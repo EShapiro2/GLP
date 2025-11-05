@@ -208,10 +208,11 @@ void main() {
       if (zsValue is StructTerm) {
         expect(zsValue.functor, '[|]', reason: 'Zs should be a list cons');
         expect(zsValue.args.length, 2, reason: 'List cons has arity 2');
+
+        // Check head
         if (zsValue.args.isNotEmpty) {
           final head = zsValue.args[0];
           print('  Head of Zs: $head');
-          // Head should be a reader (X?) where X is bound to 'a'
           if (head is ReaderTerm) {
             final wid = rt.heap.writerIdForReader(head.readerId);
             if (wid != null && rt.heap.isWriterBound(wid)) {
@@ -225,6 +226,58 @@ void main() {
             }
           }
         }
+
+        // Check tail
+        if (zsValue.args.length > 1) {
+          final tail = zsValue.args[1];
+          print('  Tail of Zs: $tail');
+          if (tail is ReaderTerm) {
+            final tailWid = rt.heap.writerIdForReader(tail.readerId);
+            if (tailWid != null && rt.heap.isWriterBound(tailWid)) {
+              final tailValue = rt.heap.valueOfWriter(tailWid);
+              print('  Tail value: $tailValue');
+
+              // Tail should be [b] = [|](b, [])
+              if (tailValue is StructTerm && tailValue.functor == '[|]') {
+                print('  Tail is a list!');
+                if (tailValue.args.isNotEmpty) {
+                  final tailHead = tailValue.args[0];
+                  print('    Tail head: $tailHead');
+                  if (tailHead is ReaderTerm) {
+                    final tailHeadWid = rt.heap.writerIdForReader(tailHead.readerId);
+                    if (tailHeadWid != null && rt.heap.isWriterBound(tailHeadWid)) {
+                      final tailHeadValue = rt.heap.valueOfWriter(tailHeadWid);
+                      print('    Tail head value: $tailHeadValue');
+                      if (tailHeadValue is ConstTerm) {
+                        expect(tailHeadValue.value, 'b', reason: 'Second element should be b');
+                        print('✓ Second element correctly bound to b');
+                      }
+                    }
+                  }
+                }
+                if (tailValue.args.length > 1) {
+                  final tailTail = tailValue.args[1];
+                  print('    Tail tail: $tailTail');
+                  if (tailTail is ReaderTerm) {
+                    final tailTailWid = rt.heap.writerIdForReader(tailTail.readerId);
+                    if (tailTailWid != null && rt.heap.isWriterBound(tailTailWid)) {
+                      final tailTailValue = rt.heap.valueOfWriter(tailTailWid);
+                      print('    Tail tail value: $tailTailValue');
+                      expect(tailTailValue, isA<ConstTerm>(), reason: 'End should be []');
+                      if (tailTailValue is ConstTerm) {
+                        expect(tailTailValue.value, '[]', reason: 'List should end with []');
+                        print('✓ List correctly ends with []');
+                      }
+                    }
+                  }
+                }
+              }
+            } else {
+              print('  WARNING: Tail is UNBOUND - merge incomplete!');
+            }
+          }
+        }
+
         print('✓ Zs correctly bound to list structure');
       }
     }

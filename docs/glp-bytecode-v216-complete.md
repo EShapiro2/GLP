@@ -205,15 +205,16 @@ headStruct('[|]', 2, 11)       // Match X11 against [|]/2
 **Operation**: Process writer variable in structure
 **Behavior**:
 - In READ mode:
-  - Extract value at S (may be constant, structure, or writer variable)
+  - Extract value at S (may be constant, structure, writer variable, or reader term)
   - Store the extracted value in clause variable Xi
   - If unbound writer: record writer-to-writer unification in σ̂w
   - If bound writer: use its value (including bound structures)
-  - If reader: check paired writer (suspend if unbound)
+  - If reader with bound paired writer: dereference and use paired writer's value
+  - If reader with unbound paired writer: store the reader term itself in Xi
 - In WRITE mode: create new writer variable, store at H and in Xi
 - Increment S (READ) or H (WRITE)
 
-**Note**: Writer-to-writer unification follows Writer MGU semantics. In READ mode, this instruction extracts any term (including nested structures) for later matching.
+**Note**: Writer-to-writer unification follows Writer MGU semantics. In READ mode, this instruction extracts any term (including nested structures and reader terms) for later matching. When a reader term is extracted, subsequent operations (like head_structure on that clause variable) will handle suspension if the reader remains unbound at match time.
 
 ### 8.2 reader Xi
 **Operation**: Process reader variable in structure

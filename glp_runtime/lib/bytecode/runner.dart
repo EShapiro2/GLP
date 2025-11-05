@@ -742,7 +742,7 @@ class BytecodeRunner {
                 cx.clauseVars[op.varIndex] = value.writerId;
                 cx.S++;
               } else if (value is ReaderTerm) {
-                // Trying to unify writer with reader - suspend if reader unbound
+                // Extract reader term - dereference if bound, store as-is if unbound
                 final rid = value.readerId;
                 final wid = cx.rt.heap.writerIdForReader(rid);
                 if (wid != null && cx.rt.heap.isWriterBound(wid)) {
@@ -751,11 +751,10 @@ class BytecodeRunner {
                   cx.clauseVars[op.varIndex] = writerValue;
                   cx.S++;
                 } else {
-                  // Unbound reader - add to Si and soft fail this clause
-                  cx.si.add(rid);
-                  _softFailToNextClause(cx, pc);
-                  pc = _findNextClauseTry(pc);
-                  continue;
+                  // Unbound reader - store the reader term itself
+                  // Suspension will be handled later if/when we try to match against it
+                  cx.clauseVars[op.varIndex] = value;
+                  cx.S++;
                 }
               } else if (value is ConstTerm || value is StructTerm) {
                 // Direct term value - store it
