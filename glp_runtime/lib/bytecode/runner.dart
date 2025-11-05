@@ -555,6 +555,29 @@ class BytecodeRunner {
                   cx.sigmaHat[wid] = ConstTerm(op.value);
                   cx.S++;
                 }
+              } else if (value is ReaderTerm) {
+                // Reader variable - check if bound, else suspend
+                final rid = value.readerId;
+                final wid = cx.rt.heap.writerIdForReader(rid);
+                if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+                  // Reader is bound - check if it matches
+                  final boundValue = cx.rt.heap.valueOfWriter(wid);
+                  if (boundValue is ConstTerm && boundValue.value == op.value) {
+                    if (debug && cx.goalId >= 4000) print('  UnifyConstant: reader $rid bound to $boundValue, matches!');
+                    cx.S++; // Match successful
+                  } else {
+                    // Bound to different value - fail
+                    if (debug && cx.goalId >= 4000) print('  UnifyConstant: reader $rid bound to $boundValue, mismatch');
+                    _softFailToNextClause(cx, pc);
+                    pc = _findNextClauseTry(pc);
+                    continue;
+                  }
+                } else {
+                  // Unbound reader - add to Si (suspend)
+                  if (debug && cx.goalId >= 4000) print('  UnifyConstant: reader $rid unbound, suspending');
+                  cx.si.add(rid);
+                  cx.S++;
+                }
               } else {
                 // Mismatch - soft fail
                 if (debug && cx.goalId >= 4000) print('  UnifyConstant: MISMATCH, failing');
