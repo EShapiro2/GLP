@@ -175,6 +175,48 @@ monitor([add(N)|Reqs],Sum) :-
 
 The GLP bytecode is modeled after the Warren Abstract Machine (WAM) and Flat Concurrent Prolog (FCP) abstract machines, adapted for GLP's three-valued unification (success/suspend/fail) and SRSW semantics.
 
+### Code Organization Hierarchy
+
+**CRITICAL DISTINCTION** - There are three levels in the code organization:
+
+1. **Module**: The complete bytecode program containing all procedures
+   - A module is the compiled program as a whole (the bytecode array)
+   - Each process/goal is associated with exactly one module
+
+2. **Procedure**: A named predicate consisting of all clauses with the same head functor/arity
+   - Example: `p/1` contains all clauses for predicate `p` with 1 argument
+   - Each procedure has an entry point PC (κ) marking its first clause
+   - Example: `p/1` might start at PC 42, `q/2` at PC 100
+
+3. **Clause**: A single rule within a procedure (head :- body)
+   - Each clause starts with `clause_try`
+   - Multiple clauses for same procedure are tried sequentially
+
+### Process Activation and Suspension
+
+**KEY PRINCIPLE**: When a process suspends and later reactivates, it **restarts from the procedure entry point (κ)**, NOT from the module beginning.
+
+- **κ (kappa)**: The PC of the first clause of the procedure being executed
+- **Suspension**: Stores the goal with its κ value
+- **Reactivation**: Goal resumes at PC = κ, trying the first clause of its procedure again
+
+**Example**:
+```
+Module containing two procedures:
+  PC 0:  p/1 clause 1 start (κ_p = 0)
+  PC 10: p/1 clause 2 start
+  PC 20: q/2 clause 1 start (κ_q = 20)
+  PC 35: q/2 clause 2 start
+
+If a goal executing q/2 suspends:
+  - It stores κ = 20 (q/2's entry point)
+  - On reactivation, it restarts at PC 20 (first clause of q/2)
+  - NOT at PC 0 (beginning of module)
+  - NOT at PC 35 (where it might have suspended)
+```
+
+**Rationale**: Reactivation means "the context has changed (some reader was bound), try the procedure again from the beginning." This allows clause selection to reconsider all clauses with the new bindings.
+
 ### Normative Specifications
 
 - **GLP Bytecode v2.16 (NORMATIVE)**: See `docs/glp-bytecode-v216-complete.md` for complete instruction set specification

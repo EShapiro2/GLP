@@ -4,7 +4,17 @@
 - **σ̂w** denotes the clause-local (goal-local) tentative writer substitution; it exists only during Phase 1 and is discarded at clause_next and suspend.
 - **Phases per clause Ci**: HEAD_i ; GUARDS_i ; BODY_i.
 - **Registers**: A (arguments), X (temporaries). Env stack E.
-- **κ** denotes the clause-selection entry PC of the current predicate.
+- **κ** denotes the clause-selection entry PC of the current procedure (the PC where the first clause of the procedure begins).
+
+### Code Organization Hierarchy
+
+There are three levels in the code organization:
+
+1. **Module**: The complete bytecode program containing all procedures
+2. **Procedure**: A named predicate (e.g., `p/1`, `merge/3`) consisting of all clauses with the same head functor/arity
+3. **Clause**: A single rule within a procedure (head :- body)
+
+**Key Principle**: Each goal maintains a κ value pointing to the entry PC of the procedure it is currently executing. When a goal suspends, it stores κ. On reactivation, execution resumes at PC = κ (the first clause of that procedure), NOT at the beginning of the module or at the suspension point.
 
 ## 1. Register Architecture
 
@@ -34,9 +44,10 @@ Note: The E, CP, and Y registers are used exclusively for deterministic environm
 **Effect**: discard σ̂w; jump to label of Cj.
 
 ### 2.3 suspend
-**Phase**: control  
-**OP-SUSPEND**: if U≠∅ then create a fresh hanger H, enqueue notes ⟨r,H⟩ for each r∈U, set goal Suspended, stop; else fail the goal.  
-**Reactivation**: resumes at κ (clause-selection entry).
+**Phase**: control
+**OP-SUSPEND**: if U≠∅ then create a fresh hanger H, enqueue notes ⟨r,H⟩ for each r∈U, set goal Suspended, stop; else fail the goal.
+**Reactivation**: resumes at κ (procedure entry - the PC of the first clause of the procedure currently being executed)
+**Note**: The κ value represents the procedure the goal is executing, which may differ from the procedure where the goal originated if `requeue` was used. For example, if `boot` tail-calls into `p/1` via `requeue`, κ points to `p/1`'s entry, not `boot`'s entry.
 
 ### 2.4 try_next_clause
 **Operation**: Attempt next clause if current fails during selection phase  
@@ -219,25 +230,50 @@ These instructions fill in structure arguments after head_structure or put_struc
 ## 9. Control Flow Instructions
 
 ### 9.1 spawn P/n
-**Operation**: Spawn new process for procedure P with arity n  
+**Operation**: Spawn new concurrent goal for procedure P with arity n
 **Behavior**:
-- Save continuation pointer in CP
-- Create new task in scheduler queue with fresh tail-recursion budget
-- Transfer control to procedure P
-- Arguments passed in A1-An
+- Create new goal with fresh goal ID
+- Copy current argument registers to new goal's environment (CallEnv)
+- Set new goal's κ to the entry PC of procedure P (first clause of P)
+- Register the environment with the runtime via `setGoalEnv(goalId, env)`
+- Enqueue the new goal in the scheduler's goal queue
+- Arguments passed via environment (slot → writer/reader ID mapping)
 - Used for all body goals except the final one
 - Ensures fair scheduling among concurrent goals
+- The spawning goal continues execution at the next instruction
 
 ### 9.2 requeue P/n
-**Operation**: Requeue current process with procedure P  
+**Operation**: Tail-call to procedure P, replacing current goal
 **Behavior**:
-- Transfer control to procedure P without saving CP
-- Reuse current process frame
+- Update current goal's environment with new arguments from argument registers
+- **Update current goal's κ to the entry PC of procedure P** (critical for suspension/reactivation)
+- Clear all clause-local state (σ̂w, Si, U, clauseVars, inBody flag)
+- Jump PC to the entry point of procedure P
+- Reuse current goal ID and process frame (no new goal created)
 - Decrement tail-recursion counter (initially 26)
-- If counter > 0: Place at tail of microtask queue
-- If counter = 0: Reset counter, schedule via event queue
-- Used only for the final goal in a clause body
+- If counter > 0: Continue execution immediately
+- If counter = 0: Reset counter, yield to event queue before continuing
+- Used only for the final goal in a clause body (tail position)
+- If this goal later suspends, it will reactivate at procedure P's entry, not the original procedure
 - Prevents unbounded queue growth while ensuring fairness
+
+**Example**: Consider `boot :- p(X), p(X?).` compiled as:
+```
+boot/0:                    % κ = 7 for boot
+  clause_try
+  commit
+  put_writer X, A1         % Create writer X
+  spawn p/1                % Spawn new goal for p(X), new goal has κ = 0
+  put_reader X, A1         % Create reader X?
+  requeue p/1              % Tail-call: update THIS goal's κ from 7 to 0!
+                           % Now executing as p(X?)
+p/1:                       % κ = 0 for p
+  clause_try
+  head_constant a, A1
+  commit
+  proceed
+```
+When the original boot goal executes `requeue p/1`, its κ changes from 7 (boot/0) to 0 (p/1). If it suspends while executing p(X?), it will reactivate at PC 0 (p/1's first clause), not PC 7 (boot/0's entry).
 
 ### 9.3 proceed
 **Operation**: Complete current procedure  

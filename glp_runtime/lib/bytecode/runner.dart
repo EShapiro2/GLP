@@ -48,7 +48,7 @@ class CallEnv {
 class RunnerContext {
   final GlpRuntime rt;
   final int goalId;
-  final int kappa;
+  int kappa;  // Mutable - updated by Requeue for tail calls
   final CallEnv env;
   final Map<int, Object?> sigmaHat = <int, Object?>{}; // σ̂w: tentative writer bindings
   final Set<int> si = <int>{};       // clause-local blockers (reader IDs)
@@ -1056,8 +1056,10 @@ class BytecodeRunner {
           final newGoalId = cx.goalId * 1000 + pc;  // Simple ID generation
           final newGoalRef = GoalRef(newGoalId, entryPc);
 
-          // TODO: Need to actually run the goal or queue it properly
-          // For now, just queue it
+          // Register environment with the runtime
+          cx.rt.setGoalEnv(newGoalId, newEnv);
+
+          // Enqueue the goal
           cx.rt.gq.enqueue(newGoalRef);
 
           // Clear argument registers for next spawn
@@ -1094,6 +1096,10 @@ class BytecodeRunner {
           cx.S = 0;
           cx.currentStructure = null;
 
+          // Update kappa to new procedure's entry point
+          // This ensures suspension/reactivation uses the correct procedure
+          cx.kappa = entryPc;
+
           // Jump to procedure entry
           pc = entryPc;
           continue;
@@ -1121,12 +1127,23 @@ class BytecodeRunner {
       // These execute after COMMIT
 
       if (op is PutWriter) {
+        print('[DEBUG PutWriter] varIndex=${op.varIndex}, argSlot=${op.argSlot}');
         // Place writer variable in argument slot
-        final writerId = cx.clauseVars[op.varIndex];
+        // If variable doesn't exist, create a fresh writer/reader pair
+        var writerId = cx.clauseVars[op.varIndex];
         if (writerId == null) {
-          throw StateError('PutWriter: variable ${op.varIndex} not found in clauseVars');
+          // Create fresh writer/reader pair
+          final (newWriterId, newReaderId) = cx.rt.heap.allocateFreshPair();
+          print('[DEBUG PutWriter] Created fresh: writer=$newWriterId, reader=$newReaderId');
+          cx.rt.heap.addWriter(WriterCell(newWriterId, newReaderId));
+          cx.rt.heap.addReader(ReaderCell(newReaderId));
+          cx.clauseVars[op.varIndex] = newWriterId;
+          writerId = newWriterId;
+        } else {
+          print('[DEBUG PutWriter] Using existing writer: $writerId');
         }
         cx.bodyArgs[op.argSlot] = writerId;
+        print('[DEBUG PutWriter] bodyArgs now: ${cx.bodyArgs}');
         pc++; continue;
       }
 
@@ -1163,6 +1180,8 @@ class BytecodeRunner {
         // Spawn new goal: create fresh goal ID, build CallEnv from bodyArgs, enqueue
         final newGoalId = cx.rt.nextGoalId++;
 
+        print('[DEBUG Spawn] Creating goal $newGoalId, bodyArgs=${cx.bodyArgs}');
+
         // Build CallEnv from bodyArgs
         final readers = <int, int>{};
         final writers = <int, int>{};
@@ -1176,8 +1195,10 @@ class BytecodeRunner {
             final writer = cx.rt.heap.writer(value);
             if (writer != null) {
               writers[slot] = value;
+              print('[DEBUG Spawn] Slot $slot: writer $value');
             } else {
               readers[slot] = value;
+              print('[DEBUG Spawn] Slot $slot: reader $value');
             }
           } else if (value is ConstTerm) {
             // Create a reader for the constant value
@@ -1187,6 +1208,7 @@ class BytecodeRunner {
         }
 
         final newEnv = CallEnv(readers: readers, writers: writers);
+        print('[DEBUG Spawn] New CallEnv: writers=$writers, readers=$readers');
         cx.rt.setGoalEnv(newGoalId, newEnv);
 
         // Get entry PC for the target procedure
