@@ -286,6 +286,26 @@ class BytecodeRunner {
             _softFailToNextClause(cx, pc);
             pc = _findNextClauseTry(pc);
             continue;
+          } else if (clauseVarValue is StructTerm) {
+            // Direct structure value (from dereferencing a bound reader)
+            if (clauseVarValue.functor == op.functor && clauseVarValue.args.length == op.arity) {
+              if (debug && cx.goalId >= 4000) print('  HeadStructure: clause var ${op.argSlot} = $clauseVarValue, MATCH!');
+              cx.currentStructure = clauseVarValue;
+              cx.mode = UnifyMode.read;
+              cx.S = 0;
+              pc++; continue;
+            } else {
+              if (debug && cx.goalId >= 4000) print('  HeadStructure: clause var ${op.argSlot} = $clauseVarValue, NO MATCH');
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            }
+          } else if (clauseVarValue is ConstTerm) {
+            // Constant value (e.g., [] or atom) - cannot match structure
+            if (debug && cx.goalId >= 4000) print('  HeadStructure: clause var ${op.argSlot} = $clauseVarValue (constant), NO MATCH');
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
           }
 
           // Unexpected clauseVar type
@@ -707,14 +727,16 @@ class BytecodeRunner {
                 final rid = value.readerId;
                 final wid = cx.rt.heap.writerIdForReader(rid);
                 if (wid != null && cx.rt.heap.isWriterBound(wid)) {
-                  // Reader is bound - extract the value (complex unification needed)
-                  // For now, just store the reader ID and handle later
-                  cx.clauseVars[op.varIndex] = rid;
+                  // Reader is bound - extract the actual value from the paired writer
+                  final writerValue = cx.rt.heap.valueOfWriter(wid);
+                  cx.clauseVars[op.varIndex] = writerValue;
                   cx.S++;
                 } else {
-                  // Unbound reader - suspend
+                  // Unbound reader - add to Si and soft fail this clause
                   cx.si.add(rid);
-                  cx.S++;
+                  _softFailToNextClause(cx, pc);
+                  pc = _findNextClauseTry(pc);
+                  continue;
                 }
               } else {
                 // Mismatch
@@ -734,16 +756,26 @@ class BytecodeRunner {
           // WRITE mode: Add reader to structure being built
           if (cx.currentStructure is _TentativeStruct) {
             final struct = cx.currentStructure as _TentativeStruct;
-            final writerId = cx.clauseVars[op.varIndex];
-            if (writerId is int) {
-              // Get the reader for this writer
-              final wc = cx.rt.heap.writer(writerId);
+            final clauseVarValue = cx.clauseVars[op.varIndex];
+            if (clauseVarValue is int) {
+              // It's a writer ID - get the reader for this writer
+              final wc = cx.rt.heap.writer(clauseVarValue);
               if (wc != null) {
                 struct.args[cx.S] = ReaderTerm(wc.readerId);
               }
-            } else if (writerId == null) {
+            } else if (clauseVarValue is Term) {
+              // Clause var is bound to a term (e.g., [] or a structure)
+              // Create a fresh writer and tentatively bind it to this value in σ̂w
+              final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
+              cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
+              cx.rt.heap.addReader(ReaderCell(freshReaderId));
+              // Add tentative binding to σ̂w (will be applied at commit)
+              cx.sigmaHat[freshWriterId] = clauseVarValue;
+              // Don't update clauseVars - keep the original value
+              struct.args[cx.S] = ReaderTerm(freshReaderId);
+            } else if (clauseVarValue == null) {
               // First occurrence of this variable is a reader!
-              // Must create the paired writer first
+              // Must create the paired writer first (unbound)
               final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
               cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
               cx.rt.heap.addReader(ReaderCell(freshReaderId));

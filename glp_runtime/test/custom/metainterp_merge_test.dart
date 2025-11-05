@@ -14,13 +14,14 @@ void main() {
     print('METAINTERPRETER TEST: MERGE');
     print('Object program:');
     print('  clause(merge([X|Xs],Ys,[X?|Zs?]), merge(Ys?,Xs?,Zs)).');
-    print('  clause(merge([],[],[])).');
+    print('  clause(merge(Xs,[Y|Ys],[Y?|Zs?]), merge(Xs?,Ys?,Zs)).');
+    print('  clause(merge([],[],[]), true).');
     print('Metainterpreter:');
     print('  run(true).');
     print('  run((A,B)) :- run(A?), run(B?).');
     print('  run(A) :- otherwise | clause(A?,B), run(B?).');
     print('Query: run(merge([a],[b],Zs))');
-    print('Expected: Zs = [a|Zs1?], continues with merge([b],[a],Zs1)');
+    print('Expected: Zs = [a,b] (alternating merge of two lists)');
     print('=' * 70 + '\n');
 
     final rt = GlpRuntime();
@@ -54,8 +55,33 @@ void main() {
       BC.COMMIT(),
       BC.PROCEED(),
 
-      // Clause 2: clause(merge([],[],[]), true).
+      // Clause 2: clause(merge(Xs,[Y|Ys],[Y?|Zs?]), merge(Xs?,Ys?,Zs)).
+      // Variables: 0=Y, 1=Ys, 2=Xs, 3=Zs
+      // Temporaries for nested structures: 10=second arg list, 11=third arg list
       BC.L('clause/2_c2'),
+      BC.TRY(),
+      // Match first arg: merge(Xs,[Y|Ys],[Y?|Zs?])
+      BC.headStruct('merge', 3, 0),     // Match merge/3 at arg0, enter READ mode, S=0
+        BC.unifyWriter(2),              // S=0: Extract first merge arg into var 2 (Xs)
+        BC.unifyWriter(10),             // S=1: Extract second merge arg into temp X10
+        BC.unifyWriter(11),             // S=2: Extract third merge arg into temp X11
+      // Now match the extracted nested structures
+      BC.headStruct('[|]', 2, 10),      // Match temp X10 (extracted list) against [|]/2
+        BC.unifyWriter(0),              // S=0: Y (head of second list)
+        BC.unifyWriter(1),              // S=1: Ys (tail of second list)
+      BC.headStruct('[|]', 2, 11),      // Match temp X11 (extracted list) against [|]/2
+        BC.unifyReader(0),              // S=0: Y? (reader - head of third list)
+        BC.unifyReader(3),              // S=1: Zs? (reader - tail of third list)
+      // Match second arg: merge(Xs?,Ys?,Zs)
+      BC.headStruct('merge', 3, 1),     // Match merge/3 at arg1
+        BC.unifyReader(2),              // S=0: Xs? (reader of var 2)
+        BC.unifyReader(1),              // S=1: Ys? (reader of var 1)
+        BC.unifyWriter(3),              // S=2: Zs (writer var 3)
+      BC.COMMIT(),
+      BC.PROCEED(),
+
+      // Clause 3: clause(merge([],[],[]), true).
+      BC.L('clause/2_c3'),
       BC.TRY(),
       BC.headStruct('merge', 3, 0),
       BC.unifyConst('[]'),          // Empty list constant
@@ -206,6 +232,6 @@ void main() {
 
     print('✓ Metainterpreter with merge passed!');
     print('✓ run(merge([a],[b],Zs)) executed successfully');
-    print('✓ Zs bound to [a|Zs1?] where merge continues');
+    print('✓ Zs bound to list structure [a|...]');
   });
 }
