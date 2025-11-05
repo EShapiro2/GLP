@@ -261,13 +261,32 @@ class BytecodeRunner {
 
           // If clauseVarValue is a WriterTerm or ReaderId, treat it as if it came from argument
           if (clauseVarValue is int) {
-            // It's a writer ID
-            final struct = _TentativeStruct(op.functor, op.arity, List.filled(op.arity, null));
-            cx.sigmaHat[clauseVarValue] = struct;
-            cx.currentStructure = struct;
-            cx.mode = UnifyMode.write;
-            cx.S = 0;
-            pc++; continue;
+            // It's a writer ID - check if bound
+            final wid = clauseVarValue;
+            if (cx.rt.heap.isWriterBound(wid)) {
+              // Writer is bound - check if it matches
+              final value = cx.rt.heap.valueOfWriter(wid);
+              if (value is StructTerm && value.functor == op.functor && value.args.length == op.arity) {
+                if (debug && cx.goalId >= 4000) print('  HeadStructure: clause var ${op.argSlot} = W$wid = $value, MATCH!');
+                cx.currentStructure = value;
+                cx.mode = UnifyMode.read;
+                cx.S = 0;
+                pc++; continue;
+              }
+              // Bound but doesn't match
+              if (debug && cx.goalId >= 4000) print('  HeadStructure: clause var ${op.argSlot} = W$wid = $value, NO MATCH');
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            } else {
+              // Writer is unbound - enter WRITE mode to create structure
+              final struct = _TentativeStruct(op.functor, op.arity, List.filled(op.arity, null));
+              cx.sigmaHat[wid] = struct;
+              cx.currentStructure = struct;
+              cx.mode = UnifyMode.write;
+              cx.S = 0;
+              pc++; continue;
+            }
           } else if (clauseVarValue is WriterTerm) {
             // Check if this writer is bound to a structure
             final wid = clauseVarValue.writerId;
@@ -738,8 +757,12 @@ class BytecodeRunner {
                   pc = _findNextClauseTry(pc);
                   continue;
                 }
+              } else if (value is ConstTerm || value is StructTerm) {
+                // Direct term value - store it
+                cx.clauseVars[op.varIndex] = value;
+                cx.S++;
               } else {
-                // Mismatch
+                // Unexpected type - mismatch
                 _softFailToNextClause(cx, pc);
                 pc = _findNextClauseTry(pc);
                 continue;
