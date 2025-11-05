@@ -150,6 +150,12 @@ class GetValue implements Op {
   GetValue(this.varIndex, this.argSlot);
 }
 
+// ===== GUARD instructions (pure tests during HEAD/GUARDS phase) =====
+/// Otherwise guard: succeeds if all previous clauses failed (not suspended)
+/// Checks if Si is empty when executed - if so, all previous clauses definitely failed
+/// If Si is non-empty, previous clauses suspended, so this fails
+class Otherwise implements Op {}
+
 // Legacy opcodes (for backward compatibility with existing tests)
 class HeadBindWriter implements Op {
   final int writerId;

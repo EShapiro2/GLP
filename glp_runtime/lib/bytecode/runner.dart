@@ -142,6 +142,19 @@ class BytecodeRunner {
       if (op is ClauseTry) { cx.clearClause(); pc++; continue; }
       if (op is GuardFail) { pc++; continue; }
 
+      // Otherwise guard: succeeds if Si is empty (all previous clauses failed, not suspended)
+      if (op is Otherwise) {
+        if (cx.si.isNotEmpty) {
+          // Previous clauses suspended (Si non-empty), so fail to next clause
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+        // Si is empty - all previous clauses definitely failed, so succeed
+        pc++;
+        continue;
+      }
+
       // Mode selection (Arg)
       if (op is RequireWriterArg) {
         final wid = cx.env.w(op.slot);
