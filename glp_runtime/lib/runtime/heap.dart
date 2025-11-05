@@ -8,11 +8,23 @@ class Heap {
   // Writer bindings (value after commit/body)
   final Map<int, Term> writerValue = <int, Term>{};
 
+  // Heap pointer for fresh variable allocation (WAM-style)
+  // Increments with each writer/reader pair allocation
+  int _nextId = 1000;
+
   WriterCell? writer(int id) => writers[id];
   ReaderCell? reader(int id) => readers[id];
 
   void addWriter(WriterCell w) => writers[w.writerId] = w;
   void addReader(ReaderCell r) => readers[r.readerId] = r;
+
+  /// Allocate a fresh writer/reader pair (WAM-style heap allocation)
+  /// Returns (writerId, readerId)
+  (int, int) allocateFreshPair() {
+    final writerId = _nextId++;
+    final readerId = _nextId++;
+    return (writerId, readerId);
+  }
 
   bool containsWriter(int id) => writers.containsKey(id);
   bool containsReader(int id) => readers.containsKey(id);

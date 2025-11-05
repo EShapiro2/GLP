@@ -58,6 +58,36 @@ class PutConstant implements Op {
   PutConstant(this.value, this.argSlot);
 }
 
+/// Create structure on heap and place reference in argument register (BODY phase)
+/// WAM semantics: HEAP[H] ← <STR, H+1>; HEAP[H+1] ← F/n; Ai ← HEAP[H]; H ← H+2; mode ← WRITE
+class PutStructure implements Op {
+  final String functor;
+  final int arity;
+  final int argSlot;   // target argument register
+  PutStructure(this.functor, this.arity, this.argSlot);
+}
+
+/// Build structure argument: allocate new writer (BODY phase, WRITE mode)
+/// Creates writer/reader pair, stores WriterTerm at HEAP[H], increments H
+class SetWriter implements Op {
+  final int varIndex;  // clause variable index to store writer ID
+  SetWriter(this.varIndex);
+}
+
+/// Build structure argument: place reader for writer (BODY phase, WRITE mode)
+/// Extracts paired reader from writer in varIndex, stores ReaderTerm at HEAP[H], increments H
+class SetReader implements Op {
+  final int varIndex;  // clause variable index holding writer ID
+  SetReader(this.varIndex);
+}
+
+/// Build structure argument: place constant (BODY phase, WRITE mode)
+/// Stores ConstTerm at HEAP[H], increments H
+class SetConstant implements Op {
+  final Object? value;
+  SetConstant(this.value);
+}
+
 // ===== v2.16 HEAD instructions (encode clause patterns) =====
 /// Match constant c with argument at argSlot
 /// Behavior: Writer(w) → σ̂w[w]=c; Reader(r) → Si+={r}; Ground(t) → check t==c

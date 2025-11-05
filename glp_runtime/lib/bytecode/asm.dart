@@ -28,6 +28,10 @@ class BC {
   static PutWriter putWriter(int varIndex, int argSlot) => PutWriter(varIndex, argSlot);
   static PutReader putReader(int varIndex, int argSlot) => PutReader(varIndex, argSlot);
   static PutConstant putConst(Object? value, int argSlot) => PutConstant(value, argSlot);
+  static PutStructure putStructure(String functor, int arity, int argSlot) => PutStructure(functor, arity, argSlot);
+  static SetWriter setWriter(int varIndex) => SetWriter(varIndex);
+  static SetReader setReader(int varIndex) => SetReader(varIndex);
+  static SetConstant setConst(Object? value) => SetConstant(value);
   static Spawn spawn(String label, int arity) => Spawn(label, arity);
   static Requeue requeue(String label, int arity) => Requeue(label, arity);
 

@@ -23,3 +23,12 @@ class ReaderTerm implements Term {
   @override
   String toString() => 'R$readerId';
 }
+
+/// Writer reference in a structure - just holds the writer ID
+/// Used when a structure contains an unbound writer variable
+class WriterTerm implements Term {
+  final int writerId;
+  WriterTerm(this.writerId);
+  @override
+  String toString() => 'W$writerId';
+}

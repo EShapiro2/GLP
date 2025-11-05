@@ -5,7 +5,7 @@ import 'package:glp_runtime/runtime/commit.dart';
 import 'package:glp_runtime/runtime/cells.dart';
 import 'opcodes.dart';
 
-enum RunResult { terminated, suspended, yielded }
+enum RunResult { terminated, suspended, yielded, outOfReductions }
 
 /// Unification mode for structure traversal (WAM-style)
 enum UnifyMode { read, write }
@@ -65,6 +65,10 @@ class RunnerContext {
   final Map<int, int> argWriters = {};  // argSlot → writer ID
   final Map<int, int> argReaders = {};  // argSlot → reader ID
 
+  // Reduction budget (null = unlimited)
+  int? reductionBudget;
+  int reductionsUsed = 0;
+
   final void Function(GoalRef)? onActivation; // host log hook
 
   RunnerContext({
@@ -73,6 +77,7 @@ class RunnerContext {
     required this.kappa,
     CallEnv? env,
     this.onActivation,
+    this.reductionBudget,
   }) : env = env ?? CallEnv();
 
   void clearClause() {
@@ -93,11 +98,13 @@ class BytecodeRunner {
   void run(RunnerContext cx) { runWithStatus(cx); }
 
   /// Helper: find next ClauseTry instruction after current PC
+  /// If no more ClauseTry, look for SuspendEnd to check for suspension/failure
   int _findNextClauseTry(int fromPc) {
     for (var i = fromPc + 1; i < prog.ops.length; i++) {
       if (prog.ops[i] is ClauseTry) return i;
+      if (prog.ops[i] is SuspendEnd) return i; // Jump to SUSP to check U
     }
-    return prog.ops.length; // End of program if no more clauses
+    return prog.ops.length; // End of program if no more clauses or SUSP
   }
 
   /// Soft-fail to next clause: union Si to U, clear clause state, jump to next ClauseTry
@@ -111,8 +118,25 @@ class BytecodeRunner {
 
   RunResult runWithStatus(RunnerContext cx) {
     var pc = 0;
+    final debug = true; // Set to true to enable trace
+
+    // Print try start
+    if (debug) {
+      print('>>> TRY: Goal ${cx.goalId} at PC ${cx.kappa}');
+    }
+
     while (pc < prog.ops.length) {
+      // Check reduction budget
+      if (cx.reductionBudget != null && cx.reductionsUsed >= cx.reductionBudget!) {
+        return RunResult.outOfReductions;
+      }
+      cx.reductionsUsed++;
+
       final op = prog.ops[pc];
+
+      if (debug && cx.goalId >= 4000) {
+        print('  [G${cx.goalId}] PC=$pc ${op.runtimeType} | Si=${cx.si} U=${cx.U} inBody=${cx.inBody}');
+      }
 
       if (op is Label) { pc++; continue; }
       if (op is ClauseTry) { cx.clearClause(); pc++; continue; }
@@ -136,15 +160,55 @@ class BytecodeRunner {
         if (arg == null) { pc++; continue; } // No argument at this slot
 
         if (arg.isWriter) {
-          // Writer: record tentative binding in σ̂w
-          cx.sigmaHat[arg.writerId!] = op.value;
+          // Writer: check if already bound, else record tentative binding in σ̂w
+          if (cx.rt.heap.isWriterBound(arg.writerId!)) {
+            // Already bound - check if value matches
+            final value = cx.rt.heap.valueOfWriter(arg.writerId!);
+            if (value is ConstTerm && value.value != op.value) {
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            } else if (value is StructTerm) {
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            }
+          } else {
+            // Unbound writer - record tentative binding in σ̂w
+            cx.sigmaHat[arg.writerId!] = op.value;
+          }
         } else if (arg.isReader) {
           // Reader: check if bound, else add to Si
           final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
           if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
             cx.si.add(arg.readerId!);
+          } else {
+            // Bound reader - check if value matches constant
+            final value = cx.rt.heap.valueOfWriter(wid);
+            if (debug && cx.goalId == 100) {
+              print('  [DEBUG] HeadConstant checking reader ${arg.readerId}: value=$value vs pattern=${op.value}');
+            }
+            if (value is ConstTerm && value.value != op.value) {
+              // Value mismatch - soft fail to next clause
+              if (debug) {
+                print('  [DEBUG] Mismatch! Soft-failing to next clause');
+              }
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            } else if (value is StructTerm && op.value != null) {
+              // Structure doesn't match constant - soft fail
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            } else if (value is StructTerm && op.value == null) {
+              // Structure doesn't match null [] - soft fail
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            }
+            // else: values match or value is compatible, continue
           }
-          // TODO: if bound, check value matches op.value
         } else {
           // Ground: check if value matches
           // TODO: implement proper ground term matching
@@ -273,8 +337,14 @@ class BytecodeRunner {
             // Check if this clause variable already has a value (from get_variable)
             final existingValue = cx.clauseVars[op.varIndex];
             if (existingValue != null) {
-              // Variable already bound - use its value
-              struct.args[cx.S] = existingValue;
+              // Variable already has a value
+              if (existingValue is int) {
+                // It's a reader ID from GetVariable - wrap in ReaderTerm
+                struct.args[cx.S] = ReaderTerm(existingValue);
+              } else {
+                // It's already a Term - use as is
+                struct.args[cx.S] = existingValue;
+              }
             } else {
               // New variable - create placeholder
               final placeholder = _ClauseVar(op.varIndex, isWriter: false);
@@ -336,16 +406,9 @@ class BytecodeRunner {
         if (arg.isWriter) {
           cx.clauseVars[op.varIndex] = arg.writerId;
         } else if (arg.isReader) {
-          // For reader, we need to check if it's bound and get the value
-          final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
-          if (wid != null && cx.rt.heap.isWriterBound(wid)) {
-            // Bound reader - store the actual value
-            final value = cx.rt.heap.valueOfWriter(wid);
-            cx.clauseVars[op.varIndex] = value;
-          } else {
-            // Unbound reader - store reader reference
-            cx.clauseVars[op.varIndex] = arg.readerId;
-          }
+          // Store reader ID (not the dereferenced value)
+          // putReader/putWriter will extract the reader from this
+          cx.clauseVars[op.varIndex] = arg.readerId;
         } else {
           // Ground term - would need to handle if CallEnv supported it
           _softFailToNextClause(cx, pc);
@@ -514,6 +577,13 @@ class BytecodeRunner {
 
       // Commit (apply σ̂w and wake suspended goals) - v2.16 semantics
       if (op is Commit) {
+        // If Si is non-empty, this clause soft-failed - skip commit and jump to next clause
+        if (cx.si.isNotEmpty) {
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+
         // Convert tentative structures to real Terms before committing
         final convertedSigmaHat = <int, Object?>{};
         for (final entry in cx.sigmaHat.entries) {
@@ -534,9 +604,8 @@ class BytecodeRunner {
                   if (wc != null) {
                     termArgs.add(ReaderTerm(wc.readerId));
                   } else {
-                    // Shouldn't happen - create fresh pair as fallback
-                    final freshWriterId = cx.goalId * 10000 + arg.varIndex * 100 + 80;
-                    final freshReaderId = cx.goalId * 10000 + arg.varIndex * 100 + 81;
+                    // Shouldn't happen - create fresh pair as fallback using heap allocation
+                    final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
                     cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
                     cx.rt.heap.addReader(ReaderCell(freshReaderId));
                     cx.clauseVars[arg.varIndex] = freshWriterId;
@@ -546,9 +615,8 @@ class BytecodeRunner {
                   // Already a term - use as-is
                   termArgs.add(resolved);
                 } else {
-                  // Not yet resolved - create fresh writer/reader pair
-                  final freshWriterId = cx.goalId * 10000 + arg.varIndex * 100 + 80;
-                  final freshReaderId = cx.goalId * 10000 + arg.varIndex * 100 + 81;
+                  // Not yet resolved - create fresh writer/reader pair (WAM-style)
+                  final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
                   cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
                   cx.rt.heap.addReader(ReaderCell(freshReaderId));
                   cx.clauseVars[arg.varIndex] = freshWriterId;
@@ -573,6 +641,11 @@ class BytecodeRunner {
           }
         }
 
+        // Print reduction (successful commit)
+        if (debug) {
+          print('>>> REDUCTION: Goal ${cx.goalId} at PC $pc (commit succeeded, σ̂w has ${convertedSigmaHat.length} bindings)');
+        }
+
         // Apply σ̂w: bind writers to tentative values, then wake suspended goals
         final acts = CommitOps.applySigmaHatV216(
           heap: cx.rt.heap,
@@ -580,6 +653,9 @@ class BytecodeRunner {
           sigmaHat: convertedSigmaHat,
         );
         for (final a in acts) {
+          if (debug) {
+            print('>>> ACTIVATION: Goal ${a.id} awakened at PC ${a.pc}');
+          }
           cx.rt.gq.enqueue(a);
           if (cx.onActivation != null) cx.onActivation!(a);
         }
@@ -599,13 +675,22 @@ class BytecodeRunner {
 
       if (op is SuspendEnd) {
         if (cx.U.isNotEmpty) {
+          if (debug) {
+            print('>>> SUSPENSION: Goal ${cx.goalId} suspended on readers: ${cx.U}');
+          }
           cx.rt.suspendGoal(goalId: cx.goalId, kappa: cx.kappa, readers: cx.U);
           cx.U.clear();
           cx.inBody = false;
           return RunResult.suspended;
         }
+        // U is empty - all clauses failed definitively (no suspension)
+        if (debug) {
+          print('>>> FAIL: Goal ${cx.goalId} (all clauses exhausted, U empty)');
+        }
         cx.inBody = false;
-        pc++; continue;
+        // According to spec, failed goals should be added to F set
+        // For now, just terminate - the goal is done (failed)
+        return RunResult.terminated;
       }
 
       // Body (bind then wake + log)
@@ -666,10 +751,9 @@ class BytecodeRunner {
             // It's a writer ID - store in argument register
             cx.argWriters[op.argSlot] = value;
           } else if (value is _ClauseVar) {
-            // It's a placeholder - we need to create an actual writer
+            // It's a placeholder - we need to create an actual writer (WAM-style)
             // This happens when HeadWriter created a placeholder in WRITE mode
-            final freshWriterId = cx.goalId * 10000 + op.varIndex * 100 + 70;
-            final freshReaderId = cx.goalId * 10000 + op.varIndex * 100 + 71;
+            final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
             cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
             cx.rt.heap.addReader(ReaderCell(freshReaderId));
             cx.argWriters[op.argSlot] = freshWriterId;
@@ -684,24 +768,35 @@ class BytecodeRunner {
 
       if (op is PutReader) {
         if (cx.inBody) {
-          // Get writer ID from clause variable, derive its reader
+          // Get ID from clause variable - could be writer ID, reader ID, or StructTerm
           final value = cx.clauseVars[op.varIndex];
           if (value is int) {
-            // It's a writer ID - get its paired reader
+            // Check if it's a writer ID or reader ID
             final wc = cx.rt.heap.writer(value);
             if (wc != null) {
+              // It's a writer ID - get its paired reader
               cx.argReaders[op.argSlot] = wc.readerId;
             } else {
-              print('ERROR: PutReader could not find writer $value in heap');
+              // Not a writer - assume it's already a reader ID
+              cx.argReaders[op.argSlot] = value;
             }
+          } else if (value is StructTerm) {
+            // It's a structure - create fresh writer/reader and bind it (WAM-style)
+            final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
+            cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
+            cx.rt.heap.addReader(ReaderCell(freshReaderId));
+            cx.rt.heap.bindWriterStruct(freshWriterId, value.functor, value.args);
+            cx.argReaders[op.argSlot] = freshReaderId;
           } else if (value is ConstTerm) {
-            // It's a ground term - create fresh writer/reader and bind it
-            final freshWriterId = cx.goalId * 10000 + op.argSlot * 100 + 60;
-            final freshReaderId = cx.goalId * 10000 + op.argSlot * 100 + 61;
+            // It's a ground constant - create fresh writer/reader and bind it (WAM-style)
+            final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
             cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
             cx.rt.heap.addReader(ReaderCell(freshReaderId));
             cx.rt.heap.bindWriterConst(freshWriterId, value.value);
             cx.argReaders[op.argSlot] = freshReaderId;
+          } else if (value is ReaderTerm) {
+            // It's already a reader - use its ID directly
+            cx.argReaders[op.argSlot] = value.readerId;
           } else {
             // Unknown - skip
             print('WARNING: PutReader got unexpected value: $value');
@@ -712,14 +807,162 @@ class BytecodeRunner {
 
       if (op is PutConstant) {
         if (cx.inBody) {
-          // For constants, we create a fresh writer/reader pair and bind immediately
-          // Generate IDs (simple approach: use goalId * 10000 + slot offset)
-          final freshWriterId = cx.goalId * 10000 + op.argSlot * 100 + 50;
-          final freshReaderId = cx.goalId * 10000 + op.argSlot * 100 + 51;
+          // For constants, we create a fresh writer/reader pair and bind immediately (WAM-style)
+          final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
           cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
           cx.rt.heap.addReader(ReaderCell(freshReaderId));
           cx.rt.heap.bindWriterConst(freshWriterId, op.value);
           cx.argReaders[op.argSlot] = freshReaderId;
+        }
+        pc++; continue;
+      }
+
+      // ===== WAM-style structure creation (BODY phase) =====
+      if (op is PutStructure) {
+        if (cx.inBody) {
+          // WAM semantics: HEAP[H] ← <STR, H+1>; HEAP[H+1] ← F/n; Ai ← HEAP[H]; H ← H+2; mode ← WRITE
+          // In GLP: We'll bind the writer at argSlot after the structure is complete
+          // For now, create temporary structure and enter WRITE mode
+
+          // Store target writer ID from environment
+          final targetWriterId = cx.env.w(op.argSlot);
+          if (targetWriterId == null) {
+            print('WARNING: PutStructure argSlot ${op.argSlot} has no writer in environment');
+            pc++; continue;
+          }
+
+          // Store the writer ID in context for later binding
+          cx.clauseVars[-1] = targetWriterId; // Use -1 as special marker for structure binding
+
+          // Create structure with placeholder args (will be filled by subsequent Set* instructions)
+          // Use ConstTerm(null) as placeholder, will be replaced
+          final structArgs = List<Term>.filled(op.arity, ConstTerm(null));
+          cx.currentStructure = StructTerm(op.functor, structArgs);
+          cx.S = 0; // Start at first argument position
+          cx.mode = UnifyMode.write;
+        }
+        pc++; continue;
+      }
+
+      if (op is SetWriter) {
+        if (cx.inBody && cx.mode == UnifyMode.write && cx.currentStructure is StructTerm) {
+          // Allocate new writer/reader pair
+          final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
+          cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
+          cx.rt.heap.addReader(ReaderCell(freshReaderId));
+
+          // Store writer ID in clause variable
+          cx.clauseVars[op.varIndex] = freshWriterId;
+
+          // Store WriterTerm in current structure at position S
+          final struct = cx.currentStructure as StructTerm;
+          struct.args[cx.S] = WriterTerm(freshWriterId);
+          cx.S++; // Move to next position
+
+          // Check if structure is complete (all arguments filled)
+          if (cx.S >= struct.args.length) {
+            // Structure complete - bind the target writer (stored at clauseVars[-1])
+            final targetWriterId = cx.clauseVars[-1];
+            if (targetWriterId is int) {
+              // Bind the writer to the completed structure
+              cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
+
+              // Activate any suspended goals
+              final w = cx.rt.heap.writer(targetWriterId);
+              if (w != null) {
+                final acts = cx.rt.roq.processOnBind(w.readerId);
+                for (final a in acts) {
+                  cx.rt.gq.enqueue(a);
+                  if (cx.onActivation != null) cx.onActivation!(a);
+                }
+              }
+            }
+
+            // Reset structure building state
+            cx.currentStructure = null;
+            cx.mode = UnifyMode.read;
+            cx.S = 0;
+            cx.clauseVars.remove(-1); // Clear the marker
+          }
+        }
+        pc++; continue;
+      }
+
+      if (op is SetReader) {
+        if (cx.inBody && cx.mode == UnifyMode.write && cx.currentStructure is StructTerm) {
+          // Get writer ID from clause variable
+          final writerId = cx.clauseVars[op.varIndex];
+          if (writerId is int) {
+            final wc = cx.rt.heap.writer(writerId);
+            if (wc != null) {
+              // Store ReaderTerm (paired reader) in current structure at position S
+              final struct = cx.currentStructure as StructTerm;
+              struct.args[cx.S] = ReaderTerm(wc.readerId);
+              cx.S++; // Move to next position
+
+              // Check if structure is complete (all arguments filled)
+              if (cx.S >= struct.args.length) {
+                // Structure complete - bind the target writer (stored at clauseVars[-1])
+                final targetWriterId = cx.clauseVars[-1];
+                if (targetWriterId is int) {
+                  // Bind the writer to the completed structure
+                  cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
+
+                  // Activate any suspended goals
+                  final w = cx.rt.heap.writer(targetWriterId);
+                  if (w != null) {
+                    final acts = cx.rt.roq.processOnBind(w.readerId);
+                    for (final a in acts) {
+                      cx.rt.gq.enqueue(a);
+                      if (cx.onActivation != null) cx.onActivation!(a);
+                    }
+                  }
+                }
+
+                // Reset structure building state
+                cx.currentStructure = null;
+                cx.mode = UnifyMode.read;
+                cx.S = 0;
+                cx.clauseVars.remove(-1); // Clear the marker
+              }
+            }
+          }
+        }
+        pc++; continue;
+      }
+
+      if (op is SetConstant) {
+        if (cx.inBody && cx.mode == UnifyMode.write && cx.currentStructure is StructTerm) {
+          // Store ConstTerm in current structure at position S
+          final struct = cx.currentStructure as StructTerm;
+          struct.args[cx.S] = ConstTerm(op.value);
+          cx.S++; // Move to next position
+
+          // Check if structure is complete (all arguments filled)
+          if (cx.S >= struct.args.length) {
+            // Structure complete - bind the target writer (stored at clauseVars[-1])
+            final targetWriterId = cx.clauseVars[-1];
+            if (targetWriterId is int) {
+              // Bind the writer to the completed structure
+              cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
+
+              // Activate any suspended goals
+              final w = cx.rt.heap.writer(targetWriterId);
+              if (w != null) {
+                final acts = cx.rt.roq.processOnBind(w.readerId);
+                for (final a in acts) {
+                  cx.rt.gq.enqueue(a);
+                  if (cx.onActivation != null) cx.onActivation!(a);
+                }
+              }
+            }
+
+            // Reset structure building state
+            cx.currentStructure = null;
+            cx.mode = UnifyMode.read;
+            cx.S = 0;
+            cx.clauseVars.remove(-1); // Clear the marker
+          }
         }
         pc++; continue;
       }
