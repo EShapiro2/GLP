@@ -237,16 +237,41 @@ The HEAD phase performs **tentative unification** building σ̂w without heap mu
 
 ## Research Sources - REQUIRED
 
-**When implementing or debugging abstract machine semantics, you MUST consult primary sources**:
+**CRITICAL: NEVER IMPROVISE. ALWAYS READ THE SOURCES.**
+
+When implementing or debugging abstract machine semantics, you **MUST** consult primary sources **BEFORE** writing any code:
 
 1. **WAM Paper**: `/Users/udi/GLP/docs/wam.pdf` - Warren's Abstract Machine (Technical Note 309, 1983)
    - Definitive source for Prolog abstract machine design
    - Explains heap allocation, environments, variable renaming, structure creation
+   - **READ THIS** for any instruction implementation (put_structure, get_structure, unify_*, etc.)
 
-2. **GLP Spec**: `/Users/udi/GLP/docs/glp_spec.pdf` - Formal GLP specification (ESOP 2026)
+2. **GLP Bytecode Spec**: `docs/glp-bytecode-v216-complete.md` - Complete v2.16 instruction set
+   - **NORMATIVE** specification for all GLP bytecode instructions
+   - **READ THIS FIRST** before implementing any instruction
+
+3. **GLP Spec**: `/Users/udi/GLP/docs/glp_spec.pdf` - Formal GLP specification (ESOP 2026)
    - Normative semantics for GLP language
+   - Defines three-valued unification, suspension, commitment
 
-3. **FCP Paper**: `/Users/udi/GLP/docs/1-s2.0-0743106689900113-main.pdf` - Flat Concurrent Prolog paper
+4. **FCP Paper**: `/Users/udi/GLP/docs/1-s2.0-0743106689900113-main.pdf` - Flat Concurrent Prolog paper
    - Reference for concurrent logic programming and reader/writer variables
 
-**NEVER guess, use secondary sources, or rely on general knowledge about abstract machines. Always verify against these papers.**
+### Implementation Protocol
+
+**BEFORE implementing ANY instruction or abstract machine feature:**
+
+1. **STOP** - Do not write code yet
+2. **READ** the relevant section in the WAM paper or bytecode spec
+3. **UNDERSTAND** the exact semantics from the source
+4. **IMPLEMENT** based on what the source says, not what you think it should do
+5. **VERIFY** your understanding by citing specific sections
+
+**FORBIDDEN ACTIONS:**
+- ❌ "Improvising" or "making it up" based on general knowledge
+- ❌ Guessing semantics from instruction names
+- ❌ Using secondary sources (StackOverflow, tutorials, etc.)
+- ❌ Relying on memory of how Prolog "usually works"
+- ❌ Implementing "similar" instructions without checking the spec
+
+**If you catch yourself saying "improvising" or "I think it should..." - STOP and read the source.**
