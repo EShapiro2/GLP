@@ -2,18 +2,80 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## START HERE - MANDATORY READING ORDER
+
+**BEFORE doing ANY implementation work, you MUST read these documents in order:**
+
+1. **`SPEC_GUIDE.md`** - Start here for overview of GLP execution model and specification structure
+2. **`docs/glp-bytecode-v216-complete.md`** - NORMATIVE instruction set specification (complete and authoritative)
+3. **`docs/glp-runtime-spec.txt`** - NORMATIVE Dart runtime architecture specification
+
+**ONLY AFTER reading these three documents should you:**
+- Write any code
+- Implement any instructions
+- Design any bytecode sequences
+- Debug any execution issues
+
+**If you have not read these documents in this session, STOP NOW and read them before proceeding.**
+
 ## Project Overview
 
 GLP (Grassroots Logic Programs) is a secure, multiagent, concurrent logic programming language designed for implementing grassroots platforms. This repository contains the GLP runtime implementation in Dart, along with a formal specification (ESOP 2026) and a virtual machine for executing GLP bytecode.
 
 **Key Concept**: GLP extends logic programs with paired single-reader/single-writer (SRSW) logic variables, providing secure communication channels among cryptographically-identified participants through encrypted, signed, and attested messages.
 
+## Repository Structure
+
+**CRITICAL: The correct working directory is `/Users/udi/GLP/glp_runtime/`**
+
+### Directory Layout
+
+```
+/Users/udi/GLP/
+├── docs/                           # Specifications and papers
+│   ├── glp-bytecode-v216-complete.md  (NORMATIVE instruction set)
+│   ├── glp-runtime-spec.txt           (NORMATIVE runtime architecture)
+│   ├── glp_spec.pdf                   (Formal GLP spec)
+│   └── wam.pdf                        (WAM paper)
+├── SPEC_GUIDE.md                   # Start here - overview of specs
+├── CLAUDE.md                       # This file
+└── glp_runtime/                    # Main Dart project (WORK HERE)
+    ├── lib/
+    │   ├── runtime/                # Core runtime (heap, scheduler, etc.)
+    │   │   ├── runtime.dart
+    │   │   ├── heap.dart
+    │   │   ├── cells.dart
+    │   │   ├── terms.dart
+    │   │   ├── machine_state.dart
+    │   │   ├── scheduler.dart
+    │   │   └── roq.dart
+    │   ├── bytecode/               # Bytecode VM (IMPLEMENT HERE)
+    │   │   ├── opcodes.dart        # Instruction definitions
+    │   │   ├── asm.dart            # Bytecode assembly helpers
+    │   │   └── runner.dart         # Bytecode interpreter
+    │   └── bytecode/v216/          # OLD - single-goal experimental VM (ignore)
+    ├── test/
+    │   ├── custom/                 # Custom test scenarios
+    │   └── conformance/            # Conformance tests
+    └── bin/
+        └── glp_runtime.dart
+
+```
+
+### Important Notes
+
+1. **DO NOT create nested `glp_runtime/glp_runtime/` directories** - work in `/Users/udi/GLP/glp_runtime/`
+2. **The main bytecode implementation goes in `lib/bytecode/`** (opcodes.dart, runner.dart, asm.dart)
+3. **The runtime system is in `lib/runtime/`** (heap, scheduler, cells, etc.) - these files already exist
+4. **Ignore `lib/bytecode/v216/`** - this is an old experimental single-goal VM, not the main implementation
+5. **Tests go in `test/custom/` or `test/conformance/`** depending on type
+
 ## Build and Test Commands
 
 All commands should be run from the `glp_runtime/` directory:
 
 ```bash
-cd glp_runtime
+cd /Users/udi/GLP/glp_runtime
 ```
 
 ### Testing
@@ -95,32 +157,9 @@ The GLP bytecode is modeled after WAM (Warren Abstract Machine) and FCP (Flat Co
 - Succeeded with Si empty → `commit`: apply σ̂w to heap, wake suspended goals, enter BODY
 - After all clauses: `suspend` if U non-empty, else fail definitively
 
-### v2.16 Virtual Machine (`lib/bytecode/v216/`)
+### Historical/Experimental Code
 
-A minimal VM for executing unit goals (single predicates) over unit clauses with HEAD/GUARD/BODY structure:
-
-- **`opcodes.dart`**: Sealed class hierarchy of GLP bytecode instructions
-  - Control: `Label`, `Goto`, `ClauseTry`, `ClauseNext`, `NoMoreClauses`, `Commit`, `Proceed`, `SuspendNow`
-  - HEAD (pure): `HeadWriter`, `HeadReader`, `HeadConstant`, `HeadStructure`
-  - GUARDS (pure): `GuardKnown`, `GuardGround`, `GuardEqConst`, `Otherwise`
-  - BODY (mutating after Commit): `PutConstant`, `Allocate`, `Deallocate`, `Spawn`, `Requeue`
-
-- **`model.dart`**: Term model for VM execution
-  - `Writer`: Variable set at COMMIT when σ̂w is applied
-  - `Reader`: Variable that may block; suspension references these
-  - `Const`: Ground constant
-  - `CallFrame`: Execution context with `pendingWrites` (σ̂w), `blockersSi` (clause-local), `blockersU` (goal-accumulated)
-
-- **`runner.dart`**: `VM` class implementing the v2.16 execution semantics
-  - HEAD/GUARDS are pure; σ̂w computed tentatively
-  - `Commit` applies σ̂w atomically, entering BODY phase where mutations occur
-  - Clause failure: soft-fail with `ClauseNext`, union Si → U, try next clause
-  - `NoMoreClauses`: suspend if U non-empty, else fail
-  - See `test/v216_vm_min_test.dart` for usage examples
-
-**Execution flow**: Try clauses in order → accumulate blockers (Si per clause, U across clauses) → if all clauses fail with blockers, suspend; otherwise fail definitively.
-
-**Note**: The v2.16 VM is a simplified model for unit goals. The full bytecode abstract machine (see above) implements the complete WAM-style instruction set with structure traversal and proper tentative binding semantics.
+**`lib/bytecode/v216/` and `test/v216_vm_min_test.dart`**: These contain a simplified single-goal VM that is NOT the main implementation. This was an early experiment and should be moved to an `OLD/` directory. The actual bytecode implementation follows the normative specifications in `docs/glp-bytecode-v216-complete.md` and `docs/glp-runtime-spec.txt`.
 
 ### Other Components
 
@@ -182,6 +221,29 @@ runner.runWithStatus(cx);
 - The runtime models concurrent execution with fairness (tail-recursion budgets) and single-shot reactivation (armed hangers)
 - Writer variables bind at commit; reader variables may cause suspension until bound
 
+### Modules and Process Activation (from FCP)
+
+**CRITICAL DISTINCTION** (from FCP Section 3.5):
+- **Module code** = compiled program as data structure (result of compilation, not active)
+- **Activation** = abstract notion of set of processes whose code resides in the module
+- **Process record** = saved state containing: procedure address (PC), arguments, next-process reference
+
+**Process Activation Semantics**:
+1. **Process record stores PC** - the saved program counter indicating where to execute
+2. **Scheduler dequeues process** - loads PC, arguments, and module context from process record
+3. **Execution starts at stored PC** - NOT at beginning of program
+4. **Each process belongs to a module** - the compiled code it executes from
+
+**Key Principle**: When a process/goal is enqueued with PC=N, execution MUST start at PC=N, not at PC=0.
+
+**Implementation Requirements**:
+- `RunnerContext.kappa` holds the entry PC for the goal
+- `BytecodeRunner.runWithStatus()` must initialize `pc = cx.kappa` (NOT `pc = 0`)
+- Goals can have different entry points within the same program (e.g., run/1_start, clause/2_start)
+- Reactivated goals restart at their stored kappa (typically the first clause)
+
+**Reference**: See FCP paper Section 4.1 "Processes" and Appendix 2 "Bootstrap and Control Flow"
+
 ### Working with Goals and Programs
 
 **Goal Management**:
@@ -239,23 +301,40 @@ The HEAD phase performs **tentative unification** building σ̂w without heap mu
 
 **CRITICAL: NEVER IMPROVISE. ALWAYS READ THE SOURCES.**
 
-When implementing or debugging abstract machine semantics, you **MUST** consult primary sources **BEFORE** writing any code:
+### Primary Specifications (MANDATORY - Read First)
 
-1. **WAM Paper**: `/Users/udi/GLP/docs/wam.pdf` - Warren's Abstract Machine (Technical Note 309, 1983)
+**You MUST read these three documents BEFORE any implementation work:**
+
+1. **`SPEC_GUIDE.md`** - Overview of GLP execution model and specification structure
+   - Read this FIRST to understand the overall architecture
+   - Describes (Q, S, F) triple, execution phases, instruction categories
+
+2. **`docs/glp-bytecode-v216-complete.md`** - Complete v2.16 instruction set (NORMATIVE)
+   - **NORMATIVE** specification for all GLP bytecode instructions
+   - Defines exact semantics of every instruction
+   - **READ THIS** before implementing ANY instruction
+
+3. **`docs/glp-runtime-spec.txt`** - Dart runtime architecture (NORMATIVE)
+   - Defines scheduler architecture, goal state, data structures
+   - Specifies tail-recursion budget, suspension/reactivation mechanisms
+   - **READ THIS** before implementing runtime components
+
+### Secondary References (Consult as Needed)
+
+4. **WAM Paper**: `/Users/udi/GLP/docs/wam.pdf` - Warren's Abstract Machine (Technical Note 309, 1983)
    - Definitive source for Prolog abstract machine design
    - Explains heap allocation, environments, variable renaming, structure creation
-   - **READ THIS** for any instruction implementation (put_structure, get_structure, unify_*, etc.)
+   - **READ THIS** for understanding WAM-derived instructions (put_structure, get_structure, unify_*, etc.)
 
-2. **GLP Bytecode Spec**: `docs/glp-bytecode-v216-complete.md` - Complete v2.16 instruction set
-   - **NORMATIVE** specification for all GLP bytecode instructions
-   - **READ THIS FIRST** before implementing any instruction
-
-3. **GLP Spec**: `/Users/udi/GLP/docs/glp_spec.pdf` - Formal GLP specification (ESOP 2026)
+5. **GLP Spec**: `/Users/udi/GLP/docs/glp_spec.pdf` - Formal GLP specification (ESOP 2026)
    - Normative semantics for GLP language
    - Defines three-valued unification, suspension, commitment
 
-4. **FCP Paper**: `/Users/udi/GLP/docs/1-s2.0-0743106689900113-main.pdf` - Flat Concurrent Prolog paper
-   - Reference for concurrent logic programming and reader/writer variables
+6. **FCP Implementation**: https://github.com/EShapiro2/FCP - Flat Concurrent Prolog full source code
+   - **AUTHORITATIVE** reference for module system, process activation, and goal scheduling
+   - Complete working implementation of abstract machine semantics
+   - Paper: `/Users/udi/GLP/docs/1-s2.0-0743106689900113-main.pdf` (Houri & Shapiro, 1989)
+   - **READ THE SOURCE CODE** for understanding modules, process records, and activation semantics
 
 ### Implementation Protocol
 

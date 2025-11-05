@@ -117,7 +117,7 @@ class BytecodeRunner {
   }
 
   RunResult runWithStatus(RunnerContext cx) {
-    var pc = 0;
+    var pc = cx.kappa;  // Start at goal's entry point (not 0!)
     final debug = true; // Set to true to enable trace
 
     // Print try start
@@ -771,6 +771,15 @@ class BytecodeRunner {
             cx.rt.heap.addReader(ReaderCell(freshReaderId));
             cx.argWriters[op.argSlot] = freshWriterId;
             // Update clause var to point to the actual writer
+            cx.clauseVars[op.varIndex] = freshWriterId;
+          } else if (value == null) {
+            // Variable doesn't exist yet - allocate fresh writer/reader pair
+            // This happens when a variable first appears in BODY phase
+            final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
+            cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
+            cx.rt.heap.addReader(ReaderCell(freshReaderId));
+            cx.argWriters[op.argSlot] = freshWriterId;
+            // Store in clause var for future references
             cx.clauseVars[op.varIndex] = freshWriterId;
           } else {
             print('WARNING: PutWriter got unexpected value: $value');
