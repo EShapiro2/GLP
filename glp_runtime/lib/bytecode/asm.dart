@@ -25,6 +25,11 @@ class BC {
   static HeadConstant headConst(Object? value, int argSlot) => HeadConstant(value, argSlot);
   static GetVariable getVar(int varIndex, int argSlot) => GetVariable(varIndex, argSlot);
   static GetValue getVal(int varIndex, int argSlot) => GetValue(varIndex, argSlot);
+  static PutWriter putWriter(int varIndex, int argSlot) => PutWriter(varIndex, argSlot);
+  static PutReader putReader(int varIndex, int argSlot) => PutReader(varIndex, argSlot);
+  static PutConstant putConst(Object? value, int argSlot) => PutConstant(value, argSlot);
+  static Spawn spawn(String label, int arity) => Spawn(label, arity);
+  static Requeue requeue(String label, int arity) => Requeue(label, arity);
 
   // UPPERCASE aliases
   static Label L(String name) => l(name);

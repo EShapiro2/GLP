@@ -35,6 +35,29 @@ class BodySetStructConstArgs implements Op {
   BodySetStructConstArgs(this.writerId, this.functor, this.constArgs);
 }
 
+/// Place writer variable into argument register (BODY phase)
+/// Used to pass writer variables to spawned goals
+class PutWriter implements Op {
+  final int varIndex;  // clause variable index holding writer ID
+  final int argSlot;   // target argument register
+  PutWriter(this.varIndex, this.argSlot);
+}
+
+/// Place reader variable into argument register (BODY phase)
+/// Derives reader from writer in clause variable
+class PutReader implements Op {
+  final int varIndex;  // clause variable index holding writer ID
+  final int argSlot;   // target argument register
+  PutReader(this.varIndex, this.argSlot);
+}
+
+/// Place constant value into argument register (BODY phase)
+class PutConstant implements Op {
+  final Object? value;
+  final int argSlot;
+  PutConstant(this.value, this.argSlot);
+}
+
 // ===== v2.16 HEAD instructions (encode clause patterns) =====
 /// Match constant c with argument at argSlot
 /// Behavior: Writer(w) → σ̂w[w]=c; Reader(r) → Si+={r}; Ground(t) → check t==c
@@ -136,4 +159,20 @@ class BodySetConstArg implements Op {
 class TailStep implements Op {
   final LabelName label;
   TailStep(this.label);
+}
+
+/// Spawn new goal for procedure P with arguments in A1-An
+/// Non-tail call: saves continuation and schedules new goal
+class Spawn implements Op {
+  final LabelName procedureLabel;  // procedure entry label
+  final int arity;                  // number of arguments
+  Spawn(this.procedureLabel, this.arity);
+}
+
+/// Tail call to procedure P with arguments in A1-An
+/// Reuses current goal frame, implements fair scheduling via tail recursion budget
+class Requeue implements Op {
+  final LabelName procedureLabel;  // procedure entry label
+  final int arity;                  // number of arguments
+  Requeue(this.procedureLabel, this.arity);
 }

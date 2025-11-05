@@ -2,6 +2,7 @@ import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/commit.dart';
+import 'package:glp_runtime/runtime/cells.dart';
 import 'opcodes.dart';
 
 enum RunResult { terminated, suspended, yielded }
@@ -34,6 +35,14 @@ class CallEnv {
         readerBySlot = readers ?? <int,int>{};
   int? w(int slot) => writerBySlot[slot];
   int? r(int slot) => readerBySlot[slot];
+
+  /// Update environment with new argument mappings (for requeue/tail calls)
+  void update(Map<int,int> newWriters, Map<int,int> newReaders) {
+    writerBySlot.clear();
+    writerBySlot.addAll(newWriters);
+    readerBySlot.clear();
+    readerBySlot.addAll(newReaders);
+  }
 }
 
 class RunnerContext {
@@ -51,6 +60,10 @@ class RunnerContext {
   int S = 0;                          // Structure pointer (current position in structure)
   Object? currentStructure;           // Current structure being traversed
   final Map<int, Object?> clauseVars = {}; // Clause variable bindings (varIndex → value)
+
+  // Argument registers for goal calls (A1, A2, ..., An)
+  final Map<int, int> argWriters = {};  // argSlot → writer ID
+  final Map<int, int> argReaders = {};  // argSlot → reader ID
 
   final void Function(GoalRef)? onActivation; // host log hook
 
@@ -618,6 +631,73 @@ class BytecodeRunner {
         pc++; continue;
       }
 
+      // ===== BODY argument setup instructions =====
+      if (op is PutWriter) {
+        if (cx.inBody) {
+          // Get writer ID from clause variable
+          final value = cx.clauseVars[op.varIndex];
+          if (value is int) {
+            // It's a writer ID - store in argument register
+            cx.argWriters[op.argSlot] = value;
+          } else if (value is _ClauseVar) {
+            // It's a placeholder - we need to create an actual writer
+            // This happens when HeadWriter created a placeholder in WRITE mode
+            final freshWriterId = cx.goalId * 10000 + op.varIndex * 100 + 70;
+            final freshReaderId = cx.goalId * 10000 + op.varIndex * 100 + 71;
+            cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
+            cx.rt.heap.addReader(ReaderCell(freshReaderId));
+            cx.argWriters[op.argSlot] = freshWriterId;
+            // Update clause var to point to the actual writer
+            cx.clauseVars[op.varIndex] = freshWriterId;
+          } else {
+            print('WARNING: PutWriter got unexpected value: $value');
+          }
+        }
+        pc++; continue;
+      }
+
+      if (op is PutReader) {
+        if (cx.inBody) {
+          // Get writer ID from clause variable, derive its reader
+          final value = cx.clauseVars[op.varIndex];
+          if (value is int) {
+            // It's a writer ID - get its paired reader
+            final wc = cx.rt.heap.writer(value);
+            if (wc != null) {
+              cx.argReaders[op.argSlot] = wc.readerId;
+            } else {
+              print('ERROR: PutReader could not find writer $value in heap');
+            }
+          } else if (value is ConstTerm) {
+            // It's a ground term - create fresh writer/reader and bind it
+            final freshWriterId = cx.goalId * 10000 + op.argSlot * 100 + 60;
+            final freshReaderId = cx.goalId * 10000 + op.argSlot * 100 + 61;
+            cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
+            cx.rt.heap.addReader(ReaderCell(freshReaderId));
+            cx.rt.heap.bindWriterConst(freshWriterId, value.value);
+            cx.argReaders[op.argSlot] = freshReaderId;
+          } else {
+            // Unknown - skip
+            print('WARNING: PutReader got unexpected value: $value');
+          }
+        }
+        pc++; continue;
+      }
+
+      if (op is PutConstant) {
+        if (cx.inBody) {
+          // For constants, we create a fresh writer/reader pair and bind immediately
+          // Generate IDs (simple approach: use goalId * 10000 + slot offset)
+          final freshWriterId = cx.goalId * 10000 + op.argSlot * 100 + 50;
+          final freshReaderId = cx.goalId * 10000 + op.argSlot * 100 + 51;
+          cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
+          cx.rt.heap.addReader(ReaderCell(freshReaderId));
+          cx.rt.heap.bindWriterConst(freshWriterId, op.value);
+          cx.argReaders[op.argSlot] = freshReaderId;
+        }
+        pc++; continue;
+      }
+
       // Fairness
       if (op is TailStep) {
         final shouldYield = cx.rt.tailReduce(cx.goalId);
@@ -628,6 +708,72 @@ class BytecodeRunner {
           pc = prog.labels[op.label]!;
           continue;
         }
+      }
+
+      // ===== Goal spawning and control flow =====
+      if (op is Spawn) {
+        if (cx.inBody) {
+          // Spawn a new goal with arguments from argWriters/argReaders
+          // Create CallEnv from current argument registers
+          final newEnv = CallEnv(
+            writers: Map.from(cx.argWriters),
+            readers: Map.from(cx.argReaders),
+          );
+
+          // Get entry point for procedure
+          final entryPc = prog.labels[op.procedureLabel];
+          if (entryPc == null) {
+            print('ERROR: Spawn could not find procedure label: ${op.procedureLabel}');
+            return RunResult.terminated;
+          }
+
+          // Create and enqueue new goal
+          final newGoalId = cx.goalId * 1000 + pc;  // Simple ID generation
+          final newGoalRef = GoalRef(newGoalId, entryPc);
+
+          // TODO: Need to actually run the goal or queue it properly
+          // For now, just queue it
+          cx.rt.gq.enqueue(newGoalRef);
+
+          // Clear argument registers for next spawn
+          cx.argWriters.clear();
+          cx.argReaders.clear();
+        }
+        pc++; continue;
+      }
+
+      if (op is Requeue) {
+        if (cx.inBody) {
+          // Tail call - reuse current goal, jump to procedure entry
+          // Get entry point for procedure
+          final entryPc = prog.labels[op.procedureLabel];
+          if (entryPc == null) {
+            print('ERROR: Requeue could not find procedure label: ${op.procedureLabel}');
+            return RunResult.terminated;
+          }
+
+          // Update environment with new arguments
+          cx.env.update(Map.from(cx.argWriters), Map.from(cx.argReaders));
+
+          // Clear argument registers
+          cx.argWriters.clear();
+          cx.argReaders.clear();
+
+          // Reset clause state for new procedure
+          cx.sigmaHat.clear();
+          cx.si.clear();
+          cx.U.clear();
+          cx.clauseVars.clear();
+          cx.inBody = false;
+          cx.mode = UnifyMode.read;
+          cx.S = 0;
+          cx.currentStructure = null;
+
+          // Jump to procedure entry
+          pc = entryPc;
+          continue;
+        }
+        pc++; continue;
       }
 
       if (op is Proceed) {
