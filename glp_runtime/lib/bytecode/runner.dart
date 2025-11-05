@@ -1,9 +1,13 @@
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/terms.dart';
+import 'package:glp_runtime/runtime/commit.dart';
 import 'opcodes.dart';
 
 enum RunResult { terminated, suspended, yielded }
+
+/// Unification mode for structure traversal (WAM-style)
+enum UnifyMode { read, write }
 
 typedef LabelName = String;
 
@@ -37,10 +41,16 @@ class RunnerContext {
   final int goalId;
   final int kappa;
   final CallEnv env;
-  final Set<int> sigmaHat = <int>{}; // tentative writers
-  final Set<int> si = <int>{};       // clause-local blockers
-  final Set<int> U = <int>{};        // union across clauses
+  final Map<int, Object?> sigmaHat = <int, Object?>{}; // σ̂w: tentative writer bindings
+  final Set<int> si = <int>{};       // clause-local blockers (reader IDs)
+  final Set<int> U = <int>{};        // union across clauses (reader IDs)
   bool inBody = false;
+
+  // WAM-style structure traversal state
+  UnifyMode mode = UnifyMode.read;   // Current unification mode
+  int S = 0;                          // Structure pointer (current position in structure)
+  Object? currentStructure;           // Current structure being traversed
+  final Map<int, Object?> clauseVars = {}; // Clause variable bindings (varIndex → value)
 
   final void Function(GoalRef)? onActivation; // host log hook
 
@@ -52,7 +62,15 @@ class RunnerContext {
     this.onActivation,
   }) : env = env ?? CallEnv();
 
-  void clearClause() { sigmaHat.clear(); si.clear(); inBody = false; }
+  void clearClause() {
+    sigmaHat.clear();
+    si.clear();
+    inBody = false;
+    mode = UnifyMode.read;
+    S = 0;
+    currentStructure = null;
+    clauseVars.clear();
+  }
 }
 
 class BytecodeRunner {
@@ -82,11 +100,100 @@ class BytecodeRunner {
         pc++; continue;
       }
 
-      // Head (concrete or Arg)
-      if (op is HeadBindWriter) { cx.sigmaHat.add(op.writerId); pc++; continue; }
+      // ===== v2.16 HEAD instructions =====
+      if (op is HeadConstant) {
+        final arg = _getArg(cx, op.argSlot);
+        if (arg == null) { pc++; continue; } // No argument at this slot
+
+        if (arg.isWriter) {
+          // Writer: record tentative binding in σ̂w
+          cx.sigmaHat[arg.writerId!] = op.value;
+        } else if (arg.isReader) {
+          // Reader: check if bound, else add to Si
+          final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
+          if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
+            cx.si.add(arg.readerId!);
+          }
+          // TODO: if bound, check value matches op.value
+        } else {
+          // Ground: check if value matches
+          // TODO: implement proper ground term matching
+        }
+        pc++; continue;
+      }
+
+      if (op is HeadStructure) {
+        final arg = _getArg(cx, op.argSlot);
+        if (arg == null) { pc++; continue; }
+
+        if (arg.isWriter) {
+          // WRITE mode: create tentative structure for writer
+          final struct = _TentativeStruct(op.functor, op.arity, List.filled(op.arity, null));
+          cx.sigmaHat[arg.writerId!] = struct;
+          cx.currentStructure = struct;
+          cx.mode = UnifyMode.write;
+          cx.S = 0; // Start at first arg
+        } else if (arg.isReader) {
+          // Reader: check if bound and has matching structure
+          final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
+          if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
+            cx.si.add(arg.readerId!);
+            pc++; continue;
+          }
+          // TODO: READ mode - traverse existing structure
+          // For now, just continue
+        } else {
+          // Ground structure: READ mode
+          // TODO: implement structure matching for ground terms
+        }
+        pc++; continue;
+      }
+
+      if (op is HeadWriter) {
+        // Process writer variable in structure (at S position)
+        if (cx.mode == UnifyMode.write) {
+          // WRITE mode: We're building a structure - create placeholder for writer
+          // The actual writer ID will be determined later (this is a clause variable)
+          if (cx.currentStructure is _TentativeStruct) {
+            final struct = cx.currentStructure as _TentativeStruct;
+            // Create a placeholder - actual writer binding happens separately
+            struct.args[cx.S] = 'W${op.varIndex}'; // Placeholder
+            cx.clauseVars[op.varIndex] = 'W${op.varIndex}';
+            cx.S++; // Advance to next arg
+          }
+        } else {
+          // READ mode: Extract value from structure at S position
+          // TODO: implement READ mode structure traversal
+        }
+        pc++; continue;
+      }
+
+      if (op is HeadReader) {
+        // Process reader variable in structure (at S position)
+        if (cx.mode == UnifyMode.write) {
+          // WRITE mode: Building structure - add reader placeholder
+          if (cx.currentStructure is _TentativeStruct) {
+            final struct = cx.currentStructure as _TentativeStruct;
+            struct.args[cx.S] = 'R${op.varIndex}'; // Placeholder
+            cx.clauseVars[op.varIndex] = 'R${op.varIndex}';
+            cx.S++; // Advance to next arg
+          }
+        } else {
+          // READ mode: Check reader at S position
+          // TODO: implement READ mode reader checking
+        }
+        pc++; continue;
+      }
+
+      // Legacy HEAD opcodes (for backward compatibility)
+      if (op is HeadBindWriter) {
+        // Mark writer as involved (no value binding for legacy opcode)
+        cx.sigmaHat[op.writerId] = null;
+        pc++; continue;
+      }
       if (op is HeadBindWriterArg) {
         final wid = cx.env.w(op.slot);
-        if (wid != null) cx.sigmaHat.add(wid);
+        if (wid != null) cx.sigmaHat[wid] = null;
         pc++; continue;
       }
       if (op is GuardNeedReader) {
@@ -106,8 +213,18 @@ class BytecodeRunner {
         pc++; continue;
       }
 
-      // Commit (phase change only)
+      // Commit (apply σ̂w and wake suspended goals) - v2.16 semantics
       if (op is Commit) {
+        // Apply σ̂w: bind writers to tentative values, then wake suspended goals
+        final acts = CommitOps.applySigmaHatV216(
+          heap: cx.rt.heap,
+          roq: cx.rt.roq,
+          sigmaHat: cx.sigmaHat,
+        );
+        for (final a in acts) {
+          cx.rt.gq.enqueue(a);
+          if (cx.onActivation != null) cx.onActivation!(a);
+        }
         cx.sigmaHat.clear();
         cx.inBody = true;
         pc++; continue;
@@ -191,10 +308,59 @@ class BytecodeRunner {
         }
       }
 
-      if (op is Proceed) { pc++; continue; }
+      if (op is Proceed) {
+        // Complete current procedure - terminate execution
+        return RunResult.terminated;
+      }
 
       pc++; // default progress
     }
     return RunResult.terminated;
   }
+
+  /// Helper to get argument info from call environment
+  _ArgInfo? _getArg(RunnerContext cx, int slot) {
+    final wid = cx.env.w(slot);
+    if (wid != null) return _ArgInfo(writerId: wid);
+
+    final rid = cx.env.r(slot);
+    if (rid != null) return _ArgInfo(readerId: rid);
+
+    // TODO: Handle ground terms
+    return null;
+  }
+}
+
+/// Helper class to represent argument information
+class _ArgInfo {
+  final int? writerId;
+  final int? readerId;
+
+  _ArgInfo({this.writerId, this.readerId});
+
+  bool get isWriter => writerId != null;
+  bool get isReader => readerId != null;
+}
+
+/// Tentative structure during HEAD phase (before commit)
+class _TentativeStruct {
+  final String functor;
+  final int arity;
+  final List<Object?> args;
+
+  _TentativeStruct(this.functor, this.arity, this.args);
+
+  @override
+  String toString() => '$functor/${arity}(${args.join(", ")})';
+}
+
+/// Helper to represent list structures
+class _ListStruct {
+  final Object? head;
+  final Object? tail;
+
+  _ListStruct(this.head, this.tail);
+
+  @override
+  String toString() => '[$head|$tail]';
 }

@@ -3,6 +3,41 @@ import 'heap.dart';
 import 'roq.dart';
 
 class CommitOps {
+  /// Apply tentative writer substitution σ̂w (v2.16 semantics)
+  /// 1. Bind writers to their tentative values in σ̂w
+  /// 2. Process ROQ for each writer (wake suspended goals)
+  static List<GoalRef> applySigmaHatV216({
+    required Heap heap,
+    required ROQueues roq,
+    required Map<int, Object?> sigmaHat,
+  }) {
+    final acts = <GoalRef>[];
+    for (final entry in sigmaHat.entries) {
+      final writerId = entry.key;
+      final value = entry.value;
+
+      // Apply binding to heap
+      if (value is String || value is int || value is bool || value == null) {
+        // Constant value
+        heap.bindWriterConst(writerId, value);
+      } else {
+        // TODO: Handle structure bindings when we implement tentative structures
+        // For now, just process ROQ even without binding
+      }
+
+      // Process ROQ to wake goals suspended on this writer's reader
+      final wc = heap.writer(writerId);
+      if (wc != null) {
+        final r = wc.readerId;
+        final a = roq.processOnBind(r);
+        if (a.isNotEmpty) acts.addAll(a);
+      }
+    }
+    return acts;
+  }
+
+  /// Legacy version: only processes ROQs for writer IDs (no binding)
+  /// Used by existing code that binds writers separately
   static List<GoalRef> applySigmaHat({
     required Heap heap,
     required ROQueues roq,

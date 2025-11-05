@@ -35,7 +35,39 @@ class BodySetStructConstArgs implements Op {
   BodySetStructConstArgs(this.writerId, this.functor, this.constArgs);
 }
 
-// Head ops with concrete ids
+// ===== v2.16 HEAD instructions (encode clause patterns) =====
+/// Match constant c with argument at argSlot
+/// Behavior: Writer(w) → σ̂w[w]=c; Reader(r) → Si+={r}; Ground(t) → check t==c
+class HeadConstant implements Op {
+  final Object? value;
+  final int argSlot;
+  HeadConstant(this.value, this.argSlot);
+}
+
+/// Match structure f/n with argument at argSlot
+/// Sets READ/WRITE mode and S register for subsequent structure traversal
+class HeadStructure implements Op {
+  final String functor;
+  final int arity;
+  final int argSlot;
+  HeadStructure(this.functor, this.arity, this.argSlot);
+}
+
+/// Process writer variable in structure (at S register position)
+/// Operates in READ or WRITE mode
+class HeadWriter implements Op {
+  final int varIndex;  // clause variable index
+  HeadWriter(this.varIndex);
+}
+
+/// Process reader variable in structure (at S register position)
+/// Operates in READ or WRITE mode, may add to Si
+class HeadReader implements Op {
+  final int varIndex;  // clause variable index
+  HeadReader(this.varIndex);
+}
+
+// Legacy opcodes (for backward compatibility with existing tests)
 class HeadBindWriter implements Op {
   final int writerId;
   HeadBindWriter(this.writerId);
