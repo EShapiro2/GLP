@@ -1083,5 +1083,168 @@ void main() {
       print('✅ PASS\n');
     });
 
+    // TEST 25: metainterp_pp_test.dart
+    test('metainterp pp: boot :- run(p(X)), run(p(X?))', () {
+      print('\n=== TEST 25: metainterp p(X) then p(X?) ===');
+      final compiler = GlpCompiler();
+      final source = '''
+        run(true).
+        run(A) :- otherwise | clause(A?, B), run(B?).
+        clause(p(a), true).
+        clause(p(b), true).
+        boot :- run(p(X)), run(p(X?)).
+      ''';
+      final program = compiler.compile(source);
+
+      final rt = GlpRuntime();
+      final runner = BytecodeRunner(program);
+      final sched = Scheduler(rt: rt, runner: runner);
+
+      const goalId = 100;
+      rt.setGoalEnv(goalId, CallEnv());
+      rt.gq.enqueue(GoalRef(goalId, program.labels['boot/0']!));
+
+      final ran = sched.drain(maxCycles: 1000);
+      expect(ran.isNotEmpty, true);
+      print('✅ PASS\n');
+    });
+
+    // TEST 26: metainterp_pq_test.dart
+    test('metainterp pq: boot :- run(p(X)), run(q(X?))', () {
+      print('\n=== TEST 26: metainterp p/q program ===');
+      final compiler = GlpCompiler();
+      final source = '''
+        run(true).
+        run(A) :- otherwise | clause(A?, B), run(B?).
+        clause(p(a), true).
+        clause(p(b), true).
+        clause(q(b), true).
+        boot :- run(p(X)), run(q(X?)).
+      ''';
+      final program = compiler.compile(source);
+
+      final rt = GlpRuntime();
+      final runner = BytecodeRunner(program);
+      final sched = Scheduler(rt: rt, runner: runner);
+
+      const goalId = 100;
+      rt.setGoalEnv(goalId, CallEnv());
+      rt.gq.enqueue(GoalRef(goalId, program.labels['boot/0']!));
+
+      final ran = sched.drain(maxCycles: 1000);
+      expect(ran.isNotEmpty, true);
+      print('✅ PASS\n');
+    });
+
+    // TEST 27: metainterp_rp_test.dart
+    test('metainterp rp: boot :- run(p(X?)), run(p(X))', () {
+      print('\n=== TEST 27: metainterp p(X?) then p(X) ===');
+      final compiler = GlpCompiler();
+      final source = '''
+        run(true).
+        run(A) :- otherwise | clause(A?, B), run(B?).
+        clause(p(a), true).
+        clause(p(b), true).
+        boot :- run(p(X?)), run(p(X)).
+      ''';
+      final program = compiler.compile(source);
+
+      final rt = GlpRuntime();
+      final runner = BytecodeRunner(program);
+      final sched = Scheduler(rt: rt, runner: runner);
+
+      const goalId = 100;
+      rt.setGoalEnv(goalId, CallEnv());
+      rt.gq.enqueue(GoalRef(goalId, program.labels['boot/0']!));
+
+      final ran = sched.drain(maxCycles: 1000);
+      expect(ran.isNotEmpty, true);
+      print('✅ PASS\n');
+    });
+
+    // TEST 28: metainterp_reversed_test.dart
+    test('metainterp reversed: run((p(X?), p(X)))', () {
+      print('\n=== TEST 28: metainterp reversed order ===');
+      final compiler = GlpCompiler();
+      final source = '''
+        run(true).
+        run((A, B)) :- run(A?), run(B?).
+        run(A) :- otherwise | clause(A?, B), run(B?).
+        clause(p(a), true).
+        clause(q(a), true).
+      ''';
+      final program = compiler.compile(source);
+
+      final rt = GlpRuntime();
+
+      // Build structure p(X) and p(X?) tuple
+      const wX = 1, rX = 2;
+      rt.heap.addWriter(WriterCell(wX, rX));
+      rt.heap.addReader(ReaderCell(rX));
+
+      // Build p(X?)
+      const wPXr = 3, rPXr = 4;
+      rt.heap.addWriter(WriterCell(wPXr, rPXr));
+      rt.heap.addReader(ReaderCell(rPXr));
+      rt.heap.bindWriterStruct(wPXr, 'p', [ReaderTerm(rX)]);
+
+      // Build p(X)
+      const wPXw = 5, rPXw = 6;
+      rt.heap.addWriter(WriterCell(wPXw, rPXw));
+      rt.heap.addReader(ReaderCell(rPXw));
+      rt.heap.bindWriterStruct(wPXw, 'p', [WriterTerm(wX)]);
+
+      // Build conjunction (p(X?), p(X))
+      const wConj = 7, rConj = 8;
+      rt.heap.addWriter(WriterCell(wConj, rConj));
+      rt.heap.addReader(ReaderCell(rConj));
+      rt.heap.bindWriterStruct(wConj, ',', [ReaderTerm(rPXr), ReaderTerm(rPXw)]);
+
+      final runner = BytecodeRunner(program);
+      final sched = Scheduler(rt: rt, runner: runner);
+
+      const goalId = 100;
+      rt.setGoalEnv(goalId, CallEnv(readers: {0: rConj}));
+      rt.gq.enqueue(GoalRef(goalId, program.labels['run/1']!));
+
+      final ran = sched.drain(maxCycles: 1000);
+      expect(ran.isNotEmpty, true);
+
+      // X should bind to 'a'
+      expect(rt.heap.isWriterBound(wX), true);
+      final valueX = rt.heap.valueOfWriter(wX);
+      expect(valueX, isA<ConstTerm>());
+      expect((valueX as ConstTerm).value, 'a');
+
+      print('✅ PASS\n');
+    });
+
+    // TEST 29: metainterp_full_test.dart (same as pq)
+    test('metainterp full: boot :- run(p(X)), run(q(X?))', () {
+      print('\n=== TEST 29: metainterp full test ===');
+      final compiler = GlpCompiler();
+      final source = '''
+        run(true).
+        run(A) :- otherwise | clause(A?, B), run(B?).
+        clause(p(a), true).
+        clause(p(b), true).
+        clause(q(b), true).
+        boot :- run(p(X)), run(q(X?)).
+      ''';
+      final program = compiler.compile(source);
+
+      final rt = GlpRuntime();
+      final runner = BytecodeRunner(program);
+      final sched = Scheduler(rt: rt, runner: runner);
+
+      const goalId = 100;
+      rt.setGoalEnv(goalId, CallEnv());
+      rt.gq.enqueue(GoalRef(goalId, program.labels['boot/0']!));
+
+      final ran = sched.drain(maxCycles: 1000);
+      expect(ran.isNotEmpty, true);
+      print('✅ PASS\n');
+    });
+
   });
 }
