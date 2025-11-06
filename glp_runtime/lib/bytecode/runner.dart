@@ -785,6 +785,9 @@ class BytecodeRunner {
               if (wc != null) {
                 struct.args[cx.S] = ReaderTerm(wc.readerId);
               }
+            } else if (clauseVarValue is ReaderTerm) {
+              // Clause var is already a reader term - use it directly
+              struct.args[cx.S] = clauseVarValue;
             } else if (clauseVarValue is Term) {
               // Clause var is bound to a term (e.g., [] or a structure)
               // Create a fresh writer and tentatively bind it to this value in σ̂w

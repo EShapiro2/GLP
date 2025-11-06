@@ -158,9 +158,17 @@ void main() {
     const rList12 = 11;
     rt.heap.addWriter(WriterCell(wList12, rList12));
     rt.heap.addReader(ReaderCell(rList12));
+
+    // Build the tail [2|[]]
+    const wTail12 = 100;
+    const rTail12 = 101;
+    rt.heap.addWriter(WriterCell(wTail12, rTail12));
+    rt.heap.addReader(ReaderCell(rTail12));
+    rt.heap.bindWriterStruct(wTail12, '[|]', [ConstTerm('2'), ConstTerm('[]')]);
+
     rt.heap.bindWriterStruct(wList12, '[|]', [
       ConstTerm('1'),
-      ConstTerm('[|](Const(2),Const([]))'),
+      WriterTerm(wTail12),
     ]);
 
     // Build [3]
@@ -175,9 +183,17 @@ void main() {
     const rListAB = 15;
     rt.heap.addWriter(WriterCell(wListAB, rListAB));
     rt.heap.addReader(ReaderCell(rListAB));
+
+    // Build the tail [b|[]]
+    const wTailAB = 102;
+    const rTailAB = 103;
+    rt.heap.addWriter(WriterCell(wTailAB, rTailAB));
+    rt.heap.addReader(ReaderCell(rTailAB));
+    rt.heap.bindWriterStruct(wTailAB, '[|]', [ConstTerm('b'), ConstTerm('[]')]);
+
     rt.heap.bindWriterStruct(wListAB, '[|]', [
       ConstTerm('a'),
-      ConstTerm('[|](Const(b),Const([]))'),
+      WriterTerm(wTailAB),
     ]);
 
     // Build [c]
@@ -254,7 +270,7 @@ void main() {
     print('Starting goal at PC ${prog.labels['run/1']}');
     print('');
 
-    final ran = sched.drain(maxCycles: 200);
+    final ran = sched.drain(maxCycles: 1000);
 
     print('');
     print('Goals executed: $ran');
@@ -268,20 +284,71 @@ void main() {
     print('Ys (W$wYs) bound: ${rt.heap.isWriterBound(wYs)}');
     print('Zs (W$wZs) bound: ${rt.heap.isWriterBound(wZs)}');
 
-    if (rt.heap.isWriterBound(wXs)) {
-      final xsValue = rt.heap.valueOfWriter(wXs);
-      print('Xs value: $xsValue');
+    // Helper function to dereference and print list contents
+    void printList(String name, int writerId) {
+      if (!rt.heap.isWriterBound(writerId)) {
+        print('$name: UNBOUND');
+        return;
+      }
+
+      final value = rt.heap.valueOfWriter(writerId);
+      print('$name value: $value');
+
+      // Walk the list and dereference all elements
+      var current = value;
+      final elements = <String>[];
+      var depth = 0;
+
+      while (current is StructTerm && current.functor == '[|]' && depth < 20) {
+        depth++;
+        if (current.args.isEmpty) break;
+
+        // Get head element
+        final head = current.args[0];
+        if (head is ReaderTerm) {
+          final wid = rt.heap.writerIdForReader(head.readerId);
+          if (wid != null && rt.heap.isWriterBound(wid)) {
+            final headValue = rt.heap.valueOfWriter(wid);
+            elements.add(headValue.toString());
+          } else {
+            elements.add('R${head.readerId}(unbound)');
+          }
+        } else if (head is ConstTerm) {
+          elements.add(head.value.toString());
+        } else {
+          elements.add(head.toString());
+        }
+
+        // Get tail
+        if (current.args.length > 1) {
+          final tail = current.args[1];
+          if (tail is ReaderTerm) {
+            final wid = rt.heap.writerIdForReader(tail.readerId);
+            if (wid != null && rt.heap.isWriterBound(wid)) {
+              current = rt.heap.valueOfWriter(wid);
+              if (current is ConstTerm && current.value == '[]') {
+                break; // End of list
+              }
+            } else {
+              elements.add('... R${tail.readerId}(unbound)');
+              break;
+            }
+          } else if (tail is ConstTerm && tail.value == '[]') {
+            break; // End of list
+          } else {
+            current = tail;
+          }
+        } else {
+          break;
+        }
+      }
+
+      print('  $name = [${elements.join(', ')}]');
     }
 
-    if (rt.heap.isWriterBound(wYs)) {
-      final ysValue = rt.heap.valueOfWriter(wYs);
-      print('Ys value: $ysValue');
-    }
-
-    if (rt.heap.isWriterBound(wZs)) {
-      final zsValue = rt.heap.valueOfWriter(wZs);
-      print('Zs value: $zsValue');
-    }
+    printList('Xs', wXs);
+    printList('Ys', wYs);
+    printList('Zs', wZs);
 
     print('');
     print('✓ Three-way merge test complete');
