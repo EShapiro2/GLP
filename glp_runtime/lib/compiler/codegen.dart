@@ -15,7 +15,7 @@ class CodeGenContext {
   final List<String> pendingLabels = [];  // Labels waiting to be placed
 
   // Temporary variable allocation
-  int nextTempVar = 0;
+  int nextTempVar = 10;  // Start temps at 10 to avoid collision with argument registers
   final Map<String, int> tempAllocation = {};
 
   // Current procedure context
@@ -46,7 +46,7 @@ class CodeGenContext {
   int allocateTemp() => nextTempVar++;
 
   void resetTemps() {
-    nextTempVar = 0;
+    nextTempVar = 10;  // Reset to 10 to avoid argument register collision
     tempAllocation.clear();
   }
 }
@@ -195,11 +195,46 @@ class CodeGenerator {
       }
 
     } else if (term is StructTerm) {
-      // Structure in head: head_structure then traverse arguments
+      // Structure in head: use two-pass approach to match hand-written bytecode
+      // Pass 1: Emit head_structure and extract all arguments (including nested structures) into temps/vars
       ctx.emit(bc.HeadStructure(term.functor, term.arity, argSlot));
 
+      final nestedStructures = <int, Term>{}; // Map of tempReg -> nested term
+
       for (final subArg in term.args) {
-        _generateStructureElement(subArg, varTable, ctx, inHead: true);
+        if (subArg is ListTerm && !subArg.isNil) {
+          // Nested list: extract to temp, defer processing
+          final tempReg = ctx.allocateTemp();
+          ctx.emit(bc.UnifyWriter(tempReg));
+          nestedStructures[tempReg] = subArg;
+        } else if (subArg is StructTerm) {
+          // Nested structure: extract to temp, defer processing
+          final tempReg = ctx.allocateTemp();
+          ctx.emit(bc.UnifyWriter(tempReg));
+          nestedStructures[tempReg] = subArg;
+        } else {
+          // Simple term: process inline
+          _generateStructureElement(subArg, varTable, ctx, inHead: true);
+        }
+      }
+
+      // Pass 2: Process deferred nested structures
+      for (final entry in nestedStructures.entries) {
+        final tempReg = entry.key;
+        final nestedTerm = entry.value;
+
+        if (nestedTerm is ListTerm) {
+          // Match list structure at temp
+          ctx.emit(bc.HeadStructure('.', 2, tempReg));
+          if (nestedTerm.head != null) _generateStructureElement(nestedTerm.head!, varTable, ctx, inHead: true);
+          if (nestedTerm.tail != null) _generateStructureElement(nestedTerm.tail!, varTable, ctx, inHead: true);
+        } else if (nestedTerm is StructTerm) {
+          // Match structure at temp
+          ctx.emit(bc.HeadStructure(nestedTerm.functor, nestedTerm.arity, tempReg));
+          for (final subSubArg in nestedTerm.args) {
+            _generateStructureElement(subSubArg, varTable, ctx, inHead: true);
+          }
+        }
       }
 
     } else if (term is UnderscoreTerm) {

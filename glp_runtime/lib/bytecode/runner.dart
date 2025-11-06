@@ -263,6 +263,7 @@ class BytecodeRunner {
         // Check if argSlot refers to a clause variable (for nested structures) or argument register
         // Clause variables are used when matching extracted nested structures (argSlot >= 10 by convention)
         final bool isClauseVar = op.argSlot >= 10;
+        if (debug && cx.goalId >= 4000) print('  HeadStructure: argSlot=${op.argSlot}, isClauseVar=$isClauseVar, functor=${op.functor}/${op.arity}');
         final arg = isClauseVar ? null : _getArg(cx, op.argSlot);
 
         if (!isClauseVar && arg == null) {
@@ -1685,9 +1686,73 @@ class BytecodeRunner {
 
       // ===== LIST-SPECIFIC HEAD INSTRUCTIONS =====
       if (op is HeadNil) {
-        // Match empty list [] with argument
-        // Equivalent to HeadConstant('[]', op.argSlot)
-        final arg = _getArg(cx, op.argSlot);
+        // Match empty list [] with argument or clause variable
+        // Check if argSlot refers to a clause variable (for nested structures) or argument register
+        final bool isClauseVar = op.argSlot >= 10;
+        final arg = isClauseVar ? null : _getArg(cx, op.argSlot);
+
+        // For clause variables, get the value from clauseVars
+        if (isClauseVar) {
+          final clauseVarValue = cx.clauseVars[op.argSlot];
+          if (clauseVarValue == null) {
+            // Unbound clause variable - soft fail
+            if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} is unbound, failing');
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
+
+          // Check if the value is [] (empty list)
+          if (clauseVarValue is ConstTerm) {
+            if (clauseVarValue.value == '[]' || clauseVarValue.value == null) {
+              // Match!
+              if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = $clauseVarValue, MATCH');
+              pc++;
+              continue;
+            } else {
+              // Non-empty constant
+              if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = $clauseVarValue, NO MATCH');
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            }
+          } else if (clauseVarValue is StructTerm) {
+            // Structure (non-empty list) doesn't match []
+            if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} is struct, NO MATCH');
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          } else if (clauseVarValue is int) {
+            // Writer ID - check if bound
+            final wid = clauseVarValue;
+            if (cx.rt.heap.isWriterBound(wid)) {
+              final value = cx.rt.heap.valueOfWriter(wid);
+              if (value is ConstTerm && (value.value == '[]' || value.value == null)) {
+                if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = W$wid = $value, MATCH');
+                pc++;
+                continue;
+              } else {
+                if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = W$wid = $value, NO MATCH');
+                _softFailToNextClause(cx, pc);
+                pc = _findNextClauseTry(pc);
+                continue;
+              }
+            } else {
+              // Unbound writer - enter WRITE mode to bind to []
+              cx.sigmaHat[wid] = ConstTerm('[]');
+              if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = W$wid (unbound), binding to []');
+              pc++;
+              continue;
+            }
+          }
+
+          // Unexpected clauseVar type
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+
+        // Regular argument handling
         if (arg == null) { pc++; continue; } // No argument at this slot
 
         if (arg.isWriter) {

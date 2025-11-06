@@ -1246,13 +1246,287 @@ void main() {
       print('✅ PASS\n');
     });
 
-    // TEST 30-33: Merge metainterp tests - TODO
-    // These compile successfully but fail at runtime
-    // Source code is valid SRSW:
-    //   clause(merge([X|Xs], Ys, [X?|Zs?]), merge(Ys?, Xs?, Zs)).
-    //   clause(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
-    //   clause(merge([], [], []), true).
-    // Need investigation of runtime behavior
+    // TEST 30: metainterp_merge_test.dart
+    test('metainterp merge: run(merge([a],[b],Zs))', () {
+      print('\n=== TEST 30: metainterp merge ===');
+      final compiler = GlpCompiler();
+      final source = '''
+        run(true).
+        run((A, B)) :- run(A?), run(B?).
+        run(A) :- otherwise | clause(A?, B), run(B?).
+        clause(merge([X|Xs], Ys, [X?|Zs?]), merge(Ys?, Xs?, Zs)).
+        clause(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+        clause(merge([], [], []), true).
+      ''';
+      final program = compiler.compile(source);
+
+      final rt = GlpRuntime();
+
+      // Build list [a] - use null for empty list since compiler uses that
+      const wListA = 10, rListA = 11;
+      rt.heap.addWriter(WriterCell(wListA, rListA));
+      rt.heap.addReader(ReaderCell(rListA));
+      rt.heap.bindWriterStruct(wListA, '.', [ConstTerm('a'), ConstTerm(null)]);
+
+      // Build list [b]
+      const wListB = 12, rListB = 13;
+      rt.heap.addWriter(WriterCell(wListB, rListB));
+      rt.heap.addReader(ReaderCell(rListB));
+      rt.heap.bindWriterStruct(wListB, '.', [ConstTerm('b'), ConstTerm(null)]);
+
+      // Build Zs (unbound writer for result)
+      const wZs = 14, rZs = 15;
+      rt.heap.addWriter(WriterCell(wZs, rZs));
+      rt.heap.addReader(ReaderCell(rZs));
+
+      // Build merge([a],[b],Zs)  - ALL args as WriterTerms
+      const wMerge = 16, rMerge = 17;
+      rt.heap.addWriter(WriterCell(wMerge, rMerge));
+      rt.heap.addReader(ReaderCell(rMerge));
+      rt.heap.bindWriterStruct(wMerge, 'merge', [
+        WriterTerm(wListA),
+        WriterTerm(wListB),
+        WriterTerm(wZs),
+      ]);
+
+      final runner = BytecodeRunner(program);
+      final sched = Scheduler(rt: rt, runner: runner);
+
+      // Start goal: run(merge([a],[b],Zs))
+      const goalId = 100;
+      rt.setGoalEnv(goalId, CallEnv(readers: {0: rMerge}));
+      rt.gq.enqueue(GoalRef(goalId, program.labels['run/1']!));
+
+      final ran = sched.drain(maxCycles: 500);
+
+      print('Goals executed: ${ran.length}');
+      print('Zs bound: ${rt.heap.isWriterBound(wZs)}');
+      if (rt.heap.isWriterBound(wZs)) {
+        final value = rt.heap.valueOfWriter(wZs);
+        print('Zs value: $value');
+      }
+
+      expect(ran.isNotEmpty, true);
+      expect(rt.heap.isWriterBound(wZs), true, reason: 'Zs should be bound to [a,b]');
+
+      final zsValue = rt.heap.valueOfWriter(wZs);
+      expect(zsValue, isA<StructTerm>(), reason: 'Should be a list structure');
+      final zsList = zsValue as StructTerm;
+      expect(zsList.functor, '.', reason: 'Should be list cons');
+
+      print('✅ PASS\n');
+    });
+
+    // TEST 31: metainterp_circular_merge_test.dart
+    test('metainterp circular merge: run((merge(Xs?,[a],Ys),merge(Ys?,[b],Xs)))', () {
+      print('\n=== TEST 31: metainterp circular merge ===');
+      final compiler = GlpCompiler();
+      final source = '''
+        run(true).
+        run((A, B)) :- run(A?), run(B?).
+        run(A) :- otherwise | clause(A?, B), run(B?).
+        clause(merge([X|Xs], Ys, [X?|Zs?]), merge(Ys?, Xs?, Zs)).
+        clause(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+        clause(merge([], [], []), true).
+      ''';
+      final program = compiler.compile(source);
+
+      final rt = GlpRuntime();
+
+      // Setup: Writer Xs and its paired reader, Writer Ys and its paired reader
+      const wXs = 1, rXs = 2;
+      rt.heap.addWriter(WriterCell(wXs, rXs));
+      rt.heap.addReader(ReaderCell(rXs));
+
+      const wYs = 3, rYs = 4;
+      rt.heap.addWriter(WriterCell(wYs, rYs));
+      rt.heap.addReader(ReaderCell(rYs));
+
+      // Build list [a]
+      const wListA = 10, rListA = 11;
+      rt.heap.addWriter(WriterCell(wListA, rListA));
+      rt.heap.addReader(ReaderCell(rListA));
+      rt.heap.bindWriterStruct(wListA, '.', [ConstTerm('a'), ConstTerm(null)]);
+
+      // Build list [b]
+      const wListB = 12, rListB = 13;
+      rt.heap.addWriter(WriterCell(wListB, rListB));
+      rt.heap.addReader(ReaderCell(rListB));
+      rt.heap.bindWriterStruct(wListB, '.', [ConstTerm('b'), ConstTerm(null)]);
+
+      // Build merge(Xs?,[a],Ys)
+      const wMerge1 = 20, rMerge1 = 21;
+      rt.heap.addWriter(WriterCell(wMerge1, rMerge1));
+      rt.heap.addReader(ReaderCell(rMerge1));
+      rt.heap.bindWriterStruct(wMerge1, 'merge', [
+        ReaderTerm(rXs),
+        WriterTerm(wListA),
+        WriterTerm(wYs),
+      ]);
+
+      // Build merge(Ys?,[b],Xs)
+      const wMerge2 = 22, rMerge2 = 23;
+      rt.heap.addWriter(WriterCell(wMerge2, rMerge2));
+      rt.heap.addReader(ReaderCell(rMerge2));
+      rt.heap.bindWriterStruct(wMerge2, 'merge', [
+        ReaderTerm(rYs),
+        WriterTerm(wListB),
+        WriterTerm(wXs),
+      ]);
+
+      // Build conjunction (merge1, merge2)
+      const wConj = 30, rConj = 31;
+      rt.heap.addWriter(WriterCell(wConj, rConj));
+      rt.heap.addReader(ReaderCell(rConj));
+      rt.heap.bindWriterStruct(wConj, ',', [
+        WriterTerm(wMerge1),
+        WriterTerm(wMerge2),
+      ]);
+
+      final runner = BytecodeRunner(program);
+      final sched = Scheduler(rt: rt, runner: runner);
+
+      // Start goal: run((merge(Xs?,[a],Ys),merge(Ys?,[b],Xs)))
+      const goalId = 100;
+      rt.setGoalEnv(goalId, CallEnv(readers: {0: rConj}));
+      rt.gq.enqueue(GoalRef(goalId, program.labels['run/1']!));
+
+      // Use reduction budget to prevent infinite loop
+      final ran = sched.drain(maxCycles: 50);
+
+      print('Goals executed: ${ran.length}');
+      print('Xs bound: ${rt.heap.isWriterBound(wXs)}');
+      print('Ys bound: ${rt.heap.isWriterBound(wYs)}');
+
+      expect(ran.isNotEmpty, true);
+      expect(ran.length, greaterThan(5), reason: 'Should execute multiple cycles');
+      expect(rt.heap.isWriterBound(wXs), true, reason: 'Xs should be bound');
+      expect(rt.heap.isWriterBound(wYs), true, reason: 'Ys should be bound');
+
+      print('✅ PASS\n');
+    });
+
+    // TEST 32: metainterp_three_way_merge_test.dart
+    test('metainterp three-way merge: run((merge([1,2],[3],Xs), merge([a,b],[c],Ys?), merge(Xs?,Ys?,Zs)))', () {}, skip: 'Complex test - needs more investigation');
+
+    // TEST 33: metainterp_three_way_circular_test.dart
+    test('metainterp three-way circular: run((merge([a|Xs?],Ys?,Zs), merge([b|Ys?],Zs?,Xs), merge([c|Zs?],Xs?,Ys)))', () {
+      print('\n=== TEST 33: metainterp three-way circular ===');
+      final compiler = GlpCompiler();
+      final source = '''
+        run(true).
+        run((A, B)) :- run(A?), run(B?).
+        run(A) :- otherwise | clause(A?, B), run(B?).
+        clause(merge([X|Xs], Ys, [X?|Zs?]), merge(Ys?, Xs?, Zs)).
+        clause(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+        clause(merge([], [], []), true).
+      ''';
+      final program = compiler.compile(source);
+
+      final rt = GlpRuntime();
+
+      // Setup: Writers for Xs, Ys, Zs
+      const wXs = 1, rXs = 2;
+      rt.heap.addWriter(WriterCell(wXs, rXs));
+      rt.heap.addReader(ReaderCell(rXs));
+
+      const wYs = 3, rYs = 4;
+      rt.heap.addWriter(WriterCell(wYs, rYs));
+      rt.heap.addReader(ReaderCell(rYs));
+
+      const wZs = 5, rZs = 6;
+      rt.heap.addWriter(WriterCell(wZs, rZs));
+      rt.heap.addReader(ReaderCell(rZs));
+
+      // Build lists [a|Xs?], [b|Ys?], [c|Zs?]
+      // [a|Xs?]
+      const wLa = 10, rLa = 11;
+      rt.heap.addWriter(WriterCell(wLa, rLa));
+      rt.heap.addReader(ReaderCell(rLa));
+      rt.heap.bindWriterStruct(wLa, '.', [ConstTerm('a'), ReaderTerm(rXs)]);
+
+      // [b|Ys?]
+      const wLb = 12, rLb = 13;
+      rt.heap.addWriter(WriterCell(wLb, rLb));
+      rt.heap.addReader(ReaderCell(rLb));
+      rt.heap.bindWriterStruct(wLb, '.', [ConstTerm('b'), ReaderTerm(rYs)]);
+
+      // [c|Zs?]
+      const wLc = 14, rLc = 15;
+      rt.heap.addWriter(WriterCell(wLc, rLc));
+      rt.heap.addReader(ReaderCell(rLc));
+      rt.heap.bindWriterStruct(wLc, '.', [ConstTerm('c'), ReaderTerm(rZs)]);
+
+      // Build merge([a|Xs?],Ys?,Zs)
+      const wM1 = 20, rM1 = 21;
+      rt.heap.addWriter(WriterCell(wM1, rM1));
+      rt.heap.addReader(ReaderCell(rM1));
+      rt.heap.bindWriterStruct(wM1, 'merge', [
+        WriterTerm(wLa),
+        ReaderTerm(rYs),
+        WriterTerm(wZs),
+      ]);
+
+      // Build merge([b|Ys?],Zs?,Xs)
+      const wM2 = 22, rM2 = 23;
+      rt.heap.addWriter(WriterCell(wM2, rM2));
+      rt.heap.addReader(ReaderCell(rM2));
+      rt.heap.bindWriterStruct(wM2, 'merge', [
+        WriterTerm(wLb),
+        ReaderTerm(rZs),
+        WriterTerm(wXs),
+      ]);
+
+      // Build merge([c|Zs?],Xs?,Ys)
+      const wM3 = 24, rM3 = 25;
+      rt.heap.addWriter(WriterCell(wM3, rM3));
+      rt.heap.addReader(ReaderCell(rM3));
+      rt.heap.bindWriterStruct(wM3, 'merge', [
+        WriterTerm(wLc),
+        ReaderTerm(rXs),
+        WriterTerm(wYs),
+      ]);
+
+      // Build conjunction (m1, (m2, m3))
+      const wConj2 = 30, rConj2 = 31;
+      rt.heap.addWriter(WriterCell(wConj2, rConj2));
+      rt.heap.addReader(ReaderCell(rConj2));
+      rt.heap.bindWriterStruct(wConj2, ',', [
+        WriterTerm(wM2),
+        WriterTerm(wM3),
+      ]);
+
+      const wConj1 = 32, rConj1 = 33;
+      rt.heap.addWriter(WriterCell(wConj1, rConj1));
+      rt.heap.addReader(ReaderCell(rConj1));
+      rt.heap.bindWriterStruct(wConj1, ',', [
+        WriterTerm(wM1),
+        WriterTerm(wConj2),
+      ]);
+
+      final runner = BytecodeRunner(program);
+      final sched = Scheduler(rt: rt, runner: runner);
+
+      const goalId = 100;
+      rt.setGoalEnv(goalId, CallEnv(readers: {0: rConj1}));
+      rt.gq.enqueue(GoalRef(goalId, program.labels['run/1']!));
+
+      // Use reduction budget to prevent infinite loop
+      final ran = sched.drain(maxCycles: 50);
+
+      print('Goals executed: ${ran.length}');
+      print('Xs bound: ${rt.heap.isWriterBound(wXs)}');
+      print('Ys bound: ${rt.heap.isWriterBound(wYs)}');
+      print('Zs bound: ${rt.heap.isWriterBound(wZs)}');
+
+      expect(ran.isNotEmpty, true);
+      expect(ran.length, greaterThan(5), reason: 'Should execute multiple cycles');
+      expect(rt.heap.isWriterBound(wXs), true, reason: 'Xs should be bound');
+      expect(rt.heap.isWriterBound(wYs), true, reason: 'Ys should be bound');
+      expect(rt.heap.isWriterBound(wZs), true, reason: 'Zs should be bound');
+
+      print('✅ PASS\n');
+    });
 
   });
 }
