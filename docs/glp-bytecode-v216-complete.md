@@ -104,12 +104,23 @@ All head_* operations are **tentative**: they update the σ̂w (tentative writer
 - Increment S after operation
 
 ### 6.3 head_reader Xi
-**Operation**: Process reader variable in clause head  
+**Operation**: Process reader variable in clause head
 **Behavior**:
-- In READ mode: verify value at S against paired writer Xi in tentative state
-- In WRITE mode: record reader constraint in σ̂w
+- In READ mode (inside structure): verify value at S against paired writer Xi in tentative state
+- In WRITE mode (inside structure): record reader constraint in σ̂w
+- **When used as top-level argument** (via GetValue after GetVariable):
+  - If argument is an unbound writer W: bind W to the value of reader Xi in σ̂w
+  - If argument is a bound writer: verify it matches reader Xi's value
+  - If argument is an unbound reader R: FAIL (the clause-local reader Xi can never be bound in the future, so this unification can never succeed in the future)
 - If writer Xi is unbound in tentative state: add to suspension set
 - Increment S after operation
+
+**Writer MGU semantics for reader in argument position**:
+When a reader Xi? appears in a head argument position and the corresponding
+goal argument is an unbound writer W, the Writer MGU binds W to the term
+that Xi references. If the goal argument is an unbound reader R, unification
+fails definitively because the clause-local reader Xi has no future binding
+that could make the unification succeed.
 
 ### 6.4 head_constant c, Ai
 **Operation**: Match constant c with argument Ai  

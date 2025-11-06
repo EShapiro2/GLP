@@ -27,6 +27,9 @@ class CodeGenContext {
   bool inGuard = false;
   bool inBody = false;
 
+  // Track variables seen in head (for GetVariable vs GetValue)
+  final Set<String> seenHeadVars = {};
+
   int get currentPC => instructions.length;
 
   void emit(bc.Op instruction) {
@@ -94,6 +97,7 @@ class CodeGenerator {
 
   void _generateClause(AnnotatedClause clause, CodeGenContext ctx, String nextLabel, bool isLastClause) {
     ctx.resetTemps();
+    ctx.seenHeadVars.clear();  // Clear head variable tracking for new clause
 
     // Emit label for non-first clauses
     if (ctx.currentClauseIndex > 0) {
@@ -154,9 +158,18 @@ class CodeGenerator {
 
       final regIndex = varInfo.registerIndex!;
 
-      // Both writers and readers in head use GetVariable
-      // This loads the argument into a register for later use
-      ctx.emit(bc.GetVariable(regIndex, argSlot));
+      // Check if this is the first occurrence in the head
+      final baseVarName = term.name.endsWith('?') ? term.name.substring(0, term.name.length - 1) : term.name;
+      final isFirstOccurrence = !ctx.seenHeadVars.contains(baseVarName);
+
+      if (isFirstOccurrence) {
+        // First occurrence: use GetVariable
+        ctx.emit(bc.GetVariable(regIndex, argSlot));
+        ctx.seenHeadVars.add(baseVarName);
+      } else {
+        // Subsequent occurrence: use GetValue
+        ctx.emit(bc.GetValue(regIndex, argSlot));
+      }
 
     } else if (term is ConstTerm) {
       // Constant in head: match with head_constant
@@ -167,8 +180,8 @@ class CodeGenerator {
         // Empty list: head_nil
         ctx.emit(bc.HeadNil(argSlot));
       } else {
-        // Non-empty list [H|T]: head_list then structure traversal
-        ctx.emit(bc.HeadList(argSlot));  // Equivalent to head_structure('[|]', 2, argSlot)
+        // Non-empty list [H|T]: treat as structure '.'(H, T)
+        ctx.emit(bc.HeadStructure('.', 2, argSlot));
 
         // Process head element
         if (term.head != null) {
@@ -206,6 +219,12 @@ class CodeGenerator {
 
       final regIndex = varInfo.registerIndex!;
 
+      // Track variable occurrences in head
+      if (inHead && ctx.inHead) {
+        final baseVarName = term.name.endsWith('?') ? term.name.substring(0, term.name.length - 1) : term.name;
+        ctx.seenHeadVars.add(baseVarName);
+      }
+
       if (term.isReader) {
         // Reader at position S
         ctx.emit(bc.UnifyReader(regIndex));
@@ -230,7 +249,7 @@ class CodeGenerator {
         if (term.isNil) {
           ctx.emit(bc.HeadNil(tempReg));
         } else {
-          ctx.emit(bc.HeadList(tempReg));
+          ctx.emit(bc.HeadStructure('.', 2, tempReg));
           if (term.head != null) _generateStructureElement(term.head!, varTable, ctx, inHead: inHead);
           if (term.tail != null) _generateStructureElement(term.tail!, varTable, ctx, inHead: inHead);
         }
@@ -239,7 +258,7 @@ class CodeGenerator {
         if (term.isNil) {
           ctx.emit(bc.PutNil(tempReg));
         } else {
-          ctx.emit(bc.PutList(tempReg));
+          ctx.emit(bc.PutStructure('.', 2, tempReg));
           if (term.head != null) _generateStructureElement(term.head!, varTable, ctx, inHead: inHead);
           if (term.tail != null) _generateStructureElement(term.tail!, varTable, ctx, inHead: inHead);
         }
@@ -364,8 +383,8 @@ class CodeGenerator {
       if (term.isNil) {
         ctx.emit(bc.PutNil(argSlot));
       } else {
-        // Build list structure
-        ctx.emit(bc.PutList(argSlot));
+        // Build list structure as '.'(H, T)
+        ctx.emit(bc.PutStructure('.', 2, argSlot));
         if (term.head != null) _generateStructureElement(term.head!, varTable, ctx, inHead: false);
         if (term.tail != null) _generateStructureElement(term.tail!, varTable, ctx, inHead: false);
       }

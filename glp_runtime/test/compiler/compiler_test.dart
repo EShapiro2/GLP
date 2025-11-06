@@ -58,11 +58,11 @@ void main() {
 
       final program = compiler.compile(source);
 
-      // Should have HeadList and Writer instructions
-      final hasHeadList = program.ops.any((op) => op is bc.HeadList);
+      // Should have HeadStructure (for '.') and Writer instructions
+      final hasHeadStruct = program.ops.any((op) => op is bc.HeadStructure);
       final hasWriter = program.ops.any((op) => op is bc.UnifyWriter);
 
-      expect(hasHeadList, isTrue);
+      expect(hasHeadStruct, isTrue);
       expect(hasWriter, isTrue);
     });
 
@@ -116,9 +116,9 @@ void main() {
       final clauseTries = program.ops.where((op) => op is bc.ClauseTry).length;
       expect(clauseTries, 3);
 
-      // Should have HeadList instructions
-      final headLists = program.ops.where((op) => op is bc.HeadList).length;
-      expect(headLists, greaterThan(0));
+      // Should have HeadStructure instructions for lists (now using '.' functor)
+      final headStructs = program.ops.where((op) => op is bc.HeadStructure).length;
+      expect(headStructs, greaterThan(0));
 
       // Should have Reader instructions
       final readers = program.ops.where((op) => op is bc.UnifyReader).length;

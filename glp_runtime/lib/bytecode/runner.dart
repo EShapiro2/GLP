@@ -585,12 +585,32 @@ class BytecodeRunner {
               pc = _findNextClauseTry(pc);
               continue;
             }
+          } else if (storedValue is ReaderTerm) {
+            // storedValue is a reader (e.g., Xs?) - bind writer to reader's value
+            final readerId = (storedValue as ReaderTerm).readerId;
+            final wid = cx.rt.heap.writerIdForReader(readerId);
+            if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+              // Reader's writer is bound - bind arg writer to that value
+              final readerValue = cx.rt.heap.valueOfWriter(wid);
+              cx.sigmaHat[arg.writerId!] = readerValue;
+            } else {
+              // Reader's writer is unbound - add reader to Si (suspend)
+              cx.si.add(readerId);
+            }
           } else {
             // storedValue is a Term - bind writer to it
             cx.sigmaHat[arg.writerId!] = storedValue;
           }
         } else if (arg.isReader) {
           // Argument is a reader - verify it matches stored value
+          if (storedValue is ReaderTerm) {
+            // storedValue is also a reader - fail definitively
+            // (clause-local reader can never be bound in the future)
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
+
           final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
           if (wid != null && cx.rt.heap.isWriterBound(wid)) {
             // Reader is bound - check value matches
