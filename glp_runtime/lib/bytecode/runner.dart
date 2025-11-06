@@ -1524,6 +1524,7 @@ class BytecodeRunner {
 
       if (op is Ground) {
         // Test if variable is ground (contains no unbound variables)
+        // Clause variable contains writer ID (int) or reader ID (int)
         final value = cx.clauseVars[op.varIndex];
         if (value == null) {
           // Unbound variable - soft-fail to next clause
@@ -1531,23 +1532,42 @@ class BytecodeRunner {
           pc = _findNextClauseTry(pc);
           continue;
         }
-        // Check if value contains any unbound variables
-        bool isGround(Object? term) {
+
+        // Helper to check if a term is ground (recursively)
+        bool isGroundTerm(Object? term) {
           if (term is WriterTerm) {
             final wid = term.writerId;
             if (!cx.rt.heap.isWriterBound(wid)) return false;
-            return isGround(cx.rt.heap.valueOfWriter(wid));
+            return isGroundTerm(cx.rt.heap.valueOfWriter(wid));
           } else if (term is ReaderTerm) {
             final wid = cx.rt.heap.writerIdForReader(term.readerId);
             if (wid == null || !cx.rt.heap.isWriterBound(wid)) return false;
-            return isGround(cx.rt.heap.valueOfWriter(wid));
+            return isGroundTerm(cx.rt.heap.valueOfWriter(wid));
           } else if (term is StructTerm) {
-            return term.args.every(isGround);
+            return term.args.every(isGroundTerm);
           } else {
             return true; // constants are ground
           }
         }
-        if (!isGround(value)) {
+
+        // Dereference the clause variable to get the actual term
+        bool isGround;
+        if (value is int) {
+          // Could be writer ID or reader ID - need to check which
+          // Try as writer first
+          if (cx.rt.heap.isWriterBound(value)) {
+            final term = cx.rt.heap.valueOfWriter(value);
+            isGround = isGroundTerm(term);
+          } else {
+            // Unbound writer - not ground
+            isGround = false;
+          }
+        } else {
+          // It's a Term object - check if it's ground
+          isGround = isGroundTerm(value);
+        }
+
+        if (!isGround) {
           _softFailToNextClause(cx, pc);
           pc = _findNextClauseTry(pc);
           continue;
@@ -1558,6 +1578,7 @@ class BytecodeRunner {
 
       if (op is Known) {
         // Test if variable is not an unbound variable
+        // Clause variable contains writer ID (int) or reader ID (int)
         final value = cx.clauseVars[op.varIndex];
         if (value == null) {
           // Unbound variable - soft-fail to next clause
@@ -1565,20 +1586,26 @@ class BytecodeRunner {
           pc = _findNextClauseTry(pc);
           continue;
         }
-        if (value is WriterTerm) {
+
+        bool isKnown;
+        if (value is int) {
+          // Could be writer ID - check if bound
+          isKnown = cx.rt.heap.isWriterBound(value);
+        } else if (value is WriterTerm) {
           final wid = value.writerId;
-          if (!cx.rt.heap.isWriterBound(wid)) {
-            _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
-            continue;
-          }
+          isKnown = cx.rt.heap.isWriterBound(wid);
         } else if (value is ReaderTerm) {
           final wid = cx.rt.heap.writerIdForReader(value.readerId);
-          if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
-            _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
-            continue;
-          }
+          isKnown = (wid != null && cx.rt.heap.isWriterBound(wid));
+        } else {
+          // Constant or other term - known
+          isKnown = true;
+        }
+
+        if (!isKnown) {
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
         }
         // Value is known (bound or constant)
         pc++;
