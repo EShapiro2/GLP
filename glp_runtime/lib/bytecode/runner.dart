@@ -146,7 +146,7 @@ class BytecodeRunner {
 
   RunResult runWithStatus(RunnerContext cx) {
     var pc = cx.kappa;  // Start at goal's entry point (not 0!)
-    final debug = true; // Set to true to enable trace
+    final debug = false; // Set to true to enable trace
 
     // Print try start
     if (debug) {
@@ -162,7 +162,7 @@ class BytecodeRunner {
 
       final op = prog.ops[pc];
 
-      if (debug && cx.goalId >= 4000) {
+      if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) {
         print('  [G${cx.goalId}] PC=$pc ${op.runtimeType} | Si=${cx.si} U=${cx.U} inBody=${cx.inBody}');
       }
 
@@ -263,7 +263,7 @@ class BytecodeRunner {
         // Check if argSlot refers to a clause variable (for nested structures) or argument register
         // Clause variables are used when matching extracted nested structures (argSlot >= 10 by convention)
         final bool isClauseVar = op.argSlot >= 10;
-        if (debug && cx.goalId >= 4000) print('  HeadStructure: argSlot=${op.argSlot}, isClauseVar=$isClauseVar, functor=${op.functor}/${op.arity}');
+        if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: argSlot=${op.argSlot}, isClauseVar=$isClauseVar, functor=${op.functor}/${op.arity}');
         final arg = isClauseVar ? null : _getArg(cx, op.argSlot);
 
         if (!isClauseVar && arg == null) {
@@ -360,8 +360,29 @@ class BytecodeRunner {
         }
 
         if (arg!.isWriter) {
-          // WRITE mode: create tentative structure for writer
-          if (debug && cx.goalId >= 4000) print('  HeadStructure: WRITE mode for writer ${arg.writerId}');
+          // Check if writer is already bound
+          if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: arg is writer ${arg.writerId}, bound=${cx.rt.heap.isWriterBound(arg.writerId!)}');
+          if (cx.rt.heap.isWriterBound(arg.writerId!)) {
+            // Already bound - check if matches structure
+            final value = cx.rt.heap.valueOfWriter(arg.writerId!);
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer ${arg.writerId} value = $value');
+            if (value is StructTerm && value.functor == op.functor && value.args.length == op.arity) {
+              // MATCH! Enter READ mode
+              if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: MATCH! Entering READ mode');
+              cx.currentStructure = value;
+              cx.mode = UnifyMode.read;
+              cx.S = 0;
+              pc++; continue;
+            } else {
+              // No match - soft fail
+              if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: NO MATCH, soft failing');
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            }
+          }
+          // Unbound writer - WRITE mode: create tentative structure for writer
+          if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: WRITE mode for unbound writer ${arg.writerId}');
           final struct = _TentativeStruct(op.functor, op.arity, List.filled(op.arity, null));
           cx.sigmaHat[arg.writerId!] = struct;
           cx.currentStructure = struct;
@@ -373,10 +394,10 @@ class BytecodeRunner {
         if (arg.isReader) {
           // Reader: check if bound and has matching structure
           final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
-          if (debug && cx.goalId >= 4000) print('  HeadStructure: READ mode, reader ${arg.readerId} -> writer $wid');
+          if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: READ mode, reader ${arg.readerId} -> writer $wid');
           if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
             // Unbound reader - add to Si and soft fail
-            if (debug && cx.goalId >= 4000) print('  HeadStructure: writer $wid unbound or null, adding to Si and failing');
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer $wid unbound or null, adding to Si and failing');
             cx.si.add(arg.readerId!);
             _softFailToNextClause(cx, pc);
             pc = _findNextClauseTry(pc);
@@ -385,17 +406,17 @@ class BytecodeRunner {
 
           // Bound reader - get value and check if it's a matching structure
           final value = cx.rt.heap.valueOfWriter(wid);
-          if (debug && cx.goalId >= 4000) print('  HeadStructure: writer $wid value = $value, expecting ${op.functor}/${op.arity}');
+          if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer $wid value = $value, expecting ${op.functor}/${op.arity}');
           if (value is StructTerm && value.functor == op.functor && value.args.length == op.arity) {
             // Matching structure - enter READ mode
-            if (debug && cx.goalId >= 4000) print('  HeadStructure: MATCH! Entering READ mode');
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: MATCH! Entering READ mode');
             cx.currentStructure = value;
             cx.mode = UnifyMode.read;
             cx.S = 0;
             pc++; continue;
           } else {
             // Non-matching structure or not a structure - soft fail
-            if (debug && cx.goalId >= 4000) print('  HeadStructure: NO MATCH, failing');
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: NO MATCH, failing');
             _softFailToNextClause(cx, pc);
             pc = _findNextClauseTry(pc);
             continue;
@@ -758,6 +779,7 @@ class BytecodeRunner {
         // Match/add writer variable at current S position
         if (cx.mode == UnifyMode.write) {
           // WRITE mode: Add writer to structure being built
+          if (debug && cx.goalId == 100) print('  [G${cx.goalId}] UnifyWriter: WRITE mode, varIndex=${op.varIndex}');
           if (cx.currentStructure is _TentativeStruct) {
             final struct = cx.currentStructure as _TentativeStruct;
             final value = cx.clauseVars[op.varIndex];
@@ -779,10 +801,12 @@ class BytecodeRunner {
         } else {
           // READ mode: Unify with writer at S position
           // Similar to UnifyConstant logic but for writers
+          if (debug && cx.goalId == 100) print('  [G${cx.goalId}] UnifyWriter: READ mode, varIndex=${op.varIndex}, S=${cx.S}');
           if (cx.currentStructure is StructTerm) {
             final struct = cx.currentStructure as StructTerm;
             if (cx.S < struct.args.length) {
               final value = struct.args[cx.S];
+              if (debug && cx.goalId == 100) print('  [G${cx.goalId}] UnifyWriter: struct.args[${cx.S}] = $value');
               // Store the writer in clause var
               if (value is WriterTerm) {
                 cx.clauseVars[op.varIndex] = value.writerId;
@@ -1120,10 +1144,13 @@ class BytecodeRunner {
       // ===== BODY argument setup instructions =====
       if (op is PutWriter) {
         if (cx.inBody) {
+          if (debug) print('  [G${cx.goalId}] PC=$pc PutWriter varIndex=${op.varIndex} argSlot=${op.argSlot} clauseVars=${cx.clauseVars}');
           // Get writer ID from clause variable
           final value = cx.clauseVars[op.varIndex];
+          if (debug) print('  [G${cx.goalId}] PutWriter: value=$value, type=${value.runtimeType}');
           if (value is int) {
             // It's a writer ID - store in argument register
+            if (debug) print('  [G${cx.goalId}] PutWriter: storing writer $value in argWriters[${op.argSlot}]');
             cx.argWriters[op.argSlot] = value;
           } else if (value is _ClauseVar) {
             // It's a placeholder - we need to create an actual writer (WAM-style)
@@ -1147,7 +1174,10 @@ class BytecodeRunner {
             print('WARNING: PutWriter got unexpected value: $value');
           }
         }
-        pc++; continue;
+        if (debug) print('  [G${cx.goalId}] PutWriter: about to increment PC to ${pc+1}');
+        pc++;
+        if (debug) print('  [G${cx.goalId}] PutWriter: continuing to PC $pc');
+        continue;
       }
 
       if (op is PutReader) {
@@ -1160,11 +1190,14 @@ class BytecodeRunner {
           if (value is int) {
             // Check if it's a writer ID or reader ID
             final wc = cx.rt.heap.writer(value);
+            if (debug && cx.goalId == 100) print('  [G${cx.goalId}] PutReader: value=$value, wc=$wc, wc.readerId=${wc?.readerId}');
             if (wc != null) {
               // It's a writer ID - get its paired reader
+              if (debug && cx.goalId == 100) print('  [G${cx.goalId}] PutReader: Setting argReaders[${op.argSlot}] = ${wc.readerId}');
               cx.argReaders[op.argSlot] = wc.readerId;
             } else {
               // Not a writer - assume it's already a reader ID
+              if (debug && cx.goalId == 100) print('  [G${cx.goalId}] PutReader: Not a writer, assuming reader ID, setting argReaders[${op.argSlot}] = $value');
               cx.argReaders[op.argSlot] = value;
             }
           } else if (value is StructTerm) {
@@ -1176,11 +1209,13 @@ class BytecodeRunner {
             cx.argReaders[op.argSlot] = freshReaderId;
           } else if (value is ConstTerm) {
             // It's a ground constant - create fresh writer/reader and bind it (WAM-style)
+            if (debug) print('  [G${cx.goalId}] PutReader: creating fresh pair for ground constant ${value.value}');
             final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
             cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
             cx.rt.heap.addReader(ReaderCell(freshReaderId));
             cx.rt.heap.bindWriterConst(freshWriterId, value.value);
             cx.argReaders[op.argSlot] = freshReaderId;
+            if (debug) print('  [G${cx.goalId}] PutReader: created W$freshWriterId/R$freshReaderId for constant');
           } else if (value is ReaderTerm) {
             // It's already a reader - use its ID directly
             cx.argReaders[op.argSlot] = value.readerId;
@@ -1189,6 +1224,7 @@ class BytecodeRunner {
             print('WARNING: PutReader got unexpected value: $value');
           }
         }
+        if (debug) print('  [G${cx.goalId}] PutReader: continuing to PC ${pc+1}');
         pc++; continue;
       }
 
@@ -1406,6 +1442,7 @@ class BytecodeRunner {
 
       if (op is Requeue) {
         if (cx.inBody) {
+          if (debug) print('  [G${cx.goalId}] PC=$pc Requeue procedureLabel=${op.procedureLabel} argWriters=${cx.argWriters} argReaders=${cx.argReaders}');
           // Tail call - reuse current goal, jump to procedure entry
           // Get entry point for procedure
           final entryPc = prog.labels[op.procedureLabel];
@@ -1414,8 +1451,10 @@ class BytecodeRunner {
             return RunResult.terminated;
           }
 
+          if (debug) print('  [G${cx.goalId}] Requeue: entryPc=$entryPc');
           // Update environment with new arguments
           cx.env.update(Map.from(cx.argWriters), Map.from(cx.argReaders));
+          if (debug) print('  [G${cx.goalId}] Requeue: updated env, jumping to PC $entryPc');
 
           // Clear argument registers
           cx.argWriters.clear();
@@ -1448,10 +1487,13 @@ class BytecodeRunner {
         // get_variable Xi, Ai: Load argument Ai into clause variable Xi
         // This records the argument value for later use in BODY
         final argInfo = _getArg(cx, op.argSlot);
+        if (debug) print('  [G${cx.goalId}] GetVariable varIndex=${op.varIndex} argSlot=${op.argSlot} argInfo=$argInfo');
         if (argInfo != null) {
           if (argInfo.isWriter) {
+            if (debug) print('  [G${cx.goalId}] GetVariable: storing writer ${argInfo.writerId} in clauseVars[${op.varIndex}]');
             cx.clauseVars[op.varIndex] = argInfo.writerId!;
           } else if (argInfo.isReader) {
+            if (debug) print('  [G${cx.goalId}] GetVariable: storing reader ${argInfo.readerId} in clauseVars[${op.varIndex}]');
             cx.clauseVars[op.varIndex] = argInfo.readerId!;
           }
         }
@@ -1689,7 +1731,9 @@ class BytecodeRunner {
         // Match empty list [] with argument or clause variable
         // Check if argSlot refers to a clause variable (for nested structures) or argument register
         final bool isClauseVar = op.argSlot >= 10;
+        if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: argSlot=${op.argSlot}, isClauseVar=$isClauseVar');
         final arg = isClauseVar ? null : _getArg(cx, op.argSlot);
+        if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: arg=$arg');
 
         // For clause variables, get the value from clauseVars
         if (isClauseVar) {
@@ -1756,15 +1800,19 @@ class BytecodeRunner {
         if (arg == null) { pc++; continue; } // No argument at this slot
 
         if (arg.isWriter) {
+          if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: arg is writer ${arg.writerId}');
           // Writer: check if already bound, else record tentative binding in σ̂w
           if (cx.rt.heap.isWriterBound(arg.writerId!)) {
             // Already bound - check if value matches []
             final value = cx.rt.heap.valueOfWriter(arg.writerId!);
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: writer ${arg.writerId} value = $value');
             if (value is ConstTerm && value.value != '[]') {
+              if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: value does not match [], failing');
               _softFailToNextClause(cx, pc);
               pc = _findNextClauseTry(pc);
               continue;
             } else if (value is StructTerm) {
+              if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: value is struct, failing');
               _softFailToNextClause(cx, pc);
               pc = _findNextClauseTry(pc);
               continue;
@@ -1774,18 +1822,29 @@ class BytecodeRunner {
             cx.sigmaHat[arg.writerId!] = ConstTerm('[]');
           }
         } else if (arg.isReader) {
+          if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: arg is reader ${arg.readerId}');
           // Reader: check if bound, else add to Si
           final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
+          if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: reader ${arg.readerId} -> writer $wid');
           if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: writer unbound, adding reader to Si');
             cx.si.add(arg.readerId!);
           } else {
             // Bound reader - check if value matches []
             final value = cx.rt.heap.valueOfWriter(wid);
-            if (value is ConstTerm && value.value != '[]') {
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: writer $wid value = $value');
+            if (value is ConstTerm && (value.value == '[]' || value.value == null)) {
+              // Match! Empty list
+              if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: MATCH! value is []');
+            } else if (value is StructTerm) {
+              // Structure doesn't match []
+              if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: value is struct, failing');
               _softFailToNextClause(cx, pc);
               pc = _findNextClauseTry(pc);
               continue;
-            } else if (value is StructTerm) {
+            } else {
+              // Non-empty constant doesn't match []
+              if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: value does not match [], failing');
               _softFailToNextClause(cx, pc);
               pc = _findNextClauseTry(pc);
               continue;

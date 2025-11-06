@@ -111,7 +111,7 @@ void main() {
       final sched = Scheduler(rt: rt, runner: runner);
 
       const goalId = 100;
-      rt.setGoalEnv(goalId, CallEnv(readers: {0: rXs, 1: rYs}, writers: {2: wZs}));
+      rt.setGoalEnv(goalId, CallEnv(writers: {0: wXs, 1: wYs, 2: wZs}));
       rt.gq.enqueue(GoalRef(goalId, program.labels['merge/3']!));
 
       final ran = sched.drain(maxCycles: 100);
