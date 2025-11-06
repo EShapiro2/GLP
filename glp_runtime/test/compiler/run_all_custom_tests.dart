@@ -983,5 +983,54 @@ void main() {
       print('✅ PASS\n');
     });
 
+    // TEST 23: simple_metainterp_test.dart
+    test('metainterp: run(true). run(A) :- otherwise | clause(A?,B), run(B?) - Goal: run(p(X))', () {
+      print('\n=== TEST 23: simple metainterpreter ===');
+      final compiler = GlpCompiler();
+      final source = '''
+        run(true).
+        run(A) :- otherwise | clause(A?, B), run(B?).
+        clause(p(a), true).
+      ''';
+      final program = compiler.compile(source);
+
+      final rt = GlpRuntime();
+
+      // X is unbound writer for p(X)
+      const wX = 1, rX = 2;
+      rt.heap.addWriter(WriterCell(wX, rX));
+      rt.heap.addReader(ReaderCell(rX));
+
+      // Build structure p(X) for the argument to run/1
+      const wPX = 3, rPX = 4;
+      rt.heap.addWriter(WriterCell(wPX, rPX));
+      rt.heap.addReader(ReaderCell(rPX));
+      rt.heap.bindWriterStruct(wPX, 'p', [WriterTerm(wX)]);
+
+      final runner = BytecodeRunner(program);
+      final sched = Scheduler(rt: rt, runner: runner);
+
+      const goalId = 100;
+      rt.setGoalEnv(goalId, CallEnv(readers: {0: rPX}));
+      rt.gq.enqueue(GoalRef(goalId, program.labels['run/1']!));
+
+      final ran = sched.drain(maxCycles: 500);  // May need more cycles
+      expect(ran.isNotEmpty, true);
+
+      // X should eventually bind to 'a'
+      expect(rt.heap.isWriterBound(wX), true);
+      final valueX = rt.heap.valueOfWriter(wX);
+      expect(valueX, isA<ConstTerm>());
+      expect((valueX as ConstTerm).value, 'a');
+
+      print('✅ PASS\n');
+    });
+
+    // TEST 24: metainterp_conj_test.dart
+    // SKIPPED: Parser doesn't support tuple syntax (A, B) in head arguments
+    test('metainterp with conjunction - SKIPPED (parser limitation)', () {
+      print('\n=== TEST 24: SKIPPED (parser needs tuple support) ===');
+    }, skip: true);
+
   });
 }
