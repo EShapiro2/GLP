@@ -1723,11 +1723,23 @@ class BytecodeRunner {
       if (op is PutList) {
         // Begin list construction in argument register
         // Equivalent to PutStructure('[|]', 2, op.argSlot)
-        final struct = StructTerm('[|]', []);
-        cx.bodyArgs[op.argSlot] = struct;
-        cx.currentStructure = struct;
-        cx.S = 0;
-        cx.mode = UnifyMode.write;
+        if (cx.inBody) {
+          // Store target writer ID from environment
+          final targetWriterId = cx.env.w(op.argSlot);
+          if (targetWriterId == null) {
+            print('WARNING: PutList argSlot ${op.argSlot} has no writer in environment');
+            pc++; continue;
+          }
+
+          // Store the writer ID in context for later binding
+          cx.clauseVars[-1] = targetWriterId; // Use -1 as special marker for structure binding
+
+          // Create list structure [H|T] with placeholder args (will be filled by Set* instructions)
+          final structArgs = List<Term>.filled(2, ConstTerm(null)); // Lists have arity 2
+          cx.currentStructure = StructTerm('[|]', structArgs);
+          cx.S = 0; // Start at first argument position
+          cx.mode = UnifyMode.write;
+        }
         pc++;
         continue;
       }
