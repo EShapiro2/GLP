@@ -235,10 +235,14 @@ runner.runWithStatus(cx);
   - `link/2` - FFI/dynamic library loading via dart:ffi
   - `load_module/2` - Bytecode module loading (basic implementation, needs serialization format)
 
-**Deferred**:
-- ⏸️ **Channel Primitives**: `create_merger/2`, `distribute_stream/2`, `copy_term/3` (multi-arg version)
+- ✅ **Channel Primitives**:
+  - `distribute_stream/2` - 1-to-N stream distribution with deep copy
+  - `copy_term_multi/3` - Deep copy term to two independent outputs
+  - Note: `create_merger/2` implemented as pure GLP clauses (see merge tests)
 
 All system predicates follow three-valued semantics (success/suspend/failure) and properly handle unbound readers.
+
+**Coverage**: Complete system predicate suite for Logix OS implementation. All critical primitives implemented.
 
 ### Modules and Process Activation (from FCP)
 
