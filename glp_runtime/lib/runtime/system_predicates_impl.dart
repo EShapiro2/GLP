@@ -1489,20 +1489,13 @@ SystemResult linkPredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (moduleListTerm is ReaderTerm) {
     final rid = moduleListTerm.readerId;
-    final readerCell = rt.heap.getReader(rid);
-    if (readerCell == null) {
-      print('[ERROR] link/2: Reader $rid does not exist');
-      return SystemResult.failure;
-    }
-
-    // Check if the reader's writer is bound
-    final writerId = readerCell.pairWriter;
-    if (!rt.heap.isWriterBound(writerId)) {
+    final wid = rt.heap.writerIdForReader(rid);
+    if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
 
-    final value = rt.heap.writerValue[writerId];
+    final value = rt.heap.writerValue[wid];
     if (value is ConstTerm) {
       final constValue = value.value;
       if (constValue is String) {
@@ -1566,14 +1559,22 @@ SystemResult linkPredicate(GlpRuntime rt, SystemCall call) {
   }
 }
 
-/// load_module/2: Load compiled GLP module (placeholder)
+/// load_module/2: Load compiled GLP module
 ///
 /// Usage: execute('load_module', [FileName, Module])
 ///
-/// Loads a compiled GLP bytecode module. Currently a placeholder.
+/// Loads a compiled GLP bytecode module from disk.
 ///
 /// Behavior:
-/// - Not yet implemented - returns FAILURE
+/// - FileName must be ground string path
+/// - If FileName is unbound reader → SUSPEND
+/// - Module is unbound writer → bind to loaded module data → SUCCESS
+/// - If file not found or deserialization fails → FAILURE
+///
+/// Note: Currently loads as raw data. Full implementation needs:
+/// - Bytecode format specification
+/// - Deserialization to instruction list
+/// - Module metadata (exports, imports)
 ///
 /// Example:
 ///   load_module('mymodule.glp', M)
@@ -1583,6 +1584,83 @@ SystemResult loadModulePredicate(GlpRuntime rt, SystemCall call) {
     return SystemResult.failure;
   }
 
-  print('[WARN] load_module/2: Not yet implemented (requires bytecode serialization)');
-  return SystemResult.failure;
+  final fileNameTerm = call.args[0];
+  final moduleTerm = call.args[1];
+
+  // Extract filename
+  String? filePath;
+  if (fileNameTerm is ConstTerm && fileNameTerm.value is String) {
+    filePath = fileNameTerm.value as String;
+  } else if (fileNameTerm is ReaderTerm) {
+    final rid = fileNameTerm.readerId;
+    final wid = rt.heap.writerIdForReader(rid);
+    if (wid == null || !rt.heap.isWriterBound(wid)) {
+      call.suspendedReaders.add(rid);
+      return SystemResult.suspend;
+    }
+
+    final value = rt.heap.writerValue[wid];
+    if (value is ConstTerm && value.value is String) {
+      filePath = value.value as String;
+    }
+  } else if (fileNameTerm is WriterTerm) {
+    final wid = fileNameTerm.writerId;
+    if (!rt.heap.isWriterBound(wid)) {
+      print('[ERROR] load_module/2: FileName writer is unbound');
+      return SystemResult.failure;
+    }
+    final value = rt.heap.writerValue[wid];
+    if (value is ConstTerm && value.value is String) {
+      filePath = value.value as String;
+    }
+  }
+
+  if (filePath == null) {
+    print('[ERROR] load_module/2: Could not extract filename');
+    return SystemResult.failure;
+  }
+
+  // Load file contents
+  // In a full implementation, this would deserialize bytecode
+  // For now, just read the raw data as proof of concept
+  try {
+    final file = File(filePath);
+    if (!file.existsSync()) {
+      print('[ERROR] load_module/2: File not found: $filePath');
+      return SystemResult.failure;
+    }
+
+    final contents = file.readAsStringSync();
+
+    // TODO: Deserialize bytecode format
+    // For now, return contents as a Map with metadata
+    final module = {
+      'path': filePath,
+      'contents': contents,
+      'loaded_at': DateTime.now().millisecondsSinceEpoch,
+    };
+
+    // Bind module to result
+    if (moduleTerm is WriterTerm) {
+      final wid = moduleTerm.writerId;
+      if (rt.heap.isWriterBound(wid)) {
+        // Verify match (would need deep equality for maps)
+        print('[WARN] load_module/2: Module writer already bound, cannot verify');
+        return SystemResult.failure;
+      } else {
+        rt.heap.bindWriterConst(wid, module);
+        return SystemResult.success;
+      }
+    } else if (moduleTerm is ConstTerm) {
+      // Verify module matches
+      print('[WARN] load_module/2: Cannot verify against constant module');
+      return SystemResult.failure;
+    } else {
+      print('[ERROR] load_module/2: Module must be writer or constant');
+      return SystemResult.failure;
+    }
+  } catch (e) {
+    print('[ERROR] load_module/2: Failed to load module: $e');
+    return SystemResult.failure;
+  }
 }
