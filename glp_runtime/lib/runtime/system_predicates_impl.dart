@@ -43,6 +43,10 @@ void registerStandardPredicates(SystemPredicateRegistry registry) {
   // Module loading
   registry.register('link', linkPredicate);
   registry.register('load_module', loadModulePredicate);
+
+  // Channel primitives (stream distribution)
+  registry.register('distribute_stream', distributeStreamPredicate);
+  registry.register('copy_term_multi', copyTermMultiPredicate);
 }
 
 /// evaluate/2: Arithmetic evaluation
@@ -1662,5 +1666,213 @@ SystemResult loadModulePredicate(GlpRuntime rt, SystemCall call) {
   } catch (e) {
     print('[ERROR] load_module/2: Failed to load module: $e');
     return SystemResult.failure;
+  }
+}
+
+// ============================================================================
+// CHANNEL PRIMITIVES (STREAM DISTRIBUTION)
+// ============================================================================
+
+/// distribute_stream/2: Copy stream to multiple outputs (1-to-N distribution)
+///
+/// Usage: execute('distribute_stream', [Input, OutputList])
+///
+/// Distributes a stream (list) to multiple output writers by deep copying.
+///
+/// Behavior:
+/// - Input must be ground list (all elements bound)
+/// - OutputList must be list of unbound writers
+/// - If Input is unbound reader → SUSPEND
+/// - Copies Input to each output writer → SUCCESS
+/// - If any output already bound or type mismatch → FAILURE
+///
+/// Example:
+///   distribute_stream([a,b,c], [W1, W2])  % W1 = [a,b,c], W2 = [a,b,c]
+SystemResult distributeStreamPredicate(GlpRuntime rt, SystemCall call) {
+  if (call.args.length != 2) {
+    print('[ERROR] distribute_stream/2 requires exactly 2 arguments, got ${call.args.length}');
+    return SystemResult.failure;
+  }
+
+  final inputTerm = call.args[0];
+  final outputListTerm = call.args[1];
+
+  // Extract and validate input
+  Object? inputValue;
+  if (inputTerm is ConstTerm) {
+    inputValue = inputTerm.value;
+  } else if (inputTerm is ReaderTerm) {
+    final rid = inputTerm.readerId;
+    final wid = rt.heap.writerIdForReader(rid);
+    if (wid == null || !rt.heap.isWriterBound(wid)) {
+      call.suspendedReaders.add(rid);
+      return SystemResult.suspend;
+    }
+    final value = rt.heap.writerValue[wid];
+    if (value is ConstTerm) {
+      inputValue = value.value;
+    } else {
+      inputValue = value;
+    }
+  } else if (inputTerm is WriterTerm) {
+    final wid = inputTerm.writerId;
+    if (!rt.heap.isWriterBound(wid)) {
+      print('[ERROR] distribute_stream/2: Input writer is unbound');
+      return SystemResult.failure;
+    }
+    final value = rt.heap.writerValue[wid];
+    if (value is ConstTerm) {
+      inputValue = value.value;
+    } else {
+      inputValue = value;
+    }
+  } else {
+    inputValue = inputTerm;
+  }
+
+  // Extract output list
+  List<int>? outputWriters;
+  if (outputListTerm is ConstTerm && outputListTerm.value is List) {
+    // List of WriterTerm objects
+    final list = outputListTerm.value as List;
+    outputWriters = [];
+    for (final item in list) {
+      if (item is WriterTerm) {
+        outputWriters.add(item.writerId);
+      } else if (item is int) {
+        outputWriters.add(item);
+      } else {
+        print('[ERROR] distribute_stream/2: OutputList contains non-writer: $item');
+        return SystemResult.failure;
+      }
+    }
+  } else {
+    print('[ERROR] distribute_stream/2: OutputList must be list of writers');
+    return SystemResult.failure;
+  }
+
+  // Distribute (deep copy) input to each output
+  for (final wid in outputWriters) {
+    if (rt.heap.isWriterBound(wid)) {
+      print('[ERROR] distribute_stream/2: Output writer $wid already bound');
+      return SystemResult.failure;
+    }
+    // Deep copy the input value
+    final copy = _deepCopyValue(inputValue);
+    rt.heap.bindWriterConst(wid, copy);
+  }
+
+  return SystemResult.success;
+}
+
+/// copy_term/3: Deep copy term to two outputs
+///
+/// Usage: execute('copy_term', [Term, Copy1, Copy2])
+///
+/// Creates two independent deep copies of a term.
+///
+/// Behavior:
+/// - Term is input (can be constant, bound writer, or reader)
+/// - If Term is unbound reader → SUSPEND
+/// - Copy1 and Copy2 are unbound writers → bind to deep copies → SUCCESS
+/// - If outputs already bound → FAILURE
+///
+/// Example:
+///   copy_term([a,b], W1, W2)  % W1 = [a,b], W2 = [a,b] (independent)
+SystemResult copyTermMultiPredicate(GlpRuntime rt, SystemCall call) {
+  if (call.args.length != 3) {
+    print('[ERROR] copy_term/3 requires exactly 3 arguments, got ${call.args.length}');
+    return SystemResult.failure;
+  }
+
+  final termArg = call.args[0];
+  final copy1Arg = call.args[1];
+  final copy2Arg = call.args[2];
+
+  // Extract source term
+  Object? sourceValue;
+  if (termArg is ConstTerm) {
+    sourceValue = termArg.value;
+  } else if (termArg is ReaderTerm) {
+    final rid = termArg.readerId;
+    final wid = rt.heap.writerIdForReader(rid);
+    if (wid == null || !rt.heap.isWriterBound(wid)) {
+      call.suspendedReaders.add(rid);
+      return SystemResult.suspend;
+    }
+    final value = rt.heap.writerValue[wid];
+    if (value is ConstTerm) {
+      sourceValue = value.value;
+    } else {
+      sourceValue = value;
+    }
+  } else if (termArg is WriterTerm) {
+    final wid = termArg.writerId;
+    if (!rt.heap.isWriterBound(wid)) {
+      print('[ERROR] copy_term/3: Source writer is unbound');
+      return SystemResult.failure;
+    }
+    final value = rt.heap.writerValue[wid];
+    if (value is ConstTerm) {
+      sourceValue = value.value;
+    } else {
+      sourceValue = value;
+    }
+  } else {
+    sourceValue = termArg;
+  }
+
+  // Extract output writers
+  int? w1, w2;
+  if (copy1Arg is WriterTerm) {
+    w1 = copy1Arg.writerId;
+  } else {
+    print('[ERROR] copy_term/3: Copy1 must be writer');
+    return SystemResult.failure;
+  }
+
+  if (copy2Arg is WriterTerm) {
+    w2 = copy2Arg.writerId;
+  } else {
+    print('[ERROR] copy_term/3: Copy2 must be writer');
+    return SystemResult.failure;
+  }
+
+  // Check outputs are unbound
+  if (rt.heap.isWriterBound(w1)) {
+    print('[ERROR] copy_term/3: Copy1 writer already bound');
+    return SystemResult.failure;
+  }
+  if (rt.heap.isWriterBound(w2)) {
+    print('[ERROR] copy_term/3: Copy2 writer already bound');
+    return SystemResult.failure;
+  }
+
+  // Create two independent deep copies
+  final copy1 = _deepCopyValue(sourceValue);
+  final copy2 = _deepCopyValue(sourceValue);
+
+  rt.heap.bindWriterConst(w1, copy1);
+  rt.heap.bindWriterConst(w2, copy2);
+
+  return SystemResult.success;
+}
+
+/// Deep copy helper for stream distribution
+Object? _deepCopyValue(Object? value) {
+  if (value == null) return null;
+
+  if (value is List) {
+    return value.map((e) => _deepCopyValue(e)).toList();
+  } else if (value is Map) {
+    return value.map((k, v) => MapEntry(k, _deepCopyValue(v)));
+  } else if (value is Set) {
+    return value.map((e) => _deepCopyValue(e)).toSet();
+  } else if (value is String || value is num || value is bool) {
+    // Primitives are immutable in Dart, safe to share
+    return value;
+  } else {
+    // For other types, return as-is (may need custom deep copy logic)
+    return value;
   }
 }
