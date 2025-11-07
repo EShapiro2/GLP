@@ -72,8 +72,14 @@ void main() {
 
     // Compile and run the goal
     try {
-      // Compile the input as a goal with metadata
-      final goalResult = compiler.compileWithMetadata(trimmed);
+      // Parse the goal to extract functor and arguments
+      // For now, handle simple cases like "hello." or "merge(..., Xs)."
+
+      // Compile as a wrapper that spawns the goal
+      // query_wrapper() :- merge([1,2,3], [a,b], Xs).
+      final wrappedQuery = 'query__wrapper() :- $trimmed';
+
+      final goalResult = compiler.compileWithMetadata(wrappedQuery);
       final goalProgram = goalResult.program;
       final variableMap = goalResult.variableMap;
 
@@ -100,8 +106,18 @@ void main() {
       rt.setGoalEnv(goalId, env);
       rt.setGoalProgram(goalId, 'main');
 
-      // Enqueue the goal at PC 0
-      rt.gq.enqueue(GoalRef(goalId, 0));
+      // Track heap size before execution to find new writers
+      final heapSizeBefore = rt.heap.writers.length;
+
+      // Find the entry point for query__wrapper/0
+      final entryPC = combinedProgram.labels['query__wrapper/0'];
+      if (entryPC == null) {
+        print('Error: Could not find query wrapper entry point');
+        continue;
+      }
+
+      // Enqueue the goal at the wrapper entry point
+      rt.gq.enqueue(GoalRef(goalId, entryPC));
       final currentGoalId = goalId;
       goalId++;
 
@@ -109,12 +125,15 @@ void main() {
       final ran = scheduler.drain(maxCycles: 10000);
 
       // Report result
-      print('→ Executed ${ran.length} goals');
+      print('→ Executed ${ran.length} goals: $ran');
 
-      // Show any new bindings created during execution
+      // After execution, find which writers were created and bound
+      // These correspond to query variables
       final finalEnv = rt.getGoalEnv(currentGoalId);
-      if (finalEnv != null && variableMap.isNotEmpty) {
-        _displayBindings(rt, finalEnv, variableMap);
+
+      // Strategy: For each variable in the query, find recently created bound writers
+      if (variableMap.isNotEmpty) {
+        _displayBindingsFromHeap(rt, variableMap, heapSizeBefore);
       }
 
     } catch (e) {
@@ -167,38 +186,44 @@ void printHelp() {
   print('');
 }
 
-void _displayBindings(GlpRuntime rt, CallEnv env, Map<String, int> variableMap) {
-  // Display bindings for all variables in the query
+void _displayBindingsFromHeap(GlpRuntime rt, Map<String, int> variableMap, int heapSizeBefore) {
+  // Strategy: Find writers that were created during query execution and are bound
+
   print('');
+  print('DEBUG: Total bound writers in heap: ${rt.heap.writerValue.length}');
+  print('DEBUG: Heap size before: $heapSizeBefore, after: ${rt.heap.writers.length}');
 
-  for (final entry in variableMap.entries) {
-    final varName = entry.key;
-    final registerIndex = entry.value;
+  // Show all bound writers
+  print('DEBUG: All bound writers:');
+  for (final entry in rt.heap.writerValue.entries) {
+    print('  W${entry.key} = ${_formatTerm(entry.value)}');
+  }
 
-    // Check both writerBySlot and readerBySlot
-    int? writerId;
+  // For now, just show the most recently bound writer
+  // This is a simple heuristic for queries with one output variable
+  if (variableMap.length == 1) {
+    final varName = variableMap.keys.first;
 
-    if (env.writerBySlot.containsKey(registerIndex)) {
-      writerId = env.writerBySlot[registerIndex]!;
-    } else if (env.readerBySlot.containsKey(registerIndex)) {
-      // This is a reader - we need to find its paired writer
-      // For now, search through all writers to find the one bound to a value
-      // that corresponds to this variable
-      //
-      // Fallback: just show that the variable is present but untrackable
-      print('  $varName = <unable to track reader variable>');
-      continue;
-    } else {
-      print('  $varName = <not found in environment>');
-      continue;
+    // Find the most recently bound writer
+    int? lastBoundWriter;
+    for (final entry in rt.heap.writerValue.entries) {
+      final writerId = entry.key;
+      if (writerId >= 1000) {  // Fresh writers start at 1000
+        lastBoundWriter = writerId;
+      }
     }
 
-    // Check if this writer is bound
-    if (rt.heap.writerValue.containsKey(writerId)) {
-      final value = rt.heap.writerValue[writerId];
+    if (lastBoundWriter != null && rt.heap.writerValue.containsKey(lastBoundWriter)) {
+      final value = rt.heap.writerValue[lastBoundWriter];
       print('  $varName = ${_formatTerm(value)}');
     } else {
       print('  $varName = <unbound>');
+    }
+  } else {
+    // Multiple variables - show all bound writers created during execution
+    for (final entry in variableMap.entries) {
+      final varName = entry.key;
+      print('  $varName = <multiple variables not yet supported>');
     }
   }
 }
