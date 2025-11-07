@@ -6,12 +6,17 @@ library;
 
 import 'dart:io';
 import 'package:glp_runtime/compiler/compiler.dart';
+import 'package:glp_runtime/compiler/parser.dart';
+import 'package:glp_runtime/compiler/lexer.dart';
+import 'package:glp_runtime/compiler/ast.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/bytecode/opcodes.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/system_predicates_impl.dart';
+import 'package:glp_runtime/runtime/cells.dart';
+import 'package:glp_runtime/runtime/terms.dart' as rt;
 
 void main() {
   print('╔════════════════════════════════════════╗');
@@ -72,68 +77,86 @@ void main() {
 
     // Compile and run the goal
     try {
-      // Parse the goal to extract functor and arguments
-      // For now, handle simple cases like "hello." or "merge(..., Xs)."
+      // Parse the query goal to extract functor, arguments, and variables
+      final lexer = Lexer(trimmed);
+      final tokens = lexer.tokenize();
+      final parser = Parser(tokens);
+      final ast = parser.parse();
 
-      // Compile as a wrapper that spawns the goal
-      // query_wrapper() :- merge([1,2,3], [a,b], Xs).
-      final wrappedQuery = 'query__wrapper() :- $trimmed';
-
-      final goalResult = compiler.compileWithMetadata(wrappedQuery);
-      final goalProgram = goalResult.program;
-      final variableMap = goalResult.variableMap;
-
-      // Combine loaded programs with the goal
-      final allOps = <Op>[];
-
-      // Add all loaded programs first
-      for (final loaded in loadedPrograms.values) {
-        allOps.addAll(loaded.ops);
-      }
-
-      // Add the goal program
-      allOps.addAll(goalProgram.ops);
-
-      // Create combined program
-      final combinedProgram = BytecodeProgram(allOps);
-
-      // Create a scheduler with the combined program
-      final runner = BytecodeRunner(combinedProgram);
-      final scheduler = Scheduler(rt: rt, runners: {'main': runner});
-
-      // Set up initial goal
-      final env = CallEnv();
-      rt.setGoalEnv(goalId, env);
-      rt.setGoalProgram(goalId, 'main');
-
-      // Track heap size before execution to find new writers
-      final heapSizeBefore = rt.heap.writers.length;
-
-      // Find the entry point for query__wrapper/0
-      final entryPC = combinedProgram.labels['query__wrapper/0'];
-      if (entryPC == null) {
-        print('Error: Could not find query wrapper entry point');
+      if (ast.procedures.isEmpty) {
+        print('Error: No goal found');
         continue;
       }
 
-      // Enqueue the goal at the wrapper entry point
+      final proc = ast.procedures[0];
+      if (proc.clauses.isEmpty) {
+        print('Error: No clauses in goal');
+        continue;
+      }
+
+      final goalClause = proc.clauses[0];
+      final goalAtom = goalClause.head;
+      final functor = goalAtom.functor;
+      final arity = goalAtom.arity;
+      final args = goalAtom.args;
+
+      // Combine all loaded programs
+      final allOps = <Op>[];
+      for (final loaded in loadedPrograms.values) {
+        allOps.addAll(loaded.ops);
+      }
+      final combinedProgram = BytecodeProgram(allOps);
+
+      // Find the entry point for the predicate
+      final procedureLabel = '$functor/$arity';
+      final entryPC = combinedProgram.labels[procedureLabel];
+      if (entryPC == null) {
+        print('Error: Predicate $procedureLabel not found');
+        print('Available predicates: ${combinedProgram.labels.keys.where((k) => !k.endsWith('_end') && !k.contains('_c')).join(', ')}');
+        continue;
+      }
+
+      // Set up heap cells for each argument and track variable writers
+      final queryVarWriters = <String, int>{};
+      final readers = <int, int>{};
+      final writers = <int, int>{};
+
+      for (int i = 0; i < args.length; i++) {
+        final arg = args[i];
+        final (readerId, writerId) = _setupArgument(rt, arg, i, readers, writers, queryVarWriters);
+      }
+
+      // Set up goal environment
+      final env = CallEnv(readers: readers, writers: writers);
+      rt.setGoalEnv(goalId, env);
+      rt.setGoalProgram(goalId, 'main');
+
+      // Create scheduler and run
+      final runner = BytecodeRunner(combinedProgram);
+      final scheduler = Scheduler(rt: rt, runners: {'main': runner});
+
       rt.gq.enqueue(GoalRef(goalId, entryPC));
       final currentGoalId = goalId;
       goalId++;
 
-      // Run scheduler
       final ran = scheduler.drain(maxCycles: 10000);
 
       // Report result
-      print('→ Executed ${ran.length} goals: $ran');
+      print('→ Executed ${ran.length} goals');
 
-      // After execution, find which writers were created and bound
-      // These correspond to query variables
-      final finalEnv = rt.getGoalEnv(currentGoalId);
-
-      // Strategy: For each variable in the query, find recently created bound writers
-      if (variableMap.isNotEmpty) {
-        _displayBindingsFromHeap(rt, variableMap, heapSizeBefore);
+      // Display variable bindings
+      if (queryVarWriters.isNotEmpty) {
+        print('');
+        for (final entry in queryVarWriters.entries) {
+          final varName = entry.key;
+          final writerId = entry.value;
+          if (rt.heap.isWriterBound(writerId)) {
+            final value = rt.heap.valueOfWriter(writerId);
+            print('  $varName = ${_formatTerm(value, rt)}');
+          } else {
+            print('  $varName = <unbound>');
+          }
+        }
       }
 
     } catch (e) {
@@ -186,52 +209,177 @@ void printHelp() {
   print('');
 }
 
-void _displayBindingsFromHeap(GlpRuntime rt, Map<String, int> variableMap, int heapSizeBefore) {
-  // Strategy: Find writers that were created during query execution and are bound
+// Set up heap cells for a query argument
+// Returns (readerId, writerId) for the argument slot
+(int, int) _setupArgument(
+  GlpRuntime runtime,
+  Term arg,
+  int argSlot,
+  Map<int, int> readers,
+  Map<int, int> writers,
+  Map<String, int> queryVarWriters,
+) {
+  if (arg is VarTerm) {
+    // Variable: create fresh writer/reader pair
+    final (writerId, readerId) = runtime.heap.allocateFreshPair();
+    runtime.heap.addWriter(WriterCell(writerId, readerId));
+    runtime.heap.addReader(ReaderCell(readerId));
 
-  print('');
-  print('DEBUG: Total bound writers in heap: ${rt.heap.writerValue.length}');
-  print('DEBUG: Heap size before: $heapSizeBefore, after: ${rt.heap.writers.length}');
-
-  // Show all bound writers
-  print('DEBUG: All bound writers:');
-  for (final entry in rt.heap.writerValue.entries) {
-    print('  W${entry.key} = ${_formatTerm(entry.value)}');
-  }
-
-  // For now, just show the most recently bound writer
-  // This is a simple heuristic for queries with one output variable
-  if (variableMap.length == 1) {
-    final varName = variableMap.keys.first;
-
-    // Find the most recently bound writer
-    int? lastBoundWriter;
-    for (final entry in rt.heap.writerValue.entries) {
-      final writerId = entry.key;
-      if (writerId >= 1000) {  // Fresh writers start at 1000
-        lastBoundWriter = writerId;
-      }
+    // Track this variable for later display
+    if (!arg.isReader) {
+      queryVarWriters[arg.name] = writerId;
     }
 
-    if (lastBoundWriter != null && rt.heap.writerValue.containsKey(lastBoundWriter)) {
-      final value = rt.heap.writerValue[lastBoundWriter];
-      print('  $varName = ${_formatTerm(value)}');
+    // Map to argument slot
+    if (arg.isReader) {
+      readers[argSlot] = readerId;
     } else {
-      print('  $varName = <unbound>');
+      writers[argSlot] = writerId;
     }
+
+    return (readerId, writerId);
+  } else if (arg is ListTerm) {
+    // List: create structure and bind it
+    final (writerId, readerId) = runtime.heap.allocateFreshPair();
+    runtime.heap.addWriter(WriterCell(writerId, readerId));
+    runtime.heap.addReader(ReaderCell(readerId));
+
+    // Build list structure recursively
+    final listValue = _buildListTerm(runtime, arg, queryVarWriters);
+    runtime.heap.writerValue[writerId] = listValue;
+
+    // Always use reader for pre-bound values
+    readers[argSlot] = readerId;
+    return (readerId, writerId);
+  } else if (arg is ConstTerm) {
+    // Constant: create bound writer/reader
+    final (writerId, readerId) = runtime.heap.allocateFreshPair();
+    runtime.heap.addWriter(WriterCell(writerId, readerId));
+    runtime.heap.addReader(ReaderCell(readerId));
+    runtime.heap.writerValue[writerId] = rt.ConstTerm(arg.value);
+
+    readers[argSlot] = readerId;
+    return (readerId, writerId);
   } else {
-    // Multiple variables - show all bound writers created during execution
-    for (final entry in variableMap.entries) {
-      final varName = entry.key;
-      print('  $varName = <multiple variables not yet supported>');
-    }
+    throw Exception('Unsupported argument type: ${arg.runtimeType}');
   }
 }
 
-String _formatTerm(Object? term) {
+// Build a list term recursively
+rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> queryVarWriters) {
+  if (list.isNil) {
+    return rt.ConstTerm(null);  // Empty list
+  }
+
+  final head = list.head;
+  final tail = list.tail;
+
+  // Convert head to runtime term
+  rt.Term headTerm;
+  if (head is ConstTerm) {
+    headTerm = rt.ConstTerm(head.value);
+  } else if (head is VarTerm) {
+    // Variable in list - create writer/reader
+    final (writerId, readerId) = runtime.heap.allocateFreshPair();
+    runtime.heap.addWriter(WriterCell(writerId, readerId));
+    runtime.heap.addReader(ReaderCell(readerId));
+    if (!head.isReader) {
+      queryVarWriters[head.name] = writerId;
+    }
+    headTerm = head.isReader ? rt.ReaderTerm(readerId) : rt.WriterTerm(writerId);
+  } else {
+    throw Exception('Unsupported list head type: ${head.runtimeType}');
+  }
+
+  // Convert tail to runtime term
+  rt.Term tailTerm;
+  if (tail is ListTerm) {
+    tailTerm = _buildListTerm(runtime, tail, queryVarWriters);
+  } else {
+    tailTerm = rt.ConstTerm(null);
+  }
+
+  return rt.StructTerm('.', [headTerm, tailTerm]);
+}
+
+
+String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
   if (term == null) return '[]';
 
-  // Use the term's built-in toString()
-  // This will properly format ConstTerm, WriterTerm, ReaderTerm, StructTerm, etc.
+  visited ??= <int>{};
+
+  if (term is rt.ConstTerm) {
+    if (term.value == null) return '[]';
+    return term.value.toString();
+  }
+
+  if (term is rt.StructTerm && term.functor == '.' && term.args.length == 2) {
+    // List cons cell - expand to readable format
+    final elements = <String>[];
+    rt.Term? current = term;
+
+    while (true) {
+      if (current is! rt.StructTerm || current.functor != '.') break;
+
+      final head = current.args[0];
+      final tail = current.args[1];
+
+      // Format head element
+      String headStr;
+      if (head is rt.ReaderTerm && runtime != null) {
+        // Dereference reader
+        final readerId = head.readerId;
+        if (visited.contains(readerId)) {
+          headStr = '<circular>';
+        } else {
+          visited.add(readerId);
+          final writer = _findPairedWriter(runtime, readerId);
+          if (writer != null && runtime.heap.isWriterBound(writer)) {
+            final value = runtime.heap.valueOfWriter(writer);
+            headStr = _formatTerm(value, runtime, visited);
+          } else {
+            headStr = 'R$readerId';
+          }
+        }
+      } else {
+        headStr = _formatTerm(head, runtime, visited);
+      }
+
+      elements.add(headStr);
+
+      // Move to tail
+      if (tail is rt.ReaderTerm && runtime != null) {
+        final readerId = tail.readerId;
+        if (visited.contains(readerId)) break;
+        visited.add(readerId);
+        final writer = _findPairedWriter(runtime, readerId);
+        if (writer != null && runtime.heap.isWriterBound(writer)) {
+          current = runtime.heap.valueOfWriter(writer);
+          if (current == null || current is! rt.StructTerm) break;
+        } else {
+          break;
+        }
+      } else if (tail is rt.ConstTerm && tail.value == null) {
+        break;  // End of list
+      } else {
+        break;
+      }
+    }
+
+    return '[${elements.join(', ')}]';
+  }
+
   return term.toString();
+}
+
+int? _findPairedWriter(GlpRuntime runtime, int readerId) {
+  // Find writer paired with this reader
+  for (final entry in runtime.heap.writers.entries) {
+    final writerId = entry.key;
+    final writerCell = entry.value;
+    if (writerCell.readerId == readerId) {
+      return writerId;
+    }
+  }
+  return null;
 }
