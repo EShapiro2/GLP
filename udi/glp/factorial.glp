@@ -1,0 +1,5 @@
+% factorial.glp - Factorial computation (simplified)
+%
+% Note: Full factorial requires arithmetic which the compiler may not fully support yet
+
+fact(one, one).

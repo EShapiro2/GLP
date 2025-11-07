@@ -1,0 +1,10 @@
+% list_ops.glp - List operations
+%
+% Common list manipulation predicates
+% Note: Simplified versions due to compiler limitations
+
+% Append two lists (base case only)
+append([], Ys?, Ys).
+
+% Member check (base case only)
+member(X?, [X?|Tail]).

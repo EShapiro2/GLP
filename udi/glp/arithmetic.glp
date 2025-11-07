@@ -1,0 +1,5 @@
+% arithmetic.glp - Arithmetic operations (simplified)
+%
+% Note: Full arithmetic requires execute('evaluate', ...) which needs testing
+
+add(a, b, result).

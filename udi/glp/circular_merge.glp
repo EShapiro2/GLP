@@ -1,0 +1,6 @@
+% circular_merge.glp - Circular dependency demonstration
+%
+% Note: Full circular merge requires manual bytecode construction
+% This is just a placeholder
+
+merge([], Ys?, Ys).

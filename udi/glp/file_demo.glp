@@ -1,0 +1,5 @@
+% file_demo.glp - File I/O demonstration (simplified)
+%
+% Note: Full file I/O requires execute(...) which needs testing
+
+demo_placeholder.

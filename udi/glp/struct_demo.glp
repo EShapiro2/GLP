@@ -1,0 +1,10 @@
+% struct_demo.glp - Structure demonstration
+%
+% Shows how to work with compound terms (structures)
+
+person(alice, age(30), city(seattle)).
+person(bob, age(25), city(portland)).
+
+get_age(person(Name?, age(Age?), _), Name, Age).
+
+get_city(person(Name?, _, city(City?)), Name, City).

@@ -1,0 +1,6 @@
+% run.glp - Metainterpreter run/1 (simplified)
+%
+% Note: Full metainterpreter requires complex SRSW handling
+% This is just a placeholder
+
+run(true).

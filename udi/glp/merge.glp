@@ -1,0 +1,9 @@
+% merge.glp - Stream merging (N-to-1)
+%
+% Merge two streams into one by copying elements alternately
+% Uses reader/writer pairs for synchronization
+%
+% Note: This is a simplified version for testing
+% Full merge requires manual bytecode construction
+
+merge([], Ys?, Ys).

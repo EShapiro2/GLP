@@ -1,0 +1,7 @@
+% clause.glp - Metainterpreter clause database (simplified)
+%
+% Note: Full clause database requires complex SRSW handling
+% This is just a placeholder
+
+clause(p(a), true).
+clause(p(b), true).
