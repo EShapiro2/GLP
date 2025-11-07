@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ffi' as ffi;
 
 import 'machine_state.dart';
 import 'heap.dart';
@@ -24,6 +25,10 @@ class GlpRuntime {
   // File handle management
   final Map<int, RandomAccessFile> _fileHandles = <int, RandomAccessFile>{};
   int _nextFileHandle = 1;
+
+  // FFI/Dynamic library management
+  final Map<int, ffi.DynamicLibrary> _libraries = <int, ffi.DynamicLibrary>{};
+  int _nextLibraryHandle = 1;
 
   // Goal ID counter for spawn
   int nextGoalId = 10000;  // Start at 10000 to avoid collisions with test goal IDs
@@ -136,5 +141,35 @@ class GlpRuntime {
       }
     }
     _fileHandles.clear();
+  }
+
+  // FFI/Dynamic library management methods
+
+  /// Load a dynamic library and allocate handle
+  int loadLibrary(String path) {
+    try {
+      final lib = ffi.DynamicLibrary.open(path);
+      final handle = _nextLibraryHandle++;
+      _libraries[handle] = lib;
+      return handle;
+    } catch (e) {
+      throw Exception('Failed to load library $path: $e');
+    }
+  }
+
+  /// Get library by handle
+  ffi.DynamicLibrary? getLibrary(int handle) => _libraries[handle];
+
+  /// Check if library handle is valid
+  bool isValidLibrary(int handle) => _libraries.containsKey(handle);
+
+  /// Close library handle (note: DynamicLibrary doesn't have close method)
+  void closeLibrary(int handle) {
+    _libraries.remove(handle);
+  }
+
+  /// Close all libraries
+  void closeAllLibraries() {
+    _libraries.clear();
   }
 }

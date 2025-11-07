@@ -1445,25 +1445,125 @@ SystemResult copyTermPredicate(GlpRuntime rt, SystemCall call) {
 // MODULE LOADING (PLACEHOLDERS)
 // ============================================================================
 
-/// link/2: Link external modules (placeholder)
+/// link/2: Link external modules
 ///
 /// Usage: execute('link', [ModuleList, Offset])
 ///
-/// Links external modules (C/Dart libraries). Currently a placeholder.
+/// Links external dynamic libraries (C libraries via FFI).
 ///
 /// Behavior:
-/// - Not yet implemented - returns FAILURE
+/// - ModuleList can be: single path string, or list of path strings
+/// - If ModuleList is unbound reader → SUSPEND
+/// - Offset is unbound writer → bind to library handle → SUCCESS
+/// - If library loading fails → FAILURE
 ///
 /// Example:
-///   link([file, math], Offset)
+///   link('libmath.so', Handle)
+///   link(['libmath.so', 'libfile.so'], Handle)
 SystemResult linkPredicate(GlpRuntime rt, SystemCall call) {
   if (call.args.length != 2) {
     print('[ERROR] link/2 requires exactly 2 arguments, got ${call.args.length}');
     return SystemResult.failure;
   }
 
-  print('[WARN] link/2: Not yet implemented (requires FFI/dynamic library loading)');
-  return SystemResult.failure;
+  final moduleListTerm = call.args[0];
+  final offsetTerm = call.args[1];
+
+  // Extract module list
+  List<String>? modulePaths;
+  if (moduleListTerm is ConstTerm) {
+    final value = moduleListTerm.value;
+    if (value is String) {
+      modulePaths = [value];
+    } else if (value is List) {
+      // Validate all elements are strings
+      if (value.every((e) => e is String)) {
+        modulePaths = value.cast<String>();
+      } else {
+        print('[ERROR] link/2: ModuleList contains non-string elements');
+        return SystemResult.failure;
+      }
+    } else {
+      print('[ERROR] link/2: ModuleList must be string or list of strings');
+      return SystemResult.failure;
+    }
+  } else if (moduleListTerm is ReaderTerm) {
+    final rid = moduleListTerm.readerId;
+    final readerCell = rt.heap.getReader(rid);
+    if (readerCell == null) {
+      print('[ERROR] link/2: Reader $rid does not exist');
+      return SystemResult.failure;
+    }
+
+    // Check if the reader's writer is bound
+    final writerId = readerCell.pairWriter;
+    if (!rt.heap.isWriterBound(writerId)) {
+      call.suspendedReaders.add(rid);
+      return SystemResult.suspend;
+    }
+
+    final value = rt.heap.writerValue[writerId];
+    if (value is ConstTerm) {
+      final constValue = value.value;
+      if (constValue is String) {
+        modulePaths = [constValue];
+      } else if (constValue is List && constValue.every((e) => e is String)) {
+        modulePaths = constValue.cast<String>();
+      }
+    }
+  } else if (moduleListTerm is WriterTerm) {
+    final wid = moduleListTerm.writerId;
+    if (!rt.heap.isWriterBound(wid)) {
+      print('[ERROR] link/2: ModuleList writer is unbound');
+      return SystemResult.failure;
+    }
+    final value = rt.heap.writerValue[wid];
+    if (value is ConstTerm) {
+      final constValue = value.value;
+      if (constValue is String) {
+        modulePaths = [constValue];
+      } else if (constValue is List && constValue.every((e) => e is String)) {
+        modulePaths = constValue.cast<String>();
+      }
+    }
+  }
+
+  if (modulePaths == null) {
+    print('[ERROR] link/2: Could not extract module paths');
+    return SystemResult.failure;
+  }
+
+  // Load libraries (for now, just load the first one as a proof of concept)
+  // In full implementation, you'd load all libraries and return some composite handle
+  try {
+    final handle = rt.loadLibrary(modulePaths.first);
+
+    // Bind offset to handle
+    if (offsetTerm is WriterTerm) {
+      final wid = offsetTerm.writerId;
+      if (rt.heap.isWriterBound(wid)) {
+        // Verify match
+        final existing = rt.heap.writerValue[wid];
+        if (existing is ConstTerm && existing.value == handle) {
+          return SystemResult.success;
+        } else {
+          return SystemResult.failure;
+        }
+      } else {
+        rt.heap.bindWriterConst(wid, handle);
+        return SystemResult.success;
+      }
+    } else if (offsetTerm is ConstTerm) {
+      // Verify handle matches
+      return (offsetTerm.value == handle) ? SystemResult.success : SystemResult.failure;
+    } else {
+      print('[ERROR] link/2: Offset must be writer or constant');
+      return SystemResult.failure;
+    }
+  } catch (e) {
+    print('[ERROR] link/2: Failed to load libraries: $e');
+    return SystemResult.failure;
+  }
 }
 
 /// load_module/2: Load compiled GLP module (placeholder)
