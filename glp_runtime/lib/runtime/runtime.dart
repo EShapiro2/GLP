@@ -6,12 +6,14 @@ import 'commit.dart';
 import 'abandon.dart';
 import 'fairness.dart';
 import 'hanger.dart';
+import 'system_predicates.dart';
 import '../bytecode/runner.dart' show CallEnv;
 
 class GlpRuntime {
   final Heap heap;
   final ROQueues roq;
   final GoalQueue gq;
+  final SystemPredicateRegistry systemPredicates;
 
   final Map<GoalId, int> _budgets = <GoalId, int>{};
   final Map<GoalId, CallEnv> _goalEnvs = <GoalId, CallEnv>{};
@@ -20,10 +22,11 @@ class GlpRuntime {
   // Goal ID counter for spawn
   int nextGoalId = 10000;  // Start at 10000 to avoid collisions with test goal IDs
 
-  GlpRuntime({Heap? heap, ROQueues? roq, GoalQueue? gq})
+  GlpRuntime({Heap? heap, ROQueues? roq, GoalQueue? gq, SystemPredicateRegistry? systemPredicates})
       : heap = heap ?? Heap(),
         roq = roq ?? ROQueues(),
-        gq = gq ?? GoalQueue();
+        gq = gq ?? GoalQueue(),
+        systemPredicates = systemPredicates ?? SystemPredicateRegistry();
 
   List<GoalRef> commitWriters(Iterable<int> writerIds) {
     final acts = CommitOps.applySigmaHat(

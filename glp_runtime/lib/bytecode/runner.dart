@@ -3,6 +3,7 @@ import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/commit.dart';
 import 'package:glp_runtime/runtime/cells.dart';
+import 'package:glp_runtime/runtime/system_predicates.dart';
 import 'opcodes.dart';
 
 enum RunResult { terminated, suspended, yielded, outOfReductions }
@@ -1722,6 +1723,51 @@ class BytecodeRunner {
           // Variable is unbound writer - fail
           _softFailToNextClause(cx, pc);
           pc = _findNextClauseTry(pc);
+          continue;
+        }
+      }
+
+      // ===== SYSTEM PREDICATE EXECUTION =====
+      if (op is Execute) {
+        // Execute system predicate: call registered Dart function
+        // System predicates can succeed, fail, or suspend on unbound readers
+
+        // Look up the system predicate
+        final predicate = cx.rt.systemPredicates.lookup(op.predicateName);
+        if (predicate == null) {
+          print('[ERROR] System predicate not found: ${op.predicateName}');
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+
+        // Extract arguments from clause variables
+        final args = <Object?>[];
+        for (final argSlot in op.argSlots) {
+          args.add(cx.clauseVars[argSlot]);
+        }
+
+        // Create system call context
+        final call = SystemCall(op.predicateName, args);
+
+        // Execute the system predicate
+        final result = predicate(cx.rt, call);
+
+        // Handle result based on three-valued semantics
+        if (result == SystemResult.success) {
+          // Predicate succeeded - continue execution
+          pc++;
+          continue;
+        } else if (result == SystemResult.failure) {
+          // Predicate failed - try next clause
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        } else {
+          // result == SystemResult.suspend
+          // Predicate suspended on unbound readers - add to Si and continue
+          cx.si.addAll(call.suspendedReaders);
+          pc++;
           continue;
         }
       }

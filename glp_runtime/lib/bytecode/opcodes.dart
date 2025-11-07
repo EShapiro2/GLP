@@ -241,6 +241,16 @@ class Known implements Op {
   Known(this.varIndex);
 }
 
+// ===== SYSTEM PREDICATE execution =====
+/// Execute system predicate: call registered Dart function
+/// Used for I/O, arithmetic, and other operations requiring side effects
+/// System predicates can succeed, fail, or suspend on unbound readers
+class Execute implements Op {
+  final String predicateName;     // name of system predicate (e.g., "evaluate", "file_read")
+  final List<int> argSlots;       // clause variable indices for arguments
+  Execute(this.predicateName, this.argSlots);
+}
+
 // Legacy opcodes (for backward compatibility with existing tests)
 class HeadBindWriter implements Op {
   final int writerId;
