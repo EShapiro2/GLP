@@ -219,6 +219,20 @@ class GetValue implements Op {
 /// If Si is non-empty, previous clauses suspended, so this fails
 class Otherwise implements Op {}
 
+/// IfWriter guard: succeeds if variable is a writer (not reader, not constant)
+/// Used for type checking in guards
+class IfWriter implements Op {
+  final int varIndex;  // clause variable index to test
+  IfWriter(this.varIndex);
+}
+
+/// IfReader guard: succeeds if variable is a reader (not writer, not constant)
+/// Used for type checking in guards
+class IfReader implements Op {
+  final int varIndex;  // clause variable index to test
+  IfReader(this.varIndex);
+}
+
 /// Guard predicate call: execute guard without side effects
 /// If succeeds: continue; If fails: try next clause; If suspends: suspend entire goal
 class Guard implements Op {

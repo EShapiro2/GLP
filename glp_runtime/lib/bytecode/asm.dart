@@ -45,6 +45,8 @@ class BC {
   static SetReader setReader(int varIndex) => SetReader(varIndex);
   static SetConstant setConst(Object? value) => SetConstant(value);
   static Otherwise otherwise() => Otherwise();
+  static IfWriter ifWriter(int varIndex) => IfWriter(varIndex);
+  static IfReader ifReader(int varIndex) => IfReader(varIndex);
   static Spawn spawn(String label, int arity) => Spawn(label, arity);
   static Requeue requeue(String label, int arity) => Requeue(label, arity);
 
@@ -88,6 +90,8 @@ class BC {
   static SuspendEnd SUSP() => susp();
   static Proceed PROCEED() => proceed();
   static Otherwise OTHERWISE() => otherwise();
+  static IfWriter IF_WRITER(int varIndex) => ifWriter(varIndex);
+  static IfReader IF_READER(int varIndex) => ifReader(varIndex);
   static BodySetConst BCONST(int writerId, Object? v) => bconst(writerId, v);
   static BodySetStructConstArgs BSTRUCTC(int writerId, String f, List<Object?> constArgs)
     => bstructC(writerId, f, constArgs);

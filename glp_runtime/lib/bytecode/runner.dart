@@ -186,6 +186,36 @@ class BytecodeRunner {
         continue;
       }
 
+      // IfWriter guard: succeeds if variable is a writer
+      if (op is IfWriter) {
+        final term = cx.clauseVars[op.varIndex];
+        if (term is WriterTerm) {
+          // It's a writer - succeed
+          pc++;
+          continue;
+        } else {
+          // Not a writer - fail this clause
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+      }
+
+      // IfReader guard: succeeds if variable is a reader
+      if (op is IfReader) {
+        final term = cx.clauseVars[op.varIndex];
+        if (term is ReaderTerm) {
+          // It's a reader - succeed
+          pc++;
+          continue;
+        } else {
+          // Not a reader - fail this clause
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+      }
+
       // Mode selection (Arg)
       if (op is RequireWriterArg) {
         final wid = cx.env.w(op.slot);
