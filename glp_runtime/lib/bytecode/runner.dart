@@ -1461,6 +1461,12 @@ class BytecodeRunner {
           // Register environment with the runtime
           cx.rt.setGoalEnv(newGoalId, newEnv);
 
+          // Inherit program from parent goal
+          final parentProgram = cx.rt.getGoalProgram(cx.goalId);
+          if (parentProgram != null) {
+            cx.rt.setGoalProgram(newGoalId, parentProgram);
+          }
+
           // Enqueue the goal
           cx.rt.gq.enqueue(newGoalRef);
 
