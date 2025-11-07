@@ -14,11 +14,33 @@ import 'terms.dart';
 
 /// Register all standard system predicates with the runtime
 void registerStandardPredicates(SystemPredicateRegistry registry) {
+  // Arithmetic
   registry.register('evaluate', evaluatePredicate);
+
+  // Utilities
   registry.register('current_time', currentTimePredicate);
   registry.register('unique_id', uniqueIdPredicate);
+  registry.register('variable_name', variableNamePredicate);
+  registry.register('copy_term', copyTermPredicate);
+
+  // File I/O
   registry.register('file_read', fileReadPredicate);
   registry.register('file_write', fileWritePredicate);
+  registry.register('file_exists', fileExistsPredicate);
+  registry.register('file_open', fileOpenPredicate);
+  registry.register('file_close', fileClosePredicate);
+
+  // Directory operations
+  registry.register('directory_list', directoryListPredicate);
+
+  // Terminal I/O
+  registry.register('write', writePredicate);
+  registry.register('nl', nlPredicate);
+  registry.register('read', readPredicate);
+
+  // Module loading
+  registry.register('link', linkPredicate);
+  registry.register('load_module', loadModulePredicate);
 }
 
 /// evaluate/2: Arithmetic evaluation
@@ -567,4 +589,526 @@ SystemResult fileWritePredicate(GlpRuntime rt, SystemCall call) {
     print('[ERROR] file_write/2: Failed to write file $path: $e');
     return SystemResult.failure;
   }
+}
+
+// ============================================================================
+// TERMINAL I/O PREDICATES
+// ============================================================================
+
+/// write/1: Write term to stdout
+///
+/// Usage: execute('write', [Term])
+///
+/// Writes a term to standard output (no newline).
+///
+/// Behavior:
+/// - Term can be constant, bound writer, or reader
+/// - If Term is unbound reader → SUSPEND
+/// - Otherwise → print to stdout → SUCCESS
+///
+/// Example:
+///   write('Hello')  % prints: Hello
+///   write(42)       % prints: 42
+SystemResult writePredicate(GlpRuntime rt, SystemCall call) {
+  if (call.args.length != 1) {
+    print('[ERROR] write/1 requires exactly 1 argument, got ${call.args.length}');
+    return SystemResult.failure;
+  }
+
+  final term = call.args[0];
+  
+  // Extract the actual value to write
+  Object? value;
+  
+  if (term is ConstTerm) {
+    value = term.value;
+  } else if (term is WriterTerm) {
+    final wid = term.writerId;
+    if (!rt.heap.isWriterBound(wid)) {
+      // Unbound writer - fail
+      return SystemResult.failure;
+    }
+    final writerValue = rt.heap.writerValue[wid];
+    if (writerValue is ConstTerm) {
+      value = writerValue.value;
+    } else {
+      value = writerValue;
+    }
+  } else if (term is ReaderTerm) {
+    final rid = term.readerId;
+    final wid = rt.heap.writerIdForReader(rid);
+    if (wid == null || !rt.heap.isWriterBound(wid)) {
+      // Unbound reader - suspend
+      call.suspendedReaders.add(rid);
+      return SystemResult.suspend;
+    }
+    final writerValue = rt.heap.writerValue[wid];
+    if (writerValue is ConstTerm) {
+      value = writerValue.value;
+    } else {
+      value = writerValue;
+    }
+  } else {
+    value = term;
+  }
+
+  // Write to stdout
+  stdout.write(value);
+  return SystemResult.success;
+}
+
+/// nl/0: Write newline to stdout
+///
+/// Usage: execute('nl', [])
+///
+/// Writes a newline character to standard output.
+///
+/// Behavior:
+/// - Always succeeds
+///
+/// Example:
+///   nl  % prints newline
+SystemResult nlPredicate(GlpRuntime rt, SystemCall call) {
+  if (call.args.isNotEmpty) {
+    print('[ERROR] nl/0 requires no arguments, got ${call.args.length}');
+    return SystemResult.failure;
+  }
+
+  stdout.writeln();
+  return SystemResult.success;
+}
+
+/// read/1: Read line from stdin
+///
+/// Usage: execute('read', [Result])
+///
+/// Reads a line from standard input and binds it to Result.
+///
+/// Behavior:
+/// - Result is unbound writer → bind to input line → SUCCESS
+/// - Result is bound → verify it matches input → SUCCESS/FAILURE
+/// - If read fails → FAILURE
+///
+/// Example:
+///   read(Line)  % reads line from stdin, binds to Line
+SystemResult readPredicate(GlpRuntime rt, SystemCall call) {
+  if (call.args.length != 1) {
+    print('[ERROR] read/1 requires exactly 1 argument, got ${call.args.length}');
+    return SystemResult.failure;
+  }
+
+  final resultTerm = call.args[0];
+
+  // Read line from stdin
+  String? line;
+  try {
+    line = stdin.readLineSync();
+    if (line == null) {
+      return SystemResult.failure;
+    }
+  } catch (e) {
+    print('[ERROR] read/1: Failed to read from stdin: $e');
+    return SystemResult.failure;
+  }
+
+  // Bind or verify result
+  if (resultTerm is WriterTerm) {
+    final wid = resultTerm.writerId;
+    if (rt.heap.isWriterBound(wid)) {
+      // Verify
+      final existingValue = rt.heap.writerValue[wid];
+      bool matches = false;
+      if (existingValue is ConstTerm && existingValue.value == line) {
+        matches = true;
+      } else if (existingValue == line) {
+        matches = true;
+      }
+      return matches ? SystemResult.success : SystemResult.failure;
+    } else {
+      // Bind
+      rt.heap.bindWriterConst(wid, line);
+      return SystemResult.success;
+    }
+  } else if (resultTerm is ConstTerm) {
+    return (resultTerm.value == line) ? SystemResult.success : SystemResult.failure;
+  } else {
+    return SystemResult.failure;
+  }
+}
+
+// ============================================================================
+// ADDITIONAL FILE OPERATIONS
+// ============================================================================
+
+/// file_exists/1: Check if file exists
+///
+/// Usage: execute('file_exists', [Path])
+///
+/// Checks if a file exists at the given path.
+///
+/// Behavior:
+/// - Path must be ground string
+/// - If Path is unbound reader → SUSPEND
+/// - If file exists → SUCCESS
+/// - If file doesn't exist → FAILURE
+///
+/// Example:
+///   file_exists('/path/to/file.txt')
+SystemResult fileExistsPredicate(GlpRuntime rt, SystemCall call) {
+  if (call.args.length != 1) {
+    print('[ERROR] file_exists/1 requires exactly 1 argument, got ${call.args.length}');
+    return SystemResult.failure;
+  }
+
+  final pathTerm = call.args[0];
+
+  // Extract path
+  String? path;
+  if (pathTerm is ConstTerm && pathTerm.value is String) {
+    path = pathTerm.value as String;
+  } else if (pathTerm is WriterTerm) {
+    final wid = pathTerm.writerId;
+    if (!rt.heap.isWriterBound(wid)) {
+      return SystemResult.failure;
+    }
+    final value = rt.heap.writerValue[wid];
+    if (value is ConstTerm && value.value is String) {
+      path = value.value as String;
+    }
+  } else if (pathTerm is ReaderTerm) {
+    final rid = pathTerm.readerId;
+    final wid = rt.heap.writerIdForReader(rid);
+    if (wid == null || !rt.heap.isWriterBound(wid)) {
+      call.suspendedReaders.add(rid);
+      return SystemResult.suspend;
+    }
+    final value = rt.heap.writerValue[wid];
+    if (value is ConstTerm && value.value is String) {
+      path = value.value as String;
+    }
+  }
+
+  if (path == null) {
+    print('[ERROR] file_exists/1: path must be a string');
+    return SystemResult.failure;
+  }
+
+  // Check if file exists
+  try {
+    final file = File(path);
+    return file.existsSync() ? SystemResult.success : SystemResult.failure;
+  } catch (e) {
+    return SystemResult.failure;
+  }
+}
+
+/// file_open/3: Open file handle (placeholder)
+///
+/// Usage: execute('file_open', [Path, Mode, Handle])
+///
+/// Opens a file and returns a handle. Currently a placeholder.
+///
+/// Behavior:
+/// - Not yet implemented - returns FAILURE
+///
+/// Example:
+///   file_open('/path/to/file.txt', 'read', H)
+SystemResult fileOpenPredicate(GlpRuntime rt, SystemCall call) {
+  if (call.args.length != 3) {
+    print('[ERROR] file_open/3 requires exactly 3 arguments, got ${call.args.length}');
+    return SystemResult.failure;
+  }
+
+  print('[WARN] file_open/3: Not yet implemented (file handles require state management)');
+  return SystemResult.failure;
+}
+
+/// file_close/1: Close file handle (placeholder)
+///
+/// Usage: execute('file_close', [Handle])
+///
+/// Closes a file handle. Currently a placeholder.
+///
+/// Behavior:
+/// - Not yet implemented - returns FAILURE
+///
+/// Example:
+///   file_close(H)
+SystemResult fileClosePredicate(GlpRuntime rt, SystemCall call) {
+  if (call.args.length != 1) {
+    print('[ERROR] file_close/1 requires exactly 1 argument, got ${call.args.length}');
+    return SystemResult.failure;
+  }
+
+  print('[WARN] file_close/1: Not yet implemented (file handles require state management)');
+  return SystemResult.failure;
+}
+
+// ============================================================================
+// DIRECTORY OPERATIONS
+// ============================================================================
+
+/// directory_list/2: List directory contents
+///
+/// Usage: execute('directory_list', [Path, List])
+///
+/// Lists all files and directories in the given directory.
+///
+/// Behavior:
+/// - Path must be ground string
+/// - If Path is unbound reader → SUSPEND
+/// - List is unbound writer → bind to list of filenames → SUCCESS
+/// - List is bound → verify it matches directory contents → SUCCESS/FAILURE
+///
+/// Example:
+///   directory_list('/path/to/dir', Files)
+SystemResult directoryListPredicate(GlpRuntime rt, SystemCall call) {
+  if (call.args.length != 2) {
+    print('[ERROR] directory_list/2 requires exactly 2 arguments, got ${call.args.length}');
+    return SystemResult.failure;
+  }
+
+  final pathTerm = call.args[0];
+  final listTerm = call.args[1];
+
+  // Extract path
+  String? path;
+  if (pathTerm is ConstTerm && pathTerm.value is String) {
+    path = pathTerm.value as String;
+  } else if (pathTerm is WriterTerm) {
+    final wid = pathTerm.writerId;
+    if (!rt.heap.isWriterBound(wid)) {
+      return SystemResult.failure;
+    }
+    final value = rt.heap.writerValue[wid];
+    if (value is ConstTerm && value.value is String) {
+      path = value.value as String;
+    }
+  } else if (pathTerm is ReaderTerm) {
+    final rid = pathTerm.readerId;
+    final wid = rt.heap.writerIdForReader(rid);
+    if (wid == null || !rt.heap.isWriterBound(wid)) {
+      call.suspendedReaders.add(rid);
+      return SystemResult.suspend;
+    }
+    final value = rt.heap.writerValue[wid];
+    if (value is ConstTerm && value.value is String) {
+      path = value.value as String;
+    }
+  }
+
+  if (path == null) {
+    print('[ERROR] directory_list/2: path must be a string');
+    return SystemResult.failure;
+  }
+
+  // List directory
+  List<String> entries;
+  try {
+    final dir = Directory(path);
+    if (!dir.existsSync()) {
+      print('[ERROR] directory_list/2: Directory not found: $path');
+      return SystemResult.failure;
+    }
+    entries = dir.listSync().map((e) => e.path.split('/').last).toList();
+  } catch (e) {
+    print('[ERROR] directory_list/2: Failed to list directory $path: $e');
+    return SystemResult.failure;
+  }
+
+  // Bind or verify result (as list of strings)
+  if (listTerm is WriterTerm) {
+    final wid = listTerm.writerId;
+    if (rt.heap.isWriterBound(wid)) {
+      // Verify - would need to compare list structures
+      print('[WARN] directory_list/2: List verification not fully implemented');
+      return SystemResult.failure;
+    } else {
+      // Bind to list (store as ConstTerm with List value for now)
+      rt.heap.bindWriterConst(wid, entries);
+      return SystemResult.success;
+    }
+  } else {
+    return SystemResult.failure;
+  }
+}
+
+// ============================================================================
+// UTILITY PREDICATES
+// ============================================================================
+
+/// variable_name/2: Get unique name for a variable
+///
+/// Usage: execute('variable_name', [Var, Name])
+///
+/// Returns a unique string identifier for a variable (useful for debugging/RPC).
+///
+/// Behavior:
+/// - Var can be writer or reader
+/// - Name is unbound writer → bind to unique string → SUCCESS
+/// - Name is bound → verify it matches → SUCCESS/FAILURE
+///
+/// Example:
+///   variable_name(X, Name)  % Name = 'W1234' or 'R5678'
+SystemResult variableNamePredicate(GlpRuntime rt, SystemCall call) {
+  if (call.args.length != 2) {
+    print('[ERROR] variable_name/2 requires exactly 2 arguments, got ${call.args.length}');
+    return SystemResult.failure;
+  }
+
+  final varTerm = call.args[0];
+  final nameTerm = call.args[1];
+
+  // Get variable name
+  String name;
+  if (varTerm is WriterTerm) {
+    name = 'W${varTerm.writerId}';
+  } else if (varTerm is ReaderTerm) {
+    name = 'R${varTerm.readerId}';
+  } else {
+    print('[ERROR] variable_name/2: first argument must be a variable');
+    return SystemResult.failure;
+  }
+
+  // Bind or verify name
+  if (nameTerm is WriterTerm) {
+    final wid = nameTerm.writerId;
+    if (rt.heap.isWriterBound(wid)) {
+      // Verify
+      final existingValue = rt.heap.writerValue[wid];
+      bool matches = false;
+      if (existingValue is ConstTerm && existingValue.value == name) {
+        matches = true;
+      } else if (existingValue == name) {
+        matches = true;
+      }
+      return matches ? SystemResult.success : SystemResult.failure;
+    } else {
+      // Bind
+      rt.heap.bindWriterConst(wid, name);
+      return SystemResult.success;
+    }
+  } else if (nameTerm is ConstTerm) {
+    return (nameTerm.value == name) ? SystemResult.success : SystemResult.failure;
+  } else {
+    return SystemResult.failure;
+  }
+}
+
+/// copy_term/2: Copy a term (shallow copy)
+///
+/// Usage: execute('copy_term', [Original, Copy])
+///
+/// Creates a copy of a term.
+///
+/// Behavior:
+/// - Original must be ground
+/// - If Original is unbound reader → SUSPEND
+/// - Copy is unbound writer → bind to copy → SUCCESS
+/// - Copy is bound → verify it matches → SUCCESS/FAILURE
+///
+/// Note: This is a simplified version - full copy_term would need
+/// to handle variable renaming for non-ground terms
+///
+/// Example:
+///   copy_term(f(a,b), C)  % C = f(a,b)
+SystemResult copyTermPredicate(GlpRuntime rt, SystemCall call) {
+  if (call.args.length != 2) {
+    print('[ERROR] copy_term/2 requires exactly 2 arguments, got ${call.args.length}');
+    return SystemResult.failure;
+  }
+
+  final originalTerm = call.args[0];
+  final copyTerm = call.args[1];
+
+  // Extract original value
+  Object? original;
+  if (originalTerm is ConstTerm) {
+    original = originalTerm;
+  } else if (originalTerm is WriterTerm) {
+    final wid = originalTerm.writerId;
+    if (!rt.heap.isWriterBound(wid)) {
+      return SystemResult.failure;
+    }
+    original = rt.heap.writerValue[wid];
+  } else if (originalTerm is ReaderTerm) {
+    final rid = originalTerm.readerId;
+    final wid = rt.heap.writerIdForReader(rid);
+    if (wid == null || !rt.heap.isWriterBound(wid)) {
+      call.suspendedReaders.add(rid);
+      return SystemResult.suspend;
+    }
+    original = rt.heap.writerValue[wid];
+  } else {
+    original = originalTerm;
+  }
+
+  // Make a copy (shallow for now)
+  final copy = original;
+
+  // Bind or verify copy
+  if (copyTerm is WriterTerm) {
+    final wid = copyTerm.writerId;
+    if (rt.heap.isWriterBound(wid)) {
+      // Verify
+      final existingValue = rt.heap.writerValue[wid];
+      return (existingValue == copy) ? SystemResult.success : SystemResult.failure;
+    } else {
+      // Bind
+      if (copy is Term) {
+        rt.heap.writerValue[wid] = copy;
+      } else {
+        rt.heap.bindWriterConst(wid, copy);
+      }
+      return SystemResult.success;
+    }
+  } else {
+    return SystemResult.failure;
+  }
+}
+
+// ============================================================================
+// MODULE LOADING (PLACEHOLDERS)
+// ============================================================================
+
+/// link/2: Link external modules (placeholder)
+///
+/// Usage: execute('link', [ModuleList, Offset])
+///
+/// Links external modules (C/Dart libraries). Currently a placeholder.
+///
+/// Behavior:
+/// - Not yet implemented - returns FAILURE
+///
+/// Example:
+///   link([file, math], Offset)
+SystemResult linkPredicate(GlpRuntime rt, SystemCall call) {
+  if (call.args.length != 2) {
+    print('[ERROR] link/2 requires exactly 2 arguments, got ${call.args.length}');
+    return SystemResult.failure;
+  }
+
+  print('[WARN] link/2: Not yet implemented (requires FFI/dynamic library loading)');
+  return SystemResult.failure;
+}
+
+/// load_module/2: Load compiled GLP module (placeholder)
+///
+/// Usage: execute('load_module', [FileName, Module])
+///
+/// Loads a compiled GLP bytecode module. Currently a placeholder.
+///
+/// Behavior:
+/// - Not yet implemented - returns FAILURE
+///
+/// Example:
+///   load_module('mymodule.glp', M)
+SystemResult loadModulePredicate(GlpRuntime rt, SystemCall call) {
+  if (call.args.length != 2) {
+    print('[ERROR] load_module/2 requires exactly 2 arguments, got ${call.args.length}');
+    return SystemResult.failure;
+  }
+
+  print('[WARN] load_module/2: Not yet implemented (requires bytecode serialization)');
+  return SystemResult.failure;
 }
