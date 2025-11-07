@@ -32,18 +32,25 @@ dart run glp_repl.dart
 
 ### Interactive Goals
 
-You can type GLP goals directly:
+You can load programs and execute queries directly:
 
 ```glp
-GLP> :load hello.glp
+GLP> hello.glp
+✓ Loaded: hello.glp
+
 GLP> hello.
 Hello from GLP!
+→ Executed 1 goals
 
-GLP> execute('write', ['Hello World']).
-Hello World
+GLP> merge.glp
+✓ Loaded: merge.glp
+
+GLP> merge([1,2,3], [a,b], Xs).
+→ Executed 1 goals
+  Xs = [1, a, 2, b, 3]
 ```
 
-**Note**: Variable bindings are not yet displayed in REPL. For queries with output variables, use the test runner.
+Variable bindings are now displayed for query results!
 
 ### Run Tests
 
