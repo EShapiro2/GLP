@@ -32,11 +32,38 @@ dart run glp_repl.dart
 
 ### Interactive Goals
 
-You can also type GLP goals directly:
+You can type GLP goals directly:
 
 ```glp
+GLP> :load hello.glp
+GLP> hello.
+Hello from GLP!
+
 GLP> execute('write', ['Hello World']).
-GLP> merge([a,b], [c,d], X).
+Hello World
+```
+
+**Note**: Variable bindings are not yet displayed in REPL. For queries with output variables, use the test runner.
+
+### Run Tests
+
+From the `udi/` directory:
+
+```bash
+# Run specific tests
+dart run run_test.dart hello       # Hello world
+dart run run_test.dart merge       # Merge tests
+dart run run_test.dart merge_123   # Merge [1,2,3] and [a,b]
+dart run run_test.dart p_q         # Simple p/q
+dart run run_test.dart metainterp  # Metainterpreter
+
+# See available tests
+dart run run_test.dart
+```
+
+Tests show full output including variable bindings:
+```
+Extracted list: [1, a, 2, b, 3]
 ```
 
 ## Example Programs
