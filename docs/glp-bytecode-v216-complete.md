@@ -380,10 +380,32 @@ Guards execute in **Phase 1** (head+guards) and are **pure tests**; they may suc
 **Difference from ground**: `known(X)` only tests whether X itself is bound, not whether X contains unbound variables internally. `ground(f(Y))` fails if Y is unbound, but `known(f(Y))` succeeds because f(Y) is a bound structure.
 
 ### 11.4 otherwise
-**Operation**: Default guard  
+**Operation**: Default guard
 **Behavior**:
 - Succeeds if all previous clauses failed
 - Used for catch-all clauses
+
+### 11.5 if_writer X
+**Operation**: Type test - succeeds if X is a writer variable
+**Three-valued semantics**:
+1. If X is WriterTerm → **SUCCEED** (continue, pc++)
+2. If X is not WriterTerm (reader or constant) → **FAIL** (soft-fail to next clause)
+
+**Usage**: Enables type-based dispatching and pattern discrimination
+**Example**:
+```
+process(X) :- if_writer(X) | ... handle writer case
+process(X) :- if_reader(X) | ... handle reader case
+process(X) :- otherwise    | ... handle constant case
+```
+
+### 11.6 if_reader X
+**Operation**: Type test - succeeds if X is a reader variable
+**Three-valued semantics**:
+1. If X is ReaderTerm → **SUCCEED** (continue, pc++)
+2. If X is not ReaderTerm (writer or constant) → **FAIL** (soft-fail to next clause)
+
+**Usage**: Complements if_writer for complete type discrimination
 
 ## 12. System Instructions
 
