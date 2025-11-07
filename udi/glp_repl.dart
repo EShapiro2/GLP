@@ -7,6 +7,7 @@ library;
 import 'dart:io';
 import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
+import 'package:glp_runtime/bytecode/opcodes.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
@@ -92,10 +93,24 @@ void main() {
     // Compile and run the goal
     try {
       // Compile the input as a goal
-      final program = compiler.compile(trimmed);
+      final goalProgram = compiler.compile(trimmed);
 
-      // Create a scheduler with the program
-      final runner = BytecodeRunner(program);
+      // Combine loaded programs with the goal
+      final allOps = <Op>[];
+
+      // Add all loaded programs first
+      for (final loaded in loadedPrograms.values) {
+        allOps.addAll(loaded.ops);
+      }
+
+      // Add the goal program
+      allOps.addAll(goalProgram.ops);
+
+      // Create combined program
+      final combinedProgram = BytecodeProgram(allOps);
+
+      // Create a scheduler with the combined program
+      final runner = BytecodeRunner(combinedProgram);
       final scheduler = Scheduler(rt: rt, runners: {'main': runner});
 
       // Set up initial goal
