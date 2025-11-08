@@ -993,15 +993,20 @@ class BytecodeRunner {
             // BODY phase structure building
             final struct = cx.currentStructure as StructTerm;
             final clauseVarValue = cx.clauseVars[op.varIndex];
+            if (debug) {
+              print('  [G${cx.goalId}] UnifyReader BODY: varIndex=${op.varIndex}, clauseVarValue=$clauseVarValue, clauseVars=${cx.clauseVars}');
+            }
             if (clauseVarValue is int) {
               // It's a writer ID - get the reader for this writer
               final wc = cx.rt.heap.writer(clauseVarValue);
               if (wc != null) {
                 struct.args[cx.S] = ReaderTerm(wc.readerId);
+                if (debug) print('  [G${cx.goalId}] UnifyReader BODY: Using paired reader ${wc.readerId} for writer $clauseVarValue');
               }
             } else if (clauseVarValue is ReaderTerm) {
               // Already a reader term - use directly
               struct.args[cx.S] = clauseVarValue;
+              if (debug) print('  [G${cx.goalId}] UnifyReader BODY: Using existing ReaderTerm $clauseVarValue');
             } else if (clauseVarValue == null) {
               // First occurrence as reader - create pair
               final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
@@ -1009,6 +1014,7 @@ class BytecodeRunner {
               cx.rt.heap.addReader(ReaderCell(freshReaderId));
               cx.clauseVars[op.varIndex] = freshWriterId;
               struct.args[cx.S] = ReaderTerm(freshReaderId);
+              if (debug) print('  [G${cx.goalId}] UnifyReader BODY: Creating FRESH pair W$freshWriterId/R$freshReaderId for varIndex=${op.varIndex}');
             }
             cx.S++;
 

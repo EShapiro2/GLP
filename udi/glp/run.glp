@@ -11,3 +11,6 @@ run((A, B)) :- run(A?), run(B?).
 
 % Default: look up clause and run body
 run(A) :- otherwise | clause(A?, B), run(B?).
+
+% Test clause to isolate reader variable bug
+run2(Ys?) :- run((merge([],[],Xs1), merge([],Xs1?,Ys))).

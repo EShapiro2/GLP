@@ -116,7 +116,7 @@ void main() async {
         rt.gq.enqueue(GoalRef(goalId, entryPC));
         goalId++;
 
-        final ran = scheduler.drain(maxCycles: 10000);
+        final ran = scheduler.drain(maxCycles: 10000, debug: true);
         print('→ Executed ${ran.length} goals');
 
         // For conjunctions, extract variables from the original query
@@ -192,7 +192,7 @@ void main() async {
       final currentGoalId = goalId;
       goalId++;
 
-      final ran = scheduler.drain(maxCycles: 10000);
+      final ran = scheduler.drain(maxCycles: 10000, debug: true);
 
       // Report result
       print('→ Executed ${ran.length} goals');
@@ -358,14 +358,32 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
     if (arg is ConstTerm) {
       argTerms.add(rt.ConstTerm(arg.value));
     } else if (arg is VarTerm) {
-      // Variable in structure - create writer/reader
-      final (writerId, readerId) = runtime.heap.allocateFreshPair();
-      runtime.heap.addWriter(WriterCell(writerId, readerId));
-      runtime.heap.addReader(ReaderCell(readerId));
-      if (!arg.isReader) {
-        queryVarWriters[arg.name] = writerId;
+      // Variable in structure - check if already exists
+      // Note: arg.name does NOT include the '?' suffix, so use it directly
+      final baseName = arg.name;
+      final existingWriterId = queryVarWriters[baseName];
+
+      if (arg.isReader && existingWriterId != null) {
+        // Reader for existing writer - use paired reader
+        final wc = runtime.heap.writer(existingWriterId);
+        if (wc != null) {
+          argTerms.add(rt.ReaderTerm(wc.readerId));
+        } else {
+          throw Exception('Writer cell not found for $baseName');
+        }
+      } else if (!arg.isReader && existingWriterId != null) {
+        // Writer already exists - reuse it
+        argTerms.add(rt.WriterTerm(existingWriterId));
+      } else {
+        // First occurrence - create fresh pair
+        final (writerId, readerId) = runtime.heap.allocateFreshPair();
+        runtime.heap.addWriter(WriterCell(writerId, readerId));
+        runtime.heap.addReader(ReaderCell(readerId));
+        if (!arg.isReader) {
+          queryVarWriters[baseName] = writerId;
+        }
+        argTerms.add(arg.isReader ? rt.ReaderTerm(readerId) : rt.WriterTerm(writerId));
       }
-      argTerms.add(arg.isReader ? rt.ReaderTerm(readerId) : rt.WriterTerm(writerId));
     } else if (arg is ListTerm) {
       argTerms.add(_buildListTerm(runtime, arg, queryVarWriters));
     } else if (arg is StructTerm) {
