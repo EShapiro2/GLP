@@ -18,11 +18,17 @@ import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 
-void main() {
+void main() async {
+  // Get git commit info
+  final gitCommit = await _getGitCommit();
+
   print('╔════════════════════════════════════════╗');
   print('║   GLP REPL - Interactive Interpreter   ║');
   print('╚════════════════════════════════════════╝');
   print('');
+  if (gitCommit != null) {
+    print('Build: $gitCommit');
+  }
   print('Working directory: udi/');
   print('Source files: glp/*.glp');
   print('Compiled files: bin/*.glpc');
@@ -197,10 +203,13 @@ void main() {
         for (final entry in queryVarWriters.entries) {
           final varName = entry.key;
           final writerId = entry.value;
+          print('[DEBUG REPL] Checking writer $writerId for var $varName');
           if (rt.heap.isWriterBound(writerId)) {
             final value = rt.heap.valueOfWriter(writerId);
+            print('[DEBUG REPL] Writer $writerId IS BOUND to: $value');
             print('  $varName = ${_formatTerm(value, rt)}');
           } else {
+            print('[DEBUG REPL] Writer $writerId is UNBOUND');
             print('  $varName = <unbound>');
           }
         }
@@ -454,17 +463,31 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
       // Move to tail
       if (tail is rt.ReaderTerm && runtime != null) {
         final readerId = tail.readerId;
-        if (visited.contains(readerId)) break;
+        if (visited.contains(readerId)) {
+          // Circular reference in tail
+          return '[${elements.join(', ')} | <circular R$readerId>]';
+        }
         visited.add(readerId);
         final writer = _findPairedWriter(runtime, readerId);
         if (writer != null && runtime.heap.isWriterBound(writer)) {
           current = runtime.heap.valueOfWriter(writer);
           if (current == null || current is! rt.StructTerm) break;
         } else {
-          break;
+          // Unbound reader in tail - show it
+          return '[${elements.join(', ')} | R$readerId]';
         }
       } else if (tail is rt.ConstTerm && tail.value == null) {
         break;  // End of list
+      } else if (tail is rt.WriterTerm && runtime != null) {
+        // Writer in tail position
+        final writerId = tail.writerId;
+        if (runtime.heap.isWriterBound(writerId)) {
+          current = runtime.heap.valueOfWriter(writerId);
+          if (current == null || current is! rt.StructTerm) break;
+        } else {
+          // Unbound writer in tail - show it
+          return '[${elements.join(', ')} | W$writerId]';
+        }
       } else {
         break;
       }
@@ -484,6 +507,19 @@ int? _findPairedWriter(GlpRuntime runtime, int readerId) {
     if (writerCell.readerId == readerId) {
       return writerId;
     }
+  }
+  return null;
+}
+
+// Get git commit info for build identification
+Future<String?> _getGitCommit() async {
+  try {
+    final result = await Process.run('git', ['log', '-1', '--format=%h %s']);
+    if (result.exitCode == 0) {
+      return result.stdout.toString().trim();
+    }
+  } catch (e) {
+    // Git not available or not a git repo
   }
   return null;
 }

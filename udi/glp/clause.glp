@@ -12,3 +12,14 @@ clause(merge([], [], []), true).
 clause(p(a), true).
 clause(p(b), true).
 clause(q(X), p(X?)).
+
+% test_minimal.glp clauses
+clause(p(X?), (q(Y), r(Y?,X))).
+clause(p1(X?), (r(Y?,X), q(Y))).
+clause(q(a), true).
+clause(r(a,b), true).
+
+clause(p2(X?), (q1(f(Y)), r1(f(Y?), X))).
+clause(p3(X?), (r1(f(Y?),X), q1(f(Y)))).
+clause(q1(f(a)), true).
+clause(r1(f(a),b), true).

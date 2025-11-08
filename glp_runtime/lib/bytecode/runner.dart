@@ -817,6 +817,9 @@ class BytecodeRunner {
             if (value is int) {
               // It's a writer ID
               struct.args[cx.S] = WriterTerm(value);
+            } else if (value is ConstTerm || value is StructTerm) {
+              // It's a ground term extracted from READ mode - use directly
+              struct.args[cx.S] = value;
             } else if (value == null) {
               // Create fresh writer/reader pair
               final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
@@ -923,6 +926,11 @@ class BytecodeRunner {
                   cx.clauseVars[op.varIndex] = wid;
                 }
                 cx.S++;
+              } else if (value is WriterTerm) {
+                // Writer term - store the writer ID directly
+                // This happens when clause head expects reader but structure has writer
+                cx.clauseVars[op.varIndex] = value.writerId;
+                cx.S++;
               } else {
                 // Mismatch
                 _softFailToNextClause(cx, pc);
@@ -987,17 +995,25 @@ class BytecodeRunner {
                 // Check if already resolved in clauseVars
                 final resolved = cx.clauseVars[arg.varIndex];
                 if (resolved is int) {
-                  // Already resolved to a writer ID - use its reader
+                  // Already resolved to a writer ID - use writer or reader based on isWriter flag
                   final wc = cx.rt.heap.writer(resolved);
                   if (wc != null) {
-                    termArgs.add(ReaderTerm(wc.readerId));
+                    if (arg.isWriter) {
+                      termArgs.add(WriterTerm(resolved));
+                    } else {
+                      termArgs.add(ReaderTerm(wc.readerId));
+                    }
                   } else {
                     // Shouldn't happen - create fresh pair as fallback using heap allocation
                     final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
                     cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
                     cx.rt.heap.addReader(ReaderCell(freshReaderId));
                     cx.clauseVars[arg.varIndex] = freshWriterId;
-                    termArgs.add(ReaderTerm(freshReaderId));
+                    if (arg.isWriter) {
+                      termArgs.add(WriterTerm(freshWriterId));
+                    } else {
+                      termArgs.add(ReaderTerm(freshReaderId));
+                    }
                   }
                 } else if (resolved is Term) {
                   // Already a term - use as-is
@@ -1008,7 +1024,11 @@ class BytecodeRunner {
                   cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
                   cx.rt.heap.addReader(ReaderCell(freshReaderId));
                   cx.clauseVars[arg.varIndex] = freshWriterId;
-                  termArgs.add(ReaderTerm(freshReaderId));
+                  if (arg.isWriter) {
+                    termArgs.add(WriterTerm(freshWriterId));
+                  } else {
+                    termArgs.add(ReaderTerm(freshReaderId));
+                  }
                 }
               } else if (arg == null) {
                 // Void/unbound - create fresh writer?
