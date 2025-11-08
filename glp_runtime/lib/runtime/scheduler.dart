@@ -9,7 +9,7 @@ class Scheduler {
   Scheduler({required this.rt, BytecodeRunner? runner, Map<Object?, BytecodeRunner>? runners})
       : runners = runners ?? (runner != null ? {null: runner} : {});
 
-  String _formatTerm(Term term) {
+  String _formatTerm(Term term, {bool markReaders = true}) {
     if (term is ConstTerm) {
       if (term.value == null) return '[]';
       return term.value.toString();
@@ -17,7 +17,7 @@ class Scheduler {
       final wid = term.writerId;
       if (rt.heap.isWriterBound(wid)) {
         final value = rt.heap.valueOfWriter(wid);
-        if (value != null) return 'W$wid=${_formatTerm(value)}';
+        if (value != null) return _formatTerm(value, markReaders: markReaders);
       }
       return 'W$wid';
     } else if (term is ReaderTerm) {
@@ -25,11 +25,14 @@ class Scheduler {
       final wid = rt.heap.writerIdForReader(rid);
       if (wid != null && rt.heap.isWriterBound(wid)) {
         final value = rt.heap.valueOfWriter(wid);
-        if (value != null) return 'R$rid=${_formatTerm(value)}';
+        if (value != null) {
+          final formatted = _formatTerm(value, markReaders: markReaders);
+          return markReaders ? '$formatted?' : formatted;
+        }
       }
-      return 'R$rid';
+      return markReaders ? 'R$rid?' : 'R$rid';
     } else if (term is StructTerm) {
-      final args = term.args.map((a) => _formatTerm(a)).join(',');
+      final args = term.args.map((a) => _formatTerm(a, markReaders: markReaders)).join(',');
       return '${term.functor}($args)';
     }
     return term.toString();
@@ -81,14 +84,30 @@ class Scheduler {
         final goalStr = _formatGoal(act.id, procName, env);
         print('${act.id}: $goalStr');
       }
+
+      // Track queue length before execution
+      final queueBefore = rt.gq.length;
+
       final cx = RunnerContext(rt: rt, goalId: act.id, kappa: act.pc, env: env);
       final result = runner.runWithStatus(cx);
+
+      // Track queue length after execution to detect spawned goals
+      final queueAfter = rt.gq.length;
+      final spawnedCount = queueAfter - queueBefore;
+
       if (debug) {
+        // Show body (spawned goals)
+        if (cx.spawnedGoals.isNotEmpty) {
+          final body = cx.spawnedGoals.join(', ');
+          print('  :- $body');
+        } else if (result == RunResult.terminated) {
+          print('  :- true');
+        }
+
+        // Show result
         if (result == RunResult.suspended) {
           print('  → suspended');
-        } else if (result == RunResult.terminated) {
-          print('  → ok');
-        } else {
+        } else if (result != RunResult.terminated) {
           print('  → $result');
         }
       }

@@ -99,6 +99,9 @@ class RunnerContext {
 
   final void Function(GoalRef)? onActivation; // host log hook
 
+  // Track spawned goals for display
+  final List<String> spawnedGoals = [];
+
   RunnerContext({
     required this.rt,
     required this.goalId,
@@ -145,9 +148,39 @@ class BytecodeRunner {
     // Jump to next clause (will be handled by returning new PC)
   }
 
+  /// Format a term for display
+  static String _formatTerm(GlpRuntime rt, Term term, {bool markReaders = true}) {
+    if (term is ConstTerm) {
+      if (term.value == null) return '[]';
+      return term.value.toString();
+    } else if (term is WriterTerm) {
+      final wid = term.writerId;
+      if (rt.heap.isWriterBound(wid)) {
+        final value = rt.heap.valueOfWriter(wid);
+        if (value != null) return _formatTerm(rt, value, markReaders: markReaders);
+      }
+      return 'W$wid';
+    } else if (term is ReaderTerm) {
+      final rid = term.readerId;
+      final wid = rt.heap.writerIdForReader(rid);
+      if (wid != null && rt.heap.isWriterBound(wid)) {
+        final value = rt.heap.valueOfWriter(wid);
+        if (value != null) {
+          final formatted = _formatTerm(rt, value, markReaders: markReaders);
+          return markReaders ? '$formatted?' : formatted;
+        }
+      }
+      return markReaders ? 'R$rid?' : 'R$rid';
+    } else if (term is StructTerm) {
+      final args = term.args.map((a) => _formatTerm(rt, a, markReaders: markReaders)).join(',');
+      return '${term.functor}($args)';
+    }
+    return term.toString();
+  }
+
   RunResult runWithStatus(RunnerContext cx) {
     var pc = cx.kappa;  // Start at goal's entry point (not 0!)
-    final debug = false; // Set to true to enable trace
+    final debug = true; // Set to true to enable trace
 
     // Print try start
     if (debug) {
@@ -1591,9 +1624,21 @@ class BytecodeRunner {
           final newGoalId = cx.rt.nextGoalId++;
           final newGoalRef = GoalRef(newGoalId, entryPc);
 
-          if (debug) {
-            print('  [G${cx.goalId}] PC=$pc Spawn ${op.procedureLabel} -> Goal $newGoalId at PC $entryPc with env: W=${newEnv.writerBySlot} R=${newEnv.readerBySlot}');
+          // Format spawned goal as GLP predicate with arguments
+          final args = <String>[];
+          for (int i = 0; i < 10; i++) {
+            final w = newEnv.writerBySlot[i];
+            final r = newEnv.readerBySlot[i];
+            if (w != null) {
+              args.add(_formatTerm(cx.rt, WriterTerm(w)));
+            } else if (r != null) {
+              args.add(_formatTerm(cx.rt, ReaderTerm(r)));
+            } else {
+              break;
+            }
           }
+          final goalStr = args.isEmpty ? op.procedureLabel : '${op.procedureLabel}(${args.join(', ')})';
+          cx.spawnedGoals.add(goalStr);
 
           // Register environment with the runtime
           cx.rt.setGoalEnv(newGoalId, newEnv);
@@ -1616,7 +1661,6 @@ class BytecodeRunner {
 
       if (op is Requeue) {
         if (cx.inBody) {
-          if (debug) print('  [G${cx.goalId}] PC=$pc Requeue procedureLabel=${op.procedureLabel} argWriters=${cx.argWriters} argReaders=${cx.argReaders}');
           // Tail call - reuse current goal, jump to procedure entry
           // Get entry point for procedure
           final entryPc = prog.labels[op.procedureLabel];
@@ -1625,10 +1669,24 @@ class BytecodeRunner {
             return RunResult.terminated;
           }
 
-          if (debug) print('  [G${cx.goalId}] Requeue: entryPc=$entryPc');
+          // Format requeued goal as GLP predicate with arguments
+          final args = <String>[];
+          for (int i = 0; i < 10; i++) {
+            final w = cx.argWriters[i];
+            final r = cx.argReaders[i];
+            if (w != null) {
+              args.add(_formatTerm(cx.rt, WriterTerm(w)));
+            } else if (r != null) {
+              args.add(_formatTerm(cx.rt, ReaderTerm(r)));
+            } else {
+              break;
+            }
+          }
+          final goalStr = args.isEmpty ? op.procedureLabel : '${op.procedureLabel}(${args.join(', ')})';
+          cx.spawnedGoals.add(goalStr);
+
           // Update environment with new arguments
           cx.env.update(Map.from(cx.argWriters), Map.from(cx.argReaders));
-          if (debug) print('  [G${cx.goalId}] Requeue: updated env, jumping to PC $entryPc');
 
           // Clear argument registers
           cx.argWriters.clear();
