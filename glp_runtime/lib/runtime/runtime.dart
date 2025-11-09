@@ -35,7 +35,7 @@ class GlpRuntime {
   int nextGoalId = 10000;  // Start at 10000 to avoid collisions with test goal IDs
 
   GlpRuntime({Heap? heap, ROQueues? roq, GoalQueue? gq, SystemPredicateRegistry? systemPredicates})
-      : heap = heap ?? HeapV2Adapter(),  // 97% performance improvement!
+      : heap = heap ?? HeapV2Adapter(),  // Using HeapV2Adapter with reader binding fix
         roq = roq ?? ROQueues(),
         gq = gq ?? GoalQueue(),
         systemPredicates = systemPredicates ?? SystemPredicateRegistry();

@@ -56,6 +56,16 @@ class HeapV2Adapter extends Heap {
       }
       _writerToVar[w.writerId] = w.writerId;
       _varToWriter[w.writerId] = w.writerId;
+
+      // CRITICAL FIX: If the writer is already bound in parent heap,
+      // copy that binding to HeapV2
+      if (super.isWriterBound(w.writerId)) {
+        final value = super.valueOfWriter(w.writerId);
+        if (value != null) {
+          final v2Value = _convertToV2(value);
+          _v2.bindVariable(w.writerId, v2Value);
+        }
+      }
     }
   }
 
@@ -70,6 +80,16 @@ class HeapV2Adapter extends Heap {
       if (varId != null) {
         _readerToVar[r.readerId] = varId;
         _varToReader[varId] = r.readerId;
+
+        // CRITICAL FIX: If the paired writer is already bound (e.g., concrete value like []),
+        // copy that binding to HeapV2 so the reader is bound from the start
+        if (super.isWriterBound(writerId)) {
+          final value = super.valueOfWriter(writerId);
+          if (value != null) {
+            final v2Value = _convertToV2(value);
+            _v2.bindVariable(varId, v2Value);
+          }
+        }
       }
     }
   }
@@ -80,7 +100,23 @@ class HeapV2Adapter extends Heap {
     if (varId == null) {
       return super.isWriterBound(writerId); // Fall back to parent
     }
-    return _v2.isBound(varId);
+
+    // CRITICAL FIX: Check BOTH V2 and parent
+    // REPL directly writes to writerValue, bypassing bindWriterConst()
+    // So we must check parent as well
+    final v2Bound = _v2.isBound(varId);
+    final parentBound = super.isWriterBound(writerId);
+
+    // If parent is bound but V2 isn't, sync the binding to V2
+    if (parentBound && !v2Bound) {
+      final value = super.valueOfWriter(writerId);
+      if (value != null) {
+        final v2Value = _convertToV2(value);
+        _v2.bindVariable(varId, v2Value);
+      }
+    }
+
+    return v2Bound || parentBound;
   }
 
   @override
@@ -99,32 +135,28 @@ class HeapV2Adapter extends Heap {
 
   @override
   void bindWriterConst(int writerId, Object? v) {
-    final varId = _writerToVar[writerId];
-    if (varId == null) {
-      super.bindWriterConst(writerId, v); // Fall back to parent
-      return;
-    }
-
-    _v2.bindVariableConst(varId, v);
-
-    // Also update parent's map for compatibility
+    // CRITICAL: Always update parent first for compatibility
     super.bindWriterConst(writerId, v);
+
+    // Then update V2 if this writer is mapped
+    final varId = _writerToVar[writerId];
+    if (varId != null) {
+      _v2.bindVariableConst(varId, v);
+    }
   }
 
   @override
   void bindWriterStruct(int writerId, String f, List<Term> args) {
-    final varId = _writerToVar[writerId];
-    if (varId == null) {
-      super.bindWriterStruct(writerId, f, args); // Fall back to parent
-      return;
-    }
-
-    // Convert args from old format to V2 format
-    final v2Args = args.map((arg) => _convertToV2(arg)).toList();
-    _v2.bindVariableStruct(varId, f, v2Args);
-
-    // Also update parent's map for compatibility
+    // CRITICAL: Always update parent first for compatibility
     super.bindWriterStruct(writerId, f, args);
+
+    // Then update V2 if this writer is mapped
+    final varId = _writerToVar[writerId];
+    if (varId != null) {
+      // Convert args from old format to V2 format
+      final v2Args = args.map((arg) => _convertToV2(arg)).toList();
+      _v2.bindVariableStruct(varId, f, v2Args);
+    }
   }
 
   /// Convert old Term types to V2 VarRef
