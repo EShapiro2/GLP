@@ -7,8 +7,9 @@ Refactor GLP runtime to align with FCP design with **incremental integration tes
 
 ### Phase Structure (Revised)
 - **Phase 0**: Baseline capture ✅ COMPLETE
-- **Phase 1**: Single ID variables ✅ COMPLETE  
-- **Phase 1.5**: HeapV2 Integration Test 🆕
+- **Phase 1**: Single ID variables ✅ COMPLETE
+- **Phase 1.5**: HeapV2 Integration Test ✅ COMPLETE
+- **Phase 1.5b**: HeapV2 Adapter Implementation 🆕
 - **Phase 2**: Instruction unification
 - **Phase 2.5**: Instruction Integration Test 🆕
 - **Phase 3**: Array-based registers
@@ -117,6 +118,152 @@ Ready for Phase 2: YES/NO
 - ⚠️ Minor issues → Fix and retest
 - ❌ Major issues → Investigate heap assumptions
 - 🔴 Fundamental problems → Reconsider approach
+
+---
+
+# PHASE 1.5b: HEAPV2 ADAPTER IMPLEMENTATION 🆕
+
+## Overview
+Phase 1.5 discovered that HeapV2 cannot be directly integrated due to type system incompatibility (WriterTerm/ReaderTerm vs VarRef). This phase creates an adapter layer to bridge the gap.
+
+## Step 1.5b.1: Create HeapV2 Adapter
+Create file: `lib/runtime/heap_v2_adapter.dart`
+
+```dart
+/// Adapter that presents old Heap interface but uses HeapV2 internally
+import 'heap.dart' as old;
+import 'heap_v2.dart';
+import 'terms.dart';
+
+class HeapV2Adapter implements old.Heap {
+  final HeapV2 _v2 = HeapV2();
+  final Map<int, int> _writerToVar = {};
+  final Map<int, int> _readerToVar = {};
+  int _nextSyntheticId = 1000;  // Start high to avoid conflicts
+
+  @override
+  (int, int) allocateFreshPair() {
+    // Allocate single variable in V2
+    int varId = _v2.allocateFreshVar();
+
+    // Create synthetic IDs for compatibility
+    int writerId = _nextSyntheticId++;
+    int readerId = _nextSyntheticId++;
+
+    // Map synthetic IDs to real variable
+    _writerToVar[writerId] = varId;
+    _readerToVar[readerId] = varId;
+
+    return (writerId, readerId);
+  }
+
+  @override
+  void bindWriter(int writerId, Term value) {
+    int varId = _writerToVar[writerId]!;
+    // Convert Term to V2 format and bind
+    _v2.bind(VarRef(varId, isReader: false), _convertTerm(value));
+  }
+
+  @override
+  Term? deref(Term term) {
+    if (term is WriterTerm) {
+      int? varId = _writerToVar[term.id];
+      if (varId != null) {
+        var v2Term = _v2.deref(VarRef(varId, isReader: false));
+        return _convertBackTerm(v2Term);
+      }
+    } else if (term is ReaderTerm) {
+      int? varId = _readerToVar[term.id];
+      if (varId != null) {
+        var v2Term = _v2.deref(VarRef(varId, isReader: true));
+        return _convertBackTerm(v2Term);
+      }
+    }
+    return term;
+  }
+
+  // Bridge ROQ operations
+  @override
+  void suspendGoalOnReader(int readerId, int goalId) {
+    int varId = _readerToVar[readerId]!;
+    _v2.suspendOn(varId, goalId);
+  }
+
+  @override
+  Set<int>? takeSuspendedGoals(int writerId) {
+    int varId = _writerToVar[writerId]!;
+    return _v2.takeSuspended(varId);
+  }
+
+  // Internal conversion helpers
+  Term _convertTerm(Term old) { /* Convert old format to V2 */ }
+  Term _convertBackTerm(dynamic v2Term) { /* Convert V2 to old format */ }
+}
+```
+
+## Step 1.5b.2: Test Adapter Integration
+Update file: `test/refactoring/heap_v2_integration_test.dart`
+
+```dart
+void main() {
+  group('HeapV2Adapter Integration', () {
+    test('Adapter works with existing bytecode runner', () {
+      // Create runner with adapter instead of direct HeapV2
+      final heap = HeapV2Adapter();
+      final runner = BytecodeRunner(heap: heap);
+
+      // Run test programs
+      final result = runner.execute(testProgram);
+      expect(result.success, isTrue);
+    });
+
+    test('Performance improvement maintained', () {
+      // Verify adapter doesn't negate performance gains
+      final adapter = HeapV2Adapter();
+      // Benchmark operations through adapter
+    });
+  });
+}
+```
+
+## Step 1.5b.3: Validate Production Compatibility
+```bash
+# Temporarily replace heap in one test file
+cp lib/runtime/heap.dart lib/runtime/heap_original.dart
+cp lib/runtime/heap_v2_adapter.dart lib/runtime/heap.dart
+
+# Run specific test to validate
+dart test test/custom/merge_test.dart
+
+# Restore original
+cp lib/runtime/heap_original.dart lib/runtime/heap.dart
+```
+
+## CHECKPOINT 1.5b: Adapter Validation
+
+### Required Results
+```
+Adapter Test Results:
+- Existing programs work: PASS/FAIL
+- Performance maintained: YES/NO (>90% of direct V2 speed)
+- No semantic changes: YES/NO
+- Memory overhead acceptable: YES/NO
+
+Ready for Phase 2: YES/NO
+```
+
+### Decision Tree
+- ✅ All pass → Proceed to Phase 2 with adapter approach
+- ⚠️ Performance degraded → Optimize adapter layer
+- ❌ Semantic differences → Fix term conversion logic
+- 🔴 Doesn't work → Reconsider approach (might need bigger refactor)
+
+### Migration Strategy
+With working adapter, we can:
+1. **Immediate** - Deploy adapter for instant performance gain
+2. **Phase 2-3** - Continue building other optimizations
+3. **Phase 4** - Gradually migrate from WriterTerm/ReaderTerm to VarRef
+4. **Phase 5** - Remove adapter, use HeapV2 directly
 
 ---
 
