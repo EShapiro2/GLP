@@ -180,7 +180,7 @@ class BytecodeRunner {
 
   RunResult runWithStatus(RunnerContext cx) {
     var pc = cx.kappa;  // Start at goal's entry point (not 0!)
-    final debug = true; // Set to true to enable trace
+    final debug = false; // Set to true to enable trace
 
     // Print try start
     if (debug) {

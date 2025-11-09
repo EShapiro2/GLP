@@ -33,7 +33,7 @@ void main() async {
   print('Source files: glp/*.glp');
   print('Compiled files: bin/*.glpc');
   print('');
-  print('Input: filename.glp to load, or goal. to execute');
+  print('Input: filename.glp to load, or goal to execute');
   print('Commands: :quit, :help');
   print('');
 
@@ -58,7 +58,11 @@ void main() async {
       continue;
     }
 
-    final trimmed = input.trim();
+    // Strip trailing . if present (allow goals without .)
+    var trimmed = input.trim();
+    if (trimmed.endsWith('.') && !trimmed.endsWith('.glp')) {
+      trimmed = trimmed.substring(0, trimmed.length - 1).trim();
+    }
 
     // Handle commands
     if (trimmed == ':quit' || trimmed == ':q') {
@@ -87,7 +91,7 @@ void main() async {
       // For conjunctions, wrap in a helper clause and compile it
       if (_isConjunction(trimmed)) {
         // Create wrapper: query__goal() :- <conjunction>.
-        final wrappedQuery = 'query__goal() :- $trimmed';
+        final wrappedQuery = 'query__goal() :- $trimmed.';
         final program = compiler.compile(wrappedQuery);
 
         // Combine with loaded programs
@@ -116,8 +120,8 @@ void main() async {
         rt.gq.enqueue(GoalRef(goalId, entryPC));
         goalId++;
 
-        final ran = scheduler.drain(maxCycles: 10000, debug: true);
-        print('→ Executed ${ran.length} goals');
+        final ran = scheduler.drain(maxCycles: 10000);
+        print('  → ${ran.length} goals');
 
         // For conjunctions, extract variables from the original query
         final result = compiler.compileWithMetadata(wrappedQuery);
@@ -131,7 +135,9 @@ void main() async {
       }
 
       // Single goal - parse directly
-      final lexer = Lexer(trimmed);
+      // Add . back for parser (parser requires it)
+      final parseInput = trimmed.endsWith('.') ? trimmed : '$trimmed.';
+      final lexer = Lexer(parseInput);
       final tokens = lexer.tokenize();
       final parser = Parser(tokens);
       final ast = parser.parse();
@@ -192,28 +198,24 @@ void main() async {
       final currentGoalId = goalId;
       goalId++;
 
-      final ran = scheduler.drain(maxCycles: 10000, debug: true);
-
-      // Report result
-      print('→ Executed ${ran.length} goals');
+      final ran = scheduler.drain(maxCycles: 10000);
 
       // Display variable bindings
       if (queryVarWriters.isNotEmpty) {
-        print('');
         for (final entry in queryVarWriters.entries) {
           final varName = entry.key;
           final writerId = entry.value;
-          print('[DEBUG REPL] Checking writer $writerId for var $varName');
           if (rt.heap.isWriterBound(writerId)) {
             final value = rt.heap.valueOfWriter(writerId);
-            print('[DEBUG REPL] Writer $writerId IS BOUND to: $value');
             print('  $varName = ${_formatTerm(value, rt)}');
           } else {
-            print('[DEBUG REPL] Writer $writerId is UNBOUND');
             print('  $varName = <unbound>');
           }
         }
       }
+
+      // Report execution count
+      print('  → ${ran.length} goals');
 
     } catch (e) {
       print('Error: $e');
