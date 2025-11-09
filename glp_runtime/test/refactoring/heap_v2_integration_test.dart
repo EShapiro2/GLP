@@ -9,8 +9,8 @@
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
-import 'package:glp_runtime/runtime/heap.dart' as v1;
-import 'package:glp_runtime/runtime/heap_v2.dart' as v2;
+import 'package:glp_runtime/runtime/heap.dart';
+import 'package:glp_runtime/runtime/heap_v2_adapter.dart';
 import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
@@ -110,26 +110,16 @@ void main() {
 // ============================================================================
 
 Map<String, dynamic> _runSimpleUnification({required bool useV2}) {
-  final rt = GlpRuntime();
+  // Create runtime with chosen heap implementation
+  final rt = useV2
+    ? GlpRuntime(heap: HeapV2Adapter())
+    : GlpRuntime();
 
-  // Create variable X/X? using chosen heap implementation
-  late int wX, rX;
-  if (useV2) {
-    // HeapV2: Single ID, access via VarRef wrapper
-    // For this test, we still use the old heap in rt
-    // but verify V2 would work the same way
-    // NOTE: Full integration requires runtime adapter - this is a compatibility check
-    wX = 1;
-    rX = 2;
-    rt.heap.addWriter(WriterCell(wX, rX));
-    rt.heap.addReader(ReaderCell(rX));
-  } else {
-    // HeapV1: Separate Writer/Reader IDs
-    wX = 1;
-    rX = 2;
-    rt.heap.addWriter(WriterCell(wX, rX));
-    rt.heap.addReader(ReaderCell(rX));
-  }
+  // Create variable X/X? - same API for both heaps
+  const wX = 1;
+  const rX = 2;
+  rt.heap.addWriter(WriterCell(wX, rX));
+  rt.heap.addReader(ReaderCell(rX));
 
   // Program p: p(a).
   final progP = BC.prog([
@@ -189,7 +179,10 @@ Map<String, dynamic> _runSimpleUnification({required bool useV2}) {
 // ============================================================================
 
 Map<String, dynamic> _runSuspensionTest({required bool useV2}) {
-  final rt = GlpRuntime();
+  // Create runtime with chosen heap implementation
+  final rt = useV2
+    ? GlpRuntime(heap: HeapV2Adapter())
+    : GlpRuntime();
 
   // Create variable X/X?
   const wX = 1;
@@ -265,7 +258,10 @@ Map<String, dynamic> _runSuspensionTest({required bool useV2}) {
 // ============================================================================
 
 Map<String, dynamic> _runFailureTest({required bool useV2}) {
-  final rt = GlpRuntime();
+  // Create runtime with chosen heap implementation
+  final rt = useV2
+    ? GlpRuntime(heap: HeapV2Adapter())
+    : GlpRuntime();
 
   // Create variable X/X?
   const wX = 1;
