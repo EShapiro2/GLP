@@ -1228,30 +1228,28 @@ class BytecodeRunner {
                       termArgs.add(ReaderTerm(wc.readerId));
                     }
                   } else {
-                    // Shouldn't happen - create fresh pair as fallback using heap allocation
-                    final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
-                    cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
-                    cx.rt.heap.addReader(ReaderCell(freshReaderId));
-                    cx.clauseVars[arg.varIndex] = freshWriterId;
+                    // Shouldn't happen - create fresh variable as fallback using heap allocation
+                    final varId = cx.rt.heap.allocateFreshVar();
+                    cx.rt.heap.addVariable(varId);
+                    cx.clauseVars[arg.varIndex] = varId;
                     if (arg.isWriter) {
-                      termArgs.add(WriterTerm(freshWriterId));
+                      termArgs.add(VarRef(varId, isReader: false));
                     } else {
-                      termArgs.add(ReaderTerm(freshReaderId));
+                      termArgs.add(VarRef(varId, isReader: true));
                     }
                   }
                 } else if (resolved is Term) {
                   // Already a term - use as-is
                   termArgs.add(resolved);
                 } else {
-                  // Not yet resolved - create fresh writer/reader pair (WAM-style)
-                  final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
-                  cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
-                  cx.rt.heap.addReader(ReaderCell(freshReaderId));
-                  cx.clauseVars[arg.varIndex] = freshWriterId;
+                  // Not yet resolved - create fresh variable (WAM-style)
+                  final varId = cx.rt.heap.allocateFreshVar();
+                  cx.rt.heap.addVariable(varId);
+                  cx.clauseVars[arg.varIndex] = varId;
                   if (arg.isWriter) {
-                    termArgs.add(WriterTerm(freshWriterId));
+                    termArgs.add(VarRef(varId, isReader: false));
                   } else {
-                    termArgs.add(ReaderTerm(freshReaderId));
+                    termArgs.add(VarRef(varId, isReader: true));
                   }
                 }
               } else if (arg == null) {
@@ -1428,23 +1426,21 @@ class BytecodeRunner {
             if (debug) print('  [G${cx.goalId}] PutWriter: storing writer $value in argWriters[${op.argSlot}]');
             cx.argWriters[op.argSlot] = value;
           } else if (value is _ClauseVar) {
-            // It's a placeholder - we need to create an actual writer (WAM-style)
+            // It's a placeholder - we need to create an actual variable (WAM-style)
             // This happens when HeadWriter created a placeholder in WRITE mode
-            final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
-            cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
-            cx.rt.heap.addReader(ReaderCell(freshReaderId));
-            cx.argWriters[op.argSlot] = freshWriterId;
-            // Update clause var to point to the actual writer
-            cx.clauseVars[op.varIndex] = freshWriterId;
+            final varId = cx.rt.heap.allocateFreshVar();
+            cx.rt.heap.addVariable(varId);
+            cx.argWriters[op.argSlot] = varId;
+            // Update clause var to point to the actual variable
+            cx.clauseVars[op.varIndex] = varId;
           } else if (value == null) {
-            // Variable doesn't exist yet - allocate fresh writer/reader pair
+            // Variable doesn't exist yet - allocate fresh variable
             // This happens when a variable first appears in BODY phase
-            final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
-            cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
-            cx.rt.heap.addReader(ReaderCell(freshReaderId));
-            cx.argWriters[op.argSlot] = freshWriterId;
+            final varId = cx.rt.heap.allocateFreshVar();
+            cx.rt.heap.addVariable(varId);
+            cx.argWriters[op.argSlot] = varId;
             // Store in clause var for future references
-            cx.clauseVars[op.varIndex] = freshWriterId;
+            cx.clauseVars[op.varIndex] = varId;
           } else {
             print('WARNING: PutWriter got unexpected value: $value');
           }
@@ -1483,25 +1479,23 @@ class BytecodeRunner {
             cx.rt.heap.bindWriterStruct(freshWriterId, value.functor, value.args);
             cx.argReaders[op.argSlot] = freshReaderId;
           } else if (value is ConstTerm) {
-            // It's a ground constant - create fresh writer/reader and bind it (WAM-style)
-            if (debug) print('  [G${cx.goalId}] PutReader: creating fresh pair for ground constant ${value.value}');
-            final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
-            cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
-            cx.rt.heap.addReader(ReaderCell(freshReaderId));
-            cx.rt.heap.bindWriterConst(freshWriterId, value.value);
-            cx.argReaders[op.argSlot] = freshReaderId;
-            if (debug) print('  [G${cx.goalId}] PutReader: created W$freshWriterId/R$freshReaderId for constant');
+            // It's a ground constant - create fresh variable and bind it (WAM-style)
+            if (debug) print('  [G${cx.goalId}] PutReader: creating fresh variable for ground constant ${value.value}');
+            final varId = cx.rt.heap.allocateFreshVar();
+            cx.rt.heap.addVariable(varId);
+            cx.rt.heap.bindWriterConst(varId, value.value);
+            cx.argReaders[op.argSlot] = varId;
+            if (debug) print('  [G${cx.goalId}] PutReader: created V$varId for constant');
           } else if (value is ReaderTerm) {
             // It's already a reader - use its ID directly
             cx.argReaders[op.argSlot] = value.readerId;
           } else if (value == null) {
-            // First occurrence of this variable - create fresh unbound pair
-            final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
-            cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
-            cx.rt.heap.addReader(ReaderCell(freshReaderId));
-            cx.clauseVars[op.varIndex] = freshWriterId;  // Remember writer ID
-            cx.argReaders[op.argSlot] = freshReaderId;
-            if (debug) print('  [G${cx.goalId}] PutReader: created fresh unbound pair W$freshWriterId/R$freshReaderId for first occurrence');
+            // First occurrence of this variable - create fresh unbound variable
+            final varId = cx.rt.heap.allocateFreshVar();
+            cx.rt.heap.addVariable(varId);
+            cx.clauseVars[op.varIndex] = varId;  // Remember variable ID
+            cx.argReaders[op.argSlot] = varId;
+            if (debug) print('  [G${cx.goalId}] PutReader: created fresh unbound variable V$varId for first occurrence');
           } else {
             // Unknown - skip
             print('WARNING: PutReader got unexpected value: $value');
@@ -1539,12 +1533,11 @@ class BytecodeRunner {
       if (op is PutStructure) {
         if (cx.inBody) {
           // WAM semantics: HEAP[H] ← <STR, H+1>; HEAP[H+1] ← F/n; Ai ← HEAP[H]; H ← H+2; mode ← WRITE
-          // In GLP: Create fresh writer/reader pair for argument passing
+          // In GLP: Create fresh variable for argument passing
 
-          // Create fresh writer/reader pair for this structure
-          final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
-          cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
-          cx.rt.heap.addReader(ReaderCell(freshReaderId));
+          // Create fresh variable for this structure
+          final varId = cx.rt.heap.allocateFreshVar();
+          cx.rt.heap.addVariable(varId);
 
           // Handle different argSlot cases FIRST - save parent before overwriting
           // -1 = nested structure being built inside parent (don't put in argReaders)
@@ -1560,16 +1553,16 @@ class BytecodeRunner {
             cx.parentWriterId = cx.clauseVars[-1]; // Save parent's writer ID BEFORE we overwrite it
           }
 
-          // NOW store the writer ID for this new structure
-          print('DEBUG: PutStructure ${op.functor}/${op.arity} (argSlot=${op.argSlot}) - storing writerId $freshWriterId at clauseVars[-1]');
-          cx.clauseVars[-1] = freshWriterId; // Use -1 as special marker for structure binding
+          // NOW store the variable ID for this new structure
+          print('DEBUG: PutStructure ${op.functor}/${op.arity} (argSlot=${op.argSlot}) - storing varId $varId at clauseVars[-1]');
+          cx.clauseVars[-1] = varId; // Use -1 as special marker for structure binding
 
           if (op.argSlot >= 0 && op.argSlot < 10) {
-            // This is an argument slot - store the reader for passing to spawned goal
-            cx.argReaders[op.argSlot] = freshReaderId;
+            // This is an argument slot - store the variable for passing to spawned goal
+            cx.argReaders[op.argSlot] = varId;
           } else {
-            // This is a temp register - store writer in clauseVars for later reference
-            cx.clauseVars[op.argSlot] = freshWriterId;
+            // This is a temp register - store variable in clauseVars for later reference
+            cx.clauseVars[op.argSlot] = varId;
           }
 
           // Create structure with placeholder args (will be filled by subsequent Set* instructions)
