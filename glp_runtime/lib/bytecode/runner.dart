@@ -1546,17 +1546,27 @@ class BytecodeRunner {
 
       if (op is SetWriter) {
         if (cx.inBody && cx.mode == UnifyMode.write && cx.currentStructure is StructTerm) {
-          // Allocate new writer/reader pair
-          final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
-          cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
-          cx.rt.heap.addReader(ReaderCell(freshReaderId));
+          // Check if writer already exists in clause variables
+          final existingWriterId = cx.clauseVars[op.varIndex];
+          final int writerId;
 
-          // Store writer ID in clause variable
-          cx.clauseVars[op.varIndex] = freshWriterId;
+          if (existingWriterId is int) {
+            // Use existing writer
+            writerId = existingWriterId;
+          } else {
+            // Allocate new writer/reader pair only if variable is uninitialized
+            final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
+            cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
+            cx.rt.heap.addReader(ReaderCell(freshReaderId));
+
+            // Store writer ID in clause variable
+            cx.clauseVars[op.varIndex] = freshWriterId;
+            writerId = freshWriterId;
+          }
 
           // Store WriterTerm in current structure at position S
           final struct = cx.currentStructure as StructTerm;
-          struct.args[cx.S] = WriterTerm(freshWriterId);
+          struct.args[cx.S] = WriterTerm(writerId);
           cx.S++; // Move to next position
 
           // Check if structure is complete (all arguments filled)
@@ -1590,41 +1600,56 @@ class BytecodeRunner {
 
       if (op is SetReader) {
         if (cx.inBody && cx.mode == UnifyMode.write && cx.currentStructure is StructTerm) {
-          // Get writer ID from clause variable
-          final writerId = cx.clauseVars[op.varIndex];
-          if (writerId is int) {
-            final wc = cx.rt.heap.writer(writerId);
-            if (wc != null) {
-              // Store ReaderTerm (paired reader) in current structure at position S
-              final struct = cx.currentStructure as StructTerm;
-              struct.args[cx.S] = ReaderTerm(wc.readerId);
-              cx.S++; // Move to next position
+          // Check if writer already exists in clause variables
+          final existingWriterId = cx.clauseVars[op.varIndex];
+          final int writerId;
 
-              // Check if structure is complete (all arguments filled)
-              if (cx.S >= struct.args.length) {
-                // Structure complete - bind the target writer (stored at clauseVars[-1])
-                final targetWriterId = cx.clauseVars[-1];
-                if (targetWriterId is int) {
-                  // Bind the writer to the completed structure
-                  cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
+          if (existingWriterId is int) {
+            // Use existing writer
+            writerId = existingWriterId;
+          } else {
+            // Allocate new writer/reader pair only if variable is uninitialized
+            final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
+            cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
+            cx.rt.heap.addReader(ReaderCell(freshReaderId));
 
-                  // Activate any suspended goals
-                  final w = cx.rt.heap.writer(targetWriterId);
-                  if (w != null) {
-                    final acts = cx.rt.roq.processOnBind(w.readerId);
-                    for (final a in acts) {
-                      cx.rt.gq.enqueue(a);
-                      if (cx.onActivation != null) cx.onActivation!(a);
-                    }
+            // Store writer ID in clause variable
+            cx.clauseVars[op.varIndex] = freshWriterId;
+            writerId = freshWriterId;
+          }
+
+          // Get the writer cell and extract reader ID
+          final wc = cx.rt.heap.writer(writerId);
+          if (wc != null) {
+            // Store ReaderTerm (paired reader) in current structure at position S
+            final struct = cx.currentStructure as StructTerm;
+            struct.args[cx.S] = ReaderTerm(wc.readerId);
+            cx.S++; // Move to next position
+
+            // Check if structure is complete (all arguments filled)
+            if (cx.S >= struct.args.length) {
+              // Structure complete - bind the target writer (stored at clauseVars[-1])
+              final targetWriterId = cx.clauseVars[-1];
+              if (targetWriterId is int) {
+                // Bind the writer to the completed structure
+                cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
+
+                // Activate any suspended goals
+                final w = cx.rt.heap.writer(targetWriterId);
+                if (w != null) {
+                  final acts = cx.rt.roq.processOnBind(w.readerId);
+                  for (final a in acts) {
+                    cx.rt.gq.enqueue(a);
+                    if (cx.onActivation != null) cx.onActivation!(a);
                   }
                 }
-
-                // Reset structure building state
-                cx.currentStructure = null;
-                cx.mode = UnifyMode.read;
-                cx.S = 0;
-                cx.clauseVars.remove(-1); // Clear the marker
               }
+
+              // Reset structure building state
+              cx.currentStructure = null;
+              cx.mode = UnifyMode.read;
+              cx.S = 0;
+              cx.clauseVars.remove(-1); // Clear the marker
             }
           }
         }

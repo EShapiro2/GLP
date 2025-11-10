@@ -31,8 +31,11 @@ run9(Ys?) :- run(merge(a,[])).
 
 runA(X?) :- merge([],[],X).
 
+
 merge([],[],[]).
 
+
+test_foo(X?) :- foo(bar(X)).
 
 test_nil([]).
 
