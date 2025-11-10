@@ -629,31 +629,58 @@ class CodeGenerator {
       }
 
     } else if (term is StructTerm) {
-      // Nested structure: convert to runtime StructTerm and emit as constant
-      // This prevents temp register issues
-      rt.Term convertTerm(Term t) {
-        if (t is ConstTerm) return rt.ConstTerm(t.value);
-        if (t is ListTerm) {
-          if (t.isNil) return rt.ConstTerm('nil');
-          final head = t.head != null ? convertTerm(t.head!) : rt.ConstTerm('nil');
-          final tail = t.tail != null ? convertTerm(t.tail!) : rt.ConstTerm('nil');
-          return rt.StructTerm('.', [head, tail]);
-        }
-        if (t is StructTerm) {
-          final rtArgs = t.args.map(convertTerm).toList();
-          return rt.StructTerm(t.functor, rtArgs);
-        }
-        // For VarTerms, this is not a ground structure - non-ground structures not yet supported
-        if (t is VarTerm) {
-          throw CompileError('Non-ground structures not yet supported: variable ${t.name} in nested structure', t.line, t.column, phase: 'codegen');
-        }
-        return rt.ConstTerm(null);  // Fallback for unexpected cases
+      // Nested structure in BODY - need to handle both ground and non-ground
+      // Start building the nested structure
+      ctx.emit(bc.PutStructure(term.functor, term.arity, -1)); // -1 = building inside parent structure
+
+      // Process each argument using SetWriter/SetReader for variables
+      for (final arg in term.args) {
+        _generateStructureElementInBody(arg, varTable, ctx);
       }
-      final structTerm = convertTerm(term);
-      ctx.emit(bc.UnifyConstant(structTerm));
 
     } else if (term is UnderscoreTerm) {
       ctx.emit(bc.UnifyVoid(count: 1));
+    }
+  }
+
+  // Helper for building structure elements in BODY phase
+  // This handles both ground and non-ground structures (with variables)
+  void _generateStructureElementInBody(Term term, VariableTable varTable, CodeGenContext ctx) {
+    if (term is VarTerm) {
+      // Variable in structure - emit as variable reference, not constant
+      final varInfo = varTable.getVar(term.name);
+      if (varInfo == null) {
+        throw CompileError('Undefined variable in structure: ${term.name}', term.line, term.column, phase: 'codegen');
+      }
+
+      final regIndex = varInfo.registerIndex!;
+
+      if (term.isReader) {
+        ctx.emit(bc.SetReader(regIndex));  // set_reader Xi
+      } else {
+        ctx.emit(bc.SetWriter(regIndex));  // set_writer Xi
+      }
+
+    } else if (term is ConstTerm) {
+      ctx.emit(bc.SetConstant(term.value));  // set_constant c
+
+    } else if (term is ListTerm) {
+      // Nested list in structure
+      if (term.isNil) {
+        ctx.emit(bc.SetConstant('nil'));
+      } else {
+        // For non-empty nested lists, need special handling
+        throw CompileError('Nested non-empty lists in structures not yet supported', term.line, term.column, phase: 'codegen');
+      }
+
+    } else if (term is StructTerm) {
+      // Nested structure - requires pre-building
+      throw CompileError('Nested structures in BODY not yet supported', term.line, term.column, phase: 'codegen');
+
+    } else if (term is UnderscoreTerm) {
+      // Anonymous variable in structure
+      final tempReg = ctx.allocateTemp();
+      ctx.emit(bc.SetWriter(tempReg));  // Create fresh writer
     }
   }
 }
