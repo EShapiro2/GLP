@@ -26,6 +26,20 @@ class Heap {
     return (writerId, readerId);
   }
 
+  /// Single-ID allocation (migration support)
+  /// Returns a single variable ID
+  /// Default implementation uses allocateFreshPair and returns writer ID
+  int allocateFreshVar() {
+    final (wid, _) = allocateFreshPair();
+    return wid;
+  }
+
+  /// Add variable to heap (migration support)
+  /// Default no-op implementation - adapter will override
+  void addVariable(int varId) {
+    // No-op in old two-ID system
+  }
+
   bool containsWriter(int id) => writers.containsKey(id);
   bool containsReader(int id) => readers.containsKey(id);
 

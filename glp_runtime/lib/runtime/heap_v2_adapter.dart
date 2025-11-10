@@ -44,6 +44,16 @@ class HeapV2Adapter extends Heap {
   }
 
   @override
+  int allocateFreshVar() {
+    return _v2.allocateFreshVar();
+  }
+
+  @override
+  void addVariable(int varId) {
+    _v2.addVariable(varId);
+  }
+
+  @override
   void addWriter(WriterCell w) {
     super.addWriter(w); // Keep parent's writer map for compatibility
 

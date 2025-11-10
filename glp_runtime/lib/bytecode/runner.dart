@@ -959,12 +959,11 @@ class BytecodeRunner {
               // It's a ground term extracted from READ mode - use directly
               struct.args[cx.S] = value;
             } else if (value == null) {
-              // Create fresh writer/reader pair
-              final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
-              cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
-              cx.rt.heap.addReader(ReaderCell(freshReaderId));
-              cx.clauseVars[op.varIndex] = freshWriterId;
-              struct.args[cx.S] = WriterTerm(freshWriterId);
+              // Create fresh variable
+              final varId = cx.rt.heap.allocateFreshVar();
+              cx.rt.heap.addVariable(varId);
+              cx.clauseVars[op.varIndex] = varId;
+              struct.args[cx.S] = VarRef(varId, isReader: false);
             } else {
               struct.args[cx.S] = _ClauseVar(op.varIndex, isWriter: true);
             }
@@ -980,12 +979,11 @@ class BytecodeRunner {
               // Ground term (ConstTerm or StructTerm) - use directly
               struct.args[cx.S] = value;
             } else if (value == null) {
-              // Create fresh writer/reader pair
-              final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
-              cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
-              cx.rt.heap.addReader(ReaderCell(freshReaderId));
-              cx.clauseVars[op.varIndex] = freshWriterId;
-              struct.args[cx.S] = WriterTerm(freshWriterId);
+              // Create fresh variable
+              final varId = cx.rt.heap.allocateFreshVar();
+              cx.rt.heap.addVariable(varId);
+              cx.clauseVars[op.varIndex] = varId;
+              struct.args[cx.S] = VarRef(varId, isReader: false);
             }
             cx.S++;
 
@@ -1064,22 +1062,20 @@ class BytecodeRunner {
               struct.args[cx.S] = clauseVarValue;
             } else if (clauseVarValue is Term) {
               // Clause var is bound to a term (e.g., [] or a structure)
-              // Create a fresh writer and tentatively bind it to this value in σ̂w
-              final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
-              cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
-              cx.rt.heap.addReader(ReaderCell(freshReaderId));
+              // Create a fresh variable and tentatively bind it to this value in σ̂w
+              final varId = cx.rt.heap.allocateFreshVar();
+              cx.rt.heap.addVariable(varId);
               // Add tentative binding to σ̂w (will be applied at commit)
-              cx.sigmaHat[freshWriterId] = clauseVarValue;
+              cx.sigmaHat[varId] = clauseVarValue;
               // Don't update clauseVars - keep the original value
-              struct.args[cx.S] = ReaderTerm(freshReaderId);
+              struct.args[cx.S] = VarRef(varId, isReader: true);
             } else if (clauseVarValue == null) {
               // First occurrence of this variable is a reader!
-              // Must create the paired writer first (unbound)
-              final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
-              cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
-              cx.rt.heap.addReader(ReaderCell(freshReaderId));
-              cx.clauseVars[op.varIndex] = freshWriterId;
-              struct.args[cx.S] = ReaderTerm(freshReaderId);
+              // Must create the variable first (unbound)
+              final varId = cx.rt.heap.allocateFreshVar();
+              cx.rt.heap.addVariable(varId);
+              cx.clauseVars[op.varIndex] = varId;
+              struct.args[cx.S] = VarRef(varId, isReader: true);
             }
             cx.S++;
           } else if (cx.currentStructure is StructTerm) {
@@ -1101,13 +1097,12 @@ class BytecodeRunner {
               struct.args[cx.S] = clauseVarValue;
               if (debug) print('  [G${cx.goalId}] UnifyReader BODY: Using existing ReaderTerm $clauseVarValue');
             } else if (clauseVarValue == null) {
-              // First occurrence as reader - create pair
-              final (freshWriterId, freshReaderId) = cx.rt.heap.allocateFreshPair();
-              cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
-              cx.rt.heap.addReader(ReaderCell(freshReaderId));
-              cx.clauseVars[op.varIndex] = freshWriterId;
-              struct.args[cx.S] = ReaderTerm(freshReaderId);
-              if (debug) print('  [G${cx.goalId}] UnifyReader BODY: Creating FRESH pair W$freshWriterId/R$freshReaderId for varIndex=${op.varIndex}');
+              // First occurrence as reader - create variable
+              final varId = cx.rt.heap.allocateFreshVar();
+              cx.rt.heap.addVariable(varId);
+              cx.clauseVars[op.varIndex] = varId;
+              struct.args[cx.S] = VarRef(varId, isReader: true);
+              if (debug) print('  [G${cx.goalId}] UnifyReader BODY: Creating FRESH variable V$varId for varIndex=${op.varIndex}');
             }
             cx.S++;
 
