@@ -107,8 +107,8 @@ void main() {
       heap2.addVariable(v2);
 
       // Create writer and reader references
-      final writer = VarRef(v1, false);
-      final reader = VarRef(v1, true);
+      final writer = VarRef(v1, isReader: false);
+      final reader = VarRef(v1, isReader: true);
 
       expect(writer.varId, equals(v1));
       expect(writer.isReader, isFalse);
@@ -130,11 +130,11 @@ void main() {
       heap2.addVariable(v1);
       heap2.addVariable(v2);
 
-      heap2.bindVariable(v1, VarRef(v2, true)); // v1 = v2?
+      heap2.bindVariable(v1, VarRef(v2, isReader: true)); // v1 = v2?
       heap2.bindVariableConst(v2, 'a'); // v2 = 'a'
 
       // Dereference v1 should give 'a'
-      final result = heap2.dereference(VarRef(v1, false));
+      final result = heap2.dereference(VarRef(v1, isReader: false));
       expect(result, isA<ConstTerm>());
       expect((result as ConstTerm).value, equals('a'));
     });
@@ -148,11 +148,11 @@ void main() {
       heap2.addVariable(v1);
       heap2.addVariable(v2);
 
-      heap2.bindVariable(v1, VarRef(v2, true)); // v1 = v2?
+      heap2.bindVariable(v1, VarRef(v2, isReader: true)); // v1 = v2?
       // v2 remains unbound
 
       // Dereference v1 should stop at v2
-      final result = heap2.dereference(VarRef(v1, false));
+      final result = heap2.dereference(VarRef(v1, isReader: false));
       expect(result, isA<VarRef>());
       expect((result as VarRef).varId, equals(v2));
     });
@@ -170,10 +170,10 @@ void main() {
       // Unbound variable
       final v1 = heap2.allocateFreshVar();
       heap2.addVariable(v1);
-      expect(heap2.isGround(VarRef(v1, false)), isFalse);
+      expect(heap2.isGround(VarRef(v1, isReader: false)), isFalse);
 
       // Structure with unbound variable
-      final nonGroundStruct = StructTerm('f', [ConstTerm('a'), VarRef(v1, false)]);
+      final nonGroundStruct = StructTerm('f', [ConstTerm('a'), VarRef(v1, isReader: false)]);
       expect(heap2.isGround(nonGroundStruct), isFalse);
 
       // Bind the variable
@@ -211,12 +211,12 @@ void main() {
 
       // Link them
       for (int i = 0; i < 9; i++) {
-        heap2.bindVariable(vars[i], VarRef(vars[i + 1], true));
+        heap2.bindVariable(vars[i], VarRef(vars[i + 1], isReader: true));
       }
       heap2.bindVariableConst(vars[9], 'end');
 
       // Dereference with compression
-      final result = heap2.dereferenceWithCompression(VarRef(vars[0], false));
+      final result = heap2.dereferenceWithCompression(VarRef(vars[0], isReader: false));
       expect(result, isA<ConstTerm>());
       expect((result as ConstTerm).value, equals('end'));
 

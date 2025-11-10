@@ -170,12 +170,12 @@ class HeapV2Adapter extends Heap {
     if (term is WriterTerm) {
       final varId = _writerToVar[term.writerId];
       if (varId != null) {
-        return VarRef(varId, false);
+        return VarRef(varId, isReader: false);
       }
     } else if (term is ReaderTerm) {
       final varId = _readerToVar[term.readerId];
       if (varId != null) {
-        return VarRef(varId, true);
+        return VarRef(varId, isReader: true);
       }
     } else if (term is StructTerm) {
       // Recursively convert structure arguments

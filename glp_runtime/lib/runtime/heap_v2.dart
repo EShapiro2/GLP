@@ -166,23 +166,3 @@ class VariableCell {
 
   VariableCell(this.varId);
 }
-
-/// Unified variable reference (replaces WriterTerm/ReaderTerm)
-class VarRef implements Term {
-  final int varId;
-  final bool isReader;
-
-  VarRef(this.varId, this.isReader);
-
-  @override
-  String toString() => isReader ? 'R$varId?' : 'W$varId';
-
-  @override
-  bool operator ==(Object other) =>
-      other is VarRef &&
-      other.varId == varId &&
-      other.isReader == isReader;
-
-  @override
-  int get hashCode => Object.hash(varId, isReader);
-}
