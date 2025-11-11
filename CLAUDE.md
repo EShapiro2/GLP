@@ -43,6 +43,45 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Why**: The project evolves rapidly across multiple AI sessions. Working with outdated assumptions causes regressions and wastes time.
 
+## Directory Structure
+
+**Clean, organized layout** (reorganized Nov 2025):
+
+```
+/Users/udi/GLP/
+├── CLAUDE.md                    # ← This file - ESSENTIAL for Claude Code
+├── README.md                    # ← Project readme
+│
+├── docs/                        # ← NORMATIVE SPECIFICATIONS
+│   ├── glp-bytecode-v216-complete.md  # ← Instruction set spec
+│   ├── glp-runtime-spec.txt           # ← Runtime architecture spec
+│   ├── glp_spec.pdf                   # ← Formal GLP spec (ESOP 2026)
+│   ├── wam.pdf                        # ← WAM paper
+│   └── 1-s2.0-0743106689900113-main.pdf  # ← FCP implementation
+│
+├── glp_runtime/                 # ← MAIN DART PROJECT (git tracked)
+│   ├── lib/
+│   │   ├── bytecode/           # ← VM implementation (runner.dart, opcodes.dart)
+│   │   ├── compiler/           # ← GLP→bytecode compiler
+│   │   └── runtime/            # ← Heap, scheduler, cells, terms
+│   ├── test/                   # ← All tests (bytecode/, custom/, conformance/)
+│   └── bin/                    # ← Demos, utilities
+│
+├── udi/                         # ← USER WORKSPACE (git tracked)
+│   ├── glp/                    # ← User GLP source files (*.glp)
+│   ├── bin/                    # ← Compiled bytecode files (*.glpc)
+│   └── glp_repl.dart          # ← REPL application
+│
+└── archive/                     # ← OLD/HISTORICAL FILES (ignore)
+    ├── backups/                # ← Timestamped backups
+    ├── old_zips/               # ← Old zip/tar.gz files
+    └── old_docs/               # ← Superseded documentation
+```
+
+**For sharing with Claude Web:**
+- **Minimal** (quick questions): `CLAUDE.md` + specific file(s)
+- **Full context** (architecture): `CLAUDE.md` + `docs/` + `glp_runtime/lib/`
+
 ## START HERE - MANDATORY READING ORDER
 
 **BEFORE doing ANY implementation work, you MUST read these documents in order:**
