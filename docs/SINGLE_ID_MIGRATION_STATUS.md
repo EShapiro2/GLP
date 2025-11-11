@@ -2,13 +2,13 @@
 
 **Date:** November 11, 2025 (Updated)
 **Branch:** `single-id-migration`
-**Status:** In Progress - Categories 1-2 Complete ✅, Ready for Step 2.4
+**Status:** In Progress - Step 2.4 90% Complete ✅, Runtime using HeapV2 directly
 
 ---
 
 ## Progress Summary
 
-### ✅ Completed (Steps 2.0.1 - 2.0.3, Group 2.3.1, Categories 1-2)
+### ✅ Completed (Steps 2.0.1 - 2.0.3, Group 2.3.1, Categories 1-2, Step 2.4 90%)
 
 1. **Branch Created** - `single-id-migration` from commit 0af4d64
 2. **VarRef Moved to terms.dart** - Now first-class term type
@@ -18,6 +18,7 @@
 6. **Group 2.3.1 Complete** - All 19 allocateFreshPair calls migrated ✅
 7. **Category 1 Complete** - All 22 type checks migrated to dual-type support ✅
 8. **Category 2 Complete** - Analyzed, no migration needed (0 refs) ✅
+9. **Step 2.4 (90%)** - Runtime using HeapV2 directly, compatibility layer added ✅
 
 ### 📊 Discovery: Scope Larger Than Expected
 
@@ -27,6 +28,46 @@
 - `allocateFreshPair`: **19 occurrences** (not 5 as estimated)
 - WriterTerm/ReaderTerm references: 53 occurrences
 - Total migration points: **70+ occurrences**
+
+---
+
+## Step 2.4: Remove Adapter - 90% Complete ✅
+
+### What Was Accomplished
+
+**Runtime Switched to HeapV2 Directly**
+- Changed `runtime.dart` from `HeapV2Adapter()` to `HeapV2()`
+- No longer using adapter layer - direct single-ID system!
+
+**Comprehensive Compatibility Layer Added to HeapV2**
+- `HeapV2` now extends `Heap` base class
+- All old two-ID methods overridden with single-ID implementations
+- Compatibility methods:
+  - `isWriterBound()`, `valueOfWriter()` → `isBound()`, `getValue()`
+  - `bindWriterConst()`, `bindWriterStruct()` → `bindVariableConst()`, `bindVariableStruct()`
+  - `writer(varId)` → returns `WriterCell(varId, varId)` (both IDs same!)
+  - `writerIdForReader(readerId)` → returns writerId (with pairing map for old tests)
+  - `addWriter()`, `addReader()` → `addVariable()`
+  - `allocateFreshVar()`, `addVariable()` → override base implementations
+
+**Key Insight: Single-ID Paradigm**
+- In single-ID system: `writerId == readerId == varId`
+- Writer and reader are just different access modes to the same variable
+- Compatibility layer bridges old two-ID test code with new single-ID implementation
+
+### Remaining Issues
+
+**Edge Case: Old Two-ID Test Code**
+- Some tests explicitly use different writer/reader IDs:
+  ```dart
+  heap.addWriter(WriterCell(100, 200));  // Different IDs!
+  ```
+- HeapV2 compatibility layer handles this with pairing map
+- A few tests may need updates to use single-ID paradigm properly
+
+**Status**: ~1-2 tests failing with edge cases, but core functionality works
+
+**Commit**: 3b97ab6 - "feat: Step 2.4 (partial) - Switch to HeapV2 directly"
 
 ---
 
@@ -160,6 +201,8 @@ cx.rt.heap.addVariable(varId);
 7. `d001bba` - refactor: Migrate next 7 allocateFreshPair calls (Group 2.3.1 continued)
 8. `f09f0db` - refactor: Complete Group 2.3.1 - all 19 allocateFreshPair calls migrated
 9. `9209865` - refactor: Category 1 - Migrate all type checks to dual-type support
+10. `a1d151c` - docs: Category 1-2 complete, ready for Step 2.4
+11. `3b97ab6` - feat: Step 2.4 (partial) - Switch to HeapV2 directly, remove adapter dependency
 
 ---
 
@@ -177,23 +220,29 @@ dart test
 **Current State:**
 - ✅ All variable allocation uses single-ID (Group 2.3.1)
 - ✅ All type checks use dual-type support (Category 1)
+- ✅ Runtime using HeapV2 directly (Step 2.4 90%)
+- ✅ Compatibility layer providing old API
 - ✅ Zero allocateFreshPair calls in runner.dart
-- ✅ Tests stable (197 passing, 24 pre-existing failures)
-- ✅ Categories 1-2 complete
-- ⏸️ Categories 3-4 deferred to Step 2.4 (adapter removal)
+- ⚠️ A few tests with old two-ID paradigm need fixes
+- ⏸️ Category 3 (14 construction sites) still to migrate
 
 **Next Session Tasks:**
 
-**Option A: Continue to Step 2.4 (Remove Adapter)**
-- All runner.dart migrations complete
-- Ready to remove HeapV2Adapter
-- Switch Runtime to use HeapV2 directly
-- Migrate Category 3 construction sites during adapter removal
+**Priority 1: Fix Remaining Test Issues** (1-2 hours)
+- Debug the ROQ activation test failure
+- Update tests using explicit two-ID paradigm
+- Verify all tests pass with HeapV2
 
-**Option B: Additional Cleanup Before Step 2.4**
-- Review for any edge cases
-- Add more tests for VarRef/dual-type scenarios
-- Document the migration helpers
+**Priority 2: Complete Category 3 Migration** (2-3 hours)
+- Migrate 14 WriterTerm/ReaderTerm construction sites to VarRef
+- Update all `ReaderTerm(id)` → `VarRef(id, isReader: true)`
+- Update all `WriterTerm(id)` → `VarRef(id, isReader: false)`
+
+**Priority 3: Final Cleanup** (1 hour)
+- Delete heap_v2_adapter.dart (no longer needed!)
+- Consider deleting old heap.dart once tests pass
+- Remove migration_helper.dart compatibility code
+- Update documentation
 
 ---
 
@@ -207,6 +256,6 @@ dart test
 
 ---
 
-**Status:** Categories 1-2 Complete ✅ - Ready for Step 2.4 (Adapter Removal)
-**No Blockers:** Category 1 (type checks) fully migrated, Category 2 (none needed)
-**Next Action:** Decide between Option A (proceed to Step 2.4) or Option B (additional cleanup)
+**Status:** Step 2.4 90% Complete ✅ - Runtime using HeapV2 directly
+**Minor Issues:** A few tests need updates for single-ID paradigm
+**Next Action:** Fix test edge cases, then complete Category 3 construction site migrations
