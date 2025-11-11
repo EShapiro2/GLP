@@ -25,25 +25,25 @@ void main() {
     final rt = GlpRuntime();
 
     // Setup: Writers for Xs, Ys, Zs
-    const wXs = 1;
-    const rXs = 2;
-    rt.heap.addWriter(WriterCell(wXs, rXs));
-    rt.heap.addReader(ReaderCell(rXs));
+    const varXs = 1;
+    
+    rt.heap.addWriter(WriterCell(varXs, varXs));
+    rt.heap.addReader(ReaderCell(varXs));
 
-    const wYs = 3;
-    const rYs = 4;
-    rt.heap.addWriter(WriterCell(wYs, rYs));
-    rt.heap.addReader(ReaderCell(rYs));
+    const varYs = 3;
+    
+    rt.heap.addWriter(WriterCell(varYs, varYs));
+    rt.heap.addReader(ReaderCell(varYs));
 
-    const wZs = 5;
-    const rZs = 6;
-    rt.heap.addWriter(WriterCell(wZs, rZs));
-    rt.heap.addReader(ReaderCell(rZs));
+    const varZs = 5;
+    
+    rt.heap.addWriter(WriterCell(varZs, varZs));
+    rt.heap.addReader(ReaderCell(varZs));
 
     print('HEAP SETUP:');
-    print('  Writer $wXs (Xs) paired with Reader $rXs (Xs?)');
-    print('  Writer $wYs (Ys) paired with Reader $rYs (Ys?)');
-    print('  Writer $wZs (Zs) paired with Reader $rZs (Zs?)');
+    print('  Writer $varXs (Xs) paired with Reader $varXs (Xs?)');
+    print('  Writer $varYs (Ys) paired with Reader $varYs (Ys?)');
+    print('  Writer $varZs (Zs) paired with Reader $varZs (Zs?)');
     print('');
 
     // Merge program using the working pattern from merge_circular_pure_trace
@@ -104,37 +104,37 @@ void main() {
     print('');
 
     // Build [a|Xs?] using '.' functor (from working test)
-    const wListA = 10;
-    const rListA = 11;
-    rt.heap.addWriter(WriterCell(wListA, rListA));
-    rt.heap.addReader(ReaderCell(rListA));
-    rt.heap.bindWriterStruct(wListA, '.', [ConstTerm('a'), VarRef(rXs, isReader: true)]);
+    const varListA = 10;
+    
+    rt.heap.addWriter(WriterCell(varListA, varListA));
+    rt.heap.addReader(ReaderCell(varListA));
+    rt.heap.bindWriterStruct(varListA, '.', [ConstTerm('a'), VarRef(varXs, isReader: true)]);
 
     // Build [b|Ys?]
-    const wListB = 12;
-    const rListB = 13;
-    rt.heap.addWriter(WriterCell(wListB, rListB));
-    rt.heap.addReader(ReaderCell(rListB));
-    rt.heap.bindWriterStruct(wListB, '.', [ConstTerm('b'), VarRef(rYs, isReader: true)]);
+    const varListB = 12;
+    
+    rt.heap.addWriter(WriterCell(varListB, varListB));
+    rt.heap.addReader(ReaderCell(varListB));
+    rt.heap.bindWriterStruct(varListB, '.', [ConstTerm('b'), VarRef(varYs, isReader: true)]);
 
     // Build [c|Zs?]
-    const wListC = 14;
-    const rListC = 15;
-    rt.heap.addWriter(WriterCell(wListC, rListC));
-    rt.heap.addReader(ReaderCell(rListC));
-    rt.heap.bindWriterStruct(wListC, '.', [ConstTerm('c'), VarRef(rZs, isReader: true)]);
+    const varListC = 14;
+    
+    rt.heap.addWriter(WriterCell(varListC, varListC));
+    rt.heap.addReader(ReaderCell(varListC));
+    rt.heap.bindWriterStruct(varListC, '.', [ConstTerm('c'), VarRef(varZs, isReader: true)]);
 
     print('STRUCTURES:');
-    print('  [a|Xs?] = writer $wListA');
-    print('  [b|Ys?] = writer $wListB');
-    print('  [c|Zs?] = writer $wListC');
+    print('  [a|Xs?] = writer $varListA');
+    print('  [b|Ys?] = writer $varListB');
+    print('  [c|Zs?] = writer $varListC');
     print('');
 
     // Goal 1: merge([a|Xs?], Ys?, Zs)
     const goal1 = 100;
     final env1 = CallEnv(
-      writers: {0: wListA, 2: wZs},
-      readers: {1: rYs},
+      writers: {0: varListA, 2: varZs},
+      readers: {1: varYs},
     );
     rt.setGoalEnv(goal1, env1);
     rt.gq.enqueue(GoalRef(goal1, prog.labels['merge/3_start']!));
@@ -142,8 +142,8 @@ void main() {
     // Goal 2: merge([b|Ys?], Zs?, Xs)
     const goal2 = 200;
     final env2 = CallEnv(
-      writers: {0: wListB, 2: wXs},
-      readers: {1: rZs},
+      writers: {0: varListB, 2: varXs},
+      readers: {1: varZs},
     );
     rt.setGoalEnv(goal2, env2);
     rt.gq.enqueue(GoalRef(goal2, prog.labels['merge/3_start']!));
@@ -151,8 +151,8 @@ void main() {
     // Goal 3: merge([c|Zs?], Xs?, Ys)
     const goal3 = 300;
     final env3 = CallEnv(
-      writers: {0: wListC, 2: wYs},
-      readers: {1: rXs},
+      writers: {0: varListC, 2: varYs},
+      readers: {1: varXs},
     );
     rt.setGoalEnv(goal3, env3);
     rt.gq.enqueue(GoalRef(goal3, prog.labels['merge/3_start']!));
@@ -172,22 +172,22 @@ void main() {
     print('=' * 70);
     print('RESULTS');
     print('=' * 70);
-    print('Xs (W$wXs) bound: ${rt.heap.isWriterBound(wXs)}');
-    print('Ys (W$wYs) bound: ${rt.heap.isWriterBound(wYs)}');
-    print('Zs (W$wZs) bound: ${rt.heap.isWriterBound(wZs)}');
+    print('Xs (W$varXs) bound: ${rt.heap.isWriterBound(varXs)}');
+    print('Ys (W$varYs) bound: ${rt.heap.isWriterBound(varYs)}');
+    print('Zs (W$varZs) bound: ${rt.heap.isWriterBound(varZs)}');
 
-    if (rt.heap.isWriterBound(wXs)) {
-      final xsValue = rt.heap.valueOfWriter(wXs);
+    if (rt.heap.isWriterBound(varXs)) {
+      final xsValue = rt.heap.valueOfWriter(varXs);
       print('Xs value: $xsValue');
     }
 
-    if (rt.heap.isWriterBound(wYs)) {
-      final ysValue = rt.heap.valueOfWriter(wYs);
+    if (rt.heap.isWriterBound(varYs)) {
+      final ysValue = rt.heap.valueOfWriter(varYs);
       print('Ys value: $ysValue');
     }
 
-    if (rt.heap.isWriterBound(wZs)) {
-      final zsValue = rt.heap.valueOfWriter(wZs);
+    if (rt.heap.isWriterBound(varZs)) {
+      final zsValue = rt.heap.valueOfWriter(varZs);
       print('Zs value: $zsValue');
     }
 

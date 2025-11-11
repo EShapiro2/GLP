@@ -20,94 +20,94 @@ void main() {
     final rt = GlpRuntime();
 
     // Build list [1,2,3]
-    const wList1 = 10;
-    const rList1 = 11;
-    rt.heap.addWriter(WriterCell(wList1, rList1));
-    rt.heap.addReader(ReaderCell(rList1));
-    rt.heap.bindWriterStruct(wList1, '.', [
+    const varList1 = 10;
+    
+    rt.heap.addWriter(WriterCell(varList1, varList1));
+    rt.heap.addReader(ReaderCell(varList1));
+    rt.heap.bindWriterStruct(varList1, '.', [
       ConstTerm(1),
       VarRef(12, isReader: true),
     ]);
 
-    const wTail1 = 13;
-    const rTail1 = 12;
-    rt.heap.addWriter(WriterCell(wTail1, rTail1));
-    rt.heap.addReader(ReaderCell(rTail1));
-    rt.heap.bindWriterStruct(wTail1, '.', [
+    const varTail1 = 13;
+    
+    rt.heap.addWriter(WriterCell(varTail1, varTail1));
+    rt.heap.addReader(ReaderCell(varTail1));
+    rt.heap.bindWriterStruct(varTail1, '.', [
       ConstTerm(2),
       VarRef(14, isReader: true),
     ]);
 
-    const wTail2 = 15;
-    const rTail2 = 14;
-    rt.heap.addWriter(WriterCell(wTail2, rTail2));
-    rt.heap.addReader(ReaderCell(rTail2));
-    rt.heap.bindWriterStruct(wTail2, '.', [
+    const varTail2 = 15;
+    
+    rt.heap.addWriter(WriterCell(varTail2, varTail2));
+    rt.heap.addReader(ReaderCell(varTail2));
+    rt.heap.bindWriterStruct(varTail2, '.', [
       ConstTerm(3),
       ConstTerm(null),
     ]);
 
     // Build empty list []
-    const wEmpty = 20;
-    const rEmpty = 21;
-    rt.heap.addWriter(WriterCell(wEmpty, rEmpty));
-    rt.heap.addReader(ReaderCell(rEmpty));
-    rt.heap.bindWriterConst(wEmpty, null);
+    const varEmpty = 20;
+    
+    rt.heap.addWriter(WriterCell(varEmpty, varEmpty));
+    rt.heap.addReader(ReaderCell(varEmpty));
+    rt.heap.bindWriterConst(varEmpty, null);
 
     // Build list [a,b,c,d]
-    const wList2 = 30;
-    const rList2 = 31;
-    rt.heap.addWriter(WriterCell(wList2, rList2));
-    rt.heap.addReader(ReaderCell(rList2));
-    rt.heap.bindWriterStruct(wList2, '.', [
+    const varList2 = 30;
+    
+    rt.heap.addWriter(WriterCell(varList2, varList2));
+    rt.heap.addReader(ReaderCell(varList2));
+    rt.heap.bindWriterStruct(varList2, '.', [
       ConstTerm('a'),
       VarRef(32, isReader: true),
     ]);
 
-    const wTail3 = 33;
-    const rTail3 = 32;
-    rt.heap.addWriter(WriterCell(wTail3, rTail3));
-    rt.heap.addReader(ReaderCell(rTail3));
-    rt.heap.bindWriterStruct(wTail3, '.', [
+    const varTail3 = 33;
+    
+    rt.heap.addWriter(WriterCell(varTail3, varTail3));
+    rt.heap.addReader(ReaderCell(varTail3));
+    rt.heap.bindWriterStruct(varTail3, '.', [
       ConstTerm('b'),
       VarRef(34, isReader: true),
     ]);
 
-    const wTail4 = 35;
-    const rTail4 = 34;
-    rt.heap.addWriter(WriterCell(wTail4, rTail4));
-    rt.heap.addReader(ReaderCell(rTail4));
-    rt.heap.bindWriterStruct(wTail4, '.', [
+    const varTail4 = 35;
+    
+    rt.heap.addWriter(WriterCell(varTail4, varTail4));
+    rt.heap.addReader(ReaderCell(varTail4));
+    rt.heap.bindWriterStruct(varTail4, '.', [
       ConstTerm('c'),
       VarRef(36, isReader: true),
     ]);
 
-    const wTail5 = 37;
-    const rTail5 = 36;
-    rt.heap.addWriter(WriterCell(wTail5, rTail5));
-    rt.heap.addReader(ReaderCell(rTail5));
-    rt.heap.bindWriterStruct(wTail5, '.', [
+    const varTail5 = 37;
+    
+    rt.heap.addWriter(WriterCell(varTail5, varTail5));
+    rt.heap.addReader(ReaderCell(varTail5));
+    rt.heap.bindWriterStruct(varTail5, '.', [
       ConstTerm('d'),
       ConstTerm(null),
     ]);
 
     // Result writers Xs and Ys
-    const wXs = 40;
-    const rXs = 41;
-    rt.heap.addWriter(WriterCell(wXs, rXs));
-    rt.heap.addReader(ReaderCell(rXs));
+    const varXs = 40;
+    
+    rt.heap.addWriter(WriterCell(varXs, varXs));
+    rt.heap.addReader(ReaderCell(varXs));
 
-    const wYs = 50;
-    const rYs = 51;
-    rt.heap.addWriter(WriterCell(wYs, rYs));
-    rt.heap.addReader(ReaderCell(rYs));
+    const varYs = 50;
+    
+    rt.heap.addWriter(WriterCell(varYs, varYs));
+    rt.heap.addReader(ReaderCell(varYs));
 
     print('HEAP SETUP:');
-    print('  List1 (W$wList1/R$rList1) = [1,2,3]');
-    print('  Empty (W$wEmpty/R$rEmpty) = []');
-    print('  List2 (W$wList2/R$rList2) = [a,b,c,d]');
-    print('  Result Xs (W$wXs/R$rXs) = unbound');
-    print('  Result Ys (W$wYs/R$rYs) = unbound');
+    print('  List1 (W$varList1/R$varList1) = [1,2,3]');
+    print('  Empty (W$varEmpty/R$varEmpty) = []');
+    print('  List2 (W$varList2/R$varList2) = [a,b,c,d]');
+    print('  Result Xs (W$varXs/R$varXs) = unbound');
+    print('  Result Ys (W$varYs/R$varYs) = unbound');
     print('');
 
     // Full merge program
@@ -168,7 +168,7 @@ void main() {
     // Goal 1: merge([1,2,3], [], Xs)
     print('--- GOAL 100: merge([1,2,3], [], Xs) ---');
     const goal1 = 100;
-    final env1 = CallEnv(readers: {0: rList1, 1: rEmpty}, writers: {2: wXs});
+    final env1 = CallEnv(readers: {0: varList1, 1: varEmpty}, writers: {2: varXs});
     rt.setGoalEnv(goal1, env1);
     rt.gq.enqueue(GoalRef(goal1, 0));
 
@@ -176,7 +176,7 @@ void main() {
     print('--- GOAL 200: merge(Xs?, [a,b,c,d], Ys) ---');
     print('(Goal 200 will suspend because Xs? is unbound)');
     const goal2 = 200;
-    final env2 = CallEnv(readers: {0: rXs, 1: rList2}, writers: {2: wYs});
+    final env2 = CallEnv(readers: {0: varXs, 1: varList2}, writers: {2: varYs});
     rt.setGoalEnv(goal2, env2);
     rt.gq.enqueue(GoalRef(goal2, 0));
 
@@ -221,9 +221,9 @@ void main() {
     }
 
     // Check Xs
-    print('Xs (W$wXs) bound: ${rt.heap.isWriterBound(wXs)}');
-    if (rt.heap.isWriterBound(wXs)) {
-      final xsValue = rt.heap.valueOfWriter(wXs);
+    print('Xs (W$varXs) bound: ${rt.heap.isWriterBound(varXs)}');
+    if (rt.heap.isWriterBound(varXs)) {
+      final xsValue = rt.heap.valueOfWriter(varXs);
       final xsList = extractList(xsValue!);
       print('Xs = $xsList');
       expect(xsList, [1, 2, 3], reason: 'Xs should be [1, 2, 3]');
@@ -232,9 +232,9 @@ void main() {
     print('');
 
     // Check Ys
-    print('Ys (W$wYs) bound: ${rt.heap.isWriterBound(wYs)}');
-    if (rt.heap.isWriterBound(wYs)) {
-      final ysValue = rt.heap.valueOfWriter(wYs);
+    print('Ys (W$varYs) bound: ${rt.heap.isWriterBound(varYs)}');
+    if (rt.heap.isWriterBound(varYs)) {
+      final ysValue = rt.heap.valueOfWriter(varYs);
       final ysList = extractList(ysValue!);
       print('Ys = $ysList');
       expect(ysList, [1, 'a', 2, 'b', 3, 'c', 'd'],

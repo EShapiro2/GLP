@@ -19,41 +19,41 @@ void main() {
     final rt = GlpRuntime();
 
     // Build list [1]
-    const wList1 = 10;
-    const rList1 = 11;
-    rt.heap.addWriter(WriterCell(wList1, rList1));
-    rt.heap.addReader(ReaderCell(rList1));
-    rt.heap.bindWriterStruct(wList1, '.', [
+    const varList1 = 10;
+    
+    rt.heap.addWriter(WriterCell(varList1, varList1));
+    rt.heap.addReader(ReaderCell(varList1));
+    rt.heap.bindWriterStruct(varList1, '.', [
       ConstTerm(1),
       ConstTerm(null),
     ]);
 
     // Build list [a]
-    const wListA = 20;
-    const rListA = 21;
-    rt.heap.addWriter(WriterCell(wListA, rListA));
-    rt.heap.addReader(ReaderCell(rListA));
-    rt.heap.bindWriterStruct(wListA, '.', [
+    const varListA = 20;
+    
+    rt.heap.addWriter(WriterCell(varListA, varListA));
+    rt.heap.addReader(ReaderCell(varListA));
+    rt.heap.bindWriterStruct(varListA, '.', [
       ConstTerm('a'),
       ConstTerm(null),
     ]);
 
     // Result writers Xs and Ys
-    const wXs = 30;
-    const rXs = 31;
-    rt.heap.addWriter(WriterCell(wXs, rXs));
-    rt.heap.addReader(ReaderCell(rXs));
+    const varXs = 30;
+    
+    rt.heap.addWriter(WriterCell(varXs, varXs));
+    rt.heap.addReader(ReaderCell(varXs));
 
-    const wYs = 40;
-    const rYs = 41;
-    rt.heap.addWriter(WriterCell(wYs, rYs));
-    rt.heap.addReader(ReaderCell(rYs));
+    const varYs = 40;
+    
+    rt.heap.addWriter(WriterCell(varYs, varYs));
+    rt.heap.addReader(ReaderCell(varYs));
 
     print('HEAP SETUP:');
-    print('  List1 (W$wList1/R$rList1) = [1]');
-    print('  ListA (W$wListA/R$rListA) = [a]');
-    print('  Result Xs (W$wXs/R$rXs) = unbound');
-    print('  Result Ys (W$wYs/R$rYs) = unbound');
+    print('  List1 (W$varList1/R$varList1) = [1]');
+    print('  ListA (W$varListA/R$varListA) = [a]');
+    print('  Result Xs (W$varXs/R$varXs) = unbound');
+    print('  Result Ys (W$varYs/R$varYs) = unbound');
     print('');
 
     // Full merge program
@@ -113,7 +113,7 @@ void main() {
     // Goal 100: merge(Xs?, [1], Ys)
     print('--- GOAL 100: merge(Xs?, [1], Ys) ---');
     const goal1 = 100;
-    final env1 = CallEnv(readers: {0: rXs, 1: rList1}, writers: {2: wYs});
+    final env1 = CallEnv(readers: {0: varXs, 1: varList1}, writers: {2: varYs});
     rt.setGoalEnv(goal1, env1);
 
     print('Executing with 100 reduction budget...');
@@ -127,10 +127,10 @@ void main() {
     final result1 = runner.runWithStatus(cx1);
     print('Result: $result1');
     print('Reductions used: ${cx1.reductionsUsed}');
-    print('Xs bound: ${rt.heap.isWriterBound(wXs)}');
-    print('Ys bound: ${rt.heap.isWriterBound(wYs)}');
-    if (rt.heap.isWriterBound(wYs)) {
-      print('Ys value: ${rt.heap.valueOfWriter(wYs)}');
+    print('Xs bound: ${rt.heap.isWriterBound(varXs)}');
+    print('Ys bound: ${rt.heap.isWriterBound(varYs)}');
+    if (rt.heap.isWriterBound(varYs)) {
+      print('Ys value: ${rt.heap.valueOfWriter(varYs)}');
     }
     print('Suspended on readers: ${cx1.U}');
     print('');
@@ -138,7 +138,7 @@ void main() {
     // Goal 200: merge(Ys?, [a], Xs)
     print('--- GOAL 200: merge(Ys?, [a], Xs) ---');
     const goal2 = 200;
-    final env2 = CallEnv(readers: {0: rYs, 1: rListA}, writers: {2: wXs});
+    final env2 = CallEnv(readers: {0: varYs, 1: varListA}, writers: {2: varXs});
     rt.setGoalEnv(goal2, env2);
 
     print('Executing with 100 reduction budget...');
@@ -152,13 +152,13 @@ void main() {
     final result2 = runner.runWithStatus(cx2);
     print('Result: $result2');
     print('Reductions used: ${cx2.reductionsUsed}');
-    print('Xs bound: ${rt.heap.isWriterBound(wXs)}');
-    if (rt.heap.isWriterBound(wXs)) {
-      print('Xs value: ${rt.heap.valueOfWriter(wXs)}');
+    print('Xs bound: ${rt.heap.isWriterBound(varXs)}');
+    if (rt.heap.isWriterBound(varXs)) {
+      print('Xs value: ${rt.heap.valueOfWriter(varXs)}');
     }
-    print('Ys bound: ${rt.heap.isWriterBound(wYs)}');
-    if (rt.heap.isWriterBound(wYs)) {
-      print('Ys value: ${rt.heap.valueOfWriter(wYs)}');
+    print('Ys bound: ${rt.heap.isWriterBound(varYs)}');
+    if (rt.heap.isWriterBound(varYs)) {
+      print('Ys value: ${rt.heap.valueOfWriter(varYs)}');
     }
     print('');
 
@@ -232,13 +232,13 @@ void main() {
     print('=' * 70);
     print('FINAL STATE AFTER $cycle CYCLES');
     print('=' * 70);
-    print('Xs bound: ${rt.heap.isWriterBound(wXs)}');
-    if (rt.heap.isWriterBound(wXs)) {
-      print('Xs value: ${rt.heap.valueOfWriter(wXs)}');
+    print('Xs bound: ${rt.heap.isWriterBound(varXs)}');
+    if (rt.heap.isWriterBound(varXs)) {
+      print('Xs value: ${rt.heap.valueOfWriter(varXs)}');
     }
-    print('Ys bound: ${rt.heap.isWriterBound(wYs)}');
-    if (rt.heap.isWriterBound(wYs)) {
-      print('Ys value: ${rt.heap.valueOfWriter(wYs)}');
+    print('Ys bound: ${rt.heap.isWriterBound(varYs)}');
+    if (rt.heap.isWriterBound(varYs)) {
+      print('Ys value: ${rt.heap.valueOfWriter(varYs)}');
     }
     print('Goals remaining in queue: ${rt.gq.length}');
     print('');
