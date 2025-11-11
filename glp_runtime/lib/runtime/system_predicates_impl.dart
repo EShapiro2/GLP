@@ -89,20 +89,20 @@ SystemResult evaluatePredicate(GlpRuntime rt, SystemCall call) {
         hasUnboundWriter = true;
       } else {
         // Writer is bound - check its value recursively
-        final value = rt.heap.writerValue[wid];
+        final value = rt.heap.getValue(wid);
         if (value != null) {
           collectUnbound(value);
         }
       }
     } else if (term is VarRef && term.isReader) {
       final rid = term.varId;
-      final wid = rt.heap.varIdForReader(rid);
+      final wid = rid;  // Single-ID: readerId == writerId
       if (wid != null) {
         if (!rt.heap.isWriterBound(wid)) {
           unboundReaders.add(rid);
         } else {
           // Reader's writer is bound - check value recursively
-          final value = rt.heap.writerValue[wid];
+          final value = rt.heap.getValue(wid);
           if (value != null) {
             collectUnbound(value);
           }
@@ -142,7 +142,7 @@ SystemResult evaluatePredicate(GlpRuntime rt, SystemCall call) {
     final wid = resultTerm.varId;
     if (rt.heap.isWriterBound(wid)) {
       // Writer already bound - verify it matches the result
-      final existingValue = rt.heap.writerValue[wid];
+      final existingValue = rt.heap.getValue(wid);
 
       // Compare the result with the existing value
       // Need to handle both Term types and primitive types
@@ -162,8 +162,8 @@ SystemResult evaluatePredicate(GlpRuntime rt, SystemCall call) {
       if (result is num || result is String || result is bool || result == null) {
         rt.heap.bindWriterConst(wid, result);
       } else if (result is Term) {
-        // Result is already a term - store it directly
-        rt.heap.writerValue[wid] = result;
+        // Result is already a term - bind it
+        rt.heap.bindVariable(wid, result);
       } else {
         // Unknown result type
         return SystemResult.failure;
@@ -173,7 +173,7 @@ SystemResult evaluatePredicate(GlpRuntime rt, SystemCall call) {
   } else if (resultTerm is VarRef && resultTerm.isReader) {
     // ResultVar is a reader - verify its writer's value matches the result
     final rid = resultTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null) {
       return SystemResult.failure;
     }
@@ -181,7 +181,7 @@ SystemResult evaluatePredicate(GlpRuntime rt, SystemCall call) {
       // Reader is unbound - cannot verify
       return SystemResult.failure;
     }
-    final writerValue = rt.heap.writerValue[wid];
+    final writerValue = rt.heap.getValue(wid);
     if (writerValue != result) {
       return SystemResult.failure;
     }
@@ -204,17 +204,17 @@ Object? _evaluate(GlpRuntime rt, Object? term) {
     if (!rt.heap.isWriterBound(wid)) {
       return null; // Unbound writer - should have been caught earlier
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     return _evaluate(rt, value);
   }
 
   if (term is VarRef && term.isReader) {
     final rid = term.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       return null; // Unbound reader - should have been caught earlier
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     return _evaluate(rt, value);
   }
 
@@ -326,7 +326,7 @@ SystemResult currentTimePredicate(GlpRuntime rt, SystemCall call) {
     final wid = timeTerm.varId;
     if (rt.heap.isWriterBound(wid)) {
       // Writer already bound - verify it matches current time
-      final existingValue = rt.heap.writerValue[wid];
+      final existingValue = rt.heap.getValue(wid);
       bool matches = false;
       if (existingValue is ConstTerm && existingValue.value == now) {
         matches = true;
@@ -377,7 +377,7 @@ SystemResult uniqueIdPredicate(GlpRuntime rt, SystemCall call) {
     final wid = idTerm.varId;
     if (rt.heap.isWriterBound(wid)) {
       // Writer already bound - verify it matches new ID
-      final existingValue = rt.heap.writerValue[wid];
+      final existingValue = rt.heap.getValue(wid);
       bool matches = false;
       if (existingValue is ConstTerm && existingValue.value == newId) {
         matches = true;
@@ -434,19 +434,19 @@ SystemResult fileReadPredicate(GlpRuntime rt, SystemCall call) {
       // Unbound writer - fail
       return SystemResult.failure;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       path = value.value as String;
     }
   } else if (pathTerm is VarRef && pathTerm.isReader) {
     final rid = pathTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       // Unbound reader - suspend
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       path = value.value as String;
     }
@@ -476,7 +476,7 @@ SystemResult fileReadPredicate(GlpRuntime rt, SystemCall call) {
     final wid = contentsTerm.varId;
     if (rt.heap.isWriterBound(wid)) {
       // Writer already bound - verify it matches file contents
-      final existingValue = rt.heap.writerValue[wid];
+      final existingValue = rt.heap.getValue(wid);
       bool matches = false;
       if (existingValue is ConstTerm && existingValue.value == contents) {
         matches = true;
@@ -532,18 +532,18 @@ SystemResult fileWritePredicate(GlpRuntime rt, SystemCall call) {
     if (!rt.heap.isWriterBound(wid)) {
       return SystemResult.failure;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       path = value.value as String;
     }
   } else if (pathTerm is VarRef && pathTerm.isReader) {
     final rid = pathTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       path = value.value as String;
     }
@@ -564,18 +564,18 @@ SystemResult fileWritePredicate(GlpRuntime rt, SystemCall call) {
     if (!rt.heap.isWriterBound(wid)) {
       return SystemResult.failure;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       contents = value.value as String;
     }
   } else if (contentsTerm is VarRef && contentsTerm.isReader) {
     final rid = contentsTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       contents = value.value as String;
     }
@@ -634,7 +634,7 @@ SystemResult writePredicate(GlpRuntime rt, SystemCall call) {
       // Unbound writer - fail
       return SystemResult.failure;
     }
-    final writerValue = rt.heap.writerValue[wid];
+    final writerValue = rt.heap.getValue(wid);
     if (writerValue is ConstTerm) {
       value = writerValue.value;
     } else {
@@ -642,13 +642,13 @@ SystemResult writePredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (term is VarRef && term.isReader) {
     final rid = term.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       // Unbound reader - suspend
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final writerValue = rt.heap.writerValue[wid];
+    final writerValue = rt.heap.getValue(wid);
     if (writerValue is ConstTerm) {
       value = writerValue.value;
     } else {
@@ -722,7 +722,7 @@ SystemResult readPredicate(GlpRuntime rt, SystemCall call) {
     final wid = resultTerm.varId;
     if (rt.heap.isWriterBound(wid)) {
       // Verify
-      final existingValue = rt.heap.writerValue[wid];
+      final existingValue = rt.heap.getValue(wid);
       bool matches = false;
       if (existingValue is ConstTerm && existingValue.value == line) {
         matches = true;
@@ -777,18 +777,18 @@ SystemResult fileExistsPredicate(GlpRuntime rt, SystemCall call) {
     if (!rt.heap.isWriterBound(wid)) {
       return SystemResult.failure;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       path = value.value as String;
     }
   } else if (pathTerm is VarRef && pathTerm.isReader) {
     final rid = pathTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       path = value.value as String;
     }
@@ -842,18 +842,18 @@ SystemResult fileOpenPredicate(GlpRuntime rt, SystemCall call) {
     if (!rt.heap.isWriterBound(wid)) {
       return SystemResult.failure;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       path = value.value as String;
     }
   } else if (pathTerm is VarRef && pathTerm.isReader) {
     final rid = pathTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       path = value.value as String;
     }
@@ -873,18 +873,18 @@ SystemResult fileOpenPredicate(GlpRuntime rt, SystemCall call) {
     if (!rt.heap.isWriterBound(wid)) {
       return SystemResult.failure;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       mode = value.value as String;
     }
   } else if (modeTerm is VarRef && modeTerm.isReader) {
     final rid = modeTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       mode = value.value as String;
     }
@@ -930,7 +930,7 @@ SystemResult fileOpenPredicate(GlpRuntime rt, SystemCall call) {
     final wid = handleTerm.varId;
     if (rt.heap.isWriterBound(wid)) {
       // Verify
-      final existingValue = rt.heap.writerValue[wid];
+      final existingValue = rt.heap.getValue(wid);
       bool matches = false;
       if (existingValue is ConstTerm && existingValue.value == handle) {
         matches = true;
@@ -985,18 +985,18 @@ SystemResult fileClosePredicate(GlpRuntime rt, SystemCall call) {
     if (!rt.heap.isWriterBound(wid)) {
       return SystemResult.failure;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is int) {
       handle = value.value as int;
     }
   } else if (handleTerm is VarRef && handleTerm.isReader) {
     final rid = handleTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is int) {
       handle = value.value as int;
     }
@@ -1049,18 +1049,18 @@ SystemResult fileReadHandlePredicate(GlpRuntime rt, SystemCall call) {
     if (!rt.heap.isWriterBound(wid)) {
       return SystemResult.failure;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is int) {
       handle = value.value as int;
     }
   } else if (handleTerm is VarRef && handleTerm.isReader) {
     final rid = handleTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is int) {
       handle = value.value as int;
     }
@@ -1101,7 +1101,7 @@ SystemResult fileReadHandlePredicate(GlpRuntime rt, SystemCall call) {
     final wid = contentsTerm.varId;
     if (rt.heap.isWriterBound(wid)) {
       // Verify
-      final existingValue = rt.heap.writerValue[wid];
+      final existingValue = rt.heap.getValue(wid);
       bool matches = false;
       if (existingValue is ConstTerm && existingValue.value == contents) {
         matches = true;
@@ -1152,18 +1152,18 @@ SystemResult fileWriteHandlePredicate(GlpRuntime rt, SystemCall call) {
     if (!rt.heap.isWriterBound(wid)) {
       return SystemResult.failure;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is int) {
       handle = value.value as int;
     }
   } else if (handleTerm is VarRef && handleTerm.isReader) {
     final rid = handleTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is int) {
       handle = value.value as int;
     }
@@ -1183,18 +1183,18 @@ SystemResult fileWriteHandlePredicate(GlpRuntime rt, SystemCall call) {
     if (!rt.heap.isWriterBound(wid)) {
       return SystemResult.failure;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       contents = value.value as String;
     }
   } else if (contentsTerm is VarRef && contentsTerm.isReader) {
     final rid = contentsTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       contents = value.value as String;
     }
@@ -1258,18 +1258,18 @@ SystemResult directoryListPredicate(GlpRuntime rt, SystemCall call) {
     if (!rt.heap.isWriterBound(wid)) {
       return SystemResult.failure;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       path = value.value as String;
     }
   } else if (pathTerm is VarRef && pathTerm.isReader) {
     final rid = pathTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       path = value.value as String;
     }
@@ -1353,7 +1353,7 @@ SystemResult variableNamePredicate(GlpRuntime rt, SystemCall call) {
     final wid = nameTerm.varId;
     if (rt.heap.isWriterBound(wid)) {
       // Verify
-      final existingValue = rt.heap.writerValue[wid];
+      final existingValue = rt.heap.getValue(wid);
       bool matches = false;
       if (existingValue is ConstTerm && existingValue.value == name) {
         matches = true;
@@ -1408,15 +1408,15 @@ SystemResult copyTermPredicate(GlpRuntime rt, SystemCall call) {
     if (!rt.heap.isWriterBound(wid)) {
       return SystemResult.failure;
     }
-    original = rt.heap.writerValue[wid];
+    original = rt.heap.getValue(wid);
   } else if (originalTerm is VarRef && originalTerm.isReader) {
     final rid = originalTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    original = rt.heap.writerValue[wid];
+    original = rt.heap.getValue(wid);
   } else {
     original = originalTerm;
   }
@@ -1429,12 +1429,12 @@ SystemResult copyTermPredicate(GlpRuntime rt, SystemCall call) {
     final wid = copyTerm.varId;
     if (rt.heap.isWriterBound(wid)) {
       // Verify
-      final existingValue = rt.heap.writerValue[wid];
+      final existingValue = rt.heap.getValue(wid);
       return (existingValue == copy) ? SystemResult.success : SystemResult.failure;
     } else {
       // Bind
       if (copy is Term) {
-        rt.heap.writerValue[wid] = copy;
+        rt.heap.bindVariable(wid, copy);
       } else {
         rt.heap.bindWriterConst(wid, copy);
       }
@@ -1493,13 +1493,13 @@ SystemResult linkPredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (moduleListTerm is VarRef && moduleListTerm.isReader) {
     final rid = moduleListTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
 
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm) {
       final constValue = value.value;
       if (constValue is String) {
@@ -1514,7 +1514,7 @@ SystemResult linkPredicate(GlpRuntime rt, SystemCall call) {
       print('[ERROR] link/2: ModuleList writer is unbound');
       return SystemResult.failure;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm) {
       final constValue = value.value;
       if (constValue is String) {
@@ -1540,7 +1540,7 @@ SystemResult linkPredicate(GlpRuntime rt, SystemCall call) {
       final wid = offsetTerm.varId;
       if (rt.heap.isWriterBound(wid)) {
         // Verify match
-        final existing = rt.heap.writerValue[wid];
+        final existing = rt.heap.getValue(wid);
         if (existing is ConstTerm && existing.value == handle) {
           return SystemResult.success;
         } else {
@@ -1597,13 +1597,13 @@ SystemResult loadModulePredicate(GlpRuntime rt, SystemCall call) {
     filePath = fileNameTerm.value as String;
   } else if (fileNameTerm is VarRef && fileNameTerm.isReader) {
     final rid = fileNameTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
 
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       filePath = value.value as String;
     }
@@ -1613,7 +1613,7 @@ SystemResult loadModulePredicate(GlpRuntime rt, SystemCall call) {
       print('[ERROR] load_module/2: FileName writer is unbound');
       return SystemResult.failure;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm && value.value is String) {
       filePath = value.value as String;
     }
@@ -1703,12 +1703,12 @@ SystemResult distributeStreamPredicate(GlpRuntime rt, SystemCall call) {
     inputValue = inputTerm.value;
   } else if (inputTerm is VarRef && inputTerm.isReader) {
     final rid = inputTerm.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm) {
       inputValue = value.value;
     } else {
@@ -1720,7 +1720,7 @@ SystemResult distributeStreamPredicate(GlpRuntime rt, SystemCall call) {
       print('[ERROR] distribute_stream/2: Input writer is unbound');
       return SystemResult.failure;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm) {
       inputValue = value.value;
     } else {
@@ -1795,12 +1795,12 @@ SystemResult copyTermMultiPredicate(GlpRuntime rt, SystemCall call) {
     sourceValue = termArg.value;
   } else if (termArg is VarRef && termArg.isReader) {
     final rid = termArg.varId;
-    final wid = rt.heap.varIdForReader(rid);
+    final wid = rid;  // Single-ID: readerId == writerId
     if (wid == null || !rt.heap.isWriterBound(wid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm) {
       sourceValue = value.value;
     } else {
@@ -1812,7 +1812,7 @@ SystemResult copyTermMultiPredicate(GlpRuntime rt, SystemCall call) {
       print('[ERROR] copy_term/3: Source writer is unbound');
       return SystemResult.failure;
     }
-    final value = rt.heap.writerValue[wid];
+    final value = rt.heap.getValue(wid);
     if (value is ConstTerm) {
       sourceValue = value.value;
     } else {

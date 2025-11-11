@@ -364,7 +364,7 @@ class BytecodeRunner {
       }
 
       if (op is HeadStructure) {
-        print('DEBUG: HeadStructure ${op.functor}/${op.arity} at argSlot ${op.argSlot}');
+        // print('DEBUG: HeadStructure ${op.functor}/${op.arity} at argSlot ${op.argSlot}');
         // Check if argSlot refers to a clause variable (for nested structures) or argument register
         // Clause variables are used when matching extracted nested structures (argSlot >= 10 by convention)
         final bool isClauseVar = op.argSlot >= 10;
@@ -373,7 +373,7 @@ class BytecodeRunner {
 
         if (!isClauseVar && arg == null) {
           // No argument - soft fail to next clause
-          print('DEBUG: HeadStructure - arg is null, failing to next clause');
+          // print('DEBUG: HeadStructure - arg is null, failing to next clause');
           if (debug && cx.goalId >= 4000) print('  HeadStructure: arg is null, failing');
           _softFailToNextClause(cx, pc);
           pc = _findNextClauseTry(pc);
@@ -381,15 +381,15 @@ class BytecodeRunner {
         }
 
         if (!isClauseVar) {
-          print('DEBUG: HeadStructure - got arg from argSlot ${op.argSlot}: ${arg?.runtimeType}');
+          // print('DEBUG: HeadStructure - got arg from argSlot ${op.argSlot}: ${arg?.runtimeType}');
         } else {
-          print('DEBUG: HeadStructure - isClauseVar=true, checking clauseVars[${op.argSlot}]');
+          // print('DEBUG: HeadStructure - isClauseVar=true, checking clauseVars[${op.argSlot}]');
         }
 
         // For clause variables, get the value from clauseVars
         if (isClauseVar) {
           final clauseVarValue = cx.clauseVars[op.argSlot];
-          print('DEBUG: HeadStructure checking clauseVars[${op.argSlot}]: ${clauseVarValue?.runtimeType} = $clauseVarValue');
+          // print('DEBUG: HeadStructure checking clauseVars[${op.argSlot}]: ${clauseVarValue?.runtimeType} = $clauseVarValue');
           if (clauseVarValue == null) {
             // Unbound clause variable - soft fail
             if (debug && cx.goalId >= 4000) print('  HeadStructure: clause var ${op.argSlot} is unbound, failing');
@@ -472,15 +472,15 @@ class BytecodeRunner {
           continue;
         }
 
-        print('DEBUG: HeadStructure - about to check arg.isWriter, arg=${arg?.runtimeType}');
+        // print('DEBUG: HeadStructure - about to check arg.isWriter, arg=${arg?.runtimeType}');
         if (arg!.isWriter) {
           // Check if writer is already bound
-          print('DEBUG: HeadStructure - arg is Writer ${arg.writerId}, bound=${cx.rt.heap.isWriterBound(arg.writerId!)}');
+          // print('DEBUG: HeadStructure - arg is Writer ${arg.writerId}, bound=${cx.rt.heap.isWriterBound(arg.writerId!)}');
           if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: arg is writer ${arg.writerId}, bound=${cx.rt.heap.isWriterBound(arg.writerId!)}');
           if (cx.rt.heap.isWriterBound(arg.writerId!)) {
             // Already bound - check if matches structure
             final value = cx.rt.heap.valueOfWriter(arg.writerId!);
-            print('DEBUG: HeadStructure - Writer ${arg.writerId} value = ${value.runtimeType}: $value, expecting ${op.functor}/${op.arity}');
+            // print('DEBUG: HeadStructure - Writer ${arg.writerId} value = ${value.runtimeType}: $value, expecting ${op.functor}/${op.arity}');
             if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer ${arg.writerId} value = $value');
             if (value is StructTerm && value.functor == op.functor && value.args.length == op.arity) {
               // MATCH! Enter READ mode
@@ -508,14 +508,14 @@ class BytecodeRunner {
         }
 
         if (arg.isReader) {
-          print('DEBUG: HeadStructure - arg is Reader ${arg.readerId}');
+          // print('DEBUG: HeadStructure - arg is Reader ${arg.readerId}');
           // Reader: check if bound and has matching structure
           final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
-          print('DEBUG: HeadStructure - Reader ${arg.readerId} -> Writer $wid');
+          // print('DEBUG: HeadStructure - Reader ${arg.readerId} -> Writer $wid');
           if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: READ mode, reader ${arg.readerId} -> writer $wid');
           if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
             // Unbound reader - add to Si and soft fail
-            print('DEBUG: HeadStructure - Writer $wid is unbound or null, adding to Si and soft failing');
+            // print('DEBUG: HeadStructure - Writer $wid is unbound or null, adding to Si and soft failing');
             if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer $wid unbound or null, adding to Si and failing');
             cx.si.add(arg.readerId!);
             _softFailToNextClause(cx, pc);
@@ -525,7 +525,7 @@ class BytecodeRunner {
 
           // Bound reader - get value and check if it's a matching structure
           final value = cx.rt.heap.valueOfWriter(wid);
-          print('DEBUG: HeadStructure - Writer $wid value = ${value.runtimeType}: $value, expecting ${op.functor}/${op.arity}');
+          // print('DEBUG: HeadStructure - Writer $wid value = ${value.runtimeType}: $value, expecting ${op.functor}/${op.arity}');
           if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer $wid value = $value, expecting ${op.functor}/${op.arity}');
           if (value is StructTerm && value.functor == op.functor && value.args.length == op.arity) {
             // Matching structure - enter READ mode
@@ -853,7 +853,7 @@ class BytecodeRunner {
             final struct = cx.currentStructure as StructTerm;
             if (cx.S < struct.args.length) {
               final value = struct.args[cx.S];
-              print('DEBUG: UnifyConstant - S=${cx.S}, value=$value (${value.runtimeType}), expecting ${op.value}');
+              // print('DEBUG: UnifyConstant - S=${cx.S}, value=$value (${value.runtimeType}), expecting ${op.value}');
               if (debug && cx.goalId >= 4000) print('  UnifyConstant: S=${cx.S}, value=$value (${value.runtimeType}), expecting ${op.value}');
 
               if (value is ConstTerm && value.value == op.value) {
@@ -1030,7 +1030,7 @@ class BytecodeRunner {
               } else if (value is ConstTerm || value is StructTerm) {
                 // Direct term value - store it
                 cx.clauseVars[op.varIndex] = value;
-                print('DEBUG: UnifyWriter stored ${value.runtimeType} in clauseVars[${op.varIndex}]: $value');
+                // print('DEBUG: UnifyWriter stored ${value.runtimeType} in clauseVars[${op.varIndex}]: $value');
                 cx.S++;
               } else {
                 // Unexpected type - mismatch
@@ -1192,18 +1192,18 @@ class BytecodeRunner {
 
       // Commit (apply σ̂w and wake suspended goals) - v2.16 semantics
       if (op is Commit) {
-        print('DEBUG: Commit - Si=${cx.si}, sigmaHat has ${cx.sigmaHat.length} entries');
+        // print('DEBUG: Commit - Si=${cx.si}, sigmaHat has ${cx.sigmaHat.length} entries');
         for (final entry in cx.sigmaHat.entries) {
-          print('DEBUG: Commit - σ̂w[${ entry.key}] = ${entry.value}');
+          // print('DEBUG: Commit - σ̂w[${ entry.key}] = ${entry.value}');
         }
         // If Si is non-empty, this clause soft-failed - skip commit and jump to next clause
         if (cx.si.isNotEmpty) {
-          print('DEBUG: Commit - SKIPPING (Si non-empty)');
+          // print('DEBUG: Commit - SKIPPING (Si non-empty)');
           _softFailToNextClause(cx, pc);
           pc = _findNextClauseTry(pc);
           continue;
         }
-        print('DEBUG: Commit - APPLYING σ̂w to heap');
+        // print('DEBUG: Commit - APPLYING σ̂w to heap');
 
         // Convert tentative structures to real Terms before committing
         final convertedSigmaHat = <int, Object?>{};
@@ -1545,7 +1545,7 @@ class BytecodeRunner {
           if (op.argSlot == -1 || cx.currentStructure != null) {
             // Nested structure - save parent context before starting nested build
             // This triggers not just for -1 but also when we're already building a structure
-            print('DEBUG: PutStructure - SAVING PARENT CONTEXT: currentStruct=${(cx.currentStructure as StructTerm?)?.functor}, S=${cx.S}, parentWriterId=${cx.clauseVars[-1]}');
+            // print('DEBUG: PutStructure - SAVING PARENT CONTEXT: currentStruct=${(cx.currentStructure as StructTerm?)?.functor}, S=${cx.S}, parentWriterId=${cx.clauseVars[-1]}');
             cx.parentStructure = cx.currentStructure;
             cx.parentS = cx.S;
             cx.parentMode = cx.mode;
@@ -1553,7 +1553,7 @@ class BytecodeRunner {
           }
 
           // NOW store the variable ID for this new structure
-          print('DEBUG: PutStructure ${op.functor}/${op.arity} (argSlot=${op.argSlot}) - storing varId $varId at clauseVars[-1]');
+          // print('DEBUG: PutStructure ${op.functor}/${op.arity} (argSlot=${op.argSlot}) - storing varId $varId at clauseVars[-1]');
           cx.clauseVars[-1] = varId; // Use -1 as special marker for structure binding
 
           if (op.argSlot >= 0 && op.argSlot < 10) {
@@ -1602,7 +1602,7 @@ class BytecodeRunner {
           if (cx.S >= struct.args.length) {
             // Structure complete - bind the target writer (stored at clauseVars[-1])
             final targetWriterId = cx.clauseVars[-1];
-            print('DEBUG: SetWriter - structure complete! functor=${struct.functor}, S=${cx.S}/${struct.args.length}, targetWriter=$targetWriterId, hasParent=${cx.parentStructure != null}');
+            // print('DEBUG: SetWriter - structure complete! functor=${struct.functor}, S=${cx.S}/${struct.args.length}, targetWriter=$targetWriterId, hasParent=${cx.parentStructure != null}');
             if (targetWriterId is int) {
               // Bind the writer to the completed structure
               cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
@@ -1626,7 +1626,7 @@ class BytecodeRunner {
 
               // Get the saved parent's writer ID
               final parentWriterId = cx.parentWriterId;
-              print('DEBUG: SetWriter - restoring parent context, parentWriterId=$parentWriterId, parentStruct=${(cx.parentStructure as StructTerm?)?.functor}');
+              // print('DEBUG: SetWriter - restoring parent context, parentWriterId=$parentWriterId, parentStruct=${(cx.parentStructure as StructTerm?)?.functor}');
 
               // Add the completed nested structure to the parent BEFORE restoring context
               if (cx.parentStructure is StructTerm) {
@@ -1654,9 +1654,9 @@ class BytecodeRunner {
               // Check if parent is now complete!
               if (cx.currentStructure is StructTerm) {
                 final parentStruct = cx.currentStructure as StructTerm;
-                print('DEBUG: SetWriter - checking parent completion: S=${cx.S}, arity=${parentStruct.args.length}, parentWriterId=$parentWriterId');
+                // print('DEBUG: SetWriter - checking parent completion: S=${cx.S}, arity=${parentStruct.args.length}, parentWriterId=$parentWriterId');
                 if (cx.S >= parentStruct.args.length && parentWriterId is int) {
-                  print('DEBUG: SetWriter - PARENT COMPLETE! Binding parent ${parentStruct.functor}/${parentStruct.args.length}');
+                  // print('DEBUG: SetWriter - PARENT COMPLETE! Binding parent ${parentStruct.functor}/${parentStruct.args.length}');
                   // Bind the parent structure
                   cx.rt.heap.bindWriterStruct(parentWriterId as int, parentStruct.functor, parentStruct.args);
 

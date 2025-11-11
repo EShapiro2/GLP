@@ -374,7 +374,7 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
       runtime.heap.addWriter(WriterCell(writerId, readerId));
       runtime.heap.addReader(ReaderCell(readerId));
       runtime.heap.bindWriterConst(writerId, arg.value);
-      argTerms.add(rt.ReaderTerm(readerId));
+      argTerms.add(rt.VarRef(readerId, isReader: true));
     } else if (arg is VarTerm) {
       // Variable in structure - check if already exists
       // Note: arg.name does NOT include the '?' suffix, so use it directly
@@ -382,16 +382,11 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
       final existingWriterId = queryVarWriters[baseName];
 
       if (arg.isReader && existingWriterId != null) {
-        // Reader for existing writer - use paired reader
-        final wc = runtime.heap.writer(existingWriterId);
-        if (wc != null) {
-          argTerms.add(rt.ReaderTerm(wc.readerId));
-        } else {
-          throw Exception('Writer cell not found for $baseName');
-        }
+        // Reader for existing writer - in single-ID, use same ID
+        argTerms.add(rt.VarRef(existingWriterId, isReader: true));
       } else if (!arg.isReader && existingWriterId != null) {
         // Writer already exists - reuse it
-        argTerms.add(rt.WriterTerm(existingWriterId));
+        argTerms.add(rt.VarRef(existingWriterId, isReader: false));
       } else {
         // First occurrence - create fresh pair
         final (writerId, readerId) = runtime.heap.allocateFreshPair();
@@ -400,7 +395,7 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
         if (!arg.isReader) {
           queryVarWriters[baseName] = writerId;
         }
-        argTerms.add(arg.isReader ? rt.ReaderTerm(readerId) : rt.WriterTerm(writerId));
+        argTerms.add(arg.isReader ? rt.VarRef(readerId, isReader: true) : rt.VarRef(writerId, isReader: false));
       }
     } else if (arg is ListTerm) {
       if (arg.isNil) {
@@ -409,7 +404,7 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
         runtime.heap.addWriter(WriterCell(writerId, readerId));
         runtime.heap.addReader(ReaderCell(readerId));
         runtime.heap.bindWriterConst(writerId, 'nil');
-        argTerms.add(rt.ReaderTerm(readerId));
+        argTerms.add(rt.VarRef(readerId, isReader: true));
       } else {
         // Non-empty list - recursively build and create writer/reader
         final (writerId, readerId) = runtime.heap.allocateFreshPair();
@@ -417,7 +412,7 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
         runtime.heap.addReader(ReaderCell(readerId));
         final listValue = _buildListTerm(runtime, arg, queryVarWriters) as rt.StructTerm;
         runtime.heap.bindWriterStruct(writerId, listValue.functor, listValue.args);
-        argTerms.add(rt.ReaderTerm(readerId));
+        argTerms.add(rt.VarRef(readerId, isReader: true));
       }
     } else if (arg is StructTerm) {
       // Nested structure - create bound writer/reader
@@ -426,7 +421,7 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
       runtime.heap.addReader(ReaderCell(readerId));
       final structValue = _buildStructTerm(runtime, arg, queryVarWriters) as rt.StructTerm;
       runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
-      argTerms.add(rt.ReaderTerm(readerId));
+      argTerms.add(rt.VarRef(readerId, isReader: true));
     } else {
       throw Exception('Unsupported struct argument type: ${arg.runtimeType}');
     }
@@ -456,7 +451,7 @@ rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> query
     if (!head.isReader) {
       queryVarWriters[head.name] = writerId;
     }
-    headTerm = head.isReader ? rt.ReaderTerm(readerId) : rt.WriterTerm(writerId);
+    headTerm = head.isReader ? rt.VarRef(readerId, isReader: true) : rt.VarRef(writerId, isReader: false);
   } else {
     throw Exception('Unsupported list head type: ${head.runtimeType}');
   }
@@ -510,9 +505,9 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
             headStr = head.isReader ? 'R$varId?' : 'W$varId';
           }
         }
-      } else if (head is rt.ReaderTerm && runtime != null) {
+      } else if (head is rt.VarRef && runtime != null) {
         // OLD: Dereference reader (for backward compatibility)
-        final readerId = head.readerId;
+        final readerId = head.varId;
         if (visited.contains(readerId)) {
           headStr = '<circular>';
         } else {
@@ -549,9 +544,9 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
           final label = tail.isReader ? 'R$varId?' : 'W$varId';
           return '[${elements.join(', ')} | $label]';
         }
-      } else if (tail is rt.ReaderTerm && runtime != null) {
+      } else if (tail is rt.VarRef && runtime != null) {
         // OLD: Handle ReaderTerm (backward compatibility)
-        final readerId = tail.readerId;
+        final readerId = tail.varId;
         if (visited.contains(readerId)) {
           // Circular reference in tail
           return '[${elements.join(', ')} | <circular R$readerId>]';
@@ -567,9 +562,9 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
         }
       } else if (tail is rt.ConstTerm && tail.value == null) {
         break;  // End of list
-      } else if (tail is rt.WriterTerm && runtime != null) {
+      } else if (tail is rt.VarRef && runtime != null) {
         // Writer in tail position
-        final writerId = tail.writerId;
+        final writerId = tail.varId;
         if (runtime.heap.isWriterBound(writerId)) {
           current = runtime.heap.valueOfWriter(writerId);
           if (current == null || current is! rt.StructTerm) break;
@@ -595,15 +590,9 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
 }
 
 int? _findPairedWriter(GlpRuntime runtime, int readerId) {
-  // Find writer paired with this reader
-  for (final entry in runtime.heap.writers.entries) {
-    final writerId = entry.key;
-    final writerCell = entry.value;
-    if (writerCell.readerId == readerId) {
-      return writerId;
-    }
-  }
-  return null;
+  // In single-ID system: readerId == writerId
+  // Just check if the variable exists
+  return runtime.heap.allVarIds.contains(readerId) ? readerId : null;
 }
 
 // Get git commit info for build identification
