@@ -17,63 +17,57 @@ void main() {
 
     final rt = GlpRuntime();
 
-    // Build list [1,2,3]
-    const wList1 = 10;
-    const rList1 = 11;
-    rt.heap.addWriter(WriterCell(wList1, rList1));
-    rt.heap.addReader(ReaderCell(rList1));
-    rt.heap.bindWriterStruct(wList1, '.', [
+    // Build list [1,2,3] - SINGLE-ID: same varId for writer and reader
+    const varList1 = 10;
+    rt.heap.addWriter(WriterCell(varList1, varList1));  // Single-ID: writerId == readerId
+    rt.heap.addReader(ReaderCell(varList1));
+    rt.heap.bindWriterStruct(varList1, '.', [
       ConstTerm(1),
       VarRef(12, isReader: true),  // tail
     ]);
 
-    const wTail1 = 13;
-    const rTail1 = 12;
-    rt.heap.addWriter(WriterCell(wTail1, rTail1));
-    rt.heap.addReader(ReaderCell(rTail1));
-    rt.heap.bindWriterStruct(wTail1, '.', [
+    const varTail1 = 12;
+    rt.heap.addWriter(WriterCell(varTail1, varTail1));  // Single-ID
+    rt.heap.addReader(ReaderCell(varTail1));
+    rt.heap.bindWriterStruct(varTail1, '.', [
       ConstTerm(2),
       VarRef(14, isReader: true),  // tail
     ]);
 
-    const wTail2 = 15;
-    const rTail2 = 14;
-    rt.heap.addWriter(WriterCell(wTail2, rTail2));
-    rt.heap.addReader(ReaderCell(rTail2));
-    rt.heap.bindWriterStruct(wTail2, '.', [
+    const varTail2 = 14;
+    rt.heap.addWriter(WriterCell(varTail2, varTail2));  // Single-ID
+    rt.heap.addReader(ReaderCell(varTail2));
+    rt.heap.bindWriterStruct(varTail2, '.', [
       ConstTerm(3),
       ConstTerm(null),  // end of list
     ]);
 
-    // Build list [a,b]
-    const wList2 = 20;
-    const rList2 = 21;
-    rt.heap.addWriter(WriterCell(wList2, rList2));
-    rt.heap.addReader(ReaderCell(rList2));
-    rt.heap.bindWriterStruct(wList2, '.', [
+    // Build list [a,b] - SINGLE-ID
+    const varList2 = 20;
+    rt.heap.addWriter(WriterCell(varList2, varList2));  // Single-ID
+    rt.heap.addReader(ReaderCell(varList2));
+    rt.heap.bindWriterStruct(varList2, '.', [
       ConstTerm('a'),
       VarRef(22, isReader: true),  // tail
     ]);
 
-    const wTail3 = 23;
-    const rTail3 = 22;
-    rt.heap.addWriter(WriterCell(wTail3, rTail3));
-    rt.heap.addReader(ReaderCell(rTail3));
-    rt.heap.bindWriterStruct(wTail3, '.', [
+    const varTail3 = 22;
+    rt.heap.addWriter(WriterCell(varTail3, varTail3));  // Single-ID
+    rt.heap.addReader(ReaderCell(varTail3));
+    rt.heap.bindWriterStruct(varTail3, '.', [
       ConstTerm('b'),
       ConstTerm(null),  // end of list
     ]);
 
-    // Result writer Xs
-    const wXs = 30;
-    const rXs = 31;
-    rt.heap.addWriter(WriterCell(wXs, rXs));
-    rt.heap.addReader(ReaderCell(rXs));
+    // Result writer Xs - SINGLE-ID
+    const varXs = 30;
+    rt.heap.addWriter(WriterCell(varXs, varXs));  // Single-ID
+    rt.heap.addReader(ReaderCell(varXs));
 
     print('HEAP SETUP:');
-    print('  List1 (W$wList1/R$rList1) = [1,2,3]');
-    print('  List2 (W$wList2/R$rList2) = [a,b]');
-    print('  Result Xs (W$wXs/R$rXs) = unbound');
+    print('  List1 (ID=$varList1) = [1,2,3]');
+    print('  List2 (ID=$varList2) = [a,b]');
+    print('  Result Xs (ID=$varXs) = unbound');
     print('');
 
     // Full merge program with all 3 clauses
@@ -133,11 +127,11 @@ void main() {
 
     // Goal: merge([1,2,3], [a,b], Xs)
     const goalId = 100;
-    final env = CallEnv(readers: {0: rList1, 1: rList2}, writers: {2: wXs});
+    final env = CallEnv(readers: {0: varList1, 1: varList2}, writers: {2: varXs});
     rt.setGoalEnv(goalId, env);
     rt.gq.enqueue(GoalRef(goalId, 0));
 
-    print('Starting goal $goalId: merge(R$rList1, R$rList2, W$wXs)');
+    print('Starting goal $goalId: merge(R$varList1, R$varList2, W$varXs)');
     print('');
 
     // Run with scheduler
@@ -148,10 +142,10 @@ void main() {
     print('RESULTS');
     print('=' * 70);
     print('Goals executed: $ran');
-    print('Xs bound: ${rt.heap.isWriterBound(wXs)}');
+    print('Xs bound: ${rt.heap.isWriterBound(varXs)}');
 
-    if (rt.heap.isWriterBound(wXs)) {
-      print('Xs value: ${rt.heap.valueOfWriter(wXs)}');
+    if (rt.heap.isWriterBound(varXs)) {
+      print('Xs value: ${rt.heap.valueOfWriter(varXs)}');
       print('');
 
       // Helper to extract list elements by following reader chain
@@ -183,7 +177,7 @@ void main() {
         return [];
       }
 
-      final value = rt.heap.valueOfWriter(wXs);
+      final value = rt.heap.valueOfWriter(varXs);
       final resultList = extractList(value!);
       print('Extracted list: $resultList');
       print('');
@@ -193,6 +187,6 @@ void main() {
         reason: 'Should alternate: 1, a, 2, b, 3');
     }
 
-    expect(rt.heap.isWriterBound(wXs), true, reason: 'Xs should be bound');
+    expect(rt.heap.isWriterBound(varXs), true, reason: 'Xs should be bound');
   });
 }

@@ -89,8 +89,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 1. **`SPEC_GUIDE.md`** - Start here for overview of GLP execution model and specification structure
 2. **`docs/glp-bytecode-v216-complete.md`** - NORMATIVE instruction set specification (complete and authoritative)
 3. **`docs/glp-runtime-spec.txt`** - NORMATIVE Dart runtime architecture specification
+4. **`docs/single-id-migration.md`** - Single-ID variable system design (CURRENT as of Nov 2025)
 
-**ONLY AFTER reading these three documents should you:**
+**ONLY AFTER reading these four documents should you:**
 - Write any code
 - Implement any instructions
 - Design any bytecode sequences
