@@ -1,0 +1,127 @@
+Change: repl_answer_extraction_fix
+Date: Mon Nov 10 14:22:45 IST 2025
+Commit before change: d43543ee350bf3cd85b4069da64c035570d71934
+Purpose: Add answer extraction to REPL - display query variable bindings
+Files to modify: bin/glp_repl.dart
+Changes:
+  - Add imports for cells and terms
+  - Use compileWithMetadata to get variable mappings
+  - Create writers for query variables
+  - Extract and display bindings after execution
+  - Add _formatValue helper function
+Previous test status: 198 passing / 23 failing
+=== Changes Made ===
+diff --git a/glp_runtime/bin/glp_repl.dart b/glp_runtime/bin/glp_repl.dart
+index dd43dd3..a78e81c 100644
+--- a/glp_runtime/bin/glp_repl.dart
++++ b/glp_runtime/bin/glp_repl.dart
+@@ -11,6 +11,8 @@ import 'package:glp_runtime/runtime/runtime.dart';
+ import 'package:glp_runtime/runtime/machine_state.dart';
+ import 'package:glp_runtime/runtime/scheduler.dart';
+ import 'package:glp_runtime/runtime/system_predicates_impl.dart';
++import 'package:glp_runtime/runtime/cells.dart';
++import 'package:glp_runtime/runtime/terms.dart';
+ 
+ void main() {
+   print('╔════════════════════════════════════════╗');
+@@ -26,6 +28,7 @@ void main() {
+   registerStandardPredicates(rt.systemPredicates);
+ 
+   var goalId = 1;
++  var nextWriterId = 1000;
+ 
+   while (true) {
+     stdout.write('GLP> ');
+@@ -54,27 +57,65 @@ void main() {
+ 
+     // Compile and run the goal
+     try {
+-      // Compile the input
+-      final program = compiler.compile(trimmed);
++      // Compile with metadata to get variable mappings
++      final result = compiler.compileWithMetadata(trimmed);
++      final program = result.program;
+ 
+-      // Create a scheduler with the program
++      // Create writers for query variables
++      final queryWriters = <String, int>{};
++      final writerEnv = <int, int>{};
++
++      // variableMap contains name -> registerIndex for variables in the query
++      for (final entry in result.variableMap.entries) {
++        final varName = entry.key;
++        final regIndex = entry.value;
++
++        // Only process writer variables (readers have "?" in the name)
++        if (!varName.contains('?')) {
++          final wid = nextWriterId++;
++          final rid = nextWriterId++;
++
++          rt.heap.addWriter(WriterCell(wid, rid));
++          rt.heap.addReader(ReaderCell(rid));
++
++          queryWriters[varName] = wid;
++          writerEnv[regIndex] = wid;
++        }
++      }
++
++      // Create scheduler and set up goal
+       final runner = BytecodeRunner(program);
+       final scheduler = Scheduler(rt: rt, runners: {'main': runner});
+ 
+-      // Set up initial goal
+-      final env = CallEnv();
++      final env = CallEnv(writers: writerEnv);
+       rt.setGoalEnv(goalId, env);
+       rt.setGoalProgram(goalId, 'main');
+ 
+-      // Enqueue the goal at PC 0
+-      rt.gq.enqueue(GoalRef(goalId, 0));
++      // Find entry point - look for first label
++      final entryPC = program.labels.values.isEmpty ? 0 : program.labels.values.first;
++      rt.gq.enqueue(GoalRef(goalId, entryPC));
+       goalId++;
+ 
+-      // Run scheduler
++      // Run
+       final ran = scheduler.drain(maxCycles: 10000);
+ 
+-      // Report result
+-      print('→ Executed ${ran.length} goals');
++      // Display results
++      if (queryWriters.isNotEmpty) {
++        for (final entry in queryWriters.entries) {
++          final varName = entry.key;
++          final wid = entry.value;
++
++          if (rt.heap.isWriterBound(wid)) {
++            final value = rt.heap.valueOfWriter(wid);
++            final formatted = _formatValue(value);
++            print('  $varName = $formatted');
++          } else {
++            print('  $varName = <unbound>');
++          }
++        }
++      } else {
++        print('→ Executed ${ran.length} goals');
++      }
+ 
+     } catch (e) {
+       print('Error: $e');
+@@ -84,6 +125,16 @@ void main() {
+   }
+ }
+ 
++String _formatValue(Term? value) {
++  if (value == null) return '<null>';
++  if (value is ConstTerm) {
++    return value.value == 'nil' ? '[]' : value.value.toString();
++  }
++  if (value is WriterTerm) return 'W${value.writerId}';
++  if (value is ReaderTerm) return 'R${value.readerId}';
++  return value.toString();
++}
++
+ void printHelp() {
+   print('');
+   print('GLP REPL Commands:');

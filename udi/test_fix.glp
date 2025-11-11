@@ -1,0 +1,8 @@
+% Test the suspension bug fix
+
+% Simple writer-reader pattern
+fetch(a, p(q)).
+execute(p(q)).
+
+% Test goal that should now work
+test_fix :- fetch(a, Body), execute(Body?).

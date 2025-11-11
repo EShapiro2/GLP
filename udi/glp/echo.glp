@@ -1,0 +1,12 @@
+% echo.glp - Read input and echo back with proper sequencing
+
+echo :-
+  execute('write', ['Enter text: ']),
+  execute('read', [Line]),
+  wait_then_echo(Line?).
+
+wait_then_echo(Input) :-
+  known(Input) |
+  execute('write', ['You entered: ']),
+  execute('write', [Input]),
+  execute('nl', []).

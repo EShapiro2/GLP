@@ -1,0 +1,14 @@
+% factorial.glp - Factorial computation with arithmetic
+%
+% Demonstrates guards and arithmetic evaluation
+% From p_fact_writer_then_reader_test.dart
+
+% Base case
+fact(zero, one).
+
+% Recursive case with guard
+fact(N, F) :-
+  known(N), ground(N) |
+  execute('evaluate', [N - one, N1]),
+  fact(N1?, F1),
+  execute('evaluate', [N * F1?, F]).

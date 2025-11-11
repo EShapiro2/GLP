@@ -1,0 +1,16 @@
+% test_middle.glp - Intermediate test between working and broken
+
+% Simple recursive execution that mirrors run/clause pattern
+% but with concrete data instead of clause bodies
+
+% Base case
+exec(done).
+
+% Recursive case: get next step, execute it
+exec(go) :- next_step(go, Step), exec(Step?).
+
+% Provides the next step
+next_step(go, done).
+
+% Test entry point
+test_middle :- exec(go).

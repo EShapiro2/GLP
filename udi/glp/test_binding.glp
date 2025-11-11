@@ -1,0 +1,20 @@
+% test_binding.glp - Minimal test for writer-reader connection
+
+% Simple predicate that binds its second argument to a term
+bind_term(a, f(x)).
+bind_term(b, g(y,z)).
+
+% Test 1: Direct writer-reader in same clause (like the metainterpreter)
+test1(X) :- bind_term(a, Y), process(Y?).
+
+% Helper that just succeeds if it can read its argument
+process(f(x)).
+process(g(y,z)).
+
+% Test 3: Most minimal - similar to clause/2 pattern
+fetch(a, p(q)).
+fetch(b, r(s,t)).
+
+test3 :- fetch(a, Body), execute(Body?).
+execute(p(q)).
+execute(r(s,t)).

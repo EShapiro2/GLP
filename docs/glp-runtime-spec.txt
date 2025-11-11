@@ -1,0 +1,371 @@
+# GLP Runtime System Specification for Dart Implementation v2.16
+
+## Overview
+
+The GLP runtime system executes bytecode on a Dart-based virtual machine that leverages Dart's native features for memory management, scheduling, and concurrency. Unlike the FCP abstract machine which manages its own process queue and garbage collection, this runtime delegates these responsibilities to Dart while focusing on GLP-specific semantics: reader/writer variables, suspension management, and SRSW enforcement.
+
+## Opcode Name Mappings
+
+This implementation uses slightly different names for some opcodes compared to the paper terminology. Here are the key mappings:
+
+**Suspension/Termination:**
+- Paper: "suspend" (at predicate end)
+- Implementation: `NoMoreClauses` + `SuspendEnd`
+  - `NoMoreClauses`: Check if U is non-empty, suspend if so, fail otherwise
+  - `SuspendEnd`: Legacy instruction, equivalent to NoMoreClauses
+
+**Control Flow:**
+- Paper: "proceed"
+- Implementation: `Proceed` (identical)
+
+**Clause Scanning:**
+- Paper: "clause_try", "clause_next"
+- Implementation: `ClauseTry`, `ClauseNext` (identical)
+
+All other opcodes (head_*, put_*, commit, spawn, requeue, etc.) use identical names in both paper and implementation.
+
+## System Architecture
+
+### Core Runtime Components
+
+The runtime consists of several interconnected subsystems that collectively implement GLP's execution model.
+
+#### Goal Scheduler
+The scheduler manages goals using Dart's event loop with two-level fairness:
+
+**Intra-GLP fairness**: Active goals are queued as Dart microtasks in FIFO order. Both `spawn` and `requeue` place goals at the tail of the queue, ensuring fair scheduling among concurrent GLP goals. 
+
+**System-level fairness**: To prevent GLP computations from starving the event queue (timers, I/O, UI), the runtime implements bounded tail recursion following FCP's approach. Each goal has a tail-recursion budget counter that decrements on each `requeue` operation. When the counter reaches zero, the goal is scheduled via `Timer.run()` instead of `scheduleMicrotask()`, yielding to the event queue before continuing. This prevents compute-intensive tail-recursive goals from monopolizing the microtask queue.
+
+Suspended goals are stored in a suspension table indexed by reader variables, with each entry containing the suspended goal's state and its suspension set. Failed goals are retained for debugging and error reporting but removed from active scheduling. The scheduler uses Dart's `scheduleMicrotask()` for goal activation when the tail-recursion budget is positive, and `Timer.run()` when yielding is required, eliminating the need for explicit time-slicing as in FCP.
+
+#### Memory Management
+The runtime leverages Dart's garbage collector rather than implementing stop-and-copy collection as in FCP. The heap is implemented as a Dart List of tagged cells, growing dynamically as needed. Stack frames are Dart objects that participate in standard garbage collection. The variable table uses weak references where appropriate to avoid preventing collection of abandoned variables. This design significantly simplifies the runtime compared to FCP's explicit memory management while maintaining efficient execution.
+
+#### Unification Engine
+The writer MGU algorithm forms the core of goal reduction. Unlike standard Prolog unification, it enforces GLP's asymmetric variable semantics where only writers can be bound, readers can only be verified, and writer-to-writer bindings are prohibited. The engine maintains a mode flag (READ/WRITE) that determines instruction behavior, similar to the WAM but adapted for reader/writer semantics. When unification encounters an unbound reader, it returns a suspension result rather than failing, triggering goal suspension until the paired writer receives a value.
+
+### Data Structures
+
+#### Goal State
+Each goal's execution context is managed by `RunnerContext` (lib/bytecode/runner.dart):
+
+```dart
+class RunnerContext {
+  final GlpRuntime rt;           // Runtime system reference
+  final int goalId;              // Unique goal identifier
+  final int kappa;               // Entry PC (first clause of procedure)
+  final CallEnv env;             // Argument bindings (writers/readers)
+
+  // Execution state
+  final Map<int, Object?> clauseVars = {};  // Clause variable bindings
+  final Map<int, Object?> sigmaHat = {};    // σ̂w: tentative writer substitution
+  final Set<int> si = {};                    // Si: clause-local suspension set
+  final Set<int> U = {};                     // U: goal-level suspension set
+
+  // Control state
+  bool inBody = false;            // Phase: HEAD/GUARDS vs BODY
+  int tailRecursionBudget = 26;   // Budget for tail call fairness
+
+  // Structure traversal (WAM-style)
+  int S = 0;                      // Subterm pointer for structure unification
+  Mode mode = Mode.read;          // READ or WRITE mode for structures
+}
+```
+
+**Note**: Goals do not store bytecode - the `BytecodeRunner` holds the `BytecodeProgram`, and each goal references it via `runtime.setGoalProgram(goalId, programKey)`.
+
+#### Heap Cell Representation
+The heap (lib/runtime/heap.dart) manages writer and reader cells as simple Dart objects:
+
+```dart
+class WriterCell {
+  final int writerId;
+  final int readerId;  // Paired reader ID
+  WriterCell(this.writerId, this.readerId);
+}
+
+class ReaderCell {
+  final int readerId;
+  ReaderCell(this.readerId);
+}
+
+class GlpHeap {
+  final Map<int, WriterCell> _writers = {};     // writerId → WriterCell
+  final Map<int, ReaderCell> _readers = {};     // readerId → ReaderCell
+  final Map<int, Object?> writerValue = {};     // writerId → bound value (if any)
+
+  bool isWriterBound(int writerId) => writerValue.containsKey(writerId);
+  Object? valueOfWriter(int writerId) => writerValue[writerId];
+  int? writerIdForReader(int readerId) {
+    // Find writer ID paired with this reader
+    for (final entry in _writers.entries) {
+      if (entry.value.readerId == readerId) return entry.key;
+    }
+    return null;
+  }
+}
+```
+
+**Terms** (lib/runtime/terms.dart) are separate from cells:
+
+```dart
+class WriterTerm { final int writerId; }
+class ReaderTerm { final int readerId; }
+class StructTerm { final String functor; final List<Object?> args; }
+class ConstTerm { final Object? value; }
+```
+
+#### Environment Frame
+Stack frames for permanent variables:
+
+```dart
+class Environment {
+  final Environment? parent;
+  final int continuationPointer;
+  final List<Cell> permanentVariables;
+  
+  Environment(this.parent, this.continuationPointer, int size) 
+    : permanentVariables = List.filled(size, WriterCell.unbound());
+}
+```
+
+#### ROQ (Read-Only Queues)
+Suspension tracking is managed by ROQ (lib/runtime/roq.dart), NOT a variable table:
+
+```dart
+class SuspensionNote {
+  final int goalId;       // Which goal is suspended
+  final int kappa;        // Entry PC to resume at
+  final Hanger hanger;    // Single-shot reactivation mechanism
+}
+
+class Hanger {
+  bool armed = true;      // Prevents duplicate reactivation
+
+  void fire(GlpRuntime rt, int goalId, int kappa) {
+    if (!armed) return;   // Already fired - ignore
+    armed = false;
+    rt.gq.enqueue(GoalRef(goalId, kappa));  // Reactivate goal
+  }
+}
+
+class ROQueues {
+  final Map<int, Queue<SuspensionNote>> _queues = {};  // readerId → suspension queue
+
+  void addSuspension(int readerId, SuspensionNote note) {
+    _queues.putIfAbsent(readerId, () => Queue()).add(note);
+  }
+
+  void processOnBind(int readerId, GlpRuntime rt) {
+    final queue = _queues[readerId];
+    if (queue == null) return;
+
+    for (final note in queue) {
+      note.hanger.fire(rt, note.goalId, note.kappa);  // Single-shot reactivation
+    }
+    queue.clear();
+  }
+}
+```
+
+**SRSW Enforcement**: The current implementation does NOT enforce SRSW at runtime - this is expected to be enforced by the compiler. The runtime trusts that bytecode is well-formed.
+
+### Execution Pipeline
+
+#### Instruction Fetch and Decode
+The runtime fetches instructions from bytecode streams and decodes them into operations. Each instruction handler is a Dart function that operates on the goal state:
+
+```dart
+typedef InstructionHandler = ExecutionResult Function(GoalState state);
+
+enum ExecutionResult {
+  continue_,
+  suspend,
+  fail,
+  succeed
+}
+```
+
+The instruction dispatcher uses a jump table indexed by opcode for efficient dispatch. Operands are decoded based on instruction type, with register references, constants, and labels extracted as needed.
+
+#### Goal Reduction Cycle
+Each active goal executes in a microtask that runs until it suspends, fails, or completes. The basic execution cycle (in `BytecodeRunner.runWithStatus()`):
+
+1. **Fetch**: Load instruction at PC from bytecode program
+2. **Decode**: Extract operands based on instruction type
+3. **Execute**: Run instruction handler, updating context
+4. **Branch**: Based on result:
+   - **CONTINUE**: Increment PC and continue loop
+   - **SUSPENDED**: Goal suspended on unbound readers in U, create suspension notes in ROQ
+   - **TERMINATED**: Goal completed (success via `proceed` or failure via `no_more_clauses`)
+   - **OUT_OF_REDUCTIONS**: Reduction budget exhausted (for testing)
+
+**No backtracking**: GLP uses committed-choice semantics - once a clause commits via `commit`, there is no going back. Failed clauses simply try the next clause via `clause_next`. No choice points or trail stack needed.
+
+#### Suspension and Reactivation
+Suspension occurs when `no_more_clauses` instruction executes with non-empty U set:
+
+**Suspension Process** (`no_more_clauses` with U ≠ ∅):
+1. Runtime calls `suspendGoal(goalId, kappa, readers)` with U set
+2. For each reader ID in U, create a `SuspensionNote(goalId, kappa, hanger)`
+3. Add suspension note to reader's ROQ via `roq.addSuspension(readerId, note)`
+4. Goal returns `RunResult.suspended` and is removed from GQ
+
+**Reactivation Process** (during `commit` when writer binds):
+1. `CommitOps.applySigmaHat()` binds writer X on heap
+2. Calls `roq.processOnBind(readerId)` where readerId is X's paired reader
+3. For each suspension note in reader's queue:
+   - Check if `hanger.armed` is true
+   - If yes: set `armed = false` and enqueue `GoalRef(goalId, kappa)` to GQ
+   - If no: skip (already reactivated by another reader binding)
+4. Clear reader's suspension queue
+5. Reactivated goal resumes at PC = kappa (first clause), NOT at suspension point
+
+**Single-shot mechanism**: The `armed` flag prevents duplicate reactivation if a goal was suspended on multiple readers and more than one binds.
+
+## Instruction Implementation
+
+### Head Processing Instructions
+
+Head instructions perform **tentative writer MGU**, building σ̂w without heap mutation:
+
+**`head_constant value argSlot`**: Unify argument with constant
+- If arg is WriterTerm: add `σ̂w[writerId] = value`, continue
+- If arg is ReaderTerm: add readerId to Si, continue (may match later)
+- If arg is ConstTerm: check `arg.value == value`, fail if mismatch
+- Does NOT mutate heap - only builds σ̂w
+
+**`head_structure functor arity argSlot`**: Match structure and set traversal mode
+- If arg is WriterTerm: set mode=WRITE, create structure in σ̂w, set S=0
+- If arg is StructTerm with matching functor/arity: set mode=READ, set S=0
+- If arg is ReaderTerm: add to Si, continue (suspension, not failure)
+- If arg is StructTerm with wrong functor/arity: soft-fail to next clause
+
+**`head_writer varIndex`**: Process writer at position S within structure
+- If mode=READ: unify structure arg at S with clause var, update σ̂w
+- If mode=WRITE: add WriterTerm to structure being built
+- Increment S
+
+**`head_reader varIndex`**: Process reader at position S within structure
+- If mode=READ: check if structure arg matches reader's writer, add to Si if unbound
+- If mode=WRITE: add ReaderTerm to structure being built
+- Increment S
+
+All head instructions are **pure** - they never mutate the heap, only extend σ̂w and Si.
+
+### Body Construction Instructions  
+
+Body instructions prepare arguments for goal calls. The `put_structure` instruction allocates heap space and initializes structure headers. The `put_writer` and `put_reader` instructions place variable references in argument registers, with readers creating references to their paired writers. These instructions never suspend as they only prepare data rather than performing unification.
+
+### Control Flow Implementation
+
+The `spawn` instruction creates a new process in Dart's microtask queue for executing a procedure. For all body goals except the final one, this instruction ensures fair scheduling by placing the new process at the tail of the queue. This prevents any single recursive predicate from monopolizing execution time while allowing concurrent goals to make progress.
+
+The `requeue` instruction implements tail recursion optimization with bounded iterations. It reuses the current process frame and decrements a tail-recursion budget counter. When the counter is positive, the process is rescheduled as a microtask, maintaining GLP-internal fairness. When the counter reaches zero, it resets and the process is scheduled via the event queue using `Timer.run()`, ensuring system-level responsiveness. This mirrors FCP's reduction-counting mechanism, preventing tail-recursive computations from starving other system events while avoiding unbounded process queue growth.
+
+The `proceed` instruction completes the current procedure and returns control to the continuation point saved by the previous `spawn` instruction. This allows the spawning process to continue with its next instruction after the spawned goal completes.
+
+### Control Flow: Clause Selection and Suspension
+
+**`clause_try`**: Mark start of new clause
+- Clear Si (clause-local suspension set)
+- Save restore point for σ̂w (in case clause fails)
+
+**`clause_next label`**: Move to next clause after failure or suspension
+- If Si non-empty: union Si into U (`U := U ∪ Si`)
+- Discard σ̂w (abandon tentative bindings)
+- Clear Si
+- Jump to label
+
+**`commit`**: Commit to current clause
+- Apply σ̂w to heap atomically (bind all writers)
+- For each newly bound writer, call `roq.processOnBind(readerId)` to reactivate suspended goals
+- Clear σ̂w and Si
+- Set `inBody = true` (enable heap mutations)
+
+**`no_more_clauses`**: All clauses exhausted
+- If U non-empty: suspend goal via `suspendGoal(goalId, kappa, U)`, return SUSPENDED
+- If U empty: definitive failure, return TERMINATED
+
+**`proceed`**: Successful completion
+- Return TERMINATED (success)
+
+There are NO explicit `suspend`, `reactivate`, or `abandon` bytecode instructions. These are runtime operations triggered automatically by control flow instructions.
+
+## Integration with Dart
+
+### Memory Management
+The runtime relies entirely on Dart's garbage collector, eliminating the complex memory management in FCP. Heap cells are regular Dart objects subject to standard collection. Environment frames are collected when no longer referenced by active goals. The variable table uses weak references to allow collection of abandoned variables. No explicit memory barriers or generation tracking is needed as in FCP.
+
+### Concurrency Model
+Each goal runs as a Dart microtask, providing cooperative concurrency without preemption. The runtime implements two levels of fairness:
+
+1. **Fairness among GLP goals**: Both `spawn` and `requeue` add goals at the tail of the microtask queue, ensuring FIFO scheduling between concurrent GLP goals.
+
+2. **System responsiveness**: To avoid starving event-queue tasks (timers, I/O, UI), goals track a tail-recursion budget. After a fixed number of consecutive `requeue` operations (e.g., 26), the goal yields to the event queue via `Timer.run()` instead of `scheduleMicrotask()`, then continues. This bounded tail-recursion mirrors FCP's reduction-counting mechanism.
+
+I/O operations use Dart's async/await, suspending the goal naturally. This model is simpler than FCP's explicit process queue while maintaining both fairness and responsiveness.
+
+### Native Integration
+System predicates are implemented as Dart functions registered with the runtime. These can access Dart libraries directly for functionality like file I/O, networking, and GUI operations. Guards are special system predicates that return success/failure without side effects. The runtime provides a foreign function interface (FFI) for calling native code when necessary.
+
+## Optimizations
+
+### Instruction Fusion
+Common instruction sequences are detected and fused into single operations. For example, `head_structure` followed by `head_writer` for the first argument can be combined into `head_structure_writer`. This reduces instruction dispatch overhead and improves cache locality.
+
+### Register Allocation
+The compiler performs register allocation to minimize register spilling. Temporary variables that don't cross procedure calls use X registers. Variables with non-overlapping lifetimes share registers. The first few arguments are passed in registers, with remaining arguments using the stack.
+
+### Suspension Optimization
+The suspension table uses efficient indexing structures to quickly locate goals suspended on specific variables. Batch reactivation processes all goals suspended on a variable in a single scheduler operation. Early abandonment detection prevents unnecessary suspension by detecting permanently unbound variables during compilation where possible.
+
+## Error Handling
+
+### Runtime Errors
+The runtime detects and reports several categories of errors. SRSW violations occur when multiple writers or readers are created for the same variable. Type errors arise when operations receive unexpected argument types. Stack overflow is detected when the logical stack exceeds limits. Abandoned variable access happens when attempting to use variables whose writers are gone.
+
+### Debugging Support
+The runtime provides comprehensive debugging facilities. Execution tracing shows instruction-by-instruction execution with register and heap state. Breakpoints can be set on specific predicates or instructions. The suspension inspector shows currently suspended goals and their suspension sets. Variable tracking follows the lifecycle of specific variables through creation, binding, and abandonment.
+
+## Performance Characteristics
+
+### Time Complexity
+**Instruction dispatch**: O(1) via Dart's type-based dispatch (if-else chain on instruction types)
+**Writer MGU**: O(n) in structure size (linear traversal, no deep recursion needed)
+**ROQ operations**: O(1) amortized for queue operations (Map lookup + Queue add/remove)
+**Reactivation**: O(k) for k suspended goals on a reader (linear scan of suspension notes)
+**Hanger check**: O(1) for single-shot armed flag check
+
+Note: Current implementation uses if-else dispatch, not jump tables. Dart's branch prediction makes this efficient for moderate instruction counts.
+
+### Space Complexity
+**Per goal**: O(1) base overhead (`RunnerContext`) plus O(v) for v clause variables in `clauseVars`
+**Heap**: O(t) for t total terms created (cells + bindings in `writerValue` map)
+**ROQ**: O(s) for s suspension notes across all readers
+**No trail stack**: Committed-choice semantics eliminate backtracking, so no trail needed
+
+### Comparison with FCP
+This runtime is simpler than FCP's abstract machine by delegating to Dart for memory management, process scheduling, and garbage collection. Performance is comparable for most workloads, with overhead from Dart's abstractions offset by elimination of manual memory management. The design prioritizes maintainability and integration with the Dart ecosystem over maximum theoretical performance.
+
+## Implementation Roadmap
+
+### Phase 1: Core Runtime
+Implement the basic execution engine with the instruction set, heap and environment management, and writer MGU algorithm. This provides a working GLP system for single-agent programs.
+
+### Phase 2: Suspension System  
+Add suspension table management, reactivation mechanisms, and abandonment detection. This enables concurrent GLP programs with reader/writer synchronization.
+
+### Phase 3: Optimizations
+Implement instruction fusion, register allocation improvements, and tail call optimization. These optimizations improve performance for production workloads.
+
+### Phase 4: Debugging Tools
+Add execution tracing, breakpoint support, and suspension inspection. These tools are essential for GLP program development.
+
+### Phase 5: Multiagent Extension
+Extend to multiple isolates for true multiagent execution, adding inter-isolate message passing and distributed variable management. This completes the full GLP vision for grassroots platforms.
+
+## Conclusion
+
+This runtime system specification provides a practical path to implementing GLP on the Dart platform. By leveraging Dart's built-in capabilities rather than reimplementing low-level functionality, the design achieves simplicity without sacrificing the unique features that make GLP suitable for grassroots platform development. The clear separation between GLP-specific logic and platform services enables portability while maintaining efficient execution on modern devices.

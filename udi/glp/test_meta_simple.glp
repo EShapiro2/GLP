@@ -1,0 +1,8 @@
+% test_meta_simple.glp - Progressively simpler tests for metainterpreter
+
+% Test 1: Fact (no body) - WORKS
+p(a).
+
+% Test 2: Rule with body - FAILS
+step1 :- step2.
+step2.

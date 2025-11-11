@@ -1,0 +1,41 @@
+--- a/lib/bytecode/runner.dart
++++ b/lib/bytecode/runner.dart
+@@ -1023,7 +1023,11 @@ class BytecodeRunner {
+                 final resolved = cx.clauseVars[arg.varIndex];
+                 if (resolved is int) {
+-                  // Already resolved to a writer ID - use its reader
++                  // Already resolved to a writer ID - use writer or reader based on isWriter flag
+                   final wc = cx.rt.heap.writer(resolved);
+                   if (wc != null) {
+-                    termArgs.add(ReaderTerm(wc.readerId));
++                    if (arg.isWriter) {
++                      termArgs.add(WriterTerm(resolved));
++                    } else {
++                      termArgs.add(ReaderTerm(wc.readerId));
++                    }
+                   } else {
+                     // Shouldn't happen - create fresh pair as fallback using heap allocation
+@@ -1031,7 +1035,11 @@ class BytecodeRunner {
+                     cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
+                     cx.rt.heap.addReader(ReaderCell(freshReaderId));
+                     cx.clauseVars[arg.varIndex] = freshWriterId;
+-                    termArgs.add(ReaderTerm(freshReaderId));
++                    if (arg.isWriter) {
++                      termArgs.add(WriterTerm(freshWriterId));
++                    } else {
++                      termArgs.add(ReaderTerm(freshReaderId));
++                    }
+                   }
+                 } else if (resolved is Term) {
+                   // Already a term - use as-is
+@@ -1042,7 +1050,11 @@ class BytecodeRunner {
+                   cx.rt.heap.addWriter(WriterCell(freshWriterId, freshReaderId));
+                   cx.rt.heap.addReader(ReaderCell(freshReaderId));
+                   cx.clauseVars[arg.varIndex] = freshWriterId;
+-                  termArgs.add(ReaderTerm(freshReaderId));
++                  if (arg.isWriter) {
++                    termArgs.add(WriterTerm(freshWriterId));
++                  } else {
++                    termArgs.add(ReaderTerm(freshReaderId));
++                  }
+                 }

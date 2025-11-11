@@ -1,0 +1,19 @@
+% Metainterpreter
+run(true).
+run(A) :- otherwise | clause(A?, B), run(B?).
+
+% Clause database entries
+clause(simple([]), true).
+clause(merge([], [], []), true).
+
+% Direct implementations for test1
+simple([]).
+
+% Test 1: Direct call (should work - tests simple/1 directly)
+test1(X?) :- simple(X).
+
+% Test 2: Through metainterpreter with simple
+test2(X?) :- run(simple(X)).
+
+% Test 3: The actual merge case through metainterpreter
+test3(X?) :- run(merge([], [], X)).

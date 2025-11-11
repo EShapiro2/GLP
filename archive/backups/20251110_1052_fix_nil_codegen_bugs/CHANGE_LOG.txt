@@ -1,0 +1,9 @@
+Change: fix_nil_codegen_bugs
+Date: $(date)
+Commit before change: $(git -C glp_runtime rev-parse HEAD 2>/dev/null || echo "not in git")
+Test status before: 198 passing, 23 failing
+
+Bugs being fixed (from Claude Web analysis):
+1. codegen.dart lines 621-622: ConstTerm(null) → ConstTerm('nil')
+2. codegen.dart lines 636-637: ConstTerm(null) → ConstTerm('nil')
+3. runner.dart line 158: Check 'nil' not null for display

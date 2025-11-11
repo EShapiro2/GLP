@@ -1,0 +1,157 @@
+======================================================================================
+GLP RUNTIME ARCHITECTURE - EXECUTION AND DATA FLOW
+======================================================================================
+
+SOURCE CODE (GLP)                COMPILATION PIPELINE              EXECUTION ENVIRONMENT
+─────────────────────────────────────────────────────────────────────────────────────
+
+merge([],Ys,Ys).
+merge([X|Xs],                 LEXER            PARSER            ANALYZER         CODEGEN
+ Ys,[X|Zs]) :-    ──────→    ────────→        ─────────→         ──────────→      ───────→
+ merge(Xs,Ys,Zs). Tokens      AST               Annotated AST      Variable        Bytecode
+                               +Meta            with VariableInfo    Assignment     Program
+                                                 +SRSW Validation    +TempsAlloc
+
+
+BYTECODE PROGRAM (in RunnerContext)
+─────────────────────────────────────────────────────────────────────────────────────
+
+Instructions (ops):                             Execution State:
+┌─────────────────────────────────────────┐   ┌─────────────────────────────────────┐
+│ Label "merge/3_start"                   │   │ PC = current instruction pointer    │
+│ ClauseTry               ← HEAD PHASE     │   │ env = CallEnv (A0→WriterID, ...)   │
+│ HeadList(0)                             │   │ sigmaHat = {WriterId→Value}        │
+│ HeadReader(0)                           │   │ Si = {UnboundReaderIds}            │
+│ HeadVariable(Ys, 1)                     │   │ U = accumulated Si                 │
+│ HeadVariable(Zs, 2)                     │   │ clauseVars = {VarIndex→Value}      │
+│ Commit              ← σ̂w applied        │   │ mode = READ|WRITE (structure)      │
+│ PutReader(1, 0)        ← BODY PHASE     │   │ S = position in current structure  │
+│ PutReader(0, 1)                         │   │ currentStructure = StructTerm?     │
+│ PutWriter(2, 2)                         │   │ argWriters = {slot→WriterId}       │
+│ Spawn("merge/3", 3)                     │   │ argReaders = {slot→ReaderId}       │
+│ Requeue("merge/3", 3)                   │   └─────────────────────────────────────┘
+│ Proceed                                 │
+│ Label "merge/3_end"                     │
+│ NoMoreClauses                           │
+└─────────────────────────────────────────┘
+
+
+RUNTIME STATE MACHINE (GlpRuntime)
+─────────────────────────────────────────────────────────────────────────────────────
+
+GoalQueue (FIFO)                  BytecodeRunner                    Heap Storage
+┌──────────────────────┐         ┌────────────────────────┐      ┌─────────────────────┐
+│ Goal(id=100, PC=5)   │ dequeue │ runWithStatus(context) │      │ WriterCells         │
+│ Goal(id=101, PC=12)  │────────→│ • Process instruction  │      │ ├─ w1 → r2          │
+│ Goal(id=102, PC=0)   │  enqueue│ • Track Si, σ̂w, U      │      │ └─ w3 → r4          │
+└──────────────────────┘         │ • Call systemPredicates│      │ ReaderCells         │
+         ↑      ↓                │ • Spawn/Requeue goals  │      │ ├─ r2 → value       │
+         │      │                │ Returns: terminated/   │      │ └─ r4 → <unbound>   │
+         │      │                │  suspended/yielded     │      └─────────────────────┘
+    Spawn  Commit                └────────────────────────┘
+   creates  wakes
+
+
+SUSPENSION AND REACTIVATION FLOW
+─────────────────────────────────────────────────────────────────────────────────────
+
+Reader Unbound in HEAD:
+  ReaderId → Si (clause-local set)
+    ↓
+All clauses fail/suspend:
+  Si → U (union across clauses)
+    ↓
+NoMoreClauses checks U:
+  U non-empty? YES
+    ↓
+Create Hanger(goalId, kappa, armed=true)
+  ↓
+Enqueue SuspensionNote(readerId, hanger) to ROQueues[readerId]
+  ↓
+Goal returns RunResult.suspended
+
+
+Writer W Binds in Commit:
+  CommitOps.applySigmaHatV216()
+    ↓
+For each WriterId → bind to heap.writerValue
+    ↓
+Get paired ReaderId from WriterCell
+    ↓
+Call roq.processOnBind(readerId)
+    ├─ For each SuspensionNote in FIFO queue:
+    │   ├─ if hanger.armed = true:
+    │   │   ├─ set armed = false
+    │   │   └─ produce GoalRef(goalId, kappa)
+    │   └─ if armed = false: skip (already woken)
+    └─ Return list of GoalRef for reactivation
+    ↓
+Enqueue all GoalRef to GoalQueue
+    ↓
+Scheduler drains, goals resume at kappa (clause selection)
+
+
+THREE-PHASE EXECUTION SEQUENCE
+─────────────────────────────────────────────────────────────────────────────────────
+
+HEAD PHASE                    GUARD PHASE                   BODY PHASE
+──────────────────────────    ───────────────────────────   ──────────────────────────
+Matches clause pattern        Pure tests (no binding)       Builds output structures
+Fills sigmaHat (tentative)    Ground, Known, Otherwise      Spawns/requeues goals
+Populates Si (unbound)        Can jump to next clause       Only after Commit applied
+Can jump to next clause       Can check type (Writer/Reader)
+
+Examples:                     Examples:                     Examples:
+• HeadConstant(c, slot)      • Ground(var) → Si if unground • PutStructure(f/n, slot)
+• HeadStructure(f/n, slot)   • Otherwise → Si empty check   • SetWriter(var) → fresh pair
+• HeadWriter/Reader(var)     • IfWriter/IfReader(var)       • Spawn(label, arity)
+• GetVariable(var, slot)                                     • Requeue(label, arity)
+                                                             • Proceed (success)
+
+Each phase can:
+├─ Succeed → continue to next instruction
+├─ Soft-fail → Si→U union, jump to next clause
+└─ Hard-fail → U empty, all clauses tried → RunResult.terminated
+
+
+VARIABLE BINDING LIFECYCLE
+─────────────────────────────────────────────────────────────────────────────────────
+
+CREATE:                          HEAD/GUARD:                   COMMIT:
+AllocationFreshPair()           (tentative)                    applySigmaHatV216()
+├─ WriterId (w)                 Writer → sigmaHat[w] = value  ├─ For each (w, val):
+├─ ReaderId (r)                 Reader unbound → Si.add(r)    │  └─ heap.bindWriterConst(w)
+├─ WriterCell(w, r)             Constant → match check        │
+├─ ReaderCell(r)                Structure → mode=WRITE        └─ roq.processOnBind(r)
+└─ Empty writerValue
+
+BODY:                           SUSPENSION:                   REACTIVATION:
+(after Commit)                  (if U non-empty)              (when W binds)
+├─ PutConstant → fresh w/r      ├─ Create Hanger(goalId,    ├─ Read from roq[r]
+│  + bind immediately           │  kappa, armed=true)        ├─ Check hanger.armed
+├─ PutStructure → allocate     │  └─ enqueue SuspensionNote  ├─ Set armed=false
+├─ SetWriter/Reader            └─ Goal suspends, returns     └─ Produce GoalRef
+│  + fill structure
+└─ Proceed                                                    (Goal resumes at kappa)
+
+
+SRSW CONSTRAINT ENFORCEMENT
+─────────────────────────────────────────────────────────────────────────────────────
+
+Compiler-time (Analyzer):
+  VariableTable.verifySRSW()
+  ├─ Writer occurrences ≤ 1
+  └─ Reader occurrences ≤ 1 (unless grounded by guard)
+
+Runtime enforcement:
+  ├─ Writers: only one binding per WriterId (writerValue map)
+  ├─ Readers: single reactivation via Hanger.armed flag
+  └─ Structure: atomic σ̂w binding (no partial updates)
+
+
+KEY INSIGHT: The three-phase execution model (HEAD/GUARD/BODY) with tentative
+bindings (σ̂w) and single-reactivation (Hanger) creates a principled concurrent
+execution environment where goals suspend on unbound readers, and bindings wake
+them exactly once.
+
+======================================================================================

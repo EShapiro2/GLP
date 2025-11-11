@@ -11,32 +11,32 @@ void main() {
     final heap = Heap();
     final roq = ROQueues();
 
-    const writerId = 77;
-    const readerId = 7077;
+    const varId = 77;
+    
 
-    heap.addWriter(WriterCell(writerId, readerId));
-    heap.addReader(ReaderCell(readerId));
+    heap.addWriter(WriterCell(varId, varId));
+    heap.addReader(ReaderCell(varId));
 
     final h1 = Hanger(goalId: 100, kappa: 9, armed: true);
     final h2 = Hanger(goalId: 200, kappa: 9, armed: true);
-    roq.enqueue(readerId, SuspensionNote(readerId, h1));
-    roq.enqueue(readerId, SuspensionNote(readerId, h2));
+    roq.enqueue(varId, SuspensionNote(varId, h1));
+    roq.enqueue(varId, SuspensionNote(varId, h2));
 
     final acts = AbandonOps.abandonWriter(
       heap: heap,
       roq: roq,
-      writerId: writerId,
+      writerId: varId,
     );
 
     expect(acts.map((a) => a.id).toList(), [100, 200]); // FIFO wake
-    expect(heap.writer(writerId)!.abandoned, isTrue);
-    expect(roq.isEmpty(readerId), isTrue);
+    expect(heap.writer(varId)!.abandoned, isTrue);
+    expect(roq.isEmpty(varId), isTrue);
 
     // Subsequent abandon calls produce no extra activations (hanger single-reactivation)
     final acts2 = AbandonOps.abandonWriter(
       heap: heap,
       roq: roq,
-      writerId: writerId,
+      writerId: varId,
     );
     expect(acts2, isEmpty);
   });

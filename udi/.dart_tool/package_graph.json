@@ -1,0 +1,34 @@
+{
+  "roots": [
+    "udi_workspace"
+  ],
+  "packages": [
+    {
+      "name": "udi_workspace",
+      "version": "1.0.0",
+      "dependencies": [
+        "glp_runtime"
+      ],
+      "devDependencies": []
+    },
+    {
+      "name": "glp_runtime",
+      "version": "1.0.0",
+      "dependencies": [
+        "collection",
+        "path"
+      ]
+    },
+    {
+      "name": "collection",
+      "version": "1.19.1",
+      "dependencies": []
+    },
+    {
+      "name": "path",
+      "version": "1.9.1",
+      "dependencies": []
+    }
+  ],
+  "configVersion": 1
+}

@@ -1,0 +1,10 @@
+name: udi_workspace
+description: Udi's GLP workspace for source and compiled programs
+version: 1.0.0
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  glp_runtime:
+    path: ../glp_runtime

@@ -1,0 +1,67 @@
+% run1.glp - Metainterpreter
+%
+% Simple metainterpreter that executes GLP goals
+% From metainterp_merge_test.dart
+
+% Base case: true succeeds
+run(true).
+
+% Conjunction: run both goals
+run((A, B)) :- run(A?), run(B?).
+
+% Default: look up clause and run body
+% B is written by clause/2, then read by run/1
+run(A) :- otherwise | clause(A?, B), run(B?).
+
+% Test clause to isolate reader variable bug
+run2(Ys?) :- run((merge([],[],Xs1), merge([],Xs1?,Ys))).
+
+run3(Ys?) :- run(merge([],[a],Ys)).
+
+run4(Ys?) :- run(merge([],[],Ys)).
+
+run6(Ys?) :- run(merge([a],[],Ys)).
+
+run7(Ys?) :- run(merge(f(a),[],Ys)).
+
+run8(Ys?) :- run(merge(a,[],Ys)).
+
+run9(Ys?) :- run(merge(a,[])).
+
+
+runA(X?) :- merge([],[],X).
+
+merge([],[],[]).
+
+
+
+run999(Ys?) :- p(a([b])).
+
+p(X).
+
+
+% clause.glp - Clause database for metainterpreter
+%
+% Provides clause/2 for simple p/q program
+% From metainterp_pq_test.dart
+
+% Merge clauses (for metainterp_merge_test.dart)
+clause(merge([X|Xs], Ys, [X?|Zs?]), merge(Ys?, Xs?, Zs)).
+clause(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+clause(merge([], [], []), true).
+
+% Simple p/q clauses (for metainterp_pq_test.dart)
+clause(p(a), true).
+clause(p(b), true).
+clause(q(X), p(X?)).
+
+% test_minimal.glp clauses
+clause(p(X?), (q(Y), r(Y?,X))).
+clause(p1(X?), (r(Y?,X), q(Y))).
+clause(q(a), true).
+clause(r(a,b), true).
+
+clause(p2(X?), (q1(f(Y)), r1(f(Y?), X))).
+clause(p3(X?), (r1(f(Y?),X), q1(f(Y)))).
+clause(q1(f(a)), true).
+clause(r1(f(a),b), true).

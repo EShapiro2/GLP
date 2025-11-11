@@ -1,0 +1,31 @@
+Change: fix_headnil_line2110_nil_check
+Date: Mon Nov 10 14:10:22 IST 2025
+Commit before change: d43543ee350bf3cd85b4069da64c035570d71934
+Purpose: Fix HeadNil instruction line 2110 - check for 'nil' instead of '[]' or null
+Files to modify: lib/bytecode/runner.dart (line 2110, single line change)
+Previous test status: 198 passing / 23 failing
+=== Changes Made ===
+diff --git a/glp_runtime/lib/bytecode/runner.dart b/glp_runtime/lib/bytecode/runner.dart
+index 1e09422..135b492 100644
+--- a/glp_runtime/lib/bytecode/runner.dart
++++ b/glp_runtime/lib/bytecode/runner.dart
+@@ -155,7 +155,8 @@ class BytecodeRunner {
+   /// Format a term for display
+   static String _formatTerm(GlpRuntime rt, Term term, {bool markReaders = true}) {
+     if (term is ConstTerm) {
+-      if (term.value == null) return '[]';
++      if (term.value == 'nil') return '[]';
++      if (term.value == null) return '<null>';
+       return term.value.toString();
+     } else if (term is WriterTerm) {
+       final wid = term.writerId;
+@@ -2106,7 +2107,7 @@ class BytecodeRunner {
+             final wid = clauseVarValue;
+             if (cx.rt.heap.isWriterBound(wid)) {
+               final value = cx.rt.heap.valueOfWriter(wid);
+-              if (value is ConstTerm && (value.value == '[]' || value.value == null)) {
++              if (value is ConstTerm && value.value == 'nil') {
+                 if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = W$wid = $value, MATCH');
+                 pc++;
+                 continue;
+Test status after: 198 passing / 23 failing (no change)
