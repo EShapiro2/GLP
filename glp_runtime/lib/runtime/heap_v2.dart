@@ -199,6 +199,14 @@ class HeapV2 extends Heap {
     return _nextId++;
   }
 
+  /// Override allocateFreshPair to return SAME ID for both writer and reader
+  /// This is the true single-ID FCP design: one variable, two access modes
+  @override
+  (int, int) allocateFreshPair() {
+    final varId = allocateFreshVar();
+    return (varId, varId);  // Writer and reader use the SAME ID
+  }
+
   /// Override addVariable from base Heap
   @override
   void addVariable(int varId) {
@@ -226,16 +234,13 @@ class HeapV2 extends Heap {
   }
 
   /// Compatibility: Get writer ID for reader ID
-  /// In single-ID from fresh allocation: they're the same
-  /// From old two-ID tests: use the pairing map
+  /// In true single-ID system: writerId == readerId == varId
+  /// Check if variable exists, return the ID itself
   @override
   int? writerIdForReader(int readerId) {
-    // Check if we have a pairing from old two-ID code
-    if (_readerToWriter.containsKey(readerId)) {
-      return _readerToWriter[readerId];
-    }
-    // Otherwise, in pure single-ID system, they're the same
-    return readerId;
+    // In single-ID, reader and writer are the same ID
+    // Just check if the variable exists
+    return _vars.containsKey(readerId) ? readerId : null;
   }
 }
 
