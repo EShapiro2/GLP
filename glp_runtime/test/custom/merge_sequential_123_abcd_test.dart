@@ -206,13 +206,11 @@ void main() {
 
         if (tail is ConstTerm) {
           return [headValue];
-        } else if (tail is ReaderTerm) {
-          final writerId = rt.heap.writerIdForReader(tail.readerId);
-          if (writerId != null) {
-            final tailValue = rt.heap.writerValue[writerId];
-            if (tailValue != null) {
-              return [headValue, ...extractList(tailValue)];
-            }
+        } else if (tail is VarRef) {
+          final varId = tail.varId;
+          final tailValue = rt.heap.getValue(varId);
+          if (tailValue != null) {
+            return [headValue, ...extractList(tailValue)];
           }
         } else if (tail is StructTerm) {
           return [headValue, ...extractList(tail)];

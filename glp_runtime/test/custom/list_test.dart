@@ -304,21 +304,19 @@ void main() {
     expect(listStruct.functor, '.', reason: 'Should be list cons');
     expect(listStruct.args.length, 2, reason: 'Cons has 2 args');
 
-    // Head should be a reader pointing to 'a'
-    expect(listStruct.args[0], isA<ReaderTerm>());
-    final headReader = (listStruct.args[0] as ReaderTerm).readerId;
-    final headWriterId = rt.heap.writerIdForReader(headReader);
-    expect(headWriterId, isNotNull, reason: 'Head reader should have paired writer');
-    final headValue = rt.heap.valueOfWriter(headWriterId!);
+    // Head should be a VarRef (reader mode) pointing to 'a'
+    expect(listStruct.args[0], isA<VarRef>());
+    final headVarRef = listStruct.args[0] as VarRef;
+    expect(headVarRef.isReader, true, reason: 'Head should be in reader mode');
+    final headValue = rt.heap.getValue(headVarRef.varId);
     expect(headValue, isA<ConstTerm>());
     expect((headValue as ConstTerm).value, 'a');
 
-    // Tail should be a reader pointing to [b]
-    expect(listStruct.args[1], isA<ReaderTerm>());
-    final tailReader = (listStruct.args[1] as ReaderTerm).readerId;
-    final tailWriterId = rt.heap.writerIdForReader(tailReader);
-    expect(tailWriterId, isNotNull, reason: 'Tail reader should have paired writer');
-    final tailValue = rt.heap.valueOfWriter(tailWriterId!);
+    // Tail should be a VarRef (reader mode) pointing to [b]
+    expect(listStruct.args[1], isA<VarRef>());
+    final tailVarRef = listStruct.args[1] as VarRef;
+    expect(tailVarRef.isReader, true, reason: 'Tail should be in reader mode');
+    final tailValue = rt.heap.getValue(tailVarRef.varId);
     expect(tailValue, isA<StructTerm>());
     final tail = tailValue as StructTerm;
     expect(tail.functor, '.');

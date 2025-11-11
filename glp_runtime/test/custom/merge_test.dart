@@ -628,7 +628,7 @@ void main() {
         // Handle tail
         if (tail is ConstTerm) {
           return [headValue];
-        } else if (tail is ReaderTerm) {
+        } else if (tail is VarRef) {
           final tailWriterId = rt.heap.writerIdForReader(tail.readerId);
           if (tailWriterId != null && rt.heap.isWriterBound(tailWriterId)) {
             final tailValue = rt.heap.valueOfWriter(tailWriterId);
@@ -828,7 +828,7 @@ void main() {
         // Handle tail
         if (tail is ConstTerm) {
           return [headValue];
-        } else if (tail is ReaderTerm) {
+        } else if (tail is VarRef) {
           final tailWriterId = rt.heap.writerIdForReader(tail.readerId);
           if (tailWriterId != null && rt.heap.isWriterBound(tailWriterId)) {
             final tailValue = rt.heap.valueOfWriter(tailWriterId);
@@ -1035,7 +1035,7 @@ void main() {
 
         if (tail is ConstTerm) {
           return [headValue];
-        } else if (tail is ReaderTerm) {
+        } else if (tail is VarRef) {
           final tailWriterId = rt.heap.writerIdForReader(tail.readerId);
           if (tailWriterId != null && rt.heap.isWriterBound(tailWriterId)) {
             final tailValue = rt.heap.valueOfWriter(tailWriterId);
@@ -1264,7 +1264,7 @@ void main() {
 
         if (tail is ConstTerm) {
           return [headValue];
-        } else if (tail is ReaderTerm) {
+        } else if (tail is VarRef) {
           final tailWriterId = rt.heap.writerIdForReader(tail.readerId);
           if (tailWriterId != null && rt.heap.isWriterBound(tailWriterId)) {
             final tailValue = rt.heap.valueOfWriter(tailWriterId);

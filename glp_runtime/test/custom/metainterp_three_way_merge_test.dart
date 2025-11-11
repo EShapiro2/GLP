@@ -305,7 +305,7 @@ void main() {
 
         // Get head element
         final head = current.args[0];
-        if (head is ReaderTerm) {
+        if (head is VarRef) {
           final wid = rt.heap.writerIdForReader(head.readerId);
           if (wid != null && rt.heap.isWriterBound(wid)) {
             final headValue = rt.heap.valueOfWriter(wid);
@@ -322,7 +322,7 @@ void main() {
         // Get tail
         if (current.args.length > 1) {
           final tail = current.args[1];
-          if (tail is ReaderTerm) {
+          if (tail is VarRef) {
             final wid = rt.heap.writerIdForReader(tail.readerId);
             if (wid != null && rt.heap.isWriterBound(wid)) {
               current = rt.heap.valueOfWriter(wid);

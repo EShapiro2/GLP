@@ -213,7 +213,7 @@ void main() {
         if (zsValue.args.isNotEmpty) {
           final head = zsValue.args[0];
           print('  Head of Zs: $head');
-          if (head is ReaderTerm) {
+          if (head is VarRef) {
             final wid = rt.heap.writerIdForReader(head.readerId);
             if (wid != null && rt.heap.isWriterBound(wid)) {
               final headValue = rt.heap.valueOfWriter(wid);
@@ -231,7 +231,7 @@ void main() {
         if (zsValue.args.length > 1) {
           final tail = zsValue.args[1];
           print('  Tail of Zs: $tail');
-          if (tail is ReaderTerm) {
+          if (tail is VarRef) {
             final tailWid = rt.heap.writerIdForReader(tail.readerId);
             if (tailWid != null && rt.heap.isWriterBound(tailWid)) {
               final tailValue = rt.heap.valueOfWriter(tailWid);
