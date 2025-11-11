@@ -26,7 +26,7 @@ void main() {
     rt.heap.addReader(ReaderCell(varList1));
     rt.heap.bindWriterStruct(varList1, '.', [
       ConstTerm(1),
-      VarRef(12, isReader: true),
+      VarRef(13, isReader: true),
     ]);
 
     const varTail1 = 13;
@@ -35,7 +35,7 @@ void main() {
     rt.heap.addReader(ReaderCell(varTail1));
     rt.heap.bindWriterStruct(varTail1, '.', [
       ConstTerm(2),
-      VarRef(14, isReader: true),
+      VarRef(15, isReader: true),
     ]);
 
     const varTail2 = 15;
@@ -61,7 +61,7 @@ void main() {
     rt.heap.addReader(ReaderCell(varList2));
     rt.heap.bindWriterStruct(varList2, '.', [
       ConstTerm('a'),
-      VarRef(32, isReader: true),
+      VarRef(33, isReader: true),
     ]);
 
     const varTail3 = 33;
@@ -70,7 +70,7 @@ void main() {
     rt.heap.addReader(ReaderCell(varTail3));
     rt.heap.bindWriterStruct(varTail3, '.', [
       ConstTerm('b'),
-      VarRef(34, isReader: true),
+      VarRef(35, isReader: true),
     ]);
 
     const varTail4 = 35;
@@ -79,7 +79,7 @@ void main() {
     rt.heap.addReader(ReaderCell(varTail4));
     rt.heap.bindWriterStruct(varTail4, '.', [
       ConstTerm('c'),
-      VarRef(36, isReader: true),
+      VarRef(37, isReader: true),
     ]);
 
     const varTail5 = 37;
