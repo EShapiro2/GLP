@@ -874,6 +874,16 @@ commit
 
 **Note**: All six comparison guards follow the same pattern: evaluate expressions, compare if ground, suspend if unbound readers present.
 
+**SRSW Implication**: When an arithmetic comparison guard **succeeds**, both operands are guaranteed to be ground (bound to numbers). This allows multiple reader occurrences of those variables in the clause body without violating SRSW, as ground values contain no unbound writers.
+
+**Example**:
+```prolog
+% Multiple readers allowed after arithmetic guard
+partition([X | Xs], Pivot, [X? | Smaller?], Larger?) :-
+    X? < Pivot? |  % X and Pivot are ground after this succeeds
+    partition(Xs?, Pivot?, Smaller, Larger).  % X? appears twice - OK!
+```
+
 ### 19.4 Type Guards
 
 These guards test term types and properties.

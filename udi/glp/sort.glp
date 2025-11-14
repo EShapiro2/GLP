@@ -47,9 +47,9 @@ qsort([ ], Rest, Rest?).
 
 
 partition ([X | Xs], A, Smaller?, [X? | Larger?]) :-
-	number(X?), A? < X? | partition (Xs?, A?, Smaller, Larger).
+	A? < X? | partition (Xs?, A?, Smaller, Larger).
 partition ([X | Xs], A, [X? | Smaller?], Larger?) :-
-	number(X?), A? >= X? | partition (Xs?, A?, Smaller, Larger).
+	A? >= X? | partition (Xs?, A?, Smaller, Larger).
 partition ([ ], _ , [ ], [ ]).
 
 

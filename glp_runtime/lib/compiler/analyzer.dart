@@ -210,9 +210,6 @@ class Analyzer {
   }
 
   void _analyzeGuard(Guard guard, VariableTable varTable) {
-    // DEBUG: Print guard predicate to see what we're analyzing
-    // print('DEBUG: Analyzing guard: ${guard.predicate}(${guard.args.length} args)');
-
     // Special handling for ground/1 and known/1
     if (guard.predicate == 'ground' && guard.args.length == 1) {
       final arg = guard.args[0];
@@ -238,7 +235,6 @@ class Analyzer {
     // which means they're ground. This allows multiple reader occurrences.
     final comparisonOps = ['<', '>', '=<', '>=', '=:=', '=\\='];
     if (comparisonOps.contains(guard.predicate) && guard.args.length == 2) {
-      // print('DEBUG: Marking comparison operands as grounded for ${guard.predicate}');
       for (final arg in guard.args) {
         if (arg is VarTerm) {
           // Mark the writer as grounded (readers of X are allowed multiple times)

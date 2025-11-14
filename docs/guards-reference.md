@@ -103,8 +103,16 @@ Ground terms contain no unbound writers. Multiple readers of a ground term do no
 | ✅ `ground(X)` | Yes | ✅ Yes |
 | ⏳ `integer(X)` | Yes (when implemented) | ✅ Yes |
 | ⏳ `number(X)` | Yes (when implemented) | ✅ Yes |
+| 📝 `X < Y` | Yes (both operands, when succeeds) | ✅ Yes |
+| 📝 `X =< Y` | Yes (both operands, when succeeds) | ✅ Yes |
+| 📝 `X > Y` | Yes (both operands, when succeeds) | ✅ Yes |
+| 📝 `X >= Y` | Yes (both operands, when succeeds) | ✅ Yes |
+| 📝 `X =:= Y` | Yes (both operands, when succeeds) | ✅ Yes |
+| 📝 `X =\= Y` | Yes (both operands, when succeeds) | ✅ Yes |
 | ✅ `known(X)` | **NO** | ❌ No |
 | ✅ `otherwise` | No | ❌ No |
+
+**Note**: Arithmetic comparison guards suspend if operands are unbound and only succeed if both operands are bound to numbers. Therefore, when they succeed, both operands are guaranteed to be ground.
 
 **Critical Difference**: `known(X)` only tests if X is bound, not if it's ground. A structure like `f(Y)` is known (bound) but not ground (Y may be unbound).
 
@@ -126,6 +134,11 @@ compute_twice(X, Y1, Y2) :- ground(X) |
 distribute(N, R1, R2) :- integer(N) |
     execute('evaluate', [N? * 2, R1]),
     execute('evaluate', [N? + 5, R2]).
+
+% ✅ Arithmetic comparison guard implies groundness
+partition(X, Pivot, Small, Large) :- X? < Pivot? |
+    Small = [X? | RestSmall?],           % X? appears twice - OK!
+    partition_rest(RestSmall?, Pivot?, Large).
 ```
 
 ### Incorrect Patterns
@@ -140,18 +153,15 @@ bad_broadcast(X, Y1, Y2) :-
 bad_pattern(X, Y1, Y2) :- known(X) |
     send(X?, Y1),    % SRSW VIOLATION!
     send(X?, Y2).    % X could be f(Z) where Z is unbound
-
-% ❌ WRONG - comparison guards don't imply groundness
-bad_compare(X, Y1, Y2) :- X > 0 |
-    send(X?, Y1),    % SRSW VIOLATION!
-    send(X?, Y2).    % X > 0 doesn't guarantee X is ground
 ```
 
 ### Compiler Requirements
 
 The SRSW analyzer must:
 1. Track guards in HEAD/GUARDS phase
-2. Recognize guards that imply groundness (`ground/1`, `integer/1`, `number/1`)
+2. Recognize guards that imply groundness:
+   - Type guards: `ground/1`, `integer/1`, `number/1`
+   - Arithmetic comparisons: `<`, `=<`, `>`, `>=`, `=:=`, `=\=`
 3. For variables with ground-guaranteeing guards:
    - Mark variable as "ground-certified" for this clause
    - Allow multiple reader occurrences in body
