@@ -240,6 +240,9 @@ headStruct('[|]', 2, 11)       // Match X11 against [|]/2
   - If Xi contains VarRef (subsequent use): extract varId from existing VarRef, create `VarRef(varId, isReader: true)`, store at H
     - Rationale: Under SRSW, varId identifies the variable; isReader specifies access mode
     - Same variable accessed in reader mode, regardless of how it was previously accessed
+  - If Xi contains ground term (ConstTerm/StructTerm): allocate fresh variable ID, bind it to the ground term, create `VarRef(newId, isReader: true)`, store at H
+    - Rationale: When X is bound to constant 1 in HEAD and BODY needs X?, we create a fresh variable bound to 1 and return a reader to it
+    - Example: In `qsort([X|Xs], S, [X?|S1?])`, after HEAD matches X=1, BODY builds `[X?|S1?]` by creating a fresh variable V bound to 1, storing `VarRef(V, isReader: true)` in the list
 - Increment S (READ) or H (WRITE)
 
 **Note**: Reader unification follows Writer MGU semantics - readers can only be read, not written

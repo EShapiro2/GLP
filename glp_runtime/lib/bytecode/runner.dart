@@ -1233,6 +1233,14 @@ class BytecodeRunner {
                 struct.args[cx.S] = VarRef(wc.readerId, isReader: true);
                 if (debug) print('  [G${cx.goalId}] UnifyReader BODY: Using paired reader ${wc.readerId} for writer $clauseVarValue');
               }
+            } else if (clauseVarValue is Term) {
+              // Xi contains ground term (ConstTerm, StructTerm, etc.) - per spec 8.2
+              // Create fresh variable, bind it to the ground term, return reader VarRef
+              final varId = cx.rt.heap.allocateFreshVar();
+              cx.rt.heap.addVariable(varId);
+              cx.rt.heap.bindVariable(varId, clauseVarValue);
+              struct.args[cx.S] = VarRef(varId, isReader: true);
+              if (debug) print('  [G${cx.goalId}] UnifyReader BODY: Created V$varId bound to $clauseVarValue, stored reader ref');
             } else if (clauseVarValue == null) {
               // First occurrence as reader - create variable
               final varId = cx.rt.heap.allocateFreshVar();
