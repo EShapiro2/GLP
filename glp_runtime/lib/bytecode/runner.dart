@@ -33,6 +33,40 @@ class BytecodeProgram {
     }
     return m;
   }
+
+  /// Generate human-readable disassembly of bytecode
+  String toDisassembly() {
+    final buffer = StringBuffer();
+    for (var i = 0; i < ops.length; i++) {
+      buffer.writeln('PC $i: ${_instructionToString(ops[i])}');
+    }
+    return buffer.toString();
+  }
+
+  String _instructionToString(dynamic op) {
+    // Handle v2 PutVariable (the critical one for debugging)
+    if (op is opv2.PutVariable) {
+      final mode = op.isReader ? 'reader' : 'writer';
+      return 'PutVariable(X${op.varIndex} → A${op.argSlot}, $mode)';
+    }
+
+    // Handle other v2 instructions
+    if (op is opv2.HeadVariable) {
+      final mode = op.isReader ? 'reader' : 'writer';
+      return 'HeadVariable(X${op.varIndex}, $mode)';
+    }
+    if (op is opv2.UnifyVariable) {
+      final mode = op.isReader ? 'reader' : 'writer';
+      return 'UnifyVariable(X${op.varIndex}, $mode)';
+    }
+    if (op is opv2.SetVariable) {
+      final mode = op.isReader ? 'reader' : 'writer';
+      return 'SetVariable(X${op.varIndex}, $mode)';
+    }
+
+    // Fallback: use toString()
+    return op.toString();
+  }
 }
 
 /// Goal-call environment: maps arg slots to WR/RO ids (set at run time).

@@ -274,10 +274,16 @@ class Known implements Op {
 /// Execute system predicate: call registered Dart function
 /// Used for I/O, arithmetic, and other operations requiring side effects
 /// System predicates can succeed, fail, or suspend on unbound readers
+///
+/// Per spec Section 18.1: Execute takes "arguments as list of Terms"
 class Execute implements Op {
   final String predicateName;     // name of system predicate (e.g., "evaluate", "file_read")
-  final List<int> argSlots;       // clause variable indices for arguments
-  Execute(this.predicateName, this.argSlots);
+  final List<Object?> args;       // arguments as Terms (not slot indices)
+
+  const Execute(this.predicateName, this.args);
+
+  @override
+  String toString() => 'Execute($predicateName, args: $args)';
 }
 
 /// SetClauseVar: Directly set a clause variable to a term value

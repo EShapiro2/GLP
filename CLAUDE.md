@@ -600,3 +600,6 @@ You are part of an AI team building GLP. Claude Chat handles architecture and co
 - please remember all your blocking reqeusts from me, so that you can later change yourm json configuration file to eliminate them
 - please formalize the process of code creation and checking, insted of debugging in the dark
 - every plan must have testing to ensure that nothing gets broken along the way
+- every plan must start with commit before execution
+- before commit, make sure the version compiles and passes all tests
+- before changing code, check the spec. if the spec is not clear or correct, discuss with udi (the user) how to change it.  only change code if it is inconsistent with spec, namely produces behavior inconsistent with the specs
