@@ -96,6 +96,16 @@ run_test "Simple Run" \
     "run(true)." \
     "→"
 
+run_test "Merge via Metainterpreter (SRSW fix)" \
+    "run1.glp" \
+    "run(merge([a,b],[b],X))." \
+    "X = \[a, b, b\]"
+
+run_test "Insertion Sort via Metainterpreter" \
+    "isort.glp" \
+    "run(insertion_sort([3,4,2,3,6,1,2],Xs))." \
+    "Xs = \[1, 2, 2, 3, 3, 4, 6\]"
+
 # ============================================
 # ARITHMETIC TESTS (Fixed Versions)
 # ============================================

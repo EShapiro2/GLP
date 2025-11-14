@@ -1,4 +1,4 @@
-% sort1.glp - Sorting algorithms in GLP
+% sort.glp - Sorting algorithms in GLP
 %
 % Multiple sorting implementations demonstrating different approaches
 
@@ -32,26 +32,6 @@ merge([X | Xs], [Y | Ys], [Y? | Zs?]) :-
     X? < Y? |
     merge([X? | Xs?], Ys?, Zs).
 
-
-
-% ===== INSERTION SORT =====
-% Simple sorting by inserting elements one at a time
-
-% insertion_sort(List?, Sorted)
-insertion_sort([], []).
-insertion_sort([X | Xs], Sorted?) :-
-    insertion_sort(Xs?, SortedTail),
-    insert(X?, SortedTail?, Sorted).
-
-% insert(Elem?, SortedList?, Result)
-% Insert element into sorted list maintaining order
-insert(X, [], [X?]).
-insert(X, [Y | Ys], [X?| [Y? | Ys?]]) :-
-    X? =< Y? |
-    true.
-insert(X, [Y | Ys], [Y? | Zs?]) :-
-    X? > Y? |
-    insert(X?, Ys?, Zs).
 
 
 % ===== QUICKSORT =====

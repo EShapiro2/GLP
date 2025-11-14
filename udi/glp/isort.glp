@@ -1,4 +1,4 @@
-% sort1.glp - Sorting algorithms in GLP
+% isort.glp - Sorting algorithms in GLP
 %
 % Multipl
 
@@ -22,10 +22,12 @@ insert(X, [Y | Ys], [Y? | Zs?]) :-
     X? >= Y? |
     insert(X?, Ys?, Zs).
 
+run(true).
+run((A, B)) :- run(A?), run(B?).
+run(A) :- otherwise | clause(A?, B), run(B?).
 
-
-p(a).
-
-q(a,b).
-
-r(a,[b]).
+clause(insertion_sort([], []),true).
+clause(insertion_sort([X | Xs], Sorted?),(insertion_sort(Xs?, SortedTail), insert(X?, SortedTail?, Sorted))).
+clause(insert(X, [], [X?]) , true).
+clause(insert(X, [Y | Ys], [X?| [Y? | Ys?]]) ,true) :-  X? < Y? | true.
+clause(insert(X, [Y | Ys], [Y? | Zs?]) , insert(X?, Ys?, Zs)) :-  X? >= Y? |  true.

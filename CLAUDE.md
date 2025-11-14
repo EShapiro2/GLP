@@ -234,20 +234,31 @@ GLP (Grassroots Logic Programs) is a secure, multiagent, concurrent logic progra
 
 ## Known Working Behavior
 
+**Current Baseline (as of commit a886da3):**
+- 86 tests passing
+- 2 tests failing (three-way circular merge - intentional, non-terminating programs)
+- Test count reduced from ~170 due to test suite reorganization (Nov 2024)
+
 These tests MUST continue working:
 ```bash
 # Run all tests
+cd /Users/udi/GLP/glp_runtime
 dart test
-# Should show ~170 passing
+# Should show: +86 -2
 
 # Test REPL
-dart run bin/glp_runtime.dart
+cd /Users/udi/GLP/udi
+./glp_repl
 > run(merge([1,5,3,3],[a,a,a,v,a,c],Xs1)).
 # Should execute MORE than 2 goals and bind Xs1
 
 # Test conjunction
 > run((merge([1,2,3], Xs), merge(Xs?, [4,5], Ys))).
 # Should work with shared variables
+
+# Run REPL test suite
+cd /Users/udi/GLP/udi
+bash run_repl_tests.sh
 ```
 
 ## Build and Test Commands
@@ -275,6 +286,24 @@ cd /Users/udi/GLP/glp_runtime
 ### Compilation
 - Compile to executable: `dart compile exe bin/glp_runtime.dart -o output_name`
 - Compile to JavaScript: `dart compile js bin/glp_runtime.dart`
+
+### REPL Development
+- REPL source: `/Users/udi/GLP/udi/glp_repl.dart`
+- REPL executable: `/Users/udi/GLP/udi/glp_repl`
+- Compile REPL: `cd /Users/udi/GLP/udi && dart compile exe glp_repl.dart -o glp_repl`
+
+**REPL Development Protocol:**
+1. Make changes to glp_runtime/lib/ or udi/glp_repl.dart
+2. Update `buildTime` in udi/glp_repl.dart with current timestamp and description:
+   ```dart
+   final buildTime = '2025-11-14T11:37:22Z (with UnifyWriter/UnifyReader SRSW fix)';
+   ```
+3. Recompile REPL: `cd /Users/udi/GLP/udi && dart compile exe glp_repl.dart -o glp_repl`
+4. Let user test with REPL first
+5. If user confirms success, then run `dart test`
+6. If all tests pass, commit changes
+
+**IMPORTANT:** Always let user test REPL changes before running full test suite.
 
 ## Architecture
 
@@ -466,6 +495,38 @@ rt.setGoalProgram(goalId2, 'p');
 - Activated goals are enqueued and restart from PC = kappa (clause 1)
 - The ROQ (Read-Only Queue) maintains FIFO order for fairness
 
+## REPL Test Protocol
+
+When the user says **"add:"** followed by a test description, add a new test case to `/Users/udi/GLP/udi/run_repl_tests.sh`.
+
+**Format:**
+```bash
+run_test "Test Description" \
+    "filename.glp" \
+    "query." \
+    "expected_pattern"
+```
+
+**Location:** Add to appropriate section (BASIC TESTS, METAINTERPRETER TESTS, ARITHMETIC TESTS, etc.)
+
+**Example:**
+```
+User: "add: test merge via metainterpreter"
+
+Action: Add to METAINTERPRETER TESTS section:
+
+run_test "Merge via Metainterpreter" \
+    "run1.glp" \
+    "run(merge([a,b],[b],X))." \
+    "X = \[a, b, b\]"
+```
+
+**Important Notes:**
+- Escape square brackets in expected patterns: `\[` and `\]`
+- Use `?` to match the reader marker in output
+- Test file must exist in `/Users/udi/GLP/udi/glp/`
+- Run tests with: `cd /Users/udi/GLP/udi && bash run_repl_tests.sh`
+
 ## Terminology - CRITICAL
 
 **NEVER use "pattern matching" terminology** when discussing GLP or logic programs. This causes conceptual errors and implementation bugs.
@@ -482,6 +543,56 @@ GLP uses **three-valued unification**:
 3. **Fail**: Terms cannot unify (mismatch)
 
 The HEAD phase performs **tentative unification** building ÏƒÌ‚w without heap mutation. COMMIT applies ÏƒÌ‚w atomically to the heap.
+
+## Bytecode Inspection Tools
+
+**CURRENT STATUS:** Bytecode disassembler/dump tool not yet implemented.
+
+**Need:** Tools to examine compiled bytecode for debugging compilation issues.
+
+**Planned Tools:**
+- Bytecode dump utility to display compiled programs in human-readable assembly format
+- Disassembler to convert binary bytecode to readable instructions
+- Debug mode in compiler to output bytecode during compilation
+
+**Workaround (Current):**
+- Manually trace through `glp_runtime/lib/compiler/codegen.dart` to understand bytecode generation
+- Add temporary debug print statements in runner.dart to log instruction execution
+- Examine compiler source code to infer bytecode structure
+
+**Priority:** HIGH - needed for debugging issues like variable identity confusion in clause compilation
+
+**Location (when created):** `/Users/udi/GLP/glp_runtime/bin/dump_bytecode.dart` or similar
+
+## Refactoring Status
+
+**Current Plan:** `/Users/udi/GLP/docs/glp_refactoring_v3_complete.md`
+
+**Completed Phases:**
+- ✅ Phase 0: Baseline capture (commit 86538ca)
+- ✅ Phase 1: Single ID variable system (HeapV2 created)
+- ✅ Phase 1.5: HeapV2 integration validation
+- ✅ Phase 1.5b: HeapV2Adapter implementation (has problems - duplicate storage)
+
+**Current Phase:** Phase 2 - Complete Single-ID Migration
+- Status: **PAUSED** due to SRSW bug discovery and fixes
+- VarRef moved to terms.dart ✅
+- Runner.dart still has some WriterTerm/ReaderTerm references
+- HeapV2Adapter has problems (duplicate storage, dereferencing inconsistency)
+
+**Next Steps (After Current Bugs Fixed):**
+1. Resume Phase 2 migration - remove remaining WriterTerm/ReaderTerm
+2. Phase 2.5: Integration validation
+3. Phase 3: Array-based registers (remove isReader flag)
+4. Phase 4: Direct HeapV2 usage (remove adapter)
+5. Phase 5: Remove old heap.dart
+
+**IMPORTANT:** Do NOT proceed with refactoring until current SRSW-related bugs are fixed and test suite is stable.
+
+**Rationale:**
+- Bug fixes might conflict with refactoring changes
+- Need clean, working baseline before major architectural changes
+- Refactoring should not invalidate bug fixes
 
 ## Research Sources - REQUIRED
 
@@ -579,9 +690,9 @@ The operation failed with the following error:
 
 [Complete error message]
 
-Current test status: X/170 passing
+Current test status: X/86 passing (baseline: 86 passing, 2 failing)
 
-The error appears to be [brief description]. 
+The error appears to be [brief description].
 
 Options:
 1. Revert the change (recommended if tests were passing before)
@@ -604,3 +715,4 @@ You are part of an AI team building GLP. Claude Chat handles architecture and co
 - before commit, make sure the version compiles and passes all tests
 - before changing code, check the spec. if the spec is not clear or correct, discuss with udi (the user) how to change it.  only change code if it is inconsistent with spec, namely produces behavior inconsistent with the specs
 - no, never implement something if it is not according to the spec.  first fix the spec if needed
+- don't be lazy, look at code yourself when you can
