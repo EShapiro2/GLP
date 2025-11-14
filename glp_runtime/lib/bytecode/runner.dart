@@ -1073,8 +1073,8 @@ class BytecodeRunner {
             final struct = cx.currentStructure as _TentativeStruct;
             final value = cx.clauseVars[op.varIndex];
             if (value is VarRef) {
-              // Already a VarRef - use directly
-              struct.args[cx.S] = value;
+              // Subsequent use: extract varId, create writer VarRef (per spec 8.1)
+              struct.args[cx.S] = VarRef(value.varId, isReader: false);
             } else if (value is int) {
               // Legacy: bare ID - create VarRef
               struct.args[cx.S] = VarRef(value, isReader: false);
@@ -1097,8 +1097,8 @@ class BytecodeRunner {
             final struct = cx.currentStructure as StructTerm;
             final value = cx.clauseVars[op.varIndex];
             if (value is VarRef) {
-              // Already a VarRef - use directly
-              struct.args[cx.S] = value;
+              // Subsequent use: extract varId, create writer VarRef (per spec 8.1)
+              struct.args[cx.S] = VarRef(value.varId, isReader: false);
             } else if (value is int) {
               // Legacy: bare ID - create VarRef
               struct.args[cx.S] = VarRef(value, isReader: false);
@@ -1187,15 +1187,9 @@ class BytecodeRunner {
           if (cx.currentStructure is _TentativeStruct) {
             final struct = cx.currentStructure as _TentativeStruct;
             final clauseVarValue = cx.clauseVars[op.varIndex];
-            if (clauseVarValue is VarRef && clauseVarValue.isReader) {
-              // Clause var is already a reader term - use it directly
-              struct.args[cx.S] = clauseVarValue;
-            } else if (clauseVarValue is VarRef && !clauseVarValue.isReader) {
-              // It's a writer VarRef - get paired reader
-              final wc = cx.rt.heap.writer(clauseVarValue.varId);
-              if (wc != null) {
-                struct.args[cx.S] = VarRef(wc.readerId, isReader: true);
-              }
+            if (clauseVarValue is VarRef) {
+              // Subsequent use: extract varId, create reader VarRef (per spec 8.2)
+              struct.args[cx.S] = VarRef(clauseVarValue.varId, isReader: true);
             } else if (clauseVarValue is int) {
               // Legacy: bare ID - create VarRef as reader
               final wc = cx.rt.heap.writer(clauseVarValue);
@@ -1228,17 +1222,10 @@ class BytecodeRunner {
             if (debug) {
               print('  [G${cx.goalId}] UnifyReader BODY: varIndex=${op.varIndex}, clauseVarValue=$clauseVarValue, clauseVars=${cx.clauseVars}');
             }
-            if (clauseVarValue is VarRef && clauseVarValue.isReader) {
-              // Already a reader term - use directly
-              struct.args[cx.S] = clauseVarValue;
-              if (debug) print('  [G${cx.goalId}] UnifyReader BODY: Using existing ReaderTerm $clauseVarValue');
-            } else if (clauseVarValue is VarRef && !clauseVarValue.isReader) {
-              // It's a writer VarRef - get paired reader
-              final wc = cx.rt.heap.writer(clauseVarValue.varId);
-              if (wc != null) {
-                struct.args[cx.S] = VarRef(wc.readerId, isReader: true);
-                if (debug) print('  [G${cx.goalId}] UnifyReader BODY: Using paired reader ${wc.readerId} for writer ${clauseVarValue.varId}');
-              }
+            if (clauseVarValue is VarRef) {
+              // Subsequent use: extract varId, create reader VarRef (per spec 8.2)
+              struct.args[cx.S] = VarRef(clauseVarValue.varId, isReader: true);
+              if (debug) print('  [G${cx.goalId}] UnifyReader BODY: Using reader for var ${clauseVarValue.varId}');
             } else if (clauseVarValue is int) {
               // Legacy: bare ID - create VarRef as reader
               final wc = cx.rt.heap.writer(clauseVarValue);

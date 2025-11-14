@@ -603,3 +603,4 @@ You are part of an AI team building GLP. Claude Chat handles architecture and co
 - every plan must start with commit before execution
 - before commit, make sure the version compiles and passes all tests
 - before changing code, check the spec. if the spec is not clear or correct, discuss with udi (the user) how to change it.  only change code if it is inconsistent with spec, namely produces behavior inconsistent with the specs
+- no, never implement something if it is not according to the spec.  first fix the spec if needed

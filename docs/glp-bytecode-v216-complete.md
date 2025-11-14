@@ -218,7 +218,11 @@ headStruct('[|]', 2, 11)       // Match X11 against [|]/2
   - If bound writer: use its value (including bound structures)
   - If reader with bound paired writer: dereference and use paired writer's value
   - If reader with unbound paired writer: store the reader term itself in Xi
-- In WRITE mode: create new writer variable, store at H and in Xi
+- In WRITE mode:
+  - If Xi is unbound (first use): allocate fresh variable ID, create `VarRef(newId, isReader: false)`, store at H and in Xi
+  - If Xi contains VarRef (subsequent use): extract varId from existing VarRef, create `VarRef(varId, isReader: false)`, store at H
+    - Rationale: Under SRSW, varId identifies the variable; isReader specifies access mode (writer vs reader)
+    - Same variable accessed in writer mode, regardless of how it was previously accessed
 - Increment S (READ) or H (WRITE)
 
 **Note**: Writer-to-writer unification follows Writer MGU semantics. In READ mode, this instruction extracts any term (including nested structures and reader terms) for later matching. When a reader term is extracted, subsequent operations (like head_structure on that clause variable) will handle suspension if the reader remains unbound at match time.
@@ -231,7 +235,11 @@ headStruct('[|]', 2, 11)       // Match X11 against [|]/2
   - If value at S is unbound writer: bind it to reader Xi in σ̂w
   - If value at S is bound writer/constant: verify it equals Xi's paired writer value
   - Add to Si if Xi's paired writer is unbound
-- In WRITE mode: create reader reference at H
+- In WRITE mode:
+  - If Xi is unbound (first use): allocate fresh variable ID, create `VarRef(newId, isReader: true)`, store at H and in Xi
+  - If Xi contains VarRef (subsequent use): extract varId from existing VarRef, create `VarRef(varId, isReader: true)`, store at H
+    - Rationale: Under SRSW, varId identifies the variable; isReader specifies access mode
+    - Same variable accessed in reader mode, regardless of how it was previously accessed
 - Increment S (READ) or H (WRITE)
 
 **Note**: Reader unification follows Writer MGU semantics - readers can only be read, not written
