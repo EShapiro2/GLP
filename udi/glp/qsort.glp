@@ -1,0 +1,26 @@
+% qsort.glp - Sorting algorithms in GLP
+%
+% Multiple sorting implementations demonstrating different approaches
+
+
+
+% ===== QUICKSORT =====
+
+quicksort(Unsorted, Sorted?) :-
+	qsort(Unsorted?, Sorted, []).
+qsort([X | Unsorted], Sorted?, Rest?) :-
+	number(X?) |
+	partition(Unsorted?, X?, Smaller, Larger),
+	qsort(Smaller?, Sorted, [X? | Sorted1?]),
+	qsort(Larger?, Sorted1, Rest).
+qsort([ ], Rest?, Rest).
+
+
+partition ([X | Xs], A, Smaller?, [X? | Larger?]) :-
+	A? < X? | partition (Xs?, A?, Smaller, Larger).
+partition ([X | Xs], A, [X? | Smaller?], Larger?) :-
+	A? >= X? | partition (Xs?, A?, Smaller, Larger).
+partition ([ ], _ , [ ], [ ]).
+
+
+

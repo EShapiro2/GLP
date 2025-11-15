@@ -978,22 +978,40 @@ class BytecodeRunner {
 
         // Unify argument with stored value (writer MGU)
         if (arg.isWriter) {
-          if (storedValue is int && arg.writerId != storedValue) {
+          // Check if this writer was already bound by earlier GetReaderVariable
+          final existingBinding = cx.sigmaHat[arg.writerId!];
+          if (existingBinding != null) {
+            // Writer was bound by mode conversion - verify binding matches stored value
+            if (existingBinding is VarRef && existingBinding.varId != storedValue) {
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            }
+          } else if (storedValue is int && arg.writerId != storedValue) {
+            // No existing binding - direct ID comparison
             _softFailToNextClause(cx, pc);
             pc = _findNextClauseTry(pc);
             continue;
           }
           // Match - continue
         } else if (arg.isReader) {
+          // Argument is reader - bind stored writer to reader's value
           final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
           if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+            // Reader is bound - bind the stored writer to this value
             final readerValue = cx.rt.heap.valueOfWriter(wid);
-            if (storedValue is int && wid != storedValue) {
+            if (storedValue is int) {
+              // storedValue is a writer ID - bind it to reader's value
+              cx.sigmaHat[storedValue] = readerValue;
+            }
+            // If storedValue is already a term, verify it matches
+            else if (storedValue != readerValue) {
               _softFailToNextClause(cx, pc);
               pc = _findNextClauseTry(pc);
               continue;
             }
           } else {
+            // Reader unbound - suspend
             cx.si.add(arg.readerId!);
           }
         }
