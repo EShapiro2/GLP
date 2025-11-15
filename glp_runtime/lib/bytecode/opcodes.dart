@@ -228,6 +228,39 @@ class GetValue implements Op {
   GetValue(this.varIndex, this.argSlot);
 }
 
+// ===== MODE-AWARE argument loading (FCP-style) =====
+/// Load argument into clause WRITER variable (first occurrence)
+/// Clause expects writer, implements mode conversion if needed
+class GetWriterVariable implements Op {
+  final int varIndex;  // clause variable index
+  final int argSlot;   // argument register
+  GetWriterVariable(this.varIndex, this.argSlot);
+}
+
+/// Load argument into clause READER variable (first occurrence)
+/// Clause expects reader, implements mode conversion if needed
+class GetReaderVariable implements Op {
+  final int varIndex;  // clause variable index
+  final int argSlot;   // argument register
+  GetReaderVariable(this.varIndex, this.argSlot);
+}
+
+/// Unify argument with clause WRITER variable (subsequent occurrence)
+/// Performs writer MGU, updates σ̂w during HEAD phase
+class GetWriterValue implements Op {
+  final int varIndex;  // clause variable index
+  final int argSlot;   // argument register
+  GetWriterValue(this.varIndex, this.argSlot);
+}
+
+/// Unify argument with clause READER variable (subsequent occurrence)
+/// Performs three-valued unification with reader semantics
+class GetReaderValue implements Op {
+  final int varIndex;  // clause variable index
+  final int argSlot;   // argument register
+  GetReaderValue(this.varIndex, this.argSlot);
+}
+
 // ===== GUARD instructions (pure tests during HEAD/GUARDS phase) =====
 /// Otherwise guard: succeeds if all previous clauses failed (not suspended)
 /// Checks if Si is empty when executed - if so, all previous clauses definitely failed

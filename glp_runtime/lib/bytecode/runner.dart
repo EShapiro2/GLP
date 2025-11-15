@@ -909,6 +909,138 @@ class BytecodeRunner {
         pc++; continue;
       }
 
+      // ===== MODE-AWARE argument loading (FCP-style) =====
+      if (op is GetWriterVariable) {
+        // Load argument into clause WRITER variable (first occurrence)
+        final arg = _getArg(cx, op.argSlot);
+        if (arg == null) {
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+
+        if (arg.isWriter) {
+          // Writer to writer - store directly
+          cx.clauseVars[op.varIndex] = arg.writerId!;
+        } else if (arg.isReader) {
+          // Reader to writer - dereference and check bound
+          final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
+          if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+            // Reader's writer is bound - store value for subsequent unification
+            final value = cx.rt.heap.valueOfWriter(wid);
+            cx.clauseVars[op.varIndex] = value;
+          } else {
+            // Unbound reader - suspend
+            cx.si.add(arg.readerId!);
+          }
+        }
+        pc++; continue;
+      }
+
+      if (op is GetReaderVariable) {
+        // Load argument into clause READER variable (first occurrence)
+        final arg = _getArg(cx, op.argSlot);
+        if (arg == null) {
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+
+        if (arg.isWriter) {
+          // Mode conversion: writer arg → reader view
+          final freshVar = cx.rt.heap.allocateFreshVar();
+          cx.rt.heap.addVariable(freshVar);
+          cx.sigmaHat[arg.writerId!] = VarRef(freshVar, isReader: true);
+          cx.clauseVars[op.varIndex] = freshVar;
+        } else if (arg.isReader) {
+          // Reader to reader - store directly
+          cx.clauseVars[op.varIndex] = arg.readerId!;
+        }
+        pc++; continue;
+      }
+
+      if (op is GetWriterValue) {
+        // Unify argument with clause WRITER variable (subsequent occurrence)
+        // Same logic as GetValue for now (writer-focused unification)
+        final arg = _getArg(cx, op.argSlot);
+        if (arg == null) {
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+
+        final storedValue = cx.clauseVars[op.varIndex];
+        if (storedValue == null) {
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+
+        // Unify argument with stored value (writer MGU)
+        if (arg.isWriter) {
+          if (storedValue is int && arg.writerId != storedValue) {
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
+          // Match - continue
+        } else if (arg.isReader) {
+          final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
+          if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+            final readerValue = cx.rt.heap.valueOfWriter(wid);
+            if (storedValue is int && wid != storedValue) {
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            }
+          } else {
+            cx.si.add(arg.readerId!);
+          }
+        }
+        pc++; continue;
+      }
+
+      if (op is GetReaderValue) {
+        // Unify argument with clause READER variable (subsequent occurrence)
+        final arg = _getArg(cx, op.argSlot);
+        if (arg == null) {
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+
+        final storedValue = cx.clauseVars[op.varIndex];
+        if (storedValue == null) {
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+
+        // Three-valued unification with reader semantics
+        if (arg.isWriter) {
+          // Bind writer to reader's value (stored is reader ID)
+          if (storedValue is int) {
+            // storedValue is the reader ID from GetReaderVariable
+            final wid = cx.rt.heap.writerIdForReader(storedValue);
+            if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+              final readerValue = cx.rt.heap.valueOfWriter(wid);
+              cx.sigmaHat[arg.writerId!] = readerValue;
+            } else {
+              // Reader unbound - suspend
+              cx.si.add(storedValue);
+            }
+          }
+        } else if (arg.isReader) {
+          // Reader to reader - check if they match
+          if (storedValue is int && arg.readerId != storedValue) {
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
+        }
+        pc++; continue;
+      }
+
       // ===== Structure subterm matching instructions =====
       if (op is UnifyConstant) {
         // Match constant at current S position
