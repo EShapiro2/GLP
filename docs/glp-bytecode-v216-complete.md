@@ -1,7 +1,8 @@
 # GLP Bytecode Instruction Set Specification — v2.16 (Normative)
 
 ## 0. ISA Conventions
-- **σ̂w** denotes the clause-local (goal-local) tentative writer substitution; it exists only during Phase 1 and is discarded at clause_next and suspend.
+- **σ̂w** denotes the goal-local tentative writer substitution; it exists only during HEAD/GUARD phases and is discarded at clause_next.
+- **U** denotes the goal-level suspension set (readers on which the goal is blocked).
 - **Phases per clause Ci**: HEAD_i ; GUARDS_i ; BODY_i.
 - **Registers**: A (arguments), X (temporaries). Env stack E.
 - **κ** denotes the clause-selection entry PC of the current procedure (the PC where the first clause of the procedure begins).
@@ -36,13 +37,13 @@ Note: The E, CP, and Y registers are used exclusively for deterministic environm
 ## 2. Control Instructions
 
 ### 2.1 clause_try Ci
-**Phase**: clause head/guards entry.  
-**Effect**: initialize Si := ∅; initialize σ̂w := ∅.
+**Phase**: clause head/guards entry.
+**Effect**: initialize σ̂w := ∅.
 
 ### 2.2 clause_next Cj
-**Phase**: clause head/guards exit on FAIL or SUSPEND_READY.
-**Effect**: if Si ≠ ∅ then U := U ∪ Si; discard σ̂w; clear Si; jump to label of Cj.
-**Purpose**: Accumulate suspension sets across clause attempts. When a clause fails or suspends, any readers added to Si during that clause are unioned into the goal-level suspension set U before trying the next clause.
+**Phase**: clause head/guards exit on FAIL.
+**Effect**: discard σ̂w; jump to label of Cj.
+**Purpose**: Try next clause after current clause fails. U may already contain readers from HEAD/GUARD instructions that encountered unbound readers.
 
 ### 2.3 try_next_clause
 **Status**: IMPLEMENTED but UNUSED - functionality overlaps with clause_next
@@ -63,14 +64,15 @@ Note: The E, CP, and Y registers are used exclusively for deterministic environm
 ## 3. Commit
 
 ### 3.1 commit
-**Phase**: boundary before BODY_i.  
-**Timing**: occurs immediately before the first BODY instruction.  
+**Phase**: boundary before BODY_i.
+**Timing**: occurs immediately before the first BODY instruction.
+**Precondition**: HEAD and GUARD phases completed successfully. U may contain readers from previous failed clause attempts only (not from current clause).
 **Effect**: atomically apply σ̂w to the heap; for each writer bound by σ̂w, bind paired RO and process ROQ in FIFO order; clear σ̂w; control enters BODY_i.
 
 ## 4. Environment and Phase Discipline (Instruction-Level)
 
 ### 4.1 Head and Guard opcodes
-**Env effect**: E' = E. They may: read cells; record tentative writer bindings in σ̂w; add readers to Si; raise FAIL.  
+**Env effect**: E' = E. They may: read cells; record tentative writer bindings in σ̂w; add readers to U and fail to next clause; raise FAIL.
 **They MUST NOT**: allocate or deallocate frames; mutate RO cells; perform I/O.
 
 ### 4.2 Body opcodes
@@ -79,21 +81,23 @@ Only BODY_i may contain:
 - **deallocate**: pop environment frame.
 
 ## 5. Guard Purity
-**Allowed primitives**: tag/status tests; equality/inequality on constants; structural equality on ground terms; integer comparisons on ground values.  
-A guard that demands an uninstantiated reader adds that reader to Si and continues scanning; short-circuiting is only permitted when result is decidable independently of suspended subexpressions.
+**Allowed primitives**: tag/status tests; equality/inequality on constants; structural equality on ground terms; integer comparisons on ground values.
+A guard that demands an uninstantiated reader adds that reader to U, fails to next clause immediately; short-circuiting is only permitted when result is decidable independently of suspended subexpressions.
 
 ## 6. Head Processing Instructions
 
-All head_* operations are **tentative**: they update the σ̂w (tentative writer substitution) and/or the suspension set S **without mutating heap cells** during clause try. Heap mutations happen only at **commit**.
+All head_* operations are **tentative**: they update the σ̂w (tentative writer substitution) and/or the suspension set U **without mutating heap cells** during clause try. Heap mutations happen only at **commit**.
+
+**Key principle**: When a HEAD instruction encounters an unbound reader, it adds the reader to U and immediately fails to the next clause. The clause never reaches commit if any HEAD instruction suspends.
 
 ### 6.1 head_structure f/n, Ai
-**Operation**: Process structure with functor f and arity n in argument register Ai  
+**Operation**: Process structure with functor f and arity n in argument register Ai
 **Behavior**:
 - Dereference the value in Ai
 - If structure with matching functor: enter READ mode, set S to first argument
 - If writer variable: record pending binding Ai = f(...) in σ̂w; no heap mutation during clause try
-- If reader variable: add to suspension set S
-- Otherwise: fail and discard σ̂w
+- If reader variable: add reader to U and fail to next clause
+- Otherwise: fail to next clause
 
 ### 6.2 head_writer Xi
 **Operation**: Process writer variable in clause head  
@@ -123,25 +127,31 @@ fails definitively because the clause-local reader Xi has no future binding
 that could make the unification succeed.
 
 ### 6.4 head_constant c, Ai
-**Operation**: Match constant c with argument Ai  
+**Operation**: Match constant c with argument Ai
 **Behavior**:
 - Dereference value in Ai
-- If matching constant: succeed
+- If matching constant: succeed (continue to next instruction)
 - If writer variable: record Ai = c in σ̂w
-- If reader variable: add to suspension set S
-- Otherwise: fail and discard σ̂w
+- If reader variable: add reader to U and fail to next clause
+- Otherwise: fail to next clause
 
 ### 6.5 head_nil Ai
-**Operation**: Match empty list [] with argument Ai  
+**Operation**: Match empty list [] with argument Ai
 **Behavior**:
-- Special case of head_constant for empty list
-- Same unification semantics as head_constant
+- Dereference value in Ai
+- If value is []: succeed (continue to next instruction)
+- If writer variable: record Ai = [] in σ̂w
+- If reader variable: add reader to U and fail to next clause
+- Otherwise: fail to next clause
 
 ### 6.6 head_list Ai
-**Operation**: Process list structure [H|T] in argument Ai  
+**Operation**: Process list structure [H|T] in argument Ai
 **Behavior**:
-- Equivalent to head_structure './2', Ai
-- Optimized instruction for common list operations
+- Dereference value in Ai
+- If list structure [H|T]: enter READ mode, set S to first argument
+- If writer variable: record pending binding Ai = [H|T] in σ̂w
+- If reader variable: add reader to U and fail to next clause
+- Otherwise: fail to next clause
 
 ## 7. Body Construction Instructions
 

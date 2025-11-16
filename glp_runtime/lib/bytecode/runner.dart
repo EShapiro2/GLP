@@ -114,8 +114,7 @@ class RunnerContext {
   int kappa;  // Mutable - updated by Requeue for tail calls
   final CallEnv env;
   final Map<int, Object?> sigmaHat = <int, Object?>{}; // σ̂w: tentative writer bindings
-  final Set<int> si = <int>{};       // clause-local blockers (reader IDs)
-  final Set<int> U = <int>{};        // union across clauses (reader IDs)
+  final Set<int> U = <int>{};        // goal-level suspension set (reader IDs)
   bool inBody = false;
 
   // WAM-style structure traversal state
@@ -164,7 +163,6 @@ class RunnerContext {
 
   void clearClause() {
     sigmaHat.clear();
-    si.clear();
     inBody = false;
     mode = UnifyMode.read;
     S = 0;
@@ -191,13 +189,27 @@ class BytecodeRunner {
     return prog.ops.length; // End of program if no more clauses or SUSP
   }
 
-  /// Soft-fail to next clause: union Si to U, clear clause state, jump to next ClauseTry
+  /// Soft-fail to next clause: clear clause state, jump to next ClauseTry
   void _softFailToNextClause(RunnerContext cx, int currentPc) {
-    // Union Si into U
-    if (cx.si.isNotEmpty) cx.U.addAll(cx.si);
-    // Clear clause-local state
+    // Clear clause-local state (σ̂w, etc.)
+    // Note: U is not cleared - it accumulates across clause attempts
     cx.clearClause();
     // Jump to next clause (will be handled by returning new PC)
+  }
+
+  /// Suspend on unbound reader: add to U and fail to next clause atomically
+  /// Per spec: "add reader to U and immediately fail to next clause" is ONE operation
+  int _suspendAndFail(RunnerContext cx, int readerId, int currentPc) {
+    cx.U.add(readerId);
+    _softFailToNextClause(cx, currentPc);
+    return _findNextClauseTry(currentPc);
+  }
+
+  /// Suspend on multiple unbound readers: add all to U and fail to next clause
+  int _suspendAndFailMulti(RunnerContext cx, Set<int> readerIds, int currentPc) {
+    cx.U.addAll(readerIds);
+    _softFailToNextClause(cx, currentPc);
+    return _findNextClauseTry(currentPc);
   }
 
   /// Format a term for display
@@ -250,7 +262,7 @@ class BytecodeRunner {
       final op = prog.ops[pc];
 
       if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) {
-        print('  [G${cx.goalId}] PC=$pc ${op.runtimeType} | Si=${cx.si} U=${cx.U} inBody=${cx.inBody}');
+        print('  [G${cx.goalId}] PC=$pc ${op.runtimeType} | U=${cx.U} inBody=${cx.inBody}');
       }
 
       if (op is Label) { pc++; continue; }
@@ -261,7 +273,7 @@ class BytecodeRunner {
       if (op is Otherwise) {
         // Otherwise succeeds only if all previous clauses definitively failed
         // If any clause suspended (U non-empty), then otherwise should also suspend
-        if (cx.U.isNotEmpty || cx.si.isNotEmpty) {
+        if (cx.U.isNotEmpty) {
           // Previous clauses suspended, so this clause also suspends
           _softFailToNextClause(cx, pc);
           pc = _findNextClauseTry(pc);
@@ -374,8 +386,9 @@ class BytecodeRunner {
             if (value is VarRef) {
               // Unbound after dereferencing
               if (value.isReader) {
-                // Unbound reader - add to suspension set Si
-                cx.si.add(value.varId);
+                // Unbound reader - add to U and fail to next clause
+                pc = _suspendAndFail(cx, value.varId, pc);
+                continue;
               } else {
                 // Unbound writer - create tentative binding
                 cx.sigmaHat[arg.writerId!] = ConstTerm(op.value);
@@ -395,10 +408,11 @@ class BytecodeRunner {
             cx.sigmaHat[arg.writerId!] = ConstTerm(op.value);
           }
         } else if (arg.isReader) {
-          // Reader: check if bound, else add to Si
+          // Reader: check if bound, else add to U and fail
           final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
           if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
-            cx.si.add(arg.readerId!);
+            pc = _suspendAndFail(cx, arg.readerId!, pc);
+            continue;
           } else {
             // Bound reader - check if value matches constant
             final value = cx.rt.heap.valueOfWriter(wid);
@@ -531,15 +545,13 @@ class BytecodeRunner {
             final wid = cx.rt.heap.writerIdForReader(rid);
             print('DEBUG SUSPEND: writerIdForReader(R$rid) = $wid');
             if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
-              // Unbound reader - add to Si and soft fail
-              print('DEBUG SUSPEND: Reader R$rid is UNBOUND! Adding to Si');
+              // Unbound reader - add to U and soft fail
+              print('DEBUG SUSPEND: Reader R$rid is UNBOUND! Adding to U');
               print('  wid = $wid');
               if (wid != null) {
                 print('  isWriterBound($wid) = ${cx.rt.heap.isWriterBound(wid)}');
               }
-              cx.si.add(rid);
-              _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _suspendAndFail(cx, rid, pc);
               continue;
             }
             print('DEBUG SUSPEND: Reader R$rid is bound to W$wid, dereferencing...');
@@ -628,9 +640,9 @@ class BytecodeRunner {
             if (value is VarRef) {
               // Unbound after dereferencing
               if (value.isReader) {
-                // Unbound reader - add to suspension set Si
-                cx.si.add(value.varId);
-                pc++; continue;
+                // Unbound reader - add to U and fail to next clause
+                pc = _suspendAndFail(cx, value.varId, pc);
+                continue;
               } else {
                 // Unbound writer - enter WRITE mode
                 final struct = _TentativeStruct(op.functor, op.arity, List.filled(op.arity, null));
@@ -672,12 +684,10 @@ class BytecodeRunner {
           // print('DEBUG: HeadStructure - Reader ${arg.readerId} -> Writer $wid');
           if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: READ mode, reader ${arg.readerId} -> writer $wid');
           if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
-            // Unbound reader - add to Si and soft fail
-            // print('DEBUG: HeadStructure - Writer $wid is unbound or null, adding to Si and soft failing');
-            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer $wid unbound or null, adding to Si and failing');
-            cx.si.add(arg.readerId!);
-            _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
+            // Unbound reader - add to U and soft fail
+            // print('DEBUG: HeadStructure - Writer $wid is unbound or null, adding to U and soft failing');
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer $wid unbound or null, adding to U and failing');
+            pc = _suspendAndFail(cx, arg.readerId!, pc);
             continue;
           }
 
@@ -919,7 +929,7 @@ class BytecodeRunner {
               cx.sigmaHat[arg.writerId!] = readerValue;
             } else {
               // Reader's writer is unbound - add reader to Si (suspend)
-              cx.si.add(readerId);
+              pc = _suspendAndFail(cx, readerId, pc); continue;
             }
           } else {
             // storedValue is a Term - bind writer to it
@@ -960,7 +970,7 @@ class BytecodeRunner {
             }
           } else {
             // Reader unbound, storedValue is a Term - add to Si
-            cx.si.add(arg.readerId!);
+            pc = _suspendAndFail(cx, arg.readerId!, pc); continue;
           }
         } else {
           // Ground term - TODO
@@ -993,7 +1003,7 @@ class BytecodeRunner {
             cx.clauseVars[op.varIndex] = value;
           } else {
             // Unbound reader - suspend
-            cx.si.add(arg.readerId!);
+            pc = _suspendAndFail(cx, arg.readerId!, pc); continue;
           }
         }
         pc++; continue;
@@ -1163,7 +1173,7 @@ class BytecodeRunner {
             }
           } else {
             // Reader unbound - suspend
-            cx.si.add(arg.readerId!);
+            pc = _suspendAndFail(cx, arg.readerId!, pc); continue;
           }
         }
         pc++; continue;
@@ -1196,7 +1206,7 @@ class BytecodeRunner {
               cx.sigmaHat[arg.writerId!] = readerValue;
             } else {
               // Reader unbound - suspend
-              cx.si.add(storedValue);
+              pc = _suspendAndFail(cx, storedValue, pc); continue;
             }
           }
         } else if (arg.isReader) {
@@ -1321,7 +1331,7 @@ class BytecodeRunner {
                 } else {
                   // Unbound reader - add to Si (suspend)
                   if (debug && cx.goalId >= 4000) print('  UnifyConstant: reader $rid unbound, suspending');
-                  cx.si.add(rid);
+                  pc = _suspendAndFail(cx, rid, pc); continue;
                   cx.S++;
                 }
               } else {
@@ -1631,7 +1641,7 @@ class BytecodeRunner {
         final rid = op.readerId;
         final wid = cx.rt.heap.writerIdForReader(rid);
         final bound = (wid != null) && cx.rt.heap.isWriterBound(wid);
-        if (!bound) cx.si.add(rid);
+        if (!bound) pc = _suspendAndFail(cx, rid, pc); continue;
         pc++; continue;
       }
       if (op is GuardNeedReaderArg) {
@@ -1639,25 +1649,15 @@ class BytecodeRunner {
         if (rid != null) {
           final wid = cx.rt.heap.writerIdForReader(rid);
           final bound = (wid != null) && cx.rt.heap.isWriterBound(wid);
-          if (!bound) cx.si.add(rid);
+          if (!bound) pc = _suspendAndFail(cx, rid, pc); continue;
         }
         pc++; continue;
       }
 
       // Commit (apply σ̂w and wake suspended goals) - v2.16 semantics
       if (op is Commit) {
-        // print('DEBUG: Commit - Si=${cx.si}, sigmaHat has ${cx.sigmaHat.length} entries');
-        for (final entry in cx.sigmaHat.entries) {
-          // print('DEBUG: Commit - σ̂w[${ entry.key}] = ${entry.value}');
-        }
-        // If Si is non-empty, this clause soft-failed - skip commit and jump to next clause
-        if (cx.si.isNotEmpty) {
-          // print('DEBUG: Commit - SKIPPING (Si non-empty)');
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
-        }
-        // print('DEBUG: Commit - APPLYING σ̂w to heap');
+        // Commit only reached if HEAD and GUARD phases succeeded
+        // Apply σ̂w to heap atomically
 
         // Convert tentative structures to real Terms before committing
         final convertedSigmaHat = <int, Object?>{};
@@ -1792,7 +1792,6 @@ class BytecodeRunner {
       // clause_next: Unified instruction for moving to next clause (spec 2.2)
       // Discard σ̂w, union Si into U, clear clause state, jump to next clause
       if (op is ClauseNext) {
-        if (cx.si.isNotEmpty) cx.U.addAll(cx.si);
         cx.clearClause();
         pc = prog.labels[op.label]!;
         continue;
@@ -1830,7 +1829,7 @@ class BytecodeRunner {
 
       // Legacy instructions (deprecated, use ClauseNext instead)
       if (op is UnionSiAndGoto) {
-        if (cx.si.isNotEmpty) cx.U.addAll(cx.si);
+        // Si removed - U updated directly by HEAD/GUARD opcodes
         cx.clearClause();
         pc = prog.labels[op.label]!;
         continue;
@@ -2499,7 +2498,7 @@ class BytecodeRunner {
 
           // Reset clause state for new procedure
           cx.sigmaHat.clear();
-          cx.si.clear();
+          // Si removed - U persists across clause attempts
           cx.U.clear();
           cx.clauseVars.clear();
           cx.inBody = false;
@@ -2634,9 +2633,7 @@ class BytecodeRunner {
           if (debug) {
             print('[GUARD] SUSPEND - unbound readers: $unboundReaders');
           }
-          cx.si.addAll(unboundReaders);
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _suspendAndFailMulti(cx, unboundReaders, pc);
           continue;
         }
 
@@ -2743,7 +2740,7 @@ class BytecodeRunner {
         } else if (unboundReaders.isNotEmpty) {
           // Contains unbound readers but no unbound writers → SUSPEND
           // May become ground when readers bind, add to Si and continue
-          cx.si.addAll(unboundReaders);
+          pc = _suspendAndFailMulti(cx, unboundReaders, pc); continue;
           pc++;
           continue;
         } else {
@@ -2815,7 +2812,7 @@ class BytecodeRunner {
           continue;
         } else if (unboundReader != null) {
           // Variable is unbound reader - could become known later, add to Si
-          cx.si.add(unboundReader);
+          pc = _suspendAndFail(cx, unboundReader, pc); continue;
           pc++;
           continue;
         } else {
@@ -2887,7 +2884,7 @@ class BytecodeRunner {
         } else {
           // result == SystemResult.suspend
           // Predicate suspended on unbound readers - add to Si and continue
-          cx.si.addAll(call.suspendedReaders);
+          pc = _suspendAndFailMulti(cx, call.suspendedReaders, pc); continue;
           pc++;
           continue;
         }
@@ -3013,10 +3010,11 @@ class BytecodeRunner {
           }
         } else if (arg.isReader) {
           if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: arg is reader ${arg.readerId}');
-          // Reader: check if bound, else add to Si
+          // Reader: check if bound, else add to U and fail
           final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
           if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
-            cx.si.add(arg.readerId!);
+            pc = _suspendAndFail(cx, arg.readerId!, pc);
+            continue;
           } else {
             // Bound reader - check if value matches []
             final value = cx.rt.heap.valueOfWriter(wid);  // Dereferenced automatically
@@ -3035,7 +3033,7 @@ class BytecodeRunner {
             }
           }
         }
-        if (debug && (cx.goalId >= 10002 && cx.goalId <= 10008)) print('[TRACE HeadNil] After HeadNil, Si = {${cx.si.join(', ')}}');
+        if (debug && (cx.goalId >= 10002 && cx.goalId <= 10008)) print('[TRACE HeadNil] After HeadNil, U = {${cx.U.join(', ')}}');
         pc++;
         continue;
       }
@@ -3070,10 +3068,11 @@ class BytecodeRunner {
             cx.mode = UnifyMode.write;
           }
         } else if (arg.isReader) {
-          // Reader: check if bound, else add to Si
+          // Reader: check if bound, else add to U and fail
           final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
           if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
-            cx.si.add(arg.readerId!);
+            pc = _suspendAndFail(cx, arg.readerId!, pc);
+            continue;
           } else {
             // Bound reader - check if it's a list structure
             final value = cx.rt.heap.valueOfWriter(wid);  // Dereferenced automatically
