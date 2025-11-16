@@ -505,23 +505,353 @@ compute(N, Result) :-
   execute('evaluate', [-N?, Result]).
 ```
 
-## 12. System Instructions
+## 12. Mode-Aware Argument Loading (FCP-style)
 
-### 12.1 get_variable Xi, Ai
-**Operation**: Load argument into register  
+**Version**: 2.16.1
+**Status**: NORMATIVE
+**Added**: November 2025 (replaces deprecated GetVariable/GetValue)
+
+### 12.0 Overview
+
+Mode-aware argument loading distinguishes between reader and writer modes at the bytecode level, enabling correct SRSW semantics and mode conversion. These opcodes replace the deprecated occurrence-based GetVariable/GetValue with explicit mode information.
+
+The four opcodes handle all combinations of:
+- **Occurrence**: First vs subsequent appearance of a variable
+- **Mode**: Writer vs reader expected by the clause
+
+**Design Principles**:
+
+1. **Mode is determined by clause syntax**: `X` = writer, `X?` = reader
+2. **Mode conversion happens during argument loading**: When argument mode differs from clause expectation
+3. **Fresh variables enable reader views**: Allocating fresh variables provides isolation for reader semantics
+4. **Three-valued unification**: Success, suspend (on unbound reader), or fail
+
+---
+
+### 12.1 get_writer_variable Xi, Ai
+
+**Operation**: Load argument into clause writer variable (first occurrence)
+
+**Syntax**: `get_writer_variable Xi, Ai`
+- `Xi`: Clause variable register index
+- `Ai`: Argument slot containing goal argument
+
+**Behavior**: Stores argument value in clauseVars[Xi] for subsequent use.
+
+**Execution Cases**:
+
+**Case 1: Argument is writer (most common)**
+```
+If arg.isWriter:
+  clauseVars[Xi] = arg.writerId
+```
+No mode conversion needed - direct storage of writer ID.
+
+**Case 2: Argument is reader**
+```
+If arg.isReader:
+  wid = heap.writerIdForReader(arg.readerId)
+  If heap.isWriterBound(wid):
+    value = heap.valueOfWriter(wid)
+    clauseVars[Xi] = value  // Store dereferenced value
+  Else:
+    Si.add(arg.readerId)    // Suspend on unbound reader
+```
+Reader-to-writer requires the reader to be bound. If unbound, suspend.
+
+**Case 3: Argument is known term**
+```
+If arg.isKnown:
+  clauseVars[Xi] = arg.knownTerm
+```
+Ground terms stored directly.
+
+**Example**:
+```prolog
+% Clause: p(X, ...)
+% Called: p(W1017, ...)  where W1017 is unbound writer
+% Bytecode: get_writer_variable X0, A0
+% Result: clauseVars[0] = 1017
+```
+
+---
+
+### 12.2 get_reader_variable Xi, Ai
+
+**Operation**: Load argument into clause reader variable (first occurrence)
+
+**Syntax**: `get_reader_variable Xi, Ai`
+- `Xi`: Clause variable register index
+- `Ai`: Argument slot containing goal argument
+
+**Behavior**: Implements mode conversion when needed, creating fresh variables for writer-to-reader conversion.
+
+**Execution Cases**:
+
+**Case 1: Argument is writer (requires mode conversion)**
+```
+If arg.isWriter:
+  freshVar = heap.allocateFreshVar()
+  heap.addVariable(freshVar)
+  σ̂w[arg.writerId] = VarRef(freshVar, isReader: true)
+  clauseVars[Xi] = freshVar
+```
+
+**Critical**: The fresh variable is allocated UNBOUND. It will be bound later if the clause body provides a value through subsequent GetWriterValue on the same variable.
+
+**Case 2: Argument is reader**
+```
+If arg.isReader:
+  clauseVars[Xi] = arg.readerId
+```
+Reader-to-reader needs no conversion.
+
+**Case 3: Argument is known term**
+```
+If arg.isKnown:
+  freshVar = heap.allocateFreshVar()
+  heap.addVariable(freshVar)
+  σ̂w[freshVar] = arg.knownTerm  // Bind fresh var to the term
+  clauseVars[Xi] = freshVar
+```
+Known terms create a fresh variable bound to the term value.
+
+**Example (Mode Conversion)**:
+```prolog
+% Clause: helper(X?, X)
+% Called: helper(a, Y)  where a is ConstTerm('a'), Y is unbound writer
+%
+% PC 0: get_reader_variable X0, A0
+%   - A0 contains ConstTerm('a')
+%   - Allocate freshVar = 1000
+%   - σ̂w[1000] = ConstTerm('a')
+%   - clauseVars[0] = 1000
+%
+% PC 1: get_writer_value X0, A1
+%   - Will unify Y with value from clauseVars[0]
+```
+
+---
+
+### 12.3 get_writer_value Xi, Ai
+
+**Operation**: Unify argument with clause writer variable (subsequent occurrence)
+
+**Syntax**: `get_writer_value Xi, Ai`
+- `Xi`: Clause variable register index
+- `Ai`: Argument slot containing goal argument
+
+**Precondition**: Variable Xi was previously loaded by GetWriterVariable or GetReaderVariable
+
+**Behavior**: Performs writer MGU between stored value and argument.
+
+**Execution Cases**:
+
+**Case 1: Both are writer IDs**
+```
+storedValue = clauseVars[Xi]
+arg = getArg(Ai)
+
+If storedValue.isWriterId && arg.isWriter:
+  If storedValue == arg.writerId:
+    // Same writer - succeed (idempotent)
+  Else:
+    // Different writers - writer MGU
+    If both unbound:
+      σ̂w[arg.writerId] = VarRef(storedValue, isReader: false)
+    Else if one bound:
+      σ̂w[unbound] = boundValue
+    Else:
+      // Both bound - unify values
+```
+
+**Case 2: Stored is fresh variable from GetReaderVariable**
+```
+If storedValue.isFreshVar && arg.isWriter:
+  // Check if fresh var was bound in σ̂w
+  If σ̂w[storedValue] exists:
+    value = σ̂w[storedValue]
+    σ̂w[arg.writerId] = value
+  Else:
+    // Fresh var still unbound - bind writer to it
+    σ̂w[arg.writerId] = VarRef(storedValue, isReader: false)
+```
+
+**Case 3: Argument is reader**
+```
+If arg.isReader:
+  // Reader cannot be assigned - must be bound
+  wid = heap.writerIdForReader(arg.readerId)
+  value = heap.valueOfWriter(wid)
+  // Unify with stored value (success/fail/suspend)
+```
+
+**Example (Completing Mode Conversion)**:
+```prolog
+% Continuing helper(a, Y) example:
+% clauseVars[0] = 1000 (fresh var)
+% σ̂w[1000] = ConstTerm('a')
+%
+% PC 1: get_writer_value X0, A1
+%   - storedValue = 1000
+%   - arg = Y (unbound writer)
+%   - σ̂w[Y] = ConstTerm('a')  // Bind Y to value of fresh var
+%
+% At commit: Y gets bound to 'a'
+```
+
+---
+
+### 12.4 get_reader_value Xi, Ai
+
+**Operation**: Unify argument with clause reader variable (subsequent occurrence)
+
+**Syntax**: `get_reader_value Xi, Ai`
+- `Xi`: Clause variable register index
+- `Ai`: Argument slot containing goal argument
+
+**Precondition**: Variable Xi was previously loaded by GetReaderVariable
+
+**Note**: Multiple reader occurrences are only legal with ground() guard per SRSW.
+
+**Behavior**: Verifies reader consistency or establishes reader binding.
+
+**Execution Cases**:
+
+**Case 1: Both are readers**
+```
+storedValue = clauseVars[Xi]  // Reader ID
+arg = getArg(Ai)              // Reader
+
+If arg.isReader:
+  If storedValue == arg.readerId:
+    // Same reader - succeed
+  Else:
+    // Different readers - both must be bound to unify
+    // (SRSW should prevent this without ground guard)
+```
+
+**Case 2: Argument is writer**
+```
+If arg.isWriter:
+  // Reader expects consistency
+  // Writer must match reader's bound value
+  Perform three-valued unification
+```
+
+**Case 3: Argument is known term**
+```
+If arg.isKnown:
+  // Reader must be bound to same value
+  Check consistency or suspend
+```
+
+---
+
+### 12.5 Mode Conversion Table
+
+| Clause Expects | Arg Provides | First Occ (Variable) | Subsequent (Value) |
+|---------------|-------------|---------------------|-------------------|
+| Writer (X) | Writer | Direct store | Writer MGU |
+| Writer (X) | Reader | Deref or suspend | Unify with bound value |
+| Writer (X) | Known | Store term | Unify terms |
+| Reader (X?) | Writer | Fresh var + σ̂w | Propagate binding |
+| Reader (X?) | Reader | Direct store | Verify same |
+| Reader (X?) | Known | Fresh var + bind | Verify value |
+
+---
+
+### 12.6 Interaction with Commit
+
+At commit (Phase 1 → Phase 2 transition):
+1. All bindings in σ̂w are applied atomically to the heap
+2. Fresh variables allocated for mode conversion become real heap variables
+3. VarRef(freshVar, isReader: true) bindings give writers reader access
+
+**Critical**: Fresh variables enable the key semantic - a writer in the goal gets a reader view of a variable that the clause body will write to.
+
+---
+
+### 12.7 Example: Complete Mode Conversion
+
+```prolog
+% Clause: identity(X?, X).
+% Called: identity(input, Output)
+% Where: input = ConstTerm('data'), Output = unbound writer
+```
+
+**Compilation**:
+```
+0: ClauseTry
+1: GetReaderVariable X0, A0    // X? - first occurrence
+2: GetWriterValue X0, A1       // X - subsequent occurrence
+3: Commit
+4: Proceed
+```
+
+**Execution Trace**:
+```
+PC 1: GetReaderVariable X0, A0
+  A0 = ConstTerm('data')
+  Allocate freshVar = 2000
+  σ̂w[2000] = ConstTerm('data')
+  clauseVars[0] = 2000
+
+PC 2: GetWriterValue X0, A1
+  storedValue = 2000
+  A1 = Output (unbound writer)
+  σ̂w[Output] = ConstTerm('data')  // Via fresh var's binding
+
+PC 3: Commit
+  Apply σ̂w to heap
+  Output now bound to 'data'
+```
+
+---
+
+### 12.8 Deprecation Notice
+
+The following opcodes are DEPRECATED and should not be used in new code:
+- `GetVariable` - replaced by GetWriterVariable/GetReaderVariable
+- `GetValue` - replaced by GetWriterValue/GetReaderValue
+
+For backward compatibility, treat deprecated opcodes as writer-mode variants.
+
+---
+
+### 12.9 Implementation Notes
+
+1. **Fresh Variable Identity**: Fresh variables are regular heap variables but allocated during HEAD phase. They become permanent at commit.
+
+2. **Reader-of-Reader Prevention**: The mode conversion design prevents reader-of-reader chains. A writer gets a reader view of a fresh variable, not a reader of another reader.
+
+3. **Suspension Semantics**: When suspending on an unbound reader, the entire clause attempt suspends. The goal will be reactivated when the reader's writer is bound.
+
+4. **SRSW Validation**: The compiler must validate SRSW constraints. Multiple reader occurrences require ground() guard.
+
+5. **Known Terms**: Terms passed as arguments (constants, structures) are treated as bound values for unification purposes.
+
+---
+
+## 13. System Instructions (Deprecated)
+
+### 13.1 get_variable Xi, Ai
+**Status**: DEPRECATED - Use get_writer_variable instead
+**Operation**: Load argument into register
 **Behavior**:
 - Copy value from Ai to Xi
 - First occurrence of variable in clause head
 - When used during **head matching**, this records a **tentative association** in **σ̂w** (no heap mutation)
 
-### 12.2 get_value Xi, Ai
-**Operation**: Unify argument with register  
+### 13.2 get_value Xi, Ai
+**Status**: DEPRECATED - Use get_writer_value instead
+**Operation**: Unify argument with register
 **Behavior**:
 - Perform writer MGU between Xi and Ai
 - Subsequent occurrence of variable
 - When used during **head matching**, this computes a **tentative writer MGU** and updates **σ̂w** (no heap mutation)
 
-### 12.3 set Xi
+### 13.3 set Xi
 **Status**: NOT IMPLEMENTED - reserved for future optimization
 **Operation**: Initialize argument position
 **Behavior**:
@@ -529,9 +859,9 @@ compute(N, Result) :-
 - Would be used before sequence of put instructions
 - Current implementation handles argument setup directly in put_* instructions
 
-## 13. Utility Instructions
+## 14. Utility Instructions
 
-### 13.1 nop
+### 14.1 nop
 **Operation**: No operation  
 **Behavior**:
 - Advance PC without other effects
@@ -549,7 +879,7 @@ compute(N, Result) :-
 - No runtime effect
 - Provides symbolic address for jumps
 
-## 14. Instruction Encoding
+## 15. Instruction Encoding
 
 **Status**: NOT IMPLEMENTED - current implementation uses Dart objects
 
@@ -569,7 +899,7 @@ The current Dart implementation represents instructions as Dart class instances 
 - **put_list_writer**: Combines put_list + put_writer
 - **get_constant_proceed**: Combines get_constant + proceed
 
-## 15. Execution Model
+## 16. Execution Model
 
 ### Writer MGU Algorithm
 The writer MGU (Most General Unifier) differs from standard unification:
@@ -593,7 +923,7 @@ The Single-Reader/Single-Writer constraint operates at two levels:
 - **Compile time**: Each clause verified to contain at most one occurrence of any writer/reader
 - **Runtime**: Variable table tracks usage across clauses/agents to detect dynamic violations
 
-## 16. Memory Layout (Dart Implementation)
+## 17. Memory Layout (Dart Implementation)
 
 **Note**: The Dart implementation uses object-oriented data structures, not traditional WAM-style heap cells.
 
@@ -621,7 +951,7 @@ The heap manages writer and reader cells:
 - Would track: variable ID, creator agent, writer/reader status, cryptographic attestation
 - Current implementation uses simple integer IDs without agent tracking
 
-## 17. Interaction with Runtime Structures
+## 18. Interaction with Runtime Structures
 
 ### Suspension Set Accumulation
 - **Si**: Clause-local suspension set (cleared at each `clause_try`)
@@ -643,7 +973,7 @@ The heap manages writer and reader cells:
 - FIFO ordering ensures fairness across concurrent goals
 - Tail-recursion budget (`requeue` instruction) prevents starvation
 
-## 18. System Predicates (Execute Mechanism)
+## 19. System Predicates (Execute Mechanism)
 
 **Status**: FULLY IMPLEMENTED
 
@@ -794,7 +1124,7 @@ These require additional runtime support for stream merging and multi-reader coo
 
 ---
 
-## 19. Guard Predicates
+## 20. Guard Predicates
 
 **Status**: SPECIFICATION COMPLETE - Implementation pending
 

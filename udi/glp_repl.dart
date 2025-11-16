@@ -22,7 +22,7 @@ void main() async {
   // Get git commit info
   final gitCommit = await _getGitCommit();
   // Build timestamp (updated at compile time)
-  final buildTime = '2025-11-15T21:45:00Z (with VarRef binding fix in commit.dart)';
+  final buildTime = '2025-11-16T03:15:00Z (Mode-aware opcodes per spec: \u03c3\u0302w bindings only)';
 
   print('╔════════════════════════════════════════╗');
   print('║   GLP REPL - Interactive Interpreter   ║');

@@ -946,14 +946,29 @@ class BytecodeRunner {
           continue;
         }
 
-        if (arg.isWriter) {
+        if (arg == null) {
+          // Mode conversion: ground term / known term → reader param
+          // Per spec 12.2 Case 3: allocate fresh var, bind in σ̂w
+          // Ground term is in argument registers as a Term
+          // For now, just store null and let subsequent ops handle it
+          // TODO: Implement proper ground term handling
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        } else if (arg.isWriter) {
           // Mode conversion: writer arg → reader view
+          // Per spec 12.2 Case 1: allocate fresh var UNBOUND on heap
           final freshVar = cx.rt.heap.allocateFreshVar();
           cx.rt.heap.addVariable(freshVar);
+
+          // Bind caller's writer to reader view in σ̂w
           cx.sigmaHat[arg.writerId!] = VarRef(freshVar, isReader: true);
+
+          // Store fresh var as clause variable (used as reader in clause body)
           cx.clauseVars[op.varIndex] = freshVar;
         } else if (arg.isReader) {
-          // Reader to reader - store directly
+          // Mode conversion: reader arg → reader param
+          // Per spec 12.2 Case 2: reader-to-reader needs no conversion
           cx.clauseVars[op.varIndex] = arg.readerId!;
         }
         pc++; continue;
@@ -1040,20 +1055,21 @@ class BytecodeRunner {
             }
           } else {
             // Argument writer is unbound
-            // Check if this writer was already bound by earlier GetReaderVariable
-            final existingBinding = cx.sigmaHat[arg.writerId!];
-            if (existingBinding != null) {
-              // Writer was bound by mode conversion - verify binding matches stored value
-              if (existingBinding is VarRef && existingBinding.varId != storedValue) {
-                _softFailToNextClause(cx, pc);
-                pc = _findNextClauseTry(pc);
-                continue;
+            // Per spec 12.3 Case 2: Check if storedValue is fresh var from GetReaderVariable
+            if (storedValue is int) {
+              // storedValue might be a fresh variable - check if it was bound in σ̂w
+              final freshVarBinding = cx.sigmaHat[storedValue];
+              if (freshVarBinding != null) {
+                // Fresh var was bound in σ̂w - propagate binding to arg writer
+                cx.sigmaHat[arg.writerId!] = freshVarBinding;
+              } else if (arg.writerId != storedValue) {
+                // Fresh var still unbound - bind arg writer to it
+                cx.sigmaHat[arg.writerId!] = VarRef(storedValue, isReader: false);
               }
-            } else if (storedValue is int && arg.writerId != storedValue) {
-              // No existing binding - direct ID comparison
-              _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
-              continue;
+              // If arg.writerId == storedValue, they're the same variable (idempotent)
+            } else if (storedValue is Term) {
+              // storedValue is a ground term - bind arg writer to it
+              cx.sigmaHat[arg.writerId!] = storedValue;
             }
           }
           // Match - continue
@@ -1680,6 +1696,9 @@ class BytecodeRunner {
           if (cx.onActivation != null) cx.onActivation!(a);
         }
         cx.sigmaHat.clear();
+        // Clear argument registers after commit (guards may have set them up)
+        cx.argReaders.clear();
+        cx.argWriters.clear();
         cx.inBody = true;
         pc++; continue;
       }
