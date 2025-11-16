@@ -435,3 +435,4 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - never modify code without consulting the spec. There are only three possibilities: 1. The spec are clear, the code needs to be revised to match the spec.  2. The specs are not clear. They should be clarified before deciding how to revise the code.  3. The specs seem incorrect. They should be discussed and possibly revised before doing any code work.
 - when you work on bug, work till the program is working
 - when suspecting a code to be incorrect, first check the spec to see if it is consistent with it
+- always work with correct and complete and clear spec. never move forward without such spec.

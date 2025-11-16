@@ -107,6 +107,28 @@ class GlpHeap {
 }
 ```
 
+**Dereferencing Semantics (FCP AM)**:
+Following the FCP Abstract Machine design, dereferencing is performed automatically when reading values from the heap. This ensures that all code working with heap values sees fully dereferenced terms, eliminating the need for manual dereferencing loops in opcode handlers.
+
+The `valueOfWriter()` method implements automatic dereferencing:
+```dart
+Term? valueOfWriter(int writerId) {
+  final value = getValue(writerId);
+  if (value == null) return null;
+  return dereference(value);  // Automatically dereference before returning
+}
+```
+
+The `dereference()` method follows variable chains (VarRef → VarRef → ... → ground term or unbound VarRef) in a read-only manner - it does not modify the heap or compress paths. This matches FCP AM semantics where variable chains remain in the heap as created, and dereferencing traverses them on each access.
+
+**Key properties**:
+- **Read-only**: Dereferencing never modifies heap cells or compresses paths
+- **Transparent**: Opcode handlers receive fully dereferenced values automatically
+- **Chain-preserving**: Variable chains (e.g., W1001 → R1002 → W1003) remain in heap
+- **Suspension-safe**: Dereferencing stops at unbound readers, allowing proper suspension detection
+
+This design eliminates manual dereferencing loops from opcode implementations (HeadNil, HeadList, HeadConstant, HeadStructure, etc.) and ensures consistent dereferencing behavior across all heap accesses.
+
 **Terms** (lib/runtime/terms.dart) are separate from cells:
 
 ```dart

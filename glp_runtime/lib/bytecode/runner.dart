@@ -351,8 +351,36 @@ class BytecodeRunner {
           // Writer: check if already bound, else record tentative binding in σ̂w
           if (cx.rt.heap.isWriterBound(arg.writerId!)) {
             // Already bound - check if value matches
-            final value = cx.rt.heap.valueOfWriter(arg.writerId!);
-            if (value is ConstTerm && value.value != op.value) {
+            var value = cx.rt.heap.valueOfWriter(arg.writerId!);
+
+            // Dereference VarRef chains to get actual value
+            while (value is VarRef) {
+              if (value.isReader) {
+                final wid = cx.rt.heap.writerIdForReader(value.varId);
+                if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+                  value = cx.rt.heap.valueOfWriter(wid);
+                } else {
+                  break;
+                }
+              } else {
+                if (cx.rt.heap.isWriterBound(value.varId)) {
+                  value = cx.rt.heap.valueOfWriter(value.varId);
+                } else {
+                  break;
+                }
+              }
+            }
+
+            if (value is VarRef) {
+              // Unbound after dereferencing
+              if (value.isReader) {
+                // Unbound reader - add to suspension set Si
+                cx.si.add(value.varId);
+              } else {
+                // Unbound writer - create tentative binding
+                cx.sigmaHat[arg.writerId!] = ConstTerm(op.value);
+              }
+            } else if (value is ConstTerm && value.value != op.value) {
               _softFailToNextClause(cx, pc);
               pc = _findNextClauseTry(pc);
               continue;
@@ -575,10 +603,44 @@ class BytecodeRunner {
           if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: arg is writer ${arg.writerId}, bound=${cx.rt.heap.isWriterBound(arg.writerId!)}');
           if (cx.rt.heap.isWriterBound(arg.writerId!)) {
             // Already bound - check if matches structure
-            final value = cx.rt.heap.valueOfWriter(arg.writerId!);
+            var value = cx.rt.heap.valueOfWriter(arg.writerId!);
             // print('DEBUG: HeadStructure - Writer ${arg.writerId} value = ${value.runtimeType}: $value, expecting ${op.functor}/${op.arity}');
             if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer ${arg.writerId} value = $value');
-            if (value is StructTerm && value.functor == op.functor && value.args.length == op.arity) {
+
+            // Dereference VarRef chains to get actual value
+            while (value is VarRef) {
+              if (value.isReader) {
+                final wid = cx.rt.heap.writerIdForReader(value.varId);
+                if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+                  value = cx.rt.heap.valueOfWriter(wid);
+                } else {
+                  break;
+                }
+              } else {
+                if (cx.rt.heap.isWriterBound(value.varId)) {
+                  value = cx.rt.heap.valueOfWriter(value.varId);
+                } else {
+                  break;
+                }
+              }
+            }
+
+            if (value is VarRef) {
+              // Unbound after dereferencing
+              if (value.isReader) {
+                // Unbound reader - add to suspension set Si
+                cx.si.add(value.varId);
+                pc++; continue;
+              } else {
+                // Unbound writer - enter WRITE mode
+                final struct = _TentativeStruct(op.functor, op.arity, List.filled(op.arity, null));
+                cx.sigmaHat[arg.writerId!] = struct;
+                cx.currentStructure = struct;
+                cx.mode = UnifyMode.write;
+                cx.S = 0;
+                pc++; continue;
+              }
+            } else if (value is StructTerm && value.functor == op.functor && value.args.length == op.arity) {
               // MATCH! Enter READ mode
               if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: MATCH! Entering READ mode');
               cx.currentStructure = value;
@@ -2926,12 +2988,13 @@ class BytecodeRunner {
         // Regular argument handling
         if (arg == null) { pc++; continue; } // No argument at this slot
 
+        // Note: valueOfWriter() dereferences automatically per FCP AM semantics
         if (arg.isWriter) {
           if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: arg is writer ${arg.writerId}');
           // Writer: check if already bound, else record tentative binding in σ̂w
           if (cx.rt.heap.isWriterBound(arg.writerId!)) {
             // Already bound - check if value matches []
-            final value = cx.rt.heap.valueOfWriter(arg.writerId!);
+            final value = cx.rt.heap.valueOfWriter(arg.writerId!);  // Dereferenced automatically
             if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: writer ${arg.writerId} value = $value');
             if (value is ConstTerm && value.value != 'nil') {
               if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: value does not match nil, failing');
@@ -2952,32 +3015,27 @@ class BytecodeRunner {
           if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: arg is reader ${arg.readerId}');
           // Reader: check if bound, else add to Si
           final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
-          if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: reader ${arg.readerId} -> writer $wid');
           if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
-            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: writer unbound, adding reader to Si');
             cx.si.add(arg.readerId!);
           } else {
             // Bound reader - check if value matches []
-            final value = cx.rt.heap.valueOfWriter(wid);
-            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: writer $wid value = $value');
+            final value = cx.rt.heap.valueOfWriter(wid);  // Dereferenced automatically
             if (value is ConstTerm && value.value == 'nil') {
               // Match! Empty list
-              if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: MATCH! value is nil (empty list)');
             } else if (value is StructTerm) {
               // Structure doesn't match []
-              if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: value is struct, failing');
               _softFailToNextClause(cx, pc);
               pc = _findNextClauseTry(pc);
               continue;
             } else {
               // Non-empty constant doesn't match []
-              if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: value does not match [], failing');
               _softFailToNextClause(cx, pc);
               pc = _findNextClauseTry(pc);
               continue;
             }
           }
         }
+        if (debug && (cx.goalId >= 10002 && cx.goalId <= 10008)) print('[TRACE HeadNil] After HeadNil, Si = {${cx.si.join(', ')}}');
         pc++;
         continue;
       }
@@ -2990,6 +3048,7 @@ class BytecodeRunner {
 
         if (arg.isWriter) {
           // Writer: create tentative structure in σ̂w
+          // Note: _getArg already dereferenced, so arg.writerId is the final value
           if (cx.rt.heap.isWriterBound(arg.writerId!)) {
             // Already bound - check if it's a list structure
             final value = cx.rt.heap.valueOfWriter(arg.writerId!);
@@ -3017,7 +3076,7 @@ class BytecodeRunner {
             cx.si.add(arg.readerId!);
           } else {
             // Bound reader - check if it's a list structure
-            final value = cx.rt.heap.valueOfWriter(wid);
+            final value = cx.rt.heap.valueOfWriter(wid);  // Dereferenced automatically
             if (value is StructTerm && value.functor == '[|]' && value.args.length == 2) {
               cx.currentStructure = value;
               cx.S = 0;

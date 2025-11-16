@@ -10,29 +10,52 @@ class Scheduler {
       : runners = runners ?? (runner != null ? {null: runner} : {});
 
   String _formatTerm(Term term, {bool markReaders = true}) {
-    if (term is ConstTerm) {
-      if (term.value == 'nil') return '[]';
-      if (term.value == null) return '<null>';  // Distinguish from nil
-      return term.value.toString();
-    } else if (term is VarRef) {
-      final varId = term.varId;
-      if (rt.heap.isBound(varId)) {
-        final value = rt.heap.getValue(varId);
-        if (value != null) {
-          final formatted = _formatTerm(value, markReaders: markReaders);
-          // Mark readers with ? suffix
-          return (term.isReader && markReaders) ? '$formatted?' : formatted;
+    // Dereference in a loop to avoid recursive ? markers
+    var current = term;
+
+    // Follow VarRef chains
+    while (current is VarRef) {
+      if (current.isReader) {
+        final wid = rt.heap.writerIdForReader(current.varId);
+        if (wid != null && rt.heap.isWriterBound(wid)) {
+          final value = rt.heap.valueOfWriter(wid);
+          if (value != null) {
+            current = value;
+          } else {
+            break;
+          }
+        } else {
+          break;
+        }
+      } else {
+        // Writer VarRef
+        if (rt.heap.isWriterBound(current.varId)) {
+          final value = rt.heap.valueOfWriter(current.varId);
+          if (value != null) {
+            current = value;
+          } else {
+            break;
+          }
+        } else {
+          break;
         }
       }
-      // Unbound variable
-      return term.isReader
-          ? (markReaders ? 'R$varId?' : 'R$varId')
-          : 'W$varId';
-    } else if (term is StructTerm) {
-      final args = term.args.map((a) => _formatTerm(a, markReaders: markReaders)).join(',');
-      return '${term.functor}($args)';
     }
-    return term.toString();
+
+    // Format the dereferenced value
+    if (current is ConstTerm) {
+      if (current.value == 'nil') return '[]';
+      if (current.value == null) return '<null>';
+      return current.value.toString();
+    } else if (current is VarRef && !current.isReader) {
+      return 'W${current.varId}';
+    } else if (current is VarRef && current.isReader) {
+      return markReaders ? 'R${current.varId}?' : 'R${current.varId}';
+    } else if (current is StructTerm) {
+      final args = current.args.map((a) => _formatTerm(a, markReaders: markReaders)).join(',');
+      return '${current.functor}($args)';
+    }
+    return current.toString();
   }
 
   String _formatGoal(int goalId, String procName, CallEnv? env) {
@@ -79,6 +102,41 @@ class Scheduler {
         }
       }
       final goalStr = _formatGoal(act.id, procName, env);
+
+      // DEBUG: Deep trace for goal arguments
+      if (debug && act.id >= 10002 && act.id <= 10002) {
+        print('[DEEP TRACE Goal ${act.id}] Raw argument state:');
+        for (int slot = 0; slot < 3; slot++) {
+          final rVal = env?.readerBySlot[slot];
+          final wVal = env?.writerBySlot[slot];
+          print('  Slot $slot:');
+          if (rVal != null) {
+            print('    env.r($slot) = R$rVal');
+            final wid = rt.heap.writerIdForReader(rVal);
+            if (wid != null) {
+              print('    writerIdForReader(R$rVal) = W$wid');
+              final bound = rt.heap.isWriterBound(wid);
+              print('    isWriterBound(W$wid) = $bound');
+              if (bound) {
+                final value = rt.heap.valueOfWriter(wid);
+                print('    valueOfWriter(W$wid) = $value');
+              }
+            }
+          }
+          if (wVal != null) {
+            print('    env.w($slot) = W$wVal');
+            final bound = rt.heap.isWriterBound(wVal);
+            print('    isWriterBound(W$wVal) = $bound');
+            if (bound) {
+              final value = rt.heap.valueOfWriter(wVal);
+              print('    valueOfWriter(W$wVal) = $value');
+            }
+          }
+          if (rVal == null && wVal == null) {
+            print('    (empty slot)');
+          }
+        }
+      }
 
       // Track queue length before execution
       final queueBefore = rt.gq.length;

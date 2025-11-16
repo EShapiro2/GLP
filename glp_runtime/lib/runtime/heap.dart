@@ -34,22 +34,9 @@ class Heap {
   void bindVariable(int varId, Term value) {
     final cell = _vars[varId];
     if (cell != null && cell.value == null) {
-      // Special handling for VarRef: if binding to a reader VarRef,
-      // bind to the writer instead to avoid reader-of-reader chains
-      if (value is VarRef && value.isReader) {
-        // Get the paired writer for this reader
-        final writerId = writerIdForReader(value.varId);
-        if (writerId != null) {
-          // Bind to the writer, not the reader
-          cell.value = VarRef(writerId, isReader: false);
-        } else {
-          // No paired writer found - bind to reader as fallback
-          cell.value = value;
-        }
-      } else {
-        // Normal binding
-        cell.value = value;
-      }
+      // Store value as-is, preserving reader/writer flags
+      // Spec requires preserving reader VarRefs (see bytecode spec 8.1, 7.3)
+      cell.value = value;
       _processROQ(varId);
     }
   }
@@ -177,8 +164,13 @@ class Heap {
   bool isWriterBound(int writerId) => isBound(writerId);
 
   /// Compatibility: Get value of writer (writerId == varId)
-  
-  Term? valueOfWriter(int writerId) => getValue(writerId);
+  /// FCP AM semantics: dereference automatically when reading from heap
+
+  Term? valueOfWriter(int writerId) {
+    final value = getValue(writerId);
+    if (value == null) return null;
+    return dereference(value);
+  }
 
   /// Compatibility: Bind writer to constant (writerId == varId)
   
