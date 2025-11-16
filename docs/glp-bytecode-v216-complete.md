@@ -7,6 +7,31 @@
 - **Registers**: A (arguments), X (temporaries). Env stack E.
 - **κ** denotes the clause-selection entry PC of the current procedure (the PC where the first clause of the procedure begins).
 
+### Variable Object Model
+
+GLP uses a **single-ID variable system** with separate reader/writer references:
+
+**Variable Object (VariableCell)**:
+- Heap-allocated object with unique ID (varId)
+- Contains: varId, value (Term or null), dereferencedCache, abandoned flag
+- Created by: `heap.allocateFreshVar()` returns ID, then `heap.addVariable(varId)` creates object on heap
+
+**Variable References (VarRef)**:
+- Lightweight references pointing to variable objects
+- `VarRef(varId, isReader: true)` - reader reference to variable varId
+- `VarRef(varId, isReader: false)` - writer reference to variable varId
+- Multiple references can point to same variable object with different access modes
+
+**Variable Lifecycle**:
+1. **Allocate**: `varId = heap.allocateFreshVar()`, then `heap.addVariable(varId)` creates VariableCell
+2. **Bind**: `heap.bindVariable(varId, term)` or via σ̂w at commit
+3. **Dereference**: `heap.valueOfWriter(varId)` follows binding chain to final value
+4. **Wake**: ROQ processes suspended goals when variable is bound
+
+**Key Principle**: Allocate ONE variable object on heap, create MULTIPLE VarRef references with different access modes (reader vs writer) as needed.
+
+**Compatibility Layer**: The Dart implementation provides `allocateFreshPair()` and `addWriter/addReader(WriterCell/ReaderCell)` as convenience methods for tests and demos. These are thin wrappers - `allocateFreshPair()` returns `(varId, varId)` (same ID for both) and `addWriter` calls `addVariable(varId)`. The underlying model remains single-ID.
+
 ### Code Organization Hierarchy
 
 There are three levels in the code organization:
