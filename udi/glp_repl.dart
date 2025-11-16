@@ -22,7 +22,7 @@ void main() async {
   // Get git commit info
   final gitCommit = await _getGitCommit();
   // Build timestamp (updated at compile time)
-  final buildTime = '2025-11-17T14:00:00Z (FIX: Remove Si, HEAD opcodes fail immediately on unbound readers)';
+  final buildTime = '2025-11-17T15:00:00Z (commit 7ee6f95: Remove Si, HEAD opcodes fail immediately)';
 
   print('╔════════════════════════════════════════╗');
   print('║   GLP REPL - Interactive Interpreter   ║');
