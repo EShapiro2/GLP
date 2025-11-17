@@ -366,31 +366,115 @@ When building structures in BODY mode that contain variables (non-ground structu
 
 ### 8.6 Push/Pop: Nested Structure State Management
 
-**Operations**: `push Xi`, `pop Xi`
-**Purpose**: Save/restore structure processing state (S, mode, currentStructure) when processing nested structures in HEAD mode
-**Following**: FCP AM design for nested structure handling
+When processing nested structures in HEAD mode (e.g., `p(f(X,Y))` where `f(X,Y)` is nested within the argument), the runtime must save and restore the structure processing state to properly handle the nesting.
 
+**Structure Processing State**: The triple `(S, mode, currentStructure)` where:
+- `S`: Current position within the structure being processed (integer index)
+- `mode`: READ or WRITE mode for structure traversal
+- `currentStructure`: Reference to the structure being processed
+  - In READ mode: StructTerm from the heap
+  - In WRITE mode: _TentativeStruct being built in σ̂w
+
+**Instruction**: `push Xi`
+**Operation**: Save current structure processing state
 **Behavior**:
-- `push Xi`: Store (S, mode, currentStructure) triple in register Xi
-- `pop Xi`: Restore (S, mode, currentStructure) from register Xi
+1. Create state object: `state = (S, mode, currentStructure)`
+2. Store in clause variable: `clauseVars[i] = state`
+3. Continue to next instruction (no other state changes)
+
+**Instruction**: `pop Xi`
+**Operation**: Restore previously saved structure processing state
+**Behavior**:
+1. Retrieve state: `state = clauseVars[i]`
+2. Restore: `S = state.S`, `mode = state.mode`, `currentStructure = state.currentStructure`
+3. Continue to next instruction
+
+**Invariants**:
+- Each `push` must have exactly one corresponding `pop`
+- Push/pop pairs follow stack discipline (properly nested)
+- State saved in clause variables survives across instruction boundaries
+- After `pop`, S points to the position in the parent structure where we left off
+
+**Following FCP AM**: This design directly follows the Flat Concurrent Prolog Abstract Machine's approach to nested structure handling, where the machine maintains a stack of structure processing contexts.
 
 ### 8.7 UnifyStructure: Nested Structure Processing
 
-**Operation**: `unify_structure f/n`
-**Purpose**: Process nested structure at current S position (FCP AM's unify_compound)
-**Behavior**:
-- READ mode: Match structure at args[S], enter matched structure (set S=0)
-- WRITE mode: Create nested _TentativeStruct at args[S], enter it (set S=0)
+**Instruction**: `unify_structure f/n`
+**Operation**: Process nested structure at current S position within parent structure
+**Purpose**: Enter a nested structure for processing (FCP AM's `unify_compound`)
+
+**READ Mode Behavior** (matching existing structure):
+1. Get value at current position: `value = currentStructure.args[S]`
+2. Check if value is StructTerm with functor `f` and arity `n`
+3. If match:
+   - Set `currentStructure = value` (enter the nested structure)
+   - Set `S = 0` (ready to process first argument of nested structure)
+   - Continue to next instruction
+4. If mismatch:
+   - Soft-fail to next clause (discard σ̂w, clear Si, jump to next clause_try)
+
+**WRITE Mode Behavior** (building new structure):
+1. Create new tentative structure: `nested = _TentativeStruct(f, n, [null, ..., null])`
+2. Place in parent structure: `currentStructure.args[S] = nested`
+3. Set `currentStructure = nested` (enter the nested structure)
+4. Set `S = 0` (ready to write first argument of nested structure)
+5. Continue to next instruction
+
+**Key Properties**:
+- Does NOT increment S (that happens after processing all nested arguments)
+- Changes `currentStructure` to point to the nested structure
+- Resets S to 0 to begin processing nested structure's arguments
+- In WRITE mode, creates _TentativeStruct that will be converted to StructTerm at commit
+- Follows three-valued unification: success (match), suspend (N/A for structures), fail (mismatch)
+
+**Commit-Time Conversion**: When `commit` executes, all _TentativeStruct objects in σ̂w are recursively converted to StructTerm objects before being applied to the heap. This ensures nested structures are properly materialized.
 
 ### 8.8 Nested Structure Pattern
 
-Nested structures in HEAD arguments use Push/UnifyStructure/Pop pattern:
+Nested structures in HEAD arguments use the Push/UnifyStructure/Pop pattern to maintain proper structure processing state across nesting levels.
+
+**Pattern**:
 ```
-push X10                    // Save state
-unify_structure f/n         // Enter nested structure
-  <process nested args>
-pop X10                     // Restore state
+head_structure 'p', 1, A0         # Match outer structure p/1, enter it
+  push X10                        # Save (S=0, mode, p_struct)
+  unify_structure 'f', 2          # Enter nested f/2 at position S=0
+    unify_writer X0               # Process f's first arg, S becomes 1
+    unify_writer X1               # Process f's second arg, S becomes 2
+  pop X10                         # Restore (S=0, mode, p_struct)
+                                  # After pop: S=0, mode=original, currentStructure=p_struct
+                                  # If p/1 had more args, S would be incremented for next arg
+commit
 ```
+
+**Concrete Example** - Matching `clause(qsort([X|Xs], Sorted, Rest), Body)`:
+```
+head_structure 'clause', 2, A0   # Match clause/2
+  push X10                        # Save state before entering nested qsort/3
+  unify_structure 'qsort', 3      # Enter qsort/3 at args[0]
+    push X11                      # Save state before entering list [X|Xs]
+    unify_structure '.', 2        # Enter list structure
+      unify_writer X0             # Match head X
+      unify_writer X1             # Match tail Xs
+    pop X11                       # Back to qsort/3 structure
+                                  # S now points to second arg of qsort
+    unify_writer X2               # Match Sorted
+    unify_writer X3               # Match Rest
+  pop X10                         # Back to clause/2 structure
+                                  # S now points to second arg of clause
+  unify_writer X4                 # Match Body
+commit
+```
+
+**Why This Pattern is Necessary**:
+- Without Push/Pop, entering a nested structure would lose track of position in parent
+- The S register and currentStructure must be saved before entering nesting
+- After processing nested structure, must restore parent context to continue
+- Allows arbitrary nesting depth (limited only by clause variable space)
+
+**Comparison to WAM**:
+- WAM uses a separate approach with argument registers and structure mode
+- GLP follows FCP AM which uses explicit state management
+- This design is clearer for concurrent execution where structures may be incrementally built
 
 **Example**: Building `merge([],[],X)` where X is a writer in register 5:
 ```

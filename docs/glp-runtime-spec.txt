@@ -467,6 +467,67 @@ Head instructions perform **tentative writer MGU**, building σ̂w without heap 
 
 All head instructions are **pure** - they never mutate the heap, only extend σ̂w and Si.
 
+### Push/Pop: Nested Structure State Management
+
+When processing nested structures in HEAD mode (e.g., `p(f(X,Y))` where `f(X,Y)` is nested within the argument), the runtime must save and restore the structure processing state to properly handle the nesting.
+
+**Structure Processing State**: The triple `(S, mode, currentStructure)` where:
+- `S`: Current position within the structure being processed
+- `mode`: READ or WRITE mode for structure traversal
+- `currentStructure`: Reference to the structure being processed (StructTerm in READ, _TentativeStruct in WRITE)
+
+**`push regIndex`**: Save current structure processing state
+- Store `(S, mode, currentStructure)` triple in clause variable `clauseVars[regIndex]`
+- Used before entering a nested structure
+- Following FCP AM's approach to nested structure handling
+
+**`pop regIndex`**: Restore structure processing state
+- Retrieve `(S, mode, currentStructure)` from `clauseVars[regIndex]`
+- Restore `S`, `mode`, and `currentStructure` to saved values
+- Used after completing nested structure processing
+- Must correspond to a previous `push` instruction
+
+**`unify_structure functor arity`**: Process nested structure at current S position
+- Following FCP AM's `unify_compound` instruction
+- Operates at the current S position within the parent structure
+
+**In READ mode**:
+1. Get value at `currentStructure.args[S]`
+2. If value is StructTerm with matching functor/arity:
+   - Set `currentStructure = value` (enter the nested structure)
+   - Set `S = 0` (start at first argument of nested structure)
+3. If mismatch: soft-fail to next clause
+
+**In WRITE mode**:
+1. Create new `_TentativeStruct(functor, arity, nullArgs)`
+2. Place it in `currentStructure.args[S]`
+3. Set `currentStructure = nested` (enter the nested structure)
+4. Set `S = 0` (ready to write first argument)
+
+**Nested Structure Pattern**:
+```
+head_structure 'p', 1, A0         # Match outer structure p/1
+  push X10                        # Save (S=0, mode, p_struct)
+  unify_structure 'f', 2          # Enter nested f/2 at position S
+    unify_writer X0               # Process first nested arg
+    unify_writer X1               # Process second nested arg
+  pop X10                         # Restore (S=0, mode, p_struct)
+                                  # Now S=0, ready for next arg of p/1 (if any)
+commit
+```
+
+**Key Invariants**:
+- Each `push` must have a corresponding `pop`
+- Push/pop pairs properly nest (stack discipline)
+- After `pop`, continue processing parent structure from saved S position
+- State saved in clause variables survives across instruction boundaries
+
+**Implementation Notes**:
+- `_StructureState` helper class stores the triple
+- Clause variables array holds both term values and state objects
+- In READ mode, nested structures are already present as StructTerms
+- In WRITE mode, nested structures are built as _TentativeStruct and converted at commit
+
 ### Body Construction Instructions  
 
 Body instructions prepare arguments for goal calls. The `put_structure` instruction allocates heap space and initializes structure headers. The `put_writer` and `put_reader` instructions place variable references in argument registers, with readers creating references to their paired writers. These instructions never suspend as they only prepare data rather than performing unification.
