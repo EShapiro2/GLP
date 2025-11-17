@@ -339,30 +339,21 @@ class CodeGenerator {
       ctx.emit(bc.UnifyConstant(term.value));
 
     } else if (term is ListTerm) {
-      // Nested list: need to extract into temp, then match
-      final tempReg = ctx.allocateTemp();
+      if (term.isNil) {
+        // Nil is atomic constant - same for HEAD and BODY modes
+        ctx.emit(bc.UnifyConstant('nil'));
+      } else {
+        // Non-empty list: extract-then-match pattern
+        final tempReg = ctx.allocateTemp();
 
-      if (inHead) {
-        // READ mode: extract value at S into temp
-        ctx.emit(bcv2.UnifyVariable(tempReg, isReader: false));  // Extract into temp
-
-        // Then match temp against nested structure
-        if (term.isNil) {
-          ctx.emit(bc.HeadNil(tempReg));
-        } else {
+        if (inHead) {
+          // READ mode: extract value at S into temp
+          ctx.emit(bcv2.UnifyVariable(tempReg, isReader: false));  // Extract into temp
           ctx.emit(bc.HeadStructure('.', 2, tempReg));
           if (term.head != null) _generateStructureElement(term.head!, varTable, ctx, inHead: inHead);
           if (term.tail != null) _generateStructureElement(term.tail!, varTable, ctx, inHead: inHead);
-        }
-      } else {
-        // WRITE mode (BODY): building nested structure within argument structure
-        // For [], just emit UnifyConstant(null) to represent empty list
-        // For [H|T], we need to build a nested structure inline
-        if (term.isNil) {
-          ctx.emit(bc.UnifyConstant('nil'));  // Empty list as 'nil'
         } else {
-          // For non-empty list, we need nested structure building
-          // This is complex - for now use temp approach but fix it
+          // WRITE mode (BODY): building nested structure within argument structure
           ctx.emit(bc.PutStructure('.', 2, tempReg));
           if (term.head != null) _generateStructureElement(term.head!, varTable, ctx, inHead: inHead);
           if (term.tail != null) _generateStructureElement(term.tail!, varTable, ctx, inHead: inHead);
