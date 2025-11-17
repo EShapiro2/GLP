@@ -12,9 +12,9 @@ class CommitOps {
     required HeapFCP heap,
     required Map<int, Object?> sigmaHat,
   }) {
-    print('[TRACE Commit FCP] Applying σ̂w to heap (${sigmaHat.length} bindings):');
+    // print('[TRACE Commit FCP] Applying σ̂w to heap (${sigmaHat.length} bindings):');
     for (final entry in sigmaHat.entries) {
-      print('  W${entry.key} → ${entry.value}');
+      // print('  W${entry.key} → ${entry.value}');
     }
 
     final activations = <GoalRef>[];
@@ -34,7 +34,7 @@ class CommitOps {
       if (value is VarRef) {
         final (targetWAddr, _) = heap.varTable[value.varId]!;
         value = heap.derefAddr(targetWAddr);
-        print('[TRACE Commit FCP] Dereferenced VarRef(${(entry.value as VarRef).varId}) → $value');
+        // print('[TRACE Commit FCP] Dereferenced VarRef(${(entry.value as VarRef).varId}) → $value');
       }
 
       // FCP line 301: Save suspension list before replacing reader content
@@ -48,7 +48,7 @@ class CommitOps {
 
       // FCP lines 245-254: Walk saved suspension list and activate
       if (oldContent is SuspensionRecord) {
-        print('[TRACE Commit FCP] Processing suspension list for R$varId:');
+        // print('[TRACE Commit FCP] Processing suspension list for R$varId:');
         _walkAndActivate(oldContent, activations);
       }
     }
@@ -57,7 +57,7 @@ class CommitOps {
     // This handles dependencies in σ̂w (e.g., W1002→V1005, W1005→nil)
     // After first pass: W1002 contains VarRef(1005), W1005 contains nil
     // After second pass: W1002 contains nil (dereferenced through chain)
-    print('[TRACE Commit FCP] Re-dereferencing cells with VarRef values...');
+    // print('[TRACE Commit FCP] Re-dereferencing cells with VarRef values...');
     for (final varId in sigmaHat.keys) {
       final (wAddr, rAddr) = heap.varTable[varId]!;
       final wContent = heap.cells[wAddr].content;
@@ -71,12 +71,12 @@ class CommitOps {
           // Target is now bound - update both cells
           heap.cells[wAddr].content = derefValue;
           heap.cells[rAddr].content = derefValue;
-          print('[TRACE Commit FCP]   W$varId: VarRef(${wContent.varId}) → $derefValue');
+          // print('[TRACE Commit FCP]   W$varId: VarRef(${wContent.varId}) → $derefValue');
         }
       }
     }
 
-    print('[TRACE Commit FCP] Total goals reactivated: ${activations.length}');
+    // print('[TRACE Commit FCP] Total goals reactivated: ${activations.length}');
     return activations;
   }
 
@@ -94,7 +94,7 @@ class CommitOps {
       current = current.next;
     }
 
-    print('[TRACE Commit FCP]   Activated $count goal(s)');
+    // print('[TRACE Commit FCP]   Activated $count goal(s)');
   }
 
 

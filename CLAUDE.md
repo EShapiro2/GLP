@@ -354,14 +354,47 @@ When implementing a solution:
 
 ## Bytecode Inspection Tools
 
-**CURRENT STATUS:** Bytecode disassembler/dump tool not yet implemented.
+### dump_bytecode.dart - Bytecode Disassembler ✅
 
-**Workaround (Current):**
-- Manually trace through `glp_runtime/lib/compiler/codegen.dart`
-- Add temporary debug print statements in runner.dart
-- Examine compiler source code to infer bytecode structure
+**Location:** `/Users/udi/GLP/udi/dump_bytecode.dart`
 
-**Priority:** HIGH - needed for debugging variable identity confusion
+**Usage:**
+```bash
+cd /Users/udi/GLP/udi
+dart dump_bytecode.dart glp/<filename>.glp
+```
+
+**What it does:**
+- Compiles a .glp source file
+- Outputs complete bytecode disassembly showing all instructions with PC addresses
+- Shows procedure entry points and clause boundaries
+
+**Example:**
+```bash
+# Dump bytecode to file for analysis
+dart dump_bytecode.dart glp/qsort.glp > /tmp/qsort_bytecode.txt
+
+# View specific bytecode section
+grep -A 30 "39:" /tmp/qsort_bytecode.txt  # View bytecode starting at PC 39
+```
+
+**Output format:**
+```
+PC 39: ClauseTry
+PC 40: HeadNil
+PC 41: GetReaderVariable
+PC 42: GetWriterValue
+PC 43: Commit
+PC 44: Proceed
+```
+
+**When to use:**
+- Debugging compilation issues
+- Understanding how clauses are compiled
+- Verifying opcode sequences
+- Investigating variable mode conversions
+- Checking clause structure and guard placements
+- Analyzing HEAD/GUARD/BODY instruction placement
 
 ## Known Working Tests
 These must continue passing:

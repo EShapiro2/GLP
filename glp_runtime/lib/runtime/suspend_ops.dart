@@ -13,9 +13,9 @@ class SuspendOps {
     required int kappa,
     required Set<int> readerVarIds,  // Variable IDs (not reader IDs)
   }) {
-    print('[TRACE SuspendOps FCP] Suspending goal $goalId on ${readerVarIds.length} reader(s):');
-    print('  Readers: ${readerVarIds.toList()}');
-    print('  Resume PC: $kappa');
+    // print('[TRACE SuspendOps FCP] Suspending goal $goalId on ${readerVarIds.length} reader(s):');
+    // print('  Readers: ${readerVarIds.toList()}');
+    // print('  Resume PC: $kappa');
 
     // Create ONE shared suspension record
     final record = SuspensionRecord(goalId, kappa);
@@ -31,10 +31,10 @@ class SuspendOps {
       // REPLACE reader cell content with suspension list
       cell.content = record;
 
-      print('  → Added to R$varId suspension list (addr=$rAddr)');
+      // print('  → Added to R$varId suspension list (addr=$rAddr)');
     }
 
-    print('  ✓ Goal $goalId suspended (shared record)');
+    // print('  ✓ Goal $goalId suspended (shared record)');
   }
 
   /// Legacy version using ROQ (for backward compatibility during migration)

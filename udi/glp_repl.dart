@@ -22,7 +22,7 @@ void main() async {
   // Get git commit info
   final gitCommit = await _getGitCommit();
   // Build timestamp (updated at compile time)
-  final buildTime = '2025-11-17T17:30:00Z (FCP two-cell heap migration complete)';
+  final buildTime = '2025-11-17T12:52:55Z (Debug output disabled for clean reduction trace)';
 
   print('╔════════════════════════════════════════╗');
   print('║   GLP REPL - Interactive Interpreter   ║');
@@ -48,7 +48,7 @@ void main() async {
   final loadedPrograms = <String, BytecodeProgram>{};
 
   var goalId = 1;
-  var debugTrace = false; // Toggle with :trace command
+  var debugTrace = true; // Toggle with :trace command
 
   while (true) {
     stdout.write('GLP> ');

@@ -172,6 +172,26 @@ run_test "Quicksort two elements [1,2]" \
     "quicksort([1,2],X)." \
     "X = \[1, 2\]"
 
+run_test "Quicksort larger list [1,6,4,2,7,4,2,6]" \
+    "qsort.glp" \
+    "quicksort([1,6,4,2,7,4,2,6],X)." \
+    "X = \[1, 2, 2, 4, 4, 6, 6, 7\]"
+
+run_test "Quicksort five elements [1,3,4,2,5]" \
+    "qsort.glp" \
+    "quicksort([1,3,4,2,5],X)." \
+    "X = \[1, 2, 3, 4, 5\]"
+
+run_test "Quicksort with non-number fails" \
+    "qsort.glp" \
+    "quicksort([a],X)." \
+    "X = <unbound>"
+
+run_test "Quicksort with unbound tail suspends" \
+    "qsort.glp" \
+    "quicksort([1|X?],Y)." \
+    "Y = <unbound>"
+
 # ============================================
 # METAINTERPRETER MERGE TESTS
 # ============================================

@@ -8,11 +8,11 @@
 
 quicksort(Unsorted, Sorted?) :-
 	qsort(Unsorted?, Sorted, []).
-qsort([X | Unsorted], Sorted?, Rest?) :-
+qsort([X | Unsorted], Sorted?, Rest) :-
 	number(X?) |
 	partition(Unsorted?, X?, Smaller, Larger),
 	qsort(Smaller?, Sorted, [X? | Sorted1?]),
-	qsort(Larger?, Sorted1, Rest).
+	qsort(Larger?, Sorted1, Rest?).
 qsort([ ], Rest?, Rest).
 
 
@@ -24,8 +24,22 @@ partition ([ ], _ , [ ], [ ]).
 
 
 
-testqs :-  qsort(X?,Y,[1|Z?]).
+run(true).
+run((A,B)) :- run(A?), run(B?).
+run(A) :- otherwise | clause(A?,B), run(B?).
 
-testqs1(Y?) :-  qsort([],Y,[1|Z?]).
 
-testqs2(Y?) :-  qsort([],Y,[1]).
+clause(quicksort(Unsorted, Sorted?),	qsort(Unsorted?, Sorted, [])).
+
+clause(qsort([X | Unsorted], Sorted?, Rest),(partition(Unsorted?, X?, Smaller, Larger),
+	qsort(Smaller?, Sorted, [X? | Sorted1?]),
+	qsort(Larger?, Sorted1, Rest?))) :-
+	number(X?) | true.
+clause(qsort([ ], Rest?, Rest), true).
+
+clause(partition ([X | Xs], A, Smaller?, [X? | Larger?]),partition (Xs?, A?, Smaller, Larger)) :-
+	A? < X? | true.
+clause(partition ([X | Xs], A, [X? | Smaller?], Larger?),partition (Xs?, A?, Smaller, Larger)) :-
+	A? >= X? | true.
+clause(partition ([ ], _ , [ ], [ ]), true).
+

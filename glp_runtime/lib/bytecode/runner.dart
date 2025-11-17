@@ -218,16 +218,16 @@ class BytecodeRunner {
   /// Suspend on unbound reader: add to U and fail to next clause atomically
   /// Per spec: "add reader to U and immediately fail to next clause" is ONE operation
   int _suspendAndFail(RunnerContext cx, int readerId, int currentPc) {
-    print('[TRACE _suspendAndFail] Goal ${cx.goalId} adding R$readerId to U, failing to next clause');
-    print('  Current PC: $currentPc');
+    // print('[TRACE _suspendAndFail] Goal ${cx.goalId} adding R$readerId to U, failing to next clause');
+//     print('  Current PC: $currentPc');
     cx.U.add(readerId);
     _softFailToNextClause(cx, currentPc);
     final nextPc = _findNextClauseTry(currentPc);
-    print('  Next PC: $nextPc');
+//     print('  Next PC: $nextPc');
     if (nextPc < prog.ops.length) {
-      print('  Next instruction: ${prog.ops[nextPc].runtimeType}');
+//       print('  Next instruction: ${prog.ops[nextPc].runtimeType}');
     } else {
-      print('  ⚠️  Next PC beyond program end!');
+//       print('  ⚠️  Next PC beyond program end!');
     }
     return nextPc;
   }
@@ -276,7 +276,7 @@ class BytecodeRunner {
 
     // Print try start
     if (debug) {
-      print('>>> TRY: Goal ${cx.goalId} at PC ${cx.kappa}');
+//       print('>>> TRY: Goal ${cx.goalId} at PC ${cx.kappa}');
     }
 
     while (pc < prog.ops.length) {
@@ -757,7 +757,7 @@ class BytecodeRunner {
         print('  arg?.isReader = ${arg?.isReader}');
         print('  isClauseVar = $isClauseVar');
         if (isClauseVar && op.argSlot < 100) {
-          print('  clauseVars[${op.argSlot}] = ${cx.clauseVars[op.argSlot]}');
+          // print('  clauseVars[${op.argSlot}] = ${cx.clauseVars[op.argSlot]}');
         }
         // TODO: Handle ground structures when CallEnv supports them
         _softFailToNextClause(cx, pc);
@@ -1064,16 +1064,16 @@ class BytecodeRunner {
           final freshVar = cx.rt.heap.allocateFreshVar();
           cx.rt.heap.addVariable(freshVar);
 
-          print('[TRACE GetReaderVariable] Writer→Reader mode conversion:');
-          print('  varIndex=${op.varIndex}, argSlot=${op.argSlot}');
-          print('  Caller writer ID: ${arg.writerId}');
-          print('  Allocated fresh var: V$freshVar');
-          print('  sigmaHat binding: W${arg.writerId} → R$freshVar');
+          // print('[TRACE GetReaderVariable] Writer→Reader mode conversion:');
+          // print('  varIndex=${op.varIndex}, argSlot=${op.argSlot}');
+          // print('  Caller writer ID: ${arg.writerId}');
+//           print('  Allocated fresh var: V$freshVar');
+          // print('  sigmaHat binding: W${arg.writerId} → R$freshVar');
 
           // Bind caller's writer to reader view in σ̂w
           cx.sigmaHat[arg.writerId!] = VarRef(freshVar, isReader: true);
 
-          print('  clauseVars[${{op.varIndex}}] = $freshVar (int)');
+          // print('  clauseVars[${{op.varIndex}}] = $freshVar (int)');
 
           // Store fresh var as clause variable (used as reader in clause body)
           cx.clauseVars[op.varIndex] = freshVar;
@@ -1740,18 +1740,18 @@ class BytecodeRunner {
 
         // Print reduction (successful commit)
         if (debug) {
-          print('>>> REDUCTION: Goal ${cx.goalId} at PC $pc (commit succeeded, σ̂w has ${convertedSigmaHat.length} bindings)');
+//           print('>>> REDUCTION: Goal ${cx.goalId} at PC $pc (commit succeeded, σ̂w has ${convertedSigmaHat.length} bindings)');
         }
 
         // TRACE: Show all sigmaHat bindings before applying to heap
-        print('[TRACE Commit] Applying sigmaHat to heap (${convertedSigmaHat.length} bindings):');
+        // print('[TRACE Commit] Applying sigmaHat to heap (${convertedSigmaHat.length} bindings):');
         for (final entry in convertedSigmaHat.entries) {
           final writerId = entry.key;
           final value = entry.value;
-          print('  W$writerId → $value');
+          // print('  W$writerId → $value');
           // FLAG invalid writer→writer bindings
           if (value is VarRef && !value.isReader) {
-            print('    ⚠️  WARNING: Writer→Writer binding detected!');
+            // print('    ⚠️  WARNING: Writer→Writer binding detected!');
           }
         }
 
@@ -1761,14 +1761,14 @@ class BytecodeRunner {
           sigmaHat: convertedSigmaHat,
         );
 
-        print('[TRACE Post-Commit] Enqueueing ${acts.length} reactivated goal(s):');
+        // print('[TRACE Post-Commit] Enqueueing ${acts.length} reactivated goal(s):');
         for (final a in acts) {
-          print('  → Goal ${a.id} at PC ${a.pc}');
+//           print('  → Goal ${a.id} at PC ${a.pc}');
           cx.rt.gq.enqueue(a);
           if (cx.onActivation != null) cx.onActivation!(a);
         }
         if (acts.isEmpty) {
-          print('  (no goals to reactivate)');
+//           print('  (no goals to reactivate)');
         }
         cx.sigmaHat.clear();
         // Clear argument registers after commit (guards may have set them up)
@@ -1800,21 +1800,21 @@ class BytecodeRunner {
       // If U non-empty: suspend; otherwise: fail definitively
       if (op is NoMoreClauses) {
         if (cx.U.isNotEmpty) {
-          print('[TRACE NoMoreClauses] Goal ${cx.goalId} suspending:');
-          print('  U (blocked readers): ${cx.U.toList()}');
-          print('  κ (resume PC): ${cx.kappa}');
-          print('  Calling suspendGoalFCP to add to reader suspension lists...');
+          // print('[TRACE NoMoreClauses] Goal ${cx.goalId} suspending:');
+//           print('  U (blocked readers): ${cx.U.toList()}');
+//           print('  κ (resume PC): ${cx.kappa}');
+//           print('  Calling suspendGoalFCP to add to reader suspension lists...');
 
           cx.rt.suspendGoalFCP(goalId: cx.goalId, kappa: cx.kappa, readerVarIds: cx.U);
 
-          print('  ✓ Goal ${cx.goalId} suspended (added to reader cells)');
+//           print('  ✓ Goal ${cx.goalId} suspended (added to reader cells)');
           cx.U.clear();
           cx.inBody = false;
           return RunResult.suspended;
         }
         // U is empty - all clauses failed definitively (no suspension)
         if (debug) {
-          print('>>> FAIL: Goal ${cx.goalId} (all clauses exhausted, U empty)');
+//           print('>>> FAIL: Goal ${cx.goalId} (all clauses exhausted, U empty)');
         }
         cx.inBody = false;
         // According to spec, failed goals should be added to F set
@@ -1835,7 +1835,7 @@ class BytecodeRunner {
       if (op is SuspendEnd) {
         if (cx.U.isNotEmpty) {
           if (debug) {
-            print('>>> SUSPENSION: Goal ${cx.goalId} suspended on readers: ${cx.U}');
+//             print('>>> SUSPENSION: Goal ${cx.goalId} suspended on readers: ${cx.U}');
           }
           cx.rt.suspendGoalFCP(goalId: cx.goalId, kappa: cx.kappa, readerVarIds: cx.U);
           cx.U.clear();
@@ -1844,7 +1844,7 @@ class BytecodeRunner {
         }
         // U is empty - all clauses failed definitively (no suspension)
         if (debug) {
-          print('>>> FAIL: Goal ${cx.goalId} (all clauses exhausted, U empty)');
+//           print('>>> FAIL: Goal ${cx.goalId} (all clauses exhausted, U empty)');
         }
         cx.inBody = false;
         // According to spec, failed goals should be added to F set
@@ -2334,9 +2334,9 @@ class BytecodeRunner {
       if (op is Spawn) {
         if (cx.inBody) {
           // TRACE: Show argument preparation
-          print('[TRACE Spawn] Preparing to spawn ${op.procedureLabel}:');
-          print('  argWriters: {${cx.argWriters.entries.map((e) => '${e.key}: W${e.value}').join(', ')}}');
-          print('  argReaders: {${cx.argReaders.entries.map((e) => '${e.key}: R${e.value}').join(', ')}}');
+          // print('[TRACE Spawn] Preparing to spawn ${op.procedureLabel}:');
+          // print('  argWriters: {${cx.argWriters.entries.map((e) => '${e.key}: W${e.value}').join(', ')}}');
+          // print('  argReaders: {${cx.argReaders.entries.map((e) => '${e.key}: R${e.value}').join(', ')}}');
 
           // Spawn a new goal with arguments from argWriters/argReaders
           // Create CallEnv from current argument registers
@@ -2489,9 +2489,9 @@ class BytecodeRunner {
         final arity = op.arity;
 
         if (debug) {
-          print('[GUARD] Evaluating: $predicateName/$arity');
-          print('[GUARD] argWriters: ${cx.argWriters}');
-          print('[GUARD] argReaders: ${cx.argReaders}');
+          // print('[GUARD] Evaluating: $predicateName/$arity');
+          // print('[GUARD] argWriters: ${cx.argWriters}');
+          // print('[GUARD] argReaders: ${cx.argReaders}');
         }
 
         // Extract and dereference arguments from argument registers
@@ -2504,13 +2504,13 @@ class BytecodeRunner {
           // Check argWriters first (for unbound writers)
           if (cx.argWriters.containsKey(i)) {
             final writerId = cx.argWriters[i]!;
-            print('[GUARD] Arg $i from argWriters: $writerId');
+            // print('[GUARD] Arg $i from argWriters: $writerId');
             argValue = VarRef(writerId, isReader: false);
           }
           // Then check argReaders (contains BOTH bound writers AND actual readers)
           else if (cx.argReaders.containsKey(i)) {
             final varId = cx.argReaders[i]!;
-            print('[GUARD] Arg $i from argReaders: $varId');
+            // print('[GUARD] Arg $i from argReaders: $varId');
 
             // CRITICAL FIX: Determine if this is a writer ID or reader ID
             // Check if varId exists as a writer in the heap
@@ -2519,48 +2519,48 @@ class BytecodeRunner {
             if (writerCell != null) {
               // It's a WRITER ID (from PutBoundConst storing bound constants)
               // Treat as a writer variable
-              print('[GUARD] Arg $i is WRITER ID (from PutBoundConst)');
+              // print('[GUARD] Arg $i is WRITER ID (from PutBoundConst)');
               argValue = VarRef(varId, isReader: false);
 
               if (debug) {
-                print('[GUARD] Slot $i: Writer ID $varId (bound: ${cx.rt.heap.isWriterBound(varId)})');
+                // print('[GUARD] Slot $i: Writer ID $varId (bound: ${cx.rt.heap.isWriterBound(varId)})');
               }
             } else {
               // It's a READER ID (from PutReader for actual readers)
               // Treat as a reader variable
-              print('[GUARD] Arg $i is READER ID (from PutReader)');
+              // print('[GUARD] Arg $i is READER ID (from PutReader)');
               argValue = VarRef(varId, isReader: true);
 
               if (debug) {
                 // Check if this reader's paired writer is bound
                 final writerId = cx.rt.heap.writerIdForReader(varId);
-                print('[GUARD] Slot $i: Reader ID $varId (writer $writerId bound: ${writerId != null ? cx.rt.heap.isWriterBound(writerId) : false})');
+                // print('[GUARD] Slot $i: Reader ID $varId (writer $writerId bound: ${writerId != null ? cx.rt.heap.isWriterBound(writerId) : false})');
               }
             }
           }
           // Check clauseVars for HEAD variables
           else if (cx.clauseVars.containsKey(i)) {
             argValue = cx.clauseVars[i];
-            print('[GUARD] Arg $i from clauseVars: $argValue');
+            // print('[GUARD] Arg $i from clauseVars: $argValue');
           }
           else {
             // No argument at this slot
             if (debug) {
-              print('[GUARD] WARNING: Argument $i not found in argWriters, argReaders, or clauseVars');
+              // print('[GUARD] WARNING: Argument $i not found in argWriters, argReaders, or clauseVars');
             }
             argValue = null;
           }
 
           // Dereference to get actual values, tracking unbound readers
           if (argValue != null) {
-            print('[GUARD] Before deref - Arg $i: $argValue (${argValue.runtimeType})');
+            // print('[GUARD] Before deref - Arg $i: $argValue (${argValue.runtimeType})');
             final (derefValue, readers) = _dereferenceWithTracking(argValue, cx);
-            print('[GUARD] After deref - Arg $i: $derefValue (${derefValue.runtimeType})');
+            // print('[GUARD] After deref - Arg $i: $derefValue (${derefValue.runtimeType})');
             args.add(derefValue);
             unboundReaders.addAll(readers);
 
             if (debug) {
-              print('[GUARD] Arg $i: $argValue → $derefValue');
+              // print('[GUARD] Arg $i: $argValue → $derefValue');
             }
           } else {
             args.add(null);
@@ -2570,7 +2570,7 @@ class BytecodeRunner {
         // If any arguments have unbound readers, suspend
         if (unboundReaders.isNotEmpty) {
           if (debug) {
-            print('[GUARD] SUSPEND - unbound readers: $unboundReaders');
+            // print('[GUARD] SUSPEND - unbound readers: $unboundReaders');
           }
           pc = _suspendAndFailMulti(cx, unboundReaders, pc);
           continue;
@@ -2581,14 +2581,14 @@ class BytecodeRunner {
 
         if (result == GuardResult.success) {
           if (debug) {
-            print('[GUARD] SUCCESS - continuing');
+            // print('[GUARD] SUCCESS - continuing');
           }
           pc++;
           continue;
         } else {
           // FAIL - try next clause
           if (debug) {
-            print('[GUARD] FAIL - trying next clause');
+            // print('[GUARD] FAIL - trying next clause');
           }
           _softFailToNextClause(cx, pc);
           pc = _findNextClauseTry(pc);
@@ -2953,20 +2953,20 @@ class BytecodeRunner {
           final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
           final bound = wid != null ? cx.rt.heap.isWriterBound(wid) : false;
           final value = (wid != null && bound) ? cx.rt.heap.valueOfWriter(wid) : null;
-          print('[DEBUG HeadNil] Goal ${cx.goalId}, Reader R${arg.readerId}: wid=$wid, exists=${wid != null}, bound=$bound, value=$value');
+          // print('[DEBUG HeadNil] Goal ${cx.goalId}, Reader R${arg.readerId}: wid=$wid, exists=${wid != null}, bound=$bound, value=$value');
 
           if (wid == null || !bound) {
             // Find the final unbound variable in the chain (FCP: suspend on ultimate target)
             final suspendOnVar = _finalUnboundVar(cx, arg.readerId!);
-            if (suspendOnVar != arg.readerId) {
-              print('[DEBUG HeadNil] → Chain detected: R${arg.readerId} → R$suspendOnVar, suspending on final');
-            }
-            print('[DEBUG HeadNil] → SUSPENDING on unbound reader R$suspendOnVar');
+            // if (suspendOnVar != arg.readerId) {
+            //   print('[DEBUG HeadNil] → Chain detected: R${arg.readerId} → R$suspendOnVar, suspending on final');
+            // }
+            // print('[DEBUG HeadNil] → SUSPENDING on unbound reader R$suspendOnVar');
             pc = _suspendAndFail(cx, suspendOnVar, pc);
             continue;
           } else {
             // Bound reader - check if value matches []
-            print('[DEBUG HeadNil] → Bound reader, checking value matches nil');
+            // print('[DEBUG HeadNil] → Bound reader, checking value matches nil');
             if (value is ConstTerm && value.value == 'nil') {
               // Match! Empty list
             } else if (value is StructTerm) {
@@ -3021,16 +3021,16 @@ class BytecodeRunner {
           final wid = cx.rt.heap.writerIdForReader(arg.readerId!);
           final bound = wid != null ? cx.rt.heap.isWriterBound(wid) : false;
           final value = (wid != null && bound) ? cx.rt.heap.valueOfWriter(wid) : null;
-          print('[DEBUG HeadList] Goal ${cx.goalId}, Reader R${arg.readerId}: wid=$wid, exists=${wid != null}, bound=$bound, value=$value');
+          // print('[DEBUG HeadList] Goal ${cx.goalId}, Reader R${arg.readerId}: wid=$wid, exists=${wid != null}, bound=$bound, value=$value');
 
           if (wid == null || !bound) {
             final suspendOnVar = _finalUnboundVar(cx, arg.readerId!);
-            print('[DEBUG HeadList] → SUSPENDING on unbound reader R$suspendOnVar');
+            // print('[DEBUG HeadList] → SUSPENDING on unbound reader R$suspendOnVar');
             pc = _suspendAndFail(cx, suspendOnVar, pc);
             continue;
           } else {
             // Bound reader - check if it's a list structure
-            print('[DEBUG HeadList] → Bound reader, checking value is list');
+            // print('[DEBUG HeadList] → Bound reader, checking value is list');
             if (value is StructTerm && value.functor == '[|]' && value.args.length == 2) {
               cx.currentStructure = value;
               cx.S = 0;
@@ -3427,20 +3427,20 @@ class BytecodeRunner {
         final b = getValue(args[1]);
 
         // Debug output
-        print('[EVAL_GUARD] < comparison:');
-        print('[EVAL_GUARD]   args[0] = ${args[0]} (${args[0].runtimeType})');
-        print('[EVAL_GUARD]   args[1] = ${args[1]} (${args[1].runtimeType})');
-        print('[EVAL_GUARD]   a = $a (${a.runtimeType})');
-        print('[EVAL_GUARD]   b = $b (${b.runtimeType})');
-        print('[EVAL_GUARD]   a is num = ${a is num}');
-        print('[EVAL_GUARD]   b is num = ${b is num}');
+        // print('[EVAL_GUARD] < comparison:');
+        // print('[EVAL_GUARD]   args[0] = ${args[0]} (${args[0].runtimeType})');
+        // print('[EVAL_GUARD]   args[1] = ${args[1]} (${args[1].runtimeType})');
+        // print('[EVAL_GUARD]   a = $a (${a.runtimeType})');
+        // print('[EVAL_GUARD]   b = $b (${b.runtimeType})');
+        // print('[EVAL_GUARD]   a is num = ${a is num}');
+        // print('[EVAL_GUARD]   b is num = ${b is num}');
 
         if (a is num && b is num) {
           final result = a < b;
-          print('[EVAL_GUARD]   $a < $b = $result');
+          // print('[EVAL_GUARD]   $a < $b = $result');
           return result ? GuardResult.success : GuardResult.failure;
         }
-        print('[EVAL_GUARD]   Type mismatch - returning failure');
+        // print('[EVAL_GUARD]   Type mismatch - returning failure');
         return GuardResult.failure;
 
       case '>':

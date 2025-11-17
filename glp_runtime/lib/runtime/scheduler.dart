@@ -104,39 +104,39 @@ class Scheduler {
       final goalStr = _formatGoal(act.id, procName, env);
 
       // DEBUG: Deep trace for goal arguments
-      if (debug && act.id >= 10002 && act.id <= 10002) {
-        print('[DEEP TRACE Goal ${act.id}] Raw argument state:');
-        for (int slot = 0; slot < 3; slot++) {
-          final rVal = env?.readerBySlot[slot];
-          final wVal = env?.writerBySlot[slot];
-          print('  Slot $slot:');
-          if (rVal != null) {
-            print('    env.r($slot) = R$rVal');
-            final wid = rt.heap.writerIdForReader(rVal);
-            if (wid != null) {
-              print('    writerIdForReader(R$rVal) = W$wid');
-              final bound = rt.heap.isWriterBound(wid);
-              print('    isWriterBound(W$wid) = $bound');
-              if (bound) {
-                final value = rt.heap.valueOfWriter(wid);
-                print('    valueOfWriter(W$wid) = $value');
-              }
-            }
-          }
-          if (wVal != null) {
-            print('    env.w($slot) = W$wVal');
-            final bound = rt.heap.isWriterBound(wVal);
-            print('    isWriterBound(W$wVal) = $bound');
-            if (bound) {
-              final value = rt.heap.valueOfWriter(wVal);
-              print('    valueOfWriter(W$wVal) = $value');
-            }
-          }
-          if (rVal == null && wVal == null) {
-            print('    (empty slot)');
-          }
-        }
-      }
+      // if (debug && act.id >= 10002 && act.id <= 10002) {
+      //   print('[DEEP TRACE Goal ${act.id}] Raw argument state:');
+      //   for (int slot = 0; slot < 3; slot++) {
+      //     final rVal = env?.readerBySlot[slot];
+      //     final wVal = env?.writerBySlot[slot];
+      //     print('  Slot $slot:');
+      //     if (rVal != null) {
+      //       print('    env.r($slot) = R$rVal');
+      //       final wid = rt.heap.writerIdForReader(rVal);
+      //       if (wid != null) {
+      //         print('    writerIdForReader(R$rVal) = W$wid');
+      //         final bound = rt.heap.isWriterBound(wid);
+      //         print('    isWriterBound(W$wid) = $bound');
+      //         if (bound) {
+      //           final value = rt.heap.valueOfWriter(wid);
+      //           print('    valueOfWriter(W$wid) = $value');
+      //         }
+      //       }
+      //     }
+      //     if (wVal != null) {
+      //       print('    env.w($slot) = W$wVal');
+      //       final bound = rt.heap.isWriterBound(wVal);
+      //       print('    isWriterBound(W$wVal) = $bound');
+      //       if (bound) {
+      //         final value = rt.heap.valueOfWriter(wVal);
+      //         print('    valueOfWriter(W$wVal) = $value');
+      //       }
+      //     }
+      //     if (rVal == null && wVal == null) {
+      //       print('    (empty slot)');
+      //     }
+      //   }
+      // }
 
       // Track queue length before execution
       final queueBefore = rt.gq.length;
@@ -182,10 +182,10 @@ class Scheduler {
     }
 
     // Show final resolvent (suspended goals that never resumed) if debug is on
-    if (debug && suspendedGoals.isNotEmpty) {
-      final resolvent = suspendedGoals.values.toList();
-      print('Resolvent: ${resolvent.join(', ')}');
-    }
+    // if (debug && suspendedGoals.isNotEmpty) {
+    //   final resolvent = suspendedGoals.values.toList();
+    //   print('Resolvent: ${resolvent.join(', ')}');
+    // }
 
     return ran;
   }
