@@ -9,28 +9,38 @@
 
 ### Variable Object Model
 
-GLP uses a **single-ID variable system** with separate reader/writer references:
+GLP uses FCP's **two-cell variable system** with shared suspension records:
 
-**Variable Object (VariableCell)**:
-- Heap-allocated object with unique ID (varId)
-- Contains: varId, value (Term or null), dereferencedCache, abandoned flag
-- Created by: `heap.allocateFreshVar()` returns ID, then `heap.addVariable(varId)` creates object on heap
+**Variable Objects (Two Cells per Variable)**:
 
-**Variable References (VarRef)**:
-- Lightweight references pointing to variable objects
-- `VarRef(varId, isReader: true)` - reader reference to variable varId
-- `VarRef(varId, isReader: false)` - writer reference to variable varId
-- Multiple references can point to same variable object with different access modes
+1. **Writer Cell**:
+   - Heap address (writerAddr)
+   - Content: Pointer to reader cell OR bound value
+   - Tag: RoTag when unbound, value tag when bound
+   - Never updated after initial binding
+
+2. **Reader Cell**:
+   - Heap address (readerAddr)
+   - Content: ONE of:
+     - Back-pointer to writer (initial state, tag WrtTag)
+     - Suspension list head (when processes waiting)
+     - Bound value (after writer binds)
+   - Content is REPLACED, not extended
+
+**Suspension Records** (shared across variables):
+- Lightweight objects with goalId, resumePC, next pointer
+- Same record appears in multiple reader cells' suspension lists
+- Activated once (first variable that binds), then disarmed (goalId nulled)
 
 **Variable Lifecycle**:
-1. **Allocate**: `varId = heap.allocateFreshVar()`, then `heap.addVariable(varId)` creates VariableCell
-2. **Bind**: `heap.bindVariable(varId, term)` or via σ̂w at commit
-3. **Dereference**: `heap.valueOfWriter(varId)` follows binding chain to final value
-4. **Wake**: ROQ processes suspended goals when variable is bound
+1. **Allocate**: Create writer cell pointing to reader, reader pointing back to writer
+2. **Suspend**: Prepend SuspensionRecord to reader cell (replacing back-pointer)
+3. **Bind**: Dereference value, update both cells, walk/activate suspension list
+4. **Activate**: Process walks suspension list, enqueues armed goals, disarms records
 
-**Key Principle**: Allocate ONE variable object on heap, create MULTIPLE VarRef references with different access modes (reader vs writer) as needed.
+**Key Principle**: TWO heap cells per variable, suspension lists stored IN reader cells, shared records prevent double-activation.
 
-**Compatibility Layer**: The Dart implementation provides `allocateFreshPair()` and `addWriter/addReader(WriterCell/ReaderCell)` as convenience methods for tests and demos. These are thin wrappers - `allocateFreshPair()` returns `(varId, varId)` (same ID for both) and `addWriter` calls `addVariable(varId)`. The underlying model remains single-ID.
+**Dart Implementation**: Can use integer IDs mapping to (writerAddr, readerAddr) pairs. VarRef(varId, isReader: bool) distinguishes access mode, but both reference the same two-cell variable.
 
 ### Code Organization Hierarchy
 
@@ -90,9 +100,50 @@ Note: The E, CP, and Y registers are used exclusively for deterministic environm
 
 ### 3.1 commit
 **Phase**: boundary before BODY_i.
-**Timing**: occurs immediately before the first BODY instruction.
-**Precondition**: HEAD and GUARD phases completed successfully. U may contain readers from previous failed clause attempts only (not from current clause).
-**Effect**: atomically apply σ̂w to the heap; for each writer bound by σ̂w, bind paired RO and process ROQ in FIFO order; clear σ̂w; control enters BODY_i.
+**Timing**: occurs immediately after GUARDS phase, before first BODY instruction.
+**Precondition**: HEAD and GUARD phases completed successfully. U may contain readers from previous failed clause attempts only (not from current successful clause).
+
+**Effect** (FCP emulate.h do_commit1 lines 217-258):
+
+1. For each binding `writerId → value` in σ̂w:
+
+   a. **Dereference target by address** (FCP line 226 `deref_ptr(Pb)`):
+      - Convert varId to address: `(wAddr,_) = varTable[varId]`
+      - Follow pointers: `while(isPointer(cells[addr])) addr = cells[addr].targetAddr`
+      - No reverse lookup - addresses followed directly like C pointers
+      - Prevents W1009→R1014→nil chains
+
+   b. **Get writer's paired reader cell**:
+      - `readerAddr = writerCell.pointsTo`
+
+   c. **Save reader's current content** (FCP line 301):
+      - `suspensionList = heap[readerAddr]`
+      - This is either: back-pointer (no suspensions), suspension list, or old bound value
+
+   d. **Bind both cells** (FCP lines 233, 303):
+      - `heap[writerAddr] = dereferencedValue`  // Writer now points to ultimate value
+      - `heap[readerAddr] = dereferencedValue`  // Reader updated too
+
+   e. **Walk saved suspension list** (FCP lines 245-254):
+      - If suspensionList is a SuspensionRecord:
+        - For each record in list:
+          - If `record.armed` (goalId not null):
+            - Enqueue `GoalRef(record.goalId, record.resumePC)` to goal queue
+            - `record.disarm()` (set goalId = null)
+          - Move to next record
+        - Free suspension records (optional - GC will collect)
+
+2. Clear σ̂w
+3. Set `inBody = true` (enable heap mutations)
+4. Control enters BODY_i
+
+**Critical FCP line 233**: `*Pa = Ref_Word(Var_Val(*Pb))`
+When binding W to target T where T is already bound, extract T's value and bind W to that value directly. This prevents variable chains and ensures all writers point to ground terms or unbound readers, never to bound intermediate readers.
+
+**FCP Pointer Semantics**:
+FCP uses raw memory pointers: `p = *p` to follow references.
+We use array indices as addresses: `addr = cells[addr].targetAddr`.
+Both avoid reverse lookups by following forward references only.
 
 ## 4. Environment and Phase Discipline (Instruction-Level)
 

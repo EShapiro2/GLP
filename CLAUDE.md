@@ -247,6 +247,12 @@ dart test test/specific_test.dart
 
 ## Working Principles
 
+### 0. FCP AM Adherence
+- **ALWAYS follow FCP AM design precisely** - no shortcuts, "improvements", or simplifications
+- **If considering any deviation from FCP AM**: STOP and discuss with user first
+- **Exception only**: general unification not needed due to SRSW (already agreed)
+- **Default assumption**: If FCP does it that way, we do it that way unless there is a simpler way due to the SRSW restriction
+
 ### 1. Test Before Changing
 ```bash
 # ALWAYS run BOTH test suites first
@@ -436,3 +442,4 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - when you work on bug, work till the program is working
 - when suspecting a code to be incorrect, first check the spec to see if it is consistent with it
 - always work with correct and complete and clear spec. never move forward without such spec.
+- check the repl test suite before unit testing

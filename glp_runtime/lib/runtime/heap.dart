@@ -25,9 +25,14 @@ class Heap {
     return _vars[varId]?.value;
   }
 
-  /// Check if variable is bound
+  /// Check if variable is bound (immediate binding, no dereferencing)
+  /// Per FCP AM spec: binding check should NOT dereference
+  /// Dereferencing happens only when reading values (valueOfWriter)
   bool isBound(int varId) {
-    return _vars[varId]?.value != null;
+    final value = _vars[varId]?.value;
+    // Bound if has any non-null value (including VarRef to another variable)
+    // Do NOT dereference - that creates the "appears bound" bug
+    return value != null;
   }
 
   /// Bind variable to a term

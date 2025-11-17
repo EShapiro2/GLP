@@ -22,7 +22,7 @@ void main() async {
   // Get git commit info
   final gitCommit = await _getGitCommit();
   // Build timestamp (updated at compile time)
-  final buildTime = '2025-11-17T15:00:00Z (commit 7ee6f95: Remove Si, HEAD opcodes fail immediately)';
+  final buildTime = '2025-11-17T17:30:00Z (FCP two-cell heap migration complete)';
 
   print('╔════════════════════════════════════════╗');
   print('║   GLP REPL - Interactive Interpreter   ║');
@@ -325,10 +325,8 @@ bool _isConjunction(String query) {
   Map<String, int> queryVarWriters,
 ) {
   if (arg is VarTerm) {
-    // Variable: create fresh writer/reader pair
+    // Variable: create fresh writer/reader pair (FCP: both cells created internally)
     final (writerId, readerId) = runtime.heap.allocateFreshPair();
-    runtime.heap.addWriter(WriterCell(writerId, readerId));
-    runtime.heap.addReader(ReaderCell(readerId));
 
     // Track this variable for later display
     if (!arg.isReader) {
@@ -344,10 +342,8 @@ bool _isConjunction(String query) {
 
     return (readerId, writerId);
   } else if (arg is ListTerm) {
-    // List: create structure and bind it
+    // List: create structure and bind it (FCP: both cells created internally)
     final (writerId, readerId) = runtime.heap.allocateFreshPair();
-    runtime.heap.addWriter(WriterCell(writerId, readerId));
-    runtime.heap.addReader(ReaderCell(readerId));
 
     // Build list structure recursively
     final listValue = _buildListTerm(runtime, arg, queryVarWriters);
@@ -361,19 +357,15 @@ bool _isConjunction(String query) {
     readers[argSlot] = readerId;
     return (readerId, writerId);
   } else if (arg is ConstTerm) {
-    // Constant: create bound writer/reader
+    // Constant: create bound writer/reader (FCP: both cells created internally)
     final (writerId, readerId) = runtime.heap.allocateFreshPair();
-    runtime.heap.addWriter(WriterCell(writerId, readerId));
-    runtime.heap.addReader(ReaderCell(readerId));
     runtime.heap.bindWriterConst(writerId, arg.value);
 
     readers[argSlot] = readerId;
     return (readerId, writerId);
   } else if (arg is StructTerm) {
-    // Structure: create and bind it
+    // Structure: create and bind it (FCP: both cells created internally)
     final (writerId, readerId) = runtime.heap.allocateFreshPair();
-    runtime.heap.addWriter(WriterCell(writerId, readerId));
-    runtime.heap.addReader(ReaderCell(readerId));
 
     // Build structure term recursively
     final structValue = _buildStructTerm(runtime, arg, queryVarWriters) as rt.StructTerm;
@@ -392,10 +384,8 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
 
   for (final arg in struct.args) {
     if (arg is ConstTerm) {
-      // Constant in structure - create bound writer/reader
+      // Constant in structure - create bound writer/reader (FCP: both cells created internally)
       final (writerId, readerId) = runtime.heap.allocateFreshPair();
-      runtime.heap.addWriter(WriterCell(writerId, readerId));
-      runtime.heap.addReader(ReaderCell(readerId));
       runtime.heap.bindWriterConst(writerId, arg.value);
       argTerms.add(rt.VarRef(readerId, isReader: true));
     } else if (arg is VarTerm) {
@@ -411,10 +401,8 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
         // Writer already exists - reuse it
         argTerms.add(rt.VarRef(existingWriterId, isReader: false));
       } else {
-        // First occurrence - create fresh pair
+        // First occurrence - create fresh pair (FCP: both cells created internally)
         final (writerId, readerId) = runtime.heap.allocateFreshPair();
-        runtime.heap.addWriter(WriterCell(writerId, readerId));
-        runtime.heap.addReader(ReaderCell(readerId));
         if (!arg.isReader) {
           queryVarWriters[baseName] = writerId;
         }
@@ -422,26 +410,20 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
       }
     } else if (arg is ListTerm) {
       if (arg.isNil) {
-        // Empty list in structure - create bound writer/reader for 'nil'
+        // Empty list in structure - create bound writer/reader for 'nil' (FCP: both cells created internally)
         final (writerId, readerId) = runtime.heap.allocateFreshPair();
-        runtime.heap.addWriter(WriterCell(writerId, readerId));
-        runtime.heap.addReader(ReaderCell(readerId));
         runtime.heap.bindWriterConst(writerId, 'nil');
         argTerms.add(rt.VarRef(readerId, isReader: true));
       } else {
-        // Non-empty list - recursively build and create writer/reader
+        // Non-empty list - recursively build and create writer/reader (FCP: both cells created internally)
         final (writerId, readerId) = runtime.heap.allocateFreshPair();
-        runtime.heap.addWriter(WriterCell(writerId, readerId));
-        runtime.heap.addReader(ReaderCell(readerId));
         final listValue = _buildListTerm(runtime, arg, queryVarWriters) as rt.StructTerm;
         runtime.heap.bindWriterStruct(writerId, listValue.functor, listValue.args);
         argTerms.add(rt.VarRef(readerId, isReader: true));
       }
     } else if (arg is StructTerm) {
-      // Nested structure - create bound writer/reader
+      // Nested structure - create bound writer/reader (FCP: both cells created internally)
       final (writerId, readerId) = runtime.heap.allocateFreshPair();
-      runtime.heap.addWriter(WriterCell(writerId, readerId));
-      runtime.heap.addReader(ReaderCell(readerId));
       final structValue = _buildStructTerm(runtime, arg, queryVarWriters) as rt.StructTerm;
       runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
       argTerms.add(rt.VarRef(readerId, isReader: true));
@@ -467,10 +449,8 @@ rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> query
   if (head is ConstTerm) {
     headTerm = rt.ConstTerm(head.value);
   } else if (head is VarTerm) {
-    // Variable in list - create writer/reader
+    // Variable in list - create writer/reader (FCP: both cells created internally)
     final (writerId, readerId) = runtime.heap.allocateFreshPair();
-    runtime.heap.addWriter(WriterCell(writerId, readerId));
-    runtime.heap.addReader(ReaderCell(readerId));
     if (!head.isReader) {
       queryVarWriters[head.name] = writerId;
     }
@@ -495,10 +475,8 @@ rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> query
       // Writer already exists - reuse it
       tailTerm = rt.VarRef(existingWriterId, isReader: false);
     } else {
-      // First occurrence - create fresh pair
+      // First occurrence - create fresh pair (FCP: both cells created internally)
       final (writerId, readerId) = runtime.heap.allocateFreshPair();
-      runtime.heap.addWriter(WriterCell(writerId, readerId));
-      runtime.heap.addReader(ReaderCell(readerId));
       if (!tail.isReader) {
         queryVarWriters[baseName] = writerId;
       }

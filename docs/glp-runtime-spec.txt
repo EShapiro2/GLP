@@ -75,37 +75,100 @@ class RunnerContext {
 
 **Note**: Goals do not store bytecode - the `BytecodeRunner` holds the `BytecodeProgram`, and each goal references it via `runtime.setGoalProgram(goalId, programKey)`.
 
-#### Heap Cell Representation
-The heap (lib/runtime/heap.dart) manages writer and reader cells as simple Dart objects:
+#### Heap Storage (FCP Two-Cell Design)
+
+Each logical variable consists of TWO heap cells following FCP AM precisely:
+
+**1. Writer Cell**:
+   - Initially: Points to its paired reader cell (tagged RoTag)
+   - When bound: Points to bound value or dereferenced ultimate value
+   - Always knows its paired reader
+   - Never changes after binding (no updates when other variables bind)
+
+**2. Reader Cell**:
+   - Initially: **null content** (unbound, tagged RoTag)
+   - With suspensions: Head of suspension list (replaces null)
+   - When writer bound: Content replaced with bound value
+   - **Critical**: Reader cell content is REPLACED, not extended
+   - Only ONE thing stored at a time: null OR suspension list OR bound value
+   - **NOT pointing back to writer** - that would create an immediate cycle
+
+**Variable Allocation** (FCP notify.c lines 194-195):
+```dart
+// Allocate two cells on heap
+final writerAddr = HP++;  // Writer cell address
+final readerAddr = HP++;  // Reader cell address
+
+// Writer points to reader
+heap[writerAddr] = Pointer(readerAddr, RoTag);  // Writer → Reader
+
+// Reader is initially UNBOUND (null content, NOT pointing back to writer)
+heap[readerAddr] = HeapCell(null, RoTag);  // Unbound reader
+
+return (writerAddr, readerAddr);  // Both addresses needed
+```
+
+**Key operations**:
+- `allocateVariable()`: Creates both cells, writer points to reader, reader initially null
+- `bindWriter(w, value)`: Dereferences value if needed, updates writer cell, processes reader's suspension queue
+- `suspendOnReader(r, suspension)`: Prepends suspension record to reader's list (replaces reader content)
+
+**Critical Design Fix** (2025-11-17):
+The reader cell must NOT point back to the writer initially. This would create an immediate cycle:
+- Writer at addr=10 → Reader at addr=11
+- Reader at addr=11 → Writer at addr=10  ← CYCLE!
+
+Dereferencing would fail immediately with cycle detection. Instead:
+- Writer at addr=10 → Reader at addr=11
+- Reader at addr=11 → null (unbound)
+
+This allows proper dereferencing and suspension list storage.
+
+**IDs vs Addresses**: FCP uses heap addresses directly. Dart implementation can use integer IDs that map to (writerAddr, readerAddr) pairs via lookup table
+
+**Address-First Design**:
+
+VarIds are external handles. Internal operations use addresses directly:
+- `allocateVariable()` returns varId but stores addresses internally
+- API converts varId→(wAddr,rAddr) at entry
+- Dereferencing follows addresses without varId lookups
+- Results convert addr→varId only when needed for external API
+
+**Dereferencing by Address (FCP Design)**:
+
+Following FCP AM exactly, dereferencing operates on heap addresses directly:
 
 ```dart
-class WriterCell {
-  final int writerId;
-  final int readerId;  // Paired reader ID
-  WriterCell(this.writerId, this.readerId);
-}
+Term derefAddr(int addr) {
+  var current = addr;
+  Set<int> visited = {};
 
-class ReaderCell {
-  final int readerId;
-  ReaderCell(this.readerId);
-}
-
-class GlpHeap {
-  final Map<int, WriterCell> _writers = {};     // writerId → WriterCell
-  final Map<int, ReaderCell> _readers = {};     // readerId → ReaderCell
-  final Map<int, Object?> writerValue = {};     // writerId → bound value (if any)
-
-  bool isWriterBound(int writerId) => writerValue.containsKey(writerId);
-  Object? valueOfWriter(int writerId) => writerValue[writerId];
-  int? writerIdForReader(int readerId) {
-    // Find writer ID paired with this reader
-    for (final entry in _writers.entries) {
-      if (entry.value.readerId == readerId) return entry.key;
+  while (true) {
+    if (visited.contains(current)) {
+      throw StateError('Cycle detected - SRSW violation!');
     }
-    return null;
+    visited.add(current);
+
+    final cell = cells[current];
+
+    // If bound to value, return it
+    if (cell.tag == ValueTag) {
+      return cell.content as Term;
+    }
+
+    // If pointer to another cell, follow it
+    if (cell.content is Pointer) {
+      current = (cell.content as Pointer).targetAddr;
+      continue;
+    }
+
+    // Unbound - construct VarRef from address
+    return VarRef.fromAddr(current);
   }
 }
 ```
+
+**Key Principle**: No reverse lookup (addr→varId) during dereferencing. Addresses followed directly like FCP's pointer arithmetic.
 
 **Dereferencing Semantics (FCP AM)**:
 Following the FCP Abstract Machine design, dereferencing is performed automatically when reading values from the heap. This ensures that all code working with heap values sees fully dereferenced terms, eliminating the need for manual dereferencing loops in opcode handlers.
@@ -245,6 +308,134 @@ Suspension occurs when `no_more_clauses` instruction executes with non-empty U s
 5. Reactivated goal resumes at PC = kappa (first clause), NOT at suspension point
 
 **Single-shot mechanism**: The `armed` flag prevents duplicate reactivation if a goal was suspended on multiple readers and more than one binds.
+
+#### Shared Suspension Records (FCP Design)
+
+Following FCP AM precisely, suspension records are SHARED across multiple variables.
+
+**Data Structure**:
+```dart
+class SuspensionRecord {
+  int? goalId;        // Process ID - can be nulled to prevent re-activation
+  int resumePC;       // Where to resume (kappa - procedure entry point)
+  SuspensionRecord? next;  // Next record in this variable's list
+
+  void disarm() {
+    goalId = null;    // Prevent future activation
+  }
+
+  bool get armed => goalId != null;
+}
+```
+
+**Key Properties**:
+- **SAME record object** appears in multiple variables' suspension lists
+- When goal suspends on readers {R1, R2, R3}:
+  - ONE SuspensionRecord created
+  - That same record prepended to R1's list, R2's list, R3's list
+- When ANY variable binds:
+  - Walk its suspension list
+  - For each armed record: activate process, then disarm
+  - Other variables' lists still have the record, but goalId is now null
+- **No separate ROQ structure** - suspension lists IN reader cells ARE the ROQ
+
+**Storage Location**:
+Suspension records stored directly in reader cell's value field, replacing the
+initial back-pointer to writer. Reader cell progression:
+1. Initially: `Pointer(writerAddr, WrtTag)`
+2. First suspension: `SuspensionRecord(goal1, kappa, null)`
+3. More suspensions: `SuspensionRecord(goal2, kappa, next: previousRecord)`
+4. Writer binds: Content saved, replaced with bound value, saved list walked
+
+#### ROQ Structure (None - FCP Uses Suspension Lists Directly)
+
+Unlike designs with separate ROQ maps, FCP stores suspension information
+DIRECTLY in reader cells. There is NO separate ROQ data structure.
+
+**Checking for suspensions**:
+```dart
+// To check if reader R has suspensions:
+final content = heap[readerAddr];
+if (content is SuspensionRecord) {
+  // Has suspensions - walk the list
+  SuspensionRecord? current = content;
+  while (current != null) {
+    if (current.armed) {
+      activate(current.goalId, current.resumePC);
+      current.disarm();
+    }
+    current = current.next;
+  }
+}
+```
+
+**Advantages**:
+- No synchronization issues between heap and separate ROQ
+- Suspension state co-located with variable
+- Matches FCP AM exactly
+
+#### Variable Chain Suspension (FCP Wake-and-Retry)
+
+When a writer is bound to another unbound variable (e.g., W1009→R1014 where R1014 is unbound), HEAD instruction suspension logic must handle this case correctly.
+
+**The Problem**:
+```
+W1009 → R1014 (unbound)
+Goal G suspends on R1009
+Later: W1014 → nil
+```
+
+If G suspended on R1009, it will never wake because R1014 (not R1009) gets bound.
+
+**The Solution - Suspend on Final Variable**:
+When HEAD instructions encounter an unbound reader, they must follow variable chains to find the ultimate unbound variable:
+
+```dart
+/// Find the final unbound variable in a chain (FCP: follow var→var bindings)
+int _finalUnboundVar(RunnerContext cx, int readerId) {
+  final wid = cx.rt.heap.writerIdForReader(readerId);
+  if (wid == null) return readerId;
+
+  final (wAddr, _) = cx.rt.heap.varTable[wid]!;
+  final derefResult = cx.rt.heap.derefAddr(wAddr);
+
+  if (derefResult is VarRef) {
+    // Bound to another unbound variable - return that one
+    return derefResult.varId;
+  }
+
+  return readerId;
+}
+```
+
+**Updated Suspension Points**:
+All HEAD instructions that suspend must use this helper:
+- HeadConstant
+- HeadNil
+- HeadList
+- HeadStructure
+- UnifyReader (Si case)
+- GetVariable
+- GetReaderVariable
+
+**Example (HeadNil)**:
+```dart
+if (wid == null || !bound) {
+  // Find the final unbound variable in the chain
+  final suspendOnVar = _finalUnboundVar(cx, arg.readerId!);
+  pc = _suspendAndFail(cx, suspendOnVar, pc);
+  continue;
+}
+```
+
+**FCP Wake-and-Retry Semantics**:
+- Goals wake when ANY binding occurs (even W→R bindings)
+- If still unbound after waking, goal re-suspends (possibly on different variable)
+- This is simpler than transitive chain tracking
+- No need to maintain `Map<int, Set<int>> chainedVars`
+
+**Key Insight**:
+By suspending on the FINAL variable in a chain, we ensure goals wake when that ultimate variable gets bound. The wake-and-retry mechanism handles all other cases - if a goal wakes but still can't proceed, it simply suspends again.
 
 ## Instruction Implementation
 

@@ -2,19 +2,16 @@ import 'dart:io';
 import 'dart:ffi' as ffi;
 
 import 'machine_state.dart';
-import 'heap.dart';
-import 'roq.dart';
+import 'heap_fcp.dart';
 import 'suspend_ops.dart';
 import 'commit.dart';
 import 'abandon.dart';
 import 'fairness.dart';
-import 'hanger.dart';
 import 'system_predicates.dart';
 import '../bytecode/runner.dart' show CallEnv;
 
 class GlpRuntime {
-  final Heap heap;
-  final ROQueues roq;
+  final HeapFCP heap;
   final GoalQueue gq;
   final SystemPredicateRegistry systemPredicates;
 
@@ -33,42 +30,45 @@ class GlpRuntime {
   // Goal ID counter for spawn
   int nextGoalId = 10000;  // Start at 10000 to avoid collisions with test goal IDs
 
-  GlpRuntime({Heap? heap, ROQueues? roq, GoalQueue? gq, SystemPredicateRegistry? systemPredicates})
-      : heap = heap ?? Heap(),  // Using single-ID Heap
-        roq = roq ?? ROQueues(),
+  GlpRuntime({HeapFCP? heap, GoalQueue? gq, SystemPredicateRegistry? systemPredicates})
+      : heap = heap ?? HeapFCP(),
         gq = gq ?? GoalQueue(),
         systemPredicates = systemPredicates ?? SystemPredicateRegistry();
 
+  /// Commit writer bindings using FCP-exact semantics
+  /// sigmaHat: Map from varId to tentative value
+  List<GoalRef> commitSigmaHat(Map<int, Object?> sigmaHat) {
+    final acts = CommitOps.applySigmaHatFCP(
+      heap: heap,
+      sigmaHat: sigmaHat,
+    );
+    _enqueueAll(acts);
+    return acts;
+  }
+
+  /// Legacy commit method (deprecated - for backward compatibility)
+  /// TODO: Remove after runner.dart updated to use commitSigmaHat
   List<GoalRef> commitWriters(Iterable<int> writerIds) {
-    final acts = CommitOps.applySigmaHat(
-      heap: heap,
-      roq: roq,
-      writerIds: writerIds,
-    );
-    _enqueueAll(acts);
-    return acts;
+    throw UnimplementedError('Legacy commitWriters deprecated - use commitSigmaHat');
   }
 
+  /// Legacy abandon method (deprecated)
+  /// TODO: Remove after runner.dart updated
   List<GoalRef> abandonWriter(int writerId) {
-    final acts = AbandonOps.abandonWriter(
-      heap: heap,
-      roq: roq,
-      writerId: writerId,
-    );
-    _enqueueAll(acts);
-    return acts;
+    throw UnimplementedError('Legacy abandonWriter deprecated - FCP has no abandon');
   }
 
-  Hanger suspendGoal({
-    required GoalId goalId,
-    required Pc kappa,
-    required Iterable<ReaderId> readers,
+  /// Suspend goal using FCP-exact shared suspension records
+  void suspendGoalFCP({
+    required int goalId,
+    required int kappa,
+    required Set<int> readerVarIds,
   }) {
-    return SuspendOps.suspendGoal(
+    SuspendOps.suspendGoalFCP(
+      heap: heap,
       goalId: goalId,
       kappa: kappa,
-      roq: roq,
-      readers: readers,
+      readerVarIds: readerVarIds,
     );
   }
 
