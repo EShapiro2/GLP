@@ -1,10 +1,8 @@
-% Test exact structure from qsort clause
+% Test clause: clause(partition([2,3],1,X14,X15), X21)
+% With the clause definition from qsort.glp line 40-41
 
-run(true).
-run((A,B)) :- run(A?), run(B?).
-run(A) :- otherwise | clause(A?,B), run(B?).
+partition ([X | Xs], A, Smaller?, [X? | Larger?]) :-
+	A? < X? | partition (Xs?, A?, Smaller, Larger).
 
-clause(qsort([1], S?, R), (partition([], 1, Sm, Lg),
-	qsort(Sm?, S, [1 | S1?]),
-	qsort(Lg?, S1, R?))) :-
-	true | true.
+clause(partition ([X | Xs], A, Smaller?, [X? | Larger?]),partition (Xs?, A?, Smaller, Larger)) :-
+	A? < X? | true.

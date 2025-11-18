@@ -26,20 +26,20 @@ partition ([ ], A , [ ], [ ]) :- number(A?) | true.
 
 run(true).
 run((A,B)) :- run(A?), run(B?).
-run(A) :- otherwise | clause(A?,B), run(B?).
+run(A) :- otherwise | reduce(A?,B), run(B?).
 
 
-clause(quicksort(Unsorted, Sorted?),	qsort(Unsorted?, Sorted, [])).
+reduce(quicksort(Unsorted, Sorted?),	qsort(Unsorted?, Sorted, [])).
 
-clause(qsort([X | Unsorted], Sorted?, Rest),(partition(Unsorted?, X?, Smaller, Larger),
+reduce(qsort([X | Unsorted], Sorted?, Rest),(partition(Unsorted?, X?, Smaller, Larger),
 	qsort(Smaller?, Sorted, [X? | Sorted1?]),
 	qsort(Larger?, Sorted1, Rest?))) :-
 	number(X?) | true.
-clause(qsort([ ], Rest?, Rest), true).
+reduce(qsort([ ], Rest?, Rest), true).
 
-clause(partition ([X | Xs], A, Smaller?, [X? | Larger?]),partition (Xs?, A?, Smaller, Larger)) :-
+reduce(partition ([X | Xs], A, Smaller?, [X? | Larger?]),partition (Xs?, A?, Smaller, Larger)) :-
 	A? < X? | true.
-clause(partition ([X | Xs], A, [X? | Smaller?], Larger?),partition (Xs?, A?, Smaller, Larger)) :-
+reduce(partition ([X | Xs], A, [X? | Smaller?], Larger?),partition (Xs?, A?, Smaller, Larger)) :-
 	A? >= X? | true.
-clause(partition ([ ], A , [ ], [ ]), true) :- number(A?) | true.
+reduce(partition ([ ], A , [ ], [ ]), true) :- number(A?) | true.
 
