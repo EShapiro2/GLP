@@ -48,9 +48,11 @@ class Scheduler {
       if (current.value == null) return '<null>';
       return current.value.toString();
     } else if (current is VarRef && !current.isReader) {
-      return 'W${current.varId}';
+      final displayId = current.varId >= 1000 ? current.varId - 1000 : current.varId;
+      return 'X$displayId';
     } else if (current is VarRef && current.isReader) {
-      return markReaders ? 'R${current.varId}?' : 'R${current.varId}';
+      final displayId = current.varId >= 1000 ? current.varId - 1000 : current.varId;
+      return markReaders ? 'X$displayId?' : 'X$displayId';
     } else if (current is StructTerm) {
       // Special formatting for list structures
       if (current.functor == '.' && current.args.length == 2) {

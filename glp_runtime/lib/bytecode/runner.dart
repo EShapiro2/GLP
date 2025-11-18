@@ -250,7 +250,8 @@ class BytecodeRunner {
         final value = rt.heap.valueOfWriter(wid);
         if (value != null) return _formatTerm(rt, value, markReaders: markReaders);
       }
-      return 'W$wid';
+      final displayId = wid >= 1000 ? wid - 1000 : wid;
+      return 'X$displayId';
     } else if (term is VarRef && term.isReader) {
       final rid = term.varId;
       final wid = rt.heap.writerIdForReader(rid);
@@ -262,7 +263,8 @@ class BytecodeRunner {
         }
       }
       // Unbound reader - show with ?
-      return markReaders ? 'R$rid?' : 'R$rid';
+      final displayId = rid >= 1000 ? rid - 1000 : rid;
+      return markReaders ? 'X$displayId?' : 'X$displayId';
     } else if (term is StructTerm) {
       // Special formatting for list structures
       if (term.functor == '.' && term.args.length == 2) {

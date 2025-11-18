@@ -233,9 +233,10 @@ void main() async {
           final writerId = entry.value;
           // Use single-ID heap methods (writerId == readerId in single-ID system)
           final rawValue = runtime.heap.getValue(writerId);
-          print('DEBUG DISPLAY: $varName = W$writerId, isBound=${runtime.heap.isBound(writerId)}, rawValue=$rawValue');
+          final displayId = writerId >= 1000 ? writerId - 1000 : writerId;
+          print('DEBUG DISPLAY: $varName = X$displayId, isBound=${runtime.heap.isBound(writerId)}, rawValue=$rawValue');
           if (runtime.heap.isBound(writerId)) {
-            // Dereference the value to follow binding chains (e.g., W1002 → R1002 → [])
+            // Dereference the value to follow binding chains (e.g., X2 → X2? → [])
             final varRef = rt.VarRef(writerId, isReader: false);
             final derefValue = runtime.heap.dereference(varRef);
             print('  $varName = ${_formatTerm(derefValue, runtime)}');
@@ -518,7 +519,8 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
           final derefHead = runtime.heap.dereference(head);
           if (derefHead is rt.VarRef) {
             // Still unbound after dereferencing
-            headStr = derefHead.isReader ? 'R${derefHead.varId}?' : 'W${derefHead.varId}';
+            final displayId = derefHead.varId >= 1000 ? derefHead.varId - 1000 : derefHead.varId;
+            headStr = derefHead.isReader ? 'X$displayId?' : 'X$displayId';
           } else {
             headStr = _formatTerm(derefHead, runtime, visited);
           }
@@ -535,7 +537,8 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
             final value = runtime.heap.valueOfWriter(writer);
             headStr = _formatTerm(value, runtime, visited);
           } else {
-            headStr = 'R$readerId';
+            final displayId = readerId >= 1000 ? readerId - 1000 : readerId;
+            headStr = 'X$displayId';
           }
         }
       } else {
@@ -550,7 +553,8 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
         final varId = tail.varId;
         if (visited.contains(varId)) {
           // Circular reference in tail
-          final label = tail.isReader ? 'R$varId?' : 'W$varId';
+          final displayId = varId >= 1000 ? varId - 1000 : varId;
+          final label = tail.isReader ? 'X$displayId?' : 'X$displayId';
           return '[${elements.join(', ')} | <circular $label>]';
         }
         visited.add(varId);
@@ -558,7 +562,8 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
         final derefTail = runtime.heap.dereference(tail);
         if (derefTail is rt.VarRef) {
           // Still unbound after dereferencing
-          final label = derefTail.isReader ? 'R${derefTail.varId}?' : 'W${derefTail.varId}';
+          final displayId = derefTail.varId >= 1000 ? derefTail.varId - 1000 : derefTail.varId;
+          final label = derefTail.isReader ? 'X$displayId?' : 'X$displayId';
           return '[${elements.join(', ')} | $label]';
         }
         current = derefTail;
@@ -568,7 +573,8 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
         final readerId = tail.varId;
         if (visited.contains(readerId)) {
           // Circular reference in tail
-          return '[${elements.join(', ')} | <circular R$readerId>]';
+          final displayId = readerId >= 1000 ? readerId - 1000 : readerId;
+          return '[${elements.join(', ')} | <circular X$displayId>]';
         }
         visited.add(readerId);
         final writer = _findPairedWriter(runtime, readerId);
@@ -577,7 +583,8 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
           if (current == null || current is! rt.StructTerm) break;
         } else {
           // Unbound reader in tail - show it
-          return '[${elements.join(', ')} | R$readerId]';
+          final displayId = readerId >= 1000 ? readerId - 1000 : readerId;
+          return '[${elements.join(', ')} | X$displayId]';
         }
       } else if (tail is rt.ConstTerm && (tail.value == 'nil' || tail.value == null)) {
         break;  // End of list
