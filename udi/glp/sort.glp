@@ -50,7 +50,7 @@ partition ([X | Xs], A, Smaller?, [X? | Larger?]) :-
 	A? < X? | partition (Xs?, A?, Smaller, Larger).
 partition ([X | Xs], A, [X? | Smaller?], Larger?) :-
 	A? >= X? | partition (Xs?, A?, Smaller, Larger).
-partition ([ ], _ , [ ], [ ]).
+partition ([ ], A , [ ], [ ]) :- number(A?) | true.
 
 
 

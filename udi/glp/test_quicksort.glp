@@ -1,13 +1,7 @@
-% qsort.glp - Sorting algorithms in GLP
-%
-% Multiple sorting implementations demonstrating different approaches
-
-
-
-% ===== QUICKSORT =====
-
+% Just the quicksort and metainterpreter from qsort.glp
 quicksort(Unsorted, Sorted?) :-
 	qsort(Unsorted?, Sorted, []).
+
 qsort([X | Unsorted], Sorted?, Rest) :-
 	number(X?) |
 	partition(Unsorted?, X?, Smaller, Larger),
@@ -15,31 +9,24 @@ qsort([X | Unsorted], Sorted?, Rest) :-
 	qsort(Larger?, Sorted1, Rest?).
 qsort([ ], Rest?, Rest).
 
-
 partition ([X | Xs], A, Smaller?, [X? | Larger?]) :-
 	A? < X? | partition (Xs?, A?, Smaller, Larger).
 partition ([X | Xs], A, [X? | Smaller?], Larger?) :-
 	A? >= X? | partition (Xs?, A?, Smaller, Larger).
 partition ([ ], A , [ ], [ ]) :- number(A?) | true.
 
-
-
 run(true).
 run((A,B)) :- run(A?), run(B?).
 run(A) :- otherwise | clause(A?,B), run(B?).
 
-
-clause(quicksort(Unsorted, Sorted?),	qsort(Unsorted?, Sorted, [])).
-
+clause(quicksort(Unsorted, Sorted?), qsort(Unsorted?, Sorted, [])).
 clause(qsort([X | Unsorted], Sorted?, Rest),(partition(Unsorted?, X?, Smaller, Larger),
 	qsort(Smaller?, Sorted, [X? | Sorted1?]),
 	qsort(Larger?, Sorted1, Rest?))) :-
 	number(X?) | true.
 clause(qsort([ ], Rest?, Rest), true).
-
 clause(partition ([X | Xs], A, Smaller?, [X? | Larger?]),partition (Xs?, A?, Smaller, Larger)) :-
 	A? < X? | true.
 clause(partition ([X | Xs], A, [X? | Smaller?], Larger?),partition (Xs?, A?, Smaller, Larger)) :-
 	A? >= X? | true.
 clause(partition ([ ], A , [ ], [ ]), true) :- number(A?) | true.
-

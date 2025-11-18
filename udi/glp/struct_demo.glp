@@ -5,6 +5,6 @@
 person(alice, age(30), city(seattle)).
 person(bob, age(25), city(portland)).
 
-get_age(person(Name?, age(Age?), _), Name, Age).
+get_age(person(Name?, age(Age?), City), Name, Age) :- true.
 
-get_city(person(Name?, _, city(City?)), Name, City).
+get_city(person(Name?, Age, city(City?)), Name, City) :- true.

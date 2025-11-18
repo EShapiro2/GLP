@@ -7,9 +7,9 @@ append([], Ys, Ys).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 
 % List member check
-member(X, [X?|_]).
-member(X, [_|Xs]) :- member(X?, Xs?).
+member(X, [X?|Tail]) :- true.
+member(X, [Head|Xs]) :- member(X?, Xs?).
 
 % List length
 length([], zero).
-length([_|Xs], succ(N?)) :- length(Xs?, N).
+length([Head|Xs], succ(N?)) :- length(Xs?, N).

@@ -1,2 +1,2 @@
 % Partition base case only
-partition([], _, [], []).
+partition([], A, [], []) :- number(A?) | true.

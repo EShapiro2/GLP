@@ -849,7 +849,26 @@ class BytecodeRunner {
         }
 
         // Ground term case (not writer or reader)
-        print('DEBUG: HeadStructure line 610 - GROUND TERM PATH');
+        if (arg is StructTerm) {
+          // StructTerm argument - check if it matches and enter READ mode
+          if (arg.functor == op.functor && arg.args.length == op.arity) {
+            // Match! Enter READ mode to unify structure arguments
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: StructTerm arg matches ${op.functor}/${op.arity}, entering READ mode');
+            cx.currentStructure = arg;
+            cx.mode = UnifyMode.read;
+            cx.S = 0;
+            pc++; continue;
+          } else {
+            // Functor/arity mismatch - soft fail
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: StructTerm arg mismatch, failing');
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
+        }
+
+        // Other ground terms (ConstTerm, etc.) - fail
+        print('DEBUG: HeadStructure line 610 - GROUND TERM PATH (non-struct)');
         print('  op.argSlot = ${op.argSlot}');
         print('  arg = $arg');
         print('  arg is VarRef = ${arg is VarRef}');
@@ -857,7 +876,6 @@ class BytecodeRunner {
         if (isClauseVar && op.argSlot < 100) {
           // print('  clauseVars[${op.argSlot}] = ${cx.clauseVars[op.argSlot]}');
         }
-        // TODO: Handle ground structures when CallEnv supports them
         _softFailToNextClause(cx, pc);
         pc = _findNextClauseTry(pc);
         continue;
@@ -1598,36 +1616,67 @@ class BytecodeRunner {
             if (cx.S < struct.args.length) {
               final value = struct.args[cx.S];
               if (debug && cx.goalId == 100) print('  [G${cx.goalId}] UnifyWriter: struct.args[${cx.S}] = $value');
-              // Store the writer in clause var
-              if (value is VarRef && !value.isReader) {
-                // CRITICAL FIX: Store the VarRef itself, not just the ID
-                cx.clauseVars[op.varIndex] = value;
-                cx.S++;
-              } else if (value is VarRef && value.isReader) {
-                // Extract reader term - dereference if bound, store as-is if unbound
-                final rid = value.varId;
-                final wid = cx.rt.heap.writerIdForReader(rid);
-                if (wid != null && cx.rt.heap.isWriterBound(wid)) {
-                  // Reader is bound - extract the actual value from the paired writer
-                  final writerValue = cx.rt.heap.valueOfWriter(wid);
-                  cx.clauseVars[op.varIndex] = writerValue;
+
+              // Check if this clause variable already has a value from UnifyReader
+              final existingValue = cx.clauseVars[op.varIndex];
+
+              if (existingValue is int) {
+                // Clause variable is a fresh variable ID from UnifyReader
+                // Bind it to the value from query structure
+                if (value is VarRef && !value.isReader) {
+                  // Query has writer - bind clause var to query writer
+                  cx.sigmaHat[existingValue] = value;
+                  cx.S++;
+                } else if (value is VarRef && value.isReader) {
+                  // Query has reader - bind clause var to query reader
+                  cx.sigmaHat[existingValue] = value;
+                  cx.S++;
+                } else if (value is ConstTerm || value is StructTerm) {
+                  // Query has ground term - bind clause var to it
+                  cx.sigmaHat[existingValue] = value;
                   cx.S++;
                 } else {
-                  // Unbound reader - store the reader term itself
-                  // Suspension will be handled later if/when we try to match against it
-                  cx.clauseVars[op.varIndex] = value;
-                  cx.S++;
+                  // Unexpected type
+                  _softFailToNextClause(cx, pc);
+                  pc = _findNextClauseTry(pc);
+                  continue;
                 }
-              } else if (value is ConstTerm || value is StructTerm) {
-                // Direct term value - store it
-                cx.clauseVars[op.varIndex] = value;
-                // print('DEBUG: UnifyWriter stored ${value.runtimeType} in clauseVars[${op.varIndex}]: $value');
+              } else if (existingValue != null) {
+                // Clause variable already bound - need to unify
+                // TODO: Implement proper unification here
                 cx.S++;
               } else {
-                // Unexpected type - mismatch
-                _softFailToNextClause(cx, pc);
-                pc = _findNextClauseTry(pc);
-                continue;
+                // First occurrence - store the value
+                if (value is VarRef && !value.isReader) {
+                  // CRITICAL FIX: Store the VarRef itself, not just the ID
+                  cx.clauseVars[op.varIndex] = value;
+                  cx.S++;
+                } else if (value is VarRef && value.isReader) {
+                  // Extract reader term - dereference if bound, store as-is if unbound
+                  final rid = value.varId;
+                  final wid = cx.rt.heap.writerIdForReader(rid);
+                  if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+                    // Reader is bound - extract the actual value from the paired writer
+                    final writerValue = cx.rt.heap.valueOfWriter(wid);
+                    cx.clauseVars[op.varIndex] = writerValue;
+                    cx.S++;
+                  } else {
+                    // Unbound reader - store the reader term itself
+                    // Suspension will be handled later if/when we try to match against it
+                    cx.clauseVars[op.varIndex] = value;
+                    cx.S++;
+                  }
+                } else if (value is ConstTerm || value is StructTerm) {
+                  // Direct term value - store it
+                  cx.clauseVars[op.varIndex] = value;
+                  // print('DEBUG: UnifyWriter stored ${value.runtimeType} in clauseVars[${op.varIndex}]: $value');
+                  cx.S++;
+                } else {
+                  // Unexpected type - mismatch
+                  _softFailToNextClause(cx, pc);
+                  pc = _findNextClauseTry(pc);
+                  continue;
+                }
               }
             }
           }
@@ -1728,6 +1777,7 @@ class BytecodeRunner {
             if (cx.S < struct.args.length) {
               final value = struct.args[cx.S];
               if (value is VarRef && value.isReader) {
+                // Query has reader, clause expects reader
                 // Store the writer ID (not the reader ID) in clause var
                 final rid = value.varId;
                 final wid = cx.rt.heap.writerIdForReader(rid);
@@ -1736,9 +1786,22 @@ class BytecodeRunner {
                 }
                 cx.S++;
               } else if (value is VarRef && !value.isReader) {
-                // Writer term - store the writer ID directly
-                // This happens when clause head expects reader but structure has writer
-                cx.clauseVars[op.varIndex] = value.varId;
+                // Query has writer, clause expects reader
+                // Need to create fresh clause variable and bind query writer to it
+                final freshVar = cx.rt.heap.allocateFreshVar();
+                cx.rt.heap.addVariable(freshVar);
+                // Bind query writer to fresh reader in σ̂w
+                cx.sigmaHat[value.varId] = VarRef(freshVar, isReader: true);
+                // Store fresh var ID in clauseVars for subsequent writer occurrence
+                cx.clauseVars[op.varIndex] = freshVar;
+                cx.S++;
+              } else if (value is ConstTerm || value is StructTerm) {
+                // Query has ground term, clause expects reader
+                // Create fresh variable, bind it to the term, store in clauseVars
+                final freshVar = cx.rt.heap.allocateFreshVar();
+                cx.rt.heap.addVariable(freshVar);
+                cx.sigmaHat[freshVar] = value;
+                cx.clauseVars[op.varIndex] = freshVar;
                 cx.S++;
               } else {
                 // Mismatch

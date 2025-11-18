@@ -387,7 +387,7 @@ headStruct('[|]', 2, 11)       // Match X11 against [|]/2
 - In READ mode:
   - Extract value at S (may be constant, structure, writer variable, or reader term)
   - Store the extracted value in clause variable Xi
-  - If unbound writer: record writer-to-writer unification in σ̂w
+  - If unbound writer: FAIL (writer-to-writer binding prohibited by WxW)
   - If bound writer: use its value (including bound structures)
   - If reader with bound paired writer: dereference and use paired writer's value
   - If reader with unbound paired writer: store the reader term itself in Xi
@@ -1296,8 +1296,17 @@ Goals suspend when encountering unbound readers:
 
 ### SRSW Enforcement
 The Single-Reader/Single-Writer constraint operates at two levels:
-- **Compile time**: Each clause verified to contain at most one occurrence of any writer/reader
-- **Runtime**: Variable table tracks usage across clauses/agents to detect dynamic violations
+- **Compile time (syntactic restriction)**: Each variable occurs as a reader/writer
+  PAIR with exactly one writer AND one reader per clause (unless ground guard allows
+  multiple readers)
+- **Runtime (invariant)**: No new occurrences created that violate SRSW
+
+### WxW (No Writer-to-Writer Binding) Restriction
+
+GLP prohibits writer-to-writer binding to ensure no readers are abandoned:
+- If writers X and Y unified, their readers X? and Y? would have no writer to provide values
+- Runtime must FAIL immediately on writer-to-writer unification attempts
+- This is NOT a suspension case - it's a definitive failure
 
 ## 17. Memory Layout (Dart Implementation)
 

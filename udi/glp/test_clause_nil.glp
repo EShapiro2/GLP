@@ -2,4 +2,4 @@
 clause(foo(a, b, []), true).
 
 % Query that should bind Z to []
-test(Z?) :- clause(foo(a, b, Z), _).
+test(Z?) :- clause(foo(a, b, Z), Body), true.

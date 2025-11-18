@@ -19,7 +19,7 @@ To understand the GLP implementation requirements, focus on these sections in or
 
 - **Writer** `X`: Single-assignment variable (promise) - can be written to exactly once
 - **Reader** `X?`: Paired read-only access to writer's future value
-- **SRSW Requirement**: In any clause, each variable (reader or writer) occurs **at most once**
+- **SRSW Requirement**: Variables occur as reader/writer PAIRS in clauses, with exactly one writer AND one reader (exception: ground guard allows multiple readers)
 - This eliminates need for distributed unification - just point-to-point communication
 
 ### Writer Unification (Definition in Section 3)
@@ -34,6 +34,13 @@ Writer unification of two terms has three possible outcomes:
 - Only binds writers: Vσ ⊂ V
 - Does not bind writers to writers (would abandon paired readers)
 - No cycles through readers: X? does not occur in Xσ (prevents circular terms)
+
+### WxW (No Writer-to-Writer Binding) Restriction
+
+GLP prohibits writer-to-writer binding to ensure no readers are abandoned:
+- If writers X and Y unified, their readers X? and Y? would have no writer to provide values
+- Runtime must FAIL immediately on writer-to-writer unification attempts
+- This is NOT a suspension case - it's a definitive failure
 
 ### GLP Transition System (Definition 10, line 317)
 
@@ -199,11 +206,18 @@ partition(Pivot, [X | Xs?], Smaller, [X | Greater]) :-
 - ⏳ `X = Y` - unification guard (suspends on unbound readers, fails if cannot unify)
 - ⏳ `X \= Y` - non-unification guard (succeeds if cannot unify, suspends on unbound readers)
 
-### CRITICAL: Ground Guards and SRSW Relaxation
+### CRITICAL: Ground Guards - Exception to Strict SRSW
 
-**Guards that guarantee groundness allow multiple reader occurrences.**
+The SRSW syntactic restriction requires "exactly one of each" in a clause. However, there is ONE exception:
 
-When a guard ensures a variable is ground (contains no unbound variables), that variable may appear multiple times as a reader in the clause body without violating SRSW. This is because ground terms contain no writers to expose.
+**When a guard guarantees groundness, multiple READER occurrences are allowed.**
+
+Why this is safe:
+- Ground terms contain no unbound writers
+- Multiple readers cannot violate single-writer when no writer can be exposed
+- This exception is ESSENTIAL for concurrent programming patterns
+
+This is NOT a violation but a controlled relaxation under specific conditions.
 
 **Guards that imply groundness**:
 - ✅ `ground(X)` - explicitly tests for groundness

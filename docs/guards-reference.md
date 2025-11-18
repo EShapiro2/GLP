@@ -4,6 +4,15 @@
 
 ---
 
+## WxW (No Writer-to-Writer Binding) Restriction
+
+GLP prohibits writer-to-writer binding to ensure no readers are abandoned:
+- If writers X and Y unified, their readers X? and Y? would have no writer to provide values
+- Runtime must FAIL immediately on writer-to-writer unification attempts
+- This is NOT a suspension case - it's a definitive failure
+
+---
+
 ## Overview
 
 Guards are pure tests with **three-valued semantics** (success/suspend/fail) that appear before the `|` separator in GLP clauses. Guards are **patient**—they suspend on unbound variables rather than fail.
@@ -84,9 +93,9 @@ run(Goal) :- otherwise | execute('write', ['No clauses for: ']),
 
 ---
 
-## CRITICAL: Ground Guards and SRSW Relaxation
+## CRITICAL: Ground Guards - The ONLY Exception to SRSW Syntactic Restriction
 
-**Guards that guarantee groundness allow multiple reader occurrences.**
+Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The ONLY exception: when guards guarantee groundness, multiple reader occurrences are permitted because ground terms cannot expose writers.
 
 ### The Rule
 

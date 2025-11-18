@@ -43,7 +43,7 @@ Suspended goals are stored in a suspension table indexed by reader variables, wi
 The runtime leverages Dart's garbage collector rather than implementing stop-and-copy collection as in FCP. The heap is implemented as a Dart List of tagged cells, growing dynamically as needed. Stack frames are Dart objects that participate in standard garbage collection. The variable table uses weak references where appropriate to avoid preventing collection of abandoned variables. This design significantly simplifies the runtime compared to FCP's explicit memory management while maintaining efficient execution.
 
 #### Unification Engine
-The writer MGU algorithm forms the core of goal reduction. Unlike standard Prolog unification, it enforces GLP's asymmetric variable semantics where only writers can be bound, readers can only be verified, and writer-to-writer bindings are prohibited. The engine maintains a mode flag (READ/WRITE) that determines instruction behavior, similar to the WAM but adapted for reader/writer semantics. When unification encounters an unbound reader, it returns a suspension result rather than failing, triggering goal suspension until the paired writer receives a value.
+The writer MGU algorithm forms the core of goal reduction. Unlike standard Prolog unification, it enforces GLP's asymmetric variable semantics where only writers can be bound, readers can only be verified, and writer-to-writer bindings cause immediate failure (not tracked or deferred) to prevent abandoned readers per WxW restriction. The engine maintains a mode flag (READ/WRITE) that determines instruction behavior, similar to the WAM but adapted for reader/writer semantics. When unification encounters an unbound reader, it returns a suspension result rather than failing, triggering goal suspension until the paired writer receives a value.
 
 ### Data Structures
 
@@ -254,7 +254,7 @@ class ROQueues {
 }
 ```
 
-**SRSW Enforcement**: The current implementation does NOT enforce SRSW at runtime - this is expected to be enforced by the compiler. The runtime trusts that bytecode is well-formed.
+**SRSW Enforcement**: Runtime assumes compiler-verified SRSW syntactic restriction. Runtime must fail on writer-to-writer unification attempts (WxW violation).
 
 ### Execution Pipeline
 
