@@ -64,12 +64,9 @@ class Scheduler {
     // Extract arguments from environment
     final args = <String>[];
     for (int i = 0; i < 10; i++) {
-      final w = env.writerBySlot[i];
-      final r = env.readerBySlot[i];
-      if (w != null) {
-        args.add(_formatTerm(VarRef(w, isReader: false)));
-      } else if (r != null) {
-        args.add(_formatTerm(VarRef(r, isReader: true)));
+      final arg = env.arg(i);
+      if (arg != null) {
+        args.add(_formatTerm(arg));
       } else {
         break;
       }

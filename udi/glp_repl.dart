@@ -204,16 +204,15 @@ void main() async {
 
       // Set up heap cells for each argument and track variable writers
       final queryVarWriters = <String, int>{};
-      final readers = <int, int>{};
-      final writers = <int, int>{};
+      final argSlots = <int, rt.Term>{};
 
       for (int i = 0; i < args.length; i++) {
         final arg = args[i];
-        final (readerId, writerId) = _setupArgument(runtime, arg, i, readers, writers, queryVarWriters);
+        _setupArgument(runtime, arg, i, argSlots, queryVarWriters);
       }
 
       // Set up goal environment
-      final env = CallEnv(readers: readers, writers: writers);
+      final env = CallEnv(args: argSlots);
       runtime.setGoalEnv(goalId, env);
       runtime.setGoalProgram(goalId, 'main');
 
@@ -318,12 +317,11 @@ bool _isConjunction(String query) {
 
 // Set up heap cells for a query argument
 // Returns (readerId, writerId) for the argument slot
-(int, int) _setupArgument(
+void _setupArgument(
   GlpRuntime runtime,
   Term arg,
   int argSlot,
-  Map<int, int> readers,
-  Map<int, int> writers,
+  Map<int, rt.Term> argSlots,
   Map<String, int> queryVarWriters,
 ) {
   if (arg is VarTerm) {
@@ -337,12 +335,10 @@ bool _isConjunction(String query) {
 
     // Map to argument slot
     if (arg.isReader) {
-      readers[argSlot] = readerId;
+      argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
     } else {
-      writers[argSlot] = writerId;
+      argSlots[argSlot] = rt.VarRef(writerId, isReader: false);
     }
-
-    return (readerId, writerId);
   } else if (arg is ListTerm) {
     // List: create structure and bind it (FCP: both cells created internally)
     final (writerId, readerId) = runtime.heap.allocateFreshPair();
@@ -356,15 +352,13 @@ bool _isConjunction(String query) {
     }
 
     // Always use reader for pre-bound values
-    readers[argSlot] = readerId;
-    return (readerId, writerId);
+    argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
   } else if (arg is ConstTerm) {
     // Constant: create bound writer/reader (FCP: both cells created internally)
     final (writerId, readerId) = runtime.heap.allocateFreshPair();
     runtime.heap.bindWriterConst(writerId, arg.value);
 
-    readers[argSlot] = readerId;
-    return (readerId, writerId);
+    argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
   } else if (arg is StructTerm) {
     // Structure: create and bind it (FCP: both cells created internally)
     final (writerId, readerId) = runtime.heap.allocateFreshPair();
@@ -373,8 +367,7 @@ bool _isConjunction(String query) {
     final structValue = _buildStructTerm(runtime, arg, queryVarWriters) as rt.StructTerm;
     runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
 
-    readers[argSlot] = readerId;
-    return (readerId, writerId);
+    argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
   } else {
     throw Exception('Unsupported argument type: ${arg.runtimeType}');
   }
