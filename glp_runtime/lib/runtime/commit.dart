@@ -58,6 +58,7 @@ class CommitOps {
       heap.cells[wAddr].tag = CellTag.ValueTag;
       heap.cells[rAddr].content = value;
       heap.cells[rAddr].tag = CellTag.ValueTag;
+      print('[DEBUG COMMIT] Bound varId $varId: W$varId[addr=$wAddr] = $value, R$varId[addr=$rAddr] = $value');
 
       // FCP lines 245-254: Walk saved suspension list and activate
       if (oldContent is SuspensionRecord) {

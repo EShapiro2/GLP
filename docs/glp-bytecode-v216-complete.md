@@ -394,10 +394,10 @@ headStruct('[|]', 2, 11)       // Match X11 against [|]/2
   - If reader with bound paired writer: dereference and use paired writer's value
   - If reader with unbound paired writer: store the reader term itself in Xi
 - In WRITE mode:
-  - If Xi is unbound (first use): allocate fresh variable ID, create `VarRef(newId, isReader: false)`, store at H and in Xi
+  - If Xi is unbound (first use): allocate fresh variable ID (creates writer/reader pair), store `VarRef(newId, isReader: false)` at H and in clauseVars[i]
   - If Xi contains VarRef (subsequent use): extract varId from existing VarRef, create `VarRef(varId, isReader: false)`, store at H
     - Rationale: Under SRSW, varId identifies the variable; isReader specifies access mode (writer vs reader)
-    - Same variable accessed in writer mode, regardless of how it was previously accessed
+    - clauseVars[i] always stores the writer (base variable) regardless of whether first occurrence is reader or writer, allowing the subsequent occurrence (which will be in opposite mode per SRSW) to access the same variable
 - Increment S (READ) or H (WRITE)
 
 **Note**: Writer-to-writer unification follows Writer MGU semantics. In READ mode, this instruction extracts any term (including nested structures and reader terms) for later matching. When a reader term is extracted, subsequent operations (like head_structure on that clause variable) will handle suspension if the reader remains unbound at match time.
@@ -407,14 +407,16 @@ headStruct('[|]', 2, 11)       // Match X11 against [|]/2
 **Behavior**:
 - In READ mode:
   - If value at S is reader R: verify R pairs with Xi
-  - If value at S is unbound writer: bind it to reader Xi in σ̂w
+  - If value at S is unbound writer W:
+    - If Xi not yet allocated (first occurrence): allocate fresh variable ID (creates writer/reader pair), bind W to VarRef(newId, isReader: true) in σ̂w, store VarRef(newId, isReader: false) in clauseVars[i]
+    - If Xi already allocated: clauseVars[i] contains VarRef(writerId, isReader: false), bind W to VarRef(writerId, isReader: true) in σ̂w
   - If value at S is bound writer/constant: verify it equals Xi's paired writer value
   - If Xi's paired writer is unbound: add to U and immediately try next clause
 - In WRITE mode:
-  - If Xi is unbound (first use): allocate fresh variable ID, create `VarRef(newId, isReader: true)`, store at H and in Xi
+  - If Xi is unbound (first use): allocate fresh variable ID (creates writer/reader pair), store `VarRef(newId, isReader: true)` at H, store `VarRef(newId, isReader: false)` in clauseVars[i]
   - If Xi contains VarRef (subsequent use): extract varId from existing VarRef, create `VarRef(varId, isReader: true)`, store at H
     - Rationale: Under SRSW, varId identifies the variable; isReader specifies access mode
-    - Same variable accessed in reader mode, regardless of how it was previously accessed
+    - clauseVars[i] always stores the writer (base variable) regardless of whether first occurrence is reader or writer, allowing the subsequent occurrence (which will be in opposite mode per SRSW) to access the same variable
   - If Xi contains ground term (ConstTerm/StructTerm): allocate fresh variable ID, bind it to the ground term, create `VarRef(newId, isReader: true)`, store at H
     - Rationale: When X is bound to constant 1 in HEAD and BODY needs X?, we create a fresh variable bound to 1 and return a reader to it
     - Example: In `qsort([X|Xs], S, [X?|S1?])`, after HEAD matches X=1, BODY builds `[X?|S1?]` by creating a fresh variable V bound to 1, storing `VarRef(V, isReader: true)` in the list

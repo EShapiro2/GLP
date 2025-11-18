@@ -421,11 +421,13 @@ class BytecodeRunner {
                 }
                 // Then check heap bindings
                 else if (cx.rt.heap.isBound(varId)) {
-                  value = cx.rt.heap.getValue(varId);
+                  final boundValue = cx.rt.heap.getValue(varId);
+                  print('[DEBUG] PC $pc: UnifyStructure - isBound=true, getValue=$boundValue');
+                  value = boundValue;
                   print('[DEBUG] PC $pc: UnifyStructure - Dereferenced from heap: $value');
                 }
                 else {
-                  print('[DEBUG] PC $pc: UnifyStructure - VarRef is UNBOUND');
+                  print('[DEBUG] PC $pc: UnifyStructure - isBound($varId)=false, VarRef is UNBOUND');
                 }
               }
 
@@ -453,6 +455,14 @@ class BytecodeRunner {
                 // Enter the nested structure
                 cx.currentStructure = nested;
                 cx.S = 0;
+              } else if (value is VarRef && value.isReader) {
+                // Unbound reader where structure expected
+                // Following three-valued unification: suspend on unbound reader
+                print('[DEBUG] PC $pc: UnifyStructure - SUSPEND! Unbound reader ${value.varId} where ${op.functor}/${op.arity} expected');
+                cx.U.add(value.varId);
+                _softFailToNextClause(cx, pc);
+                pc = _findNextClauseTry(pc);
+                continue;
               } else {
                 // Mismatch - fail to next clause
                 print('[DEBUG] PC $pc: UnifyStructure - MISMATCH! Expected ${op.functor}/${op.arity}, got: $value');
@@ -1791,12 +1801,12 @@ class BytecodeRunner {
               // Don't update clauseVars - keep the original value
               struct.args[cx.S] = VarRef(varId, isReader: true);
             } else if (clauseVarValue == null) {
-              // First occurrence of this variable is a reader!
-              // Must create the variable first (unbound)
+              // First occurrence - allocate variable (creates W/R pair)
               final varId = cx.rt.heap.allocateFreshVar();
               cx.rt.heap.addVariable(varId);
-              // CRITICAL FIX: Store VarRef, not bare ID
-              cx.clauseVars[op.varIndex] = VarRef(varId, isReader: true);
+              // Store WRITER in clauseVars (base variable for subsequent occurrences)
+              cx.clauseVars[op.varIndex] = VarRef(varId, isReader: false);
+              // Store READER in structure being built
               struct.args[cx.S] = VarRef(varId, isReader: true);
             }
             cx.S++;
@@ -1820,11 +1830,12 @@ class BytecodeRunner {
               struct.args[cx.S] = VarRef(varId, isReader: true);
               if (debug) print('  [G${cx.goalId}] UnifyReader BODY: Created V$varId bound to $clauseVarValue, stored reader ref');
             } else if (clauseVarValue == null) {
-              // First occurrence as reader - create variable
+              // First occurrence - allocate variable (creates W/R pair)
               final varId = cx.rt.heap.allocateFreshVar();
               cx.rt.heap.addVariable(varId);
-              // CRITICAL FIX: Store VarRef, not bare ID
-              cx.clauseVars[op.varIndex] = VarRef(varId, isReader: true);
+              // Store WRITER in clauseVars (base variable for subsequent occurrences)
+              cx.clauseVars[op.varIndex] = VarRef(varId, isReader: false);
+              // Store READER in structure being built
               struct.args[cx.S] = VarRef(varId, isReader: true);
               if (debug) print('  [G${cx.goalId}] UnifyReader BODY: Creating FRESH variable V$varId for varIndex=${op.varIndex}');
             }
@@ -1874,13 +1885,15 @@ class BytecodeRunner {
                 cx.S++;
               } else if (value is VarRef && !value.isReader) {
                 // Query has writer, clause expects reader
-                // Need to create fresh clause variable and bind query writer to it
+                // Allocate fresh variable (creates W/R pair), bind query writer to reader
                 final freshVar = cx.rt.heap.allocateFreshVar();
                 cx.rt.heap.addVariable(freshVar);
-                // Bind query writer to fresh reader in σ̂w
-                cx.sigmaHat[value.varId] = VarRef(freshVar, isReader: true);
-                // Store fresh var ID in clauseVars for subsequent writer occurrence
-                cx.clauseVars[op.varIndex] = freshVar;
+                // Bind goal's writer to clause reader in σ̂w
+                final readerRef = VarRef(freshVar, isReader: true);
+                cx.sigmaHat[value.varId] = readerRef;
+                print('[DEBUG σ̂w] UnifyReader READ: Added σ̂w[W${value.varId}] = $readerRef');
+                // Store WRITER in clauseVars for subsequent writer occurrence
+                cx.clauseVars[op.varIndex] = VarRef(freshVar, isReader: false);
                 cx.S++;
               } else if (value is ConstTerm || value is StructTerm) {
                 // Query has ground term, clause expects reader
@@ -1949,6 +1962,11 @@ class BytecodeRunner {
       if (op is Commit) {
         // Commit only reached if HEAD and GUARD phases succeeded
         // Apply σ̂w to heap atomically
+
+        print('[DEBUG] PC $pc: COMMIT - σ̂w contains ${cx.sigmaHat.length} bindings:');
+        cx.sigmaHat.forEach((writerId, value) {
+          print('  W$writerId → $value');
+        });
 
         // Convert tentative structures to real Terms before committing
         final convertedSigmaHat = <int, Object?>{};
@@ -2037,10 +2055,12 @@ class BytecodeRunner {
         }
 
         // Apply σ̂w: bind writers to tentative values, then wake suspended goals
+        print('[DEBUG] PC $pc: COMMIT - Applying ${convertedSigmaHat.length} bindings to heap...');
         final acts = CommitOps.applySigmaHatFCP(
           heap: cx.rt.heap,
           sigmaHat: convertedSigmaHat,
         );
+        print('[DEBUG] PC $pc: COMMIT - Applied successfully, reactivating ${acts.length} goal(s)');
 
         // print('[TRACE Post-Commit] Enqueueing ${acts.length} reactivated goal(s):');
         for (final a in acts) {

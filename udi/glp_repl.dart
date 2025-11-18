@@ -227,6 +227,7 @@ void main() async {
       final ran = scheduler.drain(maxCycles: 10000, debug: debugTrace);
 
       // Display variable bindings
+      print('[DEBUG REPL] queryVarWriters = $queryVarWriters');
       if (queryVarWriters.isNotEmpty) {
         for (final entry in queryVarWriters.entries) {
           final varName = entry.key;
@@ -389,16 +390,20 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
       // Note: arg.name does NOT include the '?' suffix, so use it directly
       final baseName = arg.name;
       final existingWriterId = queryVarWriters[baseName];
+      print('[DEBUG REPL] Structure arg: $baseName (isReader=${arg.isReader}), existing=$existingWriterId');
 
       if (arg.isReader && existingWriterId != null) {
         // Reader for existing writer - in single-ID, use same ID
+        print('[DEBUG REPL]   Reusing as reader: R$existingWriterId');
         argTerms.add(rt.VarRef(existingWriterId, isReader: true));
       } else if (!arg.isReader && existingWriterId != null) {
         // Writer already exists - reuse it
+        print('[DEBUG REPL]   Reusing as writer: W$existingWriterId');
         argTerms.add(rt.VarRef(existingWriterId, isReader: false));
       } else {
         // First occurrence - create fresh pair (FCP: both cells created internally)
         final (writerId, readerId) = runtime.heap.allocateFreshPair();
+        print('[DEBUG REPL]   Creating fresh: W$writerId/R$readerId');
         if (!arg.isReader) {
           queryVarWriters[baseName] = writerId;
         }

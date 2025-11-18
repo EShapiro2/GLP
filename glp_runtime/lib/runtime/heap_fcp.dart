@@ -89,7 +89,15 @@ class HeapFCP {
         return content as Term;
       }
 
-      // Follow pointer to another cell
+      // Check if this is a writer cell pointing to its paired reader
+      // Writer cells contain Pointer(readerAddr) but should NOT be dereferenced
+      // Instead, return the writer VarRef
+      if (cell.content is Pointer && cell.tag == CellTag.WrtTag) {
+        // This is an unbound writer → return writer VarRef, don't follow to reader
+        return _varRefFromAddr(current);
+      }
+
+      // Follow pointer to another cell (for other pointer types)
       if (cell.content is Pointer) {
         current = (cell.content as Pointer).targetAddr;
         continue;

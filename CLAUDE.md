@@ -484,3 +484,5 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - made sure claude.md points to the correct file
 - read again clause.md, and if its not there update it:  NEVER proceed in implemenetation without a spec that guides it. code should be revised only if it violates the spec.  if the spec is not clear, revise it first.
 - when we are discussing, do not move away from the discussion or do anything else until user agrees that the discussion is over
+- i want  dart run glp_repl.dart  please remember that
+- always test all repl tests after a change
