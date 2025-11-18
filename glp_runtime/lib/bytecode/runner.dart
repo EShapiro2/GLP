@@ -1523,6 +1523,14 @@ class BytecodeRunner {
 
               if (targetWriterId != null) {
                 cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
+
+                // Store VarRef to bound writer in argSlots (same as SetWriter/UnifyReader)
+                final targetSlot = cx.clauseVars[-2];
+                if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
+                  cx.argSlots[targetSlot] = VarRef(targetWriterId, isReader: true);
+                  cx.clauseVars.remove(-2);
+                }
+
                 cx.currentStructure = null;
                 cx.mode = UnifyMode.read;
                 cx.S = 0;
@@ -1647,6 +1655,14 @@ class BytecodeRunner {
 
               if (targetWriterId != null) {
                 cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
+
+                // Store VarRef to bound writer in argSlots (same as SetWriter)
+                final targetSlot = cx.clauseVars[-2];
+                if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
+                  cx.argSlots[targetSlot] = VarRef(targetWriterId, isReader: true);
+                  cx.clauseVars.remove(-2);
+                }
+
                 cx.currentStructure = null;
                 cx.mode = UnifyMode.read;
                 cx.S = 0;
@@ -2036,9 +2052,12 @@ class BytecodeRunner {
       }
 
       if (op is PutConstant) {
-        // Store constant directly in argument slot - no heap allocation
-        // Per spec v2.16 section 7.4: store ConstTerm(c) in Ai
-        cx.argSlots[op.argSlot] = ConstTerm(op.value);
+        // Create fresh variable, bind to constant, store reader VarRef in argSlot
+        // Per baseline behavior: constants are stored as VarRefs to bound variables
+        final varId = cx.rt.heap.allocateFreshVar();
+        cx.rt.heap.addVariable(varId);
+        cx.rt.heap.bindWriterConst(varId, op.value);
+        cx.argSlots[op.argSlot] = VarRef(varId, isReader: true);
         pc++; continue;
       }
 
@@ -2129,10 +2148,11 @@ class BytecodeRunner {
                 if (cx.onActivation != null) cx.onActivation!(a);
               }
 
-              // Per spec v2.16 section 7.1: Store StructTerm in argSlots
+              // Per spec v2.16 section 7.1: Store VarRef to bound writer in argSlots
               final targetSlot = cx.clauseVars[-2];
               if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
-                cx.argSlots[targetSlot] = struct; // Store StructTerm directly
+                // Store VarRef (as reader) to the writer that holds the structure
+                cx.argSlots[targetSlot] = VarRef(targetWriterId, isReader: true);
                 cx.clauseVars.remove(-2);
               }
             }
@@ -3276,15 +3296,16 @@ class BytecodeRunner {
 
       if (t is VarRef) {
         if (t.isReader) {
-          // Reader - check if paired writer is bound
-          final varId = t.varId;
-          if (cx.rt.heap.isWriterBound(varId)) {
-            final boundValue = cx.rt.heap.getValue(varId);
+          // Reader - get paired writer and check if bound
+          final readerId = t.varId;
+          final wid = cx.rt.heap.writerIdForReader(readerId);
+          if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+            final boundValue = cx.rt.heap.valueOfWriter(wid);
             // CRITICAL FIX: Recursively dereference the bound value
             return dereference(boundValue);
           } else {
             // Unbound reader - track it
-            unboundReaders.add(varId);
+            unboundReaders.add(readerId);
             return t;
           }
         } else {
