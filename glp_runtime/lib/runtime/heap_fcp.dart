@@ -141,6 +141,14 @@ class HeapFCP {
       finalValue = derefAddr(targetWAddr);
     }
 
+    // Defensive WxW check: prevent writer-to-writer binding
+    if (finalValue is VarRef && !finalValue.isReader) {
+      // Attempting to bind writer varId to another unbound writer
+      if (!isWriterBound(varId) && !isWriterBound(finalValue.varId)) {
+        throw StateError('WxW violation in bindVariable: W$varId → W${finalValue.varId} (both unbound)');
+      }
+    }
+
     // Save suspension list BEFORE overwriting reader content
     final oldContent = cells[rAddr].content;
 

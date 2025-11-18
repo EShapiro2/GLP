@@ -1279,7 +1279,11 @@ class BytecodeRunner {
               if (freshVarBinding != null) {
                 cx.sigmaHat[arg.varId] = freshVarBinding;
               } else if (arg.varId != storedValue) {
-                cx.sigmaHat[arg.varId] = VarRef(storedValue, isReader: true);
+                // WxW violation: both storedValue and arg.varId are unbound writers
+                // Spec: "Runtime must FAIL immediately on writer-to-writer unification"
+                _softFailToNextClause(cx, pc);
+                pc = _findNextClauseTry(pc);
+                continue;
               }
             } else if (storedValue is Term) {
               cx.sigmaHat[arg.varId] = storedValue;
@@ -1624,7 +1628,18 @@ class BytecodeRunner {
                 // Clause variable is a fresh variable ID from UnifyReader
                 // Bind it to the value from query structure
                 if (value is VarRef && !value.isReader) {
-                  // Query has writer - bind clause var to query writer
+                  // Query has writer - check for WxW violation
+                  final clauseVarBound = cx.rt.heap.isWriterBound(existingValue);
+                  final queryVarBound = cx.rt.heap.isWriterBound(value.varId);
+
+                  if (!clauseVarBound && !queryVarBound) {
+                    // WxW violation: both are unbound writers
+                    _softFailToNextClause(cx, pc);
+                    pc = _findNextClauseTry(pc);
+                    continue;
+                  }
+
+                  // At least one is bound - safe to record binding
                   cx.sigmaHat[existingValue] = value;
                   cx.S++;
                 } else if (value is VarRef && value.isReader) {
@@ -1943,9 +1958,9 @@ class BytecodeRunner {
           final writerId = entry.key;
           final value = entry.value;
           // print('  W$writerId → $value');
-          // FLAG invalid writer→writer bindings
+          // Enforce WxW: writer→writer bindings are prohibited
           if (value is VarRef && !value.isReader) {
-            // print('    ⚠️  WARNING: Writer→Writer binding detected!');
+            throw StateError('WxW violation in commit: W$writerId → W${value.varId} (both unbound writers)');
           }
         }
 

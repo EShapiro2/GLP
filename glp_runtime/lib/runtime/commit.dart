@@ -19,6 +19,19 @@ class CommitOps {
 
     final activations = <GoalRef>[];
 
+    // Defensive WxW validation before applying bindings
+    for (final entry in sigmaHat.entries) {
+      final value = entry.value;
+      if (value is VarRef && !value.isReader) {
+        final clauseWriterId = entry.key;
+        final queryWriterId = value.varId;
+        // Check if both are unbound (WxW violation)
+        if (!heap.isWriterBound(clauseWriterId) && !heap.isWriterBound(queryWriterId)) {
+          throw StateError('WxW violation in applySigmaHatFCP: W$clauseWriterId → W$queryWriterId (both unbound)');
+        }
+      }
+    }
+
     for (final entry in sigmaHat.entries) {
       final varId = entry.key;
       var value = entry.value;
