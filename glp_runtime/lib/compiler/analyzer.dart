@@ -26,13 +26,18 @@ class VariableInfo {
   VariableInfo(this.name, this.isWriter);
 
   bool get isSRSWValid {
-    // Writer can occur once as writer
-    if (isWriter && writerOccurrences > 1) return false;
+    // Revised SRSW: Each variable must have exactly one writer AND at least one reader
+    // Exception: Ground guard allows multiple reader occurrences
 
-    // Reader can occur once (unless ground guard allows multiple)
-    // For now, simple check: reader occurs at most once
-    // TODO: Allow multiple reader occurrences with ground guard
-    if (!isWriter && readerOccurrences > 1) return false;
+    // Must have exactly one writer occurrence
+    if (writerOccurrences != 1) return false;
+
+    // Must have at least one reader occurrence
+    if (readerOccurrences == 0) return false;
+
+    // Multiple readers allowed only with ground guard (checked in verifySRSW)
+    // This property doesn't have access to ground info, so we allow it here
+    // and verifySRSW will enforce the ground guard requirement
 
     return true;
   }
@@ -88,6 +93,26 @@ class VariableTable {
       if (info.readerOccurrences > 1 && !isGrounded(info.name)) {
         throw CompileError(
           'SRSW violation: Reader variable "${info.name}?" occurs ${info.readerOccurrences} times without ground guard',
+          info.firstOccurrence?.line ?? 0,
+          info.firstOccurrence?.column ?? 0,
+          phase: 'analyzer'
+        );
+      }
+
+      // Check for complete reader/writer pairs (revised SRSW requirement)
+      // Each variable must have exactly one writer AND at least one reader
+      if (info.writerOccurrences != 1) {
+        throw CompileError(
+          'SRSW violation: Variable "${info.name}" must have exactly one writer occurrence (found ${info.writerOccurrences})',
+          info.firstOccurrence?.line ?? 0,
+          info.firstOccurrence?.column ?? 0,
+          phase: 'analyzer'
+        );
+      }
+
+      if (info.readerOccurrences == 0) {
+        throw CompileError(
+          'SRSW violation: Variable "${info.name}" has writer but no reader (must have at least one reader)',
           info.firstOccurrence?.line ?? 0,
           info.firstOccurrence?.column ?? 0,
           phase: 'analyzer'
