@@ -405,7 +405,7 @@ class Parser {
     }
   }
 
-  // List: [], [H|T], [X], [X,Y,Z]
+  // List: [], [H|T], [X], [X,Y,Z], [X,Y,Z|T]
   Term _parseList() {
     final bracketToken = _consume(TokenType.LBRACKET, 'Expected "["');
 
@@ -420,18 +420,22 @@ class Parser {
 
     elements.add(_parseTerm());
 
-    // Check for tail syntax [H|T]
+    // Parse remaining elements and check for tail
+    while (_match(TokenType.COMMA)) {
+      elements.add(_parseTerm());
+    }
+
+    // Check for tail syntax [H|T] or [X,Y|T]
     if (_match(TokenType.PIPE)) {
       tail = _parseTerm();
       _consume(TokenType.RBRACKET, 'Expected "]" after list tail');
 
-      // Build right-associative list: [X|T]
-      return ListTerm(elements[0], tail, bracketToken.line, bracketToken.column);
-    }
-
-    // Parse remaining elements [X, Y, Z]
-    while (_match(TokenType.COMMA)) {
-      elements.add(_parseTerm());
+      // Build right-associative list: [X,Y,Z|T] -> [X|[Y|[Z|T]]]
+      Term result = tail;
+      for (int i = elements.length - 1; i >= 0; i--) {
+        result = ListTerm(elements[i], result, bracketToken.line, bracketToken.column);
+      }
+      return result;
     }
 
     _consume(TokenType.RBRACKET, 'Expected "]" after list elements');
