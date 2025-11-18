@@ -372,9 +372,15 @@ class BytecodeRunner {
         continue;
       }
 
-      // Pop: Restore structure processing state
+      // Pop: Restore structure processing state (FCP AM semantics)
       if (op is Pop) {
         final state = cx.clauseVars[op.regIndex] as _StructureState;
+
+        // FCP AM: Pop saves the built nested structure to register
+        // This makes it available for subsequent UnifyWriter/UnifyVariable
+        cx.clauseVars[op.regIndex] = cx.currentStructure;
+
+        // Restore parent context
         cx.S = state.S;
         cx.mode = state.mode;
         cx.currentStructure = state.currentStructure;
@@ -1018,7 +1024,15 @@ class BytecodeRunner {
         if (arg is VarRef && !arg.isReader) {
           cx.clauseVars[op.varIndex] = arg.varId;
         } else if (arg is VarRef && arg.isReader) {
-          cx.clauseVars[op.varIndex] = arg.varId;
+          // Reader: check if bound
+          final wid = cx.rt.heap.writerIdForReader(arg.varId);
+          if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
+            // Unbound reader - add to U and fail to next clause
+            pc = _suspendAndFail(cx, arg.varId, pc);
+            continue;
+          }
+          // Bound reader - store the writer ID for dereferencing
+          cx.clauseVars[op.varIndex] = wid;
         } else if (arg is ConstTerm || arg is StructTerm) {
           // Ground term - store directly
           cx.clauseVars[op.varIndex] = arg;
@@ -1552,6 +1566,9 @@ class BytecodeRunner {
               struct.args[cx.S] = VarRef(value, isReader: false);
             } else if (value is ConstTerm || value is StructTerm) {
               // It's a ground term extracted from READ mode - use directly
+              struct.args[cx.S] = value;
+            } else if (value is _TentativeStruct) {
+              // FCP AM: Nested tentative structure from Push/Pop sequence
               struct.args[cx.S] = value;
             } else if (value == null) {
               // Create fresh variable

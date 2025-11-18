@@ -368,7 +368,7 @@ class CodeGenerator {
       }
 
     } else if (term is StructTerm) {
-      // Nested structure: use Push/UnifyStructure/Pop pattern
+      // Nested structure: use Push/UnifyStructure/Pop pattern (FCP AM design)
       if (inHead) {
         final saveReg = ctx.allocateTemp();
         ctx.emit(bc.Push(saveReg));
@@ -377,6 +377,8 @@ class CodeGenerator {
           _generateStructureElement(subArg, varTable, ctx, inHead: true);
         }
         ctx.emit(bc.Pop(saveReg));
+        // FCP AM: After Pop, must place nested structure at S and increment
+        ctx.emit(bcv2.UnifyVariable(saveReg, isReader: false));
       } else {
         // WRITE mode
         final tempReg = ctx.allocateTemp();

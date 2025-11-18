@@ -1,0 +1,10 @@
+% Test exact structure from qsort clause
+
+run(true).
+run((A,B)) :- run(A?), run(B?).
+run(A) :- otherwise | clause(A?,B), run(B?).
+
+clause(qsort([1], S?, R), (partition([], 1, Sm, Lg),
+	qsort(Sm?, S, [1 | S1?]),
+	qsort(Lg?, S1, R?))) :-
+	true | true.

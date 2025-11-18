@@ -482,3 +482,5 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - please always commitm and test baseline before attemptin to fix the next bug
 - read and follow the Mandatory protocol for debugging the GLP implementation with GLP programs
 - made sure claude.md points to the correct file
+- read again clause.md, and if its not there update it:  NEVER proceed in implemenetation without a spec that guides it. code should be revised only if it violates the spec.  if the spec is not clear, revise it first.
+- when we are discussing, do not move away from the discussion or do anything else until user agrees that the discussion is over

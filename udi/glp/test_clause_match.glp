@@ -1,0 +1,2 @@
+% Test with reader/writer pair
+clause(qsort([], Rest?, Rest), true).
