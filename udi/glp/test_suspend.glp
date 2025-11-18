@@ -1,0 +1,7 @@
+% Test suspended goals (resolvent)
+
+% Helper that requires bound input
+needs_a(a).
+
+% Test that creates suspended goal
+test_suspend(X) :- needs_a(X?).

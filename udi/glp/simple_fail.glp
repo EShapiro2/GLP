@@ -1,0 +1,2 @@
+% Simple failure test - no clauses match
+fail_test :- fail_test.

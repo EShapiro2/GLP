@@ -180,16 +180,28 @@ class Scheduler {
           print('${act.id}: $cleanGoal → failed');
           // Remove from suspended list if it was there
           suspendedGoals.remove(act.id);
+
+          // Stop execution on goal failure
+          if (debug && suspendedGoals.isNotEmpty) {
+            // Show suspended goals (resolvent) before stopping
+            final resolvent = suspendedGoals.values.map((g) =>
+              g.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(')
+            ).toList();
+            print('Resolvent (suspended): ${resolvent.join(', ')}');
+          }
+          return ran;
         }
       }
       cycles++;
     }
 
-    // Show final resolvent (suspended goals that never resumed) if debug is on
-    // if (debug && suspendedGoals.isNotEmpty) {
-    //   final resolvent = suspendedGoals.values.toList();
-    //   print('Resolvent: ${resolvent.join(', ')}');
-    // }
+    // Show final resolvent (suspended goals that never resumed) at normal termination
+    if (debug && suspendedGoals.isNotEmpty) {
+      final resolvent = suspendedGoals.values.map((g) =>
+        g.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(')
+      ).toList();
+      print('Resolvent (suspended): ${resolvent.join(', ')}');
+    }
 
     return ran;
   }
