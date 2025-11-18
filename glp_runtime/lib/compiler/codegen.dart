@@ -263,42 +263,10 @@ class CodeGenerator {
       // Step 2: Match the structure at the temp register (not argSlot!)
       ctx.emit(bc.HeadStructure(term.functor, term.arity, tempReg));
 
-      final nestedStructures = <int, Term>{}; // Map of tempReg -> nested term
-
+      // FCP AM: Process ALL arguments inline using Push/Pop for nested structures
+      // _generateStructureElement already has correct Push/Pop logic (lines 335-361)
       for (final subArg in term.args) {
-        if (subArg is ListTerm && !subArg.isNil) {
-          // Nested list: extract to temp, defer processing
-          final tempReg = ctx.allocateTemp();
-          ctx.emit(bcv2.UnifyVariable(tempReg, isReader: false));
-          nestedStructures[tempReg] = subArg;
-        } else if (subArg is StructTerm) {
-          // Nested structure: extract to temp, defer processing
-          final tempReg = ctx.allocateTemp();
-          ctx.emit(bcv2.UnifyVariable(tempReg, isReader: false));
-          nestedStructures[tempReg] = subArg;
-        } else {
-          // Simple term: process inline
-          _generateStructureElement(subArg, varTable, ctx, inHead: true);
-        }
-      }
-
-      // Pass 2: Process deferred nested structures
-      for (final entry in nestedStructures.entries) {
-        final tempReg = entry.key;
-        final nestedTerm = entry.value;
-
-        if (nestedTerm is ListTerm) {
-          // Match list structure at temp
-          ctx.emit(bc.HeadStructure('.', 2, tempReg));
-          if (nestedTerm.head != null) _generateStructureElement(nestedTerm.head!, varTable, ctx, inHead: true);
-          if (nestedTerm.tail != null) _generateStructureElement(nestedTerm.tail!, varTable, ctx, inHead: true);
-        } else if (nestedTerm is StructTerm) {
-          // Match structure at temp
-          ctx.emit(bc.HeadStructure(nestedTerm.functor, nestedTerm.arity, tempReg));
-          for (final subSubArg in nestedTerm.args) {
-            _generateStructureElement(subSubArg, varTable, ctx, inHead: true);
-          }
-        }
+        _generateStructureElement(subArg, varTable, ctx, inHead: true);
       }
 
     } else if (term is UnderscoreTerm) {
@@ -339,6 +307,8 @@ class CodeGenerator {
           if (term.head != null) _generateStructureElement(term.head!, varTable, ctx, inHead: true);
           if (term.tail != null) _generateStructureElement(term.tail!, varTable, ctx, inHead: true);
           ctx.emit(bc.Pop(saveReg));
+          // FCP AM: After Pop, must place nested structure at S and increment
+          ctx.emit(bcv2.UnifyVariable(saveReg, isReader: false));
         } else {
           // WRITE mode (BODY): building nested structure within argument structure
           final tempReg = ctx.allocateTemp();

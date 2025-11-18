@@ -395,7 +395,23 @@ class BytecodeRunner {
           if (cx.currentStructure is StructTerm) {
             final parent = cx.currentStructure as StructTerm;
             if (cx.S < parent.args.length) {
-              final value = parent.args[cx.S];
+              Object? value = parent.args[cx.S];
+
+              // CRITICAL FIX: Dereference if it's a variable reference
+              // This handles metainterpreter/reduce cases where nested structures
+              // come through variable bindings
+              if (value is VarRef) {
+                final varId = value.varId;
+                // Check sigma-hat first (tentative bindings)
+                if (cx.sigmaHat.containsKey(varId)) {
+                  value = cx.sigmaHat[varId];
+                }
+                // Then check heap bindings
+                else if (cx.rt.heap.isWriterBound(varId)) {
+                  value = cx.rt.heap.valueOfWriter(varId);
+                }
+              }
+
               if (value is StructTerm && value.functor == op.functor && value.args.length == op.arity) {
                 // Match! Enter this structure
                 cx.currentStructure = value;
