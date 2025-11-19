@@ -1,6 +1,7 @@
 import 'machine_state.dart';
 import 'heap_fcp.dart';
 import 'suspension.dart';
+import 'terms.dart';
 
 /// Suspension operations using FCP-exact shared suspension records
 /// Records stored in wrapper nodes in reader cells (no separate ROQ)
@@ -22,8 +23,17 @@ class SuspendOps {
 
     // Create wrapper node for each reader cell (independent next pointers)
     for (final varId in readerVarIds) {
-      final (_, rAddr) = heap.varTable[varId]!;
-      final cell = heap.cells[rAddr];
+      var finalVarId = varId;
+      var (_, rAddr) = heap.varTable[finalVarId]!;
+      var cell = heap.cells[rAddr];
+
+      // Follow variable chain if reader is bound to another variable
+      while (cell.content is VarRef) {
+        final nextVar = cell.content as VarRef;
+        finalVarId = nextVar.varId;
+        (_, rAddr) = heap.varTable[finalVarId]!;
+        cell = heap.cells[rAddr];
+      }
 
       // Create wrapper node pointing to shared record
       final node = SuspensionListNode(sharedRecord);
@@ -35,11 +45,7 @@ class SuspendOps {
 
       // REPLACE reader cell content with suspension list
       cell.content = node;
-
-      // print('  → Added to R$varId suspension list (addr=$rAddr)');
     }
-
-    // print('  ✓ Goal $goalId suspended (shared record)');
   }
 
   /// Legacy version using ROQ (for backward compatibility during migration)

@@ -55,18 +55,18 @@ class CommitOps {
       // FCP line 301: Save suspension list before replacing reader content
       final oldContent = heap.cells[rAddr].content;
 
+      // CRITICAL: If oldContent is a suspension list, activate NOW before overwriting
+      // This handles X? → Y? bindings where X has suspended goals
+      if (oldContent is SuspensionListNode) {
+        _walkAndActivate(oldContent, activations);
+      }
+
       // FCP lines 233/303: Bind BOTH cells to dereferenced value
       heap.cells[wAddr].content = value;
       heap.cells[wAddr].tag = CellTag.ValueTag;
       heap.cells[rAddr].content = value;
       heap.cells[rAddr].tag = CellTag.ValueTag;
       // print('[DEBUG COMMIT] Bound varId $varId: W$varId[addr=$wAddr] = $value, R$varId[addr=$rAddr] = $value');
-
-      // FCP lines 245-254: Walk saved suspension list and activate
-      if (oldContent is SuspensionListNode) {
-        // print('[TRACE Commit FCP] Processing suspension list for R$varId:');
-        _walkAndActivate(oldContent, activations);
-      }
     }
 
     // CRITICAL FIX: Re-dereference all bound cells that contain VarRef
@@ -99,18 +99,14 @@ class CommitOps {
   /// Walk suspension list and activate armed records (FCP lines 247-253)
   static void _walkAndActivate(SuspensionListNode? list, List<GoalRef> acts) {
     var current = list;
-    int count = 0;
 
     while (current != null) {
       if (current.armed) {
         acts.add(GoalRef(current.goalId!, current.resumePC));
         current.record.disarm();  // Disarm shared record - affects all nodes
-        count++;
       }
       current = current.next;
     }
-
-    // print('[TRACE Commit FCP]   Activated $count goal(s)');
   }
 
 

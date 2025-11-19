@@ -243,6 +243,9 @@ class Scheduler {
           }
           return ran;
         }
+      } else if (result == RunResult.terminated) {
+        // Goal terminated successfully (with or without reduction) - remove from suspended list
+        suspendedGoals.remove(act.id);
       }
       cycles++;
     }

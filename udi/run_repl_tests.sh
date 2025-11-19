@@ -230,6 +230,16 @@ run_test "Metainterpreter: quicksort([1],X)" \
     "run(quicksort([1],X))." \
     "X = \[1\]"
 
+run_test "Nested metainterpreter: run1(run(quicksort([1],X)))" \
+    "qsort.glp" \
+    "run1(run(quicksort([1],X)))." \
+    "X = \[1\]"
+
+run_test "Nested metainterpreter: run1(run(quicksort([1,4,3,2,4,5],X)))" \
+    "qsort.glp" \
+    "run1(run(quicksort([1,4,3,2,4,5],X)))." \
+    "X = \[1, 2, 3, 4, 4, 5\]"
+
 # ============================================
 # SUMMARY
 # ============================================

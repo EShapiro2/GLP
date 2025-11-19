@@ -218,7 +218,7 @@ class BytecodeRunner {
 
     if (derefResult is VarRef) {
       // derefAddr returned the final unbound variable in the chain
-      if (cx.debugOutput) print('[DEBUG _finalUnboundVar] Suspending on final var: ${derefResult.varId}');
+      if (cx.debugOutput) print('[DEBUG _finalUnboundVar] Suspending on final var: ${derefResult.varId} isReader=${derefResult.isReader}');
       return derefResult.varId;
     }
 
