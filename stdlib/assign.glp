@@ -9,12 +9,12 @@
 
 % Addition: Result := X + Y
 % Clause 1: Both operands are numbers - use body kernel
-':='(Result, +(X?, Y?)) :-
+Result := X? + Y? :-
   number(X?), number(Y?) |
   add(X?, Y?, Result).
 
 % Clause 2: Recursive evaluation needed
-':='(Result, +(X?, Y?)) :-
+Result := X? + Y? :-
   otherwise |
   X1 := X?,
   Y1 := Y?,
@@ -22,12 +22,12 @@
 
 % Subtraction: Result := X - Y
 % Clause 1: Both operands are numbers
-':='(Result, -(X?, Y?)) :-
+Result := X? - Y? :-
   number(X?), number(Y?) |
   sub(X?, Y?, Result).
 
 % Clause 2: Recursive evaluation
-':='(Result, -(X?, Y?)) :-
+Result := X? - Y? :-
   otherwise |
   X1 := X?,
   Y1 := Y?,
@@ -35,12 +35,12 @@
 
 % Multiplication: Result := X * Y
 % Clause 1: Both operands are numbers
-':='(Result, *(X?, Y?)) :-
+Result := X? * Y? :-
   number(X?), number(Y?) |
   mul(X?, Y?, Result).
 
 % Clause 2: Recursive evaluation
-':='(Result, *(X?, Y?)) :-
+Result := X? * Y? :-
   otherwise |
   X1 := X?,
   Y1 := Y?,
@@ -48,17 +48,17 @@
 
 % Division: Result := X / Y (always returns float)
 % Clause 1: Both operands are numbers and Y not zero
-':='(Result, /(X?, Y?)) :-
+Result := X? / Y? :-
   number(X?), number(Y?), Y? =\= 0 |
   div(X?, Y?, Result).
 
 % Clause 2: Division by zero - abort
-':='(Result, /(X?, Y?)) :-
+Result := X? / Y? :-
   number(X?), number(Y?), Y? =:= 0 |
   abort("Division by zero").
 
 % Clause 3: Recursive evaluation
-':='(Result, /(X?, Y?)) :-
+Result := X? / Y? :-
   otherwise |
   X1 := X?,
   Y1 := Y?,
@@ -66,23 +66,23 @@
 
 % Integer Division: Result := X // Y
 % Clause 1: Both operands are integers and Y not zero
-':='(Result, //(X?, Y?)) :-
+Result := X? // Y? :-
   integer(X?), integer(Y?), Y? =\= 0 |
   idiv(X?, Y?, Result).
 
 % Clause 2: Division by zero - abort
-':='(Result, //(X?, Y?)) :-
+Result := X? // Y? :-
   integer(X?), integer(Y?), Y? =:= 0 |
   abort("Integer division by zero").
 
 % Clause 3: Type error - not integers
-':='(Result, //(X?, Y?)) :-
+Result := X? // Y? :-
   number(X?), number(Y?),
   (\+ integer(X?) ; \+ integer(Y?)) |
   abort("Integer division requires integer operands").
 
 % Clause 4: Recursive evaluation
-':='(Result, //(X?, Y?)) :-
+Result := X? // Y? :-
   otherwise |
   X1 := X?,
   Y1 := Y?,
@@ -90,23 +90,23 @@
 
 % Modulo: Result := X mod Y
 % Clause 1: Both operands are integers and Y not zero
-':='(Result, mod(X?, Y?)) :-
+Result := X? mod Y? :-
   integer(X?), integer(Y?), Y? =\= 0 |
   mod(X?, Y?, Result).
 
 % Clause 2: Modulo by zero - abort
-':='(Result, mod(X?, Y?)) :-
+Result := X? mod Y? :-
   integer(X?), integer(Y?), Y? =:= 0 |
   abort("Modulo by zero").
 
 % Clause 3: Type error - not integers
-':='(Result, mod(X?, Y?)) :-
+Result := X? mod Y? :-
   number(X?), number(Y?),
   (\+ integer(X?) ; \+ integer(Y?)) |
   abort("Modulo requires integer operands").
 
 % Clause 4: Recursive evaluation
-':='(Result, mod(X?, Y?)) :-
+Result := X? mod Y? :-
   otherwise |
   X1 := X?,
   Y1 := Y?,
@@ -118,24 +118,24 @@
 
 % Unary Negation: Result := -X
 % Clause 1: Operand is number
-':='(Result, -(X?)) :-
+Result := -X? :-
   number(X?) |
   neg(X?, Result).
 
 % Clause 2: Recursive evaluation
-':='(Result, -(X?)) :-
+Result := -X? :-
   otherwise |
   X1 := X?,
   Result := -X1?.
 
 % Absolute Value: Result := abs(X)
 % Clause 1: Operand is number
-':='(Result, abs(X?)) :-
+Result := abs(X?) :-
   number(X?) |
   abs_kernel(X?, Result).
 
 % Clause 2: Recursive evaluation
-':='(Result, abs(X?)) :-
+Result := abs(X?) :-
   otherwise |
   X1 := X?,
   Result := abs(X1?).
@@ -146,111 +146,111 @@
 
 % Square Root: Result := sqrt(X)
 % Clause 1: Operand is number and non-negative
-':='(Result, sqrt(X?)) :-
+Result := sqrt(X?) :-
   number(X?), X? >= 0 |
   sqrt_kernel(X?, Result).
 
 % Clause 2: Negative operand - abort
-':='(Result, sqrt(X?)) :-
+Result := sqrt(X?) :-
   number(X?), X? < 0 |
   abort("Square root of negative number").
 
 % Clause 3: Recursive evaluation
-':='(Result, sqrt(X?)) :-
+Result := sqrt(X?) :-
   otherwise |
   X1 := X?,
   Result := sqrt(X1?).
 
 % Sine: Result := sin(X)
 % Clause 1: Operand is number
-':='(Result, sin(X?)) :-
+Result := sin(X?) :-
   number(X?) |
   sin_kernel(X?, Result).
 
 % Clause 2: Recursive evaluation
-':='(Result, sin(X?)) :-
+Result := sin(X?) :-
   otherwise |
   X1 := X?,
   Result := sin(X1?).
 
 % Cosine: Result := cos(X)
 % Clause 1: Operand is number
-':='(Result, cos(X?)) :-
+Result := cos(X?) :-
   number(X?) |
   cos_kernel(X?, Result).
 
 % Clause 2: Recursive evaluation
-':='(Result, cos(X?)) :-
+Result := cos(X?) :-
   otherwise |
   X1 := X?,
   Result := cos(X1?).
 
 % Tangent: Result := tan(X)
 % Clause 1: Operand is number
-':='(Result, tan(X?)) :-
+Result := tan(X?) :-
   number(X?) |
   tan_kernel(X?, Result).
 
 % Clause 2: Recursive evaluation
-':='(Result, tan(X?)) :-
+Result := tan(X?) :-
   otherwise |
   X1 := X?,
   Result := tan(X1?).
 
 % Exponential: Result := exp(X)
 % Clause 1: Operand is number
-':='(Result, exp(X?)) :-
+Result := exp(X?) :-
   number(X?) |
   exp_kernel(X?, Result).
 
 % Clause 2: Recursive evaluation
-':='(Result, exp(X?)) :-
+Result := exp(X?) :-
   otherwise |
   X1 := X?,
   Result := exp(X1?).
 
 % Natural Logarithm: Result := ln(X)
 % Clause 1: Operand is number and positive
-':='(Result, ln(X?)) :-
+Result := ln(X?) :-
   number(X?), X? > 0 |
   ln_kernel(X?, Result).
 
 % Clause 2: Non-positive operand - abort
-':='(Result, ln(X?)) :-
+Result := ln(X?) :-
   number(X?), X? =< 0 |
   abort("Natural logarithm of non-positive number").
 
 % Clause 3: Recursive evaluation
-':='(Result, ln(X?)) :-
+Result := ln(X?) :-
   otherwise |
   X1 := X?,
   Result := ln(X1?).
 
 % Base-10 Logarithm: Result := log(X)
 % Clause 1: Operand is number and positive
-':='(Result, log(X?)) :-
+Result := log(X?) :-
   number(X?), X? > 0 |
   log10_kernel(X?, Result).
 
 % Clause 2: Non-positive operand - abort
-':='(Result, log(X?)) :-
+Result := log(X?) :-
   number(X?), X? =< 0 |
   abort("Logarithm of non-positive number").
 
 % Clause 3: Recursive evaluation
-':='(Result, log(X?)) :-
+Result := log(X?) :-
   otherwise |
   X1 := X?,
   Result := log(X1?).
 
 % Power: Result := pow(X, Y)
 % Clause 1: Both operands are numbers
-':='(Result, pow(X?, Y?)) :-
+Result := pow(X?, Y?) :-
   number(X?), number(Y?) |
   pow_kernel(X?, Y?, Result).
 
 % Clause 2: Recursive evaluation
-':='(Result, pow(X?, Y?)) :-
+Result := pow(X?, Y?) :-
   otherwise |
   X1 := X?,
   Y1 := Y?,
@@ -258,46 +258,46 @@
 
 % Arc Sine: Result := asin(X)
 % Clause 1: Operand is number in [-1, 1]
-':='(Result, asin(X?)) :-
+Result := asin(X?) :-
   number(X?), X? >= -1, X? =< 1 |
   asin_kernel(X?, Result).
 
 % Clause 2: Out of domain - abort
-':='(Result, asin(X?)) :-
+Result := asin(X?) :-
   number(X?), (X? < -1 ; X? > 1) |
   abort("Arc sine domain error: argument must be in [-1, 1]").
 
 % Clause 3: Recursive evaluation
-':='(Result, asin(X?)) :-
+Result := asin(X?) :-
   otherwise |
   X1 := X?,
   Result := asin(X1?).
 
 % Arc Cosine: Result := acos(X)
 % Clause 1: Operand is number in [-1, 1]
-':='(Result, acos(X?)) :-
+Result := acos(X?) :-
   number(X?), X? >= -1, X? =< 1 |
   acos_kernel(X?, Result).
 
 % Clause 2: Out of domain - abort
-':='(Result, acos(X?)) :-
+Result := acos(X?) :-
   number(X?), (X? < -1 ; X? > 1) |
   abort("Arc cosine domain error: argument must be in [-1, 1]").
 
 % Clause 3: Recursive evaluation
-':='(Result, acos(X?)) :-
+Result := acos(X?) :-
   otherwise |
   X1 := X?,
   Result := acos(X1?).
 
 % Arc Tangent: Result := atan(X)
 % Clause 1: Operand is number
-':='(Result, atan(X?)) :-
+Result := atan(X?) :-
   number(X?) |
   atan_kernel(X?, Result).
 
 % Clause 2: Recursive evaluation
-':='(Result, atan(X?)) :-
+Result := atan(X?) :-
   otherwise |
   X1 := X?,
   Result := atan(X1?).
@@ -308,83 +308,67 @@
 
 % Convert to Integer: Result := integer(X)
 % Clause 1: Operand is number
-':='(Result, integer(X?)) :-
+Result := integer(X?) :-
   number(X?) |
   integer_kernel(X?, Result).
 
 % Clause 2: Recursive evaluation
-':='(Result, integer(X?)) :-
+Result := integer(X?) :-
   otherwise |
   X1 := X?,
   Result := integer(X1?).
 
 % Convert to Real/Float: Result := real(X)
 % Clause 1: Operand is number
-':='(Result, real(X?)) :-
+Result := real(X?) :-
   number(X?) |
   real_kernel(X?, Result).
 
 % Clause 2: Recursive evaluation
-':='(Result, real(X?)) :-
+Result := real(X?) :-
   otherwise |
   X1 := X?,
   Result := real(X1?).
 
 % Round: Result := round(X)
 % Clause 1: Operand is number
-':='(Result, round(X?)) :-
+Result := round(X?) :-
   number(X?) |
   round_kernel(X?, Result).
 
 % Clause 2: Recursive evaluation
-':='(Result, round(X?)) :-
+Result := round(X?) :-
   otherwise |
   X1 := X?,
   Result := round(X1?).
 
 % Floor: Result := floor(X)
 % Clause 1: Operand is number
-':='(Result, floor(X?)) :-
+Result := floor(X?) :-
   number(X?) |
   floor_kernel(X?, Result).
 
 % Clause 2: Recursive evaluation
-':='(Result, floor(X?)) :-
+Result := floor(X?) :-
   otherwise |
   X1 := X?,
   Result := floor(X1?).
 
 % Ceiling: Result := ceil(X)
 % Clause 1: Operand is number
-':='(Result, ceil(X?)) :-
+Result := ceil(X?) :-
   number(X?) |
   ceil_kernel(X?, Result).
 
 % Clause 2: Recursive evaluation
-':='(Result, ceil(X?)) :-
+Result := ceil(X?) :-
   otherwise |
   X1 := X?,
   Result := ceil(X1?).
 
 % ============================================================================
-% SIMPLE COPY (Non-arithmetic)
+% NON-ARITHMETIC EXPRESSIONS FAIL
 % ============================================================================
 
-% Copy ground atomic value: Result := X
-% For constants, atoms, strings that are already ground
-':='(Result, X?) :-
-  nonvar(X?),
-  \+ number(X?),
-  \+ compound(X?) |
-  Result = X?.
-
-% Copy number directly: Result := 42
-':='(Result, X?) :-
-  number(X?) |
-  Result = X?.
-
-% Suspend on unbound variable: Result := Unbound
-':='(Result, X?) :-
-  var(X?) |
-  X1 := X?,    % This will suspend until X is bound
-  Result = X1?.
+% If the right-hand side is not an arithmetic expression, := fails.
+% This ensures := is used only for arithmetic evaluation.
