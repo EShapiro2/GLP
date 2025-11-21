@@ -11,6 +11,11 @@ To understand the GLP implementation requirements, focus on these sections in or
 3. **Section 4** (line 382): Programming examples demonstrating GLP behavior
 4. **Appendix: Implementation-Ready Transition System** (line 1493): Workstation implementation spec
 
+**Additional Specifications**:
+- **[glp-predicates-taxonomy.md](glp-predicates-taxonomy.md)** — Four-category predicate taxonomy (guard predicates, guard kernels, body kernels, system predicates)
+- **[glp-arithmetic-spec.md](glp-arithmetic-spec.md)** — Arithmetic evaluation with `:=` system predicate
+- **[body_kernels_spec.md](body_kernels_spec.md)** — Reference for 27 body kernel predicates
+
 **Skip**: Mathematical proofs, multiagent details (unless implementing distributed version), security mechanisms.
 
 ## Core Concepts

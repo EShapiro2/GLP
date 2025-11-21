@@ -4,6 +4,13 @@
 
 The GLP runtime system executes bytecode on a Dart-based virtual machine that leverages Dart's native features for memory management, scheduling, and concurrency. Unlike the FCP abstract machine which manages its own process queue and garbage collection, this runtime delegates these responsibilities to Dart while focusing on GLP-specific semantics: reader/writer variables, suspension management, and SRSW enforcement.
 
+## Related Specifications
+
+For comprehensive documentation on predicates and arithmetic:
+- **[glp-predicates-taxonomy.md](glp-predicates-taxonomy.md)** — Guard predicates, guard kernels, body kernels, and system predicates
+- **[glp-arithmetic-spec.md](glp-arithmetic-spec.md)** — Arithmetic evaluation and `:=` system predicate
+- **[body_kernels_spec.md](body_kernels_spec.md)** — Body kernel reference (27 predicates)
+
 ## Opcode Name Mappings
 
 This implementation uses slightly different names for some opcodes compared to the paper terminology. Here are the key mappings:

@@ -747,57 +747,19 @@ process(X) :- otherwise    | ... handle constant case
 
 ### 11.7 Arithmetic Guards (Planned)
 
-**Implementation Status**: ⏳ Specified but not yet implemented
+**Implementation Status**: ⏳ Specified but not yet fully implemented
 
-The following guards are planned for arithmetic operations. Unlike `evaluate/2` (which is two-valued and aborts on unbound inputs), these guards are three-valued and patient.
+### Arithmetic and Guard Predicates
 
-#### Planned: number(X)
-**Operation**: Test if X is bound to a number
-**Three-valued semantics**:
-1. If X bound to number (int or double) → **SUCCEED**
-2. If X is unbound reader → **SUSPEND** (add to U, immediately try next clause)
-3. If X bound to non-number → **FAIL**
+For comprehensive documentation on GLP's arithmetic system and guard predicates, see:
 
-#### Planned: integer(X)
-**Operation**: Test if X is bound to an integer
-**Three-valued semantics**:
-1. If X bound to integer → **SUCCEED**
-2. If X is unbound reader → **SUSPEND** (add to U, immediately try next clause)
-3. Otherwise (unbound writer, bound to non-integer) → **FAIL**
+- **[glp-predicates-taxonomy.md](glp-predicates-taxonomy.md)** — Complete taxonomy of guard predicates, guard kernels, body kernels, and system predicates
+- **[glp-arithmetic-spec.md](glp-arithmetic-spec.md)** — Arithmetic evaluation, `:=` system predicate, and guard vs body arithmetic
+- **[body_kernels_spec.md](body_kernels_spec.md)** — Reference for 27 body kernel predicates
 
-#### Planned: Comparison Guards
-**Operations**: `X < Y`, `X =< Y`, `X > Y`, `X >= Y`, `X =:= Y`, `X =\= Y`
+**Current Implementation**: `evaluate/2` system predicate (Dart-implemented) provides recursive arithmetic evaluation. See Section 18 below.
 
-**Note**: Prolog uses `=<` (not `<=`) for "less than or equal"
-
-**Three-valued semantics**:
-1. Both X and Y bound to numbers AND condition holds → **SUCCEED**
-2. Either X or Y is unbound reader → **SUSPEND** (add first unbound reader to U, immediately try next clause)
-3. Both bound to numbers AND condition false → **FAIL**
-
-**Parser Limitation**: Currently, the parser does NOT support infix operators in guard position. Comparison guards would require:
-- Adding comparison tokens (`LT`, `GT`, `LE`, `GE`, `ARITH_EQ`, `ARITH_NE`) to lexer
-- Updating parser to recognize these operators in guard context
-- Transforming infix to prefix predicates (e.g., `X < Y` → `<(X, Y)`)
-
-**Currently Implemented Guards**:
-- ✅ `ground(X)`, `known(X)`, `otherwise`
-- ✅ `if_writer(X)`, `if_reader(X)` - type tests
-
-**Design Pattern** (future usage):
-```prolog
-% Safe arithmetic with guards protecting execute
-safe_divide(X, Y, Z) :-
-  number(X), number(Y), Y =\= 0 |   % guards ensure preconditions
-  execute('evaluate', [X? / Y?, Z]).  % two-valued execute
-
-% Conditional computation
-compute(N, Result) :-
-  integer(N), N > 0 |               % guards test and select clause
-  execute('evaluate', [N? * 2, Result]).
-compute(N, Result) :-
-  integer(N), N =< 0 |
-  execute('evaluate', [-N?, Result]).
+**Planned**: `:=` system predicate (GLP-defined) with body kernel support as specified in the documents above.
 ```
 
 ## 12. Mode-Aware Argument Loading (FCP-style)
@@ -1395,33 +1357,22 @@ System predicates are external Dart functions callable from GLP bytecode via the
 
 **IMPORTANT**: System predicates called via execute/2 have **two-valued semantics** (success/abort), NOT three-valued (success/suspend/fail). They abort on unbound readers rather than suspending.
 
-**Arithmetic**:
-- `evaluate(Expression, Result)` - Arithmetic evaluation
+### Arithmetic System
+
+**Current Implementation**: `evaluate/2` system predicate (Dart-implemented)
 
 **Syntax**: `execute('evaluate', [Expression, Result])`
 
 **Semantics**: **Two-valued** (success or abort)
-- All operands bound numbers → compute and unify result → SUCCESS
+- All operands bound numbers → recursively evaluate and unify result → SUCCESS
 - Any operand unbound → ABORT "Unbound reader in arithmetic"
 - Non-numeric operand → ABORT "Type error: expected number"
 - Division by zero → ABORT "Arithmetic error: division by zero"
 
 **Expression Format**: Prefix structure notation using functors:
-- `+(X, Y)` - addition
-- `-(X, Y)` - subtraction
-- `*(X, Y)` - multiplication
-- `/(X, Y)` - division
-- `mod(X, Y)` - modulo
-- `neg(X)` - unary negation
+- `+(X, Y)`, `-(X, Y)`, `*(X, Y)`, `/(X, Y)`, `mod(X, Y)`
 
-**Parser Support**: The GLP parser automatically transforms infix arithmetic notation to prefix:
-- Source: `X? + Y?` → AST: `+(VarRef(X, true), VarRef(Y, true))`
-- Source: `(2 + 3) * 4` → AST: `*(+(2, 3), 4)`
-- Source: `-X?` → AST: `neg(VarRef(X, true))`
-
-**Type System**: Integers and floats supported. The lexer parses both `int` and `double` literals.
-
-**Example GLP Source**:
+**Example**:
 ```prolog
 % UNSAFE - aborts if X or Y unbound
 add(X, Y, Z) :- execute('evaluate', [X? + Y?, Z]).
@@ -1432,13 +1383,9 @@ safe_add(X, Y, Z) :-
   execute('evaluate', [X? + Y?, Z]).
 ```
 
-**Compiles to Execute instruction with**:
-```
-execute('evaluate', [
-  +(VarRef(X, isReader:true), VarRef(Y, isReader:true)),
-  VarRef(Z, isReader:false)
-])
-```
+**Future Design**: For the planned `:=` system predicate and comprehensive arithmetic support, see:
+- **[glp-arithmetic-spec.md](glp-arithmetic-spec.md)** — Complete arithmetic specification
+- **[glp-predicates-taxonomy.md](glp-predicates-taxonomy.md)** — System predicates, body kernels, and guard predicates
 
 **Utilities**:
 - `current_time(Time)` - Binds Time to current milliseconds since epoch

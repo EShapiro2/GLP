@@ -1,6 +1,8 @@
 # GLP Guards Quick Reference
 
-**Last Updated**: 2025-11-12
+**Last Updated**: 2025-11-21
+
+**See also**: [glp-predicates-taxonomy.md](glp-predicates-taxonomy.md) — Comprehensive taxonomy of guard predicates, guard kernels, body kernels, and system predicates
 
 ---
 
