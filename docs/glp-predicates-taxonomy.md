@@ -99,7 +99,9 @@ X? < Temp?                 % Guard predicate: compares X with Temp
 
 **Implementation**: Runtime-implemented (not defined in GLP).
 
-**Visibility**: **Not directly accessible to programmers** - used internally by system predicates like `:=`.
+**Visibility**: **Not accessible to user programs** - only accessible to system predicates (predefined GLP code shipped with the runtime).
+
+**Access Control**: User programs cannot call body kernels. Only system predicates have access via a separate internal registry.
 
 **Context**: Body only (after `|`), post-commit.
 
@@ -156,7 +158,9 @@ X? < Temp?                 % Guard predicate: compares X with Temp
 
 **Visibility**: Fully accessible to programmers (can be used, not redefined).
 
-**Key Characteristic**: Use body kernel predicates internally (not accessible to regular users).
+**Key Characteristic**: Have special access to body kernel predicates that regular user programs cannot access.
+
+**Access Privilege**: System predicates are loaded from a trusted location and granted access to the internal body kernel registry. User programs do not have this access.
 
 **Purpose**: Provide high-level abstractions over body kernels with proper guard checks.
 
@@ -369,18 +373,30 @@ guardKernelRegistry.register('guard_add', guardAddKernel);
 guardKernelRegistry.register('guard_mul', guardMulKernel);
 ```
 
-**Body Kernel Registry** (internal):
+**Body Kernel Registry** (internal, restricted access):
 ```dart
+// Internal registry - only accessible to system predicates
 bodyKernelRegistry.register('add', addBodyKernel);
 bodyKernelRegistry.register('mul', mulBodyKernel);
 bodyKernelRegistry.register('write', writeBodyKernel);
+
+// Access control: body kernels not in public predicate lookup
+// User goal "add(X, Y, Z)" → fails (not found in user registry)
+// System predicate calling add/3 → succeeds (has internal registry access)
 ```
 
 **System Predicates**:
-Loaded from precompiled bytecode at startup:
+Loaded from trusted location at startup with special access:
 ```dart
-runtime.loadSystemPredicates('stdlib/assign.glpc');
-runtime.loadSystemPredicates('stdlib/lists.glpc');
+// Load system predicates from trusted stdlib
+runtime.loadSystemPredicates('stdlib/assign.glpc', {
+  grantBodyKernelAccess: true  // Give access to internal registry
+});
+
+// User-loaded code does NOT get this access
+runtime.loadUserCode('user/myprogram.glpc', {
+  grantBodyKernelAccess: false  // No access to body kernels
+});
 ```
 
 ### 7.2 Compiler Responsibilities

@@ -145,9 +145,11 @@ compute1(X, Y, Z?) :- otherwise | Z = unknown.
 
 **Key Properties**:
 1. **Regular GLP clauses** - not a special bytecode instruction
-2. **Uses body kernel predicates** internally (not accessible to users)
+2. **Special access** to body kernel predicates (`add/3`, `mul/3`, etc.) that user programs cannot access
 3. **Built-in guards** ensure body kernels called safely
-4. **Assumed predefined** - users don't define it
+4. **Assumed predefined** - users don't define it, loaded from trusted stdlib
+
+**Access Control**: System predicates like `:=` are loaded from a trusted location (`stdlib/`) and granted access to an internal registry of body kernel predicates. User programs do not have this access - if a user program tries to call `add(X, Y, Z)` directly, it will fail (predicate not found).
 
 ### 4.2 Syntax
 
