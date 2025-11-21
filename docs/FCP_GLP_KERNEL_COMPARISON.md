@@ -238,8 +238,8 @@ From `/home/user/GLP/docs/glp-bytecode-v216-complete.md`:
 ### 1. **String Operations** (FCP has, GLP missing)
 FCP has extensive string manipulation (`string_length`, `string_hash`, `string_to_dlist`, `list_to_string`, conversions). GLP has no string guards or string system predicates.
 
-### 2. **Vector/Mutable Arrays** (FCP has, GLP missing)
-FCP has full vector support (`make_vector`, `read_vector`, `write_vector`, `store_vector`, `close_vector`). **GLP has no vector type at all**.
+### 2. **Vectors** (FCP has, GLP missing)
+FCP has full vector support (`make_vector`, `read_vector`, `write_vector`, `store_vector`, `close_vector`). **GLP has no vector type or vector operations**.
 
 ### 3. **Type Testing Guards** (FCP has more)
 FCP has detailed type tests (`integer`, `real`, `string`, `list`, `tuple`, `vector`, `module`, `constant`, `compound`, `number`). GLP only has `ground`, `known`, `writer`, `reader`, plus planned `guard_integer`, `guard_number`.
