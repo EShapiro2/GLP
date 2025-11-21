@@ -1,20 +1,0 @@
-Calling p(X) to bind writer X...
->>> TRY: Goal 200 at PC 0
->>> REDUCTION: Goal 200 at PC 3 (commit succeeded, σ̂w has 1 bindings)
->>> ACTIVATION: Goal 100 awakened at PC 0
->>> TRY: Goal 100 at PC 0
-  [G100] PC=0 Label | Si={} U={} inBody=false
-  [G100] PC=1 ClauseTry | Si={} U={} inBody=false
-  [G100] PC=2 HeadConstant | Si={} U={} inBody=false
-  [DEBUG] HeadConstant checking reader 2: value=Const(value) vs pattern=value
-  [G100] PC=3 Commit | Si={} U={} inBody=false
->>> REDUCTION: Goal 100 at PC 3 (commit succeeded, σ̂w has 0 bindings)
-  [G100] PC=4 Proceed | Si={} U={} inBody=true
-Writer X bound: true
-Goals executed: 2
-✓ COMMIT bound writer, then paired reader, then activated suspended goal q
-
-00:01 [32m+187[0m[31m -15[0m: test/conformance/commit_before_body_test.dart: Commit binds paired reader and activates suspended goals[0m                                                                                00:01 [32m+187[0m[31m -15[0m: [1m[90mloading test/conformance/fifo_wake_test.dart[0m[0m                                                                                                                                           00:01 [32m+187[0m[31m -15[0m: test/conformance/fifo_wake_test.dart: FIFO wake on single RO queue[0m                                                                                                                     00:01 [32m+188[0m[31m -15[0m: test/conformance/single_reactivation_test.dart: Single reactivation with one hanger registered on two readers[0m                                                                          00:01 [32m+189[0m[31m -15[0m: test/conformance/single_reactivation_test.dart: Single reactivation with one hanger registered on two readers[0m                                                                          00:01 [32m+189[0m[31m -15[0m: [1m[90mloading test/conformance/abandon_immediate_fail_test.dart[0m[0m                                                                                                                              00:01 [32m+189[0m[31m -15[0m: test/conformance/abandon_immediate_fail_test.dart: Abandon(X!) immediately wakes readers FIFO; writer marked abandoned[0m                                                                 00:01 [32m+190[0m[31m -15[0m: test/conformance/abandon_immediate_fail_test.dart: Abandon(X!) immediately wakes readers FIFO; writer marked abandoned[0m                                                                 00:01 [32m+190[0m[31m -15[0m: [1m[90mloading test/conformance/restart_clause1_test.dart[0m[0m                                                                                                                                     00:01 [32m+190[0m[31m -15[0m: test/conformance/restart_clause1_test.dart: On wake, activation pc equals kappa (restart at clause 1)[0m                                                                                  00:01 [32m+191[0m[31m -15[0m: test/conformance/restart_clause1_test.dart: On wake, activation pc equals kappa (restart at clause 1)[0m                                                                                  00:01 [32m+191[0m[31m -15[0m: [31mSome tests failed.[0m                                                                                                                                                                     
-
-Consider enabling the flag chain-stack-traces to receive more detailed exceptions.
-For example, 'dart test --chain-stack-traces'.
