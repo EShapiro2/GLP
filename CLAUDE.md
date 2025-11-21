@@ -2,10 +2,19 @@
 
 ## 🔴 CRITICAL - START OF EVERY CONVERSATION
 1. **READ CLAUDE.md** - Always read this file first
-2. **IDENTIFY CURRENT MODE** - Discussion or Implementation  
-3. **FOLLOW MODE RULES** - Never mix modes
-4. **ASK FOR CURRENT STATE** - Request latest code/errors from user
-5. **READ SPECS AS NEEDED** - Don't read all specs upfront, only when relevant to task
+2. **FETCH FCP REPOSITORY** - Clone/update FCP reference implementation:
+   ```bash
+   cd /home/user/GLP
+   if [ ! -d "FCP" ]; then
+     git clone https://github.com/EShapiro2/FCP.git
+   else
+     cd FCP && git pull && cd ..
+   fi
+   ```
+3. **IDENTIFY CURRENT MODE** - Discussion or Implementation
+4. **FOLLOW MODE RULES** - Never mix modes
+5. **ASK FOR CURRENT STATE** - Request latest code/errors from user
+6. **READ SPECS AS NEEDED** - Don't read all specs upfront, only when relevant to task
 
 ## Core Rules
 
@@ -309,10 +318,10 @@ When implementing a solution:
 
 4. **WAM Paper**: `/Users/udi/GLP/docs/wam.pdf` - Warren's Abstract Machine
 5. **GLP Spec**: `/Users/udi/GLP/docs/glp_spec.pdf` - Formal GLP specification
-6. **FCP Implementation**: 
-   - **Local Source**: `/Users/udi/Dropbox/Concurrent Prolog/FCP/Savannah`
-   - **GitHub Mirror**: https://github.com/EShapiro2/FCP
-   - **Paper**: `/Users/udi/GLP/docs/1-s2.0-0743106689900113-main.pdf`
+6. **FCP Implementation**:
+   - **Cloned Repository**: `/home/user/GLP/FCP` (auto-fetched at conversation start)
+   - **GitHub Source**: https://github.com/EShapiro2/FCP
+   - **Paper**: `/home/user/GLP/docs/1-s2.0-0743106689900113-main.pdf`
 
 ## Critical Implementation Details
 
