@@ -2,15 +2,7 @@
 
 ## 🔴 CRITICAL - START OF EVERY CONVERSATION
 1. **READ CLAUDE.md** - Always read this file first
-2. **FETCH FCP REPOSITORY** - Clone/update FCP reference implementation:
-   ```bash
-   cd /home/user/GLP
-   if [ ! -d "FCP" ]; then
-     git clone https://github.com/EShapiro2/FCP.git
-   else
-     cd FCP && git pull && cd ..
-   fi
-   ```
+2. **FETCH FCP REPOSITORY** - `cd /home/user/GLP && git clone https://github.com/EShapiro2/FCP.git` (if not exists)
 3. **IDENTIFY CURRENT MODE** - Discussion or Implementation
 4. **FOLLOW MODE RULES** - Never mix modes
 5. **ASK FOR CURRENT STATE** - Request latest code/errors from user
