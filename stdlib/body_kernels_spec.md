@@ -4,6 +4,8 @@
 
 **Access**: These predicates are only accessible to system predicates loaded from `stdlib/`, not to user programs.
 
+**Safety**: All abort conditions listed below represent programming errors. The compiler should perform static type analysis to verify these conditions never occur. Runtime aborts are safety mechanisms, not expected execution paths.
+
 ---
 
 ## Binary Arithmetic Operators

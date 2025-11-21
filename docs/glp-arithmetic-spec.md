@@ -165,60 +165,55 @@ WriterVar := Expression
 
 ### 4.3 `:=` Definition (Conceptual)
 
-The `:=` system predicate is defined with multiple clauses:
+The `:=` system predicate is defined with multiple clauses using infix notation:
 
 ```glp
 % Addition - operands are numbers
-':='(Result, +(X?, Y?)) :-
+Result := X? + Y? :-
   number(X?), number(Y?) |
   add(X?, Y?, Result).        % Body kernel - safe
 
 % Addition - recursive evaluation needed
-':='(Result, +(X?, Y?)) :-
+Result := X? + Y? :-
   otherwise |
   X1 := X?,                   % Recursively evaluate X
   Y1 := Y?,                   % Recursively evaluate Y
   Result := X1? + Y1?.        % Recurse with evaluated operands
 
 % Subtraction - operands are numbers
-':='(Result, -(X?, Y?)) :-
+Result := X? - Y? :-
   number(X?), number(Y?) |
   sub(X?, Y?, Result).
 
 % Subtraction - recursive evaluation
-':='(Result, -(X?, Y?)) :-
+Result := X? - Y? :-
   otherwise |
   X1 := X?,
   Y1 := Y?,
   Result := X1? - Y1?.
 
-% Similar clauses for *, /, mod, etc.
+% Similar clauses for *, /, //, mod
 
 % Unary negation
-':='(Result, -(X?)) :-
+Result := -X? :-
   number(X?) |
   neg(X?, Result).
 
-':='(Result, -(X?)) :-
+Result := -X? :-
   otherwise |
   X1 := X?,
   Result := -X1?.
 
-% Copy (non-arithmetic)
-':='(Result, X?) :-
-  nonvar(X?), \+ compound(X?) |  % X is ground atom/number/string
-  Result = X?.
-
 % Functions: sqrt, sin, cos, etc.
-':='(Result, sqrt(X?)) :-
+Result := sqrt(X?) :-
   number(X?), X? >= 0 |
   sqrt_kernel(X?, Result).
 
-':='(Result, sqrt(X?)) :-
+Result := sqrt(X?) :-
   number(X?), X? < 0 |
   abort("sqrt of negative number").
 
-':='(Result, sqrt(X?)) :-
+Result := sqrt(X?) :-
   otherwise |
   X1 := X?,
   Result := sqrt(X1?).
@@ -251,6 +246,8 @@ The `:=` system predicate is defined with multiple clauses:
 **Why Abort**: Body kernels execute post-commit. Failure indicates programming error, not a normal condition.
 
 **Who Ensures Safety**: The `:=` system predicate's guards ensure body kernels only called with safe inputs.
+
+**Compiler Verification**: The compiler should perform static type analysis to verify that arithmetic operations will not cause body kernel aborts. Body kernel abort conditions (type errors, division by zero with constant operands, domain errors) should be caught at compile time whenever possible. Runtime aborts are safety mechanisms for programming errors, not expected execution paths.
 
 ### 4.5 Recursive Evaluation in Body
 
