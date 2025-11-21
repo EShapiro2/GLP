@@ -3,7 +3,7 @@
   "packages": [
     {
       "name": "collection",
-      "rootUri": "file:///Users/udi/.pub-cache/hosted/pub.dev/collection-1.19.1",
+      "rootUri": "file:///root/.pub-cache/hosted/pub.dev/collection-1.19.1",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -15,7 +15,7 @@
     },
     {
       "name": "path",
-      "rootUri": "file:///Users/udi/.pub-cache/hosted/pub.dev/path-1.9.1",
+      "rootUri": "file:///root/.pub-cache/hosted/pub.dev/path-1.9.1",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -27,6 +27,6 @@
     }
   ],
   "generator": "pub",
-  "generatorVersion": "3.9.4",
-  "pubCache": "file:///Users/udi/.pub-cache"
+  "generatorVersion": "3.10.1",
+  "pubCache": "file:///root/.pub-cache"
 }

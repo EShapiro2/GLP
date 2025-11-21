@@ -2,6 +2,8 @@
 # GLP REPL Test Suite
 # Runs all working GLP programs through the REPL and verifies output
 
+export PATH="/home/user/dart-sdk/bin:$PATH"
+
 set -e
 
 PASS=0
