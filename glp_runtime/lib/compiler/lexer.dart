@@ -70,6 +70,10 @@ class Lexer {
           final lexeme = source.substring(_current - 2, _current);
           return Token(TokenType.IMPLIES, lexeme, startLine, startColumn);
         }
+        if (_match('=')) {
+          final lexeme = source.substring(_current - 2, _current);
+          return Token(TokenType.ASSIGN, lexeme, startLine, startColumn);
+        }
         throw CompileError('Unexpected character :', startLine, startColumn, phase: 'lexer');
 
       case '_':

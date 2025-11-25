@@ -23,6 +23,7 @@ enum TokenType {
 
   // Operators
   IMPLIES,        // :-
+  ASSIGN,         // := (arithmetic assignment)
   GUARD_SEP,      // | (in clause: Head :- Guards | Body)
 
   // Arithmetic operators

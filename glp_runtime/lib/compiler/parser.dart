@@ -168,8 +168,29 @@ class Parser {
     return Atom(functorToken.lexeme, args, functorToken.line, functorToken.column);
   }
 
-  // Goal: same as Atom
+  // Goal: same as Atom, or assignment (Var := Expr)
   Goal _parseGoal() {
+    // Check for assignment: Var := Expr
+    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
+      final varToken = _advance();
+      if (_match(TokenType.ASSIGN)) {
+        // Parse as ':='(Var, Expr)
+        final varTerm = varToken.type == TokenType.READER
+            ? VarTerm(varToken.lexeme, true, varToken.line, varToken.column)
+            : VarTerm(varToken.lexeme, false, varToken.line, varToken.column);
+        final expr = _parseTerm();
+        return Goal(':=', [varTerm, expr], varToken.line, varToken.column);
+      } else {
+        // Not an assignment - this is an error in goal position
+        throw CompileError(
+          'Expected predicate name or assignment, got variable "${varToken.lexeme}"',
+          varToken.line,
+          varToken.column,
+          phase: 'parser'
+        );
+      }
+    }
+
     final functorToken = _consume(TokenType.ATOM, 'Expected predicate name');
     final args = <Term>[];
 
