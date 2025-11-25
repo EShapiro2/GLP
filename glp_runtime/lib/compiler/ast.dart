@@ -151,3 +151,39 @@ class UnderscoreTerm extends Term {
   @override
   String toString() => '_';
 }
+
+/// Remote goal: Module # Goal
+/// Used for cross-module procedure calls
+class RemoteGoal extends Goal {
+  final String moduleName;
+  final Goal goal;
+
+  RemoteGoal(this.moduleName, this.goal, int line, int column)
+      : super('${moduleName}#${goal.functor}', goal.args, line, column);
+
+  @override
+  String toString() => '$moduleName # $goal';
+}
+
+/// Module metadata parsed from declarations
+/// -module(name). -export([...]). -import([...]). etc.
+class ModuleInfo {
+  final String? name;
+  final Set<String> exports;      // "proc/arity" signatures
+  final List<String> imports;     // module names
+  final String language;          // 'glp' (default) or 'compound'
+  final String mode;              // 'user' (default) or 'trust'
+  final String serviceType;       // 'procedures' (default), 'monitor', 'director'
+
+  ModuleInfo({
+    this.name,
+    this.exports = const {},
+    this.imports = const [],
+    this.language = 'glp',
+    this.mode = 'user',
+    this.serviceType = 'procedures',
+  });
+
+  @override
+  String toString() => 'ModuleInfo(${name ?? "_anonymous"}, exports: $exports)';
+}

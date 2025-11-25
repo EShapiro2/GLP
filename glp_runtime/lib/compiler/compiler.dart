@@ -14,6 +14,7 @@ export '../bytecode/runner.dart' show BytecodeProgram;
 export '../runtime/loaded_module.dart' show LoadedModule;
 export '../runtime/service_registry.dart' show ServiceRegistry;
 export 'result.dart' show CompilationResult;
+export 'ast.dart' show ModuleInfo, RemoteGoal;
 
 /// Main GLP compiler
 class GlpCompiler {
@@ -68,6 +69,10 @@ class GlpCompiler {
   ///
   /// Unlike compile() which produces a merged BytecodeProgram,
   /// this produces a LoadedModule with its own namespace.
+  ///
+  /// Module metadata can come from:
+  /// 1. Declarations in source (-module, -export, -import)
+  /// 2. Parameters (override declarations)
   LoadedModule compileModule(
     String source, {
     String? moduleName,
@@ -79,21 +84,26 @@ class GlpCompiler {
       final lexer = _createLexer(source);
       final tokens = lexer.tokenize();
 
-      // Phase 2: Syntax analysis
-      final parser = _createParser(tokens);
-      final ast = parser.parse();
+      // Phase 2a: Parse module declarations
+      final parser1 = _createParser(tokens);
+      final moduleInfo = parser1.parseModuleInfo();
+
+      // Phase 2b: Parse procedures (with fresh parser at start)
+      final parser2 = _createParser(tokens);
+      final ast = parser2.parse();
 
       // Phase 3: Semantic analysis
       final analyzer = _createAnalyzer();
       final annotatedAst = analyzer.analyze(ast);
 
       // Phase 4: Code generation to LoadedModule
+      // Parameters override parsed declarations
       final codegen = _createCodegen();
       return codegen.generateModule(
         annotatedAst,
-        moduleName: moduleName,
-        exports: exports,
-        imports: imports,
+        moduleName: moduleName ?? moduleInfo.name,
+        exports: exports ?? (moduleInfo.exports.isNotEmpty ? moduleInfo.exports : null),
+        imports: imports ?? (moduleInfo.imports.isNotEmpty ? moduleInfo.imports : null),
       );
     } on CompileError catch (e) {
       // Rethrow with source context
