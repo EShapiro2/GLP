@@ -487,6 +487,10 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - i want  dart run glp_repl.dart  please remember that
 - always test all repl tests after a change
 
+## #remember Directive
+
+When the user says `#remember <something>`, add that information to this CLAUDE.md file so it persists across sessions.
+
 ## Git Collaboration Protocol (Multiple Claude Code Sessions)
 
 1. **Main branch** (`main`) is the source of truth - contains all merged, stable work
