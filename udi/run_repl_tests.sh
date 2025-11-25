@@ -376,9 +376,43 @@ run_test "Nested metainterpreter: run1(run(quicksort([1,4,3,2,4,5],X)))" \
     "X = \[1, 2, 3, 4, 4, 5\]"
 
 # ============================================
-# FUTURE TESTS: ARITHMETIC (:= operator)
-# These tests require the := operator to be implemented
-# Claude B is working on arithmetic - these will be useful
+# ARITHMETIC TESTS (Working with := operator)
+# These use the _direct.glp files with accumulator style
+# ============================================
+
+run_test "Sum list (arithmetic)" \
+    "sum_direct.glp" \
+    "sum([1,2,3,4,5], S)." \
+    "S = 15"
+
+run_test "Sum empty list (arithmetic)" \
+    "sum_direct.glp" \
+    "sum([], S)." \
+    "S = 0"
+
+run_test "Inner product (arithmetic)" \
+    "ip_direct.glp" \
+    "ip([1,2,3], [4,5,6], S)." \
+    "S = 32"
+
+run_test "Inner product single (arithmetic)" \
+    "ip_direct.glp" \
+    "ip([2], [3], S)." \
+    "S = 6"
+
+run_test "Multiply stream (arithmetic)" \
+    "multiply_direct.glp" \
+    "multiply(3, [1,2,3,4], Ys)." \
+    "Ys = \[3, 6, 9, 12\]"
+
+run_test "Multiply stream empty (arithmetic)" \
+    "multiply_direct.glp" \
+    "multiply(5, [], Ys)." \
+    "Ys = \[\]"
+
+# ============================================
+# FUTURE TESTS: RECURSIVE ARITHMETIC
+# These need reader reactivation fix (not arithmetic issue)
 # ============================================
 
 # Helper for future tests - shows them as skipped
@@ -394,7 +428,7 @@ run_future_test() {
     echo "  File: $file"
     echo "  Query: $query"
     echo "  Expected: $expected"
-    echo "  ⏳ SKIPPED (needs := arithmetic)"
+    echo "  ⏳ SKIPPED (needs reader reactivation fix)"
 }
 
 FUTURE=0
@@ -495,7 +529,7 @@ echo "════════════════════════�
 echo "Total:  $TOTAL tests"
 echo "Passed: $PASS tests ($(( PASS * 100 / TOTAL ))%)"
 echo "Failed: $FAIL tests"
-echo "Future: $FUTURE tests (needs := arithmetic)"
+echo "Future: $FUTURE tests (needs reader reactivation fix)"
 echo ""
 
 if [ $FAIL -eq 0 ]; then

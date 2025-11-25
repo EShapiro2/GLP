@@ -20,9 +20,11 @@ enum TokenType {
   COMMA,          // ,
   PIPE,           // |
   QUESTION,       // ? (for readers)
+  SEMICOLON,      // ; (disjunction/OR in guards)
 
   // Operators
   IMPLIES,        // :-
+  ASSIGN,         // := (arithmetic assignment)
   GUARD_SEP,      // | (in clause: Head :- Guards | Body)
 
   // Arithmetic operators
@@ -30,6 +32,7 @@ enum TokenType {
   MINUS,          // - (can be unary or binary)
   STAR,           // *
   SLASH,          // /
+  SLASH_SLASH,    // // (integer division)
   MOD,            // mod (keyword)
 
   // Comparison operators
@@ -38,6 +41,8 @@ enum TokenType {
   LESS_EQUAL,     // =< (Prolog convention, not <=)
   GREATER_EQUAL,  // >=
   EQUALS,         // = (unification in guards)
+  ARITH_EQUAL,    // =:= (arithmetic equality)
+  ARITH_NOT_EQUAL,// =\= (arithmetic inequality)
 
   // Special
   UNDERSCORE,     // _ (anonymous variable)

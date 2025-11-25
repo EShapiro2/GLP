@@ -44,11 +44,17 @@ class Lexer {
       case '?': return _makeToken(TokenType.QUESTION, startLine, startColumn);
       case '|': return _makeToken(TokenType.PIPE, startLine, startColumn);
       case '#': return _makeToken(TokenType.HASH, startLine, startColumn);
+      case ';': return _makeToken(TokenType.SEMICOLON, startLine, startColumn);
 
       // Arithmetic operators
       case '+': return _makeToken(TokenType.PLUS, startLine, startColumn);
       case '*': return _makeToken(TokenType.STAR, startLine, startColumn);
-      case '/': return _makeToken(TokenType.SLASH, startLine, startColumn);
+      case '/':
+        if (_match('/')) {
+          final lexeme = source.substring(_current - 2, _current);
+          return Token(TokenType.SLASH_SLASH, lexeme, startLine, startColumn);
+        }
+        return _makeToken(TokenType.SLASH, startLine, startColumn);
 
       // Comparison operators
       case '<':
@@ -64,12 +70,30 @@ class Lexer {
           final lexeme = source.substring(_current - 2, _current);
           return Token(TokenType.LESS_EQUAL, lexeme, startLine, startColumn);
         }
+        if (_match(':')) {
+          if (_match('=')) {
+            final lexeme = source.substring(_current - 3, _current);
+            return Token(TokenType.ARITH_EQUAL, lexeme, startLine, startColumn);
+          }
+          throw CompileError('Expected "=" after "=:"', startLine, startColumn, phase: 'lexer');
+        }
+        if (_match('\\')) {
+          if (_match('=')) {
+            final lexeme = source.substring(_current - 3, _current);
+            return Token(TokenType.ARITH_NOT_EQUAL, lexeme, startLine, startColumn);
+          }
+          throw CompileError('Expected "=" after "=\\"', startLine, startColumn, phase: 'lexer');
+        }
         return _makeToken(TokenType.EQUALS, startLine, startColumn);
 
       case ':':
         if (_match('-')) {
           final lexeme = source.substring(_current - 2, _current);
           return Token(TokenType.IMPLIES, lexeme, startLine, startColumn);
+        }
+        if (_match('=')) {
+          final lexeme = source.substring(_current - 2, _current);
+          return Token(TokenType.ASSIGN, lexeme, startLine, startColumn);
         }
         throw CompileError('Unexpected character :', startLine, startColumn, phase: 'lexer');
 
@@ -111,8 +135,8 @@ class Lexer {
 
     final text = source.substring(start, _current);
 
-    // Check for 'mod' keyword
-    if (text == 'mod') {
+    // Check for 'mod' keyword - but only if not followed by '(' (predicate call)
+    if (text == 'mod' && _peek() != '(') {
       return Token(TokenType.MOD, text, line, column);
     }
 
@@ -242,18 +266,18 @@ class Lexer {
     return true;
   }
 
-  String _peek() => _isAtEnd() ? '\0' : source[_current];
-  String _peekNext() => _current + 1 >= source.length ? '\0' : source[_current + 1];
+  String _peek() => _isAtEnd() ? '\x00' : source[_current];
+  String _peekNext() => _current + 1 >= source.length ? '\x00' : source[_current + 1];
   bool _isAtEnd() => _current >= source.length;
 
   bool _isDigit(String c) {
-    if (c == '\0') return false;
+    if (c == '\x00') return false;
     final code = c.codeUnitAt(0);
     return code >= '0'.codeUnitAt(0) && code <= '9'.codeUnitAt(0);
   }
 
   bool _isAlpha(String c) {
-    if (c == '\0') return false;
+    if (c == '\x00') return false;
     final code = c.codeUnitAt(0);
     return (code >= 'a'.codeUnitAt(0) && code <= 'z'.codeUnitAt(0)) ||
            (code >= 'A'.codeUnitAt(0) && code <= 'Z'.codeUnitAt(0)) ||
@@ -263,7 +287,7 @@ class Lexer {
   bool _isAlphaNumeric(String c) => _isAlpha(c) || _isDigit(c);
 
   bool _isUpper(String c) {
-    if (c == '\0') return false;
+    if (c == '\x00') return false;
     final code = c.codeUnitAt(0);
     return code >= 'A'.codeUnitAt(0) && code <= 'Z'.codeUnitAt(0);
   }

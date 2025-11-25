@@ -1,5 +1,4 @@
 import 'machine_state.dart';
-import 'heap.dart';
 import 'heap_fcp.dart';
 import 'suspension.dart';
 import 'terms.dart';
@@ -109,22 +108,4 @@ class CommitOps {
     }
   }
 
-
-  /// Apply tentative writer substitution σ̂w (v2.16 semantics - deprecated)
-  /// TODO: Remove after full migration to FCP
-  static List<GoalRef> applySigmaHatV216({
-    required Heap heap,
-    required Map<int, Object?> sigmaHat,
-  }) {
-    throw UnimplementedError('applySigmaHatV216 deprecated - use applySigmaHatFCP');
-  }
-
-  /// Legacy version (deprecated)
-  /// TODO: Remove after full migration to FCP
-  static List<GoalRef> applySigmaHat({
-    required Heap heap,
-    required Iterable<int> writerIds,
-  }) {
-    throw UnimplementedError('applySigmaHat deprecated - use applySigmaHatFCP');
-  }
 }

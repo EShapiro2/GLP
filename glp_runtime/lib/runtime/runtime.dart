@@ -9,6 +9,7 @@ import 'abandon.dart';
 import 'fairness.dart';
 import 'system_predicates.dart';
 import 'service_registry.dart';
+import 'body_kernels.dart';
 import '../bytecode/runner.dart' show CallEnv;
 
 class GlpRuntime {
@@ -16,6 +17,7 @@ class GlpRuntime {
   final GoalQueue gq;
   final SystemPredicateRegistry systemPredicates;
   final ServiceRegistry serviceRegistry;
+  final BodyKernelRegistry bodyKernels;
 
   final Map<GoalId, int> _budgets = <GoalId, int>{};
   final Map<GoalId, CallEnv> _goalEnvs = <GoalId, CallEnv>{};
@@ -32,11 +34,19 @@ class GlpRuntime {
   // Goal ID counter for spawn
   int nextGoalId = 10000;  // Start at 10000 to avoid collisions with test goal IDs
 
-  GlpRuntime({HeapFCP? heap, GoalQueue? gq, SystemPredicateRegistry? systemPredicates, ServiceRegistry? serviceRegistry})
+  GlpRuntime({HeapFCP? heap, GoalQueue? gq, SystemPredicateRegistry? systemPredicates, ServiceRegistry? serviceRegistry, BodyKernelRegistry? bodyKernels})
       : heap = heap ?? HeapFCP(),
         gq = gq ?? GoalQueue(),
         systemPredicates = systemPredicates ?? SystemPredicateRegistry(),
-        serviceRegistry = serviceRegistry ?? ServiceRegistry();
+        serviceRegistry = serviceRegistry ?? ServiceRegistry(),
+        bodyKernels = bodyKernels ?? _createDefaultBodyKernels();
+
+  /// Create body kernel registry with standard kernels registered
+  static BodyKernelRegistry _createDefaultBodyKernels() {
+    final registry = BodyKernelRegistry();
+    registerStandardBodyKernels(registry);
+    return registry;
+  }
 
   /// Commit writer bindings using FCP-exact semantics
   /// sigmaHat: Map from varId to tentative value

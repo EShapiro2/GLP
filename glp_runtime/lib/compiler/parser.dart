@@ -210,24 +210,37 @@ class Parser {
     final arity = firstClause.head.arity;
 
     // Parse additional clauses with same functor/arity
-    while (!_isAtEnd() && _peek().type == TokenType.ATOM) {
-      if (_peek().lexeme == name) {
-        final clause = _parseClause();
+    // Special case: := clauses start with VARIABLE, not ATOM
+    while (!_isAtEnd()) {
+      // Check if next clause could be part of this procedure
+      bool couldBeSameProcedure = false;
 
-        // Verify same arity
-        if (clause.head.arity != arity) {
-          throw CompileError(
-            'Clause for $name has arity ${clause.head.arity}, expected $arity',
-            clause.line,
-            clause.column,
-            phase: 'parser'
-          );
+      if (_peek().type == TokenType.ATOM && _peek().lexeme == name) {
+        // Same predicate name
+        couldBeSameProcedure = true;
+      } else if (name == ':=' && _peek().type == TokenType.VARIABLE) {
+        // := clauses start with variable (e.g., "Result := X + Y")
+        // Look ahead to see if it's followed by :=
+        if (_current + 1 < tokens.length && tokens[_current + 1].type == TokenType.ASSIGN) {
+          couldBeSameProcedure = true;
         }
-
-        clauses.add(clause);
-      } else {
-        break;  // Different procedure
       }
+
+      if (!couldBeSameProcedure) break;
+
+      final clause = _parseClause();
+
+      // Verify same functor and arity
+      if (clause.head.functor != name || clause.head.arity != arity) {
+        throw CompileError(
+          'Clause for ${clause.head.functor}/${clause.head.arity} found, expected $name/$arity',
+          clause.line,
+          clause.column,
+          phase: 'parser'
+        );
+      }
+
+      clauses.add(clause);
     }
 
     return Procedure(name, arity, clauses, firstClause.line, firstClause.column);
@@ -280,6 +293,40 @@ class Parser {
 
   // Parse a predicate that could be either a guard or a goal
   dynamic _parseGoalOrGuard() {
+    // Check for parenthesized disjunction: (Goal1 ; Goal2)
+    if (_check(TokenType.LPAREN)) {
+      final startToken = _advance(); // consume '('
+      final firstGoal = _parseGoalOrGuard();
+
+      if (_match(TokenType.SEMICOLON)) {
+        // This is a disjunction
+        final secondGoal = _parseGoalOrGuard();
+        _consume(TokenType.RPAREN, 'Expected ")" after disjunction');
+        // Return as ';'(Goal1, Goal2) - need to convert goals to terms
+        final firstTerm = _goalToTerm(firstGoal);
+        final secondTerm = _goalToTerm(secondGoal);
+        return Goal(';', [firstTerm, secondTerm], startToken.line, startToken.column);
+      } else {
+        // Not a disjunction - put back what we parsed and try again
+        // This is complex, so for now just expect closing paren
+        _consume(TokenType.RPAREN, 'Expected ")" after guard');
+        return firstGoal;
+      }
+    }
+
+    // Check for assignment: Var := Expr
+    if (_check(TokenType.VARIABLE)) {
+      final varToken = _peek();
+      // Look ahead for :=
+      if (tokens.length > _current + 1 && tokens[_current + 1].type == TokenType.ASSIGN) {
+        _advance(); // consume variable
+        _advance(); // consume :=
+        final varTerm = VarTerm(varToken.lexeme, false, varToken.line, varToken.column);
+        final expr = _parseExpression();
+        return Goal(':=', [varTerm, expr], varToken.line, varToken.column);
+      }
+    }
+
     // Try to parse as regular predicate first
     if (_check(TokenType.ATOM)) {
       final functorToken = _consume(TokenType.ATOM, 'Expected predicate name');
@@ -324,7 +371,8 @@ class Parser {
     // Check for comparison operator
     if (_check(TokenType.LESS) || _check(TokenType.GREATER) ||
         _check(TokenType.LESS_EQUAL) || _check(TokenType.GREATER_EQUAL) ||
-        _check(TokenType.EQUALS)) {
+        _check(TokenType.EQUALS) || _check(TokenType.ARITH_EQUAL) ||
+        _check(TokenType.ARITH_NOT_EQUAL)) {
       final opToken = _advance();
       final right = _parsePrimary();
 
@@ -342,8 +390,30 @@ class Parser {
     );
   }
 
-  // Atom: functor(arg1, arg2, ...)
+  // Convert a Goal to a Term representation (for disjunction)
+  Term _goalToTerm(dynamic goal) {
+    if (goal is Goal) {
+      return StructTerm(goal.functor, goal.args, goal.line, goal.column);
+    }
+    throw CompileError('Expected goal', 0, 0, phase: 'parser');
+  }
+
+  // Atom: functor(arg1, arg2, ...) or Var := Expr (for clause heads)
   Atom _parseAtom() {
+    // Check for := pattern: Var := Expr
+    if (_check(TokenType.VARIABLE)) {
+      final varToken = _advance();
+      if (_match(TokenType.ASSIGN)) {
+        // Parse as ':='(Var, Expr)
+        final varTerm = VarTerm(varToken.lexeme, false, varToken.line, varToken.column);
+        final expr = _parseTerm();
+        return Atom(':=', [varTerm, expr], varToken.line, varToken.column);
+      } else {
+        // Not an assignment - put variable back by rewinding
+        _current--;
+      }
+    }
+
     final functorToken = _consume(TokenType.ATOM, 'Expected predicate name');
     final args = <Term>[];
 
@@ -362,8 +432,29 @@ class Parser {
     return Atom(functorToken.lexeme, args, functorToken.line, functorToken.column);
   }
 
-  // Goal: same as Atom, but handles Module # Goal syntax
+  // Goal: same as Atom, but handles Module # Goal syntax and assignment (Var := Expr)
   Goal _parseGoal() {
+    // Check for assignment: Var := Expr
+    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
+      final varToken = _advance();
+      if (_match(TokenType.ASSIGN)) {
+        // Parse as ':='(Var, Expr)
+        final varTerm = varToken.type == TokenType.READER
+            ? VarTerm(varToken.lexeme, true, varToken.line, varToken.column)
+            : VarTerm(varToken.lexeme, false, varToken.line, varToken.column);
+        final expr = _parseTerm();
+        return Goal(':=', [varTerm, expr], varToken.line, varToken.column);
+      } else {
+        // Not an assignment - this is an error in goal position
+        throw CompileError(
+          'Expected predicate name or assignment, got variable "${varToken.lexeme}"',
+          varToken.line,
+          varToken.column,
+          phase: 'parser'
+        );
+      }
+    }
+
     final functorToken = _consume(TokenType.ATOM, 'Expected predicate name');
     final args = <Term>[];
 
@@ -450,15 +541,19 @@ class Parser {
       return StructTerm('neg', [operand], minusToken.line, minusToken.column);
     }
 
-    // Variable or Reader
-    if (_check(TokenType.VARIABLE)) {
+    // Variable or Reader - check for := assignment
+    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
       final token = _advance();
-      return VarTerm(token.lexeme, false, token.line, token.column);
-    }
+      final isReader = token.type == TokenType.READER;
 
-    if (_check(TokenType.READER)) {
-      final token = _advance();
-      return VarTerm(token.lexeme, true, token.line, token.column);
+      // Check for := assignment (Var := Expr)
+      if (_match(TokenType.ASSIGN)) {
+        final varTerm = VarTerm(token.lexeme, isReader, token.line, token.column);
+        final expr = _parseExpression();
+        return StructTerm(':=', [varTerm, expr], token.line, token.column);
+      }
+
+      return VarTerm(token.lexeme, isReader, token.line, token.column);
     }
 
     // Underscore (anonymous variable)
@@ -556,12 +651,15 @@ class Parser {
            token.type == TokenType.MINUS ||
            token.type == TokenType.STAR ||
            token.type == TokenType.SLASH ||
+           token.type == TokenType.SLASH_SLASH ||
            token.type == TokenType.MOD ||
            token.type == TokenType.LESS ||
            token.type == TokenType.GREATER ||
            token.type == TokenType.LESS_EQUAL ||
            token.type == TokenType.GREATER_EQUAL ||
-           token.type == TokenType.EQUALS;
+           token.type == TokenType.EQUALS ||
+           token.type == TokenType.ARITH_EQUAL ||
+           token.type == TokenType.ARITH_NOT_EQUAL;
   }
 
   // Get operator precedence
@@ -569,6 +667,7 @@ class Parser {
     switch (op.type) {
       case TokenType.STAR:
       case TokenType.SLASH:
+      case TokenType.SLASH_SLASH:
       case TokenType.MOD:
         return 20;  // Multiplicative
       case TokenType.PLUS:
@@ -579,6 +678,8 @@ class Parser {
       case TokenType.LESS_EQUAL:
       case TokenType.GREATER_EQUAL:
       case TokenType.EQUALS:
+      case TokenType.ARITH_EQUAL:
+      case TokenType.ARITH_NOT_EQUAL:
         return 5;   // Comparison (lower than arithmetic)
       default:
         return 0;
@@ -596,6 +697,8 @@ class Parser {
         return '*';
       case TokenType.SLASH:
         return '/';
+      case TokenType.SLASH_SLASH:
+        return '//';
       case TokenType.MOD:
         return 'mod';
       case TokenType.LESS:
@@ -608,6 +711,10 @@ class Parser {
         return '>=';
       case TokenType.EQUALS:
         return '=';
+      case TokenType.ARITH_EQUAL:
+        return '=:=';
+      case TokenType.ARITH_NOT_EQUAL:
+        return '=\\=';
       default:
         throw CompileError(
           'Unknown operator: ${op.type}',

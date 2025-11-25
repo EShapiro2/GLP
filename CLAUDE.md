@@ -444,6 +444,80 @@ git reset --hard HEAD~1
 git reset --hard 7be7d83
 ```
 
+## Multi-Claude Git Collaboration Protocol
+
+### Branch Rules
+- **Main branch** (`main`) is the source of truth - contains all merged, stable work
+- **Each Claude session** works on its own branch: `claude/...-<session-id>`
+- **Permissions:**
+  - Each Claude can pull from any branch (main, other claude branches)
+  - Each Claude can only push to its own branch
+  - Only the user can merge into main
+
+### Workflow Diagram
+```
+main ◄─── merge (user only) ◄───┬──────────────┐
+                                │              │
+              pull              │              │
+                ▼               │              │
+Claude A: work → push → branch-A               │
+Claude B: work → push → branch-B ──────────────┘
+```
+
+### Claude's Responsibilities
+
+**At session start:**
+1. Pull from main: `git pull origin main`
+2. Run baseline tests: `dart test` and `bash run_repl_tests.sh`
+3. Work on your branch
+
+**During work:**
+1. Commit frequently with clear messages
+2. Test after each change
+3. Push to your branch: `git push -u origin claude/<your-branch-name>`
+
+**Before ending session:**
+1. Ensure all work is committed
+2. Push to your branch
+3. Tell user: "My changes are on branch `claude/xxx`. To merge to main, run:"
+   ```bash
+   git fetch origin claude/<branch-name>
+   git checkout main
+   git merge origin/claude/<branch-name>
+   git push origin main
+   ```
+
+### User's Responsibilities
+
+**To merge Claude's work into main:**
+```bash
+# Step 1: Fetch Claude's branch
+git fetch origin claude/<branch-name>
+
+# Step 2: Switch to main
+git checkout main
+
+# Step 3: Merge Claude's branch
+git merge origin/claude/<branch-name>
+
+# Step 4: Push to main
+git push origin main
+```
+
+**To verify merge:**
+- Ask Claude to pull main and run tests
+- Or run tests yourself: `dart test && bash udi/run_repl_tests.sh`
+
+### Common Issues
+
+**"not something we can merge" error:**
+- You need to fetch first: `git fetch origin claude/<branch-name>`
+- Then merge: `git merge origin/claude/<branch-name>`
+
+**Divergent branches:**
+- Use `git pull origin main --no-rebase` to merge main into your branch
+- Or use `git pull origin main --rebase` if you prefer rebasing
+
 ## Error Response Template
 
 When something fails:
@@ -495,3 +569,22 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - when we are discussing, do not move away from the discussion or do anything else until user agrees that the discussion is over
 - i want  dart run glp_repl.dart  please remember that
 - always test all repl tests after a change
+
+## #remember Directive
+
+When the user says `#remember <something>`, add that information to this CLAUDE.md file so it persists across sessions.
+
+## Git Collaboration Protocol (Multiple Claude Code Sessions)
+
+1. **Main branch** (`main`) is the source of truth - contains all merged, stable work
+2. **Each Claude session** works on its own branch (`claude/...-<session-id>`)
+3. **Permissions**:
+   - Each Claude can **pull from any branch** (main, other claude branches)
+   - Each Claude can **only push to its own branch** (403 error otherwise)
+   - Only the **user** can merge into main
+4. **Workflow**:
+   - Pull from `main` at session start to get latest work
+   - Create commits on your own branch
+   - Push to your branch when done
+   - User merges completed work into `main`
+5. **At session end**: Ensure all work is committed and pushed to your branch

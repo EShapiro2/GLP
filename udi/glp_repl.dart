@@ -47,6 +47,23 @@ void main() async {
   // Track loaded programs
   final loadedPrograms = <String, BytecodeProgram>{};
 
+  // Load stdlib (assign.glp) for arithmetic support
+  final stdlibPath = '../stdlib/assign.glp';
+  final stdlibFile = File(stdlibPath);
+  if (stdlibFile.existsSync()) {
+    try {
+      final stdlibSource = stdlibFile.readAsStringSync();
+      final stdlibCompiler = GlpCompiler(skipSRSW: true);
+      final stdlibProg = stdlibCompiler.compile(stdlibSource);
+      loadedPrograms['__stdlib__'] = stdlibProg;
+      print('Loaded stdlib: assign.glp (${stdlibProg.ops.length} ops)');
+    } catch (e) {
+      print('Warning: Could not load stdlib: $e');
+    }
+  } else {
+    print('Warning: stdlib not found at $stdlibPath');
+  }
+
   var goalId = 1;
   var debugTrace = true; // Toggle with :trace command
   var showBindings = true; // Toggle with :binding command

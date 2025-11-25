@@ -5,6 +5,7 @@ import 'package:glp_runtime/runtime/commit.dart';
 import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/system_predicates.dart';
 import 'package:glp_runtime/runtime/loaded_module.dart';
+import 'package:glp_runtime/runtime/body_kernels.dart';
 import 'opcodes.dart';
 import 'opcodes_v2.dart' as opv2;
 
@@ -30,9 +31,19 @@ class BytecodeProgram {
     final m = <LabelName,int>{};
     for (var i = 0; i < ops.length; i++) {
       final op = ops[i];
-      if (op is Label) m[op.name] = i;
+      // Keep first occurrence of each label (for multi-clause procedures)
+      if (op is Label && !m.containsKey(op.name)) {
+        m[op.name] = i;
+      }
     }
     return m;
+  }
+
+  /// Merge another program into this one (prepend stdlib)
+  /// Returns a new BytecodeProgram with all ops from both
+  BytecodeProgram merge(BytecodeProgram other) {
+    final mergedOps = [...other.ops, ...ops];
+    return BytecodeProgram(mergedOps);
   }
 
   /// Generate human-readable disassembly of bytecode
@@ -1523,6 +1534,15 @@ class BytecodeRunner {
                 // Bind the writer to the completed structure
                 cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
 
+                // Put the structure reference into argSlots if we have a target slot
+                // PutStructure stores target slot in clauseVars[-2] for slots 0-9
+                final targetSlot = cx.clauseVars[-2];
+                if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
+                  // Put a reader reference to the structure in the target arg slot
+                  cx.argSlots[targetSlot] = VarRef(targetWriterId, isReader: true);
+                  cx.clauseVars.remove(-2);
+                }
+
                 // Reset structure building state
                 cx.currentStructure = null;
                 cx.mode = UnifyMode.read;
@@ -2456,6 +2476,13 @@ class BytecodeRunner {
                     if (cx.onActivation != null) cx.onActivation!(a);
                   }
 
+                  // Per spec v2.16 section 7.1: Store VarRef to bound writer in argSlots
+                  final targetSlot = cx.clauseVars[-2];
+                  if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
+                    cx.argSlots[targetSlot] = VarRef(parentWriterId, isReader: true);
+                    cx.clauseVars.remove(-2);
+                  }
+
                   // Clear structure building state
                   cx.currentStructure = null;
                   cx.mode = UnifyMode.read;
@@ -2477,31 +2504,27 @@ class BytecodeRunner {
 
       if (op is SetReader) {
         if (cx.inBody && cx.mode == UnifyMode.write && cx.currentStructure is StructTerm) {
-          // Check if writer already exists in clause variables
-          final existingWriterId = cx.clauseVars[op.varIndex];
-          final int writerId;
+          // Check what value exists in clause variables
+          final existingValue = cx.clauseVars[op.varIndex];
+          final struct = cx.currentStructure as StructTerm;
 
-          if (existingWriterId is VarRef) {
-            // Use existing writer from VarRef
-            writerId = existingWriterId.varId;
-          } else if (existingWriterId is int) {
-            // Legacy: bare int (use it directly)
-            writerId = existingWriterId;
+          // Handle different value types in clauseVars
+          if (existingValue is VarRef) {
+            // VarRef: use its varId as reader reference
+            struct.args[cx.S] = VarRef(existingValue.varId, isReader: true);
+          } else if (existingValue is int) {
+            // Legacy: bare int (use it as varId directly)
+            struct.args[cx.S] = VarRef(existingValue, isReader: true);
+          } else if (existingValue is Term) {
+            // Term (ConstTerm, StructTerm, etc.): embed directly in structure
+            struct.args[cx.S] = existingValue;
           } else {
-            // Allocate new variable only if uninitialized
+            // Uninitialized: allocate new variable
             final varId = cx.rt.heap.allocateFreshVar();
             cx.rt.heap.addVariable(varId);
-
-            // Store variable ID in clause variable
-            // CRITICAL FIX: Store VarRef, not bare ID
             cx.clauseVars[op.varIndex] = VarRef(varId, isReader: false);
-            writerId = varId;
+            struct.args[cx.S] = VarRef(varId, isReader: true);
           }
-
-          // Store VarRef (reader mode) in current structure at position S
-          // In FCP single-ID: use writerId directly as reader
-          final struct = cx.currentStructure as StructTerm;
-          struct.args[cx.S] = VarRef(writerId, isReader: true);
           cx.S++; // Move to next position
 
           // Check if structure is complete (all arguments filled)
@@ -2568,6 +2591,13 @@ class BytecodeRunner {
                     for (final a in acts) {
                       cx.rt.gq.enqueue(a);
                       if (cx.onActivation != null) cx.onActivation!(a);
+                    }
+
+                    // Per spec v2.16 section 7.1: Store VarRef to bound writer in argSlots
+                    final targetSlot = cx.clauseVars[-2];
+                    if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
+                      cx.argSlots[targetSlot] = VarRef(parentWriterId, isReader: true);
+                      cx.clauseVars.remove(-2);
                     }
 
                     // Clear structure building state
@@ -2637,18 +2667,48 @@ class BytecodeRunner {
       // ===== Goal spawning and control flow =====
       if (op is Spawn) {
         if (cx.inBody) {
+          // Get entry point for procedure
+          final entryPc = prog.labels[op.procedureLabel];
+
+          // If procedure not found in program, check if it's a body kernel
+          if (entryPc == null) {
+            // Extract procedure name from label (may be "name" or "name/arity")
+            final labelParts = op.procedureLabel.split('/');
+            final procName = labelParts[0];
+
+            // Look up body kernel
+            final kernel = cx.rt.bodyKernels.lookup(procName, op.arity);
+            if (kernel != null) {
+              // Execute body kernel inline
+              // Collect arguments from argSlots
+              final args = <Object?>[];
+              for (int i = 0; i < op.arity; i++) {
+                args.add(cx.argSlots[i]);
+              }
+
+              // Execute kernel
+              final result = kernel(cx.rt, args);
+
+              if (result == BodyKernelResult.abort) {
+                print('ERROR: Body kernel ${procName}/${op.arity} aborted');
+                return RunResult.terminated;
+              }
+
+              // Success - clear args and continue (no goal spawned)
+              cx.argSlots.clear();
+              pc++; continue;
+            }
+
+            // Not a body kernel either - error
+            print('ERROR: Spawn could not find procedure label: ${op.procedureLabel}');
+            return RunResult.terminated;
+          }
+
           // Spawn a new goal with heterogeneous argument Terms
           // Per spec v2.16 section 1.1: Create CallEnv from argSlots
           final newEnv = CallEnv(
             args: Map<int, Term>.from(cx.argSlots),
           );
-
-          // Get entry point for procedure
-          final entryPc = prog.labels[op.procedureLabel];
-          if (entryPc == null) {
-            print('ERROR: Spawn could not find procedure label: ${op.procedureLabel}');
-            return RunResult.terminated;
-          }
 
           // Create and enqueue new goal with unique ID
           final newGoalId = cx.rt.nextGoalId++;
@@ -3617,6 +3677,12 @@ class BytecodeRunner {
           // Reader - get paired writer and check if bound
           final readerId = t.varId;
           final wid = cx.rt.heap.writerIdForReader(readerId);
+
+          // Check sigma-hat first for tentative bindings (before commit)
+          if (wid != null && cx.sigmaHat.containsKey(wid)) {
+            return dereference(cx.sigmaHat[wid]);
+          }
+
           if (wid != null && cx.rt.heap.isWriterBound(wid)) {
             final boundValue = cx.rt.heap.valueOfWriter(wid);
             // CRITICAL FIX: Recursively dereference the bound value
