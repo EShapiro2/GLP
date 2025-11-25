@@ -6,9 +6,13 @@ import 'error.dart';
 import 'token.dart';
 import 'result.dart';
 import '../bytecode/runner.dart' show BytecodeProgram;
+import '../runtime/loaded_module.dart';
+import '../runtime/service_registry.dart';
 
 // Re-export for users of this module
 export '../bytecode/runner.dart' show BytecodeProgram;
+export '../runtime/loaded_module.dart' show LoadedModule;
+export '../runtime/service_registry.dart' show ServiceRegistry;
 export 'result.dart' show CompilationResult;
 
 /// Main GLP compiler
@@ -54,6 +58,43 @@ class GlpCompiler {
       final result = codegen.generateWithMetadata(annotatedAst);
 
       return result;
+    } on CompileError catch (e) {
+      // Rethrow with source context
+      throw CompileError(e.message, e.line, e.column, source: source, phase: e.category?.toString().split('.').last);
+    }
+  }
+
+  /// Compile GLP source to a LoadedModule for the module system.
+  ///
+  /// Unlike compile() which produces a merged BytecodeProgram,
+  /// this produces a LoadedModule with its own namespace.
+  LoadedModule compileModule(
+    String source, {
+    String? moduleName,
+    Set<String>? exports,
+    List<String>? imports,
+  }) {
+    try {
+      // Phase 1: Lexical analysis
+      final lexer = _createLexer(source);
+      final tokens = lexer.tokenize();
+
+      // Phase 2: Syntax analysis
+      final parser = _createParser(tokens);
+      final ast = parser.parse();
+
+      // Phase 3: Semantic analysis
+      final analyzer = _createAnalyzer();
+      final annotatedAst = analyzer.analyze(ast);
+
+      // Phase 4: Code generation to LoadedModule
+      final codegen = _createCodegen();
+      return codegen.generateModule(
+        annotatedAst,
+        moduleName: moduleName,
+        exports: exports,
+        imports: imports,
+      );
     } on CompileError catch (e) {
       // Rethrow with source context
       throw CompileError(e.message, e.line, e.column, source: source, phase: e.category?.toString().split('.').last);

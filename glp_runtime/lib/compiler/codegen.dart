@@ -3,6 +3,7 @@ import '../bytecode/opcodes_v2.dart' as bcv2;
 import '../bytecode/asm.dart';
 import '../bytecode/runner.dart' show BytecodeProgram;
 import '../runtime/terms.dart' as rt;
+import '../runtime/loaded_module.dart';
 import 'ast.dart';
 import 'analyzer.dart';
 import 'error.dart';
@@ -87,6 +88,39 @@ class CodeGenerator {
     final bytecode = BytecodeProgram(ctx.instructions);
 
     return CompilationResult(bytecode, variableMap);
+  }
+
+  /// Generate a LoadedModule for the module system.
+  ///
+  /// Unlike generate() which produces a merged BytecodeProgram,
+  /// this produces a LoadedModule with its own namespace.
+  LoadedModule generateModule(
+    AnnotatedProgram program, {
+    String? moduleName,
+    Set<String>? exports,
+    List<String>? imports,
+  }) {
+    final ctx = CodeGenContext();
+    final procOffsets = <String, int>{};
+
+    // Generate code for each procedure, tracking entry points
+    for (final proc in program.procedures) {
+      // Record procedure entry point BEFORE generating code
+      procOffsets[proc.signature] = ctx.currentPC;
+      _generateProcedure(proc, ctx);
+    }
+
+    // Cast instructions to List<bc.Op> (they're all Op subclasses)
+    final instructions = ctx.instructions.cast<bc.Op>();
+
+    return LoadedModule(
+      name: moduleName ?? '_anonymous',
+      exports: exports ?? <String>{},  // Empty = all exported
+      imports: imports ?? <String>[],
+      instructions: List<bc.Op>.from(instructions),
+      labels: Map<String, int>.from(ctx.labels),
+      procOffsets: procOffsets,
+    );
   }
 
   void _generateProcedure(AnnotatedProcedure proc, CodeGenContext ctx) {
