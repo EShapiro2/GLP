@@ -124,7 +124,11 @@ num? _evaluateArithmetic(GlpRuntime rt, StructTerm struct) {
 BodyKernelResult _bindResult(GlpRuntime rt, Object? outputArg, Object value) {
   if (outputArg is VarRef && !outputArg.isReader) {
     // Bind the writer variable to the result value
-    rt.heap.bindVariableConst(outputArg.varId, value);
+    // CRITICAL: bindVariableConst returns goals to reactivate - must enqueue them!
+    final activations = rt.heap.bindVariableConst(outputArg.varId, value);
+    for (final act in activations) {
+      rt.gq.enqueue(act);
+    }
     return BodyKernelResult.success;
   }
   print('[ABORT] Body kernel: output argument is not a writer');

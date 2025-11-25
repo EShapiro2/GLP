@@ -35,8 +35,7 @@ reduce(factorial(N, F?),
         F := N? * F1?)) :-
   N? > 1 | true.
 
-% Assignment reduction
-reduce(R := Expr, true) :- R := Expr?.
+% Note: := is handled directly by the runtime, no reduce clause needed
 
 % ===== TESTS =====
 % Direct: factorial(5, F) should give F = 120

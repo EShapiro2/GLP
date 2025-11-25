@@ -30,8 +30,7 @@ reduce(ip_acc([X|Xs], [Y|Ys], Acc, S?),
        (Acc1 := Acc? + X? * Y?,
         ip_acc(Xs?, Ys?, Acc1?, S))).
 
-% Assignment reduction
-reduce(R := Expr, true) :- R := Expr?.
+% Note: := is handled directly by the runtime, no reduce clause needed
 
 % ===== TESTS =====
 % Direct: ip([1,2,3], [4,5,6], S) should give S = 32

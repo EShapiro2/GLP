@@ -54,10 +54,16 @@ class CommitOps {
       // FCP line 301: Save suspension list before replacing reader content
       final oldContent = heap.cells[rAddr].content;
 
-      // CRITICAL: If oldContent is a suspension list, activate NOW before overwriting
-      // This handles X? → Y? bindings where X has suspended goals
+      // Handle suspensions: FORWARD if binding to unbound VarRef, ACTIVATE if binding to ground
       if (oldContent is SuspensionListNode) {
-        _walkAndActivate(oldContent, activations);
+        if (value is VarRef) {
+          // Binding to another variable (still unbound) - FORWARD suspensions
+          // Don't activate now; merge into target's suspension list
+          _forwardSuspensions(heap, oldContent, value.varId);
+        } else {
+          // Binding to ground value - activate suspensions immediately
+          _walkAndActivate(oldContent, activations);
+        }
       }
 
       // FCP lines 233/303: Bind BOTH cells to dereferenced value
@@ -103,6 +109,26 @@ class CommitOps {
       if (current.armed) {
         acts.add(GoalRef(current.goalId!, current.resumePC));
         current.record.disarm();  // Disarm shared record - affects all nodes
+      }
+      current = current.next;
+    }
+  }
+
+  /// Forward suspension list to another variable (for reader chains)
+  /// When binding W → R? where R is unbound, suspensions waiting on W should
+  /// be moved to R's reader cell so they wake when R is eventually bound.
+  static void _forwardSuspensions(HeapFCP heap, SuspensionListNode? list, int targetVarId) {
+    final (_, targetRAddr) = heap.varTable[targetVarId]!;
+    var current = list;
+
+    while (current != null) {
+      if (current.armed) {
+        // Create a new node sharing the same SuspensionRecord
+        // This ensures disarming one disarms all copies (FCP shared state)
+        final newNode = SuspensionListNode(current.record);
+        final targetContent = heap.cells[targetRAddr].content;
+        newNode.next = targetContent is SuspensionListNode ? targetContent : null;
+        heap.cells[targetRAddr].content = newNode;
       }
       current = current.next;
     }

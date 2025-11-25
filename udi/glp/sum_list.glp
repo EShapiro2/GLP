@@ -30,8 +30,7 @@ reduce(sum_acc([X|Xs], Acc, S?),
        (Acc1 := Acc? + X?,
         sum_acc(Xs?, Acc1?, S))).
 
-% Assignment reduction
-reduce(R := Expr, true) :- R := Expr?.
+% Note: := is handled directly by the runtime, no reduce clause needed
 
 % ===== TESTS =====
 % Direct: sum([1,2,3,4,5], S) should give S = 15

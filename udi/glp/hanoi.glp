@@ -8,9 +8,14 @@
 % hanoi(N, From, To, Moves) :- Moves to move N disks from From to To
 hanoi(0, From, To, (From?, To?)).
 hanoi(N, From, To, (Before?, (From?, To?), After?)) :-
-  N? > 0 |
+  N? > 0, ground(From?), ground(To?) |
   N1 := N? - 1,
   free(From?, To?, Free),
+  hanoi1(N1?, Free?, From?, To?, Before, After).
+
+% Auxiliary to allow N1 and Free to be read multiple times
+hanoi1(N1, Free, From, To, Before?, After?) :-
+  ground(N1?), ground(Free?) |
   hanoi(N1?, From?, Free?, Before),
   hanoi(N1?, Free?, To?, After).
 
@@ -37,9 +42,14 @@ reduce(hanoi(0, From, To, (From?, To?)), true).
 reduce(hanoi(N, From, To, (Before?, (From?, To?), After?)),
        (N1 := N? - 1,
         free(From?, To?, Free),
-        hanoi(N1?, From?, Free?, Before),
+        hanoi1(N1?, Free?, From?, To?, Before, After))) :-
+  N? > 0, ground(From?), ground(To?) | true.
+
+% Auxiliary reduction
+reduce(hanoi1(N1, Free, From, To, Before?, After?),
+       (hanoi(N1?, From?, Free?, Before),
         hanoi(N1?, Free?, To?, After))) :-
-  N? > 0 | true.
+  ground(N1?), ground(Free?) | true.
 
 % free/3 facts reduce to true
 reduce(free(a, b, c), true).
@@ -49,8 +59,7 @@ reduce(free(b, c, a), true).
 reduce(free(c, a, b), true).
 reduce(free(c, b, a), true).
 
-% Assignment reduction (when := is implemented)
-reduce(R := Expr, true) :- R := Expr?.
+% Note: := is handled directly by the runtime, no reduce clause needed
 
 % ===== TESTS =====
 % Direct: hanoi(2, a, c, Moves)

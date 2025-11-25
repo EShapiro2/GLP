@@ -425,6 +425,16 @@ run_test "Fibonacci fib(2) (arithmetic)" \
     "fib(2, F)." \
     "F = 1"
 
+run_test "Hanoi base case hanoi(0)" \
+    "hanoi.glp" \
+    "hanoi(0, a, c, M)." \
+    "→ 1 goals"
+
+run_test "Hanoi one disk hanoi(1)" \
+    "hanoi.glp" \
+    "hanoi(1, a, c, M)." \
+    "→ 6 goals"
+
 # ============================================
 # FUTURE TESTS: RECURSIVE ARITHMETIC (depth > 2)
 # These need reader reactivation fix (not arithmetic issue)

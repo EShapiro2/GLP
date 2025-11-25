@@ -1,7 +1,8 @@
 % primes.glp - Sieve of Eratosthenes
 %
-% FUTURE TEST: Requires := arithmetic operator and mod/=:=/=\= guards
+% FUTURE TEST: Requires mod operator and =:=/=\= guards (not yet implemented)
 % From Concurrent Prolog course (handout 4)
+% NOTE: This file cannot load until mod/=:=/=\= are added to the parser
 
 % ===== DIRECT EXECUTION =====
 
@@ -67,8 +68,7 @@ reduce(filter(P, [X|Xs], [X?|Ys?]),
        filter(P?, Xs?, Ys)) :-
   X? mod P? =\= 0 | true.
 
-% Assignment reduction
-reduce(R := Expr, true) :- R := Expr?.
+% Note: := is handled directly by the runtime, no reduce clause needed
 
 % ===== TESTS =====
 % Direct: primes(20, Ps) should give Ps = [2,3,5,7,11,13,17,19]

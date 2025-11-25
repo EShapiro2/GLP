@@ -39,8 +39,7 @@ reduce(fib(N, F?),
         F := F1? + F2?)) :-
   N? > 1 | true.
 
-% Assignment reduction
-reduce(R := Expr, true) :- R := Expr?.
+% Note: := is handled directly by the runtime, no reduce clause needed
 
 % ===== TESTS =====
 % Direct: fib(10, F) should give F = 55

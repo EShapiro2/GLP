@@ -8,6 +8,7 @@
 % multiply(N, Xs, Ys) :- Ys is Xs with each element multiplied by N
 multiply(_, [], []).
 multiply(N, [X|Xs], [Y?|Ys?]) :-
+  ground(N?) |
   Y := N? * X?,
   multiply(N?, Xs?, Ys).
 
@@ -23,10 +24,10 @@ run(A) :- otherwise | reduce(A?, B), run(B?).
 reduce(multiply(_, [], []), true).
 reduce(multiply(N, [X|Xs], [Y?|Ys?]),
        (Y := N? * X?,
-        multiply(N?, Xs?, Ys))).
+        multiply(N?, Xs?, Ys))) :-
+  ground(N?) | true.
 
-% Assignment reduction
-reduce(R := Expr, true) :- R := Expr?.
+% Note: := is handled directly by the runtime, no reduce clause needed
 
 % ===== TESTS =====
 % Direct: multiply(3, [1,2,3,4], Ys) should give Ys = [3,6,9,12]

@@ -167,30 +167,50 @@ class HeapFCP {
     cells[rAddr].content = finalValue;
     cells[rAddr].tag = CellTag.ValueTag;
 
-    // Process suspensions and return activated goals (FCP: every binding wakes goals)
+    // Handle suspensions based on whether we're binding to ground or unbound
     final activations = <GoalRef>[];
     if (oldContent is SuspensionListNode) {
-      print('[TRACE HeapFCP bindVariable] Processing suspensions for V$varId:');
-      _walkAndActivate(oldContent, activations);
+      if (finalValue is VarRef) {
+        // Binding to another variable (still unbound) - FORWARD suspensions
+        // Don't activate now; merge into target's suspension list
+        _forwardSuspensions(oldContent, finalValue.varId);
+      } else {
+        // Binding to ground value - activate suspensions
+        _walkAndActivate(oldContent, activations);
+      }
     }
     return activations;
+  }
+
+  /// Forward suspension list to another variable (for reader chains)
+  void _forwardSuspensions(SuspensionListNode? list, int targetVarId) {
+    final (_, targetRAddr) = varTable[targetVarId]!;
+    var current = list;
+
+    while (current != null) {
+      if (current.armed) {
+        // Create a new node sharing the same SuspensionRecord
+        // This ensures disarming one disarms all copies (FCP shared state)
+        final newNode = SuspensionListNode(current.record);
+        final targetContent = cells[targetRAddr].content;
+        newNode.next = targetContent is SuspensionListNode ? targetContent : null;
+        cells[targetRAddr].content = newNode;
+      }
+      current = current.next;
+    }
   }
 
   /// Walk suspension list and activate armed records (from commit.dart)
   static void _walkAndActivate(SuspensionListNode? list, List<GoalRef> acts) {
     var current = list;
-    int count = 0;
 
     while (current != null) {
       if (current.armed) {
         acts.add(GoalRef(current.goalId!, current.resumePC));
         current.record.disarm();  // Disarm shared record - affects all nodes
-        count++;
       }
       current = current.next;
     }
-
-    print('[TRACE HeapFCP bindVariable]   Activated $count goal(s)');
   }
 
   /// API: Bind variable to constant

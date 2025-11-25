@@ -4139,12 +4139,73 @@ class BytecodeRunner {
       return v;
     }
 
+    // Evaluate arithmetic expressions to numeric values
+    // Supports: X, X + Y, X - Y, X * Y, X / Y, X // Y, X mod Y, -X
+    num? evaluateNumeric(Object? v) {
+      if (v is num) return v;
+      if (v is ConstTerm && v.value is num) return v.value as num;
+      if (v is StructTerm) {
+        // Evaluate arithmetic expression
+        switch (v.functor) {
+          case '+':
+            if (v.args.length != 2) return null;
+            final a = evaluateNumeric(v.args[0]);
+            final b = evaluateNumeric(v.args[1]);
+            if (a == null || b == null) return null;
+            return a + b;
+          case '-':
+            if (v.args.length == 1) {
+              // Unary minus
+              final a = evaluateNumeric(v.args[0]);
+              return a == null ? null : -a;
+            } else if (v.args.length == 2) {
+              final a = evaluateNumeric(v.args[0]);
+              final b = evaluateNumeric(v.args[1]);
+              if (a == null || b == null) return null;
+              return a - b;
+            }
+            return null;
+          case '*':
+            if (v.args.length != 2) return null;
+            final a = evaluateNumeric(v.args[0]);
+            final b = evaluateNumeric(v.args[1]);
+            if (a == null || b == null) return null;
+            return a * b;
+          case '/':
+            if (v.args.length != 2) return null;
+            final a = evaluateNumeric(v.args[0]);
+            final b = evaluateNumeric(v.args[1]);
+            if (a == null || b == null || b == 0) return null;
+            return a / b;
+          case '//':
+            if (v.args.length != 2) return null;
+            final a = evaluateNumeric(v.args[0]);
+            final b = evaluateNumeric(v.args[1]);
+            if (a == null || b == null || b == 0) return null;
+            return a ~/ b;
+          case 'mod':
+            if (v.args.length != 2) return null;
+            final a = evaluateNumeric(v.args[0]);
+            final b = evaluateNumeric(v.args[1]);
+            if (a == null || b == null || b == 0) return null;
+            return a.toInt() % b.toInt();
+          case 'neg':
+            if (v.args.length != 1) return null;
+            final a = evaluateNumeric(v.args[0]);
+            return a == null ? null : -a;
+          default:
+            return null; // Not an arithmetic functor
+        }
+      }
+      return null;
+    }
+
     switch (predicateName) {
-      // Comparison guards
+      // Comparison guards (with arithmetic expression support)
       case '<':
         if (args.length < 2) return GuardResult.failure;
-        final a = getValue(args[0]);
-        final b = getValue(args[1]);
+        final a = evaluateNumeric(args[0]);
+        final b = evaluateNumeric(args[1]);
 
         // Debug output
         // print('[EVAL_GUARD] < comparison:');
@@ -4155,55 +4216,52 @@ class BytecodeRunner {
         // print('[EVAL_GUARD]   a is num = ${a is num}');
         // print('[EVAL_GUARD]   b is num = ${b is num}');
 
-        if (a is num && b is num) {
-          final result = a < b;
-          // print('[EVAL_GUARD]   $a < $b = $result');
-          return result ? GuardResult.success : GuardResult.failure;
+        if (a != null && b != null) {
+          return a < b ? GuardResult.success : GuardResult.failure;
         }
-        // print('[EVAL_GUARD]   Type mismatch - returning failure');
         return GuardResult.failure;
 
       case '>':
         if (args.length < 2) return GuardResult.failure;
-        final a = getValue(args[0]);
-        final b = getValue(args[1]);
-        if (a is num && b is num) {
+        final a = evaluateNumeric(args[0]);
+        final b = evaluateNumeric(args[1]);
+        if (a != null && b != null) {
           return a > b ? GuardResult.success : GuardResult.failure;
         }
         return GuardResult.failure;
 
       case '=<':
         if (args.length < 2) return GuardResult.failure;
-        final a = getValue(args[0]);
-        final b = getValue(args[1]);
-        if (a is num && b is num) {
+        final a = evaluateNumeric(args[0]);
+        final b = evaluateNumeric(args[1]);
+        if (a != null && b != null) {
           return a <= b ? GuardResult.success : GuardResult.failure;
         }
         return GuardResult.failure;
 
       case '>=':
         if (args.length < 2) return GuardResult.failure;
-        final a = getValue(args[0]);
-        final b = getValue(args[1]);
-        if (a is num && b is num) {
+        final a = evaluateNumeric(args[0]);
+        final b = evaluateNumeric(args[1]);
+        if (a != null && b != null) {
           return a >= b ? GuardResult.success : GuardResult.failure;
         }
         return GuardResult.failure;
 
       case '=:=':
         if (args.length < 2) return GuardResult.failure;
-        final a = getValue(args[0]);
-        final b = getValue(args[1]);
-        if (a is num && b is num) {
+        final a = evaluateNumeric(args[0]);
+        final b = evaluateNumeric(args[1]);
+        if (a != null && b != null) {
           return a == b ? GuardResult.success : GuardResult.failure;
         }
         return GuardResult.failure;
 
       case '=\\=':
         if (args.length < 2) return GuardResult.failure;
-        final a = getValue(args[0]);
-        final b = getValue(args[1]);
-        if (a is num && b is num) {
+        final a = evaluateNumeric(args[0]);
+        final b = evaluateNumeric(args[1]);
+        if (a != null && b != null) {
           return a != b ? GuardResult.success : GuardResult.failure;
         }
         return GuardResult.failure;
@@ -4223,14 +4281,36 @@ class BytecodeRunner {
         return GuardResult.success;
 
       case 'integer':
+        // Per spec 19.4.3: Test if Xi is an integer
         if (args.isEmpty) return GuardResult.failure;
         final val = getValue(args[0]);
         return (val is int) ? GuardResult.success : GuardResult.failure;
 
       case 'number':
+        // Per spec 19.4.4: Test if Xi is numeric (int or float)
         if (args.isEmpty) return GuardResult.failure;
         final val = getValue(args[0]);
         return (val is num) ? GuardResult.success : GuardResult.failure;
+
+      case 'writer':
+        // Per spec 19.4.5: Test if Xi is an unbound writer
+        if (args.isEmpty) return GuardResult.failure;
+        final arg = args[0];
+        if (arg is VarRef && !arg.isReader) {
+          final heapVal = cx.rt.heap.getValue(arg.varId);
+          if (heapVal == null) return GuardResult.success; // Unbound writer
+        }
+        return GuardResult.failure;
+
+      case 'reader':
+        // Per spec 19.4.6: Test if Xi is an unbound reader
+        if (args.isEmpty) return GuardResult.failure;
+        final arg = args[0];
+        if (arg is VarRef && arg.isReader) {
+          final heapVal = cx.rt.heap.getValue(arg.varId);
+          if (heapVal == null) return GuardResult.success; // Unbound reader
+        }
+        return GuardResult.failure;
 
       // Control guards
       case 'otherwise':
