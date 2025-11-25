@@ -1,0 +1,19 @@
+% fib.glp - Fibonacci sequence
+%
+% FUTURE TEST: Requires := arithmetic operator
+% From Concurrent Prolog course (solutions3)
+
+% Base cases
+fib(0, 0).
+fib(1, 1).
+
+% Recursive case
+fib(N, F?) :-
+  N? > 1 |
+  N1 := N? - 1,
+  N2 := N? - 2,
+  fib(N1?, F1),
+  fib(N2?, F2),
+  F := F1? + F2?.
+
+% Test: fib(10, F) should give F = 55

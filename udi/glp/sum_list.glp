@@ -1,0 +1,14 @@
+% sum_list.glp - Sum elements of a list
+%
+% FUTURE TEST: Requires := arithmetic operator
+% From Concurrent Prolog course (solutions3)
+
+% sum(Xs, S) :- S is the sum of elements in Xs
+sum(Xs, S?) :- sum_acc(Xs?, 0, S).
+
+sum_acc([], Acc, Acc?).
+sum_acc([X|Xs], Acc, S?) :-
+  Acc1 := Acc? + X?,
+  sum_acc(Xs?, Acc1?, S).
+
+% Test: sum([1,2,3,4,5], S) should give S = 15

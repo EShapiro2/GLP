@@ -1,0 +1,12 @@
+% multiply.glp - Scalar multiply stream
+%
+% FUTURE TEST: Requires := arithmetic operator
+% From Concurrent Prolog course (handout 5 - Hamming)
+
+% multiply(N, Xs, Ys) :- Ys is Xs with each element multiplied by N
+multiply(_, [], []).
+multiply(N, [X|Xs], [Y?|Ys?]) :-
+  Y := N? * X?,
+  multiply(N?, Xs?, Ys).
+
+% Test: multiply(3, [1,2,3,4], Ys) should give Ys = [3,6,9,12]

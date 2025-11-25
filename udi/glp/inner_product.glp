@@ -1,0 +1,15 @@
+% inner_product.glp - Inner product of two vectors
+%
+% FUTURE TEST: Requires := arithmetic operator
+% From Concurrent Prolog course (solutions3)
+
+% ip(Xs, Ys, S) :- S is the inner product of vectors Xs and Ys
+ip(Xs, Ys, S?) :- ip_acc(Xs?, Ys?, 0, S).
+
+ip_acc([], [], Acc, Acc?).
+ip_acc([X|Xs], [Y|Ys], Acc, S?) :-
+  Acc1 := Acc? + X? * Y?,
+  ip_acc(Xs?, Ys?, Acc1?, S).
+
+% Test: ip([1,2,3], [4,5,6], S) should give S = 32
+%       (1*4 + 2*5 + 3*6 = 4 + 10 + 18 = 32)

@@ -1,0 +1,24 @@
+% hanoi.glp - Tower of Hanoi
+%
+% FUTURE TEST: Requires := arithmetic operator
+% From Concurrent Prolog course (handout 2)
+
+% hanoi(N, From, To, Moves) :- Moves to move N disks from From to To
+hanoi(0, From, To, (From?, To?)).
+hanoi(N, From, To, (Before?, (From?, To?), After?)) :-
+  N? > 0 |
+  N1 := N? - 1,
+  free(From?, To?, Free),
+  hanoi(N1?, From?, Free?, Before),
+  hanoi(N1?, Free?, To?, After).
+
+% free(A, B, C) :- C is the peg that is neither A nor B
+free(a, b, c).
+free(a, c, b).
+free(b, a, c).
+free(b, c, a).
+free(c, a, b).
+free(c, b, a).
+
+% Test: hanoi(2, a, c, Moves)
+% Should give moves to transfer 2 disks from peg a to peg c

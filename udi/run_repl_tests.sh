@@ -376,6 +376,75 @@ run_test "Nested metainterpreter: run1(run(quicksort([1,4,3,2,4,5],X)))" \
     "X = \[1, 2, 3, 4, 4, 5\]"
 
 # ============================================
+# FUTURE TESTS: ARITHMETIC (:= operator)
+# These tests require the := operator to be implemented
+# Claude B is working on arithmetic - these will be useful
+# ============================================
+
+# Helper for future tests - shows them as skipped
+run_future_test() {
+    local name="$1"
+    local file="$2"
+    local query="$3"
+    local expected="$4"
+
+    FUTURE=$((FUTURE + 1))
+    echo "────────────────────────────────────────"
+    echo "Future Test $FUTURE: $name"
+    echo "  File: $file"
+    echo "  Query: $query"
+    echo "  Expected: $expected"
+    echo "  ⏳ SKIPPED (needs := arithmetic)"
+}
+
+FUTURE=0
+
+run_future_test "Fibonacci fib(10)" \
+    "fib.glp" \
+    "fib(10, F)." \
+    "F = 55"
+
+run_future_test "Fibonacci fib(0)" \
+    "fib.glp" \
+    "fib(0, F)." \
+    "F = 0"
+
+run_future_test "Factorial factorial(5)" \
+    "factorial.glp" \
+    "factorial(5, F)." \
+    "F = 120"
+
+run_future_test "Factorial factorial(10)" \
+    "factorial.glp" \
+    "factorial(10, F)." \
+    "F = 3628800"
+
+run_future_test "Sum list" \
+    "sum_list.glp" \
+    "sum([1,2,3,4,5], S)." \
+    "S = 15"
+
+run_future_test "Inner product" \
+    "inner_product.glp" \
+    "ip([1,2,3], [4,5,6], S)." \
+    "S = 32"
+
+run_future_test "Multiply stream" \
+    "multiply.glp" \
+    "multiply(3, [1,2,3,4], Ys)." \
+    "Ys = [3, 6, 9, 12]"
+
+run_future_test "Tower of Hanoi (2 disks)" \
+    "hanoi.glp" \
+    "hanoi(2, a, c, Moves)." \
+    "Moves = ((a,b),(a,c),(b,c))"
+
+run_future_test "Primes up to 20" \
+    "primes.glp" \
+    "primes(20, Ps)." \
+    "Ps = [2, 3, 5, 7, 11, 13, 17, 19]"
+
+# ============================================
 # SUMMARY
 # ============================================
 
@@ -386,6 +455,7 @@ echo "════════════════════════�
 echo "Total:  $TOTAL tests"
 echo "Passed: $PASS tests ($(( PASS * 100 / TOTAL ))%)"
 echo "Failed: $FAIL tests"
+echo "Future: $FUTURE tests (needs := arithmetic)"
 echo ""
 
 if [ $FAIL -eq 0 ]; then
