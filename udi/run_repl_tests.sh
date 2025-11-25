@@ -410,8 +410,23 @@ run_test "Multiply stream empty (arithmetic)" \
     "multiply(5, [], Ys)." \
     "Ys = \[\]"
 
+run_test "Fibonacci fib(0) (arithmetic)" \
+    "fib_direct.glp" \
+    "fib(0, F)." \
+    "F = 0"
+
+run_test "Fibonacci fib(1) (arithmetic)" \
+    "fib_direct.glp" \
+    "fib(1, F)." \
+    "F = 1"
+
+run_test "Fibonacci fib(2) (arithmetic)" \
+    "fib_direct.glp" \
+    "fib(2, F)." \
+    "F = 1"
+
 # ============================================
-# FUTURE TESTS: RECURSIVE ARITHMETIC
+# FUTURE TESTS: RECURSIVE ARITHMETIC (depth > 2)
 # These need reader reactivation fix (not arithmetic issue)
 # ============================================
 

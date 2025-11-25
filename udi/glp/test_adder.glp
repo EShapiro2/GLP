@@ -1,0 +1,18 @@
+% Simulates fib but uses a separate adder predicate
+% adder(A?, B?, Sum?) adds two numbers passed in
+
+nat(0, z).
+nat(N, s(R?)) :-
+  N? > 0 |
+  M := N? - 1,
+  nat(M?, R).
+
+% add Peano numbers  
+add(z, Y, Y?).
+add(s(X), Y, s(R?)) :- add(X?, Y?, R).
+
+% fib-like: compute nat(1) + nat(1) 
+test(R?) :-
+  nat(1, A),
+  nat(1, B),
+  add(A?, B?, R).

@@ -38,6 +38,42 @@ class HeadVariable implements OpV2 {
   String toString() => '$mnemonic($varIndex)';
 }
 
+/// Get variable from argument register - first occurrence (unifies GetWriterVariable and GetReaderVariable)
+/// Used in HEAD phase to load argument into clause variable for first occurrence
+/// Behavior depends on isReader flag:
+/// - isReader=false (writer): Load argument as writer into varIndex
+/// - isReader=true (reader): Load argument as reader into varIndex
+class GetVariable implements OpV2 {
+  final int varIndex;    // clause variable index
+  final int argSlot;     // argument register
+  final bool isReader;   // true for reader mode, false for writer mode
+
+  GetVariable(this.varIndex, this.argSlot, {required this.isReader});
+
+  String get mnemonic => isReader ? 'get_reader_variable' : 'get_writer_variable';
+
+  @override
+  String toString() => '$mnemonic(X$varIndex, A$argSlot)';
+}
+
+/// Get value from argument register - subsequent occurrence (unifies GetWriterValue and GetReaderValue)
+/// Used in HEAD phase to unify argument with existing clause variable
+/// Behavior depends on isReader flag:
+/// - isReader=false (writer): Unify argument with writer in varIndex
+/// - isReader=true (reader): Unify argument with reader in varIndex
+class GetValue implements OpV2 {
+  final int varIndex;    // clause variable index
+  final int argSlot;     // argument register
+  final bool isReader;   // true for reader mode, false for writer mode
+
+  GetValue(this.varIndex, this.argSlot, {required this.isReader});
+
+  String get mnemonic => isReader ? 'get_reader_value' : 'get_writer_value';
+
+  @override
+  String toString() => '$mnemonic(X$varIndex, A$argSlot)';
+}
+
 // ============================================================================
 // STRUCTURE TRAVERSAL - Unified Instructions
 // ============================================================================
