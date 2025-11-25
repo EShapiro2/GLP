@@ -4,7 +4,9 @@
 
 ## 1. Executive Summary
 
-This document proposes a module system for GLP based on the FCP/Logix service model, adapted for GLP's simpler SRSW (Single-Reader/Single-Writer) semantics.
+This document specifies a module system for GLP that follows the FCP/Logix service model. Modules are runtime entities with dynamic loading, supporting hot reloading and multi-agent distribution.
+
+**Key Design Decision**: GLP follows FCP's runtime service model, NOT static linking. The `#` operator routes goals at runtime through a service hierarchy.
 
 ## 2. FCP/Logix Module System Analysis
 
@@ -55,18 +57,61 @@ Goal: math # factorial(5, R)
 
 ### 3.1 Design Principles
 
-1. **Simpler than FCP**: GLP's SRSW constraint eliminates shared streams
-2. **Static linking preferred**: GLP programs typically small
-3. **Incremental adoption**: Work without modules, add when needed
-4. **Familiar syntax**: Follow FCP conventions where sensible
+1. **Follow FCP**: Runtime service model with dynamic module resolution
+2. **SRSW Simplified**: No shared streams, but variables still cross module boundaries
+3. **Multi-Agent Ready**: Modules can be sent across agents, loaded dynamically
+4. **Hot Reloading**: Support development workflow with module reloading
+5. **Familiar Syntax**: Follow FCP conventions for declarations
 
-### 3.2 Module Syntax
+### 3.2 Module Declarations
 
 **Module Declaration**:
+```glp
+-module(math).
+```
+
+**Export Declaration**:
+```glp
+-export([factorial/2, gcd/3]).
+```
+
+**Import Declaration**:
+```glp
+-import([list, io]).
+```
+
+**Language Mode** (following FCP):
+```glp
+-language(glp).              % Default GLP mode
+-language(compound).         % FCP compatibility mode (future)
+```
+
+**Security Mode** (following FCP):
+```glp
+-mode(trust).                % Full access
+-mode(user).                 % Restricted access (default)
+```
+
+### 3.3 Service Types
+
+Following FCP's service model:
+
+| Type | Declaration | Description |
+|------|-------------|-------------|
+| `procedures` | `-service_type(procedures).` | Stateless exported predicates (default) |
+| `monitor` | `-service_type(monitor).` | Stateful server with internal state |
+| `director` | `-service_type(director).` | Namespace/hierarchy container |
+
+**Default**: If no `-service_type` is specified, module is `procedures` type.
+
+### 3.4 Module Syntax Example
+
 ```glp
 %% File: math.glp
 -module(math).
 -export([factorial/2, gcd/3]).
+-language(glp).
+-mode(user).
 
 factorial(0, 1).
 factorial(N?, F) :-
@@ -94,40 +139,53 @@ run(Result) :-
   Result = {factorial: F?, gcd: G?}.
 ```
 
-### 3.3 The `#` Operator
+### 3.5 The `#` Operator
 
 **Syntax**: `Module # Goal`
 
-**Semantics**:
-- Routes `Goal` to `Module` for reduction
-- Module must export the goal's predicate
-- Acts as a regular goal in the body
-- Variables retain their reader/writer modes across module boundaries
+**Runtime Semantics** (following FCP):
+1. Resolve `Module` through service hierarchy at runtime
+2. If module not loaded, load and compile dynamically
+3. Route `Goal` to module's service process
+4. Module reduces goal, results unify back to caller
+5. Variable modes (reader/writer) preserved across boundary
 
 **Multiple Goals**:
 ```glp
 math # [factorial(5, F), gcd(48, 18, G)]  % Multiple goals to same module
 ```
 
-### 3.4 Export/Import Rules
+### 3.6 Export/Import Rules
 
 1. **Export**: Only exported predicates callable via `#`
-2. **Import**: Declares compile-time dependencies
+2. **Import**: Declares dependencies, enables compile-time checking
 3. **Private**: Non-exported predicates only callable within module
-4. **Implicit self**: Within a module, `factorial(5,R)` = `self # factorial(5,R)`
+4. **Runtime Resolution**: Import is advisory; actual module resolved at runtime
 
-### 3.5 Module Resolution
+### 3.7 Module Resolution (Runtime)
 
-**Static Resolution (Phase 1)**:
-- All imports resolved at compile time
-- Linked into single bytecode unit
-- Simple, efficient, sufficient for most uses
+Unlike static linking, GLP resolves modules at runtime:
 
-**Dynamic Resolution (Future)**:
-- Load modules on demand
-- Service hierarchy like FCP
+```
+Goal: math # factorial(5, R)
 
-### 3.6 Namespacing
+1. ServiceRegistry.lookup("math")
+   → if cached: return service handle
+   → if not loaded: load_module("math")
+
+2. load_module("math"):
+   → find source (filesystem, network, agent message)
+   → compile to bytecode
+   → create service entry in registry
+   → return service handle
+
+3. Route goal to service:
+   → verify factorial/2 is exported
+   → execute goal in module's context
+   → results unify to caller's variables
+```
+
+### 3.8 Namespacing
 
 ```glp
 -module(utils.list).   % Hierarchical module name
@@ -136,254 +194,176 @@ math # [factorial(5, F), gcd(48, 18, G)]  % Multiple goals to same module
 append(Xs, Ys, Zs) :- ...
 ```
 
-### 3.7 System Modules
+Hierarchical names map to service hierarchy like FCP.
+
+### 3.9 System Modules
 
 Pre-loaded modules available without explicit import:
 - `system` - Process control, meta-operations
 - `io` - Input/output operations
-- `math` - Arithmetic (current assign.glp functionality)
+- `math` - Arithmetic (`:=` predicate)
 
-## 4. Implementation Plan
+## 4. Service Architecture
 
-### Phase 1: Static Module System
+### 4.1 Service Registry
 
-#### 4.1 Parser Extensions (lib/compiler/parser.dart)
+Runtime component managing loaded modules:
 
-```dart
-// New token types
-TokenType.HASH,        // #
-TokenType.MODULE,      // -module
-TokenType.EXPORT,      // -export
-TokenType.IMPORT,      // -import
-
-// Parse module declaration
-ModuleDecl? _parseModuleDecl() {
-  if (_match(TokenType.MINUS) && _match(TokenType.MODULE)) {
-    _consume(TokenType.LPAREN, 'Expected "(" after module');
-    final name = _consume(TokenType.ATOM, 'Expected module name');
-    _consume(TokenType.RPAREN, 'Expected ")" after module name');
-    _consume(TokenType.DOT, 'Expected "." after module declaration');
-    return ModuleDecl(name.lexeme);
-  }
-  return null;
-}
-
-// Parse Module # Goal
-Goal _parseRemoteGoal() {
-  final module = _parseAtom();
-  if (_match(TokenType.HASH)) {
-    final goal = _parseGoal();
-    return RemoteGoal(module.functor, goal);
-  }
-  return module; // Regular goal
-}
+```
+ServiceRegistry
+├── modules: Map<String, LoadedModule>
+├── hierarchy: ServiceHierarchy (tree structure)
+└── methods:
+    ├── lookup(name) → LoadedModule?
+    ├── load(name, source) → LoadedModule
+    ├── reload(name) → LoadedModule  (hot reload)
+    └── unload(name)
 ```
 
-#### 4.2 AST Extensions (lib/compiler/ast.dart)
+### 4.2 Service Hierarchy (following FCP)
 
-```dart
-class ModuleDeclaration extends ASTNode {
-  final String name;
-  final List<ProcedureRef> exports;
-  final List<String> imports;
-
-  ModuleDeclaration(this.name, this.exports, this.imports, int line, int col)
-      : super(line, col);
-}
-
-class ProcedureRef {
-  final String name;
-  final int arity;
-  ProcedureRef(this.name, this.arity);
-}
-
-class RemoteGoal extends Goal {
-  final String module;
-  final Goal goal;
-
-  RemoteGoal(this.module, this.goal, int line, int col)
-      : super(goal.functor, goal.args, line, col);
-}
-
-class Module {
-  final ModuleDeclaration? declaration;
-  final List<Procedure> procedures;
-
-  Module(this.declaration, this.procedures);
-
-  String get name => declaration?.name ?? '_main';
-  bool exports(String proc, int arity) =>
-    declaration?.exports.any((e) => e.name == proc && e.arity == arity) ?? true;
-}
+```
+[root]
+├── [system]
+│   ├── [io]
+│   └── [file]
+├── [math]
+└── [user]
+    ├── [utils]
+    │   ├── [list]
+    │   └── [math]
+    └── [app]
 ```
 
-#### 4.3 Compiler Changes (lib/compiler/codegen.dart)
+Resolution follows FCP path semantics:
+- `math # goal` → searches `[math]`
+- `utils.list # goal` → searches `[utils, list]`
 
-```dart
-class ModuleCompiler {
-  final Map<String, Module> modules = {};
+### 4.3 Monitor Modules (Stateful Services)
 
-  void compile(Module module) {
-    // Validate exports exist
-    for (final export in module.declaration?.exports ?? []) {
-      if (!module.procedures.any((p) =>
-          p.name == export.name && p.arity == export.arity)) {
-        throw CompileError('Exported ${export.name}/${export.arity} not defined');
-      }
-    }
+For stateful services (following FCP monitor pattern):
 
-    // Compile procedures
-    for (final proc in module.procedures) {
-      _compileProc(proc, module);
-    }
-  }
+```glp
+-module(counter).
+-service_type(monitor).
+-export([increment/1, get/1]).
 
-  void _compileRemoteGoal(RemoteGoal goal, Module currentModule) {
-    final targetModule = modules[goal.module];
-    if (targetModule == null) {
-      throw CompileError('Unknown module: ${goal.module}');
-    }
-    if (!targetModule.exports(goal.goal.functor, goal.goal.args.length)) {
-      throw CompileError(
-        '${goal.goal.functor}/${goal.goal.args.length} not exported by ${goal.module}');
-    }
-    // Emit call to target module's procedure
-    _emitModuleCall(goal.module, goal.goal);
-  }
-}
+% Monitor has internal state stream
+server(State?, Requests?) :-
+  Requests? = [Req? | Rest?] |
+  handle(State?, Req?, NewState),
+  server(NewState?, Rest?).
+
+handle(N?, increment(Delta?), NewN) :- NewN := N? + Delta?.
+handle(N?, get(Value), N?) :- Value = N?.
 ```
 
-#### 4.4 Bytecode Extensions
+## 5. Multi-Agent Distribution
 
-**Option A: Inline Linking** (Recommended for Phase 1)
-- Merge all imported procedures into single bytecode
-- `Module # Goal` becomes regular procedure call
-- No runtime overhead
-- Simple implementation
+### 5.1 Design for Distribution
 
-**Option B: Module Call Opcode** (For Phase 2)
-```dart
-enum Opcode {
-  // ... existing opcodes ...
-  CallModule,  // CallModule <moduleIndex> <procIndex> <arity>
-}
+GLP modules must support:
+1. **Serialization**: Module bytecode can be serialized and sent
+2. **Remote Loading**: Load module from another agent
+3. **Distributed Resolution**: `#` can route to remote agent's modules
+
+### 5.2 Remote Module Reference
+
+```glp
+% Local module call
+math # factorial(5, R)
+
+% Remote agent module call (future)
+agent(remote) # math # factorial(5, R)
 ```
 
-#### 4.5 Runtime Changes
+### 5.3 Module Transfer
 
-```dart
-class ModuleRegistry {
-  final Map<String, CompiledModule> modules = {};
+When agent A sends module to agent B:
+1. A serializes module (bytecode + metadata)
+2. B receives and registers in its ServiceRegistry
+3. B can now use `module # goal` locally
 
-  void register(String name, CompiledModule module) {
-    modules[name] = module;
-  }
-
-  CompiledModule? lookup(String name) => modules[name];
-}
-
-class CompiledModule {
-  final String name;
-  final Set<String> exports;
-  final List<int> bytecode;
-  final Map<String, int> procOffsets;
-
-  bool canCall(String proc, int arity) =>
-    exports.contains('$proc/$arity');
-}
-```
-
-### Phase 2: Multi-File Support
-
-- Load multiple .glp files
-- Resolve imports across files
-- Link into single execution unit
-
-### Phase 3: Dynamic Loading (Future)
-
-- On-demand module loading
-- Module cache
-- Optional FCP-style service processes for stateful modules
-
-## 5. SRSW Considerations
+## 6. SRSW Considerations
 
 The SRSW constraint applies across module boundaries:
 
 ```glp
 % Module A
-a(X) :- b # proc(X).  % X is writer in A, can be bound by B
+-module(a).
+-export([caller/1]).
+
+caller(X) :- b # proc(X).  % X is writer in A, can be bound by B
 
 % Module B
+-module(b).
+-export([proc/1]).
+
 proc(Y) :- Y = 42.    % Y receives writer, can bind it
 ```
 
 **Rule**: Variable modes (reader/writer) are preserved across `#` calls. The called module receives the same mode as the caller provides.
 
-## 6. Open Questions
+## 7. Hot Reloading
 
-1. **Circular imports**: Disallow or use forward declarations?
-2. **Versioning**: Module versions for compatibility checking?
-3. **Namespaces**: Flat (`math`) vs hierarchical (`utils.math`)?
-4. **Re-export**: Allow modules to re-export imports?
-5. **Default imports**: Auto-import system modules?
+For development workflow:
 
-## 7. Migration Path
-
-1. **No breaking changes**: Existing single-file programs work unchanged
-2. **Optional modules**: `-module` declaration is optional
-3. **Gradual adoption**: Add modules as codebases grow
-
-## 8. Example: Complete Multi-Module Program
-
-**File: stdlib/list.glp**
 ```glp
--module(list).
--export([append/3, length/2, reverse/3]).
-
-append([], Ys?, Ys?).
-append([X?|Xs?], Ys?, [X?|Zs]) :- append(Xs?, Ys?, Zs).
-
-length([], 0).
-length([_|Xs?], N) :- length(Xs?, N1), N := N1? + 1.
-
-reverse(Xs?, Ys) :- rev(Xs?, [], Ys).
-rev([], Acc?, Acc?).
-rev([X?|Xs?], Acc?, Ys) :- rev(Xs?, [X?|Acc?], Ys).
+% In REPL or system module
+system # reload(math)  % Reload math module from source
 ```
 
-**File: stdlib/math.glp**
-```glp
--module(math).
--export([factorial/2, sum_list/2]).
--import([list]).
+Reloading:
+1. Compiles new version
+2. Replaces entry in ServiceRegistry
+3. New calls use new version
+4. In-flight calls complete with old version
 
-factorial(0, 1).
-factorial(N?, F) :-
-  N? > 0 |
-  N1 := N? - 1,
-  factorial(N1?, F1),
-  F := N? * F1?.
+## 8. Implementation Phases
 
-sum_list([], 0).
-sum_list([X?|Xs?], S) :-
-  sum_list(Xs?, S1),
-  S := X? + S1?.
-```
+### Phase 1: Runtime Module Loading
+- ServiceRegistry implementation
+- Dynamic module compilation
+- Runtime `#` operator resolution
+- Basic service types (procedures)
 
-**File: main.glp**
-```glp
--module(main).
--import([list, math]).
+### Phase 2: Full Service Model
+- Service hierarchy (FCP-style paths)
+- Monitor modules (stateful)
+- Director modules (namespaces)
+- Hot reloading
 
-run(Result) :-
-  list # append([1,2], [3,4], L1),
-  list # length(L1?, Len),
-  math # factorial(5, F),
-  math # sum_list(L1?, Sum),
-  Result = {list: L1?, len: Len?, fact: F?, sum: Sum?}.
-```
+### Phase 3: Multi-Agent
+- Module serialization
+- Remote module loading
+- Distributed service resolution
+
+## 9. Comparison: Static vs Runtime
+
+| Aspect | Static (NOT chosen) | Runtime (chosen) |
+|--------|---------------------|------------------|
+| Resolution | Compile time | Runtime |
+| Loading | All at start | On demand |
+| Hot reload | No | Yes |
+| Multi-agent | Difficult | Natural |
+| FCP alignment | Diverges | Follows |
+| Complexity | Lower | Higher |
+
+**Decision**: Runtime model chosen because:
+1. Follows FCP design
+2. Required for multi-agent distribution
+3. Enables hot reloading
+4. Natural for dynamic systems
+
+## 10. Open Questions
+
+1. **Module Versioning**: How to handle version conflicts?
+2. **Dependency Resolution**: Automatic transitive loading?
+3. **Security Sandboxing**: How does `-mode` restrict access?
+4. **Remote Trust**: Trust model for modules from other agents?
 
 ---
 
-*Document Version: 1.0*
+*Document Version: 2.0*
 *Based on FCP/Logix analysis from github.com/EShapiro2/FCP*
+*Updated to follow FCP runtime service model per design requirement*

@@ -1,22 +1,27 @@
 # GLP Module System Implementation Plan
 
+**Version 2.0**
+
 ## Overview
 
-This document provides a detailed implementation plan for adding modules to GLP. The implementation is divided into phases, with Phase 1 providing a complete static module system.
+This document provides a detailed implementation plan for adding modules to GLP. The implementation follows the FCP/Logix runtime service model with dynamic module loading.
 
-## Architecture Decision: Static Linking
+## Architecture Decision: Runtime Service Model
 
-For Phase 1, we use **static linking**:
-- All modules compiled and linked at load time
-- `Module # Goal` compiles to direct procedure call
-- No runtime module resolution overhead
-- Simple implementation
+GLP uses **runtime service resolution** (following FCP):
+- Modules loaded dynamically on first use
+- `Module # Goal` resolved at runtime via ServiceRegistry
+- Supports hot reloading and multi-agent distribution
+- ServiceRegistry manages loaded modules
 
-This is sufficient for most GLP programs. Dynamic loading can be added later.
+**NOT using static linking** - compile-time resolution was rejected because:
+1. GLP will be multi-agent with modules sent across agents
+2. Dynamic loading required for hot reloading
+3. FCP uses runtime resolution
 
 ---
 
-## Phase 1: Static Module System
+## Phase 1: Core Runtime Module System
 
 ### 1.1 Lexer Changes
 
@@ -32,32 +37,17 @@ enum TokenType {
   MODULE,         // module (after -)
   EXPORT,         // export (after -)
   IMPORT,         // import (after -)
+  LANGUAGE,       // language (after -)
+  MODE,           // mode (after -)
+  SERVICE_TYPE,   // service_type (after -)
 }
 ```
 
 **Tasks**:
 - [ ] Add `HASH` token recognition (`#`)
 - [ ] Add keyword recognition for `module`, `export`, `import` after `-`
-- [ ] Handle hierarchical module names (`utils.list` as single atom or dotted sequence)
-
-**Implementation Notes**:
-```dart
-// In scanToken():
-case '#':
-  addToken(TokenType.HASH);
-  break;
-
-// After '-', check for declaration keywords:
-if (_match('-')) {
-  final word = _identifier();
-  switch (word) {
-    case 'module': addToken(TokenType.MODULE); break;
-    case 'export': addToken(TokenType.EXPORT); break;
-    case 'import': addToken(TokenType.IMPORT); break;
-    default: // handle as regular minus + atom
-  }
-}
-```
+- [ ] Add keyword recognition for `language`, `mode`, `service_type` after `-`
+- [ ] Handle hierarchical module names (`utils.list`)
 
 ---
 
@@ -71,31 +61,44 @@ if (_match('-')) {
 /// Module declaration: -module(name).
 class ModuleDeclaration extends ASTNode {
   final String name;
-
   ModuleDeclaration(this.name, int line, int col) : super(line, col);
 }
 
 /// Export declaration: -export([proc/arity, ...]).
 class ExportDeclaration extends ASTNode {
   final List<ProcedureRef> exports;
-
   ExportDeclaration(this.exports, int line, int col) : super(line, col);
 }
 
 /// Import declaration: -import([module, ...]).
 class ImportDeclaration extends ASTNode {
   final List<String> imports;
-
   ImportDeclaration(this.imports, int line, int col) : super(line, col);
+}
+
+/// Language declaration: -language(mode).
+class LanguageDeclaration extends ASTNode {
+  final String language;  // 'glp' or 'compound'
+  LanguageDeclaration(this.language, int line, int col) : super(line, col);
+}
+
+/// Mode declaration: -mode(security).
+class ModeDeclaration extends ASTNode {
+  final String mode;  // 'trust' or 'user'
+  ModeDeclaration(this.mode, int line, int col) : super(line, col);
+}
+
+/// Service type declaration: -service_type(type).
+class ServiceTypeDeclaration extends ASTNode {
+  final String serviceType;  // 'procedures', 'monitor', 'director'
+  ServiceTypeDeclaration(this.serviceType, int line, int col) : super(line, col);
 }
 
 /// Reference to a procedure: name/arity
 class ProcedureRef {
   final String name;
   final int arity;
-
   ProcedureRef(this.name, this.arity);
-
   String get signature => '$name/$arity';
 }
 
@@ -109,14 +112,26 @@ class RemoteGoal extends Goal {
 }
 
 /// A complete module (compilation unit)
-class Module extends ASTNode {
+class ModuleAST extends ASTNode {
   final String name;
   final Set<String> exports;      // "name/arity" strings
   final List<String> imports;
+  final String language;          // 'glp' default
+  final String mode;              // 'user' default
+  final String serviceType;       // 'procedures' default
   final List<Procedure> procedures;
 
-  Module(this.name, this.exports, this.imports, this.procedures, int line, int col)
-      : super(line, col);
+  ModuleAST({
+    required this.name,
+    required this.exports,
+    required this.imports,
+    required this.language,
+    required this.mode,
+    required this.serviceType,
+    required this.procedures,
+    required int line,
+    required int col,
+  }) : super(line, col);
 
   bool isExported(String procName, int arity) {
     return exports.isEmpty || exports.contains('$procName/$arity');
@@ -125,13 +140,10 @@ class Module extends ASTNode {
 ```
 
 **Tasks**:
-- [ ] Add `ModuleDeclaration` class
-- [ ] Add `ExportDeclaration` class
-- [ ] Add `ImportDeclaration` class
-- [ ] Add `ProcedureRef` class
+- [ ] Add all declaration AST classes
 - [ ] Add `RemoteGoal` class
-- [ ] Add `Module` class
-- [ ] Modify `Program` to hold list of `Module`
+- [ ] Add `ModuleAST` class
+- [ ] Modify `Program` to reference modules
 
 ---
 
@@ -143,10 +155,13 @@ class Module extends ASTNode {
 
 ```dart
 /// Parse a module file
-Module parseModule() {
+ModuleAST parseModule() {
   String? moduleName;
   final exports = <ProcedureRef>[];
   final imports = <String>[];
+  String language = 'glp';
+  String mode = 'user';
+  String serviceType = 'procedures';
 
   // Parse declarations at start of file
   while (_checkDeclaration()) {
@@ -157,6 +172,12 @@ Module parseModule() {
         exports.addAll(_parseExportDecl());
       } else if (_match(TokenType.IMPORT)) {
         imports.addAll(_parseImportDecl());
+      } else if (_match(TokenType.LANGUAGE)) {
+        language = _parseLanguageDecl();
+      } else if (_match(TokenType.MODE)) {
+        mode = _parseModeDecl();
+      } else if (_match(TokenType.SERVICE_TYPE)) {
+        serviceType = _parseServiceTypeDecl();
       }
     }
   }
@@ -168,78 +189,21 @@ Module parseModule() {
   }
 
   final name = moduleName ?? '_anonymous_${_fileId}';
-  final exportSet = exports.map((e) => e.signature).toSet();
+  final exportSet = exports.isEmpty
+      ? <String>{}  // Empty = all exported
+      : exports.map((e) => e.signature).toSet();
 
-  return Module(name, exportSet, imports, procedures, 1, 1);
-}
-
-/// Parse: -module(name).
-String _parseModuleDecl() {
-  _consume(TokenType.LPAREN, 'Expected "(" after module');
-  final name = _parseModuleName();
-  _consume(TokenType.RPAREN, 'Expected ")" after module name');
-  _consume(TokenType.DOT, 'Expected "." after module declaration');
-  return name;
-}
-
-/// Parse hierarchical module name: foo or foo.bar.baz
-String _parseModuleName() {
-  final parts = <String>[];
-  parts.add(_consume(TokenType.ATOM, 'Expected module name').lexeme);
-
-  while (_match(TokenType.DOT) && _check(TokenType.ATOM)) {
-    parts.add(_advance().lexeme);
-  }
-
-  return parts.join('.');
-}
-
-/// Parse: -export([name/arity, ...]).
-List<ProcedureRef> _parseExportDecl() {
-  _consume(TokenType.LPAREN, 'Expected "(" after export');
-  _consume(TokenType.LBRACKET, 'Expected "[" in export list');
-
-  final exports = <ProcedureRef>[];
-
-  if (!_check(TokenType.RBRACKET)) {
-    do {
-      exports.add(_parseProcRef());
-    } while (_match(TokenType.COMMA));
-  }
-
-  _consume(TokenType.RBRACKET, 'Expected "]" after export list');
-  _consume(TokenType.RPAREN, 'Expected ")" after export');
-  _consume(TokenType.DOT, 'Expected "." after export declaration');
-
-  return exports;
-}
-
-/// Parse: name/arity
-ProcedureRef _parseProcRef() {
-  final name = _consume(TokenType.ATOM, 'Expected procedure name').lexeme;
-  _consume(TokenType.SLASH, 'Expected "/" in procedure reference');
-  final arity = int.parse(_consume(TokenType.INTEGER, 'Expected arity').lexeme);
-  return ProcedureRef(name, arity);
-}
-
-/// Parse: -import([module, ...]).
-List<String> _parseImportDecl() {
-  _consume(TokenType.LPAREN, 'Expected "(" after import');
-  _consume(TokenType.LBRACKET, 'Expected "[" in import list');
-
-  final imports = <String>[];
-
-  if (!_check(TokenType.RBRACKET)) {
-    do {
-      imports.add(_parseModuleName());
-    } while (_match(TokenType.COMMA));
-  }
-
-  _consume(TokenType.RBRACKET, 'Expected "]" after import list');
-  _consume(TokenType.RPAREN, 'Expected ")" after import');
-  _consume(TokenType.DOT, 'Expected "." after import declaration');
-
-  return imports;
+  return ModuleAST(
+    name: name,
+    exports: exportSet,
+    imports: imports,
+    language: language,
+    mode: mode,
+    serviceType: serviceType,
+    procedures: procedures,
+    line: 1,
+    col: 1,
+  );
 }
 
 /// Parse goal, handling Module # Goal syntax
@@ -261,17 +225,152 @@ Goal _parseGoal() {
 
 **Tasks**:
 - [ ] Add `parseModule()` method
-- [ ] Add `_parseModuleDecl()` method
-- [ ] Add `_parseModuleName()` method
-- [ ] Add `_parseExportDecl()` method
-- [ ] Add `_parseProcRef()` method
-- [ ] Add `_parseImportDecl()` method
+- [ ] Add all declaration parsing methods
 - [ ] Modify `_parseGoal()` to handle `#` operator
-- [ ] Add `_checkDeclaration()` helper
 
 ---
 
-### 1.4 Compiler Changes
+### 1.4 Service Registry
+
+**File**: `lib/runtime/service_registry.dart` (new file)
+
+```dart
+/// Runtime registry of loaded modules
+class ServiceRegistry {
+  final Map<String, LoadedModule> _modules = {};
+
+  /// Lookup a module by name
+  LoadedModule? lookup(String name) => _modules[name];
+
+  /// Register a loaded module
+  void register(LoadedModule module) {
+    _modules[module.name] = module;
+  }
+
+  /// Check if module is loaded
+  bool isLoaded(String name) => _modules.containsKey(name);
+
+  /// Unload a module
+  void unload(String name) {
+    _modules.remove(name);
+  }
+
+  /// Reload a module (for hot reloading)
+  void reload(String name, LoadedModule module) {
+    _modules[name] = module;
+  }
+
+  /// Get all loaded module names
+  Iterable<String> get loadedModules => _modules.keys;
+}
+
+/// A module loaded into the runtime
+class LoadedModule {
+  final String name;
+  final Set<String> exports;      // "name/arity" signatures
+  final String language;
+  final String mode;
+  final String serviceType;
+  final List<int> bytecode;
+  final Map<String, int> procedureOffsets;  // "name/arity" -> bytecode offset
+
+  LoadedModule({
+    required this.name,
+    required this.exports,
+    required this.language,
+    required this.mode,
+    required this.serviceType,
+    required this.bytecode,
+    required this.procedureOffsets,
+  });
+
+  /// Check if procedure is exported
+  bool isExported(String name, int arity) {
+    return exports.isEmpty || exports.contains('$name/$arity');
+  }
+
+  /// Get procedure offset, or null if not found
+  int? getProcedureOffset(String name, int arity) {
+    return procedureOffsets['$name/$arity'];
+  }
+}
+```
+
+**Tasks**:
+- [ ] Create `service_registry.dart`
+- [ ] Implement `ServiceRegistry` class
+- [ ] Implement `LoadedModule` class
+
+---
+
+### 1.5 Module Loader
+
+**File**: `lib/runtime/module_loader.dart` (new file)
+
+```dart
+/// Loads and compiles modules
+class ModuleLoader {
+  final ServiceRegistry registry;
+  final ModuleCompiler compiler;
+
+  ModuleLoader(this.registry, this.compiler);
+
+  /// Load module from source
+  LoadedModule load(String name, String source) {
+    // Parse
+    final lexer = Lexer(source);
+    final tokens = lexer.scanTokens();
+    final parser = Parser(tokens);
+    final ast = parser.parseModule();
+
+    // Validate module name matches
+    if (ast.name != name && ast.name != '_anonymous_$name') {
+      throw ModuleError(
+        'Module declares name "${ast.name}" but loaded as "$name"'
+      );
+    }
+
+    // Compile
+    final compiled = compiler.compileModule(ast);
+
+    // Register
+    registry.register(compiled);
+
+    return compiled;
+  }
+
+  /// Load module from file path
+  Future<LoadedModule> loadFile(String path) async {
+    final source = await File(path).readAsString();
+    final name = _pathToModuleName(path);
+    return load(name, source);
+  }
+
+  /// Reload a module
+  LoadedModule reload(String name, String source) {
+    final module = load(name, source);
+    registry.reload(name, module);
+    return module;
+  }
+
+  String _pathToModuleName(String path) {
+    final filename = path.split('/').last;
+    return filename.endsWith('.glp')
+        ? filename.substring(0, filename.length - 4)
+        : filename;
+  }
+}
+```
+
+**Tasks**:
+- [ ] Create `module_loader.dart`
+- [ ] Implement `ModuleLoader` class
+- [ ] Implement file loading
+- [ ] Implement hot reload
+
+---
+
+### 1.6 Compiler Changes
 
 **File**: `lib/compiler/codegen.dart`
 
@@ -279,303 +378,266 @@ Goal _parseGoal() {
 
 ```dart
 class ModuleCompiler {
-  final Map<String, Module> modules = {};
-  final Map<String, CompiledModule> compiled = {};
-
-  /// Compile multiple modules together
-  CompiledProgram compileProgram(List<Module> modules) {
-    // Register all modules
-    for (final mod in modules) {
-      if (this.modules.containsKey(mod.name)) {
-        throw CompileError('Duplicate module: ${mod.name}');
-      }
-      this.modules[mod.name] = mod;
-    }
-
-    // Validate imports
-    for (final mod in modules) {
-      _validateImports(mod);
-    }
-
-    // Check for circular imports
-    _checkCircularImports();
-
-    // Compile each module
-    for (final mod in modules) {
-      compiled[mod.name] = _compileModule(mod);
-    }
-
-    // Link into single program
-    return _link(compiled);
-  }
-
-  void _validateImports(Module mod) {
-    for (final imp in mod.imports) {
-      if (!modules.containsKey(imp) && !_isSystemModule(imp)) {
-        throw CompileError(
-          'Module ${mod.name} imports unknown module: $imp'
-        );
-      }
-    }
-  }
-
-  bool _isSystemModule(String name) {
-    return ['system', 'io', 'math'].contains(name);
-  }
-
-  CompiledModule _compileModule(Module mod) {
+  /// Compile a module AST to loaded module
+  LoadedModule compileModule(ModuleAST ast) {
     // Validate exports
-    for (final export in mod.exports) {
+    for (final export in ast.exports) {
       final parts = export.split('/');
       final name = parts[0];
       final arity = int.parse(parts[1]);
 
-      final found = mod.procedures.any(
+      final found = ast.procedures.any(
         (p) => p.name == name && p.arity == arity
       );
       if (!found) {
-        throw CompileError(
-          'Module ${mod.name} exports undefined procedure: $export'
-        );
+        throw CompileError('Export "$export" not defined in module ${ast.name}');
       }
     }
 
     // Compile procedures
     final bytecode = <int>[];
-    final procOffsets = <String, int>{};
+    final procedureOffsets = <String, int>{};
 
-    for (final proc in mod.procedures) {
-      procOffsets['${proc.name}/${proc.arity}'] = bytecode.length;
-      bytecode.addAll(_compileProc(proc, mod));
+    for (final proc in ast.procedures) {
+      procedureOffsets['${proc.name}/${proc.arity}'] = bytecode.length;
+      bytecode.addAll(_compileProc(proc, ast));
     }
 
-    return CompiledModule(
-      name: mod.name,
-      exports: mod.exports,
+    return LoadedModule(
+      name: ast.name,
+      exports: ast.exports,
+      language: ast.language,
+      mode: ast.mode,
+      serviceType: ast.serviceType,
       bytecode: bytecode,
-      procOffsets: procOffsets,
+      procedureOffsets: procedureOffsets,
     );
   }
+}
+```
 
-  /// Compile a remote goal: Module # Goal
-  List<int> _compileRemoteGoal(RemoteGoal rg, Module currentModule) {
-    final targetModName = rg.moduleName;
-    final goal = rg.goal;
+**Tasks**:
+- [ ] Add `compileModule()` method
+- [ ] Compile `RemoteGoal` to runtime lookup
 
-    // Check import
-    if (!currentModule.imports.contains(targetModName) &&
-        !_isSystemModule(targetModName)) {
-      throw CompileError(
-        'Module ${currentModule.name} uses ${targetModName} but does not import it',
-        rg.line, rg.column
-      );
+---
+
+### 1.7 Runtime Changes
+
+**File**: `lib/bytecode/runner.dart`
+
+**Remote Goal Execution**:
+
+```dart
+class BytecodeRunner {
+  final ServiceRegistry registry;
+  final ModuleLoader loader;
+
+  /// Execute a remote goal: Module # Goal
+  void executeRemoteGoal(RemoteGoalInfo info) {
+    final moduleName = info.moduleName;
+    final goalName = info.goalName;
+    final goalArity = info.arity;
+
+    // Lookup module
+    var module = registry.lookup(moduleName);
+
+    // Load if not present
+    if (module == null) {
+      module = loader.loadByName(moduleName);
+      if (module == null) {
+        throw RuntimeError('Module not found: $moduleName');
+      }
     }
 
     // Check export
-    final targetMod = modules[targetModName];
-    if (targetMod != null && !targetMod.isExported(goal.functor, goal.args.length)) {
-      throw CompileError(
-        '${goal.functor}/${goal.args.length} is not exported by $targetModName',
-        rg.line, rg.column
+    if (!module.isExported(goalName, goalArity)) {
+      throw RuntimeError(
+        '$goalName/$goalArity not exported by $moduleName'
       );
     }
 
-    // For static linking: compile as call to qualified procedure name
-    // The linker will resolve this to actual offset
-    return _compileCall(
-      '${targetModName}::${goal.functor}',
-      goal.args,
-      goal.arity,
-    );
+    // Get procedure offset
+    final offset = module.getProcedureOffset(goalName, goalArity);
+    if (offset == null) {
+      throw RuntimeError(
+        '$goalName/$goalArity not found in $moduleName'
+      );
+    }
+
+    // Execute in module context
+    _executeInModule(module, offset, info.args);
   }
 }
 ```
 
 **Tasks**:
-- [ ] Add `ModuleCompiler` class
-- [ ] Add `compileProgram()` method
-- [ ] Add `_validateImports()` method
-- [ ] Add `_checkCircularImports()` method
-- [ ] Add `_compileModule()` method
-- [ ] Add `_compileRemoteGoal()` method
-- [ ] Add linker to resolve cross-module calls
+- [ ] Add `executeRemoteGoal()` method
+- [ ] Add module context switching
+- [ ] Integrate with existing goal execution
 
 ---
 
-### 1.5 Linker
+### 1.8 Bytecode Extensions
 
-**File**: `lib/compiler/linker.dart` (new file)
+**New Opcode**:
 
 ```dart
-/// Links multiple compiled modules into a single executable
-class Linker {
-  /// Link modules into single program
-  LinkedProgram link(Map<String, CompiledModule> modules) {
-    final bytecode = <int>[];
-    final globalOffsets = <String, int>{};  // "module::proc/arity" -> offset
+enum Opcode {
+  // ... existing opcodes ...
 
-    // Concatenate all bytecode, tracking offsets
-    for (final entry in modules.entries) {
-      final modName = entry.key;
-      final mod = entry.value;
-      final baseOffset = bytecode.length;
-
-      // Add this module's bytecode
-      bytecode.addAll(mod.bytecode);
-
-      // Record global offsets for exported procedures
-      for (final procEntry in mod.procOffsets.entries) {
-        final localOffset = procEntry.value;
-        final globalOffset = baseOffset + localOffset;
-        globalOffsets['$modName::${procEntry.key}'] = globalOffset;
-      }
-    }
-
-    // Patch cross-module call addresses
-    _patchCalls(bytecode, globalOffsets);
-
-    return LinkedProgram(bytecode, globalOffsets);
-  }
-
-  void _patchCalls(List<int> bytecode, Map<String, int> offsets) {
-    // Walk through bytecode, find CALL instructions
-    // with placeholder addresses, replace with actual offsets
-    // Implementation depends on bytecode format
-  }
-}
-
-class LinkedProgram {
-  final List<int> bytecode;
-  final Map<String, int> procedureOffsets;
-
-  LinkedProgram(this.bytecode, this.procedureOffsets);
+  /// Call procedure in another module
+  /// CallRemote <moduleNameIndex> <procNameIndex> <arity>
+  CallRemote,
 }
 ```
 
+**CallRemote Execution**:
+1. Read module name from constant pool
+2. Read procedure name from constant pool
+3. Resolve module via ServiceRegistry
+4. Verify export
+5. Push call frame with module context
+6. Jump to procedure in target module
+
 **Tasks**:
-- [ ] Create `linker.dart`
-- [ ] Implement `Linker` class
-- [ ] Implement `link()` method
-- [ ] Implement `_patchCalls()` method
-- [ ] Define placeholder format for unresolved calls
+- [ ] Add `CallRemote` opcode
+- [ ] Implement handler in runner
+- [ ] Add module context to call frame
 
 ---
 
-### 1.6 Multi-File Loading
+## Phase 2: Service Hierarchy
 
-**File**: `lib/compiler/loader.dart` (new file)
+### 2.1 Service Hierarchy
 
 ```dart
-/// Loads and compiles multiple GLP source files
-class ModuleLoader {
-  final Map<String, String> sources = {};  // moduleName -> source
+/// Hierarchical service tree (FCP-style)
+class ServiceHierarchy {
+  final ServiceNode root = ServiceNode('root');
 
-  /// Load a single source file
-  void loadFile(String path, String source) {
-    // Quick parse to get module name
-    final lexer = Lexer(source);
-    final tokens = lexer.scanTokens();
-    final moduleName = _extractModuleName(tokens) ?? _pathToModuleName(path);
-    sources[moduleName] = source;
-  }
-
-  /// Load multiple files
-  void loadFiles(Map<String, String> files) {
-    for (final entry in files.entries) {
-      loadFile(entry.key, entry.value);
+  /// Register module at path
+  void register(List<String> path, LoadedModule module) {
+    var node = root;
+    for (final segment in path.take(path.length - 1)) {
+      node = node.getOrCreateChild(segment);
     }
+    node.setModule(path.last, module);
   }
 
-  /// Compile all loaded modules
-  CompiledProgram compile() {
-    final modules = <Module>[];
-
-    for (final entry in sources.entries) {
-      final lexer = Lexer(entry.value);
-      final tokens = lexer.scanTokens();
-      final parser = Parser(tokens);
-      final module = parser.parseModule();
-      modules.add(module);
+  /// Lookup module by path
+  LoadedModule? lookup(List<String> path) {
+    var node = root;
+    for (final segment in path.take(path.length - 1)) {
+      node = node.getChild(segment);
+      if (node == null) return null;
     }
+    return node.getModule(path.last);
+  }
+}
 
-    final compiler = ModuleCompiler();
-    return compiler.compileProgram(modules);
+class ServiceNode {
+  final String name;
+  final Map<String, ServiceNode> children = {};
+  final Map<String, LoadedModule> modules = {};
+
+  ServiceNode(this.name);
+
+  ServiceNode getOrCreateChild(String name) {
+    return children.putIfAbsent(name, () => ServiceNode(name));
   }
 
-  String? _extractModuleName(List<Token> tokens) {
-    // Look for -module(name) at start
-    for (var i = 0; i < tokens.length - 3; i++) {
-      if (tokens[i].type == TokenType.MINUS &&
-          tokens[i+1].type == TokenType.MODULE &&
-          tokens[i+2].type == TokenType.LPAREN &&
-          tokens[i+3].type == TokenType.ATOM) {
-        return tokens[i+3].lexeme;
-      }
-    }
-    return null;
+  ServiceNode? getChild(String name) => children[name];
+
+  void setModule(String name, LoadedModule module) {
+    modules[name] = module;
   }
 
-  String _pathToModuleName(String path) {
-    // Convert "path/to/file.glp" to "file"
-    final name = path.split('/').last;
-    return name.endsWith('.glp') ? name.substring(0, name.length - 4) : name;
-  }
+  LoadedModule? getModule(String name) => modules[name];
 }
 ```
 
-**Tasks**:
-- [ ] Create `loader.dart`
-- [ ] Implement `ModuleLoader` class
-- [ ] Implement `loadFile()` method
-- [ ] Implement `compile()` method
-- [ ] Integrate with existing compiler entry points
-
----
-
-### 1.7 System Modules
-
-**File**: `lib/runtime/system_modules.dart` (new file)
+### 2.2 Hierarchical Resolution
 
 ```dart
-/// Built-in system modules
-class SystemModules {
-  static final Map<String, CompiledModule> modules = {
-    'system': _systemModule,
-    'io': _ioModule,
-    'math': _mathModule,
-  };
-
-  static final CompiledModule _mathModule = CompiledModule(
-    name: 'math',
-    exports: {':=/2'},  // Current assign.glp functionality
-    // bytecode loaded from stdlib/assign.glp
-  );
-
-  // etc.
+/// Convert module name to path
+List<String> moduleNameToPath(String name) {
+  return name.split('.');  // "utils.list" -> ["utils", "list"]
 }
 ```
 
 **Tasks**:
-- [ ] Create `system_modules.dart`
-- [ ] Define `system` module (meta-predicates)
-- [ ] Define `io` module (I/O predicates)
-- [ ] Integrate `math` module (existing assign.glp)
+- [ ] Implement `ServiceHierarchy`
+- [ ] Implement path-based resolution
+- [ ] Update loader to use hierarchy
 
 ---
 
-### 1.8 Integration
+## Phase 3: Monitor Services (Stateful)
 
-**File**: `lib/glp_runtime.dart` and others
+### 3.1 Monitor Module Support
+
+```dart
+/// Monitor module with state
+class MonitorModule extends LoadedModule {
+  dynamic state;
+  final List<dynamic> requestQueue = [];
+
+  MonitorModule({...}) : super(...);
+
+  /// Handle request to monitor
+  void handleRequest(dynamic request) {
+    requestQueue.add(request);
+    _processQueue();
+  }
+}
+```
 
 **Tasks**:
-- [ ] Update main compiler entry point to use `ModuleLoader`
-- [ ] Update REPL to handle module declarations
-- [ ] Update bytecode runner if needed
-- [ ] Update error messages to include module context
+- [ ] Implement `MonitorModule` class
+- [ ] Implement state management
+- [ ] Implement request queue processing
 
 ---
 
-## Phase 1 Testing Plan
+## Phase 4: Multi-Agent Support
+
+### 4.1 Module Serialization
+
+```dart
+/// Serialize module for transfer
+class ModuleSerializer {
+  /// Serialize module to bytes
+  List<int> serialize(LoadedModule module) {
+    // Serialize: name, exports, bytecode, metadata
+  }
+
+  /// Deserialize module from bytes
+  LoadedModule deserialize(List<int> bytes) {
+    // Reconstruct LoadedModule
+  }
+}
+```
+
+### 4.2 Remote Module Loading
+
+```dart
+/// Load module from remote agent
+Future<LoadedModule> loadFromAgent(String agentId, String moduleName) async {
+  // Request module from agent
+  // Receive serialized module
+  // Deserialize and register
+}
+```
+
+**Tasks**:
+- [ ] Implement serialization
+- [ ] Implement remote loading protocol
+- [ ] Implement agent communication
+
+---
+
+## Testing Plan
 
 ### Unit Tests
 
@@ -585,29 +647,29 @@ class SystemModules {
 void main() {
   group('Module Lexer', () {
     test('recognizes # token', () { ... });
-    test('recognizes -module declaration', () { ... });
-    test('recognizes -export declaration', () { ... });
-    test('recognizes -import declaration', () { ... });
+    test('recognizes all declaration tokens', () { ... });
   });
 
   group('Module Parser', () {
     test('parses module declaration', () { ... });
     test('parses export list', () { ... });
     test('parses import list', () { ... });
+    test('parses language declaration', () { ... });
+    test('parses mode declaration', () { ... });
+    test('parses service_type declaration', () { ... });
     test('parses remote goal', () { ... });
-    test('parses hierarchical module name', () { ... });
   });
 
-  group('Module Compiler', () {
-    test('validates exports exist', () { ... });
-    test('validates imports exist', () { ... });
-    test('detects circular imports', () { ... });
-    test('compiles remote goal', () { ... });
+  group('Service Registry', () {
+    test('registers and lookups module', () { ... });
+    test('reloads module', () { ... });
+    test('unloads module', () { ... });
   });
 
-  group('Module Linker', () {
-    test('links two modules', () { ... });
-    test('resolves cross-module calls', () { ... });
+  group('Module Loader', () {
+    test('loads module from source', () { ... });
+    test('validates exports', () { ... });
+    test('hot reloads module', () { ... });
   });
 }
 ```
@@ -616,113 +678,119 @@ void main() {
 
 **File**: `test/integration/module_integration_test.dart`
 
-Test complete module programs:
-
 ```dart
-test('simple module call', () {
-  final sources = {
-    'math.glp': '''
-      -module(math).
-      -export([double/2]).
-      double(X?, Y) :- Y := X? * 2.
-    ''',
-    'main.glp': '''
-      -module(main).
-      -import([math]).
-      test(R) :- math # double(5, R).
-    ''',
-  };
+test('remote goal execution', () {
+  final mathSource = '''
+    -module(math).
+    -export([double/2]).
+    double(X?, Y) :- Y := X? * 2.
+  ''';
 
-  final loader = ModuleLoader();
-  loader.loadFiles(sources);
-  final program = loader.compile();
+  final mainSource = '''
+    -module(main).
+    -import([math]).
+    test(R) :- math # double(5, R).
+  ''';
 
-  final result = execute(program, 'main', 'test', [_]);
+  final registry = ServiceRegistry();
+  final loader = ModuleLoader(registry, ModuleCompiler());
+
+  loader.load('math', mathSource);
+  loader.load('main', mainSource);
+
+  final result = execute(registry, 'main', 'test', [_]);
   expect(result, equals(10));
 });
 ```
 
 ---
 
-## Phase 2: Future Enhancements
-
-### 2.1 Separate Compilation
-
-- Compile each module to `.glpc` file
-- Link `.glpc` files at load time
-- Incremental recompilation
-
-### 2.2 Dynamic Loading
-
-- Load modules on first use
-- Module cache
-- Hot reloading (development)
-
-### 2.3 Service Model
-
-- FCP-style stateful services
-- Module as process
-- Monitor modules with state
-
----
-
 ## Task Summary
 
-### Must Have (Phase 1)
+### Phase 1: Core Runtime (Must Have)
 
 | # | Task | File | Status |
 |---|------|------|--------|
-| 1 | Add HASH token | lexer.dart | [ ] |
-| 2 | Add module declaration tokens | lexer.dart | [ ] |
-| 3 | Add ModuleDeclaration AST | ast.dart | [ ] |
-| 4 | Add ExportDeclaration AST | ast.dart | [ ] |
-| 5 | Add ImportDeclaration AST | ast.dart | [ ] |
-| 6 | Add RemoteGoal AST | ast.dart | [ ] |
-| 7 | Add Module AST | ast.dart | [ ] |
-| 8 | Parse module declaration | parser.dart | [ ] |
-| 9 | Parse export declaration | parser.dart | [ ] |
-| 10 | Parse import declaration | parser.dart | [ ] |
-| 11 | Parse remote goal (M # G) | parser.dart | [ ] |
-| 12 | Module validation | codegen.dart | [ ] |
-| 13 | Remote goal compilation | codegen.dart | [ ] |
-| 14 | Create linker | linker.dart | [ ] |
-| 15 | Create module loader | loader.dart | [ ] |
-| 16 | System modules | system_modules.dart | [ ] |
-| 17 | Integration | glp_runtime.dart | [ ] |
-| 18 | Unit tests | module_test.dart | [ ] |
-| 19 | Integration tests | module_integration_test.dart | [ ] |
+| 1 | Add HASH and declaration tokens | lexer.dart | [ ] |
+| 2 | Add all declaration AST nodes | ast.dart | [ ] |
+| 3 | Add RemoteGoal AST | ast.dart | [ ] |
+| 4 | Add ModuleAST | ast.dart | [ ] |
+| 5 | Parse all declarations | parser.dart | [ ] |
+| 6 | Parse remote goal (M # G) | parser.dart | [ ] |
+| 7 | Create ServiceRegistry | service_registry.dart | [ ] |
+| 8 | Create ModuleLoader | module_loader.dart | [ ] |
+| 9 | Add compileModule() | codegen.dart | [ ] |
+| 10 | Add CallRemote opcode | opcodes.dart | [ ] |
+| 11 | Implement remote goal execution | runner.dart | [ ] |
+| 12 | Unit tests | module_test.dart | [ ] |
+| 13 | Integration tests | module_integration_test.dart | [ ] |
 
-### Nice to Have (Phase 2+)
+### Phase 2: Service Hierarchy
 
 | # | Task | Priority |
 |---|------|----------|
-| 20 | Separate compilation | Medium |
-| 21 | Dynamic loading | Low |
-| 22 | Module versioning | Low |
-| 23 | Service model | Low |
+| 14 | ServiceHierarchy class | Medium |
+| 15 | Path-based resolution | Medium |
+| 16 | Director modules | Medium |
+
+### Phase 3: Monitor Services
+
+| # | Task | Priority |
+|---|------|----------|
+| 17 | MonitorModule class | Medium |
+| 18 | State management | Medium |
+| 19 | Request queue | Medium |
+
+### Phase 4: Multi-Agent
+
+| # | Task | Priority |
+|---|------|----------|
+| 20 | Module serialization | Low |
+| 21 | Remote loading | Low |
+| 22 | Agent communication | Low |
 
 ---
 
-## Dependencies
-
-The implementation order should be:
+## Implementation Order
 
 ```
-1. Lexer (tokens)
+Phase 1 (Core):
+1. Lexer tokens
    ↓
-2. AST (node types)
+2. AST nodes
    ↓
-3. Parser (parsing logic)
+3. Parser
    ↓
-4. Compiler (code generation)
+4. ServiceRegistry
    ↓
-5. Linker (cross-module resolution)
+5. ModuleLoader
    ↓
-6. Loader (multi-file support)
+6. Compiler (module support)
    ↓
-7. Integration (tie it together)
+7. Runtime (CallRemote)
    ↓
 8. Testing
+
+Phase 2 (Hierarchy):
+9. ServiceHierarchy
+   ↓
+10. Path resolution
+   ↓
+11. Director support
+
+Phase 3 (Monitors):
+12. MonitorModule
+   ↓
+13. State management
+
+Phase 4 (Multi-Agent):
+14. Serialization
+   ↓
+15. Remote loading
 ```
 
-Each step can be tested independently before proceeding.
+---
+
+*Document Version: 2.0*
+*Updated for runtime service model (not static linking)*
+*Following FCP/Logix architecture*
