@@ -511,36 +511,6 @@ class BytecodeRunner {
         continue;
       }
 
-      // IfWriter guard: succeeds if variable is a writer
-      if (op is IfWriter) {
-        final term = cx.clauseVars[op.varIndex];
-        if (term is VarRef && !term.isReader) {
-          // It's a writer - succeed
-          pc++;
-          continue;
-        } else {
-          // Not a writer - fail this clause
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
-        }
-      }
-
-      // IfReader guard: succeeds if variable is a reader
-      if (op is IfReader) {
-        final term = cx.clauseVars[op.varIndex];
-        if (term is VarRef && term.isReader) {
-          // It's a reader - succeed
-          pc++;
-          continue;
-        } else {
-          // Not a reader - fail this clause
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
-        }
-      }
-
       // ===== v2 UNIFIED INSTRUCTIONS =====
 
       // IfVariable: unified writer/reader type guard
@@ -567,6 +537,69 @@ class BytecodeRunner {
             continue;
           }
         }
+      }
+
+      // HeadVariable: unified writer/reader structure variable (at S position)
+      if (op is opv2.HeadVariable) {
+        if (cx.mode == UnifyMode.write) {
+          // WRITE mode: Building a structure
+          if (cx.currentStructure is _TentativeStruct) {
+            final struct = cx.currentStructure as _TentativeStruct;
+
+            // Check if this clause variable already has a value
+            final existingValue = cx.clauseVars[op.varIndex];
+            if (existingValue != null) {
+              // Variable already bound
+              if (op.isReader && existingValue is int) {
+                // Reader mode with variable ID - wrap in VarRef
+                struct.args[cx.S] = VarRef(existingValue, isReader: true);
+              } else {
+                // Use value as is
+                struct.args[cx.S] = existingValue;
+              }
+            } else {
+              // New variable - create placeholder
+              final placeholder = _ClauseVar(op.varIndex, isWriter: !op.isReader);
+              struct.args[cx.S] = placeholder;
+              cx.clauseVars[op.varIndex] = placeholder;
+            }
+            cx.S++; // Advance to next arg
+          }
+        } else {
+          // READ mode: Extract value from structure at S position
+          if (cx.currentStructure is StructTerm) {
+            final struct = cx.currentStructure as StructTerm;
+            if (cx.S < struct.args.length) {
+              final value = struct.args[cx.S];
+
+              // Check if variable already bound
+              final existingValue = cx.clauseVars[op.varIndex];
+              if (existingValue != null) {
+                // Need to unify
+                if (existingValue != value) {
+                  _softFailToNextClause(cx, pc);
+                  pc = _findNextClauseTry(pc);
+                  continue;
+                }
+              } else {
+                // First occurrence - store it
+                cx.clauseVars[op.varIndex] = value;
+              }
+              cx.S++; // Advance to next arg
+            } else {
+              // Structure arity mismatch - soft fail
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            }
+          } else {
+            // Not a structure - soft fail
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
+        }
+        pc++; continue;
       }
 
       // Mode selection (Arg)
@@ -974,128 +1007,6 @@ class BytecodeRunner {
         _softFailToNextClause(cx, pc);
         pc = _findNextClauseTry(pc);
         continue;
-      }
-
-      if (op is HeadWriter) {
-        // Process writer variable in structure (at S position)
-        if (cx.mode == UnifyMode.write) {
-          // WRITE mode: Building a structure - check if variable already bound
-          if (cx.currentStructure is _TentativeStruct) {
-            final struct = cx.currentStructure as _TentativeStruct;
-
-            // Check if this clause variable already has a value (from get_variable)
-            final existingValue = cx.clauseVars[op.varIndex];
-            if (existingValue != null) {
-              // Variable already bound - use its value
-              struct.args[cx.S] = existingValue;
-            } else {
-              // New variable - create placeholder
-              final placeholder = _ClauseVar(op.varIndex, isWriter: true);
-              struct.args[cx.S] = placeholder;
-              cx.clauseVars[op.varIndex] = placeholder;
-            }
-            cx.S++; // Advance to next arg
-          }
-        } else {
-          // READ mode: Extract value from structure at S position into clause variable
-          if (cx.currentStructure is StructTerm) {
-            final struct = cx.currentStructure as StructTerm;
-            if (cx.S < struct.args.length) {
-              final value = struct.args[cx.S];
-
-              // Check if variable already bound (from get_variable/get_value)
-              final existingValue = cx.clauseVars[op.varIndex];
-              if (existingValue != null) {
-                // Need to unify - for now, just check equality
-                // TODO: proper unification
-                if (existingValue != value) {
-                  _softFailToNextClause(cx, pc);
-                  pc = _findNextClauseTry(pc);
-                  continue;
-                }
-              } else {
-                // First occurrence - store it
-                cx.clauseVars[op.varIndex] = value;
-              }
-              cx.S++; // Advance to next arg
-            } else {
-              // Structure arity mismatch - soft fail
-              _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
-              continue;
-            }
-          } else {
-            // Not a structure - soft fail
-            _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
-            continue;
-          }
-        }
-        pc++; continue;
-      }
-
-      if (op is HeadReader) {
-        // Process reader variable in structure (at S position)
-        if (cx.mode == UnifyMode.write) {
-          // WRITE mode: Building structure - add reader value/reference
-          if (cx.currentStructure is _TentativeStruct) {
-            final struct = cx.currentStructure as _TentativeStruct;
-
-            // Check if this clause variable already has a value (from get_variable)
-            final existingValue = cx.clauseVars[op.varIndex];
-            if (existingValue != null) {
-              // Variable already has a value
-              if (existingValue is int) {
-                // It's a variable ID from GetVariable - wrap in VarRef
-                struct.args[cx.S] = VarRef(existingValue, isReader: true);
-              } else {
-                // It's already a Term - use as is
-                struct.args[cx.S] = existingValue;
-              }
-            } else {
-              // New variable - create placeholder
-              final placeholder = _ClauseVar(op.varIndex, isWriter: false);
-              struct.args[cx.S] = placeholder;
-              cx.clauseVars[op.varIndex] = placeholder;
-            }
-            cx.S++; // Advance to next arg
-          }
-        } else {
-          // READ mode: Verify value at S matches paired writer in tentative state
-          if (cx.currentStructure is StructTerm) {
-            final struct = cx.currentStructure as StructTerm;
-            if (cx.S < struct.args.length) {
-              final value = struct.args[cx.S];
-
-              // Check if variable already bound (from get_variable/get_value)
-              final existingValue = cx.clauseVars[op.varIndex];
-              if (existingValue != null) {
-                // Need to unify - for now, just check equality
-                // TODO: proper unification
-                if (existingValue != value) {
-                  _softFailToNextClause(cx, pc);
-                  pc = _findNextClauseTry(pc);
-                  continue;
-                }
-              } else {
-                // First occurrence - store it
-                cx.clauseVars[op.varIndex] = value;
-              }
-              cx.S++; // Advance to next arg
-            } else {
-              // Structure arity mismatch - soft fail
-              _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
-              continue;
-            }
-          } else {
-            // Not a structure - soft fail
-            _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
-            continue;
-          }
-        }
-        pc++; continue;
       }
 
       // ===== Argument loading instructions (GET class) =====

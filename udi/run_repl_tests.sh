@@ -4,6 +4,9 @@
 
 set -e
 
+# Find dart executable
+DART=${DART:-$(which dart 2>/dev/null || echo "/root/dart-sdk/bin/dart")}
+
 PASS=0
 FAIL=0
 TOTAL=0
@@ -29,7 +32,7 @@ run_test() {
     echo "  Query: $query"
 
     # Run REPL with the query
-    local output=$(dart glp_repl.dart <<EOF
+    local output=$($DART glp_repl.dart <<EOF
 $glp_file
 $query
 :quit
@@ -60,7 +63,7 @@ run_srsw_test() {
     echo "  File: $glp_file"
 
     # Run REPL - just try to load the file
-    local output=$(dart glp_repl.dart <<EOF
+    local output=$($DART glp_repl.dart <<EOF
 $glp_file
 :quit
 EOF

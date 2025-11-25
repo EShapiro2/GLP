@@ -126,20 +126,6 @@ class HeadStructure implements Op {
   HeadStructure(this.functor, this.arity, this.argSlot);
 }
 
-/// Process writer variable in structure (at S register position)
-/// Operates in READ or WRITE mode
-class HeadWriter implements Op {
-  final int varIndex;  // clause variable index
-  HeadWriter(this.varIndex);
-}
-
-/// Process reader variable in structure (at S register position)
-/// Operates in READ or WRITE mode, may add to Si
-class HeadReader implements Op {
-  final int varIndex;  // clause variable index
-  HeadReader(this.varIndex);
-}
-
 /// Match constant at current S position in structure
 /// Operates in READ or WRITE mode
 class UnifyConstant implements Op {
@@ -223,20 +209,6 @@ class UnifyStructure implements Op {
 
   @override
   String toString() => 'UnifyStructure($functor, $arity)';
-}
-
-/// IfWriter guard: succeeds if variable is a writer (not reader, not constant)
-/// Used for type checking in guards
-class IfWriter implements Op {
-  final int varIndex;  // clause variable index to test
-  IfWriter(this.varIndex);
-}
-
-/// IfReader guard: succeeds if variable is a reader (not writer, not constant)
-/// Used for type checking in guards
-class IfReader implements Op {
-  final int varIndex;  // clause variable index to test
-  IfReader(this.varIndex);
 }
 
 /// Guard predicate call: execute guard without side effects
