@@ -416,13 +416,13 @@ Files without `-module()` declaration become anonymous modules:
 
 | # | Task | File | Status |
 |---|------|------|--------|
-| 18.1 | Update REPL to use compileModule() | glp_repl.dart | [ ] |
-| 18.2 | REPL registers module in ServiceRegistry | glp_repl.dart | [ ] |
-| 18.3 | Execute via LoadedModule context | glp_repl.dart | [ ] |
-| 18.4 | Implicit module name from filename | compiler.dart | [ ] |
-| 18.5 | Verify all 60 REPL tests pass | run_repl_tests.sh | [ ] |
-| 18.6 | Update dart unit tests to use module path | test/*.dart | [ ] |
-| 18.7 | Verify all 22 dart tests pass | dart test | [ ] |
+| 18.1 | Update REPL to use compileModule() | glp_repl.dart | ✅ |
+| 18.2 | REPL registers module in ServiceRegistry | glp_repl.dart | ✅ |
+| 18.3 | Execute via LoadedModule context | glp_repl.dart | ✅ |
+| 18.4 | Implicit module name from filename | glp_repl.dart | ✅ |
+| 18.5 | Verify all 60 REPL tests pass | run_repl_tests.sh | ✅ |
+| 18.6 | Update dart unit tests to use module path | test/*.dart | ✅ |
+| 18.7 | Verify all 64 dart tests pass | dart test | ✅ |
 | 18.8 | Mark compile() as deprecated (only after all tests pass) | compiler.dart | [ ] |
 | 18.9 | Remove old code (only when confident) | *.dart | [ ] |
 
@@ -546,10 +546,10 @@ Phase 3: Runtime Execution ✅
 ├── Opcodes: CallRemote
 └── Runner: module context, CallRemote handler
     ↓
-Phase 3.5: Transition to Module System ← CURRENT
+Phase 3.5: Transition to Module System ✅
 ├── Update REPL to use compileModule()
 ├── Implicit module name from filename
-├── Deprecate old compile() path
+├── Deprecate old compile() path (pending)
 └── All execution via LoadedModule
     ↓
 Phase 4: Hierarchy & Hot Reload
@@ -578,7 +578,7 @@ Phase 5: Multi-Agent Serialization
 | 1 | 1-5 | Must have | ✅ Complete |
 | 2 | 6-12 | Must have | ✅ Complete |
 | 3 | 13-18 | Must have | ✅ Complete |
-| 3.5 | 18.1-18.7 | Must have | ⬜ Pending |
+| 3.5 | 18.1-18.7 | Must have | ✅ Complete |
 | 4 | 19-22 | Should have | ⬜ Pending |
 | 5 | 23-27 | For multi-agent | ⬜ Pending |
 
