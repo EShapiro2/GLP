@@ -170,9 +170,9 @@ class Parser {
       return Goal(functorToken.lexeme, args, functorToken.line, functorToken.column);
     }
 
-    // Otherwise, try to parse as infix comparison (e.g., X < Y)
-    // Use _parsePrimary to avoid parsing < as expression operator
-    final left = _parsePrimary();
+    // Otherwise, try to parse as infix comparison (e.g., X < Y, X? mod P? =:= 0)
+    // Use _parseExpression(6) to parse arithmetic but stop at comparison operators
+    final left = _parseExpression(6);
 
     // Check for comparison operator
     if (_check(TokenType.LESS) || _check(TokenType.GREATER) ||
@@ -180,7 +180,7 @@ class Parser {
         _check(TokenType.EQUALS) || _check(TokenType.ARITH_EQUAL) ||
         _check(TokenType.ARITH_NOT_EQUAL)) {
       final opToken = _advance();
-      final right = _parsePrimary();
+      final right = _parseExpression(6);
 
       // Transform infix to prefix: X < Y → <(X, Y)
       final functor = opToken.lexeme;

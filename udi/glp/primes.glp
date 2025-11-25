@@ -1,8 +1,7 @@
 % primes.glp - Sieve of Eratosthenes
 %
-% FUTURE TEST: Requires mod operator and =:=/=\= guards (not yet implemented)
 % From Concurrent Prolog course (handout 4)
-% NOTE: This file cannot load until mod/=:=/=\= are added to the parser
+% Uses mod operator and =:=/=\= guards for filtering multiples
 
 % ===== DIRECT EXECUTION =====
 
@@ -12,7 +11,8 @@ primes(N, Ps?) :-
   sieve(Is?, Ps).
 
 % integers(From, To, Xs) :- Xs is [From, From+1, ..., To]
-integers(N, N, [N?]).
+integers(From, To, [From?]) :-
+  From? =:= To? | true.
 integers(From, To, [From?|Xs?]) :-
   From? < To? |
   From1 := From? + 1,
@@ -21,16 +21,17 @@ integers(From, To, [From?|Xs?]) :-
 % sieve(Xs, Ys) :- filter out multiples
 sieve([], []).
 sieve([P|Xs], [P?|Ys?]) :-
+  ground(P?) |
   filter(P?, Xs?, Zs),
   sieve(Zs?, Ys).
 
 % filter(P, Xs, Ys) :- Ys is Xs with multiples of P removed
 filter(_, [], []).
 filter(P, [X|Xs], Ys?) :-
-  X? mod P? =:= 0 |
+  ground(P?), ground(X?), X? mod P? =:= 0 |
   filter(P?, Xs?, Ys).
 filter(P, [X|Xs], [X?|Ys?]) :-
-  X? mod P? =\= 0 |
+  ground(P?), ground(X?), X? mod P? =\= 0 |
   filter(P?, Xs?, Ys).
 
 % ===== METAINTERPRETER =====
@@ -47,7 +48,8 @@ reduce(primes(N, Ps?),
         sieve(Is?, Ps))).
 
 % integers/3
-reduce(integers(N, N, [N?]), true).
+reduce(integers(From, To, [From?]), true) :-
+  From? =:= To? | true.
 reduce(integers(From, To, [From?|Xs?]),
        (From1 := From? + 1,
         integers(From1?, To?, Xs))) :-
@@ -57,16 +59,17 @@ reduce(integers(From, To, [From?|Xs?]),
 reduce(sieve([], []), true).
 reduce(sieve([P|Xs], [P?|Ys?]),
        (filter(P?, Xs?, Zs),
-        sieve(Zs?, Ys))).
+        sieve(Zs?, Ys))) :-
+  ground(P?) | true.
 
 % filter/3
 reduce(filter(_, [], []), true).
 reduce(filter(P, [X|Xs], Ys?),
        filter(P?, Xs?, Ys)) :-
-  X? mod P? =:= 0 | true.
+  ground(P?), ground(X?), X? mod P? =:= 0 | true.
 reduce(filter(P, [X|Xs], [X?|Ys?]),
        filter(P?, Xs?, Ys)) :-
-  X? mod P? =\= 0 | true.
+  ground(P?), ground(X?), X? mod P? =\= 0 | true.
 
 % Note: := is handled directly by the runtime, no reduce clause needed
 
