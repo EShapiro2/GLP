@@ -68,8 +68,7 @@ reduce(filter(P, [X|Xs], [X?|Ys?]),
        filter(P?, Xs?, Ys)) :-
   X? mod P? =\= 0 | true.
 
-% Assignment reduction
-reduce(R := Expr, true) :- R := Expr?.
+% Note: := is handled directly by the runtime, no reduce clause needed
 
 % ===== TESTS =====
 % Direct: primes(20, Ps) should give Ps = [2,3,5,7,11,13,17,19]
