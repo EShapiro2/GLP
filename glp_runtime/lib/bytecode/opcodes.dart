@@ -56,22 +56,6 @@ class BodySetStructConstArgs implements Op {
   BodySetStructConstArgs(this.writerId, this.functor, this.constArgs);
 }
 
-/// Place writer variable into argument register (BODY phase)
-/// Used to pass writer variables to spawned goals
-class PutWriter implements Op {
-  final int varIndex;  // clause variable index holding writer ID
-  final int argSlot;   // target argument register
-  PutWriter(this.varIndex, this.argSlot);
-}
-
-/// Place reader variable into argument register (BODY phase)
-/// Derives reader from writer in clause variable
-class PutReader implements Op {
-  final int varIndex;  // clause variable index holding writer ID
-  final int argSlot;   // target argument register
-  PutReader(this.varIndex, this.argSlot);
-}
-
 /// Place constant value into argument register (BODY phase)
 class PutConstant implements Op {
   final Object? value;
@@ -86,20 +70,6 @@ class PutStructure implements Op {
   final int arity;
   final int argSlot;   // target argument register
   PutStructure(this.functor, this.arity, this.argSlot);
-}
-
-/// Build structure argument: allocate new writer (BODY phase, WRITE mode)
-/// Creates writer/reader pair, stores WriterTerm at HEAP[H], increments H
-class SetWriter implements Op {
-  final int varIndex;  // clause variable index to store writer ID
-  SetWriter(this.varIndex);
-}
-
-/// Build structure argument: place reader for writer (BODY phase, WRITE mode)
-/// Extracts paired reader from writer in varIndex, stores ReaderTerm at HEAP[H], increments H
-class SetReader implements Op {
-  final int varIndex;  // clause variable index holding writer ID
-  SetReader(this.varIndex);
 }
 
 /// Build structure argument: place constant (BODY phase, WRITE mode)
@@ -198,20 +168,6 @@ class UnifyVoid implements Op {
   UnifyVoid({this.count = 1});
 }
 
-/// Match writer variable at current S position
-/// In READ mode: unify with writer, In WRITE mode: add writer to structure
-class UnifyWriter implements Op {
-  final int varIndex;  // clause variable index holding the writer
-  UnifyWriter(this.varIndex);
-}
-
-/// Match reader variable at current S position
-/// In READ mode: unify with reader, In WRITE mode: add reader to structure
-class UnifyReader implements Op {
-  final int varIndex;  // clause variable index holding the writer (reader derived from it)
-  UnifyReader(this.varIndex);
-}
-
 /// Load argument into clause variable (first occurrence)
 /// Records tentative association in σ̂w during HEAD phase
 class GetVariable implements Op {
@@ -226,39 +182,6 @@ class GetValue implements Op {
   final int varIndex;  // clause variable index
   final int argSlot;   // argument register
   GetValue(this.varIndex, this.argSlot);
-}
-
-// ===== MODE-AWARE argument loading (FCP-style) =====
-/// Load argument into clause WRITER variable (first occurrence)
-/// Clause expects writer, implements mode conversion if needed
-class GetWriterVariable implements Op {
-  final int varIndex;  // clause variable index
-  final int argSlot;   // argument register
-  GetWriterVariable(this.varIndex, this.argSlot);
-}
-
-/// Load argument into clause READER variable (first occurrence)
-/// Clause expects reader, implements mode conversion if needed
-class GetReaderVariable implements Op {
-  final int varIndex;  // clause variable index
-  final int argSlot;   // argument register
-  GetReaderVariable(this.varIndex, this.argSlot);
-}
-
-/// Unify argument with clause WRITER variable (subsequent occurrence)
-/// Performs writer MGU, updates σ̂w during HEAD phase
-class GetWriterValue implements Op {
-  final int varIndex;  // clause variable index
-  final int argSlot;   // argument register
-  GetWriterValue(this.varIndex, this.argSlot);
-}
-
-/// Unify argument with clause READER variable (subsequent occurrence)
-/// Performs three-valued unification with reader semantics
-class GetReaderValue implements Op {
-  final int varIndex;  // clause variable index
-  final int argSlot;   // argument register
-  GetReaderValue(this.varIndex, this.argSlot);
 }
 
 // ===== GUARD instructions (pure tests during HEAD/GUARDS phase) =====

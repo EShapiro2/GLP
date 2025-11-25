@@ -32,17 +32,11 @@ class BC {
   static HeadReader headReader(int varIndex) => HeadReader(varIndex);
   static UnifyConstant unifyConst(Object? value) => UnifyConstant(value);
   static UnifyVoid unifyVoid({int count = 1}) => UnifyVoid(count: count);
-  static UnifyWriter unifyWriter(int varIndex) => UnifyWriter(varIndex);
-  static UnifyReader unifyReader(int varIndex) => UnifyReader(varIndex);
   static HeadConstant headConst(Object? value, int argSlot) => HeadConstant(value, argSlot);
   static GetVariable getVar(int varIndex, int argSlot) => GetVariable(varIndex, argSlot);
   static GetValue getVal(int varIndex, int argSlot) => GetValue(varIndex, argSlot);
-  static PutWriter putWriter(int varIndex, int argSlot) => PutWriter(varIndex, argSlot);
-  static PutReader putReader(int varIndex, int argSlot) => PutReader(varIndex, argSlot);
   static PutConstant putConst(Object? value, int argSlot) => PutConstant(value, argSlot);
   static PutStructure putStructure(String functor, int arity, int argSlot) => PutStructure(functor, arity, argSlot);
-  static SetWriter setWriter(int varIndex) => SetWriter(varIndex);
-  static SetReader setReader(int varIndex) => SetReader(varIndex);
   static SetConstant setConst(Object? value) => SetConstant(value);
   static Otherwise otherwise() => Otherwise();
   static IfWriter ifWriter(int varIndex) => IfWriter(varIndex);

@@ -12,8 +12,6 @@
 
 library;
 
-import 'opcodes.dart';
-
 /// Base interface for v2 instructions
 /// All v2 instructions implement this to distinguish them from v1 Op
 abstract class OpV2 {}
@@ -156,71 +154,5 @@ class IfVariable implements OpV2 {
 }
 
 // ============================================================================
-// Migration Support
+// Note: V1 migration functions removed - codegen now emits V2 directly
 // ============================================================================
-
-/// Convert old (v1) instruction to new (v2) instruction
-/// Returns null if instruction doesn't have a unified equivalent
-OpV2? migrateInstruction(Op oldOp) {
-  // HEAD phase
-  if (oldOp is HeadWriter) {
-    return HeadVariable(oldOp.varIndex, isReader: false);
-  }
-  if (oldOp is HeadReader) {
-    return HeadVariable(oldOp.varIndex, isReader: true);
-  }
-
-  // Structure traversal
-  if (oldOp is UnifyWriter) {
-    return UnifyVariable(oldOp.varIndex, isReader: false);
-  }
-  if (oldOp is UnifyReader) {
-    return UnifyVariable(oldOp.varIndex, isReader: true);
-  }
-
-  // BODY phase - Put
-  if (oldOp is PutWriter) {
-    return PutVariable(oldOp.varIndex, oldOp.argSlot, isReader: false);
-  }
-  if (oldOp is PutReader) {
-    return PutVariable(oldOp.varIndex, oldOp.argSlot, isReader: true);
-  }
-
-  // BODY phase - Set
-  if (oldOp is SetWriter) {
-    return SetVariable(oldOp.varIndex, isReader: false);
-  }
-  if (oldOp is SetReader) {
-    return SetVariable(oldOp.varIndex, isReader: true);
-  }
-
-  // GUARD phase
-  if (oldOp is IfWriter) {
-    return IfVariable(oldOp.varIndex, isReader: false);
-  }
-  if (oldOp is IfReader) {
-    return IfVariable(oldOp.varIndex, isReader: true);
-  }
-
-  // No migration available for this instruction
-  return null;
-}
-
-/// Convert old instruction to new instruction (non-null)
-/// Throws if instruction cannot be migrated
-OpV2 migrateInstructionStrict(Op oldOp) {
-  final result = migrateInstruction(oldOp);
-  if (result == null) {
-    throw UnsupportedError('Cannot migrate instruction: ${oldOp.runtimeType}');
-  }
-  return result;
-}
-
-/// Check if an instruction has a unified v2 equivalent
-bool hasUnifiedEquivalent(Op oldOp) {
-  return oldOp is HeadWriter || oldOp is HeadReader ||
-         oldOp is UnifyWriter || oldOp is UnifyReader ||
-         oldOp is PutWriter || oldOp is PutReader ||
-         oldOp is SetWriter || oldOp is SetReader ||
-         oldOp is IfWriter || oldOp is IfReader;
-}
