@@ -169,17 +169,11 @@ void main() async {
         final wrappedQuery = 'query__goal() :- $trimmed.';
         final queryModule = compiler.compileModule(wrappedQuery, moduleName: '__query__');
 
-        // Combine with loaded modules
-        final allOps = <dynamic>[];
-        for (final moduleName in runtime.serviceRegistry.moduleNames) {
-          final module = runtime.serviceRegistry.lookup(moduleName)!;
-          allOps.addAll(module.instructions);
-        }
-        allOps.addAll(queryModule.instructions);
-        final combinedProgram = BytecodeProgram(allOps);
+        // Register query module (will be looked up by runner via ServiceRegistry)
+        runtime.serviceRegistry.registerOrReplace(queryModule);
 
-        // Find entry point
-        final entryPC = combinedProgram.labels['query__goal/0'];
+        // Find entry point in query module
+        final entryPC = queryModule.labels['query__goal/0'];
         if (entryPC == null) {
           print('Error: Could not find query entry point');
           continue;
@@ -188,10 +182,12 @@ void main() async {
         // Execute with empty environment (zero-arity wrapper)
         final env = CallEnv();
         runtime.setGoalEnv(goalId, env);
-        runtime.setGoalProgram(goalId, 'main');
+        runtime.setGoalProgram(goalId, '__query__');
 
-        final runner = BytecodeRunner(combinedProgram);
-        final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
+        // Create scheduler with empty program (modules are in ServiceRegistry)
+        final emptyProgram = BytecodeProgram([]);
+        final runner = BytecodeRunner(emptyProgram);
+        final scheduler = Scheduler(rt: runtime, runners: {'__query__': runner});
 
         runtime.gq.enqueue(GoalRef(goalId, entryPC, '__query__'));
         goalId++;
@@ -240,20 +236,28 @@ void main() async {
       final arity = goalAtom.arity;
       final args = goalAtom.args;
 
-      // Combine all loaded modules
-      final allOps = <dynamic>[];
+      // Find the entry point for the predicate across all registered modules
+      final procedureLabel = '$functor/$arity';
+      int? entryPC;
+      String targetModule = '__main__';
+
       for (final moduleName in runtime.serviceRegistry.moduleNames) {
         final module = runtime.serviceRegistry.lookup(moduleName)!;
-        allOps.addAll(module.instructions);
+        if (module.labels.containsKey(procedureLabel)) {
+          entryPC = module.labels[procedureLabel];
+          targetModule = moduleName;
+          break;
+        }
       }
-      final combinedProgram = BytecodeProgram(allOps);
 
-      // Find the entry point for the predicate
-      final procedureLabel = '$functor/$arity';
-      final entryPC = combinedProgram.labels[procedureLabel];
       if (entryPC == null) {
         print('Error: Predicate $procedureLabel not found');
-        print('Available predicates: ${combinedProgram.labels.keys.where((k) => !k.endsWith('_end') && !k.contains('_c')).join(', ')}');
+        final allLabels = <String>{};
+        for (final moduleName in runtime.serviceRegistry.moduleNames) {
+          final module = runtime.serviceRegistry.lookup(moduleName)!;
+          allLabels.addAll(module.labels.keys.where((k) => !k.endsWith('_end') && !k.contains('_c')));
+        }
+        print('Available predicates: ${allLabels.join(', ')}');
         continue;
       }
 
@@ -269,13 +273,14 @@ void main() async {
       // Set up goal environment
       final env = CallEnv(args: argSlots);
       runtime.setGoalEnv(goalId, env);
-      runtime.setGoalProgram(goalId, 'main');
+      runtime.setGoalProgram(goalId, targetModule);
 
-      // Create scheduler and run
-      final runner = BytecodeRunner(combinedProgram);
-      final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
+      // Create scheduler with empty program (modules are in ServiceRegistry)
+      final emptyProgram = BytecodeProgram([]);
+      final runner = BytecodeRunner(emptyProgram);
+      final scheduler = Scheduler(rt: runtime, runners: {targetModule: runner});
 
-      runtime.gq.enqueue(GoalRef(goalId, entryPC, '__main__'));
+      runtime.gq.enqueue(GoalRef(goalId, entryPC, targetModule));
       final currentGoalId = goalId;
       goalId++;
 

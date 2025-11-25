@@ -2333,10 +2333,23 @@ class BytecodeRunner {
       // ===== Goal spawning and control flow =====
       if (op is Spawn) {
         if (cx.inBody) {
-          // Get entry point for procedure
-          final entryPc = labels[op.procedureLabel];
+          // Get entry point for procedure - first check current module's labels
+          var entryPc = labels[op.procedureLabel];
+          var targetModuleName = cx.moduleName;
 
-          // If procedure not found in program, check if it's a body kernel
+          // If procedure not found in current module, search other modules
+          if (entryPc == null) {
+            for (final modName in cx.rt.serviceRegistry.moduleNames) {
+              final mod = cx.rt.serviceRegistry.lookup(modName);
+              if (mod != null && mod.labels.containsKey(op.procedureLabel)) {
+                entryPc = mod.labels[op.procedureLabel];
+                targetModuleName = modName;
+                break;
+              }
+            }
+          }
+
+          // If procedure not found in any module, check if it's a body kernel
           if (entryPc == null) {
             // Extract procedure name from label (may be "name" or "name/arity")
             final labelParts = op.procedureLabel.split('/');
@@ -2376,9 +2389,9 @@ class BytecodeRunner {
             args: Map<int, Term>.from(cx.argSlots),
           );
 
-          // Create and enqueue new goal with unique ID (same module)
+          // Create and enqueue new goal (may be in a different module)
           final newGoalId = cx.rt.nextGoalId++;
-          final newGoalRef = GoalRef(newGoalId, entryPc, cx.moduleName);
+          final newGoalRef = GoalRef(newGoalId, entryPc, targetModuleName);
 
           // Format spawned goal as GLP predicate with arguments
           final args = <String>[];
