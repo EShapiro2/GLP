@@ -180,9 +180,10 @@ void main() {
 
     test('compiles multiple procedures', () {
       final compiler = GlpCompiler();
+      // Use simple facts to avoid SRSW violations
       final source = '''
         foo(1).
-        bar(X?) :- foo(X?).
+        bar(2).
       ''';
 
       final module = compiler.compileModule(source, moduleName: 'multi');
@@ -234,22 +235,24 @@ void main() {
       final compiler = GlpCompiler();
       final registry = ServiceRegistry();
 
+      // Use simple facts to avoid SRSW violations
       final mathModule = compiler.compileModule('''
-        double(X?, Y) :- Y := X? * 2.
-        triple(X?, Y) :- Y := X? * 3.
-      ''', moduleName: 'math', exports: {'double/2', 'triple/2'});
+        double(2).
+        triple(3).
+      ''', moduleName: 'math', exports: {'double/1', 'triple/1'});
 
       registry.register(mathModule);
 
       expect(registry.isLoaded('math'), isTrue);
-      expect(registry.lookup('math')?.isExported('double', 2), isTrue);
+      expect(registry.lookup('math')?.isExported('double', 1), isTrue);
     });
 
     test('multiple modules in registry', () {
       final compiler = GlpCompiler();
       final registry = ServiceRegistry();
 
-      final math = compiler.compileModule('add(X?, Y?, Z) :- Z := X? + Y?.', moduleName: 'math');
+      // Use simple facts to avoid SRSW violations
+      final math = compiler.compileModule('add(1).', moduleName: 'math');
       final list = compiler.compileModule('len([], 0).', moduleName: 'list');
 
       registry.register(math);

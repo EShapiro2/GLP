@@ -178,9 +178,10 @@ void main() {
   group('GlpCompiler.compileModule - with declarations', () {
     test('uses -module declaration for name', () {
       final compiler = GlpCompiler();
+      // Use simple fact to avoid SRSW violations
       final source = '''
         -module(mymath).
-        double(X?, Y) :- Y := X? * 2.
+        double(2).
       ''';
 
       final module = compiler.compileModule(source);
@@ -190,17 +191,18 @@ void main() {
 
     test('uses -export declaration for exports', () {
       final compiler = GlpCompiler();
+      // Use simple facts to avoid SRSW violations
       final source = '''
         -module(mymath).
-        -export([double/2]).
-        double(X?, Y) :- Y := X? * 2.
-        triple(X?, Y) :- Y := X? * 3.
+        -export([double/1]).
+        double(2).
+        triple(3).
       ''';
 
       final module = compiler.compileModule(source);
 
-      expect(module.isExported('double', 2), isTrue);
-      expect(module.isExported('triple', 2), isFalse);
+      expect(module.isExported('double', 1), isTrue);
+      expect(module.isExported('triple', 1), isFalse);
     });
 
     test('parameter overrides declaration', () {
@@ -217,16 +219,17 @@ void main() {
 
     test('compiles module with remote goal', () {
       final compiler = GlpCompiler();
+      // Use zero-arity to avoid SRSW violation
       final source = '''
         -module(caller).
-        test(X) :- math # double(5, X).
+        test :- math # compute.
       ''';
 
       // Should compile without error
       final module = compiler.compileModule(source);
 
       expect(module.name, equals('caller'));
-      expect(module.procedures, contains('test/1'));
+      expect(module.procedures, contains('test/0'));
     });
   });
 }

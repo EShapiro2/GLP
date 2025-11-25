@@ -17,12 +17,13 @@ import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
+import 'package:glp_runtime/runtime/loaded_module.dart';
 
 void main() async {
   // Get git commit info
   final gitCommit = await _getGitCommit();
   // Build timestamp (updated at compile time)
-  final buildTime = '2025-11-19T11:30:49Z (Fix: ROQ suspension list corruption with wrapper nodes)';
+  final buildTime = '2025-11-25T00:00:00Z (Phase 3.5: Module system transition)';
 
   print('╔════════════════════════════════════════╗');
   print('║   GLP REPL - Interactive Interpreter   ║');
@@ -44,8 +45,7 @@ void main() async {
   final runtime = GlpRuntime();
   registerStandardPredicates(runtime.systemPredicates);
 
-  // Track loaded programs
-  final loadedPrograms = <String, BytecodeProgram>{};
+  // Module system: modules registered in runtime.serviceRegistry
 
   // Load stdlib (assign.glp) for arithmetic support
   final stdlibPath = '../stdlib/assign.glp';
@@ -54,9 +54,9 @@ void main() async {
     try {
       final stdlibSource = stdlibFile.readAsStringSync();
       final stdlibCompiler = GlpCompiler(skipSRSW: true);
-      final stdlibProg = stdlibCompiler.compile(stdlibSource);
-      loadedPrograms['__stdlib__'] = stdlibProg;
-      print('Loaded stdlib: assign.glp (${stdlibProg.ops.length} ops)');
+      final stdlibModule = stdlibCompiler.compileModule(stdlibSource, moduleName: '__stdlib__');
+      runtime.serviceRegistry.registerOrReplace(stdlibModule);
+      print('Loaded stdlib: assign.glp (${stdlibModule.instructions.length} ops)');
     } catch (e) {
       print('Warning: Could not load stdlib: $e');
     }
@@ -134,17 +134,17 @@ void main() async {
     }
 
     if (trimmed.startsWith(':bytecode') || trimmed.startsWith(':bc')) {
-      // Display bytecode for loaded programs
-      if (loadedPrograms.isEmpty) {
-        print('No programs loaded');
+      // Display bytecode for loaded modules
+      if (runtime.serviceRegistry.moduleCount == 0) {
+        print('No modules loaded');
         continue;
       }
-      for (final entry in loadedPrograms.entries) {
-        print('\nBytecode for ${entry.key}:');
+      for (final moduleName in runtime.serviceRegistry.moduleNames) {
+        final module = runtime.serviceRegistry.lookup(moduleName)!;
+        print('\nBytecode for $moduleName:');
         print('=' * 60);
-        final prog = entry.value;
-        for (int i = 0; i < prog.ops.length; i++) {
-          print('  ${i.toString().padLeft(4)}: ${prog.ops[i]}');
+        for (int i = 0; i < module.instructions.length; i++) {
+          print('  ${i.toString().padLeft(4)}: ${module.instructions[i]}');
         }
       }
       continue;
@@ -153,7 +153,7 @@ void main() async {
     // Check if input is a .glp file to load
     if (trimmed.endsWith('.glp') && !trimmed.contains(' ')) {
       final filename = trimmed;
-      if (!loadProgram(filename, compiler, loadedPrograms)) {
+      if (!loadModule(filename, compiler, runtime)) {
         continue;
       }
       print('✓ Loaded: $filename');
@@ -167,14 +167,15 @@ void main() async {
       if (_isConjunction(trimmed)) {
         // Create wrapper: query__goal() :- <conjunction>.
         final wrappedQuery = 'query__goal() :- $trimmed.';
-        final program = compiler.compile(wrappedQuery);
+        final queryModule = compiler.compileModule(wrappedQuery, moduleName: '__query__');
 
-        // Combine with loaded programs
+        // Combine with loaded modules
         final allOps = <dynamic>[];
-        for (final loaded in loadedPrograms.values) {
-          allOps.addAll(loaded.ops);
+        for (final moduleName in runtime.serviceRegistry.moduleNames) {
+          final module = runtime.serviceRegistry.lookup(moduleName)!;
+          allOps.addAll(module.instructions);
         }
-        allOps.addAll(program.ops);
+        allOps.addAll(queryModule.instructions);
         final combinedProgram = BytecodeProgram(allOps);
 
         // Find entry point
@@ -239,10 +240,11 @@ void main() async {
       final arity = goalAtom.arity;
       final args = goalAtom.args;
 
-      // Combine all loaded programs
+      // Combine all loaded modules
       final allOps = <dynamic>[];
-      for (final loaded in loadedPrograms.values) {
-        allOps.addAll(loaded.ops);
+      for (final moduleName in runtime.serviceRegistry.moduleNames) {
+        final module = runtime.serviceRegistry.lookup(moduleName)!;
+        allOps.addAll(module.instructions);
       }
       final combinedProgram = BytecodeProgram(allOps);
 
@@ -316,7 +318,7 @@ void main() async {
   }
 }
 
-bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProgram> loadedPrograms) {
+bool loadModule(String filename, GlpCompiler compiler, GlpRuntime runtime) {
   try {
     // Try to load source file from glp/
     final sourceFile = File('glp/$filename');
@@ -327,9 +329,14 @@ bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProg
     }
 
     final source = sourceFile.readAsStringSync();
-    final program = compiler.compile(source);
 
-    loadedPrograms[filename] = program;
+    // Derive module name from filename (e.g., 'merge.glp' → 'merge')
+    final moduleName = filename.endsWith('.glp')
+        ? filename.substring(0, filename.length - 4)
+        : filename;
+
+    final module = compiler.compileModule(source, moduleName: moduleName);
+    runtime.serviceRegistry.registerOrReplace(module);
     return true;
   } catch (e) {
     print('Error loading $filename: $e');

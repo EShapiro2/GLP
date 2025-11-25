@@ -1,5 +1,3 @@
-import '../bytecode/opcodes.dart' show Op;
-
 /// A compiled module ready for execution.
 ///
 /// Each module has its own instruction list and label table,
@@ -15,8 +13,8 @@ class LoadedModule {
   /// Imported module names
   final List<String> imports;
 
-  /// This module's instructions
-  final List<Op> instructions;
+  /// This module's instructions (can hold both Op and OpV2 instructions)
+  final List<dynamic> instructions;
 
   /// Label table: label name → PC offset
   final Map<String, int> labels;

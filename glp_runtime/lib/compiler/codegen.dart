@@ -110,14 +110,11 @@ class CodeGenerator {
       _generateProcedure(proc, ctx);
     }
 
-    // Cast instructions to List<bc.Op> (they're all Op subclasses)
-    final instructions = ctx.instructions.cast<bc.Op>();
-
     return LoadedModule(
       name: moduleName ?? '_anonymous',
       exports: exports ?? <String>{},  // Empty = all exported
       imports: imports ?? <String>[],
-      instructions: List<bc.Op>.from(instructions),
+      instructions: List<dynamic>.from(ctx.instructions),
       labels: Map<String, int>.from(ctx.labels),
       procOffsets: procOffsets,
     );

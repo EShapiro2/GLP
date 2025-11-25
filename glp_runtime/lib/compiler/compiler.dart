@@ -95,7 +95,7 @@ class GlpCompiler {
       final ast = parser2.parse();
 
       // Phase 3: Semantic analysis
-      final analyzer = _createAnalyzer();
+      final analyzer = _createAnalyzer(skipSRSW: skipSRSW);
       final annotatedAst = analyzer.analyze(ast);
 
       // Phase 4: Code generation to LoadedModule
