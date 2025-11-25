@@ -213,20 +213,12 @@ class CodeGenerator {
       final isFirstOccurrence = !ctx.seenHeadVars.contains(baseVarName);
 
       if (isFirstOccurrence) {
-        // First occurrence: emit mode-aware opcode
-        if (term.isReader) {
-          ctx.emit(bc.GetReaderVariable(regIndex, argSlot));
-        } else {
-          ctx.emit(bc.GetWriterVariable(regIndex, argSlot));
-        }
+        // First occurrence: emit V2 GetVariable
+        ctx.emit(bcv2.GetVariable(regIndex, argSlot, isReader: term.isReader));
         ctx.seenHeadVars.add(baseVarName);
       } else {
-        // Subsequent occurrence: emit mode-aware opcode
-        if (term.isReader) {
-          ctx.emit(bc.GetReaderValue(regIndex, argSlot));
-        } else {
-          ctx.emit(bc.GetWriterValue(regIndex, argSlot));
-        }
+        // Subsequent occurrence: emit V2 GetValue
+        ctx.emit(bcv2.GetValue(regIndex, argSlot, isReader: term.isReader));
       }
 
     } else if (term is ConstTerm) {
@@ -541,7 +533,7 @@ class CodeGenerator {
     } else if (term is UnderscoreTerm) {
       // Anonymous variable: create fresh unbound writer
       final tempReg = ctx.allocateTemp();
-      ctx.emit(bc.PutWriter(tempReg, argSlot));
+      ctx.emit(bcv2.PutVariable(tempReg, argSlot, isReader: false));
     }
   }
 
@@ -655,11 +647,8 @@ class CodeGenerator {
 
       final regIndex = varInfo.registerIndex!;
 
-      if (term.isReader) {
-        ctx.emit(bc.SetReader(regIndex));  // set_reader Xi
-      } else {
-        ctx.emit(bc.SetWriter(regIndex));  // set_writer Xi
-      }
+      // V2 SetVariable with isReader flag
+      ctx.emit(bcv2.SetVariable(regIndex, isReader: term.isReader));
 
     } else if (term is ConstTerm) {
       ctx.emit(bc.SetConstant(term.value));  // set_constant c
@@ -685,7 +674,7 @@ class CodeGenerator {
     } else if (term is UnderscoreTerm) {
       // Anonymous variable in structure
       final tempReg = ctx.allocateTemp();
-      ctx.emit(bc.SetWriter(tempReg));  // Create fresh writer
+      ctx.emit(bcv2.SetVariable(tempReg, isReader: false));  // Create fresh writer
     }
   }
 }
