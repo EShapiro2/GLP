@@ -536,39 +536,24 @@ run_test "Meta: run(hanoi(2,a,c,M))" \
     "→ 54 goals"
 
 # ============================================
-# FUTURE TESTS
+# PRIMES TESTS (mod operator in guards)
 # ============================================
 
-# Helper for future tests - shows them as skipped
-run_future_test() {
-    local name="$1"
-    local file="$2"
-    local query="$3"
-    local expected="$4"
-    local reason="$5"
-
-    FUTURE=$((FUTURE + 1))
-    echo "────────────────────────────────────────"
-    echo "Future Test $FUTURE: $name"
-    echo "  File: $file"
-    echo "  Query: $query"
-    echo "  Expected: $expected"
-    echo "  ⏳ SKIPPED ($reason)"
-}
-
-FUTURE=0
-
-run_future_test "Primes up to 20" \
+run_test "Primes up to 20" \
     "primes.glp" \
     "primes(20, Ps)." \
-    "Ps = [2, 3, 5, 7, 11, 13, 17, 19]" \
-    "needs mod operator in parser"
+    "Ps = \[2, 3, 5, 7, 11, 13, 17, 19\]"
 
-run_future_test "Meta: run(primes(10,Ps))" \
+run_test "Primes up to 10" \
     "primes.glp" \
-    "run(primes(10, Ps))." \
-    "Ps = [2, 3, 5, 7]" \
-    "needs mod operator"
+    "primes(10, Ps)." \
+    "Ps = \[2, 3, 5, 7\]"
+
+# ============================================
+# FUTURE TESTS (placeholder for tests not yet working)
+# ============================================
+
+FUTURE=0
 
 # ============================================
 # SUMMARY

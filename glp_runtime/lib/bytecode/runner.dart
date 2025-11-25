@@ -2167,40 +2167,39 @@ class BytecodeRunner {
         pc++; continue;
       }
 
-      // ===== WAM-style structure creation (BODY phase) =====
+      // ===== WAM-style structure creation (BODY and GUARD phases) =====
       if (op is PutStructure) {
-        if (cx.inBody) {
-          // Per spec v2.16 section 7.1: Build StructTerm incrementally via set_* instructions
-          // Structure will be stored in argSlots when complete
+        // Per spec v2.16 section 7.1: Build StructTerm incrementally via set_* instructions
+        // Structure will be stored in argSlots when complete
+        // This works for both BODY phase and GUARD phase (for arithmetic expressions in guards)
 
-          // Create fresh variable for binding the structure
-          final varId = cx.rt.heap.allocateFreshVar();
-          cx.rt.heap.addVariable(varId);
+        // Create fresh variable for binding the structure
+        final varId = cx.rt.heap.allocateFreshVar();
+        cx.rt.heap.addVariable(varId);
 
-          // Handle nested structures - save parent context
-          if (op.argSlot == -1 || cx.currentStructure != null) {
-            cx.parentStructure = cx.currentStructure;
-            cx.parentS = cx.S;
-            cx.parentMode = cx.mode;
-            cx.parentWriterId = cx.clauseVars[-1];
-          }
-
-          // Store variable ID for structure binding
-          cx.clauseVars[-1] = varId;
-
-          // Store target argSlot for later (when structure is complete)
-          if (op.argSlot >= 0 && op.argSlot < 10) {
-            cx.clauseVars[-2] = op.argSlot; // Temporary storage of target slot
-          } else {
-            cx.clauseVars[op.argSlot] = VarRef(varId, isReader: false);
-          }
-
-          // Create structure with placeholder args (filled by Set* instructions)
-          final structArgs = List<Term>.filled(op.arity, ConstTerm(null));
-          cx.currentStructure = StructTerm(op.functor, structArgs);
-          cx.S = 0;
-          cx.mode = UnifyMode.write;
+        // Handle nested structures - save parent context
+        if (op.argSlot == -1 || cx.currentStructure != null) {
+          cx.parentStructure = cx.currentStructure;
+          cx.parentS = cx.S;
+          cx.parentMode = cx.mode;
+          cx.parentWriterId = cx.clauseVars[-1];
         }
+
+        // Store variable ID for structure binding
+        cx.clauseVars[-1] = varId;
+
+        // Store target argSlot for later (when structure is complete)
+        if (op.argSlot >= 0 && op.argSlot < 10) {
+          cx.clauseVars[-2] = op.argSlot; // Temporary storage of target slot
+        } else {
+          cx.clauseVars[op.argSlot] = VarRef(varId, isReader: false);
+        }
+
+        // Create structure with placeholder args (filled by Unify* instructions)
+        final structArgs = List<Term>.filled(op.arity, ConstTerm(null));
+        cx.currentStructure = StructTerm(op.functor, structArgs);
+        cx.S = 0;
+        cx.mode = UnifyMode.write;
         pc++; continue;
       }
 
