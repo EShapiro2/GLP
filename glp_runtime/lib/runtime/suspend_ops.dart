@@ -12,6 +12,7 @@ class SuspendOps {
     required HeapFCP heap,
     required int goalId,
     required int kappa,
+    required String moduleName,
     required Set<int> readerVarIds,  // Variable IDs (not reader IDs)
   }) {
     // print('[TRACE SuspendOps FCP] Suspending goal $goalId on ${readerVarIds.length} reader(s):');
@@ -19,7 +20,7 @@ class SuspendOps {
     // print('  Resume PC: $kappa');
 
     // Create ONE shared suspension record
-    final sharedRecord = SuspensionRecord(goalId, kappa);
+    final sharedRecord = SuspensionRecord(goalId, kappa, moduleName);
 
     // Create wrapper node for each reader cell (independent next pointers)
     for (final varId in readerVarIds) {

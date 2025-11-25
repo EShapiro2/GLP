@@ -22,6 +22,7 @@ void main() {
       heap: heap,
       goalId: g,
       kappa: kappa,
+      moduleName: '__main__',
       readerVarIds: {varId},
     );
 

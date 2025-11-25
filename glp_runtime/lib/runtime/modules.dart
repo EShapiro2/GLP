@@ -42,7 +42,7 @@ class LoaderHost {
       throw StateError('No program for $module::$predSig');
     }
     goals.add(goalId, CallSpec(module: module, predSig: predSig, env: env, kappa: kappa));
-    rt.gq.enqueue(GoalRef(goalId, kappa));
+    rt.gq.enqueue(GoalRef(goalId, kappa, module));
   }
 
   List<String> drain({int maxCycles = 1000}) {

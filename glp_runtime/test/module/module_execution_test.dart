@@ -55,6 +55,7 @@ void main() {
       final cx = RunnerContext(
         rt: rt,
         goalId: goalId,
+        moduleName: 'caller',
         kappa: entryPc,
         env: env,
       );
@@ -100,6 +101,7 @@ void main() {
       final cx = RunnerContext(
         rt: rt,
         goalId: goalId,
+        moduleName: 'caller',
         kappa: entryPc,
         env: env,
       );
@@ -146,6 +148,7 @@ void main() {
       final cx = RunnerContext(
         rt: rt,
         goalId: goalId,
+        moduleName: 'caller',
         kappa: entryPc,
         env: env,
       );
@@ -164,6 +167,7 @@ void main() {
           final nextCx = RunnerContext(
             rt: rt,
             goalId: nextGoal.id,
+            moduleName: nextGoal.moduleName,
             kappa: nextGoal.pc,
             env: nextEnv,
           );
@@ -213,6 +217,7 @@ void main() {
       final cx = RunnerContext(
         rt: rt,
         goalId: goalId,
+        moduleName: 'caller',
         kappa: entryPc,
         env: env,
       );
@@ -230,6 +235,7 @@ void main() {
           final nextCx = RunnerContext(
             rt: rt,
             goalId: nextGoal.id,
+            moduleName: nextGoal.moduleName,
             kappa: nextGoal.pc,
             env: nextEnv,
           );

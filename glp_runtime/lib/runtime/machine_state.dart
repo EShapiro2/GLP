@@ -9,11 +9,12 @@ typedef WriterId = int;  // WR identity
 /// Goal status per v2.16.
 enum GoalStatus { active, suspended, failed, succeeded }
 
-/// A reference to a goal scheduled to run at a PC.
+/// A reference to a goal scheduled to run at a PC within a module.
 class GoalRef {
   final GoalId id;
   final Pc pc;
-  const GoalRef(this.id, this.pc);
+  final String moduleName;  // Module this goal executes in
+  const GoalRef(this.id, this.pc, this.moduleName);
 }
 
 /// σ̂w: clause-local, goal-local tentative writer substitution (no heap writes).

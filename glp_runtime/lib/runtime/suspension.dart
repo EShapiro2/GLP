@@ -8,8 +8,9 @@ library;
 class SuspensionRecord {
   int? goalId;        // Process ID - nullable for disarming
   final int resumePC; // Where to resume (kappa - procedure entry point)
+  final String moduleName;  // Module this goal executes in
 
-  SuspensionRecord(this.goalId, this.resumePC);
+  SuspensionRecord(this.goalId, this.resumePC, this.moduleName);
 
   /// Disarm this record (prevent future activation)
   void disarm() {
@@ -20,7 +21,7 @@ class SuspensionRecord {
   bool get armed => goalId != null;
 
   @override
-  String toString() => 'SuspensionRecord(goal=$goalId, pc=$resumePC, armed=$armed)';
+  String toString() => 'SuspensionRecord(goal=$goalId, pc=$resumePC, module=$moduleName, armed=$armed)';
 }
 
 /// Wrapper node for linking shared records into suspension lists
@@ -36,6 +37,7 @@ class SuspensionListNode {
   bool get armed => record.armed;
   int? get goalId => record.goalId;
   int get resumePC => record.resumePC;
+  String get moduleName => record.moduleName;
 
   @override
   String toString() => 'SuspensionListNode(record=$record)';

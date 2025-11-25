@@ -195,6 +195,7 @@ class Scheduler {
       final cx = RunnerContext(
         rt: rt,
         goalId: act.id,
+        moduleName: act.moduleName,
         kappa: act.pc,
         env: env,
         goalHead: goalStr,

@@ -75,12 +75,14 @@ class GlpRuntime {
   void suspendGoalFCP({
     required int goalId,
     required int kappa,
+    required String moduleName,
     required Set<int> readerVarIds,
   }) {
     SuspendOps.suspendGoalFCP(
       heap: heap,
       goalId: goalId,
       kappa: kappa,
+      moduleName: moduleName,
       readerVarIds: readerVarIds,
     );
   }

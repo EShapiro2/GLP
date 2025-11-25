@@ -54,6 +54,7 @@ void main() {
     final cx = RunnerContext(
       rt: rt,
       goalId: goalId,
+      moduleName: '__main__',
       kappa: 0,  // Start at PC 0
       env: env,
     );

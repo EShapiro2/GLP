@@ -301,7 +301,7 @@ void main() {
       print('compute_sum/1 entry at PC $entryPc');
 
       // Enqueue the initial goal
-      rt.gq.enqueue(GoalRef(goalId, entryPc!));
+      rt.gq.enqueue(GoalRef(goalId, entryPc!, '__main__'));
 
       print('\nRunning scheduler to drain all goals...');
       final ran = sched.drain(maxCycles: 100, debug: true, debugOutput: true);

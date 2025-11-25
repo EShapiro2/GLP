@@ -34,7 +34,7 @@ void main() {
     const goalId = 100;
     final env = CallEnv();
     rt.setGoalEnv(goalId, env);
-    rt.gq.enqueue(GoalRef(goalId, prog.labels['p/0']!));
+    rt.gq.enqueue(GoalRef(goalId, prog.labels['p/0']!, '__main__'));
 
     print('Starting p with 3 nops');
     final ran = sched.drain(maxCycles: 10);
@@ -67,7 +67,7 @@ void main() {
     const goalId = 100;
     final env = CallEnv();
     rt.setGoalEnv(goalId, env);
-    rt.gq.enqueue(GoalRef(goalId, prog.labels['p/0']!));
+    rt.gq.enqueue(GoalRef(goalId, prog.labels['p/0']!, '__main__'));
 
     print('Starting p with halt');
     final ran = sched.drain(maxCycles: 10);
@@ -105,7 +105,7 @@ void main() {
     const goalId1 = 100;
     final env1 = CallEnv();
     rt.setGoalEnv(goalId1, env1);
-    rt.gq.enqueue(GoalRef(goalId1, progHalt.labels['p/0']!));
+    rt.gq.enqueue(GoalRef(goalId1, progHalt.labels['p/0']!, '__main__'));
 
     print('Testing halt...');
     final ranHalt = schedHalt.drain(maxCycles: 10);
@@ -118,7 +118,7 @@ void main() {
     const goalId2 = 200;
     final env2 = CallEnv();
     rt2.setGoalEnv(goalId2, env2);
-    rt2.gq.enqueue(GoalRef(goalId2, progProceed.labels['p/0']!));
+    rt2.gq.enqueue(GoalRef(goalId2, progProceed.labels['p/0']!, '__main__'));
 
     print('Testing proceed...');
     final ranProceed = schedProceed.drain(maxCycles: 10);

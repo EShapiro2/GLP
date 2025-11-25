@@ -122,6 +122,7 @@ class EnvironmentFrame {
 class RunnerContext {
   final GlpRuntime rt;
   final int goalId;
+  final String moduleName;  // Module this goal executes in
   int kappa;  // Mutable - updated by Requeue for tail calls
   final CallEnv env;
   final Map<int, Object?> sigmaHat = <int, Object?>{}; // σ̂w: tentative writer bindings
@@ -168,6 +169,7 @@ class RunnerContext {
   RunnerContext({
     required this.rt,
     required this.goalId,
+    required this.moduleName,
     required this.kappa,
     CallEnv? env,
     this.onActivation,
@@ -2095,7 +2097,7 @@ class BytecodeRunner {
 //           print('  κ (resume PC): ${cx.kappa}');
 //           print('  Calling suspendGoalFCP to add to reader suspension lists...');
 
-          cx.rt.suspendGoalFCP(goalId: cx.goalId, kappa: cx.kappa, readerVarIds: cx.U);
+          cx.rt.suspendGoalFCP(goalId: cx.goalId, kappa: cx.kappa, moduleName: cx.moduleName, readerVarIds: cx.U);
 
 //           print('  ✓ Goal ${cx.goalId} suspended (added to reader cells)');
           cx.U.clear();
@@ -2128,7 +2130,7 @@ class BytecodeRunner {
           if (debug) {
 //             print('>>> SUSPENSION: Goal ${cx.goalId} suspended on readers: ${cx.U}');
           }
-          cx.rt.suspendGoalFCP(goalId: cx.goalId, kappa: cx.kappa, readerVarIds: cx.U);
+          cx.rt.suspendGoalFCP(goalId: cx.goalId, kappa: cx.kappa, moduleName: cx.moduleName, readerVarIds: cx.U);
           cx.U.clear();
           cx.inBody = false;
           return RunResult.suspended;
@@ -2315,7 +2317,7 @@ class BytecodeRunner {
       if (op is TailStep) {
         final shouldYield = cx.rt.tailReduce(cx.goalId);
         if (shouldYield) {
-          cx.rt.gq.enqueue(GoalRef(cx.goalId, cx.kappa));
+          cx.rt.gq.enqueue(GoalRef(cx.goalId, cx.kappa, cx.moduleName));
           return RunResult.yielded;
         } else {
           pc = prog.labels[op.label]!;
@@ -2369,9 +2371,9 @@ class BytecodeRunner {
             args: Map<int, Term>.from(cx.argSlots),
           );
 
-          // Create and enqueue new goal with unique ID
+          // Create and enqueue new goal with unique ID (same module)
           final newGoalId = cx.rt.nextGoalId++;
-          final newGoalRef = GoalRef(newGoalId, entryPc);
+          final newGoalRef = GoalRef(newGoalId, entryPc, cx.moduleName);
 
           // Format spawned goal as GLP predicate with arguments
           final args = <String>[];
@@ -2432,9 +2434,9 @@ class BytecodeRunner {
             args: Map<int, Term>.from(cx.argSlots),
           );
 
-          // 5. Create new goal with unique ID
+          // 5. Create new goal with unique ID (in target module)
           final newGoalId = cx.rt.nextGoalId++;
-          final newGoalRef = GoalRef(newGoalId, entryPc);
+          final newGoalRef = GoalRef(newGoalId, entryPc, op.moduleName);
 
           // 6. Format spawned goal for trace output
           final args = <String>[];

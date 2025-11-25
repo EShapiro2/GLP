@@ -206,7 +206,7 @@ class HeapFCP {
 
     while (current != null) {
       if (current.armed) {
-        acts.add(GoalRef(current.goalId!, current.resumePC));
+        acts.add(GoalRef(current.goalId!, current.resumePC, current.moduleName));
         current.record.disarm();  // Disarm shared record - affects all nodes
       }
       current = current.next;
@@ -254,7 +254,7 @@ class HeapFCP {
       SuspensionListNode? current = oldContent;
       while (current != null) {
         if (current.armed) {
-          activations.add(GoalRef(current.goalId!, current.resumePC));
+          activations.add(GoalRef(current.goalId!, current.resumePC, current.moduleName));
           current.record.disarm();
         }
         current = current.next;

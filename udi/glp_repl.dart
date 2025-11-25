@@ -193,7 +193,7 @@ void main() async {
         final runner = BytecodeRunner(combinedProgram);
         final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
 
-        runtime.gq.enqueue(GoalRef(goalId, entryPC));
+        runtime.gq.enqueue(GoalRef(goalId, entryPC, '__query__'));
         goalId++;
 
         final ran = scheduler.drain(
@@ -275,7 +275,7 @@ void main() async {
       final runner = BytecodeRunner(combinedProgram);
       final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
 
-      runtime.gq.enqueue(GoalRef(goalId, entryPC));
+      runtime.gq.enqueue(GoalRef(goalId, entryPC, '__main__'));
       final currentGoalId = goalId;
       goalId++;
 
