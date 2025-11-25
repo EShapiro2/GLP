@@ -1945,37 +1945,349 @@ class BytecodeRunner {
         continue; // Re-execute at same PC with v1 instruction
       }
 
-      // GetVariable: unified first-occurrence argument loading
-      if (op is opv2.GetVariable) {
-        // Transform to v1 instruction based on isReader flag and re-execute
-        final v1Op = op.isReader
-            ? GetReaderVariable(op.varIndex, op.argSlot)
-            : GetWriterVariable(op.varIndex, op.argSlot);
+      // GetVariable: unified first-occurrence argument loading (native V2 handler)
+      // Handles opv2.GetVariable and legacy GetWriterVariable/GetReaderVariable
+      if (op is opv2.GetVariable || op is GetWriterVariable || op is GetReaderVariable) {
+        final int varIndex;
+        final int argSlot;
+        final bool isReaderMode;
+        if (op is opv2.GetVariable) {
+          varIndex = op.varIndex;
+          argSlot = op.argSlot;
+          isReaderMode = op.isReader;
+        } else if (op is GetWriterVariable) {
+          varIndex = op.varIndex;
+          argSlot = op.argSlot;
+          isReaderMode = false;
+        } else {
+          final gr = op as GetReaderVariable;
+          varIndex = gr.varIndex;
+          argSlot = gr.argSlot;
+          isReaderMode = true;
+        }
 
-        prog.ops[pc] = v1Op;
-        continue; // Re-execute at same PC with v1 instruction
+        final arg = _getArg(cx, argSlot);
+        if (arg == null) {
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+
+        if (!isReaderMode) {
+          // GetWriterVariable logic: Load argument into clause WRITER variable
+          if (arg is VarRef && !arg.isReader) {
+            cx.clauseVars[varIndex] = arg.varId;
+          } else if (arg is VarRef && arg.isReader) {
+            final wid = cx.rt.heap.writerIdForReader(arg.varId);
+            if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+              final value = cx.rt.heap.valueOfWriter(wid);
+              cx.clauseVars[varIndex] = value;
+            } else {
+              final suspendOnVar = _finalUnboundVar(cx, arg.varId);
+              pc = _suspendAndFail(cx, suspendOnVar, pc); continue;
+            }
+          } else if (arg is ConstTerm) {
+            cx.clauseVars[varIndex] = arg;
+          } else if (arg is StructTerm) {
+            cx.clauseVars[varIndex] = arg;
+          }
+        } else {
+          // GetReaderVariable logic: Load argument into clause READER variable
+          if (arg is VarRef && !arg.isReader) {
+            // Writer VarRef → reader param (mode conversion)
+            final freshVar = cx.rt.heap.allocateFreshVar();
+            cx.rt.heap.addVariable(freshVar);
+            cx.sigmaHat[arg.varId] = VarRef(freshVar, isReader: true);
+            cx.clauseVars[varIndex] = freshVar;
+          } else if (arg is VarRef && arg.isReader) {
+            cx.clauseVars[varIndex] = arg.varId;
+          } else if (arg is ConstTerm) {
+            cx.clauseVars[varIndex] = arg;
+          } else if (arg is StructTerm) {
+            cx.clauseVars[varIndex] = arg;
+          }
+        }
+        pc++; continue;
       }
 
-      // GetValue: unified subsequent-occurrence argument unification
-      if (op is opv2.GetValue) {
-        // Transform to v1 instruction based on isReader flag and re-execute
-        final v1Op = op.isReader
-            ? GetReaderValue(op.varIndex, op.argSlot)
-            : GetWriterValue(op.varIndex, op.argSlot);
+      // GetValue: unified subsequent-occurrence argument unification (native V2 handler)
+      // Handles opv2.GetValue and legacy GetWriterValue/GetReaderValue
+      if (op is opv2.GetValue || op is GetWriterValue || op is GetReaderValue) {
+        final int varIndex;
+        final int argSlot;
+        final bool isReaderMode;
+        if (op is opv2.GetValue) {
+          varIndex = op.varIndex;
+          argSlot = op.argSlot;
+          isReaderMode = op.isReader;
+        } else if (op is GetWriterValue) {
+          varIndex = op.varIndex;
+          argSlot = op.argSlot;
+          isReaderMode = false;
+        } else {
+          final gr = op as GetReaderValue;
+          varIndex = gr.varIndex;
+          argSlot = gr.argSlot;
+          isReaderMode = true;
+        }
 
-        prog.ops[pc] = v1Op;
-        continue; // Re-execute at same PC with v1 instruction
+        final arg = _getArg(cx, argSlot);
+        if (arg == null) {
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+
+        var storedValue = cx.clauseVars[varIndex];
+        if (storedValue == null) {
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+
+        if (!isReaderMode) {
+          // GetWriterValue logic: Unify argument with clause WRITER variable
+          // Check if storedValue is a reader ID
+          if (storedValue is int) {
+            final wid = cx.rt.heap.writerIdForReader(storedValue);
+            if (wid != null) {
+              storedValue = wid;
+            }
+          }
+
+          if (arg is VarRef && !arg.isReader) {
+            final argBound = cx.rt.heap.isWriterBound(arg.varId);
+            if (argBound) {
+              final argValue = cx.rt.heap.valueOfWriter(arg.varId);
+              if (storedValue is int) {
+                final storedBound = cx.rt.heap.isWriterBound(storedValue);
+                if (storedBound) {
+                  final storedVal = cx.rt.heap.valueOfWriter(storedValue);
+                  bool match = false;
+                  if (argValue is ConstTerm && storedVal is ConstTerm) {
+                    match = argValue.value == storedVal.value;
+                  } else if (argValue is StructTerm && storedVal is StructTerm) {
+                    match = argValue.functor == storedVal.functor && argValue.args.length == storedVal.args.length;
+                  } else {
+                    match = argValue == storedVal;
+                  }
+                  if (!match) {
+                    _softFailToNextClause(cx, pc);
+                    pc = _findNextClauseTry(pc);
+                    continue;
+                  }
+                } else {
+                  cx.sigmaHat[storedValue] = argValue;
+                }
+              } else if (storedValue is Term) {
+                bool match = false;
+                if (argValue is ConstTerm && storedValue is ConstTerm) {
+                  match = argValue.value == storedValue.value;
+                } else if (argValue is StructTerm && storedValue is StructTerm) {
+                  match = argValue.functor == storedValue.functor && argValue.args.length == storedValue.args.length;
+                } else {
+                  match = argValue == storedValue;
+                }
+                if (!match) {
+                  _softFailToNextClause(cx, pc);
+                  pc = _findNextClauseTry(pc);
+                  continue;
+                }
+              }
+            } else {
+              if (storedValue is int) {
+                final freshVarBinding = cx.sigmaHat[storedValue];
+                if (freshVarBinding != null) {
+                  cx.sigmaHat[arg.varId] = freshVarBinding;
+                } else if (arg.varId != storedValue) {
+                  _softFailToNextClause(cx, pc);
+                  pc = _findNextClauseTry(pc);
+                  continue;
+                }
+              } else if (storedValue is Term) {
+                cx.sigmaHat[arg.varId] = storedValue;
+              }
+            }
+          } else if (arg is VarRef && arg.isReader) {
+            final wid = cx.rt.heap.writerIdForReader(arg.varId);
+            if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+              final readerValue = cx.rt.heap.valueOfWriter(wid);
+              if (storedValue is int) {
+                cx.sigmaHat[storedValue] = readerValue;
+              } else if (storedValue != readerValue) {
+                _softFailToNextClause(cx, pc);
+                pc = _findNextClauseTry(pc);
+                continue;
+              }
+            } else {
+              final suspendOnVar = _finalUnboundVar(cx, arg.varId);
+              pc = _suspendAndFail(cx, suspendOnVar, pc); continue;
+            }
+          } else if (arg is ConstTerm) {
+            if (storedValue is int) {
+              cx.sigmaHat[storedValue] = arg;
+            } else if (storedValue is ConstTerm && storedValue.value != arg.value) {
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            }
+          } else if (arg is StructTerm) {
+            if (storedValue is int) {
+              cx.sigmaHat[storedValue] = arg;
+            } else if (storedValue is StructTerm && storedValue.functor != arg.functor) {
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            }
+          }
+        } else {
+          // GetReaderValue logic: Unify argument with clause READER variable
+          if (arg is VarRef && !arg.isReader) {
+            if (storedValue is int) {
+              final wid = cx.rt.heap.writerIdForReader(storedValue);
+              if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+                final readerValue = cx.rt.heap.valueOfWriter(wid);
+                cx.sigmaHat[arg.varId] = readerValue;
+              } else {
+                pc = _suspendAndFail(cx, storedValue, pc); continue;
+              }
+            } else if (storedValue is Term) {
+              cx.sigmaHat[arg.varId] = storedValue;
+            }
+          } else if (arg is VarRef && arg.isReader) {
+            if (storedValue is int && arg.varId != storedValue) {
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            }
+          } else if (arg is ConstTerm || arg is StructTerm) {
+            if (storedValue != arg) {
+              _softFailToNextClause(cx, pc);
+              pc = _findNextClauseTry(pc);
+              continue;
+            }
+          }
+        }
+        pc++; continue;
       }
 
-      // SetVariable: unified structure building in BODY
-      if (op is opv2.SetVariable) {
-        // Transform to v1 instruction based on isReader flag and re-execute
-        final v1Op = op.isReader
-            ? SetReader(op.varIndex)
-            : SetWriter(op.varIndex);
+      // SetVariable: unified structure building in BODY (native V2 handler)
+      // Handles both opv2.SetVariable and legacy SetWriter/SetReader
+      if (op is opv2.SetVariable || op is SetWriter || op is SetReader) {
+        // Extract varIndex and isReader from opcode
+        final int varIndex;
+        final bool isReaderMode;
+        if (op is opv2.SetVariable) {
+          varIndex = op.varIndex;
+          isReaderMode = op.isReader;
+        } else if (op is SetWriter) {
+          varIndex = op.varIndex;
+          isReaderMode = false;
+        } else {
+          varIndex = (op as SetReader).varIndex;
+          isReaderMode = true;
+        }
 
-        prog.ops[pc] = v1Op;
-        continue; // Re-execute at same PC with v1 instruction
+        if (cx.inBody && cx.mode == UnifyMode.write && cx.currentStructure is StructTerm) {
+          // Check if writer already exists in clause variables
+          final existingWriterId = cx.clauseVars[varIndex];
+          final int writerId;
+
+          if (existingWriterId is VarRef) {
+            writerId = existingWriterId.varId;
+          } else if (existingWriterId is int) {
+            writerId = existingWriterId;
+          } else {
+            // Allocate new variable only if uninitialized
+            final varId = cx.rt.heap.allocateFreshVar();
+            cx.rt.heap.addVariable(varId);
+            cx.clauseVars[varIndex] = VarRef(varId, isReader: false);
+            writerId = varId;
+          }
+
+          // Store VarRef in current structure at position S
+          // Key difference: isReaderMode determines the VarRef mode
+          final struct = cx.currentStructure as StructTerm;
+          struct.args[cx.S] = VarRef(writerId, isReader: isReaderMode);
+          cx.S++;
+
+          // Check if structure is complete
+          if (cx.S >= struct.args.length) {
+            final targetValue = cx.clauseVars[-1];
+            int? targetWriterId;
+            if (targetValue is VarRef) {
+              targetWriterId = targetValue.varId;
+            } else if (targetValue is int) {
+              targetWriterId = targetValue;
+            }
+
+            if (targetWriterId != null) {
+              cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
+
+              final acts = cx.rt.heap.processBindSuspensions(targetWriterId);
+              for (final a in acts) {
+                cx.rt.gq.enqueue(a);
+                if (cx.onActivation != null) cx.onActivation!(a);
+              }
+
+              // SetWriter-specific: Store VarRef in argSlots
+              if (!isReaderMode) {
+                final targetSlot = cx.clauseVars[-2];
+                if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
+                  cx.argSlots[targetSlot] = VarRef(targetWriterId, isReader: true);
+                  cx.clauseVars.remove(-2);
+                }
+              }
+            }
+
+            // Handle parent structure restoration
+            if (cx.parentStructure != null && targetWriterId is int) {
+              final nestedWriterId = targetWriterId;
+              final parentWriterId = cx.parentWriterId;
+
+              if (cx.parentStructure is StructTerm) {
+                final parentStruct = cx.parentStructure as StructTerm;
+                parentStruct.args[cx.parentS] = VarRef(nestedWriterId, isReader: true);
+              }
+
+              cx.currentStructure = cx.parentStructure;
+              cx.S = cx.parentS + 1;
+              cx.mode = cx.parentMode;
+
+              cx.parentStructure = null;
+              cx.parentS = 0;
+              cx.parentMode = UnifyMode.read;
+              cx.parentWriterId = null;
+
+              cx.clauseVars[-1] = parentWriterId;
+
+              // Check if parent is now complete
+              if (cx.currentStructure is StructTerm) {
+                final parentStruct = cx.currentStructure as StructTerm;
+                if (cx.S >= parentStruct.args.length && parentWriterId is int) {
+                  cx.rt.heap.bindWriterStruct(parentWriterId, parentStruct.functor, parentStruct.args);
+
+                  final acts = cx.rt.heap.processBindSuspensions(parentWriterId);
+                  for (final a in acts) {
+                    cx.rt.gq.enqueue(a);
+                    if (cx.onActivation != null) cx.onActivation!(a);
+                  }
+
+                  cx.currentStructure = null;
+                  cx.mode = UnifyMode.read;
+                  cx.S = 0;
+                  cx.clauseVars.remove(-1);
+                }
+              }
+            } else {
+              cx.currentStructure = null;
+              cx.mode = UnifyMode.read;
+              cx.S = 0;
+              cx.clauseVars.remove(-1);
+            }
+          }
+        }
+        pc++; continue;
       }
 
       // Legacy HEAD opcodes (for backward compatibility)
@@ -2323,16 +2635,65 @@ class BytecodeRunner {
         pc++; continue;
       }
 
-      // PutVariable: unified writer/reader argument placement
-      if (op is opv2.PutVariable) {
-        // Transform to v1 instruction based on isReader flag and re-execute
-        final v1Op = op.isReader
-            ? PutReader(op.varIndex, op.argSlot)
-            : PutWriter(op.varIndex, op.argSlot);
+      // PutVariable: unified writer/reader argument placement (native V2 handler)
+      // Handles opv2.PutVariable and legacy PutWriter/PutReader
+      if (op is opv2.PutVariable || op is PutWriter || op is PutReader) {
+        // Extract varIndex, argSlot, and isReader from opcode
+        final int varIndex;
+        final int argSlot;
+        final bool isReaderMode;
+        if (op is opv2.PutVariable) {
+          varIndex = op.varIndex;
+          argSlot = op.argSlot;
+          isReaderMode = op.isReader;
+        } else if (op is PutWriter) {
+          varIndex = op.varIndex;
+          argSlot = op.argSlot;
+          isReaderMode = false;
+        } else {
+          final pr = op as PutReader;
+          varIndex = pr.varIndex;
+          argSlot = pr.argSlot;
+          isReaderMode = true;
+        }
 
-        // Replace current instruction with v1 equivalent and re-execute
-        prog.ops[pc] = v1Op;
-        continue; // Re-execute at same PC with v1 instruction
+        if (debug) print('  [G${cx.goalId}] PC=$pc PutVariable varIndex=$varIndex argSlot=$argSlot isReader=$isReaderMode');
+        final value = cx.clauseVars[varIndex];
+
+        if (value is VarRef) {
+          // Already a VarRef - store with appropriate mode
+          cx.argSlots[argSlot] = VarRef(value.varId, isReader: isReaderMode);
+        } else if (value is int) {
+          // Legacy: bare int ID
+          cx.argSlots[argSlot] = VarRef(value, isReader: isReaderMode);
+        } else if (value is _ClauseVar && !isReaderMode) {
+          // Placeholder (PutWriter only) - allocate fresh variable
+          final varId = cx.rt.heap.allocateFreshVar();
+          cx.rt.heap.addVariable(varId);
+          cx.argSlots[argSlot] = VarRef(varId, isReader: false);
+          cx.clauseVars[varIndex] = VarRef(varId, isReader: false);
+        } else if (value is StructTerm && isReaderMode) {
+          // Structure (PutReader only) - create fresh variable and bind it
+          final varId = cx.rt.heap.allocateFreshVar();
+          cx.rt.heap.addVariable(varId);
+          cx.rt.heap.bindWriterStruct(varId, value.functor, value.args);
+          cx.argSlots[argSlot] = VarRef(varId, isReader: true);
+        } else if (value is ConstTerm && isReaderMode) {
+          // Constant (PutReader only) - create fresh variable and bind it
+          final varId = cx.rt.heap.allocateFreshVar();
+          cx.rt.heap.addVariable(varId);
+          cx.rt.heap.bindWriterConst(varId, value.value);
+          cx.argSlots[argSlot] = VarRef(varId, isReader: true);
+        } else if (value == null) {
+          // First occurrence - allocate fresh variable
+          final varId = cx.rt.heap.allocateFreshVar();
+          cx.rt.heap.addVariable(varId);
+          cx.clauseVars[varIndex] = VarRef(varId, isReader: false);
+          cx.argSlots[argSlot] = VarRef(varId, isReader: isReaderMode);
+        } else {
+          print('WARNING: PutVariable got unexpected value: $value (isReader=$isReaderMode)');
+        }
+        pc++; continue;
       }
 
       if (op is PutConstant) {
