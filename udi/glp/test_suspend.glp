@@ -1,7 +1,9 @@
-% Test suspended goals (resolvent)
+% Test suspension/reactivation without :=
+% Uses pass-through to test if result propagates
 
-% Helper that requires bound input
-needs_a(a).
+chain(0, zero).
+chain(N, R?) :-
+  N? > 0 |
+  link(N?, R).
 
-% Test that creates suspended goal
-test_suspend(X) :- needs_a(X?).
+link(N, done(N?)).
