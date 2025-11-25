@@ -198,14 +198,14 @@ class BytecodeRunner {
 
   /// Helper: find next ClauseTry instruction after current PC
   /// If no more ClauseTry, look for SuspendEnd/NoMoreClauses to check for suspension/failure
-  int _findNextClauseTry(int fromPc) {
-    for (var i = fromPc + 1; i < prog.ops.length; i++) {
-      if (prog.ops[i] is ClauseNext) return i; // Find ClauseNext first (unions Si to U)
-      if (prog.ops[i] is ClauseTry) return i;
-      if (prog.ops[i] is SuspendEnd) return i; // Jump to SUSP to check U
-      if (prog.ops[i] is NoMoreClauses) return i; // Jump to NoMoreClauses to check U
+  int _findNextClauseTry(int fromPc, List<dynamic> ops) {
+    for (var i = fromPc + 1; i < ops.length; i++) {
+      if (ops[i] is ClauseNext) return i; // Find ClauseNext first (unions Si to U)
+      if (ops[i] is ClauseTry) return i;
+      if (ops[i] is SuspendEnd) return i; // Jump to SUSP to check U
+      if (ops[i] is NoMoreClauses) return i; // Jump to NoMoreClauses to check U
     }
-    return prog.ops.length; // End of program if no more clauses or SUSP
+    return ops.length; // End of program if no more clauses or SUSP
   }
 
   /// Soft-fail to next clause: clear clause state, jump to next ClauseTry
@@ -243,15 +243,15 @@ class BytecodeRunner {
 
   /// Suspend on unbound reader: add to U and fail to next clause atomically
   /// Per spec: "add reader to U and immediately fail to next clause" is ONE operation
-  int _suspendAndFail(RunnerContext cx, int readerId, int currentPc) {
+  int _suspendAndFail(RunnerContext cx, int readerId, int currentPc, List<dynamic> ops) {
     // print('[TRACE _suspendAndFail] Goal ${cx.goalId} adding R$readerId to U, failing to next clause');
 //     print('  Current PC: $currentPc');
     cx.U.add(readerId);
     _softFailToNextClause(cx, currentPc);
-    final nextPc = _findNextClauseTry(currentPc);
+    final nextPc = _findNextClauseTry(currentPc, ops);
 //     print('  Next PC: $nextPc');
-    if (nextPc < prog.ops.length) {
-//       print('  Next instruction: ${prog.ops[nextPc].runtimeType}');
+    if (nextPc < ops.length) {
+//       print('  Next instruction: ${ops[nextPc].runtimeType}');
     } else {
 //       print('  ⚠️  Next PC beyond program end!');
     }
@@ -259,10 +259,10 @@ class BytecodeRunner {
   }
 
   /// Suspend on multiple unbound readers: add all to U and fail to next clause
-  int _suspendAndFailMulti(RunnerContext cx, Set<int> readerIds, int currentPc) {
+  int _suspendAndFailMulti(RunnerContext cx, Set<int> readerIds, int currentPc, List<dynamic> ops) {
     cx.U.addAll(readerIds);
     _softFailToNextClause(cx, currentPc);
-    return _findNextClauseTry(currentPc);
+    return _findNextClauseTry(currentPc, ops);
   }
 
   /// Format a term for display
@@ -351,19 +351,24 @@ class BytecodeRunner {
     var pc = cx.kappa;  // Start at goal's entry point (not 0!)
     final debug = false; // Set to true to enable trace
 
+    // Look up module for this goal - use module's instructions if available
+    final module = cx.rt.serviceRegistry.lookup(cx.moduleName);
+    final ops = module?.instructions ?? prog.ops;
+    final labels = module?.labels ?? prog.labels;
+
     // Print try start
     if (debug) {
 //       print('>>> TRY: Goal ${cx.goalId} at PC ${cx.kappa}');
     }
 
-    while (pc < prog.ops.length) {
+    while (pc < ops.length) {
       // Check reduction budget
       if (cx.reductionBudget != null && cx.reductionsUsed >= cx.reductionBudget!) {
         return RunResult.outOfReductions;
       }
       cx.reductionsUsed++;
 
-      final op = prog.ops[pc];
+      final op = ops[pc];
 
       if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) {
         print('  [G${cx.goalId}] PC=$pc ${op.runtimeType} | U=${cx.U} inBody=${cx.inBody}');
@@ -384,7 +389,7 @@ class BytecodeRunner {
         if (cx.U.isNotEmpty) {
           // Previous clauses suspended, so this clause also suspends
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
         // U and Si both empty - all previous clauses definitely failed, so succeed
@@ -488,13 +493,13 @@ class BytecodeRunner {
                 if (cx.debugOutput) print('[DEBUG] PC $pc: UnifyStructure - SUSPEND! Unbound reader ${value.varId} where ${op.functor}/${op.arity} expected');
                 cx.U.add(value.varId);
                 _softFailToNextClause(cx, pc);
-                pc = _findNextClauseTry(pc);
+                pc = _findNextClauseTry(pc, ops);
                 continue;
               } else {
                 // Mismatch - fail to next clause
                 if (cx.debugOutput) print('[DEBUG] PC $pc: UnifyStructure - MISMATCH! Expected ${op.functor}/${op.arity}, got: $value');
                 _softFailToNextClause(cx, pc);
-                pc = _findNextClauseTry(pc);
+                pc = _findNextClauseTry(pc, ops);
                 continue;
               }
             }
@@ -524,7 +529,7 @@ class BytecodeRunner {
         } else {
           // Not a writer - fail this clause
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
       }
@@ -539,7 +544,7 @@ class BytecodeRunner {
         } else {
           // Not a reader - fail this clause
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
       }
@@ -556,7 +561,7 @@ class BytecodeRunner {
             continue;
           } else {
             _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
+            pc = _findNextClauseTry(pc, ops);
             continue;
           }
         } else {
@@ -566,7 +571,7 @@ class BytecodeRunner {
             continue;
           } else {
             _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
+            pc = _findNextClauseTry(pc, ops);
             continue;
           }
         }
@@ -576,14 +581,14 @@ class BytecodeRunner {
       if (op is RequireWriterArg) {
         final arg = cx.env.arg(op.slot);
         if (arg == null || (arg is VarRef && arg.isReader)) {
-          pc = prog.labels[op.failLabel]!; continue;
+          pc = labels[op.failLabel]!; continue;
         }
         pc++; continue;
       }
       if (op is RequireReaderArg) {
         final arg = cx.env.arg(op.slot);
         if (arg == null || (arg is VarRef && !arg.isReader)) {
-          pc = prog.labels[op.failLabel]!; continue;
+          pc = labels[op.failLabel]!; continue;
         }
         pc++; continue;
       }
@@ -621,7 +626,7 @@ class BytecodeRunner {
               // Unbound after dereferencing
               if (value.isReader) {
                 // Unbound reader - add to U and fail to next clause
-                pc = _suspendAndFail(cx, value.varId, pc);
+                pc = _suspendAndFail(cx, value.varId, pc, ops);
                 continue;
               } else {
                 // Unbound writer - create tentative binding
@@ -629,11 +634,11 @@ class BytecodeRunner {
               }
             } else if (value is ConstTerm && value.value != op.value) {
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             } else if (value is StructTerm) {
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           } else {
@@ -645,7 +650,7 @@ class BytecodeRunner {
           final wid = cx.rt.heap.writerIdForReader(arg.varId);
           if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
             final suspendOnVar = _finalUnboundVar(cx, arg.varId);
-            pc = _suspendAndFail(cx, suspendOnVar, pc);
+            pc = _suspendAndFail(cx, suspendOnVar, pc, ops);
             continue;
           } else {
             // Bound reader - check if value matches constant
@@ -656,17 +661,17 @@ class BytecodeRunner {
                 print('  [DEBUG] Mismatch! Soft-failing to next clause');
               }
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             } else if (value is StructTerm && op.value != null) {
               // Structure doesn't match constant - soft fail
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             } else if (value is StructTerm && op.value == null) {
               // Structure doesn't match null [] - soft fail
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
             // else: values match or value is compatible, continue
@@ -691,7 +696,7 @@ class BytecodeRunner {
           // print('DEBUG: HeadStructure - arg is null, failing to next clause');
           if (debug && cx.goalId >= 4000) print('  HeadStructure: arg is null, failing');
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
 
@@ -709,7 +714,7 @@ class BytecodeRunner {
             // Unbound clause variable - soft fail
             if (cx.debugOutput) print('DEBUG MetaInterp: clauseVar ${op.argSlot} is NULL, failing');
             _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
+            pc = _findNextClauseTry(pc, ops);
             continue;
           }
 
@@ -730,7 +735,7 @@ class BytecodeRunner {
               // Bound but doesn't match
               if (debug && cx.goalId >= 4000) print('  HeadStructure: clause var ${op.argSlot} = W$wid = $value, NO MATCH');
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             } else {
               // Writer is unbound - enter WRITE mode to create structure
@@ -757,7 +762,7 @@ class BytecodeRunner {
               // Bound but doesn't match
               if (debug && cx.goalId >= 4000) print('  HeadStructure: clause var ${op.argSlot} = W$wid = $value, NO MATCH');
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             } else {
               // FIX: Unbound writer - create tentative structure in σ̂w
@@ -782,7 +787,7 @@ class BytecodeRunner {
               if (wid != null) {
                 print('  isWriterBound($wid) = ${cx.rt.heap.isWriterBound(wid)}');
               }
-              pc = _suspendAndFail(cx, rid, pc);
+              pc = _suspendAndFail(cx, rid, pc, ops);
               continue;
             }
             if (cx.debugOutput) print('DEBUG SUSPEND: Reader R$rid is bound to W$wid, dereferencing...');
@@ -791,7 +796,7 @@ class BytecodeRunner {
             if (rawValue == null) {
               if (debug && cx.goalId >= 4000) print('  HeadStructure: reader $rid -> writer $wid has null value, failing');
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
             final value = cx.rt.heap.dereference(rawValue);
@@ -807,7 +812,7 @@ class BytecodeRunner {
               // No match
               if (debug && cx.goalId >= 4000) print('  HeadStructure: NO MATCH, failing');
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           } else if (clauseVarValue is StructTerm) {
@@ -822,20 +827,20 @@ class BytecodeRunner {
             } else {
               if (cx.debugOutput) print('DEBUG MetaInterp: NO MATCH - failing to next clause');
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           } else if (clauseVarValue is ConstTerm) {
             // Constant value (e.g., [] or atom) - cannot match structure
             if (debug && cx.goalId >= 4000) print('  HeadStructure: clause var ${op.argSlot} = $clauseVarValue (constant), NO MATCH');
             _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
+            pc = _findNextClauseTry(pc, ops);
             continue;
           }
 
           // Unexpected clauseVar type
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
 
@@ -869,7 +874,7 @@ class BytecodeRunner {
               // Unbound after dereferencing
               if (value.isReader) {
                 // Unbound reader - add to U and fail to next clause
-                pc = _suspendAndFail(cx, value.varId, pc);
+                pc = _suspendAndFail(cx, value.varId, pc, ops);
                 continue;
               } else {
                 // Unbound writer - enter WRITE mode
@@ -891,7 +896,7 @@ class BytecodeRunner {
               // No match - soft fail
               if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: NO MATCH, soft failing');
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           }
@@ -913,7 +918,7 @@ class BytecodeRunner {
             // Unbound reader - add to U and soft fail
             if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer $wid unbound or null, adding to U and failing');
             final suspendOnVar = _finalUnboundVar(cx, arg.varId);
-            pc = _suspendAndFail(cx, suspendOnVar, pc);
+            pc = _suspendAndFail(cx, suspendOnVar, pc, ops);
             continue;
           }
 
@@ -923,7 +928,7 @@ class BytecodeRunner {
             // Null value - should not happen for bound writer
             if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer $wid has null value, failing');
             _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
+            pc = _findNextClauseTry(pc, ops);
             continue;
           }
           // Dereference recursively in case value is a VarRef chain
@@ -941,7 +946,7 @@ class BytecodeRunner {
             // Non-matching structure or not a structure - soft fail
             if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: NO MATCH, failing');
             _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
+            pc = _findNextClauseTry(pc, ops);
             continue;
           }
         }
@@ -960,7 +965,7 @@ class BytecodeRunner {
             // Functor/arity mismatch - soft fail
             if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: StructTerm arg mismatch, failing');
             _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
+            pc = _findNextClauseTry(pc, ops);
             continue;
           }
         }
@@ -975,7 +980,7 @@ class BytecodeRunner {
           // print('  clauseVars[${op.argSlot}] = ${cx.clauseVars[op.argSlot]}');
         }
         _softFailToNextClause(cx, pc);
-        pc = _findNextClauseTry(pc);
+        pc = _findNextClauseTry(pc, ops);
         continue;
       }
 
@@ -1013,7 +1018,7 @@ class BytecodeRunner {
                 // TODO: proper unification
                 if (existingValue != value) {
                   _softFailToNextClause(cx, pc);
-                  pc = _findNextClauseTry(pc);
+                  pc = _findNextClauseTry(pc, ops);
                   continue;
                 }
               } else {
@@ -1024,13 +1029,13 @@ class BytecodeRunner {
             } else {
               // Structure arity mismatch - soft fail
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           } else {
             // Not a structure - soft fail
             _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
+            pc = _findNextClauseTry(pc, ops);
             continue;
           }
         }
@@ -1077,7 +1082,7 @@ class BytecodeRunner {
                 // TODO: proper unification
                 if (existingValue != value) {
                   _softFailToNextClause(cx, pc);
-                  pc = _findNextClauseTry(pc);
+                  pc = _findNextClauseTry(pc, ops);
                   continue;
                 }
               } else {
@@ -1088,13 +1093,13 @@ class BytecodeRunner {
             } else {
               // Structure arity mismatch - soft fail
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           } else {
             // Not a structure - soft fail
             _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
+            pc = _findNextClauseTry(pc, ops);
             continue;
           }
         }
@@ -1108,7 +1113,7 @@ class BytecodeRunner {
         if (arg == null) {
           // No argument provided
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
 
@@ -1120,7 +1125,7 @@ class BytecodeRunner {
           final wid = cx.rt.heap.writerIdForReader(arg.varId);
           if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
             // Unbound reader - add to U and fail to next clause
-            pc = _suspendAndFail(cx, arg.varId, pc);
+            pc = _suspendAndFail(cx, arg.varId, pc, ops);
             continue;
           }
           // Bound reader - store the writer ID for dereferencing
@@ -1130,7 +1135,7 @@ class BytecodeRunner {
           cx.clauseVars[op.varIndex] = arg;
         } else {
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
         pc++; continue;
@@ -1141,7 +1146,7 @@ class BytecodeRunner {
         final arg = _getArg(cx, op.argSlot);
         if (arg == null) {
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
 
@@ -1150,7 +1155,7 @@ class BytecodeRunner {
         if (storedValue == null) {
           // Variable not initialized - error
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
 
@@ -1161,14 +1166,14 @@ class BytecodeRunner {
             // storedValue is a writer VarRef - check they match
             if (arg.varId != storedValue.varId) {
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           } else if (storedValue is int) {
             // Legacy: bare writer ID - check they match
             if (arg.varId != storedValue) {
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           } else if (storedValue is VarRef && storedValue.isReader) {
@@ -1181,7 +1186,7 @@ class BytecodeRunner {
               cx.sigmaHat[arg.varId] = readerValue;
             } else {
               // Reader's writer is unbound - add reader to Si (suspend)
-              pc = _suspendAndFail(cx, readerId, pc); continue;
+              pc = _suspendAndFail(cx, readerId, pc, ops); continue;
             }
           } else {
             // storedValue is a Term - bind writer to it
@@ -1192,7 +1197,7 @@ class BytecodeRunner {
           if (storedValue is VarRef && storedValue.isReader) {
             // storedValue is also a reader - fail definitively
             _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
+            pc = _findNextClauseTry(pc, ops);
             continue;
           }
 
@@ -1203,31 +1208,31 @@ class BytecodeRunner {
             if (storedValue is Term) {
               if (readerValue != storedValue) {
                 _softFailToNextClause(cx, pc);
-                pc = _findNextClauseTry(pc);
+                pc = _findNextClauseTry(pc, ops);
                 continue;
               }
             } else if (storedValue is int && wid != storedValue) {
               // storedValue is a writer ID
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           } else if (storedValue is int) {
             // Reader unbound, storedValue is writer ID - check they match
             if (wid != storedValue) {
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           } else {
             // Reader unbound, storedValue is a Term - add to Si
             final suspendOnVar = _finalUnboundVar(cx, arg.varId);
-            pc = _suspendAndFail(cx, suspendOnVar, pc); continue;
+            pc = _suspendAndFail(cx, suspendOnVar, pc, ops); continue;
           }
         } else {
           // Ground term - TODO: handle ConstTerm/StructTerm
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
         pc++; continue;
@@ -1324,7 +1329,7 @@ class BytecodeRunner {
                     // Bound to different value - fail
                     if (debug && cx.goalId >= 4000) print('  UnifyConstant: writer already bound to $boundValue, failing');
                     _softFailToNextClause(cx, pc);
-                    pc = _findNextClauseTry(pc);
+                    pc = _findNextClauseTry(pc, ops);
                     continue;
                   }
                 } else {
@@ -1347,32 +1352,32 @@ class BytecodeRunner {
                     // Bound to different value - fail
                     if (debug && cx.goalId >= 4000) print('  UnifyConstant: reader $rid bound to $boundValue, mismatch');
                     _softFailToNextClause(cx, pc);
-                    pc = _findNextClauseTry(pc);
+                    pc = _findNextClauseTry(pc, ops);
                     continue;
                   }
                 } else {
                   // Unbound reader - add to Si (suspend)
                   if (debug && cx.goalId >= 4000) print('  UnifyConstant: reader $rid unbound, suspending');
-                  pc = _suspendAndFail(cx, rid, pc); continue;
+                  pc = _suspendAndFail(cx, rid, pc, ops); continue;
                   cx.S++;
                 }
               } else {
                 // Mismatch - soft fail
                 if (debug && cx.goalId >= 4000) print('  UnifyConstant: MISMATCH, failing');
                 _softFailToNextClause(cx, pc);
-                pc = _findNextClauseTry(pc);
+                pc = _findNextClauseTry(pc, ops);
                 continue;
               }
             } else {
               // Structure arity mismatch - soft fail
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           } else {
             // Not a structure - soft fail
             _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
+            pc = _findNextClauseTry(pc, ops);
             continue;
           }
         }
@@ -1533,7 +1538,7 @@ class BytecodeRunner {
                   cx.S++;
                 } else {
                   _softFailToNextClause(cx, pc);
-                  pc = _findNextClauseTry(pc);
+                  pc = _findNextClauseTry(pc, ops);
                   continue;
                 }
               } else {
@@ -1548,7 +1553,7 @@ class BytecodeRunner {
                     final queryVarBound = cx.rt.heap.isWriterBound(value.varId);
                     if (!clauseVarBound && !queryVarBound) {
                       _softFailToNextClause(cx, pc);
-                      pc = _findNextClauseTry(pc);
+                      pc = _findNextClauseTry(pc, ops);
                       continue;
                     }
                     cx.sigmaHat[clauseVarId] = value;
@@ -1561,7 +1566,7 @@ class BytecodeRunner {
                     cx.S++;
                   } else {
                     _softFailToNextClause(cx, pc);
-                    pc = _findNextClauseTry(pc);
+                    pc = _findNextClauseTry(pc, ops);
                     continue;
                   }
                 } else if (existingValue != null) {
@@ -1587,7 +1592,7 @@ class BytecodeRunner {
                     cx.S++;
                   } else {
                     _softFailToNextClause(cx, pc);
-                    pc = _findNextClauseTry(pc);
+                    pc = _findNextClauseTry(pc, ops);
                     continue;
                   }
                 }
@@ -1607,7 +1612,7 @@ class BytecodeRunner {
         final arg = _getArg(cx, argSlot);
         if (arg == null) {
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
 
@@ -1622,7 +1627,7 @@ class BytecodeRunner {
               cx.clauseVars[varIndex] = value;
             } else {
               final suspendOnVar = _finalUnboundVar(cx, arg.varId);
-              pc = _suspendAndFail(cx, suspendOnVar, pc); continue;
+              pc = _suspendAndFail(cx, suspendOnVar, pc, ops); continue;
             }
           } else if (arg is ConstTerm) {
             cx.clauseVars[varIndex] = arg;
@@ -1657,14 +1662,14 @@ class BytecodeRunner {
         final arg = _getArg(cx, argSlot);
         if (arg == null) {
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
 
         var storedValue = cx.clauseVars[varIndex];
         if (storedValue == null) {
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
 
@@ -1696,7 +1701,7 @@ class BytecodeRunner {
                   }
                   if (!match) {
                     _softFailToNextClause(cx, pc);
-                    pc = _findNextClauseTry(pc);
+                    pc = _findNextClauseTry(pc, ops);
                     continue;
                   }
                 } else {
@@ -1713,7 +1718,7 @@ class BytecodeRunner {
                 }
                 if (!match) {
                   _softFailToNextClause(cx, pc);
-                  pc = _findNextClauseTry(pc);
+                  pc = _findNextClauseTry(pc, ops);
                   continue;
                 }
               }
@@ -1724,7 +1729,7 @@ class BytecodeRunner {
                   cx.sigmaHat[arg.varId] = freshVarBinding;
                 } else if (arg.varId != storedValue) {
                   _softFailToNextClause(cx, pc);
-                  pc = _findNextClauseTry(pc);
+                  pc = _findNextClauseTry(pc, ops);
                   continue;
                 }
               } else if (storedValue is Term) {
@@ -1739,19 +1744,19 @@ class BytecodeRunner {
                 cx.sigmaHat[storedValue] = readerValue;
               } else if (storedValue != readerValue) {
                 _softFailToNextClause(cx, pc);
-                pc = _findNextClauseTry(pc);
+                pc = _findNextClauseTry(pc, ops);
                 continue;
               }
             } else {
               final suspendOnVar = _finalUnboundVar(cx, arg.varId);
-              pc = _suspendAndFail(cx, suspendOnVar, pc); continue;
+              pc = _suspendAndFail(cx, suspendOnVar, pc, ops); continue;
             }
           } else if (arg is ConstTerm) {
             if (storedValue is int) {
               cx.sigmaHat[storedValue] = arg;
             } else if (storedValue is ConstTerm && storedValue.value != arg.value) {
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           } else if (arg is StructTerm) {
@@ -1759,7 +1764,7 @@ class BytecodeRunner {
               cx.sigmaHat[storedValue] = arg;
             } else if (storedValue is StructTerm && storedValue.functor != arg.functor) {
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           }
@@ -1772,7 +1777,7 @@ class BytecodeRunner {
                 final readerValue = cx.rt.heap.valueOfWriter(wid);
                 cx.sigmaHat[arg.varId] = readerValue;
               } else {
-                pc = _suspendAndFail(cx, storedValue, pc); continue;
+                pc = _suspendAndFail(cx, storedValue, pc, ops); continue;
               }
             } else if (storedValue is Term) {
               cx.sigmaHat[arg.varId] = storedValue;
@@ -1780,13 +1785,13 @@ class BytecodeRunner {
           } else if (arg is VarRef && arg.isReader) {
             if (storedValue is int && arg.varId != storedValue) {
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           } else if (arg is ConstTerm || arg is StructTerm) {
             if (storedValue != arg) {
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           }
@@ -1925,7 +1930,7 @@ class BytecodeRunner {
         final rid = op.readerId;
         final wid = cx.rt.heap.writerIdForReader(rid);
         final bound = (wid != null) && cx.rt.heap.isWriterBound(wid);
-        if (!bound) pc = _suspendAndFail(cx, rid, pc); continue;
+        if (!bound) pc = _suspendAndFail(cx, rid, pc, ops); continue;
         pc++; continue;
       }
       if (op is GuardNeedReaderArg) {
@@ -1933,7 +1938,7 @@ class BytecodeRunner {
         if (arg is VarRef && arg.isReader) {
           final wid = cx.rt.heap.writerIdForReader(arg.varId);
           final bound = (wid != null) && cx.rt.heap.isWriterBound(wid);
-          if (!bound) pc = _suspendAndFail(cx, arg.varId, pc); continue;
+          if (!bound) pc = _suspendAndFail(cx, arg.varId, pc, ops); continue;
         }
         pc++; continue;
       }
@@ -2074,7 +2079,7 @@ class BytecodeRunner {
       // Discard σ̂w, union Si into U, clear clause state, jump to next clause
       if (op is ClauseNext) {
         cx.clearClause();
-        pc = prog.labels[op.label]!;
+        pc = labels[op.label]!;
         continue;
       }
 
@@ -2082,7 +2087,7 @@ class BytecodeRunner {
       // When HEAD/GUARD fails, discard σ̂w, union Si to U, jump to next ClauseTry
       if (op is TryNextClause) {
         _softFailToNextClause(cx, pc);
-        pc = _findNextClauseTry(pc);
+        pc = _findNextClauseTry(pc, ops);
         continue;
       }
 
@@ -2119,10 +2124,10 @@ class BytecodeRunner {
       if (op is UnionSiAndGoto) {
         // Si removed - U updated directly by HEAD/GUARD opcodes
         cx.clearClause();
-        pc = prog.labels[op.label]!;
+        pc = labels[op.label]!;
         continue;
       }
-      if (op is ResetAndGoto) { cx.clearClause(); pc = prog.labels[op.label]!; continue; }
+      if (op is ResetAndGoto) { cx.clearClause(); pc = labels[op.label]!; continue; }
 
       // Legacy SuspendEnd (use NoMoreClauses instead)
       if (op is SuspendEnd) {
@@ -2320,7 +2325,7 @@ class BytecodeRunner {
           cx.rt.gq.enqueue(GoalRef(cx.goalId, cx.kappa, cx.moduleName));
           return RunResult.yielded;
         } else {
-          pc = prog.labels[op.label]!;
+          pc = labels[op.label]!;
           continue;
         }
       }
@@ -2329,7 +2334,7 @@ class BytecodeRunner {
       if (op is Spawn) {
         if (cx.inBody) {
           // Get entry point for procedure
-          final entryPc = prog.labels[op.procedureLabel];
+          final entryPc = labels[op.procedureLabel];
 
           // If procedure not found in program, check if it's a body kernel
           if (entryPc == null) {
@@ -2473,7 +2478,7 @@ class BytecodeRunner {
         if (cx.inBody) {
           // Tail call - reuse current goal, jump to procedure entry
           // Get entry point for procedure
-          final entryPc = prog.labels[op.procedureLabel];
+          final entryPc = labels[op.procedureLabel];
           if (entryPc == null) {
             print('ERROR: Requeue could not find procedure label: ${op.procedureLabel}');
             return RunResult.terminated;
@@ -2614,7 +2619,7 @@ class BytecodeRunner {
           if (debug) {
             // print('[GUARD] SUSPEND - unbound readers: $unboundReaders');
           }
-          pc = _suspendAndFailMulti(cx, unboundReaders, pc);
+          pc = _suspendAndFailMulti(cx, unboundReaders, pc, ops);
           continue;
         }
 
@@ -2635,7 +2640,7 @@ class BytecodeRunner {
             // print('[GUARD] FAIL - trying next clause');
           }
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
       }
@@ -2657,7 +2662,7 @@ class BytecodeRunner {
         if (value == null) {
           // Variable doesn't exist - fail
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
 
@@ -2718,12 +2723,12 @@ class BytecodeRunner {
         if (hasUnboundWriter) {
           // Contains unbound writer(s) → FAIL (cannot become ground via SRSW)
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         } else if (unboundReaders.isNotEmpty) {
           // Contains unbound readers but no unbound writers → SUSPEND
           // May become ground when readers bind, add to Si and continue
-          pc = _suspendAndFailMulti(cx, unboundReaders, pc); continue;
+          pc = _suspendAndFailMulti(cx, unboundReaders, pc, ops); continue;
           pc++;
           continue;
         } else {
@@ -2750,7 +2755,7 @@ class BytecodeRunner {
         if (value == null) {
           // Variable doesn't exist - fail
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
 
@@ -2795,13 +2800,13 @@ class BytecodeRunner {
           continue;
         } else if (unboundReader != null) {
           // Variable is unbound reader - could become known later, add to Si
-          pc = _suspendAndFail(cx, unboundReader, pc); continue;
+          pc = _suspendAndFail(cx, unboundReader, pc, ops); continue;
           pc++;
           continue;
         } else {
           // Variable is unbound writer - fail
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
       }
@@ -2824,7 +2829,7 @@ class BytecodeRunner {
         if (predicate == null) {
           print('[ERROR] System predicate not found: ${op.predicateName}');
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
 
@@ -2862,12 +2867,12 @@ class BytecodeRunner {
         } else if (result == SystemResult.failure) {
           // Predicate failed - try next clause
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         } else {
           // result == SystemResult.suspend
           // Predicate suspended on unbound readers - add to Si and continue
-          pc = _suspendAndFailMulti(cx, call.suspendedReaders, pc); continue;
+          pc = _suspendAndFailMulti(cx, call.suspendedReaders, pc, ops); continue;
           pc++;
           continue;
         }
@@ -2889,7 +2894,7 @@ class BytecodeRunner {
             // Unbound clause variable - soft fail
             if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} is unbound, failing');
             _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
+            pc = _findNextClauseTry(pc, ops);
             continue;
           }
 
@@ -2904,14 +2909,14 @@ class BytecodeRunner {
               // Non-empty constant
               if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = $clauseVarValue, NO MATCH');
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           } else if (clauseVarValue is StructTerm) {
             // Structure (non-empty list) doesn't match []
             if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} is struct, NO MATCH');
             _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
+            pc = _findNextClauseTry(pc, ops);
             continue;
           } else if (clauseVarValue is VarRef) {
             // VarRef stored in clauseVars - extract varId and handle
@@ -2925,7 +2930,7 @@ class BytecodeRunner {
               } else {
                 if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = VarRef($varId) = $value, NO MATCH');
                 _softFailToNextClause(cx, pc);
-                pc = _findNextClauseTry(pc);
+                pc = _findNextClauseTry(pc, ops);
                 continue;
               }
             } else {
@@ -2947,7 +2952,7 @@ class BytecodeRunner {
               } else {
                 if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = W$wid = $value, NO MATCH');
                 _softFailToNextClause(cx, pc);
-                pc = _findNextClauseTry(pc);
+                pc = _findNextClauseTry(pc, ops);
                 continue;
               }
             } else {
@@ -2961,7 +2966,7 @@ class BytecodeRunner {
 
           // Unexpected clauseVar type
           _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
+          pc = _findNextClauseTry(pc, ops);
           continue;
         }
 
@@ -2979,12 +2984,12 @@ class BytecodeRunner {
             if (value is ConstTerm && value.value != 'nil') {
               if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: value does not match nil, failing');
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             } else if (value is StructTerm) {
               if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: value is struct, failing');
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           } else {
@@ -3001,7 +3006,7 @@ class BytecodeRunner {
           if (wid == null || !bound) {
             // Find the final unbound variable in the chain
             final suspendOnVar = _finalUnboundVar(cx, arg.varId);
-            pc = _suspendAndFail(cx, suspendOnVar, pc);
+            pc = _suspendAndFail(cx, suspendOnVar, pc, ops);
             continue;
           } else {
             // Bound reader - check if value matches []
@@ -3011,12 +3016,12 @@ class BytecodeRunner {
             } else if (value is StructTerm) {
               // Structure doesn't match []
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             } else {
               // Non-empty constant doesn't match []
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           }
@@ -3043,7 +3048,7 @@ class BytecodeRunner {
               cx.mode = UnifyMode.read;
             } else {
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           } else {
@@ -3062,7 +3067,7 @@ class BytecodeRunner {
 
           if (wid == null || !bound) {
             final suspendOnVar = _finalUnboundVar(cx, arg.varId);
-            pc = _suspendAndFail(cx, suspendOnVar, pc);
+            pc = _suspendAndFail(cx, suspendOnVar, pc, ops);
             continue;
           } else{
             // Bound reader - check if it's a list structure
@@ -3073,7 +3078,7 @@ class BytecodeRunner {
               cx.mode = UnifyMode.read;
             } else {
               _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
+              pc = _findNextClauseTry(pc, ops);
               continue;
             }
           }
