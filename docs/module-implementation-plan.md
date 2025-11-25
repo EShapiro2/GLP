@@ -274,6 +274,8 @@ class Parser {
 
 **Goal**: Execute remote goals via ServiceRegistry.
 
+**Status**: ✅ COMPLETE
+
 ### 3.1 CodeGen for RemoteGoal
 
 **File**: `lib/compiler/codegen.dart`
@@ -359,12 +361,70 @@ class BytecodeRunner {
 
 | # | Task | File | Status |
 |---|------|------|--------|
-| 13 | Generate CallRemote for RemoteGoal | codegen.dart | [ ] |
-| 14 | Add CallRemote opcode | opcodes.dart | [ ] |
-| 15 | Add ServiceRegistry to runner | runner.dart | [ ] |
-| 16 | Implement CallRemote handler | runner.dart | [ ] |
-| 17 | Module context in goal execution | runner.dart | [ ] |
-| 18 | Integration tests | module_execution_test.dart | [ ] |
+| 13 | Generate CallRemote for RemoteGoal | codegen.dart | ✅ |
+| 14 | Add CallRemote opcode | opcodes.dart | ✅ |
+| 15 | Add ServiceRegistry to runner | runner.dart | ✅ |
+| 16 | Implement CallRemote handler | runner.dart | ✅ |
+| 17 | Module context in goal execution | runner.dart | ✅ |
+| 18 | Integration tests | module_execution_test.dart | ✅ |
+
+---
+
+## Phase 3.5: Transition to Module System
+
+**Goal**: Make module system the standard path (following FCP/Logix where everything is a module).
+
+### 3.5.1 REPL Transition
+
+**File**: `udi/glp_repl.dart`
+
+Update REPL to use module system:
+- Use `compileModule()` instead of `compile()`
+- Register loaded module in ServiceRegistry
+- Execute via LoadedModule context
+
+```dart
+// Before (old path):
+final program = compiler.compile(source);
+final runner = BytecodeRunner(program);
+
+// After (module path):
+final module = compiler.compileModule(source, moduleName: filename);
+rt.serviceRegistry.register(module);
+// Execute via module's instructions
+```
+
+### 3.5.2 Implicit Anonymous Module
+
+Files without `-module()` declaration become anonymous modules:
+- Module name derived from filename (e.g., `merge.glp` → module `merge`)
+- All procedures exported by default
+- Works transparently with existing .glp files
+
+### 3.5.3 Migration Order
+
+**Important**: All tests must be migrated and passing BEFORE deprecating old code.
+
+1. **First**: Migrate REPL to module system
+2. **Second**: Verify all 60 REPL tests pass with module path
+3. **Third**: Migrate dart unit tests to module path
+4. **Fourth**: Verify all dart tests pass with module path
+5. **Only then**: Mark old `compile()` path as deprecated
+6. **Finally**: Remove old code when confident
+
+### 3.5.4 Tasks
+
+| # | Task | File | Status |
+|---|------|------|--------|
+| 18.1 | Update REPL to use compileModule() | glp_repl.dart | [ ] |
+| 18.2 | REPL registers module in ServiceRegistry | glp_repl.dart | [ ] |
+| 18.3 | Execute via LoadedModule context | glp_repl.dart | [ ] |
+| 18.4 | Implicit module name from filename | compiler.dart | [ ] |
+| 18.5 | Verify all 60 REPL tests pass | run_repl_tests.sh | [ ] |
+| 18.6 | Update dart unit tests to use module path | test/*.dart | [ ] |
+| 18.7 | Verify all 22 dart tests pass | dart test | [ ] |
+| 18.8 | Mark compile() as deprecated (only after all tests pass) | compiler.dart | [ ] |
+| 18.9 | Remove old code (only when confident) | *.dart | [ ] |
 
 ---
 
@@ -470,21 +530,27 @@ const opcodeMap = {
 ## Implementation Order
 
 ```
-Phase 1: Per-Module Compilation (Foundation)
+Phase 1: Per-Module Compilation (Foundation) ✅
 ├── LoadedModule class
 ├── ServiceRegistry
 ├── generateModule() in CodeGenerator
 └── compileModule() in GlpCompiler
     ↓
-Phase 2: Module Syntax
+Phase 2: Module Syntax ✅
 ├── Lexer: # token, declaration keywords
 ├── AST: RemoteGoal, ModuleInfo
 └── Parser: declarations, # operator
     ↓
-Phase 3: Runtime Execution
+Phase 3: Runtime Execution ✅
 ├── CodeGen: RemoteGoal → CallRemote
 ├── Opcodes: CallRemote
 └── Runner: module context, CallRemote handler
+    ↓
+Phase 3.5: Transition to Module System ← CURRENT
+├── Update REPL to use compileModule()
+├── Implicit module name from filename
+├── Deprecate old compile() path
+└── All execution via LoadedModule
     ↓
 Phase 4: Hierarchy & Hot Reload
 ├── ServiceHierarchy
@@ -507,16 +573,17 @@ Phase 5: Multi-Agent Serialization
 
 ## Task Summary
 
-| Phase | Tasks | Priority |
-|-------|-------|----------|
-| 1 | 1-5 | Must have |
-| 2 | 6-12 | Must have |
-| 3 | 13-18 | Must have |
-| 4 | 19-22 | Should have |
-| 5 | 23-27 | For multi-agent |
+| Phase | Tasks | Priority | Status |
+|-------|-------|----------|--------|
+| 1 | 1-5 | Must have | ✅ Complete |
+| 2 | 6-12 | Must have | ✅ Complete |
+| 3 | 13-18 | Must have | ✅ Complete |
+| 3.5 | 18.1-18.7 | Must have | ⬜ Pending |
+| 4 | 19-22 | Should have | ⬜ Pending |
+| 5 | 23-27 | For multi-agent | ⬜ Pending |
 
 ---
 
-*Document Version: 3.0*
-*Updated: Per-module compilation as Phase 1, instruction objects (not raw bytecode)*
-*Serialization deferred to Phase 5 for multi-agent support*
+*Document Version: 3.1*
+*Updated: Added Phase 3.5 - Transition to Module System*
+*Following FCP/Logix: everything is a module, module system becomes the standard path*
