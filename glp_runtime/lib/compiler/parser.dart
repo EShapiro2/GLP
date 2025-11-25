@@ -32,24 +32,37 @@ class Parser {
     final arity = firstClause.head.arity;
 
     // Parse additional clauses with same functor/arity
-    while (!_isAtEnd() && _peek().type == TokenType.ATOM) {
-      if (_peek().lexeme == name) {
-        final clause = _parseClause();
+    // Special case: := clauses start with VARIABLE, not ATOM
+    while (!_isAtEnd()) {
+      // Check if next clause could be part of this procedure
+      bool couldBeSameProcedure = false;
 
-        // Verify same arity
-        if (clause.head.arity != arity) {
-          throw CompileError(
-            'Clause for $name has arity ${clause.head.arity}, expected $arity',
-            clause.line,
-            clause.column,
-            phase: 'parser'
-          );
+      if (_peek().type == TokenType.ATOM && _peek().lexeme == name) {
+        // Same predicate name
+        couldBeSameProcedure = true;
+      } else if (name == ':=' && _peek().type == TokenType.VARIABLE) {
+        // := clauses start with variable (e.g., "Result := X + Y")
+        // Look ahead to see if it's followed by :=
+        if (_current + 1 < tokens.length && tokens[_current + 1].type == TokenType.ASSIGN) {
+          couldBeSameProcedure = true;
         }
-
-        clauses.add(clause);
-      } else {
-        break;  // Different procedure
       }
+
+      if (!couldBeSameProcedure) break;
+
+      final clause = _parseClause();
+
+      // Verify same functor and arity
+      if (clause.head.functor != name || clause.head.arity != arity) {
+        throw CompileError(
+          'Clause for ${clause.head.functor}/${clause.head.arity} found, expected $name/$arity',
+          clause.line,
+          clause.column,
+          phase: 'parser'
+        );
+      }
+
+      clauses.add(clause);
     }
 
     return Procedure(name, arity, clauses, firstClause.line, firstClause.column);
@@ -315,15 +328,19 @@ class Parser {
       return StructTerm('neg', [operand], minusToken.line, minusToken.column);
     }
 
-    // Variable or Reader
-    if (_check(TokenType.VARIABLE)) {
+    // Variable or Reader - check for := assignment
+    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
       final token = _advance();
-      return VarTerm(token.lexeme, false, token.line, token.column);
-    }
+      final isReader = token.type == TokenType.READER;
 
-    if (_check(TokenType.READER)) {
-      final token = _advance();
-      return VarTerm(token.lexeme, true, token.line, token.column);
+      // Check for := assignment (Var := Expr)
+      if (_match(TokenType.ASSIGN)) {
+        final varTerm = VarTerm(token.lexeme, isReader, token.line, token.column);
+        final expr = _parseExpression();
+        return StructTerm(':=', [varTerm, expr], token.line, token.column);
+      }
+
+      return VarTerm(token.lexeme, isReader, token.line, token.column);
     }
 
     // Underscore (anonymous variable)
