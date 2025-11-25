@@ -435,9 +435,52 @@ run_test "Hanoi one disk hanoi(1)" \
     "hanoi(1, a, c, M)." \
     "→ 6 goals"
 
+run_test "Hanoi two disks hanoi(2)" \
+    "hanoi.glp" \
+    "hanoi(2, a, c, M)." \
+    "→ 16 goals"
+
+# Tests using full arithmetic files (tail-recursive with accumulator)
+run_test "Sum list (full file)" \
+    "sum_list.glp" \
+    "sum([1,2,3,4,5], S)." \
+    "S = 15"
+
+run_test "Inner product (full file)" \
+    "inner_product.glp" \
+    "ip([1,2,3], [4,5,6], S)." \
+    "S = 32"
+
+run_test "Multiply stream (full file)" \
+    "multiply.glp" \
+    "multiply(3, [1,2,3,4], Ys)." \
+    "Ys = \\[3, 6, 9, 12\\]"
+
+# Base cases from fib.glp and factorial.glp
+run_test "Fibonacci fib(0) full file" \
+    "fib.glp" \
+    "fib(0, F)." \
+    "F = 0"
+
+run_test "Fibonacci fib(1) full file" \
+    "fib.glp" \
+    "fib(1, F)." \
+    "F = 1"
+
+run_test "Factorial factorial(1)" \
+    "factorial.glp" \
+    "factorial(1, F)." \
+    "F = 1"
+
+run_test "Factorial factorial(2)" \
+    "factorial.glp" \
+    "factorial(2, F)." \
+    "F = 2"
+
 # ============================================
-# FUTURE TESTS: RECURSIVE ARITHMETIC (depth > 2)
-# These need reader reactivation fix (not arithmetic issue)
+# FUTURE TESTS: NON-TAIL-RECURSIVE ARITHMETIC
+# These need reader reactivation chain fix
+# Pattern: F := recursive_result? + something
 # ============================================
 
 # Helper for future tests - shows them as skipped
@@ -453,52 +496,32 @@ run_future_test() {
     echo "  File: $file"
     echo "  Query: $query"
     echo "  Expected: $expected"
-    echo "  ⏳ SKIPPED (needs reader reactivation fix)"
+    echo "  ⏳ SKIPPED (needs reader reactivation chain fix)"
 }
 
 FUTURE=0
 
-run_future_test "Fibonacci fib(10)" \
+run_future_test "Fibonacci fib(3) - non-tail-recursive" \
+    "fib.glp" \
+    "fib(3, F)." \
+    "F = 2"
+
+run_future_test "Fibonacci fib(10) - non-tail-recursive" \
     "fib.glp" \
     "fib(10, F)." \
     "F = 55"
 
-run_future_test "Fibonacci fib(0)" \
-    "fib.glp" \
-    "fib(0, F)." \
-    "F = 0"
+run_future_test "Factorial factorial(3) - non-tail-recursive" \
+    "factorial.glp" \
+    "factorial(3, F)." \
+    "F = 6"
 
-run_future_test "Factorial factorial(5)" \
+run_future_test "Factorial factorial(5) - non-tail-recursive" \
     "factorial.glp" \
     "factorial(5, F)." \
     "F = 120"
 
-run_future_test "Factorial factorial(10)" \
-    "factorial.glp" \
-    "factorial(10, F)." \
-    "F = 3628800"
-
-run_future_test "Sum list" \
-    "sum_list.glp" \
-    "sum([1,2,3,4,5], S)." \
-    "S = 15"
-
-run_future_test "Inner product" \
-    "inner_product.glp" \
-    "ip([1,2,3], [4,5,6], S)." \
-    "S = 32"
-
-run_future_test "Multiply stream" \
-    "multiply.glp" \
-    "multiply(3, [1,2,3,4], Ys)." \
-    "Ys = [3, 6, 9, 12]"
-
-run_future_test "Tower of Hanoi (2 disks)" \
-    "hanoi.glp" \
-    "hanoi(2, a, c, Moves)." \
-    "Moves = ((a,b),(a,c),(b,c))"
-
-run_future_test "Primes up to 20" \
+run_future_test "Primes up to 20 (needs mod parser)" \
     "primes.glp" \
     "primes(20, Ps)." \
     "Ps = [2, 3, 5, 7, 11, 13, 17, 19]"
