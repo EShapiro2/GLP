@@ -530,6 +530,11 @@ run_test "Meta: run(ip([1,2,3],[4,5,6],S))" \
     "run(ip([1,2,3], [4,5,6], S))." \
     "S = 32"
 
+run_test "Meta: run(hanoi(2,a,c,M))" \
+    "hanoi.glp" \
+    "run(hanoi(2, a, c, M))." \
+    "→ 54 goals"
+
 # ============================================
 # FUTURE TESTS
 # ============================================
@@ -558,12 +563,6 @@ run_future_test "Primes up to 20" \
     "primes(20, Ps)." \
     "Ps = [2, 3, 5, 7, 11, 13, 17, 19]" \
     "needs mod operator in parser"
-
-run_future_test "Meta: run(hanoi(2,a,c,M))" \
-    "hanoi.glp" \
-    "run(hanoi(2, a, c, M))." \
-    "M = ((a,b),(a,c),(b,c))" \
-    "tuple head unification"
 
 run_future_test "Meta: run(primes(10,Ps))" \
     "primes.glp" \

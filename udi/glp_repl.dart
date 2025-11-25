@@ -674,8 +674,24 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
   }
 
   if (term is rt.StructTerm) {
-    // General structure - recursively format arguments
-    final formattedArgs = term.args.map((arg) => _formatTerm(arg, runtime, visited)).join(',');
+    // General structure - recursively format arguments with dereferencing
+    final formattedArgs = term.args.map((arg) {
+      if (arg is rt.VarRef && runtime != null) {
+        final varId = arg.varId;
+        if (visited?.contains(varId) ?? false) {
+          return '<circular>';
+        }
+        visited?.add(varId);
+        final deref = runtime.heap.dereference(arg);
+        if (deref is rt.VarRef) {
+          // Still unbound
+          final displayId = deref.varId >= 1000 ? deref.varId - 1000 : deref.varId;
+          return deref.isReader ? 'X$displayId?' : 'X$displayId';
+        }
+        return _formatTerm(deref, runtime, visited);
+      }
+      return _formatTerm(arg, runtime, visited);
+    }).join(',');
     return '${term.functor}($formattedArgs)';
   }
 
