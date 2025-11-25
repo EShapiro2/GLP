@@ -4,6 +4,7 @@ import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/commit.dart';
 import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/system_predicates.dart';
+import 'package:glp_runtime/runtime/loaded_module.dart';
 import 'opcodes.dart';
 import 'opcodes_v2.dart' as opv2;
 
@@ -2676,6 +2677,69 @@ class BytecodeRunner {
           }
 
           // Enqueue the goal
+          cx.rt.gq.enqueue(newGoalRef);
+
+          // Clear argument registers for next spawn
+          cx.argSlots.clear();
+        }
+        pc++; continue;
+      }
+
+      if (op is CallRemote) {
+        if (cx.inBody) {
+          // Remote procedure call: Module # Procedure
+          // 1. Look up module in ServiceRegistry
+          final module = cx.rt.serviceRegistry.lookup(op.moduleName);
+          if (module == null) {
+            print('ERROR: CallRemote could not find module: ${op.moduleName}');
+            return RunResult.terminated;
+          }
+
+          // 2. Verify procedure is exported
+          if (!module.isExported(op.procedure, op.arity)) {
+            print('ERROR: CallRemote procedure not exported: ${op.moduleName}#${op.procedure}/${op.arity}');
+            return RunResult.terminated;
+          }
+
+          // 3. Get entry point from module's procOffsets
+          final entryPc = module.getProcOffset(op.procedure, op.arity);
+          if (entryPc == null) {
+            print('ERROR: CallRemote could not find procedure: ${op.moduleName}#${op.procedure}/${op.arity}');
+            return RunResult.terminated;
+          }
+
+          // 4. Create environment with arguments from argSlots
+          final newEnv = CallEnv(
+            args: Map<int, Term>.from(cx.argSlots),
+          );
+
+          // 5. Create new goal with unique ID
+          final newGoalId = cx.rt.nextGoalId++;
+          final newGoalRef = GoalRef(newGoalId, entryPc);
+
+          // 6. Format spawned goal for trace output
+          final args = <String>[];
+          for (int i = 0; i < 10; i++) {
+            final term = newEnv.arg(i);
+            if (term != null) {
+              args.add(_formatTerm(cx.rt, term));
+            } else {
+              break;
+            }
+          }
+          final goalStr = args.isEmpty
+              ? '${op.moduleName}#${op.procedure}'
+              : '${op.moduleName}#${op.procedure}(${args.join(', ')})';
+          cx.spawnedGoals.add(goalStr);
+
+          // 7. Register environment with the runtime
+          cx.rt.setGoalEnv(newGoalId, newEnv);
+
+          // 8. Create BytecodeProgram from module's instructions for the goal
+          final moduleProgram = BytecodeProgram(module.instructions);
+          cx.rt.setGoalProgram(newGoalId, moduleProgram);
+
+          // 9. Enqueue the goal
           cx.rt.gq.enqueue(newGoalRef);
 
           // Clear argument registers for next spawn

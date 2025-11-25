@@ -411,6 +411,18 @@ class Spawn implements Op {
   Spawn(this.procedureLabel, this.arity);
 }
 
+/// Call procedure in another module (remote goal)
+/// Looks up module in ServiceRegistry, verifies export, spawns goal
+class CallRemote implements Op {
+  final String moduleName;   // target module name
+  final String procedure;    // procedure name
+  final int arity;           // number of arguments
+  CallRemote(this.moduleName, this.procedure, this.arity);
+
+  @override
+  String toString() => 'CallRemote($moduleName # $procedure/$arity)';
+}
+
 /// Tail call to procedure P with arguments in A1-An
 /// Reuses current goal frame, implements fair scheduling via tail recursion budget
 class Requeue implements Op {

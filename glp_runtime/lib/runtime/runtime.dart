@@ -8,12 +8,14 @@ import 'commit.dart';
 import 'abandon.dart';
 import 'fairness.dart';
 import 'system_predicates.dart';
+import 'service_registry.dart';
 import '../bytecode/runner.dart' show CallEnv;
 
 class GlpRuntime {
   final HeapFCP heap;
   final GoalQueue gq;
   final SystemPredicateRegistry systemPredicates;
+  final ServiceRegistry serviceRegistry;
 
   final Map<GoalId, int> _budgets = <GoalId, int>{};
   final Map<GoalId, CallEnv> _goalEnvs = <GoalId, CallEnv>{};
@@ -30,10 +32,11 @@ class GlpRuntime {
   // Goal ID counter for spawn
   int nextGoalId = 10000;  // Start at 10000 to avoid collisions with test goal IDs
 
-  GlpRuntime({HeapFCP? heap, GoalQueue? gq, SystemPredicateRegistry? systemPredicates})
+  GlpRuntime({HeapFCP? heap, GoalQueue? gq, SystemPredicateRegistry? systemPredicates, ServiceRegistry? serviceRegistry})
       : heap = heap ?? HeapFCP(),
         gq = gq ?? GoalQueue(),
-        systemPredicates = systemPredicates ?? SystemPredicateRegistry();
+        systemPredicates = systemPredicates ?? SystemPredicateRegistry(),
+        serviceRegistry = serviceRegistry ?? ServiceRegistry();
 
   /// Commit writer bindings using FCP-exact semantics
   /// sigmaHat: Map from varId to tentative value

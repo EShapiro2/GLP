@@ -423,6 +423,12 @@ class CodeGenerator {
     for (int i = 0; i < goals.length; i++) {
       final goal = goals[i];
 
+      // Handle remote goal: Module # Goal
+      if (goal is RemoteGoal) {
+        _generateRemoteGoal(goal, varTable, ctx);
+        continue;
+      }
+
       // Special handling for execute/2 system predicate
       if (goal.functor == 'execute' && goal.arity == 2) {
         _generateExecuteCall(goal, varTable, ctx);
@@ -441,6 +447,30 @@ class CodeGenerator {
 
     // After spawning all goals, emit proceed to terminate parent
     ctx.emit(bc.Proceed());
+  }
+
+  void _generateRemoteGoal(RemoteGoal goal, VariableTable varTable, CodeGenContext ctx) {
+    // Get the inner goal (may be nested RemoteGoal for chained calls)
+    final innerGoal = goal.goal;
+
+    // Setup arguments for the inner goal
+    for (int j = 0; j < innerGoal.args.length; j++) {
+      _generatePutArgument(innerGoal.args[j], j, varTable, ctx);
+    }
+
+    // If inner goal is also a RemoteGoal (chained: a # b # foo), handle recursively
+    // For now, we only support direct Module # Goal syntax
+    if (innerGoal is RemoteGoal) {
+      throw CompileError(
+        'Chained remote calls (a # b # goal) not yet supported',
+        goal.line,
+        goal.column,
+        phase: 'codegen'
+      );
+    }
+
+    // Emit CallRemote instruction
+    ctx.emit(bc.CallRemote(goal.moduleName, innerGoal.functor, innerGoal.arity));
   }
 
   void _generateExecuteCall(Goal goal, VariableTable varTable, CodeGenContext ctx) {
