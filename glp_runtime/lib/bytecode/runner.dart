@@ -4,6 +4,7 @@ import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/commit.dart';
 import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/system_predicates.dart';
+import 'package:glp_runtime/runtime/body_kernels.dart';
 import 'opcodes.dart';
 import 'opcodes_v2.dart' as opv2;
 
@@ -32,6 +33,13 @@ class BytecodeProgram {
       if (op is Label) m[op.name] = i;
     }
     return m;
+  }
+
+  /// Merge another program into this one (prepend stdlib)
+  /// Returns a new BytecodeProgram with all ops from both
+  BytecodeProgram merge(BytecodeProgram other) {
+    final mergedOps = [...other.ops, ...ops];
+    return BytecodeProgram(mergedOps);
   }
 
   /// Generate human-readable disassembly of bytecode
@@ -2636,18 +2644,48 @@ class BytecodeRunner {
       // ===== Goal spawning and control flow =====
       if (op is Spawn) {
         if (cx.inBody) {
+          // Get entry point for procedure
+          final entryPc = prog.labels[op.procedureLabel];
+
+          // If procedure not found in program, check if it's a body kernel
+          if (entryPc == null) {
+            // Extract procedure name from label (may be "name" or "name/arity")
+            final labelParts = op.procedureLabel.split('/');
+            final procName = labelParts[0];
+
+            // Look up body kernel
+            final kernel = cx.rt.bodyKernels.lookup(procName, op.arity);
+            if (kernel != null) {
+              // Execute body kernel inline
+              // Collect arguments from argSlots
+              final args = <Object?>[];
+              for (int i = 0; i < op.arity; i++) {
+                args.add(cx.argSlots[i]);
+              }
+
+              // Execute kernel
+              final result = kernel(cx.rt, args);
+
+              if (result == BodyKernelResult.abort) {
+                print('ERROR: Body kernel ${procName}/${op.arity} aborted');
+                return RunResult.terminated;
+              }
+
+              // Success - clear args and continue (no goal spawned)
+              cx.argSlots.clear();
+              pc++; continue;
+            }
+
+            // Not a body kernel either - error
+            print('ERROR: Spawn could not find procedure label: ${op.procedureLabel}');
+            return RunResult.terminated;
+          }
+
           // Spawn a new goal with heterogeneous argument Terms
           // Per spec v2.16 section 1.1: Create CallEnv from argSlots
           final newEnv = CallEnv(
             args: Map<int, Term>.from(cx.argSlots),
           );
-
-          // Get entry point for procedure
-          final entryPc = prog.labels[op.procedureLabel];
-          if (entryPc == null) {
-            print('ERROR: Spawn could not find procedure label: ${op.procedureLabel}');
-            return RunResult.terminated;
-          }
 
           // Create and enqueue new goal with unique ID
           final newGoalId = cx.rt.nextGoalId++;

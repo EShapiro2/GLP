@@ -123,6 +123,19 @@ class Parser {
       }
     }
 
+    // Check for assignment: Var := Expr
+    if (_check(TokenType.VARIABLE)) {
+      final varToken = _peek();
+      // Look ahead for :=
+      if (tokens.length > _current + 1 && tokens[_current + 1].type == TokenType.ASSIGN) {
+        _advance(); // consume variable
+        _advance(); // consume :=
+        final varTerm = VarTerm(varToken.lexeme, false, varToken.line, varToken.column);
+        final expr = _parseExpression();
+        return Goal(':=', [varTerm, expr], varToken.line, varToken.column);
+      }
+    }
+
     // Try to parse as regular predicate first
     if (_check(TokenType.ATOM)) {
       final functorToken = _consume(TokenType.ATOM, 'Expected predicate name');
