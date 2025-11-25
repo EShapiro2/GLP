@@ -241,14 +241,13 @@ void main() {
           reason: 'Merged program should contain hello/0 from user code');
     });
 
-    test('user program with := compiles with skipSRSW', () {
-      // For user programs that use :=, we need skipSRSW since
-      // the variable appears in both head (as writer) and body (passed to :=)
+    test('user program with := compiles correctly with SRSW', () {
+      // Correct SRSW pattern: Z? in head (reader), Z in body (writer)
       final userSource = '''
-        compute_sum(Z) :- Z := 5 + 3.
+        compute_sum(Z?) :- Z := 5 + 3.
       ''';
-      // With skipSRSW the program should compile
-      final compiler = GlpCompiler(skipSRSW: true);
+      // No skipSRSW needed - this is valid SRSW
+      final compiler = GlpCompiler();
       final prog = compiler.compile(userSource);
 
       expect(prog.ops.isNotEmpty, isTrue);
