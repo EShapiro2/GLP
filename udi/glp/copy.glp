@@ -1,0 +1,9 @@
+% copy.glp - Stream copy
+%
+% copy(Xs, Ys) :- Ys is a copy of stream Xs
+% From Concurrent Prolog book (handout 3)
+
+copy([], []).
+copy([X|Xs], [X?|Ys?]) :- copy(Xs?, Ys).
+
+% Test via REPL: copy([a,b,c], Ys).

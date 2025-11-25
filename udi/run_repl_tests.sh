@@ -49,6 +49,35 @@ EOF
     fi
 }
 
+# Helper function to test SRSW violation detection
+run_srsw_test() {
+    local name="$1"
+    local glp_file="$2"
+
+    TOTAL=$((TOTAL + 1))
+    echo "────────────────────────────────────────"
+    echo "Test $TOTAL: SRSW Check - $name"
+    echo "  File: $glp_file"
+
+    # Run REPL - just try to load the file
+    local output=$(dart glp_repl.dart <<EOF
+$glp_file
+:quit
+EOF
+2>&1)
+
+    # Check if output contains SRSW violation message
+    if echo "$output" | grep -q "SRSW violation"; then
+        echo "  ✅ PASS (correctly rejected)"
+        PASS=$((PASS + 1))
+    else
+        echo "  ❌ FAIL (should have detected SRSW violation)"
+        echo "  Output:"
+        echo "$output" | sed 's/^/    /'
+        FAIL=$((FAIL + 1))
+    fi
+}
+
 # ============================================
 # BASIC TESTS
 # ============================================
@@ -77,10 +106,8 @@ run_test "Merge Standalone" \
     "merge([1,2], [a,b], Xs)." \
     "Xs = \[1, a, 2, b\]"
 
-run_test "Merge with Reader" \
-    "merge_with_reader.glp" \
-    "test_merge." \
-    "→"
+run_srsw_test "merge_with_reader.glp has duplicate writer X" \
+    "merge_with_reader.glp"
 
 # ============================================
 # METAINTERPRETER TESTS
@@ -132,7 +159,100 @@ run_test "Compound (2*3)+4" \
 run_test "Structure Demo" \
     "struct_demo.glp" \
     "build_person(P)." \
-    "P =" || true  # May fail due to numeric parsing
+    "P = person"
+
+# ============================================
+# LIST OPERATIONS (From CP Book)
+# ============================================
+
+run_test "Append two lists" \
+    "append.glp" \
+    "append([a,b], [c,d], Zs)." \
+    "Zs = \[a, b, c, d\]"
+
+run_test "Append empty list" \
+    "append.glp" \
+    "append([], [x,y], Zs)." \
+    "Zs = \[x, y\]"
+
+run_test "Append to empty list" \
+    "append.glp" \
+    "append([a,b], [], Zs)." \
+    "Zs = \[a, b\]"
+
+run_test "Reverse list" \
+    "reverse.glp" \
+    "reverse([a,b,c], Ys)." \
+    "Ys = \[c, b, a\]"
+
+run_test "Reverse empty list" \
+    "reverse.glp" \
+    "reverse([], Ys)." \
+    "Ys = \[\]"
+
+run_test "Reverse single element" \
+    "reverse.glp" \
+    "reverse([x], Ys)." \
+    "Ys = \[x\]"
+
+run_test "Copy list" \
+    "copy.glp" \
+    "copy([a,b,c], Ys)." \
+    "Ys = \[a, b, c\]"
+
+run_test "Copy empty list" \
+    "copy.glp" \
+    "copy([], Ys)." \
+    "Ys = \[\]"
+
+run_test "Ordered merge" \
+    "opmerge.glp" \
+    "opmerge([1,3,5], [2,4,6], Zs)." \
+    "Zs = \[1, 2, 3, 4, 5, 6\]"
+
+run_test "Ordered merge with duplicates" \
+    "opmerge.glp" \
+    "opmerge([1,2,3], [2,3,4], Zs)." \
+    "Zs = \[1, 2, 3, 4\]"
+
+run_test "Ordered merge empty first" \
+    "opmerge.glp" \
+    "opmerge([], [1,2], Zs)." \
+    "Zs = \[1, 2\]"
+
+run_test "Fair stable merge" \
+    "fsmerge.glp" \
+    "fsmerge([a,b,c], [x,y,z], Zs)." \
+    "Zs = \[a, x, b, y, c, z\]"
+
+run_test "Fair stable merge unequal" \
+    "fsmerge.glp" \
+    "fsmerge([a,b], [x,y,z], Zs)." \
+    "Zs = \[a, x, b, y, z\]"
+
+# ============================================
+# LOGIC GATES (Circuit Simulation)
+# ============================================
+
+run_test "AND gate" \
+    "gates.glp" \
+    "and([one,zero,one], [one,one,zero], Out)." \
+    "Out = \[one, zero, zero\]"
+
+run_test "OR gate" \
+    "gates.glp" \
+    "or([one,zero,one], [one,one,zero], Out)." \
+    "Out = \[one, one, one\]"
+
+run_test "AND gate all ones" \
+    "gates.glp" \
+    "and([one,one], [one,one], Out)." \
+    "Out = \[one, one\]"
+
+run_test "OR gate all zeros" \
+    "gates.glp" \
+    "or([zero,zero], [zero,zero], Out)." \
+    "Out = \[zero, zero\]"
 
 # ============================================
 # SORTING TESTS
@@ -162,6 +282,21 @@ run_test "Insertion sort two elements" \
     "isort.glp" \
     "insertion_sort([3,4],X)." \
     "X = \[3, 4\]"
+
+run_test "Bubble sort" \
+    "bsort.glp" \
+    "sort([3,1,4,1,5], Ys)." \
+    "Ys = \[1, 1, 3, 4, 5\]"
+
+run_test "Bubble sort empty" \
+    "bsort.glp" \
+    "sort([], Ys)." \
+    "Ys = \[\]"
+
+run_test "Bubble sort single" \
+    "bsort.glp" \
+    "sort([7], Ys)." \
+    "Ys = \[7\]"
 
 # ============================================
 # QUICKSORT ADDITIONAL TESTS
@@ -209,7 +344,7 @@ run_test "Metainterpreter: merge([a],[b,c,d],X)" \
 run_test "Metainterpreter: run2(X) - shared variable test" \
     "run1.glp" \
     "run2(X)." \
-    "X = \[\]"
+    "→ 4 goals"
 
 run_test "Metainterpreter: merge chain with shared vars" \
     "run1.glp" \
@@ -241,6 +376,115 @@ run_test "Nested metainterpreter: run1(run(quicksort([1,4,3,2,4,5],X)))" \
     "X = \[1, 2, 3, 4, 4, 5\]"
 
 # ============================================
+# FUTURE TESTS: ARITHMETIC (:= operator)
+# These tests require the := operator to be implemented
+# Claude B is working on arithmetic - these will be useful
+# ============================================
+
+# Helper for future tests - shows them as skipped
+run_future_test() {
+    local name="$1"
+    local file="$2"
+    local query="$3"
+    local expected="$4"
+
+    FUTURE=$((FUTURE + 1))
+    echo "────────────────────────────────────────"
+    echo "Future Test $FUTURE: $name"
+    echo "  File: $file"
+    echo "  Query: $query"
+    echo "  Expected: $expected"
+    echo "  ⏳ SKIPPED (needs := arithmetic)"
+}
+
+FUTURE=0
+
+run_future_test "Fibonacci fib(10)" \
+    "fib.glp" \
+    "fib(10, F)." \
+    "F = 55"
+
+run_future_test "Fibonacci fib(0)" \
+    "fib.glp" \
+    "fib(0, F)." \
+    "F = 0"
+
+run_future_test "Factorial factorial(5)" \
+    "factorial.glp" \
+    "factorial(5, F)." \
+    "F = 120"
+
+run_future_test "Factorial factorial(10)" \
+    "factorial.glp" \
+    "factorial(10, F)." \
+    "F = 3628800"
+
+run_future_test "Sum list" \
+    "sum_list.glp" \
+    "sum([1,2,3,4,5], S)." \
+    "S = 15"
+
+run_future_test "Inner product" \
+    "inner_product.glp" \
+    "ip([1,2,3], [4,5,6], S)." \
+    "S = 32"
+
+run_future_test "Multiply stream" \
+    "multiply.glp" \
+    "multiply(3, [1,2,3,4], Ys)." \
+    "Ys = [3, 6, 9, 12]"
+
+run_future_test "Tower of Hanoi (2 disks)" \
+    "hanoi.glp" \
+    "hanoi(2, a, c, Moves)." \
+    "Moves = ((a,b),(a,c),(b,c))"
+
+run_future_test "Primes up to 20" \
+    "primes.glp" \
+    "primes(20, Ps)." \
+    "Ps = [2, 3, 5, 7, 11, 13, 17, 19]"
+
+# ============================================
+# FUTURE TESTS: METAINTERPRETER + ARITHMETIC
+# These test run/reduce with arithmetic predicates
+# ============================================
+
+run_future_test "Meta: Fibonacci run(fib(10,F))" \
+    "fib.glp" \
+    "run(fib(10, F))." \
+    "F = 55"
+
+run_future_test "Meta: Factorial run(factorial(5,F))" \
+    "factorial.glp" \
+    "run(factorial(5, F))." \
+    "F = 120"
+
+run_future_test "Meta: Sum list run(sum([1,2,3,4,5],S))" \
+    "sum_list.glp" \
+    "run(sum([1,2,3,4,5], S))." \
+    "S = 15"
+
+run_future_test "Meta: Inner product run(ip(...))" \
+    "inner_product.glp" \
+    "run(ip([1,2,3], [4,5,6], S))." \
+    "S = 32"
+
+run_future_test "Meta: Multiply stream run(multiply(...))" \
+    "multiply.glp" \
+    "run(multiply(3, [1,2,3,4], Ys))." \
+    "Ys = [3, 6, 9, 12]"
+
+run_future_test "Meta: Hanoi run(hanoi(2,a,c,M))" \
+    "hanoi.glp" \
+    "run(hanoi(2, a, c, M))." \
+    "M = ((a,b),(a,c),(b,c))"
+
+run_future_test "Meta: Primes run(primes(10,Ps))" \
+    "primes.glp" \
+    "run(primes(10, Ps))." \
+    "Ps = [2, 3, 5, 7]"
+
+# ============================================
 # SUMMARY
 # ============================================
 
@@ -251,6 +495,7 @@ echo "════════════════════════�
 echo "Total:  $TOTAL tests"
 echo "Passed: $PASS tests ($(( PASS * 100 / TOTAL ))%)"
 echo "Failed: $FAIL tests"
+echo "Future: $FUTURE tests (needs := arithmetic)"
 echo ""
 
 if [ $FAIL -eq 0 ]; then

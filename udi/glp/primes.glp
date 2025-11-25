@@ -1,0 +1,75 @@
+% primes.glp - Sieve of Eratosthenes
+%
+% FUTURE TEST: Requires := arithmetic operator and mod/=:=/=\= guards
+% From Concurrent Prolog course (handout 4)
+
+% ===== DIRECT EXECUTION =====
+
+% primes(N, Ps) :- Ps is the list of primes up to N
+primes(N, Ps?) :-
+  integers(2, N?, Is),
+  sieve(Is?, Ps).
+
+% integers(From, To, Xs) :- Xs is [From, From+1, ..., To]
+integers(N, N, [N?]).
+integers(From, To, [From?|Xs?]) :-
+  From? < To? |
+  From1 := From? + 1,
+  integers(From1?, To?, Xs).
+
+% sieve(Xs, Ys) :- filter out multiples
+sieve([], []).
+sieve([P|Xs], [P?|Ys?]) :-
+  filter(P?, Xs?, Zs),
+  sieve(Zs?, Ys).
+
+% filter(P, Xs, Ys) :- Ys is Xs with multiples of P removed
+filter(_, [], []).
+filter(P, [X|Xs], Ys?) :-
+  X? mod P? =:= 0 |
+  filter(P?, Xs?, Ys).
+filter(P, [X|Xs], [X?|Ys?]) :-
+  X? mod P? =\= 0 |
+  filter(P?, Xs?, Ys).
+
+% ===== METAINTERPRETER =====
+
+run(true).
+run((A, B)) :- run(A?), run(B?).
+run(A) :- otherwise | reduce(A?, B), run(B?).
+
+% ===== REDUCE CLAUSES =====
+
+% primes/2
+reduce(primes(N, Ps?),
+       (integers(2, N?, Is),
+        sieve(Is?, Ps))).
+
+% integers/3
+reduce(integers(N, N, [N?]), true).
+reduce(integers(From, To, [From?|Xs?]),
+       (From1 := From? + 1,
+        integers(From1?, To?, Xs))) :-
+  From? < To? | true.
+
+% sieve/2
+reduce(sieve([], []), true).
+reduce(sieve([P|Xs], [P?|Ys?]),
+       (filter(P?, Xs?, Zs),
+        sieve(Zs?, Ys))).
+
+% filter/3
+reduce(filter(_, [], []), true).
+reduce(filter(P, [X|Xs], Ys?),
+       filter(P?, Xs?, Ys)) :-
+  X? mod P? =:= 0 | true.
+reduce(filter(P, [X|Xs], [X?|Ys?]),
+       filter(P?, Xs?, Ys)) :-
+  X? mod P? =\= 0 | true.
+
+% Assignment reduction
+reduce(R := Expr, true) :- R := Expr?.
+
+% ===== TESTS =====
+% Direct: primes(20, Ps) should give Ps = [2,3,5,7,11,13,17,19]
+% Meta:   run(primes(20, Ps)) should give same result
