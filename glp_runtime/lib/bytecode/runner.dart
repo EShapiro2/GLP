@@ -2167,26 +2167,26 @@ class BytecodeRunner {
         final isReaderMode = op.isReader;
 
         if (cx.inBody && cx.mode == UnifyMode.write && cx.currentStructure is StructTerm) {
-          // Check if writer already exists in clause variables
-          final existingWriterId = cx.clauseVars[varIndex];
-          final int writerId;
+          // Check what value exists in clause variables
+          final existingValue = cx.clauseVars[varIndex];
+          final struct = cx.currentStructure as StructTerm;
 
-          if (existingWriterId is VarRef) {
-            writerId = existingWriterId.varId;
-          } else if (existingWriterId is int) {
-            writerId = existingWriterId;
+          if (existingValue is VarRef) {
+            // VarRef: use its varId with appropriate mode
+            struct.args[cx.S] = VarRef(existingValue.varId, isReader: isReaderMode);
+          } else if (existingValue is int) {
+            // Legacy: bare int (use it as varId directly)
+            struct.args[cx.S] = VarRef(existingValue, isReader: isReaderMode);
+          } else if (existingValue is Term) {
+            // Term (ConstTerm, StructTerm, etc.): embed directly in structure
+            struct.args[cx.S] = existingValue;
           } else {
-            // Allocate new variable only if uninitialized
+            // Uninitialized: allocate new variable
             final varId = cx.rt.heap.allocateFreshVar();
             cx.rt.heap.addVariable(varId);
             cx.clauseVars[varIndex] = VarRef(varId, isReader: false);
-            writerId = varId;
+            struct.args[cx.S] = VarRef(varId, isReader: isReaderMode);
           }
-
-          // Store VarRef in current structure at position S
-          // Key difference: isReaderMode determines the VarRef mode
-          final struct = cx.currentStructure as StructTerm;
-          struct.args[cx.S] = VarRef(writerId, isReader: isReaderMode);
           cx.S++;
 
           // Check if structure is complete
@@ -2249,6 +2249,13 @@ class BytecodeRunner {
                   for (final a in acts) {
                     cx.rt.gq.enqueue(a);
                     if (cx.onActivation != null) cx.onActivation!(a);
+                  }
+
+                  // Store parent structure in argSlots (parent's argSlot is still in clauseVars[-2])
+                  final parentTargetSlot = cx.clauseVars[-2];
+                  if (parentTargetSlot is int && parentTargetSlot >= 0 && parentTargetSlot < 10) {
+                    cx.argSlots[parentTargetSlot] = VarRef(parentWriterId, isReader: true);
+                    cx.clauseVars.remove(-2);
                   }
 
                   cx.currentStructure = null;
