@@ -30,7 +30,10 @@ class BytecodeProgram {
     final m = <LabelName,int>{};
     for (var i = 0; i < ops.length; i++) {
       final op = ops[i];
-      if (op is Label) m[op.name] = i;
+      // Keep first occurrence of each label (for multi-clause procedures)
+      if (op is Label && !m.containsKey(op.name)) {
+        m[op.name] = i;
+      }
     }
     return m;
   }
@@ -1529,6 +1532,15 @@ class BytecodeRunner {
               if (targetWriterId is int) {
                 // Bind the writer to the completed structure
                 cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
+
+                // Put the structure reference into argSlots if we have a target slot
+                // PutStructure stores target slot in clauseVars[-2] for slots 0-9
+                final targetSlot = cx.clauseVars[-2];
+                if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
+                  // Put a reader reference to the structure in the target arg slot
+                  cx.argSlots[targetSlot] = VarRef(targetWriterId, isReader: true);
+                  cx.clauseVars.remove(-2);
+                }
 
                 // Reset structure building state
                 cx.currentStructure = null;
@@ -3591,6 +3603,12 @@ class BytecodeRunner {
           // Reader - get paired writer and check if bound
           final readerId = t.varId;
           final wid = cx.rt.heap.writerIdForReader(readerId);
+
+          // Check sigma-hat first for tentative bindings (before commit)
+          if (wid != null && cx.sigmaHat.containsKey(wid)) {
+            return dereference(cx.sigmaHat[wid]);
+          }
+
           if (wid != null && cx.rt.heap.isWriterBound(wid)) {
             final boundValue = cx.rt.heap.valueOfWriter(wid);
             // CRITICAL FIX: Recursively dereference the bound value

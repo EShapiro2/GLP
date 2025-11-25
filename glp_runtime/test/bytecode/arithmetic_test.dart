@@ -5,6 +5,7 @@ import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
+import 'package:glp_runtime/runtime/scheduler.dart';
 import 'dart:io';
 
 void main() {
@@ -220,8 +221,6 @@ void main() {
       final stdlibProg = stdlibCompiler.compile(stdlibSource);
 
       // A simple user program that just calls another predicate
-      // Note: Direct assignment in body like "Z := 5 + 3" violates SRSW
-      // because Z would appear both in head and body
       final userSource = '''
         hello.
       ''';
@@ -254,6 +253,86 @@ void main() {
       expect(prog.labels.containsKey('compute_sum/1'), isTrue);
 
       print('compute_sum/1 compiled to ${prog.ops.length} instructions');
+    });
+
+    test('Z := 5 + 3 executes and binds Z to 8', () {
+      print('\n=== END-TO-END ARITHMETIC TEST ===');
+
+      // Load stdlib (assign.glp)
+      final stdlibSource = File('/home/user/GLP/stdlib/assign.glp').readAsStringSync();
+      final stdlibCompiler = GlpCompiler(skipSRSW: true);
+      final stdlibProg = stdlibCompiler.compile(stdlibSource);
+
+      // Compile user program
+      final userSource = '''
+        compute_sum(Z?) :- Z := 5 + 3.
+      ''';
+      final userCompiler = GlpCompiler();
+      final userProg = userCompiler.compile(userSource);
+
+      // Merge programs
+      final mergedProg = userProg.merge(stdlibProg);
+      print('Merged program: ${mergedProg.ops.length} instructions');
+
+      // Create runtime
+      final rt = GlpRuntime();
+
+      // Allocate a variable for the result (Z)
+      final resultVarId = rt.heap.allocateVariable();
+      print('Allocated result variable: V$resultVarId');
+
+      // Create runner and scheduler
+      final runner = BytecodeRunner(mergedProg);
+      final sched = Scheduler(rt: rt, runner: runner);
+
+      // Create environment with the result variable as argument
+      // The query is compute_sum(Result?) where Result is our allocated variable
+      final env = CallEnv(args: {
+        0: VarRef(resultVarId, isReader: true),  // Pass reader to head position Z?
+      });
+
+      // Set up goal
+      final goalId = 1;
+      rt.setGoalEnv(goalId, env);
+
+      // Get entry point for compute_sum/1
+      final entryPc = mergedProg.labels['compute_sum/1'];
+      expect(entryPc, isNotNull, reason: 'compute_sum/1 should exist');
+      print('compute_sum/1 entry at PC $entryPc');
+
+      // Enqueue the initial goal
+      rt.gq.enqueue(GoalRef(goalId, entryPc!));
+
+      print('\nRunning scheduler to drain all goals...');
+      final ran = sched.drain(maxCycles: 100, debug: true, debugOutput: true);
+      print('Goals executed: ${ran.length}');
+
+      // Debug: show what goals were spawned
+      print('\nSpawned goals environments:');
+      for (var id = 10000; id < rt.nextGoalId; id++) {
+        final env = rt.getGoalEnv(id);
+        if (env != null) {
+          print('  Goal $id env: ${env.argBySlot}');
+        }
+      }
+
+      // Check if the result variable is bound
+      final isBound = rt.heap.isWriterBound(resultVarId);
+      print('Result variable bound: $isBound');
+
+      if (isBound) {
+        final value = rt.heap.getValue(resultVarId);
+        print('Result value: $value');
+
+        expect(value, isA<ConstTerm>());
+        if (value is ConstTerm) {
+          print('Result = ${value.value}');
+          expect(value.value, equals(8), reason: '5 + 3 should equal 8');
+          print('✓ Z := 5 + 3 correctly evaluates to 8!');
+        }
+      } else {
+        fail('Result variable should be bound after execution');
+      }
     });
   });
 }
