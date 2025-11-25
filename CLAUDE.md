@@ -486,3 +486,18 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - when we are discussing, do not move away from the discussion or do anything else until user agrees that the discussion is over
 - i want  dart run glp_repl.dart  please remember that
 - always test all repl tests after a change
+
+## Git Collaboration Protocol (Multiple Claude Code Sessions)
+
+1. **Main branch** (`main`) is the source of truth - contains all merged, stable work
+2. **Each Claude session** works on its own branch (`claude/...-<session-id>`)
+3. **Permissions**:
+   - Each Claude can **pull from any branch** (main, other claude branches)
+   - Each Claude can **only push to its own branch** (403 error otherwise)
+   - Only the **user** can merge into main
+4. **Workflow**:
+   - Pull from `main` at session start to get latest work
+   - Create commits on your own branch
+   - Push to your branch when done
+   - User merges completed work into `main`
+5. **At session end**: Ensure all work is committed and pushed to your branch
