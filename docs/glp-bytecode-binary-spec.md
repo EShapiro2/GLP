@@ -5,14 +5,11 @@
 
 ## Overview
 
-This specification defines the binary bytecode format for GLP, following the FCP abstract machine design. The format uses:
-- 32-bit heap words with tagged representation
-- 16-bit instruction opcodes
-- Module-based organization
+GLP uses the FCP abstract machine bytecode format. This specification documents the FCP format as used by GLP.
 
-## 1. Word Format
+## 1. Word Format (FCP fcp.h)
 
-Following FCP, heap words are 32-bit unsigned integers with tag/value encoding:
+Heap words are 32-bit unsigned integers with tagged representation:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -23,231 +20,265 @@ Following FCP, heap words are 32-bit unsigned integers with tag/value encoding:
 
 ### 1.1 Flags (2 bits)
 
-| Flag | Value | Meaning |
-|------|-------|---------|
+| Flag | Value | FCP Name |
+|------|-------|----------|
 | RefFlag | 0x0 | Reference (variable) |
 | RegularFlag | 0x1 | Regular term |
 | ListFlag | 0x2 | List cell |
 
 ### 1.2 Type Codes (4 bits)
 
-| Code | Value | Type | Description |
-|------|-------|------|-------------|
-| WrtCode | 0x0 | Writer Variable | Writable/output variable |
-| RoCode | 0x1 | Reader Variable | Read-only/input variable |
-| IntCode | 0x2 | Integer | Signed integer (26-bit range) |
-| RealCode | 0x3 | Real | Floating point (heap indirect) |
+| Code | Value | FCP Name | Description |
+|------|-------|----------|-------------|
+| WrtCode | 0x0 | Writable | Writer variable (we) |
+| RoCode | 0x1 | Read-Only | Reader variable (ro) |
+| IntCode | 0x2 | Integer | Signed integer (±2²⁵) |
+| RealCode | 0x3 | Real | Float (heap indirect) |
 | StrCode | 0x4 | String | String (heap indirect) |
 | NilCode | 0x5 | Nil | Empty list [] |
-| TplCode | 0x6 | Tuple/Structure | Compound term |
-| VctrCode | 0x7 | Vector | Array-like structure |
+| TplCode | 0x6 | Tuple | Structure f/n |
+| VctrCode | 0x7 | Vector | Array |
 | InvldCode | 0x8 | Invalid | Error marker |
 
-### 1.3 Tag Construction
+### 1.3 Word Construction
+
+```c
+#define Word(Val, Tag) ((((heapT)(Val)) << 6) | (Tag))
+#define Tag(Code, Flag) (((Code) << 2) | (Flag))
+```
+
+## 2. Opcodes (FCP opcodes.h)
+
+Instructions are 16-bit opcodes. FCP organizes them by category:
+
+### 2.1 Dereference Operations (0x001-0x00f)
+
+| Opcode | Value | Description |
+|--------|-------|-------------|
+| deref_2 | 0x001 | Dereference variable |
+| deref_3 | 0x002 | Dereference with 3 args |
+| deref_subarg_3 | 0x003 | Dereference structure subarg |
+| deref_subarg_2 | 0x004 | Dereference subarg (2 args) |
+| deref_car_3 | 0x005 | Dereference list head |
+| deref_car_2 | 0x006 | Dereference list head (2 args) |
+| deref_list | 0x007 | Dereference list |
+| deref_car_list | 0x008 | Dereference car of list |
+| deref_sub_list | 0x009 | Dereference sublist |
+| deref_vars | 0x00a | Dereference multiple vars |
+| deref_var1 | 0x00b | Dereference single var |
+| deref_2_addr | 0x00c | Dereference to address |
+| deref_integer1 | 0x00d | Dereference integer |
+| load_car | 0x00e | Load car |
+| deref_list3 | 0x00f | Dereference list (3 args) |
+
+### 2.2 Load Operations (0x010-0x020)
+
+| Opcode | Value | Description |
+|--------|-------|-------------|
+| load_we_var | 0x010 | Load writer variable |
+| load_ref_to_we_var | 0x011 | Load ref to writer |
+| load_ro_of_reg | 0x012 | Load reader from register |
+| load_ref_to_ro_of_reg | 0x013 | Load ref to reader |
+| load_ro_of_subarg | 0x014 | Load reader from subarg |
+| load_ref_to_ro_of_subarg | 0x015 | Load ref to reader subarg |
+| load_reg | 0x016 | Load register |
+| load_reg_indirect | 0x017 | Load register indirect |
+| load_car_of_reg | 0x018 | Load car of register |
+| load_pr_arg | 0x019 | Load procedure argument |
+| load_subarg | 0x01a | Load subargument |
+| load_ref_to_subarg | 0x01b | Load ref to subarg |
+| load_nil | 0x01c | Load nil |
+| load_word | 0x01d | Load word constant |
+| load_real | 0x01e | Load real |
+| load_ref_to_real | 0x01f | Load ref to real |
+| load_ref_to_string | 0x020 | Load ref to string |
+
+### 2.3 Allocate Operations (0x021-0x029)
+
+| Opcode | Value | Description |
+|--------|-------|-------------|
+| allocate_var | 0x021 | Allocate variable |
+| allocate_vars | 0x022 | Allocate N variables |
+| allocate_tuple | 0x023 | Allocate tuple/structure |
+| allocate_list_cell | 0x024 | Allocate list cell |
+| allocate_list_we | 0x025 | Allocate list with writer |
+| allocate_listN | 0x026 | Allocate list of N |
+| allocate_pr | 0x027 | Allocate process record |
+| list_assign_with_check | 0x028 | List assign with check |
+| list_assign | 0x029 | List assign |
+
+### 2.4 Copy Operations (0x02b-0x051)
+
+FCP has many copy variants for different source/destination combinations:
+- Sources: Rs (register), CpIs (constant), SRs (subregister), WeVar, etc.
+- Destinations: Rd (register), CpId (constant), SRd (subregister)
+
+| Opcode | Value | Description |
+|--------|-------|-------------|
+| copy_Rs_Rd | 0x02b | Copy register to register |
+| copy_CpIs_Rd | 0x02c | Copy constant to register |
+| copy_SRs_Rd | 0x02d | Copy subreg to register |
+| ... | ... | (many variants) |
+| copy_WeVar_SRd | 0x051 | Copy writer var to subreg |
+
+### 2.5 Control Flow (0x089-0x0a6)
+
+| Opcode | Value | Description |
+|--------|-------|-------------|
+| goto_there | 0x089 | Unconditional jump |
+| if_not_reference | 0x08a | Branch if not reference |
+| if_not_writable | 0x08b | Branch if not writer |
+| if_not_read_only | 0x08c | Branch if not reader |
+| if_not_integer | 0x08d | Branch if not integer |
+| if_not_real | 0x08e | Branch if not real |
+| if_not_string | 0x08f | Branch if not string |
+| if_not_nil | 0x090 | Branch if not nil |
+| if_not_list | 0x091 | Branch if not list |
+| if_not_tuple | 0x092 | Branch if not tuple |
+| if_not_module | 0x093 | Branch if not module |
+| if_not_vector | 0x094 | Branch if not vector |
+
+### 2.6 Unification (0x0ad-0x0c2)
+
+| Opcode | Value | Description |
+|--------|-------|-------------|
+| switch_on_tag | 0x0ad | Multi-way branch on type |
+| unify_args | 0x0ae | Unify structure arguments |
+| unify_reg_reg | 0x0af | Unify register with register |
+| unify_reg_xreg | 0x0b0 | Unify reg with indexed reg |
+| ... | ... | (many variants) |
+
+### 2.7 Branching (0x0c3-0x0c7)
+
+| Opcode | Value | Description |
+|--------|-------|-------------|
+| branch_integer | 0x0c3 | Branch on integer value |
+| branch_real | 0x0c4 | Branch on real value |
+| branch_tuple | 0x0c5 | Branch on tuple functor |
+| case_hash_integer | 0x0c6 | Hash table for integers |
+| case_hash_string | 0x0c7 | Hash table for strings |
+
+### 2.8 Execution Control (0x11e-0x13e)
+
+| Opcode | Value | Description |
+|--------|-------|-------------|
+| enqueue | 0x11e | Enqueue goal (spawn) |
+| iterate1 | 0x11f | Iterate (single) |
+| iterate | 0x120 | Iterate (tail call) |
+| execute | 0x121 | Execute procedure |
+| execute2 | 0x122 | Execute (2 args) |
+| execute1 | 0x123 | Execute (1 arg) |
+| halt | 0x124 | Halt execution |
+| commit1 | 0x125 | Commit clause |
+| commit_nolabel | 0x126 | Commit without label |
+| suspend2 | 0x127 | Suspend (2 args) |
+| suspend1 | 0x128 | Suspend (1 arg) |
+| suspend | 0x129 | Suspend goal |
+| suspend_on | 0x12a | Suspend on variable |
+| set_HBT | 0x12d | Set heap backtrack |
+| undo | 0x12e | Undo to backtrack point |
+
+### 2.9 Ask Kernels (0x140-0x170)
+
+| Opcode | Value | Description |
+|--------|-------|-------------|
+| otherwise | 0x140 | Otherwise guard |
+| is_nonvar | 0x141 | Test if not variable |
+| is_known | 0x142 | Test if known |
+| is_unknown | 0x143 | Test if unknown |
+| is_var | 0x144 | Test if variable |
+| is_we | 0x145 | Test if writer |
+| is_not_we | 0x146 | Test if not writer |
+| is_ro | 0x147 | Test if reader |
+| is_integer | 0x148 | Test if integer |
+| is_real | 0x149 | Test if real |
+| is_string | 0x14a | Test if string |
+| is_list | 0x14b | Test if list |
+| is_tuple | 0x14c | Test if tuple |
+| is_vector | 0x14d | Test if vector |
+| is_module | 0x14e | Test if module |
+| is_number | 0x14f | Test if number |
+| grounded | 0x150 | Test if ground |
+| ... | ... | (comparison ops, arithmetic) |
+
+## 3. Instruction Encoding
+
+### 3.1 Format
+
+All instructions start with 16-bit opcode, followed by operands:
 
 ```
-Tag = (Code << 2) | Flags
-Word = (Value << 6) | Tag
+┌────────────────┬────────────────────────────────┐
+│  opcode (16)   │  operands (variable length)    │
+└────────────────┴────────────────────────────────┘
 ```
 
-Examples:
-- Writer variable with ID 42: `Word(42, (WrtCode << 2) | RefFlag)` = `(42 << 6) | 0x00`
-- Reader variable with ID 42: `Word(42, (RoCode << 2) | RefFlag)` = `(42 << 6) | 0x04`
-- Integer 100: `Word(100, (IntCode << 2) | RegularFlag)` = `(100 << 6) | 0x09`
-- Nil: `Word(0, (NilCode << 2) | RegularFlag)` = `0x15`
+### 3.2 Operand Encoding
 
-## 2. GLP Opcode Mapping to FCP
-
-### 2.1 Current GLP Instructions → FCP Opcodes
-
-| Current GLP (Dart Object) | FCP Opcode | Value | Notes |
-|---------------------------|------------|-------|-------|
-| **Clause Control** ||||
-| `Label` | label | 0x000 | Pseudo-op (metadata) |
-| `ClauseTry` | clause_try | 0x0f0 | Start clause attempt |
-| `ClauseNext` | clause_next | 0x0f1 | Next clause alternative |
-| `NoMoreClauses` | no_more_clauses | 0x0f2 | End of clauses |
-| `Otherwise` | otherwise | 0x140 | FCP: ask kernel |
-| `GuardFail` | guard_fail | 0x0f4 | Guard failure |
-| `Commit` | commit | 0x125 | FCP: commit1 |
-| `Proceed` | proceed | 0x0d4 | Return from procedure |
-| `SuspendEnd` | suspend_end | 0x0f5 | End suspension block |
-| **Head Matching** ||||
-| `HeadConstant` | head_const | 0x102 | Match constant |
-| `HeadNil` | head_nil | 0x104 | Match [] |
-| `HeadStructure` | head_struct | 0x105 | Match structure |
-| `HeadList` | head_list | 0x106 | Match [H\|T] |
-| `HeadVariable(isReader:false)` | head_var_we | 0x100 | Match writer var |
-| `HeadVariable(isReader:true)` | head_var_ro | 0x101 | Match reader var |
-| `GetVariable(isReader:false)` | get_var_we | 0x110 | Get writer from arg |
-| `GetVariable(isReader:true)` | get_var_ro | 0x111 | Get reader from arg |
-| `GetValue(isReader:false)` | get_val_we | 0x112 | Get writer value |
-| `GetValue(isReader:true)` | get_val_ro | 0x113 | Get reader value |
-| **Structure Traversal** ||||
-| `Push` | push | 0x180 | Save struct context |
-| `Pop` | pop | 0x181 | Restore struct context |
-| `UnifyStructure` | unify_struct | 0x0ae | FCP: unify_args variant |
-| `UnifyConstant` | unify_const | 0x184 | Unify with constant |
-| `UnifyVariable(isReader:false)` | unify_var_we | 0x182 | Unify writer in struct |
-| `UnifyVariable(isReader:true)` | unify_var_ro | 0x183 | Unify reader in struct |
-| `UnifyVoid` | unify_void | 0x188 | Skip/create void |
-| **Body Building** ||||
-| `PutConstant` | put_const | 0x132 | Put constant in arg |
-| `PutNil` | put_nil | 0x134 | Put [] in arg |
-| `PutStructure` | put_struct | 0x135 | Put structure in arg |
-| `PutList` | put_list | 0x136 | Put [H\|T] in arg |
-| `PutVariable(isReader:false)` | put_var_we | 0x130 | Put writer in arg |
-| `PutVariable(isReader:true)` | put_var_ro | 0x131 | Put reader in arg |
-| `SetConstant` | set_const | 0x187 | Set constant in struct |
-| `SetVariable(isReader:false)` | set_var_we | 0x185 | Set writer in struct |
-| `SetVariable(isReader:true)` | set_var_ro | 0x186 | Set reader in struct |
-| **Spawn & Execution** ||||
-| `Spawn` | spawn | 0x160 | FCP: enqueue |
-| `CallRemote` | spawn_remote | 0x161 | Cross-module spawn |
-| `Requeue` | iterate | 0x120 | FCP: iterate/tail call |
-| `TailStep` | tail_step | 0x11f | FCP: iterate1 |
-| `Execute` | execute | 0x121 | FCP: execute |
-| `Halt` | halt | 0x124 | FCP: halt |
-| **Guards** ||||
-| `IfVariable(isReader:false)` | if_writer | 0x145 | FCP: is_we |
-| `IfVariable(isReader:true)` | if_reader | 0x147 | FCP: is_ro |
-| `Ground` | ground | 0x148 | Test ground term |
-| `Known` | known | 0x141 | FCP: is_nonvar |
-| `Guard` | guard_call | 0x14a | Call guard predicate |
-| **Environment** ||||
-| `Allocate` | allocate | 0x021 | FCP: allocate_vars |
-| `Deallocate` | deallocate | 0x02a | Deallocate frame |
-| **Control Flow** ||||
-| `Nop` | nop | 0x000 | No operation |
-| `goto` (implicit) | goto | 0x089 | FCP: goto_there |
-
-## 3. Instruction Formats
-
-### 3.1 No-operand instructions
-```
-┌────────────────┐
-│  opcode (16)   │
-└────────────────┘
-```
-Examples: `proceed`, `halt`, `commit`
-
-### 3.2 Single-operand instructions
-```
-┌────────────────┬────────────────┐
-│  opcode (16)   │  operand (16)  │
-└────────────────┴────────────────┘
-```
-Examples: `goto`, `head_const`, `put_int`
-
-### 3.3 Two-operand instructions
-```
-┌────────────────┬────────────────┬────────────────┐
-│  opcode (16)   │  operand1 (16) │  operand2 (16) │
-└────────────────┴────────────────┴────────────────┘
-```
-Examples: `head_var_reader(varIndex, argSlot)`, `copy_reg_reg(src, dst)`
-
-### 3.4 Variable-length instructions
-```
-┌────────────────┬────────────────┬─────────────────────┐
-│  opcode (16)   │  count (16)    │  data (count × 16)  │
-└────────────────┴────────────────┴─────────────────────┘
-```
-Examples: `switch_on_tag`, `branch_integer`
+- Register index: 16 bits
+- Constant index: 16 bits (into constant table)
+- PC offset: 16 bits (relative jump)
+- Arity: 8 bits
+- Functor: 16 bits (string table index)
 
 ## 4. Module Format
 
-### 4.1 Module Header
+### 4.1 Header
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Magic Number (32): 0x474C5001 ("GLP\x01")                  │
-│  Version (16): 0x0001                                       │
-│  Flags (16): Module flags                                   │
-│  Name Offset (32): Offset to module name in string table    │
-│  String Table Offset (32): Offset to string table           │
-│  String Table Size (32): Size of string table               │
-│  Code Offset (32): Offset to instruction stream             │
-│  Code Size (32): Size of instruction stream                 │
-│  Label Table Offset (32): Offset to label table             │
-│  Label Count (32): Number of labels                         │
-│  Export Table Offset (32): Offset to export table           │
-│  Export Count (32): Number of exports                       │
+│  Magic: 0x474C5001 ("GLP\x01")                    (32 bits) │
+│  Version                                          (16 bits) │
+│  Flags                                            (16 bits) │
+│  Module Name Index                                (16 bits) │
+│  String Table Offset                              (32 bits) │
+│  String Table Size                                (32 bits) │
+│  Code Offset                                      (32 bits) │
+│  Code Size                                        (32 bits) │
+│  Label Table Offset                               (32 bits) │
+│  Label Count                                      (16 bits) │
+│  Export Table Offset                              (32 bits) │
+│  Export Count                                     (16 bits) │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### 4.2 String Table
+
+Length-prefixed UTF-8 strings, word-aligned:
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  String 0: Length (16) + UTF-8 bytes + padding              │
-│  String 1: Length (16) + UTF-8 bytes + padding              │
-│  ...                                                        │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────┐
+│  Length (16) │ UTF-8 bytes │ padding │
+└──────────────────────────────────────┘
 ```
 
 ### 4.3 Label Table
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Label 0: Name Index (16) + Arity (8) + PC (32)             │
-│  Label 1: Name Index (16) + Arity (8) + PC (32)             │
-│  ...                                                        │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│  Name Index (16) │ Arity (8) │ PC (32)       │
+└──────────────────────────────────────────────┘
 ```
 
 ### 4.4 Export Table
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Export 0: Name Index (16) + Arity (8)                      │
-│  Export 1: Name Index (16) + Arity (8)                      │
-│  ...                                                        │
-└─────────────────────────────────────────────────────────────┘
-```
 
-### 4.5 Instruction Stream
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Instruction 0: opcode (16) + operands...                   │
-│  Instruction 1: opcode (16) + operands...                   │
-│  ...                                                        │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────┐
+│  Name Index (16) │ Arity (8)         │
+└──────────────────────────────────────┘
 ```
 
-## 5. Comparison with Current GLP Implementation
+## 5. Migration from Current Implementation
 
-### 5.1 Current State (Object-Based)
+The current GLP implementation uses Dart objects. Migration path:
 
-The current GLP implementation uses Dart objects for instructions:
-```dart
-final ops = [Label('merge/3'), ClauseTry(), HeadVariable(0, isReader: true), ...]
-```
-
-### 5.2 Target State (Binary Bytecode)
-
-The target implementation uses numeric opcodes:
-```dart
-final bytecode = Uint16List.fromList([
-  0x0000, // Label: name_index=0
-  0x0f00, // clause_try
-  0x0100, 0x0000, // head_var_reader: varIndex=0
-  ...
-]);
-```
-
-## 6. Migration Path
-
-1. **Phase 1**: Define opcode constants matching FCP
-2. **Phase 2**: Add binary encoder to compiler
-3. **Phase 3**: Add binary decoder to runner
-4. **Phase 4**: Update runner to dispatch on numeric opcodes
-5. **Phase 5**: Remove object-based instruction support
-
-## 7. Open Questions
-
-1. Should we use exact FCP opcode values or define our own?
-2. What's the integer range we need (FCP uses 26-bit)?
-3. Do we need all FCP opcodes or a subset for GLP?
-4. How to handle GLP-specific features (SRSW, etc.)?
+1. Define FCP opcode constants in Dart
+2. Compiler emits binary bytecode
+3. Runner decodes and dispatches on opcodes
+4. Remove object-based instructions
 
 ## References
 
-- FCP/EFCP opcodes.h: https://github.com/EShapiro2/FCP/blob/main/Savannah/Logix/EMULATOR/opcodes.h
-- FCP/EFCP fcp.h: https://github.com/EShapiro2/FCP/blob/main/Savannah/Logix/EMULATOR/fcp.h
+- FCP opcodes.h: https://github.com/EShapiro2/FCP/blob/main/Savannah/Logix/EMULATOR/opcodes.h
+- FCP fcp.h: https://github.com/EShapiro2/FCP/blob/main/Savannah/Logix/EMULATOR/fcp.h
+- FCP emulate.c: https://github.com/EShapiro2/FCP/blob/main/Savannah/Logix/EMULATOR/emulate.c
