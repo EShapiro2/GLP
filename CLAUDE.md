@@ -569,6 +569,7 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - when we are discussing, do not move away from the discussion or do anything else until user agrees that the discussion is over
 - i want  dart run glp_repl.dart  please remember that
 - always test all repl tests after a change
+- NEVER work not following precisely the spec
 
 ## #remember Directive
 
