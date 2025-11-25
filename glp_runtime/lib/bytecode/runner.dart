@@ -1426,12 +1426,29 @@ class BytecodeRunner {
                   cx.S++;
                 } else if (value is VarRef && !value.isReader) {
                   // Query has writer, clause expects reader
-                  final freshVar = cx.rt.heap.allocateFreshVar();
-                  cx.rt.heap.addVariable(freshVar);
-                  final readerRef = VarRef(freshVar, isReader: true);
-                  cx.sigmaHat[value.varId] = readerRef;
-                  cx.clauseVars[varIndex] = VarRef(freshVar, isReader: false);
-                  cx.S++;
+                  if (existingValue != null) {
+                    // Xi already allocated from previous writer occurrence
+                    // Bind query writer to existing value (per spec 8.2)
+                    if (existingValue is ConstTerm || existingValue is StructTerm) {
+                      // Ground value - bind writer directly to it
+                      cx.sigmaHat[value.varId] = existingValue;
+                    } else if (existingValue is VarRef) {
+                      // Existing VarRef - bind writer to reader of it
+                      cx.sigmaHat[value.varId] = VarRef(existingValue.varId, isReader: true);
+                    } else if (existingValue is int) {
+                      // Bare varId - bind writer to reader of it
+                      cx.sigmaHat[value.varId] = VarRef(existingValue, isReader: true);
+                    }
+                    cx.S++;
+                  } else {
+                    // First occurrence - allocate fresh variable
+                    final freshVar = cx.rt.heap.allocateFreshVar();
+                    cx.rt.heap.addVariable(freshVar);
+                    final readerRef = VarRef(freshVar, isReader: true);
+                    cx.sigmaHat[value.varId] = readerRef;
+                    cx.clauseVars[varIndex] = VarRef(freshVar, isReader: false);
+                    cx.S++;
+                  }
                 } else if (value is ConstTerm || value is StructTerm) {
                   // Query has ground term, clause expects reader
                   final freshVar = cx.rt.heap.allocateFreshVar();

@@ -2,10 +2,31 @@
 
 ## 🔴 CRITICAL - START OF EVERY CONVERSATION
 1. **READ CLAUDE.md** - Always read this file first
-2. **IDENTIFY CURRENT MODE** - Discussion or Implementation  
-3. **FOLLOW MODE RULES** - Never mix modes
-4. **ASK FOR CURRENT STATE** - Request latest code/errors from user
-5. **READ SPECS AS NEEDED** - Don't read all specs upfront, only when relevant to task
+2. **INSTALL DART** - Run: `curl -fsSL https://dart.dev/get-dart | sh` or check if `/tmp/dart-sdk/bin/dart` exists
+3. **SET DART PATH** - Use `DART=/tmp/dart-sdk/bin/dart` or add to PATH
+4. **IDENTIFY CURRENT MODE** - Discussion or Implementation
+5. **FOLLOW MODE RULES** - Never mix modes
+6. **ASK FOR CURRENT STATE** - Request latest code/errors from user
+7. **READ SPECS AS NEEDED** - Don't read all specs upfront, only when relevant to task
+
+### Dart Installation (if needed)
+```bash
+# Check if dart exists
+which dart || ls /tmp/dart-sdk/bin/dart
+
+# If not found, install:
+cd /tmp && wget -qO- https://storage.googleapis.com/dart-archive/channels/stable/release/latest/sdk/dartsdk-linux-x64-release.zip | busybox unzip -
+export PATH="/tmp/dart-sdk/bin:$PATH"
+
+# Verify
+dart --version
+```
+
+### FCP Reference Repository
+The FCP (Flat Concurrent Prolog) implementation is available for reference:
+- **GitHub**: https://github.com/EShapiro2/FCP
+- **Local mount** (if available): Check `/mnt/user/FCP` or ask user to mount
+- **Paper**: `/home/user/GLP/docs/1-s2.0-0743106689900113-main.pdf`
 
 ## Core Rules
 
@@ -27,9 +48,9 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 ## Key Context
 - **Project**: GLP (Grassroots Logic Programs) - a secure concurrent logic programming language
 - **Implementation Language**: Dart
-- **Current State**: Commit 7be7d83 is KNOWN WORKING (~170 tests passing)
+- **Current State**: 78 REPL tests + 25 unit tests passing (as of Nov 2025)
 - **User Expertise**: Deep understanding of GLP semantics but does not write code
-- **Working Directory**: `/Users/udi/GLP/glp_runtime/`
+- **Working Directory**: `/home/user/GLP/` (Linux) or `/Users/udi/GLP/` (Mac)
 
 ## Working Modes
 
@@ -306,6 +327,12 @@ When implementing a solution:
 3. **WAIT for agreement** - Only continue when discussion clearly over
 4. **NEVER mix discussion with implementation**
 
+## 🔴 MANDATORY: Debugging Protocol for GLP Programs
+
+**READ AND FOLLOW:** `docs/Mandatory protocol for debugging the GLP implementation with GLP programs.txt`
+
+This protocol is required when debugging GLP programs. Do not skip steps. Stop and report to user if any step fails.
+
 ## Research Sources
 
 ### Primary Specifications (MANDATORY - Read First)
@@ -487,36 +514,71 @@ Claude B: work → push → branch-B ──────────────�
    git push origin main
    ```
 
-### User's Responsibilities
+### User's Responsibilities - PRECISE Protocol for Merging to Main
+
+**🔴 IMPORTANT: This is the CORRECT protocol. Other instructions may be wrong.**
 
 **To merge Claude's work into main:**
 ```bash
-# Step 1: Fetch Claude's branch
-git fetch origin claude/<branch-name>
-
-# Step 2: Switch to main
+# Step 1: Make sure you're on main
 git checkout main
 
-# Step 3: Merge Claude's branch
+# Step 2: Pull latest main (in case other work was merged)
+git pull origin main
+
+# Step 3: Fetch Claude's branch
+git fetch origin claude/<branch-name>
+
+# Step 4: Merge Claude's branch into main
 git merge origin/claude/<branch-name>
 
-# Step 4: Push to main
+# Step 5: Push to main
 git push origin main
 ```
 
-**To verify merge:**
-- Ask Claude to pull main and run tests
-- Or run tests yourself: `dart test && bash udi/run_repl_tests.sh`
+**Alternative using GitHub web UI:**
+1. Go to repository on GitHub
+2. Create Pull Request from `claude/<branch-name>` to `main`
+3. Review changes
+4. Merge PR
 
-### Common Issues
+**To verify merge:**
+```bash
+# After merging, verify tests pass
+cd glp_runtime && dart test
+cd ../udi && bash run_repl_tests.sh
+```
+
+### Common Issues and Fixes
 
 **"not something we can merge" error:**
-- You need to fetch first: `git fetch origin claude/<branch-name>`
-- Then merge: `git merge origin/claude/<branch-name>`
+```bash
+# You forgot to fetch - do this first:
+git fetch origin claude/<branch-name>
+# Then merge:
+git merge origin/claude/<branch-name>
+```
 
-**Divergent branches:**
-- Use `git pull origin main --no-rebase` to merge main into your branch
-- Or use `git pull origin main --rebase` if you prefer rebasing
+**"fatal: refusing to merge unrelated histories":**
+```bash
+# This shouldn't happen, but if it does:
+git merge origin/claude/<branch-name> --allow-unrelated-histories
+```
+
+**Merge conflicts:**
+```bash
+# If conflicts occur, resolve them manually, then:
+git add -A
+git commit -m "Merge claude/<branch-name> into main"
+git push origin main
+```
+
+**Divergent branches (Claude needs to update from main):**
+```bash
+# Claude should run:
+git pull origin main --no-rebase
+# Then resolve any conflicts and push to their branch
+```
 
 ## Error Response Template
 
@@ -589,3 +651,43 @@ When the user says `#remember <something>`, add that information to this CLAUDE.
    - Push to your branch when done
    - User merges completed work into `main`
 5. **At session end**: Ensure all work is committed and pushed to your branch
+
+## Important Insights (Lessons Learned)
+
+### Runtime Bugs Found and Fixed
+
+1. **Position-sensitive UnifyVariable bug** (Nov 2025): When writer occurs before reader in clause head, the reader handler was ignoring the existing value. Fix: Check `existingValue` before creating fresh variables.
+
+2. **ROQ suspension list corruption**: Wrapper nodes were being added incorrectly. Fixed with proper node management.
+
+### Key Patterns
+
+1. **Accumulator patterns in reduce clauses**: Both arg orderings now work:
+   - `reduce(sum_acc([], Acc?, Acc), true)` - reader first, writer second
+   - `reduce(sum_acc([], Acc, Acc?), true)` - writer first, reader second
+
+2. **Running the REPL**: Always use `dart run glp_repl.dart` from the `udi/` directory, NOT a compiled exe.
+
+3. **Test file patterns**: The test suite uses a specific format - see `run_repl_tests.sh` for the `run_test` function.
+
+### Common Mistakes to Avoid
+
+1. **Don't create fresh variables when clauseVars already has a value** - check first
+2. **Don't overwrite clauseVars[i] without checking existing value**
+3. **Always run BOTH test suites** - unit tests AND REPL tests
+4. **Don't modify code without checking the spec first**
+5. **Don't push to main** - only push to your claude branch
+
+### Metainterpreter Pattern
+
+The standard metainterpreter pattern for arithmetic:
+```prolog
+run(true).
+run((A, B)) :- run(A?), run(B?).
+run(A) :- otherwise | reduce(A?, B), run(B?).
+
+% Handle := in metainterpreter
+reduce((X?:=T), true) :- X:=T?.
+```
+
+This enables `run(factorial(5, F))` to work with arithmetic.
