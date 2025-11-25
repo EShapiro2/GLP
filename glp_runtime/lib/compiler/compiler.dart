@@ -15,17 +15,19 @@ export 'result.dart' show CompilationResult;
 class GlpCompiler {
   final Lexer Function(String) _createLexer;
   final Parser Function(List<Token>) _createParser;
-  final Analyzer Function() _createAnalyzer;
+  final Analyzer Function({bool skipSRSW}) _createAnalyzer;
   final CodeGenerator Function() _createCodegen;
+  final bool skipSRSW;
 
   GlpCompiler({
     Lexer Function(String)? createLexer,
     Parser Function(List<Token>)? createParser,
-    Analyzer Function()? createAnalyzer,
+    Analyzer Function({bool skipSRSW})? createAnalyzer,
     CodeGenerator Function()? createCodegen,
+    this.skipSRSW = false,
   })  : _createLexer = createLexer ?? ((source) => Lexer(source)),
         _createParser = createParser ?? ((tokens) => Parser(tokens)),
-        _createAnalyzer = createAnalyzer ?? (() => Analyzer()),
+        _createAnalyzer = createAnalyzer ?? (({bool skipSRSW = false}) => Analyzer(skipSRSW: skipSRSW)),
         _createCodegen = createCodegen ?? (() => CodeGenerator());
 
   /// Compile GLP source to bytecode program
@@ -46,7 +48,7 @@ class GlpCompiler {
       final ast = parser.parse();
 
       // Phase 3: Semantic analysis
-      final analyzer = _createAnalyzer();
+      final analyzer = _createAnalyzer(skipSRSW: skipSRSW);
       final annotatedAst = analyzer.analyze(ast);
 
       // Phase 4: Code generation
