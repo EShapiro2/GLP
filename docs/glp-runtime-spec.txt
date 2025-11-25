@@ -1,5 +1,14 @@
 # GLP Runtime System Specification for Dart Implementation v2.16
 
+## Version History
+
+**v2.16.2 (November 2025)**: V1 opcode sunset complete. Separate writer/reader opcodes replaced with unified V2 opcodes using `isReader` flag:
+- `GetVariable(varIndex, argSlot, isReader: bool)` — replaces GetWriterVariable/GetReaderVariable
+- `GetValue(varIndex, argSlot, isReader: bool)` — replaces GetWriterValue/GetReaderValue
+- `SetVariable(varIndex, isReader: bool)` — replaces SetWriter/SetReader
+- `PutVariable(varIndex, argSlot, isReader: bool)` — replaces PutWriter/PutReader
+- `UnifyVariable(varIndex, isReader: bool)` — replaces UnifyWriter/UnifyReader
+
 ## Overview
 
 The GLP runtime system executes bytecode on a Dart-based virtual machine that leverages Dart's native features for memory management, scheduling, and concurrency. Unlike the FCP abstract machine which manages its own process queue and garbage collection, this runtime delegates these responsibilities to Dart while focusing on GLP-specific semantics: reader/writer variables, suspension management, and SRSW enforcement.
@@ -414,9 +423,9 @@ All HEAD instructions that suspend must use this helper:
 - HeadNil
 - HeadList
 - HeadStructure
-- UnifyReader (Si case)
-- GetVariable
-- GetReaderVariable
+- UnifyVariable (isReader: true, Si case)
+- GetVariable (isReader: false)
+- GetVariable (isReader: true)
 
 **Example (HeadNil)**:
 ```dart

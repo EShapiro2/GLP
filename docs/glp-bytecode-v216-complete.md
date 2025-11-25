@@ -1,5 +1,16 @@
 # GLP Bytecode Instruction Set Specification — v2.16 (Normative)
 
+## Version History
+
+**v2.16.2 (November 2025)**: V1 opcode sunset complete. The following separate writer/reader opcodes have been REMOVED and replaced with unified V2 opcodes using an `isReader` flag:
+- `GetWriterVariable`, `GetReaderVariable` → `GetVariable(varIndex, argSlot, isReader: bool)`
+- `GetWriterValue`, `GetReaderValue` → `GetValue(varIndex, argSlot, isReader: bool)`
+- `SetWriter`, `SetReader` → `SetVariable(varIndex, isReader: bool)`
+- `PutWriter`, `PutReader` → `PutVariable(varIndex, argSlot, isReader: bool)`
+- `UnifyWriter`, `UnifyReader` → `UnifyVariable(varIndex, isReader: bool)`
+
+The V2 unified opcodes are now the ONLY supported instruction format. Codegen emits V2 directly.
+
 ## 0. ISA Conventions
 - **σ̂w** denotes the goal-local tentative writer substitution; it exists only during HEAD/GUARD phases and is discarded at clause_next.
 - **U** denotes the goal-level suspension set (readers on which the goal is blocked).
@@ -371,19 +382,20 @@ When a nested structure occurs during structure traversal:
 **Example**: For `clause(merge([X|Xs],Ys,[X?|Zs?]), ...)`:
 ```
 headStruct('merge', 3, 0)      // Match merge/3, enter READ mode, S=0
-  unifyWriter(10)              // Extract arg at S=0 into X10 (the list [X|Xs])
-  unifyWriter(2)               // Extract arg at S=1 into X2 (Ys)
-  unifyWriter(11)              // Extract arg at S=2 into X11 (the list [X?|Zs?])
+  UnifyVariable(10, isReader: false)  // Extract arg at S=0 into X10 (the list [X|Xs])
+  UnifyVariable(2, isReader: false)   // Extract arg at S=1 into X2 (Ys)
+  UnifyVariable(11, isReader: false)  // Extract arg at S=2 into X11 (the list [X?|Zs?])
 // Now match the extracted nested structures
 headStruct('[|]', 2, 10)       // Match X10 against [|]/2
-  unifyWriter(0)               // X
-  unifyWriter(1)               // Xs
+  UnifyVariable(0, isReader: false)   // X (writer)
+  UnifyVariable(1, isReader: false)   // Xs (writer)
 headStruct('[|]', 2, 11)       // Match X11 against [|]/2
-  unifyReader(0)               // X?
-  unifyReader(3)               // Zs?
+  UnifyVariable(0, isReader: true)    // X? (reader)
+  UnifyVariable(3, isReader: true)    // Zs? (reader)
 ```
 
-### 8.1 writer Xi
+### 8.1 UnifyVariable Xi (isReader: false) — Writer Mode
+**Instruction**: `UnifyVariable(Xi, isReader: false)` (V2 unified opcode)
 **Operation**: Process writer variable in structure
 **Behavior**:
 - In READ mode:
@@ -402,7 +414,8 @@ headStruct('[|]', 2, 11)       // Match X11 against [|]/2
 
 **Note**: Writer-to-writer unification follows Writer MGU semantics. In READ mode, this instruction extracts any term (including nested structures and reader terms) for later matching. When a reader term is extracted, subsequent operations (like head_structure on that clause variable) will handle suspension if the reader remains unbound at match time.
 
-### 8.2 reader Xi
+### 8.2 UnifyVariable Xi (isReader: true) — Reader Mode
+**Instruction**: `UnifyVariable(Xi, isReader: true)` (V2 unified opcode)
 **Operation**: Process reader variable in structure
 **Behavior**:
 - In READ mode:
@@ -808,11 +821,15 @@ compute(N, Result) :-
 
 ### 12.0 Overview
 
-Mode-aware argument loading distinguishes between reader and writer modes at the bytecode level, enabling correct SRSW semantics and mode conversion. These opcodes replace the deprecated occurrence-based GetVariable/GetValue with explicit mode information.
+Mode-aware argument loading distinguishes between reader and writer modes at the bytecode level, enabling correct SRSW semantics and mode conversion.
 
-The four opcodes handle all combinations of:
+**V2 Unified Opcodes (v2.16.2)**: Two opcodes with `isReader` flag handle all cases:
+- `GetVariable(Xi, Ai, isReader: bool)` — First occurrence of variable
+- `GetValue(Xi, Ai, isReader: bool)` — Subsequent occurrence of variable
+
+The `isReader` flag specifies the mode:
 - **Occurrence**: First vs subsequent appearance of a variable
-- **Mode**: Writer vs reader expected by the clause
+- **Mode**: Writer (`isReader: false`) vs reader (`isReader: true`) expected by the clause
 
 **Design Principles**:
 
@@ -852,13 +869,15 @@ if arg is StructTerm(functor, args):
 
 ---
 
-### 12.1 get_writer_variable Xi, Ai
+### 12.1 GetVariable(Xi, Ai, isReader: false) — Writer First Occurrence
 
+**Instruction**: `GetVariable(Xi, Ai, isReader: false)` (V2 unified)
 **Operation**: Load argument into clause writer variable (first occurrence)
 
-**Syntax**: `get_writer_variable Xi, Ai`
+**Syntax**: `GetVariable(Xi, Ai, isReader: false)`
 - `Xi`: Clause variable register index
 - `Ai`: Argument slot containing goal argument
+- `isReader: false`: Writer mode
 
 **Behavior**: Stores argument value in clauseVars[Xi] for subsequent use.
 
@@ -901,13 +920,15 @@ Ground terms stored directly.
 
 ---
 
-### 12.2 get_reader_variable Xi, Ai
+### 12.2 GetVariable(Xi, Ai, isReader: true) — Reader First Occurrence
 
+**Instruction**: `GetVariable(Xi, Ai, isReader: true)` (V2 unified)
 **Operation**: Load argument into clause reader variable (first occurrence)
 
-**Syntax**: `get_reader_variable Xi, Ai`
+**Syntax**: `GetVariable(Xi, Ai, isReader: true)`
 - `Xi`: Clause variable register index
 - `Ai`: Argument slot containing goal argument
+- `isReader: true`: Reader mode
 
 **Behavior**: Implements mode conversion when needed, creating fresh variables for writer-to-reader conversion.
 
@@ -958,13 +979,15 @@ Known terms create a fresh variable bound to the term value.
 
 ---
 
-### 12.3 get_writer_value Xi, Ai
+### 12.3 GetValue(Xi, Ai, isReader: false) — Writer Subsequent Occurrence
 
+**Instruction**: `GetValue(Xi, Ai, isReader: false)` (V2 unified)
 **Operation**: Unify argument with clause writer variable (subsequent occurrence)
 
-**Syntax**: `get_writer_value Xi, Ai`
+**Syntax**: `GetValue(Xi, Ai, isReader: false)`
 - `Xi`: Clause variable register index
 - `Ai`: Argument slot containing goal argument
+- `isReader: false`: Writer mode
 
 **Precondition**: Variable Xi was previously loaded by GetWriterVariable or GetReaderVariable
 
@@ -1027,13 +1050,15 @@ If arg.isReader:
 
 ---
 
-### 12.4 get_reader_value Xi, Ai
+### 12.4 GetValue(Xi, Ai, isReader: true) — Reader Subsequent Occurrence
 
+**Instruction**: `GetValue(Xi, Ai, isReader: true)` (V2 unified)
 **Operation**: Unify argument with clause reader variable (subsequent occurrence)
 
-**Syntax**: `get_reader_value Xi, Ai`
+**Syntax**: `GetValue(Xi, Ai, isReader: true)`
 - `Xi`: Clause variable register index
 - `Ai`: Argument slot containing goal argument
+- `isReader: true`: Reader mode
 
 **Precondition**: Variable Xi was previously loaded by GetReaderVariable
 
@@ -1134,13 +1159,16 @@ PC 3: Commit
 
 ---
 
-### 12.8 Deprecation Notice
+### 12.8 Removed V1 Opcodes (v2.16.2)
 
-The following opcodes are DEPRECATED and should not be used in new code:
-- `GetVariable` - replaced by GetWriterVariable/GetReaderVariable
-- `GetValue` - replaced by GetWriterValue/GetReaderValue
+**REMOVED**: The following separate writer/reader opcodes no longer exist:
+- `GetWriterVariable`, `GetReaderVariable` - replaced by unified `GetVariable(varIndex, argSlot, isReader: bool)`
+- `GetWriterValue`, `GetReaderValue` - replaced by unified `GetValue(varIndex, argSlot, isReader: bool)`
+- `SetWriter`, `SetReader` - replaced by unified `SetVariable(varIndex, isReader: bool)`
+- `PutWriter`, `PutReader` - replaced by unified `PutVariable(varIndex, argSlot, isReader: bool)`
+- `UnifyWriter`, `UnifyReader` - replaced by unified `UnifyVariable(varIndex, isReader: bool)`
 
-For backward compatibility, treat deprecated opcodes as writer-mode variants.
+The unified V2 opcodes use an `isReader` flag to distinguish writer vs reader mode, reducing the instruction set while maintaining full functionality.
 
 ---
 
@@ -1158,25 +1186,24 @@ For backward compatibility, treat deprecated opcodes as writer-mode variants.
 
 ---
 
-## 13. System Instructions (Deprecated)
+## 13. Legacy Opcodes
 
-### 13.1 get_variable Xi, Ai
-**Status**: DEPRECATED - Use get_writer_variable instead
-**Operation**: Load argument into register
-**Behavior**:
-- Copy value from Ai to Xi
-- First occurrence of variable in clause head
-- When used during **head matching**, this records a **tentative association** in **σ̂w** (no heap mutation)
+### 13.1 Legacy Get Instructions (REMOVED in v2.16.2)
 
-### 13.2 get_value Xi, Ai
-**Status**: DEPRECATED - Use get_writer_value instead
-**Operation**: Unify argument with register
-**Behavior**:
-- Perform writer MGU between Xi and Ai
-- Subsequent occurrence of variable
-- When used during **head matching**, this computes a **tentative writer MGU** and updates **σ̂w** (no heap mutation)
+The following opcodes have been **REMOVED** and are no longer supported:
 
-### 13.3 set Xi
+| Removed Opcode | Replaced By |
+|----------------|-------------|
+| `get_variable Xi, Ai` (2-arg) | `GetVariable(Xi, Ai, isReader: false)` |
+| `get_value Xi, Ai` (2-arg) | `GetValue(Xi, Ai, isReader: false)` |
+| `get_writer_variable Xi, Ai` | `GetVariable(Xi, Ai, isReader: false)` |
+| `get_reader_variable Xi, Ai` | `GetVariable(Xi, Ai, isReader: true)` |
+| `get_writer_value Xi, Ai` | `GetValue(Xi, Ai, isReader: false)` |
+| `get_reader_value Xi, Ai` | `GetValue(Xi, Ai, isReader: true)` |
+
+All Get* operations now use the unified V2 `GetVariable` and `GetValue` opcodes with an explicit `isReader` flag.
+
+### 13.2 set Xi
 **Status**: NOT IMPLEMENTED - reserved for future optimization
 **Operation**: Initialize argument position
 **Behavior**:
