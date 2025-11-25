@@ -517,6 +517,11 @@ run_test "Meta: run(multiply(3,[1,2,3,4],Ys))" \
     "run(multiply(3, [1,2,3,4], Ys))." \
     "Ys = \\[3, 6, 9, 12\\]"
 
+run_test "Meta: run(sum([1,2,3,4,5],S))" \
+    "sum_list.glp" \
+    "run(sum([1,2,3,4,5], S))." \
+    "S = 15"
+
 # ============================================
 # FUTURE TESTS
 # ============================================
@@ -546,18 +551,12 @@ run_future_test "Primes up to 20" \
     "Ps = [2, 3, 5, 7, 11, 13, 17, 19]" \
     "needs mod operator in parser"
 
-# Accumulator pattern: reduce returns true but doesn't unify Acc with result
-run_future_test "Meta: run(sum([1,2,3,4,5],S))" \
-    "sum_list.glp" \
-    "run(sum([1,2,3,4,5], S))." \
-    "S = 15" \
-    "accumulator head unification"
-
+# Accumulator pattern: needs arg reorder like sum_list
 run_future_test "Meta: run(ip([1,2,3],[4,5,6],S))" \
     "inner_product.glp" \
     "run(ip([1,2,3], [4,5,6], S))." \
     "S = 32" \
-    "accumulator head unification"
+    "needs arg reorder fix"
 
 run_future_test "Meta: run(hanoi(2,a,c,M))" \
     "hanoi.glp" \
