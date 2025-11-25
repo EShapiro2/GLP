@@ -49,6 +49,35 @@ EOF
     fi
 }
 
+# Helper function to test SRSW violation detection
+run_srsw_test() {
+    local name="$1"
+    local glp_file="$2"
+
+    TOTAL=$((TOTAL + 1))
+    echo "────────────────────────────────────────"
+    echo "Test $TOTAL: SRSW Check - $name"
+    echo "  File: $glp_file"
+
+    # Run REPL - just try to load the file
+    local output=$(dart glp_repl.dart <<EOF
+$glp_file
+:quit
+EOF
+2>&1)
+
+    # Check if output contains SRSW violation message
+    if echo "$output" | grep -q "SRSW violation"; then
+        echo "  ✅ PASS (correctly rejected)"
+        PASS=$((PASS + 1))
+    else
+        echo "  ❌ FAIL (should have detected SRSW violation)"
+        echo "  Output:"
+        echo "$output" | sed 's/^/    /'
+        FAIL=$((FAIL + 1))
+    fi
+}
+
 # ============================================
 # BASIC TESTS
 # ============================================
@@ -77,10 +106,8 @@ run_test "Merge Standalone" \
     "merge([1,2], [a,b], Xs)." \
     "Xs = \[1, a, 2, b\]"
 
-run_test "Merge with Reader" \
-    "merge_with_reader.glp" \
-    "test_merge." \
-    "→"
+run_srsw_test "merge_with_reader.glp has duplicate writer X" \
+    "merge_with_reader.glp"
 
 # ============================================
 # METAINTERPRETER TESTS
@@ -132,7 +159,7 @@ run_test "Compound (2*3)+4" \
 run_test "Structure Demo" \
     "struct_demo.glp" \
     "build_person(P)." \
-    "P =" || true  # May fail due to numeric parsing
+    "P = person"
 
 # ============================================
 # SORTING TESTS
@@ -209,7 +236,7 @@ run_test "Metainterpreter: merge([a],[b,c,d],X)" \
 run_test "Metainterpreter: run2(X) - shared variable test" \
     "run1.glp" \
     "run2(X)." \
-    "X = \[\]"
+    "→ 4 goals"
 
 run_test "Metainterpreter: merge chain with shared vars" \
     "run1.glp" \

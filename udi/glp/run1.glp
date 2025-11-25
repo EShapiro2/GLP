@@ -26,8 +26,7 @@ run7(Ys?) :- run(merge(f(a),[],Ys)).
 
 run8(Ys?) :- run(merge(a,[],Ys)).
 
-run9(Ys?) :- run(merge(a,[])).
-
+% run9 removed - SRSW violation (Ys has no writer)
 
 runA(X?) :- merge([],[],X).
 
@@ -35,9 +34,9 @@ merge([],[],[]).
 
 
 
-run999(Ys?) :- p(a([b])).
+% run999 removed - SRSW violation (Ys has no writer)
 
-p(X).
+p(_).
 
 
 % clause.glp - Clause database for metainterpreter
