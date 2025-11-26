@@ -1,0 +1,25 @@
+% Test for observe/3
+%
+% observe(Xs, Y, Z) - creates two copies Y and Z of stream Xs
+
+% Simplified observe - only handles lists
+% Uses ground guard to allow multiple reads of X
+observe(Xs?, Y?, Z?) :- observe_list(Xs, Y, Z).
+
+observe_list([], [], []).
+observe_list([X|Xs], [Y?|Ys?], [Z?|Zs?]) :-
+    ground(X) |
+    Y := X?, Z := X?,
+    observe_list(Xs?, Ys, Zs).
+
+% Test: observe a ground list
+% Query: test_ground(A, B).
+% Expected: A = [1,2,3], B = [1,2,3]
+test_ground(A?, B?) :-
+    observe([1,2,3], A, B).
+
+% Test: observe with shared variable (incremental)
+% Query: test_incremental(Xs, A, B).
+% Then bind Xs = [a,b,c] and see A and B get same values
+test_incremental(Xs?, A?, B?) :-
+    observe(Xs, A, B).

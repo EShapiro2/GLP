@@ -3,6 +3,21 @@
 % Core stream operations used by agents and actors.
 
 % ============================================================================
+% observe/3 - Stream observation (Program 14 from paper, SRSW-fixed)
+% ============================================================================
+% observe(Xs, Y, Z) - creates two copies Y and Z of stream Xs
+% Both copies receive the same elements as Xs.
+%
+% Note: Clause 1 fixed from paper - Z? in head for SRSW compliance.
+
+observe(X?, Y, Z?) :- observe(Y?, X, Z).
+observe(X, X?, X?) :- ground(X) | true.
+observe(Xs, [Y1?|Ys1?], [Y2?|Ys2?]) :-
+    Xs? = [X|Xs1] |
+    observe(X?, Y1, Y2),
+    observe(Xs1?, Ys1, Ys2).
+
+% ============================================================================
 % merge/3 - Fair stream merger (Program 1 from paper)
 % ============================================================================
 % Merges two input streams into one output stream, alternating fairly.
