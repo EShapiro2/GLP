@@ -86,6 +86,10 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('round_kernel', 2, roundKernel);
   registry.register('floor_kernel', 2, floorKernel);
   registry.register('ceil_kernel', 2, ceilKernel);
+
+  // Tuple/List manipulation
+  registry.register('tuple_to_list', 2, tupleToListKernel);
+  registry.register('list_to_tuple', 2, listToTupleKernel);
 }
 
 /// Helper to get numeric value from argument (with arithmetic evaluation)
@@ -398,4 +402,113 @@ BodyKernelResult ceilKernel(GlpRuntime rt, List<Object?> args) {
   final x = _getNum(rt, args[0]);
   if (x == null) return BodyKernelResult.abort;
   return _bindResult(rt, args[1], x.ceil());
+}
+
+// ============================================================================
+// TUPLE/LIST MANIPULATION KERNELS
+// ============================================================================
+
+/// Helper to dereference a term (follow VarRefs to get actual value)
+Object? _deref(GlpRuntime rt, Object? term) {
+  while (term is VarRef) {
+    final val = rt.heap.getValue(term.varId);
+    if (val == null) return term; // Unbound - return the VarRef
+    term = val;
+  }
+  return term;
+}
+
+/// tuple_to_list(T, L) - Convert tuple to list [functor, arg1, arg2, ...]
+/// Precondition: T must be a bound tuple (checked by guard)
+BodyKernelResult tupleToListKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] tuple_to_list/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final tupleArg = _deref(rt, args[0]);
+
+  // Tuple must be a StructTerm (not a list)
+  if (tupleArg is! StructTerm || tupleArg.functor == '.') {
+    print('[ABORT] tuple_to_list/2: first argument must be a tuple');
+    return BodyKernelResult.abort;
+  }
+
+  // Build the list: [functor, arg1, arg2, ...]
+  // We need to build it as a proper GLP list structure
+  // Lists in GLP are StructTerm('.', [head, tail]) with '[]' as empty list
+  Term result = ConstTerm('[]'); // Start with empty list
+
+  // Add arguments in reverse order (building from the end)
+  for (var i = tupleArg.args.length - 1; i >= 0; i--) {
+    result = StructTerm('.', [tupleArg.args[i], result]);
+  }
+
+  // Add the functor at the front
+  result = StructTerm('.', [ConstTerm(tupleArg.functor), result]);
+
+  return _bindResult(rt, args[1], result);
+}
+
+/// list_to_tuple(L, T) - Construct tuple from list [functor, arg1, arg2, ...]
+/// Precondition: L must be a complete list (checked by guard)
+BodyKernelResult listToTupleKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] list_to_tuple/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  // Convert GLP list to Dart list
+  final listElems = <Object?>[];
+  var current = _deref(rt, args[0]);
+
+  while (true) {
+    // Check for empty list (end)
+    if (current is String && current == '[]') break;
+    if (current is ConstTerm && current.value == '[]') break;
+
+    // List cell
+    if (current is StructTerm && current.functor == '.' && current.args.length == 2) {
+      listElems.add(_deref(rt, current.args[0]));
+      current = _deref(rt, current.args[1]);
+      continue;
+    }
+
+    // Not a proper list
+    print('[ABORT] list_to_tuple/2: first argument must be a complete list');
+    return BodyKernelResult.abort;
+  }
+
+  // Need at least functor
+  if (listElems.isEmpty) {
+    print('[ABORT] list_to_tuple/2: list must have at least one element (functor)');
+    return BodyKernelResult.abort;
+  }
+
+  // First element must be an atom (functor)
+  final functorElem = listElems[0];
+  String functor;
+  if (functorElem is String) {
+    functor = functorElem;
+  } else if (functorElem is ConstTerm && functorElem.value is String) {
+    functor = functorElem.value as String;
+  } else {
+    print('[ABORT] list_to_tuple/2: first element must be an atom (functor)');
+    return BodyKernelResult.abort;
+  }
+
+  // Build the tuple
+  final tupleArgs = listElems.skip(1).map((e) {
+    if (e is Term) return e;
+    return ConstTerm(e);
+  }).toList();
+
+  // Must have at least one argument (otherwise it's just an atom, not a tuple)
+  if (tupleArgs.isEmpty) {
+    // For atoms, just return the functor itself
+    return _bindResult(rt, args[1], functor);
+  }
+
+  final result = StructTerm(functor, tupleArgs.cast<Term>());
+  return _bindResult(rt, args[1], result);
 }

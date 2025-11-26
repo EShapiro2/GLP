@@ -3311,6 +3311,38 @@ class BytecodeRunner {
     }
   }
 
+  /// Check if a term is a complete (proper) list
+  /// A complete list is either [] or [H|T] where T is a complete list
+  static bool _isCompleteList(Object? term, RunnerContext cx) {
+    var current = term;
+    while (true) {
+      // Dereference VarRefs
+      if (current is VarRef) {
+        final val = cx.rt.heap.getValue(current.varId);
+        if (val == null) {
+          // Unbound variable - not a complete list (would suspend in guard)
+          return false;
+        }
+        current = val;
+        continue;
+      }
+
+      // Empty list is complete
+      if (current is String && current == '[]') return true;
+      if (current is ConstTerm && current.value == '[]') return true;
+      if (current is List && current.isEmpty) return true;
+
+      // List cell - check tail recursively
+      if (current is StructTerm && current.functor == '.' && current.args.length == 2) {
+        current = current.args[1];
+        continue;
+      }
+
+      // Anything else is not a complete list
+      return false;
+    }
+  }
+
   /// Evaluate a guard predicate with ground arguments
   static GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerContext cx) {
     // Extract values from any remaining ConstTerms
@@ -3471,6 +3503,29 @@ class BytecodeRunner {
         if (args.isEmpty) return GuardResult.failure;
         final val = getValue(args[0]);
         return (val is num) ? GuardResult.success : GuardResult.failure;
+
+      case 'tuple':
+        // Test if argument is a compound term (tuple), not atom, number, or list
+        if (args.isEmpty) return GuardResult.failure;
+        final val = getValue(args[0]);
+        // A tuple is a StructTerm that is NOT a list (functor '.')
+        if (val is StructTerm && val.functor != '.') {
+          return GuardResult.success;
+        }
+        return GuardResult.failure;
+
+      case 'list':
+        // Test if argument is a complete (proper) list
+        if (args.isEmpty) return GuardResult.failure;
+        return _isCompleteList(args[0], cx) ? GuardResult.success : GuardResult.failure;
+
+      case 'atom':
+        // Test if argument is an atom (non-numeric constant)
+        if (args.isEmpty) return GuardResult.failure;
+        final val = getValue(args[0]);
+        if (val is String) return GuardResult.success;
+        if (val is ConstTerm && val.value is String) return GuardResult.success;
+        return GuardResult.failure;
 
       case 'writer':
         // Per spec 19.4.5: Test if Xi is an unbound writer

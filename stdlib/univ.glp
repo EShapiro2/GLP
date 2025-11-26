@@ -1,0 +1,20 @@
+% GLP System Predicate: =.. (univ)
+% Bidirectional conversion between tuples and lists
+% This is a system predicate with special access to body kernel predicates
+% File: stdlib/univ.glp
+% Loaded at runtime with grantBodyKernelAccess: true
+
+% ============================================================================
+% UNIV - TUPLE/LIST CONVERSION
+% ============================================================================
+
+% Clause 1: Decompose - Tuple is bound
+% foo(a,b,c) =.. L  ->  L = [foo, a, b, c]
+T? =.. L? :- tuple(T?) | tuple_to_list(T?, L).
+
+% Clause 2: Compose - List is bound
+% T =.. [bar, 1, 2]  ->  T = bar(1, 2)
+T? =.. L? :- list(L?) | list_to_tuple(L?, T).
+
+% Note: If both T and L are unbound, both clauses suspend.
+% This is correct behavior - we need at least one bound argument.
