@@ -25,8 +25,19 @@ dart --version
 ### FCP Reference Repository
 The FCP (Flat Concurrent Prolog) implementation is available for reference:
 - **GitHub**: https://github.com/EShapiro2/FCP
-- **Local mount** (if available): Check `/mnt/user/FCP` or ask user to mount
+- **Local path**: `/tmp/FCP` (after cloning)
 - **Paper**: `/home/user/GLP/docs/1-s2.0-0743106689900113-main.pdf`
+
+**Clone FCP at session start:**
+```bash
+# Check if FCP exists, clone if not
+ls /tmp/FCP 2>/dev/null || git clone --depth 1 https://github.com/EShapiro2/FCP.git /tmp/FCP
+```
+
+**Key FCP source locations:**
+- `Savannah/Logix/utils.cp` - utility predicates (tuple_to_dlist, list_to_tuple, etc.)
+- `Savannah/Logix/stream.cp` - stream utilities
+- `Savannah/Logix/EMULATOR/` - C emulator source
 
 ## Core Rules
 
