@@ -680,6 +680,7 @@ When the user says `#remember <something>`, add that information to this CLAUDE.
 3. **Always run BOTH test suites** - unit tests AND REPL tests
 4. **Don't modify code without checking the spec first**
 5. **Don't push to main** - only push to your claude branch
+6. **Use small test cases for normal testing** - for recursive tests (hanoi, fib, etc.) use small inputs; reserve large inputs for extensive testing
 
 ### Metainterpreter Pattern
 
