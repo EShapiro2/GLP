@@ -1,0 +1,28 @@
+% Play 01: Cold Call - Main Test Harness
+%
+% Sets up:
+%   - Network switch connecting alice and bob
+%   - Alice's agent and actor
+%   - Bob's agent and actor
+%
+% Run with: test.
+
+test :-
+    % Create network channels (network side)
+    new_channel(NetChA, ANetCh),
+    new_channel(NetChB, BNetCh),
+
+    % Create user channels (actor side)
+    new_channel(UserChA, AUserCh),
+    new_channel(UserChB, BUserCh),
+
+    % Start network switch
+    network((alice, NetChA?), (bob, NetChB?)),
+
+    % Start agents
+    agent(alice, AUserCh?, ANetCh?),
+    agent(bob, BUserCh?, BNetCh?),
+
+    % Start actors
+    alice_actor(UserChA?),
+    bob_actor(UserChB?).

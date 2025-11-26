@@ -1,0 +1,17 @@
+% Alice's Actor for Play 01: Cold Call
+%
+% Script:
+%   1. Say to agent: connect(bob)
+%   2. After seeing response(accept(_)): say send(bob, hello)
+%   3. Done
+
+% Step 1: Initiate connection to bob
+alice_actor(ch(In, [msg(user, alice, connect(bob))|Out?])) :-
+    alice_wait_response(In?, Out).
+
+% Step 2: After response, send hello
+alice_wait_response([msg(agent, user, response(_))|In], [msg(user, alice, send(bob, hello))|Out?]) :-
+    alice_done(In?, Out).
+
+% Step 3: Done
+alice_done(_, []).

@@ -1,0 +1,15 @@
+% Bob's Actor for Play 01: Cold Call
+%
+% Script:
+%   1. After seeing befriend(alice, Resp): say decision(yes, alice, Resp)
+%   2. After seeing msg(alice, hello): done
+
+% Step 1: Wait for befriend request, accept it
+bob_actor(ch(In, Out)) :-
+    bob_wait_befriend(In?, Out?).
+
+bob_wait_befriend([msg(agent, user, befriend(alice, Resp))|In], [msg(user, bob, decision(yes, alice, Resp?))|Out?]) :-
+    bob_wait_hello(In?, Out).
+
+% Step 2: Wait for hello message, then done
+bob_wait_hello([msg(alice, hello)|_], []).
