@@ -1,0 +1,29 @@
+% Network Switch for 2 Agents
+%
+% Based on Program 12 (3-Way Network Switch) from GLP 2025 paper,
+% simplified to 2 agents.
+%
+% Routes msg(Target, Content) messages between agents P and Q.
+% The network holds paired channels to each agent.
+%
+% Initialization:
+%   new_channel(ChP, AgentP_NetCh),  % P's network channel
+%   new_channel(ChQ, AgentQ_NetCh),  % Q's network channel
+%   network((p, ChP?), (q, ChQ?))
+
+% --- P to Q forwarding ---
+network((P, ChP), (Q, ChQ)) :-
+    receive(Msg?, ChP?, ChP1),
+    Msg = msg(Q, X) |
+    send(X?, ChQ?, ChQ1),
+    network((P?, ChP1?), (Q?, ChQ1?)).
+
+% --- Q to P forwarding ---
+network((P, ChP), (Q, ChQ)) :-
+    receive(Msg?, ChQ?, ChQ1),
+    Msg = msg(P, X) |
+    send(X?, ChP?, ChP1),
+    network((P?, ChP1?), (Q?, ChQ1?)).
+
+% --- Termination (both input streams closed) ---
+network((_, ch([], _)), (_, ch([], _))).
