@@ -3,13 +3,13 @@
 % observe(Xs, Y, Z) - creates two copies Y and Z of stream Xs
 
 % Simplified observe - only handles lists
-% Uses ground guard to allow multiple reads of X
+% Uses ground(X?) guard to allow multiple reads of X?
+% Note: We require reader form ground(X?) - stricter than paper
 observe(Xs?, Y?, Z?) :- observe_list(Xs, Y, Z).
 
 observe_list([], [], []).
-observe_list([X|Xs], [Y?|Ys?], [Z?|Zs?]) :-
-    ground(X) |
-    Y := X?, Z := X?,
+observe_list([X|Xs], [X?|Ys?], [X?|Zs?]) :-
+    ground(X?) |
     observe_list(Xs?, Ys, Zs).
 
 % Test: observe a ground list

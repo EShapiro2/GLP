@@ -241,11 +241,12 @@ class Analyzer {
   }
 
   void _analyzeGuard(Guard guard, VariableTable varTable) {
-    // Special handling for ground/1 and known/1
+    // Special handling for ground/1 - REQUIRES reader form ground(X?)
+    // This is stricter than the paper but good discipline
     if (guard.predicate == 'ground' && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm && arg.isReader) {
-        // ground(X?) allows multiple reader occurrences
+        // ground(X?) allows multiple reader occurrences of X? in clause
         varTable.markGrounded(arg.name);
       }
     }
@@ -256,7 +257,7 @@ class Analyzer {
     if (typeCheckOps.contains(guard.predicate) && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm) {
-        // Mark the writer as grounded (readers of X are allowed multiple times)
+        // Mark the variable as grounded (readers of X are allowed multiple times)
         varTable.markGrounded(arg.name);
       }
     }
@@ -268,16 +269,14 @@ class Analyzer {
     if (comparisonOps.contains(guard.predicate) && guard.args.length == 2) {
       for (final arg in guard.args) {
         if (arg is VarTerm) {
-          // Mark the writer as grounded (readers of X are allowed multiple times)
+          // Mark the variable as grounded (readers of X are allowed multiple times)
           varTable.markGrounded(arg.name);
         }
       }
     }
 
-    // Analyze guard arguments
-    for (final arg in guard.args) {
-      _analyzeTerm(arg, varTable);
-    }
+    // Guard arguments are tests, not uses - don't count toward SRSW violations
+    // (Guards read variables to test conditions, they don't consume or produce bindings)
   }
 
   void _analyzeTerm(Term term, VariableTable varTable) {
