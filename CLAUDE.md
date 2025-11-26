@@ -632,6 +632,9 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - i want  dart run glp_repl.dart  please remember that
 - always test all repl tests after a change
 - NEVER work not following precisely the spec
+- when there is a design decision or design change, discuss before going forward with your own decision
+- when you see a bug, stop and discuss how to fix it, not bypass it
+- when discussing, stay on topic until discussion is over. don't offer to change topic. don't change topic. don't resume implementation
 
 ## #remember Directive
 
