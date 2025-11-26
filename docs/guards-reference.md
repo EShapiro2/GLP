@@ -99,7 +99,7 @@ Per the formal definition, variables occur as reader/writer pairs with exactly o
 
 ### The Rule
 
-When a guard ensures a variable is ground (contains no unbound variables), that variable may appear **multiple times as a reader** in the clause body without violating SRSW. This is fundamental to GLP's concurrent programming model.
+The restriction to a single reader `X?` per clause is relaxed when `X?` occurs in a guard that ensures `X?` is ground, such as `ground(X?)`, `integer(X?)`, `number(X?)`, or arithmetic comparisons like `X? > Y?`.
 
 ### Why This Works
 
@@ -109,16 +109,16 @@ Ground terms contain no unbound writers. Multiple readers of a ground term do no
 
 | Guard | Implies Ground | Allows Multiple Readers |
 |-------|----------------|-------------------------|
-| ✅ `ground(X)` | Yes | ✅ Yes |
-| ⏳ `integer(X)` | Yes (when implemented) | ✅ Yes |
-| ⏳ `number(X)` | Yes (when implemented) | ✅ Yes |
-| 📝 `X < Y` | Yes (both operands, when succeeds) | ✅ Yes |
-| 📝 `X =< Y` | Yes (both operands, when succeeds) | ✅ Yes |
-| 📝 `X > Y` | Yes (both operands, when succeeds) | ✅ Yes |
-| 📝 `X >= Y` | Yes (both operands, when succeeds) | ✅ Yes |
-| 📝 `X =:= Y` | Yes (both operands, when succeeds) | ✅ Yes |
-| 📝 `X =\= Y` | Yes (both operands, when succeeds) | ✅ Yes |
-| ✅ `known(X)` | **NO** | ❌ No |
+| ✅ `ground(X?)` | Yes | ✅ Yes |
+| ⏳ `integer(X?)` | Yes (when implemented) | ✅ Yes |
+| ⏳ `number(X?)` | Yes (when implemented) | ✅ Yes |
+| 📝 `X? < Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| 📝 `X? =< Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| 📝 `X? > Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| 📝 `X? >= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| 📝 `X? =:= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| 📝 `X? =\= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| ✅ `known(X?)` | **NO** | ❌ No |
 | ✅ `otherwise` | No | ❌ No |
 
 **Note**: Arithmetic comparison guards suspend if operands are unbound and only succeed if both operands are bound to numbers. Therefore, when they succeed, both operands are guaranteed to be ground.
