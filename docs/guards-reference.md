@@ -56,8 +56,12 @@ echo(Input, Output) :- known(Input) | Output = Input?.
 
 ---
 
-### ✅ `ground(X)`
+### ✅ `ground(X?)`
 **Test if X contains no unbound variables**
+
+**IMPORTANT: Must use reader form `ground(X?)`, not writer form `ground(X)`.**
+
+This is stricter than the GLP 2025 paper, which allows either form. We require reader form as a discipline to ensure the variable is being read, not written.
 
 **Semantics**:
 - Success: X is ground (no unbound variables anywhere)
@@ -67,10 +71,10 @@ echo(Input, Output) :- known(Input) | Output = Input?.
 **Example**:
 ```prolog
 % Enable multiple reader occurrences
-replicate(X, [X?, X?, X?]) :- ground(X) | true.
+replicate(X, [X?, X?, X?]) :- ground(X?) | true.
 ```
 
-**Key Property**: With `ground(X)` guard, multiple occurrences of `X?` in the body don't violate single-writer, as ground terms don't expose writers.
+**Key Property**: With `ground(X?)` guard, multiple occurrences of `X?` in the body don't violate single-writer, as ground terms don't expose writers.
 
 ---
 
@@ -129,13 +133,13 @@ Ground terms contain no unbound writers. Multiple readers of a ground term do no
 
 ```prolog
 % ✅ Broadcasting with ground guard
-broadcast(Msg, Out1, Out2, Out3) :- ground(Msg) |
+broadcast(Msg, Out1, Out2, Out3) :- ground(Msg?) |
     send(Msg?, Out1),    % Msg? appears 3 times - OK!
     send(Msg?, Out2),
     send(Msg?, Out3).
 
 % ✅ Multiple computations with ground value
-compute_twice(X, Y1, Y2) :- ground(X) |
+compute_twice(X, Y1, Y2) :- ground(X?) |
     execute('evaluate', [X? + 1, Y1]),   % X? appears twice - OK!
     execute('evaluate', [X? * 2, Y2]).
 
