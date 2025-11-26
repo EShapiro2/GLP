@@ -275,8 +275,12 @@ class Analyzer {
       }
     }
 
-    // Guard arguments are tests, not uses - don't count toward SRSW violations
-    // (Guards read variables to test conditions, they don't consume or produce bindings)
+    // Analyze guard arguments to record reader/writer occurrences
+    // Guard arguments count as uses - they must satisfy SRSW
+    // (The grounding guards above mark variables as grounded, allowing multiple readers)
+    for (final arg in guard.args) {
+      _analyzeTerm(arg, varTable);
+    }
   }
 
   void _analyzeTerm(Term term, VariableTable varTable) {
