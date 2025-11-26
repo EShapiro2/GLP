@@ -1,0 +1,85 @@
+% Personal Agent for Grassroots Social Graph
+%
+% Based on Programs 5-8 from GLP 2025 paper.
+% Implements cold-call befriending protocol.
+
+% ============================================================================
+% Agent Initialization (Program 5)
+% ============================================================================
+% agent(Id, ChUser, ChNet) - Initialize agent with user and network channels
+%
+% Id: Agent's identity (public key, simplified to name for testing)
+% ChUser: Bidirectional channel to user (or Actor in tests)
+% ChNet: Bidirectional channel to network
+
+agent(Id, ChUser, ChNet) :-
+    ChUser = ch(UserIn, UserOut), ChNet = ch(NetIn, NetOut) |
+    merge(UserIn?, NetIn?, In),
+    social_graph(Id?, In?, [(user, UserOut), (net, NetOut)]).
+
+% ============================================================================
+% Social Graph Main Loop (Program 6)
+% ============================================================================
+
+% --- User initiates connection (cold call) ---
+social_graph(Id, [msg(user, Id, connect(Target))|In], Fs) :-
+    ground(Id), ground(Target) |
+    lookup_send(net, msg(Id, Target, intro(Id?, Id?, Resp)), Fs?, Fs1),
+    inject(Resp?, msg(Target, Id, response(Resp)), In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+% --- Receive cold-call introduction ---
+social_graph(Id, [msg(From, Id, intro(From, From, Resp))|In], Fs) :-
+    ground(Id) |
+    lookup_send(user, msg(agent, user, befriend(From?, Resp)), Fs?, Fs1),
+    social_graph(Id?, In?, Fs1?).
+
+% --- User decides on received introduction ---
+social_graph(Id, [msg(user, Id, decision(Dec, From, Resp?))|In], Fs) :-
+    ground(Id) |
+    bind_response(Dec?, From?, Resp, Fs?, Fs1, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+% --- Process response to our introduction ---
+social_graph(Id, [msg(From, Id, response(Resp))|In], Fs) :-
+    ground(Id) |
+    handle_response(Resp?, From?, Fs?, Fs1, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+% --- Forward application messages (pass-through) ---
+social_graph(Id, [msg(From, To, Content)|In], Fs) :-
+    ground(Id), otherwise |
+    % For now, just continue (application layer would handle this)
+    social_graph(Id?, In?, Fs?).
+
+% --- Empty input (termination) ---
+social_graph(_, [], _).
+
+% ============================================================================
+% Response Handling (Program 7)
+% ============================================================================
+
+% --- Accept: create channel and establish connection ---
+bind_response(yes, From, accept(FCh), Fs, Fs1, In, In1) :-
+    new_channel(ch(FIn, FOut), FCh) |
+    handle_response(accept(FCh?), From?, Fs?, Fs1, In?, In1).
+
+% --- Reject: bind response to no, no state change ---
+bind_response(no, _, no, Fs, Fs, In, In).
+
+% --- Handle accepted response (for both sent and received offers) ---
+handle_response(accept(ch(FIn, FOut)), From, Fs, [(From?, FOut?)|Fs?], In, In1) :-
+    tag_stream(From?, FIn?, Tagged),
+    merge(In?, Tagged?, In1).
+
+% --- Handle rejection ---
+handle_response(no, _, Fs, Fs, In, In).
+
+% ============================================================================
+% User messaging (simple send to friend)
+% ============================================================================
+
+social_graph(Id, [msg(user, Id, send(To, Content))|In], Fs) :-
+    ground(Id), ground(To) |
+    lookup_send(To, msg(Id?, To?, Content?), Fs?, Fs1),
+    social_graph(Id?, In?, Fs1?).

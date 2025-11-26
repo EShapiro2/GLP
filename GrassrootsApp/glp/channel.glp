@@ -1,0 +1,15 @@
+% Channel Operations (Program 9 from GLP 2025 paper)
+%
+% A channel is ch(In?, Out) where In? is the input stream reader
+% and Out is the output stream writer.
+%
+% These are defined as guard predicates (unit clauses) for use in clause heads.
+
+% send(X, OldCh, NewCh) - add message X to output stream
+send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+
+% receive(X, OldCh, NewCh) - remove message X from input stream
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
+
+% new_channel(Ch1, Ch2) - create paired channels with crossed streams
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).

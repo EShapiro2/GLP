@@ -1,0 +1,49 @@
+% Stream Utilities for GrassrootsApp
+%
+% Core stream operations used by agents and actors.
+
+% ============================================================================
+% merge/3 - Fair stream merger (Program 1 from paper)
+% ============================================================================
+% Merges two input streams into one output stream, alternating fairly.
+
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], [], []).
+
+% ============================================================================
+% tag_stream/3 - Tag messages with source identity (Program 11 from paper)
+% ============================================================================
+% Wraps each message M in msg(Name, M) to preserve source after merging.
+
+tag_stream(Name, [M|In], [msg(Name?, M?)|Out?]) :-
+    tag_stream(Name?, In?, Out).
+tag_stream(_, [], []).
+
+% ============================================================================
+% inject/4 - Deferred message insertion (from Program 6)
+% ============================================================================
+% inject(X, Y, InStream, OutStream)
+% When X becomes known, inserts Y into the stream.
+% Until then, passes messages through.
+
+inject(X, Y, Ys, [Y?|Ys?]) :- known(X) | true.
+inject(X, Y, [Y1|Ys], [Y1?|Ys1?]) :- unknown(X) | inject(X?, Y?, Ys?, Ys1).
+
+% ============================================================================
+% lookup/3 - Find entry in association list
+% ============================================================================
+% lookup(Key, List, Value) - finds (Key, Value) in List
+
+lookup(Key, [(Key, Value)|_], Value?) :- true.
+lookup(Key, [(K, _)|Rest], Value?) :- K =\= Key | lookup(Key?, Rest?, Value).
+
+% ============================================================================
+% lookup_send/4 - Send message to named destination
+% ============================================================================
+% lookup_send(Name, Msg, OldFs, NewFs)
+% Finds Name in friends list, sends Msg on their channel.
+
+lookup_send(Name, Msg, [(Name, Out)|Fs], [(Name, [Msg?|Out1?])|Fs?]) :- true.
+lookup_send(Name, Msg, [(N, Out)|Fs], [(N?, Out?)|Fs1?]) :-
+    N =\= Name | lookup_send(Name?, Msg?, Fs?, Fs1).
