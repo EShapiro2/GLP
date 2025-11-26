@@ -59,10 +59,6 @@ echo(Input, Output) :- known(Input) | Output = Input?.
 ### ✅ `ground(X?)`
 **Test if X contains no unbound variables**
 
-**IMPORTANT: Must use reader form `ground(X?)`, not writer form `ground(X)`.**
-
-This is stricter than the GLP 2025 paper, which allows either form. We require reader form as a discipline to ensure the variable is being read, not written.
-
 **Semantics**:
 - Success: X is ground (no unbound variables anywhere)
 - Suspend: X contains unbound readers
@@ -74,7 +70,7 @@ This is stricter than the GLP 2025 paper, which allows either form. We require r
 replicate(X, [X?, X?, X?]) :- ground(X?) | true.
 ```
 
-**Key Property**: With `ground(X?)` guard, multiple occurrences of `X?` in the body don't violate single-writer, as ground terms don't expose writers.
+**SRSW Relaxation**: The restriction to a single reader `X?` per clause is relaxed when `X?` occurs in a guard that ensures `X?` is ground, such as `ground(X?)`, `integer(X?)`, `number(X?)`, or arithmetic comparisons like `X? > Y?`.
 
 ---
 
