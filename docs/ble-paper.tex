@@ -1,17 +1,17 @@
 % \documentclass[sigconf,nonacm]{acmart}
 \documentclass[manuscript,screen,nonacm]{acmart}
 
-
 \usepackage{enumitem}
 \setlist[enumerate,1]{label=\arabic*.}
 \usepackage{siunitx}
-\usepackage{hyperref}  % optional, for clickable links
-\usepackage{cleveref}  % always load *after* hyperref
+\usepackage{hyperref}
+\usepackage{cleveref}
 \usepackage{graphicx}
 \usepackage{tabularx}
 \usepackage{float}
 \usepackage[table]{xcolor}
 \usepackage{tikz}
+\usepackage{bytefield}
 
 \newcommand{\mypara}[1]{\smallskip\noindent\textbf{#1.}}
 
@@ -25,75 +25,337 @@
 
 \title{Resilient Decentralized Communication for Grassroots Social Networks using BLE}
 
-% \author{Dan Bachar}
-% \affiliation{
-%   \institution{Technische Universit{\"a}t M{\"u}nchen \\ TUM Chair for Connected Mobility}
-%   \city{Munich}
-%   \country{Germany}
-% }
-% \email{dan.bachar@tum.de}
 \maketitle
 
-\mypara{Setup}
-We assume people with smartphones, each equipped with a keypair, unique whp. Public keys are public.
-We assume a social graph (SG), in which people know the public key of their friends and the friends of their friends.
-Furthermore, we assume that people use the last 128 bits of their public key as their Service UUID.  Thus, a person can know the Service UUID of their friends and their friends of friends.  Furthermore, we assume that smarphones aletrnate between advetising and scanning.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We assume people with smartphones, each equipped with a permanent keypair, unique with high probability. Public keys are public and never rotated.
+
+We assume a social graph (SG), in which people know the public key of their friends and their friends of friends. Furthermore, we assume that people use the last 128 bits of their public key as their BLE Service UUID. Thus, a person can compute the Service UUID of their friends and friends of friends. Smartphones alternate between advertising and scanning.
 
 We are interested in two scenarios:
 \begin{enumerate}
-    \item \textbf{Given SG:} Can people find their friends and friends of friends and establish connection, for the purpose of direct communication as well as forwading?
+    \item \textbf{Given SG:} Can people find their friends and friends of friends and establish connections, for the purpose of direct communication as well as forwarding?
     \item \textbf{Growing SG:} Can a person perform a ``cold call'' and introduce themselves to another person that is advertising, and establish a connection?
 \end{enumerate}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Goals}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Goal}
 \begin{enumerate}
-  \item Enable communication in first-contact between complete strangers $U,V$ (no common friends of degree $\le n$), pending mutual consent
-  \item Enable communication in first-contact between $n$-degree friends $U,V$: $U$ has common friends with $V$, or $U$ has friends who have common friends with friends of $V$ (someone can introduce)
-  \item Enable communication after first-contact between peers of friendship degree $\le n$ in physical proximity of each other
-    \item Given Social Graph (link topology) and a distance matrix, what is the most efficient way peers can communicate?
+  \item Enable communication in first-contact between complete strangers $U,V$ (no common friends of degree $\le 2$), pending mutual consent
+  \item Enable communication in first-contact between $n$-degree friends $U,V$ ($n \le 2$): $U$ has common friends with $V$, or $U$ has friends who have common friends with $V$ (introduction)
+  \item Enable communication after first-contact between peers of friendship degree $\le 2$ in physical proximity
+  \item Given the social graph topology and physical proximity, determine efficient routing for peer communication
 \end{enumerate}
 
-\section{Problem}
-\label{problem}
-\begin{enumerate}
-  \item What are the reliable delivery characteristics over BLE
-  \item How to build a resilient ephemeral overlay network topology by establishing links between BLE devices
-  \item \label{problem:privacy} Guarantee privacy and security of flood-based communication over BLE: direct clash with easier communication due to fingerprinting
-  \item Decipher who can relay messages for whom: how to define friends of friends? what is our $n$?
-\end{enumerate}
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Assumptions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \begin{enumerate}
-  \item All users have either Android or iPhone with BLE always enabled
-  \item $0 \le n \le 2$: we consider stragers, friends, and friends-of-friends
-  \item Users have an app installed that manages social graph using BLE communication
-  \item Users consent to share public keys and (hashed) friend lists over BLE
+  \item All users have Android or iPhone with BLE always enabled
+  \item $n \le 2$: we consider strangers, friends, and friends-of-friends
+  \item Users have an app installed that manages the social graph via BLE
+  \item Users consent to share public keys and (optionally) friend lists over BLE
   \item Users consent to store, carry, and forward messages for friends and friends-of-friends
+  \item Public keys are permanent and never rotated
 \end{enumerate}
 
-\section{Design}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Protocol Stack}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The protocol is a four-layer stack, following the BitChat architecture~\cite{bitchat}:
+
 \begin{enumerate}
-  \item Use BLE advertisements to advertise presence and willingness to communicate and relay for others: advertise PK (+handle) (+hashed friend list?)
-  \item GATT write/read (with response) to exchange messages (with delivery guarantees)
-  \item Pairing/trust request sent over BLE to establish trust (friendship)
-  \item Use a custom overlay on top of GATT to securely exchange messages using e2e encryption and bidirectional authentication
-  \item Implement a relay mechanism to forward messages through mutual friends
+  \item \textbf{Transport Layer:} BLE (advertisements, GATT read/write)
+  \item \textbf{Encryption Layer:} Noise Protocol Framework (\texttt{Noise\_XX\_25519\_ChaChaPoly\_SHA256})
+  \item \textbf{Session Layer:} Packet framing, TTL, fragmentation, routing
+  \item \textbf{Application Layer:} Messages, acknowledgments, friend requests
 \end{enumerate}
 
-\section{Approach}
-To address~\ref{problem}.~\ref{problem:privacy}, users can decide their openness to being befriended by others, and choose one of four privacy levels. Each level contains the previous level and adds a unique feature:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Cryptography}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Key Pairs}
+
+Each user generates two permanent key pairs on first launch:
+
 \begin{enumerate}
-    \item Do not share anything: user does not participate in the relay of SG blocks
-    \item Share PK: can relay SG blocks
-    \item Share name: can be befriended by strangers in close proximity
-    \item Share friends list: can be introduced to others not in close proximity
+  \item \textbf{Noise Static Key (Curve25519):} Used for Noise Protocol handshakes and encryption. The public key serves as the user's primary identity.
+  \item \textbf{Signing Key (Ed25519):} Used to sign announcements and protocol messages requiring non-repudiation.
 \end{enumerate}
-$P$ and $Q$ can become friends in one of the three ways:
+
+\subsection{Identifiers}
+
+\begin{itemize}
+  \item \textbf{Fingerprint:} \texttt{SHA256(NoiseStaticPublicKey)} --- full 256-bit hash for verification
+  \item \textbf{PeerID:} First 64 bits (8 bytes) of the fingerprint --- used for routing
+  \item \textbf{Service UUID:} Last 128 bits of the Noise static public key --- used for BLE discovery
+\end{itemize}
+
+\subsection{Noise Protocol}
+
+We use \texttt{Noise\_XX\_25519\_ChaChaPoly\_SHA256}:
+\begin{itemize}
+  \item \textbf{XX pattern:} Mutual authentication without prior key knowledge; keys exchanged during 3-message handshake
+  \item \textbf{Curve25519:} Diffie-Hellman function
+  \item \textbf{ChaCha20-Poly1305:} AEAD cipher
+  \item \textbf{SHA-256:} Hash function
+\end{itemize}
+
+The XX handshake provides:
+\begin{itemize}
+  \item Mutual authentication
+  \item Forward secrecy (ephemeral keys per session)
+  \item Identity hiding (static keys encrypted after first message)
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Privacy Levels}
+\label{sec:privacy}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Users choose one of four privacy levels. Each level includes all capabilities of previous levels:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|l|l|l|l|}
+\hline
+\textbf{Level} & \textbf{Name} & \textbf{Advertise?} & \textbf{Scan} & \textbf{Share} \\
+\hline
+1 & Silent & No & Friends only & Nothing \\
+2 & Visible & Yes & Friends only & PK only \\
+3 & Open & Yes & All & PK + Name \\
+4 & Social & Yes & All & PK + Name + Friends \\
+\hline
+\end{tabular}
+\caption{Privacy levels and their BLE behavior}
+\label{tab:privacy}
+\end{table}
+
+\mypara{Level 1 (Silent)}
+User does not advertise. Can scan for known friends' UUIDs and connect to them. Cannot be discovered by strangers. Does not relay messages.
+
+\mypara{Level 2 (Visible)}
+User advertises with their derived Service UUID. Can be discovered by friends who know their PK. Participates in message relay for friends and friends-of-friends.
+
+\mypara{Level 3 (Open)}
+User advertises and includes their display name. Scans for all BLE devices (not just friends). Can be befriended by strangers in close proximity via RSSI-based proximity check.
+
+\mypara{Level 4 (Social)}
+User shares their friend list (as a Bloom filter or truncated hashes) upon connection. Enables introductions: if $P$ and $Q$ share a friend $R$, then $R$ can introduce them even if $P$ and $Q$ have never been in proximity.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{BLE Transport}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Service UUID Derivation}
+
+Each user's BLE Service UUID is derived from their public key:
+\[
+\texttt{ServiceUUID} = \texttt{NoiseStaticPublicKey}[128..255]
+\]
+(Last 128 bits of the 256-bit Curve25519 public key)
+
+This enables:
+\begin{itemize}
+  \item Friends can scan specifically for known UUIDs
+  \item Strangers see unknown UUIDs (no metadata leakage beyond ``someone is here'')
+  \item No central registry needed
+\end{itemize}
+
+\subsection{GATT Service Structure}
+
+Each device exposes one GATT service with one characteristic:
+
+\begin{itemize}
+  \item \textbf{Service UUID:} Derived from user's PK (as above)
+  \item \textbf{Characteristic UUID:} Fixed: \texttt{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}
+  \item \textbf{Properties:} Read, Write, Notify
+\end{itemize}
+
+\subsection{Advertisement Data}
+
+BLE advertisements are limited to 31 bytes. Contents depend on privacy level:
+
+\begin{itemize}
+  \item \textbf{Level 1:} No advertisement
+  \item \textbf{Level 2:} Service UUID only (16 bytes)
+  \item \textbf{Level 3:} Service UUID + truncated name (up to 15 bytes)
+  \item \textbf{Level 4:} Same as Level 3 (friend list shared after connection)
+\end{itemize}
+
+\subsection{Scan/Advertise Duty Cycle}
+
+Devices alternate between advertising and scanning:
+\begin{itemize}
+  \item Advertise for $T_a$ seconds (e.g., 2s)
+  \item Scan for $T_s$ seconds (e.g., 5s)
+  \item Adaptive duty cycling based on battery level
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Packet Format}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+All protocol messages use a compact binary format optimized for BLE's limited MTU.
+
+\subsection{Header (14 bytes)}
+
+\begin{center}
+\begin{bytefield}[bitwidth=1.1em]{32}
+\bitheader{0-31} \\
+\bitbox{8}{Version} & \bitbox{8}{Type} & \bitbox{8}{TTL} & \bitbox{8}{Flags} \\
+\wordbox{2}{Timestamp (64 bits)} \\
+\bitbox{16}{Payload Length}
+\end{bytefield}
+\end{center}
+
+\subsection{Variable Fields}
+
+\begin{itemize}
+  \item \textbf{Sender ID} (8 bytes): Truncated fingerprint of sender
+  \item \textbf{Recipient ID} (8 bytes, optional): Present if \texttt{hasRecipient} flag set; \texttt{0xFFFFFFFFFFFFFFFF} for broadcast
+  \item \textbf{Payload} (variable): Message content
+  \item \textbf{Signature} (64 bytes, optional): Ed25519 signature if \texttt{hasSignature} flag set
+\end{itemize}
+
+\subsection{Flags}
+
+\begin{itemize}
+  \item Bit 0: \texttt{hasRecipient} --- directed message
+  \item Bit 1: \texttt{hasSignature} --- authenticated message
+  \item Bit 2: \texttt{isCompressed} --- zlib compression applied
+  \item Bit 3: \texttt{hasRoute} --- source routing info included
+  \item Bits 4--7: Reserved
+\end{itemize}
+
+\subsection{Message Types}
+
+\begin{tabular}{|c|l|l|}
+\hline
+\textbf{Type} & \textbf{Name} & \textbf{Description} \\
+\hline
+0x01 & \texttt{message} & Chat message \\
+0x02 & \texttt{deliveryAck} & Delivery acknowledgment \\
+0x03 & \texttt{readReceipt} & Read receipt \\
+0x10 & \texttt{noiseHandshakeInit} & Noise XX message 1 \\
+0x11 & \texttt{noiseHandshakeResp} & Noise XX message 2 \\
+0x12 & \texttt{noiseHandshakeFinal} & Noise XX message 3 \\
+0x20 & \texttt{friendRequest} & Friendship request \\
+0x21 & \texttt{friendAccept} & Friendship accepted \\
+0x22 & \texttt{friendReject} & Friendship rejected \\
+0x30 & \texttt{introduction} & Friend introduction \\
+0xF0 & \texttt{fragmentStart} & First fragment \\
+0xF1 & \texttt{fragmentContinue} & Middle fragment \\
+0xF2 & \texttt{fragmentEnd} & Last fragment \\
+\hline
+\end{tabular}
+
+\subsection{Padding}
+
+All packets are padded to fixed block sizes (256, 512, 1024, or 2048 bytes) to resist traffic analysis.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Routing and Relay}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{TTL-Based Flooding}
+
+Messages propagate via flooding with TTL limiting:
 \begin{enumerate}
-    \item Virtual handshakes in close proximity: $P$ and $Q$ use BLE advertisements to advertise their openness to making new friends; the advertisements contain their PKs, which they use as the primary correspondence address. When $P$ and $Q$ are sufficiently close to each other (detected through a sufficiently high RSSI), let them offer friendship to each other.
-    \item Introduction through a mutual friend: a mutual friend of $P$ and $Q$, $R$ can introduce them by sharing their registered PKs. We assume $P$ and $Q$ know in-band addresses of one another, and request the introduction from $R$.
-    \item Cold calling: $P$ knows an out-of-band address of $Q$, and sends $Q$ a Grassroots friendship request there, with $R$'s PK.
+  \item Sender sets initial TTL (default: 7)
+  \item Each relay decrements TTL
+  \item Packet dropped when TTL reaches 0
+  \item Bloom filter tracks seen packet IDs to prevent loops
 \end{enumerate}
+
+\subsection{Relay Policy by Privacy Level}
+
+\begin{itemize}
+  \item \textbf{Level 1:} Does not relay
+  \item \textbf{Levels 2--4:} Relay messages for friends and friends-of-friends
+\end{itemize}
+
+A user relays a message if:
+\begin{enumerate}
+  \item The sender is a friend, OR
+  \item The sender is a friend-of-friend (known via Level 4 friend list sharing), OR
+  \item The recipient is a friend or friend-of-friend
+\end{enumerate}
+
+\subsection{Delivery Acknowledgments}
+
+When a private message reaches its destination:
+\begin{enumerate}
+  \item Recipient sends \texttt{deliveryAck} back to sender
+  \item If no ack received within timeout, sender retries
+  \item Exponential backoff: 2s, 4s, 8s, 16s
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Friendship Establishment}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+$P$ and $Q$ can become friends in three ways:
+
+\subsection{Proximity Handshake (Level 3+)}
+
+\begin{enumerate}
+  \item $P$ and $Q$ discover each other via BLE scanning
+  \item If RSSI $\ge$ threshold (close proximity), prompt user
+  \item $P$ sends \texttt{friendRequest} with signed PK
+  \item $Q$ accepts or rejects
+  \item On accept, both store each other's PK in their friend list
+\end{enumerate}
+
+\subsection{Introduction (Level 4)}
+
+\begin{enumerate}
+  \item $P$ knows $R$; $Q$ knows $R$; $P$ and $Q$ don't know each other
+  \item $P$ asks $R$ to introduce them to $Q$
+  \item $R$ sends \texttt{introduction} packet to $Q$ containing $P$'s PK
+  \item $Q$ decides whether to accept $P$ as a friend
+\end{enumerate}
+
+\subsection{Cold Call (Out-of-Band)}
+
+\begin{enumerate}
+  \item $P$ obtains $Q$'s PK via out-of-band channel (QR code, website, etc.)
+  \item $P$ adds $Q$ as a friend locally
+  \item When $P$ and $Q$ are in BLE range, $P$ can connect to $Q$'s UUID
+  \item $P$ sends \texttt{friendRequest}; $Q$ decides to accept or reject
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Security Considerations}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{itemize}
+  \item \textbf{Replay attacks:} Noise transport messages include incrementing nonces; sliding window replay protection
+  \item \textbf{Denial of service:} Rate limiting on handshake attempts per peer
+  \item \textbf{Man-in-the-middle:} XX pattern authenticates both parties; users should verify fingerprints out-of-band for high-security contacts
+  \item \textbf{Traffic analysis:} Fixed-size padding obscures message lengths
+  \item \textbf{Fingerprinting:} Per-user Service UUIDs are a tradeoff; users accept identifiability at Levels 2+ in exchange for friend discovery
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This protocol enables resilient, decentralized communication over BLE with customizable privacy levels. By deriving Service UUIDs from public keys, friends can discover each other without central infrastructure. The four privacy levels allow users to balance discoverability against anonymity according to their preferences.
+
+\bibliographystyle{ACM-Reference-Format}
+\begin{thebibliography}{1}
+\bibitem{bitchat}
+BitChat Protocol Whitepaper, Version 1.1, July 2025.
+\url{https://github.com/nickkjordan/bitchat}
+\end{thebibliography}
 
 \end{document}
