@@ -11,6 +11,7 @@
 \usepackage{float}
 \usepackage[table]{xcolor}
 \usepackage{tikz}
+\usetikzlibrary{automata,positioning,arrows.meta}
 \usepackage{bytefield}
 
 \newcommand{\mypara}[1]{\smallskip\noindent\textbf{#1.}}
@@ -213,7 +214,7 @@ All protocol messages use a compact binary format optimized for BLE's limited MT
 \bitheader{0-31} \\
 \bitbox{8}{Version} & \bitbox{8}{Type} & \bitbox{8}{TTL} & \bitbox{8}{Flags} \\
 \wordbox{2}{Timestamp (64 bits)} \\
-\bitbox{16}{Payload Length}
+\bitbox{16}{Payload Length} & \bitbox{16}{(padding)}
 \end{bytefield}
 \end{center}
 
@@ -238,6 +239,8 @@ All protocol messages use a compact binary format optimized for BLE's limited MT
 
 \subsection{Message Types}
 
+\begin{table}[H]
+\centering
 \begin{tabular}{|c|l|l|}
 \hline
 \textbf{Type} & \textbf{Name} & \textbf{Description} \\
@@ -252,15 +255,346 @@ All protocol messages use a compact binary format optimized for BLE's limited MT
 0x21 & \texttt{friendAccept} & Friendship accepted \\
 0x22 & \texttt{friendReject} & Friendship rejected \\
 0x30 & \texttt{introduction} & Friend introduction \\
+0x31 & \texttt{friendListShare} & Friend list (Level 4) \\
 0xF0 & \texttt{fragmentStart} & First fragment \\
 0xF1 & \texttt{fragmentContinue} & Middle fragment \\
 0xF2 & \texttt{fragmentEnd} & Last fragment \\
 \hline
 \end{tabular}
+\caption{Message types}
+\label{tab:msgtypes}
+\end{table}
+
+\subsection{Message Payload Formats}
+\label{sec:payloads}
+
+Each message type has a specific payload format. All multi-byte integers are big-endian.
+
+\mypara{Chat Message (0x01)}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Field} & \textbf{Size} & \textbf{Description} \\
+\hline
+Message ID & 16 bytes & UUID (random) \\
+Content Length & 2 bytes & Length of content \\
+Content & variable & UTF-8 encoded text \\
+\hline
+\end{tabular}
+
+\mypara{Delivery Ack (0x02)}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Field} & \textbf{Size} & \textbf{Description} \\
+\hline
+Message ID & 16 bytes & UUID of acknowledged message \\
+\hline
+\end{tabular}
+
+\mypara{Read Receipt (0x03)}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Field} & \textbf{Size} & \textbf{Description} \\
+\hline
+Message ID & 16 bytes & UUID of read message \\
+\hline
+\end{tabular}
+
+\mypara{Noise Handshake Messages (0x10, 0x11, 0x12)}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Field} & \textbf{Size} & \textbf{Description} \\
+\hline
+Handshake Data & variable & Noise protocol handshake bytes \\
+\hline
+\end{tabular}
+
+\mypara{Friend Request (0x20)}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Field} & \textbf{Size} & \textbf{Description} \\
+\hline
+Requester PK & 32 bytes & Curve25519 public key \\
+Requester Sign PK & 32 bytes & Ed25519 public key \\
+Name Length & 1 byte & Length of display name \\
+Display Name & variable & UTF-8 encoded (max 63 bytes) \\
+Signature & 64 bytes & Ed25519 signature over above fields \\
+\hline
+\end{tabular}
+
+\mypara{Friend Accept (0x21)}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Field} & \textbf{Size} & \textbf{Description} \\
+\hline
+Accepter PK & 32 bytes & Curve25519 public key \\
+Accepter Sign PK & 32 bytes & Ed25519 public key \\
+Name Length & 1 byte & Length of display name \\
+Display Name & variable & UTF-8 encoded (max 63 bytes) \\
+Signature & 64 bytes & Ed25519 signature over above fields \\
+\hline
+\end{tabular}
+
+\mypara{Friend Reject (0x22)}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Field} & \textbf{Size} & \textbf{Description} \\
+\hline
+(empty payload) & 0 bytes & No additional data needed \\
+\hline
+\end{tabular}
+
+\mypara{Introduction (0x30)}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Field} & \textbf{Size} & \textbf{Description} \\
+\hline
+Introducer PK & 32 bytes & PK of mutual friend $R$ \\
+Introducee PK & 32 bytes & PK of person being introduced \\
+Introducee Sign PK & 32 bytes & Ed25519 PK of introducee \\
+Name Length & 1 byte & Length of introducee's name \\
+Introducee Name & variable & UTF-8 (max 63 bytes) \\
+Signature & 64 bytes & $R$'s signature over above fields \\
+\hline
+\end{tabular}
+
+\mypara{Friend List Share (0x31)}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Field} & \textbf{Size} & \textbf{Description} \\
+\hline
+Filter Size & 2 bytes & Size of Bloom filter in bytes \\
+Hash Count & 1 byte & Number of hash functions ($k$) \\
+Bloom Filter & variable & Bloom filter containing friend PeerIDs \\
+\hline
+\end{tabular}
+
+\subsection{Fragmentation}
+\label{sec:fragmentation}
+
+Messages larger than the BLE MTU (typically 512 bytes) are fragmented.
+
+\mypara{Fragment Header (4 bytes)}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Field} & \textbf{Size} & \textbf{Description} \\
+\hline
+Message ID & 2 bytes & Unique ID for reassembly \\
+Fragment Index & 1 byte & 0-based index of this fragment \\
+Total Fragments & 1 byte & Total number of fragments \\
+\hline
+\end{tabular}
+
+\mypara{Fragment Types}
+\begin{itemize}
+  \item \texttt{fragmentStart} (0xF0): First fragment; contains fragment header + start of payload
+  \item \texttt{fragmentContinue} (0xF1): Middle fragments; contains fragment header + payload chunk
+  \item \texttt{fragmentEnd} (0xF2): Last fragment; contains fragment header + final payload chunk
+\end{itemize}
+
+\mypara{Reassembly Rules}
+\begin{enumerate}
+  \item Receiver allocates buffer on receiving \texttt{fragmentStart}
+  \item Fragments are stored by index; duplicates are ignored
+  \item When all fragments received, payload is reassembled and processed
+  \item Incomplete messages are discarded after \texttt{FRAGMENT\_TIMEOUT} (30 seconds)
+  \item Maximum fragments per message: 255 (due to 1-byte index)
+\end{enumerate}
 
 \subsection{Padding}
 
-All packets are padded to fixed block sizes (256, 512, 1024, or 2048 bytes) to resist traffic analysis.
+All packets are padded to fixed block sizes (256, 512, 1024, or 2048 bytes) to resist traffic analysis. Padding uses PKCS\#7 scheme: pad with $n$ bytes of value $n$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{State Machines}
+\label{sec:statemachines}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Connection State Machine}
+
+Each BLE connection follows this state machine:
+
+\begin{center}
+\begin{tikzpicture}[
+    ->,
+    >=Stealth,
+    node distance=2.5cm,
+    state/.style={rectangle, rounded corners, draw, minimum width=2cm, minimum height=0.8cm},
+    every edge/.style={draw, ->, >=Stealth}
+]
+    \node[state] (idle) {Idle};
+    \node[state, right=of idle] (connecting) {Connecting};
+    \node[state, right=of connecting] (handshaking) {Handshaking};
+    \node[state, below=of handshaking] (established) {Established};
+    \node[state, left=of established] (disconnected) {Disconnected};
+
+    \path (idle) edge node[above] {discover} (connecting);
+    \path (connecting) edge node[above] {connected} (handshaking);
+    \path (handshaking) edge node[right] {handshake done} (established);
+    \path (established) edge node[below] {disconnect} (disconnected);
+    \path (disconnected) edge node[left] {retry} (idle);
+    \path (connecting) edge[bend right=50] node[below] {timeout} (disconnected);
+    \path (handshaking) edge[bend left=30] node[right] {timeout/fail} (disconnected);
+\end{tikzpicture}
+\end{center}
+
+\mypara{States}
+\begin{itemize}
+  \item \textbf{Idle:} No connection; scanning or advertising
+  \item \textbf{Connecting:} BLE GATT connection in progress
+  \item \textbf{Handshaking:} Noise XX handshake in progress
+  \item \textbf{Established:} Secure session active; can exchange messages
+  \item \textbf{Disconnected:} Connection lost; may retry
+\end{itemize}
+
+\subsection{Noise Handshake Flow}
+
+The XX handshake requires 3 messages. The \emph{initiator} is whoever initiated the BLE connection.
+
+\begin{enumerate}
+  \item \textbf{Initiator $\to$ Responder:} \texttt{noiseHandshakeInit} (0x10)
+    \begin{itemize}
+      \item Contains: Initiator's ephemeral public key
+    \end{itemize}
+  \item \textbf{Responder $\to$ Initiator:} \texttt{noiseHandshakeResp} (0x11)
+    \begin{itemize}
+      \item Contains: Responder's ephemeral public key + encrypted static key
+    \end{itemize}
+  \item \textbf{Initiator $\to$ Responder:} \texttt{noiseHandshakeFinal} (0x12)
+    \begin{itemize}
+      \item Contains: Initiator's encrypted static key
+    \end{itemize}
+\end{enumerate}
+
+After message 3, both parties derive symmetric transport keys. All subsequent packets are encrypted.
+
+\mypara{Handshake Timeout}
+If any handshake message is not received within \texttt{HANDSHAKE\_TIMEOUT} (10 seconds), the connection is aborted.
+
+\subsection{Friendship Request Flow}
+
+\begin{center}
+\begin{tikzpicture}[
+    ->,
+    >=Stealth,
+    node distance=2.2cm,
+    state/.style={rectangle, rounded corners, draw, minimum width=2cm, minimum height=0.8cm},
+]
+    \node[state] (none) {Stranger};
+    \node[state, right=of none] (pending) {Pending};
+    \node[state, right=of pending] (friend) {Friend};
+    \node[state, below=of pending] (rejected) {Rejected};
+
+    \path (none) edge node[above] {request sent} (pending);
+    \path (pending) edge node[above] {accepted} (friend);
+    \path (pending) edge node[right] {rejected} (rejected);
+    \path (rejected) edge[bend right=30] node[below] {cooldown} (none);
+\end{tikzpicture}
+\end{center}
+
+\mypara{Flow}
+\begin{enumerate}
+  \item $P$ sends \texttt{friendRequest} to $Q$
+  \item $Q$ verifies signature on request
+  \item $Q$ prompts user (or auto-accepts based on policy)
+  \item $Q$ sends \texttt{friendAccept} or \texttt{friendReject}
+  \item If accepted, both store each other's keys; if rejected, $P$ waits \texttt{FRIEND\_COOLDOWN} before retrying
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Data Structures}
+\label{sec:datastructures}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Local Social Graph}
+
+Each device maintains a local database with the following tables:
+
+\mypara{Friends Table}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\hline
+peer\_id & BLOB(8) & Primary key (truncated fingerprint) \\
+noise\_pk & BLOB(32) & Curve25519 public key \\
+sign\_pk & BLOB(32) & Ed25519 public key \\
+display\_name & TEXT & User's display name \\
+added\_at & INTEGER & Unix timestamp \\
+last\_seen & INTEGER & Unix timestamp of last contact \\
+is\_verified & BOOLEAN & Out-of-band verification done \\
+\hline
+\end{tabular}
+
+\mypara{Friends-of-Friends Table}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\hline
+peer\_id & BLOB(8) & PeerID of friend-of-friend \\
+via\_friend & BLOB(8) & PeerID of mutual friend \\
+noise\_pk & BLOB(32) & Public key (if known) \\
+display\_name & TEXT & Name (if known) \\
+\hline
+\end{tabular}
+
+\mypara{Messages Table}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\hline
+message\_id & BLOB(16) & UUID \\
+sender\_id & BLOB(8) & Sender's PeerID \\
+recipient\_id & BLOB(8) & Recipient's PeerID (null for broadcast) \\
+content & TEXT & Message content \\
+timestamp & INTEGER & Creation time \\
+status & INTEGER & 0=pending, 1=sent, 2=delivered, 3=read \\
+retry\_count & INTEGER & Number of send attempts \\
+\hline
+\end{tabular}
+
+\subsection{Bloom Filter for Deduplication}
+
+Each device maintains a Bloom filter to track recently seen packet IDs.
+
+\mypara{Parameters}
+\begin{itemize}
+  \item Size ($m$): 8192 bits (1 KB)
+  \item Hash functions ($k$): 7
+  \item Expected elements ($n$): 1000 packets
+  \item False positive rate: $\approx 0.8\%$
+\end{itemize}
+
+\mypara{Hash Functions}
+Use double hashing with MurmurHash3:
+\[
+h_i(x) = (h_1(x) + i \cdot h_2(x)) \mod m
+\]
+where $h_1$ and $h_2$ are derived from MurmurHash3 of the packet's (SenderID, Timestamp) tuple.
+
+\mypara{Filter Rotation}
+The filter is cleared every \texttt{BLOOM\_ROTATION\_INTERVAL} (5 minutes) to prevent saturation.
+
+\subsection{Friend List Bloom Filter (Level 4)}
+
+For sharing friend lists at Level 4, a separate Bloom filter is used.
+
+\mypara{Parameters}
+\begin{itemize}
+  \item Size ($m$): 2048 bits (256 bytes)
+  \item Hash functions ($k$): 5
+  \item Expected elements ($n$): 150 friends
+  \item False positive rate: $\approx 1\%$
+\end{itemize}
+
+\mypara{Contents}
+The filter contains the 8-byte PeerID of each friend.
+
+\mypara{Matching}
+When $P$ receives $Q$'s friend list filter:
+\begin{enumerate}
+  \item For each of $P$'s friends $R$, check if $R$'s PeerID is in $Q$'s filter
+  \item If match found, $R$ is likely a mutual friend (subject to false positive rate)
+  \item $P$ can then request introduction via $R$
+\end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Routing and Relay}
@@ -296,8 +630,64 @@ When a private message reaches its destination:
 \begin{enumerate}
   \item Recipient sends \texttt{deliveryAck} back to sender
   \item If no ack received within timeout, sender retries
-  \item Exponential backoff: 2s, 4s, 8s, 16s
+  \item Exponential backoff: 2s, 4s, 8s, 16s (max 4 retries)
 \end{enumerate}
+
+\subsection{Store and Forward}
+
+When a message cannot be delivered immediately:
+\begin{enumerate}
+  \item Message is stored in local queue with status ``pending''
+  \item When recipient (or relay path to recipient) becomes available, message is sent
+  \item Messages older than \texttt{MESSAGE\_EXPIRY} (24 hours) are discarded
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Timeouts and Limits}
+\label{sec:timeouts}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Parameter} & \textbf{Value} & \textbf{Description} \\
+\hline
+\texttt{CONNECTION\_TIMEOUT} & 10 s & BLE connection establishment \\
+\texttt{HANDSHAKE\_TIMEOUT} & 10 s & Noise handshake completion \\
+\texttt{IDLE\_TIMEOUT} & 60 s & Disconnect idle connections \\
+\texttt{FRAGMENT\_TIMEOUT} & 30 s & Incomplete fragment reassembly \\
+\texttt{RETRY\_INITIAL} & 2 s & First retry delay \\
+\texttt{RETRY\_MAX} & 16 s & Maximum retry delay \\
+\texttt{RETRY\_COUNT} & 4 & Maximum retry attempts \\
+\texttt{FRIEND\_COOLDOWN} & 300 s & Wait after friend rejection \\
+\texttt{MESSAGE\_EXPIRY} & 86400 s & Store-and-forward max age \\
+\texttt{BLOOM\_ROTATION} & 300 s & Dedup filter rotation interval \\
+\hline
+\end{tabular}
+\caption{Protocol timeouts}
+\label{tab:timeouts}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Parameter} & \textbf{Value} & \textbf{Description} \\
+\hline
+\texttt{MAX\_MESSAGE\_SIZE} & 65535 bytes & Maximum message payload \\
+\texttt{MAX\_DISPLAY\_NAME} & 63 bytes & Maximum name length \\
+\texttt{MAX\_FRIENDS} & 1000 & Maximum friends list size \\
+\texttt{MAX\_PENDING\_MESSAGES} & 100 & Store-and-forward queue size \\
+\texttt{MAX\_FRAGMENTS} & 255 & Maximum fragments per message \\
+\texttt{DEFAULT\_TTL} & 7 & Initial TTL for flooding \\
+\texttt{BLE\_MTU} & 512 bytes & Assumed BLE MTU \\
+\texttt{RSSI\_THRESHOLD} & -50 dBm & Proximity for stranger friending \\
+\hline
+\end{tabular}
+\caption{Protocol limits}
+\label{tab:limits}
+\end{table}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Friendship Establishment}
@@ -309,7 +699,7 @@ $P$ and $Q$ can become friends in three ways:
 
 \begin{enumerate}
   \item $P$ and $Q$ discover each other via BLE scanning
-  \item If RSSI $\ge$ threshold (close proximity), prompt user
+  \item If RSSI $\ge$ \texttt{RSSI\_THRESHOLD} (close proximity), prompt user
   \item $P$ sends \texttt{friendRequest} with signed PK
   \item $Q$ accepts or rejects
   \item On accept, both store each other's PK in their friend list
@@ -319,6 +709,7 @@ $P$ and $Q$ can become friends in three ways:
 
 \begin{enumerate}
   \item $P$ knows $R$; $Q$ knows $R$; $P$ and $Q$ don't know each other
+  \item $P$ receives $Q$'s friend list Bloom filter and detects $R$ as mutual friend
   \item $P$ asks $R$ to introduce them to $Q$
   \item $R$ sends \texttt{introduction} packet to $Q$ containing $P$'s PK
   \item $Q$ decides whether to accept $P$ as a friend
@@ -355,7 +746,7 @@ This protocol enables resilient, decentralized communication over BLE with custo
 \begin{thebibliography}{1}
 \bibitem{bitchat}
 BitChat Protocol Whitepaper, Version 1.1, July 2025.
-\url{https://github.com/nickkjordan/bitchat}
+\url{https://github.com/permissionlesstech/bitchat}
 \end{thebibliography}
 
 \end{document}
