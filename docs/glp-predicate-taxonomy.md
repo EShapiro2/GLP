@@ -26,6 +26,8 @@ GLP distinguishes between four categories of predicates based on their implement
 - `number(X?)` - Test if X is bound to a number
 - `ground(X?)` - Test if X is fully ground (no unbound variables)
 - `atom(X?)` - Test if X is an atom
+- `list(X?)` - Test if X is a list (including empty list `[]`)
+- `tuple(X?)` - Test if X is a structure/tuple (not atom, number, or list)
 - `X? > Y?` - Arithmetic comparison
 - `X? =:= Y?` - Arithmetic equality
 
@@ -127,6 +129,8 @@ X? < Temp?                 % Guard predicate: compares X with Temp
 - `mod(X?, Y?, Z)` - Modulo: Z = X mod Y
 - `write(Term)` - Write to stdout
 - `bind(Writer, Value)` - Bind writer variable to value
+- `list_to_tuple(List?, Tuple)` - Convert list to structure: `[foo, a, b]` → `foo(a, b)`
+- `tuple_to_list(Tuple?, List)` - Convert structure to list: `foo(a, b)` → `[foo, a, b]`
 
 **Usage** (internal):
 ```glp
@@ -166,6 +170,7 @@ X? < Temp?                 % Guard predicate: compares X with Temp
 
 **Examples**:
 - `:=/2` - Arithmetic assignment
+- `=../2` - Structure decomposition/composition
 - `append/3` - List concatenation
 - `length/2` - List length
 - `reverse/2` - List reversal
@@ -206,6 +211,33 @@ compute(X, Y, Z?) :-
 compute(X, Y, Z?) :-
   number(X?), number(Y?) |
   Z := X? + Y?.    % Compiler can optimize: inline add(X?, Y?, Z)
+```
+
+**Example: `=..` Definition**:
+
+```glp
+% =../2 - Structure decomposition/composition (univ)
+
+% Composition: list → tuple
+% [foo, a, b] =.. T  →  T = foo(a, b)
+X? =.. Y :- list(Y?) | list_to_tuple(Y?, X).
+
+% Decomposition: tuple → list
+% foo(a, b) =.. L  →  L = [foo, a, b]
+X =.. Y? :- tuple(X?) | tuple_to_list(X?, Y).
+```
+
+**Usage**:
+```glp
+% Decompose a structure
+analyze(Term?, Functor?, Args?) :-
+  true |
+  Term =.. [Functor | Args].
+
+% Compose a structure
+build(Functor?, Args?, Term?) :-
+  true |
+  Term =.. [Functor? | Args?].
 ```
 
 ---
