@@ -569,6 +569,10 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
 
   if (term is rt.ConstTerm) {
     if (term.value == null || term.value == 'nil') return '[]';
+    // Handle wrapped Term values (ConstTerm containing StructTerm, etc.)
+    if (term.value is rt.Term) {
+      return _formatTerm(term.value as rt.Term, runtime, visited);
+    }
     return term.value.toString();
   }
 

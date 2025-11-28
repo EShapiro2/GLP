@@ -510,7 +510,7 @@ BodyKernelResult tupleToListKernel(GlpRuntime rt, List<Object?> args) {
   // Build list: [functor, arg1, arg2, ...]
   final items = <Object?>[ConstTerm(tupleArg.functor)];
   for (final arg in tupleArg.args) {
-    items.add(arg);
+    items.add(_deref(rt, arg));  // Dereference each arg to get actual value
   }
 
   final list = _dartListToGlpList(items);

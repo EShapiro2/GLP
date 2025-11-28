@@ -646,20 +646,13 @@ When a bug, limitation, or error is uncovered:
 2. **REPORT it** - clearly describe what was found
 3. **DISCUSS how to fix it** - wait for agreement on the proper solution
 
-### Known Parser Limitation: =.. not supported in clause bodies
+### Fixed: =.. parser bug (Nov 2025)
 
-**Bug:** The `=..` operator cannot be used as a goal in clause bodies.
+**Bug was:** The `=..` operator could not be used as a goal in clause bodies.
 
-```glp
-% This FAILS:
-compose(List, Tuple) :- Tuple? =.. List?.
-% Error: "Expected predicate name or comparison" at =..
+**Fix:** Updated `_parseGoalOrGuard()` in parser.dart to handle both `=..` and READER variables.
 
-% This WORKS (in clause head):
-X? =.. [Y|Ys] :- list(Ys?) | list_to_tuple([Y|Ys], X).
-```
-
-**Status:** Not yet fixed. Parser needs to recognize `=..` as a valid goal in bodies.
+**Also fixed:** Display formatting in REPL - ConstTerm values containing nested Terms are now recursively formatted.
 
 ## Git Collaboration Protocol (Multiple Claude Code Sessions)
 

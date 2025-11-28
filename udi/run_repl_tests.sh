@@ -548,7 +548,7 @@ run_test "Univ: compose tuple from list [foo]" \
 run_test "Univ: compose tuple from list [bar, x, y]" \
     "hello.glp" \
     "T =.. [bar, x, y]." \
-    "T = bar(x, y)"
+    "T = bar(x,y)"
 
 run_test "Univ: decompose foo(a, b) to list" \
     "hello.glp" \
