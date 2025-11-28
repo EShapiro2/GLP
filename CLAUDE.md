@@ -2,8 +2,8 @@
 
 ## 🔴 CRITICAL - START OF EVERY CONVERSATION
 1. **READ CLAUDE.md** - Always read this file first
-2. **INSTALL DART** - Run: `curl -fsSL https://dart.dev/get-dart | sh` or check if `/tmp/dart-sdk/bin/dart` exists
-3. **SET DART PATH** - Use `DART=/tmp/dart-sdk/bin/dart` or add to PATH
+2. **INSTALL DART** - Check `/home/user/dart-sdk/bin/dart --version`. If missing, see "Dart Installation" section below
+3. **SET DART PATH** - `export PATH="/home/user/dart-sdk/bin:$PATH"`
 4. **MOUNT FCP** - Clone FCP repo: `git clone --depth 1 https://github.com/EShapiro2/FCP.git /tmp/FCP`
 5. **IDENTIFY CURRENT MODE** - Discussion or Implementation
 6. **FOLLOW MODE RULES** - Never mix modes
@@ -11,17 +11,31 @@
 8. **READ SPECS AS NEEDED** - Don't read all specs upfront, only when relevant to task
 
 ### Dart Installation (if needed)
-```bash
-# Check if dart exists
-which dart || ls /tmp/dart-sdk/bin/dart
 
-# If not found, install:
-cd /tmp && wget -qO- https://storage.googleapis.com/dart-archive/channels/stable/release/latest/sdk/dartsdk-linux-x64-release.zip | busybox unzip -
-export PATH="/tmp/dart-sdk/bin:$PATH"
+**IMPORTANT**: The project requires Dart SDK ^3.9.4. Use version 3.10.1 or later.
+
+```bash
+# Check if dart exists and version is sufficient
+/home/user/dart-sdk/bin/dart --version 2>/dev/null || echo "Dart not found"
+
+# If not found or wrong version, install 3.10.1:
+cd /home/user && \
+curl -L -o dart-sdk.zip "https://storage.googleapis.com/dart-archive/channels/stable/release/3.10.1/sdk/dartsdk-linux-x64-release.zip" && \
+unzip -o dart-sdk.zip && \
+rm dart-sdk.zip
+
+# Set PATH for this session
+export PATH="/home/user/dart-sdk/bin:$PATH"
 
 # Verify
 dart --version
 ```
+
+**What DOESN'T work in this environment:**
+- `curl -fsSL https://dart.dev/get-dart | sh` → 403 Forbidden
+- `apt-get install dart` → package not found
+- `busybox unzip` → command not found
+- Dart 3.2.0 or earlier → SDK version mismatch (project needs ^3.9.4)
 
 ### FCP Reference Repository
 The FCP (Flat Concurrent Prolog) implementation is available for reference:
