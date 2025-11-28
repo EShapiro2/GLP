@@ -3466,16 +3466,11 @@ class BytecodeRunner {
         final val = getValue(args[0]);
         return (val is int) ? GuardResult.success : GuardResult.failure;
 
-      case 'number':
-        // Per spec 19.4.4: Test if Xi is numeric (int or float)
+      case 'string':
+        // Succeeds if X is a string (lowercase identifier or quoted string)
         if (args.isEmpty) return GuardResult.failure;
         final val = getValue(args[0]);
-        return (val is num) ? GuardResult.success : GuardResult.failure;
-
-      case 'atom':
-        // Test if X is an atom (string constant, not nil)
-        if (args.isEmpty) return GuardResult.failure;
-        final val = getValue(args[0]);
+        // String: ConstTerm with String value (not 'nil' which represents [])
         if (val is ConstTerm && val.value is String && val.value != 'nil') {
           return GuardResult.success;
         }
@@ -3484,8 +3479,48 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
+      case 'constant':
+        // Succeeds if X is a constant (a string, a number, or [])
+        if (args.isEmpty) return GuardResult.failure;
+        final val = getValue(args[0]);
+        // String or nil (which represents [])
+        if (val is ConstTerm && val.value is String) {
+          return GuardResult.success;
+        }
+        if (val is String) {
+          return GuardResult.success;
+        }
+        // Number
+        if (val is num) {
+          return GuardResult.success;
+        }
+        if (val is ConstTerm && val.value is num) {
+          return GuardResult.success;
+        }
+        return GuardResult.failure;
+
+      case 'number':
+        // Succeeds if X is a number
+        if (args.isEmpty) return GuardResult.failure;
+        final val = getValue(args[0]);
+        if (val is num) return GuardResult.success;
+        if (val is ConstTerm && val.value is num) return GuardResult.success;
+        return GuardResult.failure;
+
+      case 'atom':
+        // Succeeds if X is an atom (a constant or a tuple)
+        if (args.isEmpty) return GuardResult.failure;
+        final val = getValue(args[0]);
+        // Constant: string (including 'nil'), number
+        if (val is ConstTerm) return GuardResult.success;
+        if (val is String) return GuardResult.success;
+        if (val is num) return GuardResult.success;
+        // Tuple: any StructTerm
+        if (val is StructTerm) return GuardResult.success;
+        return GuardResult.failure;
+
       case 'list':
-        // Test if X is a list (empty [] or non-empty [H|T])
+        // Succeeds if X is a list ([] or [H|T])
         if (args.isEmpty) return GuardResult.failure;
         final val = getValue(args[0]);
         // Empty list: ConstTerm('nil') or raw String 'nil'
@@ -3495,18 +3530,18 @@ class BytecodeRunner {
         if (val is String && val == 'nil') {
           return GuardResult.success;
         }
-        // Non-empty list: StructTerm('.', [head, tail]) - compiler uses '.' as cons functor
+        // Non-empty list: StructTerm('.', [head, tail])
         if (val is StructTerm && val.functor == '.' && val.args.length == 2) {
           return GuardResult.success;
         }
         return GuardResult.failure;
 
       case 'tuple':
-        // Test if X is a structure/tuple (not atom, number, or list)
+        // Succeeds if X is a tuple (a term with a functor and arguments)
         if (args.isEmpty) return GuardResult.failure;
         final val = getValue(args[0]);
-        // Tuple: StructTerm with functor != '.' (not a list cons cell)
-        if (val is StructTerm && val.functor != '.') {
+        // Tuple: any StructTerm (including '.' list cons cells per paper definition)
+        if (val is StructTerm) {
           return GuardResult.success;
         }
         return GuardResult.failure;
