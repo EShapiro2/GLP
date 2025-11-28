@@ -23,12 +23,13 @@ GLP distinguishes between four categories of predicates based on their implement
 **Purpose**: Test properties of terms without binding variables.
 
 **Examples**:
-- `constant(X?)` - Succeeds if X is a constant (lowercase identifier, quoted string, number, or `[]`)
-- `number(X?)` - Succeeds if X is a number (a numeric constant)
+- `string(X?)` - Succeeds if X is a string (lowercase identifier or quoted string)
+- `constant(X?)` - Succeeds if X is a constant (a string, a number, or `[]`)
+- `number(X?)` - Succeeds if X is a number
 - `ground(X?)` - Succeeds if X is fully ground (no unbound variables)
-- `atom(X?)` - Succeeds if X is an atom (a constant or a composite term)
+- `atom(X?)` - Succeeds if X is an atom (a constant or a tuple)
 - `list(X?)` - Succeeds if X is a list (`[]` or `[H|T]`)
-- `tuple(X?)` - Succeeds if X is a composite term (a structure with functor and arguments)
+- `tuple(X?)` - Succeeds if X is a tuple (a term with a functor and arguments)
 - `X? > Y?` - Arithmetic comparison
 - `X? =:= Y?` - Arithmetic equality
 
