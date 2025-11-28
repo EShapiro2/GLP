@@ -23,13 +23,16 @@ GLP distinguishes between four categories of predicates based on their implement
 **Purpose**: Test properties of terms without binding variables.
 
 **Examples**:
-- `number(X?)` - Test if X is bound to a number
-- `ground(X?)` - Test if X is fully ground (no unbound variables)
-- `atom(X?)` - Test if X is an atom
-- `list(X?)` - Test if X is a list (including empty list `[]`)
-- `tuple(X?)` - Test if X is a structure/tuple (not atom, number, or list)
+- `constant(X?)` - Succeeds if X is a constant (lowercase identifier, quoted string, number, or `[]`)
+- `number(X?)` - Succeeds if X is a number (a numeric constant)
+- `ground(X?)` - Succeeds if X is fully ground (no unbound variables)
+- `atom(X?)` - Succeeds if X is an atom (a constant or a composite term)
+- `list(X?)` - Succeeds if X is a list (`[]` or `[H|T]`)
+- `tuple(X?)` - Succeeds if X is a composite term (a structure with functor and arguments)
 - `X? > Y?` - Arithmetic comparison
 - `X? =:= Y?` - Arithmetic equality
+
+**Guard Semantics**: A guard succeeds if its condition holds, suspends if a future instantiation of its argument may cause it to succeed, and fails otherwise.
 
 **Usage**:
 ```glp
