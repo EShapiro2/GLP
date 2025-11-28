@@ -86,6 +86,10 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('round_kernel', 2, roundKernel);
   registry.register('floor_kernel', 2, floorKernel);
   registry.register('ceil_kernel', 2, ceilKernel);
+
+  // Structure manipulation
+  registry.register('list_to_tuple', 2, listToTupleKernel);
+  registry.register('tuple_to_list', 2, tupleToListKernel);
 }
 
 /// Helper to get numeric value from argument (with arithmetic evaluation)
@@ -398,4 +402,117 @@ BodyKernelResult ceilKernel(GlpRuntime rt, List<Object?> args) {
   final x = _getNum(rt, args[0]);
   if (x == null) return BodyKernelResult.abort;
   return _bindResult(rt, args[1], x.ceil());
+}
+
+// ============================================================================
+// STRUCTURE MANIPULATION KERNELS
+// ============================================================================
+
+/// Helper to fully dereference a term (follow VarRefs to their bound values)
+Object? _deref(GlpRuntime rt, Object? term) {
+  while (term is VarRef) {
+    final val = rt.heap.getValue(term.varId);
+    if (val == null) return term; // Unbound
+    term = val;
+  }
+  return term;
+}
+
+/// Helper to convert Dart list to GLP list structure
+Term _dartListToGlpList(List<Object?> items) {
+  Term result = ConstTerm('nil'); // Empty list
+  for (var i = items.length - 1; i >= 0; i--) {
+    final item = items[i];
+    final termItem = item is Term ? item : ConstTerm(item);
+    result = StructTerm('[|]', [termItem, result]);
+  }
+  return result;
+}
+
+/// Helper to convert GLP list to Dart list
+List<Object?>? _glpListToDartList(GlpRuntime rt, Object? list) {
+  final result = <Object?>[];
+  var current = _deref(rt, list);
+
+  while (current != null) {
+    // Empty list (nil)
+    if (current is ConstTerm && current.value == 'nil') {
+      return result;
+    }
+    // Non-empty list [H|T]
+    if (current is StructTerm && current.functor == '[|]' && current.args.length == 2) {
+      result.add(_deref(rt, current.args[0]));
+      current = _deref(rt, current.args[1]);
+    } else {
+      // Not a proper list
+      return null;
+    }
+  }
+  return result;
+}
+
+/// list_to_tuple(List?, Tuple) - Convert list to structure
+/// [foo, a, b] -> foo(a, b)
+BodyKernelResult listToTupleKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] list_to_tuple/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final listArg = _deref(rt, args[0]);
+  final items = _glpListToDartList(rt, listArg);
+
+  if (items == null || items.isEmpty) {
+    print('[ABORT] list_to_tuple/2: first argument must be a non-empty list');
+    return BodyKernelResult.abort;
+  }
+
+  // First element is the functor
+  final functorTerm = items[0];
+  String? functor;
+  if (functorTerm is ConstTerm && functorTerm.value is String) {
+    functor = functorTerm.value as String;
+  } else if (functorTerm is String) {
+    functor = functorTerm;
+  }
+
+  if (functor == null) {
+    print('[ABORT] list_to_tuple/2: first element must be an atom (functor)');
+    return BodyKernelResult.abort;
+  }
+
+  // Remaining elements are arguments
+  final structArgs = <Term>[];
+  for (var i = 1; i < items.length; i++) {
+    final item = items[i];
+    structArgs.add(item is Term ? item : ConstTerm(item));
+  }
+
+  final tuple = StructTerm(functor, structArgs);
+  return _bindResult(rt, args[1], tuple);
+}
+
+/// tuple_to_list(Tuple?, List) - Convert structure to list
+/// foo(a, b) -> [foo, a, b]
+BodyKernelResult tupleToListKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] tuple_to_list/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final tupleArg = _deref(rt, args[0]);
+
+  if (tupleArg is! StructTerm) {
+    print('[ABORT] tuple_to_list/2: first argument must be a structure');
+    return BodyKernelResult.abort;
+  }
+
+  // Build list: [functor, arg1, arg2, ...]
+  final items = <Object?>[ConstTerm(tupleArg.functor)];
+  for (final arg in tupleArg.args) {
+    items.add(arg);
+  }
+
+  final list = _dartListToGlpList(items);
+  return _bindResult(rt, args[1], list);
 }

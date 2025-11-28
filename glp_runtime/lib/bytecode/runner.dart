@@ -3472,6 +3472,42 @@ class BytecodeRunner {
         final val = getValue(args[0]);
         return (val is num) ? GuardResult.success : GuardResult.failure;
 
+      case 'atom':
+        // Test if X is an atom (string constant, not nil)
+        if (args.isEmpty) return GuardResult.failure;
+        final val = getValue(args[0]);
+        if (val is ConstTerm && val.value is String && val.value != 'nil') {
+          return GuardResult.success;
+        }
+        if (val is String && val != 'nil') {
+          return GuardResult.success;
+        }
+        return GuardResult.failure;
+
+      case 'list':
+        // Test if X is a list (empty [] or non-empty [H|T])
+        if (args.isEmpty) return GuardResult.failure;
+        final val = getValue(args[0]);
+        // Empty list: ConstTerm('nil')
+        if (val is ConstTerm && val.value == 'nil') {
+          return GuardResult.success;
+        }
+        // Non-empty list: StructTerm('[|]', [head, tail])
+        if (val is StructTerm && val.functor == '[|]' && val.args.length == 2) {
+          return GuardResult.success;
+        }
+        return GuardResult.failure;
+
+      case 'tuple':
+        // Test if X is a structure/tuple (not atom, number, or list)
+        if (args.isEmpty) return GuardResult.failure;
+        final val = getValue(args[0]);
+        // Tuple: StructTerm with functor != '[|]'
+        if (val is StructTerm && val.functor != '[|]') {
+          return GuardResult.success;
+        }
+        return GuardResult.failure;
+
       case 'writer':
         // Per spec 19.4.5: Test if Xi is an unbound writer
         if (args.isEmpty) return GuardResult.failure;
