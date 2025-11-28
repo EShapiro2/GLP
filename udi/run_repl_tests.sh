@@ -5,7 +5,7 @@
 set -e
 
 # Find dart executable
-DART=${DART:-$(which dart 2>/dev/null || echo "/root/dart-sdk/bin/dart")}
+DART=${DART:-$(which dart 2>/dev/null || echo "/tmp/dart-sdk/bin/dart")}
 
 PASS=0
 FAIL=0
