@@ -646,6 +646,21 @@ When a bug, limitation, or error is uncovered:
 2. **REPORT it** - clearly describe what was found
 3. **DISCUSS how to fix it** - wait for agreement on the proper solution
 
+### Known Parser Limitation: =.. not supported in clause bodies
+
+**Bug:** The `=..` operator cannot be used as a goal in clause bodies.
+
+```glp
+% This FAILS:
+compose(List, Tuple) :- Tuple? =.. List?.
+% Error: "Expected predicate name or comparison" at =..
+
+% This WORKS (in clause head):
+X? =.. [Y|Ys] :- list(Ys?) | list_to_tuple([Y|Ys], X).
+```
+
+**Status:** Not yet fixed. Parser needs to recognize `=..` as a valid goal in bodies.
+
 ## Git Collaboration Protocol (Multiple Claude Code Sessions)
 
 1. **Main branch** (`main`) is the source of truth - contains all merged, stable work
