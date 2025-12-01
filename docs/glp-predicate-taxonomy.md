@@ -86,6 +86,28 @@ X? < Temp?                 % Guard predicate: compares X with Temp
 - `guard_mul(X?, Y?, Result)` - Multiplication for guards
 - `guard_div(X?, Y?, Result)` - Division for guards
 
+**Time-Based Guard Kernels**:
+- `wait(Duration?)` - Wait for Duration milliseconds, then succeed
+- `wait_until(Timestamp?)` - Wait until absolute time (Unix ms), then succeed
+
+**Detailed Semantics** for `wait(Duration?)`:
+
+| Duration value | Behavior |
+|----------------|----------|
+| 100 | Sleep for 100ms, then succeed |
+| unbound | Suspend (like other guards on unbound readers) |
+| 0 or negative | Succeed immediately |
+| non-number | Fail |
+
+**Detailed Semantics** for `wait_until(Timestamp?)`:
+
+| Timestamp value | Behavior |
+|-----------------|----------|
+| future Unix ms | Sleep until that time, then succeed |
+| unbound | Suspend (like other guards on unbound readers) |
+| past time | Succeed immediately |
+| non-number | Fail |
+
 **Detailed Semantics** for `guard_add(X?, Y?, Result)`:
 
 | X value | Y value | Result |
@@ -135,6 +157,7 @@ X? < Temp?                 % Guard predicate: compares X with Temp
 - `bind(Writer, Value)` - Bind writer variable to value
 - `list_to_tuple(List?, Tuple)` - Convert list to structure: `[foo, a, b]` → `foo(a, b)`
 - `tuple_to_list(Tuple?, List)` - Convert structure to list: `foo(a, b)` → `[foo, a, b]`
+- `now(T)` - Bind T to current Unix milliseconds since epoch
 
 **Usage** (internal):
 ```glp
