@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'runtime.dart';
 import '../bytecode/runner.dart';
 import 'terms.dart';
@@ -256,6 +257,44 @@ class Scheduler {
         g.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(')
       ).toList();
       print('Resolvent (suspended): ${resolvent.join(', ')}');
+    }
+
+    return ran;
+  }
+
+  /// Async drain that waits for pending timers to fire.
+  /// This is needed for wait() guards which schedule timers that
+  /// will add goals back to the queue.
+  Future<List<int>> drainAsync({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) async {
+    final ran = <int>[];
+    var totalCycles = 0;
+
+    while (totalCycles < maxCycles) {
+      // Run synchronous drain until queue is empty
+      final batchRan = drain(
+        maxCycles: maxCycles - totalCycles,
+        debug: debug,
+        showBindings: showBindings,
+        debugOutput: debugOutput,
+      );
+      ran.addAll(batchRan);
+      totalCycles += batchRan.length;
+
+      // If no pending timers, we're done
+      if (rt.pendingTimers <= 0) {
+        break;
+      }
+
+      // Wait a small amount for timers to fire
+      // Timers will add goals to queue when they fire
+      if (debug) {
+        print('[DEBUG] Waiting for ${rt.pendingTimers} pending timer(s)...');
+      }
+
+      // Poll with a small delay until queue has work or no more timers
+      while (rt.gq.length == 0 && rt.pendingTimers > 0 && totalCycles < maxCycles) {
+        await Future.delayed(Duration(milliseconds: 10));
+      }
     }
 
     return ran;
