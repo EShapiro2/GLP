@@ -1,25 +1,28 @@
 % two_actors.glp - Cooperative stream construction
 %
-% Alice and Bob cooperatively build a stream using := for binding.
+% Alice and Bob cooperatively build a stream.
+% Output is produced by putting the structure directly in the HEAD,
+% not by using := in the body (which is for local bindings).
+%
+% Simpler design: no End parameter - base case closes stream with [].
 
 play(N, S?) :- integer(N?) |
-    alice(N?, S, End),
-    close_end(End?).
-
-close_end([]).
+    alice(N?, S).
 
 % ======== ALICE ========
-alice(0, S, S?).
-alice(N, S, End?) :-
+% Base case: close the stream
+alice(0, []).
+% Recursive: write [a1,a2,a3|Tail?], pass Tail writer to Bob
+alice(N, [a1, a2, a3 | Tail?]) :-
     N? > 0 |
-    S := [a1, a2, a3 | Hole],
     N1 := N? - 1,
-    bob_turn(N1?, Hole?, End).
+    bob_turn(N1?, Tail).
 
 % ======== BOB ========
-bob_turn(0, S, S?).
-bob_turn(N, S, End?) :-
+% Base case: close the stream
+bob_turn(0, []).
+% Recursive: write [b1,b2,b3|Tail?], pass Tail writer to Alice
+bob_turn(N, [b1, b2, b3 | Tail?]) :-
     N? > 0 |
-    S := [b1, b2, b3 | Hole],
     N1 := N? - 1,
-    alice(N1?, Hole?, End).
+    alice(N1?, Tail).
