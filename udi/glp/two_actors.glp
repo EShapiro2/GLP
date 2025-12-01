@@ -1,0 +1,61 @@
+% two_actors.glp - Two actors sharing a single stream
+%
+% DESIGN:
+%   Alice and Bob take turns writing to the SAME stream.
+%   Alice writes [a1,a2,a3 | Tail], waits on Tail? for bob
+%   Bob reads alice's msgs, writes [b1,b2,b3 | Tail2] to Tail
+%   Alice reads bob's msgs via Tail?, writes to Tail2
+%   ... until done
+%
+% Output: [a1,a2,a3, b1,b2,b3, a1,a2,a3, b1,b2,b3]
+
+% Entry: play(N, Out?) - N turns each, Out? returns stream
+play(N, Out?) :- number(N?) | do_play(N?, Out).
+
+% do_play - spawn alice with writer, bob with reader of same stream
+do_play(N?, S) :- number(N?) | alice(N?, S), bob(N?, S?).
+
+% ======== ALICE ========
+% alice(N, S) - alice writes to S for N turns
+
+% N = 0: alice is done, reads remaining from bob
+alice(0, S?) :- drain(S?).
+
+% N > 0: write 3 messages, wait for bob
+alice(N, [a1, a2, a3 | Tail?]) :-
+    N > 0 |
+    N1 := N - 1,
+    alice_wait(N1?, Tail?).
+
+% alice_wait - alice waits for bob's messages via reader Tail?
+% When bob writes to Tail, alice sees it
+alice_wait(N?, [_, _, _ | Next]) :- alice(N?, Next).
+
+% drain - read until stream ends
+drain([]).
+drain([_ | T?]) :- drain(T?).
+
+% ======== BOB ========
+% bob(N, S?) - bob reads S?, writes to the tail for N turns
+
+% bob waits for alice's first message
+bob(N?, [_, _, _ | Tail]) :- bob_write(N?, Tail).
+
+% bob_write(N, S) - bob writes to S
+% N = 0: bob is done, close stream
+bob_write(0, []).
+
+% N > 0: write 3 messages, wait for alice
+bob_write(N, [b1, b2, b3 | Tail?]) :-
+    N > 0 |
+    N1 := N - 1,
+    bob_wait(N1?, Tail?).
+
+% bob_wait - bob waits for alice's messages
+bob_wait(N?, [_, _, _ | Next]) :- bob_write(N?, Next).
+
+% ======== METAINTERPRETER ========
+run(true).
+run((A, B)) :- run(A?), run(B?).
+run(A) :- otherwise | reduce(A?, B), run(B?).
+reduce((X? := E), true) :- X := E?.

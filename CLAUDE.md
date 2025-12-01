@@ -690,13 +690,34 @@ X? =.. [Y|Ys] :- list(Ys?) | list_to_tuple([Y|Ys], X).
 
 ### Key Patterns
 
-1. **Accumulator patterns in reduce clauses**: Both arg orderings now work:
+1. **GLP Calling Convention - Writer/Reader Matching**:
+   **A writer in a goal must match a reader (or non-variable) in the head of the called predicate.**
+
+   This is FUNDAMENTAL to writing GLP programs:
+   ```glp
+   % CORRECT: Writer S in body, reader S? in head
+   test(R?) :- producer(S), consumer(S?, R).
+
+   % producer binds S (writer)
+   producer([a, b, c]).
+
+   % consumer receives S? (reader), produces R (writer)
+   consumer([], []).
+   consumer([H|T], [H?|R?]) :- consumer(T?, R).
+   ```
+
+   To share a stream between two processes:
+   - Put reader annotation in head (`S?`) to return the result
+   - Pass writer to producer (`S`), reader to consumer (`S?`)
+   - Each variable appears as writer at most ONCE per clause (SRSW)
+
+2. **Accumulator patterns in reduce clauses**: Both arg orderings now work:
    - `reduce(sum_acc([], Acc?, Acc), true)` - reader first, writer second
    - `reduce(sum_acc([], Acc, Acc?), true)` - writer first, reader second
 
-2. **Running the REPL**: Always use `dart run glp_repl.dart` from the `udi/` directory, NOT a compiled exe.
+3. **Running the REPL**: Always use `dart run glp_repl.dart` from the `udi/` directory, NOT a compiled exe.
 
-3. **Test file patterns**: The test suite uses a specific format - see `run_repl_tests.sh` for the `run_test` function.
+4. **Test file patterns**: The test suite uses a specific format - see `run_repl_tests.sh` for the `run_test` function.
 
 ### Common Mistakes to Avoid
 
