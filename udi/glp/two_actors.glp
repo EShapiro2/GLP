@@ -12,18 +12,18 @@ alice(N, [a1, a2, a3 | Tail]) :-
     N1 := N? - 1,
     alice_wait(N1?, Tail?).
 
-alice_wait(N, [_, _, _ | Next]) :- integer(N?) | alice(N?, Next).
+alice_wait(N, [_, _, _ | Next?]) :- integer(N?) | alice(N?, Next).
 
 % ======== BOB (reader) ========
-bob(N, [_, _, _ | Tail]) :- integer(N?) | bob_continue(N?, Tail).
+bob(N, [_, _, _ | Tail]) :- integer(N?) | bob_continue(N?, Tail?).
 
-bob_continue(0, S?) :- drain(S?).
+bob_continue(0, S) :- drain(S?).
 bob_continue(N, [b1, b2, b3 | Tail]) :-
     N? > 0 |
     N1 := N? - 1,
     bob_wait(N1?, Tail?).
 
-bob_wait(N, [_, _, _ | Next]) :- integer(N?) | bob_continue(N?, Next).
+bob_wait(N, [_, _, _ | Next]) :- integer(N?) | bob_continue(N?, Next?).
 
 drain([]).
 drain([_ | T?]) :- drain(T?).
