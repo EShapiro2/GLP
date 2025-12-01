@@ -58,6 +58,13 @@ The GLP-2025 repository contains additional GLP resources and documentation:
 - **READ THE SPEC FIRST** - Check bytecode/runtime specs before any code changes
 - **NEVER REMOVE CONTENT** - Never delete anything without explicit user approval
 
+### 🔴 GLP Programming Prerequisite
+- **NEVER try to write GLP code** before:
+  1. Reading the GLP paper (`docs/glp_spec.pdf`)
+  2. Reading the GLP specs and documentation
+  3. Reading ALL GLP REPL test suite examples (`udi/run_repl_tests.sh`)
+  4. Understanding the syntax and how the working examples function
+
 ### Communication Style  
 - **BE TERSE** - Brief, direct responses
 - **NO LONG EXPLANATIONS** - Get to the point

@@ -26,4 +26,4 @@ bob_continue(N, [b1, b2, b3 | Tail]) :-
 bob_wait(N, [_, _, _ | Next]) :- integer(N?) | bob_continue(N?, Next?).
 
 drain([]).
-drain([_ | T?]) :- drain(T?).
+drain([_ | T]) :- drain(T?).
