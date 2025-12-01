@@ -1,66 +1,29 @@
-% two_actors.glp - Two actors sharing a single stream
+% two_actors.glp - Two actors sharing a stream (no observer yet)
 %
-% DESIGN:
-%   Alice and Bob take turns writing to the SAME stream.
-%   Alice writes [a1,a2,a3 | Tail], waits on Tail? for bob
-%   Bob reads alice's msgs, writes [b1,b2,b3 | Tail2] to Tail
-%   Alice reads bob's msgs via Tail?, writes to Tail2
-%   ... until done
-%
-% Output: [a1,a2,a3, b1,b2,b3, a1,a2,a3, b1,b2,b3]
+% Alice = writer (producer), Bob = reader (consumer)
+% Stream S is internal - no external visibility until observer added
 
-% Entry: play(N, Out?) - N turns each, Out? returns stream
-play(N, Out?) :- number(N?) | do_play(N?, Out).
+play(N) :- integer(N?) | alice(N?, S), bob(N?, S?).
 
-% do_play - alice writes to S, bob reads S? and extracts tail
-do_play(N, S) :- number(N?) | alice_first(N?, S), bob(N?, S?).
-
-% ======== ALICE ========
-% alice_first(N, S) - alice writes first 3 messages to S
-alice_first(N, [a1, a2, a3 | Tail?]) :-
+% ======== ALICE (writer) ========
+alice(0, []).
+alice(N, [a1, a2, a3 | Tail]) :-
     N? > 0 |
     N1 := N? - 1,
     alice_wait(N1?, Tail?).
 
-% alice(N, S) - alice writes to S for N turns
-% N = 0: alice is done, reads remaining from bob
-alice(0, S?) :- drain(S?).
+alice_wait(N, [_, _, _ | Next]) :- integer(N?) | alice(N?, Next).
 
-% N > 0: write 3 messages, wait for bob
-alice(N, [a1, a2, a3 | Tail?]) :-
-    N > 0 |
-    N1 := N - 1,
-    alice_wait(N1?, Tail?).
+% ======== BOB (reader) ========
+bob(N, [_, _, _ | Tail]) :- integer(N?) | bob_continue(N?, Tail).
 
-% alice_wait - alice waits for bob's messages via reader Tail?
-% When bob writes to Tail, alice sees it
-alice_wait(N?, [_, _, _ | Next]) :- alice(N?, Next).
-
-% drain - read until stream ends
-drain([]).
-drain([_ | T?]) :- drain(T?).
-
-% ======== BOB ========
-% bob(N, S?) - bob reads S?, writes to the tail for N turns
-
-% bob waits for alice's first message
-bob(N?, [_, _, _ | Tail]) :- bob_write(N?, Tail).
-
-% bob_write(N, S) - bob writes to S
-% N = 0: bob is done, close stream
-bob_write(0, []).
-
-% N > 0: write 3 messages, wait for alice
-bob_write(N, [b1, b2, b3 | Tail?]) :-
-    N > 0 |
-    N1 := N - 1,
+bob_continue(0, S?) :- drain(S?).
+bob_continue(N, [b1, b2, b3 | Tail]) :-
+    N? > 0 |
+    N1 := N? - 1,
     bob_wait(N1?, Tail?).
 
-% bob_wait - bob waits for alice's messages
-bob_wait(N?, [_, _, _ | Next]) :- bob_write(N?, Next).
+bob_wait(N, [_, _, _ | Next]) :- integer(N?) | bob_continue(N?, Next).
 
-% ======== METAINTERPRETER ========
-run(true).
-run((A, B)) :- run(A?), run(B?).
-run(A) :- otherwise | reduce(A?, B), run(B?).
-reduce((X? := E), true) :- X := E?.
+drain([]).
+drain([_ | T?]) :- drain(T?).
