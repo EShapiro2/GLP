@@ -1,5 +1,3 @@
-import 'dart:io' show sleep;
-
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/terms.dart';
@@ -3574,39 +3572,6 @@ class BytecodeRunner {
         return GuardResult.success;
 
       case 'true':
-        return GuardResult.success;
-
-      // Time-based guards
-      case 'wait':
-        // wait(Duration) - wait for Duration milliseconds, then succeed
-        // Semantics:
-        // - Duration is number (ms) -> sleep for that duration, then succeed
-        // - Duration is unbound -> suspend (like other guards)
-        // - Duration is negative -> succeed immediately
-        // - Duration is non-number -> fail
-        if (args.isEmpty) return GuardResult.failure;
-        final duration = evaluateNumeric(args[0]);
-        if (duration == null) return GuardResult.failure;
-        if (duration <= 0) return GuardResult.success; // No wait needed
-        // Synchronous sleep (blocking) - simple implementation
-        sleep(Duration(milliseconds: duration.toInt()));
-        return GuardResult.success;
-
-      case 'wait_until':
-        // wait_until(Timestamp) - wait until absolute time (Unix ms), then succeed
-        // Semantics:
-        // - Timestamp is number (Unix ms) -> wait until that time, then succeed
-        // - Timestamp is unbound -> suspend (like other guards)
-        // - Timestamp is in the past -> succeed immediately
-        // - Timestamp is non-number -> fail
-        if (args.isEmpty) return GuardResult.failure;
-        final timestamp = evaluateNumeric(args[0]);
-        if (timestamp == null) return GuardResult.failure;
-        final now = DateTime.now().millisecondsSinceEpoch;
-        final delay = timestamp.toInt() - now;
-        if (delay <= 0) return GuardResult.success; // Already past
-        // Synchronous sleep (blocking) - simple implementation
-        sleep(Duration(milliseconds: delay));
         return GuardResult.success;
 
       default:
