@@ -1,29 +1,25 @@
-% two_actors.glp - Two actors sharing a stream (no observer yet)
+% two_actors.glp - Cooperative stream construction
 %
-% Alice = writer (producer), Bob = reader (consumer)
-% Stream S is internal - no external visibility until observer added
+% Alice and Bob cooperatively build a stream using := for binding.
 
-play(N) :- integer(N?) | alice(N?, S), bob(N?, S?).
+play(N, S?) :- integer(N?) |
+    alice(N?, S, End),
+    close_end(End?).
 
-% ======== ALICE (writer) ========
-alice(0, []).
-alice(N, [a1, a2, a3 | Tail]) :-
+close_end([]).
+
+% ======== ALICE ========
+alice(0, S, S?).
+alice(N, S, End?) :-
     N? > 0 |
+    S := [a1, a2, a3 | Hole],
     N1 := N? - 1,
-    alice_wait(N1?, Tail?).
+    bob_turn(N1?, Hole?, End).
 
-alice_wait(N, [_, _, _ | Next?]) :- integer(N?) | alice(N?, Next).
-
-% ======== BOB (reader) ========
-bob(N, [_, _, _ | Tail]) :- integer(N?) | bob_continue(N?, Tail?).
-
-bob_continue(0, S) :- drain(S?).
-bob_continue(N, [b1, b2, b3 | Tail]) :-
+% ======== BOB ========
+bob_turn(0, S, S?).
+bob_turn(N, S, End?) :-
     N? > 0 |
+    S := [b1, b2, b3 | Hole],
     N1 := N? - 1,
-    bob_wait(N1?, Tail?).
-
-bob_wait(N, [_, _, _ | Next]) :- integer(N?) | bob_continue(N?, Next?).
-
-drain([]).
-drain([_ | T]) :- drain(T?).
+    alice(N1?, Hole?, End).
