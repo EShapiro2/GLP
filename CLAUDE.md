@@ -342,12 +342,13 @@ When implementing a solution:
 
 ### 5. Discussion Before Implementation
 
-**CRITICAL: When user gives feedback, STOP and DISCUSS before coding:**
+**CRITICAL: When user says "stop" or "discuss" - STOP EVERYTHING IMMEDIATELY:**
 
-1. **STOP immediately** - Do not write any code
-2. **DISCUSS** - Talk through understanding, ask clarifying questions
-3. **WAIT for agreement** - Only continue when discussion clearly over
-4. **NEVER mix discussion with implementation**
+1. **STOP immediately** - Do not finish current task, do not complete git operations, do not explain further
+2. **STOP means STOP** - Not "stop after this", not "let me just finish" - STOP NOW
+3. **DISCUSS only** - Talk, ask questions, wait for user input
+4. **WAIT for agreement** - Only resume work when user explicitly says discussion is over
+5. **NEVER mix discussion with implementation** - No code, no commits, no tool calls during discussion
 
 ## 🔴 MANDATORY: Debugging Protocol for GLP Programs
 
