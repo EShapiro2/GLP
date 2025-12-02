@@ -282,6 +282,13 @@ class CodeGenerator {
       // Occurrence tracking was causing mixed v1/v2 opcode generation
       ctx.emit(bcv2.UnifyVariable(regIndex, isReader: term.isReader));
 
+      // Track variable for subsequent occurrence detection
+      // This enables GetValue to be emitted for later top-level uses
+      if (inHead) {
+        final baseVarName = term.name.endsWith('?') ? term.name.substring(0, term.name.length - 1) : term.name;
+        ctx.seenHeadVars.add(baseVarName);
+      }
+
     } else if (term is ConstTerm) {
       // Constant at position S
       ctx.emit(bc.UnifyConstant(term.value));

@@ -1361,6 +1361,9 @@ class BytecodeRunner {
             if (clauseVarValue is VarRef) {
               // Subsequent use: create VarRef with appropriate mode
               struct.args[cx.S] = VarRef(clauseVarValue.varId, isReader: isReaderMode);
+            } else if (clauseVarValue is int) {
+              // Bare varId - create VarRef with appropriate mode
+              struct.args[cx.S] = VarRef(clauseVarValue, isReader: isReaderMode);
             } else if (clauseVarValue is Term) {
               if (isReaderMode) {
                 // Reader mode with ground term: create fresh var, bind it
@@ -1676,6 +1679,9 @@ class BytecodeRunner {
           } else if (arg is ConstTerm) {
             if (storedValue is int) {
               cx.sigmaHat[storedValue] = arg;
+            } else if (storedValue is VarRef) {
+              // VarRef from UnifyVariable reader: bind the variable to arg
+              cx.sigmaHat[storedValue.varId] = arg;
             } else if (storedValue is ConstTerm && storedValue.value != arg.value) {
               _softFailToNextClause(cx, pc);
               pc = _findNextClauseTry(pc);
@@ -1684,6 +1690,9 @@ class BytecodeRunner {
           } else if (arg is StructTerm) {
             if (storedValue is int) {
               cx.sigmaHat[storedValue] = arg;
+            } else if (storedValue is VarRef) {
+              // VarRef from UnifyVariable reader: bind the variable to arg
+              cx.sigmaHat[storedValue.varId] = arg;
             } else if (storedValue is StructTerm && storedValue.functor != arg.functor) {
               _softFailToNextClause(cx, pc);
               pc = _findNextClauseTry(pc);
