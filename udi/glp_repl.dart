@@ -694,7 +694,7 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
         return _formatTerm(deref, runtime, visited);
       }
       return _formatTerm(arg, runtime, visited);
-    }).join(',');
+    }).join(', ');
     return '${term.functor}($formattedArgs)';
   }
 

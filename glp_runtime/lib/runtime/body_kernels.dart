@@ -10,6 +10,7 @@ import 'dart:math' as math;
 
 import 'runtime.dart';
 import 'terms.dart';
+import 'machine_state.dart' show GoalRef;
 
 /// Result of executing a body kernel
 enum BodyKernelResult {
@@ -131,8 +132,14 @@ num? _evaluateArithmetic(GlpRuntime rt, StructTerm struct) {
 BodyKernelResult _bindResult(GlpRuntime rt, Object? outputArg, Object value) {
   if (outputArg is VarRef && !outputArg.isReader) {
     // Bind the writer variable to the result value
-    // CRITICAL: bindVariableConst returns goals to reactivate - must enqueue them!
-    final activations = rt.heap.bindVariableConst(outputArg.varId, value);
+    // CRITICAL: bindVariable returns goals to reactivate - must enqueue them!
+    // Use bindVariable directly for Term values to avoid double-wrapping
+    final List<GoalRef> activations;
+    if (value is Term) {
+      activations = rt.heap.bindVariable(outputArg.varId, value);
+    } else {
+      activations = rt.heap.bindVariableConst(outputArg.varId, value);
+    }
     for (final act in activations) {
       rt.gq.enqueue(act);
     }
@@ -513,7 +520,7 @@ BodyKernelResult tupleToListKernel(GlpRuntime rt, List<Object?> args) {
   // Build list: [functor, arg1, arg2, ...]
   final items = <Object?>[ConstTerm(tupleArg.functor)];
   for (final arg in tupleArg.args) {
-    items.add(arg);
+    items.add(_deref(rt, arg));  // Dereference each arg
   }
 
   final list = _dartListToGlpList(items);
