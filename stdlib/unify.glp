@@ -10,4 +10,4 @@
 % Definition: The first argument is read, the second is written.
 % When both are ground, they must be equal.
 
-=(X?, X).
+X? = X.
