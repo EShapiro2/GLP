@@ -702,6 +702,25 @@ run_test "Primes up to 10" \
     "Ps = \\[2, 3, 5, 7\\]"
 
 # ============================================
+# MONITOR TESTS - value pattern in nested structure
+# ============================================
+
+run_test "Monitor: play(R) - Alice and Bob with add/subtract/value" \
+    "monitor.glp" \
+    "play(R)." \
+    "R = 12"
+
+run_test "Monitor: play_wait(R) - with 50ms delay" \
+    "monitor.glp" \
+    "play_wait(R)." \
+    "R = 12"
+
+run_test "Monitor: play_wait_until(R) - with wait_until guard" \
+    "monitor.glp" \
+    "play_wait_until(R)." \
+    "R = 12"
+
+# ============================================
 # FUTURE TESTS (not yet implemented)
 # ============================================
 
