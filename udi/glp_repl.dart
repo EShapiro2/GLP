@@ -198,7 +198,7 @@ void main() async {
         runtime.gq.enqueue(GoalRef(goalId, entryPC));
         goalId++;
 
-        final ran = scheduler.drain(
+        final ran = await scheduler.drainAsync(
           maxCycles: maxCycles,
           debug: debugTrace,
           showBindings: showBindings,
@@ -280,7 +280,7 @@ void main() async {
       final currentGoalId = goalId;
       goalId++;
 
-      final ran = scheduler.drain(
+      final ran = await scheduler.drainAsync(
         maxCycles: maxCycles,
         debug: debugTrace,
         showBindings: showBindings,

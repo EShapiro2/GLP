@@ -91,6 +91,9 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   // Structure manipulation
   registry.register('list_to_tuple', 2, listToTupleKernel);
   registry.register('tuple_to_list', 2, tupleToListKernel);
+
+  // Time operations
+  registry.register('now', 1, nowKernel);
 }
 
 /// Helper to get numeric value from argument (with arithmetic evaluation)
@@ -522,4 +525,19 @@ BodyKernelResult tupleToListKernel(GlpRuntime rt, List<Object?> args) {
 
   final list = _dartListToGlpList(items);
   return _bindResult(rt, args[1], list);
+}
+
+// ============================================================================
+// TIME KERNELS
+// ============================================================================
+
+/// now(T) - Bind T to current Unix milliseconds since epoch
+/// Always succeeds.
+BodyKernelResult nowKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 1) {
+    print('[ABORT] now/1: expected 1 argument, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final currentTime = DateTime.now().millisecondsSinceEpoch;
+  return _bindResult(rt, args[0], currentTime);
 }

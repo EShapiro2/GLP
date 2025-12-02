@@ -46,6 +46,12 @@ The FCP (Flat Concurrent Prolog) implementation is available for reference:
 
 ## Core Rules
 
+### Never Implement Without a Plan
+- **NEVER start implementation without an agreed upon plan**
+- First discuss and document the design
+- Get explicit user agreement on the plan
+- Only then proceed to implementation
+
 ### Accuracy and Honesty
 - **NEVER BS, GUESS, SPECULATE, OR HALLUCINATE**
 - **IF UNSURE, SAY SO** - "I'm not sure, need to check X"

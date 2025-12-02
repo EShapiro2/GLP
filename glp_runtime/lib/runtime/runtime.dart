@@ -32,6 +32,39 @@ class GlpRuntime {
   // Goal ID counter for spawn
   int nextGoalId = 10000;  // Start at 10000 to avoid collisions with test goal IDs
 
+  // Timer tracking for wait() guards
+  int _pendingTimers = 0;
+  int get pendingTimers => _pendingTimers;
+  void incrementPendingTimers() => _pendingTimers++;
+  void decrementPendingTimers() => _pendingTimers--;
+
+  // Wait state tracking for wait() guards
+  // Maps goalId to the reader ID that the timer will signal
+  // When goal resumes, we check if this reader is bound (timer fired)
+  final Map<int, int> _waitReaders = <int, int>{};
+
+  /// Check if a goal has a pending wait and if the timer has fired
+  /// Returns null if no wait state, true if timer fired, false if still waiting
+  bool? checkWaitState(int goalId) {
+    final readerId = _waitReaders[goalId];
+    if (readerId == null) return null;
+    // Check if the writer has been bound (timer fired)
+    return heap.isFullyBound(readerId);
+  }
+
+  /// Clear wait state for a goal (after timer completes)
+  void clearWaitState(int goalId) {
+    _waitReaders.remove(goalId);
+  }
+
+  /// Set wait state for a goal
+  void setWaitReader(int goalId, int readerId) {
+    _waitReaders[goalId] = readerId;
+  }
+
+  /// Get the wait reader for a goal (if any)
+  int? getWaitReader(int goalId) => _waitReaders[goalId];
+
   GlpRuntime({HeapFCP? heap, GoalQueue? gq, SystemPredicateRegistry? systemPredicates, BodyKernelRegistry? bodyKernels})
       : heap = heap ?? HeapFCP(),
         gq = gq ?? GoalQueue(),
