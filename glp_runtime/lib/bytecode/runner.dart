@@ -1440,11 +1440,14 @@ class BytecodeRunner {
           }
         } else {
           // READ mode: Unify with value at S position
+          if (cx.debugOutput) print('[DEBUG] UnifyVariable READ: varIndex=$varIndex, isReaderMode=$isReaderMode, S=${cx.S}, currentStructure=${cx.currentStructure?.runtimeType}');
           if (cx.currentStructure is StructTerm) {
             final struct = cx.currentStructure as StructTerm;
+            if (cx.debugOutput) print('[DEBUG] UnifyVariable READ: S=${cx.S}, struct.args.length=${struct.args.length}');
             if (cx.S < struct.args.length) {
               final value = struct.args[cx.S];
               final existingValue = cx.clauseVars[varIndex];
+              if (cx.debugOutput) print('[DEBUG] UnifyVariable READ: value=$value (${value.runtimeType}), existingValue=$existingValue');
 
               if (isReaderMode) {
                 // UnifyReader READ mode logic
@@ -1644,15 +1647,20 @@ class BytecodeRunner {
         final argSlot = op.argSlot;
         final isReaderMode = op.isReader;
 
+        if (cx.debugOutput) print('[DEBUG] GetValue: varIndex=$varIndex, argSlot=$argSlot, isReaderMode=$isReaderMode');
         final arg = _getArg(cx, argSlot);
+        if (cx.debugOutput) print('[DEBUG] GetValue: arg=$arg (${arg?.runtimeType})');
         if (arg == null) {
+          if (cx.debugOutput) print('[DEBUG] GetValue: arg is null, FAILING');
           _softFailToNextClause(cx, pc);
           pc = _findNextClauseTry(pc);
           continue;
         }
 
         var storedValue = cx.clauseVars[varIndex];
+        if (cx.debugOutput) print('[DEBUG] GetValue: storedValue=$storedValue (${storedValue?.runtimeType})');
         if (storedValue == null) {
+          if (cx.debugOutput) print('[DEBUG] GetValue: storedValue is null, FAILING');
           _softFailToNextClause(cx, pc);
           pc = _findNextClauseTry(pc);
           continue;
@@ -1723,19 +1731,24 @@ class BytecodeRunner {
             }
           } else if (arg is VarRef && arg.isReader) {
             final wid = cx.rt.heap.writerIdForReader(arg.varId);
+            if (cx.debugOutput) print('[DEBUG] GetValue reader arg: wid=$wid, isBound=${wid != null ? cx.rt.heap.isWriterBound(wid) : null}');
             if (wid != null && cx.rt.heap.isWriterBound(wid)) {
               final readerValue = cx.rt.heap.valueOfWriter(wid);
+              if (cx.debugOutput) print('[DEBUG] GetValue reader arg: readerValue=$readerValue');
               if (storedValue is int) {
                 cx.sigmaHat[storedValue] = readerValue;
               } else if (storedValue is VarRef && !storedValue.isReader) {
                 // storedValue is a writer VarRef from earlier occurrence - bind it
+                if (cx.debugOutput) print('[DEBUG] GetValue: binding storedValue.varId=${storedValue.varId} to readerValue in sigmaHat');
                 cx.sigmaHat[storedValue.varId] = readerValue;
               } else if (storedValue != readerValue) {
+                if (cx.debugOutput) print('[DEBUG] GetValue: storedValue != readerValue, FAILING');
                 _softFailToNextClause(cx, pc);
                 pc = _findNextClauseTry(pc);
                 continue;
               }
             } else {
+              if (cx.debugOutput) print('[DEBUG] GetValue reader arg: UNBOUND, suspending');
               final suspendOnVar = _finalUnboundVar(cx, arg.varId);
               pc = _suspendAndFail(cx, suspendOnVar, pc); continue;
             }
@@ -2612,7 +2625,11 @@ class BytecodeRunner {
         void collectUnbound(Object? term) {
           if (term is VarRef && !term.isReader) {
             final wid = term.varId;
-            if (!cx.rt.heap.isWriterBound(wid)) {
+            // Check both heap bindings AND sigmaHat tentative bindings
+            if (cx.sigmaHat.containsKey(wid)) {
+              // Tentatively bound in sigmaHat - recurse into the binding
+              collectUnbound(cx.sigmaHat[wid]);
+            } else if (!cx.rt.heap.isWriterBound(wid)) {
               hasUnboundWriter = true;
             } else {
               collectUnbound(cx.rt.heap.valueOfWriter(wid));
@@ -2638,8 +2655,10 @@ class BytecodeRunner {
           // Could be writer ID or reader ID
           final wc = cx.rt.heap.writer(value);
           if (wc != null) {
-            // It's a writer ID
-            if (!cx.rt.heap.isWriterBound(value)) {
+            // It's a writer ID - check sigmaHat first
+            if (cx.sigmaHat.containsKey(value)) {
+              collectUnbound(cx.sigmaHat[value]);
+            } else if (!cx.rt.heap.isWriterBound(value)) {
               hasUnboundWriter = true;
             } else {
               collectUnbound(cx.rt.heap.valueOfWriter(value));
