@@ -1,0 +1,8 @@
+% Standalone merge with reader argument test
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], [], []).
+
+p([1,2]).
+
+test(X, Zs) :- p(X), merge(X?,[a],Zs).

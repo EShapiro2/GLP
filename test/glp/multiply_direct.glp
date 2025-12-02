@@ -1,0 +1,6 @@
+% multiply_direct.glp - Scalar multiply stream (direct execution only)
+multiply(_, [], []).
+multiply(N, [X|Xs], [Y?|Ys?]) :-
+  number(N?) |
+  Y := N? * X?,
+  multiply(N?, Xs?, Ys).
