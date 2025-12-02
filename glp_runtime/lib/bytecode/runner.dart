@@ -944,7 +944,6 @@ class BytecodeRunner {
         if (arg is VarRef && arg.isReader) {
           // Reader VarRef: check if bound and has matching structure
           final wid = cx.rt.heap.writerIdForReader(arg.varId);
-          if (cx.debugOutput) print('[DEBUG] HeadStructure: reader VarRef ${arg.varId}, wid=$wid, isBound=${wid != null ? cx.rt.heap.isWriterBound(wid) : null}');
           if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: READ mode, reader ${arg.varId} -> writer $wid');
           if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
             // Unbound reader - add to U and soft fail
@@ -956,10 +955,8 @@ class BytecodeRunner {
 
           // Bound reader - dereference fully and check if it's a matching structure
           final rawValue = cx.rt.heap.valueOfWriter(wid);
-          if (cx.debugOutput) print('[DEBUG] HeadStructure: rawValue=$rawValue (${rawValue.runtimeType})');
           if (rawValue == null) {
             // Null value - should not happen for bound writer
-            if (cx.debugOutput) print('[DEBUG] HeadStructure: rawValue is null, failing');
             if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer $wid has null value, failing');
             _softFailToNextClause(cx, pc);
             pc = _findNextClauseTry(pc);
@@ -967,7 +964,6 @@ class BytecodeRunner {
           }
           // Dereference recursively in case value is a VarRef chain
           final value = cx.rt.heap.dereference(rawValue);
-          if (cx.debugOutput) print('[DEBUG] HeadStructure: dereferenced value=$value (${value.runtimeType}), expecting ${op.functor}/${op.arity}');
           // print('DEBUG: HeadStructure - Writer $wid value = ${value.runtimeType}: $value, expecting ${op.functor}/${op.arity}');
           if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer $wid dereferenced value = $value, expecting ${op.functor}/${op.arity}');
           if (value is StructTerm && value.functor == op.functor && value.args.length == op.arity) {
@@ -1231,13 +1227,11 @@ class BytecodeRunner {
           }
         } else {
           // READ mode: Verify value at S position matches constant
-          if (cx.debugOutput) print('[DEBUG] UnifyConstant READ: currentStructure=${cx.currentStructure?.runtimeType}, S=${cx.S}');
           if (cx.currentStructure is StructTerm) {
             final struct = cx.currentStructure as StructTerm;
-            if (cx.debugOutput) print('[DEBUG] UnifyConstant READ: S=${cx.S}, struct.args.length=${struct.args.length}');
             if (cx.S < struct.args.length) {
               final value = struct.args[cx.S];
-              if (cx.debugOutput) print('[DEBUG] UnifyConstant READ: S=${cx.S}, value=$value (${value.runtimeType}), expecting ${op.value}');
+              // print('DEBUG: UnifyConstant - S=${cx.S}, value=$value (${value.runtimeType}), expecting ${op.value}');
               if (debug && cx.goalId >= 4000) print('  UnifyConstant: S=${cx.S}, value=$value (${value.runtimeType}), expecting ${op.value}');
 
               if (value is ConstTerm && value.value == op.value) {
@@ -1383,7 +1377,7 @@ class BytecodeRunner {
               // Subsequent use: create VarRef with appropriate mode
               struct.args[cx.S] = VarRef(clauseVarValue.varId, isReader: isReaderMode);
             } else if (clauseVarValue is int) {
-              // Bare varId - create VarRef with appropriate mode
+              // Bare varId (from get_reader_variable etc.) - create VarRef with requested mode
               struct.args[cx.S] = VarRef(clauseVarValue, isReader: isReaderMode);
             } else if (clauseVarValue is Term) {
               if (isReaderMode) {
@@ -1448,11 +1442,9 @@ class BytecodeRunner {
           // READ mode: Unify with value at S position
           if (cx.currentStructure is StructTerm) {
             final struct = cx.currentStructure as StructTerm;
-            if (cx.debugOutput) print('[DEBUG] UnifyVariable READ: varIndex=$varIndex, isReaderMode=$isReaderMode, S=${cx.S}, struct.args.length=${struct.args.length}');
             if (cx.S < struct.args.length) {
               final value = struct.args[cx.S];
               final existingValue = cx.clauseVars[varIndex];
-              if (cx.debugOutput) print('[DEBUG] UnifyVariable READ: value=$value (${value.runtimeType}), existingValue=$existingValue');
 
               if (isReaderMode) {
                 // UnifyReader READ mode logic
@@ -1578,48 +1570,54 @@ class BytecodeRunner {
 
         if (!isReaderMode) {
           // GetWriterVariable logic: Load argument into clause WRITER variable
-          // FIX: Check if clauseVars already has a writer from earlier reader occurrence
-          final existingValue = cx.clauseVars[varIndex];
-          if (existingValue is VarRef && !existingValue.isReader) {
-            // Already have a writer from earlier reader occurrence - bind it to arg
-            if (arg is ConstTerm || arg is StructTerm) {
-              cx.sigmaHat[existingValue.varId] = arg;
-            } else if (arg is VarRef && !arg.isReader) {
-              // Writer-to-writer: bind existing to arg's value if arg is bound
-              if (cx.rt.heap.isWriterBound(arg.varId)) {
-                final value = cx.rt.heap.valueOfWriter(arg.varId);
-                cx.sigmaHat[existingValue.varId] = value;
-              } else {
-                // Both unbound - WxW violation, fail
-                _softFailToNextClause(cx, pc);
-                pc = _findNextClauseTry(pc);
-                continue;
-              }
-            } else if (arg is VarRef && arg.isReader) {
-              final wid = cx.rt.heap.writerIdForReader(arg.varId);
-              if (wid != null && cx.rt.heap.isWriterBound(wid)) {
-                final value = cx.rt.heap.valueOfWriter(wid);
-                cx.sigmaHat[existingValue.varId] = value;
-              } else {
-                final suspendOnVar = _finalUnboundVar(cx, arg.varId);
-                pc = _suspendAndFail(cx, suspendOnVar, pc); continue;
-              }
+          // IMPORTANT: Check if clauseVars[varIndex] already has a writer from
+          // an earlier occurrence (e.g., inside a structure via UnifyVariable).
+          // If so, bind that writer to the argument value via sigmaHat.
+          final existing = cx.clauseVars[varIndex];
+
+          if (arg is VarRef && !arg.isReader) {
+            if (existing is VarRef && !existing.isReader) {
+              // Both are writers - bind arg writer to existing writer's reader
+              cx.sigmaHat[arg.varId] = VarRef(existing.varId, isReader: true);
+            } else if (existing is int) {
+              // existing is bare writer varId - bind arg to reader of it
+              cx.sigmaHat[arg.varId] = VarRef(existing, isReader: true);
+            } else {
+              cx.clauseVars[varIndex] = arg.varId;
             }
-          } else if (arg is VarRef && !arg.isReader) {
-            cx.clauseVars[varIndex] = arg.varId;
           } else if (arg is VarRef && arg.isReader) {
             final wid = cx.rt.heap.writerIdForReader(arg.varId);
             if (wid != null && cx.rt.heap.isWriterBound(wid)) {
               final value = cx.rt.heap.valueOfWriter(wid);
-              cx.clauseVars[varIndex] = value;
+              if (existing is VarRef && !existing.isReader) {
+                cx.sigmaHat[existing.varId] = value;
+              } else if (existing is int) {
+                cx.sigmaHat[existing] = value;
+              } else {
+                cx.clauseVars[varIndex] = value;
+              }
             } else {
               final suspendOnVar = _finalUnboundVar(cx, arg.varId);
               pc = _suspendAndFail(cx, suspendOnVar, pc); continue;
             }
           } else if (arg is ConstTerm) {
-            cx.clauseVars[varIndex] = arg;
+            if (existing is VarRef && !existing.isReader) {
+              // Already have a writer from earlier occurrence - bind it
+              cx.sigmaHat[existing.varId] = arg;
+            } else if (existing is int) {
+              // Bare writer varId - bind it
+              cx.sigmaHat[existing] = arg;
+            } else {
+              cx.clauseVars[varIndex] = arg;
+            }
           } else if (arg is StructTerm) {
-            cx.clauseVars[varIndex] = arg;
+            if (existing is VarRef && !existing.isReader) {
+              cx.sigmaHat[existing.varId] = arg;
+            } else if (existing is int) {
+              cx.sigmaHat[existing] = arg;
+            } else {
+              cx.clauseVars[varIndex] = arg;
+            }
           }
         } else {
           // GetReaderVariable logic: Load argument into clause READER variable
@@ -1646,21 +1644,15 @@ class BytecodeRunner {
         final argSlot = op.argSlot;
         final isReaderMode = op.isReader;
 
-        if (cx.debugOutput) print('[DEBUG] GetValue: varIndex=$varIndex, argSlot=$argSlot, isReaderMode=$isReaderMode');
-
         final arg = _getArg(cx, argSlot);
-        if (cx.debugOutput) print('[DEBUG] GetValue: arg=$arg (${arg?.runtimeType})');
         if (arg == null) {
-          if (cx.debugOutput) print('[DEBUG] GetValue: arg is null, failing');
           _softFailToNextClause(cx, pc);
           pc = _findNextClauseTry(pc);
           continue;
         }
 
         var storedValue = cx.clauseVars[varIndex];
-        if (cx.debugOutput) print('[DEBUG] GetValue: storedValue=$storedValue (${storedValue?.runtimeType})');
         if (storedValue == null) {
-          if (cx.debugOutput) print('[DEBUG] GetValue: storedValue is null, failing');
           _softFailToNextClause(cx, pc);
           pc = _findNextClauseTry(pc);
           continue;
@@ -1747,9 +1739,6 @@ class BytecodeRunner {
           } else if (arg is ConstTerm) {
             if (storedValue is int) {
               cx.sigmaHat[storedValue] = arg;
-            } else if (storedValue is VarRef) {
-              // VarRef from UnifyVariable reader: bind the variable to arg
-              cx.sigmaHat[storedValue.varId] = arg;
             } else if (storedValue is ConstTerm && storedValue.value != arg.value) {
               _softFailToNextClause(cx, pc);
               pc = _findNextClauseTry(pc);
@@ -1758,9 +1747,6 @@ class BytecodeRunner {
           } else if (arg is StructTerm) {
             if (storedValue is int) {
               cx.sigmaHat[storedValue] = arg;
-            } else if (storedValue is VarRef) {
-              // VarRef from UnifyVariable reader: bind the variable to arg
-              cx.sigmaHat[storedValue.varId] = arg;
             } else if (storedValue is StructTerm && storedValue.functor != arg.functor) {
               _softFailToNextClause(cx, pc);
               pc = _findNextClauseTry(pc);
