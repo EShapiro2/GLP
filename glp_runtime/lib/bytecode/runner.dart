@@ -1621,16 +1621,55 @@ class BytecodeRunner {
           }
         } else {
           // GetReaderVariable logic: Load argument into clause READER variable
+          // IMPORTANT: Check if clauseVars[varIndex] already has a writer from
+          // an earlier occurrence (e.g., inside a structure via UnifyVariable).
+          // If so, connect the arg's writer to the existing writer.
+          final existing = cx.clauseVars[varIndex];
+
           if (arg is VarRef && !arg.isReader) {
             // Writer VarRef → reader param (mode conversion)
-            final freshVar = cx.rt.heap.allocateFreshVar();
-            cx.rt.heap.addVariable(freshVar);
-            cx.sigmaHat[arg.varId] = VarRef(freshVar, isReader: true);
-            cx.clauseVars[varIndex] = freshVar;
+            if (existing is VarRef && !existing.isReader) {
+              // Existing is a writer, arg is a writer
+              // Connect arg's writer to read from existing writer
+              cx.sigmaHat[arg.varId] = VarRef(existing.varId, isReader: true);
+            } else if (existing is int) {
+              // Existing is bare writer varId
+              cx.sigmaHat[arg.varId] = VarRef(existing, isReader: true);
+            } else if (existing != null) {
+              // Existing is a value (const, struct) - bind arg to it
+              cx.sigmaHat[arg.varId] = existing;
+            } else {
+              // No existing value - create fresh var as before
+              final freshVar = cx.rt.heap.allocateFreshVar();
+              cx.rt.heap.addVariable(freshVar);
+              cx.sigmaHat[arg.varId] = VarRef(freshVar, isReader: true);
+              cx.clauseVars[varIndex] = freshVar;
+            }
           } else if (arg is VarRef && arg.isReader) {
-            cx.clauseVars[varIndex] = arg.varId;
+            // Arg is a reader - need to connect it to existing writer if any
+            final argWriterId = cx.rt.heap.writerIdForReader(arg.varId);
+            if (existing is VarRef && !existing.isReader && argWriterId != null) {
+              // Existing is a writer, arg is a reader with a writer
+              // Connect arg's writer to read from existing writer
+              cx.sigmaHat[argWriterId] = VarRef(existing.varId, isReader: true);
+            } else if (existing is int && argWriterId != null) {
+              // Existing is bare writer varId, arg is a reader
+              cx.sigmaHat[argWriterId] = VarRef(existing, isReader: true);
+            } else if (existing != null && existing is! VarRef && argWriterId != null) {
+              // Existing is a value - bind arg's writer to it
+              cx.sigmaHat[argWriterId] = existing;
+            } else {
+              // No existing value - just store arg's reader id
+              cx.clauseVars[varIndex] = arg.varId;
+            }
           } else if (arg is ConstTerm) {
-            cx.clauseVars[varIndex] = arg;
+            if (existing is VarRef && !existing.isReader) {
+              // Existing writer should equal the constant - fail or bind?
+              // Actually for reader mode with const, we're reading the const
+              cx.clauseVars[varIndex] = arg;
+            } else {
+              cx.clauseVars[varIndex] = arg;
+            }
           } else if (arg is StructTerm) {
             cx.clauseVars[varIndex] = arg;
           }
