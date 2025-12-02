@@ -1727,6 +1727,9 @@ class BytecodeRunner {
               final readerValue = cx.rt.heap.valueOfWriter(wid);
               if (storedValue is int) {
                 cx.sigmaHat[storedValue] = readerValue;
+              } else if (storedValue is VarRef && !storedValue.isReader) {
+                // storedValue is a writer VarRef from earlier occurrence - bind it
+                cx.sigmaHat[storedValue.varId] = readerValue;
               } else if (storedValue != readerValue) {
                 _softFailToNextClause(cx, pc);
                 pc = _findNextClauseTry(pc);
