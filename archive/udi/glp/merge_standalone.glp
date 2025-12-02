@@ -1,0 +1,8 @@
+% Standalone merge - not using clause/2
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], [], []).
+
+p([1,2]).
+
+merge2(Xs, Zs?) :- merge(Xs?,[a],Ys), merge(Ys?,[b],Zs).
