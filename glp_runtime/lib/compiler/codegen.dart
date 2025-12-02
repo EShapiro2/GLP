@@ -262,8 +262,8 @@ class CodeGenerator {
       }
 
     } else if (term is UnderscoreTerm) {
-      // Anonymous variable: void/1
-      ctx.emit(bc.UnifyVoid(count: 1));
+      // Anonymous variable as direct head argument: just ignore it
+      // No instruction needed - the argument is simply not extracted
     }
   }
 

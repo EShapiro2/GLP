@@ -447,6 +447,36 @@ monitor([add(N)|Reqs],Sum) :-
 2. Runtime must preserve SRSW invariant across reductions
 3. `ground(X?)` guard relaxes single-reader for ground terms only
 
+### Anonymous Variable `_` in SRSW
+
+The anonymous variable `_` is exempt from SRSW checking:
+
+- **`_` is a writer that nobody reads** - it's a placeholder for values that are discarded
+- Each `_` occurrence creates a fresh, independent variable (no sharing)
+- Use `_` in abort clauses where the result is never bound:
+
+```prolog
+% CORRECT: _ as result in abort clause (value never bound)
+_ := X / Y :-
+  number(X?), number(Y?), Y? =:= 0 |
+  abort("Division by zero").
+
+% WRONG: Result? with no writer violates SRSW
+Result? := X / Y :-
+  number(X?), number(Y?), Y? =:= 0 |
+  abort("Division by zero").
+```
+
+**Key insight**: `_` satisfies SRSW because it's a writer occurrence, but since it's anonymous, there's no expectation of a paired reader.
+
+### SRSW is Mandatory
+
+**All GLP code must be compiled with SRSW checking enabled.** There is no option to disable SRSW checking. The compiler will reject any code that violates SRSW.
+
+- Do NOT work around SRSW violations - fix them properly
+- If SRSW seems too restrictive for a pattern, discuss the design
+- The ground guard exception exists for legitimate multi-reader patterns
+
 ## Bytecode Instruction Model
 
 The GLP bytecode is modeled after the Warren Abstract Machine (WAM) and Flat Concurrent Prolog (FCP) abstract machines, adapted for GLP's three-valued unification (success/suspend/fail) and SRSW semantics.

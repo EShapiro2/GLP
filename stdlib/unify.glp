@@ -1,0 +1,13 @@
+% GLP System Predicate: = (Unification)
+%
+% Binds the first argument (writer) to the second argument's value.
+%
+% Usage:
+%   X = foo     - Binds X to foo
+%   X = foo(a)  - Binds X to foo(a)
+%   X = Y?      - Binds X to Y's value
+%
+% Definition: X? = X means the same variable appears as reader (second arg)
+% then writer (first arg), enabling unification in GLP's SRSW model.
+
+X? = X.

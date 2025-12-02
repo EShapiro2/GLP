@@ -1574,6 +1574,14 @@ Guards provide read-only tests that determine clause selection. They appear betw
 
 ### 19.2 Arithmetic Expression Evaluation in Guards
 
+**Which guards evaluate arithmetic:**
+
+| Guard Type | Evaluates Arithmetic | Examples |
+|------------|---------------------|----------|
+| Comparison guards | YES | `<`, `>`, `=<`, `>=`, `=:=`, `=\=` |
+| Type guards | NO | `number/1`, `integer/1`, `atom/1`, `ground/1` |
+| Control guards | NO | `true`, `otherwise` |
+
 Guards like `X? + 1 < Y? * 2` require expression evaluation:
 
 1. **Recursively evaluate** arithmetic subexpressions (+, -, *, /, mod)
@@ -1582,6 +1590,8 @@ Guards like `X? + 1 < Y? * 2` require expression evaluation:
 4. **Apply comparison** to evaluated results
 
 **Note**: This uses the same arithmetic evaluator as evaluate/2 but with three-valued semantics (can suspend).
+
+**Type guards check raw type**: `number(5 + 3)` FAILS because `+(5,3)` is a StructTerm, not a number. Use comparison guards like `=:=` if you need arithmetic evaluation.
 
 **Example**:
 ```prolog
@@ -1660,6 +1670,27 @@ partition([X | Xs], Pivot, [X? | Smaller?], Larger?) :-
 ### 19.4 Type Guards
 
 These guards test term types and properties.
+
+**IMPORTANT: Type guards do NOT evaluate arithmetic expressions in their arguments.**
+
+Unlike comparison guards (`<`, `>`, `=:=`, etc.) which evaluate arithmetic expressions before comparison, type guards check the **raw type** of the argument without evaluation.
+
+Example:
+```prolog
+% With X = 5 + 3:
+number(X?)     % FAILS - X? is a StructTerm +(5,3), not a number
+X? =:= 8       % SUCCEEDS - evaluates +(5,3) to 8, then compares
+
+% With X = 8:
+number(X?)     % SUCCEEDS - X? is a number
+```
+
+This distinction is critical for clause selection:
+```prolog
+Result := N :- number(N?) | Result = N?.        % Matches plain numbers only
+Result := X? + Y? :- number(X?), number(Y?) |   % Matches arithmetic expressions
+    add(X?, Y?, Result).
+```
 
 #### 19.4.1 guard_ground Xi
 **Source**: `ground(X)` in guard position

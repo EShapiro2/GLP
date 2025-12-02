@@ -48,14 +48,14 @@ void main() async {
   final loadedPrograms = <String, BytecodeProgram>{};
 
   // Load stdlib files for system predicates
-  final stdlibFiles = ['assign.glp', 'univ.glp'];
+  final stdlibFiles = ['assign.glp', 'univ.glp', 'unify.glp'];
   for (final filename in stdlibFiles) {
     final stdlibPath = '../stdlib/$filename';
     final stdlibFile = File(stdlibPath);
     if (stdlibFile.existsSync()) {
       try {
         final stdlibSource = stdlibFile.readAsStringSync();
-        final stdlibCompiler = GlpCompiler(skipSRSW: true);
+        final stdlibCompiler = GlpCompiler();
         final stdlibProg = stdlibCompiler.compile(stdlibSource);
         loadedPrograms['__stdlib_${filename}__'] = stdlibProg;
         print('Loaded stdlib: $filename (${stdlibProg.ops.length} ops)');

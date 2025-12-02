@@ -12,9 +12,9 @@ void main() {
   late BytecodeProgram stdlibProg;
 
   setUpAll(() {
-    // Compile assign.glp with skipSRSW for system predicates
+    // Compile assign.glp - now SRSW compliant
     final stdlibSource = File('/home/user/GLP/stdlib/assign.glp').readAsStringSync();
-    final stdlibCompiler = GlpCompiler(skipSRSW: true);
+    final stdlibCompiler = GlpCompiler();
     stdlibProg = stdlibCompiler.compile(stdlibSource);
     print('Stdlib compiled: ${stdlibProg.ops.length} instructions');
   });
@@ -215,9 +215,9 @@ void main() {
 
   group('End-to-end := system predicate', () {
     test('assign.glp compiles and merges correctly', () {
-      // Load stdlib (assign.glp)
+      // Load stdlib (assign.glp) - now SRSW compliant
       final stdlibSource = File('/home/user/GLP/stdlib/assign.glp').readAsStringSync();
-      final stdlibCompiler = GlpCompiler(skipSRSW: true);
+      final stdlibCompiler = GlpCompiler();
       final stdlibProg = stdlibCompiler.compile(stdlibSource);
 
       // A simple user program that just calls another predicate
@@ -258,9 +258,9 @@ void main() {
     test('Z := 5 + 3 executes and binds Z to 8', () {
       print('\n=== END-TO-END ARITHMETIC TEST ===');
 
-      // Load stdlib (assign.glp)
+      // Load stdlib (assign.glp) - now SRSW compliant
       final stdlibSource = File('/home/user/GLP/stdlib/assign.glp').readAsStringSync();
-      final stdlibCompiler = GlpCompiler(skipSRSW: true);
+      final stdlibCompiler = GlpCompiler();
       final stdlibProg = stdlibCompiler.compile(stdlibSource);
 
       // Compile user program

@@ -5,10 +5,11 @@
 2. **INSTALL DART** - Check `/home/user/dart-sdk/bin/dart --version`. If missing, see "Dart Installation" section below
 3. **SET DART PATH** - `export PATH="/home/user/dart-sdk/bin:$PATH"`
 4. **MOUNT FCP** - Clone FCP repo: `git clone --depth 1 https://github.com/EShapiro2/FCP.git /tmp/FCP`
-5. **IDENTIFY CURRENT MODE** - Discussion or Implementation
-6. **FOLLOW MODE RULES** - Never mix modes
-7. **ASK FOR CURRENT STATE** - Request latest code/errors from user
-8. **READ SPECS AS NEEDED** - Don't read all specs upfront, only when relevant to task
+5. **MOUNT GLP-2025** - Clone GLP-2025 repo: `git clone --depth 1 https://github.com/EShapiro2/GLP-2025.git /tmp/GLP-2025`
+6. **IDENTIFY CURRENT MODE** - Discussion or Implementation
+7. **FOLLOW MODE RULES** - Never mix modes
+8. **ASK FOR CURRENT STATE** - Request latest code/errors from user
+9. **READ SPECS AS NEEDED** - Don't read all specs upfront, only when relevant to task
 
 ### Dart Installation (if needed)
 
@@ -36,6 +37,7 @@ dart --version
 - `apt-get install dart` → package not found
 - `busybox unzip` → command not found
 - Dart 3.2.0 or earlier → SDK version mismatch (project needs ^3.9.4)
+- `tail`, `head`, `grep` shell commands → not available (use full output or Dart tools)
 
 ### FCP Reference Repository
 The FCP (Flat Concurrent Prolog) implementation is available for reference:
@@ -43,6 +45,12 @@ The FCP (Flat Concurrent Prolog) implementation is available for reference:
 - **Reference Release**: `/tmp/FCP/Savannah` - this is the authoritative FCP release for GLP
 - **Key Docs**: `/tmp/FCP/Savannah/efcp/Logix/CONSTANTS.txt` - term syntax definitions
 - **GitHub**: https://github.com/EShapiro2/FCP
+
+### GLP-2025 Paper Repository
+The GLP paper and LaTeX sources:
+- **Location**: `/tmp/GLP-2025` (cloned at startup)
+- **Main file**: `/tmp/GLP-2025/main GLP 2025.tex`
+- **GitHub**: https://github.com/EShapiro2/GLP-2025
 
 ## Core Rules
 
@@ -81,7 +89,7 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 ## Key Context
 - **Project**: GLP (Grassroots Logic Programs) - a secure concurrent logic programming language
 - **Implementation Language**: Dart
-- **Current State**: 78 REPL tests + 25 unit tests passing (as of Nov 2025)
+- **Current State**: 101 REPL tests + 25 unit tests passing (as of Dec 2025)
 - **User Expertise**: Deep understanding of GLP semantics but does not write code
 - **Working Directory**: `/home/user/GLP/` (Linux) or `/Users/udi/GLP/` (Mac)
 
@@ -190,7 +198,6 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 ├── docs/                        # ← NORMATIVE SPECIFICATIONS
 │   ├── glp-bytecode-v216-complete.md  # ← Instruction set spec
 │   ├── glp-runtime-spec.txt           # ← Runtime architecture spec
-│   ├── glp_spec.pdf                   # ← Formal GLP spec (ESOP 2026)
 │   ├── wam.pdf                        # ← WAM paper
 │   └── 1-s2.0-0743106689900113-main.pdf  # ← FCP implementation
 │
@@ -299,8 +306,8 @@ bash run_repl_tests.sh       # Compare to baseline
 
 **Report both results:**
 ```
-Unit tests: 86/89 passing
-REPL tests: 13/18 passing
+Unit tests: 25/25 passing
+REPL tests: 101/101 passing
 ```
 
 **For specific test:**
@@ -319,8 +326,8 @@ dart test test/specific_test.dart
 ### 1. Test Before Changing
 ```bash
 # ALWAYS run BOTH test suites first
-dart test                 # Unit tests - should be ~86/89 passing
-bash run_repl_tests.sh    # REPL tests - note baseline
+dart test                 # Unit tests - should be 25 passing
+bash run_repl_tests.sh    # REPL tests - should be 101 passing
 ```
 If tests failing BEFORE changes, STOP and inform user.
 
@@ -377,7 +384,7 @@ This protocol is required when debugging GLP programs. Do not skip steps. Stop a
 ### Secondary References (Consult as Needed)
 
 4. **WAM Paper**: `/Users/udi/GLP/docs/wam.pdf` - Warren's Abstract Machine
-5. **GLP Spec**: `/Users/udi/GLP/docs/glp_spec.pdf` - Formal GLP specification
+5. **GLP Spec**: `/tmp/GLP-2025/main GLP 2025.tex` - Formal GLP specification (paper source)
 6. **FCP Implementation**: 
    - **Local Source**: `/Users/udi/Dropbox/Concurrent Prolog/FCP/Savannah`
    - **GitHub Mirror**: https://github.com/EShapiro2/FCP
@@ -387,6 +394,8 @@ This protocol is required when debugging GLP programs. Do not skip steps. Stop a
 
 ### GLP-Specific Knowledge
 - **SRSW Constraint**: Single-Reader/Single-Writer - each variable occurs at most once per clause
+- **SRSW is MANDATORY**: All GLP code must pass SRSW checking. NEVER invent or use a `skipSRSW` option.
+- **Anonymous variable `_`**: A writer that nobody reads - exempt from SRSW checking. Use in abort clauses where result is never bound.
 - **Three-Phase Execution**: HEAD (tentative unification) → GUARDS (pure tests) → BODY (mutations)
 - **Suspension Mechanism**: Goals suspend on unbound readers, reactivate when writers are bound
 - **Writer MGU**: Only binds writers, never readers; never binds writer to writer
@@ -468,7 +477,8 @@ PC 44: Proceed
 ## Known Working Tests
 These must continue passing:
 ```bash
-dart test  # Should show ~170 passing
+dart test  # Should show 25 passing
+bash run_repl_tests.sh  # Should show 101 passing
 ```
 
 REPL tests:
@@ -486,7 +496,7 @@ REPL tests:
 ```bash
 git status          # Ensure clean state
 git log -1 --oneline  # Note current commit
-dart test | tail -n 5  # Baseline test count
+dart test  # Run baseline tests (note: tail/head commands not available)
 ```
 
 ### Creating Safety Checkpoints
@@ -547,6 +557,17 @@ Claude B: work → push → branch-B ──────────────�
    git push origin main
    ```
 
+**When user asks to "merge with main" or "push to main":**
+Since only the user can push to main, output the exact commands they need to run:
+```bash
+git checkout main
+git pull origin main
+git fetch origin claude/<current-branch-name>
+git merge origin/claude/<current-branch-name>
+git push origin main
+```
+Replace `<current-branch-name>` with the actual branch name from this session.
+
 ### User's Responsibilities - PRECISE Protocol for Merging to Main
 
 **🔴 IMPORTANT: This is the CORRECT protocol. Other instructions may be wrong.**
@@ -605,7 +626,7 @@ The operation failed with the following error:
 
 [Complete error message]
 
-Current test status: X/170 passing
+Current test status: X/25 unit tests, Y/101 REPL tests
 
 The error appears to be [brief description].
 
@@ -708,6 +729,10 @@ X? =.. [Y|Ys] :- list(Ys?) | list_to_tuple([Y|Ys], X).
 2. **Running the REPL**: Always use `dart run glp_repl.dart` from the `udi/` directory, NOT a compiled exe.
 
 3. **Test file patterns**: The test suite uses a specific format - see `run_repl_tests.sh` for the `run_test` function.
+
+4. **CRITICAL - Reader/Writer modes in clause heads**: A reader in the head can ONLY be bound to a writer in the goal. If an argument of a goal is expected to be a reader or a ground term (non-variable), then the corresponding head argument MUST be a writer, not a reader!
+   - WRONG: `Result := N? :- number(N?) | ...` - N? is reader, but goal `X := 3` has ground term 3
+   - RIGHT: `Result := N :- number(N?) | ...` - N is writer, can receive ground term 3
 
 ### Common Mistakes to Avoid
 

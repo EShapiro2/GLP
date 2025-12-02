@@ -3237,18 +3237,8 @@ class BytecodeRunner {
           }
         }
       } else if (t is StructTerm) {
-        // For arithmetic expressions, recursively evaluate
-        if (_isArithmeticOp(t.functor)) {
-          final evalArgs = <Object?>[];
-          for (final arg in t.args) {
-            evalArgs.add(dereference(arg));
-          }
-          // Check if all args are ground numbers
-          if (evalArgs.every((a) => a is num || (a is ConstTerm && a.value is num))) {
-            return _evaluateArithmetic(t.functor, evalArgs);
-          }
-        }
-        // Return structure as-is if not arithmetic
+        // Return structure as-is (don't evaluate arithmetic here)
+        // Guards like =:= will evaluate explicitly using evaluateNumeric
         return t;
       } else if (t is ConstTerm) {
         // CRITICAL FIX: Unwrap ConstTerm to get primitive value

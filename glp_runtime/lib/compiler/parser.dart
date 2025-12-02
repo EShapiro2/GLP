@@ -52,6 +52,12 @@ class Parser {
         if (_current + 1 < tokens.length && tokens[_current + 1].type == TokenType.UNIV) {
           couldBeSameProcedure = true;
         }
+      } else if (name == '=' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER)) {
+        // = clauses start with variable (e.g., "X? = Y")
+        // Look ahead to see if it's followed by =
+        if (_current + 1 < tokens.length && tokens[_current + 1].type == TokenType.EQUALS) {
+          couldBeSameProcedure = true;
+        }
       }
 
       if (!couldBeSameProcedure) break;
@@ -159,6 +165,12 @@ class Parser {
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
         final expr = _parseTerm();
         return Goal('=..', [varTerm, expr], varToken.line, varToken.column);
+      } else if (tokens.length > _current + 1 && tokens[_current + 1].type == TokenType.EQUALS) {
+        _advance(); // consume variable
+        _advance(); // consume =
+        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
+        final term = _parseTerm();
+        return Goal('=', [varTerm, term], varToken.line, varToken.column);
       }
     }
 
@@ -177,6 +189,15 @@ class Parser {
         }
 
         _consume(TokenType.RPAREN, 'Expected ")" after arguments');
+      }
+
+      // Check if followed by = (e.g., foo = bar, or foo(a) = X)
+      if (_match(TokenType.EQUALS)) {
+        final leftTerm = args.isEmpty
+            ? ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column)
+            : StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
+        final rightTerm = _parseTerm();
+        return Goal('=', [leftTerm, rightTerm], functorToken.line, functorToken.column);
       }
 
       // Return as Goal for now (will be cast to Guard if before |)
@@ -219,20 +240,28 @@ class Parser {
 
   // Atom: functor(arg1, arg2, ...) or Var := Expr or Var =.. Expr (for clause heads)
   Atom _parseAtom() {
-    // Check for := or =.. pattern: Var := Expr or Var =.. Expr
-    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
+    // Check for := or =.. pattern: Var := Expr or Var =.. Expr or _ := Expr
+    if (_check(TokenType.VARIABLE) || _check(TokenType.READER) || _check(TokenType.UNDERSCORE)) {
       final varToken = _advance();
       final isReader = varToken.type == TokenType.READER;
+      final isUnderscore = varToken.type == TokenType.UNDERSCORE;
       if (_match(TokenType.ASSIGN)) {
-        // Parse as ':='(Var, Expr)
-        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
+        // Parse as ':='(Var, Expr) or ':='(_, Expr)
+        final lhsTerm = isUnderscore
+            ? UnderscoreTerm(varToken.line, varToken.column)
+            : VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
         final expr = _parseTerm();
-        return Atom(':=', [varTerm, expr], varToken.line, varToken.column);
+        return Atom(':=', [lhsTerm, expr], varToken.line, varToken.column);
       } else if (_match(TokenType.UNIV)) {
         // Parse as '=..'(Var, Expr)
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
         final expr = _parseTerm();
         return Atom('=..', [varTerm, expr], varToken.line, varToken.column);
+      } else if (_match(TokenType.EQUALS)) {
+        // Parse as '='(Var, Term) - unification
+        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
+        final term = _parseTerm();
+        return Atom('=', [varTerm, term], varToken.line, varToken.column);
       } else {
         // Not an assignment - put variable back by rewinding
         _current--;
@@ -262,6 +291,15 @@ class Parser {
       return Atom('=..', [leftTerm, rightTerm], functorToken.line, functorToken.column);
     }
 
+    // Check if this is followed by = (e.g., foo = bar, foo(a) = X)
+    if (_match(TokenType.EQUALS)) {
+      final leftTerm = args.isEmpty
+          ? ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column)
+          : StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
+      final rightTerm = _parseTerm();
+      return Atom('=', [leftTerm, rightTerm], functorToken.line, functorToken.column);
+    }
+
     return Atom(functorToken.lexeme, args, functorToken.line, functorToken.column);
   }
 
@@ -281,6 +319,11 @@ class Parser {
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
         final expr = _parseTerm();
         return Goal('=..', [varTerm, expr], varToken.line, varToken.column);
+      } else if (_match(TokenType.EQUALS)) {
+        // Parse as '='(Var, Term) - unification
+        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
+        final term = _parseTerm();
+        return Goal('=', [varTerm, term], varToken.line, varToken.column);
       } else {
         // Not an assignment or univ - this is an error in goal position
         throw CompileError(

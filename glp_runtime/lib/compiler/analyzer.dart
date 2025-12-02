@@ -171,9 +171,7 @@ class AnnotatedClause {
 
 /// Semantic analyzer for GLP programs
 class Analyzer {
-  final bool skipSRSW;
-
-  Analyzer({this.skipSRSW = false});
+  Analyzer();
 
   AnnotatedProgram analyze(Program program) {
     final annotatedProcs = <AnnotatedProcedure>[];
@@ -217,10 +215,8 @@ class Analyzer {
       }
     }
 
-    // Verify SRSW constraint (unless skipped for system predicates)
-    if (!skipSRSW) {
-      varTable.verifySRSW();
-    }
+    // Verify SRSW constraint - all GLP code must satisfy SRSW
+    varTable.verifySRSW();
 
     // Assign register indices
     _assignRegisters(varTable);
@@ -252,7 +248,7 @@ class Analyzer {
 
     // Type-checking guards implicitly test groundness
     // Per spec: type tests require bound values, which are ground by definition
-    final typeCheckOps = ['number', 'integer', 'float', 'atom', 'string', 'list', 'compound', 'var', 'nonvar'];
+    final typeCheckOps = ['number', 'integer', 'float', 'atom', 'string', 'list', 'tuple', 'compound', 'var', 'nonvar'];
     if (typeCheckOps.contains(guard.predicate) && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm) {
