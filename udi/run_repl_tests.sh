@@ -561,6 +561,88 @@ run_test "Univ: decompose bar(1, 2, 3) to list" \
     "L = \[bar, 1, 2, 3\]"
 
 # ============================================
+# UNIFICATION (=) TESTS
+# Uses stdlib/unify.glp which is auto-loaded
+# Definition: X? = X. (same var as reader then writer)
+# ============================================
+
+run_test "Unify: X = foo binds X to atom" \
+    "hello.glp" \
+    "X = foo." \
+    "X = foo"
+
+run_test "Unify: X = 42 binds X to number" \
+    "hello.glp" \
+    "X = 42." \
+    "X = 42"
+
+run_test "Unify: X = foo(a, b) binds X to structure" \
+    "hello.glp" \
+    "X = foo(a, b)." \
+    "X = foo(a, b)"
+
+run_test "Unify: X = [1, 2, 3] binds X to list" \
+    "hello.glp" \
+    "X = [1, 2, 3]." \
+    "X = \[1, 2, 3\]"
+
+run_test "Unify: X = foo(bar(a)) binds X to nested structure" \
+    "hello.glp" \
+    "X = foo(bar(a))." \
+    "X = foo(bar(a))"
+
+run_test "Unify: X = Y? suspends when Y unbound" \
+    "hello.glp" \
+    "X = Y?." \
+    "suspended"
+
+# ============================================
+# ASSIGNMENT (:=) TESTS
+# Uses stdlib/assign.glp which is auto-loaded
+# Base case: Result := N :- number(N?) | Result = N?.
+# ============================================
+
+run_test "Assign: X := 3 binds X to plain number" \
+    "hello.glp" \
+    "X := 3." \
+    "X = 3"
+
+run_test "Assign: X := 5 + 3 evaluates addition" \
+    "hello.glp" \
+    "X := 5 + 3." \
+    "X = 8"
+
+run_test "Assign: X := 10 - 4 evaluates subtraction" \
+    "hello.glp" \
+    "X := 10 - 4." \
+    "X = 6"
+
+run_test "Assign: X := 4 * 7 evaluates multiplication" \
+    "hello.glp" \
+    "X := 4 * 7." \
+    "X = 28"
+
+run_test "Assign: X := 20 / 4 evaluates division" \
+    "hello.glp" \
+    "X := 20 / 4." \
+    "X = 5"
+
+run_test "Assign: X := 5 + 3 * 2 respects precedence" \
+    "hello.glp" \
+    "X := 5 + 3 * 2." \
+    "X = 11"
+
+run_test "Assign: X := (5 + 3) * 2 respects parentheses" \
+    "hello.glp" \
+    "X := (5 + 3) * 2." \
+    "X = 16"
+
+run_test "Assign: X := -5 evaluates unary minus" \
+    "hello.glp" \
+    "X := -5." \
+    "X = -5"
+
+# ============================================
 # FUTURE TESTS
 # ============================================
 
