@@ -4,6 +4,12 @@
 % Loaded at runtime with grantBodyKernelAccess: true
 
 % ============================================================================
+% BASE CASE: Plain number assignment
+% ============================================================================
+% When the right-hand side is already a number, bind result to it.
+Result := N :- number(N?) | Result = N?.
+
+% ============================================================================
 % BINARY OPERATORS
 % ============================================================================
 
