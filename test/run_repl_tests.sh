@@ -10,7 +10,7 @@ DART=${DART:-$(which dart 2>/dev/null || echo "/home/user/dart-sdk/bin/dart")}
 # Paths - run from glp_runtime directory, point to test files
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GLP_RUNTIME="$SCRIPT_DIR/../glp_runtime"
-GLP_DIR="$SCRIPT_DIR/glp"
+GLP_DIR="$SCRIPT_DIR/../glp/test"
 REPL="bin/glp_repl.dart"
 
 cd "$GLP_RUNTIME"
