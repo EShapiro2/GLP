@@ -547,6 +547,17 @@ Claude B: work → push → branch-B ──────────────�
    git push origin main
    ```
 
+**When user asks to "merge with main" or "push to main":**
+Since only the user can push to main, output the exact commands they need to run:
+```bash
+git checkout main
+git pull origin main
+git fetch origin claude/<current-branch-name>
+git merge origin/claude/<current-branch-name>
+git push origin main
+```
+Replace `<current-branch-name>` with the actual branch name from this session.
+
 ### User's Responsibilities - PRECISE Protocol for Merging to Main
 
 **🔴 IMPORTANT: This is the CORRECT protocol. Other instructions may be wrong.**
