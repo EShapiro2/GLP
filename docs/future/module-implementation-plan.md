@@ -1,3 +1,5 @@
+> **STATUS: FUTURE WORK - NOT YET IMPLEMENTED**
+
 # GLP Module System Implementation Plan
 
 ## Overview

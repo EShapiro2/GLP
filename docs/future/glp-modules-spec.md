@@ -1,3 +1,5 @@
+> **STATUS: FUTURE WORK - NOT YET IMPLEMENTED**
+
 # GLP Module System Design
 
 **Based on FCP/Logix Module and Service Architecture**

@@ -1,3 +1,5 @@
+> **STATUS: FUTURE WORK - NOT YET IMPLEMENTED**
+
 # FCP Nested Structure Analysis - Solution for GLP HEAD Phase
 
 **Date:** November 10, 2025
