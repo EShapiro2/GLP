@@ -1,3 +1,5 @@
+import 'dart:async' show Timer;
+
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/terms.dart';
@@ -3563,6 +3565,74 @@ class BytecodeRunner {
 
       case 'true':
         return GuardResult.success;
+
+      // Time guards
+      case 'wait':
+        // wait(Duration) - Wait for Duration milliseconds using GLP suspension
+        // Semantics:
+        // - Unbound Duration: handled by caller (suspend on reader)
+        // - Non-number: fail
+        // - Duration <= 0: succeed immediately
+        // - Duration > 0: create reader/writer pair, start timer, suspend on reader
+        //   Timer fires → binds writer → ROQ reactivates goal
+        // IMPORTANT: On resume, check if timer has already fired (avoid infinite loop)
+        if (args.isEmpty) return GuardResult.failure;
+        final duration = evaluateNumeric(args[0]);
+        if (duration == null) return GuardResult.failure;
+        if (duration <= 0) return GuardResult.success;
+
+        // Check if this goal already has a pending wait
+        final existingReader = cx.rt.getWaitReader(cx.goalId);
+        if (existingReader != null) {
+          // Goal resumed after suspension - check if timer fired
+          if (cx.rt.heap.isFullyBound(existingReader)) {
+            // Timer fired, reader is bound - clear state and succeed
+            cx.rt.clearWaitState(cx.goalId);
+            return GuardResult.success;
+          } else {
+            // Timer hasn't fired yet - keep suspending on same reader
+            cx.U.add(existingReader);
+            return GuardResult.failure;
+          }
+        }
+
+        // First call - create fresh reader/writer pair for timer notification
+        final (writerId, readerId) = cx.rt.heap.allocateFreshPair();
+
+        // Store wait state for this goal
+        cx.rt.setWaitReader(cx.goalId, readerId);
+
+        // Track pending timer
+        cx.rt.incrementPendingTimers();
+
+        // Start timer that binds writer when it fires
+        Timer(Duration(milliseconds: duration.toInt()), () {
+          // Bind writer to 0 (any value works)
+          final reactivated = cx.rt.heap.bindVariableConst(writerId, 0);
+          // Enqueue reactivated goals
+          for (final goalRef in reactivated) {
+            cx.rt.gq.enqueue(goalRef);
+          }
+          // Decrement pending timer count
+          cx.rt.decrementPendingTimers();
+        });
+
+        // Add reader to suspension set U and fail → triggers normal suspension
+        cx.U.add(readerId);
+        return GuardResult.failure;
+
+      case 'wait_until':
+        // wait_until(Timestamp) - Test if absolute time has passed
+        // Semantics:
+        // - Unbound Timestamp: handled by caller (suspend on reader)
+        // - Non-number: fail
+        // - current time >= Timestamp: succeed
+        // - current time < Timestamp: FAIL (not suspend!)
+        if (args.isEmpty) return GuardResult.failure;
+        final timestamp = evaluateNumeric(args[0]);
+        if (timestamp == null) return GuardResult.failure;
+        final now = DateTime.now().millisecondsSinceEpoch;
+        return now >= timestamp ? GuardResult.success : GuardResult.failure;
 
       default:
         print('[WARN] Unknown guard predicate: $predicateName');

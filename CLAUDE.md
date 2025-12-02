@@ -46,11 +46,28 @@ The FCP (Flat Concurrent Prolog) implementation is available for reference:
 
 ## Core Rules
 
+### Never Implement Without a Plan
+- **NEVER start implementation without an agreed upon plan**
+- First discuss and document the design
+- Get explicit user agreement on the plan
+- Only then proceed to implementation
+
 ### Accuracy and Honesty
 - **NEVER BS, GUESS, SPECULATE, OR HALLUCINATE**
 - **IF UNSURE, SAY SO** - "I'm not sure, need to check X"
 - **READ THE SPEC FIRST** - Check bytecode/runtime specs before any code changes
 - **NEVER REMOVE CONTENT** - Never delete anything without explicit user approval
+
+### Handling Unexpected GLP Behavior
+When encountering unexpected behavior of GLP, **STOP!** Find out:
+1. Is the unexpected behavior consistent with the spec?
+2. If so, is the spec clear?
+3. If inconsistent with the spec, we have a bug.
+
+Present your findings and discuss what to do next:
+- Improve the spec
+- Fix the bug
+- Add explanations to the docs so that the behavior becomes expected
 
 ### Communication Style  
 - **BE TERSE** - Brief, direct responses
@@ -529,6 +546,17 @@ Claude B: work → push → branch-B ──────────────�
    git merge origin/claude/<branch-name>
    git push origin main
    ```
+
+**When user asks to "merge with main" or "push to main":**
+Since only the user can push to main, output the exact commands they need to run:
+```bash
+git checkout main
+git pull origin main
+git fetch origin claude/<current-branch-name>
+git merge origin/claude/<current-branch-name>
+git push origin main
+```
+Replace `<current-branch-name>` with the actual branch name from this session.
 
 ### User's Responsibilities - PRECISE Protocol for Merging to Main
 

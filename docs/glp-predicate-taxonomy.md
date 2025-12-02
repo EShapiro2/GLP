@@ -86,6 +86,59 @@ X? < Temp?                 % Guard predicate: compares X with Temp
 - `guard_mul(X?, Y?, Result)` - Multiplication for guards
 - `guard_div(X?, Y?, Result)` - Division for guards
 
+**Time-Based Guard Kernels**:
+- `wait(Duration?)` - Wait for Duration milliseconds using GLP suspension
+- `wait_until(Timestamp?)` - Test if absolute time has passed
+
+#### `wait(Duration?)` - Relative Delay Guard
+
+**Semantics** (uses standard GLP suspension mechanism):
+
+| Duration value | Behavior |
+|----------------|----------|
+| unbound | Suspend on Duration (normal reader suspension) |
+| non-number | Fail |
+| ≤ 0 | Succeed immediately |
+| N > 0 | Create fresh reader/writer pair (X?, X), start Dart Timer for N ms, suspend on X?. Timer fires → binds X = 0 → goal reactivates via ROQ |
+
+**Mechanism Details**:
+1. When `Duration` is bound to positive integer N:
+   - Runtime creates fresh reader/writer pair `(X?, X)`
+   - Runtime starts Dart `Timer(Duration(milliseconds: N), () => bind(X, 0))`
+   - Goal suspends on `X?` using standard GLP reader suspension
+   - When timer fires, it binds `X = 0`
+   - Standard ROQ mechanism reactivates suspended goal
+   - Guard succeeds (X? is now bound)
+
+**Retry Behavior**: If goal fails in body and retries this clause, a **new** timer starts. The old timer (if still pending) becomes orphaned - when it fires, the ROQ for that writer is empty, so the bind is a harmless no-op.
+
+**Orphaned Timer Handling**: No cleanup needed. When an orphaned timer fires:
+- It binds the writer (e.g., X = 0)
+- ROQ lookup finds no suspended goals (goal already activated or failed)
+- Bind succeeds but triggers no reactivation - harmless no-op
+
+#### `wait_until(Timestamp?)` - Absolute Time Test Guard
+
+**Semantics** (simple time comparison, NOT a wait):
+
+| Timestamp value | Behavior |
+|-----------------|----------|
+| unbound | Suspend on Timestamp (normal reader suspension) |
+| non-number | Fail |
+| current time ≥ Timestamp | Succeed |
+| current time < Timestamp | **Fail** (not suspend!) |
+
+**Key Difference from `wait`**: This is a **test**, not a blocking wait. It checks "has time T passed?" If not, it fails (try next clause). If the goal is later retried when time has passed, it will succeed then.
+
+**Usage Pattern**:
+```glp
+% Clause 1: If time has come, proceed
+action(T, Result?) :- wait_until(T?) | Result = done.
+
+% Clause 2: Otherwise, do something else
+action(T, Result?) :- otherwise | handle_early(Result).
+```
+
 **Detailed Semantics** for `guard_add(X?, Y?, Result)`:
 
 | X value | Y value | Result |
@@ -135,6 +188,7 @@ X? < Temp?                 % Guard predicate: compares X with Temp
 - `bind(Writer, Value)` - Bind writer variable to value
 - `list_to_tuple(List?, Tuple)` - Convert list to structure: `[foo, a, b]` → `foo(a, b)`
 - `tuple_to_list(Tuple?, List)` - Convert structure to list: `foo(a, b)` → `[foo, a, b]`
+- `now(T)` - Bind T to current Unix milliseconds since epoch (always succeeds)
 
 **Usage** (internal):
 ```glp
