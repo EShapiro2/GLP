@@ -35,3 +35,20 @@ alice([add(10), add(5) | Tail?], R) :-
 % Bob: subtract 3, query value, close stream
 % R is writer (in value(R)), R? is reader (return value)
 bob([subtract(3), value(R) | []], R?).
+
+% ======== PLAY WITH WAIT ========
+% Alice waits 50ms before passing stream to Bob
+play_wait(R?) :-
+    alice_wait(Ops, R),
+    monitor(Ops?).
+
+alice_wait([add(10), add(5) | Tail?], R) :-
+    wait(50) |
+    bob(Tail, R?).
+
+% ======== PLAY WITH WAIT_UNTIL ========
+% Only proceed if current time is past Sept 2001 (always true now)
+play_wait_until(R?) :-
+    wait_until(1000000000000) |
+    alice(Ops, R),
+    monitor(Ops?).
