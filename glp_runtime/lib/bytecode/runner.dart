@@ -2610,18 +2610,26 @@ class BytecodeRunner {
         void collectUnbound(Object? term) {
           if (term is VarRef && !term.isReader) {
             final wid = term.varId;
-            if (!cx.rt.heap.isWriterBound(wid)) {
+            // Check sigmaHat first for tentative bindings (from head unification)
+            if (cx.sigmaHat.containsKey(wid)) {
+              collectUnbound(cx.sigmaHat[wid]);
+            } else if (!cx.rt.heap.isWriterBound(wid)) {
               hasUnboundWriter = true;
             } else {
               collectUnbound(cx.rt.heap.valueOfWriter(wid));
             }
           } else if (term is VarRef && term.isReader) {
             final rid = term.varId;
-            final wid = cx.rt.heap.writerIdForReader(rid);
-            if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
-              unboundReaders.add(rid);
+            // Check sigmaHat first for tentative bindings
+            if (cx.sigmaHat.containsKey(rid)) {
+              collectUnbound(cx.sigmaHat[rid]);
             } else {
-              collectUnbound(cx.rt.heap.valueOfWriter(wid));
+              final wid = cx.rt.heap.writerIdForReader(rid);
+              if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
+                unboundReaders.add(rid);
+              } else {
+                collectUnbound(cx.rt.heap.valueOfWriter(wid));
+              }
             }
           } else if (term is StructTerm) {
             for (final arg in term.args) {

@@ -1,0 +1,20 @@
+% Minimal test for value pattern with variable tail (like monitor)
+% This pattern: [value(V?)|Ops] with V writer in second arg
+
+test_value3(R?) :-
+    get_value3([value(R)], 42).
+
+% Pattern matching [value(V?)|Ops] where Ops should be nil
+% Need to use Ops? somewhere to satisfy SRSW
+get_value3([value(V?)|Ops], V) :-
+    dummy(Ops?).
+
+dummy([]).
+
+% Test with ground guard (like monitor)
+test_value4(R?) :-
+    get_value4([value(R)], 42).
+
+get_value4([value(V?)|Ops], V) :-
+    ground(V?) |
+    dummy(Ops?).
