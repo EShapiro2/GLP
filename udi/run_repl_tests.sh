@@ -688,22 +688,30 @@ run_test "Time: wait(100) suspends then succeeds" \
     "X = done"
 
 # ============================================
+# PRIMES TESTS (Sieve of Eratosthenes)
+# ============================================
+
+run_test "Primes up to 20" \
+    "primes.glp" \
+    "primes(20, Ps)." \
+    "Ps = \\[2, 3, 5, 7, 11, 13, 17, 19\\]"
+
+run_test "Primes up to 10" \
+    "primes.glp" \
+    "primes(10, Ps)." \
+    "Ps = \\[2, 3, 5, 7\\]"
+
+# ============================================
 # FUTURE TESTS (not yet implemented)
 # ============================================
 
 FUTURE=0
 
-run_future_test "Primes up to 20" \
-    "primes.glp" \
-    "primes(20, Ps)." \
-    "Ps = [2, 3, 5, 7, 11, 13, 17, 19]" \
-    "needs mod operator in parser"
-
 run_future_test "Meta: run(primes(10,Ps))" \
     "primes.glp" \
     "run(primes(10, Ps))." \
     "Ps = [2, 3, 5, 7]" \
-    "needs mod operator"
+    "needs reduce clause for := in primes.glp"
 
 # ============================================
 # SUMMARY
