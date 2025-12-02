@@ -347,7 +347,7 @@ run_test "Metainterpreter: merge([a],[b,c,d],X)" \
 run_test "Metainterpreter: run2(X) - shared variable test" \
     "run1.glp" \
     "run2(X)." \
-    "→ 4 goals"
+    "X = \\[\\]"
 
 run_test "Metainterpreter: merge chain with shared vars" \
     "run1.glp" \

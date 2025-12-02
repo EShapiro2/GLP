@@ -1,0 +1,8 @@
+% Test value pattern inside list - closer to monitor
+% Expected: test_value2(X) should bind X to 42
+
+test_value2(R?) :-
+    get_value2([value(R)], 42).
+
+% Match value(V?) from list, V reads from Sum
+get_value2([value(V?)], V).

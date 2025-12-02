@@ -1,0 +1,8 @@
+% Minimal test for value pattern
+% Expected: test_value(X) should bind X to 42
+
+test_value(R?) :-
+    get_value(R, 42).
+
+% This should bind R to the value V via reader pattern
+get_value(V?, V).
