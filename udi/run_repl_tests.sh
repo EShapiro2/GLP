@@ -581,6 +581,34 @@ run_future_test() {
     echo "  ⏳ SKIPPED ($reason)"
 }
 
+# ============================================
+# TIME PREDICATES TESTS
+# ============================================
+
+run_test "Time: now(T) returns Unix timestamp" \
+    "test_time.glp" \
+    "get_time(T)." \
+    "T = 1"
+
+run_test "Time: wait_until succeeds for past timestamp" \
+    "test_time.glp" \
+    "past_time(1000000000000, X)." \
+    "X = yes"
+
+run_test "Time: wait_until fails for future timestamp" \
+    "test_time.glp" \
+    "past_time(9999999999999, X)." \
+    "failed"
+
+run_test "Time: wait(100) suspends then succeeds" \
+    "test_time.glp" \
+    "wait_test(X)." \
+    "X = done"
+
+# ============================================
+# FUTURE TESTS (not yet implemented)
+# ============================================
+
 FUTURE=0
 
 run_future_test "Primes up to 20" \
