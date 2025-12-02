@@ -5,10 +5,11 @@
 2. **INSTALL DART** - Check `/home/user/dart-sdk/bin/dart --version`. If missing, see "Dart Installation" section below
 3. **SET DART PATH** - `export PATH="/home/user/dart-sdk/bin:$PATH"`
 4. **MOUNT FCP** - Clone FCP repo: `git clone --depth 1 https://github.com/EShapiro2/FCP.git /tmp/FCP`
-5. **IDENTIFY CURRENT MODE** - Discussion or Implementation
-6. **FOLLOW MODE RULES** - Never mix modes
-7. **ASK FOR CURRENT STATE** - Request latest code/errors from user
-8. **READ SPECS AS NEEDED** - Don't read all specs upfront, only when relevant to task
+5. **MOUNT GLP-2025** - Clone GLP-2025 repo: `git clone --depth 1 https://github.com/EShapiro2/GLP-2025.git /tmp/GLP-2025`
+6. **IDENTIFY CURRENT MODE** - Discussion or Implementation
+7. **FOLLOW MODE RULES** - Never mix modes
+8. **ASK FOR CURRENT STATE** - Request latest code/errors from user
+9. **READ SPECS AS NEEDED** - Don't read all specs upfront, only when relevant to task
 
 ### Dart Installation (if needed)
 
@@ -44,6 +45,12 @@ The FCP (Flat Concurrent Prolog) implementation is available for reference:
 - **Reference Release**: `/tmp/FCP/Savannah` - this is the authoritative FCP release for GLP
 - **Key Docs**: `/tmp/FCP/Savannah/efcp/Logix/CONSTANTS.txt` - term syntax definitions
 - **GitHub**: https://github.com/EShapiro2/FCP
+
+### GLP-2025 Paper Repository
+The GLP paper and LaTeX sources:
+- **Location**: `/tmp/GLP-2025` (cloned at startup)
+- **Main file**: `/tmp/GLP-2025/main GLP 2025.tex`
+- **GitHub**: https://github.com/EShapiro2/GLP-2025
 
 ## Core Rules
 
