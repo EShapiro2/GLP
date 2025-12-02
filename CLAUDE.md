@@ -198,7 +198,6 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 ├── docs/                        # ← NORMATIVE SPECIFICATIONS
 │   ├── glp-bytecode-v216-complete.md  # ← Instruction set spec
 │   ├── glp-runtime-spec.txt           # ← Runtime architecture spec
-│   ├── glp_spec.pdf                   # ← Formal GLP spec (ESOP 2026)
 │   ├── wam.pdf                        # ← WAM paper
 │   └── 1-s2.0-0743106689900113-main.pdf  # ← FCP implementation
 │
@@ -385,7 +384,7 @@ This protocol is required when debugging GLP programs. Do not skip steps. Stop a
 ### Secondary References (Consult as Needed)
 
 4. **WAM Paper**: `/Users/udi/GLP/docs/wam.pdf` - Warren's Abstract Machine
-5. **GLP Spec**: `/Users/udi/GLP/docs/glp_spec.pdf` - Formal GLP specification
+5. **GLP Spec**: `/tmp/GLP-2025/main GLP 2025.tex` - Formal GLP specification (paper source)
 6. **FCP Implementation**: 
    - **Local Source**: `/Users/udi/Dropbox/Concurrent Prolog/FCP/Savannah`
    - **GitHub Mirror**: https://github.com/EShapiro2/FCP
