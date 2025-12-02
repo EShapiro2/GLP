@@ -240,15 +240,18 @@ class Parser {
 
   // Atom: functor(arg1, arg2, ...) or Var := Expr or Var =.. Expr (for clause heads)
   Atom _parseAtom() {
-    // Check for := or =.. pattern: Var := Expr or Var =.. Expr
-    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
+    // Check for := or =.. pattern: Var := Expr or Var =.. Expr or _ := Expr
+    if (_check(TokenType.VARIABLE) || _check(TokenType.READER) || _check(TokenType.UNDERSCORE)) {
       final varToken = _advance();
       final isReader = varToken.type == TokenType.READER;
+      final isUnderscore = varToken.type == TokenType.UNDERSCORE;
       if (_match(TokenType.ASSIGN)) {
-        // Parse as ':='(Var, Expr)
-        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
+        // Parse as ':='(Var, Expr) or ':='(_, Expr)
+        final lhsTerm = isUnderscore
+            ? UnderscoreTerm(varToken.line, varToken.column)
+            : VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
         final expr = _parseTerm();
-        return Atom(':=', [varTerm, expr], varToken.line, varToken.column);
+        return Atom(':=', [lhsTerm, expr], varToken.line, varToken.column);
       } else if (_match(TokenType.UNIV)) {
         // Parse as '=..'(Var, Expr)
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);

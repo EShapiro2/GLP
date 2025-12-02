@@ -59,7 +59,7 @@ Result? := X / Y :-
   div(X?, Y?, Result).
 
 % Clause 2: Division by zero - abort
-Result? := X / Y :-
+_ := X / Y :-
   number(X?), number(Y?), Y? =:= 0 |
   abort("Division by zero").
 
@@ -77,7 +77,7 @@ Result? := X // Y :-
   idiv(X?, Y?, Result).
 
 % Clause 2: Division by zero - abort
-Result? := X // Y :-
+_ := X // Y :-
   integer(X?), integer(Y?), Y? =:= 0 |
   abort("Integer division by zero").
 
@@ -95,7 +95,7 @@ Result? := X mod Y :-
   mod(X?, Y?, Result).
 
 % Clause 2: Modulo by zero - abort
-Result? := X mod Y :-
+_ := X mod Y :-
   integer(X?), integer(Y?), Y? =:= 0 |
   abort("Modulo by zero").
 
@@ -145,7 +145,7 @@ Result? := sqrt(X) :-
   sqrt_kernel(X?, Result).
 
 % Clause 2: Negative operand - abort
-Result? := sqrt(X) :-
+_ := sqrt(X) :-
   number(X?), X? < 0 |
   abort("Square root of negative number").
 
@@ -210,7 +210,7 @@ Result? := ln(X) :-
   ln_kernel(X?, Result).
 
 % Clause 2: Non-positive operand - abort
-Result? := ln(X) :-
+_ := ln(X) :-
   number(X?), X? =< 0 |
   abort("Natural logarithm of non-positive number").
 
@@ -227,7 +227,7 @@ Result? := log(X) :-
   log10_kernel(X?, Result).
 
 % Clause 2: Non-positive operand - abort
-Result? := log(X) :-
+_ := log(X) :-
   number(X?), X? =< 0 |
   abort("Logarithm of non-positive number").
 
@@ -257,7 +257,7 @@ Result? := asin(X) :-
   asin_kernel(X?, Result).
 
 % Clause 2: Out of domain - abort
-Result? := asin(X) :-
+_ := asin(X) :-
   number(X?), (X? < -1 ; X? > 1) |
   abort("Arc sine domain error: argument must be in [-1, 1]").
 
@@ -274,7 +274,7 @@ Result? := acos(X) :-
   acos_kernel(X?, Result).
 
 % Clause 2: Out of domain - abort
-Result? := acos(X) :-
+_ := acos(X) :-
   number(X?), (X? < -1 ; X? > 1) |
   abort("Arc cosine domain error: argument must be in [-1, 1]").
 
