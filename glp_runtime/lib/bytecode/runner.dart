@@ -145,6 +145,9 @@ class RunnerContext {
   // Per spec v2.16 section 1.1: heterogeneous term storage
   final Map<int, Term> argSlots = {};  // argSlot → Term (VarRef, ConstTerm, StructTerm)
 
+  // Guard argument building mode (for pre-commit structure building)
+  int? guardArgSlot;  // Target argSlot when building structure for guard argument
+
   // Reduction budget (null = unlimited)
   int? reductionBudget;
   int reductionsUsed = 0;
@@ -186,6 +189,7 @@ class RunnerContext {
     S = 0;
     currentStructure = null;
     clauseVars.clear();
+    guardArgSlot = null;
   }
 }
 
@@ -1178,7 +1182,7 @@ class BytecodeRunner {
               }
             }
           } else if (cx.currentStructure is StructTerm) {
-            // BODY phase structure building
+            // Structure building (BODY or guard argument)
             final struct = cx.currentStructure as StructTerm;
             // If value is already a Term (e.g., StructTerm), use it directly
             // Otherwise wrap in ConstTerm
@@ -1187,26 +1191,37 @@ class BytecodeRunner {
 
             // Check if structure is complete
             if (cx.S >= struct.args.length) {
-              // Structure complete - bind the target writer (stored at clauseVars[-1])
-              final targetWriterId = cx.clauseVars[-1];
-              if (targetWriterId is int) {
-                // Bind the writer to the completed structure
-                cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
-
-                // Put the structure reference into argSlots if we have a target slot
-                // PutStructure stores target slot in clauseVars[-2] for slots 0-9
-                final targetSlot = cx.clauseVars[-2];
-                if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
-                  // Put a reader reference to the structure in the target arg slot
-                  cx.argSlots[targetSlot] = VarRef(targetWriterId, isReader: true);
-                  cx.clauseVars.remove(-2);
-                }
-
-                // Reset structure building state
+              // Check if we're in guard argument building mode (pre-commit)
+              if (cx.guardArgSlot != null) {
+                // Guard argument mode: store structure directly in argSlots
+                // No heap binding needed - just temporary for guard call
+                cx.argSlots[cx.guardArgSlot!] = struct;
                 cx.currentStructure = null;
                 cx.mode = UnifyMode.read;
                 cx.S = 0;
-                cx.clauseVars.remove(-1);
+                cx.guardArgSlot = null;
+              } else {
+                // BODY phase: bind the target writer (stored at clauseVars[-1])
+                final targetWriterId = cx.clauseVars[-1];
+                if (targetWriterId is int) {
+                  // Bind the writer to the completed structure
+                  cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
+
+                  // Put the structure reference into argSlots if we have a target slot
+                  // PutStructure stores target slot in clauseVars[-2] for slots 0-9
+                  final targetSlot = cx.clauseVars[-2];
+                  if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
+                    // Put a reader reference to the structure in the target arg slot
+                    cx.argSlots[targetSlot] = VarRef(targetWriterId, isReader: true);
+                    cx.clauseVars.remove(-2);
+                  }
+
+                  // Reset structure building state
+                  cx.currentStructure = null;
+                  cx.mode = UnifyMode.read;
+                  cx.S = 0;
+                  cx.clauseVars.remove(-1);
+                }
               }
             }
           }
@@ -1361,6 +1376,9 @@ class BytecodeRunner {
             if (clauseVarValue is VarRef) {
               // Subsequent use: create VarRef with appropriate mode
               struct.args[cx.S] = VarRef(clauseVarValue.varId, isReader: isReaderMode);
+            } else if (clauseVarValue is int) {
+              // Bare varId (from get_reader_variable etc.) - create VarRef with requested mode
+              struct.args[cx.S] = VarRef(clauseVarValue, isReader: isReaderMode);
             } else if (clauseVarValue is Term) {
               if (isReaderMode) {
                 // Reader mode with ground term: create fresh var, bind it
@@ -1383,28 +1401,40 @@ class BytecodeRunner {
 
             // Check if structure is complete
             if (cx.S >= struct.args.length) {
-              final targetValue = cx.clauseVars[-1];
-              int? targetWriterId;
-              if (targetValue is VarRef) {
-                targetWriterId = targetValue.varId;
-              } else if (targetValue is int) {
-                targetWriterId = targetValue;
-              }
-
-              if (targetWriterId != null) {
-                cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
-
-                // Store VarRef to bound writer in argSlots
-                final targetSlot = cx.clauseVars[-2];
-                if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
-                  cx.argSlots[targetSlot] = VarRef(targetWriterId, isReader: true);
-                  cx.clauseVars.remove(-2);
-                }
-
+              // Check if we're in guard argument building mode (pre-commit)
+              if (cx.guardArgSlot != null) {
+                // Guard argument mode: store structure directly in argSlots
+                // No heap binding needed - just temporary for guard call
+                cx.argSlots[cx.guardArgSlot!] = struct;
                 cx.currentStructure = null;
                 cx.mode = UnifyMode.read;
                 cx.S = 0;
-                cx.clauseVars.remove(-1);
+                cx.guardArgSlot = null;
+              } else {
+                // BODY phase: bind to heap writer
+                final targetValue = cx.clauseVars[-1];
+                int? targetWriterId;
+                if (targetValue is VarRef) {
+                  targetWriterId = targetValue.varId;
+                } else if (targetValue is int) {
+                  targetWriterId = targetValue;
+                }
+
+                if (targetWriterId != null) {
+                  cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
+
+                  // Store VarRef to bound writer in argSlots
+                  final targetSlot = cx.clauseVars[-2];
+                  if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
+                    cx.argSlots[targetSlot] = VarRef(targetWriterId, isReader: true);
+                    cx.clauseVars.remove(-2);
+                  }
+
+                  cx.currentStructure = null;
+                  cx.mode = UnifyMode.read;
+                  cx.S = 0;
+                  cx.clauseVars.remove(-1);
+                }
               }
             }
           }
@@ -1540,21 +1570,54 @@ class BytecodeRunner {
 
         if (!isReaderMode) {
           // GetWriterVariable logic: Load argument into clause WRITER variable
+          // IMPORTANT: Check if clauseVars[varIndex] already has a writer from
+          // an earlier occurrence (e.g., inside a structure via UnifyVariable).
+          // If so, bind that writer to the argument value via sigmaHat.
+          final existing = cx.clauseVars[varIndex];
+
           if (arg is VarRef && !arg.isReader) {
-            cx.clauseVars[varIndex] = arg.varId;
+            if (existing is VarRef && !existing.isReader) {
+              // Both are writers - bind arg writer to existing writer's reader
+              cx.sigmaHat[arg.varId] = VarRef(existing.varId, isReader: true);
+            } else if (existing is int) {
+              // existing is bare writer varId - bind arg to reader of it
+              cx.sigmaHat[arg.varId] = VarRef(existing, isReader: true);
+            } else {
+              cx.clauseVars[varIndex] = arg.varId;
+            }
           } else if (arg is VarRef && arg.isReader) {
             final wid = cx.rt.heap.writerIdForReader(arg.varId);
             if (wid != null && cx.rt.heap.isWriterBound(wid)) {
               final value = cx.rt.heap.valueOfWriter(wid);
-              cx.clauseVars[varIndex] = value;
+              if (existing is VarRef && !existing.isReader) {
+                cx.sigmaHat[existing.varId] = value;
+              } else if (existing is int) {
+                cx.sigmaHat[existing] = value;
+              } else {
+                cx.clauseVars[varIndex] = value;
+              }
             } else {
               final suspendOnVar = _finalUnboundVar(cx, arg.varId);
               pc = _suspendAndFail(cx, suspendOnVar, pc); continue;
             }
           } else if (arg is ConstTerm) {
-            cx.clauseVars[varIndex] = arg;
+            if (existing is VarRef && !existing.isReader) {
+              // Already have a writer from earlier occurrence - bind it
+              cx.sigmaHat[existing.varId] = arg;
+            } else if (existing is int) {
+              // Bare writer varId - bind it
+              cx.sigmaHat[existing] = arg;
+            } else {
+              cx.clauseVars[varIndex] = arg;
+            }
           } else if (arg is StructTerm) {
-            cx.clauseVars[varIndex] = arg;
+            if (existing is VarRef && !existing.isReader) {
+              cx.sigmaHat[existing.varId] = arg;
+            } else if (existing is int) {
+              cx.sigmaHat[existing] = arg;
+            } else {
+              cx.clauseVars[varIndex] = arg;
+            }
           }
         } else {
           // GetReaderVariable logic: Load argument into clause READER variable
@@ -2171,9 +2234,10 @@ class BytecodeRunner {
         pc++; continue;
       }
 
-      // ===== WAM-style structure creation (BODY phase) =====
+      // ===== WAM-style structure creation =====
       if (op is PutStructure) {
         if (cx.inBody) {
+          // BODY phase: Build StructTerm with heap allocation
           // Per spec v2.16 section 7.1: Build StructTerm incrementally via set_* instructions
           // Structure will be stored in argSlots when complete
 
@@ -2200,6 +2264,19 @@ class BytecodeRunner {
           }
 
           // Create structure with placeholder args (filled by Set* instructions)
+          final structArgs = List<Term>.filled(op.arity, ConstTerm(null));
+          cx.currentStructure = StructTerm(op.functor, structArgs);
+          cx.S = 0;
+          cx.mode = UnifyMode.write;
+        } else {
+          // PRE-COMMIT phase (guard argument building): Build StructTerm WITHOUT heap allocation
+          // The structure is temporary, just for passing to the guard predicate
+          // No writer variable binding needed - store directly in argSlots when complete
+
+          // Remember target argSlot for when structure is complete
+          cx.guardArgSlot = op.argSlot;
+
+          // Create structure with placeholder args (filled by UnifyVariable/UnifyConstant)
           final structArgs = List<Term>.filled(op.arity, ConstTerm(null));
           cx.currentStructure = StructTerm(op.functor, structArgs);
           cx.S = 0;
@@ -3317,6 +3394,12 @@ class BytecodeRunner {
     num? evaluateNumeric(Object? v) {
       if (v is num) return v;
       if (v is ConstTerm && v.value is num) return v.value as num;
+      // Handle VarRef - dereference to get actual value
+      if (v is VarRef) {
+        final deref = cx.rt.heap.getValue(v.varId);
+        if (deref == null) return null; // Unbound
+        return evaluateNumeric(deref);
+      }
       if (v is StructTerm) {
         // Evaluate arithmetic expression
         switch (v.functor) {
