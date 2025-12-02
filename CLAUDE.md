@@ -414,21 +414,13 @@ This protocol is required when debugging GLP programs. Do not skip steps. Stop a
 
 ## Refactoring Status
 
-**Current Plan:** `/Users/udi/GLP/docs/glp_refactoring_v3_complete.md`
+**Status:** Single-ID variable system migration completed. The HeapV2 refactoring was superseded by direct fixes to the SRSW handling in the existing system.
 
-**Completed Phases:**
-- ✅ Phase 0: Baseline capture (commit 86538ca)
-- ✅ Phase 1: Single ID variable system (HeapV2 created)
-- ✅ Phase 1.5: HeapV2 integration validation
-- ✅ Phase 1.5b: HeapV2Adapter implementation (has problems - duplicate storage)
-
-**Current Phase:** Phase 2 - Complete Single-ID Migration
-- Status: **PAUSED** due to SRSW bug discovery and fixes
-- VarRef moved to terms.dart ✅
-- Runner.dart still has some WriterTerm/ReaderTerm references
-- HeapV2Adapter has problems (duplicate storage, dereferencing inconsistency)
-
-**IMPORTANT:** Do NOT proceed with refactoring until current SRSW-related bugs are fixed.
+**Completed Work:**
+- ✅ SRSW checking is mandatory for all code (including stdlib)
+- ✅ Anonymous variable `_` support for abort clauses
+- ✅ Reader/writer mode handling fixed in clause heads
+- ✅ Test suites passing (27 unit tests, 103 REPL tests)
 
 ## Bytecode Inspection Tools
 
