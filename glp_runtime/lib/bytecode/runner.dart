@@ -1784,10 +1784,42 @@ class BytecodeRunner {
               cx.sigmaHat[arg.varId] = storedValue;
             }
           } else if (arg is VarRef && arg.isReader) {
-            if (storedValue is int && arg.varId != storedValue) {
-              _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
-              continue;
+            // arg is reader - dereference and unify with storedValue
+            final wid = cx.rt.heap.writerIdForReader(arg.varId);
+            if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+              final argValue = cx.rt.heap.valueOfWriter(wid);
+              if (storedValue is VarRef && !storedValue.isReader) {
+                // storedValue is writer from earlier occurrence - bind it to arg's value
+                cx.sigmaHat[storedValue.varId] = argValue;
+              } else if (storedValue is int) {
+                // storedValue is bare int (reader ID) - check match
+                final storedWid = cx.rt.heap.writerIdForReader(storedValue);
+                if (storedWid != null && cx.rt.heap.isWriterBound(storedWid)) {
+                  final storedVal = cx.rt.heap.valueOfWriter(storedWid);
+                  if (storedVal != argValue) {
+                    _softFailToNextClause(cx, pc);
+                    pc = _findNextClauseTry(pc);
+                    continue;
+                  }
+                } else {
+                  // Unbound reader - bind via sigmaHat
+                  cx.sigmaHat[storedValue] = argValue;
+                }
+              }
+            } else {
+              // arg is unbound reader
+              if (storedValue is VarRef && !storedValue.isReader) {
+                // storedValue is writer, arg is unbound reader
+                // Bind writer to the reader - establishes alias for later binding propagation
+                cx.sigmaHat[storedValue.varId] = arg;
+                if (cx.debugOutput) {
+                  print('[DEBUG] GetReaderValue: binding W${storedValue.varId} → R${arg.varId}? (unbound reader alias)');
+                }
+              } else if (storedValue is int && arg.varId != storedValue) {
+                _softFailToNextClause(cx, pc);
+                pc = _findNextClauseTry(pc);
+                continue;
+              }
             }
           } else if (arg is ConstTerm || arg is StructTerm) {
             if (storedValue != arg) {

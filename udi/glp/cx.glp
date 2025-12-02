@@ -1,9 +1,17 @@
-% cx.glp - Minimal test for value binding bug
+% cx.glp - Minimal test for value binding propagation bug
+%
+% Pattern: clause has writer inside struct AND reader as separate arg
+% These should be the SAME variable
 
-% Without list - works?
-bind(X?, X).
-test3(R?) :- bind(R, 42).
+% Minimal case: bind(value(R), R?) - R in value is writer, R? is reader of same var
+% When caller provides value(W) where W gets bound to 42, R? should see 42
 
-% With list - broken?
-gethead([H?], H).
-test2(R?) :- gethead([R], 42).
+% Server that extracts value from value(X) and also returns X?
+extract([value(X?)], X).
+
+% Test: caller provides [value(W)] and 42, expects W = 42
+test1(R?) :- extract([value(R)], 42).
+
+% Even simpler: just the bob pattern
+bob_simple(value(R), R?).
+test2(R?) :- bob_simple(value(R), 42).

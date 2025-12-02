@@ -31,6 +31,9 @@ class CommitOps {
       }
     }
 
+    // Save existing chain info BEFORE overwriting - needed for deferred propagation
+    final savedChains = <int, int>{};  // varId -> chainTargetId
+
     for (final entry in sigmaHat.entries) {
       final varId = entry.key;
       var value = entry.value;
@@ -40,6 +43,18 @@ class CommitOps {
 
       // Convert varId to addresses
       final (wAddr, rAddr) = heap.varTable[varId]!;
+
+      // SAVE CHAIN INFO: If this writer was previously chained to another variable,
+      // save that info for later propagation (after re-dereferencing)
+      final wContent = heap.cells[wAddr].content;
+      if (wContent is VarRef) {
+        final chainTargetId = wContent.isReader
+            ? (heap.writerIdForReader(wContent.varId) ?? wContent.varId)
+            : wContent.varId;
+        if (!sigmaHat.containsKey(chainTargetId)) {
+          savedChains[varId] = chainTargetId;
+        }
+      }
 
       // FCP line 226: CRITICAL - dereference by ADDRESS before binding
       // This prevents W1009→R1014→nil chains
@@ -94,6 +109,35 @@ class CommitOps {
           heap.cells[rAddr].content = derefValue;
           // print('[TRACE Commit FCP]   W$varId: VarRef(${wContent.varId}) → $derefValue');
         }
+      }
+    }
+
+    // CHAIN PROPAGATION: Propagate ground values to previously chained variables
+    // This handles the case where W1006 was chained to R1001 (bob's commit),
+    // then W1006 got bound to 12 (mon's commit) - R1001's writer should also get 12
+    for (final entry in savedChains.entries) {
+      final varId = entry.key;
+      final chainTargetId = entry.value;
+
+      // Get the current value of the variable
+      final (wAddr, _) = heap.varTable[varId]!;
+      final currentValue = heap.cells[wAddr].content;
+
+      // Only propagate if the current value is ground (not VarRef)
+      if (currentValue is! VarRef && heap.varTable.containsKey(chainTargetId)) {
+        final (chainWAddr, chainRAddr) = heap.varTable[chainTargetId]!;
+
+        // Check for suspensions on chain target before binding
+        final chainOldContent = heap.cells[chainRAddr].content;
+        if (chainOldContent is SuspensionListNode) {
+          _walkAndActivate(chainOldContent, activations);
+        }
+
+        // Propagate the binding to the chain target
+        heap.cells[chainWAddr].content = currentValue;
+        heap.cells[chainWAddr].tag = CellTag.ValueTag;
+        heap.cells[chainRAddr].content = currentValue;
+        heap.cells[chainRAddr].tag = CellTag.ValueTag;
       }
     }
 
