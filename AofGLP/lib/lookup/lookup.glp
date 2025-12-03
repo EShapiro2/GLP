@@ -1,0 +1,20 @@
+%% lookup.glp - List Lookup Utilities
+%% Source: GLP Papers (referenced in social graph protocols)
+%%
+%% Lookup and lookup_send for friends list operations.
+
+lookup(Key, [(Key, Value)|_], Value).
+lookup(Key, [(K, _)|Rest], Value) :-
+    Key \= K | lookup(Key?, Rest?, Value).
+
+lookup_send(Key, Msg, Fs, Fs1) :-
+    lookup(Key?, Fs?, Out),
+    Out = [Msg?|Out1?],
+    update(Key?, Out1?, Fs?, Fs1).
+
+update(Key, NewOut, [(Key, _)|Rest], [(Key, NewOut?)|Rest?]).
+update(Key, NewOut, [(K, V)|Rest], [(K?, V?)|Rest1?]) :-
+    Key \= K | update(Key?, NewOut?, Rest?, Rest1).
+
+%% lookup finds value associated with key in association list
+%% lookup_send sends message through channel and updates friends list

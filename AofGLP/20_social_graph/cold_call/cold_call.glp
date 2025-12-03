@@ -1,0 +1,41 @@
+%% cold_call.glp - Cold Call Befriending Protocol
+%% Source: GLP Papers (Program: Social Graph Cold-Call Befriending Protocol)
+%%
+%% Enables agents to establish friendship without prior shared variables.
+%% Four phases: user initiation, offer transmission, user consultation,
+%% channel establishment.
+
+% Process user request to connect (self-introduction)
+social_graph(Id, [msg(user, Id, connect(Target))|In], Fs) :-
+    ground(Id), ground(Target) |
+    lookup_send(net, msg(Id, Target, intro(Id?, Id?, Resp)), Fs?, Fs1),
+    inject(Resp?, msg(Target, Id, response(Resp)), In?, In1),
+    social_graph(Id, In1?, Fs1?).
+
+% Process received self-introduction
+social_graph(Id, [msg(From, Id, intro(From, From, Resp))|In], Fs) :-
+    ground(Id), attestation(intro(From, From, Resp), att(From, _)) |
+    lookup_send(user, msg(agent, user, befriend(From?, Resp)), Fs?, Fs1),
+    social_graph(Id, In?, Fs1?).
+
+% Process user decision on received introduction
+social_graph(Id, [msg(user, Id, decision(Dec, From, Resp?))|In], Fs) :-
+    ground(Id) |
+    bind_response(Dec?, From?, Resp, Fs?, Fs1, In?, In1),
+    social_graph(Id, In1?, Fs1?).
+
+% Process response to sent introduction
+social_graph(Id, [msg(From, Id, response(Resp))|In], Fs) :-
+    ground(Id) |
+    handle_response(Resp?, From?, Fs?, Fs1, In?, In1),
+    social_graph(Id, In1?, Fs1?).
+
+% Application message handling
+social_graph(Id, [msg(From, To, Content)|In], Fs) :-
+    ground(Id), otherwise |
+    % Forward to application layer
+    social_graph(Id, In?, Fs?).
+
+%% inject defers insertion until response variable becomes bound
+inject(X,Y,Ys,[Y?|Ys?]) :- known(X) | true.
+inject(X,Y,[Y1|Ys],[Y1?|Ys1?]) :- unknown(X) | inject(X?,Y?,Ys?,Ys1).

@@ -1,0 +1,36 @@
+%% network_switch.glp - 3-way network switch
+%% Source: GLP Papers (Program: 3-Way Network Switch)
+%%
+%% Routes messages between three agents based on destination.
+%% For three agents p, q, r and three channels Chp, Chq, Chr,
+%% initialize with: network((p,Chp?),(q,Chq?),(r,Chr?))
+
+%% P to Q forwarding
+network((P,ChP),(Q,ChQ),(R,ChR)) :-
+    ground(Q), receive(ChP?,msg(Q,X),ChP1), send(ChQ?,X?,ChQ1) |
+    network((P,ChP1?),(Q,ChQ1?),(R,ChR?)).
+
+%% P to R forwarding
+network((P,ChP),(Q,ChQ),(R,ChR)) :-
+    ground(R), receive(ChP?,msg(R,X),ChP1), send(ChR?,X?,ChR1) |
+    network((P,ChP1?),(Q,ChQ?),(R,ChR1?)).
+
+%% Q to P forwarding
+network((P,ChP),(Q,ChQ),(R,ChR)) :-
+    ground(P), receive(ChQ?,msg(P,X),ChQ1), send(ChP?,X?,ChP1) |
+    network((P,ChP1?),(Q,ChQ1?),(R,ChR?)).
+
+%% Q to R forwarding
+network((P,ChP),(Q,ChQ),(R,ChR)) :-
+    ground(R), receive(ChQ?,msg(R,X),ChQ1), send(ChR?,X?,ChR1) |
+    network((P,ChP?),(Q,ChQ1?),(R,ChR1?)).
+
+%% R to P forwarding
+network((P,ChP),(Q,ChQ),(R,ChR)) :-
+    ground(P), receive(ChR?,msg(P,X),ChR1), send(ChP?,X?,ChP1) |
+    network((P,ChP1?),(Q,ChQ?),(R,ChR1?)).
+
+%% R to Q forwarding
+network((P,ChP),(Q,ChQ),(R,ChR)) :-
+    ground(Q), receive(ChR?,msg(Q,X),ChR1), send(ChQ?,X?,ChQ1) |
+    network((P,ChP?),(Q,ChQ1?),(R,ChR1?)).

@@ -1,0 +1,15 @@
+%% relay.glp - Stream-Channel Relay
+%% Source: GLP Papers (Program: Stream-Channel Relay)
+%%
+%% Bidirectional relay between a stream pair and a channel.
+
+relay(In, Out?, Ch) :-
+    In? = [X|In1], send(X?, Ch?, Ch1) |
+    relay(In1?, Out, Ch1?).
+relay(In, Out?, Ch) :-
+    receive(X, Ch?, Ch1), Out = [X?|Out1?] |
+    relay(In?, Out1, Ch1?).
+
+%% First clause reads from input stream and sends to channel.
+%% Second clause receives from channel and writes to output stream.
+%% Channel state threads through recursive calls.

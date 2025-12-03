@@ -1,0 +1,32 @@
+%% window_with_label.glp - Window frame with label (subclass of frame)
+%% Source: CP Collected Papers, Ch 29 (Shapiro & Takeuchi)
+%%
+%% A frame with a label at the bottom.
+%% Uses 'otherwise' for default message handling.
+
+create_window_with_label(M, Label, Parameters) :-
+    create_frame(M1?, Parameters?),
+    window_with_label(M?, Label?, M1).
+
+window_with_label([change(Label)|M?], _, M1?) :-
+    window_with_label(M?, Label?, M1).
+
+window_with_label([show|M?], Label, [ask(Parameters)|M1?]) :-
+    show_label_primitive(Label?, Parameters?),
+    window_with_label(M?, Label?, M1).
+
+window_with_label([refresh|M?], Label, [refresh|M1?]) :-
+    window_with_label([show|M?], Label?, M1).
+
+window_with_label([X|M?], Label, [X|M1?]) :-
+    otherwise |
+    window_with_label(M?, Label?, M1).
+
+%% show_label_primitive/2 displays the label in the window
+
+%% Message handling summary:
+%% Object              | Own methods          | Inherited (passed to superclass)
+%% --------------------|---------------------|----------------------------------
+%% rectangular_area    | clear, ask          | -
+%% frame               | draw, refresh       | clear, ask
+%% window_with_label   | change, show        | draw, refresh, clear, ask

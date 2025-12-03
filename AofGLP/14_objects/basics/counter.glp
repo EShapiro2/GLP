@@ -1,0 +1,31 @@
+%% counter.glp - Counter object example
+%% Source: CP Collected Papers, Ch 29 (Shapiro & Takeuchi)
+%%
+%% Simple stateful object demonstrating OOP in logic programming.
+%% Responds to clear, up, down, show messages via input stream.
+
+counter([clear|S?], _) :-
+    counter(S?, 0).
+counter([up|S?], State) :-
+    NewState := State? + 1,
+    counter(S?, NewState?).
+counter([down|S?], State) :-
+    NewState := State? - 1,
+    counter(S?, NewState?).
+counter([show(State?)|S?], State) :-
+    counter(S?, State?).
+counter([], _).
+
+%% Usage example:
+%% terminal(X), use_counter(X?, C1), counter(C1?, 0)
+
+%% use_counter receives commands from terminal and passes to counter
+use_counter([show(Val)|Input?], [show(Val)|Command?]) :-
+    use_counter(Input?, Command),
+    wait_write(Val?).
+use_counter([X|Input?], [X|Command?]) :-
+    X =\= show(_) |
+    use_counter(Input?, Command).
+use_counter([], []).
+
+wait_write(X) :- known(X?) | write(X?).

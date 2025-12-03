@@ -1,0 +1,14 @@
+%% tag_stream.glp - Stream Tagging for Source Identification
+%% Source: GLP Papers (Program: Stream Tagging)
+%%
+%% When multiple input streams merge, source identity is lost.
+%% Stream tagging preserves this by wrapping each message with
+%% its source identifier.
+
+tag_stream(Name, [M|In], [msg(Name?, M?)|Out?]) :-
+    tag_stream(Name?, In?, Out).
+tag_stream(_, [], []).
+
+%% Recursively processes input stream, wrapping each message M
+%% in msg(Name, M) term. Tagged streams can be safely merged
+%% while preserving source information.

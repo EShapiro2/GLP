@@ -1,0 +1,40 @@
+%% many_counters.glp - Managing multiple counter instances
+%% Source: CP Collected Papers, Ch 29 (Shapiro & Takeuchi)
+%%
+%% Dynamic object creation and management.
+%% Creates counter instances and routes messages by name.
+
+use_many_counters([create(Name)|Input?], List_of_counters) :-
+    counter(Com?, 0),
+    use_many_counters(Input?, [(Name?, Com)|List_of_counters?]).
+
+use_many_counters([(Name, show(Val))|Input?], List_of_counters) :-
+    send(List_of_counters?, Name?, show(Val), NewList) |
+    use_many_counters(Input?, NewList?),
+    wait_write(Val?).
+
+use_many_counters([X|Input?], List_of_counters) :-
+    X =\= create(_), X =\= (_, show(_)),
+    X = (Name, Cmd),
+    send(List_of_counters?, Name?, Cmd?, NewList) |
+    use_many_counters(Input?, NewList?).
+
+%% Send message to named counter
+send([(Name, [Message|Y?])|List?], Name, Message, [(Name?, Y)|List]).
+send([C|List?], Name, Message, [C?|L1?]) :-
+    send(List?, Name?, Message?, L1).
+
+%% Counter from counter.glp
+counter([clear|S?], _) :-
+    counter(S?, 0).
+counter([up|S?], State) :-
+    NewState := State? + 1,
+    counter(S?, NewState?).
+counter([down|S?], State) :-
+    NewState := State? - 1,
+    counter(S?, NewState?).
+counter([show(State?)|S?], State) :-
+    counter(S?, State?).
+counter([], _).
+
+wait_write(X) :- known(X?) | write(X?).

@@ -1,0 +1,22 @@
+%% dynamic_merger.glp - Dynamic stream merger
+%% Source: GLP Papers (Program: Dynamic Stream Merger)
+%%
+%% Allows dynamic addition of new streams via merge(Ws) messages.
+%% Creates a self-organizing merge tree.
+%% Uses guard X =\= Y which succeeds if arguments are not unifiable.
+
+merger(Ws,Xs,Out?) :- merge(Ws?,Xs?,Out).
+
+merge([merge(Ws)|Xs],Ys,Zs?) :-
+   merger(Ws?,Xs?,Xs1), merge(Xs1?,Ys?,Zs).
+merge(Xs,[merge(Ws)|Ys],Zs?) :-
+   merger(Ws?,Ys?,Ys1), merge(Xs?,Ys1?,Zs).
+merge([X|Xs],Ys,[X?|Zs?]) :-
+    X =\= merge(_) | merge(Ys?,Xs?,Zs).
+merge(Xs,[Y|Ys],[Y?|Zs?]) :-
+    Y =\= merge(_) | merge(Xs?,Ys?,Zs).
+merge([],[],[]).
+
+%% Any client can send merge(NewStream) to dynamically add another stream.
+%% The spawned merger process handles integration, creating a
+%% self-organizing merge tree.

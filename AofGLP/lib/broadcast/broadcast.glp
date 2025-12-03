@@ -1,0 +1,11 @@
+%% broadcast.glp - Broadcast to Multiple Recipients
+%% Source: GLP Papers (Authenticated Feed Distribution)
+%%
+%% Sends message to all recipients in friends list.
+
+broadcast(_, [], []).
+broadcast(Msg, [(Name, Out)|Fs], [(Name?, [Msg?|Out1?])|Fs1?]) :-
+    broadcast(Msg?, Fs?, Fs1).
+
+%% Recursively traverses friends list, adding message to each
+%% output stream. Returns updated friends list with new stream tails.

@@ -1,0 +1,9 @@
+%% time_utils.glp - Time Utilities
+%% Source: GLP Papers (Tracing Metainterpreters)
+%%
+%% Time predicate for timestamping execution events.
+
+current_time(T) :- time(T).
+
+%% time(T) is a built-in guard that binds T to current timestamp.
+%% Used in tracing and execution tree metainterpreters.

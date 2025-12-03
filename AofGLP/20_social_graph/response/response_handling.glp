@@ -1,0 +1,17 @@
+%% response_handling.glp - Channel Establishment and Response Handling
+%% Source: GLP Papers (Program: Response Processing)
+%%
+%% When offer is accepted, both agents establish symmetric channel
+%% configurations and merge new friend's input stream into main loop.
+
+% Bind response based on user decision
+bind_response(yes, From, accept(FCh), Fs, Fs1, In, In1) :-
+    new_channel(ch(FIn, FOut), FCh) |
+    handle_response(accept(FCh?), From, Fs, Fs1, In, In1).
+bind_response(no, _, no, Fs, Fs, In, In).
+
+% Handle response (for both received and sent offers)
+handle_response(accept(ch(FIn, FOut)), From, Fs, [(From, FOut)|Fs], In, In1) :-
+    tag_stream(From?, FIn?, Tagged),
+    merge(In?, Tagged?, In1).
+handle_response(no, _, Fs, Fs, In, In).

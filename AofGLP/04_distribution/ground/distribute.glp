@@ -1,0 +1,9 @@
+%% distribute.glp - Ground-stream distribution
+%% Source: GLP Papers (Program: GLP ground-stream distribution)
+%%
+%% Distributes ground elements to multiple output streams.
+%% May replicate X without violating single-writer invariant
+%% since it verifies X to be ground.
+
+distribute([X|Xs],[X|Ys?],[X|Zs?]) :- ground(X) | distribute(Xs?,Ys,Zs).
+distribute([],[],[]).

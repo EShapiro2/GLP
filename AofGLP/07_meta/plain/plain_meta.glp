@@ -1,0 +1,18 @@
+%% plain_meta.glp - Plain GLP metainterpreter
+%% Source: GLP Papers (Program: GLP plain metainterpreter)
+%%
+%% Basic metainterpreter using reduce/2 to encode program clauses.
+%% If a goal unifies with reduce's first argument, the body is
+%% returned in the second argument.
+
+run(true).  % halt
+run((A,B)) :- run(A?), run(B?). % fork
+run(A) :- known(A) | reduce(A?,B), run(B?). %  reduce
+
+%% Example: reduce encoding of merge
+reduce(merge([X|Xs],Ys,[X?|Zs?]),merge(Xs?,Ys?,Zs)).
+reduce(merge(Xs,[Y|Ys],[Y?|Zs?]),merge(Xs?,Ys?,Zs)).
+reduce(merge([],[],[]),true).
+
+%% Example initial goal:
+%% run((merge([1,2,3],[4,5],Xs), merge([a,b],[c,d,e],Ys), merge(Xs?,Ys?,Zs))).

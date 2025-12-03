@@ -1,0 +1,22 @@
+%% certainty_meta.glp - Metainterpreter computing certainties
+%% Source: CP Collected Papers, Ch 25 (Safra & Shapiro)
+%%
+%% Computes certainty factor of results.
+%% Each clause has associated certainty; result certainty is computed.
+
+reduce(Program, true, 1).                        %% halt - certainty 1
+reduce(Program, (A, B), C) :-                    %% fork - min of certainties
+    reduce(Program?, A?, C_of_a),
+    reduce(Program?, B?, C_of_b),
+    min(C_of_a?, C_of_b?, C).
+reduce(Program, Goal, C) :-                      %% reduce - multiply
+    clause(Goal?, Program?, Body, Cr),
+    reduce(Program?, Body?, C_of_body),
+    C := Cr? * C_of_body?.
+
+%% min/3 - return minimum of two values
+min(X, Y, X) :- X =< Y | true.
+min(X, Y, Y) :- Y < X | true.
+
+%% clause/4 returns body and certainty factor Cr
+%% Example: clause(foo(X), Program, Body, 0.9)

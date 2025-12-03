@@ -1,0 +1,23 @@
+%% runtime_control_meta.glp - GLP metainterpreter with runtime control
+%% Source: GLP Papers (Program: GLP metainterpreter with runtime control)
+%%
+%% Can suspend, resume, and abort a GLP run and produce a dump of the
+%% processes of the aborted run.
+%%
+%% Uses otherwise guard which succeeds iff all previous clauses fail
+%% (as opposed to suspend). Enables default case handling.
+%%
+%% First argument: process (goal) to be executed
+%% Second argument Cs: observed interrupt stream
+%% Last two arguments: difference-list for distributed accumulation
+
+run(true,Cs,L?,L).  % halt and close the dump
+run((A,B),Cs,L?,R) :- run(A?,Cs?,L,M?), run(B?,Cs?,M,R?). % fork
+run(A,Cs,L?,R) :- otherwise, unknown(Cs) | reduce(A?,B), run(B?,Cs,L,R?). %  reduce
+run(A,[abort|Cs],[A?|R?],R). % abort and dump
+run(A,[suspend|Cs],L?,R) :- suspended_run(A?,Cs?,L,R?). % suspend
+
+suspended_run(A,[resume|Cs],L?,R) :-  run(A?,Cs?,L,R?).  % resume
+suspended_run(A,[C|Cs],L?,R) :- otherwise | run(A?,[C?|Cs?],L,R?).
+
+%% The program is not fail-stop resilient; it can be extended to be so.

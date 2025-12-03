@@ -1,0 +1,12 @@
+%% inject.glp - Deferred Message Injection
+%% Source: GLP Papers (Social Graph Protocol)
+%%
+%% Defers insertion of message into stream until trigger variable
+%% becomes bound, while allowing stream to continue flowing.
+
+inject(X, Y, Ys, [Y?|Ys?]) :- known(X) | true.
+inject(X, Y, [Y1|Ys], [Y1?|Ys1?]) :- unknown(X) | inject(X?, Y?, Ys?, Ys1).
+
+%% When X is known, inserts Y at output and terminates.
+%% Until then, passes input messages to output while waiting.
+%% Essential for non-blocking protocol operation.

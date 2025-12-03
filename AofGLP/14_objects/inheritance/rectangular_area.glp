@@ -1,0 +1,14 @@
+%% rectangular_area.glp - Base class for window hierarchy
+%% Source: CP Collected Papers, Ch 29 (Shapiro & Takeuchi)
+%%
+%% Basic rectangular area object.
+%% Parameters = (Xpos, Ypos, Width, Height)
+
+rectangular_area([clear|M?], Parameters) :-
+    clear_primitive(Parameters?),
+    rectangular_area(M?, Parameters?).
+
+rectangular_area([ask(Parameters?)|M?], Parameters) :-
+    rectangular_area(M?, Parameters?).
+
+%% clear_primitive/1 is a system primitive that clears the screen area

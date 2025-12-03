@@ -1,0 +1,29 @@
+%% replicate.glp - Non-Ground Term Replicator
+%% Source: GLP Papers (Program: Non-Ground Term Replicator)
+%%
+%% Replicates incrementally-constructed terms that may contain
+%% uninstantiated readers. Suspends when encountering readers,
+%% resumes as values become available.
+
+%% Note: The ... notation in papers indicates this generalizes to n output copies.
+%% Binary version shown here:
+
+replicate2(X, X?, X?) :- ground(X) | true.
+replicate2(Xs, [Y1?|Ys1?], [Y2?|Ys2?]) :-
+    Xs? = [X|Xs1] |
+    replicate2(X?, Y1, Y2),
+    replicate2(Xs1?, Ys1, Ys2).
+
+%% Ternary version:
+replicate3(X, X?, X?, X?) :- ground(X) | true.
+replicate3(Xs, [Y1?|Ys1?], [Y2?|Ys2?], [Y3?|Ys3?]) :-
+    Xs? = [X|Xs1] |
+    replicate3(X?, Y1, Y2, Y3),
+    replicate3(Xs1?, Ys1, Ys2, Ys3).
+
+%% General pattern for n copies:
+%% replicate(X, X?,..., X?) :- ground(X) | true.
+%% replicate(Xs, [Y1?|Ys1?],..., [Yn?|Ysn?]) :-
+%%     Xs? = [X|Xs1] |
+%%     replicate(X?, Y1,..., Yn),
+%%     replicate(Xs1?, Ys1,..., Ysn).

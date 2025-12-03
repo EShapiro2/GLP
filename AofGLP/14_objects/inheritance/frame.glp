@@ -1,0 +1,22 @@
+%% frame.glp - Window frame (subclass of rectangular_area)
+%% Source: CP Collected Papers, Ch 29 (Shapiro & Takeuchi)
+%%
+%% A rectangular area with four border lines.
+%% Demonstrates filter pattern for inheritance.
+
+create_frame(M, Parameters) :-
+    rectangular_area(M1?, Parameters?),
+    frame(M?, M1).
+
+frame([draw|M?], [ask(Parameters)|M1?]) :-
+    draw_lines(Parameters?),
+    frame(M?, M1).
+
+frame([refresh|M?], [clear|M1?]) :-
+    frame([draw|M?], M1).
+
+frame([X|M?], [X|M1?]) :-
+    X =\= draw, X =\= refresh |
+    frame(M?, M1).
+
+%% draw_lines/1 draws four border lines
