@@ -1,0 +1,11 @@
+% N.1 Unary Predicates - Parameter passing with r
+
+% Single fact
+p(a).
+
+% Multiple clauses
+q(b).
+q(a).
+
+% Parameter passing: reader in head, writer in body
+r(X?) :- q(X).
