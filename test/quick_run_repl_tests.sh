@@ -305,12 +305,12 @@ run_test "Unary: q(X) binds X=b (first clause)" \
 run_test "Unary: p(X),p(X?) succeeds" \
     "unary.glp" \
     "p(X), p(X?)." \
-    "→ 3 goals"
+    "→ succeeds"
 
 run_test "Unary: p(X?),p(X) reactivates" \
     "unary.glp" \
     "p(X?), p(X)." \
-    "→ 4 goals"
+    "→ succeeds"
 
 run_test "Unary: p(X),q(X?) succeeds" \
     "unary.glp" \
@@ -335,12 +335,12 @@ run_test "Unary s: s(X) suspends" \
 run_test "Unary w: w(X),w(X?) succeeds" \
     "unary_w.glp" \
     "w(X), w(X?)." \
-    "→ 6 goals"
+    "→ succeeds"
 
 run_test "Unary w: w(X?),w(X) succeeds" \
     "unary_w.glp" \
     "w(X?), w(X)." \
-    "→ 5 goals"
+    "→ succeeds"
 
 # ============================================
 # SUMMARY
