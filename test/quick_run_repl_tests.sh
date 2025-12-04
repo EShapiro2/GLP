@@ -206,7 +206,7 @@ run_test "Factorial factorial(3)" \
 run_test "Hanoi(1)" \
     "hanoi.glp" \
     "hanoi(1, a, c, M)." \
-    "→ 6 goals"
+    "→ succeeds"
 
 # ============================================
 # META + ARITHMETIC (2 tests - small inputs)

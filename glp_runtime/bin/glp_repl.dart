@@ -22,7 +22,7 @@ void main() async {
   // Get git commit info
   final gitCommit = await _getGitCommit();
   // Build timestamp (updated at compile time)
-  final buildTime = '2025-11-19T11:30:49Z (Fix: ROQ suspension list corruption with wrapper nodes)';
+  final buildTime = '2025-12-04 (Clean REPL output format)';
 
   print('╔════════════════════════════════════════╗');
   print('║   GLP REPL - Interactive Interpreter   ║');
@@ -37,7 +37,7 @@ void main() async {
   print('Compiled files: bin/*.glpc');
   print('');
   print('Input: filename.glp to load, or goal to execute');
-  print('Commands: :quit, :help, :trace, :binding, :debug, :limit');
+  print('Commands: :quit, :help, :trace, :debug, :limit');
   print('');
 
   final compiler = GlpCompiler();
@@ -69,7 +69,6 @@ void main() async {
 
   var goalId = 1;
   var debugTrace = true; // Toggle with :trace command
-  var showBindings = true; // Toggle with :binding command
   var debugOutput = false; // Toggle with :debug command
   var maxCycles = 10000; // Set with :limit command
 
@@ -105,12 +104,6 @@ void main() async {
     if (trimmed == ':trace' || trimmed == ':t') {
       debugTrace = !debugTrace;
       print('Trace ${debugTrace ? "enabled" : "disabled"}');
-      continue;
-    }
-
-    if (trimmed == ':binding' || trimmed == ':b') {
-      showBindings = !showBindings;
-      print('Bindings ${showBindings ? "enabled" : "disabled"}');
       continue;
     }
 
@@ -195,25 +188,21 @@ void main() async {
         final runner = BytecodeRunner(combinedProgram);
         final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
 
+        // Reset variable numbering for this query
+        scheduler.resetDisplayNumbering();
+
         runtime.gq.enqueue(GoalRef(goalId, entryPC));
         goalId++;
 
-        final ran = await scheduler.drainAsync(
+        final result = await scheduler.drainAsyncWithStatus(
           maxCycles: maxCycles,
           debug: debugTrace,
-          showBindings: showBindings,
+          showBindings: false,  // Don't show internal bindings
           debugOutput: debugOutput,
         );
-        print('  → ${ran.length} goals');
 
-        // For conjunctions, extract variables from the original query
-        final result = compiler.compileWithMetadata(wrappedQuery);
-        if (result.variableMap.isNotEmpty) {
-          print('');
-          print('Variables bound during execution:');
-          // TODO: Track writers created during execution
-          print('  (Conjunction variable tracking not yet implemented)');
-        }
+        // Print final status
+        _printStatus(result.status);
         continue;
       }
 
@@ -276,18 +265,21 @@ void main() async {
       final runner = BytecodeRunner(combinedProgram);
       final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
 
+      // Reset variable numbering for this query
+      scheduler.resetDisplayNumbering();
+
       runtime.gq.enqueue(GoalRef(goalId, entryPC));
       final currentGoalId = goalId;
       goalId++;
 
-      final ran = await scheduler.drainAsync(
+      final result = await scheduler.drainAsyncWithStatus(
         maxCycles: maxCycles,
         debug: debugTrace,
-        showBindings: showBindings,
+        showBindings: false,  // Don't show internal bindings
         debugOutput: debugOutput,
       );
 
-      // Display variable bindings
+      // Display variable bindings using clean format
       if (debugOutput) print('[DEBUG REPL] queryVarWriters = $queryVarWriters');
       if (queryVarWriters.isNotEmpty) {
         for (final entry in queryVarWriters.entries) {
@@ -295,27 +287,38 @@ void main() async {
           final writerId = entry.value;
           // Use single-ID heap methods (writerId == readerId in single-ID system)
           final rawValue = runtime.heap.getValue(writerId);
-          final displayId = writerId >= 1000 ? writerId - 1000 : writerId;
-          if (debugOutput) print('DEBUG DISPLAY: $varName = X$displayId, isBound=${runtime.heap.isBound(writerId)}, rawValue=$rawValue');
+          if (debugOutput) print('[DEBUG] $varName (W$writerId), isBound=${runtime.heap.isBound(writerId)}, rawValue=$rawValue');
           if (runtime.heap.isBound(writerId)) {
             // Dereference the value to follow binding chains (e.g., X2 → X2? → [])
             final varRef = rt.VarRef(writerId, isReader: false);
             final derefValue = runtime.heap.dereference(varRef);
-            print('  $varName = ${_formatTerm(derefValue, runtime)}');
+            print('$varName = ${_formatTerm(derefValue, runtime)}');
           } else {
-            print('  $varName = <unbound>');
+            print('$varName = <unbound>');
           }
         }
       }
 
-      // Report execution count
-      print('  → ${ran.length} goals');
+      // Print final status
+      _printStatus(result.status);
 
     } catch (e) {
       print('Error: $e');
     }
 
     print('');
+  }
+}
+
+/// Print execution status
+void _printStatus(ExecutionStatus status) {
+  switch (status) {
+    case ExecutionStatus.succeeded:
+      print('→ succeeds');
+    case ExecutionStatus.failed:
+      print('→ failed');
+    case ExecutionStatus.suspended:
+      print('→ suspended');
   }
 }
 
@@ -358,7 +361,6 @@ void printHelp() {
   print('  :help, :h              Show this help');
   print('  :quit, :q              Exit REPL');
   print('  :trace, :t             Toggle trace output (reductions)');
-  print('  :binding, :b           Toggle σ̂w bindings display');
   print('  :debug, :d             Toggle DEBUG output');
   print('  :limit <n>             Set goal reduction limit to <n>');
   print('  :bytecode, :bc         Show loaded bytecode');
@@ -373,7 +375,6 @@ void printHelp() {
   print("  GLP> execute('write', ['Hello']).");
   print('  GLP> merge([1,2,3], [a,b], Xs).');
   print('  GLP> :limit 5000                      # Set reduction limit');
-  print('  GLP> :binding                         # Hide bindings');
   print('');
 }
 

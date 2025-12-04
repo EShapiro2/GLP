@@ -1933,19 +1933,12 @@ class BytecodeRunner {
         // Commit only reached if HEAD and GUARD phases succeeded
         // Apply σ̂w to heap atomically
 
-        if (cx.showBindings && cx.sigmaHat.isNotEmpty) {
+        // Debug output for bindings (clean output handled by REPL)
+        if (cx.debugOutput && cx.sigmaHat.isNotEmpty) {
+          print('[DEBUG] PC $pc: COMMIT - σ̂w contains ${cx.sigmaHat.length} bindings:');
           cx.sigmaHat.forEach((writerId, value) {
             print('  W$writerId → $value');
           });
-        }
-
-        if (cx.debugOutput) {
-          if (cx.debugOutput) print('[DEBUG] PC $pc: COMMIT - σ̂w contains ${cx.sigmaHat.length} bindings:');
-          if (!cx.showBindings) {
-            cx.sigmaHat.forEach((writerId, value) {
-              print('  W$writerId → $value');
-            });
-          }
         }
 
         // Convert tentative structures to real Terms before committing

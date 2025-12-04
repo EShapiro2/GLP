@@ -3,12 +3,44 @@ import 'runtime.dart';
 import '../bytecode/runner.dart';
 import 'terms.dart';
 
+/// Result of scheduler execution
+enum ExecutionStatus {
+  succeeded,  // All goals completed successfully
+  failed,     // A goal failed (no matching clause)
+  suspended,  // Goals remain suspended (waiting on unbound readers)
+}
+
+/// Result from drain operation
+class DrainResult {
+  final List<int> goalsRan;
+  final ExecutionStatus status;
+  final List<String> suspendedGoals;
+
+  DrainResult(this.goalsRan, this.status, this.suspendedGoals);
+}
+
 class Scheduler {
   final GlpRuntime rt;
   final Map<Object?, BytecodeRunner> runners;
 
   Scheduler({required this.rt, BytecodeRunner? runner, Map<Object?, BytecodeRunner>? runners})
       : runners = runners ?? (runner != null ? {null: runner} : {});
+
+  /// Variable display map: maps actual varId to display number (1, 2, 3...)
+  /// Populated as variables are encountered during formatting
+  Map<int, int> _varDisplayMap = {};
+  int _nextDisplayId = 1;
+
+  /// Get or assign a display ID for a variable
+  int _getDisplayId(int varId) {
+    return _varDisplayMap.putIfAbsent(varId, () => _nextDisplayId++);
+  }
+
+  /// Reset display numbering for a new query
+  void resetDisplayNumbering() {
+    _varDisplayMap.clear();
+    _nextDisplayId = 1;
+  }
 
   String _formatTerm(Term term, {bool markReaders = true}) {
     // Dereference in a loop to avoid recursive ? markers
@@ -49,10 +81,10 @@ class Scheduler {
       if (current.value == null) return '<null>';
       return current.value.toString();
     } else if (current is VarRef && !current.isReader) {
-      final displayId = current.varId >= 1000 ? current.varId - 1000 : current.varId;
+      final displayId = _getDisplayId(current.varId);
       return 'X$displayId';
     } else if (current is VarRef && current.isReader) {
-      final displayId = current.varId >= 1000 ? current.varId - 1000 : current.varId;
+      final displayId = _getDisplayId(current.varId);
       return markReaders ? 'X$displayId?' : 'X$displayId';
     } else if (current is StructTerm) {
       // Special formatting for list structures
@@ -103,7 +135,7 @@ class Scheduler {
       }
 
       // General structure formatting
-      final args = current.args.map((a) => _formatTerm(a, markReaders: markReaders)).join(',');
+      final args = current.args.map((a) => _formatTerm(a, markReaders: markReaders)).join(', ');
       return '${current.functor}($args)';
     }
     return current.toString();
@@ -127,10 +159,32 @@ class Scheduler {
     return '$procName(${args.join(', ')})';
   }
 
-  List<int> drain({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) {
+  /// Format a binding for display: "X1 = value"
+  String formatBinding(int varId, dynamic value) {
+    final displayId = _getDisplayId(varId);
+    String valueStr;
+    if (value is Term) {
+      valueStr = _formatTerm(value, markReaders: false);
+    } else if (value is String) {
+      valueStr = value;
+    } else if (value == null || value == 'nil') {
+      valueStr = '[]';
+    } else {
+      valueStr = value.toString();
+    }
+    // Clean up Const(...) wrapper if present
+    if (valueStr.startsWith('Const(') && valueStr.endsWith(')')) {
+      valueStr = valueStr.substring(6, valueStr.length - 1);
+    }
+    return 'X$displayId = $valueStr';
+  }
+
+  DrainResult drainWithStatus({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) {
     final ran = <int>[];
     final suspendedGoals = <int, String>{}; // Track suspended goals by ID
     var cycles = 0;
+    var hasFailed = false;
+
     while (rt.gq.length > 0 && cycles < maxCycles) {
       final act = rt.gq.dequeue();
       if (act == null) break;
@@ -151,43 +205,8 @@ class Scheduler {
       }
       final goalStr = _formatGoal(act.id, procName, env);
 
-      // DEBUG: Deep trace for goal arguments
-      // if (debug && act.id >= 10002 && act.id <= 10002) {
-      //   print('[DEEP TRACE Goal ${act.id}] Raw argument state:');
-      //   for (int slot = 0; slot < 3; slot++) {
-      //     final rVal = env?.readerBySlot[slot];
-      //     final wVal = env?.writerBySlot[slot];
-      //     print('  Slot $slot:');
-      //     if (rVal != null) {
-      //       print('    env.r($slot) = R$rVal');
-      //       final wid = rt.heap.writerIdForReader(rVal);
-      //       if (wid != null) {
-      //         print('    writerIdForReader(R$rVal) = W$wid');
-      //         final bound = rt.heap.isWriterBound(wid);
-      //         print('    isWriterBound(W$wid) = $bound');
-      //         if (bound) {
-      //           final value = rt.heap.valueOfWriter(wid);
-      //           print('    valueOfWriter(W$wid) = $value');
-      //         }
-      //       }
-      //     }
-      //     if (wVal != null) {
-      //       print('    env.w($slot) = W$wVal');
-      //       final bound = rt.heap.isWriterBound(wVal);
-      //       print('    isWriterBound(W$wVal) = $bound');
-      //       if (bound) {
-      //         final value = rt.heap.valueOfWriter(wVal);
-      //         print('    valueOfWriter(W$wVal) = $value');
-      //       }
-      //     }
-      //     if (rVal == null && wVal == null) {
-      //       print('    (empty slot)');
-      //     }
-      //   }
-      // }
-
-      // Track queue length before execution
-      final queueBefore = rt.gq.length;
+      // Check if this is a query wrapper goal (skip display)
+      final isQueryWrapper = procName.startsWith('query__');
 
       // Track if reduction occurs
       var hadReduction = false;
@@ -202,11 +221,18 @@ class Scheduler {
         showBindings: showBindings,
         debugOutput: debugOutput,
         onReduction: debug ? (goalId, head, body) {
+          // Skip query wrapper goals
+          if (head.contains('query__')) {
+            hadReduction = true;
+            suspendedGoals.remove(goalId);
+            return;
+          }
           // Print reduction when it occurs (at Commit)
           // Strip /arity suffix from procedure names for standard GLP syntax
           final cleanHead = head.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
           final cleanBody = body.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
-          print('$goalId: $cleanHead :- $cleanBody');
+          // No goal ID prefix - clean output
+          print('$cleanHead :- $cleanBody');
           hadReduction = true;
           // Remove from suspended list if it reduced
           suspendedGoals.remove(goalId);
@@ -214,35 +240,23 @@ class Scheduler {
       );
       final result = runner.runWithStatus(cx);
 
-      // Track queue length after execution to detect spawned goals
-      final queueAfter = rt.gq.length;
-      final spawnedCount = queueAfter - queueBefore;
-
       // Show suspension/failure if no reduction occurred
-      if (debug && !hadReduction) {
+      if (debug && !hadReduction && !isQueryWrapper) {
         if (result == RunResult.suspended) {
           // Strip /arity suffix for standard GLP syntax
           final cleanGoal = goalStr.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
-          print('${act.id}: $cleanGoal → suspended');
+          print('$cleanGoal → suspended');
           // Track this suspended goal
           suspendedGoals[act.id] = goalStr;
         } else if (result == RunResult.terminated) {
           // Terminated without reduction = failed
           // Strip /arity suffix for standard GLP syntax
           final cleanGoal = goalStr.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
-          print('${act.id}: $cleanGoal → failed');
+          print('$cleanGoal → failed');
+          hasFailed = true;
           // Remove from suspended list if it was there
           suspendedGoals.remove(act.id);
-
-          // Stop execution on goal failure
-          if (debug && suspendedGoals.isNotEmpty) {
-            // Show suspended goals (resolvent) before stopping
-            final resolvent = suspendedGoals.values.map((g) =>
-              g.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(')
-            ).toList();
-            print('Resolvent (suspended): ${resolvent.join(', ')}');
-          }
-          return ran;
+          break; // Stop on failure
         }
       } else if (result == RunResult.terminated) {
         // Goal terminated successfully (with or without reduction) - remove from suspended list
@@ -251,34 +265,52 @@ class Scheduler {
       cycles++;
     }
 
-    // Show final resolvent (suspended goals that never resumed) at normal termination
-    if (debug && suspendedGoals.isNotEmpty) {
-      final resolvent = suspendedGoals.values.map((g) =>
-        g.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(')
-      ).toList();
-      print('Resolvent (suspended): ${resolvent.join(', ')}');
+    // Determine final status
+    final ExecutionStatus status;
+    if (hasFailed) {
+      status = ExecutionStatus.failed;
+    } else if (suspendedGoals.isNotEmpty) {
+      status = ExecutionStatus.suspended;
+    } else {
+      status = ExecutionStatus.succeeded;
     }
 
-    return ran;
+    final suspendedList = suspendedGoals.values.map((g) =>
+      g.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(')
+    ).toList();
+
+    return DrainResult(ran, status, suspendedList);
+  }
+
+  /// Legacy drain for backward compatibility
+  List<int> drain({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) {
+    return drainWithStatus(maxCycles: maxCycles, debug: debug, showBindings: showBindings, debugOutput: debugOutput).goalsRan;
   }
 
   /// Async drain that waits for pending timers to fire.
-  /// This is needed for wait() guards which schedule timers that
-  /// will add goals back to the queue.
-  Future<List<int>> drainAsync({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) async {
+  Future<DrainResult> drainAsyncWithStatus({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) async {
     final ran = <int>[];
     var totalCycles = 0;
+    ExecutionStatus lastStatus = ExecutionStatus.succeeded;
+    List<String> lastSuspended = [];
 
     while (totalCycles < maxCycles) {
       // Run synchronous drain until queue is empty
-      final batchRan = drain(
+      final result = drainWithStatus(
         maxCycles: maxCycles - totalCycles,
         debug: debug,
         showBindings: showBindings,
         debugOutput: debugOutput,
       );
-      ran.addAll(batchRan);
-      totalCycles += batchRan.length;
+      ran.addAll(result.goalsRan);
+      totalCycles += result.goalsRan.length;
+      lastStatus = result.status;
+      lastSuspended = result.suspendedGoals;
+
+      // Stop on failure
+      if (lastStatus == ExecutionStatus.failed) {
+        break;
+      }
 
       // If no pending timers, we're done
       if (rt.pendingTimers <= 0) {
@@ -286,8 +318,7 @@ class Scheduler {
       }
 
       // Wait a small amount for timers to fire
-      // Timers will add goals to queue when they fire
-      if (debug) {
+      if (debugOutput) {
         print('[DEBUG] Waiting for ${rt.pendingTimers} pending timer(s)...');
       }
 
@@ -297,6 +328,12 @@ class Scheduler {
       }
     }
 
-    return ran;
+    return DrainResult(ran, lastStatus, lastSuspended);
+  }
+
+  /// Legacy async drain for backward compatibility
+  Future<List<int>> drainAsync({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) async {
+    final result = await drainAsyncWithStatus(maxCycles: maxCycles, debug: debug, showBindings: showBindings, debugOutput: debugOutput);
+    return result.goalsRan;
   }
 }
