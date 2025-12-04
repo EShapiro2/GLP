@@ -265,8 +265,9 @@ void main() async {
       final runner = BytecodeRunner(combinedProgram);
       final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
 
-      // Reset variable numbering for this query
+      // Reset variable numbering and set query variable names
       scheduler.resetDisplayNumbering();
+      scheduler.setQueryVarNames(queryVarWriters);
 
       runtime.gq.enqueue(GoalRef(goalId, entryPC));
       final currentGoalId = goalId;

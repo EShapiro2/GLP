@@ -26,18 +26,37 @@ class Scheduler {
   Scheduler({required this.rt, BytecodeRunner? runner, Map<Object?, BytecodeRunner>? runners})
       : runners = runners ?? (runner != null ? {null: runner} : {});
 
+  /// Query variable names: maps varId to original name from query (e.g., "X", "Xs")
+  Map<int, String> _queryVarNames = {};
+
   /// Variable display map: maps actual varId to display number (1, 2, 3...)
-  /// Populated as variables are encountered during formatting
+  /// Only used for fresh variables created during execution
   Map<int, int> _varDisplayMap = {};
   int _nextDisplayId = 1;
 
-  /// Get or assign a display ID for a variable
-  int _getDisplayId(int varId) {
-    return _varDisplayMap.putIfAbsent(varId, () => _nextDisplayId++);
+  /// Set query variable names (call before draining)
+  void setQueryVarNames(Map<String, int> varWriters) {
+    _queryVarNames.clear();
+    for (final entry in varWriters.entries) {
+      _queryVarNames[entry.value] = entry.key;
+    }
+  }
+
+  /// Get display name for a variable
+  /// Uses original name if it's a query variable, otherwise X1, X2, etc.
+  String _getVarDisplayName(int varId) {
+    // Check if this is a query variable with an original name
+    if (_queryVarNames.containsKey(varId)) {
+      return _queryVarNames[varId]!;
+    }
+    // Otherwise assign a fresh display ID
+    final displayId = _varDisplayMap.putIfAbsent(varId, () => _nextDisplayId++);
+    return 'X$displayId';
   }
 
   /// Reset display numbering for a new query
   void resetDisplayNumbering() {
+    _queryVarNames.clear();
     _varDisplayMap.clear();
     _nextDisplayId = 1;
   }
@@ -81,11 +100,11 @@ class Scheduler {
       if (current.value == null) return '<null>';
       return current.value.toString();
     } else if (current is VarRef && !current.isReader) {
-      final displayId = _getDisplayId(current.varId);
-      return 'X$displayId';
+      final name = _getVarDisplayName(current.varId);
+      return name;
     } else if (current is VarRef && current.isReader) {
-      final displayId = _getDisplayId(current.varId);
-      return markReaders ? 'X$displayId?' : 'X$displayId';
+      final name = _getVarDisplayName(current.varId);
+      return markReaders ? '$name?' : name;
     } else if (current is StructTerm) {
       // Special formatting for list structures
       if (current.functor == '.' && current.args.length == 2) {
@@ -159,9 +178,9 @@ class Scheduler {
     return '$procName(${args.join(', ')})';
   }
 
-  /// Format a binding for display: "X1 = value"
+  /// Format a binding for display: "X = value" or "X1 = value"
   String formatBinding(int varId, dynamic value) {
-    final displayId = _getDisplayId(varId);
+    final name = _getVarDisplayName(varId);
     String valueStr;
     if (value is Term) {
       valueStr = _formatTerm(value, markReaders: false);
@@ -176,7 +195,7 @@ class Scheduler {
     if (valueStr.startsWith('Const(') && valueStr.endsWith(')')) {
       valueStr = valueStr.substring(6, valueStr.length - 1);
     }
-    return 'X$displayId = $valueStr';
+    return '$name = $valueStr';
   }
 
   DrainResult drainWithStatus({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) {
