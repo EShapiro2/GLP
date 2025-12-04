@@ -153,6 +153,13 @@ class Scheduler {
         return '[${elements.join(', ')}]';
       }
 
+      // Special formatting for conjunction
+      if (current.functor == ',' && current.args.length == 2) {
+        final left = _formatTerm(current.args[0], markReaders: markReaders);
+        final right = _formatTerm(current.args[1], markReaders: markReaders);
+        return '($left, $right)';
+      }
+
       // General structure formatting
       final args = current.args.map((a) => _formatTerm(a, markReaders: markReaders)).join(', ');
       return '${current.functor}($args)';
