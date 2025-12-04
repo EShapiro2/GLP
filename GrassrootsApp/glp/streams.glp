@@ -1,0 +1,15 @@
+% Stream Utilities
+
+% observe/3 - Stream observation (Program 14, SRSW-fixed)
+% Creates two copies of a stream for observation
+observe(X?, Y, Z?) :- observe(Y?, X, Z).
+observe(X, X?, X?) :- ground(X) | true.
+observe(Xs, [Y1?|Ys1?], [Y2?|Ys2?]) :-
+    Xs? = [X|Xs1] |
+    observe(X?, Y1, Y2),
+    observe(Xs1?, Ys1, Ys2).
+
+% tag_stream/3 - Tag each element of a stream
+tag_stream(Tag, [], []).
+tag_stream(Tag, [X|Xs?], [tagged(Tag?, X?)|Ys?]) :-
+    tag_stream(Tag?, Xs, Ys).

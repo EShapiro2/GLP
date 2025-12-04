@@ -1,0 +1,13 @@
+% Alice's Actor for Play 01: Cold Call
+% Each step is one clause; unexpected messages cause failure
+
+% Step 1: Initiate connection to bob
+alice_actor(ch(In, [connect(bob)|Out?])) :-
+    alice_wait_response(In?, Out).
+
+% Step 2: After response, send hello
+alice_wait_response([response(accept(_))|In], [send(bob, hello)|Out?]) :-
+    alice_done(In?, Out).
+
+% Step 3: Done - close output stream
+alice_done(_, []).

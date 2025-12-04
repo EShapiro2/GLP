@@ -689,6 +689,18 @@ X? =.. [Y|Ys] :- list(Ys?) | list_to_tuple([Y|Ys], X).
 
 **Status:** Not yet fixed. Parser needs to recognize `=..` as a valid goal in bodies.
 
+## GrassrootsApp Testing Framework
+
+See [grassroots-testing-framework.md](docs/grassroots-testing-framework.md) for the theater-style testing approach:
+- **Agents**: Personal agents from the GLP paper
+- **Actors**: Simulated users following scripts
+- **Plays**: Test scenarios in `GrassrootsApp/plays/`
+
+Key files:
+- `GrassrootsApp/glp/agent.glp` - Personal agent implementation
+- `GrassrootsApp/glp/network.glp` - 2-agent network switch
+- `GrassrootsApp/plays/play01_cold_call/` - First test scenario
+
 ## Git Collaboration Protocol (Multiple Claude Code Sessions)
 
 1. **Main branch** (`main`) is the source of truth - contains all merged, stable work

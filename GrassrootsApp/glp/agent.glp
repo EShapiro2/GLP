@@ -1,0 +1,62 @@
+% Personal Agent - Cold Call Protocol
+% Based on GLP 2025 paper social graph
+
+% agent/3: Main agent process
+% Args: MyId, UserCh (channel to user), NetCh (channel to network)
+agent(MyId, UserCh, NetCh) :-
+    agent_loop(MyId?, UserCh?, NetCh?, []).
+
+% agent_loop/4: Main loop with friends list
+agent_loop(MyId, UserCh, NetCh, Friends) :-
+    receive(Msg?, UserCh?, UserCh1),
+    Msg = connect(Target) |
+    % User wants to connect to Target
+    send(msg(Target?, intro(MyId?, MyId?, Resp?))?, NetCh?, NetCh1),
+    agent_wait_response(MyId?, UserCh1?, NetCh1?, Friends?, Target?, Resp).
+
+agent_loop(MyId, UserCh, NetCh, Friends) :-
+    receive(Msg?, NetCh?, NetCh1),
+    Msg = intro(From, Introducer, Resp) |
+    % Received introduction from network
+    send(befriend(From?, Resp?)?, UserCh?, UserCh1),
+    agent_loop(MyId?, UserCh1?, NetCh1?, Friends?).
+
+agent_loop(MyId, UserCh, NetCh, Friends) :-
+    receive(Msg?, UserCh?, UserCh1),
+    Msg = decision(yes, Target, Resp) |
+    % User accepts befriend request
+    new_channel(MyCh, TheirCh),
+    Resp = accept(TheirCh?),
+    agent_loop(MyId?, UserCh1?, NetCh?, [(Target?, MyCh?)|Friends?]).
+
+agent_loop(MyId, UserCh, NetCh, Friends) :-
+    receive(Msg?, UserCh?, UserCh1),
+    Msg = decision(no, Target, Resp) |
+    % User rejects befriend request
+    Resp = reject,
+    agent_loop(MyId?, UserCh1?, NetCh?, Friends?).
+
+agent_loop(MyId, UserCh, NetCh, Friends) :-
+    receive(Msg?, UserCh?, UserCh1),
+    Msg = send(Target, Content) |
+    % User wants to send message to friend
+    lookup_friend(Target?, Friends?, FriendCh),
+    send(msg(MyId?, Target?, Content?)?, FriendCh?, _),
+    agent_loop(MyId?, UserCh1?, NetCh?, Friends?).
+
+% agent_wait_response/6: Waiting for cold-call response
+agent_wait_response(MyId, UserCh, NetCh, Friends, Target, Resp) :-
+    Resp? = accept(Ch) |
+    send(response(accept(Ch?))?, UserCh?, UserCh1),
+    agent_loop(MyId?, UserCh1?, NetCh?, [(Target?, Ch?)|Friends?]).
+
+agent_wait_response(MyId, UserCh, NetCh, Friends, Target, Resp) :-
+    Resp? = reject |
+    send(response(reject)?, UserCh?, UserCh1),
+    agent_loop(MyId?, UserCh1?, NetCh?, Friends?).
+
+% lookup_friend/3: Find friend's channel
+lookup_friend(Target, [(Target?, Ch)|_], Ch?) :- true.
+lookup_friend(Target, [(Other, _)|Friends?], Ch?) :-
+    Target? \= Other? |
+    lookup_friend(Target?, Friends, Ch).

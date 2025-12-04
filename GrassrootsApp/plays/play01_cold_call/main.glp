@@ -1,0 +1,28 @@
+% Test Harness for Play 01: Cold Call
+% Wires together channels, network, agents, and actors
+
+test(AliceTrace?, BobTrace?) :-
+    % Create network channels
+    new_channel(NetChA, ANetCh),
+    new_channel(NetChB, BNetCh),
+
+    % Create user channels
+    new_channel(UserChA, AUserCh),
+    new_channel(UserChB, BUserCh),
+
+    % Observe channels for traces
+    AUserCh = ch(AIn, AOut),
+    observe(AIn?, AInCopy, AliceTrace),
+    BUserCh = ch(BIn, BOut),
+    observe(BIn?, BInCopy, BobTrace),
+
+    % Start network switch
+    network((alice, NetChA?), (bob, NetChB?)),
+
+    % Start agents
+    agent(alice, ch(AInCopy?, AOut?), ANetCh?),
+    agent(bob, ch(BInCopy?, BOut?), BNetCh?),
+
+    % Start actors
+    alice_actor(UserChA?),
+    bob_actor(UserChB?).

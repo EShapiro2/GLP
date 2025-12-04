@@ -1,0 +1,13 @@
+% Bob's Actor for Play 01: Cold Call
+% Each step is one clause; unexpected messages cause failure
+
+% Step 1: Receive befriend request from agent, accept it
+bob_actor(ch([befriend(alice, Resp)|In], [decision(yes, alice, Resp?)|Out?])) :-
+    bob_wait_msg(In?, Out).
+
+% Step 2: Receive message from alice
+bob_wait_msg([msg(alice, hello)|In], Out?) :-
+    bob_done(In?, Out).
+
+% Step 3: Done - close output stream
+bob_done(_, []).
