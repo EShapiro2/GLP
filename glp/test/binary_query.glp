@@ -1,0 +1,4 @@
+% Binary predicate conjunction test
+p(a,b).
+
+query(W?) :- p(a,X), p(Y,X?), p(Y?,Z), p(W,Z?).
