@@ -37,6 +37,9 @@ $GLP_DIR/primes.glp
 $GLP_DIR/fib.glp
 $GLP_DIR/sum_list.glp
 $GLP_DIR/hanoi.glp
+$GLP_DIR/unary_r.glp
+$GLP_DIR/unary_s.glp
+$GLP_DIR/unary_w.glp
 hello.
 p(X).
 merge([1], [a], Xs).
@@ -63,6 +66,10 @@ X = f(a).
 X := 5.
 X := 2 + 3.
 X := 2 + 3 * 4.
+r(Y).
+s(Y).
+w(Y), w(Y?).
+w(Y?), w(Y).
 :quit
 REPL_INPUT
 2>&1)
@@ -95,6 +102,10 @@ declare -a tests=(
     "Assign number:X = 5"
     "Assign expr:X = 5"
     "Assign precedence:X = 14"
+    "Unary r(Y):Y = b"
+    "Unary s(Y):suspended"
+    "Unary w(Y),w(Y?):→ succeeds"
+    "Unary w(Y?),w(Y):→ succeeds"
 )
 
 PASS=0
