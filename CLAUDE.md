@@ -541,24 +541,31 @@ Claude B: work → push → branch-B ──────────────�
 **Before ending session:**
 1. Ensure all work is committed
 2. Push to your branch
-3. Tell user: "My changes are on branch `claude/xxx`. To merge to main, run:"
-   ```bash
-   git fetch origin claude/<branch-name>
-   git checkout main
-   git merge origin/claude/<branch-name>
-   git push origin main
-   ```
+3. Tell user the merge commands using the **EXACT FORMAT BELOW** (copy-paste ready):
 
-**When user asks to "merge with main" or "push to main":**
-Since only the user can push to main, output the exact commands they need to run:
+**🔴 MANDATORY FORMAT for merge instructions - USE THIS EXACTLY:**
 ```bash
+cd /Users/udi/GLP
 git checkout main
 git pull origin main
-git fetch origin claude/<current-branch-name>
-git merge origin/claude/<current-branch-name>
+git fetch origin claude/<ACTUAL-BRANCH-NAME>
+git merge origin/claude/<ACTUAL-BRANCH-NAME>
 git push origin main
 ```
-Replace `<current-branch-name>` with the actual branch name from this session.
+- **ALWAYS include `cd /Users/udi/GLP`** - user may be in wrong directory
+- **ALWAYS substitute the actual branch name** - never use placeholders like `<branch-name>`
+- **ALWAYS include the fetch step** - do NOT skip it
+
+**When user asks to "merge with main" or "push to main":**
+Output the EXACT commands with actual values (no placeholders):
+```bash
+cd /Users/udi/GLP
+git checkout main
+git pull origin main
+git fetch origin claude/xxx-actual-session-id
+git merge origin/claude/xxx-actual-session-id
+git push origin main
+```
 
 ### User's Responsibilities - PRECISE Protocol for Merging to Main
 
