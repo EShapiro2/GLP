@@ -279,6 +279,70 @@ run_test "Primes up to 10" \
     "Ps = \\[2, 3, 5, 7\\]"
 
 # ============================================
+# UNARY PREDICATES (N.1 - 12 tests)
+# ============================================
+
+run_test "Unary: p(a) succeeds" \
+    "unary.glp" \
+    "p(a)." \
+    "p(a) :- true"
+
+run_test "Unary: p(b) fails" \
+    "unary.glp" \
+    "p(b)." \
+    "failed"
+
+run_test "Unary: p(X) binds X=a" \
+    "unary.glp" \
+    "p(X)." \
+    "X = a"
+
+run_test "Unary: q(X) binds X=b (first clause)" \
+    "unary.glp" \
+    "q(X)." \
+    "X = b"
+
+run_test "Unary: p(X),p(X?) succeeds" \
+    "unary.glp" \
+    "p(X), p(X?)." \
+    "→ 3 goals"
+
+run_test "Unary: p(X?),p(X) reactivates" \
+    "unary.glp" \
+    "p(X?), p(X)." \
+    "→ 4 goals"
+
+run_test "Unary: p(X),q(X?) succeeds" \
+    "unary.glp" \
+    "p(X), q(X?)." \
+    "q(a) :- true"
+
+run_test "Unary: p(X?),q(X) fails (p(b) fails)" \
+    "unary.glp" \
+    "p(X?), q(X)." \
+    "p(b) → failed"
+
+run_test "Unary r: r(X) binds X=b" \
+    "unary_r.glp" \
+    "r(X)." \
+    "X = b"
+
+run_test "Unary s: s(X) suspends" \
+    "unary_s.glp" \
+    "s(X)." \
+    "suspended"
+
+run_test "Unary w: w(X),w(X?) succeeds" \
+    "unary_w.glp" \
+    "w(X), w(X?)." \
+    "→ 6 goals"
+
+run_test "Unary w: w(X?),w(X) succeeds" \
+    "unary_w.glp" \
+    "w(X?), w(X)." \
+    "→ 5 goals"
+
+# ============================================
 # SUMMARY
 # ============================================
 
