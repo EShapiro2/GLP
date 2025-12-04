@@ -239,6 +239,7 @@ class Scheduler {
         goalHead: goalStr,
         showBindings: showBindings,
         debugOutput: debugOutput,
+        termFormatter: (term, {bool markReaders = true}) => _formatTerm(term, markReaders: markReaders),
         onReduction: debug ? (goalId, head, body) {
           // Skip query wrapper goals
           if (head.contains('query__')) {

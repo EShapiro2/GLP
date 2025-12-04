@@ -169,6 +169,9 @@ class RunnerContext {
   final bool showBindings;
   final bool debugOutput;
 
+  // Custom term formatter for consistent variable naming
+  final String Function(Term, {bool markReaders})? termFormatter;
+
   RunnerContext({
     required this.rt,
     required this.goalId,
@@ -180,6 +183,7 @@ class RunnerContext {
     this.onReduction,
     this.showBindings = true,
     this.debugOutput = false,
+    this.termFormatter,
   }) : env = env ?? CallEnv();
 
   void clearClause() {
@@ -2377,7 +2381,10 @@ class BytecodeRunner {
           for (int i = 0; i < 10; i++) {
             final term = newEnv.arg(i);
             if (term != null) {
-              args.add(_formatTerm(cx.rt, term));
+              // Use custom formatter if provided, otherwise fall back to static formatter
+              args.add(cx.termFormatter != null
+                  ? cx.termFormatter!(term)
+                  : _formatTerm(cx.rt, term));
             } else {
               break;
             }
@@ -2418,7 +2425,10 @@ class BytecodeRunner {
           for (int i = 0; i < 10; i++) {
             final term = cx.argSlots[i];
             if (term != null) {
-              args.add(_formatTerm(cx.rt, term));
+              // Use custom formatter if provided, otherwise fall back to static formatter
+              args.add(cx.termFormatter != null
+                  ? cx.termFormatter!(term)
+                  : _formatTerm(cx.rt, term));
             } else {
               break;
             }
