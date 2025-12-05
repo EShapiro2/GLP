@@ -1,0 +1,3 @@
+% Bounded buffer consumer/producer - corrected
+bb_consumer([X1,X2|Xs?]) :- integer(X1?) | bb_consumer([X2?|Xs]).
+bb_producer([1|Xs]) :- bb_producer(Xs?).
