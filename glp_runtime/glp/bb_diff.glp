@@ -25,3 +25,19 @@ bb_prod(N, Head, Tail?) :- ground(N?) |
 bb_cons(dl(Head?,Tail), [V?|Vs?]) :-
     receive(V, dl(Head,Tail?), dl(NewHead,NewTail)),
     bb_cons(dl(NewHead?,NewTail?), Vs).
+
+% list_to_dl(List, Head, Tail) - convert list to difference list
+list_to_dl([], T?, T).
+list_to_dl([X|Xs], [X?|Ys?], T) :- list_to_dl(Xs?, Ys, T?).
+
+% append_dl via continuation-passing to satisfy SRSW
+test_append(R?, RT?) :-
+    build_first([a,b], R, RT).
+
+build_first(L, R?, RT) :- ground(L?) |
+    list_to_dl(L?, R, T1),
+    build_second([c,d], T1?, RT?).
+
+% Head? receives the hole (reader), then binds it via Head (writer)
+build_second(L, Head?, RT?) :- ground(L?) |
+    list_to_dl(L?, Head, RT).
