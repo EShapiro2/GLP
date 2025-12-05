@@ -1,3 +1,10 @@
-% Bounded buffer consumer/producer - corrected
-bb_consumer([X1,X2|Xs?]) :- integer(X1?) | bb_consumer([X2?|Xs]).
-bb_producer([1|Xs]) :- bb_producer(Xs?).
+% Bounded buffer - integers with sum
+
+% Producer: generates N, N+1, N+2, ...
+bb_producer([N?|Xs], N) :- ground(N?) | N1 := N? + 1, bb_producer(Xs?, N1?).
+
+% Consumer buffer size 1: needs 2 elements, sums them
+bb_consumer([X1,X2|Xs?], Sum) :-
+    integer(X1?), ground(Sum?) |
+    Sum1 := Sum? + X1?,
+    bb_consumer([X2?|Xs], Sum1?).
