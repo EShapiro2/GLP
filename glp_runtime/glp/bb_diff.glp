@@ -1,0 +1,27 @@
+%% bounded_buffer.glp - Bounded buffer with difference lists (GLP version)
+%% Source: CP Collected Papers, Ch 18 (Takeuchi & Furukawa)
+%%
+%% Buffer is dl(Head, Tail) - difference list
+%% - send adds to Head
+%% - receive takes from Head and extends Tail (creates new slot)
+
+% send(Msg, OldHead, NewHead) - add Msg to buffer head
+send(Msg, [Msg?|Rest?], Rest).
+
+% receive(Msg, dl(OldHead,OldTail), dl(NewHead,NewTail)) - get Msg, extend tail
+receive(Msg?, dl([Msg|Rest?],[_|Tail?]), dl(Rest,Tail)).
+
+% open(Size, Head, Tail) - create Size empty slots, Head=Tail when size=0
+open(0, H?, H).
+open(N, [_|H?], T) :- N? > 0 | N1 := N? - 1, open(N1?, H, T?).
+
+% Producer: sends integers 1,2,3,... to buffer head
+bb_prod(N, Head, Tail?) :- ground(N?) |
+    send(N?, Head?, NewHead),
+    N1 := N? + 1,
+    bb_prod(N1?, NewHead?, Tail).
+
+% Consumer: receives from head, extends tail, collects results
+bb_cons(dl(Head?,Tail), [V?|Vs?]) :-
+    receive(V, dl(Head,Tail?), dl(NewHead,NewTail)),
+    bb_cons(dl(NewHead?,NewTail?), Vs).
