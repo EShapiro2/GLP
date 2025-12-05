@@ -22,7 +22,7 @@ void main() async {
   // Get git commit info
   final gitCommit = await _getGitCommit();
   // Build timestamp (updated at compile time)
-  final buildTime = '2025-12-04 (Clean REPL output format)';
+  final buildTime = '2025-12-05 (Added conjunctive goals support)';
 
   print('╔════════════════════════════════════════╗');
   print('║   GLP REPL - Interactive Interpreter   ║');
@@ -159,50 +159,132 @@ void main() async {
     // Compile and run the goal
     try {
       // Check if this is a conjunction (contains comma outside of argument lists)
-      // For conjunctions, wrap in a helper clause and compile it
+      // For conjunctions, parse as a term and execute each goal in sequence
       if (_isConjunction(trimmed)) {
-        // Create wrapper: query__goal() :- <conjunction>.
-        final wrappedQuery = 'query__goal() :- $trimmed.';
-        final program = compiler.compile(wrappedQuery);
+        // Parse the conjunction by wrapping it as a clause body:
+        // _conj_wrapper_ :- <conjunction>.
+        final parseInput = '_conj_wrapper_ :- $trimmed.';
+        final lexer = Lexer(parseInput);
+        final tokens = lexer.tokenize();
+        final parser = Parser(tokens);
+        final ast = parser.parse();
 
-        // Combine with loaded programs
+        if (ast.procedures.isEmpty || ast.procedures[0].clauses.isEmpty) {
+          print('Error: Could not parse conjunction');
+          continue;
+        }
+
+        // Get the body goals from the parsed clause
+        final clause = ast.procedures[0].clauses[0];
+        if (clause.body == null || clause.body!.isEmpty) {
+          print('Error: No goals in conjunction');
+          continue;
+        }
+
+        // Convert Goals to Atoms for uniform handling
+        final goals = clause.body!.map((g) => Atom(g.functor, g.args, g.line, g.column)).toList();
+
+        if (debugOutput) {
+          print('[DEBUG] Conjunction goals: ${goals.length}');
+          for (final g in goals) {
+            print('[DEBUG]   ${g.functor}/${g.args.length}');
+          }
+        }
+
+        // Combine all loaded programs
         final allOps = <dynamic>[];
         for (final loaded in loadedPrograms.values) {
           allOps.addAll(loaded.ops);
         }
-        allOps.addAll(program.ops);
         final combinedProgram = BytecodeProgram(allOps);
 
-        // Find entry point
-        final entryPC = combinedProgram.labels['query__goal/0'];
-        if (entryPC == null) {
-          print('Error: Could not find query entry point');
-          continue;
-        }
+        // Track variables across goals
+        final queryVarWriters = <String, int>{};
+        final varNameToId = <String, int>{}; // Map variable names to their IDs
 
-        // Execute with empty environment (zero-arity wrapper)
-        final env = CallEnv();
-        runtime.setGoalEnv(goalId, env);
-        runtime.setGoalProgram(goalId, 'main');
-
+        // Create runner and scheduler
         final runner = BytecodeRunner(combinedProgram);
         final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
-
-        // Reset variable numbering for this query
         scheduler.resetDisplayNumbering();
 
-        runtime.gq.enqueue(GoalRef(goalId, entryPC));
-        goalId++;
+        var allSucceeded = true;
+        var anySuspended = false;
 
-        final result = await scheduler.drainAsyncWithStatus(
-          maxCycles: maxCycles,
-          debug: debugTrace,
-          showBindings: false,  // Don't show internal bindings
-          debugOutput: debugOutput,
-        );
+        // Execute each goal in sequence
+        for (final goal in goals) {
+          final functor = goal.functor;
+          final arity = goal.args.length;
+          final args = goal.args;
+
+          // Find entry point for this goal
+          final procedureLabel = '$functor/$arity';
+          final entryPC = combinedProgram.labels[procedureLabel];
+          if (entryPC == null) {
+            print('Error: Predicate $procedureLabel not found');
+            allSucceeded = false;
+            break;
+          }
+
+          // Set up arguments, reusing existing variables where needed
+          final argSlots = <int, rt.Term>{};
+          for (int i = 0; i < args.length; i++) {
+            final arg = args[i];
+            _setupConjunctionArg(runtime, arg, i, argSlots, queryVarWriters, varNameToId, debugOutput: debugOutput);
+          }
+
+          // Set up goal environment
+          final env = CallEnv(args: argSlots);
+          runtime.setGoalEnv(goalId, env);
+          runtime.setGoalProgram(goalId, 'main');
+
+          // Set query variable names for display
+          scheduler.setQueryVarNames(queryVarWriters);
+
+          runtime.gq.enqueue(GoalRef(goalId, entryPC));
+          goalId++;
+
+          // Run until this goal completes
+          final result = await scheduler.drainAsyncWithStatus(
+            maxCycles: maxCycles,
+            debug: debugTrace,
+            showBindings: false,
+            debugOutput: debugOutput,
+          );
+
+          if (result.status == ExecutionStatus.failed) {
+            allSucceeded = false;
+            break;
+          } else if (result.status == ExecutionStatus.suspended) {
+            anySuspended = true;
+            // Continue with next goal - may unblock
+          }
+        }
+
+        // Display variable bindings
+        if (debugOutput) print('[DEBUG REPL] queryVarWriters = $queryVarWriters');
+        if (queryVarWriters.isNotEmpty) {
+          for (final entry in queryVarWriters.entries) {
+            final varName = entry.key;
+            final writerId = entry.value;
+            if (debugOutput) print('[DEBUG] $varName (W$writerId), isBound=${runtime.heap.isBound(writerId)}');
+            if (runtime.heap.isBound(writerId)) {
+              final varRef = rt.VarRef(writerId, isReader: false);
+              final derefValue = runtime.heap.dereference(varRef);
+              print('$varName = ${_formatTerm(derefValue, runtime)}');
+            } else {
+              print('$varName = <unbound>');
+            }
+          }
+        }
 
         // Print final status
-        _printStatus(result.status);
+        if (!allSucceeded) {
+          _printStatus(ExecutionStatus.failed);
+        } else if (anySuspended) {
+          _printStatus(ExecutionStatus.suspended);
+        } else {
+          _printStatus(ExecutionStatus.succeeded);
+        }
         continue;
       }
 
@@ -394,6 +476,198 @@ bool _isConjunction(String query) {
     }
   }
   return false;
+}
+
+// Flatten a conjunction term into a list of goals
+// (A, (B, C)) -> [A, B, C]
+List<Atom> _flattenConjunction(Atom term) {
+  final goals = <Atom>[];
+
+  void flatten(dynamic t) {
+    if (t is StructTerm && t.functor == ',' && t.args.length == 2) {
+      flatten(t.args[0]);
+      flatten(t.args[1]);
+    } else if (t is Atom) {
+      goals.add(t);
+    } else if (t is StructTerm) {
+      // Convert StructTerm to Atom
+      goals.add(Atom(t.functor, t.args, t.line, t.column));
+    }
+  }
+
+  // Start with the atom itself - check if it's a conjunction
+  if (term.functor == ',' && term.args.length == 2) {
+    flatten(term.args[0]);
+    flatten(term.args[1]);
+  } else {
+    goals.add(term);
+  }
+
+  return goals;
+}
+
+// Set up an argument for a conjunction goal, reusing existing variables
+void _setupConjunctionArg(
+  GlpRuntime runtime,
+  Term arg,
+  int argSlot,
+  Map<int, rt.Term> argSlots,
+  Map<String, int> queryVarWriters,
+  Map<String, int> varNameToId, {
+  bool debugOutput = false,
+}) {
+  if (arg is VarTerm) {
+    final baseName = arg.name;
+    final existingId = varNameToId[baseName];
+
+    if (existingId != null) {
+      // Reuse existing variable
+      if (debugOutput) print('[DEBUG] Reusing var $baseName: ${arg.isReader ? "R" : "W"}$existingId');
+      argSlots[argSlot] = rt.VarRef(existingId, isReader: arg.isReader);
+    } else {
+      // Create new variable
+      final (writerId, readerId) = runtime.heap.allocateFreshPair();
+      varNameToId[baseName] = writerId;  // In single-ID, writerId == readerId conceptually
+
+      if (!arg.isReader) {
+        queryVarWriters[baseName] = writerId;
+      }
+
+      if (debugOutput) print('[DEBUG] New var $baseName: ${arg.isReader ? "R" : "W"}$writerId');
+      argSlots[argSlot] = rt.VarRef(arg.isReader ? readerId : writerId, isReader: arg.isReader);
+    }
+  } else if (arg is ListTerm) {
+    // List - build recursively
+    final (writerId, readerId) = runtime.heap.allocateFreshPair();
+    final listValue = _buildListTermForConj(runtime, arg, queryVarWriters, varNameToId);
+    if (listValue is rt.ConstTerm) {
+      runtime.heap.bindWriterConst(writerId, listValue.value);
+    } else if (listValue is rt.StructTerm) {
+      runtime.heap.bindWriterStruct(writerId, listValue.functor, listValue.args);
+    }
+    argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
+  } else if (arg is ConstTerm) {
+    final (writerId, readerId) = runtime.heap.allocateFreshPair();
+    runtime.heap.bindWriterConst(writerId, arg.value);
+    argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
+  } else if (arg is StructTerm) {
+    final (writerId, readerId) = runtime.heap.allocateFreshPair();
+    final structValue = _buildStructTermForConj(runtime, arg, queryVarWriters, varNameToId, debugOutput: debugOutput) as rt.StructTerm;
+    runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
+    argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
+  } else {
+    throw Exception('Unsupported argument type: ${arg.runtimeType}');
+  }
+}
+
+// Build a structure term for conjunction, reusing existing variables
+rt.Term _buildStructTermForConj(
+  GlpRuntime runtime,
+  StructTerm struct,
+  Map<String, int> queryVarWriters,
+  Map<String, int> varNameToId, {
+  bool debugOutput = false,
+}) {
+  final argTerms = <rt.Term>[];
+
+  for (final arg in struct.args) {
+    if (arg is ConstTerm) {
+      final (writerId, readerId) = runtime.heap.allocateFreshPair();
+      runtime.heap.bindWriterConst(writerId, arg.value);
+      argTerms.add(rt.VarRef(readerId, isReader: true));
+    } else if (arg is VarTerm) {
+      final baseName = arg.name;
+      final existingId = varNameToId[baseName];
+
+      if (existingId != null) {
+        argTerms.add(rt.VarRef(existingId, isReader: arg.isReader));
+      } else {
+        final (writerId, readerId) = runtime.heap.allocateFreshPair();
+        varNameToId[baseName] = writerId;
+        if (!arg.isReader) {
+          queryVarWriters[baseName] = writerId;
+        }
+        argTerms.add(arg.isReader ? rt.VarRef(readerId, isReader: true) : rt.VarRef(writerId, isReader: false));
+      }
+    } else if (arg is ListTerm) {
+      if (arg.isNil) {
+        final (writerId, readerId) = runtime.heap.allocateFreshPair();
+        runtime.heap.bindWriterConst(writerId, 'nil');
+        argTerms.add(rt.VarRef(readerId, isReader: true));
+      } else {
+        final (writerId, readerId) = runtime.heap.allocateFreshPair();
+        final listValue = _buildListTermForConj(runtime, arg, queryVarWriters, varNameToId) as rt.StructTerm;
+        runtime.heap.bindWriterStruct(writerId, listValue.functor, listValue.args);
+        argTerms.add(rt.VarRef(readerId, isReader: true));
+      }
+    } else if (arg is StructTerm) {
+      final (writerId, readerId) = runtime.heap.allocateFreshPair();
+      final structValue = _buildStructTermForConj(runtime, arg, queryVarWriters, varNameToId, debugOutput: debugOutput) as rt.StructTerm;
+      runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
+      argTerms.add(rt.VarRef(readerId, isReader: true));
+    } else {
+      throw Exception('Unsupported struct argument type: ${arg.runtimeType}');
+    }
+  }
+
+  return rt.StructTerm(struct.functor, argTerms);
+}
+
+// Build a list term for conjunction, reusing existing variables
+rt.Term _buildListTermForConj(
+  GlpRuntime runtime,
+  ListTerm list,
+  Map<String, int> queryVarWriters,
+  Map<String, int> varNameToId,
+) {
+  if (list.isNil) {
+    return rt.ConstTerm('nil');
+  }
+
+  final head = list.head;
+  final tail = list.tail;
+
+  rt.Term headTerm;
+  if (head is ConstTerm) {
+    headTerm = rt.ConstTerm(head.value);
+  } else if (head is VarTerm) {
+    final baseName = head.name;
+    final existingId = varNameToId[baseName];
+    if (existingId != null) {
+      headTerm = rt.VarRef(existingId, isReader: head.isReader);
+    } else {
+      final (writerId, readerId) = runtime.heap.allocateFreshPair();
+      varNameToId[baseName] = writerId;
+      if (!head.isReader) {
+        queryVarWriters[baseName] = writerId;
+      }
+      headTerm = head.isReader ? rt.VarRef(readerId, isReader: true) : rt.VarRef(writerId, isReader: false);
+    }
+  } else {
+    throw Exception('Unsupported list head type: ${head.runtimeType}');
+  }
+
+  rt.Term tailTerm;
+  if (tail is ListTerm) {
+    tailTerm = _buildListTermForConj(runtime, tail, queryVarWriters, varNameToId);
+  } else if (tail is VarTerm) {
+    final baseName = tail.name;
+    final existingId = varNameToId[baseName];
+    if (existingId != null) {
+      tailTerm = rt.VarRef(existingId, isReader: tail.isReader);
+    } else {
+      final (writerId, readerId) = runtime.heap.allocateFreshPair();
+      varNameToId[baseName] = writerId;
+      if (!tail.isReader) {
+        queryVarWriters[baseName] = writerId;
+      }
+      tailTerm = tail.isReader ? rt.VarRef(readerId, isReader: true) : rt.VarRef(writerId, isReader: false);
+    }
+  } else {
+    tailTerm = rt.ConstTerm(null);
+  }
+
+  return rt.StructTerm('.', [headTerm, tailTerm]);
 }
 
 // Set up heap cells for a query argument
