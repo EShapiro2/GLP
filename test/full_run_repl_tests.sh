@@ -50,6 +50,7 @@ $GLP_DIR/test_time.glp
 $GLP_DIR/primes.glp
 $GLP_DIR/no_guard.glp
 $GLP_DIR/with_guard.glp
+$GLP_DIR/bb_diff.glp
 hello.
 p(X).
 merge([1,2,3], [a,b], Xs).
@@ -151,6 +152,7 @@ primes(20, Ps20).
 primes(10, Ps10).
 no_guard(Xng, 5).
 with_guard(Xwg, 5).
+open(1, Xopen, Yopen).
 :quit
 REPL_INPUT
 2>&1)
@@ -301,6 +303,9 @@ declare -a tests=(
     # Guard tests (sigmaHat fix)
     "Guard - no guard:Xng = \[5, a, b\]"
     "Guard - with guard:Xwg = \[5, a, b\]"
+
+    # Bounded buffer (writer-to-reader alias fix)
+    "Open buffer:Xopen = \[\[\] |"
 )
 
 PASS=0
