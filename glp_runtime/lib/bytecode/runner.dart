@@ -1768,7 +1768,15 @@ class BytecodeRunner {
                 pc = _findNextClauseTry(pc);
                 continue;
               }
+            } else if (wid != null) {
+              // Reader is unbound but has an underlying writer
+              // Alias storedValue to wid (same fix as GetVariable for writer-to-reader case)
+              if (storedValue is int) {
+                cx.sigmaHat[storedValue] = VarRef(wid, isReader: true);
+              }
+              if (cx.debugOutput) print('[DEBUG] PC $pc: GetValue SUCCESS (aliased to W$wid)');
             } else {
+              // No underlying writer - suspend
               final suspendOnVar = _finalUnboundVar(cx, arg.varId);
               pc = _suspendAndFail(cx, suspendOnVar, pc); continue;
             }
