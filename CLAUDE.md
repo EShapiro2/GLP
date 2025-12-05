@@ -188,6 +188,34 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 
 **Use this message:** "This requires architectural understanding. Please consult Claude Chat for the design, then provide me with specific implementation instructions."
 
+## Practical Environment Info (Linux)
+
+**Before running commands, VERIFY - don't guess:**
+- Run `ls` to check directories exist
+- Run `pwd` to confirm current directory
+- Check file locations with `ls` before referencing them
+
+**REPL Location and Usage:**
+```bash
+cd /home/user/GLP/glp_runtime
+export PATH="/home/user/dart-sdk/bin:$PATH"
+echo -e 'filename.glp\ngoal.' | dart run bin/glp_repl.dart
+```
+
+**Key paths:**
+- REPL: `/home/user/GLP/glp_runtime/bin/glp_repl.dart`
+- stdlib: `/home/user/GLP/glp/stdlib/`
+- Test files go in: `/home/user/GLP/glp_runtime/glp/` (REPL prepends `glp/` to paths)
+
+**Commands that DON'T exist in this environment:**
+- `timeout` - not available
+- `tail`, `head`, `grep` - not available (already noted above)
+
+**REPL commands:**
+- `:trace` - toggle tracing (not `trace goal.`)
+- `:debug` - toggle debug output
+- Load file first, then run goals
+
 ## Directory Structure
 
 ```
