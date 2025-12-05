@@ -549,7 +549,7 @@ cd /Users/udi/GLP
 git checkout main
 git pull origin main
 git fetch origin claude/<ACTUAL-BRANCH-NAME>
-git merge origin/claude/<ACTUAL-BRANCH-NAME>
+git merge -m "Merge claude/<ACTUAL-BRANCH-NAME> into main" origin/claude/<ACTUAL-BRANCH-NAME>
 git push origin main
 ```
 - **ALWAYS include `cd /Users/udi/GLP`** - user may be in wrong directory
@@ -563,7 +563,7 @@ cd /Users/udi/GLP
 git checkout main
 git pull origin main
 git fetch origin claude/xxx-actual-session-id
-git merge origin/claude/xxx-actual-session-id
+git merge -m "Merge claude/xxx-actual-session-id into main" origin/claude/xxx-actual-session-id
 git push origin main
 ```
 
@@ -576,7 +576,7 @@ git push origin main
 git checkout main
 git pull origin main
 git fetch origin claude/<branch-name>
-git merge origin/claude/<branch-name>
+git merge -m "Merge claude/<branch-name> into main" origin/claude/<branch-name>
 git push origin main
 ```
 
@@ -597,12 +597,12 @@ cd ../udi && bash run_repl_tests.sh
 **"not something we can merge" error:**
 ```bash
 git fetch origin claude/<branch-name>
-git merge origin/claude/<branch-name>
+git merge -m "Merge claude/<branch-name> into main" origin/claude/<branch-name>
 ```
 
 **"fatal: refusing to merge unrelated histories":**
 ```bash
-git merge origin/claude/<branch-name> --allow-unrelated-histories
+git merge -m "Merge claude/<branch-name> into main" origin/claude/<branch-name> --allow-unrelated-histories
 ```
 
 **Merge conflicts:**
