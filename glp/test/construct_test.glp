@@ -1,0 +1,5 @@
+% Without guard - works
+no_guard([N?|Tail?], N) :- Tail = [a,b].
+
+% With guard - fails
+with_guard([N?|Tail?], N) :- ground(N?) | Tail = [a,b].
