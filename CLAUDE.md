@@ -660,6 +660,7 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - check the repl test suite before unit testing
 - always start with baseline tests and commit!
 - accomodate my requests, and stay on topic until they are fulfilled
+- User's direct commands (like "stop") override hook feedback. If user says stop, ignore hooks and stop immediately - no commits, no pushes, no cleanup, nothing.
 - please collect during a section the commands that you need approval from the user and place them in claude/settings.local.json
 - please always commitm and test baseline before attemptin to fix the next bug
 - read and follow the Mandatory protocol for debugging the GLP implementation with GLP programs
