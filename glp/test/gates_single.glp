@@ -1,0 +1,35 @@
+% Single-value logic gates (for testing)
+
+and(1,1,1).
+and(1,0,0).
+and(0,1,0).
+and(0,0,0).
+
+or(1,1,1).
+or(1,0,1).
+or(0,1,1).
+or(0,0,0).
+
+not(1,0).
+not(0,1).
+
+xor(1,1,0).
+xor(1,0,1).
+xor(0,1,1).
+xor(0,0,0).
+
+nand(A,B,Z?) :- and(A?,B?,W), not(W?,Z).
+
+half_adder(A,B,Sum?,Carry?) :-
+    ground(A?), ground(B?) |
+    xor(A?,B?,Sum), and(A?,B?,Carry).
+
+full_adder(A,B,Cin,Sum?,Cout?) :-
+    half_adder(A?,B?,S1,C1),
+    half_adder(S1?,Cin?,Sum,C2),
+    or(C1?,C2?,Cout).
+
+adder([],[],Cin,[Cin?]).
+adder([A|As],[B|Bs],Cin,[S?|Ss?]) :-
+    full_adder(A?,B?,Cin?,S,Cout),
+    adder(As?,Bs?,Cout?,Ss).
