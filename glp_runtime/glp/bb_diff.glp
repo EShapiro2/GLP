@@ -13,7 +13,7 @@ receive(Msg?, dl([Msg|Rest?],[_|Tail?]), dl(Rest,Tail)).
 
 % open(Size, Head, Tail) - create Size empty slots, Head=Tail when size=0
 open(0, H?, H).
-open(N, [_|H?], T?) :- N? > 0 | N1 := N? - 1, open(N1?, H, T).
+open(N, [_|H?], T) :- N? > 0 | N1 := N? - 1, open(N1?, H, T?).
 
 % Producer: sends integers 1,2,3,... to buffer head
 bb_prod(N, Head, Tail?) :- ground(N?) |
