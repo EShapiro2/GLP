@@ -51,6 +51,7 @@ $GLP_DIR/primes.glp
 $GLP_DIR/no_guard.glp
 $GLP_DIR/with_guard.glp
 $GLP_DIR/bb_diff.glp
+append_dl.glp
 hello.
 p(X).
 merge([1,2,3], [a,b], Xs).
@@ -153,6 +154,7 @@ primes(10, Ps10).
 no_guard(Xng, 5).
 with_guard(Xwg, 5).
 open(1, Xopen, Yopen).
+append([1,2|T1?], T1, [3,4|T2?], T2, Hdl, Tdl?).
 :quit
 REPL_INPUT
 2>&1)
@@ -306,6 +308,9 @@ declare -a tests=(
 
     # Bounded buffer (writer-to-reader alias fix)
     "Open buffer:Xopen = \[\[\] |"
+
+    # Difference list append
+    "DL append:Hdl = \[1, 2 |"
 )
 
 PASS=0
