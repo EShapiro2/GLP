@@ -1616,7 +1616,22 @@ class BytecodeRunner {
                 cx.clauseVars[varIndex] = value;
               }
               if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable SUCCESS, continuing to PC ${pc+1}');
+            } else if (wid != null) {
+              // Reader is unbound - but clause expects a writer (isReaderMode=false)
+              // Alias clause writer T to goal's underlying writer X1
+              // This allows the clause body to bind T, which actually binds X1
+              if (existing is VarRef && !existing.isReader) {
+                // Already have a writer from earlier occurrence - bind it to goal's writer
+                cx.sigmaHat[existing.varId] = VarRef(wid, isReader: true);
+              } else if (existing is int) {
+                cx.sigmaHat[existing] = VarRef(wid, isReader: true);
+              } else {
+                // First occurrence - store the underlying writer ID
+                cx.clauseVars[varIndex] = wid;
+              }
+              if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable SUCCESS (aliased to W$wid), continuing to PC ${pc+1}');
             } else {
+              // No underlying writer - suspend
               if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable SUSPENDING on R${arg.varId}');
               final suspendOnVar = _finalUnboundVar(cx, arg.varId);
               pc = _suspendAndFail(cx, suspendOnVar, pc); continue;
