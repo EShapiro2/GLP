@@ -401,6 +401,42 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# Run mwm tests (MutualRef multiway merge)
+echo ""
+echo "--- MWM (Multiway Merge) Tests ---"
+
+mwm_output=$($DART run "$REPL" <<MWM_INPUT
+mwm([], Xmwm1).
+mwm([stream([1,2,3])], Xmwm2).
+mwm([stream([a,b]), stream([1,2])], Xmwm3).
+:quit
+MWM_INPUT
+2>&1)
+
+if echo "$mwm_output" | grep -q "Xmwm1 = \[\]"; then
+    echo "PASS: MWM empty"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: MWM empty (expected: Xmwm1 = [])"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$mwm_output" | grep -q "Xmwm2 = \[1, 2, 3\]"; then
+    echo "PASS: MWM single stream"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: MWM single stream (expected: Xmwm2 = [1, 2, 3])"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$mwm_output" | grep -q "Xmwm3 = \[a, b, 1, 2\]"; then
+    echo "PASS: MWM two streams"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: MWM two streams (expected: Xmwm3 = [a, b, 1, 2])"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""
