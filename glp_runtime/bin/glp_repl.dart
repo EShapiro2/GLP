@@ -645,6 +645,8 @@ rt.Term _buildListTermForConj(
     }
   } else if (head is ListTerm) {
     headTerm = _buildListTermForConj(runtime, head, queryVarWriters, varNameToId);
+  } else if (head is StructTerm) {
+    headTerm = _buildStructTermForConj(runtime, head, queryVarWriters, varNameToId);
   } else {
     throw Exception('Unsupported list head type: ${head.runtimeType}');
   }
@@ -814,6 +816,8 @@ rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> query
     headTerm = head.isReader ? rt.VarRef(readerId, isReader: true) : rt.VarRef(writerId, isReader: false);
   } else if (head is ListTerm) {
     headTerm = _buildListTerm(runtime, head, queryVarWriters);
+  } else if (head is StructTerm) {
+    headTerm = _buildStructTerm(runtime, head, queryVarWriters);
   } else {
     throw Exception('Unsupported list head type: ${head.runtimeType}');
   }
