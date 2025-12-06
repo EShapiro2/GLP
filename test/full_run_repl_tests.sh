@@ -153,6 +153,7 @@ primes(20, Ps20).
 primes(10, Ps10).
 no_guard(Xng, 5).
 with_guard(Xwg, 5).
+Xsl = [send(1,a), send(2,b)].
 open(1, Xopen, Yopen).
 append([1,2|T1?], T1, [3,4|T2?], T2, Hdl, Tdl?).
 :quit
@@ -305,6 +306,9 @@ declare -a tests=(
     # Guard tests (sigmaHat fix)
     "Guard - no guard:Xng = \[5, a, b\]"
     "Guard - with guard:Xwg = \[5, a, b\]"
+
+    # Structs in list
+    "Structs in list:Xsl = \[send(1, a), send(2, b)\]"
 
     # Bounded buffer (writer-to-reader alias fix)
     "Open buffer:Xopen = \[\[\] |"
