@@ -1,0 +1,11 @@
+% Goal: distribute([a,b,c], Y, Z).
+% Result: Y = [a, b, c], Z = [a, b, c]
+
+distribute([a, b, c], Y, Z) :- distribute([b, c], X1, X2)
+distribute([b, c], X1, X2) :- distribute([c], X3, X4)
+distribute([c], X3, X4) :- distribute([], X5, X6)
+distribute([], X5, X6) :- true
+
+Y = [a, b, c]
+Z = [a, b, c]
+→ succeeds

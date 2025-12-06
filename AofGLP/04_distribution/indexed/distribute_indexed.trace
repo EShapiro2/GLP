@@ -1,0 +1,12 @@
+% Goal: distribute_indexed([send(1,a), send(2,b), send(1,c), send(2,d)], Y, Z).
+% Result: Y = [a, c], Z = [b, d]
+
+distribute_indexed([send(1, a), send(2, b), send(1, c), send(2, d)], Y, Z) :- distribute_indexed([send(2, b), send(1, c), send(2, d)], X1, X2)
+distribute_indexed([send(2, b), send(1, c), send(2, d)], X1, X2) :- distribute_indexed([send(1, c), send(2, d)], X3, X4)
+distribute_indexed([send(1, c), send(2, d)], X3, X4) :- distribute_indexed([send(2, d)], X5, X6)
+distribute_indexed([send(2, d)], X5, X6) :- distribute_indexed([], X7, X8)
+distribute_indexed([], X7, X8) :- true
+
+Y = [a, c]
+Z = [b, d]
+→ succeeds
