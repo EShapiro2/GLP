@@ -1,0 +1,24 @@
+% Bob produces two a's then hands tail to Alice
+bob([a,a|Tail?], Result?) :- alice(Tail, Result).
+
+% Alice produces three b's then hands tail to Bob
+alice([b,b,b|Tail?], Result?) :- bob_finish(Tail, Result).
+
+% Bob produces two more a's then closes
+bob_finish([a,a], done).
+
+% Reader: counts elements in stream
+reader([], Count, Count?).
+reader([X|Xs], Count, Result?) :- ground(X?) |
+    Count1 := Count? + 1,
+    reader(Xs?, Count1?, Result).
+
+% Test cooperative production
+test_coop(Stream?, Done?) :- bob(Stream, Done).
+
+% Test reading the cooperatively-produced stream
+test_read(Count?) :-
+    bob(Stream, _),
+    start_reader(Stream?, Count).
+
+start_reader(S?, C?) :- reader(S, 0, C).

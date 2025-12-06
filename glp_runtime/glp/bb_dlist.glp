@@ -1,0 +1,25 @@
+% Create a difference list with N empty slots
+create_dl(0, H?, H).
+create_dl(N, [_|H?], T) :- N? > 0 | N1 := N? - 1, create_dl(N1?, H, T?).
+
+% Producer: fills buffer slots with integers (countdown)
+bb_producer([], 0).
+bb_producer([N?|Xs?], N) :- N? > 0 | N1 := N? - 1, bb_producer(Xs, N1?).
+
+% Simple consumer - sums elements
+consumer([], Sum, Sum?).
+consumer([X|Xs], Sum, Result?) :- ground(X?) |
+    Sum1 := Sum? + X?,
+    consumer(Xs?, Sum1?, Result).
+
+% Consumer with buffer size 2: need to see 2 filled slots
+bb_cons2([], _, Sum, Sum?).
+bb_cons2([X], _, Sum, Result?) :- ground(X?) | Result := Sum? + X?.
+bb_cons2([X1,X2|Xs], [_|T?], Sum, Result?) :- ground(X1?) |
+    Sum1 := Sum? + X1?,
+    bb_cons2([X2?|Xs?], T, Sum1?, Result).
+
+% Simple test - producer fills stream, consumer sums
+test_simple(R?) :-
+    bb_producer(H, 5),
+    consumer(H?, 0, R).

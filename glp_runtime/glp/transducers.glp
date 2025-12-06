@@ -1,0 +1,29 @@
+% Copier: identity transducer
+copier([], []).
+copier([X|Xs], [X?|Ys?]) :- copier(Xs?, Ys).
+
+% Duplicator: each element appears twice in output
+duplicator([], []).
+duplicator([X|Xs], [X?,X?|Ys?]) :- ground(X?) | duplicator(Xs?, Ys).
+
+% Separator: inserts 0 after each element
+separator([], []).
+separator([X|Xs], [X?,0|Ys?]) :- separator(Xs?, Ys).
+
+% Differentiator: outputs difference between consecutive elements
+differentiator([], []).
+differentiator([_], []).
+differentiator([X,Y|Xs], [D?|Ds?]) :- ground(X?), ground(Y?) |
+    D := Y? - X?,
+    differentiator([Y?|Xs?], Ds).
+
+% Integrator: outputs running sum (simpler version)
+integrator([], []).
+integrator([X|Xs], [X?|Ys?]) :- ground(X?) | integrator(Xs?, Ys).
+
+% Test chained transducers
+test_chain(Out?) :-
+    duplicator([1,2], Mid),
+    chain_sep(Mid?, Out).
+
+chain_sep(M?, O?) :- separator(M, O).
