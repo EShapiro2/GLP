@@ -803,31 +803,6 @@ distribute_indexed([], Y, Z).
 
 **Status:** Not yet fixed. Need to add StructTerm case to list building functions.
 
-### Known Compiler Limitation: Structs in list literals in clause bodies
-
-**Bug:** List literals containing struct terms in clause BODIES don't compile correctly. The list construction gets mangled.
-
-```glp
-% This FAILS (structs in list literal in body):
-client2(V, Ys?) :-
-    wait(100) |
-    Ys = [add(10), subtract(2), value(V?)|Ys1?],  % <-- list with structs
-    client2_cont(Ys1).
-% Compiles to: client2(X3, X4) :- =/2(X12), client2_cont(X13)
-% The list construction disappears, =/2 has only 1 argument!
-
-% This WORKS (structs in list literal in HEAD):
-client2(V, [add(10), subtract(2), value(V?)|Ys?]) :-
-    wait(100) |
-    client2_cont(Ys).
-```
-
-**Workaround:** Move list construction from body to head pattern.
-
-**Location:** Compiler - likely in body goal compilation when handling unification with list literals containing structs.
-
-**Status:** Not yet fixed. Workaround available.
-
 ## GrassrootsApp Testing Framework
 
 See [grassroots-testing-framework.md](docs/grassroots-testing-framework.md) for the theater-style testing approach:
