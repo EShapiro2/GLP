@@ -1,0 +1,22 @@
+% Topic: Static balanced merge tree (recursive version)
+% Section: Streams - Static Balanced Merge Tree
+%
+% Test goals:
+% merge_tree([[a,b], [1,2], [x,y], [p,q]], Out).
+
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
+
+merge_tree([Xs], Xs?).
+merge_tree(Streams, Out?) :-
+    Streams? = [_,_|_] |
+    merge_layer(Streams?, Layer),
+    merge_tree(Layer?, Out).
+
+merge_layer([], []).
+merge_layer([Xs], [Xs?]).
+merge_layer([Xs,Ys|Rest], [Zs?|Layer?]) :-
+    merge(Xs?, Ys?, Zs),
+    merge_layer(Rest?, Layer).
