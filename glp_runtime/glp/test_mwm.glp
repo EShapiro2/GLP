@@ -1,0 +1,14 @@
+% Test MutualRef and mwm
+
+% Simple test: build stream [1,2,3]
+% Pattern: Out? in head (reader), Out in body (writer) = valid SRSW
+test_build(Out?) :-
+    allocate_mutual_reference(Ref, Out),
+    stream_append(1, Ref?, Ref1),
+    stream_append(2, Ref1?, Ref2),
+    stream_append(3, Ref2?, Ref3),
+    close_mutual_reference(Ref3?).
+
+% Test mwm with two streams
+test_mwm(Out?) :-
+    mwm([stream([a,b]), stream([1,2])], Out).

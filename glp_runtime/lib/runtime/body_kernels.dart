@@ -99,9 +99,9 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('now', 1, nowKernel);
 
   // MutualRef operations (O(1) stream append)
-  registry.register('kernel_mutual_ref', 2, mutualRefKernel);
+  registry.register('allocate_mutual_reference', 2, mutualRefKernel);
   registry.register('kernel_stream_append', 3, streamAppendKernel);
-  registry.register('kernel_mutual_ref_close', 1, mutualRefCloseKernel);
+  registry.register('kernel_close_mutual_reference', 1, mutualRefCloseKernel);
 }
 
 /// Helper to get numeric value from argument (with arithmetic evaluation)
@@ -566,43 +566,43 @@ BodyKernelResult nowKernel(GlpRuntime rt, List<Object?> args) {
 // MUTUAL REFERENCE KERNELS (O(1) Stream Append)
 // ============================================================================
 
-/// kernel_mutual_ref(StreamEnd, Ref) - Create MutualRef from unbound writer
+/// allocate_mutual_reference(Ref, Output) - Create MutualRef from unbound writer
 ///
-/// StreamEnd must be an unbound writer variable (the end of a stream).
-/// Ref will be bound to a MutualRefTerm pointing to StreamEnd.
+/// Ref will be bound to a MutualRefTerm.
+/// Output must be an unbound writer variable (the end of a stream).
 ///
-/// Example: mutual_ref(Tail, Ref) where Tail is unbound
+/// Example: allocate_mutual_reference(Ref, StreamTail) where StreamTail is unbound
 BodyKernelResult mutualRefKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
-    print('[ABORT] kernel_mutual_ref/2: expected 2 arguments, got ${args.length}');
+    print('[ABORT] allocate_mutual_reference/2: expected 2 arguments, got ${args.length}');
     return BodyKernelResult.abort;
   }
 
-  // First arg must be an unbound writer
-  final streamEnd = _deref(rt, args[0]);
-  if (streamEnd is! VarRef || streamEnd.isReader) {
-    print('[ABORT] kernel_mutual_ref/2: first argument must be an unbound writer');
+  // Second arg (Output) must be an unbound writer - the stream tail
+  final output = _deref(rt, args[1]);
+  if (output is! VarRef || output.isReader) {
+    print('[ABORT] allocate_mutual_reference/2: second argument must be an unbound writer');
     return BodyKernelResult.abort;
   }
 
   // Check that writer is actually unbound
-  if (rt.heap.isWriterBound(streamEnd.varId)) {
-    print('[ABORT] kernel_mutual_ref/2: writer W${streamEnd.varId} is already bound');
+  if (rt.heap.isWriterBound(output.varId)) {
+    print('[ABORT] allocate_mutual_reference/2: writer W${output.varId} is already bound');
     return BodyKernelResult.abort;
   }
 
   // Create MutualRef pointing to the unbound writer
-  final mutualRef = MutualRefTerm(streamEnd.varId);
+  final mutualRef = MutualRefTerm(output.varId);
 
-  // Bind second arg (output) to the MutualRef
-  return _bindResult(rt, args[1], mutualRef);
+  // Bind first arg (Ref) to the MutualRef
+  return _bindResult(rt, args[0], mutualRef);
 }
 
-/// kernel_stream_append(Ref, Value, NewEnd) - Append value to stream via MutualRef
+/// kernel_stream_append(Ref, Value, RefOut) - Append value to stream via MutualRef
 ///
-/// Ref must be a MutualRefTerm (from kernel_mutual_ref).
+/// Ref must be a MutualRefTerm (from allocate_mutual_reference).
 /// Value is the value to append to the stream.
-/// NewEnd will be bound to a reader for the new stream tail.
+/// RefOut will be bound to the updated MutualRef.
 ///
 /// Operation:
 /// 1. Get current writer from MutualRef
@@ -656,24 +656,24 @@ BodyKernelResult streamAppendKernel(GlpRuntime rt, List<Object?> args) {
   // Update MutualRef to point to the new tail's writer
   refArg.currentWriterId = newTailId;
 
-  // Bind third arg (NewEnd) to reader of new tail
-  return _bindResult(rt, args[2], newTailReader);
+  // Bind third arg (RefOut) to the updated MutualRef
+  return _bindResult(rt, args[2], refArg);
 }
 
-/// kernel_mutual_ref_close(Ref) - Close stream by binding tail to []
+/// kernel_close_mutual_reference(Ref) - Close stream by binding tail to []
 ///
 /// Ref must be a MutualRefTerm.
 /// Binds the current tail to empty list (nil), closing the stream.
 BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
-    print('[ABORT] kernel_mutual_ref_close/1: expected 1 argument, got ${args.length}');
+    print('[ABORT] kernel_close_mutual_reference/1: expected 1 argument, got ${args.length}');
     return BodyKernelResult.abort;
   }
 
   // First arg must be MutualRefTerm
   final refArg = _deref(rt, args[0]);
   if (refArg is! MutualRefTerm) {
-    print('[ABORT] kernel_mutual_ref_close/1: argument must be a MutualRef');
+    print('[ABORT] kernel_close_mutual_reference/1: argument must be a MutualRef');
     return BodyKernelResult.abort;
   }
 
@@ -682,7 +682,7 @@ BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
 
   // Check that current writer is still unbound
   if (rt.heap.isWriterBound(currentWriterId)) {
-    print('[ABORT] kernel_mutual_ref_close/1: MutualRef points to already-bound writer W$currentWriterId');
+    print('[ABORT] kernel_close_mutual_reference/1: MutualRef points to already-bound writer W$currentWriterId');
     return BodyKernelResult.abort;
   }
 

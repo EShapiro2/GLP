@@ -2279,6 +2279,10 @@ class BytecodeRunner {
           cx.rt.heap.addVariable(varId);
           cx.clauseVars[varIndex] = VarRef(varId, isReader: false);
           cx.argSlots[argSlot] = VarRef(varId, isReader: isReaderMode);
+        } else if (value is Term && isReaderMode) {
+          // Ground term (e.g., MutualRefTerm) - store directly in argSlots
+          // No need to wrap in VarRef, guards can work with Terms directly
+          cx.argSlots[argSlot] = value;
         } else {
           print('WARNING: PutVariable got unexpected value: $value (isReader=$isReaderMode)');
         }
@@ -3740,7 +3744,7 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
-      case 'mutual_ref':
+      case 'is_mutual_ref':
         // Succeeds if X is a MutualRefTerm (enables SRSW multiple reads)
         if (args.isEmpty) return GuardResult.failure;
         final val = getValue(args[0]);

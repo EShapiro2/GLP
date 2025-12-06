@@ -257,8 +257,8 @@ class Analyzer {
       }
     }
 
-    // mutual_ref/1 guard marks argument as ground (MutualRefTerm can be read multiple times)
-    if (guard.predicate == 'mutual_ref' && guard.args.length == 1) {
+    // is_mutual_ref/1 guard marks argument as ground (MutualRefTerm can be read multiple times)
+    if (guard.predicate == 'is_mutual_ref' && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm) {
         varTable.markGrounded(arg.name);

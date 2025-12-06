@@ -52,6 +52,24 @@ The GLP paper and LaTeX sources:
 - **Main file**: `/tmp/GLP-2025/main GLP 2025.tex`
 - **GitHub**: https://github.com/EShapiro2/GLP-2025
 
+## GLP Fundamentals (READ FIRST)
+
+### Reader/Writer Basics
+- `X` in a clause is a **writer** (syntactically, by definition)
+- `X?` is the paired **reader** of X (syntactically, by definition)
+- This is NOT a runtime property — it's determined by syntax
+
+### Guards
+- Guards test properties of their arguments **as passed**
+- `writer(X)` asks: "Is X a writer?" — Yes if X, No if X?
+- `reader(X?)` asks: "Is X? a reader?" — Yes
+- `ground(X?)` asks: "Is the value of X? ground?"
+
+### When Debugging
+- Start from language semantics, not implementation details
+- If confused, ask: "What does this mean in GLP terms?"
+- Don't reason about VarRefs/isReader flags — reason about readers and writers
+
 ## Core Rules
 
 ### Never Implement Without a Plan
@@ -70,7 +88,9 @@ The GLP paper and LaTeX sources:
 When checking specs:
 1. **Quote the spec exactly** — don't paraphrase or interpret
 2. **Answer only what the spec says** — don't add conclusions or inferences
-3. **If asked "is it clear?"** — the answer is either "yes, it says X" or "no, it doesn't address Y"
+3. **If spec covers the case**: "The spec says X"
+4. **If spec is silent**: "The spec doesn't address Y"
+5. **NEVER** say "the spec is clear" then spend 10 minutes explaining it
 
 Example of WRONG spec reading:
 > "Spec says: writer(X) — pass the variable directly, not via reader"
