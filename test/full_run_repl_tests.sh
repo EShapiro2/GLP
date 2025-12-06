@@ -51,6 +51,7 @@ $GLP_DIR/primes.glp
 $GLP_DIR/no_guard.glp
 $GLP_DIR/with_guard.glp
 $GLP_DIR/bb_diff.glp
+$GLP_DIR/nonground_list.glp
 append_dl.glp
 hello.
 p(X).
@@ -155,6 +156,8 @@ no_guard(Xng, 5).
 with_guard(Xwg, 5).
 open(1, Xopen, Yopen).
 append([1,2|T1?], T1, [3,4|T2?], T2, Hdl, Tdl?).
+test_list_in_body([1,2,3,4], Xngl).
+build_list(a, b, Xbld).
 :quit
 REPL_INPUT
 2>&1)
@@ -311,6 +314,10 @@ declare -a tests=(
 
     # Difference list append
     "DL append:Hdl = \[1, 2 |"
+
+    # Non-ground list in body (codegen fix)
+    "Non-ground list pass:Xngl = \[1, 2, 3, 4\]"
+    "Non-ground list build:Xbld = \[a, b\]"
 )
 
 PASS=0
