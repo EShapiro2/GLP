@@ -592,32 +592,43 @@ class CodeGenerator {
       if (term.isNil) {
         ctx.emit(bc.UnifyConstant('nil'));  // Empty list
       } else {
-        // Non-empty list: convert to runtime StructTerm and emit as constant
-        // This prevents list flattening bug
-        rt.Term convertListToStructTerm(ListTerm l) {
-          if (l.isNil) return rt.ConstTerm('nil');
+        // Non-empty list: check if ground or contains variables
+        if (_isGroundTerm(term)) {
+          // Ground list: convert to runtime StructTerm and emit as constant
+          rt.Term convertListToStructTerm(ListTerm l) {
+            if (l.isNil) return rt.ConstTerm('nil');
 
-          // Convert head
-          rt.Term convertTerm(Term t) {
-            if (t is ConstTerm) return rt.ConstTerm(t.value);
-            if (t is ListTerm) return convertListToStructTerm(t);
-            if (t is StructTerm) {
-              final rtArgs = t.args.map(convertTerm).toList();
-              return rt.StructTerm(t.functor, rtArgs);
+            rt.Term convertTerm(Term t) {
+              if (t is ConstTerm) return rt.ConstTerm(t.value);
+              if (t is ListTerm) return convertListToStructTerm(t);
+              if (t is StructTerm) {
+                final rtArgs = t.args.map(convertTerm).toList();
+                return rt.StructTerm(t.functor, rtArgs);
+              }
+              return rt.ConstTerm(null);  // Fallback for unexpected cases
             }
-            // For VarTerms - non-ground lists not yet supported
-            if (t is VarTerm) {
-              throw CompileError('Non-ground lists not yet supported: variable ${t.name} in list', t.line, t.column, phase: 'codegen');
-            }
-            return rt.ConstTerm(null);  // Fallback for unexpected cases
+
+            final head = l.head != null ? convertTerm(l.head!) : rt.ConstTerm('nil');
+            final tail = l.tail != null ? convertTerm(l.tail!) : rt.ConstTerm('nil');
+            return rt.StructTerm('.', [head, tail]);
+          }
+          final listStructTerm = convertListToStructTerm(term);
+          ctx.emit(bc.UnifyConstant(listStructTerm));
+        } else {
+          // Non-ground list (contains variables): build as structure './2'
+          // Pattern: [H|T] becomes '.'(H, T)
+          ctx.emit(bc.PutStructure('.', 2, -1)); // -1 = building inside parent structure
+
+          // Process head element
+          if (term.head != null) {
+            _generateStructureElementInBody(term.head!, varTable, ctx);
           }
 
-          final head = l.head != null ? convertTerm(l.head!) : rt.ConstTerm('nil');
-          final tail = l.tail != null ? convertTerm(l.tail!) : rt.ConstTerm('nil');
-          return rt.StructTerm('.', [head, tail]);
+          // Process tail element - may be another list or a variable
+          if (term.tail != null) {
+            _generateListTailInBody(term.tail!, varTable, ctx);
+          }
         }
-        final listStructTerm = convertListToStructTerm(term);
-        ctx.emit(bc.UnifyConstant(listStructTerm));
       }
 
     } else if (term is StructTerm) {
@@ -658,8 +669,18 @@ class CodeGenerator {
       if (term.isNil) {
         ctx.emit(bc.SetConstant('nil'));
       } else {
-        // For non-empty nested lists, need special handling
-        throw CompileError('Nested non-empty lists in structures not yet supported', term.line, term.column, phase: 'codegen');
+        // Non-empty nested list: build as cons cell '.'(head, tail)
+        ctx.emit(bc.PutStructure('.', 2, -1)); // -1 = building inside parent structure
+
+        // Process head element
+        if (term.head != null) {
+          _generateStructureElementInBody(term.head!, varTable, ctx);
+        }
+
+        // Process tail element
+        if (term.tail != null) {
+          _generateListTailInBody(term.tail!, varTable, ctx);
+        }
       }
 
     } else if (term is StructTerm) {
@@ -675,6 +696,33 @@ class CodeGenerator {
       // Anonymous variable in structure
       final tempReg = ctx.allocateTemp();
       ctx.emit(bcv2.SetVariable(tempReg, isReader: false));  // Create fresh writer
+    }
+  }
+
+  // Helper for building list tails in BODY phase
+  // List tails can be: another list (recurse), a variable, or nil
+  void _generateListTailInBody(Term term, VariableTable varTable, CodeGenContext ctx) {
+    if (term is ListTerm) {
+      if (term.isNil) {
+        // Tail is nil: emit constant
+        ctx.emit(bc.SetConstant('nil'));
+      } else {
+        // Tail is another list: build nested cons cell
+        ctx.emit(bc.PutStructure('.', 2, -1)); // -1 = building inside parent structure
+
+        // Process head of nested list
+        if (term.head != null) {
+          _generateStructureElementInBody(term.head!, varTable, ctx);
+        }
+
+        // Recurse for tail
+        if (term.tail != null) {
+          _generateListTailInBody(term.tail!, varTable, ctx);
+        }
+      }
+    } else {
+      // Tail is a variable or other term - use standard handling
+      _generateStructureElementInBody(term, varTable, ctx);
     }
   }
 }
