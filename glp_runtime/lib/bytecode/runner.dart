@@ -1654,6 +1654,15 @@ class BytecodeRunner {
             } else {
               cx.clauseVars[varIndex] = arg;
             }
+          } else if (arg is Term) {
+            // Handle other Term types (e.g., MutualRefTerm)
+            if (existing is VarRef && !existing.isReader) {
+              cx.sigmaHat[existing.varId] = arg;
+            } else if (existing is int) {
+              cx.sigmaHat[existing] = arg;
+            } else {
+              cx.clauseVars[varIndex] = arg;
+            }
           }
         } else {
           // GetReaderVariable logic: Load argument into clause READER variable
@@ -1683,6 +1692,11 @@ class BytecodeRunner {
               cx.clauseVars[varIndex] = arg;
             }
           } else if (arg is StructTerm) {
+            if (existing == null) {
+              cx.clauseVars[varIndex] = arg;
+            }
+          } else if (arg is Term) {
+            // Handle other Term types (e.g., MutualRefTerm)
             if (existing == null) {
               cx.clauseVars[varIndex] = arg;
             }
