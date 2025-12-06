@@ -1,31 +1,37 @@
-% Deep tests with variables at various depths
+% Binary structures (2 args) with var at different positions
+bin1(X?, Y?) :- X = pair(Y, b).
+bin2(X?, Y?) :- X = pair(a, Y).
+bin3(X?, Y?, Z?) :- X = pair(Y, Z).
 
-% Level 1-4 with var
-t1(X?, Y?) :- X = foo(Y).
-t2(X?, Y?) :- X = a(b(Y)).
-t3(X?, Y?) :- X = a(b(c(Y))).
-t4(X?, Y?) :- X = a(b(c(d(Y)))).
+% Nested binary
+bin_nest(X?, Y?) :- X = outer(inner(Y, b), c).
+bin_nest2(X?, Y?) :- X = outer(a, inner(Y, b)).
 
-% Level 6 with var at bottom
-t6(X?, Y?) :- X = a(b(c(d(e(f(Y)))))).
+% Ternary structures (3 args)
+ter1(X?, Y?) :- X = triple(Y, b, c).
+ter2(X?, Y?) :- X = triple(a, Y, c).
+ter3(X?, Y?) :- X = triple(a, b, Y).
+ter_all(X?, A?, B?, C?) :- X = triple(A, B, C).
 
-% Level 8 with var
-t8(X?, Y?) :- X = a(b(c(d(e(f(g(h(Y)))))))).
+% Nested ternary
+ter_nest(X?, Y?) :- X = outer(inner(Y, b, c), d, e).
 
-% Level 10 with var
-t10(X?, Y?) :- X = a(b(c(d(e(f(g(h(i(j(Y)))))))))).
+% Structure with reader arg (reading from goal)
+use_reader(X?, In?) :- X = processed(In).
 
-% Mixed: struct with siblings + var at depth
-mix(X?, Y?) :- X = pair(left(a(Y)), right(b(z))).
+% Deep binary tree
+tree2(X?, Y?) :- X = node(leaf(Y), leaf(z)).
+tree3(X?, Y?) :- X = node(node(leaf(Y), leaf(a)), leaf(b)).
 
-% Siblings in list with var at depth
-siblings(X?, Y?) :- X = wrapper([foo(Y), bar(z)]).
+% 4-ary structure
+quad(X?, A?, B?, C?, D?) :- X = four(A, B, C, D).
 
-% Deep list nesting with var
-deep_list(X?, Y?) :- X = [[foo(Y)]].
+% Reader passed through (In? from head, used as reader in body struct)
+pass_reader(X?, In?) :- X = wrapper(In).
 
-% Stress: 3 levels, var in first branch only
-stress(X?, Y?) :- X = t(
-    a([a1(Y), a2(x)]),
-    b([b1(x), b2(x)])
-).
+% Multiple writers at different depth positions
+multi_w(X?, A?, B?) :- X = pair(wrap(A), wrap(B)).
+
+% Writer then reader of same var (needs ground guard)
+bind_use(X?, Y?) :- X = outer(Y), ground(Y?) | done(Y?).
+done(_).
