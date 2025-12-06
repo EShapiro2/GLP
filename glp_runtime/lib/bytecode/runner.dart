@@ -1985,8 +1985,9 @@ class BytecodeRunner {
                 if (cx.onActivation != null) cx.onActivation!(a);
               }
 
-              // SetWriter-specific: Store VarRef in argSlots
-              if (!isReaderMode) {
+              // SetWriter-specific: Store VarRef in argSlots ONLY if no parent
+              // (nested structures should not store until outermost is complete)
+              if (!isReaderMode && cx.parentStack.isEmpty) {
                 final targetSlot = cx.clauseVars[-2];
                 if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
                   cx.argSlots[targetSlot] = VarRef(targetWriterId, isReader: true);

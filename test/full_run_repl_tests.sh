@@ -54,6 +54,7 @@ $GLP_DIR/bb_diff.glp
 $GLP_DIR/nonground_list.glp
 $GLP_DIR/reader_output.glp
 $GLP_DIR/two_struct_list.glp
+$GLP_DIR/depth_test.glp
 append_dl.glp
 hello.
 p(X).
@@ -164,6 +165,10 @@ build_list(a, b, Xbld).
 unwrap([hello], Xunw).
 identity(foo, Xid).
 test(Xtsl).
+bin_nest(Xbn, val).
+ter_all(Xta, a, b, c).
+tree3(Xtr3, val).
+multi_w(Xmw, p, q).
 :quit
 REPL_INPUT
 2>&1)
@@ -318,6 +323,12 @@ declare -a tests=(
     # Structs in list
     "Structs in list:Xsl = \[send(1, a), send(2, b)\]"
     "Two structs in list:Xtsl = \[foo(a), bar(b)\]"
+
+    # Nested structures with vars (depth test)
+    "Nested binary with var:Xbn = outer(inner(val, b), c)"
+    "Ternary all vars:Xta = triple(a, b, c)"
+    "Deep binary tree:Xtr3 = node(node(leaf(val), leaf(a)), leaf(b))"
+    "Multiple writers nested:Xmw = pair(wrap(p), wrap(q))"
 
     # Bounded buffer (writer-to-reader alias fix)
     "Open buffer:Xopen = \[\[\] |"
