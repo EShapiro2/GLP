@@ -1,0 +1,53 @@
+% mwm/2 - Multiway merge with constant delay
+% In: stream of stream(Xs) terms, may include merge(NewStream)
+% Out: merged output stream
+%
+% Uses MutualRef for O(1) stream append.
+% Uses short-circuit L/R pairs for termination detection.
+% allocate_mutual_reference/2 is a kernel predicate called directly.
+
+mwm(In, Out?) :-
+    allocate_mutual_reference(Ref, Out),
+    mwm_main(In?, Ref?).
+
+% Intermediate predicate with guard to allow multiple Ref? occurrences
+mwm_main(In, Ref) :-
+    is_mutual_ref(Ref?) |
+    mwm1(In?, Ref?, done, Done),
+    close_when_done(Done?, Ref?).
+
+mwm1([stream(Xs)|Streams], Ref, L, R?) :-
+    is_mutual_ref(Ref?) |
+    mwm_copy(Xs?, Ref?, L?, M),
+    mwm1(Streams?, Ref?, M?, R).
+
+mwm1([merge(NewIn)|Streams], Ref, L, R?) :-
+    is_mutual_ref(Ref?) |
+    mwm1(NewIn?, Ref?, L?, M),
+    mwm1(Streams?, Ref?, M?, R).
+
+mwm1([], _, L, L?).
+
+mwm_copy([X|Xs], Ref, L, R?) :-
+    is_mutual_ref(Ref?) |
+    stream_append(X?, Ref?, Ref1),
+    mwm_copy(Xs?, Ref1?, L?, R).
+
+mwm_copy([], _, L, L?).
+
+close_when_done(done, Ref) :-
+    is_mutual_ref(Ref?) |
+    close_mutual_reference(Ref?).
+
+% stream_append/3 - Append value to stream via MutualRef
+% Value: value to append (input)
+% RefIn: current MutualRef (input)
+% RefOut: updated MutualRef (output)
+stream_append(Value, RefIn, RefOut?) :-
+    is_mutual_ref(RefIn?) |
+    kernel_stream_append(RefIn?, Value?, RefOut).
+
+% close_mutual_reference/1 - Close stream by binding tail to []
+close_mutual_reference(Ref) :-
+    is_mutual_ref(Ref?) |
+    kernel_close_mutual_reference(Ref?).
