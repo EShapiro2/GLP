@@ -15,10 +15,11 @@
 client1(V1, [add(5), add(3), value(V1?)|Xs?]) :- client1_cont(Xs).
 client1_cont([]).
 
-% Client 2: delayed by 100ms - add 10, subtract 2, query value
-client2(V, [add(10), subtract(2), value(V?)|Ys?]) :-
+% Client 2: delayed by 100ms - uses body list construction
+client2(V, Ys?) :-
     wait(100) |
-    client2_cont(Ys).
+    Ys = [add(10), subtract(2), value(V?)|Ys1?],
+    client2_cont(Ys1).
 client2_cont([]).
 
 % Test harness: merge client streams and feed to monitor

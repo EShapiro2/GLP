@@ -1,8 +1,8 @@
 % Goal: test_monitor(V1, V2).
 % Result: V1 = 8, V2 = 16
 %
-% Client 1 sends requests immediately: add(5), add(3), value(V1)
-% Client 2 waits 100ms then sends: add(10), subtract(2), value(V2)
+% Two clients send requests to a shared monitor with timing.
+% Client 1 sends immediately; Client 2 waits 100ms before starting.
 %
 % Due to wait guard, client1's messages are processed first.
 % Client1's value query sees only its own operations: 5 + 3 = 8
@@ -24,17 +24,18 @@ merge(X4?, [], X10) → suspended
 monitor_loop([value(X1?) | X10?], 8) :- =/2(X1, 8), monitor_loop(X10?, 8)
 =/2(X1, 8) :- true
 monitor_loop(X10?, 8) → suspended
-client2(X3, X4) :- client2_cont(X12)
-merge([add(10), subtract(2), value(X3?) | X12?], [], X10) :- merge([], [subtract(2), value(X3?) | X12?], X13)
-client2_cont(X12) :- true
-monitor_loop([add(10) | X13?], 8) :- :=/2(X14, +(8, 10)), monitor_loop(X13?, X14?)
-merge([], [subtract(2), value(X3?) | []], X13) :- merge([], [value(X3?) | []], X15)
-:=/2(X14, +(8, 10)) :- true
-monitor_loop([subtract(2) | X15?], 18) :- :=/2(X16, -(18, 2)), monitor_loop(X15?, X16?)
-merge([], [value(X3?) | []], X15) :- merge([], [], X17)
-:=/2(X16, -(18, 2)) :- true
-monitor_loop([value(X3?) | X17?], 16) :- =/2(X3, 16), monitor_loop(X17?, 16)
-merge([], [], X17) :- true
+client2(X3, X4) :- =/2(X12, [add(10) | [subtract(2) | [value(X3?) | X13?]]]), client2_cont(X13)
+=/2(X12, [add(10) | [subtract(2) | [value(X3?) | X13?]]]) :- true
+client2_cont(X13) :- true
+merge([add(10) | [subtract(2) | [value(X3?) | []]]], [], X10) :- merge([], [subtract(2) | [value(X3?) | []]], X14)
+monitor_loop([add(10) | X14?], 8) :- :=/2(X15, +(8, 10)), monitor_loop(X14?, X15?)
+merge([], [subtract(2) | [value(X3?) | []]], X14) :- merge([], [value(X3?) | []], X16)
+:=/2(X15, +(8, 10)) :- true
+monitor_loop([subtract(2) | X16?], 18) :- :=/2(X17, -(18, 2)), monitor_loop(X16?, X17?)
+merge([], [value(X3?) | []], X16) :- merge([], [], X18)
+:=/2(X17, -(18, 2)) :- true
+monitor_loop([value(X3?) | X18?], 16) :- =/2(X3, 16), monitor_loop(X18?, 16)
+merge([], [], X18) :- true
 =/2(X3, 16) :- true
 monitor_loop([], 16) :- true
 
