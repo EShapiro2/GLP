@@ -1657,18 +1657,35 @@ class BytecodeRunner {
           }
         } else {
           // GetReaderVariable logic: Load argument into clause READER variable
+          final existing = cx.clauseVars[varIndex];
+          if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable (reader mode) existing clauseVars[$varIndex]=$existing (${existing?.runtimeType})');
+
           if (arg is VarRef && !arg.isReader) {
             // Writer VarRef → reader param (mode conversion)
-            final freshVar = cx.rt.heap.allocateFreshVar();
-            cx.rt.heap.addVariable(freshVar);
-            cx.sigmaHat[arg.varId] = VarRef(freshVar, isReader: true);
-            cx.clauseVars[varIndex] = freshVar;
+            if (existing != null) {
+              // clauseVars already has a value (from earlier occurrence like UnifyVariable)
+              // Bind the writer arg to that value
+              if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable binding writer W${arg.varId} to existing value $existing');
+              cx.sigmaHat[arg.varId] = existing is int ? VarRef(existing, isReader: true) : existing;
+            } else {
+              final freshVar = cx.rt.heap.allocateFreshVar();
+              cx.rt.heap.addVariable(freshVar);
+              cx.sigmaHat[arg.varId] = VarRef(freshVar, isReader: true);
+              cx.clauseVars[varIndex] = freshVar;
+            }
           } else if (arg is VarRef && arg.isReader) {
-            cx.clauseVars[varIndex] = arg.varId;
+            if (existing == null) {
+              cx.clauseVars[varIndex] = arg.varId;
+            }
+            // If existing != null, keep existing value
           } else if (arg is ConstTerm) {
-            cx.clauseVars[varIndex] = arg;
+            if (existing == null) {
+              cx.clauseVars[varIndex] = arg;
+            }
           } else if (arg is StructTerm) {
-            cx.clauseVars[varIndex] = arg;
+            if (existing == null) {
+              cx.clauseVars[varIndex] = arg;
+            }
           }
         }
         pc++; continue;
