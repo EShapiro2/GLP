@@ -1,0 +1,12 @@
+% Minimal test case for structures-in-lists bug
+
+% Works: atom in list
+test_atom(X?) :-
+    bar([foo], X).
+
+% Fails: structure with args in list
+test_struct(X?) :-
+    bar([foo(a)], X).
+
+bar(L, X?) :-
+    X = L?.
