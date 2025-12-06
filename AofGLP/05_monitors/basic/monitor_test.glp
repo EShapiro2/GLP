@@ -1,0 +1,39 @@
+%% monitor_test.glp - Monitor test with two clients
+%%
+%% Two clients send scripted requests to a shared monitor.
+%% Demonstrates concurrent access and bidirectional communication.
+%%
+%% Test goal:
+%% test_monitor(V1, V2).
+
+% Client 1: add 5, add 3, query value - returns response and stream
+client1(V1, [add(5), add(3), value(V1?)|Xs?]) :- client1_cont(Xs).
+client1_cont([]).
+
+% Client 2: add 10, subtract 2, query value - returns response and stream
+client2(V2, [add(10), subtract(2), value(V2?)|Ys?]) :- client2_cont(Ys).
+client2_cont([]).
+
+% Test harness: merge client streams and feed to monitor
+test_monitor(V1?, V2?) :-
+    client1(V1, Xs),
+    client2(V2, Ys),
+    merge(Xs?, Ys?, Zs),
+    monitor(Zs?).
+
+% Monitor implementation (accumulator with add/subtract/value)
+monitor(Reqs) :- monitor_loop(Reqs?, 0).
+
+monitor_loop([add(N)|Reqs], Sum) :-
+    Sum1 := Sum? + N?, monitor_loop(Reqs?, Sum1?).
+monitor_loop([subtract(N)|Reqs], Sum) :-
+    Sum1 := Sum? - N?, monitor_loop(Reqs?, Sum1?).
+monitor_loop([value(V?)|Reqs], Sum) :-
+    ground(Sum?) | V = Sum?, monitor_loop(Reqs?, Sum?).
+monitor_loop([], _).
+
+% Fair binary merge
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
