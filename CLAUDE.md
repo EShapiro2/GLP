@@ -715,10 +715,18 @@ When the user says `#remember <something>`, add that information to this CLAUDE.
 
 ## Bugs and Limitations - NO WORKAROUNDS
 
-When a bug, limitation, or error is uncovered:
-1. **DO NOT work around it** - no temporary fixes or alternative approaches
-2. **REPORT it** - clearly describe what was found
-3. **DISCUSS how to fix it** - wait for agreement on the proper solution
+**🔴 MANDATORY PROTOCOL when a bug is discovered:**
+
+1. **STOP IMMEDIATELY** - Do not attempt any fixes or workarounds
+2. **IDENTIFY CLEARLY** - Describe the bug precisely: what was expected, what happened, where it occurs
+3. **CHECK THE SPEC** - Find the relevant specification and verify whether:
+   - The code violates the spec (bug in implementation)
+   - The spec is unclear (spec needs clarification first)
+   - The spec seems incorrect (spec needs discussion/revision)
+4. **REPORT AND DISCUSS** - Present findings to user and wait for agreement before any action
+5. **DO NOT PROCEED** - No code changes until discussion concludes with clear agreement
+
+This protocol applies to ALL bugs - runtime errors, unexpected behavior, test failures, etc.
 
 ### Known Parser Limitation: =.. not supported in clause bodies
 
