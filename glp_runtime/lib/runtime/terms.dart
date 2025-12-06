@@ -41,3 +41,37 @@ class VarRef implements Term {
   @override
   int get hashCode => Object.hash(varId, isReader);
 }
+
+/// Mutable reference to an unbound writer - enables O(1) stream append
+///
+/// MutualRef holds a mutable pointer to the current "end" of a stream.
+/// Multiple goals can share a MutualRef and append to the same stream
+/// in constant time, without traversing the stream.
+///
+/// Usage:
+/// - Create with mutual_ref(StreamEnd, Ref) where StreamEnd is unbound writer
+/// - Append with stream_append(Ref, Value, NewEnd) - O(1) operation
+/// - Close with mutual_ref_close(Ref) to terminate stream with []
+///
+/// SRSW: MutualRefTerm is treated as ground (can be read multiple times)
+class MutualRefTerm implements Term {
+  int _currentWriterId;  // varId of current unbound tail
+  final int id;          // unique ID for this MutualRef
+
+  static int _nextId = 0;
+
+  MutualRefTerm(this._currentWriterId) : id = _nextId++;
+
+  int get currentWriterId => _currentWriterId;
+  set currentWriterId(int varId) => _currentWriterId = varId;
+
+  @override
+  String toString() => 'MutualRef#$id(@W$_currentWriterId)';
+
+  @override
+  bool operator ==(Object other) =>
+      other is MutualRefTerm && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
+}

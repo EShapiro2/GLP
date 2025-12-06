@@ -1654,6 +1654,15 @@ class BytecodeRunner {
             } else {
               cx.clauseVars[varIndex] = arg;
             }
+          } else if (arg is Term) {
+            // Handle other Term types (e.g., MutualRefTerm)
+            if (existing is VarRef && !existing.isReader) {
+              cx.sigmaHat[existing.varId] = arg;
+            } else if (existing is int) {
+              cx.sigmaHat[existing] = arg;
+            } else {
+              cx.clauseVars[varIndex] = arg;
+            }
           }
         } else {
           // GetReaderVariable logic: Load argument into clause READER variable
@@ -1683,6 +1692,11 @@ class BytecodeRunner {
               cx.clauseVars[varIndex] = arg;
             }
           } else if (arg is StructTerm) {
+            if (existing == null) {
+              cx.clauseVars[varIndex] = arg;
+            }
+          } else if (arg is Term) {
+            // Handle other Term types (e.g., MutualRefTerm)
             if (existing == null) {
               cx.clauseVars[varIndex] = arg;
             }
@@ -2279,6 +2293,10 @@ class BytecodeRunner {
           cx.rt.heap.addVariable(varId);
           cx.clauseVars[varIndex] = VarRef(varId, isReader: false);
           cx.argSlots[argSlot] = VarRef(varId, isReader: isReaderMode);
+        } else if (value is Term && isReaderMode) {
+          // Ground term (e.g., MutualRefTerm) - store directly in argSlots
+          // No need to wrap in VarRef, guards can work with Terms directly
+          cx.argSlots[argSlot] = value;
         } else {
           print('WARNING: PutVariable got unexpected value: $value (isReader=$isReaderMode)');
         }
@@ -3736,6 +3754,15 @@ class BytecodeRunner {
         final val = getValue(args[0]);
         // Tuple: any StructTerm (including '.' list cons cells per paper definition)
         if (val is StructTerm) {
+          return GuardResult.success;
+        }
+        return GuardResult.failure;
+
+      case 'is_mutual_ref':
+        // Succeeds if X is a MutualRefTerm (enables SRSW multiple reads)
+        if (args.isEmpty) return GuardResult.failure;
+        final val = getValue(args[0]);
+        if (val is MutualRefTerm) {
           return GuardResult.success;
         }
         return GuardResult.failure;

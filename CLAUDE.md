@@ -52,6 +52,24 @@ The GLP paper and LaTeX sources:
 - **Main file**: `/tmp/GLP-2025/main GLP 2025.tex`
 - **GitHub**: https://github.com/EShapiro2/GLP-2025
 
+## GLP Fundamentals (READ FIRST)
+
+### Reader/Writer Basics
+- `X` in a clause is a **writer** (syntactically, by definition)
+- `X?` is the paired **reader** of X (syntactically, by definition)
+- This is NOT a runtime property — it's determined by syntax
+
+### Guards
+- Guards test properties of their arguments **as passed**
+- `writer(X)` asks: "Is X a writer?" — Yes if X, No if X?
+- `reader(X?)` asks: "Is X? a reader?" — Yes
+- `ground(X?)` asks: "Is the value of X? ground?"
+
+### When Debugging
+- Start from language semantics, not implementation details
+- If confused, ask: "What does this mean in GLP terms?"
+- Don't reason about VarRefs/isReader flags — reason about readers and writers
+
 ## Core Rules
 
 ### Never Implement Without a Plan
@@ -65,6 +83,20 @@ The GLP paper and LaTeX sources:
 - **IF UNSURE, SAY SO** - "I'm not sure, need to check X"
 - **READ THE SPEC FIRST** - Check bytecode/runtime specs before any code changes
 - **NEVER REMOVE CONTENT** - Never delete anything without explicit user approval
+
+### Reading Specs Correctly
+When checking specs:
+1. **Quote the spec exactly** — don't paraphrase or interpret
+2. **Answer only what the spec says** — don't add conclusions or inferences
+3. **If spec covers the case**: "The spec says X"
+4. **If spec is silent**: "The spec doesn't address Y"
+5. **NEVER** say "the spec is clear" then spend 10 minutes explaining it
+
+Example of WRONG spec reading:
+> "Spec says: writer(X) — pass the variable directly, not via reader"
+
+Example of CORRECT spec reading:
+> "Spec 19.4.5 says: 'writer(X) in guard position - Test if Xi is an unbound writer. Succeed if Xi is unbound writer variable. Fail otherwise.'"
 
 ### Handling Unexpected GLP Behavior
 When encountering unexpected behavior of GLP, **STOP!** Find out:
@@ -715,10 +747,18 @@ When the user says `#remember <something>`, add that information to this CLAUDE.
 
 ## Bugs and Limitations - NO WORKAROUNDS
 
-When a bug, limitation, or error is uncovered:
-1. **DO NOT work around it** - no temporary fixes or alternative approaches
-2. **REPORT it** - clearly describe what was found
-3. **DISCUSS how to fix it** - wait for agreement on the proper solution
+**🔴 MANDATORY PROTOCOL when a bug is discovered:**
+
+1. **STOP IMMEDIATELY** - Do not attempt any fixes or workarounds
+2. **IDENTIFY CLEARLY** - Describe the bug precisely: what was expected, what happened, where it occurs
+3. **CHECK THE SPEC** - Find the relevant specification and verify whether:
+   - The code violates the spec (bug in implementation)
+   - The spec is unclear (spec needs clarification first)
+   - The spec seems incorrect (spec needs discussion/revision)
+4. **REPORT AND DISCUSS** - Present findings to user and wait for agreement before any action
+5. **DO NOT PROCEED** - No code changes until discussion concludes with clear agreement
+
+This protocol applies to ALL bugs - runtime errors, unexpected behavior, test failures, etc.
 
 ### Known Parser Limitation: =.. not supported in clause bodies
 

@@ -1,0 +1,9 @@
+% Test MutualRef - simple test that works
+% (Direct mwm calls work; wrapper predicates with structures in lists fail due to separate bug)
+
+test_build(Out?) :-
+    allocate_mutual_reference(Ref, Out),
+    stream_append(1, Ref?, Ref1),
+    stream_append(2, Ref1?, Ref2),
+    stream_append(3, Ref2?, Ref3),
+    close_mutual_reference(Ref3?).
