@@ -53,6 +53,7 @@ $GLP_DIR/with_guard.glp
 $GLP_DIR/bb_diff.glp
 $GLP_DIR/nonground_list.glp
 $GLP_DIR/reader_output.glp
+$GLP_DIR/two_struct_list.glp
 append_dl.glp
 hello.
 p(X).
@@ -162,6 +163,7 @@ test_list_in_body([1,2,3,4], Xngl).
 build_list(a, b, Xbld).
 unwrap([hello], Xunw).
 identity(foo, Xid).
+test(Xtsl).
 :quit
 REPL_INPUT
 2>&1)
@@ -315,6 +317,7 @@ declare -a tests=(
 
     # Structs in list
     "Structs in list:Xsl = \[send(1, a), send(2, b)\]"
+    "Two structs in list:Xtsl = \[foo(a), bar(b)\]"
 
     # Bounded buffer (writer-to-reader alias fix)
     "Open buffer:Xopen = \[\[\] |"

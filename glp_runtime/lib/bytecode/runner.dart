@@ -120,6 +120,21 @@ class EnvironmentFrame {
   void setY(int index, Object? value) => permanentVars[index - 1] = value;
 }
 
+/// Parent context for nested structure building
+class _ParentContext {
+  final Object? structure;
+  final int s;
+  final UnifyMode mode;
+  final Object? writerId;
+
+  _ParentContext({
+    required this.structure,
+    required this.s,
+    required this.mode,
+    required this.writerId,
+  });
+}
+
 class RunnerContext {
   final GlpRuntime rt;
   final int goalId;
@@ -135,11 +150,8 @@ class RunnerContext {
   Object? currentStructure;           // Current structure being traversed
   final Map<int, Object?> clauseVars = {}; // Clause variable bindings (varIndex → value)
 
-  // Parent structure context for nested structure building (single level sufficient for GLP)
-  Object? parentStructure;
-  int parentS = 0;
-  UnifyMode parentMode = UnifyMode.read;
-  Object? parentWriterId;  // Save parent's writer ID when nesting
+  // Parent structure stack for nested structure building (supports arbitrary depth)
+  final List<_ParentContext> parentStack = [];
 
   // Argument registers for goal calls (A1, A2, ..., An)
   // Per spec v2.16 section 1.1: heterogeneous term storage
@@ -194,6 +206,7 @@ class RunnerContext {
     currentStructure = null;
     clauseVars.clear();
     guardArgSlot = null;
+    parentStack.clear();
   }
 }
 
@@ -1433,13 +1446,80 @@ class BytecodeRunner {
                 if (targetWriterId != null) {
                   cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
 
-                  // Store VarRef to bound writer in argSlots
-                  final targetSlot = cx.clauseVars[-2];
-                  if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
-                    cx.argSlots[targetSlot] = VarRef(targetWriterId, isReader: true);
-                    cx.clauseVars.remove(-2);
+                  final acts = cx.rt.heap.processBindSuspensions(targetWriterId);
+                  for (final a in acts) {
+                    cx.rt.gq.enqueue(a);
+                    if (cx.onActivation != null) cx.onActivation!(a);
+                  }
+                }
+
+                // Handle parent structure restoration - pop from stack
+                if (cx.parentStack.isNotEmpty && targetWriterId != null) {
+                  final nestedWriterId = targetWriterId;
+                  final parent = cx.parentStack.removeLast();
+                  final parentWriterId = parent.writerId;
+
+                  if (parent.structure is StructTerm) {
+                    final parentStruct = parent.structure as StructTerm;
+                    parentStruct.args[parent.s] = VarRef(nestedWriterId, isReader: true);
                   }
 
+                  cx.currentStructure = parent.structure;
+                  cx.S = parent.s + 1;
+                  cx.mode = parent.mode;
+                  cx.clauseVars[-1] = parentWriterId;
+
+                  // Check if parent is now complete - and recursively complete ancestors
+                  while (cx.currentStructure is StructTerm) {
+                    final parentStruct = cx.currentStructure as StructTerm;
+                    final currentWriterId = cx.clauseVars[-1];
+                    final currentWriterIdInt = currentWriterId is VarRef ? currentWriterId.varId : (currentWriterId is int ? currentWriterId : null);
+
+                    if (cx.S >= parentStruct.args.length && currentWriterIdInt != null) {
+                      cx.rt.heap.bindWriterStruct(currentWriterIdInt, parentStruct.functor, parentStruct.args);
+
+                      final acts = cx.rt.heap.processBindSuspensions(currentWriterIdInt);
+                      for (final a in acts) {
+                        cx.rt.gq.enqueue(a);
+                        if (cx.onActivation != null) cx.onActivation!(a);
+                      }
+
+                      // Check for more ancestors
+                      if (cx.parentStack.isNotEmpty) {
+                        final ancestor = cx.parentStack.removeLast();
+                        if (ancestor.structure is StructTerm) {
+                          final ancestorStruct = ancestor.structure as StructTerm;
+                          ancestorStruct.args[ancestor.s] = VarRef(currentWriterIdInt, isReader: true);
+                        }
+                        cx.currentStructure = ancestor.structure;
+                        cx.S = ancestor.s + 1;
+                        cx.mode = ancestor.mode;
+                        cx.clauseVars[-1] = ancestor.writerId;
+                      } else {
+                        // No more ancestors - store in argSlots and reset
+                        final parentTargetSlot = cx.clauseVars[-2];
+                        if (parentTargetSlot is int && parentTargetSlot >= 0 && parentTargetSlot < 10) {
+                          cx.argSlots[parentTargetSlot] = VarRef(currentWriterIdInt, isReader: true);
+                          cx.clauseVars.remove(-2);
+                        }
+                        cx.currentStructure = null;
+                        cx.mode = UnifyMode.read;
+                        cx.S = 0;
+                        cx.clauseVars.remove(-1);
+                        break;
+                      }
+                    } else {
+                      // Parent not complete yet, stop
+                      break;
+                    }
+                  }
+                } else {
+                  // No parent - store in argSlots and reset
+                  final targetSlot = cx.clauseVars[-2];
+                  if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
+                    cx.argSlots[targetSlot] = VarRef(targetWriterId!, isReader: true);
+                    cx.clauseVars.remove(-2);
+                  }
                   cx.currentStructure = null;
                   cx.mode = UnifyMode.read;
                   cx.S = 0;
@@ -1915,50 +1995,65 @@ class BytecodeRunner {
               }
             }
 
-            // Handle parent structure restoration
-            if (cx.parentStructure != null && targetWriterId is int) {
+            // Handle parent structure restoration - pop from stack
+            if (cx.parentStack.isNotEmpty && targetWriterId is int) {
               final nestedWriterId = targetWriterId;
-              final parentWriterId = cx.parentWriterId;
+              final parent = cx.parentStack.removeLast();
+              final parentWriterId = parent.writerId;
+              final parentWriterIdInt = parentWriterId is VarRef ? parentWriterId.varId : (parentWriterId is int ? parentWriterId : null);
 
-              if (cx.parentStructure is StructTerm) {
-                final parentStruct = cx.parentStructure as StructTerm;
-                parentStruct.args[cx.parentS] = VarRef(nestedWriterId, isReader: true);
+              if (parent.structure is StructTerm) {
+                final parentStruct = parent.structure as StructTerm;
+                parentStruct.args[parent.s] = VarRef(nestedWriterId, isReader: true);
               }
 
-              cx.currentStructure = cx.parentStructure;
-              cx.S = cx.parentS + 1;
-              cx.mode = cx.parentMode;
-
-              cx.parentStructure = null;
-              cx.parentS = 0;
-              cx.parentMode = UnifyMode.read;
-              cx.parentWriterId = null;
-
+              cx.currentStructure = parent.structure;
+              cx.S = parent.s + 1;
+              cx.mode = parent.mode;
               cx.clauseVars[-1] = parentWriterId;
 
-              // Check if parent is now complete
-              if (cx.currentStructure is StructTerm) {
+              // Check if parent is now complete - and recursively complete ancestors
+              while (cx.currentStructure is StructTerm) {
                 final parentStruct = cx.currentStructure as StructTerm;
-                if (cx.S >= parentStruct.args.length && parentWriterId is int) {
-                  cx.rt.heap.bindWriterStruct(parentWriterId, parentStruct.functor, parentStruct.args);
+                final currentWriterId = cx.clauseVars[-1];
+                final currentWriterIdInt = currentWriterId is VarRef ? currentWriterId.varId : (currentWriterId is int ? currentWriterId : null);
 
-                  final acts = cx.rt.heap.processBindSuspensions(parentWriterId);
+                if (cx.S >= parentStruct.args.length && currentWriterIdInt != null) {
+                  cx.rt.heap.bindWriterStruct(currentWriterIdInt, parentStruct.functor, parentStruct.args);
+
+                  final acts = cx.rt.heap.processBindSuspensions(currentWriterIdInt);
                   for (final a in acts) {
                     cx.rt.gq.enqueue(a);
                     if (cx.onActivation != null) cx.onActivation!(a);
                   }
 
-                  // Store parent structure in argSlots (parent's argSlot is still in clauseVars[-2])
-                  final parentTargetSlot = cx.clauseVars[-2];
-                  if (parentTargetSlot is int && parentTargetSlot >= 0 && parentTargetSlot < 10) {
-                    cx.argSlots[parentTargetSlot] = VarRef(parentWriterId, isReader: true);
-                    cx.clauseVars.remove(-2);
+                  // Check for more ancestors
+                  if (cx.parentStack.isNotEmpty) {
+                    final ancestor = cx.parentStack.removeLast();
+                    if (ancestor.structure is StructTerm) {
+                      final ancestorStruct = ancestor.structure as StructTerm;
+                      ancestorStruct.args[ancestor.s] = VarRef(currentWriterIdInt, isReader: true);
+                    }
+                    cx.currentStructure = ancestor.structure;
+                    cx.S = ancestor.s + 1;
+                    cx.mode = ancestor.mode;
+                    cx.clauseVars[-1] = ancestor.writerId;
+                  } else {
+                    // No more ancestors - store in argSlots and reset
+                    final parentTargetSlot = cx.clauseVars[-2];
+                    if (parentTargetSlot is int && parentTargetSlot >= 0 && parentTargetSlot < 10) {
+                      cx.argSlots[parentTargetSlot] = VarRef(currentWriterIdInt, isReader: true);
+                      cx.clauseVars.remove(-2);
+                    }
+                    cx.currentStructure = null;
+                    cx.mode = UnifyMode.read;
+                    cx.S = 0;
+                    cx.clauseVars.remove(-1);
+                    break;
                   }
-
-                  cx.currentStructure = null;
-                  cx.mode = UnifyMode.read;
-                  cx.S = 0;
-                  cx.clauseVars.remove(-1);
+                } else {
+                  // Parent not complete yet, stop
+                  break;
                 }
               }
             } else {
@@ -2129,6 +2224,11 @@ class BytecodeRunner {
         cx.sigmaHat.clear();
         // Clear argument registers after commit (guards may have set them up)
         cx.argSlots.clear();
+        // Reset structure building state for BODY phase
+        cx.currentStructure = null;
+        cx.S = 0;
+        cx.mode = UnifyMode.read;
+        cx.parentStack.clear();
         cx.inBody = true;
         pc++; continue;
       }
@@ -2323,12 +2423,14 @@ class BytecodeRunner {
           final varId = cx.rt.heap.allocateFreshVar();
           cx.rt.heap.addVariable(varId);
 
-          // Handle nested structures - save parent context
+          // Handle nested structures - push parent context to stack
           if (op.argSlot == -1 || cx.currentStructure != null) {
-            cx.parentStructure = cx.currentStructure;
-            cx.parentS = cx.S;
-            cx.parentMode = cx.mode;
-            cx.parentWriterId = cx.clauseVars[-1];
+            cx.parentStack.add(_ParentContext(
+              structure: cx.currentStructure,
+              s: cx.S,
+              mode: cx.mode,
+              writerId: cx.clauseVars[-1],
+            ));
           }
 
           // Store variable ID for structure binding
@@ -2388,50 +2490,66 @@ class BytecodeRunner {
               }
             }
 
-            // Handle parent structure restoration (nested structures)
-            if (cx.parentStructure != null && targetWriterIdInt != null) {
+            // Handle parent structure restoration (nested structures) - pop from stack
+            if (cx.parentStack.isNotEmpty && targetWriterIdInt != null) {
               final nestedWriterId = targetWriterIdInt;
-              final parentWriterId = cx.parentWriterId;
+              final parent = cx.parentStack.removeLast();
+              final parentWriterId = parent.writerId;
+              // Extract int from parentWriterId if it's a VarRef
+              final parentWriterIdInt = parentWriterId is VarRef ? parentWriterId.varId : (parentWriterId is int ? parentWriterId : null);
 
-              if (cx.parentStructure is StructTerm) {
-                final parentStruct = cx.parentStructure as StructTerm;
-                parentStruct.args[cx.parentS] = VarRef(nestedWriterId, isReader: true);
+              if (parent.structure is StructTerm) {
+                final parentStruct = parent.structure as StructTerm;
+                parentStruct.args[parent.s] = VarRef(nestedWriterId, isReader: true);
               }
 
-              cx.currentStructure = cx.parentStructure;
-              cx.S = cx.parentS + 1;
-              cx.mode = cx.parentMode;
-
-              cx.parentStructure = null;
-              cx.parentS = 0;
-              cx.parentMode = UnifyMode.read;
-              cx.parentWriterId = null;
-
+              cx.currentStructure = parent.structure;
+              cx.S = parent.s + 1;
+              cx.mode = parent.mode;
               cx.clauseVars[-1] = parentWriterId;
 
-              // Check if parent is now complete
-              if (cx.currentStructure is StructTerm) {
+              // Check if parent is now complete - and recursively complete ancestors
+              while (cx.currentStructure is StructTerm) {
                 final parentStruct = cx.currentStructure as StructTerm;
-                if (cx.S >= parentStruct.args.length && parentWriterId is int) {
-                  cx.rt.heap.bindWriterStruct(parentWriterId, parentStruct.functor, parentStruct.args);
+                final currentWriterId = cx.clauseVars[-1];
+                final currentWriterIdInt = currentWriterId is VarRef ? currentWriterId.varId : (currentWriterId is int ? currentWriterId : null);
 
-                  final acts = cx.rt.heap.processBindSuspensions(parentWriterId);
+                if (cx.S >= parentStruct.args.length && currentWriterIdInt != null) {
+                  cx.rt.heap.bindWriterStruct(currentWriterIdInt, parentStruct.functor, parentStruct.args);
+
+                  final acts = cx.rt.heap.processBindSuspensions(currentWriterIdInt);
                   for (final a in acts) {
                     cx.rt.gq.enqueue(a);
                     if (cx.onActivation != null) cx.onActivation!(a);
                   }
 
-                  // Store parent structure in argSlots
-                  final parentTargetSlot = cx.clauseVars[-2];
-                  if (parentTargetSlot is int && parentTargetSlot >= 0 && parentTargetSlot < 10) {
-                    cx.argSlots[parentTargetSlot] = VarRef(parentWriterId, isReader: true);
-                    cx.clauseVars.remove(-2);
+                  // Check for more ancestors
+                  if (cx.parentStack.isNotEmpty) {
+                    final ancestor = cx.parentStack.removeLast();
+                    if (ancestor.structure is StructTerm) {
+                      final ancestorStruct = ancestor.structure as StructTerm;
+                      ancestorStruct.args[ancestor.s] = VarRef(currentWriterIdInt, isReader: true);
+                    }
+                    cx.currentStructure = ancestor.structure;
+                    cx.S = ancestor.s + 1;
+                    cx.mode = ancestor.mode;
+                    cx.clauseVars[-1] = ancestor.writerId;
+                  } else {
+                    // No more ancestors - store in argSlots and reset
+                    final parentTargetSlot = cx.clauseVars[-2];
+                    if (parentTargetSlot is int && parentTargetSlot >= 0 && parentTargetSlot < 10) {
+                      cx.argSlots[parentTargetSlot] = VarRef(currentWriterIdInt, isReader: true);
+                      cx.clauseVars.remove(-2);
+                    }
+                    cx.currentStructure = null;
+                    cx.mode = UnifyMode.read;
+                    cx.S = 0;
+                    cx.clauseVars.remove(-1);
+                    break;
                   }
-
-                  cx.currentStructure = null;
-                  cx.mode = UnifyMode.read;
-                  cx.S = 0;
-                  cx.clauseVars.remove(-1);
+                } else {
+                  // Parent not complete yet, stop
+                  break;
                 }
               }
             } else {
