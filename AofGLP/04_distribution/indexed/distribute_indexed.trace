@@ -1,0 +1,11 @@
+% Goal: distribute_indexed([send(1,a), send(2,b), send(1,c), send(2,d)], Y, Z).
+% Expected: Y = [a, c], Z = [b, d]
+
+% BLOCKED: REPL bug - can't parse structs inside lists
+% Error: Exception: Unsupported list head type: StructTerm
+%
+% The code compiles correctly. Test with empty list works:
+% distribute_indexed([], Y, Z).
+% Y = []
+% Z = []
+% → succeeds
