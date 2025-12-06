@@ -1,0 +1,31 @@
+% Deep tests with variables at various depths
+
+% Level 1-4 with var
+t1(X?, Y?) :- X = foo(Y).
+t2(X?, Y?) :- X = a(b(Y)).
+t3(X?, Y?) :- X = a(b(c(Y))).
+t4(X?, Y?) :- X = a(b(c(d(Y)))).
+
+% Level 6 with var at bottom
+t6(X?, Y?) :- X = a(b(c(d(e(f(Y)))))).
+
+% Level 8 with var
+t8(X?, Y?) :- X = a(b(c(d(e(f(g(h(Y)))))))).
+
+% Level 10 with var
+t10(X?, Y?) :- X = a(b(c(d(e(f(g(h(i(j(Y)))))))))).
+
+% Mixed: struct with siblings + var at depth
+mix(X?, Y?) :- X = pair(left(a(Y)), right(b(z))).
+
+% Siblings in list with var at depth
+siblings(X?, Y?) :- X = wrapper([foo(Y), bar(z)]).
+
+% Deep list nesting with var
+deep_list(X?, Y?) :- X = [[foo(Y)]].
+
+% Stress: 3 levels, var in first branch only
+stress(X?, Y?) :- X = t(
+    a([a1(Y), a2(x)]),
+    b([b1(x), b2(x)])
+).
