@@ -375,7 +375,6 @@ class BytecodeRunner {
       if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) {
         print('  [G${cx.goalId}] PC=$pc ${op.runtimeType} | U=${cx.U} inBody=${cx.inBody}');
       }
-
       if (op is Label) { pc++; continue; }
       if (op is ClauseTry) {
         if (cx.debugOutput) print('[DEBUG] PC $pc: ClauseTry - Starting new clause');
@@ -2375,23 +2374,73 @@ class BytecodeRunner {
           if (cx.S >= struct.args.length) {
             // Structure complete - bind the target writer (stored at clauseVars[-1])
             final targetWriterId = cx.clauseVars[-1];
-            if (targetWriterId is int) {
+            // Extract int from VarRef if needed
+            final targetWriterIdInt = targetWriterId is VarRef ? (targetWriterId as VarRef).varId : (targetWriterId is int ? targetWriterId : null);
+            if (targetWriterIdInt != null) {
               // Bind the writer to the completed structure
-              cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, struct.args);
+              cx.rt.heap.bindWriterStruct(targetWriterIdInt, struct.functor, struct.args);
 
               // Activate any suspended goals
-              final acts = cx.rt.heap.processBindSuspensions(targetWriterId);
+              final acts = cx.rt.heap.processBindSuspensions(targetWriterIdInt);
               for (final a in acts) {
                 cx.rt.gq.enqueue(a);
                 if (cx.onActivation != null) cx.onActivation!(a);
               }
             }
 
-            // Reset structure building state
-            cx.currentStructure = null;
-            cx.mode = UnifyMode.read;
-            cx.S = 0;
-            cx.clauseVars.remove(-1); // Clear the marker
+            // Handle parent structure restoration (nested structures)
+            if (cx.parentStructure != null && targetWriterIdInt != null) {
+              final nestedWriterId = targetWriterIdInt;
+              final parentWriterId = cx.parentWriterId;
+
+              if (cx.parentStructure is StructTerm) {
+                final parentStruct = cx.parentStructure as StructTerm;
+                parentStruct.args[cx.parentS] = VarRef(nestedWriterId, isReader: true);
+              }
+
+              cx.currentStructure = cx.parentStructure;
+              cx.S = cx.parentS + 1;
+              cx.mode = cx.parentMode;
+
+              cx.parentStructure = null;
+              cx.parentS = 0;
+              cx.parentMode = UnifyMode.read;
+              cx.parentWriterId = null;
+
+              cx.clauseVars[-1] = parentWriterId;
+
+              // Check if parent is now complete
+              if (cx.currentStructure is StructTerm) {
+                final parentStruct = cx.currentStructure as StructTerm;
+                if (cx.S >= parentStruct.args.length && parentWriterId is int) {
+                  cx.rt.heap.bindWriterStruct(parentWriterId, parentStruct.functor, parentStruct.args);
+
+                  final acts = cx.rt.heap.processBindSuspensions(parentWriterId);
+                  for (final a in acts) {
+                    cx.rt.gq.enqueue(a);
+                    if (cx.onActivation != null) cx.onActivation!(a);
+                  }
+
+                  // Store parent structure in argSlots
+                  final parentTargetSlot = cx.clauseVars[-2];
+                  if (parentTargetSlot is int && parentTargetSlot >= 0 && parentTargetSlot < 10) {
+                    cx.argSlots[parentTargetSlot] = VarRef(parentWriterId, isReader: true);
+                    cx.clauseVars.remove(-2);
+                  }
+
+                  cx.currentStructure = null;
+                  cx.mode = UnifyMode.read;
+                  cx.S = 0;
+                  cx.clauseVars.remove(-1);
+                }
+              }
+            } else {
+              // No parent - reset structure building state
+              cx.currentStructure = null;
+              cx.mode = UnifyMode.read;
+              cx.S = 0;
+              cx.clauseVars.remove(-1); // Clear the marker
+            }
           }
         }
         pc++; continue;
