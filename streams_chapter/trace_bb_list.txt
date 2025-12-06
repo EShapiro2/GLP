@@ -1,0 +1,55 @@
+╔════════════════════════════════════════╗
+║   GLP REPL - Interactive Interpreter   ║
+╚════════════════════════════════════════╝
+
+Compiled: 2025-12-05 (Added conjunctive goals support)
+Working directory: udi/
+Source files: glp/*.glp
+Compiled files: bin/*.glpc
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit
+
+Loaded stdlib: assign.glp (947 ops)
+Loaded stdlib: univ.glp (28 ops)
+Loaded stdlib: unify.glp (8 ops)
+GLP> ✓ Loaded: bb_list.glp
+GLP> Trace disabled
+GLP> Trace enabled
+GLP> list_producer(H, 3) :- :=/2(X1, -(3, 1)), list_producer(X2, X1?)
+:=/2(X1, -(3, 1)) :- true
+list_producer(X2, 2) :- :=/2(X3, -(2, 1)), list_producer(X4, X3?)
+:=/2(X3, -(2, 1)) :- true
+list_producer(X4, 1) :- :=/2(X5, -(1, 1)), list_producer(X6, X5?)
+:=/2(X5, -(1, 1)) :- true
+list_producer(X6, 0) :- true
+H = [3, 2, 1]
+→ succeeds
+
+GLP> test_bb_list(R) :- list_producer(X1, 5), consumer(X1?, 0, X2)
+list_producer(X1, 5) :- :=/2(X3, -(5, 1)), list_producer(X4, X3?)
+consumer([5 | X4?], 0, X2) :- :=/2(X5, +(0, 5)), consumer(X4?, X5?, X6)
+:=/2(X3, -(5, 1)) :- true
+list_producer(X4, 4) :- :=/2(X7, -(4, 1)), list_producer(X8, X7?)
+:=/2(X5, +(0, 5)) :- true
+consumer([4 | X8?], 5, X6) :- :=/2(X9, +(5, 4)), consumer(X8?, X9?, X10)
+:=/2(X7, -(4, 1)) :- true
+list_producer(X8, 3) :- :=/2(X11, -(3, 1)), list_producer(X12, X11?)
+:=/2(X9, +(5, 4)) :- true
+consumer([3 | X12?], 9, X10) :- :=/2(X13, +(9, 3)), consumer(X12?, X13?, X14)
+:=/2(X11, -(3, 1)) :- true
+list_producer(X12, 2) :- :=/2(X15, -(2, 1)), list_producer(X16, X15?)
+:=/2(X13, +(9, 3)) :- true
+consumer([2 | X16?], 12, X14) :- :=/2(X17, +(12, 2)), consumer(X16?, X17?, X18)
+:=/2(X15, -(2, 1)) :- true
+list_producer(X16, 1) :- :=/2(X19, -(1, 1)), list_producer(X20, X19?)
+:=/2(X17, +(12, 2)) :- true
+consumer([1 | X20?], 14, X18) :- :=/2(X21, +(14, 1)), consumer(X20?, X21?, X22)
+:=/2(X19, -(1, 1)) :- true
+list_producer(X20, 0) :- true
+:=/2(X21, +(14, 1)) :- true
+consumer([], 15, X22) :- true
+R = 15
+→ succeeds
+
+GLP> 

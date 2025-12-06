@@ -1,0 +1,7 @@
+% Bounded producer - generates integers from N down to 1
+producer([], 0).
+producer([N?|Xs?], N) :- N? > 0 | N1 := N? - 1, producer(Xs, N1?).
+
+% Consumer - sums elements
+consumer([], Sum, Sum?).
+consumer([X|Xs], Sum, Result?) :- ground(X?) | Sum1 := Sum? + X?, consumer(Xs?, Sum1?, Result).

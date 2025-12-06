@@ -1,0 +1,59 @@
+╔════════════════════════════════════════╗
+║   GLP REPL - Interactive Interpreter   ║
+╚════════════════════════════════════════╝
+
+Compiled: 2025-12-05 (Added conjunctive goals support)
+Working directory: udi/
+Source files: glp/*.glp
+Compiled files: bin/*.glpc
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit
+
+Loaded stdlib: assign.glp (947 ops)
+Loaded stdlib: univ.glp (28 ops)
+Loaded stdlib: unify.glp (8 ops)
+GLP> ✓ Loaded: transducers.glp
+GLP> Trace disabled
+GLP> Trace enabled
+GLP> copier([1, 2, 3], Out) :- copier([2, 3], X1)
+copier([2, 3], X1) :- copier([3], X2)
+copier([3], X2) :- copier([], X3)
+copier([], X3) :- true
+Out = [1, 2, 3]
+→ succeeds
+
+GLP> duplicator([1, 2], Out2) :- duplicator([2], X1)
+duplicator([2], X1) :- duplicator([], X2)
+duplicator([], X2) :- true
+Out2 = [1, 1, 2, 2]
+→ succeeds
+
+GLP> separator([a, b], Out3) :- separator([b], X1)
+separator([b], X1) :- separator([], X2)
+separator([], X2) :- true
+Out3 = [a, 0, b, 0]
+→ succeeds
+
+GLP> differentiator([1, 4, 7], Out4) :- :=/2(X1, -(4, 1)), differentiator([4 | [7]], X2)
+:=/2(X1, -(4, 1)) :- true
+differentiator([4 | [7]], X2) :- :=/2(X3, -(7, 4)), differentiator([7 | []], X4)
+:=/2(X3, -(7, 4)) :- true
+differentiator([7 | []], X4) :- true
+Out4 = [3, 3]
+→ succeeds
+
+GLP> test_chain(Out5) :- duplicator([1, 2], X1), chain_sep(X1?, X2)
+duplicator([1, 2], X1) :- duplicator([2], X3)
+chain_sep([1, 1 | X3?], X2) :- separator([1, 1 | X3?], X4)
+duplicator([2], X3) :- duplicator([], X5)
+separator([1, 1 | [2, 2 | X5?]], X4) :- separator([1 | [2, 2 | X5?]], X6)
+duplicator([], X5) :- true
+separator([1 | [2, 2 | []]], X6) :- separator([2, 2 | []], X7)
+separator([2, 2 | []], X7) :- separator([2 | []], X8)
+separator([2 | []], X8) :- separator([], X9)
+separator([], X9) :- true
+Out5 = [1, 0, 1, 0, 2, 0, 2, 0]
+→ succeeds
+
+GLP> 

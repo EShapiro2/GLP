@@ -1,0 +1,47 @@
+╔════════════════════════════════════════╗
+║   GLP REPL - Interactive Interpreter   ║
+╚════════════════════════════════════════╝
+
+Compiled: 2025-12-05 (Added conjunctive goals support)
+Working directory: udi/
+Source files: glp/*.glp
+Compiled files: bin/*.glpc
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit
+
+Loaded stdlib: assign.glp (947 ops)
+Loaded stdlib: univ.glp (28 ops)
+Loaded stdlib: unify.glp (8 ops)
+GLP> ✓ Loaded: streams_basic.glp
+GLP> Trace disabled
+GLP> Trace enabled
+GLP> producer(H, 5) :- :=/2(X1, -(5, 1)), producer(X2, X1?)
+:=/2(X1, -(5, 1)) :- true
+producer(X2, 4) :- :=/2(X3, -(4, 1)), producer(X4, X3?)
+:=/2(X3, -(4, 1)) :- true
+producer(X4, 3) :- :=/2(X5, -(3, 1)), producer(X6, X5?)
+:=/2(X5, -(3, 1)) :- true
+producer(X6, 2) :- :=/2(X7, -(2, 1)), producer(X8, X7?)
+:=/2(X7, -(2, 1)) :- true
+producer(X8, 1) :- :=/2(X9, -(1, 1)), producer(X10, X9?)
+:=/2(X9, -(1, 1)) :- true
+producer(X10, 0) :- true
+H = [5, 4, 3, 2, 1]
+→ succeeds
+
+GLP> consumer([5, 4, 3, 2, 1], 0, R) :- :=/2(X1, +(0, 5)), consumer([4, 3, 2, 1], X1?, X2)
+:=/2(X1, +(0, 5)) :- true
+consumer([4, 3, 2, 1], 5, X2) :- :=/2(X3, +(5, 4)), consumer([3, 2, 1], X3?, X4)
+:=/2(X3, +(5, 4)) :- true
+consumer([3, 2, 1], 9, X4) :- :=/2(X5, +(9, 3)), consumer([2, 1], X5?, X6)
+:=/2(X5, +(9, 3)) :- true
+consumer([2, 1], 12, X6) :- :=/2(X7, +(12, 2)), consumer([1], X7?, X8)
+:=/2(X7, +(12, 2)) :- true
+consumer([1], 14, X8) :- :=/2(X9, +(14, 1)), consumer([], X9?, X10)
+:=/2(X9, +(14, 1)) :- true
+consumer([], 15, X10) :- true
+R = 15
+→ succeeds
+
+GLP> 

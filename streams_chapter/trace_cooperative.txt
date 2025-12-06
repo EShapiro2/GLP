@@ -1,0 +1,50 @@
+╔════════════════════════════════════════╗
+║   GLP REPL - Interactive Interpreter   ║
+╚════════════════════════════════════════╝
+
+Compiled: 2025-12-05 (Added conjunctive goals support)
+Working directory: udi/
+Source files: glp/*.glp
+Compiled files: bin/*.glpc
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit
+
+Loaded stdlib: assign.glp (947 ops)
+Loaded stdlib: univ.glp (28 ops)
+Loaded stdlib: unify.glp (8 ops)
+GLP> ✓ Loaded: cooperative.glp
+GLP> Trace disabled
+GLP> Trace enabled
+GLP> test_coop(Stream, Done) :- bob(X1, X2)
+bob(X1, X2) :- alice(X3, X4)
+alice(X3, X4) :- bob_finish(X5, X6)
+bob_finish(X5, X6) :- true
+Stream = [a, a, b, b, b, a, a]
+Done = done
+→ succeeds
+
+GLP> test_read(Count) :- bob(X1, X2), start_reader(X1?, X3)
+bob(X1, X2) :- alice(X4, X5)
+start_reader([a, a | X4?], X3) :- reader([a, a | X4?], 0, X6)
+alice(X4, X5) :- bob_finish(X7, X8)
+reader([a, a | [b, b, b | X7?]], 0, X6) :- :=/2(X9, +(0, 1)), reader([a | [b, b, b | X7?]], X9?, X10)
+bob_finish(X7, X8) :- true
+:=/2(X9, +(0, 1)) :- true
+reader([a | [b, b, b | [a, a]]], 1, X10) :- :=/2(X11, +(1, 1)), reader([b, b, b | [a, a]], X11?, X12)
+:=/2(X11, +(1, 1)) :- true
+reader([b, b, b | [a, a]], 2, X12) :- :=/2(X13, +(2, 1)), reader([b, b | [a, a]], X13?, X14)
+:=/2(X13, +(2, 1)) :- true
+reader([b, b | [a, a]], 3, X14) :- :=/2(X15, +(3, 1)), reader([b | [a, a]], X15?, X16)
+:=/2(X15, +(3, 1)) :- true
+reader([b | [a, a]], 4, X16) :- :=/2(X17, +(4, 1)), reader([a, a], X17?, X18)
+:=/2(X17, +(4, 1)) :- true
+reader([a, a], 5, X18) :- :=/2(X19, +(5, 1)), reader([a], X19?, X20)
+:=/2(X19, +(5, 1)) :- true
+reader([a], 6, X20) :- :=/2(X21, +(6, 1)), reader([], X21?, X22)
+:=/2(X21, +(6, 1)) :- true
+reader([], 7, X22) :- true
+Count = 7
+→ succeeds
+
+GLP> 

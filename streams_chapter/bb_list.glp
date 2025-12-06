@@ -1,0 +1,22 @@
+% List-based bounded buffer (for comparison with dlist version)
+
+% Producer: generates integers from N down to 1
+list_producer([], 0).
+list_producer([N?|Xs?], N) :- N? > 0 | N1 := N? - 1, list_producer(Xs, N1?).
+
+% Consumer: needs to see 2 filled slots before consuming
+bb_consumer([], _).
+bb_consumer([X], _) :- ground(X?) | true.
+bb_consumer([X1,X2|Xs], Result?) :- ground(X1?), ground(X2?) |
+    bb_consumer([X2?|Xs?], Result).
+
+% Simple consumer - sums elements
+consumer([], Sum, Sum?).
+consumer([X|Xs], Sum, Result?) :- ground(X?) |
+    Sum1 := Sum? + X?,
+    consumer(Xs?, Sum1?, Result).
+
+% Test: producer fills, consumer sums
+test_bb_list(R?) :-
+    list_producer(H, 5),
+    consumer(H?, 0, R).
