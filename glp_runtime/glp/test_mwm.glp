@@ -1,14 +1,12 @@
-% Test MutualRef and mwm
+% Test - diagnostic for nested structures
 
-% Simple test: build stream [1,2,3]
-% Pattern: Out? in head (reader), Out in body (writer) = valid SRSW
-test_build(Out?) :-
-    allocate_mutual_reference(Ref, Out),
-    stream_append(1, Ref?, Ref1),
-    stream_append(2, Ref1?, Ref2),
-    stream_append(3, Ref2?, Ref3),
-    close_mutual_reference(Ref3?).
+% Test with [foo] - atom in list
+test1(X?) :-
+    bar([foo], X).
 
-% Test mwm with two streams
-test_mwm(Out?) :-
-    mwm([stream([a,b]), stream([1,2])], Out).
+% Test with [foo(a)] - structure in list
+test2(X?) :-
+    bar([foo(a)], X).
+
+bar(L, X?) :-
+    X = L?.

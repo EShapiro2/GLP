@@ -139,38 +139,54 @@ void kernelCloseMutualReference(MutualRefTerm ref) {
 }
 ```
 
-## 6. System Predicate: `mwm/2`
+## 6. System Predicate: `mwm/2` (Multiway Merge) — Revised
 
 **File:** `glp/stdlib/mwm.glp`
 
+**User-facing syntax:** `mwm(In?, Out)`
+
+**Semantics:**
+- `In`: Stream of `stream(Xs)` terms, may include `merge(NewStream)` to add streams dynamically
+- `Out`: Merged output stream, closed with `[]` when all input streams terminate
+
 ```glp
 % mwm/2 - Multiway merge with constant delay
-% In: stream of stream(Xs) terms, may include merge(NewStream)
-% Out: merged output stream
+% Uses short-circuit for termination detection
 mwm(In, Out?) :-
     allocate_mutual_reference(Ref, Out),
-    mwm1(In?, Ref?).
+    mwm1(In?, Ref?, done, Done),
+    close_when_done(Done?, Ref?).
 
-mwm1([stream(Xs)|Streams], Ref?) :-
+mwm1([stream(Xs)|Streams], Ref, L, R?) :-
     is_mutual_ref(Ref?) |
-    copy(Xs?, Ref?),
-    mwm1(Streams?, Ref?).
+    mwm_copy(Xs?, Ref?, L?, M),
+    mwm1(Streams?, Ref?, M?, R).
 
-mwm1([merge(NewIn)|Streams], Ref?) :-
+mwm1([merge(NewIn)|Streams], Ref, L, R?) :-
     is_mutual_ref(Ref?) |
-    mwm1(NewIn?, Ref?),
-    mwm1(Streams?, Ref?).
+    mwm1(NewIn?, Ref?, L?, M),
+    mwm1(Streams?, Ref?, M?, R).
 
-mwm1([], Ref?) :-
-    close_mutual_reference(Ref?).
+mwm1([], _, L, L?).
 
-copy([X|Xs], Ref?) :-
+mwm_copy([X|Xs], Ref, L, R?) :-
     is_mutual_ref(Ref?) |
     stream_append(X?, Ref?, Ref1),
-    copy(Xs?, Ref1?).
+    mwm_copy(Xs?, Ref1?, L?, R).
 
-copy([], _).
+mwm_copy([], _, L, L?).
+
+close_when_done(done, Ref) :-
+    is_mutual_ref(Ref?) |
+    close_mutual_reference(Ref?).
 ```
+
+**How short-circuit works:**
+1. L/R pair threads through all `mwm1` and `mwm_copy` calls
+2. Each fork extends the chain: `L?→M`, `M?→R`
+3. Each termination (`mwm1([], ...)`, `mwm_copy([], ...)`) contracts the chain: `L = L?`
+4. When ALL processes terminate, chain collapses: `done` reaches `Done`
+5. `close_when_done` triggers, binding output tail to `[]`
 
 **Pattern Explanation:**
 - `Out?` in head reads the goal's output variable (an unbound writer)
