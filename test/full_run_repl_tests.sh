@@ -52,6 +52,7 @@ $GLP_DIR/no_guard.glp
 $GLP_DIR/with_guard.glp
 $GLP_DIR/bb_diff.glp
 $GLP_DIR/nonground_list.glp
+$GLP_DIR/reader_output.glp
 append_dl.glp
 hello.
 p(X).
@@ -158,6 +159,8 @@ open(1, Xopen, Yopen).
 append([1,2|T1?], T1, [3,4|T2?], T2, Hdl, Tdl?).
 test_list_in_body([1,2,3,4], Xngl).
 build_list(a, b, Xbld).
+unwrap([hello], Xunw).
+identity(foo, Xid).
 :quit
 REPL_INPUT
 2>&1)
@@ -318,6 +321,10 @@ declare -a tests=(
     # Non-ground list in body (codegen fix)
     "Non-ground list pass:Xngl = \[1, 2, 3, 4\]"
     "Non-ground list build:Xbld = \[a, b\]"
+
+    # Reader in output position (runtime fix)
+    "Unwrap list element:Xunw = hello"
+    "Identity returns value:Xid = foo"
 )
 
 PASS=0
