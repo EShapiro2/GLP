@@ -1,0 +1,76 @@
+╔════════════════════════════════════════╗
+║   GLP REPL - Interactive Interpreter   ║
+╚════════════════════════════════════════╝
+
+Compiled: 2025-12-05 (Added conjunctive goals support)
+Working directory: udi/
+Source files: glp/*.glp
+Compiled files: bin/*.glpc
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit
+
+Loaded stdlib: assign.glp (947 ops)
+Loaded stdlib: univ.glp (28 ops)
+Loaded stdlib: unify.glp (8 ops)
+GLP> ✓ Loaded: observer.glp
+GLP> Trace disabled
+GLP> Trace enabled
+GLP> test_obs1(Sum, Copy) :- producer(X1, 5), observer1(X1?, X2, X3), consumer(X2?, 0, X4)
+producer(X1, 5) :- :=/2(X5, -(5, 1)), producer(X6, X5?)
+observer1([5 | X6?], X2, X3) :- observer1(X6?, X7, X8)
+consumer([5 | X7?], 0, X4) :- :=/2(X9, +(0, 5)), consumer(X7?, X9?, X10)
+:=/2(X5, -(5, 1)) :- true
+producer(X6, 4) :- :=/2(X11, -(4, 1)), producer(X12, X11?)
+observer1([4 | X12?], X7, X8) :- observer1(X12?, X13, X14)
+:=/2(X9, +(0, 5)) :- true
+consumer([4 | X13?], 5, X10) :- :=/2(X15, +(5, 4)), consumer(X13?, X15?, X16)
+:=/2(X11, -(4, 1)) :- true
+producer(X12, 3) :- :=/2(X17, -(3, 1)), producer(X18, X17?)
+observer1([3 | X18?], X13, X14) :- observer1(X18?, X19, X20)
+:=/2(X15, +(5, 4)) :- true
+consumer([3 | X19?], 9, X16) :- :=/2(X21, +(9, 3)), consumer(X19?, X21?, X22)
+:=/2(X17, -(3, 1)) :- true
+producer(X18, 2) :- :=/2(X23, -(2, 1)), producer(X24, X23?)
+observer1([2 | X24?], X19, X20) :- observer1(X24?, X25, X26)
+:=/2(X21, +(9, 3)) :- true
+consumer([2 | X25?], 12, X22) :- :=/2(X27, +(12, 2)), consumer(X25?, X27?, X28)
+:=/2(X23, -(2, 1)) :- true
+producer(X24, 1) :- :=/2(X29, -(1, 1)), producer(X30, X29?)
+observer1([1 | X30?], X25, X26) :- observer1(X30?, X31, X32)
+:=/2(X27, +(12, 2)) :- true
+consumer([1 | X31?], 14, X28) :- :=/2(X33, +(14, 1)), consumer(X31?, X33?, X34)
+:=/2(X29, -(1, 1)) :- true
+producer(X30, 0) :- true
+observer1([], X31, X32) :- true
+:=/2(X33, +(14, 1)) :- true
+consumer([], 15, X34) :- true
+Sum = 15
+Copy = [5, 4, 3, 2, 1]
+→ succeeds
+
+GLP> test_obs2(Copy2, Done) :- bob(X1, X2), observe(X1?, X3, X4), =/2(X3?, [])
+bob(X1, X2) :- alice(X5, X6)
+observe([a, a | X5?], X3, X4) :- =/2(X7, [a | X8?]), observe([a | X5?], X8, X9)
+=/2(X3?, []) :- true
+alice(X5, X6) :- bob_finish(X10, X11)
+=/2(X7, [a | X8?]) :- true
+observe([a | [b, b, b | X10?]], X8, X9) :- =/2(X12, [a | X13?]), observe([b, b, b | X10?], X13, X14)
+bob_finish(X10, X11) :- true
+=/2(X12, [a | X13?]) :- true
+observe([b, b, b | [a, a]], X13, X14) :- =/2(X15, [b | X16?]), observe([b, b | [a, a]], X16, X17)
+=/2(X15, [b | X16?]) :- true
+observe([b, b | [a, a]], X16, X17) :- =/2(X18, [b | X19?]), observe([b | [a, a]], X19, X20)
+=/2(X18, [b | X19?]) :- true
+observe([b | [a, a]], X19, X20) :- =/2(X21, [b | X22?]), observe([a, a], X22, X23)
+=/2(X21, [b | X22?]) :- true
+observe([a, a], X22, X23) :- =/2(X24, [a | X25?]), observe([a], X25, X26)
+=/2(X24, [a | X25?]) :- true
+observe([a], X25, X26) :- =/2(X27, [a | X28?]), observe([], X28, X29)
+=/2(X27, [a | X28?]) :- true
+observe([], X28, X29) :- true
+Copy2 = [a, a, b, b, b, a, a]
+Done = done
+→ succeeds
+
+GLP> 

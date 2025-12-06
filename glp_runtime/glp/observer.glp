@@ -1,0 +1,41 @@
+% Simple producer - countdown
+producer([], 0).
+producer([N?|Xs?], N) :- N? > 0 | N1 := N? - 1, producer(Xs, N1?).
+
+% Simple consumer - sums elements
+consumer([], Sum, Sum?).
+consumer([X|Xs], Sum, Result?) :- ground(X?) |
+    Sum1 := Sum? + X?,
+    consumer(Xs?, Sum1?, Result).
+
+% Observer 1: ground stream, forwarding
+% Input from bob, forward to alice, copy to observation stream
+observer1([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | observer1(Xs?, Ys, Zs).
+observer1([], [], []).
+
+% Test observer1: producer -> observer -> consumer
+test_obs1(Sum?, Copy?) :-
+    producer(Xs, 5),
+    observer1(Xs?, Ys, Copy),
+    consumer(Ys?, 0, Sum).
+
+% Observer 2: cooperative writing, unknown direction
+% Uses WxW failure to detect which side is producing
+observe([X|Xs], Ys?, [X?|Zs?]) :- ground(X?) | Ys = [X?|Ys1?], observe(Xs?, Ys1, Zs).
+observe([X|Xs?], Ys, [X?|Zs?]) :- ground(X?) | Ys? = [X?|Ys1], observe(Ys1?, Xs, Zs).
+observe([], [], []).
+
+% Bob produces two a's then hands tail to Alice
+bob([a,a|Tail?], Result?) :- alice(Tail, Result).
+
+% Alice produces three b's then hands tail to Bob
+alice([b,b,b|Tail?], Result?) :- bob_finish(Tail, Result).
+
+% Bob finishes with two more a's
+bob_finish([a,a], done).
+
+% Test observer2: observe cooperative production
+test_obs2(Copy?, Done?) :-
+    bob(S1, Done),
+    observe(S1?, S2, Copy),
+    S2? = [].
