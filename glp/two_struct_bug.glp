@@ -1,0 +1,4 @@
+test(X?) :-
+    X = [foo(a), bar(b)|Xs?],
+    done(Xs).
+done([]).
