@@ -48,7 +48,7 @@ void main() async {
   final loadedPrograms = <String, BytecodeProgram>{};
 
   // Load stdlib files for system predicates
-  final stdlibFiles = ['assign.glp', 'univ.glp', 'unify.glp'];
+  final stdlibFiles = ['assign.glp', 'univ.glp', 'unify.glp', 'mutual_ref.glp'];
   for (final filename in stdlibFiles) {
     final stdlibPath = '../glp/stdlib/$filename';
     final stdlibFile = File(stdlibPath);

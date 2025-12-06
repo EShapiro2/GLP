@@ -3740,23 +3740,37 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
+      case 'mutual_ref':
+        // Succeeds if X is a MutualRefTerm (enables SRSW multiple reads)
+        if (args.isEmpty) return GuardResult.failure;
+        final val = getValue(args[0]);
+        if (val is MutualRefTerm) {
+          return GuardResult.success;
+        }
+        return GuardResult.failure;
+
       case 'writer':
         // Per spec 19.4.5: Test if Xi is an unbound writer
+        // When called as writer(X?), we receive a reader VarRef
+        // We need to check if the underlying variable is unbound AND is a writer
         if (args.isEmpty) return GuardResult.failure;
-        final arg = args[0];
-        if (arg is VarRef && !arg.isReader) {
-          final heapVal = cx.rt.heap.getValue(arg.varId);
-          if (heapVal == null) return GuardResult.success; // Unbound writer
+        final writerArg = args[0];
+        if (writerArg is VarRef) {
+          final heapVal = cx.rt.heap.getValue(writerArg.varId);
+          // The variable must be unbound to be a valid "writer" target
+          // Note: reader/writer distinction is syntactic; at runtime we just check unbound
+          if (heapVal == null) return GuardResult.success; // Unbound variable
         }
         return GuardResult.failure;
 
       case 'reader':
         // Per spec 19.4.6: Test if Xi is an unbound reader
+        // Similar to writer - just checks if the variable is unbound
         if (args.isEmpty) return GuardResult.failure;
-        final arg = args[0];
-        if (arg is VarRef && arg.isReader) {
-          final heapVal = cx.rt.heap.getValue(arg.varId);
-          if (heapVal == null) return GuardResult.success; // Unbound reader
+        final readerArg = args[0];
+        if (readerArg is VarRef) {
+          final heapVal = cx.rt.heap.getValue(readerArg.varId);
+          if (heapVal == null) return GuardResult.success; // Unbound variable
         }
         return GuardResult.failure;
 

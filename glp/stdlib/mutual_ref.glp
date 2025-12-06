@@ -1,0 +1,58 @@
+% GLP System Predicate: MutualRef (O(1) Stream Append)
+% This is a system predicate with special access to body kernel predicates
+% File: stdlib/mutual_ref.glp
+% Loaded at runtime with grantBodyKernelAccess: true
+
+% ============================================================================
+% MUTUAL REFERENCE CREATION
+% ============================================================================
+% Ref := mutual_ref(StreamEnd) - Create a MutualRef from an unbound writer
+%
+% StreamEnd must be an unbound writer (the end of a stream)
+% Ref will be bound to a MutualRefTerm pointing to StreamEnd
+%
+% Example:
+%   merge(Xs, Ys, Zs) :-
+%     Ref := mutual_ref(Zs),
+%     merge_loop(Xs?, Ys?, Ref?).
+%
+Ref? := mutual_ref(StreamEnd) :-
+  writer(StreamEnd?) |
+  kernel_mutual_ref(StreamEnd?, Ref).
+
+% ============================================================================
+% STREAM APPEND
+% ============================================================================
+% stream_append(Ref, Value, NewEnd) - Append value to stream via MutualRef
+%
+% Ref must be a MutualRefTerm (ground, can be read multiple times)
+% Value is the value to append
+% NewEnd will be bound to a reader for the new stream tail
+%
+% This is an O(1) operation - no stream traversal needed
+%
+% Example:
+%   % In a merge loop, append X to output stream
+%   merge_loop([X|Xs], Ys, Ref) :-
+%     stream_append(Ref?, X?, NewEnd),
+%     merge_loop(Xs?, Ys?, Ref?).
+%
+stream_append(Ref, Value, NewEnd?) :-
+  mutual_ref(Ref?) |
+  kernel_stream_append(Ref?, Value?, NewEnd).
+
+% ============================================================================
+% CLOSE STREAM
+% ============================================================================
+% close_mutual_ref(Ref) - Close the stream by binding tail to []
+%
+% Ref must be a MutualRefTerm
+% Binds the current stream tail to empty list (nil)
+%
+% Example:
+%   merge_loop([], [], Ref) :-
+%     close_mutual_ref(Ref?).
+%
+close_mutual_ref(Ref) :-
+  mutual_ref(Ref?) |
+  kernel_mutual_ref_close(Ref?).
