@@ -1,0 +1,47 @@
+╔════════════════════════════════════════╗
+║   GLP REPL - Interactive Interpreter   ║
+╚════════════════════════════════════════╝
+
+Compiled: 2025-12-05 (Added conjunctive goals support)
+Working directory: udi/
+Source files: glp/*.glp
+Compiled files: bin/*.glpc
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit
+
+Loaded stdlib: assign.glp (947 ops)
+Loaded stdlib: univ.glp (28 ops)
+Loaded stdlib: unify.glp (8 ops)
+GLP> ✓ Loaded: merge_dynamic.glp
+GLP> Trace disabled
+GLP> Trace enabled
+GLP> merge([a, b, c], [1, 2, 3], Out) :- merge([1, 2, 3], [b, c], X1)
+merge([1, 2, 3], [b, c], X1) :- merge([b, c], [2, 3], X2)
+merge([b, c], [2, 3], X2) :- merge([2, 3], [c], X3)
+merge([2, 3], [c], X3) :- merge([c], [3], X4)
+merge([c], [3], X4) :- merge([3], [], X5)
+merge([3], [], X5) :- merge([], [], X6)
+merge([], [], X6) :- true
+Out = [a, 1, b, 2, c, 3]
+→ succeeds
+
+GLP> test_dmerge(Out2) :- dmerge([a, merge([x, y]), b], [1, 2], X1)
+dmerge([a, merge([x, y]), b], [1, 2], X1) :- dmerge([1, 2], [merge([x, y]), b], X2)
+dmerge([1, 2], [merge([x, y]), b], X2) :- dmerger([x, y], [b], X3), dmerge([1, 2], X3?, X4)
+dmerger([x, y], [b], X3) :- dmerge([x, y], [b], X5)
+dmerge([1, 2], X3?, X4) → suspended
+dmerge([x, y], [b], X5) :- dmerge([b], [y], X6)
+dmerge([1, 2], [x | X6?], X4) :- dmerge([x | X6?], [2], X7)
+dmerge([b], [y], X6) :- dmerge([y], [], X8)
+dmerge([x | [b | X8?]], [2], X7) :- dmerge([2], [b | X8?], X9)
+dmerge([y], [], X8) :- dmerge([], [], X10)
+dmerge([2], [b | [y | X10?]], X9) :- dmerge([b | [y | X10?]], [], X11)
+dmerge([], [], X10) :- true
+dmerge([b | [y | []]], [], X11) :- dmerge([], [y | []], X12)
+dmerge([], [y | []], X12) :- dmerge([], [], X13)
+dmerge([], [], X13) :- true
+Out2 = [a, 1, x, 2, b, y]
+→ succeeds
+
+GLP> 
