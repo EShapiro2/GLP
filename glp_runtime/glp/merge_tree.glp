@@ -1,0 +1,23 @@
+% merge_tree/2 - Tree-structured stream merger
+% Merges N streams in O(log N) parallel stages
+%
+% merge_tree(Streams, Out) - merges list of streams into single output
+%
+% Example: merge_tree([[a,b], [1,2], [x,y], [p,q]], Out)
+%          produces Out containing all elements fairly merged
+
+merge_tree([Xs], Xs?).
+merge_tree([X,Y|Rest], Out?) :-
+    merge_layer([X?,Y?|Rest?], Layer),
+    merge_tree(Layer?, Out).
+
+merge_layer([], []).
+merge_layer([Xs], [Xs?]).
+merge_layer([Xs,Ys|Rest], [Zs?|Layer?]) :-
+    merge(Xs?, Ys?, Zs),
+    merge_layer(Rest?, Layer).
+
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
