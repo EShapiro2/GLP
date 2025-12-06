@@ -1,0 +1,11 @@
+% Goal: merge([a,b,c], [1,2,3], Out).
+
+merge([a,b,c], [1,2,3], Out) :- merge([1,2,3], [b,c], X1)
+merge([1,2,3], [b,c], X1) :- merge([b,c], [2,3], X2)
+merge([b,c], [2,3], X2) :- merge([2,3], [c], X3)
+merge([2,3], [c], X3) :- merge([c], [3], X4)
+merge([c], [3], X4) :- merge([3], [], X5)
+merge([3], [], X5) :- merge([], [], X6)
+merge([], [], X6) :- true
+Out = [a, 1, b, 2, c, 3]
+→ succeeds

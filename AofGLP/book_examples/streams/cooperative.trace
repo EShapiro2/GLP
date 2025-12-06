@@ -1,0 +1,8 @@
+% Goal: bob(Stream, Done).
+
+bob(X1, X2) :- alice(X5, X6)
+alice(X5, X6) :- bob_finish(X10, X11)
+bob_finish(X10, X11) :- true
+Stream = [a, a, b, b, b, a, a]
+Done = done
+→ succeeds

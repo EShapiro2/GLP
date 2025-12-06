@@ -1,0 +1,30 @@
+% Topic: Biased merge operator (Exercise solution)
+% Section: Streams - Exercises
+%
+% Test goals:
+% bmerge([a,b,c], [1,2,3], Out).
+%
+% This is a simplified version that demonstrates the bias switching
+% mechanism. A full implementation would handle started/halted messages
+% to dynamically adjust subtree weights.
+
+% Initialization: start with bias 1:1, counter 1
+bmerge(X, Y, Out?) :- bmerge_init(X?, Y?, Out).
+bmerge_init(X, Y, [started|Z?]) :- bmerge6(1, 1, 1, X?, Y?, Z).
+
+% Counter exhausted: switch priorities
+bmerge6(Bx, By, 0, X, Y, Z?) :- ground(By?) | bmerge6(By?, Bx?, By?, Y?, X?, Z).
+
+% Forward from first stream (high priority)
+bmerge6(Bx, By, N, [M|X], Y, Out?) :- N? > 0 |
+    forward_msg(M?, Bx?, By?, N?, X?, Y?, Out).
+
+% End of stream: connect other stream
+bmerge6(_, _, _, [], Y, [halted|Y?]).
+bmerge6(_, _, _, X, [], [halted|X?]).
+
+% Forward regular messages, decrement counter
+forward_msg(M, Bx, By, N, X, Y, [M?|Z?]) :-
+    otherwise |
+    N1 := N? - 1,
+    bmerge6(Bx?, By?, N1?, X?, Y?, Z).

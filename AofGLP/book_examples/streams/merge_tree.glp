@@ -1,0 +1,31 @@
+% Topic: Static balanced merge tree
+% Section: Streams - Static Balanced Merge Tree
+%
+% Test goals:
+% merge_tree([[a,b], [1,2], [x,y], [p,q]], Out).
+%
+% Note: Due to SRSW constraints, recursive merge_layer is not directly
+% expressible. This version provides explicit cases for 1-4 streams.
+
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
+
+% Base: single stream passes through
+merge_tree([Xs], Xs?).
+
+% Two streams: simple merge
+merge_tree([S1,S2], Out?) :-
+    merge(S1?, S2?, Out).
+
+% Three streams: merge first two, then with third
+merge_tree([S1,S2,S3], Out?) :-
+    merge(S1?, S2?, M1),
+    merge(M1?, S3?, Out).
+
+% Four streams: merge pairs, then merge results (balanced)
+merge_tree([S1,S2,S3,S4], Out?) :-
+    merge(S1?, S2?, M1),
+    merge(S3?, S4?, M2),
+    merge(M1?, M2?, Out).

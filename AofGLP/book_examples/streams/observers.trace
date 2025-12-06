@@ -1,0 +1,45 @@
+% Goal: test_obs1(Sum, Copy).
+% Forwarding observer: producer -> observer -> consumer
+
+test_obs1(Sum, Copy) :- producer(Xs, 5), observer1(Xs?, Ys, Copy), consumer(Ys?, 0, Sum)
+producer([5|Xs], 5) :- producer(Xs, 4)
+observer1([5|Xs?], [5|Ys?], [5|Zs?]) :- observer1(Xs?, Ys, Zs)
+consumer([5|Ys?], 0, Sum) :- consumer(Ys?, 5, Sum)
+producer([4|Xs], 4) :- producer(Xs, 3)
+observer1([4|Xs?], [4|Ys?], [4|Zs?]) :- observer1(Xs?, Ys, Zs)
+consumer([4|Ys?], 5, Sum) :- consumer(Ys?, 9, Sum)
+producer([3|Xs], 3) :- producer(Xs, 2)
+observer1([3|Xs?], [3|Ys?], [3|Zs?]) :- observer1(Xs?, Ys, Zs)
+consumer([3|Ys?], 9, Sum) :- consumer(Ys?, 12, Sum)
+producer([2|Xs], 2) :- producer(Xs, 1)
+observer1([2|Xs?], [2|Ys?], [2|Zs?]) :- observer1(Xs?, Ys, Zs)
+consumer([2|Ys?], 12, Sum) :- consumer(Ys?, 14, Sum)
+producer([1|Xs], 1) :- producer(Xs, 0)
+observer1([1|Xs?], [1|Ys?], [1|Zs?]) :- observer1(Xs?, Ys, Zs)
+consumer([1|Ys?], 14, Sum) :- consumer(Ys?, 15, Sum)
+producer([], 0) :- true
+observer1([], [], []) :- true
+consumer([], 15, 15) :- true
+Sum = 15
+Copy = [5, 4, 3, 2, 1]
+→ succeeds
+
+% Goal: test_obs2(Copy, Done).
+% Cooperative observer: bob and alice take turns producing
+
+test_obs2(Copy, Done) :- bob(S1, Done), observe(S1?, S2, Copy), S2? = []
+bob([a,a|Tail?], Done) :- alice(Tail, Done)
+observe([a|Xs], Ys?, [a|Zs?]) :- Ys = [a|Ys1?], observe(Xs?, Ys1, Zs)
+observe([a|Xs], Ys?, [a|Zs?]) :- Ys = [a|Ys1?], observe(Xs?, Ys1, Zs)
+alice([b,b,b|Tail?], Done) :- bob_finish(Tail, Done)
+observe([b|Xs], Ys?, [b|Zs?]) :- Ys = [b|Ys1?], observe(Xs?, Ys1, Zs)
+observe([b|Xs], Ys?, [b|Zs?]) :- Ys = [b|Ys1?], observe(Xs?, Ys1, Zs)
+observe([b|Xs], Ys?, [b|Zs?]) :- Ys = [b|Ys1?], observe(Xs?, Ys1, Zs)
+bob_finish([a,a], done) :- true
+observe([a|Xs], Ys?, [a|Zs?]) :- Ys = [a|Ys1?], observe(Xs?, Ys1, Zs)
+observe([a|Xs], Ys?, [a|Zs?]) :- Ys = [a|Ys1?], observe(Xs?, Ys1, Zs)
+observe([], [], []) :- true
+Copy = [a, a, b, b, b, a, a]
+Done = done
+→ succeeds
+

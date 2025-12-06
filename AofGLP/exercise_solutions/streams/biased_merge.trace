@@ -1,0 +1,16 @@
+% Goal: bmerge([a,b,c], [1,2,3], Out).
+
+bmerge([a,b,c], [1,2,3], X1) :- bmerge_init([a,b,c], [1,2,3], X2)
+bmerge_init([a,b,c], [1,2,3], X2) :- bmerge6(1, 1, 1, [a,b,c], [1,2,3], X3)
+bmerge6(1, 1, 1, [a,b,c], [1,2,3], X3) :- forward_msg(a, 1, 1, 1, [b,c], [1,2,3], X4)
+forward_msg(a, 1, 1, 1, [b,c], [1,2,3], X4) :- N1 := 0, bmerge6(1, 1, 0, [b,c], [1,2,3], X6)
+bmerge6(1, 1, 0, [b,c], [1,2,3], X6) :- bmerge6(1, 1, 1, [1,2,3], [b,c], X7)  % switch!
+bmerge6(1, 1, 1, [1,2,3], [b,c], X7) :- forward_msg(1, 1, 1, 1, [2,3], [b,c], X8)
+forward_msg(1, 1, 1, 1, [2,3], [b,c], X8) :- N1 := 0, bmerge6(1, 1, 0, [2,3], [b,c], X10)
+bmerge6(1, 1, 0, [2,3], [b,c], X10) :- bmerge6(1, 1, 1, [b,c], [2,3], X11)  % switch!
+...
+Out = [started, a, 1, b, 2, c, 3, halted]
+→ succeeds
+
+% The trace shows fair alternation: after each message, the counter hits 0
+% and streams are swapped. With bias 1:1, this gives perfect alternation.

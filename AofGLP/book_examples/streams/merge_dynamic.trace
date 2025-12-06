@@ -1,0 +1,10 @@
+% Goal: dmerge([a, merge([x,y]), b], [1, 2], Out).
+
+dmerge([a, merge([x,y]), b], [1, 2], X1) :- dmerge([1, 2], [merge([x,y]), b], X2)
+dmerge([1, 2], [merge([x,y]), b], X2) :-
+    dmerger([x,y], [b], X3), dmerge([1, 2], X3?, X4)
+dmerge([x,y], [b], X5) :- dmerge([b], [y], X6)
+dmerge([1, 2], [x | X6?], X4) :- dmerge([x | X6?], [2], X7)
+...
+Out = [a, 1, x, 2, b, y]
+→ succeeds

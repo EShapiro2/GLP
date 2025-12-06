@@ -1,0 +1,15 @@
+% Topic: Cooperative stream production
+% Section: Streams - Cooperative Stream Production
+%
+% Test goals:
+% bob(Stream, Done).
+% bob(Stream, _), reader(Stream?, 0, Count).
+
+bob([a,a|Tail?], Result?) :- alice(Tail, Result).
+alice([b,b,b|Tail?], Result?) :- bob_finish(Tail, Result).
+bob_finish([a,a], done).
+
+reader([], Count, Count?).
+reader([X|Xs], Count, Result?) :- ground(X?) |
+    Count1 := Count? + 1,
+    reader(Xs?, Count1?, Result).

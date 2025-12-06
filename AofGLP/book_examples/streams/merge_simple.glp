@@ -1,0 +1,10 @@
+% Topic: Simple fair merge
+% Section: Streams - Stream Merging
+%
+% Test goals:
+% merge([a,b,c], [1,2,3], Out).
+
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).

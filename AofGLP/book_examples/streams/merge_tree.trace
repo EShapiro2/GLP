@@ -1,0 +1,12 @@
+% Goal: merge_tree([[a,b], [1,2], [x,y], [p,q]], Out).
+
+merge_tree([[a,b], [1,2], [x,y], [p,q]], X1) :-
+    merge([a,b], [1,2], X2), merge([x,y], [p,q], X3), merge(X2?, X3?, X4)
+merge([a,b], [1,2], X2) :- merge([1,2], [b], X5)
+merge([x,y], [p,q], X3) :- merge([p,q], [y], X6)
+merge([a | X5?], [x | X6?], X4) :- merge([x | X6?], X5?, X7)
+merge([1,2], [b], X5) :- merge([b], [2], X8)
+merge([p,q], [y], X6) :- merge([y], [q], X9)
+...
+Out = [a, x, 1, p, b, y, 2, q]
+→ succeeds

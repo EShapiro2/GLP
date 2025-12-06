@@ -1,0 +1,17 @@
+% Topic: Dynamic merge with stream addition
+% Section: Streams - Dynamic Merge
+%
+% Test goals:
+% dmerge([a, merge([x,y]), b], [1, 2], Out).
+
+dmerge([merge(Ws)|Xs], Ys, Zs?) :-
+    dmerger(Ws?, Xs?, Xs1), dmerge(Xs1?, Ys?, Zs).
+dmerge(Xs, [merge(Ws)|Ys], Zs?) :-
+    dmerger(Ws?, Ys?, Ys1), dmerge(Xs?, Ys1?, Zs).
+dmerge([X|Xs], Ys, [X?|Zs?]) :-
+    otherwise | dmerge(Ys?, Xs?, Zs).
+dmerge(Xs, [Y|Ys], [Y?|Zs?]) :-
+    otherwise | dmerge(Xs?, Ys?, Zs).
+dmerge([], [], []).
+
+dmerger(Ws, Xs, Out?) :- dmerge(Ws?, Xs?, Out).
