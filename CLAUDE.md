@@ -123,7 +123,7 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 - **Implementation Language**: Dart
 - **Current State**: 101 REPL tests + 25 unit tests passing (as of Dec 2025)
 - **User Expertise**: Deep understanding of GLP semantics but does not write code
-- **Working Directory**: `/home/user/GLP/` (Linux) or `/Users/udi/GLP/` (Mac)
+- **Working Directory**: `/Users/udi/GLP/` (user's Mac)
 
 ## Working Modes
 
