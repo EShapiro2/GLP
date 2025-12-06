@@ -66,6 +66,18 @@ The GLP paper and LaTeX sources:
 - **READ THE SPEC FIRST** - Check bytecode/runtime specs before any code changes
 - **NEVER REMOVE CONTENT** - Never delete anything without explicit user approval
 
+### Reading Specs Correctly
+When checking specs:
+1. **Quote the spec exactly** — don't paraphrase or interpret
+2. **Answer only what the spec says** — don't add conclusions or inferences
+3. **If asked "is it clear?"** — the answer is either "yes, it says X" or "no, it doesn't address Y"
+
+Example of WRONG spec reading:
+> "Spec says: writer(X) — pass the variable directly, not via reader"
+
+Example of CORRECT spec reading:
+> "Spec 19.4.5 says: 'writer(X) in guard position - Test if Xi is an unbound writer. Succeed if Xi is unbound writer variable. Fail otherwise.'"
+
 ### Handling Unexpected GLP Behavior
 When encountering unexpected behavior of GLP, **STOP!** Find out:
 1. Is the unexpected behavior consistent with the spec?

@@ -17,7 +17,7 @@
 %     merge_loop(Xs?, Ys?, Ref?).
 %
 Ref? := mutual_ref(StreamEnd) :-
-  writer(StreamEnd?) |
+  writer(StreamEnd) |
   kernel_mutual_ref(StreamEnd?, Ref).
 
 % ============================================================================
