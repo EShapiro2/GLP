@@ -11,6 +11,6 @@ merge_layer([Xs,Ys|Rest], [Zs?|Layer?]) :-
 
 merge_tree([Xs], Xs?).
 merge_tree(Streams, Out?) :-
-    ground(Streams?), Streams? = [_,_|_] |
+    ground(Streams?) |
     merge_layer(Streams?, Layer),
     merge_tree(Layer?, Out).
