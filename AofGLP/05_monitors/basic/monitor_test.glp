@@ -1,17 +1,24 @@
 %% monitor_test.glp - Monitor test with two clients
 %%
-%% Two clients send scripted requests to a shared monitor.
-%% Demonstrates concurrent access and bidirectional communication.
+%% Two clients send requests to a shared monitor with timing.
+%% Client 1 sends immediately; Client 2 waits 100ms before starting.
+%% This demonstrates temporal coordination via wait guards.
+%%
+%% Expected results:
+%%   V1 = 8 (client1 sees only its own: 5 + 3)
+%%   V2 = 16 (client2 sees all: 5 + 10 + 3 - 2)
 %%
 %% Test goal:
 %% test_monitor(V1, V2).
 
-% Client 1: add 5, add 3, query value - returns response and stream
+% Client 1: immediate - add 5, add 3, query value
 client1(V1, [add(5), add(3), value(V1?)|Xs?]) :- client1_cont(Xs).
 client1_cont([]).
 
-% Client 2: add 10, subtract 2, query value - returns response and stream
-client2(V2, [add(10), subtract(2), value(V2?)|Ys?]) :- client2_cont(Ys).
+% Client 2: delayed by 100ms - add 10, subtract 2, query value
+client2(V, [add(10), subtract(2), value(V?)|Ys?]) :-
+    wait(100) |
+    client2_cont(Ys).
 client2_cont([]).
 
 % Test harness: merge client streams and feed to monitor

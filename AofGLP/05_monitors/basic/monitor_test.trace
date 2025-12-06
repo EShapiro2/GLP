@@ -1,40 +1,43 @@
 % Goal: test_monitor(V1, V2).
-% Result: V1 = 16, V2 = 16
+% Result: V1 = 8, V2 = 16
 %
-% Two clients send requests to a shared monitor:
-%   Client 1: add(5), add(3), value(V1)
-%   Client 2: add(10), subtract(2), value(V2)
+% Client 1 sends requests immediately: add(5), add(3), value(V1)
+% Client 2 waits 100ms then sends: add(10), subtract(2), value(V2)
 %
-% Due to fair merge ordering, all arithmetic completes before value queries.
-% Final sum: 5 + 10 + 3 - 2 = 16
+% Due to wait guard, client1's messages are processed first.
+% Client1's value query sees only its own operations: 5 + 3 = 8
+% Client2's value query sees all operations: 5 + 10 + 3 - 2 = 16
 
 test_monitor(V1, V2) :- client1(X1, X2), client2(X3, X4), merge(X2?, X4?, X5), monitor(X5?)
 client1(X1, X2) :- client1_cont(X6)
-client2(X3, X4) :- client2_cont(X7)
-merge([add(5), add(3), value(X1?) | X6?], [add(10), subtract(2), value(X3?) | X7?], X5) :- merge([add(10), subtract(2), value(X3?) | X7?], [add(3), value(X1?) | X6?], X8)
-monitor([add(5) | X8?]) :- monitor_loop([add(5) | X8?], 0)
+client2(X3, X4) → suspended
+merge([add(5), add(3), value(X1?) | X6?], X4?, X5) :- merge(X4?, [add(3), value(X1?) | X6?], X7)
+monitor([add(5) | X7?]) :- monitor_loop([add(5) | X7?], 0)
 client1_cont(X6) :- true
-client2_cont(X7) :- true
-merge([add(10), subtract(2), value(X3?) | []], [add(3), value(X1?) | []], X8) :- merge([add(3), value(X1?) | []], [subtract(2), value(X3?) | []], X9)
-monitor_loop([add(5) | [add(10) | X9?]], 0) :- :=/2(X10, +(0, 5)), monitor_loop([add(10) | X9?], X10?)
-merge([add(3), value(X1?) | []], [subtract(2), value(X3?) | []], X9) :- merge([subtract(2), value(X3?) | []], [value(X1?) | []], X11)
-:=/2(X10, +(0, 5)) :- true
-monitor_loop([add(10) | [add(3) | X11?]], 5) :- :=/2(X12, +(5, 10)), monitor_loop([add(3) | X11?], X12?)
-merge([subtract(2), value(X3?) | []], [value(X1?) | []], X11) :- merge([value(X1?) | []], [value(X3?) | []], X13)
-:=/2(X12, +(5, 10)) :- true
-monitor_loop([add(3) | [subtract(2) | X13?]], 15) :- :=/2(X14, +(15, 3)), monitor_loop([subtract(2) | X13?], X14?)
-merge([value(X1?) | []], [value(X3?) | []], X13) :- merge([value(X3?) | []], [], X15)
-:=/2(X14, +(15, 3)) :- true
-monitor_loop([subtract(2) | [value(X1?) | X15?]], 18) :- :=/2(X16, -(18, 2)), monitor_loop([value(X1?) | X15?], X16?)
-merge([value(X3?) | []], [], X15) :- merge([], [], X17)
+merge(X4?, [add(3), value(X1?) | []], X7) :- merge(X4?, [value(X1?) | []], X8)
+monitor_loop([add(5) | [add(3) | X8?]], 0) :- :=/2(X9, +(0, 5)), monitor_loop([add(3) | X8?], X9?)
+merge(X4?, [value(X1?) | []], X8) :- merge(X4?, [], X10)
+:=/2(X9, +(0, 5)) :- true
+monitor_loop([add(3) | [value(X1?) | X10?]], 5) :- :=/2(X11, +(5, 3)), monitor_loop([value(X1?) | X10?], X11?)
+merge(X4?, [], X10) → suspended
+:=/2(X11, +(5, 3)) :- true
+monitor_loop([value(X1?) | X10?], 8) :- =/2(X1, 8), monitor_loop(X10?, 8)
+=/2(X1, 8) :- true
+monitor_loop(X10?, 8) → suspended
+client2(X3, X4) :- client2_cont(X12)
+merge([add(10), subtract(2), value(X3?) | X12?], [], X10) :- merge([], [subtract(2), value(X3?) | X12?], X13)
+client2_cont(X12) :- true
+monitor_loop([add(10) | X13?], 8) :- :=/2(X14, +(8, 10)), monitor_loop(X13?, X14?)
+merge([], [subtract(2), value(X3?) | []], X13) :- merge([], [value(X3?) | []], X15)
+:=/2(X14, +(8, 10)) :- true
+monitor_loop([subtract(2) | X15?], 18) :- :=/2(X16, -(18, 2)), monitor_loop(X15?, X16?)
+merge([], [value(X3?) | []], X15) :- merge([], [], X17)
 :=/2(X16, -(18, 2)) :- true
-monitor_loop([value(X1?) | [value(X3?) | X17?]], 16) :- =/2(X1, 16), monitor_loop([value(X3?) | X17?], 16)
+monitor_loop([value(X3?) | X17?], 16) :- =/2(X3, 16), monitor_loop(X17?, 16)
 merge([], [], X17) :- true
-=/2(X1, 16) :- true
-monitor_loop([value(X3?) | []], 16) :- =/2(X3, 16), monitor_loop([], 16)
 =/2(X3, 16) :- true
 monitor_loop([], 16) :- true
 
-V1 = 16
+V1 = 8
 V2 = 16
 → succeeds
