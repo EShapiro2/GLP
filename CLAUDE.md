@@ -202,6 +202,15 @@ export PATH="/home/user/dart-sdk/bin:$PATH"
 echo -e 'filename.glp\ngoal.' | dart run bin/glp_repl.dart
 ```
 
+**REPL Test Scripts (Linux):**
+```bash
+# Quick tests (~2s) - basic features
+bash /home/user/GLP/test/quick_run_repl_tests.sh
+
+# Full tests - complete coverage
+bash /home/user/GLP/test/full_run_repl_tests.sh
+```
+
 **Key paths:**
 - REPL: `/home/user/GLP/glp_runtime/bin/glp_repl.dart`
 - stdlib: `/home/user/GLP/glp/stdlib/`
