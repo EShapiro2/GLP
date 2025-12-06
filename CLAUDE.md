@@ -735,6 +735,34 @@ X? =.. [Y|Ys] :- list(Ys?) | list_to_tuple([Y|Ys], X).
 
 **Status:** Not yet fixed. Parser needs to recognize `=..` as a valid goal in bodies.
 
+### Known REPL Limitation: Structs inside lists in goals
+
+**Bug:** The REPL can't parse compound terms (structs) inside lists in goal arguments.
+
+```glp
+% This FAILS in REPL goal:
+distribute_indexed([send(1,a), send(2,b)], Y, Z).
+% Error: Exception: Unsupported list head type: StructTerm
+
+% This WORKS:
+distribute_indexed([], Y, Z).
+```
+
+**What works:**
+- Simple lists: `[a, b, c]` ✓
+- Nested lists: `[[a,b], [1,2]]` ✓
+- Variables in lists: `[X?, Y?]` ✓
+
+**What fails:**
+- Structs in lists: `[send(1,a), foo(x)]` ✗
+- Any compound term as list element in a goal
+
+**Location:** `glp_repl.dart` - functions `_buildListTermForConj` and `_buildListTerm` handle `ConstTerm`, `VarTerm`, and `ListTerm`, but not `StructTerm`.
+
+**Impact:** Can't test predicates that take lists of structures as input (indexed distributor, binary distributor, message routing).
+
+**Status:** Not yet fixed. Need to add StructTerm case to list building functions.
+
 ## GrassrootsApp Testing Framework
 
 See [grassroots-testing-framework.md](docs/grassroots-testing-framework.md) for the theater-style testing approach:
