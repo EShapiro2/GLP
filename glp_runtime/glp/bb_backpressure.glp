@@ -1,0 +1,16 @@
+% Slow producer - generates with visible steps
+slow_producer([], 0).
+slow_producer([N?|Xs?], N) :- N? > 0 | N1 := N? - 1, slow_producer(Xs, N1?).
+
+% Consumer with buffer size 2: requires 2 elements visible
+% Pattern [X1,X2|Xs?] means: need X1 and X2 filled, Xs? is the open tail
+bb_cons2([X1,X2|Xs?], Sum, Result?) :- ground(X1?) |
+    Sum1 := Sum? + X1?,
+    bb_cons2([X2?|Xs], Sum1?, Result).
+bb_cons2([X], Sum, Result?) :- ground(X?) | Result := Sum? + X?.
+bb_cons2([], Sum, Sum?).
+
+% Test with buffer size 2
+test_bp2(R?) :-
+    slow_producer(H, 5),
+    bb_cons2(H?, 0, R).

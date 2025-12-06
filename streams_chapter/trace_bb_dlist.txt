@@ -42,4 +42,21 @@ consumer([], 15, X22) :- true
 R = 15
 → succeeds
 
+GLP> bb_producer(H, 3) :- :=/2(X1, -(3, 1)), bb_producer(X2, X1?)
+:=/2(X1, -(3, 1)) :- true
+bb_producer(X2, 2) :- :=/2(X3, -(2, 1)), bb_producer(X4, X3?)
+:=/2(X3, -(2, 1)) :- true
+bb_producer(X4, 1) :- :=/2(X5, -(1, 1)), bb_producer(X6, X5?)
+:=/2(X5, -(1, 1)) :- true
+bb_producer(X6, 0) :- true
+consumer([3 | [2 | [1 | []]]], 0, R2) :- :=/2(X7, +(0, 3)), consumer([2 | [1 | []]], X7?, X8)
+:=/2(X7, +(0, 3)) :- true
+consumer([2 | [1 | []]], 3, X8) :- :=/2(X9, +(3, 2)), consumer([1 | []], X9?, X10)
+:=/2(X9, +(3, 2)) :- true
+consumer([1 | []], 5, X10) :- :=/2(X11, +(5, 1)), consumer([], X11?, X12)
+:=/2(X11, +(5, 1)) :- true
+consumer([], 6, X12) :- true
+H = [3, 2, 1]
+R2 = 6
+→ succeeds
 GLP> 

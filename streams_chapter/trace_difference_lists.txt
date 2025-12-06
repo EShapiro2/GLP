@@ -35,8 +35,20 @@ H2 = [1, 2, 3 | X51?]
 T2 = <unbound>
 → succeeds
 
-GLP> close_dl(H3, [], [a, b, c]) :- true
-H3 = [a, b, c]
+GLP> list_to_dl([1, 2], H1, T1) :- list_to_dl([2], X1, T1?)
+list_to_dl([2], X1, T1?) :- list_to_dl([], X2, T1?)
+list_to_dl([], X2, T1?) :- true
+list_to_dl([3, 4], H2, T2) :- list_to_dl([4], X3, T2?)
+list_to_dl([4], X3, T2?) :- list_to_dl([], X4, T2?)
+list_to_dl([], X4, T2?) :- true
+append_dl([1 | [2 | X2?]], T1, [3 | [4 | X4?]], T2, R, X5?) :- true
+close_dl([1 | [2 | [3 | [4 | X4?]]]], X5, Result) :- =/2(X5?, [])
+=/2(X5?, []) :- true
+H1 = [1, 2, 3, 4]
+T1 = [3, 4]
+H2 = [3, 4]
+T2 = []
+R = [1, 2, 3, 4]
+Result = [1, 2, 3, 4]
 → succeeds
-
 GLP> 

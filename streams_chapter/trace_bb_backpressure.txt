@@ -1,0 +1,45 @@
+╔════════════════════════════════════════╗
+║   GLP REPL - Interactive Interpreter   ║
+╚════════════════════════════════════════╝
+
+Compiled: 2025-12-05 (Added conjunctive goals support)
+Working directory: udi/
+Source files: glp/*.glp
+Compiled files: bin/*.glpc
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit
+
+Loaded stdlib: assign.glp (947 ops)
+Loaded stdlib: univ.glp (28 ops)
+Loaded stdlib: unify.glp (8 ops)
+GLP> ✓ Loaded: bb_backpressure.glp
+GLP> Trace disabled
+GLP> Trace enabled
+GLP> test_bp2(R) :- slow_producer(X1, 5), bb_cons2(X1?, 0, X2)
+slow_producer(X1, 5) :- :=/2(X3, -(5, 1)), slow_producer(X4, X3?)
+bb_cons2([5 | X4?], 0, X2) → suspended
+:=/2(X3, -(5, 1)) :- true
+slow_producer(X4, 4) :- :=/2(X5, -(4, 1)), slow_producer(X6, X5?)
+bb_cons2([5 | [4 | X6?]], 0, X2) :- :=/2(X7, +(0, 5)), bb_cons2([4 | X6], X7?, X8)
+:=/2(X5, -(4, 1)) :- true
+slow_producer(X6, 3) :- :=/2(X9, -(3, 1)), slow_producer(X10, X9?)
+:=/2(X7, +(0, 5)) :- true
+bb_cons2([4 | [3 | X10?]], 5, X8) :- :=/2(X11, +(5, 4)), bb_cons2([3 | X10], X11?, X12)
+:=/2(X9, -(3, 1)) :- true
+slow_producer(X10, 2) :- :=/2(X13, -(2, 1)), slow_producer(X14, X13?)
+:=/2(X11, +(5, 4)) :- true
+bb_cons2([3 | [2 | X14?]], 9, X12) :- :=/2(X15, +(9, 3)), bb_cons2([2 | X14], X15?, X16)
+:=/2(X13, -(2, 1)) :- true
+slow_producer(X14, 1) :- :=/2(X17, -(1, 1)), slow_producer(X18, X17?)
+:=/2(X15, +(9, 3)) :- true
+bb_cons2([2 | [1 | X18?]], 12, X16) :- :=/2(X19, +(12, 2)), bb_cons2([1 | X18], X19?, X20)
+:=/2(X17, -(1, 1)) :- true
+slow_producer(X18, 0) :- true
+:=/2(X19, +(12, 2)) :- true
+bb_cons2([1 | []], 14, X20) :- :=/2(X21, +(14, 1))
+:=/2(X21, +(14, 1)) :- true
+R = 15
+→ succeeds
+
+GLP> 

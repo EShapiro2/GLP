@@ -43,7 +43,24 @@ differentiator([7 | []], X4) :- true
 Out4 = [3, 3]
 → succeeds
 
-GLP> test_chain(Out5) :- duplicator([1, 2], X1), chain_sep(X1?, X2)
+GLP> integrator([1, 2, 3, 4], Out5) :- integrator_acc([1, 2, 3, 4], 0, X1)
+integrator_acc([1, 2, 3, 4], 0, X1) :- :=/2(X2, +(0, 1)), emit_sum(X2?, [2, 3, 4], X3)
+:=/2(X2, +(0, 1)) :- true
+emit_sum(1, [2, 3, 4], X3) :- integrator_acc([2, 3, 4], 1, X4)
+integrator_acc([2, 3, 4], 1, X4) :- :=/2(X5, +(1, 2)), emit_sum(X5?, [3, 4], X6)
+:=/2(X5, +(1, 2)) :- true
+emit_sum(3, [3, 4], X6) :- integrator_acc([3, 4], 3, X7)
+integrator_acc([3, 4], 3, X7) :- :=/2(X8, +(3, 3)), emit_sum(X8?, [4], X9)
+:=/2(X8, +(3, 3)) :- true
+emit_sum(6, [4], X9) :- integrator_acc([4], 6, X10)
+integrator_acc([4], 6, X10) :- :=/2(X11, +(6, 4)), emit_sum(X11?, [], X12)
+:=/2(X11, +(6, 4)) :- true
+emit_sum(10, [], X12) :- integrator_acc([], 10, X13)
+integrator_acc([], 10, X13) :- true
+Out5 = [1, 3, 6, 10]
+→ succeeds
+
+GLP> test_chain(Out6) :- duplicator([1, 2], X1), chain_sep(X1?, X2)
 duplicator([1, 2], X1) :- duplicator([2], X3)
 chain_sep([1, 1 | X3?], X2) :- separator([1, 1 | X3?], X4)
 duplicator([2], X3) :- duplicator([], X5)
@@ -53,7 +70,7 @@ separator([1 | [2, 2 | []]], X6) :- separator([2, 2 | []], X7)
 separator([2, 2 | []], X7) :- separator([2 | []], X8)
 separator([2 | []], X8) :- separator([], X9)
 separator([], X9) :- true
-Out5 = [1, 0, 1, 0, 2, 0, 2, 0]
+Out6 = [1, 0, 1, 0, 2, 0, 2, 0]
 → succeeds
 
 GLP> 

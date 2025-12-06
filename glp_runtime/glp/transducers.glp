@@ -17,9 +17,13 @@ differentiator([X,Y|Xs], [D?|Ds?]) :- ground(X?), ground(Y?) |
     D := Y? - X?,
     differentiator([Y?|Xs?], Ds).
 
-% Integrator: outputs running sum (simpler version)
-integrator([], []).
-integrator([X|Xs], [X?|Ys?]) :- ground(X?) | integrator(Xs?, Ys).
+% Integrator: outputs running sum
+integrator(Xs, Ys?) :- integrator_acc(Xs?, 0, Ys).
+integrator_acc([], _, []).
+integrator_acc([X|Xs], Acc, Out?) :- ground(X?) |
+    Sum := Acc? + X?,
+    emit_sum(Sum?, Xs?, Out).
+emit_sum(V, Xs, [V?|Ys?]) :- ground(V?) | integrator_acc(Xs?, V?, Ys).
 
 % Test chained transducers
 test_chain(Out?) :-

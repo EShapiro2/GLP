@@ -10,4 +10,4 @@ list_to_dl([X|Xs], [X?|Ys?], T) :- list_to_dl(Xs?, Ys, T?).
 append_dl(H1, T1?, T1, T2?, H1?, T2).
 
 % Close a difference list to a standard list
-close_dl(H?, [], H).
+close_dl(H, T, H?) :- T? = [].
