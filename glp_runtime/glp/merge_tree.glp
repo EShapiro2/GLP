@@ -1,0 +1,23 @@
+% Simple merge (base)
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
+
+% Static balanced merge tree - layer by layer
+% Base: single stream passes through
+merge_tree([Xs], Xs?).
+% Recursive: merge pairs, then recurse on resulting layer
+merge_tree([S1,S2], Out?) :-
+    merge(S1?, S2?, Out).
+merge_tree([S1,S2,S3], Out?) :-
+    merge(S1?, S2?, M1),
+    merge(M1?, S3?, Out).
+merge_tree([S1,S2,S3,S4], Out?) :-
+    merge(S1?, S2?, M1),
+    merge(S3?, S4?, M2),
+    merge(M1?, M2?, Out).
+
+% Test with 4 streams
+test_tree4(Out?) :-
+    merge_tree([[a,b], [1,2], [x,y], [p,q]], Out).
