@@ -5,5 +5,5 @@
 %% May replicate X without violating single-writer invariant
 %% since it verifies X to be ground.
 
-distribute([X|Xs],[X|Ys?],[X|Zs?]) :- ground(X) | distribute(Xs?,Ys,Zs).
+distribute([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | distribute(Xs?, Ys, Zs).
 distribute([],[],[]).
