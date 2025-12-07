@@ -40,13 +40,11 @@ qsort([X|Unsorted], Sorted?, Rest) :-
     qsort(Larger?, Sorted1, Rest?).
 qsort([], Rest?, Rest).
 
-partition([], _, [], []).
-partition([X|Xs], Pivot, [X?|Smaller?], Larger) :-
-    ground(X?), ground(Pivot?), X? =< Pivot? |
-    partition(Xs?, Pivot?, Smaller, Larger?).
-partition([X|Xs], Pivot, Smaller, [X?|Larger?]) :-
-    ground(X?), ground(Pivot?), X? > Pivot? |
-    partition(Xs?, Pivot?, Smaller?, Larger).
+partition([X|Xs], A, Smaller?, [X?|Larger?]) :-
+    A? < X? | partition(Xs?, A?, Smaller, Larger).
+partition([X|Xs], A, [X?|Smaller?], Larger?) :-
+    A? >= X? | partition(Xs?, A?, Smaller, Larger).
+partition([], A, [], []) :- number(A?) | true.
 
 %% ===== FIBONACCI =====
 %% Exponential tree recursion

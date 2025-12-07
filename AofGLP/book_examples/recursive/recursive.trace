@@ -107,20 +107,35 @@ S1 = [1, 3, 4]
 %% - Result streams back as merge completes
 
 %% =============================================================================
-%% QUICKSORT - Difference Lists (SUSPENDS - Known Issue)
+%% QUICKSORT - Difference Lists (WORKS)
 %% =============================================================================
 
+GLP> :trace
 GLP> quicksort([3,1,4], S2).
-→ suspended
 
-%% Issue: The difference list pattern with partition causes suspension
-%% when passing the "hole" as a reader to be matched against a list pattern.
-%% This is a fundamental interaction between difference lists and SRSW.
-%%
-%% The partition clause:
-%%   partition([X|Xs], Pivot, Smaller, [X?|Larger?]) :- X? > Pivot? | ...
-%% expects the fourth argument to be extended with X?, but when called with
-%% a reader of an unbound variable, it cannot match the list pattern.
+quicksort([3, 1, 4], S2) :- qsort([3, 1, 4], X1, [])
+qsort([3, 1, 4], X1, []) :- partition([1, 4], 3, X2, X3), qsort(X2?, X4, [3 | X5?]), qsort(X3?, X5, [])
+partition([1, 4], 3, X2, X3) :- partition([4], 3, X6, X7)
+qsort([1 | X6?], X4, [3 | X5?]) :- partition(X6?, 1, X8, X9), qsort(X8?, X10, [1 | X11?]), qsort(X9?, X11, [3 | X5?])
+qsort(X3?, X5, []) → suspended
+partition([4], 3, X6, X7) :- partition([], 3, X12, X13)
+partition(X6?, 1, X8, X9) → suspended
+qsort(X8?, X10, [1 | X11?]) → suspended
+qsort(X9?, X11, [3 | X5?]) → suspended
+qsort([4 | X13?], X5, []) :- partition(X13?, 4, X14, X15), qsort(X14?, X16, [4 | X17?]), qsort(X15?, X17, [])
+partition([], 3, X12, X13) :- true
+partition([], 4, X14, X15) :- true
+qsort([], X16, [4 | X17?]) :- true
+qsort([], X17, []) :- true
+partition([], 1, X8, X9) :- true
+qsort([], X10, [1 | X11?]) :- true
+qsort([], X11, [3 | [4 | []]]) :- true
+
+S2 = [1, 3, 4]
+→ succeeds
+
+%% Key: Using Smaller? and Larger? (readers) in output position allows
+%% them to receive bindings from recursive calls.
 
 %% =============================================================================
 %% FLATTEN - Tree Recursion on Structure (MISSING GUARD)
