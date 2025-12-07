@@ -1,0 +1,9 @@
+%% length.glp - Count list elements
+%% Exercise solution: ch05 streams
+
+length(Xs, N?) :- length_acc(Xs?, 0, N).
+
+length_acc([], Acc, Acc?).
+length_acc([_|Xs], Acc, N?) :-
+    Acc1 := Acc? + 1,
+    length_acc(Xs?, Acc1?, N).
