@@ -3926,6 +3926,21 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
+      case 'list':
+        // Succeeds if X is a list ([] or [H|T])
+        // Per spec: list(X?) - Succeeds if X is a list
+        if (args.isEmpty) return GuardResult.failure;
+        final val = getValue(args[0]);
+        // Empty list: ConstTerm with 'nil' or null
+        if (val is ConstTerm && (val.value == 'nil' || val.value == null)) {
+          return GuardResult.success;
+        }
+        // Cons cell: StructTerm with functor '.'
+        if (val is StructTerm && val.functor == '.') {
+          return GuardResult.success;
+        }
+        return GuardResult.failure;
+
       case 'is_mutual_ref':
         // Succeeds if X is a MutualRefTerm (enables SRSW multiple reads)
         if (args.isEmpty) return GuardResult.failure;
