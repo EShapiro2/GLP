@@ -17,31 +17,33 @@ Each program file includes:
 
 ## Directory Organization
 
-### Core Programming (01-06)
+### Core Programming
 
-#### 02_streams/ - Stream Processing
+#### streams/ - Stream Processing
 - `producer_consumer/` - Basic producer-consumer pattern
 - `observation/` - Stream observation without consumption
 
-#### 03_merge/ - Stream Merging
+#### merge/ - Stream Merging
 - `binary/` - Fair binary stream merger (the quintessential GLP program)
 - `dynamic/` - Dynamic stream merger with runtime stream addition
+- `mwm/` - Multiway merge
 - `channels/` - Channel-based merging
 
-#### 04_distribution/ - Stream Distribution
+#### distribution/ - Stream Distribution
 - `ground/` - Ground-stream distribution to multiple consumers
 - `cooperative/` - Cooperative producers with handover
 
-#### 05_monitors/ - Concurrent Monitors
+#### monitors/ - Concurrent Monitors
 - `basic/` - Stateful service with add/subtract/value requests
+- `observer/` - Type-aware observer, 4-actor play
 
-#### 06_protocols/ - Communication Protocols
+#### protocols/ - Communication Protocols
 - `network_switch/` - 3-way network message routing
 - `bounded_buffer/` - Bounded buffer implementations
 
-### Metaprogramming (07)
+### Metaprogramming
 
-#### 07_meta/ - Metainterpreters
+#### meta/ - Metainterpreters
 - `plain/` - Plain GLP metainterpreter
 - `failsafe/` - Reports failures instead of aborting
 - `control/` - Suspend/resume/abort via control stream
@@ -50,54 +52,44 @@ Each program file includes:
 - `tracing/` - Produces execution trace with timestamps
 - `debugging/` - Full runtime control with dump collection
 
-### Data Structures (08-12)
+### Data Structures
 
-#### 08_lists/ - List Operations
+#### lists/ - List Operations
 - `append/`, `reverse/`, `copy/` - Basic operations
 - `member/`, `length/`, `nth/` - Query operations
 
-#### 09_sorting/ - Sorting Algorithms
+#### sorting/ - Sorting Algorithms
 - `quicksort/` - Quicksort with partition
 - `insertion_sort/` - Insertion sort
 - `bubble_sort/` - Bubble sort
 - `merge_sort/` - Merge sort
 
-#### 10_arithmetic/ - Arithmetic Programs
+#### arithmetic/ - Arithmetic Programs
 - `factorial/`, `fibonacci/` - Recursive functions
 - `primes/` - Sieve of Eratosthenes
 - `sum_list/` - List summation
 
-#### 11_logic_gates/ - Hardware Simulation
+#### logic_gates/ - Hardware Simulation
 - `gates/` - AND/OR gate simulation on bit streams
 
-#### 12_puzzles/ - Classic Puzzles
+#### puzzles/ - Classic Puzzles
 - `hanoi/` - Tower of Hanoi
 
-### Object-Oriented (14)
+### Object-Oriented
 
-#### 14_objects/ - Object-Oriented Patterns
-- `basics/` - Counter, queue manager, many counters
-- `constraints/` - Constraint objects
-- `inheritance/` - Frame-based inheritance
+#### objects/ - Object-Oriented Patterns
+- `basics/` - Counter, queue manager, encapsulation
 
-### Grassroots Platforms (20-22)
+### Grassroots Protocols
 
-#### 20_social_graph/ - Grassroots Social Graph
-- `agent/` - Agent initialization
-- `cold_call/` - Cold-call befriending protocol
-- `response/` - Channel establishment and response handling
-- `introduction/` - Friend-mediated introductions
+#### social_graph/ - Social Graph Foundation
+- Core social graph data structures and operations
 
-#### 21_social_networking/ - Social Networking Applications
-- `direct_messaging/` - DM channel establishment
-- `feed/` - Authenticated feed distribution
-- `groups/` - Group formation and messaging
-- `blocklace/` - Interlaced streams (distributed blocklace)
-- `replication/` - Non-ground term replication
+#### networking/ - Social Networking
+- Network protocols, message routing, friend channels
 
-#### 22_security/ - Security Mechanisms
-- `attestation/` - Attestation guard predicates
-- `blockchain/` - Blockchain security properties of streams
+#### security/ - Security Protocols
+- Authentication, authorization, secure channels
 
 ### Library (lib/)
 
@@ -114,27 +106,27 @@ Each `.glp` file is self-contained with its `reduce` clauses for metainterpreter
 run(merge([1,2,3], [a,b,c], Result)).
 ```
 
-## File Count by Category
+## Directory Correspondence with Book
 
-| Category | Files |
-|----------|-------|
-| 02_streams | 2 |
-| 03_merge | 4 |
-| 04_distribution | 2 |
-| 05_monitors | 1 |
-| 06_protocols | 4 |
-| 07_meta | 12 |
-| 08_lists | 6 |
-| 09_sorting | 4 |
-| 10_arithmetic | 4 |
-| 11_logic_gates | 1 |
-| 12_puzzles | 1 |
-| 14_objects | 7 |
-| 20_social_graph | 4 |
-| 21_social_networking | 6 |
-| 22_security | 2 |
-| lib | 8 |
-| **Total** | **70** |
+After reorganization, the correspondence between book chapters and code directories:
+
+```
+Book Chapter (AofGLP repo)       Code Directory (GLP repo)
+───────────────────────────────────────────────────────────
+streams.tex                 →    streams/, merge/, distribution/
+buffered_communication.tex  →    protocols/bounded_buffer/
+monitors.tex                →    monitors/
+lists.tex                   →    lists/
+sorting.tex                 →    sorting/
+arithmetic.tex              →    arithmetic/
+objects.tex                 →    objects/
+plain_meta.tex              →    meta/plain/
+enhanced_meta.tex           →    meta/control/, meta/tracing/
+debugging.tex               →    meta/debugging/
+social_graph.tex            →    social_graph/
+networking.tex              →    networking/
+security.tex                →    security/
+```
 
 ## References
 
