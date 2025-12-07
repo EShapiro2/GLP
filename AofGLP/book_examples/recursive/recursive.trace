@@ -1,50 +1,13 @@
-%% Recursive programming examples - traces
+%% recursive.trace - Execution traces for recursive GLP examples
+%% Generated: 2025-12-07
 
-%% ============================================================
-%% Mergesort - Divide and conquer
-%% Goal: mergesort([3,1,4], S).
-%% Result: S = [1, 3, 4]
-%% Shows: concurrent split, recursive sorts, merge
-%% ============================================================
+%% =============================================================================
+%% FIBONACCI - Tree Recursion (WORKS)
+%% Shows exponential tree of concurrent processes
+%% =============================================================================
 
-mergesort([3, 1, 4], S) :- split([3, 1, 4], X1, X2), mergesort(X1?, X3), mergesort(X2?, X4), merge_sorted(X3?, X4?, X5)
-split([3, 1, 4], X1, X2) :- split([4], X6, X7)
-mergesort([3 | X6?], X3) :- split([3 | X6?], X8, X9), mergesort(X8?, X10), mergesort(X9?, X11), merge_sorted(X10?, X11?, X12)
-mergesort([1 | X7?], X4) :- split([1 | X7?], X13, X14), mergesort(X13?, X15), mergesort(X14?, X16), merge_sorted(X15?, X16?, X17)
-merge_sorted(X3?, X4?, X5) → suspended
-split([4], X6, X7) :- true
-split([3 | [4]], X8, X9) :- split([], X18, X19)
-mergesort([3 | X18?], X10) :- split([3 | X18?], X20, X21), mergesort(X20?, X22), mergesort(X21?, X23), merge_sorted(X22?, X23?, X24)
-mergesort([4 | X19?], X11) :- split([4 | X19?], X25, X26), mergesort(X25?, X27), mergesort(X26?, X28), merge_sorted(X27?, X28?, X29)
-merge_sorted(X10?, X11?, X12) → suspended
-split([1 | []], X13, X14) :- true
-mergesort([1], X15) :- true
-mergesort([], X16) :- true
-merge_sorted([1], [], X17) :- true
-split([], X18, X19) :- true
-split([3 | []], X20, X21) :- true
-mergesort([3], X22) :- true
-mergesort([], X23) :- true
-merge_sorted([3], [], X24) :- true
-split([4 | []], X25, X26) :- true
-mergesort([4], X27) :- true
-mergesort([], X28) :- true
-merge_sorted([4], [], X29) :- true
-merge_sorted(X3?, [1], X5) → suspended
-merge_sorted([3], [4], X12) :- merge_sorted([], [4 | []], X30)
-merge_sorted([3 | X30?], [1], X5) :- merge_sorted([3 | X30?], [], X31)
-merge_sorted([], [4 | []], X30) :- true
-merge_sorted([3 | [4 | []]], [], X31) :- true
-
-S = [1, 3, 4]
-→ succeeds
-
-%% ============================================================
-%% Fibonacci - Exponential tree recursion
-%% Goal: fib(5, F).
-%% Result: F = 5
-%% Shows: tree of concurrent fib processes
-%% ============================================================
+GLP> :trace
+GLP> fib(5, F).
 
 fib(5, F) :- :=/2(X1, -(5, 1)), :=/2(X2, -(5, 2)), fib(X1?, X3), fib(X2?, X4), :=/2(X5, +(X3?, X4?))
 :=/2(X1, -(5, 1)) :- true
@@ -89,3 +52,84 @@ fib(0, X34) :- true
 
 F = 5
 → succeeds
+
+%% Key observations:
+%% - fib(5) spawns fib(4) and fib(3) concurrently
+%% - These spawn fib(3), fib(2), fib(2), fib(1) concurrently
+%% - Base cases fib(0)=0, fib(1)=1 complete immediately
+%% - Assignments suspend until operands are bound
+%% - Results bubble up: 1+0=1, 1+1=2, 2+1=3, 3+2=5
+
+%% =============================================================================
+%% MERGESORT - Divide and Conquer (WORKS)
+%% =============================================================================
+
+GLP> :trace
+GLP> mergesort([3,1,4], S1).
+
+mergesort([3, 1, 4], S1) :- split([3, 1, 4], X1, X2), mergesort(X1?, X3), mergesort(X2?, X4), merge_sorted(X3?, X4?, X5)
+split([3, 1, 4], X1, X2) :- split([4], X6, X7)
+mergesort([3 | X6?], X3) :- split([3 | X6?], X8, X9), mergesort(X8?, X10), mergesort(X9?, X11), merge_sorted(X10?, X11?, X12)
+mergesort([1 | X7?], X4) :- split([1 | X7?], X13, X14), mergesort(X13?, X15), mergesort(X14?, X16), merge_sorted(X15?, X16?, X17)
+merge_sorted(X3?, X4?, X5) → suspended
+split([4], X6, X7) :- true
+split([3 | [4]], X8, X9) :- split([], X18, X19)
+mergesort([3 | X18?], X10) :- split([3 | X18?], X20, X21), mergesort(X20?, X22), mergesort(X21?, X23), merge_sorted(X22?, X23?, X24)
+mergesort([4 | X19?], X11) :- split([4 | X19?], X25, X26), mergesort(X25?, X27), mergesort(X26?, X28), merge_sorted(X27?, X28?, X29)
+merge_sorted(X10?, X11?, X12) → suspended
+split([1 | []], X13, X14) :- true
+mergesort([1], X15) :- true
+mergesort([], X16) :- true
+merge_sorted([1], [], X17) :- true
+split([], X18, X19) :- true
+split([3 | []], X20, X21) :- true
+mergesort([3], X22) :- true
+mergesort([], X23) :- true
+merge_sorted([3], [], X24) :- true
+split([4 | []], X25, X26) :- true
+mergesort([4], X27) :- true
+mergesort([], X28) :- true
+merge_sorted([4], [], X29) :- true
+merge_sorted(X3?, [1], X5) → suspended
+merge_sorted([3], [4], X12) :- merge_sorted([], [4 | []], X30)
+merge_sorted([3 | X30?], [1], X5) :- merge_sorted([3 | X30?], [], X31)
+merge_sorted([], [4 | []], X30) :- true
+merge_sorted([3 | [4 | []]], [], X31) :- true
+
+S1 = [1, 3, 4]
+→ succeeds
+
+%% Key observations:
+%% - split divides [3,1,4] into [3,4] and [1]
+%% - Recursive mergesorts run concurrently on halves
+%% - merge_sorted suspends until both halves are sorted
+%% - Comparison guards (=<, <) select correct merge clause
+%% - Result streams back as merge completes
+
+%% =============================================================================
+%% QUICKSORT - Difference Lists (SUSPENDS - Known Issue)
+%% =============================================================================
+
+GLP> quicksort([3,1,4], S2).
+→ suspended
+
+%% Issue: The difference list pattern with partition causes suspension
+%% when passing the "hole" as a reader to be matched against a list pattern.
+%% This is a fundamental interaction between difference lists and SRSW.
+%%
+%% The partition clause:
+%%   partition([X|Xs], Pivot, Smaller, [X?|Larger?]) :- X? > Pivot? | ...
+%% expects the fourth argument to be extended with X?, but when called with
+%% a reader of an unbound variable, it cannot match the list pattern.
+
+%% =============================================================================
+%% FLATTEN - Tree Recursion on Structure (MISSING GUARD)
+%% =============================================================================
+
+GLP> flatten([[1,2],[3,[4,5]],6], Flat).
+Flat = [[1, 2], [3, [4, 5]], 6]
+→ succeeds (but incorrect!)
+
+%% Issue: is_list/1 guard is not implemented in the runtime.
+%% All elements fall through to the otherwise clause.
+%% Expected result should be: [1, 2, 3, 4, 5, 6]
