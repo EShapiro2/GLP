@@ -1,0 +1,12 @@
+%% flatten.glp - Flatten nested lists
+%% Tree recursion on structure
+
+flatten([], []).
+flatten([X|Xs], Ys?) :-
+    is_list(X?) |
+    flatten(X?, FlatX),
+    flatten(Xs?, FlatXs),
+    append(FlatX?, FlatXs?, Ys).
+flatten([X|Xs], [X?|Ys?]) :-
+    \+ is_list(X?) |
+    flatten(Xs?, Ys).

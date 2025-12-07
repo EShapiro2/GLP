@@ -1,0 +1,21 @@
+%% quicksort.glp - Quicksort with append
+%% True recursion: two recursive calls spawn concurrent processes
+
+quicksort([], []).
+quicksort([X|Xs], Sorted?) :-
+    ground(X?) |
+    partition(X?, Xs?, Smaller, Bigger),
+    quicksort(Smaller?, SortedSmaller),
+    quicksort(Bigger?, SortedBigger),
+    append(SortedSmaller?, [X?|SortedBigger?], Sorted).
+
+partition(_, [], [], []).
+partition(Pivot, [X|Xs], [X?|Smaller?], Bigger) :-
+    X? =< Pivot? |
+    partition(Pivot?, Xs?, Smaller, Bigger?).
+partition(Pivot, [X|Xs], Smaller, [X?|Bigger?]) :-
+    X? > Pivot? |
+    partition(Pivot?, Xs?, Smaller?, Bigger).
+
+append([], Ys, Ys?).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
