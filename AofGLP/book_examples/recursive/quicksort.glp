@@ -1,21 +1,19 @@
-%% quicksort.glp - Quicksort with append
-%% True recursion: two recursive calls spawn concurrent processes
+%% quicksort.glp - Quicksort with difference lists
+%% True recursion with O(1) concatenation via dlists
 
-quicksort([], []).
-quicksort([X|Xs], Sorted?) :-
-    ground(X?) |
-    partition(X?, Xs?, Smaller, Bigger),
-    quicksort(Smaller?, SortedSmaller),
-    quicksort(Bigger?, SortedBigger),
-    append(SortedSmaller?, [X?|SortedBigger?], Sorted).
+quicksort(Xs, Ys?) :- qsort(Xs?, Ys, []).
 
-partition(_, [], [], []).
-partition(Pivot, [X|Xs], [X?|Smaller?], Bigger) :-
+qsort([X|Unsorted], Sorted?, Rest) :-
+    number(X?) |
+    partition(Unsorted?, X?, Smaller, Larger),
+    qsort(Smaller?, Sorted, [X?|Sorted1?]),
+    qsort(Larger?, Sorted1, Rest?).
+qsort([], Rest?, Rest).
+
+partition([], _, [], []).
+partition([X|Xs], Pivot, [X?|Smaller?], Larger) :-
     X? =< Pivot? |
-    partition(Pivot?, Xs?, Smaller, Bigger?).
-partition(Pivot, [X|Xs], Smaller, [X?|Bigger?]) :-
+    partition(Xs?, Pivot?, Smaller, Larger?).
+partition([X|Xs], Pivot, Smaller, [X?|Larger?]) :-
     X? > Pivot? |
-    partition(Pivot?, Xs?, Smaller?, Bigger).
-
-append([], Ys, Ys?).
-append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
+    partition(Xs?, Pivot?, Smaller?, Larger).
