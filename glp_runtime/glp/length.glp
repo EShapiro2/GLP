@@ -1,0 +1,12 @@
+%% length.glp - List Length
+%% Source: Standard GLP list operations
+
+length(Xs, N?) :- length(Xs?, 0, N).
+length([], Acc?, Acc?).
+length([_|Xs], Acc, N?) :- Acc1 := Acc? + 1, length(Xs?, Acc1?, N).
+
+%% Metainterpreter support
+reduce(length(Xs, N?), length(Xs?, 0, N)).
+reduce(length([], Acc?, Acc?), true).
+reduce(length([_|Xs], Acc, N?), (Acc1 := Acc? + 1, length(Xs?, Acc1?, N))).
+reduce((X? := T), true) :- X := T? | true.

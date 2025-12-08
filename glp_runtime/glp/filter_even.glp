@@ -1,0 +1,11 @@
+%% filter_even.glp - Keep even numbers
+%% Exercise solution: ch05 streams
+%% Concrete example of filter pattern
+
+filter_even([], []).
+filter_even([X|Xs], [X?|Ys?]) :-
+    ground(X?), X? mod 2 =:= 0 |
+    filter_even(Xs?, Ys).
+filter_even([X|Xs], Ys?) :-
+    ground(X?), X? mod 2 =\= 0 |
+    filter_even(Xs?, Ys).
