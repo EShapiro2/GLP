@@ -1178,7 +1178,22 @@ The unified V2 opcodes use an `isReader` flag to distinguish writer vs reader mo
 
 2. **Reader-of-Reader Prevention**: The mode conversion design prevents reader-of-reader chains. A writer gets a reader view of a fresh variable, not a reader of another reader.
 
-3. **Suspension Semantics**: When suspending on an unbound reader, the entire clause attempt suspends. The goal will be reactivated when the reader's writer is bound.
+3. **Suspension Semantics**: HEAD phase uses two-phase unification with deferred suspension:
+
+   **Phase 1 (Collection):** HEAD instructions process arguments left-to-right, accumulating:
+   - σ̂w: tentative writer bindings
+   - Si: preliminary suspension set (readers matched against constants or structures whose paired writers are not yet in σ̂w)
+
+   When a HEAD instruction encounters an unbound reader where a specific value is required, it adds the reader ID to Si and continues processing remaining arguments.
+
+   **Phase 2 (Resolution at Commit):** Before applying σ̂w:
+   - Compute S' = {X? ∈ Si : X ∉ dom(σ̂w)}
+   - If S' ≠ ∅: union S' into U (goal-level suspension set), fail to next clause
+   - If S' = ∅: proceed with commit, apply σ̂w to heap
+
+   This two-phase approach ensures that argument order does not affect success. For example, goal `p(X?,X)` against clause `p(a,a)` succeeds: Phase 1 adds X? to Si and X→a to σ̂w; Phase 2 finds X ∈ dom(σ̂w), so S' = ∅.
+
+   **GUARD phase** retains immediate failure semantics: unbound readers in guards cause the clause to fail immediately (not suspend), since guards test preconditions rather than collect bindings.
 
 4. **SRSW Validation**: The compiler must validate SRSW constraints. Multiple reader occurrences require ground() guard.
 

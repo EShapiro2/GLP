@@ -141,6 +141,7 @@ class RunnerContext {
   int kappa;  // Mutable - updated by Requeue for tail calls
   final CallEnv env;
   final Map<int, Object?> sigmaHat = <int, Object?>{}; // σ̂w: tentative writer bindings
+  final Set<int> Si = <int>{};       // clause-level preliminary suspension set
   final Set<int> U = <int>{};        // goal-level suspension set (reader IDs)
   bool inBody = false;
 
@@ -200,6 +201,7 @@ class RunnerContext {
 
   void clearClause() {
     sigmaHat.clear();
+    Si.clear();
     inBody = false;
     mode = UnifyMode.read;
     S = 0;
@@ -672,8 +674,9 @@ class BytecodeRunner {
             if (value is VarRef) {
               // Unbound after dereferencing
               if (value.isReader) {
-                // Unbound reader - add to U and fail to next clause
-                pc = _suspendAndFail(cx, value.varId, pc);
+                // Unbound reader - add to Si and continue (two-phase)
+                cx.Si.add(value.varId);
+                pc++;
                 continue;
               } else {
                 // Unbound writer - create tentative binding
@@ -693,11 +696,12 @@ class BytecodeRunner {
             cx.sigmaHat[arg.varId] = ConstTerm(op.value);
           }
         } else if (arg is VarRef && arg.isReader) {
-          // Reader VarRef: check if bound, else add to U and fail
+          // Reader VarRef: check if bound, else add to Si (two-phase)
           final wid = cx.rt.heap.writerIdForReader(arg.varId);
           if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
             final suspendOnVar = _finalUnboundVar(cx, arg.varId);
-            pc = _suspendAndFail(cx, suspendOnVar, pc);
+            cx.Si.add(suspendOnVar);
+            pc++;
             continue;
           } else {
             // Bound reader - check if value matches constant
@@ -831,13 +835,10 @@ class BytecodeRunner {
             final wid = cx.rt.heap.writerIdForReader(rid);
             if (cx.debugOutput) print('DEBUG SUSPEND: writerIdForReader(R$rid) = $wid');
             if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
-              // Unbound reader - add to U and soft fail
-              if (cx.debugOutput) print('DEBUG SUSPEND: Reader R$rid is UNBOUND! Adding to U');
-              print('  wid = $wid');
-              if (wid != null) {
-                print('  isWriterBound($wid) = ${cx.rt.heap.isWriterBound(wid)}');
-              }
-              pc = _suspendAndFail(cx, rid, pc);
+              // Unbound reader - add to Si and continue (two-phase)
+              if (cx.debugOutput) print('DEBUG SUSPEND: Reader R$rid is UNBOUND! Adding to Si');
+              cx.Si.add(rid);
+              pc++;
               continue;
             }
             if (cx.debugOutput) print('DEBUG SUSPEND: Reader R$rid is bound to W$wid, dereferencing...');
@@ -924,8 +925,9 @@ class BytecodeRunner {
             if (value is VarRef) {
               // Unbound after dereferencing
               if (value.isReader) {
-                // Unbound reader - add to U and fail to next clause
-                pc = _suspendAndFail(cx, value.varId, pc);
+                // Unbound reader - add to Si and continue (two-phase)
+                cx.Si.add(value.varId);
+                pc++;
                 continue;
               } else {
                 // Unbound writer - enter WRITE mode
@@ -968,10 +970,11 @@ class BytecodeRunner {
           final wid = cx.rt.heap.writerIdForReader(arg.varId);
           if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: READ mode, reader ${arg.varId} -> writer $wid');
           if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
-            // Unbound reader - add to U and soft fail
-            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer $wid unbound or null, adding to U and failing');
+            // Unbound reader - add to Si and continue (two-phase)
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer $wid unbound or null, adding to Si');
             final suspendOnVar = _finalUnboundVar(cx, arg.varId);
-            pc = _suspendAndFail(cx, suspendOnVar, pc);
+            cx.Si.add(suspendOnVar);
+            pc++;
             continue;
           }
 
@@ -1298,9 +1301,9 @@ class BytecodeRunner {
                     continue;
                   }
                 } else {
-                  // Unbound reader - add to Si (suspend)
-                  if (debug && cx.goalId >= 4000) print('  UnifyConstant: reader $rid unbound, suspending');
-                  pc = _suspendAndFail(cx, rid, pc); continue;
+                  // Unbound reader - add to Si and continue (two-phase)
+                  if (debug && cx.goalId >= 4000) print('  UnifyConstant: reader $rid unbound, adding to Si');
+                  cx.Si.add(rid);
                   cx.S++;
                 }
               } else {
@@ -2108,6 +2111,24 @@ class BytecodeRunner {
 
       // Commit (apply σ̂w and wake suspended goals) - v2.16 semantics
       if (op is Commit) {
+        // Phase 2: Resolve Si against σ̂w (two-phase HEAD unification)
+        final resolvedSi = <int>{};
+        for (final readerId in cx.Si) {
+          final writerId = cx.rt.heap.writerIdForReader(readerId);
+          if (writerId == null || !cx.sigmaHat.containsKey(writerId)) {
+            resolvedSi.add(readerId);
+          }
+        }
+
+        if (resolvedSi.isNotEmpty) {
+          cx.U.addAll(resolvedSi);
+          cx.Si.clear();
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+        cx.Si.clear();
+
         // Commit only reached if HEAD and GUARD phases succeeded
         // Apply σ̂w to heap atomically
 
@@ -3237,15 +3258,16 @@ class BytecodeRunner {
           }
         } else if (arg is VarRef && arg.isReader) {
           if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: arg is reader ${arg.varId}');
-          // Reader: check if bound, else add to U and fail
+          // Reader: check if bound, else add to Si (two-phase)
           final wid = cx.rt.heap.writerIdForReader(arg.varId);
           final bound = wid != null ? cx.rt.heap.isWriterBound(wid) : false;
           final value = (wid != null && bound) ? cx.rt.heap.valueOfWriter(wid) : null;
 
           if (wid == null || !bound) {
-            // Find the final unbound variable in the chain
+            // Unbound reader - add to Si and continue (two-phase)
             final suspendOnVar = _finalUnboundVar(cx, arg.varId);
-            pc = _suspendAndFail(cx, suspendOnVar, pc);
+            cx.Si.add(suspendOnVar);
+            pc++;
             continue;
           } else {
             // Bound reader - check if value matches []
@@ -3305,8 +3327,10 @@ class BytecodeRunner {
           final value = (wid != null && bound) ? cx.rt.heap.valueOfWriter(wid) : null;
 
           if (wid == null || !bound) {
+            // Unbound reader - add to Si and continue (two-phase)
             final suspendOnVar = _finalUnboundVar(cx, arg.varId);
-            pc = _suspendAndFail(cx, suspendOnVar, pc);
+            cx.Si.add(suspendOnVar);
+            pc++;
             continue;
           } else{
             // Bound reader - check if it's a list structure
