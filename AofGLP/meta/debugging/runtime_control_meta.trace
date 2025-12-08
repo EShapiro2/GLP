@@ -1,11 +1,7 @@
 === runtime_control_meta.glp ===
+Goal: run(Goal, Cs?, L?, R).
+
 Runtime control metainterpreter with suspend/resume/abort.
-Goal: run(Goal, Cs?, L?, R)
-
-Cs = observed interrupt stream
-L--R = difference list for process dump
-
-Control signals: suspend, resume, abort
+Cs = observed interrupt stream.
+L--R = difference list for process dump.
 On abort: dumps current processes to difference list.
-
-Cases: runtime control, otherwise guard, difference lists

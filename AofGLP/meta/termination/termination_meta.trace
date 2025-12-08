@@ -1,6 +1,6 @@
 === termination_meta.glp ===
-Termination-detecting metainterpreter.
 Goal: run(Goal, done, Result).
 
+Termination-detecting metainterpreter.
 Result binds to 'done' when all goals terminate.
 Uses short-circuit technique.

@@ -1,5 +1,5 @@
 === termination_detection_meta.glp ===
-Termination detection via difference list chain.
 Goal: reduce(Program, Goal, done--Done).
 
+Termination detection via difference list chain.
 Done binds to 'done' when computation terminates.

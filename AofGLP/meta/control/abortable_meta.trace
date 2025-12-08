@@ -1,5 +1,5 @@
 === abortable_meta.glp ===
-Abortable metainterpreter - abort via variable binding.
 Goal: reduce(Program, Goal, Abort).
 
+Abortable metainterpreter - abort via variable binding.
 Bind Abort to 'abort' to stop computation.

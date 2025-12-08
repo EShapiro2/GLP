@@ -1,12 +1,6 @@
 === debugger_meta.glp ===
+Goal: reduce(Program, Goal, N, Tree).
+
 Parallel debugger metainterpreter.
-Goal: reduce(Program, Goal, N, Tree)
-
 N = number of reductions before waiting.
-Tree = execution tree being built.
-
-When N reaches 0, waits for Mode:
-- debug(M, T) continues with M reductions
-- raw executes Goal directly without interpretation
-
-Cases: step debugging, execution trees, mode switching
+When N reaches 0, waits for Mode: debug(M, T) or raw.
