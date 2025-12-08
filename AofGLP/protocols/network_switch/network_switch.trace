@@ -7,4 +7,3 @@ Six clauses handle all routing combinations:
 P→Q, P→R, Q→P, Q→R, R→P, R→Q
 
 Uses receive/send in guards for message routing.
-Cases: ground guard, message routing, channel management

@@ -7,4 +7,3 @@ Uses bounded buffer for flow control.
 Suspends when both output ports are full.
 
 Four clauses handle: In1→Out1, In2→Out1, In1→Out2, In2→Out2
-Cases: bounded buffer, committed choice, nondeterministic routing

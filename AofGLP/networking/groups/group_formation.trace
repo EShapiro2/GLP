@@ -10,5 +10,3 @@ Phases:
 2. Send invitations through friend channels
 3. Members receive invitation with attestation
 4. User accepts/rejects
-
-Cases: social graph extension, attestation guards, group identity

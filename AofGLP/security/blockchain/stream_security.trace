@@ -1,5 +1,6 @@
 === stream_security.glp ===
 Blockchain security properties of GLP streams.
+Goal: extend_stream([H?|T], H, T)
 
 Properties:
 1. IMMUTABILITY: single-assignment prevents rebinding
@@ -8,4 +9,3 @@ Properties:
 4. ACYCLICITY: occurs check prevents circular bindings
 
 Example: Cooperative stream extension with explicit handover.
-Cases: SRSW enforcement, attestation, occurs check

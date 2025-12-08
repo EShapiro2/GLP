@@ -8,4 +8,3 @@ Initializes personal agent with:
 - ChNet: ch(NetIn, NetOut) network channel
 
 Merges user and network inputs, stores output streams in friends list.
-Cases: channel initialization, stream merging, agent architecture

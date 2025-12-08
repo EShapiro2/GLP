@@ -4,5 +4,3 @@ Goal: current_time(T)
 
 time(T) is built-in guard binding T to current timestamp.
 Used in tracing and execution tree metainterpreters.
-
-Cases: built-in guards, timestamping

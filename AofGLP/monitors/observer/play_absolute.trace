@@ -11,5 +11,3 @@ Actors:
 - bob_at: wait(50), subtract(3), value(VB)
 - carol_at: wait(100), add(20), value(VC)
 - diana_at: wait(150), value(VD)
-
-Cases: wait guard, temporal coordination, multi-actor merge

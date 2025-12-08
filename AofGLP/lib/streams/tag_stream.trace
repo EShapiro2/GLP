@@ -5,5 +5,3 @@ Goal: tag_stream(Name, InStream, OutStream)
 When multiple streams merge, source identity is lost.
 Wraps each message M in msg(Name, M) term.
 Tagged streams can be safely merged while preserving source.
-
-Cases: message wrapping, source tracking

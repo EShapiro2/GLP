@@ -3,4 +3,3 @@
 Goal: network((p,Chp?),(q,Chq?),(r,Chr?))
 
 Same as network_switch.glp - routes messages between three agents.
-Cases: ground guard, message routing, committed choice

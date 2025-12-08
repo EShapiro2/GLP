@@ -1,5 +1,6 @@
 === attestation_guards.glp ===
 Security guard predicates for attestation inspection.
+Goal: attestation(X, Info) or module(M)
 
 Guards:
 - attestation(X, Info): succeeds if X carries attestation
@@ -8,4 +9,3 @@ Guards:
 - module(M): binds M to current module identifier
 
 Example: Verify message before processing, check module compatibility.
-Cases: attestation guard, module guard, trust verification

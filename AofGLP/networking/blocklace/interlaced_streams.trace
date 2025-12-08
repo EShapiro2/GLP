@@ -8,5 +8,3 @@ Enables concurrent block creation without consensus.
 Each process maintains stream of blocks with payloads and references
 to most recent blocks observed from others. reader(X) guard identifies
 unprocessed blocks by detecting unbound tail variables.
-
-Cases: reader guard, DAG structure, distributed consensus-free ordering

@@ -7,5 +7,3 @@ When offer accepted:
 - Tags incoming stream with friend id
 - Merges into main input stream
 - Adds friend to friends list
-
-Cases: channel establishment, stream tagging, friends list update

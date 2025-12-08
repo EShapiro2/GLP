@@ -8,5 +8,3 @@ Three-party protocol with attestation exchange:
 2. r sends intro to both p and q
 3. Recipients exchange attestations
 4. User consulted for final decision
-
-Cases: channel creation, attestation, trust transitivity

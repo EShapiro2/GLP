@@ -1,5 +1,6 @@
 === channel_ops.glp ===
 Channel operation primitives.
+Goal: send(X, Ch, Ch1) or receive(X, Ch, Ch1) or new_channel(Ch1, Ch2)
 
 Operations (defined as guard predicates via unit clauses):
 - send(X, Ch, Ch1): adds message X to output stream
@@ -7,4 +8,3 @@ Operations (defined as guard predicates via unit clauses):
 - new_channel(Ch1, Ch2): creates paired channels
 
 A channel is ch(In?,Out) where In? is input reader, Out is output writer.
-Cases: unit clauses as guards, bidirectional channels

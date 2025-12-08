@@ -9,4 +9,3 @@ Four phases:
 4. Channel establishment: response processed
 
 Uses inject/4 to defer insertion until response bound.
-Cases: attestation guards, incomplete messages, stream injection
