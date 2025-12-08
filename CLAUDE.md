@@ -78,6 +78,13 @@ The GLP paper and LaTeX sources:
 - Get explicit user agreement on the plan
 - Only then proceed to implementation
 
+### Instructions from Claude Web
+When receiving instructions from Claude Web (via user copy-paste):
+- **REVIEW FIRST** - Read and understand the instructions before executing
+- **RAISE CONCERNS** - Let Udi know if you have comments, questions, or see potential issues
+- **DON'T BLINDLY EXECUTE** - Wait for confirmation if something seems unclear or problematic
+- Only proceed with execution after review is complete and any concerns are addressed
+
 ### Accuracy and Honesty
 - **NEVER BS, GUESS, SPECULATE, OR HALLUCINATE**
 - **IF UNSURE, SAY SO** - "I'm not sure, need to check X"
