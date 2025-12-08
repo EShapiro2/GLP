@@ -331,11 +331,12 @@ void main() async {
 
       // Set up heap cells for each argument and track variable writers
       final queryVarWriters = <String, int>{};
+      final varNameToId = <String, int>{}; // Track all variables by name
       final argSlots = <int, rt.Term>{};
 
       for (int i = 0; i < args.length; i++) {
         final arg = args[i];
-        _setupArgument(runtime, arg, i, argSlots, queryVarWriters, debugOutput: debugOutput);
+        _setupArgument(runtime, arg, i, argSlots, queryVarWriters, varNameToId, debugOutput: debugOutput);
       }
 
       // Set up goal environment
@@ -681,30 +682,37 @@ void _setupArgument(
   Term arg,
   int argSlot,
   Map<int, rt.Term> argSlots,
-  Map<String, int> queryVarWriters, {
+  Map<String, int> queryVarWriters,
+  Map<String, int> varNameToId, {
   bool debugOutput = false,
 }) {
   if (arg is VarTerm) {
-    // Variable: create fresh writer/reader pair (FCP: both cells created internally)
-    final (writerId, readerId) = runtime.heap.allocateFreshPair();
+    final baseName = arg.name;
+    final existingId = varNameToId[baseName];
 
-    // Track this variable for later display
-    if (!arg.isReader) {
-      queryVarWriters[arg.name] = writerId;
-    }
-
-    // Map to argument slot
-    if (arg.isReader) {
-      argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
+    if (existingId != null) {
+      // Already seen this variable - reuse the same ID
+      if (debugOutput) print('[DEBUG] Existing var $baseName: ${arg.isReader ? "R" : "W"}$existingId');
+      argSlots[argSlot] = rt.VarRef(existingId, isReader: arg.isReader);
     } else {
-      argSlots[argSlot] = rt.VarRef(writerId, isReader: false);
+      // First time seeing this variable - create fresh pair
+      final (writerId, _) = runtime.heap.allocateFreshPair();
+      varNameToId[baseName] = writerId;
+
+      // Track writer for display
+      if (!arg.isReader) {
+        queryVarWriters[baseName] = writerId;
+      }
+
+      if (debugOutput) print('[DEBUG] New var $baseName: ${arg.isReader ? "R" : "W"}$writerId');
+      argSlots[argSlot] = rt.VarRef(writerId, isReader: arg.isReader);
     }
   } else if (arg is ListTerm) {
     // List: create structure and bind it (FCP: both cells created internally)
     final (writerId, readerId) = runtime.heap.allocateFreshPair();
 
     // Build list structure recursively
-    final listValue = _buildListTerm(runtime, arg, queryVarWriters);
+    final listValue = _buildListTerm(runtime, arg, queryVarWriters, varNameToId);
     if (listValue is rt.ConstTerm) {
       runtime.heap.bindWriterConst(writerId, listValue.value);
     } else if (listValue is rt.StructTerm) {
@@ -724,7 +732,7 @@ void _setupArgument(
     final (writerId, readerId) = runtime.heap.allocateFreshPair();
 
     // Build structure term recursively
-    final structValue = _buildStructTerm(runtime, arg, queryVarWriters, debugOutput: debugOutput) as rt.StructTerm;
+    final structValue = _buildStructTerm(runtime, arg, queryVarWriters, varNameToId, debugOutput: debugOutput) as rt.StructTerm;
     runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
 
     argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
@@ -734,7 +742,7 @@ void _setupArgument(
 }
 
 // Build a structure term recursively
-rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int> queryVarWriters, {bool debugOutput = false}) {
+rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int> queryVarWriters, Map<String, int> varNameToId, {bool debugOutput = false}) {
   final argTerms = <rt.Term>[];
 
   for (final arg in struct.args) {
@@ -745,27 +753,23 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
       argTerms.add(rt.VarRef(readerId, isReader: true));
     } else if (arg is VarTerm) {
       // Variable in structure - check if already exists
-      // Note: arg.name does NOT include the '?' suffix, so use it directly
       final baseName = arg.name;
-      final existingWriterId = queryVarWriters[baseName];
-      if (debugOutput) print('[DEBUG REPL] Structure arg: $baseName (isReader=${arg.isReader}), existing=$existingWriterId');
+      final existingId = varNameToId[baseName];
+      if (debugOutput) print('[DEBUG REPL] Structure arg: $baseName (isReader=${arg.isReader}), existing=$existingId');
 
-      if (arg.isReader && existingWriterId != null) {
-        // Reader for existing writer - in single-ID, use same ID
-        if (debugOutput) print('[DEBUG REPL]   Reusing as reader: R$existingWriterId');
-        argTerms.add(rt.VarRef(existingWriterId, isReader: true));
-      } else if (!arg.isReader && existingWriterId != null) {
-        // Writer already exists - reuse it
-        if (debugOutput) print('[DEBUG REPL]   Reusing as writer: W$existingWriterId');
-        argTerms.add(rt.VarRef(existingWriterId, isReader: false));
+      if (existingId != null) {
+        // Already seen this variable - reuse the same ID
+        if (debugOutput) print('[DEBUG REPL]   Reusing: ${arg.isReader ? "R" : "W"}$existingId');
+        argTerms.add(rt.VarRef(existingId, isReader: arg.isReader));
       } else {
         // First occurrence - create fresh pair (FCP: both cells created internally)
-        final (writerId, readerId) = runtime.heap.allocateFreshPair();
-        if (debugOutput) print('[DEBUG REPL]   Creating fresh: W$writerId/R$readerId');
+        final (writerId, _) = runtime.heap.allocateFreshPair();
+        varNameToId[baseName] = writerId;
+        if (debugOutput) print('[DEBUG REPL]   Creating fresh: W$writerId');
         if (!arg.isReader) {
           queryVarWriters[baseName] = writerId;
         }
-        argTerms.add(arg.isReader ? rt.VarRef(readerId, isReader: true) : rt.VarRef(writerId, isReader: false));
+        argTerms.add(rt.VarRef(writerId, isReader: arg.isReader));
       }
     } else if (arg is ListTerm) {
       if (arg.isNil) {
@@ -776,14 +780,14 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
       } else {
         // Non-empty list - recursively build and create writer/reader (FCP: both cells created internally)
         final (writerId, readerId) = runtime.heap.allocateFreshPair();
-        final listValue = _buildListTerm(runtime, arg, queryVarWriters) as rt.StructTerm;
+        final listValue = _buildListTerm(runtime, arg, queryVarWriters, varNameToId) as rt.StructTerm;
         runtime.heap.bindWriterStruct(writerId, listValue.functor, listValue.args);
         argTerms.add(rt.VarRef(readerId, isReader: true));
       }
     } else if (arg is StructTerm) {
       // Nested structure - create bound writer/reader (FCP: both cells created internally)
       final (writerId, readerId) = runtime.heap.allocateFreshPair();
-      final structValue = _buildStructTerm(runtime, arg, queryVarWriters, debugOutput: debugOutput) as rt.StructTerm;
+      final structValue = _buildStructTerm(runtime, arg, queryVarWriters, varNameToId, debugOutput: debugOutput) as rt.StructTerm;
       runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
       argTerms.add(rt.VarRef(readerId, isReader: true));
     } else {
@@ -795,7 +799,7 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
 }
 
 // Build a list term recursively
-rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> queryVarWriters) {
+rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> queryVarWriters, Map<String, int> varNameToId) {
   if (list.isNil) {
     return rt.ConstTerm('nil');  // Empty list represented as 'nil'
   }
@@ -808,16 +812,22 @@ rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> query
   if (head is ConstTerm) {
     headTerm = rt.ConstTerm(head.value);
   } else if (head is VarTerm) {
-    // Variable in list - create writer/reader (FCP: both cells created internally)
-    final (writerId, readerId) = runtime.heap.allocateFreshPair();
-    if (!head.isReader) {
-      queryVarWriters[head.name] = writerId;
+    final baseName = head.name;
+    final existingId = varNameToId[baseName];
+    if (existingId != null) {
+      headTerm = rt.VarRef(existingId, isReader: head.isReader);
+    } else {
+      final (writerId, _) = runtime.heap.allocateFreshPair();
+      varNameToId[baseName] = writerId;
+      if (!head.isReader) {
+        queryVarWriters[baseName] = writerId;
+      }
+      headTerm = rt.VarRef(writerId, isReader: head.isReader);
     }
-    headTerm = head.isReader ? rt.VarRef(readerId, isReader: true) : rt.VarRef(writerId, isReader: false);
   } else if (head is ListTerm) {
-    headTerm = _buildListTerm(runtime, head, queryVarWriters);
+    headTerm = _buildListTerm(runtime, head, queryVarWriters, varNameToId);
   } else if (head is StructTerm) {
-    headTerm = _buildStructTerm(runtime, head, queryVarWriters);
+    headTerm = _buildStructTerm(runtime, head, queryVarWriters, varNameToId);
   } else {
     throw Exception('Unsupported list head type: ${head.runtimeType}');
   }
@@ -825,25 +835,19 @@ rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> query
   // Convert tail to runtime term
   rt.Term tailTerm;
   if (tail is ListTerm) {
-    tailTerm = _buildListTerm(runtime, tail, queryVarWriters);
+    tailTerm = _buildListTerm(runtime, tail, queryVarWriters, varNameToId);
   } else if (tail is VarTerm) {
-    // Variable tail (e.g., [1|Z?]) - check if already exists
     final baseName = tail.name;
-    final existingWriterId = queryVarWriters[baseName];
-
-    if (tail.isReader && existingWriterId != null) {
-      // Reader for existing writer - in single-ID, use same ID
-      tailTerm = rt.VarRef(existingWriterId, isReader: true);
-    } else if (!tail.isReader && existingWriterId != null) {
-      // Writer already exists - reuse it
-      tailTerm = rt.VarRef(existingWriterId, isReader: false);
+    final existingId = varNameToId[baseName];
+    if (existingId != null) {
+      tailTerm = rt.VarRef(existingId, isReader: tail.isReader);
     } else {
-      // First occurrence - create fresh pair (FCP: both cells created internally)
-      final (writerId, readerId) = runtime.heap.allocateFreshPair();
+      final (writerId, _) = runtime.heap.allocateFreshPair();
+      varNameToId[baseName] = writerId;
       if (!tail.isReader) {
         queryVarWriters[baseName] = writerId;
       }
-      tailTerm = tail.isReader ? rt.VarRef(readerId, isReader: true) : rt.VarRef(writerId, isReader: false);
+      tailTerm = rt.VarRef(writerId, isReader: tail.isReader);
     }
   } else {
     tailTerm = rt.ConstTerm(null);

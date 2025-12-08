@@ -1,0 +1,3 @@
+% Test for two-phase HEAD unification with shared variable
+% p(X,X?) and p(X?,X) should both succeed and bind X=a
+p(a,a).

@@ -55,6 +55,7 @@ $GLP_DIR/nonground_list.glp
 $GLP_DIR/reader_output.glp
 $GLP_DIR/two_struct_list.glp
 $GLP_DIR/depth_test.glp
+$GLP_DIR/paa.glp
 append_dl.glp
 hello.
 p(X).
@@ -169,6 +170,8 @@ bin_nest(Xbn, val).
 ter_all(Xta, a, b, c).
 tree3(Xtr3, val).
 multi_w(Xmw, p, q).
+p(Xpaa1, Xpaa1?).
+p(Xpaa2?, Xpaa2).
 :quit
 REPL_INPUT
 2>&1)
@@ -333,8 +336,8 @@ declare -a tests=(
     # Bounded buffer (writer-to-reader alias fix)
     "Open buffer:Xopen = \[\[\] |"
 
-    # Difference list append
-    "DL append:Hdl = \[1, 2 |"
+    # Difference list append (now correctly unifies T1 with T1?)
+    "DL append:Hdl = \[1, 2, 3, 4 |"
 
     # Non-ground list in body (codegen fix)
     "Non-ground list pass:Xngl = \[1, 2, 3, 4\]"
@@ -343,6 +346,10 @@ declare -a tests=(
     # Reader in output position (runtime fix)
     "Unwrap list element:Xunw = hello"
     "Identity returns value:Xid = foo"
+
+    # Two-phase HEAD unification (writer/reader same variable)
+    "p(X,X?) succeeds:Xpaa1 = a"
+    "p(X?,X) succeeds:→ succeeds"
 )
 
 PASS=0
