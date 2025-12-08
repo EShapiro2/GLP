@@ -1,0 +1,10 @@
+=== reverse.glp ===
+Goal: reverse([1,2,3,4], Rs).
+
+GLP> Error loading reverse.glp: Clause for reverse/3 found, expected reverse/2
+Line 5, Column 1:
+reverse([],Acc?,Acc?).
+^
+GLP> Error: Predicate reverse/2 not found
+Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
+GLP> 

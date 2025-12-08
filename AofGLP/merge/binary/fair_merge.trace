@@ -1,0 +1,15 @@
+=== fair_merge.glp ===
+Goal: merge([1,2,3], [a,b,c], Zs).
+
+GLP> ✓ Loaded: fair_merge.glp
+GLP> merge([1, 2, 3], [a, b, c], Zs) :- merge([a, b, c], [2, 3], X1)
+merge([a, b, c], [2, 3], X1) :- merge([2, 3], [b, c], X2)
+merge([2, 3], [b, c], X2) :- merge([b, c], [3], X3)
+merge([b, c], [3], X3) :- merge([3], [c], X4)
+merge([3], [c], X4) :- merge([c], [], X5)
+merge([c], [], X5) :- merge([], [], X6)
+merge([], [], X6) :- true
+Zs = [1, a, 2, b, 3, c]
+→ succeeds
+
+GLP> 

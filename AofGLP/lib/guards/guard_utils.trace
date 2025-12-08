@@ -1,0 +1,12 @@
+=== guard_utils.glp ===
+Common guard utility predicates (built-ins documented).
+
+Built-in guards:
+- ground(X): succeeds when X contains no unbound variables
+- known(X): succeeds if X is bound
+- unknown(X): succeeds if X is unbound
+- reader(X): succeeds if X is a reader (X?)
+- writer(X): succeeds if X is a writer (X)
+- otherwise: succeeds if no other clause matches
+
+Cases: synchronization guards, mode detection

@@ -1,0 +1,9 @@
+=== lookup.glp ===
+List lookup utilities.
+Goal: lookup(Key, List, Value) or lookup_send(Key, Msg, Fs, Fs1)
+
+- lookup/3: finds value associated with key in association list
+- lookup_send/4: sends message through channel and updates friends list
+- update/4: updates value for key in association list
+
+Cases: association lists, key-value lookup, in-place update

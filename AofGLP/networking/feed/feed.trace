@@ -1,0 +1,9 @@
+=== feed.glp ===
+Authenticated feed distribution.
+Goal: post(Content, Followers, Followers1)
+
+Broadcasts posts to followers with attestation preservation.
+When forwarding, original attestation preserved while adding forwarder's,
+creating cryptographically verifiable provenance chain.
+
+Cases: ground guard, attestation, broadcast pattern

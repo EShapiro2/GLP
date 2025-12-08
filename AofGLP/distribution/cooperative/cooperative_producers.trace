@@ -1,0 +1,6 @@
+=== cooperative_producers.glp ===
+Pattern: Cooperative stream production via explicit handover
+Goal: producer_a(control(Xs, Next)).
+
+This demonstrates round-robin production where multiple producers
+coordinate through explicit handover of the stream tail writer.

@@ -1,0 +1,10 @@
+=== network_switch.glp ===
+3-way network switch.
+Goal: network((p,Chp?),(q,Chq?),(r,Chr?))
+
+Routes messages between three agents based on destination.
+Six clauses handle all routing combinations:
+P→Q, P→R, Q→P, Q→R, R→P, R→Q
+
+Uses receive/send in guards for message routing.
+Cases: ground guard, message routing, channel management

@@ -1,0 +1,6 @@
+=== rectangular_area.glp ===
+Base class for window hierarchy.
+Goal: rectangular_area([clear, ask(P)], params(10,20,100,80)).
+
+Methods: clear (clears area), ask(Params) (returns parameters)
+Parameters = (Xpos, Ypos, Width, Height)

@@ -1,0 +1,9 @@
+=== group_messaging.glp ===
+Group messaging via interlaced streams.
+Goal: group_member(Id, (Founder, Name), Streams)
+
+Members post independently without control tokens.
+Interlaced streams ensure each block references observed messages,
+creating natural causal ordering.
+
+Cases: interlaced streams, causal ordering, concurrent posting

@@ -1,0 +1,5 @@
+=== distribute_binary.glp ===
+Goal: distribute_binary([req([0],a), req([1],b)], Y, Z).
+Note: Binary address routing. REPL limitation: structs in lists not fully supported.
+
+Expected result: Y = [req([],a)], Z = [req([],b)]

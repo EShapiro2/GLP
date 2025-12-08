@@ -1,0 +1,10 @@
+=== relay.glp ===
+Stream-channel relay.
+Goal: relay(In, Out?, Ch)
+
+Bidirectional relay between stream pair and channel.
+First clause: reads from input stream, sends to channel.
+Second clause: receives from channel, writes to output.
+Channel state threads through recursive calls.
+
+Cases: guard unification, bidirectional communication

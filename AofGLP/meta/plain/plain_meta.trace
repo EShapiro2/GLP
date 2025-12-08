@@ -1,0 +1,10 @@
+=== plain_meta.glp ===
+Goal: run(merge([1,2], [a,b], Xs)).
+
+GLP> Error loading plain_meta.glp: SRSW violation: Writer variable "A" occurs 2 times in clause
+Line 10, Column 5:
+run(A) :- known(A) | reduce(A?,B), run(B?). %  reduce
+    ^
+GLP> Error: Predicate run/1 not found
+Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
+GLP> 

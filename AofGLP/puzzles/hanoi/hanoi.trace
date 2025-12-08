@@ -1,0 +1,10 @@
+=== hanoi.glp ===
+Goal: hanoi(3, a, b, c, Moves).
+
+GLP> Error loading hanoi.glp: SRSW violation: Reader variable "From?" occurs 3 times without ground guard
+Line 5, Column 10:
+hanoi(N, From, To, Moves?) :-
+         ^
+GLP> Error: Predicate hanoi/5 not found
+Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
+GLP> 

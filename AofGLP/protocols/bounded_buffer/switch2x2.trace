@@ -1,0 +1,10 @@
+=== switch2x2.glp ===
+2x2 communication switch.
+Goal: switch2x2(In1, In2, Out1, Out2)
+
+Routes messages from two input ports to two output ports.
+Uses bounded buffer for flow control.
+Suspends when both output ports are full.
+
+Four clauses handle: In1→Out1, In2→Out1, In1→Out2, In2→Out2
+Cases: bounded buffer, committed choice, nondeterministic routing

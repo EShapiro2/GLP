@@ -1,0 +1,7 @@
+=== frame.glp ===
+Window frame - subclass of rectangular_area.
+Goal: create_frame(Msgs, params(10,20,100,80)).
+
+Own methods: draw (draws 4 border lines), refresh (clear + draw)
+Inherited: clear, ask (delegated to rectangular_area)
+Demonstrates filter pattern for inheritance.

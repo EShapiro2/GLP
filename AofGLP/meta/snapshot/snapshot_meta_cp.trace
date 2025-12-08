@@ -1,0 +1,9 @@
+=== snapshot_meta_cp.glp ===
+Snapshot metainterpreter from CP Collected Papers.
+Goal: reduce(Program, Goal, Left?--Right)
+
+When Left bound to [shot([])|Rest], Right? gets [shot(Processes)|...]
+Processes is list of currently active goals.
+
+Uses difference list chain for snapshot collection.
+Cases: process inspection, difference lists, control signals

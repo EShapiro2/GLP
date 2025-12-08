@@ -1,0 +1,5 @@
+=== certainty_meta.glp ===
+Metainterpreter computing certainty factors.
+Goal: reduce(Program, Goal, Certainty).
+
+halt: certainty 1, fork: min of branches, reduce: multiply by clause certainty

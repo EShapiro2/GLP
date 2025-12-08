@@ -1,0 +1,11 @@
+=== dynamic_merger.glp ===
+Goal: merger(Ws, [1,2,3], Out).
+Note: Allows dynamic addition of streams via merge(NewStream) messages.
+
+GLP> Error loading dynamic_merger.glp: SRSW violation: Writer variable "X" occurs 2 times in clause
+Line 14, Column 8:
+merge([X|Xs],Ys,[X?|Zs?]) :-
+       ^
+GLP> Error: Predicate merger/3 not found
+Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
+GLP> 

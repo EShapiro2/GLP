@@ -1,0 +1,18 @@
+=== merge_tree.glp ===
+Goal: merge_tree([[1,2], [a,b], [x,y]], Out).
+
+GLP> ✓ Loaded: merge_tree.glp
+GLP> merge_tree([[1, 2], [a, b]], Out) :- merge_layer([[1, 2] | [[a, b]]], X1), merge_tree(X1?, X2)
+merge_layer([[1, 2] | [[a, b]]], X1) :- merge([1, 2], [a, b], X3), merge_layer([], X4)
+merge_tree([X3? | X4?], X2) → suspended
+merge([1, 2], [a, b], X3) :- merge([a, b], [2], X5)
+merge_layer([], X4) :- true
+merge([a, b], [2], X5) :- merge([2], [b], X6)
+merge_tree([[1 | [a | X6?]] | []], X2) :- true
+merge([2], [b], X6) :- merge([b], [], X7)
+merge([b], [], X7) :- merge([], [], X8)
+merge([], [], X8) :- true
+Out = [1, a, 2, b]
+→ succeeds
+
+GLP> 

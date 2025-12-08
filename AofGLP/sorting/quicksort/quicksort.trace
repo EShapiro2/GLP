@@ -1,0 +1,18 @@
+=== quicksort.glp ===
+Goal: quicksort([3,1,4,1,5,9,2,6], Sorted).
+
+qsort(X9?, X11, [3 | X5?]) → suspended
+qsort([4 | X13?], X5, []) :- partition(X13?, 4, X14, X15), qsort(X14?, X16, [4 | X17?]), qsort(X15?, X17, [])
+partition([1, 5, 9, 2, 6], 3, X12, X13) :- partition([5, 9, 2, 6], 3, X18, X19)
+partition(X13?, 4, X14, X15) → suspended
+qsort(X14?, X16, [4 | X17?]) → suspended
+qsort(X15?, X17, []) → suspended
+partition([1 | X18?], 1, X8, X9) :- partition(X18?, 1, X20, X21)
+partition([5, 9, 2, 6], 3, X18, X19) :- partition([9, 2, 6], 3, X22, X23)
+qsort([1 | X20?], X10, [1 | X11?]) :- partition(X20?, 1, X24, X25), qsort(X24?, X26, [1 | X27?]), qsort(X25?, X27, [1 | X11?])
+partition(X18?, 1, X20, X21) → suspended
+partition([5 | X23?], 4, X14, X15) :- partition(X23?, 4, X28, X29)
+partition([9, 2, 6], 3, X22, X23) :- partition([2, 6], 3, X30, X31)
+partition(X20?, 1, X24, X25) → suspended
+--
+GLP> 

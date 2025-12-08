@@ -1,7 +1,7 @@
-=== distribute.glp (broadcast) ===
+=== distribute.glp (ground) ===
 Goal: distribute([a,b,c], Y, Z).
 
-GLP> ✓ Loaded: distribute_broadcast.glp
+GLP> ✓ Loaded: distribute_ground.glp
 GLP> distribute([a, b, c], Y, Z) :- distribute([b, c], X1, X2)
 distribute([b, c], X1, X2) :- distribute([c], X3, X4)
 distribute([c], X3, X4) :- distribute([], X5, X6)

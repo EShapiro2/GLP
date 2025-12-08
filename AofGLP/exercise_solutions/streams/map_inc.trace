@@ -1,0 +1,15 @@
+=== map_inc.glp ===
+Goal: map_inc([1,2,3], Ys).
+
+GLP> ✓ Loaded: map_inc.glp
+GLP> map_inc([1, 2, 3], Ys) :- :=/2(X1, +(1, 1)), map_inc([2, 3], X2)
+:=/2(X1, +(1, 1)) :- true
+map_inc([2, 3], X2) :- :=/2(X3, +(2, 1)), map_inc([3], X4)
+:=/2(X3, +(2, 1)) :- true
+map_inc([3], X4) :- :=/2(X5, +(3, 1)), map_inc([], X6)
+:=/2(X5, +(3, 1)) :- true
+map_inc([], X6) :- true
+Ys = [2, 3, 4]
+→ succeeds
+
+GLP> 

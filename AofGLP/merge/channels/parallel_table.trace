@@ -1,0 +1,5 @@
+=== parallel_table.glp ===
+Parallel lookup table using channels for concurrent access.
+Operations: lookup(Key, Value?, true), store(Key, Value)
+
+Each process spans a portion of key space.

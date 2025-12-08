@@ -1,147 +1,44 @@
-%% recursive.trace - Execution traces for recursive GLP examples
-%% Generated: 2025-12-07
+=== recursive.glp ===
+Contains: mergesort, quicksort, fib, flatten
 
-%% =============================================================================
-%% MERGESORT - Divide and Conquer (WORKS)
-%% =============================================================================
+Goal 1: mergesort([3,1,4,1,5], S).
+mergesort([1 | X32?], X15) :- split([1 | X32?], X34, X35), mergesort(X34?, X36), mergesort(X35?, X37), merge_sorted(X36?, X37?, X38)
+mergesort([1 | X33?], X16) :- split([1 | X33?], X39, X40), mergesort(X39?, X41), mergesort(X40?, X42), merge_sorted(X41?, X42?, X43)
+merge_sorted(X15?, X16?, X17) → suspended
+split([5], X18, X19) :- true
+split([5], X20, X21) :- true
+split([3 | [5]], X22, X23) :- split([], X44, X45)
+mergesort([3 | X44?], X24) :- split([3 | X44?], X46, X47), mergesort(X46?, X48), mergesort(X47?, X49), merge_sorted(X48?, X49?, X50)
+mergesort([5 | X45?], X25) :- split([5 | X45?], X51, X52), mergesort(X51?, X53), mergesort(X52?, X54), merge_sorted(X53?, X54?, X55)
+merge_sorted(X24?, X25?, X26) → suspended
+split([4 | []], X27, X28) :- true
+--
+GLP> 
 
-GLP> :trace
-GLP> mergesort([3,1,4], S1).
+Goal 2: quicksort([3,1,4,1,5], S).
+partition(X13?, 4, X14, X15) → suspended
+qsort(X14?, X16, [4 | X17?]) → suspended
+qsort(X15?, X17, []) → suspended
+partition([1 | X18?], 1, X8, X9) :- partition(X18?, 1, X20, X21)
+partition([5], 3, X18, X19) :- partition([], 3, X22, X23)
+qsort([1 | X20?], X10, [1 | X11?]) :- partition(X20?, 1, X24, X25), qsort(X24?, X26, [1 | X27?]), qsort(X25?, X27, [1 | X11?])
+partition(X18?, 1, X20, X21) → suspended
+partition([5 | X23?], 4, X14, X15) :- partition(X23?, 4, X28, X29)
+partition([], 3, X22, X23) :- true
+partition(X20?, 1, X24, X25) → suspended
+--
+GLP> 
 
-mergesort([3, 1, 4], S1) :- split([3, 1, 4], X1, X2), mergesort(X1?, X3), mergesort(X2?, X4), merge_sorted(X3?, X4?, X5)
-split([3, 1, 4], X1, X2) :- split([4], X6, X7)
-mergesort([3 | X6?], X3) :- split([3 | X6?], X8, X9), mergesort(X8?, X10), mergesort(X9?, X11), merge_sorted(X10?, X11?, X12)
-mergesort([1 | X7?], X4) :- split([1 | X7?], X13, X14), mergesort(X13?, X15), mergesort(X14?, X16), merge_sorted(X15?, X16?, X17)
-merge_sorted(X3?, X4?, X5) → suspended
-split([4], X6, X7) :- true
-split([3 | [4]], X8, X9) :- split([], X18, X19)
-mergesort([3 | X18?], X10) :- split([3 | X18?], X20, X21), mergesort(X20?, X22), mergesort(X21?, X23), merge_sorted(X22?, X23?, X24)
-mergesort([4 | X19?], X11) :- split([4 | X19?], X25, X26), mergesort(X25?, X27), mergesort(X26?, X28), merge_sorted(X27?, X28?, X29)
-merge_sorted(X10?, X11?, X12) → suspended
-split([1 | []], X13, X14) :- true
-mergesort([1], X15) :- true
-mergesort([], X16) :- true
-merge_sorted([1], [], X17) :- true
-split([], X18, X19) :- true
-split([3 | []], X20, X21) :- true
-mergesort([3], X22) :- true
-mergesort([], X23) :- true
-merge_sorted([3], [], X24) :- true
-split([4 | []], X25, X26) :- true
-mergesort([4], X27) :- true
-mergesort([], X28) :- true
-merge_sorted([4], [], X29) :- true
-merge_sorted(X3?, [1], X5) → suspended
-merge_sorted([3], [4], X12) :- merge_sorted([], [4 | []], X30)
-merge_sorted([3 | X30?], [1], X5) :- merge_sorted([3 | X30?], [], X31)
-merge_sorted([], [4 | []], X30) :- true
-merge_sorted([3 | [4 | []]], [], X31) :- true
-
-S1 = [1, 3, 4]
-→ succeeds
-
-%% Key observations:
-%% - split divides [3,1,4] into [3,4] and [1]
-%% - Recursive mergesorts run concurrently on halves
-%% - merge_sorted suspends until both halves are sorted
-%% - Comparison guards (=<, <) select correct merge clause
-
-%% =============================================================================
-%% QUICKSORT - Difference Lists (WORKS)
-%% =============================================================================
-
-GLP> :trace
-GLP> quicksort([3,1,4], S2).
-
-quicksort([3, 1, 4], S2) :- qsort([3, 1, 4], X1, [])
-qsort([3, 1, 4], X1, []) :- partition([1, 4], 3, X2, X3), qsort(X2?, X4, [3 | X5?]), qsort(X3?, X5, [])
-partition([1, 4], 3, X2, X3) :- partition([4], 3, X6, X7)
-qsort([1 | X6?], X4, [3 | X5?]) :- partition(X6?, 1, X8, X9), qsort(X8?, X10, [1 | X11?]), qsort(X9?, X11, [3 | X5?])
-qsort(X3?, X5, []) → suspended
-partition([4], 3, X6, X7) :- partition([], 3, X12, X13)
-partition(X6?, 1, X8, X9) → suspended
-qsort(X8?, X10, [1 | X11?]) → suspended
-qsort(X9?, X11, [3 | X5?]) → suspended
-qsort([4 | X13?], X5, []) :- partition(X13?, 4, X14, X15), qsort(X14?, X16, [4 | X17?]), qsort(X15?, X17, [])
-partition([], 3, X12, X13) :- true
-partition([], 4, X14, X15) :- true
-qsort([], X16, [4 | X17?]) :- true
-qsort([], X17, []) :- true
-partition([], 1, X8, X9) :- true
-qsort([], X10, [1 | X11?]) :- true
-qsort([], X11, [3 | [4 | []]]) :- true
-
-S2 = [1, 3, 4]
-→ succeeds
-
-%% Key: Using Smaller? and Larger? (readers) in output position allows
-%% them to receive bindings from recursive calls.
-
-%% =============================================================================
-%% FIBONACCI - Tree Recursion (WORKS)
-%% =============================================================================
-
-GLP> :trace
-GLP> fib(5, F).
-
-fib(5, F) :- :=/2(X1, -(5, 1)), :=/2(X2, -(5, 2)), fib(X1?, X3), fib(X2?, X4), :=/2(X5, +(X3?, X4?))
-:=/2(X1, -(5, 1)) :- true
-:=/2(X2, -(5, 2)) :- true
-fib(4, X3) :- :=/2(X6, -(4, 1)), :=/2(X7, -(4, 2)), fib(X6?, X8), fib(X7?, X9), :=/2(X10, +(X8?, X9?))
-fib(3, X4) :- :=/2(X11, -(3, 1)), :=/2(X12, -(3, 2)), fib(X11?, X13), fib(X12?, X14), :=/2(X15, +(X13?, X14?))
-:=/2(X5, +(X3?, X4?)) → suspended
-:=/2(X6, -(4, 1)) :- true
-:=/2(X7, -(4, 2)) :- true
-fib(3, X8) :- :=/2(X16, -(3, 1)), :=/2(X17, -(3, 2)), fib(X16?, X18), fib(X17?, X19), :=/2(X20, +(X18?, X19?))
-fib(2, X9) :- :=/2(X21, -(2, 1)), :=/2(X22, -(2, 2)), fib(X21?, X23), fib(X22?, X24), :=/2(X25, +(X23?, X24?))
-:=/2(X10, +(X8?, X9?)) → suspended
-:=/2(X11, -(3, 1)) :- true
-:=/2(X12, -(3, 2)) :- true
-fib(2, X13) :- :=/2(X26, -(2, 1)), :=/2(X27, -(2, 2)), fib(X26?, X28), fib(X27?, X29), :=/2(X30, +(X28?, X29?))
-fib(1, X14) :- true
-:=/2(X15, +(X13?, 1)) → suspended
-:=/2(X16, -(3, 1)) :- true
-:=/2(X17, -(3, 2)) :- true
-fib(2, X18) :- :=/2(X31, -(2, 1)), :=/2(X32, -(2, 2)), fib(X31?, X33), fib(X32?, X34), :=/2(X35, +(X33?, X34?))
-fib(1, X19) :- true
-:=/2(X20, +(X18?, 1)) → suspended
-:=/2(X21, -(2, 1)) :- true
-:=/2(X22, -(2, 2)) :- true
-fib(1, X23) :- true
-fib(0, X24) :- true
-:=/2(X25, +(1, 0)) :- true
-:=/2(X26, -(2, 1)) :- true
-:=/2(X27, -(2, 2)) :- true
-fib(1, X28) :- true
-fib(0, X29) :- true
-:=/2(X30, +(1, 0)) :- true
-:=/2(X31, -(2, 1)) :- true
-:=/2(X32, -(2, 2)) :- true
-fib(1, X33) :- true
-fib(0, X34) :- true
-:=/2(X35, +(1, 0)) :- true
-:=/2(X15, +(1, 1)) :- true
-:=/2(X20, +(1, 1)) :- true
-:=/2(X10, +(2, 1)) :- true
-:=/2(X5, +(3, 2)) :- true
-
-F = 5
-→ succeeds
-
-%% Key observations:
-%% - fib(5) spawns fib(4) and fib(3) concurrently
-%% - Base cases fib(0)=0, fib(1)=1 complete immediately
-%% - Assignments suspend until operands are bound
-%% - Results bubble up: 1+0=1, 1+1=2, 2+1=3, 3+2=5
-
-%% =============================================================================
-%% FLATTEN - Tree Recursion on Structure (MISSING GUARD)
-%% =============================================================================
-
-GLP> flatten([[1,2],[3,[4,5]],6], Flat).
-Flat = [[1, 2], [3, [4, 5]], 6]
-→ succeeds (but incorrect!)
-
-%% Issue: is_list/1 guard is not implemented in the runtime.
-%% All elements fall through to the otherwise clause.
-%% Expected result should be: [1, 2, 3, 4, 5, 6]
+Goal 3: fib(8, F).
+:=/2(X11, -(6, 1)) :- true
+:=/2(X12, -(6, 2)) :- true
+fib(5, X13) :- :=/2(X26, -(5, 1)), :=/2(X27, -(5, 2)), fib(X26?, X28), fib(X27?, X29), :=/2(X30, +(X28?, X29?))
+fib(4, X14) :- :=/2(X31, -(4, 1)), :=/2(X32, -(4, 2)), fib(X31?, X33), fib(X32?, X34), :=/2(X35, +(X33?, X34?))
+:=/2(X15, +(X13?, X14?)) → suspended
+:=/2(X16, -(6, 1)) :- true
+:=/2(X17, -(6, 2)) :- true
+fib(5, X18) :- :=/2(X36, -(5, 1)), :=/2(X37, -(5, 2)), fib(X36?, X38), fib(X37?, X39), :=/2(X40, +(X38?, X39?))
+fib(4, X19) :- :=/2(X41, -(4, 1)), :=/2(X42, -(4, 2)), fib(X41?, X43), fib(X42?, X44), :=/2(X45, +(X43?, X44?))
+:=/2(X20, +(X18?, X19?)) → suspended
+--
+GLP> 

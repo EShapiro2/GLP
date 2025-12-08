@@ -1,0 +1,10 @@
+=== length.glp ===
+Goal: length([a,b,c,d,e], N).
+
+GLP> Error loading length.glp: Clause for length/3 found, expected length/2
+Line 5, Column 1:
+length([], Acc?, Acc?).
+^
+GLP> Error: Predicate length/2 not found
+Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
+GLP> 

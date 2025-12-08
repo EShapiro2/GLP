@@ -1,0 +1,5 @@
+=== control_meta.glp ===
+Metainterpreter with suspend/resume/abort via control stream.
+Goal: run(Goal, ControlStream).
+
+Control messages: [suspend|Cs], [resume|Cs], [abort|Cs]

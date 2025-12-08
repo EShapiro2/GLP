@@ -1,0 +1,9 @@
+=== tracing_meta.glp ===
+Tracing metainterpreter producing execution trace.
+Goal: run(Goal, Trace)
+
+Trace is tree of (I:Time) :- SubTrace entries.
+I = clause serial number, Time = timestamp.
+Enables single-stepping through run with same scheduling.
+
+Cases: execution tracing, timestamping, clause identification

@@ -1,0 +1,18 @@
+=== insertion_sort.glp ===
+Goal: insertion_sort([3,1,4,1,5], Sorted).
+
+insert(1, X7?, X8) → suspended
+insertion_sort([], X9) :- true
+insert(5, [], X10) :- true
+insert(1, [5], X8) :- true
+insert(4, [1, 5 | []], X6) :- insert(4, [5 | []], X11)
+insert(1, [1 | X11?], X4) :- insert(1, X11?, X12)
+insert(4, [5 | []], X11) :- true
+insert(3, [1 | X12?], X2) :- insert(3, X12?, X13)
+insert(1, [4, 5 | []], X12) :- true
+insert(3, [1, 4 | [5 | []]], X13) :- insert(3, [4 | [5 | []]], X14)
+insert(3, [4 | [5 | []]], X14) :- true
+Sorted = [1, 1, 3, 4, 5]
+→ succeeds
+--
+GLP> 

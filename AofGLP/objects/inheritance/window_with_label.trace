@@ -1,0 +1,7 @@
+=== window_with_label.glp ===
+Window with label - subclass of frame.
+Goal: create_window_with_label(Msgs, "Title", params(10,20,100,80)).
+
+Own methods: change(Label), show (displays label)
+Inherited: draw, refresh, clear, ask
+Uses otherwise guard for default message handling.

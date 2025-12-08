@@ -1,0 +1,11 @@
+=== response_handling.glp ===
+Channel establishment and response handling.
+Goal: bind_response(Decision, From, Resp, Fs, Fs1, In, In1)
+
+When offer accepted:
+- Creates new channel
+- Tags incoming stream with friend id
+- Merges into main input stream
+- Adds friend to friends list
+
+Cases: channel establishment, stream tagging, friends list update

@@ -1,0 +1,10 @@
+=== inject.glp ===
+Deferred message injection.
+Goal: inject(Trigger, Msg, InStream, OutStream)
+
+Defers insertion until trigger variable becomes bound.
+Allows stream to continue flowing while waiting.
+When Trigger known, inserts Msg at output.
+Until then, passes messages through.
+
+Cases: known/unknown guards, non-blocking protocols

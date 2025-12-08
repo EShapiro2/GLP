@@ -1,0 +1,8 @@
+=== timestamped_tree_meta.glp ===
+Timestamped execution tree metainterpreter.
+Goal: run(Goal, Tree)
+
+Tree records reductions and temporal order.
+Uses observe/3 to create reader copy: one for tree output, one for execution.
+
+Cases: execution trees, observe mechanism, timestamp recording

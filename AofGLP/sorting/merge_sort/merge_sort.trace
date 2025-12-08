@@ -1,0 +1,10 @@
+=== merge_sort.glp ===
+Goal: merge_sort([3,1,4,1,5,9,2,6], Sorted).
+
+GLP> Error loading merge_sort.glp: SRSW violation: Reader variable "Xs?" occurs 2 times without ground guard
+Line 6, Column 12:
+merge_sort(Xs, Sorted?) :-
+           ^
+GLP> Error: Predicate merge_sort/2 not found
+Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
+GLP> 

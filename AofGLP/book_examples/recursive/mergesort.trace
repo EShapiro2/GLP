@@ -1,0 +1,18 @@
+=== mergesort.glp ===
+Goal: mergesort([3,1,4,1,5,9], S).
+
+mergesort([4 | X21?], X11) :- split([4 | X21?], X27, X28), mergesort(X27?, X29), mergesort(X28?, X30), merge_sorted(X29?, X30?, X31)
+merge_sorted(X10?, X11?, X12) → suspended
+split([1 | [1 | X19?]], X13, X14) :- split(X19?, X32, X33)
+mergesort([1 | X32?], X15) :- split([1 | X32?], X34, X35), mergesort(X34?, X36), mergesort(X35?, X37), merge_sorted(X36?, X37?, X38)
+mergesort([1 | X33?], X16) :- split([1 | X33?], X39, X40), mergesort(X39?, X41), mergesort(X40?, X42), merge_sorted(X41?, X42?, X43)
+merge_sorted(X15?, X16?, X17) → suspended
+split([5, 9], X18, X19) :- split([], X44, X45)
+split([5 | X44?], X20, X21) → suspended
+split([3 | X20?], X22, X23) → suspended
+mergesort(X22?, X24) :- split(X22?, X46, X47), mergesort(X46?, X48), mergesort(X47?, X49), merge_sorted(X48?, X49?, X50)
+mergesort(X23?, X25) :- split(X23?, X51, X52), mergesort(X51?, X53), mergesort(X52?, X54), merge_sorted(X53?, X54?, X55)
+merge_sorted(X24?, X25?, X26) → suspended
+split([4 | X21?], X27, X28) → suspended
+--
+GLP> 

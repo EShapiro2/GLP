@@ -1,0 +1,10 @@
+=== plus_constraint.glp ===
+Goal: plus(X, 3, 10).
+
+GLP> Error loading plus_constraint.glp: SRSW violation: Reader variable "X?" occurs 2 times without ground guard
+Line 7, Column 6:
+plus(X, Y, Z) :- known(X?), known(Y?) | Z := X? + Y?.
+     ^
+GLP> Error: Predicate plus/3 not found
+Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
+GLP> 

@@ -1,21 +1,7 @@
-% Goal: test_monitor(V1, V2).
-% Result: V1 = 8, V2 = 16
-%
-% Two clients send requests to a shared monitor with timing.
-% Client 1 sends immediately; Client 2 waits 100ms before starting.
-%
-% Due to wait guard, client1's messages are processed first.
-% Client1's value query sees only its own operations: 5 + 3 = 8
-% Client2's value query sees all operations: 5 + 10 + 3 - 2 = 16
+=== monitor_test.glp ===
+Goal: test_monitor(V1, V2).
+Note: Two clients with wait guards for temporal coordination
 
-test_monitor(V1, V2) :- client1(X1, X2), client2(X3, X4), merge(X2?, X4?, X5), monitor(X5?)
-client1(X1, X2) :- client1_cont(X6)
-client2(X3, X4) → suspended
-merge([add(5), add(3), value(X1?) | X6?], X4?, X5) :- merge(X4?, [add(3), value(X1?) | X6?], X7)
-monitor([add(5) | X7?]) :- monitor_loop([add(5) | X7?], 0)
-client1_cont(X6) :- true
-merge(X4?, [add(3), value(X1?) | []], X7) :- merge(X4?, [value(X1?) | []], X8)
-monitor_loop([add(5) | [add(3) | X8?]], 0) :- :=/2(X9, +(0, 5)), monitor_loop([add(3) | X8?], X9?)
 merge(X4?, [value(X1?) | []], X8) :- merge(X4?, [], X10)
 :=/2(X9, +(0, 5)) :- true
 monitor_loop([add(3) | [value(X1?) | X10?]], 5) :- :=/2(X11, +(5, 3)), monitor_loop([value(X1?) | X10?], X11?)
@@ -29,16 +15,5 @@ client2(X3, X4) :- =/2(X12, [add(10) | [subtract(2) | [value(X3?) | X13?]]]), cl
 client2_cont(X13) :- true
 merge([add(10) | [subtract(2) | [value(X3?) | []]]], [], X10) :- merge([], [subtract(2) | [value(X3?) | []]], X14)
 monitor_loop([add(10) | X14?], 8) :- :=/2(X15, +(8, 10)), monitor_loop(X14?, X15?)
-merge([], [subtract(2) | [value(X3?) | []]], X14) :- merge([], [value(X3?) | []], X16)
-:=/2(X15, +(8, 10)) :- true
-monitor_loop([subtract(2) | X16?], 18) :- :=/2(X17, -(18, 2)), monitor_loop(X16?, X17?)
-merge([], [value(X3?) | []], X16) :- merge([], [], X18)
-:=/2(X17, -(18, 2)) :- true
-monitor_loop([value(X3?) | X18?], 16) :- =/2(X3, 16), monitor_loop(X18?, 16)
-merge([], [], X18) :- true
-=/2(X3, 16) :- true
-monitor_loop([], 16) :- true
-
-V1 = 8
-V2 = 16
-→ succeeds
+--
+GLP> 

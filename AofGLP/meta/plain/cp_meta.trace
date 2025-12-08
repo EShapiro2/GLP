@@ -1,0 +1,5 @@
+=== cp_meta.glp ===
+Concurrent Prolog metainterpreter - program as explicit argument.
+Goal: reduce(Program, Goal).
+
+Program is list of clauses, each as (Head, Guard, Body).

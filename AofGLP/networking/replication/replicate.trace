@@ -1,0 +1,9 @@
+=== replicate.glp ===
+Non-ground term replicator.
+Goal: replicate2(Xs, Ys1, Ys2) or replicate3(Xs, Ys1, Ys2, Ys3)
+
+Replicates incrementally-constructed terms with uninstantiated readers.
+Suspends on readers, resumes when values available.
+
+Variants: replicate2 (binary), replicate3 (ternary), generalizes to n copies.
+Cases: ground guard, suspension/resumption, incremental replication

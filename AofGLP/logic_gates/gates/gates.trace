@@ -1,0 +1,12 @@
+=== gates.glp ===
+Goal: and([one,zero,one], [one,one,zero], Zs).
+
+GLP> ✓ Loaded: gates.glp
+GLP> and([one, zero, one], [one, one, zero], Zs) :- and([zero, one], [one, zero], X1)
+and([zero, one], [one, zero], X1) :- and([one], [zero], X2)
+and([one], [zero], X2) :- and([], [], X3)
+and([], [], X3) :- true
+Zs = [one, zero, zero]
+→ succeeds
+
+GLP> 

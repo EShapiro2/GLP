@@ -1,0 +1,5 @@
+=== failsafe_meta.glp ===
+Fail-safe metainterpreter - reports failures instead of aborting.
+Goal: run(Goal, FailureStream).
+
+Collects fail(Goal) terms in output stream.
