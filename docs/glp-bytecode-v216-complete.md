@@ -14,7 +14,7 @@ The V2 unified opcodes are now the ONLY supported instruction format. Codegen em
 ## 0. ISA Conventions
 - **σ̂w** denotes the goal-local tentative writer substitution; it exists only during HEAD/GUARD phases and is discarded at clause_next.
 - **U** denotes the goal-level suspension set (readers on which the goal is blocked).
-- **Suspension model**: On first unbound reader encountered in HEAD/GUARD, add to U and immediately try next clause (no clause-local accumulation).
+- **Suspension model**: HEAD unification uses two phases: (1) Collection—traverse arguments left-to-right, accumulating tentative writer bindings σ̂w and a preliminary suspension set S; (2) Resolution—compute S' = {X? ∈ S : X ∉ dom(σ̂w)}, succeed if S' empty, else add S' to U and try next clause.
 - **Phases per clause Ci**: HEAD_i ; GUARDS_i ; BODY_i.
 - **Registers**: A (arguments), X (temporaries). Env stack E.
 - **κ** denotes the clause-selection entry PC of the current procedure (the PC where the first clause of the procedure begins).
