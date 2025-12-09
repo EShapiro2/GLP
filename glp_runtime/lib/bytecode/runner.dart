@@ -269,6 +269,8 @@ class BytecodeRunner {
     // print('[TRACE _suspendAndFail] Goal ${cx.goalId} adding R$readerId to U, failing to next clause');
 //     print('  Current PC: $currentPc');
     cx.U.add(readerId);
+    // Merge Si into U before clearing (HeadStructure may have added to Si)
+    cx.U.addAll(cx.Si);
     _softFailToNextClause(cx, currentPc);
     final nextPc = _findNextClauseTry(currentPc);
 //     print('  Next PC: $nextPc');
@@ -283,6 +285,8 @@ class BytecodeRunner {
   /// Suspend on multiple unbound readers: add all to U and fail to next clause
   int _suspendAndFailMulti(RunnerContext cx, Set<int> readerIds, int currentPc) {
     cx.U.addAll(readerIds);
+    // Merge Si into U before clearing (HeadStructure may have added to Si)
+    cx.U.addAll(cx.Si);
     _softFailToNextClause(cx, currentPc);
     return _findNextClauseTry(currentPc);
   }
@@ -1320,9 +1324,8 @@ class BytecodeRunner {
               continue;
             }
           } else {
-            // Not a structure - soft fail
-            _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
+            // Not a structure - skip (HeadStructure may have added to Si for unbound reader)
+            pc++;
             continue;
           }
         }
