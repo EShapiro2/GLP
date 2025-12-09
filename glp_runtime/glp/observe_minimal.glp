@@ -32,7 +32,7 @@ test_minimal(Log?) :-
     alice(A),
     bob(B?).
 
-alice(msg(hello, Reply?)) :- got_reply(Reply).
+alice(msg(hello, Reply)) :- got_reply(Reply?).
 
 got_reply(R) :- atom(R?) | true.
 
