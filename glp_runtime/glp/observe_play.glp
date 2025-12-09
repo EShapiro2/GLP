@@ -68,20 +68,20 @@ bob([msg(1, hello, response(bob, 42)) | Rest]) :-
     bob_round2(Rest?).
 
 %% Round 2: Bob receives order, provides price=100, instock=yes
-bob_round2([msg(2, order(widget, Qty?), quote(100, yes)) | Rest]) :-
+bob_round2([msg(2, order(widget, Qty), quote(100, yes)) | Rest]) :-
     number(Qty?), Qty? >= 1 |
     bob_round3(Rest?).
 
 %% Round 3: Bob receives payment, provides receipt
-bob_round3([msg(3, buy(Amount?), receipt(tx(789), time(2024, 12, 9))) | Rest]) :-
+bob_round3([msg(3, buy(Amount), receipt(tx(789), time(2024, 12, 9))) | Rest]) :-
     number(Amount?), Amount? >= 100 |
     bob_round4(Rest?).
 
 %% Round 4: Bob receives rating, provides bonus based on stars
-bob_round4([msg(4, rate(Stars?), bonus(50)) | []]) :-
+bob_round4([msg(4, rate(Stars), bonus(50)) | []]) :-
     number(Stars?), Stars? >= 4 |
     true.
 
-bob_round4([msg(4, rate(Stars?), bonus(10)) | []]) :-
+bob_round4([msg(4, rate(Stars), bonus(10)) | []]) :-
     number(Stars?), Stars? < 4 |
     true.
