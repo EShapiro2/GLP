@@ -17,115 +17,41 @@ Each program file includes:
 
 ## Directory Organization
 
-### Core Programming
+Directories match book chapter names:
 
-#### streams/ - Stream Processing
-- `producer_consumer/` - Basic producer-consumer pattern
-- `observation/` - Stream observation without consumption
+### Part I: Foundations
+- `constants/` — Logic gates, unary/binary predicates with constants
 
-#### merge/ - Stream Merging
-- `binary/` - Fair binary stream merger (the quintessential GLP program)
-- `dynamic/` - Dynamic stream merger with runtime stream addition
-- `mwm/` - Multiway merge
-- `channels/` - Channel-based merging
+### Part II: Programming with Streams
+- `streams/` — Producers, consumers, merge, distribution, observation
+- `buffered_communication/` — Bounded buffers, flow control
+- `monitors/` — Objects and monitors, stateful servers, network switches
 
-#### distribution/ - Stream Distribution
-- `ground/` - Ground-stream distribution to multiple consumers
-- `cooperative/` - Cooperative producers with handover
+### Part III: Recursive Programming
+- `lists/` — Append, reverse, member, length
+- `sorting/` — Quicksort, mergesort, insertion sort
+- `arithmetic/` — Factorial, fibonacci, primes, trees
 
-#### monitors/ - Concurrent Monitors
-- `basic/` - Stateful service with add/subtract/value requests
-- `observer/` - Type-aware observer, 4-actor play
+### Part IV: Inheritance and Delegation
+- `inheritance/` — Frame-based inheritance
 
-#### protocols/ - Communication Protocols
-- `network_switch/` - 3-way network message routing
-- `bounded_buffer/` - Bounded buffer implementations
+### Part V: Metaprogramming
+- `meta/` — Plain, failsafe, tracing, debugging metainterpreters
 
-### Metaprogramming
+### Part VI: Grassroots Protocols
+- `social_graph/` — Agent initialization, befriending
+- `networking/` — DM channels, feeds, groups, blocklace
+- `security/` — Attestation, blockchain properties
 
-#### meta/ - Metainterpreters
-- `plain/` - Plain GLP metainterpreter
-- `failsafe/` - Reports failures instead of aborting
-- `control/` - Suspend/resume/abort via control stream
-- `termination/` - Termination detection via short-circuit
-- `snapshot/` - Collects resolvent snapshot on abort
-- `tracing/` - Produces execution trace with timestamps
-- `debugging/` - Full runtime control with dump collection
-
-### Data Structures
-
-#### lists/ - List Operations
-- `append/`, `reverse/`, `copy/` - Basic operations
-- `member/`, `length/`, `nth/` - Query operations
-
-#### sorting/ - Sorting Algorithms
-- `quicksort/` - Quicksort with partition
-- `insertion_sort/` - Insertion sort
-- `bubble_sort/` - Bubble sort
-- `merge_sort/` - Merge sort
-
-#### arithmetic/ - Arithmetic Programs
-- `factorial/`, `fibonacci/` - Recursive functions
-- `primes/` - Sieve of Eratosthenes
-- `sum_list/` - List summation
-
-#### logic_gates/ - Hardware Simulation
-- `gates/` - AND/OR gate simulation on bit streams
-
-#### puzzles/ - Classic Puzzles
-- `hanoi/` - Tower of Hanoi
-
-### Object-Oriented
-
-#### objects/ - Object-Oriented Patterns
-- `basics/` - Counter, queue manager, encapsulation
-
-### Grassroots Protocols
-
-#### social_graph/ - Social Graph Foundation
-- Core social graph data structures and operations
-
-#### networking/ - Social Networking
-- Network protocols, message routing, friend channels
-
-#### security/ - Security Protocols
-- Authentication, authorization, secure channels
-
-### Library (lib/)
-
-#### lib/ - Utility Programs
-- `channels/` - Channel operations, relay
-- `streams/` - Tag stream, inject
-- `lookup/` - List lookup utilities
-- `broadcast/` - Broadcast to multiple recipients
+### Other
+- `puzzles/` — Tower of Hanoi, etc.
+- `lib/` — Utility predicates (channels, streams, lookup, broadcast)
 
 ## Usage
 
 Each `.glp` file is self-contained with its `reduce` clauses for metainterpreter execution. To run a program under the plain metainterpreter:
 ```glp
 run(merge([1,2,3], [a,b,c], Result)).
-```
-
-## Directory Correspondence with Book
-
-After reorganization, the correspondence between book chapters and code directories:
-
-```
-Book Chapter (AofGLP repo)       Code Directory (GLP repo)
-───────────────────────────────────────────────────────────
-streams.tex                 →    streams/, merge/, distribution/
-buffered_communication.tex  →    protocols/bounded_buffer/
-monitors.tex                →    monitors/
-lists.tex                   →    lists/
-sorting.tex                 →    sorting/
-arithmetic.tex              →    arithmetic/
-objects.tex                 →    objects/
-plain_meta.tex              →    meta/plain/
-enhanced_meta.tex           →    meta/control/, meta/tracing/
-debugging.tex               →    meta/debugging/
-social_graph.tex            →    social_graph/
-networking.tex              →    networking/
-security.tex                →    security/
 ```
 
 ## References

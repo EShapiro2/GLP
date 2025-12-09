@@ -24,14 +24,14 @@ All 87 GLP programs organized by book chapter with goals and cases demonstrated.
 
 | File | Goal | Cases |
 |------|------|-------|
-| `merge/binary/fair_merge.glp` | `merge([1,2,3], [a,b,c], Zs).` | binary merge, clause alternation |
-| `merge/mwm/mwm.glp` | `mwm([stream([1,2,3])], Out).` | multiway merge, mutual references |
-| `merge/dynamic/dynamic_merger.glp` | `merger(Ws, Xs, Out).` | dynamic stream addition |
-| `merge/tree/merge_tree.glp` | `merge_tree([[a,b],[1,2]], Out).` | logarithmic merge tree |
-| `merge/channels/channels.glp` | `read(M, Ch, Ch1).` | channels (partially ordered streams) |
-| `merge/channels/parallel_table.glp` | `table(Self, Low, Val, High).` | parallel lookup via channels |
-| `protocols/bounded_buffer/bounded_buffer.glp` | `sq_num_buffered(10, Ss, 3).` | difference lists, flow control |
-| `protocols/bounded_buffer/switch2x2.glp` | `switch2x2(In1, In2, Out1, Out2).` | 2x2 routing switch |
+| `streams/merge_binary/fair_merge.glp` | `merge([1,2,3], [a,b,c], Zs).` | binary merge, clause alternation |
+| `streams/merge_mwm/mwm.glp` | `mwm([stream([1,2,3])], Out).` | multiway merge, mutual references |
+| `streams/merge_dynamic/dynamic_merger.glp` | `merger(Ws, Xs, Out).` | dynamic stream addition |
+| `streams/merge_tree/merge_tree.glp` | `merge_tree([[a,b],[1,2]], Out).` | logarithmic merge tree |
+| `streams/merge_channels/channels.glp` | `read(M, Ch, Ch1).` | channels (partially ordered streams) |
+| `streams/merge_channels/parallel_table.glp` | `table(Self, Low, Val, High).` | parallel lookup via channels |
+| `buffered_communication/bounded_buffer.glp` | `sq_num_buffered(10, Ss, 3).` | difference lists, flow control |
+| `buffered_communication/switch2x2.glp` | `switch2x2(In1, In2, Out1, Out2).` | 2x2 routing switch |
 
 ### Chapter: monitors
 
@@ -89,18 +89,18 @@ All 87 GLP programs organized by book chapter with goals and cases demonstrated.
 
 | File | Goal | Cases |
 |------|------|-------|
-| `objects/basics/counter.glp` | `counter([up,up,show(V)],0).` | stateful object, message stream |
-| `objects/basics/many_counters.glp` | `use_many_counters(Input,List).` | dynamic object creation |
-| `objects/basics/queue_manager.glp` | `qm([dequeue(X),enqueue(1)],Q,Q).` | incomplete messages, difference list queue |
-| `objects/constraints/plus_constraint.glp` | `plus(X,1,5).` | constraint propagation, known guard |
+| `monitors/basics/counter.glp` | `counter([up,up,show(V)],0).` | stateful object, message stream |
+| `monitors/basics/many_counters.glp` | `use_many_counters(Input,List).` | dynamic object creation |
+| `monitors/basics/queue_manager.glp` | `qm([dequeue(X),enqueue(1)],Q,Q).` | incomplete messages, difference list queue |
+| `monitors/constraints/plus_constraint.glp` | `plus(X,1,5).` | constraint propagation, known guard |
 
 ### Chapter: inheritance
 
 | File | Goal | Cases |
 |------|------|-------|
-| `objects/inheritance/rectangular_area.glp` | `rectangular_area(Msgs,Params).` | base class |
-| `objects/inheritance/frame.glp` | `create_frame(Msgs,Params).` | filter pattern, delegation |
-| `objects/inheritance/window_with_label.glp` | `create_window_with_label(M,L,P).` | otherwise guard, inheritance chain |
+| `inheritance/rectangular_area.glp` | `rectangular_area(Msgs,Params).` | base class |
+| `inheritance/frame.glp` | `create_frame(Msgs,Params).` | filter pattern, delegation |
+| `inheritance/window_with_label.glp` | `create_window_with_label(M,L,P).` | otherwise guard, inheritance chain |
 
 ---
 
@@ -163,8 +163,8 @@ All 87 GLP programs organized by book chapter with goals and cases demonstrated.
 | `networking/groups/group_messaging.glp` | `group_member(Id,Group,Streams).` | interlaced streams |
 | `networking/blocklace/interlaced_streams.glp` | `streams(MyStream,Others).` | blocklace DAG, reader guard |
 | `networking/replication/replicate.glp` | `replicate2(X,Y1,Y2).` | non-ground replication |
-| `protocols/network_switch/network_switch.glp` | `network((p,ChP),(q,ChQ),(r,ChR)).` | 3-way message routing |
-| `protocols/network_switch/network_switch_3way.glp` | `network((p,ChP),(q,ChQ),(r,ChR)).` | same as above |
+| `monitors/network_switch/network_switch.glp` | `network((p,ChP),(q,ChQ),(r,ChR)).` | 3-way message routing |
+| `monitors/network_switch/network_switch_3way.glp` | `network((p,ChP),(q,ChQ),(r,ChR)).` | same as above |
 
 ### Chapter: security
 
@@ -179,11 +179,11 @@ All 87 GLP programs organized by book chapter with goals and cases demonstrated.
 
 | File | Goal | Cases |
 |------|------|-------|
-| `distribution/broadcast/distribute.glp` | `distribute([a,b,c],Y,Z).` | ground guard, replication |
-| `distribution/ground/distribute.glp` | `distribute([a,b],Y,Z).` | same pattern |
-| `distribution/indexed/distribute_indexed.glp` | `distribute_indexed([send(1,a)],Y,Z).` | tag-based routing |
-| `distribution/tree/distribute_binary.glp` | `distribute_binary([req([0],a)],Y,Z).` | binary address routing |
-| `distribution/cooperative/cooperative_producers.glp` | `producer_a(control(Xs,Next)).` | cooperative handover |
+| `streams/distribute_broadcast/distribute.glp` | `distribute([a,b,c],Y,Z).` | ground guard, replication |
+| `streams/distribute_ground/distribute.glp` | `distribute([a,b],Y,Z).` | same pattern |
+| `streams/distribute_indexed/distribute_indexed.glp` | `distribute_indexed([send(1,a)],Y,Z).` | tag-based routing |
+| `streams/distribute_tree/distribute_binary.glp` | `distribute_binary([req([0],a)],Y,Z).` | binary address routing |
+| `streams/distribute_cooperative/cooperative_producers.glp` | `producer_a(control(Xs,Next)).` | cooperative handover |
 
 ---
 
@@ -191,7 +191,7 @@ All 87 GLP programs organized by book chapter with goals and cases demonstrated.
 
 | File | Goal | Cases |
 |------|------|-------|
-| `logic_gates/gates/gates.glp` | `and([one,zero],[one,one],Zs).` | stream-based logic |
+| `constants/gates/gates.glp` | `and([one,zero],[one,one],Zs).` | stream-based logic |
 
 ---
 
