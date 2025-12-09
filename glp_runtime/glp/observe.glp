@@ -4,7 +4,7 @@
 
 %% observe(A, B, Log) - observe communication between A and B
 
-%% A→B: value available at A
+%% A→B: value available at A (position 1)
 observe(A, A?, A?) :- atom(A?) | true.
 observe(A, A?, A?) :- number(A?) | true.
 observe(A, B?, Log?) :- compound(A?) |
@@ -13,9 +13,9 @@ observe(A, B?, Log?) :- compound(A?) |
     B =.. ListB?,
     Log =.. Logs?.
 
-%% B→A: value available at B
-observe(A?, B, B?) :- atom(B?) | true.
-observe(A?, B, B?) :- number(B?) | true.
+%% B→A: value available at B (position 2)
+observe(A?, A, A?) :- atom(A?) | true.
+observe(A?, A, A?) :- number(A?) | true.
 observe(A?, B, Log?) :- compound(B?) |
     B? =.. ListB,
     observe_list(ListB?, ListA, Logs),
