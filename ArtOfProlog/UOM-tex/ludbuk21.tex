@@ -1,0 +1,783 @@
+%%%%% Leonudi Book, Chapter 21, pp 365-382 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 20
+\numberfirst
+\startpage{365}
+
+\pageinsert
+\titlepage
+\chskipt\noindent
+{\bigbf Part IV}\bigskip\noindent
+{\bigbf Applications}\par\vfill
+Prolog has been used for a wide range of applications: expert systems,
+natural language understanding, symbolic algebra, compiler writing,
+building embedded languages, and architectural design, to name a few. In
+this part, we give a flavor of writing application programs in Prolog.
+\par
+The first chapter looks at programs for playing three games: mastermind,
+Nim, and Kalah. The next chapter presents an expert system for evaluating
+requests for credit. The third chapter presents a program for solving
+symbolic equations, and the final chapter looks at a compiler for a
+Pascal-like language.\par
+The emphasis in presentation in these chapters is on writing clear
+programs. Knowledge embedded in the programs is made explicit. Minor
+efficiency gains are ignored if they obscure the declarative reading of
+the program.\par\endinsert\endpage
+\chapa{Game-Playing Programs}
+Learning how to play a game is fun. As well as understanding the rules of
+the game, we must constantly learn new strategies and tactics until the
+game is mastered. Writing a program to play games is also fun, and a good
+vehicle for showing how to use Prolog for writing nontrivial programs.
+\par
+\titlepage
+\sect{Mastermind}
+Our first program guesses the secret code in the game of mastermind. It
+is a good example of what can be programmed in Prolog easily with just a
+little thought.\par
+The version of mastermind we describe is what we played as kids. It is a
+variant on the commercial version and needs less hardware (only pencil
+and paper). Player A chooses a sequence of distinct decimal digits as
+a secret code --- usually four digits for beginners and five for
+advanced players. Player B makes guesses and queries player A for the
+number of {\it bulls\/} (number of digits that appear in identical
+positions in the guess and in the code) and {\it cows\/} (number of
+digits that appear in both the guess and the code, but in different
+positions).\par 
+There is a very simple algorithm for playing the game: Impose some order
+on the set of legal guesses; then iterate, making the next guess that is
+consistent with all the information you have so far until you find the
+secret code.\par
+Rather than defining the notion of consistency formally, we appeal to the
+reader's intuition: A guess is consistent with a set of answers to
+queries if the answers to the queries would have remained the same if the
+guess were the secret code.\par
+The algorithm performs quite well compared with experienced players: an
+average of four to six guesses for a code with four digits with an observed
+maximum of eight guesses. However, it is not an easy strategy for humans to apply,
+because of the amount of bookkeeping needed. On the other hand, the
+control structure of Prolog --- nondeterministic choice, simulated by
+backtracking --- is ideal for implementing the algorithm.\par
+We describe the program top-down. The entire program is given as
+Program~\Proplamas. The top-level procedure for playing the game is 
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+mastermind(Code) $\lar$\cr
+\qi cleanup, guess(Code), check(Code), announce.\cr
+\noalign{\vskip 5pt}
+guess(Code) $\lar$\cr
+\qi Code = [X1,X2,X3,X4], selects(Code,[1,2,3,4,5,6,7,8,9,0]).\cr
+\noalign{\medskip}
+{\it Verify the proposed guess}\cr
+\noalign{\medskip}
+check(Guess) $\lar$\cr
+\qi not inconsistent(Guess), ask(Guess).\cr
+\noalign{\vskip 5pt}
+inconsistent(Guess) $\lar$\cr
+\qi query(OldGuess,Bulls,Cows),\cr
+\qi not bulls\_and\_cows\_match(OldGuess,Guess,Bulls,Cows).\cr
+\noalign{\vskip 5pt}
+bulls\_and\_cows\_match(OldGuess,Guess,Bulls,Cows) $\lar$\cr}
+\halign{\hskip 20pt\lft{\tt #}&\lft{\tt #}\cr
+\qi exact\_matches(OldGuess,Guess,N1),&\cr
+\qi Bulls =:= N1,& \% Correct number of bulls\cr
+\qi common\_members(OldGuess,Guess,N2),&\cr
+\qi Cows =:= N2-Bulls.& \% Correct number of cows\cr}
+\halign{\hskip 20pt\lft{\tt #}\cr
+\noalign{\vskip 5pt}
+exact\_matches(Xs,Ys,N) $\lar$\cr
+\qi size\_of(A,same\_place(A,Xs,Ys),N).\cr
+common\_members(Xs,Ys,N) $\lar$\cr
+\qi size\_of(A,(member(A,Xs),member(A,Ys)),N).\cr
+\noalign{\vskip 5pt}
+same\_place(X,[X$\mid$Xs],[X$\mid$Ys]).\cr
+same\_place(A,[X$\mid$Xs],[Y$\mid$Ys]) $\lar$ same\_place(A,Xs,Ys).\cr
+\noalign{\medskip}
+{\it Asking a guess}\cr
+\noalign{\medskip}
+ask(Guess) $\lar$\cr
+\qi repeat,\cr
+\qi writeln([`How many bulls and cows in ',Guess,`?']),\cr
+\qi read((Bulls,Cows)),\cr
+\qi sensible(Bulls,Cows), !,\cr
+\qi assert(query(Guess,Bulls,Cows)),\cr
+\qi Bulls =:= 4.\cr
+\noalign{\vskip 5pt}
+sensible(Bulls,Cows) $\lar$\cr
+\qi integer(Bulls), integer(Cows), Bulls+Cows $\le$ 4.\cr
+\noalign{\medskip}
+{\it Bookkeeping}\cr
+\noalign{\medskip}
+cleanup $\lar$ abolish(query,3).\cr
+\noalign{\vskip 5pt}
+announce $\lar$\cr
+\qi size\_of(X,query(X,A,B),N),\cr
+\qi writeln([`Found the answer after ',N,` queries']).\cr
+\noalign{\bigskip}
+{\bf Program \Proplamas}{\rm :~~Playing mastermind}\cr}\vfill}
+\endin
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+size\_of(X,G,N) $\lar$ findall(X,G,Xs), length(Xs,N).\cr
+\noalign{\vskip 5pt}
+length(Xs,N) $\lar$ {\rm See Program \Profinlenlis.}\cr
+\noalign{\vskip 5pt}
+selects(X,Xs) $\lar$ {\rm See Program \Protesforsus.}\cr
+\noalign{\vskip 5pt}
+abolish(F,N) $\lar$ {\rm See Exercise 12.5(i).}\cr
+\noalign{\bigskip}
+{\bf Program \Proplamas}~~{\rm (Continued)}\cr}
+\endin\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+mastermind(Code) $\lar$\cr
+\qi cleanup, guess(Code), check(Code), announce.\cr}\medno
+The heart of the top level is a generate-and-test loop. The guessing
+procedure {\tt guess(Code)}, which acts as a generator, uses the
+procedure {\tt selects(Xs,Ys)} (Program~\Protesforsus) to select
+nondeterministically a list {\tt Xs} of elements from a list {\tt Ys}.
+According to the rules of the game, {\tt Xs} is constrained to contain four
+distinct elements, while {\tt Ys} is the list of the ten decimal digits:
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+guess(Code) $\lar$\cr
+\qi Code = \(X1,X2,X3,X4\),\cr
+\qi selects(Code,\(1,2,3,4,5,6,7,8,9,0\)).\cr}\medskip
+The procedure {\tt check(Guess)} tests the proposed code {\tt Guess}. It
+first verifies that {\tt Guess} is consistent with all (i.e., not
+inconsistent with any) of the answers to queries already made; then it
+asks the user for the number of bulls and cows in {\tt Guess}. The {\tt
+ask(Guess)} procedure also controls the generate-and-test loop,
+succeeding only when the number of bulls is four, indicating the correct
+code is found:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+check(Guess) $\lar$\cr
+\qi not inconsistent(Guess), ask(Guess).\cr}\medskip
+{\tt Ask} stores previous answers to queries in the relation {\tt
+query(X,B,C)}, where {\tt X} is the guess, {\tt B} is the number of bulls
+in it, and {\tt C} the number of cows. A guess is inconsistent with a
+previous query if the number of bulls and cows do not match:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+inconsistent(Guess) $\lar$\cr
+\qi query(Old,Bulls,Cows),\cr
+\qi not bulls\_and\_cows\_match(Old,Guess,Bulls,Cows).\cr}\medno
+The bulls match between a previous guess {\tt OldGuess} and a conjectured
+guess {\tt Guess} if the number of digits in the same position in the two
+guesses equals the number of {\tt Bulls} in {\tt OldGuess}. It is
+computed by the predicate {\tt exact\_matches(OldGuess,Guess,Bulls)}. The
+cows match if the number of common digits without respect to order
+corresponds to the sum of {\tt Bulls} and {\tt Cows}; it is computed by
+the procedure {\tt bulls\_and\_cows\_match}. It is easy to count the
+number of matching digits and common digits in two queries, using an
+all-solutions predicate {\tt size\_of/3}.\par
+The {\tt ask(Guess)} procedure is a memo-function that records the
+answer to the query. It performs some limited consistency checks on the
+input with the procedure {\tt sensible/2} and succeeds only if four bulls
+are indicated. The expected syntax for the user's reply is a tuple ({\tt
+Bulls,Cows}).\par
+The remaining (top-level) predicates are for bookkeeping. The first, {\tt
+cleanup}, removes unwanted information from previous games. The predicate
+{\tt announce} tells how many guesses were needed, which is determined
+using {\tt size\_of/3}. \par
+A more efficient implementation of the {\tt exact\_matches} and {\tt
+common\_members} procedures can be obtained by writing iterative
+versions:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+exact\_matches(Xs,Ys,N) $\lar$  exact\_matches(Xs,Ys,0,N).\cr
+\noalign{\vskip 5pt}
+exact\_matches(\(X$\mid$Xs\),\(X$\mid$Ys\),K,N) $\lar$\cr
+\qi K1 is K+1, exact\_matches(Xs,Ys,K1,N).\cr
+exact\_matches(\(X$\mid$Xs\),\(Y$\mid$Ys\),K,N) $\lar$\cr
+\qi X $\ne$ Y, exact\_matches(Xs,Ys,K,N).\cr
+exact\_matches(\(~\),\(~\),N,N).\cr
+\noalign{\vskip 5pt}
+common\_members(Xs,Ys,N) $\lar$ common\_members(Xs,Ys,0,N).\cr
+\noalign{\vskip 5pt}
+common\_members(\(X$\mid$Xs\),Ys,K,N) $\lar$\cr
+\qi member(X,Ys), K1 is K+1, common\_members(Xs,Ys,K1,N).\cr
+common\_members(\(X$\mid$Xs\),Ys,K,N) $\lar$\cr
+\qi common\_members(Xs,Ys,K,N).\cr
+common\_members(\(~\),Ys,N,N).\cr}\medskip
+Using the more efficient versions of {\tt exact\_matches} and {\tt
+common\_members} saves about 10\%--30\% of the execution time.\endpage
+\sect{Nim}
+We turn our attention now from mastermind to Nim, also a game for two
+players. There are several piles of matches, and the players take
+turns removing some of the matches (up to all) in a pile. The winner
+is the player who takes the last match. Figure~\Figstaposnim\ gives a
+common starting position, with piles of 1, 3, 5 and 7 matches.
+\midinsert\vskip -0.2truecm
+$$\vcenter{\halign{\ctr{#}\cr
+I\cr
+\noalign{\vskip 5pt}
+I~I~I\cr
+\noalign{\vskip 5pt}
+I~I~I~I~I\cr
+\noalign{\vskip 5pt}
+I~I~I~I~I~I~I\cr}}$$\medskip
+\ctrline{{\bf Figure \Figstaposnim}:~~A starting position for Nim}
+\endinsert\par
+To implement the Nim-playing program, we use the game-playing framework
+of Program~\Profraplagam.\par
+The first decision is the representation of the game position and the
+moves. A natural choice for positions is a list of integers where
+elements of the list correspond to piles of matches. A move is a tuple
+({\it N,M\/}) for taking {\it M\/} matches from pile {\it N\/}. Writing
+the procedure {\tt move(Move,Position,Position1)}, where {\tt Position}
+is updated to {\tt Position1} by {\tt Move}, is straightforward. The
+recursive rule counts down match piles until the desired pile is reached.
+The remaining piles of matches representing the new game position are
+computed routinely:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+move((K,M),\(N$\mid$Ns\),[N$\mid$Ns1]) $\lar$\cr
+\qi K $>$ 1, K1 is K-1, move((K1,M),Ns,Ns1).\cr}\medno
+There are two possibilities for updating the specified pile of matches,
+the base case of the procedure. If all the matches are taken, the pile is
+removed from the list. Otherwise the new number of matches in the pile is
+computed and checked to be legal:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+move((1,N),\(N$\mid$Ns\),Ns).\cr
+move((1,M),\(N$\mid$Ns\),\(N1$\mid$Ns\)) $\lar$ N $>$ M, N1 is N-M.\cr}
+\medno
+The mechanics of turns for two-person games is specified by two facts.
+\par
+The initial piles of matches and who moves first must be decided by the
+two players. Assuming the computer moves second, the game of
+Figure~\Figstaposnim\ is specified as\medskip 
+\halign{\hskip 40pt\lft{\tt #}\cr
+initialize(nim,\(1,3,5,7\),opponent).\cr}\medskip
+The game is over when the last match is taken. This corresponds to the
+game position being the empty list. The person having to move next is the
+loser, and the output messages of {\tt announce} are formulated
+accordingly. The details are in Program~\Proproplawin.
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+play(Game) $\lar$ {\rm See Program \Profraplagam.}\cr
+\noalign{\medskip}
+{\it Filling in the game-playing framework}\cr
+\noalign{\medskip}
+initialize(nim,\(1,3,5,7\),opponent).\cr
+\noalign{\vskip 5pt}
+display\_game(Position,X) $\lar$ write(Position), nl.\cr
+\noalign{\vskip 5pt}
+game\_over(\(~\),Player,Player).\cr
+\noalign{\vskip 5pt}
+announce(computer) $\lar$ write(`You won! Congratulations.'), nl.\cr
+announce(opponent) $\lar$ write(`I won.'), nl.\cr
+\noalign{\medskip}
+{\it Choosing moves}\cr
+\noalign{\medskip}
+choose\_move(Position,opponent,Move) $\lar$\cr
+\qi writeln([`Please make move']), read(Move), legal(Move,Position).\cr
+\noalign{\vskip 5pt}
+legal((K,N),Position) $\lar$ nth\_member(K,Position,M), N $\le$ M.\cr
+\noalign{\vskip 5pt}
+nth\_member(1,\(X$\mid$Xs\),X).\cr
+nth\_member(N,\(X$\mid$Xs\),Y) $\lar$ N $>$ 1, N1 is N-1,
+nth\_member(N1,Xs,Y).\cr
+\noalign{\medskip}
+choose\_move(Position,computer,Move) $\lar$\cr
+\qi evaluate(Position,Safety,Sum),\cr
+\qi decide\_move(Safety,Position,Sum,Move).\cr
+\noalign{\medskip}
+evaluate(Position,Safety,Sum) $\lar$\cr
+\qi nim\_sum(Position,\(~\),Sum), safety(Sum,Safety).\cr
+\noalign{\vskip 5pt}
+safety(Sum,safe) $\lar$ zero(Sum), !.\cr
+safety(Sum,unsafe) $\lar$ not zero(Sum), !.\cr
+\noalign{\vskip 5pt}
+decide\_move(safe,Position,Sum,(1,1)).\cr
+\qi \% The computer's ``arbitrary move''\cr
+decide\_move(unsafe,Position,Sum,Move) $\lar$\cr
+\qi safe\_move(Position,Sum,Move).\cr
+\noalign{\medskip}
+{\it move\/}({\it Move,Position,Position1\/}) $\lar$\cr
+\qi {\it Position1\/} {\rm is the result of executing the move}\cr
+\qi {\it Move\/} {\rm from the current} {\it Position\/}.\cr
+\noalign{\medskip}
+move((K,M),[N$\mid$Ns],[N$\mid$Ns1]) $\lar$\cr
+\qi K $>$ 1, K1 is K-1, move((K1,M),Ns,Ns1).\cr
+move((1,N),[N$\mid$Ns],Ns).\cr
+move((1,M),[N$\mid$Ns],[N1$\mid$Ns]) $\lar$\cr
+\qi N $>$ M, N1 is N-M.\cr
+\noalign{\vskip 5pt}
+next\_player(computer,opponent).\qquad
+next\_player(opponent,computer).\cr
+\noalign{\bigskip}
+{\bf Program \Proproplawin}{\rm :~~A program for playing a winning game
+of Nim}\cr}\vfill}
+\endin
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it nim\_sum\/}({\it Position,SoFar,Sum\/}) $\lar$\cr
+\qi {\it Sum\/} {\rm is the nim-sum of the current} {\it
+Position\/}{\rm ,}\cr
+\qi {\rm and} {\it SoFar\/} {\rm is an accumulated value.}\cr
+\noalign{\medskip}
+nim\_sum([N$\mid$Ns],Bs,Sum) $\lar$\cr
+\qi binary(N,Ds), nim\_add(Ds,Bs,Bs1), nim\_sum(Ns,Bs1,Sum).\cr
+nim\_sum([~],Sum,Sum).\cr
+\noalign{\vskip 5pt}
+nim\_add(Bs,[~],Bs).\cr
+nim\_add([~],Bs,Bs).\cr
+nim\_add([B$\mid$Bs],[C$\mid$Cs],[D$\mid$Ds]) $\lar$\cr
+\qi D is (B+C) mod 2, nim\_add(Bs,Cs,Ds).\cr
+\noalign{\vskip 5pt}
+binary(1,[1]).\cr
+binary(N,[D$\mid$Ds]) $\lar$\cr
+\qi N $>$ 1, D is N mod 2, N1 is N/2, binary(N1,Ds).\cr
+\noalign{\vskip 5pt}
+decimal(Ds,N) $\lar$ decimal(Ds,0,1,N).\cr
+decimal([~],N,T,N).\cr
+decimal([D$\mid$Ds],A,T,N) $\lar$\cr
+\qi A1 is A+D$\ast$T, T1 is T$\ast$2, decimal(Ds,A1,T1,N).\cr
+\noalign{\vskip 5pt}
+zero([~]).\cr
+zero([0$\mid$Zs]) $\lar$ zero(Zs).\cr
+\noalign{\medskip}
+{\it safe\_move\/}({\it Position,NimSum,Move\/}) $\lar$\cr
+\qi {\it Move\/} {\rm is a move from the current} {\it Position\/} {\rm
+with}\cr
+\qi {\rm the value} {\it NimSum\/} {\rm that leaves a safe position.}\cr
+\noalign{\medskip}
+safe\_move(Piles,NimSum,Move) $\lar$\cr
+\qi safe\_move(Piles,NimSum,1,Move).\cr
+\noalign{\vskip 5pt}
+safe\_move([Pile$\mid$Piles],NimSum,K,(K,M)) $\lar$\cr
+\qi binary(Pile,Bs), can\_zero(Bs,NimSum,Ds,0), decimal(Ds,M).\cr
+safe\_move([Pile$\mid$Piles],NimSum,K,Move) $\lar$\cr
+\qi K1 is K+1, safe\_move(Piles,NimSum,K1,Move).\cr
+\noalign{\vskip 5pt}
+can\_zero([~],NimSum,[~],0) $\lar$\cr
+\qi zero(NimSum).\cr
+can\_zero([B$\mid$Bs],[0$\mid$NimSum],[C$\mid$Ds],C) $\lar$\cr
+\qi can\_zero(Bs,NimSum,Ds,C).\cr
+can\_zero([B$\mid$Bs],[1$\mid$NimSum],[D$\mid$Ds],C) $\lar$\cr
+\qi D is 1-B$\ast$C, C1 is 1-B, can\_zero(Bs,NimSum,Ds,C1).\cr
+\noalign{\bigskip}
+{\bf Program \Proproplawin}~~{\rm (Continued)}\cr}\vfill}
+\endin\par
+It remains to specify how to choose the moves. The opponent's moves are
+accepted from the keyboard; how much flexibility is allowed in input is
+the responsibility of the programmer:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+choose\_move(Position,opponent,Move) $\lar$\cr
+\qi writeln(\(`Please make move'\)),\cr
+\qi read(Move),\cr
+\qi legal(Move,Position).\cr}\medskip
+Choosing a move for the computer requires a strategy. A simple strategy
+to implement is taking all of the first pile of matches. It is
+recommended only for use against extremely poor players:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+choose\_move(\(N$\mid$Ns\),computer,(1,N)).\cr}\medskip
+A winning strategy is known for Nim. It involves dividing game states, or
+positions, into two classes, safe and unsafe. To determine if a position
+is safe or unsafe, the binary representation of the number of matches in
+each pile is computed. The {\it nim-sum\/} of these binary numbers is
+then calculated as follows. Each column is summed independently modulo 2.
+If the total in each column is zero, the position is {\it safe\/}.
+Otherwise the position is {\it unsafe\/}.
+\midinsert\vskip -0.2truecm
+$$\vcenter{\halign{\rt{#}\cr
+1\cr
+1~1\cr
+1~0~1\cr
+1~1~1\cr
+\noalign{\vskip 3pt\hrule\vskip 3pt}
+0~0~0\cr}}$$\medskip
+\ctrline{{\bf Figure \Figcomnimsum}:~~Computing nim-sums}
+\endinsert\par
+Figure~\Figcomnimsum\ illustrates the process for the four piles of
+matches in Figure~\Figstaposnim. The binary representations of $1$,
+$3$, $5$, and $7$ are $1$, $11$, $101$, and $111$ respectively.
+Calculating the nim-sum: there are four 1's in the units column, two
+1's in the 2's column and two 1's in the 4's column; an even number of
+1's in each. The nim-sum is zero, making the position \(1,3,5,7\)
+safe. On the other hand the position \(2,6\) is unsafe. The binary 
+representations are $10$ and $110$. Summing them gives one 1 in the
+4's column and two 1's in the 2's column. The single 1 in the 4's
+column makes the position unsafe.\par
+The winning strategy is to always leave the position safe. Any unsafe
+position can be converted to a safe position (though not all moves do),
+while any move from a safe position creates an unsafe one. The best
+strategy is to make an arbitrary move when confronted with a safe
+position, hoping the opponent will blunder, and to convert unsafe
+positions to safe ones.\par
+The current position is evaluated by the predicate {\tt evaluate/3}, which
+determines the safety of the current position. An algorithm is needed to
+compute the nim-sum of a position. The nim-sum is checked by the
+predicate {\tt safety(Sum,Safety)}, which labels the position {\it
+safe\/} or {\it unsafe\/} depending on the value of {\tt Sum}.\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+choose\_move(Position,computer,Move) $\lar$\cr
+\qi evaluate(Position,Safety,Sum),\cr
+\qi decide\_move(Safety,Position,Sum,Move).\cr}\medskip
+The move made by the computer computed by {\tt decide\_move/4} depends on
+the safety of the position. If the position is safe, the computer makes
+the ``arbitrary'' move of one match from the first pile. If the
+position is unsafe, an algorithm is needed to compute a move that
+converts an unsafe position into a safe one. This is done by {\tt
+safe\_move/3}.\par
+In a prior version of the program {\tt evaluate} did not return {\tt
+Sum}. In the writing of {\tt safe\_move} it transpired that the
+nim-sum was helpful, and it was sensible to pass the already computed
+value rather than recomputing it.\par
+The nim-sum is computed by {\tt nim\_sum(Ns,SoFar,Sum)}. The relation
+computed is that {\tt Sum} is the nim-sum of the numbers {\tt Ns} added
+to what has been accumulated in {\tt SoFar}. To perform the additions,
+the numbers must first be converted to binary, done by {\tt binary/2}:
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+nim\_sum(\(N$\mid$Ns\),Bs,Sum) $\lar$\cr
+\qi binary(N,Ds), nim\_add(Ds,Bs,Bs1), nim\_sum(Ns,Bs1,Sum).\cr}\medskip
+The binary form of a number is represented here as a list of digits. To
+overcome the difficulty of adding lists of unequal length, the least
+significant digits are earliest in the list. Thus 2 (in binary $10$)
+is represented as \(0,1\), while 6 is represented as \(0,1,1\). The
+two numbers can then be added from least significant digit to most
+significant digit, as is usual for addition. This is done by {\tt
+nim\_add/3} and is slightly simpler than regular addition, since no
+carry needs to be propagated. The code for both {\tt binary} and {\tt
+nim\_add} appears in Program~\Proproplawin.\par 
+The nim-sum {\tt Sum} is used by the predicate {\tt
+safe\_move(Ns,Sum,Move)} to find a winning move {\tt Move} from the
+position described by {\tt Ns}. The piles of matches are checked in turn
+by {\tt safe\_move/4} to see if there is a number of matches that can be
+taken from the pile to leave a safe position. The interesting clause is
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+safe\_move(\(Pile$\mid$Piles\),NimSum,K,(K,M)) $\lar$\cr
+\qi binary(Pile,Bs), can\_zero(Bs,NimSum,Ds,0), decimal(Ds,M).\cr}\medno
+The heart of the program is {\tt can\_zero(Bs,NimSum,Ds,Carry)}. This
+relation is true if replacing the binary number {\tt Bs} by the binary
+number {\tt Ds} would make {\tt NimSum} zero. The number {\tt Ds} is
+computed digit by digit. Each digit is determined by the corresponding
+digit of {\tt Bs}, {\tt NimSum}, and a carry digit {\tt Carry} initially
+set to 0. The number is converted to its decimal equivalent by {\tt
+decimal/2} in order to get the correct move.\par
+Program~\Proproplawin\ is a complete program for playing Nim
+interactively incorporating the winning strategy. As well as being a
+program for playing the game, it is also an axiomatization of what
+constitutes a winning strategy.\par
+\sect{Kalah}
+We now present a program for playing the game of Kalah that uses
+alpha-beta pruning. Kalah fits well into the paradigm of game trees
+for two reasons. First, the game has a simple, reasonably reliable
+evaluation function, and second, its game tree is tractable, which is
+not true for games such as chess and go. It has been claimed 
+that some Kalah programs are unbeatable by human players. Certainly,
+the one presented here beats us.\par 
+Kalah is played on a board with two rows of six holes facing each other.
+Each player owns a row of six holes, plus a kalah to the right of the
+holes. In the initial state there are six stones in each hole and the two
+kalahs are empty. This is pictured in the top half of Figure
+\Figboaposkal.
+\topin\vskip 11truecm\par
+\ctrline{{\bf Figure \Figboaposkal}:~~Board positions for Kalah}
+\endin\par
+A player begins his move by picking up all the stones in one of his holes.
+Proceeding counterclockwise around the board, he puts one of the
+picked-up stones in each hole and in his own kalah, skipping the
+opponent's kalah, until no stones remain to be distributed. There are
+three possible outcomes. If the last stone lands on the kalah, the player
+has another move. If the last stone lands on an empty hole owned by the
+player, and the opponent's hole directly across the board contains at
+least one stone, the player takes all the stones in the hole plus his
+last landed stone and puts them all in his kalah. Otherwise the player's
+turn ends, and his opponent moves.
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it Play framework}\cr
+\noalign{\medskip}
+play(Game) $\lar$ {\rm See Program \Profraplagam}.\cr
+\noalign{\medskip}
+{\it Choosing a move by minimax with alpha-beta cutoff}\cr
+\noalign{\medskip}
+choose\_move(Position,computer,Move) $\lar$\cr
+\qi lookahead(Depth),\cr
+\qi alpha\_beta(Depth,Position,-40,40,Move,Value),\cr
+\qi nl, write(Move), nl.\cr
+choose\_move(Position,opponent,Move) $\lar$\cr
+\qi nl, writeln([`please make move']), read(Move), legal(Move).\cr
+\noalign{\vskip 5pt}
+alpha\_beta(Depth,Position,Alpha,Beta,Move,Value) $\lar$\cr
+\qi {\rm See Program \Prochomovalp.}\cr
+\noalign{\vskip 5pt}
+move(Board,[M$\mid$Ms]) $\lar$\cr
+\qi member(M,[1,2,3,4,5,6]),\cr
+\qi stones\_in\_hole(M,Board,N),\cr
+\qi extend\_move(N,M,Board,Ms).\cr
+move(board([0,0,0,0,0,0],K,Ys,L),[~]).\cr
+\noalign{\vskip 5pt}
+stones\_in\_hole(M,board(Hs,K,Ys,L),Stones) $\lar$\cr
+\qi nth\_member(M,Hs,Stones), Stones $>$ 0.\cr
+\noalign{\vskip 5pt}
+extend\_move(Stones,M,Board,[~]) $\lar$\cr
+\qi Stones =\\= (7-M) mod 13, !.\cr
+extend\_move(Stones,M,Board,Ms) $\lar$\cr
+\qi Stones =:= (7-M) mod 13, !,\cr
+\qi distribute\_stones(Stones,M,Board,Board1),\cr
+\qi move(Board1,Ms).\cr
+\noalign{\medskip}
+{\it Executing a move}\cr
+\noalign{\medskip}
+move([N$\mid$Ns],Board,FinalBoard) $\lar$\cr
+\qi stones\_in\_hole(N,Board,Stones),\cr
+\qi distribute\_stones(Stones,N,Board,Board1),\cr
+\qi move(Ns,Board1,FinalBoard).\cr
+move([~],Board1,Board2) $\lar$\cr
+\qi swap(Board1,Board2).\cr
+\noalign{\bigskip}
+{\bf Program \Procomprokal}{\rm :~~A complete program for playing
+Kalah}\cr}\vfill}
+\endin
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it distribute\_stones\/}({\it Stones,Hole,Board,Board1\/}) $\lar$\cr
+\qi {\it Board1\/} {\rm is the result of distributing the number of
+stones}\cr
+\qi {\it Stones\/} {\rm from} {\it Hole\/} {\rm from the current} {\it
+Board\/}{\rm .}\cr
+\qi {\rm It consists of two stages: distributing the stones in the
+player's}\cr
+\qi {\rm holes,} {\it distribute\_my\_holes\/}{\rm , and distributing the
+stones}\cr
+\qi {\rm in the opponent's holes,} {\it distribute\_your\_holes\/}{\rm .}\cr
+\noalign{\medskip}
+distribute\_stones(Stones,Hole,Board,FinalBoard) $\lar$\cr
+\qi distribute\_my\_holes(Stones,Hole,Board,Board1,Stones1),\cr
+\qi distribute\_your\_holes(Stones1,Board1,FinalBoard).\cr
+\noalign{\vskip 5pt}
+distribute\_my\_holes(Stones,N,board(Hs,K,Ys,L),\cr
+\qii board(Hs1,K1,Ys,L),Stones1) $\lar$\cr
+\qi Stones $>$ 7-N, !,\cr
+\qi pick\_up\_and\_distribute(N,Stones,Hs,Hs1),\cr
+\qi K1 is K+1, Stones1 is Stones+N-7.\cr
+distribute\_my\_holes(Stones,N,board(Hs,K,Ys,L),Board,0) $\lar$\cr
+\qi Stones $\le$ 7-N,\cr
+\qi pick\_up\_and\_distribute(N,Stones,Hs,Hs1),\cr
+\qi check\_capture(N,Stones,Hs1,Hs2,Ys,Ys1,Pieces),\cr
+\qi update\_kalah(Pieces,N,Stones,K,K1),\cr
+\qi check\_if\_finished(board(Hs2,K1,Ys1,L),Board).\cr
+\noalign{\vskip 5pt}
+check\_capture(N,Stones,Hs,Hs1,Ys,Ys1,Pieces) $\lar$\cr
+\qi FinishingHole is N+Stones,\cr
+\qi nth\_member(FinishingHole,Hs,1),\cr
+\qi OppositeHole is 7-FinishingHole,\cr
+\qi nth\_member(OppositeHole,Ys,Y),\cr
+\qi Y $>$ 0, !,\cr
+\qi n\_substitute(OppositeHole,Ys,0,Ys1),\cr
+\qi n\_substitute(FinishingHole,Hs,0,Hs1),\cr
+\qi Pieces is Y+1.\cr
+check\_capture(N,Stones,Hs,Hs,Ys,Ys,0) $\lar$ !.\cr
+\noalign{\vskip 5pt}
+check\_if\_finished(board(Hs,K,Ys,L),board(Hs,K,Hs,L1)) $\lar$\cr
+\qi zero(Hs), !, sumlist(Ys,YsSum), L1 is L+YsSum.\cr
+check\_if\_finished(board(Hs,K,Ys,L),board(Ys,K1,Ys,L)) $\lar$\cr
+\qi zero(Ys), !, sumlist(Hs,HsSum), K1 is K+HsSum.\cr
+check\_if\_finished(Board,Board) $\lar$ !.\cr
+\noalign{\vskip 5pt}
+update\_kalah(0,Stones,N,K,K) $\lar$ Stones $<$ 7-N, !.\cr
+update\_kalah(0,Stones,N,K,K1) $\lar$ Stones =:= 7-N, !, K1 is K+1.\cr
+update\_kalah(Pieces,Stones,N,K,K1) $\lar$ Pieces $>$ 0, !, K1 is
+K+Pieces.\cr
+\noalign{\bigskip}
+{\bf Program \Procomprokal}~~{\rm (Continued)}\cr}\vfill}
+\endin
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+distribute\_your\_holes(0,Board,Board) $\lar$ !.\cr
+distribute\_your\_holes(Stones,board(Hs,K,Ys,L),board(Hs,K,Ys1,L))
+$\lar$\cr
+\qi 1 $\le$ Stones, Stones $\le$ 6,\cr
+\qi non\_zero(Hs), !,\cr
+\qi distribute(Stones,Ys,Ys1).\cr
+distribute\_your\_holes(Stones,board(Hs,K,Ys,L),Board)
+$\lar$\cr
+\qi Stones $>$ 6, !,\cr
+\qi distribute(6,Ys,Ys1),\cr
+\qi Stones1 is Stones-6,\cr
+\qi  distribute\_stones(Stones1,0,board(Hs,K,Ys1,L),Board).\cr
+distribute\_your\_holes(Stones,board(Hs,K,Ys,L),board(Hs,K,Hs,L1))
+$\lar$\cr
+\qi zero(Hs), !, sumlist(Ys,YsSum), L1 is Stones+YsSum+L.\cr
+\noalign{\medskip}
+{\it Lower-level stone distribution}\cr
+\noalign{\medskip}
+pick\_up\_and\_distribute(0,N,Hs,Hs1) $\lar$\cr
+\qi !, distribute(N,Hs,Hs1).\cr
+pick\_up\_and\_distribute(1,N,[H$\mid$Hs],[0$\mid$Hs1]) $\lar$\cr
+\qi !, distribute(N,Hs,Hs1).\cr
+pick\_up\_and\_distribute(K,N,[H$\mid$Hs],[H$\mid$Hs1]) $\lar$\cr
+\qi K $>$ 1, !, K1 is K-1, pick\_up\_and\_distribute(K1,N,Hs,Hs1).\cr
+\noalign{\vskip 5pt}
+distribute(0,Hs,Hs) $\lar$ !.\cr
+distribute(N,[H$\mid$Hs],[H1$\mid$Hs1]) $\lar$\cr
+\qi N $>$ 0, !, N1 is N-1, H1 is H+1, distribute(N1,Hs,Hs1).\cr
+distribute(N,[~],[~]) $\lar$ !.\cr
+\noalign{\medskip}
+{\it Evaluation function}\cr
+\noalign{\medskip}
+value(board(H,K,Y,L),Value) $\lar$ Value is K-L.\cr
+\noalign{\medskip}
+{\it Testing for the end of the game}\cr
+\noalign{\medskip}
+game\_over(board(0,N,0,N),Player,draw) $\lar$\cr
+\qi pieces(K), N =:= 6$\ast$K, !.\cr
+game\_over(board(H,K,Y,L),Player,Player) $\lar$\cr
+\qi pieces(N), K $>$ 6$\ast$N, !.\cr
+game\_over(board(H,K,Y,L),Player,Opponent) $\lar$\cr
+\qi pieces(N), L $>$ 6$\ast$N, next\_player(Player,Opponent).\cr
+announce(opponent) $\lar$ writeln([`You won! Congratulations.']).\cr
+announce(computer) $\lar$ writeln([`I won.']).\cr
+announce(draw) $\lar$ writeln(\(`The game is a draw'\)).\cr
+\noalign{\bigskip}
+{\bf Program \Procomprokal}~~{\rm (Continued)}\cr}\vfill}
+\endin
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it Miscellaneous game utilities}\cr
+\noalign{\medskip}
+nth\_member(N,[H$\mid$Hs],K) $\lar$\cr
+\qi N $>$ 1, !, N1 is N-1, nth\_member(N1,Hs,K).\cr
+nth\_member(1,[H$\mid$Hs],H).\cr
+\noalign{\vskip 5pt}
+n\_substitute(1,[X$\mid$Xs],Y,[Y$\mid$Xs]) $\lar$ !.\cr
+n\_substitute(N,[X$\mid$Xs],Y,[X$\mid$Xs1]) $\lar$\cr
+\qi N $>$ 1, !, N1 is N-1, n\_substitute(N1,Xs,Y,Xs1).\cr
+\noalign{\vskip 5pt}
+next\_player(computer,opponent).\cr
+next\_player(opponent,computer).\cr
+\noalign{\vskip 5pt}
+legal([N$\mid$Ns]) $\lar$  0 $<$ N, N $<$ 7, legal(Ns).\cr
+legal([~]).\cr
+\noalign{\vskip 5pt}
+swap(board(Hs,K,Ys,L),board(Ys,L,Hs,K)).\cr
+\noalign{\vskip 5pt}
+display\_game(Position,computer) $\lar$\cr
+\qi show(Position).\cr
+display\_game(Position,opponent) $\lar$\cr
+\qi swap(Position,Position1), show(Position1).\cr
+\noalign{\vskip 5pt}
+show(board(H,K,Y,L)) $\lar$\cr
+\qi reverse(H,HR), write\_stones(HR),\cr
+\qi write\_kalahs(K,L), write\_stones(Y).\cr
+\noalign{\vskip 5pt}
+write\_stones(H) $\lar$\cr
+\qi nl, tab(5), display\_holes(H).\cr
+\noalign{\vskip 5pt}
+display\_holes([H$\mid$Hs]) $\lar$\cr
+\qi write\_pile(H), display\_holes(Hs).\cr
+display\_holes([~]) $\lar$ nl.\cr
+\noalign{\vskip 5pt}
+write\_pile(N) $\lar$ N $<$ 10, write(N), tab(4).\cr
+write\_pile(N) $\lar$ N $\ge$ 10, write(N), tab(3).\cr
+\noalign{\vskip 5pt}
+write\_kalahs(K,L) $\lar$\cr
+\qi write(K), tab(34), write(L), nl.\cr
+\noalign{\vskip 5pt}
+zero([0,0,0,0,0,0]).\cr
+non\_zero(Hs) $\lar$ Hs $\ne$ [0,0,0,0,0,0].\cr
+\noalign{\medskip}
+{\it Initializing}\cr
+\noalign{\medskip}
+lookahead(2).\cr
+initialize(kalah,board([N,N,N,N,N,N],0,[N,N,N,N,N,N],0),opponent)
+$\lar$\cr
+\qi pieces(N).\cr
+pieces(6).\cr
+\noalign{\bigskip}
+{\bf Program \Procomprokal} {\rm (Continued)}\cr}\vfill}
+\endin\par
+The bottom kalah board in Figure~\Figboaposkal\ represents the following
+move from the top board by the owner of the top holes. He took the six
+stones in the rightmost hole and distributed them, the last one ending in
+the kalah, allowing another move. The stones in the fourth hole from the
+right were then distributed.\par
+If all the holes of a player become empty (even if it is not his turn
+to play), the stones remaining in the holes of the opponent are put in
+the opponent's kalah and the game ends. The winner of the game is the
+first player to get more than half the stones in his kalah.\par
+The difficulty for programming the game in Prolog is finding an
+efficient data structure to represent the board, to facilitate the
+calculation of moves. We use a four-argument structure {\tt
+board(Holes,Kalah,OppHoles,OppKalah)}, where {\tt Holes} is a list of the
+numbers of stones in your six holes, {\tt Kalah} is the number of stones
+in your kalah, and {\tt OppHoles} and {\tt OppKalah} are, respectively,
+the lists of the numbers of stones in the opponent's holes and the number
+of stones in his kalah. Lists were chosen rather than six-place
+structures to facilitate the writing of recursive programs for
+distributing the stones in the holes.\par
+A move consists of choosing a hole and distributing the stones therein. A
+move is specified as a list of integers with values between 1 and 6
+inclusive, where the numbers refer to the holes. Hole 1 is farthest
+from the player's kalah, while hole 6 is closest. A 
+list is necessary rather than a single integer because a move may
+continue. The move depicted in Figure~\Figboaposkal\ is $\(1,4\)$.\par
+The code gives all moves on backtracking. The predicate {\tt
+stones\_in\_hole(M,}\linebreak
+{\tt Board,N)} returns the number of stones {\tt N} in hole
+{\tt M} of the {\tt Board} if {\tt N} is greater than 0, failing
+if there are no stones in the hole. The predicate {\tt
+extend\_move(M,Board,N,Ms)} returns the continuation of the move {\tt
+Ms}. The second clause for {\tt move} handles the special case when all
+the player's holes become empty during a move.\par
+Testing whether the move continues is nontrivial, since it may involve
+all the procedures for making a move. If the last stone is not placed in
+the kalah, which can be determined by simple arithmetic, the move will
+end, and there is no need to distribute all the stones. Otherwise the
+stones are distributed, and the move continues recursively.\par
+The basic predicate for making a move is {\tt
+distribute\_stones(Stones,N,}\linebreak
+{\tt Board,Board1)}, which computes the relation that {\tt Board1} is
+obtained from {\tt Board} by distributing the number of stones in {\tt
+Stones} starting from hole number {\tt N}. There are two stages to the
+distribution, putting the stones in the player's holes, {\tt
+distribute\_my\_holes}, and putting the stones in the opponent's holes,
+{\tt distribute\_your\_holes}.\par
+The simpler case is distributing the stones in the opponent's holes. The
+holes are updated by {\tt distribute}, and the distribution of stones
+continues recursively if there is an excess of stones. A check is made to
+see if the player's board has become empty during the course of the move,
+and if so, the opponent's stones are added to his kalah.\par
+Distributing the player's stones must take into account two
+possibilities, distributing from any particular hole, and continuing the
+distribution for a large number of stones. The {\tt
+pick\_up\_and\_distribute} predicate is the generalization of {\tt
+distribute} to handle these cases. The predicate {\tt check\_capture}
+checks if a capture has occurred and updates the holes accordingly;
+{\tt update\_kalah} updates the number of stones in the player's 
+kalah. Some other necessary utilities such as {\tt n\_substitute} are
+also included in the program.\par
+The evaluation function is the difference between the number of stones in
+the two kalahs:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+value(board(H,K,Y,L),Value) $\lar$ Value is K-L.\cr}\medskip
+The central predicates have been described. A running program is now
+obtained by filling in the details for I/O, for initializing and
+terminating the game, etc. Simple suggestions can be found in the
+complete program for the game, given as Program~\Procomprokal.\par
+In order to optimize the performance of the program, cuts can be added.
+Another tip is to rewrite the main loop of the program as a
+failure-driven loop rather than a tail recursive program. This is
+sometimes necessary in implementations that do not incorporate tail
+recursion optimization and a good garbage collector.\par
+\sect{Background}
+The mastermind program, slightly modified, originally appeared in SIGART
+(Shapiro, 1983d) in response to a program for playing mastermind in
+Pascal. The SIGART article provoked several reactions, both of
+theoretical improvements to algorithms for playing mastermind and
+practical improvements to the program. Most interesting was an analysis
+and discussion by Powers (1984) of how a Prolog program could be
+rewritten to good benefit using the mastermind code as a case study.
+Eventually, speedup by a factor of 50 was achieved.\par
+A proof of the correctness of the algorithm for playing Nim can be found
+in any textbook discussing games on graphs, for example, Berge (1962).
+\par
+Kalah was an early AI target for game-playing programs (Slagle and Dixon,
+1969).\par\bye
+

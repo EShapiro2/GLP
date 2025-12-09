@@ -1,0 +1,1094 @@
+
+
+
+
+Part  II
+
+
+
+The  Prolog  Language
+
+
+
+   In order to implement a practical programming language based on the compu-
+
+
+tation model of logic programming, three issues need attention. The first conce*
+ *rns
+
+
+resolving the choices remaining in the abstract interpreter for logic programs,*
+ * de-
+
+
+fined in Chapter 4. The second concerns enhancing the expressiveness of the pure
+
+
+computation model of logic programs by adding meta-logical and extra-logical
+
+
+facilities. Finally, access to some of the capabilities of the underlying compu*
+ *ter,
+
+
+such as fast arithmetic and input/output, must be provided. This part discusses
+
+
+how Prolog, the most developed language based on logic programming, handles
+
+
+each of these issues.
+
+
+
+
+                                                   Chapter  6
+
+
+
+                                            Pure  Prolog
+
+
+
+   A pure Prolog program is a logic program, in which an order is defined both
+
+
+for clauses in the program and for goals in the body of the clause. The abstract
+
+
+interpreter for logic programs is specialized to take advantage of this ordering
+
+
+information. This chapter discusses the execution model of Prolog programs in
+
+
+contrast to logic programs, and compares Prolog to more conventional languages.
+
+
+   The relation between logic programming and Prolog is reminiscent of the
+
+
+relation between the lambda-calculus and Lisp. Both are concrete realizations of
+
+
+abstract computation models. Logic programs that execute with Prolog's execu-
+
+
+tion mechanism are referred to as pure Prolog.  Pure Prolog is an approximate
+
+
+realization of the logic programming computation model on a sequential machine.
+
+
+It is certainly not the only possible such realization. However, it is a realiz*
+ *ation
+
+
+with excellent practical choices, which balance preserving the properties of the
+
+
+abstract model with catering for efficient implementation.
+
+
+
+6.1   The Execution Model of Prolog
+
+
+
+
+6.1                                    The Execution Model of Prolog99
+
+
+
+   Two major decisions must be taken to convert the abstract interpreter for
+
+
+logic programs into a form suitable for a concrete programming language. First,
+
+
+the arbitrary choice of which goal in the resolvent to reduce, namely, the sche*
+ *dul-
+
+
+ing policy, must be specified. Second, the nondeterministic choice of the clause
+
+
+from the program to effect the reduction must be implemented.
+
+
+   Several logic programming languages exist, reflecting different choices. Pro*
+ *log
+
+
+and its extensions (Prolog-II, IC-Prolog, and MU-Prolog, for example) are based
+
+
+on sequential execution. Other languages, such as PARLOG, Concurrent Prolog,
+
+
+GHC, Aurora-Prolog, and Andorra-Prolog, are based on parallel execution. The
+
+
+treatment of nondeterminism distinguishes between sequential and parallel lan-
+
+
+guages. The distinction between Prolog and its extensions is in the choice of g*
+ *oal
+
+
+to reduce.
+
+
+   Prolog's execution mechanism is obtained from the abstract interpreter by
+
+
+choosing the leftmost goal instead of an arbitrary one and replacing the non-
+
+
+deterministic choice of a clause by sequential search for a unifiable clause and
+
+
+backtracking.
+
+
+   In other words, Prolog adopts a stack scheduling policy.  It maintains the
+
+
+resolvent as a stack: pops the top goal for reduction, and pushes the derived g*
+ *oals
+
+
+onto the resolvent stack.
+
+
+   In addition to the stack policy, Prolog simulates the nondeterministic choice
+
+
+of reducing clause by sequential search and backtracking.  When attempting to
+
+
+reduce a goal, the first clause whose head unifies with the goal is chosen. If *
+ *no
+
+
+unifiable clause is found for the popped goal, the computation is unwound to the
+
+
+
+
+100   Pure Prolog                                                 6.1
+
+
+
+last choice made, and the next unifiable clause is chosen.
+
+
+
+   A computation of a goal G with respect to a Prolog program P is the gen-
+
+
+eration of all solutions of G with respect to P. In terms of logic programming
+
+
+concepts, a Prolog computation of a goal G is a complete depth-first traversal *
+ *of
+
+
+the particular search tree of G obtained by always choosing the leftmost goal.
+
+
+
+   Many different Prolog implementations exist with differing syntax and pro-
+
+
+gramming facilities. Recently, there has been an attempt to reach a Prolog stan-
+
+
+dard based on the Edinburgh dialect of Prolog. At the time of writing, the stan-
+
+
+dard has not been finalized. However a complete draft exists, which we essentia*
+ *lly
+
+
+follow. We refer to the Prolog described in that document as Standard Prolog.
+
+
+The syntax of logic programs that we have been using fits within Standard Prolog
+
+
+except that we use some characters not available on a standard keyboard.  We
+
+
+give the standard equivalent of our special characters.  Thus :{ should be used
+
+
+instead of   in Prolog programs to separate the head of a clause from its body.
+
+
+All the programs in this book run (possibly with minor changes) in all Edinburg-
+
+
+compatible Prologs.
+
+
+
+   A trace of a Prolog computation is an extension of the trace of a computation
+
+
+of a logic program under the abstract interpreter as described in Section 4.2.
+
+
+We revise the computations of Chapters 4 and 5, indicating the similarities and
+
+
+differences.  Consider the query son(X,haran)?  with respect to Program 1.2,
+
+
+biblical family relationships, repeated at the top of Figure 6.1. The computati*
+ *on
+
+
+is given in the bulk of Figure 6.1.  It corresponds to a depth-first traversal *
+ *of
+
+
+the first of the search trees in Figure 5.2. It is an extension of the first tr*
+ *ace in
+
+
+
+
+6.1                                    The Execution Model of Prolog101
+
+
+
+       father(abraham,isaac).     male(isaac).
+
+
+       father(haran,lot).         male(lot).
+
+
+       father(haran,milcah).      female(yiscah).
+
+
+       father(haran,yiscah).      female(milcah).
+
+
+
+       son(X,Y)   father(Y,X), male(X).
+
+
+       daughter(X,Y)   father(Y,X), female(X).
+
+
+
+       son(X,haran)?
+
+
+           father(haran,X)                        X=lot
+
+
+           male(lot)
+
+
+                   true
+
+
+               Output:  X=lot
+
+
+                   ;
+
+
+           father(haran,X)                        X=milcah
+
+
+           male(milcah)        f
+
+
+           father(haran,X)                        X=yiscah
+
+
+           male(yiscah)        f
+
+
+                     no (more) solutions
+
+
+
+            Figure 6.1:  Tracing a simple Prolog computation
+
+
+
+Figure 4.4, since the whole search tree is searched.
+
+
+
+   The notation previously used for traces must be extended to handle failure
+
+
+
+
+102   Pure Prolog                                                 6.1
+
+
+
+and backtracking. An f after a goal denotes that a goal fails, that is there is*
+ * no
+
+
+clause whose head unifies with the goal. The next goal after a failed goal is w*
+ *here
+
+
+the computation continues on backtracking.  It already appears as a previous
+
+
+goal in the trace at the same depth of indentation and can be identified by the
+
+
+variable names. We adopt the Edinburgh Prolog convention that a \;" typed after
+
+
+a solution denotes a continuation of the computation to search for more solutio*
+ *ns.
+
+
+Unifications are indicated as previously.
+
+
+   Trace facilities and answers provided by particular Prolog implementations
+
+
+vary from our description.  For example, some Prolog implementations always
+
+
+give all solutions, while others wait for a user response after each solution.
+
+
+   The trace of append([a,b],[c,d],Ls)? giving the answer Ls=[a,b,c,d] is
+
+
+precisely the trace given in Figure 4.3.  Figure 4.5, giving the trace for solv*
+ *ing
+
+
+the Towers of Hanoi with three disks, is also a trace of the hanoi program con-
+
+
+sidered as a Prolog program solving the query hanoi(s(s(s(0))),a,b,c,Ms)?.
+
+
+The trace of a deterministic computation is the same when considered as a logic
+
+
+program or a Prolog program, provided the order of goals is preserved.
+
+
+   The next example is answering the query append(Xs,Ys,[a,b,c])?  with
+
+
+respect to Program 3.15 for append.  There are several solutions of the query.
+
+
+The search tree for this goal was given as Figure 5.3. Figure 6.2 gives the Pro*
+ *log
+
+
+trace.
+
+
+   Tracing computations is a good way to gain understanding of the execution
+
+
+model of Prolog. We give a slightly larger example, sorting a list with the qui*
+ *cksort
+
+
+program (Program 3.22, reproduced at the top of Figure 6.3). Computations using
+
+
+
+
+6.1                                    The Execution Model of Prolog103
+
+
+
+   append([XjXs],Ys,[XjZs])   append(Xs,Ys,Zs).
+
+
+   append([ ],Ys,Ys).
+
+
+   append(Xs,Ys,[a,b,c])                        Xs=[ajXs1]
+
+
+       append(Xs1,Ys,[b,c])                     Xs1=[bjXs2]
+
+
+          append(Xs2,Ys,[c])                    Xs2=[cjXs3]
+
+
+              append(Xs3,Ys,[ ])                Xs3=[ ],Ys=[ ]
+
+
+                      true
+
+
+                  Output:  (Xs=[a,b,c],Ys=[ ])
+
+
+                                  ;
+
+
+          append(Xs2,Ys,[c])                    Xs2=[ ],Ys=[c]
+
+
+                  true
+
+
+              Output:  (Xs=[a,b],Ys=[c] )
+
+
+                                  ;
+
+
+       append(Xs1,Ys,[b,c])                     Xs1=[ ],Ys=[b,c]
+
+
+              true
+
+
+          Output:  (Xs=[a],Ys=[b,c])
+
+
+                                  ;
+
+
+   append(Xs,Ys,[a,b,c])                        Xs=[ ],Ys=[a,b,c]
+
+
+          true
+
+
+       Output:  (Xs=[ ],Ys=[a,b,c])
+
+
+                                  ;
+
+
+                          no (more) solutions
+
+
+
+             Figure 6.2:  Multiple solutions for splitting a list
+
+
+
+
+104   Pure Prolog                                                 6.1
+
+
+
+quicksort are essentially deterministic and show the algorithmic behavior of a
+
+
+Prolog program. Figure 6.3 gives a trace of the query quicksort([2,1,3],Xs)?.
+
+
+Arithmetic comparisons are assumed to be unit operations, and the standard
+
+
+program for append is used.
+
+
+   We introduce a distinction between shallow and deep backtracking. Shallow
+
+
+backtracking occurs when the unification of a goal and a clause fails, and an
+
+
+alternative clause is tried. Deep backtracking occurs when the unification of t*
+ *he
+
+
+last clause of a procedure with a goal fails, and control returns to another go*
+ *al in
+
+
+the computation tree.
+
+
+   It is sometimes convenient to include, for the purpose of this definition, t*
+ *est
+
+
+predicates that occur first in the body of the clause as part of unification, a*
+ *nd
+
+
+to classify the backtracking that occurs as a result of their failure as shallo*
+ *w.
+
+
+An example in Figure 6.3 is the choice of a new clause for the goal parti-
+
+
+tion([3],2,Ls1,Bs).
+
+
+
+Exercises for Section 6.1
+
+
+
+(i)Trace the execution of daughter(X,haran)? with respect to Program 1.2.
+
+
+(ii)Trace the execution of sort([3,1,2],Xs)? with respect to Program 3.21.
+
+
+(iii)Trace the execution of sort([3,1,2],Xs)? with respect to Program 3.20.
+
+
+
+6.2   Comparison to Conventional Programming Languages
+
+
+
+
+6.2                  Comparison to Conventional Programming Languages105
+
+
+
+        quicksort([XjXs],Ys)  
+
+
+            partition(Xs,X,Littles,Bigs),
+
+
+            quicksort(Littles,Ls),
+
+
+            quicksort(Bigs,Bs),
+
+
+            append(Ls,[XjBs],Ys).
+
+
+        quicksort([ ],[ ]).
+
+
+        partition([XjXs],Y,[XjLs],Bs)  
+
+
+            X  Y, partition(Xs,Y,Ls,Bs).
+
+
+        partition([XjXs],Y,Ls,[XjBs])  
+
+
+            X > Y, partition(Xs,Y,Ls,Bs).
+
+
+        partition([ ],Y,[ ],[ ]).
+
+
+        quicksort([2,1,3],Qs)
+
+
+            partition([1,3],2,Ls,Bs)            Ls=[1jLs1]
+
+
+                1  2
+
+
+                partition([3],2,Ls1,Bs)         Ls1=[3jLs2]
+
+
+                    3  2        f
+
+
+                partition([3],2,Ls1,Bs)         Bs=[3jBs1]
+
+
+                    3 > 2
+
+
+                    partition([ ],2,Ls1,Bs1)    Ls1=[ ]=Bs1
+
+
+            quicksort([1],Qs1)
+
+
+                partition([ ],1,Ls2,Bs2)        Ls2=[ ]=Bs2
+
+
+                quicksort([ ],Qs2)              Qs2=[ ]
+
+
+                quicksort([ ],Qs3)              Qs3=[ ]
+
+
+                append([ ],[1],Qs1)             Qs1=[1]
+
+
+            quicksort([3],Qs4)
+
+
+                partition([ ],3,Ls3,Bs3)        Ls3=[ ]=Bs3
+
+
+                quicksort([ ],Qs5)              Qs5=[ ]
+
+
+                quicksort([ ],Qs6)              Qs6=[ ]
+
+
+                append([ ],[3],Qs4)             Qs4=[3]
+
+
+            append([1],[2,3],Qs)                Qs=[1jYs]
+
+
+                append([ ],[2,3],Ys)            Ys=[2,3]
+
+
+                        true
+
+
+                    Output:  (Qs=[1,2,3])
+
+
+             Figure 6.3:  Tracing a quicksort computation
+
+
+
+
+106   Pure Prolog                                                 6.2
+
+
+
+   A programming language is characterized by its control and data manip-
+
+
+ulation mechanisms.  Prolog, as a general-purpose programming language, can
+
+
+be discussed in these terms, as are conventional languages.  In this section, we
+
+
+compare the control flow and data manipulation of Prolog to that of Algol-like
+
+
+languages.
+
+
+
+   The control in Prolog programs is like that in conventional procedural lan-
+
+
+guages as long as the computation progresses forward.  Goal invocation corre-
+
+
+sponds to procedure invocation, and the ordering of goals in the body of clauses
+
+
+corresponds to sequencing of statements. Specifically, the clause A   B1,: :,:Bn
+
+
+can be viewed as the definition of a procedure A as follows:
+
+
+
+       procedure A
+
+
+           call B1,
+
+
+           call B2,
+           ..
+           .
+
+
+           call Bn,
+
+
+       end.
+
+
+
+   Recursive goal invocation in Prolog is similar in behavior and implemen-
+
+
+tation to that of conventional recursive languages.  The differences show when
+
+
+backtracking occurs.  In a conventional language, if a computation cannot pro-
+
+
+ceed (e.g., all branches of a case statement are false), a runtime error occurs*
+ *. In
+
+
+Prolog, the computation is simply undone to the last choice made, and a differe*
+ *nt
+
+
+computation path is attempted.
+
+
+
+
+6.2                  Comparison to Conventional Programming Languages107
+
+
+
+   The data structures manipulated by logic programs, terms, correspond to
+
+
+general record structures in conventional programming languages. The handling
+
+
+of data structures is very flexible in Prolog. Like Lisp, Prolog is a declarati*
+ *on-free,
+
+
+typeless language.
+
+
+
+   The major differences between prolog and conventional languages in the use
+
+
+of data structures in Prolog arise from the nature of logical variables.  Logic*
+ *al
+
+
+variables refer to individuals rather than to memory locations.  Consequently,
+
+
+having once beed specified to refer to a particular individual, a variable cann*
+ *ot
+
+
+be made to refer to another individual. In other words, logic programming does
+
+
+not support destructive assignment where the contents of an initialized variable
+
+
+can change.
+
+
+
+   Data manipulation in logic programs is achieved entirely via the unification
+
+
+algorithm. Unification subsumes
+
+
+       ffl  Single assignment
+
+
+       ffl  Parameter passing
+
+
+       ffl  Record allocation
+
+
+       ffl  Read/write-once field-access in records
+
+
+
+   We  discuss  the  trace  of  the  quicksort  program  in  Figure  6.3,  poin*
+ *t-
+
+
+ing  out  the  various  uses  of  unification.    The  unification  of  the  in*
+ *itial
+
+
+goal  quicksort([2,1,3],Qs)  with  the  head  of  the  procedure  definition
+
+
+quicksort([XjXs],Ys) illustrates several features.  The unification of [2,1,3]
+
+
+with the term [XjXs] achieves record access to the list and also selection of i*
+ *ts
+
+
+two fields, the head and tail.
+
+
+
+
+108   Pure Prolog                                                 6.2
+
+
+
+   The unification of [1,3] with Xs achieves parameter passing to the par-
+
+
+tition procedure, because of the sharing of the variables.  This gives the first
+
+
+argument of partition. Similarly, the unification of 2 with X passes the value *
+ *of
+
+
+the second parameter to partition.
+
+
+   Record  creation  can  be  seen  with  the  unification  of  the  goal  part*
+ *i-
+
+
+tion([1,3],2,Ls,Bs) with the head of the partition procedure partition([Xj
+
+
+Xs],Z,[XjLs1],Bs1). As a result, Ls is instantiated to [1jLs1]. Specifically, Ls
+
+
+is made into a list and its head is assigned the value 1, namely, record creati*
+ *on
+
+
+and field assignment via unification.
+
+
+   The recursive algorithm embodied by the quicksort program can be eas-
+
+
+ily coded in a conventional programming language using linked lists and pointer
+
+
+manipulation.  As discussed, unification is achieving the effect of the necessa*
+ *ry
+
+
+pointer manipulations.  Indeed, the manipulation of logical variables via unifi-
+
+
+cation can be viewed as an abstraction of low-level manipulation of pointers to
+
+
+complex data structures.
+
+
+   These analogies may provide hints on how to implement Prolog efficiently
+
+
+on a von Neumann machine.  Indeed, the basic idea of compilation of Prolog
+
+
+is to translate special cases of unification to conventional memory manipulation
+
+
+operations, as specified previously.
+
+
+   Conventional languages typically incorporate error-handling or exception-
+
+
+handling mechanisms of various degrees of sophistication. Pure Prolog does not
+
+
+have an error or exception mechanism built into its definition. The pure Prolog
+
+
+counterparts of nonfatal errors in conventional programs, e.g., a missing case *
+ *in
+
+
+
+
+6.3                                                   Background  109
+
+
+
+a case statement, or dividing by zero, cause failure in pure Prolog.
+
+
+   Full Prolog, introduced in the following chapters, includes system predicate*
+ *s,
+
+
+such as arithmetic and I/O, which may cause errors. Current Prolog implementa-
+
+
+tions do not have sophisticated error-handling mechanisms. Typically, on an err*
+ *or
+
+
+condition, a system predicate prints an error message and either fails or aborts
+
+
+the computation.
+
+
+   This brief discussion of Prolog's different way of manipulating data does
+
+
+not help with the more interesting question: How does programming in Prolog
+
+
+compare with programming in conventional programming languages? That is the
+
+
+major underlying topic of the rest of this book.
+
+
+
+6.3   Background
+
+
+
+   The origins of Prolog are shrouded in mystery.  All that is known is that
+
+
+the two founders, Robert Kowalski, then at Edinburgh, and Alain Colmerauer
+
+
+at Marseilles worked on similar ideas during the early 1970's, and even worked
+
+
+together one summer. The results were the formulation of the logic programming
+
+
+philosophy and computation model by Kowalski (1974), and the design and im-
+
+
+plementation of the first logic programming language Prolog, by Colmerauer and
+
+
+his colleagues (1973). Three recent articles giving many more details about the
+
+
+beginnings of Prolog and logic programming are Cohen (1988), Kowalski (1988),
+
+
+and (Colmerauer and Roussel, 1993).
+
+
+   A major force behind the realization that logic can be the basis of a practi-
+
+
+
+
+110   Pure Prolog                                                 6.3
+
+
+
+cal programming language has been the development of efficient implementation
+
+
+techniques, as pioneered by Warren (1977). Warren's compiler identified special
+
+
+cases of unification and translated them into efficient sequences of convention*
+ *al
+
+
+memory operations.  Good accounts of techniques for Prolog implementation,
+
+
+both interpretation and compilation, can be found in Maier and Warren (1988)
+
+
+and Ait-Kaci (1991).
+
+
+   Variations of Prolog with extra control features, such as IC-Prolog (Clark
+
+
+and McCabe, 1979), have been developed but have proved too costly in runtime
+
+
+overhead to be seriously considered as alternatives to Prolog.  We will refer to
+
+
+particular interesting variations that have been proposed in the appropriate se*
+ *c-
+
+
+tions.
+
+
+   Another breed of logic programming languages, which indirectly emerged
+
+
+from IC-Prolog, was concurrent logic languages.  The first was the Relational
+
+
+Language (Clark and Gregory, 1981), followed by Concurrent Prolog (Shapiro,
+
+
+1983b), PARLOG (Clark and Gregory, 1984), GHC (Ueda, 1985), and a few
+
+
+other proposals.
+
+
+   References for the variations mentioned in the text are, for Prolog-II (van
+
+
+Caneghem, 1982), IC-Prolog (Clark et al., 1982), and MU-Prolog (Naish, 1985a).
+
+
+Aurora-Prolog is described in Disz et al. (1987), while a starting place for re*
+ *ad-
+
+
+ing about AKL, a language emerging from Andorra-Prolog is Janson and Haridi
+
+
+(1991).
+
+
+   The syntax of Prolog stems from the clausal form of logic due to Kowalski
+
+
+(1974). The original Marseilles interpreter used the terminology of positive and
+
+
+
+
+6.3                                                   Background  111
+
+
+
+negative literals from resolution theory. The clause A   B1; : :;:Bn was written
+
+
++A  B1 : : :Bn.
+
+
+   David H. D. Warren adapted Marseilles Prolog for the DEC-10 at the Univer-
+
+
+sity of Edinburgh, with help from Fernando Pereira. Their decisions have been
+
+
+very influential.  Many systems adopted most of the conventions of Prolog-10
+
+
+(Warren et al., 1979), which has become known more generically as Edinburgh
+
+
+Prolog.  Its essential features are described in the widespread primer on Pro-
+
+
+log (Clocksin and Mellish, 1984). This book follows the description of Standard
+
+
+Prolog existing as Scowen (1991).
+
+
+   A paper by Cohen (1985) delves further into the relation between Prolog and
+
+
+conventional languages.

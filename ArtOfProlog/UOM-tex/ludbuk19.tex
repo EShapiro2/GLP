@@ -1,0 +1,615 @@
+%%%%% Leonudi Book, Chapter 19, pp 332-345 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 18
+\numberfirst
+\startpage{332}
+
+\chapa{Logic Grammars}
+A very important application area of Prolog is parsing. In fact, Prolog
+originated from attempts to use logic to express grammar rules and to
+formalize the process of parsing. In this chapter, we present the most
+common logic grammar formalism, definite clause grammars. We show how
+grammar rules can be considered as a language on top of Prolog, and we apply
+grammar rules to parse simple English sentences. In Chapter~24, definite
+clause grammars are used as the parsing component of a simple compiler
+for a Pascal-like language.\par
+\sect{Definite Clause Grammars}
+Definite clause grammars arise from adding features of Prolog to
+context-free grammars. In Section~18.3, we briefly sketched how
+context-free grammars could be immediately converted to Prolog programs,
+which parsed the language specified by the context-free grammar. By
+adding the ability of Prolog to exploit the power of unification and the
+ability to call builtin predicates, a very powerful parsing formalism is
+indeed achieved, as we now show.\par
+Consider the context-free grammar for recognizing the language {\it
+a\/$^{\ast}$b\/$^{\ast}$c\/}$^{\ast}$, presented in Figure~\Figconfregra,
+with equivalent Prolog program Program~\Proproparlan. The Prolog program
+can be easily enhanced to count the number of symbols that appear in any
+recognized sequence of {\it a\/}'s, {\it b\/}'s, and {\it c\/}'s. An
+argument would be added to each predicate constituting the number of
+symbols found. Arithmetic would be performed to add numbers together. The
+first clause would become\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+s(As\\Xs,N) $\lar$\cr
+\qi a(As\\Bs,NA), b(Bs\\Cs,NB), c(Cs\\Xs,NC), N is NA+NB+NC.\cr}\medskip
+The extra argument counting the number of {\it a\/}'s, {\it b\/}'s, and
+{\it c\/}'s can be added to the grammar rule just as easily, yielding
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+s(N) $\rar$ a(NA), b(NB), c(NC), N is NA+NB+NC.\cr}\medno
+Adding arguments to nonterminal symbols of context-free grammars, and the
+ability to call (arbitrary) Prolog predicates, increases their utility
+and expressive power. Grammars in this new class are called {\it definite
+clause grammars\/}, or {\it DCG\/}s. Definite clause grammars are a
+generalization of context-free grammars that are executable, 
+augmented by the language features of Prolog.\par
+Program~\Protragrapro, translating context-free grammars into Prolog
+programs, can be extended to translate DCGs into Prolog. The extension
+is posed as Exercise~(i) at the end of this section. Throughout this
+chapter we write DCGs in grammar rule notation, being aware that they
+can be viewed as Prolog programs. Many Edinburgh Prolog
+implementations provide support for grammar rules. The operator used
+for $\rar$ is -$\,$-$>$. Grammar rules are expanded automatically into
+Prolog clauses with two extra arguments added as the last two
+arguments of the predicate to represent as a difference-list the
+sequence of tokens or words recognized by the predicate. Braces are
+used to delimit goals to be called by Prolog directly, which should not
+have extra arguments added during translation. Grammar rules are not
+part of Standard Prolog but will probably be incorporated in the
+future.\par  
+Program~\Proenhlanabc\ gives a DCG that recognizes the language {\it
+a\/$^{\ast}$b\/$^{\ast}$c\/}$^{\ast}$ and also counts the number of
+letters in the recognized sequence. The enhancement from Figure
+\Figconfregra\ is immediate. To query Program~\Proenhlanabc,
+consideration must be taken of the two extra arguments that will be
+added. For example, a suitable query is {\tt s(N,\(a,a,b,b,b,c\),\(~\))?}.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+s(N) $\rar$ a(NA), b(NB), c(NC), $\{$N is NA+NB+NC$\}$.\cr
+\noalign{\vskip 5pt}
+a(N) $\rar$ \(a\), a(N1), $\{$N is N1+1$\}$.\cr
+a(0) $\rar$ \(~\).\cr
+b(N) $\rar$ \(b\), b(N1), $\{$N is N1+1$\}$.\cr
+b(0) $\rar$ \(~\).\cr
+c(N) $\rar$ \(c\), c(N1), $\{$N is N1+1$\}$.\cr
+c(0) $\rar$ \(~\).\cr
+\noalign{\bigskip}
+{\bf Program \Proenhlanabc}{\rm :~~Enhancing the language {\it a\/$^{
+\ast}$b\/$^{\ast}$c\/}$^{\ast}$}\cr}
+\endinsert\par
+Counting the symbols could, of course, be accomplished by traversing the
+difference-list of words. However, counting is a simple enhancement to
+understand, which effectively displays the essence of definite clause
+grammars. Section~19.3 presents a wider variety of enhancements.
+\par
+Our next example is a striking one of the increase in expressive
+power possible using extra arguments and unification. Consider
+recognizing the language {\it a\/$^N$b\/$^N$c\/}$^N$, which is not
+possible with a context-free grammar. However, there is a straightforward
+modification to the grammar given as Program~\Proenhlanabc. All that is
+necessary is to change the first rule and make the number of {\it a\/}'s,
+{\it b\/}'s, and {\it c\/}'s the same. The modified program is given as
+Program~\Proreclanabc.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+s $\rar$ a(N), b(N), c(N).\cr
+\noalign{\vskip 5pt}
+a(N) $\rar$ \(a\), a(N1), $\{$N is N1+1$\}$.\cr
+a(0) $\rar$ \(~\).\cr
+b(N) $\rar$ \(b\), b(N1), $\{$N is N1+1$\}$.\cr
+b(0) $\rar$ \(~\).\cr
+c(N) $\rar$ \(c\), c(N1), $\{$N is N1+1$\}$.\cr
+c(0) $\rar$ \(~\).\cr
+\noalign{\bigskip}
+{\bf Program \Proreclanabc}{\rm :~~Recognizing the language {\it
+a\/$^N$b\/$^N$c\/}$^N$}\cr}
+\endinsert\par
+In Program~\Proreclanabc, unification has added context sensitivity and
+increased the expressive power of DCGs over context-free grammars. DCGs
+should be regarded as Prolog programs. Indeed, parsing with DCGs is a
+perfect illustration of Prolog programming using nondeterministic
+programming and difference-lists. The top-down left-to-right computation
+model of Prolog yields a top-down, left-to-right parser.\par
+Definite clause grammars can be used to express general programs. For
+example, a version of Program~\Proapptwolis\ for {\tt append} with its
+last two arguments swapped can be written as follows.\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+append(\(~\)) $\rar$ \(~\).\cr
+append(\(X$\mid$Xs\)) $\rar$ \(X\), append(Xs).\cr}\medno
+Using DCGs for tasks other than parsing is an acquired programming taste.
+\par
+We conclude this section with a more substantial example. A DCG is given
+for parsing the declarative part of a block in a Pascal program. The code
+does not in fact cover all of Pascal --- it is not complete in its
+definition of types or constants, for example. Extensions to the grammar
+are posed in the exercises at the end of this section. Parsing the
+statement part of a Pascal program is illustrated in Chapter~24.\par
+The grammar for the declarative part of a Pascal block is given as
+Program~\Propardecpas. Each grammar rule corresponds closely to the
+syntax diagram for the corresponding Pascal statement. For example, the
+syntax diagram for constant declarations is as follows:
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\rm The grammar for the declarative part of a Pascal program.}\cr
+\noalign{\medskip}
+declarative\_part $\rar$\cr
+\qi const\_declaration, type\_declaration,\cr
+\qi var\_declaration, procedure\_declaration.\cr
+\noalign{\medskip}
+{\rm Constant declarations}\cr
+\noalign{\medskip}
+const\_declaration $\rar$ \(~\).\cr
+const\_declaration $\rar$\cr
+\qi \(const\), const\_definition, \(;\), const\_definitions.\cr
+\noalign{\vskip 5pt}
+const\_definitions $\rar$ \(~\).\cr
+const\_definitions $\rar$\cr
+\qi const\_definition, \(;\), const\_definitions.\cr
+\noalign{\vskip 5pt}
+const\_definition $\rar$ identifier, \(=\), constant.\cr
+\noalign{\vskip 5pt}
+identifier $\rar$ \(X\), $\{$atom(X)$\}$.\cr
+constant $\rar$ \(X\), $\{$constant(X)$\}$.\cr
+\noalign{\medskip}
+{\rm Type declarations}\cr
+\noalign{\medskip}
+type\_declaration $\rar$ \(~\).\cr
+type\_declaration $\rar$\cr
+\qi \(type\), type\_definition, \(;\), type\_definitions.\cr
+\noalign{\vskip 5pt}
+type\_definitions $\rar$ \(~\).\cr
+type\_definitions $\rar$ type\_definition, \(;\), type\_definitions.\cr
+\noalign{\vskip 5pt}
+type\_definition $\rar$ identifier, \(=\), type.\cr
+\noalign{\vskip 5pt}
+type $\rar$ \(`INTEGER'\).\cr
+type $\rar$ \(`REAL'\).\cr
+type $\rar$ \(`BOOLEAN'\).\cr
+type $\rar$ \(`CHAR'\).\cr
+\noalign{\medskip}
+{\rm Variable declarations}\cr
+\noalign{\medskip}
+var\_declaration $\rar$ \(~\).\cr
+var\_declaration $\rar$\cr
+\qi \(var\), var\_definition, \(;\), var\_definitions.\cr
+\noalign{\vskip 5pt}
+var\_definitions $\rar$ \(~\).\cr
+var\_definitions $\rar$ var\_definition, \(;\), var\_definitions.\cr
+\noalign{\vskip 5pt}
+\noalign{\bigskip}
+{\bf Program \Propardecpas}{\rm :~~Parsing the declarative part of a
+Pascal block}\cr}\vfill}
+\endin
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+var\_definition $\rar$ identifiers, \(:\), type.\cr
+\noalign{\vskip 5pt}
+identifiers $\rar$ identifier.\cr
+identifiers $\rar$ identifier, \(,\), identifiers.\cr
+\noalign{\medskip}
+{\rm Procedure declarations}\cr
+\noalign{\medskip}
+procedure\_declaration $\rar$ \(~\).\cr
+procedure\_declaration $\rar$ procedure\_heading, \(;\), block.\cr
+\noalign{\medskip}
+procedure\_heading $\rar$\cr
+\qi \(procedure\), identifier, formal\_parameter\_part.\cr
+\noalign{\vskip 5pt}
+formal\_parameter\_part $\rar$ \(~\).\cr
+formal\_parameter\_part $\rar$ \((\), formal\_parameter\_section,
+\()\).\cr
+\noalign{\vskip 5pt}
+formal\_parameter\_section $\rar$ formal\_parameters.\cr
+formal\_parameter\_section $\rar$\cr
+\qi formal\_parameters, \(;\),\cr
+\qi formal\_parameter\_section.\cr
+\noalign{\vskip 5pt}
+formal\_parameters $\rar$ value\_parameters.\cr
+formal\_parameters $\rar$ variable\_parameters.\cr
+\noalign{\vskip 5pt}
+value\_parameters $\rar$ var\_definition.\cr
+variable\_parameters $\rar$ \(var\), var\_definition.\cr
+\noalign{\bigskip}
+{\bf Program \Propardecpas}~~{\rm (Continued)}\cr}
+\endin
+$$\vcenter{\halign{\lft{#}\quad&\lft{#}\quad&\lft{#}\quad&\lft{#}\quad&
+\lft{#}\quad&\lft{#}\cr
+-$\,$-$\,$-$>$&{\bf const}&-$\,$-$\,$-$\,$-$\,$-$>$&Constant Definition&
+-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$>$\quad;&-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$
+\,$-$>$\cr
+&&$\mid$&&&$\mid$\cr
+&&\omit -$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$
+\,$-$\,$-$\,$-$\, <$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$
+\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-$\,$-
+\span\omit\span\omit\span\omit\cr}}$$\bigskip
+The second grammar rule for {\tt const\_declaration} in Program
+\Propardecpas\ says exactly the same. A constant declaration is the
+reserved word {\tt const} followed by a constant definition, handled by
+the nonterminal symbol {\tt const\_definition}; followed by a semicolon;
+followed by the rest of the constant definition, handled by the
+nonterminal symbol {\tt const\_definitions}. The first rule for {\tt
+const\_declaration} effectively states that the constant declaration is
+optional. A constant definition is an identifier followed by =, followed
+by a constant. The definition for {\tt const\_definitions} is recursive,
+being either empty or another constant definition; followed by a semicolon;
+followed by the rest of the constant definition.\par
+The remainder of Program~\Propardecpas\ is similarly easy to understand.
+It clearly shows the style of writing grammars in Prolog.\vskip 15pt
+\parno
+{\bf Exercises for Section 19.1}\vskip 5pt\par
+\offset{20pt}{(i)} Extend Program~\Protragrapro\ so that it translates
+definite clause grammars to Prolog as well as context-free grammars.\par
+\offset{20pt}{(ii)} Add to Program~\Propardecpas\ the ability to
+correctly handle label declarations and function declarations.\par
+\offset{20pt}{(iii)} Enhance Program~\Propardecpas\ to return the list of
+variables declared in the declarative part.\par
+\offset{20pt}{(iv)} Write a program to parse the language of your choice
+in the style of Program~\Propardecpas.\par
+\sect{A Grammar Interpreter}
+Grammar rules are viewed in the previous section as syntactic sugar for
+Prolog clauses. This view is supported by Prolog systems with automatic
+grammar rule translation. There is a second way of viewing grammar rules,
+namely as a rule language.\par
+This section takes the second view and considers grammar rules as an
+embedded language on top of Prolog. We consider applying the interpreter
+techniques of Chapter~17 to grammar rules.\par
+Program~\Prodcgint\ is an interpreter for grammar rules. The basic
+relation is {\tt parse(Symbol,Tokens)}, which is true if a sequence of
+grammar rules can be applied to {\tt Symbol} to reach {\tt Tokens}. The
+tokens are represented as a difference-list.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it parse\/}({\it Start,Tokens\/}) $\lar$\cr
+\qi {\rm The sequence of tokens} {\it Tokens\/} {\rm represented as a
+difference-list}\cr
+\qi {\rm can be reached by applying the grammar rules defined by $\rar$/2,}\cr 
+\qi {\rm starting from} {\it Start\/}{\rm .}\cr
+\noalign{\medskip}
+parse(A,Tokens) $\lar$\cr
+\qi nonterminal(A), A $\rar$ B, parse(Symbols,Tokens).\cr
+parse((A,B),Tokens\\Xs) $\lar$\cr
+\qi parse(A,Tokens\\Tokens1), parse(B,Tokens1\\Xs).\cr
+parse(A,Tokens) $\lar$ terminals(A), connect(A,Tokens).\cr
+parse($\{$A$\}$,Xs\\Xs) $\lar$ A.\cr
+\noalign{\vskip 5pt}
+terminals(Xs) $\lar$ {\rm See Program \Protragrapro}.\cr
+\noalign{\vskip 5pt}
+connect(Xs,Tokens) $\lar$ {\rm See Program \Proproparlan}.\cr
+\noalign{\bigskip}
+{\bf Program \Prodcgint}{\rm :~~A definite clause grammar (DCG) interpreter}\cr}
+\endin\par
+The granularity of the DCG interpreter is at the clause reduction level,
+the same as for the vanilla meta-interpreter, Program~\Prometpurpro, and
+the expert system rule interpreter, Program~\Prosketwolay. Indeed, the
+code in Program~\Prodcgint\ is similar to those interpreters. There are
+four cases, handled by the four clauses for {\tt parse} in
+Program~\Prodcgint. The first rule handles the basic operation of reducing a 
+nonterminal symbol, and the second rule handles conjunctions of symbols.
+The third rule handles terminal symbols, and the fourth rule
+covers the ability to handle Prolog predicates by calling them directly
+using the meta-variable facility.\par
+Observe that the last argument in {\tt parse/2}, the DCG interpreter, is a
+difference-list. This difference-list can be handled implicitly using
+grammar rule notation. In other words, Program~\Prodcgint\ could itself
+be written as a DCG. This task is posed as Exercise~19.2(i).\par
+Recall that the interpreters of Chapter~17 were enhanced. Similarly, the DCG
+interpreter, Program~\Prodcgint, can be enhanced.
+Program~\Prodcgintcou\ gives a simple enhancement that counts the
+number of tokens used in parsing. As mentionedbefore, this particular
+enhancement could be accomplished directly, but it illustrates how an
+interpreter can be enhanced. 
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it parse\/}({\it Start,Tokens,N\/}) $\lar$\cr
+\qi {\rm The sequence of tokens} {\it Tokens\/}{\rm , represented as a
+difference-list,}\cr
+\qi {\rm can be reached by applying the grammar rules defined by $\rar$/2,}\cr
+\qi {\rm starting from} {\it Start\/}{\rm , and} {\it N\/} {\rm tokens
+are found.}\cr
+\noalign{\medskip}
+parse(A,Tokens,N) $\lar$\cr
+\qi nonterminal(A), A $\rar$ B, parse(symbols,Tokens,N).\cr
+parse((A,B),Tokens\\Xs,N) $\lar$\cr
+\qi parse(A,Tokens\\Tokens1,NA), parse(B,Tokens1\\Xs,NB),\cr
+\qi N is NA+NB.\cr
+parse(A,Tokens,N) $\lar$\cr
+\qi terminals(A), connect(A,Tokens), length(A,N).\cr
+parse($\{$A$\}$,Xs\\Xs,0) $\lar$ A.\cr
+\noalign{\vskip 5pt}
+terminals(Xs) $\lar$ {\rm see Program \Protragrapro}.\cr
+\noalign{\vskip 5pt}
+connect(A,Tokens) $\lar$ {\rm See Program \Proproparlan}.\cr
+\noalign{\vskip 5pt}
+length(Xs,N) $\lar$ {\rm See Program \Profinlenlis}.\cr
+\noalign{\bigskip}
+{\bf Program \Prodcgintcou}{\rm :~~A DCG interpreter that counts
+words}\cr}
+\endin\par
+Comparing Programs \Proenhlanabc\ and \Prodcgintcou\ raises an
+important issue. Is it better to enhance a grammar by modifying the
+rules, as in Program~\Proenhlanabc, or to add the extra functionality at
+the level of the interpreter? The second approach is more modular, but
+suffers from a lack of efficiency.\vskip 15pt\parno
+{\bf Exercises for Section 19.2}\vskip 5pt\par
+\offset{20pt}{(i)} Write Program~\Prodcgint\ as a DCG.\par
+\offset{20pt}{(ii)} Use the partial reducer, Program~18.3, to
+specialize the interpreter of Program~\Prodcgint\ to a particular
+grammar. For example, Figure~\Figconfregra\ should be transformed to
+Program~\Proenhlanabc.\par
+\offset{20pt}{(iii)} Enhance Program~\Prodcgint\ to build a parse tree.
+\par
+\sect{Application to Natural Language Understanding}
+An important application area of logic programming has been 
+understanding natural languages. Indeed, the origins of Prolog lie
+within this application. In this section, it is shown how Prolog,
+through definite clause grammars, can be applied to natural language
+processing.\par 
+A simple context-free grammar for a small subset of English is given in
+Program~\Prodcgconfre. The nonterminal symbols are grammatical
+categories, parts of speech and phrases, and the terminal symbols are
+English words that can be thought of as the vocabulary. The first rule
+in Program~\Prodcgconfre\ says that a sentence is a noun phrase followed
+by a verb phrase. The last rule says that {\it surprise\/} is a noun.
+A sample sentence recognized by the grammar is: ``The decorated
+pieplate contains a surprise."
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+\noalign{\vskip 5pt}
+{\it Grammar Rules}\cr
+\noalign{\vskip 5pt}
+sentence $\rar$ noun\_phrase, verb\_phrase.\cr
+\noalign{\vskip 5pt}
+noun\_phrase $\rar$ determiner, noun\_phrase2.\cr
+noun\_phrase $\rar$ noun\_phrase2.\cr
+\noalign{\vskip 5pt}
+noun\_phrase2 $\rar$ adjective, noun\_phrase2.\cr
+noun\_phrase2 $\rar$ noun.\cr
+\noalign{\vskip 5pt}
+verb\_phrase $\rar$ verb.\cr
+verb\_phrase $\rar$ verb, noun\_phrase.\cr
+\noalign{\vskip 5pt}
+{\it Vocabulary}\cr
+\noalign{\vskip 5pt}
+determiner $\rar$ \(the\).\qquad adjective $\rar$ \(decorated\)\cr
+determiner $\rar$ \(a\).\cr
+\noalign{\vskip 5pt}
+noun $\rar$ [pieplate].\qquad verb $\rar$ [contains].\cr
+noun $\rar$ [surprise].\cr
+\noalign{\bigskip}
+{\bf Program \Prodcgconfre}{\rm :~~A DCG context-free grammar}\cr}
+\endin\par
+We can view a grammar as a skeleton. Using the terminology of stepwise
+enhancement introduced in Chapter~13, we proceed to show how useful
+grammatical features can be added by enhancement. The next two
+programs are enhancements of Program~\Prodcgconfre. The enhancements, although
+simple, typify how DCGs can be used for natural language applications.
+Both programs exploit the power of the logical variable.\par
+The first enhancement is constructing a parse tree for the sentence as it
+is being parsed. The program is given as Program~\Prodcgcompar. Arguments
+representing (subparts of) the parse tree must be added to
+Program~\Prodcgconfre. The enhancement is similar to adding structured
+arguments to logic programs, as discussed in Section~2.2. The program
+builds the parse tree top-down, exploiting the power of the logic variable. 
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+sentence(sentence(NP,VP)) $\rar$ noun\_phrase(NP), verb\_phrase(VP).\cr
+\noalign{\vskip 5pt}
+noun\_phrase(np(D,N)) $\rar$ determiner(D), noun\_phrase2(N).\cr
+noun\_phrase(np(N)) $\rar$ noun\_phrase2(N).\cr
+\noalign{\vskip 5pt}
+noun\_phrase2(np2(A,N)) $\rar$ adjective(A), noun\_phrase2(N).\cr
+noun\_phrase2(np2(N)) $\rar$ noun(N).\cr
+\noalign{\vskip 5pt}
+verb\_phrase(vp(V)) $\rar$ verb(V).\cr
+verb\_phrase(vp(V,N)) $\rar$ verb(V), noun\_phrase(N).\cr
+\noalign{\medskip}
+{\it Vocabulary}\cr
+\noalign{\medskip}
+determiner(det(the)) $\rar$ [the].\cr
+determiner(det(a)) $\rar$ [a].\cr
+\noalign{\vskip 5pt}
+noun(noun(pieplate)) $\rar$ [pieplate].\cr
+noun(noun(surprise)) $\rar$ [surprise].\cr
+\noalign{\vskip 5pt}
+adjective(adj(decorated)) $\rar$ [decorated].\cr
+verb(verb(contains)) $\rar$ [contains].\cr
+\noalign{\bigskip}
+{\bf Program \Prodcgcompar}{\rm :~~A DCG computing a parse tree}\cr}
+\endin\par
+The rules in Program~\Prodcgcompar\ can be given a declarative reading.
+For example, consider the rule\medskip
+\halign{\hskip 20pt\lft{\tt #}\cr
+sentence(sentence(NP,VP)) $\rar$ noun\_phrase(NP), verb\_phrase(VP).\cr}
+\medno
+This states that the phrase tree built in recognizing the sentence is a
+structure {\tt sentence(NP,VP)}, where {\tt NP} is the structure built
+while recognizing the noun phrase and {\tt VP} is the structure built
+while recognizing the verb phrase.\par
+The next enhancement concerns subject/object number agreement. Suppose we
+wanted our grammar also to parse the sentence ``The decorated pieplates
+contain a surprise." A simplistic way of handling plural forms of nouns
+and verbs, sufficient for the purposes of this book, is to treat
+different forms as separate words. We augment the vocabulary by adding
+the facts\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+noun(noun(pieplates)) $\rar$ [pieplates].\cr
+verb(verb(contain)) $\rar$ [contain].\cr}\medno
+The new program would parse ``The decorated pieplates contain a
+surprise" but unfortunately would also parse ``The decorated pieplates
+contains a surprise". There is no insistence that noun and verb must both
+be singular, or both be plural.\par
+Number agreement can be enforced by adding an argument to the parts of
+speech that must be the same. The argument indicates whether the part of
+speech is singular or plural. Consider the grammar rule\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+sentence(sentence(NP,VP)) $\rar$\cr
+\qi noun\_phrase(NP,Num), verb\_phrase(VP,Num).\cr}\medno
+The rule insists that both the noun phrase, which is the subject of the
+sentence, and the verb phrase, which is the object of the sentence, have
+the same number, singular or plural. The agreement is indicated by the
+sharing of the variable {\tt Num}. Expressing subject/object number
+agreement is context-dependent information, which is clearly beyond the
+scope of context-free grammars.\par
+Program~\Prodcgsubobj\ is an extension of Program~\Prodcgcompar\ that
+handles number agreement correctly. Noun phrases and verb phrases must
+have the same number, singular or plural. Similarly, the determiners and
+nouns in a noun phrase must agree in number. The vocabulary is extended
+to indicate which words are singular and which plural. Where number is
+unimportant, for example, with adjectives, it can be ignored, and no
+extra argument is given. The determiner {\it the\/} can be either
+singular or plural. This is handled by leaving the argument indicating
+number uninstantiated.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+sentence(sentence(NP,VP)) $\rar$\cr
+\qi noun\_phrase(NP,Num), verb\_phrase(VP,Num).\cr
+\noalign{\vskip 5pt}
+noun\_phrase(np(D,N),Num) $\rar$\cr
+\qi determiner(D,Num), noun\_phrase2(N,Num).\cr
+noun\_phrase(np(N),Num) $\rar$ noun\_phrase2(N,Num).\cr
+\noalign{\vskip 5pt}
+noun\_phrase2(np2(A,N),Num) $\rar$\cr
+\qi adjective(A), noun\_phrase2(N,Num).\cr
+noun\_phrase2(np2(N),Num) $\rar$ noun(N,Num).\cr
+\noalign{\vskip 5pt}
+verb\_phrase(vp(V),Num) $\rar$ verb(V,Num).\cr
+verb\_phrase(vp(V,N),Num) $\rar$\cr
+\qi verb(V,Num), noun\_phrase(N,Num1).\cr
+\noalign{\medskip}
+{\it Vocabulary}\cr
+\noalign{\medskip}
+determiner(det(the),Num) $\rar$ [the].\cr
+determiner(det(a),singular) $\rar$ [a].\cr
+\noalign{\vskip 5pt}
+noun(noun(pieplate),singular) $\rar$ [pieplate].\cr
+noun(noun(pieplates),plural) $\rar$ [pieplates].\cr
+noun(noun(surprise),singular) $\rar$ [surprise].\cr
+noun(noun(surprises),plural) $\rar$ [surprises].\cr
+\noalign{\vskip 5pt}
+adjective(adj(decorated)) $\rar$ [decorated].\cr
+\noalign{\vskip 5pt}
+verb(verb(contains),singular) $\rar$ [contains].\cr
+verb(verb(contain),plural) $\rar$ [contain].\cr
+\noalign{\bigskip}
+{\bf Program \Prodcgsubobj}{\rm :~~A DCG with subject/object number
+agreement}\cr}
+\endinsert\par
+The next example of a DCG uses another Prolog feature, the ability to
+refer to arbitrary Prolog goals in the body of a rule.
+Program~\Prodcgrecnum\ is a grammar for recognizing numbers written in
+English up to, but not including, 1,000. The value of the number
+recognized is calculated using the arithmetic facilities of Prolog. 
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+number(0) $\rar$ [zero].\cr
+number(N) $\rar$ xxx(N).\cr
+\noalign{\vskip 5pt}
+xxx(N) $\rar$\cr
+\qi digit(D), [hundred], rest\_xxx(N1), $\{$N is D$\ast$100+N1$\}$.\cr
+xxx(N) $\rar$ xx(N).\cr
+\noalign{\vskip 5pt}
+rest\_xxx(0) $\rar$ [~].\cr
+rest\_xxx(N) $\rar$ [and], xx(N).\cr
+\noalign{\vskip 5pt}
+xx(N) $\rar$ digit(N).\cr
+xx(N) $\rar$ teen(N).\cr
+xx(N) $\rar$ tens(T), rest\_xx(N1), $\{$N is T+N1$\}$.\cr
+\noalign{\vskip 5pt}
+rest\_xx(0) $\rar$ [~].\cr
+rest\_xx(N) $\rar$ digit(N).\cr}\medskip
+\halign{\hskip 40pt\lft{\tt #}\qquad&\lft{\tt #}\cr
+digit(1) $\rar$ [one].&teen(10) $\rar$ [ten].\cr
+digit(2) $\rar$ [two].&teen(11) $\rar$ [eleven].\cr
+digit(3) $\rar$ [three].&teen(12) $\rar$ [twelve].\cr
+digit(4) $\rar$ [four].&teen(13) $\rar$ [thirteen].\cr
+digit(5) $\rar$ [five].&teen(14) $\rar$ [fourteen].\cr
+digit(6) $\rar$ [six].&teen(15) $\rar$ [fifteen].\cr
+digit(7) $\rar$ [seven].&teen(16) $\rar$ [sixteen].\cr
+digit(8) $\rar$ [eight].&teen(17) $\rar$ [seventeen].\cr
+digit(9) $\rar$ [nine].&teen(18) $\rar$ [eighteen].\cr
+&teen(19) $\rar$ \(nineteen\).\cr
+\noalign{\vskip 10pt}
+tens(20) $\rar$ [twenty].&\cr
+tens(30) $\rar$ [thirty].&\cr
+tens(40) $\rar$ [forty].&\cr
+tens(50) $\rar$ [fifty].&\cr
+tens(60) $\rar$ [sixty].&\cr
+tens(70) $\rar$ [seventy].&\cr
+tens(80) $\rar$ [eighty].&\cr
+tens(90) $\rar$ [ninety].&\cr}\bigskip
+\halign{\hskip 40pt\lft{#}\cr
+{\bf Program \Prodcgrecnum}:~~A DCG for recognizing numbers\cr}
+\endin\par
+The basic relation is {\tt number(N)}, where {\tt N} is the numerical
+value of the number being recognized. According to the grammar specified
+by the program, a number is zero or a number {\tt N} of at most three
+digits, the relation {\tt xxx(N)}. Similarly {\tt xx(N)} represents a
+number {\tt N} of at most two digits, and the predicates {\tt
+rest\_xxx} and {\tt rest\_xx} denote the rest of a number of three or
+two digits, respectively, after the leading digit has been removed.
+The predicates {\tt digit}, {\tt teen}, and {\tt tens} recognize,
+respectively, single digits, the numbers 10 to 19 inclusive, and the
+multiples of ten from 20 to 90 inclusive.\par
+A sample rule from the grammar is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+xxx(N) $\rar$\cr
+\qi digit(D), [hundred], rest\_xxx(N1), $\{$N is D$\ast$100+N1$\}$.\cr}
+\medno
+This says that a three-digit number {\tt N} must first be a digit with
+value {\tt D}, followed by the word {\it hundred\/} followed by the
+rest of the number, which will have value {\tt N1}. The value for the
+whole number {\tt N} is obtained by multiplying {\tt D} by 100 and
+adding {\tt N1}.\par
+DCGs inherit another feature from logic programming, the ability to be
+used backward. Program~\Prodcgrecnum\ can be used to generate the written
+representation of a given number up to, but not including, 1,000. In
+technical terms, the grammar generates as well as accepts. The
+behavior in so doing is classic generate-and-test. All the legal
+numbers of the grammar are generated one by one and tested to see
+whether they have the correct value, until the actual number posed is
+reached. This feature is a curiosity rather than an efficient means of
+writing numbers.\par 
+The generative feature of DCGs is not generally useful. Many grammars
+have recursive rules. For example, the rule in Program~\Prodcgconfre\
+defining a {\tt noun\_phrase2} as an adjective followed by a {\tt
+noun\_phrase2} is recursive. Using recursively defined grammars for
+generation results in a nonterminating computation. In the grammar of
+Program~\Prodcgcompar, noun phrases with arbitrarily many adjectives are
+produced before the verb phrase is considered.\vskip 15pt\parno
+{\bf Exercises for Section 19.3}\vskip 5pt\par
+\offset{20pt}{(i)} Write a simple grammar for French that illustrates
+gender agreement.\par
+\offset{20pt}{(ii)} Extend and modify Program~\Prodcgrecnum\ for parsing
+numbers so that it covers all numbers less than 1 million. Don't forget
+to include things like ``thirty-five hundred" and to not include ``thirty
+hundred."\endpage
+\sect{Background}
+Prolog was connected to parsing right from its very beginning. As
+mentioned before, the Prolog language grew out of Colmerauer's interest
+in parsing, and his experience with developing Q-systems (Colmerauer,
+1973). The implementors of Edinburgh Prolog were also keen on natural
+language processing and wrote one of the more detailed accounts of
+definite clause grammars (Pereira and Warren, 1980). This paper gives a
+good discussion of the advantages of DCGs as a parsing formalism in
+comparison with augmented transition networks (ATNs).\par
+The examples of using DCGs for parsing languages in Section~19.1 were
+adapted from notes from a tutorial on natural language analysis
+given by Lynette Hirschman at the Symposium on Logic Programming in San
+Francisco in 1987. The DCG interpreter of Section~19.2 is adapted from
+Pereira and Shieber (1987).\par
+Even though the control structure of Prolog matches directly that of
+recursive-descent, top-down parsers, other parsing algorithms can also be
+implemented in it quite easily. For example, Matsumoto et al.\ (1986)
+describes a bottom-up parser in Prolog.\par
+The grammar in Program~\Propardecpas\ is taken from Appendix~1 of Findlay
+and Watt (1985). The grammar in Program~\Prodcgconfre\ is taken from
+Winograd's (1983) book on computational linguistics).\par
+For further reading on logic grammars, refer to Pereira
+and Shieber (1987) and Abramson and Dahl (1989).\par\bye
+

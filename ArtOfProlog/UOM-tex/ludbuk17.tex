@@ -1,0 +1,1636 @@
+%%%%% Leonudi Book, Chapter 17, pp 280-314 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 16
+\numberfirst
+\startpage{280}
+
+\chapa{Interpreters}
+Meta-programs treat other programs as data. They analyze, transform, and
+interpret other programs. The writing of meta-programs, or
+meta-programming, is particularly easy in Prolog because of the equivalence
+of programs and data: both are Prolog terms. We have already presented
+some examples of meta-programs, namely, the editor of Program~\Prolinedi\
+and the shell process of Program~\Prointshe. This chapter covers
+interpreters, an important and useful class of meta-programs, and
+Chapter~18 discusses program transformation.\par 
+\sect{Interpreters for Finite State Machines}
+The sharp distinction between programs and data present in most computer
+languages is lacking in Prolog. The equivalence of programs and data
+greatly facilitates the writing of interpreters. We demonstrate the
+facility in this section by considering the basic computation models of
+computer science. Interpreters for the various classes of automata are
+very easily written in Prolog.\par
+It is interesting to observe that the interpreters presented in this
+section are a good application of nondeterministic programming. The
+programs that are presented illustrate typical examples of don't-know
+nondeterminism. The same interpreter can execute both deterministic
+and nondeterministic automata because of the nondeterminism of
+Prolog.\par 
+{\bf Definition}:~~A (nondeterministic) finite automaton, abbreviated
+NDFA, is a 5-tuple $\lan${\it Q,$\Sig$,$\del$,I,F\/}$\ran$, where {\it
+Q\/} is a set of states, $\Sig$ is a set of symbols, $\del$ is a mapping
+from {\it Q\/} $\times\  \Sig$ to {\it Q\/}, {\it I\/} is an initial state,
+and {\it F\/} is a set of final states. If the mapping is a function,
+then an NDFA is deterministic.\par
+A finite automaton can be specified as a Prolog program by three
+collections of facts. The predicate {\tt initial(Q)} is true if {\tt Q}
+is the initial state. The predicate {\tt final(Q)} is true if {\tt Q} is
+a final state. The most interesting is {\tt delta(Q,X,Q1)}, which is true
+if the NDFA changes from state {\tt Q} to state {\tt Q1} on receipt of
+symbol {\tt X}. Note that both the set of states and the set of symbols can
+be defined implicitly as the constants that appear in the {\tt
+initial}, {\tt final}, and {\tt delta} predicates.\par
+An NDFA {\it accepts} a string of symbols from the alphabet $\Sig^{\ast}$,
+if when started in its initial state, and following the transitions
+specified by $\del$, the NDFA ends up in one of the final states. An
+interpreter for an NDFA must determine whether it accepts given strings
+of symbols. Program~\Prointnonfin\ is an interpreter. The predicate {\tt
+accept(Xs)} is true if the NDFA defined by the collection of {\tt
+initial}, {\tt final}, and {\tt delta} facts accepts the string
+represented as the list of symbols {\tt Xs}.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it accept\/}({\it Xs\/}) $\lar$\cr
+\qi {\rm The string represented by the list} {\it Xs\/} {\rm is accepted
+by}\cr
+\qi {\rm the NDFA defined by} {\it initial/1\/}{\rm ,} {\it
+delta/3\/}{\rm , and} {\it final/1\/}{\rm .}\cr
+\noalign{\medskip}
+accept(Xs) $\lar$ initial(Q), accept(Xs,Q).\cr
+\noalign{\vskip 5pt}
+accept(\(X$\mid$Xs\),Q) $\lar$ delta(Q,X,Q1), accept(Xs,Q1).\cr
+accept(\(~\),Q) $\lar$ final(Q).\cr}\bigskip
+\halign{\hskip 40pt\lft{#}~~&\lft{#}\cr
+{\bf Program~\Prointnonfin}:&An interpreter for a nondeterministic
+finite\cr
+&automaton (NDFA)\cr}
+\endinsert\par
+Figure~\Figsimaut\ shows a deterministic automaton that accepts the
+language ({\it ab\/})$^{\ast}$. There are two states, {\it q0\/} and {\it
+q1\/}. If in state {\it q0\/} an {\it a\/} is received, the automaton
+moves to state {\it q1\/}. The automaton moves back from {\it q1\/} to
+{\it q0\/} if a {\it b\/} is received. The initial state is {\it q0\/},
+and {\it q0\/} is also the single final state.
+\midinsert\vskip 2.5truecm\par
+\ctrline{{\bf Figure \Figsimaut}:~~A simple automaton}
+\endinsert\par
+To use the interpreter, a specific automaton must be given. Program
+\Prondfaaclan\ is the realization in Prolog of the automaton in Figure
+\Prointnonfin. The combination of Programs \Prointnonfin\ and
+\Prondfaaclan\ correctly accepts strings of alternating {\it a\/}'s and
+{\it b\/}'s.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+initial(q0).\cr
+\noalign{\vskip 5pt}
+final(q0).\cr
+\noalign{\vskip 5pt}
+delta(q0,a,q1).\cr
+delta(q1,b,q0).\cr
+\noalign{\bigskip}
+{\bf Program \Prondfaaclan}{\rm :~~An NDFA that accepts the language}
+({\it ab\/})$^{\ast}$\cr}
+\endin\par
+If an arc from {\it q0\/} to itself labeled {\it a\/} is added to the
+automaton in Figure~\Figsimaut, we get a new automaton that recognizes
+the language ({\it a\/}({\it a\/}$^{\ast}$){\it b\/})$^{\ast}$. This
+automaton is nondeterministic because on receipt of an {\it a\/} in state
+{\it q0\/} it is not determined which path will be followed.
+Nondeterminism does not affect the interpreter in Program~\Prointnonfin.
+All that is needed to produce the new automaton is to add the fact {\tt
+delta(q0,a,q0)} and the combined program will behave correctly.\par
+Another simple computation model is a pushdown automaton that accepts
+the class of context-free languages. Pushdown automata extend NDFAs by
+providing a single stack for memory in addition to the internal state of
+the automaton. Formally, a (nondeterministic) pushdown automaton,
+abbreviated NPDA, is a 7-tuple $\lan${\it Q,$\Sig$,G,$\del$,I,Z,F\/}$
+\ran$ where {\it Q\/}, $\Sig$, {\it I\/}, {\it F\/} are as before, {\it
+G\/} is the set of symbols that can be pushed onto the stack, {\it Z\/} is
+the start symbol on the stack, and $\del$ is changed to take the stack
+into account.\par
+Specifically, $\del$ is a mapping from  {\it Q\/ $\times$ $\Sig$ $\times$
+G\/}$^{\ast}$ to {\it Q\/ $\times$ G\/}$^{\ast}$. The mapping controls
+the change of state of the NPDA and the pushing and popping of elements
+onto and off the stack by the NPDA. In one operation, the NPDA can pop
+(push) one symbol off (onto) the stack.\par
+Analogously to an NDFA, an NPDA {\it accepts\/} a string of symbols from
+the alphabet $\Sig^{\ast}$, if when started in its initial state and
+with the starting symbol on the stack, and following the transitions
+specified by $\del$, the NPDA ends up in one of the final states with the
+stack empty. An interpreter for an NPDA is given as Program
+\Propusdowaut. The predicate {\tt accept(Xs)} is true if the NDFA defined
+by the collection of {\tt initial}, {\tt final}, and {\tt delta} facts
+accepts the string represented as the list of symbols {\tt Xs}. The
+interpreter is very similar to the interpreter of an NDFA given as
+Program~\Prointnonfin. The only change is the explicit manipulation of
+the stack by the {\tt delta} predicate.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it accept\/}({\it Xs\/}) $\lar$\cr
+\qi {\rm The string represented by the list} {\it Xs\/} {\rm is accepted
+by}\cr
+\qi {\rm the NPDA defined by} {\it initial/1\/}{\rm ,} {\it
+delta/5\/}{\rm , and} {\it final/1\/}{\rm .}\cr
+\noalign{\medskip}
+accept(Xs) $\lar$ initial(Q), accept(Xs,Q,\(~\)).\cr
+\noalign{\vskip 5pt}
+accept(\(X$\mid$Xs\),Q,S) $\lar$ delta(Q,X,S,Q1,S1), accept(Xs,Q1,S1).\cr
+accept(\(~\),Q,\(~\)) $\lar$ final(Q).\cr}\bigskip
+\halign{\hskip 40pt\lft{#}~~&\lft{#}\cr
+{\bf Program \Propusdowaut}:&An interpreter for a nondeterministic
+pushdown\cr
+&automaton (NPDA)\cr}
+\endin\par
+A particular example of an NPDA is given as Program~\Pronpdapafin. This
+automaton accepts palindromes over a finite alphabet. A {\it
+palindrome\/} is a nonempty string that reads the same backwards as
+forwards. Example palindromes are {\it noon\/}, {\it madam\/}, and {\it
+glenelg\/}. Again, the automaton is specified by {\tt initial}, {\tt
+final}, and {\tt delta} facts, and the sets of symbols being defined
+implicitly. The automaton has two states: {\it q0\/}, the initial state
+when symbols are pushed onto the stack, and {\it q1\/}, a final state
+when symbols are popped off the stack and compared with the symbols in
+the input stream. When to start pushing and start popping is decided
+nondeterministically. There are two {\tt delta} facts that change the
+state from {\it q0\/} to {\it q1\/} to allow for palindromes of both odd
+and even lengths.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+initial(q0).\qquad final(q1).\cr
+\noalign{\vskip 5pt}
+delta(q0,X,S,q0,\(X$\mid$S\)).\cr
+delta(q0,X,S,q1,\(X$\mid$S\)).\cr
+delta(q0,X,S,q1,S).\cr
+delta(q1,X,\(X$\mid$S\),q1,S).\cr
+\noalign{\bigskip}
+{\bf Program \Pronpdapafin}{\rm :~~An NPDA for palindromes over a finite
+alphabet}\cr}
+\endinsert\par
+Programs \Prointnonfin\ and \Prondfaaclan\ can be combined into a single
+program for recognizing the language ({\it ab\/})$^{\ast}$. Similarly,
+Programs \Propusdowaut\ and \Pronpdapafin\ can be combined into a single
+program for recognizing palindromes. A program that can achieve this
+combination is given in Chapter~18.\par
+It is straightforward to build an interpreter for a Turing machine
+written in a similar style to the interpreters in Programs \Prointnonfin\
+and \Propusdowaut. This is posed as Exercise~(iii) at the end of this
+section. Building an interpreter for Turing machines shows that Prolog
+has the power of all other known computation models.\vskip 15pt\parno
+{\bf Exercises for Section~17.1}\vskip 5pt\par
+\offset{20pt}{(i)} Define an NDFA that accepts the language {\it ab\/$^{
+\ast}$c\/}.\par
+\offset{20pt}{(ii)} Define an NPDA that accepts the language {\it
+a\/$^n$b\/}$^n$.\par
+\offset{20pt}{(iii)} Write an interpreter for a Turing machine.\par
+\sect{Meta-Interpreters}
+We turn now to a class of  especially useful interpreters. A {\it
+meta-interpreter\/} for a language is an interpreter for the language
+written in the language itself. Being able to write a meta-interpreter
+easily is a very powerful feature of a programming language. It gives
+access to the computation process of the language and enables the
+building of an integrated programming environment. The examples in the
+rest of this chapter demonstrate the potential of meta-interpreters and
+the ease with which they can be written. In this section, we also examine
+issues in writing meta-interpreters.\par
+Throughout the remainder of this chapter, the predicate {\tt solve} is
+used for a meta-interpreter. A suitable relation scheme is as follows.
+The relation {\tt solve(Goal)} is true if {\tt Goal} is true with respect
+to the program being interpreted.\par
+The simplest meta-interpreter that can be written in Prolog exploits the
+meta-variable facility. It is defined by a single clause:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+solve(A) $\lar$ A.\cr}\medskip
+This trivial interpreter is only useful as part of a larger program. For
+example, a version of the trivial interpreter forms the basis for the
+interactive shell given as Program~\Prointshe\ and the logging facility
+given as Program~\Prologses. In general, as we suggest here and see in
+more detail in Sections 17.3 and 17.4, meta-interpreters are useful
+and important because of the easily constructed enhancements.\par
+The best known and most widely used meta-interpreter models the
+computation model of logic programs as goal reduction. The three
+clauses of Program~\Prometpurpro\ interpret pure Prolog programs.
+This meta-interpreter, called {\it vanilla\/}, together with its
+enhancements, is the basis of the rest of this section and Section~17.3.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it solve\/}({\it Goal\/}) $\lar$\cr
+\qi {\it Goal\/} {\rm is true given the pure Prolog program defined by}
+{\it clause/2\/}{\rm .}\cr
+\noalign{\medskip}
+solve(true).\cr
+solve((A,B)) $\lar$ solve(A), solve(B).\cr
+solve(A) $\lar$ clause(A,B), solve(B).\cr
+\noalign{\bigskip}
+{\bf Program \Prometpurpro}{\rm :~~A meta-interpreter for pure
+Prolog}\cr}
+\endinsert\par
+The interpreter in Program~\Prometpurpro\ can be given a declarative
+reading. The {\tt solve} fact states that the empty goal, represented by
+the constant {\tt true}, is true. The first {\tt solve} rule states that
+a conjunction {\tt (A,B)} is true if {\tt A} is true and {\tt B} is true.
+The second {\tt solve} rule states that a goal {\tt A} is true if there
+is a clause {\tt A $\lar$ B} in the interpreted program such that {\tt B}
+is true.\par
+We also give a procedural reading of the three clauses in Program
+\Prometpurpro. The {\tt solve} fact states that the empty goal,
+represented in Prolog by the atom {\tt true}, is solved. The next clause
+concerns conjunctive goals. It reads: ``To solve a conjunction {\tt
+(A,B)},  solve {\tt A} and solve {\tt B}." The general case of goal
+reduction is covered by the final clause. To solve a goal, choose a
+clause from the program whose head unifies with the goal, and recursively
+solve the body of the clause.\par
+The procedural reading of Prolog clauses is necessary to demonstrate that
+the meta-interpreter of Program~\Prometpurpro\ indeed reflects Prolog's
+choices of implementing the abstract computation model of logic
+programming. The two choices are the selection of the leftmost goal as
+the goal to reduce, and sequential search and backtracking for the
+nondeterministic choice of the clause to use to reduce the goal. The goal
+order of the body of the {\tt solve} clause handling conjunctions
+guarantees that the leftmost goal in the conjunction is solved first.
+Sequential search and backtracking comes from Prolog's behavior in
+satisfying the {\tt clause} goal.\par
+The hard work of the interpreter is borne by the third clause of Program
+\Prometpurpro. The call to {\tt clause} performs the unification with the
+heads of the clauses appearing in the program. It is also responsible for
+giving different solutions on backtracking. Backtracking also occurs in
+the conjunctive rule reverting from {\tt B} to {\tt A}.\par
+Tracing the meta-interpreter of Program~\Prometpurpro\ solving a goal is
+instructive. The trace of answering the query {\tt
+solve(member(X,\(a,b,c\)))} with respect to Program~\Promemlis\ for {\tt
+member} is given in Figure~\Figtrametint.
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\lft{\tt #}\qquad&\lft{\tt #}\cr
+solve(member(X,\(a,b,c\)))&\cr
+\qi clause(member(X,\(a,b,c\)),B)&$\{$X=a,B=true$\}$\cr
+\qi solve(true)&\cr
+\qii {\it true}\qquad\qquad {\rm Output}: X=a&\cr
+\omit\hfill ;\hfill&\cr
+\noalign{\vskip 5pt}
+\qi solve(true)&\cr
+\qii clause(true,T)\qquad f&\cr
+\qi clause(member(X,\(a,b,c\),B)&$\{$B=member(X,\(b,c\))$\}$\cr
+\qi solve(member(X,\(b,c\)))&\cr
+\qii clause(member(X,\(b,c\)),B1)&$\{$X=b,B1=true$\}$\cr
+\qii solve(true)&\cr
+\qiii {\it true}\qquad\qquad {\rm Output}: X=b&\cr
+\omit\hfill ;\hfill&\cr
+\qii solve(true)&\cr
+\qiii clause(true,T)\qquad f&\cr
+\qii clause(member(X,\(b,c\)),B1)&$\{$B1=member(X,\(c\))$\}$\cr
+\qii solve(member(X,\(c\)))&\cr
+\qiii clause(member(X,\(c\),B2)&$\{$X=c,B2=true$\}$\cr
+\qiii solve(true)&\cr
+\qiii {\it true}\qquad\qquad {\rm Output}: X=c&\cr
+\omit\hfill ;\hfill&\cr
+\qiii solve(true)&\cr
+\qiiii clause(true,T)\qquad f&\cr
+\qiii clause(member(X,\(c\),B2))&$\{$B2=member(X,\(~\))$\}$\cr
+\qiii solve(member(X,\(~\)))&\cr
+\qiiii clause(member(X,\(~\)),B3)\qquad f&\cr
+\omit\hfill no (more) solutions\hfill&\cr}}$$\medskip
+\ctrline{{\bf Figure \Figtrametint}:~~Tracing the meta-interpreter}
+\endin\par
+The vanilla meta-interpreter inherits Prolog's representation of clauses
+using the system predicate clause. Alternative representations of clauses
+are certainly possible, and indeed have been used by alternative Prologs.
+Lists are one possible representation. The clause $A \lar
+B1,B2,\ldots,Bn$ can be represented by the clause {\tt 
+rule(A,[B1,$\ldots$,Bn])}. In this representation, the empty list
+represents the empty goal and list construction represents conjunction.
+This representation is used in Program~\Prometintpur.
+\topin
+\halign{\hskip 20pt\lft{\tt #}\cr
+{\it solve\/}({\it Goal\/}) $\lar$\cr
+\qi {\it Goal\/} {\rm is true given the pure Prolog program defined by}
+{\it clause/2\/}{\rm .}\cr
+\noalign{\medskip}
+solve(Goal) $\lar$ solve(Goal,\(~\)).\cr
+\noalign{\vskip 5pt}
+solve(\(~\),\(~\)).\cr
+solve(\(~\),\(G$\mid$Goals\)) $\lar$ solve(G,Goals).\cr
+solve(\(A$\mid$B\),Goals) $\lar$ append(B,Goals,Goals1),
+solve(A,Goals1).\cr
+solve(A,Goals) $\lar$ rule(A,B), solve(B,Goals).\cr}\bigskip
+\halign{\hskip 40pt\lft{#}~~&\lft{#}\cr
+{\bf Program \Prometintpur}:&A meta-interpreter for pure Prolog in
+continuation\cr
+&style\cr}
+\endin\par
+A different representation imposes a different form on the
+meta-interpreter, as illustrated in Program~\Prometintpur. Unlike Program
+\Prometpurpro, this version of the vanilla meta-interpreter makes
+explicit the remaining goals in the resolvent. Enhancements can be
+written to exploit the fact that the resolvent is accessible during the
+computation, for example, allowing a more sophisticated computation rule.
+The behavior of Program~\Prometintpur\ can be considered as being in
+continuation style promoted by languages such as Scheme.\par
+Differences in meta-interpreters can be characterized in terms of their
+{\it granularity\/}, that is the chunks of the computation that are made
+accessible to the programmer. The granularity of the trivial one-clause
+meta-interpreter is too coarse. Consequently there is little scope for
+applying the meta-interpreter. It is possible, though not as easy, to
+write a meta-interpreter that  models unification and backtracking. The
+granularity of such a meta-interpreter is very fine. Working at this fine
+level is usually not worthwhile. The efficiency loss is too great to
+warrant the extra applications. The meta-interpreter in Program
+\Prometpurpro, at the  clause reduction level, has the granularity most
+suited for the widest range of applications.\par
+The vanilla meta-interpreter must be extended to handle language features
+outside pure Prolog. Builtin predicates are not defined by clauses in
+the program and need different treatment. The easiest way to incorporate
+builtin predicates is to use the meta-variable facility to call them
+directly. A table of builtin predicates is necessary. In this chapter, we
+assume a table of facts of the form {\tt builtin(Predicate)} for each
+builtin predicate. Figure~\Figfratabbui\ gives part of that table. A
+table of builtin predicates is provided in some Prologs by another name
+but is not present in Standard Prolog.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\qquad&\lft{\tt #}\cr
+builtin(A is B).&builtin(A $>$ B).\cr
+builtin(read(X)).&builtin(write(X)).\cr
+builtin(integer(X)).&builtin(functor(T,F,N)).\cr
+builtin(clause(A,B)).&builtin(builtin(X)).\cr}\bigskip
+\ctrline{{\bf Figure \Figfratabbui}:~~Fragment of a table of builtin
+predicates}
+\endinsert\par
+The clause {\tt solve(A) $\lar$ builtin(A), A.} can be added to the
+meta-interpreter in Program~\Prometpurpro\ to correctly handle builtin
+predicates. The resulting program handles four disjoint cases, one per
+clause, for solving goals: the empty goal, conjunctive goals, builtin
+goals, and user-defined goals. For compatibility with a number of Prolog
+systems, the meta-interpreters in the rest of this section contain cuts
+to indicate that the clauses are mutually exclusive.\par
+The extra {\tt solve} clause makes the behavior of the builtin predicates
+invisible to the meta-interpreter. User-defined predicates that one
+wants to make invisible can be handled similarly with a single clause.
+Conversely, there are occasions when builtin predicates for negation
+and second-order programming should be made visible.\par
+The vanilla meta-interpreter needs to be extended to handle cuts
+correctly. A naive incorporation of cuts treats them as a builtin
+predicate, effectively adding a clause {\tt solve(!) $\lar$ !}. This
+clause does not achieve the correct behavior of cut. The cut in the
+clause commits to the current {\tt solve} clause rather than pruning the
+search tree.\par
+To achieve correct behavior of cut in a meta-interpreter, one needs to
+understand {\it scope\/}, that is to which clause the cut commits.
+The scope of cut, as described in Chapter~11, is the clause in which the
+cut is a goal in the body. The scope of cut when it is contained within a
+meta-logical builtin predicate such as conjunction and disjunction is
+less distinct and varies in different Prologs. If a cut is part of a
+disjunction, should execution of the cut commit to the current disjunct
+or to the clause in which the disjunction is embedded? Handling cut
+correctly in a meta-interpreter is tricky and usually relies on technical
+details of the scope of cut in a particular implementation of Prolog.
+Incorporating cuts within meta-interpreters has been widely studied, and
+references to solutions are given in Section~17.5.\par
+We apply meta-interpreters to develop a simple tracer.
+Program~\Protraforpro\ handles success branches of computations and
+does not display failure nodes in the search tree. It is capable of
+generating the traces presented in Chapter~6. 
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it solve\_trace\/}({\it Goal\/}) $\lar$\cr
+\qi {\it Goal\/} {\rm is true given the Prolog program defined by}
+{\it clause/2\/}{\rm .}\cr
+\qi {\rm The program traces the proof by side effects.}\cr
+\noalign{\medskip}
+solve\_trace(Goal) $\lar$ solve\_trace(Goal,0).\cr
+\noalign{\vskip 5pt}
+solve\_trace(true,Depth) $\lar$ !.\cr
+solve\_trace((A,B),Depth) $\lar$\cr
+\qi !, solve\_trace(A,Depth), solve\_trace(B,Depth).\cr
+solve\_trace(A,Depth) $\lar$\cr
+\qi builtin(A), !, A, display(A,Depth), nl.\cr
+solve\_trace(A,Depth) $\lar$\cr
+\qi clause(A,B), display(A,Depth), nl, Depth1 is Depth + 1,\cr
+\qi solve\_trace(B,Depth1).\cr
+\noalign{\vskip 5pt}
+display(A,Depth) $\lar$\cr
+\qi Spacing is 3$\ast$Depth, put\_spaces(Spacing), write(A).\cr
+\noalign{\vskip 5pt}
+put\_spaces(N) $\lar$\cr
+\qi between(1,N,I), put\_char(`~'), fail.\cr
+put\_spaces(N).\cr
+\noalign{\vskip 5pt}
+between(1,N,I) $\lar$ {\rm See Program \Progenranint.}\cr
+\noalign{\bigskip}
+{\bf Program \Protraforpro}{\rm :~~A tracer for Prolog}\cr}
+\endin\par
+The basic predicate is {\tt solve\_trace(Goal,Depth)}, where {\tt Goal} is
+solved at some depth. The starting depth is assumed to be 0. The first
+{\tt solve\_trace/2} clause in Program~\Protraforpro\ states that the
+empty goal is solved at any depth. The second clause indicates that each
+goal in a conjunct is solved at the same depth. The third clause handles
+builtins. The final {\tt solve\_trace/2} clause matches the goal with the
+head of a program clause, displays the goal, increments the depth, and
+solves the body of the program clause at the new depth.\par
+The predicate {\tt display(Goal,Depth)} is an interface for printing the
+traced goal. The second argument, {\tt Depth}, controls the amount of
+indentation of the first argument, {\tt Goal}. Level of indentation
+correlates with depth in the proof tree.\par
+There is subtlety in the goal order of the clause\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+solve\_trace(A,Depth) $\lar$\cr
+\qi clause(A,B), display(A,Depth), nl, Depth1 is Depth + 1,\cr
+\qi solve\_trace(B,Depth1).\cr}\medno
+The {\tt display} goal is between calls to {\tt clause} and {\tt
+solve\_trace}, ensuring that the goal is displayed each time Prolog
+backtracks to choose another clause. If the {\tt clause} and {\tt
+display} goals are swapped, only the initial call of the goal is
+displayed.\par
+Using Program~\Protraforpro\ for the query {\tt
+solve\_trace(append(Xs,Ys,[a,b,c]))?} with Program~\Proapptwolis\ for {\tt
+append} generates a trace like the one presented in Section~6.1. The output
+messages and semicolons for alternative solutions are provided by the
+underlying Prolog. There is only one difference from the trace in Figure
+\Figmulsolspl. The unifications are already performed. Separating out
+unifications requires explicit representation of unification and is
+considerably harder.\par
+A simple application of meta-interpreters constructs a proof tree while
+solving a goal. The proof tree is built top-down. A proof tree is
+essential for the applications of debugging and explanation in the next
+two sections.\par
+The basic relation is {\tt solve(Goal,Tree)}, where {\tt Tree} is a proof
+tree for the goal {\tt Goal}. Proof trees are represented by the
+structure {\tt Goal $\lar$ Proof}. Program~\Probuiprotre\ implements {\tt
+solve/2} and is a straightforward enhancement of the vanilla
+meta-interpreter. We leave as an exercise for the reader giving a
+declarative reading of the program. 
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it solve\/}({\it Goal,Tree\/}) $\lar$\cr
+\qi {\it Tree\/} {\rm is a proof tree for} {\it Goal\/} {\rm 
+given the program defined}\cr
+\qi {\rm by} {\it clause/2\/}{\rm .}\cr
+\noalign{\medskip}
+solve(true,true) $\lar$ !.\cr
+solve((A,B),(ProofA,ProofB)) $\lar$\cr
+\qi !, solve(A,ProofA), solve(B,ProofB).\cr
+solve(A,(A$\lar$builtin)) $\lar$ builtin(A), !, A.\cr
+solve(A,(A$\lar$Proof)) $\lar$ clause(A,B), solve(B,Proof).\cr
+\noalign{\bigskip}
+{\bf Program \Probuiprotre}{\rm :~~A meta-interpreter for building a
+proof tree}\cr}
+\endinsert\par
+Here is an example of using Program~\Probuiprotre\ with Program
+\Probibfamrel. The query {\tt solve(son(lot,haran),Proof)?} has the
+solution\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+Proof = (son(lot,haran) $\lar$\cr
+\qii ((father(haran,lot)$\lar$true),\cr
+\qii (male(lot)$\lar$true))).\cr}\medno
+The query {\tt solve(son(X,haran),Proof)?} has the solution {\tt X=lot}
+and the same value for {\tt Proof}.\par
+Our next enhancement of the vanilla meta-interpreter incorporates a
+mechanism for uncertainty reasoning. Associated with each clause is a
+{\it certainty factor\/}, which is a positive real number less than or
+equal to 1. A {\it logic program with certainties\/} is a set of ordered
+pairs $\lan${\it Clause,Factor\/}$\ran$, where {\it Clause\/} is a clause
+and {\it Factor\/} is a certainty factor.\par
+The simple meta-interpreter in Program~\Prometreaunc\ implements the
+uncertainty reasoning mechanism. The program is a straightforward
+enhancement of the vanilla meta-interpreter. The top-level relation is
+{\tt solve(Goal,Certainty)}, which is true when {\tt Goal} is satisfied
+with certainty {\tt Certainty}.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it solve\/}({\it Goal,Certainty\/}) $\lar$\cr
+\qi {\it Certainty\/} {\rm is our confidence that} {\it Goal\/} {\rm is
+true.}\cr
+\noalign{\medskip}
+solve(true,1) $\lar$ !.\cr
+solve((A,B),C) $\lar$\cr
+\qi !, solve(A,C1), solve(B,C2), minimum(C1,C2,C).\cr
+solve(A,1) $\lar$ builtin(A), !, A.\cr
+solve(A,C) $\lar$ clause\_cf(A,B,C1), solve(B,C2), C is C1 $\ast$ C2.\cr
+\noalign{\vskip 5pt}
+minimum(X,Y,Z) $\lar$ {\rm See Program \Prominwitcut}.\cr
+\noalign{\bigskip}
+{\bf Program \Prometreaunc}{\rm :~~A meta-interpreter for reasoning with
+uncertainty}\cr}
+\endin\par
+The meta-interpreter computes the combination of certainty factors in a
+conjunction as the minimum of the certainty factors of the conjuncts.
+Other combining strategies could be accommodated just as easily.
+Program~\Prometreaunc\ assumes that clauses with certainty factors are 
+represented using a predicate {\tt clause\_cf(A,B,CF)}.\par
+Program~\Prometreaunc\ can be enhanced to prune computations that do not
+meet a desired certainty threshold. An extra argument constituting the
+value of the cutoff threshold needs to be added. The enhanced program is
+given as Program~\Proreauncthr. The new relation is {\tt
+solve(Goal,Certainty,Threshold)}.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it solve\/}({\it Goal,Certainty,Threshold\/}) $\lar$\cr
+\qi {\it Certainty\/} {\rm is our confidence, greater than} {\it
+Threshold\/}{\rm , that} {\it Goal\/} {\rm is true.}\cr
+\noalign{\medskip}
+solve(true,1,T) $\lar$ !.\cr
+solve((A,B),C,T) $\lar$\cr
+\qi !, solve(A,C1,T), solve(B,C2,T), minimum(C1,C2,C).\cr
+solve(A,1,T) $\lar$ builtin(A), !, A.\cr
+solve(A,C,T) $\lar$\cr
+\qi clause\_cf(A,B,C1), C1 $>$ T, T1 is T/C1, \cr
+\qi solve(B,C2,T1), C is C1 $\ast$ C2.\cr
+\noalign{\vskip 5pt}
+minimum(X,Y,Z) $\lar$ {\rm See Program \Prominwitcut}.\cr
+\noalign{\bigskip}
+{\bf Program \Proreauncthr}{\rm :~~Reasoning with uncertainty with
+threshold cutoff}\cr}
+\endinsert\par
+The threshold is used in the fourth clause in Program~\Proreauncthr. The
+certainty of any goal must exceed the current threshold. If the threshold
+is exceeded, the computation continues. The new threshold is the quotient
+of the previous threshold by the certainty of the clause.\endpage
+\noindent {\bf Exercises for Section 17.2}\vskip 5pt\par
+\offset{20pt}{(i)} Write a meta-interpreter to count the number of times
+a procedure is called in a successful computation.\par
+\offset{20pt}{(ii)} Write a meta-interpreter to find the maximum depth
+reached in a computation.\par
+\offset{20pt}{(iii)} Extend Program~\Prometintpur\ to give a tracer
+and build a proof tree.\par
+\offset{20pt}{(iv)} Extend Program~\Protraforpro\ for {\tt
+solve\_trace/2} to print out failed goals.\par
+\offset{20pt}{(v)} Modify Program~\Probuiprotre\ to use a different
+representation for a proof tree.\par
+\sect{Enhanced Meta-Interpreters for Debugging}
+Debugging is an essential aspect of programming, even in Prolog. The
+promise of high-level programming languages is not so much in the
+prospect for writing bug-free programs but in the power of the
+computerized tools for supporting the process of program development. For
+reasons of bootstrapping and elegance, these tools are best implemented
+in the language itself. Such tools are programs for manipulating,
+analyzing, and simulating other programs, or in other words,
+meta-programs.\par
+This section shows meta-programs for supporting the debugging process of
+pure Prolog programs. The reason for restricting ourselves to the pure
+part is clear: the difficulties in handling the impure parts of the
+language.\par
+To debug a program, we must assume that the programmer has some intended
+behavior of the program in mind, and an intended domain of application on
+which the program should exhibit this behavior. Given those, debugging
+consists of finding discrepancies between the program's actual behavior
+and the behavior the programmer intended. Recall the definitions of an
+intended meaning and a domain from Section~5.2. An intended meaning {\it
+M\/} of a pure Prolog program is the set of ground goals on which the
+program should succeed. The {\it intended domain D\/} of a program is a
+domain on which the program should terminate. We require the intended
+meaning of a program to be a subset of the intended domain.\par
+We say that {\it A$_1$\/} is a {\it solution\/} to a goal {\it A\/} if
+the program returns on a goal {\it A\/} its instance {\it A$_1$\/}. We
+say that a solution {\it A\/} is {\it true\/} in an intended meaning {\it
+M\/} if every instance of {\it A\/} is in {\it M\/}. Otherwise it is {\it
+false\/} in {\it M\/}.\par
+A pure Prolog program can exhibit only three types of bugs, given an
+intended meaning and an intended domain. When invoked on a goal {\it A\/}
+in the intended domain, the program may do one of three things:\medskip
+\halign{\hskip 40pt\lft{#}\cr
+1. Fail to terminate\cr
+2. Return some false solution {\it A\/}$\theta$\cr
+3. Fail to return some true solution {\it A\/}$\theta$\cr}\medskip
+We describe algorithms for supporting the detection and identification of
+each of these three types of bugs.\par
+In general, it is not possible to detect if a Prolog program is
+nonterminating; the question is undecidable. Second best is to assign
+some a priori bound on the running time or depth of recursion of
+the program, and abort the computation if the bound is exceeded. It is
+desirable to save part of the computation to support the analysis of the
+reasons for nontermination. The enhanced meta-interpreter shown in
+Program~\Prometdetove\ achieves this. It is invoked with a call {\tt
+solve(A,D,Overflow)}, where {\tt A} is an initial goal, and {\tt D}
+an upper bound on the depth of recursion. The call succeeds if a solution
+is found without exceeding the predefined depth of recursion, with {\tt
+Overflow} instantiated to {\tt no\_overflow}. The call also succeeds if
+the depth of recursion is exceeded, but in this case {\tt Overflow}
+contains the stack of goals, i.e., the branch of the computation tree,
+which exceeded the depth-bound {\tt D}.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it solve\/}({\it A,D,Overflow\/}) $\lar$\cr
+\qi {\it A\/} {\rm has a proof tree of depth less than} {\it D\/} {\rm
+and}\cr
+\qi {\it Overflow\/} {\rm equals} {\it no\_overflow\/}{\rm , or} {\it
+A\/} {\rm has a}\cr
+\qi {\rm branch in the computation tree longer than} {\it D\/}{\rm , and}\cr
+\qi {\it Overflow\/} {\rm contains a list of its first} {\it D\/} {\rm
+elements.}\cr
+\noalign{\medskip}
+solve(true,D,no\_overflow) $\lar$ !.\cr
+solve(A,0,overflow([~])) $\lar$ !.\cr
+solve((A,B),D,Overflow) $\lar$\cr
+\qi D $>$ 0, !,\cr
+\qi solve(A,D,OverflowA),\cr
+\qi solve\_conjunction(OverflowA,B,D,Overflow).\cr
+solve(A,D,no\_overflow) $\lar$\cr
+\qi D $>$ 0,\cr
+\qi builtin(A), !, A.\cr
+solve(A,D,Overflow) $\lar$\cr
+\qi D $>$ 0,\cr
+\qi clause(A,B),\cr
+\qi D1 is D-1,\cr
+\qi solve(B,D1,OverflowB),\cr
+\qi return\_overflow(OverflowB,A,Overflow).\cr
+\noalign{\vskip 5pt}
+solve\_conjunction(overflow(S),B,D,overflow(S)).\cr
+solve\_conjunction(no\_overflow,B,D,Overflow) $\lar$\cr
+\qi solve(B,D,Overflow).\cr
+\noalign{\vskip 5pt}
+return\_overflow(no\_overflow,A,no\_overflow).\cr
+return\_overflow(overflow(S),A,overflow([A$\mid$S])).\cr
+\noalign{\bigskip}
+{\bf Program \Prometdetove}{\rm :~~A meta-interpreter detecting a stack
+overflow}\cr}
+\endin\par
+Note that as soon as a stack overflow is detected, the computation
+returns, without completing the proof. This is achieved by {\tt
+solve\_conjunction} and {\tt return\_overflow}.\par
+For example, consider Program~\Prononinssor\ for insertion sort.
+When called with the goal {\tt solve(isort([2,2],Xs),6,Overflow)}, the
+solution returned is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+Xs = [2,2,2,2,2,2],\cr
+Overflow = overflow([\cr
+\qi isort([2,2],[2,2,2,2,2,2]),\cr
+\qi insert(2,[2],[2,2,2,2,2,2]),\cr
+\qi insert(2,[2],[2,2,2,2,2]),\cr
+\qi insert(2,[2],[2,2,2,2]),\cr
+\qi insert(2,[2],[2,2,2]),\cr
+\qi insert(2,[2],[2,2])])\cr}\medskip
+The overflowed stack can be further analyzed, upon return, to diagnose the
+reason for nontermination. This can be caused, for example, by a loop,
+i.e., by a sequence of goals {\it G$_1$,G$_2$,$\ldots$,G$_n$\/}, on the
+stack, where {\it G$_1$\/} and {\it G$_n$\/} are called with the same
+input, or by a sequence of goals that calls each goal with increasingly
+larger inputs. The first situation occurs in the preceding example. It is
+clearly a bug that should be fixed in the program. The second situation
+is not necessarily a bug, and knowing whether the program should be
+fixed or whether a larger machine should be bought in order to execute it
+requires further program-dependent information.\par
+The second type of bug is returning a false solution. A program can
+return a false solution only if it has a false clause. A clause {\it C\/}
+is false with respect to an intended meaning {\it M\/} if it has an
+instance whose body is true in {\it M\/} and whose head is false in {\it M\/}.
+Such an instance is called a {\it counterexample\/} to {\it C\/}.\par
+Consider, for example, Program~\Proincincins\ for insertion sort. 
+On the goal {\tt isort([3,2,1],Xs)} it returns the solution {\tt
+isort([3,2,1],[3,2,1])} which is clearly false.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it isort\/}({\it Xs,Ys\/}) $\lar$\cr
+\qi {\it Ys\/} {\rm is an ordered permutation of} {\it Xs\/}{\rm . 
+Nontermination program.}\cr
+\noalign{\medskip}
+isort([X$\mid$Xs],Ys) $\lar$ isort(Xs,Zs), insert(X,Zs,Ys).\cr
+isort([~],[~]).\cr
+\noalign{\vskip 5pt}
+insert(X,[Y$\mid$Ys],[X,Y$\mid$Ys]) $\lar$\cr
+\qi X $<$ Y.\cr
+insert(X,[Y$\mid$Ys],[Y$\mid$Zs]) $\lar$\cr
+\qi X $\ge$ Y, insert(Y,[X$\mid$Ys],Zs).\cr
+insert(X,[~],[X]).\cr
+\noalign{\bigskip}
+{\bf Program \Prononinssor}{\rm :~~A nonterminating insertion sort}\cr}
+\vskip 0.6truecm
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it isort\/}({\it Xs,Ys\/}) $\lar$\cr
+\qi {\rm Buggy insertion sort.}\cr
+\noalign{\medskip}
+isort([X$\mid$Xs],Ys) $\lar$ isort(Xs,Zs), insert(X,Zs,Ys).\cr
+isort([~],[~]).\cr
+\noalign{\vskip 5pt}
+insert(X,[Y$\mid$Ys],[X,Y$\mid$Ys]) $\lar$\cr
+\qi X $\ge$ Y.\cr
+insert(X,[Y$\mid$Ys],[Y$\mid$Zs]) $\lar$\cr
+\qi X $>$ Y, insert(X,Ys,Zs).\cr
+insert(X,[~],[X]).\cr
+\noalign{\bigskip}
+{\bf Program \Proincincins}{\rm :~~An incorrect and incomplete insertion
+sort}\cr}
+\endinsert\par
+The false clause in the program is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+insert(X,[Y$\mid$Ys],[X,Y$\mid$Ys]) $\lar$ X $\ge$ Y.\cr}\medno
+and a counterexample to it is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+insert(2,[1],[2,1]) $\lar$ 2 $\ge$ 1.\cr}\medskip
+Given a ground proof tree corresponding to a false solution, one can find
+a false instance of a clause as follows: Traverse the proof tree in
+postorder. Check whether each node in the proof tree is true. If a
+false node is found, the clause whose head is the false node and whose
+body is the conjunction of its sons is a counterexample to a clause in
+the program. That clause is false and should be removed or
+modified.\par 
+The correctness of this algorithm follows from a simple inductive proof.
+The algorithm is embedded in an enhanced meta-interpreter, shown as
+Program~\Probotdiafal.
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it false\_solution\/}({\it A,Clause\/}) $\lar$\cr
+\qi {\rm If} {\it A\/} {\rm is a provable false instance, then} {\it
+Clause\/} {\rm is}\cr
+\qi {\rm a false clause in the program. Bottom-up algorithm.}\cr
+\noalign{\medskip}
+false\_solution(A,Clause) $\lar$\cr
+\qi solve(A,Proof),\cr
+\qi false\_clause(Proof,Clause).\cr
+\noalign{\vskip 5pt}
+solve(Goal,Proof) $\lar$ {\rm See Program \Probuiprotre.}\cr
+\noalign{\vskip 5pt}
+false\_clause(true,ok).\cr
+false\_clause((A,B),Clause) $\lar$\cr
+\qi false\_clause(A,ClauseA),\cr
+\qi check\_conjunction(ClauseA,B,Clause).\cr
+false\_clause((A$\lar$B),Clause) $\lar$\cr
+\qi false\_clause(B,ClauseB),\cr
+\qi check\_clause(ClauseB,A,B,Clause).\cr
+\noalign{\vskip 5pt}
+check\_conjunction(ok,B,Clause) $\lar$\cr
+\qi false\_clause(B,Clause).\cr
+check\_conjunction((A$\lar$B1),B,(A$\lar$B1)).\cr
+\noalign{\vskip 5pt}
+check\_clause(ok,A,B,Clause) $\lar$\cr
+\qi query\_goal(A,Answer),\cr
+\qi check\_answer(Answer,A,B,Clause).\cr
+check\_clause((A1$\lar$B1),A,B,(A1$\lar$B1)).\cr
+\noalign{\vskip 5pt}
+check\_answer(true,A,B,ok).\cr
+check\_answer(false,A,B,(A$\lar$B1)) $\lar$\cr
+\qi extract\_body(B,B1).\cr
+\noalign{\vskip 5pt}
+extract\_body(true,true).\cr
+extract\_body((A$\lar$B),A).\cr
+extract\_body(((A$\lar$B),Bs),(A,As)) $\lar$\cr
+\qi extract\_body(Bs,As).\cr
+\noalign{\vskip 5pt}
+query\_goal(A,true) $\lar$\cr
+\qi builtin(A).\cr
+query\_goal(Goal,Answer) $\lar$\cr
+\qi not builtin(Goal),\cr
+\qi writeln([`Is the goal ',Goal,` true?']),\cr
+\qi read(Answer).\cr
+\noalign{\bigskip}
+{\bf Program \Probotdiafal}{\rm :~~Bottom-up diagnosis of a false
+solution}\cr}\vfill}
+\endin\par
+The algorithm and its implementation assume an {\it oracle\/} that can
+answer queries concerning the intended meaning of the program. The oracle
+is some entity external to the diagnosis algorithm. It can be the
+programmer, who can respond to queries concerning the intended meaning of
+the program, or another program that has been shown to have the same
+meaning as the intended meaning of the program under debugging. The
+second situation may occur in developing a new version of a program while
+using the older version as an oracle. It can also occur when developing
+an efficient program (e.g., quicksort), given an inefficient executable
+specification of it (i.e., permutation sort), and using the specification
+as an oracle.\par
+When invoked with the goal {\tt false\_solution(isort([3,2,1],X),C)} the
+algorithm exhibits the following interactive behavior:\medskip
+\halign{\hskip 40pt\lft{#}\cr
+{\tt false\_solution(isort([3,2,1],X),C)?}\cr
+Is the goal {\tt isort([~],[~])} true?\cr
+{\it true\/}.\cr
+Is the goal {\tt insert(1,[~],[1])} true?\cr
+{\it true\/}.\cr
+Is the goal {\tt isort([1],[1])} true?\cr
+{\it true\/}.\cr
+Is the goal {\tt insert(2,[1],[2,1])} true?\cr
+{\it false\/}.\cr
+\noalign{\vskip 5pt}
+{\tt X = [3,2,1],}\cr
+{\tt C = insert(2,[1],[2,1]) $\lar$ 2 $\ge$ 1.}\cr}\medno
+This returns a counterexample to the false clause.\par
+The proof tree returned by {\tt solve/2} is not guaranteed to be ground,
+in contrast to the assumption of the algorithm. However, a ground
+proof tree can be generated by
+either instantiating variables left in the proof tree to arbitrary
+constants before activating the algorithm, or by requesting the oracle to
+instantiate the queried goal when it contains variables. Different
+instances might imply different answers. Since the goal of this algorithm
+is to find a counterexample as soon as possible, the oracle should
+instantiate the goal to a false instance if it can.\par
+One of the main concerns with diagnosis algorithms is improving their
+query complexity, i.e., reducing the number of queries they require to
+diagnose the bug. Given that the human programmer may have to answer the
+queries, this desire is understandable. The query complexity of
+the preceding diagnosis algorithm is linear in the size of the proof tree.
+There is a better strategy, whose query complexity is linear in the depth
+of the proof tree, not its size. In contrast to the previous algorithm,
+which is bottom-up, the second algorithm traverses the proof tree
+top-down. At each node it tries to find a false son. The algorithm
+recurses with any false son found. If there is no false son, then the
+current node constitutes a counterexample, as the goal at the node is 
+false, and all its sons are true.\par
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it false\_solution\/}({\it A,Clause\/}) $\lar$\cr
+\qi {\rm If} {\it A\/} {\rm is a provable false instance, then} {\it
+Clause\/}\cr
+\qi {\rm is a false clause in the program. Top-down algorithm.}\cr
+\noalign{\medskip}
+false\_solution(A,Clause) $\lar$\cr
+\qi solve(A,Proof),\cr
+\qi false\_goal(Proof,Clause).\cr
+\noalign{\vskip 5pt}
+solve(Goal,Proof) $\lar$ {\rm See Program \Probuiprotre.}\cr
+\noalign{\vskip 5pt}
+false\_goal((A$\lar$B),Clause) $\lar$\cr
+\qi false\_conjunction(B,Clause), !.\cr
+false\_goal((A$\lar$B),(A$\lar$B1)) $\lar$\cr
+\qi extract\_body(B,B1).\cr
+\noalign{\vskip 5pt}
+false\_conjunction(((A$\lar$B),Bs),Clause) $\lar$\cr
+\qi query\_goal(A,false), !,\cr
+\qi false\_goal((A$\lar$B),Clause).\cr
+false\_conjunction((A$\lar$B),Clause) $\lar$\cr
+\qi query\_goal(A,false), !,\cr
+\qi false\_goal((A$\lar$B),Clause).\cr
+false\_conjunction((A,As),Clause) $\lar$\cr
+\qi false\_conjunction(As,Clause).\cr
+\noalign{\vskip 5pt}
+extract\_body(Tree,Body) $\lar$ {\rm See Program \Probotdiafal.}\cr
+\noalign{\vskip 5pt}
+query\_goal(A,Answer) $\lar$ {\rm See Program \Probotdiafal.}\cr
+\noalign{\bigskip}
+{\bf Program \Protopdiafal}{\rm :~~Top-down diagnosis of a false
+solution}\cr}
+\endinsert\par
+The implementation of the algorithm is shown in Program~\Protopdiafal.
+Note the use of cut to implement implicit negation in the first clause of
+{\tt false\_goal/2} and the use of {\tt query\_goal/2} as a test
+predicate.\par
+Compare the behavior of the bottom-up algorithm with the following trace
+of the interactive behavior of Program~\Protopdiafal:\medskip
+\halign{\hskip 40pt\lft{#}\cr
+{\tt false\_solution(isort([3,2,1],X),C)?}\cr
+Is the goal {\tt isort([2,1],[2,1])} true?\cr
+{\it false\/}.\cr
+Is the goal {\tt isort([1],[1])} true?\cr
+{\it true\/}.\cr
+Is the goal {\tt insert(2,[1],[2,1])} true?\cr
+{\it false\/}.\cr
+\noalign{\vskip 5pt}
+{\tt X = [3,2,1],}\cr
+{\tt C = insert(2,[1],[2,1]) $\lar$ 2 $\ge$ 1.}\cr}\medskip
+There is a diagnosis algorithm for false solutions with an even better
+query complexity, called {\it divide-and-query\/}. The algorithm
+progresses by splitting the proof tree into two approximately equal
+parts and querying the node at the splitting point. If the node is
+false, the algorithm is applied recursively to the subtree rooted by this
+node. If the node is true, its subtree is removed from the tree and
+replaced by {\it true\/}, and a new middle point is computed. The
+algorithm can be shown to require a number of queries logarithmic in the
+size of the proof tree. In case of close-to-linear proof trees, this
+constitutes an exponential improvement over both the top-down and the
+bottom-up diagnosis algorithms.\par
+The third possible type of bug is a missing solution. Diagnosing a
+missing solution is more difficult than fixing the previous bugs. We
+say that a clause {\it covers\/} a goal {\it A\/} with respect to an
+intended meaning {\it M\/} if it has an instance whose head is an
+instance of {\it A\/} and whose body is in {\it M\/}.\par
+For example, consider the goal {\tt insert(2,[1,3],Xs)}. It is covered by
+the clause\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+insert(X,[Y$\mid$Ys],[X,Y$\mid$Ys]) $\lar$ X $\ge$ Y.\cr}\medno
+of Program~\Proincincins\ with respect to the intended meaning {\it M\/}
+of the program, since in the following instance of the clause\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+insert(2,[1,3],[1,2,3]) $\lar$ 2 $\ge$ 1.\cr}\medno
+the head is an instance of {\it A\/} and the body is in {\it M\/}.\par
+It can be shown that if a program {\it P\/} has a missing solution with
+respect to an intended meaning {\it M\/}, then there is a goal {\it A\/}
+in {\it M\/} that is not covered by any clause in {\it P\/}. The proof
+of this claim is beyond the scope of the book. It is embedded in the
+diagnosis algorithm that follows.\par
+Diagnosing a missing solution imposes a heavier burden on the oracle. Not
+only does it have to know whether a goal has a solution but it must also
+provide a solution, if it exists. Using such an oracle, an uncovered
+goal can be found as follows.\par
+The algorithm is given a missing solution, i.e., a goal in the intended
+meaning {\it M\/} of the program {\it P\/}, for which {\it P\/} fails.
+The algorithm starts with the initial missing solution. For every clause
+that unifies with it, it checks, using the oracle, if the body of the
+clause has an instance in {\it M\/}. If there is no such clause, the goal
+is uncovered, and the algorithm terminates. Otherwise the algorithm
+finds a goal in the body that fails. At least one of them should fail, or
+else the program would have solved the body, and hence the goal, in
+contrast to our assumption. The algorithm is applied recursively to this
+goal.\par
+An implementation of this algorithm is shown in Program~\Prodiamissol.
+The program attempts to trace the failing path of the computation and to
+find a true goal which is uncovered. Following is a session with the program:
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it missing\_solution\/}({\it A,Goal\/}) $\lar$\cr
+\qi {\rm If} {\it A\/} {\rm is a nonprovable true ground goal, then}
+{\it Goal\/} {\rm is a}\cr
+\qi {\rm true ground goal that is uncovered by the program.}\cr
+\noalign{\medskip}
+missing\_solution((A,B),Goal) $\lar$ !,\cr
+\qi (not A, missing\_solution(A,Goal) ;\cr
+\qi A, missing\_solution(B,Goal)).\cr
+missing\_solution(A,Goal) $\lar$\cr
+\qi clause(A,B),\cr
+\qi query\_clause((A$\lar$B)), !,\cr
+\qi missing\_solution(B,Goal).\cr
+missing\_solution(A,A) $\lar$\cr
+\qi not system(A).\cr
+\noalign{\vskip 5pt}
+query\_clause(Clause) $\lar$\cr
+\qi writeln([`Enter a true ground instance of ',Clause,\cr
+\qi `if there is such,  or ``no" otherwise']),\cr
+\qi read(Answer),\cr
+\qi !, check\_answer(Answer,Clause).\cr
+\noalign{\vskip 5pt}
+check\_answer(no,Clause) $\lar$ !, fail.\cr
+check\_answer(Clause,Clause) $\lar$ !.\cr
+check\_answer(Answer,Clause) $\lar$\cr
+\qi write(`Illegal answer'),\cr
+\qi !, query\_clause(Clause).\cr
+\noalign{\bigskip}
+{\bf Program \Prodiamissol}{\rm :~~Diagnosing missing solution}\cr}
+\endinsert\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+missing\_solution(isort([2,1,3],[1,2,3]),C)?\cr
+\noalign{\vskip 5pt}
+{\rm Enter a true ground instance of}\cr
+(isort([2,1,3],[1,2,3]) $\lar$\cr
+\qi isort([1,3],Xs),insert(2,Xs,[1,2,3]))\cr
+{\rm if there is such,  or ``no'' otherwise}\cr
+\noalign{\vskip 5pt}
+(isort([2,1,3],[1,2,3]) $\lar$\cr
+\qi isort([1,3],[1,3]),insert(2,[1,3],[1,2,3])).\cr
+\noalign{\vskip 5pt}
+{\rm Enter a true ground instance of}\cr
+(isort([1,3],[1,3]) $\lar$ isort([3],Ys),insert(1,Ys,[1,3]))\cr
+{\rm if there is such, or `no' otherwise}\cr
+\noalign{\vskip 5pt}
+(isort([1,3],[1,3]) $\lar$ isort([3],[3]),insert(1,[3],[1,3])).\cr
+\noalign{\vskip 5pt}
+{\rm Enter a true ground instance of}\cr
+(insert(1,[3],[1,3]) $\lar$ 1 $\ge$ 3)\cr
+{\rm if there is such,  or `no' otherwise}\cr
+\noalign{\vskip 5pt}
+{\it no\/}.\cr
+\noalign{\vskip 5pt}
+C = insert(1,[3],[1,3]).\cr}\medno
+The reader can verify that the goal {\tt insert(1,[3],[1,3])} is not
+covered by Program~\Proincincins.\par
+The three algorithms shown can be incorporated in a high-quality
+interactive program development environment for Prolog.\par
+\sect{An Explanation Shell for Rule-Based Systems}
+The final section of this chapter presents an application of interpreters
+to rule-based systems. An explanation shell is built that is capable of
+explaining why goals succeed and fail and that allows interaction with the
+user during a computation. The shell is developed with the methodology of
+stepwise enhancement introduced in Section~13.3.\par
+The skeleton interpreter in this section is written in the same style as
+the vanilla meta-interpreter and has the same granularity. It differs in
+two important respects. First, the meta-interpreter interprets a rule
+language rather than Prolog clauses. Second, the interpreter has two levels
+to allow explanation of failed goals.\par
+Before describing the interpreter, we give an example of a toy
+rule-based system written in the rule language. Program~\Prooveplaexp\
+contains some rules for placing a dish on the correct rack in an oven for
+baking. Facts have the form {\tt fact(Goal)}. For example, the first fact
+in Program~\Prooveplaexp\ states that {\tt dish1} is of type {\tt bread}.
+\par
+Rules have the form {\tt rule(Head,Body,Name)}, where {\tt Head} is a
+goal, {\tt Body} is (possibly) a conjunction of goals, and {\tt Name} is
+the name of the rule. Individual goals in the body are placed inside a
+unary postfix functor {\tt is\_true}, for reasons to be explained
+shortly. Conjunctions in the body are denoted by the binary infix
+operator {\tt \&}, which differs from Prolog syntax. Operator
+declarations for {\tt \&} and {\tt is\_true} are given in Program
+\Prooveplaexp. To paraphrase a sample rule, rule {\tt place1} in Program
+\Prooveplaexp\ states: ``A dish should be placed on the top rack of
+the oven if it is a pastry and its size is small."
+\midinsert
+\halign{\lft{\tt #}\cr
+{\rm Rule base for a simple expert system for placing dishes in an
+oven.}\cr
+{\rm The predicates used in the rules are}\cr
+{\it place\_in\_oven\/}({\it Dish,Rack\/}) $\lar$\cr
+\qi {\it Dish\/} {\rm should be placed in the oven at level} {\it Rack\/}
+{\rm for baking.}\cr
+{\it pastry\/}({\it Dish\/}) $\lar$ {\it Dish\/} {\rm is a pastry.}\cr
+{\it main\_meal\/}({\it Dish\/}) $\lar$ {\it Dish\/} {\rm is a main
+meal.}\cr
+{\it slow\_cooker\/}({\it Dish\/}) $\lar$ {\it Dish\/} {\rm is a slow
+cooker.}\cr
+{\it type\/}({\it Dish,Type\/}) $\lar$ {\it Dish\/} {\rm is best
+described as} {\it Type\/}{\rm .}\cr
+{\it size\/}({\it Dish,Size\/}) $\lar$ {\rm The size of} {\it Dish\/}
+{\rm is} {\it Size\/}{\rm .}\cr
+{\rm The rules have the form} {\tt rule(Head,Body,Name).}\cr
+\noalign{\vskip 5pt}
+\noalign{\medskip}
+:- op(40,xfy,\&).\cr
+:- op(30,xf,is\_true).\cr
+\noalign{\medskip}
+rule(place\_in\_oven(Dish,top),\cr
+\qi pastry(Dish) is\_true \& size(Dish,small) is\_true,place1).\cr
+rule(place\_in\_oven(Dish,middle),\cr
+\qi pastry(Dish) is\_true \& size(Dish,big) is\_true,place2).\cr
+rule(place\_in\_oven(Dish,middle),main\_meal(Dish) is\_true,place3).\cr
+rule(place\_in\_oven(Dish,bottom),slow\_cooker(Dish) is\_true,place4).\cr
+\noalign{\vskip 5pt}
+rule(pastry(Dish),type(Dish,cake) is\_true,pastry1).\cr
+rule(pastry(Dish),type(Dish,bread) is\_true,pastry2).\cr
+\noalign{\vskip 5pt}
+rule(main\_meal(Dish),type(Dish,meat) is\_true,main\_meal).\cr
+rule(slow\_cooker(Dish),type(Dish,milk\_pudding)
+is\_true,slow\_cooker).\cr
+\noalign{\vskip 5pt}
+fact(type(dish1,bread)).\cr
+fact(size(dish1,big)).\cr
+\noalign{\bigskip}
+{\bf Program \Prooveplaexp}{\rm :~~Oven placement rule-based system}\cr}
+\endinsert\par
+Why use a separate rule language when the syntax is so close to Prolog?
+The first rule, {\tt place1}, could be written as follows.\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+place\_in\_oven(Dish,top) $\lar$ pastry(Dish), size(Dish,small).\cr}
+\medskip
+There are two main reasons for the rule language. The first is
+pedagogical. The rule interpreter is neater, avoiding complicated details
+associated with Prolog's impurities such as the behavior of builtin
+predicates when called by {\tt clause}. Avoiding Prolog's impurities also
+makes it easier to partially evaluate the interpreter, as described in
+Chapter~18.\par
+The second reason is to show by example that the best way to develop a
+rule-based application in Prolog is to design a rule language on top of
+Prolog. Although the rule language is largely syntactic sugar, experience
+has shown that users of a rule-based system are happier working in a
+customized rule language than in Prolog. Rule languages are
+straightforward to provide on top of Prolog.\par
+We now start our presentation of the explanation shell. According to the
+method of stepwise enhancement, the skeleton constituting the basic
+control flow of the 
+final program is presented first. Program~\Prosketwolay\ contains the
+skeleton of the rule interpreter. The principal requirement that shaped
+the skeleton is the desire to handle both successful and failed
+computations in one interpreter.\par
+The rule interpreter presented in Program~\Prosketwolay\ has two levels.
+The top level, or {\it monitor\/} level, consists of the predicates {\tt
+monitor} and {\tt filter}. The bottom level, or {\it solve\/} level,
+consists of the predicates {\tt solve}, {\tt solve\_body}, and {\tt
+solve\_and}. Two levels are needed to correctly handle failed
+computations.\par
+Let us consider the bottom level first. The three predicates constitute
+an interpreter at the same level of granularity as the vanilla
+meta-interpreter. There is one major difference. There is a result
+variable that says whether a goal succeeds or fails. A goal that
+succeeds, with the result variable indicating failure, instead of
+failing gives rise to a different control flow, compensated for by the
+top level.\par 
+The predicate {\tt solve(Goal,Result)} solves a single goal. There are
+three cases. The result is {\tt yes} if the goal is a fact in the rule
+base. The result is {\tt no} if no fact or head of a rule 
+matches the goal. If there is a rule that matches the goal, the result
+will be returned by the predicate {\tt solve\_body(Goal,Result)}. The
+order of the third clause is significant because we only want to report
+{\tt no} for an individual goal if there is no suitable fact or rule.
+Effectively, {\tt solve} succeeds for each branch of the search tree,
+the result being {\tt yes} for successful branches and {\tt no} for
+failed branches.\par 
+{\tt solve\_body/2} has two clauses handling conjunctive goals and goals
+of the form {\tt A is\_true}. The functor {\tt is\_true} is a wrapper
+that allows unification to distinguish between the two cases. A Prolog
+implementation with indexing would produce efficient code. The clause
+handling conjunctions calls a predicate {\tt solve\_and/3}, which uses the
+result of solving the first conjunct to decide whether to continue. The
+code for {\tt solve\_and} results in behavior similar to the behavior of {\tt
+solve\_conjunction} in Program~\Prometdetove.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it monitor\/}({\it Goal\/}) $\lar$\cr
+\qi {\rm Succeeds if a result of yes is returned from solving} {\it
+Goal\/}\cr
+\qi {\rm at the solve level, or when the end of the computation is
+reached.}\cr
+\noalign{\medskip}
+monitor(Goal) $\lar$ solve(Goal,Result), filter(Result).\cr
+monitor(Goal).\cr
+\noalign{\vskip 5pt}
+filter(yes).\cr
+\% filter(no) $\lar$ fail.\cr
+\noalign{\medskip}
+{\it solve\/}({\it Goal,Result\/}) $\lar$\cr
+\qi {\rm Given a set of rules of the form {\it rule\/}({\it
+A,B,Name\/}),} {\it Goal\/} {\rm has}\cr
+\qi {\it Result\/} {\rm yes if it follows from the rules and no if it
+does not.}\cr
+\noalign{\medskip}
+solve(A,yes) $\lar$ fact(A).\cr
+solve(A,Result) $\lar$ rule(A,B,Name), solve\_body(B,Result).\cr
+solve(A,no).\cr
+\noalign{\vskip 5pt}
+solve\_body(A\&B,Result) $\lar$\cr
+\qi solve(A,ResultA), solve\_and(ResultA,B,Result).\cr
+solve\_body(A is\_true,Result) $\lar$ solve(A,Result).\cr
+\noalign{\vskip 5pt}
+solve\_and(no,A,no).\cr
+solve\_and(yes,B,Result) $\lar$ solve(B,Result).\cr
+\noalign{\bigskip}
+{\bf Program \Prosketwolay}{\rm :~~A skeleton two-level rule
+interpreter}\cr}
+\endin\par
+The monitor level is essentially a generate-and-test program. The solve
+level generates a branch of the search tree, and the test procedure {\tt
+filter} accepts successful branches of the search tree, indicated by the
+result being {\tt yes}. Failed branches, i.e., ones with result {\tt no},
+are rejected. Note that the second clause for {\tt filter} could simply
+be omitted. We leave it in the program, albeit commented out, to make
+clear the later enhancement step for adding a proof tree.\par
+The first enhancement of the rule interpreter makes it interactive. The
+interactive interpreter is given as Program~\Prointrulint. The user is
+given the opportunity to supply information at runtime for designated
+predicates. The designated predicates are given as a table of {\tt
+askable} facts. For example, a fact {\tt askable(type(Dish,Type)).
+}
+appearing in the table would indicate that the user could ask the type of
+the dish.
+\topin
+\halign{\hskip 20pt\lft{\tt #}\cr
+{\it solve\/}({\it Goal,Result\/}) $\lar$\cr
+\qi {\rm Given a set of rules of the form {\it rule\/}({\it
+A,B,Name\/}),} {\it Goal\/} {\rm has}\cr
+\qi {\it Result\/} {\rm yes if it follows from the rules and no if it
+does not.}\cr
+\qi {\rm The user is prompted for missing information.}\cr
+\noalign{\medskip}
+solve(A,yes) $\lar$ fact(A).\cr
+solve(A,Result) $\lar$ rule(A,B,Name), solve\_body(B,Result).\cr
+solve(A,Result) $\lar$ askable(A), solve\_askable(A,Result).\cr
+solve(A,no).\cr
+\noalign{\vskip 5pt}
+solve\_body(A\&B,Result) $\lar$\cr
+\qi solve\_body(A,ResultA), solve\_and(ResultA,B,Result).\cr
+solve\_body(A is\_true,Result) $\lar$ solve(A,Result).\cr
+\noalign{\vskip 5pt}
+solve\_and(no,A,no).\cr
+solve\_and(yes,B,Result) $\lar$ solve(B,Result).\cr
+\noalign{\vskip 5pt}
+solve\_askable(A,Result) $\lar$\cr
+\qi not known(A), ask(A,Response), respond(Response,A,Result).\cr
+\noalign{\vskip 5pt}
+{\rm The following predicates facilitate interaction with the
+user.}\cr
+\noalign{\vskip 5pt}
+ask(A,Response) $\lar$ display\_query(A), read(Response).\cr
+\noalign{\vskip 5pt}
+respond(yes,A,yes) $\lar$ assert(known\_to\_be\_true(A)).\cr
+respond(no,A,no) $\lar$ assert(known\_to\_be\_false(A)).\cr
+\noalign{\vskip 5pt}
+known(A) $\lar$ known\_to\_be\_true(A).\cr
+known(A) $\lar$ known\_to\_be\_false(A).\cr
+\noalign{\vskip 5pt}
+display\_query(A) $\lar$ write(A), write(`? ').\cr
+\noalign{\bigskip}
+{\bf Program \Prointrulint}{\rm :~~An interactive rule interpreter}\cr}
+\endin\par
+Interaction with the user is achieved by adding a new clause to the solve
+level:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+solve(A,Result) $\lar$ askable(A), solve\_askable(A,Result).\cr}\medskip
+An alternative method of making the rule interpreter interactive is to
+define a new class of goals in the body. An additional {\tt solve\_body}
+clause could be added, for example,\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+solve\_body(A is\_askable,Result) $\lar$ solve\_askable(A,Result).\cr}
+\medskip
+We prefer adding a {\tt solve} clause and having a table of {\tt askable}
+facts to embedding in the rules the information about whether a
+predicate is askable. The rules become more uniform. Furthermore, the
+askable information is explicit meta-knowledge, which can be manipulated
+as needed.\par
+To complete the interactive component of the rule interpreter, code for
+{\tt solve\_askable} needs to be specified. The essential components are
+displaying a query and accepting a response. Experience with users of
+rule-based systems shows that it is essential not to ask the same
+question twice. Users get very  irritated telling the computer
+information they feel it should know. Thus answers to queries are
+recorded using {\tt assert}. Program~\Prointrulint\ contains appropriate
+code. Only the solve level is given. The monitor level would be identical
+to Program~\Prosketwolay.\par
+Program~\Prointrulint\ queries the user. The interaction can be extended
+to allow the user also to query the program. The user may want to know
+why a particular question is being asked. A facility for giving a {\it why
+explanation\/} is common in rule-based systems, the answer being the rule
+containing the queried goal in its body. In order to give this why
+explanation, we need to extend the rule interpreter to carry the rules
+that have been used so far.\par
+Program~\Prosketwomet\ is an enhancement of Program~\Prosketwolay\ that
+carries the list of rules that have been used in solving the query. All
+the predicates carry the rules as an extra argument. The rule list is
+initialized to be empty in the first {\tt monitor} clause. The rule list
+is updated in the second {\tt solve} clause when a new rule is invoked.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it monitor\/}({\it Goal\/}) $\lar$\cr
+\qi {\rm Succeeds if a result of yes is returned from solving} {\it
+Goal\/}\cr
+\qi {\rm at the solve level, or when the end of the computation is
+reached.}\cr
+\noalign{\medskip}
+monitor(Goal) $\lar$ solve(Goal,Result,[~]), filter(Result).\cr
+monitor(Goal).\cr
+\noalign{\vskip 5pt}
+filter(yes).\cr
+\% filter(no) $\lar$ fail.\cr
+\noalign{\medskip}
+{\it solve\/}({\it Goal,Result,Rules\/}) $\lar$\cr
+\qi {\rm Given a set of rules of the form {\it rule\/}({\it
+A,B,Name\/}),} {\it Goal\/} {\rm has}\cr
+\qi {\it Result\/} {\rm yes if it follows from the rules and no if it
+does not.}\cr
+\qi {\it Rules\/} {\rm is the current list of rules that have been
+used.}\cr
+\noalign{\medskip}
+solve(A,yes,Rules) $\lar$ fact(A).\cr
+solve(A,Result,Rules) $\lar$\cr
+\qi rule(A,B,Name), RulesB = [Name$\mid$Rules],\cr
+\qi solve\_body(B,Result,RulesB).\cr
+solve(A,no,Rules).\cr
+\noalign{\vskip 5pt}
+solve\_body(A\&B,Result,Rules) $\lar$\cr
+\qi solve\_body(A,ResultA,Rules),\cr
+\qi solve\_and(ResultA,B,Result,Rules).\cr
+solve\_body(A is\_true,Result,Rules) $\lar$ solve(A,Result,Rules).\cr
+\noalign{\vskip 5pt}
+solve\_and(no,A,no,Rules).\cr
+solve\_and(yes,B,Result,Rules) $\lar$ solve(B,Result,Rules).\cr
+\noalign{\bigskip}
+{\bf Program \Prosketwomet}{\rm :~~A two-level rule interpreter
+carrying rules}\cr}
+\endin\par
+We now describe how the list of rules can be used to provide a why
+explanation. A new {\tt respond} clause needs to be added to
+Program~\Prointrulint. The appropriate behavior is to display the
+rule, then prompt the user again for the answer to the query.\medskip 
+\halign{\hskip 20pt\lft{\tt #}\cr
+respond(why,A,[Rule$\mid$Rules]) $\lar$\cr
+\qi display\_rule(Rule), ask(A,Answer), respond(Answer,A,Rules).\cr}
+\medskip
+Repeated responses of why can be handled by giving the rule that invoked
+the current rule. The correct behavior is achieved by having the
+recursive {\tt respond} goal use the rest of the rules. Finally, when
+there are no more rules to display, an appropriate response must be
+given. A suitable {\tt respond} clause is\medskip
+\halign{\hskip 20pt\lft{\tt #}\cr
+respond(why,A,[~]) $\lar$\cr
+\qi writeln([`No more explanation possible']), ask(A,Answer),\cr
+\qi respond(Answer,A,[~]).\cr}\medskip
+Now let us consider generating explanations of goals that have succeeded
+or failed. The explanations will be based on the proof tree for
+successful goals and the search tree for failed goals. Note that a search
+tree is a sequence of branches. Each branch is either a proof tree or a
+failure branch that is like a proof tree. Program~\Prosketwolay\ can be
+enhanced to incorporate both cases. The enhanced program is given as
+Program~\Prosketwopro. The solve level returns a branch of the search
+tree, and the monitor level keeps track of the failure branches since
+the last proof tree. The relation between the predicate {\tt solve/3}
+in Program~\Prosketwopro\ and {\tt solve/2} in Program~\Prosketwolay\ is
+analogous to the relation between Programs \Probuiprotre\ and
+\Prometpurpro.
+\pageinsert\vbox to\the\vsize{\vskip 0.5 truein\vskip -7pt
+\halign{\hskip 20pt\lft{\tt #}\cr
+{\it monitor\/}({\it Goal,Proof\/}) $\lar$\cr
+\qi {\rm Succeeds if a result of yes is returned from solving} {\it
+Goal\/} {\rm at the}\cr
+\qi {\rm solve level, in which case {\it Proof\/} is a proof tree representing
+the}\cr
+\qi {\rm successful computation, or when the end of the computation is reached,}\cr
+\qi {\rm in which case {\it Proof\/} is a list of failure  branches since the
+last success.}\cr
+\noalign{\medskip}
+monitor(Goal,Proof) $\lar$\cr
+\qi set\_search\_tree, solve(Goal,Result,Proof),\cr
+\qi filter(Result,Proof).\cr
+monitor(Goal,Proof) $\lar$\cr
+\qi collect\_proof(P), reverse(P,[~],P1),\cr
+\qi Proof = failed(Goal,P1).\cr
+\noalign{\vskip 5pt}
+filter(yes,Proof) $\lar$ reset\_search\_tree.\cr
+filter(no,Proof) $\lar$ store\_proof(Proof), fail.\cr
+\noalign{\medskip}
+{\it solve\/}({\it Goal,Result,Proof\/}) $\lar$\cr
+\qi {\rm Given a set of rules of the form {\it rule\/}({\it
+A,B,Name\/}),} {\it Goal\/} {\rm has}\cr
+\qi {\it Result\/} {\rm yes if it follows from the rules and no if it
+does not.}\cr
+\qi {\it Proof\/} {\rm is a proof tree if the result is yes and a failure
+branch}\cr
+\qi {\rm of the search tree if the result is no.}\cr
+\noalign{\medskip}
+:- op(40,xfy,because).\cr
+:- op(30,xfy,with).\cr
+\noalign{\medskip}
+solve(A,yes,Tree) $\lar$ fact(A), Tree = fact(A).\cr
+solve(A,Result,Tree) $\lar$\cr
+\qi rule(A,B,Name), solve\_body(B,Result,Proof),\cr
+\qi Tree = A because B with Proof.\cr
+solve(A,no,Tree) $\lar$\cr
+\qi not fact(A), not rule(A,B,Name), Tree = no\_match(A).\cr
+\noalign{\vskip 5pt}
+solve\_body(A\&B,Result,Proof) $\lar$\cr
+\qi solve\_body(A,ResultA,ProofA),\cr
+\qi solve\_and(ResultA,B,Result,ProofB),\cr
+\qi Proof = ProofA \& ProofB.\cr
+solve\_body(A is\_true,Result,Proof) $\lar$ solve(A,Result,Proof).\cr
+\noalign{\vskip 5pt}
+solve\_and(no,A,no,unsearched).\cr
+solve\_and(yes,B,Result,Tree) $\lar$ solve(B,Result,Tree).\cr
+\noalign{\bigskip}
+{\bf Program \Prosketwopro}{\rm :~~A two-level rule interpreter
+with proof trees}\cr}\vfill}
+\endin\endpage
+\topin
+\noindent The following predicates use side effects to record and remove
+branches of the search tree.\medskip
+\halign{\hskip 20pt\lft{\tt #}\cr
+collect\_proof(Proof) $\lar$ retract(`search tree'(Proof)).\cr
+store\_proof(Proof) $\lar$\cr
+\qi retract(`search tree'(Tree)),\cr
+\qi assert(`search tree'([Proof$\mid$Tree])).\cr
+set\_search\_tree $\lar$  assert(`search tree'([~])).\cr
+reset\_search\_tree $\lar$\cr
+\qi retract(`search tree'(Proof)),\cr
+\qi assert(`search tree'([~])).\cr
+\noalign{\vskip 5pt}
+reverse(Xs,Ys) $\lar$ {\rm See Program \Prorevlis.}\cr
+\noalign{\bigskip}
+{\bf Program \Prosketwopro}~~{\rm (Continued)}\cr}
+\endin\par
+Four predicates are added to the monitor level to record and remove
+branches of the search tree. The fact {\tt `search tree'(Proof)} records
+the current sequence of branches of the search tree since the last
+success. The predicate {\tt set\_search\_tree}, called by the top-level
+{\tt monitor} goal, initializes the sequence of branches to the empty
+list. Similarly, {\tt reset\_search\_tree} initializes the search
+tree but first removes the current set of branches. It is invoked by
+{\tt filter} when a successful computation is detected. The predicate
+{\tt store\_proof} updates the search tree, while {\tt collect\_proof}
+removes the search tree. The failure branches are reordered in the
+second clause for {\tt monitor/2}.\par
+Having generated an explanation, we now consider how to print it. The
+proof tree is a recursive data structure that must be traversed to be
+explained. Traversing a recursive data structure is a straightforward
+exercise. Appropriate code is given in Program~\Proexppro, and a trace of
+a computation given in Figure~\Figexpcom.
+\topin
+\halign{\hskip 20pt\lft{\tt #}\cr
+{\it explain\/}({\it Goal\/}) $\lar$\cr
+\qi {\rm Explains how the goal} {\it Goal\/} {\rm was proved.}\cr
+\noalign{\medskip}
+explain(Goal) $\lar$ monitor(Goal,Proof), interpret(Proof).\cr
+\noalign{\vskip 5pt}
+monitor(Goal,Proof) $\lar$ {\rm See Program \Prosketwopro}.\cr
+\noalign{\vskip 5pt}
+interpret(ProofA\&ProofB) $\lar$\cr
+\qi interpret(ProofA), interpret(ProofB).\cr
+interpret(failed(A,Branches)) $\lar$\cr
+\qi nl, writeln([A,` has failed with the following failure branches:']),\cr
+\qi interpret(Branches).\cr
+interpret([Fail$\mid$Fails]) $\lar$\cr
+\qi interpret(Fail), nl, write(`NEW BRANCH'), nl,\cr
+\qi interpret(Fails).\cr
+interpret([~]).\cr
+interpret(fact(A)) $\lar$\cr
+\qi nl, writeln([A,` is a fact in the database.']).\cr
+interpret(A because B with Proof) $\lar$\cr
+\qi nl, writeln([A,` is proved using the rule']),\cr
+\qi display\_rule(rule(A,B)), interpret(Proof).\cr
+interpret(no\_match(A)) $\lar$\cr
+\qi nl, writeln([A,` has no matching fact or rule in the rule\cr
+\qi base.']).\cr
+interpret(unsearched) $\lar$\cr
+\qi nl, writeln([`The rest of the conjunct is unsearched.']).\cr
+\noalign{\vskip 5pt}
+display\_rule(rule(A,B)) $\lar$\cr
+\qi write(`IF '), write\_conjunction(B), writeln([`THEN ',A~]).\cr
+\noalign{\vskip 5pt}
+write\_conjunction(A\&B) $\lar$\cr
+\qi write\_conjunction(A), write(` AND '),\cr
+\qi write\_conjunction(B).\cr
+write\_conjunction(A is\_true) $\lar$ write(A).\cr
+\noalign{\vskip 5pt}
+writeln(Xs) $\lar$ {\rm See Program \Prowrilister}.\cr
+\noalign{\bigskip}
+{\bf Program \Proexppro}{\rm :~~Explaining a proof}\cr}
+\endin
+\topin
+\halign{\hskip 20pt\lft{\tt #}\cr
+place\_in\_oven(dish1,middle) {\rm is proved using the rule}\cr
+{\rm IF} pastry(dish1) {\rm AND} size(dish1,big)\cr
+{\rm THEN} place\_in\_oven(dish1,middle)\cr
+\noalign{\vskip 5pt}
+pastry(dish1) {\rm is proved using the rule}\cr
+{\rm IF} type(dish1,bread)\cr
+{\rm THEN} pastry(dish1)\cr
+\noalign{\vskip 5pt}
+type(dish1,bread) {\rm is a fact in the database}.\cr
+\noalign{\vskip 5pt}
+size(dish1,big) {\rm is a fact in the database}.\cr
+\qi {\rm X = }{\tt middle} ;\cr
+\noalign{\vskip 5pt}
+place\_in\_oven(dish1,X) {\rm has failed with the following failure
+branches:}\cr
+\noalign{\vskip 5pt}
+place\_in\_oven(dish1,middle) {\rm is proved using the rule}\cr
+{\rm IF} main\_meal(dish1)\cr
+{\rm THEN} place\_in\_oven(dish1,middle)\cr
+\noalign{\vskip 5pt}
+main\_meal(dish1) {\rm is proved using the rule}\cr
+{\rm IF} type(dish1,meat)\cr
+{\rm THEN} main\_meal(dish1)\cr
+\noalign{\vskip 5pt}
+type(dish1,meat) {\rm has no matching fact or rule in the rule base}.\cr
+\noalign{\vskip 5pt}
+{\rm NEW BRANCH}\cr
+\noalign{\vskip 5pt}
+place\_in\_oven(dish1,low) {\rm is proved using the rule}\cr
+{\rm IF} slow\_cooker(dish1)\cr
+{\rm THEN} place\_in\_oven(dish1,low)\cr
+\noalign{\vskip 5pt}
+slow\_cooker(dish1) {\rm is proved using the rule}\cr
+{\rm IF} type(dish1,milk\_pudding)\cr
+{\rm THEN} slow\_cooker(dish1)\cr
+\noalign{\vskip 5pt}
+type(dish1,milk\_pudding) {\rm has no matching fact or rule in the rule
+base}.\cr}\bigskip
+\ctrline{{\bf Figure \Figexpcom}:~~Explaining a computation}
+\endin\par
+The explanation shell is obtained by combining the enhancements of
+Programs \Prointrulint, \Prosketwomet, and \Prosketwopro. The final
+program is given as Program~\Proexpshe. Understanding the program is
+greatly facilitated by viewing it as a sum of the three components.
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it monitor\/}({\it Goal,Proof\/}) $\lar$\cr
+\qi {\rm Succeeds if a result of yes is returned from solving} {\it
+Goal\/} {\rm at the}\cr
+\qi {\rm solve level, in which case} {\it Proof\/} {\rm is a proof tree
+representing the}\cr
+\qi {\rm successful computation, or when the end of the computation is reached,}\cr
+\qi {\rm in which case} {\it Proof\/} {\rm is a list of failure branches
+since the last success}.\cr
+\noalign{\medskip}
+monitor(Goal,Proof) $\lar$\cr
+\qi set\_search\_tree, solve(Goal,Result,[~],Proof),\cr
+\qi filter(Result,Proof).\cr
+monitor(Goal,Proof) $\lar$\cr
+\qi collect\_proof(P), reverse(P,[~],P1),\cr
+\qi Proof = failed(Goal,P1).\cr
+\noalign{\vskip 5pt}
+filter(yes,Proof) $\lar$ reset\_search\_tree.\cr
+filter(no,Proof) $\lar$ store\_proof(Proof), fail.\cr
+\noalign{\medskip}
+{\it solve\/}({\it Goal,Result,Rules,Proof\/}) $\lar$\cr
+\qi {\rm Given a set of rules of the form {\it rule\/}({\it
+A,B,Name\/}),} {\it Goal\/} {\rm has}\cr
+\qi {\it Result\/} {\rm yes if it follows from the rules and no if it
+does not.}\cr
+\qi {\it Rules\/} {\rm is the  current list of rules that have been
+used.}\cr
+\qi {\it Proof\/} {\rm is a proof tree if the result is yes and a failure
+branch}\cr
+\qi {\rm of the search tree if the result is no.}\cr
+\noalign{\medskip}
+:- op(40,xfy,because).\cr
+:- op(30,xfy,with).\cr
+\noalign{\medskip}
+solve(A,yes,Rules,Tree) $\lar$ fact(A), Tree = fact(A).\cr
+solve(A,Result,Rules,Tree) $\lar$\cr
+\qi rule(A,B,Name), RulesB = [Name$\mid$Rules],\cr
+\qi solve\_body(B,Result,RulesB,Proof),\cr
+\qi Tree = A because B with Proof.\cr
+solve(A,Result,Rules,Tree) $\lar$\cr
+\qi askable(A), solve\_askable(A,Result,Rules), Tree = user(A).\cr
+solve(A,no,Rules,Tree) $\lar$\cr
+\qi not fact(A), not rule(A,B,Name), Tree = no\_match(A).\cr
+\noalign{\vskip 5pt}
+solve\_body(A\&B,Result,Rules,Proof) $\lar$\cr
+\qi solve\_body(A,ResultA,Rules,ProofA),\cr
+\qi solve\_and(ResultA,B,Result,Rules,ProofB),\cr
+\qi Proof = ProofA \& ProofB.\cr
+solve\_body(A is\_true,Result,Rules,Proof) $\lar$\cr
+\qi solve(A,Result,Rules,Proof).\cr
+\noalign{\vskip 5pt}
+solve\_and(no,A,no,Rules,unsearched).\cr
+solve\_and(yes,B,Result,Rules,Tree) $\lar$
+solve(B,Result,Rules,Tree).\cr
+\noalign{\bigskip}
+{\bf Program \Proexpshe}{\rm :~~An explanation shell}\cr}\vfill}
+\endin
+\topin
+\noindent The following predicates use side effects to record and remove
+branches of the search tree.\medskip
+\halign{\lft{\tt #}\cr
+collect\_proof(Proof) $\lar$ retract(`search tree'(Proof)).\cr
+store\_proof(Proof) $\lar$\cr
+\qi retract(`search tree'(Tree)),\cr
+\qi assert(`search tree'([Proof$\mid$Tree])).\cr
+set\_search\_tree $\lar$ assert(`search tree'([~])).\cr
+reset\_search\_tree $\lar$\cr
+\qi retract(`search tree'(Proof)), assert(`search tree'([~])).\cr
+\noalign{\vskip 5pt}
+reverse(Xs,Ys) $\lar$ {\rm See Program \Prorevlis.}\cr}\medno
+The following predicates facilitate interaction with the user.\medskip
+\halign{\lft{\tt #}\cr
+ask(A,Response) $\lar$ display\_query(A), read(Response).\cr
+\noalign{\vskip 5pt}
+respond(yes,A,yes) $\lar$ assert(known\_to\_be\_true(A)).\cr
+respond(no,A,no) $\lar$ assert(known\_to\_be\_false(A)).\cr
+respond(why,A,[Rule$\mid$Rules]) $\lar$\cr
+\qi display\_rule(Rule), ask(A,Answer), respond(Answer,A,Rules).\cr
+respond(why,A,[~]) $\lar$\cr
+\qi writeln([`No more explanation possible']), ask(A,Answer),\cr
+\qi respond(Answer,A,[~]).\cr
+\noalign{\vskip 5pt}
+known(A) $\lar$ known\_to\_be\_true(A).\cr
+known(A) $\lar$ known\_to\_be\_false(A).\cr
+\noalign{\vskip 5pt}
+display\_query(A) $\lar$ write(A), write(`? ').\cr
+\noalign{\vskip 5pt}
+display\_rule(rule(A,B)) $\lar$\cr
+\qi write(`IF '), write\_conjunction(B), nl, writeln([`THEN ',A]).\cr
+\noalign{\vskip 5pt}
+write\_conjunction(A\&B) $\lar$\cr
+\qi write\_conjunction(A), write(` AND '), write\_conjunction(B).\cr
+\qi write\_conjunction(A is\_true) $\lar$ write(A).\cr
+\noalign{\vskip 5pt}
+writeln(Xs) $\lar$ {\rm See Program \Prowrilister.}\cr
+\noalign{\bigskip}
+{\bf Program \Proexpshe}~~{\rm (Continued)}\cr}
+\endin\vskip 15pt\parno
+{\bf Exercises for Section 17.4}\vskip 5pt\par
+\offset{20pt}{(i)} Add the ability to explain askable goals to the proof
+explainer in Program~\Proexppro.\par
+\offset{20pt}{(ii)} Add the ability to execute Prolog builtin predicates
+to the explanation shell.\par
+\offset{20pt}{(iii)} Write a two-level meta-interpreter to find the
+maximum depth reached in any computation of a goal.\par
+\sect{Background}
+Our notation for automata follows Hopcroft and Ullman (1979).\par
+There is considerable confusion in the literature about the term
+meta-interpreter --- whether it differs from the term meta-level
+interpreter, for example. The lack of clarity extends further to the
+topic of meta-programming. A good discussion of meta-programming can
+be found in Yal\c cinalp (1991).\par 
+One dimension of the discussion is whether the interpreter is capable
+of interpreting itself. An interpreter with that capability is also
+called meta-circular or self-applicable. An important early discussion
+of meta-circular interpreters can be found in Steele and Sussman
+(1978).  That paper claims that the ability of a language to specify
+itself is a fundamental criterion for language design.\par
+The vanilla meta-interpreter is rooted in Prolog folklore. A version
+was in the suite of programs attached to the first Prolog interpreter
+developed by Colmerauer and colleagues, and was given in the early
+collection of Prolog programs (Coelho et al., 1980). Subsequently,
+meta-interpreters, and more generally meta-programs, have been written
+to affect the control flow of Prolog programs. References are Gallaire
+and Lasserre (1982), Pereira (1982), and Dincbas and Le Pape (1984).
+Using enhanced meta-interpreters for handling uncertainties is
+described by Shapiro (1983c).\par
+There have been several papers on handling cuts in meta-interpreters.
+A variant of the vanilla meta-interpreter handling cuts correctly is
+described in Coelho et al.\ (1980) and attributed to Luis Pereira. One
+easy method to treat cuts is via ancestor cut, which is only present
+in a few Prologs like Waterloo Prolog on the IBM and Wisdom Prolog,
+described in the first edition of this book. There is a good
+discussion of meta-interpreters in general, and cuts in particular, in
+O'Keefe (1990).\par
+Shapiro suggested that enhanced meta-interpreters should be the basis
+of a programming environment. The argument, along with the debugging
+algorithms of Section~17.3, can be found in Shapiro (1983a). Shapiro's
+debugging work has been extended by Dershowitz and Lee (1987) and
+Drabent et al.\ (1989).\par
+Prolog is a natural language for building rule-based systems. The
+basic statements are rules, and the Prolog interpreter can be viewed as
+a backward chaining inference engine.  Early advocates of Prolog for
+expert systems were Clark and McCabe (1982), who discussed how
+explanation facilities and uncertainty can be added to simple expert
+systems expressed as Prolog clauses by adding extra arguments to the
+predicates.  Incorporating interaction with the user in Prolog was
+proposed by Sergot (1983).  An explanation facility incorporating
+Sergot's {\tt query\_the\_user} was part
+of the APES expert system shell, described in Hammond (1984).\par
+Using meta-interpreters as a basis for explanation
+facilities was proposed by Sterling (1984). Incorporating failure in a
+meta-interpreter has been discussed by several researchers, including
+Hammond (1984), Sterling and Lalee (1986), and Bruffaerts and Henin
+(1989). The first description of an integrated meta-interpreter for
+both success and failure is in Yal\c cinalp and Sterling (1989). The
+rule interpreter given in Section~17.4 is an adaptation of the
+last paper. The layered approach can be used to explain cuts
+clearly, as in Sterling and Yal\c cinalp (1989), and also for
+uncertainty reasoning, as in Yal\c cinalp and Sterling (1991) and more
+completely in Yal\c cinalp (1991).\par\bye
+

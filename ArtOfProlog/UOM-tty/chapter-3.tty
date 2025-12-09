@@ -1,0 +1,4393 @@
+
+
+
+
+                                                   Chapter  3
+
+
+
+                   Recursive  Programming
+
+
+
+   The programs of the previous chapter essentially retrieve information from,
+
+
+and manipulate, finite data structures. In general, mathematical power is gained
+
+
+by considering infinite or potentially infinite structures.  Finite instances t*
+ *hen
+
+
+follow as special cases.  Logic programs harness this power by using recursive
+
+
+data types.
+
+
+   Logical terms can be classified into types. A type is a (possibly infinite) *
+ *set
+
+
+of terms. Some types are conveniently defined by unary relations. A relation p/1
+
+
+defines the type p to be the set of X's such that p(X).
+
+
+   For example, the male/1 and female/1 predicates used previously define the
+
+
+male and female types.
+
+
+   More complex types can be defined by recursive logic programs. Such types
+
+
+are called recursive types. Types defined by unary recursive programs are called
+
+
+simple recursive types. A program defining a type is called a type definition.
+
+
+
+
+3.1                                                    Arithmetic 35
+
+
+
+   In this chapter, we show logic programs defining relations over simple recur-
+
+
+sive types, such as integers, lists, and binary trees, and also programs over m*
+ *ore
+
+
+complex types, such as polynomials.
+
+
+
+3.1   Arithmetic
+
+
+
+   The simplest recursive data type, natural numbers, arises from the founda-
+
+
+tions of mathematics. Arithmetic is based on the natural numbers. This section
+
+
+gives logic programs for performing arithmetic.
+
+
+   In fact, Prolog programs for performing arithmetic differ considerably from
+
+
+their logical counterparts, as we will see in later chapters. However, it is us*
+ *eful
+
+
+to spend time discussing the logic programs. There are two main reasons. First,
+
+
+the operations of arithmetic are usually thought of functionally rather than re*
+ *la-
+
+
+tionally. Presenting examples for such a familiar area emphasizes the change in
+
+
+thinking necessary for composing logic programs. Second, it is more natural to
+
+
+discuss the underlying mathematical issues, such as correctness and completeness
+
+
+of programs.
+
+
+   The natural numbers are built from two constructs, the constant symbol
+
+
+0 and the successor function s of arity 1.  All the natural numbers are then
+
+
+recursively given as 0, s(0), s(s(0)), s(s(s(0))), : :.:We adopt the convention
+
+
+that sn(0) denotes the integer n, that is, n applications of the successor func*
+ *tion
+
+
+to 0.
+
+
+   As in Chapter 2, we give a relation scheme for each predicate, together with
+
+
+
+
+36    Recursive Programming                                       3.1
+
+
+
+the intended meaning of the predicate. Recall that a program P is correct with
+
+
+respect to an intended meaning M if the meaning of P is a subset of M . It is c*
+ *om-
+
+
+plete if M is a subset of the meaning of P. It is correct and complete if its m*
+ *eaning
+
+
+is identical to M . Proving correctness establishes that everything deducible f*
+ *rom
+
+
+the program is intended.  Proving completeness establishes that everything in-
+
+
+tended is deducible from the program. Two correctness and completeness proofs
+
+
+are given in this section.
+
+
+   The simple type definition of natural numbers is neatly encapsulated in
+
+
+the logic program, shown as Program 3.1.  The relation scheme used is natu-
+
+
+ral_number(X), with intended meaning that X is a natural number. The program
+
+
+consists of one unit clause and one iterative clause (a clause with a single go*
+ *al in
+
+
+the body). Such a program is called minimal recursive.
+
+       natural_number(X )  
+
+
+           X  is a natural number.
+
+
+       natural_number(0).
+
+
+       natural_number(s(X))   natural_number(X).
+
+
+
+       Program 3.1:  Defining the natural numbers
+
+
+
+   Proposition:  Program 3.1 is correct and complete with respect to the set
+
+
+of goals natural_number(si(0)), for i  0.
+
+
+   Proof: (1) Completeness. Let n be a natural number. We show that the goal
+
+
+natural_number(n) is deducible from the program by giving an explicit proof tre*
+ *e.
+
+
+Either n is 0 or of the form sn(0). The proof tree for the goal natural_number(*
+ *0)
+
+
+
+
+3.1                                                    Arithmetic 37
+
+
+
+      natural_number(sn(0))       plus(sn(0),sm (0),sn+m (0))
+
+
+                j                              j
+
+
+     natural_number(sn1 (0))    plus(sn1 (0),sm (0),sn+m1  (0))
+
+
+                j                              j
+
+
+               : : :                          : : :
+
+
+                j                              j
+
+
+      natural_number(s(0))         plus(s(0),sm (0),sm+1 (0))
+
+
+                j                              j
+
+
+        natural_number(0)            plus(0,sm (0),sm (0))
+
+
+                                               j
+
+
+                                     natural_number(sm (0))
+
+
+                                               j
+
+
+                                              : : :
+
+
+       Figure 3.1:  Proof trees establishing completeness of programs
+
+
+
+is trivial. The proof tree for the goal natural_number(s(: :s:(0): :):) contain*
+ *s n
+
+
+reductions, using the rule in Program 3.1, to reach the fact natural_number(0),
+
+
+as shown in the left half of Figure 3.1.
+
+
+
+   (2) Correctness.  Suppose that natural_number(X) is deducible from Pro-
+
+
+gram 3.1, in n deductions. We prove that natural_number(X) is in the intended
+
+
+meaning of the program by induction on n. If n = 0, then the goal must have
+
+
+been proved using a unit clause, which implies that X= 0.  If n > 0, then the
+
+
+goal must be of the form natural_number(s(X0)), since it is deducible from the
+
+
+
+
+38    Recursive Programming                                       3.1
+
+
+
+       X  Y   
+
+
+           X  and Y  are natural numbers,
+
+
+           such that X  is less than or equal to Y .
+
+
+       0  X   natural_number(X).
+
+
+       s(X)  s(Y)   X  Y.
+
+
+       natural_number(X)   See Program 3.1.
+
+
+
+       Program 3.2:  The less than or equal relation
+
+
+
+program, and further, natural_number(X0) is deducible in n  1 deductions.
+
+
+By the induction hypothesis, X0 is in the intended meaning of the program, i.e.,
+
+
+X0=sk(0) for some k  0.    |
+
+
+
+   The natural numbers have a natural order. Program 3.2 is a logic program
+
+
+defining the relation less than or equal to according to the order. We denote t*
+ *he
+
+
+relation with a binary infix symbol, or operator, , according to mathematical
+
+
+usage. The goal 0  X has predicate symbol  of arity 2, has arguments 0 and
+
+
+X, and is syntactically identical to `'(0,X).
+
+
+
+   The relation scheme is N1  N2. The intended meaning of Program 3.2 is
+
+
+all ground facts X  Y, where X and Y are natural numbers and X is less than or
+
+
+equal to Y. Exercise (ii) at the end of this section is to prove the correctnes*
+ *s and
+
+
+completeness of Program 3.2.
+
+
+
+   The recursive definition of  is not computationally efficient.  The proof
+
+
+tree establishing that a particular N  is less than a particular M has M + 2
+
+
+
+
+3.1                                                    Arithmetic 39
+
+
+
+nodes. We usually think of testing whether one number is less than another as a
+
+
+unit operation, independent of the size of the numbers. Indeed, Prolog does not
+
+
+define arithmetic according to the axioms presented in this section but uses the
+
+
+underlying arithmetic capabilities of the computer directly.
+
+
+   Addition is a basic operation defining a relation between two natural numbers
+
+
+and their sum. In Section 1.1, a table of the plus relation was assumed for all
+
+
+relevant natural numbers.  A recursive program captures the relation elegantly
+
+
+and more compactly, and is given as Program 3.3.  The intended meaning of
+
+
+Program 3.3 is the set of facts plus(X,Y,Z), where X, Y, and Z are natural numb*
+ *ers
+
+
+and X+Y=Z.
+
+       plus(X,Y,Z )  
+
+
+           X , Y  , and Z  are natural numbers
+
+
+           such that Z  is the sum of X  and Y .
+
+
+       plus(0,X,X)   natural_number(X).
+
+
+       plus(s(X),Y,s(Z))   plus(X,Y,Z).
+
+
+       natural_number(X)   See Program 3.1.
+
+
+
+       Program 3.3:  Addition
+
+
+
+   Proposition:  Programs 3.1 and 3.3 constitute a correct and complete ax-
+
+
+iomatization of addition with respect to the standard intended meaning of plus/*
+ *3.
+
+
+   Proof:  (1) Completeness.  Let X, Y, and Z be natural numbers such that
+
+
+X+Y=Z. We give a proof tree for the goal plus(X,Y,Z). If X equals 0, then Y equ*
+ *als
+
+
+Z. Since Program 3.1 is a complete axiomatization of the natural numbers, there
+
+
+
+
+40    Recursive Programming                                       3.1
+
+
+
+is a proof tree for natural_number(Y), which is easily extended to a proof tree
+
+
+for plus(0,Y,Y). Otherwise, X equals sn(0) for some n.  If Y equals sm (0),
+
+
+then Z equals sn+m (0). The proof tree in the right half of Figure 3.1 establis*
+ *hes
+
+
+completeness.
+
+
+
+   (2) Correctness.  Let plus(X,Y,Z) be in the meaning.  A simple inductive
+
+
+argument on the size of X, similar to the one used in the previous proposition,
+
+
+establishes that X+Y=Z.    |
+
+
+
+   Addition is usually considered to be a function of two arguments rather than
+
+
+a relation of arity 3. Generally, logic programs corresponding to functions of n
+
+
+arguments define relations of arity n + 1.  Computing the value of a function
+
+
+is achieved by posing a query with n arguments instantiated and the argument
+
+
+place corresponding to the value of the function uninstantiated. The solution to
+
+
+the query is the value of the function with the given arguments.  To make the
+
+
+analogy clearer, we give a functional definition of addition corresponding to t*
+ *he
+
+
+logic program:
+
+
+
+       0+X = X.
+
+
+       s(X)+Y = s(X+Y).
+
+
+
+   One advantage that relational programs have over functional programs is
+
+
+the multiple uses that can be made of the program.  For example, the query
+
+
+plus(s(0),s(0),s(s(0)))?  means checking whether 1 + 1 = 2.  (We feel free
+
+
+to use the more readable decimal notation when mentioning numbers.) As for ,
+
+
+the program for plus is not efficient. The proof tree confirming that the sum of
+
+
+
+
+3.1                                                    Arithmetic 41
+
+
+
+N and M is N + M has N + M + 2 nodes.
+
+
+   Posing the query plus(s(0),s(0),X)?, an example of the standard use,
+
+
+calculates the sum of 1 and 1. However, the program can just as easily be used
+
+
+for subtraction by posing a query such as plus(s(0),X,s(s(s(0))))?.  The
+
+
+computed value of X is the difference between 3 and 1, namely, 2.  Similarly,
+
+
+asking a query with the first argument uninstantiated, and the second and third
+
+
+instantiated, also performs subtraction.
+
+
+   A more novel use exploits the possibility of a query having multiple solutio*
+ *ns.
+
+
+Consider the query plus(X,Y,s(s(s(0))))?. It reads: \Do there exist numbers
+
+
+X and Y that add up to 3." In other words, find a partition of the number 3 into
+
+
+the sum of two numbers, X and Y. There are several solutions.
+
+
+   A query with multiple solutions becomes more interesting when the properties
+
+
+of the variables in the query are restricted.  There are two forms of restricti*
+ *on:
+
+
+using extra conjuncts in the query, and instantiating variables in the query. We
+
+
+saw examples of this when querying a database. Exercise (ii) at the end of this
+
+
+section requires to define a predicate even(X), which is true if X is an even n*
+ *umber.
+
+
+Assuming such a predicate, the query plus(X,Y,N),even(X),even(Y)? gives a
+
+
+partition of N into two even numbers. The second type of restriction is exempli*
+ *fied
+
+
+by the query plus(s(s(X)),s(s(Y)),N)?, which insists that each of the numbers
+
+
+adding up to N is strictly greater than 1.
+
+
+   Almost all logic programs have multiple uses. Consider Program 3.2 for ,
+
+
+for example. The query s(0)s(s(0))? checks whether 1 is less than or equal
+
+
+to 2.  The query X  s(s(0))?  finds numbers X less than or equal to 2.  The
+
+
+
+
+42    Recursive Programming                                       3.1
+
+
+
+query X  Y? computes pairs of numbers less than or equal to each other.
+
+
+   Program 3.3 defining addition is not unique. For example, the logic program
+
+
+
+       plus(X,0,X)   natural_number(X).
+
+
+       plus(X,s(Y),s(Z))   plus(X,Y,Z).
+
+
+
+has precisely the same meaning as Program 3.3 for plus. Two programs are to
+
+
+be expected because of the symmetry between the first two arguments. A proof
+
+
+of correctness and completeness given for Program 3.3 applies to this program by
+
+
+reversing the roles of the symmetric arguments.
+
+
+   The meaning of the program for plus would not change even if it consisted
+
+
+of the two programs combined. This composite program is undesirable, however.
+
+
+There are several different proof trees for the same goal.  It is important both
+
+
+for runtime efficiency and for textual conciseness that axiomatizations of logic
+
+
+programs be minimal.
+
+
+   We define a type condition to be a call to the predicate defining the type. *
+ *For
+
+
+natural numbers, a type condition is any goal of the form natural_number(X).
+
+
+   In practice, both Programs 3.2 and 3.3 are simplified by omitting the body
+
+
+of the base rule, natural_number(X). Without this test, facts such as 0  a
+
+
+and plus(0,a,a), where a is an arbitrary constant, will be in the programs'
+
+
+meanings.  Type conditions are necessary for correct programs.  However, type
+
+
+conditions distract from the simplicity of the programs and affect the size of *
+ *the
+
+
+proof trees. Hence in the following we might omit explicit type conditions from
+
+
+the example programs, Programs 3.4{3.7.
+
+
+
+
+3.1                                                    Arithmetic 43
+
+
+
+   The basic programs shown are the building blocks for more complicated re-
+
+
+lations. A typical example is defining multiplication as repeated addition. Pro-
+
+
+gram 3.4 reflects this relation. The relation scheme is times(X,Y,Z), meaning X
+
+
+times Y equals Z.
+
+
+
+   Exponentiation is defined as repeated multiplication.   Program 3.5 for
+
+
+exp(N,X,Y) expresses the relation that XN =Y. It is analogous to Program 3.4
+
+
+for times(X,Y,Z), with exp and times replacing times and plus, respectively.
+
+
+The base cases for exponentiation are X0=1 for all positive values of X, and 0N*
+ * =0
+
+
+for positive values of N.
+
+
+
+   A definition of the factorial function uses the definition of multiplication.
+
+
+Recall that N! = N  N  1  : : :2  1. The predicate factorial(N,F) relates a
+
+
+number N to its factorial F. Program 3.6 is its axiomatization.
+
+
+
+   Not all relations concerning natural numbers are defined recursively. Rela-
+
+
+tions can also be defined in the style of programs in Chapter 2. An example is
+
+
+Program 3.7 determining the minimum of two numbers via the relation mini-
+
+
+mum(N1,N2,Min).
+
+
+
+   Composing a program to determine the remainder after integer division re-
+
+
+veals an interesting phenomenon | different mathematical definitions of the same
+
+
+concept are translated into different logic programs. Programs 3.8a and 3.8b gi*
+ *ve
+
+
+two definitions of the relation mod(X,Y,Z), which is true if Z is the value of X
+
+
+modulo Y, or in other words, Z is the remainder of X divided by Y. The programs
+
+
+assume a relation < as specified in Exercise (i) at the end of this section.
+
+
+
+
+44    Recursive Programming                                       3.1
+
+
+
+       times(X,Y,Z )  
+
+
+           X , Y  , and Z  are natural numbers
+
+
+           such that Z  is the product of X  and Y  .
+
+
+       times(0,X,0).
+
+
+       times(s(X),Y,Z)   times(X,Y,XY), plus(XY,Y,Z).
+
+
+       plus(X,Y,Z)   See Program 3.3.
+
+
+
+       Program 3.4:  Multiplication as repeated addition
+
+
+
+       exp(N,X,Y )  
+
+
+           N , X  , and Y  are natural numbers
+
+
+           such that Y  equals X  raised to the power N .
+
+
+       exp(s(X),0,0).
+
+
+       exp(0,s(X),s(0)).
+
+
+       exp(s(N),X,Y)   exp(N,X,Z), times(Z,X,Y).
+
+
+       times(X,Y,Z)   See Program 3.4.
+
+
+
+       Program 3.5:  Exponentiation as repeated multiplication
+
+
+
+       factorial(N,F )  
+
+
+           F  equals N  factorial.
+
+
+       factorial(0,s(0)).
+
+
+       factorial(s(N),F)   factorial(N,F1), times(s(N),F1,F).
+
+
+       times(X,Y,Z)   See Program 3.4.
+
+
+
+       Program 3.6:  Computing factorials
+
+
+
+
+3.1                                                    Arithmetic 45
+
+
+
+       minimum(N1,N2,Min)  
+
+
+           The minimum of the natural numbers N1  and N2  is Min.
+
+
+       minimum(N1,N2,N1)   N1  N2.
+
+
+       minimum(N1,N2,N2)   N2  N1.
+
+
+       N1  N2   See Program 3.2.
+
+
+
+       Program 3.7:  The minimum of two numbers
+
+
+
+   Program 3.8a illustrates the direct translation of a mathematical definition,
+
+
+which is a logical statement, into a logic program. The program corresponds to
+
+
+an existential definition of the integer remainder: \Z is the value of X mod Y *
+ *if
+
+
+Z is strictly less than Y , and there exists a number Q such that X = Q  Y + Z.
+
+
+In general, mathematical definitions are easily translated to logic programs.
+
+
+       mod(X,Y,Z )  
+
+
+           Z  is the remainder of the integer division of X  by Y .
+
+
+       mod(X,Y,Z)   Z < Y, times(Y,Q,QY), plus(QY,Z,X).
+
+
+
+       Program 3.8a:  A nonrecursive definition of modulus
+
+
+
+   We can relate Program 3.8a to constructive mathematics. Although seem-
+
+
+ingly an existential definition, it is also constructive, because of the constr*
+ *uctive
+
+
+nature of <, plus, and times.  The number Q, for example, proposed in the
+
+
+definition will be explicitly computed by times in any use of mod.
+
+
+   In contrast to Program 3.8a, Program 3.8b is defined recursively. It consti-
+
+
+
+
+46    Recursive Programming                                       3.1
+
+
+
+       mod(X,Y,Z )  
+
+
+           Z  is the remainder of the integer division of X  by Y .
+
+
+       mod(X,Y,X)   X < Y.
+
+
+       mod(X,Y,Z)   plus(X1,Y,X), mod(X1,Y,Z).
+
+
+
+       Program 3.8b:  A recursive definition of modulus
+
+
+
+tutes an algorithm for finding the integer remainder based on repeated subtrac-
+
+
+tion.  The first rule says that X mod Y is X if X is strictly less than Y . The
+
+
+second rule says that the value of X mod Y is the same as X  Y mod Y . The
+
+
+effect of any computation to determine the modulus is to repeatedly subtract Y
+
+
+from X until it becomes less than Y and hence is the correct value.
+
+
+
+   The mathematical function X mod Y is not defined when Y is zero. Neither
+
+
+Program 3.8a nor Program 3.8b has goal mod(X,0,Z) in its meaning for any values
+
+
+of X or Z. The test of < guarantees that.
+
+
+
+   The computational model gives a way of distinguishing between the two pro-
+
+
+grams for mod. Given a particular X , Y , and Z satisfying mod, we can compare *
+ *the
+
+
+sizes of their proof trees. In general, proof trees produced with Program 3.8b *
+ *will
+
+
+be smaller than those produced with Program 3.8a. In that sense Program 3.8b is
+
+
+more efficient. We defer more rigorous discussions of efficiency till the discu*
+ *ssions
+
+
+on lists, where the insights gained will carry over to Prolog programs.
+
+
+
+   Another example of translating a mathematical definition directly into a log*
+ *ic
+
+
+program is writing a program that defines Ackermann's function. Ackermann's
+
+
+
+
+3.1                                                    Arithmetic 47
+
+
+
+function is the simplest example of a recursive function that is not primitive
+
+
+recursive. It is a function of two arguments, defined by three cases:
+
+
+
+       ackermann(0,N ) = N +1 .
+
+
+       ackermann(M,0 ) = ackermann(M-1,1 ).
+
+
+       ackermann(M,N ) = ackermann(M-1,ackermann(M,N-1 )).
+
+
+
+   Program 3.9 is a translation of the functional definition into a logic progr*
+ *am.
+
+
+The predicate ackermann(M,N,A) denotes that A=ackermann(M,N). The third
+
+
+rule involves two calls to Ackermann's function, one to compute the value of the
+
+
+second argument.
+
+
+       ackermann(X,Y,A)  
+
+
+           A is the value of Ackermann's
+
+
+           function for the natural numbers X  and Y .
+
+
+       ackermann(0,N,s(N)).
+
+
+       ackermann(s(M),0,Val)   ackermann(M,s(0),Val).
+
+
+       ackermann(s(M),s(N),Val)  
+
+
+           ackermann(s(M),N,Val1), ackermann(M,Val1,Val).
+
+
+
+       Program 3.9:  Ackermann's function
+
+
+
+   The functional definition of Ackermann's function is clearer than the rela-
+
+
+tional one given in Program 3.9.  In general, functional notation is more read-
+
+
+able for pure functional definitions, such as Ackermann's function and the fac-
+
+
+torial function (Program 3.6). Expressing constraints can also be awkward with
+
+
+
+
+48    Recursive Programming                                       3.1
+
+
+
+relational logic programs.  For example, Program 3.8a says less directly that
+
+
+X = Q  Y + Z.
+
+
+   The final example in this section is the Euclidean algorithm for finding the
+
+
+greatest common divisor of two natural numbers, recast as a logic program. Like
+
+
+Program 3.8b, it is a recursive program not based on the recursive structure of
+
+
+numbers. The relation scheme is gcd(X,Y,Z), with intended meaning that Z is
+
+
+the greatest common divisor (or gcd) of two natural numbers X and Y. It uses
+
+
+either of the two programs, 3.8a or 3.8b, for mod.
+
+
+   The first rule in Program 3.10 is the logical essence of the Euclidean algo-
+
+
+rithm. The gcd of X and Y is the same as the gcd of Y and X mod Y . A proof
+
+
+that Program 3.10 is correct depends on the correctness of the above mathemat-
+
+
+ical statement about greatest common divisors.  The proof that the Euclidean
+
+
+algorithm is correct similarly rests on this result.
+
+       gcd(X,Y,Z )  
+
+
+           Z  is the greatest common divisor of
+
+
+           the natural numbers X  and Y .
+
+
+       gcd(X,Y,Gcd)   mod(X,Y,Z), gcd(Y,Z,Gcd).
+
+
+       gcd(X,0,X)  X > 0.
+
+
+
+       Program 3.10:  The Euclidean algorithm
+
+
+
+   The second fact in Program 3.10 is the base fact. It must be specified that X
+
+
+is greater than 0 to preclude gcd(0,0,0) from being in the meaning. The gcd of
+
+
+0 and 0 is not well defined.
+
+
+
+
+3.1                                                    Arithmetic 49
+
+
+
+Exercises for Section 3.1
+
+
+
+(i) Modify Program 3.2 for  to axiomatize the relations <, >, and . Discuss
+
+
+    multiple uses of these programs.
+
+
+
+(ii)Prove that Program 3.2 is a correct and complete axiomatization of .
+
+
+
+(iii)Prove that a proof tree for the query sn(0)  sm (0) using Program 3.2
+
+
+    has M + 2 nodes.
+
+
+
+(iv)Define predicates even(X) and odd(X) for determining if a natural number
+
+
+    is even or odd. (Hint:  Modify Program 3.1 for natural_number.)
+
+
+
+(v) Write a logic program defining the relation fib(N,F) to determine the Nth
+
+
+    Fibonacci number F.
+
+
+
+(vi)The predicate times can be used for computing exact quotients with queries
+
+
+    such as times(s(s(0)),X,s(s(s(s(0)))))? to find the result of 4 divided
+
+
+    by 2. The query times(s(s(0)),X,s(s(s(0))))? to find 3=2 has no solu-
+
+
+    tion. Many applications require the use of integer division that would calc*
+ *u-
+
+
+    late 3=2 to be 1. Write a program to compute integer quotients. (Hint: Use
+
+
+    repeated subtraction.)
+
+
+
+(vii)Modify Program 3.10 for finding the gcd of two integers so that it performs
+
+
+    repeated subtraction directly rather than use the mod function. (Hint: The
+
+
+    program repeatedly subtracts the smaller number from the larger number
+
+
+    until the two numbers are equal.)
+
+
+
+(viii)Rewrite the logic programs in Section 3.1 using a different representatio*
+ *n of
+
+
+
+
+50    Recursive Programming                                       3.1
+
+
+
+    natural numbers, namely as a sum of 1's. For example, the modified version
+
+
+    of Program 3.1 would be
+
+
+
+       natural_number(1).
+
+
+       natural_number(1+X)   natural_number(X).
+
+
+
+    Note that + is used as a binary operator, and 0 is not defined to be a natu*
+ *ral
+
+
+    number.
+
+
+
+3.2   Lists
+
+
+
+   The basic structure for arithmetic is the unary successor functor. Although
+
+
+complicated recursive functions such as Ackermann's function can be defined, the
+
+
+use of a unary recursive structure is limited.  This section discusses the bina*
+ *ry
+
+
+structure, the list.
+
+
+   The first argument of a list holds an element, and the second argument is
+
+
+recursively the rest of the list.  Lists are sufficient for most computations |
+
+
+attested to by the success of the programming language Lisp, which has lists
+
+
+as its basic compound data structure.  Arbitrarily complex structures can be
+
+
+represented with lists, though it is more convenient to use different structures
+
+
+when appropriate.
+
+
+   For lists, as for numbers, a constant symbol is necessary to terminate recur-
+
+
+sion. This \empty list," referred to as nil, will be denoted here by the symbol*
+ * [ ].
+
+
+We also need a functor of arity 2. Historically, the usual functor for lists is*
+ * \."
+
+
+
+
+3.2                                                         Lists 51
+
+
+
+(pronounced dot), which overloads the use of the period. It is convenient to de*
+ *fine
+
+
+a separate, special syntax.  The term .(X,Y) is denoted [XjY]. Its components
+
+
+have special names: X is called the head and Y is called the tail.
+
+
+   The term [XjY] corresponds to a cons pair in Lisp. The corresponding words
+
+
+for head and tail are, respectively, car and cdr.
+
+
+   Figure 3.2 illustrates the relation between lists written with different syn-
+
+
+taxes.  The first column writes lists with the dot functor, and is the way lists
+
+
+are considered as terms in logic programs. The second column gives the square
+
+
+bracket equivalent of the dot syntax. The third column is an improvement upon
+
+
+the syntax of the second column, essentially hiding the recursive structure of
+
+
+lists. In this syntax, lists are written as a sequence of elements enclosed in *
+ *square
+
+
+brackets and separated by commas. The empty list used to terminate the recur-
+
+
+sive structure is suppressed.  Note the use of \cons pair notation" in the third
+
+
+column when the list has a variable tail.
+
+
+          Formal object   Cons pair syntax   Element syntax
+
+
+          .(a,[ ])        [aj[ ]]            [a]
+
+
+          .(a,.(b,[ ]))   [aj[bj[ ]]]        [a,b]
+
+
+          .(a,.(b,.(c,[ ])))[aj[bj[c j[ ]]]] [a,b,c]
+
+
+          .(a,X)          [ajX]              [ajX]
+
+
+          .(a,.(b,X))     [aj[bjX]]          [a,bjX]
+
+
+                  Figure 3.2:  Equivalent forms of lists
+
+
+
+   Terms built with the dot functor are more general than lists. Program 3.11
+
+
+
+
+52    Recursive Programming                                       3.2
+
+
+
+                           list([a,b,c])
+
+
+                                  j
+
+
+                            list([b,c])
+
+
+                                  j
+
+
+                             list([c])
+
+
+                                  j
+
+
+                             list([ ])
+
+
+                 Figure 3.3:  Proof tree verifying a list
+
+
+
+defines a list precisely. Declaratively it reads: \A list is either the empty l*
+ *ist or a
+
+
+cons pair whose tail is a list." The program is analogous to Program 3.1 defini*
+ *ng
+
+
+natural numbers, and is the simple type definition of lists.
+
+       list(Xs)  
+
+
+           Xs is a list.
+
+
+       list([ ]).
+
+
+       list([XjXs])   list(Xs).
+
+
+
+       Program 3.11:  Defining a list
+
+
+
+   Figure 3.3 gives a proof tree for the goal list([a,b,c]). Implicit in the pr*
+ *oof
+
+
+tree are ground instances of rules in Program 3.11, for example, list([a,b,c])
+
+
+  list([b,c]). We specify the particular instance here explicitly, as instances
+
+
+of lists in cons pair notation can be confusing. [a,b,c] is an instance of [XjX*
+ *s]
+
+
+under the substitution fX=a,Xs=[b,c]g.
+
+
+   Because lists are richer data structures than numbers, a great variety of
+
+
+
+
+3.2                                                         Lists 53
+
+
+
+interesting relations can be specified with them. Perhaps the most basic operat*
+ *ion
+
+
+with lists is determining whether a particular element is in a list. The predic*
+ *ate
+
+
+expressing this relation is member(Element,List). Program 3.12 is a recursive
+
+
+definition of member/2.
+
+
+   Declaratively, the reading of Program 3.12 is straightforward. X is an eleme*
+ *nt
+
+
+of a list if it is the head of the list by the first clause, or if it is a memb*
+ *er of the
+
+
+tail of the list by the second clause. The meaning of the program is the set of*
+ * all
+
+
+ground instances member(X,Xs), where X is an element of Xs. We omit the type
+
+
+condition in the first clause. Alternatively, it would be written
+
+
+       member(X,[XjXs])   list(Xs).
+
+
+
+       member(Element,List)  
+
+
+           Element is an element of the list List.
+
+
+       member(X,[XjXs]).
+
+
+       member(X,[YjYs])   member(X,Ys).
+
+
+
+       Program 3.12:  Membership of a list
+
+
+
+   This program has many interesting applications, to be revealed throughout
+
+
+the book. Its basic uses are checking whether an element is in a list with a qu*
+ *ery
+
+
+such as member(b,[a,b,c])?, finding an element of a list with a query such as
+
+
+member(X,[a,b,c])?, and finding a list containing an element with a query such
+
+
+as member(b,X)?. This last query may seem strange, but there are programs that
+
+
+are based on this use of member.
+
+
+
+
+54    Recursive Programming                                       3.2
+
+
+
+   We use the following conventions wherever possible when naming variables
+
+
+in programs involving lists. If X is used to denote the head of a list, then Xs*
+ * will
+
+
+denote its tail. More generally, plural variable names will denote lists of ele*
+ *ments,
+
+
+and singular names will denote individual elements. Numerical suffixes will den*
+ *ote
+
+
+variants of lists. Relation schemes will still contain mnemonic names.
+
+
+   Our next example is a predicate sublist(Sub,List) for determining whether
+
+
+Sub is a sublist of List. A sublist needs the elements to be consecutive: [b,c]*
+ * is
+
+
+a sublist of [a,b,c,d], whereas [a,c] is not.
+
+
+   It is convenient to define two special cases of sublists to make the definit*
+ *ion
+
+
+of sublist easier.  It is good style when composing logic programs to define
+
+
+meaningful relations as auxiliary predicates. The two cases considered are init*
+ *ial
+
+
+sublists, or prefixes, of a list, and terminal sublists, or suffixes, of a list*
+ *.  The
+
+
+programs are interesting in their own right.
+
+
+   The predicate prefix(Prefix,List) is true if Prefix is an initial sublist of
+
+
+List, for example, prefix([a,b],[a,b,c]) is true. The companion predicate to
+
+
+prefix is suffix(Suffix,List), determining if Suffix is a terminal sublist of
+
+
+List. For example, suffix([b,c],[a,b,c]) is true. Both predicates are defined
+
+
+in Program 3.13. A type condition expressing that the variables in the base fac*
+ *ts
+
+
+are lists should be added to the base fact in each predicate to give the correct
+
+
+meaning.
+
+
+   An arbitrary sublist can be specified in terms of prefixes and suffixes: nam*
+ *ely,
+
+
+as a suffix of a prefix, or as a prefix of a suffix. Program 3.14a expresses th*
+ *e logical
+
+
+rule that Xs is a sublist of Ys if there exists Ps such that Ps is a prefix of *
+ *Ys and
+
+
+
+
+3.2                                                         Lists 55
+
+
+       prefix(Prefix,List)  
+
+
+           Prefix  is a prefix of List.
+
+
+       prefix([ ],Ys).
+
+
+       prefix([XjXs],[XjYs])   prefix(Xs,Ys).
+
+
+       suffix(Suffix,List)  
+
+
+           Suffix  is a suffix of List.
+
+
+       suffix(Xs,Xs).
+
+
+       suffix(Xs,[YjYs])   suffix(Xs,Ys).
+
+
+
+       Program 3.13:  Prefixes and suffixes of a list
+
+
+
+Xs is a suffix of Ps. Program 3.14b is the dual definition of a sublist as a pr*
+ *efix
+
+
+of a suffix.
+
+
+   The predicate prefix can also be used as the basis of a recursive definition
+
+
+of sublist. This is given as Program 3.14c. The base rule reads that a prefix of
+
+
+a list is a sublist of a list. The recursive rule reads that the sublist of a t*
+ *ail of a
+
+
+list is a sublist of the list itself.
+
+
+   The predicate member can be viewed as a special case of sublist defined by
+
+
+the rule
+
+
+
+       member(X,Xs)   sublist([X],Xs).
+
+
+
+   The basic operation with lists is concatenating two lists to give a third li*
+ *st.
+
+
+This defines a relation, append(Xs,Ys,Zs), between two lists Xs, Ys and the res*
+ *ult
+
+
+Zs of joining them together. The code for append, Program 3.15, is identical in
+
+
+
+
+56    Recursive Programming                                       3.2
+
+
+
+       sublist(Sub,List)  
+
+
+           Sub is a sublist of List.
+
+
+       a:  Suffix of a prefix
+
+
+           sublist(Xs,Ys)   prefix(Ps,Ys), suffix(Xs,Ps).
+
+
+
+       b:  Prefix of a suffix
+
+
+           sublist(Xs,Ys)   prefix(Xs,Ss), suffix(Ss,Ys).
+
+
+
+       c:  Recursive definition of a sublist
+
+
+           sublist(Xs,Ys)   prefix(Xs,Ys).
+
+
+           sublist(Xs,[YjYs])   sublist(Xs,Ys).
+
+
+
+       d:  Prefix of a suffix, using append
+
+
+           sublist(Xs,AsXsBs)  
+
+
+               append(As,XsBs,AsXsBs), append(Xs,Bs,XsBs).
+
+
+
+       e:  Suffix of a prefix, using append
+
+
+           sublist(Xs,AsXsBs)  
+
+
+               append(AsXs,Bs,AsXsBs), append(As,Xs,AsXs).
+
+
+
+       Program 3.14:  Determining sublists of lists
+
+
+
+structure to the basic program for combining two numbers, Program 3.3 for plus.
+
+
+
+   Figure 3.4 gives a proof tree for the goal append([a,b],[c,d],[a,b,c,d]).
+
+
+
+
+3.2                                                         Lists 57
+
+
+       append(Xs,Ys,XsYs)  
+
+
+           XsYs is the result of concatenating
+
+
+           the lists Xs and Ys.
+
+
+       append([ ],Ys,Ys).
+
+
+       append([XjXs],Ys,[XjZs])   append(Xs,Ys,Zs).
+
+
+
+       Program 3.15:  Appending two lists
+
+
+
+The tree structure suggests that its size is linear in the size of the first li*
+ *st. In
+
+
+general, if Xs is a list of n elements, the proof tree for append(Xs,Ys,Zs) has
+
+
+n + 1 nodes.
+
+
+                   append([a,b],[c,d],[a,b,c,d])
+
+
+                       j
+
+
+                   append([b],[c,d],[b,c,d])
+
+
+                       j
+
+
+                   append([ ],[c,d],[c,d])
+
+
+              Figure 3.4:  Proof tree for appending two lists
+
+
+
+   There are multiple uses for append similar to the multiple uses for plus.
+
+
+The basic use is to concatenate two lists by posing a query such as ap-
+
+
+pend([a,b,c],[d,e],Xs)? with answer Xs=[a,b,c,d,e]. A query such as ap-
+
+
+pend(Xs,[c,d],[a,b,c,d])?  finds the difference Xs=[a,b] between the lists
+
+
+[c,d] and [a,b,c,d]. Unlike plus, append is not symmetric in its first two ar-
+
+
+guments, and thus there are two distinct versions of finding the difference bet*
+ *ween
+
+
+two lists.
+
+
+
+
+58    Recursive Programming                                       3.2
+
+
+
+   The analogous process to partitioning a number is splitting a list. The query
+
+
+append(As,Bs,[a,b,c,d])?, for example, asks for lists As and Bs such that ap-
+
+
+pending Bs to As gives the list [a,b,c,d]. Queries about splitting lists are ma*
+ *de
+
+
+more interesting by partially specifying the nature of the split lists.  The pr*
+ *ed-
+
+
+icates member, sublist, prefix, and suffix, introduced previously, can all be
+
+
+defined in terms of append by viewing the process as splitting a list.
+
+
+   The most straightforward definitions are for prefix and suffix, which just
+
+
+specify which of the two split pieces are of interest:
+
+
+
+       prefix(Xs,Ys)   append(Xs,As,Ys).
+
+
+       suffix(Xs,Ys)   append(As,Xs,Ys).
+
+
+
+   Sublist can be written using two append goals. There are two distinct vari-
+
+
+ants, given as Programs 3.14d and 3.14e. These two programs are obtained from
+
+
+Programs 3.14a and 3.14b, respectively, where prefix and suffix are replaced
+
+
+by append goals.
+
+
+   Member can be defined using append, as follows:
+
+
+
+       member(X,Ys)   append(As,[XjXs],Ys).
+
+
+
+   This says that X is a member of Ys if Ys can be split into two lists where X*
+ * is
+
+
+the head of the second list.
+
+
+   A similar rule can be written to express the relation adjacent(X,Y,Zs) that
+
+
+two elements X and Y are adjacent in a list Zs:
+
+
+
+       adjacent(X,Y,Zs)   append(As,[X,YjYs],Zs).
+
+
+
+
+3.2                                                         Lists 59
+
+
+
+   Another relation easily expressed through append is determining the last
+
+
+element of a list. The desired pattern of the second argument to append, a list
+
+
+with one element, is built into the rule:
+
+
+
+       last(X,Xs)   append(As,[X],Xs).
+
+
+
+   Repeated applications of append can be used to define a predicate re-
+
+
+verse(List,Tsil).  The intended meaning of reverse is that Tsil is a list
+
+
+containing the elements in the list List in reverse order to how they ap-
+
+
+pear in List.  An example of a goal in the meaning of the program is re-
+
+
+verse([a,b,c],[c,b,a]).  The naive version, given as Program 3.16a, is the
+
+
+logical equivalent of the recursive formulation in any language:  recursively r*
+ *e-
+
+
+verse the tail of the list, and then add the first element at the back of the r*
+ *eversed
+
+
+tail.
+
+
+
+   There is an alternative way of defining reverse without calling append di-
+
+
+rectly. We define an auxiliary predicate reverse(Xs,Ys,Zs), which is true if Zs
+
+
+is the result of appending Ys to the elements of Xs reversed. It is defined in *
+ *Pro-
+
+
+gram 3.16b. The predicate reverse/3 is related to reverse/2 by the first clause
+
+
+in Program 3.16b.
+
+
+
+   Program 3.16b is more efficient than Program 3.16a.  Consider Figure 3.5
+
+
+, showing proof trees for the goal reverse([a,b,c],[c,b,a]) using both pro-
+
+
+grams.  In general, the size of the proof tree of Program 3.16a is quadratic in
+
+
+the number of elements in the list to be reversed, while that of Program 3.16b *
+ *is
+
+
+linear.
+
+
+
+
+60    Recursive Programming                                       3.2
+
+
+       reverse(List,Tsil)  
+
+
+           Tsil is the result of reversing the list List.
+
+
+       a:  Naive reverse
+
+
+           reverse([ ],[ ]).
+
+
+           reverse([XjXs],Zs)   reverse(Xs,Ys), append(Ys,[X],Zs).
+
+
+
+       b:  Reverse-accumulate
+
+
+           reverse(Xs,Ys)   reverse(Xs,[ ],Ys).
+
+
+           reverse([XjXs],Acc,Ys)   reverse(Xs,[XjAcc],Ys).
+
+
+           reverse([ ],Ys,Ys).
+
+
+
+       Program 3.16:  Reversing a list
+
+
+
+   The insight in Program 3.16b is the use of a better data structure for repre-
+
+
+senting the sequence of elements, which we discuss in more detail in Chapters 7
+
+
+and 15.
+
+
+
+   The final program in this section, Program 3.17, expresses a relation be-
+
+
+tween numbers and lists, using the recursive structure of each.  The predicate
+
+
+length(Xs,N) is true if Xs is a list of length N, that is, contains N elements,*
+ * where
+
+
+N is a natural number.  For example, length([a,b],s(s(0))), indicating that
+
+
+[a,b] has two elements, is in the program's meaning.
+
+
+
+   Let us consider the multiple uses of Program 3.17. The query length([a,b],
+
+
+X)? computes the length, 2, of a list [a,b]. In this way, length is regarded as*
+ * a
+
+
+function of a list, with the functional definition
+
+
+
+
+3.2                                                         Lists 61
+
+
+
+                            reverse([a,b,c],[c,b,a])
+
+
+
+                reverse([b,c],[c,b])  append([c,b],[a],[c,b,a])
+
+
+
+        reverse([c],[c])  append([c],[b],[c,b])  append([b],[a],[b,a])
+
+
+
+reverse([ ],[ ])  append([ ],[c],[c])  append([ ],[b],[b])  append([ ],[a],[a])
+
+
+
+                      reverse([a,b,c],[c,b,a])
+
+
+                                  j
+
+
+                    reverse([a,b,c],[ ],[c,b,a])
+
+
+                                  j
+
+
+                     reverse([b,c],[a],[c,b,a])
+
+
+                                  j
+
+
+                     reverse([c],[b,a],[c,b,a])
+
+
+                                  j
+
+
+                    reverse([ ],[c,b,a],[c,b,a])
+
+
+               Figure 3.5:  Proof trees for reversing a list
+
+
+
+       length([ ]) = 0
+
+
+       length([XjXs]) = s(length(Xs)).
+
+
+
+   The query length([a,b],s(s(0)))?  checks whether the list [a,b] has
+
+
+length 2.  The query length(Xs,s(s(0)))?  generates a list of length 2 with
+
+
+
+
+62    Recursive Programming                                       3.2
+
+
+
+       length(Xs,N )  
+
+
+           The list Xs has N  elements.
+
+
+       length([ ],0).
+
+
+       length([XjXs],s(N))   length(Xs,N).
+
+
+
+       Program 3.17:  Determining the length of a list
+
+
+
+variables for elements.
+
+
+
+Exercises for Section 3.2
+
+
+
+(i)A variant of Program 3.14 for sublist is defined by the following three rule*
+ *s:
+
+
+
+       subsequence([XjXs],[XjYs])   subsequence(Xs,Ys).
+
+
+       subsequence(Xs,[YjYs])   subsequence(Xs,Ys).
+
+
+       subsequence([ ],Ys).
+
+
+
+   Explain why this program has a different meaning from Program 3.14.
+
+
+(ii)Write recursive programs for adjacent and last that have the same meaning
+
+
+   as the predicates defined in the text in terms of append.
+
+
+(iii)Write a program for double(List,ListList), where every element in List
+
+
+   appears twice in ListList, e.g., double([1,2,3],[1,1,2,2,3,3]) is true.
+
+
+(iv)Compute the size of the proof tree as a function of the size of the input l*
+ *ist
+
+
+   for Programs 3.16a and 3.16b defining reverse.
+
+
+(v)Define the relation sum(ListOfIntegers,Sum), which holds if Sum is the sum
+
+
+
+
+3.2                                                         Lists 63
+
+
+
+   of the ListOfIntegers,
+
+
+       (a) Using plus/3;
+
+
+       (b) Without using any auxiliary predicate.
+
+
+   (Hint:  Three axioms are enough.)
+
+
+
+
+64    Recursive Programming                                       3.2
+
+
+
+3.3   Composing Recursive Programs
+
+
+
+   No explanation has been given so far about how the example logic programs
+
+
+have been composed.  The composition of logic programs is a skill that can be
+
+
+learned by apprenticeship or osmosis, and most definitely by practice. For simp*
+ *le
+
+
+relations, the best axiomatizations have an aesthetic elegance that look obviou*
+ *sly
+
+
+correct when written down. Through solving the exercises, the reader may find,
+
+
+however, that there is a difference between recognizing and constructing elegant
+
+
+logic programs.
+
+
+
+   This section gives more example programs involving lists. Their presentation,
+
+
+however, places more emphasis on how the programs might be composed. Two
+
+
+principles are illustrated: how to blend procedural and declarative thinking, a*
+ *nd
+
+
+how to develop a program top-down.
+
+
+
+   We have shown the dual reading of clauses: declarative and procedural. How
+
+
+do they interrelate when composing logic programs?  Pragmatically, one thinks
+
+
+procedurally when programming. However, one thinks declaratively when consid-
+
+
+ering issues of truth and meaning. One way to blend them in logic programming is
+
+
+to compose procedurally and then interpret the result as a declarative statemen*
+ *t.
+
+
+Construct a program with a given use in mind; then consider if the alternative
+
+
+uses make declarative sense.  We apply this to a program for deleting elements
+
+
+from a list.
+
+
+
+   The first, and most important, step is to specify the intended meaning of
+
+
+the relation. Clearly, three arguments are involved when deleting elements from
+
+
+
+
+3.3                                    Composing Recursive Programs65
+
+
+
+a list: an element X to be deleted, a list L1 that might have occurrences of X,
+
+
+and a list L2 with all occurrences of X deleted. An appropriate relation scheme*
+ * is
+
+
+delete(L1,X,L2). The natural meaning is all ground instances where L2 is the
+
+
+list L1 with all occurrences of X removed.
+
+
+   When composing the program, it is easiest to think of one specific use. Con-
+
+
+sider the query delete([a,b,c,b],b,X)?, a typical example of finding the result
+
+
+of deleting an element from a list. The answer here is X=[a,c]. The program will
+
+
+be recursive on the first argument. Let's don our procedural thinking caps.
+
+
+   We begin with the recursive part. The usual form of the recursive argument
+
+
+for lists is [XjXs].  There are two possibilities to consider, one where X is t*
+ *he
+
+
+element to be deleted, and one where it is not.  In the first case, the result *
+ *of
+
+
+recursively deleting X from Xs is the desired answer to the query. The appropri*
+ *ate
+
+
+rule is
+
+
+
+       delete([XjXs],X,Ys)   delete(Xs,X,Ys).
+
+
+
+   Switching hats, the declarative reading of this rule is:  \The deletion of X
+
+
+from [XjXs] is Ys if the deletion of X from Xs is Ys." The condition that the h*
+ *ead
+
+
+of the list and the element to be deleted are the same is specified by the shar*
+ *ed
+
+
+variable in the head of the rule.
+
+
+   The second case where the element to be deleted is different from X, the head
+
+
+of the list, is similar. The result required is a list whose head is X and whos*
+ *e tail
+
+
+is the result of recursively deleting the element. The rule is
+
+
+
+       delete([XjXs],Z,[XjYs])   X6=Z, delete(Xs,Z,Ys).
+
+
+
+
+66    Recursive Programming                                       3.3
+
+
+
+   The rule's declarative reading is: \The deletion of Z from [XjXs] is [XjYs]
+
+
+if Z is different from X and the deletion of Z from Xs is Ys." In contrast to t*
+ *he
+
+
+previous rule, the condition that the head of the list and the element to be de*
+ *leted
+
+
+are different is made explicit in the body of the rule.
+
+
+   The base case is straightforward.  No elements can be deleted from the
+
+
+empty list,  and the required result is also the empty list.   This gives the
+
+
+fact delete([ ],X,[ ]).  The complete program is collected together as Pro-
+
+
+gram 3.18.
+
+
+       delete(List,X,HasNoXs)  
+
+
+           The list HasNoXs is the result of removing all
+
+
+           occurrences of X  from the list List.
+
+
+       delete([XjXs],X,Ys)   delete(Xs,X,Ys).
+
+
+       delete([XjXs],Z,[XjYs])   X6=Z, delete(Xs,Z,Ys).
+
+
+       delete([ ],X,[ ]).
+
+
+
+       Program 3.18:  Deleting all occurrences of an element from a list
+
+
+
+   Let  us  review  the  program  we  have  written,  and  consider  alternative
+
+
+formulations.   Omitting  the  condition  X6=Z  from  the  second  rule  in  Pr*
+ *o-
+
+
+gram  3.18  gives  a  variant  of  delete.   This  variant  has  a  less  natur*
+ *al
+
+
+meaning,  since any number of occurrences of an element may be deleted.
+
+
+For  example,  delete([a,b,c,b],b,[a,c]),  delete([a,b,c,b],b,[a,c,b]),
+
+
+delete([a,b,c,b],b,[a,b,c]), and delete([a,b,c,b],b,[a,b,c,b]) are all
+
+
+in the meaning of the variant.
+
+
+
+
+3.3                                    Composing Recursive Programs67
+
+
+
+   Both Program 3.18 and the variant include in their meaning instances
+
+
+where the element to be deleted does not appear in either list, for example,
+
+
+delete([a],b,[a]) is true.  There are applications where this is not desired.
+
+
+Program 3.19 defines select(X,L1,L2), a relation that has a different approach
+
+
+to elements not appearing in the list.  The meaning of select(X,L1,L2) is all
+
+
+ground instances where L2 is the list L1 where exactly one occurrence of X has
+
+
+been removed.  The declarative reading of Program 3.19 is: \X is selected from
+
+
+[XjXs] to give Xs; or X is selected from [YjYs] to give [YjZs] if X is selected*
+ * from
+
+
+Ys to give Zs."
+
+
+       select(X,HasXs,OneLessXs)  
+
+
+           The list OneLessXs is the result of removing
+
+
+           one occurrence of X  from the list HasXs.
+
+
+       select(X,[XjXs],Xs).
+
+
+       select(X,[YjYs],[YjZs])   select(X,Ys,Zs).
+
+
+
+       Program 3.19:  Selecting an element from a list
+
+
+
+   A major thrust in programming has been the emphasis on a top-down design
+
+
+methodology, together with stepwise refinement. Loosely, the methodology is to
+
+
+state the general problem, break it down into subproblems, and then solve the
+
+
+pieces.  A top-down programming style is one natural way for composing logic
+
+
+programs. Our description of programs throughout the book will be mostly top-
+
+
+down.  The rest of this section describes the composition of two programs for
+
+
+sorting a list: permutation sort and quicksort.  Their top-down development is
+
+
+
+
+68    Recursive Programming                                       3.3
+
+
+
+stressed.
+
+
+   A logical specification of sorting a list is finding an ordered permutation *
+ *of a
+
+
+list. This can be written down immediately as a logic program. The basic relati*
+ *on
+
+
+scheme is sort(Xs,Ys), where Ys is a list containing the elements in Xs sorted *
+ *in
+
+
+ascending order:
+
+
+       sort(Xs,Ys)   permutation(Xs,Ys), ordered(Ys).
+
+
+
+The top-level goal of sorting has been decomposed. We must now define permu-
+
+
+tation and ordered.
+
+
+   Testing whether a list is ordered ascendingly can be expressed in the two
+
+
+clauses that follow. The fact says that a list with a single element is necessa*
+ *rily
+
+
+ordered.  The rule says that a list is ordered if the first element is less tha*
+ *n or
+
+
+equal to the second, and if the rest of the list, beginning from the second ele*
+ *ment,
+
+
+is ordered:
+
+
+       ordered([X]).
+
+
+       ordered([X,YjYs])   X  Y, ordered([YjYs]).
+
+
+
+   A program for permutation is more delicate.  One view of the process of
+
+
+permuting a list is selecting an element nondeterministically to be the first e*
+ *lement
+
+
+of the permuted list, then recursively permuting the rest of the list. We trans*
+ *late
+
+
+this view into a logic program for permutation, using Program 3.19 for select.
+
+
+The base fact says that the empty list is its own unique permutation:
+
+
+   permutation(Xs,[ZjZs])   select(Z,Xs,Ys), permutation(Ys,Zs).
+
+
+   permutation([ ],[ ]).
+
+
+
+
+3.3                                    Composing Recursive Programs69
+
+
+
+Another procedural view of generating permutations of lists is recursively per-
+
+
+muting the tail of the list and inserting the head in an arbitrary position. Th*
+ *is
+
+
+view also can be encoded immediately. The base part is identical to the previous
+
+
+version:
+
+   permutation([XjXs],Zs)   permutation(Xs,Ys), insert(X,Ys,Zs).
+
+
+   permutation([ ],[ ]).
+
+
+
+The predicate insert can be defined in terms of Program 3.19 for select:
+
+
+
+       insert(X,Ys,Zs)   select(X,Zs,Ys).
+
+
+
+   Both procedural versions of permutation have clear declarative readings.
+
+
+   The \naive" sorting program, which we call permutation sort, is collected
+
+
+together as Program 3.20.  It is an example of the generate-and-test paradigm,
+
+
+discussed fully in Chapter 14. Note the addition of the extra base case for ord*
+ *ered
+
+
+so that the program behaves correctly for empty lists.
+
+
+   The problem of sorting lists is well studied. Permutation sort is not a good
+
+
+method for sorting lists in practice. Much better algorithms come from applying
+
+
+a \divide and conquer" strategy to the task of sorting. The insight is to sort *
+ *a list
+
+
+by dividing it into two pieces, recursively sorting the pieces, and then joinin*
+ *g the
+
+
+two pieces together to give the sorted list. The methods for dividing and joini*
+ *ng
+
+
+the lists must be specified. There are two extreme positions. The first is to m*
+ *ake
+
+
+the dividing hard, and the joining easy. This approach is taken by the quicksort
+
+
+algorithm. The second position is making the joining hard, but the dividing eas*
+ *y.
+
+
+This is the approach of merge sort, which is posed as Exercise (v) at the end of
+
+
+
+
+70    Recursive Programming                                       3.3
+
+
+   sort(Xs,Ys)  
+
+
+       The list Ys is an ordered permutation of the list Xs.
+
+
+   sort(Xs,Ys)   permutation(Xs,Ys), ordered(Ys).
+
+
+   permutation(Xs,[ZjZs])   select(Z,Xs,Ys), permutation(Ys,Zs).
+
+
+   permutation([ ],[ ]).
+
+
+   ordered([ ]).
+
+
+   ordered([X]).
+
+
+   ordered([X,YjYs])   X  Y, ordered([YjYs]).
+
+
+
+   Program 3.20:  Permutation sort
+
+
+
+       sort(Xs,Ys)  
+
+
+           The list Ys is an ordered permutation of the list Xs.
+
+
+       sort([XjXs],Ys)   sort(Xs,Zs), insert(X,Zs,Ys).
+
+
+       sort([ ],[ ]).
+
+
+       insert(X,[ ],[X]).
+
+
+       insert(X,[YjYs],[YjZs])   X > Y, insert(X,Ys,Zs).
+
+
+       insert(X,[YjYs],[X,YjYs])   X  Y.
+
+
+
+       Program 3.21:  Insertion sort
+
+
+
+this section, and insertion sort, shown in Program 3.21.
+
+
+
+   In insertion sort, one element (typically the first) is removed from the lis*
+ *t.
+
+
+The rest of the list is sorted recursively; then the element is inserted, prese*
+ *rving
+
+
+
+
+3.3                                    Composing Recursive Programs71
+
+
+
+the orderedness of the list.
+
+
+   The insight in quicksort is to divide the list by choosing an arbitrary elem*
+ *ent
+
+
+in it, and then to split the list into the elements smaller than the chosen ele*
+ *ment
+
+
+and the elements larger than the chosen element.  The sorted list is composed
+
+
+of the smaller elements, followed by the chosen element, and then the larger
+
+
+elements.  The program we describe chooses the first element of the list as the
+
+
+basis of partition.
+
+
+   Program 3.22 defines the quicksort algorithm. The recursive rule for quick-
+
+
+sort reads: \Ys is a sorted version of [XjXs] if Littles and Bigs are a result *
+ *of
+
+
+partitioning Xs according to X; Ls and Bs are the result of sorting Littles and
+
+
+Bigs recursively; and Ys is the result of appending [XjBs] to Ls."
+
+
+   Partitioning a list is straightforward, and is similar to the program for de*
+ *let-
+
+
+ing elements. There are two cases to consider: when the current head of the list
+
+
+is smaller than the element being used for the partitioning, and when the head *
+ *is
+
+
+larger than the partitioning element. The declarative reading of the first part*
+ *i-
+
+
+tion clause is: \Partitioning a list whose head is X and whose tail is Xs accor*
+ *ding
+
+
+to an element Y gives the lists [XjLittles] and Bigs if X is less than or equal*
+ * to Y,
+
+
+and partitioning Xs according to Y gives the lists Littles and Bigs." The second
+
+
+clause for partition has a similar reading. The base case is that the empty list
+
+
+is partitioned into two empty lists.
+
+
+
+
+72    Recursive Programming                                       3.3
+
+
+
+   quicksort(Xs,Ys)  
+
+
+       The list Ys is an ordered permutation of the list Xs.
+
+
+   quicksort([XjXs],Ys)  
+
+
+       partition(Xs,X,Littles,Bigs),
+
+
+       quicksort(Littles,Ls),
+
+
+       quicksort(Bigs,Bs),
+
+
+       append(Ls,[XjBs],Ys).
+
+
+   quicksort([ ],[ ]).
+
+
+   partition([XjXs],Y,[XjLs],Bs)   X  Y, partition(Xs,Y,Ls,Bs).
+
+
+   partition([XjXs],Y,Ls,[XjBs])   X > Y, partition(Xs,Y,Ls,Bs).
+
+
+   partition([ ],Y,[ ],[ ]).
+
+
+
+   Program 3.22:  Quicksort
+
+
+
+Exercises for Section 3.3
+
+
+
+(i)Write  a  program  for  substitute(X,Y,L1,L2),  where  L2  is  the  re-
+
+
+   sult  of  substituting  Y  for  all  occurrences  of  X  in  L1,  e.g.,  sub*
+ *sti-
+
+
+   tute(a,x,[a,b,a,c],[x,b,x,c]) is true, whereas substitute(a,x,[a,b,
+
+
+   a,c],[a,b,x,c]) is false.
+
+
+
+(ii)What is the meaning of the variant of select:
+
+
+
+       select(X,[XjXs],Xs).
+
+
+       select(X,[YjYs],[YjZs])   X6=Y, select(X,Ys,Zs).
+
+
+
+
+3.3                                    Composing Recursive Programs73
+
+
+
+(iii)Write a program for no_doubles(L1,L2), where L2 is the result of removing
+
+
+   all duplicate elements from L1, e.g., no_doubles([a,b,c,b],[a,c,b]) is
+
+
+   true. (Hint:  Use member.)
+
+
+(iv)Write programs for even_permutation(Xs,Ys) and odd_permutation(Xs,
+
+
+   Ys)  that  find  Ys,  the  even  and  odd  permutations,  respectively,  of
+
+
+   a  list  Xs.    For  example,  even_permutation([1,2,3],[2,3,1])  and
+
+
+   odd_permutation([1,2,3],[2,1,3]) are true.
+
+
+(v)Write a program for merge sort.
+
+
+(vi)Write a logic program for kth_largest(Xs,K) that implements the linear
+
+
+   algorithm for finding the kth largest element K of a list Xs. The algorithm
+
+
+   has the following steps:
+
+
+       Break the list into groups of five elements.
+
+
+       Efficiently find the median of each of the groups, which can be done
+
+
+       with a fixed number of comparisons.
+
+
+       Recursively find the median of the medians.
+
+
+       Partition the original list with respect to the median of medians.
+
+
+       Recursively find the kth largest element in the appropriate smaller list.
+
+
+(vii)Write  a  program  for  the  relation  better_poker_hand(Hand1,Hand2,
+
+
+   Hand) that succeeds if Hand is the better poker hand between Hand1 and
+
+
+   Hand2.  For those unfamiliar with this card game, here are some rules of
+
+
+   poker necessary for answering this exercise:
+
+
+       (a) The order of cards is 2, 3, 4, 5, 6, 7, 8, 9, 10, jack, queen, king,*
+ * ace.
+
+
+       (b) Each hand consists of five cards.
+
+
+
+
+74    Recursive Programming                                       3.3
+
+
+
+       (c) The rank of hands in ascending order is no pairs < one pair < two
+
+
+   pairs < three of a kind < flush < straight < full house < four of a kind <
+
+
+   straight flush.
+
+
+       (d) Where two cards have the same rank, the higher denomination wins,
+
+
+   for example, a pair of kings beats a pair of 7's.
+
+
+   (Hints:   (1)  Represent  a  poker  hand  by  a  list  of  terms  of  the  f*
+ *orm
+
+
+   card(Suit,Value). For example a hand consisting of the 2 of clubs, the 5 of
+
+
+   spades, the queen of hearts, the queen of diamonds, and the 7 of spades would
+
+
+   be represented by the list [card(clubs,2),card(spades,5),card(hearts,queen),
+
+
+   card(diamonds,queen),card(spades,7)]. (2) It may be helpful to define
+
+
+   relations such as has_flush(Hand), which is true if all the cards in Hand
+
+
+   are of the same suit; has_full_house(Hand), which is true if Hand has three
+
+
+   cards with the same value but in different suits, and the other two cards ha*
+ *ve
+
+
+   the same different value; and has_straight(Hand), which is true if Hand has
+
+
+   cards with consecutive values. (3) The number of cases to consider is reduced
+
+
+   if the hand is first sorted.)
+
+
+
+3.4   Binary Trees
+
+
+
+   We next consider binary trees, another recursive data type. These structures
+
+
+have an important place in many algorithms.
+
+
+
+   Binary trees are represented by the ternary functor tree(Element,Left,
+
+
+Right), where Element is the element at the node, and Left and Right are the
+
+
+
+
+3.4                                                   Binary Trees75
+
+
+
+left and right subtrees respectively. The empty tree is represented by the atom
+
+
+void. For example, the tree
+
+             a
+
+
+            / n
+
+
+           b  c
+
+
+
+would be represented as
+
+
+
+       tree(a,tree(b,void,void),tree(c,void,void)).
+
+
+
+   Logic programs manipulating binary trees are similar to those manipulating
+
+
+lists. As with natural numbers and lists, we start with the type definition of *
+ *binary
+
+
+trees. It is given as Program 3.23. Note that the program is doubly recursive; *
+ *that
+
+
+is, there are two goals in the body of the recursive rule with the same predica*
+ *te
+
+
+as the head of the rule. This results from the doubly recursive nature of binary
+
+
+trees and will be seen also in the rest of the programs of this section.
+
+
+       binary_tree(Tree)  
+
+
+           Tree is a binary tree.
+
+
+       binary_tree(void).
+
+
+       binary_tree(tree(Element,Left,Right))  
+
+
+           binary_tree(Left), binary_tree(Right).
+
+
+
+       Program 3.23:  Defining binary trees
+
+
+
+   Let us write some tree-processing programs. Our first example tests whether
+
+
+an element appears in a tree. The relation scheme is tree_member(Element,Tree).
+
+
+
+
+76    Recursive Programming                                       3.4
+
+
+
+The relation is true if Element is one of the nodes in the tree. Program 3.24 c*
+ *on-
+
+
+tains the definition. The declarative reading of the program is: \X is a member
+
+
+of a tree if it is the element at the node (by the fact) or if it is a member o*
+ *f the
+
+
+left or right subtree (by the two recursive rules)."
+
+       tree_member(Element,Tree)  
+
+
+           Element is an element of the binary tree Tree.
+
+
+       tree_member(X,tree(X,Left,Right)).
+
+
+       tree_member(X,tree(Y,Left,Right))   tree_member(X,Left).
+
+
+       tree_member(X,tree(Y,Left,Right))   tree_member(X,Right).
+
+
+
+       Program 3.24:  Testing tree membership
+
+
+
+   The two branches of a binary tree are distinguishable, but for many appli-
+
+
+cations the distinction is not relevant. Consequently, a useful concept is isom*
+ *or-
+
+
+phism, which defines when unordered trees are essentially the same. Two binary
+
+
+trees T1 and T2 are isomorphic if T2 can be obtained by reordering the branches
+
+
+of the subtrees of T1. Figure 3.6 shows three simple binary trees. The first two
+
+
+are isomorphic; the first and third are not.
+
+
+   Isomorphism is an equivalence relation with a simple recursive definition.
+
+
+Two empty trees are isomorphic.  Otherwise, two trees are isomorphic if they
+
+
+have identical elements at the node and either both the left subtrees and the r*
+ *ight
+
+
+subtrees are isomorphic; or the left subtree of one is isomorphic with the right
+
+
+subtree of the other and the two other subtrees are isomorphic.
+
+
+   Program 3.25 defines a predicate isotree(Tree1,Tree2), which is true if
+
+
+
+
+3.4                                                   Binary Trees77
+
+
+
+              Figure 3.6:  Comparing trees for isomorphism
+       isotree(Tree1,Tree2 )  
+
+
+           Tree1  and Tree2  are isomorphic binary trees.
+
+
+       isotree(void,void).
+
+
+       isotree(tree(X,Left1,Right1),tree(X,Left2,Right2))  
+
+
+           isotree(Left1,Left2), isotree(Right1,Right2).
+
+
+       isotree(tree(X,Left1,Right1),tree(X,Left2,Right2))  
+
+
+           isotree(Left1,Right2), isotree(Right1,Left2).
+
+
+
+       Program 3.25:  Determining when trees are isomorphic
+
+
+
+Tree1 and Tree2 are isomorphic. The predicate is symmetric in its arguments.
+
+
+
+   Programs related to binary trees involve double recursion, one for each bran*
+ *ch
+
+
+of the tree.  The double recursion can be manifest in two ways.  Programs can
+
+
+have two separate cases to consider, as in Program 3.24 for tree_member.  In
+
+
+contrast, Program 3.12 testing membership of a list has only one recursive case.
+
+
+Alternatively, the body of the recursive clause has two recursive calls, as in *
+ *each
+
+
+
+
+78    Recursive Programming                                       3.4
+
+
+
+of the recursive rules for isotree in Program 3.25.
+
+
+   The task in Exercise 3.3(i) is to write a program for substituting for eleme*
+ *nts
+
+
+in lists. An analogous program can be written for substituting elements in bina*
+ *ry
+
+
+trees.  The predicate substitute(X,Y,OldTree,NewTree) is true if NewTree is
+
+
+the result of replacing all occurrences of X by Y in OldTree. An axiomatization
+
+
+of substitute/4 is given as Program 3.26.
+
+
+substitute(X,Y,TreeX,TreeY )  
+
+
+   The binary tree TreeY  is the result of replacing all
+
+
+   occurrences of X  in the binary tree TreeX  by Y .
+
+
+substitute(X,Y,void,void).
+
+
+substitute(X,Y,tree(Leaf,Left,Right),tree(Leaf1,Left1,Right1))  
+
+
+   replace (X,Y,Leaf,Leaf1),
+
+
+   substitute(X,Y,Left,Left1),
+
+
+   substitute(X,Y,Right,Right1).
+
+
+
+replace(X,Y,X,Y).
+
+
+replace(X,Y,Z,Z)   X 6= Z.
+
+
+
+Program 3.26:  Substituting for a term in a tree
+
+
+
+   Many applications involving trees require access to the elements appearing
+
+
+as nodes. Central is the idea of a tree traversal, which is a sequence of the n*
+ *odes
+
+
+of the tree in some predefined order. There are three possibilities for the lin*
+ *ear
+
+
+order of traversal: preorder, where the value of the node is first, then the no*
+ *des
+
+
+
+
+3.4                                                   Binary Trees79
+
+
+
+in the left subtree, followed by the nodes in the right subtree; inorder, where*
+ * the
+
+
+left nodes come first followed by the node itself and then the right nodes; and
+
+
+postorder, where the node comes after the left and right subtrees.
+
+
+   A definition of each of the three traversals is given in Program 3.27.  The
+
+
+recursive structure is identical; the only difference between the programs is t*
+ *he
+
+
+order in which the elements are composed by the various append goals.
+
+
+   The final example in this section shows interesting manipulation of trees.
+
+
+A binary tree satisfies the heap property if the value at each node is at least*
+ * as
+
+
+large as the value at its children (if they exist).  Heaps, a class of binary t*
+ *rees
+
+
+that satisfy the heap property, are a useful data structure and can be used to
+
+
+implement priority queues efficiently.
+
+
+   It is possible to heapify any binary tree containing values for which an ord*
+ *er-
+
+
+ing exists. That is, the values in the tree are moved around so that the shape *
+ *of
+
+
+the tree is preserved and the heap property is satisfied. An example tree and i*
+ *ts
+
+
+heapified equivalent are shown in Figure 3.7.
+
+
+   An algorithm for heapifying the elements of a binary tree so that the heap
+
+
+property is satisfied is easily stated recursively.   Heapify the left and right
+
+
+subtrees so that they both satisfy the heap property and then adjust the ele-
+
+
+ment at the root appropriately.  Program 3.28 embodies this algorithm.  The
+
+
+relation heapify/2 lays out the doubly recursive program structure, and ad-
+
+
+just(X,HeapL,HeapR,Heap) produces the final tree Heap satisfying the heap
+
+
+property from the root value X and the left and right subtrees HeapL and
+
+
+HeapR satisfying the heap property.
+
+
+
+
+80    Recursive Programming                                       3.4
+
+
+
+       preorder(Tree,Pre)  
+
+
+           Pre is a preorder traversal of the binary tree Tree.
+
+
+       preorder(tree(X,L,R),Xs)  
+
+
+           preorder(L,Ls), preorder(R,Rs), append([XjLs],Rs,Xs).
+
+
+       preorder(void,[ ]).
+
+
+       inorder(Tree,In)  
+
+
+           In is an inorder traversal of the binary tree Tree.
+
+
+       inorder(tree(X,L,R),Xs)  
+
+
+           inorder(L,Ls), inorder(R,Rs), append(Ls,[XjRs],Xs).
+
+
+       inorder(void,[ ]).
+
+
+       postorder(Tree,Post)  
+
+
+           Post is a postorder traversal of the binary tree Tree.
+
+
+       postorder(tree(X,L,R),Xs)  
+
+
+           postorder(L,Ls),
+
+
+           postorder(R,Rs),
+
+
+           append(Rs,[X],Rs1),
+
+
+           append(Ls,Rs1,Xs).
+
+
+       postorder(void,[ ]).
+
+
+
+       Program 3.27:  Traversals of a binary tree
+
+
+
+   Figure 3.7:  A binary tree and a heap that preserves the tree's shape
+
+
+
+
+3.4                                                   Binary Trees81
+
+
+
+heapify(Tree,Heap)  
+
+
+   The elements of the complete binary tree Tree have been adjusted
+
+
+   to form the binary tree Heap, which has the same shape as Tree and
+
+
+   satisfies the heap property that the value of each parent node is
+
+
+   greater than or equal to the values of its children.
+
+
+heapify(void,void).
+
+
+heapify(tree(X,L,R),Heap)  
+
+
+   heapify(L,HeapL), heapify(R,HeapR), adjust(X,HeapL,HeapR,Heap).
+
+
+adjust(X,HeapL,HeapR,tree(X,HeapL,HeapR))  
+
+
+   greater(X,HeapL), greater(X,HeapR).
+
+
+adjust(X,tree(X1,L,R),HeapR,tree(X1,HeapL,HeapR))  
+
+
+   X < X1, greater(X1,HeapR), adjust(X,L,R,HeapL).
+
+
+adjust(X,HeapL,tree(X1,L,R),tree(X1,HeapL,HeapR))  
+
+
+   X < X1, greater(X1,HeapL), adjust(X,L,R,HeapR).
+
+
+greater(X,void).
+
+
+greater(X,tree(X1,L,R))   X  X1.
+
+
+
+Program 3.28:  Adjusting a binary tree to satisfy the heap property
+
+
+
+   There are three cases for adjust/4 depending on the values.  If the root
+
+
+value is larger than the root values of the left and right subtrees, then the h*
+ *eap
+
+
+is tree(X,HeapL,HeapR). This is indicated in the first adjust clause in Pro-
+
+
+gram 3.28.  The second clause handles the case where the root node in the left
+
+
+heap is larger than the root node and the root of the right heap. In that case,*
+ * the
+
+
+
+
+82    Recursive Programming                                       3.4
+
+
+
+adjustment proceeds recursively on the left heap. The third clause handles the
+
+
+symmetric case where the root node of the right heap is the largest. The code is
+
+
+simplified by relegating the concern whether the subtree is empty to the predic*
+ *ate
+
+
+greater/2.
+
+
+
+Exercises for Section 3.4
+
+
+
+(i)Define a program for subtree(S,T), where S is a subtree of T.
+
+
+
+(ii)Define the relation sum_tree(TreeOfIntegers,Sum), which holds if Sum is
+
+
+   the sum of the integer elements in TreeOfIntegers.
+
+
+
+(iii)Define the relation ordered(TreeOfIntegers), which holds if Tree is an or-
+
+
+   dered tree of integers, that is, for each node in the tree the elements in t*
+ *he
+
+
+   left subtree are smaller than the element in the node, and the elements in t*
+ *he
+
+
+   right subtree are larger than the element in the node. (Hint: Define two aux-
+
+
+   iliary relations, ordered_left(X,Tree) and ordered_right(X,Tree), which
+
+
+   hold if both Tree is ordered and X is larger (respectively, smaller) than the
+
+
+   largest (smallest) node of Tree.)
+
+
+
+(iv)Define the relation tree_insert(X,Tree,Tree1), which holds if Tree1 is
+
+
+   an ordered tree resulting from inserting X into the ordered tree Tree.  If X
+
+
+   already occurs in Tree, then Tree and Tree1 are identical.  (Hint:  Four
+
+
+   axioms suffice.)
+
+
+
+(v)Write a logic program for the relation path(X,Tree,Path), where Path is
+
+
+   the path from the root of the tree Tree to X.
+
+
+
+
+3.5                                 Manipulating Symbolic Expressions83
+
+
+
+3.5   Manipulating Symbolic Expressions
+
+
+
+   The logic programs illustrated so far in this chapter have manipulated natur*
+ *al
+
+
+numbers, lists, and binary trees. The programming style is applicable more gen-
+
+
+erally. This section gives four examples of recursive programming | a program
+
+
+for defining polynomials, a program for symbolic differentiation, a program for
+
+
+solving the Towers of Hanoi problem, and a program for testing the satisfiabili*
+ *ty
+
+
+of Boolean formulae.
+
+
+   The first example is a program for recognizing polynomials in some term
+
+
+X . Polynomials are defined inductively. X itself is a polynomial in X , as is *
+ *any
+
+
+constant. Sums, differences, and products of polynomials in X are polynomials
+
+
+in X . So too are polynomials raised to the power of a natural number, and the
+
+
+quotient of a polynomial by a constant.
+
+
+   An example of a polynomial in the term x is x2  3x + 2. This follows from
+
+
+its being the sum of the polynomials, x2  3x and 2, where x2  3x is recognized
+
+
+recursively.
+
+
+   A logic program for recognizing polynomials is obtained by expressing the
+
+
+preceding informal rules in the correct form. Program 3.29 defines the relation
+
+
+polynomial(Expression,X), which is true if Expression is a polynomial in X.
+
+
+We give a declarative reading of two rules from the program.
+
+
+   The fact polynomial(X,X) says that a term X is a polynomial in itself. The
+
+
+rule
+
+
+       polynomial(Term1+Term2,X)  
+
+
+
+
+84    Recursive Programming                                       3.5
+
+
+
+       polynomial(Expression,X )  
+
+
+           Expression is a polynomial in X .
+
+
+       polynomial(X,X).
+
+
+       polynomial(Term,X)  
+
+
+           constant(Term).
+
+
+       polynomial(Term1+Term2,X)  
+
+
+           polynomial(Term1,X), polynomial(Term2,X).
+
+
+       polynomial(Term1Term2,X)  
+
+
+           polynomial(Term1,X), polynomial(Term2,X).
+
+
+       polynomial(Term1Term2,X)  
+
+
+           polynomial(Term1,X), polynomial(Term2,X).
+
+
+       polynomial(Term1/Term2,X)  
+
+
+           polynomial(Term1,X), constant(Term2).
+
+
+       polynomial(Term"N,X)  
+
+
+           natural_number(N), polynomial(Term,X).
+
+
+
+       Program 3.29:  Recognizing polynomials
+
+
+
+           polynomial(Term1,X), polynomial(Term2,X).
+
+
+
+says that the sum Term1+Term2 is a polynomial in X if both Term1 and Term2 are
+
+
+polynomials in X.
+
+
+
+   Other conventions used in Program 3.29 are the use of the unary predicate
+
+
+constant for recognizing constants, and the binary functor " to denote exponen-
+
+
+
+
+3.5                                 Manipulating Symbolic Expressions85
+
+
+
+tiation. The term X"Y denotes XY .
+
+
+   The next example is a program for taking derivatives. The relation scheme is
+
+
+derivative(Expression,X,DifferentiatedExpression). The intended mean-
+
+
+ing of derivative is that DifferentiatedExpression is the derivative of Ex-
+
+
+pression with respect to X.
+
+
+   As for Program 3.29 for recognizing polynomials, a logic program for differ-
+
+
+entiation is just a collection of the relevant differentiation rules, written i*
+ *n the
+
+
+correct syntax. For example, the fact
+
+
+       derivative(X,X,s(0)).
+
+
+
+expresses that the derivative of X with respect to itself is 1 . The fact
+
+
+       derivative(sin(X),X,cos(X)).
+
+
+
+reads: \The derivative of sin(X) with respect to X is cos(X)." Natural math-
+
+
+ematical notation can be used.  A representative sample of functions and their
+
+
+derivatives is given in Program 3.30.
+
+
+   Sums and products of terms are differentiated using the sum rule and product
+
+
+rule, respectively. The sum rule states that the derivative of a sum is the sum*
+ * of
+
+
+derivatives. The appropriate clause is
+
+
+       derivative(F+G,X,DF+DG)  
+
+
+           derivative(F,X,DF), derivative(G,X,DG).
+
+
+
+The product rule is a little more complicated, but the logical clause is just t*
+ *he
+
+
+mathematical definition:
+
+
+
+
+86    Recursive Programming                                       3.5
+
+
+
+       derivative(Expression,X,DifferentiatedExpression)  
+
+
+           DifferentiatedExpression is the derivative of
+
+
+           Expression with respect to X .
+
+
+       derivative(X,X,s(0)).
+
+
+       derivative(X"s(N),X,s(N)X"N).
+
+
+       derivative(sin(X),X,cos(X)).
+
+
+       derivative(cos(X),X,sin(X)).
+
+
+       derivative(e"X,X,e"X).
+
+
+       derivative(log(X),X,1/X).
+
+
+       derivative(F+G,X,DF+DG)  
+
+
+           derivative(F,X,DF), derivative(G,X,DG).
+
+
+       derivative(F-G,X,DF-DG)  
+
+
+           derivative(F,X,DF), derivative(G,X,DG).
+
+
+       derivative(FG,X,FDG+DFG)  
+
+
+           derivative(F,X,DF), derivative(G,X,DG).
+
+
+       derivative(1/F,X,DF/(FF))  
+
+
+           derivative(F,X,DF).
+
+
+       derivative(F/G,X,(GDFFDG)/(GG))  
+
+
+           derivative(F,X,DF), derivative(G,X,DG).
+
+
+
+       Program 3.30:  Derivative rules
+
+
+
+       derivative(FG,X,FDG+DFG)  
+
+
+           derivative(F,X,DF), derivative(G,X,DG).
+
+
+
+
+3.5                                 Manipulating Symbolic Expressions87
+
+
+
+Program 3.30 also contains the reciprocal and quotient rules.
+
+
+   The chain rule is a little more delicate. It states that the derivative of f*
+ * (g(x))
+
+
+with respect to x is the derivative of f (g(x)) with respect to g(x) times the
+
+
+derivative of g(x) with respect to x.  As stated, it involves quantification ov*
+ *er
+
+
+functions, and is outside the scope of the logic programs we have presented.
+
+
+   Nonetheless, a version of the chain rule is possible for each particular fun*
+ *ction.
+
+
+For example, we give the rule for differentiating XN and sin(X):
+
+
+       derivative(U"s(N),X,s(N)U"NDU)   derivative(U,X,DU).
+
+
+       derivative(sin(U),X,cos(U)DU)   derivative(U,X,DU).
+
+
+
+   The difficulty of expressing the chain rule for differentiation arises from *
+ *our
+
+
+choice of representation of terms. Both Programs 3.29 and 3.30 use the \natural"
+
+
+representation from mathematics where terms represent themselves. A term such
+
+
+as sin(X) is represented using a unary structure sin. If a different representa*
+ *tion
+
+
+were used, for example, unary_term(sin,X) where the name of the structure is
+
+
+made accessible, then the problem with the chain rule disappears. The chain rule
+
+
+can then be formulated as
+
+
+       derivative(unary_term(F,U),X,DFDU)  
+
+
+           derivative(unary_term(F,U),U,DF), derivative(U,X,DU).
+
+
+
+Note that all the rules in Program 3.30 would have to be reformulated in terms
+
+
+of this new representation and would appear less natural.
+
+
+   People take for granted the automatic simplification of expressions when
+
+
+differentiating expressions.  Simplification is missing from Program 3.30.  The
+
+
+
+
+88    Recursive Programming                                       3.5
+
+
+
+answer to the query derivative(3x+2,x,D)? is D=(31+0x)+0.  We would
+
+
+immediately simplify D to 3, but it is not specified in the logic program.
+
+
+   The next example is a solution to the Towers of Hanoi problem, a standard
+
+
+introductory example in the use of recursion.  The problem is to move a tower
+
+
+of n disks from one peg to another with the help of an auxiliary peg. There are
+
+
+two rules. Only one disk can be moved at a time, and a larger disk can never be
+
+
+placed on top of a smaller disk.
+
+
+   There is a legend associated with the game. Somewhere hidden in the sur-
+
+
+roundings of Hanoi, an obscure Far Eastern village when the legend was first to*
+ *ld,
+
+
+is a monastery. The monks there are performing a task assigned to them by God
+
+
+when the world was created | solving the preceding problem with three golden
+
+
+pegs and 64 golden disks. At the moment they complete their task, the world will
+
+
+collapse into dust. Since the optimal solution to the problem with n disks takes
+
+
+2n  1 moves, we need not lose any sleep over this possibility. The number 264 is
+
+
+comfortingly big.
+
+
+   The relation scheme for solving the problem is hanoi(N,A,B,C,Moves). It
+
+
+is true if Moves is the sequence of moves for moving a tower of N disks from
+
+
+peg A to peg B using peg C as the auxiliary peg.  This is an extension to usual
+
+
+solutions that do not calculate the sequence of moves but rather perform them.
+
+
+The representation of the moves uses a binary functor to, written as an infix
+
+
+operator. The term X to Y denotes that the top disk on peg X is moved to peg
+
+
+Y . The program for solving the problem is given in Program 3.31.
+
+
+   The declarative reading of the heart of the solution, the recursive rule in
+
+
+
+
+3.5                                 Manipulating Symbolic Expressions89
+
+
+
+       hanoi(N,A,B,C,Moves)  
+
+
+           Moves is a sequence of moves for solving the Towers of
+
+
+           Hanoi puzzle with N  disks and three pegs, A, B, and C .
+
+
+       hanoi(s(0),A,B,C,[A to B]).
+
+
+       hanoi(s(N),A,B,C,Moves) 
+
+
+           hanoi(N,A,C,B,Ms1),
+
+
+           hanoi(N,C,B,A,Ms2),
+
+
+           append(Ms1,[A to BjMs2],Moves).
+
+
+
+       Program 3.31:  Towers of Hanoi
+
+
+
+Program 3.31, is: \Moves is the sequence of moves of s(N) disks from peg A to
+
+
+peg B using peg C as an auxiliary, if Ms1 is the solution for moving N disks fr*
+ *om
+
+
+A to C using B, Ms2 is the solution for moving N disks from C to B using A, and
+
+
+Moves is the result of appending [A to BjMs2] to Ms1."
+
+
+   The recursion terminates with moving one disk. A slightly neater, but less
+
+
+intuitive, base for the recursion is moving no disks. The appropriate fact is
+
+
+
+       hanoi(0,A,B,C,[ ]).
+
+
+
+   The final example concerns Boolean formulae.
+
+
+   A Boolean formula is a term defined as follows: The constants true and false
+
+
+are Boolean formulae; if X and Y are Boolean formulae, so are X _Y , X ^Y , and
+
+
+X , where _ and ^ are binary infix operators for disjunction and conjunction,
+
+
+respectively, and  is a unary prefix operator for negation.
+
+
+
+
+90    Recursive Programming                                       3.5
+
+
+
+   A Boolean formula F is true if
+
+
+
+       F = `true'.
+
+
+       F = X^Y, and both X and Y are true.
+
+
+       F = X_Y, and either X or Y (or both) are true.
+
+
+       F = X, and X is false.
+
+
+
+   A Boolean formula F is false if
+
+
+
+       F = `false'.
+
+
+       F = X^Y, and either X or Y (or both) are false.
+
+
+       F = X_Y, and both X and Y are false.
+
+
+       F = X, and X is true.
+
+
+
+   Program 3.32 is a logic program for determining the truth or falsity of a
+
+
+Boolean formula.  Since it can be applied to Boolean formulae with variables,
+
+
+it is actually more powerful than it seems. A Boolean formula with variables is
+
+
+satisfiable if it has a true instance.  It is invalid if it has a false instanc*
+ *e.
+
+
+These are the relations computed by the program.
+
+
+
+Exercises for Section 3.5
+
+
+
+(i)Write a program to recognize if an arithmetic sum is normalized, that is, has
+
+
+   the form A + B, where A is a constant and B is a normalized sum.
+
+
+(ii)Write a type definition for Boolean formulae.
+
+
+(iii)Write a program for recognizing whether a logical formula is in conjunctive
+
+
+
+
+3.5                                 Manipulating Symbolic Expressions91
+
+
+       satisfiable(Formula)  
+
+
+           There is a true instance of the Boolean formula Formula.
+
+
+       satisfiable(true).
+
+
+       satisfiable(X^Y)   satisfiable(X), satisfiable(Y).
+
+
+       satisfiable(X_Y)   satisfiable(X).
+
+
+       satisfiable(X_Y)   satisfiable(Y).
+
+
+       satisfiable(X)   invalid(X).
+
+
+       invalid(Formula)  
+
+
+           There is a false instance of the Boolean formula Formula.
+
+
+       invalid(false).
+
+
+       invalid(X_Y)   invalid(X), invalid(Y).
+
+
+       invalid(X^Y)   invalid(X).
+
+
+       invalid(X^Y)   invalid(Y).
+
+
+       invalid(Y)   satisfiable(Y).
+
+
+
+       Program 3.32:  Satisfiability of Boolean formulae
+
+
+
+   normal form, namely, is a conjunction of disjunctions of literals, where a
+
+
+   literal is an atomic formula or its negation.
+
+
+(iv)Write a program for the relation negation_inwards(F1,F2), which is true if
+
+
+   F2 is the logical formula resulting from moving all negation operators occur-
+
+
+   ring in the formula F1 inside conjunctions and disjunctions.
+
+
+(v)Write a program for converting a logical formula into conjunctive normal
+
+
+   form, that is, a conjunction of disjunctions.
+
+
+
+
+92    Recursive Programming                                       3.5
+
+
+
+(vi)Consider the following representation of a bag, that is, a list of elements*
+ * with
+
+
+   multiplicities. The function symbol bag(Element,Multiplicity,RestOfBag)
+
+
+   should be used. The atom void can be used as an empty bag. For example,
+
+
+   the term bag(a,3,bag(b,2,void)) represents a list of three copies of an
+
+
+   element a, and two copies of an element b. Write logic programs to
+
+
+       (a) Take the union of two bags;
+
+
+       (b) Take the intersection of two bags;
+
+
+       (c) Substitute for an element in a bag;
+
+
+       (d) Convert a list into a bag;
+
+
+       (e) Convert a binary tree into a bag.
+
+
+
+3.6   Background
+
+
+
+   Many of the programs in this chapter have been floating around the logic
+
+
+programming community, and their origins have become obscure. For example,
+
+
+several appear in Clocksin and Mellish (1984) and in the uneven collection of
+
+
+short Prolog programs, How to Solve It in Prolog by Coelho et al. (1980).
+
+
+   The latter book has been updated as Coelho and Cotta (1988) and is a source
+
+
+for other simple examples. The exercise on describing poker hands is due to Ken
+
+
+Bowen.
+
+
+   The classic reference for binary trees is Knuth (1968) and for sorting Knuth
+
+
+(1973).
+
+
+   A discussion of the linear algorithm for the kth largest algorithms can be
+
+
+
+
+3.6                                                   Background  93
+
+
+
+found in most textbooks on algorithms, for example, Horowitz and Sahni (1978).
+
+
+The discussion of the heap property is taken from Horowitz and Sahni (1978).
+
+
+   Many of the basic programs for arithmetic and list processing have a simple
+
+
+structure that allows many correctness theorems to be proved automatically, see,
+
+
+for example, Boyer and Moore (1979) and Sterling and Bundy (1982).
+
+
+   Ackermann's function is discussed by Peter (1967).

@@ -1,0 +1,427 @@
+%%%%% Leonudi Book, Chapter 22, pp 383-392 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 21
+\numberfirst
+\startpage{383}
+
+\chapb{A Credit Evaluation}{Expert System}
+When the first edition of this book was published, there was a
+surge of activity in the application of artificial intelligence to
+industry. Of particular interest were expert systems --- programs
+designed to perform tasks previously allocated to highly paid human
+experts. One important feature of expert systems is the explicit
+representation of knowledge.\par 
+This entire book is relevant for programming expert systems. The
+example programs typify code that might be written. For instance, the
+equation-solving program of Chapter~23 can be, and has been,
+viewed as an expert system. The knowledge of expert systems is often
+expressed as rules. Prolog whose basic statements are rules is thus a
+natural language for implementing expert systems. \par
+\sect{Developing the System}
+This chapter presents an account of developing a prototype expert
+system.  The example comes from the world of banking: evaluating
+requests for credit from small business ventures. We give a
+fictionalized account of the development of a simple expert system for
+evaluating client requests for credit from a bank. The account is from
+the point of view of Prolog programmers, or knowledge engineers,
+commissioned by the bank to write the system. It begins after the most
+difficult stage of building an expert system, extracting the expert
+knowledge, has been under way for some time. In accordance with
+received wisdom, the programmers have been consulting with a single
+bank expert, Chas E. Manhattan. Chas has told us that three factors
+are of the utmost importance in considering a request for credit from
+a client (a small business venture).\par
+The most important factor is the collateral that can be offered by the
+client in case the venture folds. The various types of collateral are
+divided into categories. Currency deposits, whether local or foreign, are
+{\it first-class\/} collateral. Stocks are examples of {\it
+second-class\/} collateral, and the collateral provided by mortgages
+and the like is {\it illiquid\/}.\par
+Also very important is the client's financial record. Experience in the
+bank has shown that the two most important factors are the client's net
+worth per assets and the current gross profits on sales. The client's
+short-term debt per annual sales should be considered in evaluating the
+record, and slightly less significant is last year's sales growth. For
+knowledge engineers with some understanding of banking, no further
+explanation of such concepts is necessary. In general, a knowledge
+engineer must understand the domain sufficiently to be able to
+communicate with the domain expert.\par
+The remaining factor to be considered is the expected yield to the bank.
+This is a problem that the bank has been working on for a while. Programs
+exist to give the yield of a particular client profile. The knowledge
+engineer can thus assume that the information will be available in the
+desired form.\par
+Chas uses qualitative terms in speaking about these three factors:
+``The client had an excellent financial rating, or a good form of
+collateral. His venture would provide a reasonable yield,'' and so on.
+Even concepts that could be determined quantitatively are discussed in
+qualitative terms.  The financial world is too complicated to be
+expressed only with the numbers and ratios constantly being
+calculated.  In order to make judgments, experts in the financial
+domain tend to think in qualitative terms with which they are more
+comfortable. To echo expert reasoning and to be able to interact with
+Chas further, qualitative reasoning must be modeled.\par
+On talking to Chas, it became clear that a significant amount of the
+expert knowledge he described could be naturally expressed as a mixture
+of procedures and rules. On being pressed a little in the second and
+third interviews, Chas gave rules for determining ratings for collateral
+and financial records. These involved considerable calculations, and in
+fact, Chas admitted that to save himself work in the long term, he did a
+quick initial screening to see if the client was at all suitable.\par
+This information is sufficient to build a prototype. We show how these
+comments and observations are translated into a system. The top-level
+basic relation is {\tt credit(Client,Answer)}, where {\tt Answer} is the
+reply given to the request by {\tt Client} for credit. The code has three
+modules --- {\tt collateral}, {\tt financial\_rating}, and {\tt
+bank\_yield} --- corresponding to the three factors the expert said were
+important. The initial screening to determine that the client is worth
+considering in the first place is performed by the predicate {\tt
+ok\_profile(Client)}. The answer {\tt Answer} is then determined with
+the predicate {\tt evaluate(Profile,Answer)}, which evaluates the {\tt
+Profile} built by the three modules.\par
+Being proud knowledge engineers, we stress the features of the top-level
+formulation in {\tt credit/2}. The modularity is apparent. Each of the
+modules can be developed independently without affecting the rest of the
+system. Further, there is no commitment to any particular data structure,
+i.e., data abstraction is used. For this example, a structure {\tt
+profile(C,F,Y)} represents the profile of collateral rating {\tt C}, the
+financial rating {\tt F}, and the yield {\tt Y} of a client. However,
+nothing central depends on this decision, and it would be easy to change
+it. Let us consider some of the modular pieces.\par
+Let us look at the essential features of the collateral evaluation
+module. The relation {\tt collateral\_rating/2} determines a rating for a
+particular client's collateral. The first step is to determine an
+appropriate profile. This is done with the predicate {\tt
+collateral\_profile}, which classifies the client's collateral as {\tt
+first\_class}, {\tt second\_class}, or {\tt illiquid} and gives the
+percentage each covers of the amount of credit the client requested. The
+relation uses facts in the database concerning both the bank and the
+client. In practice, there may be separate databases for the bank and the
+client. Sample facts shown in Program \Procreevasys\ indicate, for
+example, that local currency deposits are first-class collateral.\par
+The profile is evaluated to give a rating by {\tt
+collateral\_evaluation}. It uses rules of thumb to give a qualitative
+rating of the collateral: excellent, good, etc. The first {\tt
+collateral\_evaluation} rule, for example, reads: ``The rating is
+{\it excellent\/} if the coverage of the requested credit amount by 
+first-class collateral is greater than or equal to 100 percent."
+\pageinsert\vbox to\the\vsize {\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it Credit Evaluation}\cr
+\noalign{\medskip}
+{\it credit\/}({\it Client,Answer\/}) $\lar$\cr
+\qi {\it Answer\/} {\rm is the reply to a request by} {\it Client\/} {\rm
+for credit.}\cr
+\noalign{\medskip}
+credit(Client,Answer) $\lar$\cr
+\qi ok\_profile(Client),\cr
+\qi collateral\_rating(Client,CollateralRating),\cr
+\qi financial\_rating(Client,FinancialRating),\cr
+\qi bank\_yield(Client,Yield),\cr
+\qi evaluate(profile(CollateralRating,FinancialRating,Yield),Answer).\cr
+\noalign{\medskip}
+{\it The collateral rating module}\cr
+\noalign{\medskip}
+{\it collateral\_rating\/}({\it Client,Rating\/}) $\lar$\cr
+\qi {\it Rating\/} {\rm is a qualitative description assessing the
+collateral}\cr
+\qi {\rm offered by} {\it Client\/} {\rm to cover the request for
+credit.}\cr
+\noalign{\medskip}
+collateral\_rating(Client,Rating) $\lar$\cr
+\qi collateral\_profile(Client,FirstClass,SecondClass,Illiquid),\cr
+\qi collateral\_evaluation(FirstClass,SecondClass,Illiquid,Rating).\cr
+\noalign{\vskip 5pt}
+collateral\_profile(Client,FirstClass,SecondClass,Illiquid) $\lar$\cr
+\qi requested\_credit(Client,Credit),\cr
+\qi collateral\_percent(first\_class,Client,Credit,FirstClass),\cr
+\qi collateral\_percent(second\_class,Client,Credit,SecondClass),\cr
+\qi collateral\_percent(illiquid,Client,Credit,Illiquid).\cr
+\noalign{\vskip 5pt}
+collateral\_percent(Type,Client,Total,Value) $\lar$\cr
+\qi findall(X,(collateral(Collateral,Type),\cr
+\qii amount(Collateral,Client,X)),Xs),\cr
+\qi sumlist(Xs,Sum),\cr
+\qi Value is Sum$\ast$100/Total.\cr
+\noalign{\medskip}
+{\it Evaluation rules}\cr
+\noalign{\medskip}
+collateral\_evaluation(FirstClass,SecondClass,Illiquid,excellent)
+$\lar$\cr
+\qi FirstClass $\ge$ 100.\cr
+collateral\_evaluation(FirstClass,SecondClass,Illiquid,excellent)
+$\lar$\cr
+\qi FirstClass $>$ 70, FirstClass + SecondClass $\ge$ 100.\cr
+collateral\_evaluation(FirstClass,SecondClass,Illiquid,good) $\lar$\cr
+\qi FirstClass + SecondClass $>$ 60,\cr
+\qi FirstClass + SecondClass $<$ 70,\cr
+\qi FirstClass + SecondClass + Illiquid $\ge$ 100.\cr
+\noalign{\bigskip}
+{\bf Program \Procreevasys}{\rm :~~A credit evaluation system}\cr}\vfill}
+\endin
+\pageinsert\vbox to\the\vsize {\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it Bank data -- classification of collateral}\cr
+\noalign{\medskip}
+collateral(local\_currency\_deposits,first\_class).\cr
+collateral(foreign\_currency\_deposits,first\_class).\cr
+collateral(negotiate\_instruments,second\_class).\cr
+collateral(mortgage,illiquid).\cr
+\noalign{\medskip}
+{\it Financial rating}\cr
+\noalign{\medskip}
+{\it financial\_rating\/}({\it Client,Rating\/}) $\lar$\cr
+\qi {\it Rating\/} {\rm is a qualitative description assessing the
+financial}\cr
+\qi {\rm record offered by} {\it Client\/} {\rm to support the request
+for credit.}\cr
+\noalign{\medskip}
+financial\_rating(Client,Rating) $\lar$\cr
+\qi financial\_factors(Factors),\cr
+\qi score(Factors,Client,0,Score),\cr
+\qi calibrate(Score,Rating).\cr
+\noalign{\medskip}
+{\it Financial evaluation rules}\cr
+\noalign{\medskip}
+calibrate(Score,bad) $\lar$ Score $\le$ -500.\cr
+calibrate(Score,medium) $\lar$ -500 $<$ Score, Score $<$ 150.\cr
+calibrate(Score,good) $\lar$ 150 $\le$ Score, Score $<$ 1000.\cr
+calibrate(Score,excellent) $\lar$ Score $\ge$ 1000.\cr
+\noalign{\medskip}
+{\it Bank data -- weighting factors}\cr
+\noalign{\medskip}
+financial\_factors([(net\_worth\_per\_assets,5),\cr
+\qi (last\_year\_sales\_growth,1),\cr
+\qi (gross\_profits\_on\_sales,5),\cr
+\qi (short\_term\_debt\_per\_annual\_sales,2) ]).\cr
+\noalign{\vskip 5pt}
+score([(Factor,Weight)$\mid$Factors],Client,Acc,Score) $\lar$\cr
+\qi value(Factor,Client,Value),\cr
+\qi Acc1 is Acc + Weight$\ast$Value,\cr
+\qi score(Factors,Client,Acc1,Score).\cr
+score([~],Client,Score,Score).\cr
+\noalign{\medskip}
+{\it Final evaluation}\cr
+\noalign{\medskip}
+{\it evaluate\/}({\it Profile,Outcome\/}) $\lar$\cr
+\qi {\it Outcome\/} {\rm is the reply to the client's} {\it
+Profile\/}.\cr
+\noalign{\medskip}
+evaluate(Profile,Answer) $\lar$\cr
+\qi rule(Conditions,Answer), verify(Conditions,Profile).\cr
+\noalign{\bigskip}
+{\bf Program \Procreevasys}~~{\rm (Continued)}\cr}\vfill}
+\endin
+\pageinsert\vbox to\the\vsize {\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+verify([condition(Type,Test,Rating)$\mid$Conditions],Profile) $\lar$\cr
+\qi scale(Type,Scale),\cr
+\qi select\_value(Type,Profile,Fact),\cr
+\qi compare(Test,Scale,Fact,Rating),\cr
+\qi verify(Conditions,Profile).\cr
+verify([~],Profile).\cr
+\noalign{\vskip 5pt}
+compare(`=',Scale,Rating,Rating).\cr
+compare(`$>$',Scale,Rating1,Rating2) $\lar$\cr
+\qi precedes(Scale,Rating1,Rating2).\cr
+compare(`$\ge$',Scale,Rating1,Rating2) $\lar$\cr
+\qi precedes(Scale,Rating1,Rating2) ; Rating1 = Rating2.\cr
+compare(`$<$',Scale,Rating1,Rating2) $\lar$\cr
+\qi precedes(Scale,Rating2,Rating1).\cr
+compare(`$\le$',Scale,Rating1,Rating2) $\lar$\cr
+\qi precedes(Scale,Rating2,Rating1) ; Rating1 = Rating2.\cr
+\noalign{\vskip 5pt}
+precedes([R1$\mid$Rs],R1,R2).\cr
+precedes([R$\mid$Rs],R1,R2) $\lar$ R $\ne$ R2, precedes(Rs,R1,R2).\cr
+\noalign{\vskip 5pt}
+select\_value(collateral,profile(C,F,Y),C).\cr
+select\_value(finances,profile(C,F,Y),F).\cr
+select\_value(yield,profile(C,F,Y),Y).\cr
+\noalign{\medskip}
+{\it Utilities}\cr
+\noalign{\medskip}
+sumlist(Xs,Sum) $\lar$ {\rm See Program \Proiteversum}.\cr
+\noalign{\medskip}
+{\it Bank data and rules}\cr
+\noalign{\medskip}
+rule([condition(collateral,`$\ge$',excellent),\cr
+\qi condition(finances,`$\ge$',good),\cr
+\qi condition(yield,`$\ge$',reasonable)],give\_credit).\cr
+rule([condition(collateral,`=',good),condition(finances,`=',good),\cr
+\qi condition(yield,`$\ge$',reasonable)],consult\_superior).\cr
+rule([condition(collateral,`$\le$',moderate),\cr
+\qi condition(finances,`$\le$',medium)],\cr
+\qi refuse\_credit).\cr
+\noalign{\vskip 5pt}
+scale(collateral,[excellent,good,moderate]).\cr
+scale(finances,[excellent,good,medium,bad]).\cr
+scale(yield,[excellent,reasonable,poor]).\cr
+\noalign{\bigskip}
+{\bf Program \Procreevasys}~~{\rm (Continued)}\cr}\vfill}
+\endin\par
+Two features of the code bear comment. First, the terminology used in the
+program is the terminology of Chas. This makes the program (almost)
+self-documenting to the experts and means they can modify it with little
+help from the knowledge engineer. Allowing people to think in domain
+concepts also facilitates debugging and assists in using a
+domain-independent explanation facility as discussed in Section~17.4.
+Second, the apparent naivete of the evaluation rules is deceptive. A lot 
+of knowledge and experience are hidden behind these simple numbers. Choosing
+poor values for these numbers may mean suffering severe losses.\par
+The financial evaluation module evaluates the financial stability of the
+client. It uses items taken mainly from the balance and profit/loss
+sheets. The financial rating is also qualitative. A weighted sum of
+financial factors is calculated by {\tt score} and used by {\tt
+calibrate} to determine the qualitative class.\par
+It should be noted that the modules giving the collateral rating and
+the financial rating both reflect the point of view and style of a particular
+expert, Chas Manhattan, rather than a universal truth. Within the bank
+there is no consensus about the subject. Some people tend to be
+conservative and some are prepared to take considered risks.\par
+Programming the code for determining the collateral and financial ratings
+proceeded easily. The knowledge provided by the expert was more or less
+directly translated into the program. The module for the overall
+evaluation of the client, however, was more challenging.\par
+The major difficulty was formulating the relevant expert knowledge. Our
+expert was less forthcoming with general rules for overall evaluation
+than for rating the financial record, for example. He happily discussed
+the profiles of particular clients, and the outcome of their credit
+requests and loans, but was reluctant to generalize. He preferred to
+react to suggestions rather than volunteer rules.\par
+This forced a close reevaluation of the exact problem we were solving.
+There were three possible answers the system could give: approve the
+request for credit, refuse the request, or ask for advice. There were
+three factors to be considered. Each factor had a qualitative value that
+was one of a small set of possibilities. For example, the financial
+rating could be {\it bad\/}, {\it medium\/}, {\it good\/}, or {\it
+excellent\/}. Further, the possible values were ranked on an ordinal
+scale.\par
+Our system clearly faced an instance of a general problem: Find an
+outcome from some ordinal scale based on the qualitative results of
+several ordinal scales. Rules to solve the problem were thus to give a
+conclusion based on the outcome of the factors. We pressed Chas with this
+formulation, and he rewarded us with several rules. Here is a typical one:
+``If the client's collateral rating is excellent (or better), her
+financial rating good (or better), and her yield at least reasonable,
+then grant the credit request."\par
+An immediate translation of the rule is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+evaluate(profile(excellent,good,reasonable),give\_credit).\cr}\medno
+But this misses many cases covered by the rule, for example, when the
+client's profile is {\tt (excellent,good,excellent)}. All the cases for
+a given rule can be listed. It seemed more sensible, however, to build a
+more general tool to evaluate rules expressed in terms of qualitative
+values from ordinal scales.\par
+There is potentially a problem with using ordinal scales because of the large
+number of individual cases that may need to be specified. If each of the
+{\it N\/} modules have {\it M\/} possible outcomes, there are {\it
+N\/}$^M$ cases to be considered. In general, it is infeasible to have a
+separate rule for each possibility. Not only is space a problem for so
+many rules but the search involved in finding the correct rule may be
+prohibitive. So instead we defined a small ad hoc set of rules.
+We hoped the rules defined, which covered many possibilities at once,
+would be sufficient to cover the clients the bank usually dealt with. We
+chose the structure {\tt rule(Conditions,Conclusion)} for our rules,
+where {\tt Conditions} is a list of conditions under which the rule
+applies and {\tt Conclusion} is the rule's conclusion. A condition has
+the form {\tt condition(Factor,Relation,Rating)}, insisting that the
+rating from the factor named by {\tt Factor} bears the relation named by
+{\tt Relation} to the rating given by {\tt Rating}.\par
+The relation is represented by the standard relational operators: $<$,
+=, $>$, etc. The previously mentioned rule is represented as\medskip 
+\halign{\hskip 40pt\lft{\tt #}\cr
+rule([condition(collateral,`$\ge$',excellent),\cr
+\qi condition(finances,`$\ge$',good),\cr
+\qi condition(yield,`$\ge$',reasonable)],give\_credit).\cr}\medno
+Another rule given by Chas reads: ``If both the collateral rating and
+financial rating are good, and the yield is at least reasonable, then
+consult your superior." This is translated to\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+rule([condition(collateral,`=',good),\cr
+\qi condition(finances,`=',good),\cr
+\qi condition(yield,`$\ge$',reasonable)],consult\_superior).\cr}\medno
+Factors can be mentioned twice to indicate they lie in a certain range
+or might not be mentioned at all. For example, the rule\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+rule([condition(collateral,`$\le$',moderate),\cr
+\qi condition(finances,`$\le$',medium)],\cr
+\qi refuse\_credit).\cr}\medno
+states that a client should be refused credit if the collateral rating is
+no better than moderate and the financial rating is at best medium. The
+yield is not relevant and so is not mentioned.\par
+The interpreter for the rules is written nondeterministically. The
+procedure is: ``Find a rule and verify that its conditions apply," as
+defined by {\tt evaluate}. The predicate {\tt verify(Conditions,Profile)}
+checks that the relation between the corresponding symbols in the rule
+and the ones that are associated with the {\tt Profile} of the client is
+as specified by {\tt Conditions}. For each {\tt Type} that can appear, a
+scale is necessary to give the order of values the scale can take.
+Examples of scale facts in the bank database are {\tt scale(collateral,
+\(excellent,good,moderate\))} and {\tt scale(finances,
+\(excellent,good,medium,bad\))}. The predicate {\tt select\_value}
+returns the appropriate symbol of the factor under the ordinality test
+that is performed by {\tt compare}. It is an access predicate, and
+consequently the only predicate dependent on the choice of data structure
+for the profile.\par
+At this stage, the prototype program is tested. Some data from real
+clients are necessary, and the answer the system gives on these
+individuals is tested against what the corresponding bank official would
+say. The data for {\tt client1} is given in Program~\Protesdateva. The
+reply to the query {\tt credit(client1,X)} is {\tt X = give\_credit}.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it Client Data}\cr
+\noalign{\medskip}
+bank\_yield(client1,excellent).\cr
+requested\_credit(client1,50000).\cr
+\noalign{\vskip 5pt}
+amount(local\_currency\_deposits,client1,30000).\cr
+amount(foreign\_currency\_deposits,client1,20000).\cr
+amount(bank\_guarantees,client1,3000).\cr
+\noalign{\vskip 5pt}
+amount(negotiate\_instruments,client1,5000).\cr
+amount(stocks,client1,9000).\cr
+\noalign{\vskip 5pt}
+amount(mortgage,client1,12000).\cr
+amount(documents,client1,14000).\cr
+\noalign{\vskip 5pt}
+value(net\_worth\_per\_assets,client1,40).\cr
+value(last\_year\_sales\_growth,client1,20).\cr
+value(gross\_profits\_on\_sales,client1,45).\cr
+value(short\_term\_debt\_per\_annual\_sales,client1,9).\cr
+\noalign{\vskip 5pt}
+ok\_profile(client1).\cr
+\noalign{\bigskip}
+{\bf Program \Protesdateva}{\rm :~~Test data for the credit evaluation
+system}\cr}
+\endinsert\par
+Our prototype expert system is a composite of styles and methods --- not
+just a backward chaining system. Heuristic rules of thumb are used to
+determine the collateral rating; an algorithm, albeit a simple one, is
+used to determine the financial rating; and there is a rule language,
+with an interpreter, for expressing outcomes in terms of values  from
+discrete ordinal scales. The rule interpreter proceeds forward from
+conditions to conclusion rather than backward as in Prolog. Expert
+systems must become such composites in order to exploit the different
+forms of knowledge already extant.\par
+The development of the prototype was not the only activity of the
+knowledge engineers. Various other features of the expert system were
+developed in parallel. An explanation facility was built as an extension
+of Program \Proexppro. A simulator for rules based on ordinal scales was
+built to settle the argument among the knowledge engineers as to whether
+a reasonable collection of rules would be sufficient to cover the range
+of outcomes in the general case.\par
+Finally, a consistency checker for the rules was built. The following
+meta-rule is an obvious consistency principle: ``If all of client A's
+factors are better than or equal to client B's, then the outcome of
+client A must be better than or equal to that of client B."\par
+\sect{Background}
+More details on the credit evaluation system can be found in Ben-David
+and Sterling (1986).\par\bye
+

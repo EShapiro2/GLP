@@ -1,0 +1,674 @@
+%%%%% Leonudi Book, Chapter 0 %%%%%
+
+%%%%% The Art of Prolog (First pages) %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\numberfirst
+
+{\bigbf Foreword}\bigskip\noindent
+\line{\hfill\twelverm By David H. D.\ Warren}\medskip
+
+Programming in Prolog opens the mind to a new way of looking at
+computing. There is a change of perspective which every Prolog
+programmer experiences when first getting to know the language.\par
+I shall never forget my first Prolog program. The time was early
+1974. I had learned about the abstract idea of logic programming from
+Bob Kowalski at Edinburgh, although the name ``logic programming" had
+not yet been coined.  The main idea was that deduction could be viewed
+as a form of computation, and that a declarative statement of the
+form
+\medskip
+\halign{\hskip 40pt\lft{#}\cr
+$P$ if $Q$ and $R$ and $S$.\cr}
+\medno
+could also be interpreted procedurally as
+\medskip
+\halign{\hskip 40pt\lft{#}\cr
+To solve $P$, solve $Q$ and $R$ and $S$.\cr}
+\medno
+Now I had been invited to Marseilles. Here, Alain Colmerauer and his
+colleagues had devised the language Prolog based on the logic
+programming concept.  Somehow, this realization of the concept seemed
+to me, at first sight, too simpleminded.  However, Gerard Battani and
+Henri Meloni had implemented a Prolog interpreter in Fortran (their
+first major exercise in programming, incidentally).  Why not give
+Prolog a try?
+\par
+I sat at a clattering teletype connected down an ordinary telephone
+line to an IBM machine far away in Grenoble.  I typed in some rules
+defining how plans could be constructed as sequences of actions.
+There was one important rule, modeled on the SRI planner Strips,
+which described how a plan could be elaborated by adding an action at
+the end.  Another rule, necessary for completeness, described how to
+elaborate a plan by inserting an action in the middle of the plan.  As
+an example for the planner to work on, I typed in facts about some
+simple actions in a ``blocks world" and an initial state of this world.
+I entered a description of a goal state to be achieved.  Prolog spat
+back at me:
+\medskip
+\halign{\hskip 40pt\lft{#}\cr
+?\cr}
+\medno
+meaning it couldn't find a solution. Could it be that a solution was
+not deducible from the axioms I had supplied?  Ah, yes, I had
+forgotten to enter some crucial facts.  I tried again. Prolog was
+quiet for a long time and then responded:
+\medskip
+\halign{\hskip 40pt\lft{#}\cr
+DEBORDEMENT DE PILE\cr}
+\medno
+Stack overflow!  I had run into a loop. Now a loop was conceivable
+since the space of potential plans to be considered was infinite.
+However, I had taken advantage of Prolog's procedural semantics to
+organize the axioms so that shorter plans ought to be generated first.
+Could something else be wrong?  After a lot of head scratching, I
+finally realized that I had mistyped the names of some variables.  I
+corrected the mistakes, and tried again.
+\par
+Lo and behold, Prolog responded almost instantly with a correct plan
+to achieve the goal state.  Magic!  Declaratively correct axioms had
+assured a correct result.  Deduction was being harnessed before my
+very eyes to produce effective computation.  Declarative programming
+was truly programming on a higher plane!  I had dimly seen the
+advantages in theory.  Now Prolog had made them vividly real in
+practice.  Never had I experienced such ease in getting a complex
+program coded and running.
+\par
+Of course, I had taken care to formulate the axioms and organize them
+in such a way that Prolog could use them effectively.  I had a general
+idea of how the axioms would be used.  Nevertheless it was a surprise
+to see how the axioms got used in practice on particular examples.  It
+was a delightful experience over the next few days to explore how
+Prolog actually created these plans, to correct one or two more bugs
+in my facts and rules, and to further refine the program.
+\par
+Since that time, Prolog systems have improved significantly in terms
+of debugging environments, speed, and general robustness.  The
+techniques of using Prolog have been more fully explored and are now
+better understood. And logic programming has blossomed, not least
+because of its adoption by the Japanese as the central focus of the
+Fifth Generation project.
+\par
+After more than a decade of growth of interest in Prolog, it is a
+great pleasure to see the appearance of this book.  Hitherto,
+knowledge of how to use Prolog for serious programming has largely
+been communicated by word of mouth.  This textbook sets down and
+explains for the first time in an accessible form the deeper
+principles and techniques of Prolog programming.
+\par
+The book is excellent for not only conveying what Prolog is but also
+explaining how it should be used.  The key to understanding how to use
+Prolog is to properly understand the relationship between Prolog and
+logic programming.  This book takes great care to elucidate the
+relationship.
+\par
+Above all, the book conveys the excitement of using Prolog --- the thrill
+of declarative programming.  As the authors put it, ``Declarative
+programming clears the mind."  Declarative programming enables one to
+concentrate on the essentials of a problem without getting bogged
+down in too much operational detail.  Programming should be an
+intellectually rewarding activity.  Prolog helps to make it so.
+Prolog is indeed, as the authors contend, a tool for thinking.
+\vskip 1truecm\parno
+David H. D. Warren\bkn
+Manchester, September 1986
+\par\endpage
+{\bigbf Preface}\bigskip\noindent
+Seven years have passed since the first edition of {\it The Art of
+Prolog} was published. In that time, the perception of Prolog has
+changed markedly. While not as widely used as the language C, Prolog
+is no longer regarded as an exotic language. An abundance of books on
+Prolog have appeared. Prolog is now accepted by many as interesting
+and useful for certain applications. Articles on Prolog regularly
+appear in popular magazines. Prolog and logic programming are part of
+most computer science and engineering programs, although perhaps in a
+minor role in an artificial intelligence or programming languages
+class. The first conference on Practical Applications of Prolog was
+held in London in April 1992. A standard for the language is likely
+to be in place in 1994. A future for Prolog among the programming
+languages of the world seems assured.
+\par
+In preparing for a second edition, we had to address the question of
+how much to change. I decided to listen to a request not to make the
+new edition into a new book. This second edition is much like the
+first, although a number of changes are to be expected in a second
+edition. The typography of the book has been improved: Program code is
+now in a distinctive font rather than in italics.  Figures such as
+proof trees and search trees are drawn more consistently. We have
+taken the opportunity to be more precise with language usage and to
+remove minor inconsistencies with hyphenation of words and similar
+details. All known typographical errors have been fixed. The
+background sections at the end of most chapters have been updated to
+take into account recent, important research results. The list of
+references has been expanded considerably. Extra, more advanced
+exercises, which have been used successfully in my Prolog classes,
+have been added.
+\par
+Let us take an overview of the specific changes to each part in turn.
+Part~IV, Applications, is unchanged apart from minor corrections and
+tidying. Part~I, Logic Programs, is essentially unchanged. New
+programs have been added to Chapter 3 on tree manipulation, including
+heapifying a binary tree. Extra exercises are also present.
+\par
+Part~II, The Prolog Langauge, is primarily affected by the imminence
+of a Prolog standard. We have removed all references to Wisdom Prolog
+in the text in preparation for Standard Prolog. It has proved
+impossible to guarantee that this book is consistent with the
+standard.  Reaching a standard has been a long, difficult process for
+the members of the committee. Certain predicates come into favor and
+then disappear, making it difficult for the authors of a text to know
+what to write. Furthermore, some of the proposed I/O predicates are not
+available in current Prologs, so it is impossible to run all the code!
+Most of the difficulties in reaching a Prolog standard agreeable to
+all interested parties have been with builtin or system predicates.
+This book raises some of the issues involved in adding builtins to
+Prolog but largely avoids the concerns by using pure Prolog as much
+as possible. We tend not to give detailed explanations of the
+controversial nonlogical behaviors of some of the system predicates,
+and we certainly do not use odd features in our code.
+\par
+Part III, Advanced Programming Techniques, is the most altered in
+this second edition, which perhaps should be expected. A new chapter
+has been added on program transformation, and many of the other
+chapters have been reordered. The chapters on Interpreters and Logic
+Grammars have extensive additions.
+\par
+Many people provided us feedback on the first edition, almost all of
+it very positive. I thank you all.  Three people deserve special
+thanks for taking the trouble to provide long lists of suggestions for
+improvements and to point out embarrassingly long lists of typos in
+the first edition: Norbert Fuchs, Harald S{\o}ndergaard, and Stanley
+Selkow. The following deserve mention for pointing out mistakes and
+typos in the various printings of the first edition or making
+constructive comments about the book that led to improvements in later
+printings of the first edition and for this second edition. The list
+is long, my memory sometimes short, so please forgive me if I forget
+to mention anyone. Thanks to Hani Assiryani, Tim Boemker, Jim Brand,
+Bill Braun, Pu Chen, Yves Deville, George Ernst, Claudia G\"{u}nther,
+Ann Halloran, Sundar Iyengar, Gary Kacmarcik, Mansoor Khan, Sundeep
+Kumar, Arun Lakhotia, Jean-Louis Lassez, Charlie Linville, Per Ljung,
+David Maier, Fred Mailey, Martin Marshall, Andre Mesarovic, Dan
+Oldham, Scott Pierce, Lynn Pierce, David Pedder, S. S. Ramakrishnan,
+Chet Ramey, Marty Silverstein, Bill Sloan, Ron Taylor, Rodney Topor,
+R. J. Wengert, Ted Wright, and Nan Yang. For the former students of
+CMPS411, I hope the extra marks were sufficient reward.
+\par
+Thanks to Sarah Fliegelmann and Venkatesh Srinivasan for help with
+entering changes to the second edition and TeXing numerous drafts.
+Thanks to Phil Gannon and Zo\"{e} Sterling for helpful discussions
+about the figures, and to Joe Gelles for drawing the new figures. For
+proofreading the second edition, thanks to Kathy Kovacic, David
+Schwartz, Ashish Jain and Venkatesh Srinivasan. Finally, a warm thanks
+to my editor, Terry Ehling, who has always been very helpful and very
+responsive to queries.
+\par
+Needless to say, the support of my family and friends is the most
+important and most appreciated.
+\par
+\vskip 1truecm\parno
+Leon Sterling\bkn
+Cleveland, January 1993
+\par\endpage
+
+{\bigbf Preface to First Edition}\bigskip\noindent
+The origins of this book lie in graduate student courses aimed at
+teaching advanced Prolog programming. A wealth of techniques has
+emerged in the fifteen years since the inception of Prolog as a
+programming language. Our intention in this book has been to make
+accessible the programming techniques that kindled our own excitement,
+imagination, and involvement in this area. 
+\par
+The book fills a general need. Prolog, and more generally logic
+programming, has received wide publicity in recent years.
+Currently available books and accounts, however, typically
+describe only the basics. All but the simplest examples of the use of
+Prolog have remained essentially inaccessible to people outside the
+Prolog community.
+\par
+We emphasize throughout the book the distinction between logic
+programming and Prolog programming. Logic programs can be understood
+and studied, using two abstract, machine-independent concepts: truth
+and logical deduction. One can ask whether an axiom in a program is
+true, under some interpretation of the program symbols; or whether a
+logical statement is a consequence of the program.  These questions can
+be answered independently of any concrete execution mechanism.
+\par
+On the contrary, Prolog is a programming language, borrowing its basic
+constructs from logic. Prolog programs have precise operational
+meaning: they are instructions for execution on a computer --- a
+Prolog machine.  Prolog programs in good style can almost always be
+read as logical statements, thus inheriting some of the abstract
+properties of logic programs.  Most important, the result of a
+computation of such a Prolog program is a logical consequence of the
+axioms in it. Effective Prolog programming requires an understanding
+of the theory of logic programming.
+\par
+The book consists of four parts: logic programming, the Prolog
+language, advanced techniques, and applications.  The first part is a
+self-contained introduction to logic programming. It consists of five
+chapters. The first chapter introduces the basic constructs of logic
+programs. Our account differs from other introductions to logic
+programming by explaining the basics in terms of logical deduction.
+Other accounts explain the basics from the background of resolution
+from which logic programming originated. We have found the former to
+be a more effective means of teaching the material, which students
+find intuitive and easy to understand.
+\par
+The second and third chapters of Part I introduce the two basic styles
+of logic programming: database programming and recursive programming.
+The fourth chapter discusses the computation model of logic
+programming, introducing unification, while the fifth chapter presents
+some theoretical results without proofs. In developing this part to
+enable the clear explanation of advanced techniques, we have
+introduced new concepts and reorganized others, in particular,
+in the discussion of types and termination. Other issues
+such as complexity and correctness are concepts whose consequences
+have not yet been fully developed in the logic programming research
+community.
+\par
+The second part is an introduction to Prolog. It consists of Chapters
+6 through 13. Chapter 6 discusses the computation model of Prolog in
+contrast to logic programming, and gives a comparison between Prolog
+and conventional programming languages such as Pascal. Chapter 7
+discusses the differences between composing Prolog programs and logic
+programs. Examples are given of basic programming techniques.
+\par
+The next five chapters introduce system-provided predicates that are
+essential to make Prolog a practical programming language. We classify
+Prolog system predicates into four categories: those concerned with
+efficient arithmetic, structure inspection, meta-logical predicates
+that discuss the state of the computation, and extra-logical predicates
+that achieve side effects outside the computation model of logic
+programming.  One chapter is devoted to the most notorious of Prolog
+extra-logical predicates, the cut. Basic techniques using these system
+predicates are explained. The final chapter of the section gives
+assorted pragmatic programming tips.
+\par
+The main part of the book is Part III. We describe advanced Prolog
+programming techniques that have evolved in the Prolog programming
+community, illustrating each with small yet powerful example programs.
+The examples typify the applications for which the technique is
+useful. The six chapters cover nondeterministic programming,
+incomplete data structures, parsing with DCGs, second-order
+programming, search techniques, and the use of meta-interpreters.
+\par
+The final part consists of four chapters that show how the material
+in the rest of the book can be combined to build application programs.
+A common request of Prolog newcomers is to see larger applications.
+They understand how to write elegant short programs but have
+difficulty in building a major program. The applications covered are
+game-playing programs, a prototype expert system for evaluating
+requests for credit, a symbolic equation solver, and a compiler.
+\par
+During the development of the book, it has been necessary to
+reorganize the foundations and basic examples existing in the
+folklore of the logic programming community. Our structure constitutes
+a novel framework for the teaching of Prolog.
+\par
+Material from this book has been used successfully for several courses
+on logic programming and Prolog: in Israel, the United States, and
+Scotland. The material more than suffices for a one-semester course to
+first-year graduate students or advanced undergraduates. There is
+considerable scope for instructors to particularize a course to suit a
+special area of interest.
+\par
+A recommended division of the book for a 13-week course to senior
+undergraduates or first-year graduates is as follows: 4 weeks on logic
+programming, encouraging students to develop a declarative style of
+writing programs, 4 weeks on basic Prolog programming, 3 weeks on
+advanced techniques, and 2 weeks on applications. The advanced
+techniques should include some discussion of nondeterminism,
+incomplete data structures, basic second-order predicates, and basic
+meta-interpreters. Other sections can be covered instead of
+applications. Application areas that can be stressed are search
+techniques in artificial intelligence, building expert systems,
+writing compilers and parsers, symbol manipulation, and natural
+language processing.
+\par
+There is considerable flexibility in the order of presentation. The
+material from Part I should be covered first.  The material in Parts
+III and IV can be interspersed with the material in Part II to show
+the student how larger Prolog programs using more advanced techniques
+are composed in the same style as smaller examples.
+\par
+Our assessment of students has usually been 50 percent by homework
+assignments throughout the course, and 50 percent by project. Our experience
+has been that students are capable of a significant programming task
+for their project. Examples of projects are prototype expert systems,
+assemblers, game-playing programs, partial evaluators, and
+implementations of graph theory algorithms.
+\par
+For the student who is studying the material on her own, we strongly
+advise reading through the more abstract material in Part I. A good
+Prolog programming style develops from thinking declaratively about
+the logic of a situation. The theory in Chapter 5, however, can be
+skipped until a later reading.
+\par
+The exercises in the book range from very easy and well defined to
+difficult and open-ended. Most of them are suitable for homework
+exercises. Some of the more open-ended exercises were submitted as
+course projects.
+\par
+The code in this book is essentially in Edinburgh Prolog. The course has
+been given where students used several different variants of Edinburgh
+Prolog, and no problems were encountered. All the examples
+run on Wisdom Prolog, which is discussed in the appendixes.
+\par
+We acknowledge and thank the people who contributed directly to the
+book. We also thank, collectively and anonymously, all those who
+indirectly contributed by influencing our programming styles in
+Prolog.  Improvements were suggested by Lawrence
+Byrd, Oded Maler, Jack Minker, Richard O'Keefe, Fernando Pereira, and
+several anonymous referees.
+\par
+We appreciate the contribution of the students who sat through courses
+as material from the book was being debugged. The first author
+acknowledges students at the University of Edinburgh, the Weizmann
+Institute of Science, Tel Aviv University, and Case Western Reserve
+University. The second author taught courses at the Weizmann Institute
+and Hebrew University of Jerusalem, and in industry.
+\par
+We are grateful to many people for assisting in the technical
+aspects of producing a book. We especially thank Sarah Fliegelmann, who
+produced the various drafts and camera-ready copy, above and beyond
+the call of duty.  This book might not have appeared without her
+tremendous efforts.  Arvind Bansal prepared the index and helped with
+the references.  Yehuda Barbut drew most of the figures. Max Goldberg
+and Shmuel Safra prepared the appendix.
+The publishers, MIT Press, were helpful and supportive.
+\par
+Finally, we acknowledge the support of family and friends, without
+which nothing would get done.
+\par
+Leon Sterling, 1986
+\par\endpage
+{\bigbf Introduction}\bigskip\noindent
+The inception of logic is tied with that of scientific thinking.
+Logic provides a precise language for the explicit expression of one's
+goals, knowledge, and assumptions.  Logic provides the foundation for
+deducing consequences from premises; for studying the truth or falsity
+of statements given the truth or falsity of other statements; for
+establishing the consistency of one's claims; and for verifying the
+validity of one's arguments.
+\par
+Computers are relatively new in our intellectual history.  Similar to
+logic, they are the object of scientific study and a powerful tool for
+the advancement of scientific endeavor.  Like logic, computers require
+a precise and explicit statement of one's goals and assumptions.
+Unlike logic, which has developed with the power of human thinking
+as the only external consideration, the development of computers has
+been governed from the start by severe technological and engineering
+constraints.  Although computers were intended for use by humans, the
+difficulties in constructing them were so dominant that the language
+for expressing problems to the computer and instructing it how to
+solve them was designed from the perspective of the engineering of the
+computer alone.
+\par
+Almost all modern computers are based on the early concepts of von
+Neumann and his colleagues, which emerged during the 1940s.  The von
+Neumann machine is characterized by a large uniform store of memory
+cells and a processing unit with some local cells, called registers.
+The processing unit can load data from memory to registers, perform
+arithmetic or logical operations on registers, and store values of
+registers back into memory.  A program for a von Neumann machine
+consists of a sequence of instructions to perform such operations, and
+an additional set of control instructions, which can affect the next
+instruction to be executed, possibly depending on the content of some
+register.
+\par
+As the problems of building computers were gradually understood and
+solved, the problems of using them mounted.  The bottleneck ceased to
+be the inability of the computer to perform the human's instructions
+but rather the inability of the human to instruct, or program, the
+computer.  A search for programming languages convenient for humans to
+use began.  Starting from the language understood directly by the
+computer, the machine language, better notations and formalisms were
+developed.  The main outcome of these efforts was languages that were
+easier for humans to express themselves in but that still mapped rather
+directly to the underlying machine language.  Although increasingly
+abstract, the languages in the mainstream of development, starting
+from assembly language through Fortran, Algol, Pascal, and Ada, all
+carried the mark of the underlying machine --- the von Neumann
+architecture.
+\par
+To the uninitiated intelligent person who is not familiar with the
+engineering constraints that led to its design, the von Neumann
+machine seems an arbitrary, even bizarre, device.  Thinking in terms of
+its constrained set of operations is a nontrivial problem,
+which sometimes stretches the adaptiveness of the human mind to its
+limits.
+\par
+These characteristic aspects of programming von Neumann computers 
+led to a separation of work:  there were those who thought how to
+solve the problem, and designed the methods for its solution, and
+there were the coders, who performed the mundane and tedious task of
+translating the instructions of the designers to instructions a
+computer can use.
+\par
+Both logic and programming require the explicit expression of one's
+knowledge and methods in an acceptable formalism.  The task of making
+one's knowledge explicit is tedious.  However, formalizing one's
+knowledge in logic is often an intellectually rewarding activity and
+usually reflects back on or adds insight to the problem under
+consideration.  In contrast, formalizing one's problem and method of
+solution using the von Neumann instruction set rarely has these
+beneficial effects.
+\par
+We believe that programming can be, and should be, an intellectually
+rewarding activity;  that a good programming language is a powerful
+conceptual tool --- a tool for organizing, expressing, experimenting
+with, and even communicating one's thoughts;  that treating
+programming as ``coding," the last, mundane, intellectually trivial,
+time-consuming, and tedious phase of solving a problem using a
+computer system, is perhaps at the very root of what has been
+known as the ``software crisis."
+\par
+Rather, we think that programming can be, and should be, part of the
+problem-solving process itself;  that thoughts should be organized as
+programs, so that consequences of a complex set of assumptions can be
+investigated by ``running" the assumptions;  that a conceptual solution
+to a problem should be developed hand-in-hand with a working program
+that demonstrates it and exposes its different aspects.  Suggestions
+in this direction have been made under the title ``rapid prototyping."
+\par
+To achieve this goal in its fullest --- to become true mates of the
+human thinking process --- computers have still a long way to go.
+However, we find it both appropriate and gratifying from a historical
+perspective that logic, a companion to the human thinking process
+since the early days of human intellectual history, has been
+discovered as a suitable stepping-stone in this long journey.
+\par
+Although logic has been used as a tool for designing computers and for
+reasoning about computers and computer programs since almost their
+beginning, the use of logic directly as a programming language, termed
+{\it logic programming}, is quite recent.
+\par
+Logic programming, as well as its sister approach, functional
+programming, departs radically from the mainstream of computer
+languages.  Rather then being derived, by a series of abstractions and
+reorganizations, from the von Neumann machine model and instruction
+set, it is derived from an abstract model, which has no direct
+relation to or dependence on to one machine model or another.  It is
+based on the belief that instead of the human learning to think in
+terms of the operations of a computer that which some scientists and
+engineers at some point in history happened to find easy and
+cost-effective to build, the computer should perform instructions that
+are easy for humans to provide.  In its ultimate and purest form,
+logic programming suggests that even explicit instructions for
+operation not be given but rather that the knowledge about the problem
+and assumptions sufficient to solve it be stated explicitly, as
+logical axioms.  Such a set of axioms constitutes an alternative to
+the conventional program.  The program can be executed by providing it
+with a problem, formalized as a logical statement to be proved, called
+a goal statement.  The execution is an attempt to solve the problem,
+that is, to prove the goal statement, given the assumptions in the
+logic program.
+\par
+A distinguishing aspect of the logic used in logic programming is that
+a goal statement typically is existentially quantified: it states that
+there exist some individuals with some property.  An example of a goal
+statement is, ``there exists a list $X$ such that sorting the list
+[$3,1,2$] gives $X$.''  The mechanism used to prove the goal statement
+is constructive. If successful, it provides the identity of the
+unknown individuals mentioned in the goal statement, which constitutes
+the output of the computation.  In the preceding example, assuming that
+the logic program contains appropriate axioms defining the {\it sort}
+relation, the output of the computation would be $X=[1,2,3]$.
+\par\endpage
+These ideas can be summarized in the following two metaphorical
+equations:
+\medskip
+\halign{\hskip 40pt\lft{#}\cr
+{\it program = set of axioms}.\cr
+\noalign{\vskip 5pt}
+{\it computation = constructive proof of a goal statement from the
+program}.\cr}
+\medskip
+The ideas behind these equations can be traced back as far as
+intuitionistic mathematics and proof theory of the early twentieth
+century.  They are related to Hilbert's program, to base the entire
+body of mathematical knowledge on logical foundations and to provide
+mechanical proofs for its theories, starting from the axioms of logic
+and set theory alone.  It is interesting to note that the failure of
+this program, from which ensued the incompleteness and undecidability
+results of G\" odel and Turing, marks the beginning of the modern age
+of computers.
+\par
+The first use of this approach in practical computing is a
+sequel to Robinson's unification algorithm and resolution principle,
+published in 1965.  Several hesitant attempts were made to use this
+principle as a basis of a computation mechanism, but they did
+not gain any momentum.  The beginning of logic programming
+can be attributed to Kowalski and Colmerauer.  Kowalski formulated
+the procedural interpretation of Horn clause logic.  He showed that
+an axiom
+\medskip
+\halign{\hskip 40pt\lft{#}\cr
+{\it A} if {\it B$_1$} and {\it B$_2$} and $\ldots$ and {\it B$_n$}\cr}
+\medno
+can be read and executed as a procedure of a recursive programming
+language, where {\it A} is the procedure head and the {\it B$_i$} are
+its body.  In addition to the declarative reading of the clause, {\it
+A} is true if the {\it B$_i$} are true, it can be read as follows:
+To solve (execute) {\it A}, solve (execute) {\it B$_1$} and {\it
+B$_2$} and $\ldots$ and {\it B$_n$}.  In this reading, the proof
+procedure of Horn clause logic is the interpreter of the language, and
+the unification algorithm, which is at the heart of the resolution
+proof procedure, performs the basic data manipulation operations of
+variable assignment, parameter passing, data selection, and data
+construction.
+\par
+At the same time, in the early 1970s, Colmerauer and his group at the
+University of Marseilles-Aix developed a specialized theorem prover,
+written in Fortran, which they used to implement natural language
+processing systems.  The theorem prover, called Prolog (for
+Programmation en Logique), embodied Kowalski's procedural
+interpretation.  Later, van Emden and Kowalski developed a formal
+semantics for the language of logic programs, showing that its
+operational, model-theoretic, and fixpoint semantics are the same.
+\par
+In spite of all the theoretical work and the exciting ideas, the logic
+programming approach seemed unrealistic.  At the time of its
+inception, researchers in the United States began to recognize the
+failure of the ``next-generation AI languages," such as Micro-Planner
+and Conniver, which developed as a substitute for Lisp. The main claim
+against these languages was that they were hopelessly inefficient, and
+very difficult to control.  Given their bitter experience with
+logic-based high-level languages, it is no great surprise that U.S.
+artificial intelligence scientists, when hearing about Prolog, thought
+that the Europeans were over-excited over what they, the Americans, had
+already suggested, tried, and discovered not to work.
+\par
+In that atmosphere the Prolog-10 compiler was almost an imaginary
+being.  Developed in the mid to late 1970s by David H.D.\ Warren and
+his colleagues, this efficient implementation of Prolog dispelled all
+the myths about the impracticality of logic programming.  That
+compiler, still one of the finest implementations of Prolog around,
+delivered on pure list-processing programs a performance comparable to
+the best Lisp systems available at the time.  Furthermore, the
+compiler itself was written almost entirely in Prolog, suggesting that
+classic programming tasks, not just sophisticated AI applications, could
+benefit from the power of logic programming.
+\par
+The impact of this implementation cannot be overemphasized.
+Without it, the accumulated experience that has led to this
+book would not have existed.
+\par
+In spite of the promise of the ideas, and the practicality of their
+implementation, most of the Western computer science and AI research
+community was ignorant, openly hostile, or, at best, indifferent to
+logic programming.  By 1980 the number of researchers actively engaged
+in logic programming were only a few dozen in the United States and
+about one hundred around the world.
+\par
+No doubt, logic programming would have remained a fringe activity in
+computer science for quite a while longer hadit not been for the
+announcement of the Japanese Fifth Generation Project, which took
+place in October 1981.  Although the research program the Japanese
+presented was rather baggy, faithful to their tradition of achieving
+consensus at almost any cost, the important role of logic programming
+in the next generation of computer systems was made clear.
+\par
+Since that time the Prolog language has undergone a rapid transition
+from adolescence to maturity.  There are numerous commercially
+available Prolog implementations on most computers.  A large number of
+Prolog programming books are directed to different audiences and
+emphasize different aspects of the language.  And the language itself
+has more or less stabilized, having a de facto standard, the Edinburgh
+Prolog family.
+\par
+The maturity of the language means that it is no longer a concept for
+scientists yet to shape and define but rather a given object, with
+vices and virtues.  It is time to recognize that, on the one
+hand, Prolog falls short of the high goals of logic programming
+but, on the other hand, is a powerful, productive, and practical
+programming formalism.  Given the standard life cycle of computer
+programming languages, the next few years will reveal whether
+these properties show their merit only in the classroom or prove
+useful also in the field, where people pay money to solve
+problems they care about.
+\par
+What are the current active subjects of research in logic programming
+and Prolog?  Answers to this question can be found in the regular
+scientific journals and conferences of the field;  the {\it Logic
+Programming Journal}, the {\it Journal of New Generation Computing},
+the {\it International Conference on Logic Programming}, and the {\it
+IEEE Symposium on Logic Programming} as well as in the general
+computer science journals and conferences.
+\par
+Clearly, one of the dominant areas of interest is the relation between
+logic programming, Prolog, and parallelism.  The promise of parallel
+computers, combined with the parallelism that seems to be available in
+the logic programming model, have led to numerous attempts, still
+ongoing, to execute Prolog in parallel and to devise novel concurrent
+programming languages based on the logic programming computation
+model.  This, however, is a subject for another book.
+\par\bye
+\noindent
+{\bf Opposite Part I}\medno
+{\twelverm Leonardo Da Vinci}, {\twelveit Old Man thinking}. {\twelverm
+Pen and ink (slightly enlarged). About 1510. Windsor Castle, Royal
+Library}
+\bigno
+{\bf Opposite Part II}\medno
+{\twelverm Leonardo Da Vinci}, {\twelverm  Portrait of the Florentine
+poet} {\twelveit Bernardo Bellinzone}, {\twelverm engaged at the Court
+of Ludovico Sforza. Woodcut, based on a drawing by Leonardo. From
+Bellinezone's} {\twelveit Rime}. {\twelverm Milan 1493}
+\bigno
+{\bf Opposite Part III}\medno
+{\twelverm Leonardo Da Vinci}, {\twelveit Study of a Woman's Hands
+folded over her Breast}. {\twelverm Silverpoint on pink prepared paper,
+heightened with white. About 1478. Windsor Castle, Royal Library}
+\bigno
+{\bf Opposite Part IV}\medno
+{\twelverm Leonardo Da Vinci}, {\twelveit The Proportions of the Human
+Figure}, {\twelverm after Vitruvius. Pen and ink. About 1492. Venice
+Academy}
+\par\bye
+

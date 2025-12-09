@@ -1,0 +1,2173 @@
+
+
+
+
+                                                  Chapter  20
+
+
+
+                                Search  Techniques
+
+
+
+    In this chapter, we show programs encapsulating classic AI search technique*
+ *s.
+
+
+The first section discusses state-transition frameworks for solving problems fo*
+ *rmu-
+
+
+lated in terms of a state-space graph. The second discusses the minimax algorit*
+ *hm
+
+
+with alpha-beta pruning for searching game trees.
+
+
+
+20.1   Searching State-Space Graphs
+
+
+
+    State-space graphs are used to represent problems. Nodes of the graph are
+
+
+states of the problem. An edge exists between nodes if there is a transition ru*
+ *le,
+
+
+also called a move, transforming one state into the next.  Solving the problem
+
+
+means finding a path from a given initial state to a desired solution state by
+
+
+applying a sequence of transition rules.
+
+
+    Program 20.1 is a framework for solving problems by searching their state-
+
+
+space graphs, using depth-first search as described in Section 14.2.
+
+
+
+
+20.1                                    Searching State-Space Graphs347
+
+
+
+solve_dfs(State,History,Moves)  
+
+
+    Moves is a sequence of moves to reach a
+
+
+    desired final state from the current State,
+
+
+    where History contains the states visited previously.
+
+
+solve_dfs(State,History,[ ])  
+
+
+    final_state(State).
+
+
+solve_dfs(State,History,[MovejMoves])  
+
+
+    move(State,Move),
+
+
+    update(State,Move,State1),
+
+
+    legal(State1),
+
+
+    not member(State1,History),
+
+
+    solve_dfs(State1,[State1jHistory],Moves).
+
+
+Testing the framework
+
+
+test_dfs(Problem,Moves)  
+
+
+    initial_state(Problem,State), solve_dfs(State,[State],Moves).
+
+
+
+        Program 20.1:  A depth-first state-transition framework for
+
+
+                       problem solving
+
+
+
+    No commitment has been made to the representation of states. The moves
+
+
+are specified by a binary predicate move(State,Move), where Move is a move
+
+
+applicable to State. The predicate update(State,Move,State1) finds the state
+
+
+State1 reached by applying the move Move to state State. It is often easier to
+
+
+
+
+348   Search Techniques                                          20.1
+
+
+
+combine the move and update procedures. We keep them separate here to make
+
+
+knowledge more explicit and to retain flexibility and modularity, possibly at t*
+ *he
+
+
+expense of performance.
+
+
+    The validity of possible moves is checked by the predicate legal(State),
+
+
+which checks if the problem state State satisfies the constraints of the proble*
+ *m.
+
+
+The program keeps a history of the states visited to prevent looping. Checking
+
+
+that looping does not occur is done by seeing if the new state appears in the
+
+
+history of states. The sequence of moves leading from the initial state to the *
+ *final
+
+
+state is built incrementally in the third argument of solve_dfs/3.
+
+
+    To solve a problem using the framework, the programmer must decide how
+
+
+states are to be represented, and axiomatize the move, update, and legal pro-
+
+
+cedures.  A suitable representation has profound effect on the success of this
+
+
+framework.
+
+
+    Let us use the framework to solve the wolf, goat, and cabbage problem. We
+
+
+state the problem informally. A farmer has a wolf, goat, and cabbage on the left
+
+
+side of a river. The farmer has a boat that can carry at most one of the three,
+
+
+and he must transport this trio to the right bank. The problem is that he dare
+
+
+not leave the wolf with the goat (wolves love to eat goats) or the goat with the
+
+
+cabbage (goats love to eat cabbages). He takes all his jobs very seriously and *
+ *does
+
+
+not want to disturb the ecological balance by losing a passenger.
+
+
+    States are represented by a triple, wgc(B,L,R), where B is the position
+
+
+of the boat (left or right), L is the list of occupants of the left bank, and
+
+
+R the list of occupants of the right bank.  The initial and final states are
+
+
+
+
+20.1                                    Searching State-Space Graphs349
+
+
+
+wgc(left,[wolf,goat,cabbage],[ ]) and wgc(right,[ ],[wolf,goat,cab-
+
+
+bage]), respectively.  In fact, it is not strictly necessary to note the occupa*
+ *nts
+
+
+of both the left and right banks. The occupants of the left bank can be deduced
+
+
+from the occupants of the right bank, and vice versa.  But having both makes
+
+
+specifying moves clearer.
+
+
+    It is convenient for checking for loops to keep the lists of occupants sort*
+ *ed.
+
+
+Thus wolf will always be listed before goat, both of whom will be before cabbage
+
+
+if they are on the same bank.
+
+
+    Moves transport an occupant to the opposite bank and can thus be specified
+
+
+by the particular occupant who is the Cargo.  The case when nothing is taken
+
+
+is specified by the cargo alone. The nondeterministic behavior of member allows
+
+
+a concise description of all the possible moves in three clauses as shown in Pr*
+ *o-
+
+
+gram 20.2:  moving something from the left bank, moving something from the
+
+
+right bank, or the farmer's rowing in either direction by himself.
+
+
+    For each of these moves, the updating procedure must be specified, namely,
+
+
+changing the position of the boat (by update_boat/2) and updating the banks
+
+
+(by update_banks). Using the predicate select allows a compact description of
+
+
+the updating process. The insert procedure is necessary to keep the occupant
+
+
+list sorted, facilitating the check if a state has been visited before. It cont*
+ *ains all
+
+
+the possible cases of adding an occupant to a bank.
+
+
+    Finally, the test for legality must be specified. The constraints are simpl*
+ *e.
+
+
+The wolf and goat cannot be on the same bank without the farmer, nor can the
+
+
+goat and cabbage.
+
+
+
+
+350   Search Techniques                                          20.1
+
+
+
+        States for the wolf, goat and cabbage problem are a structure
+
+
+            wgc(Boat,Left,Right), where Boat is the bank on which the boat
+
+
+            currently is, Left is the list of occupants on the left bank of
+
+
+            the river, and Right is the list of occupants on the right bank.
+
+
+        initial_state(wgc,wgc(left,[wolf,goat,cabbage],[ ])).
+
+
+        final_state(wgc(right,[ ],[wolf,goat,cabbage])).
+
+
+        move(wgc(left,L,R),Cargo)   member(Cargo,L).
+
+
+        move(wgc(right,L,R),Cargo)   member(Cargo,R).
+
+
+        move(wgc(B,L,R),alone).
+
+
+        update(wgc(B,L,R),Cargo,wgc(B1,L1,R1))  
+
+
+            update_boat(B,B1), update_banks(Cargo,B,L,R,L1,R1).
+
+
+        update_boat(left,right).
+
+
+        update_boat(right,left).
+
+
+        update_banks(alone,B,L,R,L,R).
+
+
+        update_banks(Cargo,left,L,R,L1,R1)  
+
+
+            select(Cargo,L,L1), insert(Cargo,R,R1).
+
+
+        update_banks(Cargo,right,L,R,L1,R1)  
+
+
+            select(Cargo,R,R1), insert(Cargo,L,L1).
+
+
+        insert(X,[YjYs],[X,YjYs])  
+
+
+            precedes(X,Y).
+
+
+        insert(X,[YjYs],[YjZs])  
+
+
+            precedes(Y,X), insert(X,Ys,Zs).
+
+
+        insert(X,[ ],[X]).
+
+
+        precedes(wolf,X).
+
+
+        precedes(X,cabbage).
+
+
+        legal(wgc(left,L,R))   not illegal(R).
+
+
+        legal(wgc(right,L,R))   not illegal(L).
+
+
+        illegal(Bank)   member(wolf,Bank), member(goat,Bank).
+
+
+        illegal(Bank)   member(goat,Bank), member(cabbage,Bank).
+
+
+        select(X,Xs,Ys)   See Program 3.19.
+
+
+
+        Program 20.2:  Solving the wolf, goat, and cabbage problem
+
+
+
+
+20.1                                    Searching State-Space Graphs351
+
+
+
+                  Figure 20.1:  The water jugs problem
+
+
+
+    Program 20.2, together with Program 20.1, solves the wolf, goat, and cabbage
+
+
+problem. The clarity of the program speaks for itself.
+
+
+
+    We use the state-transition framework for solving another classic search pr*
+ *ob-
+
+
+lem from recreational mathematics | the water jugs problem. There are two jugs
+
+
+of capacity 8 and 5 liters with no markings, and the problem is to measure out
+
+
+exactly 4 liters from a vat containing 20 liters (or some other large number). *
+ *The
+
+
+possible operations are filling up a jug from the vat, emptying a jug into the *
+ *vat,
+
+
+and transferring the contents of one jug to another until either the pouring ju*
+ *g is
+
+
+emptied completely, or the other jug is filled to capacity. The problem is depi*
+ *cted
+
+
+in Figure 20.1.
+
+
+
+    The problem can be generalized to N jugs of capacity C1,: :,:CN . The prob-
+
+
+lem is to measure a volume V , different from all the Ci but less than the larg*
+ *est.
+
+
+There is a solution if V is a multiple of the greatest common divisor of the Ci.
+
+
+Our particular example is solvable because 4 is a multiple of the greatest comm*
+ *on
+
+
+divisor of 8 and 5.
+
+
+
+    The particular problem we solve is for two jugs of arbitrary capacity, but
+
+
+
+
+352   Search Techniques                                          20.1
+
+
+
+the approach is immediately generalizable to any number of jugs. The program
+
+
+assumes two facts in the database, capacity(I,CI), for I equals 1 and 2. The
+
+
+natural representation of the state is a structure jugs(V1,V2), where V1 and V2
+
+
+represent the volumes of liquid currently in the two jugs.  The initial state is
+
+
+jugs(0,0) and the desired final state either jugs(0,X) or jugs(X,0), where X is
+
+
+the desired volume. In fact, the only final state that needs to be specified is*
+ * that
+
+
+the desired volume be in the larger jug. The volume can be transferred from the
+
+
+smaller volume, if it fits, by emptying the larger jug and pouring the contents*
+ * of
+
+
+the smaller jug into the larger one.
+
+
+
+    Data for solving the jugs problem in conjunction with Program 20.1 are given
+
+
+in Program 20.3. There are six moves: filling each jug, emptying each jug, and
+
+
+transferring the contents of one jug to another. A sample fact for filling the *
+ *first
+
+
+jug is move(jugs(V1,V2),fill(1)). The jugs' state is given explicitly to allow
+
+
+the data to coexist with other problem-solving data such as in Program 20.2.
+
+
+The emptying moves are optimized to prevent emptying an already empty jug.
+
+
+The updating procedure associated with the first four moves is simple, while the
+
+
+transferring operation has two cases. If the total volume in the jugs is less t*
+ *han
+
+
+the capacity of the jug being filled, the pouring jug will be emptied and the o*
+ *ther
+
+
+jug will have the entire volume. Otherwise the other jug will be filled to capa*
+ *city
+
+
+and the difference between the total liquid volume and the capacity of the fill*
+ *ed
+
+
+jug will be left in the pouring jug. This is achieved by the predicate adjust/4.
+
+
+Note that the test for legality is trivial because all reachable states are leg*
+ *al.
+
+
+
+    Most interesting problems have too large a search space to be searched ex-
+
+
+
+
+20.1                                    Searching State-Space Graphs353
+
+
+
+        initial_state(jugs,jugs(0,0)).
+
+
+        final_state(jugs(4,V)).
+
+
+        final_state(jugs(V,4).
+
+
+        move(jugs(V1,V2),fill(1)).
+
+
+        move(jugs(V1,V2),fill(2)).
+
+
+        move(jugs(V1,V2),empty(1))   V1 > 0.
+
+
+        move(jugs(V1,V2),empty(2))   V2 > 0.
+
+
+        move(jugs(V1,V2),transfer(2,1)).
+
+
+        move(jugs(V1,V2),transfer(1,2)).
+
+
+        update(jugs(V1,V2),fill(1),jugs(C1,V2))   capacity(1,C1).
+
+
+        update(jugs(V1,V2),fill(2),jugs(V1,C2))   capacity(2,C2).
+
+
+        update(jugs(V1,V2),empty(1),jugs(0,V2)).
+
+
+        update(jugs(V1,V2),empty(2),jugs(V1,0)).
+
+
+        update(jugs(V1,V2),transfer(2,1),jugs(W1,W2))  
+
+
+            capacity(1,C1),
+
+
+            Liquid is V1 + V2,
+
+
+            Excess is Liquid - C1,
+
+
+            adjust(Liquid,Excess,W1,W2).
+
+
+        update(jugs(V1,V2),transfer(1,2),jugs(W1,W2))  
+
+
+            capacity(2,C2),
+
+
+            Liquid is V1 + V2,
+
+
+            Excess is Liquid - C2,
+
+
+            adjust(Liquid,Excess,W2,W1).
+
+
+        adjust(Liquid,Excess,Liquid,0)   Excess  0.
+
+
+        adjust(Liquid,Excess,V,Excess)  
+
+
+            Excess > 0, V is Liquid - Excess.
+
+
+        legal(jugs(V1,V2)).
+
+
+        capacity(1,8).
+
+
+        capacity(2,5).
+
+
+
+        Program 20.3:  Solving the water jugs problem
+
+
+
+
+354   Search Techniques                                          20.1
+
+
+
+haustively by a program like 20.1. One possibility for improvement is to put mo*
+ *re
+
+
+knowledge into the moves allowed. Solutions to the jug problem can be found by
+
+
+filling one of the jugs whenever possible, emptying the other whenever possible,
+
+
+and otherwise transferring the contents of the jug being filled to the jug being
+
+
+emptied. Thus instead of six moves only three need be specified, and the search
+
+
+will be more direct, because only one move will be applicable to any given stat*
+ *e.
+
+
+This may not give an optimal solution if the wrong jug to be constantly filled *
+ *is
+
+
+chosen.
+
+
+
+    Developing this point further, the three moves can be coalesced into a high*
+ *er-
+
+
+level move, fill_and_transfer.  This tactic fills one jug and transfers all its
+
+
+contents to the other jug, emptying the other jug as necessary.  The code for
+
+
+transferring from the bigger to the smaller jug is
+
+
+
+        move(jugs(V1,V2),fill_and_transfer(1)).
+
+
+        update(jugs(V1,V2),fill_and_transfer(1),jugs(0,V))  
+
+
+            capacity(1,C1),
+
+
+            capacity(2,C2),
+
+
+            C1 > C2,
+
+
+            V is (C1+V2) mod C2.
+
+
+
+    Using this program, we need only three fill and transfer operations to solve
+
+
+the problem in Figure 20.1.
+
+
+
+    Adding such domain knowledge means changing the problem description en-
+
+
+tirely and constitutes programming, although at a different level.
+
+
+
+
+20.1                                    Searching State-Space Graphs355
+
+
+
+    Another possibility for improvement of the search performance, investigated
+
+
+by early research in AI, is heuristic guidance. A general framework, based on a
+
+
+more explicit choice of the next state to search in the state-space graph, is u*
+ *sed.
+
+
+The choice depends on numeric scores assigned to positions. The score, computed
+
+
+by an evaluation function, is a measure of the goodness of the position. Depth-*
+ *first
+
+
+search can be considered a special case of searching using an evaluation functi*
+ *on
+
+
+whose value is the distance of the current state to the initial state, while br*
+ *eadth-
+
+
+first search uses an evaluation function which is the inverse of that distance.
+
+
+
+    We show two search techniques that use an evaluation function explic-
+
+
+itly:  hill  climbing  and  best-first  search.   In  the  following,  the  pre*
+ *dicate
+
+
+value(State,Value) is an evaluation function.  The techniques are described
+
+
+abstractly.
+
+
+
+    Hill climbing is a generalization of depth-first search where the successor
+
+
+position with the highest score is chosen rather than the leftmost one chosen
+
+
+by Prolog.  The problem-solving framework of Program 20.1 is easily adapted.
+
+
+The hill climbing move generates all the states that can be reached from the
+
+
+current state in a single move, and then orders them in decreasing order with
+
+
+respect to the values computed by the evaluation function. The predicate evalu-
+
+
+ate_and_order(Moves,State,MVs) determines the relation that MVs is an ordered
+
+
+list of move-value tuples corresponding to the list of moves Moves from a state
+
+
+State. The overall program is given as Program 20.4.
+
+
+
+    To demonstrate the behavior of the program we use the example tree of Pro-
+
+
+gram 14.8 augmented with a value for each move. This is given as Program 20.5.
+
+
+
+
+356   Search Techniques                                          20.1
+
+
+
+        solve_hill_climb(State,History,Moves)  
+
+
+            Moves is the sequence of moves to reach a
+
+
+            desired final state from the current State,
+
+
+            where History is a list of the states visited previously.
+
+
+        solve_hill_climb(State,History,[ ])  
+
+
+            final_state(State).
+
+
+        solve_hill_climb(State,History,[MovejMoves])  
+
+
+            hill_climb(State,Move),
+
+
+            update(State,Move,State1),
+
+
+            legal(State1),
+
+
+            not member(State1,History),
+
+
+            solve_hill_climb(State1,[State1jHistory],Moves).
+
+
+        hill_climb(State,Move)  
+
+
+            findall(M,move(State,M),Moves),
+
+
+            evaluate_and_order(Moves,State,[ ],MVs),
+
+
+            member((Move,Value),MVs).
+
+
+        evaluate_and_order(Moves,State,SoFar,OrderedMVs)  
+
+
+            All the Moves from the current State
+
+
+            are evaluated and ordered as OrderedMVs.
+
+
+            SoFar is an accumulator for partial computations.
+
+
+        evaluate_and_order([MovejMoves],State,MVs,OrderedMVs)  
+
+
+            update(State,Move,State1),
+
+
+            value(State1,Value),
+
+
+            insert((Move,Value),MVs,MVs1),
+
+
+            evaluate_and_order(Moves,State,MVs1,OrderedMVs).
+
+
+        evaluate_and_order([ ],State,MVs,MVs).
+
+
+        insert(MV,[ ],[MV]).
+
+
+        insert((M,V),[(M1,V1)jMVs],[(M,V),(M1,V1)jMVs])  
+
+
+            V  V1.
+
+
+        insert((M,V),[(M1,V1)jMVs],[(M1,V1)jMVs1])  
+
+
+            V < V1, insert((M,V),MVs,MVs1).
+
+
+        Testing the framework
+
+
+        test_hill_climb(Problem,Moves)  
+
+
+            initial_state(Problem,State),
+
+
+            solve_hill_climb(State,[State],Moves).
+
+
+
+        Program 20.4:  Hill climbing framework for problem solving
+
+
+
+
+20.1                                    Searching State-Space Graphs357
+
+
+
+        initial_state(tree,a).    value(a,0).    final_state(j).
+
+
+        move(a,b).    value(b,1).    move(c,g).    value(g,6).
+
+
+        move(a,c).    value(c,5).    move(d,j).    value(j,9).
+
+
+        move(a,d).    value(d,7).    move(e,k).    value(k,1).
+
+
+        move(a,e).    value(e,2).    move(f,h).    value(h,3).
+
+
+        move(c,f).    value(f,4).    move(f,i).    value(i,2).
+
+
+
+        Program 20.5:  Test data
+
+
+
+Program 20.4, combined with Program 20.5and appropriate definitions of update
+
+
+and legal searches the tree in the order a, d, j. The program is easily tested *
+ *on
+
+
+the wolf, goat, and cabbage problem using as the evaluation function the number
+
+
+of occupants on the right bank.
+
+
+    Program 20.4 contains a repeated computation. The state reached by Move
+
+
+is calculated in order to reach a value for the move and then recalculated by
+
+
+update. This recalculation can be avoided by adding an extra argument to move
+
+
+and keeping the state along with the move and the value as the moves are ordere*
+ *d.
+
+
+Another possibility if there will be many calculations of the same move is using
+
+
+a memo-function. What is the most efficient method depends on the particular
+
+
+problem.  For problems where the update procedure is simple, the program as
+
+
+presented will be best.
+
+
+    Hill climbing is a good technique when there is only one hill and the evalu*
+ *ation
+
+
+function is a good indication of progress. Essentially, it takes a local look a*
+ *t the
+
+
+state-space graph, making the decision on where next to search on the basis of
+
+
+
+
+358   Search Techniques                                          20.1
+
+
+
+the current state alone.
+
+
+
+    An alternative search method, called best-first search, takes a global look*
+ * at
+
+
+the complete state-space. The best state from all those currently unsearched is
+
+
+chosen.
+
+
+
+    Program 20.6 for best-first search is a generalization of breadth-first sea*
+ *rch
+
+
+given in Section 16.2.  A frontier is kept as for breadth-first search, which is
+
+
+updated as the search progresses. At each stage, the next best available move is
+
+
+made. We make the code as similar as possible to Program 20.4 for hill climbing
+
+
+to allow comparison.
+
+
+
+    At each stage of the search, there is a set of moves to consider rather than
+
+
+a single one.  The plural predicate names, for example, updates and legals,
+
+
+indicate this.  Thus legals(States,States1) filters a set of successor states,
+
+
+checking which ones are allowed by the constraints of the problem. One disad-
+
+
+vantage of breadth-first search (and hence best-first search) is that the path *
+ *to
+
+
+take is not as conveniently calculated. Each state must store explicitly with i*
+ *t the
+
+
+path used to reach it. This is reflected in the code.
+
+
+
+    Program 20.6 tested on the data of Program 20.5 searches the tree in the
+
+
+same order as for hill climbing.
+
+
+
+    Program 20.6 makes each step of the process explicit. In practice, it may be
+
+
+more efficient to combine some of the steps. When filtering the generated state*
+ *s,
+
+
+for example, we can test that a state is new and also legal at the same time. T*
+ *his
+
+
+saves generating intermediate data structures. Program 20.7 illustrates the idea
+
+
+
+
+20.1                                    Searching State-Space Graphs359
+
+
+
+solve_best(Frontier,History,Moves)  
+
+
+    Moves is a sequence of moves to reach a desired final state from
+
+
+    the initial state, where Frontier contains the current states under
+
+
+    consideration, and History contains the states visited previously.
+
+
+solve_best([state(State,Path,Value)jFrontier],History,Moves)  
+
+
+    final_state(State), reverse(Path,Moves).
+
+
+solve_best([state(State,Path,Value)jFrontier],History,FinalPath)  
+
+
+    findall(M,move(State,M),Moves),
+
+
+    updates(Moves,Path,State,States),
+
+
+    legals(States,States1),
+
+
+    news(States1,History,States2),
+
+
+    evaluates(States2,Values),
+
+
+    inserts(Values,Frontier,Frontier1),
+
+
+    solve_best(Frontier1,[StatejHistory],FinalPath).
+
+
+updates(Moves,Path,State,States)  
+
+
+    States is the list of possible states accessible from the
+
+
+    current State, according to the list of possible Moves,
+
+
+    where Path is a path from the initial node to State.
+
+
+updates([MjMs],Path,S,[(S1,[MjPath])jSs])  
+
+
+    update(S,M,S1), updates(Ms,Path,S,Ss).
+
+
+updates([ ],Path,State,[ ]).
+
+
+legals(States,States1 )  
+
+
+    States1  is the subset of the list of States that are legal.
+
+
+legals([(S,P)jStates],[(S,P)jStates1])  
+
+
+    legal(S), legals(States,States1).
+
+
+legals([(S,P)jStates],States1)  
+
+
+    not legal(S), legals(States,States1).
+
+
+legals([ ],[ ]).
+
+
+news(States,History,States1 )  
+
+
+    States1  is the list of states in States but not in History.
+
+
+news([(S,P)jStates],History,States1)  
+
+
+    member(S,History), news(States,History,States1).
+
+
+news([(S,P)jStates],History,[(S,P)jStates1])  
+
+
+    not member(S,History), news(States,History,States1).
+
+
+news([ ],History,[ ]).
+
+
+
+Program 20.6:  Best-first framework for problem solving
+
+
+
+
+360   Search Techniques                                          20.1
+
+
+
+evaluates(States,Values)  
+
+
+    Values is the list of tuples of States augmented by their value.
+
+
+evaluates([(S,P)jStates],[state(S,P,V)jValues])  
+
+
+    value(S,V), evaluates(States,Values).
+
+
+evaluates([ ],[ ]).
+
+
+inserts(States,Frontier,Frontier1 )  
+
+
+    Frontier1  is the result of inserting States into the current Frontier.
+
+
+inserts([ValuejValues],Frontier,Frontier1)  
+
+
+    insert(Value,Frontier,Frontier0),
+
+
+    inserts(Values,Frontier0,Frontier1).
+
+
+inserts([ ],Frontier,Frontier).
+
+
+insert(State,[ ],[State]).
+
+
+insert(State,[State1jStates],[State,State1jStates]  
+
+
+    lesseq_value(State,State1).
+
+
+insert(State,[State1jStates],[StatejStates])  
+
+
+    equals(State,State1).
+
+
+insert(State,[State1jStates],[State1jStates1])  
+
+
+    greater_value(State,State1), insert(State,States,States1).
+
+
+equals(state(S,P,V),state(S,P1,V)).
+
+
+lesseq_value(state(S1,P1,V1),state(S2,P2,V2))   S1 6= S2, V1  V2.
+
+
+greater_value(state(S1,P1,V1),state(S2,P2,V2))   V1 > V2.
+
+
+
+Program 20.6  (Continued)
+
+
+
+
+20.1                                    Searching State-Space Graphs361
+
+
+
+solve_best(Frontier,History,Moves)  
+
+
+    Moves is a sequence of moves to reach a desired final state
+
+
+    from the initial state.  Frontier contains the current states
+
+
+    under consideration.  History contains the states visited previously.
+
+
+solve_best([state(State,Path,Value)jFrontier],History,Moves)  
+
+
+    final_state(State), reverse(Path,[ ],Moves).
+
+
+solve_best([state(State,Path,Value)jFrontier],History,FinalPath)  
+
+
+    findall(M,move(State,M),Moves),
+
+
+    update_frontier(Moves,State,Path,History,Frontier,Frontier1),
+
+
+    solve_best(Frontier1,[StatejHistory],FinalPath).
+
+
+update_frontier([MjMs],State,Path,History,F,F1)  
+
+
+    update(State,M,State1),
+
+
+    legal(State1),
+
+
+    value(State1,Value),
+
+
+    not member(State1,History),
+
+
+    insert((State1,[MjPath],Value),F,F0),
+
+
+    update_frontier(Ms,State,Path,History,F0,F1).
+
+
+update_frontier([ ],S,P,H,F,F).
+
+
+insert(State,Frontier,Frontier1)   See Program 20.6.
+
+
+
+Program 20.7:  Concise best-first framework for problem solving
+
+
+
+by combining all the checks into one procedure, update_frontier.
+
+
+
+
+362   Search Techniques                                          20.1
+
+
+
+Exercises for Section 20.1
+
+
+
+(i) Redo the water jugs program based on the two fill-and-transfer operations.
+
+
+
+(ii)Write a program to solve the missionaries and cannibals problem:
+
+
+
+    Three missionaries and three cannibals are standing on the left bank of a
+
+
+    river.  There is a small boat to ferry them across with enough room for
+
+
+    only one or two people. They wish to cross the river. If ever there are more
+
+
+    missionaries than cannibals on a particular bank of the river, the missiona*
+ *ries
+
+
+    will convert the cannibals. Find a series of ferryings to transport safely *
+ *all
+
+
+    the missionaries and cannibals across the river without exposing any of the
+
+
+    cannibals to conversion.
+
+
+
+(iii)Write a program to solve the five jealous husbands problem (Dudeney, 1917):
+
+
+
+    During a certain flood five married couples found themselves surrounded by
+
+
+    water and had to escape from their unpleasant position in a boat that would
+
+
+    only hold three persons at a time.  Every husband was so jealous that he
+
+
+    would not allow his wife to be in the boat or on either bank with another
+
+
+    man (or with other men) unless he himself was present. Find a way of getting
+
+
+    these five men and their wives across to safety.
+
+
+
+(iv)Compose a general problem-solving framework built around breadth-first
+
+
+    search analogous to Program 20.1, based on programs in Section 16.2.
+
+
+
+(v) Express the 8-queens puzzle within the framework. Find an evaluation func-
+
+
+    tion.
+
+
+
+
+20.2                                          Searching Game Trees363
+
+
+
+20.2   Searching Game Trees
+
+
+
+    What happens when we play a game? Starting the game means setting up
+
+
+the chess pieces, dealing out the cards, or setting out the matches, for exampl*
+ *e.
+
+
+Once it is decided who plays first, the players take turns making a move. After
+
+
+each move the game position is updated accordingly.
+
+
+    We develop the vague specification in the previous paragraph into a simple
+
+
+framework for playing games. The top-level statement is
+
+
+        play(Game)  
+
+
+            initialize(Game,Position,Player),
+
+
+            display_game(Position,Player),
+
+
+            play(Position,Player,Result).
+
+
+
+The predicate initialize(Game,Position,Player) determines the initial game
+
+
+position Position for Game, and Player, the player to start.
+
+
+    A game is a sequence of turns, where each turn consists of a player choosing
+
+
+a move, the move being executed, and the next player being determined.  The
+
+
+neatest way of expressing this is as a tail recursive procedure, play, with thr*
+ *ee
+
+
+arguments: a game position, a player to move, and the final result. It is conve-
+
+
+nient to separate the choice of the move by choose_move/3 from its execution by
+
+
+move/3. The remaining predicates in the clause for play/3 display the state of
+
+
+the game and determine the next player:
+
+
+        play(Position,Player,Result)  
+
+
+            choose_move(Position,Player,Move),
+
+
+
+
+364   Search Techniques                                          20.2
+
+
+
+            move(Move,Position,Position1),
+
+
+            display_game(Position1,Player),
+
+
+            next_player(Player,Player1),
+
+
+            !, play(Position1,Player1,Result).
+
+
+
+    Program 20.8 provides a logical framework for game-playing programs. Using
+
+
+it for writing a program for a particular game focuses attention on the importa*
+ *nt
+
+
+issues for game playing: what data structures should be used to represent the g*
+ *ame
+
+
+position, and how strategies for the game should be expressed. We demonstrate
+
+
+the process in Chapter 21 by writing programs to play Nim and Kalah.
+
+
+
+    The problem-solving frameworks of Section 20.1 are readily adapted to play-
+
+
+ing games. Given a particular game state, the problem is to find a path of moves
+
+
+to a winning position.
+
+
+
+    A game tree is similar to a state-space graph.  It is the tree obtained by
+
+
+identifying states with nodes and edges with players' moves. We do not, however,
+
+
+identify nodes on the tree, obtained by different sequences of moves, even if t*
+ *hey
+
+
+repeat the same state. In a game tree, each layer is called a ply.
+
+
+
+    Most game trees are far too large to be searched exhaustively. This section
+
+
+discusses the techniques that have been developed to cope with the large search
+
+
+space for two-person games. In particular, we concentrate on the minimax algo-
+
+
+rithm augmented by alpha-beta pruning. This strategy is used as the basis of a
+
+
+program we present for playing Kalah in Chapter 21.
+
+
+
+    We describe the basic approach of searching game trees using evaluation
+
+
+
+
+20.2                                          Searching Game Trees365
+
+
+
+        play(Game)  
+
+
+            Play game with name Game.
+
+
+        play(Game)  
+
+
+            initialize(Game,Position,Player),
+
+
+            display_game(Position,Player),
+
+
+            play(Position,Player,Result).
+
+
+        play(Position,Player,Result)  
+
+
+            game_over(Position,Player,Result), !, announce(Result).
+
+
+        play(Position,Player,Result)  
+
+
+            choose_move(Position,Player,Move),
+
+
+            move(Move,Position,Position1),
+
+
+            display_game(Position1,Player),
+
+
+            next_player(Player,Player1),
+
+
+            !, play(Position1,Player1,Result).
+
+
+
+        Program 20.8:  Framework for playing games
+
+
+
+functions. Again, in this section value(Position,Value) denotes an evaluation
+
+
+function computing the Value of Position, the current state of the game. Here
+
+
+is a simple algorithm for choosing the next move:
+
+
+
+        Find all possible game states that can be reached in one move.
+
+
+        Compute the values of the states using the evaluation function.
+
+
+        Choose the move that leads to the position with the highest score.
+
+
+
+
+366   Search Techniques                                          20.2
+
+
+
+    evaluate_and_choose(Moves,Position,Record,BestMove)  
+
+
+        Chooses the BestMove from the set of Moves from the
+
+
+        current Position.  Record records the current best move.
+
+
+    evaluate_and_choose([MovejMoves],Position,Record,BestMove)  
+
+
+        move(Move,Position,Position1),
+
+
+        value(Position1,Value),
+
+
+        update(Move,Value,Record,Record1),
+
+
+        evaluate_and_choose(Moves,Position,Record1,BestMove).
+
+
+    evaluate_and_choose([ ],Position,(Move,Value),Move).
+
+
+    update(Move,Value,(Move1,Value1),(Move1,Value1))  
+
+
+        Value  Value1.
+
+
+    update(Move,Value,(Move1,Value1),(Move,Value))  
+
+
+        Value > Value1.
+
+
+
+    Program 20.9:  Choosing the best move
+
+
+
+This  algorithm  is  encoded  as  Program  20.9.    It  assumes  a  predicate
+
+
+move(Move,Position,Position1) that applies a Move to the current Position
+
+
+to reach Position1.  The interface to the game framework of Program 20.8 is
+
+
+provided by the clause
+
+
+
+        choose_move(Position,computer,Move)  
+
+
+            findall(M,move(Position,M),Moves),
+
+
+            evaluate_and_choose(Moves,Position,(nil,-1000),Move).
+
+
+
+
+20.2                                          Searching Game Trees367
+
+
+
+The predicate move(Position,Move) is true if Move is a possible move from the
+
+
+current position.
+
+
+    The basic relation is evaluate_and_choose(Moves,Position,Record,BestMove)
+
+
+which chooses the best move BestMove in the possible Moves from a given Posi-
+
+
+tion. For each of the possible moves, the corresponding position is determined,
+
+
+its value is calculated, and the move with the highest value is chosen. Record *
+ *is
+
+
+a record of the current best move so far. In Program 20.9, it is represented as*
+ * a
+
+
+tuple (Move,Value).  The structure of Record has been partially abstracted in
+
+
+the procedure update/4. How much data abstraction to use is a matter of style
+
+
+and a trade-off among readability, conciseness, and performance.
+
+
+    Looking ahead one move, the approach of Program 20.9, would be sufficient if
+
+
+the evaluation function were perfect, that is, if the score reflected which pos*
+ *itions
+
+
+led to a win and which to a loss.  Games become interesting when a perfect
+
+
+evaluation function is not known. Choosing a move on the basis of looking ahead
+
+
+one move is generally not a good strategy. It is better to look several moves a*
+ *head
+
+
+and to infer from what is found the best move to make.
+
+
+    The minimax algorithm is the standard method for determining the value of
+
+
+a position based on searching the game tree several ply ahead.
+
+
+    The algorithm assumes that, when confronted with several choices, the op-
+
+
+ponent would make the best choice for her, i.e., the worst choice for me.  My
+
+
+goal then is to make the move that maximizes for me the value of the position
+
+
+after the opponent has made her best move, i.e., that minimizes the value for h*
+ *er.
+
+
+Hence the name minimax. This reasoning proceeds several ply ahead, depending
+
+
+
+
+368   Search Techniques                                          20.2
+
+
+
+on the resources that can be allocated to the search. At the last ply the evalu*
+ *ation
+
+
+function is used.
+
+
+    Assuming a reasonable evaluation function, the algorithm will produce better
+
+
+results the more ply are searched. It will produce the best move if the entire *
+ *tree
+
+
+is searched.
+
+
+    The minimax algorithm is justified by a zero-sum assumption, which says,
+
+
+informally, that what is good for me must be bad for my opponent, and vice vers*
+ *a.
+
+
+
+                    Figure 20.2:  A simple game tree
+
+
+
+    Figure 20.2 depicts a simple game tree of depth 2 ply. The player has two
+
+
+moves in the current position, and the opponent has two replies. The values of
+
+
+the leaf nodes are the values for the player. The opponent wants to minimize the
+
+
+score, so will choose the minimum values, making the positions be worth +1 and
+
+
+1 at one level higher in the tree. The player wants to maximize the value and
+
+
+will choose the node with value +1.
+
+
+
+
+20.2                                          Searching Game Trees369
+
+
+
+evaluate_and_choose(Moves,Position,Depth,Flag,Record,BestMove)  
+
+
+    Choose the BestMove from the set of Moves from the current
+
+
+    Position using the minimax algorithm searching Depth ply ahead.
+
+
+    Flag indicates if we are currently minimizing or maximizing.
+
+
+    Record records the current best move.
+
+
+evaluate_and_choose([MovejMoves],Position,D,MaxMin,Record,Best)  
+
+
+    move(Move,Position,Position1),
+
+
+    minimax(D,Position1,MaxMin,MoveX,Value),
+
+
+    update(Move,Value,Record,Record1),
+
+
+    evaluate_and_choose(Moves,Position,D,MaxMin,Record1,Best).
+
+
+evaluate_and_choose([ ],Position,D,MaxMin,Record,Record).
+
+
+minimax(0,Position,MaxMin,Move,Value)  
+
+
+    value(Position,V),
+
+
+    Value is VMaxMin.
+
+
+minimax(D,Position,MaxMin,Move,Value)  
+
+
+    D > 0,
+
+
+    findall(M,move(Position,M),Moves),
+
+
+    D1 is D - 1,
+
+
+    MinMax is -MaxMin,
+
+
+    evaluate_and_choose(Moves,Position,D1,MinMax, (nil,-1000),
+
+
+        (Move,Value)).
+
+
+update(Move,Value,Record,Record1)   See Program 20.9.
+
+
+
+Program 20.10:  Choosing the best move with the minimax algorithm
+
+
+
+
+370   Search Techniques                                          20.2
+
+
+
+    Program 20.10 encodes the minimax algorithm. The basic relation is min-
+
+
+imax(D,Position,MaxMin,Move,Value), which is true if Move is the move with
+
+
+the highest Value from Position obtained by searching D ply in the game tree.
+
+
+MaxMin is a flag that indicates if we are maximizing or minimizing.  It is 1 for
+
+
+maximizing and 1 for minimizing, the particular values being chosen for ease of
+
+
+manipulation by simple arithmetic operations. A generalization of Program 20.9
+
+
+is used to choose from the set of moves.  Two extra arguments must be added
+
+
+to evaluate_and_choose:  the number of ply D and the flag MaxMin.  The last
+
+
+argument is generalized to return a record including both a move and a value
+
+
+rather than just a move. The minimax procedure does the bookkeeping, changing
+
+
+the number of moves being looked ahead and also the minimax flag. The initial
+
+
+record is (nil,-1000), where nil represents an arbitrary move and -1000 is a
+
+
+score intended to be less than any possible score of the evaluation function.
+
+
+
+    The observation about efficiency that was made about combining the move
+
+
+generation and update procedures in the context of searching state-space graphs
+
+
+has an analogue when searching game trees. Whether it is better to compute the
+
+
+set of positions rather than the set of moves (with the corresponding change in
+
+
+algorithm) will depend on the particular application.
+
+
+
+    The minimax algorithm can be improved by keeping track of the results of
+
+
+the search so far, using a technique known as alpha-beta pruning. The idea is to
+
+
+keep for each node the estimated minimum value found so far, the alpha value,
+
+
+along with the estimated maximum value, beta. If, on evaluating a node, beta is
+
+
+exceeded, no more search on that branch is necessary. In good cases, more than
+
+
+
+
+20.3                                                  Background  371
+
+
+
+half the positions in the game tree need not be evaluated.
+
+
+    Program 20.11 is a modified version of Program 20.10 that incorporates
+
+
+alpha-beta pruning. The new relation scheme is alpha_beta(Depth,Position,
+
+
+Alpha,Beta,Move,Value), which extends minimax by replacing the minimax
+
+
+flag with alpha and beta.  The same relation holds with respect to evalu-
+
+
+ate_and_choose.
+
+
+    Unlike the one in Program 20.10, the version of evaluate_and_choose in
+
+
+Program 20.11 does not need to search all possibilities. This is achieved by in-
+
+
+troducing a predicate cutoff, which either stops searching the current branch or
+
+
+continues the search, updating the value of alpha and the current best move as
+
+
+appropriate.
+
+
+    For example, the last node in the game tree in Figure 20.2 does not need to
+
+
+be searched. Once a move with value 1 is found, which is less than the value of
+
+
++1 the player is guaranteed, no other nodes can contribute to the final score.
+
+
+    The program can be generalized by replacing the base case of alpha_beta by
+
+
+a test of whether the position is terminal. This is necessary in chess programs,
+
+
+for example, for handling incomplete piece exchanges.
+
+
+
+20.3   Background
+
+
+
+    Search techniques for both planning and game playing are discussed in AI
+
+
+textbooks. For further details of search strategies or the minimax algorithm and
+
+
+its extension to alpha-beta pruning, see, for example, Nilsson (1971) or Winston
+
+
+
+
+372   Search Techniques                                          20.3
+
+
+evaluate_and_choose(Moves,Position,Depth,Alpha,Beta,Record,BestMove)  
+
+
+    Chooses the BestMove from the set of Moves from the current
+
+
+    Position using the minimax algorithm with alpha-beta cutoff searching
+
+
+    Depth ply ahead.  Alpha and Beta are the parameters of the algorithm.
+
+
+    Record records the current best move.
+
+
+evaluate_and_choose([MovejMoves],Position,D,Alpha,Beta,Move1,
+
+
+        BestMove)  
+
+
+    move(Move,Position,Position1),
+
+
+    alpha_beta(D,Position1,Alpha,Beta,MoveX,Value),
+
+
+    Value1 is -Value,
+
+
+    cutoff(Move,Value1,D,Alpha,Beta,Moves,Position,Move1,BestMove).
+
+
+evaluate_and_choose([ ],Position,D,Alpha,Beta,Move,(Move,Alpha)).
+
+
+alpha_beta(0,Position,Alpha,Beta,Move,Value)  
+
+
+    value(Position,Value).
+
+
+alpha_beta(D,Position,Alpha,Beta,Move,Value)  
+
+
+    findall(M,move(Position,M),Moves),
+
+
+    Alpha1 is -Beta,
+
+
+    Beta1 is -Alpha,
+
+
+    D1 is D-1,
+
+
+    evaluate_and_choose(Moves,Position,D1,Alpha1,Beta1,nil,
+
+
+            (Move,Value)).
+
+
+cutoff(Move,Value,D,Alpha,Beta,Moves,Position,Move1,(Move,Value))  
+
+
+    Value  Beta.
+
+
+cutoff(Move,Value,D,Alpha,Beta,Moves,Position,Move1,BestMove)  
+
+
+    Alpha < Value, Value < Beta,
+
+
+    evaluate_and_choose(Moves,Position,D,Value,Beta,Move,BestMove).
+
+
+cutoff(Move,Value,D,Alpha,Beta,Moves,Position,Move1,BestMove)  
+
+
+    Value  Alpha,
+
+
+    evaluate_and_choose(Moves,Position,D,Alpha,Beta,Move1,BestMove).
+
+
+
+Program 20.11:  Choosing a move using minimax with alpha-beta pruning
+
+
+
+
+20.3                                                  Background  373
+
+
+
+(1977).
+
+
+    Walter Wilson originally showed us the alpha-beta algorithm in Prolog.

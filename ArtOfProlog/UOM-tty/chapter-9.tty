@@ -1,0 +1,1355 @@
+
+
+
+
+                                            Chapter 9
+
+
+
+                       Structure  Inspection
+
+
+
+   Standard Prolog has several predicates related to the structure of terms.
+
+
+These predicates are used to recognize the different types of terms, to decompo*
+ *se
+
+
+terms into their functor and arguments, and to create new terms. This chapter
+
+
+discusses the use of predicates related to term structure.
+
+
+
+9.1   Type Predicates
+
+
+
+   Type predicates are unary relations that distinguish between the different
+
+
+types of terms.  System predicates exist that test whether a given term is a
+
+
+structure or a constant, and further, whether a constant is an atom, an integer*
+ * or
+
+
+floating-point. Figure 9.1 gives the four basic type predicates in Standard Pro*
+ *log,
+
+
+together with their intended meanings.
+
+
+   Each of the basic predicates in Figure 9.1 can be regarded as an infinite ta*
+ *ble
+
+
+of facts. The predicate integer/1 would consist of a table of integers:
+
+
+       integer(0).  integer(1).  integer(-1).  : : :
+
+
+
+
+9.1                                         Type Predicates139
+
+
+              integer(X)   X is an integer.
+
+
+              atom(X)   X is an atom.
+
+
+              real(X)   X is a floating-point number.
+
+
+              compound(X)   X is a compound term.
+
+
+              Figure 9.1: Basic system type predicates
+
+
+
+The predicate atom/1 would consist of a table of atoms in the program:
+
+
+
+       atom(foo).  atom(bar).  : : :
+
+
+
+The predicate compound/1 would consist of a table of the function symbols in the
+
+
+program with variable arguments, etc.
+
+
+
+       compound(father(X,Y)).  compound(son(X,Y)).  : : :
+
+
+
+   Other type predicates can be built from the basic type predicates. For ex-
+
+
+ample, that a number is either an integer or floating-point can be represented *
+ *by
+
+
+two clauses:
+
+
+
+       number(X)   integer(X).
+
+
+       number(X)   real(X).
+
+
+
+   Standard Prolog includes a predicate number/1 effectively defined in this wa*
+ *y.
+
+
+It also includes a predicate atomic(X), which is true if X is an atom or a numb*
+ *er.
+
+
+In this book, we prefer to call the predicate constant/1. To run under Standard
+
+
+Prolog, the following clause may be necessary:
+
+
+
+       constant(X)   atomic(X).
+
+
+
+
+140   Structure Inspection                               9.1
+
+
+
+   To illustrate the use of type predicates, the query integer(3)? would suc-
+
+
+ceed, but the query atom(3)? would fail. One might expect that a call to a type
+
+
+predicate with a variable argument, such as integer(X)?, would generate differ-
+
+
+ent integers on backtracking. This is not practical for implementation, however,
+
+
+and we would prefer that such a call report an error condition. In fact, Standa*
+ *rd
+
+
+Prolog specifies that the call integer(X)? should fail.
+
+
+   The only terms not covered by the predicates in Figure 9.1 are variables.
+
+
+Prolog does provide system predicates relating to variables. The use of such pr*
+ *ed-
+
+
+icates, however, is conceptually very different from the use of structure inspe*
+ *c-
+
+
+tion predicates described in this chapter. Meta-logical predicates (their techn*
+ *ical
+
+
+name) are the subject of Chapter 10.
+
+
+   We give an example of the use of a type predicate as part of a program for
+
+
+flattening a list of lists. The relation flatten(Xs,Ys) is true if Ys is the li*
+ *st of
+
+
+elements occurring in the list of lists Xs. The elements of Xs can themselves be
+
+
+lists or elements, so elements can be arbitrarily deeply nested. An example of a
+
+
+goal in the meaning of flatten is flatten([[a],[b,[c,d]],e],[a,b,c,d,e]).
+
+
+   The simplest program for flattening uses double recursion.  To flatten an
+
+
+arbitrary list [XjXs], where X can itself be a list, flatten the head of the li*
+ *st X,
+
+
+flatten the tail of the list Xs, and concatenate the results:
+
+
+
+       flatten([XjXs],Ys)  
+
+
+          flatten(X,Ys1), flatten(Xs,Ys2), append(Ys1,Ys2,Ys).
+
+
+
+What are the base cases? The empty list is flattened to itself. A type predicate
+
+
+
+
+9.1                                         Type Predicates141
+
+
+
+is necessary for the remaining case. The result of flattening a constant is a l*
+ *ist
+
+
+containing the constant:
+
+
+
+       flatten(X,[X])   constant(X), X6=[ ].
+
+
+
+The condition constant(X) is necessary to prevent the rule being used when X is
+
+
+a list. The complete program for flatten is given as Program 9.1a.
+
+
+       flatten(Xs,Ys)  
+
+
+          Ys is a list of the elements of Xs.
+
+
+       flatten([XjXs],Ys)  
+
+
+          flatten(X,Ys1), flatten(Xs,Ys2), append(Ys1,Ys2,Ys).
+
+
+       flatten(X,[X])  
+
+
+          constant(X), X6=[ ].
+
+
+       flatten([ ],[ ]).
+
+
+
+       Program 9.1a: Flattening a list with double recursion
+
+
+
+   Program 9.1a, although very clear declaratively, is not the most efficient w*
+ *ay
+
+
+of flattening a list.  In the worst case, which is a left-linear tree, the prog*
+ *ram
+
+
+would require a number of reductions whose order is quadratic in the number of
+
+
+elements in the flattened list.
+
+
+   A program for flatten that constructs the flattened list top-down is a little
+
+
+more involved than the doubly recursive version. It uses an auxiliary predicate
+
+
+flatten(Xs,Stack,Ys), where Ys is a flattened list containing the elements in
+
+
+Xs and a stack Stack to keep track of what needs to be flattened. The stack is
+
+
+
+
+142   Structure Inspection                               9.1
+
+
+
+represented as a list.
+
+
+   The call of flatten/3 by flatten/2 initializes the stack to the empty list.
+
+
+We discuss the cases covered by flatten/3. The general case is flattening a list
+
+
+[XjXs], where X is itself a list. In this case Xs is pushed onto the stack, and*
+ * X
+
+
+is recursively flattened. The predicate list(X) is used to recognize a list. It*
+ * is
+
+
+defined by the fact list([XjXs]):
+
+
+
+       flatten([XjXs],S,Ys)   list(X), flatten(X,[XsjS],Ys).
+
+
+
+When the head of the list is a constant other then the empty list, it is added *
+ *to
+
+
+the output, and the tail of the list is flattened recursively:
+
+
+
+   flatten([XjXs],S,[XjYs])   constant(X),X6=[ ], flatten(Xs,S,Ys).
+
+
+
+When the end of the list is reached, there are two possibilities, depending on *
+ *the
+
+
+state of the stack. If the stack is nonempty, the top element is popped, and the
+
+
+flattening continues:
+
+
+
+       flatten([ ],[XjS],Ys)   flatten(X,S,Ys).
+
+
+
+If the stack is empty, the computation terminates:
+
+
+
+       flatten([ ],[ ],[ ]).
+
+
+
+The complete program is given as Program 9.1b.
+
+
+   A general technique of using a stack is demonstrated in Program 9.1b. The
+
+
+stack is managed by unification. Items are pushed onto the stack by recursive
+
+
+calls to a consed list. Items are popped by unifying with the head of the list *
+ *and
+
+
+
+
+9.1                                         Type Predicates143
+
+
+       flatten(Xs,Ys)  
+
+
+          Ys is a list of the elements of Xs.
+
+
+       flatten(Xs,Ys)   flatten(Xs,[ ],Ys).
+
+
+       flatten([XjXs],S,Ys)  
+
+
+          list(X), flatten(X,[XsjS],Ys).
+
+
+       flatten([XjXs],S,[XjYs])  
+
+
+          constant(X), X6=[ ], flatten(Xs,S,Ys).
+
+
+       flatten([ ],[XjS],Ys)  
+
+
+          flatten(X,S,Ys).
+
+
+       flatten([ ],[ ],[ ]).
+
+
+       list([XjXs]).
+
+
+
+       Program 9.1b: Flattening a list using a stack
+
+
+
+recursive calls to the tail. Another application of stacks appears in Programs *
+ *17.3
+
+
+and 17.4 simulating pushdown automata.
+
+
+   Note that the stack parameter is an example of an accumulator.
+
+
+   The reader can verify that the revised program requires a number of reduc-
+
+
+tions linear in the size of the flattened list.
+
+
+
+Exercise for Section 9.1
+
+
+
+(i)Rewrite Program 9.1a for flatten(Xs,Ys) to use an accumulator instead of
+
+
+   the call to append, keeping it doubly recursive.
+
+
+
+
+144   Structure Inspection                               9.1
+
+
+
+9.2   Accessing Compound Terms
+
+
+
+   Recognizing a term as compound is one aspect of structure inspection.
+
+
+Another aspect is providing access to the functor name, arity, and argu-
+
+
+ments of a compound term.  One system predicate for delving into compound
+
+
+terms is functor(Term,F,Arity).  This predicate is true if Term is a term
+
+
+whose principal functor has name F and arity Arity.  For example, func-
+
+
+tor(father(haran,lot),father,2)? succeeds.
+
+
+
+   The functor predicate can be defined, analogously to the type predicates, by*
+ * a
+
+
+table of facts of the form functor(f(X1,: :,:XN ),f,N) for each functor f of ar*
+ *ity
+
+
+N, for example, functor(father(X,Y),father,2), functor(son(X,Y),son,2),
+
+
+: :.: Standard Prolog considers constants to be functors of arity 0, with the
+
+
+appropriate extension to the functor table.
+
+
+
+   Calls to functor can fail for various reasons.  A goal such as func-
+
+
+tor(father(X,Y),son,2) does not unify with an appropriate fact in the table.
+
+
+Also, there are type restrictions on the arguments of functor goals. For exampl*
+ *e,
+
+
+the third argument of functor, the arity of the term, cannot be an atom or a
+
+
+compound term. If these restrictions are violated, the goal fails. A distinction
+
+
+can be made between calls that fail and calls that should give an error because
+
+
+there are infinitely many solutions, such as functor(X,Y,2)?.
+
+
+
+   The predicate functor is commonly used in two ways, term decomposi-
+
+
+tion and creation.  The first use finds the functor name and arity of a given
+
+
+term. For example, the query functor(father(haran,lot),X,Y)? has the so-
+
+
+
+
+9.2                                 Accessing Compound Terms145
+
+
+
+lution fX=father,Y=2g. The second use builds a term with a particular func-
+
+
+tor name and arity.  A sample query is functor(T,father,2)?  with solution
+
+
+T=father(X,Y).
+
+
+   The companion system predicate to functor is arg(N,Term,Arg), which
+
+
+accesses the arguments of a term rather than the functor name.  The goal
+
+
+arg(N,Term,Arg) is true if Arg is the Nth argument of Term.  For example,
+
+
+arg(1,father(haran,lot),haran) is true.
+
+
+   Like functor/3, arg/3 is commonly used in two ways. The term decompo-
+
+
+sition use finds a particular argument of a compound term. A query exemplifying
+
+
+this use is arg(2,father(haran,lot),X)? with solution X=lot. The term cre-
+
+
+ation use instantiates a variable argument of a term.  For example, the query
+
+
+arg(1,father(X,lot),haran)? succeeds, instantiating X to haran.
+
+
+   The predicate arg is also defined as if there is an infinite table of facts.*
+ * A
+
+
+fragment of the table is
+
+
+
+       arg(1,father(X,Y),X).  arg(2,father(X,Y),Y).
+
+
+          arg(1,son(X,Y),X).  : :.:
+
+
+
+Calls to arg fail if the goal does not unify with the appropriate fact in the t*
+ *able,
+
+
+for example, arg(1,father(haran,lot),abraham).  They also fail if the type
+
+
+restrictions are violated, for example, if the first argument is an atom. An er*
+ *ror
+
+
+is reported with a goal such as arg(1,X,Y).
+
+
+   Let us consider an example of using functor and arg to inspect terms. Pro-
+
+
+gram 9.2 axiomatizes a relation subterm(T1,T2), which is true if T1 is a subterm
+
+
+
+
+146   Structure Inspection                               9.2
+
+
+
+of T2. For reasons that will become apparent later, we restrict T1 and T2 to be
+
+
+ground.
+
+
+       subterm(Sub,Term)  
+
+
+          Sub is a subterm of the ground term Term.
+
+
+       subterm(Term,Term).
+
+
+       subterm(Sub,Term)  
+
+
+          compound(Term), functor(Term,F,N), subterm(N,Sub,Term).
+
+
+       subterm(N,Sub,Term)  
+
+
+          N > 1, N1 is N-1, subterm(N1,Sub,Term).
+
+
+       subterm(N,Sub,Term)  
+
+
+          arg(N,Term,Arg), subterm(Sub,Arg).
+
+
+
+       Program 9.2: Finding subterms of a term
+
+
+
+   The first clause of Program 9.2 defining subterm/2 states that any term is a
+
+
+subterm of itself. The second clause states that Sub is a subterm of a compound
+
+
+term Term if it is a subterm of one of the arguments. The number of arguments,
+
+
+i.e., the arity of the principal functor of the term, is found and used as a lo*
+ *op
+
+
+counter by the auxiliary subterm/3, which iteratively tests all the arguments.
+
+
+   The first clause of subterm/3 decrements the counter and recursively calls
+
+
+subterm. The second clause covers the case when Sub is a subterm of the Nth
+
+
+argument of the term.
+
+
+   The subterm procedure can be used in two ways: to test whether the first
+
+
+
+
+9.2                                 Accessing Compound Terms147
+
+
+
+argument is indeed a subterm of the second; and to generate subterms of a given
+
+
+term.  Note that the clause order determines the order in which subterms are
+
+
+generated. The order in Program 9.2 gives subterms of the first argument before
+
+
+subterms of the second argument, and so on. Swapping the order of the clauses
+
+
+changes the order of solutions.
+
+
+
+   Consider the query subterm(a,f(X,Y))?, where the second argument is not
+
+
+ground. Eventually the subgoal subterm(a,X) is reached. This succeeds by the
+
+
+first subterm rule, instantiating X to a.  The subgoal also matches the second
+
+
+subterm rule, invoking the goal compound(X), which generates an error. This is
+
+
+undesirable behavior.
+
+
+
+   We defer the issues arising when performing structure inspection on non-
+
+
+ground terms to Chapter 10, where meta-logical predicates with suitable expres-
+
+
+sive power are introduced. For the rest of this chapter, all programs are assum*
+ *ed
+
+
+to take only ground arguments unless otherwise stated.
+
+
+
+   Program 9.2 is typical code for programs that perform structure inspection.
+
+
+We look at another example, substituting for a subterm in a term.
+
+
+
+   The relation scheme for a general program for substituting subterms is sub-
+
+
+stitute(Old,New,OldTerm,NewTerm), where NewTerm is the result of replacing
+
+
+all occurrences of Old in OldTerm by New. Program 9.3 implementing the relation
+
+
+generalizes substituting for elements in a list, posed as Exercise 3.3(i) and t*
+ *he
+
+
+logic program (Program 3.26) substituting for elements in binary trees.
+
+
+
+   Program 9.3 is a little more complicated than Program 9.2 for subterm but
+
+
+
+
+148   Structure Inspection                               9.2
+
+
+       substitute(Old,New,OldTerm,NewTerm)  
+
+
+          NewTerm is the result of replacing all occurrences of Old
+
+
+          in OldTerm by New.
+
+
+       substitute(Old,New,Old,New).
+
+
+       substitute(Old,New,Term,Term)  
+
+
+          constant(Term), Term 6= Old.
+
+
+       substitute(Old,New,Term,Term1)  
+
+
+          compound(Term),
+
+
+          functor(Term,F,N),
+
+
+          functor(Term1,F,N),
+
+
+          substitute(N,Old,New,Term,Term1).
+
+
+       substitute(N,Old,New,Term,Term1)  
+
+
+          N > 0,
+
+
+          arg(N,Term,Arg),
+
+
+          substitute(Old,New,Arg,Arg1),
+
+
+          arg(N,Term1,Arg1),
+
+
+          N1 is N-1,
+
+
+          substitute(N1,Old,New,Term,Term1).
+
+
+       substitute(0,Old,New,Term,Term1).
+
+
+
+       Program 9.3: A program for substituting in a term
+
+
+
+conforms to the same basic pattern. The clauses for substitute/4 cover three
+
+
+different cases. The last, handling compound terms, calls an auxiliary predicate
+
+
+
+
+9.2                                 Accessing Compound Terms149
+
+
+
+substitute/5, which iteratively substitutes in the subterms. The arity of the
+
+
+principal functor of the term is used as the initial value of a loop counter th*
+ *at
+
+
+is successively decremented to control the iteration.  We present a particular
+
+
+example to illustrate the interesting points lurking in the code. A trace of the
+
+
+query substitute(cat,dog,owns(jane,cat),X)? is given in Figure 9.2.
+
+
+
+   The query fails to unify with the fact in Program 9.3. The second rule is al*
+ *so
+
+
+not applicable because owns(jane,cat) is not a constant.
+
+
+
+   The third substitute rule is applicable to the query.  The second call of
+
+
+functor is interesting.  Name and Arity have been instantiated to owns and
+
+
+2, respectively, in the previous call of functor, so this call builds a term th*
+ *at
+
+
+serves as the answer template to be filled in as the computation progresses. Th*
+ *is
+
+
+explicit term building has been achieved by implicit unification in previous Pr*
+ *olog
+
+
+programs. The call to substitute/5 successively instantiates the arguments of
+
+
+Term1. In our example, the second argument of owns(X1,X2) is instantiated to
+
+
+dog, and then X1 is instantiated to jane.
+
+
+
+   The two calls to arg serve different tasks in substitute/5. The first call
+
+
+selects an argument, while the second call of arg instantiates an argument.
+
+
+
+   Substitution in a term is typically done by destructive assignment in con-
+
+
+ventional languages. Destructive assignment is not possible directly in Prolog.
+
+
+Program 9.3 typifies how Prolog handles changing data structures. The new term
+
+
+is recursively built as the old term is being traversed, by logically relating *
+ *the
+
+
+corresponding subterms of the terms.
+
+
+
+
+150   Structure Inspection                               9.2
+
+
+substitute(cat,dog,owns(jane,cat),X)                    X=owns(jane,cat)
+
+
+   constant(owns(jane,cat))       f
+
+
+substitute(cat,dog,owns(jane,cat),X)
+
+
+   compound(owns(jane,cat))
+
+
+   functor(owns(jane,cat),F,N)                          F=owns,N=2
+
+
+   functor(X,owns,2)                                    X=owns(X1,X2)
+
+
+   substitute(2,cat,dog,owns(jane,cat),owns(X1,X2))
+
+
+       2 > 0
+
+
+       arg(2,owns(jane,cat),Arg)                        Arg=cat
+
+
+       substitute(cat,dog,cat,Arg1)                     Arg1=dog
+
+
+       arg(2,owns(X1,X2),dog)                           X2=dog
+
+
+       N1 is 2-1                                        N1=1
+
+
+       substitute(1,cat,dog,owns(jane,cat), owns(X1,dog))
+
+
+          1 > 0
+
+
+          arg(1,owns(jane,cat),Arg2)                    Arg2=jane
+
+
+          substitute(cat,dog,jane,Arg3)                 Arg3=jane
+
+
+             constant(jane)
+
+
+             jane 6= cat
+
+
+          arg(1,owns(X1,dog),jane)                      X1=jane
+
+
+          N2 is 1-1                                     N2=0
+
+
+          substitute(0,cat,dog,owns(jane,cat),owns(jane,dog))
+
+
+             0 > 0       f
+
+
+          substitute(0,cat,dog,owns(jane,cat),owns(jane,dog))
+
+
+             true
+
+
+                 Output:  (X=owns(jane,dog))
+
+
+
+            Figure 9.2: Tracing the substitute predicate
+
+
+
+
+9.2                                 Accessing Compound Terms151
+
+
+
+   Note that the order of the second arg goal and the recursive call to sub-
+
+
+stitute/5 can be swapped. The modified clause for substitute/5 is logically
+
+
+equivalent to the previous one and gives the same result in the context of Pro-
+
+
+gram 9.3. Procedurally, however, they are radically different.
+
+
+
+   Another system predicate for structure inspection is a binary operator =..,
+
+
+called, for historical reasons, univ. The goal Term =.. List succeeds if List is
+
+
+a list whose head is the functor name of the term Term and whose tail is the li*
+ *st
+
+
+of arguments of Term. For example, the query (father(haran,lot) =.. [fa-
+
+
+ther,haran,lot])? succeeds.
+
+
+
+   Like functor and arg, univ has two uses.   Either it builds a term
+
+
+given a list,  for example,  (X =..  [father,haran,lot])?   with solution
+
+
+X=father(haran,lot), or it builds a list given a term, for example, (fa-
+
+
+ther(haran,lot) =..  Xs)? with solution Xs=[father,haran,lot].
+
+
+
+   In general, programs written using functor and arg can also be written
+
+
+with univ.  Program 9.4 is an alternative definition of subterm, equivalent to
+
+
+Program 9.2. As in Program 9.2, an auxiliary predicate investigates the argu-
+
+
+ments; here it is subterm_list.  Univ is used to access the list of arguments,
+
+
+Args, of which subterms are recursively found by subterm_list.
+
+
+
+   Programs using univ to inspect structures are usually simpler.  However,
+
+
+programs written with functor and arg are in general more efficient than those
+
+
+using univ, since they avoid building intermediate structures.
+
+
+
+   A neat use of univ is formulating the chain rule for symbolic differentiatio*
+ *n.
+
+
+
+
+152   Structure Inspection                               9.2
+
+
+
+       subterm(Sub,Term)  
+
+
+          Sub is a subterm of the ground term Term.
+
+
+       subterm(Term,Term).
+
+
+       subterm(Sub,Term)  
+
+
+          compound(Term), Term =..  [FjArgs], subterm_list(Sub,Args).
+
+
+       subterm_list(Sub,[ArgjArgs])  
+
+
+          subterm(Sub,Arg).
+
+
+       subterm_list(Sub,[ArgjArgs])  
+
+
+          subterm_list(Sub,Args).
+
+
+
+       Program 9.4: Subterm defined using univ
+
+
+
+The chain rule states that d/dxff (g(x)g = d/dg(x)ff (g(x)g  d/dxfg(x)g. In
+
+
+Section 3.5, we noted that this rule could not be expressed as a single clause *
+ *of
+
+
+a logic program as part of Program 3.30. A Prolog rule encapsulating the chain
+
+
+rule is
+
+
+
+       derivative(F_G_X,X,DFDG)  
+
+
+          F_G_X =..  [F,G_X],
+
+
+          derivative(F_G_X,G_X,DF),
+
+
+          derivative(G_X,X,DG).
+
+
+
+The function F_G_X is split up by univ into its function F and argument G_X,
+
+
+checking that F is a function of arity 1 at the same time. The derivative of F *
+ *with
+
+
+respect to its argument is recursively calculated, as is the derivative of G_X.*
+ * These
+
+
+
+
+9.2                                 Accessing Compound Terms153
+
+
+
+are combined to give the solution.
+
+
+   Univ can be defined in terms of functor and arg. Two different definitions
+
+
+are necessary, however, to cover both building lists from terms and building te*
+ *rms
+
+
+from lists. One definition does not suffice, because of errors caused by uninst*
+ *an-
+
+
+tiated variables.  Other system predicates are similarly precluded from flexible
+
+
+use.
+
+
+   Program 9.5a behaves correctly for building a list from a term. The functor
+
+
+F is found by the call to functor, and the arguments are recursively found by
+
+
+the predicate args. The first argument of args is a counter that counts up, so
+
+
+that the arguments will appear in order in the final list. If Program 9.5a is c*
+ *alled
+
+
+with Term uninstantiated, an error will be generated because of an incorrect ca*
+ *ll
+
+
+of functor.
+
+
+   Program 9.5b behaves correctly for constructing a term from a list.  The
+
+
+length of the list is used to determine the number of arguments. The term tem-
+
+
+plate is built by the call to functor, and a different variant of args is used *
+ *to fill
+
+
+in the arguments. Program 9.5b results in an error if used to build a list, bec*
+ *ause
+
+
+of the goal length(Args,N) being called with uninstantiated arguments.
+
+
+
+
+154   Structure Inspection                               9.2
+
+
+
+       Term =.. List  
+
+
+          List is a list containing the functor of Term followed
+
+
+          by the arguments of Term.
+
+
+       Term =..  [FjArgs]  
+
+
+          functor(Term,F,N), args(0,N,Term,Args).
+
+
+       args(I,N,Term,[ArgjArgs])  
+
+
+          I < N, I1 is I+1, arg(I1,Term,Arg), args(I1,N,Term,Args).
+
+
+       args(N,N,Term,[ ]).
+
+
+
+       Program 9.5a: Constructing a list corresponding to a term
+
+
+
+       Term =.. List  
+
+
+          The functor of Term is the first element of the list List,
+
+
+          and its arguments are the rest of List's elements.
+
+
+       Term =..  [FjArgs]  
+
+
+          length(Args,N), functor(Term,F,N), args(Args,Term,1).
+
+
+       args([ArgjArgs],Term,N)  
+
+
+          arg(N,Term,Arg), N1 is N+1, args(Args,Term,N1).
+
+
+       args([ ],Term,N).
+
+
+       length(Xs,N)   See Program 8.11.
+
+
+
+       Program 9.5b: Constructing a term corresponding to a list
+
+
+
+Exercises for Section 9.2
+
+
+
+
+9.3                                            Background155
+
+
+
+(i)Define a predicate occurrences(Sub,Term,N), true if N is the number of
+
+
+   occurrences of subterm Sub in Term. Assume that Term is ground.
+
+
+(ii)Define a predicate position(Subterm,Term,Position), where Position is
+
+
+   a list of argument positions identifying Subterm within Term. For example,
+
+
+   the position of X in 2sin(X) is [2,1], since sin(X) is the second argument
+
+
+   of the binary operator \", and X is the first argument of sin(X). (Hint: Add
+
+
+   an extra argument for Program 9.2 for subterm, and build the position list
+
+
+   top-down.)
+
+
+(iii)Rewrite Program 9.5a so that it counts down. (Hint: Use an accumulator.)
+
+
+(iv)Define functor and arg in terms of univ. How can the programs be used?
+
+
+(v)Rewrite Program 9.3 for substitute so that it uses univ.
+
+
+
+9.3   Background
+
+
+
+   Prolog does not distinguish between object-level and meta-level type predi-
+
+
+cates. We have taken a different approach, by defining the type test predicates*
+ * to
+
+
+work only on instantiated terms and by treating the meta-logical test predicates
+
+
+(e.g., var/1, discussed in Section 10.1) separately. The predicates for accessi*
+ *ng
+
+
+and constructing terms, functor, arg, and =.., originate from the Edinburgh
+
+
+family.  The origin of =..  is in the old Prolog-10 syntax for lists, which used
+
+
+the operator ,..  instead of the current j in lists, e.g., [a,b,c,..Xs] instead
+
+
+of [a,b,cjXs]. The .. on the right-hand side suggested or reminded that the
+
+
+right-hand side of the equality is a list.
+
+
+
+
+156   Structure Inspection                               9.3
+
+
+
+   Several of the examples in this section were adapted from O'Keefe (1983).
+
+
+   Exercises 9.2(i) and 9.2(ii) are used in the equation solver in Chapter 23.

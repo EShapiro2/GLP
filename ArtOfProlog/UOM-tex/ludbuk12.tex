@@ -1,0 +1,706 @@
+%%%%% Leoudi Book, Chapter 12, pp 185-200 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 11
+\numberfirst
+\startpage{185}
+
+\chapa{Extra-Logical Predicates}
+There is a class of predicates in Prolog that lie outside the logic
+programming model, and are called {\it extra-logical predicates\/}. These
+predicates achieve a side effect in the course of being satisfied as a
+logical goal. There are basically three types of extra-logical system
+predicates: predicates concerned with I/O, predicates for accessing and
+manipulating the program, and predicates for interfacing with the
+underlying operating system. Prolog I/O and program manipulation
+predicates are discussed in this chapter. The interface to the operating
+system is too system-dependent to be discussed in this book.\par
+\sect{Input/Output}
+A very important class of predicates that produces side effects is that
+concerned with I/O. Any practical programming language must have a
+mechanism for both input and output. The execution model of Prolog,
+however, precludes the expression of I/O within the pure component of the
+language.\par
+The basic predicate for input is {\tt read(X)}. This goal reads a term
+from the current input stream, usually from the terminal. The term that
+has been read is unified with {\tt X}, and {\tt read} succeeds or fails
+depending on the result of unification.\par
+The basic predicate for output is {\tt write(X)}. This goal writes the
+term {\tt X} on the current output stream, as defined by the underlying
+operating system, usually to the terminal. Neither {\tt read} nor {\tt
+write} give alternative solutions on backtracking.\par
+The normal use of {\tt read} is with a variable argument {\tt X}, which
+acquires the value of the first term in the current input stream. The
+instantiation of {\tt X} to something outside the program lies outside
+the logical model, since each time the procedure is called, {\tt read(X)}
+succeeds with a (possibly) different value for {\tt X}.\par
+{\tt Read} attempts to parse the next term on the input stream. If it
+fails, it prints an error message on the terminal.\par
+There is an asymmetry between the extra-logical nature of {\tt read} and
+{\tt write}. If all calls to {\tt write} were replaced with the goal {\it
+true\/}, which always succeeded once, the semantics of the program would
+be unaffected. That is not true for {\tt read}.\par
+Early Prolog implementations did not  concentrate on input and output
+facilities, providing the basic predicates {\tt read} and {\tt write}, or
+their equivalents, and little else. More recent Prolog implementations
+have a wider range of formatted I/O options, some of which have been adopted in
+Standard Prolog. In this book, the emphasis is not on I/O, and so we
+restrict outselves to basic predicates and some simple utilities
+described in the rest of this section. For more elaborate I/O, consult
+your particular Prolog manual.\par
+A useful utility is a predicate {\tt writeln(Xs)}, analogous to the
+Pascal command, which writes the list of terms {\tt Xs} as a line of
+output on the current output stream. It is defined in Program
+\Prowrilister. The predicate {\tt writeln} uses the builtin predicate
+{\tt nl}, which causes the next output character to be on a new line. As
+an example of its use, executing the conjunctive goal {\tt (X=3,
+writeln(\(`The value of X is ',X\))} produces the output\medskip
+\halign{\hskip 40pt\lft{#}\cr
+The value of {\tt X} is 3.\cr}
+Note the use of the quoted atom `The value of {\tt X} is '.\par
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+writeln(\(X$\mid$Xs\)) $\lar$ write(X), writeln(Xs).\cr
+writeln(\(~\)) $\lar$ nl.\cr
+\noalign{\bigskip}
+{\bf  Program \Prowrilister}{\rm :~~Writing a list of terms}\cr}
+\endinsert\medno
+Both {\tt read} and {\tt write} operate at the term level. A lower level
+for I/O is the character level. Edinburgh Prolog assumed that characters
+were represented by ASCII codes. Standard Prolog takes a broader
+perspective to support such character sets as Kanji. The basic output
+predicate is {\tt put\_char(Char)}, which outputs the character {\tt Char}
+on the current output stream. Standard Prolog allows you to specify the
+output stream, but we do not give examples here. The basic input
+predicate at the character level is {\tt get\_char(Char)}, which reads a
+character {\tt C} from the current input stream and then unifies {\tt
+C} with {\tt Char}.\par
+Program~\Prorealiswor\ defines {\tt read\_word\_list(Words)}, a utility
+predicate for reading in a list of words, {\tt Words}, from the current
+input, terminated by an end-of-words character, for example a period.
+Specific definitions of the predicates {\tt word\_char/1}, {\tt
+fill\_char/1}, and {\tt end\_of\_words\_char/1} need to be added. It can
+be used to allow freer form input. In Program~\Prorealiswor, words can be
+separated by arbitrarily many fill characters.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it read\_word\_list\/}({\it Words\/}) $\lar$\cr
+\qi {\it Words} {\rm is a list of words read from the input stream via
+side effects.}\cr
+\noalign{\medskip}
+read\_word\_list(Words) $\lar$\cr
+\qi get\_char(FirstChar),\cr
+\qi read\_words(FirstChar,Words).\cr
+\noalign{\vskip 5pt}
+read\_words(Char,\(Word$\mid$Words\)) $\lar$\cr
+\qi word\_char(Char),\cr
+\qi read\_word(Char,Word,NextChar),\cr
+\qi read\_words(NextChar,Words).\cr
+\noalign{\vskip 5pt}
+read\_words(Char,Words) $\lar$\cr
+\qi fill\_char(Char),\cr
+\qi get\_char(NextChar),\cr
+\qi read\_words(NextChar,Words).\cr
+\noalign{\vskip 5pt}
+read\_words(Char,\(~\)) $\lar$\cr
+\qi end\_of\_words\_char(Char).\cr
+\noalign{\vskip 5pt}
+read\_word(Char,Word,NextChar) $\lar$\cr
+\qi word\_chars(Char,Chars,NextChar),\cr
+\qi atom\_list(Word,Chars).\cr
+\noalign{\vskip 5pt}
+word\_chars(Char,\(Char$\mid$Chars\),FinalChar) $\lar$\cr
+\qi word\_char(Char), !,\cr
+\qi get\_char(NextChar),\cr
+\qi word\_chars(NextChar,Chars,FinalChar).\cr
+word\_chars(Char,\(~\),Char) $\lar$\cr
+\qi not word\_char(Char).\cr
+\noalign{\bigskip}
+{\bf  Program \Prorealiswor}{\rm :~~Reading in a list of words}\cr}
+\endin\par
+The predicate {\tt read\_word\_list} reads a character, {\tt
+FirstChar}, and calls {\tt read\_words(FirstChar,Words)}. This
+predicate does one of three actions, depending on what {\tt FirstChar}
+is. If {\tt FirstChar} is a word character, then the next word is 
+found. Word characters in Standard Prolog are uppercase and lowercase
+letters, underscores, and digits. The second action is to ignore filling
+characters, and so the next character is read, and the program continues
+recursively. Finally, if the character denoting the end of the words is
+reached, the program terminates and returns the list of words.\par
+It is important that the program must always read a character ahead and
+then test what it should do. If the character is useful, for example, a
+word character, it must be passed down to be part of the word. Otherwise
+characters can get lost when backtracking. Consider the following read
+and process loop:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+process([~]) $\lar$\cr
+\qi get\_char(C), end\_of\_words\_char(C).\cr
+process([W$\mid$Words]) $\lar$\cr
+\qi get\_char(C), word\_char(C), get\_word(C,W), process(Words).\cr}
+\medno
+If the first character in a word is not an {\tt end\_of\_words\_char},
+the first clause will fail, and the second clause will cause the reading
+of the next character.\par
+Returning to Program~\Prorealiswor, the predicate {\tt
+read\_word(Char,Word,NextChar)} reads a word {\tt Word} given the
+current character {\tt Char} and returns the next character after the
+word, {\tt NextChar}. The list of characters composing the word is
+found by {\tt word\_chars/3} (with the same arguments as {\tt
+read\_word}). The word is created from the list of characters using
+the system predicate {\tt atom\_list/2}. In {\tt word\_chars} there is
+the same property of looking ahead one character, so that no character
+is lost.\par   
+Predicates such as {\tt fill\_char/1} and {\tt word\_char/1} exemplify
+data abstraction in Prolog.\vskip 15pt\parno
+{\bf Exercise for Section 12.1}\vskip 5pt\par
+\offset{20pt}{(i)} Extend Program~\Prorealiswor\ to handle a wider range
+of inputs, for example, numbers.\par
+\sect{Program Access and Manipulation}
+So far programs have been assumed to be resident in computer
+memory, without discussion of how they are represented or how they got
+there. Many applications depend on accessing the clauses in the program.
+Furthermore, if programs are to be modified at runtime, there must be a
+way of adding (and deleting) clauses.\par
+The first Prologs, implemented as simple interpreted systems, classified
+predicates as builtin and static or user-defined and dynamic. The
+subsequent development of compilers and libraries require a more
+sophisticated classification.\par
+Each user-defined predicate is either {\it dynamic\/} or {\it static\/}.
+The procedure of a dynamic predicate can be altered, whereas the procedure
+of a static predicate cannot. Builtin predicates are assumed to be
+static. The system predicates introduced in this section apply only to dynamic
+predicates and will probably cause error messages if applied to static
+predicates. In this book, we assume all predicates are dynamic unless
+otherwise specified. In many Prologs, declarations are needed to make a
+predicate dynamic.\par
+The system predicate for accessing a program is {\tt
+clause(Head,Body)}. The goal {\tt clause(Head,Body)} must be called with
+{\tt Head} instantiated. The program is searched for the first clause
+whose head unifies with {\tt Head}. The head and body of this clause are
+then unified with {\tt Head} and {\tt Body}. On backtracking, the goal
+succeeds once for each unifiable clause in the procedure. Note that
+clauses in the program cannot be accessed via their body.\par
+Facts have the atom {\tt true} as their body. Conjunctive goals are
+represented using the binary functor {\tt ,} . The actual representations can
+be easily abstracted away, however.\par
+Consider Program~\Promemlis\ for {\tt member}:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+member(X,[X$\mid$Xs]).\cr
+member(X,[Y$\mid$Ys]) $\lar$ member(X,Ys).\cr}\medno
+The goal {\tt clause(member(X,Ys),Body)} has two solutions: {\tt
+$\{$Ys=[X$\mid$Xs],Body=}\linebreak
+{\tt true$\}$} and {\tt $\{$Ys=[Y$\mid$Ys1],Body=member(X,Ys1)$\}$}. Note
+that a fresh copy of the variables appearing in the clause is made each
+time a unification is performed. In terms of the meta-logical primitives
+{\tt freeze} and {\tt melt}, the clause is stored in frozen form in the
+program. Each call to {\tt clause} causes a new melt of the frozen
+clause. This is the logical counterpart of the classic notion of
+reentrant code.\par
+System predicates are provided both to add clauses to the program and to
+remove clauses. The basic predicate for adding clauses is {\tt
+assertz(Clause)}, which adds {\tt Clause} as the last clause of the
+corresponding procedure. For example, {\tt assertz(father(haran,lot))?}
+adds the {\tt father} fact to the program. When describing rules an extra
+level of brackets is needed for technical reasons concerning the
+precedence of terms. For example, {\tt assertz((parent(X,Y) $\lar$
+father(X,Y)))} is the correct syntax.\par
+There is a variant of {\tt assertz}, {\tt asserta}, that adds the clause
+at the beginning of a procedure.\par
+If {\tt Clause} is uninstantiated (or if {\tt Clause} has the form {\it
+H\/$\lar$B\/} with {\it H\/} uninstantiated), an error condition occurs.
+\par
+The predicate {\tt retract(C)} removes from the program the first clause
+in the program unifying with {\tt C}. Note that to retract a clause such
+as {\tt a $\lar$ b,c,d}, you need to specify {\tt retract((a $\lar$ C))}.
+A call to {\tt retract} may only mark a clause for removal, rather than
+physically removing it, and the actual removal would occur only when
+Prolog's top-level query is solved. This is for implementation
+reasons, but may lead to anomalous behavior in some Prologs.\par
+Asserting a clause freezes the terms appearing in the clause. Retracting
+the same clause melts a new copy of the terms. In many Prologs this is
+exploited to be the easiest way of copying a term. Standard Prolog,
+however, provides a builtin predicate {\tt copy\_term/2} for this purpose.
+\par
+The predicates {\tt assert} and {\tt retract} introduce to Prolog the
+possibility of programming with side effects. Code depending on
+side effects for its successful execution is hard to read, hard to debug,
+and hard to reason about formally. Hence these predicates are somewhat
+controversial, and using them is sometimes a result of intellectual
+laziness or incompetence. They should be used as little as possible
+when programming. Many of the programs to be given in this book can be 
+written using {\tt assert} and {\tt retract}, but the results are less
+clean and less efficient. Further, as Prolog compiler technology
+advances, the inefficiency in using {\tt assert} and {\tt retract} will
+become more apparent.\par
+It is possible, however, to give logical justification for some limited
+uses of {\tt assert} and {\tt retract}. Asserting a clause is justified,
+for example, if the clause already logically follows from the program. In
+such a case, adding it will not affect the meaning of the program, since
+no new consequences can be derived. Perhaps program efficiency will
+improve, as some consequences could be derived faster. This use is 
+exemplified in the lemma construct, introduced in Section~12.3.\par
+Similarly, retracting a clause is justified if the clause is logically
+redundant. In this case, retracting constitutes a kind of logical garbage
+collection, whose purpose is to reduce the size of the program.\par
+\sect{Memo-Functions}
+Memo-functions save the results of subcomputations to be used later in a
+computation. Remembering partial results is impossible within pure
+Prolog, so memo-functions are implemented using side effects to the
+program. Programming in this way can be considered bottom-up programming.
+\par
+The prototypical memo-function is {\tt lemma(Goal)}. Operationally, it
+attempts to prove the goal {\tt Goal} and, if successful, stores the
+result of the proof as a lemma. It is implemented as\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+lemma(P) $\lar$ P, asserta((P $\lar$ !)).\cr}\medno
+The next time the goal {\tt P} is attempted, the new solution will be
+used, and there will be no unnecessary recomputation. The cut is present
+to prevent the more general program being used. Its use is justified only
+if {\tt P} does not have multiple solutions.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it hanoi\/}({\it N,A,B,C,Moves\/}) $\lar$\cr
+\qi {\it Moves\/} {\rm is the sequence of moves required to move} {\it
+N\/} {\rm disks}\cr
+\qi {\rm from peg} {\it A\/} {\rm to peg} {\it B\/} {\rm using peg} {\it
+C\/} {\rm as an intermediary}\cr
+\qi {\rm according to the rules of the Towers of Hanoi puzzle.}\cr
+\noalign{\medskip}
+hanoi(1,A,B,C,[A to B\)).\cr
+hanoi(N,A,B,C,Moves) $\lar$\cr
+\qi N $>$ 1,\cr
+\qi N1 is N-1,\cr
+\qi lemma(hanoi(N1,A,C,B,Ms1)),\cr
+\qi hanoi(N1,C,B,A,Ms2),\cr
+\qi append(Ms1,\(A to B$\mid$Ms2\),Moves).\cr
+\noalign{\vskip 5pt}
+lemma(P) $\lar$ P, asserta((P $\lar$ !)).\cr
+\noalign{\medskip}
+{\it Testing}\cr
+\noalign{\medskip}
+test\_hanoi(N,Pegs,Moves) $\lar$\cr
+\qi hanoi(N,A,B,C,Moves), Pegs = [A,B,C].\cr
+\noalign{\bigskip}
+{\bf Program \Protowhanmem}{\rm :~~Towers of Hanoi using a
+memo-function}\cr}
+\endinsert\par
+Using lemmas is demonstrated with Program~\Protowhanmem\ for solving the
+Towers of Hanoi problem. The performance of Program~\Protowhan\ in
+solving the problem is dramatically improved. It is well known that the
+solution of the Towers of Hanoi with {\it N\/} disks requires $2^N-1$
+moves. For example, ten disks require 1,023 moves, or in
+terms of Program~\Protowhan, 1,023 calls of {\tt hanoi(1,A,B,C,Xs)}. The
+overall number of general calls of {\tt hanoi/5} is significantly more.
+\par
+The solution to the Towers of Hanoi repeatedly solves subproblems moving
+the identical number of disks. A memo-function can be used to recall the
+moves made in solving each subproblem of moving a smaller number of
+disks. Later attempts to solve the subproblem can use the computed
+sequence of moves rather than recomputing them.\par
+The idea is seen with the recursive clause of {\tt hanoi} in Program
+\Protowhanmem. The first call to solve {\tt hanoi} with $N-1$
+disks is remembered, and can be used by the second call to {\tt hanoi}
+with $N-1$ disks.\par
+The program is tested with the predicate {\tt test\_hanoi(N,Pegs,Moves)}.
+{\tt N} is the number of disks, {\tt Pegs} is a list of the three peg
+names, and {\tt Moves} is the list of moves that must be made. Note that
+in order to take advantage of the memo-functions, a general problem is
+solved first. Only when the solution is complete, and all memo-functions
+have recorded their results, are the peg names instantiated.\vskip 15pt
+\parno
+{\bf Exercise for Section 12.3}\vskip 5pt\par
+\offset{20pt}{(i)} Two players take turns to say a number between 1 and 3
+inclusive. A sum is kept of the numbers, and the player who brings the
+sum to 20 wins. Write a program to play the game to win, using
+memo-functions.\par
+\sect{Interactive Programs}
+A common form of a program requiring side effects is an interactive
+loop.  A command is read from the terminal, responded to, and the next
+command read. Interactive loops are implemented typically by {\it
+while\/} loops in conventional languages. Program~\Probasintloo\ gives
+the basic skeleton of such programs, where a command is read, then
+echoed by being written on the screen.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+echo $\lar$ read(X), echo(X).\cr
+\noalign{\vskip 5pt}
+echo(X) $\lar$ last\_input(X), !.\cr
+echo(X) $\lar$ write(X), nl, read(Y), !, echo(Y).\cr
+\noalign{\bigskip}
+{\bf Program \Probasintloo}{\rm :~~Basic interactive loop}\cr}
+\endinsert\par
+The read/echo loop is invoked by the goal {\tt echo}. The heart of the
+program is the relation {\tt echo(X)}, where {\tt X} is the term to be
+echoed. The program assumes a user-defined predicate {\tt last\_input/1},
+which succeeds if the argument satisfies the termination condition for
+input. If the termination condition is satisfied by the input, the loop
+terminates; otherwise the term is written and a new term is read.\par
+Note that the testing of the term is separate from its reading. This is
+necessary to avoid losing a term: terms cannot be reread. The same
+phenomenon occurred in Program~\Prorealiswor\ for processing characters.
+The character was read and then separately processed.\par
+Program~\Probasintloo\ is iterative and deterministic. It can be run
+efficiently on a system with tail recursion optimization, always using
+the same small amount of space.\par
+We give two examples of programs using the basic cycle of reading a
+term, and then processing it. The first is a line editor. The second
+interactive program is a shell for Prolog commands, which is
+essentially a top-level interpreter for Prolog in Prolog.\par
+The first decision in writing a simple line editor in Prolog is how to
+represent the file. Each line in the file must be accessible, together
+with the cursor position, that is the  current position within the file.
+We use a structure {\tt file(Before,After)}, where {\tt Before} is a list
+of lines before the cursor, and {\tt After} is a list of lines after the
+cursor. The cursor position is restricted to be at the end of some line.
+The lines before the cursor will be in reverse order to give easier
+access to the lines nearer the cursor. The basic loop accepts a command
+from the keyboard and applies it to produce a new version of the file.
+Program~\Prolinedi\ is the editor.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+edit $\lar$ edit(file([~],[~])).\cr
+\noalign{\vskip 5pt}
+edit(File) $\lar$\cr
+\qi write\_prompt, read(Command), edit(File,Command).\cr
+\noalign{\vskip 5pt}
+edit(File,exit) $\lar$ !.\cr
+edit(File,Command) $\lar$\cr
+\qi apply(Command,File,File1), !, edit(File1).\cr
+edit(File,Command) $\lar$\cr
+\qi writeln([Command,` is not applicable']), !, edit(File).\cr
+\noalign{\vskip 5pt}
+apply(up,file([X$\mid$Xs],Ys),file(Xs,[X$\mid$Ys])).\cr
+apply(up(N),file(Xs,Ys),file(Xs1,Ys1)) $\lar$\cr
+\qi N $>$ 0, up(N,Xs,Ys,Xs1,Ys1).\cr
+apply(down,file(Xs,[Y$\mid$Ys]),file([Y$\mid$Xs],Ys)).\cr
+apply(insert(Line),file(Xs,Ys),file(Xs,[Line$\mid$Ys])).\cr
+apply(delete,file(Xs,[Y$\mid$Ys]),file(Xs,Ys)).\cr
+apply(print,file([X$\mid$Xs],Ys),file([X$\mid$Xs],Ys)) $\lar$\cr
+\qi write(X), nl.\cr
+apply(print($\ast$),file(Xs,Ys),file(Xs,Ys)) $\lar$\cr
+\qi reverse(Xs,Xs1), write\_file(Xs1), write\_file(Ys).\cr
+\noalign{\vskip 5pt}
+up(N,[~],Ys,[~],Ys).\cr
+up(0,Xs,Ys,Xs,Ys).\cr
+up(N,[X$\mid$Xs],Ys,Xs1,Ys1) $\lar$\cr
+\qi N $>$ 0, N1 is N$-$1, up(N1,Xs,[X$\mid$Ys],Xs1,Ys1).\cr
+\noalign{\vskip 5pt}
+write\_file([X$\mid$Xs]) $\lar$\cr
+\qi write(X), nl, write\_file(Xs).\cr
+write\_file([~]).\cr
+\noalign{\vskip 5pt}
+write\_prompt $\lar$ write(`$\gg$'), nl.\cr
+\noalign{\bigskip}
+{\bf Program \Prolinedi}{\rm :~~A line editor}\cr}
+\endin\par
+An editing session is invoked by {\tt edit}, which initializes the file
+being processed to the empty file, {\tt file([~],[~]))}. The interactive
+loop is controlled by {\tt edit(File)}. It writes a prompt on the screen,
+using {\tt write\_prompt}, then reads and processes a command. The
+processing uses the basic predicate {\tt edit(File,Command)}, which
+applies the command to the file. The application is performed by the goal
+{\tt apply(Command,File,File1)}, where {\tt File1} is the new version of
+the file after the command has been applied. The editing continues by
+calling {\tt edit/1} on {\tt File1}. The third {\tt edit/2} clause
+handles the case when no command is applicable, indicated by the failure
+of {\tt apply}. In this case, an appropriate message is printed on the
+screen and the editing continues. The editing session is terminated by
+the command {\tt exit}, which is separately tested for by {\tt edit/2}.
+\par
+Let us look at a couple of {\tt apply} clauses, to give the flavor of how
+commands are specified. Particularly simple are commands for moving the
+cursor. The clause\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+apply(up,file([X$\mid$Xs],Ys),file(Xs,[X$\mid$Ys])).\cr}\medno
+says that we move the cursor up by moving the line immediately above
+the cursor to be immediately below the cursor. The command fails if
+the cursor is at the top of the file. The command for moving the
+cursor down, also shown in Program~12.5, is analogous to moving the
+cursor up. \par
+Moving the cursor up {\it N\/} lines rather than a single line involves
+using an auxiliary predicate {\tt up/5} to change the cursor position in
+the file. Issues of robustness surface in its definition. Note that {\tt
+apply} tests that the argument to {\tt up} is sensible, i.e., a positive
+number of lines, before {\tt up} is invoked. The predicate {\tt up}
+itself handles the case when the number of lines to be moved up is
+greater than the number of lines in the file. The command succeeds with
+the cursor placed at the top of the file. Extending the editor program
+to move a cursor down {\it N\/} lines is posed as an exercise at the
+end of this section.\par
+Other commands given in Program~\Prolinedi\ insert and delete lines. The
+command for insert, {\tt insert(Line)}, contains an argument, namely the
+line to be inserted. The command for delete is straightforward. It fails
+if the cursor is at the bottom of the screen. Also in the editor are
+commands for printing the line above the cursor, {\tt print}, and for
+printing the whole file, {\tt print($\ast$)}.\par
+The editor commands are mutually exclusive. Only one {\tt apply}
+clause is applicable for any command. As soon as an {\tt apply} goal
+succeeds, there are no other possible alternatives. Prolog
+implementations that support indexing would find the correct clause
+immediately and leave no choice points. Imposing determinism via
+exploitation of indexing is a little different than adding explicit
+cuts, as described in Section~11.1, where the cuts would have been
+applied directly to the {\tt apply} facts themselves. The difference
+between the two approaches is merely cosmetic. Note that a cut is
+still needed in the second {\tt edit} clause to indicate that
+successful execution of a command and reporting of an error message
+are mutually exclusive.\par
+A possible extension to the editor is to allow each command to handle its
+own error message. For example, suppose you wanted a more helpful
+message than ``Command not applicable" when trying to move up when at
+the top of the file. This would be handled by extending the {\tt apply}
+clause for moving up in the file.\par
+We shift from editors to shells. A shell accepts commands from a terminal
+and executes them. We illustrate with an example of a shell for answering
+Prolog goals. This is presented as Program~\Prointshe.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+shell $\lar$\cr
+\qi shell\_prompt, read(Goal), shell(Goal).\cr
+\noalign{\vskip 5pt}
+shell(exit) $\lar$ !.\cr
+shell(Goal) $\lar$\cr
+\qi ground(Goal), !, shell\_solve\_ground(Goal), shell.\cr
+shell(Goal) $\lar$\cr
+\qi shell\_solve(Goal), shell.\cr
+\noalign{\vskip 5pt}
+shell\_solve(Goal) $\lar$\cr
+\qi Goal, write(Goal), nl, fail.\cr
+shell\_solve(Goal) $\lar$\cr
+\qi write(`No (more) solutions'), nl.\cr
+\noalign{\vskip 5pt}
+shell\_solve\_ground(Goal) $\lar$\cr
+\qi Goal, !, write(`Yes'), nl.\cr
+shell\_solve\_ground(Goal) $\lar$\cr
+\qi write(`No'), nl.\cr
+\noalign{\vskip 5pt}
+shell\_prompt $\lar$  write(`Next command? ').\cr
+\noalign{\bigskip}
+{\bf Program \Prointshe}{\rm :~~An interactive shell}\cr}
+\endinsert\par
+The shell is invoked by {\tt shell}. The code is similar to the editor.
+The shell gives a prompt, using {\tt shell\_prompt}, then reads a goal
+and tries to solve it using {\tt shell(Goal)}. A distinction is made
+between solving ground goals, where a yes/no answer is given, and solving
+nonground goals, where the answer is the appropriately instantiated goal.
+These two cases are handled by {\tt shell\_solve\_ground} and {\tt
+shell\_solve}, respectively. The shell is terminated by the goal {\tt
+exit}.\par
+Both {\tt shell\_solve\_ground} and {\tt shell\_solve} use the
+meta-variable facility to call the goal to be solved. The success or
+failure of the goal determines the output message. These predicates are
+the simplest examples of meta-interpreters, a subject discussed in
+Chapter~17.\par
+The {\tt shell\_solve} procedure shows an interesting solve-write-fail
+combination, which is useful to elicit all solutions to a goal by forced
+backtracking. Since we do not wish the shell to fail, an alternative
+clause is provided, which succeeds when all solutions to the goal are
+exhausted. It is interesting to note that it is not possible to collect
+all solutions to goals in a straightforward way without using some sort
+of side effect. This is explained further in Chapter~16 on second-order
+programming.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+log $\lar$ shell(log).\cr
+\noalign{\vskip 5pt}
+shell(Flag) $\lar$\cr
+\qi shell\_prompt, shell\_read(Goal,Flag), shell(Goal,Flag).\cr
+\noalign{\vskip 5pt}
+shell(exit,Flag) $\lar$\cr
+\qi !, close\_logging\_file.\cr
+shell(nolog,Flag) $\lar$\cr
+\qi !, shell(nolog).\cr
+shell(log,Flag) $\lar$\cr
+\qi !, shell(log).\cr
+shell(Goal,Flag) $\lar$\cr
+\qi ground(Goal), !, shell\_solve\_ground(Goal,Flag), shell(Flag).\cr
+shell(Goal,Flag) $\lar$\cr
+\qi shell\_solve(Goal,Flag), shell(Flag).\cr
+\noalign{\vskip 5pt}
+shell\_solve(Goal,Flag) $\lar$\cr
+\qi Goal, shell\_write(Goal,Flag), nl, fail.\cr
+shell\_solve(Goal,Flag) $\lar$\cr
+\qi shell\_write(`No (more) solutions',Flag), nl.\cr
+\noalign{\vskip 5pt}
+shell\_solve\_ground(Goal,Flag) $\lar$\cr
+\qi Goal, !, shell\_write(`Yes',Flag), nl.\cr
+shell\_solve\_ground(Goal,Flag) $\lar$\cr
+\qi shell\_write(`No',Flag), nl.\cr
+\noalign{\vskip 5pt}
+shell\_prompt $\lar$ write(`Next command? ').\cr
+\noalign{\vskip 5pt}
+shell\_read(X,log) $\lar$ read(X),\cr
+\qi file\_write([`Next command? ',X],`prolog.log').\cr
+shell\_read(X,nolog) $\lar$ read(X).\cr
+\noalign{\vskip 5pt}
+shell\_write(X,nolog) $\lar$ write(X).\cr
+shell\_write(X,log) $\lar$ write(X), file\_write(X,`prolog.log').\cr
+\noalign{\vskip 5pt}
+file\_write(X,File) $\lar$ write\_term(File,Term,\(~\)).\cr
+\noalign{\vskip 5pt}
+close\_logging\_file $\lar$ close(`prolog.log').\cr
+\noalign{\bigskip}
+{\bf Program \Prologses}{\rm :~~Logging a session}\cr}
+\endin\par
+The shell can be used as a basis for a logging facility to keep a record
+of a session with Prolog. Such a facility is given as Program~\Prologses.
+This new shell is invoked by {\tt log}, which calls the basic interactive
+predicate {\tt shell(Flag)} with {\tt Flag} initialized to {\tt log}. The
+flag takes one of two values, {\tt log} or {\tt nolog}, and indicates
+whether the output is currently being logged.\par
+The logging facility is an extension of Program~\Prointshe. The
+principal predicates take an extra argument, which
+indicates the current state of logging. Two extra commands are added,
+{\tt log} and {\tt nolog}, to turn logging on and off.\par
+The flag is used by the predicates concerned with I/O. Each message
+written on the screen must also be written in the logging file. Also, each
+goal read is inserted in the log to increase the log's readability. Thus
+calls to {\tt read} in Program~\Prointshe\ are replaced by a call to {\tt
+shell\_read}, and calls to {\tt write} replaced by calls to {\tt
+shell\_write}.\par
+The definition of {\tt shell\_write} specifies what must be done:\medskip
+\halign{\hskip 20pt\lft{\tt #}\cr
+shell\_write(X,nolog) $\lar$ write(X).\cr
+shell\_write(X,log) $\lar$ write(X), file\_write([X],`prolog.log').\cr}
+\medno
+If the flag is currently {\tt nolog}, the output is written normally to
+the screen. If the flag is {\tt log}, an extra copy is written to the
+file {\tt prolog.log}. The predicate {\tt file\_write(X,File)} writes the
+line {\tt X} to file {\tt File}.\par
+The remaining two predicates in Program~\Prologses, {\tt file\_write/2}
+and {\tt close\_logging\_file}, involve interacting with the underlying
+file system. Appropriate commands from Standard Prolog are given, and the
+reader is referred to a Prolog manual for more information.\vskip 15pt
+\parno
+{\bf Exercises for Section 12.4}\vskip 5pt\par
+\offset{20pt}{(i)} Extend Program~\Prolinedi, the editor, to handle the
+following commands:\bk
+(a) Move the cursor down {\it N\/} lines,\bk
+(b) Delete {\it N\/} lines,\bk
+(c) Move to a line containing a given term,\bk
+(d) Replace one term by another,\bk
+(e) Any command of your choice.\par
+\offset{20pt}{(ii)} Modify the logging facility, Program~\Prologses,
+so that the user can specify the destination file of the logged
+output.\par 
+\sect{Failure-Driven Loops}
+The interactive programs in the previous section were all based on tail
+recursive loops. There is an alternative way of writing loops in Prolog
+that are analogous to repeat loops in conventional languages. These loops
+are driven by failure and are called {\it failure-driven loops\/}. These
+loops are useful only when used in conjunction with extra-logical
+predicates that cause side effects. Their behavior can be understood
+only from an operational point of view.\par
+A simple example of a failure-driven loop is a query {\tt Goal,
+write(Goal), nl, fail?}, which causes all solutions to a goal to be
+written on the screen. Such a loop is used in the shells of Programs
+\Prointshe\ and \Prologses.\par
+A failure-driven loop can be used to define the system predicate {\tt
+tab(N)} for printing {\tt N} blanks on the screen. It uses Program
+\Progenranint\ for {\tt between}:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+tab(N) $\lar$ between(1,N,I), put\_char(` '), fail.\cr}\medskip
+Each of the interactive programs in the previous section can be rewritten
+using a failure-driven loop. The new version of the basic interactive
+loop is given as Program~\Probasintrep. It is based on a nonterminating
+system predicate {\tt repeat}, which can be defined by the minimal
+recursive procedure in Program~\Probasintrep. Unlike the
+Program~\Probasintloo\ goal, the goal {\tt echo(X)} fails unless the
+termination condition is satisfied. The failure causes backtracking to
+the {\tt repeat} goal, which succeeds, and the next term is read and
+echoed. The cut in the definition of {\tt echo} ensures that the
+repeat loop is not reentered later.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+echo $\lar$ repeat, read(X), echo(X), !.\cr
+\noalign{\vskip 5pt}
+echo(X) $\lar$ last\_input(X), !.\cr
+echo(X) $\lar$ write(X), nl, fail.\cr
+\noalign{\vskip 5pt}
+repeat.\cr
+repeat $\lar$ repeat.\cr
+\noalign{\bigskip}
+{\bf Program \Probasintrep}{\rm :~~Basic interactive repeat loop}\cr}
+\endinsert\par
+Failure-driven loops that use {\tt repeat} are called {\it repeat
+loops\/} and are the analogue of repeat loops from conventional
+languages. Repeat loops are useful in Prolog for interacting with the
+outside system to repeatedly read and/or write. Repeat loops require a
+predicate that is guaranteed to fail, causing the iteration to
+continue, unless the loop should be terminated.  The goal {\tt
+echo(X)} in Program~\Probasintrep\ serves that function, only
+succeeding when the last input is reached.  A useful heuristic for
+building repeat loops is that there should be a cut in the body of the
+clause with the {\tt repeat} goal, which prevents a nonterminating
+computation were the loop to be reentered via backtracking.\par
+We use a repeat loop to define the system predicate {\tt consult(File)}
+for reading in a file of clauses and asserting them. Program~\Proconfil\
+contains its definition. The system predicates {\tt open/3} and {\tt
+close/1} are used for opening and closing an input file, respectively.
+\midinsert
+\halign{\lft{\tt #}\cr
+{\it consult\/}({\it File\/}) $\lar$\cr
+\qi {\rm The clauses of the program in the file} {\it File\/} {\rm are
+read and asserted.}\cr
+\noalign{\medskip}
+consult(File) $\lar$ open(File,read,DD), consult\_loop(DD), close(DD).\cr
+\noalign{\vskip 5pt}
+consult\_loop(DD) $\lar$ repeat, read(Clause), process(Clause,DD), !.\cr
+\noalign{\vskip 5pt}
+process(Clause,DD) $\lar$ at\_end\_of\_stream(DD).\cr
+process(Clause,DD) $\lar$ assertz(Clause), fail.\cr
+\noalign{\bigskip}
+{\bf Program \Proconfil}{\rm :~~Consulting a file}\cr}
+\endinsert\par
+Tail recursive loops are preferable to repeat loops because the latter
+have no logical meaning. In practice, repeat loops are often necessary to
+run large computations, especially on Prolog implementations without tail
+recursion optimization or garbage collection. Explicit failure
+typically initiates some implementation-dependent reclamation of
+space.\vskip 15pt\parno 
+{\bf Exercise for Section 12.5}\vskip 5pt\par
+\offset{20pt}{(i)} Write your own version of the builtin predicate {\tt
+abolish(F,N)} that retracts all the clauses for the procedure {\tt F} of
+arity {\tt N}.\par
+\sect{Background}
+I/O has never really blended well with the rest of the language
+of Prolog. Its standard implementation, with side effects, relies solely
+on the procedural semantics of Prolog and has no connection to the
+underlying logic programming model. For example, if an output is issued
+on a failing branch of a computation, it is not undone upon backtracking.
+If an input term is read, it is lost on backtracking, as the input stream
+is not backtrackable.\par
+Concurrent logic languages attempt to remedy the problem and to integrate
+I/O better with the logic programming model by identifying the I/O
+streams of devices with the logical streams in the language 
+(Shapiro, 1986). Perpetual recursive processes can produce or consume
+incrementally those potentially unbounded streams.\par
+Self-modifying programs are a bygone concept in computer science. Modern
+programming languages preclude this ability, and good assembly language
+practice also avoids such programming tricks. It is ironic
+that a programming language attempting to open a new era in computer
+programming opens the front door to such arcane techniques, using the
+predicates {\tt assert} and {\tt retract}.\par
+These program manipulation predicates of Prolog were devised initially as
+a low-level mechanism for loading and reloading programs, implemented in
+DEC-10 Prolog by the {\tt consult} and {\tt reconsult} predicates. However,
+like any other feature of a language, they ended up being used for tasks
+that, we believe, were not intended by their original designers.\par
+Reluctantly, we must acknowledge that {\tt assert} and {\tt retract} are
+part of Prolog, and clarify the anomalies. Attempts have been made in
+this direction. Inconsistencies between different Prolog
+implementations are discussed in Moss (1986). The best way of handling
+retracts seems to be the logical update view presented in Lindholm and
+O'Keefe (1987).\par
+The discussion of static and dynamic predicates comes from the Standard
+Prolog draft (Scowen, 1991).\par
+The program for the Towers of Hanoi was shown to us by Shmuel Safra.
+Memo-functions in the context of artificial intelligence were proposed by
+Donald Michie (1968).\par
+The line editor is originally due to Warren (1982b).\par\bye
+

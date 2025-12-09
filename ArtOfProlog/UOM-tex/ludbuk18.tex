@@ -1,0 +1,737 @@
+%%%%% Leonudi Book, Chapter 18, pp 315-331 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 17
+\numberfirst
+\startpage{315}
+
+\chapa{Program Transformation}
+As stated in the introduction to Chapter~17, meta-programming, or the
+writing of programs that treat other programs as data, is particularly
+easy in Prolog. This chapter gives examples of programs that transform
+and manipulate Prolog programs. The first section looks at
+fold/unfold, the operation that underlies most applications of
+program transformation for Prolog programs. The transformations given
+in Chapter~15 for using difference-lists to avoid explicit concatenation
+of lists can be understood as unfold operations, for example. The
+second section describes a simple system for controlled unfolding and
+folding, which is especially good for removing layers of
+interpretation. The final section gives two examples of
+source-to-source transformation by code walking.\par
+\sect{Unfold/Fold Transformations}
+Logic programming arose from research on resolution theorem proving. The
+basic step in the logic programming computation model, goal reduction,
+corresponds to a single resolution between a query and a program clause.
+Unfold/fold operations correspond to resolution between two Horn clauses.
+Loosely, unfolding corresponds to replacing a goal in the body of a clause
+by its definition, while folding corresponds to recognizing that goal(s)
+in the body of a clause are an instance of a definition. These two
+operations, being so similar, are often discussed together.\par
+We demonstrate unfolding and folding with a running example in the first
+part of this chapter. The example is specializing the interpreter for
+nondeterministic pushdown automata (Program~\Propusdowaut) for the
+particular pushdown automaton for recognizing palindromes (Program
+\Pronpdapafin). In general, specializing interpreters is a good
+application for unfold/fold operations.\par
+{\bf Definition}:~~Unfolding a goal {\it B$_i$\/} in a clause {\it A\/
+$\lar$ B$_1$,$\ldots$,B$_n$\/} with respect to a clause {\it B\/ $\lar$
+C$_1$,$\ldots$,C$_m$\/} where {\it B\/} and {\it B$_i$\/} unify with mgu
+$\theta$, produces a clause ({\it A\/ $\lar$ B$_1$,$\ldots$,B$_{i-
+1}$,C$_1$,$\ldots$,C$_m$,B$_{i+1}$,$\ldots$,B$_n$\/})$\theta$.\par
+As an example of unfolding, we specialize the clause {\tt accept(Xs)
+$\lar$ initial(Q), accept(Xs,Q,\(~\))} to a particular initial state by
+unfolding the {\tt initial(Q)} goal with respect to a particular {\tt
+initial} fact. Specifically, unfolding with respect to the fact {\tt
+initial(push)} produces the clause {\tt accept(Xs) $\lar$
+accept(Xs,push,\(~\))}. (Note that in our running example we use the states
+{\tt push} and {\tt pop} for {\tt q0} and {\tt q1}, respectively, from the
+NPDA of Program~\Pronpdapafin.)\par
+The effect of the unfolding is to instantiate the initial state for the
+NPDA to {\tt push}. In general, the effect of unfolding is to propagate
+variable bindings to the right, as in this example, and also to the left,
+to goals in the body of the clause and possibly also to the head.\par
+There may be several clauses whose heads unify with a given goal in the
+body of a clause. We extend the definition of unfolding accordingly.\par
+{\bf Definition}:~~Unfolding a goal {\it B$_i$\/} in a clause {\it A\/
+$\lar$ B$_1$,$\ldots$,B$_n$\/} with respect to a procedure defining {\it
+B$_i$\/} is to unfold the goal with respect to each clause in the
+procedure whose head unifies with {\it B$_i$\/}.\par
+Unfolding the {\tt delta/5} goal in the clause {\tt accept(\(X$
+\mid$Xs\),Q,S) $\lar$ delta(Q,}\linebreak
+{\tt X,S,Q1,S1), accept(Xs,Q1,S1)} with respect to the following
+procedure for {\tt delta} adapted from Program~\Pronpdapafin\medskip
+\halign{\hskip 40pt\lft{\tt #}\qquad&\lft{\tt #}\cr
+delta(push,X,S,push,\(X$\mid$S\)).&delta(push,X,S,pop,\(X$\mid$S\)).\cr
+delta(push,X,S,pop,S).&delta(pop,X,\(X$\mid$S\),pop,S).\cr}\medno
+produces four clauses, one for each fact.\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+accept(\(X$\mid$Xs\),push,S) $\lar$ accept(Xs,push,\(X$\mid$S\)).\cr
+accept(\(X$\mid$Xs\),push,S) $\lar$ accept(Xs,pop,\(X$\mid$S\)).\cr
+accept(\(X$\mid$Xs\),push,S) $\lar$ accept(Xs,pop,S).\cr
+accept(\(X$\mid$Xs\),pop,\(X$\mid$S\)) $\lar$ accept(Xs,pop,S).\cr}
+\medskip
+This example shows variable bindings being propagated both to the right,
+and to the head of the clause left of the goal being unfolded.\par
+Folding is the reverse of unfolding. The occurrence of a body of a clause
+is replaced by its head. It is easiest to show with an example. Folding
+the goal {\tt accept(Xs,push,\(~\))} in the clause {\tt accept(Xs) $\lar$
+accept(Xs,push,\(~\))} with respect to the clause {\tt
+palindrome(Xs,State,Stack) $\lar$ accept(Xs,State,Stack)} produces the
+clause {\tt accept(Xs) $\lar$ palindrome(Xs,push,\(~\))}.\par
+Note that if we now unfold the goal {\tt palindrome(Xs,push,\(~\))} in
+{\tt accept(Xs) $\lar$ palindrome(Xs,push,\(~\))} with respect to the
+clause just used for folding, {\tt palindrome(Xs,State,Stack) $\lar$
+accept(Xs,State,Stack)}, we arrive back at the original clause, {\tt
+accept(Xs) $\lar$ accept(Xs,push,\(~\))}. Ideally, fold/unfold are
+inverse operations.\par
+Our example of folding used an iterative clause, i.e., one with a single
+goal in the body. Folding can be performed on a conjunction of goals, but
+there are technical difficulties arising from the scope of variables. Here we
+restrict ourselves to iterative clauses. The reader interested in the
+more general case should study the references given at the end of the
+chapter.\par
+Specialization of the interpreter of Program~\Propusdowaut\ is completed
+by unfolding the {\tt final(Q)} goal in the third clause of
+Program~\Propusdowaut, folding all occurrences of {\tt accept/3}, and
+folding with respect to the clause {\tt palindrome(Xs) $\lar$
+accept(Xs)}. Program~\Proproaccpal\ is then obtained. 
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it palindrome\/}({\it Xs\/}) $\lar$\cr
+\qi {\rm The string represented by the list} {\it Xs\/} {\rm is a
+palindrome.}\cr
+\noalign{\medskip}
+palindrome(Xs) $\lar$ palindrome(Xs,push,\(~\)).\cr
+\noalign{\vskip 5pt}
+palindrome(\(X$\mid$Xs\),push,S) $\lar$ palindrome(Xs,push,\(X$
+\mid$S\)).\cr
+palindrome(\(X$\mid$Xs\),push,S) $\lar$ palindrome(Xs,pop,\(X$
+\mid$S\)).\cr
+palindrome(\(X$\mid$Xs\),push,S) $\lar$ palindrome(Xs,pop,S).\cr
+palindrome(\(X$\mid$Xs\),pop,\(X$\mid$S\)) $\lar$
+palindrome(Xs,pop,S).\cr
+palindrome(\(~\),pop,\(~\)).\cr
+\noalign{\bigskip}
+{\bf Program \Proproaccpal}{\rm :~~A program accepting palindromes}\cr}
+\endinsert\par
+Propagating bindings leftward in Prolog will not preserve correctness in
+general. For example, consider unfolding the goal {\tt r(X)} with respect
+to the fact {\tt r(3)} in the clause {\tt p(X) $\lar$ var(X), r(x)}. The
+resulting clause, {\tt p(3) $\lar$ var(3)}, clearly always fails, in
+contrast with the original clause. Unfolding for Prolog can be performed
+correctly by not propagating bindings leftward, and replacing the
+unfolded goal by the unifier. For this example, the result would be {\tt
+p(X) $\lar$ var(X), X=3}. This will not be an issue in the examples we
+consider.\vskip 15pt\parno
+{\bf Exercise for Section 18.1}\vskip 5pt\par
+\offset{20pt}{(i)} Specialize the interpreter of Program~\Prointnonfin\
+to the NDFA of Program~\Prondfaaclan, or any other NDFA, by unfold/fold
+operations.\par
+\sect{Partial reduction}
+In this section we develop a simple system for controlled unfold/fold
+operations according to prescribed user declarations. Systems for
+controlled unfolding are known in the logic programming literature as
+partial evaluators. This name reveals the influence of functional
+programming, where the basic computation model is evaluation. We prefer to
+refer to the system in terms of the computation model of logic
+programming, goal reduction. We thus, nonstandardly, say our system is
+doing partial reduction, and call it a {\it partial reducer\/}.\par
+Considerable research on applying partial reduction has shown that
+partial reduction is especially useful for removing levels of
+interpretation. The sequence of unfold/fold operations given in
+Section~18.1 typify what is possible. The general NPDA interpreter 
+was specialized to a specific NPDA, removing interpreter overhead. The
+resulting program, Program~\Proproaccpal, only recognizes palindromes
+but does so far more efficiently than the combination of Programs
+\Propusdowaut\ and \Pronpdapafin.\par
+Let us see how to build a system that can apply the unfold and fold
+operations that were needed to produce the {\tt palindrome} program. The
+main idea is to recursively perform unfold/fold until no more ``progress''
+can be achieved. A relation that replaces a goal by its equivalent under
+these operations is needed. The resulting equivalent goal is known as a
+{\it residue\/}. Let us call our basic relation {\tt
+preduce(Goal,Residue)}, with intended meaning that {\tt Residue} is a
+residue arising from partially reducing {\tt Goal} by applying unfold and
+fold operations.\par
+Program~\Prometintdet\ contains code for {\tt preduce}. There are three
+possibilities for handling a single goal. It can be folded, unfolded, or
+left alone. The question immediately arises how to decide between the
+three possibilities. The easiest for a system is to rely on the user.
+Program~\Prometintdet\ assumes that the user gives {\tt
+should\_fold(Goal,FoldedGoal)} declarations that say which goals should
+be folded and to what they should be folded, and also {\tt
+should\_unfold(Goal)} declarations that say which goals should be
+unfolded. Unification against the program clauses determines to what they
+should be unfolded. Goals not covered by either declaration are left alone.
+The remaining clauses in Program~\Prometintdet\ handle the empty goal,
+{\tt true}, and conjunctive goals, which are treated recursively in the
+obvious way.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it preduce\/}({\it Goal,Residue\/}) $\lar$\cr
+\qi {\rm Partially reduce} {\it Goal\/} {\rm to leave the residue} {\it
+Residue\/}{\rm .}\cr
+\noalign{\medskip}
+preduce(true,true) $\lar$ !.\cr
+preduce((A,B),(PA,PB)) $\lar$ !, preduce(A,PA), preduce(B,PB).\cr
+preduce(A,B) $\lar$ should\_fold(A,B), !.\cr
+preduce(A,Residue) $\lar$ \cr
+\qi should\_unfold(A), !, clause(A,B), preduce(B,Residue).\cr
+preduce(A,A).\cr
+\noalign{\bigskip}
+{\bf Program \Prometintdet}{\rm :~~A meta-interpreter for determining a
+residue}\cr}
+\endin\par
+Observe that Program~\Prometintdet\ is essentially a meta-interpreter at
+the granularity level of vanilla (Program~\Prometpurpro). The
+meta-interpreter is enhanced to return the residue. Handling builtins is
+assigned to the exercises.\par
+The query {\tt preduce((initial(Q), accept(Xs,Q,\(~\))), Residue)?}
+assuming appropriate {\tt should\_fold} and {\tt should\_unfold}
+declarations (to be given shortly) has as solution {\tt Residue =
+(true,palindrome(Xs,push,\(~\)))}. It would be preferable to remove the
+superfluous call to {\tt true}. This can be done by modifying the clause
+handling conjunctive goals to be more careful in computing the
+conjunctive resolvent. A suitable modification is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+preduce((A,B),Res) $\lar$\cr
+\qi !, preduce(A,PA), preduce(B,PB), combine(PA,PB,Res).\cr}\medno
+The code for {\tt combine}, removing superfluous empty goals, is given in
+Program~\Prosimparred.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it process\/}({\it Program, RedProgram\/}) $\lar$\cr
+\qi {\rm Partially reduce each of the clauses in} {\it Program\/} {\rm to
+produce}\cr
+\qi {\it RedProgram\/}{\rm .}\cr
+\noalign{\medskip}
+process(Prog,NewProg) $\lar$\cr
+\qi findall(PCl,(member(Cl,Prog),preduce(Cl,PCl)),NewProg).\cr
+\noalign{\vskip 5pt}
+test(Name,Program) $\lar$\cr
+\qi program(Name,Clauses), process(Clauses,Program).\cr
+\noalign{\medskip}
+{\it preduce\/}({\it Goal,Residue\/}) $\lar$\cr
+\qi {\rm Partially reduce} {\it Goal\/} {\rm to leave the residue} {\it
+Residue\/}{\rm .}\cr
+\noalign{\medskip}
+preduce((A $\lar$ B),(PA $\lar$ PB)) $\lar$\cr
+\qi !, preduce(B,PB), preduce(A,PA).\cr
+preduce(true,true) $\lar$ !.\cr
+preduce((A,B),Res) $\lar$\cr
+\qi !, preduce(A,PA), preduce(B,PB), combine(PA,PB,Res).\cr
+preduce(A,B) $\lar$ should\_fold(A,B), !.\cr
+preduce(A,Residue) $\lar$\cr
+\qi should\_unfold(A), !, clause(A,B), preduce(B,Residue).\cr
+preduce(A,A).\cr
+\noalign{\vskip 5pt}
+combine(true,B,B) $\lar$ !.\cr
+combine(A,true,A) $\lar$ !.\cr
+combine(A,B,(A,B)).\cr
+\noalign{\bigskip}
+{\bf Program \Prosimparred}{\rm :~~A simple partial reduction system}\cr}
+\endin\par
+To extend Program~\Prometintdet\ into a partial reducer, clauses must be
+handled as well as goals. We saw a need in the previous section to
+partially reduce the head and body of a clause. The only question is in
+which order. Typically, we will want to fold the head and unfold the body.
+Since unfolding propagates bindings, unfolding first will allow more
+specific folding. Thus our proposed rule for handling clauses is
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+preduce((A $\lar$ B),(PA $\lar$ PB)) $\lar$\cr
+\qi !, preduce(B,PB), preduce(A,PA).\cr}\medno
+This goal order is advantageous for the example of the rule interpreter
+to be presented later in this section.\par
+To partially reduce a program, we need to partially reduce each of its
+clauses. For each clause, there may be several possibilities because of
+nondeterminism. For example, the recursive {\tt accept/3} clause led to
+four rules because of the four possible ways of unfolding the {\tt delta}
+goal. The cleanest way to get the whole collection of program clauses is
+to use the all-solutions predicate {\tt findall}. That gives\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+process(Prog,NewProg) $\lar$\cr
+\qi findall(PCl,(member(Cl,Prog), preduce(Cl,PCl)),NewProg).\cr}\medskip
+Putting all the preceding actions together gives a simple system for partial
+reduction. The code is presented as Program~\Prosimparred. The program
+also contains a testing clause.\par
+We now concentrate on how to specify {\tt should\_fold} and {\tt
+should\_unfold} declarations. Consider the NPDA example for recognizing
+palindromes. The {\tt initial}, {\tt final}, and {\tt delta} goals should
+all be unfolded. A declaration is needed for each. The {\tt accept/1} and
+{\tt accept/3} goals should be folded into palindrome goals with the same
+argument. The declaration for {\tt accept/1} is {\tt
+should\_fold(accept(Xs),palindrome(Xs))}. All the necessary declarations
+are given in Program~\Prospendpa. Program~\Prospendpa\ also contains the
+test program as data. Note the need to make all the variables in the
+program distinct. Applying Program~\Prosimparred\ to Program~\Prospendpa\
+by posing the query {\tt test(npda,P)?} produces Program~\Proproaccpal,
+with the only difference being an explicit empty body for the last {\tt
+palindrome} fact.
+\topin
+\halign{\hskip 20pt\lft{\tt #}\cr
+program(npda,\((accept(Xs1) $\lar$ initial(Q1), accept(Xs1,Q1,\(~\)),\cr
+\qi (accept(\(X2$\mid$Xs2\),Q2,S2) $\lar$ delta(Q2,X2,S2,Q12,S12),\cr
+\qi accept(Xs2,Q12,S12)), (accept(\(~\),Q3,\(~\)) $\lar$ true)\),P).\cr
+\noalign{\vskip 5pt}
+should\_unfold(initial(Q)).\cr
+should\_unfold(final(Q)).\cr
+should\_unfold(delta(A,B,C,D,E)).\cr
+\noalign{\vskip 5pt}
+should\_fold(accept(Q,Xs,Q1),palindrome(Q,Xs,Q1)).\cr
+should\_fold(accept(Xs),palindrome(Xs)).\cr
+\noalign{\bigskip}
+{\bf Program \Prospendpa}{\rm :~~Specializing an NPDA}\cr}
+\endin\par
+We now give a more complicated example of applying partial reduction to
+remove a level of overhead. We consider a simpler variant of the rule
+interpreter given in Section~17.4. The variant is at the bottom level of
+the layered interpreter. The interpreter, whose relation is {\tt
+solve(A,N)}, counts the number of reductions used in solving the goal
+{\tt A}. The code for {\tt solve} and related predicate {\tt solve\_body}
+is given in Program~\Prosperulint. The rules that we will consider
+constitute Program~\Prooveplaexp\ for determining where a dish should be
+placed in the oven. The rules are repeated in Program~\Prosperulint\ for
+convenience.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\rm Rule interpreter for counting reductions}\cr
+\noalign{\medskip}
+solve(A,1) $\lar$ fact(A).\cr
+solve(A,N) $\lar$ rule(A,B,Name), solve\_body(B,NB), N is NB+1.\cr
+\noalign{\vskip 5pt}
+solve\_body(A\&B,N) $\lar$\cr
+\qi solve\_body(A,NA), solve\_body(B,NB), N is NA+NB.\cr
+solve\_body(A is\_true,N) $\lar$ solve(A,N).\cr
+\noalign{\medskip}
+{\rm Sample rule base}\cr
+\noalign{\medskip}
+rule(oven(Dish,top),pastry(Dish) is\_true\cr
+\qi \& size(Dish,small) is\_true,place1).\cr
+rule(oven(Dish,middle),pastry(Dish) is\_true\cr
+\qi \& size(Dish,big) is\_true,place2).\cr
+rule(oven(Dish,middle),main\_meal(Dish) is\_true,place3).\cr
+rule(oven(Dish,bottom),slow\_cooker(Dish) is\_true,place4).\cr
+\noalign{\vskip 5pt}
+rule(pastry(Dish),type(Dish,cake) is\_true,pastry1).\cr
+rule(pastry(Dish),type(Dish,bread) is\_true,pastry2).\cr
+\noalign{\vskip 5pt}
+rule(main\_meal(Dish),type(Dish,meat) is\_true,main\_meal).\cr
+rule(slow\_cooker(Dish),type(Dish,milk\_pudding)\cr
+\qi is\_true,slow\_cooker).\cr
+\noalign{\vskip 5pt}
+should\_fold(solve(oven(D,P),N),oven(D,P,N)).\cr
+should\_fold(solve(pastry(D),N),pastry(D,N)).\cr
+should\_fold(solve(main\_meal(D),N),main\_meal(D,N)).\cr
+should\_fold(solve(slow\_cooker(D),N),slow\_cooker(D,N)).\cr
+should\_fold(solve(type(D,P),N),type(D,P,N)).\cr
+should\_fold(solve(size(D,P),N),size(D,P,N)).\cr
+\noalign{\vskip 5pt}
+should\_unfold(solve\_body(G,N)).\cr
+should\_unfold(rule(A,B,Name)).\cr
+\noalign{\vskip 5pt}
+program(rule\_interpreter,\((solve(A1,1) $\lar$ fact(A1)),\cr
+\qi (solve(A2,N) $\lar$ rule(A2,B,Name), solve\_body(B,NB), N is NB+1)\)).\cr
+\noalign{\bigskip}
+{\bf Program \Prosperulint}{\rm :~~Specializing a rule interpreter}\cr}
+\endin\par
+The effect of partial reduction in this case will be to ``compile'' the
+rules into Prolog clauses where the arithmetic calculations are done. The
+resulting Prolog clauses can in turn be compiled, in contrast to the
+combination of interpreter plus rules. Rule {\tt place1} will be
+transformed to\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+oven(Dish,top,N) $\lar$\cr
+\qi pastry(Dish,N1), size(Dish,small,N2),\cr
+\qi N3 is N1+N2, N is N3+1.\cr}\medskip
+The idea is to unfold the calls to {\tt rule} so that each rule can be
+handled, and also to unfold the component of the interpreter that handles
+syntactic structure, specifically {\tt solve\_body}. What gets folded are
+the individual calls to {\tt solve}, such as {\tt solve(oven(D,P),N)},
+which gets replaced by a predicate {\tt oven(D,P,N)}. The necessary
+declarations are given in Program~\Prosperulint. Program~\Prosimparred\
+applied to Program~\Prosperulint\ produces the desired effect.\par
+Specifying what goals should be folded and unfolded is in general
+straightforward in cases similar to what we have shown. Nevertheless,
+making such declarations is a burden on the programmer. In many cases,
+the declarations can be derived automatically. Discussing how is
+beyond the scope of the chapter.\par
+How useful partial reduction is for general Prolog programs is an open
+issue. As indicated, care must be taken when handling Prolog's impurities
+not to change the meaning of the program. Further, interaction with
+Prolog implementations can actually mean that programs that have been
+partially reduced can perform worse than the original program. It will be
+interesting to see how much partial reduction will be applied for Prolog
+compilation.\vskip 15pt\parno
+{\bf Exercises for Section 18.2}\vskip 5pt\par
+\offset{20pt}{(i)} Extend Program~\Prosimparred\ to handle builtins.\par
+\offset{20pt}{(ii)} Apply Program~\Prosimparred\ to the two-level rule
+interpreter with rules given as Program~\Prosketwomet.\par
+\sect{Code Walking}
+The examples of meta-programming given so far in Chapters 17 and 18 are
+dynamic in the sense that they ``execute'' Prolog programs by performing
+reductions. Prolog is also a useful language for writing static
+meta-programs that perform syntactic transformations of Prolog programs.
+In this section, we give two nontrivial examples in which programs are
+explicitly manipulated syntactically.\par
+The first example of explicit program manipulation is program
+composition. In Section~13.3, stepwise enhancement for systematic
+construction of Prolog programs was introduced. The third and final step
+in the method is composition of separate enhancements of a common
+skeleton. We now present a program to achieve composition that is
+capable of composing Programs \Profinunitwo\ and \Profininttwo\ to
+produce Program~\Profinuniint.\par
+The running example we use to illustrate the program is a variant of the
+example in Chapter~13. The skeleton is the same, namely,\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+skel(\(X$\mid$Xs\),Ys) $\lar$ member(X,Ys), skel(Xs,Ys).\cr
+skel(\(X$\mid$Xs\),Ys) $\lar$ nonmember(X,Ys), skel(Xs,Ys).\cr
+skel(\(~\),Ys).\cr}\medno
+The {\tt union} program, Program~\Profinunitwo, is also the same, namely,
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+union(\(X$\mid$Xs\),Ys,Us) $\lar$ member(X,Ys), union(Xs,Ys,Us).\cr
+union(\(X$\mid$Xs\),Ys,\(X$\mid$Us\)) $\lar$ nonmember(X,Ys),
+union(Xs,Ys,Us).\cr
+union(\(~\),Ys,Ys).\cr}\medno
+The second program to be composed is different and represents when added
+goals are present. The relation to be used is {\tt common(Xs,Ys,N)}, which
+counts the number of common elements {\tt N} in two lists {\tt Xs} and
+{\tt Ys}. The code is\medno
+\halign{\hskip 40pt\lft{\tt #}\cr
+common(\(X$\mid$Xs\),Ys,N) $\lar$\cr
+\qi member(X,Ys), common(Xs,Ys,M), N is M+1.\cr
+common(\(X$\mid$Xs\),Ys,N) $\lar$ nonmember(X,Ys), common(Xs,Ys,N).\cr
+common(\(~\),Ys,0).\cr}\medskip
+The program for composition makes some key assumptions that can be
+justified by theory underlying stepwise enhancement. Describing the
+theory is beyond the scope of this book. The most important assumption is
+that there is a one-to-one correspondence between the clauses of the two
+programs being composed, and one-to-one correspondences between the clauses of
+each of the programs and the common skeleton.\par
+Programs are represented as lists of clauses. The first clause in the
+first program corresponds to the first clause in the second program and
+to the first clause in the skeleton. Our assumption implies that the
+lists of clauses of programs being composed have the same length. The
+three programs have been written with corresponding clauses in the
+same order. (That the lists of clauses do have the same length is not
+checked explicitly.)\par
+In order to perform composition, a composition specification is
+needed. It states how the arguments of the final program relate to the
+two extensions. The relation that we will assume is {\tt
+composition\_specification(Program1,Program2,Skeleton,}\linebreak
+{\tt FinalProgram)}. An example of the specification for our running
+example is {\tt composition\_specification(union(Xs,Ys,Us),
+common(Xs,Ys,N), skel(Xs,Ys), uc(Xs,Ys,Us,N)}. The composition
+specification is given as part of Program~\Procomtwoenh.
+\topin
+\halign{\lft{\tt #}\cr
+{\it compose\/}({\it Program1,Program2,Skeleton,FinalProgram\/})
+$\lar$\cr
+\qi {\it FinalProgram\/} {\rm is the result of composing} {\it
+Program1\/} {\rm and}\cr
+\qi {\it Program2\/}{\rm , which are both enhancements of} {\it
+Skeleton\/}{\rm .}\cr
+\noalign{\medskip}
+compose(\(Cl1$\mid$Cls1\),\(Cl2$\mid$Cls2\),\(ClSkel$\mid$ClsSkel\),\(Cl$
+\mid$Cls\)) $\lar$\cr
+\qi compose\_clause(Cl1,Cl2,ClSkel,Cl),\cr
+\qi compose(Cls1,Cls2,ClsSkel,Cls).\cr
+compose(\(~\),\(~\),\(~\),\(~\)).\cr
+\noalign{\vskip 5pt}
+compose\_clause((A1$\lar$B1),(A2$\lar$B2),(ASkel$\lar$BSkel),(A$\lar$B))
+$\lar$\cr
+\qi composition\_specification(A1,A2,ASkel,A),\cr
+\qi compose\_bodies(BSkel,B1,B2,B\\true).\cr
+\noalign{\vskip 5pt}
+compose\_bodies(SkelBody,Body1,Body2,B\\BRest) $\lar$\cr
+\qi first(SkelBody,G), !,\cr
+\qi align(G,Body1,G1,RestBody1,B\\B1),\cr
+\qi align(G,Body2,G2,RestBody2,B1\\(Goal,B2)),\cr
+\qi compose\_goal(G1,G2,Goal),\cr
+\qi rest(SkelBody,Gs),\cr
+\qi compose\_bodies(Gs,RestBody1,RestBody2,B2\\BRest).\cr
+compose\_bodies(true,Body1,Body2,B\\BRest) $\lar$\cr
+\qi rest\_goals(Body1,B\\B1), rest\_goals(Body2,B1\\BRest).\cr
+\noalign{\vskip 5pt}
+align(Goal,Body,G,RestBody,B\\B) $\lar$\cr
+\qi first(Body,G), correspond(G,Goal), !, rest(Body,RestBody).\cr
+align(Goal,(G,Body),CorrespondingG,RestBody,(G,B)\\B1) $\lar$\cr
+\qi align(Goal,Body,CorrespondingG,RestBody,B\\B1).\cr}\medskip
+\halign{\lft{\tt #}\qquad&\lft{\tt #}\cr
+first((G,Gs),G).&rest((G,Gs),Gs).\cr
+first(G,G) $\lar$ G $\ne$ (A,B), G $\ne$ true.&rest(G,true) $\lar$ G
+$\ne$ (A,B).\cr}\medskip
+\halign{\lft{\tt #}\cr
+correspond(G,G).\cr
+correspond(G,B) $\lar$ map(G,B).\cr
+\noalign{\vskip 5pt}
+compose\_goal(G,G,G) $\lar$ !.\cr
+compose\_goal(A1,A2,A) $\lar$\cr
+\qi !, composition\_specification(A1,A2,ASkel,A).\cr
+\noalign{\vskip 5pt}
+rest\_goals(true,B\\B) $\lar$ !.\cr
+rest\_goals(Body,(G,B)\\BRest) $\lar$\cr
+\qi first(Body,G), !, rest(Body,Body1), rest\_goals(Body1,B\\BRest).\cr
+\noalign{\bigskip}
+{\bf Program \Procomtwoenh}{\rm :~~Composing two enhancements of a
+skeleton}\cr}
+\endin\par
+The program for composition is given as Program~\Procomtwoenh. The
+top-level relation is {\tt compose/4}, which composes the first two
+programs assumed to be enhancements of the third argument to produce the
+composite program, which is the fourth argument.\par
+The program proceeds clause by clause in the top loop of
+Program~\Procomtwoenh, where {\tt compose\_clause/4} does the clause
+composition. The arguments correspond exactly to the arguments for
+{\tt compose\/}. To compose two clauses, we have to compose the heads
+and the bodies.  Composition of the heads of clauses happens through
+unification with the composition specification. The predicate {\tt
+compose\_bodies/4} is used to compose the bodies. Note that the order
+of arguments has been changed so that we systematically traverse the
+skeleton. Each goal in the skeleton must be represented in each of the
+enhancements so that it can be used as a reference to align the goals in
+each of the enhancements.\par The essence of {\tt compose\_bodies} is
+to traverse the body of the skeleton goal by goal and construct the
+appropriate output goal as we proceed. In order to produce tidy
+output and avoid superfluous empty goals, a difference-structure is
+used to build the output body. The first clause for {\tt
+compose\_bodies} covers the case when the body of the skeleton is
+nonempty. The predicates {\tt first} and {\tt rest}, which access the
+body of the skeleton, are a good example of data abstraction.
+\par
+An important assumption made by Program~\Procomtwoenh\ concerns finding
+the goals in the bodies of the program that correspond to the goals in
+the skeleton. The assumption made, embedded in the predicate {\tt
+correspond}, is that a mapping will be given from goals in the
+enhancement to goals in the skeleton. In our running example, the
+predicates {\tt member} and {\tt nonmember} map onto themselves, while
+both {\tt union} and {\tt common} map onto {\tt skel}. This information,
+provided by the predicate {\tt map/2}, is needed to correctly align goals
+from the skeleton with goals of the program being composed. The code for
+{\tt align} as presented allows for additional goals to be present
+between goals in the skeleton. The only extra goal in our running example
+is the arithmetic calculation in {\tt common}, which is after the goals
+corresponding to the skeleton goals.\par
+The second clause for {\tt compose\_bodies} covers the case when the body
+is empty, either from dealing with a fact or because the skeleton has
+been traversed. In this case, any additional goals need to be included in
+the result. This is the function of {\tt rest\_goals}.\par
+Program~\Protesprocom\ contains a testing clause for Program
+\Procomtwoenh, along with the specific data for our running example. As
+with Program~\Prospendpa, variables in the programs being composed must
+be named differently. Automatic generation of composition specifications
+for more complicated examples is possible.
+\topin
+\halign{\hskip 20pt\lft{\tt #}\cr
+test\_compose(X,Prog) $\lar$\cr
+\qi program1(X,Prog1), program2(X,Prog2),\cr
+\qi skeleton(X,Skeleton), compose(Prog1,Prog2,Skeleton,Prog).\cr
+\noalign{\vskip 5pt}
+program1(test,\(\cr
+\qi (union(\(X1$\mid$Xs1\),Ys1,Zs1) $\lar$\cr
+\qii member(X1,Ys1), union(Xs1,Ys1,Zs1)),\cr
+\qi (union(\(X2$\mid$Xs2\),Ys2,\(X2$\mid$Zs2\)) $\lar$\cr
+\qii nonmember(X2,Ys2), union(Xs2,Ys2,Zs2)),\cr
+\qi (union(\(~\),Ys3,Ys3) $\lar$ true)\)).\cr
+program2(test,\(\cr
+\qi (common(\(X1$\mid$Xs1\),Ys1,N1) $\lar$\cr
+\qii member(X1,Ys1), common(Xs1,Ys1,M1), N1 is M1+1),\cr
+\qi (common(\(X2$\mid$Xs2\),Ys2,N2) $\lar$\cr
+\qii nonmember(X2,Ys2), common(Xs2,Ys2,N2)),\cr
+\qi (common(\(~\),Ys3,0) $\lar$ true)\)).\cr
+skeleton(test,\(\cr
+\qi (skel(\(X1$\mid$Xs1\),Ys1) $\lar$ member(X1,Ys1), skel(Xs1,Ys1)),\cr
+\qi (skel(\(X2$\mid$Xs2\),Ys2) $\lar$ nonmember(X2,Ys2),
+skel(Xs2,Ys2)),\cr
+\qi (skel(\(~\),Ys3) $\lar$ true)\)).\cr
+\noalign{\vskip 5pt}
+composition\_specification(union(Xs,Ys,Us), common(Xs,Ys,N),\cr
+\qi skel(Xs,Ys),uc(Xs,Ys,Us,N)).\cr
+\noalign{\vskip 5pt}
+map(union(Xs,Ys,Zs), skel(Xs,Ys)).\cr
+map(common(Xs,Ys,N), skel(Xs,Ys)).\cr
+\noalign{\bigskip}
+{\bf Program \Protesprocom}{\rm :~~Testing program composition}\cr}
+\endin\par
+The second example of explicit manipulation of programs is the conversion
+of context-free grammar rules to equivalent Prolog clauses. Context-free
+grammars are defined over a language of symbols, divided into {\it
+nonterminal\/} symbols and {\it terminal\/} symbols. A context-free
+grammar is a set of rules of the form\medskip
+\halign{\hskip 40pt\lft{#}\cr
+$\lan${\it head\/}$\ran$ $\lar$ $\lan${\it body\/}$\ran$\cr}\medno
+where {\it head\/} is a nonterminal symbol and {\it body\/} is a sequence
+of one or more items separated by commas. Each item can be a terminal or
+nonterminal symbol. Associated with each grammar is a starting symbol and
+a language that is the set of sequences of terminal symbols obtained by
+repeated (nondeterministic) application of the grammar rules starting
+from the starting symbol. For compatibility with Chapter~19,
+nonterminal symbols are denoted as Prolog atoms, terminal symbols are
+enclosed within lists, and \(~\) denotes the empty operation.\par
+The language a(bc)$^{\ast}$ can be defined by the following context-free
+grammar consisting of four rules:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+s $\rar$ \(a\), b.\cr
+b $\rar$ \(b\), c.\cr
+b $\rar$ \(~\).\cr
+c $\rar$ \(c\), b.\cr}\medskip
+Another example of a context-free grammar is given in Figure
+\Figconfregra. This grammar recognizes the language a$^{\ast}$b$^{
+\ast}$c$^{\ast}$.
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\lft{\tt #}\cr
+s $\rar$ a, b, c.\cr
+\noalign{\vskip 5pt}
+a $\rar$ \(a\), a.\cr
+a $\rar$ \(~\).\cr
+b $\rar$ \(b\), b.\cr
+b $\rar$ \(~\).\cr
+c $\rar$ \(c\), c.\cr
+c $\rar$ \(~\).\cr}}$$\medskip
+\ctrline{{\bf Figure \Figconfregra}:~~A context-free grammar for the
+language a$^{\ast}$b$^{\ast}$c$^{\ast}$}
+\endin\par
+A context-free grammar can be immediately written as a Prolog program.
+Each nonterminal symbol becomes a unary predicate whose argument is the
+sentence or phrase it identifies. The naive choice for representing each
+phrase is as a list of terminal symbols. The first grammar rule in Figure
+\Figconfregra\ becomes\medskip
+\halign{\lft{\tt #}\cr
+s(Xs) $\rar$\cr
+\qi a(As), b(Bs), c(Cs), append(Bs,Cs,BsCs), append(As,BsCs,Xs).\cr}
+\medskip
+Completing the grammar of Figure~\Figconfregra\ in the style of the
+previous rule leads to a correct program for parsing, albeit an
+inefficient one. The calls to {\tt append} suggest, correctly, that a
+difference-list might be a more appropriate structure for representing the
+sequence of terminals in the context of parsing. Program~\Proproparlan\
+is a translation of Figure~\Figconfregra\ to a Prolog program where
+difference-lists represent the phrases. The basic relation scheme is {\tt
+s(Xs)}, which is true if {\tt Xs} is a sequence of symbols accepted by the
+grammar.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+s(As\\Xs) $\lar$ a(As\\Bs), b(Bs\\Cs), c(Cs\\Xs).\cr
+\noalign{\vskip 5pt}
+a(Xs\\Ys) $\lar$ connect(\(a\),Xs\\Xs1), a(Xs1\\Ys).\cr
+a(Xs\\Ys) $\lar$ connect(\(~\),Xs\\Ys).\cr
+b(Xs\\Ys) $\lar$ connect(\(b\),Xs\\Xs1), b(Xs1\\Ys).\cr
+b(Xs\\Ys) $\lar$ connect(\(~\),Xs\\Ys).\cr
+c(Xs\\Ys) $\lar$ connect(\(c\),Xs\\Xs1), c(Xs1\\Ys).\cr
+c(Xs\\Ys) $\lar$ connect(\(~\),Xs\\Ys).\cr
+\noalign{\vskip 5pt}
+connect(\(~\),Xs\\Xs).\cr
+connect(\(W$\mid$Ws\),\(W$\mid$Xs\)\\Ys) $\lar$ connect(Ws,Xs\\Ys).\cr
+\noalign{\bigskip}
+{\bf Program \Proproparlan}{\rm :~~A Prolog program parsing the language
+a$^{\ast}$b$^{\ast}$c$^{\ast}$}\cr}
+\endinsert\par
+The predicate {\tt connect(Xs,Ws)} is true if the list {\tt Xs}
+represents the same sequence of elements as {\tt Ws}. The predicate is
+used to make explicit the translation of terminal symbols to Prolog
+programs.\par
+As a parsing program, Program~\Proproparlan\ is a top-down, left-to-right
+recursive parser that backtracks when it needs an alternative solution.
+Although easy to construct, backtracking parsers are in general
+inefficient. However, the efficiency of the underlying Prolog
+implementation in general more than compensates.\par
+We now present Program~\Protragrapro, which translates
+Figure~\Figconfregra\ to Program~\Proproparlan. As for
+Program~\Procomtwoenh, the translation proceeds clause by clause.
+There is a one-to-one correspondence between grammar rules and Prolog
+clauses. The basic relation is {\tt translate(Rules,Clauses)}.
+Individual clauses are translated by {\tt translate\_rule/2}. To
+translate a rule, both the head and body must be translated, with the
+appropriate correspondence of difference-lists, which will be added as
+additional arguments. 
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it translate\/}({\it Grammar,Program\/}) $\lar$\cr
+\qi {\it Program\/} {\rm is the Prolog equivalent of the context-free}\cr
+\qi {\rm grammar} {\it Grammar\/}{\rm .}\cr
+\noalign{\medskip}
+translate(\(Rule$\mid$Rules\),\(Clause$\mid$Clauses\)) $\lar$\cr
+\qi translate\_rule(Rule,Clause),\cr
+\qi translate(Rules,Clauses).\cr
+translate(\(~\),\(~\)).\cr
+\noalign{\medskip}
+{\it translate\_rule\/}({\it GrammarRule,PrologClause\/}) $\lar$\cr
+\qi {\it PrologClause\/} {\rm is the Prolog equivalent of the grammar}\cr
+\qi {\rm rule} {\it GrammarRule\/}{\rm .}\cr
+\noalign{\medskip}
+translate\_rule((Lhs $\rar$ Rhs),(Head $\lar$ Body)) $\lar$\cr
+\qi translate\_head(Lhs,Head,Xs\\Ys),\cr
+\qi translate\_body(Rhs,Body,Xs\\Ys).\cr
+\noalign{\vskip 5pt}
+translate\_head(A,A1,Xs) $\lar$\cr
+\qi translate\_goal(A,A1,Xs).\cr
+\noalign{\vskip 5pt}
+translate\_body(A,B),(A1,B1),Xs\\Ys) $\lar$\cr
+\qi !, translate\_body(A,A1,Xs\\Xs1), translate\_body(B,B1,Xs1\\Ys).\cr
+translate\_body(A,A1,Xs) $\lar$\cr
+\qi translate\_goal(A,A1,Xs).\cr
+\noalign{\vskip 5pt}
+translate\_goal(A,A1,DList) $\lar$\cr
+\qi nonterminal(A), functor(A1,A,1), arg(1,A1,DList).\cr
+translate\_goal(Terms,connect(Terms,S),S) $\lar$\cr
+\qi terminals(Terms).\cr
+\noalign{\vskip 5pt}
+nonterminal(A) $\lar$ atom(A).\cr
+\noalign{\vskip 5pt}
+terminals(Xs) $\lar$ list(Xs).\cr
+\noalign{\vskip 5pt}
+list(Xs) $\lar$ {\rm see Program \Prodeflis}.\cr
+\noalign{\bigskip}
+{\bf Program \Protragrapro}{\rm :~~Translating grammar rules to Prolog
+clauses}\cr}
+\endinsert\par
+Adding an argument is handled by the predicate {\tt
+translate\_goal}. If the goal to be translated is a nonterminal symbol, a
+unary predicate with the same functor is created. If the goal is a list of
+terminal symbols, the appropriate {\tt connect} goal is created. When
+executed, the {\tt connect} goal connects the two difference-lists. Code
+for {\tt connect} is in Program~\Proproparlan.\par
+Program~\Protragrapro\ can be extended for automatic translation of
+definite clause grammar rules. Definite clause grammars are the subject
+of Chapter~19. Most versions of Edinburgh Prolog provide such a
+translator.\vskip 15pt\parno 
+{\bf Exercise for Section 18.3}\vskip 5pt\par
+\offset{20pt}{(i)} Apply Program~\Procomtwoenh\ to one of the exercises
+posed at the end of Section~13.3.\par
+\sect{Background}
+Often research in logic programming has followed in the steps of related
+research in functional programming. This is true for unfold/fold and
+partial evaluation. Burstall and Darlington (1977) wrote the seminal paper
+on unfold/fold in the functional programming literature. Their work was
+adapted for logic programming by Tamaki and Sato (1984).\par
+The term {\it partial evaluation\/} may have been used first in a paper by
+Lombardi and Raphael (1964), where a simple partial evaluator for Lisp
+was described. A seminal paper introducing partial evaluation to computer
+science is due to Futamura in 1971, who noted the possibility of
+compiling away levels of interpretation. Komorowski described the first
+partial evaluator for pure Prolog in his thesis in 1981. He has since
+preferred the term {\it partial deduction\/}. Gallagher in 1983 was
+the first to advocate using partial evaluation in Prolog for removing
+interpretation overhead (Gallagher, 1986). Venken (1984) was the first
+to list some of the problems of extending partial evaluation to full
+Prolog. The paper that sparked the most interest in partial evaluation 
+in Prolog is due to Takeuchi and Furukawa (1986). They discussed using
+partial evaluation for removing runtime overhead and showed an order of
+magnitude speedup. Sterling and Beer (1989) particularize the work for
+expert systems. Their paper introduces the issue of pushing down
+meta-arguments, which is subsumed in this chapter by {\tt should\_fold}
+declarations. Specific Prolog partial evaluation systems to read for more
+details are ProMiX (Lakhotia and Sterling, 1990) and Mixtus (Sahlin,
+1991). An interesting application of partial evaluation is given by Smith
+(1991), where efficient string-matching programs were developed.\par
+Composition was first discussed in the context of Prolog
+meta-interpreters in Sterling and Beer (1989) and an informal algorithm
+was given in Sterling and Lakhotia (1988). A theory is found in
+Kirschenbaum, Sterling, and Jain (1993).\par\bye 
+

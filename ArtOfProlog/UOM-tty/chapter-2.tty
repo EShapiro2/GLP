@@ -1,0 +1,1651 @@
+
+
+
+
+                                                   Chapter  2
+
+
+
+                     Database  Programming
+
+
+
+    There are two basic styles of using logic programs: defining a logical data*
+ *base,
+
+
+and manipulating data structures. This chapter discusses database programming.
+
+
+A logic database contains a set of facts and rules.  We show how a set of facts
+
+
+can define relations, as in relational databases.  We show how rules can define
+
+
+complex relational queries, as in relational algebra. A logic program composed *
+ *of
+
+
+a set of facts and rules of a rather restricted format can express the function*
+ *alities
+
+
+associated with relational databases.
+
+
+
+2.1    Simple Databases
+
+
+
+    We begin by revising Program 1.1, the biblical database, and its augmen-
+
+
+tation with rules expressing family relationships.  The database itself had four
+
+
+basic predicates, father/2, mother/2, male/1, and female/1. We adopt a con-
+
+
+vention from database theory and give for each relation a relation scheme that
+
+
+specifies the role that each position in the relation (or argument in the goal)
+
+
+
+
+20    Database Programming                                       2.1
+
+
+
+is intended to represent.  Relation schemes for the four predicates here are, r*
+ *e-
+
+
+spectively, father(Father,Child), mother(Mother,Child), male(Person), and
+
+
+female(Person). The mnemonic names are intended to speak for themselves.
+
+
+
+    Variables are given mnemonic names in rules, but usually X or Y  when
+
+
+discussing queries.  Multiword names are handled differently for variables and
+
+
+predicates.  Each new word in a variable starts with an uppercase letter, for
+
+
+example, NieceOrNephew, while words are delimited by underscores for predicate
+
+
+and function names, for example, schedule_conflict.
+
+
+
+    New relations are built from these basic relationships by defining suit-
+
+
+able rules.  Appropriate relation schemes for the relationships introduced in
+
+
+the previous chapter are son(Son,Parent), daughter(Daughter,Parent), par-
+
+
+ent(Parent,Child), and grandparent(Grandparent,Grandchild).  From the
+
+
+logical viewpoint, it is unimportant which relationships are defined by facts a*
+ *nd
+
+
+which by rules. For example, if the available database consisted of parent, male
+
+
+and female facts, the rules defining son and grandparent are still correct. New
+
+
+rules must be written for the relationships no longer defined by facts, namely,
+
+
+father and mother. Suitable rules are
+
+
+
+        father(Dad,Child)   parent(Dad,Child), male(Dad).
+
+
+        mother(Mum,Child)   parent(Mum,Child), female(Mum).
+
+
+
+    Interesting rules can be obtained by making relationships explicit that are
+
+
+present in the database only implicitly. For example, since we know the father
+
+
+and mother of a child, we know which couples produced offspring, or to use a
+
+
+
+
+2.1                                              Simple Databases 21
+
+
+
+Biblical term, procreated.  This is not given explicitly in the database, but a
+
+
+simple rule can be written recovering the information.  The relation scheme is
+
+
+procreated(Man,Woman).
+
+
+    procreated(Man,Woman)   father(Man,Child), mother(Woman,Child).
+
+
+
+This reads: \Man and Woman procreated if there is a Child such that Man is the
+
+
+father of Child and Woman is the mother of Child."
+
+
+    Another example of information that can be recovered from the simple infor-
+
+
+mation present is sibling relationships | brothers and sisters. We give a rule *
+ *for
+
+
+brother(Brother,Sibling).
+
+
+    brother(Brother,Sib)  
+
+
+        parent(Parent,Brother), parent(Parent,Sib), male(Brother).
+
+
+
+This reads: \Brother is the brother of Sib if Parent is a parent of both Brother
+
+
+and Sib, and Brother is male."
+
+
+    There is a problem with this definition of brother. The query brother(X,X)?
+
+
+is satisfied for any male child X, which is not our understanding of the brother
+
+
+relationship.
+
+
+    In order to preclude such cases from the meaning of the program, we introdu*
+ *ce
+
+
+a predicate 6=(Term1,Term2). It is convenient to write this predicate as an inf*
+ *ix
+
+
+operator. Thus Term16=Term2 is true if Term1 and Term2 are different. For the
+
+
+present it is restricted to constant terms. It can be defined, in principle, by*
+ * a table
+
+
+X 6= Y for every two different individuals X and Y in the domain of interest.
+
+
+Figure 2.1 gives part of the appropriate table for Program 1.1.
+
+
+
+
+22    Database Programming                                       2.1
+
+
+
+       abraham6=isaac.     abraham6=haran.    abraham6=lot.
+
+
+       abraham6=milcah.    abraham6=yiscah.   isaac6=haran.
+
+
+       isaac6=lot.         isaac6=milcah.     isaac6=yiscah.
+
+
+       haran6=lot.         haran6=milcah.     haran6=yiscah.
+
+
+       lot6=milcah.        lot6=yiscah.       milcah6=yiscah.
+
+
+
+                    Figure 2.1:  Defining inequality
+
+
+
+    The new brother rule is
+
+
+        brother(Brother,Sib)  
+
+
+            parent(Parent,Brother),
+
+
+            parent(Parent,Sib),
+
+
+            male(Brother),
+
+
+            Brother 6= Sib.
+
+
+
+    The more relationships that are present, the easier it is to define complic*
+ *ated
+
+
+relationships. Program 2.1 defines the relationships uncle(Uncle,Person), sib-
+
+
+ling(Sib1,Sib2), and cousin(Cousin1,Cousin2). The definition of uncle in
+
+
+Program 2.1 does not define the husband of a sister of a parent to be an uncle.
+
+
+This may or may not be the intended meaning.  In general, different cultures
+
+
+define these family relationships differently.  In any case, the logic makes cl*
+ *ear
+
+
+exactly what the programmer means by these family relationships.
+
+
+    Another relationship implicit in the family database is whether a woman is a
+
+
+mother. This is determined by using the mother/2 relationship. The new relation
+
+
+scheme is mother(Woman), defined by the rule
+
+
+
+
+2.1                                              Simple Databases 23
+
+
+        uncle(Uncle,Person)  
+
+
+            brother(Uncle,Parent), parent(Parent,Person).
+
+
+        sibling(Sib1,Sib2)  
+
+
+            parent(Parent,Sib1), parent(Parent,Sib2), Sib1 6= Sib2.
+
+
+        cousin(Cousin1,Cousin2)  
+
+
+            parent(Parent1,Cousin1),
+
+
+            parent(Parent2,Cousin2),
+
+
+            sibling(Parent1,Parent2).
+
+
+
+        Program 2.1:  Defining family relationships
+
+
+
+        mother(Woman)  mother(Woman,Child).
+
+
+
+This reads: \Woman is a mother if she is the mother of some Child." Note that
+
+
+we have used the same predicate name, mother, to describe two different mother
+
+
+relationships. The mother predicate takes a different number of arguments, i.e.,
+
+
+has a different arity, in the two cases. In general, the same predicate name de*
+ *notes
+
+
+a different relation when it has a different arity.
+
+
+
+    We change examples, lest the example of family relationships become inces-
+
+
+tuous, and consider describing simple logical circuits.  A circuit can be viewed
+
+
+from two perspectives. The first is the topological layout of the physical comp*
+ *o-
+
+
+nents usually described in the circuit diagram. The second is the interaction of
+
+
+functional units. Both views are easily accommodated in a logic program. The
+
+
+circuit diagram is represented by a collection of facts, while rules describe t*
+ *he
+
+
+functional components.
+
+
+
+
+24    Database Programming                                       2.1
+
+
+
+    Program 2.2 is a database giving a simplified view of the logical and-gate
+
+
+drawn in Figure 2.2. The facts are the connections of the particular resistors *
+ *and
+
+
+transistors comprising the circuit.  The relation scheme for resistors is resis-
+
+
+tor(End1,End2) and for transistors transistor(Gate,Source,Drain).
+
+
+    The program demonstrates the style of commenting of logic programs we
+
+
+will follow throughout the book.  Each interesting procedure is preceded by a
+
+
+relation scheme for the procedure, shown in italic font, and by English text de*
+ *fin-
+
+
+ing the relation. We recommend this style of commenting, which emphasizes the
+
+
+declarative reading of programs, for Prolog programs as well.
+
+
+    Particular configurations of resistors and transistors fulfill roles captur*
+ *ed
+
+
+via rules defining the functional components of the circuit.  The circuit de-
+
+
+scribes an and-gate, which takes two input signals and produces as output
+
+
+the logical and of these signals.  One way of building an and-gate, and how
+
+
+this circuit is composed, is to connect a nand-gate with an inverter.  Rela-
+
+
+tion schemes for these three components are and_gate(Input1,Input2,Output),
+
+
+nand_gate(Input1,Input2,Output), and inverter(Input,Output).
+
+
+    To appreciate Program 2.2, let us read the inverter rule. This states that *
+ *an
+
+
+inverter is built up from a transistor with the source connected to the ground,*
+ * and
+
+
+a resistor with one end connected to the power source. The gate of the transist*
+ *or
+
+
+is the input to the inverter, while the free end of the resistor must be connec*
+ *ted
+
+
+to the drain of the transistor, which forms the output of the inverter. Sharing*
+ * of
+
+
+variables is used to insist on the common connection.
+
+
+    Consider the query and_gate(In1,In2,Out)?  to Program 2.2.  It has the
+
+
+
+
+2.1                                              Simple Databases 25
+
+
+
+        resistor(power,n1).
+
+
+        resistor(power,n2).
+
+
+        transistor(n2,ground,n1).
+
+
+        transistor(n3,n4,n2).
+
+
+        transistor(n5,ground,n4).
+
+
+        inverter(Input,Output)  
+
+
+            Output is the inversion of Input.
+
+
+        inverter(Input,Output)  
+
+
+            transistor(Input,ground,Output),
+
+
+            resistor(power,Output).
+
+
+        nand_gate(Input1,Input2,Output)  
+
+
+            Output is the logical nand of Input1  and Input2 .
+
+
+        nand_gate(Input1,Input2,Output)  
+
+
+            transistor(Input1,X,Output),
+
+
+            transistor(Input2,ground,X),
+
+
+            resistor(power,Output).
+
+
+        and_gate(Input1,Input2,Output)  
+
+
+            Output is the logical and of Input1  and Input2 .
+
+
+        and_gate(Input1,Input2,Output)  
+
+
+            nand_gate(Input1,Input2,X),
+
+
+            inverter(X,Output).
+
+
+
+        Program 2.2:  A circuit for a logical and-gate
+
+
+
+
+26    Database Programming                                       2.1
+
+
+
+                      Figure 2.2:  A logical circuit
+
+
+
+                      Figure 2.3:  Still-life objects
+
+
+
+
+2.1                                              Simple Databases 27
+
+
+
+solution fIn1=n3,In2=n5,Out=n1g.  This solution confirms that the circuit de-
+
+
+scribed by the facts is an and-gate, and indicates the inputs and output.
+
+
+
+
+28    Database Programming                                       2.1
+
+
+
+Exercises for Section 2.1
+
+
+
+(i) Modify the rule for brother on page 21 to give a rule for sister, the rule
+
+
+    for uncle in Program 2.1 to give a rule for niece, and the rule for sibling
+
+
+    in Program 2.1 so that it only recognizes full siblings, i.e., those that h*
+ *ave
+
+
+    the same mother and father.
+
+
+(ii)Using a predicate married_couple(Wife,Husband), define the relationships
+
+
+    mother_in_law, brother_in_law, and son_in_law.
+
+
+(iii)Describe the layout of objects in Figure 2.3 with facts using the predicat*
+ *es
+
+
+    left_of(Object1,Object2) and above(Object1,Object2).  Define predi-
+
+
+    cates right_of(Object1,Object2) and below(Object1,Object2) in terms
+
+
+    of left_of and above, respectively.
+
+
+
+
+2.2                              Structured Data and Data Abstraction29
+
+
+
+2.2    Structured Data and Data Abstraction
+
+
+
+    A limitation of Program 2.2 for describing the and-gate is the treatment of
+
+
+the circuit as a black box. There is no indication of the structure of the circ*
+ *uit in
+
+
+the answer to the and_gate query, even though the structure has been implicitly
+
+
+used in finding the answer. The rules tell us that the circuit represents an an*
+ *d-
+
+
+gate, but the structure of the and-gate is present only implicitly. We remedy t*
+ *his
+
+
+by adding an extra argument to each of the goals in the database. For uniformit*
+ *y,
+
+
+the extra argument becomes the first argument. The base facts simply acquire
+
+
+an identifier. Proceeding from left to right in the diagram of Figure 2.2, we l*
+ *abel
+
+
+the resistors r1 and r2, and the transistors t1, t2, and t3.
+
+
+
+    Names of the functional components should reflect their structure.  An in-
+
+
+verter is composed of a transistor and a resistor.  To represent this, we need
+
+
+structured data. The technique is to use a compound term, inv(T,R), where T
+
+
+and R are the respective names of the inverter's component transistor and resis*
+ *tor.
+
+
+Analogously, the name of a nand-gate will be nand(T1,T2,R), where T1, T2, and
+
+
+R name the two transistors and resistor that comprise a nand-gate. Finally, an
+
+
+and-gate can be named in terms of an inverter and a nand-gate. The modified
+
+
+code containing the names appears in Program 2.3.
+
+
+
+    The query and_gate(G,In1,In2,Out)?  has solution fG=and(nand(t2,t3,
+
+
+r2),inv(t1,r1)),In1=n3,In2=n5,Out=n1g. In1, In2, and Out have their pre-
+
+
+vious values. The complicated structure for G reflects accurately the functional
+
+
+composition of the and-gate.
+
+
+
+
+30    Database Programming                                       2.2
+
+
+
+        resistor(R,Node1,Node2 )  
+
+
+            R is a resistor between Node1  and Node2 .
+
+
+        resistor(r1,power,n1).
+
+
+        resistor(r2,power,n2).
+
+
+        transistor(T,Gate,Source,Drain)  
+
+
+            T  is a transistor whose gate is Gate,
+
+
+            source is Source, and drain is Drain.
+
+
+        transistor(t1,n2,ground,n1).
+
+
+        transistor(t2,n3,n4,n2).
+
+
+        transistor(t3,n5,ground,n4).
+
+
+        inverter(I,Input,Output)  
+
+
+            I  is an inverter that inverts Input to Output.
+
+
+        inverter(inv(T,R),Input,Output)  
+
+
+            transistor(T,Input,ground,Output),
+
+
+            resistor(R,power,Output).
+
+
+        nand_gate(Nand,Input1,Input2,Output)  
+
+
+            Nand is a gate forming the logical nand, Output,
+
+
+            of Input1  and Input2 .
+
+
+        nand_gate(nand(T1,T2,R),Input1,Input2,Output)  
+
+
+            transistor(T1,Input1,X,Output),
+
+
+            transistor(T2,Input2,ground,X),
+
+
+            resistor(R,power,Output).
+
+
+        and_gate(And,Input1,Input2,Output)  
+
+
+            And is a gate forming the logical and, Output,
+
+
+            of Input1  and Input2 .
+
+
+        and_gate(and(N,I),Input1,Input2,Output)  
+
+
+            nand_gate(N,Input1,Input2,X),
+
+
+            inverter(I,X,Output).
+
+
+
+        Program 2.3:  The circuit database with names
+
+
+
+
+2.2                              Structured Data and Data Abstraction31
+
+
+
+    Structuring data is important in programming in general and in logic pro-
+
+
+gramming in particular. It is used to organize data in a meaningful way. Rules
+
+
+can be written more abstractly, ignoring irrelevant details.  More modular pro-
+
+
+grams can be achieved this way, because a change of data representation need not
+
+
+mean a change in the whole program, as shown by the following example.
+
+
+    Consider the following two ways of representing a fact about a lecture cour*
+ *se
+
+
+on complexity given on Monday from 9 to 11 by David Harel in the Feinberg
+
+
+building, room A:
+
+
+        course(complexity,monday,9,11,david,harel,feinberg,a).
+
+
+
+and
+
+
+        course(complexity,time(monday,9,11),lecturer(david,harel),
+
+
+            location(feinberg,a)).
+
+
+
+The first fact represents course as a relation between eight items | a course
+
+
+name, a day, a starting hour, a finishing hour, a lecturer's first name, a lect*
+ *urer's
+
+
+surname, a building, and a room.  The second fact makes course a relation
+
+
+between four items | a name, a time, a lecturer, and a location with further
+
+
+qualification.  The time is composed of a day, a starting time, and a finishing
+
+
+time; lecturers have a first name and a surname; and locations are specified by*
+ * a
+
+
+building and a room. The second fact reflects more elegantly the relations that
+
+
+hold.
+
+
+    The four-argument version of course enables more concise rules to be written
+
+
+by abstracting the details that are irrelevant to the query. Program 2.4 contai*
+ *ns
+
+
+
+
+32    Database Programming                                       2.2
+
+
+
+examples. The occupied rule assumes a predicate less than or equal, represented
+
+
+as a binary infix operator .
+
+    lecturer(Lecturer,Course)  
+
+
+        course(Course,Time,Lecturer,Location).
+
+
+    duration(Course,Length)  
+
+
+        course(Course,time(Day,Start,Finish),Lecturer,Location),
+
+
+        plus(Start,Length,Finish).
+
+
+    teaches(Lecturer,Day)  
+
+
+        course(Course,time(Day,Start,Finish),Lecturer,Location).
+
+
+    occupied(Room,Day,Time)  
+
+
+        course(Course,time(Day,Start,Finish),Lecturer,Room),
+
+
+        Start  Time, Time  Finish.
+
+
+
+    Program 2.4:  Course rules
+
+
+
+    Rules not using the particular values of a structured argument need not
+
+
+\know" how the argument is structured.  For example, the rules for duration
+
+
+and teaches represent time explicitly as time(Day,Start,Finish) because the
+
+
+Day or Start or Finish times of the course are desired. In contrast, the rule f*
+ *or
+
+
+lecturer does not. This leads to greater modularity, because the representation
+
+
+of time can be changed without affecting the rules that do not inspect it.
+
+
+    We offer no definitive advice on when to use structured data.  Not using
+
+
+structured data allows a uniform representation where all the data are simple.
+
+
+The advantages of structured data are compactness of representation, which more
+
+
+
+
+2.2                              Structured Data and Data Abstraction33
+
+
+
+accurately reflects our perspective of a situation, and modularity. We can rela*
+ *te
+
+
+the discussion to conventional programming languages. Facts are the counterpart
+
+
+of tables, while structured data correspond to records with aggregate fields.
+
+
+    We believe that the appearance of a program is important, particularly when
+
+
+attempting difficult problems. A good structuring of data can make a difference
+
+
+when programming complex problems.
+
+
+    Some of the rules in Program 2.4 are recovering relations between two indi-
+
+
+viduals, binary relations, from the single, more complicated one. All the course
+
+
+information could have been written in terms of binary relations as follows:
+
+
+        day(complexity,monday).
+
+
+        start_time(complexity,9).
+
+
+        finish_time(complexity,11).
+
+
+        lecturer(complexity,harel).
+
+
+        building(complexity,feinberg).
+
+
+        room(complexity,a).
+
+
+
+Rules would then be expressed differently, reverting to the previous style of m*
+ *aking
+
+
+implicit connections explicit. For example,
+
+
+        teaches(Lecturer,Day)  
+
+
+            lecturer(Course,Lecturer), day(Course,Day).
+
+
+
+Exercises for Section 2.2
+
+
+
+(i) Add   rules   defining   the   relations   location(Course,Building),
+
+
+
+
+34    Database Programming                                       2.2
+
+
+
+    busy(Lecturer,Time),  and cannot_meet(Lecturer1,Lecturer2).   Test
+
+
+    with your own course facts.
+
+
+
+(ii)Possibly  using  relations  from  Exercise  (i),  define  the  relation  sc*
+ *hed-
+
+
+    ule_conflict(Time,Place,Course1,Course2).
+
+
+
+(iii)Write a program to check if a student has met the requirements for a colle*
+ *ge
+
+
+    degree.  Facts will be used to represent the courses that the student has
+
+
+    taken and the grades obtained, and rules will be used to enforce the college
+
+
+    requirements.
+
+
+
+(iv)Design a small database for an application of your own choice. Use a single
+
+
+    predicate to express the information, and invent suitable rules.
+
+
+
+2.3    Recursive Rules
+
+
+
+    The rules described so far define new relationships in terms of existing on*
+ *es.
+
+
+An interesting extension is recursive definitions of relationships that define *
+ *rela-
+
+
+tionships in terms of themselves. One way of viewing recursive rules is as gene*
+ *r-
+
+
+alization of a set of nonrecursive rules.
+
+
+
+    Consider a series of rules defining ancestors | grandparents, greatgrandpar-
+
+
+ents, etc:
+
+
+
+grandparent(Ancestor,Descendant)  
+
+
+    parent(Ancestor,Person), parent(Person,Descendant).
+
+
+greatgrandparent(Ancestor,Descendant)  
+
+
+
+
+2.3                                               Recursive Rules 35
+
+
+
+    parent(Ancestor,Person), grandparent(Person,Descendant).
+
+
+greatgreatgrandparent(Ancestor,Descendant)  
+
+
+    parent(Ancestor,Person), greatgrandparent(Person,Descendant).
+
+
+
+A clear pattern can be seen, which can be expressed in a rule defining the rela-
+
+
+tionship ancestor(Ancestor,Descendant):
+
+
+
+        ancestor(Ancestor,Descendant)  
+
+
+            parent(Ancestor,Person), ancestor(Person,Descendant).
+
+
+
+This rule is a generalization of the previous rules.
+
+
+    A logic program for ancestor also requires a nonrecursive rule, the choice
+
+
+of which affects the meaning of the program. If the fact ancestor(X,X) is used,
+
+
+defining the ancestor relationship to be reflexive, people will be considered t*
+ *o be
+
+
+their own ancestors. This is not the intuitive meaning of ancestor. Program 2.5*
+ * is
+
+
+a logic program defining the ancestor relationship, where parents are considered
+
+
+ancestors.
+
+
+        ancestor(Ancestor,Descendant)  
+
+
+            Ancestor is an ancestor of Descendant.
+
+
+        ancestor(Ancestor,Descendant)  
+
+
+            parent(Ancestor,Descendant).
+
+
+        ancestor(Ancestor,Descendant)  
+
+
+            parent(Ancestor,Person), ancestor(Person,Descendant).
+
+
+
+        Program 2.5:  The ancestor relationship
+
+
+
+
+36    Database Programming                                       2.3
+
+
+
+    The ancestor relationship is the transitive closure of the parent relations*
+ *hip.
+
+
+In general, finding the transitive closure of a relationship is easily done in *
+ *a logic
+
+
+program by using a recursive rule.
+
+
+    Program 2.5 defining ancestor is an example of a linear recursive program.
+
+
+A program is linear recursive if there is only one recursive goal in the body
+
+
+of the recursive clause.  The linearity can be easily seen from considering the
+
+
+complexity of proof trees solving ancestor queries.  A proof tree establishing
+
+
+that two individuals are n generations apart given Program 2.5 and a collection
+
+
+of parent facts has 2  n nodes.
+
+
+    There are many alternative ways of defining ancestors. The declarative con-
+
+
+tent of the recursive rule in Program 2.5 is that Ancestor is an ancestor of De-
+
+
+scendant if Ancestor is a parent of an ancestor of Descendant. Another way of
+
+
+expressing the recursion is by observing that Ancestor would be an ancestor of
+
+
+Descendant if Ancestor is an ancestor of a parent of Descendant. The relevant
+
+
+rule is
+
+
+
+        ancestor(Ancestor,Descendant)  
+
+
+            ancestor(Ancestor,Person), parent(Person,Descendant).
+
+
+
+    Another version of defining ancestors is not linear recursive.  A program
+
+
+identical in meaning to Program 2.5 but with two recursive goals in the recursi*
+ *ve
+
+
+clause is
+
+
+
+        ancestor(Ancestor,Descendant)  
+
+
+            parent(Ancestor,Descendant).
+
+
+
+
+2.3                                               Recursive Rules 37
+
+
+
+        ancestor(Ancestor,Descendant)  
+
+
+            ancestor(Ancestor,Person), ancestor(Person,Descendant).
+
+
+
+    Consider the problem of testing connectivity in a directed graph. A directed
+
+
+graph can be represented as a logic program by a collection of facts.  A fact
+
+
+edge(Node1,Node2) is present in the program if there is an edge from Node1 to
+
+
+Node2 in the graph. Figure 2.4 shows a graph; Program 2.6 is its description as
+
+
+a logic program.
+
+
+                          a !  b         f
+
+
+                          #    #         #
+
+
+                          c !  d !  e    g
+
+
+                      Figure 2.4:  A simple graph
+
+
+
+        edge(a,b).    edge(a,c).    edge(b,d).
+
+
+        edge(c,d).    edge(d,e).    edge(f,g).
+
+
+
+        Program 2.6:  A directed graph
+
+
+
+    Two nodes are connected if there is a series of edges that can be tra-
+
+
+versed to get from the first node to the second.  That is, the relation con-
+
+
+nected(Node1,Node2), which is true if Node1 and Node2 are connected, is the
+
+
+transitive closure of the edge relation. For example, a and e are connected in *
+ *the
+
+
+graph in Figure 2.4, but b and f are not. Program 2.7 defines the relation. The
+
+
+meaning of the program is the set of goals connected(X,Y), where X and Y are
+
+
+connected. Note that connected is a transitive reflexive relation because of the
+
+
+
+
+38    Database Programming                                       2.3
+
+
+
+connected(Node1,Node2 )  
+
+
+    Node1  is connected to Node2  in the
+
+
+    graph defined by the edge/2  relation.
+
+
+connected(Node,Node).
+
+
+connected(Node1,Node2)   edge(Node1,Link), connected(Link,Node2).
+
+
+
+Program 2.7:  The transitive closure of the edge relation
+
+
+
+choice of base fact.
+
+
+
+
+2.4                   Logic Programs and the Relational Database Model39
+
+
+
+Exercises for Section 2.3
+
+
+
+(i) A stack of blocks can be described by a collection of facts on(Block1,
+
+
+    Block2),  which  is  true  if  Block1  is  on  Block2.   Define  a  predica*
+ *te
+
+
+    above(Block1, Block2) that is true if Block1 is above Block2 in the stack.
+
+
+    (Hint:  above is the transitive closure of on.)
+
+
+
+(ii)Add recursive rules for left_of and above from Exercise 2.1(iii) on p. 24. *
+ *De-
+
+
+    fine higher(Object1,Object2), which is true if Object1 is on a line higher
+
+
+    than Object2 in Figure 2.3. For example, the bicycle is higher than the fish
+
+
+    in the figure.
+
+
+
+(iii)How many nodes are there in the proof tree for connected(a,e) using Pro-
+
+
+    grams 2.6 and 2.7? In general, using Program 2.6 and a collection of edge/2
+
+
+    facts, how many nodes are there in a proof tree establishing that two nodes
+
+
+    are connected by a path containing n intermediate nodes?
+
+
+
+2.4    Logic Programs and the Relational Database Model
+
+
+
+    Logic programs can be viewed as a powerful extension to the relational
+
+
+database model, the extra power coming from the ability to specify rules. Many
+
+
+of the concepts introduced have meaningful analogues in terms of databases. The
+
+
+converse is also true.  The basic operations of the relational algebra are easi*
+ *ly
+
+
+expressed within logic programming.
+
+
+
+    Procedures composed solely of facts correspond to relations, the arity of t*
+ *he
+
+
+
+
+40    Database Programming                                       2.4
+
+
+
+relation being the arity of the procedure. Five basic operations define the rel*
+ *a-
+
+
+tional algebra: union, set difference, Cartesian product, projection, and selec*
+ *tion.
+
+
+We show how each is translated into a logic program.
+
+
+    The union operation creates a relation of arity n from two relations r and *
+ *s,
+
+
+both of arity n. The new relation, denoted here r_union_s, is the union of r and
+
+
+s. It is defined directly as a logic program by two rules:
+
+
+        r_union_s(X1,: :,:Xn)   r(X1,: :,:Xn).
+
+
+        r_union_s(X1,: :,:Xn)   s(X1,: :,:Xn).
+
+
+
+    Set difference involves negation. We assume a predicate not. Intuitively, a
+
+
+goal not G is true with respect to a program P if G is not a logical consequenc*
+ *e of
+
+
+P. Negation in logic programs is discussed in Chapter 5, where limitations of t*
+ *he
+
+
+intuitive definition are indicated.  The definition is correct, however, if we *
+ *deal
+
+
+only with ground facts, as is the case with relational databases.
+
+
+    The definition of r_diff_s of arity n, where r and s are of arity n, is
+
+
+        r_diff_s(X1,: :,:Xn)   r(X1,: :,:Xn), not s(X1,: :,:Xn).
+
+
+
+    Cartesian product can be defined in a single rule. If r is a relation of ar*
+ *ity
+
+
+m, and s is a relation of arity n, then r_x_s is a relation of arity m + n defi*
+ *ned by
+
+
+    r_x_s(X1,: :,:Xm ,Xm+1 ,: :,:Xm+n )   r(X1,: :,:Xm ), s(Xm+1 ,: :,:Xm+n ).
+
+
+
+    Projection involves forming a new relation comprising only some of the at-
+
+
+tributes of an existing relation. This is straightforward for any particular ca*
+ *se. For
+
+
+example, the projection r13 selecting the first and third arguments of a relati*
+ *on
+
+
+
+
+2.4                   Logic Programs and the Relational Database Model41
+
+
+
+r of arity 3 is
+
+
+        r13(X1,X3)   r(X1,X2,X3).
+
+
+
+    Selection is similarly straightforward for any particular case.  Consider a
+
+
+relation consisting of tuples whose third components are greater than their sec*
+ *ond,
+
+
+and a relation where the first component is Smith or Jones. In both cases a rel*
+ *ation
+
+
+r of arity 3 is used to illustrate. The first example creates a relation r1:
+
+
+        r1(X1,X2,X3)   r(X1,X2,X3),X3 > X2.
+
+
+
+The second example creates a relation r2, which requires a disjunctive relation-
+
+
+ship, smith_or_jones:
+
+
+        r2(X1,X2,X3)   r(X1,X2,X3), smith_or_jones(X1).
+
+
+        smith_or_jones(smith).
+
+
+        smith_or_jones(jones).
+
+
+
+    Some of the derived operations of the relational algebra are more closely
+
+
+related to the constructs of logic programming. We mention two, intersection and
+
+
+the natural join. If r and s are relations of arity n, the intersection, r_meet*
+ *_s is
+
+
+also of arity n and is defined in a single rule.
+
+
+        r_meet_s(X1,: :,:Xn)   r(X1,: :,:Xn), s(X1,: :,:Xn).
+
+
+
+A natural join is precisely a conjunctive query with shared variables.
+
+
+
+
+42    Database Programming                                       2.4
+
+
+
+2.5    Background
+
+
+
+    Readers interested in pursuing the connection between logic programming
+
+
+and database theory are referred to the many papers that have been written on t*
+ *he
+
+
+subject. A good starting place is the review paper by Gallaire et al. (1984). T*
+ *here
+
+
+are earlier papers on logic and databases in Gallaire and Minker (1978). Another
+
+
+interesting book is about the implementation of a database query language in
+
+
+Prolog (Li, 1984). Our discussion of relational databases follows Ullman (1982).
+
+
+Another good account of relational databases can be found in Maier (1983).
+
+
+
+    In the seven years between the appearance of the first edition and the seco*
+ *nd
+
+
+edition of this book, the database community has accepted logic programs as
+
+
+extensions of relational databases. The term used for a database extended with
+
+
+logical rules is logic database or deductive database.  There is now a wealth of
+
+
+material about logic databases.  The rewritten version of Ullman's text (1989)
+
+
+discusses logic databases and gives pointers to the important literature.
+
+
+
+    Perhaps the major difference between logic databases as taught from a
+
+
+database perspective and the view presented here is the way of evaluating queri*
+ *es.
+
+
+Here we implicitly assume that the interpreter from Figure 4.2 will be used, a
+
+
+top-down approach.  The database community prefers a bottom-up evaluation
+
+
+mechanism. Various bottom-up strategies for answering a query with respect to
+
+
+a logic database are given in Ullman (1989).
+
+
+
+    In general, an n-ary relation can be replaced by n + 1 binary relations, as
+
+
+shown by Kowalski (1979a). If one of the arguments forms a key for the relation,
+
+
+
+
+2.5                                                   Background  43
+
+
+
+as does the course name in the example in Section 2.2, n binary relations suffi*
+ *ce.
+
+
+    The addition of an extra argument to each predicate in the circuit, as dis-
+
+
+cussed at the beginning of Section 2.2, is an example of an enhancement of a lo*
+ *gic
+
+
+program.  The technique of developing programs by enhancement is of growing
+
+
+importance. More will be said about this in Chapter 13.

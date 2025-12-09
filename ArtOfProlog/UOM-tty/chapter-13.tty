@@ -1,0 +1,1356 @@
+
+
+
+
+                                                 Chapter  13
+
+
+
+                      Program  Development
+
+
+
+   Software engineering considerations are as relevant for programming in logic
+
+
+programming languages as in procedural languages. Prolog is no different from
+
+
+any other language in its need for a methodology to build and maintain large
+
+
+programs. A good programming style is important, as is a good program devel-
+
+
+opment methodology. This chapter discusses programming style and layout and
+
+
+program development, and introduces a method called stepwise enhancement for
+
+
+systematic construction of Prolog programs.
+
+
+
+13.1  Programming Style and Layout
+
+
+
+   One basic concern in composing the programs in this book has been to make
+
+
+them as declarative as possible to increase program clarity and readability.  A
+
+
+program must be considered as a whole.  Its readability is determined by its
+
+
+physical layout and by the choice of names appearing in it. This section discus*
+ *ses
+
+
+the guidelines we use when composing programs.
+
+
+
+
+202   Program Development                                        13.1
+
+
+
+   An important influence in making programs easy to read is the naming of
+
+
+the various objects in the program. The choice of all predicate names, variable
+
+
+names, constants, and structures appearing in the program affect readability. T*
+ *he
+
+
+aim is to emphasize the declarative reading of the program.
+
+
+
+   We choose predicate names to be a word (or several words) that names rela-
+
+
+tions between objects in the program rather than describing what the program is
+
+
+doing. Coining a good declarative name for a procedure does not come easily.
+
+
+
+   The activity of programming is procedural. It is often easier to name pro-
+
+
+cedurally than declaratively (and programs with procedural names usually run
+
+
+faster :-). Once the program works, however, we often revise the predicate names
+
+
+to be declarative. Composing a program is a cyclic activity in which names are
+
+
+constantly being reworked to reflect our improved understanding of our creation,
+
+
+and to enhance readability by us and others.
+
+
+
+   Mnemonic variable names also have an effect on program readability. A name
+
+
+can be a meaningful word (or words) or a standard variable form such as Xs for
+
+
+lists.
+
+
+
+   Variables that appear only once in a clause can be handled separately. They
+
+
+are in effect anonymous, and from an implementation viewpoint need not be
+
+
+named. Standard Prolog supports a special syntactic convention, a single under-
+
+
+score, for referring to anonymous variables. Using this convention, Program 3.12
+
+
+for member would be written
+
+
+
+       member(X,[Xj_]).
+
+
+
+
+13.1                                   Programming Style and Layout203
+
+
+
+       member(X,[_jYs])   member(X,Ys).
+
+
+
+The advantage of the convention is to highlight the significant variables for u*
+ *ni-
+
+
+fication. The disadvantage is related; the reading of clauses becomes procedural
+
+
+rather than declarative.
+
+
+   We use different syntactic conventions for separating multiple words in vari-
+
+
+able names and predicate functors.  For variables, composite words are run to-
+
+
+gether, each new word starting with a capital letter. Multiple words in predica*
+ *te
+
+
+names are linked with underscores. Syntactic conventions are a matter of taste,
+
+
+but it is preferable to have a consistent style.
+
+
+   The layout of individual clauses also has an effect on how easily programs
+
+
+can be understood. We have found the most helpful style to be
+
+
+       foo(hArgumentsi)  
+
+
+           bar1(hArguments1i),
+
+
+           bar2(hArguments2i),
+           ..
+           .
+
+
+           barn(hArgumentsni).
+
+
+
+   The heads of all clauses are aligned, the goals in the body of a clause are
+
+
+indented and occupy a separate line each. A blank line is inserted between pro-
+
+
+cedures, but there is no space between individual clauses of a procedure.
+
+
+   Layout in a book and the typography used are not entirely consistent with
+
+
+actual programs. If all the goals in the body of a clause are short, then have *
+ *them
+
+
+on one line. Occasionally we have tables of facts with more than one fact per l*
+ *ine.
+
+
+
+
+204   Program Development                                        13.1
+
+
+
+   A program can be self-documenting if sufficient care is taken with these two
+
+
+factors and the program is sufficiently simple.  Given the natural aversion of
+
+
+programmers to comments and documentation, this is very desirable.
+
+
+
+   In practice, code is rarely self-documenting and comments are needed. One
+
+
+important part of the documentation is the relation scheme, which can be pre-
+
+
+sented before the clauses defining that relation, augmented with further expla-
+
+
+nations if necessary.  The explanations used in this book define the relation a
+
+
+procedure computes. It is not always easy to come up with a precise, declarativ*
+ *e,
+
+
+natural language description of a relation computed by a logic program.  How-
+
+
+ever, the inability to do so usually indicates that the programmer does not ful*
+ *ly
+
+
+understand the creation, even if the creation actually works. Hence we encourage
+
+
+the use of the declarative documentation conventions adopted in this book. They
+
+
+are a good means of communicating to others what a program defines as well as
+
+
+a discipline of thought, enabling programmers to think about and reflect on the*
+ *ir
+
+
+own creations.
+
+
+
+13.2  Reflections on Program Development
+
+
+
+   Since programming in pure Prolog is as close to writing specifications as any
+
+
+practical programming language has gotten, one might hope that pure Prolog
+
+
+programs would be bug-free. This, of course, is not the case. Even when axiom-
+
+
+atizing one's concepts and algorithms, a wide spectrum of bugs, quite similar to
+
+
+ones found in conventional languages, can be encountered.
+
+
+
+
+13.2                               Reflections on Program Development205
+
+
+
+   Stating it differently, for any formalism there are sufficiently complex pro*
+ *b-
+
+
+lems for which there are no self-evidently correct formulations of solutions. T*
+ *he
+
+
+difference between low-level and high-level languages, then, is only the thresh*
+ *old
+
+
+after which simple examination of the program is insufficient to determine its
+
+
+correctness.
+
+
+   There are two schools of thought on what to do on such an occasion. The
+
+
+\verification" school suggests that such complex programs be verified by proving
+
+
+that they behave correctly with respect to an abstract specification. It is not*
+ * clear
+
+
+how to apply this approach to logic programs, since the distance between the
+
+
+abstract specification and the program is much smaller then in other languages.
+
+
+If the Prolog axiomatization is not self-evident, there is very little hope tha*
+ *t the
+
+
+specification, no matter in what language it is written, would be.
+
+
+   One might suggest using full first-order logic as a specification formalism *
+ *for
+
+
+Prolog. It is the authors' experience that very rarely is a specification in fu*
+ *ll first-
+
+
+order logic shorter, simpler, or more readable then the simplest Prolog program
+
+
+defining the relation.
+
+
+   Given this situation, there are weaker alternatives. One is to prove that one
+
+
+Prolog program, perhaps more efficient though more complex, is equivalent to a
+
+
+simpler Prolog program, which, though less efficient, could serve as a specific*
+ *ation
+
+
+for the first. Another is to prove that a program satisfies some constraint, su*
+ *ch
+
+
+as a \loop invariant," which, though not guaranteeing the program's correctness,
+
+
+increases our confidence in it.
+
+
+   In some sense, Prolog programs are executable specifications. The alternative
+
+
+
+
+206   Program Development                                        13.2
+
+
+
+to staring at them, trying to convince ourselves that they are correct, is to e*
+ *xecute
+
+
+them, and see if they behave in the way we want. This is the standard testing a*
+ *nd
+
+
+debugging activity, carried out in program development in any other programming
+
+
+language. All the classical methods, approaches, and common wisdom concerning
+
+
+program testing and debugging apply equally well to Prolog.
+
+
+   What is the difference, then, between program development in conventional,
+
+
+even symbolic languages and Prolog?
+
+
+   One answer is that although Prolog programming is \just" programming,
+
+
+there is some improvement in ease of expression and speed of debugging compared
+
+
+to other lower-level formalisms | we hope the reader has already had a glimpse
+
+
+of it.
+
+
+   Another answer is that declarative programming clears your mind. Said less
+
+
+dramatically, programming one's ideas in general, and programming in a declar-
+
+
+ative and high-level language in particular, clarifies one's thoughts and conce*
+ *pts.
+
+
+For experienced Prolog programmers, Prolog is not just a formalism for coding a
+
+
+computer, but also a formalism in which ideas can be expressed and evaluated |
+
+
+a tool for thinking.
+
+
+   A third answer is that the properties of the high-level formalism of logic
+
+
+may eventually lead to practical program development tools that are an order of
+
+
+magnitude more powerful then the tools used today. Examples of such tools are
+
+
+automatic program transformers, partial-evaluators, type inference programs, and
+
+
+algorithmic debuggers. The latter are addressed in Section 17.3, where program
+
+
+diagnosis algorithms and their implementation in Prolog are described.
+
+
+
+
+13.2                               Reflections on Program Development207
+
+
+
+   Unfortunately, practical Prolog programming environments incorporating
+
+
+these novel ideas are not yet widely available. In the meantime, a simple trace*
+ *r,
+
+
+such as explained in Section 17.2, is most of what one can expect. Nevertheless,
+
+
+large and sophisticated Prolog programs can be developed even using the current
+
+
+Prolog environments, perhaps with greater ease than in other available language*
+ *s.
+
+
+
+   The current tools and systems do not dictate or support a specific program
+
+
+development methodology.  However, as with other symbolic programming lan-
+
+
+guages, rapid prototyping is perhaps the most natural development strategy. In
+
+
+this strategy, one has an evolving, usable prototype of the system in most stag*
+ *es
+
+
+of the development.  Development proceeds by either rewriting the prototype
+
+
+program or extending it.  Another alternative, or complementary, approach to
+
+
+program development is \think top-down, implement bottom-up." Although the
+
+
+design of a system should be top-down and goal-driven, its implementation pro-
+
+
+ceeds best if done bottom-up.  In bottom-up programming each piece of code
+
+
+written can be debugged immediately. Global decisions, such as representation,
+
+
+can be tested in practice on small sections of the system, and cleaned up and
+
+
+made more robust before most of the programming has been done. Also, experi-
+
+
+ence with one subsystem may lead to changes in the design of other subsystems.
+
+
+
+   The size of the chunks of code that should be written and debugged as a whole
+
+
+varies and grows as the experience of the programmer grows. Experienced Prolog
+
+
+programmers can write programs consisting of several pages of code, knowing
+
+
+that what is left after writing is done is mostly simple and mundane debugging.
+
+
+Less experienced programmers might find it hard to grasp the functionality and
+
+
+
+
+208   Program Development                                        13.2
+
+
+
+interaction of more then a few procedures at a time.
+
+
+
+   We would like to conclude this section with a few moralistic statements. For
+
+
+every programming language, no matter how clean, elegant, and high-level, one
+
+
+can find programmers who will use it to write dirty, contorted, and unreadable
+
+
+programs. Prolog is no exception. However, we feel that for most problems that
+
+
+have an elegant solution, there is an elegant expression of that solution in Pr*
+ *olog.
+
+
+It is a goal of this book to convey both this belief and the tools to realize it
+
+
+in concrete cases, by showing that aesthetics and practicality are not necessar*
+ *ily
+
+
+opposed or conflicting goals. Put even more strongly, elegance is not optional.
+
+
+
+13.3  Systematizing Program Construction
+
+
+
+   The pedagogic style of this book is to present well-constructed programs
+
+
+illustrating the important Prolog programming techniques.  The examples are
+
+
+explained in sufficient detail so that readers can apply the techniques to cons*
+ *truct
+
+
+similar programs to meet their own programming needs. Implicitly, we are saying
+
+
+that Prolog programming is a skill that can be learned by observing good exampl*
+ *es
+
+
+and abstracting the principles.
+
+
+
+   Learning by apprenticeship, observing other programs, is not the only way.
+
+
+As experience with programming in Prolog accumulates, more systematic meth-
+
+
+ods of teaching Prolog programming are emerging. The emergence of systematic
+
+
+methods is analogous to the emergence of structured programming and stepwise
+
+
+refinement in the early 1970s after sufficient experience had accumulated in wr*
+ *it-
+
+
+
+
+13.3                               Systematizing Program Construction209
+
+
+
+ing programs in the computer languages of the 1950s and 1960s.
+
+
+   In this section, we sketch a method to develop Prolog programs. The reader
+
+
+is invited to reconstruct for herself how this method could be applied to devel*
+ *op
+
+
+the programs in Parts III and IV of this book. Underlying the method is a desire
+
+
+to provide more structure to Prolog programs so that software components can
+
+
+be reused and large applications can be routinely maintained and extended.
+
+
+   Central to the method is identifying the essential flow of control of a pro-
+
+
+gram. A program embodying a control flow is called a skeleton. Extra goals and
+
+
+arguments can be attached to a skeleton. The extra goals and arguments are en-
+
+
+twined around the central flow of control and perform additional computations.
+
+
+The program containing the extra arguments and goals is called an enhancement
+
+
+of the skeleton. Building an enhancement from a skeleton will be called applying
+
+
+a technique.
+
+
+   For example, consider Program 8.6a for summing a list of numbers, repro-
+
+
+duced here:
+
+
+
+       sumlist([XjXs],Sum)   sumlist(Xs,XsSum), Sum is X+XsSum.
+
+
+       sumlist([ ],0).
+
+
+
+   The control flow embodied in the sumlist program is traversing the list of
+
+
+numbers. The skeleton is obtained by dropping the second argument completely,
+
+
+restricting to a predicate with one argument, and removing goals that only per-
+
+
+tain to the second argument. This gives the following program, which should be
+
+
+identifiable as Program 3.11 defining a list.
+
+
+
+
+210   Program Development                                        13.3
+
+
+
+       list([XjXs])   list(Xs).
+
+
+       list([ ]).
+
+
+
+   The extra argument of the sumlist program calculates the sum of the num-
+
+
+bers in the list. This form of calculation is very common and appeared in sever*
+ *al
+
+
+of the examples in Chapter 8.
+
+
+   Another enhancement of the list program is Program 8.11 calculating the
+
+
+length of a list. There is a clear similarity between the programs for length a*
+ *nd
+
+
+sumlist. Both use a similar technique for calculating a number, in one case the
+
+
+sum of the numbers in the list, in the second the length of the list.
+
+
+       length([XjXs],N)   length(Xs,N1), N is N1+1.
+
+
+       length([ ],0).
+
+
+
+   Multiple techniques can be applied to a skeleton. For example, we can apply
+
+
+both summing elements and counting elements in one pass to get the program
+
+
+sum_length:
+
+
+       sum_length([XjXs],Sum,N)  
+
+
+           sumlist(Xs,XsSum,N1), Sum is X+XsSum, N is N1+1.
+
+
+       sum_length([ ],0,0).
+
+
+
+   Intuitively, it is straightforward to create the sum_length program from the
+
+
+programs for sumlist and length. The arguments are taken directly and com-
+
+
+bined to give a new program. We call this operation composition. In Chapter 18,
+
+
+a program for composition is presented.
+
+
+   Another example of a technique is adding a pair of arguments as an accu-
+
+
+
+
+13.3                               Systematizing Program Construction211
+
+
+
+mulator and a final result. The technique is informally described in Section 7.*
+ *5.
+
+
+Applying the appropriate version of the technique to the list skeleton can gen-
+
+
+erate Program 8.6b for sumlist or the iterative version of length, which is the
+
+
+solution to Exercise 8.3(vii).
+
+
+   Identifying control flows of programs may seem contradictory to the ideal of
+
+
+declarative programming espoused in the previous section. However, at some level
+
+
+programming is a procedural activity, and describing well-written chunks of code
+
+
+is fine. It is our belief that recognizing patterns of programs makes it easier*
+ * for
+
+
+people to develop good style. Declarativeness is preserved by ensuring wherever
+
+
+possible that each enhancement produced be given a declarative reading.
+
+
+   The programming method called stepwise enhancement consists of three
+
+
+steps:
+
+
+1. Identify the skeleton program constituting the control flow.
+
+
+2. Create enhancements using standard programming techniques.
+
+
+3. Compose the separate enhancements to give the final program.
+
+
+   We illustrate stepwise enhancement for a simple example | calculating the
+
+
+union and intersection of two lists of elements.  For simplicity we assume that
+
+
+there are no duplicate elements in the two lists and that we do not care about *
+ *the
+
+
+order of elements in the answer.
+
+
+   A skeleton for this program follows. The appropriate control flow is to tra-
+
+
+verse the first list, checking whether each element is a member or not of the s*
+ *econd
+
+
+list. There will be two cases:
+
+
+
+
+212   Program Development                                        13.3
+
+
+
+       skel([XjXs],Ys)   member(X,Ys), skel(Xs,Ys).
+
+
+       skel([XjXs],Ys)   nonmember(X,Ys), skel(Xs,Ys).
+
+
+       skel([ ],Ys).
+
+
+
+   To calculate the union, we need a third argument, which can be built top-
+
+
+down in the style discussed in Section 7.5. We consider each clause in turn. Wh*
+ *en
+
+
+an element in the first list is a member of the second list, it is not included*
+ * in the
+
+
+union. When an element in the first list is not a member of the second list, it*
+ * is
+
+
+included in the union. When the first list is empty, the union is the second li*
+ *st.
+
+
+The enhancement for union is given as Program 13.1.
+
+
+       union(Xs,Ys,Us)  
+
+
+           Us is the union of the elements in Xs and Ys.
+
+
+       union([XjXs],Ys,Us)   member(X,Ys), union(Xs,Ys,Us).
+
+
+       union([XjXs],Ys,[XjUs])   nonmember(X,Ys), union(Xs,Ys,Us).
+
+
+       union([ ],Ys,Ys).
+
+
+
+       Program 13.1:  Finding the union of two lists
+
+
+
+   The intersection, given as Program 13.2, is determined with a similar tech-
+
+
+nique. We again consider each clause in turn. When an element in the first list
+
+
+is a member of the second list, it is included in the intersection. When an ele-
+
+
+ment in the first list is not a member of the second list, it is not included i*
+ *n the
+
+
+intersection. When the first list is empty, so is the intersection.
+
+
+   Calculating both the union and the intersection can be determined in a single
+
+
+
+
+13.3                               Systematizing Program Construction213
+
+
+intersect(Xs,Ys,Is)  
+
+
+   Is is the intersection of the elements in Xs and Ys.
+
+
+intersect([XjXs],Ys,[XjIs])   member(X,Ys), intersect(Xs,Ys,Is).
+
+
+intersect([XjXs],Ys,Is)   nonmember(X,Ys), intersect(Xs,Ys,Is).
+
+
+intersect([ ],Ys,[ ]).
+
+
+
+Program 13.2:  Finding the intersection of two lists
+
+
+
+       union_intersect(Xs,Ys,Us,Is)  
+
+
+           Us and Is are the union and intersection, respectively, of the
+
+
+           elements in Xs and Ys.
+
+
+       union_intersect([XjXs],Ys,Us,[XjIs])  
+
+
+           member(X,Ys), union_intersect(Xs,Ys,Us,Is).
+
+
+       union_intersect([XjXs],Ys,[XjUs],Is)  
+
+
+           nonmember(X,Ys), union_intersect(Xs,Ys,Us,Is).
+
+
+       union_intersect([ ],Ys,Ys,[ ]).
+
+
+
+       Program 13.3:  Finding the union and intersection of two lists
+
+
+
+traversal of the first list by composing the two enhancements. This program is
+
+
+given as Program 13.3.
+
+
+   Developing a program is typically straightforward once the skeleton has been
+
+
+decided.  Knowing what skeleton to use is less straightforward and is learned
+
+
+by experience. Experience is necessary for any design task. By splitting up the
+
+
+program development into three steps, however, the design process is simplified
+
+
+
+
+214   Program Development                                        13.3
+
+
+
+and given structure.
+
+
+
+   A motivation behind giving programs structure, as is done by stepwise en-
+
+
+hancement, is to facilitate program maintenance. It is easy to extend a program
+
+
+by adding new techniques to a skeleton, and it is possible to improve programs *
+ *by
+
+
+changing skeletons while maintaining techniques. Further, the structure makes it
+
+
+easy to explain a program.
+
+
+
+   Skeletons and techniques can be considered as constituting reusable software
+
+
+components. This will be illustrated in Chapter 17, where the same skeleton met*
+ *a-
+
+
+interpreter is useful both for program debugging and for expert system shells.
+
+
+
+   Having  raised  software  engineering  issues  such  as  maintainability  and
+
+
+reusability, we conclude this chapter by examining two other issues that must
+
+
+be addressed if Prolog is to be routinely used for large software projects.  The
+
+
+place of specifications should be clarified, and modules are necessary if code *
+ *is to
+
+
+be developed in pieces.
+
+
+
+   It is clear from the previous section that we do not advocate using first-or*
+ *der
+
+
+logic as a specification language.  Still, it is necessary to have a specificat*
+ *ion,
+
+
+that is, a document explaining the behavior of a program sufficiently so that t*
+ *he
+
+
+program can be used without the code having to be read.  We believe that a
+
+
+specification should be the primary form of documentation and be given for each
+
+
+procedure in a program.
+
+
+
+   A suggested form for a specification is given in Figure 13.1.  It consists of
+
+
+a procedure declaration, effectively giving the name and arity of the predicate;
+
+
+
+
+13.3                               Systematizing Program Construction215
+
+
+
+                     procedure  p(T1,T2,: :,:Tn)
+
+
+                     Types:     T1: type1
+
+
+                                T2: type2
+                                ..  .
+                                .   ..
+
+
+                                Tn: typen
+
+
+                     Relation scheme:
+
+
+                     Modes of use:
+
+
+                     Multiplicities of solution:
+
+
+                Figure 13.1:  Template for a specification
+
+
+
+a series of type declarations about the arguments; a relation scheme; and other
+
+
+important information such as modes of use of the predicate and multiplicities *
+ *of
+
+
+solutions in each mode of use. We discuss each component in turn.
+
+
+
+   Types are emerging as important in Prolog programs. An untyped language
+
+
+facilitates rapid prototyping and interactive development, but for more systema*
+ *tic
+
+
+projects, imposing types is probably worthwhile.
+
+
+
+   The relation scheme is a precise statement in English that explains the re-
+
+
+lation computed by the program. All the programs in this book have a relation
+
+
+scheme. It should be stressed that relation schemes must be precise statements.
+
+
+We believe that proving properties of programs will proceed in the way of math-
+
+
+ematics, where proofs are given by precise statements in an informal language.
+
+
+
+   Prolog programs inherit from logic programs the possibility of being multi-
+
+
+
+
+216   Program Development                                        13.3
+
+
+
+use.  In practice, multi-use is rare.  A specification should state which uses *
+ *are
+
+
+guaranteed to be correct. That is the purpose of the modes of use component in
+
+
+Figure 13.1. Modes of use are specified by the instantiation state of arguments
+
+
+before and after calls to the predicate.
+
+
+   For example,  the most common mode of use of Program 3.15 for ap-
+
+
+pend(Xs,Ys,Zs) for concatenating two lists Xs and Ys to produce a list Zs is
+
+
+as follows. Xs and Ys are instantiated at the time of call, whereas Zs is not, *
+ *and
+
+
+all three arguments are instantiated after the goal succeeds.  Calling append/3
+
+
+with all three arguments instantiated is a different mode of use. A common con-
+
+
+vention, taken from DEC-10 Prolog is to use + for an instantiated argument,
+
+
+for an uninstantiated argument, and ? for either. The modes for the precedinguse
+
+
+of append are append(+; +; ) before the call and append(+; +; +) after the call.
+
+
+   More precise statements can be made by combining modes with types. The
+
+
+mode of use of the current example becomes the following: Before the call the
+
+
+first two arguments are complete lists and the third a variable; after the call*
+ * all
+
+
+three arguments are complete lists.
+
+
+   Multiplicities are the number of solutions of the predicate, and should be
+
+
+specified for each mode of use of the program.  It is useful to give both the
+
+
+minimum and maximum number of solutions of a predicate.  The multiplicities
+
+
+can be used to reason about properties of the program.
+
+
+   Modules are primarily needed to allowseveral people to work on a project.
+
+
+Several programmers should be able to develop separate components of a large
+
+
+system without worrying about undesirable interactions such as conflict of pred-
+
+
+
+
+13.3                               Systematizing Program Construction217
+
+
+
+icate names.  What is needed is a mechanism for specifying what is local to a
+
+
+module and which predicates are imported and exported.
+
+
+
+   Current Prolog systems provide primitive facilities for handling modules. The
+
+
+current systems are either atom-based or predicate-based, depending on what is
+
+
+made local to the module.  Directives are provided for specifying imports and
+
+
+exports. Experience is growing in using existing module facilities, which will *
+ *be
+
+
+translated into standards for modules that will ultimately be incorporated into
+
+
+Standard Prolog.  The current draft on modules in Standard Prolog is in too
+
+
+much flux to describe here. The user needing modules should consult the relevant
+
+
+Prolog manual.
+
+
+
+Exercises for Section 13.3
+
+
+
+(i)Enhance Program 13.3 to build the list of elements contained in the first li*
+ *st
+
+
+   but not in the second list.
+
+
+
+(ii)Write a program to solve the following problem. Given a binary tree T with
+
+
+   positive integers as values, build a tree that has the same structure as T
+
+
+   but with every node replaced by the maximum value in the tree. It can be
+
+
+   accomplished with one traversal of the tree. (Hint:  Use Program 3.23 as a
+
+
+   skeleton.)
+
+
+
+(iii)Write a program to calculate the mean and mode of an ordered list of numbe*
+ *rs
+
+
+   in one pass of the list.
+
+
+
+
+218   Program Development                                        13.4
+
+
+
+13.4  Background
+
+
+
+   Commenting on Prolog programming style has become more prevalent in
+
+
+recent Prolog textbooks.  There are useful discussions in both Ross (1989) and
+
+
+O'Keefe (1990).  The latter book also introduces program schemas, which have
+
+
+parallels with skeletons and techniques.
+
+
+   Stepwise enhancement has emerged from ongoing work at Case Western Re-
+
+
+serve University, first in the COMPOSERS group and more recently in the ProSE
+
+
+group. Examples of decomposing Prolog programs into skeletons and techniques
+
+
+are given in Sterling and Kirschenbaum (1993) and presented in tutorial form
+
+
+in Deville, Sterling, and Deransart (1991). Underlying theory is given in Power
+
+
+and Sterling (1990) and Kirschenbaum, Sterling, and Jain (1993). An application
+
+
+of structuring Prolog programs using skeletons and techniques to the inductive
+
+
+inference of Prolog programs can be found in Kirschenbaum and Sterling (1991).
+
+
+   Automatic incorporation of techniques into skeletons via partial evaluation
+
+
+has been described in Lakhotia (1989).
+
+
+   The discussion on specifications for Prolog programs is strongly influenced
+
+
+by Deville (1990).
+
+
+   Exercise 13.3(ii) was suggested by Gilles Kahn. The example is originally due
+
+
+to Bird. Exercise 13.3(iii) emerged through interaction with Marc Kirschenbaum.
+
+
+Solutions to both exercises are given in Deville, Sterling, and Deransart (1991*
+ *).

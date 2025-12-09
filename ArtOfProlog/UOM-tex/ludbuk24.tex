@@ -1,0 +1,875 @@
+%%%%% Leonudi Book, Chapter 24, pp 412-431 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 23
+\numberfirst
+\startpage{412}
+
+\chapa{A Compiler}
+Our final application is a compiler. The program is presented top-down.
+The first section outlines the scope of the compiler and gives its
+definition. The next three sections describe the three major components:
+the parser, the code generator, and the assembler.\par
+\sect{Overview of the Compiler}
+The source language for the compiler is PL, a simplified version of
+Pascal designed solely for the purposes of this chapter. It contains an
+assignment statement, an if-then-else statement, a {\it while}
+statement, and simple I/O statements.  The language is best
+illustrated with an example. Figure~\Figplpcomfac\ contains a program
+for computing factorials written in PL. A formal definition of the
+syntax of the language is implicit in the parser in Program~\Procomplmlan.
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\lft{#}\cr
+program factorial;\cr
+\qi begin\cr
+\qii read value;\cr
+\qii count := 1;\cr
+\qii result := 1;\cr
+\qii while count $<$ value do\cr
+\qiii begin\cr
+\qiiii count := count+1;\cr
+\qiiii result := result$\ast$count\cr
+\qiii end ;\cr
+\qii write result\cr
+\qi end\cr}}$$\vskip 5pt\par
+\ctrline{{\bf Figure \Figplpcomfac}:~~A PL program for computing
+factorials}\medskip
+$$\vcenter{\halign{\lft{#}\quad&\lft{#}\qquad&\lft{#}\qquad&\lft{#}\cr
+\hfill ARITHMETIC\hfill \span\omit&CONTROL&I/O, etc.\cr
+\noalign{\vskip 5pt}
+Literals&Memory&&\cr
+\noalign{\vskip 5pt}
+&&jumpeq&read\cr
+addc&add&jumpne&write\cr
+subc&sub&jumplt&halt\cr
+mulc&mul&jumpgt&\cr
+divc&div&jumple&\cr
+loadc&load&jumpge&\cr
+store&&jump&\cr}}$$\medskip
+\ctrline{{\bf Figure \Figtarlanins}:~~Target language instructions}
+\endin
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\lft{#}\quad&\lft{#}\quad&\lft{#}\quad&\lft{#}\quad&
+\lft{#}\cr
+\omit\hfill Symbol\hfill&Address&\omit\hfill Instruction\hfill&Operand&
+\omit\hfill Symbol\hfill\cr
+\noalign{\vskip 5pt}
+&1&READ&21&VALUE\cr
+&2&LOADC&1&\cr
+&3&STORE&19&COUNT\cr
+&4&LOADC&20&\cr
+&5&STORE&20&RESULT\cr
+LABEL1&6&LOAD&19&COUNT\cr
+&7&SUB&21&VALUE\cr
+&8&JUMPGE&16&LABEL2\cr
+&9&LOAD&19&COUNT\cr
+&10&ADDC&1&\cr
+&11&STORE&19&COUNT\cr
+&12&LOAD&20&RESULT\cr
+&13&MUL&19&COUNT\cr
+&14&STORE&20&RESULT\cr
+&15&JUMP&6&LABEL1\cr
+LABEL2&16&LOAD&20&RESULT\cr
+&17&WRITE&0&\cr
+&18&HALT&0&\cr
+COUNT&19&BLOCK&3&\cr
+RESULT&20&&&\cr
+VALUE&21&&&\cr}}$$\vskip 5pt\par
+\ctrline{{\bf Figure \Figasscodver}~~Assembly code version of a factorial
+program}\medskip
+$$\vcenter{\halign{\ctr{#}\quad&\ctr{#}\quad&\ctr{#}\quad&\ctr{#}\quad
+&\ctr{#}\cr
+Source&Lexical analysis&Token&Syntax analysis&Source\cr
+text&\rightarrowfill&list&\rightarrowfill&structure\cr}}$$
+$$\vcenter{\halign{\ctr{#}\quad&\ctr{#}\quad&\ctr{#}\quad&\ctr{#}\quad
+&\ctr{#}\quad&\ctr{#}\cr
+Code generation&Object&Assembly&Object&Output&Object\cr
+\rightarrowfill&structure&\rightarrowfill&
+structure&\rightarrowfill&program\cr
+&(relocatable)&&(absolute)&&\cr}}$$\medskip
+\ctrline{{\bf Figure \Figstacom}:~~The stages of compilation}
+\endin
+\pageinsert\vbox to\the\vsize {\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it compile\/}({\it Tokens,ObjectCode\/}) $\lar$\cr
+\qi {\it ObjectCode\/} {\rm is the result of compilation of}\cr
+\qi {\rm a list of} {\it Tokens\/} {\rm representing a PL program.}\cr
+\noalign{\medskip}
+compile(Tokens,ObjectCode) $\lar$\cr
+\qi parse(Tokens,Structure),\cr
+\qi encode(Structure,Dictionary,Code),\cr
+\qi assemble(Code,Dictionary,ObjectCode).\cr
+\noalign{\medskip}
+{\it The parser}\cr
+\noalign{\medskip}
+{\it parse\/}({\it Tokens,Structure\/}) $\lar$\cr
+\qi {\it Structure\/} {\rm represents the successfully parsed list of}
+{\it Tokens\/}{\rm .}\cr
+\noalign{\medskip}
+parse(Source,Structure) $\lar$\cr
+\qi pl\_program(Structure,Source\\[~]).\cr
+\noalign{\vskip 5pt}
+pl\_program(S) $\rar$ [program], identifier(X), [`;'], statement(S).\cr
+\noalign{\vskip 5pt}
+statement((S;Ss)) $\rar$\cr
+\qi [begin], statement(S), rest\_statements(Ss).\cr
+statement(assign(X,V)) $\rar$\cr
+\qi identifier(X), [`:='], expression(V).\cr
+statement(if(T,S1,S2)) $\rar$\cr
+\qi [if], test(T), [then], statement(S1), [else], statement(S2).\cr
+statement(while(T,S)) $\rar$\cr
+\qi [while], test(T), [do], statement(S).\cr
+statement(read(X)) $\rar$\cr
+\qi [read], identifier(X).\cr
+statement(write(X)) $\rar$\cr
+\qi [write], expression(X).\cr
+\noalign{\vskip 5pt}
+rest\_statements((S;Ss)) $\rar$
+[`;'], statement(S), rest\_statements(Ss).\cr
+rest\_statements(void) $\rar$ [end].\cr
+\noalign{\vskip 5pt}
+expression(X) $\rar$ pl\_constant(X).\cr
+expression(expr(Op,X,Y)) $\rar$\cr
+\qi pl\_constant(X), arithmetic\_op(Op), expression(Y).\cr
+\noalign{\vskip 5pt}
+arithmetic\_op(`+') $\rar$ [`+'].\cr
+arithmetic\_op(`-') $\rar$ [`-'].\cr
+arithmetic\_op(`$\ast$') $\rar$ [`$\ast$'].\cr
+arithmetic\_op(`/') $\rar$ [`/'].\cr
+\noalign{\vskip 5pt}
+pl\_constant(name(X)) $\rar$ identifier(X).\cr
+pl\_constant(number(X)) $\rar$ pl\_integer(X).\cr
+\noalign{\bigskip}
+{\bf Program \Procomplmlan}{\rm :~~A compiler from PL to machine
+language}\cr}\vfill}
+\endin
+\pageinsert\vbox to\the\vsize {\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+identifier(X) $\rar$ [X], $\{$atom(X)$\}$.\cr
+pl\_integer(X) $\rar$ [X], $\{$integer(X)$\}$.\cr
+\noalign{\vskip 5pt}
+test(compare(Op,X,Y)) $\rar$\cr
+\qi expression(X), comparison\_op(Op), expression(Y).\cr
+\noalign{\vskip 5pt}
+comparison\_op(`=') $\rar$ [`='].\cr
+comparison\_op(`$\ne$') $\rar$ \(`$\ne$'\).\cr
+comparison\_op(`$>$') $\rar$ [`$>$'].\cr
+comparison\_op(`$<$') $\rar$ [`$<$'].\cr
+comparison\_op(`$\ge$') $\rar$ [`$\ge$'].\cr
+comparison\_op(`$\le$') $\rar$ [`$\le$'].\cr
+\noalign{\medskip}
+{\it The code generator}\cr
+\noalign{\medskip}
+{\it encode\/}({\it Structure,Dictionary,RelocatableCode\/}) $\lar$\cr
+\qi {\it RelocatableCode\/} {\rm is generated from the parsed} {\it
+Structure}\cr
+\qi {\rm building a} {\it Dictionary\/} {\rm associating variables with
+addresses.}\cr
+\noalign{\medskip}
+encode((X;Xs),D,(Y;Ys)) $\lar$\cr
+\qi encode(X,D,Y), encode(Xs,D,Ys).\cr
+encode(void,D,no\_op).\cr
+encode(assign(Name,E),D,(Code; instr(store,Address))) $\lar$\cr
+\qi lookup(Name,D,Address), encode\_expression(E,D,Code).\cr
+encode(if(Test,Then,Else),D,\cr
+\qi (TestCode; ThenCode; instr(jump,L2);\cr
+\qi label(L1); ElseCode; label(L2))) $\lar$\cr
+\qii encode\_test(Test,L1,D,TestCode),\cr
+\qii encode(Then,D,ThenCode),\cr
+\qii encode(Else,D,ElseCode).\cr
+encode(while(Test,Do),D,\cr
+\qi (label(L1); TestCode; DoCode; instr(jump,L1); label(L2))) $\lar$\cr
+\qii encode\_test(Test,L2,D,TestCode), encode(Do,D,DoCode).\cr
+encode(read(X),D,instr(read,Address)) $\lar$\cr
+\qi lookup(X,D,Address).\cr
+encode(write(E),D,(Code; instr(write,0))) $\lar$\cr
+\qi encode\_expression(E,D,Code).\cr
+\noalign{\medskip}
+{\it encode\_expression\/}({\it Expression,Dictionary,Code\/}) $\lar$\cr
+\qi {\it Code\/} {\rm corresponds to an arithmetic} {\it
+Expression\/}{\rm .}\cr
+\noalign{\medskip}
+encode\_expression(number(C),D,instr(loadc,C)).\cr
+encode\_expression(name(X),D,instr(load,Address)) $\lar$\cr
+\qi lookup(X,D,Address).\cr
+encode\_expression(expr(Op,E1,E2),D,(Load;Instruction)) $\lar$\cr
+\qi single\_instruction(Op,E2,D,Instruction),\cr
+\qi encode\_expression(E1,D,Load).\cr
+\noalign{\bigskip}
+{\bf Program \Procomplmlan}~~{\rm (Continued)}\cr}\vfill}
+\endin
+\pageinsert\vbox to\the\vsize {\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+encode\_expression(expr(Op,E1,E2),D,Code) $\lar$\cr
+\qi not single\_instruction(Op,E2,D,Instruction),\cr
+\qi single\_operation(Op,E1,D,E2Code,Code),\cr
+\qi encode\_expression(E2,D,E2Code).\cr
+\noalign{\vskip 5pt}
+single\_instruction(Op,number(C),D,instr(OpCode,C)) $\lar$\cr
+\qi literal\_operation(Op,OpCode).\cr
+single\_instruction(Op,name(X),D,instr(OpCode,A)) $\lar$\cr
+\qi memory\_operation(Op,OpCode), lookup(X,D,A).\cr
+\noalign{\vskip 5pt}
+single\_operation(Op,E,D,Code,(Code;Instruction)) $\lar$\cr
+\qi commutative(Op), single\_instruction(Op,E,D,Instruction).\cr
+single\_operation(Op,E,D,Code,\cr
+\qii (Code;instr(store,Address);Load;instr(OpCode,Address))) $\lar$\cr
+\qi not commutative(Op),\cr
+\qi lookup(`\$temp',D,Address),\cr
+\qi encode\_expression(E,D,Load),\cr
+\qi op\_code(E,Op,OpCode).\cr
+\noalign{\vskip 5pt}
+op\_code(number(C),Op,OpCode) $\lar$ literal\_operation(Op,OpCode).\cr
+op\_code(name(X),Op,OpCode) $\lar$ memory\_operation(Op,OpCode).\cr}
+\medskip
+\halign{\lft{\tt #}\qquad&\lft{\tt #}\cr
+literal\_operation(`+',addc).&memory\_operation(`+',add).\cr
+literal\_operation(`-',subc).&memory\_operation(`-',sub).\cr
+literal\_operation(`$\ast$',mulc).&memory\_operation(`$\ast$',mul).\cr
+literal\_operation(`/',divc).&memory\_operation(`/',div).\cr
+\noalign{\vskip 5pt}
+commutative(`+').&commutative(`$\ast$').\cr}\medskip
+\halign{\lft{\tt #}\cr
+encode\_test(compare(Op,E1,E2),Label,D,\cr
+\qii (Code;instr(OpCode,Label))) $\lar$\cr
+\qi comparison\_opcode(Op,OpCode),\cr
+\qi encode\_expression(expr(`-',E1,E2),D,Code).\cr}\medskip
+\halign{\lft{\tt #}\qquad&\lft{\tt #}\cr
+comparison\_opcode(`=',jumpne).&comparison\_opcode(`$\ne$',jumpeq).\cr
+comparison\_opcode(`$>$',jumple).&comparison\_opcode(`$\ge$',jumplt).\cr
+comparison\_opcode(`$<$',jumpge).&comparison\_opcode(`$\le$',jumpgt).\cr}
+\medskip
+\halign{\lft{\tt #}\cr
+lookup(Name,Dictionary,Address) $\lar$ {\rm See Program \Prodicloobin.}\cr
+\noalign{\medskip}
+{\it The assembler}\cr
+\noalign{\medskip}
+{\it assemble\/}({\it Code,Dictionary,TidyCode\/}) $\lar$\cr
+\qi {\it TidyCode\/} {\rm is the result of assembling} {\it Code\/} {\rm
+removing}\cr
+\qi {\it no\_op\/}{\rm s and} {\it label\/}{\rm s, and filling in the}
+{\it Dictionary\/}{\rm .}\cr
+\noalign{\bigskip}
+{\bf Program \Procomplmlan}~~{\rm (Continued)}\cr}\vfill}
+\endin
+\topin
+\halign{\hskip 20pt\lft{\tt #}\cr
+assemble(Code,Dictionary,TidyCode) $\lar$\cr
+\qi tidy\_and\_count(Code,1,N,TidyCode\\(instr(halt,0);block(L))),\cr
+\qi N1 is N+1,\cr
+\qi allocate(Dictionary,N1,N2),\cr
+\qi L is N2-N1, !.\cr
+\noalign{\vskip 5pt}
+tidy\_and\_count((Code1;Code2),M,N,TCode1\\TCode2) $\lar$\cr
+\qi tidy\_and\_count(Code1,M,M1,TCode1\\Rest),\cr
+\qi tidy\_and\_count(Code2,M1,N,Rest\\TCode2).\cr
+tidy\_and\_count(instr(X,Y),N,N1,(instr(X,Y);Code)\\Code) $\lar$\cr
+\qi N1 is N+1.\cr
+tidy\_and\_count(label(N),N,N,Code\\Code).\cr
+tidy\_and\_count(no\_op,N,N,Code\\Code).\cr
+\noalign{\vskip 5pt}
+allocate(void,N,N).\cr
+allocate(dict(Name,N1,Before,After),N0,N) $\lar$\cr
+\qi allocate(Before,N0,N1),\cr
+\qi N2 is N1+1,\cr
+\qi allocate(After,N2,N).\cr
+\noalign{\bigskip}
+{\bf Program \Procomplmlan}~~{\rm (Continued)}\cr}
+\endin\par
+The target language is a machine language typical for a one-accumulator
+computer. Its instructions are given in Figure~\Figtarlanins. Each
+instruction has one (explicit) operand, which can be one of four things:
+an integer constant, the address of a storage location, the address of a
+program instruction, or a value to be ignored. Most of the instructions
+also have a second implicit operand, which is either the accumulator or
+its contents. In addition, there is a pseudoinstruction {\it block\/} that
+reserves a number of storage locations as specified by its integer
+operand.\par
+The scope of the compiler is clear from its behavior on our example.
+Figure~\Figasscodver\ is the translation of the PL program in
+Figure~\Figplpcomfac\ into machine language. The compiler produces the
+columns labeled {\it Instruction\/} and {\it Operand\/}.\par 
+The task of compiling can be broken down into the five stages given in
+Figure~\Figstacom. The first stage transforms a source text into a list
+of tokens. The list of tokens is parsed in the second stage, syntax
+analysis, to give a source structure. The third and fourth stages
+transform the source structure into relocatable code and assemble the
+relocatable code into absolute object code, respectively. The final stage
+outputs the object program.\par
+Our compiler implements the middle three stages. Both the first stage of
+lexical analysis and the final output stage are relatively uninteresting
+and are not considered here. The top level of the code handles syntax
+analysis, code generation, and assembly.\par
+The basic predicate {\tt compile(Tokens,ObjectCode)} relates a list of
+tokens {\tt Tokens} to the {\tt ObjectCode} of the program the tokens
+represent. The compiler compiles correctly any legal PL program but does
+not handle errors; that is outside the scope of this chapter. The list of
+tokens is assumed to be input from some previous stage of lexical
+analysis. The parser performing the syntax analysis, implemented by the
+predicate {\tt parse}, produces from the {\tt Tokens} an internal parse
+tree {\tt Structure}. The structure is used by the code generator {\tt
+encode} to produce relocatable code {\tt Code}. A dictionary associating
+variable locations to memory addresses and keeping track of labels is
+needed to generate the code. This is the second argument of {\tt encode}.
+Finally, the relocatable code is assembled into object code by {\tt
+assemble} with the aid of the constructed {\tt Dictionary}.\par
+The testing data and instructions for the program are given as
+Program~\Protesanddat. The program {\it factorial\/} is the PL program
+of Figure~\Figplpcomfac\ translated into a list of tokens. The two
+small programs consist of a single statement each, and test features
+of the language not covered by the factorial example. The program {\it
+test1\/} tests compilation of a nontrivial arithmetic expression,
+and {\it test2\/} checks the if-then-else statement. 
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+test\_compiler(X,Y) $\lar$\cr
+\qi program(X,P), compile(P,Y).\cr
+\noalign{\vskip 5pt}
+program(test1,[program,test1,`;',begin,write,\cr
+\qi x,`+',y,`-',z,`/',2,end]).\cr
+program(test2,[program,test2,`;',\cr
+\qi begin,if,a,`$>$',b,then,max,`:=',a,else,max,`:=',b,end]).\cr
+\noalign{\vskip 5pt}
+program(factorial,\cr
+\qi [program,factorial,`;'\cr
+\qi ,begin\cr
+\qii ,read,value,`;'\cr
+\qii ,count,`:=',1,`;'\cr
+\qii ,result,`:=',1,`;'\cr
+\qii ,while,count,`$<$',value,do\cr
+\qiii ,begin\cr
+\qiiii ,count,`:=',count,`+',1,`;'\cr
+\qiiii ,result,`:=',result,`$\ast$',count\cr
+\qiii ,end,`;'\cr
+\qii ,write,result\cr
+\qi ,end]).\cr
+\noalign{\bigskip}
+{\bf Program \Protesanddat}{\rm :~~Test data}\cr}
+\endin\par
+\sect{The Parser}
+The parser proper is written as a definite clause grammar, as described
+in Chapter~19. The predicate {\tt parse} as given in Program
+\Procomplmlan\ is just an interface to the DCG, whose top-level predicate
+is {\tt pl\_program}. The DCG has a single argument, the structure
+corresponding to the statements, as described later. A variant of
+Program~\Protragrapro\ is assumed to translate the DCG into Prolog
+clauses. The convention of that program is that the last argument of the
+predicates defined by the DCG is a difference-list:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+parse(Source,Structure) $\lar$\cr
+\qi pl\_program(Structure,Source\\[~]).\cr}\medno
+The first statement of any PL program must be a program statement. A
+program statement consists of the word {\it program\/} followed by the
+name of the program. We call words that must appear for rules of the
+grammar to apply {\it standard identifiers\/}, the word {\it program\/}
+being an example. The name of the program is an identifier in the
+language. What constitutes identifiers, and more generally constants,
+is discussed in the context of arithmetic expressions. The program
+name is followed by a semicolon, another standard identifier, and then
+the program proper begins. The body of a PL program consists of
+statements or, more precisely, a single statement that may itself consist
+of several statements. All this is summed up in the top-level grammar
+rule:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+pl\_program(S) $\rar$\cr
+\qi [program], identifier(X), [`;'], statement(S).\cr}\medskip
+The structure returned as the output of the parsing is the statement
+constituting the body of the program. For the purpose of code
+generation, the top-level program statement has no significance and
+is ignored in the structure built.\par
+The first statement we describe is a {\it compound statement\/}. Its
+syntax is the standard identifier {\tt begin} followed by the first
+statement, {\tt S}, say, in the compound statement, and then the
+remaining statements {\tt Ss}. The structure returned for a compound
+statement is ({\tt S;Ss}), where {\tt ;} is used as a two-place infix
+functor. Note that {\tt S}, {\tt Ss}, or both may be compound statements
+or contain them. The semicolon is chosen as functor to echo its use in
+PL for denoting sequencing of statements:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+statement((S;Ss)) $\rar$\cr
+\qi [begin], statement(S), rest\_statements(Ss).\cr}\medskip
+Statements in PL are delimited by semicolons. The rest of the statements
+are accordingly defined as a semicolon followed by a nonempty statement,
+and recursively the remaining statements:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+rest\_statements((S;Ss)) $\rar$\cr
+\qi [`;'], statement(S), rest\_statements(Ss).\cr}\medno
+The end of a sequence of statements is indicated by the standard
+identifier {\tt end}. The atom {\tt void} is used to mark the end of a
+statement in the internal structure. The base case of {\tt
+rest\_statements} is therefore\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+rest\_statements(void) $\rar$ [end].\cr}\medskip
+The above definition of statements precludes the possibility of empty
+statements. Programs and compound statements in PL cannot be empty.\par
+The next statement to discuss is the assignment statement. It has a
+simple syntactic definition --- a left-hand side, followed by the
+standard identifier {\tt is}, followed by the right-hand side. The
+left-hand side is restricted to being a PL identifier, and the
+right-hand side is any arithmetic expression whose definition is to be
+given:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+statement(assign(X,E)) $\rar$\cr
+\qi identifier(X), [`:='], expression(E).\cr}\medskip
+The structure returned by the successful recognition of an assignment
+statement has the form {\tt assign(X,E)}. The (Prolog) variable {\tt E}
+represents the structure of the arithmetic expression, and {\tt X} is
+the name of the (PL) variable to be assigned the value of the expression.
+It is implicitly assumed that {\tt X} will be a PL identifier.\par
+For simplicity of both code and explanation, we restrict ourselves to
+a subclass of arithmetic 
+expressions. Two rules define the subclass. An expression is either a
+constant or a constant followed by an arithmetic operator and
+recursively an arithmetic expression. Examples of expressions in the
+subclass are $x$, $3$, $2\cdot t$ and $x+y-z/2$, the expression in the
+first test case in Program~\Protesanddat:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+expression(X) $\rar$ pl\_constant(X).\cr
+expression(expr(Op,X,Y)) $\rar$\cr
+\qi pl\_constant(X), arithmetic\_op(Op), expression(Y).\cr}\medno
+This subclass of expressions does not respect the standard precedence of
+arithmetic operators. The expression $x\cdot 2+y$ is parsed as
+$x\cdot(2+y)$. On the other hand, the expression $x+y-z/2$ is interpreted
+unambiguously as $x+(y-(z/2))$.\par
+For this example, we restrict ourselves to two types of constants in PL:
+identifiers and integers. The specification of {\tt pl\_constant} duly
+consists of two rules. Which of the two is found is reflected in the
+structure returned. For identifiers {\tt X}, the structure {\tt name(X)}
+is returned, whereas {\tt number(X)} is returned for the integer {\tt X}:
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+pl\_constant(name(X)) $\rar$ identifier(X).\cr
+pl\_constant(number(X)) $\rar$ pl\_integer(X).\cr}\medskip
+For simplicity we assume that PL integers and PL identifiers are Prolog
+integers and atoms, respectively. This allows the use of Prolog system
+predicates to identify the PL identifiers and integers. Recall that the
+curly braces notation of DCGs is used to specify Prolog goals:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+identifier(X) $\rar$ [X], $\{$atom(X)$\}$.\cr
+pl\_integer(X) $\rar$ [X], $\{$integer(X)$\}$.\cr}\medno
+In fact, all grammar rules that use PL identifiers and constants could be
+modified to call the Prolog predicates directly if greater efficiency is
+needed.\par
+A list of arithmetic operators is necessary to complete the definition of
+arithmetic expressions. The form of the statement for addition,
+represented by +, follows. The grammar rules for subtraction,
+multiplication, and division are analogous, and appear in the full parser
+in Program~\Procomplmlan:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+arithmetic\_op(`+') $\rar$ [`+'].\cr}\medskip
+The next statement to be discussed is the conditional statement, or
+if-then-else. The syntax for conditionals is the standard identifier {\tt
+if} followed by a test (to be defined). After the test, the standard
+identifier {\tt then} is necessary, followed by a statement
+constituting the then part, the standard identifier {\tt else} and a
+statement constituting the else part, in that order. The structure built
+by the parser is {\tt if(T,S1,S2)}, where {\tt T} is the test, {\tt S1} is
+the then part, and {\tt S2} is the else part:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+statement(if(T,S1,S2)) $\rar$\cr
+\qi [if], test(T), [then], statement(S1),\cr
+\qi [else], statement(S2).\cr}\medskip
+Tests are defined to be an expression followed by a comparison operator
+and another expression. The structure returned has the form {\tt
+compare(Op,X,Y)}, where {\tt Op} is the comparison operator, and {\tt X}
+and {\tt Y} are the left-hand and right-hand expressions in the test,
+respectively:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+test(compare(Op,X,Y)) $\rar$\cr
+\qi expression(X), comparison\_op(Op), expression(Y).\cr}\medskip
+The definition of comparison operators using the predicate {\tt
+comparison\_op} is analogous to the use of {\tt arithmetic\_op} to
+define arithmetic operators. Program~\Procomplmlan\ contains definitions
+for {\it =}, $\ne$, {\it $>$}, {\it $<$}, {\it $\ge$}, and {\it $\le$}.
+\par
+{\it While\/} statements consist of a test and the action to take if the test is
+true. The structure returned is {\tt while(T,S)}, where {\tt T} is the
+test and {\tt S} is the action. The syntax is defined by the following
+rule:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+statement(while(T,S)) $\rar$\cr
+\qi [while], test(T), [do], statement(S).\cr}\medskip
+I/O is handled in PL with a simple read statement and a simple write
+statement. The input statement consists of the standard identifier {\tt
+read} followed by a PL identifier; it returns the structure {\tt
+read(X)}, where {\tt X} is the identifier. Write statements are similar:
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+statement(read(X)) $\rar$ [read], identifier(X).\cr
+statement(write(X)) $\rar$ [write], expression(X).\cr}\medskip
+Collecting the various pieces of the DCG just described gives a
+parser for the language. Note that ignoring the arguments in the DCG
+gives a formal BNF grammar for PL.\par
+Let us consider the behavior of the parser on the test data in
+Program~\Protesanddat. The parsed structures produced for the two single 
+statement programs have the form {\tt $\lan$structure\/$\ran$;void}, where
+{\tt $\lan$structure\/$\ran$} represents the parsed statement. The {\tt
+write} statement is translated to\medskip
+\halign{\lft{\tt #}\cr
+write(expr(+,name(x),expr(-,name(y),expr(/,name(z),number(2))))),\cr}
+\medno
+and the if-then-else statement is translated to\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+if(compare($>$,name(a),name(b)),assign(max,name(a)),\cr
+\qi assign(max,name(b))).\cr}\medno
+The {\it factorial\/} program is parsed into a sequence of five
+statements followed by {\tt void}. The output after parsing for all three
+test programs is given in Figure~\Figoutfropar. This is the input for the
+second stage of compilation, code generation.
+\midinsert\vskip -0.2truecm
+$$\vcenter{\halign{\lft{\tt #}\cr
+{\it Program test1}:\cr
+\noalign{\vskip 5pt}
+\qi write(expr(+,name(x),expr(-,name(y),\cr
+\qii expr(/,name(z),number(2)))));void\cr
+\noalign{\vskip 10pt}
+{\it Program test2}:\cr
+\noalign{\vskip 5pt}
+\qi if(compare($>$,name(a),name(b)),assign(max,name(a)),\cr
+\qii assign(max,name(b)));void\cr
+\noalign{\vskip 10pt}
+{\it Program test3}:\cr
+\noalign{\vskip 5pt}
+\qi read(value);assign(count,number(1));assign(result,number(1));\cr
+\qii while(compare($<$,name(count),name(value)),\cr
+\qii (assign(count,expr(+,name(count),number(1)));\cr
+\qii assign(result,expr($\ast$,name(result),name(count)));void));\cr
+\qii write(name(result));void\cr}}$$\medskip
+\ctrline{{\bf Figure \Figoutfropar}:~~Output from parsing}
+\endinsert\par
+\sect{The Code Generator}
+The basic relation of the code generator is {\tt
+encode(Structure,Dictionary,}\linebreak
+{\tt Code)}, which generates {\tt Code} from the {\tt Structure} produced
+by the parser. This section echoes the previous one. The generated code
+is described for each of the structures produced by the parser
+representing the various PL statements.\par
+{\tt Dictionary} relates PL variables to memory locations, and labels to
+instruction addresses. The dictionary is used by the assembler to resolve
+locations of labels and identifiers. Throughout this section {\it D\/}
+refers to this dictionary. An incomplete ordered binary tree is used to
+implement it, as described in Section~15.3. The predicate {\tt
+lookup(Name,D,Value)} (Program~\Prodicloobin) is used for accessing the
+incomplete binary tree.\par
+The structure corresponding to a compound statement is a sequence of its
+constituent structures. This is translated into a sequence of blocks of
+code, recursively defined by {\tt encode}. The functor {\tt ;} is
+used to denote sequencing. The empty statement denoted by {\tt void} is
+translated into a null operation, denoted {\tt no\_op}. When the
+relocatable code is traversed during assembly this ``pseudoinstruction"
+is removed.\par
+The structure produced by the parser for the general PL assignment
+statement has the form {\tt assign(Name,Expression)}, where {\tt
+Expression} is the expression to be evaluated and assigned to the PL
+variable {\tt Name}. The corresponding compiled form calculates the
+expression followed by a {\tt store} instruction whose argument is the
+address corresponding to {\tt Name}. The representation of individual
+instructions in the compiled code is the structure {\tt instr(X,Y)}, where
+{\tt X} is the instruction and {\tt Y} is the operand. The appropriate
+translation of the {\tt assign} structure is therefore ({\tt Code;
+instr(store,Address))}, where {\tt Code} is the compiled form of the
+expression, which, after execution, leaves the value of the expression in
+the accumulator. It is generated by the predicate {\tt
+encode\_expression(Expression,D,ExpressionCode)}. Encoding the assignment
+statement is performed by the clause\medskip
+\halign{\lft{\tt #}\cr
+encode(assign(Name,Expression),D,(Code;instr(store,Address))) $\lar$\cr
+\qi lookup(Name,D,Address), encode\_expression(Expression,D,Code).\cr}
+\medskip
+This clause is a good example of Prolog code that is easily understood
+declaratively but hides complicated procedural bookkeeping. Logically,
+relations have been specified between {\tt Name} and {\tt Address},
+and between {\tt Expression} and {\tt Code}. From the programmer's point
+of view it is irrelevant when the final structure is constructed, and in
+fact the order of the two goals in the body of this clause can be swapped
+without changing the behavior of the overall program. Furthermore, the
+{\tt lookup} goal, in relating {\tt Name} with {\tt Address}, could be
+making a new entry or retrieving a previous one, where the final
+instantiation of the address happens in the assembly stage. None of this
+bookkeeping needs explicit mention by the programmer. It goes on
+correctly in the background.\par
+There are several cases to be considered for compiling the expression.
+Constants are loaded directly; the appropriate machine instruction is
+{\tt loadc C}, where {\tt C\/} is the constant. Similarly identifiers
+are compiled into the instruction {\tt load A}, where {\tt A} is the
+address of the identifier. The two corresponding clauses of {\tt
+encode\_expression} are\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+encode\_expression(number(C),D,instr(loadc,C)).\cr
+encode\_expression(name(X),D,instr(load,Address)) $\lar$\cr
+\qi lookup(X,D,Address).\cr}\medskip
+The general expression is the structure {\tt expr(Op,E1,E2)}, where {\tt
+Op} is the operator, {\tt E1} is a PL constant, and {\tt E2} is an
+expression. The form of the compiled code  depends on {\tt E2}. If it is
+a PL constant, then the final code consists of two statements: an
+appropriate {\tt load} instruction determined recursively by {\tt
+encode\_expression} and the single instruction corresponding to {\tt Op}.
+Again, it does not matter in which order the two instructions are
+determined. The clause of {\tt encode\_expression} is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+encode\_expression(expr(Op,E1,E2),D,(Load;Instruction)) $\lar$\cr
+\qi single\_instruction(Op,E2,D,Instruction),\cr
+\qi encode\_expression(E1,D,Load).\cr}\medskip
+The nature of the single instruction depends on the operator and whether
+the PL constant is a number or an identifier. Numbers refer to literal
+operations, and identifiers refer to memory operations:\medskip
+\vbox{\halign{\hskip 40pt\lft{\tt #}\cr
+single\_instruction(Op,number(C),D,instr(Opcode,C)) $\lar$\cr
+\qi literal\_operation(Op,Opcode).\cr
+single\_instruction(Op,name(X),D,instr(Opcode,A)) $\lar$\cr
+\qi memory\_operation(Op,Opcode), lookup(X,D,A).\cr}}\medno
+A separate table of facts is needed for each sort of operation. The
+respective form of the facts is illustrated for +:\medskip
+\halign{\hskip 40pt\lft{\tt #}\quad&\lft{\tt #}\cr
+literal\_operation(+,addc).&memory\_operation(+,add).\cr}\medskip
+A separate calculation is necessary when the second expression is not a
+constant and cannot be encoded in a single instruction. The form of the
+compiled code is determined from the compiled code for calculating
+{\tt E2}, and the single operation is determined by {\tt Op} and {\tt
+E1}:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+encode\_expression(expr(Op,E1,E2),D,Code) $\lar$\cr
+\qi not single\_instruction(Op,E2,D,Instruction),\cr
+\qi single\_operation(Op,E1,D,E2Code,Code),\cr
+\qi encode\_expression(E2,D,E2Code).\cr}\medskip
+In general, the result of calculating {\tt E2} must be stored in some
+temporary location, called {\tt \$temp} in the following code. The
+sequence of instructions is then the code for {\tt E2}, a {\tt store}
+instruction, a {\tt load} instruction for {\tt E1}, and the appropriate
+memory operation addressing the stored contents. The predicates shown
+previously are used to construct the final form of the code:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+single\_operation(Op,E,D,Code,\cr
+\qi (Code;\cr
+\qi instr(store,Address);\cr
+\qi Load;\cr
+\qi instr(OpCode,Address))\cr
+) $\lar$\cr
+\qii not commutative(Op),\cr
+\qii lookup(`\$temp',D,Address),\cr
+\qii encode\_expression(E,D,Load),\cr
+\qii op\_code(E,Op,OpCode).\cr}\medskip
+An optimization is possible if the operation is commutative, e.g.,
+addition or multiplication, which circumvents the need for a temporary
+variable. In this case, the memory or literal operation can be performed
+on {\tt E1}, assuming that the result of computing {\tt E2} is in the
+accumulator:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+single\_operation(Op,E,D,Code,(Code;Instruction)) $\lar$\cr
+\qi commutative(Op), single\_instruction(Op,E,D,Instruction).\cr}\medskip
+The next statement is the conditional if-then-else parsed into the
+structure {\tt if(Test,Then,Else)}. To compile the structure, we have to
+introduce labels to which instructions can jump. For the conditional we
+need two labels marking the beginning and end of the else part
+respectively. The labels have the form {\tt label(N)}, where {\tt N} is
+the address of the instruction. The value of {\tt N} is filled in during
+the assembling stage, when the label statement itself is removed. The
+schematic of the code is given by the third argument of the following
+{\tt encode} clause:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+encode(if(Test,Then,Else),D,\cr
+\qi (TestCode;\cr
+\qi ThenCode;\cr
+\qi instr(jump,L2);\cr
+\qi label(L1);\cr
+\qi ElseCode;\cr
+\qi label(L2))\cr
+)$\lar$\cr
+\qii encode\_test(Test,L1,D,TestCode),\cr
+\qii encode(Then,D,ThenCode),\cr
+\qii encode(Else,D,ElseCode).\cr}\medskip
+In order to compare two arithmetic expressions, we subtract the second
+from the first and make the jump operation appropriate to the particular
+comparison operator. For example, if the test is whether two expressions
+are equal, we circumvent the code if the result of subtracting the two is
+not equal to zero. Thus {\tt comparison\_opcode(`=',jumpne)} is a fact.
+Note that the label that is the second argument of {\tt encode\_test} is
+the address of the code following the test.\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+encode\_test(compare(Op,E1,E2),Label,D,\cr
+\qii (Code; instr(OpCode,Label))) $\lar$\cr
+\qi comparison\_opcode(Op,OpCode),\cr
+\qi encode\_expression(expr(`-',E1,E2),D,Code).\cr}\medskip
+The next statement to consider is the {\it while\/} statement. The statement is
+parsed into the structure {\tt while(Test,Statements)}. A label is
+necessary before the test, then the test code is given as for the
+if-then-else statement, then the body of code corresponding to {\tt
+Statements} and a jump to reperform the test. A label is necessary after
+the {\tt jump} instruction for when the test fails.\medskip
+\vbox{\bigskip\halign{\hskip 40pt\lft{\tt #}\cr
+encode(while(Test,Do),D,\cr
+\qi (label(L1);\cr
+\qi TestCode;\cr
+\qi DoCode;\cr
+\qi instr(jump,L1);\cr
+\qi label(L2))\cr
+) $\lar$\cr
+\qii encode\_test(Test,L2,D,TestCode),\cr
+\qii encode(Do,D,DoCode).\cr}}\medskip
+The I/O statements are straightforward. The parsed structure for input,
+{\tt read(X)}, is compiled into a single {\tt read} instruction, and
+the table is used to get the correct address:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+encode(read(X),D,instr(read,Address)) $\lar$\cr
+\qi lookup(X,D,Address).\cr}\medno
+The output statement is translated into encoding an expression and then
+a {\tt write} instruction:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+encode(write(E),D,(Code; instr(write,0))) $\lar$\cr
+\qi encode\_expression(E,D,Code).\cr}\medskip
+Figure~\Figgencod\ contains the relocatable code after code generation
+and before assembly for each of the three examples of Program
+\Protesanddat. Mnemonic variable names have been used for easy reading.
+\midinsert\vskip -0.2truecm
+$$\vcenter{\halign{\lft{\tt #}\cr
+{\it Program test1}:\cr
+\noalign{\vskip 5pt}
+\qi ((((instr(load,Z);instr(divc,2));instr(store,Temp);\cr
+\qi instr(load,Y);instr(sub,Temp));instr(add,X));\cr
+\qi instr(write,0));no\_op\cr
+\noalign{\vskip 10pt}
+{\it Program test2}:\cr
+\noalign{\vskip 5pt}
+\qi (((instr(load,A);instr(sub,B));instr(jumple,L1));\cr
+\qi (instr(load,A);instr(store,Max));instr(jump,L2);label(L1);\cr
+\qi (instr(load,B);instr(store,Max));label(L2));no\_op\cr
+\noalign{\vskip 10pt}
+{\it Program factorial}:\cr
+\noalign{\vskip 5pt}
+\qi
+instr(read,Value);(instr(loadc,1);instr(store,Count));\cr
+\qi (instr(loadc,1);instr(store,Result));(label(L1);\cr
+\qi ((instr(load,Count);instr(sub,Value));instr(jumpge,L2));\cr
+\qi (((instr(load,Count);instr(addc,1));instr(store,Count));\cr
+\qi ((instr(load,Result);instr(mul,Count));instr(store,Result));\cr
+\qi no\_op);instr(jump,L1);label(L2));(instr(load,Result);\cr
+\qi instr(write,0));no\_op\cr}}$$\medskip
+\ctrline{{\bf Figure \Figgencod}:~~The generated code}
+\endinsert\par
+\sect{The Assembler}
+The final stage performed by the compiler is assembling the relocatable
+code into absolute object code. The predicate {\tt
+assemble(Code,Dictionary,}\linebreak
+{\tt ObjectCode)} takes the {\tt Code} and {\tt Dictionary} generated in
+the previous stage and produces the object code. There are two stages in
+the assembly. During the first stage, the instructions in the code are
+counted, at the same time computing the addresses of any labels created
+during code generation and removing unnecessary null operations. This
+tidied code is further augmented by a halt instruction, denoted by {\tt
+instr(halt,0)}, and a block of {\it L\/} memory locations for the {\it
+L\/} PL variables and temporary locations in the code. The space for
+memory locations is denoted by {\tt block(L)}. In the second stage,
+addresses are created for the PL and temporary variables used in the
+program:\medskip
+\hskip 40pt\halign{\lft{\tt #}\cr
+assemble(Code,Dictionary,TidyCode) $\lar$\cr
+\qi tidy\_and\_count(Code,1,N,TidyCode\\(instr(halt,0);block(L))),\cr
+\qi N1 is N+1,\cr
+\qi allocate(Dictionary,N1,N2),\cr
+\qi L is N2-N1, !.\cr}\medskip
+The predicate {\tt tidy\_and\_count(Code,M,N,TidyCode)} tidies the {\tt
+Code} into {\tt TidyCode}, where the correct addresses of labels have been
+filled in and the null operations have been removed. Procedurally,
+executing {\tt tidy\_and\_count} constitutes a second pass over the code.
+{\tt M} is the address of the beginning of the code, and {\tt N} is 1
+more than the address of the end of the original code. Thus the number of
+actual instructions in {\tt Code} is {\tt N+1-M}. {\tt TidyCode} is
+represented as a difference-structure based on {\tt ;} .\par
+The recursive clause of {\tt tidy\_and\_count} demonstrates both standard
+difference-structure technique and updating of numeric values:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+tidy\_and\_count((Code1;Code2),M,N,TCode1\\TCode2) $\lar$\cr
+\qi tidy\_and\_count(Code1,M,M1,TCode1\\Rest),\cr
+\qi tidy\_and\_count(Code2,M1,N,Rest\\TCode2).\cr}\medskip
+Three types of primitives occur in the code: instructions, labels, and
+no\_ops. Instructions are handled routinely. The address counter is
+incremented by 1, and the instruction is inserted into a
+difference-structure:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+tidy\_and\_count(instr(X,Y),N,N1,(instr(X,Y);Code)\\Code) $\lar$\cr
+\qi N1 is N+1.\cr}\medskip
+Both labels and no\_ops are removed without updating the current address
+or adding an instruction to the tidied code:\medskip
+\vbox{\halign{\hskip 40pt\lft{\tt #}\cr
+tidy\_and\_count(label(N),N,N,Code\\Code).\cr
+tidy\_and\_count(no\_op,N,N,Code\\Code).\cr}}\medno
+Declaratively, the clauses are identical. Procedurally, the unification of
+the label number with the current address causes a major effect in the
+program. Every reference to the label address is filled in. This program
+is another illustration of the power of the logical variable.\par
+The predicate {\tt allocate(Dictionary,M,N)} has primarily a procedural
+interpretation. During the code generation as the dictionary is
+constructed, storage locations are associated with each of the PL
+variables in the program, plus any temporary variables needed for
+computing expressions. The effect of {\tt allocate} is to assign actual
+memory locations for the variables and to fill in the references to them in
+the program.\par
+The variables are found by traversing the {\tt Dictionary}. {\tt M} is
+the address of the memory location for the first variable, and {\tt N}
+is 1 more than the address of the last. The order of variables is
+alphabetic corresponding to their order in the dictionary. The code also
+completes the dictionary as a data structure.\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+allocate(void,N,N).\cr
+allocate(dict(Name,N1,Before,After),N0,N) $\lar$\cr
+\qi allocate(Before,N0,N1),\cr
+\qi N2 is N1+1,\cr
+\qi allocate(After,N2,N).\cr}\medskip
+Because the dictionary is an incomplete data structure, the predicate
+{\tt allocate} can succeed many times. The variables at the end of the
+tree match both the fact and the recursive clause. For the compiler, the
+easiest way to stop multiple solutions is to add a cut to the clause for
+{\tt assemble/3}, which commits to the first (and minimal) assignment of
+memory locations for variables.
+\midinsert\vskip -0.2truecm
+$$\vcenter{\halign{\lft{\tt #}\cr
+{\it Program test1}:\cr
+\noalign{\vskip 5pt}
+\qi instr(load,11);instr(divc,2);instr(store,12);instr(load,10);\cr
+\qi instr(sub,12);instr(add,9);instr(write,0);instr(halt,0);block(4)\cr
+\noalign{\vskip 10pt}
+{\it Program test2}:\cr
+\noalign{\vskip 5pt}
+\qi instr(load,10);instr(sub,11);instr(jumple,7);instr(load,10);\cr
+\qi instr(store,12);instr(jump,9);instr(load,11);instr(store,12);\cr
+\qi instr(halt,0);block(3)\cr
+\noalign{\vskip 10pt}
+{\it Program factorial}:\cr
+\noalign{\vskip 5pt}
+\qi instr(read,21);instr(loadc,1);instr(store,19);instr(loadc,1);\cr
+\qi instr(store,20);instr(load,19);instr(sub,21);instr(jumpge,16);\cr
+\qi instr(load,19);instr(addc,1);instr(store,19);instr(load,20);\cr
+\qi instr(mul,19);instr(store,20);instr(jump,6);instr(load,20);\cr
+\qi instr(write,0);instr(halt,0);block(3)\cr}}$$\medskip
+\ctrline{{\bf Figure \Figcomobjcod}:~~The compiled object code}
+\endinsert\par
+The compiled versions of the test programs given in
+Program~\Protesanddat\ appear in Figure~\Figcomobjcod.\vskip 15pt\parno 
+{\bf Exercises for Chapter 24}\vskip 5pt\par
+\offset{20pt}{(i)} Extend the compiler so that it handles repeat loops.
+The syntax is {\it repeat $\lan$statement\/$\ran$ until
+$\lan$test\/$\ran$}. Extensions to both the parser and the compiler need
+to be made. Test the program on the following:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+program repeat;\cr
+\qi begin\cr
+\qii i := 1;\cr
+\qii repeat\cr
+\qiii begin\cr
+\qiiii write(i);\cr
+\qiiii i := i+1\cr
+\qiii end\cr
+\qii until i = 11\cr
+\qi end.\cr}\medskip
+\offset{20pt}{(ii)} Extend the definition of arithmetic expressions to
+allow arbitrary ones. In the encoder, you will have to cater for the
+possibility of needing several temporary variables.\par
+\sect{Background}
+The compiler described is based on a delightful paper by Warren (1980).
+\par\bye
+

@@ -1,0 +1,550 @@
+%%%%% Leoudi Book, Chapter 10, pp 150-161 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 9
+\numberfirst
+\startpage{150}
+
+\chapa{Meta-Logical Predicates}
+A useful extension to the expressive power of logic programs is provided
+by the meta-logical predicates. These predicates are outside the scope of
+first-order logic, because they query the state of the proof, treat variables
+(rather than the terms they denote) as objects of the language, and allow
+the conversion of data structures to goals.\par
+Meta-logical predicates allow us to overcome two difficulties involving
+the use of variables encountered in previous chapters. The first
+difficulty is the behavior of variables in system predicates. For
+example, evaluating an arithmetic expression with variables gives an
+error. So does calling type predicates with variable arguments. A
+consequence of this behavior is to restrict Prolog programs to have a
+single use in contrast to the multiple uses of the equivalent logic
+programs.\par
+The second difficulty is the accidental instantiation of variables during
+structure inspection. Variables need to be considered as specific objects
+rather than standing for an arbitrary unspecified term. In 
+Chapter~9 we handled the difficulty by restricting inspection to ground
+terms only.\par
+This chapter has four sections, each for a different class of
+meta-logical predicates. The first section discusses type predicates that
+determine whether a term is a variable. The second section
+discusses term comparison. The next sections describe predicates enabling
+variables to be manipulated as objects. Finally, a facility is described
+for converting data into executable goals.\par
+\sect{Meta-Logical Type Predicates}
+The basic meta-logical type predicate is {\tt var(Term)}, which tests
+whether a given term is at present an uninstantiated variable. Its
+behavior is similar to the type predicates discussed in Section~9.1. The
+query {\tt var(Term)?} succeeds if {\tt Term} is a variable and fails if
+{\tt Term} is not a variable. For example, {\tt var(X)?} succeeds,
+whereas both {\tt var(a)?} and {\tt var(\(X$\mid$Xs\))?} fail.\par
+The predicate {\tt var} is an extension to pure Prolog programs. A table
+cannot be used to give all the variable names. A fact {\tt var(X)} means
+that all instances of {\tt X} are variables rather than that the
+letter {\tt X} denotes a variable. Being able to refer to a variable
+name is outside the scope of first-order logic in general or pure Prolog
+in particular.\par
+The predicate {\tt nonvar(Term)} has the opposite behavior to {\tt var}.
+The query {\tt nonvar(Term)?} succeeds if {\tt Term} is not a variable
+and fails if {\tt Term} is a variable.\par
+The meta-logical type predicates can be used to restore some flexibility
+to programs using system predicates and also to control goal
+order. We demonstrate this by revising some programs from earlier
+chapters.\par
+Consider the relation {\tt plus(X,Y,Z)}. Program~\Promuluseplu\ is a
+version of {\tt plus} that can be used for subtraction as well as
+addition. The idea is to check which arguments are instantiated before
+calling the arithmetic evaluator. For example, the second rule says that
+if the first and third arguments, {\tt X} and {\tt Z}, are not variables,
+the second argument, {\tt Y}, can be determined as their difference. Note
+that if the arguments are not integers, the evaluation will fail, the
+desired behavior.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it plus\/}({\it X,Y,Z\/}) $\lar$\cr
+\qi {\rm The sum of the numbers} {\it X\/} {\rm and} {\it Y\/} {\rm is}
+{\it Z\/}{\rm .}\cr
+\noalign{\medskip}
+plus(X,Y,Z) $\lar$ nonvar(X), nonvar(Y), Z is X+Y.\cr
+plus(X,Y,Z) $\lar$ nonvar(X), nonvar(Z), Y is Z-X.\cr
+plus(X,Y,Z) $\lar$ nonvar(Y), nonvar(Z), X is Z-Y.\cr
+\noalign{\bigskip}
+{\bf  Program \Promuluseplu}{\rm :~~Multiple uses for} {\tt plus}\cr}
+\endinsert\par
+The behavior of Program~\Promuluseplu\ resembles that of Program~\Proadditi,
+the logic program for {\tt plus}. Further, it does not generate any
+errors. Nonetheless, it does not have the full flexibility of the
+recursive logic program: it cannot be used to partition a number into two
+smaller numbers, for example. To partition a number involves generating
+numbers, for which a different program is needed. This is posed as 
+Exercise~(ii) at the end of this section.\par
+Meta-logical goals placed initially in the body of a clause to decide
+which clause in a procedure should be used are called {\it meta-logical
+tests\/}. Program~10.1 for {\tt plus} is controlled by meta-logical
+tests. These tests refer to the current state of the computation.
+Knowledge of the operational semantics of Prolog is required to
+understand them.\par
+Standard Prolog in fact endows the type predicates with a meta-logical
+ability. For example, if {\tt X} is a variable the goal {\tt
+integer(X)} fails, rather than giving an error. This enables the rules
+from  Program~\Promuluseplu\ to be written using the system predicate
+{\tt integer} rather than {\tt nonvar}, for example,\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+plus(X,Y,Z) $\lar$ integer(X), integer(Y), Z is X+Y.\cr}\medno
+We feel it is preferable to separate type checking, which is a perfectly
+legitimate first-order operation, from meta-logical tests, which are a
+much stronger tool.\par
+Another relation that can have multiple uses restored is {\tt
+length(Xs,N)} determining the length {\tt N} of a list {\tt Xs}. Separate
+Prolog programs (\Prochelenlis\ and \Profinlenlis) are needed to find the
+length of a given list and to generate an arbitrary list of a given
+length, despite the fact that one logic program (\Prodetlenlis) performs
+both functions. Program~\Promulpurlen\ uses meta-logical tests to define
+a single {\tt length} relation. The program has an added virtue over
+Programs \Prochelenlis\ and \Profinlenlis. It avoids the non-terminating
+behavior present in both, when both arguments are uninstantiated.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it length\/}({\it Xs,N\/}) $\lar$\cr
+\qi {\rm The list} {\it Xs\/} {\rm has length} {\it N\/}{\rm .}\cr
+\noalign{\medskip}
+length(Xs,N) $\lar$ nonvar(Xs), length1(Xs,N).\cr
+length(Xs,N) $\lar$ var(Xs), nonvar(N), length2(Xs,N).\cr
+\noalign{\vskip 5pt}
+length1(Xs,N) $\lar$ {\rm See Program \Profinlenlis.}\cr
+length2(Xs,N) $\lar$ {\rm See Program \Prochelenlis.}\cr
+\noalign{\bigskip}
+{\bf Program \Promulpurlen}{\rm :~~A multipurpose} length {\rm
+program}\cr}
+\endinsert\par
+Meta-logical tests can also be used to make the best choice of the goal
+order of clauses in a program. Section~7.3 discusses the definition of
+{\tt grandparent}:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+grandparent(X,Z) $\lar$ parent(X,Y), parent(Y,Z).\cr}\medno
+The optimum goal order changes depending on whether you are searching for
+the grandchildren of a given grandparent or the grandparents of a given
+grandchild. Program~\Promoreffver\ is a version of {\tt grandparent} that
+will search more efficiently.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it grandparent\/}({\it X,Z\/}) $\lar$\cr
+\qi {\it X\/} {\rm is the grandparent of} {\it Z\/}{\rm .}\cr
+\noalign{\medskip}
+grandparent(X,Z) $\lar$ nonvar(X), parent(X,Y), parent(Y,Z).\cr
+grandparent(X,Z) $\lar$ nonvar(Z), parent(Y,Z), parent(X,Y).\cr
+\noalign{\bigskip}
+{\bf  Program \Promoreffver}{\rm :~~A more efficient version of} 
+grandparent\cr}
+\endinsert \par
+The basic meta-logical type predicates can be used to define more
+involved meta-logical procedures. Consider a relation {\tt ground(Term)},
+which is true if {\tt Term} is ground. Program~\Protestergro\ gives a
+definition.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it ground\/}({\it Term\/}) $\lar$\cr
+\qi {\it Term\/} {\rm is a ground term.}\cr
+\noalign{\medskip}
+ground(Term) $\lar$\cr
+\qi nonvar(Term), constant(Term).\cr
+ground(Term) $\lar$\cr
+\qi nonvar(Term),\cr
+\qi compound(Term),\cr
+\qi functor(Term,F,N),\cr
+\qi ground(N,Term).\cr
+\noalign{\vskip 5pt}
+ground(N,Term) $\lar$\cr
+\qi N $>$ 0,\cr
+\qi arg(N,Term,Arg),\cr
+\qi ground(Arg),\cr
+\qi N1 is N-1,\cr
+\qi ground(N1,Term).\cr
+ground(0,Term).\cr
+\noalign{\bigskip}
+{\bf  Program \Protestergro}{\rm :~~Testing if a term is ground}\cr}
+\endinsert\par
+The program is in the style of the programs for structure inspection
+given in Section~9.2, in particular Program~\Proprosubter\ for {\tt
+substitute}. The two clauses for {\tt ground/1} are straightforward. In
+both cases, a meta-logical test is used to ensure that no error is
+generated. The first clause says that constant terms are ground. The
+second clause deals with structures. It calls an auxiliary predicate
+{\tt ground/2}, which iteratively checks that all the arguments of the
+structure are ground.\par
+We look at a more elaborate example of using meta-logical type
+predicates; writing a unification algorithm. The necessity of Prolog to
+support unification for matching goals with clause heads means that
+explicit unification is readily available. Prolog's underlying
+unification can be used to give a trivial definition\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+unify(X,X).\cr}\medno
+which is the definition of the system predicate {\tt =/2}, namely, {\tt
+X=X}.\par
+Note that this definition depends on Prolog's underlying mechanism for
+unification, and hence does not enforce the occurs check.\par
+A more explicit definition of Prolog's unification is possible using
+meta-logical type predicates. Although more cumbersome and less
+efficient, this definition is useful as a basis for more elaborate
+unification algorithms. One example is unification with the occurs check,
+described in Section~10.2. Another example is unification in other
+logic programming languages that can be embedded in Prolog, such as
+read-only unification of Concurrent Prolog.\par
+Program~\Prounialg\ is an explicit definition of unification. The
+relation {\tt unify(Term1,Term2)} is true if {\tt Term1} unifies with
+{\tt Term2}. The clauses of {\tt unify} outline the possible cases. The
+first clause of the program says that two variables unify. The next
+clause is an encapsulation of the rule for unification that if {\tt X} is
+a variable, then {\tt X} unifies with {\tt Y}.
+\midinsert
+\halign{\lft{\tt #}\cr
+{\it unify\/}({\it Term1,Term2\/}) $\lar$\cr
+\qi {\it Term1\/} {\rm and} {\it Term2\/} {\rm are unified, ignoring the
+occurs check.}\cr
+\noalign{\medskip}
+unify(X,Y) $\lar$\cr
+\qi var(X), var(Y), X=Y.\cr
+unify(X,Y) $\lar$\cr
+\qi var(X), nonvar(Y), X=Y.\cr
+unify(X,Y) $\lar$\cr
+\qi var(Y), nonvar(X), Y=X.\cr
+unify(X,Y) $\lar$\cr
+\qi nonvar(X), nonvar(Y), constant(X), constant(Y), X=Y.\cr
+unify(X,Y) $\lar$\cr
+\qi nonvar(X), nonvar(Y), compound(X), compound(Y), term\_unify(X,Y).\cr
+\noalign{\vskip 5pt}
+term\_unify(X,Y) $\lar$\cr
+\qi functor(X,F,N), functor(Y,F,N), unify\_args(N,X,Y).\cr
+\noalign{\vskip 5pt}
+unify\_args(N,X,Y) $\lar$\cr
+\qi N $>$ 0, unify\_arg(N,X,Y), N1 is N-1, unify\_args(N1,X,Y).\cr
+unify\_args(0,X,Y).\cr
+\noalign{\vskip 5pt}
+unify\_arg(N,X,Y) $\lar$\cr
+\qi arg(N,X,ArgX), arg(N,Y,ArgY), unify(ArgX,ArgY).\cr
+\noalign{\bigskip}
+{\bf Program \Prounialg}{\rm :~~Unification algorithm}\cr}
+\endinsert\par
+The other case bearing discussion in Program~\Prounialg\ is unifying two
+compound terms, as given in the predicate {\tt term\_unify(X,Y)}. This
+predicate checks that the two terms {\tt X} and {\tt Y} have the same
+principal functor and arity, and then checks that all the arguments
+unify, using {\tt unify\_args}, in a way similar to the structure
+inspection programs shown before.\vskip 15pt\parno
+{\bf Exercises for Section 10.1}\vskip 5pt\par
+\offset{20pt}{(i)} Write a version of Program~\Progenlisint\ for
+{\tt range} that can be used in multiple ways.\par
+\offset{20pt}{(ii)} Write a version of Program~\Promuluseplu\ for {\tt
+plus} that partitions a number as well as performing addition and
+subtraction. (Hint:~~Use {\tt between} to generate numbers.)\par
+\sect{Comparing Nonground Terms}
+Consider the problem of extending the explicit unification program,
+Program~\Prounialg, to handle the occurs check. Recall that the occurs
+check is part of the formal definition of unification, which requires
+that a variable not be unified with a term containing this variable. In
+order to implement it in Prolog, we need to check whether two variables
+are identical (not just unifiable, as any two variables are). This is a
+meta-logical test.\par
+Standard Prolog provides a system predicate, {\tt ==/2}, for this
+purpose. The query {\tt X == Y?} succeeds if {\tt X}
+and {\tt Y} are identical constants, identical variables, or both
+structures whose principal functors have the same name and arity, and
+recursively {\tt X$_i$ == Y$_i$?} succeeds for all
+corresponding arguments {\tt X$_i$} and {\tt Y$_i$} of {\tt X} and
+{\tt Y}. The goal fails otherwise. For example, {\tt X == 5?}
+fails (in contrast to {\tt X = 5?}).\par
+There is also a system predicate that has the opposite behavior to {\tt
+==}. The query {\tt X \\== Y?} succeeds unless {\tt X} and
+{\tt Y} are identical terms.\par
+The predicate {\tt \\==} can be used to define a predicate {\tt
+not\_occurs\_in(Sub,}\linebreak
+{\tt Term)}, which is true if {\tt Sub} does not occur in {\tt Term}, the
+relation that is needed in the unification algorithm with the occurs
+check. {\tt not\_occurs\_in(Sub,Term)} is a meta-logical structure
+inspection predicate. It is used in Program~\Prounioccche, a variant of
+Program~\Prounialg, to implement unification with the occurs check.
+\topin
+\halign{\lft{\tt #}\cr
+{\it unify\/}({\it Term1,Term2\/}) $\lar$\cr
+\qi {\it Term1\/} {\rm and} {\it Term2\/} {\rm are unified with the
+occurs check.}\cr
+\noalign{\medskip}
+unify(X,Y) $\lar$\cr
+\qi var(X), var(Y), X=Y.\cr
+unify(X,Y) $\lar$\cr
+\qi var(X), nonvar(Y), not\_occurs\_in(X,Y), X=Y.\cr
+unify(X,Y) $\lar$\cr
+\qi var(Y), nonvar(X), not\_occurs\_in(Y,X), Y=X.\cr
+unify(X,Y) $\lar$\cr
+\qi nonvar(X), nonvar(Y), constant(X), constant(Y), X=Y.\cr
+unify(X,Y) $\lar$\cr
+\qi nonvar(X), nonvar(Y), compound(X), compound(Y), term\_unify(X,Y).\cr
+\noalign{\medskip}
+{\it not\_occurs\_in\/}({\it X,Term\/}) $\lar$\cr
+\qi {\rm The variable} {\it X\/} {\rm does not occur in} {\it Term\/}.\cr
+\noalign{\medskip}
+not\_occurs\_in(X,Y) $\lar$\cr
+\qi var(Y), X \\== Y.\cr
+not\_occurs\_in(X,Y) $\lar$\cr
+\qi nonvar(Y), constant(Y).\cr
+not\_occurs\_in(X,Y) $\lar$\cr
+\qi nonvar(Y), compound(Y), functor(Y,F,N), not\_occurs\_in(N,X,Y).\cr
+\noalign{\vskip 5pt}
+not\_occurs\_in(N,X,Y) $\lar$\cr
+\qi N$>$0, arg(N,Y,Arg), not\_occurs\_in(X,Arg), N1 is N-1,\cr
+\qii not\_occurs\_in(N1,X,Y).\cr
+not\_occurs\_in(0,X,Y).\cr
+\noalign{\vskip 5pt}
+term\_unify(X,Y) $\lar$ {\rm See Program \Prounialg.}\cr
+\noalign{\bigskip}
+{\bf Program \Prounioccche}{\rm :~~Unification with the occurs check}\cr}
+\endin\par
+Note that the definition of {\tt not\_occurs\_in} is not restricted to
+ground terms. Lifting the restriction on Program~\Profinsubter\ for {\tt
+subterm} is not as easy. Consider the query {\tt subterm(X,Y)?}. This
+would succeed using Program~\Profinsubter, instantiating {\tt X} to {\tt
+Y}.\par
+We define a meta-logical predicate {\tt occurs\_in(Sub,Term)} that has
+the desired behavior.\par
+The predicate {\tt ==} allows a definition of {\tt occurs\_in} based on
+Program~\Profinsubter\ for {\tt subterm}. All the subterms of the given
+term are generated on backtracking and tested to see if they are
+identical to the variable. The code is given in Program~\Prooccuin a.\par
+As defined, {\tt subterm} works properly only for ground terms. However,
+by adding meta-logical type tests, as in the definition of {\tt
+not\_occurs\_in} in Program~\Prounioccche, this problem is easily
+rectified.\endpage
+\sect{Variables as Objects}
+The delicate handling of variables needed to define {\tt occurs\_in} in
+Section~10.2 highlights a deficiency in the expressive power of
+Prolog. Variables are not easily manipulated. When trying to inspect,
+create, and reason about terms, variables can be unwittingly instantiated.
+\par
+A similar concern occurs with Program~\Proprosubter\ for {\tt
+substitute}. Consider the goal {\tt substitute(a,b,X,Y)}, substituting
+{\tt a} for {\tt b} in a variable {\tt X} to give {\tt Y}. There are two
+plausible behaviors for {\tt substitute} in this case. Logically there is
+a solution when {\tt X} is {\tt a} and {\tt Y} is {\tt b}. This is the
+solution actually given by Program~\Proprosubter, achieved by unification
+with the base fact {\tt substitute(Old,New,Old,New)}.\par
+In practice, another behavior is usually preferred. The two terms {\tt X}
+and {\tt a} should be considered different, and {\tt Y} should be
+instantiated to {\tt X}. The other base case from Program~\Proprosubter,
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+substitute(Old,New,Term,Term) $\lar$ constant(Term), Term $\ne$ Old.\cr}
+\medno
+covers this behavior. However, the goal would fail because a variable is
+not a constant.\par
+We can prevent the first (logical) solution by using a meta-logical test
+to ensure that the term being substituted in is ground. The unification
+implicit in the head of the clause is then only performed if the test
+succeeds, and so must be made explicit. The base fact becomes the rule
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+substitute(Old,New,Term,New) $\lar$ ground(Term), Old = Term.\cr}\medno
+Treating a variable as different from a constant is handled by a special
+rule, again relying on a meta-logical test:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+substitute(Old,New,Var,Var) $\lar$ var(Var).\cr}\medskip
+Adding the two preceding clauses to Program~\Proprosubter\ for {\tt
+substitute} and adding other meta-logical tests allows the program to
+handle nonground terms. However, the resultant program is inelegant.
+It is a mixture of procedural and declarative styles, and it demands
+of the reader an understanding of Prolog's control flow. To make a
+medical analogy, the symptoms have been treated (undesirable
+instantiation of variables), but not the disease (inability to refer
+to variables as objects). Additional meta-logical primitives are
+necessary to cure the problem.\par 
+The difficulty of mixing object-level and meta-level manipulation of terms
+stems from a theoretical problem. Strictly speaking, meta-level programs
+should view object-level variables as constants and be able to refer to
+them by name.\par
+We suggest two system predicates, {\tt freeze(Term,Frozen)} and {\tt
+melt(Frozen,}\linebreak
+{\tt Thawed)}, to allow explicit manipulation of variables. Freezing a
+term {\tt Term} makes a copy of the term, {\tt Frozen}, where all the
+uninstantiated variables in the term become unique constants. A frozen
+term looks like, and can be manipulated as, a ground term.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it occurs\_in\/}({\it Sub,Term\/}) $\lar$\cr
+\qi {\it Sub\/} {\rm is a subterm of the (possibly nonground) term} {\it
+Term\/}{\rm .}\cr
+\noalign{\medskip}
+{\rm a: Using}  == \cr
+\noalign{\vskip 5pt}
+\qi occurs\_in(X,Term) $\lar$\cr
+\qii subterm(Sub,Term), X == Sub.\cr
+\noalign{\vskip 5pt}
+{\rm b: Using}  freeze \cr
+\noalign{\vskip 5pt}
+\qi occurs\_in(X,Term) $\lar$\cr
+\qii freeze(X,Xf), freeze(Term,Termf), subterm(Xf,Termf).\cr
+\noalign{\vskip 5pt}
+\qi subterm(X,Term) $\lar$ {\rm See Program \Profinsubter.}\cr
+\noalign{\bigskip}
+{\bf Program \Prooccuin}{\rm :~~Occurs in}\cr}
+\endin\par
+Frozen variables are regarded as ground atoms during unification. Two
+frozen variables unify if and only if they are identical. Similarly, if a
+frozen term and an uninstantiated variable are unified, they become an
+identical frozen term. The behavior of frozen variables in system
+predicates is the behavior of the constants. For example, arithmetic
+evaluation involving a frozen variable will fail.\par
+The predicate {\tt freeze} is meta-logical in a similar sense to {\tt
+var}. It enables the state of a term during the computation to be
+manipulated directly.\par
+The predicate {\tt freeze} allows an alternative definition of {\tt
+occurs\_in} from the one given in Section~10.2. The idea is to freeze
+the term so that variables become ground objects. This makes
+Program~\Profinsubter\ for {\tt subterm}, which works correctly for
+ground terms, applicable. The definition is given as
+Program~\Prooccuin b.\par 
+Freezing gives the ability to tell whether two terms are identical. Two
+frozen terms, {\tt X} and {\tt Y}, unify if and only if their
+unfrozen versions are identical, that is, {\tt X == Y}. This
+property is essential to the correct behavior of Program~\Prooccuin b.
+\par
+The difference between a frozen term and a ground term is that the frozen
+term can be ``melted back" into a nonground term. The companion predicate
+to {\tt freeze} is {\tt melt(Frozen,Thawed)}. The goal {\tt melt(X,Y)}
+produces a copy {\tt Y} of the term {\tt X} where frozen variables become
+regular Prolog variables. Any instantiations to the variables in {\tt
+X} during the time when {\tt X} has been frozen are taken into account
+when melting {\tt Y}.\par
+The combination of {\tt freeze} and {\tt melt} allows us to write a
+variant of {\tt substitute}, {\tt non\_ground\_substitute}, where
+variables are not accidentally instantiated. The procedural view of {\tt
+non\_ground\_substitute} is as follows. The term is frozen before
+substitution; the substitution is performed on the frozen term using the
+version of {\tt substitute}, which works correctly on ground terms; and
+then the new term is melted:\medskip
+\halign{\hskip 20pt\lft{\tt #}\cr
+non\_ground\_substitute(X,Y,Old,New) $\lar$\cr
+\qi freeze(Old,Old1), substitute(X,Y,Old1,Old2), melt(Old2,New).\cr}
+\medskip
+The frozen term can also be used as a template for making copies. The
+system predicate {\tt melt\_new(Frozen,Term)} makes a copy {\tt Term} of
+the term {\tt Frozen}, where frozen variables are replaced by new
+variables.\par
+One use of {\tt melt\_new} is to copy a term. The predicate {\tt
+copy(Term,Copy)} produces a new copy of a term. It can be defined in a
+single rule:\medskip
+\halign{\hskip 20pt\lft{\tt #}\cr
+copy(Term,Copy) $\lar$ freeze(Term,Frozen), melt\_new(Frozen,Copy).\cr}
+\medskip
+Standard Prolog provides the predicate {\tt copy\_term(Term1,Term2)} for
+copying terms. It is true if and only if {\tt Term2} unifies with a term
+{\tt T} that is a copy of {\tt Term1} except that all the variables of
+{\tt Term1} have been replaced by fresh variables.\par
+Unfortunately, the predicates {\tt freeze/2}, {\tt melt/2}, and {\tt
+melt\_new/2} as described here are not present in existing Prolog
+implementations. They will be useful nonetheless in expressing and
+explaining the behavior of extra-logical predicates, discussed in Chapter
+12.\par
+A useful approximation to {\tt freeze} is the predicate {\tt
+numbervars(Term,N1,N2)}, which is provided in many Edinburgh Prolog
+libraries. A call to the predicate is true if the variables appearing in
+{\tt Term} can be numbered from {\tt N1} to {\tt N2-1}. The effect of
+the call is to replace each variable in the term by a term of the form
+{\tt `\$VAR'(N)} where {\tt N} lies between {\tt N1} and {\tt N2}. For
+example, the goal {\tt numbervars(append(\(X$\mid$Xs\),Ys,\(X$
+\mid$Zs\),1,N)} succeeds with the substitution {\tt $\{$X=`\$VAR(1)',
+Xs=`\$VAR'(2), Ys=`\$VAR'(3), Zs=`\$VAR'(4), N=5$\}$}.
+Code implementing {\tt numbervars} is given as Program~\Pronumthevar. It
+is in the same style as the structure inspection utilities given in
+Chapter~9.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it numbervars\/}({\it Term,N1,N2\/}) $\lar$\cr
+\qi {\rm The variables in} {\it Term\/} {\rm are numbered from} {\it
+N1\/} {\rm to} {\it N2 -- 1\/}{\rm .}\cr
+\noalign{\medskip}
+numbervars(`\$VAR'(N),N,N1) $\lar$\cr
+\qi N1 is N+1.\cr
+numbervars(Term,N,N) $\lar$\cr
+\qi nonvar(Term), constant(Term).\cr
+numbervars(Term,N1,N2) $\lar$\cr
+\qi nonvar(Term), compound(Term),\cr
+\qi functor(Term,Name,N),\cr
+\qi numbervars(0,N,Term,N1,N2).\cr
+\noalign{\vskip 5pt}
+numbervars(N,N,Term,N1,N1).\cr
+numbervars(I,N,Term,N1,N3) $\lar$\cr
+\qi I $<$ N\cr
+\qi I1 is I+1,\cr
+\qi arg(I1,Term,Arg),\cr
+\qi numbervars(Arg,N1,N2),\cr
+\qi numbervars(I1,N,Term,N2,N3).\cr
+\noalign{\bigskip}
+{\bf  Program \Pronumthevar}{\rm :~~Numbering the variables in a
+term}\cr}
+\endin\endpage
+\sect{The Meta-Variable Facility}
+A feature of Prolog is the equivalence of programs and data --- both can
+be represented as logical terms. In order for this to be exploited,
+programs need to be treated as data, and data must be transformed into
+programs. In this section, we mention a facility that allows a term to be
+converted into a goal. The predicate {\tt call(X)} calls the goal {\tt X}
+for Prolog to solve.\par
+In practice, most Prolog implementations relax the restriction we have
+imposed on logic programs, that the goals in the body of a clause must be
+nonvariable terms. The {\it meta-variable facility\/} allows a variable
+to appear as a goal in a conjunctive goal or in the body of the clause.
+During the computation, by the time it is called, the variable must be
+instantiated to a term. It will then be treated as usual. If the
+variable is not instantiated when it comes to be called, an error is
+reported. The meta-variable facility is a syntactic convenience for the
+system predicate {\tt call}.\par
+The meta-variable facility greatly facilitates meta-programming, in
+particular the construction of meta-interpreters and shells. Two
+important examples to be discussed in later chapters are Program
+\Prointshe, a simple shell, and Program~\Prometpurpro, a
+meta-interpreter. It is also essential for defining negation (Program
+\Pronegfai) and allowing the definition of higher-order predicates to be
+described in Section~16.3.\par
+We give an example of using the meta-variable facility with a definition
+of logical disjunction, denoted by the binary infix operator ``{\tt ;}''.
+The goal {\tt (X;Y)} is true if {\tt X} or {\tt Y} is true. The
+definition is given as Program~\Prologdis.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it X ; Y\/} $\lar$\cr
+\qi {\it X\/} {\rm or} {\it Y\/}.\cr
+\noalign{\medskip}
+X ; Y $\lar$ X.\cr
+X ; Y $\lar$ Y.\cr
+\noalign{\bigskip}
+{\bf Program \Prologdis}{\rm :~~Logical disjunction}\cr}
+\endin\par
+\sect{Background}
+An excellent discussion of meta-logical system predicates in DEC-10
+Prolog, and how they are used, can be found in O'Keefe (1983).\par The
+unification procedure for Concurrent Prolog, written in Prolog, is in
+Shapiro (1983b).\par The difficulty in correctly manipulating
+object-level variables in Prolog at the meta-level has been raised by
+several people. The discussion first extensive discussion is in
+Nakashima et al. (1984), where the predicates {\tt freeze}, {\tt
+melt}, and {\tt melt\_new} are introduced. The name {\tt freeze} was a
+little unfortunate, as it has been suggested for other additions to pure
+Prolog. Most notable is Colmerauer's {\tt geler} (Colmerauer, 1982a),
+which allows the suspension of a goal and gives the programmer more
+control over goal order. This predicate is provided by Sicstus Prolog
+as {\tt freeze}. The discussion of Nakashima and colleagues, although
+publicized in the first editon of this book, was largely ignored, to be revived
+by Barklund (1989) musing over ``What is a variable in Prolog?'' and
+by attempts to do meta-programming in constraint logic programming
+languages, for example, Heintze et al. (1989) and Lim and Stuckey
+(1990).\par The G\"odel project (Hill and Lloyd, 1993) 
+has advocated replacing Prolog by a language that facilitates
+explicit manipulation of variables at a meta-level. In Lloyd and Hill
+(1989), the terms ground and nonground representation are used.
+Prolog uses a nonground representation, and adding {\tt freeze} and
+{\tt numbervars} allows a ground representation.
+\par\bye
+

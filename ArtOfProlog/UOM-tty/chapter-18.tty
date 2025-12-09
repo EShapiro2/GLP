@@ -1,0 +1,1911 @@
+
+
+
+
+                                              Chapter 18
+
+
+
+                 Program  Transformation
+
+
+
+    As stated in the introduction to Chapter 17, meta-programming, or the writ-
+
+
+ing of programs that treat other programs as data, is particularly easy in Prol*
+ *og.
+
+
+This chapter gives examples of programs that transform and manipulate Prolog
+
+
+programs.  The first section looks at fold/unfold, the operation that underlies
+
+
+most applications of program transformation for Prolog programs. The transfor-
+
+
+mations given in Chapter 15 for using difference-lists to avoid explicit concat*
+ *e-
+
+
+nation of lists can be understood as unfold operations, for example. The second
+
+
+section describes a simple system for controlled unfolding and folding, which is
+
+
+especially good for removing layers of interpretation. The final section gives *
+ *two
+
+
+examples of source-to-source transformation by code walking.
+
+
+
+18.1   Unfold/Fold Transformations
+
+
+
+    Logic programming arose from research on resolution theorem proving. The
+
+
+basic step in the logic programming computation model, goal reduction, corre-
+
+
+
+
+316   Program Transformation                                18.1
+
+
+
+sponds to a single resolution between a query and a program clause. Unfold/fold
+
+
+operations correspond to resolution between two Horn clauses. Loosely, unfolding
+
+
+corresponds to replacing a goal in the body of a clause by its definition, while
+
+
+folding corresponds to recognizing that goal(s) in the body of a clause are an *
+ *in-
+
+
+stance of a definition. These two operations, being so similar, are often discu*
+ *ssed
+
+
+together.
+
+
+    We demonstrate unfolding and folding with a running example in the first
+
+
+part of this chapter. The example is specializing the interpreter for nondeterm*
+ *in-
+
+
+istic pushdown automata (Program 17.3) for the particular pushdown automaton
+
+
+for recognizing palindromes (Program 17.4). In general, specializing interprete*
+ *rs
+
+
+is a good application for unfold/fold operations.
+
+
+    Definition: Unfolding a goal Biin a clause A   B1,: :,:Bn with respect to
+
+
+a clause B   C1,: :,:Cm where B and Biunify with mgu , produces a clause (A
+
+
+  B1,: :,:Bi1 ,C1,: :,:Cm ,Bi+1,: :,:Bn).
+
+
+    As an example of unfolding, we specialize the clause accept(Xs)   ini-
+
+
+tial(Q), accept(Xs,Q,[ ]) to a particular initial state by unfolding the ini-
+
+
+tial(Q) goal with respect to a particular initial fact. Specifically, unfolding
+
+
+with respect to the fact initial(push) produces the clause accept(Xs)   ac-
+
+
+cept(Xs,push,[ ]). (Note that in our running example we use the states push
+
+
+and pop for q0 and q1, respectively, from the NPDA of Program 17.4.)
+
+
+    The effect of the unfolding is to instantiate the initial state for the NPD*
+ *A to
+
+
+push. In general, the effect of unfolding is to propagate variable bindings to *
+ *the
+
+
+right, as in this example, and also to the left, to goals in the body of the cl*
+ *ause
+
+
+
+
+18.1                                  Unfold/Fold Transformations317
+
+
+
+and possibly also to the head.
+
+
+    There may be several clauses whose heads unify with a given goal in the body
+
+
+of a clause. We extend the definition of unfolding accordingly.
+
+
+    Definition: Unfolding a goal Biin a clause A   B1,: :,:Bn with respect to
+
+
+a procedure defining Bi is to unfold the goal with respect to each clause in the
+
+
+procedure whose head unifies with Bi.
+
+
+    Unfolding the delta/5 goal in the clause accept([XjXs],Q,S)   delta(Q,
+
+
+X,S,Q1,S1), accept(Xs,Q1,S1) with respect to the following procedure for
+
+
+delta adapted from Program 17.4
+
+
+
+        delta(push,X,S,push,[XjS]). delta(push,X,S,pop,[XjS]).
+
+
+        delta(push,X,S,pop,S).      delta(pop,X,[XjS],pop,S).
+
+
+
+produces four clauses, one for each fact.
+
+
+
+        accept([XjXs],push,S)   accept(Xs,push,[XjS]).
+
+
+        accept([XjXs],push,S)   accept(Xs,pop,[XjS]).
+
+
+        accept([XjXs],push,S)   accept(Xs,pop,S).
+
+
+        accept([XjXs],pop,[XjS])   accept(Xs,pop,S).
+
+
+
+    This example shows variable bindings being propagated both to the right,
+
+
+and to the head of the clause left of the goal being unfolded.
+
+
+    Folding  is  the  reverse  of  unfolding.   The  occurrence  of  a  body  of
+
+
+a clause is replaced by its head.   It is easiest to show with an exam-
+
+
+ple. Folding the goal accept(Xs,push,[ ]) in the clause accept(Xs)   ac-
+
+
+
+
+318   Program Transformation                                18.1
+
+
+
+cept(Xs,push,[ ]) with respect to the clause palindrome(Xs,State,Stack)
+
+
+  accept(Xs,State,Stack) produces the clause accept(Xs)   palindrome(Xs,push,[ *
+ *]).
+
+
+    Note that if we now unfold the goal palindrome(Xs,push,[ ]) in ac-
+
+
+cept(Xs)   palindrome(Xs,push,[ ]) with respect to the clause just used
+
+
+for folding, palindrome(Xs,State,Stack)   accept(Xs,State,Stack), we ar-
+
+
+rive back at the original clause, accept(Xs)   accept(Xs,push,[ ]). Ideally,
+
+
+fold/unfold are inverse operations.
+
+
+    Our example of folding used an iterative clause, i.e., one with a single go*
+ *al
+
+
+in the body. Folding can be performed on a conjunction of goals, but there are
+
+
+technical difficulties arising from the scope of variables. Here we restrict ou*
+ *rselves
+
+
+to iterative clauses. The reader interested in the more general case should stu*
+ *dy
+
+
+the references given at the end of the chapter.
+
+
+    Specialization of the interpreter of Program 17.3 is completed by unfolding
+
+
+the final(Q) goal in the third clause of Program 17.3, folding all occurrences
+
+
+of accept/3, and folding with respect to the clause palindrome(Xs)   ac-
+
+
+cept(Xs). Program 18.1 is then obtained.
+
+
+    Propagating bindings leftward in Prolog will not preserve correctness in ge*
+ *n-
+
+
+eral. For example, consider unfolding the goal r(X) with respect to the fact r(*
+ *3)
+
+
+in the clause p(X)   var(X), r(x).  The resulting clause, p(3)   var(3),
+
+
+clearly always fails, in contrast with the original clause.  Unfolding for Prol*
+ *og
+
+
+can be performed correctly by not propagating bindings leftward, and replacing
+
+
+the unfolded goal by the unifier. For this example, the result would be p(X)  
+
+
+var(X), X=3. This will not be an issue in the examples we consider.
+
+
+
+
+18.2                                          Partial reduction319
+
+
+        palindrome(Xs)  
+
+
+           The string represented by the list Xs is a palindrome.
+
+
+        palindrome(Xs)   palindrome(Xs,push,[ ]).
+
+
+        palindrome([XjXs],push,S)   palindrome(Xs,push,[XjS]).
+
+
+        palindrome([XjXs],push,S)   palindrome(Xs,pop,[XjS]).
+
+
+        palindrome([XjXs],push,S)   palindrome(Xs,pop,S).
+
+
+        palindrome([XjXs],pop,[XjS])   palindrome(Xs,pop,S).
+
+
+        palindrome([ ],pop,[ ]).
+
+
+
+        Program 18.1: A program accepting palindromes
+
+
+
+Exercise for Section 18.1
+
+
+
+(i) Specialize the interpreter of Program 17.1 to the NDFA of Program 17.2, or
+
+
+    any other NDFA, by unfold/fold operations.
+
+
+
+18.2   Partial reduction
+
+
+
+    In this section we develop a simple system for controlled unfold/fold opera-
+
+
+tions according to prescribed user declarations. Systems for controlled unfoldi*
+ *ng
+
+
+are known in the logic programming literature as partial evaluators. This name
+
+
+reveals the influence of functional programming, where the basic computation
+
+
+model is evaluation. We prefer to refer to the system in terms of the computati*
+ *on
+
+
+model of logic programming, goal reduction.  We thus, nonstandardly, say our
+
+
+system is doing partial reduction, and call it a partial reducer.
+
+
+
+
+320   Program Transformation                                18.2
+
+
+
+    Considerable research on applying partial reduction has shown that partial
+
+
+reduction is especially useful for removing levels of interpretation. The seque*
+ *nce
+
+
+of unfold/fold operations given in Section 18.1 typify what is possible. The ge*
+ *n-
+
+
+eral NPDA interpreter was specialized to a specific NPDA, removing interpreter
+
+
+overhead. The resulting program, Program 18.1, only recognizes palindromes but
+
+
+does so far more efficiently than the combination of Programs 17.3 and 17.4.
+
+
+
+    Let us see how to build a system that can apply the unfold and fold oper-
+
+
+ations that were needed to produce the palindrome program. The main idea is
+
+
+to recursively perform unfold/fold until no more \progress" can be achieved. A
+
+
+relation that replaces a goal by its equivalent under these operations is neede*
+ *d.
+
+
+The resulting equivalent goal is known as a residue. Let us call our basic rela-
+
+
+tion preduce(Goal,Residue), with intended meaning that Residue is a residue
+
+
+arising from partially reducing Goal by applying unfold and fold operations.
+
+
+
+    Program 18.2 contains code for preduce.  There are three possibilities for
+
+
+handling a single goal.  It can be folded, unfolded, or left alone.  The ques-
+
+
+tion immediately arises how to decide between the three possibilities. The eas-
+
+
+iest for a system is to rely on the user.  Program 18.2 assumes that the user
+
+
+gives should_fold(Goal,FoldedGoal) declarations that say which goals should
+
+
+be folded and to what they should be folded, and also should_unfold(Goal)
+
+
+declarations that say which goals should be unfolded.  Unification against the
+
+
+program clauses determines to what they should be unfolded. Goals not covered
+
+
+by either declaration are left alone. The remaining clauses in Program 18.2 han*
+ *dle
+
+
+the empty goal, true, and conjunctive goals, which are treated recursively in t*
+ *he
+
+
+
+
+18.2                                          Partial reduction321
+
+
+
+        preduce(Goal,Residue)  
+
+
+           Partially reduce Goal to leave the residue Residue.
+
+
+        preduce(true,true)   !.
+
+
+        preduce((A,B),(PA,PB))   !, preduce(A,PA), preduce(B,PB).
+
+
+        preduce(A,B)   should_fold(A,B), !.
+
+
+        preduce(A,Residue)  
+
+
+           should_unfold(A), !, clause(A,B), preduce(B,Residue).
+
+
+        preduce(A,A).
+
+
+
+        Program 18.2: A meta-interpreter for determining a residue
+
+
+
+obvious way.
+
+
+
+    Observe that Program 18.2 is essentially a meta-interpreter at the granular*
+ *ity
+
+
+level of vanilla (Program 17.5). The meta-interpreter is enhanced to return the
+
+
+residue. Handling builtins is assigned to the exercises.
+
+
+
+    The query preduce((initial(Q), accept(Xs,Q,[ ])), Residue)?  as-
+
+
+suming appropriate should_fold and should_unfold declarations (to be given
+
+
+shortly) has as solution Residue = (true,palindrome(Xs,push,[ ])).   It
+
+
+would be preferable to remove the superfluous call to true.  This can be done
+
+
+by modifying the clause handling conjunctive goals to be more careful in comput-
+
+
+ing the conjunctive resolvent. A suitable modification is
+
+
+
+        preduce((A,B),Res)  
+
+
+           !, preduce(A,PA), preduce(B,PB), combine(PA,PB,Res).
+
+
+
+
+322   Program Transformation                                18.2
+
+
+
+The code for combine, removing superfluous empty goals, is given in Pro-
+
+
+gram 18.3.
+
+
+    To extend Program 18.2 into a partial reducer, clauses must be handled as
+
+
+well as goals. We saw a need in the previous section to partially reduce the he*
+ *ad
+
+
+and body of a clause.  The only question is in which order.  Typically, we will
+
+
+want to fold the head and unfold the body. Since unfolding propagates bindings,
+
+
+unfolding first will allow more specific folding. Thus our proposed rule for ha*
+ *ndling
+
+
+clauses is
+
+
+        preduce((A   B),(PA   PB))  
+
+
+           !, preduce(B,PB), preduce(A,PA).
+
+
+
+This goal order is advantageous for the example of the rule interpreter to be
+
+
+presented later in this section.
+
+
+    To partially reduce a program, we need to partially reduce each of its clau*
+ *ses.
+
+
+For each clause, there may be several possibilities because of nondeterminism.
+
+
+For example, the recursive accept/3 clause led to four rules because of the four
+
+
+possible ways of unfolding the delta goal.  The cleanest way to get the whole
+
+
+collection of program clauses is to use the all-solutions predicate findall. Th*
+ *at
+
+
+gives
+
+
+        process(Prog,NewProg)  
+
+
+           findall(PCl,(member(Cl,Prog), preduce(Cl,PCl)),NewProg).
+
+
+
+    Putting all the preceding actions together gives a simple system for partial
+
+
+reduction. The code is presented as Program 18.3. The program also contains a
+
+
+
+
+18.2                                          Partial reduction323
+
+
+
+        process(Program, RedProgram)  
+
+
+           Partially reduce each of the clauses in Program to produce
+
+
+           RedProgram.
+
+
+        process(Prog,NewProg)  
+
+
+           findall(PCl,(member(Cl,Prog),preduce(Cl,PCl)),NewProg).
+
+
+        test(Name,Program)  
+
+
+           program(Name,Clauses), process(Clauses,Program).
+
+
+        preduce(Goal,Residue)  
+
+
+           Partially reduce Goal to leave the residue Residue.
+
+
+        preduce((A   B),(PA   PB))  
+
+
+           !, preduce(B,PB), preduce(A,PA).
+
+
+        preduce(true,true)   !.
+
+
+        preduce((A,B),Res)  
+
+
+           !, preduce(A,PA), preduce(B,PB), combine(PA,PB,Res).
+
+
+        preduce(A,B)   should_fold(A,B), !.
+
+
+        preduce(A,Residue)  
+
+
+           should_unfold(A), !, clause(A,B), preduce(B,Residue).
+
+
+        preduce(A,A).
+
+
+        combine(true,B,B)   !.
+
+
+        combine(A,true,A)   !.
+
+
+        combine(A,B,(A,B)).
+
+
+
+        Program 18.3: A simple partial reduction system
+
+
+
+
+324   Program Transformation                                18.2
+
+
+
+    program(npda,[(accept(Xs1)   initial(Q1), accept(Xs1,Q1,[ ]),
+
+
+        (accept([X2jXs2],Q2,S2)   delta(Q2,X2,S2,Q12,S12),
+
+
+        accept(Xs2,Q12,S12)), (accept([ ],Q3,[ ])   true)],P).
+
+
+    should_unfold(initial(Q)).
+
+
+    should_unfold(final(Q)).
+
+
+    should_unfold(delta(A,B,C,D,E)).
+
+
+    should_fold(accept(Q,Xs,Q1),palindrome(Q,Xs,Q1)).
+
+
+    should_fold(accept(Xs),palindrome(Xs)).
+
+
+
+    Program 18.4: Specializing an NPDA
+
+
+
+testing clause.
+
+
+
+    We now concentrate on how to specify should_fold and should_unfold
+
+
+declarations.  Consider the NPDA example for recognizing palindromes.  The
+
+
+initial, final, and delta goals should all be unfolded.  A declaration is
+
+
+needed for each.  The accept/1 and accept/3 goals should be folded into
+
+
+palindrome goals with the same argument.  The declaration for accept/1 is
+
+
+should_fold(accept(Xs),palindrome(Xs)). All the necessary declarations are
+
+
+given in Program 18.4. Program 18.4 also contains the test program as data. Note
+
+
+the need to make all the variables in the program distinct. Applying Program 18*
+ *.3
+
+
+to Program 18.4 by posing the query test(npda,P)? produces Program 18.1, with
+
+
+the only difference being an explicit empty body for the last palindrome fact.
+
+
+
+    We now give a more complicated example of applying partial reduction to
+
+
+
+
+18.2                                          Partial reduction325
+
+
+
+remove a level of overhead. We consider a simpler variant of the rule interpret*
+ *er
+
+
+given in Section 17.4. The variant is at the bottom level of the layered interp*
+ *reter.
+
+
+The interpreter, whose relation is solve(A,N), counts the number of reductions
+
+
+used in solving the goal A. The code for solve and related predicate solve_body*
+ * is
+
+
+given in Program 18.5. The rules that we will consider constitute Program 17.17
+
+
+for determining where a dish should be placed in the oven. The rules are repeat*
+ *ed
+
+
+in Program 18.5 for convenience.
+
+
+
+    The effect of partial reduction in this case will be to \compile" the rules*
+ * into
+
+
+Prolog clauses where the arithmetic calculations are done. The resulting Prolog
+
+
+clauses can in turn be compiled, in contrast to the combination of interpreter *
+ *plus
+
+
+rules. Rule place1 will be transformed to
+
+
+
+        oven(Dish,top,N)  
+
+
+           pastry(Dish,N1), size(Dish,small,N2),
+
+
+           N3 is N1+N2, N is N3+1.
+
+
+
+    The idea is to unfold the calls to rule so that each rule can be handled,
+
+
+and also to unfold the component of the interpreter that handles syntactic stru*
+ *c-
+
+
+ture, specifically solve_body. What gets folded are the individual calls to sol*
+ *ve,
+
+
+such as solve(oven(D,P),N), which gets replaced by a predicate oven(D,P,N).
+
+
+The necessary declarations are given in Program 18.5. Program 18.3 applied to
+
+
+Program 18.5 produces the desired effect.
+
+
+
+    Specifying what goals should be folded and unfolded is in general straight-
+
+
+forward in cases similar to what we have shown. Nevertheless, making such dec-
+
+
+
+
+326   Program Transformation                                18.2
+
+
+
+        Rule interpreter for counting reductions
+
+
+        solve(A,1)   fact(A).
+
+
+        solve(A,N)   rule(A,B,Name), solve_body(B,NB), N is NB+1.
+
+
+        solve_body(A&B,N)  
+
+
+           solve_body(A,NA), solve_body(B,NB), N is NA+NB.
+
+
+        solve_body(A is_true,N)   solve(A,N).
+
+
+        Sample rule base
+
+
+        rule(oven(Dish,top),pastry(Dish) is_true
+
+
+           & size(Dish,small) is_true,place1).
+
+
+        rule(oven(Dish,middle),pastry(Dish) is_true
+
+
+           & size(Dish,big) is_true,place2).
+
+
+        rule(oven(Dish,middle),main_meal(Dish) is_true,place3).
+
+
+        rule(oven(Dish,bottom),slow_cooker(Dish) is_true,place4).
+
+
+        rule(pastry(Dish),type(Dish,cake) is_true,pastry1).
+
+
+        rule(pastry(Dish),type(Dish,bread) is_true,pastry2).
+
+
+        rule(main_meal(Dish),type(Dish,meat) is_true,main_meal).
+
+
+        rule(slow_cooker(Dish),type(Dish,milk_pudding)
+
+
+           is_true,slow_cooker).
+
+
+        should_fold(solve(oven(D,P),N),oven(D,P,N)).
+
+
+        should_fold(solve(pastry(D),N),pastry(D,N)).
+
+
+        should_fold(solve(main_meal(D),N),main_meal(D,N)).
+
+
+        should_fold(solve(slow_cooker(D),N),slow_cooker(D,N)).
+
+
+        should_fold(solve(type(D,P),N),type(D,P,N)).
+
+
+        should_fold(solve(size(D,P),N),size(D,P,N)).
+
+
+        should_unfold(solve_body(G,N)).
+
+
+        should_unfold(rule(A,B,Name)).
+
+
+        program(rule_interpreter,[(solve(A1,1)   fact(A1)),
+
+
+           (solve(A2,N)   rule(A2,B,Name), solve_body(B,NB), N is NB+1)]).
+
+
+
+        Program 18.5: Specializing a rule interpreter
+
+
+
+
+18.3                                            Code Walking327
+
+
+
+larations is a burden on the programmer. In many cases, the declarations can be
+
+
+derived automatically. Discussing how is beyond the scope of the chapter.
+
+
+
+    How useful partial reduction is for general Prolog programs is an open issu*
+ *e.
+
+
+As indicated, care must be taken when handling Prolog's impurities not to change
+
+
+the meaning of the program. Further, interaction with Prolog implementations
+
+
+can actually mean that programs that have been partially reduced can perform
+
+
+worse than the original program. It will be interesting to see how much partial
+
+
+reduction will be applied for Prolog compilation.
+
+
+
+Exercises for Section 18.2
+
+
+
+(i) Extend Program 18.3 to handle builtins.
+
+
+
+(ii)Apply Program 18.3 to the two-level rule interpreter with rules given as
+
+
+    Program 17.20.
+
+
+
+18.3   Code Walking
+
+
+
+    The examples of meta-programming given so far in Chapters 17 and 18 are
+
+
+dynamic in the sense that they \execute" Prolog programs by performing re-
+
+
+ductions. Prolog is also a useful language for writing static meta-programs that
+
+
+perform syntactic transformations of Prolog programs. In this section, we give *
+ *two
+
+
+nontrivial examples in which programs are explicitly manipulated syntactically.
+
+
+
+    The first example of explicit program manipulation is program composition.
+
+
+
+
+328   Program Transformation                                18.3
+
+
+
+In Section 13.3, stepwise enhancement for systematic construction of Prolog pro-
+
+
+grams was introduced.  The third and final step in the method is composition
+
+
+of separate enhancements of a common skeleton.  We now present a program
+
+
+to achieve composition that is capable of composing Programs 13.1 and 13.2 to
+
+
+produce Program 13.3.
+
+
+    The running example we use to illustrate the program is a variant of the
+
+
+example in Chapter 13. The skeleton is the same, namely,
+
+
+
+        skel([XjXs],Ys)   member(X,Ys), skel(Xs,Ys).
+
+
+        skel([XjXs],Ys)   nonmember(X,Ys), skel(Xs,Ys).
+
+
+        skel([ ],Ys).
+
+
+
+The union program, Program 13.1, is also the same, namely,
+
+
+
+        union([XjXs],Ys,Us)   member(X,Ys), union(Xs,Ys,Us).
+
+
+        union([XjXs],Ys,[XjUs])   nonmember(X,Ys), union(Xs,Ys,Us).
+
+
+        union([ ],Ys,Ys).
+
+
+
+The second program to be composed is different and represents when added goals
+
+
+are present. The relation to be used is common(Xs,Ys,N), which counts the num-
+
+
+ber of common elements N in two lists Xs and Ys. The code is
+
+
+
+        common([XjXs],Ys,N)  
+
+
+           member(X,Ys), common(Xs,Ys,M), N is M+1.
+
+
+        common([XjXs],Ys,N)   nonmember(X,Ys), common(Xs,Ys,N).
+
+
+        common([ ],Ys,0).
+
+
+
+
+18.3                                            Code Walking329
+
+
+
+    The program for composition makes some key assumptions that can be justi-
+
+
+fied by theory underlying stepwise enhancement. Describing the theory is beyond
+
+
+the scope of this book. The most important assumption is that there is a one-
+
+
+to-one correspondence between the clauses of the two programs being composed,
+
+
+and one-to-one correspondences between the clauses of each of the programs and
+
+
+the common skeleton.
+
+
+
+    Programs are represented as lists of clauses.  The first clause in the first
+
+
+program corresponds to the first clause in the second program and to the first
+
+
+clause in the skeleton. Our assumption implies that the lists of clauses of pro*
+ *grams
+
+
+being composed have the same length. The three programs have been written with
+
+
+corresponding clauses in the same order. (That the lists of clauses do have the
+
+
+same length is not checked explicitly.)
+
+
+
+    In order to perform composition, a composition specification is needed. It
+
+
+states how the arguments of the final program relate to the two extensions. The*
+ * re-
+
+
+lation that we will assume is composition_specification(Program1,Program2,Skele*
+ *ton,
+
+
+FinalProgram).    An  example  of  the  specification  for  our  running  ex-
+
+
+ample is composition_specification(union(Xs,Ys,Us), common(Xs,Ys,N),
+
+
+skel(Xs,Ys), uc(Xs,Ys,Us,N). The composition specification is given as part
+
+
+of Program 18.6.
+
+
+
+    The program for composition is given as Program 18.6. The top-level relation
+
+
+is compose/4, which composes the first two programs assumed to be enhancements
+
+
+of the third argument to produce the composite program, which is the fourth
+
+
+argument.
+
+
+
+
+330   Program Transformation                                18.3
+
+
+
+compose(Program1,Program2,Skeleton,FinalProgram)  
+
+
+    FinalProgram is the result of composing Program1 and
+
+
+    Program2, which are both enhancements of Skeleton.
+
+
+compose([Cl1jCls1],[Cl2jCls2],[ClSkeljClsSkel],[CljCls])  
+
+
+    compose_clause(Cl1,Cl2,ClSkel,Cl),
+
+
+    compose(Cls1,Cls2,ClsSkel,Cls).
+
+
+compose([ ],[ ],[ ],[ ]).
+
+
+compose_clause((A1 B1),(A2 B2),(ASkel BSkel),(A B))  
+
+
+    composition_specification(A1,A2,ASkel,A),
+
+
+    compose_bodies(BSkel,B1,B2,Bntrue).
+
+
+compose_bodies(SkelBody,Body1,Body2,BnBRest)  
+
+
+    first(SkelBody,G), !,
+
+
+    align(G,Body1,G1,RestBody1,BnB1),
+
+
+    align(G,Body2,G2,RestBody2,B1n(Goal,B2)),
+
+
+    compose_goal(G1,G2,Goal),
+
+
+    rest(SkelBody,Gs),
+
+
+    compose_bodies(Gs,RestBody1,RestBody2,B2nBRest).
+
+
+compose_bodies(true,Body1,Body2,BnBRest)  
+
+
+    rest_goals(Body1,BnB1), rest_goals(Body2,B1nBRest).
+
+
+align(Goal,Body,G,RestBody,BnB)  
+
+
+    first(Body,G), correspond(G,Goal), !, rest(Body,RestBody).
+
+
+align(Goal,(G,Body),CorrespondingG,RestBody,(G,B)nB1)  
+
+
+    align(Goal,Body,CorrespondingG,RestBody,BnB1).
+
+
+first((G,Gs),G).                    rest((G,Gs),Gs).
+
+
+first(G,G)   G 6= (A,B), G 6= true. rest(G,true)   G 6= (A,B).
+
+
+correspond(G,G).
+
+
+correspond(G,B)   map(G,B).
+
+
+compose_goal(G,G,G)   !.
+
+
+compose_goal(A1,A2,A)  
+
+
+    !, composition_specification(A1,A2,ASkel,A).
+
+
+rest_goals(true,BnB)   !.
+
+
+rest_goals(Body,(G,B)nBRest)  
+
+
+    first(Body,G), !, rest(Body,Body1), rest_goals(Body1,BnBRest).
+
+
+
+Program 18.6: Composing two enhancements of a skeleton
+
+
+
+
+18.3                                            Code Walking331
+
+
+
+    The program proceeds clause by clause in the top loop of Program 18.6, where
+
+
+compose_clause/4 does the clause composition. The arguments correspond ex-
+
+
+actly to the arguments for compose. To compose two clauses, we have to compose
+
+
+the heads and the bodies. Composition of the heads of clauses happens through
+
+
+unification with the composition specification. The predicate compose_bodies/4
+
+
+is used to compose the bodies. Note that the order of arguments has been changed
+
+
+so that we systematically traverse the skeleton. Each goal in the skeleton must
+
+
+be represented in each of the enhancements so that it can be used as a reference
+
+
+to align the goals in each of the enhancements.
+
+
+
+    The essence of compose_bodies is to traverse the body of the skeleton goal
+
+
+by goal and construct the appropriate output goal as we proceed.  In order to
+
+
+produce tidy output and avoid superfluous empty goals, a difference-structure is
+
+
+used to build the output body. The first clause for compose_bodies covers the
+
+
+case when the body of the skeleton is nonempty. The predicates first and rest,
+
+
+which access the body of the skeleton, are a good example of data abstraction.
+
+
+
+    An important assumption made by Program 18.6 concerns finding the goals
+
+
+in the bodies of the program that correspond to the goals in the skeleton. The
+
+
+assumption made, embedded in the predicate correspond, is that a mapping will
+
+
+be given from goals in the enhancement to goals in the skeleton. In our running
+
+
+example, the predicates member and nonmember map onto themselves, while both
+
+
+union and common map onto skel. This information, provided by the predicate
+
+
+map/2, is needed to correctly align goals from the skeleton with goals of the
+
+
+program being composed. The code for align as presented allows for additional
+
+
+
+
+332   Program Transformation                                18.3
+
+
+
+goals to be present between goals in the skeleton.  The only extra goal in our
+
+
+running example is the arithmetic calculation in common, which is after the goa*
+ *ls
+
+
+corresponding to the skeleton goals.
+
+
+    The second clause for compose_bodies covers the case when the body is
+
+
+empty, either from dealing with a fact or because the skeleton has been travers*
+ *ed.
+
+
+In this case, any additional goals need to be included in the result. This is t*
+ *he
+
+
+function of rest_goals.
+
+
+    Program 18.7 contains a testing clause for Program 18.6, along with the
+
+
+specific data for our running example. As with Program 18.4, variables in the
+
+
+programs being composed must be named differently. Automatic generation of
+
+
+composition specifications for more complicated examples is possible.
+
+
+    The second example of explicit manipulation of programs is the conversion of
+
+
+context-free grammar rules to equivalent Prolog clauses. Context-free grammars
+
+
+are defined over a language of symbols, divided into nonterminal symbols and
+
+
+terminal symbols. A context-free grammar is a set of rules of the form
+
+
+
+        hheadi   hbodyi
+
+
+
+where head is a nonterminal symbol and body is a sequence of one or more items
+
+
+separated by commas. Each item can be a terminal or nonterminal symbol. As-
+
+
+sociated with each grammar is a starting symbol and a language that is the set
+
+
+of sequences of terminal symbols obtained by repeated (nondeterministic) appli-
+
+
+cation of the grammar rules starting from the starting symbol. For compatibility
+
+
+with Chapter 19, nonterminal symbols are denoted as Prolog atoms, terminal
+
+
+
+
+18.3                                            Code Walking333
+
+
+
+    test_compose(X,Prog)  
+
+
+        program1(X,Prog1), program2(X,Prog2),
+
+
+        skeleton(X,Skeleton), compose(Prog1,Prog2,Skeleton,Prog).
+
+
+    program1(test,[
+
+
+        (union([X1jXs1],Ys1,Zs1)  
+
+
+           member(X1,Ys1), union(Xs1,Ys1,Zs1)),
+
+
+        (union([X2jXs2],Ys2,[X2jZs2])  
+
+
+           nonmember(X2,Ys2), union(Xs2,Ys2,Zs2)),
+
+
+        (union([ ],Ys3,Ys3)   true)]).
+
+
+    program2(test,[
+
+
+        (common([X1jXs1],Ys1,N1)  
+
+
+           member(X1,Ys1), common(Xs1,Ys1,M1), N1 is M1+1),
+
+
+        (common([X2jXs2],Ys2,N2)  
+
+
+           nonmember(X2,Ys2), common(Xs2,Ys2,N2)),
+
+
+        (common([ ],Ys3,0)   true)]).
+
+
+    skeleton(test,[
+
+
+        (skel([X1jXs1],Ys1)   member(X1,Ys1), skel(Xs1,Ys1)),
+
+
+        (skel([X2jXs2],Ys2)   nonmember(X2,Ys2), skel(Xs2,Ys2)),
+
+
+        (skel([ ],Ys3)   true)]).
+
+
+    composition_specification(union(Xs,Ys,Us), common(Xs,Ys,N),
+
+
+        skel(Xs,Ys),uc(Xs,Ys,Us,N)).
+
+
+    map(union(Xs,Ys,Zs), skel(Xs,Ys)).
+
+
+    map(common(Xs,Ys,N), skel(Xs,Ys)).
+
+
+
+    Program 18.7: Testing program composition
+
+
+
+
+334   Program Transformation                                18.3
+
+
+
+                          s ! a, b, c.
+
+
+                          a ! [a], a.
+
+
+                          a ! [ ].
+
+
+                          b ! [b], b.
+
+
+                          b ! [ ].
+
+
+                          c ! [c], c.
+
+
+                          c ! [ ].
+
+
+       Figure 18.1: A context-free grammar for the language a b c
+
+
+
+symbols are enclosed within lists, and [ ] denotes the empty operation.
+
+
+    The language a(bc)  can be defined by the following context-free grammar
+
+
+consisting of four rules:
+
+
+        s ! [a], b.
+
+
+        b ! [b], c.
+
+
+        b ! [ ].
+
+
+        c ! [c], b.
+
+
+
+    Another example of a context-free grammar is given in Figure 18.1.  This
+
+
+grammar recognizes the language a b c .
+
+
+    A context-free grammar can be immediately written as a Prolog program.
+
+
+Each nonterminal symbol becomes a unary predicate whose argument is the sen-
+
+
+tence or phrase it identifies. The naive choice for representing each phrase is*
+ * as a
+
+
+list of terminal symbols. The first grammar rule in Figure 18.1 becomes
+
+
+s(Xs) !
+
+
+
+
+18.3                                            Code Walking335
+
+
+
+    a(As), b(Bs), c(Cs), append(Bs,Cs,BsCs), append(As,BsCs,Xs).
+
+
+
+    Completing the grammar of Figure 18.1 in the style of the previous rule lea*
+ *ds
+
+
+to a correct program for parsing, albeit an inefficient one. The calls to append
+
+
+suggest, correctly, that a difference-list might be a more appropriate structur*
+ *e for
+
+
+representing the sequence of terminals in the context of parsing. Program 18.8 *
+ *is
+
+
+a translation of Figure 18.1 to a Prolog program where difference-lists represe*
+ *nt
+
+
+the phrases. The basic relation scheme is s(Xs), which is true if Xs is a seque*
+ *nce
+
+
+of symbols accepted by the grammar.
+
+
+        s(AsnXs)   a(AsnBs), b(BsnCs), c(CsnXs).
+
+
+        a(XsnYs)   connect([a],XsnXs1), a(Xs1nYs).
+
+
+        a(XsnYs)   connect([ ],XsnYs).
+
+
+        b(XsnYs)   connect([b],XsnXs1), b(Xs1nYs).
+
+
+        b(XsnYs)   connect([ ],XsnYs).
+
+
+        c(XsnYs)   connect([c],XsnXs1), c(Xs1nYs).
+
+
+        c(XsnYs)   connect([ ],XsnYs).
+
+
+        connect([ ],XsnXs).
+
+
+        connect([WjWs],[WjXs]nYs)   connect(Ws,XsnYs).
+
+
+
+        Program 18.8: A Prolog program parsing the language a b c
+
+
+
+    The predicate connect(Xs,Ws) is true if the list Xs represents the same
+
+
+sequence of elements as Ws. The predicate is used to make explicit the translat*
+ *ion
+
+
+of terminal symbols to Prolog programs.
+
+
+
+
+336   Program Transformation                                18.3
+
+
+
+    As a parsing program, Program 18.8 is a top-down, left-to-right recursive
+
+
+parser that backtracks when it needs an alternative solution. Although easy to
+
+
+construct, backtracking parsers are in general inefficient. However, the effici*
+ *ency
+
+
+of the underlying Prolog implementation in general more than compensates.
+
+
+
+    We now present Program 18.9, which translates Figure 18.1 to Program 18.8.
+
+
+As for Program 18.6, the translation proceeds clause by clause. There is a one-*
+ *to-
+
+
+one correspondence between grammar rules and Prolog clauses. The basic rela-
+
+
+tion is translate(Rules,Clauses). Individual clauses are translated by trans-
+
+
+late_rule/2. To translate a rule, both the head and body must be translated,
+
+
+with the appropriate correspondence of difference-lists, which will be added as
+
+
+additional arguments.
+
+
+
+    Adding an argument is handled by the predicate translate_goal. If the goal
+
+
+to be translated is a nonterminal symbol, a unary predicate with the same funct*
+ *or
+
+
+is created. If the goal is a list of terminal symbols, the appropriate connect *
+ *goal
+
+
+is created. When executed, the connect goal connects the two difference-lists.
+
+
+Code for connect is in Program 18.8.
+
+
+
+    Program 18.9 can be extended for automatic translation of definite clause
+
+
+grammar rules. Definite clause grammars are the subject of Chapter 19. Most
+
+
+versions of Edinburgh Prolog provide such a translator.
+
+
+
+Exercise for Section 18.3
+
+
+
+(i) Apply Program 18.6 to one of the exercises posed at the end of Section 13.3.
+
+
+
+
+18.3                                            Code Walking337
+
+
+        translate(Grammar,Program)  
+
+
+           Program is the Prolog equivalent of the context-free
+
+
+           grammar Grammar.
+
+
+        translate([RulejRules],[ClausejClauses])  
+
+
+           translate_rule(Rule,Clause),
+
+
+           translate(Rules,Clauses).
+
+
+        translate([ ],[ ]).
+
+
+        translate_rule(GrammarRule,PrologClause)  
+
+
+           PrologClause is the Prolog equivalent of the grammar
+
+
+           rule GrammarRule.
+
+
+        translate_rule((Lhs ! Rhs),(Head   Body))  
+
+
+           translate_head(Lhs,Head,XsnYs),
+
+
+           translate_body(Rhs,Body,XsnYs).
+
+
+        translate_head(A,A1,Xs)  
+
+
+           translate_goal(A,A1,Xs).
+
+
+        translate_body(A,B),(A1,B1),XsnYs)  
+
+
+           !, translate_body(A,A1,XsnXs1), translate_body(B,B1,Xs1nYs).
+
+
+        translate_body(A,A1,Xs)  
+
+
+           translate_goal(A,A1,Xs).
+
+
+        translate_goal(A,A1,DList)  
+
+
+           nonterminal(A), functor(A1,A,1), arg(1,A1,DList).
+
+
+        translate_goal(Terms,connect(Terms,S),S)  
+
+
+           terminals(Terms).
+
+
+        nonterminal(A)   atom(A).
+
+
+        terminals(Xs)   list(Xs).
+
+
+        list(Xs)   see Program 3.11.
+
+
+
+        Program 18.9: Translating grammar rules to Prolog clauses
+
+
+
+
+338   Program Transformation                                18.4
+
+
+
+18.4   Background
+
+
+
+    Often research in logic programming has followed in the steps of related
+
+
+research in functional programming. This is true for unfold/fold and partial ev*
+ *al-
+
+
+uation. Burstall and Darlington (1977) wrote the seminal paper on unfold/fold
+
+
+in the functional programming literature. Their work was adapted for logic pro-
+
+
+gramming by Tamaki and Sato (1984).
+
+
+    The term partial evaluation may have been used first in a paper by Lombardi
+
+
+and Raphael (1964), where a simple partial evaluator for Lisp was described. A
+
+
+seminal paper introducing partial evaluation to computer science is due to Futa-
+
+
+mura in 1971, who noted the possibility of compiling away levels of interpretat*
+ *ion.
+
+
+Komorowski described the first partial evaluator for pure Prolog in his thesis *
+ *in
+
+
+1981. He has since preferred the term partial deduction. Gallagher in 1983 was
+
+
+the first to advocate using partial evaluation in Prolog for removing interpret*
+ *a-
+
+
+tion overhead (Gallagher, 1986). Venken (1984) was the first to list some of the
+
+
+problems of extending partial evaluation to full Prolog. The paper that sparked
+
+
+the most interest in partial evaluation in Prolog is due to Takeuchi and Furuka*
+ *wa
+
+
+(1986). They discussed using partial evaluation for removing runtime overhead
+
+
+and showed an order of magnitude speedup. Sterling and Beer (1989) particular-
+
+
+ize the work for expert systems. Their paper introduces the issue of pushing do*
+ *wn
+
+
+meta-arguments, which is subsumed in this chapter by should_fold declarations.
+
+
+Specific Prolog partial evaluation systems to read for more details are ProMiX
+
+
+(Lakhotia and Sterling, 1990) and Mixtus (Sahlin, 1991). An interesting applica-
+
+
+tion of partial evaluation is given by Smith (1991), where efficient string-mat*
+ *ching
+
+
+
+
+18.4                                              Background339
+
+
+
+programs were developed.
+
+
+    Composition was first discussed in the context of Prolog meta-interpreters
+
+
+in Sterling and Beer (1989) and an informal algorithm was given in Sterling and
+
+
+Lakhotia (1988). A theory is found in Kirschenbaum, Sterling, and Jain (1993).

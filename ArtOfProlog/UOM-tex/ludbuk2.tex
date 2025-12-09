@@ -1,0 +1,625 @@
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 1
+\numberfirst
+\startpage{19}
+
+\chapa{Database Programming}
+There are two basic styles of using logic programs: defining a logical
+database, and manipulating data structures. This chapter discusses
+database programming. A logic database contains a set of facts and
+rules. We show how a set of facts can define relations, as in relational
+databases. We show how rules can define complex relational queries, as in
+relational algebra. A logic program composed of a set of facts
+and rules of a rather restricted format can express the functionalities
+associated with relational databases.\par
+\sect{Simple Databases}
+We begin by revising Program~\Probibfamdat, the biblical database, and
+its augmentation with rules expressing family relationships. The database
+itself had four basic predicates, {\tt father/2}, {\tt mother/2}, {\tt
+male/1}, and {\tt female/1}. We adopt a convention from database theory
+and give for each relation a {\it relation scheme\/} that specifies the
+role that each position in the relation (or argument in the goal) is
+intended to represent. Relation schemes for the four predicates here are,
+respectively, {\tt father(Father,Child)}, {\tt mother(Mother,Child)},
+{\tt male(Person)}, and {\tt female(Person)}. The mnemonic names are
+intended to speak for themselves.\par
+Variables are given mnemonic names in rules, but usually {\it
+X\/} or {\it Y\/} when discussing queries. Multiword names are handled
+differently for variables and predicates. Each new word in a variable 
+starts with an uppercase letter, for example, {\tt NieceOrNephew}, while
+words are delimited by underscores for predicate and function names, for
+example, {\tt schedule\_conflict}.\par
+New relations are built from these basic relationships by defining
+suitable rules. Appropriate relation schemes for the relationships introduced
+in the previous chapter are {\tt son(Son,Parent)}, {\tt
+daughter(Daughter,Parent)}, {\tt parent(Parent,Child)}, and {\tt
+grandparent(Grandparent,Grandchild)}. From the logical viewpoint, it is
+unimportant which relationships are defined by facts and which by rules.
+For example, if the available database consisted of {\tt parent}, {\tt
+male} and {\tt female} facts, the rules defining {\tt son} and {\tt
+grandparent} are still correct. New rules must be written for the
+relationships no longer defined by facts, namely, {\tt father} and {\tt
+mother}. Suitable rules are \medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+father(Dad,Child) $\lar$ parent(Dad,Child), male(Dad).\cr
+mother(Mum,Child) $\lar$ parent(Mum,Child), female(Mum).\cr}\medskip
+Interesting rules can be obtained by making relationships explicit that
+are present in the database only implicitly. For example, since we know
+the father and mother of a child, we know which couples produced
+offspring, or to use a Biblical term, procreated. This is not given
+explicitly in the database, but a simple rule can be written recovering
+the information. The relation scheme is {\tt procreated(Man,Woman)}.
+\medskip
+\halign{\hskip 20pt\lft{\tt #}\cr
+procreated(Man,Woman) $\lar$ father(Man,Child), mother(Woman,Child).\cr}
+\medno
+This reads: ``{\tt Man} and {\tt Woman} procreated if there is a {\tt
+Child} such that {\tt Man} is the father of {\tt Child} and {\tt Woman}
+is the mother of {\tt Child}."\par
+Another example of information that can be recovered from the simple
+information present is sibling relationships --- brothers and sisters. We
+give a rule for {\tt brother(Brother,Sibling)}.\medskip
+\halign{\hskip 20pt\lft{\tt #}\cr
+brother(Brother,Sib) $\lar$\cr
+\qi parent(Parent,Brother), parent(Parent,Sib), male(Brother).\cr}\medno
+This reads: ``{\tt Brother}  is the brother of {\tt Sib} if {\tt Parent}
+is a parent of both {\tt Brother} and {\tt Sib}, and {\tt Brother} is
+male."\par
+There is a problem with this definition of brother. The query
+{\tt brother(X,X)?} is satisfied for any male child {\tt X}, which is not
+our understanding of the brother relationship.\par
+In order to preclude such cases from the meaning of the program, we
+introduce a predicate $\ne${\tt (Term1,Term2)}. It is convenient to write
+this predicate as an infix operator. Thus {\tt Term1$\ne$Term2} is true
+if {\tt Term1}  and {\tt Term2} are different. For the present it is
+restricted to constant terms. It can be defined, in principle, by a table
+$X\ne Y$ for every two different individuals {\it X\/} and {\it
+Y\/} in the domain of interest. Figure~\Figdefine\ gives part of the
+appropriate table for Program~\Probibfamdat.
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\lft{\tt #}\qquad&\lft{\tt #}\qquad&\lft{\tt #}\cr
+abraham$\ne$isaac.&abraham$\ne$haran.&abraham$\ne$lot.\cr
+abraham$\ne$milcah.&abraham$\ne$yiscah.&isaac$\ne$haran.\cr
+isaac$\ne$lot.&isaac$\ne$milcah.&isaac$\ne$yiscah.\cr
+haran$\ne$lot.&haran$\ne$milcah.&haran$\ne$yiscah.\cr
+lot$\ne$milcah.&lot$\ne$yiscah.&milcah$\ne$yiscah.\cr}}$$\medskip
+\ctrline{{\bf Figure \Figdefine}:~~Defining inequality}
+\endin\par
+The new brother rule is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+brother(Brother,Sib) $\lar$\cr
+\qi parent(Parent,Brother),\cr
+\qi parent(Parent,Sib),\cr
+\qi male(Brother),\cr
+\qi Brother $\ne$ Sib.\cr}\medskip
+The more relationships that are present, the easier it is to define
+complicated relationships. Program~\Prodeffamrel\ defines the relationships
+{\tt uncle(Uncle,Person)}, {\tt sibling(Sib1,Sib2)}, and {\tt
+cousin(Cousin1,Cousin2)}. The definition of {\tt uncle} in 
+Program~\Prodeffamrel\ does not define the husband of a sister of a parent to
+be an uncle.  This may or may not be the intended meaning. In general,
+different cultures define these family relationships differently. In
+any case, the logic makes clear exactly what the programmer means by
+these family relationships.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+uncle(Uncle,Person) $\lar$\cr
+\qi brother(Uncle,Parent), parent(Parent,Person).\cr
+sibling(Sib1,Sib2) $\lar$\cr
+\qi parent(Parent,Sib1), parent(Parent,Sib2), Sib1 $\ne$ Sib2.\cr
+cousin(Cousin1,Cousin2) $\lar$\cr
+\qi parent(Parent1,Cousin1),\cr
+\qi parent(Parent2,Cousin2),\cr
+\qi sibling(Parent1,Parent2).\cr
+\noalign{\bigskip}
+{\bf Program \Prodeffamrel}{\rm :~~Defining family relationships}\cr}
+\endinsert\par
+Another relationship implicit in the family database is whether a woman
+is a mother. This is determined by using the {\tt mother/2}
+relationship. The new relation scheme is {\tt mother(Woman)}, 
+defined by the rule\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+mother(Woman)$\lar$ mother(Woman,Child).\cr}\medno
+This reads: ``{\tt Woman} is a mother if she is the mother of some {\tt
+Child}.'' Note that we have used the same predicate name, {\tt mother}, to
+describe two different {\tt mother} relationships. The {\tt mother}
+predicate takes a different number of arguments, i.e., has a different
+arity, in the two cases. In general, the same predicate name denotes a
+different relation when it has a different arity.\par
+We change examples, lest the example of family relationships become
+incestuous, and consider describing simple logical circuits. A circuit
+can be viewed from two perspectives. The first is the topological layout
+of the physical components usually described in the circuit diagram. The
+second is the interaction of functional units. Both views are easily
+accommodated in a logic program. The circuit diagram is represented by a
+collection of facts, while rules describe the functional components.\par
+Program~\Procirloggat\ is a database giving a simplified view of the
+logical and-gate drawn in Figure~\Figlogcir. The facts are the
+connections of the particular resistors and transistors comprising the
+circuit. The relation scheme for resistors is {\tt resistor(End1,End2)}
+and for transistors {\tt transistor(Gate,Source,Drain)}.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+resistor(power,n1).\cr
+resistor(power,n2).\cr
+\noalign{\vskip 5pt}
+transistor(n2,ground,n1).\cr
+transistor(n3,n4,n2).\cr
+transistor(n5,ground,n4).\cr
+\noalign{\medskip}
+{\it inverter\/}({\it Input,Output\/}) $\lar$\cr
+\qi {\it Output\/} {\rm is the inversion of} {\it Input\/}.\cr
+\noalign{\medskip}
+inverter(Input,Output) $\lar$\cr
+\qi transistor(Input,ground,Output),\cr
+\qi resistor(power,Output).\cr
+\noalign{\medskip}
+{\it nand\_gate\/}({\it Input1,Input2,Output\/}) $\lar$\cr
+\qi {\it Output\/} {\rm is the logical nand of} {\it Input1\/} {\rm and}
+{\it Input2\/}.\cr
+\noalign{\medskip}
+nand\_gate(Input1,Input2,Output) $\lar$\cr
+\qi transistor(Input1,X,Output),\cr
+\qi transistor(Input2,ground,X),\cr
+\qi resistor(power,Output).\cr
+\noalign{\medskip}
+{\it and\_gate\/}({\it Input1,Input2,Output\/}) $\lar$\cr
+\qi {\it Output\/} {\rm is the logical and of} {\it Input1\/} {\rm and}
+{\it Input2\/}.\cr
+\noalign{\medskip}
+and\_gate(Input1,Input2,Output) $\lar$\cr
+\qi nand\_gate(Input1,Input2,X),\cr
+\qi inverter(X,Output).\cr
+\noalign{\bigskip}
+{\bf Program \Procirloggat}{\rm :~~A circuit for a logical and-gate}\cr}
+\endin
+\pageinsert\vbox to\the\vsize {\vskip 0.5truein\vskip -7pt
+\vskip 9.6truecm\par
+\ctrline{{\bf Figure \Figlogcir}:~~A logical circuit}\bigskip
+\vskip 6.5truecm\par
+\ctrline{{\bf Figure \Figstilifobj}:~~Still-life objects}}
+\endin\par
+The program demonstrates the style of commenting of logic programs we
+will follow throughout the book. Each interesting procedure is preceded
+by a relation scheme for the procedure, shown in italic font, 
+and by English text defining the
+relation. We recommend this style of commenting, which emphasizes the
+declarative reading of programs, for Prolog programs as well.\par
+Particular configurations of resistors and transistors fulfill roles
+captured via rules defining the functional components of the circuit. The
+circuit describes an and-gate, which takes two input signals and produces
+as output the logical {\it and\/} of these signals. One way of building
+an and-gate, and how this circuit is composed, is to connect a nand-gate
+with an inverter. Relation schemes for these three components are {\tt
+and\_gate(Input1,Input2,Output)}, {\tt nand\_gate(Input1,Input2,Output)},
+and {\tt inverter(Input,Output)}.\par
+To appreciate Program~\Procirloggat, let us read the inverter rule. This
+states that an inverter is built up from a transistor with the source
+connected to the ground, and a resistor with one end connected to the
+power source. The gate of the transistor is the input to the inverter,
+while the free end of the resistor must be connected to the drain of the
+transistor, which forms the output of the inverter. Sharing of variables
+is used to insist on the common connection.\par
+Consider the query {\tt and\_gate(In1,In2,Out)?} to Program
+\Procirloggat. It has the solution {\tt $\{$In1=n3,In2=n5,Out=n1$\}$}.
+This solution confirms that the circuit described by the facts is an
+and-gate, and indicates the inputs and output.\endpage
+\noindent {\bf Exercises for Section 2.1}\vskip 5pt\par
+\offset{20pt}{(i)} Modify the rule for {\tt brother} on page 21 to
+give a rule for {\tt sister}, the rule for {\tt uncle} in Program
+\Prodeffamrel\  to give a rule for {\tt niece}, and the rule for {\tt
+sibling} in Program~\Prodeffamrel\ so that it only recognizes full siblings,
+i.e., those that have the same mother and father.\par
+\offset{20pt}{(ii)} Using a predicate {\tt
+married\_couple(Wife,Husband)}, define the relationships {\tt
+mother\_in\_law}, {\tt brother\_in\_law}, and {\tt son\_in\_law}.\par
+\offset{20pt}{(iii)} Describe the layout of objects in Figure
+\Figstilifobj\ with facts using the predicates {\tt
+left\_of(Object1,Object2)} and {\tt above(Object1,Object2)}. Define
+predicates {\tt right\_of(Object1,Object2)} and {\tt
+below(Object1,Object2)} in terms of {\tt left\_of} and {\tt above},
+respectively.\endpage
+\sect{Structured Data and Data Abstraction}
+A limitation of Program~\Procirloggat\ for describing the and-gate is the
+treatment of the circuit as a black box. There is no indication of the
+structure of the circuit in the answer to the {\tt and\_gate} query, even
+though the structure has been implicitly used in finding the answer. The
+rules tell us that the circuit represents an and-gate, but the structure
+of the and-gate is present only implicitly. We remedy this by adding an
+extra argument to each of the goals in the database. For uniformity, the
+extra argument becomes the first argument. The base facts simply acquire
+an identifier. Proceeding from left to right in the diagram of Figure
+\Figlogcir, we label the resistors {\tt r1\/} and {\tt r2\/}, and the
+transistors {\tt t1\/}, {\tt t2\/}, and {\tt t3\/}.\par
+Names of the functional components should reflect their structure. An
+inverter is composed of a transistor and a resistor. To represent this,
+we need structured data. The technique is to use a compound term, {\tt
+inv(T,R)}, where {\tt T} and {\tt R} are the respective names of the
+inverter's component transistor and resistor. Analogously, the name of a
+nand-gate will be {\tt nand(T1,T2,R)}, where {\tt T1}, {\tt T2}, and {\tt
+R} name the two transistors and resistor that comprise a nand-gate.
+Finally, an and-gate can be named in terms of an inverter and a
+nand-gate. The modified code containing the names appears in 
+Program~\Procirdatnom.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it resistor\/}({\it R,Node1,Node2\/}) $\lar$\cr
+\qi {\it R\/} {\rm is a resistor between} {\it Node1\/} {\rm and} {\it
+Node2\/}.\cr
+\noalign{\medskip}
+resistor(r1,power,n1).\cr
+resistor(r2,power,n2).\cr
+\noalign{\medskip}
+{\it transistor\/}({\it T,Gate,Source,Drain\/}) $\lar$\cr
+\qi {\it T\/} {\rm is a transistor whose gate is} {\it Gate\/}{\rm ,}\cr
+\qi {\rm source is} {\it Source\/}{\rm , and drain is} {\it Drain\/}{\rm .}\cr
+\noalign{\medskip}
+transistor(t1,n2,ground,n1).\cr
+transistor(t2,n3,n4,n2).\cr
+transistor(t3,n5,ground,n4).\cr
+\noalign{\medskip}
+{\it inverter\/}({\it I,Input,Output\/}) $\lar$\cr
+\qi {\it I\/} {\rm is an inverter that inverts} {\it Input\/} {\rm to}
+{\it Output\/}{\rm .}\cr
+\noalign{\medskip}
+inverter(inv(T,R),Input,Output) $\lar$\cr
+\qi transistor(T,Input,ground,Output),\cr
+\qi resistor(R,power,Output).\cr
+\noalign{\medskip}
+{\it nand\_gate\/}({\it Nand,Input1,Input2,Output\/}) $\lar$\cr
+\qi {\it Nand\/} {\rm is a gate forming the logical nand,} {\it
+Output\/}{\rm ,}\cr
+\qi {\rm of} {\it Input1\/} {\rm and} {\it Input2\/}{\rm .}\cr
+\noalign{\medskip}
+nand\_gate(nand(T1,T2,R),Input1,Input2,Output) $\lar$\cr
+\qi transistor(T1,Input1,X,Output),\cr
+\qi transistor(T2,Input2,ground,X),\cr
+\qi resistor(R,power,Output).\cr
+\noalign{\medskip}
+{\it and\_gate\/}({\it And,Input1,Input2,Output\/}) $\lar$\cr
+\qi {\it And\/} {\rm is a gate forming the logical and,} {\it
+Output\/}{\rm ,}\cr
+\qi {\rm of} {\it Input1\/} {\rm and} {\it Input2\/}{\rm .}\cr
+\noalign{\medskip}
+and\_gate(and(N,I),Input1,Input2,Output) $\lar$\cr
+\qi nand\_gate(N,Input1,Input2,X),\cr
+\qi inverter(I,X,Output).\cr
+\noalign{\bigskip}
+{\bf Program \Procirdatnom}{\rm :~~The circuit database with names}\cr}
+\endin\par
+The query {\tt and\_gate(G,In1,In2,Out)?} has solution {\tt
+$\{$G=and(nand(t2,t3,}\linebreak
+{\tt r2),inv(t1,r1)),In1=n3,In2=n5,Out=n1$\}$}. {\tt In1}, {\tt In2}, and
+{\tt Out} have their previous values. The complicated structure for {\tt
+G} reflects accurately the functional composition of the and-gate.\par
+Structuring data is important in programming in general and in logic
+programming in particular. It is used to organize data in a meaningful
+way. Rules can be written more abstractly, ignoring irrelevant details.
+More modular programs can be achieved this way, because a change of data
+representation need not mean a change in the whole program, as shown by the
+following example.\par
+Consider the following two ways of representing a fact about a lecture
+course on complexity given on Monday from 9 to 11 by David Harel in the
+Feinberg building, room A:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+course(complexity,monday,9,11,david,harel,feinberg,a).\cr}\medno
+and\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+course(complexity,time(monday,9,11),lecturer(david,harel),\cr
+\qi location(feinberg,a)).\cr}\medno
+The first fact represents {\tt course} as a relation between eight
+items --- a course name, a day, a starting hour, a finishing hour, a
+lecturer's first name, a lecturer's surname, a building, and a room. The
+second fact makes {\tt course} a relation between four items --- a
+name, a time, a lecturer, and a location with further qualification. The
+time is composed of a day, a starting time, and a finishing time;
+lecturers have a first name and a surname; and locations are specified by
+a building and a room. The second fact reflects more elegantly the
+relations that hold.\par
+The four-argument version of {\tt course} enables more concise rules to
+be written by abstracting the details that are irrelevant to the query.
+Program~\Procourul\ contains examples. The {\tt occupied}
+rule assumes a predicate less than or equal, represented as a binary
+infix operator $\le$.
+\midinsert
+\halign{\hskip 20pt\lft{\tt #}\cr
+lecturer(Lecturer,Course) $\lar$\cr
+\qi course(Course,Time,Lecturer,Location).\cr
+\noalign{\vskip 5pt}
+duration(Course,Length) $\lar$\cr
+\qi course(Course,time(Day,Start,Finish),Lecturer,Location),\cr
+\qi{plus(Start,Length,Finish).}\cr
+\noalign{\vskip 5pt}
+teaches(Lecturer,Day) $\lar$\cr
+\qi course(Course,time(Day,Start,Finish),Lecturer,Location).\cr
+\noalign{\vskip 5pt}
+occupied(Room,Day,Time) $\lar$\cr
+\qi course(Course,time(Day,Start,Finish),Lecturer,Room),\cr
+\qi Start $\le$ Time, Time $\le$ Finish.\cr
+\noalign{\bigskip}
+{\bf Program \Procourul}{\rm :~~Course rules}\cr}
+\endinsert\par
+Rules not using the particular values of a structured argument need not
+``know" how the argument is structured. For example, the rules for {\tt
+duration} and {\tt teaches} represent time explicitly as {\tt
+time(Day,Start,Finish)} because the {\tt Day} or {\tt Start} or {\tt
+Finish} times of the course are desired. In contrast, the rule for {\tt
+lecturer} does not. This leads to greater modularity, because the
+representation of time can be changed without affecting the rules that do
+not inspect it.\par
+We offer no definitive advice on when to use structured data. Not using
+structured data allows a uniform representation where all the data are
+simple. The advantages of structured data are compactness of
+representation, which more accurately reflects our perspective of a
+situation, and modularity. We can relate the discussion to conventional
+programming languages. Facts are the counterpart of tables, while
+structured data correspond to records with aggregate fields.\par
+We believe that the appearance of a program is important, particularly
+when attempting difficult problems. A good structuring of data can make a
+difference when programming complex problems.\par
+Some of the rules in Program~\Procourul\ are recovering relations
+between two individuals, {\it binary\/} relations, from the single,
+more complicated one. All the course information could have been written
+in terms of binary relations as follows:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+day(complexity,monday).\cr
+start\_time(complexity,9).\cr
+finish\_time(complexity,11).\cr
+lecturer(complexity,harel).\cr
+building(complexity,feinberg).\cr
+room(complexity,a).\cr}\medno
+Rules would then be expressed differently, reverting to the previous
+style of making implicit connections explicit. For example,\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+teaches(Lecturer,Day) $\lar$\cr
+\qi lecturer(Course,Lecturer), day(Course,Day).\cr}\vskip 15pt\parno
+{\bf Exercises for Section 2.2}\vskip 5pt\par
+\offset{20pt}{(i)} Add rules defining the relations {\tt
+location(Course,Building)},\linebreak
+{\tt busy(Lecturer,Time)}, and {\tt cannot\_meet(Lecturer1,Lecturer2)}.
+Test with your own course facts.\par
+\offset{20pt}{(ii)} Possibly using relations from Exercise (i),
+define the relation {\tt schedule\_conflict(Time,Place,Course1,Course2)}.
+\par
+\offset{20pt}{(iii)} Write a program to check if a student has met the
+requirements for a college degree. Facts will be used to represent the
+courses that the student has taken and the grades obtained, and
+rules will be used to enforce the college requirements.\par
+\offset{20pt}{(iv)} Design a small database for an application of your
+own choice. Use a single predicate to express the information, and invent
+suitable rules.\par
+\sect{Recursive Rules}
+The rules described so far define new relationships in terms of existing
+ones. An interesting extension is recursive definitions of relationships
+that define relationships in terms of themselves. One way of viewing
+recursive rules is as generalization of a set of nonrecursive rules.\par
+Consider a series of rules defining ancestors --- grandparents,
+greatgrandparents, etc:\medskip
+\halign{\lft{\tt #}\cr
+grandparent(Ancestor,Descendant) $\lar$\cr
+\qi parent(Ancestor,Person), parent(Person,Descendant).\cr
+greatgrandparent(Ancestor,Descendant) $\lar$\cr
+\qi parent(Ancestor,Person), grandparent(Person,Descendant).\cr
+greatgreatgrandparent(Ancestor,Descendant) $\lar$\cr
+\qi parent(Ancestor,Person), greatgrandparent(Person,Descendant).\cr}
+\medno
+A clear pattern can be seen, which can be expressed in a rule defining
+the relationship {\tt ancestor(Ancestor,Descendant)}:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+ancestor(Ancestor,Descendant) $\lar$\cr
+\qi parent(Ancestor,Person), ancestor(Person,Descendant).\cr}\medno
+This rule is a generalization of the previous rules.\par A logic program
+for {\tt ancestor} also requires a nonrecursive rule, the choice of
+which affects the meaning of the program. If the fact {\tt
+ancestor(X,X)} is used, defining the {\tt ancestor} relationship to be
+reflexive, people will be considered to be their own ancestors. This
+is not the intuitive meaning of ancestor. Program~\Proancrel\ is a
+logic program defining the {\tt ancestor} relationship, where parents
+are considered ancestors.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it ancestor\/}({\it Ancestor,Descendant\/}) $\lar$\cr
+\qi {\it Ancestor\/} {\rm is an ancestor of} {\it Descendant\/}.\cr
+\noalign{\medskip}
+ancestor(Ancestor,Descendant) $\lar$\cr
+\qi parent(Ancestor,Descendant).\cr
+ancestor(Ancestor,Descendant) $\lar$\cr
+\qi parent(Ancestor,Person), ancestor(Person,Descendant).\cr
+\noalign{\bigskip}
+{\bf Program \Proancrel}{\rm :~~The} ancestor {\rm relationship}\cr}
+\endinsert\par
+The {\tt ancestor} relationship is the transitive closure of the {\tt
+parent} relationship. In general, finding the transitive closure of a
+relationship is easily done in a logic program by using a recursive
+rule.\par
+Program~\Proancrel\ defining {\tt ancestor} is an example of a linear recursive
+program. A program is {\it linear recursive\/} if there is only one
+recursive goal in the body of the recursive clause. The linearity can be
+easily seen from considering the complexity of proof trees solving {\tt
+ancestor} queries. A proof tree establishing that two individuals are
+{\it n\/} generations apart given Program~\Proancrel\ and a collection of
+{\tt parent} facts has $2\cdot n$ nodes.\par
+There are many alternative ways of defining ancestors. The declarative
+content of the recursive rule in Program~\Proancrel\ is that {\tt
+Ancestor} is an ancestor of {\tt Descendant} if {\tt Ancestor} is a
+parent of an ancestor of {\tt Descendant}. Another way of expressing the
+recursion is by observing that {\tt Ancestor} would be an ancestor of
+{\tt Descendant} if {\tt Ancestor} is an ancestor of a parent of {\tt
+Descendant}. The relevant rule is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+ancestor(Ancestor,Descendant) $\lar$\cr
+\qi ancestor(Ancestor,Person), parent(Person,Descendant).\cr}\medskip
+Another version of defining ancestors is not linear recursive. A program
+identical in meaning to Program~\Proancrel\ but with two
+recursive goals in the recursive clause is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+ancestor(Ancestor,Descendant) $\lar$\cr
+\qi parent(Ancestor,Descendant).\cr
+ancestor(Ancestor,Descendant) $\lar$\cr
+\qi ancestor(Ancestor,Person), ancestor(Person,Descendant).\cr}\medskip
+Consider the problem of testing connectivity in a directed graph. A
+directed graph can be represented as a logic program by a collection of
+facts. A fact {\tt edge(Node1,Node2)} is present in the program if there
+is an edge from {\tt Node1} to {\tt Node2} in the graph. Figure
+\Figsimgra\ shows a graph; Program~\Prodirgra\ is its description
+as a logic program.
+\midinsert\vskip -0.2truecm
+$$\vcenter{\halign{\ctr{#}\hskip 5pt&\ctr{#}\hskip 5pt&\ctr{#}\hskip 5pt&
+\ctr{#}\hskip 5pt&\ctr{#}\hskip 5pt&\ctr{#}\hskip 5pt&\ctr{#}\cr
+a&$\rar$&b&&&&f\cr
+$\downarrow$&&$\downarrow$&&&&$\downarrow$\cr
+c&$\rar$&d&$\rar$&e&\hskip 12pt&g\cr}}$$\medskip
+\ctrline{{\bf Figure \Figsimgra}:~~A simple graph}\vskip 0.6truecm
+\halign{\hskip 40pt\lft{\tt #}\qquad&\lft{\tt #}\qquad&\lft{\tt #}\cr
+edge(a,b).&edge(a,c).&edge(b,d).\cr
+edge(c,d).&edge(d,e).&edge(f,g).\cr}\bigskip
+\halign{\hskip 40pt\lft{#}\cr
+{\bf Program \Prodirgra}:~~A directed graph\cr}
+\endinsert\par
+Two nodes are connected if there is a series of edges that can be
+traversed to get from the first node to the second. That is, the
+relation {\tt connected(Node1,Node2)}, which is true if {\tt Node1}
+and {\tt Node2} are connected, is the transitive closure of the {\tt
+edge} relation.  For example, {\it a\/} and {\it e\/} are connected
+in the graph in Figure~\Figsimgra, but {\it b\/} and {\it f\/} are not.
+Program~\Protracloedg\ defines the relation. The meaning of the
+program is the set of goals {\tt connected(X,Y)}, where {\tt X} and {\tt
+Y} are connected. Note that {\tt connected} is a transitive reflexive
+relation because of the choice of base fact.
+\topin
+\halign{\lft{\tt #}\cr
+{\it connected\/}({\it Node1,Node2\/}) $\lar$\cr
+\qi {\it Node1\/} {\rm is connected to} {\it Node2\/} {\rm in the}\cr
+\qi {\rm graph defined by the} {\it edge/2\/} {\rm relation}.\cr
+\noalign{\medskip}
+connected(Node,Node).\cr
+connected(Node1,Node2) $\lar$ edge(Node1,Link), connected(Link,Node2).\cr
+\noalign{\bigskip}
+{\bf Program \Protracloedg}{\rm :~~The transitive closure of the {\tt
+edge} relation}\cr}
+\endin\endpage
+\noindent {\bf Exercises for Section 2.3}\vskip 5pt\par
+\offset{20pt}{(i)} A stack of blocks can be described by a collection of
+facts {\tt on(Block1, Block2)}, which is true if {\tt Block1} is on {\tt
+Block2}. Define a predicate {\tt above(Block1, Block2)} that is true if
+{\tt Block1} is above {\tt Block2} in the stack.\bk
+(Hint:~~{\tt above} is the transitive closure of {\tt on}.)\par
+\offset{20pt}{(ii)} Add recursive rules for {\tt left\_of} and {\tt
+above} from Exercise 2.1(iii) on p.\ 24. Define {\tt
+higher(Object1,Object2)}, which is true if {\tt Object1} is on a line
+higher than {\tt Object2} in Figure~\Figstilifobj. For example, the bicycle is
+higher than the fish in the figure.\par
+\offset{20pt}{(iii)} How many nodes are there in the proof tree for {\tt
+connected(a,e)} using Programs \Prodirgra\ and \Protracloedg? In general,
+using Program~\Prodirgra\ and a collection of {\tt edge/2} facts, how
+many nodes are there in a proof tree establishing that two nodes are 
+connected by a path containing {\it n\/} intermediate nodes?\par
+\sect{Logic Programs and the Relational Database Model}
+Logic programs can be viewed as a powerful extension to the relational
+database model, the extra power coming from the ability to specify rules.
+Many of the concepts introduced have meaningful analogues in terms of
+databases. The converse is also true. The basic operations of the
+relational algebra are easily expressed within logic programming.\par
+Procedures composed solely of facts correspond to relations, the arity of
+the relation being the arity of the procedure. Five basic operations
+define the relational algebra: union, set difference, Cartesian product,
+projection, and selection. We show how each is translated into a logic
+program.\par
+The union operation creates a relation of arity {\it n\/} from two
+relations {\tt r\/} and {\tt s\/}, both of arity {\it n\/}. The new
+relation, denoted here {\tt r\_union\_s}, is the union of {\tt r\/} and
+{\tt s\/}. It is defined directly as a logic program by two rules:
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+r\_union\_s(X$_1$,$\ldots$,X$_n$) $\lar$ r(X$_1$,$\ldots$,X$_n$).\cr
+r\_union\_s(X$_1$,$\ldots$,X$_n$) $\lar$ s(X$_1$,$\ldots$,X$_n$).\cr}
+\medskip
+Set difference involves negation. We assume a predicate {\tt not\/}.
+Intuitively, a goal {\tt not G\/} is true with respect to a program {\it
+P\/} if {\tt G\/} is not a logical consequence of {\it P\/}. Negation in
+logic programs is discussed in Chapter~5, where limitations of the
+intuitive definition are indicated. The definition is correct, however,
+if we deal only with ground facts, as is the case with relational
+databases.\par
+The definition of {\tt r\_diff\_s} of arity {\it n\/}, where {\tt r} and
+{\tt s} are of arity {\it n\/}, is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+r\_diff\_s(X$_1$,$\ldots$,X$_n$) $\lar$ r(X$_1$,$\ldots$,X$_n$),
+not~s(X$_1$,$\ldots$,X$_n$).\cr}\medskip
+Cartesian product can be defined in a single rule. If {\tt r\/} is a
+relation of arity {\it m\/}, and {\tt s\/} is a relation of arity {\it
+n\/}, then {\tt r\_x\_s\/} is a relation of arity $m+n$ defined by\medskip
+\halign{\hskip 20pt\lft{\tt #}\cr
+r\_x\_s(X$_1$,$\ldots$,X$_m$,X$_{m+1}$,$\ldots$,X$_{m+n}$) $\lar$
+r(X$_1$,$\ldots$,X$_m$), s(X$_{m+1}$,$\ldots$,X$_{m+n}$).\cr}\medskip
+Projection involves forming a new relation comprising only some of the
+attributes of an existing relation. This is straightforward for any
+particular case. For example, the projection {\tt r13\/} selecting the
+first and third arguments of a relation {\tt r} of arity 3 is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+r13(X$_1$,X$_3$) $\lar$ r(X$_1$,X$_2$,X$_3$).\cr}\medskip
+Selection is similarly straightforward for any particular case. Consider
+a relation consisting of tuples whose third components are greater than
+their second, and a relation where the first component is Smith or Jones.
+In both cases a relation {\tt r\/} of arity 3 is used to illustrate. The
+first example creates a relation {\tt r1\/}:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+r1(X$_1$,X$_2$,X$_3$) $\lar$ r(X$_1$,X$_2$,X$_3$),X$_3$ $>$ X$_2$.\cr}
+\medno
+The second example creates a relation {\tt r2\/}, which requires a
+disjunctive relationship, {\tt smith\_or\_jones}:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+r2(X$_1$,X$_2$,X$_3$) $\lar$ r(X$_1$,X$_2$,X$_3$),
+smith\_or\_jones(X$_1$).\cr
+\noalign{\vskip 5pt}
+{\tt smith\_or\_jones(smith)}.\cr
+{\tt smith\_or\_jones(jones)}.\cr}\medskip
+Some of the derived operations of the relational algebra are more closely
+related to the constructs of logic programming. We mention two,
+intersection and the natural join. If {\tt r\/} and {\tt s\/} are
+relations of arity {\it n\/}, the intersection, {\tt r\_meet\_s} is also
+of arity {\it n\/} and is defined in a single rule.\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+r\_meet\_s(X$_1$,$\ldots$,X$_n$) $\lar$ r(X$_1$,$\ldots$,X$_n$),
+s(X$_1$,$\ldots$,X$_n$).\cr}\medno
+A natural join is precisely a conjunctive query with shared variables.
+\endpage
+\sect{Background}
+Readers interested in pursuing the connection between logic
+programming and database theory are referred to the many papers that
+have been written on the subject. A good starting place is the review
+paper by Gallaire et al.\ (1984). There are earlier papers on logic
+and databases in Gallaire and Minker (1978). Another interesting book
+is about the implementation of a database query language in Prolog
+(Li, 1984). Our discussion of relational databases follows Ullman
+(1982). Another good account of relational databases can be found in
+Maier (1983).\par In the seven years between the appearance of the
+first edition and the second edition of this book, the database community
+has accepted logic programs as extensions of relational databases. The
+term used for a database extended with logical rules is {\it logic
+database\/} or {\it deductive database\/}. There is now a wealth of
+material about logic databases. The rewritten version of
+Ullman's text (1989) discusses logic databases and gives
+pointers to the important literature.\par Perhaps the major difference
+between logic databases as taught from a database perspective and the
+view presented here is the way of evaluating queries. Here we
+implicitly assume that the interpreter from Figure
+\Figabsintlog\ will be used, a top-down approach. The database community
+prefers a bottom-up evaluation mechanism. Various bottom-up strategies
+for answering a query with respect to a logic database are given in
+Ullman (1989).\par
+In general, an {\it n\/}-ary relation can be replaced by $n+1$
+binary relations, as shown by Kowalski (1979a). If one of the arguments
+forms a key for the relation, as does the course name in the 
+example in Section~2.2, {\it n\/} binary relations suffice.\par
+The addition of an extra argument to each predicate in the circuit, as
+discussed at the beginning of Section~2.2, is an example of an {\it
+enhancement\/} of a logic program. The technique of developing programs
+by enhancement is of growing importance. More will be said about this 
+in Chapter~13.\par\bye
+

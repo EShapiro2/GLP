@@ -1,0 +1,1534 @@
+
+
+
+
+                                                   Chapter  5
+
+
+
+               Theory  of  Logic  Programs
+
+
+
+   A major underlying theme of this book, laid out in the introduction, is that
+
+
+logic programming is attractive as a basis for computation because of its basis*
+ * in
+
+
+mathematical logic, which has a well-understood, well-developed theory. In this
+
+
+chapter, we sketch some of the growing theory of logic programming, which merges
+
+
+the theory inherited from mathematical logic with experience from computer sci-
+
+
+ence and engineering. Giving a complete account is way beyond the scope of this
+
+
+book. In this chapter, we present some results to direct the reader in important
+
+
+directions. The first section, on semantics, gives definitions and suggests why*
+ * the
+
+
+model-theoretic and proof-theoretic semantics give the same result.  The main
+
+
+issue in the second section, on program correctness, is termination. Complexity
+
+
+of logic programs is discussed in the third section. The most important section
+
+
+for the rest of the book is Section 4, which discusses search trees. Search tre*
+ *es are
+
+
+vital to understanding Prolog's behavior. Finally, we introduce negation in log*
+ *ic
+
+
+programming.
+
+
+
+
+5.1                                                     Semantics 85
+
+
+
+5.1   Semantics
+
+
+
+   Semantics assigns meanings to programs. Discussing semantics allows us to
+
+
+describe more formally the relation a program computes. Chapter 1 informally
+
+
+describes the meaning of a logic program P as the set of ground instances that
+
+
+are deducible from P via a finite number of applications of the rule of univers*
+ *al
+
+
+modus ponens. This section considers more formal approaches.
+
+
+
+   The operational semantics is a way of describing procedurally the meaning
+
+
+of a program. The operational meaning of a logic program P is the set of ground
+
+
+goals that are instances of queries solved by P using the abstract interpreter *
+ *given
+
+
+in Figure 4.2. This is an alternative formulation of the previous semantics, wh*
+ *ich
+
+
+defined meaning in terms of logical deduction.
+
+
+
+   The declarative semantics of logic programs is based on the standard model-
+
+
+theoretic semantics of first-order logic. In order to define it, some new termi*
+ *nology
+
+
+is needed.
+
+
+
+   Definition: Let P be a logic program. The Herbrand universe of P, denoted
+
+
+U (P), is the set of all ground terms that can be formed from the constants and
+
+
+function symbols appearing in P.     |
+
+
+
+   In this section, we use two running examples | yet another family database
+
+
+example, given as Program 5.1; and Program 3.1 defining the natural numbers,
+
+
+repeated here:
+
+       natural_number(0).
+
+
+       natural_number(s(X))   natural_number(X).
+
+
+
+
+86    Theory of Logic Programs                                    5.1
+
+
+       parent(terach,abraham).     parent(abraham,isaac).
+
+
+       parent(isaac,jacob).        parent(jacob,benjamin).
+
+
+       ancestor(X,Y)   parent(X,Y).
+
+
+       ancestor(X,Z)   parent(X,Y), ancestor(Y,Z).
+
+
+
+       Program 5.1:  Yet another family example
+
+
+
+The Herbrand universe of Program 5.1 is the set of all constants appearing in
+
+
+the program, namely, fterach,abraham,isaac,jacob,benjaming.  If there are
+
+
+no function symbols, the Herbrand universe is finite. In Program 3.1, there is *
+ *one
+
+
+constant symbol, 0, and one unary function symbol, s. The Herbrand universe of
+
+
+Program 3.1 is f0,s(0),s(s(0)),: :g:. If no constants appear in a program, one
+
+
+is arbitrarily chosen.
+
+
+   Definition:  The Herbrand base, denoted B(P), is the set of all ground
+
+
+goals that can be formed from the predicates in P and the terms in the Herbrand
+
+
+universe.     |
+
+
+   There are two predicates, parent/2 and ancestor/2, in Program 5.1. The
+
+
+Herbrand base of Program 5.1 consists of 25 goals for each predicate, where each
+
+
+constant appears as each argument:
+
+
+
+       fparent(terach,terach), parent(terach,abraham),
+
+
+       parent(terach,isaac), parent(terach,jacob),
+
+
+       parent(terach,benjamin), parent(abraham,terach),
+
+
+       parent(abraham,abraham), parent(abraham,isaac),
+
+
+       parent(abraham,jacob), parent(abraham,benjamin),
+
+
+
+
+5.1                                                     Semantics 87
+
+
+
+       parent(isaac,terach), parent(isaac,abraham),
+
+
+       parent(isaac,isaac), parent(isaac,jacob),
+
+
+       parent(isaac,benjamin), parent(jacob,terach),
+
+
+       parent(jacob,abraham), parent(jacob,isaac),
+
+
+       parent(jacob,jacob), parent(jacob,benjamin),
+
+
+       parent(benjamin,terach), parent(benjamin,abraham),
+
+
+       parent(benjamin,isaac), parent(benjamin,jacob),
+
+
+       parent(benjamin,benjamin), ancestor(terach,terach),
+
+
+       ancestor(terach,abraham), ancestor(terach,isaac),
+
+
+       ancestor(terach,jacob), ancestor(terach,benjamin),
+
+
+       ancestor(abraham,terach), ancestor(abraham,abraham),
+
+
+       ancestor(abraham,isaac), ancestor(abraham,jacob),
+
+
+       ancestor(abraham,benjamin), ancestor(isaac,terach),
+
+
+       ancestor(isaac,abraham), ancestor(isaac,isaac),
+
+
+       ancestor(isaac,jacob), ancestor(isaac,benjamin),
+
+
+       ancestor(jacob,terach), ancestor(jacob,abraham),
+
+
+       ancestor(jacob,isaac), ancestor(jacob,jacob),
+
+
+       ancestor(jacob,benjamin), ancestor(benjamin,terach),
+
+
+       ancestor(benjamin,abraham), ancestor(benjamin,isaac),
+
+
+       ancestor(benjamin,jacob), ancestor(benjamin,benjamin)g.
+
+
+
+The  Herbrand  base  is  infinite  if  the  Herbrand  universe  is.    For  Pro-
+
+
+gram 3.1, there is one predicate, natural_number.  The Herbrand base equals
+
+
+fnatural_number(0),natural_number(s(0)),: :g:.
+
+
+
+
+88    Theory of Logic Programs                                    5.1
+
+
+
+   Definition: An interpretation for a logic program is a subset of the Herbrand
+
+
+base.     |
+
+
+
+   An interpretation assigns truth and falsity to the elements of the Herbrand
+
+
+base. A goal in the Herbrand base is true with respect to an interpretation if *
+ *it
+
+
+is a member of it, false otherwise.
+
+
+
+   Definition:  An interpretation I is a model for a logic program if for each
+
+
+ground instance of a clause in the program A B1,: :,:Bn, A is in I if B1,: :,:Bn
+
+
+are in I .     |
+
+
+
+   Intuitively, models are interpretations that respect the declarative reading*
+ * of
+
+
+the clauses of a program.
+
+
+
+   For Program 3.1, natural_number(0) must be in every model, and nat-
+
+
+ural_number(s(X)) is in the model if natural_number(X) is.  Any model of
+
+
+Program 3.1 thus includes the whole Herbrand base.
+
+
+
+   For Program 5.1, the facts parent(terach,abraham), parent(abraham,
+
+
+isaac), parent(isaac,jacob), and parent(jacob,benjamin) must be in ev-
+
+
+ery model. A ground instance of the goal ancestor(X,Y) is in the model if the
+
+
+corresponding instance of parent(X,Y) is, by the first clause. So, for example,
+
+
+ancestor(terach,abraham) is in every model.  By the second clause, ances-
+
+
+tor(X,Z) is in the model if parent(X,Y) and ancestor(Y,Z) are.
+
+
+
+   It is easy to see that the intersection of two models for a logic program P
+
+
+is again a model.  This property allows the definition of the intersection of a*
+ *ll
+
+
+models.
+
+
+
+
+5.1                                                     Semantics 89
+
+
+
+   Definition:  The model obtained as the intersection of all models is known
+
+
+as the minimal model and denoted M (P). The minimal model is the declarative
+
+
+meaning of a logic program.    |
+
+
+   The declarative meaning of the program for natural_number, its minimal
+
+
+model, is the complete Herbrand base fnatural_number(0),natural_number(s
+
+
+(0)),natural_number(s(s(0))),: :g:.
+
+
+   The declarative meaning of Program 5.1 is fparent(terach,abraham),
+
+
+parent(abraham,isaac), parent(isaac,jacob), parent(jacob,benjamin),
+
+
+ancestor(terach,abraham), ancestor(abraham,isaac), ancestor(isaac,
+
+
+jacob), ancestor(jacob,benjamin), ancestor(terach,isaac), ances-
+
+
+tor(terach,jacob), ancestor(terach,benjamin), ancestor(abraham,
+
+
+jacob), ancestor(abraham,benjamin), ancestor(isaac,benjamin)g.
+
+
+   Let us consider the declarative meaning of append, defined as Program 3.15
+
+
+and repeated here:
+
+
+
+       append([XjXs],Ys,[XjZs])   append(Xs,Ys,Zs).
+
+
+       append([ ],Ys,Ys).
+
+
+
+The  Herbrand  universe  is  [  ],[[  ]],[[  ],[  ]],: :,: namely,  all  lists *
+ * that  can
+
+
+be  built  using  the  constant  [  ].    The  Herbrand  base  is  all  combina-
+
+
+tions  of  lists  with  the  append  predicate.   The  declarative  meaning  is*
+ *  all
+
+
+ground instances of append([ ],Xs,Xs), that is, append([ ],[ ],[ ]),ap-
+
+
+pend([ ],[[ ]],[[ ]]),: :,:together with goals such as append([[ ]],[ ],
+
+
+[[ ]]), which are logically implied by application(s) of the rule. This is only*
+ * a
+
+
+
+
+90    Theory of Logic Programs                                    5.1
+
+
+
+subset of the Herbrand base. For example, append([ ],[ ],[[ ]]) is not in the
+
+
+meaning of append but is in the Herbrand base.
+
+
+   Denotational semantics assigns meanings to programs based on associating
+
+
+with the program a function over the domain computed by the program.  The
+
+
+meaning of the program is defined as the least fixpoint of the function, if it *
+ *exists.
+
+
+The domain of computations of logic programs is interpretations.
+
+
+   Definition:  Given a logic program P, there is a natural mapping TP from
+
+
+interpretations to interpretations, defined as follows:
+
+
+
+       TP (I ) =fA in B(P):A B1,B2,: :,:Bn, n  0 , is a ground instance of
+
+
+               a clause in P, and B1,: :,:Bn are in I g.
+
+
+
+        |
+
+
+
+The mapping is monotonic, since whenever an interpretation I is contained in an
+
+
+interpretation J , then TP (I ) is contained in TP (J ).
+
+
+   This mapping gives an alternative way of characterizing models. An inter-
+
+
+pretation I is a model if and only if TP (I ) is contained in I .
+
+
+   Besides being monotonic, the transformation is also continuous, a notion that
+
+
+will not be defined here. These two properties ensure that for every logic prog*
+ *ram
+
+
+P, the transformation TP has a least fixpoint, which is the meaning assigned to
+
+
+P by its denotational semantics.
+
+
+   Happily, all the different definitions of semantics are actually describing *
+ *the
+
+
+same object. The operational, denotational, and declarative semantics have been
+
+
+
+
+5.2                                            Program Correctness91
+
+
+
+demonstrated to be equivalent. This allows us to define the meaning of a logic
+
+
+program as its minimal model.
+
+
+
+5.2   Program Correctness
+
+
+
+   Every logic program has a well-defined meaning, as discussed in Section 5.1.
+
+
+This meaning is neither correct nor incorrect.
+
+
+   The meaning of the program, however, may or may not be what was intended
+
+
+by the programmer. Discussions of correctness must therefore take into consider-
+
+
+ation the intended meaning of the program. Our previous discussion of proving
+
+
+correctness and completeness similarly was with respect to an intended meaning
+
+
+of a program.
+
+
+   We recall the definitions from Chapter 1. An intended meaning of a program
+
+
+P is a set of ground goals. We use intended meanings to denote the set of goals
+
+
+intended by the programmer for the program to compute. A program P is correct
+
+
+with respect to an intended meaning M if M (P) is contained in M . A program
+
+
+P is complete with respect to an intended meaning if M is contained in M (P). A
+
+
+program is thus correct and complete with respect to an intended meaning if the
+
+
+two meanings coincide exactly.
+
+
+   Another important aspect of a logic program is whether it terminates.
+
+
+   Definition:  A domain is a set of goals, not necessarily ground, closed under
+
+
+the instance relation. That is, if A is in D and A0is an instance of A, then A0*
+ *is
+
+
+in D as well.    |
+
+
+
+
+92    Theory of Logic Programs                                    5.2
+
+
+
+   Definition: A termination domain of a program P is a domain D such that
+
+
+every computation of P on every goal in D terminates.    |
+
+
+   Usually, a useful program should have a termination domain that includes
+
+
+its intended meaning. However, since the computation model of logic programs is
+
+
+liberal in the order in which goals in the resolvent can be reduced, most inter*
+ *esting
+
+
+logic programs will not have interesting termination domains. This situation wi*
+ *ll
+
+
+improve when we switch to Prolog.  The restrictive model of Prolog allows the
+
+
+programmer to compose nontrivial programs that terminate over useful domains.
+
+
+   Consider Program 3.1 defining the natural numbers. This program is termi-
+
+
+nating over its Herbrand base. However, the program is nonterminating over the
+
+
+domain fnatural_number(X)g. This is caused by the possibility of the nontermi-
+
+
+nating computation depicted in the trace in Figure 5.1.
+
+
+               natural_number(X)             X=s(X1)
+
+
+                 natural_number(X1)          X1=s(X2)
+
+
+                   natural_number(X2)        X2=s(X3)
+                       ..
+                       .
+
+
+               Figure 5.1:  A nonterminating computation
+
+
+
+   For any logic program, it is useful to find domains over which it is termina*
+ *ting.
+
+
+This is usually difficult for recursive logic programs. We need to describe rec*
+ *ursive
+
+
+data types in a way that allows us to discuss termination.
+
+
+   Recall that a type, introduced in Chapter 3, is a set of terms.
+
+
+   Definition: A type is complete if the set is closed under the instance relat*
+ *ion.
+
+
+
+
+5.2                                            Program Correctness93
+
+
+
+With every complete type T we can associate an incomplete type IT , which is the
+
+
+set of terms that have instances in T and instances not in T .    |
+
+
+
+   We illustrate the use of these definitions to find termination domains for t*
+ *he
+
+
+recursive programs using recursive data types in Chapter 3. Specific instances *
+ *of
+
+
+the definitions of complete and incomplete types are given for natural numbers
+
+
+and lists. A (complete) natural number is either the constant 0, or a term of t*
+ *he
+
+
+form sn(X). An incomplete natural number is either a variable, X , or a term of
+
+
+the form sn (X ), where X is a variable. Program 3.2 for  is terminating for the
+
+
+domain consisting of goals where the first and/or second argument is a complete
+
+
+natural number.
+
+
+
+   Definition: A list is complete if every instance satisfies the definition gi*
+ *ven
+
+
+in Program 3.11.  A list is incomplete if there are instances that satisfy this
+
+
+definition and instances that do not.     |
+
+
+
+   For example, the list [a,b,c] is complete (proved in Figure 3.3), while the
+
+
+variable X is incomplete. Two more interesting examples: [a,X,c] is a complete
+
+
+list, although not ground, whereas [a,bjXs] is incomplete.
+
+
+
+   A termination domain for append is the set of goals where the first and/or
+
+
+the third argument is a complete list. We discuss domains for other list-proces*
+ *sing
+
+
+programs in Section 7.2, on termination of Prolog programs.
+
+
+
+Exercises for Section 5.2
+
+
+
+(i)Give a domain over which Program 3.3 for plus is terminating.
+
+
+
+
+94    Theory of Logic Programs                                    5.2
+
+
+
+(ii)Define complete and incomplete binary trees by analogy with the definitions
+
+
+   for complete and incomplete lists.
+
+
+
+5.3   Complexity
+
+
+
+   We have analyzed informally the complexity of several logic programs, for
+
+
+example,  and plus (Programs 3.2 and 3.3) in the section on arithmetic, and
+
+
+append and the two versions of reverse in the section on lists (Programs 3.15 a*
+ *nd
+
+
+3.16). In this section, we briefly describe more formal complexity measures.
+
+
+   The multiple uses of logic programs slightly change the nature of complexity
+
+
+measures.  Instead of looking at a particular use and specifying complexity in
+
+
+terms of the sizes of the inputs, we look at goals in the meaning and see how
+
+
+they were derived. A natural measure of the complexity of a logic program is the
+
+
+length of the proofs it generates for goals in its meaning.
+
+
+   Definition:   The size of a term is the number of symbols in its textual
+
+
+representation.     |
+
+
+   Constants and variables, consisting of a single symbol, have size 1.  The
+
+
+size of a compound term is 1 more than the sum of the sizes of its argu-
+
+
+ments.  For example, the list [b] has size 3, [a,b] has size 5, and the goal
+
+
+append([a,b],[c,d],Xs) has size 12.  In general, a list of n elements has size
+
+
+2  n + 1.
+
+
+   Definition:  A program P is of length complexity L(n) if for any goal G in
+
+
+the meaning of P of size n there is a proof of G with respect to P of length le*
+ *ss
+
+
+
+
+5.3                                                    Complexity 95
+
+
+
+than equal to L(n).    |
+
+
+
+   Length complexity is related to the usual complexity measures in computer
+
+
+science. For sequential realizations of the computation model, it corresponds to
+
+
+time complexity. Program 3.15 for append has linear length complexity. This is
+
+
+demonstrated in Exercise (i) at the end of this section.
+
+
+
+   The applicability of this measure to Prolog programs, as opposed to logic
+
+
+programs, depends on using a unification algorithm without an occurs check.
+
+
+Consider the runtime of the straightforward program for appending two lists.
+
+
+Appending two lists, as shown in Figure 4.3, involves several unifications of a*
+ *ppend
+
+
+goals with the head of the append rule append([XjXs],Ys,[XjZs]).  At least
+
+
+three unifications, matching variables against (possibly incomplete) lists, wil*
+ *l be
+
+
+necessary. If the occurs check must be performed for each, the argument lists m*
+ *ust
+
+
+be searched. This is directly proportional to the size of the input goal. Howev*
+ *er,
+
+
+if the occurs check is omitted, the unification time will be bounded by a const*
+ *ant.
+
+
+The overall complexity of append becomes quadratic in the size of the input lis*
+ *ts
+
+
+with the occurs check, but only linear without it.
+
+
+
+   We introduce other useful measures related to proofs. Let R be a proof. We
+
+
+define the depth of R to be the deepest invocation of a goal in the associated
+
+
+reduction. The goal-size of R is the maximum size of any goal reduced.
+
+
+
+   Definition:  A logic program P is of goal-size complexity G(n) if for any
+
+
+goal A in the meaning of P of size n, there is a proof of A with respect to P of
+
+
+goal-size less than or equal to G(n).    |
+
+
+
+
+96    Theory of Logic Programs                                    5.3
+
+
+
+   Definition:  A logic program P is of depth-complexity D(n) if for any goal
+
+
+A in the meaning of P of size n, there is a proof of G with respect to P of dep*
+ *th
+
+
+D(n).    |
+
+
+
+   Goal-size complexity relates to space. Depth-complexity relates to space of
+
+
+what needs to be remembered for sequential realizations, and to space and time
+
+
+complexity for parallel realizations.
+
+
+
+Exercises for Section 5.3
+
+
+
+(i)Show that the size of a goal in the meaning of append joining a list of leng*
+ *th
+
+
+   n to one of length m to give a list of length n+m is 4n+4m+7. Show that
+
+
+   a proof tree has m + 2 nodes. Hence show that append has linear complexity.
+
+
+   Would the complexity be altered if the type condition were added?
+
+
+
+(ii)Show that Program 3.3 for plus has linear complexity.
+
+
+
+(iii)Discuss the complexity of other logic programs.
+
+
+
+5.4   Search Trees
+
+
+
+   Computations of logic programs given so far resolve the issue of nondetermin-
+
+
+ism by always making the correct choice. For example, the complexity measures,
+
+
+based on proof trees, assume that the correct clause can be chosen from the
+
+
+program to effect the reduction. Another way of computationally modeling non-
+
+
+determinism is by developing all possible reductions in parallel. In this secti*
+ *on, we
+
+
+
+
+5.4                                                   Search Trees97
+
+
+
+discuss search trees, a formalism for considering all possible computation path*
+ *s.
+
+
+   Definition: A search tree of a goal G with respect to a program P is defined
+
+
+as follows. The root of the tree is G. Nodes of the tree are (possibly conjunct*
+ *ive)
+
+
+goals with one goal selected.  There is an edge leading from a node N for each
+
+
+clause in the program whose head unifies with the selected goal.  Each branch
+
+
+in the tree from the root is a computation of G by P. Leaves of the tree are
+
+
+success nodes, where the empty goal has been reached, or failure nodes, where
+
+
+the selected goal at the node cannot be further reduced. Success nodes correspo*
+ *nd
+
+
+to solutions of the root of the tree.     |
+
+
+   There are in general many search trees for a given goal with respect to a
+
+
+program. Figure 5.2 shows two search trees for the query son(S,haran)? with
+
+
+respect to Program 1.2.  The two possibilities correspond to the two choices of
+
+
+goal to reduce from the resolvent father(haran,S),male(S). The trees are quite
+
+
+distinct, but both have a single success branch corresponding to the solution o*
+ *f the
+
+
+query S=lot. The respective success branches are given as traces in Figure 4.4.
+
+
+   We adopt some conventions when drawing search trees.  The leftmost goal
+
+
+of a node is always the selected one. This implies that the goals in derived go*
+ *als
+
+
+may be permuted so that the new goal to be selected for reduction is the first
+
+
+goal. The edges are labeled with substitutions that are applied to the variables
+
+
+in the leftmost goal. These substitutions are computed as part of the unificati*
+ *on
+
+
+algorithm.
+
+
+   Search trees correspond closely to traces for deterministic computations. The
+
+
+traces for the append query and hanoi query given, respectively, in Figures 4.3
+
+
+
+
+98    Theory of Logic Programs                                    5.4
+
+
+
+           son(S,haran)                  son(S,haran)
+
+
+                j                             j
+
+
+       father(haran,S),male(S)      male(S),father(haran,S)
+
+
+       S=lot/    S=milcahn             S=isaac/  S=lotn
+
+
+     male(lot)    male(milcah)father(haran,isaac)  father(haran,lot)
+
+
+             S=yiscahj
+
+
+           male(yiscah)                         true
+
+
+
+        true
+
+
+                     Figure 5.2:  Two search trees
+
+
+
+and 4.5 can be easily made into search trees. This is Exercise (i) at the end of
+
+
+this section.
+
+
+
+   Search trees contain multiple success nodes if the query has multiple soluti*
+ *ons.
+
+
+Figure 5.3 contains the search tree for the query append(As,Bs,[a,b,c])? with
+
+
+respect to Program 3.15 for append, asking to split the list [a,b,c] into two.
+
+
+The solutions for As and Bs are found by collecting the labels of the edges in
+
+
+the branch leading to the success node. For example, in the figure, following t*
+ *he
+
+
+leftmost branch gives the solution fAs=[a,b,c],Bs=[ ]g.
+
+
+
+   The number of success nodes is the same for any search tree of a given goal
+
+
+with respect to a program.
+
+
+
+   Search trees can have infinite branches, which correspond to nonterminat-
+
+
+ing computations. Consider the goal append(Xs,[c,d],Ys) with respect to the
+
+
+
+
+5.4                                                   Search Trees99
+
+
+
+          append(As,Bs,[a,b,c])
+
+
+                  As=[ajAs1]            As=[ ],Bs=[a,b,c]
+
+
+          append(As1,Bs,[b,c])          true
+
+
+                  As1=[bjAs2]           As1=[ ],Bs=[b,c]
+
+
+          append(As2,Bs,[c])            true
+
+
+                  As2=[cjAs3]           As2=[ ],Bs=[c]
+
+
+          append(As3,Bs,[ ])            true
+
+
+                  As3=[ ],Bs=[ ]
+
+
+              true
+
+
+           Figure 5.3:  Search tree with multiple success nodes
+
+
+
+standard program for append. The search tree is given in Figure 5.4. The infini*
+ *te
+
+
+branch is the nonterminating computation given in Figure 4.6.
+
+
+
+       append(Xs,[c,d],Ys)
+
+
+           Xs=[XjXs1],Ys=[XjYs1]           Xs=[ ],Ys=[c,d]
+
+
+       append(Xs1,[c,d],Ys1)               true
+
+
+           Xs1=[X1jXs2],Ys1=[X1jYs2]       Xs1=[ ],Ys1=[c,d]
+
+
+       append(Xs2,[c,d],Ys2)               true
+
+
+           Xs2=[X2jXs3],Ys2=[X2jYs3]       Xs2=[ ],Ys2=[c,d]
+
+
+       append(Xs3),[c,d],Ys3)              true
+           ..                                  .
+           .                                   ..
+
+
+             Figure 5.4:  Search tree with an infinite branch
+
+
+
+   Complexity measures can also be defined in terms of search trees.  Prolog
+
+
+
+
+100   Theory of Logic Programs                                    5.4
+
+
+
+programs perform a depth-first traversal of the search tree. Therefore, measures
+
+
+based on the size of the search tree will be a more realistic measure of the co*
+ *m-
+
+
+plexity of Prolog programs than those based on the complexity of the proof tree.
+
+
+However, the complexity of the search tree is much harder to analyze.
+
+
+
+   There is a deeper point lurking. The relation between proof trees and search
+
+
+trees is the relation between nondeterministic computations and deterministic
+
+
+computations. Whether the complexity classes defined via proof trees are equiva-
+
+
+lent to complexity classes defined via search trees is a reformulation of the c*
+ *lassic
+
+
+P=NP question in terms of logic programming.
+
+
+
+Exercises for Section 5.4
+
+
+
+(i)Transform the traces of Figure 4.3 and 4.5 into search trees.
+
+
+
+(ii)Draw a search tree for the query sort([2,4,1],Xs)?  using permutation
+
+
+   sort.
+
+
+
+5.5   Negation in Logic Programming
+
+
+
+   Logic programs are collections of rules and facts describing what is true.
+
+
+Untrue facts are not expressed explicitly; they are omitted. When writing rules,
+
+
+it is often natural to include negative conditions. For example, defining a bac*
+ *helor
+
+
+as an unmarried male could be written as
+
+
+
+       bachelor(X)   male(X), not married(X).
+
+
+
+
+5.5                                    Negation in Logic Programming101
+
+
+
+if negation were allowed.  In this section, we describe an extension to the log*
+ *ic
+
+
+programming computation model that allows a limited form of negation.
+
+
+   Researchers have investigated other extensions to logic programming to allow
+
+
+disjunction, and indeed, arbitrary first-order formulae. Discussing them is bey*
+ *ond
+
+
+the scope of this book. The most useful of the extensions is definitely negatio*
+ *n.
+
+
+   We define a relation not G and give a semantics. The essence of logic pro-
+
+
+gramming is that there is an efficient procedural semantics.  There is a natural
+
+
+way to adapt the procedural semantics to negation, namely by negation as fail-
+
+
+ure. A goal G fails, (not G succeeds), if G cannot be derived by the procedural
+
+
+semantics.
+
+
+   The relation not G is only a partial form of negation from first-order logic.
+
+
+The relation not uses the negation as failure rule. A goal not G will be assumed
+
+
+to be a consequence of a program P if G is not a consequence of P.
+
+
+   Negation as failure can be characterized in terms of search trees.
+
+
+   Definition: A search tree of a goal G with respect to a program P is finitely
+
+
+failed if it has no success nodes or infinite branches. The finite failure set *
+ *of a
+
+
+logic program P is the set of goals G such that G has a finitely failed search *
+ *tree
+
+
+with respect to P.    |
+
+
+   A goal not G is implied by a program P by the \negation as failure" rule if
+
+
+G is in the finite failure set of P.
+
+
+   Let us see a simple example. Consider the program consisting of two facts:
+
+
+       likes(abraham,pomegranates).
+
+
+
+
+102   Theory of Logic Programs                                    5.5
+
+
+
+       likes(isaac,pomegranates).
+
+
+
+The goal not likes(sarah,pomegranates) follows from the program by nega-
+
+
+tion as failure. The search tree for the goal likes(sarah,pomegranates) has a
+
+
+single failure node.
+
+
+   Using negation as failure allows easy definition of many relations. For exam-
+
+
+ple, a declarative definition of the relation disjoint(Xs,Ys) that two lists, Xs
+
+
+and Ys, have no elements in common is possible as follows.
+
+
+       disjoint(Xs,Ys)   not (member(X,Xs), member(X,Ys)).
+
+
+
+This reads: \Xs is disjoint from Ys if there is no element X that is a member of
+
+
+both Xs and Ys."
+
+
+   An intuitive understanding of negation as failure is fine for the programs in
+
+
+this book using negation. There are semantic problems, however, especially when
+
+
+integrated with other issues such as completeness and termination. Pointers to
+
+
+the literature are given in Section 5.6, and Prolog's implementation of negation
+
+
+as failure is discussed in Chapter 11.
+
+
+
+5.6   Background
+
+
+
+   The classic paper on the semantics of logic programs is of van Emden and
+
+
+Kowalski (1976). Important extensions were given by Apt and van Emden (1982).
+
+
+In particular, they showed that the choice of goal to reduce from the resolvent
+
+
+is arbitrary by showing that the number of success nodes is an invariant for the
+
+
+
+
+5.6                                                   Background  103
+
+
+
+search trees.  Textbook accounts of the theory of logic programming discussing
+
+
+the equivalence between the declarative and procedural semantics can be found
+
+
+in Apt (1990), Deville (1990), and Lloyd (1987).
+
+
+
+   In Shapiro (1984), complexity measures for logic programs are compared
+
+
+with the complexity of computations of alternating Turing machines. It is shown
+
+
+that goal-size is linearly related to alternating space, the product of length *
+ *and
+
+
+goal-size is linearly related to alternating tree-size, and the product of dept*
+ *h and
+
+
+goal-size is linearly related to alternating time.
+
+
+
+   The classic name for search trees in the literature is SLD trees. The name
+
+
+SLD was coined by research in automatic theorem proving, which preceded the
+
+
+birth of logic programming. SLD resolution is a particular refinement of the re*
+ *so-
+
+
+lution principle introduced in Robinson (1965). Computations of logic programs
+
+
+can be interpreted as a series of resolution steps, and in fact, SLD resolution*
+ * steps,
+
+
+and are still commonly described thus in the literature. The acronym SLD stands
+
+
+for Selecting a literal, using a Linear strategy, restricted to Definite clause*
+ *s.
+
+
+
+   The first proof of the correctness and completeness of SLD resolution, albeit
+
+
+under the name LUSH-resolution, was given by Hill (1974).
+
+
+
+   The subject of negation has received a large amount of attention and interest
+
+
+since the inception of logic programming. The fundamental work on the semantics
+
+
+of negation as failure is by Clark (1978). Clark's results, establishing soundn*
+ *ess,
+
+
+were extended by Jaffar et al. (1983), who proved the completeness of the rule.
+
+
+
+   The concept of negation as failure is a restricted version of the closed wor*
+ *ld
+
+
+
+
+104   Theory of Logic Programs                                    5.6
+
+
+
+assumption as discussed in the database world. For more information see Reiter
+
+
+(1978).  There has been extensive research on characterizing negation in logic
+
+
+programming that has not stabilized at this time .  The reader should look up
+
+
+the latest logic programming conference proceedings to find current thinking. A
+
+
+good place to start reading to understand the issue is Kunen (1989).

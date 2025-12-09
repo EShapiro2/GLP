@@ -1,0 +1,1907 @@
+
+
+
+
+                                                Chapter 12
+
+
+
+                  Extra-Logical  Predicates
+
+
+
+    There is a class of predicates in Prolog that lie outside the logic program*
+ *ming
+
+
+model, and are called extra-logical predicates. These predicates achieve a side*
+ * ef-
+
+
+fect in the course of being satisfied as a logical goal. There are basically th*
+ *ree
+
+
+types of extra-logical system predicates: predicates concerned with I/O, predi-
+
+
+cates for accessing and manipulating the program, and predicates for interfacing
+
+
+with the underlying operating system.  Prolog I/O and program manipulation
+
+
+predicates are discussed in this chapter. The interface to the operating system*
+ * is
+
+
+too system-dependent to be discussed in this book.
+
+
+
+12.1   Input/Output
+
+
+
+    A very important class of predicates that produces side effects is that con-
+
+
+cerned with I/O. Any practical programming language must have a mechanism
+
+
+for both input and output. The execution model of Prolog, however, precludes
+
+
+the expression of I/O within the pure component of the language.
+
+
+
+
+186   Extra-Logical Predicates                                 12.1
+
+
+
+    The basic predicate for input is read(X). This goal reads a term from the
+
+
+current input stream, usually from the terminal. The term that has been read is
+
+
+unified with X, and read succeeds or fails depending on the result of unificati*
+ *on.
+
+
+
+    The basic predicate for output is write(X). This goal writes the term X on *
+ *the
+
+
+current output stream, as defined by the underlying operating system, usually to
+
+
+the terminal. Neither read nor write give alternative solutions on backtracking.
+
+
+
+    The normal use of read is with a variable argument X, which acquires the
+
+
+value of the first term in the current input stream.  The instantiation of X to
+
+
+something outside the program lies outside the logical model, since each time t*
+ *he
+
+
+procedure is called, read(X) succeeds with a (possibly) different value for X.
+
+
+
+    Read attempts to parse the next term on the input stream. If it fails, it p*
+ *rints
+
+
+an error message on the terminal.
+
+
+
+    There is an asymmetry between the extra-logical nature of read and write.
+
+
+If all calls to write were replaced with the goal true, which always succeeded
+
+
+once, the semantics of the program would be unaffected.  That is not true for
+
+
+read.
+
+
+
+    Early Prolog implementations did not concentrate on input and output fa-
+
+
+cilities, providing the basic predicates read and write, or their equivalents, *
+ *and
+
+
+little else. More recent Prolog implementations have a wider range of formatted
+
+
+I/O options, some of which have been adopted in Standard Prolog. In this book,
+
+
+the emphasis is not on I/O, and so we restrict outselves to basic predicates and
+
+
+some simple utilities described in the rest of this section. For more elaborate*
+ * I/O,
+
+
+
+
+12.1                                               Input/Output187
+
+
+
+consult your particular Prolog manual.
+
+
+    A useful utility is a predicate writeln(Xs), analogous to the Pascal com-
+
+
+mand, which writes the list of terms Xs as a line of output on the current outp*
+ *ut
+
+
+stream. It is defined in Program 12.1. The predicate writeln uses the builtin
+
+
+predicate nl, which causes the next output character to be on a new line. As an
+
+
+example of its use, executing the conjunctive goal (X=3, writeln([`The value
+
+
+of X is ',X]) produces the output
+
+
+
+       The value of X is 3.
+
+
+    Note the use of the quoted atom `The value of X is '.
+
+
+       writeln([XjXs])   write(X), writeln(Xs).
+
+
+       writeln([ ])   nl.
+
+
+
+       Program 12.1: Writing a list of terms
+
+
+
+Both read and write operate at the term level.  A lower level for I/O is the
+
+
+character level. Edinburgh Prolog assumed that characters were represented by
+
+
+ASCII codes. Standard Prolog takes a broader perspective to support such char-
+
+
+acter sets as Kanji. The basic output predicate is put_char(Char), which outputs
+
+
+the character Char on the current output stream. Standard Prolog allows you to
+
+
+specify the output stream, but we do not give examples here. The basic input
+
+
+predicate at the character level is get_char(Char), which reads a character C
+
+
+from the current input stream and then unifies C with Char.
+
+
+    Program 12.2 defines read_word_list(Words), a utility predicate for read-
+
+
+
+
+188   Extra-Logical Predicates                                 12.1
+
+
+
+ing in a list of words, Words, from the current input, terminated by an end-
+
+
+of-words character, for example a period.  Specific definitions of the predicat*
+ *es
+
+
+word_char/1, fill_char/1, and end_of_words_char/1 need to be added. It can
+
+
+be used to allow freer form input. In Program 12.2, words can be separated by
+
+
+arbitrarily many fill characters.
+
+
+
+    The predicate read_word_list reads a character, FirstChar, and calls
+
+
+read_words(FirstChar,Words).  This predicate does one of three actions, de-
+
+
+pending on what FirstChar is. If FirstChar is a word character, then the next
+
+
+word is found. Word characters in Standard Prolog are uppercase and lowercase
+
+
+letters, underscores, and digits. The second action is to ignore filling charac*
+ *ters,
+
+
+and so the next character is read, and the program continues recursively. Final*
+ *ly,
+
+
+if the character denoting the end of the words is reached, the program terminat*
+ *es
+
+
+and returns the list of words.
+
+
+
+    It is important that the program must always read a character ahead and then
+
+
+test what it should do. If the character is useful, for example, a word charact*
+ *er,
+
+
+it must be passed down to be part of the word. Otherwise characters can get lost
+
+
+when backtracking. Consider the following read and process loop:
+
+
+
+       process([ ])  
+
+
+           get_char(C), end_of_words_char(C).
+
+
+       process([WjWords])  
+
+
+           get_char(C), word_char(C), get_word(C,W), process(Words).
+
+
+
+If the first character in a word is not an end_of_words_char, the first clause *
+ *will
+
+
+
+
+12.1                                               Input/Output189
+
+
+
+       read_word_list(Words)  
+
+
+           Words is a list of words read from the input stream via side effects.
+
+
+       read_word_list(Words)  
+
+
+           get_char(FirstChar),
+
+
+           read_words(FirstChar,Words).
+
+
+       read_words(Char,[WordjWords])  
+
+
+           word_char(Char),
+
+
+           read_word(Char,Word,NextChar),
+
+
+           read_words(NextChar,Words).
+
+
+       read_words(Char,Words)  
+
+
+           fill_char(Char),
+
+
+           get_char(NextChar),
+
+
+           read_words(NextChar,Words).
+
+
+       read_words(Char,[ ])  
+
+
+           end_of_words_char(Char).
+
+
+       read_word(Char,Word,NextChar)  
+
+
+           word_chars(Char,Chars,NextChar),
+
+
+           atom_list(Word,Chars).
+
+
+       word_chars(Char,[CharjChars],FinalChar)  
+
+
+           word_char(Char), !,
+
+
+           get_char(NextChar),
+
+
+           word_chars(NextChar,Chars,FinalChar).
+
+
+       word_chars(Char,[ ],Char)  
+
+
+           not word_char(Char).
+
+
+
+       Program 12.2: Reading in a list of words
+
+
+
+
+190   Extra-Logical Predicates                                 12.1
+
+
+
+fail, and the second clause will cause the reading of the next character.
+
+
+
+    Returning to Program 12.2, the predicate read_word(Char,Word,NextChar)
+
+
+reads a word Word given the current character Char and returns the next charact*
+ *er
+
+
+after the word, NextChar. The list of characters composing the word is found by
+
+
+word_chars/3 (with the same arguments as read_word). The word is created from
+
+
+the list of characters using the system predicate atom_list/2.  In word_chars
+
+
+there is the same property of looking ahead one character, so that no character*
+ * is
+
+
+lost.
+
+
+
+    Predicates such as fill_char/1 and word_char/1 exemplify data abstraction
+
+
+in Prolog.
+
+
+
+Exercise for Section 12.1
+
+
+
+(i) Extend Program 12.2 to handle a wider range of inputs, for example, num-
+
+
+    bers.
+
+
+
+12.2   Program Access and Manipulation
+
+
+
+    So far programs have been assumed to be resident in computer memory,
+
+
+without discussion of how they are represented or how they got there.  Many
+
+
+applications depend on accessing the clauses in the program.  Furthermore, if
+
+
+programs are to be modified at runtime, there must be a way of adding (and
+
+
+deleting) clauses.
+
+
+
+
+12.2                               Program Access and Manipulation191
+
+
+
+    The first Prologs, implemented as simple interpreted systems, classified pr*
+ *ed-
+
+
+icates as builtin and static or user-defined and dynamic. The subsequent devel-
+
+
+opment of compilers and libraries require a more sophisticated classification.
+
+
+
+    Each user-defined predicate is either dynamic or static.  The procedure of
+
+
+a dynamic predicate can be altered, whereas the procedure of a static predicate
+
+
+cannot. Builtin predicates are assumed to be static. The system predicates intr*
+ *o-
+
+
+duced in this section apply only to dynamic predicates and will probably cause
+
+
+error messages if applied to static predicates. In this book, we assume all pre*
+ *d-
+
+
+icates are dynamic unless otherwise specified. In many Prologs, declarations are
+
+
+needed to make a predicate dynamic.
+
+
+
+    The system predicate for accessing a program is clause(Head,Body). The
+
+
+goal clause(Head,Body) must be called with Head instantiated. The program is
+
+
+searched for the first clause whose head unifies with Head. The head and body
+
+
+of this clause are then unified with Head and Body.  On backtracking, the goal
+
+
+succeeds once for each unifiable clause in the procedure. Note that clauses in *
+ *the
+
+
+program cannot be accessed via their body.
+
+
+
+    Facts have the atom true as their body. Conjunctive goals are represented
+
+
+using the binary functor , . The actual representations can be easily abstracted
+
+
+away, however.
+
+
+
+    Consider Program 3.12 for member:
+
+
+
+       member(X,[XjXs]).
+
+
+       member(X,[YjYs])   member(X,Ys).
+
+
+
+
+192   Extra-Logical Predicates                                 12.2
+
+
+
+The goal clause(member(X,Ys),Body) has two solutions:  fYs=[XjXs],Body=
+
+
+trueg and fYs=[YjYs1],Body=member(X,Ys1)g.  Note that a fresh copy of the
+
+
+variables appearing in the clause is made each time a unification is performed.
+
+
+In terms of the meta-logical primitives freeze and melt, the clause is stored in
+
+
+frozen form in the program. Each call to clause causes a new melt of the frozen
+
+
+clause. This is the logical counterpart of the classic notion of reentrant code.
+
+
+    System predicates are provided both to add clauses to the program and to re-
+
+
+move clauses. The basic predicate for adding clauses is assertz(Clause), which
+
+
+adds Clause as the last clause of the corresponding procedure.  For example,
+
+
+assertz(father(haran,lot))?  adds the father fact to the program.  When
+
+
+describing rules an extra level of brackets is needed for technical reasons con-
+
+
+cerning the precedence of terms. For example, assertz((parent(X,Y)   fa-
+
+
+ther(X,Y))) is the correct syntax.
+
+
+    There is a variant of assertz, asserta, that adds the clause at the beginni*
+ *ng
+
+
+of a procedure.
+
+
+    If Clause is uninstantiated (or if Clause has the form H  B with H unin-
+
+
+stantiated), an error condition occurs.
+
+
+    The predicate retract(C) removes from the program the first clause in the
+
+
+program unifying with C. Note that to retract a clause such as a   b,c,d, you
+
+
+need to specify retract((a   C)). A call to retract may only mark a clause
+
+
+for removal, rather than physically removing it, and the actual removal would
+
+
+occur only when Prolog's top-level query is solved.  This is for implementation
+
+
+reasons, but may lead to anomalous behavior in some Prologs.
+
+
+
+
+12.2                               Program Access and Manipulation193
+
+
+
+    Asserting a clause freezes the terms appearing in the clause. Retracting the
+
+
+same clause melts a new copy of the terms.  In many Prologs this is exploited
+
+
+to be the easiest way of copying a term. Standard Prolog, however, provides a
+
+
+builtin predicate copy_term/2 for this purpose.
+
+
+
+    The predicates assert and retract introduce to Prolog the possibility of
+
+
+programming with side effects. Code depending on side effects for its successful
+
+
+execution is hard to read, hard to debug, and hard to reason about formally.
+
+
+Hence these predicates are somewhat controversial, and using them is sometimes
+
+
+a result of intellectual laziness or incompetence.  They should be used as litt*
+ *le
+
+
+as possible when programming. Many of the programs to be given in this book
+
+
+can be written using assert and retract, but the results are less clean and
+
+
+less efficient. Further, as Prolog compiler technology advances, the inefficien*
+ *cy in
+
+
+using assert and retract will become more apparent.
+
+
+
+    It is possible, however, to give logical justification for some limited use*
+ *s of
+
+
+assert and retract.  Asserting a clause is justified, for example, if the clause
+
+
+already logically follows from the program. In such a case, adding it will not *
+ *affect
+
+
+the meaning of the program, since no new consequences can be derived. Perhaps
+
+
+program efficiency will improve, as some consequences could be derived faster.
+
+
+This use is exemplified in the lemma construct, introduced in Section 12.3.
+
+
+
+    Similarly, retracting a clause is justified if the clause is logically redu*
+ *ndant.
+
+
+In this case, retracting constitutes a kind of logical garbage collection, whose
+
+
+purpose is to reduce the size of the program.
+
+
+
+
+194   Extra-Logical Predicates                                 12.3
+
+
+
+12.3   Memo-Functions
+
+
+
+    Memo-functions save the results of subcomputations to be used later in a
+
+
+computation. Remembering partial results is impossible within pure Prolog, so
+
+
+memo-functions are implemented using side effects to the program. Programming
+
+
+in this way can be considered bottom-up programming.
+
+
+
+    The prototypical memo-function is lemma(Goal). Operationally, it attempts
+
+
+to prove the goal Goal and, if successful, stores the result of the proof as a *
+ *lemma.
+
+
+It is implemented as
+
+
+
+       lemma(P)   P, asserta((P   !)).
+
+
+
+The next time the goal P is attempted, the new solution will be used, and there
+
+
+will be no unnecessary recomputation.  The cut is present to prevent the more
+
+
+general program being used. Its use is justified only if P does not have multip*
+ *le
+
+
+solutions.
+
+
+
+    Using lemmas is demonstrated with Program 12.3 for solving the Towers
+
+
+of Hanoi problem. The performance of Program 3.31 in solving the problem is
+
+
+dramatically improved. It is well known that the solution of the Towers of Hanoi
+
+
+with N disks requires 2N  1 moves. For example, ten disks require 1,023 moves,
+
+
+or in terms of Program 3.31, 1,023 calls of hanoi(1,A,B,C,Xs).  The overall
+
+
+number of general calls of hanoi/5 is significantly more.
+
+
+
+    The solution to the Towers of Hanoi repeatedly solves subproblems moving
+
+
+the identical number of disks. A memo-function can be used to recall the moves
+
+
+
+
+12.3                                             Memo-Functions195
+
+
+       hanoi(N,A,B,C,Moves)  
+
+
+           Moves is the sequence of moves required to move N  disks
+
+
+           from peg A to peg B using peg C as an intermediary
+
+
+           according to the rules of the Towers of Hanoi puzzle.
+
+
+       hanoi(1,A,B,C,[A to B]).
+
+
+       hanoi(N,A,B,C,Moves)  
+
+
+           N > 1,
+
+
+           N1 is N-1,
+
+
+           lemma(hanoi(N1,A,C,B,Ms1)),
+
+
+           hanoi(N1,C,B,A,Ms2),
+
+
+           append(Ms1,[A to BjMs2],Moves).
+
+
+       lemma(P)   P, asserta((P   !)).
+
+
+       Testing
+
+
+       test_hanoi(N,Pegs,Moves)  
+
+
+           hanoi(N,A,B,C,Moves), Pegs = [A,B,C].
+
+
+
+       Program 12.3: Towers of Hanoi using a memo-function
+
+
+
+made in solving each subproblem of moving a smaller number of disks.  Later
+
+
+attempts to solve the subproblem can use the computed sequence of moves rather
+
+
+than recomputing them.
+
+
+    The idea is seen with the recursive clause of hanoi in Program 12.3.  The
+
+
+first call to solve hanoi with N  1 disks is remembered, and can be used by the
+
+
+second call to hanoi with N  1 disks.
+
+
+
+
+196   Extra-Logical Predicates                                 12.3
+
+
+
+    The program is tested with the predicate test_hanoi(N,Pegs,Moves).  N
+
+
+is the number of disks, Pegs is a list of the three peg names, and Moves is the
+
+
+list of moves that must be made.  Note that in order to take advantage of the
+
+
+memo-functions, a general problem is solved first.  Only when the solution is
+
+
+complete, and all memo-functions have recorded their results, are the peg names
+
+
+instantiated.
+
+
+
+Exercise for Section 12.3
+
+
+
+(i) Two players take turns to say a number between 1 and 3 inclusive. A sum is
+
+
+    kept of the numbers, and the player who brings the sum to 20 wins. Write a
+
+
+    program to play the game to win, using memo-functions.
+
+
+
+12.4   Interactive Programs
+
+
+
+    A common form of a program requiring side effects is an interactive loop.
+
+
+A command is read from the terminal, responded to, and the next command
+
+
+read. Interactive loops are implemented typically by while loops in conventional
+
+
+languages.  Program 12.4 gives the basic skeleton of such programs, where a
+
+
+command is read, then echoed by being written on the screen.
+
+
+    The read/echo loop is invoked by the goal echo. The heart of the program
+
+
+is the relation echo(X), where X is the term to be echoed. The program assumes
+
+
+a user-defined predicate last_input/1, which succeeds if the argument satisfies
+
+
+the termination condition for input. If the termination condition is satisfied *
+ *by
+
+
+
+
+12.4                                         Interactive Programs197
+
+
+       echo   read(X), echo(X).
+
+
+       echo(X)   last_input(X), !.
+
+
+       echo(X)   write(X), nl, read(Y), !, echo(Y).
+
+
+
+       Program 12.4: Basic interactive loop
+
+
+
+the input, the loop terminates; otherwise the term is written and a new term is
+
+
+read.
+
+
+    Note that the testing of the term is separate from its reading. This is nec-
+
+
+essary to avoid losing a term: terms cannot be reread. The same phenomenon
+
+
+occurred in Program 12.2 for processing characters. The character was read and
+
+
+then separately processed.
+
+
+    Program 12.4 is iterative and deterministic.  It can be run efficiently on a
+
+
+system with tail recursion optimization, always using the same small amount of
+
+
+space.
+
+
+    We give two examples of programs using the basic cycle of reading a term,
+
+
+and then processing it. The first is a line editor. The second interactive prog*
+ *ram
+
+
+is a shell for Prolog commands, which is essentially a top-level interpreter for
+
+
+Prolog in Prolog.
+
+
+    The first decision in writing a simple line editor in Prolog is how to rep-
+
+
+resent the file.  Each line in the file must be accessible, together with the c*
+ *ur-
+
+
+sor position, that is the current position within the file.  We use a structure
+
+
+file(Before,After), where Before is a list of lines before the cursor, and Af-
+
+
+ter is a list of lines after the cursor. The cursor position is restricted to b*
+ *e at the
+
+
+
+
+198   Extra-Logical Predicates                                 12.4
+
+
+
+end of some line. The lines before the cursor will be in reverse order to give *
+ *easier
+
+
+access to the lines nearer the cursor. The basic loop accepts a command from the
+
+
+keyboard and applies it to produce a new version of the file. Program 12.5 is t*
+ *he
+
+
+editor.
+
+
+
+    An editing session is invoked by edit, which initializes the file being pro-
+
+
+cessed to the empty file, file([ ],[ ])).  The interactive loop is controlled
+
+
+by edit(File).  It writes a prompt on the screen, using write_prompt, then
+
+
+reads and processes a command.   The processing uses the basic predicate
+
+
+edit(File,Command), which applies the command to the file.  The application
+
+
+is performed by the goal apply(Command,File,File1), where File1 is the new
+
+
+version of the file after the command has been applied. The editing continues by
+
+
+calling edit/1 on File1. The third edit/2 clause handles the case when no com-
+
+
+mand is applicable, indicated by the failure of apply. In this case, an appropr*
+ *iate
+
+
+message is printed on the screen and the editing continues. The editing session*
+ * is
+
+
+terminated by the command exit, which is separately tested for by edit/2.
+
+
+
+    Let us look at a couple of apply clauses, to give the flavor of how commands
+
+
+are specified. Particularly simple are commands for moving the cursor. The clau*
+ *se
+
+
+
+       apply(up,file([XjXs],Ys),file(Xs,[XjYs])).
+
+
+
+says that we move the cursor up by moving the line immediately above the cursor
+
+
+to be immediately below the cursor. The command fails if the cursor is at the t*
+ *op
+
+
+of the file. The command for moving the cursor down, also shown in Program 12.5,
+
+
+is analogous to moving the cursor up.
+
+
+
+
+12.4                                         Interactive Programs199
+
+
+
+       edit   edit(file([ ],[ ])).
+
+
+       edit(File)  
+
+
+           write_prompt, read(Command), edit(File,Command).
+
+
+       edit(File,exit)   !.
+
+
+       edit(File,Command)  
+
+
+           apply(Command,File,File1), !, edit(File1).
+
+
+       edit(File,Command)  
+
+
+           writeln([Command,` is not applicable']), !, edit(File).
+
+
+       apply(up,file([XjXs],Ys),file(Xs,[XjYs])).
+
+
+       apply(up(N),file(Xs,Ys),file(Xs1,Ys1))  
+
+
+           N > 0, up(N,Xs,Ys,Xs1,Ys1).
+
+
+       apply(down,file(Xs,[YjYs]),file([YjXs],Ys)).
+
+
+       apply(insert(Line),file(Xs,Ys),file(Xs,[LinejYs])).
+
+
+       apply(delete,file(Xs,[YjYs]),file(Xs,Ys)).
+
+
+       apply(print,file([XjXs],Ys),file([XjXs],Ys))  
+
+
+           write(X), nl.
+
+
+       apply(print(),file(Xs,Ys),file(Xs,Ys))  
+
+
+           reverse(Xs,Xs1), write_file(Xs1), write_file(Ys).
+
+
+       up(N,[ ],Ys,[ ],Ys).
+
+
+       up(0,Xs,Ys,Xs,Ys).
+
+
+       up(N,[XjXs],Ys,Xs1,Ys1)  
+
+
+           N > 0, N1 is N1, up(N1,Xs,[XjYs],Xs1,Ys1).
+
+
+       write_file([XjXs])  
+
+
+           write(X), nl, write_file(Xs).
+
+
+       write_file([ ]).
+
+
+       write_prompt   write(`AE'), nl.
+
+
+
+       Program 12.5: A line editor
+
+
+
+
+200   Extra-Logical Predicates                                 12.4
+
+
+
+    Moving the cursor up N lines rather than a single line involves using an au*
+ *x-
+
+
+iliary predicate up/5 to change the cursor position in the file. Issues of robu*
+ *stness
+
+
+surface in its definition. Note that apply tests that the argument to up is sen*
+ *si-
+
+
+ble, i.e., a positive number of lines, before up is invoked. The predicate up i*
+ *tself
+
+
+handles the case when the number of lines to be moved up is greater than the
+
+
+number of lines in the file. The command succeeds with the cursor placed at the
+
+
+top of the file. Extending the editor program to move a cursor down N lines is
+
+
+posed as an exercise at the end of this section.
+
+
+
+    Other commands given in Program 12.5 insert and delete lines. The com-
+
+
+mand for insert, insert(Line), contains an argument, namely the line to be
+
+
+inserted. The command for delete is straightforward. It fails if the cursor is *
+ *at
+
+
+the bottom of the screen. Also in the editor are commands for printing the line
+
+
+above the cursor, print, and for printing the whole file, print().
+
+
+
+    The editor commands are mutually exclusive. Only one apply clause is ap-
+
+
+plicable for any command. As soon as an apply goal succeeds, there are no other
+
+
+possible alternatives. Prolog implementations that support indexing would find
+
+
+the correct clause immediately and leave no choice points. Imposing determin-
+
+
+ism via exploitation of indexing is a little different than adding explicit cut*
+ *s, as
+
+
+described in Section 11.1, where the cuts would have been applied directly to
+
+
+the apply facts themselves. The difference between the two approaches is merely
+
+
+cosmetic.  Note that a cut is still needed in the second edit clause to indicate
+
+
+that successful execution of a command and reporting of an error message are
+
+
+mutually exclusive.
+
+
+
+
+12.4                                         Interactive Programs201
+
+
+
+    A possible extension to the editor is to allow each command to handle its
+
+
+own error message.  For example, suppose you wanted a more helpful message
+
+
+than \Command not applicable" when trying to move up when at the top of the
+
+
+file. This would be handled by extending the apply clause for moving up in the
+
+
+file.
+
+
+    We shift from editors to shells. A shell accepts commands from a terminal
+
+
+and executes them. We illustrate with an example of a shell for answering Prolog
+
+
+goals. This is presented as Program 12.6.
+
+
+    The shell is invoked by shell. The code is similar to the editor. The shell
+
+
+gives a prompt, using shell_prompt, then reads a goal and tries to solve it usi*
+ *ng
+
+
+shell(Goal). A distinction is made between solving ground goals, where a yes/no
+
+
+answer is given, and solving nonground goals, where the answer is the appropri-
+
+
+ately instantiated goal. These two cases are handled by shell_solve_ground and
+
+
+shell_solve, respectively. The shell is terminated by the goal exit.
+
+
+    Both shell_solve_ground and shell_solve use the meta-variable facility
+
+
+to call the goal to be solved. The success or failure of the goal determines the
+
+
+output message. These predicates are the simplest examples of meta-interpreters,
+
+
+a subject discussed in Chapter 17.
+
+
+    The shell_solve procedure shows an interesting solve-write-fail combina-
+
+
+tion, which is useful to elicit all solutions to a goal by forced backtracking.*
+ * Since
+
+
+we do not wish the shell to fail, an alternative clause is provided, which succ*
+ *eeds
+
+
+when all solutions to the goal are exhausted. It is interesting to note that it*
+ * is not
+
+
+possible to collect all solutions to goals in a straightforward way without usi*
+ *ng
+
+
+
+
+202   Extra-Logical Predicates                                 12.4
+
+       shell  
+
+
+           shell_prompt, read(Goal), shell(Goal).
+
+
+       shell(exit)   !.
+
+
+       shell(Goal)  
+
+
+           ground(Goal), !, shell_solve_ground(Goal), shell.
+
+
+       shell(Goal)  
+
+
+           shell_solve(Goal), shell.
+
+
+       shell_solve(Goal)  
+
+
+           Goal, write(Goal), nl, fail.
+
+
+       shell_solve(Goal)  
+
+
+           write(`No (more) solutions'), nl.
+
+
+       shell_solve_ground(Goal)  
+
+
+           Goal, !, write(`Yes'), nl.
+
+
+       shell_solve_ground(Goal)  
+
+
+           write(`No'), nl.
+
+
+       shell_prompt   write(`Next command?  ').
+
+
+
+       Program 12.6: An interactive shell
+
+
+
+some sort of side effect. This is explained further in Chapter 16 on second-ord*
+ *er
+
+
+programming.
+
+
+    The shell can be used as a basis for a logging facility to keep a record of
+
+
+a session with Prolog. Such a facility is given as Program 12.7. This new shell
+
+
+is invoked by log, which calls the basic interactive predicate shell(Flag) with
+
+
+
+
+12.4                                         Interactive Programs203
+
+
+
+       log   shell(log).
+
+
+       shell(Flag)  
+
+
+           shell_prompt, shell_read(Goal,Flag), shell(Goal,Flag).
+
+
+       shell(exit,Flag)  
+
+
+           !, close_logging_file.
+
+
+       shell(nolog,Flag)  
+
+
+           !, shell(nolog).
+
+
+       shell(log,Flag)  
+
+
+           !, shell(log).
+
+
+       shell(Goal,Flag)  
+
+
+           ground(Goal), !, shell_solve_ground(Goal,Flag), shell(Flag).
+
+
+       shell(Goal,Flag)  
+
+
+           shell_solve(Goal,Flag), shell(Flag).
+
+
+       shell_solve(Goal,Flag)  
+
+
+           Goal, shell_write(Goal,Flag), nl, fail.
+
+
+       shell_solve(Goal,Flag)  
+
+
+           shell_write(`No (more) solutions',Flag), nl.
+
+
+       shell_solve_ground(Goal,Flag)  
+
+
+           Goal, !, shell_write(`Yes',Flag), nl.
+
+
+       shell_solve_ground(Goal,Flag)  
+
+
+           shell_write(`No',Flag), nl.
+
+
+       shell_prompt   write(`Next command?  ').
+
+
+       shell_read(X,log)   read(X),
+
+
+           file_write([`Next command?  ',X],`prolog.log').
+
+
+       shell_read(X,nolog)   read(X).
+
+
+       shell_write(X,nolog)   write(X).
+
+
+       shell_write(X,log)   write(X), file_write(X,`prolog.log').
+
+
+       file_write(X,File)   write_term(File,Term,[ ]).
+
+
+       close_logging_file   close(`prolog.log').
+
+
+
+       Program 12.7: Logging a session
+
+
+
+
+204   Extra-Logical Predicates                                 12.4
+
+
+
+Flag initialized to log.  The flag takes one of two values, log or nolog, and
+
+
+indicates whether the output is currently being logged.
+
+
+    The logging facility is an extension of Program 12.6. The principal predica*
+ *tes
+
+
+take an extra argument, which indicates the current state of logging. Two extra
+
+
+commands are added, log and nolog, to turn logging on and off.
+
+
+    The flag is used by the predicates concerned with I/O. Each message written
+
+
+on the screen must also be written in the logging file.  Also, each goal read
+
+
+is inserted in the log to increase the log's readability.  Thus calls to read in
+
+
+Program 12.6 are replaced by a call to shell_read, and calls to write replaced
+
+
+by calls to shell_write.
+
+
+    The definition of shell_write specifies what must be done:
+
+
+
+    shell_write(X,nolog)   write(X).
+
+
+    shell_write(X,log)   write(X), file_write([X],`prolog.log').
+
+
+
+If the flag is currently nolog, the output is written normally to the screen.  *
+ *If
+
+
+the flag is log, an extra copy is written to the file prolog.log. The predicate
+
+
+file_write(X,File) writes the line X to file File.
+
+
+    The  remaining  two  predicates  in  Program  12.7,  file_write/2  and
+
+
+close_logging_file, involve interacting with the underlying file system.  Ap-
+
+
+propriate commands from Standard Prolog are given, and the reader is referred
+
+
+to a Prolog manual for more information.
+
+
+
+Exercises for Section 12.4
+
+
+
+
+12.5                                         Failure-Driven Loops205
+
+
+
+(i) Extend Program 12.5, the editor, to handle the following commands:
+
+
+    (a) Move the cursor down N lines,
+
+
+    (b) Delete N lines,
+
+
+    (c) Move to a line containing a given term,
+
+
+    (d) Replace one term by another,
+
+
+    (e) Any command of your choice.
+
+
+(ii)Modify the logging facility, Program 12.7, so that the user can specify the
+
+
+    destination file of the logged output.
+
+
+
+12.5   Failure-Driven Loops
+
+
+
+    The interactive programs in the previous section were all based on tail re-
+
+
+cursive loops.  There is an alternative way of writing loops in Prolog that are
+
+
+analogous to repeat loops in conventional languages. These loops are driven by
+
+
+failure and are called failure-driven loops. These loops are useful only when u*
+ *sed
+
+
+in conjunction with extra-logical predicates that cause side effects. Their beh*
+ *avior
+
+
+can be understood only from an operational point of view.
+
+
+    A simple example of a failure-driven loop is a query Goal, write(Goal),
+
+
+nl, fail?, which causes all solutions to a goal to be written on the screen. Su*
+ *ch
+
+
+a loop is used in the shells of Programs 12.6 and 12.7.
+
+
+    A failure-driven loop can be used to define the system predicate tab(N) for
+
+
+printing N blanks on the screen. It uses Program 8.5 for between:
+
+
+       tab(N)   between(1,N,I), put_char(` '), fail.
+
+
+
+
+206   Extra-Logical Predicates                                 12.5
+
+
+
+    Each of the interactive programs in the previous section can be rewritten
+
+
+using a failure-driven loop. The new version of the basic interactive loop is g*
+ *iven
+
+
+as Program 12.8. It is based on a nonterminating system predicate repeat, which
+
+
+can be defined by the minimal recursive procedure in Program 12.8. Unlike the
+
+
+Program 12.4 goal, the goal echo(X) fails unless the termination condition is
+
+
+satisfied.  The failure causes backtracking to the repeat goal, which succeeds,
+
+
+and the next term is read and echoed. The cut in the definition of echo ensures
+
+
+that the repeat loop is not reentered later.
+
+
+       echo   repeat, read(X), echo(X), !.
+
+
+       echo(X)   last_input(X), !.
+
+
+       echo(X)   write(X), nl, fail.
+
+
+       repeat.
+
+
+       repeat   repeat.
+
+
+
+       Program 12.8: Basic interactive repeat loop
+
+
+
+    Failure-driven loops that use repeat are called repeat loops and are the an*
+ *a-
+
+
+logue of repeat loops from conventional languages.  Repeat loops are useful in
+
+
+Prolog for interacting with the outside system to repeatedly read and/or write.
+
+
+Repeat loops require a predicate that is guaranteed to fail, causing the iterat*
+ *ion
+
+
+to continue, unless the loop should be terminated.  The goal echo(X) in Pro-
+
+
+gram 12.8 serves that function, only succeeding when the last input is reached.*
+ * A
+
+
+useful heuristic for building repeat loops is that there should be a cut in the*
+ * body
+
+
+of the clause with the repeat goal, which prevents a nonterminating computation
+
+
+
+
+12.5                                         Failure-Driven Loops207
+
+
+
+were the loop to be reentered via backtracking.
+
+
+    We use a repeat loop to define the system predicate consult(File) for read-
+
+
+ing in a file of clauses and asserting them. Program 12.9 contains its definiti*
+ *on.
+
+
+The system predicates open/3 and close/1 are used for opening and closing an
+
+
+input file, respectively.
+
+
+consult(File)  
+
+
+    The clauses of the program in the file File are read and asserted.
+
+
+consult(File)   open(File,read,DD), consult_loop(DD), close(DD).
+
+
+consult_loop(DD)   repeat, read(Clause), process(Clause,DD), !.
+
+
+process(Clause,DD)   at_end_of_stream(DD).
+
+
+process(Clause,DD)   assertz(Clause), fail.
+
+
+
+Program 12.9: Consulting a file
+
+
+
+    Tail recursive loops are preferable to repeat loops because the latter have*
+ * no
+
+
+logical meaning. In practice, repeat loops are often necessary to run large com*
+ *pu-
+
+
+tations, especially on Prolog implementations without tail recursion optimizati*
+ *on
+
+
+or garbage collection.  Explicit failure typically initiates some implementatio*
+ *n-
+
+
+dependent reclamation of space.
+
+
+
+Exercise for Section 12.5
+
+
+
+(i) Write your own version of the builtin predicate abolish(F,N) that retracts
+
+
+    all the clauses for the procedure F of arity N.
+
+
+
+
+208   Extra-Logical Predicates                                 12.6
+
+
+
+12.6   Background
+
+
+
+    I/O has never really blended well with the rest of the language of Prolog. *
+ *Its
+
+
+standard implementation, with side effects, relies solely on the procedural sem*
+ *an-
+
+
+tics of Prolog and has no connection to the underlying logic programming model.
+
+
+For example, if an output is issued on a failing branch of a computation, it is*
+ * not
+
+
+undone upon backtracking. If an input term is read, it is lost on backtracking,*
+ * as
+
+
+the input stream is not backtrackable.
+
+
+
+    Concurrent logic languages attempt to remedy the problem and to integrate
+
+
+I/O better with the logic programming model by identifying the I/O streams of
+
+
+devices with the logical streams in the language (Shapiro, 1986). Perpetual rec*
+ *ur-
+
+
+sive processes can produce or consume incrementally those potentially unbounded
+
+
+streams.
+
+
+
+    Self-modifying programs are a bygone concept in computer science. Modern
+
+
+programming languages preclude this ability, and good assembly language practice
+
+
+also avoids such programming tricks. It is ironic that a programming language
+
+
+attempting to open a new era in computer programming opens the front door to
+
+
+such arcane techniques, using the predicates assert and retract.
+
+
+
+    These program manipulation predicates of Prolog were devised initially as a
+
+
+low-level mechanism for loading and reloading programs, implemented in DEC-
+
+
+10 Prolog by the consult and reconsult predicates.  However, like any other
+
+
+feature of a language, they ended up being used for tasks that, we believe, were
+
+
+not intended by their original designers.
+
+
+
+
+12.6                                                Background 209
+
+
+
+    Reluctantly, we must acknowledge that assert and retract are part of Pro-
+
+
+log, and clarify the anomalies. Attempts have been made in this direction. Inco*
+ *n-
+
+
+sistencies between different Prolog implementations are discussed in Moss (1986*
+ *).
+
+
+The best way of handling retracts seems to be the logical update view presented
+
+
+in Lindholm and O'Keefe (1987).
+
+
+    The discussion of static and dynamic predicates comes from the Standard
+
+
+Prolog draft (Scowen, 1991).
+
+
+    The program for the Towers of Hanoi was shown to us by Shmuel Safra.
+
+
+Memo-functions in the context of artificial intelligence were proposed by Donald
+
+
+Michie (1968).
+
+
+    The line editor is originally due to Warren (1982b).

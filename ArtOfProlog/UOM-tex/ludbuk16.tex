@@ -1,0 +1,742 @@
+%%%%% Leonudi Book, Chapter 16, pp 263-279 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 15
+\numberfirst
+\startpage{263}
+
+\chapa{Second-Order Programming}
+Chapters 14 and 15 demonstrate Prolog programming techniques based
+directly on logic programming. This chapter, in contrast, shows programming
+techniques that are missing from the basic logic programming model but
+can nonetheless be incorporated into Prolog by relying on language
+features outside of first-order logic. These techniques are called
+second-order, since they talk about sets and their properties rather
+than about individuals.\par
+The first section introduces predicates that produce sets as solutions.
+Computing with predicates that produce sets is particularly powerful when
+combined with programming techniques presented in earlier chapters. The
+second section gives some applications. The third section looks at lambda
+expressions and predicate variables, which allow functions and relations
+to be treated as ``first-class" data objects.\par
+\sect{All-Solutions Predicates}
+Solving a Prolog query with a program entails finding an instance of the
+query that is implied by the program. What is involved in finding {\it
+all\/} instances of a query that are implied by a program? Declaratively,
+such a query lies outside the logic programming model presented in
+Chapter~1. It is a second-order question, since it asks for the set of 
+elements with a certain property. Operationally, it is also outside the
+pure Prolog computation model. In pure Prolog, all information about a
+certain branch of the computation is lost on backtracking. This prevents
+a simple way of using pure Prolog to find the set of all solutions to a
+query, or even to find how many solutions there are to a given query.\par
+This section discusses predicates that return all instances of a query.
+We call such predicates {\it all-solutions predicates\/}. Experience has
+shown that all-solutions predicates are very useful for
+programming.\par
+A basic all-solutions predicate is {\tt findall(Term,Goal,Bag)}. The
+predicate is true if and only if {\tt Bag} unifies with the list of
+values to which a variable {\tt X} not occurring in {\tt Term} or {\tt
+Goal} would be bound by successive resatisfaction of {\tt call(Goal),
+X=Term?} after systematic replacement of all variables in {\tt X} by
+new variables.\par 
+Procedurally, {\tt findall(Term,Goal,Bag)} creates an empty list {\tt L},
+renames {\tt Goal} to a goal {\tt G}, and executes {\tt G}. If {\tt G}
+succeeds, a copy of {\tt Term} is appended to {\tt L}, and {\tt G} is
+reexecuted. For each successful reexecution, a copy of {\tt Term} is
+appended to the list. Eventually, when {\tt G} fails, {\tt Bag} is unified
+with {\tt L}. The success or failure of {\tt findall} depends on the
+success or failure of the unification.\par
+We demonstrate the use of all-solutions predicates using part of the
+biblical database of Program~\Probibfamdat, repeated here as
+Program~\Prosamdat. 
+\midinsert\vskip -0.2truecm
+$$\vcenter{\halign{\lft{\tt #}\qquad&\lft{\tt #}\cr
+father(terach,abraham).&father(haran,lot).\cr
+father(terach,nachor).&father(haran,milcah).\cr
+father(terach,haran).&father(haran,yiscah).\cr
+father(abraham,isaac).&\cr}}$$
+$$\vcenter{\halign{\lft{\tt #}\qquad&\lft{\tt #}\qquad&\lft{\tt #}\cr
+male(abraham).&male(haran).&female(yiscah).\cr
+male(isaac).&male(nachor).&female(milcah).\cr
+male(lot).&&\cr}}$$\medskip
+\ctrline{{\bf Program \Prosamdat}:~~Sample data}
+\endinsert\par
+Consider the task of finding all the children of a particular father. It
+is natural to envisage a predicate {\tt children(X,Kids)}, where {\tt
+Kids} is a list of children of {\tt X}. It is immediate to define using
+{\tt findall}, namely,\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+children(X,Kids) $\lar$ findall(Kid,father(X,Kid),Kids).\cr}\medno
+The query {\tt children(terach,Xs)?} with respect to Program
+\Prosamdat\ produces the answer {\tt Xs = \(abraham,nachor,haran\)}.
+\par
+The query {\tt findall(F,father(F,K),Fs)?} with respect to Program
+\Prosamdat\ produces the answer {\tt F =
+\(terach,haran,terach,haran,terach,haran,abraham\)}. It would be useful
+to conceive of this query as asking who is a father and to receive as
+solution {\tt \(terach,haran,abraham\)}. This answer can be obtained by
+removing duplicate solutions.\par
+Another interpretation can be made of the query {\tt
+findall(F,father(F,K),}\linebreak
+{\tt Fs)?}. Instead of having a single solution, all fathers, there could
+be a solution for each child {\tt K}. Thus one solution would be {\tt
+K=abraham, Fs = \(terach\)}; another would be {\tt K=lot, Fs = \(haran\)};
+and so on.\par 
+Standard Prolog provides two predicates that distinguish between these
+two interpretations. The predicate {\tt bagof(Term,Goal,Bag)} is like
+{\tt findall} except that alternative solutions are found for the
+variables in {\tt Goal}. The predicate {\tt setof(Term,Goal,Bag)} is a
+refinement of {\tt bagof} where the solutions in {\tt Bag} are sorted
+corresponding to a standard order of terms and duplicates removed. If we 
+want to emphasize that the solution should be conceived  of as a set, we 
+refer to all-solutions predicates as {\it set predicates\/}.\par
+Another all-solutions predicate checks whether all solutions to a query
+satisfy a certain condition. Program~\Proappsetpre\ defines a predicate
+{\tt for\_all(Goal,Condition)}, which succeeds when {\tt Condition} is true
+for all values of {\tt Goal}. It uses the meta-variable facility.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it for\_all\/}({\it Goal,Condition\/})\cr
+\qi {\rm For all solutions of} {\it Goal\/}{\rm ,} {\it Condition\/} 
+{\rm is true.}\cr
+\noalign{\medskip}
+for\_all(Goal,Condition) $\lar$\cr
+\qi findall(Condition,Goal,Cases), check(Cases).\cr
+\noalign{\vskip 5pt}
+check(\(Case$\mid$Cases\)) $\lar$ Case, check(Cases).\cr
+check(\(~\)).\cr
+\noalign{\bigskip}
+{\bf Program \Proappsetpre}{\rm :~~Applying set predicates}\cr}
+\endin\par
+The query {\tt for\_all(father(X,C),male(C))?} checks which fathers have
+only male children. It produces two answers: {\tt X=terach} and {\tt
+X=abraham}.\par
+A simpler, more efficient, but less general version of {\tt for\_all} can
+be written directly using a combination of nondeterminism and negation by
+failure. The definition is \medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+for\_all(Goal,Condition) $\lar$ not (Goal, not Condition).\cr}\medno
+It successfully answers a query such as {\tt
+for\_all(father(terach,X),male(X))?} but fails to give a solution to the
+query {\tt for\_all(father(X,C),male(C))?}.\par
+We conclude this section by showing how to implement a simple variant of
+{\tt findall}. The discussion serves a dual purpose. It illustrates the
+style of implementation for all-solutions predicates and gives a utility
+that will be used in the next section. The predicate {\tt
+find\_all\_dl(X,Goal,Instances)} is true if {\tt Instances} is the bag
+(multiset) of instances of {\tt X}, represented as a difference-list,
+where {\tt Goal} is true.\par
+The definition of {\tt find\_all\_dl} is given as Program~\Proimpsetpre.
+The program can only be understood operationally. There are two stages to
+the procedure, as specified by the two clauses for {\tt find\_all\_dl}.
+The explicit failure in the first clause guarantees that the second will
+be executed. The first stage finds all solutions to {\tt Goal} using a
+failure-driven loop, asserting the associated {\tt X} as it proceeds. The
+second stage retrieves the solutions.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it find\_all\_dl\/}({\it X,Goal,Instances\/}) $\lar$ \cr
+\qi {\it Instances\/} {\rm is the multiset of}\cr
+\qi {\rm instances of} {\it X\/} {\rm for which} {\it Goal\/} {\rm is
+true. The multiplicity}\cr
+\qi {\rm of an element is the number of different ways} {\it Goal\/} {\rm
+can be}\cr
+\qi {\rm proved with it as an instance of} {\it X\/}{\rm .}\cr
+\noalign{\medskip}
+find\_all\_dl(X,Goal,Xs) $\lar$\cr
+\qi asserta(`\$instance'(`\$mark')), Goal,\cr
+\qi asserta(`\$instance'(X)), fail.\cr
+find\_all\_dl(X,Goal,Xs\\Ys) $\lar$\cr
+\qi retract(`\$instance'(X)), reap(X,Xs\\Ys), !.\cr
+\noalign{\vskip 5pt}
+reap(X,Xs\\Ys) $\lar$\cr
+\qi X $\ne$ `\$mark', retract(`\$instance'(X1)), !,\cr
+\qi reap(X1,Xs\\[X$\mid$Ys]).\cr
+reap(`\$mark',Xs\\Xs).\cr}\bigskip
+\halign{\hskip 40pt\lft{#}~~&\lft{#}\cr
+{\bf Program \Proimpsetpre}:&Implementing an all-solutions predicate
+using\cr
+& difference-lists, {\tt assert}, and {\tt retract}\cr}
+\endin\par
+Asserting {\tt \$mark} is essential for nested all-solutions
+predicates to work correctly, lest one set should ``steal" solutions
+produced by the other all-solutions predicate.\medno
+{\bf Exercise for Section 16.1}\vskip 5pt\par
+\offset{20pt}{(i)} Define the predicate {\tt intersect(Xs,Ys,Zs)} using
+an all-solutions predicate to compute the intersection {\tt Zs} of two
+lists {\tt Xs} and {\tt Ys}. What should happen if the two lists do not
+intersect? Compare the code with the recursive definition of {\it
+intersect\/}.\par
+\sect{Applications of Set Predicates}
+Set predicates are a significant addition to Prolog. Clean solutions are
+obtained to many problems by using set predicates, especially when other
+programming techniques, discussed in previous chapters, are incorporated.
+This section presents three example programs: traversing a graph
+breadth-first, using the Lee algorithm for finding routes in VLSI
+circuits, and producing a keyword in context (KWIC) index.\par
+Section~14.2 presents three programs, \Proconfindag, \Profinpatdep, and
+\Procongra, for traversing a graph depth-first. We discuss here the
+equivalent programs for traversing a graph breadth-first.\par
+The basic relation is {\tt connected(X,Y)}, which is true if {\tt X} and
+{\tt Y} are connected. Program~\Protesconbre\ defines the relation.
+Breadth-first search is implemented by keeping a queue of nodes waiting
+to be expanded. The {\tt connected} clause accordingly calls {\tt
+connected\_bfs(Queue,Y)}, which is true if {\tt Y} is in the connected
+component of the graph represented by the nodes in the {\tt Queue}.
+\topin
+\halign{\lft{\tt #}\cr
+{\it connected\/}({\it X,Y\/}) $\lar$\cr
+\qi {\rm Node} {\it X\/} {\rm is connected to node} {\it Y\/} {\rm in the
+DAG defined by}\cr
+\qi {\it edge/2\/} {\rm facts.}\cr
+\noalign{\medskip}
+connected(X,Y) $\lar$ enqueue(X,Q\\Q,Q1), connected\_bfs(Q1,Y).\cr
+\noalign{\vskip 5pt}
+connected\_bfs(Q,Y) $\lar$ empty(Q), !, fail.\cr
+connected\_bfs(Q,Y) $\lar$ dequeue(X,Q,Q1), X=Y.\cr
+connected\_bfs(Q,Y) $\lar$\cr
+\qi dequeue(X,Q,Q1), enqueue\_edges(X,Q1,Q2), connected\_bfs(Q2,Y).\cr
+\noalign{\vskip 5pt}
+enqueue\_edges(X,Xs\\Ys,Xs\\Zs) $\lar$ find\_all\_dl(N,edge(X,N),Ys\\Zs),
+!.\cr
+\noalign{\vskip 5pt}
+empty(\(~\)\\\(~\)).\cr
+\noalign{\vskip 5pt}
+enqueue/3, dequeue/3 $\lar$ {\rm See Program \Proquepro}.\cr
+\noalign{\vskip 5pt}
+find\_all\_dl(Term,Goal,DList) $\lar$ {\rm See Program
+\Proimpsetpre}.\cr}
+\halign{\hskip 40pt\lft{#}\cr
+\noalign{\medskip}
+{\it Data}\cr
+\noalign{\medskip}}
+\halign{\lft{\tt #}\qquad&\lft{\tt #}\qquad&\lft{\tt #}\qquad&\lft{\tt #}
+\qquad&\lft{\tt #}\cr
+edge(a,b).&edge(a,c).&edge(a,d).&edge(a,e).&edge(f,i).\cr
+edge(c,f).&edge(c,g).&edge(f,h).&edge(e,k).&edge(d,j).\cr
+\noalign{\vskip 5pt}
+edge(x,y).&edge(y,z).&edge(z,x).&edge(y,u).&edge(z,v).\cr}\bigskip
+\halign{\hskip 40pt\lft{#}\cr
+{\bf Program \Protesconbre}:~~Testing connectivity breadth-first in a
+DAG\cr}
+\endin\par
+Each call to {\tt connected\_bfs} removes the current node from the head
+of the queue, finds the edges connected to it, and adds them to
+the tail of the queue. The queue is represented as a difference-list, and
+the all-solutions predicate {\tt find\_all\_dl} is used. The program
+fails when the queue is empty. Because difference-lists are an incomplete
+data structure, the test that the queue is empty must be made
+explicitly. Otherwise the program would not terminate.\par
+Consider the {\tt edge\/} clauses in Program~\Protesconbre, representing
+the left-hand graph in Figure~\Figdirgra. Using them, the query {\tt
+connected(a,X)?} gives the values {\tt a}, {\tt b}, {\tt c}, {\tt d},
+{\tt e}, {\tt f}, {\tt g}, {\tt j}, {\tt k}, {\tt h}, {\tt i} for {\tt X}
+on backtracking, which is a breadth-first traversal of the graph.\par
+Like Program~\Proconfindag, Program~\Protesconbre\ correctly traverses a
+finite tree or a directed acyclic graph (DAG). If there are cycles in the
+graph, the program will not terminate. Program~\Protesconfir\ is an
+improvement over Program~\Protesconbre\ in which a list of the nodes visited
+in the graph is kept. Instead of adding all the successor nodes at the
+end of the queue, each is checked to see if it has been visited before.
+This is performed by the predicate {\tt filter} in Program~\Protesconfir.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it connected\/}({\it X,Y\/}) $\lar$\cr
+\qi {\rm Node} {\it X\/} {\rm is connected to node} {\it Y\/} {\rm in the
+graph defined by}\cr
+\qi {\it edge/2\/} {\rm facts.}\cr
+\noalign{\medskip}
+connected(X,Y) $\lar$\cr
+\qi enqueue(X,Q\\Q,Q1), connected\_bfs(Q1,Y,\(X\)).\cr
+\noalign{\vskip 5pt}
+connected\_bfs(Q,Y,Visited) $\lar$ empty(Q), !, fail.\cr
+connected\_bfs(Q,Y,Visited) $\lar$ dequeue(X,Q,Q1), X=Y.\cr
+connected\_bfs(Q,Y,Visited) $\lar$\cr
+\qi dequeue(X,Q,Q1),\cr
+\qi findall(N,edge(X,N),Edges),\cr
+\qi filter(Edges,Visited,Visited1,Q1,Q2),\cr
+\qi connected\_bfs(Q2,Y,Visited1).\cr
+\noalign{\vskip 5pt}
+filter(\(N$\mid$Ns\),Visited,Visited1,Q,Q1) $\lar$\cr
+\qi member(N,Visited), !, filter(Ns,Visited,Visited1,Q,Q1).\cr
+filter(\(N$\mid$Ns\),Visited,Visited1,Q,Q2) $\lar$\cr
+\qi not member(N,Visited), !, enqueue(N,Q,Q1),\cr
+\qi filter(Ns,\(N$\mid$Visited\),Visited1,Q1,Q2).\cr
+filter(\(~\),Visited,Visited,Q,Q).\cr
+\noalign{\vskip 5pt}
+empty(\(~\)\\\(~\)).\cr
+\noalign{\vskip 5pt}
+enqueue/3, dequeue/3 $\lar$ {\rm See Program \Proquepro}.\cr
+\noalign{\bigskip}
+{\bf Program \Protesconfir}{\rm :~~Testing connectivity breadth-first in
+a graph}\cr}
+\endin\par
+Program~\Protesconfir\ in fact is more powerful than its depth-first
+equivalent, Program~\Procongra. Not only will it correctly traverse any
+finite graph but it will also correctly traverse infinite graphs in which every
+vertex has finite degree as well. It is useful to summarize what
+extensions to pure Prolog have been necessary to increase the performance
+in searching graphs. Pure Prolog correctly searches finite trees and
+DAGs. Adding negation allows correct searching of finite graphs with
+cycles, while set predicates are necessary for infinite graphs. This is
+shown in Figure~\Figpowprotas.
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\lft{#}\cr
+(1) Finite trees and DAGs\cr
+\qi Pure Prolog\cr
+(2) Finite graphs\cr
+\qi Pure Prolog + negation\cr
+(3) Infinite graphs\cr
+\qi Pure Prolog + second order + negation\cr}}$$\medskip
+\ctrline{{\bf Figure \Figpowprotas}:~~Power of Prolog for various
+searching tasks}
+\endin\par
+Calculating the path between two nodes is a little more awkward than for
+depth-first search. It is necessary to keep with each node in the queue a
+list of the nodes linking it to the original node. The technique is
+demonstrated in Program~\Probesfirfra.\par
+The next example combines the power of nondeterministic programming with
+the use of second-order programming. It is a program for calculating a
+minimal cost route between two points in a circuit using the Lee
+algorithm.\par
+The problem is formulated as follows. Given a grid that may have
+obstacles, find a shortest path between two specified points. Figure
+\Figprleevlsi\ shows a grid with obstacles. The heavy solid line
+represents a shortest path between the two points {\it A\/} and {\it
+B\/}. The shaded rectangles represent the obstacles.
+\topin\vskip 11.5truecm\par
+\ctrline{{\bf Figure \Figprleevlsi}:~~The problem of Lee routing for
+VLSI circuits}
+\endin\par
+We first formulate the problem in a suitable form for programming. The
+VLSI circuit is modeled by a grid of points, conveniently assumed to be
+the upper quadrant of the Cartesian plane. A route is a path between two
+points in the grid, along horizontal and vertical lines only, subject to
+the constraints of remaining in the grid and not passing through any
+obstacles.\par
+Points in the plane are represented by their Cartesian coordinates and
+denoted  {\it X\/}--{\it Y\/}. In Figure~\Figprleevlsi, {\it A\/} is
+1--1 and {\it B\/} is 5--5. This representation is chosen for
+readability and utilizes the definition of -- as an infix binary
+operator. Paths are calculated by the program as 
+a list of points from {\it B\/} to {\it A\/}, including both endpoints.
+In Figure~\Figprleevlsi\ the route calculated is
+\(5--5,5--4,5--3,5--2,4--2,3--2,2--2,1--2,1--1\), and is marked by 
+the heavy solid line.\par
+The top-level relation computed by the program is {\tt
+lee\_route(A,B,Obstac-}\linebreak
+{\tt les,Path)}, where {\tt Path} is a route (of minimal distance) from
+point {\tt A} to point {\tt B} in the circuit. {\tt Obstacles} are the
+obstacles in the grid. The program has two stages. First, successive 
+waves of neighboring grid points are generated, starting from the
+initial point, until the final point is reached. Second, the path is
+extracted from the accumulated waves. Let us examine the various
+components of Program~\Proleerou, the overall program for Lee routing.
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it lee\_route\/}({\it Source,Destination,Obstacles,Path\/}) $\lar$\cr
+\qi {\it Path\/} {\rm is a minimal length path from} {\it Source\/} {\rm
+to}\cr
+\qi {\it Destination\/} {\rm that does not cross} {\it
+Obstacles\/}{\rm .}\cr
+\noalign{\medskip}
+lee\_route(A,B,Obstacles,Path) $\lar$\cr
+\qi waves(B,[[A],[~]],Obstacles,Waves),\cr
+\qi path(A,B,Waves,Path).\cr
+\noalign{\medskip}
+{\it waves\/}({\it Destination,WavesSoFar,Obstacles,Waves\/}) $\lar$\cr
+\qi {\it Waves\/} {\rm is a list of waves including} {\it
+WavesSoFar\/}\cr
+\qi {\rm (except, perhaps, its last wave) that leads to} {\it
+Destination\/}\cr
+\qi {\rm without crossing} {\it Obstacles\/}{\rm .}\cr
+\noalign{\medskip}
+waves(B,[Wave$\mid$Waves],Obstacles,Waves) $\lar$ member(B,Wave), !.\cr
+waves(B,[Wave,LastWave$\mid$LastWaves],Obstacles,Waves) $\lar$\cr
+\qi next\_wave(Wave,LastWave,Obstacles,NextWave),\cr
+\qi waves(B,[NextWave,Wave,LastWave$\mid$LastWaves],Obstacles,Waves).\cr
+\noalign{\medskip}
+{\it next\_wave\/}({\it Wave,LastWave,Obstacles,NextWave\/}) $\lar$\cr
+\qi {\it NextWave\/} {\rm is the set of admissible points from} {\it
+Wave\/}{\rm ,}\cr
+\qi {\rm that is, excluding points from} {\it LastWave\/}{\rm ,}\cr
+\qi {\it Wave\/} {\rm and points under} {\it Obstacles\/}{\rm .}\cr
+\noalign{\medskip}
+next\_wave(Wave,LastWave,Obstacles,NextWave) $\lar$\cr
+\qi findall(X,admissible(X,Wave,LastWave,Obstacles),NextWave).\cr
+\noalign{\vskip 5pt}
+admissible(X,Wave,LastWave,Obstacles) $\lar$\cr
+\qi adjacent(X,Wave,Obstacles),\cr
+\qi not member(X,LastWave),\cr
+\qi not member(X,Wave).\cr
+\noalign{\vskip 5pt}
+adjacent(X,Wave,Obstacles) $\lar$\cr
+\qi member(X1,Wave),\cr
+\qi neighbor(X1,X),\cr
+\qi not obstructed(X,Obstacles).\cr
+\noalign{\vskip 5pt}
+neighbor(X1-Y,X2-Y) $\lar$ next\_to(X1,X2).\cr
+neighbor(X-Y1,X-Y2) $\lar$ next\_to(Y1,Y2).\cr
+\noalign{\vskip 5pt}
+next\_to(X,X1) $\lar$ X1 is X+1.\cr
+next\_to(X,X1) $\lar$ X $>$ 0, X1 is X-1.\cr
+\noalign{\vskip 5pt}
+obstructed(Point,Obstacles) $\lar$\cr
+\qi member(Obstacle,Obstacles), obstructs(Point,Obstacle).\cr
+\noalign{\bigskip}
+{\bf Program \Proleerou}{\rm :~~Lee routing}\cr}\vfill}
+\endin
+\topin
+\halign{\lft{\tt #}\cr
+obstructs(X-Y,obstacle(X-Y1,X2-Y2)) $\lar$ Y1 $\le$ Y, Y $\le$ Y2.\cr
+obstructs(X-Y,obstacle(X1-Y1,X-Y2)) $\lar$ Y1 $\le$ Y, Y $\le$ Y2.\cr
+obstructs(X-Y,obstacle(X1-Y,X2-Y2)) $\lar$ X1 $\le$ X, X $\le$ X2.\cr
+obstructs(X-Y,obstacle(X1-Y1,X2-Y)) $\lar$ X1 $\le$ X, X $\le$ X2.\cr
+\noalign{\medskip}
+{\it path\/}({\it Source,Destination,Waves,Path\/}) $\lar$\cr
+\qi {\it Path\/} {\rm is a path from} {\it Source\/} {\rm to} {\it
+Destination\/} {\rm going through} {\it Waves\/}{\rm .}\cr
+\noalign{\medskip}
+path(A,A,Waves,[A]) $\lar$  !.\cr
+path(A,B,[Wave$\mid$Waves],[B$\mid$Path]) $\lar$\cr
+\qi member(B1,Wave),\cr
+\qi neighbor(B,B1),\cr
+\qi !, path(A,B1,Waves,Path).\cr
+\noalign{\medskip}
+{\it Testing and data}\cr
+\noalign{\medskip}
+test\_lee(Name,Path) $\lar$\cr
+\qi data(Name,A,B,Obstacles), lee\_route(A,B,Obstacles,Path).\cr
+\noalign{\vskip 5pt}
+data(test,1-1,5-5,[obstacle(2-3,4-5),obstacle(6-6,8-8)]).\cr
+\noalign{\bigskip}
+{\bf Program \Proleerou}~~{\rm (Continued)}\cr}
+\endin\par
+Waves are defined inductively. The initial wave is the list {\tt \(A\)}.
+Successive waves are sets of points that neighbor a point in the previous
+wave and that do not already appear in previous waves. They are illustrated
+by the lighter solid lines in Figure~\Figprleevlsi.\par
+Wave generation is performed by {\tt
+waves(B,WavesSoFar,Obstacles,Waves)}. The predicate {\tt waves/4} is true
+if {\tt Waves} is a list of waves to the destination {\tt B} avoiding the
+obstacles represented by {\tt Obstacles} and {\tt WavesSoFar} is an
+accumulator containing the waves generated so far in traveling from the
+source. The predicate terminates when the destination is in the current
+wave. The recursive clause calls {\tt next\_wave/4}, which finds all the
+appropriate grid points constituting the next wave using the
+all-solutions predicate {\tt findall}.\par 
+Obstacles are assumed to be rectangular blocks. They are represented by
+the term {\tt obstacle(L,R)}, where {\tt L} is the coordinates of the
+lower left-hand corner and {\tt R} the coordinates of the upper
+right-hand corner. Exercise~(i) at the end of this section requires
+modifying the program to handle other obstacles.\par
+The predicate {\tt path(A,B,Waves,Path)} finds the path {\tt Path} back
+from {\tt B} to {\tt A} through the {\tt Waves} generated in the process.
+{\tt Path} is built downward, which means the order of the points is from
+{\tt B} to {\tt A}. This order can be changed by using an accumulator in
+{\tt path}.\par
+Program~\Proleerou\ produces no output while computing the Lee route. In
+practice, the user may like to see  the computation in progress. This can
+be easily done by adding appropriate {\tt write} statements to the
+procedures {\tt next\_wave} and {\tt path}.\par
+Our final example in this section concerns the keyword in context
+(KWIC) problem. Again, a simple Prolog program, combining
+nondeterministic and second-order programming, suffices to solve a
+complex task.\par 
+Finding keywords in context involves searching text for all occurrences
+of a set of keywords, extracting the contexts in which they appear. We
+consider here the following variant of the general problem: ``Given a
+list of titles, produce a sorted list of all occurrences of a set of
+keywords in the titles, together with their context."\par
+Sample input to a program is given in Figure~\Figinpoutkey\ together with
+the expected output. The context is described as a rotation of the title
+with the end of the title indicated by $\mid$. In the example, the
+keywords are {\it algorithmic\/}, {\it debugging\/}, {\it logic\/}, {\it
+problem\/}, {\it program\/}, {\it programming\/}, {\it prolog\/}, and {\it
+solving\/}, all the nontrivial words.
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\lft{#}~&\lft{#}\cr
+{\bf Input}:&programming in prolog\cr
+&logic for problem solving\cr
+&logic programming\cr
+&algorithmic program debugging\cr
+\noalign{\vskip 5pt}
+{\bf Output}:&algorithmic program debugging $\mid$,\cr
+&debugging $\mid$ algorithmic program,\cr
+&logic for problem solving $\mid$,\cr
+&logic programming $\mid$,\cr
+&problem solving $\mid$ logic for,\cr
+&program debugging $\mid$ algorithmic,\cr
+&programming in prolog $\mid$,\cr
+&programming $\mid$ logic,\cr
+&prolog $\mid$ programming in,\cr
+&solving $\mid$ logic for problem\cr}}$$\medskip
+\ctrline{{\bf Figure \Figinpoutkey}~~Input and output for keyword in
+context (KWIC) problem}
+\endin\par
+The relation we want to compute is {\tt kwic(Titles,KwicTitles)} where
+{\tt Titles} is the list of titles whose keywords are to be extracted,
+and {\tt KwicTitles} is the sorted list of keywords in their contexts.
+Both the input and output titles are assumed to be given as lists of
+words. A more general program, as a preliminary step, would convert
+freer-form input into lists of words and produce prettier output.\par 
+The program is presented in stages. The basis is a nondeterministic
+specification of a rotation of a list of words. It has an elegant
+definition in terms of {\tt append}:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+rotate(Xs,Ys) $\lar$ append(As,Bs,Xs), append(Bs,As,Ys).\cr}\medno
+Declaratively, {\tt Ys} is a rotation of {\tt Xs} if {\tt Xs} is composed
+of {\tt As} followed by {\tt Bs}, and {\tt Ys} is {\tt Bs} followed by
+{\tt As}.\par
+The next stage of development involves identifying single words as
+potential keywords. This is done by isolating the word in the first call
+to {\tt append}. Note that the new rule is an instance of the previous
+one:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+rotate(Xs,Ys) $\lar$\cr
+\qi append(As,\(Key$\mid$Bs\),Xs), append(\(Key$\mid$Bs\),As,Ys).\cr}
+\medno
+This definition also improves the previous attempt by removing the
+duplicate solution when one of the split lists is empty and the other is
+the entire list.\par
+The next improvement involves examining a potential keyword more closely.
+Suppose each keyword {\tt Word} is identified by a fact of the form {\tt
+keyword(Word)}. The solutions to the {\tt rotate} procedure can be
+filtered so that only words identified as keywords are accepted. The
+appropriate version is\medskip
+\halign{\hskip 20pt\lft{\tt #}\cr
+rotate\_and\_filter(Xs,Ys) $\lar$\cr
+\qi append(As,\(Key$\mid$Bs\),Xs), keyword(Key), append(\(Key$
+\mid$Bs\),As,Ys).\cr}\medno
+Operationally {\tt rotate\_and\_filter} considers all keys, filtering out
+the unwanted alternatives. The goal order is important here to
+maximize program efficiency. 
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it kwic\/}({\it Titles,KWTitles\/}) $\lar$\cr
+\qi {\it KWTitles\/} {\rm is a KWIC index of the list of titles} {\it
+Titles\/}{\rm .}\cr
+\noalign{\medskip}
+kwic(Titles,KWTitles) $\lar$\cr
+\qi setof(Ys,Xs$\uparrow$(member(Xs,Titles),\cr
+\qi rotate\_and\_filter(Xs,Ys)),KWTitles).\cr
+\noalign{\medskip}
+{\it rotate\_and\_filter\/}({\it Xs,Ys\/}) $\lar$\cr
+\qi {\it Ys\/} {\rm is a rotation of the list} {\it Xs\/} {\rm such
+that}\cr
+\qi {\rm the first word of} {\it Ys\/} {\rm is significant and $\mid$}\cr
+\qi {\rm is inserted after the last word of} {\it Xs\/}{\rm .}\cr
+\noalign{\medskip}
+rotate\_and\_filter(Xs,Ys) $\lar$\cr
+\qi append(As,[Key$\mid$Bs],Xs),\cr
+\qi not insignificant(Key),\cr
+\qi append([Key$\mid$Bs\),\(`$\mid$'$\mid$As\),Ys).\cr
+\noalign{\medskip}
+{\it Vocabulary of insignificant words}\cr
+\noalign{\medskip}}
+\halign{\hskip 40pt\lft{\tt #}\qquad&\lft{\tt #}\cr
+insignificant(a).&insignificant(the).\cr
+insignificant(in).&insignificant(for).\cr
+\noalign{\medskip}
+{\it Testing and data}\cr
+\noalign{\medskip}}
+\halign{\hskip 40pt\lft{\tt #}\cr
+test\_kwic(Books,Kwic) $\lar$\cr
+\qi titles(Books,Titles), kwic(Titles,Kwic).\cr
+\noalign{\vskip 5pt}
+titles(lp,[[logic,for,problem,solving],\cr
+\qi [logic,programming],\cr
+\qi [algorithmic,program,debugging],\cr
+\qi [programming,in,prolog]]).\cr
+\noalign{\bigskip}
+{\bf Program \Proprokwicin}{\rm :~~Producing a keyword in context (KWIC) index}\cr}
+\endin\par
+In Program~\Proprokwicin, the final version, a complementary view to
+recognizing keywords is taken. Any word {\tt Word} is a keyword unless
+otherwise specified by a fact of the form {\tt insignificant(Word)}.
+Further the procedure is augmented to insert the end-of-title mark
+$\mid$, providing the context information. This is done by adding the
+extra symbol in the second {\tt append} call. Incorporating this
+discussion yields the clause for {\tt rotate\_and\_filter} in
+Program~\Proprokwicin.\par 
+Finally, a set predicate is used to get all the solutions. Quantification
+is necessary over all the possible titles. Advantage is derived from the
+behavior of {\tt setof} in sorting the answers. The complete program is
+given as Program~\Proprokwicin, and is an elegant example of the
+expressive power of Prolog. The test predicate is {\tt test\_kwic/2}.
+\vskip 15pt\parno
+{\bf Exercises for Section 16.2}\vskip 5pt\par
+\offset{20pt}{(i)} Modify Program~\Proleerou\ to handle other obstacles
+than rectangles.\par
+\offset{20pt}{(ii)} Adapt Program~\Proprokwicin\ for KWIC so that it
+extracts keywords from lines of text.\par
+\offset{20pt}{(iii)} Modify rotation of a list so that it uses
+difference-lists.\par
+\offset{20pt}{(iv)} Write a program to find a minimal spanning tree for
+a graph.\par
+\offset{20pt}{(v)} Write a program to find the maximum flow in a network
+design using the Ford-Fulkerson algorithm.\endpage
+\sect{Other Second-Order Predicates}
+First-order logic allows quantification over individuals. Second-order
+logic further allows quantification over predicates. Incorporating this
+extension into logic programming entails using rules with goals whose
+predicate names are variables. Predicate names become ``first-class" data
+objects to be manipulated and modified.\par
+A simple example of a second-order relation is the determination of
+whether all members of a list have a certain property. For simplicity the
+property is assumed to be described as a unary predicate. Let us define
+{\tt has\_property(Xs,P)}, which is true if each element of {\tt Xs} has
+some property {\tt P}. Extending Prolog syntax to allow variable
+predicate names enables us to define {\tt has\_property} as in Figure
+\Figsecordpre. Because {\tt has\_property} allows variable properties, it
+is a second-order predicate. An example of its use is testing whether a
+list of people {\tt Xs} is all male with a query {\tt
+has\_property(Xs,male)?}.
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\lft{\tt #}\cr
+has\_property(\(X$\mid$Xs\),P) $\lar$ P(X), has\_property(Xs,P).\cr
+has\_property(\(~\),P).\cr
+\noalign{\vskip 5pt}
+map\_list(\(X$\mid$Xs\),P,\(Y$\mid$Ys\)) $\lar$ P(X,Y),
+map\_list(Xs,P,Ys).\cr
+map\_list(\(~\),P,\(~\)).\cr}}$$\medskip
+\ctrline{{\bf Figure \Figsecordpre}:~~Second-order predicates}
+\endin\par
+Another second-order predicate is {\tt map\_list(Xs,P,Ys)}. {\tt Ys} is
+the map of the list {\tt Xs} under the predicate {\tt P}. That is, for
+each element {\tt X} of {\tt Xs} there is a corresponding element {\tt Y}
+of {\tt Ys} such that {\tt P(X,Y)} is true. The order of the elements in
+{\tt Xs} is preserved in {\tt Ys}. We can use {\tt map\_list} to rewrite
+some of the programs of earlier chapters. For example, Program
+\Protraworwor\ mapping English to French words can be expressed as {\tt
+map\_list(Words,dict,Mots)}. Like {\tt has\_property}, {\tt map\_list}
+is easily defined using a variable predicate name. The definition is
+given in Figure~\Figsecordpre.\par
+Operationally, allowing variable predicate names implies dynamic
+construction of goals while answering a query. The relation to be
+computed is not fixed statically when the query is posed but is
+determined dynamically during the computation.\par
+Some Prologs allow the programmer to use variables for predicate names,
+and allow the syntax of Figure~\Figsecordpre. It is unnecessary to
+complicate the syntax however. The tools already exist for implementing
+second-order predicates. One basic relation is necessary, which we call
+{\tt apply}; it constructs the goal with a variable functor. The
+predicate {\tt apply} is defined by a set of clauses, one for each
+functor name and arity. For example, for functor {\tt foo} of arity {\tt
+n}, the clause is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+apply(foo,X1,$\ldots$,Xn) $\lar$ foo(X1,$\ldots$,Xn).\cr}\medno
+The two predicates in Figure~\Figsecordpre\ are transformed into Standard
+Prolog in Program~\Prosecordpre. Sample definitions of {\tt apply}
+clauses are given for the examples mentioned in the text.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it has\_property\/}({\it Xs,P\/}) $\lar$\cr
+\qi {\rm Each element in the list} {\it Xs\/} {\rm has property} {\it
+P\/}{\rm .}\cr
+\noalign{\medskip}
+has\_property(\(X$\mid$Xs\),P) $\lar$\cr
+\qi apply(P,X), has\_property(Xs,P).\cr
+has\_property(\(~\),P).\cr
+\noalign{\vskip 5pt}
+apply(male,X) $\lar$ male(X).\cr
+\noalign{\medskip}
+{\it maplist\/}({\it Xs,P,Ys\/}) $\lar$\cr
+\qi {\rm Each element in the list} {\it Xs\/} {\rm stands in relation}\cr
+\qi {\it P\/} {\rm to its corresponding element in the list} {\it
+Ys\/}{\rm .}\cr
+\noalign{\medskip}
+map\_list(\(X$\mid$Xs\),P,\(Y$\mid$Ys\)) $\lar$\cr
+\qi apply(P,X,Y), map\_list(Xs,P,Ys).\cr
+map\_list(\(~\),P,\(~\)).\cr
+\noalign{\vskip 5pt}
+apply(dict,X,Y) $\lar$ dict(X,Y).\cr
+\noalign{\bigskip}
+{\bf Program \Prosecordpre}{\rm :~~Second-order predicates in Prolog}\cr}
+\endin\par
+The predicate {\tt apply} performs structure inspection. The whole
+collection of {\tt apply} clauses can be generalized by using the
+structure inspection primitive, {\tt univ}. The general predicate {\tt
+apply(P,Xs)} applies predicate {\tt P} to a list of arguments {\tt Xs}:
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+apply(F,Xs) $\lar$ Goal =.. \(F$\mid$Xs\), Goal.\cr}\medno
+We can generalize the function to be applied from a predicate name, i.e.,
+an atom, to a term parameterized by variables. An example is substituting
+for a value in a list. The relation {\tt substitute/4} from
+Program~\Proprosubter\ can be viewed as an instance of {\tt map\_list} if  
+parameterization is allowed. Namely, {\tt
+map\_list(Xs,substitute(Old,New),Ys)} has the same effect in substituting
+the element {\tt New} for the element {\tt Old} in {\tt Xs} to get {\tt
+Ys} --- exactly the relation computed by Program~\Proprosubter. In order
+to handle this correctly, the definition of {\tt apply} must be extended a
+little:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+apply(P,Xs) $\lar$\cr
+\qi P =.. L1, append(L1,Xs,L2), Goal =.. L2, Goal.\cr}\medskip
+Using {\tt apply} as part of {\tt map\_list} leads to inefficient
+programs. For example, using {\tt substitute} directly rather than
+through {\tt map\_list} results in far fewer intermediate structures
+being created, and eases the task of compilation. Hence these
+second-order predicates are better used in conjunction with a program
+transformation system that can translate second-order calls to
+first-order calls at compile-time.\par
+The predicate {\tt apply} can also be used to implement lambda
+expressions. A lambda expression is one of the form {\it lambda\/}({\it
+X$_1$,$\ldots$,X$_n$\/}).{\it Expression\/}. If the set of lambda
+expressions to be used is known in advance, they can be named. For
+example, the above expression would be replaced by some unique
+identifier, {\tt foo} say, and defined by an {\tt apply} clause:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+apply(foo,X1,$\ldots$,Xn) $\lar$ Expression.\cr}\medskip
+Although possible both theoretically and pragmatically, the use of
+lambda expressions and second-order constructs such as {\tt
+has\_property} and {\tt map\_list} is not as widespread in Prolog as
+in functional programming languages like Lisp. We conjecture that this
+is a combination of cultural bias and the availability of a host of
+alternative programming techniques. It is possible that the ongoing
+work on extending the logic programming model with higher-order
+constructs and integrating it with functional programming will change
+the picture.\par
+In the meantime, all-solutions predicates seem to be the main and most useful
+higher-order construct in Prolog.\vskip 15pt\parno
+{\bf Exercise for Section 16.3}\vskip 5pt\par
+\offset{20pt}{(i)} Write a program performing beta reduction for lambda
+expressions.\par
+\sect{Background}
+The discussion of {\tt findall} uses the description contained in the
+Standard Prolog document (Scowen, 1991). An excellent discussion of the
+all-solutions predicates {\tt bagof} and {\tt setof} in Edinburgh Prolog
+are given in Warren (1982a). Discussions of ``rolling your own'' set
+predicates can be found in both O'Keefe (1990) and Ross (1989).\par
+Set predicates are a powerful extension to Prolog.  They can be used
+(inefficiently) to implement negation as failure and meta-logical type
+predicates (Kahn, 1984). If a goal {\tt G} has no solutions, which is
+determined by a predicate such as {\tt findall}, then {\tt not G} is
+true. The predicate {\tt var(X)} is implemented by testing whether the
+goal {\tt X=1;X=2} has two solutions. Further discussion of such behavior
+of set predicates and a survey of different implementations of set
+predicates can be found in Naish (1985b).\par
+Further description of the Lee algorithm and the general routing problem
+for VLSI circuits can be found in textbooks on VLSI, for example, Breuer
+and Carter (1983). A neat graphic version of Program~\Proleerou\ has been
+written by Dave Broderick.\par
+Recent logic programming research has focused somewhat more on
+higher-order logic programming. Approaches of note are Lambda-Prolog  
+(Miller and Nadathur, 1986) and HiLog (Chen et al., 1989).\par
+KWIC was posed as a benchmark for high-level programming languages by
+Perlis, and was used to compare several languages. We find the Prolog
+implementation of it perhaps the most elegant of all.\par
+Our description of lambda expressions is modeled after Warren (1982a).
+Predicates such as {\tt apply} and {\tt map\_list} were part of the
+utilities package at the University of Edinburgh. They were fashionable
+for a while but fell out of favor because they were not compiled
+efficiently, and no source-to-source transformation tools were available.
+\par\bye
+

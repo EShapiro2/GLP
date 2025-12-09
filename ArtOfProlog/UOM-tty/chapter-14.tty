@@ -1,0 +1,3518 @@
+
+
+
+
+Part  III
+
+
+
+Advanced    Prolog    Programming
+
+
+Techniques
+
+
+
+    The expressive power and high-level nature of logic programming can be
+
+
+exploited to write programs that are not easily expressed in conventional pro-
+
+
+gramming languages. Different problem-solving paradigms can be supported, and
+
+
+alternative data construction and access mechanisms can be used.
+
+
+    The simple Prolog programs of the previous part are examples of the use
+
+
+of basic programming techniques, reinterpreted in the context of logic program-
+
+
+ming. This part collects more advanced techniques that have evolved in the logic
+
+
+programming community and exploit the special features of logic programs. We
+
+
+show how they can be used to advantage.
+
+
+
+
+                                                 Chapter  14
+
+
+
+                                 Nondeterministic
+
+
+                                        Programming
+
+
+
+    One feature of the logic programming computation model lacking in conven-
+
+
+tional programming models is nondeterminism.  Nondeterminism is a technical
+
+
+concept used to define, in a concise way, abstract computation models. However,
+
+
+in addition to being a powerful theoretical concept, nondeterminism is also use*
+ *ful
+
+
+for defining and implementing algorithms. This chapter shows how, by thinking
+
+
+nondeterministically, one can construct concise and efficient programs.
+
+
+    Intuitively, a nondeterministic machine can choose its next operation cor-
+
+
+rectly when faced with several alternatives. True nondeterministic machines can-
+
+
+not be realized but can be simulated or approximated. In particular, the Prolog
+
+
+interpreter approximates the nondeterministic behavior of the abstract interpre*
+ *ter
+
+
+of logic programs by sequential search and backtracking, as explained in Chap-
+
+
+ter 6.  However, the fact that nondeterminism is only simulated without being
+
+
+\really present" can be abstracted away in many cases in favor of nondetermin-
+
+
+
+
+14.1                                            Generate-and-Test215
+
+
+
+istic thinking in much the same way as pointer manipulation details involved in
+
+
+unification can be abstracted away in favor of symbolic thinking.
+
+
+
+14.1   Generate-and-Test
+
+
+
+    Generate-and-test is a common technique in algorithm design and program-
+
+
+ming. Here is how generate-and-test works for problem solving. One process or
+
+
+routine generates candidate solutions to the problem, and another process or ro*
+ *u-
+
+
+tine tests the candidates, trying to find one or all candidates that actually s*
+ *olve
+
+
+the problem.
+
+
+    It is easy to write logic programs that, under the execution model of Pro-
+
+
+log, implement the generate-and-test technique. Such programs typically have a
+
+
+conjunction of two goals, in which one acts as the generator and the other tests
+
+
+whether the solution is acceptable, as in the following clause:
+
+
+
+        find(X)   generate(X), test(X).
+
+
+
+This Prolog program would actually behave like a conventional, procedural,
+
+
+generate-and-test program. When called with find(X)?, generate(X) succeeds,
+
+
+returning some X, with which test(X) is called. If the test goal fails, executi*
+ *on
+
+
+backtracks to generate(X), which generates the next element.  This continues
+
+
+iteratively until the tester successfully finds a solution with the distinguish*
+ *ing
+
+
+property or until the generator has exhausted all alternative solutions.
+
+
+    The programmer, however, need not be concerned with the generate-and-test
+
+
+
+
+216   Nondeterministic Programming                              14.1
+
+
+
+    verb(Sentence,Verb)  
+
+
+        Verb is a verb in the list of words Sentence.
+
+
+    verb(Sentence,Word)   member(Word,Sentence), verb(Word).
+
+
+    noun(Sentence,Word)   member(Word,Sentence), noun(Word).
+
+
+    article(Sentence,Word)   member(Word,Sentence), article(Word).
+
+
+    Vocabulary
+
+
+    noun(man).     noun(woman).
+
+
+    article(a).    verb(loves).
+
+
+    member(X,Xs)   See Program 3.12.
+
+
+
+        Program 14.1:  Finding parts of speech in a sentence
+
+
+
+cycle and can view this technique more abstractly, as an instance of nondeter-
+
+
+ministic programming.  In this nondeterministic program the generator guesses
+
+
+correctly an element in the domain of possible solutions, and the tester simply
+
+
+verifies that the guess of the generator is correct.
+
+
+    A good example of a program with multiple solutions and commonly used
+
+
+as a generator is Program 3.12 for member. The query member(X,[a,b,c])? will
+
+
+yield the solutions X=a, X=b, and X=c successively as required. Thus member can
+
+
+be used to nondeterministically choose the correct element of a list in a gener*
+ *ate-
+
+
+and-test program.
+
+
+    Program 14.1 is a simple example of generate-and-test using member as a
+
+
+generator. The program identifies parts of speech of a sentence. We assume that
+
+
+
+
+14.1                                            Generate-and-Test217
+
+
+
+a sentence is represented as a list of words and that there is a database of fa*
+ *cts
+
+
+giving the parts of speech of particular words.  Each part of speech is a unary
+
+
+predicate whose argument is a word, for example, noun(man) indicates that man
+
+
+is a noun. The relation verb(Sentence,Word) is true if Word is a verb in senten*
+ *ce
+
+
+Sentence. The analogous meanings are intended for noun/2 and article/2. The
+
+
+query verb([a,man,loves,a,woman],V)? finds the verb V=loves in the sentence
+
+
+using generate-and-test.  Words in the sentence are generated by member and
+
+
+tested to see if they are verbs.
+
+
+
+    Another simple example is testing whether two lists have an element in com-
+
+
+mon. Consider the predicate intersect(Xs,Ys), which is true if Xs and Ys have
+
+
+an element in common:
+
+
+
+        intersect(Xs,Ys)   member(X,Xs), member(X,Ys).
+
+
+
+    The first member goal in the body of the clause generates members of the
+
+
+first list, which are then tested to see whether they are in the second list by*
+ * the
+
+
+second member goal. Thinking nondeterministically, the first goal guesses an X *
+ *in
+
+
+Xs, and the second verifies that the guess is a member of Ys.
+
+
+
+    Note that when executed as a Prolog program, this clause effectively imple-
+
+
+ments two nested loops.  The outer loop iterates over the elements of the first
+
+
+list, and the inner loop checks whether the chosen element is a member of the
+
+
+second list. Hence this nondeterministic logic program achieves, under the exec*
+ *u-
+
+
+tion model of Prolog, a behavior very similar to the standard solution one would
+
+
+compose for this problem in Fortran, Pascal, or Lisp.
+
+
+
+
+218   Nondeterministic Programming                              14.1
+
+
+
+    The definition of member in terms of append,
+
+
+        member(X,Xs)   append(As,[XjBs],Xs).
+
+
+
+is itself essentially a generate-and-test program.  The two stages, however, are
+
+
+amalgamated by the use of unification. The append goal generates splits of the
+
+
+list, and immediately a test is made whether the first element of the second li*
+ *st
+
+
+is X.
+
+
+    Typically, generate-and-test programs are easier to construct than programs
+
+
+that compute the solution directly, but they are also less efficient.  A standa*
+ *rd
+
+
+technique for optimizing generate-and-test programs is to \push" the tester in-
+
+
+side the generator as deeply as possible.  Ultimately, the tester is completely
+
+
+intertwined with the generator, and only correct solutions are generated.
+
+
+    Let us consider optimizing generate-and-test programs by pushing the tester
+
+
+into the generator. Program 3.20 for permutation sort is another example of a
+
+
+generate-and-test program. The top level is as follows:
+
+
+        sort(Xs,Ys)   permutation(Xs,Ys), ordered(Ys).
+
+
+
+Abstractly, this program guesses nondeterministically the correct permutation
+
+
+via permutation(Xs,Ys), and ordered checks that the permutation is actually
+
+
+ordered.
+
+
+    Operationally, the behavior is as follows. A query involving sort is reduced
+
+
+to a query involving permutation and ordered. A failure-driven loop ensues. A
+
+
+permutation of the list is generated by permutation and tested by ordered. If
+
+
+the permuted list is not ordered, the execution backtracks to the permutation
+
+
+
+
+14.1                                            Generate-and-Test219
+
+
+
+goal, which generates another permutation to be tested. Eventually an ordered
+
+
+permutation is generated and the computation terminates.
+
+
+    Permutation sort is a highly inefficient sorting algorithm, requiring time
+
+
+super-exponential in the size of the list to be sorted. Pushing the tester into*
+ * the
+
+
+generator, however, leads to a reasonable algorithm.  The generator for permu-
+
+
+tation sort, permutation, selects an arbitrary element and recursively permutes
+
+
+the rest of the list. The tester, ordered, verifies that the first two elements*
+ * of the
+
+
+permutation are in order, then recursively checks the rest. If we view the com-
+
+
+bined recursive permutation and ordered goals as a recursive sorting process,
+
+
+we have the basis for insertion sort, Program 3.21.  To sort a list, sort the t*
+ *ail
+
+
+of the list and insert the head of the list into its correct place in the order*
+ *. The
+
+
+arbitrary selection of an element has been replaced by choosing the first eleme*
+ *nt.
+
+
+    Another example of the advantage of intertwining generating and testing can
+
+
+be seen with programs solving the N queens problem.
+
+
+    The N  queens problem requires the placement of N  pieces on an N -by-
+
+
+N rectangular board so that no two pieces are on the same line:  horizontal,
+
+
+vertical, or diagonal. The original formulation called for 8 queens to be place*
+ *d on
+
+
+a chessboard, and the criterion of not being on the same line corresponds to two
+
+
+queens not attacking each other under the rules of chess.  Hence the problem's
+
+
+name.
+
+
+    The program has been well studied in the recreational mathematics literatur*
+ *e.
+
+
+There is no solution for N = 2 and N = 3, and a unique solution up to reflection
+
+
+for N = 4, shown in Figure 14.1.  There are 88 solutions for N = 8, or 92,
+
+
+
+
+220   Nondeterministic Programming                              14.1
+
+
+
+depending on strictness with symmetries.
+
+
+
+    Program 14.2 is a simplistic program solving the N queens problem. The re-
+
+
+lation queen(N,Qs) is true if Qs is a solution to the N queens problem. Solutio*
+ *ns
+
+
+are specified as a permutation of the list of the numbers 1 to N . The first el*
+ *ement
+
+
+of the list is the row number to place the queen in the first column, the second
+
+
+element indicates the row number to place the queen in the second column, etc.
+
+
+Figure 14.1 indicates the solution [2,4,1,3] to the 4 queens problem. This spec*
+ *ifi-
+
+
+cation of solutions, and the program generating them, has implicitly incorporat*
+ *ed
+
+
+the observation that any solution to the N queens problem will have a queen on
+
+
+each row and a queen on each column.
+
+
+
+    The program behaves as follows. The predicate range creates a list Ns of the
+
+
+numbers from 1 to N . Then a generate-and-test cycle begins. The permutation
+
+
+predicate generates a permutation Qs of Ns, which is tested to see whether it is
+
+
+a solution to the problem with the predicate safe(Qs). This predicate is true if
+
+
+Qs is a correct placement of the queens. Since two queens are not placed on the
+
+
+same row or column, the predicate need only check whether two queens attack
+
+
+each other along a diagonal. Safe is defined recursively. A list of queens is s*
+ *afe if
+
+
+the queens represented by the tail of the list are safe and the queen represent*
+ *ed
+
+
+by the head of the list does not attack any of the other queens. The definition
+
+
+of attack(Q,Qs) uses a neat encapsulation of the interaction of diagonals.  A
+
+
+queen is on the same diagonal as a second queen N columns away if the second
+
+
+queen's row number is N units greater than, or N units less than, the first que*
+ *en's
+
+
+row number. This is expressed by the first clause of attack/3 in Program 14.2.
+
+
+
+
+14.1                                            Generate-and-Test221
+
+
+
+                          ________________
+                          |   |   |Q  |   |
+                          |___|___|___|___|
+                          |Q  |   |   |   |
+                          |___|___|___|___|
+                          |   |   |   |Q  |
+                          |___|___|___|___|
+                          |   |Q  |   |   |
+                          |___|___|___|___|
+
+
+             Figure 14.1:  A solution to the 4 queens problem
+
+
+
+        queens(N,Queens)  
+
+
+            Queens is a placement that solves the N  queens problem,
+
+
+            represented as a permutation of the list of numbers [1; 2; : :;:N].
+
+
+        queens(N,Qs)  
+
+
+            range(1,N,Ns), permutation(Ns,Qs), safe(Qs).
+
+
+        safe(Qs)  
+
+
+            The placement Qs is safe.
+
+
+        safe([QjQs])   safe(Qs), not attack(Q,Qs).
+
+
+        safe([ ]).
+
+
+        attack(X,Xs)   attack(X,1,Xs).
+
+
+        attack(X,N,[YjYs])   X is Y+N ; X is Y-N.
+
+
+        attack(X,N,[YjYs])   N1 is N+1, attack(X,N1,Ys).
+
+
+        permutation(Xs,Ys)   See Program 3.20.
+
+
+        range(M,N,Ns)   See Program 8.12.
+
+
+
+        Program 14.2:  Naive generate-and-test program solving N  queens
+
+
+
+
+222   Nondeterministic Programming                              14.1
+
+
+
+The meaning of attack(Q,Qs) is that queen Q attacks some queen in Qs.  The
+
+
+diagonals are tested iteratively until the end of the board is reached.
+
+
+
+    Program 14.2 cannot recognize when solutions are symmetric.  The pro-
+
+
+gram gives two solutions to the query queens(4,Qs)?, namely Qs=[2,4,1,3]
+
+
+and Qs=[3,1,4,2].
+
+
+
+    Although it is a well-written logic program, Program 14.2 behaves ineffi-
+
+
+ciently. Many permutations are generated that have no chance of being solutions.
+
+
+As with permutation sort, we improve the program by pushing the tester, in this
+
+
+case safe, into the generator.
+
+
+
+    Instead of testing the complete permutation, that is, placing all the queen*
+ *s,
+
+
+each queen can be checked as it is being placed. Program 14.3 computes solutions
+
+
+to the N queens problem by placing the queens one at a time. It also proceeds by
+
+
+generating and testing, in contrast to insertion sort, which became a determini*
+ *stic
+
+
+algorithm by the transformation. The generator in the program is select and
+
+
+the tester is attack, or more precisely its negation.
+
+
+
+    The positions of the previously placed queens are necessary to test whether
+
+
+a new queen is safe. Therefore the final solution is built upward using an accu-
+
+
+mulator. This is an application of the basic technique described in Section 7.5*
+ *. A
+
+
+consequence of using an accumulator is that the queens are placed on the right-
+
+
+hand edge of the board. The two solutions to the query queens(4,Qs)? are given
+
+
+in the opposite order to the solutions given by Program 14.2.
+
+
+
+    The next problem is to color a planar map so that no two adjoining regions
+
+
+
+
+14.1                                            Generate-and-Test223
+
+
+        queens(N,Queens)  
+
+
+            Queens is a placement that solves the N  queens problem,
+
+
+            represented as a permutation of the list of numbers [1; 2; : :;:N].
+
+
+        queens(N,Qs)   range(1,N,Ns), queens(Ns,[ ],Qs).
+
+
+        queens(UnplacedQs,SafeQs,Qs)  
+
+
+            select(Q,UnplacedQs,UnplacedQs1),
+
+
+            not attack(Q,SafeQs),
+
+
+            queens(UnplacedQs1,[QjSafeQs],Qs).
+
+
+        queens([ ],Qs,Qs).
+
+
+        select(X,Xs,Ys)   See Program 3.19.
+
+
+        attack(X,Xs)   See Program 14.2.
+
+
+
+        Program 14.3:  Placing one queen at a time
+
+
+
+have the same color. A famous conjecture, an open question for a hundred years,
+
+
+was proved in 1976, showing that four colors are sufficient to color any planar
+
+
+map. Figure 14.2 gives a simple map requiring four colors to be colored correct*
+ *ly.
+
+
+This can be proved by enumeration of the possibilities. Hence four colors are b*
+ *oth
+
+
+necessary and sufficient.
+
+
+
+                            ____________
+                            |     a     |
+                            |___________|
+                            |b  | c |d  |
+                            |___|___|___|
+                            |   e | f   |
+                            |_____|_____|
+
+
+                Figure 14.2:  A map requiring four colors
+
+
+
+
+224   Nondeterministic Programming                              14.1
+
+
+
+    Program 14.4, which solves the map-coloring problem, uses the generate-and-
+
+
+test programming technique extensively. The program implements the following
+
+
+nondeterministic iterative algorithm:
+
+
+    For each region of the map,
+
+
+        choose a color,
+
+
+        choose (or verify) colors for the neighboring regions from the
+
+
+            remaining colors.
+
+
+
+A data structure is needed to support the algorithm.  The map is represented
+
+
+as a list of regions. Each region has a name, a color, and a list of colors of *
+ *the
+
+
+adjoining regions. The map in Figure 14.2, for example, is represented as
+
+
+[region(a,A,[B,C,D]),region(b,B,[A,C,E]),region(c,C,[A,B,D,E,F]),
+
+
+    region(d,D,[A,C,F]),region(e,E,[B,C,F]),region(f,F,[C,D,E])].
+
+
+
+The sharing of variables is used to ensure that the same region is not colored *
+ *with
+
+
+two different colors by different iterations of the algorithm.
+
+
+    The top-level relation is color_map(Map,Colors), where Map is represented
+
+
+as before, and Colors is a list of colors used to color the map.  Our colors are
+
+
+red, yellow, blue, and white.  The heart of the algorithm is the definition of
+
+
+color_region(Region,Colors):
+
+
+    color_region(region(Name,Color,Neighbors),Colors)  
+
+
+        select(Color,Colors,Colors1), members(Neighbors,Colors1).
+
+
+
+Both the select and members goals can act as generators or testers, depending
+
+
+
+
+14.1                                            Generate-and-Test225
+
+
+
+color_map(Map,Colors)  
+
+
+    Map is colored with Colors so that no two neighbors have the same color.
+
+
+    The map is represented as an adjacency-list of regions
+
+
+    region(Name,Color,Neighbors), where Name is the name of the region,
+
+
+    Color is its color, and Neighbors are the colors of its neighbors.
+
+
+color_map([RegionjRegions],Colors)  
+
+
+    color_region(Region,Colors),
+
+
+    color_map(Regions,Colors).
+
+
+color_map([ ],Colors).
+
+
+color_region(Region,Colors)  
+
+
+    Region and its neighbors are colored using Colors so that the
+
+
+    region's color is different from the color of any of its neighbors.
+
+
+color_region(region(Name,Color,Neighbors),Colors)  
+
+
+    select(Color,Colors,Colors1),
+
+
+    members(Neighbors,Colors1).
+
+
+select(X,Xs,Ys)   See Program 3.19.
+
+
+members(Xs,Ys)   See Program 7.6.
+
+
+
+Program 14.4:  Map coloring
+
+
+
+Test data
+
+
+test_color(Name,Map)  
+
+
+    map(Name,Map),
+
+
+    colors(Name,Colors),
+
+
+    color_map(Map,Colors).
+
+
+map(test,[region(a,A,[B,C,D]),region(b,B,[A,C,E]),
+
+
+    region(c,C,[A,B,D,E,F]),region(d,D,[A,C,F]),
+
+
+    region(e,E,[B,C,F]),region(f,F,[C,D,E])]).
+
+
+map(west_europe,[region(portugal,P,[E]), region(spain,E,[F,P]),
+
+
+    region(france,F,[E,I,S,B,WG,L]), region(belgium,B,[F,H,L,WG]),
+
+
+    region(holland,H,[B,WG]), region(west_germany,WG,[F,A,S,H,B,L]),
+
+
+    region(luxembourg,L,[F,B,WG]), region(italy,I,[F,A,S]),
+
+
+    region(switzerland,S,[F,I,A,WG]), region(austria,A,[I,S,WG])]).
+
+
+colors(X,[red,yellow,blue,white]).
+
+
+
+Program 14.5:  Test data for map coloring
+
+
+
+
+226   Nondeterministic Programming                              14.1
+
+
+
+on whether their arguments are instantiated.
+
+
+
+    Overall, the effect of the program is to instantiate a data structure, the *
+ *map.
+
+
+The calls to select and members can be viewed as specifying local constraints.
+
+
+The predicates either generate by instantiating arguments in the structure or t*
+ *est
+
+
+whether instantiated values satisfy local constraints. Program 14.5 tests the m*
+ *ap
+
+
+coloring solution.
+
+
+
+    Instantiating a data structure designed especially for a problem is a parti*
+ *cu-
+
+
+larly effective means of implementing generate-and-test solutions. Unification *
+ *and
+
+
+failure to unify control the building of the final solution structure, avoiding*
+ * cre-
+
+
+ation of unnecessary intermediate data structures. Since unification is support*
+ *ed
+
+
+well by Prolog implementations, solutions are found quickly.  Exercise 14.1(iv)
+
+
+assigns the task of designing a data structure that can be instantiated to solve
+
+
+the N queens problem. The resulting program solves the N queens problem much
+
+
+more quickly than Program 14.2 or 14.3.
+
+
+
+    Our final example is solving a logic puzzle.  The behavior of the program
+
+
+is similar to the map-coloring program. The logic puzzle consists of some facts
+
+
+about some small number of objects that have various attributes. The minimum
+
+
+number of facts is given about the objects and attributes, to yield a unique way
+
+
+of assigning attributes to objects.
+
+
+
+    Here is an example that we use to describe the technique of solving logic
+
+
+puzzles.
+
+
+
+    Three friends came first, second, and third in a programming competition.
+
+
+
+
+14.1                                            Generate-and-Test227
+
+
+
+Each of the three has a different first name, likes a different sport, and has a
+
+
+different nationality.
+
+
+    Michael likes basketball and did better than the American. Simon, the Israe*
+ *li,
+
+
+did better than the tennis player. The cricket player came first.
+
+
+    Who is the Australian? What sport does Richard play?
+
+
+    Logic puzzles such as this one are elegantly solved by instantiating the va*
+ *lues
+
+
+of a suitable data structure and extracting the solution values.  Each clue is
+
+
+translated into a fact about the data structure. This can be done before the ex*
+ *act
+
+
+form of the data structure is determined using data abstraction. Let us analyze
+
+
+the first clue: \Michael likes basketball and did better than the American." Two
+
+
+distinct people are referred to. One is named Michael, whose sport is basketbal*
+ *l,
+
+
+and the other is American. Further, Michael did better than the American. If we
+
+
+assume the structure to be instantiated is Friends, then the clue is expressed *
+ *as
+
+
+the conjunction of goals
+
+
+
+        did_better(Man1,Man2,Friends), first_name(Man1,michael),
+
+
+        sport(Man1,basketball), nationality(Man2,american),
+
+
+
+Similarly, the second clue can be translated to the conditions
+
+
+
+        did_better(Man1,Man2,Friends), first_name(Man1,simon),
+
+
+        nationality(Man1,israeli), sport(Man2,tennis),
+
+
+
+and the third clue to the conditions
+
+
+
+        first(Friends,Man), sport(Man,cricket).
+
+
+
+
+228   Nondeterministic Programming                              14.1
+
+
+
+    A framework for solving puzzles is given as Program 14.6.   The rela-
+
+
+tion computed is solve_puzzle(Puzzle,Solution),  where Solution is the
+
+
+solution  to  Puzzle.    The  puzzle  is  represented  by  the  structure  puz-
+
+
+zle(Clues,Queries,Solution), where the data structure being instantiated is
+
+
+incorporated into the clues and queries, and the values to be extracted are giv*
+ *en
+
+
+by Solution.
+
+        solve_puzzle(Puzzle,Solution)  
+
+
+            Solution is a solution of Puzzle,
+
+
+            where Puzzle is puzzle(Clues,Queries,Solution).
+
+
+        solve_puzzle(puzzle(Clues,Queries,Solution),Solution)  
+
+
+            solve(Clues),
+
+
+            solve(Queries).
+
+
+        solve([CluejClues])  
+
+
+            Clue, solve(Clues).
+
+
+        solve([ ]).
+
+
+
+        Program 14.6:  A puzzle solver
+
+
+
+    The code for solve_puzzle is trivial. All it does is successively solve each
+
+
+clue and query, which are expressed as Prolog goals and are executed with the
+
+
+meta-variable facility.
+
+
+    The  clues  and  queries  for  our  example  puzzle  are  given  in  Program
+
+
+14.7.  We describe the structure assumed by the clues to solve the puzzle.
+
+
+Each person has three attributes and can be represented by the structure
+
+
+
+
+14.1                                            Generate-and-Test229
+
+
+
+friend(Name,Country,Sport). There are three friends whose order in the pro-
+
+
+gramming competition is significant. This suggests an ordered sequence of three
+
+
+elements as the structure for the problem, i.e., the list
+
+
+
+        [friend(N1,C1,S1),friend(N2,C2,S2),friend(N3,C3,S3)].
+
+
+
+The programs defining the conditions did_better, first_name, nationality,
+
+
+sport, and first are straightforward, and are given in Program 14.7.
+
+
+    The combination of Programs 14.6 and 14.7 works as a giant generate-and-
+
+
+test. Each of the did_better and member goals access people, and the remaining
+
+
+goals access attributes of the people.  Whether they are generators or testers
+
+
+depends on whether the arguments are instantiated or not.  The answer to the
+
+
+complete puzzle, for the curious, is that Michael is the Australian, and Richard
+
+
+plays tennis.
+
+
+    The puzzle given in Program 14.7 is simple. An interesting question is how
+
+
+well does the framework of Program 14.6 scale. A good example of a larger puzzle
+
+
+is given in Exercise 14.1(vi). Is the framework adequate for such a puzzle?
+
+
+    The short answer is yes.  Prolog is an excellent language for solving logic
+
+
+puzzles.  However, care must be taken when formulating the clues and queries.
+
+
+For example, the predicate member is often essential to specify individuals, as*
+ * is
+
+
+done to formulate the query in Program 14.7.  It may be tempting to become
+
+
+systematic and begin the puzzle solution by specifying all individuals by member
+
+
+goals. This can lead to very inefficient programs because too many choice-points
+
+
+are set up. In general, implicit checking of a condition is usually more effici*
+ *ent.
+
+
+
+
+230   Nondeterministic Programming                              14.1
+
+
+
+Test data
+
+
+test_puzzle(Name,Solution)  
+
+
+    structure(Name,Structure),
+
+
+    clues(Name,Structure,Clues),
+
+
+    queries(Name,Structure,Queries,Solution),
+
+
+    solve_puzzle(puzzle(Clues,Queries,Solution),Solution).
+
+
+structure(test,[friend(N1,C1,S1),friend(N2,C2,S2),friend(N3,C3,S3)]).
+
+
+clues(test,Friends,
+
+
+    [(did_better(Man1Clue1,Man2Clue1,Friends),              % Clue 1
+
+
+    first_name(Man1Clue1,michael), sport(Man1Clue1,basketball),
+
+
+    nationality(Man2Clue1,american)),
+
+
+    (did_better(Man1Clue2,Man2Clue2,Friends),               % Clue 2
+
+
+    first_name(Man1Clue2,simon), nationality(Man1Clue2,israeli),
+
+
+    sport(Man2Clue2,tennis)),
+
+
+    (first(Friends,ManClue3), sport(ManClue3,cricket))     % Clue 3
+
+
+    ]).
+
+
+queries(test, Friends,
+
+
+    [  member(Q1,Friends),
+
+
+        first_name(Q1,Name),
+
+
+        nationality(Q1,australian),                        % Query 1
+
+
+        member(Q2,Friends),
+
+
+        first_name(Q2,richard),
+
+
+        sport(Q2,Sport)                                   % Query 2
+
+
+    ],
+
+
+    [[`The Australian is ', Name],[`Richard plays ', Sport]]
+
+
+).
+
+
+did_better(A,B,[A,B,C]).
+
+
+did_better(A,C,[A,B,C]).
+
+
+did_better(B,C,[A,B,C]).
+
+
+first_name(friend(A,B,C),A).
+
+
+nationality(friend(A,B,C),B).
+
+
+sport(friend(A,B,C),C).
+
+
+first([XjXs],X).
+
+
+
+Program 14.7:  A description of a puzzle
+
+
+
+
+14.1                                            Generate-and-Test231
+
+
+
+Another observation is that the order of the goals in the queries can significa*
+ *ntly
+
+
+affect running time. It is best to worry about this once the problem formulatio*
+ *n is
+
+
+correct. Determining appropriate goal order is a skill easily learned by experi*
+ *ence.
+
+
+
+    Another tip concerns negative clues, such as \John is not the tailor." These
+
+
+clues are best regarded as specifying two separate individuals, John and the ta*
+ *ilor,
+
+
+rather than as setting up a negative condition about one individual. The predic*
+ *ate
+
+
+select can be used instead of member to guarantee that individuals are differen*
+ *t.
+
+
+
+Exercises for Section 14.1
+
+
+
+(i) Write a program to compute the integer square root of a natural number N
+
+
+    defined to be the number I such that I2  N, but (I + 1)2 > N. Use the
+
+
+    predicate between/3, Program 8.5, to generate successive natural numbers
+
+
+    on backtracking.
+
+
+
+(ii)Write a program to solve the stable marriage problem (Sedgewick, 1983),
+
+
+    stated as follows:
+
+
+
+    Suppose there are N men and N women who want to get married.  Each
+
+
+    man has a list of all the women in his preferred order, and each woman has
+
+
+    a list of all the men in her preferred order. The problem is to find a set *
+ *of
+
+
+    marriages that is stable.
+
+
+
+    A pair of marriages is unstable if there are a man and woman who prefer each
+
+
+    other to their spouses.  For example, consider the pair of marriages where
+
+
+    David is married to Paula, and Jeremy is married to Judy. If David prefers
+
+
+
+
+232   Nondeterministic Programming                              14.1
+
+
+
+    Judy to Paula, and Judy prefers David to Jeremy, the pair of marriages is
+
+
+    unstable. This pair would also be unstable if Jeremy preferred Paula to Jud*
+ *y,
+
+
+    and Paula preferred Jeremy to David. A set of marriages is stable if there *
+ *is
+
+
+    no pair of unstable marriages.
+
+
+
+    Your program should have as input lists of preferences, and produce as outp*
+ *ut
+
+
+    a stable set of marriages. It is a theorem from graph theory that this is a*
+ *lways
+
+
+    possible. Test the program on the following five men and five women with
+
+
+    their associated preferences:
+
+
+
+        avraham:  chana tamar zvia ruth sarah
+
+
+        binyamin: zvia chana ruth sarah tamar
+
+
+        chaim:    chana ruth tamar sarah zvia
+
+
+        david:    zvia ruth chana sarah tamar
+
+
+        elazar:   tamar ruth chana zvia sarah
+
+
+        zvia:     elazar avraham david binyamin chaim
+
+
+        chana:    david elazar binyamin avraham chaim
+
+
+        ruth:     avraham david binyamin chaim elazar
+
+
+        sarah:    chaim binyamin david avraham elazar
+
+
+        tamar:    david binyamin chaim elazar avraham
+
+
+
+(iii)Use Program 14.4 to color the map of Western Europe. The countries are
+
+
+    given in Program 14.5.
+
+
+
+(iv)Design a data structure for solving the N queens problem by instantiation.
+
+
+    Write a program that solves the problem by instantiating the structure.
+
+
+
+
+14.1                                            Generate-and-Test233
+
+
+
+(v) Explain why the following program solves the N queens problem:
+
+
+
+        queens(N,Qs)   gen_list(N,Qs), place_queens(N,Qs,Ups,Downs).
+
+
+        gen_list(0,[ ]).
+
+
+        gen_list(N,[QjL])   N > 0, N1 is N-1, gen_list(N1,L).
+
+
+        place_queens(0,Qs,Ups,Downs).
+
+
+        place_queens(I,Qs,Ups,[DjDowns])  
+
+
+            I > 0, I1 is I-1,
+
+
+            place_queens(I1,Qs,[UjUps],Downs),
+
+
+            place_queen(I,Qs,Ups,Downs).
+
+
+            place_queen(Q,[QjQs],[QjUps],[QjDowns]).
+
+
+            place_queen(Q,[Q1jQs],[UjUps],[DjDowns]  
+
+
+               place_queen(Q,Qs,Ups,Downs).
+
+
+
+(vi)Write a program to solve the following logic puzzle. There are five houses,
+
+
+    each of a different color and inhabited by a man of a different nationality,
+
+
+    with a different pet, drink, and brand of cigarettes.
+
+
+
+     (a)The Englishman lives in the red house.
+
+
+     (b)The Spaniard owns the dog.
+
+
+     (c)Coffee is drunk in the green house.
+
+
+     (d)The Ukrainian drinks tea.
+
+
+     (e)The green house is immediately to the right (your right) of the ivory
+
+
+        house.
+
+
+     (f)The Winston smoker owns snails.
+
+
+
+
+234   Nondeterministic Programming                              14.1
+
+
+
+     (g)Kools are smoked in the yellow house.
+
+
+     (h)Milk is drunk in the middle house.
+
+
+     (i)The Norwegian lives in the first house on the left.
+
+
+     (j)The man who smokes Chesterfields lives in the house next to the man
+
+
+        with the fox.
+
+
+     (k)Kools are smoked in the house next to the house where the horse is
+
+
+        kept.
+
+
+     (l)The Lucky Strike smoker drinks orange juice.
+
+
+    (m) The Japanese smokes Parliaments.
+
+
+     (n)The Norwegian lives next to the blue house.
+
+
+
+    Who owns the Zebra? Who drinks water?
+
+
+(vii)Write a program to test whether a graph is planar using the algorithm of
+
+
+    Hopcroft and Tarjan (Deo, 1974; Even, 1979).
+
+
+
+14.2   Don't-Care and Don't-Know Nondeterminism
+
+
+
+    Two forms of nondeterminism are distinguished in the logic programming
+
+
+literature.  They differ in the nature of the choice that must be made among
+
+
+alternatives. For don't-care nondeterminism, the choice can be made arbitrarily.
+
+
+In terms of the logic programming computation model, any goal reduction will
+
+
+lead to a solution, and it does not matter which particular solution is found. *
+ *For
+
+
+don't-know nondeterminism, the choice matters but the correct one is not known
+
+
+at the time the choice is made.
+
+
+
+
+14.2                       Don't-Care and Don't-Know Nondeterminism235
+
+
+
+    Most examples of don't-care nondeterminism are not relevant for the Prolog
+
+
+programmer. A prototypical example is the code for minimum. Program 3.7 is the
+
+
+standard, incorporating a limited amount of don't-care nondeterminism, namely,
+
+
+when X and Y are the same:
+
+
+
+        minimum(X,Y,X)   X  Y.
+
+
+        minimum(X,Y,Y)   Y  X.
+
+
+
+In Section 7.4, we termed this redundancy and advised against its use.
+
+
+    On the other hand, programs exhibiting don't-know nondeterminism are com-
+
+
+mon. Consider the program for testing whether two binary trees are isomorphic
+
+
+(Program 3.25, reproduced here). Each clause is independently correct, but given
+
+
+two isomorphic binary trees, we don't know which of the two recursive clauses
+
+
+should be used to prove the isomorphism. Operationally, only when the compu-
+
+
+tation terminates successfully do we know the correct choice:
+
+
+
+        isotree(void,void).
+
+
+        isotree(tree(X,L1,R1),tree(X,L2,R2))  
+
+
+            isotree(L1,L2), isotree(R1,R2).
+
+
+        isotree(tree(X,L1,R1),tree(X,L2,R2))  
+
+
+            isotree(L1,R2), isotree(L2,R1).
+
+
+
+    Composing Prolog programs exhibiting either form of nondeterminism can be
+
+
+indistinguishable from composing deterministic programs. Each clause is written
+
+
+independently. Whether inputs match only one clause or several is irrelevant to
+
+
+the programmer. Indeed this is seen from the multiple uses that can be made of
+
+
+
+
+236   Nondeterministic Programming                              14.2
+
+
+
+Prolog programs. With arguments instantiated in one way, the program is deter-
+
+
+ministic; with another pattern of instantiation, the program is nondeterministi*
+ *c.
+
+
+For example, append/3 is deterministic if called with its first two arguments i*
+ *n-
+
+
+stantiated, while it is generally nondeterministic if called with the third arg*
+ *ument
+
+
+instantiated and the first two arguments uninstantiated.
+
+
+
+    The behavior of Prolog programs seemingly having don't-know nondetermin-
+
+
+ism such as isotree is known. A given logic program and a query determine a
+
+
+search tree, as discussed in Chapter 5, which is searched depth-first by Prolog.
+
+
+Writing a program possessing don't-know nondeterminism is really specifying a
+
+
+depth-first search algorithm for solving the problem.
+
+
+
+    We consider this viewpoint in a little more detail with a particular exampl*
+ *e:
+
+
+finding whether two nodes in a graph are connected.  Figure 14.3 contains two
+
+
+graphs that will be used to test our ideas.  The left-hand one is a tree, while
+
+
+the right-hand one is not, containing a cycle. Trees, or more generally, direct*
+ *ed
+
+
+acyclic graphs (DAGs), behave better than graphs with cycles, as we will see in
+
+
+our example programs.
+
+
+
+    Our first program is a small modification of a logic program of Section 2.3.
+
+
+Program 14.8 defines the relation connected(X,Y), which is true if two nodes in
+
+
+a graph, X and Y, are connected. Edges are directed; the fact edge(X,Y) states
+
+
+that a directed edge exists from X to Y. Declaratively the program is a concise,
+
+
+recursive specification of what it means for nodes in a graph to be connected.
+
+
+Interpreted operationally as a Prolog program, it is the implementation of an
+
+
+algorithm to find whether two nodes are connected using depth-first search.
+
+
+
+
+14.2                       Don't-Care and Don't-Know Nondeterminism237
+
+
+
+                     Figure 14.3:  Directed graphs
+
+
+
+connected(X,Y )  
+
+
+    Node X  is connected to node Y ,
+
+
+    given an edge/2  relation describing a DAG.
+
+
+connected(X,X).
+
+
+connected(X,Y)   edge(X,N), connected(N,Y).
+
+
+Data
+
+
+edge(a,b).    edge(a,c).    edge(a,d).    edge(a,e).   edge(d,j).
+
+
+edge(c,f).    edge(c,g).    edge(f,h).    edge(e,k).   edge(f,i).
+
+
+edge(x,y).    edge(y,z).    edge(z,x).    edge(y,u).   edge(z,v).
+
+
+
+Program 14.8:  Connectivity in a finite DAG
+
+
+
+    The solutions to the query connected(a,X)? using the data from the left-
+
+
+hand graph in Figure 14.3 gives as values for X, a, b, c, f, h, i, g, d, j, e, *
+ *k. Their
+
+
+
+
+238   Nondeterministic Programming                              14.2
+
+
+
+        path(X,Y,Path)  
+
+
+            Path is a path between two nodes X  and Y
+
+
+            in the DAG defined by the relation edge/2 .
+
+
+        path(X,X,[X]).
+
+
+        path(X,Y,[XjP])   edge(X,N), path(N,Y,P).
+
+
+
+        Program 14.9:  Finding a path by depth-first search
+
+
+
+order constitutes a depth-first traversal of the tree.
+
+
+
+    Program 14.9 is an extension of this simple program that finds a path betwe*
+ *en
+
+
+two nodes. The predicate path(X,Y,Path) is true if Path is a path from the node
+
+
+X to the node Y in a graph. Both endpoints are included in the path. The path is
+
+
+built downward, which fits well with the recursive specification of the connect*
+ *ed
+
+
+relation. The ease of computing the path is a direct consequence of the depth-
+
+
+first traversal. Extending a breadth-first traversal to find the path is much m*
+ *ore
+
+
+difficult. Sections 16.2 and 20.1 show how it can be done.
+
+
+
+    Depth-first search, dfs, correctly traverses any finite tree or DAG (direct*
+ *ed
+
+
+acyclic graph). There is a problem, however, with traversing a graph with cycle*
+ *s.
+
+
+The computation can become lost in an infinite loop around one of the cycles.
+
+
+For example, the query connected(x,Node)?, referring to the right-hand graph
+
+
+of Figure 14.3 gives solutions Node=y, Node=z, and Node=x repeatedly without
+
+
+reaching u or v.
+
+
+
+    The problem is overcome by modifying connected.  An extra argument is
+
+
+
+
+14.2                       Don't-Care and Don't-Know Nondeterminism239
+
+
+
+added that accumulates the nodes visited so far. A test is made to avoid visiti*
+ *ng
+
+
+the same node twice. This is shown in Program 14.10.
+
+
+connected(X,Y )  
+
+
+    Node X  is connected to node Y  in the graph defined by edge/2 .
+
+
+connected(X,Y)   connected(X,Y,[X]).
+
+
+connected(X,X,Visited).
+
+
+connected(X,Y,Visited)  
+
+
+    edge(X,N), not member(N,Visited), connected(N,Y,[NjVisited]).
+
+
+
+Program 14.10:  Connectivity in a graph
+
+
+
+    Program 14.10 successfully traverses a finite directed graph depth-first. T*
+ *he
+
+
+pure Prolog program needed for searching finite DAGs must be extended by nega-
+
+
+tion in order to work correctly. Adding an accumulator of paths visited to avoid
+
+
+entering loops effectively breaks the cycles in the graph by preventing travers*
+ *al
+
+
+of an edge that would complete a cycle.
+
+
+    The program is not guaranteed to reach every node of an infinite graph. To
+
+
+do so, breadth-first search is necessary. This is discussed further in Section *
+ *16.2.
+
+
+    This section is completed with a program for building simple plans in the
+
+
+blocks world. The program is written nondeterministically, essentially performi*
+ *ng
+
+
+a depth-first search. It combines the two extensions mentioned before | keeping
+
+
+an accumulator of what has been traversed, and computing a path.
+
+
+    The problem is to form a plan in the blocks world, that is, to specify a
+
+
+
+
+240   Nondeterministic Programming                              14.2
+
+
+
+sequence of actions for restacking blocks to achieve a particular configuration.
+
+
+Figure 14.4 gives the initial state and the desired final state of a blocks wor*
+ *ld
+
+
+problem. There are three blocks, a,b, and c, and three places, p, q, and r. The
+
+
+actions allowed are moving a block from the top of a block to a place and moving
+
+
+a block from one block to another. For an action to succeed, the top of the mov*
+ *ed
+
+
+block must be clear, and also the place or block to which it is being moved must
+
+
+be clear.
+
+
+
+       Figure 14.4:  Initial and final states of a blocks world problem
+
+
+
+    The top-level procedure of Program 14.11 solving the problem is trans-
+
+
+form(State1,State2,Plan).  A plan of actions, Plan, is produced that trans-
+
+
+forms State1 into State2 when executed.
+
+
+    States are represented by a list of relations of the form on(X,Y), where X *
+ *is
+
+
+a block and Y is a block or place. They represent the facts that are true in the
+
+
+state.  For example, the initial and final states in Figure 14.4 are, respectiv*
+ *ely,
+
+
+[on(a,b),on(b,p),on(c,r)] and [on(a,b),on(b,c),on(c,r)]. The state de-
+
+
+scriptions are ordered in the sense that the on relation for a precedes that of*
+ * b,
+
+
+which precedes the on relation for c. The state descriptions allow easy testing*
+ * of
+
+
+
+
+14.2                       Don't-Care and Don't-Know Nondeterminism241
+
+
+
+        transform(State1,State2,Plan)  
+
+
+            Plan is a plan of actions to transform State1  into State2 .
+
+
+        transform(State1,State2,Plan)  
+
+
+            transform(State1,State2,[State1],Plan).
+
+
+        transform(State,State,Visited,[ ]).
+
+
+        transform(State1,State2,Visited,[ActionjActions])  
+
+
+            legal_action(Action,State1),
+
+
+            update(Action,State1,State),
+
+
+            not member(State,Visited),
+
+
+            transform(State,State2,[StatejVisited],Actions).
+
+
+        legal_action(to_place(Block,Y,Place),State)  
+
+
+            on(Block,Y,State), clear(Block,State),
+
+
+            place(Place), clear(Place,State).
+
+
+        legal_action(to_block(Block1,Y,Block2),State)  
+
+
+            on(Block1,Y,State), clear(Block1,State), block(Block2),
+
+
+            Block1 6= Block2, clear(Block2,State).
+
+
+        clear(X,State)   not member(on(A,X),State).
+
+
+        on(X,Y,State)   member(on(X,Y),State).
+
+
+        update(to_block(X,Y,Z),State,State1)  
+
+
+            substitute(on(X,Y),on(X,Z),State,State1).
+
+
+        update(to_place(X,Y,Z),State,State1)  
+
+
+            substitute(on(X,Y),on(X,Z),State,State1).
+
+
+        substitute(X,Y,Xs,Ys)   See Exercise 3.3(i).
+
+
+
+        Program 14.11:  A depth-first planner
+
+
+
+
+242   Nondeterministic Programming                              14.2
+
+
+
+whether a block or place X is clear in a given state by checking that there is *
+ *no
+
+
+relation of the form on(A,X). The predicates clear/2 and on/3 in Program 14.11
+
+
+take advantage of this representation.
+
+
+    The nondeterministic algorithm used by the planner is given by the recursive
+
+
+clause of transform/4 in the program:
+
+
+
+        While the desired state is not reached,
+
+
+            find a legal action,
+
+
+            update the current state,
+
+
+            check that it has not been visited before.
+
+
+
+There are two possible actions, moving to a block and moving to a place.  For
+
+
+each, the conditions for which it is legal must be specified, and a method given
+
+
+for updating the state as a result of performing the action.
+
+
+    Program 14.11 successfully solves the simple problem given as Program 14.12.
+
+
+The first plan it produces is horrendous, however:
+
+
+[to_place(a,b,q),to_block(a,q,c),to_place(b,p,q),to_place(a,c,p),
+
+
+    to_block(a,p,b),to_place(c,r,p),to_place(a,b,r),to_block(a,r,c),
+
+
+    to_place(b,q,r),to_place(a,c,q),to_block(a,q,b),to_place(c,p,q),
+
+
+    to_place(a,b,p),to_block(a,p,c),to_place(b,r,p),to_place(a,c,r),
+
+
+    to_block(b,p,a),to_place(c,q,p),to_block(b,a,c),to_place(a,r,q),
+
+
+    to_block(b,c,a),to_place(c,p,r),to_block(b,a,c),to_place(a,q,p),
+
+
+    to_block(a,p,b)].
+
+
+
+Block a is first moved to q, then to c. After that, block b is moved to q, bloc*
+ *k a
+
+
+
+
+14.2                       Don't-Care and Don't-Know Nondeterminism243
+
+
+
+is moved to p and b, and after 20 more random moves, the final configuration is
+
+
+reached.
+
+Testing and data
+
+
+test_plan(Name,Plan)  
+
+
+    initial_state(Name,I), final_state(Name,F), transform(I,F,Plan).
+
+
+initial_state(test,[on(a,b),on(b,p),on(c,r)]).
+
+
+final_state(test,[on(a,b),on(b,c),on(c,r)]).
+
+
+block(a).    block(b).    block(c).
+
+
+place(p).    place(q).    place(r).
+
+
+
+Program 14.12:  Testing the depth-first planner
+
+
+
+    It is easy to incorporate a little more intelligence by first trying to ach*
+ *ieve one
+
+
+of the goal states. The predicate legal_action can be replaced by a predicate
+
+
+choose_action(Action,State1,State2). A simple definition suffices to produce
+
+
+intelligent behavior in our example problem:
+
+
+        choose_action(Action,State1,State2)  
+
+
+            suggest(Action,State2), legal_action(Action,State1).
+
+
+        choose_action(Action,State1,State2)  
+
+
+            legal_action(Action,State1).
+
+
+        suggest(to_place(X,Y,Z),State)  
+
+
+            member(on(X,Z),State), place(Z).
+
+
+        suggest(to_block(X,Y,Z),State)  
+
+
+
+
+244   Nondeterministic Programming                              14.2
+
+
+
+            member(on(X,Z),State), block(Z).
+
+
+
+The first plan now produced is [to_place(a,b,q),to_block(b,p,c),to_block(
+
+
+a,q,b)].
+
+
+
+Exercises for Section 14.2
+
+
+
+(i) Apply Program 14.11 to solve another simple blocks world problem.
+
+
+(ii)Modify Program 14.11 to solve the following planning problem.
+
+
+    Consider a simplified computer consisting of a single accumulator and a lar*
+ *ge
+
+
+    number of general purpose registers. There are four instructions: load, sto*
+ *re,
+
+
+    add and subtract. From the initial state where the accumulator is empty, re*
+ *g-
+
+
+    ister1 contains the value c1 , register2 contains c2 , register3 contains c*
+ *3 and
+
+
+    register4 contains c4 , achieve a final state where the accumulator contains
+
+
+
+        (a) (c1 { c2 ) + (c3 { c4 )
+
+
+        (b) (c1 { c2 ) + (c1 { c2 )
+
+
+        (c) c1 , and register1 contains c1 + (c2 { c3 ),
+
+
+            and register2 contains c2 { c3 .
+
+
+
+14.3   Artificial  Intelligence  classics:   ANALOGY,  ELIZA,
+
+
+and McSAM
+
+
+
+    \The best way to learn a subject is to teach it" is a cliche commonly repea*
+ *ted
+
+
+to new teachers. An appropriate analogue for new programmers is that the best
+
+
+
+
+14.3         Artificial Intelligence classics: ANALOGY, ELIZA, and2McSAM45
+
+
+
+way to understand a program is to rewrite or extend it. In this spirit, we pres*
+ *ent
+
+
+logical reconstructions of three AI programs. Each is clear, understandable, and
+
+
+easily extended. The exercises at the end of the section encourage the reader to
+
+
+add new facts and rules to the programs.
+
+
+    The three programs chosen are the ANALOGY program of Evans for solv-
+
+
+ing geometric analogy questions from intelligence tests; the ELIZA program of
+
+
+Weizenbaum, which simulates or rather parodies conversation; and McSAM, a mi-
+
+
+croversion of SAM, a program for \understanding" stories from the Yale language
+
+
+group. Each logical reconstruction is expressed very simply. The nondeterminism
+
+
+of Prolog allows the programmer to ignore the issues of search.
+
+
+    Consider the task of solving the geometric analogy problems typically used
+
+
+in intelligence tests.  Several diagrams are presented in a prototypical proble*
+ *m.
+
+
+Diagrams A, B, and C are singled out from a list of possible answers and the
+
+
+following question is posed:  \A is to B as C is to which one of the `answer'
+
+
+diagrams?" Figure 14.5 gives a simple problem of this type.
+
+
+    Here is an intuitive algorithm for solving the problem, where terms such as
+
+
+find, apply, and operation are left unspecified:
+
+        Find an operation that relates A to B.
+
+
+        Apply the operation to C to give a diagram X.
+
+
+        Find X, or its nearest equivalent, among the answers.
+
+
+
+In the problem in Figure 14.5, the positions of the square and triangle are swa*
+ *pped
+
+
+(with appropriate scaling) between diagrams A and B. The \obvious" answer is
+
+
+to swap the square and the circle in diagram C. The resultant diagram appears
+
+
+
+
+246   Nondeterministic Programming                              14.3
+
+
+
+               Figure 14.5:  A geometric analogy problem
+
+
+
+as no. 2 in the possible answers.
+
+
+    Program 14.13 is a simple program for solving analogy problems. The basic
+
+
+relation is analogy(Pair1,Pair2,Answers), where each Pair is of the form X
+
+
+is_to Y. To parse the program, is_to must be declared as an infix operator.
+
+
+The two elements in Pair1 bear the same relation as the two elements in Pair2,
+
+
+and the second element in Pair2 appears in Answers. The definition of analogy
+
+
+implements the intuitive algorithm:
+
+
+
+analogy(A is_to B,C is_to X,Answers)  
+
+
+    match(A,B,Operation), match(C,X,Operation), member(X,Answers).
+
+
+
+A fundamental decision is how the figures in the problem should be repre-
+
+
+
+
+14.3         Artificial Intelligence classics: ANALOGY, ELIZA, and2McSAM47
+
+
+
+    analogy(Pair1,Pair2,Answers)  
+
+
+        An analogy holds between the pairs of figures Pair1  and Pair2 .
+
+
+        The second element of Pair2  is one of the possible Answers.
+
+
+    analogy(A is_to B,C is_to X,Answers)  
+
+
+        match(A,B,Operation),
+
+
+        match(C,X,Operation),
+
+
+        member(X,Answers).
+
+
+    match(inside(Figure1,Figure2),inside(Figure2,Figure1),invert).
+
+
+    match(above(Figure1,Figure2),above(Figure2,Figure1),invert).
+
+
+
+    Program 14.13:  A program solving geometric analogies
+
+
+
+    Testing and data
+
+
+    test_analogy(Name,X)  
+
+
+        figures(Name,A,B,C),
+
+
+        answers(Name,Answers),
+
+
+        analogy(A is_to B,C is_to X,Answers).
+
+
+    figures(test1,inside(square,triangle),inside(triangle,square),
+
+
+        inside(circle,square)).
+
+
+    answers(test1,[inside(circle,triangle),inside(square,circle),
+
+
+        inside(triangle,square)]).
+
+
+
+    Program 14.14:  Testing ANALOGY
+
+
+
+
+248   Nondeterministic Programming                              14.3
+
+
+
+sented. In Program 14.13, figures are represented as Prolog terms. Diagram A
+
+
+in Figure 14.5 is a square inside a triangle and is represented as the term in-
+
+
+side(square,triangle).
+
+
+
+    The relation between two diagrams is found by the predicate match(A,B,
+
+
+Operation). This relation is true if Operation matches A and B. The operation
+
+
+invert is used to solve our example problem. The behavior of invert is to swap
+
+
+its arguments.
+
+
+
+    The predicate match is used in two distinct ways in this program. The first
+
+
+time it produces an operation matching two given diagrams.  The second time
+
+
+it produces a second diagram given an operation and a diagram. These details
+
+
+are, however, irrelevant from the nondeterministic viewpoint. Finding the answer
+
+
+is implemented simply, checking whether a given diagram appears in the list of
+
+
+answers. Note that the second match goal and the member goal can be swapped.
+
+
+The behavior then becomes guessing an answer using member as a generator,
+
+
+and verifying that the guess has the same relation to diagram C as A does to B.
+
+
+Program 14.14 tests the analogy program.
+
+
+
+    Exercise 14.3(i) poses three additional problems to be solved by analogy,
+
+
+which can be expressed within the framework of Program 14.13. The representa-
+
+
+tion of pictures by terms, and the description of operations becomes increasing*
+ *ly
+
+
+ad hoc.  Indeed, much of the \intelligence" of the program is embedded in the
+
+
+representation. The original ANALOGY program did not assume as much knowl-
+
+
+edge. It took a line drawing and tried to recognize the objects. Triangles, squ*
+ *ares,
+
+
+and so on, were not assumed to be the primitives.
+
+
+
+
+14.3         Artificial Intelligence classics: ANALOGY, ELIZA, and2McSAM49
+
+
+
+    The next AI classic considered is a simplified version of ELIZA. The program
+
+
+aims to simulate a conversation. A user types in a sentence, and ELIZA responds
+
+
+with an appropriate question or comment.  ELIZA does not understand in any
+
+
+real sense, responding to its input by recognizing word patterns and replying by
+
+
+using a corresponding response pattern. To make the patterns of responses more
+
+
+credible, a psychiatrist setting is adopted. A sample interaction with ELIZA is
+
+
+given in Figure 14.6. Computer responses are preceded by AE.
+
+
+              I am unhappy.
+
+
+           AE How long have you been unhappy?
+
+
+              Six months. Can you help me.
+
+
+           AE What makes you think I help you?
+
+
+              You remind me of my father and brother.
+
+
+           AE Please tell me more about father.
+
+
+              I like teasing father.
+
+
+           AE Does anyone else in your family like teasing father?
+
+
+              No, only me.
+
+
+           AE Please go on.
+
+
+              Figure 14.6:  Sample conversation with ELIZA
+
+
+
+    The heart of ELIZA is a procedure for matching the input sentence against
+
+
+a pattern.  The resulting match is applied to another pattern to determine the
+
+
+program reply. The pair of patterns can be considered a stimulus/response pair,
+
+
+where the input is matched against the stimulus and the output generated from
+
+
+the response. A typical stimulus/response pair is
+
+
+
+
+250   Nondeterministic Programming                              14.3
+
+
+
+        I am hstatementi    How long have you been hstatementi?
+
+
+
+Using this pair, the response of the program to the input statement \I am un-
+
+
+happy" will be the question \How long have you been unhappy?" The hstatementi
+
+
+can be viewed as a slot to be filled.
+
+
+    Program 14.15 is a simple version of ELIZA. It implements the following
+
+
+algorithm:
+
+
+
+        Read the input.
+
+
+        While the input is not bye,
+
+
+            choose a stimulus/response pair,
+
+
+            match the input to the stimulus,
+
+
+            generate the reply from the response and the above match,
+
+
+            output the response,
+
+
+            read the next input.
+
+
+
+    The stimulus/response pairs are represented as facts of the form pat-
+
+
+tern(Stimulus,Response), where both Stimulus and Response are lists of
+
+
+words and slots.  Slots in the patterns are represented by integers.  The predi-
+
+
+cate match(Pattern,Table,Words) is used for both the second and third steps
+
+
+of the algorithm.  It expresses a relation between a pattern Pattern, a list of
+
+
+words Words, and a table Table, where the table records how the slots in the
+
+
+pattern are filled. A central part of the match procedure is played by a nonde-
+
+
+terministic use of append to break up a list of words. The table is represented
+
+
+by an incomplete data structure, discussed in more detail in Chapter 15.  The
+
+
+
+
+14.3         Artificial Intelligence classics: ANALOGY, ELIZA, and2McSAM51
+
+
+
+eliza  
+
+
+    Simulates a conversation via side effects.
+
+
+eliza   read_word_list(Input), eliza(Input), !.
+
+
+eliza([bye])  
+
+
+    reply([`Goodbye.  I hope I have helped you']).
+
+
+eliza(Input)  
+
+
+    pattern(Stimulus,Response),
+
+
+    match(Stimulus,Dictionary,Input),
+
+
+    match(Response,Dictionary,Output),
+
+
+    reply(Output),
+
+
+    read_word_list(Input1),
+
+
+    !, eliza(Input1).
+
+
+match(Pattern,Dictionary,Words)  
+
+
+    Pattern matches the list of words Words, and matchings are
+
+
+    recorded in the Dictionary.
+
+
+match([NjPattern],Dictionary,Target)  
+
+
+    integer(N), lookup(N,Dictionary,LeftTarget),
+
+
+    append(LeftTarget,RightTarget,Target),
+
+
+    match(Pattern,Dictionary,RightTarget).
+
+
+match([WordjPattern],Dictionary,[WordjTarget])  
+
+
+    atom(Word), match(Pattern,Dictionary,Target).
+
+
+match([ ],Dictionary,[ ]).
+
+
+lookup(Key,Dictionary,Value)   See Program 15.8.
+
+
+pattern(Stimulus,Response)  
+
+
+    Response is an applicable response pattern to the pattern Stimulus.
+
+
+pattern([i,am,1],[`How',long,have,you,been,1,?]).
+
+
+pattern([1,you,2,me],[`What',makes,you,think,`I',2,you,?]).
+
+
+pattern([i,like,1],[`Does',anyone,else,in,your,family,like,1,?]).
+
+
+pattern([i,feel,1],[`Do',you,often,feel,that,way,?]).
+
+
+pattern([1,X,2],[`Please',tell,me,more,about,X,.])    important(X).
+
+
+pattern([1],[`Please',go,on,.]).
+
+
+important(father).    important(mother).     important(son).
+
+
+important(sister).    important(brother).    important(daughter).
+
+
+reply([HeadjTail])   write(Head), write(` '), reply(Tail).
+
+
+reply([ ])   nl.
+
+
+read_word_list(Xs)   See Program 12.2.
+
+
+
+Program 14.15:  ELIZA
+
+
+
+
+252   Nondeterministic Programming                              14.3
+
+
+
+   Input:   John went to Leones, ate a hamburger, and left.
+
+
+   Output:  John went to Leones. He was shown from the door to a seat.
+
+
+            A waiter brought John a hamburger, which John ate by mouth.
+
+
+            The waiter brought John a check, and John left Leones for
+
+
+            another place.
+
+
+
+                Figure 14.7:  A story filled in by McSAM
+
+
+
+missing procedure lookup/3 is given in Section 15.3. The reply is generated by
+
+
+reply(Words).  which is a modified version of Program 12.1 for writeln that
+
+
+leaves spaces between words.
+
+
+    The final program presented in this section is Micro SAM or McSAM. It is
+
+
+a simplified version of the SAM (Script Applier Mechanism) program developed
+
+
+in the natural language group at Yale University.  The aim of McSAM is to
+
+
+\understand" stories.  Given a story, it finds a relevant script and matches the
+
+
+individual events of the story against the patterns in the script. In the proce*
+ *ss,
+
+
+events in the script not explicitly mentioned in the story are filled in.
+
+
+    Both the story and the script are represented in terms of Schank's theory
+
+
+of conceptual dependency. For example, consider the input story in Figure 14.7,
+
+
+which is used as an example in our version of McSAM. The English version
+
+
+
+        \John went to Leones, ate a hamburger, and left"
+
+
+
+is represented in the program as a list of lists:
+
+
+
+        [  [ptrans, john, john, X1, leones],
+
+
+
+
+14.3         Artificial Intelligence classics: ANALOGY, ELIZA, and2McSAM53
+
+
+
+           [ingest, X2, hamburger, X3],
+
+
+           [ptrans, Actor, Actor, X4, X5]  ].
+
+
+
+The first element in each list, ptrans and ingest, for example, is a term from
+
+
+conceptual dependency theory. The representation of the story as a list of list*
+ *s is
+
+
+chosen as a tribute to the original Lisp version.
+
+
+    Programming McSAM in Prolog is a triviality, as demonstrated by Pro-
+
+
+gram 14.16.  The top-level relation is mcsam(Story,Script), which expands a
+
+
+Story into its \understood" equivalent according to a relevant Script. The scri*
+ *pt
+
+
+is found by the predicate find(Story,Script,Defaults). The story is searched
+
+
+for a nonvariable argument that triggers the name of a script. In our example of
+
+
+John visiting Leones, the atom leones triggers the restaurant script, indicated
+
+
+by the fact trigger(leones,restaurant) in Program 14.17.
+
+
+    The matching of the story to the script is done by match(Script,Story),
+
+
+which associates lines in the story with lines in the script. Remaining slots i*
+ *n the
+
+
+script are filled in by name_defaults(Defaults). The \output" is
+
+
+
+        [ptrans,john,john,place1,leones]
+
+
+        [ptrans,john,john,door,seat]
+
+
+        [mtrans,john,waiter,hamburger]
+
+
+        [ingest,john,hamburger,[mouth,john]]
+
+
+        [atrans,john,check,john,waiter]
+
+
+        [ptrans,john,john,leones,place2].
+
+
+
+Its translation to English is given in Figure 14.7.
+
+
+
+
+254   Nondeterministic Programming                              14.3
+
+
+
+        mcsam(Story,Script)  
+
+
+            Script describes Story.
+
+
+        mcsam(Story,Script)  
+
+
+            find(Story,Script,Defaults),
+
+
+            match(Script,Story),
+
+
+            name_defaults(Defaults).
+
+
+        find(Story,Script,Defaults)  
+
+
+            filler(Slot,Story),
+
+
+            trigger(Slot,Name),
+
+
+            script(Name,Script,Defaults).
+
+
+        match(Script,Story)  
+
+
+            Story is a subsequence of Script.
+
+
+        match(Script,[ ]).
+
+
+        match([LinejScript],[LinejStory])   match(Script,Story).
+
+
+        match([LinejScript],Story)   match(Script,Story).
+
+
+        filler(Slot,Story)  
+
+
+            Slot is a word in Story.
+
+
+        filler(Slot,Story)  
+
+
+            member([ActionjArgs],Story),
+
+
+            member(Slot,Args),
+
+
+            nonvar(Slot).
+
+
+        name_defaults(Defaults)  
+
+
+            Unifies default pairs in Defaults.
+
+
+        name_defaults([ ]).
+
+
+        name_defaults([[N,N]jL])   name_defaults(L).
+
+
+        name_defaults([[N1,N2]jL])   N1 6= N2, name_defaults(L).
+
+
+
+        Program 14.16:  McSAM
+
+
+
+
+14.4                                                 Background  255
+
+
+
+    The work done on the original McSAM was all in the searching and pattern
+
+
+matching. This is accomplished in Prolog by nondeterministic programming and
+
+
+unification.
+
+
+
+Exercises for Section 14.3
+
+
+
+(i) Extend ANALOGY, Program 14.13, to solve the three problems in Fig-
+
+
+    ure 14.8.
+
+
+(ii)Extend ELIZA, Program 14.15, by adding new stimulus/response patterns.
+
+
+(iii)If the seventh statement in Figure 14.6 is changed to be \I like teasing my
+
+
+    father," ELIZA responds with \Does any one else in your family like teasing
+
+
+    my father." Modify Program 14.15 to \fix" this behavior, changing references
+
+
+    such as I , my, to you, your, etc.
+
+
+(iv)Rewrite McSAM to use structures.
+
+
+(v) Reconstruct another AI classic.  A good candidate is the general problem
+
+
+    solver GPS.
+
+
+
+14.4   Background
+
+
+
+    Applying Prolog to generate-and-test problems has been very common. Many
+
+
+researchers have discussed the behavior of Prolog in solving the N queens probl*
+ *em
+
+
+and map coloring. A good discussion of how Prolog handles the N queens problem
+
+
+can be found in Elcock (1983). The N queens program given in Exercise 14.1(v),
+
+
+
+
+256   Nondeterministic Programming                              14.4
+
+
+
+        Testing and data
+
+
+        test_mcsam(Name,UnderstoodStory)  
+
+
+            story(Name,Story), mcsam(Story,UnderstoodStory).
+
+
+        story(test,[[ptrans, john, john, X1, leones],
+
+
+            [ingest, X2, hamburger, X3],
+
+
+            [ptrans, Actor, Actor, X4, X5]  ]).
+
+
+        script(restaurant,
+
+
+            [  [ptrans, Actor, Actor, EarlierPlace, Restaurant],
+
+
+               [ptrans, Actor, Actor, Door, Seat],
+
+
+               [mtrans, Actor, Waiter, Food],
+
+
+               [ingest, Actor, Food, [mouth, Actor] ],
+
+
+               [atrans, Actor, Money, Actor, Waiter],
+
+
+               [ptrans, Actor, Actor, Restaurant, Gone] ],
+
+
+            [  [Actor, customer], [EarlierPlace, place1],
+
+
+               [Restaurant, restaurant], [Door, door],
+
+
+               [Seat, seat], [Food, meal], [Waiter, waiter],
+
+
+               [Money, check], [Gone, place2]  ] ).
+
+
+        trigger(leones,restaurant).
+
+
+        trigger(waiter,restaurant).
+
+
+
+        Program 14.17:  Testing McSAM
+
+
+
+the fastest of which we are aware, is due to Thomas Fruewirth. A classification
+
+
+
+
+14.4                                                 Background  257
+
+
+
+                  Figure 14.8:  Three analogy problems
+
+
+
+
+258   Nondeterministic Programming                              14.4
+
+
+
+of generate-and-test programs in Prolog is given in Bansal and Sterling (1989).
+
+
+
+    Several researchers have used Prolog's behavior on generate-and-test prob-
+
+
+lems as a reason to investigate alternative control of logic programs. Suggesti*
+ *ons
+
+
+for improvement include co-routining incorporated in IC-Prolog (Clark and Mc-
+
+
+Cabe, 1979) and intelligent backtracking (Bruynooghe and Pereira, 1984). Neither
+
+
+have been widely adopted into Prolog.
+
+
+
+    Other examples of solving puzzles by instantiating structures are given in a
+
+
+book by Evan Tick (1991) comparing Prolog program performance with concur-
+
+
+rent logic programming languages.
+
+
+
+    The zebra puzzle, Exercise 14.1(iv) did the rounds on the Prolog Digest in
+
+
+the early 1980s. It was used as an unofficial benchmark to test both the speed
+
+
+of Prolog implementations and the ability of Prolog programmers to write clear
+
+
+code.  The description of clues given in Program 14.7 was influenced by one of
+
+
+the solutions. The framework of Program 14.6 was tested extensively by Steven
+
+
+Kaminski in a course project at Case Western Reserve University. He took the
+
+
+first 20 puzzles of an available puzzle book and solved them using the framewor*
+ *k.
+
+
+Although very much a Prolog novice, he was able to use Prolog fairly easily to
+
+
+find solutions. His experience highlighted some interesting points, namely, how
+
+
+to handle negative information and the undesirability of too many choice points
+
+
+with redundant calls to select and member.
+
+
+
+    The definitive discussion of don't-care and don't-know nondeterminism in
+
+
+logic programming appears in Kowalski (1979a).
+
+
+
+
+14.4                                                 Background  259
+
+
+
+    Program 14.11 for planning is a variant of an example from Kowalski (1979a).
+
+
+The original planning program in Prolog was WARPLAN (Warren, 1976), repro-
+
+
+duced in Coelho et al. (1980). Exercise 14.2(ii) was adapted from descriptions *
+ *of
+
+
+WARPLAN's abilities in Coelho and Cotta (1988).
+
+
+    ANALOGY constituted the Ph.D. thesis of Thomas Evans at MIT in the
+
+
+mid-1960s. A good description of the program appears in Semantic Information
+
+
+Processing (Minsky, 1968). Evans' program tackled many aspects of the problem
+
+
+that are made trivial by our choice of representation, for example, identifying
+
+
+that there are triangles, squares, and circles in the diagrams. Our version, Pr*
+ *o-
+
+
+gram 14.13, emerged from a discussion group of Leon Sterling with a group of
+
+
+Epistemics students at the University of Edinburgh.
+
+
+    ELIZA was originally presented in Weizenbaum (1966). Its performance led
+
+
+people to believe that a limited form of the Turing test had been passed. Weize*
+ *n-
+
+
+baum, its author, was horrified by people's reactions to the program and to AI
+
+
+more generally, and he wrote an impassioned plea against taking the program too
+
+
+seriously (Weizenbaum, 1976).  Our version, Program 14.15, is a slight variant
+
+
+of a teaching program attributed to Alan Bundy, Richard O'Keefe, and Henry
+
+
+Thompson, which was used for AI courses at the University of Edinburgh.
+
+
+    McSAM is a version of the SAM program, which was tailored for teaching AI
+
+
+programming (Schank and Riesbeck, 1981). Our version, Program 14.16, is due to
+
+
+Ernie Davis and Ehud Shapiro. More information about conceptual dependency
+
+
+can be found in Schank and Abelson (1977).
+
+
+    A rational reconstruction of GPS, suggested in Exercise 14.3(v), was shown
+
+
+
+
+260   Nondeterministic Programming                              14.4
+
+
+
+to us by George Ernst.

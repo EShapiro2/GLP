@@ -1,0 +1,1138 @@
+
+
+
+
+                                                 Chapter  22
+
+
+
+                           A  Credit  Evaluation
+
+
+                                      Expert  System
+
+
+
+    When the first edition of this book was published, there was a surge of act*
+ *ivity
+
+
+in the application of artificial intelligence to industry. Of particular intere*
+ *st were
+
+
+expert systems | programs designed to perform tasks previously allocated to
+
+
+highly paid human experts. One important feature of expert systems is the expli*
+ *cit
+
+
+representation of knowledge.
+
+
+    This entire book is relevant for programming expert systems. The example
+
+
+programs typify code that might be written. For instance, the equation-solving
+
+
+program of Chapter 23 can be, and has been, viewed as an expert system. The
+
+
+knowledge of expert systems is often expressed as rules.  Prolog whose basic
+
+
+statements are rules is thus a natural language for implementing expert systems.
+
+
+
+22.1   Developing the System
+
+
+
+    This chapter presents an account of developing a prototype expert system.
+
+
+
+
+384   A Credit Evaluation Expert System                         22.1
+
+
+
+The example comes from the world of banking: evaluating requests for credit from
+
+
+small business ventures. We give a fictionalized account of the development of a
+
+
+simple expert system for evaluating client requests for credit from a bank. The
+
+
+account is from the point of view of Prolog programmers, or knowledge engineers,
+
+
+commissioned by the bank to write the system. It begins after the most difficult
+
+
+stage of building an expert system, extracting the expert knowledge, has been
+
+
+under way for some time. In accordance with received wisdom, the programmers
+
+
+have been consulting with a single bank expert, Chas E. Manhattan. Chas has
+
+
+told us that three factors are of the utmost importance in considering a request
+
+
+for credit from a client (a small business venture).
+
+
+
+    The most important factor is the collateral that can be offered by the clie*
+ *nt in
+
+
+case the venture folds. The various types of collateral are divided into catego*
+ *ries.
+
+
+Currency deposits, whether local or foreign, are first-class collateral. Stocks*
+ * are
+
+
+examples of second-class collateral, and the collateral provided by mortgages a*
+ *nd
+
+
+the like is illiquid.
+
+
+
+    Also very important is the client's financial record. Experience in the bank
+
+
+has shown that the two most important factors are the client's net worth per as*
+ *sets
+
+
+and the current gross profits on sales. The client's short-term debt per annual*
+ * sales
+
+
+should be considered in evaluating the record, and slightly less significant is*
+ * last
+
+
+year's sales growth. For knowledge engineers with some understanding of banking,
+
+
+no further explanation of such concepts is necessary.  In general, a knowledge
+
+
+engineer must understand the domain sufficiently to be able to communicate with
+
+
+the domain expert.
+
+
+
+
+22.1                                         Developing the System385
+
+
+
+    The remaining factor to be considered is the expected yield to the bank.
+
+
+This is a problem that the bank has been working on for a while. Programs exist
+
+
+to give the yield of a particular client profile. The knowledge engineer can th*
+ *us
+
+
+assume that the information will be available in the desired form.
+
+
+
+    Chas uses qualitative terms in speaking about these three factors:  \The
+
+
+client had an excellent financial rating, or a good form of collateral. His ven*
+ *ture
+
+
+would provide a reasonable yield," and so on. Even concepts that could be deter-
+
+
+mined quantitatively are discussed in qualitative terms. The financial world is*
+ * too
+
+
+complicated to be expressed only with the numbers and ratios constantly being
+
+
+calculated. In order to make judgments, experts in the financial domain tend to
+
+
+think in qualitative terms with which they are more comfortable. To echo expert
+
+
+reasoning and to be able to interact with Chas further, qualitative reasoning m*
+ *ust
+
+
+be modeled.
+
+
+
+    On talking to Chas, it became clear that a significant amount of the expert
+
+
+knowledge he described could be naturally expressed as a mixture of procedures
+
+
+and rules. On being pressed a little in the second and third interviews, Chas g*
+ *ave
+
+
+rules for determining ratings for collateral and financial records. These invol*
+ *ved
+
+
+considerable calculations, and in fact, Chas admitted that to save himself work
+
+
+in the long term, he did a quick initial screening to see if the client was at *
+ *all
+
+
+suitable.
+
+
+
+    This information is sufficient to build a prototype.  We show how these
+
+
+comments and observations are translated into a system.  The top-level ba-
+
+
+sic relation is credit(Client,Answer), where Answer is the reply given to
+
+
+
+
+386   A Credit Evaluation Expert System                         22.1
+
+
+
+the request by Client for credit.  The code has three modules | collat-
+
+
+eral, financial_rating, and bank_yield | corresponding to the three fac-
+
+
+tors the expert said were important.  The initial screening to determine that
+
+
+the client is worth considering in the first place is performed by the predicate
+
+
+ok_profile(Client).  The answer Answer is then determined with the predi-
+
+
+cate evaluate(Profile,Answer), which evaluates the Profile built by the three
+
+
+modules.
+
+
+
+    Being proud knowledge engineers, we stress the features of the top-level fo*
+ *r-
+
+
+mulation in credit/2.  The modularity is apparent.  Each of the modules can
+
+
+be developed independently without affecting the rest of the system.  Further,
+
+
+there is no commitment to any particular data structure, i.e., data abstraction
+
+
+is used. For this example, a structure profile(C,F,Y) represents the profile of
+
+
+collateral rating C, the financial rating F, and the yield Y of a client. Howev*
+ *er,
+
+
+nothing central depends on this decision, and it would be easy to change it. Let
+
+
+us consider some of the modular pieces.
+
+
+
+    Let us look at the essential features of the collateral evaluation module.
+
+
+The relation collateral_rating/2 determines a rating for a particular client's
+
+
+collateral.  The first step is to determine an appropriate profile.  This is do*
+ *ne
+
+
+with the predicate collateral_profile, which classifies the client's collateral
+
+
+as first_class, second_class, or illiquid and gives the percentage each cov-
+
+
+ers of the amount of credit the client requested.  The relation uses facts in t*
+ *he
+
+
+database concerning both the bank and the client.  In practice, there may be
+
+
+separate databases for the bank and the client. Sample facts shown in Program
+
+
+
+
+22.1                                         Developing the System387
+
+
+
+22.1 indicate, for example, that local currency deposits are first-class collat*
+ *eral.
+
+
+    The profile is evaluated to give a rating by collateral_evaluation.  It
+
+
+uses rules of thumb to give a qualitative rating of the collateral: excellent, *
+ *good,
+
+
+etc. The first collateral_evaluation rule, for example, reads: \The rating is
+
+
+excellent if the coverage of the requested credit amount by first-class collate*
+ *ral is
+
+
+greater than or equal to 100 percent."
+
+
+    Two features of the code bear comment.  First, the terminology used in
+
+
+the program is the terminology of Chas. This makes the program (almost) self-
+
+
+documenting to the experts and means they can modify it with little help from
+
+
+the knowledge engineer. Allowing people to think in domain concepts also facil-
+
+
+itates debugging and assists in using a domain-independent explanation facility
+
+
+as discussed in Section 17.4. Second, the apparent naivete of the evaluation ru*
+ *les
+
+
+is deceptive. A lot of knowledge and experience are hidden behind these simple
+
+
+numbers.  Choosing poor values for these numbers may mean suffering severe
+
+
+losses.
+
+
+    The financial evaluation module evaluates the financial stability of the cl*
+ *ient.
+
+
+It uses items taken mainly from the balance and profit/loss sheets. The financi*
+ *al
+
+
+rating is also qualitative.  A weighted sum of financial factors is calculated *
+ *by
+
+
+score and used by calibrate to determine the qualitative class.
+
+
+    It should be noted that the modules giving the collateral rating and the
+
+
+financial rating both reflect the point of view and style of a particular exper*
+ *t,
+
+
+Chas Manhattan, rather than a universal truth.  Within the bank there is no
+
+
+consensus about the subject. Some people tend to be conservative and some are
+
+
+
+
+388   A Credit Evaluation Expert System                         22.1
+
+
+
+Credit Evaluation
+
+
+credit(Client,Answer)  
+
+
+    Answer is the reply to a request by Client for credit.
+
+
+credit(Client,Answer)  
+
+
+    ok_profile(Client),
+
+
+    collateral_rating(Client,CollateralRating),
+
+
+    financial_rating(Client,FinancialRating),
+
+
+    bank_yield(Client,Yield),
+
+
+    evaluate(profile(CollateralRating,FinancialRating,Yield),Answer).
+
+
+The collateral rating module
+
+
+collateral_rating(Client,Rating)  
+
+
+    Rating is a qualitative description assessing the collateral
+
+
+    offered by Client to cover the request for credit.
+
+
+collateral_rating(Client,Rating)  
+
+
+    collateral_profile(Client,FirstClass,SecondClass,Illiquid),
+
+
+    collateral_evaluation(FirstClass,SecondClass,Illiquid,Rating).
+
+
+collateral_profile(Client,FirstClass,SecondClass,Illiquid)  
+
+
+    requested_credit(Client,Credit),
+
+
+    collateral_percent(first_class,Client,Credit,FirstClass),
+
+
+    collateral_percent(second_class,Client,Credit,SecondClass),
+
+
+    collateral_percent(illiquid,Client,Credit,Illiquid).
+
+
+collateral_percent(Type,Client,Total,Value)  
+
+
+    findall(X,(collateral(Collateral,Type),
+
+
+        amount(Collateral,Client,X)),Xs),
+
+
+    sumlist(Xs,Sum),
+
+
+    Value is Sum100/Total.
+
+
+Evaluation rules
+
+
+collateral_evaluation(FirstClass,SecondClass,Illiquid,excellent)  
+
+
+    FirstClass  100.
+
+
+collateral_evaluation(FirstClass,SecondClass,Illiquid,excellent)  
+
+
+    FirstClass > 70, FirstClass + SecondClass  100.
+
+
+collateral_evaluation(FirstClass,SecondClass,Illiquid,good)  
+
+
+    FirstClass + SecondClass > 60,
+
+
+    FirstClass + SecondClass < 70,
+
+
+    FirstClass + SecondClass + Illiquid  100.
+
+
+
+Program 22.1:  A credit evaluation system
+
+
+
+
+22.1                                         Developing the System389
+
+
+
+Bank data { classification of collateral
+
+
+collateral(local_currency_deposits,first_class).
+
+
+collateral(foreign_currency_deposits,first_class).
+
+
+collateral(negotiate_instruments,second_class).
+
+
+collateral(mortgage,illiquid).
+
+
+Financial rating
+
+
+financial_rating(Client,Rating)  
+
+
+    Rating is a qualitative description assessing the financial
+
+
+    record offered by Client to support the request for credit.
+
+
+financial_rating(Client,Rating)  
+
+
+    financial_factors(Factors),
+
+
+    score(Factors,Client,0,Score),
+
+
+    calibrate(Score,Rating).
+
+
+Financial evaluation rules
+
+
+calibrate(Score,bad)   Score  -500.
+
+
+calibrate(Score,medium)   -500 < Score, Score < 150.
+
+
+calibrate(Score,good)   150  Score, Score < 1000.
+
+
+calibrate(Score,excellent)   Score  1000.
+
+
+Bank data { weighting factors
+
+
+financial_factors([(net_worth_per_assets,5),
+
+
+    (last_year_sales_growth,1),
+
+
+    (gross_profits_on_sales,5),
+
+
+    (short_term_debt_per_annual_sales,2) ]).
+
+
+score([(Factor,Weight)jFactors],Client,Acc,Score)  
+
+
+    value(Factor,Client,Value),
+
+
+    Acc1 is Acc + WeightValue,
+
+
+    score(Factors,Client,Acc1,Score).
+
+
+score([ ],Client,Score,Score).
+
+
+Final evaluation
+
+
+evaluate(Profile,Outcome)  
+
+
+    Outcome is the reply to the client's Profile.
+
+
+evaluate(Profile,Answer)  
+
+
+    rule(Conditions,Answer), verify(Conditions,Profile).
+
+
+
+Program 22.1  (Continued)
+
+
+
+
+390   A Credit Evaluation Expert System                         22.1
+
+
+
+verify([condition(Type,Test,Rating)jConditions],Profile)  
+
+
+    scale(Type,Scale),
+
+
+    select_value(Type,Profile,Fact),
+
+
+    compare(Test,Scale,Fact,Rating),
+
+
+    verify(Conditions,Profile).
+
+
+verify([ ],Profile).
+
+
+compare(`=',Scale,Rating,Rating).
+
+
+compare(`>',Scale,Rating1,Rating2)  
+
+
+    precedes(Scale,Rating1,Rating2).
+
+
+compare(`',Scale,Rating1,Rating2)  
+
+
+    precedes(Scale,Rating1,Rating2) ; Rating1 = Rating2.
+
+
+compare(`<',Scale,Rating1,Rating2)  
+
+
+    precedes(Scale,Rating2,Rating1).
+
+
+compare(`',Scale,Rating1,Rating2)  
+
+
+    precedes(Scale,Rating2,Rating1) ; Rating1 = Rating2.
+
+
+precedes([R1jRs],R1,R2).
+
+
+precedes([RjRs],R1,R2)   R 6= R2, precedes(Rs,R1,R2).
+
+
+select_value(collateral,profile(C,F,Y),C).
+
+
+select_value(finances,profile(C,F,Y),F).
+
+
+select_value(yield,profile(C,F,Y),Y).
+
+
+Utilities
+
+
+sumlist(Xs,Sum)   See Program 8.6b.
+
+
+Bank data and rules
+
+
+rule([condition(collateral,`',excellent),
+
+
+    condition(finances,`',good),
+
+
+    condition(yield,`',reasonable)],give_credit).
+
+
+rule([condition(collateral,`=',good),condition(finances,`=',good),
+
+
+    condition(yield,`',reasonable)],consult_superior).
+
+
+rule([condition(collateral,`',moderate),
+
+
+    condition(finances,`',medium)],
+
+
+    refuse_credit).
+
+
+scale(collateral,[excellent,good,moderate]).
+
+
+scale(finances,[excellent,good,medium,bad]).
+
+
+scale(yield,[excellent,reasonable,poor]).
+
+
+
+Program 22.1  (Continued)
+
+
+
+
+22.1                                         Developing the System391
+
+
+
+prepared to take considered risks.
+
+
+    Programming the code for determining the collateral and financial ratings
+
+
+proceeded easily. The knowledge provided by the expert was more or less directly
+
+
+translated into the program. The module for the overall evaluation of the clien*
+ *t,
+
+
+however, was more challenging.
+
+
+    The major difficulty was formulating the relevant expert knowledge.  Our
+
+
+expert was less forthcoming with general rules for overall evaluation than for
+
+
+rating the financial record, for example.  He happily discussed the profiles of
+
+
+particular clients, and the outcome of their credit requests and loans, but was
+
+
+reluctant to generalize. He preferred to react to suggestions rather than volun*
+ *teer
+
+
+rules.
+
+
+    This forced a close reevaluation of the exact problem we were solving. There
+
+
+were three possible answers the system could give: approve the request for cred*
+ *it,
+
+
+refuse the request, or ask for advice. There were three factors to be considere*
+ *d.
+
+
+Each factor had a qualitative value that was one of a small set of possibilitie*
+ *s. For
+
+
+example, the financial rating could be bad, medium, good, or excellent. Further,
+
+
+the possible values were ranked on an ordinal scale.
+
+
+    Our system clearly faced an instance of a general problem: Find an outcome
+
+
+from some ordinal scale based on the qualitative results of several ordinal sca*
+ *les.
+
+
+Rules to solve the problem were thus to give a conclusion based on the outcome
+
+
+of the factors. We pressed Chas with this formulation, and he rewarded us with
+
+
+several rules. Here is a typical one: \If the client's collateral rating is exc*
+ *ellent (or
+
+
+better), her financial rating good (or better), and her yield at least reasonab*
+ *le,
+
+
+
+
+392   A Credit Evaluation Expert System                         22.1
+
+
+
+then grant the credit request."
+
+
+    An immediate translation of the rule is
+
+
+
+        evaluate(profile(excellent,good,reasonable),give_credit).
+
+
+
+But this misses many cases covered by the rule, for example, when the client's
+
+
+profile is (excellent,good,excellent).  All the cases for a given rule can be
+
+
+listed. It seemed more sensible, however, to build a more general tool to evalu*
+ *ate
+
+
+rules expressed in terms of qualitative values from ordinal scales.
+
+
+    There is potentially a problem with using ordinal scales because of the lar*
+ *ge
+
+
+number of individual cases that may need to be specified. If each of the N mod-
+
+
+ules have M possible outcomes, there are N M cases to be considered. In general,
+
+
+it is infeasible to have a separate rule for each possibility.  Not only is spa*
+ *ce a
+
+
+problem for so many rules but the search involved in finding the correct rule
+
+
+may be prohibitive.  So instead we defined a small ad hoc set of rules.  We
+
+
+hoped the rules defined, which covered many possibilities at once, would be suf-
+
+
+ficient to cover the clients the bank usually dealt with. We chose the structure
+
+
+rule(Conditions,Conclusion) for our rules, where Conditions is a list of con-
+
+
+ditions under which the rule applies and Conclusion is the rule's conclusion. A
+
+
+condition has the form condition(Factor,Relation,Rating), insisting that the
+
+
+rating from the factor named by Factor bears the relation named by Relation
+
+
+to the rating given by Rating.
+
+
+    The relation is represented by the standard relational operators: <, =, >,
+
+
+etc. The previously mentioned rule is represented as
+
+
+
+
+22.1                                         Developing the System393
+
+
+
+        rule([condition(collateral,`',excellent),
+
+
+            condition(finances,`',good),
+
+
+            condition(yield,`',reasonable)],give_credit).
+
+
+
+Another rule given by Chas reads:  \If both the collateral rating and financial
+
+
+rating are good, and the yield is at least reasonable, then consult your superi*
+ *or."
+
+
+This is translated to
+
+
+        rule([condition(collateral,`=',good),
+
+
+            condition(finances,`=',good),
+
+
+            condition(yield,`',reasonable)],consult_superior).
+
+
+
+Factors can be mentioned twice to indicate they lie in a certain range or might
+
+
+not be mentioned at all. For example, the rule
+
+
+        rule([condition(collateral,`',moderate),
+
+
+            condition(finances,`',medium)],
+
+
+            refuse_credit).
+
+
+
+states that a client should be refused credit if the collateral rating is no be*
+ *tter than
+
+
+moderate and the financial rating is at best medium. The yield is not relevant
+
+
+and so is not mentioned.
+
+
+    The interpreter for the rules is written nondeterministically.   The pro-
+
+
+cedure is:  \Find a rule and verify that its conditions apply," as defined
+
+
+by evaluate.  The predicate verify(Conditions,Profile) checks that the
+
+
+relation between the corresponding symbols in the rule and the ones that
+
+
+are associated with the Profile of the client is as specified by Conditions.
+
+
+
+
+394   A Credit Evaluation Expert System                         22.1
+
+
+
+For each Type that can appear,  a scale is necessary to give the order of
+
+
+values the scale can take.   Examples of scale facts in the bank database
+
+
+are scale(collateral, [excellent,good,moderate]) and scale(finances,
+
+
+[excellent,good,medium,bad]). The predicate select_value returns the ap-
+
+
+propriate symbol of the factor under the ordinality test that is performed by
+
+
+compare. It is an access predicate, and consequently the only predicate depen-
+
+
+dent on the choice of data structure for the profile.
+
+
+
+    At this stage, the prototype program is tested. Some data from real clients*
+ * are
+
+
+necessary, and the answer the system gives on these individuals is tested again*
+ *st
+
+
+what the corresponding bank official would say. The data for client1 is given in
+
+
+Program 22.2. The reply to the query credit(client1,X) is X = give_credit.
+
+
+
+    Our prototype expert system is a composite of styles and methods | not
+
+
+just a backward chaining system. Heuristic rules of thumb are used to determine
+
+
+the collateral rating; an algorithm, albeit a simple one, is used to determine *
+ *the
+
+
+financial rating; and there is a rule language, with an interpreter, for expres*
+ *sing
+
+
+outcomes in terms of values from discrete ordinal scales.  The rule interpreter
+
+
+proceeds forward from conditions to conclusion rather than backward as in Prolo*
+ *g.
+
+
+Expert systems must become such composites in order to exploit the different
+
+
+forms of knowledge already extant.
+
+
+
+    The development of the prototype was not the only activity of the knowl-
+
+
+edge engineers.  Various other features of the expert system were developed in
+
+
+parallel. An explanation facility was built as an extension of Program 17.22. A
+
+
+simulator for rules based on ordinal scales was built to settle the argument am*
+ *ong
+
+
+
+
+22.1                                         Developing the System395
+
+
+        Client Data
+
+
+        bank_yield(client1,excellent).
+
+
+        requested_credit(client1,50000).
+
+
+        amount(local_currency_deposits,client1,30000).
+
+
+        amount(foreign_currency_deposits,client1,20000).
+
+
+        amount(bank_guarantees,client1,3000).
+
+
+        amount(negotiate_instruments,client1,5000).
+
+
+        amount(stocks,client1,9000).
+
+
+        amount(mortgage,client1,12000).
+
+
+        amount(documents,client1,14000).
+
+
+        value(net_worth_per_assets,client1,40).
+
+
+        value(last_year_sales_growth,client1,20).
+
+
+        value(gross_profits_on_sales,client1,45).
+
+
+        value(short_term_debt_per_annual_sales,client1,9).
+
+
+        ok_profile(client1).
+
+
+
+        Program 22.2:  Test data for the credit evaluation system
+
+
+
+the knowledge engineers as to whether a reasonable collection of rules would be
+
+
+sufficient to cover the range of outcomes in the general case.
+
+
+
+    Finally, a consistency checker for the rules was built. The following meta-*
+ *rule
+
+
+is an obvious consistency principle: \If all of client A's factors are better t*
+ *han or
+
+
+equal to client B's, then the outcome of client A must be better than or equal *
+ *to
+
+
+
+
+396   A Credit Evaluation Expert System                         22.1
+
+
+
+that of client B."
+
+
+
+22.2   Background
+
+
+
+    More details on the credit evaluation system can be found in Ben-David and
+
+
+Sterling (1986).

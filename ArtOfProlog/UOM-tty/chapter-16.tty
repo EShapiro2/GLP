@@ -1,0 +1,1880 @@
+
+
+
+
+                                                  Chapter  16
+
+
+
+            Second-Order  Programming
+
+
+
+    Chapters 14 and 15 demonstrate Prolog programming techniques based di-
+
+
+rectly on logic programming.  This chapter, in contrast, shows programming
+
+
+techniques that are missing from the basic logic programming model but can
+
+
+nonetheless be incorporated into Prolog by relying on language features outside
+
+
+of first-order logic. These techniques are called second-order, since they talk*
+ * about
+
+
+sets and their properties rather than about individuals.
+
+
+    The first section introduces predicates that produce sets as solutions. Com-
+
+
+puting with predicates that produce sets is particularly powerful when combined
+
+
+with programming techniques presented in earlier chapters. The second section
+
+
+gives some applications. The third section looks at lambda expressions and pred-
+
+
+icate variables, which allow functions and relations to be treated as \first-cl*
+ *ass"
+
+
+data objects.
+
+
+
+16.1   All-Solutions Predicates
+
+
+
+
+264   Second-Order Programming                                   16.1
+
+
+
+    Solving a Prolog query with a program entails finding an instance of the
+
+
+query that is implied by the program. What is involved in finding all instances*
+ * of
+
+
+a query that are implied by a program? Declaratively, such a query lies outside*
+ * the
+
+
+logic programming model presented in Chapter 1. It is a second-order question,
+
+
+since it asks for the set of elements with a certain property. Operationally, i*
+ *t is
+
+
+also outside the pure Prolog computation model. In pure Prolog, all information
+
+
+about a certain branch of the computation is lost on backtracking. This prevents
+
+
+a simple way of using pure Prolog to find the set of all solutions to a query, *
+ *or
+
+
+even to find how many solutions there are to a given query.
+
+
+    This section discusses predicates that return all instances of a query. We *
+ *call
+
+
+such predicates all-solutions predicates. Experience has shown that all-solutio*
+ *ns
+
+
+predicates are very useful for programming.
+
+
+    A basic all-solutions predicate is findall(Term,Goal,Bag). The predicate
+
+
+is true if and only if Bag unifies with the list of values to which a variable X
+
+
+not occurring in Term or Goal would be bound by successive resatisfaction of
+
+
+call(Goal), X=Term? after systematic replacement of all variables in X by new
+
+
+variables.
+
+
+    Procedurally, findall(Term,Goal,Bag) creates an empty list L, renames
+
+
+Goal to a goal G, and executes G. If G succeeds, a copy of Term is appended to *
+ *L,
+
+
+and G is reexecuted. For each successful reexecution, a copy of Term is appended
+
+
+to the list. Eventually, when G fails, Bag is unified with L. The success or fa*
+ *ilure
+
+
+of findall depends on the success or failure of the unification.
+
+
+    We demonstrate the use of all-solutions predicates using part of the biblic*
+ *al
+
+
+
+
+16.1                                         All-Solutions Predicates265
+
+
+          father(terach,abraham).     father(haran,lot).
+
+
+          father(terach,nachor).      father(haran,milcah).
+
+
+          father(terach,haran).       father(haran,yiscah).
+
+
+          father(abraham,isaac).
+
+
+         male(abraham).    male(haran).      female(yiscah).
+
+
+         male(isaac).      male(nachor).     female(milcah).
+
+
+         male(lot).
+
+
+                      Program 16.1:  Sample data
+
+
+
+database of Program 1.1, repeated here as Program 16.1.
+
+
+    Consider the task of finding all the children of a particular father. It is*
+ * natural
+
+
+to envisage a predicate children(X,Kids), where Kids is a list of children of X.
+
+
+It is immediate to define using findall, namely,
+
+
+
+        children(X,Kids)   findall(Kid,father(X,Kid),Kids).
+
+
+
+The query children(terach,Xs)?  with respect to Program 16.1 produces the
+
+
+answer Xs = [abraham,nachor,haran].
+
+
+    The query findall(F,father(F,K),Fs)? with respect to Program 16.1 pro-
+
+
+duces the answer F = [terach,haran,terach,haran,terach,haran,abraham].
+
+
+It would be useful to conceive of this query as asking who is a father and to r*
+ *eceive
+
+
+as solution [terach,haran,abraham]. This answer can be obtained by removing
+
+
+duplicate solutions.
+
+
+    Another interpretation can be made of the query findall(F,father(F,K),
+
+
+Fs)?. Instead of having a single solution, all fathers, there could be a soluti*
+ *on for
+
+
+
+
+266   Second-Order Programming                                   16.1
+
+
+
+        for_all(Goal,Condition)
+
+
+            For all solutions of Goal, Condition is true.
+
+
+        for_all(Goal,Condition)  
+
+
+            findall(Condition,Goal,Cases), check(Cases).
+
+
+        check([CasejCases])   Case, check(Cases).
+
+
+        check([ ]).
+
+
+
+        Program 16.2:  Applying set predicates
+
+
+
+each child K. Thus one solution would be K=abraham, Fs = [terach]; another
+
+
+would be K=lot, Fs = [haran]; and so on.
+
+
+
+    Standard Prolog provides two predicates that distinguish between these two
+
+
+interpretations.  The predicate bagof(Term,Goal,Bag) is like findall except
+
+
+that alternative solutions are found for the variables in Goal.  The predicate
+
+
+setof(Term,Goal,Bag) is a refinement of bagof where the solutions in Bag are
+
+
+sorted corresponding to a standard order of terms and duplicates removed. If we
+
+
+want to emphasize that the solution should be conceived of as a set, we refer to
+
+
+all-solutions predicates as set predicates.
+
+
+
+    Another all-solutions predicate checks whether all solutions to a query sat*
+ *isfy
+
+
+a certain condition. Program 16.2 defines a predicate for_all(Goal,Condition),
+
+
+which succeeds when Condition is true for all values of Goal. It uses the meta-
+
+
+variable facility.
+
+
+
+    The query for_all(father(X,C),male(C))? checks which fathers have only
+
+
+
+
+16.1                                         All-Solutions Predicates267
+
+
+
+male children. It produces two answers: X=terach and X=abraham.
+
+
+    A simpler, more efficient, but less general version of for_all can be writt*
+ *en
+
+
+directly using a combination of nondeterminism and negation by failure.  The
+
+
+definition is
+
+
+
+        for_all(Goal,Condition)   not (Goal, not Condition).
+
+
+
+It successfully answers a query such as for_all(father(terach,X),male(X))?
+
+
+but fails to give a solution to the query for_all(father(X,C),male(C))?.
+
+
+    We conclude this section by showing how to implement a simple variant
+
+
+of findall.  The discussion serves a dual purpose.  It illustrates the style of
+
+
+implementation for all-solutions predicates and gives a utility that will be us*
+ *ed
+
+
+in the next section.  The predicate find_all_dl(X,Goal,Instances) is true if
+
+
+Instances is the bag (multiset) of instances of X, represented as a difference-*
+ *list,
+
+
+where Goal is true.
+
+
+    The definition of find_all_dl is given as Program 16.3. The program can
+
+
+only be understood operationally.  There are two stages to the procedure, as
+
+
+specified by the two clauses for find_all_dl. The explicit failure in the first*
+ * clause
+
+
+guarantees that the second will be executed. The first stage finds all solution*
+ *s to
+
+
+Goal using a failure-driven loop, asserting the associated X as it proceeds. The
+
+
+second stage retrieves the solutions.
+
+
+    Asserting $mark is essential for nested all-solutions predicates to work co*
+ *r-
+
+
+rectly, lest one set should \steal" solutions produced by the other all-solutio*
+ *ns
+
+
+predicate.
+
+
+
+
+268   Second-Order Programming                                   16.1
+
+
+
+        find_all_dl(X,Goal,Instances)  
+
+
+            Instances is the multiset of
+
+
+            instances of X  for which Goal is true. The multiplicity
+
+
+            of an element is the number of different ways Goal can be
+
+
+            proved with it as an instance of X .
+
+
+        find_all_dl(X,Goal,Xs)  
+
+
+            asserta(`$instance'(`$mark')), Goal,
+
+
+            asserta(`$instance'(X)), fail.
+
+
+        find_all_dl(X,Goal,XsnYs)  
+
+
+            retract(`$instance'(X)), reap(X,XsnYs), !.
+
+
+        reap(X,XsnYs)  
+
+
+            X 6= `$mark', retract(`$instance'(X1)), !,
+
+
+            reap(X1,Xsn[XjYs]).
+
+
+        reap(`$mark',XsnXs).
+
+
+
+        Program 16.3:  Implementing an all-solutions predicate using
+
+
+                       difference-lists, assert, and retract
+
+
+
+Exercise for Section 16.1
+
+
+
+(i) Define the predicate intersect(Xs,Ys,Zs) using an all-solutions predicate
+
+
+    to compute the intersection Zs of two lists Xs and Ys. What should happen if
+
+
+    the two lists do not intersect? Compare the code with the recursive definit*
+ *ion
+
+
+    of intersect.
+
+
+
+
+16.2                                    Applications of Set Predicates269
+
+
+
+16.2   Applications of Set Predicates
+
+
+
+    Set predicates are a significant addition to Prolog. Clean solutions are ob-
+
+
+tained to many problems by using set predicates, especially when other program-
+
+
+ming techniques, discussed in previous chapters, are incorporated. This section
+
+
+presents three example programs: traversing a graph breadth-first, using the Lee
+
+
+algorithm for finding routes in VLSI circuits, and producing a keyword in conte*
+ *xt
+
+
+(KWIC) index.
+
+
+
+    Section 14.2 presents three programs, 14.8, 14.9, and 14.10, for traversing*
+ * a
+
+
+graph depth-first. We discuss here the equivalent programs for traversing a gra*
+ *ph
+
+
+breadth-first.
+
+
+
+    The basic relation is connected(X,Y), which is true if X and Y are connecte*
+ *d.
+
+
+Program 16.4 defines the relation. Breadth-first search is implemented by keepi*
+ *ng
+
+
+a queue of nodes waiting to be expanded. The connected clause accordingly calls
+
+
+connected_bfs(Queue,Y), which is true if Y is in the connected component of the
+
+
+graph represented by the nodes in the Queue.
+
+
+
+    Each call to connected_bfs removes the current node from the head of
+
+
+the queue, finds the edges connected to it, and adds them to the tail of the
+
+
+queue. The queue is represented as a difference-list, and the all-solutions pre*
+ *di-
+
+
+cate find_all_dl is used. The program fails when the queue is empty. Because
+
+
+difference-lists are an incomplete data structure, the test that the queue is e*
+ *mpty
+
+
+must be made explicitly. Otherwise the program would not terminate.
+
+
+
+    Consider the edge clauses in Program 16.4, representing the left-hand graph
+
+
+
+
+270   Second-Order Programming                                   16.2
+
+
+
+connected(X,Y )  
+
+
+    Node X  is connected to node Y  in the DAG defined by
+
+
+    edge/2  facts.
+
+
+connected(X,Y)   enqueue(X,QnQ,Q1), connected_bfs(Q1,Y).
+
+
+connected_bfs(Q,Y)   empty(Q), !, fail.
+
+
+connected_bfs(Q,Y)   dequeue(X,Q,Q1), X=Y.
+
+
+connected_bfs(Q,Y)  
+
+
+    dequeue(X,Q,Q1), enqueue_edges(X,Q1,Q2), connected_bfs(Q2,Y).
+
+
+enqueue_edges(X,XsnYs,XsnZs)   find_all_dl(N,edge(X,N),YsnZs), !.
+
+
+empty([ ]n[ ]).
+
+
+enqueue/3, dequeue/3   See Program 15.11.
+
+
+find_all_dl(Term,Goal,DList)   See Program 16.3.
+
+
+        Data
+
+
+edge(a,b).    edge(a,c).     edge(a,d).    edge(a,e).    edge(f,i).
+
+
+edge(c,f).    edge(c,g).     edge(f,h).    edge(e,k).    edge(d,j).
+
+
+edge(x,y).    edge(y,z).     edge(z,x).    edge(y,u).    edge(z,v).
+
+
+
+        Program 16.4:  Testing connectivity breadth-first in a DAG
+
+
+
+in Figure 14.3. Using them, the query connected(a,X)? gives the values a, b, c,
+
+
+d, e, f, g, j, k, h, i for X on backtracking, which is a breadth-first traversa*
+ *l of the
+
+
+graph.
+
+
+
+
+16.2                                    Applications of Set Predicates271
+
+
+
+    Like Program 14.8, Program 16.4 correctly traverses a finite tree or a dire*
+ *cted
+
+
+acyclic graph (DAG). If there are cycles in the graph, the program will not ter-
+
+
+minate. Program 16.5 is an improvement over Program 16.4 in which a list of the
+
+
+nodes visited in the graph is kept. Instead of adding all the successor nodes at
+
+
+the end of the queue, each is checked to see if it has been visited before. Thi*
+ *s is
+
+
+performed by the predicate filter in Program 16.5.
+
+
+    Program 16.5 in fact is more powerful than its depth-first equivalent, Pro-
+
+
+gram 14.10.  Not only will it correctly traverse any finite graph but it will a*
+ *lso
+
+
+correctly traverse infinite graphs in which every vertex has finite degree as w*
+ *ell.
+
+
+It is useful to summarize what extensions to pure Prolog have been necessary
+
+
+to increase the performance in searching graphs. Pure Prolog correctly searches
+
+
+finite trees and DAGs. Adding negation allows correct searching of finite graphs
+
+
+with cycles, while set predicates are necessary for infinite graphs. This is sh*
+ *own
+
+
+in Figure 16.1.
+
+
+    Calculating the path between two nodes is a little more awkward than for
+
+
+depth-first search.  It is necessary to keep with each node in the queue a list
+
+
+of the nodes linking it to the original node.  The technique is demonstrated in
+
+
+Program 20.6.
+
+
+    The next example combines the power of nondeterministic programming with
+
+
+the use of second-order programming. It is a program for calculating a minimal
+
+
+cost route between two points in a circuit using the Lee algorithm.
+
+
+    The problem is formulated as follows. Given a grid that may have obstacles,
+
+
+find a shortest path between two specified points. Figure 16.2 shows a grid with
+
+
+
+
+272   Second-Order Programming                                   16.2
+
+
+
+        connected(X,Y )  
+
+
+            Node X  is connected to node Y  in the graph defined by
+
+
+            edge/2  facts.
+
+
+        connected(X,Y)  
+
+
+            enqueue(X,QnQ,Q1), connected_bfs(Q1,Y,[X]).
+
+
+        connected_bfs(Q,Y,Visited)   empty(Q), !, fail.
+
+
+        connected_bfs(Q,Y,Visited)   dequeue(X,Q,Q1), X=Y.
+
+
+        connected_bfs(Q,Y,Visited)  
+
+
+            dequeue(X,Q,Q1),
+
+
+            findall(N,edge(X,N),Edges),
+
+
+            filter(Edges,Visited,Visited1,Q1,Q2),
+
+
+            connected_bfs(Q2,Y,Visited1).
+
+
+        filter([NjNs],Visited,Visited1,Q,Q1)  
+
+
+            member(N,Visited), !, filter(Ns,Visited,Visited1,Q,Q1).
+
+
+        filter([NjNs],Visited,Visited1,Q,Q2)  
+
+
+            not member(N,Visited), !, enqueue(N,Q,Q1),
+
+
+            filter(Ns,[NjVisited],Visited1,Q1,Q2).
+
+
+        filter([ ],Visited,Visited,Q,Q).
+
+
+        empty([ ]n[ ]).
+
+
+        enqueue/3, dequeue/3   See Program 15.11.
+
+
+
+        Program 16.5:  Testing connectivity breadth-first in a graph
+
+
+
+
+16.2                                    Applications of Set Predicates273
+
+
+
+                (1) Finite trees and DAGs
+
+
+                    Pure Prolog
+
+
+                (2) Finite graphs
+
+
+                    Pure Prolog + negation
+
+
+                (3) Infinite graphs
+
+
+                    Pure Prolog + second order + negation
+
+
+          Figure 16.1:  Power of Prolog for various searching tasks
+
+
+
+obstacles. The heavy solid line represents a shortest path between the two poin*
+ *ts
+
+
+A and B. The shaded rectangles represent the obstacles.
+
+
+
+    We first formulate the problem in a suitable form for programming.  The
+
+
+VLSI circuit is modeled by a grid of points, conveniently assumed to be the upp*
+ *er
+
+
+quadrant of the Cartesian plane. A route is a path between two points in the gr*
+ *id,
+
+
+along horizontal and vertical lines only, subject to the constraints of remaini*
+ *ng in
+
+
+the grid and not passing through any obstacles.
+
+
+
+    Points in the plane are represented by their Cartesian coordinates and de-
+
+
+noted X {Y . In Figure 16.2, A is 1{1 and B is 5{5. This representation is chos*
+ *en
+
+
+for readability and utilizes the definition of { as an infix binary operator. P*
+ *aths
+
+
+are calculated by the program as a list of points from B to A, including both
+
+
+endpoints. In Figure 16.2 the route calculated is [5{5,5{4,5{3,5{2,4{2,3{2,2{2,*
+ *1{
+
+
+2,1{1], and is marked by the heavy solid line.
+
+
+
+    The top-level relation computed by the program is lee_route(A,B,Obstac-
+
+
+les,Path), where Path is a route (of minimal distance) from point A to point B *
+ *in
+
+
+
+
+274   Second-Order Programming                                   16.2
+
+
+
+         Figure 16.2:  The problem of Lee routing for VLSI circuits
+
+
+
+the circuit. Obstacles are the obstacles in the grid. The program has two stage*
+ *s.
+
+
+First, successive waves of neighboring grid points are generated, starting from*
+ * the
+
+
+initial point, until the final point is reached. Second, the path is extracted *
+ *from
+
+
+the accumulated waves. Let us examine the various components of Program 16.6,
+
+
+the overall program for Lee routing.
+
+
+
+    Waves are defined inductively.  The initial wave is the list [A]. Successive
+
+
+
+
+16.2                                    Applications of Set Predicates275
+
+
+
+lee_route(Source,Destination,Obstacles,Path)  
+
+
+    Path is a minimal length path from Source to
+
+
+    Destination that does not cross Obstacles.
+
+
+lee_route(A,B,Obstacles,Path)  
+
+
+    waves(B,[[A],[ ]],Obstacles,Waves),
+
+
+    path(A,B,Waves,Path).
+
+
+waves(Destination,WavesSoFar,Obstacles,Waves)  
+
+
+    Waves is a list of waves including WavesSoFar
+
+
+    (except, perhaps, its last wave) that leads to Destination
+
+
+    without crossing Obstacles.
+
+
+waves(B,[WavejWaves],Obstacles,Waves)   member(B,Wave), !.
+
+
+waves(B,[Wave,LastWavejLastWaves],Obstacles,Waves)  
+
+
+    next_wave(Wave,LastWave,Obstacles,NextWave),
+
+
+    waves(B,[NextWave,Wave,LastWavejLastWaves],Obstacles,Waves).
+
+
+next_wave(Wave,LastWave,Obstacles,NextWave)  
+
+
+    NextWave is the set of admissible points from Wave,
+
+
+    that is, excluding points from LastWave,
+
+
+    Wave and points under Obstacles.
+
+
+next_wave(Wave,LastWave,Obstacles,NextWave)  
+
+
+    findall(X,admissible(X,Wave,LastWave,Obstacles),NextWave).
+
+
+admissible(X,Wave,LastWave,Obstacles)  
+
+
+    adjacent(X,Wave,Obstacles),
+
+
+    not member(X,LastWave),
+
+
+    not member(X,Wave).
+
+
+adjacent(X,Wave,Obstacles)  
+
+
+    member(X1,Wave),
+
+
+    neighbor(X1,X),
+
+
+    not obstructed(X,Obstacles).
+
+
+neighbor(X1-Y,X2-Y)   next_to(X1,X2).
+
+
+neighbor(X-Y1,X-Y2)   next_to(Y1,Y2).
+
+
+next_to(X,X1)   X1 is X+1.
+
+
+next_to(X,X1)   X > 0, X1 is X-1.
+
+
+obstructed(Point,Obstacles)  
+
+
+    member(Obstacle,Obstacles), obstructs(Point,Obstacle).
+
+
+
+Program 16.6:  Lee routing
+
+
+
+
+276   Second-Order Programming                                   16.2
+
+
+
+obstructs(X-Y,obstacle(X-Y1,X2-Y2))   Y1  Y, Y  Y2.
+
+
+obstructs(X-Y,obstacle(X1-Y1,X-Y2))   Y1  Y, Y  Y2.
+
+
+obstructs(X-Y,obstacle(X1-Y,X2-Y2))   X1  X, X  X2.
+
+
+obstructs(X-Y,obstacle(X1-Y1,X2-Y))   X1  X, X  X2.
+
+
+path(Source,Destination,Waves,Path)  
+
+
+    Path is a path from Source to Destination going through Waves.
+
+
+path(A,A,Waves,[A])   !.
+
+
+path(A,B,[WavejWaves],[BjPath])  
+
+
+    member(B1,Wave),
+
+
+    neighbor(B,B1),
+
+
+    !, path(A,B1,Waves,Path).
+
+
+Testing and data
+
+
+test_lee(Name,Path)  
+
+
+    data(Name,A,B,Obstacles), lee_route(A,B,Obstacles,Path).
+
+
+data(test,1-1,5-5,[obstacle(2-3,4-5),obstacle(6-6,8-8)]).
+
+
+
+Program 16.6  (Continued)
+
+
+
+waves are sets of points that neighbor a point in the previous wave and that do
+
+
+not already appear in previous waves.  They are illustrated by the lighter solid
+
+
+lines in Figure 16.2.
+
+
+    Wave generation is performed by waves(B,WavesSoFar,Obstacles,Waves).
+
+
+The predicate waves/4 is true if Waves is a list of waves to the destination B *
+ *avoid-
+
+
+
+
+16.2                                    Applications of Set Predicates277
+
+
+
+ing the obstacles represented by Obstacles and WavesSoFar is an accumulator
+
+
+containing the waves generated so far in traveling from the source. The predica*
+ *te
+
+
+terminates when the destination is in the current wave. The recursive clause ca*
+ *lls
+
+
+next_wave/4, which finds all the appropriate grid points constituting the next
+
+
+wave using the all-solutions predicate findall.
+
+
+
+    Obstacles are assumed to be rectangular blocks.  They are represented by
+
+
+the term obstacle(L,R), where L is the coordinates of the lower left-hand corner
+
+
+and R the coordinates of the upper right-hand corner. Exercise (i) at the end of
+
+
+this section requires modifying the program to handle other obstacles.
+
+
+
+    The predicate path(A,B,Waves,Path) finds the path Path back from B to
+
+
+A through the Waves generated in the process.  Path is built downward, which
+
+
+means the order of the points is from B to A. This order can be changed by using
+
+
+an accumulator in path.
+
+
+
+    Program 16.6 produces no output while computing the Lee route. In practice,
+
+
+the user may like to see the computation in progress. This can be easily done by
+
+
+adding appropriate write statements to the procedures next_wave and path.
+
+
+
+    Our final example in this section concerns the keyword in context (KWIC)
+
+
+problem.  Again, a simple Prolog program, combining nondeterministic and
+
+
+second-order programming, suffices to solve a complex task.
+
+
+
+    Finding keywords in context involves searching text for all occurrences of a
+
+
+set of keywords, extracting the contexts in which they appear. We consider here
+
+
+the following variant of the general problem: \Given a list of titles, produce a
+
+
+
+
+278   Second-Order Programming                                   16.2
+
+
+
+                Input:   programming in prolog
+
+
+                         logic for problem solving
+
+
+                         logic programming
+
+
+                         algorithmic program debugging
+
+
+                Output:  algorithmic program debugging j,
+
+
+                         debugging j algorithmic program,
+
+
+                         logic for problem solving j,
+
+
+                         logic programming j,
+
+
+                         problem solving j logic for,
+
+
+                         program debugging j algorithmic,
+
+
+                         programming in prolog j,
+
+
+                         programming j logic,
+
+
+                         prolog j programming in,
+
+
+                         solving j logic for problem
+
+
+    Figure 16.3  Input and output for keyword in context (KWIC) problem
+
+
+
+sorted list of all occurrences of a set of keywords in the titles, together wit*
+ *h their
+
+
+context."
+
+
+
+    Sample input to a program is given in Figure 16.3 together with the expected
+
+
+output. The context is described as a rotation of the title with the end of the*
+ * title
+
+
+indicated by j. In the example, the keywords are algorithmic, debugging, logic,
+
+
+problem, program, programming, prolog, and solving, all the nontrivial words.
+
+
+
+    The relation we want to compute is kwic(Titles,KwicTitles) where Ti-
+
+
+
+
+16.2                                    Applications of Set Predicates279
+
+
+
+tles is the list of titles whose keywords are to be extracted, and KwicTitles is
+
+
+the sorted list of keywords in their contexts.  Both the input and output titles
+
+
+are assumed to be given as lists of words. A more general program, as a prelimi-
+
+
+nary step, would convert freer-form input into lists of words and produce prett*
+ *ier
+
+
+output.
+
+
+    The program is presented in stages. The basis is a nondeterministic speci-
+
+
+fication of a rotation of a list of words. It has an elegant definition in term*
+ *s of
+
+
+append:
+
+
+        rotate(Xs,Ys)   append(As,Bs,Xs), append(Bs,As,Ys).
+
+
+
+Declaratively, Ys is a rotation of Xs if Xs is composed of As followed by Bs, a*
+ *nd
+
+
+Ys is Bs followed by As.
+
+
+    The next stage of development involves identifying single words as potential
+
+
+keywords.  This is done by isolating the word in the first call to append.  Note
+
+
+that the new rule is an instance of the previous one:
+
+
+        rotate(Xs,Ys)  
+
+
+            append(As,[KeyjBs],Xs), append([KeyjBs],As,Ys).
+
+
+
+This definition also improves the previous attempt by removing the duplicate
+
+
+solution when one of the split lists is empty and the other is the entire list.
+
+
+    The next improvement involves examining a potential keyword more closely.
+
+
+Suppose each keyword Word is identified by a fact of the form keyword(Word).
+
+
+The solutions to the rotate procedure can be filtered so that only words identi*
+ *fied
+
+
+as keywords are accepted. The appropriate version is
+
+
+
+
+280   Second-Order Programming                                   16.2
+
+
+
+    rotate_and_filter(Xs,Ys)  
+
+
+        append(As,[KeyjBs],Xs), keyword(Key), append([KeyjBs],As,Ys).
+
+
+
+Operationally rotate_and_filter considers all keys, filtering out the unwanted
+
+
+alternatives. The goal order is important here to maximize program efficiency.
+
+
+
+    In Program 16.7, the final version, a complementary view to recognizing
+
+
+keywords is taken. Any word Word is a keyword unless otherwise specified by a
+
+
+fact of the form insignificant(Word). Further the procedure is augmented to
+
+
+insert the end-of-title mark j, providing the context information. This is done*
+ * by
+
+
+adding the extra symbol in the second append call. Incorporating this discussion
+
+
+yields the clause for rotate_and_filter in Program 16.7.
+
+
+
+    Finally, a set predicate is used to get all the solutions.  Quantification *
+ *is
+
+
+necessary over all the possible titles. Advantage is derived from the behavior *
+ *of
+
+
+setof in sorting the answers. The complete program is given as Program 16.7,
+
+
+and is an elegant example of the expressive power of Prolog. The test predicate
+
+
+is test_kwic/2.
+
+
+
+Exercises for Section 16.2
+
+
+
+(i) Modify Program 16.6 to handle other obstacles than rectangles.
+
+
+
+(ii)Adapt Program 16.7 for KWIC so that it extracts keywords from lines of
+
+
+    text.
+
+
+
+(iii)Modify rotation of a list so that it uses difference-lists.
+
+
+
+
+16.2                                    Applications of Set Predicates281
+
+
+
+        kwic(Titles,KWTitles)  
+
+
+            KWTitles is a KWIC index of the list of titles Titles.
+
+
+        kwic(Titles,KWTitles)  
+
+
+            setof(Ys,Xs"(member(Xs,Titles),
+
+
+            rotate_and_filter(Xs,Ys)),KWTitles).
+
+
+        rotate_and_filter(Xs,Ys)  
+
+
+            Ys is a rotation of the list Xs such that
+
+
+            the first word of Ys is significant and j
+
+
+            is inserted after the last word of Xs.
+
+
+        rotate_and_filter(Xs,Ys)  
+
+
+            append(As,[KeyjBs],Xs),
+
+
+            not insignificant(Key),
+
+
+            append([KeyjBs],[`j'jAs],Ys).
+
+
+        Vocabulary of insignificant words
+
+
+        insignificant(a).     insignificant(the).
+
+
+        insignificant(in).    insignificant(for).
+
+
+        Testing and data
+
+
+        test_kwic(Books,Kwic)  
+
+
+            titles(Books,Titles), kwic(Titles,Kwic).
+
+
+        titles(lp,[[logic,for,problem,solving],
+
+
+            [logic,programming],
+
+
+            [algorithmic,program,debugging],
+
+
+            [programming,in,prolog]]).
+
+
+
+        Program 16.7:  Producing a keyword in context (KWIC) index
+
+
+
+
+282   Second-Order Programming                                   16.2
+
+
+
+(iv)Write a program to find a minimal spanning tree for a graph.
+
+
+(v) Write a program to find the maximum flow in a network design using the
+
+
+    Ford-Fulkerson algorithm.
+
+
+
+
+16.3                                   Other Second-Order Predicates283
+
+
+
+       has_property([XjXs],P)   P(X), has_property(Xs,P).
+
+
+       has_property([ ],P).
+
+
+       map_list([XjXs],P,[YjYs])   P(X,Y), map_list(Xs,P,Ys).
+
+
+       map_list([ ],P,[ ]).
+
+
+
+                  Figure 16.4:  Second-order predicates
+
+
+
+16.3   Other Second-Order Predicates
+
+
+
+    First-order logic allows quantification over individuals.  Second-order log*
+ *ic
+
+
+further allows quantification over predicates.  Incorporating this extension in*
+ *to
+
+
+logic programming entails using rules with goals whose predicate names are vari-
+
+
+ables. Predicate names become \first-class" data objects to be manipulated and
+
+
+modified.
+
+
+
+    A simple example of a second-order relation is the determination of whether
+
+
+all members of a list have a certain property. For simplicity the property is a*
+ *s-
+
+
+sumed to be described as a unary predicate. Let us define has_property(Xs,P),
+
+
+which is true if each element of Xs has some property P. Extending Prolog syntax
+
+
+to allow variable predicate names enables us to define has_property as in Figure
+
+
+16.4. Because has_property allows variable properties, it is a second-order pre*
+ *d-
+
+
+icate. An example of its use is testing whether a list of people Xs is all male*
+ * with
+
+
+a query has_property(Xs,male)?.
+
+
+
+    Another second-order predicate is map_list(Xs,P,Ys). Ys is the map of the
+
+
+list Xs under the predicate P. That is, for each element X of Xs there is a cor*
+ *re-
+
+
+
+
+284   Second-Order Programming                                   16.3
+
+
+
+sponding element Y of Ys such that P(X,Y) is true. The order of the elements in*
+ * Xs
+
+
+is preserved in Ys. We can use map_list to rewrite some of the programs of earl*
+ *ier
+
+
+chapters. For example, Program 7.8 mapping English to French words can be ex-
+
+
+pressed as map_list(Words,dict,Mots). Like has_property, map_list is easily
+
+
+defined using a variable predicate name. The definition is given in Figure 16.4.
+
+
+    Operationally, allowing variable predicate names implies dynamic construc-
+
+
+tion of goals while answering a query. The relation to be computed is not fixed
+
+
+statically when the query is posed but is determined dynamically during the com-
+
+
+putation.
+
+
+    Some Prologs allow the programmer to use variables for predicate names,
+
+
+and allow the syntax of Figure 16.4. It is unnecessary to complicate the syntax
+
+
+however. The tools already exist for implementing second-order predicates. One
+
+
+basic relation is necessary, which we call apply; it constructs the goal with a
+
+
+variable functor. The predicate apply is defined by a set of clauses, one for e*
+ *ach
+
+
+functor name and arity. For example, for functor foo of arity n, the clause is
+
+
+
+        apply(foo,X1,: :,:Xn)   foo(X1,: :,:Xn).
+
+
+
+The two predicates in Figure 16.4 are transformed into Standard Prolog in Pro-
+
+
+gram 16.8. Sample definitions of apply clauses are given for the examples men-
+
+
+tioned in the text.
+
+
+    The predicate apply performs structure inspection. The whole collection of
+
+
+apply clauses can be generalized by using the structure inspection primitive, u*
+ *niv.
+
+
+The general predicate apply(P,Xs) applies predicate P to a list of arguments Xs:
+
+
+
+
+16.3                                   Other Second-Order Predicates285
+
+
+
+        has_property(Xs,P)  
+
+
+            Each element in the list Xs has property P.
+
+
+        has_property([XjXs],P)  
+
+
+            apply(P,X), has_property(Xs,P).
+
+
+        has_property([ ],P).
+
+
+        apply(male,X)   male(X).
+
+
+        maplist(Xs,P,Ys)  
+
+
+            Each element in the list Xs stands in relation
+
+
+            P to its corresponding element in the list Ys.
+
+
+        map_list([XjXs],P,[YjYs])  
+
+
+            apply(P,X,Y), map_list(Xs,P,Ys).
+
+
+        map_list([ ],P,[ ]).
+
+
+        apply(dict,X,Y)   dict(X,Y).
+
+
+
+        Program 16.8:  Second-order predicates in Prolog
+
+
+
+        apply(F,Xs)   Goal =..  [FjXs], Goal.
+
+
+
+We can generalize the function to be applied from a predicate name,  i.e.,
+
+
+an atom, to a term parameterized by variables.  An example is substituting
+
+
+for a value in a list.  The relation substitute/4 from Program 9.3 can be
+
+
+viewed as an instance of map_list if parameterization is allowed.  Namely,
+
+
+map_list(Xs,substitute(Old,New),Ys) has the same effect in substituting the
+
+
+element New for the element Old in Xs to get Ys | exactly the relation computed
+
+
+
+
+286   Second-Order Programming                                   16.3
+
+
+
+by Program 9.3. In order to handle this correctly, the definition of apply must
+
+
+be extended a little:
+
+
+
+        apply(P,Xs)  
+
+
+            P =..  L1, append(L1,Xs,L2), Goal =..  L2, Goal.
+
+
+
+    Using apply as part of map_list leads to inefficient programs. For example,
+
+
+using substitute directly rather than through map_list results in far fewer int*
+ *er-
+
+
+mediate structures being created, and eases the task of compilation. Hence these
+
+
+second-order predicates are better used in conjunction with a program transfor-
+
+
+mation system that can translate second-order calls to first-order calls at com*
+ *pile-
+
+
+time.
+
+
+    The predicate apply can also be used to implement lambda expressions. A
+
+
+lambda expression is one of the form lambda(X1,: :,:Xn).Expression.  If the set
+
+
+of lambda expressions to be used is known in advance, they can be named. For
+
+
+example, the above expression would be replaced by some unique identifier, foo
+
+
+say, and defined by an apply clause:
+
+
+
+        apply(foo,X1,: :,:Xn)   Expression.
+
+
+
+    Although possible both theoretically and pragmatically, the use of lambda
+
+
+expressions and second-order constructs such as has_property and map_list is
+
+
+not as widespread in Prolog as in functional programming languages like Lisp.
+
+
+We conjecture that this is a combination of cultural bias and the availability *
+ *of
+
+
+a host of alternative programming techniques.  It is possible that the ongoing
+
+
+work on extending the logic programming model with higher-order constructs
+
+
+
+
+16.4                                                  Background  287
+
+
+
+and integrating it with functional programming will change the picture.
+
+
+
+    In the meantime, all-solutions predicates seem to be the main and most usef*
+ *ul
+
+
+higher-order construct in Prolog.
+
+
+
+Exercise for Section 16.3
+
+
+
+(i) Write a program performing beta reduction for lambda expressions.
+
+
+
+16.4   Background
+
+
+
+    The discussion of findall uses the description contained in the Standard
+
+
+Prolog document (Scowen, 1991).  An excellent discussion of the all-solutions
+
+
+predicates bagof and setof in Edinburgh Prolog are given in Warren (1982a).
+
+
+Discussions of \rolling your own" set predicates can be found in both O'Keefe
+
+
+(1990) and Ross (1989).
+
+
+
+    Set predicates are a powerful extension to Prolog. They can be used (ineffi-
+
+
+ciently) to implement negation as failure and meta-logical type predicates (Kah*
+ *n,
+
+
+1984). If a goal G has no solutions, which is determined by a predicate such as
+
+
+findall, then not G is true.  The predicate var(X) is implemented by testing
+
+
+whether the goal X=1;X=2 has two solutions. Further discussion of such behavior
+
+
+of set predicates and a survey of different implementations of set predicates c*
+ *an
+
+
+be found in Naish (1985b).
+
+
+
+    Further description of the Lee algorithm and the general routing problem
+
+
+
+
+288   Second-Order Programming                                   16.4
+
+
+
+for VLSI circuits can be found in textbooks on VLSI, for example, Breuer and
+
+
+Carter (1983). A neat graphic version of Program 16.6 has been written by Dave
+
+
+Broderick.
+
+
+    Recent logic programming research has focused somewhat more on higher-
+
+
+order logic programming.  Approaches of note are Lambda-Prolog (Miller and
+
+
+Nadathur, 1986) and HiLog (Chen et al., 1989).
+
+
+    KWIC was posed as a benchmark for high-level programming languages by
+
+
+Perlis, and was used to compare several languages. We find the Prolog implemen-
+
+
+tation of it perhaps the most elegant of all.
+
+
+    Our description of lambda expressions is modeled after Warren (1982a).
+
+
+Predicates such as apply and map_list were part of the utilities package at the
+
+
+University of Edinburgh. They were fashionable for a while but fell out of favor
+
+
+because they were not compiled efficiently, and no source-to-source transformat*
+ *ion
+
+
+tools were available.

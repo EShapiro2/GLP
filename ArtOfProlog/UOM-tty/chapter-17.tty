@@ -1,0 +1,4105 @@
+
+
+
+
+                                             Chapter 17
+
+
+
+                                        Interpreters
+
+
+
+    Meta-programs treat other programs as data. They analyze, transform, and
+
+
+interpret other programs. The writing of meta-programs, or meta-programming,
+
+
+is particularly easy in Prolog because of the equivalence of programs and data:
+
+
+both are Prolog terms.  We have already presented some examples of meta-
+
+
+programs, namely, the editor of Program 12.5 and the shell process of Pro-
+
+
+gram 12.6.  This chapter covers interpreters, an important and useful class of
+
+
+meta-programs, and Chapter 18 discusses program transformation.
+
+
+
+17.1   Interpreters for Finite State Machines
+
+
+
+    The sharp distinction between programs and data present in most computer
+
+
+languages is lacking in Prolog.  The equivalence of programs and data greatly
+
+
+facilitates the writing of interpreters. We demonstrate the facility in this se*
+ *ction
+
+
+by considering the basic computation models of computer science. Interpreters
+
+
+for the various classes of automata are very easily written in Prolog.
+
+
+
+
+17.1                           Interpreters for Finite State2Machines81
+
+
+
+    It is interesting to observe that the interpreters presented in this section
+
+
+are a good application of nondeterministic programming.  The programs that
+
+
+are presented illustrate typical examples of don't-know nondeterminism.  The
+
+
+same interpreter can execute both deterministic and nondeterministic automata
+
+
+because of the nondeterminism of Prolog.
+
+
+    Definition:  A (nondeterministic) finite automaton, abbreviated NDFA, is
+
+
+a 5-tuple hQ,,ffi,I,Fi, where Q is a set of states,  is a set of symbols, ffi i*
+ *s a
+
+
+mapping from Q   to Q, I is an initial state, and F is a set of final states. If
+
+
+the mapping is a function, then an NDFA is deterministic.
+
+
+    A finite automaton can be specified as a Prolog program by three collections
+
+
+of facts. The predicate initial(Q) is true if Q is the initial state. The predi*
+ *cate
+
+
+final(Q) is true if Q is a final state.  The most interesting is delta(Q,X,Q1),
+
+
+which is true if the NDFA changes from state Q to state Q1 on receipt of symbol*
+ * X.
+
+
+Note that both the set of states and the set of symbols can be defined implicit*
+ *ly
+
+
+as the constants that appear in the initial, final, and delta predicates.
+
+
+    An NDFA accepts a string of symbols from the alphabet  , if when started
+
+
+in its initial state, and following the transitions specified by ffi, the NDFA *
+ *ends up
+
+
+in one of the final states. An interpreter for an NDFA must determine whether it
+
+
+accepts given strings of symbols. Program 17.1 is an interpreter. The predicate
+
+
+accept(Xs) is true if the NDFA defined by the collection of initial, final, and
+
+
+delta facts accepts the string represented as the list of symbols Xs.
+
+
+    Figure 17.1 shows a deterministic automaton that accepts the language (ab) .
+
+
+There are two states, q0 and q1. If in state q0 an a is received, the automaton
+
+
+
+
+282   Interpreters                                         17.1
+
+
+       accept(Xs)  
+
+
+           The string represented by the list Xs is accepted by
+
+
+           the NDFA defined by initial/1, delta/3, and final/1.
+
+
+       accept(Xs)   initial(Q), accept(Xs,Q).
+
+
+       accept([XjXs],Q)   delta(Q,X,Q1), accept(Xs,Q1).
+
+
+       accept([ ],Q)   final(Q).
+
+
+
+       Program 17.1: An interpreter for a nondeterministic finite
+
+
+                     automaton (NDFA)
+
+
+
+moves to state q1. The automaton moves back from q1 to q0 if a b is received.
+
+
+The initial state is q0, and q0 is also the single final state.
+
+
+
+                  Figure 17.1: A simple automaton
+
+
+
+    To use the interpreter, a specific automaton must be given. Program 17.2 is
+
+
+the realization in Prolog of the automaton in Figure 17.1. The combination of
+
+
+Programs 17.1 and 17.2 correctly accepts strings of alternating a's and b's.
+
+
+    If an arc from q0 to itself labeled a is added to the automaton in Figure 1*
+ *7.1,
+
+
+we get a new automaton that recognizes the language (a(a )b) . This automaton
+
+
+is nondeterministic because on receipt of an a in state q0 it is not determined
+
+
+which path will be followed. Nondeterminism does not affect the interpreter in
+
+
+
+
+17.1                           Interpreters for Finite State2Machines83
+
+
+
+       initial(q0).
+
+
+       final(q0).
+
+
+       delta(q0,a,q1).
+
+
+       delta(q1,b,q0).
+
+
+
+       Program 17.2: An NDFA that accepts the language (ab)
+
+
+
+Program 17.1. All that is needed to produce the new automaton is to add the
+
+
+fact delta(q0,a,q0) and the combined program will behave correctly.
+
+
+
+    Another simple computation model is a pushdown automaton that accepts
+
+
+the class of context-free languages. Pushdown automata extend NDFAs by pro-
+
+
+viding a single stack for memory in addition to the internal state of the autom*
+ *aton.
+
+
+Formally, a (nondeterministic) pushdown automaton, abbreviated NPDA, is a 7-
+
+
+tuple hQ,,G,ffi,I,Z,Fi where Q, , I , F are as before, G is the set of symbols
+
+
+that can be pushed onto the stack, Z is the start symbol on the stack, and ffi *
+ *is
+
+
+changed to take the stack into account.
+
+
+
+    Specifically, ffi is a mapping from Q    G  to Q  G . The mapping
+
+
+controls the change of state of the NPDA and the pushing and popping of elements
+
+
+onto and off the stack by the NPDA. In one operation, the NPDA can pop (push)
+
+
+one symbol off (onto) the stack.
+
+
+
+    Analogously to an NDFA, an NPDA accepts a string of symbols from the
+
+
+alphabet  , if when started in its initial state and with the starting symbol on
+
+
+the stack, and following the transitions specified by ffi, the NPDA ends up in *
+ *one
+
+
+
+
+284   Interpreters                                         17.1
+
+
+
+       accept(Xs)  
+
+
+           The string represented by the list Xs is accepted by
+
+
+           the NPDA defined by initial/1, delta/5, and final/1.
+
+
+       accept(Xs)   initial(Q), accept(Xs,Q,[ ]).
+
+
+       accept([XjXs],Q,S)   delta(Q,X,S,Q1,S1), accept(Xs,Q1,S1).
+
+
+       accept([ ],Q,[ ])   final(Q).
+
+
+
+       Program 17.3: An interpreter for a nondeterministic pushdown
+
+
+                     automaton (NPDA)
+
+
+
+of the final states with the stack empty. An interpreter for an NPDA is given
+
+
+as Program 17.3. The predicate accept(Xs) is true if the NDFA defined by the
+
+
+collection of initial, final, and delta facts accepts the string represented as
+
+
+the list of symbols Xs.  The interpreter is very similar to the interpreter of *
+ *an
+
+
+NDFA given as Program 17.1. The only change is the explicit manipulation of
+
+
+the stack by the delta predicate.
+
+
+
+    A particular example of an NPDA is given as Program 17.4. This automaton
+
+
+accepts palindromes over a finite alphabet. A palindrome is a nonempty string
+
+
+that reads the same backwards as forwards.  Example palindromes are noon,
+
+
+madam, and glenelg. Again, the automaton is specified by initial, final, and
+
+
+delta facts, and the sets of symbols being defined implicitly. The automaton has
+
+
+two states: q0, the initial state when symbols are pushed onto the stack, and
+
+
+q1, a final state when symbols are popped off the stack and compared with the
+
+
+
+
+17.1                           Interpreters for Finite State2Machines85
+
+
+
+symbols in the input stream. When to start pushing and start popping is decided
+
+
+nondeterministically. There are two delta facts that change the state from q0 to
+
+
+q1 to allow for palindromes of both odd and even lengths.
+
+
+       initial(q0).    final(q1).
+
+
+       delta(q0,X,S,q0,[XjS]).
+
+
+       delta(q0,X,S,q1,[XjS]).
+
+
+       delta(q0,X,S,q1,S).
+
+
+       delta(q1,X,[XjS],q1,S).
+
+
+
+       Program 17.4: An NPDA for palindromes over a finite alphabet
+
+
+
+    Programs 17.1 and 17.2 can be combined into a single program for recognizing
+
+
+the language (ab) . Similarly, Programs 17.3 and 17.4 can be combined into a
+
+
+single program for recognizing palindromes.  A program that can achieve this
+
+
+combination is given in Chapter 18.
+
+
+    It is straightforward to build an interpreter for a Turing machine written
+
+
+in a similar style to the interpreters in Programs 17.1 and 17.3. This is posed
+
+
+as Exercise (iii) at the end of this section.  Building an interpreter for Turi*
+ *ng
+
+
+machines shows that Prolog has the power of all other known computation models.
+
+
+
+Exercises for Section 17.1
+
+
+
+(i) Define an NDFA that accepts the language ab c.
+
+
+(ii)Define an NPDA that accepts the language anbn.
+
+
+
+
+286   Interpreters                                         17.1
+
+
+
+(iii)Write an interpreter for a Turing machine.
+
+
+
+17.2   Meta-Interpreters
+
+
+
+    We turn now to a class of especially useful interpreters. A meta-interpreter
+
+
+for a language is an interpreter for the language written in the language itsel*
+ *f.
+
+
+Being able to write a meta-interpreter easily is a very powerful feature of a p*
+ *ro-
+
+
+gramming language. It gives access to the computation process of the language
+
+
+and enables the building of an integrated programming environment. The exam-
+
+
+ples in the rest of this chapter demonstrate the potential of meta-interpreters*
+ * and
+
+
+the ease with which they can be written. In this section, we also examine issues
+
+
+in writing meta-interpreters.
+
+
+    Throughout the remainder of this chapter, the predicate solve is used
+
+
+for a meta-interpreter.  A suitable relation scheme is as follows.  The relation
+
+
+solve(Goal) is true if Goal is true with respect to the program being interpret*
+ *ed.
+
+
+    The simplest meta-interpreter that can be written in Prolog exploits the
+
+
+meta-variable facility. It is defined by a single clause:
+
+
+
+       solve(A)   A.
+
+
+
+    This trivial interpreter is only useful as part of a larger program. For ex*
+ *ample,
+
+
+a version of the trivial interpreter forms the basis for the interactive shell *
+ *given
+
+
+as Program 12.6 and the logging facility given as Program 12.7. In general, as *
+ *we
+
+
+suggest here and see in more detail in Sections 17.3 and 17.4, meta-interpreters
+
+
+
+
+17.2                                          Meta-Interpreters287
+
+
+
+are useful and important because of the easily constructed enhancements.
+
+
+    The best known and most widely used meta-interpreter models the computa-
+
+
+tion model of logic programs as goal reduction. The three clauses of Program 17*
+ *.5
+
+
+interpret pure Prolog programs. This meta-interpreter, called vanilla, together
+
+
+with its enhancements, is the basis of the rest of this section and Section 17.*
+ *3.
+
+       solve(Goal)  
+
+
+           Goal is true given the pure Prolog program defined by clause/2.
+
+
+       solve(true).
+
+
+       solve((A,B))   solve(A), solve(B).
+
+
+       solve(A)   clause(A,B), solve(B).
+
+
+
+       Program 17.5: A meta-interpreter for pure Prolog
+
+
+
+    The interpreter in Program 17.5 can be given a declarative reading.  The
+
+
+solve fact states that the empty goal, represented by the constant true, is tru*
+ *e.
+
+
+The first solve rule states that a conjunction (A,B) is true if A is true and B*
+ * is
+
+
+true. The second solve rule states that a goal A is true if there is a clause A*
+ *  
+
+
+B in the interpreted program such that B is true.
+
+
+    We also give a procedural reading of the three clauses in Program 17.5. The
+
+
+solve fact states that the empty goal, represented in Prolog by the atom true,
+
+
+is solved.  The next clause concerns conjunctive goals.  It reads:  \To solve a
+
+
+conjunction (A,B), solve A and solve B." The general case of goal reduction is
+
+
+covered by the final clause. To solve a goal, choose a clause from the program
+
+
+whose head unifies with the goal, and recursively solve the body of the clause.
+
+
+
+
+288   Interpreters                                         17.2
+
+
+
+    The procedural reading of Prolog clauses is necessary to demonstrate that t*
+ *he
+
+
+meta-interpreter of Program 17.5 indeed reflects Prolog's choices of implementi*
+ *ng
+
+
+the abstract computation model of logic programming. The two choices are the
+
+
+selection of the leftmost goal as the goal to reduce, and sequential search and
+
+
+backtracking for the nondeterministic choice of the clause to use to reduce the
+
+
+goal.  The goal order of the body of the solve clause handling conjunctions
+
+
+guarantees that the leftmost goal in the conjunction is solved first.  Sequenti*
+ *al
+
+
+search and backtracking comes from Prolog's behavior in satisfying the clause
+
+
+goal.
+
+
+
+    The hard work of the interpreter is borne by the third clause of Program
+
+
+17.5. The call to clause performs the unification with the heads of the clauses
+
+
+appearing in the program. It is also responsible for giving different solutions*
+ * on
+
+
+backtracking. Backtracking also occurs in the conjunctive rule reverting from B
+
+
+to A.
+
+
+
+    Tracing the meta-interpreter of Program 17.5 solving a goal is instructive.
+
+
+The trace of answering the query solve(member(X,[a,b,c])) with respect to
+
+
+Program 3.12 for member is given in Figure 17.2.
+
+
+
+    The vanilla meta-interpreter inherits Prolog's representation of clauses us*
+ *ing
+
+
+the system predicate clause. Alternative representations of clauses are certain*
+ *ly
+
+
+possible, and indeed have been used by alternative Prologs. Lists are one possi*
+ *ble
+
+
+representation. The clause A   B1; B2; : :;:Bn can be represented by the clause
+
+
+rule(A,[B1,: :,:Bn]). In this representation, the empty list represents the emp*
+ *ty
+
+
+goal and list construction represents conjunction. This representation is used *
+ *in
+
+
+
+
+17.2                                          Meta-Interpreters289
+
+
+
+ solve(member(X,[a,b,c]))
+
+
+    clause(member(X,[a,b,c]),B)              fX=a,B=trueg
+
+
+    solve(true)
+
+
+        true        Output:  X=a
+
+
+                      ;
+
+
+    solve(true)
+
+
+        clause(true,T)    f
+
+
+    clause(member(X,[a,b,c],B)               fB=member(X,[b,c])g
+
+
+    solve(member(X,[b,c]))
+
+
+        clause(member(X,[b,c]),B1)           fX=b,B1=trueg
+
+
+        solve(true)
+
+
+           true        Output:  X=b
+
+
+                      ;
+
+
+        solve(true)
+
+
+           clause(true,T)    f
+
+
+        clause(member(X,[b,c]),B1)           fB1=member(X,[c])g
+
+
+        solve(member(X,[c]))
+
+
+           clause(member(X,[c],B2)           fX=c,B2=trueg
+
+
+           solve(true)
+
+
+           true        Output:  X=c
+
+
+                      ;
+
+
+           solve(true)
+
+
+               clause(true,T)    f
+
+
+           clause(member(X,[c],B2))          fB2=member(X,[ ])g
+
+
+           solve(member(X,[ ]))
+
+
+               clause(member(X,[ ]),B3)    f
+
+
+               no (more) solutions
+
+
+
+               Figure 17.2: Tracing the meta-interpreter
+
+
+
+
+290   Interpreters                                         17.2
+
+
+
+    solve(Goal)  
+
+
+       Goal is true given the pure Prolog program defined by clause/2.
+
+
+    solve(Goal)   solve(Goal,[ ]).
+
+
+    solve([ ],[ ]).
+
+
+    solve([ ],[GjGoals])   solve(G,Goals).
+
+
+    solve([AjB],Goals)   append(B,Goals,Goals1), solve(A,Goals1).
+
+
+    solve(A,Goals)   rule(A,B), solve(B,Goals).
+
+
+
+       Program 17.6: A meta-interpreter for pure Prolog in continuation
+
+
+                     style
+
+
+
+Program 17.6.
+
+
+
+    A different representation imposes a different form on the meta-interpreter,
+
+
+as illustrated in Program 17.6. Unlike Program 17.5, this version of the vanilla
+
+
+meta-interpreter makes explicit the remaining goals in the resolvent. Enhance-
+
+
+ments can be written to exploit the fact that the resolvent is accessible during
+
+
+the computation, for example, allowing a more sophisticated computation rule.
+
+
+The behavior of Program 17.6 can be considered as being in continuation style
+
+
+promoted by languages such as Scheme.
+
+
+
+    Differences in meta-interpreters can be characterized in terms of their gra*
+ *n-
+
+
+ularity, that is the chunks of the computation that are made accessible to the
+
+
+programmer.  The granularity of the trivial one-clause meta-interpreter is too
+
+
+coarse. Consequently there is little scope for applying the meta-interpreter. It
+
+
+
+
+17.2                                          Meta-Interpreters291
+
+
+
+is possible, though not as easy, to write a meta-interpreter that models unific*
+ *a-
+
+
+tion and backtracking. The granularity of such a meta-interpreter is very fine.
+
+
+Working at this fine level is usually not worthwhile.  The efficiency loss is t*
+ *oo
+
+
+great to warrant the extra applications. The meta-interpreter in Program 17.5,
+
+
+at the clause reduction level, has the granularity most suited for the widest r*
+ *ange
+
+
+of applications.
+
+
+    The vanilla meta-interpreter must be extended to handle language features
+
+
+outside pure Prolog.  Builtin predicates are not defined by clauses in the pro-
+
+
+gram and need different treatment. The easiest way to incorporate builtin predi-
+
+
+cates is to use the meta-variable facility to call them directly. A table of bu*
+ *iltin
+
+
+predicates is necessary. In this chapter, we assume a table of facts of the form
+
+
+builtin(Predicate) for each builtin predicate. Figure 17.3 gives part of that
+
+
+table. A table of builtin predicates is provided in some Prologs by another name
+
+
+but is not present in Standard Prolog.
+
+
+       builtin(A is B).       builtin(A > B).
+
+
+       builtin(read(X)).      builtin(write(X)).
+
+
+       builtin(integer(X)).   builtin(functor(T,F,N)).
+
+
+       builtin(clause(A,B)).  builtin(builtin(X)).
+
+
+
+          Figure 17.3: Fragment of a table of builtin predicates
+
+
+
+    The clause solve(A)   builtin(A), A. can be added to the meta-
+
+
+interpreter in Program 17.5 to correctly handle builtin predicates. The resulti*
+ *ng
+
+
+program handles four disjoint cases, one per clause, for solving goals: the emp*
+ *ty
+
+
+
+
+292   Interpreters                                         17.2
+
+
+
+goal, conjunctive goals, builtin goals, and user-defined goals. For compatibili*
+ *ty
+
+
+with a number of Prolog systems, the meta-interpreters in the rest of this sect*
+ *ion
+
+
+contain cuts to indicate that the clauses are mutually exclusive.
+
+
+
+    The extra solve clause makes the behavior of the builtin predicates invisib*
+ *le
+
+
+to the meta-interpreter. User-defined predicates that one wants to make invisib*
+ *le
+
+
+can be handled similarly with a single clause.  Conversely, there are occasions
+
+
+when builtin predicates for negation and second-order programming should be
+
+
+made visible.
+
+
+
+    The vanilla meta-interpreter needs to be extended to handle cuts correctly.*
+ * A
+
+
+naive incorporation of cuts treats them as a builtin predicate, effectively add*
+ *ing a
+
+
+clause solve(!)    !. This clause does not achieve the correct behavior of cut.
+
+
+The cut in the clause commits to the current solve clause rather than pruning
+
+
+the search tree.
+
+
+
+    To achieve correct behavior of cut in a meta-interpreter, one needs to un-
+
+
+derstand scope, that is to which clause the cut commits. The scope of cut, as
+
+
+described in Chapter 11, is the clause in which the cut is a goal in the body. *
+ *The
+
+
+scope of cut when it is contained within a meta-logical builtin predicate such *
+ *as
+
+
+conjunction and disjunction is less distinct and varies in different Prologs. I*
+ *f a
+
+
+cut is part of a disjunction, should execution of the cut commit to the current
+
+
+disjunct or to the clause in which the disjunction is embedded?  Handling cut
+
+
+correctly in a meta-interpreter is tricky and usually relies on technical detai*
+ *ls of
+
+
+the scope of cut in a particular implementation of Prolog.  Incorporating cuts
+
+
+within meta-interpreters has been widely studied, and references to solutions a*
+ *re
+
+
+
+
+17.2                                          Meta-Interpreters293
+
+
+
+given in Section 17.5.
+
+
+    We apply meta-interpreters to develop a simple tracer. Program 17.7 handles
+
+
+success branches of computations and does not display failure nodes in the sear*
+ *ch
+
+
+tree. It is capable of generating the traces presented in Chapter 6.
+
+
+    The basic predicate is solve_trace(Goal,Depth), where Goal is solved at
+
+
+some depth. The starting depth is assumed to be 0. The first solve_trace/2
+
+
+clause in Program 17.7 states that the empty goal is solved at any depth. The
+
+
+second clause indicates that each goal in a conjunct is solved at the same dept*
+ *h.
+
+
+The third clause handles builtins. The final solve_trace/2 clause matches the
+
+
+goal with the head of a program clause, displays the goal, increments the depth,
+
+
+and solves the body of the program clause at the new depth.
+
+
+    The predicate display(Goal,Depth) is an interface for printing the traced
+
+
+goal. The second argument, Depth, controls the amount of indentation of the fir*
+ *st
+
+
+argument, Goal. Level of indentation correlates with depth in the proof tree.
+
+
+    There is subtlety in the goal order of the clause
+
+
+
+       solve_trace(A,Depth)  
+
+
+           clause(A,B), display(A,Depth), nl, Depth1 is Depth + 1,
+
+
+           solve_trace(B,Depth1).
+
+
+
+The display goal is between calls to clause and solve_trace, ensuring that
+
+
+the goal is displayed each time Prolog backtracks to choose another clause.  If
+
+
+the clause and display goals are swapped, only the initial call of the goal is
+
+
+displayed.
+
+
+
+
+294   Interpreters                                         17.2
+
+
+
+       solve_trace(Goal)  
+
+
+           Goal is true given the Prolog program defined by clause/2.
+
+
+           The program traces the proof by side effects.
+
+
+       solve_trace(Goal)   solve_trace(Goal,0).
+
+
+       solve_trace(true,Depth)   !.
+
+
+       solve_trace((A,B),Depth)  
+
+
+           !, solve_trace(A,Depth), solve_trace(B,Depth).
+
+
+       solve_trace(A,Depth)  
+
+
+           builtin(A), !, A, display(A,Depth), nl.
+
+
+       solve_trace(A,Depth)  
+
+
+           clause(A,B), display(A,Depth), nl, Depth1 is Depth + 1,
+
+
+           solve_trace(B,Depth1).
+
+
+       display(A,Depth)  
+
+
+           Spacing is 3Depth, put_spaces(Spacing), write(A).
+
+
+       put_spaces(N)  
+
+
+           between(1,N,I), put_char(` '), fail.
+
+
+       put_spaces(N).
+
+
+       between(1,N,I)   See Program 8.5.
+
+
+
+       Program 17.7: A tracer for Prolog
+
+
+
+    Using Program 17.7 for the query solve_trace(append(Xs,Ys,[a,b,c]))?
+
+
+with Program 3.15 for append generates a trace like the one presented in Sec-
+
+
+
+
+17.2                                          Meta-Interpreters295
+
+
+
+tion 6.1. The output messages and semicolons for alternative solutions are pro-
+
+
+vided by the underlying Prolog. There is only one difference from the trace in
+
+
+Figure 6.2. The unifications are already performed. Separating out unifications
+
+
+requires explicit representation of unification and is considerably harder.
+
+
+    A simple application of meta-interpreters constructs a proof tree while sol*
+ *v-
+
+
+ing a goal.  The proof tree is built top-down.  A proof tree is essential for t*
+ *he
+
+
+applications of debugging and explanation in the next two sections.
+
+
+    The basic relation is solve(Goal,Tree), where Tree is a proof tree for the
+
+
+goal Goal.  Proof trees are represented by the structure Goal   Proof.  Pro-
+
+
+gram 17.8 implements solve/2 and is a straightforward enhancement of the
+
+
+vanilla meta-interpreter. We leave as an exercise for the reader giving a decla*
+ *rative
+
+
+reading of the program.
+
+       solve(Goal,Tree)  
+
+
+           Tree is a proof tree for Goal given the program defined
+
+
+           by clause/2.
+
+
+       solve(true,true)   !.
+
+
+       solve((A,B),(ProofA,ProofB))  
+
+
+           !, solve(A,ProofA), solve(B,ProofB).
+
+
+       solve(A,(A builtin))   builtin(A), !, A.
+
+
+       solve(A,(A Proof))   clause(A,B), solve(B,Proof).
+
+
+
+       Program 17.8: A meta-interpreter for building a proof tree
+
+
+
+    Here is an example of using Program 17.8 with Program 1.2.  The query
+
+
+
+
+296   Interpreters                                         17.2
+
+
+
+solve(son(lot,haran),Proof)? has the solution
+
+
+
+       Proof = (son(lot,haran)  
+
+
+              ((father(haran,lot) true),
+
+
+              (male(lot) true))).
+
+
+
+The query solve(son(X,haran),Proof)? has the solution X=lot and the same
+
+
+value for Proof.
+
+
+    Our next enhancement of the vanilla meta-interpreter incorporates a mecha-
+
+
+nism for uncertainty reasoning. Associated with each clause is a certainty fact*
+ *or,
+
+
+which is a positive real number less than or equal to 1.  A logic program with
+
+
+certainties is a set of ordered pairs hClause,Factori, where Clause is a clause*
+ * and
+
+
+Factor is a certainty factor.
+
+
+    The simple meta-interpreter in Program 17.9 implements the uncertainty rea-
+
+
+soning mechanism. The program is a straightforward enhancement of the vanilla
+
+
+meta-interpreter. The top-level relation is solve(Goal,Certainty), which is true
+
+
+when Goal is satisfied with certainty Certainty.
+
+
+    The meta-interpreter computes the combination of certainty factors in a
+
+
+conjunction as the minimum of the certainty factors of the conjuncts.  Other
+
+
+combining strategies could be accommodated just as easily.  Program 17.9 as-
+
+
+sumes that clauses with certainty factors are represented using a predicate
+
+
+clause_cf(A,B,CF).
+
+
+    Program 17.9 can be enhanced to prune computations that do not meet a
+
+
+desired certainty threshold. An extra argument constituting the value of the cu*
+ *toff
+
+
+
+
+17.2                                          Meta-Interpreters297
+
+
+
+       solve(Goal,Certainty)  
+
+
+           Certainty is our confidence that Goal is true.
+
+
+       solve(true,1)   !.
+
+
+       solve((A,B),C)  
+
+
+           !, solve(A,C1), solve(B,C2), minimum(C1,C2,C).
+
+
+       solve(A,1)   builtin(A), !, A.
+
+
+       solve(A,C)   clause_cf(A,B,C1), solve(B,C2), C is C1  C2.
+
+
+       minimum(X,Y,Z)   See Program 11.3.
+
+
+
+       Program 17.9: A meta-interpreter for reasoning with uncertainty
+
+
+
+threshold needs to be added. The enhanced program is given as Program 17.10.
+
+
+The new relation is solve(Goal,Certainty,Threshold).
+
+
+    The threshold is used in the fourth clause in Program 17.10. The certainty
+
+
+of any goal must exceed the current threshold.  If the threshold is exceeded,
+
+
+the computation continues.  The new threshold is the quotient of the previous
+
+
+threshold by the certainty of the clause.
+
+
+
+
+298   Interpreters                                         17.2
+
+
+       solve(Goal,Certainty,Threshold)  
+
+
+           Certainty is our confidence, greater than Threshold, that Goal is tr*
+ *ue.
+
+
+       solve(true,1,T)   !.
+
+
+       solve((A,B),C,T)  
+
+
+           !, solve(A,C1,T), solve(B,C2,T), minimum(C1,C2,C).
+
+
+       solve(A,1,T)   builtin(A), !, A.
+
+
+       solve(A,C,T)  
+
+
+           clause_cf(A,B,C1), C1 > T, T1 is T/C1,
+
+
+           solve(B,C2,T1), C is C1  C2.
+
+
+       minimum(X,Y,Z)   See Program 11.3.
+
+
+
+       Program 17.10: Reasoning with uncertainty with threshold cutoff
+
+
+
+Exercises for Section 17.2
+
+
+
+(i) Write a meta-interpreter to count the number of times a procedure is called
+
+
+    in a successful computation.
+
+
+(ii)Write a meta-interpreter to find the maximum depth reached in a computa-
+
+
+    tion.
+
+
+(iii)Extend Program 17.6 to give a tracer and build a proof tree.
+
+
+(iv)Extend Program 17.7 for solve_trace/2 to print out failed goals.
+
+
+(v) Modify Program 17.8 to use a different representation for a proof tree.
+
+
+
+17.3   Enhanced Meta-Interpreters for Debugging
+
+
+
+
+17.3                       Enhanced Meta-Interpreters for Debugging299
+
+
+
+    Debugging is an essential aspect of programming, even in Prolog.  The
+
+
+promise of high-level programming languages is not so much in the prospect for
+
+
+writing bug-free programs but in the power of the computerized tools for sup-
+
+
+porting the process of program development. For reasons of bootstrapping and
+
+
+elegance, these tools are best implemented in the language itself. Such tools a*
+ *re
+
+
+programs for manipulating, analyzing, and simulating other programs, or in other
+
+
+words, meta-programs.
+
+
+    This section shows meta-programs for supporting the debugging process of
+
+
+pure Prolog programs. The reason for restricting ourselves to the pure part is
+
+
+clear: the difficulties in handling the impure parts of the language.
+
+
+    To debug a program, we must assume that the programmer has some intended
+
+
+behavior of the program in mind, and an intended domain of application on which
+
+
+the program should exhibit this behavior.  Given those, debugging consists of
+
+
+finding discrepancies between the program's actual behavior and the behavior
+
+
+the programmer intended. Recall the definitions of an intended meaning and a
+
+
+domain from Section 5.2. An intended meaning M of a pure Prolog program is the
+
+
+set of ground goals on which the program should succeed. The intended domain
+
+
+D of a program is a domain on which the program should terminate. We require
+
+
+the intended meaning of a program to be a subset of the intended domain.
+
+
+    We say that A1 is a solution to a goal A if the program returns on a goal A
+
+
+its instance A1. We say that a solution A is true in an intended meaning M if
+
+
+every instance of A is in M . Otherwise it is false in M .
+
+
+    A pure Prolog program can exhibit only three types of bugs, given an intend*
+ *ed
+
+
+
+
+300   Interpreters                                         17.3
+
+
+
+meaning and an intended domain. When invoked on a goal A in the intended
+
+
+domain, the program may do one of three things:
+
+
+
+       1. Fail to terminate
+
+
+       2. Return some false solution A
+
+
+       3. Fail to return some true solution A
+
+
+
+    We describe algorithms for supporting the detection and identification of e*
+ *ach
+
+
+of these three types of bugs.
+
+
+
+    In general, it is not possible to detect if a Prolog program is nonterminat-
+
+
+ing; the question is undecidable. Second best is to assign some a priori bound
+
+
+on the running time or depth of recursion of the program, and abort the com-
+
+
+putation if the bound is exceeded. It is desirable to save part of the computa-
+
+
+tion to support the analysis of the reasons for nontermination.  The enhanced
+
+
+meta-interpreter shown in Program 17.11 achieves this. It is invoked with a call
+
+
+solve(A,D,Overflow), where A is an initial goal, and D an upper bound on the
+
+
+depth of recursion. The call succeeds if a solution is found without exceeding *
+ *the
+
+
+predefined depth of recursion, with Overflow instantiated to no_overflow. The
+
+
+call also succeeds if the depth of recursion is exceeded, but in this case Over-
+
+
+flow contains the stack of goals, i.e., the branch of the computation tree, whi*
+ *ch
+
+
+exceeded the depth-bound D.
+
+
+
+    Note that as soon as a stack overflow is detected, the computation returns,
+
+
+without completing the proof. This is achieved by solve_conjunction and re-
+
+
+turn_overflow.
+
+
+
+
+17.3                       Enhanced Meta-Interpreters for Debugging301
+
+
+
+       solve(A,D,Overflow)  
+
+
+           A has a proof tree of depth less than D and
+
+
+           Overflow equals no_overflow, or A has a
+
+
+           branch in the computation tree longer than D, and
+
+
+           Overflow contains a list of its first D elements.
+
+
+       solve(true,D,no_overflow)   !.
+
+
+       solve(A,0,overflow([ ]))   !.
+
+
+       solve((A,B),D,Overflow)  
+
+
+           D > 0, !,
+
+
+           solve(A,D,OverflowA),
+
+
+           solve_conjunction(OverflowA,B,D,Overflow).
+
+
+       solve(A,D,no_overflow)  
+
+
+           D > 0,
+
+
+           builtin(A), !, A.
+
+
+       solve(A,D,Overflow)  
+
+
+           D > 0,
+
+
+           clause(A,B),
+
+
+           D1 is D-1,
+
+
+           solve(B,D1,OverflowB),
+
+
+           return_overflow(OverflowB,A,Overflow).
+
+
+       solve_conjunction(overflow(S),B,D,overflow(S)).
+
+
+       solve_conjunction(no_overflow,B,D,Overflow)  
+
+
+           solve(B,D,Overflow).
+
+
+       return_overflow(no_overflow,A,no_overflow).
+
+
+       return_overflow(overflow(S),A,overflow([AjS])).
+
+
+
+       Program 17.11: A meta-interpreter detecting a stack overflow
+
+
+
+
+302   Interpreters                                         17.3
+
+
+
+    For example, consider Program 17.12 for insertion sort. When called with
+
+
+the goal solve(isort([2,2],Xs),6,Overflow), the solution returned is
+
+
+
+       Xs = [2,2,2,2,2,2],
+
+
+       Overflow = overflow([
+
+
+           isort([2,2],[2,2,2,2,2,2]),
+
+
+           insert(2,[2],[2,2,2,2,2,2]),
+
+
+           insert(2,[2],[2,2,2,2,2]),
+
+
+           insert(2,[2],[2,2,2,2]),
+
+
+           insert(2,[2],[2,2,2]),
+
+
+           insert(2,[2],[2,2])])
+
+
+
+    The overflowed stack can be further analyzed, upon return, to diagnose the
+
+
+reason for nontermination. This can be caused, for example, by a loop, i.e., by*
+ * a
+
+
+sequence of goals G1,G2,: :,:Gn, on the stack, where G1 and Gn are called with *
+ *the
+
+
+same input, or by a sequence of goals that calls each goal with increasingly la*
+ *rger
+
+
+inputs. The first situation occurs in the preceding example. It is clearly a bu*
+ *g that
+
+
+should be fixed in the program. The second situation is not necessarily a bug, *
+ *and
+
+
+knowing whether the program should be fixed or whether a larger machine should
+
+
+be bought in order to execute it requires further program-dependent information.
+
+
+
+    The second type of bug is returning a false solution. A program can return
+
+
+a false solution only if it has a false clause. A clause C is false with respec*
+ *t to
+
+
+an intended meaning M if it has an instance whose body is true in M and whose
+
+
+head is false in M . Such an instance is called a counterexample to C .
+
+
+
+
+17.3                       Enhanced Meta-Interpreters for Debugging303
+
+
+
+    Consider, for example, Program 17.13 for insertion sort.  On the goal
+
+
+isort([3,2,1],Xs) it returns the solution isort([3,2,1],[3,2,1]) which is
+
+
+clearly false.
+
+
+    The false clause in the program is
+
+
+       insert(X,[YjYs],[X,YjYs])   X  Y.
+
+
+
+and a counterexample to it is
+
+
+       insert(2,[1],[2,1])   2  1.
+
+
+
+    Given a ground proof tree corresponding to a false solution, one can find a
+
+
+false instance of a clause as follows: Traverse the proof tree in postorder. Ch*
+ *eck
+
+
+whether each node in the proof tree is true. If a false node is found, the clau*
+ *se
+
+
+whose head is the false node and whose body is the conjunction of its sons is a
+
+
+counterexample to a clause in the program. That clause is false and should be
+
+
+removed or modified.
+
+
+    The correctness of this algorithm follows from a simple inductive proof. The
+
+
+algorithm is embedded in an enhanced meta-interpreter, shown as Program 17.14.
+
+
+    The algorithm and its implementation assume an oracle that can answer
+
+
+queries concerning the intended meaning of the program.  The oracle is some
+
+
+entity external to the diagnosis algorithm. It can be the programmer, who can
+
+
+respond to queries concerning the intended meaning of the program, or another
+
+
+program that has been shown to have the same meaning as the intended meaning
+
+
+of the program under debugging. The second situation may occur in developing
+
+
+a new version of a program while using the older version as an oracle. It can a*
+ *lso
+
+
+
+
+304   Interpreters                                         17.3
+
+
+
+       isort(Xs,Ys)  
+
+
+           Ys is an ordered permutation of Xs. Nontermination program.
+
+
+       isort([XjXs],Ys)   isort(Xs,Zs), insert(X,Zs,Ys).
+
+
+       isort([ ],[ ]).
+
+
+       insert(X,[YjYs],[X,YjYs])  
+
+
+           X < Y.
+
+
+       insert(X,[YjYs],[YjZs])  
+
+
+           X  Y, insert(Y,[XjYs],Zs).
+
+
+       insert(X,[ ],[X]).
+
+
+
+       Program 17.12: A nonterminating insertion sort
+
+
+
+       isort(Xs,Ys)  
+
+
+           Buggy insertion sort.
+
+
+       isort([XjXs],Ys)   isort(Xs,Zs), insert(X,Zs,Ys).
+
+
+       isort([ ],[ ]).
+
+
+       insert(X,[YjYs],[X,YjYs])  
+
+
+           X  Y.
+
+
+       insert(X,[YjYs],[YjZs])  
+
+
+           X > Y, insert(X,Ys,Zs).
+
+
+       insert(X,[ ],[X]).
+
+
+
+       Program 17.13: An incorrect and incomplete insertion sort
+
+
+
+
+17.3                       Enhanced Meta-Interpreters for Debugging305
+
+
+
+       false_solution(A,Clause)  
+
+
+           If A is a provable false instance, then Clause is
+
+
+           a false clause in the program. Bottom-up algorithm.
+
+
+       false_solution(A,Clause)  
+
+
+           solve(A,Proof),
+
+
+           false_clause(Proof,Clause).
+
+
+       solve(Goal,Proof)   See Program 17.8.
+
+
+       false_clause(true,ok).
+
+
+       false_clause((A,B),Clause)  
+
+
+           false_clause(A,ClauseA),
+
+
+           check_conjunction(ClauseA,B,Clause).
+
+
+       false_clause((A B),Clause)  
+
+
+           false_clause(B,ClauseB),
+
+
+           check_clause(ClauseB,A,B,Clause).
+
+
+       check_conjunction(ok,B,Clause)  
+
+
+           false_clause(B,Clause).
+
+
+       check_conjunction((A B1),B,(A B1)).
+
+
+       check_clause(ok,A,B,Clause)  
+
+
+           query_goal(A,Answer),
+
+
+           check_answer(Answer,A,B,Clause).
+
+
+       check_clause((A1 B1),A,B,(A1 B1)).
+
+
+       check_answer(true,A,B,ok).
+
+
+       check_answer(false,A,B,(A B1))  
+
+
+           extract_body(B,B1).
+
+
+       extract_body(true,true).
+
+
+       extract_body((A B),A).
+
+
+       extract_body(((A B),Bs),(A,As))  
+
+
+           extract_body(Bs,As).
+
+
+       query_goal(A,true)  
+
+
+           builtin(A).
+
+
+       query_goal(Goal,Answer)  
+
+
+           not builtin(Goal),
+
+
+           writeln([`Is the goal ',Goal,` true?']),
+
+
+           read(Answer).
+
+
+
+       Program 17.14: Bottom-up diagnosis of a false solution
+
+
+
+
+306   Interpreters                                         17.3
+
+
+
+occur when developing an efficient program (e.g., quicksort), given an ineffici*
+ *ent
+
+
+executable specification of it (i.e., permutation sort), and using the specific*
+ *ation
+
+
+as an oracle.
+
+
+
+    When invoked with the goal false_solution(isort([3,2,1],X),C) the al-
+
+
+gorithm exhibits the following interactive behavior:
+
+
+
+       false_solution(isort([3,2,1],X),C)?
+
+
+       Is the goal isort([ ],[ ]) true?
+
+
+       true.
+
+
+       Is the goal insert(1,[ ],[1]) true?
+
+
+       true.
+
+
+       Is the goal isort([1],[1]) true?
+
+
+       true.
+
+
+       Is the goal insert(2,[1],[2,1]) true?
+
+
+       false.
+
+
+       X = [3,2,1],
+
+
+       C = insert(2,[1],[2,1])   2  1.
+
+
+
+This returns a counterexample to the false clause.
+
+
+
+    The proof tree returned by solve/2 is not guaranteed to be ground, in con-
+
+
+trast to the assumption of the algorithm. However, a ground proof tree can be
+
+
+generated by either instantiating variables left in the proof tree to arbitrary*
+ * con-
+
+
+stants before activating the algorithm, or by requesting the oracle to instanti*
+ *ate
+
+
+the queried goal when it contains variables. Different instances might imply di*
+ *f-
+
+
+
+
+17.3                       Enhanced Meta-Interpreters for Debugging307
+
+
+
+ferent answers. Since the goal of this algorithm is to find a counterexample as
+
+
+soon as possible, the oracle should instantiate the goal to a false instance if*
+ * it can.
+
+
+    One of the main concerns with diagnosis algorithms is improving their query
+
+
+complexity, i.e., reducing the number of queries they require to diagnose the b*
+ *ug.
+
+
+Given that the human programmer may have to answer the queries, this desire
+
+
+is understandable.  The query complexity of the preceding diagnosis algorithm
+
+
+is linear in the size of the proof tree.  There is a better strategy, whose que*
+ *ry
+
+
+complexity is linear in the depth of the proof tree, not its size. In contrast *
+ *to the
+
+
+previous algorithm, which is bottom-up, the second algorithm traverses the proof
+
+
+tree top-down. At each node it tries to find a false son. The algorithm recurses
+
+
+with any false son found. If there is no false son, then the current node const*
+ *itutes
+
+
+a counterexample, as the goal at the node is false, and all its sons are true.
+
+
+    The implementation of the algorithm is shown in Program 17.15. Note the
+
+
+use of cut to implement implicit negation in the first clause of false_goal/2 a*
+ *nd
+
+
+the use of query_goal/2 as a test predicate.
+
+
+    Compare the behavior of the bottom-up algorithm with the following trace
+
+
+of the interactive behavior of Program 17.15:
+
+
+       false_solution(isort([3,2,1],X),C)?
+
+
+       Is the goal isort([2,1],[2,1]) true?
+
+
+       false.
+
+
+       Is the goal isort([1],[1]) true?
+
+
+       true.
+
+
+       Is the goal insert(2,[1],[2,1]) true?
+
+
+
+
+308   Interpreters                                         17.3
+
+
+       false_solution(A,Clause)  
+
+
+           If A is a provable false instance, then Clause
+
+
+           is a false clause in the program. Top-down algorithm.
+
+
+       false_solution(A,Clause)  
+
+
+           solve(A,Proof),
+
+
+           false_goal(Proof,Clause).
+
+
+       solve(Goal,Proof)   See Program 17.8.
+
+
+       false_goal((A B),Clause)  
+
+
+           false_conjunction(B,Clause), !.
+
+
+       false_goal((A B),(A B1))  
+
+
+           extract_body(B,B1).
+
+
+       false_conjunction(((A B),Bs),Clause)  
+
+
+           query_goal(A,false), !,
+
+
+           false_goal((A B),Clause).
+
+
+       false_conjunction((A B),Clause)  
+
+
+           query_goal(A,false), !,
+
+
+           false_goal((A B),Clause).
+
+
+       false_conjunction((A,As),Clause)  
+
+
+           false_conjunction(As,Clause).
+
+
+       extract_body(Tree,Body)   See Program 17.14.
+
+
+       query_goal(A,Answer)   See Program 17.14.
+
+
+
+       Program 17.15: Top-down diagnosis of a false solution
+
+
+
+
+17.3                       Enhanced Meta-Interpreters for Debugging309
+
+
+
+       false.
+
+
+       X = [3,2,1],
+
+
+       C = insert(2,[1],[2,1])   2  1.
+
+
+
+    There is a diagnosis algorithm for false solutions with an even better query
+
+
+complexity, called divide-and-query.  The algorithm progresses by splitting the
+
+
+proof tree into two approximately equal parts and querying the node at the spli*
+ *t-
+
+
+ting point. If the node is false, the algorithm is applied recursively to the s*
+ *ubtree
+
+
+rooted by this node. If the node is true, its subtree is removed from the tree *
+ *and
+
+
+replaced by true, and a new middle point is computed. The algorithm can be
+
+
+shown to require a number of queries logarithmic in the size of the proof tree.
+
+
+In case of close-to-linear proof trees, this constitutes an exponential improve*
+ *ment
+
+
+over both the top-down and the bottom-up diagnosis algorithms.
+
+
+    The third possible type of bug is a missing solution. Diagnosing a missing
+
+
+solution is more difficult than fixing the previous bugs.  We say that a clause
+
+
+covers a goal A with respect to an intended meaning M if it has an instance
+
+
+whose head is an instance of A and whose body is in M .
+
+
+    For example, consider the goal insert(2,[1,3],Xs). It is covered by the
+
+
+clause
+
+
+       insert(X,[YjYs],[X,YjYs])   X  Y.
+
+
+
+of Program 17.13 with respect to the intended meaning M of the program, since
+
+
+in the following instance of the clause
+
+
+       insert(2,[1,3],[1,2,3])   2  1.
+
+
+
+
+310   Interpreters                                         17.3
+
+
+
+the head is an instance of A and the body is in M .
+
+
+
+    It can be shown that if a program P has a missing solution with respect
+
+
+to an intended meaning M , then there is a goal A in M that is not covered by
+
+
+any clause in P. The proof of this claim is beyond the scope of the book. It is
+
+
+embedded in the diagnosis algorithm that follows.
+
+
+
+    Diagnosing a missing solution imposes a heavier burden on the oracle. Not
+
+
+only does it have to know whether a goal has a solution but it must also provide
+
+
+a solution, if it exists. Using such an oracle, an uncovered goal can be found *
+ *as
+
+
+follows.
+
+
+
+    The algorithm is given a missing solution, i.e., a goal in the intended mea*
+ *ning
+
+
+M of the program P, for which P fails.  The algorithm starts with the initial
+
+
+missing solution. For every clause that unifies with it, it checks, using the o*
+ *racle,
+
+
+if the body of the clause has an instance in M . If there is no such clause, th*
+ *e goal
+
+
+is uncovered, and the algorithm terminates. Otherwise the algorithm finds a goal
+
+
+in the body that fails. At least one of them should fail, or else the program w*
+ *ould
+
+
+have solved the body, and hence the goal, in contrast to our assumption. The
+
+
+algorithm is applied recursively to this goal.
+
+
+
+    An implementation of this algorithm is shown in Program 17.16. The pro-
+
+
+gram attempts to trace the failing path of the computation and to find a true
+
+
+goal which is uncovered. Following is a session with the program:
+
+
+
+       missing_solution(isort([2,1,3],[1,2,3]),C)?
+
+
+       Enter a true ground instance of
+
+
+
+
+17.3                       Enhanced Meta-Interpreters for Debugging311
+
+
+       missing_solution(A,Goal)  
+
+
+           If A is a nonprovable true ground goal, then Goal is a
+
+
+           true ground goal that is uncovered by the program.
+
+
+       missing_solution((A,B),Goal)   !,
+
+
+           (not A, missing_solution(A,Goal) ;
+
+
+           A, missing_solution(B,Goal)).
+
+
+       missing_solution(A,Goal)  
+
+
+           clause(A,B),
+
+
+           query_clause((A B)), !,
+
+
+           missing_solution(B,Goal).
+
+
+       missing_solution(A,A)  
+
+
+           not system(A).
+
+
+       query_clause(Clause)  
+
+
+           writeln([`Enter a true ground instance of ',Clause,
+
+
+           `if there is such, or ``no" otherwise']),
+
+
+           read(Answer),
+
+
+           !, check_answer(Answer,Clause).
+
+
+       check_answer(no,Clause)   !, fail.
+
+
+       check_answer(Clause,Clause)   !.
+
+
+       check_answer(Answer,Clause)  
+
+
+           write(`Illegal answer'),
+
+
+           !, query_clause(Clause).
+
+
+
+       Program 17.16: Diagnosing missing solution
+
+
+
+
+312   Interpreters                                         17.3
+
+
+
+       (isort([2,1,3],[1,2,3])  
+
+
+           isort([1,3],Xs),insert(2,Xs,[1,2,3]))
+
+
+       if there is such, or \no" otherwise
+
+
+       (isort([2,1,3],[1,2,3])  
+
+
+           isort([1,3],[1,3]),insert(2,[1,3],[1,2,3])).
+
+
+       Enter a true ground instance of
+
+
+       (isort([1,3],[1,3])   isort([3],Ys),insert(1,Ys,[1,3]))
+
+
+       if there is such, or `no' otherwise
+
+
+       (isort([1,3],[1,3])   isort([3],[3]),insert(1,[3],[1,3])).
+
+
+       Enter a true ground instance of
+
+
+       (insert(1,[3],[1,3])   1  3)
+
+
+       if there is such, or `no' otherwise
+
+
+       no.
+
+
+       C = insert(1,[3],[1,3]).
+
+
+
+The reader can verify that the goal insert(1,[3],[1,3]) is not covered by
+
+
+Program 17.13.
+
+
+
+    The three algorithms shown can be incorporated in a high-quality interactive
+
+
+program development environment for Prolog.
+
+
+
+17.4   An Explanation Shell for Rule-Based Systems
+
+
+
+
+17.4                     An Explanation Shell for Rule-Based3Systems13
+
+
+
+    The final section of this chapter presents an application of interpreters t*
+ *o rule-
+
+
+based systems. An explanation shell is built that is capable of explaining why *
+ *goals
+
+
+succeed and fail and that allows interaction with the user during a computation.
+
+
+The shell is developed with the methodology of stepwise enhancement introduced
+
+
+in Section 13.3.
+
+
+    The skeleton interpreter in this section is written in the same style as the
+
+
+vanilla meta-interpreter and has the same granularity. It differs in two import*
+ *ant
+
+
+respects. First, the meta-interpreter interprets a rule language rather than Pr*
+ *olog
+
+
+clauses. Second, the interpreter has two levels to allow explanation of failed *
+ *goals.
+
+
+    Before describing the interpreter, we give an example of a toy rule-based
+
+
+system written in the rule language. Program 17.17 contains some rules for plac*
+ *ing
+
+
+a dish on the correct rack in an oven for baking. Facts have the form fact(Goal*
+ *).
+
+
+For example, the first fact in Program 17.17 states that dish1 is of type bread.
+
+
+    Rules have the form rule(Head,Body,Name), where Head is a goal, Body is
+
+
+(possibly) a conjunction of goals, and Name is the name of the rule. Individual
+
+
+goals in the body are placed inside a unary postfix functor is_true, for reasons
+
+
+to be explained shortly. Conjunctions in the body are denoted by the binary inf*
+ *ix
+
+
+operator &, which differs from Prolog syntax.  Operator declarations for & and
+
+
+is_true are given in Program 17.17. To paraphrase a sample rule, rule place1
+
+
+in Program 17.17 states: \A dish should be placed on the top rack of the oven if
+
+
+it is a pastry and its size is small."
+
+
+    Why use a separate rule language when the syntax is so close to Prolog? The
+
+
+first rule, place1, could be written as follows.
+
+
+
+
+314   Interpreters                                         17.4
+
+
+Rule base for a simple expert system for placing dishes in an oven.
+
+
+The predicates used in the rules are
+
+
+place_in_oven(Dish,Rack)  
+
+
+    Dish should be placed in the oven at level Rack for baking.
+
+
+pastry(Dish)   Dish is a pastry.
+
+
+main_meal(Dish)   Dish is a main meal.
+
+
+slow_cooker(Dish)   Dish is a slow cooker.
+
+
+type(Dish,Type)   Dish is best described as Type.
+
+
+size(Dish,Size)   The size of Dish is Size.
+
+
+The rules have the form rule(Head,Body,Name).
+
+
+
+:- op(40,xfy,&).
+
+
+:- op(30,xf,is_true).
+
+
+rule(place_in_oven(Dish,top),
+
+
+    pastry(Dish) is_true & size(Dish,small) is_true,place1).
+
+
+rule(place_in_oven(Dish,middle),
+
+
+    pastry(Dish) is_true & size(Dish,big) is_true,place2).
+
+
+rule(place_in_oven(Dish,middle),main_meal(Dish) is_true,place3).
+
+
+rule(place_in_oven(Dish,bottom),slow_cooker(Dish) is_true,place4).
+
+
+rule(pastry(Dish),type(Dish,cake) is_true,pastry1).
+
+
+rule(pastry(Dish),type(Dish,bread) is_true,pastry2).
+
+
+rule(main_meal(Dish),type(Dish,meat) is_true,main_meal).
+
+
+rule(slow_cooker(Dish),type(Dish,milk_pudding) is_true,slow_cooker).
+
+
+fact(type(dish1,bread)).
+
+
+fact(size(dish1,big)).
+
+
+
+Program 17.17: Oven placement rule-based system
+
+
+
+
+17.4                     An Explanation Shell for Rule-Based3Systems15
+
+
+
+       place_in_oven(Dish,top)   pastry(Dish), size(Dish,small).
+
+
+
+    There are two main reasons for the rule language. The first is pedagogical.
+
+
+The rule interpreter is neater, avoiding complicated details associated with Pr*
+ *o-
+
+
+log's impurities such as the behavior of builtin predicates when called by clau*
+ *se.
+
+
+Avoiding Prolog's impurities also makes it easier to partially evaluate the int*
+ *er-
+
+
+preter, as described in Chapter 18.
+
+
+
+    The second reason is to show by example that the best way to develop a
+
+
+rule-based application in Prolog is to design a rule language on top of Prolog.
+
+
+Although the rule language is largely syntactic sugar, experience has shown that
+
+
+users of a rule-based system are happier working in a customized rule language
+
+
+than in Prolog. Rule languages are straightforward to provide on top of Prolog.
+
+
+
+    We now start our presentation of the explanation shell.  According to the
+
+
+method of stepwise enhancement, the skeleton constituting the basic control flow
+
+
+of the final program is presented first. Program 17.18 contains the skeleton of*
+ * the
+
+
+rule interpreter. The principal requirement that shaped the skeleton is the des*
+ *ire
+
+
+to handle both successful and failed computations in one interpreter.
+
+
+
+    The rule interpreter presented in Program 17.18 has two levels.  The top
+
+
+level, or monitor level, consists of the predicates monitor and filter.  The
+
+
+bottom level, or solve level, consists of the predicates solve, solve_body, and
+
+
+solve_and. Two levels are needed to correctly handle failed computations.
+
+
+
+    Let us consider the bottom level first.  The three predicates constitute an
+
+
+interpreter at the same level of granularity as the vanilla meta-interpreter. T*
+ *here
+
+
+
+
+316   Interpreters                                         17.4
+
+
+
+is one major difference. There is a result variable that says whether a goal su*
+ *cceeds
+
+
+or fails. A goal that succeeds, with the result variable indicating failure, in*
+ *stead
+
+
+of failing gives rise to a different control flow, compensated for by the top l*
+ *evel.
+
+
+
+    The predicate solve(Goal,Result) solves a single goal.  There are three
+
+
+cases. The result is yes if the goal is a fact in the rule base. The result is *
+ *no
+
+
+if no fact or head of a rule matches the goal.  If there is a rule that matches
+
+
+the goal, the result will be returned by the predicate solve_body(Goal,Result).
+
+
+The order of the third clause is significant because we only want to report no *
+ *for
+
+
+an individual goal if there is no suitable fact or rule. Effectively, solve suc*
+ *ceeds
+
+
+for each branch of the search tree, the result being yes for successful branches
+
+
+and no for failed branches.
+
+
+
+    solve_body/2 has two clauses handling conjunctive goals and goals of the
+
+
+form A is_true.  The functor is_true is a wrapper that allows unification
+
+
+to distinguish between the two cases.  A Prolog implementation with indexing
+
+
+would produce efficient code. The clause handling conjunctions calls a predicate
+
+
+solve_and/3, which uses the result of solving the first conjunct to decide whet*
+ *her
+
+
+to continue. The code for solve_and results in behavior similar to the behavior
+
+
+of solve_conjunction in Program 17.11.
+
+
+
+    The monitor level is essentially a generate-and-test program. The solve lev*
+ *el
+
+
+generates a branch of the search tree, and the test procedure filter accepts
+
+
+successful branches of the search tree, indicated by the result being yes. Fail*
+ *ed
+
+
+branches, i.e., ones with result no, are rejected. Note that the second clause *
+ *for
+
+
+filter could simply be omitted. We leave it in the program, albeit commented
+
+
+
+
+17.4                     An Explanation Shell for Rule-Based3Systems17
+
+
+
+       monitor(Goal)  
+
+
+           Succeeds if a result of yes is returned from solving Goal
+
+
+           at the solve level, or when the end of the computation is reached.
+
+
+       monitor(Goal)   solve(Goal,Result), filter(Result).
+
+
+       monitor(Goal).
+
+
+       filter(yes).
+
+
+       % filter(no)   fail.
+
+
+       solve(Goal,Result)  
+
+
+           Given a set of rules of the form rule(A,B,Name), Goal has
+
+
+           Result yes if it follows from the rules and no if it does not.
+
+
+       solve(A,yes)   fact(A).
+
+
+       solve(A,Result)   rule(A,B,Name), solve_body(B,Result).
+
+
+       solve(A,no).
+
+
+       solve_body(A&B,Result)  
+
+
+           solve(A,ResultA), solve_and(ResultA,B,Result).
+
+
+       solve_body(A is_true,Result)   solve(A,Result).
+
+
+       solve_and(no,A,no).
+
+
+       solve_and(yes,B,Result)   solve(B,Result).
+
+
+
+       Program 17.18: A skeleton two-level rule interpreter
+
+
+
+out, to make clear the later enhancement step for adding a proof tree.
+
+
+
+
+318   Interpreters                                         17.4
+
+
+
+    The first enhancement of the rule interpreter makes it interactive. The in-
+
+
+teractive interpreter is given as Program 17.19.  The user is given the oppor-
+
+
+tunity to supply information at runtime for designated predicates.  The desig-
+
+
+nated predicates are given as a table of askable facts. For example, a fact ask-
+
+
+able(type(Dish,Type)).   appearing in the table would indicate that the user
+
+
+could ask the type of the dish.
+
+
+    Interaction with the user is achieved by adding a new clause to the solve
+
+
+level:
+
+
+       solve(A,Result)   askable(A), solve_askable(A,Result).
+
+
+
+    An alternative method of making the rule interpreter interactive is to defi*
+ *ne
+
+
+a new class of goals in the body. An additional solve_body clause could be adde*
+ *d,
+
+
+for example,
+
+
+       solve_body(A is_askable,Result)   solve_askable(A,Result).
+
+
+
+    We prefer adding a solve clause and having a table of askable facts to
+
+
+embedding in the rules the information about whether a predicate is askable.
+
+
+The rules become more uniform. Furthermore, the askable information is explicit
+
+
+meta-knowledge, which can be manipulated as needed.
+
+
+    To complete the interactive component of the rule interpreter, code for
+
+
+solve_askable needs to be specified. The essential components are displaying
+
+
+a query and accepting a response. Experience with users of rule-based systems
+
+
+shows that it is essential not to ask the same question twice.  Users get very
+
+
+irritated telling the computer information they feel it should know.  Thus an-
+
+
+
+
+17.4                     An Explanation Shell for Rule-Based3Systems19
+
+
+
+    solve(Goal,Result)  
+
+
+       Given a set of rules of the form rule(A,B,Name), Goal has
+
+
+       Result yes if it follows from the rules and no if it does not.
+
+
+       The user is prompted for missing information.
+
+
+    solve(A,yes)   fact(A).
+
+
+    solve(A,Result)   rule(A,B,Name), solve_body(B,Result).
+
+
+    solve(A,Result)   askable(A), solve_askable(A,Result).
+
+
+    solve(A,no).
+
+
+    solve_body(A&B,Result)  
+
+
+       solve_body(A,ResultA), solve_and(ResultA,B,Result).
+
+
+    solve_body(A is_true,Result)   solve(A,Result).
+
+
+    solve_and(no,A,no).
+
+
+    solve_and(yes,B,Result)   solve(B,Result).
+
+
+    solve_askable(A,Result)  
+
+
+       not known(A), ask(A,Response), respond(Response,A,Result).
+
+
+    The following predicates facilitate interaction with the user.
+
+
+    ask(A,Response)   display_query(A), read(Response).
+
+
+    respond(yes,A,yes)   assert(known_to_be_true(A)).
+
+
+    respond(no,A,no)   assert(known_to_be_false(A)).
+
+
+    known(A)   known_to_be_true(A).
+
+
+    known(A)   known_to_be_false(A).
+
+
+    display_query(A)   write(A), write(`?  ').
+
+
+
+    Program 17.19: An interactive rule interpreter
+
+
+
+
+320   Interpreters                                         17.4
+
+
+
+swers to queries are recorded using assert. Program 17.19 contains appropriate
+
+
+code.  Only the solve level is given.  The monitor level would be identical to
+
+
+Program 17.18.
+
+
+    Program 17.19 queries the user. The interaction can be extended to allow
+
+
+the user also to query the program. The user may want to know why a particular
+
+
+question is being asked. A facility for giving a why explanation is common in r*
+ *ule-
+
+
+based systems, the answer being the rule containing the queried goal in its bod*
+ *y.
+
+
+In order to give this why explanation, we need to extend the rule interpreter to
+
+
+carry the rules that have been used so far.
+
+
+    Program 17.20 is an enhancement of Program 17.18 that carries the list of
+
+
+rules that have been used in solving the query. All the predicates carry the ru*
+ *les
+
+
+as an extra argument. The rule list is initialized to be empty in the first mon*
+ *itor
+
+
+clause. The rule list is updated in the second solve clause when a new rule is
+
+
+invoked.
+
+
+    We now describe how the list of rules can be used to provide a why explana-
+
+
+tion. A new respond clause needs to be added to Program 17.19. The appropriate
+
+
+behavior is to display the rule, then prompt the user again for the answer to t*
+ *he
+
+
+query.
+
+
+
+    respond(why,A,[RulejRules])  
+
+
+       display_rule(Rule), ask(A,Answer), respond(Answer,A,Rules).
+
+
+
+    Repeated responses of why can be handled by giving the rule that invoked the
+
+
+current rule. The correct behavior is achieved by having the recursive respond
+
+
+
+
+17.4                     An Explanation Shell for Rule-Based3Systems21
+
+
+
+       monitor(Goal)  
+
+
+           Succeeds if a result of yes is returned from solving Goal
+
+
+           at the solve level, or when the end of the computation is reached.
+
+
+       monitor(Goal)   solve(Goal,Result,[ ]), filter(Result).
+
+
+       monitor(Goal).
+
+
+       filter(yes).
+
+
+       % filter(no)   fail.
+
+
+       solve(Goal,Result,Rules)  
+
+
+           Given a set of rules of the form rule(A,B,Name), Goal has
+
+
+           Result yes if it follows from the rules and no if it does not.
+
+
+           Rules is the current list of rules that have been used.
+
+
+       solve(A,yes,Rules)   fact(A).
+
+
+       solve(A,Result,Rules)  
+
+
+           rule(A,B,Name), RulesB = [NamejRules],
+
+
+           solve_body(B,Result,RulesB).
+
+
+       solve(A,no,Rules).
+
+
+       solve_body(A&B,Result,Rules)  
+
+
+           solve_body(A,ResultA,Rules),
+
+
+           solve_and(ResultA,B,Result,Rules).
+
+
+       solve_body(A is_true,Result,Rules)   solve(A,Result,Rules).
+
+
+       solve_and(no,A,no,Rules).
+
+
+       solve_and(yes,B,Result,Rules)   solve(B,Result,Rules).
+
+
+
+       Program 17.20: A two-level rule interpreter carrying rules
+
+
+
+
+322   Interpreters                                         17.4
+
+
+
+goal use the rest of the rules. Finally, when there are no more rules to displa*
+ *y, an
+
+
+appropriate response must be given. A suitable respond clause is
+
+
+    respond(why,A,[ ])  
+
+
+       writeln([`No more explanation possible']), ask(A,Answer),
+
+
+       respond(Answer,A,[ ]).
+
+
+
+    Now let us consider generating explanations of goals that have succeeded or
+
+
+failed. The explanations will be based on the proof tree for successful goals a*
+ *nd
+
+
+the search tree for failed goals. Note that a search tree is a sequence of bran*
+ *ches.
+
+
+Each branch is either a proof tree or a failure branch that is like a proof tre*
+ *e.
+
+
+Program 17.18 can be enhanced to incorporate both cases. The enhanced program
+
+
+is given as Program 17.21. The solve level returns a branch of the search tree,
+
+
+and the monitor level keeps track of the failure branches since the last proof *
+ *tree.
+
+
+The relation between the predicate solve/3 in Program 17.21 and solve/2 in
+
+
+Program 17.18 is analogous to the relation between Programs 17.8 and 17.5.
+
+
+
+
+17.4                     An Explanation Shell for Rule-Based3Systems23
+
+
+
+    monitor(Goal,Proof )  
+
+
+       Succeeds if a result of yes is returned from solving Goal at the
+
+
+       solve level, in which case Proof is a proof tree representing the
+
+
+       successful computation, or when the end of the computation is reached,
+
+
+       in which case Proof is a list of failure branches since the last success.
+
+
+    monitor(Goal,Proof)  
+
+
+       set_search_tree, solve(Goal,Result,Proof),
+
+
+       filter(Result,Proof).
+
+
+    monitor(Goal,Proof)  
+
+
+       collect_proof(P), reverse(P,[ ],P1),
+
+
+       Proof = failed(Goal,P1).
+
+
+    filter(yes,Proof)   reset_search_tree.
+
+
+    filter(no,Proof)   store_proof(Proof), fail.
+
+
+    solve(Goal,Result,Proof )  
+
+
+       Given a set of rules of the form rule(A,B,Name), Goal has
+
+
+       Result yes if it follows from the rules and no if it does not.
+
+
+       Proof  is a proof tree if the result is yes and a failure branch
+
+
+       of the search tree if the result is no.
+
+
+    :- op(40,xfy,because).
+
+
+    :- op(30,xfy,with).
+
+
+    solve(A,yes,Tree)   fact(A), Tree = fact(A).
+
+
+    solve(A,Result,Tree)  
+
+
+       rule(A,B,Name), solve_body(B,Result,Proof),
+
+
+       Tree = A because B with Proof.
+
+
+    solve(A,no,Tree)  
+
+
+       not fact(A), not rule(A,B,Name), Tree = no_match(A).
+
+
+    solve_body(A&B,Result,Proof)  
+
+
+       solve_body(A,ResultA,ProofA),
+
+
+       solve_and(ResultA,B,Result,ProofB),
+
+
+       Proof = ProofA & ProofB.
+
+
+    solve_body(A is_true,Result,Proof)   solve(A,Result,Proof).
+
+
+    solve_and(no,A,no,unsearched).
+
+
+    solve_and(yes,B,Result,Tree)   solve(B,Result,Tree).
+
+
+
+    Program 17.21: A two-level rule interpreter with proof trees
+
+
+
+
+324   Interpreters                                         17.4
+
+
+
+The following predicates use side effects to record and remove branches of the
+
+
+search tree.
+
+
+    collect_proof(Proof)   retract(`search tree'(Proof)).
+
+
+    store_proof(Proof)  
+
+
+       retract(`search tree'(Tree)),
+
+
+       assert(`search tree'([ProofjTree])).
+
+
+    set_search_tree   assert(`search tree'([ ])).
+
+
+    reset_search_tree  
+
+
+       retract(`search tree'(Proof)),
+
+
+       assert(`search tree'([ ])).
+
+
+    reverse(Xs,Ys)   See Program 3.16.
+
+
+
+    Program 17.21  (Continued)
+
+
+
+    Four predicates are added to the monitor level to record and remove branches
+
+
+of the search tree.  The fact `search tree'(Proof) records the current se-
+
+
+quence of branches of the search tree since the last success.  The predicate
+
+
+set_search_tree, called by the top-level monitor goal, initializes the sequence*
+ * of
+
+
+branches to the empty list. Similarly, reset_search_tree initializes the search
+
+
+tree but first removes the current set of branches. It is invoked by filter when
+
+
+a successful computation is detected.  The predicate store_proof updates the
+
+
+search tree, while collect_proof removes the search tree. The failure branches
+
+
+are reordered in the second clause for monitor/2.
+
+
+
+
+17.5                                              Background325
+
+
+
+    Having generated an explanation, we now consider how to print it.  The
+
+
+proof tree is a recursive data structure that must be traversed to be explained.
+
+
+Traversing a recursive data structure is a straightforward exercise. Appropriate
+
+
+code is given in Program 17.22, and a trace of a computation given in Figure 17*
+ *.4.
+
+
+    The explanation shell is obtained by combining the enhancements of Pro-
+
+
+grams 17.19, 17.20, and 17.21.  The final program is given as Program 17.23.
+
+
+Understanding the program is greatly facilitated by viewing it as a sum of the
+
+
+three components.
+
+
+
+Exercises for Section 17.4
+
+
+
+(i) Add the ability to explain askable goals to the proof explainer in Pro-
+
+
+    gram 17.22.
+
+
+(ii)Add the ability to execute Prolog builtin predicates to the explanation she*
+ *ll.
+
+
+(iii)Write a two-level meta-interpreter to find the maximum depth reached in any
+
+
+    computation of a goal.
+
+
+
+17.5   Background
+
+
+
+    Our notation for automata follows Hopcroft and Ullman (1979).
+
+
+    There is considerable confusion in the literature about the term meta-
+
+
+interpreter | whether it differs from the term meta-level interpreter, for exam*
+ *ple.
+
+
+The lack of clarity extends further to the topic of meta-programming. A good
+
+
+
+
+326   Interpreters                                         17.5
+
+
+
+    explain(Goal)  
+
+
+       Explains how the goal Goal was proved.
+
+
+    explain(Goal)   monitor(Goal,Proof), interpret(Proof).
+
+
+    monitor(Goal,Proof)   See Program 17.21.
+
+
+    interpret(ProofA&ProofB)  
+
+
+       interpret(ProofA), interpret(ProofB).
+
+
+    interpret(failed(A,Branches))  
+
+
+       nl, writeln([A,` has failed with the following failure branches:']),
+
+
+       interpret(Branches).
+
+
+    interpret([FailjFails])  
+
+
+       interpret(Fail), nl, write(`NEW BRANCH'), nl,
+
+
+       interpret(Fails).
+
+
+    interpret([ ]).
+
+
+    interpret(fact(A))  
+
+
+       nl, writeln([A,` is a fact in the database.']).
+
+
+    interpret(A because B with Proof)  
+
+
+       nl, writeln([A,` is proved using the rule']),
+
+
+       display_rule(rule(A,B)), interpret(Proof).
+
+
+    interpret(no_match(A))  
+
+
+       nl, writeln([A,` has no matching fact or rule in the rule
+
+
+       base.']).
+
+
+    interpret(unsearched)  
+
+
+       nl, writeln([`The rest of the conjunct is unsearched.']).
+
+
+    display_rule(rule(A,B))  
+
+
+       write(`IF '), write_conjunction(B), writeln([`THEN ',A ]).
+
+
+    write_conjunction(A&B)  
+
+
+       write_conjunction(A), write(` AND '),
+
+
+       write_conjunction(B).
+
+
+    write_conjunction(A is_true)   write(A).
+
+
+    writeln(Xs)   See Program 12.1.
+
+
+
+    Program 17.22: Explaining a proof
+
+
+
+
+17.5                                              Background327
+
+
+
+discussion of meta-programming can be found in Yalcinalp (1991).
+
+
+    One dimension of the discussion is whether the interpreter is capable of in-
+
+
+terpreting itself. An interpreter with that capability is also called meta-circ*
+ *ular
+
+
+or self-applicable. An important early discussion of meta-circular interpreters*
+ * can
+
+
+be found in Steele and Sussman (1978). That paper claims that the ability of a
+
+
+language to specify itself is a fundamental criterion for language design.
+
+
+    The vanilla meta-interpreter is rooted in Prolog folklore. A version was in*
+ * the
+
+
+suite of programs attached to the first Prolog interpreter developed by Colmer-
+
+
+auer and colleagues, and was given in the early collection of Prolog programs
+
+
+(Coelho et al., 1980). Subsequently, meta-interpreters, and more generally meta-
+
+
+programs, have been written to affect the control flow of Prolog programs. Refe*
+ *r-
+
+
+ences are Gallaire and Lasserre (1982), Pereira (1982), and Dincbas and Le Pape
+
+
+(1984). Using enhanced meta-interpreters for handling uncertainties is described
+
+
+by Shapiro (1983c).
+
+
+    There have been several papers on handling cuts in meta-interpreters. A var*
+ *i-
+
+
+ant of the vanilla meta-interpreter handling cuts correctly is described in Coe*
+ *lho
+
+
+et al. (1980) and attributed to Luis Pereira. One easy method to treat cuts is *
+ *via
+
+
+ancestor cut, which is only present in a few Prologs like Waterloo Prolog on the
+
+
+IBM and Wisdom Prolog, described in the first edition of this book. There is a
+
+
+good discussion of meta-interpreters in general, and cuts in particular, in O'K*
+ *eefe
+
+
+(1990).
+
+
+    Shapiro suggested that enhanced meta-interpreters should be the basis of a
+
+
+programming environment. The argument, along with the debugging algorithms
+
+
+
+
+328   Interpreters                                         17.5
+
+
+
+    place_in_oven(dish1,middle) is proved using the rule
+
+
+    IF pastry(dish1) AND size(dish1,big)
+
+
+    THEN place_in_oven(dish1,middle)
+
+
+    pastry(dish1) is proved using the rule
+
+
+    IF type(dish1,bread)
+
+
+    THEN pastry(dish1)
+
+
+    type(dish1,bread) is a fact in the database.
+
+
+    size(dish1,big) is a fact in the database.
+
+
+       X = middle ;
+
+
+    place_in_oven(dish1,X) has failed with the following failure branches:
+
+
+    place_in_oven(dish1,middle) is proved using the rule
+
+
+    IF main_meal(dish1)
+
+
+    THEN place_in_oven(dish1,middle)
+
+
+    main_meal(dish1) is proved using the rule
+
+
+    IF type(dish1,meat)
+
+
+    THEN main_meal(dish1)
+
+
+    type(dish1,meat) has no matching fact or rule in the rule base.
+
+
+    NEW BRANCH
+
+
+    place_in_oven(dish1,low) is proved using the rule
+
+
+    IF slow_cooker(dish1)
+
+
+    THEN place_in_oven(dish1,low)
+
+
+    slow_cooker(dish1) is proved using the rule
+
+
+    IF type(dish1,milk_pudding)
+
+
+    THEN slow_cooker(dish1)
+
+
+    type(dish1,milk_pudding) has no matching fact or rule in the rule base.
+
+
+
+                Figure 17.4: Explaining a computation
+
+
+
+
+17.5                                              Background329
+
+
+
+monitor(Goal,Proof )  
+
+
+    Succeeds if a result of yes is returned from solving Goal at the
+
+
+    solve level, in which case Proof  is a proof tree representing the
+
+
+    successful computation, or when the end of the computation is reached,
+
+
+    in which case Proof  is a list of failure branches since the last success.
+
+
+monitor(Goal,Proof)  
+
+
+    set_search_tree, solve(Goal,Result,[ ],Proof),
+
+
+    filter(Result,Proof).
+
+
+monitor(Goal,Proof)  
+
+
+    collect_proof(P), reverse(P,[ ],P1),
+
+
+    Proof = failed(Goal,P1).
+
+
+filter(yes,Proof)   reset_search_tree.
+
+
+filter(no,Proof)   store_proof(Proof), fail.
+
+
+solve(Goal,Result,Rules,Proof )  
+
+
+    Given a set of rules of the form rule(A,B,Name), Goal has
+
+
+    Result yes if it follows from the rules and no if it does not.
+
+
+    Rules is the current list of rules that have been used.
+
+
+    Proof  is a proof tree if the result is yes and a failure branch
+
+
+    of the search tree if the result is no.
+
+
+:- op(40,xfy,because).
+
+
+:- op(30,xfy,with).
+
+
+solve(A,yes,Rules,Tree)   fact(A), Tree = fact(A).
+
+
+solve(A,Result,Rules,Tree)  
+
+
+    rule(A,B,Name), RulesB = [NamejRules],
+
+
+    solve_body(B,Result,RulesB,Proof),
+
+
+    Tree = A because B with Proof.
+
+
+solve(A,Result,Rules,Tree)  
+
+
+    askable(A), solve_askable(A,Result,Rules), Tree = user(A).
+
+
+solve(A,no,Rules,Tree)  
+
+
+    not fact(A), not rule(A,B,Name), Tree = no_match(A).
+
+
+solve_body(A&B,Result,Rules,Proof)  
+
+
+    solve_body(A,ResultA,Rules,ProofA),
+
+
+    solve_and(ResultA,B,Result,Rules,ProofB),
+
+
+    Proof = ProofA & ProofB.
+
+
+solve_body(A is_true,Result,Rules,Proof)  
+
+
+    solve(A,Result,Rules,Proof).
+
+
+solve_and(no,A,no,Rules,unsearched).
+
+
+solve_and(yes,B,Result,Rules,Tree)   solve(B,Result,Rules,Tree).
+
+
+
+Program 17.23: An explanation shell
+
+
+
+
+330   Interpreters                                         17.5
+
+
+
+The following predicates use side effects to record and remove branches of the
+
+
+search tree.
+
+
+collect_proof(Proof)   retract(`search tree'(Proof)).
+
+
+store_proof(Proof)  
+
+
+    retract(`search tree'(Tree)),
+
+
+    assert(`search tree'([ProofjTree])).
+
+
+set_search_tree   assert(`search tree'([ ])).
+
+
+reset_search_tree  
+
+
+    retract(`search tree'(Proof)), assert(`search tree'([ ])).
+
+
+reverse(Xs,Ys)   See Program 3.16.
+
+
+
+The following predicates facilitate interaction with the user.
+
+
+ask(A,Response)   display_query(A), read(Response).
+
+
+respond(yes,A,yes)   assert(known_to_be_true(A)).
+
+
+respond(no,A,no)   assert(known_to_be_false(A)).
+
+
+respond(why,A,[RulejRules])  
+
+
+    display_rule(Rule), ask(A,Answer), respond(Answer,A,Rules).
+
+
+respond(why,A,[ ])  
+
+
+    writeln([`No more explanation possible']), ask(A,Answer),
+
+
+    respond(Answer,A,[ ]).
+
+
+known(A)   known_to_be_true(A).
+
+
+known(A)   known_to_be_false(A).
+
+
+display_query(A)   write(A), write(`?  ').
+
+
+display_rule(rule(A,B))  
+
+
+    write(`IF '), write_conjunction(B), nl, writeln([`THEN ',A]).
+
+
+write_conjunction(A&B)  
+
+
+    write_conjunction(A), write(` AND '), write_conjunction(B).
+
+
+    write_conjunction(A is_true)   write(A).
+
+
+writeln(Xs)   See Program 12.1.
+
+
+
+Program 17.23  (Continued)
+
+
+
+
+17.5                                              Background331
+
+
+
+of Section 17.3, can be found in Shapiro (1983a). Shapiro's debugging work has
+
+
+been extended by Dershowitz and Lee (1987) and Drabent et al. (1989).
+
+
+    Prolog is a natural language for building rule-based systems. The basic sta*
+ *te-
+
+
+ments are rules, and the Prolog interpreter can be viewed as a backward chaining
+
+
+inference engine. Early advocates of Prolog for expert systems were Clark and
+
+
+McCabe (1982), who discussed how explanation facilities and uncertainty can
+
+
+be added to simple expert systems expressed as Prolog clauses by adding extra
+
+
+arguments to the predicates. Incorporating interaction with the user in Prolog
+
+
+was proposed by Sergot (1983).  An explanation facility incorporating Sergot's
+
+
+query_the_user was part of the APES expert system shell, described in Ham-
+
+
+mond (1984).
+
+
+    Using meta-interpreters as a basis for explanation facilities was proposed *
+ *by
+
+
+Sterling (1984).  Incorporating failure in a meta-interpreter has been discussed
+
+
+by several researchers, including Hammond (1984), Sterling and Lalee (1986),
+
+
+and Bruffaerts and Henin (1989).  The first description of an integrated meta-
+
+
+interpreter for both success and failure is in Yalcinalp and Sterling (1989). T*
+ *he
+
+
+rule interpreter given in Section 17.4 is an adaptation of the last paper.  The
+
+
+layered approach can be used to explain cuts clearly, as in Sterling and Yalcin*
+ *alp
+
+
+(1989), and also for uncertainty reasoning, as in Yalcinalp and Sterling (1991)
+
+
+and more completely in Yalcinalp (1991).

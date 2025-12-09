@@ -1,0 +1,864 @@
+%%%%% Leonudi Book, Chapter 20, pp 346-364 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 19
+\numberfirst
+\startpage{346}
+
+\chapa{Search Techniques}
+In this chapter, we show programs encapsulating classic AI search
+techniques. The first section discusses state-transition frameworks for
+solving problems formulated in terms of a state-space graph. The second
+discusses the minimax algorithm with alpha-beta pruning for searching
+game trees.\par
+\sect{Searching State-Space Graphs}
+State-space graphs are used to represent problems. Nodes of the graph are
+states of the problem. An edge exists between nodes if there is a
+transition rule, also called a {\it move\/}, transforming one state into
+the next. Solving the problem means finding a path from a given initial
+state to a desired solution state by applying a sequence of transition
+rules.\par
+Program~\Prodepstafra\ is a framework for solving problems by searching
+their state-space graphs, using depth-first search as described in
+Section~14.2.
+\topin
+\halign{\lft{\tt #}\cr
+{\it solve\_dfs\/}({\it State,History,Moves\/}) $\lar$\cr
+\qi {\it Moves\/} {\rm is a sequence of moves to reach a}\cr
+\qi {\rm desired final state from the current} {\it State\/}{\rm ,}\cr
+\qi {\rm where} {\it History\/} {\rm contains the states visited
+previously.}\cr
+\noalign{\medskip}
+solve\_dfs(State,History,[~]) $\lar$\cr
+\qi final\_state(State).\cr
+solve\_dfs(State,History,[Move$\mid$Moves]) $\lar$\cr
+\qi move(State,Move),\cr
+\qi update(State,Move,State1),\cr
+\qi legal(State1),\cr
+\qi not member(State1,History),\cr
+\qi solve\_dfs(State1,[State1$\mid$History],Moves).\cr
+\noalign{\medskip}
+{\it Testing the framework}\cr
+\noalign{\medskip}
+test\_dfs(Problem,Moves) $\lar$\cr
+\qi initial\_state(Problem,State), solve\_dfs(State,[State],Moves).\cr}
+\bigskip
+\halign{\hskip 40pt\lft{#}~~&\lft{#}\cr
+{\bf Program \Prodepstafra}:&A depth-first state-transition framework
+for\cr
+&problem solving\cr}
+\endin\par
+No commitment has been made to the representation of states. The moves
+are specified by a binary predicate {\tt move(State,Move)}, where {\tt
+Move} is a move applicable to {\tt State}. The predicate {\tt
+update(State,Move,State1)} finds the state {\tt State1} reached by
+applying the move {\tt Move} to state {\tt State}. It is often easier to
+combine the {\tt move} and {\tt update} procedures. We keep them separate
+here to make knowledge more explicit and to retain flexibility and
+modularity, possibly at the expense of performance.\par
+The validity of possible moves is checked by the predicate {\tt
+legal(State)}, which checks if the problem state {\tt State} satisfies the
+constraints of the problem. The program keeps a history of the states
+visited to prevent looping. Checking that looping does not occur is done
+by seeing if the new state appears in the history of states. The sequence
+of moves leading from the initial state to the final state is built
+incrementally in the third argument of {\tt solve\_dfs/3\/}.\par
+To solve a problem using the framework, the programmer must decide how
+states are to be represented, and axiomatize the {\tt move}, {\tt update},
+and {\tt legal} procedures. A suitable representation has profound effect
+on the success of this framework.\par
+Let us use the framework to solve the wolf, goat, and cabbage problem. We
+state the problem informally. A farmer has a wolf, goat, and cabbage on
+the left side of a river. The farmer has a boat that can carry at most
+one of the three, and he must transport this trio to the right bank. The
+problem is that he dare not leave the wolf with the goat (wolves love to
+eat goats) or the goat with the cabbage (goats love to eat cabbages). He
+takes all his jobs very seriously and does not want to disturb the
+ecological balance by losing a passenger.\par
+States are represented by a triple, {\tt wgc(B,L,R)}, where {\tt B} is the
+position of the boat (left or right), {\tt L} is the list of occupants of
+the left bank, and {\tt R} the list of occupants of the right bank.
+The initial and final states are {\tt
+wgc(left,[wolf,goat,cabbage],[~])} and {\tt
+wgc(right,[~],[wolf,goat,cab-}\linebreak 
+{\tt bage])}, respectively. In fact, it is not strictly necessary to note
+the occupants of both the left and right banks. The occupants of the
+left bank can be deduced from the occupants of the right bank, and vice
+versa. But having both makes specifying moves clearer.\par
+It is convenient for checking for loops to keep the lists of occupants
+sorted. Thus {\tt wolf} will always be listed before {\tt goat}, both of
+whom will be before {\tt cabbage} if they are on the same bank.\par
+Moves transport an occupant to the opposite bank and can thus be
+specified by the particular occupant who is the {\tt Cargo}. The case
+when nothing is taken is specified by the cargo {\tt alone}. The
+nondeterministic behavior of {\tt member} allows a concise description of
+all the possible moves in three clauses as shown in Program~20.2:
+moving something from the left bank, moving something from the right
+bank, or the farmer's rowing in either direction by himself.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\rm States for the wolf, goat and cabbage problem are a structure}\cr
+\qi {\it wgc\/}{\rm (}{\it Boat,Left,Right\/}{\rm ), where} {\it
+Boat\/} {\rm is the bank on which the boat}\cr
+\qi {\rm currently is,} {\it Left\/} {\rm is the list of occupants on the
+left bank of}\cr
+\qi {\rm the river, and} {\it Right\/} {\rm is the list of occupants on
+the right bank.}\cr
+\noalign{\medskip}
+initial\_state(wgc,wgc(left,[wolf,goat,cabbage],[~])).\cr
+\noalign{\vskip 5pt}
+final\_state(wgc(right,[~],[wolf,goat,cabbage])).\cr
+\noalign{\vskip 5pt}
+move(wgc(left,L,R),Cargo) $\lar$ member(Cargo,L).\cr
+move(wgc(right,L,R),Cargo) $\lar$ member(Cargo,R).\cr
+move(wgc(B,L,R),alone).\cr
+\noalign{\vskip 5pt}
+update(wgc(B,L,R),Cargo,wgc(B1,L1,R1)) $\lar$\cr
+\qi update\_boat(B,B1), update\_banks(Cargo,B,L,R,L1,R1).\cr
+\noalign{\vskip 5pt}
+update\_boat(left,right).\cr
+update\_boat(right,left).\cr
+\noalign{\vskip 5pt}
+update\_banks(alone,B,L,R,L,R).\cr
+update\_banks(Cargo,left,L,R,L1,R1) $\lar$\cr
+\qi select(Cargo,L,L1), insert(Cargo,R,R1).\cr
+update\_banks(Cargo,right,L,R,L1,R1) $\lar$\cr
+\qi select(Cargo,R,R1), insert(Cargo,L,L1).\cr
+\noalign{\vskip 5pt}
+insert(X,[Y$\mid$Ys],[X,Y$\mid$Ys]) $\lar$\cr
+\qi precedes(X,Y).\cr
+insert(X,[Y$\mid$Ys],[Y$\mid$Zs]) $\lar$\cr
+\qi precedes(Y,X), insert(X,Ys,Zs).\cr
+insert(X,[~],[X]).\cr
+\noalign{\vskip 5pt}
+precedes(wolf,X).\cr
+precedes(X,cabbage).\cr
+\noalign{\vskip 5pt}
+legal(wgc(left,L,R)) $\lar$ not illegal(R).\cr
+legal(wgc(right,L,R)) $\lar$ not illegal(L).\cr
+\noalign{\vskip 5pt}
+illegal(Bank) $\lar$ member(wolf,Bank), member(goat,Bank).\cr
+illegal(Bank) $\lar$ member(goat,Bank), member(cabbage,Bank).\cr
+\noalign{\vskip 5pt}
+select(X,Xs,Ys) $\lar$ {\rm See Program \Proselelelis.}\cr
+\noalign{\bigskip}
+{\bf Program \Prosolwolgoa}{\rm :~~Solving the wolf, goat, and cabbage
+problem}\cr}
+\endin\par
+For each of these moves, the updating procedure must be specified, namely,
+changing the position of the boat (by {\tt update\_boat/2}) and updating
+the banks (by {\tt update\_banks}). Using the predicate {\tt select}
+allows a compact description of the updating process. The {\tt insert}
+procedure is necessary to keep the occupant list sorted, facilitating the
+check if a state has been visited before. It contains all the possible
+cases of adding an occupant to a bank.\par
+Finally, the test for legality must be specified. The constraints are
+simple. The wolf and goat cannot be on the same bank without the farmer,
+nor can the goat and cabbage.\par
+Program~\Prosolwolgoa, together with Program~\Prodepstafra,
+solves the wolf, goat, and cabbage problem. The clarity of the program
+speaks for itself.\par 
+We use the state-transition framework for solving another classic search
+problem from recreational mathematics --- the water jugs problem. There
+are two jugs of capacity 8 and 5 liters with no markings, and the problem
+is to measure out exactly 4 liters from a vat containing 20 liters (or
+some other large number). The possible operations are filling up a jug
+from the vat, emptying a jug into the vat, and transferring the contents
+of one jug to another until either the pouring jug is emptied completely,
+or the other jug is filled to capacity. The problem is depicted in
+Figure~\Figwatjugpro. 
+\topin\vskip 3.8truecm\par
+\ctrline{{\bf Figure \Figwatjugpro}:~~The water jugs problem}
+\endin\par
+The problem can be generalized to {\it N\/} jugs of capacity {\it
+C$_1$,$\ldots$,C$_N$\/}. The problem is to measure a volume {\it V\/},
+different from all the {\it C$_i$\/} but less than the largest. There
+is a solution if {\it V\/} is a multiple of the greatest common divisor
+of the {\it C$_i$\/}. Our particular example is solvable because 4 is a
+multiple of the greatest common divisor of 8 and 5.\par
+The particular problem we solve is for two jugs of arbitrary capacity,
+but the approach is immediately generalizable to any number of jugs. The
+program assumes two facts in the database, {\tt capacity(I,CI)}, for {\tt
+I} equals $1$ and $2$. The natural representation of the state is a
+structure {\tt jugs(V1,V2)}, where {\tt V1} and {\tt V2} represent the
+volumes of liquid currently in the two jugs. The initial state is {\tt
+jugs(0,0)} and the desired final state either {\tt jugs(0,X)} or {\tt
+jugs(X,0)}, where {\tt X} is the desired volume. In fact, the only
+final state that needs to be specified is that the desired volume be
+in the larger jug. The volume can be transferred from the smaller
+volume, if it fits, by emptying the larger jug and pouring the
+contents of the smaller jug into the larger one. 
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+initial\_state(jugs,jugs(0,0)).\cr
+final\_state(jugs(4,V)).\cr
+final\_state(jugs(V,4).\cr
+\noalign{\vskip 5pt}
+move(jugs(V1,V2),fill(1)).\cr
+move(jugs(V1,V2),fill(2)).\cr
+move(jugs(V1,V2),empty(1)) $\lar$ V1 $>$ 0.\cr
+move(jugs(V1,V2),empty(2)) $\lar$ V2 $>$ 0.\cr
+move(jugs(V1,V2),transfer(2,1)).\cr
+move(jugs(V1,V2),transfer(1,2)).\cr
+\noalign{\vskip 5pt}
+update(jugs(V1,V2),fill(1),jugs(C1,V2)) $\lar$ capacity(1,C1).\cr
+update(jugs(V1,V2),fill(2),jugs(V1,C2)) $\lar$ capacity(2,C2).\cr
+update(jugs(V1,V2),empty(1),jugs(0,V2)).\cr
+update(jugs(V1,V2),empty(2),jugs(V1,0)).\cr
+update(jugs(V1,V2),transfer(2,1),jugs(W1,W2)) $\lar$\cr
+\qi capacity(1,C1),\cr
+\qi Liquid is V1 + V2,\cr
+\qi Excess is Liquid - C1,\cr
+\qi adjust(Liquid,Excess,W1,W2).\cr
+update(jugs(V1,V2),transfer(1,2),jugs(W1,W2)) $\lar$\cr
+\qi capacity(2,C2),\cr
+\qi Liquid is V1 + V2,\cr
+\qi Excess is Liquid - C2,\cr
+\qi adjust(Liquid,Excess,W2,W1).\cr
+\noalign{\vskip 5pt}
+adjust(Liquid,Excess,Liquid,0) $\lar$ Excess $\le$ 0.\cr
+adjust(Liquid,Excess,V,Excess) $\lar$\cr
+\qi Excess $>$ 0, V is Liquid - Excess.\cr
+\noalign{\vskip 5pt}
+legal(jugs(V1,V2)).\cr
+\noalign{\vskip 5pt}
+capacity(1,8).\cr
+capacity(2,5).\cr
+\noalign{\bigskip}
+{\bf Program \Prosolwatjug}{\rm :~~Solving the water jugs problem}\cr}
+\endin\par
+Data for solving the jugs problem in conjunction with
+Program~\Prodepstafra\ are given in Program~\Prosolwatjug. There are
+six moves: filling each jug, emptying each jug, and transferring the
+contents of one jug to another. A sample fact for filling the first
+jug is {\tt move(jugs(V1,V2),fill(1))}. The jugs' state is given
+explicitly to allow the data to coexist with other problem-solving
+data such as in Program~\Prosolwolgoa. The emptying moves are
+optimized to prevent emptying an already empty jug. The updating
+procedure associated with the first 
+four moves is simple, while the transferring operation has two cases.
+If the total volume in the jugs is less than the capacity of the jug
+being filled, the pouring jug will be emptied and the other jug will
+have the entire volume. Otherwise the other jug will be filled to
+capacity and the difference between the total liquid volume and the
+capacity of the filled jug will be left in the pouring jug. This is
+achieved by the predicate {\tt adjust/4}. Note that the test for
+legality is trivial because all reachable states are legal.\par 
+Most interesting problems have too large a search space to be searched
+exhaustively by a program like \Prodepstafra. One possibility for
+improvement is to put more knowledge into the moves allowed. Solutions
+to the jug problem can be found by filling one of the jugs whenever
+possible, emptying the other whenever possible, and otherwise
+transferring the contents of the jug being filled to the jug being
+emptied. Thus instead of six moves only three need be specified, and
+the search will be more direct, because only one move will be
+applicable to any given state. This may not give an optimal solution
+if the wrong jug to be constantly filled is chosen.\par 
+Developing this point further, the three moves can be coalesced into a
+higher-level move, {\tt fill\_and\_transfer}. This tactic fills one
+jug and transfers all its contents to the other jug, emptying the
+other jug as necessary. The code for transferring from the bigger to
+the smaller jug is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+move(jugs(V1,V2),fill\_and\_transfer(1)).\cr
+\noalign{\vskip 5pt}
+update(jugs(V1,V2),fill\_and\_transfer(1),jugs(0,V)) $\lar$\cr
+\qi capacity(1,C1),\cr
+\qi capacity(2,C2),\cr
+\qi C1 $>$ C2,\cr
+\qi V is (C1+V2) mod C2.\cr}\medskip
+Using this program, we need only three fill and transfer operations to
+solve the problem in Figure~\Figwatjugpro. \par
+Adding such domain knowledge means changing the problem description
+entirely and constitutes programming, although at a different level.\par 
+Another possibility for improvement of the search performance,
+investigated by early research in AI, is heuristic guidance. A general
+framework, based on a more explicit choice of the next state to search
+in the state-space graph, is used. The choice 
+depends on numeric scores assigned to positions. The score, computed
+by an {\it evaluation function\/}, is a measure of the goodness of the
+position. Depth-first search can be considered a special case of
+searching using an evaluation function whose value is the distance of
+the current state to the initial state, while breadth-first search
+uses an evaluation function which is the inverse of that distance.\par
+We show two search techniques that use an evaluation function
+explicitly: hill climbing and best-first search. In the following, the
+predicate {\tt value(State,Value)} is an evaluation function. The
+techniques are described abstractly.\par 
+Hill climbing is a generalization of depth-first search where the
+successor position with the highest score is chosen rather than the
+leftmost one chosen by Prolog. The problem-solving framework of
+Program~\Prodepstafra\ is easily adapted. The hill climbing {\tt move}
+generates  all the states that can be reached from the current state
+in a single move, and then orders them in decreasing order with
+respect to the values computed by the evaluation function. The
+predicate {\tt evaluate\_and\_order(Moves,State,MVs)} determines the
+relation that {\tt MVs} is an ordered list of move-value tuples
+corresponding to the list of moves {\tt Moves} from a state {\tt
+State}. The overall program is given as Program~\Prohilclipro.\par
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it solve\_hill\_climb\/}({\it State,History,Moves\/}) $\lar$\cr
+\qi {\it Moves\/} {\rm is the sequence of moves to reach a}\cr
+\qi {\rm desired final state from the current} {\it State\/,}\cr
+\qi {\rm where} {\it History\/} {\rm is a list of the states visited
+previously.}\cr
+\noalign{\medskip}
+solve\_hill\_climb(State,History,[~]) $\lar$\cr
+\qi final\_state(State).\cr
+solve\_hill\_climb(State,History,[Move$\mid$Moves]) $\lar$\cr
+\qi hill\_climb(State,Move),\cr
+\qi update(State,Move,State1),\cr
+\qi legal(State1),\cr
+\qi not member(State1,History),\cr
+\qi solve\_hill\_climb(State1,[State1$\mid$History],Moves).\cr
+\noalign{\vskip 5pt}
+hill\_climb(State,Move) $\lar$\cr
+\qi findall(M,move(State,M),Moves),\cr
+\qi evaluate\_and\_order(Moves,State,[~],MVs),\cr
+\qi member((Move,Value),MVs).\cr
+\noalign{\medskip}
+{\it evaluate\_and\_order\/}({\it Moves,State,SoFar,OrderedMVs\/)}
+$\lar$\cr
+\qi {\rm All the} {\it Moves\/} {\rm from the current} {\it State\/}\cr
+\qi {\rm are evaluated and ordered as} {\it OrderedMVs\/}{\rm .}\cr
+\qi {\it SoFar\/} {\rm is an accumulator for partial computations.}\cr
+\noalign{\medskip}
+evaluate\_and\_order([Move$\mid$Moves],State,MVs,OrderedMVs) $\lar$\cr
+\qi update(State,Move,State1),\cr
+\qi value(State1,Value),\cr
+\qi insert((Move,Value),MVs,MVs1),\cr
+\qi evaluate\_and\_order(Moves,State,MVs1,OrderedMVs).\cr
+evaluate\_and\_order([~],State,MVs,MVs).\cr
+\noalign{\vskip 5pt}
+insert(MV,[~\),[MV]).\cr
+insert((M,V),[(M1,V1)$\mid$MVs],[(M,V),(M1,V1)$\mid$MVs]) $\lar$\cr
+\qi V $\ge$ V1.\cr
+insert((M,V),[(M1,V1)$\mid$MVs],[(M1,V1)$\mid$MVs1]) $\lar$\cr
+\qi V $<$ V1, insert((M,V),MVs,MVs1).\cr
+\noalign{\medskip}
+{\it Testing the framework}\cr
+\noalign{\medskip}
+test\_hill\_climb(Problem,Moves) $\lar$\cr
+\qi initial\_state(Problem,State),\cr
+\qi solve\_hill\_climb(State,[State],Moves).\cr
+\noalign{\bigskip}
+{\bf Program \Prohilclipro}{\rm :~~Hill climbing framework for problem
+solving}\cr}\vfill}
+\endin\par
+To demonstrate the behavior of the program we use the example tree of
+Program~\Proconfindag\ augmented with a value for each move. This is
+given as Program~\Protesdat. Program~\Prohilclipro, combined with
+Program~\Protesdat and  appropriate definitions of {\tt update} and
+{\tt legal} searches the tree in the order {\tt a}, {\tt d}, {\tt j}.
+The program is easily tested on the wolf, goat, and cabbage problem
+using as the evaluation function the number of occupants on the right bank.  
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+initial\_state(tree,a).\qquad value(a,0).\qquad final\_state(j).\cr
+\noalign{\medskip}}
+\halign{\hskip 40pt\lft{\tt #}\qquad&\lft{\tt #}\qquad&\lft{\tt #}\qquad&
+\lft{\tt #}\cr
+move(a,b).&value(b,1).&move(c,g).&value(g,6).\cr
+move(a,c).&value(c,5).&move(d,j).&value(j,9).\cr
+move(a,d).&value(d,7).&move(e,k).&value(k,1).\cr
+move(a,e).&value(e,2).&move(f,h).&value(h,3).\cr
+move(c,f).&value(f,4).&move(f,i).&value(i,2).\cr}\bigskip
+\halign{\hskip 40pt\lft{#}\cr
+{\bf Program \Protesdat}:~~Test data\cr}
+\endin\par
+Program~\Prohilclipro\ contains a repeated computation. The state reached
+by {\tt Move} is calculated in order to reach a value for the move and
+then recalculated by {\tt update}. This recalculation can be avoided by
+adding an extra argument to {\tt move} and keeping the state along with
+the move and the value as the moves are ordered. Another possibility if
+there will be many calculations of the same move is using a
+memo-function. What is the most efficient method depends on the
+particular problem. For problems where the {\tt update} procedure is
+simple, the program as presented will be best.\par
+Hill climbing is a good technique when there is only one hill and the
+evaluation function is a good indication of progress. Essentially, it
+takes a local look at the state-space graph, making the decision on where
+next to search on the basis of the current state alone.\par
+An alternative search method, called {\it best-first search\/}, takes a
+global look at the complete state-space. The best state from all those
+currently unsearched is chosen.\par
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it solve\_best\/}({\it Frontier,History,Moves\/}) $\lar$\cr
+\qi {\it Moves\/} {\rm is a sequence of moves to reach a desired final
+state from}\cr
+\qi {\rm the initial state, where} {\it Frontier\/} {\rm contains the
+current states under}\cr
+\qi {\rm consideration, and} {\it History\/} {\rm contains the states
+visited previously.}\cr
+\noalign{\medskip}
+solve\_best([state(State,Path,Value)$\mid$Frontier],History,Moves)
+$\lar$\cr
+\qi final\_state(State), reverse(Path,Moves).\cr
+solve\_best([state(State,Path,Value)$\mid$Frontier],History,FinalPath)
+$\lar$\cr
+\qi findall(M,move(State,M),Moves),\cr
+\qi updates(Moves,Path,State,States),\cr
+\qi legals(States,States1),\cr
+\qi news(States1,History,States2),\cr
+\qi evaluates(States2,Values),\cr
+\qi inserts(Values,Frontier,Frontier1),\cr
+\qi solve\_best(Frontier1,[State$\mid$History],FinalPath).\cr
+\noalign{\medskip}
+{\it updates\/}({\it Moves,Path,State,States\/}) $\lar$\cr
+\qi {\it States\/} {\rm is the list of possible states accessible from
+the}\cr
+\qi {\rm current} {\it State\/}{\rm , according to the list of possible}
+{\it Moves\/}{\rm ,}\cr
+\qi {\rm where} {\it Path\/} {\rm is a path from the initial node to}
+{\it State\/}{\rm .}\cr
+\noalign{\medskip}
+updates([M$\mid$Ms],Path,S,[(S1,[M$\mid$Path])$\mid$Ss]) $\lar$\cr
+\qi update(S,M,S1), updates(Ms,Path,S,Ss).\cr
+updates([~],Path,State,[~]).\cr
+\noalign{\medskip}
+{\it legals\/}({\it States,States1\/}) $\lar$\cr
+\qi {\it States1\/} {\rm is the subset of the list of} {\it States\/}
+{\rm that are legal.}\cr
+\noalign{\medskip}
+legals([(S,P)$\mid$States],[(S,P)$\mid$States1]) $\lar$\cr
+\qi legal(S), legals(States,States1).\cr
+legals([(S,P)$\mid$States],States1) $\lar$\cr
+\qi not legal(S), legals(States,States1).\cr
+legals([~],[~]).\cr
+\noalign{\medskip}
+{\it news\/}({\it States,History,States1\/}) $\lar$\cr
+\qi {\it States1\/} {\rm is the list of states in} {\it States\/} {\rm
+but not in} {\it History\/}{\rm .}\cr
+\noalign{\medskip}
+news([(S,P)$\mid$States],History,States1) $\lar$\cr
+\qi member(S,History), news(States,History,States1).\cr
+news([(S,P)$\mid$States],History,[(S,P)$\mid$States1]) $\lar$\cr
+\qi not member(S,History), news(States,History,States1).\cr
+news([~],History,[~]).\cr
+\noalign{\bigskip}
+{\bf Program \Probesfirfra}{\rm :~~Best-first framework for
+problem solving}\cr}\vfill}
+\endin
+\topin
+\halign{\lft{\tt #}\cr
+{\it evaluates\/}({\it States,Values\/}) $\lar$\cr
+\qi {\it Values\/} {\rm is the list of tuples of} {\it States\/} {\rm
+augmented by their value.}\cr
+\noalign{\medskip}
+evaluates([(S,P)$\mid$States],[state(S,P,V)$\mid$Values]) $\lar$\cr
+\qi value(S,V), evaluates(States,Values).\cr
+evaluates([~],[~]).\cr
+\noalign{\medskip}
+{\it inserts\/}({\it States,Frontier,Frontier1\/}) $\lar$\cr
+\qi {\it Frontier1\/} {\rm is the result of inserting} {\it States\/}
+{\rm into the current} {\it Frontier\/}{\rm .}\cr
+\noalign{\medskip}
+inserts([Value$\mid$Values],Frontier,Frontier1) $\lar$\cr
+\qi insert(Value,Frontier,Frontier0),\cr
+\qi inserts(Values,Frontier0,Frontier1).\cr
+inserts([~],Frontier,Frontier).\cr
+\noalign{\vskip 5pt}
+insert(State,[~],[State]).\cr
+insert(State,\(State1$\mid$States\),\(State,State1$\mid$States\)
+$\lar$\cr
+\qi lesseq\_value(State,State1).\cr
+insert(State,\(State1$\mid$States\),\(State$\mid$States\)) $\lar$\cr
+\qi equals(State,State1).\cr
+insert(State,\(State1$\mid$States\),\(State1$\mid$States1\)) $\lar$\cr
+\qi greater\_value(State,State1), insert(State,States,States1).\cr
+\noalign{\vskip 5pt}
+equals(state(S,P,V),state(S,P1,V)).\cr
+\noalign{\vskip 5pt}
+lesseq\_value(state(S1,P1,V1),state(S2,P2,V2)) $\lar$ S1 $\ne$ S2, V1
+$\le$ V2.\cr
+\noalign{\vskip 5pt}
+greater\_value(state(S1,P1,V1),state(S2,P2,V2)) $\lar$ V1 $>$ V2.\cr
+\noalign{\bigskip}
+{\bf Program \Probesfirfra}~~{\rm (Continued)}\cr}
+\endin\par
+Program~\Probesfirfra\ for best-first search is a generalization of
+breadth-first search given in Section~16.2. A frontier is kept as for
+breadth-first search, which is updated as the search progresses. At each
+stage, the next best available move is made. We make the code as similar
+as possible to Program~\Prohilclipro\ for hill climbing to allow
+comparison.\par
+At each stage of the search, there is a set of moves to consider rather
+than a single one. The plural predicate names, for example, {\tt updates}
+and {\tt legals}, indicate this. Thus {\tt legals(States,States1)}
+filters a set of successor states, checking which ones are allowed by the
+constraints of the problem. One disadvantage of breadth-first search (and
+hence best-first search) is that the path to take is not as conveniently
+calculated. Each state must store explicitly with it the path used to
+reach it. This is reflected in the code.\par
+Program~\Probesfirfra\ tested on the data of Program~\Protesdat\ searches
+the tree in the same order as for hill climbing.\par
+Program~\Probesfirfra\ makes each step of the process explicit. In
+practice, it may be more efficient to combine some of the steps. When
+filtering the generated states, for example, we can test that a
+state is new and also legal at the same time. This saves generating
+intermediate data structures. Program~\Proconbesfir\ illustrates the idea
+by combining all the checks into one procedure, {\tt
+update\_frontier}.
+\topin
+\halign{\lft{\tt #}\cr
+{\it solve\_best\/}({\it Frontier,History,Moves\/}) $\lar$\cr
+\qi {\it Moves\/} {\rm is a sequence of moves to reach a desired final
+state}\cr
+\qi {\rm from the initial state.} {\it Frontier\/} {\rm contains the
+current states}\cr
+\qi {\rm under consideration.} {\it History\/} {\rm contains the states
+visited previously.}\cr
+\noalign{\medskip}
+solve\_best([state(State,Path,Value)$\mid$Frontier],History,Moves)
+$\lar$\cr
+\qi final\_state(State), reverse(Path,[~],Moves).\cr
+solve\_best([state(State,Path,Value)$\mid$Frontier],History,FinalPath)
+$\lar$\cr
+\qi findall(M,move(State,M),Moves),\cr
+\qi update\_frontier(Moves,State,Path,History,Frontier,Frontier1),\cr
+\qi solve\_best(Frontier1,[State$\mid$History],FinalPath).\cr
+\noalign{\vskip 5pt}
+update\_frontier([M$\mid$Ms],State,Path,History,F,F1) $\lar$\cr
+\qi update(State,M,State1),\cr
+\qi legal(State1),\cr
+\qi value(State1,Value),\cr
+\qi not member(State1,History),\cr
+\qi insert((State1,[M$\mid$Path],Value),F,F0),\cr
+\qi update\_frontier(Ms,State,Path,History,F0,F1).\cr
+update\_frontier([~],S,P,H,F,F).\cr
+\noalign{\vskip 5pt}
+insert(State,Frontier,Frontier1) $\lar$ {\rm See Program
+\Probesfirfra.}\cr
+\noalign{\bigskip}
+{\bf Program \Proconbesfir}{\rm :~~Concise best-first framework for
+problem solving}\cr}
+\endin\vskip 15pt\parno
+{\bf Exercises for Section 20.1}\vskip 5pt\par
+\offset{20pt}{(i)} Redo the water jugs program based on the two
+fill-and-transfer operations.\par 
+\offset{20pt}{(ii)} Write a program to solve the missionaries and
+cannibals problem:\par
+\offset{20pt}{} Three missionaries and three cannibals are standing on
+the left bank of a river. There is a small boat to ferry them across with
+enough room for only one or two people. They wish to cross the river. If
+ever there are more missionaries than cannibals on a particular bank of
+the river, the missionaries will convert the cannibals. Find a series of
+ferryings to transport safely all the missionaries and cannibals across
+the river without exposing any of the cannibals to conversion.\par
+\offset{20pt}{(iii)} Write a program to solve the five jealous husbands
+problem (Dudeney, 1917):\par
+\offset{20pt}{} During a certain flood five married couples found
+themselves surrounded by water and had to escape from their unpleasant
+position in a boat that would only hold three persons at a time. Every
+husband was so jealous that he would not allow his wife to be in the boat
+or on either bank with another man (or with other men) unless he himself
+was present. Find a way of getting these five men and their wives
+across to safety.\par
+\offset{20pt}{(iv)} Compose a general problem-solving framework built
+around breadth-first search analogous to Program~\Prodepstafra, based on
+programs in Section~16.2.\par
+\offset{20pt}{(v)} Express the 8-queens puzzle within the framework.
+Find an evaluation function.\par
+\sect{Searching Game Trees}
+What happens when we play a game? Starting the game means setting up the
+chess pieces, dealing out the cards, or setting out the matches, for
+example. Once it is decided who plays first, the players take turns
+making a move. After each move the game position is updated accordingly.
+\par
+We develop the vague specification in the previous paragraph into a
+simple framework for playing games. The top-level statement is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+play(Game) $\lar$\cr
+\qi initialize(Game,Position,Player),\cr
+\qi display\_game(Position,Player),\cr
+\qi play(Position,Player,Result).\cr}\medno
+The predicate {\tt initialize(Game,Position,Player)} determines the
+initial game position {\tt Position} for {\tt Game}, and {\tt Player},
+the player to start.\par
+A game is a sequence of turns, where each turn consists of a player
+choosing a move, the move being executed, and the next player being
+determined. The neatest way of expressing this is as a tail recursive
+procedure, {\tt play}, with three arguments: a game position, a player to
+move, and the final result. It is convenient to separate the choice of the
+move by {\tt choose\_move/3} from its execution by {\tt move/3}. The
+remaining predicates in the clause for {\tt play/3} display the
+state of the game and determine the next player:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+play(Position,Player,Result) $\lar$\cr
+\qi choose\_move(Position,Player,Move),\cr
+\qi move(Move,Position,Position1),\cr
+\qi display\_game(Position1,Player),\cr
+\qi next\_player(Player,Player1),\cr
+\qi !,  play(Position1,Player1,Result).\cr}\medskip
+Program~\Profraplagam\ provides a logical framework for game-playing
+programs. Using it for writing a program for a particular game focuses
+attention on the important issues for game playing: what data structures
+should be used to represent the game position, and how strategies for the
+game should be expressed. We demonstrate the process in Chapter~21 by
+writing  programs to play Nim and Kalah.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it play\/}({\it Game\/}) $\lar$\cr
+\qi {\rm Play game with name} {\it Game\/}.\cr
+\noalign{\medskip}
+play(Game) $\lar$\cr
+\qi initialize(Game,Position,Player),\cr
+\qi display\_game(Position,Player),\cr
+\qi play(Position,Player,Result).\cr
+\noalign{\vskip 5pt}
+play(Position,Player,Result) $\lar$\cr
+\qi game\_over(Position,Player,Result), !, announce(Result).\cr
+play(Position,Player,Result) $\lar$\cr
+\qi choose\_move(Position,Player,Move),\cr
+\qi move(Move,Position,Position1),\cr
+\qi display\_game(Position1,Player),\cr
+\qi next\_player(Player,Player1),\cr
+\qi !, play(Position1,Player1,Result).\cr
+\noalign{\bigskip}
+{\bf Program \Profraplagam}{\rm :~~Framework for playing games}\cr}
+\endin\par
+The problem-solving frameworks of Section~20.1 are readily
+adapted to playing games. Given a particular game state, the problem is
+to find a path of moves to a winning position.\par
+A game tree is similar to a state-space graph. It is the tree obtained by
+identifying states with nodes and edges with players' moves. We do not,
+however, identify nodes on the tree, obtained by different sequences of
+moves, even if they repeat the same state. In a game tree, each layer is
+called a {\it ply\/}.\par
+Most game trees are far too large to be searched exhaustively. This
+section discusses the techniques that have been developed to cope with
+the large search space for two-person games. In particular, we concentrate
+on the minimax algorithm augmented by alpha-beta pruning. This strategy
+is used as the basis of a program we present for playing Kalah in Chapter
+21.\par
+We describe the basic approach of searching game trees using evaluation
+functions. Again, in this section {\tt value(Position,Value)} denotes an
+evaluation function computing the {\tt Value} of {\tt Position}, the
+current state of the game. Here is a simple algorithm for choosing the
+next move:\medskip
+\halign{\hskip 40pt\lft{#}\cr
+Find all possible game states that can be reached in one move.\cr
+Compute the values of the states using the evaluation function.\cr
+Choose the move that leads to the position with the highest score.\cr}
+\medno
+This algorithm is encoded as Program~\Prochobesmov. It assumes a
+predicate {\tt move(Move,Position,Position1)} that applies a {\tt Move}
+to the current {\tt Position} to reach {\tt Position1}. The interface to
+the game framework of Program~\Profraplagam\ is provided by the clause
+\topin
+\halign{\hskip 20pt\lft{\tt #}\cr
+{\it evaluate\_and\_choose\/}({\it Moves,Position,Record,BestMove\/})
+$\lar$\cr
+\qi {\rm Chooses the} {\it BestMove\/} {\rm from the set of} {\it
+Moves\/} {\rm from the}\cr
+\qi {\rm current} {\it Position\/}{\rm .} {\it Record\/} {\rm records the
+current best move.}\cr
+\noalign{\medskip}
+evaluate\_and\_choose([Move$\mid$Moves],Position,Record,BestMove)
+$\lar$\cr
+\qi move(Move,Position,Position1),\cr
+\qi value(Position1,Value),\cr
+\qi update(Move,Value,Record,Record1),\cr
+\qi evaluate\_and\_choose(Moves,Position,Record1,BestMove).\cr
+evaluate\_and\_choose([~],Position,(Move,Value),Move).\cr
+\noalign{\vskip 5pt}
+update(Move,Value,(Move1,Value1),(Move1,Value1)) $\lar$\cr
+\qi Value $\le$ Value1.\cr
+update(Move,Value,(Move1,Value1),(Move,Value)) $\lar$\cr
+\qi Value $>$ Value1.\cr
+\noalign{\bigskip}
+{\bf Program \Prochobesmov}{\rm :~~Choosing the best move}\cr}
+\endin\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+choose\_move(Position,computer,Move) $\lar$\cr
+\qi findall(M,move(Position,M),Moves),\cr
+\qi evaluate\_and\_choose(Moves,Position,(nil,-1000),Move).\cr}\medno
+The predicate {\tt move(Position,Move)} is true if {\tt Move} is a
+possible move from the current position.\par
+The basic relation is {\tt
+evaluate\_and\_choose(Moves,Position,Record,BestMove)} which chooses the best
+move {\tt BestMove} in the possible {\tt Moves} from a given {\tt Position}.
+For each of the possible moves, the corresponding position is determined,
+its value is calculated, and the move with the highest value is
+chosen. {\tt Record} is a record of the current best move so far. In
+Program~\Prochobesmov, it is represented as a tuple {\tt (Move,Value)}. The 
+structure of {\tt Record} has been partially abstracted in the procedure
+{\tt update/4}. How much data abstraction to use is a matter of style
+and a trade-off among readability, conciseness, and performance.\par
+Looking ahead one move, the approach of Program~\Prochobesmov, would be
+sufficient if the evaluation function were perfect, that is, if the score
+reflected which positions led to a win and which to a loss. Games
+become interesting when a perfect evaluation function is not known.
+Choosing a move on the basis of looking ahead one move is generally not a
+good strategy. It is better to look several moves ahead and to infer from
+what is found the best move to make.\par
+The {\it minimax algorithm\/} is the standard method for determining the
+value of a position based on searching the game tree several ply
+ahead. \par
+The algorithm assumes that, when confronted with several choices, the
+opponent would make the best choice for her, i.e., the worst choice for
+me. My goal then is to make the move that maximizes for me the value of
+the position after the opponent has made her best move, i.e., that minimizes
+the value for her. Hence the name minimax. This reasoning proceeds
+several ply ahead, depending on the resources that can be allocated to
+the search. At the last ply the evaluation function is used.\par
+Assuming a reasonable evaluation function, the algorithm will produce
+better results the more ply are searched. It will produce the best move
+if the entire tree is searched.\par
+The minimax algorithm is justified by a zero-sum assumption, which says,
+informally, that what is good for me must be bad for my opponent, and
+vice versa.
+\midinsert\vskip 6truecm\par
+\ctrline{{\bf Figure \Figsimgamtre}:~~A simple game tree}
+\endinsert\par
+Figure~\Figsimgamtre\ depicts a simple game tree of depth 2 ply. The
+player has two moves in the current position, and the opponent has two
+replies. The values of the leaf nodes are the values for the player. The
+opponent wants to minimize the score, so will choose the minimum values,
+making the positions be worth $+1$ and $-1$ at one level
+higher in the tree. The player wants to maximize the value and will
+choose the node with value $+1$.
+\topin
+\halign{\lft{\tt #}\cr
+{\it evaluate\_and\_choose\/}({\it
+Moves,Position,Depth,Flag,Record,BestMove\/}) $\lar$\cr
+\qi {\rm Choose the} {\it BestMove\/} {\rm from the set of} {\it Moves\/}
+{\rm from the current}\cr
+\qi {\it Position\/} {\rm using the minimax algorithm searching} {\it
+Depth\/} {\rm ply ahead.}\cr
+\qi {\it Flag\/} {\rm indicates if we are currently minimizing or
+maximizing.}\cr
+\qi {\it Record\/} {\rm records the current best move.}\cr
+\noalign{\medskip}
+evaluate\_and\_choose([Move$\mid$Moves],Position,D,MaxMin,Record,Best)
+$\lar$\cr
+\qi move(Move,Position,Position1),\cr
+\qi minimax(D,Position1,MaxMin,MoveX,Value),\cr
+\qi update(Move,Value,Record,Record1),\cr
+\qi evaluate\_and\_choose(Moves,Position,D,MaxMin,Record1,Best).\cr
+evaluate\_and\_choose([~],Position,D,MaxMin,Record,Record).\cr
+\noalign{\vskip 5pt}
+minimax(0,Position,MaxMin,Move,Value) $\lar$\cr
+\qi value(Position,V),\cr
+\qi Value is V$\ast$MaxMin.\cr
+minimax(D,Position,MaxMin,Move,Value) $\lar$\cr
+\qi D $>$ 0,\cr
+\qi findall(M,move(Position,M),Moves),\cr
+\qi D1 is D - 1,\cr
+\qi MinMax is -MaxMin,\cr
+\qi evaluate\_and\_choose(Moves,Position,D1,MinMax, (nil,-1000),\cr
+\qii (Move,Value)).\cr
+\noalign{\vskip 5pt}
+update(Move,Value,Record,Record1) $\lar$ {\rm See Program
+\Prochobesmov.}\cr
+\noalign{\bigskip}
+{\bf Program \Prochominalg}{\rm :~~Choosing the best move with the
+minimax algorithm}\cr}
+\endin\par
+Program~\Prochominalg\ encodes the minimax algorithm. The basic relation
+is {\tt minimax(D,Position,MaxMin,Move,Value)}, which is true if {\tt
+Move} is the move with the highest {\tt Value} from {\tt Position}
+obtained by searching {\tt D} ply in the game tree. {\tt MaxMin} is a
+flag that indicates if we are maximizing or minimizing. It is $1$
+for maximizing and $-1$ for minimizing, the particular values
+being chosen for ease of manipulation by simple arithmetic operations. A
+generalization of Program~\Prochobesmov\ is used to choose from the set
+of moves. Two extra arguments must be added to {\tt
+evaluate\_and\_choose}: the number of ply {\tt D} and the flag {\tt
+MaxMin}. The last argument is generalized to return a record including both 
+a move and a value rather than just a move. The {\tt minimax} procedure
+does the bookkeeping, changing the number of moves being looked ahead
+and also the minimax flag. The initial record is {\tt (nil,-1000)},
+where {\tt nil} represents an arbitrary move and {\tt -1000} is a score
+intended to be less than any possible score of the evaluation function.
+\par
+The observation about efficiency that was made about combining the move
+generation and update procedures in the context of searching state-space
+graphs has an analogue when searching game trees. Whether it is better to
+compute the set of positions rather than the set of moves (with the
+corresponding change in algorithm) will depend on the particular
+application.\par
+The minimax algorithm can be improved by keeping track of the results of
+the search so far, using a technique known as alpha-beta pruning. The
+idea is to keep for each node the estimated minimum value found so far,
+the alpha value, along with the estimated maximum value, beta. If, on
+evaluating a node, beta is exceeded, no more search on that branch is
+necessary. In good cases, more than half the positions in the game tree
+need not be evaluated.
+\midinsert
+\halign{\lft{\tt #}\cr
+{\it evaluate\_and\_choose\/}({\it
+Moves,Position,Depth,Alpha,Beta,Record,BestMove\/}) $\lar$\cr
+\qi {\rm Chooses the} {\it BestMove\/} {\rm from the set of} {\it
+Moves\/} {\rm from the current}\cr
+\qi {\it Position\/} {\rm using the minimax algorithm with alpha-beta
+cutoff searching}\cr
+\qi {\it Depth\/} {\rm ply ahead.} {\it Alpha\/} {\rm and} {\it Beta\/}
+{\rm are the parameters of the algorithm.}\cr
+\qi {\it Record\/} {\rm records the current best move.}\cr
+\noalign{\medskip}
+evaluate\_and\_choose([Move$\mid$Moves],Position,D,Alpha,Beta,Move1,\cr
+\qii BestMove) $\lar$\cr
+\qi move(Move,Position,Position1),\cr
+\qi alpha\_beta(D,Position1,Alpha,Beta,MoveX,Value),\cr
+\qi Value1 is -Value,\cr
+\qi cutoff(Move,Value1,D,Alpha,Beta,Moves,Position,Move1,BestMove).\cr
+evaluate\_and\_choose([~],Position,D,Alpha,Beta,Move,(Move,Alpha)).\cr
+\noalign{\vskip 5pt}
+alpha\_beta(0,Position,Alpha,Beta,Move,Value) $\lar$\cr
+\qi value(Position,Value).\cr
+alpha\_beta(D,Position,Alpha,Beta,Move,Value) $\lar$\cr
+\qi findall(M,move(Position,M),Moves),\cr
+\qi Alpha1 is -Beta,\cr
+\qi Beta1 is -Alpha,\cr
+\qi D1 is D-1,\cr
+\qi evaluate\_and\_choose(Moves,Position,D1,Alpha1,Beta1,nil,\cr
+\qiii (Move,Value)).\cr
+\noalign{\vskip 5pt}
+cutoff(Move,Value,D,Alpha,Beta,Moves,Position,Move1,(Move,Value))
+$\lar$\cr
+\qi Value $\ge$ Beta.\cr
+cutoff(Move,Value,D,Alpha,Beta,Moves,Position,Move1,BestMove) $\lar$\cr
+\qi Alpha $<$ Value, Value $<$ Beta,\cr
+\qi evaluate\_and\_choose(Moves,Position,D,Value,Beta,Move,BestMove).\cr
+cutoff(Move,Value,D,Alpha,Beta,Moves,Position,Move1,BestMove) $\lar$\cr
+\qi Value $\le$ Alpha,\cr
+\qi evaluate\_and\_choose(Moves,Position,D,Alpha,Beta,Move1,BestMove).\cr
+\noalign{\bigskip}
+{\bf Program \Prochomovalp}{\rm :~~Choosing a move using minimax with
+alpha-beta pruning}\cr}
+\endinsert\par
+Program~\Prochomovalp\ is a modified version of Program~\Prochominalg\
+that incorporates alpha-beta pruning. The new relation scheme is {\tt
+alpha\_beta(Depth,Position,}\linebreak
+{\tt Alpha,Beta,Move,Value)}, which extends minimax by replacing the
+minimax flag with alpha and beta. The same relation holds with
+respect to {\tt evaluate\_and\_choose}.\par
+Unlike the one in Program~\Prochominalg, the version of {\tt evaluate\_and\_choose}
+in Program~\Prochomovalp\ does not need to search all possibilities. This
+is achieved by introducing a predicate {\tt cutoff}, which either stops
+searching the current branch or continues the search, updating the value
+of alpha and the current best move as appropriate.\par
+For example, the last node in the game tree in Figure~\Figsimgamtre\
+does not need to be searched. Once a move with value $-1$ is
+found, which is less than the value of $+1$ the player is
+guaranteed, no other nodes can contribute to the final score.\par
+The program can be generalized by replacing the base case of {\tt
+alpha\_beta} by a test of whether the position is terminal. This is
+necessary in chess programs, for example, for handling incomplete piece
+exchanges.\par
+\sect{Background}
+Search techniques for both planning and game playing are discussed in AI
+textbooks. For further details of search strategies or the minimax
+algorithm and its extension to alpha-beta pruning, see, for example,
+Nilsson (1971) or Winston (1977).\par
+Walter Wilson originally showed us the alpha-beta algorithm in Prolog.
+\par\bye
+
