@@ -1,0 +1,29 @@
+%% Trace: test_observe(Out, Log)
+%% Demonstrates bidirectional observation - query forward, response backward
+
+GLP> test_observe(Out, Log).
+
+test_observe(Out, Log) :-
+    =/2(X1, request(hello, X2?)),      % In = request(hello, Response?)
+    observe(X1?, X3, X4),               % observe(In?, Out, Log)
+    =/2(X2, goodbye)                    % Response = goodbye
+
+=/2(X1, request(hello, X2?)) :- true   % Create request with unbound Response
+
+observe(request(hello, X2?), X3, X4) :- true
+    %% At this point, request has unbound X2? (Response)
+    %% observe sets up bidirectional connection
+
+=/2(X2, goodbye) :- true               % Bind Response to goodbye
+    %% This binding propagates through observe to Out and Log
+
+%% RESULT:
+Out = request(hello, goodbye)
+Log = request(hello, goodbye)
+→ succeeds
+
+%% Key observation:
+%% - Request created with unbound Response slot (Response?)
+%% - observe passes structure through, waiting for subterms to be bound
+%% - When Response = goodbye executes, binding propagates to both Out and Log
+%% - Bidirectional: query (hello) flows forward, response (goodbye) flows backward

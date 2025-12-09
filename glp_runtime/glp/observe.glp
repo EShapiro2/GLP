@@ -28,7 +28,7 @@ observe_list([H|T], [I?|Is?], [L?|Ls?]) :-
     observe_list(T?, Is, Ls).
 
 %% Test: bidirectional - Query flows forward, Response flows backward
-test_observe(Out, Log) :-
-    In = request(hello, Response),
+test_observe(Out?, Log?) :-
+    In = request(hello, Response?),
     observe(In?, Out, Log),
     Response = goodbye.
