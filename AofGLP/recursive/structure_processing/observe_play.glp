@@ -1,8 +1,8 @@
 %% observe_play.glp - Multi-round protocol between Alice and Bob
 %% All equalities folded into heads
+%% Type guards (atom, number, compound) allow multiple reader occurrences
 
-%% === observe.glp (inlined) ===
-%% observe(A, B, Log) - observe communication between A and B
+%% === observe.glp (inlined - consult not supported) ===
 
 %% A→B: value available at A (position 1)
 observe(A, A?, A?) :- atom(A?) | true.
@@ -38,46 +38,50 @@ test_play(Log?) :-
 %% Alice: sends values, receives responses via readers
 %% ===========================================
 
+%% Round 1: Alice sends hello, receives name/age
 alice([msg(1, hello, response(Name?, Age?)) | Rest?]) :-
     alice_round2(Name, Age, Rest).
 
+%% Round 2: Alice sends order, receives quote
 alice_round2(N, A, [msg(2, order(widget, 5), quote(Price?, InStock?)) | Rest?]) :-
-    known(N?), known(A?) |
+    atom(N?), number(A?) |
     alice_round3(Price, InStock, Rest).
 
+%% Round 3: Alice sends buy with price, receives receipt
 alice_round3(P, S, [msg(3, buy(P?), receipt(TxId?, Time?)) | Rest?]) :-
-    known(P?), known(S?) |
+    number(P?), atom(S?) |
     alice_round4(TxId, Time, Rest).
 
+%% Round 4: Alice sends rating, receives bonus
 alice_round4(Tx, T, [msg(4, rate(5), bonus(Points?)) | []]) :-
-    known(Tx?), known(T?) |
+    compound(Tx?), compound(T?) |
     alice_done(Points).
 
-alice_done(P) :- known(P?) | true.
+alice_done(P) :- number(P?) | true.
 
 %% ===========================================
-%% Bob: receives values, fills in responses
+%% Bob: receives values, provides responses
 %% ===========================================
 
+%% Round 1: Bob receives hello, provides name=bob, age=42
 bob([msg(1, hello, response(bob, 42)) | Rest]) :-
     bob_round2(Rest?).
 
-bob_round2([msg(2, order(Item, Qty), quote(Price, InStock)) | Rest]) :-
-    Item? = widget, Qty? >= 1 |
-    Price = 100,
-    InStock = yes,
+%% Round 2: Bob receives order, provides price=100, instock=yes
+bob_round2([msg(2, order(widget, Qty?), quote(100, yes)) | Rest]) :-
+    number(Qty?), Qty? >= 1 |
     bob_round3(Rest?).
 
-bob_round3([msg(3, buy(Amount), receipt(TxId, Time)) | Rest]) :-
-    Amount? >= 100 |
-    TxId = tx(789),
-    Time = time(2024, 12, 9),
+%% Round 3: Bob receives payment, provides receipt
+bob_round3([msg(3, buy(Amount?), receipt(tx(789), time(2024, 12, 9))) | Rest]) :-
+    number(Amount?), Amount? >= 100 |
     bob_round4(Rest?).
 
-bob_round4([msg(4, rate(Stars), bonus(Points)) | []]) :-
-    Stars? >= 4 |
-    Points = 50.
+%% Round 4: Bob receives rating, provides bonus based on stars
+bob_round4([msg(4, rate(Stars?), bonus(50)) | []]) :-
+    number(Stars?), Stars? >= 4 |
+    true.
 
-bob_round4([msg(4, rate(Stars), bonus(Points)) | []]) :-
-    Stars? < 4 |
-    Points = 10.
+bob_round4([msg(4, rate(Stars?), bonus(10)) | []]) :-
+    number(Stars?), Stars? < 4 |
+    true.
