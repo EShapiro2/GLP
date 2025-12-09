@@ -1,0 +1,83 @@
+%% observe_play.glp - Multi-round protocol between Alice and Bob
+%% All equalities folded into heads
+
+%% === observe.glp (inlined) ===
+%% observe(A, B, Log) - observe communication between A and B
+
+%% A→B: value available at A (position 1)
+observe(A, A?, A?) :- atom(A?) | true.
+observe(A, A?, A?) :- number(A?) | true.
+observe(A, B?, Log?) :- compound(A?) |
+    A? =.. ListA,
+    observe_list(ListA?, ListB, Logs),
+    B =.. ListB?,
+    Log =.. Logs?.
+
+%% B→A: value available at B (position 2)
+observe(A?, A, A?) :- atom(A?) | true.
+observe(A?, A, A?) :- number(A?) | true.
+observe(A?, B, Log?) :- compound(B?) |
+    B? =.. ListB,
+    observe_list(ListB?, ListA, Logs),
+    A =.. ListA?,
+    Log =.. Logs?.
+
+observe_list([], [], []).
+observe_list([H|T], [I?|Is?], [L?|Ls?]) :-
+    observe(H?, I, L),
+    observe_list(T?, Is, Ls).
+
+%% === Protocol test ===
+
+test_play(Log?) :-
+    observe(AliceSide?, BobSide, Log),
+    alice(AliceSide),
+    bob(BobSide?).
+
+%% ===========================================
+%% Alice: sends values, receives responses via readers
+%% ===========================================
+
+alice([msg(1, hello, response(Name?, Age?)) | Rest?]) :-
+    alice_round2(Name, Age, Rest).
+
+alice_round2(N, A, [msg(2, order(widget, 5), quote(Price?, InStock?)) | Rest?]) :-
+    known(N?), known(A?) |
+    alice_round3(Price, InStock, Rest).
+
+alice_round3(P, S, [msg(3, buy(P?), receipt(TxId?, Time?)) | Rest?]) :-
+    known(P?), known(S?) |
+    alice_round4(TxId, Time, Rest).
+
+alice_round4(Tx, T, [msg(4, rate(5), bonus(Points?)) | []]) :-
+    known(Tx?), known(T?) |
+    alice_done(Points).
+
+alice_done(P) :- known(P?) | true.
+
+%% ===========================================
+%% Bob: receives values, fills in responses
+%% ===========================================
+
+bob([msg(1, hello, response(bob, 42)) | Rest]) :-
+    bob_round2(Rest?).
+
+bob_round2([msg(2, order(Item, Qty), quote(Price, InStock)) | Rest]) :-
+    Item? = widget, Qty? >= 1 |
+    Price = 100,
+    InStock = yes,
+    bob_round3(Rest?).
+
+bob_round3([msg(3, buy(Amount), receipt(TxId, Time)) | Rest]) :-
+    Amount? >= 100 |
+    TxId = tx(789),
+    Time = time(2024, 12, 9),
+    bob_round4(Rest?).
+
+bob_round4([msg(4, rate(Stars), bonus(Points)) | []]) :-
+    Stars? >= 4 |
+    Points = 50.
+
+bob_round4([msg(4, rate(Stars), bonus(Points)) | []]) :-
+    Stars? < 4 |
+    Points = 10.
