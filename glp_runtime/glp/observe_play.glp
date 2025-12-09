@@ -36,27 +36,27 @@ test_play(Log?) :-
 %% Alice
 %% ===========================================
 
-alice([msg(1, hello, response(Name, Age)) | Rest]) :-
-    alice_wait1(Name?, Age?, Rest?).
+alice([msg(1, hello, response(Name, Age)) | Rest?]) :-
+    alice_wait1(Name?, Age?, Rest).
 
-alice_wait1(Name, Age, Rest) :-
+alice_wait1(Name, Age, Rest?) :-
     atom(Name?), number(Age?) |
-    alice_round2(Rest?).
+    alice_round2(Rest).
 
-alice_round2([msg(2, order(widget, 5), quote(Price, InStock)) | Rest]) :-
-    alice_wait2(Price?, InStock?, Rest?).
+alice_round2([msg(2, order(widget, 5), quote(Price, InStock)) | Rest?]) :-
+    alice_wait2(Price?, InStock?, Rest).
 
 alice_wait2(Price, InStock, Rest) :-
     number(Price?), atom(InStock?) |
-    alice_round3(Price?, Rest?).
+    alice_round3(Price?, Rest).
 
-alice_round3(P, [msg(3, buy(P?), receipt(TxId, Time)) | Rest]) :-
+alice_round3(P, [msg(3, buy(P?), receipt(TxId, Time)) | Rest?]) :-
     number(P?) |
-    alice_wait3(TxId?, Time?, Rest?).
+    alice_wait3(TxId?, Time?, Rest).
 
 alice_wait3(TxId, Time, Rest) :-
     compound(TxId?), compound(Time?) |
-    alice_round4(Rest?).
+    alice_round4(Rest).
 
 alice_round4([msg(4, rate(5), bonus(Points)) | []]) :-
     alice_wait4(Points?).
