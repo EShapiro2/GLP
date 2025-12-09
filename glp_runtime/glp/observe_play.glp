@@ -55,7 +55,7 @@ alice_round3(P, [msg(3, buy(P?), receipt(TxId, Time)) | Rest?]) :-
     alice_wait3(TxId?, Time?, Rest).
 
 alice_wait3(TxId, Time, Rest?) :-
-    compound(TxId?), compound(Time?) |
+    tuple(TxId?), tuple(Time?) |
     alice_round4(Rest).
 
 alice_round4([msg(4, rate(5), bonus(Points)) | []]) :-
