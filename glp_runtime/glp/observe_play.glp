@@ -1,5 +1,4 @@
 %% observe_play.glp - Multi-round protocol between Alice and Bob
-%% Corrected for SRSW compliance
 
 %% === observe.glp (inlined - consult not supported) ===
 
@@ -34,51 +33,41 @@ test_play(Log?) :-
     bob(B?).
 
 %% ===========================================
-%% Alice: sends values, receives responses
-%% Response fields are writers that bob fills
+%% Alice
 %% ===========================================
 
-%% Round 1: Alice sends hello, waits for name/age
 alice([msg(1, hello, response(Name, Age)) | Rest]) :-
     atom(Name?), number(Age?) |
     alice_round2(Rest?).
 
-%% Round 2: Alice sends order, waits for quote
 alice_round2([msg(2, order(widget, 5), quote(Price, InStock)) | Rest]) :-
     number(Price?), atom(InStock?) |
-    alice_round3(Price, Rest).
+    alice_round3(Price?, Rest?).
 
-%% Round 3: Alice sends buy with price, waits for receipt
 alice_round3(P, [msg(3, buy(P?), receipt(TxId, Time)) | Rest]) :-
     number(P?), compound(TxId?), compound(Time?) |
     alice_round4(Rest?).
 
-%% Round 4: Alice sends rating, waits for bonus
 alice_round4([msg(4, rate(5), bonus(Points)) | []]) :-
     number(Points?) |
     true.
 
 %% ===========================================
-%% Bob: receives values, provides responses
-%% Received fields are writers that get alice's values
+%% Bob
 %% ===========================================
 
-%% Round 1: Bob receives hello, provides name=bob, age=42
 bob([msg(1, Greeting, response(bob, 42)) | Rest]) :-
     atom(Greeting?) |
     bob_round2(Rest?).
 
-%% Round 2: Bob receives order, provides price=100, instock=yes
 bob_round2([msg(2, order(Item, Qty), quote(100, yes)) | Rest]) :-
     atom(Item?), number(Qty?), Qty? >= 1 |
     bob_round3(Rest?).
 
-%% Round 3: Bob receives payment, provides receipt
 bob_round3([msg(3, buy(Amount), receipt(tx(789), time(2024, 12, 9))) | Rest]) :-
     number(Amount?), Amount? >= 100 |
     bob_round4(Rest?).
 
-%% Round 4: Bob receives rating, provides bonus
 bob_round4([msg(4, rate(Stars), bonus(50)) | []]) :-
     number(Stars?), Stars? >= 4 |
     true.
