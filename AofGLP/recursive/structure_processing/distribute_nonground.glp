@@ -1,0 +1,40 @@
+%% distribute_nonground.glp - Distribute stream without requiring ground elements
+%% Bindings to original propagate to both copies
+
+%% distribute(In?, Out1, Out2) - distribute stream to two consumers
+distribute([X|Xs], [Y?|Ys?], [Z?|Zs?]) :-
+    copy(X?, Y, Z),
+    distribute(Xs?, Ys, Zs).
+distribute([], [], []).
+
+%% copy(Original?, Copy1, Copy2) - create two copies of term
+copy(X, Y?, Z?) :- atom(X?) | Y = X?, Z = X?.
+copy(X, Y?, Z?) :- number(X?) | Y = X?, Z = X?.
+copy(X, Y?, Z?) :- compound(X?) |
+    X? =.. List,
+    copy_list(List?, List1, List2),
+    Y =.. List1?,
+    Z =.. List2?.
+copy(X, Y?, Z?) :- unknown(X?) |
+    link(X?, Y, Z).
+
+copy_list([], [], []).
+copy_list([H|T], [H1?|T1?], [H2?|T2?]) :-
+    copy(H?, H1, H2),
+    copy_list(T?, T1, T2).
+
+%% link(Original?, Copy1, Copy2) - wait for binding, then copy
+link(X, Y?, Z?) :- atom(X?) | Y = X?, Z = X?.
+link(X, Y?, Z?) :- number(X?) | Y = X?, Z = X?.
+link(X, Y?, Z?) :- compound(X?) |
+    X? =.. List,
+    copy_list(List?, List1, List2),
+    Y =.. List1?,
+    Z =.. List2?.
+
+%% Test: distribute stream with incomplete messages
+test_distribute(Out1, Out2) :-
+    In = [msg(a, R1), msg(b, R2)],
+    distribute(In?, Out1, Out2),
+    R1 = response1,
+    R2 = response2.
