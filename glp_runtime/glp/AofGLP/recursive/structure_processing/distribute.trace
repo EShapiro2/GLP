@@ -1,0 +1,43 @@
+GLP> ✓ Loaded: AofGLP/recursive/structure_processing/distribute.glp
+
+GLP> test_ground(X, Y) :- distribute([a, b, c], X1, X2)
+distribute([a, b, c], X1, X2) :- copy(a, X3, X4), distribute([b, c], X5, X6)
+copy(a, X3, X4) :- =/2(X7, a), =/2(X8, a)
+distribute([b, c], X5, X6) :- copy(b, X9, X10), distribute([c], X11, X12)
+=/2(X7, a) :- true
+=/2(X8, a) :- true
+copy(b, X9, X10) :- =/2(X13, b), =/2(X14, b)
+distribute([c], X11, X12) :- copy(c, X15, X16), distribute([], X17, X18)
+=/2(X13, b) :- true
+=/2(X14, b) :- true
+copy(c, X15, X16) :- =/2(X19, c), =/2(X20, c)
+distribute([], X17, X18) :- true
+=/2(X19, c) :- true
+=/2(X20, c) :- true
+X = [a, b, c]
+Y = [a, b, c]
+→ succeeds
+
+GLP> test_compound(X, Y) :- distribute([msg(hello, world), msg(foo, bar)], X1, X2)
+distribute([msg(hello, world), msg(foo, bar)], X1, X2) :- copy(msg(hello, world), X3, X4), distribute([msg(foo, bar)], X5, X6)
+copy(msg(hello, world), X3, X4) :- =/2(X7, msg(hello, world)), =/2(X8, msg(hello, world))
+distribute([msg(foo, bar)], X5, X6) :- copy(msg(foo, bar), X9, X10), distribute([], X11, X12)
+=/2(X7, msg(hello, world)) :- true
+=/2(X8, msg(hello, world)) :- true
+copy(msg(foo, bar), X9, X10) :- =/2(X13, msg(foo, bar)), =/2(X14, msg(foo, bar))
+distribute([], X11, X12) :- true
+=/2(X13, msg(foo, bar)) :- true
+=/2(X14, msg(foo, bar)) :- true
+X = [msg(hello, world), msg(foo, bar)]
+Y = [msg(hello, world), msg(foo, bar)]
+→ succeeds
+
+GLP> test_nested(X, Y) :- distribute([outer(inner(a, b), c)], X1, X2)
+distribute([outer(inner(a, b), c)], X1, X2) :- copy(outer(inner(a, b), c), X3, X4), distribute([], X5, X6)
+copy(outer(inner(a, b), c), X3, X4) :- =/2(X7, outer(inner(a, b), c)), =/2(X8, outer(inner(a, b), c))
+distribute([], X5, X6) :- true
+=/2(X7, outer(inner(a, b), c)) :- true
+=/2(X8, outer(inner(a, b), c)) :- true
+X = [outer(inner(a, b), c)]
+Y = [outer(inner(a, b), c)]
+→ succeeds
