@@ -3953,6 +3953,16 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
+      case 'compound':
+        // Succeeds if X is a compound term (has functor and arguments)
+        // In Prolog/GLP: compound terms are structures, including lists
+        if (args.isEmpty) return GuardResult.failure;
+        final val = getValue(args[0]);
+        if (val is StructTerm) {
+          return GuardResult.success;
+        }
+        return GuardResult.failure;
+
       case 'list':
         // Succeeds if X is a list ([] or [H|T])
         // Per spec: list(X?) - Succeeds if X is a list
