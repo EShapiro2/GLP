@@ -56,6 +56,8 @@ $GLP_DIR/reader_output.glp
 $GLP_DIR/two_struct_list.glp
 $GLP_DIR/depth_test.glp
 $GLP_DIR/paa.glp
+$GLP_DIR/test_bob.glp
+$GLP_DIR/test_nested_suspend.glp
 append_dl.glp
 hello.
 p(X).
@@ -172,6 +174,10 @@ tree3(Xtr3, val).
 multi_w(Xmw, p, q).
 p(Xpaa1, Xpaa1?).
 p(Xpaa2?, Xpaa2).
+bob(Xbob?).
+level1(Xlv1?).
+level2([Xlv2?|Rlv2]).
+level3([wrapper(Xlv3?)|Rlv3]).
 :quit
 REPL_INPUT
 2>&1)
@@ -350,6 +356,12 @@ declare -a tests=(
     # Two-phase HEAD unification (writer/reader same variable)
     "p(X,X?) succeeds:Xpaa1 = a"
     "p(X?,X) succeeds:→ succeeds"
+
+    # Suspension tests (unbound reader vs structure pattern)
+    "Suspend bob(X?) unbound:bob(X.*) → suspended"
+    "Suspend level1(X?) unbound:level1(X.*) → suspended"
+    "Suspend level2 nested:level2(.*) → suspended"
+    "Suspend level3 deep nested:level3(.*) → suspended"
 )
 
 PASS=0
