@@ -1,0 +1,2 @@
+%% Simple list pattern with variable
+test_list_var([X | _]) :- atom(X?) | true.

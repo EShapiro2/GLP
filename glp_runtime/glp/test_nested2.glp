@@ -1,0 +1,2 @@
+%% Even simpler nested structure
+test_nested([foo(X) | _]) :- atom(X?) | true.

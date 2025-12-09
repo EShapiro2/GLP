@@ -1,0 +1,6 @@
+%% Bob's exact structure
+bob2([msg(1, Greeting, response(bob, 42)) | Rest]) :-
+    atom(Greeting?) |
+    done(Rest?).
+
+done(_) :- true.

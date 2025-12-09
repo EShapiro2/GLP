@@ -1,0 +1,2 @@
+%% One-arg with ground
+test_ground([foo(1) | _]) :- true.
