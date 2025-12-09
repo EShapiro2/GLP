@@ -1,0 +1,18 @@
+%% substitute.glp - Substituting for a term in a tree (AoP 3.26)
+%% substitute(X,Y,TreeX,TreeY) :- TreeY is the result of replacing all X in TreeX by Y.
+
+substitute(X, Y, void, void).
+substitute(X, Y, tree(Leaf, Left, Right), tree(Leaf1, Left1, Right1)) :-
+    replace(X?, Y?, Leaf?, Leaf1),
+    substitute(X?, Y?, Left?, Left1),
+    substitute(X?, Y?, Right?, Right1).
+
+replace(X, Y, X, Y).
+replace(X, Y, Z, Z) :- X? \== Z? | true.
+
+%% reduce clauses for metainterpreter
+reduce(substitute(X, Y, void, void), true).
+reduce(substitute(X, Y, tree(Leaf, Left, Right), tree(Leaf1, Left1, Right1)),
+    (replace(X?, Y?, Leaf?, Leaf1), substitute(X?, Y?, Left?, Left1), substitute(X?, Y?, Right?, Right1))).
+reduce(replace(X, Y, X, Y), true).
+reduce(replace(X, Y, Z, Z), true) :- X? \== Z?.

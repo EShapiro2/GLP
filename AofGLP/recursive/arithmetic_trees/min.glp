@@ -1,0 +1,20 @@
+%% min.glp - The minimum of two numbers (AoP 3.7)
+%% minimum(N1,N2,Min) :- The minimum of natural numbers N1 and N2 is Min.
+%% Note: Original uses operator syntax; we use lesseq as a regular predicate.
+
+minimum(N1, N2, N1) :- lesseq(N1?, N2?) | true.
+minimum(N1, N2, N2) :- lesseq(N2?, N1?) | true.
+
+lesseq(0, X) :- natural_number(X?) | true.
+lesseq(s(X), s(Y)) :- lesseq(X?, Y?).
+
+natural_number(0).
+natural_number(s(X)) :- natural_number(X?).
+
+%% reduce clauses for metainterpreter
+reduce(minimum(N1, N2, N1), lesseq(N1?, N2?)).
+reduce(minimum(N1, N2, N2), lesseq(N2?, N1?)).
+reduce(lesseq(0, X), natural_number(X?)).
+reduce(lesseq(s(X), s(Y)), lesseq(X?, Y?)).
+reduce(natural_number(0), true).
+reduce(natural_number(s(X)), natural_number(X?)).

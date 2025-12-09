@@ -1,0 +1,18 @@
+%% translate.glp - Translating word for word (AoP 7.8)
+%% translate(Words,Mots) :- Mots is a French translation of the English words Words.
+
+translate([Word|Words], [Mot|Mots]) :- dict(Word?, Mot), translate(Words?, Mots).
+translate([], []).
+
+dict(the, le).
+dict(dog, chien).
+dict(chases, chasse).
+dict(cat, chat).
+
+%% reduce clauses for metainterpreter
+reduce(translate([Word|Words], [Mot|Mots]), (dict(Word?, Mot), translate(Words?, Mots))).
+reduce(translate([], []), true).
+reduce(dict(the, le), true).
+reduce(dict(dog, chien), true).
+reduce(dict(chases, chasse), true).
+reduce(dict(cat, chat), true).
