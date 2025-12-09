@@ -227,7 +227,20 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 
 **Use this message:** "This requires architectural understanding. Please consult Claude Chat for the design, then provide me with specific implementation instructions."
 
-## Practical Environment Info (Linux)
+## Two Environments: Claude (Linux) vs User (Mac)
+
+**CRITICAL: There are TWO different environments:**
+
+| Environment | Path | Used by |
+|-------------|------|---------|
+| Claude Code (Linux) | `/home/user/GLP` | Claude running commands |
+| User's Mac | `/Users/udi/GLP` | User running commands |
+
+**When giving instructions TO THE USER (merge commands, etc.), ALWAYS use Mac paths (`/Users/udi/GLP`).**
+
+---
+
+## Practical Environment Info (Linux - Claude Code)
 
 **Before running commands, VERIFY - don't guess:**
 - Run `ls` to check directories exist
