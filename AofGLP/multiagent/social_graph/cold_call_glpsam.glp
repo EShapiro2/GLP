@@ -10,7 +10,7 @@
 social_graph(Id, [msg(user, Id?, connect(Target))|In], Fs) :-
     ground(Id?), ground(Target?) |
     lookup_send(net, msg(Id?, Target?, intro(Id?, Id?, Resp)), Fs?, Fs1),
-    inject(Resp?, msg(Target?, Id?, response(Resp?)), In?, In1),
+    inject_msg(Resp?, Target?, Id?, In?, In1),
     social_graph(Id?, In1?, Fs1?).
 
 %% Process received self-introduction
@@ -37,6 +37,8 @@ social_graph(Id, [msg(_, _, _)|In], Fs) :-
     ground(Id?), otherwise |
     social_graph(Id?, In?, Fs?).
 
-%% inject - defer insertion until trigger becomes known
-inject(X, Y, Ys, [Y?|Ys?]) :- known(X?) | true.
-inject(X, Y, [Y1|Ys], [Y1?|Ys1?]) :- unknown(X?) | inject(X?, Y?, Ys?, Ys1).
+%% inject_msg - defer insertion of response message until Resp becomes ground
+inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
+    ground(Resp?) | true.
+inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
+    unknown(Resp?) | inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
