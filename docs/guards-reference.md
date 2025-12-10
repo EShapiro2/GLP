@@ -117,74 +117,6 @@ process(X, Y?) :- ground(X) | Y = computed(X?).  % Would fail, not suspend
 
 ---
 
-## Multiple Head Writers and Ground Guards
-
-### The Rule
-
-When the same variable appears as a **writer** in multiple positions within a clause head, a `ground(X?)` guard is required.
-
-### Why This Rule Exists
-
-In GLP, a writer represents a binding point—a location where a value can be assigned. Multiple writers of the same variable in the head creates ambiguity:
-
-| Scenario | Problem |
-|----------|---------|
-| Variable unbound at call time | Which head position provides the value? Which constrains it? |
-| Variable bound at call time | Safe: both positions test equality against the known value |
-
-The `ground(X?)` guard ensures the variable is bound before clause selection, making multiple head occurrences function as equality tests rather than ambiguous binding points.
-
-### Example: Association List Lookup
-
-```prolog
-% ✅ CORRECT - ground guard enables multiple head writers
-lookup(Key, [(Key, Value)|_], Value?) :- ground(Key?) | true.
-lookup(Key, [_|Rest], Value?) :-
-    otherwise | lookup(Key?, Rest?, Value).
-```
-
-The first clause uses `Key` twice in the head to test that the first argument equals the key in the pair. The `ground(Key?)` guard ensures `Key` is bound before this test occurs.
-
-```prolog
-% ❌ WRONG - multiple head writers without ground guard
-lookup(Key, [(Key, Value)|_], Value?).
-```
-
-Without the guard, if `Key` is unbound, the semantics are undefined: does the first position bind `Key`, or does the pair's key bind it, or do they constrain each other?
-
-```prolog
-% ❌ WRONG - reader doesn't test equality
-lookup(Key, [(Key?, Value)|_], Value?).
-```
-
-Using `Key?` (reader) in the pair pattern doesn't test equality—it accepts any value. This returns the first pair's value regardless of whether keys match.
-
-### The Pattern
-
-For head-based equality testing:
-
-```prolog
-predicate(X, f(X, ...), ...) :- ground(X?) | ...
-```
-
-- Same writer variable in multiple head positions
-- `ground(X?)` guard required
-- Functions as pattern matching against known value
-
-### SRSW Implications
-
-This rule extends SRSW:
-
-| Head Writers | Guard | Status |
-|--------------|-------|--------|
-| Single occurrence | None required | ✅ Valid |
-| Multiple occurrences | `ground(X?)` | ✅ Valid |
-| Multiple occurrences | No guard | ❌ SRSW violation |
-
-The SRSW checker should flag multiple head writers without a corresponding `ground()` guard.
-
----
-
 ## CRITICAL: Ground Guards - The ONLY Exception to SRSW Syntactic Restriction
 
 Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The ONLY exception: when guards guarantee groundness, multiple reader occurrences are permitted because ground terms cannot expose writers.
@@ -311,6 +243,38 @@ safe_compute(X, Y) :- number(X?) | execute('evaluate', [X? * 2, Y]).
 safe_divide(X, Y, Z) :- integer(X?), integer(Y?), Y? =\= 0 |
                         execute('evaluate', [X? / Y?, Z]).
 ```
+
+---
+
+## Equality Guard
+
+### ✅ `X =?= Y`
+**Ground equality test**
+
+Tests whether two terms are ground and equal.
+
+**Semantics** (three-valued):
+
+| X | Y | Result |
+|---|---|--------|
+| ground | ground, X = Y | succeed |
+| ground | ground, X ≠ Y | fail |
+| unbound reader | any | suspend |
+| any | unbound reader | suspend |
+| unbound writer | any | fail |
+| any | unbound writer | fail |
+
+**Usage**: Pattern matching where equality must be tested explicitly.
+
+```prolog
+% Lookup in association list
+lookup(Key, [(K, Value)|_], Value?) :- Key =?= K? | true.
+lookup(Key, [_|Rest], Value?) :- otherwise | lookup(Key?, Rest?, Value).
+```
+
+The guard `Key =?= K?` succeeds when `Key` and `K` are both ground and equal. If `K` is unbound (reader), it suspends. If `Key` is unbound writer, it fails.
+
+**Why not multiple head writers**: GLP maintains strict SRSW (one writer per variable). Instead of implicit equality via multiple head occurrences, use `=?=` for explicit, visible equality testing.
 
 ---
 
