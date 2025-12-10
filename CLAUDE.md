@@ -404,6 +404,13 @@ REPL tests: 101/101 passing
 dart test test/specific_test.dart
 ```
 
+### Bug Fix Test Protocol
+
+**When a bug is detected and fixed:**
+1. Add the test case that exposed the bug to the REPL test suite
+2. The test should verify the fix works (not just that it doesn't crash)
+3. This prevents regression - the bug should never reappear
+
 ## Working Principles
 
 ### 0. FCP AM Adherence
