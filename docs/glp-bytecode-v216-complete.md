@@ -267,12 +267,20 @@ When debugging bytecode:
 - Otherwise: fail to next clause
 
 ### 6.2 head_writer Xi
-**Operation**: Process writer variable in clause head  
+**Operation**: Process writer variable in clause head
 **Behavior**:
 - In READ mode: extract value from current structure position (S) into Xi
 - In WRITE mode: record new writer creation in σ̂w
 - Operate against tentative state, not actual heap
 - Increment S after operation
+
+**WxW Detection**:
+When processing a head writer against a goal argument:
+- If goal argument is an unbound writer: FAIL immediately (WxW violation)
+- If goal argument is an unbound reader: add reader to Si (suspend)
+- If goal argument is bound: extract value into Xi
+
+Writer-to-writer unification violates the SRSW constraint and must fail, not suspend.
 
 ### 6.3 head_reader Xi
 **Operation**: Process reader variable in clause head
