@@ -171,16 +171,151 @@ class AnnotatedClause {
 
 /// Semantic analyzer for GLP programs
 class Analyzer {
+  int _freshVarCounter = 0;
+
   Analyzer();
 
   AnnotatedProgram analyze(Program program) {
+    // Step 1: Find unit clauses (defined guard predicates)
+    final unitClauses = _findUnitClauses(program);
+
+    // Step 2: Transform defined guards to equality goals
+    final transformedProgram = _transformDefinedGuards(program, unitClauses);
+
+    // Step 3: Analyze transformed program
     final annotatedProcs = <AnnotatedProcedure>[];
 
-    for (final proc in program.procedures) {
+    for (final proc in transformedProgram.procedures) {
       annotatedProcs.add(_analyzeProcedure(proc));
     }
 
-    return AnnotatedProgram(program, annotatedProcs);
+    return AnnotatedProgram(transformedProgram, annotatedProcs);
+  }
+
+  /// Find all unit clauses in the program.
+  /// A unit clause is a procedure with exactly one clause, no guards, and no body.
+  /// Returns map from "name/arity" to the head arguments.
+  Map<String, List<Term>> _findUnitClauses(Program program) {
+    final result = <String, List<Term>>{};
+
+    for (final proc in program.procedures) {
+      if (proc.clauses.length == 1) {
+        final clause = proc.clauses.first;
+        final hasGuards = clause.guards != null && clause.guards!.isNotEmpty;
+        final hasBody = clause.body != null && clause.body!.isNotEmpty;
+
+        if (!hasGuards && !hasBody) {
+          // This is a unit clause
+          result['${proc.name}/${proc.arity}'] = clause.head.args;
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /// Transform defined guards to equality goals.
+  /// For guard p(S1,...,Sn) with unit clause p(T1,...,Tn),
+  /// replace with equality guards T1=S1, T2=S2, ..., Tn=Sn.
+  Program _transformDefinedGuards(Program program, Map<String, List<Term>> unitClauses) {
+    if (unitClauses.isEmpty) return program;
+
+    final transformedProcs = <Procedure>[];
+
+    for (final proc in program.procedures) {
+      final transformedClauses = <Clause>[];
+
+      for (final clause in proc.clauses) {
+        transformedClauses.add(_transformClause(clause, unitClauses));
+      }
+
+      transformedProcs.add(Procedure(proc.name, proc.arity, transformedClauses, proc.line, proc.column));
+    }
+
+    return Program(transformedProcs, program.line, program.column);
+  }
+
+  /// Transform a single clause by unfolding any defined guards.
+  Clause _transformClause(Clause clause, Map<String, List<Term>> unitClauses) {
+    if (clause.guards == null || clause.guards!.isEmpty) {
+      return clause;
+    }
+
+    final newGuards = <Guard>[];
+    bool anyTransformed = false;
+
+    for (final guard in clause.guards!) {
+      final signature = '${guard.predicate}/${guard.args.length}';
+      final unitClauseArgs = unitClauses[signature];
+
+      if (unitClauseArgs != null) {
+        // This is a defined guard - unfold to equalities
+        anyTransformed = true;
+        final equalityGuards = _unfoldDefinedGuard(guard.args, unitClauseArgs, guard.line, guard.column);
+        newGuards.addAll(equalityGuards);
+      } else {
+        // Not a defined guard - keep as is
+        newGuards.add(guard);
+      }
+    }
+
+    if (!anyTransformed) {
+      return clause;
+    }
+
+    return Clause(
+      clause.head,
+      guards: newGuards.isEmpty ? null : newGuards,
+      body: clause.body,
+      line: clause.line,
+      column: clause.column,
+    );
+  }
+
+  /// Unfold a defined guard call to equality guards.
+  /// call args: S1, S2, ..., Sn (from the guard call)
+  /// unit clause args: T1, T2, ..., Tn (from the unit clause head)
+  /// Result: guards T1'=S1, T2'=S2, ..., Tn'=Sn where Ti' has fresh variables
+  List<Guard> _unfoldDefinedGuard(List<Term> callArgs, List<Term> unitClauseArgs, int line, int column) {
+    // Create fresh variable mapping for unit clause variables
+    final varMapping = <String, String>{};
+
+    // Rename variables in unit clause args to fresh names
+    final renamedArgs = <Term>[];
+    for (final arg in unitClauseArgs) {
+      renamedArgs.add(_renameVariables(arg, varMapping, line, column));
+    }
+
+    // Create equality guards: Ti = Si
+    final guards = <Guard>[];
+    for (int i = 0; i < callArgs.length && i < renamedArgs.length; i++) {
+      guards.add(Guard('=', [renamedArgs[i], callArgs[i]], line, column));
+    }
+
+    return guards;
+  }
+
+  /// Rename variables in a term to fresh names.
+  /// Updates varMapping with new names for each variable encountered.
+  Term _renameVariables(Term term, Map<String, String> varMapping, int line, int column) {
+    if (term is VarTerm) {
+      final freshName = varMapping.putIfAbsent(term.name, () => '_G${_freshVarCounter++}');
+      return VarTerm(freshName, term.isReader, term.line, term.column);
+    } else if (term is StructTerm) {
+      final newArgs = term.args.map((arg) => _renameVariables(arg, varMapping, line, column)).toList();
+      return StructTerm(term.functor, newArgs, term.line, term.column);
+    } else if (term is ListTerm) {
+      final newHead = term.head != null ? _renameVariables(term.head!, varMapping, line, column) : null;
+      final newTail = term.tail != null ? _renameVariables(term.tail!, varMapping, line, column) : null;
+      return ListTerm(newHead, newTail, term.line, term.column);
+    } else if (term is UnderscoreTerm) {
+      // Anonymous variables get fresh names too (each _ is independent)
+      final freshName = '_G${_freshVarCounter++}';
+      return VarTerm(freshName, false, term.line, term.column);
+    } else {
+      // ConstTerm - return as is
+      return term;
+    }
   }
 
   AnnotatedProcedure _analyzeProcedure(Procedure proc) {
