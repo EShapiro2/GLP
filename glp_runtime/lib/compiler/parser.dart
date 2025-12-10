@@ -40,20 +40,20 @@ class Parser {
       if (_peek().type == TokenType.ATOM && _peek().lexeme == name) {
         // Same predicate name
         couldBeSameProcedure = true;
-      } else if (name == ':=' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER)) {
-        // := clauses start with variable (e.g., "Result := X + Y")
+      } else if (name == ':=' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER || _peek().type == TokenType.UNDERSCORE)) {
+        // := clauses start with variable or underscore (e.g., "Result := X + Y" or "_ := X / 0")
         // Look ahead to see if it's followed by :=
         if (_current + 1 < tokens.length && tokens[_current + 1].type == TokenType.ASSIGN) {
           couldBeSameProcedure = true;
         }
-      } else if (name == '=..' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER)) {
-        // =.. clauses start with variable (e.g., "X? =.. Y")
+      } else if (name == '=..' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER || _peek().type == TokenType.UNDERSCORE)) {
+        // =.. clauses start with variable or underscore (e.g., "X? =.. Y")
         // Look ahead to see if it's followed by =..
         if (_current + 1 < tokens.length && tokens[_current + 1].type == TokenType.UNIV) {
           couldBeSameProcedure = true;
         }
-      } else if (name == '=' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER)) {
-        // = clauses start with variable (e.g., "X? = Y")
+      } else if (name == '=' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER || _peek().type == TokenType.UNDERSCORE)) {
+        // = clauses start with variable or underscore (e.g., "X? = Y")
         // Look ahead to see if it's followed by =
         if (_current + 1 < tokens.length && tokens[_current + 1].type == TokenType.EQUALS) {
           couldBeSameProcedure = true;
