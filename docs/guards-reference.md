@@ -246,6 +246,57 @@ safe_divide(X, Y, Z) :- integer(X?), integer(Y?), Y? =\= 0 |
 
 ---
 
+## Defined Guards (Unit Clause Unfolding)
+
+### ✅ User-defined guard predicates via unit clauses
+
+A **unit clause** (head-only, no guards, no body) can define a guard predicate:
+
+```prolog
+% Define channel/1 as a guard predicate
+channel(ch(_, _)).
+```
+
+When used in guard position, the compiler unfolds it to HEAD-style pattern matching:
+
+```prolog
+% This guard:
+process(X, Y) :- channel(X?) | ...
+
+% Unfolds at compile-time to:
+process(X, Y) :- X? = ch(_, _) | ...
+```
+
+**Semantics** (three-valued, like all guards):
+- **Success**: Argument matches the unit clause pattern
+- **Suspend**: Argument contains unbound reader
+- **Fail**: Argument doesn't match pattern
+
+**Example**:
+```prolog
+% Define a type guard
+pair(p(_, _)).
+
+% Use in guard position
+process_pair(X, R) :- pair(X?) | R = is_pair.
+process_pair(_, R) :- otherwise | R = not_pair.
+
+% Queries:
+% process_pair(p(a,b), R).  → R = is_pair
+% process_pair(foo, R).     → R = not_pair
+% process_pair(X, R).       → suspended (X unbound)
+```
+
+**Requirements for unit clause guards**:
+1. Exactly one clause
+2. No guards (no `|` in clause)
+3. No body (just the head pattern)
+4. Use `_` for pattern placeholders (satisfies SRSW)
+
+**Why anonymous variables**: The unit clause head pattern uses `_` because there's no body to consume the variables. Using named variables like `channel(ch(In?, Out)).` would violate SRSW (reader with no writer).
+
+---
+
 ## Planned Comparison Guards (Require Parser Extension)
 
 ### 📝 `X < Y`, `X =< Y`, `X > Y`, `X >= Y`
