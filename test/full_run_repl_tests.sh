@@ -58,6 +58,7 @@ $GLP_DIR/depth_test.glp
 $GLP_DIR/paa.glp
 $GLP_DIR/test_bob.glp
 $GLP_DIR/test_nested_suspend.glp
+test_defined_guards.glp
 append_dl.glp
 hello.
 p(X).
@@ -178,6 +179,9 @@ bob(Xbob?).
 level1(Xlv1?).
 level2([Xlv2?|Rlv2]).
 level3([wrapper(Xlv3?)|Rlv3]).
+test(ch(Adg?, Bdg), Rdg1).
+test(foo, Rdg2).
+test(Xdg?, Rdg3).
 :quit
 REPL_INPUT
 2>&1)
@@ -362,6 +366,11 @@ declare -a tests=(
     "Suspend level1(X?) unbound:level1(X.*) → suspended"
     "Suspend level2 nested:level2(.*) → suspended"
     "Suspend level3 deep nested:level3(.*) → suspended"
+
+    # Defined guards (unit clause unfolding)
+    "Defined guard match:Rdg1 = ok"
+    "Defined guard fail:Rdg2 = not_channel"
+    "Defined guard suspend:test(X.*, Rdg3) → suspended"
 )
 
 PASS=0
