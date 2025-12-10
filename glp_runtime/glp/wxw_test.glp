@@ -1,0 +1,4 @@
+%% wxw_test.glp - Test writer vs writer unification
+%% According to spec, WxW should FAIL, not suspend
+
+wxw_test(X, Y).
