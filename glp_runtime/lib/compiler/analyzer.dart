@@ -287,6 +287,16 @@ class Analyzer {
       }
     }
 
+    // Ground equality guard marks both arguments as grounded
+    // =?= succeeds only if both arguments are ground and equal
+    if (guard.predicate == '=?=' && guard.args.length == 2) {
+      for (final arg in guard.args) {
+        if (arg is VarTerm) {
+          varTable.markGrounded(arg.name);
+        }
+      }
+    }
+
     // Analyze guard arguments
     for (final arg in guard.args) {
       _analyzeTerm(arg, varTable);
