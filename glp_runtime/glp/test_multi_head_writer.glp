@@ -1,9 +1,0 @@
-% Test multiple head writers with ground guard
-% lookup(Key, [(Key, Value)|_], Value?) - Key appears twice in head
-
-% With ground guard - should compile
-lookup(Key, [(Key, Value)|_], Value?) :- ground(Key?) | true.
-lookup(Key, [_|Rest], Value?) :- otherwise | lookup(Key?, Rest?, Value).
-
-% Test query: lookup(b, [(a,1),(b,2)], V).
-% Expected: V = 2

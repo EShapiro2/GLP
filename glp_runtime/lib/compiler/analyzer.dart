@@ -9,7 +9,6 @@ class VariableInfo {
   // Occurrence tracking
   int writerOccurrences = 0;
   int readerOccurrences = 0;
-  int headWriterOccurrences = 0;  // Track head writer occurrences separately
 
   // First occurrence location
   AstNode? firstOccurrence;
@@ -61,13 +60,6 @@ class VariableTable {
     info.firstOccurrence ??= node;
   }
 
-  void recordHeadWriterOccurrence(String name, AstNode node) {
-    final info = _vars.putIfAbsent(name, () => VariableInfo(name, true));
-    info.writerOccurrences++;
-    info.headWriterOccurrences++;
-    info.firstOccurrence ??= node;
-  }
-
   void recordReaderOccurrence(String name, AstNode node) {
     final writerName = name;  // Reader X? pairs with writer X
 
@@ -89,29 +81,12 @@ class VariableTable {
     for (final info in _vars.values) {
       // Check writer occurrences
       if (info.writerOccurrences > 1) {
-        // Multiple head writers allowed with ground guard (for pattern matching)
-        final extraWriters = info.writerOccurrences - 1;
-        final extraHeadWriters = info.headWriterOccurrences - 1;
-
-        if (extraHeadWriters == extraWriters && isGrounded(info.name)) {
-          // All extra writers are in head AND variable is grounded - OK
-        } else if (extraHeadWriters < extraWriters) {
-          // Some extra writers are in body - always invalid
-          throw CompileError(
-            'SRSW violation: Writer variable "${info.name}" occurs multiple times in body',
-            info.firstOccurrence?.line ?? 0,
-            info.firstOccurrence?.column ?? 0,
-            phase: 'analyzer'
-          );
-        } else {
-          // Multiple head writers without ground guard
-          throw CompileError(
-            'SRSW violation: Multiple head writers for "${info.name}" require ground(${info.name}?) guard',
-            info.firstOccurrence?.line ?? 0,
-            info.firstOccurrence?.column ?? 0,
-            phase: 'analyzer'
-          );
-        }
+        throw CompileError(
+          'SRSW violation: Writer variable "${info.name}" occurs ${info.writerOccurrences} times in clause',
+          info.firstOccurrence?.line ?? 0,
+          info.firstOccurrence?.column ?? 0,
+          phase: 'analyzer'
+        );
       }
 
       // Check reader occurrences (unless grounded)
@@ -125,10 +100,10 @@ class VariableTable {
       }
 
       // Check for complete reader/writer pairs (revised SRSW requirement)
-      // Each variable must have at least one writer AND at least one reader
-      if (info.writerOccurrences < 1) {
+      // Each variable must have exactly one writer AND at least one reader
+      if (info.writerOccurrences != 1) {
         throw CompileError(
-          'SRSW violation: Variable "${info.name}" has no writer occurrence',
+          'SRSW violation: Variable "${info.name}" must have exactly one writer occurrence (found ${info.writerOccurrences})',
           info.firstOccurrence?.line ?? 0,
           info.firstOccurrence?.column ?? 0,
           phase: 'analyzer'
@@ -221,8 +196,8 @@ class Analyzer {
   AnnotatedClause _analyzeClause(Clause clause) {
     final varTable = VariableTable();
 
-    // Analyze head (track head writer occurrences separately)
-    _analyzeHead(clause.head, varTable);
+    // Analyze head
+    _analyzeAtom(clause.head, varTable);
 
     // Analyze guards (if present)
     final hasGuards = clause.guards != null && clause.guards!.isNotEmpty;
@@ -252,33 +227,6 @@ class Analyzer {
   void _analyzeAtom(Atom atom, VariableTable varTable) {
     for (final arg in atom.args) {
       _analyzeTerm(arg, varTable);
-    }
-  }
-
-  void _analyzeHead(Atom atom, VariableTable varTable) {
-    for (final arg in atom.args) {
-      _analyzeHeadTerm(arg, varTable);
-    }
-  }
-
-  void _analyzeHeadTerm(Term term, VariableTable varTable) {
-    if (term is VarTerm) {
-      if (term.isReader) {
-        varTable.recordReaderOccurrence(term.name, term);
-      } else {
-        varTable.recordHeadWriterOccurrence(term.name, term);
-      }
-    } else if (term is StructTerm) {
-      for (final arg in term.args) {
-        _analyzeHeadTerm(arg, varTable);
-      }
-    } else if (term is ListTerm) {
-      if (term.head != null) {
-        _analyzeHeadTerm(term.head!, varTable);
-      }
-      if (term.tail != null) {
-        _analyzeHeadTerm(term.tail!, varTable);
-      }
     }
   }
 
