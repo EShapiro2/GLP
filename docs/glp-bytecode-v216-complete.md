@@ -267,12 +267,23 @@ When debugging bytecode:
 - Otherwise: fail to next clause
 
 ### 6.2 head_writer Xi
-**Operation**: Process writer variable in clause head  
+**Operation**: Process writer variable in clause head
 **Behavior**:
 - In READ mode: extract value from current structure position (S) into Xi
 - In WRITE mode: record new writer creation in σ̂w
 - Operate against tentative state, not actual heap
 - Increment S after operation
+
+**Goal argument cases** (when processing top-level argument):
+- Goal constant/structure: assign to Xi in σ̂w
+- Goal writer (unbound): FAIL (WxW violation)
+- Goal writer (bound): assign dereferenced value to Xi
+- Goal reader (bound): assign dereferenced value to Xi
+- Goal reader (unbound): assign the reader reference itself to Xi, SUCCEED
+  - This connects Xi to the reader's communication channel
+  - When the reader's paired writer is later bound, the value flows through Xi
+
+The unbound-reader case is critical: head writers receive reader references directly without dereferencing. This enables passthrough patterns like `copy(X, X?)` where the output receives whatever the input will receive.
 
 ### 6.3 head_reader Xi
 **Operation**: Process reader variable in clause head
