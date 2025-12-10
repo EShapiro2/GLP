@@ -1,0 +1,32 @@
+%% demo_response_stream.glp - Demonstrates response_stream/merge pattern
+%% Simplified version of cold-call protocol for testing
+
+%% response_stream: produces single message when response arrives
+%% Uses ground(Resp?) to both wait for binding AND enable multiple readers
+response_stream(Resp, From, To, [msg(From?, To?, response(Resp?))]) :-
+    ground(Resp?) | true.
+
+%% Simple agent that sends intro and waits for response
+%% Output list pattern: [FirstMsg|Rest?] where Rest is filled by recursive call
+demo_agent(Id, [msg(user, Id?, connect(Target))|In], [msg(Id?, Target?, intro(Id?, Resp))|Out?]) :-
+    ground(Id?), ground(Target?) |
+    % Setup response stream
+    response_stream(Resp?, Target?, Id?, Rs),
+    % Merge response into input
+    merge(In?, Rs?, In1),
+    % Continue processing
+    demo_agent(Id?, In1?, Out).
+
+%% Process response when it arrives
+demo_agent(Id, [msg(From, Id?, response(Resp))|In], [got_response(From?, Resp?)|Out?]) :-
+    ground(Id?) |
+    demo_agent(Id?, In?, Out).
+
+%% Empty input - terminate
+demo_agent(_, [], []).
+
+%% Merge two streams
+merge([H|T], Ys, [H?|Zs?]) :- merge(T?, Ys?, Zs).
+merge(Xs, [H|T], [H?|Zs?]) :- merge(Xs?, T?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
