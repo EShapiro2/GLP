@@ -147,14 +147,14 @@ The occurs check in readers prevents formation of circular terms.
 #### Type Guards
 
 **Currently Implemented**:
-- ✅ `ground(X)` - succeeds if X contains no unbound variables, fails otherwise
-- ✅ `known(X)` - succeeds if X is bound, fails if unbound variable
+- ✅ `ground(X?)` - succeeds if X? contains no unbound variables, suspends if unbound readers, fails if unbound writers
+- ✅ `known(X?)` - succeeds if X? is bound, suspends if unbound reader, fails if unbound writer
+- ✅ `number(X?)` - succeeds if X? bound to number, suspends if X? unbound reader, fails if X? bound to non-number
+- ✅ `integer(X?)` - succeeds if X? bound to integer, suspends if X? unbound reader, fails otherwise
 
 **Planned Type Guards**:
-- ⏳ `number(X)` - succeeds if X bound to number, suspends if X unbound, fails if X bound to non-number
-- ⏳ `integer(X)` - succeeds if X bound to integer, suspends if X unbound, fails otherwise
 - ⏳ `writer(X)` - succeeds if X is a writer variable, fails if reader or ground
-- ⏳ `reader(X)` - succeeds if X is a reader variable, fails if writer or ground
+- ⏳ `reader(X?)` - succeeds if X? is a reader variable, fails if writer or ground
 
 #### Arithmetic Comparison Guards
 
@@ -220,25 +220,25 @@ Why this is safe:
 This is NOT a violation but a controlled relaxation under specific conditions.
 
 **Guards that imply groundness**:
-- ✅ `ground(X)` - explicitly tests for groundness
-- ⏳ `integer(X)` - integers are always ground (when implemented)
-- ⏳ `number(X)` - numbers are always ground (when implemented)
+- ✅ `ground(X?)` - explicitly tests for groundness
+- ✅ `integer(X?)` - integers are always ground
+- ✅ `number(X?)` - numbers are always ground
 
 **Correct patterns**:
 ```prolog
 % ✅ CORRECT - ground guard allows multiple X? occurrences
-broadcast(X, Y1, Y2, Y3) :- ground(X) |
+broadcast(X, Y1, Y2, Y3) :- ground(X?) |
     send(X?, Y1),     % X? appears 3 times - OK!
     send(X?, Y2),
     send(X?, Y3).
 
-% ✅ CORRECT - integer guard implies groundness (when implemented)
-distribute(N, R1, R2) :- integer(N) |
+% ✅ CORRECT - integer guard implies groundness
+distribute(N, R1, R2) :- integer(N?) |
     execute('evaluate', [N? * 2, R1]),   % N? appears twice - OK!
     execute('evaluate', [N? * 3, R2]).
 
 % ✅ CORRECT - ground guard with arithmetic
-compute_twice(X, Y1, Y2) :- ground(X) |
+compute_twice(X, Y1, Y2) :- ground(X?) |
     execute('evaluate', [X? + 1, Y1]),
     execute('evaluate', [X? * 2, Y2]).
 ```
@@ -250,10 +250,10 @@ bad_broadcast(X, Y1, Y2) :-
     send(X?, Y1),    % SRSW VIOLATION!
     send(X?, Y2).    % X? appears twice without ground guard
 
-% ❌ WRONG - known(X) does NOT imply ground
-bad_use(X, Y1, Y2) :- known(X) |
+% ❌ WRONG - known(X?) does NOT imply ground
+bad_use(X, Y1, Y2) :- known(X?) |
     send(X?, Y1),    % SRSW VIOLATION!
-    send(X?, Y2).    % X could be f(Y) where Y is unbound
+    send(X?, Y2).    % X? could be f(Y) where Y is unbound
 ```
 
 **Key Insight**: This relaxation enables broadcasting and multi-reader patterns essential for concurrent programming.

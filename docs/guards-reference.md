@@ -56,21 +56,23 @@ echo(Input, Output) :- known(Input) | Output = Input?.
 
 ---
 
-### ✅ `ground(X)`
-**Test if X contains no unbound variables**
+### ✅ `ground(X?)`
+**Test if X? contains no unbound variables**
 
 **Semantics**:
-- Success: X is ground (no unbound variables anywhere)
-- Suspend: X contains unbound readers
-- Fail: X contains unbound writers
+- Success: X? is ground (no unbound variables anywhere)
+- Suspend: X? contains unbound readers (waiting for values)
+- Fail: X? contains unbound writers
+
+**Why the argument must be a reader**: Guards use three-valued semantics where unbound variables cause suspension (waiting for a value). If the argument were a writer, an unbound variable would cause immediate failure rather than suspension, defeating the purpose of patient synchronization.
 
 **Example**:
 ```prolog
 % Enable multiple reader occurrences
-replicate(X, [X?, X?, X?]) :- ground(X) | true.
+replicate(X, [X?, X?, X?]) :- ground(X?) | true.
 ```
 
-**Key Property**: With `ground(X)` guard, multiple occurrences of `X?` in the body don't violate single-writer, as ground terms don't expose writers.
+**Key Property**: With `ground(X?)` guard, multiple occurrences of `X?` in the body don't violate SRSW, as ground terms don't expose writers.
 
 ---
 
@@ -93,6 +95,28 @@ run(Goal) :- otherwise | execute('write', ['No clauses for: ']),
 
 ---
 
+## Guard Arguments: Why Readers?
+
+Guards that test variable values (`ground`, `known`, `integer`, `number`, `atom`) take **reader** arguments. This follows from GLP's three-valued guard semantics:
+
+| Argument Type | If Unbound | Behavior |
+|---------------|------------|----------|
+| Reader (`X?`) | Suspend | Wait for paired writer to provide value |
+| Writer (`X`) | Fail | No paired reader to wait for |
+
+Using a reader enables patient synchronization: the clause waits until data arrives before testing it. Using a writer would cause immediate failure on unbound variables, defeating the purpose of concurrent synchronization.
+
+**Example**:
+```prolog
+% ✅ CORRECT - reader suspends until value available
+process(X, Y?) :- ground(X?) | Y = computed(X?).
+
+% ❌ WRONG - writer fails immediately if unbound
+process(X, Y?) :- ground(X) | Y = computed(X?).  % Would fail, not suspend
+```
+
+---
+
 ## CRITICAL: Ground Guards - The ONLY Exception to SRSW Syntactic Restriction
 
 Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The ONLY exception: when guards guarantee groundness, multiple reader occurrences are permitted because ground terms cannot expose writers.
@@ -109,16 +133,16 @@ Ground terms contain no unbound writers. Multiple readers of a ground term do no
 
 | Guard | Implies Ground | Allows Multiple Readers |
 |-------|----------------|-------------------------|
-| ✅ `ground(X)` | Yes | ✅ Yes |
-| ⏳ `integer(X)` | Yes (when implemented) | ✅ Yes |
-| ⏳ `number(X)` | Yes (when implemented) | ✅ Yes |
-| 📝 `X < Y` | Yes (both operands, when succeeds) | ✅ Yes |
-| 📝 `X =< Y` | Yes (both operands, when succeeds) | ✅ Yes |
-| 📝 `X > Y` | Yes (both operands, when succeeds) | ✅ Yes |
-| 📝 `X >= Y` | Yes (both operands, when succeeds) | ✅ Yes |
-| 📝 `X =:= Y` | Yes (both operands, when succeeds) | ✅ Yes |
-| 📝 `X =\= Y` | Yes (both operands, when succeeds) | ✅ Yes |
-| ✅ `known(X)` | **NO** | ❌ No |
+| ✅ `ground(X?)` | Yes | ✅ Yes |
+| ✅ `integer(X?)` | Yes | ✅ Yes |
+| ✅ `number(X?)` | Yes | ✅ Yes |
+| 📝 `X? < Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| 📝 `X? =< Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| 📝 `X? > Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| 📝 `X? >= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| 📝 `X? =:= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| 📝 `X? =\= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| ✅ `known(X?)` | **NO** | ❌ No |
 | ✅ `otherwise` | No | ❌ No |
 
 **Note**: Arithmetic comparison guards suspend if operands are unbound and only succeed if both operands are bound to numbers. Therefore, when they succeed, both operands are guaranteed to be ground.
@@ -129,18 +153,18 @@ Ground terms contain no unbound writers. Multiple readers of a ground term do no
 
 ```prolog
 % ✅ Broadcasting with ground guard
-broadcast(Msg, Out1, Out2, Out3) :- ground(Msg) |
+broadcast(Msg, Out1, Out2, Out3) :- ground(Msg?) |
     send(Msg?, Out1),    % Msg? appears 3 times - OK!
     send(Msg?, Out2),
     send(Msg?, Out3).
 
 % ✅ Multiple computations with ground value
-compute_twice(X, Y1, Y2) :- ground(X) |
+compute_twice(X, Y1, Y2) :- ground(X?) |
     execute('evaluate', [X? + 1, Y1]),   % X? appears twice - OK!
     execute('evaluate', [X? * 2, Y2]).
 
-% ✅ Integer guard implies groundness (when implemented)
-distribute(N, R1, R2) :- integer(N) |
+% ✅ Integer guard implies groundness
+distribute(N, R1, R2) :- integer(N?) |
     execute('evaluate', [N? * 2, R1]),
     execute('evaluate', [N? + 5, R2]).
 
@@ -158,10 +182,10 @@ bad_broadcast(X, Y1, Y2) :-
     send(X?, Y1),    % SRSW VIOLATION!
     send(X?, Y2).    % X? appears twice without ground guard
 
-% ❌ WRONG - known(X) does NOT imply ground
-bad_pattern(X, Y1, Y2) :- known(X) |
+% ❌ WRONG - known(X?) does NOT imply ground
+bad_example(X, Y1, Y2) :- known(X?) |
     send(X?, Y1),    % SRSW VIOLATION!
-    send(X?, Y2).    % X could be f(Z) where Z is unbound
+    send(X?, Y2).    % X? could be f(Z) where Z is unbound
 ```
 
 ### Compiler Requirements
@@ -189,34 +213,34 @@ This feature enables essential concurrent patterns:
 
 ---
 
-## Planned Guards (Not Yet Implemented)
+## Type Guards (Implemented)
 
-### ⏳ `number(X)`
+### ✅ `number(X?)`
 **Test for numeric type**
 
 **Semantics**:
-- Success: X bound to number (int or double)
-- Suspend: X is unbound reader
-- Fail: X bound to non-number
+- Success: X? bound to number (int or double)
+- Suspend: X? is unbound reader
+- Fail: X? bound to non-number
 
-**Example** (future):
+**Example**:
 ```prolog
-safe_compute(X, Y) :- number(X) | execute('evaluate', [X? * 2, Y]).
+safe_compute(X, Y) :- number(X?) | execute('evaluate', [X? * 2, Y]).
 ```
 
 ---
 
-### ⏳ `integer(X)`
+### ✅ `integer(X?)`
 **Test for integer type**
 
 **Semantics**:
-- Success: X bound to integer
-- Suspend: X is unbound reader
-- Fail: X bound to non-integer (including floats)
+- Success: X? bound to integer
+- Suspend: X? is unbound reader
+- Fail: X? bound to non-integer (including floats)
 
-**Example** (future):
+**Example**:
 ```prolog
-safe_divide(X, Y, Z) :- integer(X), integer(Y), Y =\= 0 |
+safe_divide(X, Y, Z) :- integer(X?), integer(Y?), Y? =\= 0 |
                         execute('evaluate', [X? / Y?, Z]).
 ```
 
@@ -236,11 +260,11 @@ safe_divide(X, Y, Z) :- integer(X), integer(Y), Y =\= 0 |
 
 **Example** (future):
 ```prolog
-factorial(N, F) :- integer(N), N > 0 |
+factorial(N, F) :- integer(N?), N? > 0 |
                    execute('evaluate', [N? - 1, N1]),
                    factorial(N1?, F1),
                    execute('evaluate', [N? * F1?, F]).
-factorial(N, 1) :- integer(N), N =< 0 | true.
+factorial(N, 1) :- integer(N?), N? =< 0 | true.
 ```
 
 **Parser Status**: Requires adding comparison tokens (`LT`, `GT`, `LE`, `GE`) to lexer and handling infix syntax in guard position.
@@ -258,7 +282,7 @@ factorial(N, 1) :- integer(N), N =< 0 | true.
 
 **Example** (future):
 ```prolog
-safe_divide(X, Y, Z) :- number(X), number(Y), Y =\= 0 |
+safe_divide(X, Y, Z) :- number(X?), number(Y?), Y? =\= 0 |
                         execute('evaluate', [X? / Y?, Z]).
 ```
 
@@ -275,7 +299,7 @@ safe_divide(X, Y, Z) :- number(X), number(Y), Y =\= 0 |
 | **Syntax** | `Head :- Guard \| Body` | `execute('name', [Args])` |
 | **Phase** | HEAD/GUARDS (before commit) | BODY (after commit) |
 | **Side Effects** | Never | May have (I/O, mutations) |
-| **Examples** | `known(X)`, `ground(X)`, `number(X)` | `evaluate/2`, `write/1`, `file_read/2` |
+| **Examples** | `known(X?)`, `ground(X?)`, `number(X?)` | `evaluate/2`, `write/1`, `file_read/2` |
 
 ---
 
@@ -290,12 +314,12 @@ unsafe_double(X, Y) :-
 
 % ✅ SAFE - guard ensures X is bound number
 safe_double(X, Y) :-
-  number(X) |
+  number(X?) |
   execute('evaluate', [X? * 2, Y]).
 
 % ✅ SAFE - multiple guards ensure preconditions
 safe_divide(X, Y, Z) :-
-  number(X), number(Y), Y =\= 0 |
+  number(X?), number(Y?), Y? =\= 0 |
   execute('evaluate', [X? / Y?, Z]).
 ```
 
@@ -306,30 +330,30 @@ safe_divide(X, Y, Z) :-
 ### Pattern 1: Type Checking Before Execute
 ```prolog
 process(X, Result) :-
-  integer(X), X > 0 |
+  integer(X?), X? > 0 |
   execute('evaluate', [X? * X?, Result]).
 ```
 
 ### Pattern 2: Conditional Clause Selection
 ```prolog
 compute(N, Result) :-
-  integer(N), N > 10 |
+  integer(N?), N? > 10 |
   execute('evaluate', [N? * 2, Result]).
 compute(N, Result) :-
-  integer(N), N =< 10 |
+  integer(N?), N? =< 10 |
   execute('evaluate', [N? + 10, Result]).
 ```
 
 ### Pattern 3: Default Case with Otherwise
 ```prolog
-handle(X, done) :- integer(X) | process_int(X?).
-handle(X, done) :- ground(X) | process_ground(X?).
+handle(X, done) :- integer(X?) | process_int(X?).
+handle(X, done) :- ground(X?) | process_ground(X?).
 handle(_, error) :- otherwise | true.
 ```
 
 ### Pattern 4: Safe Multiple Readers
 ```prolog
-broadcast(Msg, [Msg?, Msg?, Msg?]) :- ground(Msg) | true.
+broadcast(Msg, [Msg?, Msg?, Msg?]) :- ground(Msg?) | true.
 ```
 
 ---
@@ -404,7 +428,7 @@ A: Guards are **patient** (suspend on unbound variables) to enable concurrent pr
 
 **Q: Can I use arithmetic in guards?**
 
-A: ⏳ Not yet - `number(X)` and `X < Y` are planned but not implemented. Currently, use `known(X)` and `ground(X)`, then perform arithmetic via `execute('evaluate', ...)` in the body.
+A: Comparison guards like `X? < Y?` require parser extension and are not yet implemented. Type guards `number(X?)` and `integer(X?)` are implemented. Use `known(X?)` and `ground(X?)` for variable testing, then perform arithmetic via `execute('evaluate', ...)` in the body.
 
 **Q: What's the difference between `known` and `ground`?**
 
