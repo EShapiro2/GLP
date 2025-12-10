@@ -1,11 +1,17 @@
-%% cold_call.glp - Cold Call Befriending Protocol
-%% Source: GLP Papers (Program: Social Graph Cold-Call Befriending Protocol)
+%% cold_call_deployed.glp.future - Cold Call Befriending Protocol (Deployment Version)
+%% STATUS: NOT EXECUTABLE IN GLPSAM - For future distributed deployment only
 %%
+%% This version includes attestation guards for cryptographic message verification.
+%% The attestation/2 guard requires a distributed runtime with signature verification.
+%% For simulation, use cold_call_glpsam.glp instead.
+%%
+%% NOTE: Contains unresolved SRSW issues with attestation guards that will be
+%% addressed when implementing the deployment runtime.
+%%
+%% Source: GLP Papers (Program: Social Graph Cold-Call Befriending Protocol)
 %% Enables agents to establish friendship without prior shared variables.
 %% Four phases: user initiation, offer transmission, user consultation,
 %% channel establishment.
-%%
-%% Uses attestation guards for message authentication.
 
 % Process user request to connect (self-introduction)
 social_graph(Id, [msg(user, Id?, connect(Target))|In], Fs) :-

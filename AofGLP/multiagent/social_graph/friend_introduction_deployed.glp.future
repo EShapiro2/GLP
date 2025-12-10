@@ -1,6 +1,14 @@
-%% friend_introduction.glp - Friend-Mediated Introduction Protocol
-%% Source: GLP Papers (Program: Friend-Mediated Introduction Protocol)
+%% friend_introduction_deployed.glp.future - Friend-Mediated Introduction Protocol (Deployment Version)
+%% STATUS: NOT EXECUTABLE IN GLPSAM - For future distributed deployment only
 %%
+%% This version includes attestation guards for cryptographic message verification.
+%% The attestation/2 guard requires a distributed runtime with signature verification.
+%% For simulation, a GLPSAM version would be needed.
+%%
+%% NOTE: Contains unresolved SRSW issues with attestation guards that will be
+%% addressed when implementing the deployment runtime.
+%%
+%% Source: GLP Papers (Program: Friend-Mediated Introduction Protocol)
 %% Leverages existing trust relationships to establish new connections.
 %% When agent r is friends with both p and q, r can introduce them.
 
