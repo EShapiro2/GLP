@@ -274,13 +274,16 @@ When debugging bytecode:
 - Operate against tentative state, not actual heap
 - Increment S after operation
 
-**WxW Detection**:
-When processing a head writer against a goal argument:
-- If goal argument is an unbound writer: FAIL immediately (WxW violation)
-- If goal argument is an unbound reader: add reader to Si (suspend)
-- If goal argument is bound: extract value into Xi
+**Goal argument cases** (when processing top-level argument):
+- Goal constant/structure: assign to Xi in σ̂w
+- Goal writer (unbound): FAIL (WxW violation)
+- Goal writer (bound): assign dereferenced value to Xi
+- Goal reader (bound): assign dereferenced value to Xi
+- Goal reader (unbound): assign the reader reference itself to Xi, SUCCEED
+  - This connects Xi to the reader's communication channel
+  - When the reader's paired writer is later bound, the value flows through Xi
 
-Writer-to-writer unification violates the SRSW constraint and must fail, not suspend.
+The unbound-reader case is critical: head writers receive reader references directly without dereferencing. This enables passthrough patterns like `copy(X, X?)` where the output receives whatever the input will receive.
 
 ### 6.3 head_reader Xi
 **Operation**: Process reader variable in clause head
