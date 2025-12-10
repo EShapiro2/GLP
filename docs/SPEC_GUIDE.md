@@ -477,6 +477,17 @@ Result? := X / Y :-
 - If SRSW seems too restrictive for a pattern, discuss the design
 - The ground guard exception exists for legitimate multi-reader patterns
 
+### Multiple Head Writers
+
+When the same writer variable appears multiple times in a clause head (for pattern matching / equality testing), a `ground(X?)` guard is required:
+
+```prolog
+% Testing that first argument equals key in list pair
+lookup(Key, [(Key, Value)|_], Value?) :- ground(Key?) | true.
+```
+
+Without the guard, the binding direction is ambiguous when the variable is unbound at call time. The guard ensures the variable is bound, making both head occurrences function as equality constraints against a known value.
+
 ## Bytecode Instruction Model
 
 The GLP bytecode is modeled after the Warren Abstract Machine (WAM) and Flat Concurrent Prolog (FCP) abstract machines, adapted for GLP's three-valued unification (success/suspend/fail) and SRSW semantics.
