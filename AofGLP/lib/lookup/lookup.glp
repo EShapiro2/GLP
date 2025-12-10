@@ -10,6 +10,7 @@ lookup(Key, [_|Rest], Value?) :-
 
 %% lookup_send(Key, Msg, Fs, Fs1) - send message through channel, update list
 lookup_send(Key, Msg, Fs, Fs1?) :-
+    ground(Key?) |
     lookup(Key?, Fs?, Out),
     Out = [Msg?|Out1?],
     update(Key?, Out1?, Fs?, Fs1).
