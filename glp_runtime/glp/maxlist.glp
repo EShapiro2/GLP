@@ -1,0 +1,17 @@
+%% maxlist.glp - Finding the maximum of a list of integers (AoP 8.9)
+%% maxlist(Xs,N) :- N is the maximum of the list of integers Xs.
+
+maxlist([X|Xs], M?) :- maxlist_acc(Xs?, X?, M).
+
+maxlist_acc([X|Xs], Y, M?) :- maximum(X?, Y?, Y1), maxlist_acc(Xs?, Y1?, M).
+maxlist_acc([], M, M?).
+
+maximum(X, Y, Y?) :- X? =< Y? | true.
+maximum(X, Y, X?) :- X? > Y? | true.
+
+%% reduce clauses for metainterpreter
+reduce(maxlist([X|Xs], M?), maxlist_acc(Xs?, X?, M)).
+reduce(maxlist_acc([X|Xs], Y, M?), (maximum(X?, Y?, Y1), maxlist_acc(Xs?, Y1?, M))).
+reduce(maxlist_acc([], M, M?), true).
+reduce(maximum(X, Y, Y?), true) :- X? =< Y? | true.
+reduce(maximum(X, Y, X?), true) :- X? > Y? | true.

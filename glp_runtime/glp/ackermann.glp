@@ -3,9 +3,9 @@
 
 ackermann(0, N, s(N?)).
 ackermann(s(M), 0, Val?) :- ackermann(M?, s(0), Val).
-ackermann(s(M), s(N), Val?) :- tuple(M?) | ackermann(s(M?), N?, Val1), ackermann(M?, Val1?, Val).
+ackermann(s(M), s(N), Val?) :- tuple(M?), tuple(N?) | ackermann(s(M?), N?, Val1), ackermann(M?, Val1?, Val).
 
 %% reduce clauses for metainterpreter
 reduce(ackermann(0, N, s(N?)), true).
 reduce(ackermann(s(M), 0, Val?), ackermann(M?, s(0), Val)).
-reduce(ackermann(s(M), s(N), Val?), (ackermann(s(M?), N?, Val1), ackermann(M?, Val1?, Val))) :- tuple(M?) | true.
+reduce(ackermann(s(M), s(N), Val?), (ackermann(s(M?), N?, Val1), ackermann(M?, Val1?, Val))) :- tuple(M?), tuple(N?) | true.

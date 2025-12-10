@@ -7,7 +7,7 @@ minimum(N1, N2, Out?) :- tuple(N1?), tuple(N2?) | min_check(N1?, N2?, Out).
 min_check(N1, N2, N1?) :- tuple(N1?), tuple(N2?) | lesseq(N1?, N2?).
 min_check(N1, N2, N2?) :- tuple(N1?), tuple(N2?) | lesseq(N2?, N1?).
 
-lesseq(0, X) :- natural_number(X?) | true.
+lesseq(0, X) :- tuple(X?) | true.
 lesseq(s(X), s(Y)) :- lesseq(X?, Y?).
 
 natural_number(0).
@@ -17,7 +17,7 @@ natural_number(s(X)) :- natural_number(X?).
 reduce(minimum(N1, N2, Out?), min_check(N1?, N2?, Out)) :- tuple(N1?), tuple(N2?) | true.
 reduce(min_check(N1, N2, N1?), lesseq(N1?, N2?)) :- tuple(N1?), tuple(N2?) | true.
 reduce(min_check(N1, N2, N2?), lesseq(N2?, N1?)) :- tuple(N1?), tuple(N2?) | true.
-reduce(lesseq(0, X), natural_number(X?)).
+reduce(lesseq(0, X), true) :- tuple(X?) | true.
 reduce(lesseq(s(X), s(Y)), lesseq(X?, Y?)).
 reduce(natural_number(0), true).
 reduce(natural_number(s(X)), natural_number(X?)).

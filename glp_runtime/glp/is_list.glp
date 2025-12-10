@@ -1,0 +1,9 @@
+%% is_list.glp - Defining a list (AoP 3.11)
+%% list(Xs) :- Xs is a list.
+
+list([]).
+list([_|Xs]) :- list(Xs?).
+
+%% reduce clauses for metainterpreter
+reduce(list([]), true).
+reduce(list([_|Xs]), list(Xs?)).
