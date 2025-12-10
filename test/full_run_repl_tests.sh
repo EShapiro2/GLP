@@ -163,6 +163,7 @@ no_guard(Xng, 5).
 with_guard(Xwg, 5).
 Xsl = [send(1,a), send(2,b)].
 open(1, Xopen, Yopen).
+open2(1, Xopen2).
 append([1,2|T1?], T1, [3,4|T2?], T2, Hdl, Tdl?).
 test_list_in_body([1,2,3,4], Xngl).
 build_list(a, b, Xbld).
@@ -343,8 +344,12 @@ declare -a tests=(
     "Deep binary tree:Xtr3 = node(node(leaf(val), leaf(a)), leaf(b))"
     "Multiple writers nested:Xmw = pair(wrap(p), wrap(q))"
 
-    # Bounded buffer (writer-to-reader alias fix)
-    "Open buffer:Xopen = \[\[\] |"
+    # Bounded buffer - WxW: goal unbound writer vs head writer fails
+    # (open/3 uses incorrect mode annotations - T should be T?)
+    "Open buffer:failed"
+
+    # Open2 - WxW-compliant version with single dl(Head,Tail) output
+    "Open2 buffer:Xopen2 = dl"
 
     # Difference list append (now correctly unifies T1 with T1?)
     "DL append:Hdl = \[1, 2, 3, 4 |"

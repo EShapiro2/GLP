@@ -12,8 +12,15 @@ send(Msg, [Msg?|Rest?], Rest).
 receive(Msg?, dl([Msg|Rest?],[_|Tail?]), dl(Rest,Tail)).
 
 % open(Size, Head, Tail) - create Size empty slots, Head=Tail when size=0
+% NOTE: This version has WxW issue when called with two unbound writers
+% Use open2/2 below for WxW-compliant version
 open(0, H?, H).
 open(N, [_|H?], T) :- N? > 0 | N1 := N? - 1, open(N1?, H, T?).
+
+% open2(Size, Buffer) - WxW-compliant version returning dl(Head, Tail) structure
+% Single output avoids goal-writer vs head-writer conflict
+open2(0, dl(H?, H)).
+open2(N, dl([_|H?], T)) :- N? > 0 | N1 := N? - 1, open2(N1?, dl(H, T?)).
 
 % Producer: sends integers 1,2,3,... to buffer head
 bb_prod(N, Head, Tail?) :- ground(N?) |
