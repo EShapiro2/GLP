@@ -4,6 +4,9 @@
 %% When offer is accepted, both agents establish symmetric channel
 %% configurations and merge new friend's input stream into main loop.
 
+% Defined guard: create paired channels where each channel's input is paired with the other's output
+new_channel(ch(Xs?,Ys), ch(Ys?,Xs)).
+
 % Bind response based on user decision
 bind_response(yes, From, Out?, Fs, Fs1?, In, In1?) :-
     atom(From?),
