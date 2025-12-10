@@ -248,6 +248,19 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 - Check file locations with `ls` before referencing them
 
 **REPL Location and Usage:**
+
+**Use compiled executable for faster testing** (recommended):
+```bash
+cd /home/user/GLP/glp_runtime
+# Compile once (if not already compiled or after code changes):
+export PATH="/home/user/dart-sdk/bin:$PATH"
+dart compile exe bin/glp_repl.dart -o glp_repl
+
+# Run tests with compiled executable (much faster - milliseconds vs seconds):
+echo -e 'filename.glp\ngoal.' | ./glp_repl
+```
+
+**Alternative: Use dart run** (slower, recompiles each time):
 ```bash
 cd /home/user/GLP/glp_runtime
 export PATH="/home/user/dart-sdk/bin:$PATH"
@@ -864,7 +877,7 @@ Key files:
    - `reduce(sum_acc([], Acc?, Acc), true)` - reader first, writer second
    - `reduce(sum_acc([], Acc, Acc?), true)` - writer first, reader second
 
-2. **Running the REPL**: Always use `dart run glp_repl.dart` from the `udi/` directory, NOT a compiled exe.
+2. **Running the REPL**: Use compiled executable `./glp_repl` for faster testing, or `dart run bin/glp_repl.dart` if exe not compiled. Run from `glp_runtime/` directory.
 
 3. **Test file patterns**: The test suite uses a specific format - see `run_repl_tests.sh` for the `run_test` function.
 
