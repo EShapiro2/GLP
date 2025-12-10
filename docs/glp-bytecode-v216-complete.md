@@ -760,22 +760,22 @@ process(X) :- otherwise    | ... handle constant case
 
 ### 11.7 Arithmetic Guards (Planned)
 
-**Implementation Status**: ⏳ Specified but not yet implemented
+**Implementation Status**: Type guards implemented, comparison guards require parser extension
 
-The following guards are planned for arithmetic operations. Unlike `evaluate/2` (which is two-valued and aborts on unbound inputs), these guards are three-valued and patient.
+Type guards are three-valued and patient (unlike `evaluate/2` which is two-valued and aborts on unbound inputs).
 
-#### Planned: number(X)
-**Operation**: Test if X is bound to a number
+#### ✅ Implemented: number(X?)
+**Operation**: Test if X? is bound to a number
 **Three-valued semantics**:
-1. If X bound to number (int or double) → **SUCCEED**
-2. If X is unbound reader → **SUSPEND** (add to U, immediately try next clause)
-3. If X bound to non-number → **FAIL**
+1. If X? bound to number (int or double) → **SUCCEED**
+2. If X? is unbound reader → **SUSPEND** (add to U, immediately try next clause)
+3. If X? bound to non-number → **FAIL**
 
-#### Planned: integer(X)
-**Operation**: Test if X is bound to an integer
+#### ✅ Implemented: integer(X?)
+**Operation**: Test if X? is bound to an integer
 **Three-valued semantics**:
-1. If X bound to integer → **SUCCEED**
-2. If X is unbound reader → **SUSPEND** (add to U, immediately try next clause)
+1. If X? bound to integer → **SUCCEED**
+2. If X? is unbound reader → **SUSPEND** (add to U, immediately try next clause)
 3. Otherwise (unbound writer, bound to non-integer) → **FAIL**
 
 #### Planned: Comparison Guards
@@ -794,22 +794,23 @@ The following guards are planned for arithmetic operations. Unlike `evaluate/2` 
 - Transforming infix to prefix predicates (e.g., `X < Y` → `<(X, Y)`)
 
 **Currently Implemented Guards**:
-- ✅ `ground(X)`, `known(X)`, `otherwise`
-- ✅ `if_writer(X)`, `if_reader(X)` - type tests
+- ✅ `ground(X?)`, `known(X?)`, `otherwise`
+- ✅ `number(X?)`, `integer(X?)` - type tests
+- ✅ `if_writer(X)`, `if_reader(X?)` - mode tests
 
-**Design Pattern** (future usage):
+**Design Pattern**:
 ```prolog
 % Safe arithmetic with guards protecting execute
 safe_divide(X, Y, Z) :-
-  number(X), number(Y), Y =\= 0 |   % guards ensure preconditions
-  execute('evaluate', [X? / Y?, Z]).  % two-valued execute
+  number(X?), number(Y?), Y? =\= 0 |   % guards ensure preconditions
+  execute('evaluate', [X? / Y?, Z]).   % two-valued execute
 
-% Conditional computation
+% Conditional computation (when comparison guards implemented)
 compute(N, Result) :-
-  integer(N), N > 0 |               % guards test and select clause
+  integer(N?), N? > 0 |               % guards test and select clause
   execute('evaluate', [N? * 2, Result]).
 compute(N, Result) :-
-  integer(N), N =< 0 |
+  integer(N?), N? =< 0 |
   execute('evaluate', [-N?, Result]).
 ```
 
@@ -1470,7 +1471,7 @@ add(X, Y, Z) :- execute('evaluate', [X? + Y?, Z]).
 
 % SAFE - guards ensure inputs bound
 safe_add(X, Y, Z) :-
-  number(X), number(Y) |
+  number(X?), number(Y?) |
   execute('evaluate', [X? + Y?, Z]).
 ```
 
@@ -1708,7 +1709,7 @@ Result := X? + Y? :- number(X?), number(Y?) |   % Matches arithmetic expressions
 ```
 
 #### 19.4.1 guard_ground Xi
-**Source**: `ground(X)` in guard position
+**Source**: `ground(X?)` in guard position
 **Operation**: Test if Xi is ground (contains no variables)
 **Behavior**:
 - Recursively check Xi for any unbound variables
@@ -1716,23 +1717,25 @@ Result := X? + Y? :- number(X?), number(Y?) |   % Matches arithmetic expressions
 - Suspend if contains unbound readers
 - Fail if contains unbound writers
 
+**Why reader argument**: Guards use readers to enable patient suspension. An unbound reader suspends (waiting for paired writer), while an unbound writer fails immediately.
+
 **Example**:
 ```prolog
-safe_div(X, Y, Z?) :- ground(X), ground(Y), Y? =\= 0 | execute('evaluate', [X? / Y?, Z]).
+safe_div(X, Y, Z?) :- ground(X?), ground(Y?), Y? =\= 0 | execute('evaluate', [X? / Y?, Z]).
 ```
 
 #### 19.4.2 guard_known Xi
-**Source**: `known(X)` in guard position
+**Source**: `known(X?)` in guard position
 **Operation**: Test if Xi is not a variable
 **Behavior**:
 - Succeed if Xi is bound to any term (even if that term contains variables)
 - Suspend if Xi is unbound reader
 - Fail if Xi is unbound writer
 
-**Difference from ground**: `known([X])` succeeds even if X is unbound, `ground([X])` fails.
+**Difference from ground**: `known([X?])` succeeds even if X is unbound, `ground([X?])` fails.
 
 #### 19.4.3 guard_integer Xi
-**Source**: `integer(X)` in guard position
+**Source**: `integer(X?)` in guard position
 **Operation**: Test if Xi is an integer
 **Behavior**:
 - Succeed if Xi is bound to integer value
@@ -1740,7 +1743,7 @@ safe_div(X, Y, Z?) :- ground(X), ground(Y), Y? =\= 0 | execute('evaluate', [X? /
 - Suspend if Xi is unbound reader
 
 #### 19.4.4 guard_number Xi
-**Source**: `number(X)` in guard position
+**Source**: `number(X?)` in guard position
 **Operation**: Test if Xi is numeric (integer or real)
 **Behavior**: As guard_integer but accepts any numeric type (int or float)
 
@@ -1753,7 +1756,7 @@ safe_div(X, Y, Z?) :- ground(X), ground(Y), Y? =\= 0 | execute('evaluate', [X? /
 - **Non-monotonic**: can succeed then fail after binding
 
 #### 19.4.6 guard_reader Xi
-**Source**: `reader(X)` in guard position
+**Source**: `reader(X?)` in guard position
 **Operation**: Test if Xi is an unbound reader
 **Behavior**:
 - Succeed if Xi is unbound reader variable
