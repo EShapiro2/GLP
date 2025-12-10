@@ -22,14 +22,14 @@ These documents define the GLP language and runtime:
 |----------|-------------|
 | [glp-predicate-taxonomy.md](glp-predicate-taxonomy.md) | Classification of predicates (direct, meta, etc.) |
 | [guards-reference.md](guards-reference.md) | Guard predicates reference |
-| [module-language-spec.md](module-language-spec.md) | Module syntax specification |
-| [single-id-migration.md](single-id-migration.md) | Single-ID variable system design |
+| [mutual-ref-spec.md](mutual-ref-spec.md) | Mutual reference specification |
 
 ## Development Guidelines
 
 | Document | Description |
 |----------|-------------|
-| [Mandatory protocol for debugging...](Mandatory%20protocol%20for%20debugging%20the%20GLP%20implementation%20with%20GLP%20programs.txt) | Required debugging protocol |
+| [Mandatory protocol...](Mandatory%20protocol%20for%20debugging%20the%20GLP%20implementation%20with%20GLP%20programs.txt) | Required debugging protocol |
+| [grassroots-testing-framework.md](grassroots-testing-framework.md) | Testing framework documentation |
 
 ## Future Work (`docs/future/`)
 
@@ -48,6 +48,14 @@ Work-in-progress documents:
 | Document | Description |
 |----------|-------------|
 | [main_GLP_to_Dart (3).tex](drafts/main_GLP_to_Dart%20(3).tex) | Draft companion paper (LaTeX) |
+
+## Archive (`docs/archive/`)
+
+Completed migrations and historical documents:
+
+| Document | Description |
+|----------|-------------|
+| [single-id-migration.md](archive/single-id-migration.md) | Single-ID variable system migration (completed Nov 2025) |
 
 ## External References
 
