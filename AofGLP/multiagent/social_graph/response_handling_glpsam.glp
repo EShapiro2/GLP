@@ -13,6 +13,7 @@ bind_response(no, _, no, Fs, Fs?, In, In?).
 
 %% Handle response (for both received and sent offers)
 handle_response(accept(ch(FIn, FOut)), From, Fs, [(From?, FOut?)|Fs?], In, In1?) :-
+    ground(From?) |
     tag_stream(From?, FIn?, Tagged),
     merge(In?, Tagged?, In1).
 handle_response(no, _, Fs, Fs?, In, In?).
