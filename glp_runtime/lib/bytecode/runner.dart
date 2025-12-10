@@ -4073,10 +4073,113 @@ class BytecodeRunner {
         final now = DateTime.now().millisecondsSinceEpoch;
         return now >= timestamp ? GuardResult.success : GuardResult.failure;
 
+      case '=?=':
+        // Ground equality test
+        // Semantics:
+        // - Unbound reader: suspend (handled by caller via _dereferenceWithTracking)
+        // - Unbound writer: fail
+        // - Both ground and equal: succeed
+        // - Both ground and not equal: fail
+        if (args.length < 2) return GuardResult.failure;
+        final left = args[0];
+        final right = args[1];
+
+        // Check for unbound writers (VarRef that reached here is unbound writer)
+        // Unbound readers would have caused suspension in caller
+        if (left is VarRef || right is VarRef) {
+          return GuardResult.failure;  // Unbound writer → fail
+        }
+
+        // Both ground - check structural equality
+        final result = _termsEqual(left, right, cx);
+        return result ? GuardResult.success : GuardResult.failure;
+
       default:
         print('[WARN] Unknown guard predicate: $predicateName');
         return GuardResult.failure;
     }
+  }
+
+  /// Check structural equality of two ground terms
+  /// cx is needed to dereference VarRefs inside structures
+  static bool _termsEqual(Object? a, Object? b, RunnerContext cx) {
+    // Handle null
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+
+    // Unwrap ConstTerm
+    if (a is ConstTerm) a = a.value;
+    if (b is ConstTerm) b = b.value;
+
+    // Dereference VarRefs
+    if (a is VarRef) {
+      if (a.isReader) {
+        final wid = cx.rt.heap.writerIdForReader(a.varId);
+        if (wid != null) {
+          if (cx.sigmaHat.containsKey(wid)) {
+            a = cx.sigmaHat[wid];
+          } else if (cx.rt.heap.isWriterBound(wid)) {
+            a = cx.rt.heap.valueOfWriter(wid);
+          } else {
+            return false; // Unbound - can't compare
+          }
+        } else {
+          return false;
+        }
+      } else {
+        if (cx.sigmaHat.containsKey(a.varId)) {
+          a = cx.sigmaHat[a.varId];
+        } else if (cx.rt.heap.isWriterBound(a.varId)) {
+          a = cx.rt.heap.getValue(a.varId);
+        } else {
+          return false; // Unbound writer
+        }
+      }
+      // Recursively unwrap
+      return _termsEqual(a, b, cx);
+    }
+    if (b is VarRef) {
+      if (b.isReader) {
+        final wid = cx.rt.heap.writerIdForReader(b.varId);
+        if (wid != null) {
+          if (cx.sigmaHat.containsKey(wid)) {
+            b = cx.sigmaHat[wid];
+          } else if (cx.rt.heap.isWriterBound(wid)) {
+            b = cx.rt.heap.valueOfWriter(wid);
+          } else {
+            return false;
+          }
+        } else {
+          return false;
+        }
+      } else {
+        if (cx.sigmaHat.containsKey(b.varId)) {
+          b = cx.sigmaHat[b.varId];
+        } else if (cx.rt.heap.isWriterBound(b.varId)) {
+          b = cx.rt.heap.getValue(b.varId);
+        } else {
+          return false;
+        }
+      }
+      return _termsEqual(a, b, cx);
+    }
+
+    // Simple values (numbers, strings)
+    if (a is num && b is num) return a == b;
+    if (a is String && b is String) return a == b;
+
+    // Structures
+    if (a is StructTerm && b is StructTerm) {
+      if (a.functor != b.functor) return false;
+      if (a.args.length != b.args.length) return false;
+      for (int i = 0; i < a.args.length; i++) {
+        if (!_termsEqual(a.args[i], b.args[i], cx)) return false;
+      }
+      return true;
+    }
+
+    // Default: use Dart equality
+    return a == b;
   }
 }
 

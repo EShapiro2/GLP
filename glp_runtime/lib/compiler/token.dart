@@ -43,6 +43,7 @@ enum TokenType {
   EQUALS,         // = (unification in guards)
   ARITH_EQUAL,    // =:= (arithmetic equality)
   ARITH_NOT_EQUAL,// =\= (arithmetic inequality)
+  GROUND_EQUAL,   // =?= (ground equality)
   UNIV,           // =.. (structure decomposition/composition)
 
   // Special
