@@ -246,6 +246,38 @@ safe_divide(X, Y, Z) :- integer(X?), integer(Y?), Y? =\= 0 |
 
 ---
 
+## Equality Guard
+
+### ✅ `X =?= Y`
+**Ground equality test**
+
+Tests whether two terms are ground and equal.
+
+**Semantics** (three-valued):
+
+| X | Y | Result |
+|---|---|--------|
+| ground | ground, X = Y | succeed |
+| ground | ground, X ≠ Y | fail |
+| unbound reader | any | suspend |
+| any | unbound reader | suspend |
+| unbound writer | any | fail |
+| any | unbound writer | fail |
+
+**Usage**: Pattern matching where equality must be tested explicitly.
+
+```prolog
+% Lookup in association list
+lookup(Key, [(K, Value)|_], Value?) :- Key =?= K? | true.
+lookup(Key, [_|Rest], Value?) :- otherwise | lookup(Key?, Rest?, Value).
+```
+
+The guard `Key =?= K?` succeeds when `Key` and `K` are both ground and equal. If `K` is unbound (reader), it suspends. If `Key` is unbound writer, it fails.
+
+**Why not multiple head writers**: GLP maintains strict SRSW (one writer per variable). Instead of implicit equality via multiple head occurrences, use `=?=` for explicit, visible equality testing.
+
+---
+
 ## Defined Guards (Unit Clause Unfolding)
 
 ### ✅ User-defined guard predicates via unit clauses
