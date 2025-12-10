@@ -1,0 +1,52 @@
+%% cold_call_glpsam.glp - Cold Call Befriending Protocol (GLPSAM)
+%% GLPSAM simulation version - attestation guards removed (assumes correct agents)
+%%
+%% Enables agents to establish friendship without prior shared variables.
+%% Four phases: user initiation, offer transmission, user consultation,
+%% channel establishment.
+
+% Process user request to connect (self-introduction)
+% Note: Resp is the response variable shared between intro and inject
+social_graph(Id, [msg(user, Id?, connect(Target))|In], Fs) :-
+    ground(Id?), ground(Target?) |
+    send_and_setup_response(Id?, Target?, Fs?, Fs1, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+% Send intro message and setup inject to capture response
+% The Resp variable links the intro message with the response handling
+send_and_setup_response(Id, Target, Fs, Fs1?, In, In1?) :-
+    atom(Id?), atom(Target?) |
+    lookup_send(net, msg(Id?, Target?, intro(Id?, Id?, Resp)), Fs?, Fs1),
+    setup_inject(Resp?, Target?, Id?, In?, In1).
+
+setup_inject(Resp, Target, Id, In, In1?) :-
+    atom(Target?), atom(Id?) |
+    inject(Resp?, msg(Target?, Id?, response(Resp)), In?, In1).
+
+% Process received self-introduction
+% GLPSAM: attestation guard removed
+social_graph(Id, [msg(From, Id?, intro(From?, From?, Resp))|In], Fs) :-
+    ground(Id?), ground(From?) |
+    lookup_send(user, msg(agent, user, befriend(From?, Resp)), Fs?, Fs1),
+    social_graph(Id?, In?, Fs1?).
+
+% Process user decision on received introduction
+social_graph(Id, [msg(user, Id?, decision(Dec, From, Resp?))|In], Fs) :-
+    ground(Id?) |
+    bind_response(Dec?, From?, Resp, Fs?, Fs1, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+% Process response to sent introduction
+social_graph(Id, [msg(From, Id?, response(Resp))|In], Fs) :-
+    ground(Id?) |
+    handle_response(Resp?, From?, Fs?, Fs1, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+% Application message handling
+social_graph(Id, [msg(From, To, Content)|In], Fs) :-
+    ground(Id?), otherwise |
+    social_graph(Id?, In?, Fs?).
+
+% inject defers insertion until response variable becomes bound
+inject(X, Y, Ys, [Y?|Ys?]) :- ground(X?) | true.
+inject(X, Y, [Y1|Ys], [Y1?|Ys1?]) :- writer(X) | inject(X?, Y?, Ys?, Ys1).

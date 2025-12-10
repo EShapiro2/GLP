@@ -1,0 +1,35 @@
+%% friend_introduction_glpsam.glp - Friend-Mediated Introduction Protocol (GLPSAM)
+%% GLPSAM simulation version - attestation guards removed (assumes correct agents)
+%%
+%% Leverages existing trust relationships to establish new connections.
+%% When agent r is friends with both p and q, r can introduce them.
+
+% Friend introduces two others
+social_graph(Id, [msg(user, Id?, introduce(P, Q))|In], Fs) :-
+    ground(Id?), ground(P?), ground(Q?),
+    new_channel(ch(PQIn, PQOut), ch(QPIn, QPOut)) |
+    lookup_send(P?, msg(Id?, P?, intro(Q?, ch(QPIn?, PQOut?))), Fs?, Fs1),
+    lookup_send(Q?, msg(Id?, Q?, intro(P?, ch(PQIn?, QPOut?))), Fs1?, Fs2),
+    social_graph(Id?, In?, Fs2?).
+
+% Process introduction from friend
+% GLPSAM: attestation guard removed
+social_graph(Id, [msg(From, Id?, intro(Other, Ch))|In], Fs) :-
+    ground(Id?), ground(From?), ground(Other?) |
+    lookup_send(user, msg(agent, user, befriend_intro(From?, Other?, Ch?)), Fs?, Fs1),
+    social_graph(Id?, In?, Fs1?).
+
+% User accepts introduction
+social_graph(Id, [msg(user, Id?, accept_intro(Other, ch(FIn, FOut)))|In], Fs) :-
+    ground(Id?), ground(Other?) |
+    tag_stream(Other?, FIn?, Tagged),
+    merge(In?, Tagged?, In1),
+    add_friend(Other?, FOut?, Fs?, Fs1),
+    social_graph(Id?, In1?, Fs1?).
+
+% User rejects introduction
+social_graph(Id, [msg(user, Id?, reject_intro(_, _))|In], Fs) :-
+    ground(Id?) |
+    social_graph(Id?, In?, Fs?).
+
+add_friend(Name, Out, Fs, [(Name?, Out?)|Fs?]).
