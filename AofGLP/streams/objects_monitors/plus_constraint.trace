@@ -1,10 +1,23 @@
 === plus_constraint.glp ===
+Goal: plus(2, 3, X).
+
+GLP> ✓ Loaded: plus_constraint.glp
+GLP> plus(2, 3, X) :- :=/2(X1, +(2, 3))
+:=/2(X1, +(2, 3)) :- true
+X = 5
+→ succeeds
+
 Goal: plus(X, 3, 10).
 
-GLP> Error loading plus_constraint.glp: SRSW violation: Reader variable "X?" occurs 2 times without ground guard
-Line 7, Column 6:
-plus(X, Y, Z) :- known(X?), known(Y?) | Z := X? + Y?.
-     ^
-GLP> Error: Predicate plus/3 not found
-Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
-GLP> 
+GLP> plus(X, 3, 10) :- :=/2(X1, -(10, 3))
+:=/2(X1, -(10, 3)) :- true
+X = 7
+→ succeeds
+
+Goal: plus(5, X, 8).
+
+GLP> plus(5, X, 8) :- :=/2(X1, -(8, 5))
+:=/2(X1, -(8, 5)) :- true
+X = 3
+→ succeeds
+

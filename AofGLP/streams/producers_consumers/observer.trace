@@ -2,10 +2,14 @@
 Goal: observe([a,b,c], Y, Z).
 Note: Bidirectional observation - creates two copies of ground stream
 
-GLP> Error loading observer.glp: SRSW violation: Writer variable "Z" occurs 2 times in clause
-Line 8, Column 16:
-observe(X?, Y, Z) :- observe(Y?, X, Z).
-               ^
-GLP> Error: Predicate observe/3 not found
-Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
-GLP> 
+GLP> ✓ Loaded: observer.glp
+GLP> observe([a, b, c], Y, Z) :- head_tail([a, b, c], X1, X2), observe(X1?, X3, X4), observe(X2?, X5, X6)
+head_tail([a, b, c], X1, X2) :- true
+observe(a, X3, X4) :- copy_to(a, X7, X8)
+copy_to(a, X7, X8) :- true
+observe([b, c], X5, X6) :- head_tail([b, c], X9, X10), observe(X9?, X11, X12), observe(X10?, X13, X14)
+...
+Y = [a, b, c]
+Z = [a, b, c]
+→ succeeds
+

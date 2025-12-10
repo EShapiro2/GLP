@@ -1,10 +1,18 @@
 === plain_meta.glp ===
-Goal: run(merge([1,2], [a,b], Xs)).
+Goal: run(merge([1,2],[3,4],Xs)).
 
-GLP> Error loading plain_meta.glp: SRSW violation: Writer variable "A" occurs 2 times in clause
-Line 10, Column 5:
-run(A) :- known(A) | reduce(A?,B), run(B?). %  reduce
-    ^
-GLP> Error: Predicate run/1 not found
-Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
-GLP> 
+GLP> ✓ Loaded: plain_meta.glp
+GLP> run(merge([1, 2], [3, 4], Xs)) :- reduce(merge([1, 2], [3, 4], Xs), X1), run(X1?)
+reduce(merge([1, 2], [3, 4], Xs), X1) :- true
+run(merge([2], [3, 4], X2)) :- reduce(merge([2], [3, 4], X2), X3), run(X3?)
+reduce(merge([2], [3, 4], X2), X3) :- true
+run(merge([], [3, 4], X4)) :- reduce(merge([], [3, 4], X4), X5), run(X5?)
+reduce(merge([], [3, 4], X4), X5) :- true
+run(merge([], [4], X6)) :- reduce(merge([], [4], X6), X7), run(X7?)
+reduce(merge([], [4], X6), X7) :- true
+run(merge([], [], X8)) :- reduce(merge([], [], X8), X9), run(X9?)
+reduce(merge([], [], X8), X9) :- true
+run(true) :- true
+Xs = [1, 2, 3, 4]
+→ succeeds
+

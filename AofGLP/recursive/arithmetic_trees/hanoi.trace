@@ -1,10 +1,16 @@
 === hanoi.glp ===
-Goal: hanoi(3, a, b, c, Moves).
+Goal: hanoi(2, a, c, Moves).
+Note: Requires append.glp to be loaded first.
 
-GLP> Error loading hanoi.glp: SRSW violation: Reader variable "From?" occurs 3 times without ground guard
-Line 5, Column 10:
-hanoi(N, From, To, Moves?) :-
-         ^
-GLP> Error: Predicate hanoi/5 not found
-Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
-GLP> 
+GLP> ✓ Loaded: append.glp
+GLP> ✓ Loaded: hanoi.glp
+GLP> hanoi(2, a, c, Moves) :- :=/2(X1, -(2, 1)), other(a, c, X2), hanoi_two(X1?, a, c, X2?, X3, X4), append(X3?, [move(a, c) | X4?], X5)
+:=/2(X1, -(2, 1)) :- true
+other(a, c, X2) :- true
+hanoi_two(1, a, c, b, X3, X4) :- hanoi(1, a, b, X6), hanoi(1, b, c, X7)
+hanoi(1, a, b, X6) :- :=/2(X8, -(1, 1)), other(a, b, X9), hanoi_two(X8?, a, b, X9?, X10, X11), append(X10?, [move(a, b) | X11?], X12)
+hanoi(1, b, c, X7) :- :=/2(X13, -(1, 1)), other(b, c, X14), hanoi_two(X13?, b, c, X14?, X15, X16), append(X15?, [move(b, c) | X16?], X17)
+...
+Moves = [move(a, b), move(a, c), move(b, c)]
+→ succeeds
+

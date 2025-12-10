@@ -1,10 +1,15 @@
 === counter.glp ===
-Goal: counter([up, up, show(V1), down, show(V2)], 0).
+Goal: counter([up,up,down,show(X)], 0).
 
-GLP> Error loading counter.glp: SRSW violation: Reader variable "S?" occurs 2 times without ground guard
-Line 7, Column 16:
-counter([clear|S?], _) :-
-               ^
-GLP> Error: Predicate counter/2 not found
-Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
-GLP> 
+GLP> ✓ Loaded: counter.glp
+GLP> counter([up, up, down, show(X)], 0) :- :=/2(X1, +(0, 1)), counter([up, down, show(X)], X1?)
+:=/2(X1, +(0, 1)) :- true
+counter([up, down, show(X)], 1) :- :=/2(X2, +(1, 1)), counter([down, show(X)], X2?)
+:=/2(X2, +(1, 1)) :- true
+counter([down, show(X)], 2) :- :=/2(X3, -(2, 1)), counter([show(X)], X3?)
+:=/2(X3, -(2, 1)) :- true
+counter([show(X)], 1) :- counter([], 1)
+counter([], 1) :- true
+X = 1
+→ succeeds
+

@@ -4,9 +4,9 @@
 %% Constraint X + Y = Z with bidirectional propagation.
 %% Activates when any two of three arguments are known.
 
-plus(X, Y, Z) :- known(X?), known(Y?) | Z := X? + Y?.
-plus(X, Y, Z) :- known(Y?), known(Z?) | X := Z? - Y?.
-plus(X, Y, Z) :- known(Z?), known(X?) | Y := Z? - X?.
+plus(X, Y, Out?) :- number(X?), number(Y?) | Out := X? + Y?.
+plus(Out?, Y, Z) :- number(Y?), number(Z?) | Out := Z? - Y?.
+plus(X, Out?, Z) :- number(Z?), number(X?) | Out := Z? - X?.
 
 %% Example constraint network:
 %%   plus(X, A, 5)     % X + A = 5

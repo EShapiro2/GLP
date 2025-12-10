@@ -1,10 +1,21 @@
 === primes.glp ===
-Goal: primes(20, Ps).
+Goal: primes(10, Ps).
 
-GLP> Error loading primes.glp: SRSW violation: Reader variable "P?" occurs 3 times without ground guard
-Line 10, Column 8:
-sieve([P?|Is], [P?|Ps?]) :- filter(Is?, P?, Fs), sieve(Fs?, Ps).
-       ^
-GLP> Error: Predicate primes/2 not found
-Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
-GLP> 
+GLP> ✓ Loaded: primes.glp
+GLP> primes(10, Ps) :- integers(2, 10, X1), sieve(X1?, X2)
+integers(2, 10, X1) :- :=/2(X3, +(2, 1)), integers(X3?, 10, X4)
+sieve([2 | X4?], X2) :- filter(X4?, 2, X5), sieve(X5?, X6)
+:=/2(X3, +(2, 1)) :- true
+integers(3, 10, X4) :- :=/2(X7, +(3, 1)), integers(X7?, 10, X8)
+filter([3 | X8?], 2, X5) :- filter(X8?, 2, X9)
+sieve([3 | X9?], X6) :- filter(X9?, 3, X10), sieve(X10?, X11)
+...
+integers(11, 10, X36) :- true
+filter([], 2, X40) :- true
+filter([], 3, X39) :- true
+filter([], 5, X33) :- true
+filter([], 7, X37) :- true
+sieve([], X38) :- true
+Ps = [2, 3, 5, 7]
+→ succeeds
+

@@ -1,10 +1,16 @@
 === member.glp ===
 Goal: member(c, [a,b,c,d]).
 
-GLP> Error loading member.glp: SRSW violation: Writer variable "X" occurs 2 times in clause
-Line 4, Column 8:
-member(X, [X|_]).
-       ^
-GLP> Error: Predicate member/2 not found
-Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
-GLP> 
+GLP> ✓ Loaded: member.glp
+GLP> member(c, [a, b, c, d]) :- member(c, [b, c, d])
+member(c, [b, c, d]) :- member(c, [c, d])
+member(c, [c, d]) :- true
+→ succeeds
+
+Goal: member(5, [1,2,3]).
+
+GLP> member(5, [1, 2, 3]) :- member(5, [2, 3])
+member(5, [2, 3]) :- member(5, [3])
+member(5, [3]) :- member(5, [])
+member(5, []) → failed
+→ failed

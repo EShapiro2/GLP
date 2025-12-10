@@ -1,10 +1,10 @@
 === append.glp ===
 Goal: append([1,2,3], [4,5], Zs).
 
-GLP> Error loading append.glp: SRSW violation: Reader variable "Ys?" occurs 2 times without ground guard
-Line 4, Column 11:
-append([],Ys?,Ys?).
-          ^
-GLP> Error: Predicate append/3 not found
-Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
-GLP> 
+GLP> ✓ Loaded: append.glp
+GLP> append([1, 2, 3], [4, 5], X) :- append([2, 3], [4, 5], X1)
+append([2, 3], [4, 5], X1) :- append([3], [4, 5], X2)
+append([3], [4, 5], X2) :- append([], [4, 5], X3)
+append([], [4, 5], X3) :- true
+X = [1, 2, 3, 4, 5]
+→ succeeds

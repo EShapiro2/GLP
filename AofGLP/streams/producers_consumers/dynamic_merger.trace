@@ -1,11 +1,15 @@
 === dynamic_merger.glp ===
-Goal: merger(Ws, [1,2,3], Out).
-Note: Allows dynamic addition of streams via merge(NewStream) messages.
+Goal: merge([1,2,3], [a,b,c], Out).
+Note: Merges two streams, supports dynamic stream addition via merge(NewStream) messages.
 
-GLP> Error loading dynamic_merger.glp: SRSW violation: Writer variable "X" occurs 2 times in clause
-Line 14, Column 8:
-merge([X|Xs],Ys,[X?|Zs?]) :-
-       ^
-GLP> Error: Predicate merger/3 not found
-Available predicates: :=/2, =../2, =/2, mwm/2, mwm_main/2, mwm1/4, close_when_done/2, stream_append/3, close_mutual_reference/1
-GLP> 
+GLP> ✓ Loaded: dynamic_merger.glp
+GLP> merge([1, 2, 3], [a, b, c], Out) :- merge([a, b, c], [2, 3], X1)
+merge([a, b, c], [2, 3], X1) :- merge([2, 3], [b, c], X2)
+merge([2, 3], [b, c], X2) :- merge([b, c], [3], X3)
+merge([b, c], [3], X3) :- merge([3], [c], X4)
+merge([3], [c], X4) :- merge([c], [], X5)
+merge([c], [], X5) :- merge([], [], X6)
+merge([], [], X6) :- true
+Out = [1, a, 2, b, 3, c]
+→ succeeds
+
