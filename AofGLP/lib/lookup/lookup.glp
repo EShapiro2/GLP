@@ -4,7 +4,7 @@
 %% Lookup and lookup_send for friends list operations.
 
 %% lookup(Key, List, Value) - find value associated with key
-lookup(Key, [(K, Value)|_], Value?) :- Key =?= K? | true.
+lookup(Key, [(K, Value)|_], Value?) :- Key? =?= K? | true.
 lookup(Key, [_|Rest], Value?) :-
     otherwise | lookup(Key?, Rest?, Value).
 
@@ -15,6 +15,6 @@ lookup_send(Key, Msg, Fs, Fs1?) :-
     update(Key?, Out1?, Fs?, Fs1).
 
 %% update(Key, NewOut, OldList, NewList) - update value for key in list
-update(Key, NewOut, [(K, _)|Rest], [(K?, NewOut?)|Rest?]) :- Key =?= K? | true.
+update(Key, NewOut, [(K, _)|Rest], [(K?, NewOut?)|Rest?]) :- ground(K?), Key? =?= K? | true.
 update(Key, NewOut, [Pair|Rest], [Pair?|Rest1?]) :-
     otherwise | update(Key?, NewOut?, Rest?, Rest1).
