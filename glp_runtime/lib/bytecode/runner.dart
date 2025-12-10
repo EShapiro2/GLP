@@ -1714,18 +1714,18 @@ class BytecodeRunner {
               if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable SUCCESS, continuing to PC ${pc+1}');
             } else if (wid != null) {
               // Reader is unbound - but clause expects a writer (isReaderMode=false)
-              // Alias clause writer T to goal's underlying writer X1
-              // This allows the clause body to bind T, which actually binds X1
+              // Per spec: Goal reader X? vs Head writer V → V receives X? (the reader reference)
+              // Store the reader reference itself, not just the underlying writer ID
               if (existing is VarRef && !existing.isReader) {
-                // Already have a writer from earlier occurrence - bind it to goal's writer
-                cx.sigmaHat[existing.varId] = VarRef(wid, isReader: true);
+                // Already have a writer from earlier occurrence - bind it to goal's reader
+                cx.sigmaHat[existing.varId] = arg;  // arg is the reader VarRef
               } else if (existing is int) {
-                cx.sigmaHat[existing] = VarRef(wid, isReader: true);
+                cx.sigmaHat[existing] = arg;
               } else {
-                // First occurrence - store the underlying writer ID
-                cx.clauseVars[varIndex] = wid;
+                // First occurrence - store the reader reference
+                cx.clauseVars[varIndex] = arg;  // Store reader VarRef, not wid
               }
-              if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable SUCCESS (aliased to W$wid), continuing to PC ${pc+1}');
+              if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable SUCCESS (stored reader R${arg.varId}), continuing to PC ${pc+1}');
             } else {
               // No underlying writer - suspend
               if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable SUSPENDING on R${arg.varId}');
@@ -1927,7 +1927,11 @@ class BytecodeRunner {
         } else {
           // GetReaderValue logic: Unify argument with clause READER variable
           if (arg is VarRef && !arg.isReader) {
-            if (storedValue is int) {
+            // Goal has writer, head has reader - bind goal writer to stored value
+            if (storedValue is VarRef) {
+              // storedValue is a reader/writer reference - bind goal writer to it
+              cx.sigmaHat[arg.varId] = storedValue;
+            } else if (storedValue is int) {
               final wid = cx.rt.heap.writerIdForReader(storedValue);
               if (wid != null && cx.rt.heap.isWriterBound(wid)) {
                 final readerValue = cx.rt.heap.valueOfWriter(wid);
