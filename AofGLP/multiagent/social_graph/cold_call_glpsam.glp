@@ -1,42 +1,42 @@
 %% cold_call_glpsam.glp - Cold Call Befriending Protocol (GLPSAM)
+%% Source: GLP-2025 Paper (Program: Social Graph Cold-Call Befriending Protocol)
 %% GLPSAM simulation version - attestation guards removed (assumes correct agents)
 %%
 %% Enables agents to establish friendship without prior shared variables.
 %% Four phases: user initiation, offer transmission, user consultation,
 %% channel establishment.
 
-% Process user request to connect (self-introduction)
+%% Process user request to connect (self-introduction)
 social_graph(Id, [msg(user, Id?, connect(Target))|In], Fs) :-
     ground(Id?), ground(Target?) |
     lookup_send(net, msg(Id?, Target?, intro(Id?, Id?, Resp)), Fs?, Fs1),
-    response_stream(Resp?, Target?, Id?, Rs),
-    merge(In?, Rs?, In1),
+    inject(Resp?, msg(Target?, Id?, response(Resp?)), In?, In1),
     social_graph(Id?, In1?, Fs1?).
 
-% Process received self-introduction
+%% Process received self-introduction
+%% (attestation guard removed for GLPSAM)
 social_graph(Id, [msg(From, Id?, intro(From?, From?, Resp))|In], Fs) :-
     ground(Id?), ground(From?) |
     lookup_send(user, msg(agent, user, befriend(From?, Resp?)), Fs?, Fs1),
     social_graph(Id?, In?, Fs1?).
 
-% Process user decision on received introduction
-social_graph(Id, [msg(user, Id?, decision(Dec, From, Resp))|In], Fs) :-
+%% Process user decision on received introduction
+social_graph(Id, [msg(user, Id?, decision(Dec, From, Resp?))|In], Fs) :-
     ground(Id?) |
-    bind_response(Dec?, From?, Resp?, Fs?, Fs1, In?, In1),
+    bind_response(Dec?, From?, Resp, Fs?, Fs1, In?, In1),
     social_graph(Id?, In1?, Fs1?).
 
-% Process response to sent introduction
+%% Process response to sent introduction
 social_graph(Id, [msg(From, Id?, response(Resp))|In], Fs) :-
     ground(Id?) |
     handle_response(Resp?, From?, Fs?, Fs1, In?, In1),
     social_graph(Id?, In1?, Fs1?).
 
-% Application message handling
+%% Catch-all for other messages
 social_graph(Id, [msg(_, _, _)|In], Fs) :-
     ground(Id?), otherwise |
     social_graph(Id?, In?, Fs?).
 
-%% response_stream: suspends until Resp? is bound, then constructs message
-%% Pattern matching extracts channel variable - SRSW compliant
-response_stream(accept(Ch), Target, Id, [msg(Target?, Id?, response(accept(Ch?)))]).
-response_stream(no, Target, Id, [msg(Target?, Id?, response(no))]).
+%% inject - defer insertion until trigger becomes known
+inject(X, Y, Ys, [Y?|Ys?]) :- known(X?) | true.
+inject(X, Y, [Y1|Ys], [Y1?|Ys1?]) :- unknown(X?) | inject(X?, Y?, Ys?, Ys1).
