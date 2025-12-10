@@ -7,7 +7,7 @@
 
 % Process user request to connect (self-introduction)
 social_graph(Id, [msg(user, Id?, connect(Target))|In], Fs) :-
-    ground(Id), ground(Target) |
+    ground(Id?), ground(Target?) |
     lookup_send(net, msg(Id?, Target?, intro(Id?, Id?, Resp)), Fs?, Fs1),
     response_stream(Resp?, Target?, Id?, Rs),
     merge(In?, Rs?, In1),
@@ -15,25 +15,25 @@ social_graph(Id, [msg(user, Id?, connect(Target))|In], Fs) :-
 
 % Process received self-introduction
 social_graph(Id, [msg(From, Id?, intro(From?, From?, Resp))|In], Fs) :-
-    ground(Id), ground(From) |
+    ground(Id?), ground(From?) |
     lookup_send(user, msg(agent, user, befriend(From?, Resp?)), Fs?, Fs1),
     social_graph(Id?, In?, Fs1?).
 
 % Process user decision on received introduction
 social_graph(Id, [msg(user, Id?, decision(Dec, From, Resp))|In], Fs) :-
-    ground(Id) |
+    ground(Id?) |
     bind_response(Dec?, From?, Resp?, Fs?, Fs1, In?, In1),
     social_graph(Id?, In1?, Fs1?).
 
 % Process response to sent introduction
 social_graph(Id, [msg(From, Id?, response(Resp))|In], Fs) :-
-    ground(Id) |
+    ground(Id?) |
     handle_response(Resp?, From?, Fs?, Fs1, In?, In1),
     social_graph(Id?, In1?, Fs1?).
 
 % Application message handling
-social_graph(Id, [msg(From, To, Content)|In], Fs) :-
-    ground(Id), otherwise |
+social_graph(Id, [msg(_, _, _)|In], Fs) :-
+    ground(Id?), otherwise |
     social_graph(Id?, In?, Fs?).
 
 %% response_stream: suspends until Resp? is bound, then constructs message
