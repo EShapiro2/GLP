@@ -60,6 +60,7 @@ $GLP_DIR/test_bob.glp
 $GLP_DIR/test_nested_suspend.glp
 test_defined_guards.glp
 append_dl.glp
+assign_reader_test.glp
 hello.
 p(X).
 merge([1,2,3], [a,b], Xs).
@@ -183,6 +184,7 @@ level3([wrapper(Xlv3?)|Rlv3]).
 test(ch(Adg?, Bdg), Rdg1).
 test(foo, Rdg2).
 test(Xdg?, Rdg3).
+assign_reader(Rar?, Xar).
 :quit
 REPL_INPUT
 2>&1)
@@ -376,6 +378,9 @@ declare -a tests=(
     "Defined guard match:Rdg1 = ok"
     "Defined guard fail:Rdg2 = not_channel"
     "Defined guard suspend:test(X.*, Rdg3) → suspended"
+
+    # Goal reader vs head writer (should succeed, not suspend)
+    "Goal reader to head writer:assign_reader(.*) :- true"
 )
 
 PASS=0
