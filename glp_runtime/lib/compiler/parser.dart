@@ -212,7 +212,7 @@ class Parser {
     if (_check(TokenType.LESS) || _check(TokenType.GREATER) ||
         _check(TokenType.LESS_EQUAL) || _check(TokenType.GREATER_EQUAL) ||
         _check(TokenType.EQUALS) || _check(TokenType.ARITH_EQUAL) ||
-        _check(TokenType.ARITH_NOT_EQUAL)) {
+        _check(TokenType.ARITH_NOT_EQUAL) || _check(TokenType.GROUND_EQUAL)) {
       final opToken = _advance();
       final right = _parseExpression(6);
 

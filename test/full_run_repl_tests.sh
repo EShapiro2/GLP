@@ -479,6 +479,70 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# Run ground equality (=?=) tests
+echo ""
+echo "--- Ground Equality (=?=) Guard Tests ---"
+
+ge_output=$($DART run "$REPL" <<GE_INPUT
+$GLP_DIR/test_ground_equal.glp
+test(a, a, R1).
+test(a, b, R2).
+test(foo(1,2), foo(1,2), R3).
+test(foo(1,2), foo(1,3), R4).
+test([1,2,3], [1,2,3], R5).
+test([1,2], [1,3], R6).
+:quit
+GE_INPUT
+2>&1)
+
+if echo "$ge_output" | grep -q "R1 = equal"; then
+    echo "PASS: =?= atoms equal"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =?= atoms equal (expected: R1 = equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$ge_output" | grep -q "R2 = not_equal"; then
+    echo "PASS: =?= atoms not equal"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =?= atoms not equal (expected: R2 = not_equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$ge_output" | grep -q "R3 = equal"; then
+    echo "PASS: =?= structures equal"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =?= structures equal (expected: R3 = equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$ge_output" | grep -q "R4 = not_equal"; then
+    echo "PASS: =?= structures not equal"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =?= structures not equal (expected: R4 = not_equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$ge_output" | grep -q "R5 = equal"; then
+    echo "PASS: =?= lists equal"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =?= lists equal (expected: R5 = equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$ge_output" | grep -q "R6 = not_equal"; then
+    echo "PASS: =?= lists not equal"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =?= lists not equal (expected: R6 = not_equal)"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""

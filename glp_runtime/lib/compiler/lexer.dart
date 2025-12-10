@@ -90,6 +90,13 @@ class Lexer {
           }
           throw CompileError('Expected "=" after "=\\"', startLine, startColumn, phase: 'lexer');
         }
+        if (_match('?')) {
+          if (_match('=')) {
+            final lexeme = source.substring(_current - 3, _current);
+            return Token(TokenType.GROUND_EQUAL, lexeme, startLine, startColumn);
+          }
+          throw CompileError('Expected "=" after "=?"', startLine, startColumn, phase: 'lexer');
+        }
         return _makeToken(TokenType.EQUALS, startLine, startColumn);
 
       case ':':
