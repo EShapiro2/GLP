@@ -1682,7 +1682,18 @@ class BytecodeRunner {
               // existing is bare writer varId - bind arg to reader of it
               cx.sigmaHat[arg.varId] = VarRef(existing, isReader: true);
             } else {
-              cx.clauseVars[varIndex] = arg.varId;
+              // First occurrence: goal writer vs head writer
+              // WxW check: if goal writer is UNBOUND, this is writer-to-writer = FAIL
+              if (!cx.rt.heap.isWriterBound(arg.varId)) {
+                if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable WxW FAIL - goal writer W${arg.varId} is unbound');
+                _softFailToNextClause(cx, pc);
+                pc = _findNextClauseTry(pc);
+                continue;
+              }
+              // Goal writer is BOUND - use its value
+              final boundValue = cx.rt.heap.valueOfWriter(arg.varId);
+              if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable goal writer W${arg.varId} bound to $boundValue');
+              cx.clauseVars[varIndex] = boundValue;
             }
           } else if (arg is VarRef && arg.isReader) {
             final wid = cx.rt.heap.writerIdForReader(arg.varId);
