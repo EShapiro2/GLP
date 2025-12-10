@@ -7,9 +7,9 @@
 
 %% Bind response based on user decision
 %% Unfolded from: new_channel(ch(FIn, FOut), FCh) in guard
-bind_response(yes, From, accept(ch(FOut?, FIn)), Fs, Fs1, In, In1) :-
-    handle_response(accept(ch(FIn?, FOut)), From?, Fs, Fs1, In, In1).
-bind_response(no, _, no, Fs, Fs, In, In).
+bind_response(yes, From, accept(ch(FOut?, FIn)), Fs, Fs1?, In, In1?) :-
+    handle_response(accept(ch(FIn?, FOut)), From?, Fs?, Fs1, In?, In1).
+bind_response(no, _, no, Fs, Fs?, In, In?).
 
 %% Handle response (for both received and sent offers)
 handle_response(accept(ch(FIn, FOut)), From, Fs, [(From?, FOut?)|Fs?], In, In1?) :-
