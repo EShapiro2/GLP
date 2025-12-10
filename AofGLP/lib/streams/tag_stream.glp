@@ -6,7 +6,7 @@
 %% its source identifier.
 
 tag_stream(Name, [M|In], [msg(Name?, M?)|Out?]) :-
-    tag_stream(Name?, In?, Out).
+    ground(Name?) | tag_stream(Name?, In?, Out).
 tag_stream(_, [], []).
 
 %% Recursively processes input stream, wrapping each message M
