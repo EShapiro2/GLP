@@ -2763,6 +2763,59 @@ class BytecodeRunner {
         pc++; continue;
       }
 
+      // ===== MODULE SYSTEM INSTRUCTIONS =====
+      // Phase 2 module system: distribute and transmit opcodes
+      // These handle cross-module RPC following FCP design
+
+      if (op is Distribute) {
+        // Static RPC to imported module at known index
+        // Following FCP: distribute # {Index, Goal}
+        //
+        // In full module runtime, this writes to import vector which
+        // routes via serve_import to target module.
+        // For now, log the RPC for debugging.
+        if (cx.inBody) {
+          if (cx.debugOutput) {
+            print('[MODULE] Distribute: import[${ op.importIndex}] # ${op.functor}/${op.arity}');
+          }
+          // Collect arguments
+          final args = <Term>[];
+          for (int i = 0; i < op.arity; i++) {
+            final arg = cx.argSlots[i];
+            if (arg != null) args.add(arg);
+          }
+          // TODO: When full module system is active, call handleDistribute
+          // For now, RPC is logged but not executed (module runtime not connected)
+          cx.argSlots.clear();
+        }
+        pc++; continue;
+      }
+
+      if (op is Transmit) {
+        // Dynamic RPC to module resolved at runtime
+        // Following FCP: transmit # {ModuleVar, Goal}
+        //
+        // In full module runtime, this resolves module name from variable,
+        // looks up in registry, and sends message to target.
+        if (cx.inBody) {
+          // Get module name from clause variable
+          final moduleVar = cx.clauseVars[op.moduleVarIndex];
+          if (cx.debugOutput) {
+            print('[MODULE] Transmit: X${op.moduleVarIndex}($moduleVar) # ${op.functor}/${op.arity}');
+          }
+          // Collect arguments
+          final args = <Term>[];
+          for (int i = 0; i < op.arity; i++) {
+            final arg = cx.argSlots[i];
+            if (arg != null) args.add(arg);
+          }
+          // TODO: When full module system is active, call handleTransmit
+          // For now, RPC is logged but not executed (module runtime not connected)
+          cx.argSlots.clear();
+        }
+        pc++; continue;
+      }
+
       // ===== VARIABLE INSTRUCTIONS =====
 
       // REMOVED: Duplicate GetVariable handler
