@@ -1599,7 +1599,38 @@ Guards provide read-only tests that determine clause selection. They appear betw
 5. Guard SUSPEND: add first unbound reader to U, discard σ̂w, try next clause
 6. All guards succeed: COMMIT applies σ̂w, enter BODY
 
-### 19.2 Arithmetic Expression Evaluation in Guards
+### 19.2 Guard Negation (`~G`)
+
+**Syntax**: `~G` where G is an atomic built-in guard
+
+**Semantics**: `~G` succeeds iff G fails. Suspension behavior follows from the standard guard definition (a guard suspends if there exists a substitution to its readers that makes it succeed).
+
+**Restrictions**:
+- Only atomic built-in guards can be negated
+- Defined guards (unit clauses) cannot be negated
+- Compound guards cannot be negated (no `~(A, B)`)
+- Double negation `~~G` is syntactically forbidden (formally equivalent to G, but forbidden in syntax)
+
+**Negatable guards**:
+- Type guards: `ground`, `known`, `unknown`, `integer`, `number`, `atom`, `string`, `constant`, `compound`, `tuple`, `list`, `is_list`, `writer`, `reader`
+- Equality: `=?=`
+
+**Non-negatable guards** (due to type-error semantics):
+- Arithmetic: `<`, `>`, `=<`, `>=`, `=:=`, `=\=`
+- Control: `otherwise`
+- Time: `wait`, `wait_until`
+
+**Compilation**: `~G` compiles to the same guard instruction as G, followed by result inversion.
+
+**Example**:
+```prolog
+handle(X, Y) :- ~integer(X?) | handle_non_integer(X?, Y).
+lookup(Key, [(K,_)|Rest], V?) :- ~(Key =?= K?) | lookup(Key?, Rest?, V).
+```
+
+**Design Rationale**: In GLP, guards have input-only variables - they test but don't bind. This makes success and failure symmetric definitive outcomes. Neither produces bindings, both are final decisions. This symmetry enables clean negation semantics where `~G` simply inverts the success/fail outcome while preserving suspension behavior.
+
+### 19.3 Arithmetic Expression Evaluation in Guards
 
 **Which guards evaluate arithmetic:**
 
@@ -1776,12 +1807,9 @@ safe_div(X, Y, Z?) :- ground(X?), ground(Y?), Y? =\= 0 | execute('evaluate', [X?
 
 ### 19.5 Control Guards
 
-#### 19.5.1 guard_true
-**Source**: `true` in guard position
-**Operation**: Always succeeds
-**Behavior**: Unconditional success (no-op guard)
+**Note on `true`**: The atom `true` is a **body stub**, not a guard. It appears in clause bodies as `| true` when no body goals are needed. It is not a guard predicate and should not be listed as one.
 
-#### 19.5.2 guard_otherwise
+#### 19.5.1 guard_otherwise
 **Source**: `otherwise` in guard position
 **Operation**: Succeeds if all previous clauses failed
 **Compiler directive**: Compiler must track clause ordering
@@ -1794,26 +1822,30 @@ classify(X, neg) :- X? < 0 | true.
 classify(X, zero) :- otherwise | true.
 ```
 
-### 19.6 Unification Guards
+### 19.6 Equality Guard
 
-#### 19.6.1 guard_unify Xi, Xj
-**Source**: `X = Y` in guard position
-**Operation**: Attempt unification
+#### 19.6.1 guard_equal Xi, Xj
+**Source**: `X =?= Y` in guard position (ground equality)
+**Operation**: Test ground equality
 **Behavior**:
-- Perform tentative writer MGU (add bindings to σ̂w)
-- Success if unifiable
-- Fail if not unifiable (structure mismatch)
-- Suspend if unbound readers block unification
+- Succeed if both Xi and Xj are ground and equal
+- Fail if both ground and not equal
+- Suspend if either contains unbound readers
+- Fail if either contains unbound writers
+
+**Note**: This guard tests term equality, not unification. It does not add bindings to σ̂w.
 
 **Example**:
 ```prolog
-p(X, Y) :- X = f(Y, Z?) | body.  % Adds X=f(Y,Z) to σ̂w if succeeds
+lookup(Key, [(K,V)|_], V?) :- Key =?= K? | true.
+lookup(Key, [(K,_)|Rest], V?) :- ~(Key =?= K?) | lookup(Key?, Rest?, V).
 ```
 
-#### 19.6.2 guard_not_unifiable Xi, Xj
-**Source**: `X \= Y` in guard position
-**Operation**: Test non-unifiability
-**Behavior**: Negation of guard_unify (no bindings added to σ̂w)
+**Removed guards**:
+- `guard_unify` (`=` in guard position): Removed. Unification in guards is not a built-in; define as unit clause if needed.
+- `guard_not_unifiable` (`\=` in guard position): Removed. Use `~(X =?= Y)` for inequality testing.
+
+**Note on `=\=`**: The arithmetic inequality guard `=\=` is **redundant** once guard negation (`~`) is implemented. It becomes equivalent to `~(X =:= Y)` and will be removed in a future version.
 
 ### 19.7 Lexer/Parser Integration
 
@@ -1821,21 +1853,25 @@ p(X, Y) :- X = f(Y, Z?) | body.  % Adds X=f(Y,Z) to σ̂w if succeeds
 
 | Source | Token Type    | Priority | Associativity | Bytecode Instruction      |
 |--------|---------------|----------|---------------|---------------------------|
+| `~`    | TILDE         | 900      | prefix        | guard negation            |
+| `=?=`  | GROUND_EQ     | 700      | non-assoc     | guard_equal               |
 | `<`    | LESS          | 700      | non-assoc     | guard_less                |
 | `>`    | GREATER       | 700      | non-assoc     | guard_greater             |
 | `=<`   | LESS_EQ       | 700      | non-assoc     | guard_less_equal          |
 | `>=`   | GREATER_EQ    | 700      | non-assoc     | guard_greater_equal       |
 | `=:=`  | ARITH_EQ      | 700      | non-assoc     | guard_arith_equal         |
-| `=\=`  | ARITH_NE      | 700      | non-assoc     | guard_arith_not_equal     |
-| `=`    | UNIFY         | 800      | non-assoc     | guard_unify (in guards)   |
-| `\=`   | NOT_UNIFY     | 800      | non-assoc     | guard_not_unifiable       |
+
+**Removed tokens** (no longer guard operators):
+- `=` (UNIFY) - Not a guard; use defined guards if unification testing needed
+- `\=` (NOT_UNIFY) - Removed; use `~(X =?= Y)` instead
+- `=\=` (ARITH_NE) - Redundant; equivalent to `~(X =:= Y)`, will be removed
 
 #### Operator Precedence (from lowest to highest)
 
 1. **Guard separator**: `|` - 1100
 2. **Conjunction**: `,` - 1000
-3. **Unification**: `=`, `\=` - 800
-4. **Comparison**: `<`, `>`, `=<`, `>=`, `=:=`, `=\=` - 700
+3. **Guard negation**: `~` - 900 (prefix)
+4. **Comparison**: `<`, `>`, `=<`, `>=`, `=:=`, `=?=` - 700
 5. **Addition**: `+`, `-` - 500
 6. **Multiplication**: `*`, `/`, `mod` - 400
 7. **Primary**: variables, numbers, parentheses - highest
@@ -1845,22 +1881,21 @@ p(X, Y) :- X = f(Y, Z?) | body.  % Adds X=f(Y,Z) to σ̂w if succeeds
 ```
 // IMPORTANT: Check multi-character operators FIRST
 
+// Three-character operators
+'=?='  → GROUND_EQ      // Ground equality
+'=:='  → ARITH_EQ       // Arithmetic equality
+
 // Two-character operators
 '=<'   → LESS_EQ        // Prolog style (not <=)
 '>='   → GREATER_EQ
-'\\='  → NOT_UNIFY      // Backslash + equals
-
-// Three-character operators
-'=:='  → ARITH_EQ       // Arithmetic equality
-'=\\=' → ARITH_NE       // Arithmetic inequality (backslash)
 
 // Single-character operators (check AFTER multi-char)
+'~'    → TILDE           // Guard negation (prefix)
 '<'    → LESS
 '>'    → GREATER
-'='    → UNIFY
 ```
 
-**Ordering Critical**: Lexer must check `=<` before `<`, `=:=` before `=`, etc.
+**Ordering Critical**: Lexer must check `=?=` and `=:=` before `=<`, and `=<` before `<`.
 
 ### 19.8 Guards vs. System Predicates
 

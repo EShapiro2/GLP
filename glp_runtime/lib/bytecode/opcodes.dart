@@ -213,24 +213,30 @@ class UnifyStructure implements Op {
 
 /// Guard predicate call: execute guard without side effects
 /// If succeeds: continue; If fails: try next clause; If suspends: suspend entire goal
+/// If negated: invert success/fail result (suspend unchanged)
 class Guard implements Op {
   final LabelName procedureLabel;  // guard predicate entry
   final int arity;                  // number of arguments
-  Guard(this.procedureLabel, this.arity);
+  final bool negated;               // true if ~G (guard negation)
+  Guard(this.procedureLabel, this.arity, {this.negated = false});
 }
 
 /// Ground test: test if variable contains no unbound variables
 /// Succeed if X is ground, fail otherwise. Pure test, no side effects.
+/// If negated: succeed if X is NOT ground (contains unbound variables)
 class Ground implements Op {
   final int varIndex;  // clause variable index to test
-  Ground(this.varIndex);
+  final bool negated;  // true if ~ground(X)
+  Ground(this.varIndex, {this.negated = false});
 }
 
 /// Known test: test if variable is not an unbound variable
 /// Succeed if X is not a variable, fail otherwise. Pure test operation.
+/// If negated: succeed if X IS an unbound variable
 class Known implements Op {
   final int varIndex;  // clause variable index to test
-  Known(this.varIndex);
+  final bool negated;  // true if ~known(X)
+  Known(this.varIndex, {this.negated = false});
 }
 
 // ===== SYSTEM PREDICATE execution =====
