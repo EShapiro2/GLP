@@ -337,3 +337,39 @@ class Nop implements Op {}
 
 /// Terminate execution - mark goal as completed, return control to scheduler
 class Halt implements Op {}
+
+// ============================================================================
+// Module System Opcodes (Phase 2)
+// ============================================================================
+
+/// Distribute: Static RPC to imported module at known index
+/// Following FCP: distribute # {Index, Goal}
+///
+/// Writes message to import vector at Index, which routes to target module.
+/// Index is 1-based (FCP convention).
+class Distribute implements Op {
+  final int importIndex;      // Index in import vector (1-based)
+  final String functor;       // Goal functor
+  final int arity;            // Goal arity
+
+  Distribute(this.importIndex, this.functor, this.arity);
+
+  @override
+  String toString() => 'Distribute([$importIndex] $functor/$arity)';
+}
+
+/// Transmit: Dynamic RPC to module resolved at runtime
+/// Following FCP: transmit # {ModuleVar, Goal}
+///
+/// Resolves module name from variable, looks up in registry, sends message.
+/// Used when target module is not known at compile time.
+class Transmit implements Op {
+  final int moduleVarIndex;   // Register holding module name variable
+  final String functor;       // Goal functor
+  final int arity;            // Goal arity
+
+  Transmit(this.moduleVarIndex, this.functor, this.arity);
+
+  @override
+  String toString() => 'Transmit(X$moduleVarIndex, $functor/$arity)';
+}
