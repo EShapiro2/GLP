@@ -4,16 +4,19 @@
 %% Allows inspection of running computation state.
 %% When 'shot(Ps)' appears on interrupt stream, collects current processes.
 
-reduce(P, true, Chain--Chain?).                  %% halt
-reduce(P, (A, B), Left--Right) :-                %% fork
+reduce(_, true, Chain--Chain?).                  %% halt
+reduce(P, (A, B), Left--Right?) :-               %% fork
+    ground(P?) |
     reduce(P?, A?, Left?--Middle),
     reduce(P?, B?, Middle?--Right).
-reduce(P, Goal, Left--Right) :-                  %% reduce
-    ~(Goal =?= true), ~(Goal =?= (_, _)),
+reduce(P, Goal, Left--Right?) :-                 %% reduce
+    ground(P?), ground(Goal?),
+    ~(Goal? =?= true), ~(Goal? =?= (_, _)),
     unknown(Left?),
     clause(Goal?, P?, Body) |
     reduce(P?, Body?, Left?--Right).
-reduce(P, Goal, [shot(Ps)|Left]--[shot([Goal?|Ps?])|Right]) :-  %% shot
+reduce(P, Goal, [shot(Ps)|Left]--[shot([Goal?|Ps?])|Right?]) :-  %% shot
+    ground(Goal?) |
     reduce(P?, Goal?, Left?--Right).
 
 %% Usage:
