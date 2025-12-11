@@ -553,6 +553,84 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# --- Guard Negation (~G) Tests ---
+echo ""
+echo "--- Guard Negation (~G) Tests ---"
+
+gn_output=$(echo -e "$GLP_DIR/test_guard_negation.glp\ntest_neg_int(5, R1).\ntest_neg_int(hello, R2).\ntest_neg_number(3.14, R3).\ntest_neg_number(hello, R4).\ntest_neg_eq(5, 5, R5).\ntest_neg_eq(5, 3, R6)." | $DART run $REPL 2>&1)
+
+if echo "$gn_output" | grep -q "R1 = is_int"; then
+    echo "PASS: ~integer(5) fails, integer succeeds"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: ~integer(5) fails, integer succeeds (expected: R1 = is_int)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$gn_output" | grep -q "R2 = not_int"; then
+    echo "PASS: ~integer(hello) succeeds"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: ~integer(hello) succeeds (expected: R2 = not_int)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$gn_output" | grep -q "R3 = is_num"; then
+    echo "PASS: ~number(3.14) fails, number succeeds"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: ~number(3.14) fails, number succeeds (expected: R3 = is_num)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$gn_output" | grep -q "R4 = not_num"; then
+    echo "PASS: ~number(hello) succeeds"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: ~number(hello) succeeds (expected: R4 = not_num)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$gn_output" | grep -q "R5 = eq"; then
+    echo "PASS: ~(5 =?= 5) fails, equality succeeds"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: ~(5 =?= 5) fails, equality succeeds (expected: R5 = eq)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$gn_output" | grep -q "R6 = neq"; then
+    echo "PASS: ~(5 =?= 3) succeeds"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: ~(5 =?= 3) succeeds (expected: R6 = neq)"
+    FAIL=$((FAIL + 1))
+fi
+
+# --- Invalid Guard Tests ---
+echo ""
+echo "--- Invalid Guard Tests ---"
+
+# Create temp file with true in guard position
+TMP_TRUE_GUARD=$(mktemp --suffix=.glp)
+echo 'bad_guard(X?) :- true | X = done.' > "$TMP_TRUE_GUARD"
+
+true_guard_output=$($DART run "$REPL" <<TRUE_INPUT
+$TMP_TRUE_GUARD
+:quit
+TRUE_INPUT
+2>&1)
+
+rm -f "$TMP_TRUE_GUARD"
+
+if echo "$true_guard_output" | grep -q '"true" is not a guard'; then
+    echo "PASS: true in guard position rejected"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: true in guard position should be rejected"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""

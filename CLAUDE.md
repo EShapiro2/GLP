@@ -417,6 +417,13 @@ REPL tests: 101/101 passing
 dart test test/specific_test.dart
 ```
 
+### Bug Fix Test Protocol
+
+**When a bug is detected and fixed:**
+1. Add the test case that exposed the bug to the REPL test suite
+2. The test should verify the fix works (not just that it doesn't crash)
+3. This prevents regression - the bug should never reappear
+
 ## Working Principles
 
 ### 0. FCP AM Adherence
@@ -639,6 +646,18 @@ Claude B: work → push → branch-B ──────────────�
 1. Commit frequently with clear messages
 2. Test after each change
 3. Push to your branch: `git push -u origin claude/<your-branch-name>`
+
+**After completing a task and pushing:**
+When a task is completed, committed, and pushed, ALWAYS provide the user with merge instructions so they can integrate the work into main. Use the exact format below with the actual branch name:
+
+```bash
+cd /Users/udi/GLP
+git checkout main
+git pull origin main
+git fetch origin claude/<ACTUAL-BRANCH-NAME>
+git merge -m "Merge claude/<ACTUAL-BRANCH-NAME> into main" origin/claude/<ACTUAL-BRANCH-NAME>
+git push origin main
+```
 
 **Before ending session:**
 1. Ensure all work is committed

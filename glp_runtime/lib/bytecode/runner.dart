@@ -2853,10 +2853,20 @@ class BytecodeRunner {
         }
 
         // All arguments are ground - evaluate the guard
-        final result = _evaluateGuard(predicateName, args, cx);
+        var result = _evaluateGuard(predicateName, args, cx);
+
+        // Handle guard negation: invert success/fail (suspend unchanged)
+        if (op.negated) {
+          if (result == GuardResult.success) {
+            result = GuardResult.failure;
+          } else if (result == GuardResult.failure) {
+            result = GuardResult.success;
+          }
+          // suspend stays suspend
+        }
 
         if (result == GuardResult.success) {
-          if (cx.debugOutput) print('[DEBUG] Guard - SUCCESS with args: $args');
+          if (cx.debugOutput) print('[DEBUG] Guard${op.negated ? " (negated)" : ""} - SUCCESS with args: $args');
           if (debug) {
             // print('[GUARD] SUCCESS - continuing');
           }
@@ -2864,7 +2874,7 @@ class BytecodeRunner {
           continue;
         } else {
           // FAIL - try next clause
-          if (cx.debugOutput) print('[DEBUG] Guard - FAILED with args: $args');
+          if (cx.debugOutput) print('[DEBUG] Guard${op.negated ? " (negated)" : ""} - FAILED with args: $args');
           if (debug) {
             // print('[GUARD] FAIL - trying next clause');
           }
@@ -2876,21 +2886,24 @@ class BytecodeRunner {
 
       if (op is Ground) {
         // ground(X): Succeeds if X is ground (contains no unbound variables)
+        // ~ground(X): Succeeds if X is NOT ground (contains unbound variables)
         //
-        // Three-valued semantics:
+        // Three-valued semantics for ground(X):
         // 1. If X is ground → SUCCEED (test passes, pc++)
         // 2. If X contains unbound readers (but no unbound writers) → SUSPEND
         //    (add readers to Si, pc++ - may become ground when readers bind)
         // 3. If X contains unbound writers → FAIL (soft-fail to next clause)
         //    (due to SRSW, cannot wait for unknown future binding)
         //
-        // Per spec section 5: "A guard that demands an uninstantiated reader
-        // adds that reader to Si and continues scanning"
+        // For ~ground(X) (negated):
+        // 1. If X is ground → FAIL
+        // 2. If X contains unbound readers → SUSPEND (might become ground)
+        // 3. If X contains unbound writers → SUCCEED (definitely not ground)
 
         final value = cx.clauseVars[op.varIndex];
-        if (cx.debugOutput) print('[DEBUG] PC $pc: Ground varIndex=${op.varIndex}, clauseVars value=$value (${value?.runtimeType})');
+        if (cx.debugOutput) print('[DEBUG] PC $pc: Ground${op.negated ? " (negated)" : ""} varIndex=${op.varIndex}, clauseVars value=$value (${value?.runtimeType})');
         if (value == null) {
-          // Variable doesn't exist - fail
+          // Variable doesn't exist - fail (even for negated)
           _softFailToNextClause(cx, pc);
           pc = _findNextClauseTry(pc);
           continue;
@@ -2970,41 +2983,65 @@ class BytecodeRunner {
           collectUnbound(value);
         }
 
-        // Decision logic (three-valued):
-        if (hasUnboundWriter) {
-          // Contains unbound writer(s) → FAIL (cannot become ground via SRSW)
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
-        } else if (unboundReaders.isNotEmpty) {
-          // Contains unbound readers but no unbound writers → SUSPEND
-          // May become ground when readers bind, add to Si and continue
-          pc = _suspendAndFailMulti(cx, unboundReaders, pc); continue;
-          pc++;
-          continue;
+        // Decision logic (three-valued) with negation support:
+        if (op.negated) {
+          // ~ground(X) semantics
+          if (hasUnboundWriter) {
+            // Contains unbound writer(s) → definitely not ground → SUCCEED
+            pc++;
+            continue;
+          } else if (unboundReaders.isNotEmpty) {
+            // Contains unbound readers → might become ground → SUSPEND
+            pc = _suspendAndFailMulti(cx, unboundReaders, pc);
+            continue;
+          } else {
+            // No unbound variables → is ground → FAIL
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
         } else {
-          // No unbound variables → SUCCEED (is ground)
-          pc++;
-          continue;
+          // ground(X) semantics (original)
+          if (hasUnboundWriter) {
+            // Contains unbound writer(s) → FAIL (cannot become ground via SRSW)
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          } else if (unboundReaders.isNotEmpty) {
+            // Contains unbound readers but no unbound writers → SUSPEND
+            // May become ground when readers bind, add to Si and continue
+            pc = _suspendAndFailMulti(cx, unboundReaders, pc);
+            continue;
+          } else {
+            // No unbound variables → SUCCEED (is ground)
+            pc++;
+            continue;
+          }
         }
       }
 
       if (op is Known) {
         // known(X): Succeeds if X is not an unbound variable
+        // ~known(X): Succeeds if X IS an unbound variable (equivalent to unknown/1)
         //
-        // Three-valued semantics:
+        // Three-valued semantics for known(X):
         // 1. If X is bound (to anything) → SUCCEED (test passes, pc++)
         // 2. If X is an unbound reader → SUSPEND
         //    (add reader to Si, pc++ - may become known when reader binds)
         // 3. If X is an unbound writer → FAIL (soft-fail to next clause)
         //    (due to SRSW, cannot wait for unknown future binding)
         //
+        // For ~known(X) (negated):
+        // 1. If X is bound → FAIL
+        // 2. If X is an unbound reader → SUSPEND (might become known)
+        // 3. If X is an unbound writer → SUCCEED (definitely unknown)
+        //
         // Note: known(X) differs from ground(X) - known only checks if X itself
         // is bound, not whether X contains unbound variables internally
 
         final value = cx.clauseVars[op.varIndex];
         if (value == null) {
-          // Variable doesn't exist - fail
+          // Variable doesn't exist - fail (even for negated)
           _softFailToNextClause(cx, pc);
           pc = _findNextClauseTry(pc);
           continue;
@@ -3014,6 +3051,7 @@ class BytecodeRunner {
         // NOTE: Must check BOTH sigmaHat (tentative bindings) AND heap bindings
         bool isKnown = false;
         int? unboundReader = null;
+        bool isUnboundWriter = false;
 
         if (value is int) {
           // Could be writer ID or reader ID - check sigmaHat first
@@ -3023,7 +3061,11 @@ class BytecodeRunner {
             final wc = cx.rt.heap.writer(value);
             if (wc != null) {
               // It's a writer ID - check if bound
-              isKnown = cx.rt.heap.isWriterBound(value);
+              if (cx.rt.heap.isWriterBound(value)) {
+                isKnown = true;
+              } else {
+                isUnboundWriter = true;
+              }
             } else {
               // It's a reader ID - check if its paired writer is bound
               final wid = cx.rt.heap.writerIdForReader(value);
@@ -3045,8 +3087,10 @@ class BytecodeRunner {
           // Writer - check sigmaHat first, then heap
           if (cx.sigmaHat.containsKey(value.varId)) {
             isKnown = true;
+          } else if (cx.rt.heap.isWriterBound(value.varId)) {
+            isKnown = true;
           } else {
-            isKnown = cx.rt.heap.isWriterBound(value.varId);
+            isUnboundWriter = true;
           }
         } else if (value is VarRef && value.isReader) {
           // Reader - check sigmaHat first, then heap
@@ -3072,20 +3116,39 @@ class BytecodeRunner {
           isKnown = true;
         }
 
-        if (isKnown) {
-          // Variable is known - succeed
-          pc++;
-          continue;
-        } else if (unboundReader != null) {
-          // Variable is unbound reader - could become known later, add to Si
-          pc = _suspendAndFail(cx, unboundReader, pc); continue;
-          pc++;
-          continue;
+        // Decision logic with negation support
+        if (op.negated) {
+          // ~known(X) semantics
+          if (isUnboundWriter) {
+            // Variable is unbound writer → definitely unknown → SUCCEED
+            pc++;
+            continue;
+          } else if (unboundReader != null) {
+            // Variable is unbound reader → might become known → SUSPEND
+            pc = _suspendAndFail(cx, unboundReader, pc);
+            continue;
+          } else {
+            // Variable is known → FAIL
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
         } else {
-          // Variable is unbound writer - fail
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
+          // known(X) semantics (original)
+          if (isKnown) {
+            // Variable is known - succeed
+            pc++;
+            continue;
+          } else if (unboundReader != null) {
+            // Variable is unbound reader - could become known later, add to Si
+            pc = _suspendAndFail(cx, unboundReader, pc);
+            continue;
+          } else {
+            // Variable is unbound writer - fail
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
         }
       }
 
