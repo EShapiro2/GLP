@@ -1,0 +1,7 @@
+%% replicate3.glp - Ternary stream replication
+%% Replicates a stream to three outputs
+
+replicate3(X, X?, X?, X?) :- ground(X?) | true.
+replicate3([X|Xs], [Y1?|Ys1?], [Y2?|Ys2?], [Y3?|Ys3?]) :-
+    replicate3(X?, Y1, Y2, Y3),
+    replicate3(Xs?, Ys1, Ys2, Ys3).

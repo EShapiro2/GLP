@@ -1,0 +1,10 @@
+%% Trace: replicate3([a,b,c], A, B, C)
+%% Expected result: A = [a, b, c], B = [a, b, c], C = [a, b, c]
+%%
+%% Replicates stream [a,b,c] to three outputs
+
+replicate3([a, b, c], A, B, C) :- true
+A = [a, b, c]
+B = [a, b, c]
+C = [a, b, c]
+→ succeeds
