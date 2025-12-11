@@ -667,7 +667,7 @@ use_counter([show(Val)|Input?], [show(Val)|Command?]) :-
     use_counter(Input?, Command),
     wait_write(Val?).
 use_counter([X|Input?], [X|Command?]) :-
-    X =\= show(_) |
+    ~(X? =?= show(_)) |
     use_counter(Input?, Command).
 use_counter([], []).
 
@@ -703,7 +703,7 @@ frame([refresh|M?], [clear|M1?]) :-
     frame([draw|M?], M1).
 
 frame([X|M?], [X|M1?]) :-
-    X =\= draw, X =\= refresh |
+    ~(X? =?= draw), ~(X? =?= refresh) |
     frame(M?, M1).
 
 %% draw_lines/1 draws four border lines
@@ -795,11 +795,11 @@ reduce(P, (A, B), Time, (Ta?, Tb?)) :-           %% fork
 reduce(P, G, Time, (G? :- Tbody?)) :-            %% reduce (with budget)
     Time > 0,
     New_t := Time? - 1,
-    G =\= true, G =\= (_, _),
+    ~(G? =?= true), ~(G? =?= (_, _)),
     clause(G?, P?, Body) |
     reduce(P?, Body?, New_t?, Tbody).
 reduce(P, G, 0, what_now(Mode)) :-               %% wait for command
-    G =\= true, G =\= (_, _) |
+    ~(G? =?= true), ~(G? =?= (_, _)) |
     next(P?, G?, Mode?).
 
 next(P, G, debug(Time, Tree)) :-                 %% debug mode
