@@ -350,7 +350,7 @@ class CodeGenerator {
       if (arg is VarTerm) {
         final varInfo = varTable.getVar(arg.name);
         if (varInfo != null) {
-          ctx.emit(bc.Ground(varInfo.registerIndex!));
+          ctx.emit(bc.Ground(varInfo.registerIndex!, negated: guard.negated));
           return;
         }
       }
@@ -361,13 +361,14 @@ class CodeGenerator {
       if (arg is VarTerm) {
         final varInfo = varTable.getVar(arg.name);
         if (varInfo != null) {
-          ctx.emit(bc.Known(varInfo.registerIndex!));
+          ctx.emit(bc.Known(varInfo.registerIndex!, negated: guard.negated));
           return;
         }
       }
     }
 
     if (guard.predicate == 'otherwise' && guard.args.isEmpty) {
+      // 'otherwise' cannot be negated (enforced by analyzer)
       ctx.emit(bc.Otherwise());
       return;
     }
@@ -375,6 +376,15 @@ class CodeGenerator {
     // Check for defined guard (unit clause)
     final unitClauseArgs = _findUnitClause(guard.predicate, guard.args.length);
     if (unitClauseArgs != null) {
+      // Defined guards cannot be negated
+      if (guard.negated) {
+        throw CompileError(
+          'Defined guard "${guard.predicate}" cannot be negated',
+          guard.line,
+          guard.column,
+          phase: 'codegen'
+        );
+      }
       // Defined guard: unfold to guard unifications
       _generateDefinedGuard(guard.args, unitClauseArgs, varTable, ctx);
       return;
@@ -386,7 +396,7 @@ class CodeGenerator {
       _generatePutArgument(guard.args[i], i, varTable, ctx);
     }
 
-    ctx.emit(bc.Guard(guard.predicate, guard.args.length));
+    ctx.emit(bc.Guard(guard.predicate, guard.args.length, negated: guard.negated));
   }
 
   /// Generate code for a defined guard (unit clause unfolding).

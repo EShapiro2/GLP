@@ -104,7 +104,10 @@ class Parser {
       if (_match(TokenType.PIPE)) {
         // Everything before | were guards - convert Goal to Guard
         guards = predicates.map((g) {
-          return Guard(g.functor, g.args, g.line, g.column);
+          // Detect negated guards (functor starts with ~)
+          final isNegated = g.functor.startsWith('~');
+          final actualFunctor = isNegated ? g.functor.substring(1) : g.functor;
+          return Guard(actualFunctor, g.args, g.line, g.column, negated: isNegated);
         }).toList();
 
         // Parse body after |
@@ -127,13 +130,41 @@ class Parser {
 
   // Parse a predicate that could be either a guard or a goal
   dynamic _parseGoalOrGuard() {
-    // Check for parenthesized disjunction: (Goal1 ; Goal2)
+    // Check for guard negation: ~G
+    bool negated = false;
+    int negLine = _peek().line;
+    int negColumn = _peek().column;
+    if (_match(TokenType.TILDE)) {
+      negated = true;
+      negLine = _previous().line;
+      negColumn = _previous().column;
+
+      // Check for double negation ~~G (syntactically forbidden)
+      if (_check(TokenType.TILDE)) {
+        throw CompileError(
+          'Double negation ~~G is not allowed',
+          _peek().line,
+          _peek().column,
+          phase: 'parser'
+        );
+      }
+    }
+
+    // Check for parenthesized expression: (Goal) or (Goal1 ; Goal2)
     if (_check(TokenType.LPAREN)) {
       final startToken = _advance(); // consume '('
       final firstGoal = _parseGoalOrGuard();
 
       if (_match(TokenType.SEMICOLON)) {
-        // This is a disjunction
+        // This is a disjunction - negation not allowed
+        if (negated) {
+          throw CompileError(
+            'Guard negation (~) cannot be applied to disjunction',
+            negLine,
+            negColumn,
+            phase: 'parser'
+          );
+        }
         final secondGoal = _parseGoalOrGuard();
         _consume(TokenType.RPAREN, 'Expected ")" after disjunction');
         // Return as ';'(Goal1, Goal2) - need to convert goals to terms
@@ -141,9 +172,13 @@ class Parser {
         final secondTerm = _goalToTerm(secondGoal);
         return Goal(';', [firstTerm, secondTerm], startToken.line, startToken.column);
       } else {
-        // Not a disjunction - put back what we parsed and try again
-        // This is complex, so for now just expect closing paren
+        // Parenthesized single goal - apply negation if present
         _consume(TokenType.RPAREN, 'Expected ")" after guard');
+        if (negated) {
+          // Apply negation to the parsed goal
+          final functor = '~${firstGoal.functor}';
+          return Goal(functor, firstGoal.args, negLine, negColumn);
+        }
         return firstGoal;
       }
     }
@@ -197,11 +232,22 @@ class Parser {
             ? ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column)
             : StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
         final rightTerm = _parseTerm();
+        // Negation not allowed on unification goals
+        if (negated) {
+          throw CompileError(
+            'Guard negation (~) cannot be applied to unification',
+            negLine,
+            negColumn,
+            phase: 'parser'
+          );
+        }
         return Goal('=', [leftTerm, rightTerm], functorToken.line, functorToken.column);
       }
 
       // Return as Goal for now (will be cast to Guard if before |)
-      return Goal(functorToken.lexeme, args, functorToken.line, functorToken.column);
+      // Use ~functor convention if negated (will be detected during Guard conversion)
+      final functor = negated ? '~${functorToken.lexeme}' : functorToken.lexeme;
+      return Goal(functor, args, negated ? negLine : functorToken.line, negated ? negColumn : functorToken.column);
     }
 
     // Otherwise, try to parse as infix comparison (e.g., X < Y, X? mod P? =:= 0)
@@ -217,8 +263,9 @@ class Parser {
       final right = _parseExpression(6);
 
       // Transform infix to prefix: X < Y → <(X, Y)
-      final functor = opToken.lexeme;
-      return Goal(functor, [left, right], opToken.line, opToken.column);
+      // For negation: ~(X =?= Y) → use ~=?= functor convention
+      final functor = negated ? '~${opToken.lexeme}' : opToken.lexeme;
+      return Goal(functor, [left, right], negated ? negLine : opToken.line, negated ? negColumn : opToken.column);
     }
 
     // Not a valid guard or goal
