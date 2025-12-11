@@ -1,0 +1,18 @@
+%% network2.glp - 2-way network switch
+%% Messages are msg(From, To, Content) - switch routes based on To
+%%
+%% Each agent has one channel ch(In?, Out) to the switch.
+%% Agent writes addressed messages to Out, reads incoming from In.
+%% Switch holds inverse: ch(Out?, In) - reads agent's output, writes to agent's input.
+
+%% Alice sends to Bob
+network2((alice, ch([msg(alice, bob, X)|AliceIn], AliceOut?)),
+         (bob, ch(BobIn, [msg(alice, bob, X?)|BobOut?]))) :-
+    network2((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut))).
+
+%% Bob sends to Alice
+network2((alice, ch(AliceIn, [msg(bob, alice, X?)|AliceOut?])),
+         (bob, ch([msg(bob, alice, X)|BobIn], BobOut?))) :-
+    network2((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut))).

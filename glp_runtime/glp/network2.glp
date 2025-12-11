@@ -1,0 +1,10 @@
+%% network2.glp - 2-way network switch
+%% Partially evaluated from defined guards receive/send
+
+%% Alice sends to Bob: read msg(bob,X) from alice's out, write X to bob's in
+network2((alice, ch([msg(bob, X)|AOut], AIn)), (bob, ch(BOut, [X?|BIn]))) :-
+    network2((alice, ch(AOut?, AIn?)), (bob, ch(BOut?, BIn?))).
+
+%% Bob sends to Alice: read msg(alice,X) from bob's out, write X to alice's in
+network2((alice, ch(AOut, [X?|AIn])), (bob, ch([msg(alice, X)|BOut], BIn))) :-
+    network2((alice, ch(AOut?, AIn?)), (bob, ch(BOut?, BIn?))).

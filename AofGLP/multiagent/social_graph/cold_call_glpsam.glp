@@ -37,8 +37,9 @@ social_graph(Id, [msg(_, _, _)|In], Fs) :-
     ground(Id?), otherwise |
     social_graph(Id?, In?, Fs?).
 
-%% inject_msg - defer insertion of response message until Resp becomes ground
+%% inject_msg - defer insertion of response message until Resp is known (bound)
+%% Note: Use known(Resp?) not ground(Resp?) because accept(ch(...)) contains unbound channel vars
 inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
-    ground(Resp?) | true.
+    known(Resp?) | true.
 inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
-    unknown(Resp?) | inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
+    otherwise | inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
