@@ -531,3 +531,385 @@ This branch was **not merged to main**. The implementation may need review and u
 6. **Two Dispatch Modes:**
    - Fast path: compile-time known targets → indexed vector write
    - Slow path: runtime targets → hierarchy server lookup
+
+---
+
+## 14. Deep Dive: How Monitor-Based RPC Actually Works
+
+This section answers detailed questions about the FCP RPC mechanism with specific file/line references.
+
+### 14.1 When Module A Calls `B # goal(X, Y)`
+
+**Question:** How does the message get from A to B? What is B's monitor doing? How does the result get back to A?
+
+#### Step 1: Compile-Time Transformation
+
+**File:** `system/compile/precompile/rpc.cp:164-175`
+
+When module A is compiled and contains `math # factorial(5, R)`:
+
+```prolog
+% If "math" is a string known at compile time:
+remote_procedure_call(Name, Goal,
+    (distribute # {Index?, Goal})^,
+    [import(Name, Index) | Im]^, Im
+) :-
+    string(Name) |
+        true.
+```
+
+The compiler:
+1. Collects all imports (like `math`) into a list
+2. Assigns an integer index to each (via `indices/3` at line 116)
+3. Transforms `math # factorial(5, R)` → `distribute # {1, factorial(5, R)}`
+
+#### Step 2: Module A's Distributor Setup
+
+**File:** `domain_server.cp:910-938`
+
+When module A is activated, a **distributor vector** is created:
+
+```prolog
+distributor(Imports, ServiceId, Distributor, Domain)
+ + (Index = 0, VectorTuple, Tuple = VectorTuple?) :-
+
+    Imports ? ServiceName, string(ServiceName),
+    Index++,
+    listener(ServiceId),
+    listener(Domain),
+    listener(Tuple) |
+        arg(Index', Tuple, Stream),
+        cache_import(Stream?, ServiceName, ServiceId, Domain),
+        self;
+    ...
+```
+
+This creates a vector with N entries, one per imported module. Each entry is a **stream** that will carry messages to that module.
+
+#### Step 3: Message Dispatch via Output Server
+
+**File:** `domain_server.cp:1964-1975`
+
+When A's body executes `distribute # {1, factorial(5, R)}`:
+
+```prolog
+output(CallInfo, ServiceId, Output, UCC, Done, Vector, Left, Right,
+        Circuit, Domain
+) :-
+    Output ? distribute(DX, Goal, DL, DR),
+    ServiceId = [_ | Scope],
+    UCC = {CO, CL, CR, CC},
+    ...
+    integer(DX),
+    vector(Vector) |
+        unify_without_failure(DL, DR),
+        UCC' = {CO, CL, CM, CC},
+        write_vector(DX, export(ServiceId, Scope, Goal, {CO, CM?, CR, CC}),
+                     Vector, Vector'),
+        self;
+```
+
+**Key:** `write_vector(1, export(..., factorial(5, R), CCC), Vector)` appends the message to stream #1.
+
+#### Step 4: Cache Import Connects to Target Module
+
+**File:** `domain_server.cp:964-1013`
+
+The `cache_import` procedure establishes the connection to module B:
+
+```prolog
+cache_import(Stream, Import, ServiceId, Domain) :-
+    ...
+    list(Stream),
+    Import = self,
+    ServiceId = [Name | _], Name =\= self,
+    channel(Domain) |
+        write_channel(find(ServiceId, SSC), Domain, Domain'),
+        serve_import(Stream, Import, ServiceId, Domain'?, SSC?);
+    ...
+```
+
+It:
+1. Sends `find([math, ...], SSC)` to the Domain server
+2. Domain server locates module B and returns its Service Channel (SSC)
+3. `serve_import` then forwards all messages from Stream to SSC
+
+#### Step 5: Module B's Monitor Receives the Message
+
+**File:** `domain_server.cp:1163-1199`
+
+Module B is running as a monitor process:
+
+```prolog
+monitor(In, Domain, ML, MR, Stop,  Monitor, Attributes,
+        ServiceId, InChannel, OutChannel
+) :-
+    In ? _Functor(CallInfo, _Scope, Goals, SCC),
+    listener(Domain),
+    listener(Monitor),
+    listener(Attributes),
+    listener(ServiceId),
+    listener(InChannel),
+    SCC = {CO, CL, CR, CC},
+    ... |
+        monitor_goals(Goals, Domain, ML'?, ML, Stop1?, Monitor, Attributes,
+                      ServiceId, InChannel, CallInfo, CO, CL, CR, CC),
+        self;
+```
+
+The monitor:
+1. Reads `export(CallInfo, Scope, factorial(5, R), CCC)` from its input stream `In`
+2. Extracts the goal `factorial(5, R)` and the computation controls
+3. Calls `monitor_goals` to dispatch to the local `factorial/2` procedure
+
+#### Step 6: Result Returns via CCC
+
+The key to understanding how results return is the **CCC (Computation Control Context)**:
+
+```prolog
+{CO, CL, CR, CC}
+% CO = Control Output - signals (abort, suspend, resume)
+% CL = Computation Left - input from caller
+% CR = Computation Right - output to caller
+% CC = Computation Channel - for nested requests
+```
+
+When module A makes the call:
+- A's `CR` (right side) becomes part of the CCC sent to B
+- When B binds `R` (in `factorial(5, R)`), the binding flows through this stream back to A
+- **The result returns via stream unification, not a separate return message!**
+
+This is the key FCP insight: **variables in the goal are shared between caller and callee**. Results flow back automatically when the callee binds them.
+
+---
+
+### 14.2 The Vector/Distribute Mechanism in Detail
+
+**Question:** From the analysis: `distribute # {Index, Goal}` writes to a vector. Who reads from that vector? Is each imported module a stream in the vector?
+
+#### How the Vector Works
+
+**File:** `EMULATOR/kernels.c:443-479`
+
+```c
+do_make_vector(Arg) {
+    ...
+    KOutA = Ref_Word(HP);        // Vector reference
+    *HP++ = Word(Arity, VctrTag);
+    Pa = HP;
+    HP += Arity;
+    KOutB = Ref_Word(HP);        // Tuple reference for reading
+    *HP++ = Word(Arity, TplTag);
+    Pb = HP;
+    HP += Arity;
+    while (Arity-- > 0) {
+        *Pa++ = Ref_Word(HP);    // Vector entry points to HP
+        *HP = Var_Word(Pb, WrtTag); // Writer variable
+        *Pb++ = Var_Word(HP, RoTag); // Reader variable
+        HP++;
+    }
+}
+```
+
+`make_vector(N, Vector, Tuple)` creates:
+- **Vector:** N-element vector where each element is a **writer end** of a stream
+- **Tuple:** N-element tuple where each element is the **reader end** of the same stream
+
+#### Who Reads from Each Stream?
+
+**Answer:** Each imported module has a **dedicated reader process** (`serve_import`) that reads from its stream entry.
+
+**File:** `domain_server.cp:1015-1033`
+
+```prolog
+serve_import(Stream, Import, ServiceId, Domain, SSC) :-
+    Stream ? RPC,
+    channel(SSC) |
+        write_channel(RPC, SSC, SSC'),  % Forward to target module
+        self;
+
+    Stream = [] | Import = _, ServiceId = _, Domain = _, SSC = _ ;
+    ...
+```
+
+So for a module with imports `[math, io, utils]`:
+- Index 1 → stream to `math` → `serve_import` reads and forwards to math's monitor
+- Index 2 → stream to `io` → `serve_import` reads and forwards to io's monitor
+- Index 3 → stream to `utils` → `serve_import` reads and forwards to utils' monitor
+
+Each `serve_import` connects to its target module **lazily** - the first message triggers a `find(ModuleName, SSC)` lookup.
+
+---
+
+### 14.3 Concrete Example: `math # factorial(5, R)` Message Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ COMPILE TIME                                                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  Source (in module A):  R := math # factorial(5)                       │
+│                                                                         │
+│  After RPC transformation (rpc.cp:164-175):                            │
+│     distribute # {1, factorial(5, R)}                                  │
+│     (assuming math is import #1)                                        │
+│                                                                         │
+│  Import list: [import(math, 1)]                                        │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│ RUNTIME - Module A Activation                                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  1. domain_server.cp:910-938 - Create distributor:                     │
+│     make_vector(1, Vector, Tuple)                                       │
+│     Vector = {Stream1_Writer}                                           │
+│     Tuple = {Stream1_Reader}                                            │
+│                                                                         │
+│  2. domain_server.cp:964-1013 - Start serve_import for math:           │
+│     serve_import(Stream1_Reader, math, [A|Scope], Domain, ?)            │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│ RUNTIME - Goal Execution                                                │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  3. Module A's body executes, encounters:                              │
+│     distribute # {1, factorial(5, R)}                                  │
+│                                                                         │
+│  4. domain_server.cp:1964-1975 - Output server handles:                │
+│     write_vector(1, export([A|Scope], Scope, factorial(5,R),           │
+│                           {CO, CM?, CR, CC}),                          │
+│                  Vector)                                                │
+│                                                                         │
+│     → Appends export message to Stream1                                 │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│ RUNTIME - Message Routing                                               │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  5. serve_import reads from Stream1_Reader:                             │
+│     Stream ? export([A|Scope], Scope, factorial(5,R), CCC)              │
+│                                                                         │
+│  6. First message triggers lookup (domain_server.cp:970-975):          │
+│     write_channel(find([math|Scope], SSC), Domain)                     │
+│                                                                         │
+│  7. Domain server locates math module, returns SSC                     │
+│                                                                         │
+│  8. serve_import forwards to math's channel:                           │
+│     write_channel(export(..., factorial(5,R), CCC), SSC)               │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│ RUNTIME - Module B (math) Execution                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  9. math's monitor reads from its input (domain_server.cp:1167):       │
+│     In ? export(CallInfo, Scope, factorial(5,R), SCC)                   │
+│                                                                         │
+│  10. monitor_goals dispatches to local factorial/2                      │
+│                                                                         │
+│  11. Local procedure executes: factorial(5, R)                         │
+│      → Computes result, binds R = 120                                   │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│ RESULT RETURN - Via Stream Unification                                  │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  12. When math binds R = 120:                                          │
+│      - R is the SAME variable that A passed in the goal                │
+│      - The binding propagates automatically through shared reference    │
+│      - A's R variable becomes bound to 120                             │
+│                                                                         │
+│  13. No explicit "return" message needed!                              │
+│      FCP uses shared variables for bidirectional communication         │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 14.4 Alternatives to Monitors
+
+**Question:** What's the alternative to monitors for cross-module calls?
+
+FCP provides three approaches:
+
+#### Alternative 1: Procedure Modules (`-mode(trust/failsafe/interrupt)`)
+
+**File:** `domain_server.cp:1117-1127`
+
+```prolog
+activated(..., ActivateControls, ...) :-
+    ActivateControls = procedures(_, _, _) | Attributes = _,
+        Kind = procedures,
+        in_server(In, Module, failsafe(abort, relay), ServiceId,
+                  Domain, Distributor);
+
+    ActivateControls = procedures(_, _, _, _) | Attributes = _,
+        Kind = procedures,
+        in_server(In, Module, interrupt(interrupt, serve), ServiceId,
+                  Domain, Distributor);
+```
+
+Procedure modules don't have a user-defined monitor - they expose procedures directly with:
+- `trust` - minimal overhead
+- `failsafe` - exception handling
+- `interrupt` - suspend/resume capability
+
+#### Alternative 2: Block Compilation (Whole-Program Optimization)
+
+**File:** `block/tree/self.cp`
+
+When modules are "blocked" together:
+- Intra-block RPCs become **direct procedure calls**
+- No monitor, no vector, no message passing
+- Procedures renamed: `math$factorial/2`
+
+```prolog
+% Before blocking:
+math # factorial(5, R)
+
+% After blocking (direct call):
+math$factorial(5, R)
+```
+
+**This eliminates all RPC overhead for calls within the same block.**
+
+#### Alternative 3: Direct Channel Communication
+
+If you have a reference to a module's channel (not its name), you can write directly:
+
+**File:** `domain_server.cp:789-791`
+
+```prolog
+send_rpc_goal(Goal, UCC, DRC, CallInfo, Scope, Target) :-
+    channel(Target),
+    arity(Target) =:= 1 | DRC = _, CallInfo = _, Scope = _,
+        write_channel(Goal, Target),  % Direct write!
+        closeCC(UCC);
+```
+
+---
+
+### 14.5 Summary: Two-Phase Message Flow
+
+| Phase | Mechanism | Overhead |
+|-------|-----------|----------|
+| **Static dispatch** | `distribute # {Index, Goal}` → `write_vector` → stream → `serve_import` → target | O(1) vector index + stream message |
+| **Dynamic dispatch** | `transmit # {Target, Goal}` → `find(Target, SSC)` → hierarchy lookup → target | O(log n) lookup + stream message |
+| **Blocked (inlined)** | Direct procedure call | Zero RPC overhead |
+
+The FCP module system is optimized for the common case (static dispatch) while supporting dynamic dispatch when needed.
