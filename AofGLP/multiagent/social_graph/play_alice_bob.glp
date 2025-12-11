@@ -1,16 +1,124 @@
-%% play_alice_bob.glp - 2-player cold-call test
-%% Alice initiates connection to Bob, Bob accepts.
-%% Tests full protocol: agent initialization, network routing, channel establishment.
+%% play_alice_bob.glp - 2-agent cold-call play
+%% Alice initiates connection to Bob, Bob accepts
+%%
+%% Requires: merge.glp, tag_stream.glp, lookup.glp from lib/
+%% Include: cold_call_glpsam.glp, agent_glpsam.glp, response_handling_glpsam.glp, network2.glp
+
+%% === Library predicates (inlined for self-contained test) ===
+
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys?, Ys).
+merge(Xs?, [], Xs).
+
+tag_stream(Name, [M|In], [msg(Name?, M?)|Out?]) :-
+    ground(Name?) | tag_stream(Name?, In?, Out).
+tag_stream(_, [], []).
+
+%% lookup(Key, List, Value) - find value associated with key
+lookup(Key, [(K, Value)|_], Value?) :- Key? =?= K? | true.
+lookup(Key, [_|Rest], Value?) :-
+    otherwise | lookup(Key?, Rest?, Value).
+
+%% lookup_send(Key, Msg, Fs, Fs1) - send message through channel, update list
+lookup_send(Key, Msg, Fs, Fs1?) :-
+    ground(Key?) |
+    lookup_send_step(Key?, Msg?, Fs?, Fs1).
+
+lookup_send_step(Key, Msg, [(K, Out)|Rest], [(K?, Out1?)|Rest?]) :-
+    Key? =?= K? |
+    Out? = [Msg?|Out1].
+lookup_send_step(Key, Msg, [Pair|Rest], [Pair?|Rest1?]) :-
+    otherwise |
+    lookup_send_step(Key?, Msg?, Rest?, Rest1).
+
+%% === Agent initialization ===
+
+agent(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
+    merge(UserIn?, NetIn?, In),
+    build_friends(UserOut?, NetOut?, Fs),
+    social_graph(Id?, In?, Fs?).
+
+build_friends(UserOut, NetOut, [(user, UserOut?), (net, NetOut?)]).
+
+%% === Cold-call protocol (GLPSAM) ===
+
+social_graph(Id, [msg(user, Id?, connect(Target))|In], Fs) :-
+    ground(Id?), ground(Target?) |
+    lookup_send(net, msg(Id?, Target?, intro(Id?, Id?, Resp)), Fs?, Fs1),
+    inject_msg(Resp?, Target?, Id?, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+social_graph(Id, [msg(From, Id?, intro(From?, From?, Resp))|In], Fs) :-
+    ground(Id?), ground(From?) |
+    lookup_send(user, msg(agent, user, befriend(From?, Resp?)), Fs?, Fs1),
+    social_graph(Id?, In?, Fs1?).
+
+social_graph(Id, [msg(user, Id?, decision(Dec, From, Resp?))|In], Fs) :-
+    ground(Id?) |
+    bind_response(Dec?, From?, Resp, Fs?, Fs1, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+social_graph(Id, [msg(From, Id?, response(Resp))|In], Fs) :-
+    ground(Id?) |
+    handle_response(Resp?, From?, Fs?, Fs1, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+social_graph(Id, [msg(_, _, _)|In], Fs) :-
+    ground(Id?), otherwise |
+    social_graph(Id?, In?, Fs?).
+
+inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
+    known(Resp?) | true.
+inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
+    otherwise | inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
+
+%% === Response handling (GLPSAM) ===
+
+bind_response(yes, From, accept(ch(FOut?, FIn)), Fs, Fs1?, In, In1?) :-
+    handle_response(accept(ch(FIn?, FOut)), From?, Fs?, Fs1, In?, In1).
+bind_response(no, _, no, Fs, Fs?, In, In?).
+
+handle_response(accept(ch(FIn, FOut)), From, Fs, [(From?, FOut?)|Fs?], In, In1?) :-
+    ground(From?) |
+    tag_stream(From?, FIn?, Tagged),
+    merge(In?, Tagged?, In1).
+handle_response(no, _, Fs, Fs?, In, In?).
+
+%% === Network switch ===
+
+network2((alice, ch([msg(alice, bob, X)|AliceIn], AliceOut?)),
+         (bob, ch(BobIn, [msg(alice, bob, X?)|BobOut?]))) :-
+    network2((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut))).
+
+network2((alice, ch(AliceIn, [msg(bob, alice, X?)|AliceOut?])),
+         (bob, ch([msg(bob, alice, X)|BobIn], BobOut?))) :-
+    network2((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut))).
+
+%% === The Play ===
 
 play_alice_bob :-
-    agent(alice, ch(AU2A?, AA2U), ch(AN2A?, AA2N)),
-    agent(bob, ch(BU2B?, BB2U), ch(BN2B?, BB2N)),
-    network2((alice, ch(AA2N?, AN2A)), (bob, ch(BB2N?, BN2B))),
-    alice_actor(ch(AA2U?, AU2A)),
-    bob_actor(ch(BB2U?, BU2B)).
+    %% Network switch (holds inverse of agents' network channels)
+    network2((alice, ch(AliceNetOut?, AliceNetIn)),
+             (bob, ch(BobNetOut?, BobNetIn))),
 
-%% Alice: initiate connection to bob
-alice_actor(ch(_, [msg(user, alice, connect(bob))])).
+    %% Alice's agent
+    agent(alice, ch(AliceUserIn?, AliceUserOut), ch(AliceNetIn?, AliceNetOut)),
 
-%% Bob: wait for befriend, accept
-bob_actor(ch([msg(agent, user, befriend(alice, Resp))|_], [msg(user, bob, decision(yes, alice, Resp?))])).
+    %% Bob's agent
+    agent(bob, ch(BobUserIn?, BobUserOut), ch(BobNetIn?, BobNetOut)),
+
+    %% Alice's script: initiate connection to Bob, ignore output
+    alice_actor(AliceUserOut?, AliceUserIn),
+
+    %% Bob's script: receive befriend request, accept
+    bob_actor(BobUserOut?, BobUserIn).
+
+%% Alice's actor: sends connect, ignores agent output
+alice_actor(_, [msg(user, alice, connect(bob))]).
+
+%% Bob's actor: waits for befriend, sends acceptance
+bob_actor([msg(agent, user, befriend(From, Resp))|_],
+          [msg(user, bob, decision(yes, From?, Resp?))|_]).
