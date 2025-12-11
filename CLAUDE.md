@@ -647,6 +647,18 @@ Claude B: work → push → branch-B ──────────────�
 2. Test after each change
 3. Push to your branch: `git push -u origin claude/<your-branch-name>`
 
+**After completing a task and pushing:**
+When a task is completed, committed, and pushed, ALWAYS provide the user with merge instructions so they can integrate the work into main. Use the exact format below with the actual branch name:
+
+```bash
+cd /Users/udi/GLP
+git checkout main
+git pull origin main
+git fetch origin claude/<ACTUAL-BRANCH-NAME>
+git merge -m "Merge claude/<ACTUAL-BRANCH-NAME> into main" origin/claude/<ACTUAL-BRANCH-NAME>
+git push origin main
+```
+
 **Before ending session:**
 1. Ensure all work is committed
 2. Push to your branch
