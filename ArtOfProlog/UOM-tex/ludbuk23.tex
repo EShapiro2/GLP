@@ -1,0 +1,877 @@
+%%%%% Leonudi Book, Chapter 23, pp 393-411 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 22
+\numberfirst
+\startpage{393}
+
+\chapa{An Equation Solver}
+A very natural area for Prolog applications is symbolic manipulation. For
+example, a Prolog program for symbolic differentiation, a typical symbol
+manipulation task, is just the rules of differentiation in different
+syntax, as shown in Program~\Proderrul.\par
+In this chapter, we present a program for solving symbolic equations. It
+is a simplification of PRESS (PRolog Equation Solving System), developed
+in the mathematical reasoning group of the Department of Artificial
+Intelligence at the University of Edinburgh. PRESS performs at the level
+of a mathematics student in her final year of high school.\par
+The first section gives an overview of equation solving with some
+example solutions. The remaining four sections cover the four major
+equation-solving methods implemented in the equation solver.\par
+\sect{An Overview of Equation Solving}
+The task of equation solving can be described syntactically. Given an
+equation Lhs = Rhs in an unknown X, transform the equation into an
+equivalent equation X = Rhs1, where Rhs1 does not contain X. This
+final equation is the solution. Two equations are equivalent if one is
+transformed into the other by a finite number of applications of the
+axioms and rules of algebra.\par 
+Successful mathematics students do not solve equations by blindly
+applying axioms of algebra. Instead they learn, develop, and use various
+methods and strategies. Our equation solver, modeling this behavior, is
+accordingly a collection of methods to be applied to an equation to be
+solved. Each method transforms the equation by applying identities of
+algebra expressed as rewrite rules. The methods can and do take widely
+different forms. They can be a collection of rules for solving the class
+of equations to which the method is applicable, or algorithms
+implementing a decision procedure.\par
+Abstractly, a method has two parts: a condition testing whether the method
+is applicable, and the application of the method itself.\par
+The type of equations our program can handle are indicated by the three
+examples in Figure~\Figtesequ. They consist of {\it algebraic
+functions\/} of the unknown, that is +, --, $\ast$, /, and exponentiation
+to an integer power, and also trigonometric and exponential functions.
+The unknown is {\it x\/} in all three equations.
+\midinsert\vskip -0.2truecm
+$$\vcenter{\halign{\lft{#}~~&\lft{#}\cr
+(i)&$\cos (x)\cdot (1-2\cdot\sin (x))=0$\cr
+\noalign{\vskip 5pt}
+(ii)&$x^2-3\cdot x+2=0$\cr
+\noalign{\vskip 5pt}
+(iii)&$2^{2\cdot x}-5\cdot 2^{x+1}+16=0$\cr}}$$\medskip
+\ctrline{{\bf Figure \Figtesequ}:~~Test equations}
+\endinsert\par
+We briefly show how each equation is solved.\par
+The first step in solving equation (i) in Figure~\Figtesequ\ is
+factorization. The problem to be solved is reduced to solving 
+$\cos (x)=0$ and $1-2\cdot\sin (x)=0$. A solution to either of these
+equations is a solution to the 
+original equation.\par
+Both the equations $\cos (x)=0$ and $1-2\cdot\sin (x)=0$ are solved by
+making $x$ the subject of the equation. This is possible because $x$
+occurs once in each equation.\par
+The solution to $\cos (x)=0$ is $\arccos (0)$. The solution of
+$1-2\cdot\sin (x)=0$ takes the following steps:\medskip
+\halign{\hskip 40pt\lft{#}\cr
+$1-2\cdot\sin (x)=0$,\cr
+$2\cdot\sin (x)=1$,\cr
+$\sin (x)=1/2$,\cr
+$x=\arcsin (1/2)$.\cr}\medno
+In general, equations with a single occurrence of the unknown can be
+solved by an algorithmic method called {\it isolation}. The method
+repeatedly applies an appropriate inverse function to both sides of the
+equation until the single occurrence of the unknown is isolated on the
+left-hand side of the equation. Isolation solves $1-2\cdot\sin (x)=0$
+by producing the preceding sequence of equations.\par
+Equation (ii) in Figure~\Figtesequ, $x^2-3\cdot x+2=0$, is a quadratic
+equation in $x$. We all learn in high school a formula for solving
+quadratic equations. The discriminant,  $b^2-4\cdot a\cdot c$, is
+calculated, in this case $(-3)^2-4\cdot 1\cdot 2$, which equals 1, and
+two solutions are given: $x=(-(-3)+\sqrt{1})/2$, which equals $2$, and
+$x=(-(-3)-\sqrt{1})/2$, which equals $1$.\par
+The key to solving equation (iii) in Figure~\Figtesequ\ is to realize
+that the equation is really a quadratic equation in $2^x$. The
+equation $2^{2\cdot x}-5\cdot 2^{x+1}+16=0$ can be rewritten as 
+$(2^x)^2-5\cdot 2\cdot 2^x+16=0$. This can be solved for $2^x$, giving
+two solutions of the form $2^x=$Rhs, where Rhs is free of $x$. Each of
+these equations are solved for $x$ to give solutions to equation~(iii).\par
+PRESS was tested on equations taken from British A-level examinations in
+mathematics. It seems that examiners liked posing questions such as
+equation~(iii), which involved the student`s manipulating logarithmic,
+exponential, or other transcendental functions into forms where they could
+be solved as polynomials. A method called {\it homogenization\/} evolved
+to solve equations of these types.\par
+The aim of homogenization is to transform the equation into a polynomial
+in some term containing the unknown. (We simplify the more general
+homogenization of PRESS for didactic purposes.) The method consists of
+four steps, which we illustrate for equation (iii). The equation is first
+parsed and all maximal nonpolynomial terms containing the unknown are
+collected with duplicates removed. This set is called the {\it offenders
+set\/}. In the example, it is  $\{2^{2x},2^{x+1}\}$. The second step
+is finding a term, known as the {\it reduced term\/}. The 
+result of homogenization is a polynomial equation in the reduced term.
+The reduced term in our example is $2^x$. The third step of
+homogenization is finding rewrite rules that express each of the elements
+of the offenders set as a polynomial in the reduced term. Finding such a
+set guarantees that homogenization will succeed. In our example the
+rewrite rules are $2^{2x} = (2^x)^2$ and $2^{x+1} = 2\cdot 2^x$.
+Finally, the rewrite rules are applied to produce the polynomial
+equation.\par 
+We complete this section with a brief overview of the equation solver.
+The basic predicate is {\tt solve\_equation(Equation,X,Solution)}. The
+relation is true if {\tt Solution} is a solution to {\tt Equation} in the
+unknown {\tt X}. The complete code appears as Program~\Proprosolequ.
+\pageinsert\vbox to\the\vsize {\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it solve\_equation\/}({\it Equation,Unknown,Solution\/}) $\lar$\cr
+\qi {\it Solution\/} {\rm is a solution to the equation} {\it Equation\/}
+{\rm in the unknown} {\it Unknown}{\rm .}\cr
+\noalign{\medskip}
+solve\_equation(A$\ast$B=0,X,Solution) $\lar$\cr
+\qi !,\cr
+\qi factorize(A$\ast$B,X,Factors\\[~]),\cr
+\qi remove\_duplicates(Factors,Factors1),\cr
+\qi solve\_factors(Factors1,X,Solution).\cr
+\noalign{\vskip 5pt}
+solve\_equation(Equation,X,Solution) $\lar$\cr
+\qi single\_occurrence(X,Equation),\cr
+\qi !,\cr
+\qi position(X,Equation,[Side$\mid$Position]),\cr
+\qi maneuver\_sides(Side,Equation,Equation1),\cr
+\qi isolate(Position,Equation1,Solution).\cr
+\noalign{\vskip 5pt}
+solve\_equation(Lhs=Rhs,X,Solution) $\lar$\cr
+\qi polynomial(Lhs,X),\cr
+\qi polynomial(Rhs,X),\cr
+\qi !,\cr
+\qi polynomial\_normal\_form(Lhs-Rhs,X,PolyForm),\cr
+\qi solve\_polynomial\_equation(PolyForm,X,Solution).\cr
+\noalign{\vskip 5pt}
+solve\_equation(Equation,X,Solution) $\lar$\cr
+\qi homogenize(Equation,X,Equation1,X1),\cr
+\qi !,\cr
+\qi solve\_equation(Equation1,X1,Solution1),\cr
+\qi solve\_equation(Solution1,X,Solution).\cr
+\noalign{\medskip}
+{\it The factorization method}\cr
+\noalign{\medskip}
+{\it factorize\/}({\it Expression,Subterm,Factors\/}) $\lar$\cr
+\qi {\it Factors\/} {\rm is a difference-list consisting of the factors of} \cr
+\qi {\rm the multiplicative term} {\it Expression\/} {\rm that contain
+the {\it Subterm\/}{\rm .}\cr
+\noalign{\medskip}
+factorize(A$\ast$B,X,Factors\\Rest) $\lar$\cr
+\qi !, factorize(A,X,Factors\\Factors1),
+factorize(B,X,Factors1\\Rest).\cr
+factorize(C,X,[C$\mid$Factors]\\Factors) $\lar$\cr
+\qi subterm(X,C),  !.\cr
+factorize(C,X,Factors\\Factors).\cr
+\noalign{\medskip}
+{\it solve\_factors\/}({\it Factors,Unknown,Solution\/}) $\lar$\cr
+\qi {\it Solution\/} {\rm is a solution of the equation} {\it
+Factor\/} {\rm = 0 in the}\cr
+\qi {\it Unknown\/} {\rm for some} {\it Factor\/} {\rm in the list of}
+{\it Factors\/}{\rm .}\cr
+\noalign{\bigskip}
+{\bf Program \Proprosolequ}{\rm :~~A program for solving equations}\cr}
+\vfill}
+\endin
+\pageinsert\vbox to\the\vsize {\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+solve\_factors([Factor$\mid$Factors],X,Solution) $\lar$\cr
+\qi solve\_equation(Factor=0,X,Solution).\cr
+solve\_factors([Factor$\mid$Factors],X,Solution) $\lar$\cr
+\qi solve\_factors(Factors,X,Solution).\cr
+\noalign{\medskip}
+{\it The isolation method}\cr
+\noalign{\medskip}
+maneuver\_sides(1,Lhs = Rhs,Lhs = Rhs) $\lar$ !.\cr
+maneuver\_sides(2,Lhs = Rhs,Rhs = Lhs) $\lar$ !.\cr
+\noalign{\vskip 5pt}
+isolate([N$\mid$Position],Equation,IsolatedEquation) $\lar$\cr
+\qi isolax(N,Equation,Equation1),\cr
+\qi isolate(Position,Equation1,IsolatedEquation).\cr
+isolate([~],Equation,Equation).\cr
+\noalign{\medskip}
+{\it Axioms for isolation}\cr}\medskip
+\halign{\lft{\tt #}\quad&\lft{\tt #}\cr
+isolax(1,-Lhs = Rhs,Lhs = -Rhs).&\% Unary minus\cr
+\noalign{\vskip 5pt}
+isolax(1,Term1+Term2 = Rhs,Term1 = Rhs-Term2).&\% Addition\cr
+isolax(2,Term1+Term2 = Rhs,Term2 = Rhs-Term1).&\% Addition\cr
+\noalign{\vskip 5pt}
+isolax(1,Term1-Term2 = Rhs,Term1 = Rhs+Term2).&\% Subtraction\cr
+isolax(2,Term1-Term2 = Rhs,Term2 = Term1-Rhs).&\% Subtraction\cr
+\noalign{\vskip 5pt}
+isolax(1,Term1$\ast$Term2 = Rhs,Term1 = Rhs/Term2) $\lar$&\%
+Multiplication\cr
+\qi Term2 $\ne$ 0.\cr
+isolax(2,Term1$\ast$Term2 = Rhs,Term2 = Rhs/Term1) $\lar$&\%
+Multiplication\cr
+\qi Term1 $\ne$ 0.\cr}
+\halign{\lft{\tt #}\cr
+\noalign{\vskip 5pt}
+isolax(1,Term1$\uparrow$Term2 = Rhs,Term1 = Rhs$\uparrow$(-Term2)).\cr
+\qi \% Exponentiation\cr
+isolax(2,Term1$\uparrow$Term2 = Rhs,Term2 = log(base(Term1),Rhs)).\cr
+\qi \% Exponentiation\cr}
+\halign{\lft{\tt #}\qquad\qquad\qquad&\lft{\tt #}\cr
+\noalign{\vskip 5pt}
+isolax(1,sin(U) = V,U = arcsin(V)).&\% Sine\cr
+isolax(1,sin(U) = V,U = $\pi$-arcsin(V)).&\% Sine\cr
+isolax(1,cos(U) = V,U = arccos(V)).&\% Cosine\cr
+isolax(1,cos(U) = V,U = -arccos(V)).&\% Cosine\cr}
+\halign{\lft{\tt #}\cr
+\noalign{\medskip}
+{\it The polynomial method}\cr
+\noalign{\medskip}
+polynomial(Term,X) $\lar$ {\rm See Program \Prorecpoy.}\cr
+\noalign{\medskip}
+{\it polynomial\_normal\_form\/}({\it Expression,Term,PolyNormalForm\/})
+$\lar$\cr
+\qi {\it PolyNormalForm\/} {\rm is the polynomial normal form of}\cr
+\qi {\it Expression\/}{\rm , which is a polynomial in} {\it
+Term\/}{\rm .}\cr
+\noalign{\bigskip}
+{\bf Program \Proprosolequ}~~{\rm (Continued)}\cr}\vfill}
+\endin
+\pageinsert\vbox to\the\vsize {\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+polynomial\_normal\_form(Polynomial,X,NormalForm) $\lar$\cr
+\qi polynomial\_form(Polynomial,X,PolyForm),\cr
+\qi remove\_zero\_terms(PolyForm,NormalForm), !.\cr
+\noalign{\vskip 5pt}
+polynomial\_form(X,X,[(1,1)]).\cr
+polynomial\_form(X$\uparrow$N,X,[(1,N)]).\cr
+polynomial\_form(Term1+Term2,X,PolyForm) $\lar$\cr
+\qi polynomial\_form(Term1,X,PolyForm1),\cr
+\qi polynomial\_form(Term2,X,PolyForm2),\cr
+\qi add\_polynomials(PolyForm1,PolyForm2,PolyForm).\cr
+polynomial\_form(Term1-Term2,X,PolyForm) $\lar$\cr
+\qi polynomial\_form(Term1,X,PolyForm1),\cr
+\qi polynomial\_form(Term2,X,PolyForm2),\cr
+\qi subtract\_polynomials(PolyForm1,PolyForm2,PolyForm).\cr
+polynomial\_form(Term1$\ast$Term2,X,PolyForm) $\lar$\cr
+\qi polynomial\_form(Term1,X,PolyForm1),\cr
+\qi polynomial\_form(Term2,X,PolyForm2),\cr
+\qi multiply\_polynomials(PolyForm1,PolyForm2,PolyForm).\cr
+polynomial\_form(Term$\uparrow$N,X,PolyForm) $\lar$ !,\cr
+\qi polynomial\_form(Term,X,PolyForm1),\cr
+\qi binomial(PolyForm1,N,PolyForm).\cr
+polynomial\_form(Term,X,[(Term,0)]) $\lar$\cr
+\qi free\_of(X,Term), !.\cr
+\noalign{\vskip 5pt}
+remove\_zero\_terms([(0,N)$\mid$Poly],Poly1) $\lar$\cr
+\qi !, remove\_zero\_terms(Poly,Poly1).\cr
+remove\_zero\_terms([(C,N)$\mid$Poly],[(C,N)$\mid$Poly1]) $\lar$\cr
+\qi C $\ne$ 0, !, remove\_zero\_terms(Poly,Poly1).\cr
+remove\_zero\_terms([~],[~]).\cr
+\noalign{\medskip}
+{\it Polynomial manipulation routines}\cr
+\noalign{\medskip}
+{\it add\_polynomials\/}({\it Poly1,Poly2,Poly\/}) $\lar$\cr
+\qi {\it Poly\/} {\rm is the sum of} {\it Poly1\/} {\rm and} {\it
+Poly2\/}{\rm , where} {\it Poly1\/}{\rm ,}\cr
+\qi {\it Poly2\/}{\rm , and} {\it Poly\/} {\rm are all in polynomial
+form.}\cr
+\noalign{\medskip}
+add\_polynomials([~],Poly,Poly) $\lar$ !.\cr
+add\_polynomials(Poly,[~],Poly) $\lar$ !.\cr
+add\_polynomials([(Ai,Ni)$\mid$Poly1],[(Aj,Nj)$\mid
+$Poly2],[(Ai,Ni)$\mid$Poly]) $\lar$\cr
+\qi Ni $>$ Nj, !, add\_polynomials(Poly1,[(Aj,Nj)$\mid$Poly2],Poly).\cr
+add\_polynomials([(Ai,Ni)$\mid$Poly1],[(Aj,Nj)$\mid
+$Poly2],[(A,Ni)$\mid$Poly]) $\lar$\cr
+\qi Ni =:= Nj, !, A is Ai+Aj, add\_polynomials(Poly1,Poly2,Poly).\cr
+add\_polynomials([(Ai,Ni)$\mid$Poly1],[(Aj,Nj)$\mid
+$Poly2],[(Aj,Nj)$\mid$Poly]) $\lar$\cr
+\qi Ni $<$ Nj, !, add\_polynomials([(Ai,Ni)$\mid$Poly1],Poly2,Poly).\cr
+\noalign{\bigskip}
+{\bf Program \Proprosolequ}~~{\rm (Continued)}\cr}\vfill}
+\endin
+\pageinsert\vbox to\the\vsize {\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it subtract\_polynomials\/}({\it Poly1,Poly2,Poly\/}) $\lar$\cr
+\qi {\it Poly\/} {\rm is the difference of} {\it Poly1\/} {\rm and} {\it
+Poly2\/}{\rm , where} {\it Poly1\/}{\rm ,}\cr
+\qi {\it Poly2\/} {\rm , and} {\it Poly\/} {\rm are all in polynomial
+form.}\cr
+\noalign{\medskip}
+subtract\_polynomials(Poly1,Poly2,Poly) $\lar$\cr
+\qi multiply\_single(Poly2,(-1,0),Poly3),\cr
+\qi add\_polynomials(Poly1,Poly3,Poly), !.\cr
+\noalign{\medskip}
+{\it multiply\_single\/}({\it Poly1,Monomial,Poly\/}) $\lar$\cr
+\qi {\it Poly\/} {\rm is the product of} {\it Poly1\/} {\rm and} {\it
+Monomial\/}{\rm , where} {\it Poly1\/}\cr
+\qi {\rm and} {\it Poly\/} {\rm are in polynomial form, and} {\it
+Monomial\/} {\rm has the}\cr
+\qi {\rm form} ({\it C,N\/}) {\rm denoting the monomial} {\it C\/$
+\ast$X\/$^N$}{\rm .}\cr
+\noalign{\medskip}
+multiply\_single([(C1,N1)$\mid$Poly1],(C,N),[(C2,N2)$\mid$Poly])
+$\lar$\cr
+\qi C2 is C1$\ast$C, N2 is N1+N, multiply\_single(Poly1,(C,N),Poly).\cr
+multiply\_single([~],Factor,[~]).\cr
+\noalign{\medskip}
+{\it multiply\_polynomials\/}({\it Poly1,Poly2,Poly\/}) $\lar$\cr
+\qi {\it Poly\/} {\rm is the product of} {\it Poly1\/} {\rm and} {\it
+Poly2\/}{\rm , where} {\it Poly1\/},\cr
+\qi {\it Poly2\/} {\rm and} {\it Poly\/} {\rm are all in polynomial
+form}\cr
+\noalign{\medskip}
+multiply\_polynomials([(C,N)$\mid$Poly1],Poly2,Poly) $\lar$\cr
+\qi multiply\_single(Poly2,(C,N),Poly3),\cr
+\qi multiply\_polynomials(Poly1,Poly2,Poly4),\cr
+\qi add\_polynomials(Poly3,Poly4,Poly).\cr
+multiply\_polynomials([~],P,[~]).\cr
+\noalign{\vskip 5pt}
+binomial(Poly,1,Poly).\cr
+\noalign{\medskip}
+{\it Polynomial equation solver}\cr
+\noalign{\medskip}
+{\it solve\_polynomial\_equation\/}({\it Equation,Unknown,Solution\/})
+$\lar$\cr
+\qi {\it Solution\/} {\rm is a solution to the} {\rm polynomial} 
+{\it Equation\/} {\rm in the unknown} {\it Unknown}{\rm .}\cr
+\noalign{\medskip}
+solve\_polynomial\_equation(PolyEquation,X,X = -B/A) $\lar$\cr
+\qi linear(PolyEquation), !,\cr
+\qi pad(PolyEquation,[(A,1),(B,0)]).\cr
+solve\_polynomial\_equation(PolyEquation,X,Solution) $\lar$\cr
+\qi quadratic(PolyEquation), !,\cr
+\qi pad(PolyEquation,[(A,2),(B,1),(C,0)]),\cr
+\qi discriminant(A,B,C,Discriminant),\cr
+\qi root(X,A,B,C,Discriminant,Solution).\cr
+\noalign{\vskip 5pt}
+discriminant(A,B,C,D) $\lar$ D is B$\ast$B - 4$\ast$A$\ast$C.\cr
+\noalign{\bigskip}
+{\bf Program \Proprosolequ}~~{\rm (Continued)}\cr}\vfill}
+\endin
+\pageinsert\vbox to\the\vsize {\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+root(X,A,B,C,0,X= -B/(2$\ast$A)).\cr
+root(X,A,B,C,D,X= (-B+sqrt(D))/(2$\ast$A)) $\lar$ D $>$ 0.\cr
+root(X,A,B,C,D,X= (-B-sqrt(D))/(2$\ast$A)) $\lar$ D $>$ 0.\cr
+\noalign{\vskip 5pt}
+pad([(C,N)$\mid$Poly],[(C,N)$\mid$Poly1]) $\lar$\cr
+\qi !, pad(Poly,Poly1).\cr
+pad(Poly,[(0,N)$\mid$Poly1]) $\lar$\cr
+\qi pad(Poly,Poly1).\cr
+pad([~],[~]).\cr
+\noalign{\vskip 5pt}
+linear([(Coeff,1)$\mid$Poly]).\cr
+quadratic([(Coeff,2)$\mid$Poly]).\cr
+\noalign{\medskip}
+{\it The homogenization method}\cr
+\noalign{\medskip}
+{\it homogenize\/}({\it Equation,X,Equation1,X1\/}) $\lar$\cr
+\qi {\rm The} {\it Equation\/} {\rm in} {\it X\/} {\rm is transformed to
+the polynomial}\cr
+\qi {\it Equation1\/} {\rm in} {\it X1\/} {\rm where} {\it X1\/}{\rm ,
+contains} {\it X\/}{\rm .}\cr 
+\noalign{\medskip}
+homogenize(Equation,X,Equation1,X1) $\lar$\cr
+\qi offenders(Equation,X,Offenders),\cr
+\qi reduced\_term(X,Offenders,Type,X1),\cr
+\qi rewrite(Offenders,Type,X1,Substitutions),\cr
+\qi substitute(Equation,Substitutions,Equation1).\cr
+\noalign{\medskip}
+{\it offenders\/}({\it Equation,Unknown,Offenders\/}) $\lar$\cr
+\qi {\it Offenders\/} {\rm is the set of offenders of the {\it Equation} in
+the} {\it Unknown}{\rm .}\cr
+\noalign{\medskip}
+offenders(Equation,X,Offenders) $\lar$\cr
+\qi parse(Equation,X,Offenders1\\[~]),\cr
+\qi remove\_duplicates(Offenders1,Offenders),\cr
+\qi multiple(Offenders).\cr
+\noalign{\vskip 5pt}
+reduced\_term(X,Offenders,Type,X1) $\lar$\cr
+\qi classify(Offenders,X,Type),\cr
+\qi candidate(Type,Offenders,X,X1).\cr
+\noalign{\medskip}
+{\it Heuristics for exponential equations}\cr
+\noalign{\medskip}
+classify(Offenders,X,exponential) $\lar$\cr
+\qi exponential\_offenders(Offenders,X).\cr
+\noalign{\vskip 5pt}
+exponential\_offenders([A$\uparrow$B$\mid$Offs],X) $\lar$\cr
+\qi free\_of(X,A), subterm(X,B), exponential\_offenders(Offs,X).\cr
+exponential\_offenders([~],X).\cr
+\noalign{\vskip 5pt}
+candidate(exponential,Offenders,X,A$\uparrow$X) $\lar$\cr
+\qi base(Offenders,A), polynomial\_exponents(Offenders,X).\cr
+\noalign{\bigskip}
+{\bf Program \Proprosolequ}~~{\rm (Continued)}\cr}\vfill}
+\endin
+\pageinsert\vbox to\the\vsize {\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+base([A$\uparrow$B$\mid$Offs],A) $\lar$ base(Offs,A).\cr
+base([~\),A).\cr
+\noalign{\vskip 5pt}
+polynomial\_exponents([A$\uparrow$B$\mid$Offs],X) $\lar$\cr
+\qi polynomial(B,X), polynomial\_exponents(Offs,X).\cr
+polynomial\_exponents([~],X).\cr
+\noalign{\medskip}
+{\it Parsing the equation and making substitutions}\cr
+\noalign{\medskip}
+{\it parse\/}({\it Expression,Term,Offenders\/}) $\lar$\cr
+\qi {\it Expression\/} {\rm is traversed to produce the set of} {\it
+Offenders\/} {\rm in} {\it Term\/}{\rm ,}\cr
+\qi {\rm that is, the nonalgebraic subterms of} {\it Expression\/} {\rm
+containing} {\it Term}{\rm .}\cr
+\noalign{\medskip}
+parse(A+B,X,L1\\L2) $\lar$\cr
+\qi !, parse(A,X,L1\\L3), parse(B,X,L3\\L2).\cr
+parse(A$\ast$B,X,L1\\L2) $\lar$\cr
+\qi !, parse(A,X,L1\\L3), parse(B,X,L3\\L2).\cr
+parse(A-B,X,L1\\L2) $\lar$\cr
+\qi !, parse(A,X,L1\\L3), parse(B,X,L3\\L2).\cr
+parse(A=B,X,L1\\L2) $\lar$\cr
+\qi !, parse(A,X,L1\\L3), parse(B,X,L3\\L2).\cr
+parse(A$\uparrow$B,X,L) $\lar$\cr
+\qi integer(B), !, parse(A,X,L).\cr
+parse(A,X,L\\L) $\lar$\cr
+\qi free\_of(X,A), !.\cr
+parse(A,X,[A$\mid$L]\\L) $\lar$\cr
+\qi subterm(X,A), !.\cr
+\noalign{\medskip}
+{\it substitute\/}({\it Expression,Substitutions,Expression1\/})
+$\lar$\cr
+\qi {\rm The list of} {\it Substitutions\/} {\rm is applied to} {\it
+Expression\/} {\rm to produce} {\it Expression1}{\rm .}\cr
+\noalign{\medskip}
+substitute(A+B,Subs,NewA+NewB) $\lar$\cr
+\qi !, substitute(A,Subs,NewA), substitute(B,Subs,NewB).\cr
+substitute(A$\ast$B,Subs,NewA$\ast$NewB) $\lar$\cr
+\qi !, substitute(A,Subs,NewA), substitute(B,Subs,NewB).\cr
+substitute(A-B,Subs,NewA-NewB) $\lar$\cr
+\qi !, substitute(A,Subs,NewA), substitute(B,Subs,NewB).\cr
+substitute(A=B,Subs,NewA=NewB) $\lar$\cr
+\qi !, substitute(A,Subs,NewA), substitute(B,Subs,NewB).\cr
+substitute(A$\uparrow$B,Subs,NewA$\uparrow$B) $\lar$\cr
+\qi integer(B), !, substitute(A,Subs,NewA).\cr
+substitute(A,Subs,B) $\lar$\cr
+\qi member(A=B,Subs), !.\cr
+substitute(A,Subs,A).\cr
+\noalign{\bigskip}
+{\bf Program \Proprosolequ}~~{\rm (Continued)}\cr}\vfill}
+\endin
+\pageinsert\vbox to\the\vsize {\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it Finding homogenization rewrite rules}\cr
+\noalign{\medskip}
+rewrite([Off$\mid$Offs],Type,X1,[Off=Term$\mid$Rewrites]) $\lar$\cr
+\qi homogenize\_axiom(Type,Off,X1,Term),\cr
+\qi rewrite(Offs,Type,X1,Rewrites).\cr
+rewrite([~],Type,X,[~]).\cr
+\noalign{\medskip}
+{\it Homogenization axioms}\cr
+\noalign{\medskip}
+homogenize\_axiom(exponential,A$\uparrow$(N$\ast$X),A$\uparrow$X,(A$
+\uparrow$X)$\uparrow$N).\cr
+homogenize\_axiom(exponential,A$\uparrow$(-X),A$\uparrow$X,1/(A$
+\uparrow$X)).\cr
+homogenize\_axiom(exponential,A$\uparrow$(X+B),A$\uparrow$X,A$
+\uparrow$B$\ast$A$\uparrow$X).\cr
+\noalign{\medskip}
+{\it Utilities}\cr
+\noalign{\medskip}
+subterm(Sub,Term) $\lar$ {\rm See Program \Profinsubter.}\cr
+\noalign{\vskip 5pt}
+position(Term,Term,[~]) $\lar$ !.\cr
+position(Sub,Term,Path) $\lar$\cr
+\qi compound(Term), functor(Term,F,N), position(N,Sub,Term,Path), !.\cr
+\noalign{\vskip 5pt}
+position(N,Sub,Term,[N$\mid$Path]) $\lar$\cr
+\qi arg(N,Term,Arg), position(Sub,Arg,Path).\cr
+position(N,Sub,Term,Path) $\lar$\cr
+\qi N $>$ 1, N1 is N-1, position(N1,Sub,Term,Path).\cr
+\noalign{\vskip 5pt}
+free\_of(Subterm,Term) $\lar$ occurrence(Subterm,Term,0).\cr
+\noalign{\vskip 5pt}
+single\_occurrence(Subterm,Term) $\lar$ occurrence(Subterm,Term,1).\cr
+\noalign{\vskip 5pt}
+occurrence(Term,Term,1) $\lar$ !.\cr
+occurrence(Sub,Term,N) $\lar$\cr
+\qi compound(Term), !, functor(Term,F,M), occurrence(M,Sub,Term,0,N).\cr
+occurrence(Sub,Term,0) $\lar$ Term $\ne$ Sub.\cr
+\noalign{\vskip 5pt}
+occurrence(M,Sub,Term,N1,N2) $\lar$\cr
+\qi M $>$ 0, !, arg(M,Term,Arg), occurrence(Sub,Arg,N), N3 is N+N1,\cr
+\qi M1 is M-1, occurrence(M1,Sub,Term,N3,N2).\cr
+occurrence(0,Sub,Term,N,N).\cr
+\noalign{\vskip 5pt}
+remove\_duplicates(Xs,Ys) $\lar$ no\_doubles(Xs,Ys).\cr
+\noalign{\vskip 5pt}
+no\_doubles(Xs,Ys) $\lar$ {\rm See Program \Proremduplis.}\cr
+\noalign{\vskip 5pt}
+multiple([X1,X2$\mid$Xs]).\cr
+\noalign{\bigskip}
+{\bf Program \Proprosolequ}~~{\rm (Continued)}\cr}\vfill}
+\endin
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it Testing and data}\cr
+\noalign{\medskip}
+test\_press(X,Y) $\lar$ equation(X,E,U), solve\_equation(E,U,Y).\cr
+\noalign{\vskip 5pt}
+equation(1,cos(x)$\ast$(1-2$\ast$sin(x))=0,x).\cr
+\noalign{\vskip 5pt}
+equation(2,x$\uparrow$2-3$\ast$x+2=0,x).\cr
+\noalign{\vskip 5pt}
+equation(3,2$\uparrow$(2$\ast$x)-5$\ast$2$\uparrow$(x+1)+16=0,x).\cr
+\noalign{\bigskip}
+{\bf Program \Proprosolequ}~~{\rm (Continued)}\cr}
+\endin\par
+Program~\Proprosolequ\ has four clauses for {\tt solve\_equation}, one
+for each of the four methods needed to solve the equations in
+Figure~\Figtesequ. More generally, there is a clause for each
+equation-solving method. The full PRESS system has several more
+methods.\par   
+Our equation solver ignores several features that might be expected.
+There is no simplification of expressions, no rational arithmetic, no
+record of the last equation solved, no help facility, and so forth. PRESS
+does contain many of these facilities as discussed briefly in Section~23.6.\par
+\sect{Factorization}
+Factorization is the first method attempted by the equation solver. Note
+that the test whether factorization is applicable is trivial, being
+unification with the equation $A\ast B=0$. If the test
+succeeds, the simpler equations are recursively solved. The top-level
+clause implementing factorization is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+solve\_equation(A$\ast$B=0,X,Solution) $\lar$\cr
+\qi factorize(A$\ast$B,X,Factors\\[~]),\cr
+\qi remove\_duplicates(Factors,Factors1),\cr
+\qi solve\_factors(Factors1,X,Solution).\cr}\medno
+The top-level clause in Program~\Proprosolequ\ has a cut as the first
+goal in the body. This is a green cut: none of the other methods depend
+on the success or failure of factorization. In general, we omit green cuts
+from clauses we describe in the text.\par
+\sect{Isolation}
+A useful concept to locate and manipulate the single occurrence of the
+unknown is its {\it position\/}. The position of a subterm in a term is
+a list of argument numbers specifying where it appears. Consider the
+equation $\cos (x)=0$. The term $\cos (x)$ containing $x$ is the first
+argument of the equation, and $x$ is the first (and only) argument of
+$\cos (x)$. The position of $x$ in $\cos (x)=0$ is therefore
+[1,1]. This is indicated in the diagram in Figure~\Figpossubter.
+The figure also shows the position of $x$ in $1-2\cdot\sin (x)=0$
+which is [1,2,2,1]. 
+\topin\vskip 6truecm\par
+\ctrline{{\bf Figure \Figpossubter}:~~Position of subterms in terms}
+\endin\par
+The clause defining the method of isolation is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+solve\_equation(Equation,X,Solution) $\lar$\cr
+\qi single\_occurrence(X,Equation),\cr
+\qi position(X,Equation,[Side$\mid$Position]),\cr
+\qi maneuver\_sides(Side,Equation,Equation1),\cr
+\qi isolate(Position,Equation1,Solution).\cr}\medno
+The condition characterizing when isolation is applicable is that there
+be a single occurrence of the unknown {\tt X} in the equation, checked
+by {\tt single\_occurrence}. The method calculates the position of {\tt
+X} with the predicate {\tt position}. The isolation of {\tt X} then
+proceeds in two stages. First, {\tt maneuver\_sides} ensures that {\tt
+X} appears on the left-hand side of the equation, and second, {\tt
+isolate} makes it the subject of the formula.\par
+It is useful to define {\tt single\_occurrence} in terms of the more
+general predicate {\tt occurrence(Subterm,Term,N)}, which counts the
+number of times {\tt N} that {\tt Subterm} occurs in the term {\tt Term}.
+Both {\tt occurrence} and {\tt position} are typical structure inspection
+predicates. Both are posed as exercises at the end of Section~9.2. Code
+for them appears in the utilities section of Program~\Proprosolequ.\par
+The predicate {\tt maneuver\_sides(N,Equation,Equation1)} consists of two
+facts:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+maneuver\_sides(1,Lhs = Rhs,Lhs = Rhs).\cr
+maneuver\_sides(2,Lhs = Rhs,Rhs = Lhs).\cr}\medno
+Its effect is to ensure that the unknown appears on the left-hand side of
+{\tt Equation1}. The first argument {\tt N}, the head of the position
+list, indicates the side of the equation in which the unknown appears.
+A $1$ means the left-hand side, and the equation is left intact. A $2$
+means the right-hand side, and so the sides of the equation are swapped.\par
+The transformation of the equation is done by {\tt isolate/3}. It
+repeatedly applies rewrite rules until the position list is exhausted:
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+isolate([N$\mid$Position],Equation,IsolatedEquation) $\lar$\cr
+\qi isolax(N,Equation,Equation1),\cr
+\qi isolate(Position,Equation1,IsolatedEquation).\cr
+isolate([~],Equation,Equation).\cr}\medno
+The rewrite rules, or isolation axioms, are specified by the predicate
+{\tt isolax(N,Equation,Equation1)}. Let us consider an example used in
+solving $1-2\cdot\sin (x)=0$. An equivalence
+transformation on equations is adding the same quantity to both sides of
+an equation. We show its translation into an {\tt isolax} axiom for
+manipulating equations of the form $u-v=w$. Note that
+rules need only simplify the left-hand side of equations, since the
+unknown is guaranteed to be on that side.\par
+Two rules are necessary to cover the two cases whether the first or
+second argument of $u-v$ contains the unknown. The term $u-v=w$
+can be rewritten to either $u=w+v$ or $v=u-w$. The first argument of
+{\it isolax\/} specifies which argument of the sum contains the
+unknown. The Prolog equivalent of the two rewrite rules is then\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+isolax(1,Term1-Term2 = Rhs,Term1 = Rhs+Term2).\cr
+isolax(2,Term1-Term2 = Rhs,Term2 = Term1-Rhs).\cr}\medno
+Other isolation axioms are more complicated. Consider simplifying a
+product on the left-hand side of an equation. One of the expected rules
+would be\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+isolax(1,Term1$\ast$Term2 = Rhs,Term1 = Rhs/Term2).\cr}\medno
+If {\tt Term2} equals zero, however, the rewriting is invalid. A test is
+therefore added that prevents the axioms for multiplication being
+applied if the term by which it divides is $0$. For example,
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+isolax(1,Term1$\ast$Term2 = Rhs,Term1 = Rhs/Term2) $\lar$ Term2 $\ne$
+0.\cr}\medskip
+Isolation axioms for trigonometric functions illustrate another
+possibility that must be catered for --- multiple solutions. An equation
+such as $\sin (x)=1/2$ that is reached in our example has two
+solutions between $0$ and $2\cdot\pi$. The alternative solutions are
+handled by having separate {\tt isolax} axioms: 
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+isolax(1,sin(U) = V,U = arcsin(V)).\cr
+isolax(1,sin(U) = V,U = $\pi$ - arcsin(V)).\cr}\medskip
+In fact, the equation has a more general solution.
+Integers of the form $2\cdot n\cdot\pi$ can be added to either
+solution for arbitrary values of $n$. The decision whether a
+particular or general solution is desired depends on context and on
+semantic information independent of the equation solver.\par
+Further examples of isolation axioms are given in the complete equation
+solver, Program~\Proprosolequ.\par
+The code described so far is sufficient to solve the first equation in
+Figure~\Figtesequ, $\cos (x)\cdot (1-2\cdot\sin (x))=0$. There are
+four answers $\arccos (0)$, $-\arccos (0)$, $\arcsin ((1-0)/2)$,
+$\pi-\arcsin ((1-0)/2)$. Each can be simplified, for example, $\arcsin
+((1-0)/2)$ to $\pi/6$, but will not be unless the expression is
+explicitly evaluated.\par
+The usefulness of an equation solver depends on how well it can perform
+such simplification, even though simplification is not strictly part of
+the equation-solving task. Writing an expression simplifier is
+nontrivial, however. It is undecidable whether two expressions are
+equivalent in general. Some simple identities of algebra can be easily
+incorporated, for example, rewriting $0+u$ to $u$. Choosing between
+other preferred forms, e.g., $(1+x)^3$ and $1+3\cdot x+3\cdot
+x^2+x^3$, depends on context.\par
+\sect{Polynomial}
+Polynomial equations are solved by a polynomial equation solver, applying
+various polynomial methods. Both sides of the equation are checked as to
+whether they are polynomials in the unknown. If the checks are
+successful, the equation is converted to a polynomial normal form by {\tt
+polynomial\_normal\_form}, and the polynomial equation solver {\tt
+solve\_polynomial\_equation} is invoked:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+solve\_equation(Lhs=Rhs,X,Solution) $\lar$\cr
+\qi polynomial(Lhs,X),\cr
+\qi polynomial(Rhs,X),\cr
+\qi polynomial\_normal\_form(Lhs-Rhs,X,PolyForm),\cr
+\qi solve\_polynomial\_equation(PolyForm,X,Solution).\cr}\medskip
+The polynomial normal form is a list of tuples of the form ({\it
+A$_i$,N$_i$\/}), where {\it A$_i$\/} is the coefficient of {\it
+X\/$^{N_i}$}, which is necessarily nonzero. The tuples are sorted into
+strictly decreasing order of {\it N$_i$\/}; for each degree there is at
+most one tuple. For example, the list [$(1,2),(-3,1),(2,0)$] is the
+normal form for $x^2-3\cdot x+2$. The leading term of the polynomial
+is the head of the list. The classic algorithms for handling
+polynomials are applicable to equations in normal form. Reduction to
+polynomial normal form occurs in two stages:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+polynomial\_normal\_form(Polynomial,X,NormalForm) $\lar$\cr
+\qi polynomial\_form(Polynomial,X,PolyForm),\cr
+\qi remove\_zero\_terms(PolyForm,NormalForm).\cr}\medskip
+The predicate {\tt polynomial\_form(X,Polynomial,PolyForm)} decomposes
+the polynomial. {\tt PolyForm} is a sorted list of coefficient-degree
+tuples, where tuples with zero coefficients may occur.\par
+It is convenient for many of the polynomial methods to assume that all
+the terms in the polynomial form have nonzero coefficients. Therefore the
+final step of {\tt polynomial\_normal\_form} is removing those terms whose
+coefficients are zero. This is achieved by a simple recursive procedure
+{\tt remove\_zero\_terms}.\par
+The code for {\tt polynomial\_form} directly echoes the code for {\tt
+polynomial}. For each clause used in the parsing process, there is a
+corresponding clause giving the resultant polynomial. For example, the
+polynomial form of a term $x^n$ is [$(1,n)$], which is expressed in
+the clause\medskip 
+\halign{\hskip 40pt\lft{\tt #}\cr
+polynomial\_form(X$\uparrow$N,X,[(1,N)]).\cr}\medskip
+The recursive clauses for {\tt polynomial\_form} manipulate the
+polynomials in order to preserve the polynomial form. Consider the clause
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+polynomial\_form(Poly1+Poly2,X,PolyForm) $\lar$\cr
+\qi polynomial\_form(Poly1,X,PolyForm1),\cr
+\qi polynomial\_form(Poly2,X,PolyForm2),\cr
+\qi add\_polynomials(PolyForm1,PolyForm2,PolyForm).\cr}\medno
+The procedure {\tt add\_polynomials} contains an algorithm for adding
+polynomials in normal form. The code is a straightforward list of the
+possibilities that can arise:\medskip
+\halign{\hskip 20pt\lft{\tt #}\cr
+add\_polynomials([~],Poly,Poly).\cr
+add\_polynomials(Poly,[~],Poly).\cr
+add\_polynomials([(Ai,Ni)$\mid$Poly1],[(Aj,Nj)$\mid$Poly2],[(Ai,Ni)$\mid
+$Poly]) $\lar$\cr
+\qi Ni $>$ Nj, add\_polynomials(Poly1,[(Aj,Nj)$\mid$Poly2],Poly).\cr
+add\_polynomials([(Ai,Ni)$\mid$Poly1],[(Aj,Nj)$\mid$Poly2],[(A,Ni)$\mid
+$Poly]) $\lar$\cr
+\qi Ni =:= Nj, A is Ai+Aj, add\_polynomials(Poly1,Poly2,Poly).\cr
+add\_polynomials([(Ai,Ni)$\mid$Poly1],[(Aj,Nj)$\mid$Poly2],[(Aj,Nj)$\mid
+$Poly]) $\lar$\cr
+\qi Ni $<$ Nj, add\_polynomials([(Ai,Ni)$\mid$Poly1],Poly2,Poly).\cr}
+\medskip
+Similarly, the procedures {\tt subtract\_polynomials}, {\tt
+multiply\_polynomials}, and {\tt binomial} are algorithms for subtracting,
+multiplying, and binomially expanding polynomials in normal form to
+produce results in normal form. The subsidiary predicate {\tt
+multiply\_single(Poly1,Monomial,Poly2)} multiplies a polynomial by a
+monomial ({\it C,N\/}) to produce a new polynomial.\par
+Once the polynomial is in normal form, the polynomial equation solver is
+invoked. The structure of the polynomial solver follows the
+structure of the overall equation solver. The solver is a collection of
+methods that are tried in order to see which is applicable and can be
+used to solve the equation. The predicate {\tt
+solve\_polynomial\_equation} is the analogous relation to {\tt
+solve\_equation}.\par
+The second equation in Figure~\Figtesequ\ is quadratic and can be solved
+with the standard formula. The equation solver mirrors the human method.
+The polynomial is identified as being suitable for the quadratic method
+by checking (with {\tt quadratic}) if the leading term in the polynomial
+is of second degree. Since zero terms have been removed in putting the
+polynomial into its normal form, {\tt pad} puts them back if necessary.
+The next two steps are familiar: calculating the discriminant, and
+returning the roots according to the value of the discriminant. Again
+multiple solutions are indicated by having multiple possibilities:
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+solve\_polynomial\_equation(Poly,X,Solution) $\lar$\cr
+\qi quadratic(Poly),\cr
+\qi pad(Poly,[(A,2),(B,1),(C,0)]),\cr
+\qi discriminant(A,B,C,Discriminant),\cr
+\qi root(X,A,B,C,Discriminant,Solution).\cr
+\noalign{\vskip 5pt}
+discriminant(A,B,C,D) $\lar$ D is (B$\ast$B - 4$\ast$A$\ast$C).\cr
+\noalign{\vskip 5pt}
+root(X,A,B,C,0,X= -B/(2$\ast$A)).\cr
+root(X,A,B,C,D,X= (-B+sqrt(D))/(2$\ast$A)) $\lar$ D $>$ 0.\cr
+root(X,A,B,C,D,X= (-B-sqrt(D))/(2$\ast$A)) $\lar$ D $>$ 0.\cr}
+\medskip
+Other clauses for {\tt solve\_polynomial\_equation} constitute separate
+methods for solving different polynomial equations. Linear equations are
+solved with a simple formula. In PRESS, cubic equations are handled by
+guessing a root and then factoring, reducing the equation to a quadratic.
+Other tricks recognize obvious factors, or that quartic equations missing
+a cubic and a linear term are really disguised quadratics.\par
+\sect{Homogenization}
+The top-level clause for homogenization reflects the transformation of
+the original equation into a new equation in a new unknown, which is
+recursively solved; its solution is obtained for the original unknown:
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+solve\_equation(Equation,X,Solution) $\lar$\cr
+\qi homogenize(Equation,X,Equation1,X1),\cr
+\qi solve\_equation(Equation1,X1,Solution1),\cr
+\qi solve\_equation(Solution1,X,Solution).\cr}\medskip
+The code for {\tt homogenize/4} implements the four stages of
+homogenization, described in Section~23.1. The offenders set is
+calculated by {\tt offenders/3}, which checks that there are multiple
+offenders. If there is only a single offender, homogenization will not be
+useful:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+homogenize(Equation,X,Equation1,X1) $\lar$\cr
+\qi offenders(Equation,X,Offenders),\cr
+\qi reduced\_term(X,Offenders,Type,X1),\cr
+\qi rewrite(Offenders,Type,X1,Substitutions),\cr
+\qi substitute(Equation,Substitutions,Equation1).\cr}\medskip
+The predicate {\tt reduced\_term/4} finds a {\it reduced term\/}, that is,
+a candidate for the new unknown. In order to structure the search for the
+reduced term, the equation is classified into a type. This type is used
+in the next stage to find rewrite rules expressing each element of the
+offenders set as an appropriate function of the reduced term. The type of
+the example equation is {\it exponential\/}. PRESS encodes a lot of
+heuristic knowledge about finding a suitable reduced term. The heuristics
+depend on the type of the terms appearing in the offenders set. To
+aid the structuring (and retrieval) of knowledge, finding a reduced term
+proceeds in two stages --- classifying the type of the offenders set, and
+finding a reduced term of that type:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+reduced\_term(X,Offenders,Type,X1) $\lar$\cr
+\qi classify(Offenders,X,Type),\cr
+\qi candidate(Type,Offenders,X,X1).\cr}\medskip
+We look at the set of rules appropriate to our particular equation. The
+offenders set is of exponential type because all the elements in the
+offenders set have the form {\it A\/$^B$}, where {\it A\/} does not
+contain the unknown but {\it B\/} does. Standard recursive procedures
+check that this is true.\par
+The heuristic used to select the reduced term in this example is that if
+all the bases are the same, {\it A\/}, and each exponent is a polynomial
+in the unknown, {\it X\/}, then a suitable reduced term is {\it A\/$^X$}:
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+candidate(exponential,Offenders,X,A$\uparrow$X) $\lar$\cr
+\qi base(Offenders,A), polynomial\_exponents(Offenders,X).\cr}\medno
+The straightforward code for {\tt base} and {\tt polynomial\_exponents}
+is in the complete program. The heuristics in PRESS are better developed
+than the ones shown here. For example, the greatest common divisor of all
+the leading terms of the polynomials is calculated and used to choose the
+reduced term.\par
+The next step is checking whether each member of the offenders set can be
+rewritten in terms of the reduced term candidate. This involves finding
+an appropriate rule. The collection of clauses for {\tt
+homogenize\_axiom} constitute the possibly applicable rewrite rules. In
+other words, relevant rules must be specified in advance. The applicable
+rules in this case are\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+homogenize\_axiom(exponential,A$\uparrow$(N$\ast$X),A$\uparrow$X,(A$
+\uparrow$X)$\uparrow$N).\cr
+homogenize\_axiom(exponential,A$\uparrow$(X+B),A$\uparrow$X,A$\uparrow$B$
+\ast$A$\uparrow$X).\cr}\medskip
+Substituting the term in the equation echoes the parsing process used by
+{\tt offenders} as each part of the equation is checked to see whether
+it is the appropriate term to rewrite.\vskip 15pt\parno
+{\bf Exercises for Chapter 23}\vskip 5pt\par
+\offset{20pt}{(i)} Add isolation axioms to Program~\Proprosolequ\ to
+handle quotients on the left-hand side of the equation. Solve the
+equation $x/2 = 5$.\par
+\offset{20pt}{(ii)} Add to the polynomial equation solver the ability to
+solve disguised linear and disguised quadratic equations. Solve the
+equations $2\cdot x^3-8 = x^3$, and $x^4-5\cdot x^2+6 = 0$.\par
+\offset{20pt}{(iii)} The equation $\cos (2\cdot x)-\sin (x) = 0$ can
+be solved as a quadratic equation in $\sin (x)$ by applying the
+rewrite rule $\cos (2\cdot x)=1-2\cdot\sin^2(x)$. Add clauses to
+Program~\Proprosolequ\ to solve this equation. You will need to add rules
+for identifying terms of type {\it trigonometric\/}, heuristics for
+finding trigonometric reduced terms, and appropriate homogenization
+axioms.\par
+\offset{20pt}{(iv)} Rewrite the predicate {\tt free\_of(Term,X)} so that
+it fails as soon as it finds an occurrence of {\tt X} in {\tt Term}.\par
+\offset{20pt}{(v)} Modify Program~\Proprosolequ\ so that it solves simple
+simultaneous equations.\par
+\sect{Background}
+Symbolic manipulation was an early application area for Prolog. Early
+examples are programs for symbolic integration (Bergman and Kanoui, 1973)
+and for proving theorems in geometry (Welham, 1976).\par
+The PRESS program, from which Program~\Proprosolequ\ is adapted, owes a
+debt to many people. The original version was written by Bob Welham.
+Many of the researchers in the mathematical reasoning group working with
+Alan Bundy at the University of Edinburgh subsequently tinkered with the
+code. Published descriptions of the program appear in Bundy and Welham
+(1981), Sterling et al.\ (1982), and Silver (1986). The last reference has
+a detailed discussion of homogenization.\par
+PRESS includes various modules, not discussed in this chapter, that are
+interesting in their own right: for example, a package for interval
+arithmetic (Bundy, 1984), an infinite precision rational arithmetic
+package developed by Richard O'Keefe, and an expression simplifier based
+on difference-structures as described in Section~15.2, developed by
+Lawrence Byrd. The successful integration of all these modules is strong
+evidence for the practicality of Prolog for large programming projects.
+\par
+The development of PRESS showed up classic points of software
+engineering. For example, at one stage the program was being tuned prior
+to publishing some statistics. Profiling was done on the program, which
+showed that the predicate most commonly called was {\tt free\_of}.
+Rewriting it as suggested in Exercise~23(iv) resulted in a speedup of 35
+percent in the performance of PRESS.\par
+Program~\Proprosolequ\ is a considerably cleaned-up version of PRESS.
+Tidying the code enabled further research. Program~\Proprosolequ\ was
+easily translated to other logic programming languages, Concurrent Prolog
+and FCP (Sterling and Codish, 1986). Making the conditions when methods
+were used more explicit enabled the writing of a program to learn new
+equation-solving methods from examples (Silver, 1986).\par\bye
+

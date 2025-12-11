@@ -1,0 +1,765 @@
+%%%%% Leonudi Book, Chapter 15, pp 246-262 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 14
+\numberfirst
+\startpage{246}
+
+\chapa{Incomplete Data Structures}
+The programs presented so far have been discussed in terms of
+relations between complete data structures. Powerful programming
+techniques emerge from extending the discussion to incomplete data
+structures, as demonstrated in this chapter.\par
+The first section discusses difference-lists, an alternative data
+structure to lists for representing a sequence of elements. They can be
+used to simplify and increase the efficiency of list-processing programs.
+In some respects, difference-lists generalize the concept of
+accumulators. Data structures 
+built from the difference of incomplete structures other than lists are
+discussed in the second section. The third section shows how tables and
+dictionaries, represented as incomplete structures, can be built
+incrementally during a computation. The final section discusses queues,
+an application of difference-lists.\par
+\sect{Difference-Lists}
+Consider the sequence of elements 1,2,3. It can be represented as
+the difference between pairs of lists. It is the difference between the
+lists \(1,2,3,4,5\) and \(4,5\), the difference between the lists
+\(1,2,3,8\) and \(8\), and the difference between \(1,2,3\) and \(~\).
+Each of these cases is an instance of the difference between two
+incomplete lists \(1,2,3$\mid${\it Xs\/}\) and {\it Xs\/}.\par
+We denote the difference between two lists as a structure {\it
+As\/\\Bs\/}, which is called a {\it difference-list\/}. {\it As\/} is the
+{\it head\/} of the difference-list and {\it Bs\/} the {\it tail\/}. In
+this example \(1,2,3$\mid${\it Xs\/}\){\it \\Xs\/} is the most
+general difference-list representing the sequence 1,2,3, where
+[1,2,3$\mid${\it Xs\/}] is the head of the difference-list and {\it
+Xs\/} the tail.\par
+Logical expressions are unified, not evaluated. Consequently the binary
+functor used to denote difference-lists can be arbitrary. Of course, the
+user must be consistent in using the same functor in any one program.
+Another common choice of functor besides \\\ is --. The functor for
+difference-lists can also be omitted entirely, the head and the tail of the
+difference-list becoming separate arguments in a predicate. While this
+last choice has advantages from a perspective of efficiency, we use the
+functor \\\ throughout for clarity.\par
+Lists and difference-lists are closely related. Both are used to
+represent sequences of elements. Any list {\it L\/} can be trivially
+represented as a difference-list {\it L\/\\}\(~\). The empty list is
+represented by any difference-list whose head and tail are identical, the
+most general form being {\it As\/\\As\/}.\par
+Difference-lists are an established logic programming technique. The use
+of difference-lists rather than lists can lead to more concise and
+efficient programs. The improvement occurs because of the combining
+property of difference-lists. Two incomplete difference-lists can be
+concatenated to give a third difference-list in constant time. In
+contrast, lists are concatenated using the standard {\tt append}
+program in time linear in the length of the first list.
+\midinsert\vskip 6.7truecm\par
+\ctrline{{\bf Figure \Figcondiflis}:~~Concatenating difference-lists}
+\endinsert\par
+Consider Figure~\Figcondiflis. The difference-list {\it
+Xs\/\\Zs\/} is the result of appending the difference-list {\it
+Ys\/\\Zs\/} to the difference-list {\it Xs\/\\Ys\/}. This can be
+expressed as a single fact. Program~\Procondiflis\ defines a predicate
+{\tt append\_dl(As,Bs,Cs)}, which is true if the difference-list {\tt Cs}
+is the result of appending the difference-list {\tt Bs} to the
+difference-list {\tt As}. We use the suffix {\tt \_dl} to denote a
+variant of a predicate that uses difference-lists.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it append\_dl\/}({\it As,Bs,Cs\/}) $\lar$\cr
+\qi {\rm The difference-list} {\it Cs\/} {\rm is the result of appending}
+{\it Bs\/} {\rm to} {\it As\/}{\rm ,}\cr
+\qi {\rm where} {\it As\/} {\rm and} {\it Bs\/} {\rm are compatible
+difference-lists.}\cr
+\noalign{\medskip}
+append\_dl(Xs\\Ys, Ys\\Zs, Xs\\Zs).\cr
+\noalign{\bigskip}
+{\bf Program \Procondiflis}{\rm :~~Concatenating difference-lists}\cr}
+\endin\par
+A necessary and sufficient condition characterizing when two
+difference-lists {\tt As\/\\Bs} and {\tt Xs\/\\Ys} can be concatenated
+using Program~\Procondiflis\ is that {\tt Bs} be unifiable with {\tt Xs}.
+In that case, the two difference-lists are {\it compatible\/}. If the tail
+of a difference-list is uninstantiated, it is compatible with any
+difference-list. Furthermore, in such a case Program~\Procondiflis\ would
+concatenate it in constant time. For example, the result of the query
+{\tt append\_dl(\(a,b,c$\mid$Xs\)\\Xs,\(1,2\)\\\(~\),Ys)?} is {\tt
+(Xs=\(1,2\),Ys=\(a,b,c,1,2\)\\\(~\))}.\par
+Difference-lists are the logic programming counterpart of Lisp's {\it
+rplacd\/}, which is also used to concatenate lists in constant time and
+save consing (allocating new list-cells). There is a
+difference between the two: the former are free of side effects and can be
+discussed in terms of the abstract computation model, whereas {\it
+rplacd\/} is a destructive operation, which can be described only by
+reference to the machine representation of S-expressions.\par
+A good example of a program that can be improved by using
+difference-lists is Program~\Proflalisdou\ for flattening a list. It uses
+double recursion to flatten separately the head and tail of a list of
+lists, then concatenates the results. We adapt that program to compute
+the relation {\tt flatten\_dl(Xs,Ys)}, where {\tt Ys} is a
+difference-list representing the elements that appear in a list of lists
+{\tt Xs} in correct order. The direct translation of Program
+\Proflalisdou\ to use difference-lists follows:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+flatten\_dl(\(X$\mid$Xs\),Ys\\Zs) $\leftarrow$\cr
+\qi flatten\_dl(X,As\\Bs), flatten\_dl(Xs,Cs\\Ds),\cr
+\qi append\_dl(As\\Bs,Cs\\Ds,Ys\\Zs).\cr
+flatten\_dl(X,\(X$\mid$Xs\)\\Xs) $\leftarrow$\cr
+\qi constant(X), X$\ne$\(~\).\cr
+flatten\_dl(\(~\),Xs\\Xs).\cr}\medno
+The doubly recursive clause can be simplified by unfolding the {\tt
+append\_dl} goal with respect to its definition in Program~\Procondiflis.
+Unfolding is discussed in more detail in Chapter~18 on program
+transformation. The result is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+flatten\_dl(\(X$\mid$Xs\),As\\Ds) $\leftarrow$\cr
+\qi flatten\_dl(X,As\\Bs), flatten\_dl(Xs,Bs\\Ds).\cr}\medno
+The program for {\it flatten\_dl\/} can be used to implement {\tt
+flatten} by expressing the connection between the desired flattened list
+and the difference-list computed by {\tt flatten\_dl} as follows:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+flatten(Xs,Ys) $\leftarrow$ flatten\_dl(Xs,Ys\\\(~\)).\cr}\medno
+Collecting the program and renaming variables yields
+Program~\Proflalisdif. 
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it flatten\/}({\it Xs,Ys\/}) $\lar$\cr
+\qi {\it Ys\/} {\rm is a flattened list containing the elements in} {\it
+Xs\/}.\cr
+\noalign{\medskip}
+flatten(Xs,Ys) $\leftarrow$ flatten\_dl(Xs,Ys\\\(~\)).\cr
+\noalign{\vskip 5pt}
+flatten\_dl(\(X$\mid$Xs\),Ys\\Zs) $\leftarrow$\cr
+\qi flatten\_dl(X,Ys\\Ys1), flatten\_dl(Xs,Ys1\\Zs).\cr
+flatten\_dl(X,\(X$\mid$Xs\)\\Xs) $\leftarrow$\cr
+\qi constant(X), X$\ne$\(~\).\cr
+flatten\_dl(\(~\),Xs\\Xs).\cr
+\noalign{\bigskip}
+{\bf Program \Proflalisdif}{\rm :~~Flattening a list of lists using
+difference-lists}\cr}
+\endinsert\par
+Declaratively Program~\Proflalisdif\ is straightforward. The explicit
+call to {\tt append} is made unnecessary by flattening the original list
+of lists into a difference-list rather than a list. The resultant program
+is more efficient, because the size of its proof tree is linear in the number
+of elements in the list of lists rather than quadratic.\par
+The operational behavior of programs using difference-lists, such as
+Program~\Proflalisdif, is harder to understand. The flattened list seems
+to be built by magic.\par
+Let us investigate the program in action. Figure~\Figtracomdif\ is a
+trace of the query {\tt flatten([[a],[b,[c]]],Xs)?} with respect to
+Program~\Proflalisdif.
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\lft{\tt #}\qquad\qquad&\lft{\tt #}\cr
+flatten([[a],[b,[c]]],Xs)&\cr
+\qi flatten\_dl([[a],[b,[c]]],Xs\\[~])&\cr
+\qii flatten\_dl([a],Xs\\Xs1)&\cr
+\qiii flatten\_dl(a,Xs\\Xs2)&Xs = [a$\mid$Xs2]\cr
+\qiiii constant(a)&\cr
+\qiiii a $\ne$ \(~\)&\cr
+\qiii flatten\_dl([],Xs2\\Xs1)&Xs2 = Xs1\cr
+\qii flatten\_dl([[b,[c]]],Xs1\\[~])&\cr
+\qiii flatten\_dl([b,[c]],Xs1\\Xs3)&\cr
+\qiiii flatten\_dl(b,Xs1\\Xs4)&Xs1 = [b$\mid$Xs4]\cr
+\qiiiii constant(b)&\cr
+\qiiiii b $\ne$ \(~\)&\cr
+\qiiii flatten\_dl([[c]],Xs4\\Xs3)&\cr
+\qiiiii flatten\_dl([c],Xs4\\Xs5)&\cr
+\qiiiiii flatten\_dl(c,Xs4\\Xs6)&Xs4 = [c$\mid$Xs6]\cr
+\qiiiiiii constant(c)&\cr
+\qiiiiiii c $\ne$ \(~\)&\cr
+\qiiiiii flatten\_dl([~],Xs6\\Xs5)&Xs6 = Xs5\cr
+\qiiiii flatten\_dl([~],Xs5\\Xs3)&Xs5 = Xs3\cr
+\qiiii flatten\_dl([~],Xs3\\[~])&Xs3 = [~]\cr
+\qiii Output: Xs = [a,b,c]&\cr}}$$\medskip
+\ctrline{{\bf Figure \Figtracomdif}:~~Tracing a computation using
+difference-lists}
+\endin\par
+The trace shows that the output, {\tt Xs}, is built top-down (in the
+terminology of Section~7.5). The tail of the difference-list acts like a
+pointer to the end of the incomplete structure. The pointer gets set by
+unification. By using these ``pointers" no intermediate structures are
+built, in contrast to Program~\Proflalisdou.\par
+The discrepancy between clear declarative understanding and difficult
+procedural understanding stems from the power of the logical variable. We
+can specify logical relations implicitly and leave their enforcement
+to Prolog. Here the concatenation of the difference-lists has been
+expressed implicitly, and it is mysterious when it happens in the
+program.\par
+Building structures with difference-lists is closely related to building
+structures with accumulators. Loosely, difference-lists build
+structures top-down, while accumulators build structures bottom-up.
+Exercise~9.1(i) asked for a doubly recursive version 
+of {\tt flatten} that avoided the call to {\tt append} by using
+accumulators. A solution is the following program:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+flatten(Xs,Ys) $\lar$ flatten(Xs,[~],Ys).\cr
+\noalign{\vskip 5pt}
+flatten([X$\mid$Xs],Zs,Ys) $\lar$\cr
+\qi flatten(Xs,Zs,Ys1), flatten(X,Ys1,Ys).\cr
+flatten(X,Xs,[X$\mid$Xs]) $\lar$\cr
+\qi constant(X), X$\ne$\(~\).\cr
+flatten([~],Xs,Xs).\cr}\medno
+The similarity of this program to Program~\Proflalisdif\ is striking.
+There are only two differences between the programs. The first difference
+is syntactic. The difference-list is represented as two arguments, but in
+reverse order, the tail preceding the head. The second difference is the
+goal order in the recursive clause of {\tt flatten}. The net effect is
+that the flattened list is built bottom-up from its tail rather than
+top-down from its head.\par
+We give another example of the similarity between difference-lists and
+accumulators. Program~\Prorevdiflis\ is a translation of naive {\tt
+reverse} (Program~\Prorevlis a) where lists have been replaced by
+difference-lists, and the {\tt append} operation has been unfolded away.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it reverse\/}({\it Xs,Ys\/}) $\lar$\cr
+\qi {\it Ys\/} {\rm is the reversal of the list} {\it Xs\/}{\rm .}\cr
+\noalign{\medskip}
+reverse(Xs,Ys) $\leftarrow$ reverse\_dl(Xs,Ys\\\(~\)).\cr
+\noalign{\vskip 5pt}
+reverse\_dl(\(X$\mid$Xs\),Ys\\Zs) $\leftarrow$\cr
+\qi reverse\_dl(Xs,Ys\\\(X$\mid$Zs\)).\cr
+reverse\_dl(\(~\),Xs\\Xs).\cr
+\noalign{\bigskip}
+{\bf Program \Prorevdiflis}{\rm :~~Reverse with difference-lists}\cr}
+\endinsert\par
+When are difference-lists the appropriate data structure for Prolog
+programs? Programs with explicit calls to {\tt append} can usually gain
+in efficiency by using difference-lists rather than lists. A typical
+example is a doubly recursive program where the final result is obtained
+by appending the outputs of the two recursive calls. More generally, a
+program that independently builds different sections of a list to be
+later combined is a good candidate for using difference-lists.
+\par
+The logic program for {\tt quicksort}, Program~\Proquicks, is an example
+of a doubly recursive program where the final result, a sorted list, is
+obtained from concatenating two sorted sublists. It can be made more
+efficient by using difference-lists. All the {\tt append} operations
+involved in combining partial results can be performed implicitly, as
+shown in Program~\Proquidiflis.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it quicksort\/}({\it List,SortedList\/}) $\lar$\cr
+\qi {\it SortedList\/} {\rm is an ordered permutation of} {\it
+List\/}{\rm .}\cr
+\noalign{\medskip}
+quicksort(Xs,Ys) $\leftarrow$ quicksort\_dl(Xs,Ys\\\(~\)).\cr
+\noalign{\vskip 5pt}
+quicksort\_dl(\(X$\mid$Xs\),Ys\\Zs) $\leftarrow$\cr
+\qi partition(Xs,X,Littles,Bigs),\cr
+\qi quicksort\_dl(Littles,Ys\\\(X$\mid$Ys1\)),\cr
+\qi quicksort\_dl(Bigs,Ys1\\Zs).\cr
+quicksort\_dl(\(~\),Xs\\Xs).\cr
+\noalign{\vskip 5pt}
+partition(Xs,X,Ls,Bs) $\lar$ {\rm See Program \Proquicks}.\cr
+\noalign{\bigskip}
+{\bf Program \Proquidiflis}{\rm :~~Quicksort using difference-lists}\cr}
+\endin\par
+The call of {\tt quicksort\_dl} by {\tt quicksort} is an initializing
+call, as for {\tt flatten} in Program~\Proflalisdif. The recursive clause
+is the quicksort algorithm interpreted for difference-lists where the
+final result is pieced together implicitly rather than explicitly. The
+base clause of {\tt quicksort\_dl} states that the result of sorting an
+empty list is the empty difference-list. Note the use of unification to
+place the partitioning element {\tt X} after the smaller elements {\tt
+Ys} and before the bigger elements {\tt Ys1} in the call {\tt
+quicksort\_dl(Littles,Ys\\\(X$\mid$Ys1\))}.\par
+Program~\Proquidiflis\ is derived from Program~\Proquicks\ in exactly the
+same way as Program~\Proflalisdif\ is derived from
+Program~\Proflalisdou. Lists are replaced by difference-lists and the
+{\tt append\_dl} goal unfolded away. The initial call of {\tt
+quicksort\_dl} by {\tt quicksort} expresses the relation between
+the desired sorted list and the computed sorted difference-list.\par  
+An outstanding example of using difference-lists to advantage is a
+solution to a simplified version of Dijkstra's Dutch flag problem. The
+problem reads: ``Given a list of elements colored {\it red\/}, {\it
+white\/}, or {\it blue\/}, reorder the list so that all the red elements
+appear first, then all the white elements, followed by the blue elements.
+This reordering should preserve the original relative order of elements
+of the same color." For example, the list {\tt
+[red(1),white(2),blue(3),red(4),white(5)]} should be reordered to {\tt
+[red(1),red(4),white(2),white(5),blue(3)]}.\par
+Program~\Prosoldutfla\ is a simple-minded solution to the problem that
+collects the elements in three separate lists, then concatenates the
+lists. The basic relation is {\tt dutch(Xs,Ys)}, where {\tt Xs} is the
+original list of colored elements and {\tt Ys} is the reordered list
+separated into colors.
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it dutch\/}({\it Xs,RedsWhitesBlues\/}) $\lar$\cr
+\qi {\it RedsWhitesBlues\/} {\rm is a list of elements of} {\it Xs\/}
+{\rm ordered}\cr
+\qi {\rm by color: red, then white, then blue.}\cr
+\noalign{\medskip}
+dutch(Xs,RedsWhitesBlues) $\lar$\cr
+\qi distribute(Xs,Reds,Whites,Blues),\cr
+\qi append(Whites,Blues,WhitesBlues),\cr
+\qi append(Reds,WhitesBlues,RedsWhitesBlues).\cr
+\noalign{\medskip}
+{\it distribute\/}({\it Xs,Reds,Whites,Blues\/}) $\lar$\cr
+\qi {\it Reds\/,} {\it Whites\/,} {\rm and} {\it Blues\/} {\rm are the
+lists of the red, white,}\cr
+\qi {\rm and blue elements in} {\it Xs\/}{\rm , respectively.}\cr
+\noalign{\medskip}
+distribute([red(X)$\mid$Xs],[red(X)$\mid$Reds],Whites,Blues) $\lar$\cr
+\qi distribute(Xs,Reds,Whites,Blues).\cr
+distribute([white(X)$\mid$Xs],Reds,[white(X)$\mid$Whites],Blues)
+$\lar$\cr
+\qi distribute(Xs,Reds,Whites,Blues).\cr
+distribute([blue(X)$\mid$Xs],Reds,Whites,[blue(X)$\mid$Blues]) $\lar$\cr
+\qi distribute(Xs,Reds,Whites,Blues).\cr
+distribute([~],[~],[~],[~]).\cr
+\noalign{\vskip 5pt}
+append(Xs,Ys,Zs) $\lar$ {\rm See Program \Proapptwolis.}\cr
+\noalign{\bigskip}
+{\bf Program \Prosoldutfla}{\rm :~~A solution to the Dutch flag
+problem}\cr}\vskip 0.6truecm
+\halign{\lft{\tt #}\cr
+{\it dutch\/}({\it Xs,RedsWhitesBlues\/}) $\lar$\cr
+\qi {\it RedsWhitesBlues\/} {\rm is a list of elements of} {\it Xs\/}
+{\rm ordered}\cr
+\qi {\rm by color: red, then white, then blue.}\cr
+\noalign{\medskip}
+dutch(Xs,RedsWhitesBlues) $\lar$\cr
+\qi distribute\_dls(Xs,RedsWhitesBlues\\WhitesBlues,\cr
+\qii WhitesBlues\\Blues,Blues\\[~]).\cr
+\noalign{\medskip}
+{\it distribute\_dls\/}({\it Xs,Reds,Whites,Blues\/}) $\lar$\cr
+\qi {\it Reds\/,} {\it Whites\/,} {\rm and} {\it Blues\/} {\rm are the
+difference-lists of the}\cr
+\qi {\rm red, white, and blue elements in} {\it Xs\/}{\rm , respectively.}\cr
+\noalign{\medskip}
+distribute\_dls([red(X)$\mid$Xs],[red(X)$\mid
+$Reds]\\Reds1,Whites,Blues) $\lar$\cr
+\qi distribute\_dls(Xs,Reds\\Reds1,Whites,Blues).\cr
+distribute\_dls([white(X)$\mid$Xs],Reds,[white(X)$\mid
+$Whites]\\Whites1,Blues) $\lar$\cr
+\qi distribute\_dls(Xs,Reds,Whites\\Whites1,Blues).\cr
+distribute\_dls([blue(X)$\mid$Xs],Reds,Whites,[blue(X)$\mid
+$Blues]\\Blues1) $\lar$\cr
+\qi distribute\_dls(Xs,Reds,Whites,Blues\\Blues1).\cr
+distribute\_dls([~],Reds\\Reds,Whites\\Whites,Blues\\Blues).\cr
+\noalign{\bigskip}
+{\bf Program \Produtfladif}{\rm :~~Dutch flag with difference-lists}\cr}
+\vfill}
+\endin\par
+The heart of the program is the procedure {\tt distribute}, which
+constructs three lists, one for each color. The lists are built top-down.
+The two calls to {\tt append} can be removed by having {\tt distribute}
+build three distinct difference-lists instead of three lists. Program
+\Produtfladif\ is an appropriately modified version of the program.\par
+The implicit concatenation of the difference-lists is done in the
+initializing call to {\tt distribute\_dls} by {\tt dutch}. The complete
+list is finally ``assembled" from its parts with the satisfaction of the
+base clause of {\tt distribute\_dls}.\par
+The Dutch flag example demonstrates a program that builds parts of the
+solution independently and pieces them together at the end. It is a more
+complex use of difference-lists than the earlier examples.\par
+Although it makes the program easier to read, the use of an explicit
+constructor such as \\\ for difference-lists incurs noticeable
+overhead in time and space. Using two separate arguments to represent
+the difference-list is more efficient. When important, this efficiency
+can be gained by straightforward manual or automatic
+transformation.\vskip 15pt\parno 
+{\bf Exercises for Section 15.1}\vskip 5pt\par
+\offset{20pt}{(i)} Rewrite Program~\Proflalisdif\ so that the final list
+of elements is in the reverse order to how they appear in the list of
+lists.\par
+\offset{20pt}{(ii)} Rewrite Programs \Protrabintre\ for {\tt
+preorder(Tree,List)}, {\tt inorder(Tree,List)} and {\tt
+postorder(Tree,List)}, which collect the elements occurring in a binary
+tree, to use difference-lists and avoid an explicit call to {\tt append}.\par
+\offset{20pt}{(iii)} Rewrite Program~\Protowhanmem\ for solving the
+Towers of Hanoi so that the list of moves is created as a difference-list
+rather than a list.\par
+\sect{Difference-Structures}
+The concept underlying difference-lists is the use of the difference
+between incomplete data structures to represent partial results of a
+computation. This can be applied to recursive data types other than
+lists. This section looks at a specific example, sum expressions.\par
+Consider the task of normalizing sum expressions.
+Figure~\Figunnnorsum\ contains two sums $(a+b)+(c+d)$ and $(a+(b+(c+d)))$
+(Standard Prolog syntax brackets the term $a+b+c$ as $((a+b)+c)$. We
+describe a procedure converting a sum into a normalized one that is
+bracketed to the right. For example, the expression on the left in
+Figure~\Figunnnorsum\ would be converted to the one on the right. Such
+a procedure is useful for doing algebraic simplification, facilitating
+writing programs to test whether two expressions are equivalent.
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\lft{#}\cr
+~~~~~~~~+~~~~~~~~~~~~~~~~~~~+\cr
+~~~~~~~/~\\~~~~~~~~~~~~~~~~~/~\\\cr
+~~~~~~+~~+~~~~~~~~~~~~~~~a~~+\cr
+~~~~~/~\\~/~\\~~~~~~~~~~~~~~~~/~\\\cr
+~~~~a~~b~c~~d~~~~~~~~~~~~~~b~~+\cr
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/~\\\cr
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c~~+\cr
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/~\\\cr
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~d~~0\cr}}$$\medskip
+\ctrline{{\bf Figure \Figunnnorsum}:~~Unnormalized and normalized sums}
+\vskip 0.6truecm
+\halign{\hskip 20pt\lft{\tt #}\cr
+{\it normalize\/}({\it Sum,NormalizedSum\/}) $\lar$\cr
+\qi {\it NormalizedSum\/} {\rm is the result of normalizing the sum
+expression} {\it Sum\/}{\rm .}\cr
+\noalign{\medskip}
+normalize(Exp,Norm) $\lar$ normalize\_ds(Exp,Norm++0).\cr
+\noalign{\vskip 5pt}
+normalize\_ds(A+B,Norm++Space) $\lar$\cr
+\qi normalize\_ds(A,Norm++NormB), normalize\_ds(B,NormB++Space).\cr
+normalize\_ds(A,(A+Space)++Space) $\lar$\cr
+\qi constant(A).\cr
+\noalign{\bigskip}
+{\bf Program \Pronorpluexp}{\rm :~~Normalizing plus expressions}\cr}
+\endin\par
+We introduce a {\it difference-sum\/} as a variant of a difference-list.
+A difference-sum is represented as a structure {\it E1\/} ++ {\it E2\/},
+where {\it E1\/} and {\it E2\/} are incomplete normalized sums. It is
+assumed that ++ is defined as a binary infix operator. It is convenient
+to use 0 to indicate an empty sum.\par
+Program~\Pronorpluexp\ is a program for normalizing sums. The relation
+scheme is {\tt normalize(Exp,Norm)}, where {\tt Norm} is an
+expression equivalent to {\tt Exp} that is bracketed to the right and
+preserves the order of the constants appearing in {\tt Exp}.\par
+This program is similar in structure to Program~\Proflalisdif\ for
+flattening lists using difference-lists. There is an initialization
+stage, where the difference-structure is set up, typically calling a
+predicate with the same name but different arity or different argument
+pattern. The base case passes out the tail of the incomplete
+structure, and the goals in the body of the recursive clause pass the
+tail of the first incomplete structure to be the head of the
+second.\par 
+The program builds the normalized sum top-down. By analogy with the
+programs using difference-lists, the program can be easily modified to
+build the structure bottom-up, which is Exercise~(ii) at the end of this
+section.\par
+The declarative reading of these programs is straightforward.
+Operationally the programs can be understood in terms of building a
+structure incrementally, where the ``hole" for further results is
+referred to explicitly. This is entirely analogous to difference-lists.
+\vskip 15pt\parno
+{\bf Exercises for Section 15.2}\vskip 5pt\par
+\offset{20pt}{(i)} Define the predicate {\tt normalized\_sum(Expression)},
+which is true if {\tt Expression} is a normalized sum.\par
+\offset{20pt}{(ii)} Rewrite Program~\Pronorpluexp\ so that\bki
+(a) The normalized sum is built bottom-up;\bki
+(b) The order of the elements is reversed.\par
+\offset{20pt}{(iii)} Enhance Program~\Pronorpluexp\ so that numbers
+appearing in the addends are added together and returned as the first
+component of the normalized sum. For example, $(3+x)+2+(y+4)$ should
+be normalized to $9+(x+y)$.\par
+\offset{20pt}{(iv)} Write a program to normalize products using
+difference-products, defined analogously to difference-sums.\par
+\sect{Dictionaries}
+A different use of incomplete data structures enables the implementation
+of dictionaries. Consider the task of creating, using, and maintaining a
+set of values indexed under keys. There are two main operations we would
+like to perform: looking up a value stored under a certain key, and
+entering a new key and its associated value. These operations must ensure
+consistency --- for example, the same key should not appear twice with two
+different values. It is possible to perform both operations, looking up
+values of keys, and entering new keys, with a single simple procedure by
+exploiting incomplete data structures.\par
+Consider a linear sequence of key-value pairs. Let us see the advantages
+of using an incomplete data structure for its representation. Program
+\Prodicloolis\ defines the relation {\tt lookup(Key,Dictionary,Value)} which is
+true if the entry under {\tt Key} in the dictionary {\tt Dictionary} has value
+{\tt Value}. The dictionary is represented as an incomplete list of pairs
+of the form {\tt (Key,Value)}.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it lookup\/}({\it Key,Dictionary,Value\/}) $\lar$\cr
+\qi {\it Dictionary\/} {\rm contains} {\it Value\/} {\rm indexed under}
+{\it Key\/}{\rm .}\cr
+\qi {\it Dictionary\/} {\rm is represented as an incomplete} \cr
+\qi {\rm list of pairs of the form} ({\it Key,Value\/}){\rm .}\cr
+\noalign{\medskip}
+lookup(Key,[(Key,Value)$\mid$Dict],Value).\cr
+lookup(Key,[(Key1,Value1)$\mid$Dict],Value) $\lar$\cr
+\qi Key $\ne$ Key1, lookup(Key,Dict,Value).\cr
+\noalign{\bigskip}
+{\bf Program \Prodicloolis}{\rm :~~Dictionary lookup from a list of
+tuples}\cr}
+\endinsert\par
+Let us consider an example where the dictionary is used to remember phone
+extensions keyed under the names of people. Suppose that {\tt Dict} is
+initially instantiated to {\tt [(arnold,8881),(barry,4513),(cathy,5950)$
+\mid$Xs]}. The query {\tt lookup(arnold,Dict,N)?} has as answer {\tt
+N=8881} and is used for finding Arnold's phone number. The query {\tt
+lookup(barry,Dict,4513)?} succeeds, checking that Barry's phone number
+is 4513.\par 
+The entry of new keys and values is demonstrated by the query {\tt
+lookup(david,Dict,1199)?}. Syntactically this appears to check David's
+phone number. Its effect is different. The query succeeds, instantiating
+{\tt Dict} to {\tt [(arnold,8881),(barry,4513),(cathy,5950),(david,1199)$
+\mid$Xs1]}. Thus {\tt lookup} has entered a new value.\par
+What happens if we check Cathy's number with the query {\tt
+lookup(cathy,}\linebreak
+{\tt Dict,5951)?}, where the number is incorrect? Rather than entering a
+second entry for Cathy, the query fails because of the test {\tt Key $\ne$
+Key1}.\par
+The {\tt lookup} procedure given in Program~\Prodicloolis\ completes
+Program~\Proeliza, the simplified ELIZA. Note that when the program begins,
+the dictionary is empty, indicated by its being a variable. The dictionary is
+built up during the matching against the stimulus half of a
+stimulus-response pair. The constructed dictionary is used to produce the
+correct response. Note that entries are placed in the dictionary without
+their values being known: a striking example of the power of logical
+variables. Once an integer is detected, it is put in the dictionary, and
+its value is determined later.\par
+Searching linear lists is not very efficient for a large number of
+key-value pairs. Ordered binary trees allow more efficient retrieval of
+information than linear lists. The insight that an incomplete structure
+can be used to allow entry of new keys as well as to look up values
+carries over to binary trees.\par
+The binary trees of Section~3.4 are modified to be a four-place structure
+{\tt dict(Key,Value,Left,Right)}, where {\tt Left} and {\tt Right} are,
+respectively, the left and right subdictionaries, and {\tt Key} and {\tt
+Value} are as before. The functor {\tt dict} is used to suggest a
+dictionary.\par
+Looking up in the dictionary tree has a very elegant definition, similar
+in spirit to Program~\Prodicloolis. It performs recursion on binary trees
+rather than on lists, and relies on unification to instantiate variables
+to dictionary structures. Program~\Prodicloobin\ gives the procedure {\tt
+lookup(Key,Dictionary,Value)}, which as before both looks up the value
+corresponding to a given key and enters new values.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it lookup\/}({\it Key,Dictionary,Value\/}) $\lar$\cr
+\qi {\it Dictionary\/} {\rm contains} {\it Value\/} {\rm indexed under}
+{\it Key\/}{\rm .}\cr
+\qi {\it Dictionary\/} {\rm is represented as an ordered binary tree.}\cr
+\noalign{\medskip}
+lookup(Key,dict(Key,X,Left,Right),Value) $\leftarrow$\cr
+\qi !, X = Value.\cr
+lookup(Key,dict(Key1,X,Left,Right),Value) $\leftarrow$\cr
+\qi Key $<$ Key1, lookup(Key,Left,Value).\cr
+lookup(Key,dict(Key1,X,Left,Right),Value) $\leftarrow$\cr
+\qi Key $>$ Key1, lookup(Key,Right,Value).\cr
+\noalign{\bigskip}
+{\bf Program \Prodicloobin}{\rm :~~Dictionary lookup in a binary
+tree}\cr}
+\endin\par
+At each stage, the key is compared with the key of the current node. If it
+is less, the left branch is recursively checked; if it is greater, the
+right branch is taken. If the key is non-numeric, the predicates {\tt
+$<$} and {\tt $>$} must be generalized. The cut is necessary in Program
+\Prodicloobin, in contrast to Program~\Prodicloolis, because of the
+nonlogical nature of comparison operators, which will give errors if keys
+are not instantiated.\par
+Given a number of pairs of keys and values, the dictionary they determine
+is not unique. The shape of the dictionary depends on the order in which
+queries are posed to the dictionary.\par
+The dictionary can be used to melt a term that has been frozen using
+Program~\Pronumthevar\ for {\tt numbervars}. The code is given as Program
+\Promelter. Each melted variable is entered into the dictionary, so that
+the correct shared variables will be assigned.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it freeze\/}({\it A,B\/}) $\lar$\cr
+\qi {\rm Freeze term} {\it A\/} {\rm into} {\it B\/}{\rm .}\cr
+\noalign{\medskip}
+freeze(A,B) $\lar$\cr
+\qi copy\_term(A,B), numbervars(B,0,N).\cr
+\noalign{\medskip}
+{\it melt\_new\/}({\it A,B\/}) $\lar$\cr
+\qi {\rm Melt the frozen term} {\it A\/} {\rm into} {\it B\/}{\rm .}\cr
+\noalign{\medskip}
+melt\_new(A,B) $\lar$\cr
+\qi melt(A,B,Dictionary), !.\cr
+\noalign{\vskip 5pt}
+melt(`\$VAR'(N),X,Dictionary) $\lar$\cr
+\qi lookup(N,Dictionary,X).\cr
+melt(X,X,Dictionary) $\lar$\cr
+\qi constant(X).\cr
+melt(X,Y,Dictionary) $\lar$\cr
+\qi compound(X),\cr
+\qi functor(X,F,N),\cr
+\qi functor(Y,F,N),\cr
+\qi melt(N,X,Y,Dictionary).\cr
+\noalign{\vskip 5pt}
+melt(N,X,Y,Dictionary) $\lar$\cr
+\qi N $>$ 0,\cr
+\qi arg(N,X,ArgX),\cr
+\qi melt(ArgX,ArgY,Dictionary),\cr
+\qi arg(N,Y,ArgY),\cr
+\qi N1 is N-1,\cr
+\qi melt(N1,X,Y,Dictionary).\cr
+melt(0,X,Y,Dictionary).\cr
+\noalign{\vskip 5pt}
+numbervars(Term,N1,N2) $\lar$ {\rm See Program \Pronumthevar.}\cr
+\noalign{\vskip 5pt}
+lookup(Key,Dictionary,Value) $\lar$ {\rm See Program \Prodicloobin.}\cr
+\noalign{\bigskip}
+{\bf Program \Promelter}{\rm :~~Melting a term}\cr}
+\endin\par
+\sect{Queues}
+An interesting application of difference-lists is to implement queues. A
+{\tt queue} is a first-in, first-out store of information. The head of
+the difference-list represents the beginning of the queue, the tail
+represents the end of the queue, and the members of the difference-list
+are the elements in the queue. A queue is empty if the difference-list is
+empty, that is, if its head and tail are identical.\par
+Maintaining a queue is different from maintaining a dictionary. We
+consider the relation {\tt queue(S)}, where a queue processes a stream
+of commands, represented as a list {\tt S}. There are two basic
+operations on a queue --- enqueuing an element and dequeuing 
+an element --- represented, respectively, by the structures {\tt
+enqueue(X)} and {\tt dequeue(X)}, where {\tt X} is the element concerned.
+\par
+Program~\Proquepro\ implements the operations abstractly. The predicate
+{\tt queue(S)} calls {\tt queue(S,Q)}, where {\tt Q} is initialized to an
+empty queue. {\tt queue/2} is an interpreter for the stream of enqueue
+and dequeue commands, responding to each command and updating the state
+of the queue accordingly. Enqueuing an element exploits the
+incompleteness of the tail of the queue, instantiating it to a new
+element and a new tail, which is passed as the updated tail of the queue.
+Clearly, the calls to {\tt enqueue} and {\tt dequeue} can be unfolded,
+resulting in a more concise and efficient, but perhaps less readable,
+program.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it queue\/}({\it S\/}) $\lar$\cr
+\qi {\it S\/} {\rm is a sequence of enqueue and dequeue operations,}\cr
+\qi {\rm represented as a list of terms} {\it enqueue\/}({\it X\/}) {\rm
+and} {\it dequeue\/}({\it X\/}){\rm .}\cr
+\noalign{\medskip}
+queue(S) $\leftarrow$ queue(S,Q\\Q).\cr
+\noalign{\vskip 5pt}
+queue(\(enqueue(X)$\mid$Xs\),Q) $\leftarrow$\cr
+\qi enqueue(X,Q,Q1), queue(Xs,Q1).\cr
+queue(\(dequeue(X)$\mid$Xs\),Q) $\leftarrow$\cr
+\qi dequeue(X,Q,Q1), queue(Xs,Q1).\cr
+queue(\(~\),Q).\cr
+\noalign{\vskip 5pt}
+enqueue(X,Qh\\\(X$\mid$Qt\),Qh\\Qt).\cr
+dequeue(X,\(X$\mid$Qh\)\\Qt,Qh\\Qt).\cr
+\noalign{\bigskip}
+{\bf Program \Proquepro}{\rm :~~A queue process}\cr}
+\endin\par
+The program terminates when the stream of commands is exhausted. It can
+be extended to insist that the queue be empty at the end of the commands
+by changing the base fact to\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+queue(\(~\),Q) $\leftarrow$ empty(Q).\cr}\medno
+A queue is empty if both its head and tail can be instantiated to the
+empty list, expressed by the fact {\tt empty(\(~\)\\\(~\))}. Logically,
+the clause {\tt empty(Xs\\Xs)} would also be sufficient; however,
+because of the lack of the occurs check in Prolog, discussed in
+Chapter~4, it may succeed erroneously on a nonempty queue, creating a
+cyclic data structure.\par
+We demonstrate the use of queues in Program~\Proflalisque\ for flattening
+a list. Although the example is somewhat contrived, it shows how queues
+can be used. The program does not preserve the order of the elements in
+the original list.\par
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it flatten\/}({\it Xs,Ys\/}) $\lar$\cr
+\qi {\it Ys\/} {\rm is a flattened list containing the elements in} {\it
+Xs\/}.\cr
+\noalign{\medskip}
+flatten(Xs,Ys) $\lar$ flatten\_q(Xs,Qs\\Qs,Ys).\cr
+\noalign{\vskip 5pt}
+flatten\_q([X$\mid$Xs],Ps\\[Xs$\mid$Qs],Ys) $\lar$\cr
+\qi flatten\_q(X,Ps\\Qs,Ys).\cr
+flatten\_q(X,[Q$\mid$Ps]\\Qs,[X$\mid$Ys]) $\lar$\cr
+\qi constant(X), X$\ne$\(~\), flatten\_q(Q,Ps\\Qs,Ys).\cr
+flatten\_q(\(~\),Q,Ys) $\lar$\cr
+\qi non\_empty(Q), dequeue(X,Q,Q1), flatten\_q(X,Q1,Ys).\cr
+flatten\_q([~],[~]\\[~],[~]).\cr
+\noalign{\vskip 5pt}
+non\_empty(\(~\)\\\(~\)) $\lar$ !, fail.\cr
+non\_empty(Q).\cr
+\noalign{\vskip 5pt}
+dequeue(X,\(X$\mid$Qh\)\\Qt,Qh\\Qt).\cr
+\noalign{\bigskip}
+{\bf Program \Proflalisque}{\rm :~~Flattening a list using a queue}\cr}
+\endin\par
+The basic relation is {\tt flatten\_q(Ls,Q,Xs)}, where {\tt Ls} is the
+list of lists to be flattened, {\tt Q} is the queue of lists waiting to
+be flattened, and {\tt Xs} is the list of elements in {\tt Ls}. The
+initial call of {\tt flatten\_q/3} by {\tt flatten/2} initializes an
+empty queue. The basic operation is enqueuing the tail of the list and
+recursively flattening the head of the list:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+flatten\_q(\(X$\mid$Xs\),Q,Ys) $\leftarrow$ enqueue(Xs,Q,Q1),
+flatten\_q(X,Q1,Ys).\cr}\medno
+The explicit call to {\tt enqueue} can be omitted and incorporated via
+unification as follows:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+flatten\_q(\(X$\mid$Xs\),Qh\\\(Xs$\mid$Qt\),Ys) $\leftarrow$
+flatten\_q(X,Qh\\Qt,Ys).\cr}\medno
+If the element being flattened is a constant, it is added to the output
+structure being built top-down, and an element is dequeued (by unifying
+with the head of the difference-list) to be flattened in the recursive
+call:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+flatten\_q(X,\(Q$\mid$Qh\)\\Qt,\(X$\mid$Ys\)) $\leftarrow$\cr
+\qi constant(X), X$\ne$\(~\), flatten\_q(Q,Qh\\Qt,Ys).\cr}\medno
+When the empty list is being flattened, either the top element is
+dequeued\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+flatten\_q(\(~\),Q,Ys) $\leftarrow$\cr
+\qi non\_empty(Q), dequeue(X,Q,Q1), flatten\_q(X,Q1,Ys).\cr}\medno
+or the queue is empty, and the computation terminates:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+flatten\_q(\(~\),\(~\)\\\(~\),\(~\)).\cr}\medskip
+A previous version of Program~\Proflalisque\ incorrectly expressed the
+case when the list was empty, and the top element was dequeued as\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+flatten\_q(\(~\),\(Q$\mid$Qh\)\\Qt,Ys) $\lar$
+flatten\_q(Q,Qh\\Qt,Ys).\cr}\medno
+This led to a nonterminating computation, since an empty queue {\tt
+Qs\\Qs} unified with {\tt \(Q$\mid$Qh\)\\Qt} and so the base case was
+never reached.\par
+Let us reconsider Program~15.11 operationally. Under the
+expected use of a queue, {\tt enqueue(X)} messages are sent with {\tt
+X} determined and {\tt dequeue(X)} with {\tt X} undetermined. As long
+as more elements are enqueued than dequeued, the queue behaves as
+expected, with the difference between the head of the queue and the
+tail of the queue being the elements in the queue. However, if the
+number of dequeue messages received exceeds that of enqueue messages,
+an interesting thing happens --- the content of the queue becomes {\it
+negative\/}. The head runs ahead of the tail, resulting in a queue
+containing a negative sequence of undetermined elements, one for each
+excessive dequeue message. \par
+It is interesting to observe that this behavior is consistent with the
+associativity of appending of difference-lists. If a queue {\tt
+Qs\\\(X1,X2,X3$\mid$Qs\)} that contains minus three undetermined elements
+has the queue {\tt \(a,b,c,d,e$\mid$Xs\)\\Xs} that contains five
+elements appended to it, then the result will be the queue {\tt \(d,e$
+\mid$Xs\)\\Xs} with two elements, where the ``negative" elements {\tt
+X1,X2,X3} are unified with {\tt a,b,c}.\par
+\sect{Background}
+Difference-lists have been in the logic programming folklore since its
+inception. The first description of them in the literature is given by
+Clark and Tarnlund (1977).\par
+The automatic transformation of simple programs without difference-lists
+to programs with difference-lists, for example, {\tt reverse} and {\tt
+flatten}, can be found in Bloch (1984).\par
+Section~15.1 implicitly contains an algorithm for converting from a
+program with explicit calls to {\tt append} to an equivalent, more
+efficient program that uses difference-lists to concatenate the
+elements and which is much more efficient. Care is needed in
+application of the algorithm. There are excellent discussions of a
+correct algorithm and the dangers of using difference-lists without
+the occurs check in S{\o}ndergaard(1990) amd Marriott and
+S{\o}ndergaard (1993).\par 
+There is an interesting discussion of the Dutch flag problem in O'Keefe
+(1990).\par
+Automatic removal of a functor denoting difference-lists is described in
+Gallagher and Bruynooghe (1990).\par
+Maintaining dictionaries and queues can be given a theoretical basis as a
+perpetual process, as described by Warren (1982) and Lloyd (1987).\par
+Queues are particularly important in concurrent logic programming languages,
+since their input need not be a list of requests but a stream, which is
+generated incrementally by the processes requesting the services of the
+queue.\par\bye
+

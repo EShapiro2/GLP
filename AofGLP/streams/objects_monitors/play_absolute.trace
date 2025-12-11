@@ -1,0 +1,13 @@
+=== play_absolute.glp ===
+Four-actor play with absolute time targets.
+Goal: play_absolute(VA?, VB?, VC?, VD?, Log?)
+
+Alice acts immediately, Bob at T0+50ms, Carol at T0+100ms, Diana at T0+150ms.
+Uses guard_sub for computing wait deltas from absolute targets.
+Streams merged, observed, logged, then sent to accumulator monitor.
+
+Actors:
+- alice: add(10), add(5), value(VA)
+- bob_at: wait(50), subtract(3), value(VB)
+- carol_at: wait(100), add(20), value(VC)
+- diana_at: wait(150), value(VD)

@@ -1,0 +1,35 @@
+%% hanoi.glp - Tower of Hanoi in GLP
+%% Source: Standard GLP examples
+
+hanoi(0, _, _, []).
+hanoi(N, From, To, Moves?) :-
+    number(N?), N? > 0, atom(From?), atom(To?) |
+    N1 := N? - 1,
+    other(From?, To?, Via),
+    hanoi_two(N1?, From?, To?, Via?, M1, M2),
+    append(M1?, [move(From?,To?)|M2?], Moves).
+
+%% Helper to make two recursive hanoi calls
+hanoi_two(N, From, To, Via, M1?, M2?) :-
+    number(N?), atom(From?), atom(To?), atom(Via?) |
+    hanoi(N?, From?, Via?, M1),
+    hanoi(N?, Via?, To?, M2).
+
+other(a, b, c). other(a, c, b).
+other(b, a, c). other(b, c, a).
+other(c, a, b). other(c, b, a).
+
+%% Metainterpreter support
+reduce(hanoi(0, _, _, []), true).
+reduce(hanoi(N, From, To, Moves?),
+       (N1 := N? - 1, other(From?, To?, Via),
+        hanoi_two(N1?, From?, To?, Via?, M1, M2),
+        append(M1?, [move(From?,To?)|M2?], Moves))) :-
+    number(N?), N? > 0, atom(From?), atom(To?) | true.
+reduce(hanoi_two(N, From, To, Via, M1?, M2?),
+       (hanoi(N?, From?, Via?, M1), hanoi(N?, Via?, To?, M2))) :-
+    number(N?), atom(From?), atom(To?), atom(Via?) | true.
+reduce(other(a, b, c), true). reduce(other(a, c, b), true).
+reduce(other(b, a, c), true). reduce(other(b, c, a), true).
+reduce(other(c, a, b), true). reduce(other(c, b, a), true).
+reduce((X? := T), true) :- X := T? | true.

@@ -1,0 +1,12 @@
+=== group_formation.glp ===
+Group formation protocol.
+Goal: social_graph(Id, [msg(user, Id, create_group(Name, Friends))|In], Fs)
+
+Founder-administered model: users create groups with selected friends.
+Group identifier is (founder, name), preventing naming conflicts.
+
+Phases:
+1. Create group streams
+2. Send invitations through friend channels
+3. Members receive invitation with attestation
+4. User accepts/rejects

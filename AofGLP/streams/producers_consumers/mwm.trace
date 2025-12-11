@@ -1,0 +1,6 @@
+=== mwm.glp ===
+Goal: mwm([stream([1,2,3]), stream([a,b])], Out).
+Note: Multiway merge with O(1) append via MutualRef.
+Requires kernel predicates: allocate_mutual_reference, stream_append, close_mutual_reference
+
+Expected: Out merges all input streams with termination detection.

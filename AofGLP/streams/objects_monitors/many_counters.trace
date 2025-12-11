@@ -1,0 +1,5 @@
+=== many_counters.glp ===
+Dynamic object creation and management.
+Goal: use_many_counters([create(c1), (c1,up), (c1,show(V))], []).
+
+Creates counter instances by name and routes messages.

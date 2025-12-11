@@ -1,0 +1,1373 @@
+%%%%% Leonudi Book, Chapter 14, pp 213-245 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 13
+\numberfirst
+\startpage{213}
+
+\pageinsert
+\titlepage
+\chskipt\noindent
+{\bigbf Part III}\bigskip\noindent
+{\bigbf Advanced Prolog Programming Techniques}\par\vfill
+The expressive power and high-level nature of logic programming can be
+exploited to write programs that are not easily expressed in conventional
+programming languages. Different problem-solving paradigms can be
+supported, and alternative data construction and access mechanisms can be
+used.\par
+The simple Prolog programs of the previous part are examples of the use
+of basic programming techniques, reinterpreted in the context of logic
+programming. This part collects more advanced techniques that have
+evolved in the logic programming community and exploit the special
+features of logic programs. We show how they can be used to advantage.
+\par\endinsert\endpage
+\chapb{Nondeterministic}{Programming}
+One feature of the logic programming computation model lacking in
+conventional programming models is nondeterminism. Nondeterminism is a
+technical concept used to define, in a concise way, abstract computation
+models. However, in addition to being a powerful theoretical concept,
+nondeterminism is also useful for defining and implementing algorithms.
+This chapter shows how, by thinking nondeterministically, one can
+construct concise and efficient programs.\par
+\titlepage
+Intuitively, a nondeterministic machine can choose its next operation
+correctly when faced with several alternatives. True nondeterministic
+machines cannot be realized but can be simulated or approximated. In
+particular, the Prolog interpreter approximates the nondeterministic
+behavior of the abstract interpreter of logic programs by sequential
+search and backtracking, as explained in Chapter~6. However, the fact that
+nondeterminism is only simulated without being ``really present'' can
+be abstracted away in many cases in favor of nondeterministic thinking
+in much the same way as pointer manipulation details involved in
+unification can be abstracted away in favor of symbolic thinking.\par
+\sect{Generate-and-Test}
+Generate-and-test is a common technique in algorithm design and
+programming. Here is how generate-and-test works for problem solving. One
+process or routine generates candidate solutions to the problem, and
+another process or routine tests the candidates, trying to find one or
+all candidates that actually solve the problem.\par
+It is easy to write logic programs that, under the execution model of
+Prolog, implement the generate-and-test technique.  Such programs
+typically have a conjunction of two goals, in which one acts as the
+generator and the other tests whether the solution is acceptable, as in
+the following clause:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+find(X) $\lar$ generate(X), test(X).\cr}\medno
+This Prolog program would actually behave like a conventional,
+procedural, generate-and-test program. When called with {\tt find(X)?},
+{\tt generate(X)} succeeds, returning some {\tt X}, with which {\tt
+test(X)} is called. If the {\tt test} goal fails, execution backtracks to
+{\tt generate(X)}, which generates the next element. This continues
+iteratively until the tester successfully finds a solution with the
+distinguishing property or until the generator has exhausted all
+alternative solutions.\par
+The programmer, however, need not  be concerned with the
+generate-and-test cycle and can view this technique more abstractly,
+as an instance of nondeterministic programming. In this
+nondeterministic program the generator guesses correctly an element in
+the domain of possible solutions, and the tester simply verifies that
+the guess of the generator is correct.\par
+A good example of a program with multiple solutions and commonly used as
+a generator is Program~\Promemlis\ for {\tt member}. The query {\tt
+member(X,\(a,b,c\))?} will yield the solutions {\tt X=a}, {\tt X=b}, and
+{\tt X=c} successively as required. Thus {\tt member} can be used to
+nondeterministically choose the correct element of a list in a
+generate-and-test program.
+\topin
+\halign{\hskip 20pt\lft{\tt #}\cr
+{\it verb\/}({\it Sentence,Verb\/}) $\lar$\cr
+\qi {\it Verb\/} {\rm is a verb in the list of words} {\it
+Sentence\/}{\rm .}\cr
+\noalign{\medskip}
+verb(Sentence,Word) $\lar$ member(Word,Sentence), verb(Word).\cr
+noun(Sentence,Word) $\lar$ member(Word,Sentence), noun(Word).\cr
+article(Sentence,Word) $\lar$
+member(Word,Sentence), article(Word).\cr
+\noalign{\medskip}
+{\it Vocabulary}\cr}\medskip
+\halign{\hskip 20pt\lft{\tt #}\qquad&\lft{\tt #}\cr
+noun(man).&noun(woman).\cr
+article(a).&verb(loves).\cr}\medskip
+\halign{\hskip 20pt\lft{\tt #}\cr
+member(X,Xs) $\lar$ {\rm See Program \Promemlis.}\cr}\bigskip
+\halign{\hskip 40pt\lft{#}\cr
+{\bf Program~\Profinparspe}:~~Finding parts of speech in a sentence\cr}
+\endin\par
+Program~\Profinparspe\ is a simple example of generate-and-test using
+{\tt member} as a generator. The program identifies parts of speech of a
+sentence. We assume that a sentence is represented as a list of words
+and that there is a database of facts giving the parts of speech of particular
+words. Each part of speech is a unary predicate whose argument is a word,
+for example, {\tt noun(man)} indicates that {\tt man} is a noun. The
+relation {\tt verb(Sentence,Word)} is true if {\tt Word} is a verb in
+sentence {\tt Sentence}. The analogous meanings are intended for {\tt
+noun/2} and {\tt article/2}. The query {\tt
+verb(\(a,man,loves,a,woman\),V)?} finds the verb {\tt V=loves} in the
+sentence using generate-and-test. Words in the sentence are generated by
+{\tt member} and tested to see if they are verbs.\par
+Another simple example is testing whether two lists have an element in
+common. Consider the predicate {\tt intersect(Xs,Ys)}, which is true if
+{\tt Xs} and {\tt Ys} have an element in common:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+intersect(Xs,Ys) $\lar$ member(X,Xs), member(X,Ys).\cr}\medskip
+The first {\tt member} goal in the body of the clause generates members
+of the first list, which are then tested to see whether they are in the
+second list by the second {\tt member} goal. Thinking
+nondeterministically, the first goal guesses an {\tt X} in {\tt Xs},
+and the second verifies that the guess is a member of {\tt Ys}.\par
+Note that when executed as a Prolog program, this clause effectively
+implements two nested loops. The outer loop iterates over the elements of
+the first list, and the inner loop checks whether the chosen element is a
+member of the second list. Hence this nondeterministic logic program
+achieves, under the execution model of Prolog, a behavior very similar to
+the standard solution one would compose for this problem in Fortran,
+Pascal, or Lisp.\par
+The definition of {\tt member} in terms of {\tt append},\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+member(X,Xs) $\lar$ append(As,\(X$\mid$Bs\),Xs).\cr}\medno
+is itself essentially a generate-and-test program. The two stages,
+however, are amalgamated by the use of unification. The {\tt append}
+goal generates splits of the list, and immediately a test is made
+whether the first element of the second list is {\tt X}.\par
+Typically, generate-and-test programs are easier to construct than
+programs that compute the solution directly, but they are also less
+efficient. A standard technique for optimizing generate-and-test programs
+is to ``push" the tester inside the generator as deeply as possible.
+Ultimately, the tester is completely intertwined with the generator, and
+only correct solutions are generated.\par
+Let us consider optimizing generate-and-test programs by pushing the
+tester into the generator. Program~\Propersor\ for permutation sort is
+another example of a generate-and-test program. The top level is as
+follows:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+sort(Xs,Ys) $\lar$ permutation(Xs,Ys), ordered(Ys).\cr}\medno
+Abstractly, this program guesses nondeterministically the correct
+permutation via {\tt permutation(Xs,Ys)}, and {\tt ordered} checks that
+the permutation is actually ordered.\par
+Operationally, the behavior is as follows. A query involving {\tt sort}
+is reduced to a query involving {\tt permutation} and {\tt ordered}. A
+failure-driven loop ensues. A permutation of the list is generated by
+{\tt permutation} and tested by {\tt ordered}. If the permuted list is
+not ordered, the execution backtracks to the {\tt permutation} goal, which
+generates another permutation to be tested. Eventually an ordered
+permutation is generated and the computation terminates.\par
+Permutation sort is a highly inefficient sorting algorithm, requiring
+time super-exponential in the size of the list to be sorted. Pushing the
+tester into the generator, however, leads to a reasonable algorithm. The
+generator for permutation sort, {\tt permutation}, selects an arbitrary
+element and recursively permutes the rest of the list. The tester, {\tt
+ordered}, verifies that the first two elements of the permutation are in
+order, then recursively checks the rest. If we view the combined
+recursive {\tt permutation} and {\tt ordered} goals as a recursive
+sorting process, we have the basis for insertion sort, Program
+\Proinssor. To sort a list, sort the tail of the list and insert the head
+of the list into its correct place in the order. The arbitrary selection
+of an element has been replaced by choosing the first element.\par
+Another example of the advantage of intertwining generating and testing
+can be seen with programs solving the {\it N\/} queens problem.\par
+The {\it N\/} queens problem requires the placement of {\it N\/} pieces
+on an {\it N\/}-by-{\it N\/} rectangular board so that no two pieces are
+on the same line: horizontal, vertical, or diagonal. The original
+formulation called for 8 queens to be placed on a chessboard, and the
+criterion of not being on the same line corresponds to two queens not
+attacking each other under the rules of chess. Hence the problem's name.
+\par
+The program has been well studied in the recreational mathematics
+literature. There is no solution for $N=2$ and $N=3$, and a unique
+solution up to reflection for $N=4$, shown in Figure~\Figsolquepro.
+There are 88 solutions for $N=8$, or 92, depending on strictness with
+symmetries. 
+\topin\hskip -0.7truecm
+$$\vcenter{\lineskip 0pt
+\halign{\tabskip 6pt\ctr{#}&\ctr{#}&\ctr{#}&\ctr{#}&\ctr{#}&\ctr{#}&
+\ctr{#}&\ctr{#}&\tabskip 0pt\ctr{#}\cr
+\noalign{\hrule}
+\a&&\a&&\a&Q&\a&&\a\cr
+\noalign{\hrule}
+\a&Q&\a&&\a&&\a&&\a\cr
+\noalign{\hrule}
+\a&&\a&&\a&&\a&Q&\a\cr
+\noalign{\hrule}
+\a&&\a&Q&\a&&\a&&\a\cr
+\noalign{\hrule}}}$$\medskip
+\ctrline{{\bf Figure \Figsolquepro}:~~A solution to the 4 queens problem}
+\vskip 0.6truecm
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it queens\/}({\it N,Queens\/}) $\lar$\cr
+\qi {\it Queens\/} {\rm is a placement that solves the} {\it N\/} {\rm
+queens problem,}\cr
+\qi {\rm represented as a permutation of the list of numbers
+\($1,2,\ldots,N$\).}\cr 
+\noalign{\medskip}
+queens(N,Qs) $\lar$\cr
+\qi range(1,N,Ns), permutation(Ns,Qs), safe(Qs).\cr
+\noalign{\medskip}
+{\it safe\/}({\it Qs\/}) $\lar$\cr
+\qi {\rm The placement} {\it Qs\/} {\rm is safe.}\cr
+\noalign{\medskip}
+safe(\(Q$\mid$Qs\)) $\lar$ safe(Qs), not attack(Q,Qs).\cr
+safe(\(~\)).\cr
+\noalign{\vskip 5pt}
+attack(X,Xs) $\lar$ attack(X,1,Xs).\cr
+\noalign{\vskip 5pt}
+attack(X,N,\(Y$\mid$Ys\)) $\lar$ X is Y+N ; X is Y-N.\cr
+attack(X,N,\(Y$\mid$Ys\)) $\lar$ N1 is N+1,
+attack(X,N1,Ys).\cr
+\noalign{\vskip 5pt}
+permutation(Xs,Ys) $\lar$ {\rm See Program \Propersor.}\cr
+\noalign{\vskip 5pt}
+range(M,N,Ns) $\lar$ {\rm See Program \Progenlisint.}\cr
+\noalign{\bigskip}
+{\bf Program \Pronaigenque}{\rm :~~Naive generate-and-test program
+solving} {\it N\/} {\rm queens}\cr}
+\endin\par
+Program~\Pronaigenque\ is a simplistic program solving the {\it N\/} queens
+problem. The relation {\tt queen(N,Qs)} is true if {\tt Qs} is a solution
+to the {\it N\/} queens problem. Solutions are specified as a permutation
+of the list of the numbers 1 to {\it N\/}. The first element of the list is
+the row number to place the queen in the first column, the second element
+indicates the row number to place the queen in the second column, etc.
+Figure~\Figsolquepro\ indicates the solution \(2,4,1,3\) to the 4 queens
+problem. This specification of solutions, and the program generating
+them, has implicitly incorporated the observation that any solution to
+the {\it N\/} queens problem will have a queen on each row and a queen on
+each column.\par
+The program behaves as follows. The predicate {\tt range} creates a list
+{\tt Ns} of the numbers from $1$ to {\it N\/}. Then a
+generate-and-test cycle begins. The {\tt permutation} predicate generates 
+a permutation {\tt Qs} of {\tt Ns}, which is tested to see whether it
+is a solution to the problem with the predicate {\tt safe(Qs)}. This
+predicate is true if {\tt Qs} is a correct placement of the queens.
+Since two queens are not placed on the same row or column, the
+predicate need only check whether two queens attack each other along a
+diagonal. {\tt Safe} is defined recursively. A list of queens is safe
+if the queens represented by the tail of the list are safe and the
+queen represented by the head of the list does not attack any of the
+other queens. The definition of {\tt attack(Q,Qs)} uses a neat
+encapsulation of the interaction of diagonals. A queen is on the same
+diagonal as a second queen {\it N\/} columns away if the second
+queen's row number is {\it N\/} units greater than, or {\it N\/} units
+less than, the first queen's row number. This is expressed by the
+first clause of {\tt attack/3} in Program~\Pronaigenque. The meaning
+of {\tt attack(Q,Qs)} is that queen {\tt Q} attacks some queen in {\tt
+Qs}. The diagonals are tested iteratively until the end of the board
+is reached.\par 
+Program~\Pronaigenque\ cannot recognize when solutions are symmetric. The
+program gives two solutions to the query {\tt queens(4,Qs)?}, namely {\tt
+Qs=[2,4,1,3]} and {\tt Qs=[3,1,4,2]}.\par
+Although it is a well-written logic program, Program~\Pronaigenque\
+behaves inefficiently. Many permutations are generated that have no
+chance of being solutions. As with permutation sort, we improve the
+program by pushing the tester, in this case {\tt safe}, into the
+generator.\par 
+Instead of testing the complete permutation, that is, placing all the
+queens, each queen can be checked as it is being placed. Program
+\Proplaoneque\ computes solutions to the {\it N\/} queens problem by
+placing the queens one at a time. It also proceeds by generating and
+testing, in contrast to insertion sort, which became a deterministic
+algorithm by the transformation. The generator in the program is {\tt
+select} and the tester is {\tt attack}, or more precisely its negation.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it queens\/}({\it N,Queens\/}) $\lar$\cr
+\qi {\it Queens\/} {\rm is a placement that solves the} {\it N\/} {\rm
+queens problem,}\cr
+\qi {\rm represented as a permutation of the list of numbers
+\($1,2,\ldots,N$\).}\cr
+\noalign{\medskip}
+queens(N,Qs) $\lar$ range(1,N,Ns), queens(Ns,[~],Qs).\cr
+\noalign{\vskip 5pt}
+queens(UnplacedQs,SafeQs,Qs) $\lar$\cr
+\qi select(Q,UnplacedQs,UnplacedQs1),\cr
+\qi not attack(Q,SafeQs),\cr
+\qi queens(UnplacedQs1,[Q$\mid$SafeQs],Qs).\cr
+queens([~],Qs,Qs).\cr
+\noalign{\vskip 5pt}
+select(X,Xs,Ys) $\lar$ {\rm See Program \Proselelelis.}\cr
+\noalign{\vskip 5pt}
+attack(X,Xs) $\lar$ {\rm See Program \Pronaigenque.}\cr
+\noalign{\bigskip}
+{\bf Program \Proplaoneque}{\rm :~~Placing one queen at a time}\cr}
+\endinsert\par
+The positions of the previously placed queens are necessary to test
+whether a new queen is safe. Therefore the final solution is built upward
+using an accumulator. This is an application of the basic technique
+described in Section~7.5. A consequence of using an accumulator is that
+the queens are placed on the right-hand edge of the board. The two
+solutions to the query {\tt queens(4,Qs)?} are given in the opposite
+order to the solutions given by Program~\Pronaigenque.\par
+The next problem is to color a planar map so that no two adjoining
+regions have the same color. A famous conjecture, an open question for a
+hundred years, was proved in 1976, showing that four colors are sufficient
+to color any planar map. Figure~\Figmapreqcol\ gives a simple map
+requiring four colors to be colored correctly. This can be proved by
+enumeration of the possibilities. Hence four colors are both necessary
+and sufficient.
+\midinsert\vskip -0.2truecm
+$$\vcenter{\lineskip 0pt
+\halign{\tabskip 6pt\ctr{#}&\ctr{#}&\ctr{#}&\ctr{#}&\ctr{#}&\ctr{#}&
+\tabskip 0pt\ctr{#}\cr
+\noalign{\hrule}
+\a&&&a&&&\a\cr
+\noalign{\hrule}
+\a&b&\a&c&\a&d&\a\cr
+\noalign{\hrule}
+\a&&e&\a&f&&\a\cr
+\noalign{\hrule}}}$$\medskip
+\ctrline{{\bf Figure \Figmapreqcol}:~~A map requiring four colors}
+\endinsert\par
+Program~\Promapcol, which solves the map-coloring problem, uses the
+generate-and-test programming technique extensively. The program
+implements the following nondeterministic iterative algorithm:
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\lft{#}\cr
+{\it color\_map\/}({\it Map,Colors\/}) $\lar$\cr
+\qi {\it Map\/} is colored with {\it Colors\/} so that no two neighbors
+have the same color.\cr
+\qi The map is represented as an adjacency-list of regions\cr
+\qi {\it region\/}({\it Name,Color,Neighbors\/}), where {\it Name\/} is
+the name of the region,\cr
+\qi {\it Color\/} is its color, and {\it Neighbors\/} are the colors of
+its neighbors.\cr
+\noalign{\medskip}
+{\tt color\_map([Region$\mid$Regions],Colors) $\lar$}\cr
+\qi {\tt color\_region(Region,Colors),}\cr
+\qi {\tt color\_map(Regions,Colors).}\cr
+{\tt color\_map([~],Colors).}\cr
+\noalign{\medskip}
+{\it color\_region\/}({\it Region,Colors\/}) $\lar$\cr
+\qi {\it Region\/} and its neighbors are colored using {\it Colors\/} so
+that the\cr
+\qi region's color is different from the color of any of its
+neighbors.\cr
+\noalign{\medskip}
+{\tt color\_region(region(Name,Color,Neighbors),Colors) $\lar$}\cr
+\qi {\tt select(Color,Colors,Colors1),}\cr
+\qi {\tt members(Neighbors,Colors1).}\cr
+\noalign{\vskip 5pt}
+{\tt select(X,Xs,Ys) $\lar$} See Program \Proselelelis.\cr
+\noalign{\vskip 5pt}
+{\tt members(Xs,Ys) $\lar$} See Program \Protesforsub.\cr
+\noalign{\bigskip}
+{\bf Program \Promapcol}:~~Map coloring\cr}\vskip 0.6truecm
+\halign{\lft{\tt #}\cr
+{\it Test data}\cr
+\noalign{\medskip}
+test\_color(Name,Map) $\lar$\cr
+\qi map(Name,Map),\cr
+\qi colors(Name,Colors),\cr
+\qi color\_map(Map,Colors).\cr
+\noalign{\vskip 5pt}
+map(test,[region(a,A,[B,C,D]),region(b,B,[A,C,E]),\cr
+\qi region(c,C,[A,B,D,E,F]),region(d,D,[A,C,F]),\cr
+\qi region(e,E,[B,C,F]),region(f,F,[C,D,E])]).\cr
+\noalign{\vskip 5pt}
+map(west\_europe,[region(portugal,P,[E]), region(spain,E,[F,P]),\cr
+\qi region(france,F,[E,I,S,B,WG,L]), region(belgium,B,[F,H,L,WG]),\cr
+\qi region(holland,H,[B,WG]), region(west\_germany,WG,[F,A,S,H,B,L]),\cr
+\qi region(luxembourg,L,[F,B,WG]), region(italy,I,[F,A,S]),\cr
+\qi region(switzerland,S,[F,I,A,WG]), region(austria,A,[I,S,WG])]).\cr
+\noalign{\vskip 5pt}
+colors(X,[red,yellow,blue,white]).\cr
+\noalign{\bigskip}
+{\bf Program \Protesdatmap}{\rm :~~Test data for map coloring}\cr}\vfill}
+\endin\par
+For each region of the map,\medskip
+\halign{\hskip 40pt\lft{#}\cr
+choose a color,\cr
+choose (or verify) colors for the neighboring regions from the\cr
+\qi remaining colors.\cr}\medno
+A data structure is needed to support the algorithm. The map is
+represented as a list of regions. Each region has a name, a color, and a
+list of colors of the adjoining regions. The map in Figure~\Figmapreqcol,
+for example, is represented as\medskip
+\halign{\lft{\tt #}\cr
+[region(a,A,[B,C,D]),region(b,B,[A,C,E]),region(c,C,[A,B,D,E,F]),\cr
+\qi region(d,D,[A,C,F]),region(e,E,[B,C,F]),region(f,F,[C,D,E])].\cr}
+\medno
+The sharing of variables is used to ensure that the same region is not
+colored with two different colors by different iterations of the
+algorithm.\par
+The top-level relation is {\tt color\_map(Map,Colors)}, where {\tt
+Map} is represented as before, and {\tt Colors} is a list of colors used
+to color the map. Our colors are red, yellow, blue, and white. The
+heart of the algorithm is the definition of {\tt
+color\_region(Region,Colors)}:\medskip 
+\halign{\hskip 20pt\lft{\tt #}\cr
+color\_region(region(Name,Color,Neighbors),Colors) $\lar$\cr
+\qi select(Color,Colors,Colors1), members(Neighbors,Colors1).\cr}\medno
+Both the {\tt select} and {\tt members} goals can act as generators or
+testers, depending on whether their arguments are instantiated.\par
+Overall, the effect of the program is to instantiate a data structure, the
+map. The calls to {\tt select} and {\tt members} can be viewed as
+specifying local constraints. The predicates either generate by
+instantiating arguments in the structure or test whether instantiated
+values satisfy local constraints. Program~14.5 tests the map coloring
+solution.\par 
+Instantiating a data structure designed especially for a problem is a
+particularly effective means of implementing generate-and-test solutions.
+Unification and failure to unify control the building of the final
+solution structure, avoiding creation of unnecessary intermediate data
+structures. Since unification is supported well by Prolog
+implementations, solutions are found quickly. Exercise~14.1(iv) assigns
+the task of designing a data structure that can be instantiated to solve
+the {\it N\/} queens problem. The resulting program solves the {\it N\/}
+queens problem much more quickly than Program~\Pronaigenque\ or
+\Proplaoneque.\par
+Our final example is solving a logic puzzle. The behavior of the program
+is similar to the map-coloring program. The logic puzzle consists of some
+facts about some small number of objects that have various attributes.
+The minimum number of facts is given about the objects and attributes, to
+yield a unique way of assigning attributes to objects.\par
+Here is an example that we use to describe the technique of solving
+logic puzzles.\par
+Three friends came first, second, and third in a programming competition.
+Each of the three has a different first name, likes a different sport,
+and has a different nationality.\par
+Michael likes basketball and did better than the American. Simon, the
+Israeli, did better than the tennis player. The cricket player came
+first.\par
+Who is the Australian?  What sport does Richard play?\par
+Logic puzzles such as this one are elegantly solved by instantiating
+the values of a suitable data structure and extracting the solution
+values. Each clue is translated into a fact about the data structure.
+This can be done before the exact form of the data structure is
+determined using data abstraction. Let us analyze the first clue:
+``Michael likes basketball and did better than the American." Two
+distinct people are referred to. One is named Michael, whose sport is
+basketball, and the other is American. Further, Michael did better than
+the American. If we assume the structure to be instantiated is {\tt
+Friends}, then the clue is expressed as the conjunction of goals\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+did\_better(Man1,Man2,Friends), first\_name(Man1,michael),\cr
+sport(Man1,basketball), nationality(Man2,american),\cr}\medno
+Similarly, the second clue can be translated to the conditions\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+did\_better(Man1,Man2,Friends), first\_name(Man1,simon),\cr
+nationality(Man1,israeli), sport(Man2,tennis),\cr}\medno
+and the third clue to the conditions\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+first(Friends,Man), sport(Man,cricket).\cr}\medskip
+A framework for solving puzzles is given as Program~\Propuzsol. The
+relation computed is {\tt solve\_puzzle(Puzzle,Solution)}, where {\tt
+Solution} is the solution to {\tt Puzzle}. The puzzle is represented by
+the structure {\tt puzzle(Clues,Queries,Solution)}, where the data
+structure being instantiated is incorporated into the clues and queries,
+and the values to be extracted are given by {\tt Solution}.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it solve\_puzzle\/}({\it Puzzle,Solution\/}) $\lar$\cr
+\qi {\it Solution\/} {\rm is a solution of} {\it Puzzle\/,}\cr
+\qi {\rm where} {\it Puzzle\/} {\rm is} {\it puzzle\/}({\it
+Clues,Queries,Solution\/}){\rm .}\cr
+\noalign{\medskip}
+solve\_puzzle(puzzle(Clues,Queries,Solution),Solution) $\lar$\cr
+\qi solve(Clues),\cr
+\qi solve(Queries).\cr
+\noalign{\vskip 5pt}
+solve([Clue$\mid$Clues]) $\lar$\cr
+\qi Clue, solve(Clues).\cr
+solve([~]).\cr
+\noalign{\bigskip}
+{\bf Program \Propuzsol}{\rm :~~A puzzle solver}\cr}
+\endinsert\par
+The code for {\tt solve\_puzzle} is trivial. All it does is successively
+solve each clue and query, which are expressed as Prolog goals and are
+executed with the meta-variable facility.\par
+The clues and queries for our example puzzle are given in Program
+\Prodespuz. We describe the structure assumed by the clues to solve the
+puzzle. Each person has three attributes and can be represented by the
+structure {\tt friend(Name,Country,Sport)}. There are three friends whose
+order in the programming competition is significant. This suggests an
+ordered sequence of three elements as the structure for the problem,
+i.e., the list
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it Test data}\cr
+\noalign{\medskip}
+test\_puzzle(Name,Solution) $\lar$\cr
+\qi structure(Name,Structure),\cr
+\qi clues(Name,Structure,Clues),\cr
+\qi queries(Name,Structure,Queries,Solution),\cr
+\qi solve\_puzzle(puzzle(Clues,Queries,Solution),Solution).\cr
+\noalign{\vskip 5pt}
+structure(test,[friend(N1,C1,S1),friend(N2,C2,S2),friend(N3,C3,S3)]).\cr
+\noalign{\vskip 5pt}
+clues(test,Friends,\cr
+\qi [(did\_better(Man1Clue1,Man2Clue1,Friends),\hskip 2.5truecm \% Clue
+1\cr
+\qi first\_name(Man1Clue1,michael), sport(Man1Clue1,basketball),\cr
+\qi nationality(Man2Clue1,american)),\cr
+\qi (did\_better(Man1Clue2,Man2Clue2,Friends),\hskip 2.65truecm \% Clue
+2\cr
+\qi first\_name(Man1Clue2,simon), nationality(Man1Clue2,israeli),\cr
+\qi sport(Man2Clue2,tennis)),\cr
+\qi (first(Friends,ManClue3), sport(ManClue3,cricket))\hskip 0.9truecm \%
+Clue 3\cr
+\qi ]).\cr
+\noalign{\vskip 5pt}
+queries(test, Friends,\cr
+\qi [\quad member(Q1,Friends),\cr
+\qii first\_name(Q1,Name),\cr
+\qii nationality(Q1,australian),\hskip 4.3truecm \% Query 1\cr
+\qii member(Q2,Friends),\cr
+\qii first\_name(Q2,richard),\cr
+\qii sport(Q2,Sport)\hskip 6.45truecm \% Query 2\cr
+\qi ],\cr
+\qi \([`The Australian is ', Name],[`Richard plays ', Sport]]\cr
+).\cr
+\noalign{\vskip 5pt}
+did\_better(A,B,[A,B,C]).\cr
+did\_better(A,C,[A,B,C]).\cr
+did\_better(B,C,[A,B,C]).\cr
+\noalign{\vskip 5pt}
+first\_name(friend(A,B,C),A).\cr
+nationality(friend(A,B,C),B).\cr
+sport(friend(A,B,C),C).\cr
+\noalign{\vskip 5pt}
+first([X$\mid$Xs],X).\cr
+\noalign{\bigskip}
+{\bf Program \Prodespuz}{\rm :~~A description of a puzzle}\cr}\vfill}
+\endin\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+\(friend(N1,C1,S1),friend(N2,C2,S2),friend(N3,C3,S3)\).\cr}\medno
+The programs defining the conditions {\tt did\_better}, {\tt
+first\_name}, {\tt nationality}, {\tt sport}, and {\tt first} are
+straightforward, and are given in Program~\Prodespuz.\par
+The combination of Programs \Propuzsol\ and \Prodespuz\ works as a giant
+generate-and-test. Each of the {\tt did\_better} and {\tt member} goals
+access people, and the remaining goals access attributes of the people.
+Whether they are generators or testers depends on whether the arguments
+are instantiated or not. The answer to the complete puzzle, for the
+curious, is that Michael is the Australian, and Richard plays tennis.\par
+The puzzle given in Program~\Prodespuz\ is simple. An interesting
+question is how well does the framework of Program~\Propuzsol\ scale. A
+good example of a larger puzzle is given in Exercise~14.1(vi). Is the
+framework adequate for such a puzzle?\par
+The short answer is yes. Prolog is an excellent language for solving
+logic puzzles. However, care must be taken when formulating the clues and
+queries. For example, the predicate {\tt member} is often essential to
+specify individuals, as is done to formulate the
+query in Program~\Prodespuz. It may be tempting to become systematic and
+begin the puzzle solution by specifying all individuals by {\tt member}
+goals. This can lead to very inefficient programs because too many
+choice-points are set up. In general, implicit checking of a condition is
+usually more efficient. Another observation is that the order of the
+goals in the queries can significantly affect running time. It is best
+to worry about this once the problem formulation is correct. Determining
+appropriate goal order is a skill easily learned by experience.\par
+Another tip concerns negative clues, such as ``John is not the tailor."
+These clues are best regarded as specifying two separate individuals,
+John and the tailor, rather than as setting up a negative condition about
+one individual. The predicate {\tt select} can be used instead of {\tt
+member} to guarantee that individuals are different.\vskip 15pt\parno
+{\bf Exercises for Section 14.1}\vskip 5pt\par
+\offset{20pt}{(i)} Write a program to compute the integer square root of
+a natural number {\it N\/} defined to be the number {\it I\/} such that
+$I^2 \le N$, but $(I+1)^2 > N$. Use the predicate {\tt between/3},
+Program~\Progenranint, to generate successive natural numbers on
+backtracking.\par 
+\offset{20pt}{(ii)} Write a program to solve the stable marriage problem
+(Sedgewick, 1983), stated as follows:\par
+\offset{20pt}{} Suppose there are {\it N\/} men and {\it N\/} women who
+want to get married. Each man has a list of all the women in his
+preferred order, and each woman has a list of all the men in her
+preferred order. The problem is to find a set of marriages that is
+stable.\par
+\offset{20pt}{} A pair of marriages is {\it unstable\/} if there are a man
+and woman who prefer each other to their spouses. For example, consider
+the pair of marriages where David is married to Paula, and Jeremy is
+married to Judy. If David prefers Judy to Paula, and Judy prefers David to
+Jeremy, the pair of marriages is unstable. This pair would also be
+unstable if Jeremy preferred Paula to Judy, and Paula preferred Jeremy to
+David. A set of marriages is {\it stable\/} if there is no pair of
+unstable marriages.\par
+\offset{20pt}{} Your program should have as input lists of preferences,
+and produce as output a stable set of  marriages. It is a theorem from
+graph theory that this is always possible. Test the program on the
+following five men and five women with their associated preferences:\medskip
+\halign{\hskip 40pt\lft{#}\quad&\lft{#}\cr
+avraham:&chana tamar zvia ruth sarah\cr
+binyamin:&zvia chana ruth sarah tamar\cr
+chaim:&chana ruth tamar sarah zvia\cr
+david:&zvia ruth chana sarah tamar\cr
+elazar:&tamar ruth chana zvia sarah\cr
+\noalign{\vskip 5pt}
+zvia:&elazar avraham david binyamin chaim\cr
+chana:&david elazar binyamin avraham chaim\cr
+ruth:&avraham david binyamin chaim elazar\cr
+sarah:&chaim binyamin david avraham elazar\cr
+tamar:&david binyamin chaim elazar avraham\cr}\medskip
+\offset{20pt}{(iii)} Use Program~\Promapcol\ to color the map of Western
+Europe. The countries are given in Program~\Protesdatmap.\par
+\offset{20pt}{(iv)} Design a data structure for solving the {\it N\/}
+queens problem by instantiation. Write a program that solves the problem
+by instantiating the structure.\par
+\offset{20pt}{(v)} Explain why the following program solves the {\it N\/}
+queens problem:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+queens(N,Qs) $\lar$ gen\_list(N,Qs), place\_queens(N,Qs,Ups,Downs).\cr
+\noalign{\vskip 5pt}
+gen\_list(0,\(~\)).\cr
+gen\_list(N,\(Q$\mid$L\)) $\lar$ N $>$ 0, N1 is N-1, gen\_list(N1,L).\cr
+\noalign{\vskip 5pt}
+place\_queens(0,Qs,Ups,Downs).\cr
+place\_queens(I,Qs,Ups,\(D$\mid$Downs\)) $\lar$\cr
+\qi I $>$ 0, I1 is I-1,\cr
+\qi place\_queens(I1,Qs,\(U$\mid$Ups\),Downs),\cr
+\qi place\_queen(I,Qs,Ups,Downs).\cr
+\noalign{\vskip 5pt}
+\qi place\_queen(Q,\(Q$\mid$Qs\),\(Q$\mid$Ups\),\(Q$\mid$Downs\)).\cr
+\qi place\_queen(Q,\(Q1$\mid$Qs\),\(U$\mid$Ups\),\(D$\mid$Downs\)
+$\lar$\cr
+\qii place\_queen(Q,Qs,Ups,Downs).\cr}\medskip
+\offset{20pt}{(vi)} Write a program to solve the following logic puzzle.
+There are five houses, each of a different color and inhabited by a man
+of a different nationality, with a different pet, drink, and brand of
+cigarettes.\medskip
+\halign{\hskip 20pt\rt{#}~~&\lft{#}\cr
+(a)&The Englishman lives in the red house.\cr
+(b)&The Spaniard owns the dog.\cr
+(c)&Coffee is drunk in the green house.\cr
+(d)&The Ukrainian drinks tea.\cr
+(e)&The green house is immediately to the right (your right) of the
+ivory\cr
+&house.\cr
+(f)&The Winston smoker owns snails.\cr
+(g)&Kools are smoked in the yellow house.\cr
+(h)&Milk is drunk in the middle house.\cr
+(i)&The Norwegian lives in the first house on the left.\cr
+(j)&The man who smokes Chesterfields lives in the house next to the
+man\cr
+&with the fox.\cr
+(k)&Kools are smoked in the house next to the house where the horse is\cr
+&kept.\cr
+(l)&The Lucky Strike smoker drinks orange juice.\cr
+(m)&The Japanese smokes Parliaments.\cr
+(n)&The Norwegian lives next to the blue house.\cr}\medskip
+\offset{20pt}{} Who owns the Zebra?  Who drinks water?\par
+\offset{20pt}{(vii)} Write a program to test whether a graph is planar
+using the algorithm of Hopcroft and Tarjan (Deo, 1974; Even, 1979).\par
+\sect{Don't-Care and Don't-Know Nondeterminism}
+Two forms of nondeterminism are distinguished in the logic programming
+literature. They differ in the nature of the choice that must be made
+among alternatives. For {\it don't-care nondeterminism\/}, the choice can 
+be made arbitrarily. In terms of the logic programming computation model,
+any goal reduction will lead to a solution, and it does not matter which
+particular solution is found. For {\it don't-know nondeterminism\/}, the
+choice matters but the correct one is not known at the time the choice
+is made.\par
+Most examples of don't-care nondeterminism are not relevant for the
+Prolog programmer. A prototypical example is the code for {\tt minimum}.
+Program~\Promintwonum\ is the standard, incorporating a limited amount of
+don't-care nondeterminism, namely, when {\tt X} and {\tt Y} are the same:
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+minimum(X,Y,X) $\lar$ X $\le$ Y.\cr
+minimum(X,Y,Y) $\lar$ Y $\le$ X.\cr}\medno
+In Section~7.4, we termed this redundancy and advised against its use.
+\par
+On the other hand, programs exhibiting don't-know nondeterminism are
+common. Consider the program for testing whether two binary trees are
+isomorphic (Program~\Prodettreiso, reproduced here). Each clause is
+independently correct, but given two isomorphic binary trees, we don't
+know which of the two recursive clauses should be used to prove the
+isomorphism. Operationally, only when the computation terminates
+successfully do we know the correct choice:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+isotree(void,void).\cr
+isotree(tree(X,L1,R1),tree(X,L2,R2)) $\lar$\cr
+\qi isotree(L1,L2), isotree(R1,R2).\cr
+isotree(tree(X,L1,R1),tree(X,L2,R2)) $\lar$\cr
+\qi isotree(L1,R2), isotree(L2,R1).\cr}\medskip
+Composing Prolog programs exhibiting either form of nondeterminism can
+be indistinguishable from composing deterministic programs. Each clause
+is written independently. Whether inputs match only one clause or several
+is irrelevant to the programmer. Indeed this is seen from the multiple
+uses that can be made of Prolog programs. With arguments instantiated in
+one way, the program is deterministic; with another pattern of
+instantiation, the program is nondeterministic. For example, {\tt
+append/3} is deterministic if called with its first two arguments
+instantiated, while it is generally nondeterministic if called with
+the third argument instantiated and the first two arguments
+uninstantiated.\par 
+The behavior of Prolog programs seemingly  having don't-know
+nondeterminism such as {\tt isotree} is known. A given logic program and
+a query determine a search tree, as discussed in Chapter~5, which is
+searched depth-first by Prolog. Writing a program possessing don't-know
+nondeterminism is really specifying a depth-first search algorithm for
+solving the problem.\par
+We consider this viewpoint in a little more detail with a particular
+example: finding whether two nodes in a graph are connected. Figure
+\Figdirgra\ contains two graphs that will be used to test our ideas. The
+left-hand one is a tree, while the right-hand one is not, containing a
+cycle. Trees, or more generally, directed acyclic graphs (DAGs), behave
+better than graphs with cycles, as we will see in our example programs.
+\topin\vskip 5.3truecm\par
+\ctrline{{\bf Figure \Figdirgra}:~~Directed graphs}\vskip 0.6truecm
+\halign{\lft{\tt #}\cr
+{\it connected\/}({\it X,Y\/}) $\lar$\cr
+\qi {\rm Node} {\it X\/} {\rm is connected to node} {\it Y\/,}\cr
+\qi {\rm given an} {\it edge/2\/} {\rm relation describing a DAG.}\cr
+\noalign{\medskip}
+connected(X,X).\cr
+connected(X,Y) $\lar$ edge(X,N), connected(N,Y).\cr
+\noalign{\medskip}
+{\it Data}\cr}\medskip
+\halign{\lft{\tt #}\qquad&\lft{\tt #}\qquad&\lft{\tt #}\qquad&
+\lft{\tt #}\qquad&\lft{\tt #}\cr
+edge(a,b).&edge(a,c).&edge(a,d).&edge(a,e).&edge(d,j).\cr
+edge(c,f).&edge(c,g).&edge(f,h).&edge(e,k).&edge(f,i).\cr
+\noalign{\vskip 5pt}
+edge(x,y).&edge(y,z).&edge(z,x).&edge(y,u).&edge(z,v).\cr}\bigskip
+\halign{\lft{#}\cr
+{\bf Program \Proconfindag}:~~Connectivity in a finite DAG\cr}
+\endin\par
+Our first program is a small modification of a logic program of Section
+2.3. Program~\Proconfindag\ defines the relation {\tt connected(X,Y)},
+which is true if two nodes in a graph, {\tt X} and {\tt Y}, are
+connected. Edges are directed; the fact {\tt edge(X,Y)} states that a
+directed edge exists from {\tt X} to {\tt Y}. Declaratively the program
+is a concise, recursive specification of what it means for nodes in a
+graph to be connected. Interpreted operationally as a Prolog program, it
+is the implementation of an algorithm to find whether two nodes are
+connected using depth-first search.\par
+The solutions to the query {\tt connected(a,X)?} using the data from the
+left-hand graph in Figure~\Figdirgra\ gives as values for {\tt X}, {\tt
+a}, {\tt b}, {\tt c}, {\tt f}, {\tt h}, {\tt i}, {\tt g}, {\tt d}, {\tt
+j}, {\tt e}, {\tt k}. Their order constitutes a depth-first traversal of
+the tree.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it path\/}({\it X,Y,Path\/}) $\lar$\cr
+\qi {\it Path\/} {\rm is a path between two nodes} {\it X\/} {\rm and}
+{\it Y\/}\cr
+\qi {\rm in the DAG defined by the relation} {\it edge/2\/}{\rm .}\cr
+\noalign{\medskip}
+path(X,X,[X]).\cr
+path(X,Y,[X$\mid$P]) $\lar$ edge(X,N), path(N,Y,P).\cr
+\noalign{\bigskip}
+{\bf Program \Profinpatdep}{\rm :~~Finding a path by depth-first
+search}\cr}
+\endin\par
+Program~\Profinpatdep\ is an extension of this simple program that finds
+a path between two nodes. The predicate {\tt path(X,Y,Path)} is true if
+{\tt Path} is a path from the node {\tt X} to the node {\tt Y} in a
+graph. Both endpoints are included in the path. The path is built
+downward, which fits well with the recursive specification of the {\tt
+connected} relation. The ease of computing the path is a direct
+consequence of the depth-first traversal. Extending a
+breadth-first traversal to find the path is much more difficult.
+Sections 16.2 and 20.1 show how it can be done.\par
+Depth-first search, {\it dfs\/}, correctly traverses any finite tree or
+DAG (directed acyclic graph). There is a problem, however, with
+traversing a graph with cycles. The computation can become lost in an
+infinite loop around one of the cycles. For example, the
+query {\tt connected(x,Node)?}, referring to the right-hand graph of
+Figure~\Figdirgra\ gives solutions {\tt Node=y}, {\tt Node=z}, and
+{\tt Node=x} repeatedly without reaching {\it u\/} or {\it v\/}.\par
+The problem is overcome by  modifying {\tt connected}. An extra argument
+is added that accumulates the nodes visited so far. A test is made to
+avoid visiting the same node twice. This is shown in Program~\Procongra.
+\midinsert
+\halign{\lft{\tt #}\cr
+{\it connected\/}({\it X,Y\/}) $\lar$\cr
+\qi {\rm Node} {\it X\/} {\rm is connected to node} {\it Y\/} {\rm in the
+graph defined by} {\it edge/2\/}{\rm .}\cr
+\noalign{\medskip}
+connected(X,Y) $\lar$ connected(X,Y,[X]).\cr
+\noalign{\vskip 5pt}
+connected(X,X,Visited).\cr
+connected(X,Y,Visited) $\lar$\cr
+\qi edge(X,N), not member(N,Visited), connected(N,Y,[N$\mid$Visited]).\cr
+\noalign{\bigskip}
+{\bf Program \Procongra}{\rm :~~Connectivity in a graph}\cr}
+\endinsert\par
+Program~\Procongra\ successfully traverses a finite directed graph 
+depth-first. The pure Prolog program needed for searching finite DAGs must be
+extended by negation in order to work correctly. Adding an accumulator of
+paths visited to avoid entering loops effectively breaks the cycles in
+the graph by preventing traversal of an edge that would complete a
+cycle.\par
+The program is not guaranteed to reach every node of an infinite graph.
+To do so, breadth-first search is necessary. This is discussed further in
+Section~16.2.\par
+This section is completed with a program for building simple plans in the
+blocks world. The program is written nondeterministically, essentially
+performing a depth-first search. It combines the two extensions
+mentioned before --- keeping an accumulator of what has been traversed, and
+computing a path.\par
+The problem is to form a plan in the blocks world, that is, to specify
+a sequence of actions for restacking blocks to achieve a particular
+configuration. Figure~\Figinifinsta\ gives the initial state and the
+desired final state of a blocks world problem. There are three blocks,
+{\it a\/},{\it b\/}, and {\it c\/}, and three places, {\it p\/}, {\it
+q\/}, and {\it r\/}. The actions allowed are moving a block from the top
+of a block to a place and moving a block from one block to another. For
+an action to succeed, the top of the moved block must be clear, and also
+the place or block to which it is being moved must be clear.
+\midinsert\vskip 4.5truecm\par
+\ctrline{{\bf Figure \Figinifinsta}:~~Initial and final states of a
+blocks world problem}
+\endinsert\par
+The top-level procedure of Program~\Prodepfirpla\ solving the
+problem is {\tt transform(State1,State2,Plan)}. A plan of actions, {\tt
+Plan}, is produced that transforms {\tt State1} into {\tt State2}
+when executed.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it transform\/}({\it State1,State2,Plan\/}) $\lar$\cr
+\qi {\it Plan\/} {\rm is a plan of actions to transform} {\it State1\/}
+{\rm into} {\it State2\/}{\rm .}\cr
+\noalign{\medskip}
+transform(State1,State2,Plan) $\lar$\cr
+\qi transform(State1,State2,[State1],Plan).\cr
+\noalign{\vskip 5pt}
+transform(State,State,Visited,[~]).\cr
+transform(State1,State2,Visited,[Action$\mid$Actions]) $\lar$\cr
+\qi legal\_action(Action,State1),\cr
+\qi update(Action,State1,State),\cr
+\qi not member(State,Visited),\cr
+\qi transform(State,State2,[State$\mid$Visited],Actions).\cr
+\noalign{\vskip 5pt}
+legal\_action(to\_place(Block,Y,Place),State) $\lar$\cr
+\qi on(Block,Y,State), clear(Block,State),\cr
+\qi place(Place), clear(Place,State).\cr
+legal\_action(to\_block(Block1,Y,Block2),State) $\lar$\cr
+\qi on(Block1,Y,State), clear(Block1,State), block(Block2),\cr
+\qi Block1 $\ne$ Block2, clear(Block2,State).\cr
+\noalign{\vskip 5pt}
+clear(X,State) $\lar$ not member(on(A,X),State).\cr
+\noalign{\vskip 5pt}
+on(X,Y,State) $\lar$ member(on(X,Y),State).\cr
+\noalign{\vskip 5pt}
+update(to\_block(X,Y,Z),State,State1) $\lar$\cr
+\qi substitute(on(X,Y),on(X,Z),State,State1).\cr
+update(to\_place(X,Y,Z),State,State1) $\lar$\cr
+\qi substitute(on(X,Y),on(X,Z),State,State1).\cr
+\noalign{\vskip 5pt}
+substitute(X,Y,Xs,Ys) $\lar$ {\rm See Exercise 3.3(i).}\cr
+\noalign{\bigskip}
+{\bf Program \Prodepfirpla}{\rm :~~A depth-first planner}\cr}
+\endin\par
+States are represented by a list of relations of the form {\tt on(X,Y)},
+where {\tt X} is a block and {\tt Y} is a block or place. They represent
+the facts that are true in the state. For example, the initial and final
+states in Figure~14.4 are, respectively, {\tt
+[on(a,b),on(b,p),on(c,r)]} and {\tt [on(a,b),on(b,c),on(c,r)]}. The state
+descriptions are ordered in the sense that the {\tt on} relation for {\tt
+a} precedes that of {\tt b}, which precedes the {\tt on} relation for
+{\tt c}. The  state descriptions allow easy testing of whether a block or
+place {\tt X} is clear in a given state by checking that there is no
+relation of the form {\tt on(A,X)}. The predicates {\tt clear/2} and {\tt
+on/3} in Program~\Prodepfirpla\ take advantage of this representation.
+\par
+The nondeterministic algorithm used by the planner is given by the
+recursive clause of {\tt transform/4} in the program:\medskip
+\halign{\hskip 40pt\lft{#}\cr
+While the desired state is not reached,\cr
+\qi find a legal action,\cr
+\qi update the current state,\cr
+\qi check that it has not been visited before.\cr}\medno
+There are two possible actions, moving to a block and moving to a place.
+For each, the conditions for which it is legal must be specified, and a
+method given for updating the state as a result of performing the
+action.\par
+Program~\Prodepfirpla\ successfully solves the simple problem given as
+Program~\Protesdepfir. The first plan it produces is horrendous, however:
+\halign{\lft{\tt #}\cr
+[to\_place(a,b,q),to\_block(a,q,c),to\_place(b,p,q),to\_place(a,c,p),\cr
+\qi
+to\_block(a,p,b),to\_place(c,r,p),to\_place(a,b,r),to\_block(a,r,c),\cr
+\qi
+to\_place(b,q,r),to\_place(a,c,q),to\_block(a,q,b),to\_place(c,p,q),\cr
+\qi
+to\_place(a,b,p),to\_block(a,p,c),to\_place(b,r,p),to\_place(a,c,r),\cr
+\qi
+to\_block(b,p,a),to\_place(c,q,p),to\_block(b,a,c),to\_place(a,r,q),\cr
+\qi
+to\_block(b,c,a),to\_place(c,p,r),to\_block(b,a,c),to\_place(a,q,p),\cr
+\qi to\_block(a,p,b)].\cr}\medno
+Block {\tt a} is first moved to {\tt q}, then to {\tt c}. After that,
+block {\tt b} is moved to {\tt q}, block {\tt a} is moved to {\tt p} and
+{\tt b}, and after 20 more random moves, the final configuration is
+reached.\par
+\midinsert
+\halign{\lft{\tt #}\cr
+{\it Testing and data}\cr
+\noalign{\medskip}
+test\_plan(Name,Plan) $\lar$\cr
+\qi initial\_state(Name,I), final\_state(Name,F), transform(I,F,Plan).\cr
+\noalign{\vskip 5pt}
+initial\_state(test,[on(a,b),on(b,p),on(c,r)]).\cr
+final\_state(test,[on(a,b),on(b,c),on(c,r)]).\cr}\medskip
+\halign{\lft{\tt #}\qquad&\lft{\tt #}\qquad&\lft{\tt #}\cr
+block(a).&block(b).&block(c).\cr
+place(p).&place(q).&place(r).\cr}\bigskip
+\halign{\lft{#}\cr
+{\bf Program \Protesdepfir}:~~Testing the depth-first planner\cr}
+\endinsert\medskip
+It is easy to incorporate a little more intelligence by first trying to
+achieve one of the goal states. The predicate {\tt legal\_action} can be
+replaced by a predicate {\tt choose\_action(Action,State1,State2)}. A
+simple definition suffices to produce intelligent 
+behavior in our example problem:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+choose\_action(Action,State1,State2) $\lar$\cr
+\qi suggest(Action,State2), legal\_action(Action,State1).\cr
+choose\_action(Action,State1,State2) $\lar$\cr
+\qi legal\_action(Action,State1).\cr
+\noalign{\vskip 5pt}
+suggest(to\_place(X,Y,Z),State) $\lar$\cr
+\qi member(on(X,Z),State), place(Z).\cr
+suggest(to\_block(X,Y,Z),State) $\lar$\cr
+\qi member(on(X,Z),State), block(Z).\cr}\medno
+The first plan now produced is {\tt
+[to\_place(a,b,q),to\_block(b,p,c),to\_block(}\linebreak
+{\tt a,q,b)]}.\vskip 15pt\parno
+{\bf Exercises for Section 14.2}\vskip 5pt\par
+\offset{20pt}{(i)} Apply Program~\Prodepfirpla\ to solve another simple
+blocks world problem.\par
+\offset{20pt}{(ii)} Modify Program~\Prodepfirpla\ to solve the following
+planning problem.\par
+\offset{20pt}{} Consider a simplified computer consisting of a single
+accumulator and a large number of general purpose registers. There are
+four instructions: {\it load\/}, {\it store\/}, {\it add\/} and {\it
+subtract\/}. From the initial state where the accumulator is empty, {\it
+register1\/} contains the value {\it c1\/}, {\it register2\/} contains
+{\it c2\/}, {\it register3\/} contains {\it c3\/} and {\it register4\/}
+contains {\it c4\/}, achieve a final state where the accumulator contains
+\medskip
+\halign{\hskip 40pt\lft{#}\quad&\lft{#}\cr
+(a)&({\it c1 -- c2\/}) + ({\it c3 -- c4\/})\cr
+(b)&({\it c1 -- c2\/}) + ({\it c1 -- c2\/})\cr
+(c)&{\it c1\/}, and {\it register1\/} contains {\it c1\/} +  ({\it
+c2 --  c3\/}),\cr
+&and {\it register2\/} contains {\it c2 -- c3\/}.\cr}\par
+\sect{Artificial Intelligence classics: ANALOGY, ELIZA, and McSAM}
+``The best way to learn a subject is to teach it" is a cliche commonly
+repeated to new teachers. An appropriate analogue for new programmers is
+that the best way to understand a program is to rewrite or extend it. In
+this spirit, we present logical reconstructions of three AI programs.
+Each is clear, understandable, and easily extended. The exercises at the
+end of the section encourage the reader to add new facts and rules to the
+programs.\par
+The three programs chosen are the ANALOGY program of Evans for solving
+geometric analogy questions from intelligence tests; the ELIZA program of
+Weizenbaum, which simulates or rather parodies conversation;  and McSAM,
+a microversion of SAM, a program for ``understanding" stories from the
+Yale language group. Each logical reconstruction is expressed very
+simply. The nondeterminism of Prolog allows the programmer to ignore the
+issues of search.\par
+Consider the task of solving the geometric analogy problems typically
+used in intelligence tests. Several diagrams are presented in a
+prototypical problem. Diagrams A, B, and C are singled out from a list
+of possible answers and the following question is posed: ``A is to B
+as C is to which one of the `answer' diagrams?" Figure~\Figgeoanapro\
+gives a simple problem of this type.
+\topin\vskip 8truecm\par
+\ctrline{{\bf Figure \Figgeoanapro}:~~A geometric analogy problem}
+\endin\par
+Here is an intuitive algorithm for solving the problem, where terms such
+as {\it find\/}, {\it apply\/}, and {\it operation\/} are left
+unspecified:\medskip 
+\vbox{\halign{\hskip 40pt\lft{#}\cr
+Find an operation that relates A to B.\cr
+Apply the operation to C to give a diagram X.\cr
+Find X, or its nearest equivalent, among the answers.\cr}}\medno
+In the problem in Figure~\Figgeoanapro, the positions of the square and
+triangle are swapped (with appropriate scaling) between diagrams A
+and B. The ``obvious" answer is to swap the square and the circle
+in diagram C. The resultant diagram appears as no. 2 in the
+possible answers.
+\topin
+\halign{\hskip 20pt\lft{\tt #}\cr
+{\it analogy\/}({\it Pair1,Pair2,Answers\/}) $\lar$\cr
+\qi {\rm An analogy holds between the pairs of figures} {\it Pair1\/}
+{\rm and} {\it Pair2\/}{\rm .}\cr
+\qi {\rm The second element of} {\it Pair2\/} {\rm is one of the
+possible} {\it Answers\/}{\rm .}\cr
+\noalign{\medskip}
+analogy(A is\_to B,C is\_to X,Answers) $\lar$\cr
+\qi match(A,B,Operation),\cr
+\qi match(C,X,Operation),\cr
+\qi member(X,Answers).\cr
+\noalign{\vskip 5pt}
+match(inside(Figure1,Figure2),inside(Figure2,Figure1),invert).\cr
+match(above(Figure1,Figure2),above(Figure2,Figure1),invert).\cr
+\noalign{\bigskip}
+{\bf Program \Proprosolgeo}{\rm :~~A program solving geometric
+analogies}\cr}\vskip 0.6truecm
+\halign{\hskip 20pt\lft{\tt #}\cr
+{\it Testing and data}\cr
+\noalign{\medskip}
+test\_analogy(Name,X) $\lar$\cr
+\qi figures(Name,A,B,C),\cr
+\qi answers(Name,Answers),\cr
+\qi analogy(A is\_to B,C is\_to X,Answers).\cr
+\noalign{\vskip 5pt}
+figures(test1,inside(square,triangle),inside(triangle,square),\cr
+\qi inside(circle,square)).\cr
+answers(test1,[inside(circle,triangle),inside(square,circle),\cr
+\qi inside(triangle,square)\)).\cr
+\noalign{\bigskip}
+{\bf Program \Proanatesdat}{\rm :~~Testing ANALOGY}\cr}
+\endin\par
+Program~\Proprosolgeo\ is a simple program for solving analogy problems.
+The basic relation is {\tt analogy(Pair1,Pair2,Answers)}, where each {\tt
+Pair} is of the form {\tt X is\_to Y}. To parse the program, {\tt is\_to}
+must be declared as an infix operator. The two elements in {\tt Pair1}
+bear the same relation as the two elements in {\tt Pair2}, and the
+second element in {\tt Pair2} appears in {\tt Answers}. The definition of
+{\tt analogy} implements the intuitive algorithm:\medskip
+\halign{\lft{\tt #}\cr
+analogy(A is\_to B,C is\_to X,Answers) $\lar$\cr
+\qi match(A,B,Operation), match(C,X,Operation), member(X,Answers).\cr}
+\medno
+A fundamental decision is how the figures in the problem should be
+represented. In Program~\Proprosolgeo, figures are represented as
+Prolog terms. Diagram~A in Figure~\Figgeoanapro\ is a square inside a 
+triangle and is represented as the term {\tt inside(square,triangle)}.\par 
+The relation between two diagrams is found by the predicate {\tt
+match(A,B,}\linebreak
+{\tt Operation)}. This relation is true if {\tt Operation} matches {\tt
+A} and {\tt B}. The operation {\tt invert} is used to solve our example
+problem. The behavior of {\tt invert} is to swap its arguments.\par
+The predicate {\tt match} is used in two distinct ways in this program.
+The first time it produces an operation matching two given diagrams. The
+second time it produces a second diagram given an operation and a diagram.
+These details are, however, irrelevant from the nondeterministic
+viewpoint. Finding the answer is implemented simply, checking whether a
+given diagram appears in the list of answers. Note that the second {\tt
+match} goal and the {\tt member} goal can be swapped. The behavior then
+becomes guessing an answer using {\tt member} as a generator, and
+verifying that the guess has the same relation to diagram~{\tt C} as
+{\tt A} does to {\tt B}. Program~14.14 tests the analogy program.\par
+Exercise~14.3(i) poses three additional problems to be solved by analogy,
+which can be expressed within the framework of Program~\Proprosolgeo. The
+representation of pictures by terms, and the description of operations
+becomes increasingly ad hoc. Indeed, much of the ``intelligence'' of the
+program is embedded in the representation. The original ANALOGY program
+did not assume as much knowledge. It took a line drawing and tried to
+recognize the objects. Triangles, squares, and so on, were not assumed to
+be the primitives.\par
+The next AI classic considered is a simplified version of ELIZA. The
+program aims to simulate a conversation. A user types in a sentence, and
+ELIZA responds with an appropriate question or comment. ELIZA does not
+understand in any real sense, responding to its input by recognizing word
+patterns and replying by using a corresponding response pattern. To make
+the patterns of responses more credible, a psychiatrist setting is
+adopted. A sample interaction with ELIZA is given in Figure
+\Figsamceliza. Computer responses are preceded by $\gg$.
+\midinsert\vskip -0.2truecm
+$$\vcenter{\halign{\lft{#}\quad&\lft{#}\cr
+&I am unhappy.\cr
+$\gg$&How long have you been unhappy?\cr
+& Six months. Can you help me.\cr
+$\gg$&What makes you think I help you?\cr
+&You remind me of my father and brother.\cr
+$\gg$&Please tell me more about father.\cr
+&I like teasing father.\cr
+$\gg$&Does anyone else in your family like teasing father?\cr
+&No, only me.\cr
+$\gg$&Please go on.\cr}}$$\medskip
+\ctrline{{\bf Figure \Figsamceliza}:~~Sample conversation with ELIZA}
+\endinsert\par
+The heart of ELIZA is a procedure for matching the input sentence against
+a pattern. The resulting match is applied to another pattern to determine
+the program reply. The pair of patterns can be considered a
+stimulus/response pair, where the input is matched against the stimulus
+and the output generated from the response.  A typical stimulus/response
+pair is\medskip
+\halign{\hskip 40pt\lft{#}\cr
+I am $\lan$statement$\ran$\qquad How long have you been $\lan$statement$
+\ran$?\cr}\medno
+Using this pair, the response of the program to the input statement ``I
+am unhappy" will be the question ``How long have you been unhappy?" The
+$\lan$statement$\ran$ can be viewed as a slot to be filled.\par
+Program~\Proeliza\ is a simple version of ELIZA. It implements the
+following algorithm:
+\pageinsert\vbox to\the\vsize {\vskip 0.5truein\vskip -7pt
+\halign{\lft{\tt #}\cr
+{\it eliza\/} $\lar$\cr
+\qi {\rm Simulates a conversation via side effects.}\cr
+\noalign{\medskip}
+eliza $\lar$ read\_word\_list(Input), eliza(Input), !.\cr
+\noalign{\vskip 5pt}
+eliza([bye]) $\lar$\cr
+\qi reply([`Goodbye. I hope I have helped you']).\cr
+eliza(Input) $\lar$\cr
+\qi pattern(Stimulus,Response),\cr
+\qi match(Stimulus,Dictionary,Input),\cr
+\qi match(Response,Dictionary,Output),\cr
+\qi reply(Output),\cr
+\qi read\_word\_list(Input1),\cr
+\qi !, eliza(Input1).\cr
+\noalign{\medskip}
+{\it match\/}({\it Pattern,Dictionary,Words\/}) $\lar$\cr
+\qi {\it Pattern\/} {\rm matches the list of words} {\it Words\/}{\rm ,
+and matchings are}\cr
+\qi {\rm recorded in the} {\it Dictionary\/}{\rm .}\cr
+\noalign{\medskip}
+match([N$\mid$Pattern],Dictionary,Target) $\lar$\cr
+\qi integer(N), lookup(N,Dictionary,LeftTarget),\cr
+\qi append(LeftTarget,RightTarget,Target),\cr
+\qi match(Pattern,Dictionary,RightTarget).\cr
+match([Word$\mid$Pattern],Dictionary,[Word$\mid$Target]) $\lar$\cr
+\qi atom(Word), match(Pattern,Dictionary,Target).\cr
+match([~],Dictionary,[~]).\cr
+\noalign{\vskip 5pt}
+lookup(Key,Dictionary,Value) $\lar$ {\rm See Program \Prodicloolis.}\cr
+\noalign{\medskip}
+{\it pattern\/}({\it Stimulus,Response\/}) $\lar$\cr
+\qi {\it Response\/} {\rm is an applicable response pattern to the
+pattern} {\it Stimulus\/}{\rm .}\cr
+\noalign{\medskip}
+pattern([i,am,1],[`How',long,have,you,been,1,?]).\cr
+pattern([1,you,2,me],[`What',makes,you,think,`I',2,you,?]).\cr
+pattern([i,like,1],[`Does',anyone,else,in,your,family,like,1,?]).\cr
+pattern([i,feel,1],[`Do',you,often,feel,that,way,?]).\cr
+pattern([1,X,2],[`Please',tell,me,more,about,X,.]) $\lar$
+important(X).\cr
+pattern([1],[`Please',go,on,.]).\cr}\medskip
+\halign{\lft{\tt #}\qquad&\lft{\tt #}\qquad&\lft{\tt #}\cr
+important(father).&important(mother).&important(son).\cr
+important(sister).&important(brother).&important(daughter).\cr}\medskip
+\halign{\lft{\tt #}\cr
+reply([Head$\mid$Tail]) $\lar$ write(Head), write(` '), reply(Tail).\cr
+reply([~]) $\lar$ nl.\cr
+\noalign{\vskip 5pt}
+read\_word\_list(Xs) $\lar$ {\rm See Program \Prorealiswor.}\cr
+\noalign{\bigskip}
+{\bf Program \Proeliza}{\rm :~~ELIZA}\cr}\vfill}
+\endin\medskip
+\halign{\hskip 40pt\lft{#}\cr
+Read the input.\cr
+While the input is not {\tt bye},\cr
+\qi choose a stimulus/response pair,\cr
+\qi match the input to the stimulus,\cr
+\qi generate the reply from the response and the above match,\cr
+\qi output the response,\cr
+\qi read the next input.\cr}\medskip
+The stimulus/response pairs are represented as facts of the form {\tt
+pattern(Stimulus,Response)}, where both {\tt Stimulus} and {\tt Response}
+are lists of words and slots. Slots in the patterns are represented by
+integers. The predicate {\tt match(Pattern,Table,Words)} is used for both
+the second and third steps of the algorithm. It expresses a
+relation between a pattern {\tt Pattern}, a list of words {\tt Words},
+and a table {\tt Table}, where the table records how the slots in the
+pattern are filled. A central part of the {\tt match} procedure is played
+by a nondeterministic use of {\tt append} to break up a list of words. The
+table is represented by an {\it incomplete data structure\/},
+discussed in more detail in Chapter~15. The missing procedure 
+{\tt lookup/3} is given in Section~15.3. The reply is generated by
+{\tt reply(Words)}. which is a modified version of Program~\Prowrilister\
+for {\tt writeln} that leaves spaces between words.\par
+The final program presented in this section is Micro SAM or McSAM. It is
+a simplified version of the SAM (Script Applier Mechanism) program
+developed in the natural language group at Yale University. The aim of
+McSAM is to ``understand" stories. Given a story, it finds a relevant
+script and matches the individual events of the story against the
+patterns in the script. In the process, events in the script not
+explicitly mentioned in the story are filled in.\par
+Both the story and the script are represented in terms of Schank's theory
+of conceptual dependency. For example, consider the input story in Figure
+\Figstofmcsam, which is used as an example in our version of McSAM. The
+English version
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\lft{#}~~&\lft{#}\cr
+{\bf Input\/}:&John went to Leones, ate a hamburger, and left.\cr
+\noalign{\vskip 5pt}
+{\bf Output\/}:&John went to Leones. He was shown from the door to a
+seat.\cr
+&A waiter brought John a hamburger, which John ate by mouth.\cr
+&The waiter brought John a check, and John left Leones for\cr
+&another place.\cr}}$$\medskip
+\ctrline{{\bf Figure \Figstofmcsam}:~~A story filled in by McSAM}
+\endin\medskip
+\halign{\hskip 40pt\lft{#}\cr
+``John went to Leones, ate a hamburger, and left"\cr}\medno
+is represented in the program as a list of lists:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+[~~[ptrans, john, john, X1, leones],\cr
+~~~[ingest, X2, hamburger, X3],\cr
+~~~[ptrans, Actor, Actor, X4, X5]~~].\cr}\medno
+The first element in each list, {\tt ptrans} and {\tt ingest}, for
+example, is a term from conceptual dependency theory. The representation
+of the story as a list of lists is chosen as a tribute to the original
+Lisp version.\par
+Programming McSAM in Prolog is a triviality, as demonstrated by
+Program~\Promcsam. The top-level relation is {\tt
+mcsam(Story,Script)}, which expands a {\tt Story} into its
+``understood" equivalent according to a relevant {\tt Script}. The
+script is found by the predicate {\tt find(Story,Script,Defaults)}.
+The story is searched for a nonvariable argument that triggers the
+name of a script. In our example of John visiting Leones, the atom
+{\tt leones} triggers the {\tt restaurant} script, indicated by the
+fact {\tt trigger(leones,restaurant)} in Program~\Protesdmcsam.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it mcsam\/}({\it Story,Script\/}) $\lar$\cr
+\qi {\it Script\/} {\rm describes} {\it Story\/}{\rm .}\cr
+\noalign{\medskip}
+mcsam(Story,Script) $\lar$\cr
+\qi find(Story,Script,Defaults),\cr
+\qi match(Script,Story),\cr
+\qi name\_defaults(Defaults).\cr
+\noalign{\vskip 5pt}
+find(Story,Script,Defaults) $\lar$\cr
+\qi filler(Slot,Story),\cr
+\qi trigger(Slot,Name),\cr
+\qi script(Name,Script,Defaults).\cr
+\noalign{\medskip}
+{\it match\/}({\it Script,Story\/}) $\lar$\cr
+\qi {\it Story\/} {\rm is a subsequence of} {\it Script\/}{\rm .}\cr
+\noalign{\medskip}
+match(Script,[~]).\cr
+match([Line$\mid$Script],[Line$\mid$Story])
+$\lar$ match(Script,Story).\cr
+match([Line$\mid$Script],Story) $\lar$ match(Script,Story).\cr
+\noalign{\medskip}
+{\it filler\/}({\it Slot,Story\/}) $\lar$\cr
+\qi {\it Slot\/} {\rm is a word in} {\it Story\/}{\rm .}\cr
+\noalign{\medskip}
+filler(Slot,Story) $\lar$\cr
+\qi member([Action$\mid$Args],Story),\cr
+\qi member(Slot,Args),\cr
+\qi nonvar(Slot).\cr
+\noalign{\medskip}
+{\it name\_defaults\/}({\it Defaults\/}) $\lar$\cr
+\qi {\rm Unifies default pairs in} {\it Defaults\/}{\rm .}\cr
+\noalign{\medskip}
+name\_defaults([~]).\cr
+name\_defaults([[N,N]$\mid$L]) $\lar$  name\_defaults(L).\cr
+name\_defaults([[N1,N2]$\mid$L]) $\lar$  N1 $\ne$ N2,
+name\_defaults(L).\cr
+\noalign{\bigskip}
+{\bf Program \Promcsam}{\rm :~~McSAM}\cr}
+\endin\par
+The matching of the story to the script is done by {\tt
+match(Script,Story)}, which associates lines in the story with lines in
+the script. Remaining slots in the script are filled in by {\tt
+name\_defaults(Defaults)}.  The ``output" is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+[ptrans,john,john,place1,leones]\cr
+[ptrans,john,john,door,seat]\cr
+[mtrans,john,waiter,hamburger]\cr
+[ingest,john,hamburger,[mouth,john]]\cr
+[atrans,john,check,john,waiter]\cr
+[ptrans,john,john,leones,place2].\cr}\medno
+Its translation to English is given in Figure~\Figstofmcsam.\par
+The work done on the original McSAM was all in the searching and pattern
+matching. This is accomplished in Prolog by nondeterministic programming
+and unification.\vskip 15pt\parno
+{\bf Exercises for Section 14.3}\vskip 5pt\par
+\offset{20pt}{(i)} Extend ANALOGY, Program~\Proprosolgeo, to solve the
+three problems in Figure~\Figthranapro.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it Testing and data}\cr
+\noalign{\medskip}
+test\_mcsam(Name,UnderstoodStory) $\lar$\cr
+\qi story(Name,Story), mcsam(Story,UnderstoodStory).\cr
+\noalign{\vskip 5pt}
+story(test,[[ptrans, john, john, X1, leones],\cr
+\qi [ingest, X2, hamburger, X3],\cr
+\qi [ptrans, Actor, Actor, X4, X5]~~]).\cr
+\noalign{\vskip 5pt}
+script(restaurant,\cr
+\qi [~~[ptrans, Actor, Actor, EarlierPlace, Restaurant],\cr
+\qi~~~[ptrans, Actor, Actor, Door, Seat],\cr
+\qi~~~[mtrans, Actor, Waiter, Food],\cr
+\qi~~~[ingest, Actor, Food, [mouth, Actor] ],\cr
+\qi~~~\(atrans, Actor, Money, Actor, Waiter],\cr
+\qi~~~[ptrans, Actor, Actor, Restaurant, Gone] ],\cr
+\qi [~~[Actor, customer], [EarlierPlace, place1],\cr
+\qi~~~[Restaurant, restaurant], [Door, door],\cr
+\qi~~~[Seat, seat], [Food, meal], [Waiter, waiter],\cr
+\qi~~~[Money, check], [Gone, place2]~~] ).\cr
+\noalign{\vskip 5pt}
+trigger(leones,restaurant).\cr
+trigger(waiter,restaurant).\cr
+\noalign{\bigskip}
+{\bf Program \Protesdmcsam}{\rm :~~Testing McSAM}\cr}
+\endin
+\pageinsert\vbox to\the\vsize{\vskip 0.5truein\vskip -7pt\vfill
+\ctrline{{\bf Figure \Figthranapro}:~~Three analogy problems}}
+\endin\par
+\offset{20pt}{(ii)} Extend ELIZA, Program~\Proeliza, by adding new
+stimulus/response patterns.\par
+\offset{20pt}{(iii)} If the seventh statement in Figure~\Figsamceliza\ is
+changed to be ``I like teasing my father," ELIZA responds with ``Does any
+one else in your family like teasing my father." Modify Program
+\Proeliza\ to ``fix" this behavior, changing references such as {\it
+I\/}, {\it my\/}, to {\it you\/}, {\it your\/}, etc.\par
+\offset{20pt}{(iv)} Rewrite McSAM to use structures.\par
+\offset{20pt}{(v)} Reconstruct another AI classic. A good candidate is
+the general problem solver GPS.\par
+\sect{Background}
+Applying Prolog to generate-and-test problems has been very common. Many
+researchers have discussed the behavior of Prolog in solving the {\it
+N\/} queens problem and map coloring. A good discussion of how Prolog
+handles the {\it N\/} queens problem can be found in Elcock (1983). The
+{\it N\/} queens program given in Exercise~14.1(v), the fastest of which
+we are aware, is due to Thomas Fruewirth. A classification of
+generate-and-test programs in Prolog is given in Bansal and Sterling
+(1989).\par
+Several researchers have used Prolog's behavior on generate-and-test
+problems as a reason to investigate alternative control of logic
+programs. Suggestions for improvement include co-routining incorporated
+in IC-Prolog (Clark and McCabe, 1979) and intelligent backtracking
+(Bruynooghe and Pereira, 1984). Neither have been widely adopted into
+Prolog.\par
+Other examples of solving puzzles by instantiating structures are given
+in a book by Evan Tick (1991) comparing Prolog program performance with
+concurrent logic programming languages.\par
+The zebra puzzle, Exercise~14.1(iv) did the rounds on the Prolog Digest
+in the early 1980s. It was used as an unofficial benchmark to test both
+the speed of Prolog implementations and the ability of Prolog programmers
+to write clear code. The description of clues given in
+Program~\Prodespuz\ was influenced by one of the solutions. The
+framework of Program~\Propuzsol\ was tested extensively by Steven 
+Kaminski in a course project at Case Western Reserve University. He
+took the first 20 puzzles of an available puzzle book 
+and solved them using the framework. Although very much a Prolog novice,
+he was able to use Prolog fairly easily to find solutions. His experience
+highlighted some interesting points, namely, how to handle negative
+information and the undesirability of too many choice points with
+redundant calls to {\tt select} and {\tt member}.\par
+The definitive discussion of don't-care and don't-know nondeterminism in
+logic programming appears in Kowalski (1979a).\par
+Program~\Prodepfirpla\ for planning is a variant of an example from
+Kowalski (1979a). The original planning program in Prolog was WARPLAN
+(Warren, 1976), reproduced in Coelho et al.\ (1980). Exercise~14.2(ii)
+was adapted from descriptions of WARPLAN's abilities in Coelho and Cotta
+(1988).\par
+ANALOGY constituted the Ph.D.\ thesis of Thomas Evans at MIT in the
+mid-1960s. A good description of the program appears in {\it Semantic 
+Information Processing\/} (Minsky, 1968). Evans' program tackled many
+aspects of the problem that are made trivial by our choice of
+representation, for example, identifying that there are triangles,
+squares, and circles in the diagrams. Our version, Program~\Proprosolgeo,
+emerged from a discussion group of Leon Sterling with a group of
+Epistemics students at the University of Edinburgh.\par
+ELIZA was originally presented in Weizenbaum (1966). Its performance led
+people to believe that a limited form of the Turing test had been passed.
+Weizenbaum, its author, was horrified by people's reactions to the
+program and to AI more generally, and he wrote an impassioned plea against
+taking the program too seriously (Weizenbaum, 1976). Our version,
+Program~\Proeliza, is a slight variant of a teaching program
+attributed to Alan Bundy, Richard O'Keefe, and Henry Thompson, which
+was used for AI courses at the University of Edinburgh.\par
+McSAM is a version of the SAM program, which was tailored for teaching AI
+programming (Schank and Riesbeck, 1981). Our version, Program~\Promcsam,
+is due to Ernie Davis and Ehud Shapiro. More information about
+conceptual dependency can be found in Schank and Abelson (1977).\par
+A rational reconstruction of GPS, suggested in Exercise~14.3(v), was
+shown to us by George Ernst.\par\bye
+

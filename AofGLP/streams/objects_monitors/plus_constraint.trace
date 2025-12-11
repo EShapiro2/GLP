@@ -1,0 +1,23 @@
+=== plus_constraint.glp ===
+Goal: plus(2, 3, X).
+
+GLP> ✓ Loaded: plus_constraint.glp
+GLP> plus(2, 3, X) :- :=/2(X1, +(2, 3))
+:=/2(X1, +(2, 3)) :- true
+X = 5
+→ succeeds
+
+Goal: plus(X, 3, 10).
+
+GLP> plus(X, 3, 10) :- :=/2(X1, -(10, 3))
+:=/2(X1, -(10, 3)) :- true
+X = 7
+→ succeeds
+
+Goal: plus(5, X, 8).
+
+GLP> plus(5, X, 8) :- :=/2(X1, -(8, 5))
+:=/2(X1, -(8, 5)) :- true
+X = 3
+→ succeeds
+

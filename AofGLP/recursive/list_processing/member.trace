@@ -1,0 +1,16 @@
+=== member.glp ===
+Goal: member(c, [a,b,c,d]).
+
+GLP> ✓ Loaded: member.glp
+GLP> member(c, [a, b, c, d]) :- member(c, [b, c, d])
+member(c, [b, c, d]) :- member(c, [c, d])
+member(c, [c, d]) :- true
+→ succeeds
+
+Goal: member(5, [1,2,3]).
+
+GLP> member(5, [1, 2, 3]) :- member(5, [2, 3])
+member(5, [2, 3]) :- member(5, [3])
+member(5, [3]) :- member(5, [])
+member(5, []) → failed
+→ failed

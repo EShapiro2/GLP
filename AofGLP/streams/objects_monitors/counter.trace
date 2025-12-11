@@ -1,0 +1,15 @@
+=== counter.glp ===
+Goal: counter([up,up,down,show(X)], 0).
+
+GLP> ✓ Loaded: counter.glp
+GLP> counter([up, up, down, show(X)], 0) :- :=/2(X1, +(0, 1)), counter([up, down, show(X)], X1?)
+:=/2(X1, +(0, 1)) :- true
+counter([up, down, show(X)], 1) :- :=/2(X2, +(1, 1)), counter([down, show(X)], X2?)
+:=/2(X2, +(1, 1)) :- true
+counter([down, show(X)], 2) :- :=/2(X3, -(2, 1)), counter([show(X)], X3?)
+:=/2(X3, -(2, 1)) :- true
+counter([show(X)], 1) :- counter([], 1)
+counter([], 1) :- true
+X = 1
+→ succeeds
+

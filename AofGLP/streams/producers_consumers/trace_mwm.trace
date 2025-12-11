@@ -1,0 +1,28 @@
+% Goal: mwm([stream([a,b]), stream([1,2])], Out).
+% Result: Out = [a, b, 1, 2]
+%
+% Multiway merge with MutualRef for O(1) stream append.
+% Short-circuit L/R chain detects termination.
+
+mwm([stream([a, b]), stream([1, 2])], Out) :- mwm_main([stream([a, b]), stream([1, 2])], MutualRef#0(@W1004))
+mwm_main([stream([a, b]), stream([1, 2])], MutualRef#0(@W1004)) :- mwm1([stream([a, b]), stream([1, 2])], MutualRef#0(@W1004), done, X1), close_when_done(X1?, MutualRef#0(@W1004))
+mwm1([stream([a, b]), stream([1, 2])], MutualRef#0(@W1004), done, X1) :- mwm_copy([a, b], MutualRef#0(@W1004), done, X2), mwm1([stream([1, 2])], MutualRef#0(@W1004), X2?, X3)
+close_when_done(X1?, MutualRef#0(@W1004)) → suspended
+mwm_copy([a, b], MutualRef#0(@W1004), done, X2) :- stream_append(a, MutualRef#0(@W1004), X4), mwm_copy([b], X4?, done, X5)
+mwm1([stream([1, 2])], MutualRef#0(@W1004), X2?, X3) :- mwm_copy([1, 2], MutualRef#0(@W1004), X2?, X6), mwm1([], MutualRef#0(@W1004), X6?, X7)
+stream_append(a, MutualRef#0(@W1004), X4) :- true
+mwm_copy([b], MutualRef#0(@W1026), done, X5) :- stream_append(b, MutualRef#0(@W1026), X8), mwm_copy([], X8?, done, X9)
+mwm_copy([1, 2], MutualRef#0(@W1026), X2?, X6) :- stream_append(1, MutualRef#0(@W1026), X10), mwm_copy([2], X10?, X2?, X11)
+mwm1([], MutualRef#0(@W1026), X6?, X7) → suspended
+stream_append(b, MutualRef#0(@W1026), X8) :- true
+mwm_copy([], MutualRef#0(@W1038), done, X9) :- true
+stream_append(1, MutualRef#0(@W1038), X10) :- true
+mwm_copy([2], MutualRef#0(@W1041), done, X11) :- stream_append(2, MutualRef#0(@W1041), X12), mwm_copy([], X12?, done, X13)
+stream_append(2, MutualRef#0(@W1041), X12) :- true
+mwm_copy([], MutualRef#0(@W1049), done, X13) :- true
+mwm1([], MutualRef#0(@W1049), done, X7) :- true
+close_when_done(done, MutualRef#0(@W1049)) :- close_mutual_reference(MutualRef#0(@W1049))
+close_mutual_reference(MutualRef#0(@W1049)) :- true
+
+Out = [a, b, 1, 2]
+→ succeeds

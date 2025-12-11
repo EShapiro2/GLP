@@ -1,0 +1,24 @@
+=== producer_consumer.glp ===
+Goal: producer(Xs), consumer(Xs?, 0).
+Note: Infinite stream - shows suspension/resumption pattern
+
+║   GLP REPL - Interactive Interpreter   ║
+╚════════════════════════════════════════╝
+
+Build: 9732a65 Add INDEX.md - catalog of all 87 GLP programs by chapter with goals and cases
+Compiled: 2025-12-05 (Added conjunctive goals support)
+Working directory: udi/
+Source files: glp/*.glp
+Compiled files: bin/*.glpc
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit
+
+Loaded stdlib: assign.glp (947 ops)
+Loaded stdlib: univ.glp (28 ops)
+Loaded stdlib: unify.glp (8 ops)
+Loaded stdlib: mwm.glp (161 ops)
+GLP> Error: File not found: glp/pc_test.glp
+GLP> Error: Predicate producer/1 not found
+→ failed
+GLP> 

@@ -1,0 +1,7 @@
+=== broadcast.glp ===
+Broadcast to multiple recipients.
+Goal: broadcast(Msg, Followers, Followers1)
+
+Sends message to all recipients in friends list.
+Traverses list, adding message to each output stream.
+Returns updated friends list with new stream tails.

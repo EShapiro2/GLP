@@ -1,0 +1,10 @@
+%% gcd_integer.glp - Computing the greatest common divisor of two integers (AoP 8.1)
+%% greatest_common_divisor(X,Y,Z) :- Z is the gcd of integers X and Y.
+
+greatest_common_divisor(I, 0, I?).
+greatest_common_divisor(I, J, Gcd?) :-
+    number(J?), J? > 0 | R := I? mod J?, greatest_common_divisor(J?, R?, Gcd).
+
+%% reduce clauses for metainterpreter
+reduce(greatest_common_divisor(I, 0, I?), true).
+reduce(greatest_common_divisor(I, J, Gcd?), (R := I? mod J?, greatest_common_divisor(J?, R?, Gcd))) :- number(J?), J? > 0 | true.

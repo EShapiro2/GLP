@@ -1,0 +1,14 @@
+%% termination_meta.glp - Termination-detecting GLP metainterpreter
+%% Source: GLP Papers (Program: GLP termination-detecting metainterpreter)
+%%
+%% Uses short-circuit technique: chain of paired variables extends
+%% while goals fork, contracts when goals terminate, closes when
+%% all goals have terminated.
+%%
+%% Call with: run(Goal, done, R)
+%% R? will be bound to done iff the run terminates.
+
+run(true,L,L?).  % halt
+run((A,B),Cs,L,R?) :-  run(A?,Cs1?,L?,M), run(B?,Cs1,M?,R). % fork
+run(A,L,R?) :- known(A) |        % reduce
+        reduce(A?,B,Cs1?), run(B?,Xs,Cs2?,L?,R).

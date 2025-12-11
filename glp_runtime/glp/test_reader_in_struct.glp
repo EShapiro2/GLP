@@ -1,0 +1,2 @@
+% Simple passthrough
+passthrough(X, X?).

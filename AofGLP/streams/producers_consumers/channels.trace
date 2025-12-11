@@ -1,0 +1,6 @@
+=== channels.glp ===
+Channels: Partially ordered streams (vs totally ordered)
+Operations: read, write, empty, close, min, branches, serialize, subset
+
+Example: serialize(Channel, Stream) converts channel to ordered stream.
+Uses multistream representation with branch(Left, Right) for concurrent writers.

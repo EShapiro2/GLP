@@ -1,0 +1,10 @@
+=== bounded_buffer.glp ===
+Bounded buffer stream communication.
+Goal: sq_num_buffered(N, Ss, Size)
+
+Limits sender when buffer is full.
+Buffer as difference-list: Head--Tail
+Receiver controls expansion by creating new slots.
+
+Operations: send/3, receive/3, open/2, close/1, closed/1
+Example: Buffered stream of squares.

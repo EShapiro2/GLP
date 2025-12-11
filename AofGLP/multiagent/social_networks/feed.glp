@@ -1,0 +1,28 @@
+%% feed.glp - Authenticated Feed Distribution
+%% Source: GLP Papers (Program: Authenticated Feed Distribution)
+%%
+%% Content feeds leverage ground guard to broadcast to multiple followers
+%% while maintaining cryptographic proof of authorship.
+
+% Post distribution with attestation preservation
+post(Content, Followers, Followers1) :-
+    ground(Content), current_time(Time) |
+    create_post(Content?, Time?, Post),
+    broadcast(Post?, Followers?, Followers1).
+
+broadcast(_, [], []).
+broadcast(Post, [(Name,Out)|Fs], [(Name,[Post|Out1?])|Fs1]) :-
+    broadcast(Post?, Fs?, Fs1).
+
+% Defined guard for attestation preservation
+preserve_attestation(Post, Author, forward(Author?, Post)).
+
+% Forward with attestation verification
+forward(Post, Followers, Followers1) :-
+    ground(Post), attestation(Post, att(Author, _)),
+    preserve_attestation(Post?, Author?, Forward) |
+    broadcast(Forward?, Followers?, Followers1).
+
+%% Each post carries creator's attestation. When forwarding, original
+%% attestation is preserved whilst adding forwarder's attestation,
+%% creating cryptographically verifiable provenance chain.

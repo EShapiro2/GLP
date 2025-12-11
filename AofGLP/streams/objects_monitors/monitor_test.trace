@@ -1,0 +1,19 @@
+=== monitor_test.glp ===
+Goal: test_monitor(V1, V2).
+Note: Two clients with wait guards for temporal coordination
+
+merge(X4?, [value(X1?) | []], X8) :- merge(X4?, [], X10)
+:=/2(X9, +(0, 5)) :- true
+monitor_loop([add(3) | [value(X1?) | X10?]], 5) :- :=/2(X11, +(5, 3)), monitor_loop([value(X1?) | X10?], X11?)
+merge(X4?, [], X10) → suspended
+:=/2(X11, +(5, 3)) :- true
+monitor_loop([value(X1?) | X10?], 8) :- =/2(X1, 8), monitor_loop(X10?, 8)
+=/2(X1, 8) :- true
+monitor_loop(X10?, 8) → suspended
+client2(X3, X4) :- =/2(X12, [add(10) | [subtract(2) | [value(X3?) | X13?]]]), client2_cont(X13)
+=/2(X12, [add(10) | [subtract(2) | [value(X3?) | X13?]]]) :- true
+client2_cont(X13) :- true
+merge([add(10) | [subtract(2) | [value(X3?) | []]]], [], X10) :- merge([], [subtract(2) | [value(X3?) | []]], X14)
+monitor_loop([add(10) | X14?], 8) :- :=/2(X15, +(8, 10)), monitor_loop(X14?, X15?)
+--
+GLP> 

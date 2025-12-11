@@ -1,0 +1,1941 @@
+
+
+
+
+Part  IV
+
+
+
+Applications
+
+
+
+    Prolog has been used for a wide range of applications: expert systems, natu*
+ *ral
+
+
+language understanding, symbolic algebra, compiler writing, building embedded
+
+
+languages, and architectural design, to name a few. In this part, we give a fla*
+ *vor
+
+
+of writing application programs in Prolog.
+
+
+    The first chapter looks at programs for playing three games: mastermind,
+
+
+Nim, and Kalah.  The next chapter presents an expert system for evaluating
+
+
+requests for credit.  The third chapter presents a program for solving symbolic
+
+
+equations, and the final chapter looks at a compiler for a Pascal-like language.
+
+
+    The emphasis in presentation in these chapters is on writing clear programs.
+
+
+Knowledge embedded in the programs is made explicit. Minor efficiency gains are
+
+
+ignored if they obscure the declarative reading of the program.
+
+
+
+
+                                                  Chapter  21
+
+
+
+                   Game-Playing  Programs
+
+
+
+    Learning how to play a game is fun. As well as understanding the rules of
+
+
+the game, we must constantly learn new strategies and tactics until the game is
+
+
+mastered. Writing a program to play games is also fun, and a good vehicle for
+
+
+showing how to use Prolog for writing nontrivial programs.
+
+
+
+21.1   Mastermind
+
+
+
+    Our first program guesses the secret code in the game of mastermind. It is
+
+
+a good example of what can be programmed in Prolog easily with just a little
+
+
+thought.
+
+
+    The version of mastermind we describe is what we played as kids.  It is
+
+
+a variant on the commercial version and needs less hardware (only pencil and
+
+
+paper). Player A chooses a sequence of distinct decimal digits as a secret code*
+ * |
+
+
+usually four digits for beginners and five for advanced players. Player B makes
+
+
+guesses and queries player A for the number of bulls (number of digits that app*
+ *ear
+
+
+
+
+21.1                                                  Mastermind  367
+
+
+
+in identical positions in the guess and in the code) and cows (number of digits
+
+
+that appear in both the guess and the code, but in different positions).
+
+
+    There is a very simple algorithm for playing the game: Impose some order
+
+
+on the set of legal guesses; then iterate, making the next guess that is consis*
+ *tent
+
+
+with all the information you have so far until you find the secret code.
+
+
+    Rather than defining the notion of consistency formally, we appeal to the
+
+
+reader's intuition: A guess is consistent with a set of answers to queries if t*
+ *he
+
+
+answers to the queries would have remained the same if the guess were the secret
+
+
+code.
+
+
+    The algorithm performs quite well compared with experienced players: an
+
+
+average of four to six guesses for a code with four digits with an observed max*
+ *imum
+
+
+of eight guesses. However, it is not an easy strategy for humans to apply, beca*
+ *use
+
+
+of the amount of bookkeeping needed. On the other hand, the control structure
+
+
+of Prolog | nondeterministic choice, simulated by backtracking | is ideal for
+
+
+implementing the algorithm.
+
+
+    We describe the program top-down.  The entire program is given as Pro-
+
+
+gram 21.1. The top-level procedure for playing the game is
+
+
+
+        mastermind(Code)  
+
+
+            cleanup, guess(Code), check(Code), announce.
+
+
+
+The heart of the top level is a generate-and-test loop.  The guessing procedure
+
+
+guess(Code), which acts as a generator, uses the procedure selects(Xs,Ys)
+
+
+(Program 7.7) to select nondeterministically a list Xs of elements from a list *
+ *Ys.
+
+
+
+
+368   Game-Playing Programs                                      21.1
+
+
+
+mastermind(Code)  
+
+
+    cleanup, guess(Code), check(Code), announce.
+
+
+guess(Code)  
+
+
+    Code = [X1,X2,X3,X4], selects(Code,[1,2,3,4,5,6,7,8,9,0]).
+
+
+Verify the proposed guess
+
+
+check(Guess)  
+
+
+    not inconsistent(Guess), ask(Guess).
+
+
+inconsistent(Guess)  
+
+
+    query(OldGuess,Bulls,Cows),
+
+
+    not bulls_and_cows_match(OldGuess,Guess,Bulls,Cows).
+
+
+bulls_and_cows_match(OldGuess,Guess,Bulls,Cows)  
+
+
+        exact_matches(OldGuess,Guess,N1),
+
+
+        Bulls =:= N1,                     % Correct number of bulls
+
+
+        common_members(OldGuess,Guess,N2),
+
+
+        Cows =:= N2-Bulls.                % Correct number of cows
+
+
+    exact_matches(Xs,Ys,N)  
+
+
+        size_of(A,same_place(A,Xs,Ys),N).
+
+
+    common_members(Xs,Ys,N)  
+
+
+        size_of(A,(member(A,Xs),member(A,Ys)),N).
+
+
+    same_place(X,[XjXs],[XjYs]).
+
+
+    same_place(A,[XjXs],[YjYs])   same_place(A,Xs,Ys).
+
+
+    Asking a guess
+
+
+    ask(Guess)  
+
+
+        repeat,
+
+
+        writeln([`How many bulls and cows in ',Guess,`?']),
+
+
+        read((Bulls,Cows)),
+
+
+        sensible(Bulls,Cows), !,
+
+
+        assert(query(Guess,Bulls,Cows)),
+
+
+        Bulls =:= 4.
+
+
+    sensible(Bulls,Cows)  
+
+
+        integer(Bulls), integer(Cows), Bulls+Cows  4.
+
+
+    Bookkeeping
+
+
+    cleanup   abolish(query,3).
+
+
+    announce  
+
+
+        size_of(X,query(X,A,B),N),
+
+
+        writeln([`Found the answer after ',N,` queries']).
+
+
+
+    Program 21.1:  Playing mastermind
+
+
+
+
+21.1                                                  Mastermind  369
+
+
+
+        size_of(X,G,N)   findall(X,G,Xs), length(Xs,N).
+
+
+        length(Xs,N)   See Program 8.11.
+
+
+        selects(X,Xs)   See Program 7.7.
+
+
+        abolish(F,N)   See Exercise 12.5(i).
+
+
+
+        Program 21.1  (Continued)
+
+
+
+According to the rules of the game, Xs is constrained to contain four distinct
+
+
+elements, while Ys is the list of the ten decimal digits:
+
+
+
+        guess(Code)  
+
+
+            Code = [X1,X2,X3,X4],
+
+
+            selects(Code,[1,2,3,4,5,6,7,8,9,0]).
+
+
+
+    The procedure check(Guess) tests the proposed code Guess. It first verifies
+
+
+that Guess is consistent with all (i.e., not inconsistent with any) of the answ*
+ *ers
+
+
+to queries already made; then it asks the user for the number of bulls and cows
+
+
+in Guess.  The ask(Guess) procedure also controls the generate-and-test loop,
+
+
+succeeding only when the number of bulls is four, indicating the correct code is
+
+
+found:
+
+
+
+        check(Guess)  
+
+
+            not inconsistent(Guess), ask(Guess).
+
+
+
+    Ask stores previous answers to queries in the relation query(X,B,C), where
+
+
+X is the guess, B is the number of bulls in it, and C the number of cows. A gue*
+ *ss is
+
+
+
+
+370   Game-Playing Programs                                      21.1
+
+
+
+inconsistent with a previous query if the number of bulls and cows do not match:
+
+
+
+        inconsistent(Guess)  
+
+
+            query(Old,Bulls,Cows),
+
+
+            not bulls_and_cows_match(Old,Guess,Bulls,Cows).
+
+
+
+The bulls match between a previous guess OldGuess and a conjectured guess
+
+
+Guess if the number of digits in the same position in the two guesses equals
+
+
+the number of Bulls in OldGuess.   It is computed by the predicate ex-
+
+
+act_matches(OldGuess,Guess,Bulls). The cows match if the number of com-
+
+
+mon digits without respect to order corresponds to the sum of Bulls and Cows;
+
+
+it is computed by the procedure bulls_and_cows_match. It is easy to count the
+
+
+number of matching digits and common digits in two queries, using an all-soluti*
+ *ons
+
+
+predicate size_of/3.
+
+
+    The ask(Guess) procedure is a memo-function that records the answer to
+
+
+the query.  It performs some limited consistency checks on the input with the
+
+
+procedure sensible/2 and succeeds only if four bulls are indicated. The expected
+
+
+syntax for the user's reply is a tuple (Bulls,Cows).
+
+
+    The remaining (top-level) predicates are for bookkeeping. The first, cleanu*
+ *p,
+
+
+removes unwanted information from previous games.  The predicate announce
+
+
+tells how many guesses were needed, which is determined using size_of/3.
+
+
+    A more efficient implementation of the exact_matches and common_members
+
+
+procedures can be obtained by writing iterative versions:
+
+
+
+        exact_matches(Xs,Ys,N)   exact_matches(Xs,Ys,0,N).
+
+
+
+
+21.1                                                  Mastermind  371
+
+
+
+        exact_matches([XjXs],[XjYs],K,N)  
+
+
+            K1 is K+1, exact_matches(Xs,Ys,K1,N).
+
+
+        exact_matches([XjXs],[YjYs],K,N)  
+
+
+            X 6= Y, exact_matches(Xs,Ys,K,N).
+
+
+        exact_matches([ ],[ ],N,N).
+
+
+        common_members(Xs,Ys,N)   common_members(Xs,Ys,0,N).
+
+
+        common_members([XjXs],Ys,K,N)  
+
+
+            member(X,Ys), K1 is K+1, common_members(Xs,Ys,K1,N).
+
+
+        common_members([XjXs],Ys,K,N)  
+
+
+            common_members(Xs,Ys,K,N).
+
+
+        common_members([ ],Ys,N,N).
+
+
+
+    Using the more efficient versions of exact_matches and common_members
+
+
+saves about 10%{30% of the execution time.
+
+
+
+
+372   Game-Playing Programs                                      21.1
+
+
+
+21.2   Nim
+
+
+
+    We turn our attention now from mastermind to Nim, also a game for two
+
+
+players. There are several piles of matches, and the players take turns removing
+
+
+some of the matches (up to all) in a pile. The winner is the player who takes t*
+ *he
+
+
+last match.  Figure 21.1 gives a common starting position, with piles of 1, 3, 5
+
+
+and 7 matches.
+
+
+                                  I
+
+
+                                 I I I
+
+
+                               I I I I I
+
+
+                              I I I I I I I
+
+
+                Figure 21.1:  A starting position for Nim
+
+
+
+    To implement the Nim-playing program, we use the game-playing framework
+
+
+of Program 20.8.
+
+
+    The first decision is the representation of the game position and the moves.
+
+
+A natural choice for positions is a list of integers where elements of the list*
+ * corre-
+
+
+spond to piles of matches. A move is a tuple (N,M ) for taking M matches from
+
+
+pile N . Writing the procedure move(Move,Position,Position1), where Posi-
+
+
+tion is updated to Position1 by Move, is straightforward.  The recursive rule
+
+
+counts down match piles until the desired pile is reached. The remaining piles *
+ *of
+
+
+matches representing the new game position are computed routinely:
+
+
+        move((K,M),[NjNs],[NjNs1])  
+
+
+
+
+21.2                                                        Nim   373
+
+
+
+            K > 1, K1 is K-1, move((K1,M),Ns,Ns1).
+
+
+
+There are two possibilities for updating the specified pile of matches, the base
+
+
+case of the procedure. If all the matches are taken, the pile is removed from t*
+ *he
+
+
+list. Otherwise the new number of matches in the pile is computed and checked
+
+
+to be legal:
+
+
+        move((1,N),[NjNs],Ns).
+
+
+        move((1,M),[NjNs],[N1jNs])   N > M, N1 is N-M.
+
+
+
+The mechanics of turns for two-person games is specified by two facts.
+
+
+    The initial piles of matches and who moves first must be decided by the
+
+
+two players.  Assuming the computer moves second, the game of Figure 21.1 is
+
+
+specified as
+
+
+        initialize(nim,[1,3,5,7],opponent).
+
+
+
+    The game is over when the last match is taken. This corresponds to the game
+
+
+position being the empty list. The person having to move next is the loser, and
+
+
+the output messages of announce are formulated accordingly. The details are in
+
+
+Program 21.2.
+
+
+    It remains to specify how to choose the moves. The opponent's moves are
+
+
+accepted from the keyboard; how much flexibility is allowed in input is the re-
+
+
+sponsibility of the programmer:
+
+
+        choose_move(Position,opponent,Move)  
+
+
+            writeln([`Please make move']),
+
+
+
+
+374   Game-Playing Programs                                      21.2
+
+
+
+play(Game)   See Program 20.8.
+
+
+Filling in the game-playing framework
+
+
+initialize(nim,[1,3,5,7],opponent).
+
+
+display_game(Position,X)   write(Position), nl.
+
+
+game_over([ ],Player,Player).
+
+
+announce(computer)   write(`You won!  Congratulations.'), nl.
+
+
+announce(opponent)   write(`I won.'), nl.
+
+
+Choosing moves
+
+
+choose_move(Position,opponent,Move)  
+
+
+    writeln([`Please make move']), read(Move), legal(Move,Position).
+
+
+legal((K,N),Position)   nth_member(K,Position,M), N  M.
+
+
+nth_member(1,[XjXs],X).
+
+
+nth_member(N,[XjXs],Y)   N > 1, N1 is N-1, nth_member(N1,Xs,Y).
+
+
+choose_move(Position,computer,Move)  
+
+
+    evaluate(Position,Safety,Sum),
+
+
+    decide_move(Safety,Position,Sum,Move).
+
+
+evaluate(Position,Safety,Sum)  
+
+
+    nim_sum(Position,[ ],Sum), safety(Sum,Safety).
+
+
+safety(Sum,safe)   zero(Sum), !.
+
+
+safety(Sum,unsafe)   not zero(Sum), !.
+
+
+decide_move(safe,Position,Sum,(1,1)).
+
+
+    % The computer's ``arbitrary move''
+
+
+decide_move(unsafe,Position,Sum,Move)  
+
+
+    safe_move(Position,Sum,Move).
+
+
+move(Move,Position,Position1 )  
+
+
+    Position1  is the result of executing the move
+
+
+    Move from the current Position.
+
+
+move((K,M),[NjNs],[NjNs1])  
+
+
+    K > 1, K1 is K-1, move((K1,M),Ns,Ns1).
+
+
+move((1,N),[NjNs],Ns).
+
+
+move((1,M),[NjNs],[N1jNs])  
+
+
+    N > M, N1 is N-M.
+
+
+next_player(computer,opponent).    next_player(opponent,computer).
+
+
+
+Program 21.2:  A program for playing a winning game of Nim
+
+
+
+
+21.2                                                        Nim   375
+
+
+
+nim_sum(Position,SoFar,Sum)  
+
+
+    Sum is the nim-sum of the current Position,
+
+
+    and SoFar is an accumulated value.
+
+
+nim_sum([NjNs],Bs,Sum)  
+
+
+    binary(N,Ds), nim_add(Ds,Bs,Bs1), nim_sum(Ns,Bs1,Sum).
+
+
+nim_sum([ ],Sum,Sum).
+
+
+nim_add(Bs,[ ],Bs).
+
+
+nim_add([ ],Bs,Bs).
+
+
+nim_add([BjBs],[CjCs],[DjDs])  
+
+
+    D is (B+C) mod 2, nim_add(Bs,Cs,Ds).
+
+
+binary(1,[1]).
+
+
+binary(N,[DjDs])  
+
+
+    N > 1, D is N mod 2, N1 is N/2, binary(N1,Ds).
+
+
+decimal(Ds,N)   decimal(Ds,0,1,N).
+
+
+decimal([ ],N,T,N).
+
+
+decimal([DjDs],A,T,N)  
+
+
+    A1 is A+DT, T1 is T2, decimal(Ds,A1,T1,N).
+
+
+zero([ ]).
+
+
+zero([0jZs])   zero(Zs).
+
+
+safe_move(Position,NimSum,Move)  
+
+
+    Move is a move from the current Position with
+
+
+    the value NimSum that leaves a safe position.
+
+
+safe_move(Piles,NimSum,Move)  
+
+
+    safe_move(Piles,NimSum,1,Move).
+
+
+safe_move([PilejPiles],NimSum,K,(K,M))  
+
+
+    binary(Pile,Bs), can_zero(Bs,NimSum,Ds,0), decimal(Ds,M).
+
+
+safe_move([PilejPiles],NimSum,K,Move)  
+
+
+    K1 is K+1, safe_move(Piles,NimSum,K1,Move).
+
+
+can_zero([ ],NimSum,[ ],0)  
+
+
+    zero(NimSum).
+
+
+can_zero([BjBs],[0jNimSum],[CjDs],C)  
+
+
+    can_zero(Bs,NimSum,Ds,C).
+
+
+can_zero([BjBs],[1jNimSum],[DjDs],C)  
+
+
+    D is 1-BC, C1 is 1-B, can_zero(Bs,NimSum,Ds,C1).
+
+
+
+Program 21.2  (Continued)
+
+
+
+
+376   Game-Playing Programs                                      21.2
+
+
+
+            read(Move),
+
+
+            legal(Move,Position).
+
+
+
+    Choosing a move for the computer requires a strategy. A simple strategy to
+
+
+implement is taking all of the first pile of matches. It is recommended only for
+
+
+use against extremely poor players:
+
+
+        choose_move([NjNs],computer,(1,N)).
+
+
+
+    A winning strategy is known for Nim. It involves dividing game states, or
+
+
+positions, into two classes, safe and unsafe.  To determine if a position is sa*
+ *fe
+
+
+or unsafe, the binary representation of the number of matches in each pile is
+
+
+computed. The nim-sum of these binary numbers is then calculated as follows.
+
+
+Each column is summed independently modulo 2. If the total in each column is
+
+
+zero, the position is safe. Otherwise the position is unsafe.
+
+
+                                   1
+
+
+                                  1 1
+
+
+                                1 0 1
+
+
+                                1_1_1_
+                                0 0 0
+
+
+                   Figure 21.2:  Computing nim-sums
+
+
+
+    Figure 21.2 illustrates the process for the four piles of matches in Figure*
+ * 21.1.
+
+
+The binary representations of 1, 3, 5, and 7 are 1, 11, 101, and 111 respective*
+ *ly.
+
+
+Calculating the nim-sum: there are four 1's in the units column, two 1's in the*
+ * 2's
+
+
+column and two 1's in the 4's column; an even number of 1's in each. The nim-
+
+
+
+
+21.2                                                        Nim   377
+
+
+
+sum is zero, making the position [1,3,5,7] safe. On the other hand the position
+
+
+[2,6] is unsafe. The binary representations are 10 and 110. Summing them gives
+
+
+one 1 in the 4's column and two 1's in the 2's column. The single 1 in the 4's
+
+
+column makes the position unsafe.
+
+
+
+    The winning strategy is to always leave the position safe. Any unsafe posit*
+ *ion
+
+
+can be converted to a safe position (though not all moves do), while any move f*
+ *rom
+
+
+a safe position creates an unsafe one. The best strategy is to make an arbitrary
+
+
+move when confronted with a safe position, hoping the opponent will blunder,
+
+
+and to convert unsafe positions to safe ones.
+
+
+
+    The current position is evaluated by the predicate evaluate/3, which de-
+
+
+termines the safety of the current position.  An algorithm is needed to com-
+
+
+pute the nim-sum of a position.  The nim-sum is checked by the predicate
+
+
+safety(Sum,Safety), which labels the position safe or unsafe depending on the
+
+
+value of Sum.
+
+
+
+        choose_move(Position,computer,Move)  
+
+
+            evaluate(Position,Safety,Sum),
+
+
+            decide_move(Safety,Position,Sum,Move).
+
+
+
+    The move made by the computer computed by decide_move/4 depends on
+
+
+the safety of the position. If the position is safe, the computer makes the \ar*
+ *bi-
+
+
+trary" move of one match from the first pile. If the position is unsafe, an alg*
+ *orithm
+
+
+is needed to compute a move that converts an unsafe position into a safe one. T*
+ *his
+
+
+is done by safe_move/3.
+
+
+
+
+378   Game-Playing Programs                                      21.2
+
+
+
+    In a prior version of the program evaluate did not return Sum. In the writi*
+ *ng
+
+
+of safe_move it transpired that the nim-sum was helpful, and it was sensible to
+
+
+pass the already computed value rather than recomputing it.
+
+
+    The nim-sum is computed by nim_sum(Ns,SoFar,Sum). The relation com-
+
+
+puted is that Sum is the nim-sum of the numbers Ns added to what has been
+
+
+accumulated in SoFar. To perform the additions, the numbers must first be con-
+
+
+verted to binary, done by binary/2:
+
+
+
+        nim_sum([NjNs],Bs,Sum)  
+
+
+            binary(N,Ds), nim_add(Ds,Bs,Bs1), nim_sum(Ns,Bs1,Sum).
+
+
+
+    The binary form of a number is represented here as a list of digits. To ove*
+ *r-
+
+
+come the difficulty of adding lists of unequal length, the least significant di*
+ *gits are
+
+
+earliest in the list. Thus 2 (in binary 10) is represented as [0,1], while 6 is*
+ * repre-
+
+
+sented as [0,1,1]. The two numbers can then be added from least significant dig*
+ *it
+
+
+to most significant digit, as is usual for addition. This is done by nim_add/3 *
+ *and
+
+
+is slightly simpler than regular addition, since no carry needs to be propagate*
+ *d.
+
+
+The code for both binary and nim_add appears in Program 21.2.
+
+
+    The nim-sum Sum is used by the predicate safe_move(Ns,Sum,Move) to find
+
+
+a winning move Move from the position described by Ns. The piles of matches are
+
+
+checked in turn by safe_move/4 to see if there is a number of matches that can
+
+
+be taken from the pile to leave a safe position. The interesting clause is
+
+
+
+        safe_move([PilejPiles],NimSum,K,(K,M))  
+
+
+            binary(Pile,Bs), can_zero(Bs,NimSum,Ds,0), decimal(Ds,M).
+
+
+
+
+21.3                                                       Kalah  379
+
+
+
+The heart of the program is can_zero(Bs,NimSum,Ds,Carry).  This relation is
+
+
+true if replacing the binary number Bs by the binary number Ds would make
+
+
+NimSum zero. The number Ds is computed digit by digit. Each digit is determined
+
+
+by the corresponding digit of Bs, NimSum, and a carry digit Carry initially set*
+ * to
+
+
+0. The number is converted to its decimal equivalent by decimal/2 in order to
+
+
+get the correct move.
+
+
+    Program 21.2 is a complete program for playing Nim interactively incorpo-
+
+
+rating the winning strategy. As well as being a program for playing the game, it
+
+
+is also an axiomatization of what constitutes a winning strategy.
+
+
+
+21.3   Kalah
+
+
+
+    We now present a program for playing the game of Kalah that uses alpha-
+
+
+beta pruning.  Kalah fits well into the paradigm of game trees for two reasons.
+
+
+First, the game has a simple, reasonably reliable evaluation function, and seco*
+ *nd,
+
+
+its game tree is tractable, which is not true for games such as chess and go. It
+
+
+has been claimed that some Kalah programs are unbeatable by human players.
+
+
+Certainly, the one presented here beats us.
+
+
+    Kalah is played on a board with two rows of six holes facing each other.
+
+
+Each player owns a row of six holes, plus a kalah to the right of the holes. In*
+ * the
+
+
+initial state there are six stones in each hole and the two kalahs are empty. T*
+ *his
+
+
+is pictured in the top half of Figure 21.3.
+
+
+    A player begins his move by picking up all the stones in one of his holes. *
+ *Pro-
+
+
+
+
+380   Game-Playing Programs                                      21.3
+
+
+
+                 Figure 21.3:  Board positions for Kalah
+
+
+
+ceeding counterclockwise around the board, he puts one of the picked-up stones
+
+
+in each hole and in his own kalah, skipping the opponent's kalah, until no ston*
+ *es
+
+
+remain to be distributed.  There are three possible outcomes.  If the last stone
+
+
+lands on the kalah, the player has another move.  If the last stone lands on an
+
+
+empty hole owned by the player, and the opponent's hole directly across the boa*
+ *rd
+
+
+contains at least one stone, the player takes all the stones in the hole plus h*
+ *is last
+
+
+landed stone and puts them all in his kalah. Otherwise the player's turn ends,
+
+
+
+
+21.3                                                       Kalah  381
+
+
+
+and his opponent moves.
+
+
+
+    The bottom kalah board in Figure 21.3 represents the following move from
+
+
+the top board by the owner of the top holes.  He took the six stones in the
+
+
+rightmost hole and distributed them, the last one ending in the kalah, allowing
+
+
+another move. The stones in the fourth hole from the right were then distribute*
+ *d.
+
+
+
+    If all the holes of a player become empty (even if it is not his turn to pl*
+ *ay),
+
+
+the stones remaining in the holes of the opponent are put in the opponent's kal*
+ *ah
+
+
+and the game ends. The winner of the game is the first player to get more than
+
+
+half the stones in his kalah.
+
+
+
+    The difficulty for programming the game in Prolog is finding an efficient
+
+
+data structure to represent the board, to facilitate the calculation of moves. *
+ *We
+
+
+use a four-argument structure board(Holes,Kalah,OppHoles,OppKalah), where
+
+
+Holes is a list of the numbers of stones in your six holes, Kalah is the number
+
+
+of stones in your kalah, and OppHoles and OppKalah are, respectively, the lists
+
+
+of the numbers of stones in the opponent's holes and the number of stones in his
+
+
+kalah. Lists were chosen rather than six-place structures to facilitate the wri*
+ *ting
+
+
+of recursive programs for distributing the stones in the holes.
+
+
+
+    A move consists of choosing a hole and distributing the stones therein.  A
+
+
+move is specified as a list of integers with values between 1 and 6 inclusive, *
+ *where
+
+
+the numbers refer to the holes. Hole 1 is farthest from the player's kalah, whi*
+ *le
+
+
+hole 6 is closest. A list is necessary rather than a single integer because a m*
+ *ove
+
+
+may continue. The move depicted in Figure 21.3 is [1; 4].
+
+
+
+
+382   Game-Playing Programs                                      21.3
+
+
+
+Play framework
+
+
+play(Game)   See Program 20.8.
+
+
+Choosing a move by minimax with alpha-beta cutoff
+
+
+choose_move(Position,computer,Move)  
+
+
+    lookahead(Depth),
+
+
+    alpha_beta(Depth,Position,-40,40,Move,Value),
+
+
+    nl, write(Move), nl.
+
+
+choose_move(Position,opponent,Move)  
+
+
+    nl, writeln([`please make move']), read(Move), legal(Move).
+
+
+alpha_beta(Depth,Position,Alpha,Beta,Move,Value)  
+
+
+    See Program 20.11.
+
+
+move(Board,[MjMs])  
+
+
+    member(M,[1,2,3,4,5,6]),
+
+
+    stones_in_hole(M,Board,N),
+
+
+    extend_move(N,M,Board,Ms).
+
+
+move(board([0,0,0,0,0,0],K,Ys,L),[ ]).
+
+
+stones_in_hole(M,board(Hs,K,Ys,L),Stones)  
+
+
+    nth_member(M,Hs,Stones), Stones > 0.
+
+
+extend_move(Stones,M,Board,[ ])  
+
+
+    Stones =n= (7-M) mod 13, !.
+
+
+extend_move(Stones,M,Board,Ms)  
+
+
+    Stones =:= (7-M) mod 13, !,
+
+
+    distribute_stones(Stones,M,Board,Board1),
+
+
+    move(Board1,Ms).
+
+
+Executing a move
+
+
+move([NjNs],Board,FinalBoard)  
+
+
+    stones_in_hole(N,Board,Stones),
+
+
+    distribute_stones(Stones,N,Board,Board1),
+
+
+    move(Ns,Board1,FinalBoard).
+
+
+move([ ],Board1,Board2)  
+
+
+    swap(Board1,Board2).
+
+
+
+Program 21.3:  A complete program for playing Kalah
+
+
+
+
+21.3                                                       Kalah  383
+
+
+
+distribute_stones(Stones,Hole,Board,Board1 )  
+
+
+    Board1  is the result of distributing the number of stones
+
+
+    Stones from Hole from the current Board.
+
+
+    It consists of two stages: distributing the stones in the player's
+
+
+    holes, distribute_my_holes, and distributing the stones
+
+
+    in the opponent's holes, distribute_your_holes.
+
+
+distribute_stones(Stones,Hole,Board,FinalBoard)  
+
+
+    distribute_my_holes(Stones,Hole,Board,Board1,Stones1),
+
+
+    distribute_your_holes(Stones1,Board1,FinalBoard).
+
+
+distribute_my_holes(Stones,N,board(Hs,K,Ys,L),
+
+
+        board(Hs1,K1,Ys,L),Stones1)  
+
+
+    Stones > 7-N, !,
+
+
+    pick_up_and_distribute(N,Stones,Hs,Hs1),
+
+
+    K1 is K+1, Stones1 is Stones+N-7.
+
+
+distribute_my_holes(Stones,N,board(Hs,K,Ys,L),Board,0)  
+
+
+    Stones  7-N,
+
+
+    pick_up_and_distribute(N,Stones,Hs,Hs1),
+
+
+    check_capture(N,Stones,Hs1,Hs2,Ys,Ys1,Pieces),
+
+
+    update_kalah(Pieces,N,Stones,K,K1),
+
+
+    check_if_finished(board(Hs2,K1,Ys1,L),Board).
+
+
+check_capture(N,Stones,Hs,Hs1,Ys,Ys1,Pieces)  
+
+
+    FinishingHole is N+Stones,
+
+
+    nth_member(FinishingHole,Hs,1),
+
+
+    OppositeHole is 7-FinishingHole,
+
+
+    nth_member(OppositeHole,Ys,Y),
+
+
+    Y > 0, !,
+
+
+    n_substitute(OppositeHole,Ys,0,Ys1),
+
+
+    n_substitute(FinishingHole,Hs,0,Hs1),
+
+
+    Pieces is Y+1.
+
+
+check_capture(N,Stones,Hs,Hs,Ys,Ys,0)   !.
+
+
+check_if_finished(board(Hs,K,Ys,L),board(Hs,K,Hs,L1))  
+
+
+    zero(Hs), !, sumlist(Ys,YsSum), L1 is L+YsSum.
+
+
+check_if_finished(board(Hs,K,Ys,L),board(Ys,K1,Ys,L))  
+
+
+    zero(Ys), !, sumlist(Hs,HsSum), K1 is K+HsSum.
+
+
+check_if_finished(Board,Board)   !.
+
+
+update_kalah(0,Stones,N,K,K)   Stones < 7-N, !.
+
+
+update_kalah(0,Stones,N,K,K1)   Stones =:= 7-N, !, K1 is K+1.
+
+
+update_kalah(Pieces,Stones,N,K,K1)   Pieces > 0, !, K1 is K+Pieces.
+
+
+
+Program 21.3  (Continued)
+
+
+
+
+384   Game-Playing Programs                                      21.3
+
+
+
+distribute_your_holes(0,Board,Board)   !.
+
+
+distribute_your_holes(Stones,board(Hs,K,Ys,L),board(Hs,K,Ys1,L))  
+
+
+    1  Stones, Stones  6,
+
+
+    non_zero(Hs), !,
+
+
+    distribute(Stones,Ys,Ys1).
+
+
+distribute_your_holes(Stones,board(Hs,K,Ys,L),Board)  
+
+
+    Stones > 6, !,
+
+
+    distribute(6,Ys,Ys1),
+
+
+    Stones1 is Stones-6,
+
+
+    distribute_stones(Stones1,0,board(Hs,K,Ys1,L),Board).
+
+
+distribute_your_holes(Stones,board(Hs,K,Ys,L),board(Hs,K,Hs,L1))  
+
+
+    zero(Hs), !, sumlist(Ys,YsSum), L1 is Stones+YsSum+L.
+
+
+Lower-level stone distribution
+
+
+pick_up_and_distribute(0,N,Hs,Hs1)  
+
+
+    !, distribute(N,Hs,Hs1).
+
+
+pick_up_and_distribute(1,N,[HjHs],[0jHs1])  
+
+
+    !, distribute(N,Hs,Hs1).
+
+
+pick_up_and_distribute(K,N,[HjHs],[HjHs1])  
+
+
+    K > 1, !, K1 is K-1, pick_up_and_distribute(K1,N,Hs,Hs1).
+
+
+distribute(0,Hs,Hs)   !.
+
+
+distribute(N,[HjHs],[H1jHs1])  
+
+
+    N > 0, !, N1 is N-1, H1 is H+1, distribute(N1,Hs,Hs1).
+
+
+distribute(N,[ ],[ ])   !.
+
+
+Evaluation function
+
+
+value(board(H,K,Y,L),Value)   Value is K-L.
+
+
+Testing for the end of the game
+
+
+game_over(board(0,N,0,N),Player,draw)  
+
+
+    pieces(K), N =:= 6K, !.
+
+
+game_over(board(H,K,Y,L),Player,Player)  
+
+
+    pieces(N), K > 6N, !.
+
+
+game_over(board(H,K,Y,L),Player,Opponent)  
+
+
+    pieces(N), L > 6N, next_player(Player,Opponent).
+
+
+announce(opponent)   writeln([`You won!  Congratulations.']).
+
+
+announce(computer)   writeln([`I won.']).
+
+
+announce(draw)   writeln([`The game is a draw']).
+
+
+
+Program 21.3  (Continued)
+
+
+
+
+21.3                                                       Kalah  385
+
+
+
+Miscellaneous game utilities
+
+
+nth_member(N,[HjHs],K)  
+
+
+    N > 1, !, N1 is N-1, nth_member(N1,Hs,K).
+
+
+nth_member(1,[HjHs],H).
+
+
+n_substitute(1,[XjXs],Y,[YjXs])   !.
+
+
+n_substitute(N,[XjXs],Y,[XjXs1])  
+
+
+    N > 1, !, N1 is N-1, n_substitute(N1,Xs,Y,Xs1).
+
+
+next_player(computer,opponent).
+
+
+next_player(opponent,computer).
+
+
+legal([NjNs])   0 < N, N < 7, legal(Ns).
+
+
+legal([ ]).
+
+
+swap(board(Hs,K,Ys,L),board(Ys,L,Hs,K)).
+
+
+display_game(Position,computer)  
+
+
+    show(Position).
+
+
+display_game(Position,opponent)  
+
+
+    swap(Position,Position1), show(Position1).
+
+
+show(board(H,K,Y,L))  
+
+
+    reverse(H,HR), write_stones(HR),
+
+
+    write_kalahs(K,L), write_stones(Y).
+
+
+write_stones(H)  
+
+
+    nl, tab(5), display_holes(H).
+
+
+display_holes([HjHs])  
+
+
+    write_pile(H), display_holes(Hs).
+
+
+display_holes([ ])   nl.
+
+
+write_pile(N)   N < 10, write(N), tab(4).
+
+
+write_pile(N)   N  10, write(N), tab(3).
+
+
+write_kalahs(K,L)  
+
+
+    write(K), tab(34), write(L), nl.
+
+
+zero([0,0,0,0,0,0]).
+
+
+non_zero(Hs)   Hs 6= [0,0,0,0,0,0].
+
+
+Initializing
+
+
+lookahead(2).
+
+
+initialize(kalah,board([N,N,N,N,N,N],0,[N,N,N,N,N,N],0),opponent)  
+
+
+    pieces(N).
+
+
+pieces(6).
+
+
+
+Program 21.3 (Continued)
+
+
+
+
+386   Game-Playing Programs                                      21.3
+
+
+
+    The code gives all moves on backtracking. The predicate stones_in_hole(M,
+
+
+Board,N) returns the number of stones N in hole M of the Board if N is
+
+
+greater than 0, failing if there are no stones in the hole.  The predicate ex-
+
+
+tend_move(M,Board,N,Ms) returns the continuation of the move Ms. The second
+
+
+clause for move handles the special case when all the player's holes become emp*
+ *ty
+
+
+during a move.
+
+
+    Testing whether the move continues is nontrivial, since it may involve all *
+ *the
+
+
+procedures for making a move. If the last stone is not placed in the kalah, whi*
+ *ch
+
+
+can be determined by simple arithmetic, the move will end, and there is no need
+
+
+to distribute all the stones. Otherwise the stones are distributed, and the move
+
+
+continues recursively.
+
+
+    The basic predicate for making a move is distribute_stones(Stones,N,
+
+
+Board,Board1), which computes the relation that Board1 is obtained from Board
+
+
+by distributing the number of stones in Stones starting from hole number N.
+
+
+There are two stages to the distribution, putting the stones in the player's ho*
+ *les,
+
+
+distribute_my_holes, and putting the stones in the opponent's holes, dis-
+
+
+tribute_your_holes.
+
+
+    The simpler case is distributing the stones in the opponent's holes. The ho*
+ *les
+
+
+are updated by distribute, and the distribution of stones continues recursively
+
+
+if there is an excess of stones. A check is made to see if the player's board h*
+ *as
+
+
+become empty during the course of the move, and if so, the opponent's stones are
+
+
+added to his kalah.
+
+
+    Distributing the player's stones must take into account two possibilities, *
+ *dis-
+
+
+
+
+21.4                                                  Background  387
+
+
+
+tributing from any particular hole, and continuing the distribution for a large
+
+
+number of stones. The pick_up_and_distribute predicate is the generalization
+
+
+of distribute to handle these cases. The predicate check_capture checks if a
+
+
+capture has occurred and updates the holes accordingly; update_kalah updates
+
+
+the number of stones in the player's kalah. Some other necessary utilities such*
+ * as
+
+
+n_substitute are also included in the program.
+
+
+    The evaluation function is the difference between the number of stones in t*
+ *he
+
+
+two kalahs:
+
+
+
+        value(board(H,K,Y,L),Value)   Value is K-L.
+
+
+
+    The central predicates have been described. A running program is now ob-
+
+
+tained by filling in the details for I/O, for initializing and terminating the *
+ *game,
+
+
+etc. Simple suggestions can be found in the complete program for the game, given
+
+
+as Program 21.3.
+
+
+    In order to optimize the performance of the program, cuts can be added. An-
+
+
+other tip is to rewrite the main loop of the program as a failure-driven loop r*
+ *ather
+
+
+than a tail recursive program.  This is sometimes necessary in implementations
+
+
+that do not incorporate tail recursion optimization and a good garbage collecto*
+ *r.
+
+
+
+21.4   Background
+
+
+
+    The mastermind program, slightly modified, originally appeared in SIGART
+
+
+(Shapiro, 1983d) in response to a program for playing mastermind in Pascal. The
+
+
+
+
+388   Game-Playing Programs                                      21.4
+
+
+
+SIGART article provoked several reactions, both of theoretical improvements to
+
+
+algorithms for playing mastermind and practical improvements to the program.
+
+
+Most interesting was an analysis and discussion by Powers (1984) of how a Prolog
+
+
+program could be rewritten to good benefit using the mastermind code as a case
+
+
+study. Eventually, speedup by a factor of 50 was achieved.
+
+
+    A proof of the correctness of the algorithm for playing Nim can be found in
+
+
+any textbook discussing games on graphs, for example, Berge (1962).
+
+
+    Kalah was an early AI target for game-playing programs (Slagle and Dixon,
+
+
+1969).

@@ -1,0 +1,13 @@
+=== nth.glp ===
+Goal: nth(3, [a,b,c,d,e], X).
+
+GLP> ✓ Loaded: nth.glp
+GLP> nth(3, [a, b, c, d, e], X) :- :=/2(X1, -(3, 1)), nth(X1?, [b, c, d, e], X2)
+:=/2(X1, -(3, 1)) :- true
+nth(2, [b, c, d, e], X2) :- :=/2(X3, -(2, 1)), nth(X3?, [c, d, e], X4)
+:=/2(X3, -(2, 1)) :- true
+nth(1, [c, d, e], X4) :- true
+X = c
+→ succeeds
+
+GLP> 

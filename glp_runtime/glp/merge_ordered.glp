@@ -1,0 +1,15 @@
+%% merge_ordered.glp - Merging ordered lists (AoP 7.2)
+%% merge(Xs,Ys,Zs) :- Zs is an ordered list obtained from merging ordered lists Xs and Ys.
+
+merge([X|Xs], [Y|Ys], [X?|Zs?]) :- X? < Y? | merge(Xs?, [Y?|Ys?], Zs).
+merge([X|Xs], [Y|Ys], [X?,Y?|Zs?]) :- X? =:= Y? | merge(Xs?, Ys?, Zs).
+merge([X|Xs], [Y|Ys], [Y?|Zs?]) :- X? > Y? | merge([X?|Xs?], Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
+
+%% reduce clauses for metainterpreter
+reduce(merge([X|Xs], [Y|Ys], [X?|Zs?]), merge(Xs?, [Y?|Ys?], Zs)) :- X? < Y? | true.
+reduce(merge([X|Xs], [Y|Ys], [X?,Y?|Zs?]), merge(Xs?, Ys?, Zs)) :- X? =:= Y? | true.
+reduce(merge([X|Xs], [Y|Ys], [Y?|Zs?]), merge([X?|Xs?], Ys?, Zs)) :- X? > Y? | true.
+reduce(merge([], Ys, Ys?), true).
+reduce(merge(Xs, [], Xs?), true).

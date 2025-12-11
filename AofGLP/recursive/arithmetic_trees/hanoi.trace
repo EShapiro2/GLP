@@ -1,0 +1,16 @@
+=== hanoi.glp ===
+Goal: hanoi(2, a, c, Moves).
+Note: Requires append.glp to be loaded first.
+
+GLP> ✓ Loaded: append.glp
+GLP> ✓ Loaded: hanoi.glp
+GLP> hanoi(2, a, c, Moves) :- :=/2(X1, -(2, 1)), other(a, c, X2), hanoi_two(X1?, a, c, X2?, X3, X4), append(X3?, [move(a, c) | X4?], X5)
+:=/2(X1, -(2, 1)) :- true
+other(a, c, X2) :- true
+hanoi_two(1, a, c, b, X3, X4) :- hanoi(1, a, b, X6), hanoi(1, b, c, X7)
+hanoi(1, a, b, X6) :- :=/2(X8, -(1, 1)), other(a, b, X9), hanoi_two(X8?, a, b, X9?, X10, X11), append(X10?, [move(a, b) | X11?], X12)
+hanoi(1, b, c, X7) :- :=/2(X13, -(1, 1)), other(b, c, X14), hanoi_two(X13?, b, c, X14?, X15, X16), append(X15?, [move(b, c) | X16?], X17)
+...
+Moves = [move(a, b), move(a, c), move(b, c)]
+→ succeeds
+

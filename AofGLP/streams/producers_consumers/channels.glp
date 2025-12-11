@@ -1,0 +1,70 @@
+%% channels.glp - Channels: A Generalization of Streams
+%% Source: CP Collected Papers, Ch 17 (Tribble, Miller, Kahn, Bobrow, Abbott, Shapiro)
+%%
+%% Channels are partially ordered sets of elements (vs totally ordered streams).
+%% Multiple writers need not synchronize; readers can process unordered messages in parallel.
+%% Implemented using "multistream" - a polymorphic stream with branch elements.
+
+%% Basic stream operations (for comparison)
+stream_read(Message, [Message|Stream?], Stream).
+stream_write(Message, [Message|Stream], Stream).
+stream_empty([]).
+
+%% Channel operations using multistream representation
+%% A multistream is either:
+%%   - A regular list [M|Rest]
+%%   - A branch: branch(Left, Right) where Left and Right are multistreams
+
+%% Read from channel - nondeterministically reads a minimal element
+read(Message, [Message|Channel?], Channel).
+read(Message, branch(Left1, Right?), branch(Left2, Right)) :-
+    read(Message?, Left1?, Left2).
+read(Message, branch(Left?, Right1), branch(Left, Right2)) :-
+    read(Message?, Right1?, Right2).
+
+%% Write to channel - creates branch for concurrent writers
+write(Message, Channel, Left) :-
+    Channel = branch([Message|Left?], _) | true.
+write(Message, Channel, Out) :-
+    Channel? = branch(_, Right?) |
+    write(Message?, Right?, Out).
+
+%% Empty test
+empty([]).
+empty(branch(Left, Right)) :-
+    empty(Left?), empty(Right?) | true.
+
+%% Close a channel
+close([]).
+close(branch(Left, Right)) :-
+    close(Left?), close(Right?).
+
+%% Read minimum element (if one exists)
+min(Message, [Message|Channel?], Channel).
+
+%% Split channel into two disjoint subchannels
+branches(branch(C1, C2?), C1, C2).
+
+%% Serialize: convert channel to totally ordered stream
+serialize(Channel, [Message|Stream?]) :-
+    min(Message?, Channel?, Channel2) |
+    serialize(Channel2?, Stream).
+serialize(Channel, Stream) :-
+    branches(Channel?, C1, C2) |
+    serialize(C1?, S1),
+    serialize(C2?, S2),
+    merge(S1?, S2?, Stream).
+serialize(Channel, []) :-
+    empty(Channel?) | true.
+
+%% Subset: associate a subset channel with a larger superset
+subset(Subset, Superset) :-
+    min(Message?, Subset?, Subset2) |
+    write(Message?, Superset?, Superset2),
+    subset(Subset2?, Superset2?).
+subset(Subset, Superset) :-
+    branches(Subset?, S1, S2) |
+    subset(S1?, Superset?),
+    subset(S2?, Superset?).
+subset(Subset, _) :-
+    empty(Subset?) | true.

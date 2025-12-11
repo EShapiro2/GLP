@@ -1,0 +1,3 @@
+% Test Writer x Writer unification
+% According to spec: goal writer vs head writer should FAIL
+wxw_test(X, Y).

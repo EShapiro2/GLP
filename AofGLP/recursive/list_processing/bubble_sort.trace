@@ -1,0 +1,18 @@
+=== bubble_sort.glp ===
+Goal: bubble_sort([3,1,4,1,5], Sorted).
+
+continue(X11?, [1 | X15?], X12) → suspended
+bubble([4 | [5]], X13, X14) :- bubble([5 | []], X17, X18)
+bubble([3 | [1 | [4 | X17?]]], X15, X16) :- bubble([3 | [4 | X17?]], X19, X20)
+bubble([5 | []], X17, X18) :- true
+continue(yes, [1 | [1 | X19?]], X12) :- bsort([1 | [1 | X19?]], X21)
+bubble([3 | [4 | [5]]], X19, X20) :- bubble([4 | [5]], X22, X23)
+bsort([1 | [1 | [3 | X22?]]], X21) :- bubble([1 | [1 | [3 | X22?]]], X24, X25), continue(X25?, X24?, X26)
+bubble([4 | [5]], X22, X23) :- bubble([5 | []], X27, X28)
+bubble([1 | [1 | [3 | [4 | X27?]]]], X24, X25) :- bubble([1 | [3 | [4 | X27?]]], X29, X30)
+continue(X25?, [1 | X29?], X26) → suspended
+bubble([5 | []], X27, X28) :- true
+bubble([1 | [3 | [4 | [5]]]], X29, X30) :- bubble([3 | [4 | [5]]], X31, X32)
+bubble([3 | [4 | [5]]], X31, X32) :- bubble([4 | [5]], X33, X34)
+--
+GLP> 

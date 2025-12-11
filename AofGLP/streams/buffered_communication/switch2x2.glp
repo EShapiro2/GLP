@@ -1,0 +1,23 @@
+%% switch2x2.glp - 2x2 communication switch
+%% Source: CP Collected Papers, Ch 18 (Takeuchi & Furukawa)
+%%
+%% Routes messages from two input ports to two output ports.
+%% Uses bounded buffer for flow control.
+%% Suspends when both output ports are full.
+
+switch2x2(In1, In2, Out1, Out2) :-
+    receive(M, In1?, Ins1), send(M?, Out1?, Outs1) |
+    switch2x2(Ins1?, In2?, Outs1?, Out2?).
+switch2x2(In1, In2, Out1, Out2) :-
+    receive(M, In2?, Ins2), send(M?, Out1?, Outs1) |
+    switch2x2(In1?, Ins2?, Outs1?, Out2?).
+switch2x2(In1, In2, Out1, Out2) :-
+    receive(M, In1?, Ins1), send(M?, Out2?, Outs2) |
+    switch2x2(Ins1?, In2?, Out1?, Outs2?).
+switch2x2(In1, In2, Out1, Out2) :-
+    receive(M, In2?, Ins2), send(M?, Out2?, Outs2) |
+    switch2x2(In1?, Ins2?, Out1?, Outs2?).
+
+%% Helper predicates (from bounded_buffer.glp)
+send(Msg, [Msg|NBuf?], NBuf).
+receive(Msg, [Msg|NBuf?], NBuf).

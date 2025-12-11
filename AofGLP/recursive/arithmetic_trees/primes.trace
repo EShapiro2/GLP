@@ -1,0 +1,21 @@
+=== primes.glp ===
+Goal: primes(10, Ps).
+
+GLP> ✓ Loaded: primes.glp
+GLP> primes(10, Ps) :- integers(2, 10, X1), sieve(X1?, X2)
+integers(2, 10, X1) :- :=/2(X3, +(2, 1)), integers(X3?, 10, X4)
+sieve([2 | X4?], X2) :- filter(X4?, 2, X5), sieve(X5?, X6)
+:=/2(X3, +(2, 1)) :- true
+integers(3, 10, X4) :- :=/2(X7, +(3, 1)), integers(X7?, 10, X8)
+filter([3 | X8?], 2, X5) :- filter(X8?, 2, X9)
+sieve([3 | X9?], X6) :- filter(X9?, 3, X10), sieve(X10?, X11)
+...
+integers(11, 10, X36) :- true
+filter([], 2, X40) :- true
+filter([], 3, X39) :- true
+filter([], 5, X33) :- true
+filter([], 7, X37) :- true
+sieve([], X38) :- true
+Ps = [2, 3, 5, 7]
+→ succeeds
+

@@ -1,0 +1,23 @@
+=== observed_monitor.glp ===
+Goal: play_accum(VA, VB, VC, VD, Log).
+
+observe_accum([add(10) | X16?], X12, X13) :- observe_accum(X16?, X17, X18)
+monitor([add(10) | X17?]) :- monitor_loop([add(10) | X17?], 0)
+alice_done(X14) :- true
+merge(X4?, [add(5), value(X1?) | []], X15) :- merge(X4?, [value(X1?) | []], X19)
+merge(X10?, [add(5) | X19?], X16) :- merge(X10?, X19?, X20)
+observe_accum([add(5) | X20?], X17, X18) :- observe_accum(X20?, X21, X22)
+monitor_loop([add(10) | [add(5) | X21?]], 0) :- :=/2(X23, +(0, 10)), monitor_loop([add(5) | X21?], X23?)
+merge(X4?, [value(X1?) | []], X19) :- merge(X4?, [], X24)
+merge(X10?, [value(X1?) | X24?], X20) :- merge(X10?, X24?, X25)
+observe_accum([value(X1?) | X25?], X21, X22) :- duplicate(X26?, X1, X27), observe_accum(X25?, X28, X29)
+:=/2(X23, +(0, 10)) :- true
+monitor_loop([add(5) | [value(X26) | X28?]], 10) :- :=/2(X30, +(10, 5)), monitor_loop([value(X26) | X28?], X30?)
+merge(X4?, [], X24) → suspended
+merge(X10?, X24?, X25) → suspended
+duplicate(X26?, X1, X27) → suspended
+observe_accum(X25?, X28, X29) → suspended
+:=/2(X30, +(10, 5)) :- true
+monitor_loop([value(X26) | X28?], 15) :- =/2(X31, 15), monitor_loop(X28?, 15)
+--
+GLP> 

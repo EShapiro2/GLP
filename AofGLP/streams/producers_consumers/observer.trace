@@ -1,0 +1,15 @@
+=== observer.glp ===
+Goal: observe([a,b,c], Y, Z).
+Note: Bidirectional observation - creates two copies of ground stream
+
+GLP> ✓ Loaded: observer.glp
+GLP> observe([a, b, c], Y, Z) :- head_tail([a, b, c], X1, X2), observe(X1?, X3, X4), observe(X2?, X5, X6)
+head_tail([a, b, c], X1, X2) :- true
+observe(a, X3, X4) :- copy_to(a, X7, X8)
+copy_to(a, X7, X8) :- true
+observe([b, c], X5, X6) :- head_tail([b, c], X9, X10), observe(X9?, X11, X12), observe(X10?, X13, X14)
+...
+Y = [a, b, c]
+Z = [a, b, c]
+→ succeeds
+

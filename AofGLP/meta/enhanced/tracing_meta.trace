@@ -1,0 +1,6 @@
+=== tracing_meta.glp ===
+Goal: run(Goal, Trace).
+
+Tracing metainterpreter producing execution trace.
+Trace is tree of (I:Time) :- SubTrace entries.
+Enables single-stepping through run with same scheduling.

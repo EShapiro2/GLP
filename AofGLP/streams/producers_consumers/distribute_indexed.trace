@@ -1,0 +1,5 @@
+=== distribute_indexed.glp ===
+Goal: distribute_indexed([send(1,a), send(2,b)], Y, Z).
+Note: Routes messages by send(N,X) tag. REPL limitation: structs in lists not fully supported.
+
+Expected result: Y = [a], Z = [b]

@@ -1,0 +1,15 @@
+=== dynamic_merger.glp ===
+Goal: merge([1,2,3], [a,b,c], Out).
+Note: Merges two streams, supports dynamic stream addition via merge(NewStream) messages.
+
+GLP> ✓ Loaded: dynamic_merger.glp
+GLP> merge([1, 2, 3], [a, b, c], Out) :- merge([a, b, c], [2, 3], X1)
+merge([a, b, c], [2, 3], X1) :- merge([2, 3], [b, c], X2)
+merge([2, 3], [b, c], X2) :- merge([b, c], [3], X3)
+merge([b, c], [3], X3) :- merge([3], [c], X4)
+merge([3], [c], X4) :- merge([c], [], X5)
+merge([c], [], X5) :- merge([], [], X6)
+merge([], [], X6) :- true
+Out = [1, a, 2, b, 3, c]
+→ succeeds
+

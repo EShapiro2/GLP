@@ -1,0 +1,50 @@
+%% cold_call_deployed.glp.future - Cold Call Befriending Protocol (Deployment Version)
+%% STATUS: NOT EXECUTABLE IN GLPSAM - For future distributed deployment only
+%%
+%% This version includes attestation guards for cryptographic message verification.
+%% The attestation/2 guard requires a distributed runtime with signature verification.
+%% For simulation, use cold_call_glpsam.glp instead.
+%%
+%% NOTE: Contains unresolved SRSW issues with attestation guards that will be
+%% addressed when implementing the deployment runtime.
+%%
+%% Source: GLP Papers (Program: Social Graph Cold-Call Befriending Protocol)
+%% Enables agents to establish friendship without prior shared variables.
+%% Four phases: user initiation, offer transmission, user consultation,
+%% channel establishment.
+
+% Process user request to connect (self-introduction)
+social_graph(Id, [msg(user, Id?, connect(Target))|In], Fs) :-
+    ground(Id?), ground(Target?) |
+    lookup_send(net, msg(Id?, Target?, intro(Id?, Id?, Resp)), Fs?, Fs1),
+    response_stream(Resp?, Target?, Id?, Rs),
+    merge(In?, Rs?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+% Process received self-introduction
+social_graph(Id, [msg(From, Id?, intro(From?, From?, Resp))|In], Fs) :-
+    ground(Id?), ground(From?), attestation(intro(From?, From?, Resp?), att(From?, _)) |
+    lookup_send(user, msg(agent, user, befriend(From?, Resp?)), Fs?, Fs1),
+    social_graph(Id?, In?, Fs1?).
+
+% Process user decision on received introduction
+social_graph(Id, [msg(user, Id?, decision(Dec, From, Resp))|In], Fs) :-
+    ground(Id?) |
+    bind_response(Dec?, From?, Resp?, Fs?, Fs1, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+% Process response to sent introduction
+social_graph(Id, [msg(From, Id?, response(Resp))|In], Fs) :-
+    ground(Id?) |
+    handle_response(Resp?, From?, Fs?, Fs1, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+% Application message handling
+social_graph(Id, [msg(_, _, _)|In], Fs) :-
+    ground(Id?), otherwise |
+    social_graph(Id?, In?, Fs?).
+
+%% response_stream: suspends until Resp? is bound, then constructs message
+%% Pattern matching extracts channel variable - SRSW compliant
+response_stream(accept(Ch), Target, Id, [msg(Target?, Id?, response(accept(Ch?)))]).
+response_stream(no, Target, Id, [msg(Target?, Id?, response(no))]).

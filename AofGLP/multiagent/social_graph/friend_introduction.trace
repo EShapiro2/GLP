@@ -1,0 +1,10 @@
+=== friend_introduction.glp ===
+Friend-mediated introduction protocol.
+Goal: social_graph(Id, [msg(user, Id, introduce(P, Q))|In], Fs)
+
+When agent r is friends with both p and q, r introduces them.
+Three-party protocol with attestation exchange:
+1. r creates channel pair
+2. r sends intro to both p and q
+3. Recipients exchange attestations
+4. User consulted for final decision

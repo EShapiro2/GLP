@@ -1,0 +1,6 @@
+=== debugger_meta.glp ===
+Goal: reduce(Program, Goal, N, Tree).
+
+Parallel debugger metainterpreter.
+N = number of reductions before waiting.
+When N reaches 0, waits for Mode: debug(M, T) or raw.

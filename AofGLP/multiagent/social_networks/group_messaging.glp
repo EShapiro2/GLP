@@ -1,0 +1,26 @@
+%% group_messaging.glp - Group Messaging via Interlaced Streams
+%% Source: GLP Papers (Program: Group Messaging)
+%%
+%% Members post independently without control tokens. Interlaced streams
+%% ensure each member's block references all observed messages, creating
+%% natural causal ordering.
+
+% Member participates in group
+group_member(Id, (Founder, Name), Streams) :-
+    lookup((Founder,Name), Fs?, group(Role, Streams)),
+    compose_messages(Id?, Name?, Messages),
+    find_my_stream(Id?, Streams?, MyStream),
+    interlace(Messages?, MyStream?, [], Streams?).
+
+compose_messages(Id, Name, [Msg|Msgs]) :-
+    await_user_input(Id?, Name?, Input),
+    format_message(Input?, Id?, Msg),
+    compose_messages(Id?, Name?, Msgs?).
+compose_messages(_, _, []).
+
+format_message(reply(Text), Id, msg(Id, reply, Text)).
+format_message(post(Text), Id, msg(Id, post, Text)).
+
+%% Security derives from authenticated friend channels - all group
+%% communication occurs through channels established via social graph
+%% protocol, with automatic attestation on every message.

@@ -1,0 +1,6 @@
+=== snapshot_meta_cp.glp ===
+Goal: reduce(Program, Goal, Left?--Right).
+
+Snapshot metainterpreter from CP Collected Papers.
+When Left bound to [shot([])|Rest], Right? gets [shot(Processes)|...]
+Processes is list of currently active goals.

@@ -1,0 +1,1019 @@
+%%%%% Leoudi Book, Chapter 11, pp 162-184 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 10
+\numberfirst
+\startpage{162}
+
+\chapa{Cuts and Negation}
+Prolog provides a single system predicate, called {\it cut\/}, for
+affecting the procedural behavior of programs. Its main function is to
+reduce the search space of Prolog computations by dynamically pruning the
+search tree. The cut can be used to prevent Prolog from following
+fruitless computation paths that the programmer knows could not produce
+solutions.\par
+The cut can also be used, inadvertently or purposefully, to prune
+computation paths that do contain solutions. By doing so, a weak form of
+negation can be effected.\par
+The use of cut is controversial. Many of its uses can only be interpreted
+procedurally, in contrast to the declarative style of programming we
+encourage. Used sparingly, however, it can improve the efficiency of
+programs without compromising their clarity.\par
+\sect{Green Cuts: Expressing Determinism}
+Consider the program {\tt merge(Xs,Ys,Zs)} (Program~\Promerordlit), which
+merges two sorted lists of numbers {\tt Xs} and {\tt Ys} into the
+combined sorted list {\tt Zs}.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it merge\/}({\it Xs,Ys,Zs\/}) $\lar$\cr
+\qi {\it Zs\/} {\rm is an ordered list of integers obtained from
+merging}\cr
+\qi {\rm the ordered lists of integers} {\it Xs\/} {\rm and} {\it
+Ys\/}{\rm .}\cr
+\noalign{\medskip}
+merge([X$\mid$Xs],[Y$\mid$Ys],[X$\mid$Zs]) $\lar$ X$<$Y, merge(Xs,[Y$
+\mid$Ys],Zs).\cr
+merge([X$\mid$Xs],[Y$\mid$Ys],[X,Y$\mid$Zs]) $\lar$ X=:=Y,
+merge(Xs,Ys,Zs).\cr
+\noalign{\vskip 5pt}
+merge([X$\mid$Xs],[Y$\mid$Ys],[Y$\mid$Zs]) $\lar$ X$>$Y, merge([X$
+\mid$Xs],Ys,Zs).\cr
+merge(Xs,[~],Xs).\cr
+merge([~],Ys,Ys).\cr
+\noalign{\bigskip}
+{\bf Program \Promerordlit}{\rm :~~Merging ordered lists}\cr}
+\endin\par
+Merging two lists of sorted numbers is a deterministic operation. Only
+one of the five {\tt merge} clauses applies for each nontrivial goal
+in a given computation. To be more specific, when comparing two
+numbers {\tt X} and {\tt Y}, for example, only one of the three tests
+{\tt X $<$ Y}, {\tt X =:= Y}, and {\tt X $>$ Y} can be true. Once a test
+succeeds, there is no possibility that any other test will
+succeed.\par 
+The cut, denoted {\tt !}, can be used to express the
+mutually exclusive nature of the tests. It is placed after the
+arithmetic tests. For example, the first {\tt merge} clause is
+written\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+merge([X$\mid$Xs],[Y$\mid$Ys],[X$\mid$Zs]) $\lar$ X$<$Y, !, merge(Xs,[Y$
+\mid$Ys],Zs).\cr}\medskip
+Operationally, the cut is handled as follows. \par
+{\it The goal succeeds and
+commits Prolog to all the choices made since the  parent goal was unified
+with the head of the clause the cut occurs in\/}.\par
+Although this definition is complete and precise, its ramifications and
+implications are not always intuitively clear or apparent.\par
+Misunderstandings concerning the effects of a cut are a major source for
+bugs for experienced and inexperienced Prolog programmers alike. The
+misunderstandings fall into two categories: assuming that the cut prunes
+computation paths it does not, and assuming that it does not prune
+solutions where it actually does.\par
+The following implications may help clarify the foregoing terse
+definition: \par
+\item{$\bullet$} First, a cut prunes all clauses below it.  A goal {\it
+p\/} unified with a clause containing a cut that succeeded would not be
+able to produce solutions using clauses that occur below that clause.
+\item{$\bullet$} Second, a cut prunes all alternative solutions to the
+conjunction of goals that appear to its left in the clause. For example, a
+conjunctive goal followed by a cut will produce at most one solution.
+\item{$\bullet$} On the other hand, the cut does not affect the goals to
+its right in the clause. They can produce more than one solution in the
+event of backtracking. However, once this conjunction fails, the search
+proceeds from the last alternative prior to the choice of the clause
+containing the cut. \par
+
+Let us consider a fragment of the search tree of the query {\tt
+merge([1,3,5],[2,3],Xs)?} with respect to Program~\Promerwitcut, a
+version of {\tt merge} with cuts added. The fragment is 
+given as Figure~\Figeffcut. The query is first reduced to the conjunctive
+query {\tt 1$<$2,!,merge([3,5],[2,3],Xs1)?}; the goal {\tt 1$<$2} is
+successfully solved, reaching the node marked ($\ast$) in the search
+tree. The effect of executing the cut is to prune the branches marked (a)
+and (b).
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it merge\/}({\it Xs,Ys,Zs\/}) $\lar$\cr
+\qi {\it Zs\/} {\rm is an ordered list of integers obtained from
+merging}\cr
+\qi {\rm the ordered lists of integers} {\it Xs\/} {\rm and} {\it
+Ys\/}{\rm .}\cr
+\noalign{\medskip}
+merge([X$\mid$Xs],[Y$\mid$Ys],[X$\mid$Zs]) $\lar$\cr
+\qi X$<$Y, !, merge(Xs,[Y$\mid$Ys],Zs).\cr
+merge([X$\mid$Xs],[Y$\mid$Ys],[X,Y$\mid$Zs]) $\lar$\cr
+\qi X=:=Y, !, merge(Xs,Ys,Zs).\cr
+merge([X$\mid$Xs],[Y$\mid$Ys],[Y$\mid$Zs]) $\lar$\cr
+\qi X$>$Y, !, merge([X$\mid$Xs],Ys,Zs).\cr
+merge(Xs,[~],Xs) $\lar$ !.\cr
+merge([~],Ys,Ys) $\lar$ !.\cr
+\noalign{\bigskip}
+{\bf Program \Promerwitcut}{\rm :~~Merging with cuts}\cr}\par
+$$\vcenter{\halign{\ctr{#}&\ctr{#}&\ctr{#}\cr
+&merge(\(1,3,5\),\(2,3\),Xs)&\cr
+\noalign{\vskip 10pt}
+&(a)&\cr
+&1=:=2,!,merge(\(3,5\),\(3\),Xs1)&\cr
+&&(b)\cr
+1$<$2,!,merge([3,5],[2,3],Xs1)&&1$>$2,!,merge([1,3,5],[3],Xs1)\cr
+\noalign{\vskip 10pt}
+($\ast$) !,merge([3,5],[2,3],Xs1)&&\cr
+\noalign{\vskip 10pt}
+merge([3,5],[2,3],Xs1)&&\cr}}$$\medskip
+\ctrline{{\bf Figure \Figeffcut}:~~The effect of cut}
+\endinsert\par
+Continuing discussion of Program~\Promerwitcut, the placement of the cuts
+in the three recursive clauses of {\tt merge} is after the
+test.\foot{The cut after the third {\tt merge} clause is unnecessary in
+any practical sense. Procedurally, it will not cause any reduction of
+search. But it makes the program more  symmetric, and like the old joke
+says about chicken soup, it doesn't hurt.} The two base cases of {\tt
+merge} are also deterministic. The correct clause is chosen by
+unification, and thus a cut is placed as the first goal (and in fact the
+only goal) in the body of the rule. Note that the cuts eliminate the
+redundant solution to the goal {\tt merge([~],[~],Xs)}. Previously, this
+was accomplished more awkwardly, by specifying that {\tt Xs} (or {\tt
+Ys}) had at least one element.\par
+We restate the effect of a cut in a general clause $C =
+A\lar B_1,\ldots,B_k,!,B_{k+2},\ldots,B_n$ in a procedure defining {\it
+A\/}. If the current goal {\it G\/} unifies with the head of {\it
+C\/}, and {\it B$_1$,$\ldots$,B$_k$\/} further succeed, the cut has
+the following effect. The program is committed to the choice of {\it
+C\/} for reducing {\it G\/}; any alternative clauses for {\it A\/}
+that might unify with {\it G\/} are ignored. Further, should $B_i$
+fail for $i>k+1$, backtracking goes back only as far as the !. Other
+choices remaining in the computation of {\it B$_i$\/}, $i\le k+1$, are
+pruned from the search tree. If backtracking actually reaches the cut,
+then the cut fails, and the search proceeds from the last choice made
+before the choice of {\it G\/} to reduce {\it C\/}.\par
+The cuts used in the {\tt merge} program express that {\tt merge} is
+deterministic. That is,  only one of the clauses can be used
+successfully for proving an applicable goal. The cut commits the 
+computation to a single clause, once the computation has progressed enough
+to determine that this is the only clause to be used.\par
+The information conveyed by the cut prunes the search tree, and hence
+shortens the path traversed by Prolog, which reduces the computation
+time. In practice, using cuts in a program is even more important for
+saving space. Intuitively, knowing that a computation is deterministic
+means that less information needs to be kept for use in the event of
+backtracking. This can be exploited by Prolog implementations with tail
+recursion optimization, discussed in Section~11.2.\par
+Let us consider some other examples. Cuts can be added to the program for
+computing the minimum of two numbers (Program~\Promintwonum) in precisely
+the same way as for {\tt merge}. Once an arithmetic test succeeds, there is
+no possibility for the other test succeeding. Program~\Prominwitcut\ is
+the appropriately modified version of {\tt minimum}.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it minimum\/}({\it X,Y,Min\/}) $\lar$\cr
+\qi {\it Min\/} {\rm is the minimum of the numbers} {\it X\/} {\rm and}
+{\it Y\/}{\rm .}\cr
+\noalign{\medskip}
+minimum(X,Y,X) $\lar$ X$\le$Y, !.\cr
+minimum(X,Y,Y) $\lar$ X$>$Y, !.\cr
+\noalign{\bigskip}
+{\bf  Program \Prominwitcut}{\rm :~~}Minimum {\rm with cuts}\cr}
+\endinsert\par
+A more substantial example where cuts can be added to indicate that a
+program is deterministic is provided by Program~\Prorecpol. The program
+defines the relation {\tt polynomial(Term,X)} for recognizing if {\tt
+Term} is a polynomial in {\tt X}. A typical rule is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+polynomial(Term1+Term2,X)$\lar$\cr
+\qi polynomial(Term1,X), polynomial(Term2,X).\cr}\medno
+Once the term being tested has been recognized as a sum (by unifying with
+the head of the rule), it is known that none of the other {\tt
+polynomial} rules will be applicable.  Program~\Prorecpoy\ gives the
+complete polynomial program with cuts added. The result is a
+deterministic program that has a mixture of cuts after conditions and
+cuts after unification.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it polynomial\/}({\it Term,X\/}) $\lar$\cr
+\qi {\it Term\/} {\rm is a polynomial in} {\it X\/}{\rm .}\cr
+\noalign{\medskip}
+polynomial(X,X) $\lar$ !.\cr
+polynomial(Term,X) $\lar$\cr
+\qi constant(Term), !.\cr
+polynomial(Term1+Term2,X) $\lar$\cr
+\qi !, polynomial(Term1,X), polynomial(Term2,X).\cr
+polynomial(Term1-Term2,X) $\lar$\cr
+\qi !, polynomial(Term1,X), polynomial(Term2,X).\cr
+polynomial(Term1$\ast$Term2,X) $\lar$\cr
+\qi !, polynomial(Term1,X), polynomial(Term2,X).\cr
+polynomial(Term1/Term2,X) $\lar$\cr
+\qi !, polynomial(Term1,X), constant(Term2).\cr
+polynomial(Term$\uparrow$N,X) $\lar$\cr
+\qi !, integer(N), N $\ge$ 0, polynomial(Term,X).\cr
+\noalign{\bigskip}
+{\bf  Program \Prorecpoy}{\rm :~~Recognizing polynomials}\cr}
+\endinsert\par
+When discussing the Prolog programs for arithmetic, which use the
+underlying arithmetic capabilities of the computer rather than a
+recursive logic program, we argued that the increased efficiency is
+often achievedat the price of flexibility. The logic programs lost
+their multiple uses when expressed as Prolog programs. Prolog programs
+with cuts also have less flexibility than their cut-free equivalents.
+This is not a problem if the intended use of a program is one-way to
+begin with, as is often the case.\par 
+The examples so far have demonstrated pruning useless alternatives for
+the parent goal. We give an example where cuts greatly aid efficiency by
+removing redundant computations of sibling goals. Consider the recursive
+clause of an interchange sort program:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+sort(Xs,Ys) $\lar$\cr
+\qi append(As,[X,Y$\mid$Bs],Xs),\cr
+\qi X$>$Y,\cr
+\qi append(As,[Y,X$\mid$Bs],Xs1),\cr
+\qi sort(Xs1,Ys).\cr}\medskip
+The program searches for a pair of adjacent elements that are out of
+order, swaps them, and continues until the list is ordered. The base
+clause is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+sort(Xs,Xs) $\lar$ ordered(Xs).\cr}\medskip
+Consider a goal {\tt sort([3,2,1],Xs)}. This is sorted by swapping {\tt
+3} and {\tt 2}, then {\tt 3} and {\tt 1}, and finally {\tt 2} and {\tt 1}
+to produce the ordered list {\tt [1,2,3]}. It could also be sorted by
+first swapping {\tt 2} and {\tt 1}, then swapping {\tt 3} and {\tt 1},
+and finally swapping {\tt 3} and {\tt 2}, to arrive at the same solution.
+We know there is only one sorted list. Consequently there is no point in
+searching for another alternative once an interchange is made. This can
+be indicated by placing the cut after the test {\tt X$>$Y}. This is the
+earliest it is known that an interchange is necessary. The interchange
+sort program with cut is given as Program~\Prointsor.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it sort\/}({\it Xs,Ys\/}) $\lar$\cr
+\qi {\it Ys\/} {\rm is an ordered permutation of the list of integers}
+{\it Xs\/}{\rm .}\cr
+\noalign{\medskip}
+sort(Xs,Ys) $\lar$\cr
+\qi append(As,[X,Y$\mid$Bs],Xs),\cr
+\qi X$>$Y,\cr
+\qi !,\cr
+\qi append(As,[Y,X$\mid$Bs],Xs1),\cr
+\qi sort(Xs1,Ys).\cr
+sort(Xs,Xs) $\lar$\cr
+\qi ordered(Xs),\cr
+\qi !.\cr
+\noalign{\vskip 5pt}
+ordered(Xs) $\lar$ {\rm See Program \Propersor.}\cr
+\noalign{\bigskip}
+{\bf Program \Prointsor}{\rm :~~Interchange sort}\cr}
+\endinsert\par
+The addition of cuts to the programs described in this section does not
+alter their declarative meaning; all solutions to a given query are
+found. Conversely, removing the cuts should similarly not affect the
+meaning of the program.  Unfortunately, this is not always the case. A
+distinction has been made in the literature between {\it green cuts\/}
+and {\it red cuts\/}. Green cuts have been considered in this section.
+The addition and removal of green cuts from a program do not affect the
+program's meaning. Green cuts prune only computation paths that do not
+lead to new solutions. Cuts that are not green are {\it red\/}.\par
+The cut interacts with system predicates such as {\tt call} and {\tt ;},
+introduced in Chapter~10, and with predicates such as {\tt not},
+introduced later in this chapter. The question is what {\it scope\/}
+should cut have, that is, which choice points should be affected. Since
+such tricky uses of cut are not presented or advocated in this book, we
+defer discussion of the scope of cut until Chapter~17 on interpreters.
+\vskip 15pt\parno
+{\bf Exercises for Section 11.1}\vskip 5pt \par
+\offset{20pt}{(i)} Add cuts to the partition program from {\tt
+quicksort}, Program~\Proquicks.\par
+\offset{20pt}{(ii)} Add cuts to the differentiation program, 
+Program~\Proderrul.\par
+\offset{20pt}{(iii)} Add cuts to the insertion sort program, 
+Program~\Proinssor.\par
+\sect{Tail Recursion Optimization}
+As noted in Section~8.3, the main difference from a performance point of
+view between recursion and iteration is that recursion requires, in
+general, space linear in the number of recursive calls to execute,
+whereas iteration can be executed in constant space, independent of the
+number of iterations performed.\par
+Recursive programs defined free of side effects might be considered more
+elegant and pleasing than their iterative counterparts defined in terms
+of iteration and local variables. However, an order of magnitude in space
+complexity seems an unacceptable price for such aesthetic pleasures.
+Fortunately, there is a class of recursive programs, precisely those that
+can be translated directly into iterative ones, that can be executed in
+constant space.\par
+The implementation technique that achieves this space saving is called
+{\it tail recursion optimization\/}, or more precisely, {\it last call
+optimization\/}. Intuitively, the idea of tail recursion optimization is
+to execute a recursive program as if it were an iterative one.\par
+Consider the reduction of a goal {\it A\/} using the clause\medskip
+\halign{\hskip 40pt\lft{#}\cr
+A$\pri$ $\lar$ B$_1$,B$_2$,$\ldots$,B$_n$.\cr}\medno
+with most general unifier $\theta$. The optimization is potentially
+applicable to the last call in the body of a clause, {\it B$_n$\/}. It
+reuses the area allocated for the parent goal {\it A\/} for the new goal
+{\it B$_n$\/}.\par
+The key precondition for this optimization to apply is that there be no
+choice points left from the time the parent goal {\it A\/} reduced to
+this clause to the time the last goal {\it B$_n$\/} is reduced. In other
+words, {\it A\/} has no alternative clauses for reduction left, and there
+are no choice points left in the computation of goals to the left of {\it
+B$_n$\/}, namely, the computation of the conjunctive goal ({\it
+B$_1$,B$_2$,$\ldots$,B$_{n-1}$\/})$\theta$, was deterministic.\par
+Most implementations of tail recursion optimization can recognize to a
+limited extent at runtime whether this condition occurs, by comparing
+backtracking-related information associated with the goals {\it B$_n$\/}
+and {\it A\/}. Another implementation technique, clause indexing, also
+interacts closely with tail recursion optimization and enhances the
+ability of the implementation to detect that this precondition occurs.
+Indexing performs some analysis of the goal, to detect which clauses are
+applicable for reduction, before actually attempting to do the
+unifications. Typically, indexing is done on the type and value of the
+first argument of the goal.\par
+Consider the {\tt append} program:\medskip
+\halign{\hskip 20pt\lft{\tt #}\cr
+append([X$\mid$Xs],Ys,[X$\mid$Zs]) $\lar$ append(Xs,Ys,Zs).\cr
+append([~],Ys,Ys).\cr}\medskip
+If it is used to append two complete lists, then by the time the
+recursive {\tt append} goal is executed, the preconditions for tail
+recursion optimization hold. No other clause is applicable to the parent
+goal (if the first argument unifies with {\tt [X$\mid$Xs]}, it certainly
+won't unify with [~], since we assumed that the first argument is a
+complete list). There are no other goals in the body besides {\tt
+append}, so the second precondition holds vacuously.\par
+However, for the implementation to know that the optimization applies, it
+needs to know that the second clause, although not tried yet, is not
+applicable. Here indexing comes into play. By analyzing the first
+argument of {\tt append}, it is possible to know that the second clause
+would fail even before trying it, and to apply the optimization in the
+recursive call to {\tt append}.\par
+Not all implementations provide indexing, and not all cases of
+determinism can be detected by the indexing mechanisms available.
+Therefore it is in the interest of the programmer to help an
+implementation that supports tail recursion optimization to recognize
+that the preconditions for applying it hold.\par
+There is a sledgehammer technique for doing so: Add a cut before the last
+goal of a clause, in which tail recursion optimization should always
+apply, as in\medskip
+\halign{\hskip 40pt\lft{#}\cr
+A$_1$ $\lar$ B$_1$,B$_2$,$\ldots$,!,B$_n$.\cr}\medno
+This cut prunes both alternative clauses left for the parent goal {\it
+A\/}, and any alternatives left for the computation of ({\it
+B$_1$,B$_2$,$\ldots$,B$_{n-1}$\/})$\theta$.\par
+In general, it is not possible to answer if such a cut is green or red,
+and the programmer's judgment should be applied.\par
+It should be noted that the effect of tail recursion optimization is
+enhanced greatly when accompanied with a good garbage collector. Stated
+negatively, the optimization is not very significant without garbage
+collection. The reason is that most tail recursive programs generate some
+data structures on each iteration. Most of these structures are
+temporary and can be reclaimed (see, for instance, the editor in
+Program~\Prolinedi). Together with a garbage collector, such programs
+can run, in principle, forever. Without it, although the stack space
+they consume would remain constant, the space allocated to the
+uncollected temporary data structures would overflow.\par 
+\sect{Negation}
+The cut can be used to implement a version of negation as failure.
+Program~\Pronegfai\ defines a predicate {\tt not(Goal)}, which succeeds if
+{\tt Goal} fails. As well as using cut, the program uses the
+meta-variable facility described in Chapter~10, and a system predicate
+{\tt fail} that always fails.\par
+Standard Prolog provides a predicate {\tt fail\_if(Goal)}, which has the
+same behavior as {\tt not/1}. Other Prologs provide the same predicate
+under the name {\tt \\+/1}. The rationale for not calling the system predicate
+{\tt not} is that the predicate does not implement true logical negation,
+and it is misleading to label it as such. We believe that the user easily
+learns how the predicate differs from true negation, as we will explain,
+and programmers are helped rather than misled by the name.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it not X\/} $\lar$\cr
+\qi {\it X\/} {\rm is not provable.}\cr
+\noalign{\medskip}
+not X $\lar$ X, !, fail.\cr
+not X.\cr
+\noalign{\bigskip}
+{\bf  Program \Pronegfai}{\rm :~~Negation as failure}\cr}
+\endinsert\par
+Let us consider the behavior of Program~\Pronegfai\ in answering the
+query {\tt not G?} The first rule applies, and {\tt G} is called using
+the meta-variable facility. If {\tt G} succeeds, the cut is
+encountered. The computation is then committed to the first rule, and
+{\tt not G} fails. If the call to {\tt G} fails, then the second rule
+of Program~\Pronegfai\ is used, which succeeds. Thus {\tt not G} fails
+if {\tt G} succeeds and succeeds if {\tt G} fails.\par
+The rule order is essential for Program~\Pronegfai\ to behave as
+intended. This introduces a new, not entirely desirable, dimension to
+Prolog programs. Previously, changing the rule order only changed the
+order of solutions. Now the meaning of the program can change. Procedures
+where the rule order is critical in this sense must be considered as a
+single unit rather than as a collection of individual clauses.\par
+The termination of a goal {\tt not G} depends on the termination of
+{\tt G}. If {\tt G} terminates, so does {\tt not G}. If {\tt
+G} does not terminate, then {\tt not G} may or may not terminate
+depending on whether a success node is found in the search tree before
+an infinite branch. Consider the following nonterminating program:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+married(abraham,sarah).\cr
+married(X,Y) $\lar$ married(Y,X).\cr}\medno
+The query {\tt not married(abraham,sarah)?} terminates (with failure)
+even though {\tt married(abraham,sarah)?} does not terminate.\par
+Program~\Pronegfai\ is incomplete as an implementation of negation by
+failure. The incompleteness arises from Prolog's incompleteness in
+realizing the computation model of logic programs. The definition of
+negation as failure for logic programs is in terms of a finitely failed
+search tree. A Prolog computation is not guaranteed to find one, even if
+it exists. There are goals that could fail by negation as failure, that
+do not terminate under Prolog's computation rule. For example, the query
+{\tt not(p(X),q(X))?} does not terminate with respect to the program
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+p(s(X)) $\lar$ p(X).\cr
+q(a).\cr}\medno
+The query would succeed if the {\tt q(X)} goal were selected first, since
+that gives a finitely failed search tree.\par
+The incorrectness of Program~\Pronegfai\ stems from the order of
+traversal of the search tree and arises when {\tt not} is used in
+conjunction with other goals. Consider using {\tt not} to define a
+relationship {\tt unmarried\_student(X)} for someone who is both not
+married and a student, as in the following program:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+unmarried\_student(X) $\lar$ not married(X), student(X).\cr
+student(bill).\cr
+married(joe).\cr}\medno
+The query {\tt unmarried\_student(X)?} fails with respect to the
+preceding data, ignoring that {\tt X=bill} is a solution logically
+implied by the rule and two facts. The failure occurs in the goal {\tt
+not married(X)}, since there is a solution {\tt X=joe}. The problem
+can be avoided here by swapping the order of the goals in the body of
+the rule.\par 
+A similar example is the query {\tt not (X=1), X=2?}, which fails
+although there is a solution {\tt X=2}.\par 
+The implementation of negation as failure is not guaranteed to work
+correctly for nonground goals, as the foregoing examples demonstrate.
+In most implementations of Prolog, it is the responsibility 
+of the programmer to ensure that negated goals are ground before they are
+solved. This can be done either by a static analysis of the program or
+by a runtime check, using the predicate {\tt ground} defined in Program
+\Protestergro.\par
+The predicate {\tt not} is very useful. It allows us to define
+interesting concepts. For example, consider a predicate {\tt
+disjoint(Xs,Ys)}, true if two lists {\tt Xs} and {\tt Ys} have no elements
+in common. It can be defined as\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+disjoint(Xs,Ys) $\lar$ not (member(Z,Xs), member(Z,Ys)).\cr}\medno
+Many other examples of using {\tt not} will appear in the programs
+throughout this book.\par
+An interesting property of {\tt not(Goal)} is that it never instantiates
+the arguments in {\tt Goal}. This is because of the explicit failure after
+the call to {\tt Goal} succeeds, which undoes any bindings made. This
+property can be exploited to define a procedure {\tt verify(Goal)}, given
+as part of Program~\Protestervar, which determines whether a goal is true
+without affecting the current state of the variable bindings. Double
+negation provides the means.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it variants\/}({\it Term1,Term2\/}) $\lar$\cr
+\qi {\it Term1} {\rm and} {\it Term2\/} {\rm are variants.}\cr
+\noalign{\medskip}
+variants(Term1,Term2) $\lar$\cr
+\qi verify((numbervars(Term1,0,N),\cr
+\qi numbervars(Term2,0,N),\cr
+\qi Term1=Term2)).\cr
+\noalign{\medskip}
+{\it verify\/}({\it Goal\/}) $\lar$\cr
+\qi {\it Goal\/} {\rm has a true instance. Verifying this is not done}\cr
+\qi {\rm constructively, so variables are not instantiated in the
+process}.\cr
+\noalign{\medskip}
+verify(Goal) $\lar$ not(not Goal).\cr
+\noalign{\vskip 5pt}
+numbervars(Term,N,N1) $\lar$ {\rm See Program \Pronumthevar}.\cr
+\noalign{\bigskip}
+{\bf Program \Protestervar}{\rm :~~Testing if terms are variants}\cr}
+\endinsert\par
+We note in passing that negation as implemented in Prolog shares a
+feature with negation in natural language. A doubly negated statement is
+not the same as the equivalent affirmative statement.\par
+The program for {\tt verify} can be used in conjunction with
+Program~\Pronumthevar\ for {\tt numbervars} to define a notion of
+equality intermediate between unifiability provided by {\tt =/2} and
+syntactic equality provided by {\tt ==/2}. The predicate {\tt
+variants(X,Y)} defined in Program~\Protestervar\ is true if two terms
+{\tt X} and {\tt Y} are variants. Recall from Chapter~4 that two terms
+are variants if they are instances of each other. This can be achieved
+with the following trick, implemented in Program~\Protestervar.
+Instantiate the variables using {\tt numbervars}, test whether the
+terms unify, and undo the instantiation.\par 
+The three forms of comparison {\tt =/2}, {\tt variant/2}, and {\tt ==/2}
+are progressively stronger, with unifiability being the weakest and most
+general. Identical terms are variants, and variant terms are unifiable.
+The distinction between the different comparisons vanishes for ground
+terms; for ground terms all three comparisons return the same results.
+\par
+The conjunction of cut and fail used in the first clause of {\tt not} in
+Program~\Pronegfai\ is known as the {\it cut-fail combination\/}. The
+cut-fail combination is a technique that can be used more generally. It
+allows early failure. A clause with a cut-fail combination says that the
+search need not (and will not) proceed.\par
+Some cuts in a cut-fail combination are green cuts. That is, the program
+has the same meaning if the clause containing the cut-fail combination is
+removed. For example, consider Program~\Protestergro\ defining the
+predicate {\tt ground}. An extra clause can be added, which can reduce
+the search without affecting the meaning:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+ground(Term) $\lar$ var(Term), !, fail.\cr}\medskip
+The use of cut in Program~\Pronegfai\ implementing {\tt not} is not
+green, but red. The program does not behave as intended if the cut is
+removed.\par
+The cut-fail combination is used to implement other system predicates
+involving negation. For example, the predicate {\tt $\ne$} (written as
+{\tt \\=} in Standard Prolog) can be simply implemented via unification
+and cut-fail, rather than via an infinite table, with Program~\Proimpneq.
+This program is also only guaranteed to work correctly for ground goals.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it X\/ $\ne$ Y\/} $\lar$\cr
+\qi {\it X\/} {\rm and} {\it Y\/} {\rm are not unifiable.}\cr
+\noalign{\medskip}
+X $\ne$ X $\lar$ !, fail.\cr
+X $\ne$ Y.\cr
+\noalign{\bigskip}
+{\bf  Program \Proimpneq}{\rm :~~Implementing {\tt $\ne$}}\cr}
+\endinsert\par
+With ingenuity, and a good understanding of unification and the execution
+mechanism of Prolog, interesting definitions can be found for many
+meta-logical predicates. A sense of the necessary contortions can be
+found in the program for {\tt same\_var(X,Y)}, which succeeds if {\tt X}
+and {\tt Y} are the same variable and otherwise fails:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+same\_var(foo,Y) $\lar$ var(Y), !, fail.\cr
+same\_var(X,Y) $\lar$ var(X), var(Y).\cr}\medno
+The argument for its correctness follows: ``If the arguments to {\tt
+same\_var} are the same variable, binding {\tt X} to {\tt foo} will bind
+the second argument as well, so the first clause will fail, and the
+second clause will succeed. If either of the arguments is not a variable,
+both clauses will fail. If the arguments are different variables, the
+first clause will fail, but the cut stops the second clause from being
+considered."\vskip 15pt \parno
+{\bf Exercises for Section 11.3} \vskip 5pt \par
+\offset{20pt}{(i)} Define the system predicate {\tt \\==} using {\tt ==}
+and the cut-fail combination.\par
+\offset{20pt}{(ii)} Define {\tt nonvar} using {\tt var} and the
+cut-fail combination.\par
+\sect{Red Cuts: Omitting Explicit Conditions}
+Prolog's sequential choice of rules and its behavior in executing cut are
+the key features necessary to compose the program for {\tt not}. The
+programmer can take into account that Prolog will only execute a part of
+the procedure if certain conditions hold. This suggests a new, and
+misguided, style of programming in Prolog, where the explicit conditions
+governing the use of a rule are omitted.\par
+The prototypical (bad) example in the literature is a modified version of
+Program~\Prominwitcut\ for {\tt minimum}. The comparison in the second
+clause of the program can be discarded to give the program\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+minimum(X,Y,X) $\lar$ X$\le$Y, !.\cr
+minimum(X,Y,Y).\cr}\medno
+The reasoning offered to justify the program is as follows: ``If {\tt X}
+is less than or equal to {\tt Y}, then the minimum is {\tt X}. Otherwise
+the minimum is {\tt Y}, and another comparison between {\tt X} and {\tt
+Y} is unnecessary." Such a comparison is performed, however, by
+Program~\Prominwitcut.\par 
+There is a severe flaw with this reasoning. The modified program has a
+different meaning from the standard program for {\tt minimum}. It
+succeeds on the goal {\tt minimum(2,5,5)}. The modified program is a
+false logic program.\par
+The incorrect {\tt minimum} goal implied by the modified program can be
+avoided. It is necessary to make explicit the unification between the
+first and third arguments, which is implicit in the first rule. The
+modified rule is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+minimum(X,Y,Z) $\lar$ X$\le$Y, !, Z=X.\cr}\medno
+This technique of using the cut to commit to a clause after part of the
+unification has been done is quite general. But for {\tt minimum} the
+resultant code is contrived. It is far better to simply write the correct
+logic program, adding cuts if efficiency is important, as done in Program
+\Prominwitcut.\par
+Using cut with the operational behavior of Prolog in mind is problematic.
+It allows the writing of Prolog programs that are false when read as
+logic programs, that is, have false conclusions but behave correctly
+because Prolog is unable to prove the false conclusions. For example, if
+{\tt minimum} goals are of the form {\tt minimum(X,Y,Z)}, where {\tt X}
+and {\tt Y} are instantiated, but {\tt Z} is not, the modified program
+behaves correctly.\par
+The only effect of the green cuts presented in Section~11.1 is to prune
+from the search tree branches that are known to be useless. Cuts whose
+presence in a program changes the meaning of that program are called
+{\it red cuts\/}. The removal of a red cut from a program changes its
+meaning, i.e., the set of goals it can prove.\par
+A standard Prolog programming technique using red cuts is the omission of
+explicit conditions. Knowledge of the behavior of Prolog, specifically
+the order in which rules are used in a program, is relied on to omit
+conditions that could be inferred to be true. This is sometimes
+essential in practical Prolog programming, since explicit conditions,
+especially negative ones, are cumbersome to specify and inefficient to
+run. But making such omissions is error-prone.\par
+Omitting an explicit condition is possible if the failure of the previous
+clauses implies the condition. For example, the failure of the
+comparison {\tt X$\le$Y} in the {\tt minimum} code implies that {\tt X}
+is greater than {\tt Y}. Thus the test {\tt X$>$Y} can be omitted. In
+general, the explicit condition is effectively the negation of the
+previous conditions. By using red cuts to omit conditions, negation is
+being expressed implicitly.\par
+Consider Program~\Prointsor\ for interchange sort. The first (recursive)
+rule applies whenever there is an adjacent pair of elements in the list
+that are out of order. When the second {\tt sort} rule is used, there are
+no such pairs and the list must be sorted. Thus the condition {\tt
+ordered(Xs)} can be omitted, leaving the second rule as the fact {\tt
+sort(Xs,Xs)}. As with {\tt minimum}, this is an incorrect logical
+statement.\par
+Once the {\tt ordered} condition is removed from the program, the cut
+changes from green to red. Removing the cut from the variant
+without the {\tt ordered} condition leaves a program that gives false
+solutions.\par
+Let us consider another example of omitting an explicit condition.
+Consider Program~\Prodeloccele\ for deleting elements in a list. The two
+recursive clauses cover distinct cases, corresponding to whether or not
+the head of the list is the element to be deleted. The distinct nature of
+the cases can be indicated with cuts, as shown in Program~\Prodelelelis.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it delete\/}({\it Xs,X,Ys\/}) $\lar$\cr
+\qi {\it Ys\/} {\rm is the result of deleting all occurrences of} {\it
+X\/} {\rm from the list} {\it Xs\/}{\rm .}\cr
+\noalign{\medskip}
+delete(\(X$\mid$Xs\),X,Ys) $\lar$ !, delete(Xs,X,Ys).\cr
+delete(\(X$\mid$Xs\),Z,\(X$\mid$Ys\)) $\lar$ X $\ne$ Z, !,
+delete(Xs,Z,Ys).\cr
+delete(\(~\),X,\(~\)).\cr
+\noalign{\bigskip}
+{\bf  Program \Prodelelelis}{\rm :~~Deleting elements from a list}\cr}
+\endinsert\par
+By reasoning that the failure of the first clause implies that the head
+of the list is not the same as the element to be deleted, the explicit
+inequality test can be omitted from the second clause. The modified
+program is given as Program~\Prodelelefro. The cuts in
+Program~\Prodelelelis\ are green in comparison to the red cut in the
+first clause of Program~\Prodelelefro.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it delete\/}({\it Xs,X,Ys\/}) $\lar$\cr
+\qi {\it Ys\/} {\rm is the result of deleting all occurrences of} {\it
+X\/} {\rm from the list} {\it Xs\/}{\rm .}\cr
+\noalign{\medskip}
+delete(\(X$\mid$Xs\),X,Ys) $\lar$ !, delete(Xs,X,Ys).\cr
+delete(\(X$\mid$Xs\),Z,\(X$\mid$Ys\)) $\lar$ !, delete(Xs,Z,Ys).\cr
+delete(\(~\),X,\(~\)).\cr
+\noalign{\bigskip}
+{\bf  Program \Prodelelefro}{\rm :~~Deleting elements from a list}\cr}
+\endinsert\par
+In general, omitting simple tests as in Program~\Prodelelefro\ is
+inadvisable. The efficiency gain by their omission is minimal compared to
+the loss of readability and modifiability of the code.\par
+Let us investigate the use of cut to express the if-then-else control
+structure. Program~\Proifthenels\ defines the relation {\tt
+if\_then\_else(P,Q,R)}. Declaratively, the relation is true if {\tt P}
+and {\tt Q} are true, or {\tt not P} and {\tt R} are true. Operationally,
+we prove {\tt P} and, if successful, prove {\tt Q}, else prove {\tt R}.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it if\_then\_else\/}({\it P,Q,R\/}) $\lar$\cr
+\qi {\rm Either} {\it P\/} {\rm and} {\it Q\/} {\rm , or not} {\it P\/}
+{\rm and} {\it R\/}{\rm .}\cr
+\noalign{\medskip}
+if\_then\_else(P,Q,R) $\lar$ P, !, Q.\cr
+if\_then\_else(P,Q,R) $\lar$ R.\cr
+\noalign{\bigskip}
+{\bf  Program \Proifthenels}{\rm :~~If-then-else statement}\cr}
+\endin\par
+The utility of a red cut to implement this solution is self-evident. The
+alternative to using a cut is to make explicit the condition under which
+{\tt R} is run. The second clause would read\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+if\_then\_else(P,Q,R) $\lar$ not P, R.\cr}\medno
+This could be expensive computationally. The goal {\tt P} will have to be
+computed a second time in the determination of {\tt not}.\par
+We have seen so far two kinds of red cuts.  One kind is built into
+the program, as in the definitions of {\tt not} and $\ne$.  A second kind
+was a green cut that became red when conditions in the programs were
+removed. However, there is a third kind of red cut. A cut that is
+introduced into a program as a green cut that just improves efficiency
+can turn out to be a red cut that changes the program's meaning.\par
+For example, consider trying to write an efficient version of {\tt
+member} that does not succeed several times when there are multiple
+copies of an element in a list. Taking a procedural view, one might use a
+cut to avoid backtracking once an element is found to be a member of a
+list. The corresponding code is\medskip
+\vbox{\halign{\hskip 40pt\lft{\tt #}\cr
+member(X,\(X$\mid$Xs\)) $\lar$ !.\cr
+member(X,\(Y$\mid$Ys\)) $\lar$ member(X,Ys).\cr}}\medno
+Adding the cut indeed changes the behavior of the program. However, it is
+now not an efficient variant of {\tt member}, since, for example, the
+query {\tt member(X,\(1,2,3\))?} gives only one solution, {\tt X=1}. It
+is a variant of {\tt member\_check}, given as Program~\Prochelismem, with
+the explicit condition {\tt X $\ne$ Y} omitted, and hence the cut is red.
+\vskip15pt\parno
+{\bf Exercises for Section 11.4}\vskip 5pt \par
+\offset{20pt}{(i)} Discuss where cuts could be placed in Program
+\Proprosubter\ for {\tt substitute}. Consider whether a cut-fail combination
+would be useful, and whether explicit conditions can be omitted.\par
+\offset{20pt}{(ii)} Analyze the relation between Program~\Proselelelis\
+for {\tt select} and the program obtained by adding a single cut:\medskip
+\vbox{\halign{\hskip 40pt\lft{\tt #}\cr
+select(X,\(X$\mid$Xs\),Xs) $\lar$ !.\cr
+select(X,\(Y$\mid$Ys\),\(Y$\mid$Zs\)) $\lar$ select(X,Ys,Zs).\cr}}
+\medskip
+(Hint:~~Consider variants of {\tt select}.)\par
+\sect{Default Rules}
+Logic programs with red cuts essentially consist of a series of
+special cases and a default rule. For example, Program~\Pronegfai\ for
+{\tt not} had a special case when the goal {\tt G} succeeded and a
+default fact {\tt not G} used otherwise. The second rule for {\tt
+if\_then\_else} in Program~\Proifthenels\ is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+if\_then\_else(P,Q,R) $\lar$ R.\cr}\medno
+It is used by default if {\tt P} fails.\par
+Using cuts to achieve default behavior is in the logic programming
+folklore. We argue, using a simple example, that often it is better to
+compose an alternative logical formulation than to use cuts for default
+behavior.\par
+Program~\Prodetwelpay\ is a naive program for determining social welfare
+payments. The relation {\tt pension(Person,Pension)} determines which
+pension, {\tt Pension}, a person, {\tt Person}, is entitled to. The first
+{\tt pension} rule says that a person is entitled to an invalid's pension
+if he is an invalid. The second rule states that people over the age of
+65 are entitled to an old age pension if they have contributed to a
+suitable pension scheme long enough, that is, they must be {\tt
+paid\_up}. People who are not paid up are still entitled to supplementary
+benefit if they are over 65.\par
+Consider extending Program~\Prodetwelpay\ to include the rule that people
+receive nothing if they do not  qualify for one of the pensions. The
+procedural ``solution" is to add cuts after each of the three rules, and
+an extra default fact
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it pension\/}({\it Person,Pension\/}) $\lar$\cr
+\qi {\it Pension\/} {\rm is the type of pension received by} {\it
+Person\/}{\rm .}\cr
+\noalign{\medskip}
+pension(X,invalid\_pension) $\lar$ invalid(X).\cr
+pension(X,old\_age\_pension) $\lar$ over\_65(X), paid\_up(X).\cr
+pension(X,supplementary\_benefit) $\lar$ over\_65(X).\cr
+\noalign{\vskip 5pt}
+invalid(mc\_tavish).\cr
+\noalign{\vskip 5pt}
+over\_65(mc\_tavish).\quad over\_65(mc\_donald).\quad
+over\_65(mc\_duff).\cr
+\noalign{\vskip 5pt}
+paid\_up(mc\_tavish).\quad paid\_up(mc\_donald).\cr
+\noalign{\bigskip}
+{\bf  Program \Prodetwelpay}{\rm :~~Determining welfare payments}\cr}
+\vskip 0.6truecm
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it pension\/}({\it Person,Pension\/}) $\lar$\cr
+\qi {\it Pension\/} {\rm is the type of pension received by} {\it
+Person\/}{\rm .}\cr
+\noalign{\medskip}
+pension(X,invalid\_pension) $\lar$ invalid(X), !.\cr
+pension(X,old\_age\_pension) $\lar$ over\_65(X), paid\_up(X), !.\cr
+pension(X,supplementary\_benefit) $\lar$ over\_65(X), !.\cr
+pension(X,nothing).\cr
+\noalign{\bigskip}
+{\bf Program \Prodetwelpam}{\rm :~~Determining welfare payments}\cr}
+\endin\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+pension(X,nothing).\cr}\medno
+This version is given as Program~\Prodetwelpam.\par
+Program~\Prodetwelpam\ behaves correctly on queries to determine the
+pension  to which people are entitled, for example, {\tt
+pension(mc\_tavish,X)?}. The program is not correct, though. The query
+{\tt pension(mc\_tavish,nothing)?} succeeds, which {\tt mc\_tavish}
+wouldn't be too happy about, and {\tt pension(X,old\_age\_pension)?} has
+the erroneous unique answer {\tt X=mc\_tavish}. The cuts prevent
+alternatives being found. Program~\Prodetwelpam\ only works correctly to
+determine the pension to which a given person is entitled.\par
+A better solution is to introduce a new relation {\tt
+entitlement(X,Y)}, which is true if {\tt X} is entitled to {\tt Y}. It is
+defined with two rules and uses Program~\Prodetwelpay\ for {\tt pension}:
+\medskip
+\vbox{\halign{\hskip 40pt\lft{\tt #}\cr
+entitlement(X,Y) $\lar$ pension(X,Y).\cr
+entitlement(X,nothing) $\lar$ not pension(X,Y).\cr}}\medskip
+This program has all the advantages of Program~\Prodetwelpam and neither
+of the disadvantages mentioned before. It shows that making a person
+entitled to nothing as the default rule is really a new concept and
+should be presented as such.\par
+\sect{Cuts for Efficiency}
+Earlier in this chapter, we claimed that the efficiency of
+some Prolog programs could be improved through sparing use of the cut.
+This section explores the claim. Two issues are addressed. The first is
+the meaning of efficiency in the context of Prolog. The second is
+appropriate uses of cut.\par
+Efficiency relates to utilization of resources. The resources used by
+computations are space and time. To understand Prolog's use of space and
+time, we need to consider Prolog implementation technology.\par
+The two major areas of memory manipulated during a Prolog computation are
+the stack and the heap. The stack, called the local stack in many
+Edinburgh Prolog implementations, is used to govern control flow. The
+heap, called the global stack in many Edinburgh Prolog implementations,
+is used to construct data structures that are needed throughout the
+computation.\par
+Let us relate stack management to the computation model of Prolog.
+Each time a goal is chosen for reduction, a stack frame is placed on the
+stack. Pointers are used to specify subsequent flow of control once the
+goal succeeds or fails. The pointers depend on whether other clauses can
+be used to reduce the chosen goal. Handling the stack frame is simplified
+considerably if it is known that only one clause is applicable.
+Technically, a {\it choice point\/} needs to be put on the stack if more
+than one clause is applicable.\par
+Experience has shown that avoiding placing choice points on the stack has
+a large impact on efficiency. Indeed, Prolog implementation technology has
+advanced to the stage that deterministic code, i.e., without
+choice points, can be made to run almost as efficiently as conventional
+languages.\par
+Cuts are one way that Prolog implementations know that only one clause is
+applicable. Another way is by the effective use of indexing. Whether a
+cut is needed to tell a particular Prolog implementation that only one
+clause is applicable depends on the particular indexing scheme. In this
+book, we often use the first argument to differentiate between clauses.
+Indexing on the first argument is the most common among Prolog
+implementations. For effective use, consult your Prolog manual.\par
+Efficient use of space is determined primarily by controlling the growth
+of the stack. Already we have discussed the advantages of iterative code
+and last call optimization. Too many frames placed on the stack can cause
+computations to abort. In practice this is a major concern. Running out
+of stack space is a common symptom of an infinite loop or running a
+highly recursive program. For example, Program~\Proackfun\ implementing
+Ackermann's function, when adapted for Prolog arithmetic, quickly
+exhausts an implementation's capacity.\par
+Time complexity is approximated by number of reductions. Thus efficient
+use of time can be determined by analyzing the number of reductions a
+program makes. In Part~I, we analyzed different logic programs by the
+size of proof trees. In Prolog, size of search tree is a better measure,
+but it becomes difficult to incorporate Prolog's nondeterminism.\par
+Probably the most important approach to improving time performance is
+better algorithms. Although Prolog is a declarative language, the
+notion of an algorithm applies equally well to Prolog as to other
+languages. Examples of good and bad algorithms for the same problem,
+together with their Prolog implementations, have been given in
+previous chapters. Linear reverse using accumulators
+(Program~\Prorevlis b) is clearly more efficient than naive reverse
+(Program~\Prorevlis a). Quicksort (Program~\Proquicks) is better than
+permutation sort (Program~\Propersor).\par 
+Besides coming up with better algorithms, several things can be done
+to influence the performance of Prolog programs. One is to choose a
+better implementation. An efficient implementation is characterized by
+its raw speed, its indexing capabilities, support for tail recursion
+optimization, and garbage collection. The speed of logic programming
+languages is usually measured in LIPS, or {\it logical inferences per
+second\/}. A logical inference corresponds to a reduction in a
+computation. Most Prolog implementations claim a LIPS rating. The
+standard benchmark, by no means ideal, is to time Program~\Prorevlis a,
+naive {\tt reverse}, reversing a list. There are 496 reductions for a
+list of 30 elements.\par
+Once the implementation is fixed, the programs themselves can be tuned
+by\par
+\offset{20pt}{$\bullet$} Good goal ordering, where the rule is ``fail as
+early as possible''\par
+\offset{20pt}{$\bullet$} Exploitation of the indexing facility, by
+ordering arguments appropriately\par
+\offset{20pt}{$\bullet$} Elimination of nondeterminism using explicit
+conditions and cuts\par
+Let us elaborate on the third item and discuss guidelines for using
+cut. As discussed, Prolog implementations will perform more efficiently
+if they know a predicate is deterministic. The appropriate sparing use
+of cut is primarily for saying that predicates are deterministic, not
+for controlling backtracking.\par
+The two basic principles for using a cut are\par
+\offset{20pt}{$\bullet$} Make cuts as local as possible.\par
+\offset{20pt}{$\bullet$} Place a cut as soon as it is known that the
+correct clause has been chosen.\par
+Let us illustrate the principles with the quicksort program, Program
+\Proquicks. The recursive clause is as follows\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+quicksort(\(X$\mid$Xs\),Ys) $\lar$\cr
+\qi partition(Xs,X,Littles,Bigs), quicksort(Littles,Ls),\cr
+\qi quicksort(Bigs,Bs), append(Ls,\(X$\mid$Bs\),Ys).\cr}\medno
+We know there is only one solution for the partition of the list.
+Rather than place a cut in the clause for {\tt quicksort}, the {\tt
+partition} predicate should be made deterministic. This is in accordance
+with the first principle.\par
+One of the partition clauses is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+partition(\(X$\mid$Xs\),Y,\(X$\mid$Ls\),Bs) $\lar$\cr
+\qi X $\le$ Y, partition(Xs,Y,Ls,Bs).\cr}\medno
+If the clause succeeds, then no other will be applicable. But the cut
+should be placed before the recursive call to {\tt partition} rather than
+after, according to the second principle.\par
+Where and whether to place cuts can depend on the Prolog implementation
+being used. Cuts are needed only if Prolog does not know the determinism
+of a predicate. If, for example, indexing can determine that only one
+predicate is applicable, no cuts are needed. In a system without
+indexing, cuts would be needed for the same program.\par
+Having discussed appropriate use of cuts, we stress that
+adding cuts to a program should typically be done {\it after\/} the
+program runs correctly. A common misconception is that a program can be
+fixed from giving extraneous answers and behaving incorrectly by adding
+cuts. This is not so. Prolog code should be debugged as declaratively as
+possible, a topic we discuss in Chapter~13. Only when the logic is
+correct should efficiency be addressed.\par
+The final factor that we consider in evaluating the efficiency of Prolog
+programs is the creation of intermediate data structures, which primarily
+affects use of the heap. Minimizing the number of data structures being
+generated is a subject that has not received much attention in the Prolog
+literature. We analyze two versions of the predicate {\tt sublist(Xs,Ys)}
+to illustrate the type of reasoning possible.\par
+The two versions of {\tt sublist} that we consider involve Program
+\Propresuflis\ for calculating prefixes and suffixes of lists. We must
+also specify the comparison with respect to a particular use. The one
+chosen for the analysis is whether a given list is a sublist of a
+second given list. The first clause that follows denotes a sublist as a prefix of a
+suffix, and the second clause defines a sublist as a suffix of a prefix:
+\medskip
+\halign{\lft{\tt #}\qquad&\rt{#}\cr
+sublist(Xs,AsXsBs) $\lar$ suffix(XsBs,AsXsBs), prefix(Xs,XsBs).\cr
+sublist(Xs,AsXsBs) $\lar$ prefix(AsXs,AsXsBs), suffix(Xs,AsXs).\cr}
+\medskip
+Although both programs have the same meaning, there is a difference in
+the performance of the two programs. If the two arguments to {\tt
+sublist} are complete lists, the first clause simply goes down the
+second list, returning a suffix, then goes down the first list,
+checking if the suffix is a prefix of the first list. This execution
+does not generate any new intermediate data structures. On the other
+hand, the second clause creates a new list, which is a prefix of the
+second list, then checks if this list is a suffix of the first list.
+If the check fails, backtracking occurs, and a new prefix of the first
+list is created.\par 
+Even though, on the average, the number of reductions performed by the
+two clauses is the same, they are different in their efficiency. The
+first clause does not generate new structures (does not cons, in Lisp
+jargon). The second One clause does. When analyzing Lisp programs, it is 
+common to examine the consing performance in great detail, and whether a
+program conses or not is an important efficiency consideration. We feel
+that the issue is important for Prolog programs, but perhaps the state of
+the art of studying the performance of large Prolog programs has not
+matured enough to dictate such analyses.\par
+\sect{Background}
+The cut was introduced in Marseilles Prolog (Colmerauer et al., 1973)
+and was perhaps one of the most influential design decisions in 
+Prolog. Colmerauer experimented with several other constructs, which
+corresponded to special cases of the cut, before coming up with its
+full definition.\par
+The terminology {\it green cuts\/} and {\it red cuts\/} was introduced
+by van Emden (1982), in order to try to distinguish between legitimate
+and illegitimate uses of cuts. Alternative control structures, which
+are more structured then the cut, are constantly being proposed, but
+the cut still remains the workhorse of the Prolog programmer. Some of
+the extensions are if-then-else constructs (O'Keefe, 1985) and
+notations for declaring that a relation is functional, or
+deterministic, as well as ``weak-cuts," ``snips," remote-cuts
+(Chikayama, 1984), and {\tt not} itself, which, as currently
+implemented, can be viewed as a structured application of the cut.\par
+The controversial nature of cut has not been emphasized in this book. A
+good starting place to read about some of cut's problems, and the
+variation in its implementation, is Moss (1986). Many of the difficulties
+arise from the scope of the cut, and how cuts interact with the system
+predicates for control such as conjunction, disjunction, and the
+meta-variable facility. For example, two versions of {\tt call} have
+been suggested, one that blocks the cut and one that
+does not. Further discussion of cut can be found in O'Keefe (1990),
+including an exposition on when cut should be used.\par
+Some Prologs provide {\tt if\_then\_else(P,Q,R)} under the syntax {\tt P
+$\rar$ Q}; {\tt R} and an abridged if-then form {\tt P $\rar$ Q}. Whether
+to include if-then-else in Standard Prolog has been a controversial
+issue. The trade-off is convenience for some programming tasks versus
+thorny semantic anomalies. This issue has been raised several times on
+the USENET newsgroup comp.lang.prolog. Relevant comments were collected
+in the May 1991 issue of the Newsletter of the Association for Logic
+Programming, Volume 4, No.~2.\par
+The cut is also the ancestor of the commit operator of concurrent
+logic languages, which was first introduced by Clark and Gregory (1981)
+in their Relational Language. The commit cleans up one of the major
+drawbacks of the cut, which is destroying the modularity of clauses. The
+cut is asymmetric, because it eliminates alternative clauses below the clause
+in which it appears, but not above. Hence a cut in one clause affects the
+meaning of other clauses. The commit, on the other hand, is symmetric
+and therefore cannot implement negation as failure; it does not destroy
+the modularity of clauses.\par
+The pioneering work on Prolog implementation technology was in D.H.D.\
+Warren's Ph.D.\ thesis (1977). Warren later added tail recursion
+optimization to his original DEC-10 compiler (1986). Tail
+recursion optimization was implemented concurrently by Bruynooghe (1982)
+in his Prolog system. A motley collection of papers on Prolog
+implementations can be found in Campbell (1984).\par
+Most current compilers and implementation technology are based on the
+WAM (Warren Abstract Machine), published as a somewhat cryptic technical
+report (Warren, 1983). Readers seriously interested in program efficiency
+need to understand the WAM. The best places to start reading about the
+WAM are Maier and Warren (1988) and Ait-Kaci (1991).\par
+References to negation in logic programming can be found in
+Section~5.6. Implementations of a sound negation as failure rule in
+dialects of Prolog can be found in Prolog-II (van Caneghem, 1982) and
+MU-Prolog (Naish, 1985a).\par 
+The program for {\tt same\_var} and its argument for correctness are due
+to O'Keefe (1983).\par
+Program~\Prodetwelpam\ for {\tt pension} is a variant of an example due
+to Sam Steel for a Prolog course at the University of Edinburgh --- hence
+the Scottish flavor. Needless to say, this is not intended as, nor is it
+an accurate expression, of the Scottish or British social welfare
+system.\par\bye
+

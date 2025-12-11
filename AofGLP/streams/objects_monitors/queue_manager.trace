@@ -1,0 +1,6 @@
+=== queue_manager.glp ===
+Queue manager using incomplete messages.
+Goal: qm([dequeue(X), enqueue(1), enqueue(2)], Q, Q).
+
+dequeue returns immediately; value filled in by later enqueue.
+Key pattern: incomplete messages for resource management.

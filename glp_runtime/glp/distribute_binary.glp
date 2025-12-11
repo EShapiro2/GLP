@@ -1,0 +1,17 @@
+%% distribute_binary.glp - Binary address-based distribution
+%% Source: GLP Papers
+%%
+%% Routes messages through binary tree based on address bits.
+%% First bit determines left (0) or right (1), then recurses.
+%%
+%% req(Addr, Content) - request with binary address and content
+%% Address [] means "arrived at destination"
+%%
+%% Test goal:
+%% distribute_binary([req([0],a), req([1],b), req([0],c)], Y, Z).
+
+distribute_binary([req([0|Addr],C)|In], [req(Addr?,C?)|Out1?], Out2?) :-
+    distribute_binary(In?, Out1, Out2).
+distribute_binary([req([1|Addr],C)|In], Out1?, [req(Addr?,C?)|Out2?]) :-
+    distribute_binary(In?, Out1, Out2).
+distribute_binary([], [], []).

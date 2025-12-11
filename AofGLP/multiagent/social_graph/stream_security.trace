@@ -1,0 +1,11 @@
+=== stream_security.glp ===
+Blockchain security properties of GLP streams.
+Goal: extend_stream([H?|T], H, T)
+
+Properties:
+1. IMMUTABILITY: single-assignment prevents rebinding
+2. UNFORKABILITY: SRSW ensures one writer per variable
+3. NON-REPUDIATION: attestations provide cryptographic proof
+4. ACYCLICITY: occurs check prevents circular bindings
+
+Example: Cooperative stream extension with explicit handover.

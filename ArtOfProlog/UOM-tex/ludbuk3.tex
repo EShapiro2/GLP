@@ -1,0 +1,1752 @@
+%%%%% Leonudi Book, Chapter 3, pp 34-71 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\overfullrule 0pt
+\chapnum=0\advance\chapnum by 2
+\numberfirst
+\startpage{34}
+
+\chapa{Recursive Programming}
+The programs of the previous chapter essentially retrieve information
+from, and manipulate, finite data structures. In general, mathematical
+power is gained by considering infinite or potentially infinite
+structures. Finite instances then follow as special cases. Logic programs
+harness this power by using recursive data types.\par
+Logical terms can be classified into types.  A {\it type\/} is a
+(possibly infinite) set of terms. Some types are conveniently defined by
+unary relations. A relation {\tt p/1} defines the type {\tt p} to be the
+set of {\tt X}'s such that {\tt p(X)}.\par
+For example, the {\tt male/1} and {\tt female/1} predicates used
+previously define the {\tt male} and {\tt female} types.\par
+More complex types can be defined by recursive logic programs. Such types
+are called {\it recursive types\/}. Types defined by unary recursive
+programs are called {\it simple recursive types\/}. A program defining a
+type is called a {\it type definition\/}.\par
+In this chapter, we show logic programs defining relations over simple
+recursive types, such as integers, lists, and binary trees, and also
+programs over more complex types, such as polynomials.\par
+\sect{Arithmetic}
+The simplest recursive data type, natural numbers, arises from the
+foundations of mathematics. Arithmetic is based on the natural numbers.
+This section gives logic programs for performing arithmetic.\par
+In fact, Prolog programs for performing arithmetic differ considerably
+from their logical counterparts, as we will see in later chapters.
+However, it is useful to spend time discussing the logic programs. There
+are two main reasons. First, the operations of arithmetic are usually
+thought of functionally rather than relationally. Presenting examples for
+such a familiar area emphasizes the change in thinking necessary for
+composing logic programs. Second, it is more natural to discuss the
+underlying mathematical issues, such as correctness and completeness of
+programs.\par
+The natural numbers are built from two constructs, the constant symbol
+{\tt 0} and the successor function {\tt s} of arity $1$. All the
+natural numbers are then recursively given as {\tt 0}, {\tt s(0)}, {\tt
+s(s(0))}, {\tt s(s(s(0)))}, $\ldots$\ . We adopt the convention that {\tt
+s$^n$(0)} denotes the integer {\it n\/}, that is, {\it n\/} applications
+of the successor function to {\tt 0}.\par
+As in Chapter~2, we give a relation scheme for each predicate,
+together with the intended meaning of the predicate. Recall that a
+program {\it P\/} is {\it correct\/} with respect to an intended meaning
+{\it M\/} if the meaning of {\it P\/} is a subset of {\it M\/}. It is
+{\it complete\/} if {\it M\/} is a subset of the meaning of {\it P\/}. It
+is correct and complete if its meaning is identical to {\it M\/}. Proving
+correctness establishes that everything deducible from the program is
+intended. Proving completeness establishes that everything intended is
+deducible from the program. Two correctness and completeness proofs are
+given in this section.\par
+The simple type definition of natural numbers is neatly encapsulated in
+the logic program, shown as Program~\Prodefnatnum. The relation scheme used is
+{\tt natural\_number(X)}, with intended meaning that {\tt X} is a natural
+number. The program consists of one unit clause and one iterative clause
+(a clause with a single goal in the body). Such a program is called {\it
+minimal recursive\/}.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it natural\_number\/}({\it X\/}) $\lar$\cr
+\qi {\it X\/} {\rm is a natural number}.\cr
+\noalign{\medskip}
+natural\_number(0).\cr
+natural\_number(s(X)) $\lar$ natural\_number(X).\cr
+\noalign{\bigskip}
+{\bf Program \Prodefnatnum}{\rm :~~Defining the natural numbers}\cr}
+\endinsert\par
+{\bf Proposition}:~~Program \Prodefnatnum\ is correct and complete with
+respect to the set of goals {\tt natural\_number(s$^i$(0))}, for 
+$i \ge 0$.\par
+{\bf Proof}:~~(1) Completeness. Let {\it n\/} be a natural number. We
+show that the goal {\tt natural\_number(n)} is deducible from the program
+by giving an explicit proof tree. Either {\tt n} is {\tt 0} or of the
+form {\tt s$^n$(0)}. The proof tree for the goal {\tt natural\_number(0)}
+is trivial. The proof tree for the goal {\tt natural\_number(s($
+\ldots$s(0)$\ldots$))} contains {\it n\/} reductions, using the rule in
+Program~\Prodefnatnum, to reach the fact {\tt natural\_number(0)}, as
+shown in the left half of Figure~\Figprotreest.
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\ctr{\tt #}\qquad&\ctr{\tt #}\cr
+natural\_number(s$^n$(0))&plus(s$^n$(0),s$^m$(0),s$^{n+m}$(0))\cr
+$\mid$&$\mid$\cr
+natural\_number(s$^{n-1}$(0))&plus(s$^{n-1}$(0),s$^m$(0),s$^{n+m-
+1}$(0))\cr
+$\mid$&$\mid$\cr
+$\ldots$&$\ldots$\cr
+$\mid$&$\mid$\cr
+natural\_number(s(0))&plus(s(0),s$^m$(0),s$^{m+1}$(0))\cr
+$\mid$&$\mid$\cr
+natural\_number(0)&plus(0,s$^m$(0),s$^m$(0))\cr
+&$\mid$\cr
+&natural\_number(s$^m$(0))\cr
+&$\mid$\cr
+&$\ldots$\cr}}$$\medskip
+\ctrline{{\bf Figure \Figprotreest}:~~Proof trees establishing
+completeness of programs}
+\endin\par
+(2) Correctness. Suppose that {\tt natural\_number(X)} is deducible from
+Program~\Prodefnatnum, in {\it n\/} deductions. We prove that {\tt
+natural\_number(X)} is in the intended meaning of the program by
+induction on {\it n\/}. If $n=0$, then the goal must have
+been proved using a unit clause, which implies that {\tt X\/}$=0$.
+If $n>0$, then the goal must be of the form {\tt
+natural\_number(s(X$\pri$))}, since it is deducible from the program, and
+further, {\tt natural\_number(X$\pri$)} is deducible in $n--1$
+deductions. By the induction hypothesis, {\tt X}$\pri$ is in the intended
+meaning of the program, i.e.,\ {\tt X$\pri$=s$^k$(0)} for some {\tt k
+$\ge$ 0}.\hskip 10pt\QEDA\par
+The natural numbers have a natural order. Program~\Prolesthaequ\ is a
+logic program defining the relation less than or equal to according
+to the order. We denote the relation with a binary infix symbol, or
+{\it operator\/}, {\tt $\le$}, according to mathematical usage. The goal
+{\tt 0 $\le$ X} has predicate symbol {\tt $\le$} of arity 2, has
+arguments {\tt 0} and {\tt X}, and is syntactically identical to {\tt
+`$\le$'(0,X)}.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it X\/ $\le$ Y\/} $\lar$\cr
+\qi {\it X\/} {\rm and} {\it Y\/} {\rm are natural numbers,}\cr
+\qi {\rm such that} {\it X\/} {\rm is less than or equal to} {\it
+Y\/}{\rm .}\cr
+\noalign{\medskip}
+0 $\le$ X $\lar$ natural\_number(X).\cr
+s(X) $\le$ s(Y) $\lar$ X $\le$ Y.\cr
+\noalign{\vskip 5pt}
+natural\_number(X) $\lar$ {\rm See Program \Prodefnatnum .}\cr
+\noalign{\bigskip}
+{\bf Program \Prolesthaequ}{\rm :~~The less than or equal relation}\cr}
+\endin\par
+The relation scheme is {\it N$_1$\/ $\le$ N$_2$\/}. The intended meaning
+of Program~\Prolesthaequ\ is all ground facts {\tt X $\le$ Y}, where {\tt
+X} and {\tt Y} are natural numbers and {\tt X} is less than or equal to
+{\tt Y}. Exercise (ii) at the end of this section is to prove the
+correctness and completeness of Program~\Prolesthaequ.\par
+The recursive definition of {\tt $\le$} is not computationally
+efficient. The proof tree establishing that a particular {\it N\/} is
+less than a particular  $M$ has $M+2$ nodes. We
+usually think of testing whether one number is less than another as a
+unit operation, independent of the size of the numbers. Indeed, Prolog
+does not define arithmetic according to the axioms presented in this
+section but uses the underlying arithmetic capabilities of the computer
+directly.\par
+Addition is a basic operation defining a relation between two natural
+numbers and their sum. In Section~1.1, a table of the {\tt plus}
+relation was assumed for all relevant natural numbers. A recursive
+program captures the relation elegantly and more compactly, and is
+given as Program~\Proadditi. The intended meaning of Program~\Proadditi\
+is the set of facts {\tt plus(X,Y,Z)}, where {\tt X}, {\tt Y}, and {\tt Z}
+are natural numbers and {\tt X+Y=Z}.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it plus\/}({\it X,Y,Z\/}) $\lar$\cr
+\qi {\it X\/}, {\it Y\/} {\rm , and} {\it Z\/} {\rm are natural
+numbers}\cr
+\qi {\rm such that} {\it Z\/} {\rm is the sum of} {\it X\/} {\rm and}
+{\it Y\/}{\rm .}\cr
+\noalign{\medskip}
+plus(0,X,X) $\lar$ natural\_number(X).\cr
+plus(s(X),Y,s(Z)) $\lar$ plus(X,Y,Z).\cr
+\noalign{\vskip 5pt}
+natural\_number(X) $\lar$ {\rm See Program \Prodefnatnum .}\cr
+\noalign{\bigskip}
+{\bf Program \Proadditi}{\rm :~~Addition}\cr}
+\endinsert\par
+{\bf Proposition}:~~Programs \Prodefnatnum\ and \Proadditi\ constitute a
+correct and complete axiomatization of addition with respect to the
+standard intended meaning of {\tt plus/3}.\par
+{\bf Proof}:~~(1) Completeness. Let {\tt X}, {\tt Y}, and {\tt Z} be
+natural numbers such that {\tt X+Y=Z}. We give a proof tree for the goal
+{\tt plus(X,Y,Z)}. If {\tt X} equals {\tt 0}, then {\tt Y} equals {\tt
+Z}. Since Program~\Prodefnatnum\ is a complete axiomatization of the
+natural numbers, there is a proof tree for {\tt natural\_number(Y)},
+which is easily extended to a proof tree for {\tt plus(0,Y,Y)}.
+Otherwise, {\tt X} equals {\tt s$^n$(0)} for some {\it n\/}. If {\tt Y}
+equals {\tt s$^m$(0)}, then {\tt Z} equals {\tt s$^{n+m}$(0)}. The proof
+tree in the right half of Figure~\Figprotreest\ establishes completeness.
+\par
+(2) Correctness. Let {\tt plus(X,Y,Z)} be in the meaning. A simple
+inductive argument on the size of {\tt X}, similar to the one used in the
+previous proposition, establishes that {\tt X+Y=Z}.\hskip 10pt\QEDA\par
+Addition is usually considered to be a function of two arguments rather
+than a relation of arity $3$. Generally, logic programs corresponding to
+functions of {\it n\/} arguments define relations of arity $n+1$. 
+Computing the value of a function is achieved by posing a query
+with {\it n\/} arguments instantiated and the argument place
+corresponding to the value of the function uninstantiated. The solution
+to the query is the value of the function with the given arguments. To
+make the analogy clearer, we give a functional definition of addition
+corresponding to the logic program:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+0+X = X.\cr
+s(X)+Y = s(X+Y).\cr}\medskip
+One advantage that relational programs have over functional programs is
+the multiple uses that can be made of the program. For example, the query
+{\tt plus(s(0),s(0),s(s(0)))?} means checking whether $1+1=2$.
+(We feel free to use the more readable decimal notation
+when mentioning numbers.) As for $\le$, the program for {\tt plus} is not
+efficient. The proof tree confirming that the sum of {\it N\/} and {\it
+M\/} is $N+M$ has $N+M+2$ nodes.\par
+Posing the query {\tt plus(s(0),s(0),X)?}, an example of the standard
+use, calculates the sum of  $1$ and  $1$. However, the program
+can just as easily be used for subtraction by posing a query such as {\tt
+plus(s(0),X,s(s(s(0))))?}. The computed value of {\tt X} is the difference
+between $3$ and $1$, namely, $2$. Similarly, asking a
+query with the first argument uninstantiated, and the second and third
+instantiated, also performs subtraction.\par
+A more novel use exploits the possibility of a query having {\it multiple
+solutions\/}. Consider the query {\tt plus(X,Y,s(s(s(0))))?}. It reads:
+``Do there exist numbers {\tt X} and {\tt Y} that add up to $3$."
+In other words, find a partition of the number $3$ into the sum of
+two numbers, {\tt X} and {\tt Y}. There are several solutions.\par
+A query with multiple solutions becomes more interesting when the
+properties of the variables in the query are restricted. There are two
+forms of restriction: using extra conjuncts in the query, and
+instantiating variables in the query. We saw examples of this when
+querying a database. Exercise (ii) at the end of this section requires to
+define a predicate {\tt even(X)}, which is true if {\tt X} is an even
+number. Assuming such a predicate, the query {\tt
+plus(X,Y,N),even(X),even(Y)?} gives a partition of {\tt N} into two even
+numbers. The second type of restriction is exemplified by the query {\tt
+plus(s(s(X)),s(s(Y)),N)?}, which insists that each of the numbers adding
+up to {\tt N\/} is strictly greater than $1$.\par
+Almost all logic programs have multiple uses. Consider Program
+\Prolesthaequ\ for $\le$, for example. The query {\tt s(0)$\le$s(s(0))?}
+checks whether $1$ is less than or equal to $2$. The query
+{\tt X $\le$ s(s(0))?} finds numbers {\tt X} less than or equal to
+$2$. The query {\tt X $\le$ Y?} computes pairs of numbers less than or
+equal to each other.\par
+Program~\Proadditi\ defining addition is not unique. For example, the
+logic program\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+plus(X,0,X) $\lar$ natural\_number(X).\cr
+plus(X,s(Y),s(Z)) $\lar$ plus(X,Y,Z).\cr}\medno
+has precisely the same meaning as Program~\Proadditi\ for {\tt plus}. Two
+programs are to be expected because of the symmetry between the first two
+arguments. A proof of correctness and completeness given for Program
+\Proadditi\ applies to this program by reversing the roles of the
+symmetric arguments.\par
+The meaning of the program for {\tt plus} would not change even if it
+consisted of the two programs combined. This composite program is
+undesirable, however. There are several different proof trees for the
+same goal. It is important both for runtime efficiency and for textual
+conciseness that axiomatizations of logic programs be minimal.\par
+We define a {\it type condition\/} to be a call to the predicate defining
+the type. For natural numbers, a type condition is any goal of the form
+{\tt natural\_number(X)}.\par
+In practice, both Programs \Prolesthaequ\ and \Proadditi\ are simplified
+by omitting the body of the base rule, {\tt natural\_number(X)}. Without
+this test, facts such as {\tt 0\/ $\le$ a} and {\tt plus(0,a,a)}, where
+{\tt a} is an arbitrary constant, will be in the programs' meanings. Type
+conditions are necessary for correct programs. However, type conditions
+distract from the simplicity of the programs and affect the size of the
+proof trees. Hence in the following we might omit explicit type
+conditions from the example programs, Programs~3.4--3.7.\par
+The basic programs shown are the building blocks for more complicated
+relations. A typical example is defining multiplication as repeated
+addition. Program~\Promulrepadd\ reflects this relation. The relation
+scheme is {\tt times(X,Y,Z)}, meaning {\tt X} times {\tt Y} equals {\tt
+Z}.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it times\/}({\it X,Y,Z\/}) $\lar$\cr
+\qi {\it X\/}{\rm ,} {\it Y\/} {\rm , and} {\it Z\/} {\rm are natural
+numbers}\cr
+\qi {\rm such that} {\it Z\/} {\rm is the product of} {\it X\/} {\rm and}
+{\it Y\/} {\rm .}\cr
+\noalign{\medskip}
+times(0,X,0).\cr
+times(s(X),Y,Z) $\lar$ times(X,Y,XY), plus(XY,Y,Z).\cr
+\noalign{\vskip 5pt}
+plus(X,Y,Z) $\lar$ {\rm See Program \Proadditi .}\cr
+\noalign{\bigskip}
+{\bf Program \Promulrepadd}{\rm :~~Multiplication as repeated
+addition}\cr}\vskip 0.6truecm
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it exp\/}({\it N,X,Y\/}) $\lar$\cr
+\qi {\it N\/}{\rm ,} {\it X\/} {\rm , and} {\it Y\/} {\rm are natural
+numbers}\cr
+\qi {\rm such that} {\it Y\/} {\rm equals} {\it X\/} {\rm raised to the
+power} {\it N\/}{\rm .}\cr
+\noalign{\medskip}
+exp(s(X),0,0).\cr
+exp(0,s(X),s(0)).\cr
+exp(s(N),X,Y) $\lar$ exp(N,X,Z), times(Z,X,Y).\cr
+\noalign{\vskip 5pt}
+times(X,Y,Z) $\lar$ {\rm See Program \Promulrepadd .}\cr
+\noalign{\bigskip}
+{\bf Program \Proexprepmul}{\rm :~~Exponentiation as repeated
+multiplication}\cr}\vskip 0.6truecm
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it factorial\/}({\it N,F\/}) $\lar$\cr
+\qi {\it F\/} {\rm equals} {\it N\/} {\rm factorial.}\cr
+\noalign{\medskip}
+factorial(0,s(0)).\cr
+factorial(s(N),F) $\lar$ factorial(N,F1), times(s(N),F1,F).\cr
+\noalign{\vskip 5pt}
+times(X,Y,Z) $\lar$ {\rm See Program \Promulrepadd .}\cr
+\noalign{\bigskip}
+{\bf Program \Procomfac}{\rm :~~Computing factorials}\cr}
+\endin\par
+Exponentiation is defined as repeated multiplication. Program
+\Proexprepmul\ for {\tt exp(N,X,Y)} expresses the relation that {\tt
+X$^N$=Y}. It is analogous to Program~\Promulrepadd\ for {\tt
+times(X,Y,Z)}, with {\tt exp} and {\tt times} replacing {\tt times} and
+{\tt plus}, respectively. The base cases for exponentiation are {\tt
+X$^0$=1} for all positive values of {\tt X}, and {\tt 0$^N$=0} for
+positive values of {\tt N}.\par
+A definition of the factorial function uses the definition of
+multiplication. Recall that $N!  = N\cdot N-1\cdot\ldots\cdot 2\cdot1$. 
+The predicate {\tt factorial(N,F)} relates a number {\tt N} to its 
+factorial {\tt F}. Program~\Procomfac\ is its axiomatization.\par
+Not all relations concerning natural numbers are defined recursively.
+Relations can also be defined in the style of programs in Chapter~2. An
+example is Program~\Promintwonum\ determining the minimum of two numbers
+via the relation {\tt minimum(N1,N2,Min)}.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it minimum\/}({\it N1,N2,Min\/}) $\lar$\cr
+\qi {\rm The minimum of the natural numbers} {\it N1\/} {\rm and} {\it
+N2\/} {\rm is} {\it Min\/}{\rm .}\cr
+\noalign{\medskip}
+minimum(N1,N2,N1) $\lar$ N1 $\le$ N2.\cr
+minimum(N1,N2,N2) $\lar$ N2 $\le$ N1.\cr
+\noalign{\vskip 5pt}
+N1 $\le$ N2 $\lar$ {\rm See Program \Prolesthaequ .}\cr
+\noalign{\bigskip}
+{\bf Program \Promintwonum}{\rm :~~The minimum of two numbers}\cr}
+\endin\par
+Composing a program to determine the remainder after integer division
+reveals an interesting phenomenon --- different mathematical definitions
+of the same concept are translated into different logic programs.
+Programs \Prononrecdef\ and \Prorucdefmod\ give two definitions of the
+relation {\tt mod(X,Y,Z)}, which is true if {\tt Z} is the value of {\tt
+X} modulo {\tt Y}, or in other words, {\tt Z} is the remainder of {\tt X}
+divided by {\tt Y}. The programs assume a relation $<$ as specified in
+Exercise (i) at the end of this section.\par
+Program~\Prononrecdef\ illustrates the direct translation of a
+mathematical definition, which is a logical statement, into a logic
+program. The program corresponds to an existential definition of the
+integer remainder: ``{\it Z\/} is the value of {\it X\/} mod {\it Y\/} if
+{\it Z\/} is strictly less than {\it Y\/}, and there exists a number {\it
+Q\/} such that $X=Q\cdot Y+Z$. In general,
+mathematical definitions are easily translated to logic programs.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it mod\/}({\it X,Y,Z\/}) $\lar$\cr
+\qi {\it Z\/} {\rm is the remainder of the integer division of} {\it X\/}
+{\rm by} {\it Y\/}{\rm .}\cr
+\noalign{\medskip}
+mod(X,Y,Z) $\lar$ Z $<$ Y, times(Y,Q,QY), plus(QY,Z,X).\cr
+\noalign{\bigskip}
+{\bf Program \Prononrecdef}{\rm :~~A nonrecursive definition of
+modulus}\cr}
+\endinsert\par
+We can relate Program~\Prononrecdef\ to constructive mathematics.
+Although seemingly an existential definition, it is also constructive,
+because of the constructive nature of $<$, {\tt plus}, and {\tt times}. The
+number {\it Q\/}, for example, proposed in the definition will be
+explicitly computed by {\tt times} in any use of {\tt mod}.\par
+In contrast to Program~\Prononrecdef, Program~\Prorucdefmod\ is defined
+recursively. It constitutes an algorithm for finding the integer
+remainder based on repeated subtraction. The first rule says  that {\it
+X\/} mod {\it Y\/} is {\it X\/} if {\it X\/} is strictly less than {\it
+Y\/}. The second rule says that the value of {\it X\/} mod {\it Y\/} is
+the same as $X--Y$ mod {\it Y\/}. The effect of any computation to
+determine the modulus is to repeatedly subtract {\it Y\/} from {\it X\/}
+until it becomes less than {\it Y\/} and hence is the correct value.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it mod\/}({\it X,Y,Z\/}) $\lar$\cr
+\qi {\it Z\/} {\rm is the remainder of the integer division of} {\it X\/}
+{\rm by} {\it Y\/}{\rm .}\cr
+\noalign{\medskip}
+mod(X,Y,X) $\lar$ X $<$ Y.\cr
+mod(X,Y,Z) $\lar$ plus(X1,Y,X), mod(X1,Y,Z).\cr
+\noalign{\bigskip}
+{\bf Program \Prorucdefmod}{\rm :~~A recursive definition of modulus}\cr}
+\endin\par
+The mathematical function {\it X} mod {\it Y\/} is not defined when {\it Y\/}
+is zero. Neither Program~\Prononrecdef\ nor Program~\Prorucdefmod\ has
+goal {\tt mod(X,0,Z)} in its meaning for any values of {\tt X} or {\tt
+Z}. The test of $<$ guarantees that.\par
+The computational model gives a way of distinguishing between the two
+programs for {\tt mod}. Given a particular {\it X\/}, {\it Y\/}, and {\it
+Z\/} satisfying {\tt mod}, we can compare the sizes of their proof trees.
+In general, proof trees produced with Program~\Prorucdefmod\ will be
+smaller than those produced with Program~\Prononrecdef. In that sense
+Program~\Prorucdefmod\ is more efficient. We defer more rigorous
+discussions of efficiency till the discussions on lists, where the
+insights gained will carry over to Prolog programs.\par
+Another example of translating a mathematical definition directly into a
+logic program is writing a program that defines Ackermann's function.
+Ackermann's function is the simplest example of a recursive function
+that is not primitive recursive. It is a function of two arguments,
+defined by three cases:\medskip
+\halign{\hskip 40pt\lft{#}\cr
+{\it ackermann\/}({\it 0,N\/}) = {\it N\/}+{\it 1\/}.\cr
+{\it ackermann\/}({\it M,0\/}) = {\it ackermann\/}({\it M-1,1\/}).\cr
+{\it ackermann\/}({\it M,N\/}) = {\it ackermann\/}({\it
+M-1,ackermann\/}({\it M,N-1\/})).\cr} \medskip
+Program~\Proackfun\ is a translation of the functional definition into a
+logic program. The predicate {\tt ackermann(M,N,A)} denotes that {\tt
+A=ackermann(M,N)}. The third rule involves two calls to Ackermann's
+function, one to compute the value of the second argument.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it ackermann\/}({\it X,Y,A\/}) $\lar$\cr
+\qi {\it A\/} {\rm is the value of Ackermann's}\cr
+\qi {\rm function for the natural numbers} {\it X\/} {\rm and} {\it
+Y\/}{\rm .}\cr
+\noalign{\medskip}
+ackermann(0,N,s(N)).\cr
+ackermann(s(M),0,Val) $\lar$ ackermann(M,s(0),Val).\cr
+ackermann(s(M),s(N),Val) $\lar$ \cr
+\qi ackermann(s(M),N,Val1),
+ackermann(M,Val1,Val).\cr
+\noalign{\bigskip}
+{\bf Program \Proackfun}{\rm :~~Ackermann's function}\cr}
+\endinsert\par
+The functional definition of Ackermann's function is clearer than the
+relational one given in Program~\Proackfun. In general, functional
+notation is more readable for pure functional definitions, such as
+Ackermann's function and the factorial function (Program~\Procomfac).
+Expressing constraints can also be awkward with relational logic
+programs. For example, Program~\Prononrecdef\ says less directly that
+$X=Q\cdot Y+Z$.\par
+The final example in this section is the Euclidean algorithm for finding
+the greatest common divisor of two natural numbers, recast as a logic
+program. Like Program~\Prorucdefmod, it is a recursive program not based
+on the recursive structure of numbers. The relation scheme is {\tt
+gcd(X,Y,Z)}, with intended meaning that {\tt Z} is the greatest common
+divisor (or gcd) of two natural numbers {\tt X} and {\tt Y}. It uses
+either of the two programs, \Prononrecdef\ or \Prorucdefmod, for {\tt
+mod}.\par
+The first rule in Program~\Proeucalg\ is the logical essence of the
+Euclidean algorithm. The gcd of {\it X\/} and {\it Y\/} is the same as
+the gcd of {\it Y\/} and {\it X} mod {\it Y\/}.~~A proof that 
+Program~\Proeucalg\ is correct depends on the correctness of the above
+mathematical statement about greatest common divisors. The proof that the
+Euclidean algorithm is correct similarly rests on this result.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it gcd\/}({\it X,Y,Z\/}) $\lar$\cr
+\qi {\it Z\/} {\rm is the greatest common divisor of}\cr
+\qi {\rm the natural numbers} {\it X\/} {\rm and} {\it Y\/}{\rm .}\cr
+\noalign{\medskip}
+gcd(X,Y,Gcd) $\lar$ mod(X,Y,Z), gcd(Y,Z,Gcd).\cr
+gcd(X,0,X)$\lar$ X $>$ 0.\cr
+\noalign{\bigskip}
+{\bf Program \Proeucalg}{\rm :~~The Euclidean algorithm}\cr}
+\endinsert\par
+The second fact in Program~\Proeucalg\ is the base fact. It must be
+specified that {\tt X} is greater than 0 to preclude {\tt gcd(0,0,0)}
+from being in the meaning. The gcd of 0 and 0 is not well defined.\vskip
+15pt\parno
+{\bf Exercises for Section 3.1}\vskip 5pt\par
+\offset{25pt}{(i)} Modify Program~\Prolesthaequ\ for $\le$ to axiomatize
+the relations $<$, $>$, and $\ge$. Discuss multiple uses of these
+programs.\par
+\offset{25pt}{(ii)} Prove that Program~\Prolesthaequ\ is a correct and
+complete axiomatization of $\le$.\par
+\offset{25pt}{(iii)} Prove that a proof tree for the query {\tt s$^n$(0)}
+$\le$ {\tt s$^m$(0)} using Program~\Prolesthaequ\ has $M+2$ nodes.\par
+\offset{25pt}{(iv)} Define predicates {\tt even(X)} and {\tt odd(X)} for
+determining if a natural number is even or odd.
+(Hint:~~Modify Program~\Prodefnatnum\ for {\tt natural\_number}.)\par
+\offset{25pt}{(v)} Write a logic program defining the relation {\tt
+fib(N,F)} to determine the {\tt N}th Fibonacci number {\tt F}.\par
+\offset{25pt}{(vi)} The predicate {\tt times} can be used for computing
+exact quotients with queries such as {\tt
+times(s(s(0)),X,s(s(s(s(0)))))?} to find the result of $4$ divided
+by $2$. The query {\tt times(s(s(0)),X,s(s(s(0))))?} to find 
+$3/2$ has no solution. Many applications require the use of integer
+division that would calculate $3/2$ to be $1$. Write a program to 
+compute integer quotients. (Hint:~~Use repeated subtraction.)\par
+\offset{25pt}{(vii)} Modify Program \Proeucalg\ for finding the gcd of
+two integers so that it performs repeated subtraction directly rather
+than use the mod function.
+(Hint:~~The program repeatedly subtracts the smaller number from the
+larger number until the two numbers are equal.)\par
+\offset{25pt}{(viii)} Rewrite the logic programs in Section~3.1 using a
+different representation of natural numbers, namely as a sum of 1's. For
+example, the modified version of Program~\Prodefnatnum\ would be\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+natural\_number(1).\cr
+natural\_number(1+X) $\lar$ natural\_number(X).\cr}\medskip
+\offset{25pt}{} Note that + is used as a binary operator, and 0 is not
+defined to be a natural number.\par
+\sect{Lists}
+The basic structure for arithmetic is the unary successor functor.
+Although complicated recursive functions such as Ackermann's function 
+can be defined, the use of a unary recursive structure is limited. This
+section discusses the binary structure, the {\it list\/}.\par
+The first argument of a list holds an {\it element\/}, and the second
+argument is recursively the rest of the list. Lists are sufficient for
+most computations --- attested to by the success of the programming
+language Lisp, which has lists as its basic compound data structure.
+Arbitrarily complex structures can be represented with lists, though it
+is more convenient to use different structures when appropriate.\par
+For lists, as for numbers, a constant symbol is necessary to terminate
+recursion. This ``empty list," referred to as nil, will be denoted here
+by the symbol \(~\). We also need a functor of arity 2. Historically,
+the usual functor for lists is ``{\it .}" (pronounced dot), which
+overloads the use of the period. It is convenient to define a separate,
+special syntax. The term {\tt .(X,Y)} is denoted {\tt \(X$\mid$Y\)}. Its
+components have special names: {\tt X} is called the {\it head\/} and
+{\tt Y} is called the {\it tail\/}.\par
+The term {\tt \(X$\mid$Y\)} corresponds to a cons pair in Lisp. The
+corresponding words for head and tail are, respectively, {\it car\/} and
+{\it cdr\/}.\par
+Figure~\Figequforlis\ illustrates the relation between lists written
+with different syntaxes. The first column writes lists with the dot
+functor, and is the way lists are considered as terms in logic programs.
+The second column gives the square bracket equivalent of the dot syntax.
+The third column is an improvement upon the syntax of the second column,
+essentially hiding the recursive structure of lists. In this syntax,
+lists are written as a sequence of elements enclosed in square brackets
+and separated by commas. The empty list used to terminate the recursive
+structure is suppressed. Note the use of ``cons pair notation" in the
+third column when the list has a variable tail.
+\midinsert\vskip -0.2truecm
+$$\vcenter{\halign{\lft{#}\qquad&\lft{#}\qquad&\lft{#}\cr
+Formal object&Cons pair syntax&Element syntax\cr
+\noalign{\vskip 5pt}
+.(a,\(~\))&\(a$\mid$\(~\)\)&\(a\)\cr
+.(a,.(b,\(~\)))&\(a$\mid$\(b$\mid$\(~\)\)\)&\(a,b\)\cr
+.(a,.(b,.(c,\(~\))))&\(a$\mid$\(b$\mid$\(c
+$\mid$\(~\)\)\)\)&\(a,b,c\)\cr
+.(a,X)&\(a$\mid$X\)&\(a$\mid$X\)\cr
+.(a,.(b,X))&\(a$\mid$\(b$\mid$X\)\)&\(a,b$\mid$X\)\cr}}$$\medskip
+\ctrline{{\bf Figure \Figequforlis}:~~Equivalent forms of lists}
+\endinsert\par
+Terms built with the dot functor are more general than lists. Program
+\Prodeflis\ defines a list precisely. Declaratively it reads: ``A list is
+either the empty list or a cons pair whose tail is a list." The program
+is analogous to Program~\Prodefnatnum\ defining natural numbers, and is
+the simple type definition of lists.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it list\/}({\it Xs\/}) $\lar$\cr
+\qi {\it Xs\/} {\rm is a list.}\cr
+\noalign{\medskip}
+list(\(~\)).\cr
+list(\(X$\mid$Xs\)) $\lar$ list(Xs).\cr
+\noalign{\bigskip}
+{\bf Program \Prodeflis}{\rm :~~Defining a list}\cr}
+\endinsert\par
+Figure~\Figprotrever\ gives a proof tree for the goal {\tt
+list([a,b,c])}. Implicit in the proof tree are ground instances of rules
+in Program~\Prodeflis, for example, {\tt list([a,b,c]) $\lar$
+list([b,c])}. We specify the particular instance here explicitly, as
+instances of lists in cons pair notation can be confusing. {\tt [a,b,c]}
+is an instance of {\tt [X$\mid$Xs]} under the substitution {\tt
+$\{$X=a,Xs=[b,c]$\}$}.
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\ctr{\tt #}\cr
+list([a,b,c])\cr
+$\mid$\cr
+list([b,c])\cr
+$\mid$\cr
+list([c])\cr
+$\mid$\cr
+list([~])\cr}}$$\medskip
+\ctrline{{\bf Figure \Figprotrever}:~~Proof tree verifying a list}
+\endin\par
+Because lists are richer data structures than numbers, a great
+variety of interesting relations can be specified with them.
+Perhaps the most basic operation with lists is determining whether a
+particular element is in a list. The predicate expressing this
+relation is {\tt member(Element,List)}. Program~\Promemlis\ is a
+recursive definition of {\tt member/2}.\par
+Declaratively, the reading of Program~\Promemlis\ is straightforward.
+{\tt X} is an element of a list if it is the head of the list by the
+first clause, or if it is a member of the tail of the list by the second
+clause. The meaning of the program is the set of all ground instances
+{\tt member(X,Xs)}, where {\tt X} is an element of {\tt Xs}. We omit the
+type condition in the first clause. Alternatively, it would be written
+\halign{\hskip 40pt\lft{\tt #}\cr
+member(X,\(X$\mid$Xs\)) $\lar$ list(Xs).\cr}\medskip
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it member\/}({\it Element,List\/}) $\lar$\cr
+\qi {\it Element\/} {\rm is an element of the list} {\it List\/}{\rm .}\cr
+\noalign{\medskip}
+member(X,\(X$\mid$Xs\)).\cr
+member(X,\(Y$\mid$Ys\)) $\lar$ member(X,Ys).\cr
+\noalign{\bigskip}
+{\bf Program \Promemlis}{\rm :~~Membership of a list}\cr}
+\endinsert\medskip
+This program has many interesting applications, to be revealed throughout
+the book. Its basic uses are checking whether an element is in a list
+with a query such as {\tt member(b,\(a,b,c\))?}, finding an element of a
+list with a query such as {\tt member(X,\(a,b,c\))?}, and finding a list
+containing an element with a query such as {\tt member(b,X)?}. This last
+query may seem strange, but there are programs that are based on this use
+of {\tt member}.\par
+We use the following conventions wherever possible when naming variables
+in programs involving lists. If {\tt X} is used to denote the head of a
+list, then {\tt Xs} will denote its tail. More generally, plural variable
+names will denote lists of elements, and singular names will denote
+individual elements. Numerical suffixes will denote variants of lists.
+Relation schemes will still contain mnemonic names.\par
+Our next example is a predicate {\tt sublist(Sub,List)} for determining
+whether {\tt Sub} is a sublist of {\tt List}. A sublist needs the
+elements to be consecutive: {\tt \(b,c\)} is a sublist of {\tt
+\(a,b,c,d\)}, whereas {\tt \(a,c\)} is not.\par
+It is convenient to define two special cases of sublists to make the
+definition of {\tt sublist} easier. It is good style when composing
+logic programs to define meaningful relations as auxiliary
+predicates. The two cases considered are initial sublists, or
+prefixes, of a list, and terminal sublists, or suffixes, of a list.
+The programs are interesting in their own right.\par The predicate
+{\tt prefix(Prefix,List)} is true if {\tt Prefix} is an initial
+sublist of {\tt List}, for example, {\tt prefix(\(a,b\),\(a,b,c\))} is
+true. The companion predicate to {\tt prefix} is {\tt
+suffix(Suffix,List)}, determining if {\tt Suffix} is a terminal sublist
+of {\tt List}. For example, {\tt suffix(\(b,c\),\(a,b,c\))} is true.
+Both predicates are defined in Program~\Propresuflis. A type condition
+expressing that the variables in the base facts are lists should be
+added to the base fact in each predicate to give the correct meaning.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it prefix\/}({\it Prefix,List\/}) $\lar$\cr
+\qi {\it Prefix\/} {\rm is a prefix of} {\it List\/}{\rm .}\cr
+\noalign{\medskip}
+prefix(\(~\),Ys).\cr
+prefix(\(X$\mid$Xs\),\(X$\mid$Ys\)) $\lar$ prefix(Xs,Ys).\cr
+\noalign{\medskip}
+{\it suffix\/}({\it Suffix,List\/}) $\lar$\cr
+\qi {\it Suffix\/} {\rm is a suffix of} {\it List\/}{\rm .}\cr
+\noalign{\medskip}
+suffix(Xs,Xs).\cr
+suffix(Xs,\(Y$\mid$Ys\)) $\lar$ suffix(Xs,Ys).\cr
+\noalign{\bigskip}
+{\bf Program \Propresuflis}{\rm :~~Prefixes and suffixes of a list}\cr}
+\endinsert\par
+An arbitrary sublist can be specified in terms of prefixes and suffixes:
+namely, as a suffix of a prefix, or as a prefix of a suffix. Program
+\Prodetsublis a expresses the logical rule that {\tt Xs} is a sublist of
+{\tt Ys} if there exists {\it Ps\/} such that {\it Ps\/} is a prefix of
+{\tt Ys} and {\tt Xs} is a suffix of {\it Ps\/}. Program~\Prodetsublis b
+is the dual definition of a sublist as a prefix of a suffix.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it sublist\/}({\it Sub,List\/}) $\lar$\cr
+\qi {\it Sub\/} {\rm is a sublist of} {\it List\/}{\rm .}\cr
+\noalign{\medskip}
+{\rm a:~~Suffix of a prefix}\cr
+\noalign{\vskip 5pt}
+\qi sublist(Xs,Ys) $\lar$ prefix(Ps,Ys), suffix(Xs,Ps).\cr
+\noalign{\vskip 10pt}
+{\rm b:~~Prefix of a suffix}\cr
+\noalign{\vskip 5pt}
+\qi sublist(Xs,Ys) $\lar$ prefix(Xs,Ss), suffix(Ss,Ys).\cr
+\noalign{\vskip 10pt}
+{\rm c:~~Recursive definition of a sublist}\cr
+\noalign{\vskip 5pt}
+\qi sublist(Xs,Ys) $\lar$ prefix(Xs,Ys).\cr
+\qi sublist(Xs,\(Y$\mid$Ys\)) $\lar$ sublist(Xs,Ys).\cr
+\noalign{\vskip 10pt}
+{\rm d:~~Prefix of a suffix, using} append\cr
+\noalign{\vskip 5pt}
+\qi sublist(Xs,AsXsBs) $\lar$\cr
+\qii append(As,XsBs,AsXsBs), append(Xs,Bs,XsBs).\cr
+\noalign{\vskip 10pt}
+\noalign{\vskip 5pt}
+{\rm e:~~Suffix of a prefix, using} append\cr
+\noalign{\vskip 5pt}
+\qi sublist(Xs,AsXsBs) $\lar$\cr
+\qii append(AsXs,Bs,AsXsBs), append(As,Xs,AsXs).\cr
+\noalign{\bigskip}
+{\bf Program \Prodetsublis}{\rm :~~Determining sublists of lists}\cr}
+\endin\par
+The predicate {\tt prefix} can also be used as the basis of a recursive
+definition of {\tt sublist}. This is given as Program~\Prodetsublis c.
+The base rule reads that a prefix of a list is a sublist of a list. The
+recursive rule reads that the sublist of a tail of a list is a sublist of
+the list itself.\par
+The predicate {\tt member} can be viewed as a special case of {\tt
+sublist} defined by the rule \medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+member(X,Xs) $\lar$ sublist(\(X\),Xs).\cr}\medskip
+The basic operation with lists is concatenating two lists to give a third
+list. This defines a relation, {\tt append(Xs,Ys,Zs)}, between two
+lists {\tt Xs}, {\tt Ys} and the result {\tt Zs} of joining them
+together. The code for {\tt append}, Program~\Proapptwolis, is identical
+in structure to the basic program for combining two numbers,
+Program~\Proadditi\ for {\tt plus}.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it append\/}({\it Xs,Ys,XsYs\/}) $\lar$\cr
+\qi {\it XsYs\/} {\rm is the result of concatenating}\cr
+\qi {\rm the lists} {\it Xs\/} {\rm and} {\it Ys\/}{\rm .}\cr
+\noalign{\medskip}
+append(\(~\),Ys,Ys).\cr
+append(\(X$\mid$Xs\),Ys,\(X$\mid$Zs\)) $\lar$
+append(Xs,Ys,Zs).\cr
+\noalign{\bigskip}
+{\bf Program \Proapptwolis}{\rm :~~Appending two lists}\cr}
+\endinsert\par
+Figure~\Figprotreapp\ gives a proof tree for the goal {\tt
+append([a,b],[c,d],[a,b,c,d])}. The tree structure suggests that its size
+is linear in the size of the first list. In general, if {\tt Xs} is a
+list of {\it n\/} elements, the proof tree for {\tt append(Xs,Ys,Zs)} has
+$n+1$ nodes.
+\midinsert\vskip -0.2truecm
+$$\vcenter{\halign{\lft{\tt #}\cr
+append([a,b],[c,d],[a,b,c,d])\cr
+\qquad $\mid$\cr
+append([b],[c,d],[b,c,d])\cr
+\qquad $\mid$\cr
+append([~],[c,d],[c,d])\cr}}$$\medskip
+\ctrline{{\bf Figure \Figprotreapp}:~~Proof tree for appending two
+lists}
+\endinsert\par
+There are multiple uses for {\tt append} similar to the multiple uses for
+{\tt plus}. The basic use is to concatenate two lists by posing a query
+such as {\tt append(\(a,b,c\),\(d,e\),Xs)?} with answer {\tt
+Xs=\(a,b,c,d,e\)}. A query such as {\tt append(Xs,\(c,d\),\(a,b,c,d\))?}
+finds the difference {\tt Xs=\(a,b\)} between the lists {\tt \(c,d\)} and
+{\tt \(a,b,c,d\)}. Unlike {\tt plus}, {\tt append} is not symmetric in
+its first two arguments, and thus there are two distinct versions of
+finding the difference between two lists.\par
+The analogous process to partitioning a number is splitting a list. The
+query {\tt append(As,Bs,\(a,b,c,d\))?}, for example, asks for lists {\tt
+As} and {\tt Bs} such that appending {\tt Bs} to {\tt As} gives the list
+{\tt \(a,b,c,d\)}. Queries about splitting lists are made more
+interesting by partially specifying the nature of the split lists. The
+predicates {\tt member}, {\tt sublist}, {\tt prefix}, and {\tt suffix},
+introduced previously, can all be defined in terms of {\tt append} 
+by viewing the process as splitting a list.\par
+The most straightforward definitions are for {\tt prefix} and {\tt
+suffix}, which just specify which of the two split pieces are of
+interest:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+prefix(Xs,Ys) $\lar$ append(Xs,As,Ys).\cr
+suffix(Xs,Ys) $\lar$ append(As,Xs,Ys).\cr}\medskip
+{\tt Sublist} can be written using two {\tt append} goals. There are two
+distinct variants, given as Programs \Prodetsublis d and \Prodetsublis e.
+These two programs are obtained from Programs \Prodetsublis a and
+\Prodetsublis b, respectively, where {\tt prefix} and {\tt suffix} are
+replaced by {\tt append} goals.\par
+{\tt Member} can be defined using {\tt append}, as follows:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+member(X,Ys) $\lar$ append(As,\(X$\mid$Xs\),Ys).\cr}\medskip
+This says that {\tt X} is a member of {\tt Ys} if {\tt Ys} can be split
+into two lists where {\tt X} is the head of the second list.\par
+A similar rule can be written to express the relation {\tt
+adjacent(X,Y,Zs)} that two elements {\tt X} and {\tt Y} are adjacent in a
+list {\tt Zs}:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+adjacent(X,Y,Zs) $\lar$ append(As,\(X,Y$\mid$Ys\),Zs).\cr}\medskip
+Another relation easily expressed through {\tt append} is determining
+the last element of a list. The desired pattern of the second argument to
+{\tt append}, a list with one element, is built into the rule:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+last(X,Xs) $\lar$ append(As,\(X\),Xs).\cr}\medskip
+Repeated applications of {\tt append} can be used to define a predicate {\tt
+reverse(List,Tsil)}. The intended meaning of {\tt reverse} is that {\tt
+Tsil} is a list containing the elements in the list {\tt List} in reverse
+order to how they appear in {\tt List}. An example of a goal in the
+meaning of the program is {\tt reverse(\(a,b,c\),\(c,b,a\))}. The naive
+version, given as Program~\Prorevlis a, is the logical equivalent of the
+recursive formulation in any language: recursively reverse the tail of
+the list, and then add the first element at the back of the reversed
+tail.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it reverse\/}({\it List,Tsil\/}) $\lar$\cr
+\qi {\it Tsil\/} {\rm is the result of reversing the list} {\it
+List\/}{\rm .}\cr
+\noalign{\medskip}
+{\rm a:~~Naive reverse}\cr
+\noalign{\vskip 5pt}
+\qi reverse(\(~\),\(~\)).\cr
+\qi reverse(\(X$\mid$Xs\),Zs) $\lar$ reverse(Xs,Ys),
+append(Ys,\(X\),Zs).\cr
+\noalign{\vskip 10pt}
+{\rm b:~~Reverse-accumulate}\cr
+\noalign{\vskip 5pt}
+\qi reverse(Xs,Ys) $\lar$ reverse(Xs,[~],Ys).\cr
+\noalign{\vskip 5pt}
+\qi reverse([X$\mid$Xs],Acc,Ys) $\lar$ reverse(Xs,[X$\mid$Acc],Ys).\cr
+\qi reverse([~],Ys,Ys).\cr
+\noalign{\bigskip}
+{\bf Program \Prorevlis}{\rm :~~Reversing a list}\cr}
+\endinsert\par
+There is an alternative way of defining {\tt reverse} without calling
+{\tt append} directly. We define an auxiliary predicate {\tt
+reverse(Xs,Ys,Zs)}, which is true if {\tt Zs} is the result of appending
+{\tt Ys} to the elements of {\tt Xs} reversed. It is defined in Program
+\Prorevlis b. The predicate {\tt reverse/3} is related to {\tt reverse/2}
+by the first clause in Program~\Prorevlis b.\par
+Program~\Prorevlis b is more efficient than Program~\Prorevlis a.
+Consider Figure~\Figprotrerev\ , showing proof trees for the goal {\tt
+reverse([a,b,c],[c,b,a])} using both programs. In general, the size of the
+proof tree of Program~\Prorevlis a is quadratic in the number of elements
+in the list to be reversed, while that of Program~\Prorevlis b is linear.
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\ctr{\tt #}\cr
+reverse([a,b,c],[c,b,a])\cr
+\noalign{\vskip 15pt}
+reverse([b,c],[c,b])\quad append([c,b],[a],[c,b,a])\cr
+\noalign{\vskip 15pt}
+reverse([c],[c])\quad append([c],[b],[c,b])\quad append([b],[a],[b,a])\cr
+\noalign{\vskip 15pt}
+reverse([~],[~])\quad append([~],[c],[c])\quad append([~],[b],[b])\quad
+append([~],[a],[a])\cr}}$$
+$$\vcenter{\halign{\ctr{\tt #}\cr
+reverse([a,b,c],[c,b,a])\cr
+\noalign{\vskip 5pt}
+$\mid$\cr
+\noalign{\vskip 5pt}
+reverse([a,b,c],[~],[c,b,a])\cr
+\noalign{\vskip 5pt}
+$\mid$\cr
+\noalign{\vskip 5pt}
+reverse([b,c],[a],[c,b,a])\cr
+\noalign{\vskip 5pt}
+$\mid$\cr
+\noalign{\vskip 5pt}
+reverse([c],[b,a],[c,b,a])\cr
+\noalign{\vskip 5pt}
+$\mid$\cr
+\noalign{\vskip 5pt}
+reverse([~],[c,b,a],[c,b,a])\cr}}$$\medskip
+\ctrline{{\bf Figure \Figprotrerev}:~~Proof trees for reversing a list}
+\endin\par
+The insight in Program~\Prorevlis b is the use of a better data structure
+for representing the sequence of elements, which we discuss in more
+detail in Chapters 7 and 15.\par
+The final program in this section, Program~\Prodetlenlis, expresses a
+relation between numbers and lists, using the recursive structure of
+each. The predicate {\tt length(Xs,N)} is true if {\tt Xs} is a list of
+length {\tt N}, that is, contains {\tt N} elements, where {\tt N} is a
+natural number. For example, {\tt length(\(a,b\),s(s(0)))}, indicating
+that {\tt \(a,b\)} has two elements, is in the program's meaning.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it length\/}({\it Xs,N\/}) $\lar$\cr
+\qi {\rm The list} {\it Xs\/} {\rm has} {\it N\/} {\rm elements.}\cr
+\noalign{\medskip}
+length(\(~\),0).\cr
+length(\(X$\mid$Xs\),s(N)) $\lar$ length(Xs,N).\cr
+\noalign{\bigskip}
+{\bf Program \Prodetlenlis}{\rm :~~Determining the length of a list}\cr}
+\endin\par
+Let us consider the multiple uses of Program \Prodetlenlis. The query
+{\tt length(\(a,b\),}\linebreak
+{\tt X)?} computes the length, $2$, of a list {\tt \(a,b\)}. In
+this way, {\tt length} is regarded as a function of a list, with the
+functional definition\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+length(\(~\)) = 0\cr
+length(\(X$\mid$Xs\)) = s(length(Xs)).\cr}\medskip
+The query {\tt length(\(a,b\),s(s(0)))?} checks whether the list {\tt
+\(a,b\)} has length $2$. The query {\tt length(Xs,s(s(0)))?}
+generates a list of length $2$ with variables for elements.\vskip
+15pt\parno
+{\bf Exercises for Section 3.2}\vskip 5pt\par
+\offset{20pt}{(i)} A variant of Program~\Prodetsublis\ for {\tt sublist}
+is defined by the following three rules:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+subsequence(\(X$\mid$Xs\),\(X$\mid$Ys\)) $\lar$ subsequence(Xs,Ys).\cr
+subsequence(Xs,\(Y$\mid$Ys\)) $\lar$ subsequence(Xs,Ys).\cr
+subsequence(\(~\),Ys).\cr}\medno
+\offset{20pt}{} Explain why this program has a different meaning from
+Program~\Prodetsublis.\par
+\offset{20pt}{(ii)} Write recursive programs for {\tt adjacent} and {\tt
+last} that have the same meaning as the predicates defined in the text
+in terms of {\tt append}.\par
+\offset{20pt}{(iii)} Write a program for {\tt double(List,ListList)},
+where every element in {\tt List} appears twice in {\tt ListList}, e.g.,\
+{\tt double(\(1,2,3\),\(1,1,2,2,3,3\))} is true.\par
+\offset{20pt}{(iv)} Compute the size of the proof tree as a function of
+the size of the input list for Programs \Prorevlis a and \Prorevlis b
+defining {\tt reverse}.\par
+\offset{20pt}{(v)} Define the relation {\tt sum(ListOfIntegers,Sum)},
+which holds if {\tt Sum} is the sum of the {\tt ListOfIntegers},\bki
+(a) Using {\tt plus/3};\bki
+(b) Without using any auxiliary predicate.\bk
+(Hint:~~Three axioms are enough.)\endpage
+\sect{Composing Recursive Programs}
+No explanation has been given so far about how the example logic programs
+have been composed. The composition of logic programs is a skill that
+can be learned by apprenticeship or osmosis, and most definitely by
+practice. For simple relations, the best axiomatizations have an
+aesthetic elegance that look obviously correct when written down.
+Through solving the exercises, the reader may find, however, that there
+is a difference between recognizing and constructing elegant logic
+programs.\par
+This section gives more example programs involving lists. Their
+presentation, however, places more emphasis on how the programs might be
+composed. Two principles are illustrated: how to blend procedural and
+declarative thinking, and how to develop a program top-down.\par
+We have shown the dual reading of clauses: declarative and procedural.
+How do they interrelate when composing logic programs? Pragmatically, one
+thinks procedurally when programming. However, one thinks declaratively
+when considering issues of truth and meaning. One way to blend them in
+logic programming is to compose procedurally and then interpret the
+result as a declarative statement. Construct a program with a given use
+in mind; then consider if the alternative uses make declarative sense. We
+apply this to a program for deleting elements from a list.\par
+The first, and most important, step is to specify the intended meaning of
+the relation. Clearly, three arguments are involved when
+deleting elements from a list: an element {\tt X} to be deleted, a list
+{\tt L1} that might have occurrences of {\tt X}, and a list {\tt L2}
+with all occurrences of {\tt X} deleted. An appropriate relation scheme
+is {\tt delete(L1,X,L2)}. The natural meaning is all ground instances
+where {\tt L2} is the list {\tt L1} with all occurrences of {\tt X}
+removed.\par
+When composing the program, it is easiest to think of one specific use.
+Consider the query {\tt delete(\(a,b,c,b\),b,X)?}, a typical example of
+finding the result of deleting an element from a list. The answer here is
+{\tt X=\(a,c\)}. The program will be recursive on the first argument.
+Let's don our procedural thinking caps.\par
+We begin with the recursive part. The usual form of the recursive
+argument for lists is {\tt \(X$\mid$Xs\)}. There are two possibilities to
+consider, one where {\tt X} is the element to be deleted, and one where
+it is not. In the first case, the result of recursively deleting {\tt X}
+from {\tt Xs} is the desired answer to the query. The appropriate rule is
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+delete(\(X$\mid$Xs\),X,Ys) $\lar$ delete(Xs,X,Ys).\cr}\medskip
+Switching hats, the declarative reading of this rule is: ``The deletion
+of {\tt X} from {\tt \(X$\mid$Xs\)} is {\tt Ys} if the deletion of {\tt
+X} from {\tt Xs} is {\tt Ys}." The condition that the head of the list
+and the element to be deleted are the same is specified by the shared
+variable in the head of the rule.\par
+The second case where the element to be deleted is different from {\tt
+X}, the head of the list, is similar.  The result required is a list
+whose head is {\tt X} and whose tail is the result of recursively
+deleting the element. The rule is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+delete(\(X$\mid$Xs\),Z,\(X$\mid$Ys\)) $\lar$ X$\ne$Z,
+delete(Xs,Z,Ys).\cr}\medskip
+The rule's declarative reading is: ``The deletion of {\tt Z} from {\tt
+\(X$\mid$Xs\)} is {\tt \(X$\mid$Ys\)} if {\tt Z} is different from {\tt
+X} and the deletion of {\tt Z} from {\tt Xs} is {\tt Ys}." In contrast to
+the previous rule, the condition that the head of the list and the
+element to be deleted are different is made explicit in the body of the
+rule.\par
+The base case is straightforward. No elements can be deleted from the
+empty list, and the required result is also the empty list. This gives
+the fact {\tt delete(\(~\),X,\(~\))}. The complete program is collected
+together as Program~\Prodeloccele.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it delete\/}({\it List,X,HasNoXs\/}) $\lar$\cr
+\qi {\rm The list} {\it HasNoXs\/} {\rm is the result of removing all}\cr
+\qi {\rm occurrences of} {\it X\/} {\rm from the list} {\it List\/}{\rm .}\cr
+\noalign{\medskip}
+delete(\(X$\mid$Xs\),X,Ys) $\lar$ delete(Xs,X,Ys).\cr
+delete(\(X$\mid$Xs\),Z,\(X$\mid$Ys\)) $\lar$
+X$\ne$Z, delete(Xs,Z,Ys).\cr
+delete(\(~\),X,\(~\)).\cr
+\noalign{\bigskip}
+{\bf Program \Prodeloccele}{\rm :~~Deleting all occurrences  of an
+element from a list}\cr}
+\endinsert\par
+Let us review the program we have written, and consider alternative
+formulations. Omitting the condition {\tt X$\ne$Z} from the second rule
+in Program~\Prodeloccele\ gives a variant of {\tt delete}. This variant
+has a less natural meaning, since any number of occurrences of an element
+may be deleted. For example, {\tt delete(\(a,b,c,b\),b,\(a,c\))}, {\tt
+delete(\(a,b,c,b\),b,\(a,c,b\))}, {\tt delete(\(a,b,c,b\),b,\(a,b,c\))},
+and {\tt delete(\(a,b,c,b\),b,\(a,b,c,b\))} are all in the meaning of the
+variant.\par
+Both Program~\Prodeloccele\ and the variant include in their
+meaning instances where the element to be deleted does not appear in
+either list, for example, {\tt delete(\(a\),b,\(a\))} is true. There are
+applications where this is not desired. Program~\Proselelelis\ defines
+{\tt select(X,L1,L2)}, a relation that has a different approach to
+elements not appearing in the list. The meaning of {\tt select(X,L1,L2)}
+is all ground instances where {\tt L2} is the list {\tt L1} where exactly
+one occurrence of {\tt X} has been removed. The declarative reading of
+Program~\Proselelelis\ is: ``{\tt X} is selected from {\tt \(X$\mid$Xs\)}
+to give {\tt Xs}; or {\tt X} is selected from {\tt \(Y$\mid$Ys\)} to give
+{\tt \(Y$\mid$Zs\)} if {\tt X} is selected from {\tt Ys} to give {\tt
+Zs}."
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it select\/}({\it X,HasXs,OneLessXs\/}) $\lar$\cr
+\qi {\rm The list} {\it OneLessXs\/} {\rm is the result of removing}\cr
+\qi {\rm one occurrence of} {\it X\/} {\rm from the list} {\it
+HasXs\/}{\rm .}\cr
+\noalign{\medskip}
+select(X,\(X$\mid$Xs\),Xs).\cr
+select(X,\(Y$\mid$Ys\),\(Y$\mid$Zs\)) $\lar$ select(X,Ys,Zs).\cr
+\noalign{\bigskip}
+{\bf Program \Proselelelis}{\rm :~~Selecting an element from a list}\cr}
+\endinsert\par
+A major thrust in programming has been the emphasis on a top-down design
+methodology, together with stepwise refinement. Loosely, the methodology
+is to state the general problem, break it down into subproblems, and then
+solve the pieces. A top-down programming style is one natural way for
+composing logic programs. Our description of programs throughout the book
+will be mostly top-down. The rest of this section describes the
+composition of two programs for sorting a list: permutation sort and
+quicksort. Their top-down development is stressed.\par
+A logical specification of sorting a list is finding an ordered
+permutation of a list. This can be written down immediately as a logic
+program. The basic relation scheme is {\tt sort(Xs,Ys)}, where {\tt Ys}
+is a list containing the elements in {\tt Xs} sorted in ascending order:
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+sort(Xs,Ys) $\lar$ permutation(Xs,Ys), ordered(Ys).\cr}\medno
+The top-level goal of sorting has been decomposed. We must now define
+{\tt permutation} and {\tt ordered}.\par
+Testing whether a list is ordered ascendingly can be expressed in the two
+clauses that follow. The fact says that a list with a single element is
+necessarily ordered. The rule says that a list is ordered if the first
+element is less than or equal to the second, and if the rest of the list,
+beginning from the second element, is ordered:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+ordered(\(X\)).\cr
+ordered(\(X,Y$\mid$Ys\)) $\lar$
+X $\le$ Y, ordered(\(Y$\mid$Ys\)).\cr}\medskip
+A program for {\tt permutation} is more delicate. One view of the process
+of permuting a list is selecting an element nondeterministically to be
+the first element of the permuted list, then recursively permuting the
+rest of the list. We translate this view into a logic program for {\tt
+permutation}, using Program~\Proselelelis\ for {\tt select}. The base
+fact says that the empty list is its own unique permutation:\medskip
+\halign{\hskip 20pt\lft{\tt #}\cr
+permutation(Xs,\(Z$\mid$Zs\)) $\lar$ select(Z,Xs,Ys),
+permutation(Ys,Zs).\cr
+permutation(\(~\),\(~\)).\cr}\medno
+Another procedural view of generating permutations of lists is
+recursively permuting the tail of the list and inserting the head in an
+arbitrary position. This view also can be encoded immediately. The base
+part is identical to the previous version:\medskip
+\vbox{\halign{\hskip 20pt\lft{\tt #}\cr
+permutation(\(X$\mid$Xs\),Zs) $\lar$ permutation(Xs,Ys),
+insert(X,Ys,Zs).\cr
+permutation(\(~\),\(~\)).\cr}}\medno
+The predicate {\tt insert} can be defined in terms of 
+Program~\Proselelelis\ for {\tt select}:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+insert(X,Ys,Zs) $\lar$ select(X,Zs,Ys).\cr}\medskip
+Both procedural versions of {\tt permutation} have clear declarative
+readings.\par
+The ``naive" sorting program, which we call permutation sort, is
+collected together as Program~\Propersor. It is an example of the
+generate-and-test paradigm, discussed fully in Chapter~14. Note the
+addition of the extra base case for {\tt ordered} so that the program
+behaves correctly for empty lists.
+\midinsert
+\halign{\hskip 20pt\lft{\tt #}\cr
+{\it sort\/}({\it Xs,Ys\/}) $\lar$\cr
+\qi {\rm The list} {\it Ys\/} {\rm is an ordered permutation of the list}
+{\it Xs\/}{\rm .}\cr
+\noalign{\medskip}
+sort(Xs,Ys) $\lar$ permutation(Xs,Ys), ordered(Ys).\cr
+\noalign{\vskip 5pt}
+permutation(Xs,\(Z$\mid$Zs\)) $\lar$ select(Z,Xs,Ys),
+permutation(Ys,Zs).\cr
+permutation(\(~\),\(~\)).\cr
+\noalign{\vskip 5pt}
+ordered(\(~\)).\cr
+ordered(\(X\)).\cr
+ordered(\(X,Y$\mid$Ys\)) $\lar$ X $\le$ Y, ordered(\(Y$\mid$Ys\)).\cr
+\noalign{\bigskip}
+{\bf Program \Propersor}{\rm :~~Permutation sort}\cr}
+\endinsert\par
+The problem of sorting lists is well studied. Permutation sort is not a
+good method for sorting lists in practice. Much better algorithms come
+from applying a ``divide and conquer" strategy to the task of sorting.
+The insight is to sort a list by dividing it into two pieces, recursively
+sorting the pieces, and then joining the two pieces together to give the
+sorted list. The methods for dividing and joining the lists must be
+specified. There are two extreme positions. The first is to make the
+dividing hard, and the joining easy. This approach is taken by the
+quicksort algorithm. The
+second position is making the joining hard, but the dividing easy. This
+is the approach of merge sort, which is posed as Exercise (v) at the end
+of this section, and insertion sort, shown in Program~\Proinssor.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it sort\/}({\it Xs,Ys\/}) $\lar$\cr
+\qi {\rm The list} {\it Ys\/} {\rm is an ordered permutation of the list}
+{\it Xs\/}{\rm .}\cr
+\noalign{\medskip}
+sort(\(X$\mid$Xs\),Ys) $\lar$ sort(Xs,Zs), insert(X,Zs,Ys).\cr
+sort(\(~\),\(~\)).\cr
+\noalign{\vskip 5pt}
+insert(X,\(~\),\(X\)).\cr
+insert(X,\(Y$\mid$Ys\),\(Y$\mid$Zs\)) $\lar$ X $>$ Y, insert(X,Ys,Zs).\cr
+insert(X,\(Y$\mid$Ys\),\(X,Y$\mid$Ys\)) $\lar$ X $\le$ Y.\cr
+\noalign{\bigskip}
+{\bf Program \Proinssor}{\rm :~~Insertion sort}\cr}
+\endin\par
+In insertion sort, one element (typically the first) is removed from the
+list. The rest of the list is sorted recursively; then the element is
+inserted, preserving the orderedness of the list.\par
+The insight in quicksort is to divide the list by choosing an arbitrary
+element in it, and then to split the list into the elements smaller than
+the chosen element and the elements larger than the chosen element. The
+sorted list is composed of the smaller elements, followed by the chosen
+element, and then the larger elements. The program we describe chooses
+the first element of the list as the basis of partition.\par
+Program~\Proquicks\ defines the quicksort algorithm. The recursive rule
+for {\tt quicksort} reads: ``{\tt Ys} is a sorted version of {\tt
+[X$\mid$Xs]} if {\tt Littles} and {\tt Bigs} are a result of partitioning
+{\tt Xs} according to {\tt X}; {\tt Ls} and {\tt Bs} are the result of
+sorting {\tt Littles} and {\tt Bigs} recursively; and {\tt Ys} is the
+result of appending {\tt [X$\mid$Bs]} to {\tt Ls}.''
+\topin
+\halign{\hskip 20pt\lft{\tt #}\cr
+{\it quicksort\/}({\it Xs,Ys\/}) $\lar$\cr
+\qi {\rm The list} {\it Ys\/} {\rm is an ordered permutation of the list}
+{\it Xs\/}{\rm .}\cr
+\noalign{\medskip}
+quicksort(\(X$\mid$Xs\),Ys) $\lar$\cr
+\qi partition(Xs,X,Littles,Bigs),\cr
+\qi quicksort(Littles,Ls),\cr
+\qi quicksort(Bigs,Bs),\cr
+\qi append(Ls,\(X$\mid$Bs\),Ys).\cr
+quicksort(\(~\),\(~\)).\cr
+\noalign{\vskip 5pt}
+partition(\(X$\mid$Xs\),Y,\(X$\mid$Ls\),Bs) $\lar$ X $\le$ Y,
+partition(Xs,Y,Ls,Bs).\cr
+partition(\(X$\mid$Xs\),Y,Ls,\(X$\mid$Bs\)) $\lar$ X $>$ Y,
+partition(Xs,Y,Ls,Bs).\cr
+partition(\(~\),Y,\(~\),\(~\)).\cr
+\noalign{\bigskip}
+{\bf Program \Proquicks}{\rm :~~Quicksort}\cr}
+\endin\par
+Partitioning a list is straightforward, and is similar to the program for
+deleting elements. There are two cases to consider: when the current head
+of the list is smaller than the element being used for the partitioning,
+and when the head is larger than the partitioning element. The
+declarative reading of the first {\tt partition} clause is:
+``Partitioning a list whose head is {\tt X} and whose tail is {\tt Xs}
+according to an element {\tt Y} gives the lists {\tt [X$\mid$Littles]}
+and {\tt Bigs} if {\tt X} is less than or equal to {\tt Y}, and
+partitioning {\tt Xs} according to {\tt Y} gives the lists {\tt Littles}
+and {\tt Bigs}." The second clause for {\tt partition} has a similar
+reading. The base case is that the empty list is partitioned into two
+empty lists.\endpage
+\noindent {\bf Exercises for Section 3.3}\vskip 5pt\par
+\offset{20pt}{(i)} Write a program for {\tt substitute(X,Y,L1,L2)}, where
+{\tt L2} is the result of substituting {\tt Y} for all occurrences of
+{\tt X} in {\tt L1}, e.g., {\tt substi-}\linebreak
+{\tt tute(a,x,\(a,b,a,c\),\(x,b,x,c\))} is true, whereas {\tt
+substitute(a,x,\(a,b,}\linebreak
+{\tt a,c\),\(a,b,x,c\))} is false.\par
+\offset{20pt}{(ii)} What is the meaning of the variant of {\tt select}:
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+select(X,\(X$\mid$Xs\),Xs).\cr
+select(X,\(Y$\mid$Ys\),\(Y$\mid$Zs\)) $\lar$ X$\ne$Y,
+select(X,Ys,Zs).\cr}\medskip
+\offset{20pt}{(iii)} Write a program for {\tt no\_doubles(L1,L2)}, where
+{\tt L2} is the result of removing all duplicate elements from {\tt L1},
+e.g., {\tt no\_doubles(\(a,b,c,b\),\(a,c,b\))} is true. 
+(Hint:~~Use {\tt member}.)\par
+\offset{20pt}{(iv)} Write programs for {\tt even\_permutation(Xs,Ys)} and
+{\tt odd\_permutation(Xs,}\linebreak
+{\tt Ys)} that find {\tt Ys}, the even and odd permutations,
+respectively, of a list {\tt Xs}. For example, {\tt
+even\_permutation(\(1,2,3\),\(2,3,1\))} and {\tt
+odd\_permutation(\(1,2,3\),\(2,1,3\))} are true.\par
+\offset{20pt}{(v)} Write a program for merge sort.\par
+\offset{20pt}{(vi)} Write a logic program for {\tt kth\_largest(Xs,K)}
+that implements the linear algorithm for finding the {\it k}th largest element
+{\tt K} of a list {\tt Xs}. The algorithm has the following steps:\bki
+Break the list into groups of five elements.\bki
+Efficiently find the median of each of the groups, which can be done\bki
+with a fixed number of comparisons.\bki
+Recursively find the median of the medians.\bki
+Partition the original list with respect to the median of medians.\bki
+Recursively find the {\it k}th largest element in the appropriate smaller
+list.\par
+\offset{20pt}{(vii)} Write a program for the relation {\tt
+better\_poker\_hand(Hand1,Hand2,}\linebreak
+{\tt Hand)} that succeeds if {\tt Hand} is the better poker hand between
+{\tt Hand1} and {\tt Hand2}. For those unfamiliar with this card game,
+here are some rules of poker necessary for answering this exercise:\bki
+(a) The order of cards is 2, 3, 4, 5, 6, 7, 8, 9, 10, jack, queen, king,
+ace.\bki
+(b) Each hand consists of five cards.\bki
+(c) The rank of hands in ascending order is
+no pairs $<$ one pair $<$ two pairs $<$ three of a kind $<$ flush $<$
+straight $<$ full house $<$ four of a kind $<$ straight flush.\bki
+(d) Where two cards have the same rank, the higher denomination wins, for
+example, a pair of kings beats a pair of 7's.\bk
+(Hints:~~(1) Represent a poker hand by a list of terms of the form {\tt
+card(Suit,Value)}. For example a hand consisting of the 2 of clubs, the
+5 of spades, the queen of hearts, the queen of diamonds, and the 7
+of spades would be represented by the list
+{\tt \(card(clubs,2),card(spades,5),card(hearts,queen),
+card(diamonds,queen),card(spades,7)\)}.
+(2) It may be helpful to define relations such as {\tt
+has\_flush(Hand)}, which is true if all the cards in {\tt Hand} are of the
+same suit; {\tt has\_full\_house(Hand)}, which is true if {\tt Hand} has
+three cards with the same value but in different suits, and the other two
+cards have the same different value; and {\tt has\_straight(Hand)}, which
+is true if {\tt Hand} has cards with consecutive values.
+(3) The number of cases to consider is reduced if the hand is first
+sorted.)\par
+\sect{Binary Trees}
+We next consider binary trees, another recursive data type. These
+structures have an important place in many algorithms.\par
+Binary trees are represented by the ternary functor {\tt
+tree(Element,Left,}\linebreak
+{\tt Right)}, where {\tt Element} is the element at the node, and {\tt
+Left} and {\tt Right} are the left and right subtrees respectively. The
+empty tree is represented by the atom {\tt void}. For example, the tree
+\medskip
+\vbox{\halign{\hskip 40pt\lft{#}\cr
+\qi ~~a\cr
+\qi ~/~\\\cr
+\qi b~~~c\cr}}\medno
+would be represented as\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+tree(a,tree(b,void,void),tree(c,void,void)).\cr}\medskip
+Logic programs manipulating binary trees are similar to those
+manipulating lists. As with natural numbers and lists, we start with the
+type definition of binary trees. It is given as Program~\Prodefbintre.
+Note that the program is {\it doubly recursive\/}; that is, there are two
+goals in the body of the recursive rule with the same predicate as the
+head of the rule. This results from the doubly recursive nature of binary
+trees and will be seen also in the rest of the programs of this
+section.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it binary\_tree\/}({\it Tree\/}) $\lar$\cr
+\qi {\it Tree\/} {\rm is a binary tree.}\cr
+\noalign{\medskip}
+binary\_tree(void).\cr
+binary\_tree(tree(Element,Left,Right)) $\lar$\cr
+\qi binary\_tree(Left), binary\_tree(Right).\cr
+\noalign{\bigskip}
+{\bf Program \Prodefbintre}{\rm :~~Defining binary trees}\cr}
+\endinsert\par
+Let us write some tree-processing programs. Our first example tests
+whether an element appears in a tree. The relation scheme is {\tt
+tree\_member(Element,Tree)}. The relation is true if {\tt Element} is one
+of the nodes in the tree. Program~\Protestremem\ contains the definition.
+The declarative reading of the program is: ``{\tt X} is a member of a tree
+if it is the element at the node (by the fact) or if it is a member of
+the left or right subtree (by the two recursive rules)."
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it tree\_member\/}({\it Element,Tree\/}) $\lar$\cr
+\qi {\it Element\/} {\rm is an element of the binary tree} {\it
+Tree\/}{\rm .}\cr
+\noalign{\medskip}
+tree\_member(X,tree(X,Left,Right)).\cr
+tree\_member(X,tree(Y,Left,Right)) $\lar$ tree\_member(X,Left).\cr
+tree\_member(X,tree(Y,Left,Right)) $\lar$ tree\_member(X,Right).\cr
+\noalign{\bigskip}
+{\bf Program \Protestremem}{\rm :~~Testing tree membership}\cr}
+\endinsert\par
+The two branches of a binary tree are distinguishable, but for many
+applications the distinction is not relevant. Consequently, a useful
+concept is isomorphism, which defines when unordered trees are
+essentially the same. Two binary trees {\tt T1} and {\tt T2} are {\it
+isomorphic\/} if {\tt T2} can be obtained by reordering the branches of
+the subtrees of {\tt T1}. Figure~\Figcomtreiso\ shows three simple binary
+trees. The first two are isomorphic; the first and third are not.
+\topin\vskip 4.8truecm\par
+\ctrline{{\bf Figure \Figcomtreiso}:~~Comparing trees for isomorphism}
+\endin\par
+Isomorphism is an equivalence relation with a simple recursive
+definition. Two empty trees are isomorphic. Otherwise, two trees are
+isomorphic if they have identical elements at the node and either both
+the left subtrees and the right subtrees are isomorphic; or the left
+subtree of one is isomorphic with the right subtree of the other and the
+two other subtrees are isomorphic.\par
+Program~\Prodettreiso\ defines a predicate {\tt isotree(Tree1,Tree2)},
+which is true if {\tt Tree1} and {\tt Tree2} are isomorphic. The
+predicate is symmetric in its arguments.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it isotree\/}({\it Tree1,Tree2\/}) $\lar$\cr
+\qi {\it Tree1\/} {\rm and} {\it Tree2\/} {\rm are isomorphic binary
+trees.}\cr
+\noalign{\medskip}
+isotree(void,void).\cr
+isotree(tree(X,Left1,Right1),tree(X,Left2,Right2)) $\lar$\cr
+\qi isotree(Left1,Left2), isotree(Right1,Right2).\cr
+isotree(tree(X,Left1,Right1),tree(X,Left2,Right2)) $\lar$\cr
+\qi isotree(Left1,Right2), isotree(Right1,Left2).\cr
+\noalign{\bigskip}
+{\bf Program \Prodettreiso}{\rm :~~Determining when trees are
+isomorphic}\cr}
+\endinsert\par
+Programs related to binary trees involve double recursion, one for each
+branch of the tree. The double recursion can be manifest in two ways.
+Programs can have two separate cases to consider, as in Program
+\Protestremem\ for {\tt tree\_member}. In contrast, Program~\Promemlis\
+testing membership of a list has only one recursive case. Alternatively,
+the body of the recursive clause has two recursive calls, as in each of
+the recursive rules for {\tt isotree} in Program~\Prodettreiso.\par
+The task in Exercise 3.3(i) is to write a program for substituting for
+elements in lists. An analogous program can be written for substituting
+elements in binary trees. The predicate {\tt
+substitute(X,Y,OldTree,NewTree)} is true if {\tt NewTree} is the result
+of replacing all occurrences of {\tt X} by {\tt Y} in {\tt OldTree}. An
+axiomatization of {\tt substitute/4} is given as Program~\Prosubtertre.
+\midinsert
+\halign{\lft{\tt #}\cr
+{\it substitute\/}({\it X,Y,TreeX,Tree\hskip -1pt Y\/}) $\lar$\cr
+\qi {\rm The binary tree} {\it Tree\hskip -1pt Y\/} {\rm is the result of
+replacing all}\cr
+\qi {\rm occurrences of} {\it X\/} {\rm in the binary tree} {\it TreeX\/}
+{\rm by} {\it Y\/}{\rm .}\cr
+\noalign{\medskip}
+substitute(X,Y,void,void).\cr
+substitute(X,Y,tree(Leaf,Left,Right),tree(Leaf1,Left1,Right1)) $\lar$\cr
+\qi replace (X,Y,Leaf,Leaf1), \cr
+\qi substitute(X,Y,Left,Left1), \cr
+\qi substitute(X,Y,Right,Right1).\cr
+\cr
+replace(X,Y,X,Y). \cr
+replace(X,Y,Z,Z) $\lar$ X $\ne$ Z. \cr
+\noalign{\bigskip}
+{\bf Program \Prosubtertre}{\rm :~~Substituting for a term in a tree}\cr}
+\endinsert\par
+Many applications involving trees require access to the elements
+appearing as nodes. Central is the idea of a tree {\it traversal\/}, which
+is a sequence of the nodes of the tree in some predefined order. There
+are three possibilities for the linear order of traversal: {\it
+preorder\/}, where the value of the node is first, then the nodes in the
+left subtree, followed by the nodes in the right subtree; {\it
+inorder\/}, where the left nodes come first followed by the node itself
+and then the right nodes; and {\it postorder\/}, where the node comes 
+after the left and right subtrees.\par
+A definition of each of the three traversals is given in Program
+\Protrabintre. The recursive structure is identical; the only difference
+between the programs is the order in which the elements are composed by the
+various {\tt append} goals.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it preorder\/}({\it Tree,Pre\/}) $\lar$\cr
+\qi {\it Pre\/} {\rm is a preorder traversal of the binary tree} {\it
+Tree\/}{\rm .}\cr
+\noalign{\medskip}
+preorder(tree(X,L,R),Xs) $\lar$\cr
+\qi preorder(L,Ls), preorder(R,Rs), append([X$\mid$Ls],Rs,Xs).\cr
+preorder(void,[~]).\cr
+\noalign{\medskip}
+{\it inorder\/}({\it Tree,In\/}) $\lar$\cr
+\qi {\it In\/} {\rm is an inorder traversal of the binary tree} {\it
+Tree\/}{\rm .}\cr
+\noalign{\medskip}
+inorder(tree(X,L,R),Xs) $\lar$\cr
+\qi inorder(L,Ls), inorder(R,Rs), append(Ls,[X$\mid$Rs],Xs).\cr
+inorder(void,[~]).\cr
+\noalign{\medskip}
+{\it postorder\/}({\it Tree,Post\/}) $\lar$\cr
+\qi {\it Post\/} {\rm is a postorder traversal of the binary tree} {\it
+Tree\/}{\rm .}\cr
+\noalign{\medskip}
+postorder(tree(X,L,R),Xs) $\lar$\cr
+\qi postorder(L,Ls),\cr
+\qi postorder(R,Rs),\cr
+\qi append(Rs,[X],Rs1),\cr
+\qi append(Ls,Rs1,Xs).\cr
+postorder(void,[~]).\cr
+\noalign{\bigskip}
+{\bf Program \Protrabintre}{\rm :~~Traversals of a binary tree}\cr}\vskip
+5.5truecm\par
+\ctrline{{\bf Figure \Figheabintre}:~~ A binary tree and a heap that 
+preserves the tree's shape}
+\endin\par
+The final example in this section shows interesting manipulation of
+trees. A binary tree satisfies the {\it heap property\/} if the value at
+each node is at least as large as the value at its children (if they
+exist). Heaps, a class of binary trees that satisfy the heap property,
+are a useful data structure and can be used to implement priority queues
+efficiently.\par
+It is possible to {\it heapify\/} any binary tree containing values for
+which an ordering exists. That is, the values in the tree are moved
+around so that the shape of the tree is preserved and the heap property
+is satisfied. An example tree and its heapified equivalent are
+shown in Figure~\Figheabintre.\par
+An algorithm for heapifying the elements of a binary tree so that the
+heap property is satisfied is easily stated recursively. Heapify the left
+and right subtrees so that they both satisfy the heap property and then
+adjust the element at the root appropriately. Program~\Proadjbintre\
+embodies this algorithm. The relation {\tt heapify/2} lays out the doubly
+recursive program structure, and {\tt adjust(X,HeapL,HeapR,Heap)}
+produces the final tree {\tt Heap} satisfying the heap property from the
+root value {\tt X} and the left and right subtrees {\tt HeapL} and
+\linebreak
+{\tt HeapR} satisfying the heap property.
+\topin
+\halign{\lft{\tt #}\cr
+{\it heapify\/}({\it Tree,Heap\/}) $\lar$\cr
+\qi {\rm The elements of the complete binary tree} {\it Tree\/} {\rm have
+been adjusted}\cr
+\qi {\rm to form the binary tree} {\it Heap\/}{\rm , which has the same
+shape as} {\it Tree\/} {\rm and}\cr
+\qi {\rm satisfies the heap property that the value of each parent node
+is}\cr
+\qi {\rm greater than or equal to the values of its children.}\cr
+\noalign{\medskip}
+heapify(void,void).\cr
+heapify(tree(X,L,R),Heap) $\lar$\cr
+\qi heapify(L,HeapL), heapify(R,HeapR), adjust(X,HeapL,HeapR,Heap).\cr
+\noalign{\vskip 5pt}
+adjust(X,HeapL,HeapR,tree(X,HeapL,HeapR)) $\lar$\cr
+\qi greater(X,HeapL), greater(X,HeapR).\cr
+adjust(X,tree(X1,L,R),HeapR,tree(X1,HeapL,HeapR)) $\lar$\cr
+\qi X $<$ X1, greater(X1,HeapR), adjust(X,L,R,HeapL).\cr
+adjust(X,HeapL,tree(X1,L,R),tree(X1,HeapL,HeapR)) $\lar$\cr
+\qi X $<$ X1, greater(X1,HeapL), adjust(X,L,R,HeapR).\cr
+\noalign{\vskip 5pt}
+greater(X,void).\cr
+greater(X,tree(X1,L,R)) $\lar$ X $\ge$ X1.\cr
+\noalign{\bigskip}
+{\bf Program \Proadjbintre}{\rm :~~Adjusting a binary tree to satisfy the
+heap property}\cr}
+\endin\par
+There are three cases for {\tt adjust/4} depending on the values. If the
+root value is larger than the root values of the left and right subtrees,
+then the heap is {\tt tree(X,HeapL,HeapR)}. This is indicated in the
+first {\tt adjust} clause in Program~\Proadjbintre. The second clause
+handles the case where the root node in the left heap is larger than the
+root node and the root of the right heap. In that case, the adjustment
+proceeds recursively on the left heap. The third clause handles the
+symmetric case where the root node of the right heap is the largest. The
+code is simplified by relegating the concern whether the subtree is empty
+to the predicate {\tt greater/2}.\vskip 15pt\parno
+{\bf Exercises for Section 3.4}\vskip 5pt\par
+\offset{20pt}{(i)} Define a program for {\tt subtree(S,T)}, where {\tt S}
+is a subtree of {\tt T}.\par
+\offset{20pt}{(ii)} Define the relation {\tt
+sum\_tree(TreeOfIntegers,Sum)}, which holds if {\tt Sum} is the sum of
+the integer elements in {\tt TreeOfIntegers}.\par
+\offset{20pt}{(iii)} Define the relation {\tt ordered(TreeOfIntegers)},
+which holds if {\tt Tree} is an ordered tree of integers, that is, for
+each node in the tree the elements in the left subtree are smaller than
+the element in the node, and the elements in the right subtree are larger
+than the element in the node.
+(Hint:~~Define two auxiliary relations, {\tt ordered\_left(X,Tree)} and
+{\tt ordered\_right(X,Tree)}, which hold if both {\tt Tree} is ordered
+and {\tt X} is larger (respectively, smaller) than the largest (smallest)
+node of {\tt Tree}.)\par
+\offset{20pt}{(iv)} Define the relation {\tt tree\_insert(X,Tree,Tree1)},
+which holds if {\tt Tree1} is an ordered tree resulting from inserting
+{\tt X} into the ordered tree {\tt Tree}. If {\tt X} already occurs in
+{\tt Tree}, then {\tt Tree} and {\tt Tree1} are identical.
+(Hint:~~Four axioms suffice.)\par
+\offset{20pt}{(v)} Write a logic program for the relation {\tt
+path(X,Tree,Path)}, where {\tt Path} is the path from the root of the tree
+{\tt Tree} to {\tt X}.\par
+\sect{Manipulating Symbolic Expressions}
+The logic programs illustrated so far in this chapter have manipulated
+natural numbers, lists, and binary trees. The programming style is
+applicable more generally. This section gives four examples of recursive
+programming --- a program for defining polynomials, a program for
+symbolic differentiation, a program for solving the Towers of Hanoi
+problem, and a program for testing the satisfiability of Boolean
+formulae.\par
+The first example is a program for recognizing polynomials in some term
+{\it X\/}. Polynomials are defined inductively. {\it X\/} itself is a
+polynomial in {\it X\/}, as is any constant. Sums, differences, and
+products of polynomials in {\it X\/} are polynomials in {\it X\/}. So too
+are polynomials raised to the power of a natural number, and the quotient
+of a polynomial by a constant.\par
+An example of a polynomial in the term $x$ is $x^2-3x+2$. This follows
+from its being the sum of the polynomials, $x^2-3x$ and $2$, where 
+$x^2-3x$ is recognized recursively.\par
+A logic program for recognizing polynomials is obtained by expressing
+the preceding informal rules in the correct form. Program~\Prorecpol\
+defines the relation {\tt polynomial(Expression,X)}, which is true if {\tt
+Expression} is a polynomial in {\tt X}. We give a declarative reading of
+two rules from the program.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it polynomial\/}({\it Expression,X\/}) $\lar$\cr
+\qi {\it Expression\/} {\rm is a polynomial in} {\it X\/}{\rm .}\cr
+\noalign{\medskip}
+polynomial(X,X).\cr
+polynomial(Term,X) $\lar$\cr
+\qi constant(Term).\cr
+polynomial(Term1$+$Term2,X) $\lar$\cr
+\qi polynomial(Term1,X),
+polynomial(Term2,X).\cr
+polynomial(Term1$-$Term2,X) $\lar$\cr
+\qi polynomial(Term1,X), polynomial(Term2,X).\cr
+polynomial(Term1$\ast$Term2,X) $\lar$\cr
+\qi polynomial(Term1,X), polynomial(Term2,X).\cr
+polynomial(Term1/Term2,X) $\lar$\cr
+\qi polynomial(Term1,X), constant(Term2).\cr
+polynomial(Term$\uparrow$N,X) $\lar$\cr
+\qi natural\_number(N), polynomial(Term,X).\cr
+\noalign{\bigskip}
+{\bf Program \Prorecpol}{\rm :~~Recognizing polynomials}\cr}
+\endin\par
+The fact {\tt polynomial(X,X)} says that a term {\tt X} is a polynomial
+in itself. The rule\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+polynomial(Term1+Term2,X) $\lar$\cr
+\qi polynomial(Term1,X), polynomial(Term2,X).\cr}\medno
+says that the sum {\tt Term1+Term2} is a polynomial in {\tt X} if both
+{\tt Term1} and {\tt Term2} are polynomials in {\tt X}.\par
+Other conventions used in Program~\Prorecpol\ are the use of the unary
+predicate {\tt constant} for recognizing constants, and the binary
+functor $\uparrow$ to denote exponentiation. The term {\tt X$\uparrow$Y}
+denotes {\tt X}$^Y$.\par
+The next example is a program for taking derivatives. The relation scheme
+is {\tt derivative(Expression,X,DifferentiatedExpression)}. The intended
+meaning of {\tt derivative} is that {\tt DifferentiatedExpression} is the
+derivative of {\tt Expression} with respect to {\tt X}.\par
+As for Program~\Prorecpol\ for recognizing polynomials, a logic program
+for differentiation is just a collection of the relevant differentiation
+rules, written in the correct syntax. For example, the fact\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+derivative(X,X,s(0)).\cr}\medno
+expresses that the derivative of {\tt X} with respect to itself is {\it
+1\/}. The fact\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+derivative(sin(X),X,cos(X)).\cr}\medno
+reads: ``The derivative of {\tt sin(X)} with respect to {\tt X} is {\tt
+cos(X)}." Natural mathematical notation can be used. A representative
+sample of functions and their derivatives is given in Program~\Proderrul.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it derivative\/}({\it Expression,X,DifferentiatedExpression\/})
+$\lar$\cr
+\qi {\it DifferentiatedExpression\/} {\rm is the derivative of}\cr
+\qi {\it Expression\/} {\rm with respect to} {\it X\/}{\rm .}\cr
+\noalign{\medskip}
+derivative(X,X,s(0)).\cr
+derivative(X$\uparrow$s(N),X,s(N)$\ast$X$\uparrow$N).\cr
+derivative(sin(X),X,cos(X)).\cr
+derivative(cos(X),X,$-$sin(X)).\cr
+derivative(e$\uparrow$X,X,e$\uparrow$X).\cr
+derivative(log(X),X,1/X).\cr
+\noalign{\vskip 5pt}
+derivative(F$+$G,X,DF$+$DG) $\lar$\cr
+\qi derivative(F,X,DF), derivative(G,X,DG).\cr
+derivative(F-G,X,DF-DG) $\lar$\cr
+\qi derivative(F,X,DF), derivative(G,X,DG).\cr
+derivative(F$\ast$G,X,F$\ast$DG$+$DF$\ast$G) $\lar$\cr
+\qi derivative(F,X,DF), derivative(G,X,DG).\cr
+derivative(1/F,X,$-$DF/(F$\ast$F)) $\lar$\cr
+\qi derivative(F,X,DF).\cr
+derivative(F/G,X,(G$\ast$DF$-$F$\ast$DG)/(G$\ast$G)) $\lar$\cr
+\qi derivative(F,X,DF), derivative(G,X,DG).\cr
+\noalign{\bigskip}
+{\bf Program \Proderrul}{\rm :~~Derivative rules}\cr}
+\endin\par
+Sums and products of terms are differentiated using the sum rule and
+product rule, respectively. The sum rule states that the derivative of a
+sum is the sum of derivatives. The appropriate clause is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+derivative(F$+$G,X,DF$+$DG) $\lar$\cr
+\qi derivative(F,X,DF), derivative(G,X,DG).\cr}\medno
+The product rule is a little more complicated, but the logical clause is
+just the mathematical definition:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+derivative(F$\ast$G,X,F$\ast$DG$+$DF$\ast$G) $\lar$\cr
+\qi derivative(F,X,DF), derivative(G,X,DG).\cr}\medno
+Program~\Proderrul\ also contains the reciprocal and quotient rules.\par
+The chain rule is a little more delicate. It states that the derivative
+of {\it f\/}({\it g\/}({\it x\/})) with respect to {\it x\/} is the
+derivative of {\it f\/}({\it g\/}({\it x\/})) with respect to {\it
+g\/}({\it x\/}) times the derivative of {\it g\/}({\it x\/}) with respect
+to {\it x\/}. As stated, it involves quantification over functions, and
+is outside the scope of the logic programs we have presented.\par
+Nonetheless, a version of the chain rule is possible for each particular
+function. For example, we give the rule for differentiating {\tt X$^N$}
+and {\tt sin(X)}:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+derivative(U$\uparrow$s(N),X,s(N)$\ast$U$\uparrow$N$\ast$DU) $\lar$
+derivative(U,X,DU).\cr
+derivative(sin(U),X,cos(U)$\ast$DU) $\lar$ derivative(U,X,DU).\cr}
+\medskip
+The difficulty of expressing the chain rule for differentiation arises
+from our choice of representation of terms. Both Programs \Prorecpol\ and
+\Proderrul\ use the ``natural" representation from mathematics where
+terms represent themselves. A term such as {\tt sin(X)} is represented
+using a unary structure {\tt sin}. If a different representation were
+used, for example, {\tt unary\_term(sin,X)} where the name of the
+structure is made accessible, then the problem with the chain rule
+disappears. The chain rule can then be formulated as\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+derivative(unary\_term(F,U),X,DF$\ast$DU) $\lar$\cr
+\qi derivative(unary\_term(F,U),U,DF), derivative(U,X,DU).\cr}\medno
+Note that all the rules in Program~\Proderrul\ would have to be
+reformulated in terms of this new representation and would appear less
+natural.\par
+People take for granted the automatic simplification of expressions when
+differentiating expressions. Simplification is missing from Program
+\Proderrul. The answer to the query {\tt derivative(3$\ast$x+2,x,D)?} is
+{\tt D=(3$\ast$1+0$\ast$x)+0}. We would immediately simplify {\tt D}
+to $3$, but it is not specified in the logic program.\par
+The next example is a solution to the Towers of Hanoi problem, a
+standard introductory example in the use of recursion. The problem is to
+move a tower of {\it n\/} disks from one peg to another with the help of
+an auxiliary peg. There are two rules. Only one disk can be moved at a
+time, and a larger disk can never be placed on top of a smaller disk.\par
+There is a legend associated with the game. Somewhere hidden in the
+surroundings of Hanoi, an obscure Far Eastern village when the legend was
+first told, is a monastery. The monks there are performing a task
+assigned to them by God when the world was created --- solving the
+preceding problem with three golden pegs and 64 golden disks. At the moment
+they complete their task, the world will collapse into dust. Since the
+optimal solution to the problem with {\it n\/} disks takes $2^n-1$ moves,
+we need not lose any sleep over this possibility. The number $2^{64}$ is
+comfortingly big.\par
+The relation scheme for solving the problem is {\tt
+hanoi(N,A,B,C,Moves)}. It is true if {\tt Moves} is the sequence of moves
+for moving a tower of {\tt N} disks from peg {\tt A} to peg {\tt B} using
+peg {\tt C} as the auxiliary peg. This is an extension to usual solutions
+that do not calculate the sequence of moves but rather perform them.
+The representation of the moves uses a binary functor {\it to\/}, written
+as an infix operator. The term {\it X to Y\/} denotes that the top disk
+on peg {\it X\/} is moved to peg {\it Y\/}. The program for solving the
+problem is given in Program~\Protowhan.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it hanoi\/}({\it N,A,B,C,Moves\/}) $\lar$\cr
+\qi {\it Moves\/} {\rm is a sequence of moves for solving the Towers
+of}\cr
+\qi {\rm Hanoi puzzle with} {\it N\/} {\rm disks and three pegs,} {\it
+A\/}{\rm ,} {\it B\/}{\rm , and} {\it C\/}{\rm .}\cr
+\noalign{\medskip}
+hanoi(s(0),A,B,C,\(A to B\)).\cr
+hanoi(s(N),A,B,C,Moves)$\lar$\cr
+\qi hanoi(N,A,C,B,Ms1),\cr
+\qi hanoi(N,C,B,A,Ms2),\cr
+\qi append(Ms1,\(A to B$\mid$Ms2\),Moves).\cr
+\noalign{\bigskip}
+{\bf Program \Protowhan}{\rm :~~Towers of Hanoi}\cr}
+\endin\par
+The declarative reading of the heart of the solution, the recursive rule
+in Program~\Protowhan, is: ``{\tt Moves} is the sequence of moves of
+{\tt s(N)} disks from peg {\tt A} to peg {\tt B} using peg {\tt C} as an
+auxiliary, if {\tt Ms1} is the solution for moving {\tt N} disks from {\tt
+A} to {\tt C} using {\tt B}, {\tt Ms2} is the solution for moving {\tt N}
+disks from {\tt C} to {\tt B} using {\tt A}, and {\tt Moves} is the result
+of appending {\tt [A to B$\mid$Ms2]} to {\tt Ms1}.''\par
+The recursion terminates with moving one disk. A slightly neater, but less
+intuitive, base for the recursion is moving no disks. The appropriate
+fact is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+hanoi(0,A,B,C,[~]).\cr}\medskip
+The final example concerns Boolean formulae.\par
+A {\it Boolean formula\/} is a term defined as follows: The constants
+{\it true\/} and {\it false\/} are Boolean formulae; if {\it X\/} and
+{\it Y\/} are Boolean formulae, so are {\it X\/$\vee$Y\/}, {\it X\/$
+\wedge$Y\/}, and $\sim${\it X\/}, where $\vee$ and $\wedge$ are binary
+infix operators for disjunction and conjunction, respectively, and $\sim$
+is a unary prefix operator for negation.\par
+A Boolean formula {\it F\/} is {\it true\/} if\medskip
+\halign{\hskip 40pt\lft{#}\cr
+F = `true'.\cr
+F = X$\wedge$Y, and both {\it X\/} and {\it Y\/} are true.\cr
+F = X$\vee$Y, and either {\it X\/} or {\it Y\/} (or both) are true.\cr
+F = $\sim$X, and {\it X\/} is false.\cr}\medskip
+A Boolean formula {\it F\/} is {\it false\/} if\medskip
+\halign{\hskip 40pt\lft{#}\cr
+F = `false'.\cr
+F = X$\wedge$Y, and either {\it X\/} or {\it Y\/} (or both) are false.\cr
+F = X$\vee$Y, and both {\it X\/} and {\it Y\/} are false.\cr
+F = $\sim$X, and {\it X\/} is true.\cr}\medskip
+Program~\Prosatboofor\ is a logic program for determining the truth or
+falsity of a Boolean formula. Since it can be applied to Boolean formulae
+with variables, it is actually more powerful than it seems. A Boolean
+formula with variables is {\tt satisfiable} if it has 
+a true instance. It is {\tt invalid} if it has a false instance. These
+are the relations computed by the program.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it satisfiable\/}({\it Formula\/}) $\lar$\cr
+\qi {\rm There is a true instance of the Boolean formula} {\it
+Formula\/}{\rm .}\cr
+\noalign{\medskip}
+satisfiable(true).\cr
+satisfiable(X$\wedge$Y) $\lar$ satisfiable(X), satisfiable(Y).\cr
+satisfiable(X$\vee$Y) $\lar$ satisfiable(X).\cr
+satisfiable(X$\vee$Y) $\lar$ satisfiable(Y).\cr
+satisfiable($\sim$X) $\lar$ invalid(X).\cr
+\noalign{\medskip}
+{\it invalid\/}({\it Formula\/}) $\lar$\cr
+\qi {\rm There is a false instance of the Boolean formula} {\it
+Formula\/}{\rm .}\cr
+\noalign{\medskip}
+invalid(false).\cr
+invalid(X$\vee$Y) $\lar$ invalid(X), invalid(Y).\cr
+invalid(X$\wedge$Y) $\lar$ invalid(X).\cr
+invalid(X$\wedge$Y) $\lar$ invalid(Y).\cr
+invalid($\sim$Y) $\lar$ satisfiable(Y).\cr
+\noalign{\bigskip}
+{\bf Program~\Prosatboofor}{\rm :~~Satisfiability of Boolean
+formulae}\cr}
+\endinsert\vskip 15pt\parno
+{\bf Exercises for Section 3.5}\vskip 5pt\par
+\offset{20pt}{(i)} Write a program to recognize if an arithmetic sum is
+normalized, that is, has the form $A+B$, where {\it A\/} is a
+constant and {\it B\/} is a normalized sum.\par
+\offset{20pt}{(ii)} Write a type definition for Boolean formulae.\par
+\offset{20pt}{(iii)} Write a program for recognizing whether a logical
+formula is in conjunctive normal form, namely, is a conjunction of
+disjunctions of literals, where a literal is an atomic formula or its
+negation.\par
+\offset{20pt}{(iv)} Write a program for the relation {\tt
+negation\_inwards(F1,F2)}, which is true if {\tt F2} is the logical
+formula resulting from moving all negation operators occurring in the
+formula {\tt F1} inside conjunctions and disjunctions.\par
+\offset{20pt}{(v)} Write a program for converting a logical formula into
+conjunctive normal form, that is, a conjunction of disjunctions.\par
+\offset{20pt}{(vi)} Consider the following representation of a bag, that
+is, a list of elements with multiplicities. The function symbol {\tt
+bag(Element,Multiplicity,RestOfBag)} should be used. The atom {\tt
+void} can be used as an empty bag. For example, the term 
+{\tt bag(a,3,bag(b,2,void))} represents a list of three copies of an
+element {\tt a}, and two copies of an element {\tt b}. 
+Write logic programs to\bki
+(a) Take the union of two bags;\bki
+(b) Take the intersection of two bags;\bki
+(c) Substitute for an element in a bag;\bki
+(d) Convert a list into a bag;\bki
+(e) Convert a binary tree into a bag.\par
+\sect{Background}
+Many of the programs in this chapter have been floating around the logic
+programming community, and their origins have become obscure. For
+example, several appear in Clocksin and Mellish (1984) and in the uneven
+collection of short Prolog programs, {\it How to Solve It in Prolog} by
+Coelho et al.\ (1980).\par
+The latter book has been updated as Coelho and Cotta (1988)
+and is a source for other simple examples. The exercise on describing
+poker hands is due to Ken Bowen.\par
+The classic reference for binary trees is Knuth (1968) and for sorting
+Knuth (1973).\par
+A discussion of the linear algorithm for the {\it k\/}th largest
+algorithms can be found in most textbooks on algorithms, for example,
+Horowitz and Sahni (1978). The discussion of the heap property is taken
+from Horowitz and Sahni (1978).\par
+Many of the basic programs for arithmetic and list processing have a
+simple structure that allows many correctness theorems to be proved
+automatically, see, for example, Boyer and Moore (1979) and Sterling and
+Bundy (1982).\par
+Ackermann's function is discussed by Peter (1967).\par\bye
+

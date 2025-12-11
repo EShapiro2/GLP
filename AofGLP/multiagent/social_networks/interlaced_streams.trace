@@ -1,0 +1,10 @@
+=== interlaced_streams.glp ===
+Interlaced streams as distributed blocklace.
+Goal: streams(MyStream, Others)
+
+Blocklace: DAG where each block references multiple predecessors.
+Enables concurrent block creation without consensus.
+
+Each process maintains stream of blocks with payloads and references
+to most recent blocks observed from others. reader(X) guard identifies
+unprocessed blocks by detecting unbound tail variables.

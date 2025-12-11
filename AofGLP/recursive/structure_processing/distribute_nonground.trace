@@ -1,0 +1,51 @@
+%% Trace: test_distribute(Out1, Out2)
+%% Demonstrates one-way stream distribution with incremental message construction
+
+GLP> test_distribute(Out1, Out2).
+
+test_distribute(Out1, Out2) :-
+    =/2(X1, [msg(a, X2?) | [msg(b, X3?)]]),   % In = [msg(a,R1?), msg(b,R2?)]
+    distribute(X1?, X4, X5),
+    =/2(X2, response1),                        % R1 = response1
+    =/2(X3, response2)                         % R2 = response2
+
+=/2(X1, [msg(a, X2?) | [msg(b, X3?)]]) :- true
+
+distribute([msg(a, X2?) | [msg(b, X3?)]], X4, X5) :-
+    copy(msg(a, X2?), X6, X7),
+    distribute([msg(b, X3?)], X8, X9)
+
+=/2(X2, response1) :- true                     % Binds R1
+=/2(X3, response2) :- true                     % Binds R2
+
+%% After R1 bound, copy proceeds (was suspended waiting for compound args)
+copy(msg(a, response1), X6, X7) :-
+    =/2(X10, msg(a, response1)),
+    =/2(X11, msg(a, response1))
+
+distribute([msg(b, response2)], X8, X9) :-
+    copy(msg(b, response2), X12, X13),
+    distribute([], X14, X15)
+
+=/2(X10, msg(a, response1)) :- true            % Copy 1 of msg(a, response1)
+=/2(X11, msg(a, response1)) :- true            % Copy 2 of msg(a, response1)
+
+copy(msg(b, response2), X12, X13) :-
+    =/2(X16, msg(b, response2)),
+    =/2(X17, msg(b, response2))
+
+distribute([], X14, X15) :- true               % End of stream
+
+=/2(X16, msg(b, response2)) :- true            % Copy 1 of msg(b, response2)
+=/2(X17, msg(b, response2)) :- true            % Copy 2 of msg(b, response2)
+
+%% RESULT:
+Out1 = [msg(a, response1), msg(b, response2)]
+Out2 = [msg(a, response1), msg(b, response2)]
+→ succeeds
+
+%% Key observation:
+%% - Messages started with unbound response variables (R1?, R2?)
+%% - distribute/copy suspended on compound guard until responses bound
+%% - When R1=response1 and R2=response2 executed, copies completed
+%% - Both output streams got the complete messages

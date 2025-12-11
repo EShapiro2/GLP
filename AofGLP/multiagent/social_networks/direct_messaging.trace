@@ -1,0 +1,7 @@
+=== direct_messaging.glp ===
+Direct messaging channel establishment.
+Goal: establish(yes, From, Resp, Fs, Fs1, In, In1)
+
+Creates separate DM channels from protocol control channels.
+Verifies DM channel attestation from authenticated friend.
+Each DM message carries attestation for non-repudiation.

@@ -1,0 +1,18 @@
+=== factorial.glp ===
+Goal: factorial(5, F).
+
+factorial(3, X5) :- :=/2(X7, -(3, 1)), factorial(X7?, X8), :=/2(X9, *(3, X8?))
+:=/2(X6, *(4, X5?)) → suspended
+:=/2(X7, -(3, 1)) :- true
+factorial(2, X8) :- :=/2(X10, -(2, 1)), factorial(X10?, X11), :=/2(X12, *(2, X11?))
+:=/2(X9, *(3, X8?)) → suspended
+:=/2(X10, -(2, 1)) :- true
+factorial(1, X11) :- true
+:=/2(X12, *(2, 1)) :- true
+:=/2(X9, *(3, 2)) :- true
+:=/2(X6, *(4, 6)) :- true
+:=/2(X3, *(5, 24)) :- true
+F = 120
+→ succeeds
+
+GLP> 

@@ -1,0 +1,43 @@
+%% parallel_table.glp - Parallel lookup table using channels
+%% Source: CP Collected Papers, Ch 17 (Tribble et al.)
+%%
+%% Associates values with keys in a linear space.
+%% Each process spans a portion of the key space.
+%% Uses channels for concurrent access without serialization.
+
+%% Lookup: exact key match returns value and true
+table(Self, LowKey, Value, HighKey) :-
+    read(lookup(LowKey, Value?, true), Self?, NewSelf) |
+    table(NewSelf?, LowKey?, Value?, HighKey?).
+
+%% Lookup: key in range but not exact match returns false
+table(Self, LowKey, Value, HighKey) :-
+    read(lookup(Key, _, false), Self?, NewSelf),
+    LowKey < Key,
+    Key < HighKey |
+    table(NewSelf?, LowKey?, Value?, HighKey?).
+
+%% Store: key in range creates two new table segments
+table(Self, LowKey, Value, HighKey) :-
+    read(store(Key, HighValue), Self?, NewSelf),
+    LowKey < Key,
+    Key < HighKey |
+    table(NewSelf?, LowKey?, Value?, Key?),
+    table(NewSelf?, Key?, HighValue?, HighKey?).
+
+%% Store: exact key match updates value
+table(Self, LowKey, _, HighKey) :-
+    read(store(LowKey, NewValue), Self?, NewSelf) |
+    table(NewSelf?, LowKey?, NewValue?, HighKey?).
+
+%% Example using channels for parallel processing:
+%% compute(C) :-
+%%     min(X, C?, C1) |
+%%     process(X?),
+%%     compute(C1?).
+%% compute(C) :-
+%%     branches(C?, C1, C2) |
+%%     compute(C1?),
+%%     compute(C2?).
+%% compute(C) :-
+%%     empty(C?) | true.

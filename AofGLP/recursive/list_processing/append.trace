@@ -1,0 +1,10 @@
+=== append.glp ===
+Goal: append([1,2,3], [4,5], Zs).
+
+GLP> ✓ Loaded: append.glp
+GLP> append([1, 2, 3], [4, 5], X) :- append([2, 3], [4, 5], X1)
+append([2, 3], [4, 5], X1) :- append([3], [4, 5], X2)
+append([3], [4, 5], X2) :- append([], [4, 5], X3)
+append([], [4, 5], X3) :- true
+X = [1, 2, 3, 4, 5]
+→ succeeds

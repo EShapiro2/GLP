@@ -1,0 +1,20 @@
+%% observer.glp - Stream observation without consumption
+%% Source: GLP Papers (Program: Concurrent Observer)
+%%
+%% For non-ground data requiring observation without consumption.
+%% Forwards communication bidirectionally while producing a
+%% replicable audit stream.
+
+observe(X?, Y, Z?) :- observe(Y?, X, Z).
+observe(X, Out1?, Out2?) :- ground(X?) | copy_to(X?, Out1, Out2).
+observe(Xs, [Y1?|Ys1?], [Y2?|Ys2?]) :-
+    list(Xs?) |
+    head_tail(Xs?, X, Xs1),
+    observe(X?, Y1, Y2),
+    observe(Xs1?, Ys1, Ys2).
+
+%% Helper to copy ground value to two outputs
+copy_to(X, X?, X?) :- ground(X?) | true.
+
+%% Helper to extract head and tail
+head_tail([H|T], H?, T?).

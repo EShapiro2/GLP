@@ -1,0 +1,6 @@
+=== snapshot_meta.glp ===
+Goal: run(A, Cs?, [], R).
+
+Metainterpreter with snapshot collection on abort.
+When Cs bound to [suspend, abort], R? receives current resolvent.
+Uses short-circuit technique.

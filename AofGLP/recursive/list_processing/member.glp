@@ -1,0 +1,10 @@
+%% member.glp - List Membership
+%% Source: Standard GLP list operations
+%% Note: Uses ground guard to allow comparison
+
+member(X, [H|_]) :- ground(X?), ground(H?), X? =:= H? | true.
+member(X, [_|Xs]) :- member(X?, Xs?).
+
+%% Metainterpreter support
+reduce(member(X, [H|_]), true) :- ground(X?), ground(H?), X? =:= H? | true.
+reduce(member(X, [_|Xs]), member(X?, Xs?)).

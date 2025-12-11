@@ -1,0 +1,14 @@
+%% flatten.glp - Flatten nested lists with difference lists
+%% Tree recursion on structure
+%% Note: Uses same pattern as qsort for SRSW compliance
+
+flatten(Xs, Ys?) :- flatten_dl(Xs?, Ys, []).
+
+flatten_dl([], Front?, Front).
+flatten_dl([X|Xs], Front?, Back) :-
+    ground(X?), is_list(X?) |
+    flatten_dl(X?, Front, Mid),
+    flatten_dl(Xs?, Mid?, Back?).
+flatten_dl([X|Xs], [X?|Front?], Back) :-
+    otherwise |
+    flatten_dl(Xs?, Front, Back?).

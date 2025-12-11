@@ -1,0 +1,8 @@
+%% map_inc.glp - Increment each element
+%% Exercise solution: ch05 streams
+%% Concrete example of map pattern
+
+map_inc([], []).
+map_inc([X|Xs], [Y?|Ys?]) :-
+    Y := X? + 1,
+    map_inc(Xs?, Ys).

@@ -1,0 +1,549 @@
+%%%%% Leonudi Book, Chapter 4, pp 72-83 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 3
+\numberfirst
+\startpage{72}
+
+\chapb{The Computation}{Model of Logic Programs}
+The computation model used in the first three chapters of the book has a
+severe restriction. All goals appearing in the proof trees are ground.
+All rule instances used to derive the goals in the proof trees are also
+ground. The abstract interpreter described assumes that the substitutions
+giving the desired ground instances can be guessed correctly. In fact, the
+correct substitutions can be computed rather than guessed.\par
+This chapter presents a general computation model of logic programs. The
+first section presents a unification algorithm that removes the
+guesswork in determining instances of terms. The second section presents
+an appropriately modified abstract interpreter and gives example
+computations of logic programs.\par
+The computation model of logic programming we present is especially
+well suited to sequential languages such as Prolog. Our model can be used
+to describe parallel logic programming languages. However, developers of
+these languages have often used other models, such as state transitions
+or dynamic tree creation and destruction (see Section 4.3).\par
+\sect{Unification}
+The heart of our computation model of logic programs is unification.
+Unification is the basis of most work in automated deduction and of the
+use of logical inference in artificial intelligence.\par
+Necessary terminology for describing the algorithm is repeated from
+Chapter~1, and new definitions are introduced as needed.\par
+Recall that a term {\it t\/} is a common instance of two terms, {\it
+t$_1$\/} and {\it t$_2$\/}, if there exist substitutions $\theta_1$ and
+$\theta_2$ such that {\it t\/} equals {\it t$_1$\/}$\theta_1$ and {\it
+t$_2$\/}$\theta_2$. A term {\it s\/} is {\it more general\/} than a term
+{\it t\/} if {\it t\/} is an instance of {\it s\/} but {\it s\/} is not
+an instance of {\it t\/}. A term {\it s\/} is an {\it alphabetic
+variant\/} of a term {\it t\/} if both {\it s\/} is an instance of {\it
+t\/} and {\it t\/} is an instance of {\it s\/}. Alphabetic variants are
+related by the renaming of variables that occur in the terms. For
+example, {\tt member(X,tree(Left,X,Right))} and {\tt
+member(Y,tree(Left,Y,Z))} are alphabetic variants.\par
+A {\it unifier\/} of two terms is a substitution making the terms
+identical. If two terms have a unifier, we say they {\it unify\/}. There
+is a close relation between unifiers and common instances. Any
+unifier determines a common instance, and conversely, any common instance
+determines a unifier.\par
+For example, {\tt append([1,2,3],[3,4],List)} and {\tt
+append([X$\mid$Xs],Ys,}\linebreak
+{\tt \(X$\mid$Zs])} unify. A unifying substitution is {\tt
+$\{$X=1,Xs=[2,3], Ys=[3,4], List=}\linebreak
+{\tt [1$\mid$Zs]$\}$}. Their common instance, determined by this unifying
+substitution, is {\tt append([1,2,3],[3,4],[1$\mid$Zs])}.\par
+A {\it most general unifier\/}, or {\it mgu\/}, of two terms is a unifier
+such that the associated common instance is most general. It can be shown
+that if two terms unify, all mgus are equivalent. Making that statement
+precise is beyond the scope of this book, but we give pointers in
+Section 4.3. We proceed by giving an algorithm that computes a
+most general unifier of two terms if one exists.\par
+The algorithm for unification presented here is based on solving
+equations. The input for the algorithm is two terms, {\it T$_1$\/} and
+{\it T$_2$\/}. The output of the algorithm is an mgu of the two terms if
+they unify, or {\it failure} if the terms do not unify. The algorithm
+uses a pushdown stack for storing the equations that need to be solved
+and a location, $\theta$, for collecting the substitution comprising the
+output.\par
+The location $\theta$ is initially empty, and the stack is initialized to
+contain the equation $T_1 = T_2$. The algorithm consists
+of a loop of popping an equation from the stack and processing it. The
+loop terminates when the stack becomes empty or if failure occurs in
+processing an invalid equation.\par
+We consider the possible actions for dealing with a popped equation
+$S=T$. The simplest case is if {\it S\/} and {\it T\/} are
+identical constants or variables. This equation is correct, and nothing
+further needs to be done. The computation continues by popping the next
+equation from the stack.\par
+If {\it S\/} is a variable, and {\it T\/} is a term not containing {\it
+S\/}, the following happens. The stack is searched for all occurrences of
+{\it S\/}, which are replaced by {\it T\/}. Similarly, all occurrences of
+{\it S\/} in $\theta$ are replaced by {\it T\/}. Then the substitution
+$S=T$ is added to $\theta$. It is significant that {\it
+S\/} does not occur in {\it T\/}. The test embodied by the phrase ``not
+containing" is known as the {\it occurs check\/}.\par
+If {\it T\/} is a variable, and {\it S\/} is a term not containing {\it
+T\/}, i.e., {\it T\/} satisfies the occurs check with respect to {\it
+S\/}, the symmetric sequence of actions happens.\par
+Equations are added to the stack if {\it S\/} and {\it T\/} are compound
+terms with the same principal functor and arity, {\it f\/}({\it S$_1$,$
+\ldots$,S$_n$\/}) and {\it f\/}({\it T$_1$,$\ldots$,T$_n$\/}), say. For
+the terms to unify, each of the argument pairs must simultaneously unify.
+This is achieved by pushing the {\it n\/} equations, $S_i = T_i$,
+onto the stack.\par
+In any other case, {\it failure\/} is reported, and the algorithm
+terminates. If the stack is emptied, the terms unify, and the unifier can
+be found in $\theta$. The complete algorithm is given as Figure
+\Figunialg. The occurs check is embodied in the phrase ``that does not
+occur in."
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\lft{#}~&\lft{#}\cr
+{\bf Input}:&Two terms {\it T$_1$\/} and {\it T$_2$\/} to be unified\cr
+\noalign{\vskip 5pt}
+{\bf Output}:&$\theta$, the mgu of {\it T$_1$\/} and {\it T$_2$\/}, or
+{\it failure}\cr
+\noalign{\vskip 5pt}
+{\bf Algorithm}:&Initialize the substitution $\theta$ to be empty,\cr
+&the stack to contain the equation $T_1 = T_2$,\cr
+&and failure to {\it false\/}.\cr
+\noalign{\vskip 5pt}
+&{\it while} stack not empty and no failure {\it do}\cr
+\noalign{\vskip 5pt}
+&\qi pop $X=Y$ from the stack\cr
+\noalign{\vskip 5pt}
+&\qi {\it case}\cr
+&\qii {\it X\/} is a variable that does not occur in {\it Y\/}:\cr
+&\qiii substitute {\it Y\/} for {\it X\/} in the stack and in $\theta$\cr
+&\qiii add $X=Y$ to $\theta$\cr
+\noalign{\vskip 5pt}
+&\qii {\it Y\/} is a variable that does not occur in {\it X\/}:\cr
+&\qiii substitute {\it X\/} for {\it Y\/} in the stack and in $\theta$\cr
+&\qiii add $Y=X$ to $\theta$\cr
+\noalign{\vskip 5pt}
+&\qii {\it X\/} and {\it Y\/} are identical constants or variables:\cr
+&\qiii continue\cr
+\noalign{\vskip 5pt}
+&\qii {\it X\/} is $f(X_1,\ldots,X_n)$ and {\it Y\/} is $f(Y_1,\ldots,Y_n)$\cr
+&\qiii for some functor {\it f\/} and {\it n\/ $>$ 0\/}:\cr
+&\qiii push $X_i = Y_i, i=1\ldots n$, on the
+stack\cr
+\noalign{\vskip 5pt}
+&\qii otherwise:\cr
+&\qiii failure is {\it true}\cr
+\noalign{\vskip 5pt}
+& {\it If} failure, {\it then} output {\it failure\/} {\it else}
+output $\theta$.\cr}}$$\medskip
+\ctrline{{\bf Figure \Figunialg}:~~A unification algorithm}
+\endin\par
+We do not prove the correctness of this algorithm, nor analyze its
+complexity. The interested reader is referred to the literature in
+Section 4.3.\par
+Consider attempting to unify the terms {\tt append([a,b],[c,d],Ls)} and
+{\tt append([X$\mid$Xs],Ys,\(X$\mid$Zs])}. The stack is initialized to
+the equation\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+append([a,b],[c,d],Ls) = append([X$\mid$Xs],Ys,[X$\mid$Zs]).\cr}\medno
+These two terms have the same functor, {\tt append}, and arity,
+3, so we add the three equations relating the subterms of the two
+terms. These are {\tt [a,b]=[X$\mid$Xs]}, {\tt [c,d]=Ys}, and {\tt
+Ls=[X$\mid$Zs]}.\par
+The next equation, {\tt [a,b]=[X$\mid$Xs]}, is popped from the stack.
+These two compound terms have the same functor, ``{\it .}", and arity, 2,
+so two equations, {\tt a=X} and {\tt [b]=X}, are added to the stack.
+Continuing, the equation {\tt a=X} is popped. This is covered by the
+second case in Figure~\Figunialg. {\tt X} is a variable not occurring in
+the constant, {\tt a}. All occurrences of {\tt X} in the stack are
+replaced by {\tt a}. One equation is affected, namely {\tt
+Ls=[X$\mid$Zs]}, which becomes {\tt Ls=[a$\mid$Zs]}. The equation {\tt
+X=a} is added to the initially empty substitution, and the algorithm
+continues.\par
+The next equation to be popped is {\tt [b]=Xs}. Again this is covered by
+the second case. {\tt Xs=[b]} is added to the set of substitutions, and
+the stack is checked for occurrences of {\tt Xs}. There are none, and the
+next equation is popped.\par
+The second case also covers {\tt [c,d]=Ys}. Another substitution, {\tt
+Ys=[c,d]}, is added to the collection, and the final equation, {\tt
+Ls=[a$\mid$Zs]}, is popped. This is handled by the symmetric first case.
+{\tt Ls} does not occur in {\tt [a$\mid$Zs]}, so the equation is added as
+is to the unifier, and the algorithm terminates successfully. The unifier
+is {\tt $\{$X=a,Xs=[b], Ys=[c,d], Ls=[a$\mid$Zs]$\}$}. The common
+instance produced by the unifier is {\tt append([a,b],[c,d],[a$
+\mid$Zs])}. Note that in this unification, the substitutions were not
+updated.\par
+The occurs check is necessary to prevent the unification of terms such as
+{\tt s(X)} and {\tt X}. There is no finite common instance of these
+terms. However, most Prolog implementations omit the occurs check from
+the unification algorithm, for pragmatic reasons.\par
+When implementing this unification algorithm for a particular logic
+programming language, the explicit substitution in both the equations on
+the stack and the unifier is avoided. Instead, logical variables and
+other terms are represented by memory cells with different values, and
+variable binding is implemented by assigning to the memory cell representing
+a logical variable a reference to the cell containing the representation
+of the term the variable is bound to. Therefore,\medskip
+\halign{\hskip 40pt\lft{#}\cr
+Substitute {\it Y\/} for {\it X\/} in stack and in $\theta$.\cr
+Add $X=Y$ to substitutions.\cr}\medno
+is replaced by\medskip
+\halign{\hskip 40pt\lft{#}\cr
+Make {\it X\/} a reference to {\it Y\/}.\cr}\vskip 15pt\parno
+{\bf Exercises for Section 4.1}\vskip 5pt\par
+\offset{20pt}{(i)} Use the algorithm in Figure~\Figunialg\ to compute an
+mgu of {\tt append([b],[c,d],L)} and {\tt append([X$\mid$Xs],Ys,[X$
+\mid$Zs])}.\par
+\offset{20pt}{(ii)} Use the algorithm in Figure~\Figunialg\ to compute
+an mgu of {\tt hanoi(s(N),A,B,C,Ms)} and {\tt hanoi(s(s(0)),a,b,c,Xs)}.
+\par
+\sect{An Abstract Interpreter for Logic Programs}
+We revise the abstract interpreter of Section~1.8 in the light of the
+unification algorithm. The result is our full computation model of logic
+programs. All the concepts introduced previously, such as goal reductions
+and computation traces, have their analogues in the full model.\par
+A computation of a logic program can be described informally as follows.
+It starts from some initial (possibly conjunctive) query {\it G\/} and,
+if it terminates, has one of two results: success or failure. If a
+computation succeeds, the instance of {\it G\/} proved is conceived of as
+the output of the computation. A given query can have several successful
+computations, each resulting in a different output. In addition, it may
+have nonterminating computations, to which we associate no result.\par
+The computation progresses via {\it goal reduction\/}. At each stage,
+there is some resolvent, a conjunction of goals to be proved. A goal in
+the resolvent and clause in the logic program are chosen such that the
+clause's head unifies with the goal. The computation proceeds with a new
+resolvent, obtained by replacing the chosen goal by the body of the
+chosen clause in the resolvent and then applying the most general
+unifier of the head of the clause and the goal. The computation
+terminates when the resolvent is empty. In this case, we say the goal is
+solved by the program.\par
+To describe computations more formally, we introduce some useful concepts.
+A {\it computation\/} of a goal $Q=Q_0$ by a program {\it
+P\/} is a (possibly infinite) sequence of triples $\lan${\it
+Q$_i$,G$_i$,C$_i$\/}$\ran$. {\it Q$_i$\/} is a (conjunctive) goal, {\it
+G$_i$\/} is a goal occurring in {\it Q$_i$\/}, and {\it C$_i$\/} is a
+clause {\it A\/$\lar$B$_1$,$\ldots$,B$_k$\/} in {\it P\/} renamed so that
+it contains new variable symbols not occurring in {\it Q$_j$\/},
+$0\le j\le i$. For all $i > 0$, {\it Q$_{i+1}$\/} is the
+result of replacing {\it G$_i$\/} by the body of {\it C$_i$\/} in {\it
+Q$_i$\/}, and applying the substitution $\theta_i$, the most general
+unifier of {\it G$_i$\/} and {\it A$_i$\/}, the head of {\it C$_i$\/}; or
+the constant {\it true\/} if {\it G$_i$\/} is the only goal in {\it
+Q$_i$\/} and the body of {\it C$_i$\/} is empty; or the constant {\it
+fail\/} if {\it G$_i$\/} and the head of {\it C$_i$\/} do not unify.\par
+The goals {\it B$_i$\/}$\theta_i$ are said to be {\it derived\/} from
+{\it G$_j$\/} and {\it C$_j$\/}. A goal $G_j=B_{ik}\theta$, where 
+{\it B$_{ik}$\/} occurs in the body of clause {\it
+C$_i$\/}, is said to be {\it invoked\/} by {\it G$_i$\/} and {\it
+C$_i$\/}. {\it G$_i$\/} is the {\it parent\/} of any goal it invokes. Two
+goals with the same parent goal are {\it sibling goals\/}.\par
+A {\it trace\/} of a computation of a logic program $\lan${\it
+Q$_i$,G$_i$,C$_i$\/}$\ran$ is the sequence of pairs $\lan${\it G$_i$\/},$
+\theta_i\pri\ran$, where $\theta_i\pri$ is the subset of the mgu
+$\theta_i$ computed at the {\it i\/}th reduction, restricted to
+variables in {\it G$_i$\/}.\par
+We present an abstract interpreter for logic programs. It is an
+adaptation of the interpreter for ground goals (Figure~\Figabsintans).
+The restriction to using ground instances of clauses to effect reductions
+is lifted. Instead, the unification algorithm is applied to the chosen
+goal and head of the chosen clause to find the correct substitution to
+apply to the new resolvent.\par
+Care needs to be taken with the variables in rules to avoid name clashes.
+Variables are local to a clause. Hence variables in different clauses
+that have the same name are, in fact, different. This is ensured by
+renaming the variables appearing in a clause each time the clause is
+chosen to effect a reduction. The new names must not include any of the
+variable names used previously in the computation.\par
+The revised version of the interpreter is given as Figure~\Figabsintlog.
+It solves a query {\it G\/} with respect to a program {\it P\/}. The
+output of the interpreter is an instance of {\it G\/} if a proof of such
+an instance is found, or {\it no\/} if a failure has occurred during
+the computation. Note that the interpreter may also fail to terminate.
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\lft{#}~~&\lft{#}\cr
+{\bf Input}:&A goal {\it G\/} and a program {\it P}\cr
+\noalign{\vskip 5pt}
+{\bf Output}:&An instance of {\it G\/} that is a logical consequence of
+{\it P\/},\cr
+&or {\it no\/} otherwise\cr
+\noalign{\vskip 5pt}
+{\bf Algorithm}:&Initialize the resolvent to {\it G}.\cr
+&{\it while\/} the resolvent is not empty {\it do}\cr
+&\qi choose a goal {\it A\/} from the resolvent\cr
+&\qi choose a (renamed) clause {\it A\/$\pri\lar$B$_1$,$\ldots$,B$_n$\/}
+from {\it P}\cr
+&\qiii such that {\it A\/} and {\it A\/}$\pri$ unify with mgu $\theta$\cr
+&\qii (if no such goal and clause exist, exit the {\it while} loop)\cr
+&\qi replace {\it A\/} by {\it B$_1$,$\ldots$,B$_n$\/} in the
+resolvent\cr
+&\qi apply $\theta$ to the resolvent and to {\it G}\cr
+&{\it If\/} the resolvent is empty, {\it then\/} output {\it G\/}, {\it
+else\/} output {\it no}.\cr}}$$\medskip
+\ctrline{{\bf Figure \Figabsintlog}:~~An abstract interpreter for logic
+programs}
+\endin\par
+An instance of a query for which a proof is found is called a {\it
+solution\/} to the query.\par
+The policy for adding and removing goals from the resolvent is called the
+{\it scheduling policy\/} of the interpreter. The abstract interpreter
+leaves the scheduling policy unspecified.\par
+Consider solving the query {\tt append([a,b],[c,d],Ls)?} by Program
+\Proapptwolis\ for {\tt append} using the abstract interpreter of Figure
+\Figabsintlog. The resolvent is initialized to be {\tt
+append([a,b],[c,d],Ls)}. It is chosen as the goal to reduce, being the
+only one. The rule chosen from the program is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+append([X$\mid$Xs],Ys,[X$\mid$Zs]) $\lar$ append(Xs,Ys,Zs).\cr}\medno
+The unifier of the goal and the head of the rule is {\tt
+$\{$X=a,Xs=\(b], Ys=[c,d], Ls=[a$\mid$Zs]$\}$}. A detailed calculation of
+this unifier appeared in the previous section. The new resolvent is the
+instance of {\tt append(Xs,Ys,Zs)} under the unifier, namely, {\tt
+append([b],[c,d],Zs)}. This goal is chosen in the next iteration of the
+loop. The same clause for {\tt append} is chosen, but variables must be
+renamed to avoid a clash of variable names. The version chosen is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+append([X1$\mid$Xs1],Ys1,[X1$\mid$Zs1]) $\lar$ append(Xs1,Ys1,Zs1).\cr}
+\medno
+The unifier of the head and goal is {\tt $\{$X1=b, Xs1=[~],
+Ys1=[c,d], Zs=[b$\mid$Zs1]$\}$}. The new resolvent is {\tt
+append([~],[c,d],Zs1)}. This time the fact {\tt append([~],Zs2,Zs2)} is
+chosen; we again rename variables as necessary. The unifier this time is
+{\tt $\{$Zs2=[c,d], Zs1=[c,d]$\}$}. The new resolvent is empty and the
+computation terminates.\par
+To compute the result of the computation, we apply the relevant part of
+the mgu's calculated during the computation. The first unification
+instantiated {\tt Ls} to {\tt [a$\mid$Zs]}. {\tt Zs} was instantiated to
+{\tt [b$\mid$Zs1]} in the second unification, and {\tt Zs1} further
+became {\tt [c,d]}. Putting it together, {\tt Ls} has the value {\tt
+[a$\mid$[b$\mid$[c,d]]]}, or more simply, {\tt [a,b,c,d]}.\par
+The computation can be represented by a trace. The trace of the
+foregoing {\tt append} computation is presented in Figure~\Figtraapptwo.
+To make the traces clearer, goals are indented according to the
+indentation of their parent. A goal has an indentation depth of {\tt d+1}
+if its parent has indentation depth {\tt d}.\par
+As another example, consider solving the query {\tt son(S,haran)?} by
+Program~\Probibfamrel. It is reduced using the clause {\tt son(X,Y)
+$\lar$ father(Y,X),male(X)}. A most general unifier is {\tt
+$\{$X=S,Y=haran$\}$}. Applying the substitution gives the new resolvent
+{\tt father(haran,S), male(S)}. This is a conjunctive goal. There are two
+choices for the next goal to reduce. Choosing the goal {\tt
+father(haran,S)} leads to the following computation. The goal unifies
+with the fact {\tt father(haran,lot)} in the program, and the computation
+continues with {\tt S} instantiated to {\tt lot}. The new resolvent is
+{\tt male(lot)}, which is reduced by a fact in the program, and the
+computation terminates. This is illustrated in the left trace in Figure
+\Figdiftrasam.
+\midinsert\vskip -0.2truecm
+$$\vcenter{\halign{\lft{#}\qquad&\lft{#}\cr
+{\tt append(\(a,b\),\(c,d\),Ls)}&{\tt Ls=\(a$\mid$Zs\)}\cr
+\hbox{\hskip 10pt {\tt append(\(b\),\(c,d\),Zs)}}&{\tt Zs=\(b$
+\mid$Zs1\)}\cr
+\qi {\tt append(\(~\),\(c,d\),Zs1)}&{\tt Zs1=\(c,d\)}\cr
+\hbox{\hskip 30pt {\it true}}&\cr
+\hbox{\hskip 40pt Output: {\tt Ls=\(a,b,c,d\)}}&\cr}}$$\medskip
+\ctrline{{\bf Figure \Figtraapptwo}:~~Tracing the appending of two lists}
+\par
+$$\vcenter{\halign{\lft{#}\qquad&\lft{#}\qquad&\lft{#}\qquad&\lft{#}\cr
+{\tt son(S,haran)}&&{\tt son(S,haran)}&\cr
+\hbox{\hskip 10pt {\tt father(haran,S)}}&{\tt S=lot}&\hbox{\hskip 10pt
+{\tt male(S)}}&{\tt S=lot}\cr
+\hbox{\hskip 10pt {\tt male(lot)}}&&\hbox{\hskip 10pt {\tt
+father(haran,lot)}}&\cr
+\qi {\it true}&&\qi {\it true}&\cr}}$$\medskip
+\ctrline{{\bf Figure \Figdiftrasam}:~~Different traces of the same
+solution}
+\endinsert\par
+The other possibility for computing {\tt S=haran} is choosing to reduce
+the goal {\tt male(S)} before {\tt father(haran,S)}. This goal is reduced
+by the fact {\tt male(lot)} with {\tt S} instantiated to {\tt lot}. The
+new resolvent is {\tt father(haran,lot)}, which is reduced to the empty
+goal by the corresponding fact. This is the right trace in Figure
+\Figdiftrasam.\par
+Solutions to a query obtained using the abstract interpreter may
+contain variables. Consider the query {\tt member(a,Xs)?} with respect to
+Program~\Promemlis\ for {\tt member}. This can be interpreted as asking
+what list {\tt Xs} has the element {\tt a} as a member. One solution
+computed by the abstract interpreter is {\tt Xs=[a$\mid$Ys]}, namely, a
+list with {\tt a} as its head and an unspecified tail. Solutions that
+contain variables denote an infinity of solutions --- all their ground
+instances.\par
+There are two choices in the interpreter of Figure~\Figabsintlog:
+choosing the goal to reduce, and choosing the clause to effect the
+reduction. These must be resolved in any realization of the computation
+model. The nature of the choices is fundamentally different.\par
+The choice of goal to reduce is arbitrary; it does not matter which is
+chosen for the computation to succeed. If there is a successful
+computation by choosing a given goal, then there is a successful
+computation by choosing any other goal. The two traces in Figure
+\Figdiftrasam\ illustrate two successful computations, where the choice
+of goal to reduce at the second step of the computation differs.\par
+The choice of the clause to effect the reduction is nondeterministic. Not
+every choice will lead to a successful computation. For example, in both
+traces in Figure~\Figdiftrasam, we could have gone wrong. If we
+had chosen to reduce the goal {\tt father(haran,S)} with the fact {\tt
+father(haran,yiscah)}, we would not have been able to reduce the invoked
+goal {\tt male(yiscah)}. For the second computation, had we chosen to
+reduce {\tt male(S)} with {\tt male(isaac)}, the invoked goal {\tt
+father(haran,isaac)} could not have been reduced.\par
+For some computations, for example, the computation illustrated in Figure
+\Figtraapptwo, there is only one clause from the program that can reduce
+each goal. Such a computation is called {\it deterministic\/}.
+Deterministic computations mean that we do not have to exercise our
+nondeterministic imagination.\par
+The alternative choices that can be made by the abstract interpreter
+when trying to prove a goal implicitly define a search tree, as
+described more fully in Section~5.4. The interpreter ``guesses" a
+successful path in this search tree, corresponding to a proof of the
+goal, if one exists. However, dumber interpreters, without guessing
+abilities, can also be built, with the same power as our abstract
+interpreter. One possibility is to search this tree breadth-first, that
+is, to explore all possible choices in parallel. This will guarantee that
+if there is a finite proof of the goal (i.e., a finite successful path in
+the search tree), it will be found.\par
+Another possibility would be to explore the abstract search tree
+depth-first. In contrast to the breadth-first search strategy, the
+depth-first one does not guarantee finding a proof even if one exists,
+since the search tree may have infinite paths, corresponding to
+potentially infinite computations of the nondeterministic interpreter. A
+depth-first search of the tree might get lost in an infinite path, never
+finding a finite successful path, even if one exists.\par
+In technical terms, the breadth-first search strategy defines a {\it
+complete\/} proof procedure for logic programs, whereas the depth-first
+one is {\it incomplete\/}. In spite of its incompleteness, depth-first
+search is the one incorporated in Prolog, for practical reasons, as
+explained in Chapter~6.\par
+Let us give a trace of a longer computation, solving the Towers of Hanoi
+problem with three disks, using Program~\Protowhan. It is a deterministic
+computation, given as Figure~\Figsoltowhan. The final {\tt append}
+goal is given without unifications. It is straightforward to fill them
+in.
+\midinsert\vskip -0.2truecm
+$$\vcenter{\halign{\lft{\tt #}\quad&\lft{\tt #}\cr
+hanoi(s(s(s(0))),a,b,c,Ms)&\cr
+\qi hanoi(s(s(0)),a,c,b,Ms1)&\cr
+\qii hanoi(s(0),a,b,c,Ms11)&Ms11=\(a to b\)\cr
+\qii hanoi(s(0),b,c,a,Ms12)&Ms12=\(b to c\)\cr
+\qii append(\(a to b\),\(a to c,b to c\),Ms1)&Ms1=\(a to b$\mid$Xs\)\cr
+\qiii append(\(~\),\(a to c,b to c\),Xs)&Xs=\(a to c,b to c\)\cr
+\qi  hanoi(s(s(0)),c,b,a,Ms2)&\cr
+\qii hanoi(s(0),c,a,b,Ms21)&Ms21=\(c to a\)\cr
+\qii hanoi(s(0),a,b,c,Ms22)&Ms22=\(a to b\)\cr
+\qii append(\(c to a\),\(c to b,a to b\),Ms2)&Ms2=\(c to a$\mid$Ys\)\cr
+\qiii append(\(~\),\(c to b,a to b\),Ys)&Ys=\(c to b,a to b\)\cr
+\qi append(\(c to a,c to b,a to b\),\(a to b,c to a,&\cr
+\qiiiii c to b,a to b\),Ms)&Ms=\(c to a$\mid$Zs\)\cr
+\qii append(\(c to b,a to b\),\(a to b,c to a,&\cr
+\qiiiii c to b,a to b\),Zs)&Zs=\(c to b$\mid$Zs1\)\cr
+\qiii append(\(a to b\),\(a to b,c to a,&\cr
+\qiiiii c to b,a to b\),Zs1)&Zs1=\(a to b$\mid$Zs2\)\cr
+\qiiii append(\(~\),\(a to b,c to a,&\cr
+\qiiiii c to b,a to b\),Zs2)&Zs2=\(a to b,c to a,\cr
+& c to b,a to b\)\cr}}$$
+\medskip
+\ctrline{{\bf Figure \Figsoltowhan}:~~Solving the Towers of Hanoi}
+\endinsert\par
+Computations such as that in Figure~\Figsoltowhan\ can be compared to
+computations in more conventional languages. Unification can be seen to
+subsume many of the mechanisms of conventional languages: record
+allocation, assignment of and access to fields in records, parameter
+passing, and more. We defer the subject until the computation model for
+Prolog is introduced in Chapter~6.\par
+A computation of {\it G\/} by {\it P\/} {\it terminates\/} if {\it
+G$_n$\/} = {\it true\/} or {\it fail\/} for some {\it n\/ $\ge$ 0\/}. Such
+a computation is finite and of length {\it n\/}. Successful
+computations correspond to terminating computations that end in {\it
+true\/}. Failing computations end in {\it fail\/}. All the traces given
+so far have been of successful computations.\par
+Recursive programs admit the possibility of nonterminating computations.
+The query {\tt append(Xs,[c,d],Ys)?} with respect to {\tt append} can be
+reduced arbitrarily many times using the rule for {\tt append}. In the
+process, {\tt Xs} becomes a list of arbitrary length. This corresponds to
+solutions of the query appending {\tt [c,d]} to an arbitrarily long list.
+The nonterminating computation is illustrated in Figure~\Fignontercom.
+\topin\vskip -0.6truecm
+$$\vcenter{\halign{\lft{\tt #}\qquad&\lft{\tt #}\cr
+append(Xs,[c,d],Ys)&Xs=[X$\mid$Xs1], Ys=[X$\mid$Ys1]\cr
+\hbox{\hskip 10pt
+append(Xs1,[c,d],Ys1)}&Xs1=[X1$\mid$Xs2], Ys1=[X1$\mid$Ys2]\cr
+\qi append(Xs2,[c,d],Ys2)&Xs2=[X2$\mid$Xs3], Ys2=[X2$\mid$Ys3\)\cr
+\hbox{\hskip 30pt
+append(Xs3,[c,d],Ys3)}&Xs3=[X3$\mid$Xs4], Ys3=[X3$\mid$Ys4]\cr
+\omit\hfill $\ldots$\hfill&\omit\hfill $\ldots$\hfill\cr}}$$\medskip
+\ctrline{{\bf Figure \Fignontercom}:~~A nonterminating computation}
+\endin\par
+All the traces presented so far have an important feature in common. If
+two goals {\it G$_i$\/} and {\it G$_j$\/} are invoked from the same
+parent, and {\it G$_i$\/} appears before {\it G$_j$\/} in the trace, then
+all goals invoked by {\it G$_i$\/} will appear before {\it G$_j$\/} in
+the trace. This scheduling policy makes traces easier to follow, by
+solving queries depth-first.\par
+The scheduling policy has another important effect: instantiating
+variables before their values are needed for other parts of the
+computation. A good ordering can mean the difference between a
+computation being deterministic or not.\par
+Consider the computation traced in Figure~\Figsoltowhan. The goal\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+hanoi(s(s(s(0))),a,b,c,Ms)\cr}\medno
+is reduced to the following conjunction\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+hanoi(s(s(0)),a,c,b,Ms1),\cr
+\qi hanoi(s(s(0)),c,b,a,Ms2),\cr
+\qi append(Ms1,[a to b$\mid$Ms2],Ms).\cr}\medno
+If the {\tt append} goal is now chosen, the {\tt append} fact could be
+used (incorrectly) to reduce the goal. By reducing the two {\tt hanoi}
+goals first, and all the goals they invoke, the {\tt append} goal has the
+correct values for {\tt Ms1} and {\tt Ms2}.\vskip 15pt\parno
+{\bf Exercises for Section 4.2}\vskip 5pt\par
+\offset{20pt}{(i)} Trace the query {\tt sort([3,1,2],Xs)?} using the
+permutation sort (\Propersor), insertion sort (\Proinssor), and quicksort
+(\Proquicks) programs in turn.\par
+\offset{20pt}{(ii)} Give a trace for the goal {\tt derivative(3$
+\ast$sin(x)-4$\ast$cos(x),x,D)} using Program~\Proderrul\ for {\tt
+derivative}.\par
+\offset{20pt}{(iii)} Practice tracing your favorite computations.\endpage
+\vsize 24truecm
+\sect{Background}
+Unification plays a central role in automated deduction and in the use
+of logical inference in artificial intelligence. It was first
+described in the landmark paper of Robinson (1965). Algorithms for
+unification have been the subject of much investigation: see, for
+example, Martelli and Montanari (1982), Paterson and Wegman (1978), and
+Dwork et al.\ (1984).  Typical textbook descriptions appear in Bundy
+(1983) and Nilsson (1980).
+\par
+The definition of unification presented here is nonstandard. Readers
+wishing to learn more about unifiers are referred to the definitive
+discussion on unification in Lassez, Maher and Marriott (1988). This
+paper points out inconsistencies of the various definitions of unifiers
+that have been proposed in the literature, including the version in this
+book. Essentially, we have explained unifiers based on terms to avoid
+technical issues of composition of substitutions, which are not needed
+for our description of logic programming computations.\par
+The computation model we have presented has a sequential bias and is
+influenced by the computation model for Prolog given in Chapter~6.
+Nonetheless, the model has potential for parallelism by selecting several
+goals or several rules at a time, and for elaborate control by selecting
+complicated computation rules. References for reading about different
+computation models for logic programming are given in Section~6.3.\par
+Another bias of our computation model is the central place of
+unification. An exciting development within logic programming has been
+the realization that unification is just one instance of constraint
+solving. New computation models have been presented where the solution
+of equality constraints, i.e., unification, in the abstract interpreter
+of Figure~\Figabsintlog\ is replaced by solving other constraints. Good
+starting places to read about the new constraint-based models are
+Colmerauer (1990), Jaffar and Lassez (1987), and Lassez (1991).\par
+A proof that the choice of goal to reduce from the resolvent is arbitrary
+can be found in Apt and van Emden (1982) or in the text of Lloyd (1987).
+\par
+A method for replacing the runtime occurs check with compile-time
+analysis was suggested by Plaisted (1984).\par
+Attempts have been made to make unification without the occurs check
+more than a necessary expedient for practical implementations of Prolog.
+In particular, Colmerauer (1982b) proposes a theoretical model for such
+unifications that incorporates computing with infinite terms.\par
+A novel use of unification without the occurs check appears in Eggert and
+Chow (1983), where Escher-like drawings that gracefully tend to infinity
+are constructed.\par\bye
+

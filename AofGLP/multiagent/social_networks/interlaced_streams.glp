@@ -1,0 +1,34 @@
+%% interlaced_streams.glp - Interlaced Streams as Distributed Blocklace
+%% Source: GLP Papers (Program: Interlaced Streams (Blocklace))
+%%
+%% Blocklace: partially-ordered generalization of blockchain where each
+%% block references multiple predecessors, forming a DAG. Enables
+%% concurrent block creation without consensus.
+%%
+%% Initial goal for three agents:
+%%   p(streams(P_stream, [Q_stream?, R_stream?])),
+%%   q(streams(Q_stream, [P_stream?, R_stream?])),
+%%   r(streams(R_stream, [P_stream?, Q_stream?]))
+
+streams(MyStream, Others) :-
+    produce_payloads(Payloads),
+    interlace(Payloads?, MyStream, [], Others?).
+
+interlace([Payload|Payloads], [block(Payload?,Tips?)|Stream?], PrevTips, Others) :-
+    collect_new_tips(Others?, Tips, Others1),
+    interlace(Payloads?, Stream, Tips?, Others1?).
+interlace([], [], _, _).
+
+% Using reader(X) to identify fresh tips not yet incorporated
+collect_new_tips([[Block|Bs]|Others], [Block?|Tips?], [Bs?|Others1?]) :-
+    reader(Bs) |  % Bs unbound means Block is the current tip
+    collect_new_tips(Others?, Tips, Others1).
+collect_new_tips([[B|Bs]|Others], Tips?, [[Bs]?|Others1?]) :-
+    % Skip B as it's already been referenced
+    collect_new_tips([[Bs]?|Others?], Tips, Others1).
+collect_new_tips([], [], []).
+
+%% Each process maintains its own stream of blocks containing application
+%% payloads and references to most recent blocks observed from others.
+%% The reader(X) guard identifies unprocessed blocks by detecting unbound
+%% tail variables.

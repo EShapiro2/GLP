@@ -1,0 +1,12 @@
+%% delete.glp - Deleting all occurrences of an element from a list (AoP 3.18)
+%% delete(List,X,HasNoXs) :- HasNoXs is the result of removing all occurrences of X from List.
+%% Note: Requires numeric elements for =:= guard
+
+delete([X|Xs], Y, Ys?) :- X? =:= Y? | delete(Xs?, Y?, Ys).
+delete([H|Xs], Z, [H?|Ys?]) :- otherwise | delete(Xs?, Z?, Ys).
+delete([], _, []).
+
+%% reduce clauses for metainterpreter
+reduce(delete([X|Xs], Y, Ys?), delete(Xs?, Y?, Ys)) :- X? =:= Y? | true.
+reduce(delete([H|Xs], Z, [H?|Ys?]), delete(Xs?, Z?, Ys)) :- otherwise | true.
+reduce(delete([], _, []), true).

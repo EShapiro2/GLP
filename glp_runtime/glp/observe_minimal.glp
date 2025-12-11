@@ -1,0 +1,39 @@
+%% observe_minimal.glp - Minimal case exposing observe limitation
+
+%% === observe.glp (inlined - consult not supported) ===
+
+%% A→B: value available at A (position 1)
+observe(A, A?, A?) :- atom(A?) | true.
+observe(A, A?, A?) :- number(A?) | true.
+observe(A, B?, Log?) :- compound(A?) |
+    A? =.. ListA,
+    observe_list(ListA?, ListB, Logs),
+    B =.. ListB?,
+    Log =.. Logs?.
+
+%% B→A: value available at B (position 2)
+observe(A?, A, A?) :- atom(A?) | true.
+observe(A?, A, A?) :- number(A?) | true.
+observe(A?, B, Log?) :- compound(B?) |
+    B? =.. ListB,
+    observe_list(ListB?, ListA, Logs),
+    A =.. ListA?,
+    Log =.. Logs?.
+
+observe_list([], [], []).
+observe_list([H|T], [I?|Is?], [L?|Ls?]) :-
+    observe(H?, I, L),
+    observe_list(T?, Is, Ls).
+
+%% === Minimal test ===
+
+test_minimal(Log?) :-
+    observe(A?, B, Log),
+    alice(A),
+    bob(B?).
+
+alice(msg(hello, Reply)) :- got_reply(Reply?).
+
+got_reply(R) :- atom(R?) | true.
+
+bob(msg(Greeting, world)) :- atom(Greeting?) | true.

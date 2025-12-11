@@ -1,0 +1,523 @@
+%%%%% Leoudi Book, Chapter 9, pp 138-149 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\chapnum=0\advance\chapnum by 8
+\numberfirst
+\startpage{138}
+
+\chapa{Structure Inspection}
+Standard Prolog has several predicates related to the structure of terms.
+These predicates are used to recognize the different types of terms, to
+decompose terms into their functor and arguments, and to create new terms.
+This chapter discusses the use of predicates related to term structure.
+\par
+\sect{Type Predicates}
+{\it Type predicates\/} are unary relations that distinguish between the
+different types of terms. System predicates exist that test whether a
+given term is a structure or a constant, and further, whether a constant
+is an atom, an integer or floating-point. Figure~\Figsystyppre\ gives the
+four basic type predicates in Standard Prolog, together with their
+intended meanings.
+\midinsert\vskip -0.2truecm
+$$\vcenter{\halign{\lft{#}\cr
+{\tt integer(X) $\lar$ X} is an integer.\cr
+{\tt atom(X) $\lar$ X} is an atom.\cr
+{\tt real(X) $\lar$ X} is a floating-point number.\cr
+{\tt compound(X) $\lar$ X} is a compound term.\cr}}$$\medskip
+\ctrline{{\bf  Figure \Figsystyppre}:~~Basic system type predicates}
+\endinsert\par
+Each of the basic predicates in Figure~\Figsystyppre\ can be regarded as
+an infinite table of facts. The predicate {\tt integer/1} would consist
+of a table of integers:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+integer(0).\quad integer(1).\quad integer(-1).\quad $\ldots$\cr}\medno
+The predicate {\tt atom/1} would consist of a table of atoms in the
+program:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+atom(foo).\quad atom(bar).\quad $\ldots$\cr}\medno
+The predicate {\tt compound/1} would consist of a table of the function
+symbols in the program with variable arguments, etc.\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+compound(father(X,Y)).\quad compound(son(X,Y)).\quad $\ldots$\cr}\medskip
+Other type predicates can be built from the basic type predicates. For
+example, that a number is either an integer or floating-point can be
+represented by two clauses:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+number(X) $\lar$ integer(X).\cr
+number(X) $\lar$ real(X).\cr}\medskip
+Standard Prolog includes a predicate {\tt number/1} effectively
+defined in this way. It also includes a predicate {\tt atomic(X)},
+which is true if {\tt X} is an atom or a number. In this book, we
+prefer to call the predicate {\tt constant/1}. To run under Standard
+Prolog, the following clause may be necessary:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+constant(X) $\lar$ atomic(X).\cr}\medskip
+To illustrate the use of type predicates, the query {\tt integer(3)?}
+would succeed, but the query {\tt atom(3)?} would fail. One might
+expect that a call to a type predicate with a variable argument, such as
+{\tt integer(X)?}, would generate different integers on backtracking.
+This is not practical for implementation, however, and we would prefer
+that such a call report an error condition. In fact, Standard Prolog
+specifies that the call {\tt integer(X)?} should fail.\par
+The only terms not covered by the predicates in Figure~\Figsystyppre\ are
+variables. Prolog does provide system predicates relating to variables.
+The use of such predicates, however, is conceptually very different from
+the use of structure inspection predicates described in this chapter.
+Meta-logical predicates (their technical name) are the subject of
+Chapter~10.\par 
+We give an example of the use of a type predicate as part of a program
+for flattening a list of lists. The relation {\tt flatten(Xs,Ys)} is true
+if {\tt Ys} is the  list of elements occurring in the list of lists {\tt
+Xs}. The elements of {\tt Xs} can themselves be lists or elements, so
+elements can be arbitrarily deeply nested. An example of a goal in the
+meaning of {\tt flatten} is {\tt flatten([[a],[b,[c,d]],e],[a,b,c,d,e])}.
+\par
+The simplest program for flattening uses double recursion. To flatten an
+arbitrary list {\tt [X$\mid$Xs]}, where {\tt X} can itself be a list,
+flatten the head of the list {\tt X}, flatten the tail of the list {\tt
+Xs}, and concatenate the results:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+flatten([X$\mid$Xs],Ys) $\lar$\cr
+\qi flatten(X,Ys1), flatten(Xs,Ys2), append(Ys1,Ys2,Ys).\cr}\medno
+What are the base cases? The empty list is flattened to itself. A type
+predicate is necessary for the remaining case. The result of flattening a
+constant is a list containing the constant:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+flatten(X,[X]) $\lar$ constant(X), X$\ne$\(~\).\cr}\medno
+The condition {\tt constant(X)} is necessary to prevent the rule being
+used when {\tt X} is a list. The complete program for {\tt flatten} is
+given as Program~\Proflalisdou.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it flatten\/}({\it Xs,Ys\/}) $\lar$\cr
+\qi {\it Ys\/} {\rm is a list of the elements of} {\it Xs\/}{\rm .}\cr
+\noalign{\medskip}
+flatten([X$\mid$Xs],Ys) $\lar$\cr
+\qi flatten(X,Ys1), flatten(Xs,Ys2), append(Ys1,Ys2,Ys).\cr
+flatten(X,[X]) $\lar$\cr
+\qi constant(X), X$\ne$\(~\).\cr
+flatten([~],[~]).\cr
+\noalign{\bigskip}
+{\bf Program \Proflalisdou}{\rm :~~Flattening a list with double
+recursion}\cr}
+\endinsert\par
+Program~\Proflalisdou, although very clear declaratively, is not the most
+efficient way of flattening a list. In the worst case, which is a
+left-linear tree, the program would require a number of reductions whose
+order is quadratic in the number of elements in the flattened list.\par
+A program for {\tt flatten} that constructs the flattened list top-down
+is a little more involved than the doubly recursive version. It uses an
+auxiliary predicate {\tt flatten(Xs,Stack,Ys)}, where {\tt Ys} is a
+flattened list containing the elements in {\tt Xs} and a stack {\tt
+Stack} to keep track of what needs to be flattened. The stack is
+represented as a list.\par
+The call of {\tt flatten/3} by {\tt flatten/2} initializes the stack to
+the empty list. We discuss the cases covered by {\tt flatten/3}. The
+general case is flattening a list {\tt [X$\mid$Xs]}, where {\tt X} is
+itself a list. In this case {\tt Xs} is pushed onto the stack, and {\tt
+X} is recursively flattened. The predicate {\tt list(X)} is used to
+recognize a list. It is defined by the fact {\tt list(\(X$\mid$Xs\))}:
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+flatten([X$\mid$Xs],S,Ys) $\lar$
+list(X), flatten(X,[Xs$\mid$S],Ys).\cr}\medno
+When the head of the list is a constant other then the empty list, it is
+added to the output, and the tail of the list is flattened recursively:
+\medskip
+\halign{\hskip 20pt\lft{\tt #}\cr
+flatten([X$\mid$Xs],S,[X$\mid$Ys]) $\lar$
+constant(X),X$\ne$\(~\), flatten(Xs,S,Ys).\cr}\medno
+When the end of the list is reached, there are two possibilities,
+depending on the state of the stack. If the stack is nonempty, the top
+element is popped, and the flattening continues:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+flatten([~],[X$\mid$S],Ys) $\lar$ flatten(X,S,Ys).\cr}\medno
+If the stack is empty, the computation terminates:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+flatten([~],[~],[~]).\cr}\medno
+The complete program is given as Program~\Proflalissta.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it flatten\/}({\it Xs,Ys\/}) $\lar$\cr
+\qi {\it Ys\/} {\rm is a list of the elements of} {\it Xs\/}{\rm .}\cr
+\noalign{\medskip}
+flatten(Xs,Ys) $\lar$ flatten(Xs,[~],Ys).\cr
+\noalign{\vskip 5pt}
+flatten([X$\mid$Xs],S,Ys) $\lar$\cr
+\qi list(X), flatten(X,[Xs$\mid$S],Ys).\cr
+flatten([X$\mid$Xs],S,[X$\mid$Ys]) $\lar$\cr
+\qi constant(X), X$\ne$\(~\), flatten(Xs,S,Ys).\cr
+flatten([~],[X$\mid$S],Ys) $\lar$\cr
+\qi flatten(X,S,Ys).\cr
+flatten([~],[~],[~]).\cr
+\noalign{\vskip 5pt}
+list([X$\mid$Xs]).\cr
+\noalign{\bigskip}
+{\bf Program \Proflalissta}{\rm :~~Flattening a list using a stack}\cr}
+\endinsert\par
+A general technique of using a stack is demonstrated in Program
+\Proflalissta. The stack is managed by unification. Items are pushed onto
+the stack by recursive calls to a consed list. Items are popped by
+unifying with the head of the list and recursive calls to the tail.
+Another application of stacks appears in Programs 
+\Propusdowaut\ and \Pronpdapafin\ simulating pushdown automata.\par
+Note that the stack parameter is an example of an accumulator.\par
+The reader can verify that the revised program requires a number of
+reductions linear in the size of the flattened list.\vskip 15pt\parno
+{\bf Exercise for Section 9.1}\vskip 5pt\par
+\offset{20pt}{(i)} Rewrite Program~\Proflalisdou\ for {\tt
+flatten(Xs,Ys)} to use an accumulator instead of the call to {\tt
+append}, keeping it doubly recursive.\endpage
+\sect{Accessing Compound Terms}
+Recognizing a term as compound is one aspect of structure inspection.
+Another aspect is providing access to the functor name, arity, and
+arguments of a compound term. One system predicate for delving into
+compound terms is {\tt functor(Term,F,Arity)}. This predicate is true if
+{\tt Term} is a term whose principal functor has name {\tt F} and arity
+{\tt Arity}. For example, {\tt functor(father(haran,lot),father,2)?}
+succeeds.\par
+The functor predicate can be defined, analogously to the type predicates,
+by a table of facts of the form {\tt functor(f(X$_1$,$
+\ldots$,X$_N$),f,N)} for each functor {\tt f} of arity {\tt N}, for
+example, {\tt functor(father(X,Y),father,2)}, {\tt
+functor(son(X,Y),son,2)}, $\ldots$ . Standard Prolog considers constants to
+be functors of arity 0, with the appropriate extension to the functor
+table.\par
+Calls to {\tt functor} can fail for various reasons. A goal such as {\tt
+functor(father(X,Y),son,2)} does not unify with an appropriate fact in
+the table. Also, there are type restrictions on the arguments of {\tt
+functor} goals. For example, the third argument of {\tt functor}, the
+arity of the term, cannot be an atom or a compound term. If these
+restrictions are violated, the goal fails. A distinction can be made
+between calls that fail and calls that should give an error because
+there are infinitely many solutions, such as {\tt functor(X,Y,2)?}.\par
+The predicate {\tt functor} is commonly used in two ways, term
+decomposition and creation. The first use finds the functor name and
+arity of a given term. For example, the query {\tt
+functor(father(haran,lot),X,Y)?} has the solution {\tt
+$\{$X=father,Y=2$\}$}. The second use builds a term with a particular
+functor name and arity. A sample query is {\tt functor(T,father,2)?} with
+solution {\tt T=father(X,Y)}.\par
+The companion system predicate to {\tt functor} is {\tt arg(N,Term,Arg)},
+which accesses the arguments of a term rather than the functor name. The
+goal {\tt arg(N,Term,Arg)} is true if {\tt Arg} is the {\tt N}th argument
+of {\tt Term}. For example, {\tt arg(1,father(haran,lot),haran)} is true.
+\par
+Like {\tt functor/3}, {\tt arg/3} is commonly used in two ways. The term
+decomposition use finds a particular argument of a compound term. A query
+exemplifying this use is {\tt arg(2,father(haran,lot),X)?} with solution
+{\tt X=lot}. The term creation use instantiates a variable argument of a
+term. For example, the query {\tt arg(1,father(X,lot),haran)?} succeeds,
+instantiating {\tt X} to {\tt haran}.\par
+The predicate {\tt arg} is also defined as if there is an infinite table
+of facts. A fragment of the table is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+arg(1,father(X,Y),X).\quad arg(2,father(X,Y),Y).\cr
+\qi arg(1,son(X,Y),X).\quad $\ldots$ .\cr}\medno
+Calls to {\tt arg} fail if the goal does not unify with the appropriate
+fact in the table, for example, {\tt arg(1,father(haran,lot),abraham)}.
+They also fail if the type restrictions are violated, for example, if the
+first argument is an atom. An error is reported with a goal such as {\tt
+arg(1,X,Y)}.\par
+Let us consider an example of using {\tt functor} and {\tt arg} to
+inspect terms. Program~\Profinsubter\ axiomatizes a relation {\tt
+subterm(T1,T2)}, which is true if {\tt T1} is a subterm of {\tt T2}. For
+reasons that will become apparent later, we restrict {\tt T1} and {\tt
+T2} to be ground.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it subterm\/}({\it Sub,Term\/}) $\lar$\cr
+\qi {\it Sub\/} {\rm is a subterm of the ground term} {\it Term\/}{\rm .}\cr
+\noalign{\medskip}
+subterm(Term,Term).\cr
+subterm(Sub,Term) $\lar$\cr
+\qi compound(Term), functor(Term,F,N), subterm(N,Sub,Term).\cr
+\noalign{\vskip 5pt}
+subterm(N,Sub,Term) $\lar$\cr
+\qi N $>$ 1, N1 is N-1, subterm(N1,Sub,Term).\cr
+subterm(N,Sub,Term) $\lar$\cr
+\qi arg(N,Term,Arg), subterm(Sub,Arg).\cr
+\noalign{\bigskip}
+{\bf  Program \Profinsubter}{\rm :~~Finding subterms of a term}\cr}
+\endinsert\par
+The first clause of Program~\Profinsubter\ defining {\tt subterm/2}
+states that any term is a subterm of itself. The second clause states
+that {\tt Sub} is a subterm of a compound term {\tt Term} if it is a
+subterm of one of the arguments. The number of arguments, i.e., the arity
+of the principal functor of the term, is found and used as a loop counter
+by the auxiliary {\tt subterm/3}, which iteratively tests all the
+arguments.\par
+The first clause of {\tt subterm/3} decrements the counter and
+recursively calls {\tt subterm}. The second clause covers the case when
+{\tt Sub} is a subterm of the {\tt N}th argument of the term.\par
+The {\tt subterm} procedure can be used in two ways: to test whether
+the first argument is indeed a subterm of the second; and to generate
+subterms of a given term. Note that the clause order determines the order
+in which subterms are generated. The order in Program~\Profinsubter\
+gives subterms of the first argument before subterms of the second
+argument, and so on. Swapping the order of the clauses changes the order
+of solutions.\par
+Consider the query {\tt subterm(a,f(X,Y))?}, where the second argument is
+not ground. Eventually the subgoal {\tt subterm(a,X)} is reached. This
+succeeds by the first {\tt subterm} rule, instantiating {\tt X} to {\tt
+a}. The subgoal also matches the second {\tt subterm} rule, invoking the
+goal {\tt compound(X)}, which generates an error. This is undesirable
+behavior.\par
+We defer the issues arising when performing structure inspection on
+nonground terms to Chapter~10, where meta-logical predicates with
+suitable expressive power are introduced. For the rest of this chapter,
+all programs are assumed to take only ground arguments unless otherwise
+stated.\par
+Program~\Profinsubter\ is typical code for programs that perform
+structure inspection. We look at another example, substituting for a
+subterm in a term.\par
+The relation scheme for a general program for substituting subterms is
+{\tt substitute(Old,New,OldTerm,NewTerm)}, where {\tt NewTerm} is the
+result of replacing all occurrences of {\tt Old} in {\tt OldTerm} by {\tt
+New}. Program~\Proprosubter\ implementing the relation generalizes
+substituting for elements in a list, posed as Exercise~3.3(i) and the
+logic program (Program~\Prosubtertre) substituting for elements in
+binary trees.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it substitute\/}({\it Old,New,OldTerm,NewTerm\/}) $\lar$\cr
+\qi {\it NewTerm\/} {\rm is the result of replacing all occurrences of}
+{\it Old\/}\cr
+\qi {\rm in} {\it OldTerm\/} {\rm by} {\it New\/}{\rm .}\cr
+\noalign{\medskip}
+substitute(Old,New,Old,New).\cr
+substitute(Old,New,Term,Term) $\lar$\cr
+\qi constant(Term), Term $\ne$ Old.\cr
+substitute(Old,New,Term,Term1) $\lar$\cr
+\qi compound(Term),\cr
+\qi functor(Term,F,N),\cr
+\qi functor(Term1,F,N),\cr
+\qi substitute(N,Old,New,Term,Term1).\cr
+\noalign{\vskip 5pt}
+substitute(N,Old,New,Term,Term1) $\lar$\cr
+\qi N $>$ 0,\cr
+\qi arg(N,Term,Arg),\cr
+\qi substitute(Old,New,Arg,Arg1),\cr
+\qi arg(N,Term1,Arg1),\cr
+\qi N1 is N-1,\cr
+\qi substitute(N1,Old,New,Term,Term1).\cr
+substitute(0,Old,New,Term,Term1).\cr
+\noalign{\bigskip}
+{\bf  Program \Proprosubter}{\rm :~~A program for substituting in a
+term}\cr}
+\endinsert\par
+Program~\Proprosubter\ is a little more complicated than Program
+\Profinsubter\ for {\tt subterm} but conforms to the same basic pattern.
+The clauses for {\tt substitute/4} cover three different cases. The last,
+handling compound terms, calls an auxiliary predicate {\tt substitute/5},
+which iteratively substitutes in the subterms. The arity of the principal
+functor of the term is used as the initial value of a loop counter that
+is successively decremented to control the iteration. We present a
+particular example to illustrate the interesting points lurking in the
+code. A trace of the query {\tt substitute(cat,dog,owns(jane,cat),X)?} is
+given in Figure~\Figtrasubpre.
+\midinsert
+\halign{\lft{\tt #}\quad&\lft{\tt #}\cr
+substitute(cat,dog,owns(jane,cat),X)&X=owns(jane,cat)\cr
+\qi constant(owns(jane,cat))\qquad\qquad f&\cr
+substitute(cat,dog,owns(jane,cat),X)&\cr
+\qi compound(owns(jane,cat))&\cr
+\qi functor(owns(jane,cat),F,N)&F=owns,N=2\cr
+\qi functor(X,owns,2)&X=owns(X1,X2)\cr
+\qi substitute(2,cat,dog,owns(jane,cat),owns(X1,X2))&\cr
+\qii 2 $>$ 0&\cr
+\qii arg(2,owns(jane,cat),Arg)&Arg=cat\cr
+\qii substitute(cat,dog,cat,Arg1)&Arg1=dog\cr
+\qii arg(2,owns(X1,X2),dog)&X2=dog\cr
+\qii N1 is 2-1&N1=1\cr
+\qii substitute(1,cat,dog,owns(jane,cat), owns(X1,dog))&\cr
+\qiii 1 $>$ 0&\cr
+\qiii arg(1,owns(jane,cat),Arg2)&Arg2=jane\cr
+\qiii substitute(cat,dog,jane,Arg3)&Arg3=jane\cr
+\qiiii constant(jane)&\cr
+\qiiii jane $\ne$ cat&\cr
+\qiii arg(1,owns(X1,dog),jane)&X1=jane\cr
+\qiii N2 is 1-1&N2=0\cr
+\qiii substitute(0,cat,dog,owns(jane,cat),owns(jane,dog))\cr
+\qiiii 0 $>$ 0\qquad\qquad f\cr
+\qiii substitute(0,cat,dog,owns(jane,cat),owns(jane,dog))\cr
+\qiiii {\it true}\cr
+\qiiiii Output: (X=owns(jane,dog))\cr}\bigskip
+\ctrline{{\bf  Figure \Figtrasubpre}:~~Tracing the {\tt substitute} predicate}
+\endinsert\par
+The query fails to unify with the fact in Program~\Proprosubter. The
+second rule is also not applicable because {\tt owns(jane,cat)} is not a
+constant.\par
+The third {\tt substitute} rule is applicable to the query. The second
+call of {\tt functor} is interesting. {\tt Name} and {\tt Arity} have
+been instantiated to {\tt owns} and {\tt 2}, respectively, in the
+previous call of {\tt functor}, so this call builds a term that serves as
+the answer template to be filled in as the computation progresses. This
+explicit term building has been achieved by implicit unification in
+previous Prolog programs. The call to {\tt substitute/5} successively
+instantiates the arguments of {\tt Term1}. In our example, the second
+argument of {\tt owns(X1,X2)} is instantiated to {\tt dog}, and then {\tt
+X1} is instantiated to {\tt jane}.\par
+The two calls to {\tt arg} serve different tasks in {\tt substitute/5}.
+The first call selects an argument, while the second call of {\tt arg}
+instantiates an argument.\par
+Substitution in a term is typically done by destructive assignment in
+conventional languages. Destructive assignment is not possible directly
+in Prolog. Program~\Proprosubter\ typifies how Prolog handles changing
+data structures. The new term is recursively built as the old term is
+being traversed, by logically relating the corresponding subterms of the
+terms.\par
+Note that the order of the second {\tt arg} goal and the recursive call
+to {\tt substitute/5} can be swapped. The modified clause for {\tt
+substitute/5} is logically equivalent to the previous one and gives the
+same result in the context of Program~\Proprosubter. Procedurally,
+however, they are radically different.\par
+Another system predicate for structure inspection is a binary operator
+{\tt =..}, called, for historical reasons, {\tt univ}. The goal {\tt
+Term} =.. {\tt List} succeeds if {\tt List} is a list whose head is the
+functor name of the term {\tt Term} and whose tail is the list of
+arguments of {\tt Term}. For example, the query {\tt
+(father(haran,lot)~=..~\(father,haran,lot\))?} succeeds.\par
+Like {\tt functor} and {\tt arg}, {\tt univ} has two uses. Either it
+builds a term given a list, for example, {\tt (X =..
+[father,haran,lot])?} with solution {\tt X=father(haran,lot)}, or it
+builds a list given a term, for example, {\tt (father(haran,lot) =..
+Xs)?} with solution {\tt Xs=[father,haran,lot]}.\par
+In general, programs written using {\tt functor} and {\tt arg} can also
+be written with {\tt univ}. Program~\Prosubdefusi\ is an alternative
+definition of {\tt subterm}, equivalent to Program~\Profinsubter. As in
+Program~\Profinsubter, an auxiliary predicate investigates the arguments;
+here it is {\tt subterm\_list}. {\tt Univ} is used to access the list of
+arguments, {\tt Args}, of which subterms are recursively found by {\tt
+subterm\_list}.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it subterm}({\it Sub,Term}) $\lar$\cr
+\qi {\it Sub} {\rm is a subterm of the ground term} {\it Term}{\rm .}\cr
+\noalign{\medskip}
+subterm(Term,Term).\cr
+subterm(Sub,Term) $\lar$\cr
+\qi compound(Term), Term =.. \(F$\mid$Args\), subterm\_list(Sub,Args).\cr
+\noalign{\vskip 5pt}
+subterm\_list(Sub,\(Arg$\mid$Args\)) $\lar$\cr
+\qi subterm(Sub,Arg).\cr
+subterm\_list(Sub,\(Arg$\mid$Args\)) $\lar$\cr
+\qi subterm\_list(Sub,Args).\cr
+\noalign{\bigskip}
+{\bf  Program \Prosubdefusi}{\rm :~~Subterm defined using {\tt univ}}\cr}
+\endin\par
+Programs using {\tt univ} to inspect structures are usually simpler.
+However, programs written with {\tt functor} and {\tt arg} are in general
+more efficient than those using {\tt univ}, since they avoid building
+intermediate structures.\par
+A neat use of {\tt univ} is formulating the chain rule for symbolic
+differentiation. The chain rule states that {\it d\/}/{\it dx\/}$\{${\it
+f\/}({\it g\/}({\it x\/})$\}$ = {\it d\/}/{\it dg\/}({\it x\/})$\{${\it
+f\/}({\it g\/}({\it x\/})$\}$ $\times$ {\it d\/}/{\it dx\/}$\{${\it
+g\/}({\it x\/})$\}$. In Section~3.5, we noted that this rule could not be
+expressed as a single clause of a logic program as part of
+Program~\Proderrul. A Prolog rule encapsulating the chain rule is\medskip 
+\halign{\hskip 40pt\lft{\tt #}\cr
+derivative(F\_G\_X,X,DF$\ast$DG) $\lar$\cr
+\qi F\_G\_X =.. \(F,G\_X\),\cr
+\qi derivative(F\_G\_X,G\_X,DF),\cr
+\qi derivative(G\_X,X,DG).\cr}\medno
+The function {\tt F\_G\_X} is split up by {\tt univ} into its function
+{\tt F} and  argument {\tt G\_X}, checking that {\tt F} is a function
+of arity 1 at the same time. The derivative of {\tt F} with respect to
+its argument is recursively calculated, as is the derivative of {\tt
+G\_X}. These are combined to give the solution.\par
+{\tt Univ} can be defined in terms of {\tt functor} and {\tt arg}. Two
+different definitions are necessary, however, to cover both building
+lists from terms and building terms from lists. One definition does not
+suffice, because of errors caused by uninstantiated variables. Other system
+predicates are similarly precluded from flexible use.\par
+Program~\Proconliscor\ behaves correctly for building a list from a term.
+The functor {\tt F} is found by the call to {\tt functor}, and the
+arguments are recursively found by the predicate {\tt args}. The first
+argument of {\tt args} is a counter that counts up, so that the arguments
+will appear in order in the final list. If Program~\Proconliscor\ is
+called with {\tt Term} uninstantiated, an error will be generated
+because of an incorrect call of {\tt functor}.
+\topin
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it Term =.. List\/} $\lar$\cr
+\qi {\it List\/} {\rm is a list containing the functor of} {\it Term\/}
+{\rm followed}\cr
+\qi {\rm by the arguments of} {\it Term\/}{\rm .}\cr
+\noalign{\medskip}
+Term =.. [F$\mid$Args] $\lar$\cr
+\qi functor(Term,F,N), args(0,N,Term,Args).\cr
+\noalign{\vskip 5pt}
+args(I,N,Term,\(Arg$\mid$Args\)) $\lar$\cr
+\qi I $<$ N, I1 is I+1, arg(I1,Term,Arg), args(I1,N,Term,Args).\cr
+args(N,N,Term,[~]).\cr
+\noalign{\bigskip}
+{\bf Program \Proconliscor}{\rm :~~Constructing a list corresponding to
+a term}\cr}\vskip 0.6truecm
+\halign{\hskip 40pt\lft{\tt #}\cr
+{\it Term =.. List\/} $\lar$\cr
+\qi {\rm The functor of} {\it Term\/} {\rm is the first element of the
+list} {\it List\/}{\rm ,}\cr
+\qi {\rm and its arguments are the rest of} {\it List\/}{\rm 's
+elements.}\cr
+\noalign{\medskip}
+Term =.. [F$\mid$Args] $\lar$\cr
+\qi length(Args,N), functor(Term,F,N), args(Args,Term,1).\cr
+\noalign{\vskip 5pt}
+args([Arg$\mid$Args],Term,N) $\lar$\cr
+\qi arg(N,Term,Arg), N1 is N+1, args(Args,Term,N1).\cr
+args([~],Term,N).\cr
+\noalign{\vskip 5pt}
+length(Xs,N) $\lar$ {\rm See Program \Profinlenlis.}\cr
+\noalign{\bigskip}
+{\bf Program \Procontercor}{\rm :~~Constructing a term corresponding to
+a list}\cr}
+\endin\par
+Program~\Procontercor\ behaves correctly for constructing a term from a
+list. The length of the list is used to determine the number of
+arguments. The term template is built by the call to {\tt functor}, and
+a different variant of {\tt args} is used to fill in the arguments.
+Program~\Procontercor\ results in an error if used to build a list,
+because of the goal {\tt length(Args,N)} being called with uninstantiated
+arguments.\endpage
+\noindent {\bf Exercises for Section 9.2}\vskip 5pt \par
+\offset{20pt}{(i)} Define a predicate {\tt occurrences(Sub,Term,N)}, true
+if {\tt N} is the number of occurrences of subterm {\tt Sub} in {\tt
+Term}. Assume that {\tt Term} is ground.\par
+\offset{20pt}{(ii)} Define a predicate {\tt
+position(Subterm,Term,Position)}, where {\tt Position} is a list of
+argument positions identifying {\tt Subterm} within {\tt Term}. For
+example, the position of {\tt X} in {\tt 2$\cdot$sin(X)} is {\tt
+\(2,1\)}, since {\tt sin(X)} is the second argument of the binary
+operator ``$\cdot$", and {\tt X} is the first argument of {\tt sin(X)}.
+(Hint:~~Add an extra argument for Program~\Profinsubter\ for {\tt
+subterm}, and build the position list top-down.)\par
+\offset{20pt}{(iii)} Rewrite Program~\Proconliscor\ so that it counts
+down. (Hint:~~Use an accumulator.)\par
+\offset{20pt}{(iv)} Define {\tt functor} and {\tt arg} in terms of {\tt
+univ\/}. How can the programs be used?\par
+\offset{20pt}{(v)} Rewrite Program~\Proprosubter\ for {\tt substitute} so
+that it uses {\tt univ}.\par
+\sect{Background}
+Prolog does not distinguish between object-level and meta-level type
+predicates. We have taken a different approach, by defining the type test
+predicates to work only on instantiated terms and by treating the
+meta-logical test predicates (e.g., {\tt var/1}, discussed in
+Section~10.1) separately. The predicates for accessing and constructing
+terms, {\tt functor}, {\tt arg}, and {\tt =..}, originate from the
+Edinburgh family. The origin of {\tt =..} is in the old Prolog-10 syntax
+for lists, which used the operator {\tt ,..} instead of the current
+{\tt $\mid$} in lists, e.g., {\tt [a,b,c,..Xs]} instead of {\tt [a,b,c$
+\mid$Xs]}. The {\tt ..} on the right-hand side suggested or reminded that
+the right-hand side of the equality is a list.\par
+Several of the examples in this section were adapted from O'Keefe (1983).
+\par
+Exercises 9.2(i) and 9.2(ii) are used in the equation solver in
+Chapter~23.\par\bye
+

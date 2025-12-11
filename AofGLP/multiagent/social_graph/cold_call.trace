@@ -1,0 +1,11 @@
+=== cold_call.glp ===
+Cold call befriending protocol.
+Goal: social_graph(Id, [msg(user, Id, connect(Target))|In], Fs)
+
+Four phases:
+1. User initiation: connect(Target) request
+2. Offer transmission: intro(Id, Id, Resp) sent
+3. User consultation: befriend(From, Resp) shown
+4. Channel establishment: response processed
+
+Uses inject/4 to defer insertion until response bound.

@@ -1,0 +1,725 @@
+%%%%% Leonudi Book, Chapter 1, pp 1-18 %%%%%
+
+\input wizzle
+\input ludbumac
+\hsize 12.4truecm
+\vsize 18.2truecm
+\input headline
+\tolerance 3000
+\numberfirst
+\startpage{1}
+
+\pageinsert
+\titlepage\chskipt\noindent
+{\bigbf Part I}\bigskip\noindent
+{\bigbf Logic Programs}\par\vfill
+A logic program is a set of axioms, or rules, defining relations
+between objects. A computation of a logic program is a deduction of
+consequences of the program. A program defines a set of consequences,
+which is its meaning. The art of logic programming is constructing
+concise and elegant programs that have the desired meaning.\par\endinsert
+\endpage
+\chapa{Basic Constructs}
+The basic constructs of logic programming, terms and statements, are
+inherited from logic. There are three basic statements: facts, rules, and
+queries. There is a single data structure: the logical term.\par
+\titlepage
+\sect{Facts}
+The simplest kind of statement is called a {\it fact\/}. Facts are a
+means of stating that a relation holds between objects. An example is
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+father(abraham,isaac).\cr}\medno
+This fact says that Abraham is the father of Isaac, or that the relation
+{\tt father} holds between the individuals named {\tt abraham} and {\tt
+isaac}. Another name for a relation is a {\it predicate\/}. Names of
+individuals are known as {\it atoms\/}. Similarly, {\tt plus(2,3,5)}
+expresses the relation that 2 plus 3 is 5. The familiar {\tt plus}
+relation can be realized via a set of facts that defines the addition
+table. An initial segment of the table is\medskip
+\halign{\hskip 40pt\lft{\tt #}\qquad&\lft{\tt #}\qquad&\lft{\tt #}\qquad&
+\lft{\tt #}\cr
+plus(0,0,0).&plus(0,1,1).&plus(0,2,2).&plus(0,3,3).\cr
+plus(1,0,1).&plus(1,1,2).&plus(1,2,3).&plus(1,3,4).\cr}\medno
+A sufficiently large segment of this table, which happens to be also a
+legal logic program, will be assumed as the definition of the {\tt plus}
+relation throughout this chapter.\par
+The syntactic conventions used throughout the book are introduced as
+needed. The first is the case convention. It is significant that the
+names of both predicates and atoms in facts begin with a lowercase
+letter rather than an uppercase letter. \par
+A finite set of facts constitutes a {\it program\/}. This is the simplest
+form of logic program. A set of facts is also a description of a
+situation. This insight is the basis of database programming, to be
+discussed in the next chapter. An example database of family
+relationships from the Bible is given as Program~\Probibfamdat. The
+predicates {\tt father}, {\tt mother}, {\tt male}, and {\tt female}
+express the obvious relationships.
+\midinsert
+\halign{\hskip 40pt\lft{\tt #}\qquad&\lft{\tt #}\cr
+father(terach,abraham).&male(terach).\cr
+father(terach,nachor).&male(abraham).\cr
+father(terach,haran).&male(nachor).\cr
+father(abraham,isaac).&male(haran).\cr
+father(haran,lot).&male(isaac).\cr
+father(haran,milcah).&male(lot).\cr
+father(haran,yiscah).&\cr
+&female(sarah).\cr
+mother(sarah,isaac).&female(milcah).\cr
+&female(yiscah).\cr
+\noalign{\bigskip}
+{\bf Program \Probibfamdat}{\rm :~~A biblical family database}\cr}
+\endinsert\par
+\sect{Queries}
+The second form of statement in a logic program is a {\it query\/}.
+Queries are a means of retrieving information from a logic program. A
+query asks whether a certain relation holds between objects. For example,
+the query {\tt father(abraham,isaac)?} asks whether the {\tt father}
+relationship holds between {\tt abraham} and {\tt isaac}. Given the facts of
+Program~\Probibfamdat, the answer to this query is {\it yes\/}.\par
+Syntactically, queries and facts look the same, but they can be distinguished
+by the context. When there is a possibility of confusion, a terminating
+period will indicate a fact, while a terminating question mark will
+indicate a query. We call the entity without the period or question mark
+a {\it goal\/}. A fact {\it P\/}. states that the goal {\it P\/} is true.
+A query {\it P?\/} asks whether the goal {\it P\/} is true. A {\it simple
+query\/} consists of a single goal.\par
+Answering a query with respect to a program is determining whether the
+query is a logical consequence of the program. We define logical
+consequence incrementally through this chapter. Logical consequences are
+obtained by applying deduction rules. The simplest rule of deduction is
+{\it identity\/}: from {\it P\/} deduce {\it P\/}. A query is a logical
+consequence of an identical fact.\par
+Operationally, answering simple queries using a program containing facts
+like Program~\Probibfamdat\ is straightforward. Search for a fact in the
+program that implies the query. If a fact identical to the query is
+found, the answer is {\it yes\/}.\par
+The answer {\it no\/} is given if a fact identical to the query is not
+found, because the fact is not a logical consequence of the program. This
+answer does not reflect on the truth of the query; it merely says that we
+failed to prove the query from the program. Both the queries {\tt
+female(abraham)?} and {\tt plus(1,1,2)?} will be answered {\it no\/} with
+respect to Program~\Probibfamdat.\par
+\sect{The Logical Variable, Substitutions, and Instances}
+A logical variable stands for an unspecified individual and is used
+accordingly. Consider its use in queries. Suppose we want to know of
+whom {\tt abraham} is the father. One way is to ask a series of queries,
+{\tt father(abraham,lot)?}, {\tt father(abraham,milcah)?}, $\ldots$, {\tt
+father(abraham,isaac)?}, $\ldots$ until an answer {\it yes\/} is given. A
+variable allows a better way of expressing the query as {\tt
+father(abraham,X)?}, to which the answer is {\tt X=isaac}. Used in this
+way, {\it variables are a means of summarizing many queries\/}. A query
+containing a variable asks whether there is a value for the variable that
+makes the query a logical consequence of the program, as explained
+later.\par
+Variables in logic programs behave differently from variables in
+conventional programming languages. They stand for an unspecified but
+single entity rather than for a store location in memory.\par
+Having introduced variables, we can define a {\it term\/}, the single data
+structure in logic programs. The definition is inductive. Constants and
+variables are terms. Also compound terms, or structures, are terms. A
+{\it compound term\/} comprises a functor (called the principal functor
+of the term) and a sequence of one or more arguments, which are terms. A
+{\it functor\/} is characterized by its {\it name\/}, which is an atom,
+and its {\it arity\/}, or number of arguments. Syntactically, compound
+terms have the form {\it f\/}({\it t$_1$,t$_2$,$\ldots$,t$_n$\/}), where
+the functor has name {\it f\/} and is of arity {\it n\/}, and the {\it
+t$_i$\/} are the arguments. Examples of compound terms include {\tt
+s(0)}, {\tt hot(milk)}, {\tt name(john,doe)}, {\tt
+list(a,list(b,nil))}, {\tt foo(X)},
+and {\tt tree(tree(nil,3,nil),5,R)}.\par
+Queries, goals, and more generally terms where variables do not occur are
+called {\it ground\/}. Where variables do occur, they are called {\it
+nonground\/}. For example, {\tt foo(a,b)} is ground, whereas {\tt bar(X)}
+is nonground.\par
+{\bf Definition}:~~A {\it substitution} is a finite set (possibly empty)
+of pairs of the form $X_i = t_i$, where {\it X$_i$\/} is
+a variable and {\it t$_i$\/} is a term, and $X_i \ne X_j$ for
+every $i \ne j$, and {\it X$_i$\/} does not occur in {\it
+t$_j$\/}, for any {\it i\/} and {\it j\/}.\hskip 10pt\QEDA\par
+An example of a substitution consisting of a single pair is 
+{\tt $\{$X=isaac$\}$}. Substitutions can be applied to terms. The result of
+applying a substitution $\theta$ to a term {\it A\/}, denoted by {\it
+A\/}$\theta$, is the term obtained by replacing every occurrence of {\it
+X\/} by {\it t\/} in {\it A\/}, for every pair $X = t$ in
+$\theta$.\par
+The result of applying {\tt $\{$X=isaac$\}$} to the term {\tt
+father(abraham,X)} is the term {\tt father(abraham,isaac)}.\par
+{\bf Definition}:~~{\it A\/} is an {\it instance\/} of {\it B\/} if there
+is a substitution $\theta$ such that $A = B\theta$.\hskip
+10pt\QEDA\par
+The goal {\tt father(abraham,isaac)} is an instance of {\tt
+father(abraham,X)} by this definition.  Similarly, {\tt
+mother(sarah,isaac)} is an instance of {\tt mother(X,Y)} under the
+substitution {\tt $\{$X=sarah,Y=isaac$\}$}.\par
+\sect{Existential Queries}
+Logically speaking, variables in queries are existentially quantified,
+which means, intuitively, that the query {\tt father(abraham,X)?} reads:
+``Does there exist an {\tt X} such that {\tt abraham} is the father of
+{\tt X}?" More generally, a query {\it p\/}({\it T$_1$,T$_2$,$
+\ldots$,T$_n$\/}){\it ?\/}, which contains the variables {\it
+X$_1$,X$_2$,$\ldots$,X$_k$\/} reads: ``Are there {\it X$_1$,X$_2$,$
+\ldots$,X$_k$\/} such that {\it p\/}({\it T$_1$,T$_2$,$
+\ldots$,T$_n$\/}){\it ?\/}" For convenience, existential quantification
+is usually omitted.\par
+The next deduction rule we introduce is {\it generalization\/}. An
+existential query {\it P\/} is a logical consequence of an instance of
+it, {\it P\/}$\theta$, for any substitution $\theta$. The fact {\tt
+father(abraham,isaac)} implies that there exists an {\tt X} such that
+{\tt father(abraham,X)} is true, namely, {\tt X=isaac}.\par
+Operationally, to answer a nonground query using a program of facts,
+search for a fact that is an instance of the query. If found, the answer,
+or {\it solution\/}, is that instance. A solution is represented
+in this chapter by the substitution that, if applied to the query,
+results in the solution. The answer is {\it no\/} if there is no suitable
+fact in the program.\par
+In general, an existential query may have several solutions. Program
+\Probibfamdat\ shows that Haran is the father of three children. Thus the
+query {\tt father(haran,X)?} has the solutions {\tt $\{$X=lot$\}$},
+{\tt $\{$X=milcah$\}$}, {\tt $\{$X=yiscah$\}$}. Another query with
+multiple solutions is {\tt plus(X,Y,4)?} for finding numbers that add up
+to 4. Solutions are, for example, {\tt $\{$X=0, Y=4$\}$} and {\tt
+$\{$X=1, Y=3$\}$}. Note that the different variables {\tt X} and {\tt Y}
+correspond to (possibly) different objects.\par
+An interesting variant of the last query is {\tt plus(X,X,4)?}, which
+insists that the two numbers that add up to 4 be the same. It has a
+unique answer {\tt $\{$X=2$\}$}.\par
+\sect{Universal Facts}
+Variables are also useful in facts. Suppose that all the biblical
+characters like pomegranates. Instead of including in the program an
+appropriate fact for every individual,\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+likes(abraham,pomegranates).\cr
+likes(sarah,pomegranates).\cr
+$\vdots$\cr}\medno
+a fact {\tt likes(X,pomegranates)} can say it all. Used in this way, {\it
+variables are a means of summarizing many facts\/}. The fact {\tt
+times(0,X,0)} summarizes all the facts stating that {\tt 0} times some
+number is {\tt 0}.\par
+Variables in facts are implicitly universally quantified, which means,
+intuitively, that the fact {\tt likes(X,pomegranates)} states that for
+all {\tt X}, {\tt X} likes {\tt pomegranates}. In general, a fact {\it p\/}({\it
+T$_1$,$\ldots$,T$_n$\/}) reads that for all {\it X$_1$,$\ldots$,X$_k$\/},
+where the {\it X$_i$\/} are variables occurring in the fact, {\it
+p\/}({\it T$_1$,$\ldots$,T$_n$\/}) is true.  Logically, from a
+universally quantified fact one can deduce any instance of it. For
+example, from {\tt likes(X,pomegranates)}, deduce {\tt
+likes(abraham,pomegranates)}.\par
+This is the third deduction rule, called {\it instantiation\/}. From a
+universally quantified statement {\it P\/}, deduce an instance of it, {\it
+P\/}$\theta$, for any substitution $\theta$.\par
+As for queries, two unspecified objects, denoted by variables, can be
+constrained to be the same by using the same variable name. The fact {\tt
+plus(0,X,X)} expresses that {\tt 0} is a left identity for addition. It
+reads that for all values of {\tt X}, {\tt 0} plus {\tt X} is {\tt X}. A
+similar use occurs when translating the English statement ``Everybody
+likes himself" to {\tt likes(X,X)}.\par
+Answering a ground query with a universally quantified fact is
+straightforward. Search for a fact for which the query is an instance.
+For example, the answer to {\tt plus(0,2,2)?} is {\it yes\/}, based on
+the fact {\tt plus(0,X,X)}. Answering a nonground query using a nonground
+fact involves a new definition: a common instance of two terms.\par
+{\bf Definition}:~~{\it C\/} is a {\it common instance\/} of {\it A\/}
+and {\it B\/} if it is an instance of {\it A\/} and an instance of {\it
+B\/}, in other words, if there are substitutions $\theta_1$ and
+$\theta_2$ such that {\it C\/}={\it A\/}$\theta_1$ is syntactically
+identical to {\it B\/}$\theta_2$.\hskip 10pt\QEDA\par
+For example, the goals {\tt plus(0,3,Y)} and {\tt plus(0,X,X)} have a
+common instance {\tt plus(0,3,3)}. When the substitution 
+{\tt $\{$Y=3$\}$} is applied to {\tt plus(0,3,Y)} and the substitution 
+{\tt $\{$X=3$\}$} is applied
+to {\tt plus(0,X,X)}, both yield {\tt plus(0,3,3)}.\par
+In general, to answer a query using a fact, search for a common instance
+of the query and fact. The answer is the common instance, if one exists.
+Otherwise the answer is {\it no\/}.\par
+Answering an existential query with a universal fact using a common
+instance involves two logical deductions. The instance is deduced from
+the fact by the rule of instantiation, and the query is deduced from the
+instance by the rule of generalization.\par
+\sect{Conjunctive Queries and Shared Variables}
+An important extension to the queries discussed so far is {\it
+conjunctive queries\/}. Conjunctive queries are a conjunction of goals
+posed as a query, for example, {\tt father(terach,X),father(X,Y)?} or in
+general, {\it Q$_1$,$\ldots$,Q$_n$?\/}. Simple queries are a special case
+of conjunctive queries when there is a single goal. Logically, it asks
+whether a conjunction is deducible from the program. We use ``,''
+throughout to denote logical {\it and\/}. Do not confuse the comma that
+separates the arguments in a goal with commas used to separate goals,
+denoting conjunction.\par
+In the simplest conjunctive queries all the goals are ground, for
+example, {\tt father(abraham,isaac),male(lot)?}. The answer to this query
+using Program~\Probibfamdat\ is clearly {\it yes\/} because both goals in the
+query are facts in the program. In general, the query {\it Q$_1$,$
+\ldots$,Q$_n$?\/}, where each {\it Q$_i$\/} is a ground goal, is answered
+yes with respect to a program {\it P\/} if each {\it Q$_i$\/} is implied
+by {\it P\/}. Hence ground conjunctive queries are not very interesting.
+\par
+Conjunctive queries are interesting when there are one or more {\it
+shared variables\/}, variables that occur in two different goals of the
+query. An example is the query {\tt father(haran,X),male(X)?}. The scope
+of a variable in a conjunctive query, as in a simple query, 
+is the whole conjunction. Thus the
+query {\it p\/}({\it X\/}),{\it q\/}({\it X\/}){\it ?\/} reads: ``Is
+there an {\it X\/} such that {\it both\/} {\it p\/}({\it X\/}) and {\it
+q\/}({\it X\/})?" \par
+Shared variables are used as a means of constraining a simple query by
+restricting the range of a variable. We have already seen an example with
+the query {\tt plus(X,X,4)?}, where the solution of numbers adding up to 4
+was restricted to the numbers being the same. Consider the query {\tt
+father(haran,X),male(X)?}. Here solutions to the query {\tt
+father(haran,X)?} are restricted to children that are male. Program
+\Probibfamdat\ shows there is only one solution, {\tt $\{$X=lot$\}$}.
+Alternatively, this query can be viewed as restricting solutions to the
+query {\tt male(X)?} to individuals who have Haran for a father.\par
+A slightly different use of a shared variable can be seen in the query
+{\tt father(terach,X),father(X,Y)?}. On the one hand, it restricts the sons
+of {\tt terach} to those who are themselves fathers. On the other hand, it
+considers individuals {\tt Y}, whose fathers are sons of {\tt terach}.
+There are several solutions, for example, {\tt
+$\{$X=abraham,Y=isaac$\}$} and {\tt $\{$X=haran,Y=lot$\}$}.\par
+A conjunctive query is a logical consequence of a program {\it P\/} if
+all the goals in the conjunction are consequences of {\it P\/}, where
+shared variables are instantiated to the same values in different goals.
+A sufficient condition is that there be a ground instance of the query
+that is a consequence of {\it P\/}. This instance then deduces the
+conjuncts in the query via generalization.\par
+The restriction to ground instances is unnecessary and will be lifted in
+Chapter~4 when we discuss the computation model of logic programs. We
+employ this restriction in the meantime to simplify the discussion in the
+coming sections.\par
+Operationally, to solve the conjunctive query {\it A$_1$,A$_2$,$
+\ldots$,A$_n$?\/} using a program {\it P\/}, find a substitution $\theta$
+such that {\it A\/}$_1\theta$ and $\ldots$ and {\it A\/}$_n\theta$ are
+ground instances of facts in {\it P\/}. The same substitution applied to
+all the goals ensures that instances of variables are common throughout
+the query. For example, consider the query {\tt father(haran,X),male(X)?} 
+with respect to Program~\Probibfamdat. Applying the
+substitution {\tt $\{$X=lot$\}$} to the query gives the ground instance
+{\tt father(haran,lot),male(lot)?}, which is a consequence of the
+program.\par
+\sect{Rules}
+Interesting conjunctive queries are defining relationships in their own
+right. The query {\tt father(haran,X),male(X)?} is asking for a son of
+Haran. The query {\tt father(terach,X),father(X,Y)?} is asking about
+grandchildren of Terach. This brings us to the third and most important
+statement in logic programming, a rule, which enables us to define new
+relationships in terms of existing relationships.\par
+{\it Rules\/} are statements of the form:\medskip
+\halign{\hskip 40pt\lft{#}\cr
+{\it A\/ $\lar$ B$_1$,B$_2$,$\ldots$,B$_n$\/}.\cr}\medno
+where $n \ge 0$. The goal {\it A\/} is the {\it head\/} of the
+rule, and the conjunction of goals {\it B$_1$,$\ldots$,B$_n$\/} is the
+{\it body\/} of the rule. Rules, facts, and queries are also called {\it
+Horn clauses\/}, or {\it clauses\/} for short. Note that a fact is just a
+special case of a rule when  $n = 0$. Facts are also called
+{\it unit clauses\/}. We also have a special name for clauses with one
+goal in the body, namely, when  $n = 1$.  Such a clause is
+called an {\it iterative clause\/}. As for facts, variables appearing in
+rules are universally quantified, and their scope is the whole rule.\par
+A rule expressing the {\tt son} relationship is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+son(X,Y) $\lar$ father(Y,X), male(X).\cr}\medno
+Similarly one can define a rule for the {\tt daughter} relationship:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+daughter(X,Y) $\lar$ father(Y,X), female(X).\cr}\medno
+A rule for the {\tt grandfather} relationship is\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+grandfather(X,Y) $\lar$ father(X,Z), father(Z,Y).\cr}\medskip
+Rules can be viewed in two ways. First, they are a means of expressing
+new  or complex queries in terms of simple queries. A query {\tt
+son(X,haran)?} to the program that contains the preceding rule for {\tt son}
+is translated to the query {\tt father(haran,X),male(X)?}
+according to the rule, and solved as before. A new query about the {\tt
+son} relationship has been built from simple queries involving {\tt
+father} and {\tt male} relationships. Interpreting rules in this way is
+their {\it procedural\/} reading. The procedural reading for the
+{\tt grandfather} rule is: ``To answer a query {\it Is X the grandfather of
+Y?\/}, answer the conjunctive query {\it Is X the father of Z and Z the
+father of Y?\/}."\par
+The second view of rules comes from interpreting the rule as a logical
+axiom. The backward arrow $\lar$ is used to denote logical implication.
+The {\tt son} rule reads: ``{\it X\/} is a son of {\it Y\/} if {\it Y\/}
+is the father of {\it X\/} and {\it X\/} is male." In this view, rules are
+a means of defining new or complex relationships using other, simpler
+relationships. The predicate {\tt son} has been defined in terms of the
+predicates {\tt father} and {\tt male}. The associated reading of the
+rule is known as the {\it declarative\/} reading. The declarative reading
+of the {\tt grandfather} rule is: ``For all {\it X\/}, {\it Y\/}, and {\it
+Z\/}, {\it X\/} is the grandfather of {\it Y\/} if {\it X\/} is the
+father of {\it Z\/} and {\it Z\/} is the father of {\it Y\/}."\par
+Although formally all variables in a clause are universally quantified,
+we will sometimes refer to variables that occur in the body of the
+clause, but not in its head, as if they are existentially quantified
+inside the body.  For example, the {\tt grandfather} rule can be read:
+``For all {\it X\/} and {\it Y\/}, {\it X\/} is the grandfather of {\it
+Y\/} if there exists a {\it Z\/} such that {\it X\/} is the father of
+{\it Z\/} and {\it Z\/} is the father of {\it Y\/}." The formal
+justification of this verbal transformation will not be given, and we
+treat it just as a convenience. Whenever it is a source of confusion, the
+reader can resort back to the formal reading of a clause, in which all
+variables are universally quantified from the outside.\par
+To incorporate rules into our framework of logical deduction, we need the
+law of modus ponens. Modus ponens states that from  $B$ and 
+$A \lar B$ we can deduce $A$.\par
+{\bf Definition}:~~The law of {\it universal modus ponens\/} says that
+from the rule\medskip
+\halign{\hskip 40pt\lft{#}\cr
+{\it R\/} = ({\it A\/$\lar$B$_1$,B$_2$,$\ldots$,B$_n$\/})\cr}\medno
+and the facts\medskip
+\halign{\hskip 40pt\lft{#}\cr
+{\it B\/}$_1\pri.$\cr
+{\it B\/}$_2\pri$.\cr
+$\vdots$\cr
+{\it B\/}$_n\pri$.\cr}\medno
+{\it A\/}$\pri$ can be deduced if\medskip
+\halign{\hskip 40pt\lft{#}\cr
+{\it A\/}$\pri$ $\lar$ {\it B\/$_1\pri$,B\/$_2\pri$,$\ldots$,B\/$_n
+\pri$}\cr}\medno
+is an instance of {\it R\/}.\hskip 10pt\QEDA\par
+Universal modus ponens includes identity and instantiation as special
+cases.\bigskip
+We are now in a position to give a complete definition of the concept of
+a logic program and of its associated concept of logical consequence.\par
+{\bf Definition}:~~A {\it logic program\/} is a finite set of rules.
+\hskip 10pt\QEDA\par
+{\bf Definition}:~~An existentially quantified goal {\it G\/} is a
+logical consequence of a program {\it P\/} if there is a clause in {\it
+P\/} with a ground instance $A \lar B_1,\ldots,B_n, n\ge 0$ 
+such that {\it B$_1$,$\ldots$,B$_n$\/} are logical
+consequences of {\it P\/}, and {\it A\/} is an instance of {\it G\/}.
+\hskip 10pt\QEDA\par
+Note that the goal {\it G\/} is a logical consequence of a program {\it
+P\/} if and only if {\it G\/} can be deduced from {\it P\/} by a finite
+number of applications of the rule of universal modus ponens.\par
+Consider the query {\tt son(S,haran)?} with respect to Program
+\Probibfamdat\ augmented by the rule for {\tt son}. The substitution {\tt
+$\{$X=lot,Y=haran$\}$} applied to the rule gives the instance {\tt
+son(lot,haran) $\lar$ father(haran,lot),male(lot)}. Both the goals
+in the body of this rule are facts in Program~\Probibfamdat. Thus
+universal modus ponens implies the query with answer {\tt $\{$S=lot$\}$}.
+\par
+Operationally, answering queries reflects the definition of logical
+consequence. Guess a ground instance of a goal, and a ground instance of
+a rule, and recursively answer the conjunctive query corresponding to the
+body of that rule. To solve a goal {\it A\/} with program {\it P\/},
+choose a rule {\it A$_1\/\lar$B$_1$,B$_2$,$\ldots$,B$_n$\/} in {\it P\/},
+and guess substitution $\theta$ such that  $A = A_1\theta$,
+and {\it B\/}$_i\theta$ is ground for $1\le i\le n$. Then
+recursively solve each {\it B\/}$_i\theta$. This procedure can involve
+arbitrarily long chains of reasoning. It is difficult in general to guess
+the correct ground instance and to choose the right rule. We show in Chapter
+4 how the guessing of an instance can be removed.\par
+The rule given for {\tt son} is correct but is an incomplete
+specification of the relationship. For example, we cannot conclude that
+Isaac is the son of Sarah. What is missing is that a child can be the son
+of a mother as well as the son of a father. A new rule expressing this
+relationship can be added, namely,\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+son(X,Y) $\lar$ mother(Y,X), male(X).\cr}\medskip
+To define the relationship {\tt grandparent} correctly would take four rules
+to include both cases of {\tt father} and {\tt mother}:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+grandparent(X,Y) $\lar$ father(X,Z), father(Z,Y).\cr
+grandparent(X,Y) $\lar$ father(X,Z), mother(Z,Y).\cr
+grandparent(X,Y) $\lar$ mother(X,Z), father(Z,Y).\cr
+grandparent(X,Y) $\lar$ mother(X,Z), mother(Z,Y).\cr}\medno
+There is a better, more compact, way of expressing these rules. We need
+to define the auxiliary relationship {\tt parent} as being a father or
+a mother. Part of the art of logic programming is deciding on what
+intermediate predicates to define to achieve a complete, elegant
+axiomatization of a relationship. The rules defining {\tt parent} are
+straightforward, capturing the definition of a parent being a father or a
+mother. Logic programs can incorporate alternative definitions, or more
+technically disjunction, by having alternative rules, as for {\tt
+parent}:\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+parent(X,Y) $\lar$ father(X,Y).\cr
+parent(X,Y) $\lar$ mother(X,Y).\cr}\medno
+Rules for {\tt son} and {\tt grandparent} are now, respectively,\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+son(X,Y) $\lar$ parent(Y,X), male(X).\cr
+grandparent(X,Y) $\lar$ parent(X,Z), parent(Z,Y).\cr}\medskip
+A collection of rules with the same predicate in the head, such as the
+pair of parent rules, is called a {\it procedure\/}. We shall see later
+that under the operational interpretation of these rules by Prolog, such
+a collection of rules is indeed the analogue of procedures or subroutines
+in conventional programming languages.\endpage
+\sect{A Simple Abstract Interpreter}
+An operational procedure for answering queries has been informally
+described and progressively developed in the previous sections. In this
+section, the details are fleshed out into an abstract interpreter for
+logic programs. In keeping with the restriction of universal modus ponens
+to ground goals, the interpreter only answers ground queries.\par
+The abstract interpreter performs yes/no computations. It takes as input
+a program and a goal, and answers {\it yes\/} if the goal is a logical
+consequence of the program and {\it no\/} otherwise. The interpreter is
+given in Figure~\Figabsintans. Note that the interpreter may fail to
+terminate if the goal is not deducible from the program, in which case no
+answer is given.
+\midinsert\vskip -0.2truecm
+$$\vcenter{\halign{\lft{#}~&\lft{#}\cr
+{\bf Input}:&A ground goal {\it G\/} and a program {\it P}\cr
+\noalign{\vskip 5pt}
+{\bf Output}:
+&{\it yes\/} if {\it G\/} is a logical consequence of {\it P\/},\cr
+&{\it no} otherwise\cr
+\noalign{\vskip 5pt}
+{\bf Algorithm}:
+&Initialize the resolvent to {\it G\/}.\cr
+&{\it while\/}  the resolvent is not empty {\it do}\cr
+&\qi choose a goal {\it A\/} from the resolvent\cr
+&\qi choose a ground instance of a clause {\it A\/$\pri\lar$B$_1$,$
+\ldots$,B$_n$\/} from {\it P\/}\cr
+&\qiii such that {\it A\/} and {\it A\/}$\pri$ are identical\cr
+&\qii (if no such goal and clause exist, exit the while loop)\cr
+&\qi replace {\it A\/} by {\it B$_1$,$\ldots$,B$_n$\/} in the
+resolvent\cr
+&{\it If\/} the resolvent is empty, {\it then\/} output {\it yes\/}, 
+{\it else\/} output {\it no\/}.\cr}}$$\medskip
+\ctrcol{{\bf Figure \Figabsintans}:~~An abstract interpreter to answer
+ground queries\cr
+with respect to logic programs}
+\endinsert\par
+The current, usually conjunctive, goal at any stage of the computation is
+called the {\it resolvent\/}. A {\it trace\/} of the interpreter is the
+sequence of resolvents produced during the computation. Figure
+\Figtratheint\ is a trace of answering the query {\tt son(lot,haran)?}
+with respect to Program~\Probibfamrel, a subset of the facts of Program
+\Probibfamdat\ together with rules defining {\tt son} and {\tt daughter}.
+For clarity, Figure~\Figtratheint\ also explicitly states the choice of
+goal and clause made at each iteration of the abstract interpreter.
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\lft{#}~&\lft{#}\cr
+{\bf Input}:&{\tt son(lot,haran)?} and Program~\Probibfamrel\cr
+&Resolvent is {\tt son(lot,haran)}\cr
+&Resolvent is not empty\cr
+&\qi choose {\tt son(lot,haran)}\qquad (the only choice)\cr
+&\qi choose {\tt son(lot,haran) $\lar$ father(haran,lot), male(lot).}\cr
+&\qi new resolvent is {\tt father(haran,lot), male(lot)}\cr
+&Resolvent is not empty\cr
+&\qi choose {\tt father(haran,lot)}\cr
+&\qi choose {\tt father(haran,lot).}\cr
+&\qi new resolvent is {\tt male(lot)}\cr
+&Resolvent is not empty\cr
+&\qi choose {\tt male(lot)}\cr
+&\qi choose {\tt male(lot).}\cr
+&\qi new resolvent is empty\cr
+\noalign{\vskip 5pt}
+{\bf Output}:&{\it yes}\cr}}$$\medskip
+\ctrline{{\bf Figure \Figtratheint}:~~Tracing the interpreter}\vskip
+0.6truecm
+\halign{\hskip 40pt\lft{\tt #}\qquad&\lft{\tt #}\cr
+father(abraham,isaac).&male(isaac).\cr
+father(haran,lot).&male(lot).\cr
+father(haran,milcah).&female(milcah).\cr
+father(haran,yiscah).&female(yiscah).\cr}
+\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+son(X,Y) $\lar$ father(Y,X), male(X).\cr
+daughter(X,Y) $\lar$ father(Y,X), female(X).\cr
+\noalign{\bigskip}
+{\bf Program \Probibfamrel}{\rm :~~Biblical family relationships}\cr}
+\endin\par
+Each iteration of the {\it while} loop of the abstract interpreter corresponds
+to a single application of modus ponens. This is called a {\it
+reduction\/}. \par
+{\bf Definition}:~~A {\it reduction\/} of a goal {\it G\/} by a program
+{\it P\/} is the replacement of {\it G\/} by the body of an instance of a
+clause in {\it P\/}, whose head is identical to the chosen goal.
+\hskip 10pt\QEDA\par
+A reduction is the basic computational step in logic programming. The
+goal replaced in a reduction is {\it reduced\/}, and the new goals are
+{\it derived\/}. In this chapter, we restrict ourselves to {\it ground
+reductions\/}, where the goal and the instance of the clause are ground.
+Later, in Chapter~4, we consider more general reductions where unification
+is used to choose the instance of the clause and make the goal to be
+reduced and the head of the clause identical.\par
+The trace in Figure~\Figtratheint\ contains three reductions. The first
+reduces the goal {\tt son(lot,haran)} and produces two derived goals,
+{\tt father(haran,lot)} and {\tt male(lot)}. The second reduction is of
+{\tt father(haran,lot)} and produces no derived goals. The third
+reduction also produces no derived goals in reducing {\tt male(lot)}.\par
+There are two unspecified choices in the interpreter in Figure
+\Figabsintans. The first is the goal to reduce from the resolvent. The
+second choice is the clause (and an appropriate ground instance) to
+reduce the goal. These two choices have very different natures.\par
+The selection of the goal to be reduced is arbitrary. In any given
+resolvent, all the goals must be reduced. It can be shown that the order
+of reductions is immaterial for answering the query.\par
+In contrast, the choice of the clause and a suitable instance is
+critical. In general, there are several choices of a clause, and
+infinitely many ground instances. The choice is made
+nondeterministically. The concept of nondeterministic choice is used in
+the definition of many computation models, e.g., finite automata and
+Turing machines, and has proven to be a powerful theoretic concept. A
+nondeterministic choice is an unspecified choice from a number of
+alternatives, which is supposed to be made in a ``clairvoyant" way. If
+only some of the alternatives lead to a successful computation, then one
+of them is chosen. Formally, the concept is defined as follows. A
+computation that contains nondeterministic choices {\it succeeds\/} if
+there is a sequence of choices that leads to success. Of course, no real
+machine can directly implement this definition. However, it can be
+approximated in a useful way, as done in Prolog. This is explained in 
+Chapter~6.\par
+The interpreter given in Figure~\Figabsintans\ can be extended to
+answer nonground existential queries by an initial additional step. Guess
+a ground instance of the query. This is identical to the step in the
+interpreter of guessing ground instances of the rules. It is difficult in
+general to guess the correct ground instance, since that means knowing
+the result of the computation before performing it.\par
+A new concept is needed to lift the restriction to ground instances and
+remove the burden of guessing them. In Chapter~4, we show how the guess of
+ground instances can be eliminated, and we introduce the computational model
+of logic programs more fully. Until then it is assumed that the correct
+choices can be made.\par
+A trace of a query implicitly contains a proof that the query follows
+from the program. A more convenient representation of the proof is with a
+proof tree. A {\it proof tree\/} consists of nodes and edges that
+represent the goals reduced during the computation. The root of the proof
+tree for a simple query is the query itself. The nodes of the tree are
+goals that are reduced during the computation. There is a directed edge
+from a node to each node corresponding to a derived goal of the reduced
+goal. The proof tree for a conjunctive query is just the collection of
+proof trees for the individual goals in the conjunction. Figure~\Figsimprotre\ 
+gives a proof tree for the program trace in Figure~\Figtratheint.
+\topin\vskip -0.7truecm
+$$\vcenter{\halign{\lft{\tt #}\cr
+\hskip 40pt son(lot,haran)\cr
+\hskip 45pt /\hskip 47pt\\\cr
+father(haran,lot)\qquad male(lot)\cr}}$$\medskip
+\ctrline{{\bf Figure \Figsimprotre}:~~A simple proof tree}
+\endin\par
+An important measure provided by proof trees is the number of nodes in
+the tree. It indicates how many reduction steps are performed in a
+computation. This measure is used as a basis of comparison between
+different programs in Chapter~3.\par
+\sect{The Meaning of a Logic Program}
+How can we know if a logic program says what we wanted it to say? If it
+is correct, or incorrect? In order to answer such questions, we have to
+define what is the meaning of a logic program. Once defined, we can 
+examine if the program means what we have intended it to mean.\par
+{\bf Definition}:~~The {\it meaning\/} of a logic program {\it P\/}, {\it
+M\/}({\it P\/}), is the set of ground goals deducible from {\it P\/}.
+\hskip 10pt\QEDA\par
+From this definition it follows that the meaning of a logic program
+composed just of ground facts, such as Program~\Probibfamdat, is the
+program itself. In other words, for simple programs, the program ``means
+just what it says." Consider Program~\Probibfamdat\ augmented with the
+two rules defining the {\tt parent} relationship. What is its meaning? It
+contains, in addition to the facts about fathers and mothers, mentioned
+explicitly in the program, all goals of the form {\tt parent(X,Y)} for
+every pair {\tt X} and {\tt Y} such that {\tt father(X,Y)} or {\tt
+mother(X,Y)} is in the program. This example shows that the meaning of a
+program contains explicitly whatever the program states implicitly.\par
+Assuming that we define the intended meaning of a program also to be a
+set of ground goals, we can ask what is the relation between the
+actual and the intended meanings of a program. We can check whether
+everything the program says is correct, or whether the program says
+everything we wanted it to say.\par
+Informally, we say that a program is {\it correct\/} with respect to some
+intended meaning {\it M\/} if the meaning of {\it P\/}, {\it M\/}({\it
+P\/}), is a subset of {\it M\/}. That is, a correct program does not say
+things that were not intended. A program is {\it complete\/} with respect
+to {\it M\/} if {\it M\/} is a subset of {\it M\/}({\it P\/}). That is, a
+complete program says everything that is intended. It follows that a
+program {\it P\/} is correct and complete with respect to an intended
+meaning {\it M\/} if {\it M\/} = {\it M\/}({\it P\/}).\par
+Throughout the book, when meaningful predicate and constant names are
+used, the intended meaning of the program is assumed to be the one
+intuitively implied by the choice of names.\par
+For example, the program for the {\tt son} relationship containing only the
+first axiom that uses {\tt father} is incomplete with respect to the
+intuitively understood intended meaning of {\tt son}, since it cannot
+deduce {\tt son(isaac,sarah)}. If we add to Program~\Probibfamdat\ the
+rule\medskip
+\halign{\hskip 40pt\lft{\tt #}\cr
+son(X,Y) $\lar$ mother(X,Y), male(Y).\cr}\medno
+it would make the program incorrect with respect to the intended meaning,
+since it deduces {\tt son(sarah,isaac)}.\par
+The notions of correctness and completeness of a logic program are
+studied further in Chapter~5.\par
+Although the notion of truth is not defined fully here, we will say that
+a ground goal is {\it true\/} with respect to an intended meaning if it
+is a member of it, and {\it false\/} otherwise.  We will say it is simply
+{\it true\/} if it is a member of the intended meaning implied by the
+names of the predicate and constant symbols appearing in the program.\par
+\sect{Summary}
+We conclude this section with a summary of the constructs and concepts
+introduced, filling in the remaining necessary definitions.\par
+The basic structure in logic programs is a term. A {\it term\/} is a
+constant, a variable, or a compound term. Constants denote particular
+individuals such as integers and atoms, while variables denote a single
+but unspecified individual. The symbol for an atom can be any sequence of
+characters, which is quoted if there is possibility of confusion with
+other symbols (such as variables or integers). Symbols for variables are
+distinguished by beginning with an uppercase letter.\par
+A {\it compound term\/} comprises a functor (called the principal functor
+of the term) and a sequence of one or more terms called {\it
+arguments\/}.  A {\it functor\/} is characterized by its {\it name\/},
+which is an atom, and its {\it arity\/} or number of arguments. Constants
+are considered functors of arity 0. Syntactically, compound terms have
+the form {\it f\/}({\it t$_1$,t$_2$,$\ldots$,t$_n$\/}) where the functor
+has name {\it f\/} and is of arity {\it n\/}, and the {\it t$_i$\/} are
+the arguments. A functor {\it f\/} of arity {\it n\/} is denoted {\it
+f/n\/}. Functors with the same name but different arities are distinct.
+Terms are {\it ground\/} if they contain no variables; otherwise they are
+{\it nonground\/}. {\it Goals\/} are atoms or compound terms, and are
+generally nonground.\par
+A {\it substitution\/} is a finite set (possibly empty) of pairs of the
+form $X=t$, where {\it X\/} is a variable and {\it t\/} is a term, with 
+no variable on the left-hand side of a pair appearing on the right-hand 
+side of another pair, and no two pairs having the same variable as left-hand 
+side. For any substitution $\theta = \{X_1=t_1,X_2=t_2,\ldots,X_n=t_n\}$ 
+and term {\it s\/}, the term {\it s\/}$\theta$ denotes the result of
+simultaneously replacing in {\it s\/} each occurrence of the variable
+{\it X$_i$\/} by {\it t$_i$\/},  $1\le i\le n$; the term
+{\it s\/}$\theta$ is called an {\it instance\/} of {\it s\/}. More will
+be said on this restriction on substitutions in the background to Chapter
+4.\par
+A {\it logic program\/} is a finite set of clauses. A {\it clause\/} or
+{\it rule\/} is a universally quantified logical sentence of the form
+\medskip
+\halign{\hskip 40pt\lft{#}\cr
+{\it A\/$\lar$B$_1$,B$_2$,$\ldots$,B$_k$.\qquad $k \ge 0$},\cr}\medno
+where {\it A\/} and the {\it B$_i$\/} are goals. Such a sentence is
+read declaratively: ``{\it A\/} is implied by the conjunction of the {\it
+B$_i$\/}," and is interpreted procedurally ``To answer query {\it A\/},
+answer the conjunctive query {\it B$_1$,B$_2$,$\ldots$,B$_k$\/}." {\it
+A\/} is called the clause's {\it head\/} and the conjunction of the {\it
+B$_i$\/} the clause's {\it body\/}. If  $k=0$, the clause
+is known as a {\it fact\/} or {\it unit clause\/} and written {\it A\/.},
+meaning {\it A\/} is true under the declarative reading, and goal {\it
+A\/} is satisfied under the procedural interpretation. If $k=1$, 
+the clause is known as an {\it iterative clause\/}.\par
+A {\it query\/} is a conjunction of the form\medskip
+\halign{\hskip 40pt\lft{#}\cr
+{\it A$_1$,$\ldots$,A$_n$?\qquad $n>0$,}\cr}\medno
+where the {\it A$_i$\/} are goals. Variables in a query are understood
+to be existentially quantified.\par
+A {\it computation\/} of a logic program {\it P\/} finds an instance of a
+given query logically deducible from {\it P\/}. A goal {\it G\/} is
+deducible from a program {\it P\/} if there is an instance {\it A\/} of
+{\it G\/} where {\it A\/$\lar$B$_1$,$\ldots$,B$_n$\/},  $n\ge 0$,
+is a ground instance of a clause in {\it P\/}, and the {\it
+B$_i$\/} are deducible from {\it P\/}. Deduction of a goal from an
+identical fact is a special case.\par
+The {\it meaning\/} of a program {\it P\/} is inductively defined using
+logical deduction. The set of ground instances of facts in {\it P\/} are
+in the meaning. A ground goal {\it G\/} is in the meaning if there is a
+ground instance {\it G\/$\lar$B$_1$,$\ldots$,B$_n$\/} of a rule in {\it
+P\/} such that {\it B$_1$,$\ldots$,B$_n$\/} are in the meaning. The
+meaning consists of the ground instances that are deducible from the
+program.\par
+An intended meaning {\it M\/} of a program is also a set of ground unit
+goals. A program {\it P\/} is {\it correct\/} with respect to an intended
+meaning {\it M\/} if {\it M\/}({\it P\/}) is a subset of {\it M\/}. It is
+{\it complete\/} with respect to {\it M\/} if {\it M\/} is a subset of
+{\it M\/}({\it P\/}). Clearly, it is correct and complete with respect to
+its intended meaning, which is the desired situation, if $M=M(P)$.\par
+A ground goal is {\it true\/} with respect to an intended meaning if it
+is a member of it, and {\it false\/} otherwise.\par
+Logical deduction is defined syntactically here, and hence also the
+meaning of logic programs. In Chapter~5, alternative ways of describing
+the meaning of logic programs are presented, and their equivalence with
+the current definition is discussed.\par\bye
+

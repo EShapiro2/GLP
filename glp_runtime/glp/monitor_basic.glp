@@ -1,0 +1,23 @@
+%% monitor.glp - Concurrent monitor (accumulator)
+%% Source: GLP Papers (Program: Concurrent Monitor)
+%%
+%% A stateful service handling add, subtract, and value requests.
+%% Demonstrates incomplete messages for bidirectional communication.
+%% value(V) request: monitor binds response variable V to current sum.
+
+monitor(Reqs) :- monitor(Reqs?,0).
+
+monitor([add(N)|Reqs],Sum) :-
+    Sum1 := Sum? + N?, monitor(Reqs?,Sum1?).
+monitor([subtract(N)|Reqs],Sum) :-
+    Sum1 := Sum? - N?, monitor(Reqs?,Sum1?).
+monitor([value(V)|Reqs],Sum) :-
+    ground(Sum?) | V = Sum?, monitor(Reqs?,Sum?).
+monitor([],_).
+
+%% Example initial goal:
+%% client1(Xs), client2(Ys), merge(Xs?,Ys?,Zs), monitor(Zs?).
+%%
+%% The monitor demonstrates a stateful service handling requests from
+%% multiple concurrent clients, serialized through stream merging
+%% whilst maintaining state through the Sum parameter in tail-recursive calls.

@@ -1,0 +1,90 @@
+%% observe_play.glp - Multi-round protocol between Alice and Bob
+
+%% === observe.glp (inlined - consult not supported) ===
+
+%% A→B: value available at A (position 1)
+observe(A, A?, A?) :- atom(A?) | true.
+observe(A, A?, A?) :- number(A?) | true.
+observe(A, B?, Log?) :- compound(A?) |
+    A? =.. ListA,
+    observe_list(ListA?, ListB, Logs),
+    B =.. ListB?,
+    Log =.. Logs?.
+
+%% B→A: value available at B (position 2)
+observe(A?, A, A?) :- atom(A?) | true.
+observe(A?, A, A?) :- number(A?) | true.
+observe(A?, B, Log?) :- compound(B?) |
+    B? =.. ListB,
+    observe_list(ListB?, ListA, Logs),
+    A =.. ListA?,
+    Log =.. Logs?.
+
+observe_list([], [], []).
+observe_list([H|T], [I?|Is?], [L?|Ls?]) :-
+    observe(H?, I, L),
+    observe_list(T?, Is, Ls).
+
+%% === Protocol test ===
+
+test_play(Log?) :-
+    observe(A?, B, Log),
+    alice(A),
+    bob(B?).
+
+%% ===========================================
+%% Alice
+%% ===========================================
+
+alice([msg(1, hello, response(Name, Age)) | Rest]) :-
+    alice_wait1(Name?, Age?, Rest?).
+
+alice_wait1(Name, Age, Rest) :-
+    atom(Name?), number(Age?) |
+    alice_round2(Rest?).
+
+alice_round2([msg(2, order(widget, 5), quote(Price, InStock)) | Rest]) :-
+    alice_wait2(Price?, InStock?, Rest?).
+
+alice_wait2(Price, InStock, Rest) :-
+    number(Price?), atom(InStock?) |
+    alice_round3(Price?, Rest?).
+
+alice_round3(P, [msg(3, buy(P?), receipt(TxId, Time)) | Rest]) :-
+    number(P?) |
+    alice_wait3(TxId?, Time?, Rest?).
+
+alice_wait3(TxId, Time, Rest) :-
+    compound(TxId?), compound(Time?) |
+    alice_round4(Rest?).
+
+alice_round4([msg(4, rate(5), bonus(Points)) | []]) :-
+    alice_wait4(Points?).
+
+alice_wait4(Points) :-
+    number(Points?) |
+    true.
+
+%% ===========================================
+%% Bob
+%% ===========================================
+
+bob([msg(1, Greeting, response(bob, 42)) | Rest]) :-
+    atom(Greeting?) |
+    bob_round2(Rest?).
+
+bob_round2([msg(2, order(Item, Qty), quote(100, yes)) | Rest]) :-
+    atom(Item?), number(Qty?), Qty? >= 1 |
+    bob_round3(Rest?).
+
+bob_round3([msg(3, buy(Amount), receipt(tx(789), time(2024, 12, 9))) | Rest]) :-
+    number(Amount?), Amount? >= 100 |
+    bob_round4(Rest?).
+
+bob_round4([msg(4, rate(Stars), bonus(50)) | []]) :-
+    number(Stars?), Stars? >= 4 |
+    true.
+
+bob_round4([msg(4, rate(Stars), bonus(10)) | []]) :-
+    number(Stars?), Stars? < 4 |
+    true.
