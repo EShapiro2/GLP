@@ -56,16 +56,12 @@ class CodeGenContext {
 
 /// Code generator - transforms annotated AST to bytecode
 class CodeGenerator {
-  // Program reference for defined guard lookup
-  AnnotatedProgram? _program;
-
   BytecodeProgram generate(AnnotatedProgram program) {
     final result = generateWithMetadata(program);
     return result.program;
   }
 
   CompilationResult generateWithMetadata(AnnotatedProgram program) {
-    _program = program;  // Store for defined guard lookup
     final ctx = CodeGenContext();
     final variableMap = <String, int>{};
 
@@ -373,23 +369,6 @@ class CodeGenerator {
       return;
     }
 
-    // Check for defined guard (unit clause)
-    final unitClauseArgs = _findUnitClause(guard.predicate, guard.args.length);
-    if (unitClauseArgs != null) {
-      // Defined guards cannot be negated
-      if (guard.negated) {
-        throw CompileError(
-          'Defined guard "${guard.predicate}" cannot be negated',
-          guard.line,
-          guard.column,
-          phase: 'codegen'
-        );
-      }
-      // Defined guard: unfold to guard unifications
-      _generateDefinedGuard(guard.args, unitClauseArgs, varTable, ctx);
-      return;
-    }
-
     // Generic guard predicate call (runtime evaluation)
     // Setup arguments, then call guard
     for (int i = 0; i < guard.args.length; i++) {
@@ -397,117 +376,6 @@ class CodeGenerator {
     }
 
     ctx.emit(bc.Guard(guard.predicate, guard.args.length, negated: guard.negated));
-  }
-
-  /// Generate code for a defined guard (unit clause unfolding).
-  /// Unfolds p(S1,...,Sn) with unit clause p(T1,...,Tn) to:
-  /// guard unifications T1=S1, T2=S2, ..., Tn=Sn
-  void _generateDefinedGuard(List<Term> callArgs, List<Term> headArgs,
-      VariableTable varTable, CodeGenContext ctx) {
-    // For each pair (call arg, head arg), generate guard unification
-    for (int i = 0; i < callArgs.length && i < headArgs.length; i++) {
-      final callArg = callArgs[i];
-      final headArg = headArgs[i];
-
-      // The call arg should be loaded, then matched against head arg pattern
-      // We use HEAD-style matching which is already designed for tentative unification
-
-      // Allocate a temp to hold the call arg value
-      final tempReg = ctx.allocateTemp();
-
-      // Load call arg into temp register
-      if (callArg is VarTerm) {
-        final varInfo = varTable.getVar(callArg.name);
-        if (varInfo != null) {
-          // Copy from clause var to temp
-          ctx.emit(bc.GetVariable(tempReg, varInfo.registerIndex!));
-        }
-      } else if (callArg is ConstTerm) {
-        // Constant - for guard unification, we need to check it matches
-        // For now, emit GetVariable with constant handling
-        ctx.emit(bc.HeadConstant(callArg.value, tempReg));
-      }
-
-      // Now match the head arg pattern against the temp register
-      _generateGuardPatternMatch(headArg, tempReg, varTable, ctx);
-    }
-  }
-
-  /// Generate pattern matching code for a guard unification.
-  /// The value to match is in sourceReg, match against pattern.
-  void _generateGuardPatternMatch(Term pattern, int sourceReg,
-      VariableTable varTable, CodeGenContext ctx) {
-    if (pattern is VarTerm) {
-      // Variable in unit clause head - allocate temp and unify
-      // The temp gets bound to whatever is in sourceReg
-      final tempReg = ctx.allocateTemp();
-      // In guard phase, this creates a tentative binding
-      ctx.emit(bcv2.UnifyVariable(tempReg, isReader: pattern.isReader));
-
-    } else if (pattern is ConstTerm) {
-      // Constant pattern - check that sourceReg matches
-      ctx.emit(bc.HeadConstant(pattern.value, sourceReg));
-
-    } else if (pattern is StructTerm) {
-      // Structure pattern - use HeadStructure + nested matching
-      ctx.emit(bc.HeadStructure(pattern.functor, pattern.arity, sourceReg));
-
-      // Match each sub-argument
-      for (final subArg in pattern.args) {
-        _generateGuardStructureElement(subArg, varTable, ctx);
-      }
-
-    } else if (pattern is ListTerm) {
-      if (pattern.isNil) {
-        ctx.emit(bc.HeadNil(sourceReg));
-      } else {
-        // Non-empty list: treat as '.'(H, T)
-        ctx.emit(bc.HeadStructure('.', 2, sourceReg));
-        if (pattern.head != null) {
-          _generateGuardStructureElement(pattern.head!, varTable, ctx);
-        }
-        if (pattern.tail != null) {
-          _generateGuardStructureElement(pattern.tail!, varTable, ctx);
-        }
-      }
-    }
-  }
-
-  /// Generate structure element matching for guard unification.
-  /// Similar to _generateStructureElement but for guard phase.
-  void _generateGuardStructureElement(Term term, VariableTable varTable, CodeGenContext ctx) {
-    if (term is VarTerm) {
-      // Variable - allocate fresh temp for unit clause variable
-      final tempReg = ctx.allocateTemp();
-      ctx.emit(bcv2.UnifyVariable(tempReg, isReader: term.isReader));
-
-    } else if (term is ConstTerm) {
-      ctx.emit(bc.UnifyConstant(term.value));
-
-    } else if (term is StructTerm) {
-      // Nested structure
-      final saveReg = ctx.allocateTemp();
-      ctx.emit(bc.Push(saveReg));
-      ctx.emit(bc.UnifyStructure(term.functor, term.arity));
-      for (final subArg in term.args) {
-        _generateGuardStructureElement(subArg, varTable, ctx);
-      }
-      ctx.emit(bc.Pop(saveReg));
-      ctx.emit(bcv2.UnifyVariable(saveReg, isReader: false));
-
-    } else if (term is ListTerm) {
-      if (term.isNil) {
-        ctx.emit(bc.UnifyConstant('nil'));
-      } else {
-        final saveReg = ctx.allocateTemp();
-        ctx.emit(bc.Push(saveReg));
-        ctx.emit(bc.UnifyStructure('.', 2));
-        if (term.head != null) _generateGuardStructureElement(term.head!, varTable, ctx);
-        if (term.tail != null) _generateGuardStructureElement(term.tail!, varTable, ctx);
-        ctx.emit(bc.Pop(saveReg));
-        ctx.emit(bcv2.UnifyVariable(saveReg, isReader: false));
-      }
-    }
   }
 
   void _generateBody(List<Goal> goals, VariableTable varTable, CodeGenContext ctx) {
@@ -859,27 +727,4 @@ class CodeGenerator {
     }
   }
 
-  /// Find a unit clause for the given predicate name/arity.
-  /// A unit clause is one with no guards and no body (or body = true).
-  /// Returns the unit clause's head arguments if found, null otherwise.
-  List<Term>? _findUnitClause(String name, int arity) {
-    if (_program == null) return null;
-
-    for (final proc in _program!.procedures) {
-      if (proc.name == name && proc.arity == arity) {
-        // Found matching procedure - check if it's a unit clause
-        if (proc.clauses.length == 1) {
-          final clause = proc.clauses.first;
-          final hasGuards = clause.ast.guards != null && clause.ast.guards!.isNotEmpty;
-          final hasBody = clause.ast.body != null && clause.ast.body!.isNotEmpty;
-
-          // Unit clause: no guards and no body
-          if (!hasGuards && !hasBody) {
-            return clause.ast.head.args;
-          }
-        }
-      }
-    }
-    return null;
-  }
 }
