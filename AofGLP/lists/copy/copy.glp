@@ -1,9 +1,0 @@
-%% copy.glp - List copying
-%% Source: Standard GLP list operations
-
-copy([],[]).
-copy([X?|Xs],[X?|Ys?]) :- copy(Xs?,Ys).
-
-%% Metainterpreter support
-reduce(copy([],[]), true).
-reduce(copy([X?|Xs],[X?|Ys?]), copy(Xs?,Ys)).

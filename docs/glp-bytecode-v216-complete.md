@@ -267,12 +267,23 @@ When debugging bytecode:
 - Otherwise: fail to next clause
 
 ### 6.2 head_writer Xi
-**Operation**: Process writer variable in clause head  
+**Operation**: Process writer variable in clause head
 **Behavior**:
 - In READ mode: extract value from current structure position (S) into Xi
 - In WRITE mode: record new writer creation in σ̂w
 - Operate against tentative state, not actual heap
 - Increment S after operation
+
+**Goal argument cases** (when processing top-level argument):
+- Goal constant/structure: assign to Xi in σ̂w
+- Goal writer (unbound): FAIL (WxW violation)
+- Goal writer (bound): assign dereferenced value to Xi
+- Goal reader (bound): assign dereferenced value to Xi
+- Goal reader (unbound): assign the reader reference itself to Xi, SUCCEED
+  - This connects Xi to the reader's communication channel
+  - When the reader's paired writer is later bound, the value flows through Xi
+
+The unbound-reader case is critical: head writers receive reader references directly without dereferencing. This enables passthrough patterns like `copy(X, X?)` where the output receives whatever the input will receive.
 
 ### 6.3 head_reader Xi
 **Operation**: Process reader variable in clause head
@@ -760,22 +771,22 @@ process(X) :- otherwise    | ... handle constant case
 
 ### 11.7 Arithmetic Guards (Planned)
 
-**Implementation Status**: ⏳ Specified but not yet implemented
+**Implementation Status**: Type guards implemented, comparison guards require parser extension
 
-The following guards are planned for arithmetic operations. Unlike `evaluate/2` (which is two-valued and aborts on unbound inputs), these guards are three-valued and patient.
+Type guards are three-valued and patient (unlike `evaluate/2` which is two-valued and aborts on unbound inputs).
 
-#### Planned: number(X)
-**Operation**: Test if X is bound to a number
+#### ✅ Implemented: number(X?)
+**Operation**: Test if X? is bound to a number
 **Three-valued semantics**:
-1. If X bound to number (int or double) → **SUCCEED**
-2. If X is unbound reader → **SUSPEND** (add to U, immediately try next clause)
-3. If X bound to non-number → **FAIL**
+1. If X? bound to number (int or double) → **SUCCEED**
+2. If X? is unbound reader → **SUSPEND** (add to U, immediately try next clause)
+3. If X? bound to non-number → **FAIL**
 
-#### Planned: integer(X)
-**Operation**: Test if X is bound to an integer
+#### ✅ Implemented: integer(X?)
+**Operation**: Test if X? is bound to an integer
 **Three-valued semantics**:
-1. If X bound to integer → **SUCCEED**
-2. If X is unbound reader → **SUSPEND** (add to U, immediately try next clause)
+1. If X? bound to integer → **SUCCEED**
+2. If X? is unbound reader → **SUSPEND** (add to U, immediately try next clause)
 3. Otherwise (unbound writer, bound to non-integer) → **FAIL**
 
 #### Planned: Comparison Guards
@@ -794,22 +805,23 @@ The following guards are planned for arithmetic operations. Unlike `evaluate/2` 
 - Transforming infix to prefix predicates (e.g., `X < Y` → `<(X, Y)`)
 
 **Currently Implemented Guards**:
-- ✅ `ground(X)`, `known(X)`, `otherwise`
-- ✅ `if_writer(X)`, `if_reader(X)` - type tests
+- ✅ `ground(X?)`, `known(X?)`, `otherwise`
+- ✅ `number(X?)`, `integer(X?)` - type tests
+- ✅ `if_writer(X)`, `if_reader(X?)` - mode tests
 
-**Design Pattern** (future usage):
+**Design Pattern**:
 ```prolog
 % Safe arithmetic with guards protecting execute
 safe_divide(X, Y, Z) :-
-  number(X), number(Y), Y =\= 0 |   % guards ensure preconditions
-  execute('evaluate', [X? / Y?, Z]).  % two-valued execute
+  number(X?), number(Y?), Y? =\= 0 |   % guards ensure preconditions
+  execute('evaluate', [X? / Y?, Z]).   % two-valued execute
 
-% Conditional computation
+% Conditional computation (when comparison guards implemented)
 compute(N, Result) :-
-  integer(N), N > 0 |               % guards test and select clause
+  integer(N?), N? > 0 |               % guards test and select clause
   execute('evaluate', [N? * 2, Result]).
 compute(N, Result) :-
-  integer(N), N =< 0 |
+  integer(N?), N? =< 0 |
   execute('evaluate', [-N?, Result]).
 ```
 
@@ -1178,7 +1190,22 @@ The unified V2 opcodes use an `isReader` flag to distinguish writer vs reader mo
 
 2. **Reader-of-Reader Prevention**: The mode conversion design prevents reader-of-reader chains. A writer gets a reader view of a fresh variable, not a reader of another reader.
 
-3. **Suspension Semantics**: When suspending on an unbound reader, the entire clause attempt suspends. The goal will be reactivated when the reader's writer is bound.
+3. **Suspension Semantics**: HEAD phase uses two-phase unification with deferred suspension:
+
+   **Phase 1 (Collection):** HEAD instructions process arguments left-to-right, accumulating:
+   - σ̂w: tentative writer bindings
+   - Si: preliminary suspension set (readers matched against constants or structures whose paired writers are not yet in σ̂w)
+
+   When a HEAD instruction encounters an unbound reader where a specific value is required, it adds the reader ID to Si and continues processing remaining arguments.
+
+   **Phase 2 (Resolution at Commit):** Before applying σ̂w:
+   - Compute S' = {X? ∈ Si : X ∉ dom(σ̂w)}
+   - If S' ≠ ∅: union S' into U (goal-level suspension set), fail to next clause
+   - If S' = ∅: proceed with commit, apply σ̂w to heap
+
+   This two-phase approach ensures that argument order does not affect success. For example, goal `p(X?,X)` against clause `p(a,a)` succeeds: Phase 1 adds X? to Si and X→a to σ̂w; Phase 2 finds X ∈ dom(σ̂w), so S' = ∅.
+
+   **GUARD phase** retains immediate failure semantics: unbound readers in guards cause the clause to fail immediately (not suspend), since guards test preconditions rather than collect bindings.
 
 4. **SRSW Validation**: The compiler must validate SRSW constraints. Multiple reader occurrences require ground() guard.
 
@@ -1455,7 +1482,7 @@ add(X, Y, Z) :- execute('evaluate', [X? + Y?, Z]).
 
 % SAFE - guards ensure inputs bound
 safe_add(X, Y, Z) :-
-  number(X), number(Y) |
+  number(X?), number(Y?) |
   execute('evaluate', [X? + Y?, Z]).
 ```
 
@@ -1572,7 +1599,38 @@ Guards provide read-only tests that determine clause selection. They appear betw
 5. Guard SUSPEND: add first unbound reader to U, discard σ̂w, try next clause
 6. All guards succeed: COMMIT applies σ̂w, enter BODY
 
-### 19.2 Arithmetic Expression Evaluation in Guards
+### 19.2 Guard Negation (`~G`)
+
+**Syntax**: `~G` where G is an atomic built-in guard
+
+**Semantics**: `~G` succeeds iff G fails. Suspension behavior follows from the standard guard definition (a guard suspends if there exists a substitution to its readers that makes it succeed).
+
+**Restrictions**:
+- Only atomic built-in guards can be negated
+- Defined guards (unit clauses) cannot be negated
+- Compound guards cannot be negated (no `~(A, B)`)
+- Double negation `~~G` is syntactically forbidden (formally equivalent to G, but forbidden in syntax)
+
+**Negatable guards**:
+- Type guards: `ground`, `known`, `unknown`, `integer`, `number`, `atom`, `string`, `constant`, `compound`, `tuple`, `list`, `is_list`, `writer`, `reader`
+- Equality: `=?=`
+
+**Non-negatable guards** (due to type-error semantics):
+- Arithmetic: `<`, `>`, `=<`, `>=`, `=:=`, `=\=`
+- Control: `otherwise`
+- Time: `wait`, `wait_until`
+
+**Compilation**: `~G` compiles to the same guard instruction as G, followed by result inversion.
+
+**Example**:
+```prolog
+handle(X, Y) :- ~integer(X?) | handle_non_integer(X?, Y).
+lookup(Key, [(K,_)|Rest], V?) :- ~(Key =?= K?) | lookup(Key?, Rest?, V).
+```
+
+**Design Rationale**: In GLP, guards have input-only variables - they test but don't bind. This makes success and failure symmetric definitive outcomes. Neither produces bindings, both are final decisions. This symmetry enables clean negation semantics where `~G` simply inverts the success/fail outcome while preserving suspension behavior.
+
+### 19.3 Arithmetic Expression Evaluation in Guards
 
 **Which guards evaluate arithmetic:**
 
@@ -1693,7 +1751,7 @@ Result := X? + Y? :- number(X?), number(Y?) |   % Matches arithmetic expressions
 ```
 
 #### 19.4.1 guard_ground Xi
-**Source**: `ground(X)` in guard position
+**Source**: `ground(X?)` in guard position
 **Operation**: Test if Xi is ground (contains no variables)
 **Behavior**:
 - Recursively check Xi for any unbound variables
@@ -1701,23 +1759,25 @@ Result := X? + Y? :- number(X?), number(Y?) |   % Matches arithmetic expressions
 - Suspend if contains unbound readers
 - Fail if contains unbound writers
 
+**Why reader argument**: Guards use readers to enable patient suspension. An unbound reader suspends (waiting for paired writer), while an unbound writer fails immediately.
+
 **Example**:
 ```prolog
-safe_div(X, Y, Z?) :- ground(X), ground(Y), Y? =\= 0 | execute('evaluate', [X? / Y?, Z]).
+safe_div(X, Y, Z?) :- ground(X?), ground(Y?), Y? =\= 0 | execute('evaluate', [X? / Y?, Z]).
 ```
 
 #### 19.4.2 guard_known Xi
-**Source**: `known(X)` in guard position
+**Source**: `known(X?)` in guard position
 **Operation**: Test if Xi is not a variable
 **Behavior**:
 - Succeed if Xi is bound to any term (even if that term contains variables)
 - Suspend if Xi is unbound reader
 - Fail if Xi is unbound writer
 
-**Difference from ground**: `known([X])` succeeds even if X is unbound, `ground([X])` fails.
+**Difference from ground**: `known([X?])` succeeds even if X is unbound, `ground([X?])` fails.
 
 #### 19.4.3 guard_integer Xi
-**Source**: `integer(X)` in guard position
+**Source**: `integer(X?)` in guard position
 **Operation**: Test if Xi is an integer
 **Behavior**:
 - Succeed if Xi is bound to integer value
@@ -1725,7 +1785,7 @@ safe_div(X, Y, Z?) :- ground(X), ground(Y), Y? =\= 0 | execute('evaluate', [X? /
 - Suspend if Xi is unbound reader
 
 #### 19.4.4 guard_number Xi
-**Source**: `number(X)` in guard position
+**Source**: `number(X?)` in guard position
 **Operation**: Test if Xi is numeric (integer or real)
 **Behavior**: As guard_integer but accepts any numeric type (int or float)
 
@@ -1738,7 +1798,7 @@ safe_div(X, Y, Z?) :- ground(X), ground(Y), Y? =\= 0 | execute('evaluate', [X? /
 - **Non-monotonic**: can succeed then fail after binding
 
 #### 19.4.6 guard_reader Xi
-**Source**: `reader(X)` in guard position
+**Source**: `reader(X?)` in guard position
 **Operation**: Test if Xi is an unbound reader
 **Behavior**:
 - Succeed if Xi is unbound reader variable
@@ -1747,12 +1807,9 @@ safe_div(X, Y, Z?) :- ground(X), ground(Y), Y? =\= 0 | execute('evaluate', [X? /
 
 ### 19.5 Control Guards
 
-#### 19.5.1 guard_true
-**Source**: `true` in guard position
-**Operation**: Always succeeds
-**Behavior**: Unconditional success (no-op guard)
+**Note on `true`**: The atom `true` is a **body stub**, not a guard. It appears in clause bodies as `| true` when no body goals are needed. It is not a guard predicate and should not be listed as one.
 
-#### 19.5.2 guard_otherwise
+#### 19.5.1 guard_otherwise
 **Source**: `otherwise` in guard position
 **Operation**: Succeeds if all previous clauses failed
 **Compiler directive**: Compiler must track clause ordering
@@ -1765,26 +1822,30 @@ classify(X, neg) :- X? < 0 | true.
 classify(X, zero) :- otherwise | true.
 ```
 
-### 19.6 Unification Guards
+### 19.6 Equality Guard
 
-#### 19.6.1 guard_unify Xi, Xj
-**Source**: `X = Y` in guard position
-**Operation**: Attempt unification
+#### 19.6.1 guard_equal Xi, Xj
+**Source**: `X =?= Y` in guard position (ground equality)
+**Operation**: Test ground equality
 **Behavior**:
-- Perform tentative writer MGU (add bindings to σ̂w)
-- Success if unifiable
-- Fail if not unifiable (structure mismatch)
-- Suspend if unbound readers block unification
+- Succeed if both Xi and Xj are ground and equal
+- Fail if both ground and not equal
+- Suspend if either contains unbound readers
+- Fail if either contains unbound writers
+
+**Note**: This guard tests term equality, not unification. It does not add bindings to σ̂w.
 
 **Example**:
 ```prolog
-p(X, Y) :- X = f(Y, Z?) | body.  % Adds X=f(Y,Z) to σ̂w if succeeds
+lookup(Key, [(K,V)|_], V?) :- Key =?= K? | true.
+lookup(Key, [(K,_)|Rest], V?) :- ~(Key =?= K?) | lookup(Key?, Rest?, V).
 ```
 
-#### 19.6.2 guard_not_unifiable Xi, Xj
-**Source**: `X \= Y` in guard position
-**Operation**: Test non-unifiability
-**Behavior**: Negation of guard_unify (no bindings added to σ̂w)
+**Removed guards**:
+- `guard_unify` (`=` in guard position): Removed. Unification in guards is not a built-in; define as unit clause if needed.
+- `guard_not_unifiable` (`\=` in guard position): Removed. Use `~(X =?= Y)` for inequality testing.
+
+**Note on `=\=`**: The arithmetic inequality guard `=\=` is **redundant** once guard negation (`~`) is implemented. It becomes equivalent to `~(X =:= Y)` and will be removed in a future version.
 
 ### 19.7 Lexer/Parser Integration
 
@@ -1792,21 +1853,25 @@ p(X, Y) :- X = f(Y, Z?) | body.  % Adds X=f(Y,Z) to σ̂w if succeeds
 
 | Source | Token Type    | Priority | Associativity | Bytecode Instruction      |
 |--------|---------------|----------|---------------|---------------------------|
+| `~`    | TILDE         | 900      | prefix        | guard negation            |
+| `=?=`  | GROUND_EQ     | 700      | non-assoc     | guard_equal               |
 | `<`    | LESS          | 700      | non-assoc     | guard_less                |
 | `>`    | GREATER       | 700      | non-assoc     | guard_greater             |
 | `=<`   | LESS_EQ       | 700      | non-assoc     | guard_less_equal          |
 | `>=`   | GREATER_EQ    | 700      | non-assoc     | guard_greater_equal       |
 | `=:=`  | ARITH_EQ      | 700      | non-assoc     | guard_arith_equal         |
-| `=\=`  | ARITH_NE      | 700      | non-assoc     | guard_arith_not_equal     |
-| `=`    | UNIFY         | 800      | non-assoc     | guard_unify (in guards)   |
-| `\=`   | NOT_UNIFY     | 800      | non-assoc     | guard_not_unifiable       |
+
+**Removed tokens** (no longer guard operators):
+- `=` (UNIFY) - Not a guard; use defined guards if unification testing needed
+- `\=` (NOT_UNIFY) - Removed; use `~(X =?= Y)` instead
+- `=\=` (ARITH_NE) - Redundant; equivalent to `~(X =:= Y)`, will be removed
 
 #### Operator Precedence (from lowest to highest)
 
 1. **Guard separator**: `|` - 1100
 2. **Conjunction**: `,` - 1000
-3. **Unification**: `=`, `\=` - 800
-4. **Comparison**: `<`, `>`, `=<`, `>=`, `=:=`, `=\=` - 700
+3. **Guard negation**: `~` - 900 (prefix)
+4. **Comparison**: `<`, `>`, `=<`, `>=`, `=:=`, `=?=` - 700
 5. **Addition**: `+`, `-` - 500
 6. **Multiplication**: `*`, `/`, `mod` - 400
 7. **Primary**: variables, numbers, parentheses - highest
@@ -1816,22 +1881,21 @@ p(X, Y) :- X = f(Y, Z?) | body.  % Adds X=f(Y,Z) to σ̂w if succeeds
 ```
 // IMPORTANT: Check multi-character operators FIRST
 
+// Three-character operators
+'=?='  → GROUND_EQ      // Ground equality
+'=:='  → ARITH_EQ       // Arithmetic equality
+
 // Two-character operators
 '=<'   → LESS_EQ        // Prolog style (not <=)
 '>='   → GREATER_EQ
-'\\='  → NOT_UNIFY      // Backslash + equals
-
-// Three-character operators
-'=:='  → ARITH_EQ       // Arithmetic equality
-'=\\=' → ARITH_NE       // Arithmetic inequality (backslash)
 
 // Single-character operators (check AFTER multi-char)
+'~'    → TILDE           // Guard negation (prefix)
 '<'    → LESS
 '>'    → GREATER
-'='    → UNIFY
 ```
 
-**Ordering Critical**: Lexer must check `=<` before `<`, `=:=` before `=`, etc.
+**Ordering Critical**: Lexer must check `=?=` and `=:=` before `=<`, and `=<` before `<`.
 
 ### 19.8 Guards vs. System Predicates
 

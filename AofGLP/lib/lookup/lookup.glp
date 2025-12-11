@@ -3,18 +3,18 @@
 %%
 %% Lookup and lookup_send for friends list operations.
 
-lookup(Key, [(Key, Value)|_], Value).
-lookup(Key, [(K, _)|Rest], Value) :-
-    Key \= K | lookup(Key?, Rest?, Value).
+%% lookup(Key, List, Value) - find value associated with key
+lookup(Key, [(K, Value)|_], Value?) :- Key? =?= K? | true.
+lookup(Key, [_|Rest], Value?) :-
+    otherwise | lookup(Key?, Rest?, Value).
 
-lookup_send(Key, Msg, Fs, Fs1) :-
-    lookup(Key?, Fs?, Out),
-    Out = [Msg?|Out1?],
+%% lookup_send(Key, Msg, Fs, Fs1) - send message through channel, update list
+lookup_send(Key, Msg, Fs, Fs1?) :-
+    ground(Key?), ground(Fs?) |
+    lookup(Key?, Fs?, [Msg?|Out1]),
     update(Key?, Out1?, Fs?, Fs1).
 
-update(Key, NewOut, [(Key, _)|Rest], [(Key, NewOut?)|Rest?]).
-update(Key, NewOut, [(K, V)|Rest], [(K?, V?)|Rest1?]) :-
-    Key \= K | update(Key?, NewOut?, Rest?, Rest1).
-
-%% lookup finds value associated with key in association list
-%% lookup_send sends message through channel and updates friends list
+%% update(Key, NewOut, OldList, NewList) - update value for key in list
+update(Key, NewOut, [(K, _)|Rest], [(K?, NewOut?)|Rest?]) :- ground(K?), Key? =?= K? | true.
+update(Key, NewOut, [Pair|Rest], [Pair?|Rest1?]) :-
+    otherwise | update(Key?, NewOut?, Rest?, Rest1).

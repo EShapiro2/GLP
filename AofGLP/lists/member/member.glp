@@ -1,9 +1,0 @@
-%% member.glp - List Membership
-%% Source: Standard GLP list operations
-
-member(X, [X|_]).
-member(X, [_|Xs]) :- member(X?, Xs?).
-
-%% Metainterpreter support
-reduce(member(X, [X|_]), true).
-reduce(member(X, [_|Xs]), member(X?, Xs?)).

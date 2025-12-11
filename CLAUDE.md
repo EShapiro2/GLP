@@ -78,6 +78,13 @@ The GLP paper and LaTeX sources:
 - Get explicit user agreement on the plan
 - Only then proceed to implementation
 
+### Instructions from Claude Web
+When receiving instructions from Claude Web (via user copy-paste):
+- **REVIEW FIRST** - Read and understand the instructions before executing
+- **RAISE CONCERNS** - Let Udi know if you have comments, questions, or see potential issues
+- **DON'T BLINDLY EXECUTE** - Wait for confirmation if something seems unclear or problematic
+- Only proceed with execution after review is complete and any concerns are addressed
+
 ### Accuracy and Honesty
 - **NEVER BS, GUESS, SPECULATE, OR HALLUCINATE**
 - **IF UNSURE, SAY SO** - "I'm not sure, need to check X"
@@ -220,7 +227,20 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 
 **Use this message:** "This requires architectural understanding. Please consult Claude Chat for the design, then provide me with specific implementation instructions."
 
-## Practical Environment Info (Linux)
+## Two Environments: Claude (Linux) vs User (Mac)
+
+**CRITICAL: There are TWO different environments:**
+
+| Environment | Path | Used by |
+|-------------|------|---------|
+| Claude Code (Linux) | `/home/user/GLP` | Claude running commands |
+| User's Mac | `/Users/udi/GLP` | User running commands |
+
+**When giving instructions TO THE USER (merge commands, etc.), ALWAYS use Mac paths (`/Users/udi/GLP`).**
+
+---
+
+## Practical Environment Info (Linux - Claude Code)
 
 **Before running commands, VERIFY - don't guess:**
 - Run `ls` to check directories exist
@@ -383,6 +403,13 @@ REPL tests: 101/101 passing
 ```bash
 dart test test/specific_test.dart
 ```
+
+### Bug Fix Test Protocol
+
+**When a bug is detected and fixed:**
+1. Add the test case that exposed the bug to the REPL test suite
+2. The test should verify the fix works (not just that it doesn't crash)
+3. This prevents regression - the bug should never reappear
 
 ## Working Principles
 

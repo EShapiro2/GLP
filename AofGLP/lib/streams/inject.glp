@@ -3,6 +3,12 @@
 %%
 %% Defers insertion of message into stream until trigger variable
 %% becomes bound, while allowing stream to continue flowing.
+%%
+%% NOTE: For cases where the message must be constructed at delivery time
+%% (using readers of the trigger variable), use response_stream with merge
+%% instead. See cold_call_glpsam.glp for the pattern:
+%%   response_stream(Resp?, Target?, Id?, Rs),
+%%   merge(In?, Rs?, In1)
 
 inject(X, Y, Ys, [Y?|Ys?]) :- known(X) | true.
 inject(X, Y, [Y1|Ys], [Y1?|Ys1?]) :- unknown(X) | inject(X?, Y?, Ys?, Ys1).

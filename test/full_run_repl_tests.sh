@@ -55,7 +55,12 @@ $GLP_DIR/nonground_list.glp
 $GLP_DIR/reader_output.glp
 $GLP_DIR/two_struct_list.glp
 $GLP_DIR/depth_test.glp
+$GLP_DIR/paa.glp
+$GLP_DIR/test_bob.glp
+$GLP_DIR/test_nested_suspend.glp
+test_defined_guards.glp
 append_dl.glp
+assign_reader_test.glp
 hello.
 p(X).
 merge([1,2,3], [a,b], Xs).
@@ -159,6 +164,7 @@ no_guard(Xng, 5).
 with_guard(Xwg, 5).
 Xsl = [send(1,a), send(2,b)].
 open(1, Xopen, Yopen).
+open2(1, Xopen2).
 append([1,2|T1?], T1, [3,4|T2?], T2, Hdl, Tdl?).
 test_list_in_body([1,2,3,4], Xngl).
 build_list(a, b, Xbld).
@@ -169,6 +175,16 @@ bin_nest(Xbn, val).
 ter_all(Xta, a, b, c).
 tree3(Xtr3, val).
 multi_w(Xmw, p, q).
+p(Xpaa1, Xpaa1?).
+p(Xpaa2?, Xpaa2).
+bob(Xbob?).
+level1(Xlv1?).
+level2([Xlv2?|Rlv2]).
+level3([wrapper(Xlv3?)|Rlv3]).
+test(ch(Adg?, Bdg), Rdg1).
+test(foo, Rdg2).
+test(Xdg?, Rdg3).
+assign_reader(Rar?, Xar).
 :quit
 REPL_INPUT
 2>&1)
@@ -330,11 +346,15 @@ declare -a tests=(
     "Deep binary tree:Xtr3 = node(node(leaf(val), leaf(a)), leaf(b))"
     "Multiple writers nested:Xmw = pair(wrap(p), wrap(q))"
 
-    # Bounded buffer (writer-to-reader alias fix)
-    "Open buffer:Xopen = \[\[\] |"
+    # Bounded buffer - WxW: goal unbound writer vs head writer fails
+    # (open/3 uses incorrect mode annotations - T should be T?)
+    "Open buffer:failed"
 
-    # Difference list append
-    "DL append:Hdl = \[1, 2 |"
+    # Open2 - WxW-compliant version with single dl(Head,Tail) output
+    "Open2 buffer:Xopen2 = dl"
+
+    # Difference list append (now correctly unifies T1 with T1?)
+    "DL append:Hdl = \[1, 2, 3, 4 |"
 
     # Non-ground list in body (codegen fix)
     "Non-ground list pass:Xngl = \[1, 2, 3, 4\]"
@@ -343,6 +363,24 @@ declare -a tests=(
     # Reader in output position (runtime fix)
     "Unwrap list element:Xunw = hello"
     "Identity returns value:Xid = foo"
+
+    # Two-phase HEAD unification (writer/reader same variable)
+    "p(X,X?) succeeds:Xpaa1 = a"
+    "p(X?,X) succeeds:→ succeeds"
+
+    # Suspension tests (unbound reader vs structure pattern)
+    "Suspend bob(X?) unbound:bob(X.*) → suspended"
+    "Suspend level1(X?) unbound:level1(X.*) → suspended"
+    "Suspend level2 nested:level2(.*) → suspended"
+    "Suspend level3 deep nested:level3(.*) → suspended"
+
+    # Defined guards (unit clause unfolding)
+    "Defined guard match:Rdg1 = ok"
+    "Defined guard fail:Rdg2 = not_channel"
+    "Defined guard suspend:test(X.*, Rdg3) → suspended"
+
+    # Goal reader vs head writer (should succeed, not suspend)
+    "Goal reader to head writer:assign_reader(.*) :- true"
 )
 
 PASS=0
@@ -448,6 +486,148 @@ if echo "$mwm_output" | grep -q "Xmwm3 = \[a, b, 1, 2\]"; then
     PASS=$((PASS + 1))
 else
     echo "FAIL: MWM two streams (expected: Xmwm3 = [a, b, 1, 2])"
+    FAIL=$((FAIL + 1))
+fi
+
+# Run ground equality (=?=) tests
+echo ""
+echo "--- Ground Equality (=?=) Guard Tests ---"
+
+ge_output=$($DART run "$REPL" <<GE_INPUT
+$GLP_DIR/test_ground_equal.glp
+test(a, a, R1).
+test(a, b, R2).
+test(foo(1,2), foo(1,2), R3).
+test(foo(1,2), foo(1,3), R4).
+test([1,2,3], [1,2,3], R5).
+test([1,2], [1,3], R6).
+:quit
+GE_INPUT
+2>&1)
+
+if echo "$ge_output" | grep -q "R1 = equal"; then
+    echo "PASS: =?= atoms equal"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =?= atoms equal (expected: R1 = equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$ge_output" | grep -q "R2 = not_equal"; then
+    echo "PASS: =?= atoms not equal"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =?= atoms not equal (expected: R2 = not_equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$ge_output" | grep -q "R3 = equal"; then
+    echo "PASS: =?= structures equal"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =?= structures equal (expected: R3 = equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$ge_output" | grep -q "R4 = not_equal"; then
+    echo "PASS: =?= structures not equal"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =?= structures not equal (expected: R4 = not_equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$ge_output" | grep -q "R5 = equal"; then
+    echo "PASS: =?= lists equal"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =?= lists equal (expected: R5 = equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$ge_output" | grep -q "R6 = not_equal"; then
+    echo "PASS: =?= lists not equal"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =?= lists not equal (expected: R6 = not_equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+# --- Guard Negation (~G) Tests ---
+echo ""
+echo "--- Guard Negation (~G) Tests ---"
+
+gn_output=$(echo -e "$GLP_DIR/test_guard_negation.glp\ntest_neg_int(5, R1).\ntest_neg_int(hello, R2).\ntest_neg_number(3.14, R3).\ntest_neg_number(hello, R4).\ntest_neg_eq(5, 5, R5).\ntest_neg_eq(5, 3, R6)." | $DART run $REPL 2>&1)
+
+if echo "$gn_output" | grep -q "R1 = is_int"; then
+    echo "PASS: ~integer(5) fails, integer succeeds"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: ~integer(5) fails, integer succeeds (expected: R1 = is_int)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$gn_output" | grep -q "R2 = not_int"; then
+    echo "PASS: ~integer(hello) succeeds"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: ~integer(hello) succeeds (expected: R2 = not_int)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$gn_output" | grep -q "R3 = is_num"; then
+    echo "PASS: ~number(3.14) fails, number succeeds"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: ~number(3.14) fails, number succeeds (expected: R3 = is_num)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$gn_output" | grep -q "R4 = not_num"; then
+    echo "PASS: ~number(hello) succeeds"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: ~number(hello) succeeds (expected: R4 = not_num)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$gn_output" | grep -q "R5 = eq"; then
+    echo "PASS: ~(5 =?= 5) fails, equality succeeds"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: ~(5 =?= 5) fails, equality succeeds (expected: R5 = eq)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$gn_output" | grep -q "R6 = neq"; then
+    echo "PASS: ~(5 =?= 3) succeeds"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: ~(5 =?= 3) succeeds (expected: R6 = neq)"
+    FAIL=$((FAIL + 1))
+fi
+
+# --- Invalid Guard Tests ---
+echo ""
+echo "--- Invalid Guard Tests ---"
+
+# Create temp file with true in guard position
+TMP_TRUE_GUARD=$(mktemp --suffix=.glp)
+echo 'bad_guard(X?) :- true | X = done.' > "$TMP_TRUE_GUARD"
+
+true_guard_output=$($DART run "$REPL" <<TRUE_INPUT
+$TMP_TRUE_GUARD
+:quit
+TRUE_INPUT
+2>&1)
+
+rm -f "$TMP_TRUE_GUARD"
+
+if echo "$true_guard_output" | grep -q '"true" is not a guard'; then
+    echo "PASS: true in guard position rejected"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: true in guard position should be rejected"
     FAIL=$((FAIL + 1))
 fi
 
