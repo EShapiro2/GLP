@@ -1,86 +1,52 @@
-%% network4.glp - 4-Agent Network Switch
-%% Routes messages between alice, bob, carol, dave based on destination
+%% network4.glp - 4-way network switch (partially evaluated)
+%% Routes messages between alice, bob, carol, dave based on destination.
+%% Message format: msg(Src, Dst, Content)
+%% 12 clauses: each of 4 agents can send to 3 others.
 
-%% Message from Alice to Bob
-network4((alice, ChA), (bob, ChB), (carol, ChC), (dave, ChD)) :-
-    receive(Msg?, ChA?, ChA1),
-    Msg = msg(bob, X) |
-    send(X?, ChB?, ChB1),
-    network4((alice, ChA1?), (bob, ChB1?), (carol, ChC?), (dave, ChD?)).
+%% Alice sends to Bob
+network4((alice, ch([msg(Src, bob, Content)|AOut], AIn)), (bob, ch(BOut, [msg(Src?, bob, Content?)|BIn])), (carol, ChC), (dave, ChD)) :-
+    network4((alice, ch(AOut?, AIn?)), (bob, ch(BOut?, BIn?)), (carol, ChC?), (dave, ChD?)).
 
-%% Message from Alice to Carol
-network4((alice, ChA), (bob, ChB), (carol, ChC), (dave, ChD)) :-
-    receive(Msg?, ChA?, ChA1),
-    Msg = msg(carol, X) |
-    send(X?, ChC?, ChC1),
-    network4((alice, ChA1?), (bob, ChB?), (carol, ChC1?), (dave, ChD?)).
+%% Alice sends to Carol
+network4((alice, ch([msg(Src, carol, Content)|AOut], AIn)), (bob, ChB), (carol, ch(COut, [msg(Src?, carol, Content?)|CIn])), (dave, ChD)) :-
+    network4((alice, ch(AOut?, AIn?)), (bob, ChB?), (carol, ch(COut?, CIn?)), (dave, ChD?)).
 
-%% Message from Alice to Dave
-network4((alice, ChA), (bob, ChB), (carol, ChC), (dave, ChD)) :-
-    receive(Msg?, ChA?, ChA1),
-    Msg = msg(dave, X) |
-    send(X?, ChD?, ChD1),
-    network4((alice, ChA1?), (bob, ChB?), (carol, ChC?), (dave, ChD1?)).
+%% Alice sends to Dave
+network4((alice, ch([msg(Src, dave, Content)|AOut], AIn)), (bob, ChB), (carol, ChC), (dave, ch(DOut, [msg(Src?, dave, Content?)|DIn]))) :-
+    network4((alice, ch(AOut?, AIn?)), (bob, ChB?), (carol, ChC?), (dave, ch(DOut?, DIn?))).
 
-%% Message from Bob to Alice
-network4((alice, ChA), (bob, ChB), (carol, ChC), (dave, ChD)) :-
-    receive(Msg?, ChB?, ChB1),
-    Msg = msg(alice, X) |
-    send(X?, ChA?, ChA1),
-    network4((alice, ChA1?), (bob, ChB1?), (carol, ChC?), (dave, ChD?)).
+%% Bob sends to Alice
+network4((alice, ch(AOut, [msg(Src?, alice, Content?)|AIn])), (bob, ch([msg(Src, alice, Content)|BOut], BIn)), (carol, ChC), (dave, ChD)) :-
+    network4((alice, ch(AOut?, AIn?)), (bob, ch(BOut?, BIn?)), (carol, ChC?), (dave, ChD?)).
 
-%% Message from Bob to Carol
-network4((alice, ChA), (bob, ChB), (carol, ChC), (dave, ChD)) :-
-    receive(Msg?, ChB?, ChB1),
-    Msg = msg(carol, X) |
-    send(X?, ChC?, ChC1),
-    network4((alice, ChA?), (bob, ChB1?), (carol, ChC1?), (dave, ChD?)).
+%% Bob sends to Carol
+network4((alice, ChA), (bob, ch([msg(Src, carol, Content)|BOut], BIn)), (carol, ch(COut, [msg(Src?, carol, Content?)|CIn])), (dave, ChD)) :-
+    network4((alice, ChA?), (bob, ch(BOut?, BIn?)), (carol, ch(COut?, CIn?)), (dave, ChD?)).
 
-%% Message from Bob to Dave
-network4((alice, ChA), (bob, ChB), (carol, ChC), (dave, ChD)) :-
-    receive(Msg?, ChB?, ChB1),
-    Msg = msg(dave, X) |
-    send(X?, ChD?, ChD1),
-    network4((alice, ChA?), (bob, ChB1?), (carol, ChC?), (dave, ChD1?)).
+%% Bob sends to Dave
+network4((alice, ChA), (bob, ch([msg(Src, dave, Content)|BOut], BIn)), (carol, ChC), (dave, ch(DOut, [msg(Src?, dave, Content?)|DIn]))) :-
+    network4((alice, ChA?), (bob, ch(BOut?, BIn?)), (carol, ChC?), (dave, ch(DOut?, DIn?))).
 
-%% Message from Carol to Alice
-network4((alice, ChA), (bob, ChB), (carol, ChC), (dave, ChD)) :-
-    receive(Msg?, ChC?, ChC1),
-    Msg = msg(alice, X) |
-    send(X?, ChA?, ChA1),
-    network4((alice, ChA1?), (bob, ChB?), (carol, ChC1?), (dave, ChD?)).
+%% Carol sends to Alice
+network4((alice, ch(AOut, [msg(Src?, alice, Content?)|AIn])), (bob, ChB), (carol, ch([msg(Src, alice, Content)|COut], CIn)), (dave, ChD)) :-
+    network4((alice, ch(AOut?, AIn?)), (bob, ChB?), (carol, ch(COut?, CIn?)), (dave, ChD?)).
 
-%% Message from Carol to Bob
-network4((alice, ChA), (bob, ChB), (carol, ChC), (dave, ChD)) :-
-    receive(Msg?, ChC?, ChC1),
-    Msg = msg(bob, X) |
-    send(X?, ChB?, ChB1),
-    network4((alice, ChA?), (bob, ChB1?), (carol, ChC1?), (dave, ChD?)).
+%% Carol sends to Bob
+network4((alice, ChA), (bob, ch(BOut, [msg(Src?, bob, Content?)|BIn])), (carol, ch([msg(Src, bob, Content)|COut], CIn)), (dave, ChD)) :-
+    network4((alice, ChA?), (bob, ch(BOut?, BIn?)), (carol, ch(COut?, CIn?)), (dave, ChD?)).
 
-%% Message from Carol to Dave
-network4((alice, ChA), (bob, ChB), (carol, ChC), (dave, ChD)) :-
-    receive(Msg?, ChC?, ChC1),
-    Msg = msg(dave, X) |
-    send(X?, ChD?, ChD1),
-    network4((alice, ChA?), (bob, ChB?), (carol, ChC1?), (dave, ChD1?)).
+%% Carol sends to Dave
+network4((alice, ChA), (bob, ChB), (carol, ch([msg(Src, dave, Content)|COut], CIn)), (dave, ch(DOut, [msg(Src?, dave, Content?)|DIn]))) :-
+    network4((alice, ChA?), (bob, ChB?), (carol, ch(COut?, CIn?)), (dave, ch(DOut?, DIn?))).
 
-%% Message from Dave to Alice
-network4((alice, ChA), (bob, ChB), (carol, ChC), (dave, ChD)) :-
-    receive(Msg?, ChD?, ChD1),
-    Msg = msg(alice, X) |
-    send(X?, ChA?, ChA1),
-    network4((alice, ChA1?), (bob, ChB?), (carol, ChC?), (dave, ChD1?)).
+%% Dave sends to Alice
+network4((alice, ch(AOut, [msg(Src?, alice, Content?)|AIn])), (bob, ChB), (carol, ChC), (dave, ch([msg(Src, alice, Content)|DOut], DIn))) :-
+    network4((alice, ch(AOut?, AIn?)), (bob, ChB?), (carol, ChC?), (dave, ch(DOut?, DIn?))).
 
-%% Message from Dave to Bob
-network4((alice, ChA), (bob, ChB), (carol, ChC), (dave, ChD)) :-
-    receive(Msg?, ChD?, ChD1),
-    Msg = msg(bob, X) |
-    send(X?, ChB?, ChB1),
-    network4((alice, ChA?), (bob, ChB1?), (carol, ChC?), (dave, ChD1?)).
+%% Dave sends to Bob
+network4((alice, ChA), (bob, ch(BOut, [msg(Src?, bob, Content?)|BIn])), (carol, ChC), (dave, ch([msg(Src, bob, Content)|DOut], DIn))) :-
+    network4((alice, ChA?), (bob, ch(BOut?, BIn?)), (carol, ChC?), (dave, ch(DOut?, DIn?))).
 
-%% Message from Dave to Carol
-network4((alice, ChA), (bob, ChB), (carol, ChC), (dave, ChD)) :-
-    receive(Msg?, ChD?, ChD1),
-    Msg = msg(carol, X) |
-    send(X?, ChC?, ChC1),
-    network4((alice, ChA?), (bob, ChB?), (carol, ChC1?), (dave, ChD1?)).
+%% Dave sends to Carol
+network4((alice, ChA), (bob, ChB), (carol, ch(COut, [msg(Src?, carol, Content?)|CIn])), (dave, ch([msg(Src, carol, Content)|DOut], DIn))) :-
+    network4((alice, ChA?), (bob, ChB?), (carol, ch(COut?, CIn?)), (dave, ch(DOut?, DIn?))).

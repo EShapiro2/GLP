@@ -1,0 +1,30 @@
+%% play_4agents.glp - 4-player cold-call scenario
+%% Round 1: Alice initiates connection to Bob, Bob accepts
+%% Carol and Dave are idle (just initialized)
+
+play_4agents :-
+    %% Start all 4 agents
+    agent(alice, ch(AU2A?, AA2U), ch(AN2A?, AA2N)),
+    agent(bob, ch(BU2B?, BB2U), ch(BN2B?, BB2N)),
+    agent(carol, ch(CU2C?, CC2U), ch(CN2C?, CC2N)),
+    agent(dave, ch(DU2D?, DD2U), ch(DN2D?, DD2N)),
+    %% Start 4-way network
+    network4((alice, ch(AA2N?, AN2A)), (bob, ch(BB2N?, BN2B)),
+             (carol, ch(CC2N?, CN2C)), (dave, ch(DD2N?, DN2D))),
+    %% Start actors
+    alice_actor(ch(AA2U?, AU2A)),
+    bob_actor(ch(BB2U?, BU2B)),
+    carol_actor(ch(CC2U?, CU2C)),
+    dave_actor(ch(DD2U?, DU2D)).
+
+%% Alice: initiate connection to bob
+alice_actor(ch(_, [msg(user, alice, connect(bob))])).
+
+%% Bob: wait for befriend, accept
+bob_actor(ch([msg(agent, user, befriend(alice, Resp))|_], [msg(user, bob, decision(yes, alice, Resp?))])).
+
+%% Carol: idle (no messages)
+carol_actor(ch(_, [])).
+
+%% Dave: idle (no messages)
+dave_actor(ch(_, [])).
