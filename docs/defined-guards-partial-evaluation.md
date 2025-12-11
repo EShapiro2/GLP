@@ -250,40 +250,16 @@ The partial evaluator should run:
 
 Suggested location: `analyzer.dart`, as a transformation pass before `_analyzeClause`.
 
-## Current Implementation (INCORRECT)
+## Current Implementation
 
-The current implementation in `codegen.dart` attempts to handle defined guards at bytecode level:
+**Status: NOT IMPLEMENTED**
 
-- `_findUnitClause()` - finds unit clauses
-- `_generateDefinedGuard()` - generates HEAD-style matching opcodes
-- `_generateGuardPatternMatch()` - pattern matching
-- `_generateGuardStructureElement()` - structure element matching
-
-This approach is **incorrect** because:
-1. It only tests patterns, doesn't construct bindings
+The bytecode-level approach that was previously in `codegen.dart` has been removed. That approach was incorrect because:
+1. It only tested patterns, didn't construct bindings
 2. HEAD-style opcodes are for tentative unification, not binding construction
-3. The guard disappears but bindings aren't applied to the rest of the clause
+3. The guard disappeared but bindings weren't applied to the rest of the clause
 
-**This code should be removed** once proper partial evaluation is implemented.
-
-## Work Already Done (To Be Reverted)
-
-An attempt was made to implement partial evaluation in `analyzer.dart`:
-
-1. `_findUnitClauses()` - identifies unit clauses ✓
-2. `_transformDefinedGuards()` - orchestrates transformation ✓
-3. `_transformClause()` - transforms single clause with fixpoint iteration ✓
-4. `_glpUnify()` - GLP two-phase unification (may have bugs)
-5. `_unifyTerms()` - structural unification helper
-6. `_applySubstitution()` - applies substitution to clause
-7. `_applySubstToTerm()` - applies substitution to term
-8. `_renameVariables()` - renames unit clause variables to fresh names
-9. `_resolveSubstitution()` - resolves substitution chains
-
-Issues encountered:
-- Underscore handling caused SRSW violations
-- GLP unification logic may not correctly handle all reader/writer cases
-- Complexity suggests need for more careful design
+Proper partial evaluation as described in this document is pending implementation.
 
 ## Testing Plan
 
