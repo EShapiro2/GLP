@@ -913,3 +913,268 @@ send_rpc_goal(Goal, UCC, DRC, CallInfo, Scope, Target) :-
 | **Blocked (inlined)** | Direct procedure call | Zero RPC overhead |
 
 The FCP module system is optimized for the common case (static dispatch) while supporting dynamic dispatch when needed.
+
+---
+
+## 15. Additional FCP Module System Details
+
+### 15.1 Module File Location
+
+**Question:** How does FCP find module files when loading?
+
+**File:** `system/get_module.cp`
+
+FCP uses a **context-relative file search** with specific naming conventions:
+
+```prolog
+% From get_module.cp:67-84
+update(Context, Name, Options, Output, ModuleResult) :-
+    string_to_dlist(Name, ListBin, Bin),
+    string_to_dlist(".bin", Bin, []),           % Binary suffix
+    string_to_dlist("Bin/", BinListBin, ListBin) | % Bin/ subdirectory
+    ...
+    file # [execute_in_context(Context, fileinfo(BinName, BinDate)),
+            execute_in_context(Context, fileinfo(BinBinName, BinBinDate)),
+            execute_in_context(Context, fileinfo(Dot_oName, Dot_oDate)),
+            execute_in_context(Context,fileinfo(BinDot_oName, BinDot_oDate))
+           | CpInfo],
+```
+
+**Search order for module `foo` in context `[path, to, module]`:**
+
+1. `Bin/foo.bin` - compiled bytecode in Bin subdirectory
+2. `foo.bin` - compiled bytecode in current directory
+3. `Bin/foo.o` - native compiled object in Bin subdirectory
+4. `foo.o` - native compiled object in current directory
+5. `foo.cp` - source file (if auto-compile enabled)
+
+**Key insight:** FCP uses a **hierarchical directory structure** where:
+- Each module directory can have a `Bin/` subdirectory for compiled files
+- Source files are `.cp` files
+- Binary files are `.bin` (bytecode) or `.o` (native)
+- The context is a **path list** like `[module_name, parent_name, grandparent_name]`
+
+**File:** `system/get_source.cp:146-149`
+
+```prolog
+Source = file(Context, Name, Requests) :
+  Requests ! execute_in_context(Context, isdirectory(Name, IsDirectory)) |
+  get_file_source(Abort, Control, IsDirectory, Reply, Terms, Outs,
+                  Context, Name, Requests')
+```
+
+If a file isn't found in the current context, FCP walks up the hierarchy looking in parent directories.
+
+---
+
+### 15.2 Circular Dependencies
+
+**Question:** How does FCP handle A imports B, B imports A?
+
+**Finding:** FCP uses **lazy loading** which naturally handles circular dependencies.
+
+**Mechanism:**
+
+1. **Import declarations are collected at compile time** but NOT resolved immediately
+2. **Modules are loaded on first RPC** - not when imported
+3. **The `serve_import` process** connects lazily:
+
+**File:** `domain_server.cp:964-1013`
+
+```prolog
+cache_import(Stream, Import, ServiceId, Domain) :-
+    Stream = [] | Import = _, ServiceId = _, Domain = _ ;  % Empty = no messages yet
+
+    list(Stream),  % First message arrives
+    ... |
+        write_channel(find(ServiceId, SSC), Domain, Domain'),
+        serve_import(Stream, Import, ServiceId, Domain'?, SSC?);
+```
+
+**Why circular dependencies work:**
+
+- Module A can import B and B can import A
+- When A loads, B's import entry is created but B isn't loaded yet
+- If A calls `B # foo(...)`, B loads on demand
+- If B calls `A # bar(...)`, A is already loaded (the caller)
+- The vector/stream mechanism allows messages to queue before the target is ready
+
+**No explicit circular dependency detection** is needed because:
+- Each module is an independent process
+- Messages queue on streams until the receiver is ready
+- There's no blocking synchronous "require" step
+
+---
+
+### 15.3 Boot Sequence and Entry Point
+
+**Question:** How does FCP determine which module/goal runs first?
+
+**File:** `system/compile/control/run.cp`
+
+FCP has a special **boot mode** for the entry point module:
+
+```prolog
+% From run.cp:66-74
+boot_clause({ {Boot, `In, Out},
+              {Ask, Tell},
+              Body
+            },
+            { {Boot, `boot(in), Out},
+              {Ask, [`boot(in) = [system | `In] | Tell]},
+              Body
+            }^
+).
+```
+
+**Boot sequence:**
+
+1. **System starts with `boot/2` procedure** in the root module
+2. The boot clause receives `boot(in)` which is bound to `[system | In]`
+3. `system` is the system service channel
+4. Boot procedure initializes the computation and starts user services
+
+**File:** `hierarchy_server.cp:109-116`
+
+```prolog
+start(IHS) :-
+    processor # file(working_directory(UID), true),
+    server(PIN, FPS'),
+    FPS ! find([], not_found(director([], binary(UID), _Close), open(_))),
+    domain_server # process_dictionary(FPS, Closes),
+    close_services(Closes),
+    make_channel(PIOC, PIN),
+    hierarchy(IHS, PIOC).
+```
+
+**Startup flow:**
+1. `hierarchy_server # start(...)` initializes the hierarchy
+2. `domain_server` starts with the root module
+3. Root module's `boot/2` clause executes
+4. Boot procedure spawns initial computation goals
+
+**There is no explicit "main" function** - the boot module is determined by the computation context that starts the system.
+
+---
+
+### 15.4 Error Handling: Missing Modules and Procedures
+
+**Question:** When an RPC target module doesn't exist or procedure isn't exported, what happens?
+
+**File:** `domain_server.cp:574-601`
+
+FCP has explicit error handling for missing services:
+
+```prolog
+% Module/service not found
+Serve = no_service(Id),
+Id =\= processor, Id =\= _@_,
+otherwise,
+UCC = {_, CL, CR, CC},
+channel(CC) | DRC = _, Scope = _, Closed = _,
+    write_channel(request(CallInfo, failed(Id # Goals, no_service), CL, CR),
+                  CC
+    );
+
+% Processor service discarded
+Serve = no_service(processor),
+otherwise,
+UCC = {_, CL, CR, CC},
+channel(CC) | DRC = _, Scope = _, Closed = _,
+    write_channel(request(CallInfo, failed(processor # Goals, discarded),
+                          CL, CR),
+                  CC
+    );
+
+% Link not found
+Serve = no_service(Id @ LinkName),
+otherwise,
+UCC = {_, CL, CR, CC},
+channel(CC) | DRC = _, Scope = _, Closed = _,
+    write_channel(request(CallInfo, failed(Id # Goals @ LinkName, no_link),
+                          CL, CR),
+                  CC
+    );
+```
+
+**Error types:**
+
+| Error | Meaning | Where Generated |
+|-------|---------|-----------------|
+| `no_service` | Module/service not found | `domain_server.cp:579` |
+| `discarded` | Processor service unavailable | `domain_server.cp:587` |
+| `no_link` | Network link not found | `domain_server.cp:597` |
+| `unknown` | Procedure not exported/found | `domain_server.cp:698` |
+| `unrecognized` | Invalid goal format | `domain_server.cp:439` |
+
+**What happens:**
+
+1. **Error goes to computation channel** via `write_channel(request(..., failed(...), ...), CC)`
+2. **Computation exception handler** processes the failure
+3. **In trust mode:** Goal simply fails (no exception propagation)
+4. **In failsafe/interrupt mode:** Exception can be caught and handled
+
+**File:** `domain_server.cp:698-703`
+
+```prolog
+% Unknown procedure in known module
+otherwise,		% Designated = super, Scope = []
+known(Goal),
+UCC = {_, CL, CR, CC},
+channel(DRC) | Designated = _, Scope = _,
+    write_channel(request(CallerId?, failed(CalledId? # Goal, unknown),
+                          CL, CR),
+                  CC
+    ),
+    failed_goal_call(CallInfo, CallerId, CalledId);
+```
+
+**Key insight:** FCP doesn't suspend on missing modules in trust mode - it **fails the goal** and reports to the computation channel. This is different from suspension on unbound variables.
+
+---
+
+### 15.5 Module Loading Modes
+
+**File:** `get_module.cp:63`
+
+```prolog
+Default ::= query ; auto ; binary.
+```
+
+| Mode | Behavior |
+|------|----------|
+| `query` | Ask user whether to compile if source newer than binary |
+| `auto` | Automatically compile if source newer |
+| `binary` | Only load binary, never compile |
+
+**File:** `get_module.cp:138-154`
+
+```prolog
+update_source(DateCp, DateBin, Context, NameBin, Update) :-
+    DateBin @< DateCp :
+      Update = update(DateCp, Context, NameBin) ;  % Source newer -> compile
+
+    DateCp = 0, DateBin = 0 : Context = _, NameBin = _,
+      Update = false(no_module) ;                  % Neither exists
+
+    otherwise,
+    NameBin = '.' : DateCp = _, DateBin = _, Context = _, NameBin = _,
+      Update = false(no_module) ;                  % Already searched
+
+    otherwise,
+    NameBin =\= '.' |
+      name_to_base_and_suffix(NameBin, BaseName, NameSuffix),
+      load_file(DateCp, DateBin, Context, NameBin, Update,
+                BaseName, NameSuffix).
+```
+
+---
+
+### 15.6 Summary: FCP Module System Design Principles
+
+1. **Lazy loading:** Modules load on first use, not at import declaration
+2. **Hierarchical paths:** Module identity is a path list `[name, parent, grandparent]`
+3. **Convention over configuration:** Standard directory structure (`Bin/`, `.cp`, `.bin`)
+4. **Fail-fast for errors:** Missing modules/procedures fail immediately (don't suspend)
+5. **Circular dependencies allowed:** Natural consequence of lazy loading + stream communication
+6. **Boot protocol:** Special `boot/2` entry point receives system services
