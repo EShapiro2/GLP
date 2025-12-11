@@ -181,10 +181,10 @@ bob(Xbob?).
 level1(Xlv1?).
 level2([Xlv2?|Rlv2]).
 level3([wrapper(Xlv3?)|Rlv3]).
-# DISABLED: Defined guards not yet implemented via proper partial evaluation
-# test(ch(Adg?, Bdg), Rdg1).
-# test(foo, Rdg2).
-# test(Xdg?, Rdg3).
+# Defined guards via partial evaluation
+test(ch(Adg?, Bdg), Rdg1).
+test(foo, Rdg2).
+test(Xdg?, Rdg3).
 assign_reader(Rar?, Xar).
 :quit
 REPL_INPUT
@@ -375,10 +375,10 @@ declare -a tests=(
     "Suspend level2 nested:level2(.*) → suspended"
     "Suspend level3 deep nested:level3(.*) → suspended"
 
-    # DISABLED: Defined guards not yet implemented via proper partial evaluation
-    # "Defined guard match:Rdg1 = ok"
-    # "Defined guard fail:Rdg2 = not_channel"
-    # "Defined guard suspend:test(X.*, Rdg3) → suspended"
+    # Defined guards via partial evaluation
+    "Defined guard match:Rdg1 = ok"
+    "Defined guard fail:Rdg2 = not_channel"
+    "Defined guard suspend:test(X.*, Rdg3) → suspended"
 
     # Goal reader vs head writer (should succeed, not suspend)
     "Goal reader to head writer:assign_reader(.*) :- true"
