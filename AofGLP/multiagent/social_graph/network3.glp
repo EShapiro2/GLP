@@ -1,0 +1,53 @@
+%% network3.glp - 3-way network switch
+%% Messages are msg(From, To, Content) - switch routes based on To
+%% 6 clauses: each of 3 agents can send to 2 others
+%%
+%% Uses swap pattern: HEAD has Out?, BODY has Out (writer preserved)
+
+%% Alice sends to Bob
+network3((alice, ch([msg(alice, bob, X)|AliceIn], AliceOut?)),
+         (bob, ch(BobIn, [msg(alice, bob, X?)|BobOut?])),
+         (carol, ch(CarolIn, CarolOut?))) :-
+    network3((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut))).
+
+%% Alice sends to Carol
+network3((alice, ch([msg(alice, carol, X)|AliceIn], AliceOut?)),
+         (bob, ch(BobIn, BobOut?)),
+         (carol, ch(CarolIn, [msg(alice, carol, X?)|CarolOut?]))) :-
+    network3((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut))).
+
+%% Bob sends to Alice
+network3((alice, ch(AliceIn, [msg(bob, alice, X?)|AliceOut?])),
+         (bob, ch([msg(bob, alice, X)|BobIn], BobOut?)),
+         (carol, ch(CarolIn, CarolOut?))) :-
+    network3((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut))).
+
+%% Bob sends to Carol
+network3((alice, ch(AliceIn, AliceOut?)),
+         (bob, ch([msg(bob, carol, X)|BobIn], BobOut?)),
+         (carol, ch(CarolIn, [msg(bob, carol, X?)|CarolOut?]))) :-
+    network3((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut))).
+
+%% Carol sends to Alice
+network3((alice, ch(AliceIn, [msg(carol, alice, X?)|AliceOut?])),
+         (bob, ch(BobIn, BobOut?)),
+         (carol, ch([msg(carol, alice, X)|CarolIn], CarolOut?))) :-
+    network3((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut))).
+
+%% Carol sends to Bob
+network3((alice, ch(AliceIn, AliceOut?)),
+         (bob, ch(BobIn, [msg(carol, bob, X?)|BobOut?])),
+         (carol, ch([msg(carol, bob, X)|CarolIn], CarolOut?))) :-
+    network3((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut))).
