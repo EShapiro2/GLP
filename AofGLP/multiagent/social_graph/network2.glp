@@ -1,0 +1,12 @@
+%% network2.glp - 2-way network switch (partially evaluated)
+%% Routes messages between alice and bob based on destination.
+%% Derived from receive/send defined guards, folded into head.
+%% Message format: msg(Src, Dst, Content)
+
+%% Alice sends to Bob: match msg(_, bob, _), forward full message
+network2((alice, ch([msg(Src, bob, Content)|AOut], AIn)), (bob, ch(BOut, [msg(Src?, bob, Content?)|BIn]))) :-
+    network2((alice, ch(AOut?, AIn?)), (bob, ch(BOut?, BIn?))).
+
+%% Bob sends to Alice: match msg(_, alice, _), forward full message
+network2((alice, ch(AOut, [msg(Src?, alice, Content?)|AIn])), (bob, ch([msg(Src, alice, Content)|BOut], BIn))) :-
+    network2((alice, ch(AOut?, AIn?)), (bob, ch(BOut?, BIn?))).

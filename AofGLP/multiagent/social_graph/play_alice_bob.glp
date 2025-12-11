@@ -1,0 +1,16 @@
+%% play_alice_bob.glp - 2-player cold-call test
+%% Alice initiates connection to Bob, Bob accepts.
+%% Tests full protocol: agent initialization, network routing, channel establishment.
+
+play_alice_bob :-
+    agent(alice, ch(AU2A?, AA2U), ch(AN2A?, AA2N)),
+    agent(bob, ch(BU2B?, BB2U), ch(BN2B?, BB2N)),
+    network2((alice, ch(AA2N?, AN2A)), (bob, ch(BB2N?, BN2B))),
+    alice_actor(ch(AA2U?, AU2A)),
+    bob_actor(ch(BB2U?, BU2B)).
+
+%% Alice: initiate connection to bob
+alice_actor(ch(_, [msg(user, alice, connect(bob))])).
+
+%% Bob: wait for befriend, accept
+bob_actor(ch([msg(agent, user, befriend(alice, Resp))|_], [msg(user, bob, decision(yes, alice, Resp?))])).

@@ -1,0 +1,18 @@
+%% test_switch.glp - Minimal switch test
+%% Test if basic pattern matching on destination atom works
+
+%% Simple 2-way switch - routes by destination
+switch2([msg(Src, alice, Content)|Rest], [msg(Src?, alice, Content?)|A1?], B) :-
+    switch2(Rest?, A1, B?).
+switch2([msg(Src, bob, Content)|Rest], A, [msg(Src?, bob, Content?)|B1?]) :-
+    switch2(Rest?, A?, B1).
+switch2([], [], []).
+
+%% Test: single message to bob
+%% Readers in head for outputs (value comes from body writers)
+test1(OutA?, OutB?) :-
+    switch2([msg(alice, bob, hello)], OutA, OutB).
+
+%% Test: single message to alice
+test2(OutA?, OutB?) :-
+    switch2([msg(bob, alice, hello)], OutA, OutB).
