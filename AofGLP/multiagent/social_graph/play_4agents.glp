@@ -1,30 +1,62 @@
-%% play_4agents.glp - 4-player cold-call scenario
-%% Round 1: Alice initiates connection to Bob, Bob accepts
-%% Carol and Dave are idle (just initialized)
+%% play_4agents.glp - 4-player cold-call scenario with 5 rounds
+%% Round 1: Alice → Bob (accept)
+%% Round 2: Carol → Dave (accept)
+%% Round 3: Bob → Carol (accept)
+%% Round 4: Dave → Alice (reject)
+%% Round 5: Alice → Carol (accept)
+%%
+%% Uses wait() guards to sequence rounds.
 
 play_4agents :-
-    %% Start all 4 agents
     agent(alice, ch(AU2A?, AA2U), ch(AN2A?, AA2N)),
     agent(bob, ch(BU2B?, BB2U), ch(BN2B?, BB2N)),
     agent(carol, ch(CU2C?, CC2U), ch(CN2C?, CC2N)),
     agent(dave, ch(DU2D?, DD2U), ch(DN2D?, DD2N)),
-    %% Start 4-way network
     network4((alice, ch(AA2N?, AN2A)), (bob, ch(BB2N?, BN2B)),
              (carol, ch(CC2N?, CN2C)), (dave, ch(DD2N?, DN2D))),
-    %% Start actors
     alice_actor(ch(AA2U?, AU2A)),
     bob_actor(ch(BB2U?, BU2B)),
     carol_actor(ch(CC2U?, CU2C)),
     dave_actor(ch(DD2U?, DU2D)).
 
-%% Alice: initiate connection to bob
-alice_actor(ch(_, [msg(user, alice, connect(bob))])).
+%% Alice: R1 connect(bob), R4 reject dave, R5 connect(carol)
+alice_actor(ch(In, [msg(user, alice, connect(bob))|Out?])) :-
+    alice_r4(In?, Out).
 
-%% Bob: wait for befriend, accept
-bob_actor(ch([msg(agent, user, befriend(alice, Resp))|_], [msg(user, bob, decision(yes, alice, Resp?))])).
+alice_r4([msg(agent, user, befriend(dave, Resp))|In], [msg(user, alice, decision(no, dave, Resp?))|Out?]) :-
+    alice_r5(In?, Out).
 
-%% Carol: idle (no messages)
-carol_actor(ch(_, [])).
+alice_r5(In, [msg(user, alice, connect(carol))|Out?]) :-
+    alice_done(In?, Out).
 
-%% Dave: idle (no messages)
-dave_actor(ch(_, [])).
+alice_done(_, []).
+
+%% Bob: R1 accept alice, R3 connect(carol)
+bob_actor(ch([msg(agent, user, befriend(alice, Resp))|In], [msg(user, bob, decision(yes, alice, Resp?))|Out?])) :-
+    bob_r3(In?, Out).
+
+bob_r3(In, [msg(user, bob, connect(carol))|Out?]) :-
+    bob_done(In?, Out).
+
+bob_done(_, []).
+
+%% Carol: R2 initiate connect(dave), R3 accept bob, R5 accept alice
+carol_actor(ch(In, [msg(user, carol, connect(dave))|Out?])) :-
+    carol_r3(In?, Out).
+
+carol_r3([msg(agent, user, befriend(bob, Resp))|In], [msg(user, carol, decision(yes, bob, Resp?))|Out?]) :-
+    carol_r5(In?, Out).
+
+carol_r5([msg(agent, user, befriend(alice, Resp))|In], [msg(user, carol, decision(yes, alice, Resp?))|Out?]) :-
+    carol_done(In?, Out).
+
+carol_done(_, []).
+
+%% Dave: R2 accept carol (wait for befriend), R4 connect(alice)
+dave_actor(ch([msg(agent, user, befriend(carol, Resp))|In], [msg(user, dave, decision(yes, carol, Resp?))|Out?])) :-
+    dave_r4(In?, Out).
+
+dave_r4(In, [msg(user, dave, connect(alice))|Out?]) :-
+    dave_done(In?, Out).
+
+dave_done(_, []).
