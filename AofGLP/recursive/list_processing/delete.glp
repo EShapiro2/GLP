@@ -1,11 +1,11 @@
 %% delete.glp - Deleting all occurrences of an element from a list (AoP 3.18)
 %% delete(List,X,HasNoXs) :- HasNoXs is the result of removing all occurrences of X from List.
 
-delete([X|Xs], X?, Ys?) :- ground(X?) | delete(Xs?, X?, Ys).
-delete([X|Xs], Z, [X?|Ys?]) :- ~(X? =?= Z?) | delete(Xs?, Z?, Ys).
+delete([X|Xs], Y, Ys?) :- ground(Y?), X? =?= Y? | delete(Xs?, Y?, Ys).
+delete([X|Xs], Y, [X?|Ys?]) :- ground(Y?), ~(X? =?= Y?) | delete(Xs?, Y?, Ys).
 delete([], _, []).
 
 %% reduce clauses for metainterpreter
-reduce(delete([X|Xs], X?, Ys?), delete(Xs?, X?, Ys)) :- ground(X?) | true.
-reduce(delete([X|Xs], Z, [X?|Ys?]), delete(Xs?, Z?, Ys)) :- ~(X? =?= Z?) | true.
+reduce(delete([X|Xs], Y, Ys?), delete(Xs?, Y?, Ys)) :- ground(Y?), X? =?= Y? | true.
+reduce(delete([X|Xs], Y, [X?|Ys?]), delete(Xs?, Y?, Ys)) :- ground(Y?), ~(X? =?= Y?) | true.
 reduce(delete([], _, []), true).

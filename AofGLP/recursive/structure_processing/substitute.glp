@@ -8,13 +8,13 @@ substitute(X, Y, tree(Leaf, Left, Right), tree(Leaf1?, Left1?, Right1?)) :-
     substitute(X?, Y?, Left?, Left1),
     substitute(X?, Y?, Right?, Right1).
 
-replace(X, Y, X?, Y?).
-replace(X, _, Z, Z?) :- ~(X? =?= Z?) | true.
+replace(X, Y, Z, Y?) :- ground(X?), X? =?= Z? | true.
+replace(X, _, Z, Z?) :- ground(X?), ~(X? =?= Z?) | true.
 
 %% reduce clauses for metainterpreter
 reduce(substitute(_, _, void, void), true).
 reduce(substitute(X, Y, tree(Leaf, Left, Right), tree(Leaf1?, Left1?, Right1?)),
     (replace(X?, Y?, Leaf?, Leaf1), substitute(X?, Y?, Left?, Left1), substitute(X?, Y?, Right?, Right1))) :-
     ground(X?), ground(Y?) | true.
-reduce(replace(X, Y, X?, Y?), true).
-reduce(replace(X, _, Z, Z?), true) :- ~(X? =?= Z?) | true.
+reduce(replace(X, Y, Z, Y?), true) :- ground(X?), X? =?= Z? | true.
+reduce(replace(X, _, Z, Z?), true) :- ground(X?), ~(X? =?= Z?) | true.
