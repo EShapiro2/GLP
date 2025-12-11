@@ -9,7 +9,7 @@ reduce(P, (A, B), Abort) :-                      %% fork
     reduce(P?, A?, Abort?),
     reduce(P?, B?, Abort?).
 reduce(P, Goal, Abort) :-                        %% reduce
-    Goal =\= true, Goal =\= (_, _),
+    ~(Goal =?= true), ~(Goal =?= (_, _)),
     unknown(Abort?),
     clause(Goal?, P?, Body) |
     reduce(P?, Body?, Abort?).

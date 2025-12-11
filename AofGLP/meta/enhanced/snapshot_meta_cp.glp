@@ -9,7 +9,7 @@ reduce(P, (A, B), Left--Right) :-                %% fork
     reduce(P?, A?, Left?--Middle),
     reduce(P?, B?, Middle?--Right).
 reduce(P, Goal, Left--Right) :-                  %% reduce
-    Goal =\= true, Goal =\= (_, _),
+    ~(Goal =?= true), ~(Goal =?= (_, _)),
     unknown(Left?),
     clause(Goal?, P?, Body) |
     reduce(P?, Body?, Left?--Right).

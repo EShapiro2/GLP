@@ -2,10 +2,10 @@
 %% delete(List,X,HasNoXs) :- HasNoXs is the result of removing all occurrences of X from List.
 
 delete([X|Xs], X, Ys) :- delete(Xs?, X?, Ys).
-delete([X|Xs], Z, [X|Ys]) :- X? \== Z? | delete(Xs?, Z?, Ys).
+delete([X|Xs], Z, [X|Ys]) :- ~(X? =?= Z?) | delete(Xs?, Z?, Ys).
 delete([], X, []).
 
 %% reduce clauses for metainterpreter
 reduce(delete([X|Xs], X, Ys), delete(Xs?, X?, Ys)).
-reduce(delete([X|Xs], Z, [X|Ys]), delete(Xs?, Z?, Ys)) :- X? \== Z?.
+reduce(delete([X|Xs], Z, [X|Ys]), delete(Xs?, Z?, Ys)) :- ~(X? =?= Z?).
 reduce(delete([], X, []), true).

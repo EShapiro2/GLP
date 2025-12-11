@@ -12,11 +12,11 @@ reduce(P, (A, B), Time, (Ta?, Tb?)) :-           %% fork
 reduce(P, G, Time, (G? :- Tbody?)) :-            %% reduce (with budget)
     Time > 0,
     New_t := Time? - 1,
-    G =\= true, G =\= (_, _),
+    ~(G =?= true), ~(G =?= (_, _)),
     clause(G?, P?, Body) |
     reduce(P?, Body?, New_t?, Tbody).
 reduce(P, G, 0, what_now(Mode)) :-               %% wait for command
-    G =\= true, G =\= (_, _) |
+    ~(G =?= true), ~(G =?= (_, _)) |
     next(P?, G?, Mode?).
 
 next(P, G, debug(Time, Tree)) :-                 %% debug mode
