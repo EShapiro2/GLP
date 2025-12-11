@@ -607,6 +607,30 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# --- Invalid Guard Tests ---
+echo ""
+echo "--- Invalid Guard Tests ---"
+
+# Create temp file with true in guard position
+TMP_TRUE_GUARD=$(mktemp --suffix=.glp)
+echo 'bad_guard(X?) :- true | X = done.' > "$TMP_TRUE_GUARD"
+
+true_guard_output=$($DART run "$REPL" <<TRUE_INPUT
+$TMP_TRUE_GUARD
+:quit
+TRUE_INPUT
+2>&1)
+
+rm -f "$TMP_TRUE_GUARD"
+
+if echo "$true_guard_output" | grep -q '"true" is not a guard'; then
+    echo "PASS: true in guard position rejected"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: true in guard position should be rejected"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""

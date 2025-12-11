@@ -255,7 +255,23 @@ class Analyzer {
     'wait', 'wait_until',
   };
 
+  // Body-only constructs that are NOT valid guards
+  static const _invalidInGuardPosition = {
+    'true',   // true is body-only, not a guard
+    'false',  // false is body-only
+    'fail',   // fail is body-only
+  };
+
   void _analyzeGuard(Guard guard, VariableTable varTable) {
+    // Reject body-only constructs in guard position
+    if (_invalidInGuardPosition.contains(guard.predicate)) {
+      throw CompileError(
+        '"${guard.predicate}" is not a guard - it can only appear in body position',
+        guard.line,
+        guard.column,
+        phase: 'analyzer'
+      );
+    }
     // Validate guard negation
     if (guard.negated) {
       // Check if guard is negatable
