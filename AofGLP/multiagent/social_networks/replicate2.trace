@@ -1,0 +1,9 @@
+%% Trace: replicate2([1,2,3], A, B)
+%% Expected result: A = [1, 2, 3], B = [1, 2, 3]
+%%
+%% Replicates stream [1,2,3] to two outputs
+
+replicate2([1, 2, 3], A, B) :- true
+A = [1, 2, 3]
+B = [1, 2, 3]
+→ succeeds

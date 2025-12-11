@@ -1,0 +1,36 @@
+%% feed_server.glp - Complete feed server
+%% Combines posting and follower management
+
+%% Dependencies
+replicate2(X, X?, X?) :- ground(X?) | true.
+replicate2([X|Xs], [Y1?|Ys1?], [Y2?|Ys2?]) :-
+    replicate2(X?, Y1, Y2),
+    replicate2(Xs?, Ys1, Ys2).
+
+broadcast(_, [], []).
+broadcast(Post, [(Name, Out)|Fs], [(Name?, [Post?|Out?])|Fs1?]) :-
+    ground(Post?) |
+    broadcast(Post?, Fs?, Fs1).
+
+add_follower(Name, Followers, [(Name?, Stream)|Followers?], Stream?).
+
+remove_follower(Name, [(First, _)|Fs], Fs?) :- Name? =?= First? | true.
+remove_follower(Name, [(Other, Stream)|Fs], [(Other?, Stream?)|Fs1?]) :-
+    ~(Name? =?= Other?) |
+    remove_follower(Name?, Fs?, Fs1).
+
+%% Feed server
+feed_server(Commands, Followers) :-
+    serve_feed(Commands?, Followers?, _).
+
+serve_feed([post(Content)|Cmds], Fs, Fs2?) :-
+    ground(Content?) |
+    broadcast(Content?, Fs?, Fs1),
+    serve_feed(Cmds?, Fs1?, Fs2).
+serve_feed([subscribe(Name, Stream)|Cmds], Fs, Fs2?) :-
+    add_follower(Name?, Fs?, Fs1, Stream?),
+    serve_feed(Cmds?, Fs1?, Fs2).
+serve_feed([unsubscribe(Name)|Cmds], Fs, Fs2?) :-
+    remove_follower(Name?, Fs?, Fs1),
+    serve_feed(Cmds?, Fs1?, Fs2).
+serve_feed([], Fs, Fs?).
