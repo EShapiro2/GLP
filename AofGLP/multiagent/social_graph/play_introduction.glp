@@ -192,21 +192,18 @@ alice_actor(_, [msg(user, alice, connect(bob)),
                msg(user, alice, connect(carol)),
                msg(user, alice, introduce(bob, carol))]).
 
-%% Bob: accept cold call immediately, then wait for introduction
-%% Output is incremental: decision first, then accept_intro
-bob_actor([msg(agent, user, befriend(From, Resp))|Rest],
-          [msg(user, bob, decision(yes, From?, Resp?))|Out]) :-
-    bob_wait_intro(Rest?, Out?).  %% Out? reads the tail, pass to wait
+%% Bob: accept Alice's cold-call, then accept introduction to Carol
+bob_actor([msg(agent, user, befriend(alice, Resp1))|Out1],
+          [msg(user, bob, decision(yes, alice, Resp1?))|In1?]) :-
+    bob_wait_intro(Out1?, In1).
 
-%% Bob waits for introduction message and writes accept_intro to output tail
-bob_wait_intro([msg(agent, user, befriend_intro(_, Other, Ch))|_], Tail) :-
-    Tail? = [msg(user, bob, accept_intro(Other?, Ch?))].
+bob_wait_intro([msg(agent, user, befriend_intro(alice, carol, Ch))|_],
+               [msg(user, bob, accept_intro(carol, Ch?))|_]).
 
-%% Carol: accept cold call immediately, then wait for introduction
-carol_actor([msg(agent, user, befriend(From, Resp))|Rest],
-            [msg(user, carol, decision(yes, From?, Resp?))|Out]) :-
-    carol_wait_intro(Rest?, Out?).  %% Out? reads the tail, pass to wait
+%% Carol: accept Alice's cold-call, then accept introduction to Bob
+carol_actor([msg(agent, user, befriend(alice, Resp2))|Out2],
+            [msg(user, carol, decision(yes, alice, Resp2?))|In2?]) :-
+    carol_wait_intro(Out2?, In2).
 
-%% Carol waits for introduction message and writes accept_intro to output tail
-carol_wait_intro([msg(agent, user, befriend_intro(_, Other, Ch))|_], Tail) :-
-    Tail? = [msg(user, carol, accept_intro(Other?, Ch?))].
+carol_wait_intro([msg(agent, user, befriend_intro(alice, bob, Ch))|_],
+                 [msg(user, carol, accept_intro(bob, Ch?))|_]).
