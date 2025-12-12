@@ -49,9 +49,11 @@ class GlpPrinter {
         buffer.write(clause.guards!.map(printGuard).join(', '));
       }
 
-      // Body separator
+      // Body separator - only use | if there are guards
       if (hasBody) {
-        buffer.write(' | ');
+        if (hasGuards) {
+          buffer.write(' | ');
+        }
         buffer.write(clause.body!.map(printGoal).join(', '));
       }
     }

@@ -225,9 +225,12 @@ class PartialEvaluator {
             newBody = [Goal('true', [], clause.line, clause.column)];
           }
 
+          // Simplify guards - remove redundant ones
+          final simplifiedGuards = _simplifyGuards(newGuards, newHead);
+
           expanded.add(Clause(
             newHead,
-            guards: newGuards,
+            guards: simplifiedGuards,
             body: newBody,
             line: clause.line,
             column: clause.column,
@@ -267,7 +270,7 @@ class PartialEvaluator {
     final Map<String, String> renaming = {};
     for (final name in varNames) {
       if (name != '_') {
-        renaming[name] = '_PE\$${_varCounter++}';
+        renaming[name] = 'PE${_varCounter++}';
       }
     }
 
@@ -472,7 +475,7 @@ class PartialEvaluator {
     final Map<String, String> renaming = {};
     for (final name in varNames) {
       if (name != '_') {
-        renaming[name] = '_PE\$${_varCounter++}';
+        renaming[name] = 'PE${_varCounter++}';
       }
     }
 
@@ -842,5 +845,88 @@ class PartialEvaluator {
       goal.line,
       goal.column,
     );
+  }
+
+  /// Simplify guards by removing redundant ones after specialization.
+  /// A guard is redundant if it always succeeds given the head pattern.
+  List<Guard>? _simplifyGuards(List<Guard>? guards, Atom head) {
+    if (guards == null || guards.isEmpty) return null;
+
+    final simplified = <Guard>[];
+
+    for (final guard in guards) {
+      if (_isRedundantGuard(guard, head)) {
+        // Skip this guard - it's always true
+        continue;
+      }
+      simplified.add(guard);
+    }
+
+    return simplified.isEmpty ? null : simplified;
+  }
+
+  /// Check if a guard is redundant (always succeeds) given the head.
+  bool _isRedundantGuard(Guard guard, Atom head) {
+    // Type guards with concrete argument are redundant
+    if (guard.args.length == 1) {
+      final arg = guard.args[0];
+      final concreteArg = _getConcreteArg(arg);
+
+      if (concreteArg != null) {
+        switch (guard.predicate) {
+          case 'tuple':
+          case 'compound':
+            // tuple(structure) always succeeds
+            return concreteArg is StructTerm;
+          case 'list':
+          case 'is_list':
+            // list([...]) always succeeds
+            return concreteArg is ListTerm;
+          case 'integer':
+            return concreteArg is ConstTerm && concreteArg.value is int;
+          case 'number':
+            return concreteArg is ConstTerm &&
+                (concreteArg.value is int || concreteArg.value is double);
+          case 'atom':
+            return concreteArg is ConstTerm && concreteArg.value is String;
+          case 'ground':
+            // If argument is fully concrete (no variables), ground succeeds
+            return _isGround(concreteArg);
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Get the concrete (non-variable) form of a term.
+  /// Returns null if the term contains unbound variables.
+  Term? _getConcreteArg(Term term) {
+    if (term is VarTerm) {
+      // A reader reference - try to find what it refers to
+      // For now, if it's a reader, we can't determine concreteness
+      return null;
+    }
+    if (term is ConstTerm || term is StructTerm || term is ListTerm) {
+      return term;
+    }
+    return null;
+  }
+
+  /// Check if a term is ground (contains no variables).
+  bool _isGround(Term term) {
+    if (term is VarTerm) return false;
+    if (term is UnderscoreTerm) return true;
+    if (term is ConstTerm) return true;
+    if (term is StructTerm) {
+      return term.args.every(_isGround);
+    }
+    if (term is ListTerm) {
+      if (term.isNil) return true;
+      final headGround = term.head == null || _isGround(term.head!);
+      final tailGround = term.tail == null || _isGround(term.tail!);
+      return headGround && tailGround;
+    }
+    return false;
   }
 }
