@@ -18,6 +18,15 @@ import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 
+/// Module info for REPL module tracking
+class ModuleInfo {
+  final String name;
+  final BytecodeProgram program;
+  final List<String> imports;
+
+  ModuleInfo({required this.name, required this.program, required this.imports});
+}
+
 void main() async {
   // Get git commit info
   final gitCommit = await _getGitCommit();
@@ -46,6 +55,9 @@ void main() async {
 
   // Track loaded programs
   final loadedPrograms = <String, BytecodeProgram>{};
+
+  // Track loaded modules (for module system support)
+  final loadedModules = <String, ModuleInfo>{};
 
   // Load stdlib files for system predicates
   final stdlibFiles = ['assign.glp', 'univ.glp', 'unify.glp', 'mwm.glp'];
@@ -149,7 +161,7 @@ void main() async {
     // Check if input is a .glp file to load
     if (trimmed.endsWith('.glp') && !trimmed.contains(' ')) {
       final filename = trimmed;
-      if (!loadProgram(filename, compiler, loadedPrograms)) {
+      if (!loadProgram(filename, compiler, loadedPrograms, loadedModules)) {
         continue;
       }
       print('✓ Loaded: $filename');
@@ -236,6 +248,15 @@ void main() async {
           final env = CallEnv(args: argSlots);
           runtime.setGoalEnv(goalId, env);
           runtime.setGoalProgram(goalId, 'main');
+
+          // Set module context if procedure belongs to a module with imports
+          final module = _findModuleForProcedure(procedureLabel, loadedModules);
+          if (module != null) {
+            final modCtx = _buildModuleContext(module, loadedModules, combinedProgram: combinedProgram);
+            if (modCtx != null) {
+              runtime.setGoalModuleContext(goalId, modCtx);
+            }
+          }
 
           // Set query variable names for display
           scheduler.setQueryVarNames(queryVarWriters);
@@ -344,6 +365,15 @@ void main() async {
       runtime.setGoalEnv(goalId, env);
       runtime.setGoalProgram(goalId, 'main');
 
+      // Set module context if procedure belongs to a module with imports
+      final module = _findModuleForProcedure(procedureLabel, loadedModules);
+      if (module != null) {
+        final modCtx = _buildModuleContext(module, loadedModules, combinedProgram: combinedProgram);
+        if (modCtx != null) {
+          runtime.setGoalModuleContext(goalId, modCtx);
+        }
+      }
+
       // Create scheduler and run
       final runner = BytecodeRunner(combinedProgram);
       final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
@@ -406,7 +436,7 @@ void _printStatus(ExecutionStatus status) {
   }
 }
 
-bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProgram> loadedPrograms) {
+bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProgram> loadedPrograms, Map<String, ModuleInfo> loadedModules) {
   try {
     // Support absolute paths or relative paths in glp/ subdirectory
     final File sourceFile;
@@ -427,6 +457,13 @@ bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProg
     final program = compiler.compile(source);
 
     loadedPrograms[filename] = program;
+
+    // Extract module metadata from source
+    final moduleInfo = _extractModuleInfo(source, program);
+    if (moduleInfo != null) {
+      loadedModules[moduleInfo.name] = moduleInfo;
+    }
+
     return true;
   } catch (e) {
     print('Error loading $filename: $e');
@@ -434,6 +471,61 @@ bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProg
   }
 }
 
+/// Extract module name and imports from GLP source
+ModuleInfo? _extractModuleInfo(String source, BytecodeProgram program) {
+  // Extract -module(name)
+  final moduleMatch = RegExp(r'-module\((\w+)\)\.').firstMatch(source);
+  if (moduleMatch == null) {
+    return null;  // Not a module file
+  }
+  final name = moduleMatch.group(1)!;
+
+  // Extract -import([...])
+  final imports = <String>[];
+  final importMatch = RegExp(r'-import\(\[([^\]]*)\]\)\.').firstMatch(source);
+  if (importMatch != null) {
+    imports.addAll(importMatch.group(1)!
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty));
+  }
+
+  return ModuleInfo(name: name, program: program, imports: imports);
+}
+
+/// Build ReplModuleContext for a module (if it has imports)
+ReplModuleContext? _buildModuleContext(ModuleInfo module, Map<String, ModuleInfo> loadedModules, {BytecodeProgram? combinedProgram}) {
+  if (module.imports.isEmpty) {
+    return null;  // No imports, no context needed
+  }
+
+  // Build import map: import index (1-based) -> target module
+  final imports = <int, ReplModuleTarget>{};
+  for (int i = 0; i < module.imports.length; i++) {
+    final importName = module.imports[i];
+    final target = loadedModules[importName];
+    if (target != null) {
+      imports[i + 1] = ReplModuleTarget(target.name, target.program);  // 1-based indexing
+    }
+  }
+
+  return ReplModuleContext(
+    moduleName: module.name,
+    imports: imports,
+    combinedProgram: combinedProgram,
+    programKey: 'main',
+  );
+}
+
+/// Find the module that defines a given procedure
+ModuleInfo? _findModuleForProcedure(String procedureLabel, Map<String, ModuleInfo> loadedModules) {
+  for (final module in loadedModules.values) {
+    if (module.program.labels.containsKey(procedureLabel)) {
+      return module;
+    }
+  }
+  return null;
+}
 
 void printHelp() {
   print('');

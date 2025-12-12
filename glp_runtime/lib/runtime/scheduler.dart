@@ -237,6 +237,9 @@ class Scheduler {
       // Track if reduction occurs
       var hadReduction = false;
 
+      // Get module context if set for this goal
+      final moduleContext = rt.getGoalModuleContext(act.id);
+
       // Create context with reduction callback for trace
       final cx = RunnerContext(
         rt: rt,
@@ -246,6 +249,7 @@ class Scheduler {
         goalHead: goalStr,
         showBindings: showBindings,
         debugOutput: debugOutput,
+        moduleContext: moduleContext,
         termFormatter: (term, {bool markReaders = true}) => _formatTerm(term, markReaders: markReaders),
         onReduction: debug ? (goalId, head, body) {
           // Skip query wrapper goals
