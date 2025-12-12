@@ -387,6 +387,31 @@ class Parser {
         _consume(TokenType.RPAREN, 'Expected ")" after arguments');
       }
 
+      // Check for static remote goal: atom # goal (e.g., math # factorial(5, R))
+      if (_match(TokenType.HASH)) {
+        // Module name cannot have arguments
+        if (args.isNotEmpty) {
+          throw CompileError(
+            'Module name cannot have arguments: ${functorToken.lexeme}',
+            functorToken.line,
+            functorToken.column,
+            phase: 'parser'
+          );
+        }
+        // Negation not allowed on remote goals
+        if (negated) {
+          throw CompileError(
+            'Guard negation (~) cannot be applied to remote goal',
+            negLine,
+            negColumn,
+            phase: 'parser'
+          );
+        }
+        final moduleTerm = ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
+        final innerGoal = _parseGoal();
+        return RemoteGoal(moduleTerm, innerGoal, functorToken.line, functorToken.column);
+      }
+
       // Check if followed by = (e.g., foo = bar, or foo(a) = X)
       if (_match(TokenType.EQUALS)) {
         final leftTerm = args.isEmpty

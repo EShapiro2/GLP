@@ -20,6 +20,7 @@ import 'package:glp_runtime/runtime/import_vector.dart';
 import 'package:glp_runtime/runtime/serve_import.dart';
 import 'package:glp_runtime/runtime/dispatcher.dart';
 import 'package:glp_runtime/runtime/module_messages.dart';
+import 'package:glp_runtime/runtime/module_loader.dart';
 
 /// Compile module source to LoadedModule
 LoadedModule compileModule(String source, String name) {
@@ -48,12 +49,7 @@ LoadedModule compileModule(String source, String name) {
   );
 }
 
-// Extension to convert Module AST to Program for analyzer
-extension ModuleToProgram on Module {
-  Program toProgram() {
-    return Program(procedures, line, column);
-  }
-}
+// Note: ModuleToProgram extension imported from module_loader.dart
 
 void main() {
   group('End-to-End Module Execution', () {
@@ -424,12 +420,13 @@ value(42).
 
       // Module B: calls c # value(X)
       // Pattern: R? in head (reader), R in body (writer) - C can bind it
+      // Clean syntax without 'otherwise |' - parser fix allows atom # goal
       final bSource = '''
 -module(b).
 -import([c]).
 -export([get_value/1]).
 
-get_value(R?) :- otherwise | c # value(R).
+get_value(R?) :- c # value(R).
 ''';
       final bModule = compileModule(bSource, 'b');
 
@@ -620,6 +617,173 @@ private_proc(X?) :- X := 99.
           reason: 'private_proc/1 should NOT be exported');
 
       print('[TEST] Verified: private_proc/1 not in exports (unknown error)');
+    });
+
+    test('file-based loading: ModuleLoader loads .glp files', () async {
+      // Test ModuleLoader with actual .glp files
+      // Files: test/module/files/math.glp, test/module/files/main.glp
+
+      // Create a fresh registry for this test
+      final testRegistry = FcpModuleRegistry();
+
+      // Create ModuleLoader with path to test files
+      final loader = ModuleLoader(
+        basePath: 'test/module/files',
+        onModuleLoaded: (module) {
+          testRegistry.register(module);
+          print('[LOADER] Registered module: ${module.name}');
+        },
+      );
+
+      // Load math module first (main depends on it)
+      final mathModule = await loader.load('math');
+      expect(mathModule.name, equals('math'), reason: 'Module name should be math');
+      expect(mathModule.isExported('double/2'), isTrue, reason: 'double/2 should be exported');
+      print('[TEST] math module loaded: exports=${mathModule.exports}');
+
+      // Load main module (imports math)
+      final mainModule = await loader.load('main');
+      expect(mainModule.name, equals('main'), reason: 'Module name should be main');
+      expect(mainModule.isExported('compute/2'), isTrue, reason: 'compute/2 should be exported');
+      expect(mainModule.imports, contains('math'), reason: 'main should import math');
+      print('[TEST] main module loaded: imports=${mainModule.imports}, exports=${mainModule.exports}');
+
+      // Verify both modules are in registry
+      expect(testRegistry.lookup('math'), isNotNull, reason: 'math should be in registry');
+      expect(testRegistry.lookup('main'), isNotNull, reason: 'main should be in registry');
+
+      // Set up import vector for main → math RPC
+      final mainVectorResult = ImportVector.make(1);
+      mainModule.importVector = mainVectorResult.vector;
+
+      // Start serve_import for main → math
+      final serveImports = startServeImports(
+        readers: mainVectorResult.readers,
+        importNames: ['math'],
+        registry: testRegistry,
+        onError: (error, msg) => print('[SERVE_IMPORT ERROR] $error'),
+      );
+      print('[TEST] serve_import started');
+
+      // Start dispatcher for math module
+      final mathDispatcher = startDispatcher(
+        module: mathModule,
+        executor: (message, module) async {
+          print('[DISPATCH math] Received: ${message.signature}');
+          final entryPc = module.getEntryPoint(message.signature);
+          if (entryPc == null) return;
+
+          final env = CallEnv(
+            args: {for (int i = 0; i < message.args.length; i++) i: message.args[i]},
+          );
+          final goalId = rt.nextGoalId++;
+          rt.setGoalEnv(goalId, env);
+          rt.setGoalProgram(goalId, module.bytecode);
+          rt.setGoalModuleContext(goalId, ModuleGoalContext(module: module, registry: testRegistry));
+
+          final runner = BytecodeRunner(module.bytecode);
+          final ctx = RunnerContext(
+            rt: rt,
+            goalId: goalId,
+            kappa: entryPc,
+            env: env,
+            debugOutput: false,
+            moduleContext: ModuleGoalContext(module: module, registry: testRegistry),
+          );
+          runner.runWithStatus(ctx);
+        },
+        onError: (error) => print('[DISPATCH math ERROR] $error'),
+      );
+
+      // Start dispatcher for main module
+      final mainDispatcher = startDispatcher(
+        module: mainModule,
+        executor: (message, module) async {
+          print('[DISPATCH main] Received: ${message.signature}');
+          final entryPc = module.getEntryPoint(message.signature);
+          if (entryPc == null) return;
+
+          final env = CallEnv(
+            args: {for (int i = 0; i < message.args.length; i++) i: message.args[i]},
+          );
+          final goalId = rt.nextGoalId++;
+          rt.setGoalEnv(goalId, env);
+          rt.setGoalProgram(goalId, module.bytecode);
+          rt.setGoalModuleContext(goalId, ModuleGoalContext(module: module, registry: testRegistry));
+
+          final runner = BytecodeRunner(module.bytecode);
+          final ctx = RunnerContext(
+            rt: rt,
+            goalId: goalId,
+            kappa: entryPc,
+            env: env,
+            debugOutput: false,
+            moduleContext: ModuleGoalContext(module: module, registry: testRegistry),
+          );
+          runner.runWithStatus(ctx);
+        },
+        onError: (error) => print('[DISPATCH main ERROR] $error'),
+      );
+
+      // Create result variable (writer for RPC output)
+      final resultVarId = rt.heap.allocateVariable();
+      final resultWriter = VarRef(resultVarId, isReader: false);
+
+      // Create input variable for compute(5, R)
+      final inputVarId = rt.heap.allocateVariable();
+      rt.heap.bindWriterConst(inputVarId, 5);
+      final inputArg = VarRef(inputVarId, isReader: true);
+
+      // Send compute(5, W) to main module
+      final message = ExportMessage.trust(
+        sourceModule: 'test',
+        functor: 'compute',
+        arity: 2,
+        args: [inputArg, resultWriter],
+      );
+      print('[TEST] Sending: compute(5, W) to main');
+      mainModule.inputSink.add(message);
+
+      // Allow async processing
+      await Future.delayed(Duration(milliseconds: 200));
+
+      // Process any queued goals
+      var iterations = 0;
+      while (!rt.gq.isEmpty && iterations < 20) {
+        final goalRef = rt.gq.dequeue();
+        if (goalRef == null) break;
+        final goalId = goalRef.id;
+        final env = rt.getGoalEnv(goalId);
+        final prog = rt.getGoalProgram(goalId);
+        if (env != null && prog != null) {
+          final runner = BytecodeRunner(prog as BytecodeProgram);
+          final ctx = RunnerContext(
+            rt: rt,
+            goalId: goalId,
+            kappa: goalRef.pc,
+            env: env,
+            debugOutput: false,
+            moduleContext: rt.getGoalModuleContext(goalId),
+          );
+          runner.runWithStatus(ctx);
+        }
+        iterations++;
+      }
+
+      // Check result: compute(5, R) -> math#double(5, R) -> R = 10
+      final resultValue = rt.heap.valueOfWriter(resultVarId);
+      print('[TEST] Result W$resultVarId = $resultValue');
+
+      // Cleanup
+      for (final s in serveImports) s.stop();
+      mathDispatcher.stop();
+      mainDispatcher.stop();
+
+      // Verify
+      expect(resultValue, isNotNull, reason: 'Writer should be bound');
+      expect(resultValue, isA<ConstTerm>(), reason: 'Should be ConstTerm(10)');
+      expect((resultValue as ConstTerm).value, equals(10), reason: 'compute(5,R) should bind R=10');
+      print('[TEST] File-based loading test passed!');
     });
   });
 }
