@@ -189,6 +189,26 @@ assign_reader(Rar?, Xar).
 # Channel operations as defined guards
 test_channel_guards.glp
 make_pair(ch(Achg?, Bchg), Rchg).
+# Comprehensive defined guards test suite
+test_defined_guards_all.glp
+make_pair(Call1, Call2).
+bind_response(yes, RespYes, LocalYes).
+bind_response(no, RespNo, LocalNo).
+test_channel(ch(TchA?, TchB), TchR1).
+test_channel(foo, TchR2).
+test_channel(p(TpaA, TpaB), TchR3).
+test_pair(p(TprA, TprB), TprR1).
+test_pair(foo, TprR2).
+test_wrapper(w(TwrX), TwrR1).
+test_wrapper(foo, TwrR2).
+test_nested(w(p(TnA, TnB)), TnR1).
+test_nested(w(hello), TnR2).
+test_nested(foo, TnR3).
+test_wrap(hello, TwpR).
+test_deep(foo, TdpR).
+test_triple(1, 2, TtrR).
+relay_send([], RsOut, ch([], [])).
+relay_recv([], RrOut, ch([], [])).
 :quit
 REPL_INPUT
 2>&1)
@@ -385,6 +405,28 @@ declare -a tests=(
 
     # Channel operations as defined guards
     "Channel make_pair:Rchg = ch("
+
+    # Comprehensive defined guards test suite
+    "DG make_pair creates channels:Call1 = ch("
+    "DG bind_response yes:RespYes = accept(ch("
+    "DG bind_response yes local:LocalYes = ch("
+    "DG bind_response no:RespNo = no"
+    "DG bind_response no local:LocalNo = none"
+    "DG channel test success:TchR1 = ok"
+    "DG channel test fail atom:TchR2 = not_channel"
+    "DG channel test fail pair:TchR3 = not_channel"
+    "DG pair test success:TprR1 = ok"
+    "DG pair test fail:TprR2 = not_pair"
+    "DG wrapper test success:TwrR1 = ok"
+    "DG wrapper test fail:TwrR2 = not_wrapper"
+    "DG nested wrapper with pair:TnR1 = wrapper_with_pair"
+    "DG nested just wrapper:TnR2 = just_wrapper"
+    "DG nested neither:TnR3 = neither"
+    "DG wrap binding:TwpR = wrapped(hello)"
+    "DG deep binding:TdpR = outer(inner(foo))"
+    "DG triple binding:TtrR = pair(1, 2)"
+    "DG relay_send base:RsOut = \[\]"
+    "DG relay_recv base:RrOut = \[\]"
 
     # Goal reader vs head writer (should succeed, not suspend)
     "Goal reader to head writer:assign_reader(.*) :- true"
