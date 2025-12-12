@@ -5,6 +5,7 @@ import 'codegen.dart';
 import 'error.dart';
 import 'token.dart';
 import 'result.dart';
+import 'ast.dart' show Program;
 import '../bytecode/runner.dart' show BytecodeProgram;
 
 // Re-export for users of this module
@@ -41,13 +42,19 @@ class GlpCompiler {
       final lexer = _createLexer(source);
       final tokens = lexer.tokenize();
 
-      // Phase 2: Syntax analysis
+      // Phase 2: Syntax analysis (use parseModule to get module info)
       final parser = _createParser(tokens);
-      final ast = parser.parse();
+      final module = parser.parseModule();
 
-      // Phase 3: Semantic analysis
+      // Convert Module to Program for analyzer
+      final ast = Program(module.procedures, module.line, module.column);
+
+      // Check if this is a declared module (has -module declaration)
+      final isModule = module.declaration != null;
+
+      // Phase 3: Semantic analysis (with module flag for reduce generation)
       final analyzer = _createAnalyzer();
-      final annotatedAst = analyzer.analyze(ast);
+      final annotatedAst = analyzer.analyze(ast, generateReduce: isModule);
 
       // Phase 4: Code generation
       final codegen = _createCodegen();
