@@ -49,12 +49,13 @@ class GlpCompiler {
       // Convert Module to Program for analyzer
       final ast = Program(module.procedures, module.line, module.column);
 
-      // Check if this is a declared module (has -module declaration)
-      final isModule = module.declaration != null;
+      // Generate reduce/2 for all files except stdlib
+      // (stdlib files have -stdlib. declaration)
+      final generateReduce = !module.isStdlib;
 
-      // Phase 3: Semantic analysis (with module flag for reduce generation)
+      // Phase 3: Semantic analysis (with reduce generation flag)
       final analyzer = _createAnalyzer();
-      final annotatedAst = analyzer.analyze(ast, generateReduce: isModule);
+      final annotatedAst = analyzer.analyze(ast, generateReduce: generateReduce);
 
       // Phase 4: Code generation
       final codegen = _createCodegen();

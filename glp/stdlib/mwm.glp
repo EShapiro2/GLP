@@ -5,6 +5,7 @@
 % Uses MutualRef for O(1) stream append.
 % Uses short-circuit L/R pairs for termination detection.
 % allocate_mutual_reference/2 is a kernel predicate called directly.
+-stdlib.
 
 mwm(In, Out?) :-
     allocate_mutual_reference(Ref, Out),

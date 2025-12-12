@@ -28,6 +28,7 @@ class Parser {
     ModuleDeclaration? moduleDecl;
     final exports = <ExportDeclaration>[];
     final imports = <ImportDeclaration>[];
+    bool isStdlib = false;
 
     // Parse declarations at the start of the file
     while (!_isAtEnd() && _check(TokenType.MINUS)) {
@@ -50,6 +51,12 @@ class Parser {
           _consume(TokenType.RPAREN, 'Expected ")" after module name');
           _consume(TokenType.DOT, 'Expected "." after module declaration');
           moduleDecl = ModuleDeclaration(name, startLine, startCol);
+          break;
+
+        case 'stdlib':
+          // -stdlib. declaration - marks this file as stdlib (no reduce generation)
+          _consume(TokenType.DOT, 'Expected "." after stdlib declaration');
+          isStdlib = true;
           break;
 
         case 'export':
@@ -90,6 +97,7 @@ class Parser {
       exports: exports,
       imports: imports,
       procedures: procedures,
+      isStdlib: isStdlib,
       line: 1,
       column: 1,
     );
