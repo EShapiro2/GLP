@@ -1,8 +1,21 @@
 # GLP Partial Evaluator Design
 
-## Status: DESIGN DOCUMENT
+## Status: STAGE 1 IMPLEMENTED
 
-This document specifies the design of the GLP partial evaluator. Implementation proceeds in stages, with Stage 1 (Defined Guards) as the immediate priority.
+Stage 1 (Defined Guards) is fully implemented and tested.
+
+**Implementation**: `lib/compiler/analyzer.dart` - `PartialEvaluator` class
+
+**Tests**:
+- `glp/test_defined_guards.glp` - Basic channel/1 guard
+- `glp/test_relay_send.glp` - send/3 guard with nested structures
+- `glp/test_channel_guards.glp` - Full channel operations (send, receive, new_channel)
+
+**REPL test coverage**: 145 tests passing including defined guard tests.
+
+---
+
+This document specifies the design of the GLP partial evaluator. Stage 2 (Meta-interpreter Specialization) is future work.
 
 ## Overview
 
