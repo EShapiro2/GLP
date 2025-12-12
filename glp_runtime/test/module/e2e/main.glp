@@ -1,0 +1,20 @@
+%% test/modules/e2e/main.glp
+%% Main module that uses math module
+
+-module(main).
+-import([math]).
+-export([boot/1, test_factorial/1, test_double/1]).
+
+%% boot/1 - Entry point for module system
+boot(Result) :- otherwise |
+    math # factorial(5, F),
+    math # double(10, D),
+    Result = done(F?, D?).
+
+%% test_factorial/1 - Just test factorial
+test_factorial(F) :- otherwise |
+    math # factorial(6, F).
+
+%% test_double/1 - Just test double
+test_double(D) :- otherwise |
+    math # double(21, D).
