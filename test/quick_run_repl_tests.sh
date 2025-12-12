@@ -127,7 +127,7 @@ echo ""
 echo "======================================"
 echo "Total: $((PASS + FAIL)) | Passed: $PASS | Failed: $FAIL"
 echo "======================================"
-echo "(Full test suite: full_run_repl_tests.sh)"
+echo "(Quick suite - run full_run_repl_tests.sh for complete coverage)"
 
 if [ $FAIL -eq 0 ]; then
     echo "ALL TESTS PASSED!"

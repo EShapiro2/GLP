@@ -1,0 +1,24 @@
+%% dm_simple.glp - Direct Messaging Channel Establishment
+%%
+%% Friends (already connected via social graph) establish a dedicated
+%% conversation channel, separate from the control channel.
+
+%% Request DM channel from friend
+%% FriendOut: current state of friend's output stream
+%% FriendOut1: new state with dm_request prepended
+%% Resp: response variable to receive DM channel
+request_dm([dm_request(Resp?)|FriendOut?], FriendOut, Resp).
+
+%% Process incoming DM request - create channel and respond
+%% RemoteCh is sent back to requester, LocalCh is kept
+accept_dm(dm_request(Resp), LocalCh?) :-
+    new_channel(LocalCh, RemoteCh),
+    bind_response(Resp?, RemoteCh?).
+
+bind_response(Ch?, Ch).
+
+%% Send message on DM channel
+dm_send(Msg, ch(In, [Msg?|Out?]), ch(In?, Out)).
+
+%% Receive message from DM channel
+dm_receive(Msg?, ch([Msg|In], Out?), ch(In?, Out)).

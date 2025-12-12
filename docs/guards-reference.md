@@ -28,6 +28,72 @@ Guards are pure tests with **three-valued semantics** (success/suspend/fail) tha
 
 ---
 
+## Guard Negation (`~G`)
+
+**Syntax**: `~G` where G is an atomic built-in guard
+
+**Semantics**: `~G` succeeds iff G fails. Suspension behavior follows from the standard guard definition (a guard suspends if there exists a substitution to its readers that makes it succeed).
+
+**Restrictions**:
+- Only atomic built-in guards can be negated
+- Defined guards (unit clauses) cannot be negated
+- Compound guards cannot be negated (no `~(A, B)`)
+- Double negation `~~G` is syntactically forbidden (formally equivalent to G, but forbidden in syntax)
+
+### Negatable Guards
+
+These guards can be negated with `~`:
+
+| Guard | Description | `~` Negation |
+|-------|-------------|--------------|
+| `ground(X?)` | Test if X contains no variables | `~ground(X?)` succeeds if X is not ground |
+| `known(X?)` | Test if X is bound | `~known(X?)` succeeds if X is unbound |
+| `unknown(X?)` | Test if X is unbound | `~unknown(X?)` succeeds if X is bound |
+| `integer(X?)` | Test for integer type | `~integer(X?)` succeeds if X is not an integer |
+| `number(X?)` | Test for numeric type | `~number(X?)` succeeds if X is not a number |
+| `atom(X?)` | Test for atom type | `~atom(X?)` succeeds if X is not an atom |
+| `string(X?)` | Test for string type | `~string(X?)` succeeds if X is not a string |
+| `constant(X?)` | Test for constant | `~constant(X?)` succeeds if X is not a constant |
+| `compound(X?)` | Test for compound term | `~compound(X?)` succeeds if X is not compound |
+| `tuple(X?)` | Test for tuple type | `~tuple(X?)` succeeds if X is not a tuple |
+| `list(X?)` | Test for list type | `~list(X?)` succeeds if X is not a list |
+| `is_list(X?)` | Test for proper list | `~is_list(X?)` succeeds if X is not a proper list |
+| `unknown(X?)` | Test for unbound variable | `~unknown(X?)` succeeds if X is bound |
+| `X =?= Y` | Ground equality test | `~(X =?= Y)` succeeds if X and Y are not equal |
+
+### Non-Negatable Guards
+
+These guards cannot be negated (due to type-error semantics or special behavior):
+
+| Guard | Reason |
+|-------|--------|
+| `<`, `>`, `=<`, `>=` | Type error on non-numeric operands |
+| `=:=`, `=\=` | Type error on non-numeric operands |
+| `otherwise` | Special clause-ordering semantics |
+| `wait`, `wait_until` | Time-based control flow |
+
+### Examples
+
+```prolog
+% Negation of type guards
+handle(X, Y) :- ~integer(X?) | handle_non_integer(X?, Y).
+handle(X, Y) :- integer(X?) | handle_integer(X?, Y).
+
+% Negation of ground
+process(X, Y) :- ~ground(X?) | wait_for_binding(X?, Y).
+process(X, Y) :- ground(X?) | process_ground(X?, Y).
+
+% Negation of equality
+lookup(Key, [(K,V)|_], V?) :- Key =?= K? | true.
+lookup(Key, [(K,_)|Rest], V?) :- ~(Key =?= K?) | lookup(Key?, Rest?, Value).
+```
+
+### Design Rationale
+
+In GLP, guards have **input-only variables** - they test but don't bind. This makes success and failure symmetric definitive outcomes. Neither produces bindings, both are final decisions. This symmetry enables clean negation semantics where `~G` simply inverts the success/fail outcome while preserving suspension behavior.
+
+---
+
 ## Implementation Status Legend
 
 - ✅ **Implemented** - Working in current runtime
@@ -354,22 +420,17 @@ factorial(N, 1) :- integer(N?), N? =< 0 | true.
 
 ---
 
-### 📝 `X =:= Y`, `X =\= Y`
-**Arithmetic equality and inequality**
+### 📝 `X =:= Y`
+**Arithmetic equality**
 
 **Semantics**:
 - `=:=` (equality): Success if both bound and numerically equal
-- `=\=` (inequality): Success if both bound and numerically different
-- Both suspend if either operand unbound
-- Both fail if condition doesn't hold
+- Suspends if either operand unbound
+- Fails if condition doesn't hold
 
-**Example** (future):
-```prolog
-safe_divide(X, Y, Z) :- number(X?), number(Y?), Y? =\= 0 |
-                        execute('evaluate', [X? / Y?, Z]).
-```
+**Parser Status**: Requires lexer support for multi-character operator `=:=`.
 
-**Parser Status**: Requires lexer support for multi-character operators `=:=` and `=\=`.
+**Note on `=\=`**: The arithmetic inequality guard `=\=` is **redundant** once guard negation (`~`) is implemented. It becomes equivalent to `~(X =:= Y)`. The `=\=` operator will be removed in a future version. Use `~(X? =:= Y?)` for arithmetic inequality.
 
 ---
 

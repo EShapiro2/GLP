@@ -4,12 +4,14 @@
 %% Adds ability to abort computation via Abort argument.
 %% When Abort is bound to 'abort', computation stops.
 
-reduce(P, true, _).                              %% halt
+reduce(_, true, _).                              %% halt
 reduce(P, (A, B), Abort) :-                      %% fork
+    ground(P?), ground(Abort?) |
     reduce(P?, A?, Abort?),
     reduce(P?, B?, Abort?).
 reduce(P, Goal, Abort) :-                        %% reduce
-    Goal =\= true, Goal =\= (_, _),
+    ground(P?), ground(Goal?),
+    ~(Goal? =?= true), ~(Goal? =?= (_, _)),
     unknown(Abort?),
     clause(Goal?, P?, Body) |
     reduce(P?, Body?, Abort?).

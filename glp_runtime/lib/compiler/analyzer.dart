@@ -236,7 +236,58 @@ class Analyzer {
     }
   }
 
+  // Guards that can be negated with ~
+  static const _negatableGuards = {
+    // Type guards
+    'ground', 'known', 'unknown', 'integer', 'number', 'atom', 'string',
+    'constant', 'compound', 'tuple', 'list', 'is_list',
+    // Equality
+    '=?=',
+  };
+
+  // Guards that cannot be negated (due to type-error semantics or special behavior)
+  static const _nonNegatableGuards = {
+    // Arithmetic (type error on non-numeric)
+    '<', '>', '=<', '>=', '=:=', '=\\=',
+    // Control
+    'otherwise',
+    // Time
+    'wait', 'wait_until',
+  };
+
+  // Body-only constructs that are NOT valid guards
+  static const _invalidInGuardPosition = {
+    'true',   // true is body-only, not a guard
+    'false',  // false is body-only
+    'fail',   // fail is body-only
+  };
+
   void _analyzeGuard(Guard guard, VariableTable varTable) {
+    // Reject body-only constructs in guard position
+    if (_invalidInGuardPosition.contains(guard.predicate)) {
+      throw CompileError(
+        '"${guard.predicate}" is not a guard - it can only appear in body position',
+        guard.line,
+        guard.column,
+        phase: 'analyzer'
+      );
+    }
+    // Validate guard negation
+    if (guard.negated) {
+      // Check if guard is negatable
+      if (_nonNegatableGuards.contains(guard.predicate)) {
+        throw CompileError(
+          'Guard "${guard.predicate}" cannot be negated (type-error semantics)',
+          guard.line,
+          guard.column,
+          phase: 'analyzer'
+        );
+      }
+      // Note: defined guards (unit clauses) cannot be negated - this would require
+      // checking if the guard predicate is a user-defined unit clause, which we
+      // defer to runtime or codegen phase for now
+    }
+
     // Special handling for ground/1 and known/1
     if (guard.predicate == 'ground' && guard.args.length == 1) {
       final arg = guard.args[0];
@@ -265,9 +316,9 @@ class Analyzer {
       }
     }
 
-    // writer/1 and reader/1 guards mark argument as ground
+    // unknown/1 guard marks argument as ground for SRSW purposes
     // Unbound variables are safe to read multiple times (always return same reference)
-    if ((guard.predicate == 'writer' || guard.predicate == 'reader') && guard.args.length == 1) {
+    if (guard.predicate == 'unknown' && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm) {
         varTable.markGrounded(arg.name);
@@ -295,6 +346,13 @@ class Analyzer {
           varTable.markGrounded(arg.name);
         }
       }
+    }
+
+    // unknown/1 and known/1 are meta-tests (test if variable is unbound/bound)
+    // Their arguments should NOT count as reader occurrences for SRSW
+    // The variable must still have a writer and reader elsewhere
+    if ((guard.predicate == 'unknown' || guard.predicate == 'known') && guard.args.length == 1) {
+      return;  // Don't record this occurrence
     }
 
     // Analyze guard arguments

@@ -1,0 +1,11 @@
+% math.glp - Math module for file-based loading test
+-module(math).
+-export([double/2]).
+
+% double(N, R) - binds R based on N value (using facts, no stdlib)
+double(0, 0).
+double(1, 2).
+double(2, 4).
+double(3, 6).
+double(4, 8).
+double(5, 10).

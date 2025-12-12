@@ -1,18 +1,20 @@
 %% substitute.glp - Substituting for a term in a tree (AoP 3.26)
 %% substitute(X,Y,TreeX,TreeY) :- TreeY is the result of replacing all X in TreeX by Y.
 
-substitute(X, Y, void, void).
-substitute(X, Y, tree(Leaf, Left, Right), tree(Leaf1, Left1, Right1)) :-
+substitute(_, _, void, void).
+substitute(X, Y, tree(Leaf, Left, Right), tree(Leaf1?, Left1?, Right1?)) :-
+    ground(X?), ground(Y?) |
     replace(X?, Y?, Leaf?, Leaf1),
     substitute(X?, Y?, Left?, Left1),
     substitute(X?, Y?, Right?, Right1).
 
-replace(X, Y, X, Y).
-replace(X, Y, Z, Z) :- X? \== Z? | true.
+replace(X, Y, Z, Y?) :- ground(X?), X? =?= Z? | true.
+replace(X, _, Z, Z?) :- ground(X?), ~(X? =?= Z?) | true.
 
 %% reduce clauses for metainterpreter
-reduce(substitute(X, Y, void, void), true).
-reduce(substitute(X, Y, tree(Leaf, Left, Right), tree(Leaf1, Left1, Right1)),
-    (replace(X?, Y?, Leaf?, Leaf1), substitute(X?, Y?, Left?, Left1), substitute(X?, Y?, Right?, Right1))).
-reduce(replace(X, Y, X, Y), true).
-reduce(replace(X, Y, Z, Z), true) :- X? \== Z?.
+reduce(substitute(_, _, void, void), true).
+reduce(substitute(X, Y, tree(Leaf, Left, Right), tree(Leaf1?, Left1?, Right1?)),
+    (replace(X?, Y?, Leaf?, Leaf1), substitute(X?, Y?, Left?, Left1), substitute(X?, Y?, Right?, Right1))) :-
+    ground(X?), ground(Y?) | true.
+reduce(replace(X, Y, Z, Y?), true) :- ground(X?), X? =?= Z? | true.
+reduce(replace(X, _, Z, Z?), true) :- ground(X?), ~(X? =?= Z?) | true.

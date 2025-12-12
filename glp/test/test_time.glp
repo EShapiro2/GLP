@@ -1,7 +1,7 @@
 % Test time mechanisms
 
-% Get current time
-get_time(T?) :- true | now(T).
+% Get current time (no guard needed)
+get_time(T?) :- now(T).
 
 % Test wait_until - succeeds if time >= T
 past_time(T, yes) :- wait_until(T?) | true.

@@ -12,13 +12,13 @@ merge([merge(Ws)|Xs], Ys, Zs?) :-
 merge(Xs, [merge(Ws)|Ys], Zs?) :-
    merger(Ws?, Ys?, Ys1), merge(Xs?, Ys1?, Zs).
 merge([X|Xs], Ys, [X?|Zs?]) :-
-    tuple(X?), X? =\= merge(_) | merge(Ys?, Xs?, Zs).
+    tuple(X?), ~(X? =?= merge(_)) | merge(Ys?, Xs?, Zs).
 merge([X|Xs], Ys, [X?|Zs?]) :-
     atom(X?) | merge(Ys?, Xs?, Zs).
 merge([X|Xs], Ys, [X?|Zs?]) :-
     number(X?) | merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :-
-    tuple(Y?), Y? =\= merge(_) | merge(Xs?, Ys?, Zs).
+    tuple(Y?), ~(Y? =?= merge(_)) | merge(Xs?, Ys?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :-
     atom(Y?) | merge(Xs?, Ys?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :-

@@ -1,35 +1,19 @@
 %% response_handling_glpsam.glp - Channel Establishment and Response Handling (GLPSAM)
-%% GLPSAM simulation version - identical to response_handling.glp (no attestation here)
+%% Source: GLP-2025 Paper (Program: Social Graph Cold-Call Befriending Protocol)
+%% GLPSAM simulation version - defined guards manually unfolded
 %%
 %% When offer is accepted, both agents establish symmetric channel
 %% configurations and merge new friend's input stream into main loop.
 
-% Defined guard: create paired channels where each channel's input is paired with the other's output
-new_channel(ch(Xs?,Ys), ch(Ys?,Xs)).
-
-% Bind response based on user decision
-bind_response(yes, From, Out?, Fs, Fs1?, In, In1?) :-
-    atom(From?),
-    new_channel(ch(FIn, FOut), FCh) |
-    wrap_accept(FCh?, Out),
-    handle_accept(From?, ch(FIn?, FOut?), Fs?, Fs1, In?, In1).
+%% Bind response based on user decision
+%% Unfolded from: new_channel(ch(FIn, FOut), FCh) in guard
+bind_response(yes, From, accept(ch(FOut?, FIn)), Fs, Fs1?, In, In1?) :-
+    handle_response(accept(ch(FIn?, FOut)), From?, Fs?, Fs1, In?, In1).
 bind_response(no, _, no, Fs, Fs?, In, In?).
 
-wrap_accept(Ch, accept(Ch?)).
-
-% Handle accepted response
-handle_accept(From, ch(FIn, FOut), Fs, Fs1?, In, In1?) :-
-    atom(From?) |
+%% Handle response (for both received and sent offers)
+handle_response(accept(ch(FIn, FOut)), From, Fs, [(From?, FOut?)|Fs?], In, In1?) :-
+    ground(From?) |
     tag_stream(From?, FIn?, Tagged),
-    merge(In?, Tagged?, In1),
-    add_friend(From?, FOut?, Fs?, Fs1).
-
-% Handle response (for both received and sent offers)
-handle_response(accept(ch(FIn, FOut)), From, Fs, Fs1?, In, In1?) :-
-    atom(From?) |
-    tag_stream(From?, FIn?, Tagged),
-    merge(In?, Tagged?, In1),
-    add_friend(From?, FOut?, Fs?, Fs1).
+    merge(In?, Tagged?, In1).
 handle_response(no, _, Fs, Fs?, In, In?).
-
-add_friend(Name, Out, Fs, [(Name?, Out?)|Fs?]).

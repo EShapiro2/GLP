@@ -44,6 +44,8 @@ class Lexer {
       case '?': return _makeToken(TokenType.QUESTION, startLine, startColumn);
       case '|': return _makeToken(TokenType.PIPE, startLine, startColumn);
       case ';': return _makeToken(TokenType.SEMICOLON, startLine, startColumn);
+      case '~': return _makeToken(TokenType.TILDE, startLine, startColumn);
+      case '#': return _makeToken(TokenType.HASH, startLine, startColumn);
 
       // Arithmetic operators
       case '+': return _makeToken(TokenType.PLUS, startLine, startColumn);

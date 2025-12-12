@@ -1,10 +1,30 @@
 === interlaced_streams.glp ===
 Interlaced streams as distributed blocklace.
-Goal: streams(MyStream, Others)
 
 Blocklace: DAG where each block references multiple predecessors.
 Enables concurrent block creation without consensus.
 
 Each process maintains stream of blocks with payloads and references
-to most recent blocks observed from others. reader(X) guard identifies
+to most recent blocks observed from others. unknown(X?) guard identifies
 unprocessed blocks by detecting unbound tail variables.
+
+--- Test: Single agent (no other streams) ---
+Query: streams(S, []).
+
+S = stream([block(r1, []), block(r2, [])])
+→ succeeds
+
+--- Test: Interlacing with incomplete streams ---
+%% Trace: streams(Result, [[block(p1, [])|Ptail], [block(q1, [])|Qtail]])
+%%
+%% Tests interlacing with incomplete streams from two other agents.
+%% P has produced block(p1, []) with unbound tail Ptail
+%% Q has produced block(q1, []) with unbound tail Qtail
+%%
+%% Result: First block r1 collects tips from both P and Q.
+%% Second block r2 suspends waiting for more blocks from P and Q.
+
+Result = stream([block(r1, [block(p1, []), block(q1, [])]), block(r2, X)])
+Ptail = <unbound>
+Qtail = <unbound>
+→ suspended

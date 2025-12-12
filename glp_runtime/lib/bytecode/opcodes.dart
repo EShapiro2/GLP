@@ -213,24 +213,30 @@ class UnifyStructure implements Op {
 
 /// Guard predicate call: execute guard without side effects
 /// If succeeds: continue; If fails: try next clause; If suspends: suspend entire goal
+/// If negated: invert success/fail result (suspend unchanged)
 class Guard implements Op {
   final LabelName procedureLabel;  // guard predicate entry
   final int arity;                  // number of arguments
-  Guard(this.procedureLabel, this.arity);
+  final bool negated;               // true if ~G (guard negation)
+  Guard(this.procedureLabel, this.arity, {this.negated = false});
 }
 
 /// Ground test: test if variable contains no unbound variables
 /// Succeed if X is ground, fail otherwise. Pure test, no side effects.
+/// If negated: succeed if X is NOT ground (contains unbound variables)
 class Ground implements Op {
   final int varIndex;  // clause variable index to test
-  Ground(this.varIndex);
+  final bool negated;  // true if ~ground(X)
+  Ground(this.varIndex, {this.negated = false});
 }
 
 /// Known test: test if variable is not an unbound variable
 /// Succeed if X is not a variable, fail otherwise. Pure test operation.
+/// If negated: succeed if X IS an unbound variable
 class Known implements Op {
   final int varIndex;  // clause variable index to test
-  Known(this.varIndex);
+  final bool negated;  // true if ~known(X)
+  Known(this.varIndex, {this.negated = false});
 }
 
 // ===== SYSTEM PREDICATE execution =====
@@ -331,3 +337,39 @@ class Nop implements Op {}
 
 /// Terminate execution - mark goal as completed, return control to scheduler
 class Halt implements Op {}
+
+// ============================================================================
+// Module System Opcodes (Phase 2)
+// ============================================================================
+
+/// Distribute: Static RPC to imported module at known index
+/// Following FCP: distribute # {Index, Goal}
+///
+/// Writes message to import vector at Index, which routes to target module.
+/// Index is 1-based (FCP convention).
+class Distribute implements Op {
+  final int importIndex;      // Index in import vector (1-based)
+  final String functor;       // Goal functor
+  final int arity;            // Goal arity
+
+  Distribute(this.importIndex, this.functor, this.arity);
+
+  @override
+  String toString() => 'Distribute([$importIndex] $functor/$arity)';
+}
+
+/// Transmit: Dynamic RPC to module resolved at runtime
+/// Following FCP: transmit # {ModuleVar, Goal}
+///
+/// Resolves module name from variable, looks up in registry, sends message.
+/// Used when target module is not known at compile time.
+class Transmit implements Op {
+  final int moduleVarIndex;   // Register holding module name variable
+  final String functor;       // Goal functor
+  final int arity;            // Goal arity
+
+  Transmit(this.moduleVarIndex, this.functor, this.arity);
+
+  @override
+  String toString() => 'Transmit(X$moduleVarIndex, $functor/$arity)';
+}

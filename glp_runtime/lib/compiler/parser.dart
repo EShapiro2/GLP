@@ -9,8 +9,11 @@ class Parser {
 
   Parser(this.tokens);
 
-  /// Parse tokens into an AST
+  /// Parse tokens into an AST (legacy method, skips declarations)
   Program parse() {
+    // Skip any module declarations at the start
+    _skipDeclarations();
+
     final procedures = <Procedure>[];
 
     while (!_isAtEnd()) {
@@ -18,6 +21,164 @@ class Parser {
     }
 
     return Program(procedures, 1, 1);
+  }
+
+  /// Parse tokens into a Module AST (includes declarations)
+  Module parseModule() {
+    ModuleDeclaration? moduleDecl;
+    final exports = <ExportDeclaration>[];
+    final imports = <ImportDeclaration>[];
+
+    // Parse declarations at the start of the file
+    while (!_isAtEnd() && _check(TokenType.MINUS)) {
+      final startPos = _current;
+      final startLine = _peek().line;
+      final startCol = _peek().column;
+      _advance(); // consume '-'
+
+      if (!_check(TokenType.ATOM)) {
+        _current = startPos;  // Back up, not a declaration
+        break;
+      }
+
+      final keyword = _advance();
+
+      switch (keyword.lexeme) {
+        case 'module':
+          _consume(TokenType.LPAREN, 'Expected "(" after module');
+          final name = _parseModuleName();
+          _consume(TokenType.RPAREN, 'Expected ")" after module name');
+          _consume(TokenType.DOT, 'Expected "." after module declaration');
+          moduleDecl = ModuleDeclaration(name, startLine, startCol);
+          break;
+
+        case 'export':
+          _consume(TokenType.LPAREN, 'Expected "(" after export');
+          _consume(TokenType.LBRACKET, 'Expected "[" for export list');
+          final procRefs = _parseProcRefList();
+          _consume(TokenType.RBRACKET, 'Expected "]" after export list');
+          _consume(TokenType.RPAREN, 'Expected ")" after export');
+          _consume(TokenType.DOT, 'Expected "." after export declaration');
+          exports.add(ExportDeclaration(procRefs, startLine, startCol));
+          break;
+
+        case 'import':
+          _consume(TokenType.LPAREN, 'Expected "(" after import');
+          _consume(TokenType.LBRACKET, 'Expected "[" for import list');
+          final moduleNames = _parseAtomList();
+          _consume(TokenType.RBRACKET, 'Expected "]" after import list');
+          _consume(TokenType.RPAREN, 'Expected ")" after import');
+          _consume(TokenType.DOT, 'Expected "." after import declaration');
+          imports.add(ImportDeclaration(moduleNames, startLine, startCol));
+          break;
+
+        default:
+          // Unknown declaration, back up to the '-'
+          _current = startPos;
+          break;
+      }
+    }
+
+    // Parse procedures
+    final procedures = <Procedure>[];
+    while (!_isAtEnd()) {
+      procedures.add(_parseProcedure());
+    }
+
+    return Module(
+      declaration: moduleDecl,
+      exports: exports,
+      imports: imports,
+      procedures: procedures,
+      line: 1,
+      column: 1,
+    );
+  }
+
+  /// Skip module declarations at start of file (for legacy parse())
+  void _skipDeclarations() {
+    while (!_isAtEnd() && _check(TokenType.MINUS)) {
+      final startPos = _current;
+      _advance(); // consume '-'
+
+      if (!_check(TokenType.ATOM)) {
+        _current = startPos;  // Back up, not a declaration
+        break;
+      }
+
+      final keyword = _peek().lexeme;
+
+      if (['module', 'export', 'import'].contains(keyword)) {
+        // Skip to the next DOT
+        while (!_isAtEnd() && !_check(TokenType.DOT)) {
+          _advance();
+        }
+        if (_check(TokenType.DOT)) {
+          _advance();  // consume '.'
+        }
+      } else {
+        // Not a declaration keyword, back up
+        _current = startPos;
+        break;
+      }
+    }
+  }
+
+  /// Parse hierarchical module name (e.g., utils.list)
+  String _parseModuleName() {
+    final parts = <String>[];
+    parts.add(_consume(TokenType.ATOM, 'Expected module name').lexeme);
+
+    while (_match(TokenType.DOT) && _check(TokenType.ATOM)) {
+      parts.add(_consume(TokenType.ATOM, 'Expected module name part').lexeme);
+    }
+
+    // Back up if we consumed a DOT but the next token wasn't ATOM
+    // (This handles -module(foo). where DOT ends the declaration)
+    if (_previous().type == TokenType.DOT && !_check(TokenType.ATOM)) {
+      _current--;
+    }
+
+    return parts.join('.');
+  }
+
+  /// Parse list of procedure references: [proc/arity, ...]
+  List<ProcRef> _parseProcRefList() {
+    final refs = <ProcRef>[];
+
+    if (_check(TokenType.RBRACKET)) return refs;  // Empty list
+
+    refs.add(_parseProcRef());
+
+    while (_match(TokenType.COMMA)) {
+      refs.add(_parseProcRef());
+    }
+
+    return refs;
+  }
+
+  /// Parse single procedure reference: name/arity
+  ProcRef _parseProcRef() {
+    final name = _consume(TokenType.ATOM, 'Expected procedure name').lexeme;
+    _consume(TokenType.SLASH, 'Expected "/" in procedure reference');
+    final arityToken = _consume(TokenType.NUMBER, 'Expected arity');
+    final arity = arityToken.literal as int;
+    return ProcRef(name, arity);
+  }
+
+  /// Parse list of atoms: [atom, ...]
+  List<String> _parseAtomList() {
+    final atoms = <String>[];
+
+    if (_check(TokenType.RBRACKET)) return atoms;  // Empty list
+
+    atoms.add(_parseModuleName());
+
+    while (_match(TokenType.COMMA)) {
+      atoms.add(_parseModuleName());
+    }
+
+    return atoms;
   }
 
   // Procedure: one or more clauses with same head functor/arity
@@ -104,7 +265,10 @@ class Parser {
       if (_match(TokenType.PIPE)) {
         // Everything before | were guards - convert Goal to Guard
         guards = predicates.map((g) {
-          return Guard(g.functor, g.args, g.line, g.column);
+          // Detect negated guards (functor starts with ~)
+          final isNegated = g.functor.startsWith('~');
+          final actualFunctor = isNegated ? g.functor.substring(1) : g.functor;
+          return Guard(actualFunctor, g.args, g.line, g.column, negated: isNegated);
         }).toList();
 
         // Parse body after |
@@ -127,13 +291,41 @@ class Parser {
 
   // Parse a predicate that could be either a guard or a goal
   dynamic _parseGoalOrGuard() {
-    // Check for parenthesized disjunction: (Goal1 ; Goal2)
+    // Check for guard negation: ~G
+    bool negated = false;
+    int negLine = _peek().line;
+    int negColumn = _peek().column;
+    if (_match(TokenType.TILDE)) {
+      negated = true;
+      negLine = _previous().line;
+      negColumn = _previous().column;
+
+      // Check for double negation ~~G (syntactically forbidden)
+      if (_check(TokenType.TILDE)) {
+        throw CompileError(
+          'Double negation ~~G is not allowed',
+          _peek().line,
+          _peek().column,
+          phase: 'parser'
+        );
+      }
+    }
+
+    // Check for parenthesized expression: (Goal) or (Goal1 ; Goal2)
     if (_check(TokenType.LPAREN)) {
       final startToken = _advance(); // consume '('
       final firstGoal = _parseGoalOrGuard();
 
       if (_match(TokenType.SEMICOLON)) {
-        // This is a disjunction
+        // This is a disjunction - negation not allowed
+        if (negated) {
+          throw CompileError(
+            'Guard negation (~) cannot be applied to disjunction',
+            negLine,
+            negColumn,
+            phase: 'parser'
+          );
+        }
         final secondGoal = _parseGoalOrGuard();
         _consume(TokenType.RPAREN, 'Expected ")" after disjunction');
         // Return as ';'(Goal1, Goal2) - need to convert goals to terms
@@ -141,9 +333,13 @@ class Parser {
         final secondTerm = _goalToTerm(secondGoal);
         return Goal(';', [firstTerm, secondTerm], startToken.line, startToken.column);
       } else {
-        // Not a disjunction - put back what we parsed and try again
-        // This is complex, so for now just expect closing paren
+        // Parenthesized single goal - apply negation if present
         _consume(TokenType.RPAREN, 'Expected ")" after guard');
+        if (negated) {
+          // Apply negation to the parsed goal
+          final functor = '~${firstGoal.functor}';
+          return Goal(functor, firstGoal.args, negLine, negColumn);
+        }
         return firstGoal;
       }
     }
@@ -191,17 +387,53 @@ class Parser {
         _consume(TokenType.RPAREN, 'Expected ")" after arguments');
       }
 
+      // Check for static remote goal: atom # goal (e.g., math # factorial(5, R))
+      if (_match(TokenType.HASH)) {
+        // Module name cannot have arguments
+        if (args.isNotEmpty) {
+          throw CompileError(
+            'Module name cannot have arguments: ${functorToken.lexeme}',
+            functorToken.line,
+            functorToken.column,
+            phase: 'parser'
+          );
+        }
+        // Negation not allowed on remote goals
+        if (negated) {
+          throw CompileError(
+            'Guard negation (~) cannot be applied to remote goal',
+            negLine,
+            negColumn,
+            phase: 'parser'
+          );
+        }
+        final moduleTerm = ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
+        final innerGoal = _parseGoal();
+        return RemoteGoal(moduleTerm, innerGoal, functorToken.line, functorToken.column);
+      }
+
       // Check if followed by = (e.g., foo = bar, or foo(a) = X)
       if (_match(TokenType.EQUALS)) {
         final leftTerm = args.isEmpty
             ? ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column)
             : StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
         final rightTerm = _parseTerm();
+        // Negation not allowed on unification goals
+        if (negated) {
+          throw CompileError(
+            'Guard negation (~) cannot be applied to unification',
+            negLine,
+            negColumn,
+            phase: 'parser'
+          );
+        }
         return Goal('=', [leftTerm, rightTerm], functorToken.line, functorToken.column);
       }
 
       // Return as Goal for now (will be cast to Guard if before |)
-      return Goal(functorToken.lexeme, args, functorToken.line, functorToken.column);
+      // Use ~functor convention if negated (will be detected during Guard conversion)
+      final functor = negated ? '~${functorToken.lexeme}' : functorToken.lexeme;
+      return Goal(functor, args, negated ? negLine : functorToken.line, negated ? negColumn : functorToken.column);
     }
 
     // Otherwise, try to parse as infix comparison (e.g., X < Y, X? mod P? =:= 0)
@@ -217,8 +449,9 @@ class Parser {
       final right = _parseExpression(6);
 
       // Transform infix to prefix: X < Y → <(X, Y)
-      final functor = opToken.lexeme;
-      return Goal(functor, [left, right], opToken.line, opToken.column);
+      // For negation: ~(X =?= Y) → use ~=?= functor convention
+      final functor = negated ? '~${opToken.lexeme}' : opToken.lexeme;
+      return Goal(functor, [left, right], negated ? negLine : opToken.line, negated ? negColumn : opToken.column);
     }
 
     // Not a valid guard or goal
@@ -304,12 +537,20 @@ class Parser {
   }
 
   // Goal: same as Atom, or assignment (Var := Expr) or univ (Var =.. Expr)
+  // Also handles remote goals: Module # Goal
   Goal _parseGoal() {
     // Check for assignment or univ: Var := Expr or Var =.. Expr
+    // Also check for dynamic remote goal: Var # Goal
     if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
       final varToken = _advance();
       final isReader = varToken.type == TokenType.READER;
-      if (_match(TokenType.ASSIGN)) {
+
+      // Check for dynamic remote goal: Var # Goal (e.g., M # factorial(5, R))
+      if (_match(TokenType.HASH)) {
+        final moduleTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
+        final innerGoal = _parseGoal();
+        return RemoteGoal(moduleTerm, innerGoal, varToken.line, varToken.column);
+      } else if (_match(TokenType.ASSIGN)) {
         // Parse as ':='(Var, Expr)
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
         final expr = _parseTerm();
@@ -348,6 +589,22 @@ class Parser {
       }
 
       _consume(TokenType.RPAREN, 'Expected ")" after arguments');
+    }
+
+    // Check for static remote goal: Module # Goal (e.g., math # factorial(5, R))
+    if (_match(TokenType.HASH)) {
+      // Module name cannot have arguments
+      if (args.isNotEmpty) {
+        throw CompileError(
+          'Module name cannot have arguments: ${functorToken.lexeme}',
+          functorToken.line,
+          functorToken.column,
+          phase: 'parser'
+        );
+      }
+      final moduleTerm = ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
+      final innerGoal = _parseGoal();
+      return RemoteGoal(moduleTerm, innerGoal, functorToken.line, functorToken.column);
     }
 
     // Check if this is followed by =.. (e.g., foo(a,b) =.. L)

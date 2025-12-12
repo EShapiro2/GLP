@@ -1,0 +1,69 @@
+%% play_group_manager.glp - Manager-Based Group Messaging Play
+%%
+%% Scenario: Alice creates a group, invites Bob and Carol.
+%% All messages go through Alice (manager) who serializes and distributes.
+%%
+%% This demonstrates:
+%% 1. Alice creates group, becomes manager
+%% 2. Alice invites Bob and Carol
+%% 3. Bob posts a message -> goes to Alice -> distributed to all
+%% 4. Carol posts a message -> goes to Alice -> distributed to all
+%% 5. All members see messages in same order (manager serializes)
+
+%% === Manager: processes commands, returns feed and member streams ===
+
+manager(Commands?, Feed?, Members?) :-
+    manage(Commands, [], [], Feed, Members).
+
+%% Process invite - add member entry
+manage([invite(Name)|Cmds], Members, Feed, Feed1?, Members1?) :-
+    manage(Cmds?, [(Name?, [])|Members?], Feed?, Feed1, Members1).
+
+%% Process post - prepend to all member streams and feed
+manage([post(From, Content)|Cmds], Members, Feed, Feed1?, Members1?) :-
+    ground(From?), ground(Content?) |
+    prepend_all(msg(From?, Content?), Members?, Members2),
+    manage(Cmds?, Members2?, [msg(From?, Content?)|Feed?], Feed1, Members1).
+
+%% Done - return accumulated feed and members
+manage([], Members, Feed, Feed?, Members?).
+
+%% === Prepend message to all member streams ===
+
+prepend_all(_, [], []).
+prepend_all(Msg, [(Name, Stream)|Ms], [(Name?, [Msg?|Stream?])|Ms1?]) :-
+    ground(Msg?) |
+    prepend_all(Msg?, Ms?, Ms1).
+
+%% === Get member stream from list ===
+
+get_member_stream(Name, [(Name?, Stream)|_], Stream?).
+get_member_stream(Name?, [_|Ms], Stream?) :- get_member_stream(Name, Ms?, Stream).
+
+%% === The Play ===
+
+play_group_manager :-
+    %% Alice is manager - processes commands
+    manager([invite(bob), invite(carol),
+             post(bob, hello_from_bob),
+             post(carol, hello_from_carol)], Feed, Members),
+
+    %% Get member streams and verify
+    play_continue(Feed?, Members?).
+
+play_continue(Feed, Members) :-
+    ground(Feed?), ground(Members?) |
+    get_member_stream(bob, Members?, BobStream),
+    get_member_stream(carol, Members?, CarolStream),
+    verify_group(Feed?, BobStream?, CarolStream?).
+
+verify_group(Feed, BobRcvd, CarolRcvd) :-
+    check_feed(Feed?),
+    check_streams(BobRcvd?, CarolRcvd?).
+
+%% Feed has newest first: [carol_msg, bob_msg]
+check_feed([msg(carol, hello_from_carol), msg(bob, hello_from_bob)]).
+
+%% Member streams have newest first too
+check_streams([msg(carol, hello_from_carol), msg(bob, hello_from_bob)],
+              [msg(carol, hello_from_carol), msg(bob, hello_from_bob)]).

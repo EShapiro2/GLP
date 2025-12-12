@@ -80,11 +80,12 @@ class Goal extends AstNode {
 class Guard extends AstNode {
   final String predicate;
   final List<Term> args;
+  final bool negated;  // true if ~G (guard negation)
 
-  Guard(this.predicate, this.args, int line, int column) : super(line, column);
+  Guard(this.predicate, this.args, int line, int column, {this.negated = false}) : super(line, column);
 
   @override
-  String toString() => '$predicate(${args.join(", ")})';
+  String toString() => negated ? '~$predicate(${args.join(", ")})' : '$predicate(${args.join(", ")})';
 }
 
 // Terms (expressions)
@@ -150,4 +151,123 @@ class UnderscoreTerm extends Term {
 
   @override
   String toString() => '_';
+}
+
+// ============================================================================
+// Module System AST Nodes
+// ============================================================================
+
+/// Module declaration: -module(name).
+class ModuleDeclaration extends AstNode {
+  final String name;
+
+  ModuleDeclaration(this.name, int line, int column) : super(line, column);
+
+  @override
+  String toString() => '-module($name).';
+}
+
+/// Export declaration: -export([pred/arity, ...]).
+class ExportDeclaration extends AstNode {
+  final List<ProcRef> exports;
+
+  ExportDeclaration(this.exports, int line, int column) : super(line, column);
+
+  @override
+  String toString() => '-export([${exports.join(", ")}]).';
+}
+
+/// Import declaration: -import([module1, module2, ...]).
+class ImportDeclaration extends AstNode {
+  final List<String> imports;
+
+  ImportDeclaration(this.imports, int line, int column) : super(line, column);
+
+  @override
+  String toString() => '-import([${imports.join(", ")}]).';
+}
+
+/// Procedure reference: pred/arity
+class ProcRef {
+  final String name;
+  final int arity;
+
+  ProcRef(this.name, this.arity);
+
+  String get signature => '$name/$arity';
+
+  @override
+  String toString() => signature;
+}
+
+/// Remote goal: Module # Goal
+/// Used for cross-module procedure calls
+class RemoteGoal extends Goal {
+  final Term module;  // Can be ConstTerm (atom) or VarTerm (variable)
+  final Goal goal;
+
+  RemoteGoal(this.module, this.goal, int line, int column)
+      : super('#', [module, _goalToTerm(goal)], line, column);
+
+  /// Get module name if statically known, null if dynamic (variable)
+  String? get staticModuleName {
+    if (module is ConstTerm) {
+      return (module as ConstTerm).value as String;
+    }
+    return null;
+  }
+
+  /// Check if module is dynamically resolved (variable)
+  bool get isDynamic => module is VarTerm;
+
+  @override
+  String toString() => '$module # $goal';
+
+  /// Convert a Goal to a StructTerm for storage in args
+  static Term _goalToTerm(Goal g) {
+    return StructTerm(g.functor, g.args, g.line, g.column);
+  }
+}
+
+/// Complete module structure
+class Module extends AstNode {
+  final ModuleDeclaration? declaration;
+  final List<ExportDeclaration> exports;
+  final List<ImportDeclaration> imports;
+  final List<Procedure> procedures;
+
+  Module({
+    this.declaration,
+    this.exports = const [],
+    this.imports = const [],
+    this.procedures = const [],
+    required int line,
+    required int column,
+  }) : super(line, column);
+
+  /// Get module name, or null if anonymous
+  String? get name => declaration?.name;
+
+  /// Get all exported procedure signatures
+  Set<String> get exportedSignatures {
+    final result = <String>{};
+    for (final decl in exports) {
+      for (final ref in decl.exports) {
+        result.add(ref.signature);
+      }
+    }
+    return result;
+  }
+
+  /// Get all imported module names
+  List<String> get importedModules {
+    final result = <String>[];
+    for (final decl in imports) {
+      result.addAll(decl.imports);
+    }
+    return result;
+  }
+
+  @override
+  String toString() => 'Module(${name ?? "_anonymous"}, ${procedures.length} procedures)';
 }

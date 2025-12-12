@@ -1,0 +1,25 @@
+%% test_channel_route.glp - Test channel-based routing
+
+%% Network for 2 agents using channel ops (from paper)
+%% Route message from alice to bob
+net2((alice, ChA), (bob, ChB)) :-
+    receive(Msg?, ChA?, ChA1),
+    Msg = msg(bob, X) |
+    send(X?, ChB?, ChB1),
+    net2((alice, ChA1?), (bob, ChB1?)).
+
+%% Route message from bob to alice
+net2((alice, ChA), (bob, ChB)) :-
+    receive(Msg?, ChB?, ChB1),
+    Msg = msg(alice, X) |
+    send(X?, ChA?, ChA1),
+    net2((alice, ChA1?), (bob, ChB1?)).
+
+%% Test: create channels and send message
+%% Alice sends msg(bob, hello), Bob should receive hello
+test_net(Result?) :-
+    new_channel(AliceNet, NetAlice),
+    new_channel(BobNet, NetBob),
+    net2((alice, NetAlice?), (bob, NetBob?)),
+    send(msg(bob, hello), AliceNet?, _),
+    receive(Result, BobNet?, _).

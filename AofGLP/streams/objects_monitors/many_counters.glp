@@ -14,7 +14,7 @@ use_many_counters([(Name, show(Val))|Input?], List_of_counters) :-
     wait_write(Val?).
 
 use_many_counters([X|Input?], List_of_counters) :-
-    X =\= create(_), X =\= (_, show(_)),
+    ~(X =?= create(_)), ~(X =?= (_, show(_))),
     X = (Name, Cmd),
     send(List_of_counters?, Name?, Cmd?, NewList) |
     use_many_counters(Input?, NewList?).

@@ -1,0 +1,61 @@
+%% play_group_interlaced.glp - Group Messaging via Interlaced Streams
+%%
+%% Scenario: Alice and Bob form a group where each posts blocks
+%% that reference the other's previous blocks (tips).
+%%
+%% This demonstrates:
+%% 1. Each member maintains their own stream
+%% 2. Each block references tips from other members' streams
+%% 3. Causal ordering emerges from tip references
+%%
+%% Note: Due to SRSW, we show sequential interlacing where
+%% Bob's blocks reference Alice's completed stream.
+
+%% === Alice produces a simple stream (no tips - she starts first) ===
+
+alice_stream([Msg|Msgs], [block(Msg?, [])|Stream?]) :-
+    alice_stream(Msgs?, Stream).
+alice_stream([], []).
+
+%% === Bob produces blocks referencing Alice's tips ===
+
+bob_stream([Msg|Msgs], AliceTips, [block(Msg?, AliceTips?)|Stream?]) :-
+    ground(AliceTips?) |
+    bob_stream(Msgs?, AliceTips?, Stream).
+bob_stream([], _, []).
+
+%% === Extract tips (first blocks) from a stream ===
+
+get_tips([Block|_], [Block?]).
+get_tips([], []).
+
+%% === The Play ===
+
+play_group_interlaced :-
+    %% Alice produces her stream first (pioneer - no tips to reference)
+    alice_stream([msg(alice, hello), msg(alice, world)], AliceStream),
+
+    %% Continue when Alice is done
+    play_continue(AliceStream?).
+
+play_continue(AliceStream) :-
+    ground(AliceStream?) |
+    get_tips(AliceStream?, AliceTips),
+    bob_stream([msg(bob, hi), msg(bob, there)], AliceTips?, BobStream),
+    play_verify(AliceStream?, BobStream?).
+
+play_verify(AliceStream, BobStream) :-
+    ground(BobStream?) |
+    verify_interlaced(AliceStream?, BobStream?).
+
+%% Verification
+verify_interlaced(AliceStream, BobStream) :-
+    check_alice(AliceStream?),
+    check_bob(BobStream?).
+
+%% Alice's blocks have no tips (she started first)
+check_alice([block(msg(alice, hello), []), block(msg(alice, world), [])]).
+
+%% Bob's blocks reference Alice's first block
+check_bob([block(msg(bob, hi), [block(msg(alice, hello), [])]),
+           block(msg(bob, there), [block(msg(alice, hello), [])])]).

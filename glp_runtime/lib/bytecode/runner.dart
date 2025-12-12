@@ -7,6 +7,8 @@ import 'package:glp_runtime/runtime/commit.dart';
 import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/system_predicates.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
+import 'package:glp_runtime/runtime/module_runtime.dart' show ModuleGoalContext;
+import 'package:glp_runtime/runtime/module_messages.dart';
 import 'opcodes.dart';
 import 'opcodes_v2.dart' as opv2;
 
@@ -185,6 +187,9 @@ class RunnerContext {
   // Custom term formatter for consistent variable naming
   final String Function(Term, {bool markReaders})? termFormatter;
 
+  // Module context for distribute/transmit handlers (Phase 5 integration)
+  final Object? moduleContext;
+
   RunnerContext({
     required this.rt,
     required this.goalId,
@@ -197,6 +202,7 @@ class RunnerContext {
     this.showBindings = true,
     this.debugOutput = false,
     this.termFormatter,
+    this.moduleContext,
   }) : env = env ?? CallEnv();
 
   void clearClause() {
@@ -541,30 +547,32 @@ class BytecodeRunner {
 
       // ===== v2 UNIFIED INSTRUCTIONS =====
 
-      // IfVariable: unified writer/reader type guard
-      if (op is opv2.IfVariable) {
+      // Unknown: test if variable is unbound (value unknown)
+      if (op is opv2.Unknown) {
         final term = cx.clauseVars[op.varIndex];
-        if (op.isReader) {
-          // Check if it's a reader
-          if (term is VarRef && term.isReader) {
-            pc++;
-            continue;
-          } else {
+        // Succeeds if variable is unbound (no value yet)
+        if (term is VarRef) {
+          // Check if variable is unbound in σ̂w or heap
+          if (cx.sigmaHat.containsKey(term.varId)) {
+            // Has tentative binding - not unknown
             _softFailToNextClause(cx, pc);
             pc = _findNextClauseTry(pc);
             continue;
           }
-        } else {
-          // Check if it's a writer
-          if (term is VarRef && !term.isReader) {
-            pc++;
-            continue;
-          } else {
+          if (cx.rt.heap.isBound(term.varId)) {
+            // Has heap binding - not unknown
             _softFailToNextClause(cx, pc);
             pc = _findNextClauseTry(pc);
             continue;
           }
+          // Unbound = unknown, succeed
+          pc++;
+          continue;
         }
+        // Non-variable is always known (bound to a value)
+        _softFailToNextClause(cx, pc);
+        pc = _findNextClauseTry(pc);
+        continue;
       }
 
       // HeadVariable: unified writer/reader structure variable (at S position)
@@ -1682,7 +1690,18 @@ class BytecodeRunner {
               // existing is bare writer varId - bind arg to reader of it
               cx.sigmaHat[arg.varId] = VarRef(existing, isReader: true);
             } else {
-              cx.clauseVars[varIndex] = arg.varId;
+              // First occurrence: goal writer vs head writer
+              // Store the goal's writer reference - clause can bind through it
+              if (cx.rt.heap.isWriterBound(arg.varId)) {
+                // Goal writer already bound - use its value
+                final boundValue = cx.rt.heap.valueOfWriter(arg.varId);
+                if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable goal writer W${arg.varId} bound to $boundValue');
+                cx.clauseVars[varIndex] = boundValue;
+              } else {
+                // Goal writer unbound - store writer ref, clause can bind it later
+                if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable storing unbound goal writer W${arg.varId}');
+                cx.clauseVars[varIndex] = arg;
+              }
             }
           } else if (arg is VarRef && arg.isReader) {
             final wid = cx.rt.heap.writerIdForReader(arg.varId);
@@ -1703,18 +1722,18 @@ class BytecodeRunner {
               if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable SUCCESS, continuing to PC ${pc+1}');
             } else if (wid != null) {
               // Reader is unbound - but clause expects a writer (isReaderMode=false)
-              // Alias clause writer T to goal's underlying writer X1
-              // This allows the clause body to bind T, which actually binds X1
+              // Per spec: Goal reader X? vs Head writer V → V receives X? (the reader reference)
+              // Store the reader reference itself, not just the underlying writer ID
               if (existing is VarRef && !existing.isReader) {
-                // Already have a writer from earlier occurrence - bind it to goal's writer
-                cx.sigmaHat[existing.varId] = VarRef(wid, isReader: true);
+                // Already have a writer from earlier occurrence - bind it to goal's reader
+                cx.sigmaHat[existing.varId] = arg;  // arg is the reader VarRef
               } else if (existing is int) {
-                cx.sigmaHat[existing] = VarRef(wid, isReader: true);
+                cx.sigmaHat[existing] = arg;
               } else {
-                // First occurrence - store the underlying writer ID
-                cx.clauseVars[varIndex] = wid;
+                // First occurrence - store the reader reference
+                cx.clauseVars[varIndex] = arg;  // Store reader VarRef, not wid
               }
-              if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable SUCCESS (aliased to W$wid), continuing to PC ${pc+1}');
+              if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable SUCCESS (stored reader R${arg.varId}), continuing to PC ${pc+1}');
             } else {
               // No underlying writer - suspend
               if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable SUSPENDING on R${arg.varId}');
@@ -1916,7 +1935,11 @@ class BytecodeRunner {
         } else {
           // GetReaderValue logic: Unify argument with clause READER variable
           if (arg is VarRef && !arg.isReader) {
-            if (storedValue is int) {
+            // Goal has writer, head has reader - bind goal writer to stored value
+            if (storedValue is VarRef) {
+              // storedValue is a reader/writer reference - bind goal writer to it
+              cx.sigmaHat[arg.varId] = storedValue;
+            } else if (storedValue is int) {
               final wid = cx.rt.heap.writerIdForReader(storedValue);
               if (wid != null && cx.rt.heap.isWriterBound(wid)) {
                 final readerValue = cx.rt.heap.valueOfWriter(wid);
@@ -2748,6 +2771,128 @@ class BytecodeRunner {
         pc++; continue;
       }
 
+      // ===== MODULE SYSTEM INSTRUCTIONS =====
+      // Phase 2 module system: distribute and transmit opcodes
+      // These handle cross-module RPC following FCP design
+
+      if (op is Distribute) {
+        // Static RPC to imported module at known index
+        // Following FCP: distribute # {Index, Goal}
+        //
+        // Writes ExportMessage to import vector which routes via
+        // serve_import to target module's dispatcher.
+        if (cx.inBody) {
+          // Collect arguments from argSlots
+          final args = <Term>[];
+          for (int i = 0; i < op.arity; i++) {
+            final arg = cx.argSlots[i];
+            if (arg != null) args.add(arg);
+          }
+
+          // Check if module context is available
+          if (cx.moduleContext is ModuleGoalContext) {
+            final modCtx = cx.moduleContext as ModuleGoalContext;
+            final vector = modCtx.module.importVector;
+
+            if (vector != null && op.importIndex <= vector.size) {
+              // Build and send ExportMessage
+              final message = ExportMessage.trust(
+                sourceModule: modCtx.module.name,
+                functor: op.functor,
+                arity: op.arity,
+                args: args,
+              );
+              vector.write(op.importIndex, message);
+
+              if (cx.debugOutput) {
+                print('[MODULE] Distribute: ${modCtx.module.name} -> import[${op.importIndex}] # ${op.functor}/${op.arity}');
+              }
+            } else {
+              if (cx.debugOutput) {
+                print('[MODULE] Distribute: No vector or index out of range for ${op.functor}/${op.arity}');
+              }
+            }
+          } else {
+            // No module context - log only (standalone execution)
+            if (cx.debugOutput) {
+              print('[MODULE] Distribute (no context): import[${op.importIndex}] # ${op.functor}/${op.arity}');
+            }
+          }
+          cx.argSlots.clear();
+        }
+        pc++; continue;
+      }
+
+      if (op is Transmit) {
+        // Dynamic RPC to module resolved at runtime
+        // Following FCP: transmit # {ModuleVar, Goal}
+        //
+        // Resolves module name from variable, looks up in registry,
+        // sends ExportMessage directly to target module's input channel.
+        if (cx.inBody) {
+          // Collect arguments from argSlots
+          final args = <Term>[];
+          for (int i = 0; i < op.arity; i++) {
+            final arg = cx.argSlots[i];
+            if (arg != null) args.add(arg);
+          }
+
+          // Get module name from clause variable
+          final moduleVar = cx.clauseVars[op.moduleVarIndex];
+
+          // Check if module context is available
+          if (cx.moduleContext is ModuleGoalContext) {
+            final modCtx = cx.moduleContext as ModuleGoalContext;
+
+            // Resolve module name from variable
+            String? moduleName;
+            if (moduleVar is ConstTerm) {
+              moduleName = moduleVar.value?.toString();
+            } else if (moduleVar is VarRef) {
+              // Dereference variable to get bound value
+              final deref = cx.rt.heap.dereference(moduleVar);
+              if (deref is ConstTerm) {
+                moduleName = deref.value?.toString();
+              }
+            }
+
+            if (moduleName != null) {
+              // Look up target module in registry
+              final targetModule = modCtx.registry.lookup(moduleName);
+              if (targetModule != null) {
+                // Build and send ExportMessage directly to target
+                final message = ExportMessage.trust(
+                  sourceModule: modCtx.module.name,
+                  functor: op.functor,
+                  arity: op.arity,
+                  args: args,
+                );
+                targetModule.inputSink.add(message);
+
+                if (cx.debugOutput) {
+                  print('[MODULE] Transmit: ${modCtx.module.name} -> $moduleName # ${op.functor}/${op.arity}');
+                }
+              } else {
+                if (cx.debugOutput) {
+                  print('[MODULE] Transmit: Module "$moduleName" not found in registry');
+                }
+              }
+            } else {
+              if (cx.debugOutput) {
+                print('[MODULE] Transmit: Could not resolve module name from X${op.moduleVarIndex}');
+              }
+            }
+          } else {
+            // No module context - log only (standalone execution)
+            if (cx.debugOutput) {
+              print('[MODULE] Transmit (no context): X${op.moduleVarIndex}($moduleVar) # ${op.functor}/${op.arity}');
+            }
+          }
+          cx.argSlots.clear();
+        }
+        pc++; continue;
+      }
+
       // ===== VARIABLE INSTRUCTIONS =====
 
       // REMOVED: Duplicate GetVariable handler
@@ -2829,7 +2974,8 @@ class BytecodeRunner {
         }
 
         // If any arguments have unbound readers, suspend
-        if (unboundReaders.isNotEmpty) {
+        // EXCEPTION: 'unknown' guard specifically tests for unbound - don't suspend
+        if (unboundReaders.isNotEmpty && predicateName != 'unknown') {
           if (debug) {
             // print('[GUARD] SUSPEND - unbound readers: $unboundReaders');
           }
@@ -2838,10 +2984,20 @@ class BytecodeRunner {
         }
 
         // All arguments are ground - evaluate the guard
-        final result = _evaluateGuard(predicateName, args, cx);
+        var result = _evaluateGuard(predicateName, args, cx);
+
+        // Handle guard negation: invert success/fail (suspend unchanged)
+        if (op.negated) {
+          if (result == GuardResult.success) {
+            result = GuardResult.failure;
+          } else if (result == GuardResult.failure) {
+            result = GuardResult.success;
+          }
+          // suspend stays suspend
+        }
 
         if (result == GuardResult.success) {
-          if (cx.debugOutput) print('[DEBUG] Guard - SUCCESS with args: $args');
+          if (cx.debugOutput) print('[DEBUG] Guard${op.negated ? " (negated)" : ""} - SUCCESS with args: $args');
           if (debug) {
             // print('[GUARD] SUCCESS - continuing');
           }
@@ -2849,7 +3005,7 @@ class BytecodeRunner {
           continue;
         } else {
           // FAIL - try next clause
-          if (cx.debugOutput) print('[DEBUG] Guard - FAILED with args: $args');
+          if (cx.debugOutput) print('[DEBUG] Guard${op.negated ? " (negated)" : ""} - FAILED with args: $args');
           if (debug) {
             // print('[GUARD] FAIL - trying next clause');
           }
@@ -2861,21 +3017,24 @@ class BytecodeRunner {
 
       if (op is Ground) {
         // ground(X): Succeeds if X is ground (contains no unbound variables)
+        // ~ground(X): Succeeds if X is NOT ground (contains unbound variables)
         //
-        // Three-valued semantics:
+        // Three-valued semantics for ground(X):
         // 1. If X is ground → SUCCEED (test passes, pc++)
         // 2. If X contains unbound readers (but no unbound writers) → SUSPEND
         //    (add readers to Si, pc++ - may become ground when readers bind)
         // 3. If X contains unbound writers → FAIL (soft-fail to next clause)
         //    (due to SRSW, cannot wait for unknown future binding)
         //
-        // Per spec section 5: "A guard that demands an uninstantiated reader
-        // adds that reader to Si and continues scanning"
+        // For ~ground(X) (negated):
+        // 1. If X is ground → FAIL
+        // 2. If X contains unbound readers → SUSPEND (might become ground)
+        // 3. If X contains unbound writers → SUCCEED (definitely not ground)
 
         final value = cx.clauseVars[op.varIndex];
-        if (cx.debugOutput) print('[DEBUG] PC $pc: Ground varIndex=${op.varIndex}, clauseVars value=$value (${value?.runtimeType})');
+        if (cx.debugOutput) print('[DEBUG] PC $pc: Ground${op.negated ? " (negated)" : ""} varIndex=${op.varIndex}, clauseVars value=$value (${value?.runtimeType})');
         if (value == null) {
-          // Variable doesn't exist - fail
+          // Variable doesn't exist - fail (even for negated)
           _softFailToNextClause(cx, pc);
           pc = _findNextClauseTry(pc);
           continue;
@@ -2955,41 +3114,65 @@ class BytecodeRunner {
           collectUnbound(value);
         }
 
-        // Decision logic (three-valued):
-        if (hasUnboundWriter) {
-          // Contains unbound writer(s) → FAIL (cannot become ground via SRSW)
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
-        } else if (unboundReaders.isNotEmpty) {
-          // Contains unbound readers but no unbound writers → SUSPEND
-          // May become ground when readers bind, add to Si and continue
-          pc = _suspendAndFailMulti(cx, unboundReaders, pc); continue;
-          pc++;
-          continue;
+        // Decision logic (three-valued) with negation support:
+        if (op.negated) {
+          // ~ground(X) semantics
+          if (hasUnboundWriter) {
+            // Contains unbound writer(s) → definitely not ground → SUCCEED
+            pc++;
+            continue;
+          } else if (unboundReaders.isNotEmpty) {
+            // Contains unbound readers → might become ground → SUSPEND
+            pc = _suspendAndFailMulti(cx, unboundReaders, pc);
+            continue;
+          } else {
+            // No unbound variables → is ground → FAIL
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
         } else {
-          // No unbound variables → SUCCEED (is ground)
-          pc++;
-          continue;
+          // ground(X) semantics (original)
+          if (hasUnboundWriter) {
+            // Contains unbound writer(s) → FAIL (cannot become ground via SRSW)
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          } else if (unboundReaders.isNotEmpty) {
+            // Contains unbound readers but no unbound writers → SUSPEND
+            // May become ground when readers bind, add to Si and continue
+            pc = _suspendAndFailMulti(cx, unboundReaders, pc);
+            continue;
+          } else {
+            // No unbound variables → SUCCEED (is ground)
+            pc++;
+            continue;
+          }
         }
       }
 
       if (op is Known) {
         // known(X): Succeeds if X is not an unbound variable
+        // ~known(X): Succeeds if X IS an unbound variable (equivalent to unknown/1)
         //
-        // Three-valued semantics:
+        // Three-valued semantics for known(X):
         // 1. If X is bound (to anything) → SUCCEED (test passes, pc++)
         // 2. If X is an unbound reader → SUSPEND
         //    (add reader to Si, pc++ - may become known when reader binds)
         // 3. If X is an unbound writer → FAIL (soft-fail to next clause)
         //    (due to SRSW, cannot wait for unknown future binding)
         //
+        // For ~known(X) (negated):
+        // 1. If X is bound → FAIL
+        // 2. If X is an unbound reader → SUSPEND (might become known)
+        // 3. If X is an unbound writer → SUCCEED (definitely unknown)
+        //
         // Note: known(X) differs from ground(X) - known only checks if X itself
         // is bound, not whether X contains unbound variables internally
 
         final value = cx.clauseVars[op.varIndex];
         if (value == null) {
-          // Variable doesn't exist - fail
+          // Variable doesn't exist - fail (even for negated)
           _softFailToNextClause(cx, pc);
           pc = _findNextClauseTry(pc);
           continue;
@@ -2999,6 +3182,7 @@ class BytecodeRunner {
         // NOTE: Must check BOTH sigmaHat (tentative bindings) AND heap bindings
         bool isKnown = false;
         int? unboundReader = null;
+        bool isUnboundWriter = false;
 
         if (value is int) {
           // Could be writer ID or reader ID - check sigmaHat first
@@ -3008,7 +3192,11 @@ class BytecodeRunner {
             final wc = cx.rt.heap.writer(value);
             if (wc != null) {
               // It's a writer ID - check if bound
-              isKnown = cx.rt.heap.isWriterBound(value);
+              if (cx.rt.heap.isWriterBound(value)) {
+                isKnown = true;
+              } else {
+                isUnboundWriter = true;
+              }
             } else {
               // It's a reader ID - check if its paired writer is bound
               final wid = cx.rt.heap.writerIdForReader(value);
@@ -3030,8 +3218,10 @@ class BytecodeRunner {
           // Writer - check sigmaHat first, then heap
           if (cx.sigmaHat.containsKey(value.varId)) {
             isKnown = true;
+          } else if (cx.rt.heap.isWriterBound(value.varId)) {
+            isKnown = true;
           } else {
-            isKnown = cx.rt.heap.isWriterBound(value.varId);
+            isUnboundWriter = true;
           }
         } else if (value is VarRef && value.isReader) {
           // Reader - check sigmaHat first, then heap
@@ -3057,20 +3247,39 @@ class BytecodeRunner {
           isKnown = true;
         }
 
-        if (isKnown) {
-          // Variable is known - succeed
-          pc++;
-          continue;
-        } else if (unboundReader != null) {
-          // Variable is unbound reader - could become known later, add to Si
-          pc = _suspendAndFail(cx, unboundReader, pc); continue;
-          pc++;
-          continue;
+        // Decision logic with negation support
+        if (op.negated) {
+          // ~known(X) semantics
+          if (isUnboundWriter) {
+            // Variable is unbound writer → definitely unknown → SUCCEED
+            pc++;
+            continue;
+          } else if (unboundReader != null) {
+            // Variable is unbound reader → might become known → SUSPEND
+            pc = _suspendAndFail(cx, unboundReader, pc);
+            continue;
+          } else {
+            // Variable is known → FAIL
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
         } else {
-          // Variable is unbound writer - fail
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
+          // known(X) semantics (original)
+          if (isKnown) {
+            // Variable is known - succeed
+            pc++;
+            continue;
+          } else if (unboundReader != null) {
+            // Variable is unbound reader - could become known later, add to Si
+            pc = _suspendAndFail(cx, unboundReader, pc);
+            continue;
+          } else {
+            // Variable is unbound writer - fail
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
         }
       }
 
@@ -3977,24 +4186,30 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
-      case 'writer':
-        // Per spec 19.4.5: Test if Xi is an unbound writer
+      case 'unknown':
+        // Test if dereferencing leads to an unbound variable
+        // Per spec: "Succeeds if X is bound to an unbound variable"
+        // This means we follow the binding chain to its end
         if (args.isEmpty) return GuardResult.failure;
-        final arg = args[0];
-        if (arg is VarRef && !arg.isReader) {
-          final heapVal = cx.rt.heap.getValue(arg.varId);
-          if (heapVal == null) return GuardResult.success; // Unbound writer
-        }
-        return GuardResult.failure;
+        Object? value = args[0];
 
-      case 'reader':
-        // Per spec 19.4.6: Test if Xi is an unbound reader
-        if (args.isEmpty) return GuardResult.failure;
-        final arg = args[0];
-        if (arg is VarRef && arg.isReader) {
-          final heapVal = cx.rt.heap.getValue(arg.varId);
-          if (heapVal == null) return GuardResult.success; // Unbound reader
+        // Follow binding chain to end
+        while (value is VarRef) {
+          final varId = value.varId;
+          // Check σ̂w first
+          if (cx.sigmaHat.containsKey(varId)) {
+            value = cx.sigmaHat[varId];
+            continue;
+          }
+          // Check heap
+          if (cx.rt.heap.isBound(varId)) {
+            value = cx.rt.heap.getValue(varId);
+            continue;
+          }
+          // Reached an unbound variable → SUCCESS
+          return GuardResult.success;
         }
+        // Dereferenced to a non-variable (ground term) → FAILURE
         return GuardResult.failure;
 
       // Control guards

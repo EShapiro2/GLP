@@ -1,0 +1,18 @@
+%% Trace: substitute(a, b, tree(a, tree(a, void, void), tree(c, void, void)), T)
+%% Expected result: T = tree(b, tree(b, void, void), tree(c, void, void))
+%%
+%% Substitutes all occurrences of 'a' with 'b' in the tree.
+%% Note: 'c' is preserved since c ≠ a.
+
+substitute(a, b, tree(a, tree(a, void, void), tree(c, void, void)), T) :- replace(a, b, a, X1), substitute(a, b, tree(a, void, void), X2), substitute(a, b, tree(c, void, void), X3)
+replace(a, b, a, X1) :- true
+substitute(a, b, tree(a, void, void), X2) :- replace(a, b, a, X4), substitute(a, b, void, X5), substitute(a, b, void, X6)
+substitute(a, b, tree(c, void, void), X3) :- replace(a, b, c, X7), substitute(a, b, void, X8), substitute(a, b, void, X9)
+replace(a, b, a, X4) :- true
+substitute(a, b, void, X5) :- true
+substitute(a, b, void, X6) :- true
+replace(a, b, c, X7) :- true
+substitute(a, b, void, X8) :- true
+substitute(a, b, void, X9) :- true
+T = tree(b, tree(b, void, void), tree(c, void, void))
+→ succeeds

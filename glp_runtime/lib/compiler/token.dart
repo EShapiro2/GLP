@@ -48,6 +48,8 @@ enum TokenType {
 
   // Special
   UNDERSCORE,     // _ (anonymous variable)
+  TILDE,          // ~ (guard negation)
+  HASH,           // # (module operator: Module # Goal)
 
   // End of file
   EOF

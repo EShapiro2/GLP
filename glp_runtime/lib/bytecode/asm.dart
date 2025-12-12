@@ -40,8 +40,7 @@ class BC {
   static PutStructure putStructure(String functor, int arity, int argSlot) => PutStructure(functor, arity, argSlot);
   static SetConstant setConst(Object? value) => SetConstant(value);
   static Otherwise otherwise() => Otherwise();
-  static opv2.IfVariable ifWriter(int varIndex) => opv2.IfVariable(varIndex, isReader: false);
-  static opv2.IfVariable ifReader(int varIndex) => opv2.IfVariable(varIndex, isReader: true);
+  static opv2.Unknown unknown(int varIndex) => opv2.Unknown(varIndex);
   static Spawn spawn(String label, int arity) => Spawn(label, arity);
   static Requeue requeue(String label, int arity) => Requeue(label, arity);
 
@@ -85,8 +84,7 @@ class BC {
   static SuspendEnd SUSP() => susp();
   static Proceed PROCEED() => proceed();
   static Otherwise OTHERWISE() => otherwise();
-  static opv2.IfVariable IF_WRITER(int varIndex) => ifWriter(varIndex);
-  static opv2.IfVariable IF_READER(int varIndex) => ifReader(varIndex);
+  static opv2.Unknown UNKNOWN(int varIndex) => unknown(varIndex);
   static BodySetConst BCONST(int writerId, Object? v) => bconst(writerId, v);
   static BodySetStructConstArgs BSTRUCTC(int writerId, String f, List<Object?> constArgs)
     => bstructC(writerId, f, constArgs);

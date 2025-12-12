@@ -248,6 +248,19 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 - Check file locations with `ls` before referencing them
 
 **REPL Location and Usage:**
+
+**Use compiled executable for faster testing** (recommended):
+```bash
+cd /home/user/GLP/glp_runtime
+# Compile once (if not already compiled or after code changes):
+export PATH="/home/user/dart-sdk/bin:$PATH"
+dart compile exe bin/glp_repl.dart -o glp_repl
+
+# Run tests with compiled executable (much faster - milliseconds vs seconds):
+echo -e 'filename.glp\ngoal.' | ./glp_repl
+```
+
+**Alternative: Use dart run** (slower, recompiles each time):
 ```bash
 cd /home/user/GLP/glp_runtime
 export PATH="/home/user/dart-sdk/bin:$PATH"
@@ -403,6 +416,13 @@ REPL tests: 101/101 passing
 ```bash
 dart test test/specific_test.dart
 ```
+
+### Bug Fix Test Protocol
+
+**When a bug is detected and fixed:**
+1. Add the test case that exposed the bug to the REPL test suite
+2. The test should verify the fix works (not just that it doesn't crash)
+3. This prevents regression - the bug should never reappear
 
 ## Working Principles
 
@@ -626,6 +646,18 @@ Claude B: work → push → branch-B ──────────────�
 1. Commit frequently with clear messages
 2. Test after each change
 3. Push to your branch: `git push -u origin claude/<your-branch-name>`
+
+**After completing a task and pushing:**
+When a task is completed, committed, and pushed, ALWAYS provide the user with merge instructions so they can integrate the work into main. Use the exact format below with the actual branch name:
+
+```bash
+cd /Users/udi/GLP
+git checkout main
+git pull origin main
+git fetch origin claude/<ACTUAL-BRANCH-NAME>
+git merge -m "Merge claude/<ACTUAL-BRANCH-NAME> into main" origin/claude/<ACTUAL-BRANCH-NAME>
+git push origin main
+```
 
 **Before ending session:**
 1. Ensure all work is committed
@@ -864,7 +896,7 @@ Key files:
    - `reduce(sum_acc([], Acc?, Acc), true)` - reader first, writer second
    - `reduce(sum_acc([], Acc, Acc?), true)` - writer first, reader second
 
-2. **Running the REPL**: Always use `dart run glp_repl.dart` from the `udi/` directory, NOT a compiled exe.
+2. **Running the REPL**: Use compiled executable `./glp_repl` for faster testing, or `dart run bin/glp_repl.dart` if exe not compiled. Run from `glp_runtime/` directory.
 
 3. **Test file patterns**: The test suite uses a specific format - see `run_repl_tests.sh` for the `run_test` function.
 
