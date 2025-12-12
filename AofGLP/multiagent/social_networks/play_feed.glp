@@ -1,0 +1,84 @@
+%% play_feed.glp - Feed and Followers Play
+%%
+%% Scenario: Alice runs a feed. Bob and Carol subscribe. Alice posts messages.
+%% Bob and Carol receive the posts.
+%%
+%% This play demonstrates:
+%% 1. Alice starts a feed server
+%% 2. Bob subscribes, gets a stream for receiving posts
+%% 3. Carol subscribes, gets a stream for receiving posts
+%% 4. Alice posts two messages
+%% 5. Both Bob and Carol receive both messages
+
+%% === Broadcast with ground guard ===
+
+broadcast(_, [], []).
+broadcast(Post, [(Name, Feed)|Fs], [(Name?, Feed1?)|Fs1?]) :-
+    ground(Post?) |
+    extend_feed(Post?, Feed?, Feed1),
+    broadcast(Post?, Fs?, Fs1).
+
+%% === Feed operations ===
+
+make_feed(feed([])).
+extend_feed(Post, feed(Xs), feed([Post?|Xs?])).
+get_feed(Name, [(Name?, Feed)|_], Feed?).
+get_feed(Name?, [_|Fs], Feed?) :- get_feed(Name, Fs?, Feed).
+
+%% === Feed server ===
+
+serve_feed([post(Content)|Cmds], Fs, Fs2?) :-
+    ground(Content?) |
+    broadcast(Content?, Fs?, Fs1),
+    serve_feed(Cmds?, Fs1?, Fs2).
+serve_feed([subscribe(Name)|Cmds], Fs, Fs2?) :-
+    make_feed(Feed),
+    serve_feed(Cmds?, [(Name?, Feed?)|Fs?], Fs2).
+serve_feed([], Fs, Fs?).
+
+%% === Alice: Feed author ===
+%% Receives commands, runs feed server
+
+alice(Commands?, Followers, FinalFollowers?) :-
+    serve_feed(Commands, Followers?, FinalFollowers).
+
+%% === Bob: Subscriber ===
+%% Subscribes to feed, receives posts
+
+bob([subscribe(bob, BobFeed)|_], BobResult?) :-
+    bob_receive(BobFeed?, BobResult).
+
+bob_receive(feed([Post1, Post2|_]), result(Post1?, Post2?)).
+
+%% === Carol: Subscriber ===
+%% Receives posts from feed
+
+carol(CarolFeed, CarolResult?) :-
+    carol_receive(CarolFeed?, CarolResult).
+
+carol_receive(feed([Post1, Post2|_]), result(Post1?, Post2?)).
+
+
+%% === Verification ===
+
+verify(result(P1, P2), result(P3, P4)) :-
+    check(P1?, P2?, P3?, P4?).
+
+check(second_post, hello_world, second_post, hello_world).
+
+%% === The Play ===
+
+play_feed :-
+    %% Alice serves feed
+    alice([subscribe(bob), subscribe(carol),
+           post(hello_world), post(second_post)], [], Followers),
+    %% Get feeds and verify
+    play_continue(Followers?).
+
+play_continue(Followers) :-
+    ground(Followers?) |
+    get_feed(bob, Followers?, BobFeed),
+    get_feed(carol, Followers?, CarolFeed),
+    bob_receive(BobFeed?, BobResult),
+    carol_receive(CarolFeed?, CarolResult),
+    verify(BobResult?, CarolResult?).
