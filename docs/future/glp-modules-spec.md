@@ -1,4 +1,8 @@
-> **STATUS: FUTURE WORK - NOT YET IMPLEMENTED**
+> **STATUS: PHASE 1 IMPLEMENTED** (Dec 2025)
+> - Module declarations (-module, -export, -import) ✓
+> - Static RPC via Distribute opcode ✓
+> - Dynamic RPC via Transmit opcode ✓
+> - Backwards compatibility (defaults for missing declarations) ✓
 
 # GLP Module System Design
 
@@ -118,7 +122,32 @@ math # [factorial(5, F), gcd(48, 18, G)]  % Multiple goals to same module
 3. **Private**: Non-exported predicates only callable within module
 4. **Implicit self**: Within a module, `factorial(5,R)` = `self # factorial(5,R)`
 
-### 3.5 Module Resolution
+### 3.5 Declaration Defaults (Backwards Compatibility)
+
+All module declarations are **optional** for backwards compatibility:
+
+| Declaration | If Omitted | Behavior |
+|-------------|-----------|----------|
+| `-module(name)` | Name defaults to `_main` (or filename without extension) | Program works as single anonymous module |
+| `-export([...])` | **All predicates are exported** | Full access to all procedures (like before modules) |
+| `-import([...])` | Empty import list `[]` | No static imports; can still use dynamic RPC via `M # Goal` |
+
+**Examples:**
+
+```glp
+%% This program has no module declarations - works exactly as before
+factorial(0, 1).
+factorial(N, F?) :- N? > 0 | N1 := N? - 1, factorial(N1?, F1), F := N? * F1?.
+```
+
+When compiled:
+- Module name: `_main`
+- Exports: `{factorial/2}` (all procedures auto-exported)
+- Imports: `[]` (empty)
+
+**Note**: Even without `-import`, you can use dynamic RPC with `M # Goal` syntax - it will use the Transmit opcode for runtime module resolution.
+
+### 3.6 Module Resolution
 
 **Static Resolution (Phase 1)**:
 - All imports resolved at compile time
@@ -129,7 +158,7 @@ math # [factorial(5, F), gcd(48, 18, G)]  % Multiple goals to same module
 - Load modules on demand
 - Service hierarchy like FCP
 
-### 3.6 Namespacing
+### 3.7 Namespacing
 
 ```glp
 -module(utils.list).   % Hierarchical module name
@@ -138,7 +167,7 @@ math # [factorial(5, F), gcd(48, 18, G)]  % Multiple goals to same module
 append(Xs, Ys, Zs) :- ...
 ```
 
-### 3.7 System Modules
+### 3.8 System Modules
 
 Pre-loaded modules available without explicit import:
 - `system` - Process control, meta-operations

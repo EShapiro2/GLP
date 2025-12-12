@@ -34,10 +34,21 @@ LoadedModule compileModule(String source, String name) {
   final generator = CodeGenerator();
   final bytecode = generator.generate(annotatedProgram);
 
-  final exports = <String>{};
-  for (final exportDecl in module.exports) {
-    for (final procRef in exportDecl.exports) {
-      exports.add(procRef.signature);
+  // Default: if no -export declarations, export ALL procedures (backwards compatibility)
+  Set<String> exports;
+  if (module.exports.isEmpty) {
+    // No explicit exports - export all procedures
+    exports = <String>{};
+    for (final proc in module.procedures) {
+      exports.add('${proc.name}/${proc.arity}');
+    }
+  } else {
+    // Explicit exports - only export listed procedures
+    exports = <String>{};
+    for (final exportDecl in module.exports) {
+      for (final procRef in exportDecl.exports) {
+        exports.add(procRef.signature);
+      }
     }
   }
 
@@ -957,6 +968,145 @@ private_proc(X?) :- X := 99.
       expect((resultValue as ConstTerm).value, equals(10),
           reason: 'run(double(5,R), math_rules) should bind R=10');
       print('[TEST] Meta-interpreter test passed!');
+    });
+
+    test('backwards compatibility: program without module declarations', () async {
+      // Test that a program without -module, -export, -import declarations
+      // compiles and runs exactly as before (backwards compatible)
+
+      // Classic factorial without any module declarations
+      final source = '''
+%% No module declarations at all - just pure GLP
+factorial(0, 1).
+factorial(N, F?) :- N? > 0 | N1 := N? - 1, factorial(N1?, F1), F := N? * F1?.
+''';
+
+      // Compile using ModuleLoader (which applies defaults)
+      final testRegistry = FcpModuleRegistry();
+      final loader = ModuleLoader(
+        basePath: '.',  // Not used for in-memory compile
+        onModuleLoaded: (module) {
+          testRegistry.register(module);
+        },
+      );
+
+      // Use compileFromSource with default name
+      final module = loader.compileFromSource(source, '_main');
+
+      // Verify defaults:
+      // 1. Name defaults to what we passed (would be '_main' or filename in practice)
+      expect(module.name, equals('_main'), reason: 'Module name should be _main');
+
+      // 2. No -export means ALL procedures are exported
+      expect(module.exports.contains('factorial/2'), isTrue,
+          reason: 'factorial/2 should be auto-exported when no -export declaration');
+      print('[TEST] factorial/2 auto-exported: ${module.exports}');
+
+      // 3. No -import means empty imports list
+      expect(module.imports, isEmpty,
+          reason: 'No -import means empty imports list');
+      print('[TEST] imports empty: ${module.imports}');
+
+      // Verify the module can actually execute
+      // Merge with stdlib for := support
+      final stdlibSource = File('/home/user/GLP/glp/stdlib/assign.glp').readAsStringSync();
+      final compiler = GlpCompiler();
+      final stdlib = compiler.compile(stdlibSource);
+      final mergedBytecode = module.bytecode.merge(stdlib);
+
+      // Create a new module with merged bytecode
+      final executableModule = LoadedModule(
+        name: module.name,
+        bytecode: mergedBytecode,
+        exports: module.exports,
+        imports: module.imports,
+      );
+
+      // Create result variable
+      final resultVarId = rt.heap.allocateVariable();
+      final resultWriter = VarRef(resultVarId, isReader: false);
+
+      // Create input for factorial(5, R)
+      final inputVarId = rt.heap.allocateVariable();
+      rt.heap.bindWriterConst(inputVarId, 5);
+      final inputArg = VarRef(inputVarId, isReader: true);
+
+      // Start dispatcher for the module
+      final dispatcher = startDispatcher(
+        module: executableModule,
+        executor: (message, module) async {
+          final entryPc = module.getEntryPoint(message.signature);
+          if (entryPc == null) return;
+
+          final env = CallEnv(
+            args: {for (int i = 0; i < message.args.length; i++) i: message.args[i]},
+          );
+          final goalId = rt.nextGoalId++;
+          rt.setGoalEnv(goalId, env);
+          rt.setGoalProgram(goalId, module.bytecode);
+          rt.setGoalModuleContext(goalId, ModuleGoalContext(module: module, registry: testRegistry));
+
+          final runner = BytecodeRunner(module.bytecode);
+          final ctx = RunnerContext(
+            rt: rt,
+            goalId: goalId,
+            kappa: entryPc,
+            env: env,
+            debugOutput: false,
+            moduleContext: ModuleGoalContext(module: module, registry: testRegistry),
+          );
+          runner.runWithStatus(ctx);
+        },
+        onError: (error) => print('[ERROR] $error'),
+      );
+
+      // Send factorial(5, R) message
+      final message = ExportMessage.trust(
+        sourceModule: 'test',
+        functor: 'factorial',
+        arity: 2,
+        args: [inputArg, resultWriter],
+      );
+      executableModule.inputSink.add(message);
+
+      // Allow async processing
+      await Future.delayed(Duration(milliseconds: 100));
+
+      // Process queued goals
+      var iterations = 0;
+      while (!rt.gq.isEmpty && iterations < 50) {
+        final goalRef = rt.gq.dequeue();
+        if (goalRef == null) break;
+        final goalId = goalRef.id;
+        final env = rt.getGoalEnv(goalId);
+        final prog = rt.getGoalProgram(goalId);
+        if (env != null && prog != null) {
+          final runner = BytecodeRunner(prog as BytecodeProgram);
+          final ctx = RunnerContext(
+            rt: rt,
+            goalId: goalId,
+            kappa: goalRef.pc,
+            env: env,
+            debugOutput: false,
+            moduleContext: rt.getGoalModuleContext(goalId),
+          );
+          runner.runWithStatus(ctx);
+        }
+        iterations++;
+      }
+
+      // Cleanup
+      dispatcher.stop();
+
+      // Verify result
+      final resultValue = rt.heap.valueOfWriter(resultVarId);
+      print('[TEST] Result: factorial(5, R) = $resultValue');
+
+      expect(resultValue, isNotNull, reason: 'R should be bound');
+      expect(resultValue, isA<ConstTerm>(), reason: 'Should be ConstTerm(120)');
+      expect((resultValue as ConstTerm).value, equals(120),
+          reason: 'factorial(5) should equal 120');
+      print('[TEST] Backwards compatibility test passed!');
     });
   });
 }
