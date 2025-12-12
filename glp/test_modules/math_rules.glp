@@ -1,0 +1,5 @@
+-module(math_rules).
+-export([reduce/2]).
+
+reduce(double(X, Y), (Y := X? * 2)).
+reduce(square(X, Y), (Y := X? * X?)).
