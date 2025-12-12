@@ -1,34 +1,46 @@
 %% interlaced_streams.glp - Interlaced Streams as Distributed Blocklace
-%% Source: GLP Papers (Program: Interlaced Streams (Blocklace))
 %%
-%% Blocklace: partially-ordered generalization of blockchain where each
-%% block references multiple predecessors, forming a DAG. Enables
-%% concurrent block creation without consensus.
+%% Blocklace: DAG where each block references multiple predecessors.
+%% Enables concurrent block creation without consensus.
 %%
-%% Initial goal for three agents:
-%%   p(streams(P_stream, [Q_stream?, R_stream?])),
-%%   q(streams(Q_stream, [P_stream?, R_stream?])),
-%%   r(streams(R_stream, [P_stream?, Q_stream?]))
+%% Each process maintains stream of blocks with payloads and references
+%% to most recent blocks observed from others.
 
-streams(MyStream, Others) :-
+%% Main entry: streams(stream(S?), Others)
+%% S - output stream of blocks produced by this agent
+%% Others - list of readers for other agents' streams
+
+streams(stream(S?), Others) :-
     produce_payloads(Payloads),
-    interlace(Payloads?, MyStream, [], Others?).
+    interlace(Payloads?, S, [], Others?).
 
-interlace([Payload|Payloads], [block(Payload?,Tips?)|Stream?], PrevTips, Others) :-
-    collect_new_tips(Others?, Tips, Others1),
-    interlace(Payloads?, Stream, Tips?, Others1?).
+%% For testing: generate fixed payloads
+produce_payloads([p1, p2, p3]).
+
+%% interlace(Payloads, MyStream, PrevTips, Others)
+%% Payloads - remaining payloads to process
+%% MyStream - output stream being constructed
+%% PrevTips - tips from previous block (unused currently)
+%% Others - other agents' streams to observe
+
+interlace([Payload|Payloads], Output?, _, Others) :-
+    collect_tips(Others?, Tips, Others1),
+    build_and_continue(Payload?, Tips?, Output, Payloads?, Others1?).
 interlace([], [], _, _).
 
-% Using reader(X) to identify fresh tips not yet incorporated
-collect_new_tips([[Block|Bs]|Others], [Block?|Tips?], [Bs?|Others1?]) :-
-    reader(Bs) |  % Bs unbound means Block is the current tip
-    collect_new_tips(Others?, Tips, Others1).
-collect_new_tips([[B|Bs]|Others], Tips?, [[Bs]?|Others1?]) :-
-    % Skip B as it's already been referenced
-    collect_new_tips([[Bs]?|Others?], Tips, Others1).
-collect_new_tips([], [], []).
+%% build_and_continue: construct block with tips and continue interlacing
+%% ground(Tips?) allows multiple reads of Tips? (in block and recursive call)
+build_and_continue(Payload, Tips, [block(Payload?, Tips?)|Stream?], Payloads, Others) :-
+    ground(Tips?) |
+    interlace(Payloads?, Stream, Tips?, Others?).
 
-%% Each process maintains its own stream of blocks containing application
-%% payloads and references to most recent blocks observed from others.
-%% The reader(X) guard identifies unprocessed blocks by detecting unbound
-%% tail variables.
+%% collect_tips: gather current tips from other streams
+%% Uses reader(X) guard to detect unextended stream tails
+
+collect_tips([[Block|Bs]|Others], [Block?|Tips?], [Bs?|Others1?]) :-
+    reader(Bs?) |
+    collect_tips(Others?, Tips, Others1).
+collect_tips([[_|Bs]|Others], Tips?, [Bs?|Others1?]) :-
+    otherwise |
+    collect_tips(Others?, Tips, Others1).
+collect_tips([], [], []).
