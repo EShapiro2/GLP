@@ -1,0 +1,2 @@
+-module(mod_a).
+double(X, Y?) :- number(X?) | Y := X? * 2.

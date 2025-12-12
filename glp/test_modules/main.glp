@@ -1,0 +1,6 @@
+-module(main).
+-import([math]).
+-export([test_double/1, test_factorial/1]).
+
+test_double(R?) :- math # double(5, D), R := D?.
+test_factorial(R?) :- math # factorial(5, F), R := F?.
