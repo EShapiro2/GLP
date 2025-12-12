@@ -1,0 +1,29 @@
+% ============================================================
+% Corrected Defined Guards Examples
+% ============================================================
+
+% Unit clauses (defined guards)
+send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+% --- Example 1: make_pair ---
+make_pair(C1?, C2?) :- new_channel(C1, C2) | true.
+
+% --- Example 2: relay with send ---
+relay_send([X|In1], Out?, Ch) :- send(X?, Ch?, Ch1) | relay_send(In1?, Out, Ch1?).
+relay_send([], [], ch([], [])).
+
+% --- Example 3: relay with receive ---
+relay_recv(In?, [X?|Out1?], Ch) :- receive(X, Ch?, Ch1) | relay_recv(In, Out1, Ch1?).
+relay_recv([], [], ch([], [])).
+
+% --- Example 4: bind_response ---
+bind_response(yes, accept(RemoteCh?), LocalCh?) :-
+    new_channel(LocalCh, RemoteCh) | true.
+bind_response(no, no, none).
+
+% --- Example 5: Combined relay ---
+relay([X|In1], Out?, Ch) :- send(X?, Ch?, Ch1) | relay(In1?, Out, Ch1?).
+relay(In?, [X?|Out1?], Ch) :- receive(X, Ch?, Ch1) | relay(In, Out1, Ch1?).
+relay([], [], ch([], [])).
