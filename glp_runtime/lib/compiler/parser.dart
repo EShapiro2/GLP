@@ -367,6 +367,22 @@ class Parser {
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
         final term = _parseTerm();
         return Goal('=', [varTerm, term], varToken.line, varToken.column);
+      } else if (tokens.length > _current + 1 && tokens[_current + 1].type == TokenType.HASH) {
+        // Dynamic remote goal: Var # Goal (e.g., M? # factorial(5, R))
+        _advance(); // consume variable
+        _advance(); // consume #
+        // Negation not allowed on remote goals
+        if (negated) {
+          throw CompileError(
+            'Guard negation (~) cannot be applied to remote goal',
+            negLine,
+            negColumn,
+            phase: 'parser'
+          );
+        }
+        final moduleTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
+        final innerGoal = _parseGoal();
+        return RemoteGoal(moduleTerm, innerGoal, varToken.line, varToken.column);
       }
     }
 

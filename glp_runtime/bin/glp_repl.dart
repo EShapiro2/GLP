@@ -228,6 +228,108 @@ void main() async {
           final arity = goal.args.length;
           final args = goal.args;
 
+          // Handle remote goal (Module # Goal)
+          if (functor == '#' && args.length == 2) {
+            final moduleArg = args[0];
+            final goalArg = args[1];
+
+            // Resolve module name
+            String? moduleName;
+            if (moduleArg is ConstTerm) {
+              moduleName = moduleArg.value.toString();
+            } else if (moduleArg is VarTerm) {
+              // Look up variable value
+              final varName = moduleArg.name;
+              final writerId = varNameToId[varName];
+              if (writerId != null && runtime.heap.isBound(writerId)) {
+                final value = runtime.heap.dereference(rt.VarRef(writerId, isReader: false));
+                if (value is rt.ConstTerm) {
+                  moduleName = value.value.toString();
+                }
+              }
+              if (moduleName == null) {
+                print('Error: Module variable $varName is unbound or not an atom');
+                allSucceeded = false;
+                break;
+              }
+            }
+
+            if (moduleName == null) {
+              print('Error: Invalid module in remote goal');
+              allSucceeded = false;
+              break;
+            }
+
+            // Extract inner goal functor and args from goalArg
+            String innerFunctor;
+            List<Term> innerArgs;
+            if (goalArg is StructTerm) {
+              innerFunctor = goalArg.functor;
+              innerArgs = goalArg.args;
+            } else if (goalArg is ConstTerm) {
+              innerFunctor = goalArg.value.toString();
+              innerArgs = [];
+            } else {
+              print('Error: Invalid goal in remote goal');
+              allSucceeded = false;
+              break;
+            }
+
+            // Find target module and procedure
+            final targetModule = loadedModules[moduleName];
+            if (targetModule == null) {
+              print('Error: Module $moduleName not loaded');
+              allSucceeded = false;
+              break;
+            }
+
+            final procedureLabel = '$innerFunctor/${innerArgs.length}';
+            final entryPC = combinedProgram.labels[procedureLabel];
+            if (entryPC == null) {
+              print('Error: Predicate $procedureLabel not found in module $moduleName');
+              allSucceeded = false;
+              break;
+            }
+
+            // Set up arguments for inner goal
+            final argSlots = <int, rt.Term>{};
+            for (int i = 0; i < innerArgs.length; i++) {
+              final arg = innerArgs[i];
+              _setupConjunctionArg(runtime, arg, i, argSlots, queryVarWriters, varNameToId, debugOutput: debugOutput);
+            }
+
+            // Set up goal environment
+            final env = CallEnv(args: argSlots);
+            runtime.setGoalEnv(goalId, env);
+            runtime.setGoalProgram(goalId, 'main');
+
+            // Set module context for the remote call
+            final modCtx = _buildModuleContext(targetModule, loadedModules, combinedProgram: combinedProgram);
+            if (modCtx != null) {
+              runtime.setGoalModuleContext(goalId, modCtx);
+            }
+
+            scheduler.setQueryVarNames(queryVarWriters);
+            runtime.gq.enqueue(GoalRef(goalId, entryPC));
+            goalId++;
+
+            // Run until this goal completes
+            final result = await scheduler.drainAsyncWithStatus(
+              maxCycles: maxCycles,
+              debug: debugTrace,
+              showBindings: false,
+              debugOutput: debugOutput,
+            );
+
+            if (result.status == ExecutionStatus.failed) {
+              allSucceeded = false;
+              break;
+            } else if (result.status == ExecutionStatus.suspended) {
+              anySuspended = true;
+            }
+            continue; // Next goal
+          }
+
           // Find entry point for this goal
           final procedureLabel = '$functor/$arity';
           final entryPC = combinedProgram.labels[procedureLabel];

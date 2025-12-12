@@ -743,6 +743,22 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# Test 7: Dynamic RPC - module as variable
+dynamic_output=$($DART run "$REPL" <<DYNAMIC_INPUT
+test_modules/math.glp
+M = math, M? # double(7, R).
+:quit
+DYNAMIC_INPUT
+2>&1)
+
+if echo "$dynamic_output" | grep -q "R = 14"; then
+    echo "PASS: Dynamic RPC: M? # double(7, R) returns R = 14"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Dynamic RPC: M? # double(7, R) (expected: R = 14)"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""
