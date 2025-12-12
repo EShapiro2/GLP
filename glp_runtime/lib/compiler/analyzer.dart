@@ -240,7 +240,7 @@ class Analyzer {
   static const _negatableGuards = {
     // Type guards
     'ground', 'known', 'unknown', 'integer', 'number', 'atom', 'string',
-    'constant', 'compound', 'tuple', 'list', 'is_list', 'writer', 'reader',
+    'constant', 'compound', 'tuple', 'list', 'is_list',
     // Equality
     '=?=',
   };
@@ -316,9 +316,9 @@ class Analyzer {
       }
     }
 
-    // writer/1 and reader/1 guards mark argument as ground
+    // unknown/1 guard marks argument as ground for SRSW purposes
     // Unbound variables are safe to read multiple times (always return same reference)
-    if ((guard.predicate == 'writer' || guard.predicate == 'reader') && guard.args.length == 1) {
+    if (guard.predicate == 'unknown' && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm) {
         varTable.markGrounded(arg.name);
