@@ -1,0 +1,192 @@
+%% GLP Module System Infrastructure
+%% Implements FCP-style module system in pure GLP
+%%
+%% Core predicates:
+%%   serve_import/3   - Bridge import stream to target module
+%%   dispatcher/2     - Read from input channel, dispatch to reduce/2
+%%   register_channel/3, lookup_channel/3 - Registry operations
+%%   distribute/4, transmit/4 - RPC primitives
+
+-module(modules).
+-export([serve_import/3, dispatcher/2, register_channel/3, lookup_channel/3,
+         distribute/4, transmit/4, activate_module/4]).
+
+%% ============================================================
+%% serve_import/3 - Bridge import stream to target module's input
+%% ============================================================
+%% serve_import(ImportStream?, ModuleName?, Registry?)
+%%
+%% Reads RPC messages from ImportStream and forwards them to
+%% the target module's input channel (looked up in Registry).
+
+serve_import([Msg|Rest], ModuleName, Registry) :-
+    ground(Msg?), ground(ModuleName?), ground(Registry?) |
+    lookup_and_send(ModuleName?, Registry?, Msg?),
+    serve_import(Rest?, ModuleName?, Registry?).
+
+serve_import([], _, _).
+
+%% Helper: lookup channel and send message (combined to avoid SRSW violation)
+lookup_and_send(ModuleName, Registry, Msg) :-
+    lookup_channel_send(ModuleName?, Registry?, Msg?).
+
+%% Combined lookup and send - writes message directly when channel found
+%% Ch extracted once (writer), then read once (reader) - SRSW compliant
+lookup_channel_send(Name, [entry(N, Ch)|_], Msg) :-
+    Name? =:= N? |
+    write_to_channel(Ch?, Msg?).
+
+lookup_channel_send(Name, [entry(N, _)|Rest], Msg) :-
+    Name? =\= N? |
+    lookup_channel_send(Name?, Rest?, Msg?).
+
+%% Write message to channel - Channel is the stream to write to
+%% Channel? reads the value received, then unifies it with [Msg?|_]
+write_to_channel(Channel, Msg) :-
+    Channel? = [Msg?|_].
+
+%% ============================================================
+%% dispatcher/2 - Process incoming RPC messages
+%% ============================================================
+%% dispatcher(InputChannel?, ModuleName?)
+%%
+%% Reads rpc(Goal, ResultVar) messages from InputChannel,
+%% calls reduce/2 to get the body, then executes it.
+
+dispatcher([rpc(Goal, ResultVar)|Rest], Module) :-
+    ground(Goal?), ground(Module?) |
+    dispatch_one(Module?, Goal?, ResultVar?),
+    dispatcher(Rest?, Module?).
+
+dispatcher([], _).
+
+%% dispatch_one/3 - Handle a single RPC message
+%% Note: reduce/2 is LOCAL to the module, not an RPC call
+%% Module parameter kept for context (unused in basic case)
+dispatch_one(_Module, Goal, ResultVar) :-
+    reduce(Goal?, Body),
+    run_body(Body?, ResultVar?).
+
+%% run_body/2 - Execute a clause body
+run_body(true, _).
+
+run_body((A, B), R) :-
+    known(A?), known(B?), ground(R?) |
+    run_body(A?, R?),
+    run_body(B?, R?).
+
+run_body(Goal, _) :-
+    otherwise |
+    call(Goal?).
+
+%% ============================================================
+%% Registry Operations
+%% ============================================================
+
+%% register_channel/3 - Add module channel to registry
+%% register_channel(Name?, Channel?, Registry)
+%%
+%% Registry is a stream of entry(Name, Channel) pairs.
+%% Registration writes a new entry.
+
+register_channel(Name, Channel, Registry) :-
+    Registry? = [entry(Name?, Channel?)|_].
+
+%% lookup_channel/3 - Find module channel in registry
+%% lookup_channel(Name?, Registry?, Channel)
+%%
+%% Searches registry for matching name, unifies Channel.
+
+lookup_channel(Name, [entry(N, Ch)|_], Channel) :-
+    Name? =:= N? |
+    Channel? = Ch?.
+
+lookup_channel(Name, [entry(N, _)|Rest], Channel) :-
+    Name? =\= N? |
+    lookup_channel(Name?, Rest?, Channel?).
+
+%% ============================================================
+%% RPC Primitives
+%% ============================================================
+
+%% distribute/4 - Static RPC via import vector
+%% distribute(Index?, Goal?, ImportVec?, ResultVar)
+%%
+%% Writes rpc message to import stream at given index.
+
+distribute(Index, Goal, ImportVec, ResultVar) :-
+    ground(Index?), ground(Goal?) |
+    nth(Index?, ImportVec?, Stream),
+    Stream? = [rpc(Goal?, ResultVar?)|_].
+
+%% transmit/4 - Dynamic RPC via registry lookup
+%% transmit(ModuleName?, Goal?, Registry?, ResultVar)
+%%
+%% Looks up module in registry, sends RPC message.
+
+transmit(ModuleName, Goal, Registry, ResultVar) :-
+    ground(ModuleName?), ground(Goal?) |
+    lookup_and_send_rpc(ModuleName?, Registry?, Goal?, ResultVar?).
+
+%% Helper - combined lookup and RPC send
+lookup_and_send_rpc(ModuleName, Registry, Goal, ResultVar) :-
+    lookup_channel_rpc(ModuleName?, Registry?, Goal?, ResultVar?).
+
+%% Combined lookup and RPC send to avoid SRSW violations
+lookup_channel_rpc(Name, [entry(N, Ch)|_], Goal, ResultVar) :-
+    Name? =:= N? |
+    Ch? = [rpc(Goal?, ResultVar?)|_].
+
+lookup_channel_rpc(Name, [entry(N, _)|Rest], Goal, ResultVar) :-
+    Name? =\= N? |
+    lookup_channel_rpc(Name?, Rest?, Goal?, ResultVar?).
+
+%% ============================================================
+%% Module Activation
+%% ============================================================
+
+%% activate_module/4 - Initialize a module
+%% activate_module(ModuleName?, Imports?, InputChannel, Registry?)
+%%
+%% 1. Register this module's input channel
+%% 2. Create import streams for each import
+%% 3. Start serve_import for each import
+%% 4. Start dispatcher on input channel
+
+activate_module(Module, Imports, Input, Registry) :-
+    ground(Module?), ground(Imports?), ground(Input?), ground(Registry?) |
+    register_channel(Module?, Input?, Registry?),
+    activate_imports(Imports?, Registry?, Module?, Input?).
+
+%% activate_imports/4 - Set up imports and start dispatcher
+activate_imports(Imports, Registry, Module, Input) :-
+    ground(Imports?), ground(Registry?), ground(Module?), ground(Input?) |
+    create_import_streams(Imports?, ImportVec),
+    start_serve_imports(Imports?, ImportVec?, Registry?),
+    dispatcher(Input?, Module?).
+
+%% create_import_streams/2 - Create stream for each import
+create_import_streams([], []).
+
+create_import_streams([_|Rest], [_Stream|Streams]) :-
+    create_import_streams(Rest?, Streams?).
+
+%% start_serve_imports/3 - Start serve_import for each import
+start_serve_imports([], [], _).
+
+start_serve_imports([Imp|Imps], [Stream|Streams], Registry) :-
+    ground(Registry?) |
+    serve_import(Stream?, Imp?, Registry?),
+    start_serve_imports(Imps?, Streams?, Registry?).
+
+%% ============================================================
+%% Utility Predicates
+%% ============================================================
+
+%% nth/3 - Get nth element (1-based indexing)
+nth(1, [H|_], Elem) :- Elem? = H?.
+
+nth(N, [_|T], Elem) :-
+    N? > 1 |
+    N1 := N? - 1,
+    nth(N1?, T?, Elem?).
