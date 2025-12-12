@@ -209,7 +209,20 @@ class OccurrenceClassifier {
       }
     }
 
+    // Guard arguments (guards only read values, all variables are readers)
+    if (clause.guards != null) {
+      for (final guard in clause.guards!) {
+        _classifyGuard(guard, occurrences);
+      }
+    }
+
     return occurrences;
+  }
+
+  void _classifyGuard(Guard guard, List<Occurrence> out) {
+    for (final arg in guard.args) {
+      _collectVariables(arg, OccurrenceType.reader, out);
+    }
   }
 
   void _classifyTerm(Term term, Mode argMode, bool isHead, List<Occurrence> out) {
