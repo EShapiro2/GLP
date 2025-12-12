@@ -1,34 +1,61 @@
-%% play_dm.glp - Direct Messaging Play
+%% play_dm.glp - Direct Messaging Channel Establishment Play
 %%
-%% Scenario: Alice and Bob are already friends with established friend channels.
-%% They establish a dedicated DM channel and exchange messages.
+%% Scenario: Alice and Bob are already friends (have established friend channels
+%% from prior cold-call). They establish a dedicated DM channel and exchange messages.
 %%
-%% The friend channels are pre-established (output of prior befriending).
-%% Friend channel: Alice writes to AliceToBob, Bob reads from it.
-%%                 Bob writes to BobToAlice, Alice reads from it.
+%% This play demonstrates:
+%% 1. Alice sends dm_request through friend channel to Bob
+%% 2. Bob receives request, creates DM channel pair, responds
+%% 3. Alice receives her DM channel endpoint via response variable
+%% 4. Both exchange messages on the DM channel
 
-%% Simplified play - just show channel establishment and message exchange
-play_dm :-
-    %% Establish DM channel directly
-    new_channel(AliceCh, BobCh),
+%% === Channel primitives ===
 
-    %% Alice sends greeting
-    dm_send(hello_bob, AliceCh?, AliceCh1),
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
-    %% Bob receives and replies
-    dm_receive(Msg, BobCh?, BobCh1),
-    dm_send(hello_alice, BobCh1?, _),
+dm_send(Msg, ch(In, [Msg?|Out?]), ch(In?, Out)).
 
-    %% Alice receives reply
-    dm_receive(Reply, AliceCh1?, _),
+dm_receive(Msg?, ch([Msg|In], Out?), ch(In?, Out)).
 
+%% === DM Protocol ===
+
+bind_resp(Ch?, Ch).
+
+%% === Alice's process ===
+%% Sends DM request, waits for channel, sends message, receives reply
+
+alice([dm_request(Resp)|_], FriendIn?, AliceResult?) :-
+    alice_continue(Resp?, FriendIn, AliceResult).
+
+alice_continue(DMCh, _, result(sent, Reply?)) :-
+    known(DMCh?) |
+    dm_send(hello_bob, DMCh?, DMCh1),
+    dm_receive(Reply, DMCh1?, _).
+
+%% === Bob's process ===
+%% Receives DM request, creates channel, responds, receives message, replies
+
+bob([dm_request(Resp)|_], _, BobResult?) :-
+    new_channel(BobDM, AliceDM),
+    bind_resp(Resp?, AliceDM?),
+    bob_continue(BobDM?, BobResult).
+
+bob_continue(DMCh, result(Msg?, replied)) :-
+    dm_receive(Msg, DMCh?, DMCh1),
+    dm_send(hello_alice, DMCh1?, _).
+
+%% === Result verification ===
+
+verify(result(sent, Reply), result(Msg, replied)) :-
     report(Msg?, Reply?).
 
-report(_, _).
+report(hello_bob, hello_alice).
 
-%% Channel primitives from channel_ops.glp
-new_channel(ch(Xs?,Ys), ch(Ys?,Xs)).
+%% === The Play ===
 
-%% DM primitives from dm_simple.glp
-dm_send(Msg, ch(In, [Msg?|Out?]), ch(In?, Out)).
-dm_receive(Msg?, ch([Msg|In], Out?), ch(In?, Out)).
+play_dm :-
+    %% Alice and Bob communicate through friend channel
+    %% FriendOut (Alice writes) connects to FriendIn (Bob reads)
+    alice(FriendOut, FriendIn?, AliceResult),
+    bob(FriendOut?, FriendIn, BobResult),
+    verify(AliceResult?, BobResult?).
