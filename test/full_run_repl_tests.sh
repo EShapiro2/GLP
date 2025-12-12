@@ -811,6 +811,58 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# --- Auto-generated reduce/2 Tests ---
+echo ""
+echo "--- Auto-generated reduce/2 Tests ---"
+
+# Test 8: reduce/2 for fact
+reduce_fact_output=$($DART run "$REPL" <<REDUCE_FACT
+reduce_test.glp
+reduce(hello(world), Body).
+:quit
+REDUCE_FACT
+2>&1)
+
+if echo "$reduce_fact_output" | grep -q "Body = true"; then
+    echo "PASS: reduce/2 for fact: hello(world) -> true"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: reduce/2 for fact (expected: Body = true)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test 9: reduce/2 for rule without guard
+reduce_rule_output=$($DART run "$REPL" <<REDUCE_RULE
+reduce_test.glp
+reduce(greet(foo, Y), Body).
+:quit
+REDUCE_RULE
+2>&1)
+
+if echo "$reduce_rule_output" | grep -qE "Body = :="; then
+    echo "PASS: reduce/2 for rule: greet(foo, Y) -> Body contains :="
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: reduce/2 for rule (expected: Body contains :=)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test 10: reduce/2 for guarded rule
+reduce_guarded_output=$($DART run "$REPL" <<REDUCE_GUARDED
+reduce_test.glp
+reduce(double(5, Y), Body).
+:quit
+REDUCE_GUARDED
+2>&1)
+
+if echo "$reduce_guarded_output" | grep -qE "Body = :=.*\*.*5.*2"; then
+    echo "PASS: reduce/2 for guarded rule: double(5, Y) -> Body contains 5*2"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: reduce/2 for guarded rule (expected: Body contains multiplication)"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""
