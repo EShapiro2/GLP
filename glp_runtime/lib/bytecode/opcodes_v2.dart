@@ -133,24 +133,21 @@ class SetVariable implements OpV2 {
 }
 
 // ============================================================================
-// GUARD PHASE - Unified Instructions
+// GUARD PHASE - Guard Instructions
 // ============================================================================
 
-/// Type test guard (unifies IfWriter and IfReader)
-/// Tests if variable has expected type (writer vs reader)
-/// Behavior depends on isReader flag:
-/// - isReader=false: Succeed if variable is a writer
-/// - isReader=true: Succeed if variable is a reader
-class IfVariable implements OpV2 {
+/// Test if variable is unbound (value unknown)
+/// Succeeds if the variable is unbound, fails if bound to any value.
+/// Used for dispatch based on binding status.
+class Unknown implements OpV2 {
   final int varIndex;    // clause variable index to test
-  final bool isReader;   // true to test for reader, false to test for writer
 
-  IfVariable(this.varIndex, {required this.isReader});
+  Unknown(this.varIndex);
 
-  String get mnemonic => isReader ? 'if_reader' : 'if_writer';
+  String get mnemonic => 'unknown';
 
   @override
-  String toString() => '$mnemonic(X$varIndex)';
+  String toString() => 'unknown(X$varIndex)';
 }
 
 // ============================================================================

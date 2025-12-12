@@ -541,30 +541,32 @@ class BytecodeRunner {
 
       // ===== v2 UNIFIED INSTRUCTIONS =====
 
-      // IfVariable: unified writer/reader type guard
-      if (op is opv2.IfVariable) {
+      // Unknown: test if variable is unbound (value unknown)
+      if (op is opv2.Unknown) {
         final term = cx.clauseVars[op.varIndex];
-        if (op.isReader) {
-          // Check if it's a reader
-          if (term is VarRef && term.isReader) {
-            pc++;
-            continue;
-          } else {
+        // Succeeds if variable is unbound (no value yet)
+        if (term is VarRef) {
+          // Check if variable is unbound in σ̂w or heap
+          if (cx.sigmaHat.containsKey(term.varId)) {
+            // Has tentative binding - not unknown
             _softFailToNextClause(cx, pc);
             pc = _findNextClauseTry(pc);
             continue;
           }
-        } else {
-          // Check if it's a writer
-          if (term is VarRef && !term.isReader) {
-            pc++;
-            continue;
-          } else {
+          if (cx.rt.heap.isBound(term.varId)) {
+            // Has heap binding - not unknown
             _softFailToNextClause(cx, pc);
             pc = _findNextClauseTry(pc);
             continue;
           }
+          // Unbound = unknown, succeed
+          pc++;
+          continue;
         }
+        // Non-variable is always known (bound to a value)
+        _softFailToNextClause(cx, pc);
+        pc = _findNextClauseTry(pc);
+        continue;
       }
 
       // HeadVariable: unified writer/reader structure variable (at S position)
@@ -4055,24 +4057,22 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
-      case 'writer':
-        // Per spec 19.4.5: Test if Xi is an unbound writer
+      case 'unknown':
+        // Test if argument is an unbound variable (value unknown)
+        // Succeeds if argument is an unbound variable, fails otherwise
         if (args.isEmpty) return GuardResult.failure;
         final arg = args[0];
-        if (arg is VarRef && !arg.isReader) {
-          final heapVal = cx.rt.heap.getValue(arg.varId);
-          if (heapVal == null) return GuardResult.success; // Unbound writer
+        if (arg is VarRef) {
+          // Check if variable is unbound in σ̂w or heap
+          if (cx.sigmaHat.containsKey(arg.varId)) {
+            return GuardResult.failure; // Has tentative binding
+          }
+          if (cx.rt.heap.isBound(arg.varId)) {
+            return GuardResult.failure; // Has heap binding
+          }
+          return GuardResult.success; // Unbound = unknown
         }
-        return GuardResult.failure;
-
-      case 'reader':
-        // Per spec 19.4.6: Test if Xi is an unbound reader
-        if (args.isEmpty) return GuardResult.failure;
-        final arg = args[0];
-        if (arg is VarRef && arg.isReader) {
-          final heapVal = cx.rt.heap.getValue(arg.varId);
-          if (heapVal == null) return GuardResult.success; // Unbound reader
-        }
+        // Non-variable is always known
         return GuardResult.failure;
 
       // Control guards
