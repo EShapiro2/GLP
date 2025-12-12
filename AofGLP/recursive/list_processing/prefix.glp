@@ -1,9 +1,9 @@
 %% prefix.glp - Prefixes of a list (AoP 3.13)
 %% prefix(Prefix,List) :- Prefix is a prefix of List.
 
-prefix([], Ys).
+prefix([], _).
 prefix([X|Xs], [X|Ys]) :- prefix(Xs?, Ys?).
 
 %% reduce clauses for metainterpreter
-reduce(prefix([], Ys), true).
+reduce(prefix([], _), true).
 reduce(prefix([X|Xs], [X|Ys]), prefix(Xs?, Ys?)).
