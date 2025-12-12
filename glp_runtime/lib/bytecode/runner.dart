@@ -7,6 +7,8 @@ import 'package:glp_runtime/runtime/commit.dart';
 import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/system_predicates.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
+import 'package:glp_runtime/runtime/module_runtime.dart' show ModuleGoalContext;
+import 'package:glp_runtime/runtime/module_messages.dart';
 import 'opcodes.dart';
 import 'opcodes_v2.dart' as opv2;
 
@@ -1687,17 +1689,17 @@ class BytecodeRunner {
               cx.sigmaHat[arg.varId] = VarRef(existing, isReader: true);
             } else {
               // First occurrence: goal writer vs head writer
-              // WxW check: if goal writer is UNBOUND, this is writer-to-writer = FAIL
-              if (!cx.rt.heap.isWriterBound(arg.varId)) {
-                if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable WxW FAIL - goal writer W${arg.varId} is unbound');
-                _softFailToNextClause(cx, pc);
-                pc = _findNextClauseTry(pc);
-                continue;
+              // Store the goal's writer reference - clause can bind through it
+              if (cx.rt.heap.isWriterBound(arg.varId)) {
+                // Goal writer already bound - use its value
+                final boundValue = cx.rt.heap.valueOfWriter(arg.varId);
+                if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable goal writer W${arg.varId} bound to $boundValue');
+                cx.clauseVars[varIndex] = boundValue;
+              } else {
+                // Goal writer unbound - store writer ref, clause can bind it later
+                if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable storing unbound goal writer W${arg.varId}');
+                cx.clauseVars[varIndex] = arg;
               }
-              // Goal writer is BOUND - use its value
-              final boundValue = cx.rt.heap.valueOfWriter(arg.varId);
-              if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable goal writer W${arg.varId} bound to $boundValue');
-              cx.clauseVars[varIndex] = boundValue;
             }
           } else if (arg is VarRef && arg.isReader) {
             final wid = cx.rt.heap.writerIdForReader(arg.varId);
@@ -2775,21 +2777,45 @@ class BytecodeRunner {
         // Static RPC to imported module at known index
         // Following FCP: distribute # {Index, Goal}
         //
-        // In full module runtime, this writes to import vector which
-        // routes via serve_import to target module.
-        // For now, log the RPC for debugging.
+        // Writes ExportMessage to import vector which routes via
+        // serve_import to target module's dispatcher.
         if (cx.inBody) {
-          if (cx.debugOutput) {
-            print('[MODULE] Distribute: import[${ op.importIndex}] # ${op.functor}/${op.arity}');
-          }
-          // Collect arguments
+          // Collect arguments from argSlots
           final args = <Term>[];
           for (int i = 0; i < op.arity; i++) {
             final arg = cx.argSlots[i];
             if (arg != null) args.add(arg);
           }
-          // TODO: When full module system is active, call handleDistribute
-          // For now, RPC is logged but not executed (module runtime not connected)
+
+          // Check if module context is available
+          if (cx.moduleContext is ModuleGoalContext) {
+            final modCtx = cx.moduleContext as ModuleGoalContext;
+            final vector = modCtx.module.importVector;
+
+            if (vector != null && op.importIndex <= vector.size) {
+              // Build and send ExportMessage
+              final message = ExportMessage.trust(
+                sourceModule: modCtx.module.name,
+                functor: op.functor,
+                arity: op.arity,
+                args: args,
+              );
+              vector.write(op.importIndex, message);
+
+              if (cx.debugOutput) {
+                print('[MODULE] Distribute: ${modCtx.module.name} -> import[${op.importIndex}] # ${op.functor}/${op.arity}');
+              }
+            } else {
+              if (cx.debugOutput) {
+                print('[MODULE] Distribute: No vector or index out of range for ${op.functor}/${op.arity}');
+              }
+            }
+          } else {
+            // No module context - log only (standalone execution)
+            if (cx.debugOutput) {
+              print('[MODULE] Distribute (no context): import[${op.importIndex}] # ${op.functor}/${op.arity}');
+            }
+          }
           cx.argSlots.clear();
         }
         pc++; continue;
@@ -2799,22 +2825,67 @@ class BytecodeRunner {
         // Dynamic RPC to module resolved at runtime
         // Following FCP: transmit # {ModuleVar, Goal}
         //
-        // In full module runtime, this resolves module name from variable,
-        // looks up in registry, and sends message to target.
+        // Resolves module name from variable, looks up in registry,
+        // sends ExportMessage directly to target module's input channel.
         if (cx.inBody) {
-          // Get module name from clause variable
-          final moduleVar = cx.clauseVars[op.moduleVarIndex];
-          if (cx.debugOutput) {
-            print('[MODULE] Transmit: X${op.moduleVarIndex}($moduleVar) # ${op.functor}/${op.arity}');
-          }
-          // Collect arguments
+          // Collect arguments from argSlots
           final args = <Term>[];
           for (int i = 0; i < op.arity; i++) {
             final arg = cx.argSlots[i];
             if (arg != null) args.add(arg);
           }
-          // TODO: When full module system is active, call handleTransmit
-          // For now, RPC is logged but not executed (module runtime not connected)
+
+          // Get module name from clause variable
+          final moduleVar = cx.clauseVars[op.moduleVarIndex];
+
+          // Check if module context is available
+          if (cx.moduleContext is ModuleGoalContext) {
+            final modCtx = cx.moduleContext as ModuleGoalContext;
+
+            // Resolve module name from variable
+            String? moduleName;
+            if (moduleVar is ConstTerm) {
+              moduleName = moduleVar.value?.toString();
+            } else if (moduleVar is VarRef) {
+              // Dereference variable to get bound value
+              final deref = cx.rt.heap.dereference(moduleVar);
+              if (deref is ConstTerm) {
+                moduleName = deref.value?.toString();
+              }
+            }
+
+            if (moduleName != null) {
+              // Look up target module in registry
+              final targetModule = modCtx.registry.lookup(moduleName);
+              if (targetModule != null) {
+                // Build and send ExportMessage directly to target
+                final message = ExportMessage.trust(
+                  sourceModule: modCtx.module.name,
+                  functor: op.functor,
+                  arity: op.arity,
+                  args: args,
+                );
+                targetModule.inputSink.add(message);
+
+                if (cx.debugOutput) {
+                  print('[MODULE] Transmit: ${modCtx.module.name} -> $moduleName # ${op.functor}/${op.arity}');
+                }
+              } else {
+                if (cx.debugOutput) {
+                  print('[MODULE] Transmit: Module "$moduleName" not found in registry');
+                }
+              }
+            } else {
+              if (cx.debugOutput) {
+                print('[MODULE] Transmit: Could not resolve module name from X${op.moduleVarIndex}');
+              }
+            }
+          } else {
+            // No module context - log only (standalone execution)
+            if (cx.debugOutput) {
+              print('[MODULE] Transmit (no context): X${op.moduleVarIndex}($moduleVar) # ${op.functor}/${op.arity}');
+            }
+          }
           cx.argSlots.clear();
         }
         pc++; continue;
