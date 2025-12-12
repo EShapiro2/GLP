@@ -560,11 +560,9 @@ bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProg
 
     loadedPrograms[filename] = program;
 
-    // Extract module metadata from source
-    final moduleInfo = _extractModuleInfo(source, program);
-    if (moduleInfo != null) {
-      loadedModules[moduleInfo.name] = moduleInfo;
-    }
+    // Extract module metadata from source (always registers, defaults name from filename)
+    final moduleInfo = _extractModuleInfo(source, program, filename);
+    loadedModules[moduleInfo.name] = moduleInfo;
 
     return true;
   } catch (e) {
@@ -574,13 +572,17 @@ bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProg
 }
 
 /// Extract module name and imports from GLP source
-ModuleInfo? _extractModuleInfo(String source, BytecodeProgram program) {
-  // Extract -module(name)
+/// If no -module declaration, derives name from filename
+ModuleInfo _extractModuleInfo(String source, BytecodeProgram program, String filename) {
+  // Extract -module(name) or default to filename-based name
+  String name;
   final moduleMatch = RegExp(r'-module\((\w+)\)\.').firstMatch(source);
-  if (moduleMatch == null) {
-    return null;  // Not a module file
+  if (moduleMatch != null) {
+    name = moduleMatch.group(1)!;
+  } else {
+    // Default: derive from filename (glp/math_module.glp → math_module)
+    name = _moduleNameFromFilename(filename);
   }
-  final name = moduleMatch.group(1)!;
 
   // Extract -import([...])
   final imports = <String>[];
@@ -593,6 +595,16 @@ ModuleInfo? _extractModuleInfo(String source, BytecodeProgram program) {
   }
 
   return ModuleInfo(name: name, program: program, imports: imports);
+}
+
+/// Derive module name from filename
+String _moduleNameFromFilename(String filename) {
+  // Remove path and extension: "glp/math_module.glp" → "math_module"
+  final baseName = filename.split('/').last;
+  if (baseName.endsWith('.glp')) {
+    return baseName.substring(0, baseName.length - 4);
+  }
+  return baseName;
 }
 
 /// Build ReplModuleContext for a module (if it has imports)
