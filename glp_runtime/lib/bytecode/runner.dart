@@ -2846,7 +2846,8 @@ class BytecodeRunner {
         }
 
         // If any arguments have unbound readers, suspend
-        if (unboundReaders.isNotEmpty) {
+        // EXCEPTION: 'unknown' guard specifically tests for unbound - don't suspend
+        if (unboundReaders.isNotEmpty && predicateName != 'unknown') {
           if (debug) {
             // print('[GUARD] SUSPEND - unbound readers: $unboundReaders');
           }
