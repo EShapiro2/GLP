@@ -128,24 +128,26 @@ All module declarations are **optional** for backwards compatibility:
 
 | Declaration | If Omitted | Behavior |
 |-------------|-----------|----------|
-| `-module(name)` | Name defaults to `_main` (or filename without extension) | Program works as single anonymous module |
+| `-module(name)` | Name defaults to filename without `.glp` extension | `math.glp` → module name `math` |
 | `-export([...])` | **All predicates are exported** | Full access to all procedures (like before modules) |
-| `-import([...])` | Empty import list `[]` | No static imports; can still use dynamic RPC via `M # Goal` |
+| `-import([...])` | Empty import list `[]` | Static RPC requires import; dynamic RPC (`Var? # Goal`) still works |
 
 **Examples:**
 
 ```glp
-%% This program has no module declarations - works exactly as before
+%% File: factorial.glp (no module declarations)
 factorial(0, 1).
 factorial(N, F?) :- N? > 0 | N1 := N? - 1, factorial(N1?, F1), F := N? * F1?.
 ```
 
 When compiled:
-- Module name: `_main`
+- Module name: `factorial` (from filename)
 - Exports: `{factorial/2}` (all procedures auto-exported)
 - Imports: `[]` (empty)
 
-**Note**: Even without `-import`, you can use dynamic RPC with `M # Goal` syntax - it will use the Transmit opcode for runtime module resolution.
+For REPL/in-memory compilation: module name defaults to `_main`.
+
+**Note**: Static RPC (`atom # goal`) requires the atom in `-import` list. Dynamic RPC (`Var? # goal`) uses Transmit opcode and works without import.
 
 ### 3.6 Module Resolution
 

@@ -23,6 +23,7 @@ import 'package:glp_runtime/runtime/module_messages.dart';
 import 'package:glp_runtime/runtime/module_loader.dart';
 
 /// Compile module source to LoadedModule
+/// [name] is the fallback name if no -module declaration (e.g., derived from filename)
 LoadedModule compileModule(String source, String name) {
   final lexer = Lexer(source);
   final tokens = lexer.tokenize();
@@ -52,8 +53,11 @@ LoadedModule compileModule(String source, String name) {
     }
   }
 
+  // Module name: from -module declaration, or fallback to parameter
+  final moduleName = module.name ?? name;
+
   return LoadedModule(
-    name: name,
+    name: moduleName,
     bytecode: bytecode,
     exports: exports,
     imports: module.importedModules,

@@ -131,9 +131,14 @@ class ModuleLoader {
     // Extract imports (default: empty list if no -import declarations)
     final imports = module.importedModules;
 
+    // Determine module name:
+    // 1. From -module(name) declaration if present
+    // 2. Otherwise, from filename parameter (derived from path)
+    final moduleName = module.name ?? name;
+
     // Create LoadedModule
     final loadedModule = LoadedModule(
-      name: name,
+      name: moduleName,
       bytecode: bytecode,
       exports: exports,
       imports: imports,
