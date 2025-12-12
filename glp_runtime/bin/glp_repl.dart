@@ -18,6 +18,15 @@ import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 
+/// Module info for REPL module tracking
+class ModuleInfo {
+  final String name;
+  final BytecodeProgram program;
+  final List<String> imports;
+
+  ModuleInfo({required this.name, required this.program, required this.imports});
+}
+
 void main() async {
   // Get git commit info
   final gitCommit = await _getGitCommit();
@@ -46,6 +55,9 @@ void main() async {
 
   // Track loaded programs
   final loadedPrograms = <String, BytecodeProgram>{};
+
+  // Track loaded modules (for module system support)
+  final loadedModules = <String, ModuleInfo>{};
 
   // Load stdlib files for system predicates
   final stdlibFiles = ['assign.glp', 'univ.glp', 'unify.glp', 'mwm.glp'];
@@ -149,7 +161,7 @@ void main() async {
     // Check if input is a .glp file to load
     if (trimmed.endsWith('.glp') && !trimmed.contains(' ')) {
       final filename = trimmed;
-      if (!loadProgram(filename, compiler, loadedPrograms)) {
+      if (!loadProgram(filename, compiler, loadedPrograms, loadedModules)) {
         continue;
       }
       print('✓ Loaded: $filename');
@@ -216,6 +228,108 @@ void main() async {
           final arity = goal.args.length;
           final args = goal.args;
 
+          // Handle remote goal (Module # Goal)
+          if (functor == '#' && args.length == 2) {
+            final moduleArg = args[0];
+            final goalArg = args[1];
+
+            // Resolve module name
+            String? moduleName;
+            if (moduleArg is ConstTerm) {
+              moduleName = moduleArg.value.toString();
+            } else if (moduleArg is VarTerm) {
+              // Look up variable value
+              final varName = moduleArg.name;
+              final writerId = varNameToId[varName];
+              if (writerId != null && runtime.heap.isBound(writerId)) {
+                final value = runtime.heap.dereference(rt.VarRef(writerId, isReader: false));
+                if (value is rt.ConstTerm) {
+                  moduleName = value.value.toString();
+                }
+              }
+              if (moduleName == null) {
+                print('Error: Module variable $varName is unbound or not an atom');
+                allSucceeded = false;
+                break;
+              }
+            }
+
+            if (moduleName == null) {
+              print('Error: Invalid module in remote goal');
+              allSucceeded = false;
+              break;
+            }
+
+            // Extract inner goal functor and args from goalArg
+            String innerFunctor;
+            List<Term> innerArgs;
+            if (goalArg is StructTerm) {
+              innerFunctor = goalArg.functor;
+              innerArgs = goalArg.args;
+            } else if (goalArg is ConstTerm) {
+              innerFunctor = goalArg.value.toString();
+              innerArgs = [];
+            } else {
+              print('Error: Invalid goal in remote goal');
+              allSucceeded = false;
+              break;
+            }
+
+            // Find target module and procedure
+            final targetModule = loadedModules[moduleName];
+            if (targetModule == null) {
+              print('Error: Module $moduleName not loaded');
+              allSucceeded = false;
+              break;
+            }
+
+            final procedureLabel = '$innerFunctor/${innerArgs.length}';
+            final entryPC = combinedProgram.labels[procedureLabel];
+            if (entryPC == null) {
+              print('Error: Predicate $procedureLabel not found in module $moduleName');
+              allSucceeded = false;
+              break;
+            }
+
+            // Set up arguments for inner goal
+            final argSlots = <int, rt.Term>{};
+            for (int i = 0; i < innerArgs.length; i++) {
+              final arg = innerArgs[i];
+              _setupConjunctionArg(runtime, arg, i, argSlots, queryVarWriters, varNameToId, debugOutput: debugOutput);
+            }
+
+            // Set up goal environment
+            final env = CallEnv(args: argSlots);
+            runtime.setGoalEnv(goalId, env);
+            runtime.setGoalProgram(goalId, 'main');
+
+            // Set module context for the remote call
+            final modCtx = _buildModuleContext(targetModule, loadedModules, combinedProgram: combinedProgram);
+            if (modCtx != null) {
+              runtime.setGoalModuleContext(goalId, modCtx);
+            }
+
+            scheduler.setQueryVarNames(queryVarWriters);
+            runtime.gq.enqueue(GoalRef(goalId, entryPC));
+            goalId++;
+
+            // Run until this goal completes
+            final result = await scheduler.drainAsyncWithStatus(
+              maxCycles: maxCycles,
+              debug: debugTrace,
+              showBindings: false,
+              debugOutput: debugOutput,
+            );
+
+            if (result.status == ExecutionStatus.failed) {
+              allSucceeded = false;
+              break;
+            } else if (result.status == ExecutionStatus.suspended) {
+              anySuspended = true;
+            }
+            continue; // Next goal
+          }
+
           // Find entry point for this goal
           final procedureLabel = '$functor/$arity';
           final entryPC = combinedProgram.labels[procedureLabel];
@@ -236,6 +350,15 @@ void main() async {
           final env = CallEnv(args: argSlots);
           runtime.setGoalEnv(goalId, env);
           runtime.setGoalProgram(goalId, 'main');
+
+          // Set module context if procedure belongs to a module with imports
+          final module = _findModuleForProcedure(procedureLabel, loadedModules);
+          if (module != null) {
+            final modCtx = _buildModuleContext(module, loadedModules, combinedProgram: combinedProgram);
+            if (modCtx != null) {
+              runtime.setGoalModuleContext(goalId, modCtx);
+            }
+          }
 
           // Set query variable names for display
           scheduler.setQueryVarNames(queryVarWriters);
@@ -344,6 +467,15 @@ void main() async {
       runtime.setGoalEnv(goalId, env);
       runtime.setGoalProgram(goalId, 'main');
 
+      // Set module context if procedure belongs to a module with imports
+      final module = _findModuleForProcedure(procedureLabel, loadedModules);
+      if (module != null) {
+        final modCtx = _buildModuleContext(module, loadedModules, combinedProgram: combinedProgram);
+        if (modCtx != null) {
+          runtime.setGoalModuleContext(goalId, modCtx);
+        }
+      }
+
       // Create scheduler and run
       final runner = BytecodeRunner(combinedProgram);
       final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
@@ -406,7 +538,7 @@ void _printStatus(ExecutionStatus status) {
   }
 }
 
-bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProgram> loadedPrograms) {
+bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProgram> loadedPrograms, Map<String, ModuleInfo> loadedModules) {
   try {
     // Support absolute paths or relative paths in glp/ subdirectory
     final File sourceFile;
@@ -427,6 +559,11 @@ bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProg
     final program = compiler.compile(source);
 
     loadedPrograms[filename] = program;
+
+    // Extract module metadata from source (always registers, defaults name from filename)
+    final moduleInfo = _extractModuleInfo(source, program, filename);
+    loadedModules[moduleInfo.name] = moduleInfo;
+
     return true;
   } catch (e) {
     print('Error loading $filename: $e');
@@ -434,6 +571,75 @@ bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProg
   }
 }
 
+/// Extract module name and imports from GLP source
+/// If no -module declaration, derives name from filename
+ModuleInfo _extractModuleInfo(String source, BytecodeProgram program, String filename) {
+  // Extract -module(name) or default to filename-based name
+  String name;
+  final moduleMatch = RegExp(r'-module\((\w+)\)\.').firstMatch(source);
+  if (moduleMatch != null) {
+    name = moduleMatch.group(1)!;
+  } else {
+    // Default: derive from filename (glp/math_module.glp → math_module)
+    name = _moduleNameFromFilename(filename);
+  }
+
+  // Extract -import([...])
+  final imports = <String>[];
+  final importMatch = RegExp(r'-import\(\[([^\]]*)\]\)\.').firstMatch(source);
+  if (importMatch != null) {
+    imports.addAll(importMatch.group(1)!
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty));
+  }
+
+  return ModuleInfo(name: name, program: program, imports: imports);
+}
+
+/// Derive module name from filename
+String _moduleNameFromFilename(String filename) {
+  // Remove path and extension: "glp/math_module.glp" → "math_module"
+  final baseName = filename.split('/').last;
+  if (baseName.endsWith('.glp')) {
+    return baseName.substring(0, baseName.length - 4);
+  }
+  return baseName;
+}
+
+/// Build ReplModuleContext for a module (if it has imports)
+ReplModuleContext? _buildModuleContext(ModuleInfo module, Map<String, ModuleInfo> loadedModules, {BytecodeProgram? combinedProgram}) {
+  if (module.imports.isEmpty) {
+    return null;  // No imports, no context needed
+  }
+
+  // Build import map: import index (1-based) -> target module
+  final imports = <int, ReplModuleTarget>{};
+  for (int i = 0; i < module.imports.length; i++) {
+    final importName = module.imports[i];
+    final target = loadedModules[importName];
+    if (target != null) {
+      imports[i + 1] = ReplModuleTarget(target.name, target.program);  // 1-based indexing
+    }
+  }
+
+  return ReplModuleContext(
+    moduleName: module.name,
+    imports: imports,
+    combinedProgram: combinedProgram,
+    programKey: 'main',
+  );
+}
+
+/// Find the module that defines a given procedure
+ModuleInfo? _findModuleForProcedure(String procedureLabel, Map<String, ModuleInfo> loadedModules) {
+  for (final module in loadedModules.values) {
+    if (module.program.labels.containsKey(procedureLabel)) {
+      return module;
+    }
+  }
+  return null;
+}
 
 void printHelp() {
   print('');

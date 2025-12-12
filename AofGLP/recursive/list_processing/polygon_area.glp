@@ -1,12 +1,12 @@
 %% polygon_area.glp - Computing the area of polygons (AoP 8.8)
 %% area(Chain,Area) :- Area is the area of the polygon enclosed by the list of points Chain.
 
-area([Tuple], 0).
+area([_], 0).
 area([(X1,Y1), (X2,Y2) | XYs], Area) :-
     area([(X2?,Y2?) | XYs?], Area1),
     Area := (X1? * Y2? - Y1? * X2?) / 2 + Area1?.
 
 %% reduce clauses for metainterpreter
-reduce(area([Tuple], 0), true).
+reduce(area([_], 0), true).
 reduce(area([(X1,Y1), (X2,Y2) | XYs], Area),
     (area([(X2?,Y2?) | XYs?], Area1), Area := (X1? * Y2? - Y1? * X2?) / 2 + Area1?)).

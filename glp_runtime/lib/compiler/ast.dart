@@ -282,6 +282,7 @@ class Module extends AstNode {
   final List<ImportDeclaration> imports;
   final List<ModeDeclaration> modeDeclarations;
   final List<Procedure> procedures;
+  final bool isStdlib;  // true if -stdlib. declaration present
 
   Module({
     this.declaration,
@@ -289,6 +290,7 @@ class Module extends AstNode {
     this.imports = const [],
     this.modeDeclarations = const [],
     this.procedures = const [],
+    this.isStdlib = false,
     required int line,
     required int column,
   }) : super(line, column);

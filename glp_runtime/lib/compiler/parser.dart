@@ -28,6 +28,7 @@ class Parser {
     ModuleDeclaration? moduleDecl;
     final exports = <ExportDeclaration>[];
     final imports = <ImportDeclaration>[];
+    bool isStdlib = false;
 
     // Parse declarations at the start of the file
     while (!_isAtEnd() && _check(TokenType.MINUS)) {
@@ -50,6 +51,12 @@ class Parser {
           _consume(TokenType.RPAREN, 'Expected ")" after module name');
           _consume(TokenType.DOT, 'Expected "." after module declaration');
           moduleDecl = ModuleDeclaration(name, startLine, startCol);
+          break;
+
+        case 'stdlib':
+          // -stdlib. declaration - marks this file as stdlib (no reduce generation)
+          _consume(TokenType.DOT, 'Expected "." after stdlib declaration');
+          isStdlib = true;
           break;
 
         case 'export':
@@ -98,6 +105,7 @@ class Parser {
       imports: imports,
       modeDeclarations: modeDeclarations,
       procedures: procedures,
+      isStdlib: isStdlib,
       line: 1,
       column: 1,
     );
@@ -375,6 +383,22 @@ class Parser {
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
         final term = _parseTerm();
         return Goal('=', [varTerm, term], varToken.line, varToken.column);
+      } else if (tokens.length > _current + 1 && tokens[_current + 1].type == TokenType.HASH) {
+        // Dynamic remote goal: Var # Goal (e.g., M? # factorial(5, R))
+        _advance(); // consume variable
+        _advance(); // consume #
+        // Negation not allowed on remote goals
+        if (negated) {
+          throw CompileError(
+            'Guard negation (~) cannot be applied to remote goal',
+            negLine,
+            negColumn,
+            phase: 'parser'
+          );
+        }
+        final moduleTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
+        final innerGoal = _parseGoal();
+        return RemoteGoal(moduleTerm, innerGoal, varToken.line, varToken.column);
       }
     }
 

@@ -181,11 +181,36 @@ bob(Xbob?).
 level1(Xlv1?).
 level2([Xlv2?|Rlv2]).
 level3([wrapper(Xlv3?)|Rlv3]).
-# DISABLED: Defined guards not yet implemented via proper partial evaluation
-# test(ch(Adg?, Bdg), Rdg1).
-# test(foo, Rdg2).
-# test(Xdg?, Rdg3).
+# Defined guards via partial evaluation
+test(ch(Adg?, Bdg), Rdg1).
+test(foo, Rdg2).
+test(Xdg?, Rdg3).
 assign_reader(Rar?, Xar).
+# Channel operations as defined guards
+test_channel_guards.glp
+make_pair(ch(Achg?, Bchg), Rchg).
+# Comprehensive defined guards test suite
+test_defined_guards_all.glp
+make_pair(Call1, Call2).
+bind_response(yes, RespYes, LocalYes).
+bind_response(no, RespNo, LocalNo).
+test_channel(ch(TchA?, TchB), TchR1).
+test_channel(foo, TchR2).
+test_channel(p(TpaA, TpaB), TchR3).
+test_pair(p(TprA, TprB), TprR1).
+test_pair(foo, TprR2).
+test_wrapper(w(TwrX), TwrR1).
+test_wrapper(foo, TwrR2).
+test_nested(w(p(TnA, TnB)), TnR1).
+test_nested(w(hello), TnR2).
+test_nested(foo, TnR3).
+test_wrap(hello, TwpR).
+test_deep(foo, TdpR).
+test_triple(1, 2, TtrR).
+relay_send([], RsOut, ch([], [])).
+relay_recv([], RrOut, ch([], [])).
+relay([], RelayOut, ch([], [])).
+switch2x2(ch([], SwA), ch([], SwB), ch(SwC, []), ch(SwD, [])).
 :quit
 REPL_INPUT
 2>&1)
@@ -375,10 +400,37 @@ declare -a tests=(
     "Suspend level2 nested:level2(.*) → suspended"
     "Suspend level3 deep nested:level3(.*) → suspended"
 
-    # DISABLED: Defined guards not yet implemented via proper partial evaluation
-    # "Defined guard match:Rdg1 = ok"
-    # "Defined guard fail:Rdg2 = not_channel"
-    # "Defined guard suspend:test(X.*, Rdg3) → suspended"
+    # Defined guards via partial evaluation
+    "Defined guard match:Rdg1 = ok"
+    "Defined guard fail:Rdg2 = not_channel"
+    "Defined guard suspend:test(X.*, Rdg3) → suspended"
+
+    # Channel operations as defined guards
+    "Channel make_pair:Rchg = ch("
+
+    # Comprehensive defined guards test suite
+    "DG make_pair creates channels:Call1 = ch("
+    "DG bind_response yes:RespYes = accept(ch("
+    "DG bind_response yes local:LocalYes = ch("
+    "DG bind_response no:RespNo = no"
+    "DG bind_response no local:LocalNo = none"
+    "DG channel test success:TchR1 = ok"
+    "DG channel test fail atom:TchR2 = not_channel"
+    "DG channel test fail pair:TchR3 = not_channel"
+    "DG pair test success:TprR1 = ok"
+    "DG pair test fail:TprR2 = not_pair"
+    "DG wrapper test success:TwrR1 = ok"
+    "DG wrapper test fail:TwrR2 = not_wrapper"
+    "DG nested wrapper with pair:TnR1 = wrapper_with_pair"
+    "DG nested just wrapper:TnR2 = just_wrapper"
+    "DG nested neither:TnR3 = neither"
+    "DG wrap binding:TwpR = wrapped(hello)"
+    "DG deep binding:TdpR = outer(inner(foo))"
+    "DG triple binding:TtrR = pair(1, 2)"
+    "DG relay_send base:RsOut = \[\]"
+    "DG relay_recv base:RrOut = \[\]"
+    "DG relay base:RelayOut = \[\]"
+    "DG switch2x2 base:switch2x2(.*) :- true"
 
     # Goal reader vs head writer (should succeed, not suspend)
     "Goal reader to head writer:assign_reader(.*) :- true"
@@ -629,6 +681,185 @@ if echo "$true_guard_output" | grep -q '"true" is not a guard'; then
     PASS=$((PASS + 1))
 else
     echo "FAIL: true in guard position should be rejected"
+    FAIL=$((FAIL + 1))
+fi
+
+# --- Module RPC Tests ---
+echo ""
+echo "--- Module RPC Tests ---"
+
+module_output=$($DART run "$REPL" <<MODULE_INPUT
+mod_a.glp
+main_mod.glp
+test(R).
+:quit
+MODULE_INPUT
+2>&1)
+
+if echo "$module_output" | grep -q "R = 10"; then
+    echo "PASS: Cross-module RPC: mod_a # double(5, R) returns R = 10"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Cross-module RPC: mod_a # double(5, R) (expected: R = 10)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$module_output" | grep -q "→ succeeds"; then
+    echo "PASS: Cross-module RPC succeeds"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Cross-module RPC should succeed"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test 2: Recursive RPC - math#factorial
+factorial_output=$($DART run "$REPL" <<FACTORIAL_INPUT
+test_modules/math.glp
+test_modules/main.glp
+test_factorial(R).
+:quit
+FACTORIAL_INPUT
+2>&1)
+
+if echo "$factorial_output" | grep -q "R = 120"; then
+    echo "PASS: Recursive RPC: math#factorial(5) returns R = 120"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Recursive RPC: math#factorial(5) (expected: R = 120)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test 3: Chain RPC - A→B→C
+chain_output=$($DART run "$REPL" <<CHAIN_INPUT
+test_modules/utils.glp
+test_modules/chain_b.glp
+test_modules/chain_a.glp
+run(4, R).
+:quit
+CHAIN_INPUT
+2>&1)
+
+if echo "$chain_output" | grep -q "R = 12"; then
+    echo "PASS: Chain RPC: A→B→C (4*3=12)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Chain RPC: A→B→C (expected: R = 12)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test 4: Missing module - RPC suspends
+missing_output=$($DART run "$REPL" <<MISSING_INPUT
+test_modules/main.glp
+test_double(R).
+:quit
+MISSING_INPUT
+2>&1)
+
+if echo "$missing_output" | grep -q "suspended"; then
+    echo "PASS: Missing module: RPC suspends"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Missing module should suspend (got: $missing_output)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test 5: Unexported procedure - error
+unexported_output=$($DART run "$REPL" <<UNEXPORTED_INPUT
+test_modules/math.glp
+math # private_helper(X).
+:quit
+UNEXPORTED_INPUT
+2>&1)
+
+if echo "$unexported_output" | grep -qE "unknown|not exported|error|Error|not found"; then
+    echo "PASS: Unexported procedure rejected"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Unexported procedure should be rejected"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test 6: Backwards compatibility - no module declaration
+compat_output=$($DART run "$REPL" <<COMPAT_INPUT
+factorial.glp
+factorial(5, R).
+:quit
+COMPAT_INPUT
+2>&1)
+
+if echo "$compat_output" | grep -q "R = 120"; then
+    echo "PASS: Backwards compat: no module decl works"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Backwards compat: factorial(5) should return 120"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test 7: Dynamic RPC - module as variable
+dynamic_output=$($DART run "$REPL" <<DYNAMIC_INPUT
+test_modules/math.glp
+M = math, M? # double(7, R).
+:quit
+DYNAMIC_INPUT
+2>&1)
+
+if echo "$dynamic_output" | grep -q "R = 14"; then
+    echo "PASS: Dynamic RPC: M? # double(7, R) returns R = 14"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Dynamic RPC: M? # double(7, R) (expected: R = 14)"
+    FAIL=$((FAIL + 1))
+fi
+
+# --- Auto-generated reduce/2 Tests ---
+echo ""
+echo "--- Auto-generated reduce/2 Tests ---"
+
+# Test 8: reduce/2 for fact
+reduce_fact_output=$($DART run "$REPL" <<REDUCE_FACT
+reduce_test.glp
+reduce(hello(world), Body).
+:quit
+REDUCE_FACT
+2>&1)
+
+if echo "$reduce_fact_output" | grep -q "Body = true"; then
+    echo "PASS: reduce/2 for fact: hello(world) -> true"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: reduce/2 for fact (expected: Body = true)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test 9: reduce/2 for rule without guard
+reduce_rule_output=$($DART run "$REPL" <<REDUCE_RULE
+reduce_test.glp
+reduce(greet(foo, Y), Body).
+:quit
+REDUCE_RULE
+2>&1)
+
+if echo "$reduce_rule_output" | grep -qE "Body = :="; then
+    echo "PASS: reduce/2 for rule: greet(foo, Y) -> Body contains :="
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: reduce/2 for rule (expected: Body contains :=)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test 10: reduce/2 for guarded rule
+reduce_guarded_output=$($DART run "$REPL" <<REDUCE_GUARDED
+reduce_test.glp
+reduce(double(5, Y), Body).
+:quit
+REDUCE_GUARDED
+2>&1)
+
+if echo "$reduce_guarded_output" | grep -qE "Body = :=.*\*.*5.*2"; then
+    echo "PASS: reduce/2 for guarded rule: double(5, Y) -> Body contains 5*2"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: reduce/2 for guarded rule (expected: Body contains multiplication)"
     FAIL=$((FAIL + 1))
 fi
 
