@@ -1,12 +1,15 @@
-# Bug: Module name defaults not working
+# Bug: Module name defaults not working (PARTIALLY FIXED)
 
 **Date:** December 2025
-**Severity:** Medium
+**Severity:** Low (workaround available)
 **Component:** REPL module system
+**Status:** Partially fixed - `-module(name)` now defaults to filename, but `-import([...])` is still required
 
 ## Summary
 
-Module RPC requires explicit `-module(name).` declaration. Files without this declaration are not registered as modules, causing RPC calls to silently fail.
+~~Module RPC requires explicit `-module(name).` declaration.~~ **FIXED:** Module name now defaults to filename.
+
+**Still Required:** The importing module must have `-import([module_names]).` declaration for module context to be built.
 
 ## Current Behavior
 
