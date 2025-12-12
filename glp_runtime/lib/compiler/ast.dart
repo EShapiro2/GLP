@@ -229,17 +229,65 @@ class RemoteGoal extends Goal {
   }
 }
 
+// ============================================================================
+// Polymorphic Moded Types (PMT) AST Nodes
+// ============================================================================
+
+/// Mode declaration: TypeName(Params) := predicate(ModedArg, ...).
+/// Example: Merge(A) := merge(List(A)?, List(A)?, List(A)).
+class ModeDeclaration extends AstNode {
+  final String typeName;           // e.g., "Merge"
+  final List<String> typeParams;   // e.g., ["A"]
+  final String predicate;          // e.g., "merge"
+  final List<ModedArg> args;       // e.g., [reader, reader, writer]
+
+  ModeDeclaration(
+    this.typeName,
+    this.typeParams,
+    this.predicate,
+    this.args,
+    int line,
+    int column,
+  ) : super(line, column);
+
+  int get arity => args.length;
+  String get signature => '$predicate/$arity';
+
+  @override
+  String toString() {
+    final paramsStr = typeParams.isEmpty ? '' : '(${typeParams.join(", ")})';
+    return '$typeName$paramsStr := $predicate(${args.join(", ")}).';
+  }
+}
+
+/// Moded argument in a mode declaration
+/// Example: List(A)? is ModedArg("List", ["A"], isReader: true)
+class ModedArg {
+  final String typeName;           // e.g., "List" or "Num"
+  final List<String> typeParams;   // e.g., ["A"]
+  final bool isReader;             // true if T?, false if T
+
+  ModedArg(this.typeName, this.typeParams, {required this.isReader});
+
+  @override
+  String toString() => isReader ? '$typeName${_paramsStr}?' : '$typeName$_paramsStr';
+
+  String get _paramsStr => typeParams.isEmpty ? '' : '(${typeParams.join(", ")})';
+}
+
 /// Complete module structure
 class Module extends AstNode {
   final ModuleDeclaration? declaration;
   final List<ExportDeclaration> exports;
   final List<ImportDeclaration> imports;
+  final List<ModeDeclaration> modeDeclarations;
   final List<Procedure> procedures;
 
   Module({
     this.declaration,
     this.exports = const [],
     this.imports = const [],
+    this.modeDeclarations = const [],
     this.procedures = const [],
     required int line,
     required int column,
