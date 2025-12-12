@@ -1,0 +1,11 @@
+-module(meta).
+-export([run/2]).
+
+run(true, _Module).
+run((A, B), Module) :-
+    known(A?), known(B?), ground(Module?) |
+    run(A?, Module?), run(B?, Module?).
+run(Goal, Module) :-
+    ground(Module?), constant(Module?), otherwise |
+    Module? # reduce(Goal?, Body),
+    run(Body?, Module?).
