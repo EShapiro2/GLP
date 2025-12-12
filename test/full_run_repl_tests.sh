@@ -181,11 +181,36 @@ bob(Xbob?).
 level1(Xlv1?).
 level2([Xlv2?|Rlv2]).
 level3([wrapper(Xlv3?)|Rlv3]).
-# DISABLED: Defined guards not yet implemented via proper partial evaluation
-# test(ch(Adg?, Bdg), Rdg1).
-# test(foo, Rdg2).
-# test(Xdg?, Rdg3).
+# Defined guards via partial evaluation
+test(ch(Adg?, Bdg), Rdg1).
+test(foo, Rdg2).
+test(Xdg?, Rdg3).
 assign_reader(Rar?, Xar).
+# Channel operations as defined guards
+test_channel_guards.glp
+make_pair(ch(Achg?, Bchg), Rchg).
+# Comprehensive defined guards test suite
+test_defined_guards_all.glp
+make_pair(Call1, Call2).
+bind_response(yes, RespYes, LocalYes).
+bind_response(no, RespNo, LocalNo).
+test_channel(ch(TchA?, TchB), TchR1).
+test_channel(foo, TchR2).
+test_channel(p(TpaA, TpaB), TchR3).
+test_pair(p(TprA, TprB), TprR1).
+test_pair(foo, TprR2).
+test_wrapper(w(TwrX), TwrR1).
+test_wrapper(foo, TwrR2).
+test_nested(w(p(TnA, TnB)), TnR1).
+test_nested(w(hello), TnR2).
+test_nested(foo, TnR3).
+test_wrap(hello, TwpR).
+test_deep(foo, TdpR).
+test_triple(1, 2, TtrR).
+relay_send([], RsOut, ch([], [])).
+relay_recv([], RrOut, ch([], [])).
+relay([], RelayOut, ch([], [])).
+switch2x2(ch([], SwA), ch([], SwB), ch(SwC, []), ch(SwD, [])).
 :quit
 REPL_INPUT
 2>&1)
@@ -375,10 +400,37 @@ declare -a tests=(
     "Suspend level2 nested:level2(.*) → suspended"
     "Suspend level3 deep nested:level3(.*) → suspended"
 
-    # DISABLED: Defined guards not yet implemented via proper partial evaluation
-    # "Defined guard match:Rdg1 = ok"
-    # "Defined guard fail:Rdg2 = not_channel"
-    # "Defined guard suspend:test(X.*, Rdg3) → suspended"
+    # Defined guards via partial evaluation
+    "Defined guard match:Rdg1 = ok"
+    "Defined guard fail:Rdg2 = not_channel"
+    "Defined guard suspend:test(X.*, Rdg3) → suspended"
+
+    # Channel operations as defined guards
+    "Channel make_pair:Rchg = ch("
+
+    # Comprehensive defined guards test suite
+    "DG make_pair creates channels:Call1 = ch("
+    "DG bind_response yes:RespYes = accept(ch("
+    "DG bind_response yes local:LocalYes = ch("
+    "DG bind_response no:RespNo = no"
+    "DG bind_response no local:LocalNo = none"
+    "DG channel test success:TchR1 = ok"
+    "DG channel test fail atom:TchR2 = not_channel"
+    "DG channel test fail pair:TchR3 = not_channel"
+    "DG pair test success:TprR1 = ok"
+    "DG pair test fail:TprR2 = not_pair"
+    "DG wrapper test success:TwrR1 = ok"
+    "DG wrapper test fail:TwrR2 = not_wrapper"
+    "DG nested wrapper with pair:TnR1 = wrapper_with_pair"
+    "DG nested just wrapper:TnR2 = just_wrapper"
+    "DG nested neither:TnR3 = neither"
+    "DG wrap binding:TwpR = wrapped(hello)"
+    "DG deep binding:TdpR = outer(inner(foo))"
+    "DG triple binding:TtrR = pair(1, 2)"
+    "DG relay_send base:RsOut = \[\]"
+    "DG relay_recv base:RrOut = \[\]"
+    "DG relay base:RelayOut = \[\]"
+    "DG switch2x2 base:switch2x2(.*) :- true"
 
     # Goal reader vs head writer (should succeed, not suspend)
     "Goal reader to head writer:assign_reader(.*) :- true"

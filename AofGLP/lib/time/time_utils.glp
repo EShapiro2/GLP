@@ -3,7 +3,7 @@
 %%
 %% Time predicate for timestamping execution events.
 
-current_time(T) :- time(T).
+current_time(T?) :- time(T) | true.
 
 %% time(T) is a built-in guard that binds T to current timestamp.
 %% Used in tracing and execution tree metainterpreters.

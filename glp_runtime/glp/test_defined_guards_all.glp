@@ -1,0 +1,75 @@
+% ============================================================
+% Comprehensive Defined Guards Test Suite
+% All examples from docs/defined-guards-book-examples.md
+% ============================================================
+
+% === Unit Clause Definitions (Defined Guards) ===
+
+% Channel operations
+send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+% Type tests
+channel(ch(_, _)).
+pair(p(_, _)).
+wrapper(w(_)).
+
+% === Example 1: make_pair ===
+make_pair(C1?, C2?) :- new_channel(C1, C2) | true.
+
+% === Example 2: relay_send ===
+relay_send([X|In1], Out?, Ch) :- send(X?, Ch?, Ch1) | relay_send(In1?, Out, Ch1?).
+relay_send([], [], ch([], [])).
+
+% === Example 3: relay_recv ===
+relay_recv(In?, [X?|Out1?], Ch) :- receive(X, Ch?, Ch1) | relay_recv(In, Out1, Ch1?).
+relay_recv([], [], ch([], [])).
+
+% === Example 4: relay (full bidirectional) ===
+relay([X|In1], Out?, Ch) :- send(X?, Ch?, Ch1) | relay(In1?, Out, Ch1?).
+relay(In?, [X?|Out1?], Ch) :- receive(X, Ch?, Ch1) | relay(In, Out1, Ch1?).
+relay([], [], ch([], [])).
+
+% === Example 5: bind_response ===
+bind_response(yes, accept(RemoteCh?), LocalCh?) :- new_channel(LocalCh, RemoteCh) | true.
+bind_response(no, no, none).
+
+% === Example 6: switch2x2 (first two clauses) ===
+switch2x2(In1, In2?, Out1, Out2?) :-
+    receive(M, In1?, Ins1), send(M?, Out1?, Outs1) |
+    switch2x2(Ins1?, In2, Outs1?, Out2).
+switch2x2(In1?, In2, Out1, Out2?) :-
+    receive(M, In2?, Ins2), send(M?, Out1?, Outs1) |
+    switch2x2(In1, Ins2?, Outs1?, Out2).
+switch2x2(ch([], _), ch([], _), ch(_, []), ch(_, [])).
+
+% === Example 7: channel type test ===
+test_channel(X, ok) :- channel(X?) | true.
+test_channel(_, not_channel) :- otherwise | true.
+
+% === Example 8: pair type test ===
+test_pair(X, ok) :- pair(X?) | true.
+test_pair(_, not_pair) :- otherwise | true.
+
+% === Example 9: wrapper type test ===
+test_wrapper(X, ok) :- wrapper(X?) | true.
+test_wrapper(_, not_wrapper) :- otherwise | true.
+
+% === Example 10: nested structure test ===
+% Test wrapper containing a pair
+test_nested(w(p(_, _)), wrapper_with_pair) :- true.
+test_nested(w(_), just_wrapper) :- otherwise | true.
+test_nested(_, neither) :- otherwise | true.
+
+% === Example 11: binding construction ===
+wrap(X, wrapped(X?)).
+test_wrap(X, Y?) :- wrap(X?, Y) | true.
+
+% === Example 12: deep binding ===
+deep(X, outer(inner(X?))).
+test_deep(X, Y?) :- deep(X?, Y) | true.
+
+% === Example 13: triple binding ===
+triple(X, Y, pair(X?, Y?)).
+test_triple(A, B, C?) :- triple(A?, B?, C) | true.
