@@ -17,6 +17,8 @@ import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
+import 'package:glp_runtime/compiler/partial_evaluator.dart';
+import 'package:glp_runtime/compiler/glp_printer.dart';
 
 /// Module info for REPL module tracking
 class ModuleInfo {
@@ -154,6 +156,85 @@ void main() async {
         for (int i = 0; i < prog.ops.length; i++) {
           print('  ${i.toString().padLeft(4)}: ${prog.ops[i]}');
         }
+      }
+      continue;
+    }
+
+    // :pe - Partial evaluation command
+    if (trimmed.startsWith(':pe')) {
+      final parts = trimmed.split(RegExp(r'\s+'));
+      String? inputFile;
+
+      if (parts.length > 1) {
+        inputFile = parts[1];
+      } else if (loadedPrograms.isNotEmpty) {
+        // Use last loaded file
+        inputFile = loadedPrograms.keys.last;
+        inputFile = 'glp/$inputFile';
+      }
+
+      if (inputFile == null) {
+        print('Usage: :pe [filename.glp]');
+        print('No file loaded and no file specified');
+        continue;
+      }
+
+      // Ensure path starts with glp/ if not absolute
+      if (!inputFile.startsWith('/') && !inputFile.startsWith('glp/')) {
+        inputFile = 'glp/$inputFile';
+      }
+
+      final outputFile = inputFile.replaceAll('.glp', '_specialized.glp');
+
+      try {
+        final file = File(inputFile);
+        if (!file.existsSync()) {
+          print('Error: File not found: $inputFile');
+          continue;
+        }
+
+        final source = file.readAsStringSync();
+        final lexer = Lexer(source);
+        final tokens = lexer.tokenize();
+        final parser = Parser(tokens);
+        final program = parser.parse();
+
+        // Count initial clauses
+        int initialClauses = 0;
+        for (final proc in program.procedures) {
+          initialClauses += proc.clauses.length;
+        }
+
+        print('Partial Evaluating: $inputFile');
+        print('  Initial: $initialClauses clauses');
+
+        // Stage 1: Defined guards
+        final pe = PartialEvaluator();
+        final stage1 = pe.transformDefinedGuards(program);
+        int stage1Clauses = 0;
+        for (final proc in stage1.procedures) {
+          stage1Clauses += proc.clauses.length;
+        }
+        print('  Stage 1 (guards): $stage1Clauses clauses');
+
+        // Stage 2: reduce/2 unfolding
+        final stage2 = pe.unfoldReduceCalls(stage1);
+        int stage2Clauses = 0;
+        for (final proc in stage2.procedures) {
+          stage2Clauses += proc.clauses.length;
+        }
+        print('  Stage 2 (reduce): $stage2Clauses clauses');
+
+        // Serialize
+        final printer = GlpPrinter();
+        final output = printer.printProgram(stage2);
+
+        // Write output
+        File(outputFile).writeAsStringSync(output);
+        print('Written to: $outputFile');
+
+      } catch (e) {
+        print('Error during partial evaluation: $e');
       }
       continue;
     }
@@ -642,6 +723,7 @@ void printHelp() {
   print('  :debug, :d             Toggle DEBUG output');
   print('  :limit <n>             Set goal reduction limit to <n>');
   print('  :bytecode, :bc         Show loaded bytecode');
+  print('  :pe [file.glp]         Partial evaluate (unfold reduce/2)');
   print('');
   print('File Organization:');
   print('  glp/           GLP source files (.glp)');
