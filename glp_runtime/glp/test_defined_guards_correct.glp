@@ -12,11 +12,13 @@ new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 make_pair(C1?, C2?) :- new_channel(C1, C2) | true.
 
 % --- Example 2: relay with send ---
-relay_send([X|In1], Out?, Ch) :- send(X?, Ch?, Ch1) | relay_send(In1?, Out?, Ch1?).
+% Out? in head (reader), Out in body (writer)
+relay_send([X|In1], Out?, Ch) :- send(X?, Ch?, Ch1) | relay_send(In1?, Out, Ch1?).
 relay_send([], [], ch([], [])).
 
 % --- Example 3: relay with receive ---
-relay_recv(In?, [X?|Out1?], Ch) :- receive(X, Ch?, Ch1) | relay_recv(In?, Out1, Ch1?).
+% In? in head (reader from caller), In in body (writer for recursive)
+relay_recv(In?, [X?|Out1?], Ch) :- receive(X, Ch?, Ch1) | relay_recv(In, Out1, Ch1?).
 relay_recv([], [], ch([], [])).
 
 % --- Example 4: bind_response ---
@@ -25,6 +27,6 @@ bind_response(yes, From?, accept(RemoteCh?), LocalCh?) :-
 bind_response(no, _, no, none).
 
 % --- Example 5: Combined relay ---
-relay([X|In1], Out?, Ch) :- send(X?, Ch?, Ch1) | relay(In1?, Out?, Ch1?).
-relay(In, [X?|Out1?], Ch) :- receive(X, Ch?, Ch1) | relay(In?, Out1, Ch1?).
+relay([X|In1], Out?, Ch) :- send(X?, Ch?, Ch1) | relay(In1?, Out, Ch1?).
+relay(In?, [X?|Out1?], Ch) :- receive(X, Ch?, Ch1) | relay(In, Out1, Ch1?).
 relay([], [], ch([], [])).
