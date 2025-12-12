@@ -185,6 +185,9 @@ class RunnerContext {
   // Custom term formatter for consistent variable naming
   final String Function(Term, {bool markReaders})? termFormatter;
 
+  // Module context for distribute/transmit handlers (Phase 5 integration)
+  final Object? moduleContext;
+
   RunnerContext({
     required this.rt,
     required this.goalId,
@@ -197,6 +200,7 @@ class RunnerContext {
     this.showBindings = true,
     this.debugOutput = false,
     this.termFormatter,
+    this.moduleContext,
   }) : env = env ?? CallEnv();
 
   void clearClause() {
