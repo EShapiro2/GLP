@@ -4058,21 +4058,29 @@ class BytecodeRunner {
         return GuardResult.failure;
 
       case 'unknown':
-        // Test if argument is an unbound variable (value unknown)
-        // Succeeds if argument is an unbound variable, fails otherwise
+        // Test if dereferencing leads to an unbound variable
+        // Per spec: "Succeeds if X is bound to an unbound variable"
+        // This means we follow the binding chain to its end
         if (args.isEmpty) return GuardResult.failure;
-        final arg = args[0];
-        if (arg is VarRef) {
-          // Check if variable is unbound in σ̂w or heap
-          if (cx.sigmaHat.containsKey(arg.varId)) {
-            return GuardResult.failure; // Has tentative binding
+        Object? value = args[0];
+
+        // Follow binding chain to end
+        while (value is VarRef) {
+          final varId = value.varId;
+          // Check σ̂w first
+          if (cx.sigmaHat.containsKey(varId)) {
+            value = cx.sigmaHat[varId];
+            continue;
           }
-          if (cx.rt.heap.isBound(arg.varId)) {
-            return GuardResult.failure; // Has heap binding
+          // Check heap
+          if (cx.rt.heap.isBound(varId)) {
+            value = cx.rt.heap.getValue(varId);
+            continue;
           }
-          return GuardResult.success; // Unbound = unknown
+          // Reached an unbound variable → SUCCESS
+          return GuardResult.success;
         }
-        // Non-variable is always known
+        // Dereferenced to a non-variable (ground term) → FAILURE
         return GuardResult.failure;
 
       // Control guards
