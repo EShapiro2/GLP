@@ -1,0 +1,16 @@
+% Unit clause (defined guard)
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+% Test 1: bind_response pattern
+% The guard new_channel(ch(FIn, FOut), FCh) should:
+% - Bind FCh to ch(FOut?, FIn) in head
+% - Allow ch(FIn?, FOut) to be used in body
+
+bind_response_test(From, accept(FCh), Result?) :-
+    new_channel(ch(FIn, FOut), FCh) |
+    use_channel(From?, ch(FIn?, FOut?), Result).
+
+use_channel(From, Ch, ok(From?, Ch?)).
+
+% Test 2: Direct new_channel usage
+make_channels(C1, C2?) :- new_channel(C1?, C2) | true.
