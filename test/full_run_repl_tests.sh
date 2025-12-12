@@ -632,6 +632,34 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# --- Module RPC Tests ---
+echo ""
+echo "--- Module RPC Tests ---"
+
+module_output=$($DART run "$REPL" <<MODULE_INPUT
+mod_a.glp
+main_mod.glp
+test(R).
+:quit
+MODULE_INPUT
+2>&1)
+
+if echo "$module_output" | grep -q "R = 10"; then
+    echo "PASS: Cross-module RPC: mod_a # double(5, R) returns R = 10"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Cross-module RPC: mod_a # double(5, R) (expected: R = 10)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$module_output" | grep -q "→ succeeds"; then
+    echo "PASS: Cross-module RPC succeeds"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Cross-module RPC should succeed"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""
