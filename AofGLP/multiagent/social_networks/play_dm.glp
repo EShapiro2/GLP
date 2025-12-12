@@ -1,0 +1,34 @@
+%% play_dm.glp - Direct Messaging Play
+%%
+%% Scenario: Alice and Bob are already friends with established friend channels.
+%% They establish a dedicated DM channel and exchange messages.
+%%
+%% The friend channels are pre-established (output of prior befriending).
+%% Friend channel: Alice writes to AliceToBob, Bob reads from it.
+%%                 Bob writes to BobToAlice, Alice reads from it.
+
+%% Simplified play - just show channel establishment and message exchange
+play_dm :-
+    %% Establish DM channel directly
+    new_channel(AliceCh, BobCh),
+
+    %% Alice sends greeting
+    dm_send(hello_bob, AliceCh?, AliceCh1),
+
+    %% Bob receives and replies
+    dm_receive(Msg, BobCh?, BobCh1),
+    dm_send(hello_alice, BobCh1?, _),
+
+    %% Alice receives reply
+    dm_receive(Reply, AliceCh1?, _),
+
+    report(Msg?, Reply?).
+
+report(_, _).
+
+%% Channel primitives from channel_ops.glp
+new_channel(ch(Xs?,Ys), ch(Ys?,Xs)).
+
+%% DM primitives from dm_simple.glp
+dm_send(Msg, ch(In, [Msg?|Out?]), ch(In?, Out)).
+dm_receive(Msg?, ch([Msg|In], Out?), ch(In?, Out)).
