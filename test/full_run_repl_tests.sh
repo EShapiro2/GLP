@@ -660,6 +660,89 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# Test 2: Recursive RPC - math#factorial
+factorial_output=$($DART run "$REPL" <<FACTORIAL_INPUT
+test_modules/math.glp
+test_modules/main.glp
+test_factorial(R).
+:quit
+FACTORIAL_INPUT
+2>&1)
+
+if echo "$factorial_output" | grep -q "R = 120"; then
+    echo "PASS: Recursive RPC: math#factorial(5) returns R = 120"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Recursive RPC: math#factorial(5) (expected: R = 120)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test 3: Chain RPC - A→B→C
+chain_output=$($DART run "$REPL" <<CHAIN_INPUT
+test_modules/utils.glp
+test_modules/chain_b.glp
+test_modules/chain_a.glp
+run(4, R).
+:quit
+CHAIN_INPUT
+2>&1)
+
+if echo "$chain_output" | grep -q "R = 12"; then
+    echo "PASS: Chain RPC: A→B→C (4*3=12)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Chain RPC: A→B→C (expected: R = 12)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test 4: Missing module - RPC suspends
+missing_output=$($DART run "$REPL" <<MISSING_INPUT
+test_modules/main.glp
+test_double(R).
+:quit
+MISSING_INPUT
+2>&1)
+
+if echo "$missing_output" | grep -q "suspended"; then
+    echo "PASS: Missing module: RPC suspends"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Missing module should suspend (got: $missing_output)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test 5: Unexported procedure - error
+unexported_output=$($DART run "$REPL" <<UNEXPORTED_INPUT
+test_modules/math.glp
+math # private_helper(X).
+:quit
+UNEXPORTED_INPUT
+2>&1)
+
+if echo "$unexported_output" | grep -qE "unknown|not exported|error|Error|not found"; then
+    echo "PASS: Unexported procedure rejected"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Unexported procedure should be rejected"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test 6: Backwards compatibility - no module declaration
+compat_output=$($DART run "$REPL" <<COMPAT_INPUT
+factorial.glp
+factorial(5, R).
+:quit
+COMPAT_INPUT
+2>&1)
+
+if echo "$compat_output" | grep -q "R = 120"; then
+    echo "PASS: Backwards compat: no module decl works"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Backwards compat: factorial(5) should return 120"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""
