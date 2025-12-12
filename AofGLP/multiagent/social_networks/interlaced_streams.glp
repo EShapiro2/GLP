@@ -15,7 +15,7 @@ interlace([Payload|Payloads], [block(Payload?, Tips?)|Stream?], Others) :-
 interlace([], [], _).
 
 collect_tips([[Block|Bs]|Others], [Block?|Tips?], [Bs?|Others1?]) :-
-    reader(Bs?) |
+    unknown(Bs?) |
     collect_tips(Others?, Tips, Others1).
 collect_tips([[_|Bs]|Others], Tips?, [Bs?|Others1?]) :-
     otherwise |
