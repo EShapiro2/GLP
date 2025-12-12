@@ -1,0 +1,18 @@
+% meta.glp - Meta-interpreter with corrected guards
+-module(meta).
+-export([run/2]).
+
+% Base case: true always succeeds
+run(true, _Module).
+
+% Conjunction: decompose when both components are known and module is ground
+run((A, B), Module) :-
+    known(A?), known(B?), ground(Module?) |
+    run(A?, Module?), run(B?, Module?).
+
+% Goal: look up clause in module and run body
+% ground(Module?) allows reusing Module? in body
+run(Goal, Module) :-
+    ground(Module?), constant(Module?), otherwise |
+    Module? # clause(Goal?, Body),
+    run(Body?, Module?).

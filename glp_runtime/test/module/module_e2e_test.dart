@@ -785,5 +785,178 @@ private_proc(X?) :- X := 99.
       expect((resultValue as ConstTerm).value, equals(10), reason: 'compute(5,R) should bind R=10');
       print('[TEST] File-based loading test passed!');
     });
+
+    test('meta-interpreter: run(double(5, R), math_rules) binds R=10', () async {
+      // Test meta-interpreter with corrected guards:
+      // - constant(Module?) checks Module is bound to a constant
+      // - known(A?), known(B?) checks tuple components are bound
+      // - otherwise ensures third clause fires when first two don't match
+
+      final testRegistry = FcpModuleRegistry();
+
+      // Load modules via ModuleLoader
+      final loader = ModuleLoader(
+        basePath: 'test/module/files',
+        onModuleLoaded: (module) {
+          testRegistry.register(module);
+          print('[LOADER] Registered module: ${module.name}');
+        },
+      );
+
+      // Load math_rules module (provides clause/2 facts)
+      final mathRulesModule = await loader.load('math_rules');
+      expect(mathRulesModule.isExported('clause/2'), isTrue,
+          reason: 'math_rules should export clause/2');
+      print('[TEST] math_rules loaded: exports=${mathRulesModule.exports}');
+
+      // Load meta module (provides run/2)
+      final metaModule = await loader.load('meta');
+      expect(metaModule.isExported('run/2'), isTrue,
+          reason: 'meta should export run/2');
+      // Note: meta uses dynamic dispatch via Module? # clause(...), not static imports
+      print('[TEST] meta loaded: exports=${metaModule.exports}');
+
+      // Start dispatcher for math_rules (handles clause/2 queries)
+      final mathRulesDispatcher = startDispatcher(
+        module: mathRulesModule,
+        executor: (message, module) async {
+          print('[DISPATCH math_rules] Received: ${message.signature}');
+          final entryPc = module.getEntryPoint(message.signature);
+          if (entryPc == null) {
+            print('[DISPATCH math_rules] No entry for ${message.signature}');
+            return;
+          }
+
+          final env = CallEnv(
+            args: {for (int i = 0; i < message.args.length; i++) i: message.args[i]},
+          );
+          final goalId = rt.nextGoalId++;
+          rt.setGoalEnv(goalId, env);
+          rt.setGoalProgram(goalId, module.bytecode);
+          rt.setGoalModuleContext(goalId, ModuleGoalContext(module: module, registry: testRegistry));
+
+          final runner = BytecodeRunner(module.bytecode);
+          final ctx = RunnerContext(
+            rt: rt,
+            goalId: goalId,
+            kappa: entryPc,
+            env: env,
+            debugOutput: true,
+            moduleContext: ModuleGoalContext(module: module, registry: testRegistry),
+          );
+          runner.runWithStatus(ctx);
+          print('[DISPATCH math_rules] Done');
+        },
+        onError: (error) => print('[DISPATCH math_rules ERROR] $error'),
+      );
+
+      // Start dispatcher for meta module (handles run/2 queries)
+      final metaDispatcher = startDispatcher(
+        module: metaModule,
+        executor: (message, module) async {
+          print('[DISPATCH meta] Received: ${message.signature}');
+          final entryPc = module.getEntryPoint(message.signature);
+          if (entryPc == null) {
+            print('[DISPATCH meta] No entry for ${message.signature}');
+            return;
+          }
+
+          final env = CallEnv(
+            args: {for (int i = 0; i < message.args.length; i++) i: message.args[i]},
+          );
+          final goalId = rt.nextGoalId++;
+          rt.setGoalEnv(goalId, env);
+          rt.setGoalProgram(goalId, module.bytecode);
+          rt.setGoalModuleContext(goalId, ModuleGoalContext(module: module, registry: testRegistry));
+
+          final runner = BytecodeRunner(module.bytecode);
+          final ctx = RunnerContext(
+            rt: rt,
+            goalId: goalId,
+            kappa: entryPc,
+            env: env,
+            debugOutput: true,
+            moduleContext: ModuleGoalContext(module: module, registry: testRegistry),
+          );
+          runner.runWithStatus(ctx);
+          print('[DISPATCH meta] Done');
+        },
+        onError: (error) => print('[DISPATCH meta ERROR] $error'),
+      );
+
+      // Create result variable for R in double(5, R)
+      final resultVarId = rt.heap.allocateVariable();
+      final resultWriter = VarRef(resultVarId, isReader: false);
+      print('[TEST] Created result writer W$resultVarId');
+
+      // Build the goal: double(5, R) as a structure
+      // We need to pass this as the first argument to run/2
+      final goalStructVarId = rt.heap.allocateVariable();
+      final fiveVarId = rt.heap.allocateVariable();
+      rt.heap.bindWriterConst(fiveVarId, 5);
+      // Build double(5, R) structure - args are: [reader to 5, writer for result]
+      rt.heap.bindWriterStruct(goalStructVarId, 'double', [
+        VarRef(fiveVarId, isReader: true),
+        resultWriter,
+      ]);
+      final goalArg = VarRef(goalStructVarId, isReader: true);
+
+      // Build the module argument: math_rules (constant)
+      final moduleVarId = rt.heap.allocateVariable();
+      rt.heap.bindWriterConst(moduleVarId, 'math_rules');
+      final moduleArg = VarRef(moduleVarId, isReader: true);
+
+      // Send run(double(5, R), math_rules) to meta module
+      final message = ExportMessage.trust(
+        sourceModule: 'test',
+        functor: 'run',
+        arity: 2,
+        args: [goalArg, moduleArg],
+      );
+      print('[TEST] Sending: run/2 to meta');
+      metaModule.inputSink.add(message);
+
+      // Allow async processing
+      await Future.delayed(Duration(milliseconds: 300));
+
+      // Process queued goals
+      var iterations = 0;
+      while (!rt.gq.isEmpty && iterations < 50) {
+        final goalRef = rt.gq.dequeue();
+        if (goalRef == null) break;
+        final goalId = goalRef.id;
+        final env = rt.getGoalEnv(goalId);
+        final prog = rt.getGoalProgram(goalId);
+        if (env != null && prog != null) {
+          final runner = BytecodeRunner(prog as BytecodeProgram);
+          final ctx = RunnerContext(
+            rt: rt,
+            goalId: goalId,
+            kappa: goalRef.pc,
+            env: env,
+            debugOutput: false,
+            moduleContext: rt.getGoalModuleContext(goalId),
+          );
+          runner.runWithStatus(ctx);
+        }
+        iterations++;
+      }
+      print('[TEST] Processed $iterations queued goals');
+
+      // Check result
+      final resultValue = rt.heap.valueOfWriter(resultVarId);
+      print('[TEST] Result W$resultVarId = $resultValue');
+
+      // Cleanup
+      mathRulesDispatcher.stop();
+      metaDispatcher.stop();
+
+      // Verify: double(5, R) should bind R = 10
+      expect(resultValue, isNotNull, reason: 'R should be bound after meta-interpretation');
+      expect(resultValue, isA<ConstTerm>(), reason: 'Should be ConstTerm(10)');
+      expect((resultValue as ConstTerm).value, equals(10),
+          reason: 'run(double(5,R), math_rules) should bind R=10');
+      print('[TEST] Meta-interpreter test passed!');
+    });
   });
 }
