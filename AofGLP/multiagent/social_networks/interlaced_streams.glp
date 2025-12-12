@@ -2,40 +2,17 @@
 %%
 %% Blocklace: DAG where each block references multiple predecessors.
 %% Enables concurrent block creation without consensus.
-%%
-%% Each process maintains stream of blocks with payloads and references
-%% to most recent blocks observed from others.
-
-%% Main entry: streams(stream(S?), Others)
-%% S - output stream of blocks produced by this agent
-%% Others - list of readers for other agents' streams
 
 streams(stream(S?), Others) :-
     produce_payloads(Payloads),
-    interlace(Payloads?, S, [], Others?).
+    interlace(Payloads?, S, Others?).
 
-%% For testing: generate fixed payloads
-produce_payloads([p1, p2, p3]).
+produce_payloads([r1, r2]).
 
-%% interlace(Payloads, MyStream, PrevTips, Others)
-%% Payloads - remaining payloads to process
-%% MyStream - output stream being constructed
-%% PrevTips - tips from previous block (unused currently)
-%% Others - other agents' streams to observe
-
-interlace([Payload|Payloads], Output?, _, Others) :-
+interlace([Payload|Payloads], [block(Payload?, Tips?)|Stream?], Others) :-
     collect_tips(Others?, Tips, Others1),
-    build_and_continue(Payload?, Tips?, Output, Payloads?, Others1?).
-interlace([], [], _, _).
-
-%% build_and_continue: construct block with tips and continue interlacing
-%% ground(Tips?) allows multiple reads of Tips? (in block and recursive call)
-build_and_continue(Payload, Tips, [block(Payload?, Tips?)|Stream?], Payloads, Others) :-
-    ground(Tips?) |
-    interlace(Payloads?, Stream, Tips?, Others?).
-
-%% collect_tips: gather current tips from other streams
-%% Uses reader(X) guard to detect unextended stream tails
+    interlace(Payloads?, Stream, Others1?).
+interlace([], [], _).
 
 collect_tips([[Block|Bs]|Others], [Block?|Tips?], [Bs?|Others1?]) :-
     reader(Bs?) |
