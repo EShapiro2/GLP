@@ -20,6 +20,7 @@ class GlpRuntime {
   final Map<GoalId, int> _budgets = <GoalId, int>{};
   final Map<GoalId, CallEnv> _goalEnvs = <GoalId, CallEnv>{};
   final Map<GoalId, Object?> _goalPrograms = <GoalId, Object?>{};
+  final Map<GoalId, Object?> _goalModuleContexts = <GoalId, Object?>{};  // Module context for RPC;
 
   // File handle management
   final Map<int, RandomAccessFile> _fileHandles = <int, RandomAccessFile>{};
@@ -140,6 +141,14 @@ class GlpRuntime {
   }
 
   Object? getGoalProgram(GoalId g) => _goalPrograms[g];
+
+  /// Set module context for a goal (for distribute/transmit handlers)
+  void setGoalModuleContext(GoalId g, Object? ctx) {
+    _goalModuleContexts[g] = ctx;
+  }
+
+  /// Get module context for a goal
+  Object? getGoalModuleContext(GoalId g) => _goalModuleContexts[g];
 
   void _enqueueAll(List<GoalRef> acts) {
     for (final a in acts) {
