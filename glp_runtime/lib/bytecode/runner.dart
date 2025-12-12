@@ -4075,6 +4075,34 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
+      case 'unknown':
+        // Succeeds if dereferencing leads to an unbound variable
+        // Must follow binding chain to the end
+        if (args.isEmpty) return GuardResult.failure;
+        var value = args[0];
+
+        // Follow binding chain to end
+        while (value is VarRef) {
+          final varId = value.varId;
+          // Check σ̂w first
+          if (cx.sigmaHat.containsKey(varId)) {
+            value = cx.sigmaHat[varId];
+            continue;
+          }
+          // Check heap
+          if (cx.rt.heap.isBound(varId)) {
+            final heapVal = cx.rt.heap.getValue(varId);
+            if (heapVal != null) {
+              value = heapVal;
+              continue;
+            }
+          }
+          // Reached an unbound variable → SUCCESS
+          return GuardResult.success;
+        }
+        // Dereferenced to a non-variable (ground term) → FAILURE
+        return GuardResult.failure;
+
       // Control guards
       case 'otherwise':
         // This is handled by the compiler - should not reach runtime
