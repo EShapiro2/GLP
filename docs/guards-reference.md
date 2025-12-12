@@ -58,8 +58,7 @@ These guards can be negated with `~`:
 | `tuple(X?)` | Test for tuple type | `~tuple(X?)` succeeds if X is not a tuple |
 | `list(X?)` | Test for list type | `~list(X?)` succeeds if X is not a list |
 | `is_list(X?)` | Test for proper list | `~is_list(X?)` succeeds if X is not a proper list |
-| `writer(X)` | Test for unbound writer | `~writer(X)` succeeds if X is not an unbound writer |
-| `reader(X?)` | Test for unbound reader | `~reader(X?)` succeeds if X is not an unbound reader |
+| `unknown(X?)` | Test for unbound variable | `~unknown(X?)` succeeds if X is bound |
 | `X =?= Y` | Ground equality test | `~(X =?= Y)` succeeds if X and Y are not equal |
 
 ### Non-Negatable Guards
