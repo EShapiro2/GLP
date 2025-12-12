@@ -79,6 +79,13 @@ class Parser {
       }
     }
 
+    // Parse PMT mode declarations (after module declarations, before procedures)
+    // PMT declarations: CapitalizedName(Params) := predicate(ModedArg, ...).
+    final modeDeclarations = <ModeDeclaration>[];
+    while (!_isAtEnd() && _isPmtDeclaration()) {
+      modeDeclarations.add(_parseModeDeclaration());
+    }
+
     // Parse procedures
     final procedures = <Procedure>[];
     while (!_isAtEnd()) {
@@ -89,6 +96,7 @@ class Parser {
       declaration: moduleDecl,
       exports: exports,
       imports: imports,
+      modeDeclarations: modeDeclarations,
       procedures: procedures,
       line: 1,
       column: 1,
@@ -922,5 +930,134 @@ class Parser {
     if (_check(type)) return _advance();
 
     throw CompileError(message, _peek().line, _peek().column, phase: 'parser');
+  }
+
+  // ============================================================================
+  // PMT (Polymorphic Moded Types) Parser Methods
+  // ============================================================================
+
+  /// Check if a string is capitalized (starts with uppercase letter)
+  bool _isCapitalized(String s) {
+    if (s.isEmpty) return false;
+    final first = s.codeUnitAt(0);
+    return first >= 65 && first <= 90;  // A-Z
+  }
+
+  /// Check if we're at a PMT mode declaration: CapitalizedName(...) := pred(...).
+  /// or CapitalizedName := pred(...).
+  /// Note: Capitalized names are tokenized as VARIABLE, not ATOM
+  bool _isPmtDeclaration() {
+    // PMT type names are capitalized, so they're tokenized as VARIABLE
+    if (!_check(TokenType.VARIABLE)) return false;
+
+    // Look ahead for := (optionally with type params in between)
+    final saved = _current;
+
+    _advance();  // consume type name
+
+    // Skip optional type params: (A, B, ...)
+    if (_check(TokenType.LPAREN)) {
+      _advance();
+      int depth = 1;
+      while (!_isAtEnd() && depth > 0) {
+        if (_check(TokenType.LPAREN)) depth++;
+        if (_check(TokenType.RPAREN)) depth--;
+        _advance();
+      }
+    }
+
+    // Check for :=
+    final isDecl = _check(TokenType.ASSIGN);
+
+    _current = saved;  // restore position
+    return isDecl;
+  }
+
+  /// Parse a PMT mode declaration: TypeName(Params) := predicate(ModedArg, ...).
+  ModeDeclaration _parseModeDeclaration() {
+    // Type names are capitalized, so they're tokenized as VARIABLE
+    final typeNameToken = _consume(TokenType.VARIABLE, 'Expected type name');
+    final typeName = typeNameToken.lexeme;
+
+    // Optional type parameters: (A, B, ...) - also capitalized, so VARIABLE
+    final typeParams = <String>[];
+    if (_match(TokenType.LPAREN)) {
+      // Parse type params (single capital letters like A, B)
+      typeParams.add(_consume(TokenType.VARIABLE, 'Expected type parameter').lexeme);
+      while (_match(TokenType.COMMA)) {
+        typeParams.add(_consume(TokenType.VARIABLE, 'Expected type parameter').lexeme);
+      }
+      _consume(TokenType.RPAREN, 'Expected ")" after type parameters');
+    }
+
+    _consume(TokenType.ASSIGN, 'Expected ":=" in mode declaration');
+
+    // Predicate name (lowercase atom)
+    final predToken = _consume(TokenType.ATOM, 'Expected predicate name');
+    final predicate = predToken.lexeme;
+
+    // Arguments with modes: (ModedArg, ModedArg, ...)
+    final args = <ModedArg>[];
+    _consume(TokenType.LPAREN, 'Expected "(" after predicate name');
+    if (!_check(TokenType.RPAREN)) {
+      args.add(_parseModedArg());
+      while (_match(TokenType.COMMA)) {
+        args.add(_parseModedArg());
+      }
+    }
+    _consume(TokenType.RPAREN, 'Expected ")" after moded arguments');
+    _consume(TokenType.DOT, 'Expected "." after mode declaration');
+
+    return ModeDeclaration(
+      typeName,
+      typeParams,
+      predicate,
+      args,
+      typeNameToken.line,
+      typeNameToken.column,
+    );
+  }
+
+  /// Parse a moded argument: TypeName(Params)? or TypeName(Params)
+  /// Note: The lexer tokenizes "Num?" as a single READER token with lexeme "Num"
+  ModedArg _parseModedArg() {
+    // Type names can be:
+    // - VARIABLE: "Num" (writer) or "List" (with type params)
+    // - READER: "Num?" (reader without type params)
+    String typeName;
+    bool isReader;
+
+    if (_check(TokenType.READER)) {
+      // Simple reader type without type params: Num?
+      final token = _advance();
+      typeName = token.lexeme;
+      isReader = true;
+      // No type params possible since ? was consumed by lexer
+      return ModedArg(typeName, [], isReader: isReader);
+    }
+
+    // VARIABLE: type name possibly with type params
+    final typeToken = _consume(TokenType.VARIABLE, 'Expected type name');
+    typeName = typeToken.lexeme;
+
+    // Optional type parameters: (A, B) - also capitalized, so VARIABLE or READER
+    final typeParams = <String>[];
+    if (_match(TokenType.LPAREN)) {
+      typeParams.add(_parseTypeParam());
+      while (_match(TokenType.COMMA)) {
+        typeParams.add(_parseTypeParam());
+      }
+      _consume(TokenType.RPAREN, 'Expected ")" after type parameters');
+    }
+
+    // Check for reader marker (?) after type params
+    isReader = _match(TokenType.QUESTION);
+
+    return ModedArg(typeName, typeParams, isReader: isReader);
+  }
+
+  /// Parse a type parameter (VARIABLE)
+  String _parseTypeParam() {
+    return _consume(TokenType.VARIABLE, 'Expected type parameter').lexeme;
   }
 }
