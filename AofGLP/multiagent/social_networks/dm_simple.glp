@@ -10,8 +10,12 @@
 request_dm([dm_request(Resp?)|FriendOut?], FriendOut, Resp).
 
 %% Process incoming DM request - create channel and respond
-accept_dm(dm_request(Resp), DMCh?) :-
-    new_channel(DMCh, Resp?).
+%% RemoteCh is sent back to requester, LocalCh is kept
+accept_dm(dm_request(Resp), LocalCh?) :-
+    new_channel(LocalCh, RemoteCh),
+    bind_response(Resp?, RemoteCh?).
+
+bind_response(Ch?, Ch).
 
 %% Send message on DM channel
 dm_send(Msg, ch(In, [Msg?|Out?]), ch(In?, Out)).
