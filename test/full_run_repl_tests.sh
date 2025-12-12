@@ -209,6 +209,8 @@ test_deep(foo, TdpR).
 test_triple(1, 2, TtrR).
 relay_send([], RsOut, ch([], [])).
 relay_recv([], RrOut, ch([], [])).
+relay([], RelayOut, ch([], [])).
+switch2x2(ch([], SwA), ch([], SwB), ch(SwC, []), ch(SwD, [])).
 :quit
 REPL_INPUT
 2>&1)
@@ -427,6 +429,8 @@ declare -a tests=(
     "DG triple binding:TtrR = pair(1, 2)"
     "DG relay_send base:RsOut = \[\]"
     "DG relay_recv base:RrOut = \[\]"
+    "DG relay base:RelayOut = \[\]"
+    "DG switch2x2 base:switch2x2(.*) :- true"
 
     # Goal reader vs head writer (should succeed, not suspend)
     "Goal reader to head writer:assign_reader(.*) :- true"
