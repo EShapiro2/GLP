@@ -1,0 +1,24 @@
+%% Test GLP Infrastructure Predicates
+%% Simplified tests - one predicate at a time
+
+%% Test register_channel/3
+%% Should unify Registry with [entry(math, my_channel)|_]
+test_register(Result) :-
+    register_channel(math, my_channel, Registry),
+    Result? = Registry?.
+
+%% Test lookup_channel/3 - simple case
+%% Lookup math in a registry containing math
+test_lookup(Result) :-
+    lookup_channel(math, [entry(math, found_it)|_], Ch),
+    Result? = Ch?.
+
+%% Test nth/3 - get first element
+test_nth1(Result) :-
+    nth(1, [first, second, third], Elem),
+    Result? = Elem?.
+
+%% Test nth/3 - get second element
+test_nth2(Result) :-
+    nth(2, [first, second, third], Elem),
+    Result? = Elem?.
