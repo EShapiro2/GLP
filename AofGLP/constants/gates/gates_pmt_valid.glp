@@ -1,0 +1,26 @@
+%% gates.glp - Logic gate simulation in GLP (PMT-validatable subset)
+%% Extracted mode declarations and clauses only
+
+%% Mode declarations
+And := and(List(Num)?, List(Num)?, List(Num)).
+Or := or(List(Num)?, List(Num)?, List(Num)).
+Not := not(List(Num)?, List(Num)).
+
+%% AND gate
+and([], [], []).
+and([one|Xs], [one|Ys], [one|Zs?]) :- and(Xs?, Ys?, Zs).
+and([one|Xs], [zero|Ys], [zero|Zs?]) :- and(Xs?, Ys?, Zs).
+and([zero|Xs], [one|Ys], [zero|Zs?]) :- and(Xs?, Ys?, Zs).
+and([zero|Xs], [zero|Ys], [zero|Zs?]) :- and(Xs?, Ys?, Zs).
+
+%% OR gate
+or([], [], []).
+or([one|Xs], [one|Ys], [one|Zs?]) :- or(Xs?, Ys?, Zs).
+or([one|Xs], [zero|Ys], [one|Zs?]) :- or(Xs?, Ys?, Zs).
+or([zero|Xs], [one|Ys], [one|Zs?]) :- or(Xs?, Ys?, Zs).
+or([zero|Xs], [zero|Ys], [zero|Zs?]) :- or(Xs?, Ys?, Zs).
+
+%% NOT gate
+not([], []).
+not([one|Xs], [zero|Zs?]) :- not(Xs?, Zs).
+not([zero|Xs], [one|Zs?]) :- not(Xs?, Zs).
