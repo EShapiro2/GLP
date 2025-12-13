@@ -1,2 +1,0 @@
-%% Nested structure in list
-test_nested([msg(1, X) | _]) :- atom(X?) | true.

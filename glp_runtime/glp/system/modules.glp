@@ -31,13 +31,21 @@ lookup_and_send(ModuleName, Registry, Msg) :-
     lookup_channel_send(ModuleName?, Registry?, Msg?).
 
 %% Combined lookup and send - writes message directly when channel found
-%% Pattern folded into head: [Msg?|_] is the output channel structure
-lookup_channel_send(Name, [entry(N, [Msg?|_])|_], Msg) :-
-    Name? =:= N?.
+%% Using helper to avoid compiler limitation with struct patterns in lists
+lookup_channel_send(Name, [Entry|_], Msg) :-
+    entry_matches_send(Entry?, Name?, Msg?).
 
-lookup_channel_send(Name, [entry(N, _)|Rest], Msg) :-
-    Name? =\= N? |
+lookup_channel_send(Name, [_|Rest], Msg) :-
+    otherwise |
     lookup_channel_send(Name?, Rest?, Msg?).
+
+%% Helper: check entry matches and write to channel
+entry_matches_send(entry(N, Channel), Name, Msg) :-
+    Name? =?= N? | write_msg(Channel?, Msg?).
+
+%% Helper: write message to channel head
+%% Msg binds to channel head (unbound), then Msg? receives value, binding the head
+write_msg([Msg|_], Msg?).
 
 %% ============================================================
 %% dispatcher/2 - Process incoming RPC messages
@@ -91,10 +99,10 @@ register_channel(Name, Channel, [entry(Name?, Channel?)|_]).
 %% Searches registry for matching name, returns Channel.
 %% Pattern folded into head: Ch? is returned directly.
 
-lookup_channel(Name, [entry(N, Ch)|_], Ch?) :- Name? =:= N?.
+lookup_channel(Name, [entry(N, Ch)|_], Ch?) :- Name? =?= N? | true.
 
-lookup_channel(Name, [entry(N, _)|Rest], Channel) :-
-    Name? =\= N? |
+lookup_channel(Name, [entry(_, _)|Rest], Channel) :-
+    otherwise |
     lookup_channel(Name?, Rest?, Channel?).
 
 %% ============================================================
@@ -112,13 +120,23 @@ distribute(Index, Goal, ImportVec, ResultVar) :-
     nth_write_rpc(Index?, ImportVec?, Goal?, ResultVar?).
 
 %% nth_write_rpc - Get nth stream and write RPC message
-%% Pattern folded into head: [rpc(Goal?, ResultVar?)|_] written to stream
-nth_write_rpc(1, [[rpc(Goal?, ResultVar?)|_]|_], Goal, ResultVar).
+%% Using helper to avoid compiler limitation with nested struct patterns
+nth_write_rpc(1, [Stream|_], Goal, ResultVar) :-
+    write_rpc(Stream?, Goal?, ResultVar?).
 
 nth_write_rpc(N, [_|T], Goal, ResultVar) :-
     N? > 1 |
     N1 := N? - 1,
     nth_write_rpc(N1?, T?, Goal?, ResultVar?).
+
+%% Helper: write rpc message to stream head
+%% Msg binds to channel head, then passed as reader to build_rpc
+write_rpc([Msg|_], Goal, ResultVar) :-
+    build_rpc(Goal?, ResultVar?, Msg?).
+
+%% Build rpc struct using unify - rpc(G?, R?) = Msg? binds Msg to struct
+build_rpc(Goal, ResultVar, Msg) :-
+    rpc(Goal?, ResultVar?) = Msg?.
 
 %% transmit/4 - Dynamic RPC via registry lookup
 %% transmit(ModuleName?, Goal?, Registry?, ResultVar)
@@ -133,13 +151,18 @@ transmit(ModuleName, Goal, Registry, ResultVar) :-
 lookup_and_send_rpc(ModuleName, Registry, Goal, ResultVar) :-
     lookup_channel_rpc(ModuleName?, Registry?, Goal?, ResultVar?).
 
-%% Combined lookup and RPC send - pattern folded into head
-lookup_channel_rpc(Name, [entry(N, [rpc(Goal?, ResultVar?)|_])|_], Goal, ResultVar) :-
-    Name? =:= N?.
+%% Combined lookup and RPC send
+%% Using helper to avoid compiler limitation with struct patterns in lists
+lookup_channel_rpc(Name, [Entry|_], Goal, ResultVar) :-
+    entry_matches_rpc(Entry?, Name?, Goal?, ResultVar?).
 
-lookup_channel_rpc(Name, [entry(N, _)|Rest], Goal, ResultVar) :-
-    Name? =\= N? |
+lookup_channel_rpc(Name, [_|Rest], Goal, ResultVar) :-
+    otherwise |
     lookup_channel_rpc(Name?, Rest?, Goal?, ResultVar?).
+
+%% Helper: check entry matches and write RPC to channel
+entry_matches_rpc(entry(N, Channel), Name, Goal, ResultVar) :-
+    Name? =?= N? | write_rpc(Channel?, Goal?, ResultVar?).
 
 %% ============================================================
 %% Module Activation
@@ -184,10 +207,13 @@ start_serve_imports([Imp|Imps], [Stream|Streams], Registry) :-
 %% ============================================================
 
 %% nth/3 - Get nth element (1-based indexing)
-%% Pattern folded into head: H? returned directly
 nth(1, [H|_], H?).
 
-nth(N, [_|T], Elem) :-
+nth(N, List, Elem) :-
     N? > 1 |
+    skip_and_find(N?, List?, Elem?).
+
+%% Helper: decrement N, skip first element, recurse
+skip_and_find(N, [_|T], Elem) :-
     N1 := N? - 1,
     nth(N1?, T?, Elem?).

@@ -1,17 +1,51 @@
 %% Test GLP Infrastructure Predicates
-%% Simplified tests - one predicate at a time
+%% Uses wrapper predicates to avoid REPL struct-in-list parsing limitation
 
 %% Test register_channel/3
-%% Should unify Registry with [entry(math, my_channel)|_]
 test_register(Result) :-
     register_channel(math, my_channel, Registry),
     Result? = Registry?.
 
-%% Test lookup_channel/3 - simple case
-%% Lookup math in a registry containing math
+%% Test lookup_channel - wrap to avoid REPL struct parsing
 test_lookup(Result) :-
-    lookup_channel(math, [entry(math, found_it)|_], Ch),
+    make_registry(math, found_it, Registry),
+    lookup_channel(math, Registry?, Ch),
     Result? = Ch?.
+
+make_registry(Name, Channel, [entry(Name?, Channel?)|_]).
+
+%% Test lookup not found (should fail on mismatch)
+test_lookup_missing(Result) :-
+    make_registry(other, ch, Registry),
+    lookup_channel(math, Registry?, Ch),
+    Result? = Ch?.
+
+%% Test serve_import - simplified
+%% Just verify serve_import completes without error
+%% (Avoiding SRSW issue by not reading back from channel)
+test_serve_import(Result) :-
+    init_channel(Ch),
+    make_closed_registry(math, Ch?, Registry),
+    make_closed_import_stream(test_goal, ImportStream),
+    serve_import(ImportStream?, math, Registry?),
+    Result? = done.
+
+init_channel([_|_]).
+
+make_closed_registry(Name, Channel, [entry(Name?, Channel?)]).
+
+make_closed_import_stream(Goal, [rpc(Goal?, _)]).
+
+get_first_msg([Msg|_], Msg?).
+
+%% Test distribute - verify it completes
+%% Pass ground ResultVar placeholder to simplify testing
+test_distribute(Result) :-
+    make_import_vec(ImportVec),
+    distribute(1, my_goal, ImportVec?, result_placeholder),
+    Result? = done.
+
+make_import_vec([[_|_]|_]).
 
 %% Test nth/3 - get first element
 test_nth1(Result) :-
