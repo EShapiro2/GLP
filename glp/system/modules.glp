@@ -31,19 +31,13 @@ lookup_and_send(ModuleName, Registry, Msg) :-
     lookup_channel_send(ModuleName?, Registry?, Msg?).
 
 %% Combined lookup and send - writes message directly when channel found
-%% Ch extracted once (writer), then read once (reader) - SRSW compliant
-lookup_channel_send(Name, [entry(N, Ch)|_], Msg) :-
-    Name? =:= N? |
-    write_to_channel(Ch?, Msg?).
+%% Pattern folded into head: [Msg?|_] is the output channel structure
+lookup_channel_send(Name, [entry(N, [Msg?|_])|_], Msg) :-
+    Name? =:= N?.
 
 lookup_channel_send(Name, [entry(N, _)|Rest], Msg) :-
     Name? =\= N? |
     lookup_channel_send(Name?, Rest?, Msg?).
-
-%% Write message to channel - Channel is the stream to write to
-%% Channel? reads the value received, then unifies it with [Msg?|_]
-write_to_channel(Channel, Msg) :-
-    Channel? = [Msg?|_].
 
 %% ============================================================
 %% dispatcher/2 - Process incoming RPC messages
@@ -87,19 +81,17 @@ run_body(Goal, _) :-
 %% register_channel(Name?, Channel?, Registry)
 %%
 %% Registry is a stream of entry(Name, Channel) pairs.
-%% Registration writes a new entry.
+%% Registration writes a new entry - pattern folded into head (unit clause).
 
-register_channel(Name, Channel, Registry) :-
-    Registry? = [entry(Name?, Channel?)|_].
+register_channel(Name, Channel, [entry(Name?, Channel?)|_]).
 
 %% lookup_channel/3 - Find module channel in registry
 %% lookup_channel(Name?, Registry?, Channel)
 %%
-%% Searches registry for matching name, unifies Channel.
+%% Searches registry for matching name, returns Channel.
+%% Pattern folded into head: Ch? is returned directly.
 
-lookup_channel(Name, [entry(N, Ch)|_], Channel) :-
-    Name? =:= N? |
-    Channel? = Ch?.
+lookup_channel(Name, [entry(N, Ch)|_], Ch?) :- Name? =:= N?.
 
 lookup_channel(Name, [entry(N, _)|Rest], Channel) :-
     Name? =\= N? |
@@ -113,11 +105,20 @@ lookup_channel(Name, [entry(N, _)|Rest], Channel) :-
 %% distribute(Index?, Goal?, ImportVec?, ResultVar)
 %%
 %% Writes rpc message to import stream at given index.
+%% Uses helper to fold pattern into head.
 
 distribute(Index, Goal, ImportVec, ResultVar) :-
     ground(Index?), ground(Goal?) |
-    nth(Index?, ImportVec?, Stream),
-    Stream? = [rpc(Goal?, ResultVar?)|_].
+    nth_write_rpc(Index?, ImportVec?, Goal?, ResultVar?).
+
+%% nth_write_rpc - Get nth stream and write RPC message
+%% Pattern folded into head: [rpc(Goal?, ResultVar?)|_] written to stream
+nth_write_rpc(1, [[rpc(Goal?, ResultVar?)|_]|_], Goal, ResultVar).
+
+nth_write_rpc(N, [_|T], Goal, ResultVar) :-
+    N? > 1 |
+    N1 := N? - 1,
+    nth_write_rpc(N1?, T?, Goal?, ResultVar?).
 
 %% transmit/4 - Dynamic RPC via registry lookup
 %% transmit(ModuleName?, Goal?, Registry?, ResultVar)
@@ -132,10 +133,9 @@ transmit(ModuleName, Goal, Registry, ResultVar) :-
 lookup_and_send_rpc(ModuleName, Registry, Goal, ResultVar) :-
     lookup_channel_rpc(ModuleName?, Registry?, Goal?, ResultVar?).
 
-%% Combined lookup and RPC send to avoid SRSW violations
-lookup_channel_rpc(Name, [entry(N, Ch)|_], Goal, ResultVar) :-
-    Name? =:= N? |
-    Ch? = [rpc(Goal?, ResultVar?)|_].
+%% Combined lookup and RPC send - pattern folded into head
+lookup_channel_rpc(Name, [entry(N, [rpc(Goal?, ResultVar?)|_])|_], Goal, ResultVar) :-
+    Name? =:= N?.
 
 lookup_channel_rpc(Name, [entry(N, _)|Rest], Goal, ResultVar) :-
     Name? =\= N? |
@@ -184,7 +184,8 @@ start_serve_imports([Imp|Imps], [Stream|Streams], Registry) :-
 %% ============================================================
 
 %% nth/3 - Get nth element (1-based indexing)
-nth(1, [H|_], Elem) :- Elem? = H?.
+%% Pattern folded into head: H? returned directly
+nth(1, [H|_], H?).
 
 nth(N, [_|T], Elem) :-
     N? > 1 |
