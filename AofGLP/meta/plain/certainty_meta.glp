@@ -4,7 +4,7 @@
 %% Computes certainty factor of results.
 %% Each clause has associated certainty; result certainty is computed.
 
-reduce(Program, true, 1).                        %% halt - certainty 1
+reduce(_, true, 1).                              %% halt - certainty 1
 reduce(Program, (A, B), C) :-                    %% fork - min of certainties
     reduce(Program?, A?, C_of_a),
     reduce(Program?, B?, C_of_b),

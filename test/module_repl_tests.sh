@@ -50,11 +50,10 @@ run_test "chain RPC: A→B→C" \
 
 # ===========================================
 # TEST 4: Dynamic RPC (Transmit) - module as variable
-# NOTE: Parser doesn't support M? # goal syntax in REPL goals yet
 # ===========================================
-# run_test "dynamic RPC: Module variable" \
-#     "test_modules/math.glp\nM = math, M? # double(7, R)." \
-#     "R = 14"
+run_test "dynamic RPC: Module variable" \
+    "test_modules/math.glp\nM = math, M? # double(7, R)." \
+    "R = 14"
 
 # ===========================================
 # TEST 5: Meta-interpreter with math_rules using reduce/2

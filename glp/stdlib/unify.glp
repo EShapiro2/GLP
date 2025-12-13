@@ -9,5 +9,6 @@
 %
 % Definition: X? = X means the same variable appears as reader (second arg)
 % then writer (first arg), enabling unification in GLP's SRSW model.
+-stdlib.
 
 X? = X.

@@ -2,8 +2,8 @@
 %% list(Xs) :- Xs is a list.
 
 list([]).
-list([X|Xs]) :- list(Xs?).
+list([_|Xs]) :- list(Xs?).
 
 %% reduce clauses for metainterpreter
 reduce(list([]), true).
-reduce(list([X|Xs]), list(Xs?)).
+reduce(list([_|Xs]), list(Xs?)).
