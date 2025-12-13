@@ -7,8 +7,10 @@
 %% Assumes each program clause A :- D | B is represented by a unit clause:
 %%   reduce(A,B,I) :- G | true.
 %% where I is the serial number of the clause in the program.
+%%
+%% Trace format: reduction(ClauseIndex, Timestamp, BodyTrace)
 
 run(true,true).  % halt
-run((A,B),(TA?,TB?)) :- run(A?,TA), run(B?,TB). % fork
-run(A,((I?:Time?):-TB?)) :- known(A) |
+run((A,B),fork(TA?,TB?)) :- run(A?,TA), run(B?,TB). % fork
+run(A,reduction(I?,Time?,TB?)) :- known(A?) |
     time(Time), reduce(A?,B,I), run(B?, TB).

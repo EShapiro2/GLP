@@ -5,13 +5,15 @@
 %% Control messages are ground, distributed to all metainterpreter instances.
 
 run(true,_).  % halt
-run((A,B),Cs) :- distribute(Cs?,Cs1,Cs2), run(A?,Cs1?), run(B?,Cs1). % fork
-run(A,[suspend|Cs]) :- suspended_run(A,Cs?).   % suspend
-run(A,Cs) :- known(A) |        % reduce
-        distribute(Cs?,Cs1,Cs2), reduce(A?,B,Cs1?), run(B?,Xs,Cs2?).
+run((A,B),Cs) :-
+    ground(Cs?) |  % control stream is ground, can be shared
+    run(A?,Cs?), run(B?,Cs?). % fork - both branches share control
+run(A,[suspend|Cs]) :- suspended_run(A?,Cs?).   % suspend
+run(A,Cs) :- known(A?) |        % reduce
+    reduce(A?,B), run(B?,Cs?).
 
-suspended_run(A,[resume|Cs]) :- run(A,Cs?).
-suspended_run(A,[abort|Cs]).
+suspended_run(A,[resume|Cs]) :- run(A?,Cs?).
+suspended_run(_,[abort|_]).
 
 %% The metainterpreter suspends reductions as soon as the control stream
 %% is bound to [suspend|Cs?], upon which the run can be resumed or aborted

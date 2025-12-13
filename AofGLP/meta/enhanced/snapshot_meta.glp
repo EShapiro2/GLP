@@ -10,7 +10,7 @@
 %% If Cs is bound to [suspend, abort], R? will be bound to
 %% the current resolvent of the run.
 
-suspended_run(A,[resume|Cs],L,R?) :- run(A,Cs?,L?,R).
+suspended_run(A,[resume|Cs],L,R?) :- run(A?,Cs?,L?,R).
 suspended_run(A,[abort|_],L,[A?|L?]).
 
 %% Note: Taking a snapshot of a suspended run and then resuming it
