@@ -3,13 +3,13 @@
 %%
 %% Core predicates:
 %%   serve_import/3   - Bridge import stream to target module
-%%   dispatcher/2     - Read from input channel, dispatch to reduce/2
+%%   dispatcher/2     - Read export(Goal) from input channel, dispatch to reduce/2
 %%   register_channel/3, lookup_channel/3 - Registry operations
-%%   distribute/4, transmit/4 - RPC primitives
+%%   distribute/3, transmit/3 - Export primitives (Goal contains result var)
 
 -module(modules).
 -export([serve_import/3, dispatcher/2, register_channel/3, lookup_channel/3,
-         distribute/4, transmit/4, activate_module/4]).
+         distribute/3, transmit/3, activate_module/4]).
 
 %% ============================================================
 %% serve_import/3 - Bridge import stream to target module's input
@@ -48,36 +48,31 @@ entry_matches_send(entry(N, Channel), Name, Msg) :-
 write_msg([Msg|_], Msg?).
 
 %% ============================================================
-%% dispatcher/2 - Process incoming RPC messages
+%% dispatcher/2 - Process incoming export messages
 %% ============================================================
 %% dispatcher(InputChannel?, ModuleName?)
 %%
-%% Reads rpc(Goal, ResultVar) messages from InputChannel,
+%% Reads export(Goal) messages from InputChannel,
 %% calls reduce/2 to get the body, then executes it.
+%% Result variable is inside Goal - shared with caller.
 
-dispatcher([rpc(Goal, ResultVar)|Rest], Module) :-
-    known(Goal?), ground(Module?) |
-    dispatch_one(Module?, Goal?, ResultVar?),
+dispatcher([export(Goal)|Rest], Module) :-
+    known(Goal?) |
+    reduce(Goal?, Body),
+    run_body(Body?),
     dispatcher(Rest?, Module?).
 
 dispatcher([], _).
 
-%% dispatch_one/3 - Handle a single RPC message
-%% Note: reduce/2 is LOCAL to the module, not an RPC call
-%% Module parameter kept for context (unused in basic case)
-dispatch_one(_Module, Goal, ResultVar) :-
-    reduce(Goal?, Body),
-    run_body(Body?, ResultVar?).
+%% run_body/1 - Execute a clause body
+run_body(true).
 
-%% run_body/2 - Execute a clause body
-run_body(true, _).
+run_body((A, B)) :-
+    known(A?), known(B?) |
+    run_body(A?),
+    run_body(B?).
 
-run_body((A, B), R) :-
-    known(A?), known(B?), ground(R?) |
-    run_body(A?, R?),
-    run_body(B?, R?).
-
-run_body(Goal, _) :-
+run_body(Goal) :-
     otherwise |
     call(Goal?).
 
@@ -106,63 +101,58 @@ lookup_channel(Name, [entry(_, _)|Rest], Channel) :-
     lookup_channel(Name?, Rest?, Channel?).
 
 %% ============================================================
-%% RPC Primitives
+%% Export Primitives
 %% ============================================================
 
-%% distribute/4 - Static RPC via import vector
-%% distribute(Index?, Goal?, ImportVec?, ResultVar)
+%% distribute/3 - Static export via import vector
+%% distribute(Index?, Goal?, ImportVec?)
 %%
-%% Writes rpc message to import stream at given index.
-%% Uses helper to fold pattern into head.
+%% Writes export(Goal) message to import stream at given index.
+%% Result variable is inside Goal - shared with caller.
 
-distribute(Index, Goal, ImportVec, ResultVar) :-
+distribute(Index, Goal, ImportVec) :-
     ground(Index?), known(Goal?) |
-    nth_write_rpc(Index?, ImportVec?, Goal?, ResultVar?).
+    nth_write_export(Index?, ImportVec?, Goal?).
 
-%% nth_write_rpc - Get nth stream and write RPC message
-%% Using helper to avoid compiler limitation with nested struct patterns
-nth_write_rpc(1, [Stream|_], Goal, ResultVar) :-
-    write_rpc(Stream?, Goal?, ResultVar?).
+%% nth_write_export - Get nth stream and write export message
+nth_write_export(1, [Stream|_], Goal) :-
+    write_export(Stream?, Goal?).
 
-nth_write_rpc(N, [_|T], Goal, ResultVar) :-
+nth_write_export(N, [_|T], Goal) :-
     N? > 1 |
     N1 := N? - 1,
-    nth_write_rpc(N1?, T?, Goal?, ResultVar?).
+    nth_write_export(N1?, T?, Goal?).
 
-%% Helper: write rpc message to stream head
-%% Msg binds to channel head, then passed as reader to build_rpc
-write_rpc([Msg|_], Goal, ResultVar) :-
-    build_rpc(Goal?, ResultVar?, Msg?).
+%% Helper: write export message to stream head
+write_export([Msg|_], Goal) :-
+    export(Goal?) = Msg?.
 
-%% Build rpc struct using unify - rpc(G?, R?) = Msg? binds Msg to struct
-build_rpc(Goal, ResultVar, Msg) :-
-    rpc(Goal?, ResultVar?) = Msg?.
-
-%% transmit/4 - Dynamic RPC via registry lookup
-%% transmit(ModuleName?, Goal?, Registry?, ResultVar)
+%% transmit/3 - Dynamic export via registry lookup
+%% transmit(ModuleName?, Goal?, Registry?)
 %%
-%% Looks up module in registry, sends RPC message.
+%% Looks up module in registry, sends export(Goal) message.
+%% Result variable is inside Goal - shared with caller.
 
-transmit(ModuleName, Goal, Registry, ResultVar) :-
+transmit(ModuleName, Goal, Registry) :-
     ground(ModuleName?), known(Goal?) |
-    lookup_and_send_rpc(ModuleName?, Registry?, Goal?, ResultVar?).
+    lookup_and_send_export(ModuleName?, Registry?, Goal?).
 
-%% Helper - combined lookup and RPC send
-lookup_and_send_rpc(ModuleName, Registry, Goal, ResultVar) :-
-    lookup_channel_rpc(ModuleName?, Registry?, Goal?, ResultVar?).
+%% Helper - combined lookup and export send
+lookup_and_send_export(ModuleName, Registry, Goal) :-
+    lookup_channel_export(ModuleName?, Registry?, Goal?).
 
-%% Combined lookup and RPC send
+%% Combined lookup and export send
 %% Using helper to avoid compiler limitation with struct patterns in lists
-lookup_channel_rpc(Name, [Entry|_], Goal, ResultVar) :-
-    entry_matches_rpc(Entry?, Name?, Goal?, ResultVar?).
+lookup_channel_export(Name, [Entry|_], Goal) :-
+    entry_matches_export(Entry?, Name?, Goal?).
 
-lookup_channel_rpc(Name, [_|Rest], Goal, ResultVar) :-
+lookup_channel_export(Name, [_|Rest], Goal) :-
     otherwise |
-    lookup_channel_rpc(Name?, Rest?, Goal?, ResultVar?).
+    lookup_channel_export(Name?, Rest?, Goal?).
 
-%% Helper: check entry matches and write RPC to channel
-entry_matches_rpc(entry(N, Channel), Name, Goal, ResultVar) :-
-    Name? =?= N? | write_rpc(Channel?, Goal?, ResultVar?).
+%% Helper: check entry matches and write export to channel
+entry_matches_export(entry(N, Channel), Name, Goal) :-
+    Name? =?= N? | write_export(Channel?, Goal?).
 
 %% ============================================================
 %% Module Activation

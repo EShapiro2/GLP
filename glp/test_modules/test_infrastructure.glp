@@ -34,15 +34,15 @@ init_channel([_|_]).
 
 make_closed_registry(Name, Channel, [entry(Name?, Channel?)]).
 
-make_closed_import_stream(Goal, [rpc(Goal?, _)]).
+make_closed_import_stream(Goal, [export(Goal?)]).
 
 get_first_msg([Msg|_], Msg?).
 
 %% Test distribute - verify it completes
-%% Pass ground ResultVar placeholder to simplify testing
+%% Result var is now inside Goal (FCP style)
 test_distribute(Result) :-
     make_import_vec(ImportVec),
-    distribute(1, my_goal, ImportVec?, result_placeholder),
+    distribute(1, my_goal, ImportVec?),
     Result? = done.
 
 make_import_vec([[_|_]|_]).
