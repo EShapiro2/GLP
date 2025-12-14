@@ -15,6 +15,8 @@ These documents define the GLP language and runtime:
 | [glp-compiler-spec.md](glp-compiler-spec.md) | Compiler design and implementation |
 | [glp-arithmetic-spec.md](glp-arithmetic-spec.md) | Arithmetic operations via `:=` operator |
 | [parser-spec.md](parser-spec.md) | Parser specification |
+| [naming-conventions.md](naming-conventions.md) | System primitive naming conventions (`'_name'`) |
+| [equators-spec.md](equators-spec.md) | Equator extension for many-to-one signaling |
 
 ## Reference Documents
 
@@ -56,6 +58,9 @@ Completed migrations and historical documents:
 | Document | Description |
 |----------|-------------|
 | [single-id-migration.md](archive/single-id-migration.md) | Single-ID variable system migration (completed Nov 2025) |
+| [fcp-module-system-analysis.md](archive/fcp-module-system-analysis.md) | FCP module system analysis (historical reference) |
+| [BUG-module-name-defaults.md](archive/BUG-module-name-defaults.md) | Bug report (resolved) |
+| [MODULE-SYSTEM-NOTE.md](archive/MODULE-SYSTEM-NOTE.md) | Internal note (superseded by v1 spec) |
 
 ## External References
 
