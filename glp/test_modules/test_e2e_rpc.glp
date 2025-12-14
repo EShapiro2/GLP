@@ -1,0 +1,16 @@
+%% End-to-end test: RPC through GLP infrastructure
+%% math_reduce module must be loaded first
+
+%% Test reduce directly first
+test_reduce_direct(Result) :-
+    reduce(double(5, _), Body),
+    Result? = Body?.
+
+%% Test dispatcher with ground goal (for debugging)
+%% Note: This won't bind R because the goal in RPC is ground
+test_dispatcher_ground(Result) :-
+    make_input_ground(MathInput),
+    dispatcher(MathInput?, math_reduce),
+    Result? = dispatched.
+
+make_input_ground([rpc(double(5, dummy_result), _)|_]).

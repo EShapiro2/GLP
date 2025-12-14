@@ -56,7 +56,7 @@ write_msg([Msg|_], Msg?).
 %% calls reduce/2 to get the body, then executes it.
 
 dispatcher([rpc(Goal, ResultVar)|Rest], Module) :-
-    ground(Goal?), ground(Module?) |
+    known(Goal?), ground(Module?) |
     dispatch_one(Module?, Goal?, ResultVar?),
     dispatcher(Rest?, Module?).
 
@@ -116,7 +116,7 @@ lookup_channel(Name, [entry(_, _)|Rest], Channel) :-
 %% Uses helper to fold pattern into head.
 
 distribute(Index, Goal, ImportVec, ResultVar) :-
-    ground(Index?), ground(Goal?) |
+    ground(Index?), known(Goal?) |
     nth_write_rpc(Index?, ImportVec?, Goal?, ResultVar?).
 
 %% nth_write_rpc - Get nth stream and write RPC message
@@ -144,7 +144,7 @@ build_rpc(Goal, ResultVar, Msg) :-
 %% Looks up module in registry, sends RPC message.
 
 transmit(ModuleName, Goal, Registry, ResultVar) :-
-    ground(ModuleName?), ground(Goal?) |
+    ground(ModuleName?), known(Goal?) |
     lookup_and_send_rpc(ModuleName?, Registry?, Goal?, ResultVar?).
 
 %% Helper - combined lookup and RPC send

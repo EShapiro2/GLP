@@ -1,0 +1,22 @@
+%% Test variable sharing through reduce
+
+%% Test: does reduce preserve variable connection?
+%% If Goal = double(5, R) and reduce returns Body with Y,
+%% is Y connected to R?
+
+%% Simple reduce that returns the second argument
+test_reduce(extract(_, Y), Y?).
+
+%% Test with ground value - should work
+test_ground(Result) :-
+    test_reduce(extract(hello, world), R),
+    Result? = R?.
+
+%% Test what we get back when second arg is passed as writer slot
+%% X is writer (slot for result), passed to extract's second position
+test_unbound(Returned) :-
+    test_reduce(extract(hello, X), R),
+    check_same(X?, R?, Returned?).
+
+check_same(A, B, same) :- A? =?= B? | true.
+check_same(_, _, different) :- otherwise | true.
