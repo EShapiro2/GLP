@@ -4,18 +4,23 @@
 %% Adds ability to abort computation via Abort argument.
 %% When Abort is bound to 'abort', computation stops.
 
-reduce(_, true, _).                              %% halt
-reduce(P, (A, B), Abort) :-                      %% fork
-    ground(P?), ground(Abort?) |
-    reduce(P?, A?, Abort?),
-    reduce(P?, B?, Abort?).
-reduce(P, Goal, Abort) :-                        %% reduce
-    ground(P?), ground(Goal?),
+run(true, _).                                    %% halt
+run((A, B), Abort) :-                            %% fork
+    ground(Abort?) |
+    run(A?, Abort?),
+    run(B?, Abort?).
+run(Goal, Abort) :-                              %% reduce
+    ground(Goal?),
     ~(Goal? =?= true), ~(Goal? =?= (_, _)),
-    unknown(Abort?),
-    clause(Goal?, P?, Body) |
-    reduce(P?, Body?, Abort?).
-reduce(_, _, abort).                             %% abort
+    unknown(Abort?) |
+    reduce(Goal?, Body),
+    run(Body?, Abort?).
+run(_, abort).                                   %% abort
 
-%% Usage: reduce(Program, Goal, Abort?)
+%% Object program: merge
+reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge([], [], []), true).
+
+%% Usage: run(Goal, Abort?)
 %% To abort: bind Abort to 'abort'

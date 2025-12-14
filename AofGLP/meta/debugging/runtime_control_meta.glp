@@ -23,3 +23,8 @@ suspended_run(A,[resume|Cs],L?,R) :-  run(A?,Cs?,L,R?).  % resume
 suspended_run(A,[C|Cs],L?,R) :- otherwise | run(A?,[C?|Cs?],L,R?).
 
 %% The program is not fail-stop resilient; it can be extended to be so.
+
+%% Object program: merge
+reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge([], [], []), true).

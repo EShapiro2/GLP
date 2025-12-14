@@ -18,3 +18,8 @@ suspended_run(_,[abort|_]).
 %% The metainterpreter suspends reductions as soon as the control stream
 %% is bound to [suspend|Cs?], upon which the run can be resumed or aborted
 %% by binding Cs accordingly.
+
+%% Object program: merge
+reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge([], [], []), true).

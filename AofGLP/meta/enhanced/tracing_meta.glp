@@ -14,3 +14,8 @@ run(true,true).  % halt
 run((A,B),fork(TA?,TB?)) :- run(A?,TA), run(B?,TB). % fork
 run(A,reduction(I?,Time?,TB?)) :- known(A?) |
     time(Time), reduce(A?,B,I), run(B?, TB).
+
+%% Object program: merge (with clause indices)
+reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs), 1).
+reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs), 2).
+reduce(merge([], [], []), true, 3).
