@@ -1,7 +1,9 @@
 % Test time mechanisms
 
-% Get current time (no guard needed)
-get_time(T?) :- now(T).
+% Test that _now returns a timestamp > 0
+time_positive(Result?) :- get_current_time(T), check_positive(T?, Result).
+get_current_time(T?) :- '_now'(T).
+check_positive(T, yes) :- T? > 0 | true.
 
 % Test wait_until - succeeds if time >= T
 past_time(T, yes) :- wait_until(T?) | true.
