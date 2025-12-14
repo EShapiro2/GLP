@@ -1,0 +1,3 @@
+%% Test # operator in head argument position
+test_extract(M?, G?) :- handle(M # G).
+handle(foo # bar(X)) :- true.
