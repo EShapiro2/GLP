@@ -1,11 +1,3 @@
--stdlib.
+%% equator.glp - Equator system predicate
 
-%% create_equator(C, Eq, Handle)
-%% Creates equator with collapse value C
-%% Eq = '_equator'(E, C) structure
-%% Handle = E? reader for controller
-create_equator(C, '_equator'(E, C?), E?).
-
-%% equate(Eq) - User-facing predicate to trigger equator
-%% Suspends until Eq is bound to equator structure, then triggers
 equate(Eq) :- equator(Eq?) | '_equator'(Eq?).
