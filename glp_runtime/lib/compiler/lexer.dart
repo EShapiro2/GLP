@@ -45,6 +45,7 @@ class Lexer {
       case '|': return _makeToken(TokenType.PIPE, startLine, startColumn);
       case ';': return _makeToken(TokenType.SEMICOLON, startLine, startColumn);
       case '~': return _makeToken(TokenType.TILDE, startLine, startColumn);
+      case '#': return _makeToken(TokenType.HASH, startLine, startColumn);
 
       // Arithmetic operators
       case '+': return _makeToken(TokenType.PLUS, startLine, startColumn);
@@ -189,7 +190,9 @@ class Lexer {
     return Token(TokenType.NUMBER, text, line, column, value);
   }
 
-  /// Scan string literal
+  /// Scan string literal or quoted atom
+  /// Single quotes produce ATOM (quoted atom, can be used as functor)
+  /// Double quotes produce STRING (string literal)
   Token _string(String quote, int line, int column) {
     final buffer = StringBuffer();
 
@@ -223,7 +226,14 @@ class Lexer {
     }
 
     _advance(); // closing quote
-    return Token(TokenType.STRING, buffer.toString(), line, column, buffer.toString());
+
+    // Single-quoted: produce ATOM (quoted atom, usable as functor)
+    // Double-quoted: produce STRING (string literal)
+    if (quote == "'") {
+      return Token(TokenType.ATOM, buffer.toString(), line, column);
+    } else {
+      return Token(TokenType.STRING, buffer.toString(), line, column, buffer.toString());
+    }
   }
 
   /// Skip whitespace and comments

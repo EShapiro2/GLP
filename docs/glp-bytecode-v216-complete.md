@@ -747,27 +747,21 @@ guard <, 2           % Evaluate A? < X? with 2 arguments
 - Succeeds if all previous clauses failed
 - Used for catch-all clauses
 
-### 11.5 if_writer X
-**Operation**: Type test - succeeds if X is a writer variable
+### 11.5 unknown X
+**Operation**: Test if X is unbound (value unknown)
 **Three-valued semantics**:
-1. If X is WriterTerm → **SUCCEED** (continue, pc++)
-2. If X is not WriterTerm (reader or constant) → **FAIL** (soft-fail to next clause)
+1. If X is an unbound variable → **SUCCEED** (continue, pc++)
+2. If X is bound to any value → **FAIL** (soft-fail to next clause)
 
-**Usage**: Enables type-based dispatching and pattern discrimination
+**Usage**: Test whether a value is yet unknown (unbound), enabling dispatch based on binding status.
 **Example**:
 ```
-process(X) :- if_writer(X) | ... handle writer case
-process(X) :- if_reader(X) | ... handle reader case
-process(X) :- otherwise    | ... handle constant case
+process(X) :- unknown(X?) | ... handle unbound case
+process(X) :- known(X?)   | ... handle bound case
 ```
 
-### 11.6 if_reader X
-**Operation**: Type test - succeeds if X is a reader variable
-**Three-valued semantics**:
-1. If X is ReaderTerm → **SUCCEED** (continue, pc++)
-2. If X is not ReaderTerm (writer or constant) → **FAIL** (soft-fail to next clause)
-
-**Usage**: Complements if_writer for complete type discrimination
+### 11.6 (Reserved)
+*Section removed - previously documented if_reader which is now consolidated into unknown/1*
 
 ### 11.7 Arithmetic Guards (Planned)
 
@@ -805,9 +799,8 @@ Type guards are three-valued and patient (unlike `evaluate/2` which is two-value
 - Transforming infix to prefix predicates (e.g., `X < Y` → `<(X, Y)`)
 
 **Currently Implemented Guards**:
-- ✅ `ground(X?)`, `known(X?)`, `otherwise`
+- ✅ `ground(X?)`, `known(X?)`, `unknown(X?)`, `otherwise`
 - ✅ `number(X?)`, `integer(X?)` - type tests
-- ✅ `if_writer(X)`, `if_reader(X?)` - mode tests
 
 **Design Pattern**:
 ```prolog
@@ -1789,21 +1782,16 @@ safe_div(X, Y, Z?) :- ground(X?), ground(Y?), Y? =\= 0 | execute('evaluate', [X?
 **Operation**: Test if Xi is numeric (integer or real)
 **Behavior**: As guard_integer but accepts any numeric type (int or float)
 
-#### 19.4.5 guard_writer Xi
-**Source**: `writer(X)` in guard position
-**Operation**: Test if Xi is an unbound writer
+#### 19.4.5 guard_unknown Xi
+**Source**: `unknown(X?)` in guard position
+**Operation**: Test if Xi is unbound (value unknown)
 **Behavior**:
-- Succeed if Xi is unbound writer variable
-- Fail otherwise
+- Succeed if Xi is an unbound variable
+- Fail if Xi is bound to any value
 - **Non-monotonic**: can succeed then fail after binding
 
-#### 19.4.6 guard_reader Xi
-**Source**: `reader(X?)` in guard position
-**Operation**: Test if Xi is an unbound reader
-**Behavior**:
-- Succeed if Xi is unbound reader variable
-- Fail otherwise
-- **Non-monotonic**: can succeed then fail after paired writer binds
+#### 19.4.6 (Reserved)
+*Section removed - previously documented guard_reader which is now consolidated into guard_unknown*
 
 ### 19.5 Control Guards
 
@@ -1987,6 +1975,6 @@ Guards must satisfy these requirements:
 6. ⏳ Testing (unit tests, integration tests)
 
 **See Also**:
-- Section 11: Existing guard instructions (ground, known, if_writer, if_reader)
+- Section 11: Existing guard instructions (ground, known, unknown)
 - Section 18: System predicates (execute mechanism)
 - parser-spec.md: Parser implementation details

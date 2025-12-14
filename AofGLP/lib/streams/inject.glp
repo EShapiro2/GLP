@@ -10,8 +10,10 @@
 %%   response_stream(Resp?, Target?, Id?, Rs),
 %%   merge(In?, Rs?, In1)
 
-inject(X, Y, Ys, [Y?|Ys?]) :- known(X) | true.
-inject(X, Y, [Y1|Ys], [Y1?|Ys1?]) :- unknown(X) | inject(X?, Y?, Ys?, Ys1).
+%% Trigger is bound externally - we receive and watch it
+%% TODO: Needs redesign for SRSW - trigger pattern has inherent multi-read
+inject(Trigger, Y, Ys, [Y?|Ys?]) :- known(Trigger?) | true.
+inject(Trigger, Y, [Y1|Ys], [Y1?|Ys1?]) :- unknown(Trigger?) | inject(Trigger?, Y?, Ys?, Ys1).
 
 %% When X is known, inserts Y at output and terminates.
 %% Until then, passes input messages to output while waiting.

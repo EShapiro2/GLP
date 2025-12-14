@@ -68,8 +68,10 @@ Module A                              Module B (math)
 ```
 
 - `name` — atom (lowercase identifier)
-- Must be first declaration in file
-- File without `-module` is anonymous main module
+- **Optional.** If omitted, defaults to filename without `.glp` extension
+- Example: `math.glp` without `-module` declaration has module name `math`
+- For REPL/in-memory compilation: defaults to `_main`
+- Existing programs without module declarations work unchanged (backwards compatible)
 
 ### 2.2 Export Declaration
 
@@ -80,6 +82,7 @@ Module A                              Module B (math)
 - Lists procedures visible to other modules
 - Unexported procedures are module-private
 - Multiple `-export` declarations allowed (cumulative)
+- **Default:** If no `-export` declaration, **all procedures are exported** (backwards compatible)
 
 ### 2.3 Import Declaration
 
@@ -89,8 +92,10 @@ Module A                              Module B (math)
 
 - Lists modules this module will call
 - Compiler assigns index to each (1, 2, 3, ...)
-- Enables O(1) indexed dispatch
+- Enables O(1) indexed dispatch via Distribute opcode
 - **FCP behavior:** Import does NOT load the module — loading is lazy on first RPC
+- **Default:** If no `-import` declaration, empty import list
+- **Note:** Static RPC (`atom # goal`) requires the module in `-import`; dynamic RPC (`Var? # goal`) uses Transmit opcode and works without import
 
 ### 2.4 Remote Procedure Call
 

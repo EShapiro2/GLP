@@ -7,9 +7,10 @@
 %
 % Decomposition: tuple → list
 %   foo(a, b) =.. L  →  L = [foo, a, b]
+-stdlib.
 
 % Composition: list → tuple
-X? =.. [Y|Ys] :- list(Ys?) | list_to_tuple([Y?|Ys?], X).
+X? =.. [Y|Ys] :- list(Ys?) | '_list_to_tuple'([Y?|Ys?], X).
 
 % Decomposition: tuple → list
-X =.. Y? :- tuple(X?) | tuple_to_list(X?, Y).
+X =.. Y? :- tuple(X?) | '_tuple_to_list'(X?, Y).

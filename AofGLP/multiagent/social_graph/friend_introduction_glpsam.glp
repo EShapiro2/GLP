@@ -4,6 +4,9 @@
 %% Leverages existing trust relationships to establish new connections.
 %% When agent r is friends with both p and q, r can introduce them.
 
+%% Channel operations (defined guard)
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
 % Friend introduces two others
 social_graph(Id, [msg(user, Id?, introduce(P, Q))|In], Fs) :-
     ground(Id?), ground(P?), ground(Q?),

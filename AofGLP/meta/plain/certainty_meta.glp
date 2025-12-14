@@ -3,20 +3,33 @@
 %%
 %% Computes certainty factor of results.
 %% Each clause has associated certainty; result certainty is computed.
+%%
+%% Usage: run(Goal, Certainty)
+%% where Certainty? will be bound to the computed certainty factor.
 
-reduce(Program, true, 1).                        %% halt - certainty 1
-reduce(Program, (A, B), C) :-                    %% fork - min of certainties
-    reduce(Program?, A?, C_of_a),
-    reduce(Program?, B?, C_of_b),
+run(true, 1).                                    %% halt - certainty 1
+run((A, B), C?) :-                               %% fork - min of certainties
+    run(A?, C_of_a),
+    run(B?, C_of_b),
     min(C_of_a?, C_of_b?, C).
-reduce(Program, Goal, C) :-                      %% reduce - multiply
-    clause(Goal?, Program?, Body, Cr),
-    reduce(Program?, Body?, C_of_body),
+run(Goal, C?) :-                                 %% reduce - multiply
+    ground(Goal?),
+    ~(Goal? =?= true), ~(Goal? =?= (_, _)) |
+    reduce_cert(Goal?, Body, Cr),
+    run(Body?, C_of_body),
     C := Cr? * C_of_body?.
 
 %% min/3 - return minimum of two values
-min(X, Y, X) :- X =< Y | true.
-min(X, Y, Y) :- Y < X | true.
+min(X, Y, Z?) :- ground(X?), ground(Y?), X? =< Y? | Z = X?.
+min(X, Y, Z?) :- ground(X?), ground(Y?), Y? < X? | Z = Y?.
 
-%% clause/4 returns body and certainty factor Cr
-%% Example: clause(foo(X), Program, Body, 0.9)
+%% Object program: merge with certainty factors
+%% Each clause has certainty 1.0 (deterministic merge)
+reduce_cert(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs), 1).
+reduce_cert(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs), 1).
+reduce_cert(merge([], [], []), true, 1).
+
+%% Usage:
+%% run(merge([1,2], [3,4], Z), Cert)
+%% Z? will be bound to [1,2,3,4] (or other merge)
+%% Cert? will be 1 (all certainties are 1)

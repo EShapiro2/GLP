@@ -7,10 +7,34 @@ import 'package:glp_runtime/runtime/commit.dart';
 import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/system_predicates.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
+import 'package:glp_runtime/runtime/module_runtime.dart' show ModuleGoalContext;
+import 'package:glp_runtime/runtime/module_messages.dart';
 import 'opcodes.dart';
 import 'opcodes_v2.dart' as opv2;
 
 enum RunResult { terminated, suspended, yielded, outOfReductions }
+
+/// Module target for REPL imports
+class ReplModuleTarget {
+  final String name;
+  final BytecodeProgram program;
+  ReplModuleTarget(this.name, this.program);
+}
+
+/// Simple module context for REPL (synchronous goal spawning)
+class ReplModuleContext {
+  final String moduleName;
+  final Map<int, ReplModuleTarget> imports;  // importIndex (1-based) -> target
+  final BytecodeProgram? combinedProgram;    // Combined program for entry point lookup
+  final String programKey;                    // Key for scheduler's runners map
+
+  ReplModuleContext({
+    required this.moduleName,
+    required this.imports,
+    this.combinedProgram,
+    this.programKey = 'main',
+  });
+}
 
 /// Unification mode for structure traversal (WAM-style)
 enum UnifyMode { read, write }
@@ -185,6 +209,9 @@ class RunnerContext {
   // Custom term formatter for consistent variable naming
   final String Function(Term, {bool markReaders})? termFormatter;
 
+  // Module context for distribute/transmit handlers (Phase 5 integration)
+  final Object? moduleContext;
+
   RunnerContext({
     required this.rt,
     required this.goalId,
@@ -197,6 +224,7 @@ class RunnerContext {
     this.showBindings = true,
     this.debugOutput = false,
     this.termFormatter,
+    this.moduleContext,
   }) : env = env ?? CallEnv();
 
   void clearClause() {
@@ -541,30 +569,32 @@ class BytecodeRunner {
 
       // ===== v2 UNIFIED INSTRUCTIONS =====
 
-      // IfVariable: unified writer/reader type guard
-      if (op is opv2.IfVariable) {
+      // Unknown: test if variable is unbound (value unknown)
+      if (op is opv2.Unknown) {
         final term = cx.clauseVars[op.varIndex];
-        if (op.isReader) {
-          // Check if it's a reader
-          if (term is VarRef && term.isReader) {
-            pc++;
-            continue;
-          } else {
+        // Succeeds if variable is unbound (no value yet)
+        if (term is VarRef) {
+          // Check if variable is unbound in σ̂w or heap
+          if (cx.sigmaHat.containsKey(term.varId)) {
+            // Has tentative binding - not unknown
             _softFailToNextClause(cx, pc);
             pc = _findNextClauseTry(pc);
             continue;
           }
-        } else {
-          // Check if it's a writer
-          if (term is VarRef && !term.isReader) {
-            pc++;
-            continue;
-          } else {
+          if (cx.rt.heap.isBound(term.varId)) {
+            // Has heap binding - not unknown
             _softFailToNextClause(cx, pc);
             pc = _findNextClauseTry(pc);
             continue;
           }
+          // Unbound = unknown, succeed
+          pc++;
+          continue;
         }
+        // Non-variable is always known (bound to a value)
+        _softFailToNextClause(cx, pc);
+        pc = _findNextClauseTry(pc);
+        continue;
       }
 
       // HeadVariable: unified writer/reader structure variable (at S position)
@@ -1683,17 +1713,17 @@ class BytecodeRunner {
               cx.sigmaHat[arg.varId] = VarRef(existing, isReader: true);
             } else {
               // First occurrence: goal writer vs head writer
-              // WxW check: if goal writer is UNBOUND, this is writer-to-writer = FAIL
-              if (!cx.rt.heap.isWriterBound(arg.varId)) {
-                if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable WxW FAIL - goal writer W${arg.varId} is unbound');
-                _softFailToNextClause(cx, pc);
-                pc = _findNextClauseTry(pc);
-                continue;
+              // Store the goal's writer reference - clause can bind through it
+              if (cx.rt.heap.isWriterBound(arg.varId)) {
+                // Goal writer already bound - use its value
+                final boundValue = cx.rt.heap.valueOfWriter(arg.varId);
+                if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable goal writer W${arg.varId} bound to $boundValue');
+                cx.clauseVars[varIndex] = boundValue;
+              } else {
+                // Goal writer unbound - store writer ref, clause can bind it later
+                if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable storing unbound goal writer W${arg.varId}');
+                cx.clauseVars[varIndex] = arg;
               }
-              // Goal writer is BOUND - use its value
-              final boundValue = cx.rt.heap.valueOfWriter(arg.varId);
-              if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable goal writer W${arg.varId} bound to $boundValue');
-              cx.clauseVars[varIndex] = boundValue;
             }
           } else if (arg is VarRef && arg.isReader) {
             final wid = cx.rt.heap.writerIdForReader(arg.varId);
@@ -1769,9 +1799,19 @@ class BytecodeRunner {
             // Writer VarRef → reader param (mode conversion)
             if (existing != null) {
               // clauseVars already has a value (from earlier occurrence like UnifyVariable)
-              // Bind the writer arg to that value
+              // Bind the writer arg to the READER of that value
+              // BUG FIX: When existing is a writer VarRef, convert to reader
               if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable binding writer W${arg.varId} to existing value $existing');
-              cx.sigmaHat[arg.varId] = existing is int ? VarRef(existing, isReader: true) : existing;
+              if (existing is VarRef && !existing.isReader) {
+                // existing is a writer - bind to its reader
+                cx.sigmaHat[arg.varId] = VarRef(existing.varId, isReader: true);
+              } else if (existing is int) {
+                // existing is bare varId - bind to reader of it
+                cx.sigmaHat[arg.varId] = VarRef(existing, isReader: true);
+              } else {
+                // existing is already a reader or a term - use as-is
+                cx.sigmaHat[arg.varId] = existing;
+              }
             } else {
               final freshVar = cx.rt.heap.allocateFreshVar();
               cx.rt.heap.addVariable(freshVar);
@@ -2763,6 +2803,170 @@ class BytecodeRunner {
         pc++; continue;
       }
 
+      // ===== MODULE SYSTEM INSTRUCTIONS =====
+      // Phase 2 module system: distribute and transmit opcodes
+      // These handle cross-module RPC following FCP design
+
+      if (op is Distribute) {
+        // Static RPC to imported module at known index
+        // Following FCP: distribute # {Index, Goal}
+        //
+        // Writes ExportMessage to import vector which routes via
+        // serve_import to target module's dispatcher.
+        if (cx.inBody) {
+          // Collect arguments from argSlots
+          final args = <Term>[];
+          for (int i = 0; i < op.arity; i++) {
+            final arg = cx.argSlots[i];
+            if (arg != null) args.add(arg);
+          }
+
+          // Check if module context is available
+          if (cx.moduleContext is ReplModuleContext) {
+            // REPL mode: directly spawn goal in target module
+            final replCtx = cx.moduleContext as ReplModuleContext;
+            final target = replCtx.imports[op.importIndex];
+
+            if (target != null) {
+              // Find entry point - use combined program if available, otherwise target's program
+              final signature = '${op.functor}/${op.arity}';
+              final program = replCtx.combinedProgram ?? target.program;
+              final entryPC = program.labels[signature];
+
+              if (entryPC != null) {
+                // Create argument slots for the new goal
+                final argSlots = <int, Term>{};
+                for (int i = 0; i < args.length; i++) {
+                  argSlots[i] = args[i];
+                }
+
+                // Allocate new goal ID and enqueue
+                final newGoalId = cx.rt.nextGoalId++;
+                final env = CallEnv(args: argSlots);
+                cx.rt.setGoalEnv(newGoalId, env);
+                cx.rt.setGoalProgram(newGoalId, replCtx.programKey);  // Use consistent key
+
+                // Pass same module context for nested RPCs
+                cx.rt.setGoalModuleContext(newGoalId, replCtx);
+
+                cx.rt.gq.enqueue(GoalRef(newGoalId, entryPC));
+
+                if (cx.debugOutput) {
+                  print('[MODULE] Distribute (REPL): ${replCtx.moduleName} -> ${target.name} # $signature (goal $newGoalId @ PC $entryPC)');
+                }
+              } else {
+                if (cx.debugOutput) {
+                  print('[MODULE] Distribute: Entry point not found for ${op.functor}/${op.arity} in ${target.name}');
+                }
+              }
+            } else {
+              if (cx.debugOutput) {
+                print('[MODULE] Distribute: No target for import index ${op.importIndex}');
+              }
+            }
+          } else if (cx.moduleContext is ModuleGoalContext) {
+            final modCtx = cx.moduleContext as ModuleGoalContext;
+            final vector = modCtx.module.importVector;
+
+            if (vector != null && op.importIndex <= vector.size) {
+              // Build and send ExportMessage
+              final message = ExportMessage.trust(
+                sourceModule: modCtx.module.name,
+                functor: op.functor,
+                arity: op.arity,
+                args: args,
+              );
+              vector.write(op.importIndex, message);
+
+              if (cx.debugOutput) {
+                print('[MODULE] Distribute: ${modCtx.module.name} -> import[${op.importIndex}] # ${op.functor}/${op.arity}');
+              }
+            } else {
+              if (cx.debugOutput) {
+                print('[MODULE] Distribute: No vector or index out of range for ${op.functor}/${op.arity}');
+              }
+            }
+          } else {
+            // No module context - log only (standalone execution)
+            if (cx.debugOutput) {
+              print('[MODULE] Distribute (no context): import[${op.importIndex}] # ${op.functor}/${op.arity}');
+            }
+          }
+          cx.argSlots.clear();
+        }
+        pc++; continue;
+      }
+
+      if (op is Transmit) {
+        // Dynamic RPC to module resolved at runtime
+        // Following FCP: transmit # {ModuleVar, Goal}
+        //
+        // Resolves module name from variable, looks up in registry,
+        // sends ExportMessage directly to target module's input channel.
+        if (cx.inBody) {
+          // Collect arguments from argSlots
+          final args = <Term>[];
+          for (int i = 0; i < op.arity; i++) {
+            final arg = cx.argSlots[i];
+            if (arg != null) args.add(arg);
+          }
+
+          // Get module name from clause variable
+          final moduleVar = cx.clauseVars[op.moduleVarIndex];
+
+          // Check if module context is available
+          if (cx.moduleContext is ModuleGoalContext) {
+            final modCtx = cx.moduleContext as ModuleGoalContext;
+
+            // Resolve module name from variable
+            String? moduleName;
+            if (moduleVar is ConstTerm) {
+              moduleName = moduleVar.value?.toString();
+            } else if (moduleVar is VarRef) {
+              // Dereference variable to get bound value
+              final deref = cx.rt.heap.dereference(moduleVar);
+              if (deref is ConstTerm) {
+                moduleName = deref.value?.toString();
+              }
+            }
+
+            if (moduleName != null) {
+              // Look up target module in registry
+              final targetModule = modCtx.registry.lookup(moduleName);
+              if (targetModule != null) {
+                // Build and send ExportMessage directly to target
+                final message = ExportMessage.trust(
+                  sourceModule: modCtx.module.name,
+                  functor: op.functor,
+                  arity: op.arity,
+                  args: args,
+                );
+                targetModule.inputSink.add(message);
+
+                if (cx.debugOutput) {
+                  print('[MODULE] Transmit: ${modCtx.module.name} -> $moduleName # ${op.functor}/${op.arity}');
+                }
+              } else {
+                if (cx.debugOutput) {
+                  print('[MODULE] Transmit: Module "$moduleName" not found in registry');
+                }
+              }
+            } else {
+              if (cx.debugOutput) {
+                print('[MODULE] Transmit: Could not resolve module name from X${op.moduleVarIndex}');
+              }
+            }
+          } else {
+            // No module context - log only (standalone execution)
+            if (cx.debugOutput) {
+              print('[MODULE] Transmit (no context): X${op.moduleVarIndex}($moduleVar) # ${op.functor}/${op.arity}');
+            }
+          }
+          cx.argSlots.clear();
+        }
+        pc++; continue;
+      }
+
       // ===== VARIABLE INSTRUCTIONS =====
 
       // REMOVED: Duplicate GetVariable handler
@@ -2844,7 +3048,8 @@ class BytecodeRunner {
         }
 
         // If any arguments have unbound readers, suspend
-        if (unboundReaders.isNotEmpty) {
+        // EXCEPTION: 'unknown' guard specifically tests for unbound - don't suspend
+        if (unboundReaders.isNotEmpty && predicateName != 'unknown') {
           if (debug) {
             // print('[GUARD] SUSPEND - unbound readers: $unboundReaders');
           }
@@ -4055,24 +4260,87 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
-      case 'writer':
-        // Per spec 19.4.5: Test if Xi is an unbound writer
+      case 'equator':
+        // Succeeds if X is bound to '_equator'(E, C) where C is a constant
+        // Enables many-to-one signaling via equators
         if (args.isEmpty) return GuardResult.failure;
-        final arg = args[0];
-        if (arg is VarRef && !arg.isReader) {
-          final heapVal = cx.rt.heap.getValue(arg.varId);
-          if (heapVal == null) return GuardResult.success; // Unbound writer
+        final eqVal = getValue(args[0]);
+        // Check for _equator(E, C) structure with constant C
+        if (eqVal is StructTerm &&
+            eqVal.functor == '_equator' &&
+            eqVal.args.length == 2) {
+          // Check that second arg is a constant (after dereferencing)
+          final cArg = eqVal.args[1];
+          Object? cVal;
+          if (cArg is VarRef) {
+            // Dereference the variable
+            if (cx.sigmaHat.containsKey(cArg.varId)) {
+              cVal = cx.sigmaHat[cArg.varId];
+            } else if (cx.rt.heap.isBound(cArg.varId)) {
+              cVal = cx.rt.heap.getValue(cArg.varId);
+            }
+          } else {
+            cVal = cArg;
+          }
+          // Check if it's a constant (ConstTerm or primitive)
+          if (cVal is ConstTerm || cVal is num || cVal is String) {
+            return GuardResult.success;
+          }
         }
         return GuardResult.failure;
 
-      case 'reader':
-        // Per spec 19.4.6: Test if Xi is an unbound reader
+      case 'unknown':
+        // Test if dereferencing leads to an unbound variable
+        // Per spec: "Succeeds if X is bound to an unbound variable"
+        // This means we follow the binding chain to its end
         if (args.isEmpty) return GuardResult.failure;
-        final arg = args[0];
-        if (arg is VarRef && arg.isReader) {
-          final heapVal = cx.rt.heap.getValue(arg.varId);
-          if (heapVal == null) return GuardResult.success; // Unbound reader
+        Object? value = args[0];
+
+        // Follow binding chain to end
+        while (value is VarRef) {
+          final varId = value.varId;
+          // Check σ̂w first
+          if (cx.sigmaHat.containsKey(varId)) {
+            value = cx.sigmaHat[varId];
+            continue;
+          }
+          // Check heap
+          if (cx.rt.heap.isBound(varId)) {
+            value = cx.rt.heap.getValue(varId);
+            continue;
+          }
+          // Reached an unbound variable → SUCCESS
+          return GuardResult.success;
         }
+        // Dereferenced to a non-variable (ground term) → FAILURE
+        return GuardResult.failure;
+
+      case 'unknown':
+        // Succeeds if dereferencing leads to an unbound variable
+        // Must follow binding chain to the end
+        if (args.isEmpty) return GuardResult.failure;
+        var value = args[0];
+
+        // Follow binding chain to end
+        while (value is VarRef) {
+          final varId = value.varId;
+          // Check σ̂w first
+          if (cx.sigmaHat.containsKey(varId)) {
+            value = cx.sigmaHat[varId];
+            continue;
+          }
+          // Check heap
+          if (cx.rt.heap.isBound(varId)) {
+            final heapVal = cx.rt.heap.getValue(varId);
+            if (heapVal != null) {
+              value = heapVal;
+              continue;
+            }
+          }
+          // Reached an unbound variable → SUCCESS
+          return GuardResult.success;
+        }
+        // Dereferenced to a non-variable (ground term) → FAILURE
         return GuardResult.failure;
 
       // Control guards

@@ -1,8 +1,8 @@
 # Defined Guards: Partial Evaluation Design
 
-## Status: NOT IMPLEMENTED (Design Document)
+## Status: IMPLEMENTED (November 2025)
 
-This document describes the intended implementation of defined guards via partial evaluation at compile time. The current implementation uses bytecode-level pattern matching which is incorrect - it only tests patterns, it doesn't construct bindings.
+This document describes the implementation of defined guards via partial evaluation at compile time. The partial evaluator in `lib/compiler/analyzer.dart` transforms clauses using defined guards into their expanded form before SRSW analysis.
 
 ## Overview
 

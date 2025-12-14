@@ -58,8 +58,7 @@ These guards can be negated with `~`:
 | `tuple(X?)` | Test for tuple type | `~tuple(X?)` succeeds if X is not a tuple |
 | `list(X?)` | Test for list type | `~list(X?)` succeeds if X is not a list |
 | `is_list(X?)` | Test for proper list | `~is_list(X?)` succeeds if X is not a proper list |
-| `writer(X)` | Test for unbound writer | `~writer(X)` succeeds if X is not an unbound writer |
-| `reader(X?)` | Test for unbound reader | `~reader(X?)` succeeds if X is not an unbound reader |
+| `unknown(X?)` | Test for unbound variable | `~unknown(X?)` succeeds if X is bound |
 | `X =?= Y` | Ground equality test | `~(X =?= Y)` succeeds if X and Y are not equal |
 
 ### Non-Negatable Guards
@@ -558,6 +557,32 @@ test_known_fail :-
 - **glp-bytecode-v216-complete.md** - Complete guard instruction specifications
 - **parser-spec.md** - Parser implementation for guard expressions
 - **main_GLP_to_Dart (1).tex** - Formal specification
+
+---
+
+## Equator Guard
+
+### `equator(X?)`
+**Test if X is an equator structure**
+
+**Semantics**:
+- Success: X is bound to `'_equator'(E, C)` where C is a constant
+- Suspend: X is unbound reader
+- Fail: X is any other value
+
+**SRSW Relaxation**: Like `ground(X?)`, the `equator(X?)` guard permits multiple occurrences of `X?` in the clause body. This enables distributing the equator structure to multiple spawned processes.
+
+**Example**:
+```prolog
+% Meta-interpreter with emergency brake
+run(M, (A,B), Commands, Eq) :-
+    equator(Eq?) |
+    distribute(Commands?, Commands1, Commands2),
+    run(M?, A?, Commands1?, Eq?),  % Eq? appears twice - OK with equator guard
+    run(M?, B?, Commands2?, Eq?).
+```
+
+**See also**: `docs/equators-spec.md` for full specification.
 
 ---
 

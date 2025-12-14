@@ -1,0 +1,6 @@
+%% main_module.glp - Demonstrates cross-module RPC
+
+compute(Result?) :-
+    math_module # factorial(5, F),
+    math_module # gcd(48, 18, G),
+    Result = result(factorial(F?), gcd(G?)).

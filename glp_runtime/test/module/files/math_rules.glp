@@ -1,0 +1,15 @@
+% math_rules.glp - Math rules as clause/2 facts for meta-interpreter
+-module(math_rules).
+-export([clause/2]).
+
+% Facts for double/2: double(N, R) where R = N * 2
+clause(double(0, 0), true).
+clause(double(1, 2), true).
+clause(double(2, 4), true).
+clause(double(3, 6), true).
+clause(double(5, 10), true).
+
+% Facts for square/2: square(N, R) where R = N * N
+clause(square(2, 4), true).
+clause(square(3, 9), true).
+clause(square(4, 16), true).

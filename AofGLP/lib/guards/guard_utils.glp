@@ -7,12 +7,8 @@
 %% ground(X) is built-in
 
 %% Known/unknown checks for synchronization
-%% known(X) succeeds if X is bound
-%% unknown(X) succeeds if X is unbound
-
-%% Reader/writer detection
-%% reader(X) succeeds if X is a reader (X?)
-%% writer(X) succeeds if X is a writer (X)
+%% known(X?) succeeds if X is bound
+%% unknown(X?) succeeds if X is unbound (follows binding chains)
 
 %% Otherwise guard - succeeds if no other clause matches
 %% otherwise is built-in

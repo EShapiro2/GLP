@@ -10,9 +10,31 @@
 %% If Cs is bound to [suspend, abort], R? will be bound to
 %% the current resolvent of the run.
 
-suspended_run(A,[resume|Cs],L,R?) :- run(A,Cs?,L?,R).
-suspended_run(A,[abort|_],L,[A?|L?]).
+run(true, _, L, L?).                             %% halt - pass resolvent through
+run((A, B), Cs, L, R?) :-                        %% fork
+    ground(Cs?) |
+    run(A?, Cs?, L?, M),
+    run(B?, Cs?, M?, R).
+run(A, [suspend|Cs], L, R?) :- suspended_run(A?, Cs?, L?, R).  %% suspend
+run(A, Cs, L, R?) :-                             %% reduce
+    ground(A?),
+    ~(A? =?= true), ~(A? =?= (_, _)) |
+    reduce(A?, B),
+    run(B?, Cs?, L?, R).
+
+suspended_run(A, [resume|Cs], L, R?) :- run(A?, Cs?, L?, R).
+suspended_run(A, [abort|_], L, [A?|L?]).
 
 %% Note: Taking a snapshot of a suspended run and then resuming it
 %% requires extra effort, as two copies of the goal are needed:
 %% a 'frozen' one for the snapshot, and a 'live' one to continue the run.
+
+%% Object program: merge
+reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge([], [], []), true).
+
+%% Usage:
+%% run(merge([1,2], [3,4], Z), Cs?, [], R)
+%% With Cs = [continue, continue, ...] to run normally
+%% Or Cs = [suspend, abort] to get snapshot of suspended goals in R?
