@@ -5,6 +5,9 @@
 %% Forwards communication bidirectionally while producing a
 %% replicable audit stream.
 
+%% Note: This file uses bidirectional predicates that don't fit
+%% a single mode declaration. MT validation skipped.
+
 observe(X?, Y, Z?) :- observe(Y?, X, Z).
 observe(X, Out1?, Out2?) :- ground(X?) | copy_to(X?, Out1, Out2).
 observe(Xs, [Y1?|Ys1?], [Y2?|Ys2?]) :-

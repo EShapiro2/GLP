@@ -7,6 +7,12 @@
 %% Test goal:
 %% distribute_indexed([send(1,a), send(2,b), send(1,c), send(2,d)], Y, Z).
 
+%% Type definitions
+List := [] | [_ | List].
+
+%% Mode declarations
+DistributeIndexed := distribute_indexed(List?, List, List).
+
 distribute_indexed([send(1,X)|In], [X?|Out1?], Out2?) :-
     distribute_indexed(In?, Out1, Out2).
 distribute_indexed([send(2,X)|In], Out1?, [X?|Out2?]) :-
