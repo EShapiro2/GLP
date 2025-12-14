@@ -1799,9 +1799,19 @@ class BytecodeRunner {
             // Writer VarRef → reader param (mode conversion)
             if (existing != null) {
               // clauseVars already has a value (from earlier occurrence like UnifyVariable)
-              // Bind the writer arg to that value
+              // Bind the writer arg to the READER of that value
+              // BUG FIX: When existing is a writer VarRef, convert to reader
               if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable binding writer W${arg.varId} to existing value $existing');
-              cx.sigmaHat[arg.varId] = existing is int ? VarRef(existing, isReader: true) : existing;
+              if (existing is VarRef && !existing.isReader) {
+                // existing is a writer - bind to its reader
+                cx.sigmaHat[arg.varId] = VarRef(existing.varId, isReader: true);
+              } else if (existing is int) {
+                // existing is bare varId - bind to reader of it
+                cx.sigmaHat[arg.varId] = VarRef(existing, isReader: true);
+              } else {
+                // existing is already a reader or a term - use as-is
+                cx.sigmaHat[arg.varId] = existing;
+              }
             } else {
               final freshVar = cx.rt.heap.allocateFreshVar();
               cx.rt.heap.addVariable(freshVar);
