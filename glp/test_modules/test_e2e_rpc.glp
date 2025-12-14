@@ -1,16 +1,25 @@
 %% End-to-end test: RPC through GLP infrastructure
 %% math_reduce module must be loaded first
 
-%% Test reduce directly first
+%% Test reduce directly - should return Body with result slot
 test_reduce_direct(Result) :-
     reduce(double(5, _), Body),
     Result? = Body?.
 
+%% Test e2e: dispatcher processes export(double(5, R)) and binds R = 10
+%% FCP style: Goal contains result variable, shared with caller
+test_e2e_simple(Result) :-
+    make_export_msg(double(5, R), Input),
+    dispatcher(Input?, math_reduce),
+    Result? = R?.
+
+%% Helper: create input stream with export(Goal) message
+make_export_msg(Goal, [export(Goal?)|_]).
+
 %% Test dispatcher with ground goal (for debugging)
-%% Note: This won't bind R because the goal in RPC is ground
 test_dispatcher_ground(Result) :-
     make_input_ground(MathInput),
     dispatcher(MathInput?, math_reduce),
     Result? = dispatched.
 
-make_input_ground([rpc(double(5, dummy_result), _)|_]).
+make_input_ground([export(double(5, dummy_result))|_]).
