@@ -57,51 +57,52 @@ class BodyKernelRegistry {
 }
 
 /// Register all standard body kernels
+/// All kernel names start with _ to distinguish them from user predicates
 void registerStandardBodyKernels(BodyKernelRegistry registry) {
   // Arithmetic operations
-  registry.register('add', 3, addKernel);
-  registry.register('sub', 3, subKernel);
-  registry.register('mul', 3, mulKernel);
-  registry.register('div', 3, divKernel);
-  registry.register('idiv', 3, idivKernel);
-  registry.register('mod', 3, modKernel);
-  registry.register('neg', 2, negKernel);
+  registry.register('_add', 3, addKernel);
+  registry.register('_sub', 3, subKernel);
+  registry.register('_mul', 3, mulKernel);
+  registry.register('_div', 3, divKernel);
+  registry.register('_idiv', 3, idivKernel);
+  registry.register('_mod', 3, modKernel);
+  registry.register('_neg', 2, negKernel);
 
   // Math functions
-  registry.register('abs_kernel', 2, absKernel);
-  registry.register('sqrt_kernel', 2, sqrtKernel);
-  registry.register('sin_kernel', 2, sinKernel);
-  registry.register('cos_kernel', 2, cosKernel);
-  registry.register('tan_kernel', 2, tanKernel);
-  registry.register('exp_kernel', 2, expKernel);
-  registry.register('ln_kernel', 2, lnKernel);
-  registry.register('log10_kernel', 2, log10Kernel);
-  registry.register('pow_kernel', 3, powKernel);
-  registry.register('asin_kernel', 2, asinKernel);
-  registry.register('acos_kernel', 2, acosKernel);
-  registry.register('atan_kernel', 2, atanKernel);
+  registry.register('_abs', 2, absKernel);
+  registry.register('_sqrt', 2, sqrtKernel);
+  registry.register('_sin', 2, sinKernel);
+  registry.register('_cos', 2, cosKernel);
+  registry.register('_tan', 2, tanKernel);
+  registry.register('_exp', 2, expKernel);
+  registry.register('_ln', 2, lnKernel);
+  registry.register('_log10', 2, log10Kernel);
+  registry.register('_pow', 3, powKernel);
+  registry.register('_asin', 2, asinKernel);
+  registry.register('_acos', 2, acosKernel);
+  registry.register('_atan', 2, atanKernel);
 
   // Type conversions
-  registry.register('integer_kernel', 2, integerKernel);
-  registry.register('real_kernel', 2, realKernel);
-  registry.register('round_kernel', 2, roundKernel);
-  registry.register('floor_kernel', 2, floorKernel);
-  registry.register('ceil_kernel', 2, ceilKernel);
+  registry.register('_integer', 2, integerKernel);
+  registry.register('_real', 2, realKernel);
+  registry.register('_round', 2, roundKernel);
+  registry.register('_floor', 2, floorKernel);
+  registry.register('_ceil', 2, ceilKernel);
 
   // Structure manipulation
-  registry.register('list_to_tuple', 2, listToTupleKernel);
-  registry.register('tuple_to_list', 2, tupleToListKernel);
+  registry.register('_list_to_tuple', 2, listToTupleKernel);
+  registry.register('_tuple_to_list', 2, tupleToListKernel);
 
   // Identity/copy
-  registry.register('copy', 2, copyKernel);
+  registry.register('_copy', 2, copyKernel);
 
   // Time operations
-  registry.register('now', 1, nowKernel);
+  registry.register('_now', 1, nowKernel);
 
   // MutualRef operations (O(1) stream append)
-  registry.register('allocate_mutual_reference', 2, mutualRefKernel);
-  registry.register('kernel_stream_append', 3, streamAppendKernel);
-  registry.register('kernel_close_mutual_reference', 1, mutualRefCloseKernel);
+  registry.register('_allocate_mutual_reference', 2, mutualRefKernel);
+  registry.register('_stream_append', 3, streamAppendKernel);
+  registry.register('_close_mutual_reference', 1, mutualRefCloseKernel);
 }
 
 /// Helper to get numeric value from argument (with arithmetic evaluation)

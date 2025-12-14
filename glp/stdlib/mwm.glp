@@ -8,7 +8,7 @@
 -stdlib.
 
 mwm(In, Out?) :-
-    allocate_mutual_reference(Ref, Out),
+    '_allocate_mutual_reference'(Ref, Out),
     mwm_main(In?, Ref?).
 
 % Intermediate predicate with guard to allow multiple Ref? occurrences
@@ -46,9 +46,9 @@ close_when_done(done, Ref) :-
 % RefOut: updated MutualRef (output)
 stream_append(Value, RefIn, RefOut?) :-
     is_mutual_ref(RefIn?) |
-    kernel_stream_append(RefIn?, Value?, RefOut).
+    '_stream_append'(RefIn?, Value?, RefOut).
 
 % close_mutual_reference/1 - Close stream by binding tail to []
 close_mutual_reference(Ref) :-
     is_mutual_ref(Ref?) |
-    kernel_close_mutual_reference(Ref?).
+    '_close_mutual_reference'(Ref?).
