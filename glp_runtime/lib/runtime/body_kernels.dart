@@ -103,6 +103,9 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_allocate_mutual_reference', 2, mutualRefKernel);
   registry.register('_stream_append', 3, streamAppendKernel);
   registry.register('_close_mutual_reference', 1, mutualRefCloseKernel);
+
+  // Equator operations (many-to-one signaling)
+  registry.register('_equator', 1, equatorKernel);
 }
 
 /// Helper to get numeric value from argument (with arithmetic evaluation)
@@ -694,6 +697,63 @@ BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
   for (final act in activations) {
     rt.gq.enqueue(act);
   }
+
+  return BodyKernelResult.success;
+}
+
+// ============================================================================
+// EQUATOR KERNELS (Many-to-One Signaling)
+// ============================================================================
+
+/// '_equator'(X) - Trigger an equator if X is an equator structure
+///
+/// Semantics:
+/// - If X = '_equator'(E, C) and E is an unbound writer: bind E = C (trigger!)
+/// - Otherwise: no-op (succeed without doing anything)
+///
+/// This allows multiple recipients to trigger an equator, with only the first
+/// successful binding actually having effect (subsequent calls see E already bound).
+BodyKernelResult equatorKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 1) {
+    // Wrong arity - no-op (succeed silently)
+    return BodyKernelResult.success;
+  }
+
+  // Dereference the argument
+  final deref = _deref(rt, args[0]);
+
+  // Check if it's an equator structure: '_equator'(E, C)
+  if (deref is! StructTerm ||
+      deref.functor != '_equator' ||
+      deref.args.length != 2) {
+    // Not an equator - no-op
+    return BodyKernelResult.success;
+  }
+
+  // Get E (first arg) and C (second arg)
+  final e = deref.args[0];
+  final c = _deref(rt, deref.args[1]);
+
+  // Check if E is an unbound writer
+  if (e is VarRef && !e.isReader) {
+    // E is a writer - check if it's unbound
+    if (!rt.heap.isWriterBound(e.varId)) {
+      // E is unbound - trigger by binding E = C
+      final List<GoalRef> activations;
+      if (c is Term) {
+        activations = rt.heap.bindVariable(e.varId, c);
+      } else {
+        activations = rt.heap.bindVariableConst(e.varId, c);
+      }
+
+      // Enqueue all reactivations
+      for (final act in activations) {
+        rt.gq.enqueue(act);
+      }
+    }
+    // If already bound, no-op (someone else triggered first)
+  }
+  // If E is not a writer or not a VarRef, no-op
 
   return BodyKernelResult.success;
 }

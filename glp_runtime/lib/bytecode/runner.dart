@@ -4250,6 +4250,35 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
+      case 'equator':
+        // Succeeds if X is bound to '_equator'(E, C) where C is a constant
+        // Enables many-to-one signaling via equators
+        if (args.isEmpty) return GuardResult.failure;
+        final eqVal = getValue(args[0]);
+        // Check for _equator(E, C) structure with constant C
+        if (eqVal is StructTerm &&
+            eqVal.functor == '_equator' &&
+            eqVal.args.length == 2) {
+          // Check that second arg is a constant (after dereferencing)
+          final cArg = eqVal.args[1];
+          Object? cVal;
+          if (cArg is VarRef) {
+            // Dereference the variable
+            if (cx.sigmaHat.containsKey(cArg.varId)) {
+              cVal = cx.sigmaHat[cArg.varId];
+            } else if (cx.rt.heap.isBound(cArg.varId)) {
+              cVal = cx.rt.heap.getValue(cArg.varId);
+            }
+          } else {
+            cVal = cArg;
+          }
+          // Check if it's a constant (ConstTerm or primitive)
+          if (cVal is ConstTerm || cVal is num || cVal is String) {
+            return GuardResult.success;
+          }
+        }
+        return GuardResult.failure;
+
       case 'unknown':
         // Test if dereferencing leads to an unbound variable
         // Per spec: "Succeeds if X is bound to an unbound variable"
