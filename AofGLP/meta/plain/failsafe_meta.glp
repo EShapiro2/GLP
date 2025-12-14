@@ -12,3 +12,11 @@ run(A,Xs?) :- known(A) | reduce(A?,B), run(B?,Xs). %  reduce
 
 %% Failure reports can be used to debug a program, but do not
 %% prevent a faulty run from running forever.
+
+%% Object program: merge
+reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge([], [], []), true).
+
+%% Catch-all for failures (required by fail-safe semantics)
+reduce(A, failed(A?)) :- otherwise | true.

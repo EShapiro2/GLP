@@ -12,12 +12,19 @@
 %% Last two arguments: difference-list for distributed accumulation
 
 run(true,_,L?,L).   % halt and close the dump
-run((A,B),Cs,L?,R) :- run(A?,Cs?,L,M?), run(B?,Cs?,M,R?). % fork
-run(A,Cs,L?,R) :- otherwise, unknown(Cs) | reduce(A?,B), run(B?,Cs,L,R?). %  reduce
-run(A,[abort|Cs],[A?|R?],R). % abort and dump
+run((A,B),Cs,L?,R) :-
+    ground(Cs?) |  % control stream is ground, can be shared
+    run(A?,Cs?,L,M?), run(B?,Cs?,M,R?). % fork
+run(A,Cs,L?,R) :- otherwise, unknown(Cs?) | reduce(A?,B), run(B?,Cs?,L,R?). %  reduce
+run(A,[abort|_],[A?|R?],R). % abort and dump
 run(A,[suspend|Cs],L?,R) :- suspended_run(A?,Cs?,L,R?). % suspend
 
 suspended_run(A,[resume|Cs],L?,R) :-  run(A?,Cs?,L,R?).  % resume
 suspended_run(A,[C|Cs],L?,R) :- otherwise | run(A?,[C?|Cs?],L,R?).
 
 %% The program is not fail-stop resilient; it can be extended to be so.
+
+%% Object program: merge
+reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge([], [], []), true).
