@@ -5,9 +5,33 @@
 %% Multiple writers need not synchronize; readers can process unordered messages in parallel.
 %% Implemented using "multistream" - a polymorphic stream with branch elements.
 
-%% Note: This file contains bidirectional and multi-mode predicates
-%% (read, write, subset) that don't fit single mode declarations.
-%% MT validation skipped.
+%% Type definitions
+List := [] | [_ | List].
+Multistream := [] | [_ | Multistream] | branch(Multistream, Multistream).
+
+%% Mode declarations - basic stream operations
+StreamRead := stream_read(Any, List?, List).
+StreamWrite := stream_write(Any?, List, List?).
+StreamEmpty := stream_empty(List?).
+
+%% Mode declarations - channel read (can branch left or right)
+Read := read(Any, Multistream?, Multistream).
+
+%% Mode declarations - channel write
+Write := write(Any?, Multistream?, Multistream).
+
+%% Mode declarations - channel state
+Empty := empty(Multistream?).
+Close := close(Multistream?).
+
+%% Mode declarations - channel access
+Min := min(Any, Multistream?, Multistream).
+Branches := branches(Multistream?, Multistream, Multistream).
+
+%% Mode declarations - channel transformations
+Serialize := serialize(Multistream?, List).
+Subset := subset(Multistream?, Multistream?).
+Merge := merge(List?, List?, List).
 
 %% Basic stream operations (for comparison)
 stream_read(Message, [Message|Stream?], Stream).
@@ -15,10 +39,6 @@ stream_write(Message, [Message|Stream], Stream).
 stream_empty([]).
 
 %% Channel operations using multistream representation
-%% A multistream is either:
-%%   - A regular list [M|Rest]
-%%   - A branch: branch(Left, Right) where Left and Right are multistreams
-
 %% Read from channel - nondeterministically reads a minimal element
 read(Message, [Message|Channel?], Channel).
 read(Message, branch(Left1, Right?), branch(Left2, Right)) :-
