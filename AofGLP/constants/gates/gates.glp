@@ -3,13 +3,14 @@
 
 %% Type definitions
 BinaryDigit := zero | one.
+List(A) := [] | [A | List(A)].
 Gates := And | Or | Not.
 Goals(X) := true | X | (X, Goals(X)).
 
-%% Mode declarations (all must come before clauses)
-And := and(List?, List?, List).
-Or := or(List?, List?, List).
-Not := not(List?, List).
+%% Mode declarations
+And := and(List(BinaryDigit)?, List(BinaryDigit)?, List(BinaryDigit)).
+Or := or(List(BinaryDigit)?, List(BinaryDigit)?, List(BinaryDigit)).
+Not := not(List(BinaryDigit)?, List(BinaryDigit)).
 Reduce := reduce(Gates?, Goals(Gates)).
 
 %% Clauses
