@@ -1,14 +1,11 @@
-% GLP System Predicate: Equator (Many-to-One Signaling)
-% Creates equator structure for many-to-one communication.
+-stdlib.
 
-% create_equator(C, Eq, Handle)
-% C - collapse constant (reader)
-% Eq - binds to '_equator'(E, C) structure (writer)
-% Handle - binds to E? reader of the fresh variable inside structure
+%% create_equator(C, Eq, Handle)
+%% Creates equator with collapse value C
+%% Eq = '_equator'(E, C) structure
+%% Handle = E? reader for controller
 create_equator(C, '_equator'(E, C?), E?).
 
-% '_equator'(X) - Trigger an equator if X is an equator structure
-% Suspends until X is bound to an equator, then triggers it.
-% If E is already bound (already triggered), this is a no-op.
-'_equator'(X) :- equator(X?) | '_trigger_equator'(X?).
-'_equator'(_) :- otherwise | true.
+%% equate(Eq) - User-facing predicate to trigger equator
+%% Suspends until Eq is bound to equator structure, then triggers
+equate(Eq) :- equator(Eq?) | '_equator'(Eq?).
