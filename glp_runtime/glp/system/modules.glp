@@ -3,7 +3,7 @@
 %%
 %% Core predicates:
 %%   serve_import/3   - Bridge import stream to target module
-%%   dispatcher/2     - Read export(Goal) from input channel, dispatch to reduce/2
+%%   dispatcher/2     - Read export(Goal) from input channel, dispatch via dispatch/1
 %%   register_channel/3, lookup_channel/3 - Registry operations
 %%   distribute/3, transmit/3 - Export primitives (Goal contains result var)
 
@@ -53,28 +53,19 @@ write_msg([Msg|_], Msg?).
 %% dispatcher(InputChannel?, ModuleName?)
 %%
 %% Reads export(Goal) messages from InputChannel,
-%% calls reduce/2 to get the body, then executes it.
+%% dispatches via dispatch/1 which directly calls the procedure.
 %% Result variable is inside Goal - shared with caller.
+%%
+%% dispatch/1 clauses are auto-generated for each exported procedure:
+%%   dispatch(double(X, Y)) :- Y? := X? * 2.
+%%   dispatch(factorial(N, R)) :- factorial(N, R).
 
 dispatcher([export(Goal)|Rest], Module) :-
     known(Goal?) |
-    reduce(Goal?, Body),
-    run_body(Body?),
+    dispatch(Goal?),
     dispatcher(Rest?, Module?).
 
 dispatcher([], _).
-
-%% run_body/1 - Execute a clause body
-run_body(true).
-
-run_body((A, B)) :-
-    known(A?), known(B?) |
-    run_body(A?),
-    run_body(B?).
-
-run_body(Goal) :-
-    otherwise |
-    call(Goal?).
 
 %% ============================================================
 %% Registry Operations

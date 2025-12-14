@@ -1,5 +1,7 @@
 -module(math_reduce).
--export([reduce/2]).
+-export([dispatch/1]).
 
-reduce(double(X, Y), (Y? := X? * 2)).
-reduce(triple(X, Y), (Y? := X? * 3)).
+%% dispatch/1 clauses - FCP-style direct dispatch
+%% Pattern matches goal, body executes directly
+dispatch(double(X, Y)) :- Y := X? * 2.
+dispatch(triple(X, Y)) :- Y := X? * 3.
