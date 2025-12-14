@@ -2,6 +2,9 @@
 ///
 /// Maps predicate signatures (e.g., "merge/3") to their argument modes
 /// (reader/writer for each position).
+///
+/// Supports multiple mode alternatives for the same predicate/arity
+/// (union of mode declarations).
 
 import '../ast.dart';
 
@@ -11,46 +14,48 @@ enum Mode {
   writer,  // Output: value flows from callee to caller
 }
 
-/// Error thrown when a duplicate mode declaration is detected
-class DuplicateModeDeclarationError implements Exception {
-  final String signature;
-  final int line;
-  final int column;
-
-  DuplicateModeDeclarationError(this.signature, this.line, this.column);
-
-  @override
-  String toString() =>
-      'Duplicate mode declaration for $signature at line $line, column $column';
-}
-
 /// Mode table: stores and retrieves mode declarations by predicate signature
+///
+/// Supports multiple mode alternatives per predicate/arity for union declarations:
+/// ```
+/// Observe := observe(Any?, Any, Any?) | observe(Any, Any?, Any?).
+/// ```
 class ModeTable {
-  final Map<String, List<Mode>> _modes = {};
-  final Map<String, ModeDeclaration> _declarations = {};
+  /// Maps predicate/arity to list of mode alternatives
+  final Map<String, List<List<Mode>>> _modes = {};
+
+  /// Maps predicate/arity to list of declarations (one per alternative)
+  final Map<String, List<ModeDeclaration>> _declarations = {};
 
   /// Add a mode declaration to the table
   ///
-  /// Throws [DuplicateModeDeclarationError] if a declaration for the same
-  /// predicate/arity already exists.
+  /// If a declaration for the same predicate/arity already exists,
+  /// adds this as an alternative mode (for union declarations).
   void addDeclaration(ModeDeclaration decl) {
     final signature = decl.signature;
-
-    if (_modes.containsKey(signature)) {
-      throw DuplicateModeDeclarationError(signature, decl.line, decl.column);
-    }
 
     // Extract modes from moded arguments
     final modes = decl.args.map((arg) => arg.isReader ? Mode.reader : Mode.writer).toList();
 
-    _modes[signature] = modes;
-    _declarations[signature] = decl;
+    // Add to existing alternatives or create new list
+    _modes.putIfAbsent(signature, () => []).add(modes);
+    _declarations.putIfAbsent(signature, () => []).add(decl);
   }
 
-  /// Get modes for a predicate with given arity
+  /// Get the first/primary mode for a predicate with given arity
   ///
   /// Returns null if no declaration exists.
+  /// For predicates with multiple modes, use [getAllModes].
   List<Mode>? getModes(String predicate, int arity) {
+    final allModes = _modes['$predicate/$arity'];
+    return allModes?.isNotEmpty == true ? allModes!.first : null;
+  }
+
+  /// Get all mode alternatives for a predicate with given arity
+  ///
+  /// Returns null if no declaration exists.
+  /// Returns list of mode signatures (each is a List<Mode>).
+  List<List<Mode>>? getAllModes(String predicate, int arity) {
     return _modes['$predicate/$arity'];
   }
 
@@ -59,10 +64,24 @@ class ModeTable {
     return _modes.containsKey('$predicate/$arity');
   }
 
-  /// Get the original declaration for a predicate/arity
+  /// Check if predicate has multiple mode alternatives
+  bool hasMultipleModes(String predicate, int arity) {
+    final allModes = _modes['$predicate/$arity'];
+    return allModes != null && allModes.length > 1;
+  }
+
+  /// Get the first/primary declaration for a predicate/arity
   ///
   /// Returns null if no declaration exists.
   ModeDeclaration? getDeclaration(String predicate, int arity) {
+    final allDecls = _declarations['$predicate/$arity'];
+    return allDecls?.isNotEmpty == true ? allDecls!.first : null;
+  }
+
+  /// Get all declarations for a predicate/arity
+  ///
+  /// Returns null if no declaration exists.
+  List<ModeDeclaration>? getAllDeclarations(String predicate, int arity) {
     return _declarations['$predicate/$arity'];
   }
 
@@ -70,9 +89,11 @@ class ModeTable {
   ///
   /// Returns null if no declaration with that type name exists.
   ModeDeclaration? getDeclarationByTypeName(String typeName) {
-    for (final decl in _declarations.values) {
-      if (decl.typeName == typeName) {
-        return decl;
+    for (final decls in _declarations.values) {
+      for (final decl in decls) {
+        if (decl.typeName == typeName) {
+          return decl;
+        }
       }
     }
     return null;
@@ -81,7 +102,7 @@ class ModeTable {
   /// Get all declared signatures
   Iterable<String> get signatures => _modes.keys;
 
-  /// Get number of declarations
+  /// Get number of unique predicates (not counting alternatives)
   int get length => _modes.length;
 
   /// Check if table is empty

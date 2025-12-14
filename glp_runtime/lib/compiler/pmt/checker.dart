@@ -4,6 +4,9 @@
 /// - Each variable must have exactly 1 writer occurrence
 /// - Each variable must have at least 1 reader occurrence
 /// - Multiple reader occurrences allowed only if variable is grounded by a guard
+///
+/// Supports multiple mode alternatives (union of mode declarations).
+/// A clause is valid if it satisfies SRSW for at least one declared mode.
 
 import '../ast.dart';
 import 'errors.dart';
@@ -20,20 +23,63 @@ class PmtChecker {
   List<PmtError> checkProcedure(Procedure proc) {
     final errors = <PmtError>[];
 
-    final modes = modeTable.getModes(proc.name, proc.arity);
-    if (modes == null) {
+    final allModes = modeTable.getAllModes(proc.name, proc.arity);
+    if (allModes == null || allModes.isEmpty) {
       // No mode declaration — skip checking
       return errors;
     }
 
     for (final clause in proc.clauses) {
-      errors.addAll(checkClause(clause, modes));
+      errors.addAll(checkClauseAgainstModes(clause, allModes));
     }
 
     return errors;
   }
 
-  /// Check a single clause against its mode declaration
+  /// Check a single clause against multiple mode alternatives
+  ///
+  /// Clause is valid if it satisfies SRSW for at least one mode.
+  List<PmtError> checkClauseAgainstModes(Clause clause, List<List<Mode>> allModes) {
+    if (allModes.length == 1) {
+      // Single mode — use standard checking
+      return checkClause(clause, allModes.first);
+    }
+
+    // Multiple modes — try each until one succeeds
+    List<PmtError>? bestErrors;
+
+    for (final modes in allModes) {
+      final errors = checkClause(clause, modes);
+      if (errors.isEmpty) {
+        // This mode works — clause is valid
+        return [];
+      }
+      // Track the mode with fewest errors
+      if (bestErrors == null || errors.length < bestErrors.length) {
+        bestErrors = errors;
+      }
+    }
+
+    // No mode matched — return errors from best match, with note about alternatives
+    if (bestErrors != null && bestErrors.isNotEmpty) {
+      // Add a note that this is a multimodal predicate
+      final modeStrings = allModes.map((m) =>
+        '(${m.map((mode) => mode == Mode.reader ? '?' : '').join(', ')})'
+      ).join(' | ');
+      return [
+        PmtError(
+          'Clause does not match any declared mode. Available modes: $modeStrings',
+          clause.line,
+          clause.column,
+        ),
+        ...bestErrors,
+      ];
+    }
+
+    return bestErrors ?? [];
+  }
+
+  /// Check a single clause against a specific mode declaration
   List<PmtError> checkClause(Clause clause, List<Mode> modes) {
     final errors = <PmtError>[];
 

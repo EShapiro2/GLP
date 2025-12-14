@@ -84,10 +84,58 @@ void main() {
       expect(table.getModes('xor', 3), [Mode.reader, Mode.reader, Mode.writer]);
     });
 
-    test('duplicate declaration throws error', () {
+    test('multiple mode declarations for same predicate/arity (union of modes)', () {
       final table = ModeTable();
 
+      // First mode: observe(Any?, Any, Any?)
       final decl1 = ModeDeclaration(
+        'Observe',
+        [],
+        'observe',
+        [
+          ModedArg('Any', [], isReader: true),
+          ModedArg('Any', [], isReader: false),
+          ModedArg('Any', [], isReader: true),
+        ],
+        1,
+        1,
+      );
+
+      // Second mode: observe(Any, Any?, Any?)
+      final decl2 = ModeDeclaration(
+        'Observe',
+        [],
+        'observe',
+        [
+          ModedArg('Any', [], isReader: false),
+          ModedArg('Any', [], isReader: true),
+          ModedArg('Any', [], isReader: true),
+        ],
+        1,
+        30,
+      );
+
+      table.addDeclaration(decl1);
+      table.addDeclaration(decl2);
+
+      // getModes returns first mode (for backwards compatibility)
+      expect(table.getModes('observe', 3), [Mode.reader, Mode.writer, Mode.reader]);
+
+      // getAllModes returns all mode alternatives
+      final allModes = table.getAllModes('observe', 3);
+      expect(allModes, isNotNull);
+      expect(allModes!.length, 2);
+      expect(allModes[0], [Mode.reader, Mode.writer, Mode.reader]);
+      expect(allModes[1], [Mode.writer, Mode.reader, Mode.reader]);
+
+      // hasMultipleModes returns true
+      expect(table.hasMultipleModes('observe', 3), isTrue);
+    });
+
+    test('hasMultipleModes returns false for single mode', () {
+      final table = ModeTable();
+
+      table.addDeclaration(ModeDeclaration(
         'Not',
         [],
         'not',
@@ -97,34 +145,14 @@ void main() {
         ],
         1,
         1,
-      );
+      ));
 
-      final decl2 = ModeDeclaration(
-        'NotAgain',
-        [],
-        'not',  // Same predicate/arity
-        [
-          ModedArg('Bool', [], isReader: true),
-          ModedArg('Bool', [], isReader: false),
-        ],
-        5,
-        1,
-      );
-
-      table.addDeclaration(decl1);
-
-      expect(
-        () => table.addDeclaration(decl2),
-        throwsA(isA<DuplicateModeDeclarationError>()),
-      );
+      expect(table.hasMultipleModes('not', 2), isFalse);
     });
 
-    test('DuplicateModeDeclarationError has correct message', () {
-      final error = DuplicateModeDeclarationError('merge/3', 10, 5);
-      expect(
-        error.toString(),
-        'Duplicate mode declaration for merge/3 at line 10, column 5',
-      );
+    test('getAllModes returns null for missing declaration', () {
+      final table = ModeTable();
+      expect(table.getAllModes('unknown', 2), isNull);
     });
 
     test('getDeclaration returns original declaration', () {

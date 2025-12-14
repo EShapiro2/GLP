@@ -98,17 +98,19 @@ class Parser {
     final typeDefLocations = <String, (int, int, List<String>)>{};  // name -> (line, col, typeParams)
 
     while (!_isAtEnd() && _isPmtDeclaration()) {
-      final result = _parseModeOrTypeDeclaration();
-      if (result is ModeDeclaration) {
-        modeDeclarations.add(result);
-      } else if (result is TypeDefinition) {
-        // Merge with existing definition if same type name
-        final existing = typeDefsByName[result.typeName];
-        if (existing != null) {
-          existing.addAll(result.constructors);
-        } else {
-          typeDefsByName[result.typeName] = List.from(result.constructors);
-          typeDefLocations[result.typeName] = (result.line, result.column, result.typeParams);
+      final results = _parseModeOrTypeDeclaration();
+      for (final result in results) {
+        if (result is ModeDeclaration) {
+          modeDeclarations.add(result);
+        } else if (result is TypeDefinition) {
+          // Merge with existing definition if same type name
+          final existing = typeDefsByName[result.typeName];
+          if (existing != null) {
+            existing.addAll(result.constructors);
+          } else {
+            typeDefsByName[result.typeName] = List.from(result.constructors);
+            typeDefLocations[result.typeName] = (result.line, result.column, result.typeParams);
+          }
         }
       }
     }
@@ -1089,8 +1091,9 @@ class Parser {
   }
 
   /// Parse either a mode declaration or a type definition
-  /// Returns ModeDeclaration or TypeDefinition based on RHS structure
-  AstNode _parseModeOrTypeDeclaration() {
+  /// Returns list of ModeDeclaration or TypeDefinition based on RHS structure
+  /// Union of mode declarations returns multiple ModeDeclarations
+  List<AstNode> _parseModeOrTypeDeclaration() {
     // Type names are capitalized, so they're tokenized as VARIABLE
     final typeNameToken = _consume(TokenType.VARIABLE, 'Expected type name');
     final typeName = typeNameToken.lexeme;
@@ -1111,19 +1114,26 @@ class Parser {
     // Look at the RHS:
     // - Mode declaration: pred(Type?, Type) - predicate with moded args
     // - Type definition: atom | struct | [] | [_|T] | union of these
+    // - Union of mode declarations: pred(T?, T) | pred(T, T?)
 
     // Parse all constructors/alternatives separated by |
     final constructors = <TypeConstructor>[];
-    bool hasModeMarkers = false;
-    String? predicateName;
-    List<ModedArg>? modedArgs;
+    final modeAlternatives = <_ModeDeclarationParts>[];
+    bool firstHasModeMarkers = false;
+    String? firstPredicateName;
 
     // Parse first constructor/alternative
     final firstResult = _parseConstructorOrModeArg();
     if (firstResult is _ModeDeclarationParts) {
-      predicateName = firstResult.predicate;
-      modedArgs = firstResult.args;
-      hasModeMarkers = firstResult.hasModeMarkers;
+      firstPredicateName = firstResult.predicate;
+      firstHasModeMarkers = firstResult.hasModeMarkers;
+      if (firstResult.hasModeMarkers || firstResult.args.isEmpty) {
+        modeAlternatives.add(firstResult);
+      } else {
+        // First alternative is struct constructor (no mode markers)
+        final structArgs = firstResult.args.map((a) => TypeArg(a.typeName, a.typeParams, isReader: a.isReader)).toList();
+        constructors.add(StructConstructor(firstResult.predicate, structArgs));
+      }
     } else {
       constructors.add(firstResult as TypeConstructor);
     }
@@ -1133,17 +1143,42 @@ class Parser {
       final result = _parseConstructorOrModeArg();
       if (result is _ModeDeclarationParts) {
         if (result.hasModeMarkers) {
-          // Union of mode declarations - not yet supported
-          throw CompileError(
-            'Union of mode declarations not yet supported. Use separate declarations.',
-            typeNameToken.line,
-            typeNameToken.column,
-            phase: 'parser',
-          );
+          // Union of mode declarations
+          if (modeAlternatives.isEmpty && firstPredicateName != null) {
+            // First was a struct constructor, but this is a mode - error
+            throw CompileError(
+              'Cannot mix type constructors and mode declarations in union.',
+              typeNameToken.line,
+              typeNameToken.column,
+              phase: 'parser',
+            );
+          }
+          // Verify same predicate name and arity
+          if (modeAlternatives.isNotEmpty) {
+            final first = modeAlternatives.first;
+            if (result.predicate != first.predicate) {
+              throw CompileError(
+                'Mode union must use same predicate name: expected "${first.predicate}", got "${result.predicate}".',
+                typeNameToken.line,
+                typeNameToken.column,
+                phase: 'parser',
+              );
+            }
+            if (result.args.length != first.args.length) {
+              throw CompileError(
+                'Mode union must have same arity: expected ${first.args.length}, got ${result.args.length}.',
+                typeNameToken.line,
+                typeNameToken.column,
+                phase: 'parser',
+              );
+            }
+          }
+          modeAlternatives.add(result);
+        } else {
+          // Struct constructor without mode markers
+          final structArgs = result.args.map((a) => TypeArg(a.typeName, a.typeParams, isReader: a.isReader)).toList();
+          constructors.add(StructConstructor(result.predicate, structArgs));
         }
-        // Struct constructor without mode markers
-        final structArgs = result.args.map((a) => TypeArg(a.typeName, a.typeParams, isReader: a.isReader)).toList();
-        constructors.add(StructConstructor(result.predicate, structArgs));
       } else {
         constructors.add(result as TypeConstructor);
       }
@@ -1152,26 +1187,23 @@ class Parser {
     _consume(TokenType.DOT, 'Expected "." after declaration');
 
     // Decide what to return based on what we parsed
-    if (predicateName != null && modedArgs != null) {
-      if (hasModeMarkers || modedArgs.isEmpty) {
-        // Mode declaration: either has ? markers or is nullary pred()
-        return ModeDeclaration(
-          typeName,
-          typeParams,
-          predicateName,
-          modedArgs,
-          typeNameToken.line,
-          typeNameToken.column,
-        );
-      } else {
-        // Struct constructor (pred with args but no ? markers)
-        final structArgs = modedArgs.map((a) => TypeArg(a.typeName, a.typeParams, isReader: a.isReader)).toList();
-        constructors.add(StructConstructor(predicateName, structArgs));
-        return TypeDefinition(typeName, typeParams, constructors, typeNameToken.line, typeNameToken.column);
-      }
+    if (modeAlternatives.isNotEmpty) {
+      // Mode declaration(s): return one ModeDeclaration per alternative
+      return modeAlternatives.map((parts) => ModeDeclaration(
+        typeName,
+        typeParams,
+        parts.predicate,
+        parts.args,
+        typeNameToken.line,
+        typeNameToken.column,
+      )).toList();
+    } else if (firstPredicateName != null && !firstHasModeMarkers && constructors.isEmpty) {
+      // Edge case: single struct with args but no mode markers treated as struct constructor
+      // This shouldn't happen if we handled first result correctly above
+      return [TypeDefinition(typeName, typeParams, constructors, typeNameToken.line, typeNameToken.column)];
     } else {
       // This is a type definition with constructors
-      return TypeDefinition(typeName, typeParams, constructors, typeNameToken.line, typeNameToken.column);
+      return [TypeDefinition(typeName, typeParams, constructors, typeNameToken.line, typeNameToken.column)];
     }
   }
 

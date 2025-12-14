@@ -213,5 +213,68 @@ merge([], Ys, Ys?).
       expect(module.modeDeclarations[0].predicate, 'merge');
       expect(module.procedures[0].name, 'merge');
     });
+
+    test('parses union of mode declarations', () {
+      const source = '''
+Observe := observe(Any?, Any, Any?) | observe(Any, Any?, Any?).
+
+observe(X?, Y, Z?) :- observe(Y?, X, Z).
+observe(X, Out1?, Out2?) :- ground(X?) | true.
+''';
+
+      final lexer = Lexer(source);
+      final tokens = lexer.tokenize();
+      final parser = Parser(tokens);
+      final module = parser.parseModule();
+
+      // Should produce 2 mode declarations for the same predicate
+      expect(module.modeDeclarations.length, 2);
+
+      // First mode: observe(Any?, Any, Any?)
+      final decl1 = module.modeDeclarations[0];
+      expect(decl1.typeName, 'Observe');
+      expect(decl1.predicate, 'observe');
+      expect(decl1.arity, 3);
+      expect(decl1.args[0].isReader, isTrue);   // Any?
+      expect(decl1.args[1].isReader, isFalse);  // Any
+      expect(decl1.args[2].isReader, isTrue);   // Any?
+
+      // Second mode: observe(Any, Any?, Any?)
+      final decl2 = module.modeDeclarations[1];
+      expect(decl2.typeName, 'Observe');
+      expect(decl2.predicate, 'observe');
+      expect(decl2.arity, 3);
+      expect(decl2.args[0].isReader, isFalse);  // Any
+      expect(decl2.args[1].isReader, isTrue);   // Any?
+      expect(decl2.args[2].isReader, isTrue);   // Any?
+    });
+
+    test('union of modes with type parameters', () {
+      const source = '''
+BiMap(K, V) := bimap(Map(K, V)?, Map(V, K)) | bimap(Map(K, V), Map(V, K)?).
+
+bimap(In, Out).
+''';
+
+      final lexer = Lexer(source);
+      final tokens = lexer.tokenize();
+      final parser = Parser(tokens);
+      final module = parser.parseModule();
+
+      // Should produce 2 mode declarations
+      expect(module.modeDeclarations.length, 2);
+
+      // First mode: bimap(Map(K, V)?, Map(V, K))
+      final decl1 = module.modeDeclarations[0];
+      expect(decl1.predicate, 'bimap');
+      expect(decl1.args[0].isReader, isTrue);   // Map(K, V)?
+      expect(decl1.args[1].isReader, isFalse);  // Map(V, K)
+
+      // Second mode: bimap(Map(K, V), Map(V, K)?)
+      final decl2 = module.modeDeclarations[1];
+      expect(decl2.predicate, 'bimap');
+      expect(decl2.args[0].isReader, isFalse);  // Map(K, V)
+      expect(decl2.args[1].isReader, isTrue);   // Map(V, K)?
+    });
   });
 }
