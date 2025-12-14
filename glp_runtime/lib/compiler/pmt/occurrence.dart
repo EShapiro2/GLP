@@ -127,10 +127,25 @@ class OccurrenceClassifier {
   ///
   /// Built-ins with known modes:
   /// - `:=/2` - arithmetic assignment: writer(LHS), reader(RHS)
+  /// - `allocate_mutual_reference/2` - writer(Ref), writer(Output)
+  /// - `kernel_stream_append/3` - reader(RefIn), reader(Value), writer(RefOut)
+  /// - `kernel_close_mutual_reference/1` - reader(Ref)
   List<Mode>? _getBuiltinModes(String functor, int arity) {
     if (functor == ':=' && arity == 2) {
       // X := Expr - X is writer (receives result), Expr is reader (provides value)
       return [Mode.writer, Mode.reader];
+    }
+    if (functor == 'allocate_mutual_reference' && arity == 2) {
+      // allocate_mutual_reference(Ref, Output) - Ref is writer, Output is writer
+      return [Mode.writer, Mode.writer];
+    }
+    if (functor == 'kernel_stream_append' && arity == 3) {
+      // kernel_stream_append(RefIn, Value, RefOut)
+      return [Mode.reader, Mode.reader, Mode.writer];
+    }
+    if (functor == 'kernel_close_mutual_reference' && arity == 1) {
+      // kernel_close_mutual_reference(Ref)
+      return [Mode.reader];
     }
     return null;
   }
