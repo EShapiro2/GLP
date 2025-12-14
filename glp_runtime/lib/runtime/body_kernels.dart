@@ -105,7 +105,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_close_mutual_reference', 1, mutualRefCloseKernel);
 
   // Equator operations (many-to-one signaling)
-  registry.register('_equator', 1, equatorKernel);
+  registry.register('_trigger_equator', 1, equatorKernel);
 }
 
 /// Helper to get numeric value from argument (with arithmetic evaluation)
