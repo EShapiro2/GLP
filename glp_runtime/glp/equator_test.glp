@@ -1,0 +1,20 @@
+% equator_test.glp - Test equator creation and triggering
+
+% Import the equator creation predicate
+-stdlib(equator).
+
+% Test 1: Basic equator creation
+% create_equator(stop, Eq, Handle) should:
+% - Bind Eq to '_equator'(E, stop) with fresh writer E
+% - Bind Handle to E? (reader of E)
+test_create(Eq, Handle) :- create_equator(stop, Eq, Handle).
+
+% Test 2: Trigger an equator and verify handle gets the value
+% When equator is triggered, Handle? should become 'stop'
+test_equator_trigger(Result) :-
+    create_equator(triggered, Eq, Handle),
+    trigger_equator(Eq?),
+    Result = Handle?.
+
+% Helper to trigger an equator (placeholder - kernel not yet implemented)
+trigger_equator(Eq) :- '_equator'(Eq?).

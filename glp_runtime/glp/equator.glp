@@ -1,0 +1,13 @@
+% equator.glp - Equator creation for many-to-one signaling
+%
+% An equator is a term '_equator'(E, C) where:
+% - E is a writer (the trigger)
+% - C is a constant (the collapse value)
+%
+% Multiple processes can receive the equator structure and trigger it,
+% but only the controller holding E? detects when it fires.
+
+% Create an equator with collapse value C
+% Returns: Eq = '_equator'(E, C) with fresh writer E
+%          Handle = E? (the reader, for controller to detect trigger)
+create_equator(C, '_equator'(E, C?), E?).
