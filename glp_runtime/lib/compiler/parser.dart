@@ -1140,6 +1140,11 @@ class Parser {
   /// Parse a constructor or mode declaration arguments
   /// Returns TypeConstructor for type definitions, _ModeDeclarationParts for mode declarations
   dynamic _parseConstructorOrModeArg() {
+    // Check for tuple constructors: (X, Y, ...)
+    if (_check(TokenType.LPAREN)) {
+      return _parseTupleConstructor();
+    }
+
     // Check for list constructors: [] or [_|T]
     if (_check(TokenType.LBRACKET)) {
       return _parseListConstructor();
@@ -1222,6 +1227,60 @@ class Parser {
     _consume(TokenType.RBRACKET, 'Expected "]" after list constructor');
 
     return ListConstructor(head, tail);
+  }
+
+  /// Parse a tuple constructor: (X, Goals(X)), (A, B), etc.
+  TupleConstructor _parseTupleConstructor() {
+    _consume(TokenType.LPAREN, 'Expected "("');
+
+    final elements = <TypeArg>[];
+
+    // Parse first element
+    elements.add(_parseTypeArgForTuple());
+
+    // Parse remaining elements
+    while (_match(TokenType.COMMA)) {
+      elements.add(_parseTypeArgForTuple());
+    }
+
+    _consume(TokenType.RPAREN, 'Expected ")" after tuple');
+
+    return TupleConstructor(elements);
+  }
+
+  /// Parse a type arg for tuple: TypeName, TypeName?, TypeName(Params), etc.
+  TypeArg _parseTypeArgForTuple() {
+    // Type name (VARIABLE because capitalized)
+    if (_check(TokenType.VARIABLE)) {
+      final token = _advance();
+
+      // Optional type params: Goals(X) -> Goals with param X
+      final typeParams = <String>[];
+      if (_match(TokenType.LPAREN)) {
+        typeParams.add(_parseTypeParam());
+        while (_match(TokenType.COMMA)) {
+          typeParams.add(_parseTypeParam());
+        }
+        _consume(TokenType.RPAREN, 'Expected ")" after type parameters');
+      }
+
+      // Check for ?
+      final isReader = _match(TokenType.QUESTION);
+      return TypeArg(token.lexeme, typeParams, isReader: isReader);
+    }
+
+    // Reader type without params: Type?
+    if (_check(TokenType.READER)) {
+      final token = _advance();
+      return TypeArg(token.lexeme, [], isReader: true);
+    }
+
+    throw CompileError(
+      'Expected type in tuple',
+      _peek().line,
+      _peek().column,
+      phase: 'parser',
+    );
   }
 
   /// Parse a type arg for list constructor: _ or _? or TypeName or TypeName?

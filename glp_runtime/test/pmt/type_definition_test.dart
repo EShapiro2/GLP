@@ -166,6 +166,33 @@ And := and(List?, List?, List).
       expect(typeDef.constructors.length, 2);
     });
 
+    test('tuple constructor', () {
+      final source = 'Goals(X) := true | X | (X, Goals(X)).';
+      final module = parseModule(source);
+
+      expect(module.typeDefinitions.length, 1);
+      final def = module.typeDefinitions[0];
+      expect(def.typeName, 'Goals');
+      expect(def.typeParams, ['X']);
+      expect(def.constructors.length, 3);
+
+      // First: true (atom)
+      expect(def.constructors[0], isA<AtomConstructor>());
+      expect((def.constructors[0] as AtomConstructor).name, 'true');
+
+      // Second: X (type param reference)
+      expect(def.constructors[1], isA<AtomConstructor>());
+      expect((def.constructors[1] as AtomConstructor).name, 'X');
+
+      // Third: (X, Goals(X)) (tuple)
+      expect(def.constructors[2], isA<TupleConstructor>());
+      final tuple = def.constructors[2] as TupleConstructor;
+      expect(tuple.elements.length, 2);
+      expect(tuple.elements[0].typeName, 'X');
+      expect(tuple.elements[1].typeName, 'Goals');
+      expect(tuple.elements[1].typeParams, ['X']);
+    });
+
     test('nullary predicate is mode declaration', () {
       final source = 'Halt := halt().';
       final module = parseModule(source);

@@ -4,17 +4,20 @@
 %% Type definitions
 BinaryDigit := zero | one.
 Gates := And | Or | Not.
+Goals(X) := true | X | (X, Goals(X)).
 
-%% Gate declarations
+%% Mode declarations (all must come before clauses)
 And := and(List?, List?, List).
+Or := or(List?, List?, List).
+Not := not(List?, List).
+Reduce := reduce(Gates?, Goals(Gates)).
 
+%% Clauses
 and([], [], []).
 and([one|Xs], [one|Ys], [one|Zs?]) :- and(Xs?, Ys?, Zs).
 and([one|Xs], [zero|Ys], [zero|Zs?]) :- and(Xs?, Ys?, Zs).
 and([zero|Xs], [one|Ys], [zero|Zs?]) :- and(Xs?, Ys?, Zs).
 and([zero|Xs], [zero|Ys], [zero|Zs?]) :- and(Xs?, Ys?, Zs).
-
-Or := or(List?, List?, List).
 
 or([], [], []).
 or([one|Xs], [one|Ys], [one|Zs?]) :- or(Xs?, Ys?, Zs).
@@ -22,14 +25,9 @@ or([one|Xs], [zero|Ys], [one|Zs?]) :- or(Xs?, Ys?, Zs).
 or([zero|Xs], [one|Ys], [one|Zs?]) :- or(Xs?, Ys?, Zs).
 or([zero|Xs], [zero|Ys], [zero|Zs?]) :- or(Xs?, Ys?, Zs).
 
-Not := not(List?, List).
-
 not([], []).
 not([one|Xs], [zero|Zs?]) :- not(Xs?, Zs).
 not([zero|Xs], [one|Zs?]) :- not(Xs?, Zs).
-
-%% Metainterpreter support
-Reduce := reduce(Gates?, Gates).
 
 reduce(and([], [], []), true).
 reduce(and([one|Xs], [one|Ys], [one|Zs?]), and(Xs?, Ys?, Zs)).

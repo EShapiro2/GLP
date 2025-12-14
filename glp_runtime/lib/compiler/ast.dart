@@ -338,6 +338,16 @@ class ListConstructor extends TypeConstructor {
   }
 }
 
+/// Tuple constructor: (X, Goals(X)), (A, B, C), etc.
+class TupleConstructor extends TypeConstructor {
+  final List<TypeArg> elements;
+
+  const TupleConstructor(this.elements);
+
+  @override
+  String toString() => '(${elements.join(", ")})';
+}
+
 /// Type argument in a constructor
 /// Example: List? is TypeArg("List", [], isReader: true)
 /// Example: _? is TypeArg("_", [], isReader: true)
