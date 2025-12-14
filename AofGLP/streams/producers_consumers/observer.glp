@@ -8,8 +8,8 @@
 %% Type definitions
 List := [] | [_ | List].
 
-%% Mode declarations
-Observe := observe(Any?, Any, Any?) | observe(Any, Any?, Any?).
+%% Mode declarations (three modes for bidirectional observe)
+Observe := observe(Any?, Any, Any?) | observe(Any, Any?, Any?) | observe(Any?, Any, Any).
 CopyTo := copy_to(Any?, Any, Any).
 HeadTail := head_tail(List?, Any, List).
 
