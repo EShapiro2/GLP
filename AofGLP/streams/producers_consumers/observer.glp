@@ -5,8 +5,13 @@
 %% Forwards communication bidirectionally while producing a
 %% replicable audit stream.
 
-%% Note: This file uses bidirectional predicates that don't fit
-%% a single mode declaration. MT validation skipped.
+%% Type definitions
+List := [] | [_ | List].
+
+%% Mode declarations
+Observe := observe(Any?, Any, Any?) | observe(Any, Any?, Any?).
+CopyTo := copy_to(Any?, Any, Any).
+HeadTail := head_tail(List?, Any, List).
 
 observe(X?, Y, Z?) :- observe(Y?, X, Z).
 observe(X, Out1?, Out2?) :- ground(X?) | copy_to(X?, Out1, Out2).
