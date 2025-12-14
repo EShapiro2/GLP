@@ -1,15 +1,16 @@
 %% tracing_meta_simple.glp - Simplified tracing meta-interpreter
 %%
-%% Records execution with clause indices.
-%% Tree format: reduction(Goal, ClauseId, BodyTree) | fork(T1, T2) | true
-%% No timestamps, no cross-module calls.
+%% Records execution with clause indices and timestamps.
+%% Tree format: reduction(Goal, ClauseId, Time, BodyTree) | fork(T1, T2) | true
+%% Uses '_now' system predicate for timestamps.
 
 run(true, true).                                 % halt
 run((A,B), fork(TA?, TB?)) :-                    % fork
     run(A?, TA),
     run(B?, TB).
-run(A, reduction(A?, I?, TB?)) :-                % reduce
+run(A, reduction(A?, I?, Time?, TB?)) :-         % reduce
     tuple(A?) |
+    '_now'(Time),
     reduce(A?, B, I),
     run(B?, TB).
 
