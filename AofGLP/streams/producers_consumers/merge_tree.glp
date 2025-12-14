@@ -14,6 +14,15 @@
 % The tree structure provides logarithmic depth, enabling parallel merging
 % of many streams efficiently.
 
+%% Type definitions
+List := [] | [_ | List].
+ListOfLists := [] | [List | ListOfLists].
+
+%% Mode declarations
+MergeTree := merge_tree(ListOfLists?, List).
+MergeLayer := merge_layer(ListOfLists?, ListOfLists).
+Merge := merge(List?, List?, List).
+
 % Base case: single stream passes through unchanged
 merge_tree([Xs], Xs?).
 

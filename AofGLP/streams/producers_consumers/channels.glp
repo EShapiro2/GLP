@@ -5,6 +5,10 @@
 %% Multiple writers need not synchronize; readers can process unordered messages in parallel.
 %% Implemented using "multistream" - a polymorphic stream with branch elements.
 
+%% Note: This file contains bidirectional and multi-mode predicates
+%% (read, write, subset) that don't fit single mode declarations.
+%% MT validation skipped.
+
 %% Basic stream operations (for comparison)
 stream_read(Message, [Message|Stream?], Stream).
 stream_write(Message, [Message|Stream], Stream).
