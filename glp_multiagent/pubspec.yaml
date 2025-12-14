@@ -1,0 +1,28 @@
+name: glp_multiagent
+description: GLP Multi-Window Multiagent Simulation
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  desktop_multi_window: ^0.2.3
+  window_manager: ^0.4.0
+  path: ^1.8.0
+
+  # Link to existing GLP runtime with Phase 0 I/O
+  glp_runtime:
+    path: ../glp_runtime
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
