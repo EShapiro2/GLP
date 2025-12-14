@@ -1,0 +1,22 @@
+%% tracing_meta_simple.glp - Simplified tracing meta-interpreter
+%%
+%% Records execution with clause indices.
+%% Tree format: reduction(Goal, ClauseId, BodyTree) | fork(T1, T2) | true
+%% No timestamps, no cross-module calls.
+
+run(true, true).                                 % halt
+run((A,B), fork(TA?, TB?)) :-                    % fork
+    run(A?, TA),
+    run(B?, TB).
+run(A, reduction(A?, I?, TB?)) :-                % reduce
+    tuple(A?) |
+    reduce(A?, B, I),
+    run(B?, TB).
+
+%% Object program: merge with clause indices
+reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs), 1).
+reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs), 2).
+reduce(merge([], [], []), true, 3).
+
+%% Test
+test(Zs?, Tree?) :- run(merge([1,2], [3,4], Zs), Tree).
