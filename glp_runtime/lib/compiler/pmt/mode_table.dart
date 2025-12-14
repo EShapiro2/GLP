@@ -66,6 +66,18 @@ class ModeTable {
     return _declarations['$predicate/$arity'];
   }
 
+  /// Get a declaration by its type name (e.g., "And" for "And := and(...)")
+  ///
+  /// Returns null if no declaration with that type name exists.
+  ModeDeclaration? getDeclarationByTypeName(String typeName) {
+    for (final decl in _declarations.values) {
+      if (decl.typeName == typeName) {
+        return decl;
+      }
+    }
+    return null;
+  }
+
   /// Get all declared signatures
   Iterable<String> get signatures => _modes.keys;
 

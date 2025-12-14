@@ -6,7 +6,9 @@ import '../ast.dart';
 import '../lexer.dart';
 import '../parser.dart';
 import 'mode_table.dart';
+import 'type_table.dart';
 import 'checker.dart';
+import 'type_checker.dart';
 import 'errors.dart';
 
 class PmtValidator {
@@ -37,6 +39,8 @@ class PmtValidator {
   ///
   /// Only procedures with corresponding mode declarations are checked.
   /// Procedures without mode declarations are skipped.
+  ///
+  /// Performs both SRSW checking and type checking.
   static List<PmtError> validateAst(Module ast) {
     // No mode declarations = nothing to check
     if (ast.modeDeclarations.isEmpty) {
@@ -46,13 +50,27 @@ class PmtValidator {
     // Build mode table from declarations
     final modeTable = ModeTable.fromDeclarations(ast.modeDeclarations);
 
-    // Create checker with mode table
-    final checker = PmtChecker(modeTable);
+    // Build type table from type definitions
+    final typeTable = TypeTable.fromModule(ast);
 
-    // Check all procedures
+    // Create SRSW checker with mode table
+    final srswChecker = PmtChecker(modeTable);
+
+    // Check all procedures for SRSW
     final errors = <PmtError>[];
     for (final proc in ast.procedures) {
-      errors.addAll(checker.checkProcedure(proc));
+      errors.addAll(srswChecker.checkProcedure(proc));
+    }
+
+    // If type definitions exist, also do type checking
+    if (ast.typeDefinitions.isNotEmpty) {
+      final typeChecker = TypeChecker(typeTable, modeTable);
+      final typeErrors = typeChecker.checkModule(ast);
+
+      // Convert TypeErrors to PmtErrors
+      for (final te in typeErrors) {
+        errors.add(PmtError(te.message, te.line, te.column));
+      }
     }
 
     return errors;
