@@ -5,6 +5,9 @@
 %% Uses bounded buffer for flow control.
 %% Suspends when both output ports are full.
 
+%% Note: Complex guard-based state threading where receive/send
+%% share variables within guards. MT validation skipped.
+
 switch2x2(In1, In2, Out1, Out2) :-
     receive(M, In1?, Ins1), send(M?, Out1?, Outs1) |
     switch2x2(Ins1?, In2?, Outs1?, Out2?).

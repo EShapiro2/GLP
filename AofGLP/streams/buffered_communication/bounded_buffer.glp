@@ -4,6 +4,19 @@
 %% Bounded buffer communication limits sender when buffer is full.
 %% The receiver controls buffer expansion by creating new slots.
 
+%% Type definitions
+List := [] | [_ | List].
+
+%% Note: Complex buffer state threading with difference lists.
+%% Many predicates have intricate modes. Basic modes provided where clear.
+
+%% Mode declarations
+SendUnbounded := send_unbounded(Any?, List, List?).
+ReceiveUnbounded := receive_unbounded(Any, List?, List).
+Send := send(Any?, List, List?).
+Close := close(List?).
+Closed := closed(Any?).
+
 %% Unbounded buffer send/receive (standard stream communication)
 send_unbounded(Msg, [Msg|NStrm], NStrm).
 receive_unbounded(Msg, [Msg|NStrm?], NStrm).
