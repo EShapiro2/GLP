@@ -863,6 +863,58 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# --- Quoted Atom Functor Tests ---
+echo ""
+echo "--- Quoted Atom Functor Tests ---"
+
+# Test: Quoted atom as functor in head
+quoted_head_output=$($DART run "$REPL" <<QUOTED_HEAD
+quoted_functor_test.glp
+'_test_kernel'(5, R).
+:quit
+QUOTED_HEAD
+2>&1)
+
+if echo "$quoted_head_output" | grep -q "R = 6"; then
+    echo "PASS: Quoted atom functor in head: '_test_kernel'(5, R) returns R = 6"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Quoted atom functor in head (expected: R = 6)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test: Quoted atom as functor in body
+quoted_body_output=$($DART run "$REPL" <<QUOTED_BODY
+quoted_functor_test.glp
+quoted_body_test.glp
+wrapper(10, R).
+:quit
+QUOTED_BODY
+2>&1)
+
+if echo "$quoted_body_output" | grep -q "R = 11"; then
+    echo "PASS: Quoted atom functor in body: wrapper(10, R) returns R = 11"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Quoted atom functor in body (expected: R = 11)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test: Quoted atom as structure functor
+quoted_struct_output=$($DART run "$REPL" <<QUOTED_STRUCT
+X = '_equator'(E, stop).
+:quit
+QUOTED_STRUCT
+2>&1)
+
+if echo "$quoted_struct_output" | grep -q "_equator"; then
+    echo "PASS: Quoted atom as structure functor: X = '_equator'(E, stop)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Quoted atom as structure functor"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""
