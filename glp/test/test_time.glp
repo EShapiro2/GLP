@@ -5,6 +5,13 @@ time_positive(Result?) :- get_current_time(T), check_positive(T?, Result).
 get_current_time(T?) :- '_now'(T).
 check_positive(T, yes) :- T? > 0 | true.
 
+% Test that two consecutive _now calls return non-decreasing values
+time_advances(Result?) :- get_first_time(T), check_time_advances(T?, Result).
+get_first_time(T?) :- '_now'(T).
+check_time_advances(T1, Result?) :- get_second_time(T2), compare_times(T1?, T2?, Result).
+get_second_time(T?) :- '_now'(T).
+compare_times(T1, T2, yes) :- T2? >= T1? | true.
+
 % Test wait_until - succeeds if time >= T
 past_time(T, yes) :- wait_until(T?) | true.
 
