@@ -79,11 +79,42 @@ class Parser {
       }
     }
 
-    // Parse PMT mode declarations (after module declarations, before procedures)
-    // PMT declarations: CapitalizedName(Params) := predicate(ModedArg, ...).
+    // Parse PMT mode declarations and type definitions (after module declarations, before procedures)
+    // Mode declarations: CapitalizedName(Params) := predicate(ModedArg, ...).
+    // Type definitions: TypeName := constructor | constructor | ...
     final modeDeclarations = <ModeDeclaration>[];
+    final typeDefinitions = <TypeDefinition>[];
+
+    // Collect type definitions by name for merging multi-line definitions
+    final typeDefsByName = <String, List<TypeConstructor>>{};
+    final typeDefLocations = <String, (int, int, List<String>)>{};  // name -> (line, col, typeParams)
+
     while (!_isAtEnd() && _isPmtDeclaration()) {
-      modeDeclarations.add(_parseModeDeclaration());
+      final result = _parseModeOrTypeDeclaration();
+      if (result is ModeDeclaration) {
+        modeDeclarations.add(result);
+      } else if (result is TypeDefinition) {
+        // Merge with existing definition if same type name
+        final existing = typeDefsByName[result.typeName];
+        if (existing != null) {
+          existing.addAll(result.constructors);
+        } else {
+          typeDefsByName[result.typeName] = List.from(result.constructors);
+          typeDefLocations[result.typeName] = (result.line, result.column, result.typeParams);
+        }
+      }
+    }
+
+    // Convert merged type definitions to final list
+    for (final entry in typeDefsByName.entries) {
+      final loc = typeDefLocations[entry.key]!;
+      typeDefinitions.add(TypeDefinition(
+        entry.key,
+        loc.$3,  // typeParams from first definition
+        entry.value,
+        loc.$1,
+        loc.$2,
+      ));
     }
 
     // Parse procedures
@@ -97,6 +128,7 @@ class Parser {
       exports: exports,
       imports: imports,
       modeDeclarations: modeDeclarations,
+      typeDefinitions: typeDefinitions,
       procedures: procedures,
       line: 1,
       column: 1,
@@ -1018,6 +1050,222 @@ class Parser {
     );
   }
 
+  /// Parse either a mode declaration or a type definition
+  /// Returns ModeDeclaration or TypeDefinition based on RHS structure
+  AstNode _parseModeOrTypeDeclaration() {
+    // Type names are capitalized, so they're tokenized as VARIABLE
+    final typeNameToken = _consume(TokenType.VARIABLE, 'Expected type name');
+    final typeName = typeNameToken.lexeme;
+
+    // Optional type parameters: (A, B, ...) - also capitalized, so VARIABLE
+    final typeParams = <String>[];
+    if (_match(TokenType.LPAREN)) {
+      typeParams.add(_consume(TokenType.VARIABLE, 'Expected type parameter').lexeme);
+      while (_match(TokenType.COMMA)) {
+        typeParams.add(_consume(TokenType.VARIABLE, 'Expected type parameter').lexeme);
+      }
+      _consume(TokenType.RPAREN, 'Expected ")" after type parameters');
+    }
+
+    _consume(TokenType.ASSIGN, 'Expected ":=" in declaration');
+
+    // Now we need to determine if this is a mode declaration or type definition
+    // Look at the RHS:
+    // - Mode declaration: pred(Type?, Type) - predicate with moded args
+    // - Type definition: atom | struct | [] | [_|T] | union of these
+
+    // Parse all constructors/alternatives separated by |
+    final constructors = <TypeConstructor>[];
+    bool hasModeMarkers = false;
+    String? predicateName;
+    List<ModedArg>? modedArgs;
+
+    // Parse first constructor/alternative
+    final firstResult = _parseConstructorOrModeArg();
+    if (firstResult is _ModeDeclarationParts) {
+      predicateName = firstResult.predicate;
+      modedArgs = firstResult.args;
+      hasModeMarkers = firstResult.hasModeMarkers;
+    } else {
+      constructors.add(firstResult as TypeConstructor);
+    }
+
+    // Parse additional alternatives with |
+    while (_match(TokenType.PIPE)) {
+      final result = _parseConstructorOrModeArg();
+      if (result is _ModeDeclarationParts) {
+        if (result.hasModeMarkers) {
+          // Union of mode declarations - not yet supported
+          throw CompileError(
+            'Union of mode declarations not yet supported. Use separate declarations.',
+            typeNameToken.line,
+            typeNameToken.column,
+            phase: 'parser',
+          );
+        }
+        // Struct constructor without mode markers
+        final structArgs = result.args.map((a) => TypeArg(a.typeName, a.typeParams, isReader: a.isReader)).toList();
+        constructors.add(StructConstructor(result.predicate, structArgs));
+      } else {
+        constructors.add(result as TypeConstructor);
+      }
+    }
+
+    _consume(TokenType.DOT, 'Expected "." after declaration');
+
+    // Decide what to return based on what we parsed
+    if (predicateName != null && modedArgs != null) {
+      if (hasModeMarkers || modedArgs.isEmpty) {
+        // Mode declaration: either has ? markers or is nullary pred()
+        return ModeDeclaration(
+          typeName,
+          typeParams,
+          predicateName,
+          modedArgs,
+          typeNameToken.line,
+          typeNameToken.column,
+        );
+      } else {
+        // Struct constructor (pred with args but no ? markers)
+        final structArgs = modedArgs.map((a) => TypeArg(a.typeName, a.typeParams, isReader: a.isReader)).toList();
+        constructors.add(StructConstructor(predicateName, structArgs));
+        return TypeDefinition(typeName, typeParams, constructors, typeNameToken.line, typeNameToken.column);
+      }
+    } else {
+      // This is a type definition with constructors
+      return TypeDefinition(typeName, typeParams, constructors, typeNameToken.line, typeNameToken.column);
+    }
+  }
+
+  /// Parse a constructor or mode declaration arguments
+  /// Returns TypeConstructor for type definitions, _ModeDeclarationParts for mode declarations
+  dynamic _parseConstructorOrModeArg() {
+    // Check for list constructors: [] or [_|T]
+    if (_check(TokenType.LBRACKET)) {
+      return _parseListConstructor();
+    }
+
+    // Check for atom or struct
+    if (_check(TokenType.ATOM)) {
+      final token = _advance();
+
+      // Nullary atom (type constructor)
+      if (!_check(TokenType.LPAREN)) {
+        return AtomConstructor(token.lexeme);
+      }
+
+      // Has arguments - could be struct constructor or mode declaration
+      _advance();  // consume (
+      final args = <ModedArg>[];
+      bool hasModeMarkers = false;
+
+      if (!_check(TokenType.RPAREN)) {
+        final arg = _parseModedArg();
+        if (arg.isReader) hasModeMarkers = true;
+        args.add(arg);
+
+        while (_match(TokenType.COMMA)) {
+          final arg = _parseModedArg();
+          if (arg.isReader) hasModeMarkers = true;
+          args.add(arg);
+        }
+      }
+
+      _consume(TokenType.RPAREN, 'Expected ")" after arguments');
+
+      // If no args, it's a nullary mode declaration (pred())
+      if (args.isEmpty) {
+        return _ModeDeclarationParts(token.lexeme, args, false);
+      }
+
+      return _ModeDeclarationParts(token.lexeme, args, hasModeMarkers);
+    }
+
+    // Check for VARIABLE (could be type param reference in type definition)
+    if (_check(TokenType.VARIABLE)) {
+      final token = _advance();
+      // Check for () which makes it a nullary mode declaration
+      if (_match(TokenType.LPAREN)) {
+        _consume(TokenType.RPAREN, 'Expected ")" after predicate name');
+        return _ModeDeclarationParts(token.lexeme, [], false);
+      }
+      // Type parameter reference as constructor (rare but possible)
+      return AtomConstructor(token.lexeme);
+    }
+
+    throw CompileError(
+      'Expected constructor or predicate',
+      _peek().line,
+      _peek().column,
+      phase: 'parser',
+    );
+  }
+
+  /// Parse a list constructor: [] or [head|tail]
+  ListConstructor _parseListConstructor() {
+    _consume(TokenType.LBRACKET, 'Expected "["');
+
+    // Empty list []
+    if (_match(TokenType.RBRACKET)) {
+      return const ListConstructor(null, null);
+    }
+
+    // Parse head: _ or _? or TypeName or TypeName?
+    final head = _parseTypeArgForList();
+
+    // Expect |
+    _consume(TokenType.PIPE, 'Expected "|" in list constructor');
+
+    // Parse tail: TypeName or TypeName?
+    final tail = _parseTypeArgForList();
+
+    _consume(TokenType.RBRACKET, 'Expected "]" after list constructor');
+
+    return ListConstructor(head, tail);
+  }
+
+  /// Parse a type arg for list constructor: _ or _? or TypeName or TypeName?
+  TypeArg _parseTypeArgForList() {
+    // Underscore
+    if (_match(TokenType.UNDERSCORE)) {
+      // Check for ?
+      final isReader = _match(TokenType.QUESTION);
+      return TypeArg('_', [], isReader: isReader);
+    }
+
+    // Reader type without params: Type?
+    if (_check(TokenType.READER)) {
+      final token = _advance();
+      return TypeArg(token.lexeme, [], isReader: true);
+    }
+
+    // Type name (VARIABLE because capitalized)
+    if (_check(TokenType.VARIABLE)) {
+      final token = _advance();
+
+      // Optional type params
+      final typeParams = <String>[];
+      if (_match(TokenType.LPAREN)) {
+        typeParams.add(_parseTypeParam());
+        while (_match(TokenType.COMMA)) {
+          typeParams.add(_parseTypeParam());
+        }
+        _consume(TokenType.RPAREN, 'Expected ")" after type parameters');
+      }
+
+      // Check for ?
+      final isReader = _match(TokenType.QUESTION);
+      return TypeArg(token.lexeme, typeParams, isReader: isReader);
+    }
+
+    throw CompileError(
+      'Expected type in list constructor',
+      _peek().line,
+      _peek().column,
+      phase: 'parser',
+    );
+  }
+
   /// Parse a moded argument: TypeName(Params)? or TypeName(Params)
   /// Note: The lexer tokenizes "Num?" as a single READER token with lexeme "Num"
   ModedArg _parseModedArg() {
@@ -1060,4 +1308,13 @@ class Parser {
   String _parseTypeParam() {
     return _consume(TokenType.VARIABLE, 'Expected type parameter').lexeme;
   }
+}
+
+/// Helper class to hold parsed mode declaration parts during disambiguation
+class _ModeDeclarationParts {
+  final String predicate;
+  final List<ModedArg> args;
+  final bool hasModeMarkers;
+
+  _ModeDeclarationParts(this.predicate, this.args, this.hasModeMarkers);
 }

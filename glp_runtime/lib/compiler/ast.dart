@@ -275,12 +275,95 @@ class ModedArg {
   String get _paramsStr => typeParams.isEmpty ? '' : '(${typeParams.join(", ")})';
 }
 
+// ============================================================================
+// Moded Type Definitions
+// ============================================================================
+
+/// Type definition: TypeName := constructor | constructor | ...
+/// Example: BinaryDigit := zero | one.
+class TypeDefinition extends AstNode {
+  final String typeName;
+  final List<String> typeParams;  // e.g., ["T"] for List(T)
+  final List<TypeConstructor> constructors;
+
+  TypeDefinition(this.typeName, this.typeParams, this.constructors, int line, int column)
+      : super(line, column);
+
+  @override
+  String toString() {
+    final paramsStr = typeParams.isEmpty ? '' : '(${typeParams.join(", ")})';
+    return '$typeName$paramsStr := ${constructors.join(" | ")}.';
+  }
+}
+
+/// Base class for type constructors
+abstract class TypeConstructor {
+  const TypeConstructor();
+}
+
+/// Atom constructor: zero, one, nil, etc.
+class AtomConstructor extends TypeConstructor {
+  final String name;
+
+  const AtomConstructor(this.name);
+
+  @override
+  String toString() => name;
+}
+
+/// Struct constructor: dl(List?, List), get(Num), etc.
+class StructConstructor extends TypeConstructor {
+  final String functor;
+  final List<TypeArg> args;
+
+  const StructConstructor(this.functor, this.args);
+
+  @override
+  String toString() => '$functor(${args.join(", ")})';
+}
+
+/// List constructor: [], [_|List], [_?|BBList], etc.
+class ListConstructor extends TypeConstructor {
+  final TypeArg? head;  // null for []
+  final TypeArg? tail;  // null for []
+
+  const ListConstructor(this.head, this.tail);
+
+  bool get isNil => head == null && tail == null;
+
+  @override
+  String toString() {
+    if (isNil) return '[]';
+    return '[$head|$tail]';
+  }
+}
+
+/// Type argument in a constructor
+/// Example: List? is TypeArg("List", [], isReader: true)
+/// Example: _? is TypeArg("_", [], isReader: true)
+class TypeArg {
+  final String typeName;  // Type name or "_" for anonymous
+  final List<String> typeParams;
+  final bool isReader;
+
+  const TypeArg(this.typeName, this.typeParams, {required this.isReader});
+
+  bool get isAnonymous => typeName == '_';
+
+  @override
+  String toString() {
+    final paramsStr = typeParams.isEmpty ? '' : '(${typeParams.join(", ")})';
+    return isReader ? '$typeName$paramsStr?' : '$typeName$paramsStr';
+  }
+}
+
 /// Complete module structure
 class Module extends AstNode {
   final ModuleDeclaration? declaration;
   final List<ExportDeclaration> exports;
   final List<ImportDeclaration> imports;
   final List<ModeDeclaration> modeDeclarations;
+  final List<TypeDefinition> typeDefinitions;
   final List<Procedure> procedures;
 
   Module({
@@ -288,6 +371,7 @@ class Module extends AstNode {
     this.exports = const [],
     this.imports = const [],
     this.modeDeclarations = const [],
+    this.typeDefinitions = const [],
     this.procedures = const [],
     required int line,
     required int column,
