@@ -6,6 +6,7 @@ import 'error.dart';
 class Parser {
   final List<Token> tokens;
   int _current = 0;
+  Clause? _pendingClause;  // Clause parsed but belongs to different procedure
 
   Parser(this.tokens);
 
@@ -225,8 +226,14 @@ class Parser {
   Procedure _parseProcedure() {
     final clauses = <Clause>[];
 
-    // Parse first clause
-    final firstClause = _parseClause();
+    // Use pending clause if available, otherwise parse first clause
+    final Clause firstClause;
+    if (_pendingClause != null) {
+      firstClause = _pendingClause!;
+      _pendingClause = null;
+    } else {
+      firstClause = _parseClause();
+    }
     clauses.add(firstClause);
 
     final name = firstClause.head.functor;
@@ -265,8 +272,15 @@ class Parser {
 
       final clause = _parseClause();
 
-      // Verify same functor and arity
-      if (clause.head.functor != name || clause.head.arity != arity) {
+      // If functor matches but arity differs, this is a different procedure
+      // Store it as pending and break
+      if (clause.head.functor == name && clause.head.arity != arity) {
+        _pendingClause = clause;
+        break;
+      }
+
+      // Verify same functor (arity already checked above for same-name case)
+      if (clause.head.functor != name) {
         throw CompileError(
           'Clause for ${clause.head.functor}/${clause.head.arity} found, expected $name/$arity',
           clause.line,
