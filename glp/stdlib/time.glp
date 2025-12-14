@@ -1,0 +1,5 @@
+%% time.glp - Time system predicates
+-stdlib.
+
+%% now(T?) - Bind T to current Unix milliseconds since epoch
+now(T?) :- '_now'(T).
