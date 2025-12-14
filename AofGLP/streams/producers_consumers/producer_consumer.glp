@@ -3,12 +3,20 @@
 %%
 %% Producer generates infinite stream [0,1,2,3,...] continuously.
 %% Consumer accumulates running sum as it receives each value.
-%% In a fair run, each consumer goal must eventually be reduced.
-%% As producer extends stream, fairness ensures consumer makes progress,
-%% guaranteeing every number produced is eventually consumed.
 
-producer(Xs) :- producer(Xs?,0).
+%% Type definitions
+List := [] | [_ | List].
 
-producer([N?|Xs],N) :- N1 := N? + 1, producer(Xs,N1?).
+%% Mode declarations
+Producer1 := producer(List).
+Producer2 := producer(List, Num?).
+Consumer1 := consumer(List?).
+Consumer2 := consumer(List?, Num?).
 
-consumer([X|Xs],Sum) :- Sum1 := Sum? + X?, consumer(Xs?,Sum1?).
+producer(Xs) :- producer(Xs?, 0).
+
+producer([N?|Xs], N) :- number(N?) | N1 := N? + 1, producer(Xs, N1?).
+
+consumer(Xs) :- consumer(Xs?, 0).
+
+consumer([X|Xs], Sum) :- Sum1 := Sum? + X?, consumer(Xs?, Sum1?).

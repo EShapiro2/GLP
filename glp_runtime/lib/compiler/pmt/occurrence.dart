@@ -92,6 +92,19 @@ class OccurrenceClassifier {
       return;
     }
 
+    // Handle built-in operations with known modes
+    final builtinModes = _getBuiltinModes(goal.functor, goal.arity);
+    if (builtinModes != null) {
+      for (int i = 0; i < goal.args.length && i < builtinModes.length; i++) {
+        final argMode = builtinModes[i];
+        final occType = (argMode == Mode.reader)
+            ? OccurrenceType.reader
+            : OccurrenceType.writer;
+        _collectVariables(goal.args[i], occType, out);
+      }
+      return;
+    }
+
     // Look up modes for this goal
     final goalModes = modeTable.getModes(goal.functor, goal.arity);
     if (goalModes == null) {
@@ -108,6 +121,18 @@ class OccurrenceClassifier {
           : OccurrenceType.writer;
       _collectVariables(goal.args[i], occType, out);
     }
+  }
+
+  /// Get modes for built-in operations
+  ///
+  /// Built-ins with known modes:
+  /// - `:=/2` - arithmetic assignment: writer(LHS), reader(RHS)
+  List<Mode>? _getBuiltinModes(String functor, int arity) {
+    if (functor == ':=' && arity == 2) {
+      // X := Expr - X is writer (receives result), Expr is reader (provides value)
+      return [Mode.writer, Mode.reader];
+    }
+    return null;
   }
 
   /// Classify variables in a guard
