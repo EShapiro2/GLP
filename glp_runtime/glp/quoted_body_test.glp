@@ -1,0 +1,1 @@
+wrapper(X, R?) :- number(X?) | '_test_kernel'(X?, R).

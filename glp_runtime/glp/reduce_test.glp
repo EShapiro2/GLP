@@ -1,0 +1,11 @@
+%% Test file for reduce/2 auto-generation
+-module(reduce_test).
+
+%% Fact
+hello(world).
+
+%% Rule without guard
+greet(X, Y?) :- Y := X?.
+
+%% Rule with guard
+double(X, Y?) :- number(X?) | Y := X? * 2.

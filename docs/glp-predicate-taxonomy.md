@@ -179,16 +179,45 @@ action(T, Result?) :- otherwise | handle_early(Result).
 - Domain error (division by zero) → **abort** "Domain error in body kernel"
 
 **Examples**:
-- `add(X?, Y?, Z)` - Addition: Z = X + Y
-- `sub(X?, Y?, Z)` - Subtraction: Z = X - Y
-- `mul(X?, Y?, Z)` - Multiplication: Z = X * Y
-- `div(X?, Y?, Z)` - Division: Z = X / Y (float result)
-- `mod(X?, Y?, Z)` - Modulo: Z = X mod Y
-- `write(Term)` - Write to stdout
-- `bind(Writer, Value)` - Bind writer variable to value
-- `list_to_tuple(List?, Tuple)` - Convert list to structure: `[foo, a, b]` → `foo(a, b)`
-- `tuple_to_list(Tuple?, List)` - Convert structure to list: `foo(a, b)` → `[foo, a, b]`
-- `now(T)` - Bind T to current Unix milliseconds since epoch (always succeeds)
+
+*Arithmetic:*
+- `'_add'(X?, Y?, Z)` - Addition: Z = X + Y
+- `'_sub'(X?, Y?, Z)` - Subtraction: Z = X - Y
+- `'_mul'(X?, Y?, Z)` - Multiplication: Z = X * Y
+- `'_div'(X?, Y?, Z)` - Division: Z = X / Y (float result)
+- `'_idiv'(X?, Y?, Z)` - Integer division: Z = X // Y
+- `'_mod'(X?, Y?, Z)` - Modulo: Z = X mod Y
+- `'_neg'(X?, Z)` - Unary negation: Z = -X
+
+*Math functions:*
+- `'_abs'(X?, Z)` - Absolute value
+- `'_sqrt'(X?, Z)` - Square root
+- `'_sin'(X?, Z)`, `'_cos'(X?, Z)`, `'_tan'(X?, Z)` - Trigonometric
+- `'_asin'(X?, Z)`, `'_acos'(X?, Z)`, `'_atan'(X?, Z)` - Inverse trigonometric
+- `'_exp'(X?, Z)` - Exponential (e^X)
+- `'_ln'(X?, Z)` - Natural logarithm
+- `'_log10'(X?, Z)` - Base-10 logarithm
+- `'_pow'(X?, Y?, Z)` - Power: Z = X^Y
+
+*Type conversion:*
+- `'_integer'(X?, Z)` - Convert to integer
+- `'_real'(X?, Z)` - Convert to float
+- `'_round'(X?, Z)`, `'_floor'(X?, Z)`, `'_ceil'(X?, Z)` - Rounding
+
+*Structure:*
+- `'_list_to_tuple'(List?, Tuple)` - Convert list to structure: `[foo, a, b]` → `foo(a, b)`
+- `'_tuple_to_list'(Tuple?, List)` - Convert structure to list: `foo(a, b)` → `[foo, a, b]`
+- `'_copy'(Source?, Target)` - Copy term
+
+*Time:*
+- `'_now'(T)` - Bind T to current Unix milliseconds since epoch
+
+*Mutual references (O(1) stream append):*
+- `'_allocate_mutual_reference'(InitialTail, Ref)` - Create mutual reference
+- `'_stream_append'(Element, Ref?, NewRef)` - Append to stream via reference
+- `'_close_mutual_reference'(Ref?)` - Close mutual reference
+
+**Naming Convention**: All body kernels use quoted atoms starting with underscore: `'_name'`. This distinguishes system primitives from user-defined predicates and prevents name collisions.
 
 **Usage** (internal):
 ```glp
@@ -466,9 +495,9 @@ guardKernelRegistry.register('guard_mul', guardMulKernel);
 **Body Kernel Registry** (internal, restricted access):
 ```dart
 // Internal registry - only accessible to system predicates
-bodyKernelRegistry.register('add', addBodyKernel);
-bodyKernelRegistry.register('mul', mulBodyKernel);
-bodyKernelRegistry.register('write', writeBodyKernel);
+bodyKernelRegistry.register("'_add'", addBodyKernel);
+bodyKernelRegistry.register("'_mul'", mulBodyKernel);
+// Note: write is a system predicate, not a body kernel
 
 // Access control: body kernels not in public predicate lookup
 // User goal "add(X, Y, Z)" → fails (not found in user registry)

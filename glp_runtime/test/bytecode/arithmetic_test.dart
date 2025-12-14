@@ -38,8 +38,8 @@ void main() {
       final yRef = VarRef(yId, isReader: true);
       final resultRef = VarRef(resultId, isReader: false);  // writer
 
-      final kernel = rt.bodyKernels.lookup('add', 3);
-      expect(kernel, isNotNull, reason: 'add/3 kernel should be registered');
+      final kernel = rt.bodyKernels.lookup('_add', 3);
+      expect(kernel, isNotNull, reason: '_add/3 kernel should be registered');
 
       final result = kernel!(rt, [xRef, yRef, resultRef]);
       expect(result, equals(BodyKernelResult.success));
@@ -61,7 +61,7 @@ void main() {
       rt.heap.bindVariableConst(xId, 10);
       rt.heap.bindVariableConst(yId, 4);
 
-      final kernel = rt.bodyKernels.lookup('sub', 3);
+      final kernel = rt.bodyKernels.lookup('_sub', 3);
       expect(kernel, isNotNull);
 
       final result = kernel!(rt, [
@@ -85,7 +85,7 @@ void main() {
       rt.heap.bindVariableConst(xId, 7);
       rt.heap.bindVariableConst(yId, 6);
 
-      final kernel = rt.bodyKernels.lookup('mul', 3);
+      final kernel = rt.bodyKernels.lookup('_mul', 3);
       final result = kernel!(rt, [
         VarRef(xId, isReader: true),
         VarRef(yId, isReader: true),
@@ -107,7 +107,7 @@ void main() {
       rt.heap.bindVariableConst(xId, 15);
       rt.heap.bindVariableConst(yId, 4);
 
-      final kernel = rt.bodyKernels.lookup('div', 3);
+      final kernel = rt.bodyKernels.lookup('_div', 3);
       final result = kernel!(rt, [
         VarRef(xId, isReader: true),
         VarRef(yId, isReader: true),
@@ -129,7 +129,7 @@ void main() {
       rt.heap.bindVariableConst(xId, 10);
       rt.heap.bindVariableConst(yId, 0);
 
-      final kernel = rt.bodyKernels.lookup('div', 3);
+      final kernel = rt.bodyKernels.lookup('_div', 3);
       final result = kernel!(rt, [
         VarRef(xId, isReader: true),
         VarRef(yId, isReader: true),
@@ -146,7 +146,7 @@ void main() {
 
       rt.heap.bindVariableConst(xId, 42);
 
-      final kernel = rt.bodyKernels.lookup('neg', 2);
+      final kernel = rt.bodyKernels.lookup('_neg', 2);
       final result = kernel!(rt, [
         VarRef(xId, isReader: true),
         VarRef(resultId, isReader: false),
@@ -165,7 +165,7 @@ void main() {
 
       rt.heap.bindVariableConst(xId, 16);
 
-      final kernel = rt.bodyKernels.lookup('sqrt_kernel', 2);
+      final kernel = rt.bodyKernels.lookup('_sqrt', 2);
       final result = kernel!(rt, [
         VarRef(xId, isReader: true),
         VarRef(resultId, isReader: false),
@@ -180,36 +180,36 @@ void main() {
       final rt = GlpRuntime();
 
       // Binary arithmetic
-      expect(rt.bodyKernels.has('add', 3), isTrue);
-      expect(rt.bodyKernels.has('sub', 3), isTrue);
-      expect(rt.bodyKernels.has('mul', 3), isTrue);
-      expect(rt.bodyKernels.has('div', 3), isTrue);
-      expect(rt.bodyKernels.has('idiv', 3), isTrue);
-      expect(rt.bodyKernels.has('mod', 3), isTrue);
+      expect(rt.bodyKernels.has('_add', 3), isTrue);
+      expect(rt.bodyKernels.has('_sub', 3), isTrue);
+      expect(rt.bodyKernels.has('_mul', 3), isTrue);
+      expect(rt.bodyKernels.has('_div', 3), isTrue);
+      expect(rt.bodyKernels.has('_idiv', 3), isTrue);
+      expect(rt.bodyKernels.has('_mod', 3), isTrue);
 
       // Unary
-      expect(rt.bodyKernels.has('neg', 2), isTrue);
-      expect(rt.bodyKernels.has('abs_kernel', 2), isTrue);
+      expect(rt.bodyKernels.has('_neg', 2), isTrue);
+      expect(rt.bodyKernels.has('_abs', 2), isTrue);
 
       // Math functions
-      expect(rt.bodyKernels.has('sqrt_kernel', 2), isTrue);
-      expect(rt.bodyKernels.has('sin_kernel', 2), isTrue);
-      expect(rt.bodyKernels.has('cos_kernel', 2), isTrue);
-      expect(rt.bodyKernels.has('tan_kernel', 2), isTrue);
-      expect(rt.bodyKernels.has('exp_kernel', 2), isTrue);
-      expect(rt.bodyKernels.has('ln_kernel', 2), isTrue);
-      expect(rt.bodyKernels.has('log10_kernel', 2), isTrue);
-      expect(rt.bodyKernels.has('pow_kernel', 3), isTrue);
-      expect(rt.bodyKernels.has('asin_kernel', 2), isTrue);
-      expect(rt.bodyKernels.has('acos_kernel', 2), isTrue);
-      expect(rt.bodyKernels.has('atan_kernel', 2), isTrue);
+      expect(rt.bodyKernels.has('_sqrt', 2), isTrue);
+      expect(rt.bodyKernels.has('_sin', 2), isTrue);
+      expect(rt.bodyKernels.has('_cos', 2), isTrue);
+      expect(rt.bodyKernels.has('_tan', 2), isTrue);
+      expect(rt.bodyKernels.has('_exp', 2), isTrue);
+      expect(rt.bodyKernels.has('_ln', 2), isTrue);
+      expect(rt.bodyKernels.has('_log10', 2), isTrue);
+      expect(rt.bodyKernels.has('_pow', 3), isTrue);
+      expect(rt.bodyKernels.has('_asin', 2), isTrue);
+      expect(rt.bodyKernels.has('_acos', 2), isTrue);
+      expect(rt.bodyKernels.has('_atan', 2), isTrue);
 
       // Type conversions
-      expect(rt.bodyKernels.has('integer_kernel', 2), isTrue);
-      expect(rt.bodyKernels.has('real_kernel', 2), isTrue);
-      expect(rt.bodyKernels.has('round_kernel', 2), isTrue);
-      expect(rt.bodyKernels.has('floor_kernel', 2), isTrue);
-      expect(rt.bodyKernels.has('ceil_kernel', 2), isTrue);
+      expect(rt.bodyKernels.has('_integer', 2), isTrue);
+      expect(rt.bodyKernels.has('_real', 2), isTrue);
+      expect(rt.bodyKernels.has('_round', 2), isTrue);
+      expect(rt.bodyKernels.has('_floor', 2), isTrue);
+      expect(rt.bodyKernels.has('_ceil', 2), isTrue);
     });
   });
 

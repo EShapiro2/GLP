@@ -4,7 +4,9 @@
 %% Sends message to all recipients in friends list.
 
 broadcast(_, [], []).
-broadcast(Msg, [(Name, Out)|Fs], [(Name?, [Msg?|Out1?])|Fs1?]) :-
+%% TODO: Needs redesign for SRSW - multi-recipient broadcast inherently reads Msg multiple times
+broadcast(Msg, [(Name, Out)|Fs], [(Name?, [Msg?|Out?])|Fs1?]) :-
+    ground(Msg?) |
     broadcast(Msg?, Fs?, Fs1).
 
 %% Recursively traverses friends list, adding message to each

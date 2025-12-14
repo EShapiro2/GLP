@@ -1,0 +1,37 @@
+% test_arithmetic_kernels.glp - Comprehensive arithmetic kernel tests
+% Pattern: inputs are writers in head, output is reader F?
+% In body: F := expr uses F's reader occurrence
+
+% Integer division
+test_idiv(X, Y, R?) :- number(X?), number(Y?) | R := X? // Y?.
+
+% abs
+test_abs(X, R?) :- number(X?) | R := abs(X?).
+
+% sqrt
+test_sqrt(X, R?) :- number(X?) | R := sqrt(X?).
+
+% sin/cos/tan
+test_sin(X, R?) :- number(X?) | R := sin(X?).
+test_cos(X, R?) :- number(X?) | R := cos(X?).
+test_tan(X, R?) :- number(X?) | R := tan(X?).
+
+% exp/ln/log10
+test_exp(X, R?) :- number(X?) | R := exp(X?).
+test_ln(X, R?) :- number(X?) | R := ln(X?).
+test_log10(X, R?) :- number(X?) | R := log10(X?).
+
+% pow
+test_pow(X, Y, R?) :- number(X?), number(Y?) | R := pow(X?, Y?).
+
+% asin/acos/atan
+test_asin(X, R?) :- number(X?) | R := asin(X?).
+test_acos(X, R?) :- number(X?) | R := acos(X?).
+test_atan(X, R?) :- number(X?) | R := atan(X?).
+
+% Type conversions
+test_integer_conv(X, R?) :- number(X?) | R := integer(X?).
+test_real(X, R?) :- number(X?) | R := real(X?).
+test_round(X, R?) :- number(X?) | R := round(X?).
+test_floor(X, R?) :- number(X?) | R := floor(X?).
+test_ceil(X, R?) :- number(X?) | R := ceil(X?).

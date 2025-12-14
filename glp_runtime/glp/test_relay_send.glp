@@ -1,0 +1,12 @@
+% Test relay with send/3 as defined guard
+% send/3 unit clause: send(Msg, ch(Id, [Msg?|Rest?]), ch(Id?, Rest))
+send(Msg, ch(Id, [Msg?|Rest?]), ch(Id?, Rest)).
+
+% relay clause using send/3 as defined guard
+% Fixed: Out is writer in head, Out? is reader in body
+relay([X|In1], Out, Ch) :-
+    send(X?, Ch?, Ch1) |
+    relay(In1?, Out?, Ch1?).
+
+% Base case: output channel equals input channel when list is empty
+relay([], Ch, Ch?).

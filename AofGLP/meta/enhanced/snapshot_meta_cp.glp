@@ -3,23 +3,29 @@
 %%
 %% Allows inspection of running computation state.
 %% When 'shot(Ps)' appears on interrupt stream, collects current processes.
+%%
+%% Uses chain(Left, Right) for short-circuit termination detection.
 
-reduce(_, true, Chain--Chain?).                  %% halt
-reduce(P, (A, B), Left--Right?) :-               %% fork
-    ground(P?) |
-    reduce(P?, A?, Left?--Middle),
-    reduce(P?, B?, Middle?--Right).
-reduce(P, Goal, Left--Right?) :-                 %% reduce
-    ground(P?), ground(Goal?),
+run(true, chain(Chain, Chain?)).                 %% halt - close circuit
+run((A, B), chain(Left, Right?)) :-              %% fork - split chain
+    run(A?, chain(Left?, Middle)),
+    run(B?, chain(Middle?, Right)).
+run(Goal, chain(Left, Right?)) :-                %% reduce
+    ground(Goal?),
     ~(Goal? =?= true), ~(Goal? =?= (_, _)),
-    unknown(Left?),
-    clause(Goal?, P?, Body) |
-    reduce(P?, Body?, Left?--Right).
-reduce(P, Goal, [shot(Ps)|Left]--[shot([Goal?|Ps?])|Right?]) :-  %% shot
+    unknown(Left?) |
+    reduce(Goal?, Body),
+    run(Body?, chain(Left?, Right)).
+run(Goal, chain([shot(Ps)|Left], [shot([Goal?|Ps?])|Right?])) :-  %% shot
     ground(Goal?) |
-    reduce(P?, Goal?, Left?--Right).
+    run(Goal?, chain(Left?, Right)).
+
+%% Object program: merge
+reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge([], [], []), true).
 
 %% Usage:
-%% reduce(Program, Goal, Left?--Right)
+%% run(Goal, chain(Left?, Right))
 %% When Left bound to [shot([])|Rest], Right? gets [shot(Processes)|...]
 %% Processes is list of currently active goals
