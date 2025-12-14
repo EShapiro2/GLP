@@ -2,7 +2,7 @@
 
 % Test 1: equator guard succeeds for valid equator structure
 test_equator_guard(R?) :-
-    make_equator(stop, Eq, _Handle),
+    create_equator(stop, Eq, _Handle),
     check_equator(Eq?, R).
 
 check_equator(Eq, yes) :- equator(Eq?) | true.
@@ -10,12 +10,12 @@ check_equator(_, no) :- otherwise | true.
 
 % Test 2: Equator kernel triggers and binds handle
 test_equator_trigger(Handle?) :-
-    make_equator(triggered, Eq, Handle),
+    create_equator(triggered, Eq, Handle),
     '_equator'(Eq?).
 
 % Test 3: SRSW relaxation - multiple Eq? occurrences with equator guard
 test_equator_srsw(R1?, R2?) :-
-    make_equator(stop, Eq, _Handle),
+    create_equator(stop, Eq, _Handle),
     distribute_equator(Eq?, R1, R2).
 
 distribute_equator(Eq, R1?, R2?) :- equator(Eq?) | R1 = got_it, R2 = got_it.
@@ -23,7 +23,7 @@ distribute_equator(Eq, R1?, R2?) :- equator(Eq?) | R1 = got_it, R2 = got_it.
 % Test 4: Build equator structure directly and test guard
 % The make_equator predicate handles proper variable setup
 test_equator_direct(R?) :-
-    make_equator(done, Eq, Handle),
+    create_equator(done, Eq, Handle),
     test_eq_check(Eq?, Handle?, R).
 
 test_eq_check(Eq, Handle, ok) :- equator(Eq?) | '_equator'(Eq?), wait_bound(Handle?).

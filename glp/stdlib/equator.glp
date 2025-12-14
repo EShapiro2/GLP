@@ -1,33 +1,8 @@
 % GLP System Predicate: Equator (Many-to-One Signaling)
-% This enables many-to-one communication patterns where multiple recipients
-% can receive and trigger the same equator structure.
-% File: stdlib/equator.glp
-% Loaded at runtime
+% Creates equator structure for many-to-one communication.
 
-%% make_equator(C, Eq, Handle)
-%% Creates an equator structure with collapse value C
-%%
-%% Arguments:
-%%   C       - The constant value to bind when equator is triggered (reader)
-%%   Eq      - Binds to '_equator'(Handle, C?) - the distributable structure (writer)
-%%   Handle  - Fresh variable returned for controller to wait on (writer)
-%%
-%% Usage:
-%%   Controller creates equator, distributes Eq? to multiple workers.
-%%   Each worker can call '_equator'(Eq?) to trigger.
-%%   Controller waits on Handle? to detect when any worker triggered.
-%%
-%% Example:
-%%   make_equator(stop, Eq, Handle),
-%%   distribute(Eq?, Worker1, Worker2, Worker3),
-%%   wait_for_trigger(Handle?).
-%%
-%% The equator structure is: '_equator'(Handle, C)
-%% - Handle is a fresh variable (unbound writer)
-%% - C is the collapse value (constant)
-%% When '_equator'(Eq?) is called, it binds Handle = C, which the controller
-%% can detect by waiting on Handle?.
-%%
-%% The structure is built using unification: Eq = '_equator'(Handle, C?)
-make_equator(C, Eq?, Handle?) :-
-    Eq = '_equator'(Handle, C?).
+% create_equator(C, Eq, Handle)
+% C - collapse constant (reader)
+% Eq - binds to '_equator'(E, C) structure (writer)
+% Handle - binds to E? reader of the fresh variable inside structure
+create_equator(C, '_equator'(E, C?), E?).
