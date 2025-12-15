@@ -1,0 +1,9 @@
+switch2x2([M | Ins1?], In2, [M | Outs1?], Out2) :- switch2x2(Ins1?, In2?, Outs1?, Out2?).
+switch2x2(In1, [M | Ins2?], [M | Outs1?], Out2) :- switch2x2(In1?, Ins2?, Outs1?, Out2?).
+switch2x2([M | Ins1?], In2, Out1, [M | Outs2?]) :- switch2x2(Ins1?, In2?, Out1?, Outs2?).
+switch2x2(In1, [M | Ins2?], Out1, [M | Outs2?]) :- switch2x2(In1?, Ins2?, Out1?, Outs2?).
+
+send(Msg, [Msg | NBuf?], NBuf).
+
+receive(Msg, [Msg | NBuf?], NBuf).
+
