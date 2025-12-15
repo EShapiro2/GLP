@@ -851,7 +851,7 @@ class Parser {
     );
   }
 
-  // Check if token is an arithmetic operator
+  // Check if token is an arithmetic operator or # (module operator)
   bool _isOperator(Token token) {
     return token.type == TokenType.PLUS ||
            token.type == TokenType.MINUS ||
@@ -865,7 +865,8 @@ class Parser {
            token.type == TokenType.GREATER_EQUAL ||
            token.type == TokenType.EQUALS ||
            token.type == TokenType.ARITH_EQUAL ||
-           token.type == TokenType.ARITH_NOT_EQUAL;
+           token.type == TokenType.ARITH_NOT_EQUAL ||
+           token.type == TokenType.HASH;
   }
 
   // Get operator precedence
@@ -879,6 +880,8 @@ class Parser {
       case TokenType.PLUS:
       case TokenType.MINUS:
         return 10;  // Additive
+      case TokenType.HASH:
+        return 2;   // Module operator (very low, so M # foo(X,Y) parses correctly)
       case TokenType.LESS:
       case TokenType.GREATER:
       case TokenType.LESS_EQUAL:
@@ -921,6 +924,8 @@ class Parser {
         return '=:=';
       case TokenType.ARITH_NOT_EQUAL:
         return '=\\=';
+      case TokenType.HASH:
+        return '#';
       default:
         throw CompileError(
           'Unknown operator: ${op.type}',
