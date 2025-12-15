@@ -5,8 +5,13 @@
 %% Uses bounded buffer for flow control.
 %% Suspends when both output ports are full.
 
-%% Note: Complex guard-based state threading where receive/send
-%% share variables within guards. MT validation skipped.
+%% Type definitions
+List := [] | [_ | List].
+
+%% Mode declarations
+Switch2x2 := switch2x2(List?, List?, List, List).
+Send := send(Any?, List, List?).
+Receive := receive(Any, List?, List).
 
 switch2x2(In1, In2, Out1, Out2) :-
     receive(M, In1?, Ins1), send(M?, Out1?, Outs1) |
