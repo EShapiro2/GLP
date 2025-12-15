@@ -431,7 +431,8 @@ class Analyzer {
 
     // Type-checking guards implicitly test groundness
     // Per spec: type tests require bound values, which are ground by definition
-    final typeCheckOps = ['number', 'integer', 'float', 'atom', 'string', 'list', 'tuple', 'compound', 'var', 'nonvar'];
+    // Note: var/nonvar removed (don't guarantee groundness), float removed (not implemented)
+    final typeCheckOps = ['number', 'integer', 'atom', 'string', 'list', 'tuple', 'compound', 'constant'];
     if (typeCheckOps.contains(guard.predicate) && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm) {
