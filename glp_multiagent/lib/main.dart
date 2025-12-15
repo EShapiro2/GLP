@@ -1,9 +1,14 @@
-/// GLP Multiagent - Phase 2 UI with GLPSAM Integration
+/// GLP Multiagent - Phase 3: Two Windows with MethodChannel
 ///
-/// Orange theme, wired to echo_io.glp via Phase 0 I/O classes.
+/// Coordinator window spawns agent windows, routes messages between them.
 library;
 
+import 'dart:convert';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
@@ -16,49 +21,137 @@ import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/external_io.dart';
 
-/// Embedded echo_io.glp program source
-const _echoIoSource = '''
-%% echo_io.glp - Simple echo for I/O testing (Phase 0)
-%% Out? in head reads the output position, Out in body writes the tail
-echo_test(ch([H|In], [echo(H?)|Out?])) :-
-    ground(H?) |
-    echo_test(ch(In?, Out)).
-echo_test(ch([], [])).
+/// Embedded ping_pong_agent.glp program source
+const _agentSource = '''
+%% ping_pong_agent.glp - Agent that handles user input and network messages
+%% SRSW: ground(X?) guard allows multiple reader occurrences of X?
+
+%% Main agent entry: merge user and net inputs, process in loop
+agent(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
+    merge(UserIn?, NetIn?, In),
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% User sends a message to another agent
+agent_loop(Id, [send(To, Content)|In], [sent(To?, Content?)|UserOut], [msg(Id?, To?, Content?)|NetOut]) :-
+    ground(Id?), ground(To?), ground(Content?) |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% Receive ping from network - reply with pong
+agent_loop(Id, [msg(From, ping)|In], [received_ping(From?)|UserOut], [msg(Id?, From?, pong)|NetOut]) :-
+    ground(Id?), ground(From?) |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% Receive pong from network - display to user
+agent_loop(Id, [msg(From, pong)|In], [received_pong(From?)|UserOut], NetOut?) :-
+    ground(Id?), ground(From?) |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% Receive any other message from network - display to user
+agent_loop(Id, [msg(From, Content)|In], [received(From?, Content?)|UserOut], NetOut?) :-
+    ground(Id?), ground(From?), ground(Content?) |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% Empty input - close outputs
+agent_loop(_, [], [], []).
 ''';
 
-/// Simple holder for I/O context (avoids AgentIOContext late field issues)
-class _SimpleIOContext {
-  final ExternalChannel userChannel;
-  final ExternalChannel netChannel;
-  final InputInjector userInput;
-  final OutputObserver userOutput;
+/// Entry point - checks if spawned window or main coordinator
+void main(List<String> args) {
+  debugPrint('=== MAIN ARGS: $args ===');
 
-  _SimpleIOContext({
-    required this.userChannel,
-    required this.netChannel,
-    required this.userInput,
-    required this.userOutput,
-  });
-
-  rt.Term get userChannelTerm => buildChannelTerm(userChannel);
-  rt.Term get netChannelTerm => buildChannelTerm(netChannel);
-
-  void dispose() {
-    userOutput.dispose();
+  if (args.firstOrNull == 'multi_window') {
+    // Spawned agent window
+    final windowId = int.parse(args[1]);
+    final params = jsonDecode(args[2]) as Map<String, dynamic>;
+    final agentId = params['agentId'] as String;
+    debugPrint('=== SPAWNED AGENT WINDOW: $agentId (windowId=$windowId) ===');
+    runAgentWindow(windowId, agentId);
+  } else {
+    // Main/coordinator window
+    debugPrint('=== COORDINATOR WINDOW ===');
+    runCoordinatorWindow();
   }
 }
 
-void main() {
-  runApp(const GlpApp());
+/// Run the coordinator window (spawns agent windows)
+void runCoordinatorWindow() {
+  runApp(const CoordinatorApp());
 }
 
-class GlpApp extends StatelessWidget {
-  const GlpApp({super.key});
+/// Run an agent window (spawned by coordinator)
+void runAgentWindow(int windowId, String agentId) {
+  runApp(AgentApp(windowId: windowId, agentId: agentId));
+}
+
+// ============================================================================
+// SIMPLE ROUTER - Routes messages between agent windows
+// ============================================================================
+
+/// Simple message router using MethodChannel
+class SimpleRouter {
+  static final SimpleRouter _instance = SimpleRouter._();
+  static SimpleRouter get instance => _instance;
+
+  SimpleRouter._();
+
+  final Map<String, int> _agentWindows = {}; // agentId -> windowId
+  final List<String> _routingLog = [];
+  VoidCallback? onLogUpdate;
+
+  List<String> get routingLog => List.unmodifiable(_routingLog);
+
+  void _log(String message) {
+    final timestamp = DateTime.now().toIso8601String().substring(11, 19);
+    _routingLog.add('[$timestamp] $message');
+    onLogUpdate?.call();
+  }
+
+  void register(String agentId, int windowId) {
+    _agentWindows[agentId] = windowId;
+    _log('Registered $agentId (window $windowId)');
+  }
+
+  void unregister(String agentId) {
+    _agentWindows.remove(agentId);
+    _log('Unregistered $agentId');
+  }
+
+  Future<void> route(String from, String to, dynamic payload) async {
+    _log('Route: $from -> $to: $payload');
+
+    final targetWindowId = _agentWindows[to];
+    if (targetWindowId == null) {
+      _log('ERROR: Unknown recipient $to');
+      return;
+    }
+
+    try {
+      await DesktopMultiWindow.invokeMethod(
+        targetWindowId,
+        'deliver',
+        jsonEncode({
+          'from': from,
+          'payload': payload,
+        }),
+      );
+      _log('Delivered to $to');
+    } catch (e) {
+      _log('ERROR delivering to $to: $e');
+    }
+  }
+}
+
+// ============================================================================
+// COORDINATOR APP
+// ============================================================================
+
+class CoordinatorApp extends StatelessWidget {
+  const CoordinatorApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'GLP Multiagent',
+      title: 'GLP Coordinator',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.orange,
@@ -70,7 +163,217 @@ class GlpApp extends StatelessWidget {
           backgroundColor: Colors.orange,
           foregroundColor: Colors.white,
         ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
+          ),
+        ),
+      ),
+      home: const CoordinatorScreen(),
+    );
+  }
+}
+
+class CoordinatorScreen extends StatefulWidget {
+  const CoordinatorScreen({super.key});
+
+  @override
+  State<CoordinatorScreen> createState() => _CoordinatorScreenState();
+}
+
+class _CoordinatorScreenState extends State<CoordinatorScreen> {
+  final Map<String, WindowController> _windows = {};
+  final List<String> _log = [];
+
+  @override
+  void initState() {
+    super.initState();
+    SimpleRouter.instance.onLogUpdate = () {
+      setState(() {});
+    };
+
+    // Set up handler for messages from agent windows
+    DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
+      debugPrint('=== COORDINATOR RECEIVED: ${call.method} from $fromWindowId ===');
+      if (call.method == 'send') {
+        final args = jsonDecode(call.arguments as String) as Map<String, dynamic>;
+        final from = args['from'] as String;
+        final to = args['to'] as String;
+        final payload = args['payload'];
+        await SimpleRouter.instance.route(from, to, payload);
+      }
+      return null;
+    });
+
+    _log.add('Coordinator started');
+  }
+
+  Future<void> _spawnAgent(String agentId, double x, double y) async {
+    if (_windows.containsKey(agentId)) {
+      _log.add('$agentId already spawned');
+      setState(() {});
+      return;
+    }
+
+    try {
+      final window = await DesktopMultiWindow.createWindow(
+        jsonEncode({'agentId': agentId}),
+      );
+      await window.setTitle('$agentId - GLP Agent');
+      await window.setFrame(Rect.fromLTWH(x, y, 400, 600));
+      await window.show();
+
+      _windows[agentId] = window;
+      SimpleRouter.instance.register(agentId, window.windowId);
+
+      _log.add('Spawned $agentId (window ${window.windowId})');
+      setState(() {});
+    } catch (e) {
+      _log.add('ERROR spawning $agentId: $e');
+      setState(() {});
+    }
+  }
+
+  Future<void> _spawnAliceAndBob() async {
+    await _spawnAgent('Alice', 100, 100);
+    await _spawnAgent('Bob', 520, 100);
+  }
+
+  Future<void> _closeAll() async {
+    for (final entry in _windows.entries) {
+      try {
+        await entry.value.close();
+        SimpleRouter.instance.unregister(entry.key);
+      } catch (e) {
+        _log.add('ERROR closing ${entry.key}: $e');
+      }
+    }
+    _windows.clear();
+    _log.add('Closed all windows');
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('GLP Coordinator'),
+      ),
+      body: Column(
+        children: [
+          // Control buttons
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            color: Colors.orange.shade50,
+            child: Row(
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _spawnAliceAndBob,
+                  icon: const Icon(Icons.people),
+                  label: const Text('Spawn Alice & Bob'),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton.icon(
+                  onPressed: () => _spawnAgent('Charlie', 940, 100),
+                  icon: const Icon(Icons.person_add),
+                  label: const Text('Add Charlie'),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton.icon(
+                  onPressed: _closeAll,
+                  icon: const Icon(Icons.close),
+                  label: const Text('Close All'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Active agents
+          Container(
+            padding: const EdgeInsets.all(8.0),
+            child: Wrap(
+              spacing: 8,
+              children: _windows.keys.map((id) => Chip(
+                label: Text(id),
+                avatar: const Icon(Icons.person, size: 18),
+                backgroundColor: Colors.orange.shade100,
+              )).toList(),
+            ),
+          ),
+
+          const Divider(),
+
+          // Routing log
+          Expanded(
+            child: Container(
+              color: Colors.grey.shade100,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(8.0),
+                itemCount: SimpleRouter.instance.routingLog.length,
+                itemBuilder: (context, index) {
+                  return Text(
+                    SimpleRouter.instance.routingLog[index],
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+
+          // Coordinator log
+          Container(
+            height: 100,
+            color: Colors.orange.shade50,
+            child: ListView.builder(
+              padding: const EdgeInsets.all(8.0),
+              itemCount: _log.length,
+              itemBuilder: (context, index) {
+                return Text(
+                  _log[index],
+                  style: const TextStyle(fontSize: 11),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// AGENT APP (spawned windows)
+// ============================================================================
+
+class AgentApp extends StatelessWidget {
+  final int windowId;
+  final String agentId;
+
+  const AgentApp({
+    super.key,
+    required this.windowId,
+    required this.agentId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: '$agentId - GLP Agent',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.orange,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.orange,
+          brightness: Brightness.light,
+        ),
+        appBarTheme: const AppBarTheme(
           backgroundColor: Colors.orange,
           foregroundColor: Colors.white,
         ),
@@ -81,13 +384,20 @@ class GlpApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const AgentScreen(),
+      home: AgentScreen(windowId: windowId, agentId: agentId),
     );
   }
 }
 
 class AgentScreen extends StatefulWidget {
-  const AgentScreen({super.key});
+  final int windowId;
+  final String agentId;
+
+  const AgentScreen({
+    super.key,
+    required this.windowId,
+    required this.agentId,
+  });
 
   @override
   State<AgentScreen> createState() => _AgentScreenState();
@@ -101,14 +411,14 @@ class _AgentScreenState extends State<AgentScreen> {
   // GLP Runtime components
   GlpRuntime? _runtime;
   Scheduler? _scheduler;
-  _SimpleIOContext? _ioContext;
+  _FullIOContext? _ioContext;
   Map<String, BytecodeProgram> _programs = {};
   int _goalId = 1;
 
   // Pending output terms (to be dereferenced after execution)
-  final List<rt.Term> _pendingOutputTerms = [];
+  final List<rt.Term> _pendingUserOutputTerms = [];
+  final List<rt.Term> _pendingNetOutputTerms = [];
 
-  String _agentId = 'agent_001';
   int _goalCount = 0;
   int _heapVars = 0;
   bool _isRunning = false;
@@ -118,64 +428,141 @@ class _AgentScreenState extends State<AgentScreen> {
   @override
   void initState() {
     super.initState();
+    _setupMethodChannel();
     _initializeRuntime();
+  }
+
+  void _setupMethodChannel() {
+    // Handle messages from coordinator - inject into GLP NetIn
+    DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
+      debugPrint('=== AGENT ${widget.agentId} RECEIVED: ${call.method} ===');
+      if (call.method == 'deliver') {
+        final args = jsonDecode(call.arguments as String) as Map<String, dynamic>;
+        final from = args['from'] as String;
+        final payload = args['payload'];
+        _onNetworkMessageReceived(from, payload);
+      }
+      return null;
+    });
+  }
+
+  void _onNetworkMessageReceived(String from, dynamic payload) {
+    _addOutput('[NET RECV from $from] $payload');
+
+    if (_ioContext == null || _runtime == null) return;
+
+    // Inject msg(From, Payload) into NetIn for GLP to process
+    final msgTerm = rt.StructTerm('msg', [
+      rt.ConstTerm(from),
+      rt.ConstTerm(payload),
+    ]);
+
+    final activations = _ioContext!.netInput.inject(msgTerm);
+    for (final goal in activations) {
+      _runtime!.gq.enqueue(goal);
+    }
+
+    // Run to process the message
+    _runUntilQuiescent();
+  }
+
+  Future<void> _sendNetworkMessage(String to, dynamic payload) async {
+    _addOutput('[NET SEND to $to] $payload');
+
+    // Send to coordinator for routing
+    try {
+      await DesktopMultiWindow.invokeMethod(
+        0, // Main window ID is always 0
+        'send',
+        jsonEncode({
+          'from': widget.agentId,
+          'to': to,
+          'payload': payload,
+        }),
+      );
+    } catch (e) {
+      _addOutput('[ERROR] Failed to send: $e');
+    }
   }
 
   Future<void> _initializeRuntime() async {
     try {
-      debugPrint('=== INIT START ===');
       _addOutput('[INIT] Creating GLP runtime...');
 
       // Create runtime
       _runtime = GlpRuntime();
       registerStandardPredicates(_runtime!.systemPredicates);
 
-      // Create channels manually (don't use AgentIOContext.create which sets up default observers)
+      // Create channels
       final userChannel = createExternalChannel(_runtime!.heap, 'user');
       final netChannel = createExternalChannel(_runtime!.heap, 'net');
 
-      // Create input injector
+      // Create user input injector
       final userInput = InputInjector(_runtime!.heap, 'user', userChannel.inputVarId);
 
-      // Create output observer - collects terms to be displayed after execution
+      // Create net input injector (for incoming network messages)
+      final netInput = InputInjector(_runtime!.heap, 'net', netChannel.inputVarId);
+
+      // Create user output observer - displays to UI
       final userOutput = OutputObserver(
         _runtime!.heap,
         'user',
         userChannel.outputVarId,
         (term) {
-          debugPrint('=== OUTPUT RECEIVED: $term ===');
-          // Store term for later display (after execution completes)
-          _pendingOutputTerms.add(term);
+          _pendingUserOutputTerms.add(term);
         },
         () {
           setState(() {
-            _outputLog.add('[OUTPUT CLOSED]');
+            _outputLog.add('[USER OUTPUT CLOSED]');
           });
         },
       );
 
-      // Store in a simple holder
-      _ioContext = _SimpleIOContext(
+      // Create net output observer - sends to network via MethodChannel
+      final netOutput = OutputObserver(
+        _runtime!.heap,
+        'net',
+        netChannel.outputVarId,
+        (term) {
+          _pendingNetOutputTerms.add(term);
+        },
+        () {
+          debugPrint('=== NET OUTPUT CLOSED ===');
+        },
+      );
+
+      _ioContext = _FullIOContext(
         userChannel: userChannel,
         netChannel: netChannel,
         userInput: userInput,
+        netInput: netInput,
         userOutput: userOutput,
+        netOutput: netOutput,
       );
 
-      debugPrint('=== CHANNELS CREATED ===');
-      _addOutput('[INIT] Loading echo_io.glp...');
+      _addOutput('[INIT] Loading ping_pong_agent.glp...');
 
-      // Compile embedded echo_io.glp program
+      // Compile embedded agent program + stdlib merge
       final compiler = GlpCompiler();
-      final program = compiler.compile(_echoIoSource);
-      _programs['echo_io.glp'] = program;
-      debugPrint('=== PROGRAM COMPILED ===');
-      _addOutput('[INIT] Loaded echo_io.glp');
+      final program = compiler.compile(_agentSource);
+      _programs['agent.glp'] = program;
 
-      // Start goal: echo_test(Ch)
-      _addOutput('[INIT] Starting goal: echo_test(Ch)');
-      _startGoal('echo_test(Ch)');
-      debugPrint('=== GOAL STARTED ===');
+      // Load stdlib for merge
+      final stdlibSource = '''
+merge([H|T1], T2, [H|T3]) :- merge(T1?, T2?, T3).
+merge(T1, [H|T2], [H|T3]) :- merge(T1?, T2?, T3).
+merge([], T2, T2?).
+merge(T1, [], T1?).
+''';
+      final stdlibProgram = compiler.compile(stdlibSource);
+      _programs['stdlib.glp'] = stdlibProgram;
+
+      _addOutput('[INIT] Loaded agent program');
+
+      // Start goal: agent(Id, UserCh, NetCh)
+      final agentIdLower = widget.agentId.toLowerCase();
+      _addOutput('[INIT] Starting goal: agent($agentIdLower, UserCh, NetCh)');
+      _startAgentGoal(agentIdLower);
 
       setState(() {
         _initialized = true;
@@ -183,38 +570,17 @@ class _AgentScreenState extends State<AgentScreen> {
         _updateStats();
       });
 
-      debugPrint('=== INIT COMPLETE ===');
-      _addOutput('[INIT] Ready! Type text and click Send.');
+      _addOutput('[INIT] Ready! Type: send(bob, ping)');
     } catch (e, st) {
-      debugPrint('=== INIT ERROR: $e ===');
-      debugPrint('$st');
       _addOutput('[ERROR] $e');
-      _addOutput('[TRACE] $st');
+      debugPrint('$st');
     }
   }
 
-  void _startGoal(String goalStr) {
+  void _startAgentGoal(String agentId) {
     if (_runtime == null || _ioContext == null) return;
 
     try {
-      // Parse goal
-      final parseInput = goalStr.endsWith('.') ? goalStr : '$goalStr.';
-      final lexer = Lexer(parseInput);
-      final tokens = lexer.tokenize();
-      final parser = Parser(tokens);
-      final parsedAst = parser.parse();
-
-      if (parsedAst.procedures.isEmpty || parsedAst.procedures[0].clauses.isEmpty) {
-        _addOutput('[ERROR] Could not parse goal');
-        return;
-      }
-
-      final goalClause = parsedAst.procedures[0].clauses[0];
-      final goalAtom = goalClause.head;
-      final functor = goalAtom.functor;
-      final arity = goalAtom.arity;
-      final args = goalAtom.args;
-
       // Combine loaded programs
       final allOps = <dynamic>[];
       for (final loaded in _programs.values) {
@@ -222,30 +588,19 @@ class _AgentScreenState extends State<AgentScreen> {
       }
       final combinedProgram = BytecodeProgram(allOps);
 
-      // Find entry point
-      final procedureLabel = '$functor/$arity';
-      final entryPC = combinedProgram.labels[procedureLabel];
+      // Find entry point for agent/3
+      final entryPC = combinedProgram.labels['agent/3'];
       if (entryPC == null) {
-        _addOutput('[ERROR] Predicate $procedureLabel not found');
+        _addOutput('[ERROR] Predicate agent/3 not found');
         return;
       }
 
-      // Set up arguments
-      final argSlots = <int, rt.Term>{};
-      for (int i = 0; i < args.length; i++) {
-        final arg = args[i];
-        if (arg is ast.VarTerm) {
-          final name = arg.name;
-          if (name == 'Ch' || name == 'UserCh') {
-            argSlots[i] = _ioContext!.userChannelTerm;
-          } else if (name == 'Net' || name == 'NetCh') {
-            argSlots[i] = _ioContext!.netChannelTerm;
-          } else {
-            final (writerId, readerId) = _runtime!.heap.allocateFreshPair();
-            argSlots[i] = rt.VarRef(arg.isReader ? readerId : writerId, isReader: arg.isReader);
-          }
-        }
-      }
+      // Set up arguments: agent(Id, UserCh, NetCh)
+      final argSlots = <int, rt.Term>{
+        0: rt.ConstTerm(agentId),
+        1: _ioContext!.userChannelTerm,
+        2: _ioContext!.netChannelTerm,
+      };
 
       // Set up goal environment
       final env = CallEnv(args: argSlots);
@@ -261,9 +616,13 @@ class _AgentScreenState extends State<AgentScreen> {
       _runtime!.gq.enqueue(GoalRef(_goalId, entryPC));
       _goalId++;
 
-      _addOutput('[GOAL] Started $goalStr');
-    } catch (e) {
+      _addOutput('[GOAL] Started agent($agentId, UserCh, NetCh)');
+
+      // Initial run to set up merge
+      _runUntilQuiescent();
+    } catch (e, st) {
       _addOutput('[ERROR] Starting goal: $e');
+      debugPrint('$st');
     }
   }
 
@@ -271,21 +630,17 @@ class _AgentScreenState extends State<AgentScreen> {
     final text = _inputController.text.trim();
     if (text.isEmpty || _ioContext == null || _runtime == null) return;
 
-    debugPrint('=== SEND INPUT: $text ===');
     setState(() {
       _outputLog.add('> $text');
     });
 
     try {
-      // Parse and inject term
+      // Parse and inject term into UserIn
       final term = _parseTerm(text);
-      debugPrint('=== PARSED TERM: $term ===');
       final activations = _ioContext!.userInput.inject(term);
-      debugPrint('=== INJECTED, activations=${activations.length} ===');
 
       // Enqueue activated goals
       for (final goal in activations) {
-        debugPrint('=== ENQUEUE reactivated goal ${goal.id} at PC ${goal.pc} ===');
         _runtime!.gq.enqueue(goal);
       }
 
@@ -293,17 +648,13 @@ class _AgentScreenState extends State<AgentScreen> {
       _scrollToBottom();
 
       // Auto-run after injection
-      debugPrint('=== RUNNING... ===');
       _runUntilQuiescent();
-    } catch (e, st) {
-      debugPrint('=== SEND ERROR: $e ===');
-      debugPrint('$st');
+    } catch (e) {
       _addOutput('[ERROR] $e');
     }
   }
 
   rt.Term _parseTerm(String termStr) {
-    // Parse term by wrapping as fact
     final parseInput = '_temp_($termStr).';
     final lexer = Lexer(parseInput);
     final tokens = lexer.tokenize();
@@ -352,27 +703,8 @@ class _AgentScreenState extends State<AgentScreen> {
     return rt.StructTerm('.', [head, tail]);
   }
 
-  void _step() {
-    if (_scheduler == null) {
-      _addOutput('[ERROR] No scheduler');
-      return;
-    }
-
-    setState(() {
-      _outputLog.add('[STEP]');
-    });
-
-    final result = _scheduler!.drainWithStatus(maxCycles: 1, debug: false);
-    _goalCount += result.goalsRan.length;
-    _updateStats();
-    _scrollToBottom();
-  }
-
   Future<void> _runUntilQuiescent() async {
-    if (_scheduler == null) {
-      debugPrint('=== NO SCHEDULER ===');
-      return;
-    }
+    if (_scheduler == null) return;
 
     setState(() {
       _isRunning = true;
@@ -380,15 +712,13 @@ class _AgentScreenState extends State<AgentScreen> {
     });
 
     try {
-      debugPrint('=== DRAIN START, queue=${_runtime!.gq.length} ===');
       final result = await _scheduler!.drainAsyncWithStatus(
         maxCycles: 1000,
-        debug: true,
+        debug: false,
       );
-      debugPrint('=== DRAIN DONE: ${result.status}, ran=${result.goalsRan.length} ===');
       _goalCount += result.goalsRan.length;
 
-      // Display pending output (now that variables are bound)
+      // Display pending output
       _displayPendingOutput();
 
       setState(() {
@@ -396,28 +726,12 @@ class _AgentScreenState extends State<AgentScreen> {
         _status = result.status.name;
         _updateStats();
       });
-    } catch (e, st) {
-      debugPrint('=== RUN ERROR: $e ===');
-      debugPrint('$st');
+    } catch (e) {
       setState(() {
         _isRunning = false;
         _status = 'Error: $e';
       });
     }
-  }
-
-  void _run() {
-    _addOutput('[RUN]');
-    _runUntilQuiescent();
-  }
-
-  void _stop() {
-    setState(() {
-      _isRunning = false;
-      _status = 'Stopped';
-      _outputLog.add('[STOP]');
-    });
-    _scrollToBottom();
   }
 
   void _updateStats() {
@@ -426,17 +740,37 @@ class _AgentScreenState extends State<AgentScreen> {
     }
   }
 
-  /// Display pending output terms (after execution, when variables are bound)
   void _displayPendingOutput() {
-    for (final term in _pendingOutputTerms) {
+    // Display user output terms
+    for (final term in _pendingUserOutputTerms) {
       final derefTerm = _derefTerm(term);
-      debugPrint('=== DISPLAY OUTPUT: $derefTerm ===');
       setState(() {
         _outputLog.add('< ${_formatTerm(derefTerm)}');
       });
     }
-    _pendingOutputTerms.clear();
+    _pendingUserOutputTerms.clear();
+
+    // Process net output terms - send via MethodChannel
+    for (final term in _pendingNetOutputTerms) {
+      final derefTerm = _derefTerm(term);
+      // Expect msg(From, To, Content) from GLP
+      if (derefTerm is rt.StructTerm && derefTerm.functor == 'msg' && derefTerm.args.length == 3) {
+        final to = _termToString(derefTerm.args[1]);
+        final content = _termToString(derefTerm.args[2]);
+        _sendNetworkMessage(to, content);
+      } else {
+        _addOutput('[NET OUT] ${_formatTerm(derefTerm)}');
+      }
+    }
+    _pendingNetOutputTerms.clear();
     _scrollToBottom();
+  }
+
+  String _termToString(rt.Term term) {
+    if (term is rt.ConstTerm) {
+      return term.value?.toString() ?? '';
+    }
+    return _formatTerm(term);
   }
 
   void _addOutput(String text) {
@@ -458,26 +792,20 @@ class _AgentScreenState extends State<AgentScreen> {
     });
   }
 
-  /// Dereference a term - replace VarRefs with their actual values
   rt.Term _derefTerm(rt.Term term) {
     if (_runtime == null) return term;
 
     if (term is rt.VarRef) {
-      // Dereference the variable
       final value = _runtime!.heap.getValue(term.varId);
       if (value != null && value is! rt.VarRef) {
-        // Got a concrete value - dereference it recursively
         return _derefTerm(value);
       }
-      // Still unbound or is another VarRef - return as-is
       return term;
     }
     if (term is rt.StructTerm) {
-      // Recursively dereference args
       final derefArgs = term.args.map(_derefTerm).toList();
       return rt.StructTerm(term.functor, derefArgs);
     }
-    // ConstTerm or other - return as-is
     return term;
   }
 
@@ -520,14 +848,14 @@ class _AgentScreenState extends State<AgentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('GLP Multiagent'),
+        title: Text(widget.agentId),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Center(
               child: Text(
-                _agentId,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                'Window ${widget.windowId}',
+                style: const TextStyle(fontSize: 12),
               ),
             ),
           ),
@@ -535,36 +863,6 @@ class _AgentScreenState extends State<AgentScreen> {
       ),
       body: Column(
         children: [
-          // Control buttons
-          Container(
-            padding: const EdgeInsets.all(8.0),
-            color: Colors.orange.shade50,
-            child: Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _initialized ? _step : null,
-                  icon: const Icon(Icons.skip_next),
-                  label: const Text('Step'),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: (_initialized && !_isRunning) ? _run : null,
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('Run'),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: _isRunning ? _stop : null,
-                  icon: const Icon(Icons.stop),
-                  label: const Text('Stop'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isRunning ? Colors.red : Colors.grey,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
           // Output log
           Expanded(
             child: Container(
@@ -577,6 +875,8 @@ class _AgentScreenState extends State<AgentScreen> {
                   final line = _outputLog[index];
                   final isInput = line.startsWith('>');
                   final isOutput = line.startsWith('<');
+                  final isSend = line.startsWith('[SEND');
+                  final isRecv = line.startsWith('[RECV');
                   final isControl = line.startsWith('[');
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2.0),
@@ -584,15 +884,21 @@ class _AgentScreenState extends State<AgentScreen> {
                       line,
                       style: TextStyle(
                         fontFamily: 'monospace',
-                        fontSize: 14,
+                        fontSize: 13,
                         color: isInput
                             ? Colors.blue.shade800
                             : isOutput
                                 ? Colors.green.shade800
-                                : isControl
-                                    ? Colors.orange.shade800
-                                    : Colors.black87,
-                        fontWeight: (isControl || isOutput) ? FontWeight.bold : FontWeight.normal,
+                                : isSend
+                                    ? Colors.purple.shade800
+                                    : isRecv
+                                        ? Colors.teal.shade800
+                                        : isControl
+                                            ? Colors.orange.shade800
+                                            : Colors.black87,
+                        fontWeight: (isControl || isOutput || isSend || isRecv)
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                   );
@@ -601,10 +907,10 @@ class _AgentScreenState extends State<AgentScreen> {
             ),
           ),
 
-          // Input area
+          // GLP input area - user types terms like send(bob, ping)
           Container(
             padding: const EdgeInsets.all(8.0),
-            color: Colors.white,
+            color: Colors.orange.shade50,
             child: Row(
               children: [
                 Expanded(
@@ -612,7 +918,7 @@ class _AgentScreenState extends State<AgentScreen> {
                     controller: _inputController,
                     enabled: _initialized,
                     decoration: InputDecoration(
-                      hintText: _initialized ? 'Enter term to send...' : 'Initializing...',
+                      hintText: _initialized ? 'send(bob, ping)' : 'Initializing...',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -641,29 +947,60 @@ class _AgentScreenState extends State<AgentScreen> {
               children: [
                 Text(
                   'Goals: $_goalCount',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
                 ),
-                const SizedBox(width: 24),
+                const SizedBox(width: 16),
                 Text(
-                  'Heap vars: $_heapVars',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  'Heap: $_heapVars',
+                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
                 ),
                 const Spacer(),
                 Container(
-                  width: 12,
-                  height: 12,
+                  width: 10,
+                  height: 10,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: _isRunning ? Colors.green : (_initialized ? Colors.orange : Colors.grey),
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(_status),
+                Text(_status, style: const TextStyle(fontSize: 11)),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+// ============================================================================
+// HELPER CLASS
+// ============================================================================
+
+/// Full I/O context with both user and network channels
+class _FullIOContext {
+  final ExternalChannel userChannel;
+  final ExternalChannel netChannel;
+  final InputInjector userInput;
+  final InputInjector netInput;
+  final OutputObserver userOutput;
+  final OutputObserver netOutput;
+
+  _FullIOContext({
+    required this.userChannel,
+    required this.netChannel,
+    required this.userInput,
+    required this.netInput,
+    required this.userOutput,
+    required this.netOutput,
+  });
+
+  rt.Term get userChannelTerm => buildChannelTerm(userChannel);
+  rt.Term get netChannelTerm => buildChannelTerm(netChannel);
+
+  void dispose() {
+    userOutput.dispose();
+    netOutput.dispose();
   }
 }

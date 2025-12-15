@@ -1,0 +1,34 @@
+%% ping_pong_agent.glp - Agent that handles user input and network messages
+%%
+%% SRSW: Each variable appears once as writer, once as reader in a clause.
+%% ground(X?) guard allows multiple reader occurrences of X?
+
+%% Main agent entry: merge user and net inputs, process in loop
+agent(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
+    merge(UserIn?, NetIn?, In),
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% User sends a message to another agent
+%% Input: send(To, Content) from user
+%% Output: msg(Id, To, Content) to network, sent(...) to user
+agent_loop(Id, [send(To, Content)|In], [sent(To?, Content?)|UserOut], [msg(Id?, To?, Content?)|NetOut]) :-
+    ground(Id?), ground(To?), ground(Content?) |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% Receive ping from network - reply with pong
+agent_loop(Id, [msg(From, ping)|In], [received_ping(From?)|UserOut], [msg(Id?, From?, pong)|NetOut]) :-
+    ground(Id?), ground(From?) |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% Receive pong from network - display to user
+agent_loop(Id, [msg(From, pong)|In], [received_pong(From?)|UserOut], NetOut?) :-
+    ground(Id?), ground(From?) |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% Receive any other message from network - display to user
+agent_loop(Id, [msg(From, Content)|In], [received(From?, Content?)|UserOut], NetOut?) :-
+    ground(Id?), ground(From?), ground(Content?) |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% Empty input - close outputs
+agent_loop(_, [], [], []).

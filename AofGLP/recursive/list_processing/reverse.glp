@@ -1,11 +1,12 @@
 %% reverse.glp - List reversal
 %% Source: Standard GLP list operations
 
-reverse(Xs,Ys) :- reverse(Xs?,[],Ys).
-reverse([],Acc?,Acc?).
-reverse([X?|Xs],Acc,Ys?) :- reverse(Xs?,[X?|Acc?],Ys).
+reverse(Xs, Ys?) :- reverse_acc(Xs?, [], Ys).
+
+reverse_acc([], Acc, Acc?).
+reverse_acc([X|Xs], Acc, Ys?) :- reverse_acc(Xs?, [X?|Acc?], Ys).
 
 %% Metainterpreter support
-reduce(reverse(Xs,Ys), reverse(Xs?,[],Ys)).
-reduce(reverse([],Acc?,Acc?), true).
-reduce(reverse([X?|Xs],Acc,Ys?), reverse(Xs?,[X?|Acc?],Ys)).
+reduce(reverse(Xs, Ys?), reverse_acc(Xs?, [], Ys)).
+reduce(reverse_acc([], Acc, Acc?), true).
+reduce(reverse_acc([X|Xs], Acc, Ys?), reverse_acc(Xs?, [X?|Acc?], Ys)).
