@@ -7,16 +7,18 @@
 %% ============================================
 
 %% Get balance in a currency (0 if not found)
-get_balance(Currency, [(Currency?, Bal)|_], Bal?).
-get_balance(Currency?, [_|Balances], Bal?) :-
-    get_balance(Currency, Balances?, Bal).
+get_balance(Currency, [(K, Bal)|_], Bal?) :- Currency? =?= K? | true.
+get_balance(Currency, [_|Balances], Bal?) :-
+    otherwise | get_balance(Currency?, Balances?, Bal).
 get_balance(_, [], 0).
 
 %% Update balance in a currency
 set_balance(Currency, NewBal, [], [(Currency?, NewBal?)]).
-set_balance(Currency, NewBal, [(Currency?, _)|Bs], [(Currency?, NewBal?)|Bs?]).
-set_balance(Currency?, NewBal, [B|Bs], [B?|Bs1?]) :-
-    set_balance(Currency, NewBal?, Bs?, Bs1).
+set_balance(Currency, NewBal, [(K, _)|Bs], [(K?, NewBal?)|Bs?]) :-
+    Currency? =?= K? | true.
+set_balance(Currency, NewBal, [B|Bs], [B?|Bs1?]) :-
+    otherwise |
+    set_balance(Currency?, NewBal?, Bs?, Bs1).
 
 %% ============================================
 %% Agent Process
@@ -70,12 +72,13 @@ handle(mint(Amount), Balances, Balances1, Stream, Stream1) :-
 %% Redeem: claimer returns sovereign's coins, requests repayment
 handle(redeem(Sovereign, Amount, Preferences),
        Balances, Balances1, Stream, Stream1) :-
+    ground(Sovereign?), ground(Amount?),
     get_balance(Sovereign?, Balances?, OldBal),
     Amount? =< OldBal? |
     NewBal := OldBal? - Amount?,
     set_balance(Sovereign?, NewBal?, Balances?, Balances1),
-    Stream = [block(tx(Sovereign?, [payment(Sovereign?, Amount?)]), 
-                    (redeem, Preferences?), []) 
+    Stream = [block(tx(Sovereign?, [payment(Sovereign?, Amount?)]),
+                    (redeem, Preferences?), [])
              | Stream1?].
 
 %% Repay: sovereign repays a redemption claim
