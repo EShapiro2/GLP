@@ -1,0 +1,30 @@
+%% router_io.glp - Message router for multi-channel I/O (Phase 0)
+%%
+%% Routes messages between user channel and network channel.
+%% Messages have format: to(Dest, Msg) or from(Src, Msg)
+%%
+%% Test with io_test_harness.dart:
+%%   IO> load router_io.glp
+%%   IO> goal router(Ch, Net)
+%%   IO> inject to(net, hello)
+%%   IO> run
+%%   IO> output
+
+%% Simple router: forwards user input to network output
+%% Pattern match in head to satisfy SRSW
+
+%% Forward message to network
+router(ch([to(net, Msg)|UserT], UserOut), ch(NetIn, [msg(Msg?)|NetOut])) :-
+    router(ch(UserT?, UserOut?), ch(NetIn?, NetOut?)).
+
+%% Echo user input back to user
+router(ch([echo(Msg)|UserT], [echoed(Msg?)|UserOut]), ch(NetIn, NetOut)) :-
+    router(ch(UserT?, UserOut?), ch(NetIn?, NetOut?)).
+
+%% Close when user input closes
+router(ch([], []), ch(NetIn, [])) :-
+    consume(NetIn?).
+
+%% Helper: consume remaining network input
+consume([]).
+consume([_|T]) :- consume(T?).

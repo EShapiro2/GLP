@@ -1,0 +1,4 @@
+% Goal: bmerge([a,b,c], [1,2,3], Out).
+
+% TODO: Trace to be added from GLP REPL.
+% Expected: Out = [started, a, 1, b, 2, c, 3, halted] (with fair alternation)

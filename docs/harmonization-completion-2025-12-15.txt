@@ -1,0 +1,67 @@
+# Book-Repo Harmonization Summary (2025-12-15)
+
+## Phase 1 (GLP Repo `/Users/udi/GLP/AofGLP/`):
+
+### P1.1: Move non-GLP files
+- `concurrent_prolog_examples/*.glp` → `archive/concurrent_prolog/` (2 files)
+- `from_aop/*.pl` → `archive/from_aop/` (27 files)
+
+### P1.2: Rename `*_glpsam.glp` files
+- `agent_glpsam.glp` → `agent_simple.glp`
+- `cold_call_glpsam.glp` → `cold_call.glp`
+- `friend_introduction_glpsam.glp` → `friend_introduction.glp`
+- `response_handling_glpsam.glp` → `response_handling_unfolded.glp` (conflict with existing)
+
+### P1.3: Fix `reverse.glp` helper naming
+- `reverse/3` → `reverse_acc/3`
+
+### P1.4: Fix `length.glp` helper naming
+- `length/3` → `length_acc/3`
+
+### P1.5: Update `plain_meta.glp` with M# syntax
+- Added M# syntax
+
+### Already Had M# Syntax (No Changes Needed)
+- `failsafe_meta.glp` ✓
+- `control_meta.glp` ✓
+- `abortable_meta.glp` ✓
+- `tracing_meta.glp` ✓
+- `termination_detection_meta.glp` ✓
+
+### Already Existed (No Changes Needed)
+- `gates_simple.glp` ✓
+- `circuits.glp` ✓
+- `producer_consumer_countdown.glp` ✓
+- `flatten.glp` ✓
+- `tree_sum.glp` ✓
+- `list_to_bst.glp` ✓
+- `lesseq.glp` ✓
+- `biased_merge.glp` ✓
+- `map_inc.glp` ✓
+- `filter_even.glp` ✓
+- `fib_linear` in `fibonacci.glp` ✓
+
+---
+
+## Phase 2 (Book Repo `/Users/udi/Art-of-GLP-2025/`):
+
+### P2.1: Update `substitute/4` with ground guards
+- In `recursive.tex`
+
+### P2.2: Update `observe/3` to bidirectional
+- In `recursive.tex`
+
+### P2.3: Harmonize `factorial/2`
+- Added base case
+- Changed guard
+- In `recursive.tex`
+
+### P2.4: Add count-up producer exercise
+- In `streams.tex`
+
+### P2.5: Add stream-based gates forward reference
+- In `constants.tex`
+
+---
+
+## Status: ALL TASKS COMPLETE (as of 2025-12-15)

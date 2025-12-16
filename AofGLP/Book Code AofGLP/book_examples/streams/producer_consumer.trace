@@ -1,0 +1,14 @@
+% Goal: producer(H, 5), consumer(H?, 0, R).
+
+GLP> producer(H, 5), consumer(H?, 0, R).
+producer(X1, 5) :- :=/2(X3, -(5, 1)), producer(X4, X3?)
+consumer([5 | X4?], 0, X2) :- :=/2(X5, +(0, 5)), consumer(X4?, X5?, X6)
+:=/2(X3, -(5, 1)) :- true
+producer(X4, 4) :- :=/2(X7, -(4, 1)), producer(X8, X7?)
+:=/2(X5, +(0, 5)) :- true
+consumer([4 | X8?], 5, X6) :- :=/2(X9, +(5, 4)), consumer(X8?, X9?, X10)
+...
+producer(X20, 0) :- true
+consumer([], 15, X22) :- true
+R = 15
+→ succeeds

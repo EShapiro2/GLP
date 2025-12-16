@@ -2,24 +2,25 @@
 %% Source: GLP Papers (Program: GLP metainterpreter with run control)
 %%
 %% Supports suspend, resume, and abort via control stream.
-%% Control messages are ground, distributed to all metainterpreter instances.
+%% Uses short-circuit L--R for state dump on abort.
 
-run(true,_).  % halt
-run((A,B),Cs) :-
-    ground(Cs?) |  % control stream is ground, can be shared
-    run(A?,Cs?), run(B?,Cs?). % fork - both branches share control
-run(A,[suspend|Cs]) :- suspended_run(A?,Cs?).   % suspend
-run(A,Cs) :- known(A?) |        % reduce
-    reduce(A?,B), run(B?,Cs?).
+run(M, true, _, L, L?).                          % halt
+run(M, (A, B), Cs, L, R?) :-                     % fork
+    ground(Cs?) |
+    run(M?, A?, Cs?, L?, Mid),
+    run(M?, B?, Cs?, Mid?, R).
+run(M, M1 # G, Cs, L, R?) :-                     % cross-module
+    run(M1?, G?, Cs?, L?, R).
+run(M, A, [suspend|Cs], L, R?) :-                % suspend
+    suspended_run(M?, A?, Cs?, L?, R).
+run(M, A, Cs, L, R?) :-                          % reduce
+    tuple(A?) |
+    M? # reduce(A?, B),
+    run(M?, B?, Cs?, L?, R).
 
-suspended_run(A,[resume|Cs]) :- run(A?,Cs?).
-suspended_run(_,[abort|_]).
+suspended_run(M, A, [resume|Cs], L, R?) :-       % resume
+    run(M?, A?, Cs?, L?, R).
+suspended_run(_, A, [abort|_], L, [A?|L?]).      % abort + dump
 
-%% The metainterpreter suspends reductions as soon as the control stream
-%% is bound to [suspend|Cs?], upon which the run can be resumed or aborted
-%% by binding Cs accordingly.
-
-%% Object program: merge
-reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
-reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
-reduce(merge([], [], []), true).
+%% Example usage:
+%% ?- run(merge_module, Goal, [suspend, resume, abort|_], done, Dump).

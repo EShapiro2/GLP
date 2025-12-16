@@ -51,27 +51,11 @@ class CommitOps {
         // print('[TRACE Commit FCP] Dereferenced VarRef(${(entry.value as VarRef).varId}) → $value');
       }
 
-      // FCP line 301: Save suspension list before replacing reader content
-      final oldContent = heap.cells[rAddr].content;
-
-      // Handle suspensions: FORWARD if binding to unbound VarRef, ACTIVATE if binding to ground
-      if (oldContent is SuspensionListNode) {
-        if (value is VarRef) {
-          // Binding to another variable (still unbound) - FORWARD suspensions
-          // Don't activate now; merge into target's suspension list
-          _forwardSuspensions(heap, oldContent, value.varId);
-        } else {
-          // Binding to ground value - activate suspensions immediately
-          _walkAndActivate(oldContent, activations);
-        }
-      }
-
-      // FCP lines 233/303: Bind BOTH cells to dereferenced value
-      heap.cells[wAddr].content = value;
-      heap.cells[wAddr].tag = CellTag.ValueTag;
-      heap.cells[rAddr].content = value;
-      heap.cells[rAddr].tag = CellTag.ValueTag;
-      // print('[DEBUG COMMIT] Bound varId $varId: W$varId[addr=$wAddr] = $value, R$varId[addr=$rAddr] = $value');
+      // Use heap.bindVariable() to properly trigger callbacks and handle suspensions
+      // This ensures onBind callbacks for external I/O are invoked
+      final valueAsTerm = value is Term ? value : ConstTerm(value);
+      final acts = heap.bindVariable(varId, valueAsTerm);
+      activations.addAll(acts);
     }
 
     // CRITICAL FIX: Re-dereference all bound cells that contain VarRef

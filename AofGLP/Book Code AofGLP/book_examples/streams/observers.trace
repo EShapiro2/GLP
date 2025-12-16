@@ -1,0 +1,26 @@
+% Goal: test_obs1(Sum, Copy).
+
+GLP> test_obs1(Sum, Copy).
+producer(X1, 5) :- :=/2(X5, -(5, 1)), producer(X6, X5?)
+observer1([5 | X6?], X2, X3) :- observer1(X6?, X7, X8)
+consumer([5 | X7?], 0, X4) :- :=/2(X9, +(0, 5)), consumer(X7?, X9?, X10)
+...
+observer1([], X31, X32) :- true
+consumer([], 15, X34) :- true
+Sum = 15
+Copy = [5, 4, 3, 2, 1]
+→ succeeds
+
+% Goal: test_obs2(Copy, Done).
+
+GLP> test_obs2(Copy, Done).
+bob(X1, X2) :- alice(X5, X6)
+observe([a, a | X5?], X3, X4) :- =/2(X7, [a | X8?]), observe([a | X5?], X8, X9)
+alice(X5, X6) :- bob_finish(X10, X11)
+observe([a | [b, b, b | X10?]], X8, X9) :- =/2(X12, [a | X13?]), observe([b, b, b | X10?], X13, X14)
+bob_finish(X10, X11) :- true
+...
+observe([], X28, X29) :- true
+Copy = [a, a, b, b, b, a, a]
+Done = done
+→ succeeds

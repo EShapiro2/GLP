@@ -1,0 +1,17 @@
+% Goal: bob(Stream, Done).
+
+GLP> bob(Stream, Done).
+bob(X1, X2) :- alice(X3, X4)
+alice(X3, X4) :- bob_finish(X5, X6)
+bob_finish(X5, X6) :- true
+Stream = [a, a, b, b, b, a, a]
+Done = done
+→ succeeds
+
+% Goal: bob(Stream, _), reader(Stream?, 0, Count).
+
+GLP> bob(Stream, _), reader(Stream?, 0, Count).
+...
+reader([], 7, X22) :- true
+Count = 7
+→ succeeds

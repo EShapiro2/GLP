@@ -1,22 +1,22 @@
 %% failsafe_meta.glp - Fail-safe GLP metainterpreter
 %% Source: GLP Papers (Program: GLP fail-safe metainterpreter)
 %%
-%% Reports failures instead of aborting.
-%% Assumes program representation ends with:
-%%   reduce(A,failed(A)) :- otherwise | true.
+%% Reports failures via short-circuit instead of aborting.
+%% L--R threads through computation for failure collection.
 
-run(true,[]).  % halt
-run((A,B),Zs?) :- run(A?,Xs), run(B?,Ys), merge(Xs?,Ys?,Zs). % fork
-run(fail(A),[fail(A?)]).    % report failure
-run(A,Xs?) :- known(A) | reduce(A?,B), run(B?,Xs). %  reduce
+run(M, true, L, L?).                             % halt - close circuit
+run(M, (A, B), L, R?) :-                         % fork - chain
+    run(M?, A?, L?, Mid),
+    run(M?, B?, Mid?, R).
+run(M, M1 # G, L, R?) :- run(M1?, G?, L?, R).    % cross-module
+run(M, failed(A), L, [failed(A?)|L?]).           % report failure
+run(M, A, L, R?) :-                              % reduce
+    tuple(A?) |
+    M? # reduce(A?, B),
+    run(M?, B?, L?, R).
 
-%% Failure reports can be used to debug a program, but do not
-%% prevent a faulty run from running forever.
+%% Object program must include catch-all:
+%% reduce(A, failed(A?)) :- otherwise | true.
 
-%% Object program: merge
-reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
-reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
-reduce(merge([], [], []), true).
-
-%% Catch-all for failures (required by fail-safe semantics)
-reduce(A, failed(A?)) :- otherwise | true.
+%% Example usage:
+%% ?- run(merge_module, merge([1,2], [3], Zs), done, Failures).

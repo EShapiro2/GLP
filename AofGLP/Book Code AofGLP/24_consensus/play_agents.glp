@@ -1,0 +1,73 @@
+%% play_agents.glp - Multi-agent consensus simulation
+%% Three agents running the full consensus protocol
+
+:- include(consensus).
+
+%% ============================================
+%% Three-Agent Play
+%% ============================================
+
+play_agents(AliceOut, AliceFin) :-
+    Participants = [alice, bob, carol],
+    
+    %% Initial states
+    Genesis = block(0, genesis(Participants?, 0.5, 1000), []),
+    InitBlocklace = [Genesis?],
+    
+    AliceState0 = state(InitBlocklace?, low, Participants?, [tx_a], alice),
+    
+    %% Event streams (will be built by simulation)
+    %% For simplicity, we manually script the events
+    
+    %% Round 1: Alice advances (has tx_a)
+    AliceEvents = [advance(1)],
+    agent(AliceEvents?, AliceState0?, AliceOut, AliceFin).
+
+%% ============================================
+%% Test the agent's block creation
+%% ============================================
+
+test_agent_propose(Result) :-
+    Participants = [alice, bob, carol],
+    Genesis = block(0, genesis, []),
+    InitBlocklace = [Genesis?],
+    
+    %% Alice has a transaction
+    AliceState = state(InitBlocklace?, low, Participants?, [tx_a], alice),
+    
+    %% Alice advances round 1
+    handle_event(advance(1), AliceState?, AliceState1, Out?, Out1),
+    
+    %% Check she created a block with tx_a
+    check_propose_result(Out?, Result).
+
+check_propose_result([block(1, tx_a, _)|_], passed).
+check_propose_result(Other, failed(Other?)) :-
+    otherwise | true.
+
+test_agent_endorse(Result) :-
+    Participants = [alice, bob, carol],
+    Genesis = block(0, genesis, []),
+    AliceBlock = block(1, tx_a, [Genesis?]),
+    
+    %% Bob receives Alice's block then advances to round 2
+    BobState = state([Genesis?], low, Participants?, [], bob),
+    
+    handle_event(receive(AliceBlock?), BobState?, BobState1, Out1?, Out1),
+    handle_event(advance(2), BobState1?, BobState2, Out2?, Out3),
+    
+    %% Check Bob created endorsement
+    check_endorse_result(Out2?, Result).
+
+check_endorse_result([block(2, empty, _)|_], passed).
+check_endorse_result(Other, failed(Other?)) :-
+    otherwise | true.
+
+%% ============================================
+%% Run All Agent Tests
+%% ============================================
+
+test_agents(Results) :-
+    test_agent_propose(R1),
+    test_agent_endorse(R2),
+    Results = [propose(R1?), endorse(R2?)].
