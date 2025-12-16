@@ -93,7 +93,7 @@ compute_repayments(0, _, Balances, [], Balances?).
 
 %% Preference list exhausted: pay remainder in own coins
 compute_repayments(Amount, [], Balances, [(self, Amount?)], Balances?) :-
-    Amount? > 0 | .
+    Amount? > 0 | true.
 
 %% Try next currency in preference list
 compute_repayments(Amount, [Currency|Rest], Balances, Repayments?, Balances1) :-
@@ -135,7 +135,7 @@ emit_repayments(Claimer, [(self, Amount)|Rest], ClaimHash, Stream, Stream1) :-
 
 %% Pay in foreign currency
 emit_repayments(Claimer, [(Currency, Amount)|Rest], ClaimHash, Stream, Stream1) :-
-    Currency? \= self |
+    ~(Currency? =?= self) |
     Stream = [block(tx(Currency?, [payment(Claimer?, Amount?)]), 
                     (repay, ClaimHash?), []) | Stream2?],
     emit_repayments(Claimer?, Rest?, ClaimHash?, Stream2?, Stream1).
@@ -147,7 +147,7 @@ emit_repayments(Claimer, [(Currency, Amount)|Rest], ClaimHash, Stream, Stream1) 
 %% Find a payment block to a specific recipient
 find_payment_to(Recipient, [Block|_], Block?) :-
     Block = block(tx(_, Payments), issue, _),
-    has_payment_to(Recipient?, Payments?) | .
+    has_payment_to(Recipient?, Payments?) | true.
 find_payment_to(Recipient?, [_|Blocks], Block?) :-
     find_payment_to(Recipient, Blocks?, Block).
 
@@ -157,12 +157,12 @@ has_payment_to(Recipient?, [_|Payments]) :-
 
 %% Find an approval block
 find_approval([Block|_], Block?) :-
-    Block = block(_, approve, _) | .
+    Block = block(_, approve, _) | true.
 find_approval([_|Blocks], Block?) :-
     find_approval(Blocks?, Block).
 
 %% Find a redemption claim block
 find_claim([Block|_], Block?) :-
-    Block = block(tx(_, _), (redeem, _), _) | .
+    Block = block(tx(_, _), (redeem, _), _) | true.
 find_claim([_|Blocks], Block?) :-
     find_claim(Blocks?, Block).
