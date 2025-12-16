@@ -11,11 +11,6 @@ class CommitOps {
     required HeapFCP heap,
     required Map<int, Object?> sigmaHat,
   }) {
-    // print('[TRACE Commit FCP] Applying σ̂w to heap (${sigmaHat.length} bindings):');
-    for (final entry in sigmaHat.entries) {
-      // print('  W${entry.key} → ${entry.value}');
-    }
-
     final activations = <GoalRef>[];
 
     // Defensive WxW validation before applying bindings

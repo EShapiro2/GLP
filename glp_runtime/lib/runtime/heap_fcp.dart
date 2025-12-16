@@ -169,10 +169,13 @@ class HeapFCP {
     final (wAddr, rAddr) = varTable[varId]!;
 
     // Dereference value if it's a VarRef
+    // IMPORTANT: Use reader or writer address based on value.isReader
+    // This preserves the reader/writer mode through the dereference
     var finalValue = value;
     if (value is VarRef) {
-      final (targetWAddr, _) = varTable[value.varId]!;
-      finalValue = derefAddr(targetWAddr);
+      final (targetWAddr, targetRAddr) = varTable[value.varId]!;
+      final targetAddr = value.isReader ? targetRAddr : targetWAddr;
+      finalValue = derefAddr(targetAddr);
     }
 
     // Defensive WxW check: prevent writer-to-writer binding

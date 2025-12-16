@@ -1,7 +1,7 @@
 %% play_ping_pong.glp - Test play for ping-pong agent
 %%
 %% Scenario: Alice sends ping to Bob via network, Bob auto-responds with pong.
-%% Simplified version: direct pattern matching without intermediate agent_loop.
+%% Uses friends list + lookup_send pattern (same as play_alice_bob.glp)
 
 %% === Library predicates (inlined) ===
 
@@ -23,29 +23,51 @@ network2((alice, ch(AliceIn, [msg(bob, alice, X?)|AliceOut?])),
     network2((alice, ch(AliceIn?, AliceOut)),
              (bob, ch(BobIn?, BobOut))).
 
-%% === Simple Ping-Pong Agent ===
-%% Process one message at a time using structure patterns in head
+%% === Simple Ping-Pong Agent (using friends list pattern) ===
+%% Agent wraps streams in friends list, passes to loop
+
+agent(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
+    merge(UserIn?, NetIn?, In),
+    build_friends(UserOut?, NetOut?, Fs),
+    ping_pong_loop(Id?, In?, Fs?).
+
+build_friends(UserOut, NetOut, [(user, UserOut?), (net, NetOut?)]).
 
 %% User sends a message - forward to network
-agent(Id, ch([send(To, Content)|UserIn], [sent(To?, Content?)|UserOut?]),
-          ch(NetIn, [msg(Id?, To?, Content?)|NetOut?])) :-
+ping_pong_loop(Id, [send(To, Content)|In], Fs) :-
     ground(Id?), ground(To?), ground(Content?) |
-    agent(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut)).
+    lookup_send(user, sent(To?, Content?), Fs?, Fs1),
+    lookup_send(net, msg(Id?, To?, Content?), Fs1?, Fs2),
+    ping_pong_loop(Id?, In?, Fs2?).
 
 %% Receive ping from network - reply with pong
-agent(Id, ch(UserIn, [received_ping(From?)|UserOut?]),
-          ch([msg(From, To, ping)|NetIn], [msg(Id?, From?, pong)|NetOut?])) :-
+ping_pong_loop(Id, [msg(From, To, ping)|In], Fs) :-
     ground(Id?), ground(From?), ground(To?), Id? =?= To? |
-    agent(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut)).
+    lookup_send(user, received_ping(From?), Fs?, Fs1),
+    lookup_send(net, msg(Id?, From?, pong), Fs1?, Fs2),
+    ping_pong_loop(Id?, In?, Fs2?).
 
-%% Receive pong from network - report to user (no net output)
-agent(Id, ch(UserIn, [received_pong(From?)|UserOut?]),
-          ch([msg(From, To, pong)|NetIn], NetOut?)) :-
+%% Receive pong from network - report to user
+ping_pong_loop(Id, [msg(From, To, pong)|In], Fs) :-
     ground(Id?), ground(From?), ground(To?), Id? =?= To? |
-    agent(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut)).
+    lookup_send(user, received_pong(From?), Fs?, Fs1),
+    ping_pong_loop(Id?, In?, Fs1?).
 
-%% Empty inputs - close outputs
-agent(_, ch([], []), ch([], [])).
+%% Empty input - close all outputs
+ping_pong_loop(_, [], Fs) :- close_all(Fs?).
+
+close_all([]).
+close_all([(_, Out)|Rest]) :- Out? = [], close_all(Rest?).
+
+%% === lookup_send: find channel by key and extend its stream ===
+
+lookup_send(Key, Msg, [(K, Out)|Rest], [(K?, Out1?)|Rest?]) :-
+    Key? =?= K? |
+    Out? = [Msg?|Out1].
+
+lookup_send(Key, Msg, [(K, Out)|Rest], [(K?, Out?)|Rest1?]) :-
+    otherwise |
+    lookup_send(Key?, Msg?, Rest?, Rest1).
 
 %% === Actors ===
 
