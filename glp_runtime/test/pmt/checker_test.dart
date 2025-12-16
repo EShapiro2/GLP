@@ -422,21 +422,29 @@ void main() {
           1, 1,
         ));
 
-        // observe(X?, Y, Z?) :- observe(Y?, X, Z).
-        // This matches first mode: X? in reader position → writer, Y in writer → reader
-        // X: 1 writer (head arg1) + 1 reader (body arg2) = valid
-        // Y: 1 reader (head arg2 inverts to reader) + 1 writer (body arg1 inverts) = valid
-        // Z: 1 reader (head arg3) + 1 writer (body arg3) = valid
+        // observe(X, Y?, Z) :- observe(Y, X?, Z).
+        // With double inversion rule:
+        // HEAD (reader, writer, reader):
+        //   X (writer in reader) → writer
+        //   Y? (reader in writer) → writer (double inversion: reader→writer)
+        //   Z (writer in reader) → writer
+        // BODY (reader, writer, reader):
+        //   Y (writer in reader) → reader
+        //   X? (reader in writer) → reader (double inversion: writer→reader)
+        //   Z (writer in reader) → reader
+        // X: 1 writer (head) + 1 reader (body) = valid
+        // Y: 1 writer (head) + 1 reader (body) = valid
+        // Z: 1 writer (head) + 1 reader (body) = valid
         final clause = Clause(
           Atom('observe', [
-            VarTerm('X', true, 1, 9),   // X? - reader in head
-            VarTerm('Y', false, 1, 13), // Y - writer in head
-            VarTerm('Z', true, 1, 16),  // Z? - reader in head
+            VarTerm('X', false, 1, 9),  // X - writer in head
+            VarTerm('Y', true, 1, 12),  // Y? - reader in head
+            VarTerm('Z', false, 1, 16), // Z - writer in head
           ], 1, 1),
           body: [
             Goal('observe', [
-              VarTerm('Y', true, 1, 28),  // Y? - reader in body
-              VarTerm('X', false, 1, 32), // X - writer in body
+              VarTerm('Y', false, 1, 28), // Y - writer in body
+              VarTerm('X', true, 1, 31),  // X? - reader in body
               VarTerm('Z', false, 1, 35), // Z - writer in body
             ], 1, 22),
           ],

@@ -152,26 +152,38 @@ class OccurrenceClassifier {
 
   /// Classify variables in a guard
   /// Guards only read values, so all variable occurrences are readers
+  /// No double inversion in guards - they always just read
   void _classifyGuard(Guard guard, List<Occurrence> out) {
     for (final arg in guard.args) {
-      _collectVariables(arg, OccurrenceType.reader, out);
+      _collectVariables(arg, OccurrenceType.reader, out, applyDoubleInversion: false);
     }
   }
 
   /// Recursively collect variable occurrences from a term
-  void _collectVariables(Term term, OccurrenceType type, List<Occurrence> out) {
+  ///
+  /// [applyDoubleInversion] - if true, reader-form variables invert the occurrence type.
+  /// This should be true for head/body positions, false for guards.
+  void _collectVariables(Term term, OccurrenceType type, List<Occurrence> out,
+      {bool applyDoubleInversion = true}) {
     if (term is VarTerm) {
-      out.add(Occurrence(term.name, type, term.line, term.column));
+      // Apply double inversion: reader-form variables invert the occurrence type
+      // Only in head/body positions, not in guards
+      final actualType = (applyDoubleInversion && term.isReader)
+          ? (type == OccurrenceType.writer
+              ? OccurrenceType.reader
+              : OccurrenceType.writer)
+          : type;
+      out.add(Occurrence(term.name, actualType, term.line, term.column));
     } else if (term is StructTerm) {
       for (final arg in term.args) {
-        _collectVariables(arg, type, out);
+        _collectVariables(arg, type, out, applyDoubleInversion: applyDoubleInversion);
       }
     } else if (term is ListTerm) {
       if (term.head != null) {
-        _collectVariables(term.head!, type, out);
+        _collectVariables(term.head!, type, out, applyDoubleInversion: applyDoubleInversion);
       }
       if (term.tail != null) {
-        _collectVariables(term.tail!, type, out);
+        _collectVariables(term.tail!, type, out, applyDoubleInversion: applyDoubleInversion);
       }
     }
     // ConstTerm, UnderscoreTerm — no variables to collect
