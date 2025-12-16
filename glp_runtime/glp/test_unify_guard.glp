@@ -1,0 +1,16 @@
+%% Test =/2 as defined guard
+
+%% Basic unification guard - alias two variables
+alias_test(A, B, R?) :- A = B | R = both(A?, B?).
+
+%% Unify with constant
+const_test(X, R?) :- X = hello | R = got(X?).
+
+%% Unify structures
+struct_test(X, R?) :- X = pair(1, 2) | R = X?.
+
+%% Multiple unify guards - chain aliasing
+multi_test(A, B, C, R?) :- A = B, B = C | R = triple(A?, B?, C?).
+
+%% Unify in pattern match context
+pattern_test([H|T], R?) :- H = first | R = matched(H?, T?).

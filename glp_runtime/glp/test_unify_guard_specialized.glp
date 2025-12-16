@@ -1,0 +1,10 @@
+alias_test(A, A?, R?) :- ground(A?) | R = both(A?, A?).
+
+const_test(hello, R?) :- R = got(hello).
+
+struct_test(pair(1, 2), R?) :- R = pair(1, 2).
+
+multi_test(A, A?, A?, R?) :- ground(A?) | R = triple(A?, A?, A?).
+
+pattern_test([first | T], R?) :- R = matched(first, T?).
+
