@@ -154,7 +154,7 @@ Xa5 := 20 / 4.
 Xa6 := 5 + 3 * 2.
 Xa7 := (5 + 3) * 2.
 Xa8 := -5.
-get_time(Ttime).
+time_advances(Tadv).
 past_time(1000000000000, Xpast).
 past_time(9999999999999, Xfuture).
 wait_test(Xwait).
@@ -349,7 +349,7 @@ declare -a tests=(
     "Assign negative:Xa8 = -5"
 
     # Time predicates
-    "Time now:Ttime = 1"
+    "Time advances:Tadv = true"
     "Time past:Xpast = yes"
     "Time future:failed"
     "Time wait:Xwait = done"

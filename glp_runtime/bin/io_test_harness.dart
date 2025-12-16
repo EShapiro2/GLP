@@ -382,8 +382,12 @@ void _injectTerm(String termStr, InputInjector injector, GlpRuntime runtime) {
     final argAst = clause.head.args[0];
     final term = _astToRuntimeTerm(argAst, runtime);
 
-    injector.inject(term);
-    print('Injected: $termStr');
+    // Inject and enqueue any activated goals
+    final activations = injector.inject(term);
+    for (final goal in activations) {
+      runtime.gq.enqueue(goal);
+    }
+    print('Injected: $termStr (${activations.length} goal(s) reactivated)');
   } catch (e) {
     print('Error injecting term: $e');
   }
@@ -436,7 +440,8 @@ Future<void> _stepExecution(Scheduler scheduler, int n) async {
 void _showOutput(AgentIOContext ctx) {
   print('User output (${ctx.userOutputTerms.length} terms):');
   for (var i = 0; i < ctx.userOutputTerms.length; i++) {
-    print('  [$i] ${_formatTerm(ctx.userOutputTerms[i])}');
+    final derefTerm = _derefTerm(ctx.heap, ctx.userOutputTerms[i]);
+    print('  [$i] ${_formatTerm(derefTerm)}');
   }
   if (ctx.userOutputClosed) {
     print('  [stream closed]');
@@ -444,11 +449,28 @@ void _showOutput(AgentIOContext ctx) {
 
   print('Network output (${ctx.netOutputTerms.length} terms):');
   for (var i = 0; i < ctx.netOutputTerms.length; i++) {
-    print('  [$i] ${_formatTerm(ctx.netOutputTerms[i])}');
+    final derefTerm = _derefTerm(ctx.heap, ctx.netOutputTerms[i]);
+    print('  [$i] ${_formatTerm(derefTerm)}');
   }
   if (ctx.netOutputClosed) {
     print('  [stream closed]');
   }
+}
+
+/// Dereference a term - replace VarRefs with their actual values
+rt.Term _derefTerm(dynamic heap, rt.Term term) {
+  if (term is rt.VarRef) {
+    final value = heap.getValue(term.varId);
+    if (value != null && value is rt.Term && value is! rt.VarRef) {
+      return _derefTerm(heap, value);
+    }
+    return term;
+  }
+  if (term is rt.StructTerm) {
+    final derefArgs = term.args.map((a) => _derefTerm(heap, a)).toList();
+    return rt.StructTerm(term.functor, derefArgs);
+  }
+  return term;
 }
 
 /// Show runtime status

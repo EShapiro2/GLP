@@ -6,6 +6,7 @@ library;
 
 import 'terms.dart';
 import 'heap_fcp.dart';
+import 'machine_state.dart'; // For GoalRef
 
 /// An External Channel is a bidirectional connection between Dart and GLP.
 ///
@@ -78,26 +79,29 @@ class InputInjector {
   /// Inject a term into the input stream.
   ///
   /// Binds current writer to [term | newTail], advances writer to newTail.
-  /// GLP goals suspended on this stream will wake up.
-  void inject(Term term) {
+  /// Returns list of goals that were woken up by the injection (should be enqueued).
+  List<GoalRef> inject(Term term) {
     // Allocate fresh variable for tail
     final tailId = heap.allocateFreshVar();
 
     // Build list cell: [term | tail] using '.' functor (GLP cons convention)
     final listCell = StructTerm('.', [term, VarRef(tailId, isReader: false)]);
 
-    // Bind current writer to list cell
-    heap.bindVariable(_currentWriterId, listCell);
+    // Bind current writer to list cell - this may wake suspended goals
+    final activations = heap.bindVariable(_currentWriterId, listCell);
 
     // Advance writer to tail for next injection
     _currentWriterId = tailId;
+
+    return activations;
   }
 
   /// Close the input stream (no more input).
   ///
   /// Binds current writer to empty list (nil).
-  void close() {
-    heap.bindVariable(_currentWriterId, ConstTerm('nil'));
+  /// Returns list of goals that were woken up (should be enqueued).
+  List<GoalRef> close() {
+    return heap.bindVariable(_currentWriterId, ConstTerm('nil'));
   }
 }
 

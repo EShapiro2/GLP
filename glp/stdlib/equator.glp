@@ -1,3 +1,4 @@
 %% equator.glp - Equator system predicate
+-stdlib.
 
 equate(Eq) :- equator(Eq?) | '_equator'(Eq?).

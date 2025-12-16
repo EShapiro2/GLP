@@ -60,7 +60,7 @@ void main() async {
   final loadedModules = <String, ModuleInfo>{};
 
   // Load stdlib files for system predicates
-  final stdlibFiles = ['assign.glp', 'univ.glp', 'unify.glp', 'mwm.glp', 'equator.glp'];
+  final stdlibFiles = ['assign.glp', 'univ.glp', 'unify.glp', 'mwm.glp', 'equator.glp', 'time.glp'];
   for (final filename in stdlibFiles) {
     final stdlibPath = '../glp/stdlib/$filename';
     final stdlibFile = File(stdlibPath);
@@ -1063,10 +1063,10 @@ rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> query
 }
 
 
-String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
+String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? path]) {
   if (term == null) return '[]';
 
-  visited ??= <int>{};
+  path ??= <int>{};
 
   if (term is rt.ConstTerm) {
     if (term.value == null || term.value == 'nil') return '[]';
@@ -1089,37 +1089,39 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
       if (head is rt.VarRef && runtime != null) {
         // Dereference VarRef (single-ID system) - fully recursive
         final varId = head.varId;
-        if (visited.contains(varId)) {
+        if (path.contains(varId)) {
           headStr = '<circular>';
         } else {
-          visited.add(varId);
+          path.add(varId);
           final derefHead = runtime.heap.dereference(head);
           if (derefHead is rt.VarRef) {
             // Still unbound after dereferencing
             final displayId = derefHead.varId >= 1000 ? derefHead.varId - 1000 : derefHead.varId;
             headStr = derefHead.isReader ? 'X$displayId?' : 'X$displayId';
           } else {
-            headStr = _formatTerm(derefHead, runtime, visited);
+            headStr = _formatTerm(derefHead, runtime, path);
           }
+          path.remove(varId);  // Remove after processing children
         }
       } else if (head is rt.VarRef && runtime != null) {
         // OLD: Dereference reader (for backward compatibility)
         final readerId = head.varId;
-        if (visited.contains(readerId)) {
+        if (path.contains(readerId)) {
           headStr = '<circular>';
         } else {
-          visited.add(readerId);
+          path.add(readerId);
           final writer = _findPairedWriter(runtime, readerId);
           if (writer != null && runtime.heap.isWriterBound(writer)) {
             final value = runtime.heap.valueOfWriter(writer);
-            headStr = _formatTerm(value, runtime, visited);
+            headStr = _formatTerm(value, runtime, path);
           } else {
             final displayId = readerId >= 1000 ? readerId - 1000 : readerId;
             headStr = 'X$displayId';
           }
+          path.remove(readerId);  // Remove after processing children
         }
       } else {
-        headStr = _formatTerm(head, runtime, visited);
+        headStr = _formatTerm(head, runtime, path);
       }
 
       elements.add(headStr);
@@ -1128,38 +1130,42 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
       if (tail is rt.VarRef && runtime != null) {
         // Handle VarRef (single-ID system) - dereference fully
         final varId = tail.varId;
-        if (visited.contains(varId)) {
+        if (path.contains(varId)) {
           // Circular reference in tail
           final displayId = varId >= 1000 ? varId - 1000 : varId;
           final label = tail.isReader ? 'X$displayId?' : 'X$displayId';
           return '[${elements.join(', ')} | <circular $label>]';
         }
-        visited.add(varId);
+        path.add(varId);
         // Dereference recursively to get final value
         final derefTail = runtime.heap.dereference(tail);
         if (derefTail is rt.VarRef) {
           // Still unbound after dereferencing
+          path.remove(varId);
           final displayId = derefTail.varId >= 1000 ? derefTail.varId - 1000 : derefTail.varId;
           final label = derefTail.isReader ? 'X$displayId?' : 'X$displayId';
           return '[${elements.join(', ')} | $label]';
         }
         current = derefTail;
+        path.remove(varId);  // Remove after processing
         if (current == null || current is! rt.StructTerm) break;
       } else if (tail is rt.VarRef && runtime != null) {
         // OLD: Handle ReaderTerm (backward compatibility)
         final readerId = tail.varId;
-        if (visited.contains(readerId)) {
+        if (path.contains(readerId)) {
           // Circular reference in tail
           final displayId = readerId >= 1000 ? readerId - 1000 : readerId;
           return '[${elements.join(', ')} | <circular X$displayId>]';
         }
-        visited.add(readerId);
+        path.add(readerId);
         final writer = _findPairedWriter(runtime, readerId);
         if (writer != null && runtime.heap.isWriterBound(writer)) {
           current = runtime.heap.valueOfWriter(writer);
+          path.remove(readerId);  // Remove after processing
           if (current == null || current is! rt.StructTerm) break;
         } else {
           // Unbound reader in tail - show it
+          path.remove(readerId);
           final displayId = readerId >= 1000 ? readerId - 1000 : readerId;
           return '[${elements.join(', ')} | X$displayId]';
         }
@@ -1179,22 +1185,27 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? visited]) {
 
   if (term is rt.StructTerm) {
     // General structure - recursively format arguments with dereferencing
+    final currentPath = path;  // Capture for closure
     final formattedArgs = term.args.map((arg) {
       if (arg is rt.VarRef && runtime != null) {
         final varId = arg.varId;
-        if (visited?.contains(varId) ?? false) {
+        if (currentPath.contains(varId)) {
           return '<circular>';
         }
-        visited?.add(varId);
+        currentPath.add(varId);
         final deref = runtime.heap.dereference(arg);
+        String result;
         if (deref is rt.VarRef) {
           // Still unbound
           final displayId = deref.varId >= 1000 ? deref.varId - 1000 : deref.varId;
-          return deref.isReader ? 'X$displayId?' : 'X$displayId';
+          result = deref.isReader ? 'X$displayId?' : 'X$displayId';
+        } else {
+          result = _formatTerm(deref, runtime, currentPath);
         }
-        return _formatTerm(deref, runtime, visited);
+        currentPath.remove(varId);  // Remove after processing children
+        return result;
       }
-      return _formatTerm(arg, runtime, visited);
+      return _formatTerm(arg, runtime, currentPath);
     }).join(', ');
     return '${term.functor}($formattedArgs)';
   }

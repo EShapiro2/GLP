@@ -2,24 +2,16 @@
 %% Source: CP Collected Papers, Ch 25 (Safra & Shapiro)
 %%
 %% Uses short-circuit technique to detect distributed termination.
-%% Initial call: run(Goal, chain(done, Done))
-%% Done? binds to 'done' when computation terminates.
 
-run(true, chain(Chain, Chain?)).                 %% halt - close circuit
-run((A, B), chain(Left, Right?)) :-              %% fork - split chain
-    run(A?, chain(Left?, Middle)),
-    run(B?, chain(Middle?, Right)).
-run(Goal, chain(Left, Right?)) :-                %% reduce - pass chain
-    ground(Goal?),
-    ~(Goal? =?= true), ~(Goal? =?= (_, _)) |
-    reduce(Goal?, Body),
-    run(Body?, chain(Left?, Right)).
+run(M, true, L, L?).                             % halt - close circuit
+run(M, (A, B), L, R?) :-                         % fork - split chain
+    run(M?, A?, L?, Mid),
+    run(M?, B?, Mid?, R).
+run(M, M1 # G, L, R?) :- run(M1?, G?, L?, R).    % cross-module
+run(M, A, L, R?) :-                              % reduce
+    tuple(A?) |
+    M? # reduce(A?, B),
+    run(M?, B?, L?, R).
 
-%% Object program: merge
-reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
-reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
-reduce(merge([], [], []), true).
-
-%% Usage:
-%% run(MyGoal, chain(done, Done)), wait_for(Done?).
-%% wait_for(done).
+%% Termination detected when Result? becomes known(done)
+%% Example: run(module, Goal, done, Result), known(Result?) | ...
