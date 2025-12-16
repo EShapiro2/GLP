@@ -1,0 +1,60 @@
+%% test_ping_pong_inline.glp - Full ping-pong with inline inputs (no =/2)
+
+%% === Network switch (2-way) ===
+network2((alice, ch([msg(alice, bob, X)|AliceIn], AliceOut?)),
+         (bob, ch(BobIn, [msg(alice, bob, X?)|BobOut?]))) :-
+    network2((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut))).
+
+network2((alice, ch(AliceIn, [msg(bob, alice, X?)|AliceOut?])),
+         (bob, ch([msg(bob, alice, X)|BobIn], BobOut?))) :-
+    network2((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut))).
+
+%% === Simple Ping-Pong Agent ===
+
+%% User sends a message - forward to network
+agent(Id, ch([send(To, Content)|UserIn], [sent(To?, Content?)|UserOut?]),
+          ch(NetIn, [msg(Id?, To?, Content?)|NetOut?])) :-
+    ground(Id?), ground(To?), ground(Content?) |
+    agent(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut)).
+
+%% Receive ping from network - reply with pong
+agent(Id, ch(UserIn, [received_ping(From?)|UserOut?]),
+          ch([msg(From, To, ping)|NetIn], [msg(Id?, From?, pong)|NetOut?])) :-
+    ground(Id?), ground(From?), ground(To?), Id? =?= To? |
+    agent(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut)).
+
+%% Receive pong from network - report to user (no net output)
+agent(Id, ch(UserIn, [received_pong(From?)|UserOut?]),
+          ch([msg(From, To, pong)|NetIn], NetOut?)) :-
+    ground(Id?), ground(From?), ground(To?), Id? =?= To? |
+    agent(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut)).
+
+%% Empty inputs - close outputs
+agent(_, ch([], []), ch([], [])).
+
+%% === Actors provide input INLINE (no =/2) ===
+
+%% Alice actor: provides input directly, ignores output
+alice_actor(_, [send(bob, ping)]).
+
+%% Bob actor: no input, ignores output
+bob_actor(_, []).
+
+%% === The Play ===
+
+test_ping_pong_inline :-
+    %% Network switch
+    network2((alice, ch(AliceNetOut?, AliceNetIn)),
+             (bob, ch(BobNetOut?, BobNetIn))),
+
+    %% Alice's agent
+    agent(alice, ch(AliceUserIn?, AliceUserOut), ch(AliceNetIn?, AliceNetOut)),
+
+    %% Bob's agent
+    agent(bob, ch(BobUserIn?, BobUserOut), ch(BobNetIn?, BobNetOut)),
+
+    %% Actors (provide input inline, first arg ignored)
+    alice_actor(AliceUserOut?, AliceUserIn),
+    bob_actor(BobUserOut?, BobUserIn).

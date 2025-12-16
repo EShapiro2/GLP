@@ -1,0 +1,19 @@
+%% test_agent_inline.glp - Agent with inline input (no =/2)
+
+%% Agent directly handles send command - builds output in head (echo style)
+agent(Id, ch([send(To, Content)|UserIn], [sent(To?, Content?)|UserOut?]),
+          ch(NetIn, [msg(Id?, To?, Content?)|NetOut?])) :-
+    ground(Id?), ground(To?), ground(Content?) |
+    agent(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut)).
+
+%% Base case - empty inputs close outputs
+agent(_, ch([], []), ch([], [])).
+
+check_user([sent(bob, ping)|_]).
+check_net([msg(alice, bob, ping)|_]).
+
+%% Test with input INLINE in the call (no =/2)
+test_agent_inline :-
+    agent(alice, ch([send(bob, ping)], UserOut), ch([], NetOut)),
+    check_user(UserOut?),
+    check_net(NetOut?).

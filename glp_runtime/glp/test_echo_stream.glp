@@ -1,0 +1,15 @@
+%% test_echo_stream.glp - Test echo with stream (unbound tail)
+
+echo([H|In], [H?|Out?]) :- echo(In?, Out).
+echo([], []).
+
+%% Test with ground list (should work)
+test_ground :- echo([a,b,c], X), check_ground(X?).
+check_ground([a,b,c]).
+
+%% Test with unbound tail (might WxW?)
+test_stream :-
+    echo([a|Tail?], X),
+    Tail = [b,c],
+    check_stream(X?).
+check_stream([a,b,c]).
