@@ -36,7 +36,7 @@ agent([Request|Requests], Balances, Stream) :-
 
 %% Issue: pay someone in a given currency
 handle(issue(To, Amount, Currency), Balances, Balances1, Stream, Stream1) :-
-    ground(Currency?), ground(Amount?), ground(To?),
+    ground(Currency?), ground(Amount?), ground(To?), ground(Balances?),
     get_balance(Currency?, Balances?, OldBal),
     Amount? =< OldBal? |
     NewBal := OldBal? - Amount?,
@@ -48,7 +48,7 @@ handle(issue(To, Amount, Currency), Balances, Balances1, Stream, Stream1) :-
 %% Accept: accept an incoming payment
 handle(accept(Amount, Currency, PaymentBlock, ApprovalBlock),
        Balances, Balances1, Stream, Stream1) :-
-    ground(Amount?), ground(Currency?) |
+    ground(Amount?), ground(Currency?), ground(Balances?) |
     get_balance(Currency?, Balances?, OldBal),
     NewBal := OldBal? + Amount?,
     set_balance(Currency?, NewBal?, Balances?, Balances1),
@@ -62,7 +62,7 @@ handle(approve(PaymentBlock), Balances, Balances?, Stream, Stream1) :-
 
 %% Mint: sovereign creates new coins (only unbalanced operation)
 handle(mint(Amount), Balances, Balances1, Stream, Stream1) :-
-    ground(Amount?) |
+    ground(Amount?), ground(Balances?) |
     get_balance(self, Balances?, OldBal),
     NewBal := OldBal? + Amount?,
     set_balance(self, NewBal?, Balances?, Balances1),
@@ -75,7 +75,7 @@ handle(mint(Amount), Balances, Balances1, Stream, Stream1) :-
 %% Redeem: claimer returns sovereign's coins, requests repayment
 handle(redeem(Sovereign, Amount, Preferences),
        Balances, Balances1, Stream, Stream1) :-
-    ground(Sovereign?), ground(Amount?),
+    ground(Sovereign?), ground(Amount?), ground(Balances?),
     get_balance(Sovereign?, Balances?, OldBal),
     Amount? =< OldBal? |
     NewBal := OldBal? - Amount?,
@@ -87,7 +87,7 @@ handle(redeem(Sovereign, Amount, Preferences),
 %% Repay: sovereign repays a redemption claim
 handle(repay(Claimer, Amount, Preferences, ClaimHash),
        Balances, Balances1, Stream, Stream1) :-
-    ground(Claimer?), ground(Amount?), ground(ClaimHash?) |
+    ground(Claimer?), ground(Amount?), ground(ClaimHash?), ground(Balances?) |
     compute_repayments(Amount?, Preferences?, Balances?, Repayments, Balances1),
     emit_repayments(Claimer?, Repayments?, ClaimHash?, Stream?, Stream1).
 
