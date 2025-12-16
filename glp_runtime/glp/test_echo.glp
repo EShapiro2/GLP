@@ -1,0 +1,7 @@
+%% test_echo.glp - Test standard echo pattern
+
+echo([H|In], [H?|Out?]) :- echo(In?, Out).
+echo([], []).
+
+test_echo :- echo([a,b,c], X), check_echo(X?).
+check_echo([a,b,c]).

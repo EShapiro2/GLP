@@ -1,0 +1,49 @@
+%% test_wxw_trace.glp - Trace WxW issue step by step
+
+%% Test 1: Simple constant binding (works)
+test1 :- foo(X), check1(X?).
+foo(hello).
+check1(hello).
+
+%% Test 2a: Output via structure pattern with = in body (FAILS - WxW)
+test2a :- bar_bad(Y), check2(Y?).
+bar_bad([a|Tail?]) :- Tail = [].
+check2([a]).
+
+%% Test 2b: Output via structure pattern with value in head (WORKS)
+test2b :- bar_good(Y), check2(Y?).
+bar_good([a]).
+
+%% Test 3: Nested structure call
+test3 :- qux(pair(A, B)), check3a(A?), check3b(B?).
+qux(pair(hello, world)).
+check3a(hello).
+check3b(world).
+
+%% Test 4a: Agent-like wrapper calling inner with readers (FAILS)
+test4a :-
+    wrapper_bad(ch(In?, Out)),
+    In = [a],
+    check4(Out?).
+
+wrapper_bad(ch(In, Out)) :-
+    inner(In?, Out?).
+
+inner([a|Rest], [b|Tail?]) :-
+    inner(Rest?, Tail).
+inner([], []).
+
+check4([b]).
+
+%% Test 4b: Agent-like but using writers properly (let's try)
+test4b :-
+    wrapper_good(ch(In?, Out)),
+    In = [a],
+    check4(Out?).
+
+wrapper_good(ch(In, [B?|OutTail?])) :-
+    inner2(In?, B, OutTail).
+
+inner2([a|Rest], b, Tail?) :-
+    inner2(Rest?, _, Tail).
+inner2([], _, []).

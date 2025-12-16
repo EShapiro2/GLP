@@ -1,0 +1,26 @@
+%% test_agent_only.glp - Test agent without network
+
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys?, Ys).
+merge(Xs?, [], Xs).
+
+agent(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
+    merge(UserIn?, NetIn?, In),
+    agent_loop(Id?, In?, UserOut?, NetOut?).
+
+agent_loop(Id, [send(To, Content)|In], [sent(To?, Content?)|UserOut?], [msg(Id?, To?, Content?)|NetOut?]) :-
+    ground(Id?), ground(To?), ground(Content?) |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+agent_loop(_, [], [], []).
+
+check_user([sent(bob, ping)|_]).
+check_net([msg(alice, bob, ping)|_]).
+
+test_agent_only :-
+    agent(alice, ch(UserIn?, UserOut), ch(NetIn?, NetOut)),
+    UserIn = [send(bob, ping)],
+    NetIn = [],
+    check_user(UserOut?),
+    check_net(NetOut?).

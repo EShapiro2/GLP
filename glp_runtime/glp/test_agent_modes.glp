@@ -1,0 +1,22 @@
+%% test_agent_modes.glp - Test agent_loop with different argument modes
+
+agent_loop(Id, [send(To, Content)|In], [sent(To?, Content?)|UserOut?], [msg(Id?, To?, Content?)|NetOut?]) :-
+    ground(Id?), ground(To?), ground(Content?) |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+agent_loop(_, [], [], []).
+
+check_user([sent(bob, ping)|_]).
+check_net([msg(alice, bob, ping)|_]).
+
+%% Test 1: Pass WRITERS to agent_loop (works)
+test_writers :-
+    agent_loop(alice, [send(bob, ping)], UserOut, NetOut),
+    check_user(UserOut?),
+    check_net(NetOut?).
+
+%% Test 2: Pass READERS to agent_loop (like agent does)
+test_readers :-
+    agent_loop(alice, [send(bob, ping)], UserOut?, NetOut?),
+    check_user(UserOut?),
+    check_net(NetOut?).

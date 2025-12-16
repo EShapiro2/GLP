@@ -1,0 +1,16 @@
+%% test_agent_loop.glp - Test agent_loop directly
+
+agent_loop(Id, [send(To, Content)|In], [sent(To?, Content?)|UserOut?], [msg(Id?, To?, Content?)|NetOut?]) :-
+    ground(Id?), ground(To?), ground(Content?) |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+agent_loop(_, [], [], []).
+
+check_user([sent(bob, ping)|_]).
+check_net([msg(alice, bob, ping)|_]).
+
+%% Test 1: Direct agent_loop call with ground input
+test_agent_loop :-
+    agent_loop(alice, [send(bob, ping)], UserOut, NetOut),
+    check_user(UserOut?),
+    check_net(NetOut?).
