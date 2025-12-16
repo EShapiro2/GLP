@@ -36,22 +36,24 @@ agent([Request|Requests], Balances, Stream) :-
 
 %% Issue: pay someone in a given currency
 handle(issue(To, Amount, Currency), Balances, Balances1, Stream, Stream1) :-
+    ground(Currency?), ground(Amount?), ground(To?),
     get_balance(Currency?, Balances?, OldBal),
     Amount? =< OldBal? |
     NewBal := OldBal? - Amount?,
     set_balance(Currency?, NewBal?, Balances?, Balances1),
     Stream = [block(tx(Currency?, [payment(To?, Amount?), payment(self, NewBal?)]),
-                    issue, []) 
+                    issue, [])
              | Stream1?].
 
 %% Accept: accept an incoming payment
-handle(accept(Amount, Currency, PaymentBlock, ApprovalBlock), 
+handle(accept(Amount, Currency, PaymentBlock, ApprovalBlock),
        Balances, Balances1, Stream, Stream1) :-
+    ground(Amount?), ground(Currency?) |
     get_balance(Currency?, Balances?, OldBal),
     NewBal := OldBal? + Amount?,
     set_balance(Currency?, NewBal?, Balances?, Balances1),
     Stream = [block(tx(Currency?, [payment(self, NewBal?)]),
-                    accept, [PaymentBlock?, ApprovalBlock?]) 
+                    accept, [PaymentBlock?, ApprovalBlock?])
              | Stream1?].
 
 %% Approve: sovereign approves a payment in their currency
@@ -60,6 +62,7 @@ handle(approve(PaymentBlock), Balances, Balances?, Stream, Stream1) :-
 
 %% Mint: sovereign creates new coins (only unbalanced operation)
 handle(mint(Amount), Balances, Balances1, Stream, Stream1) :-
+    ground(Amount?) |
     get_balance(self, Balances?, OldBal),
     NewBal := OldBal? + Amount?,
     set_balance(self, NewBal?, Balances?, Balances1),
@@ -84,6 +87,7 @@ handle(redeem(Sovereign, Amount, Preferences),
 %% Repay: sovereign repays a redemption claim
 handle(repay(Claimer, Amount, Preferences, ClaimHash),
        Balances, Balances1, Stream, Stream1) :-
+    ground(Claimer?), ground(Amount?), ground(ClaimHash?) |
     compute_repayments(Amount?, Preferences?, Balances?, Repayments, Balances1),
     emit_repayments(Claimer?, Repayments?, ClaimHash?, Stream?, Stream1).
 
@@ -132,14 +136,16 @@ emit_repayments(_, [], _, Stream, Stream?).
 
 %% Pay in sovereign's own currency
 emit_repayments(Claimer, [(self, Amount)|Rest], ClaimHash, Stream, Stream1) :-
+    ground(Claimer?), ground(Amount?), ground(ClaimHash?) |
     Stream = [block(tx(self, [payment(Claimer?, Amount?)]),
                     (repay, ClaimHash?), []) | Stream2?],
     emit_repayments(Claimer?, Rest?, ClaimHash?, Stream2?, Stream1).
 
 %% Pay in foreign currency
 emit_repayments(Claimer, [(Currency, Amount)|Rest], ClaimHash, Stream, Stream1) :-
+    ground(Claimer?), ground(Currency?), ground(Amount?), ground(ClaimHash?),
     ~(Currency? =?= self) |
-    Stream = [block(tx(Currency?, [payment(Claimer?, Amount?)]), 
+    Stream = [block(tx(Currency?, [payment(Claimer?, Amount?)]),
                     (repay, ClaimHash?), []) | Stream2?],
     emit_repayments(Claimer?, Rest?, ClaimHash?, Stream2?, Stream1).
 
