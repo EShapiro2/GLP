@@ -6,13 +6,12 @@
 
 run(true, _).                                    %% halt
 run((A, B), Abort) :-                            %% fork
-    ground(Abort?) |
+    ground(Abort?), ~(Abort? =?= abort) |
     run(A?, Abort?),
     run(B?, Abort?).
 run(Goal, Abort) :-                              %% reduce
-    ground(Goal?),
     ~(Goal? =?= true), ~(Goal? =?= (_, _)),
-    unknown(Abort?) |
+    ~(Abort? =?= abort) |
     reduce(Goal?, Body),
     run(Body?, Abort?).
 run(_, abort).                                   %% abort

@@ -97,6 +97,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
 
   // Time operations
   registry.register('now', 1, nowKernel);
+  registry.register('time', 1, nowKernel);  // Alias for compatibility with meta-interpreters
 
   // MutualRef operations (O(1) stream append)
   registry.register('allocate_mutual_reference', 2, mutualRefKernel);

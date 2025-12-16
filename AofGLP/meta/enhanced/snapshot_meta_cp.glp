@@ -11,7 +11,6 @@ run((A, B), chain(Left, Right?)) :-              %% fork - split chain
     run(A?, chain(Left?, Middle)),
     run(B?, chain(Middle?, Right)).
 run(Goal, chain(Left, Right?)) :-                %% reduce
-    ground(Goal?),
     ~(Goal? =?= true), ~(Goal? =?= (_, _)),
     unknown(Left?) |
     reduce(Goal?, Body),

@@ -17,7 +17,6 @@ run((A, B), Cs, L, R?) :-                        %% fork
     run(B?, Cs?, M?, R).
 run(A, [suspend|Cs], L, R?) :- suspended_run(A?, Cs?, L?, R).  %% suspend
 run(A, Cs, L, R?) :-                             %% reduce
-    ground(A?),
     ~(A? =?= true), ~(A? =?= (_, _)) |
     reduce(A?, B),
     run(B?, Cs?, L?, R).
