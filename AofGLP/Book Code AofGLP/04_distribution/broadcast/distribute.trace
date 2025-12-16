@@ -1,0 +1,4 @@
+% Goal: distribute([a,b,c], Y, Z).
+
+% TODO: Trace to be added from GLP REPL.
+% Expected: Y = [a, b, c], Z = [a, b, c]

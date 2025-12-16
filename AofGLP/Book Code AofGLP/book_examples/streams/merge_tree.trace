@@ -1,0 +1,4 @@
+% Goal: merge_tree([[a,b], [1,2], [x,y], [p,q]], Out).
+
+% TODO: Trace to be added once nested list support is implemented.
+% Expected: Out = [a, x, 1, p, b, y, 2, q] (or similar fair interleaving)

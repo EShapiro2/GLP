@@ -1,0 +1,42 @@
+% Topic: Stream observers
+% Section: Streams - Stream Observers
+%
+% Test goals:
+% test_obs1(Sum, Copy).
+% test_obs2(Copy, Done).
+
+% Producer and consumer for testing
+producer([], 0).
+producer([N?|Xs?], N) :- N? > 0 | N1 := N? - 1, producer(Xs, N1?).
+
+consumer([], Sum, Sum?).
+consumer([X|Xs], Sum, Result?) :- ground(X?) |
+    Sum1 := Sum? + X?,
+    consumer(Xs?, Sum1?, Result).
+
+% Forwarding observer
+observer1([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | observer1(Xs?, Ys, Zs).
+observer1([], [], []).
+
+% Test forwarding observer
+test_obs1(Sum?, Copy?) :-
+    producer(H, 5),
+    observer1(H?, Fwd, Copy),
+    consumer(Fwd?, 0, Sum).
+
+% Cooperative producers
+bob([a,a|Tail?], Result?) :- alice(Tail, Result).
+alice([b,b,b|Tail?], Result?) :- bob_finish(Tail, Result).
+bob_finish([a,a], done).
+
+% Cooperative observer (handles direction changes)
+observe([X|Xs], Ys?, [X?|Zs?]) :- ground(X?) |
+    Ys = [X?|Ys1?], observe(Xs?, Ys1, Zs).
+observe([X|Xs?], Ys, [X?|Zs?]) :- ground(X?) |
+    Ys = [X?|Ys1], observe(Ys1?, Xs, Zs).
+observe([], [], []).
+
+% Test cooperative observer
+test_obs2(Copy?, Done?) :-
+    bob(Stream, Done),
+    observe(Stream?, _, Copy).
