@@ -1,0 +1,168 @@
+%% gc.glp - Grassroots Cryptocurrencies
+%% Implementation of Grassroots Flash payment system
+%% Reference: lewis2023grassroots, shapiro2024gc
+
+%% ============================================
+%% Balance Management
+%% ============================================
+
+%% Get balance in a currency (0 if not found)
+get_balance(Currency, [(Currency?, Bal)|_], Bal?).
+get_balance(Currency?, [_|Balances], Bal?) :-
+    get_balance(Currency, Balances?, Bal).
+get_balance(_, [], 0).
+
+%% Update balance in a currency
+set_balance(Currency, NewBal, [], [(Currency?, NewBal?)]).
+set_balance(Currency, NewBal, [(Currency?, _)|Bs], [(Currency?, NewBal?)|Bs?]).
+set_balance(Currency?, NewBal, [B|Bs], [B?|Bs1?]) :-
+    set_balance(Currency, NewBal?, Bs?, Bs1).
+
+%% ============================================
+%% Agent Process
+%% ============================================
+
+%% Agent processes request stream, maintains balances, produces block stream
+agent([], _, []).
+agent([Request|Requests], Balances, Stream) :-
+    handle(Request?, Balances?, Balances1, Stream?, Stream1),
+    agent(Requests?, Balances1?, Stream1?).
+
+%% ============================================
+%% Request Handlers
+%% ============================================
+
+%% Issue: pay someone in a given currency
+handle(issue(To, Amount, Currency), Balances, Balances1, Stream, Stream1) :-
+    get_balance(Currency?, Balances?, OldBal),
+    Amount? =< OldBal? |
+    NewBal := OldBal? - Amount?,
+    set_balance(Currency?, NewBal?, Balances?, Balances1),
+    Stream = [block(tx(Currency?, [payment(To?, Amount?), payment(self, NewBal?)]),
+                    issue, []) 
+             | Stream1?].
+
+%% Accept: accept an incoming payment
+handle(accept(Amount, Currency, PaymentBlock, ApprovalBlock), 
+       Balances, Balances1, Stream, Stream1) :-
+    get_balance(Currency?, Balances?, OldBal),
+    NewBal := OldBal? + Amount?,
+    set_balance(Currency?, NewBal?, Balances?, Balances1),
+    Stream = [block(tx(Currency?, [payment(self, NewBal?)]),
+                    accept, [PaymentBlock?, ApprovalBlock?]) 
+             | Stream1?].
+
+%% Approve: sovereign approves a payment in their currency
+handle(approve(PaymentBlock), Balances, Balances?, Stream, Stream1) :-
+    Stream = [block(tx(self, []), approve, [PaymentBlock?]) | Stream1?].
+
+%% Mint: sovereign creates new coins (only unbalanced operation)
+handle(mint(Amount), Balances, Balances1, Stream, Stream1) :-
+    get_balance(self, Balances?, OldBal),
+    NewBal := OldBal? + Amount?,
+    set_balance(self, NewBal?, Balances?, Balances1),
+    Stream = [block(tx(self, [payment(self, NewBal?)]), mint, []) | Stream1?].
+
+%% ============================================
+%% Redemption
+%% ============================================
+
+%% Redeem: claimer returns sovereign's coins, requests repayment
+handle(redeem(Sovereign, Amount, Preferences),
+       Balances, Balances1, Stream, Stream1) :-
+    get_balance(Sovereign?, Balances?, OldBal),
+    Amount? =< OldBal? |
+    NewBal := OldBal? - Amount?,
+    set_balance(Sovereign?, NewBal?, Balances?, Balances1),
+    Stream = [block(tx(Sovereign?, [payment(Sovereign?, Amount?)]), 
+                    (redeem, Preferences?), []) 
+             | Stream1?].
+
+%% Repay: sovereign repays a redemption claim
+handle(repay(Claimer, Amount, Preferences, ClaimHash),
+       Balances, Balances1, Stream, Stream1) :-
+    compute_repayments(Amount?, Preferences?, Balances?, Repayments, Balances1),
+    emit_repayments(Claimer?, Repayments?, ClaimHash?, Stream?, Stream1).
+
+%% ============================================
+%% Repayment Computation
+%% ============================================
+
+%% Base case: nothing to repay
+compute_repayments(0, _, Balances, [], Balances?).
+
+%% Preference list exhausted: pay remainder in own coins
+compute_repayments(Amount, [], Balances, [(self, Amount?)], Balances?) :-
+    Amount? > 0 | .
+
+%% Try next currency in preference list
+compute_repayments(Amount, [Currency|Rest], Balances, Repayments?, Balances1) :-
+    Amount? > 0 |
+    get_balance(Currency?, Balances?, Available),
+    take_from_currency(Amount?, Currency?, Available?, Rest?, 
+                       Balances?, Repayments, Balances1).
+
+%% No coins of this currency available
+take_from_currency(Amount, _, 0, Rest, Balances, Repayments?, Balances1) :-
+    compute_repayments(Amount?, Rest?, Balances?, Repayments, Balances1).
+
+%% Have enough: pay full amount in this currency
+take_from_currency(Amount, Currency, Available, _, Balances, 
+                   [(Currency?, Amount?)], Balances1) :-
+    Available? >= Amount? |
+    NewBal := Available? - Amount?,
+    set_balance(Currency?, NewBal?, Balances?, Balances1).
+
+%% Not enough: pay what we have, continue with remainder
+take_from_currency(Amount, Currency, Available, Rest, Balances,
+                   [(Currency?, Available?)|Repayments?], Balances1) :-
+    Available? > 0, Available? < Amount? |
+    Remainder := Amount? - Available?,
+    set_balance(Currency?, 0, Balances?, Balances2),
+    compute_repayments(Remainder?, Rest?, Balances2?, Repayments, Balances1).
+
+%% ============================================
+%% Repayment Block Emission
+%% ============================================
+
+emit_repayments(_, [], _, Stream, Stream?).
+
+%% Pay in sovereign's own currency
+emit_repayments(Claimer, [(self, Amount)|Rest], ClaimHash, Stream, Stream1) :-
+    Stream = [block(tx(self, [payment(Claimer?, Amount?)]),
+                    (repay, ClaimHash?), []) | Stream2?],
+    emit_repayments(Claimer?, Rest?, ClaimHash?, Stream2?, Stream1).
+
+%% Pay in foreign currency
+emit_repayments(Claimer, [(Currency, Amount)|Rest], ClaimHash, Stream, Stream1) :-
+    Currency? \= self |
+    Stream = [block(tx(Currency?, [payment(Claimer?, Amount?)]), 
+                    (repay, ClaimHash?), []) | Stream2?],
+    emit_repayments(Claimer?, Rest?, ClaimHash?, Stream2?, Stream1).
+
+%% ============================================
+%% Block Search Helpers
+%% ============================================
+
+%% Find a payment block to a specific recipient
+find_payment_to(Recipient, [Block|_], Block?) :-
+    Block = block(tx(_, Payments), issue, _),
+    has_payment_to(Recipient?, Payments?) | .
+find_payment_to(Recipient?, [_|Blocks], Block?) :-
+    find_payment_to(Recipient, Blocks?, Block).
+
+has_payment_to(Recipient, [payment(Recipient?, _)|_]).
+has_payment_to(Recipient?, [_|Payments]) :-
+    has_payment_to(Recipient, Payments?).
+
+%% Find an approval block
+find_approval([Block|_], Block?) :-
+    Block = block(_, approve, _) | .
+find_approval([_|Blocks], Block?) :-
+    find_approval(Blocks?, Block).
+
+%% Find a redemption claim block
+find_claim([Block|_], Block?) :-
+    Block = block(tx(_, _), (redeem, _), _) | .
+find_claim([_|Blocks], Block?) :-
+    find_claim(Blocks?, Block).
