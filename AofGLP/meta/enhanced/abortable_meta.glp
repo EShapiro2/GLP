@@ -1,26 +1,19 @@
-%% abortable_meta.glp - Abortable metainterpreter
+%% abortable_meta.glp - Abortable GLP metainterpreter
 %% Source: CP Collected Papers, Ch 25 (Safra & Shapiro)
 %%
-%% Adds ability to abort computation via Abort argument.
-%% When Abort is bound to 'abort', computation stops.
+%% Supports abort via equator (emergency brake).
+%% When Eq is bound, computation stops.
 
-run(true, _).                                    %% halt
-run((A, B), Abort) :-                            %% fork
-    ground(Abort?) |
-    run(A?, Abort?),
-    run(B?, Abort?).
-run(Goal, Abort) :-                              %% reduce
-    ground(Goal?),
-    ~(Goal? =?= true), ~(Goal? =?= (_, _)),
-    unknown(Abort?) |
-    reduce(Goal?, Body),
-    run(Body?, Abort?).
-run(_, abort).                                   %% abort
+run(M, true, _).                                 % halt
+run(M, (A, B), Eq) :-                            % fork
+    unknown(Eq?) |
+    run(M?, A?, Eq?), run(M?, B?, Eq?).
+run(M, M1 # G, Eq) :- run(M1?, G?, Eq?).         % cross-module
+run(M, A, Eq) :-                                 % reduce
+    tuple(A?), unknown(Eq?) |
+    M? # reduce(A?, B),
+    run(M?, B?, Eq?).
+run(_, _, Eq) :- known(Eq?) | true.              % abort - brake pulled
 
-%% Object program: merge
-reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
-reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
-reduce(merge([], [], []), true).
-
-%% Usage: run(Goal, Abort?)
-%% To abort: bind Abort to 'abort'
+%% Example usage:
+%% ?- run(module, Goal, Eq?), ... bind Eq to abort when needed

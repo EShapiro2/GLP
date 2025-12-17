@@ -1,0 +1,11 @@
+% Topic: Ground-stream distribution (broadcast)
+% Section: Streams - Distribution
+%
+% Distributes ground elements to multiple output streams.
+% Uses ground(X) guard to safely replicate X without violating SRSW.
+%
+% Test goals:
+% distribute([a,b,c], Y, Z).
+
+distribute([X|Xs], [X|Ys?], [X|Zs?]) :- ground(X?) | distribute(Xs?, Ys, Zs).
+distribute([], [], []).

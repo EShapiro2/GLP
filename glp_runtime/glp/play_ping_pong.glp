@@ -1,0 +1,73 @@
+%% play_ping_pong.glp - Test play for ping-pong agent
+%%
+%% Scenario: Alice sends ping to Bob via network, Bob auto-responds with pong.
+%% Simplified version: direct pattern matching without intermediate agent_loop.
+
+%% === Library predicates (inlined) ===
+
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys?, Ys).
+merge(Xs?, [], Xs).
+
+%% === Network switch (2-way) ===
+%% Routes msg(From, To, Content) based on To field
+
+network2((alice, ch([msg(alice, bob, X)|AliceIn], AliceOut?)),
+         (bob, ch(BobIn, [msg(alice, bob, X?)|BobOut?]))) :-
+    network2((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut))).
+
+network2((alice, ch(AliceIn, [msg(bob, alice, X?)|AliceOut?])),
+         (bob, ch([msg(bob, alice, X)|BobIn], BobOut?))) :-
+    network2((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut))).
+
+%% === Simple Ping-Pong Agent ===
+%% Process one message at a time using structure patterns in head
+
+%% User sends a message - forward to network
+agent(Id, ch([send(To, Content)|UserIn], [sent(To?, Content?)|UserOut?]),
+          ch(NetIn, [msg(Id?, To?, Content?)|NetOut?])) :-
+    ground(Id?), ground(To?), ground(Content?) |
+    agent(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut)).
+
+%% Receive ping from network - reply with pong
+agent(Id, ch(UserIn, [received_ping(From?)|UserOut?]),
+          ch([msg(From, To, ping)|NetIn], [msg(Id?, From?, pong)|NetOut?])) :-
+    ground(Id?), ground(From?), ground(To?), Id? =?= To? |
+    agent(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut)).
+
+%% Receive pong from network - report to user (no net output)
+agent(Id, ch(UserIn, [received_pong(From?)|UserOut?]),
+          ch([msg(From, To, pong)|NetIn], NetOut?)) :-
+    ground(Id?), ground(From?), ground(To?), Id? =?= To? |
+    agent(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut)).
+
+%% Empty inputs - close outputs
+agent(_, ch([], []), ch([], [])).
+
+%% === Actors ===
+
+%% Alice: sends ping command
+alice_actor(_, [send(bob, ping)]).
+
+%% Bob: no user input
+bob_actor(_, []).
+
+%% === The Play ===
+
+play_ping_pong :-
+    %% Network switch
+    network2((alice, ch(AliceNetOut?, AliceNetIn)),
+             (bob, ch(BobNetOut?, BobNetIn))),
+
+    %% Alice's agent
+    agent(alice, ch(AliceUserIn?, AliceUserOut), ch(AliceNetIn?, AliceNetOut)),
+
+    %% Bob's agent
+    agent(bob, ch(BobUserIn?, BobUserOut), ch(BobNetIn?, BobNetOut)),
+
+    %% Actors
+    alice_actor(AliceUserOut?, AliceUserIn),
+    bob_actor(BobUserOut?, BobUserIn).

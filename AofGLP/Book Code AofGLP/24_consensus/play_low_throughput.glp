@@ -1,0 +1,72 @@
+%% play_low_throughput.glp - Low-throughput consensus scenario
+%% Single transaction, no conflicts, finalized in one wave
+
+:- include(consensus).
+
+%% ============================================
+%% The Play
+%% ============================================
+
+%% Scenario: Alice proposes a transaction, Bob and Carol endorse and ratify
+%% All three output the same finalized sequence
+
+play_low_throughput(Result) :-
+    Participants = [alice, bob, carol],
+    
+    %% Genesis block (round 0)
+    Genesis = block(0, genesis(Participants?, 0.5, 1000), []),
+    
+    %% Alice proposes tx_a in round 1
+    AliceR1 = block(1, tx_a, [Genesis?]),
+    
+    %% Bob and Carol see Alice's block, endorse in round 2
+    BobR2 = block(2, empty, [AliceR1?]),
+    CarolR2 = block(2, empty, [AliceR1?]),
+    AliceR2 = block(2, empty, [AliceR1?]),
+    
+    %% All ratify in round 3
+    AliceR3 = block(3, empty, [AliceR2?, BobR2?, CarolR2?]),
+    BobR3 = block(3, empty, [AliceR2?, BobR2?, CarolR2?]),
+    CarolR3 = block(3, empty, [AliceR2?, BobR2?, CarolR2?]),
+    
+    %% Build blocklace (each agent's view)
+    Blocklace = [AliceR3?, BobR3?, CarolR3?, 
+                 AliceR2?, BobR2?, CarolR2?,
+                 AliceR1?, Genesis?],
+    
+    %% Compute finalized sequence
+    tau(Blocklace?, Participants?, Sequence),
+    
+    %% Verify
+    verify_low_throughput(Sequence?, Result).
+
+verify_low_throughput([tx_a], passed). 
+verify_low_throughput(Other, failed(expected_tx_a, got(Other?))).
+
+%% ============================================
+%% Simpler test: just check finality detection
+%% ============================================
+
+test_finality(Result) :-
+    Participants = [alice, bob, carol],
+    Genesis = block(0, genesis, []),
+    Candidate = block(1, tx_a, [Genesis?]),
+    
+    %% 3 endorsements (majority of 3)
+    E1 = block(2, empty, [Candidate?]),
+    E2 = block(2, empty, [Candidate?]),
+    E3 = block(2, empty, [Candidate?]),
+    
+    %% 3 ratifications
+    R1 = block(3, empty, [E1?, E2?, E3?]),
+    R2 = block(3, empty, [E1?, E2?, E3?]),
+    R3 = block(3, empty, [E1?, E2?, E3?]),
+    
+    Blocklace = [R1?, R2?, R3?, E1?, E2?, E3?, Candidate?, Genesis?],
+    
+    check_finalized(Candidate?, Blocklace?, Participants?, Result).
+
+check_finalized(Candidate, Blocklace, Participants, passed) :-
+    is_finalized(Candidate?, Blocklace?, Participants?) | true.
+check_finalized(_, _, _, failed) :-
+    otherwise | true.

@@ -1,0 +1,33 @@
+%% ping_pong_io.glp - Bidirectional I/O test (Phase 0)
+%%
+%% Test with io_test_harness.dart:
+%%   IO> load ping_pong_io.glp
+%%   IO> goal ping_pong(Ch)
+%%   IO> run
+%%   (should see 'ready' in output)
+%%   IO> inject ping
+%%   IO> run
+%%   (should see 'pong' in output)
+%%   IO> inject quit
+%%   IO> run
+%%   (should see 'goodbye' in output)
+%%
+%% Demonstrates:
+%% - Writing to output before reading input
+%% - Responding to different input messages
+
+%% Entry: writes 'ready' then waits for commands
+%% Pattern match in head to satisfy SRSW
+ping_pong(ch(In, [ready|Out])) :-
+    wait_cmd(In?, Out?).
+
+%% Handle 'ping' command: respond with 'pong'
+wait_cmd([ping|T], [pong|Out]) :-
+    wait_cmd(T?, Out?).
+
+%% Handle 'quit' command: send goodbye and close
+wait_cmd([quit|_], [goodbye]).
+
+%% Handle 'echo' command with argument
+wait_cmd([echo(X)|T], [echoed(X?)|Out]) :-
+    wait_cmd(T?, Out?).

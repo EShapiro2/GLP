@@ -1,0 +1,21 @@
+% Topic: Cooperative stream production
+% Section: Streams - Cooperative Stream Production
+%
+% Test goals:
+% bob(Stream, Done).
+% bob(Stream, _), reader(Stream?, 0, Count).
+
+% Bob produces two a's then hands tail to Alice
+bob([a,a|Tail?], Result?) :- alice(Tail, Result).
+
+% Alice produces three b's then hands tail to Bob
+alice([b,b,b|Tail?], Result?) :- bob_finish(Tail, Result).
+
+% Bob produces two more a's then closes
+bob_finish([a,a], done).
+
+% A reader walks the stream until hitting the end
+reader([], Count, Count?).
+reader([X|Xs], Count, Result?) :- ground(X?) |
+    Count1 := Count? + 1,
+    reader(Xs?, Count1?, Result).

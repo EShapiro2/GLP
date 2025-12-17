@@ -1,0 +1,4 @@
+% Goal: distribute_indexed([send(1,a), send(2,b), send(1,c), send(2,d)], Y, Z).
+
+% TODO: Trace to be added from GLP REPL.
+% Expected: Y = [a, c], Z = [b, d]

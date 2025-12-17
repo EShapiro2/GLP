@@ -41,6 +41,10 @@ class HeapFCP {
   int HP = 0;  // Heap pointer (next free address)
   int nextVarId = 1000;
 
+  /// Callbacks for external observation (Phase 0 I/O)
+  /// When a variable is bound, registered callbacks are invoked
+  final Map<int, void Function(Term)> _bindCallbacks = {};
+
   /// Allocate a fresh variable (FCP notify.c lines 194-195)
   /// Returns varId, stores (writerAddr, readerAddr) in varTable
   int allocateVariable() {
@@ -57,6 +61,27 @@ class HeapFCP {
 
     varTable[varId] = (wAddr, rAddr);
     return varId;
+  }
+
+  /// Register callback for when variable is bound (Phase 0 I/O)
+  /// If variable is already bound, callback is invoked immediately.
+  /// Otherwise, callback is stored and invoked when bindVariable() is called.
+  void onBind(int varId, void Function(Term) callback) {
+    // Check if already bound
+    if (isFullyBound(varId)) {
+      final value = getValue(varId);
+      if (value != null) {
+        callback(value);
+      }
+      return;
+    }
+    // Register for later invocation
+    _bindCallbacks[varId] = callback;
+  }
+
+  /// Remove a registered callback (for cleanup)
+  void removeBindCallback(int varId) {
+    _bindCallbacks.remove(varId);
   }
 
   /// Address-based dereferencing (FCP-exact)
@@ -179,6 +204,19 @@ class HeapFCP {
         _walkAndActivate(oldContent, activations);
       }
     }
+
+    // Notify external observer if registered (Phase 0 I/O)
+    final callback = _bindCallbacks.remove(varId);
+    if (callback != null) {
+      if (finalValue is VarRef) {
+        // Binding to another variable - forward callback to target
+        _bindCallbacks[finalValue.varId] = callback;
+      } else {
+        // Binding to ground value - invoke callback now
+        callback(finalValue);
+      }
+    }
+
     return activations;
   }
 

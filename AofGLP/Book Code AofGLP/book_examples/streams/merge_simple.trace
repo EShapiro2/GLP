@@ -1,0 +1,10 @@
+% Goal: merge([1,2], [a,b], Out).
+
+GLP> merge([1,2], [a,b], Out).
+merge([1, 2], [a, b], Out) :- merge([a, b], [2], X1)
+merge([a, b], [2], X1) :- merge([2], [b], X2)
+merge([2], [b], X2) :- merge([b], [], X3)
+merge([b], [], X3) :- merge([], [], X4)
+merge([], [], X4) :- true
+Out = [1, a, 2, b]
+→ succeeds

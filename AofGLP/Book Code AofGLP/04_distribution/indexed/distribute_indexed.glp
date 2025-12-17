@@ -1,0 +1,14 @@
+% Topic: Indexed stream distributor (routing)
+% Section: Streams - Distribution
+%
+% Routes messages to different outputs based on send(N,X) tag.
+% send(1,X) goes to first output, send(2,X) to second.
+%
+% Test goals:
+% distribute_indexed([send(1,a), send(2,b), send(1,c), send(2,d)], Y, Z).
+
+distribute_indexed([send(1,X)|In], [X?|Out1?], Out2) :-
+    distribute_indexed(In?, Out1, Out2).
+distribute_indexed([send(2,X)|In], Out1, [X?|Out2?]) :-
+    distribute_indexed(In?, Out1, Out2).
+distribute_indexed([], [], []).
