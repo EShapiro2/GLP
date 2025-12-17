@@ -1,0 +1,17 @@
+% Test file for guard negation (~G) feature
+
+% Basic negation - type guards
+% Note: type guards implicitly ground the variable, allowing duplicate reader references
+test_neg_int(X, not_int) :- ~integer(X?) | true.
+test_neg_int(X, is_int) :- integer(X?) | true.
+
+test_neg_number(X, not_num) :- ~number(X?) | true.
+test_neg_number(X, is_num) :- number(X?) | true.
+
+% ground/1 marks arg as grounded
+test_neg_ground(X, not_ground) :- ~ground(X?) | true.
+test_neg_ground(X, is_ground) :- ground(X?) | true.
+
+% Negation of equality
+test_neg_eq(X, Y, neq) :- ~(X? =?= Y?) | true.
+test_neg_eq(X, Y, eq) :- X? =?= Y? | true.

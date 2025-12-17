@@ -1,0 +1,8 @@
+% N.1 Unary Predicates - Test file
+
+% Single fact
+p(a).
+
+% Multiple clauses
+q(b).
+q(a).

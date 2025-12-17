@@ -1,0 +1,5 @@
+% hello.glp - Simple hello world program
+
+hello :-
+  execute('write', ['Hello from GLP!']),
+  execute('nl', []).

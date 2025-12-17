@@ -1,0 +1,24 @@
+% Test cases for unbound reader vs structure pattern at different nesting levels
+% All should SUSPEND (not fail) when the reader is unbound
+
+% === LEVEL 1: Top-level structure ===
+% Goal: level1(X?) where X is unbound
+% Expected: suspend on X (can't match structure pattern until X is bound)
+level1(foo(A, B)) :- atom(A?) | done(B?).
+
+% === LEVEL 2: One level nested ===
+% Goal: level2([X? | Rest]) where X is unbound
+% The list exists, but first element X? is unbound
+% Expected: suspend on X (can't match msg/2 until X is bound)
+level2([msg(A, B) | Rest]) :- atom(A?) | process(B?, Rest?).
+
+% === LEVEL 3: Two levels nested ===
+% Goal: level3([wrapper(X?) | Rest]) where X is unbound
+% The list exists, wrapper exists, but X? inside wrapper is unbound
+% Expected: suspend on X (can't match inner/1 until X is bound)
+level3([wrapper(inner(A)) | Rest]) :- atom(A?) | finish(Rest?).
+
+% Stubs for body predicates
+done(_).
+process(_, _).
+finish(_).

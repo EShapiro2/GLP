@@ -1,0 +1,11 @@
+% Test case: non-ground list in body goal argument
+% Tests that [X?,Y?|Rest?] patterns compile correctly in body goals
+
+% Pass list with variables in body goal
+test_list_in_body([A,B|Cs], Result?) :-
+    process_list([A?,B?|Cs?], Result).
+
+process_list(L, L?).
+
+% Build list with variables
+build_list(X, Y, [X?,Y?]).

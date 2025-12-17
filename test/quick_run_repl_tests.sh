@@ -8,7 +8,7 @@ set -e
 DART=${DART:-$(which dart 2>/dev/null || echo "/home/user/dart-sdk/bin/dart")}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GLP_RUNTIME="$SCRIPT_DIR/../glp_runtime"
-GLP_DIR="$SCRIPT_DIR/../glp/test"
+GLP_DIR="$SCRIPT_DIR/../programs/tests/repl"
 REPL="bin/glp_repl.dart"
 
 cd "$GLP_RUNTIME"

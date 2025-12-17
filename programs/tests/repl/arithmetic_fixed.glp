@@ -1,0 +1,22 @@
+% arithmetic_fixed.glp - Arithmetic operations with infix notation
+%
+% Uses natural infix notation: X + Y
+% Parser transforms to prefix: +(X, Y)
+
+% Addition
+add(X, Y, Z?) :- execute('evaluate', [X? + Y?, Z]).
+
+% Multiplication
+multiply(X, Y, Z?) :- execute('evaluate', [X? * Y?, Z]).
+
+% Subtraction
+subtract(X, Y, Z?) :- execute('evaluate', [X? - Y?, Z]).
+
+% Division
+divide(X, Y, Z?) :- execute('evaluate', [X? / Y?, Z]).
+
+% Modulo
+modulo(X, Y, Z?) :- execute('evaluate', [X? mod Y?, Z]).
+
+% Compound example: (2*3)+4 = 10
+compute(X?) :- execute('evaluate', [(2 * 3) + 4, X]).

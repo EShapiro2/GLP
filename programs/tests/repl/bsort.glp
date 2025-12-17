@@ -1,0 +1,22 @@
+% bsort.glp - Bubble Sort
+%
+% Selection-based bubble sort
+% From Concurrent Prolog course (solutions3)
+
+% sort(Xs, Ys) :- sorting Xs gives Ys
+sort([], []).
+sort([X|Xs], [Smallest?|Sorted?]) :-
+    bbl([X?|Xs?], Smallest, Rest),
+    sort(Rest?, Sorted).
+
+% bbl(Xs, Y, Ys) :- Y is smallest in Xs, Ys is the rest
+bbl([X|Xs], Y?, Ys?) :- bbl1(X?, Xs?, Y, Ys).
+
+% bbl1(Min, Xs, Smallest, Rest) :- find smallest, accumulate rest
+bbl1(Min, [], Min?, []).
+bbl1(Min, [X|Xs], Smallest?, [X?|Ys?]) :-
+    Min? < X? | bbl1(Min?, Xs?, Smallest, Ys).
+bbl1(Min, [X|Xs], Smallest?, [Min?|Ys?]) :-
+    Min? >= X? | bbl1(X?, Xs?, Smallest, Ys).
+
+% Test via REPL: sort([3,1,4,1,5,9,2,6], Ys).

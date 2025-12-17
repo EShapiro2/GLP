@@ -1,0 +1,3 @@
+% Producer-consumer stream example
+producer([N?|Xs?],N) :- ground(N?) | N1 := N? + 1, producer(Xs,N1?).
+consumer([X|Xs],Sum) :- ground(X?), ground(Sum?) | Sum1 := Sum? + X?, consumer(Xs?,Sum1?).

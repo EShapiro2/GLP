@@ -1,0 +1,7 @@
+% Test case for unbound reader vs list pattern
+bob([msg(1, Greeting, response(bob, 42)) | Rest]) :-
+    atom(Greeting?) |
+    bob_round2(Rest?).
+
+bob_round2([]).
+bob_round2([_|T]) :- bob_round2(T?).

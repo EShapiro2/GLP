@@ -1,0 +1,12 @@
+% N.1 Unary Predicates - Parameter passing with w
+
+% Single fact
+p(a).
+
+% Multiple clauses
+q(b).
+q(a).
+
+% Two-clause wrapper: both directions
+w(X) :- q(X?).
+w(X?) :- q(X).

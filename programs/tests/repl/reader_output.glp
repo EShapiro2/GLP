@@ -1,0 +1,5 @@
+% Test case: reader in output position binds result correctly
+% Pattern: variable is writer in one head argument, reader in another
+
+unwrap([X], X?).
+identity(X, X?).

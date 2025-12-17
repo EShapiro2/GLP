@@ -1,0 +1,15 @@
+%% Bounded buffer - GLP version
+%% Based on CP Collected Papers, Ch 18 (Takeuchi & Furukawa)
+
+%% Buffer is difference-list: Head--Tail
+%% send adds to head, receive takes from head and extends tail
+
+% send(Msg, OldBuf, NewBuf) - put Msg in buffer
+send(Msg, [Msg?|NBuf?], NBuf).
+
+% receive(Msg, OldBuf--OldTail, NewBuf--NewTail) - get Msg, extend buffer
+receive(Msg?, [Msg|NBuf]--[_|NTail?], NBuf?--NTail).
+
+% open(Size, Buf--Tail) - create buffer of given size
+open(0, X?--X).
+open(N, [_|Y?]--Z) :- N? > 0 | N1 := N? - 1, open(N1?, Y--Z).

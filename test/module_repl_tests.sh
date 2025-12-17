@@ -2,9 +2,12 @@
 # Module System REPL Tests
 # These tests verify actual REPL usage of modules
 
-cd "$(dirname "$0")/../glp_runtime"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR/../glp_runtime"
 
 REPL="./glp_repl"
+MOD_DIR="$SCRIPT_DIR/../programs/tests/modules"
+REPL_DIR="$SCRIPT_DIR/../programs/tests/repl"
 PASS=0
 FAIL=0
 
@@ -31,28 +34,28 @@ run_test() {
 # TEST 1: Simple cross-module RPC
 # ===========================================
 run_test "simple RPC: math#double" \
-    "test_modules/math.glp\ntest_modules/main.glp\ntest_double(R)." \
+    "$MOD_DIR/math.glp\n$MOD_DIR/main.glp\ntest_double(R)." \
     "R = 10"
 
 # ===========================================
 # TEST 2: Recursive cross-module RPC
 # ===========================================
 run_test "recursive RPC: math#factorial" \
-    "test_modules/math.glp\ntest_modules/main.glp\ntest_factorial(R)." \
+    "$MOD_DIR/math.glp\n$MOD_DIR/main.glp\ntest_factorial(R)." \
     "R = 120"
 
 # ===========================================
 # TEST 3: Multi-module chain A → B → C
 # ===========================================
 run_test "chain RPC: A→B→C" \
-    "test_modules/utils.glp\ntest_modules/chain_b.glp\ntest_modules/chain_a.glp\nrun(4, R)." \
+    "$MOD_DIR/utils.glp\n$MOD_DIR/chain_b.glp\n$MOD_DIR/chain_a.glp\nrun(4, R)." \
     "R = 12"
 
 # ===========================================
 # TEST 4: Dynamic RPC (Transmit) - module as variable
 # ===========================================
 run_test "dynamic RPC: Module variable" \
-    "test_modules/math.glp\nM = math, M? # double(7, R)." \
+    "$MOD_DIR/math.glp\nM = math, M? # double(7, R)." \
     "R = 14"
 
 # ===========================================
@@ -75,21 +78,21 @@ run_test "dynamic RPC: Module variable" \
 # TEST 7: Missing module - RPC suspends (module not loaded)
 # ===========================================
 run_test "missing module: RPC suspends" \
-    "test_modules/main.glp\ntest_double(R)." \
+    "$MOD_DIR/main.glp\ntest_double(R)." \
     "suspended"
 
 # ===========================================
 # TEST 8: Error - unexported procedure
 # ===========================================
 run_test "error: unexported procedure" \
-    "test_modules/math.glp\nmath # private_helper(X)." \
+    "$MOD_DIR/math.glp\nmath # private_helper(X)." \
     "unknown|not exported|error|Error"
 
 # ===========================================
 # TEST 9: Backwards compatibility - no module declaration
 # ===========================================
 run_test "backwards compat: no module decl" \
-    "factorial.glp\nfactorial(5, R)." \
+    "$REPL_DIR/factorial.glp\nfactorial(5, R)." \
     "R = 120"
 
 # ===========================================

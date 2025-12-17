@@ -1,0 +1,37 @@
+% Binary structures (2 args) with var at different positions
+bin1(X?, Y?) :- X = pair(Y, b).
+bin2(X?, Y?) :- X = pair(a, Y).
+bin3(X?, Y?, Z?) :- X = pair(Y, Z).
+
+% Nested binary
+bin_nest(X?, Y?) :- X = outer(inner(Y, b), c).
+bin_nest2(X?, Y?) :- X = outer(a, inner(Y, b)).
+
+% Ternary structures (3 args)
+ter1(X?, Y?) :- X = triple(Y, b, c).
+ter2(X?, Y?) :- X = triple(a, Y, c).
+ter3(X?, Y?) :- X = triple(a, b, Y).
+ter_all(X?, A?, B?, C?) :- X = triple(A, B, C).
+
+% Nested ternary
+ter_nest(X?, Y?) :- X = outer(inner(Y, b, c), d, e).
+
+% Structure with reader arg (reading from goal)
+use_reader(X?, In?) :- X = processed(In).
+
+% Deep binary tree
+tree2(X?, Y?) :- X = node(leaf(Y), leaf(z)).
+tree3(X?, Y?) :- X = node(node(leaf(Y), leaf(a)), leaf(b)).
+
+% 4-ary structure
+quad(X?, A?, B?, C?, D?) :- X = four(A, B, C, D).
+
+% Reader passed through (In? from head, used as reader in body struct)
+pass_reader(X?, In?) :- X = wrapper(In).
+
+% Multiple writers at different depth positions
+multi_w(X?, A?, B?) :- X = pair(wrap(A), wrap(B)).
+
+% Writer then reader of same var (needs ground guard)
+bind_use(X?, Y?) :- X = outer(Y), ground(Y?) | done(Y?).
+done(_).

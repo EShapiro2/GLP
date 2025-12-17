@@ -1,0 +1,9 @@
+% append.glp - List append
+%
+% Classic list append from Concurrent Prolog book
+% append(Xs, Ys, Zs) :- Zs is Xs followed by Ys
+
+append([], Ys, Ys?).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
+
+% Test via REPL: append([a,b], [c,d], Zs).

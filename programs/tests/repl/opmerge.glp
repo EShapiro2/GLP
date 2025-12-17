@@ -1,0 +1,13 @@
+% opmerge.glp - Ordered merge
+%
+% opmerge(Xs, Ys, Zs) :- Zs is the ordered merge of sorted lists Xs and Ys
+% Removes duplicates when merging (used in Hamming's problem)
+% From Concurrent Prolog book (handout 5)
+
+opmerge([], Ys, Ys?).
+opmerge(Xs, [], Xs?).
+opmerge([U|X], [V|Y], [U?|Z?]) :- U? < V? | opmerge(X?, [V?|Y?], Z).
+opmerge([U|X], [V|Y], [V?|Z?]) :- U? > V? | opmerge([U?|X?], Y?, Z).
+opmerge([U|X], [V|Y], [U?|Z?]) :- U? >= V?, U? =< V? | opmerge(X?, Y?, Z).
+
+% Test via REPL: opmerge([1,3,5], [2,3,6], Zs).

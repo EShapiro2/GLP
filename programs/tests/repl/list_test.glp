@@ -1,0 +1,2 @@
+% Test with variable tail
+make_list([N?|Tail?], N, Tail) :- true.
