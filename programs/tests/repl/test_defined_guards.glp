@@ -1,0 +1,16 @@
+% Test defined guards via unit clauses
+% A unit clause defines a guard predicate
+
+% Define channel/1 as a guard predicate
+% Use anonymous variables for pattern placeholders
+channel(ch(_, _)).
+
+% Use channel/1 in guard position
+test(X, ok) :- channel(X?) | true.
+test(_, not_channel) :- otherwise | true.
+
+% Test query: test(ch(A?, B), R).
+% Expected: R = ok (X matches ch/2 structure)
+
+% Test query: test(foo, R).
+% Expected: R = not_channel (foo doesn't match ch/2)

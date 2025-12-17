@@ -10,6 +10,7 @@ DART=${DART:-$(which dart 2>/dev/null || echo "/home/user/dart-sdk/bin/dart")}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GLP_RUNTIME="$SCRIPT_DIR/../glp_runtime"
 GLP_DIR="$SCRIPT_DIR/../programs/tests/repl"
+MOD_DIR="$SCRIPT_DIR/../programs/tests/modules"
 REPL="bin/glp_repl.dart"
 
 cd "$GLP_RUNTIME"
@@ -58,9 +59,9 @@ $GLP_DIR/depth_test.glp
 $GLP_DIR/paa.glp
 $GLP_DIR/test_bob.glp
 $GLP_DIR/test_nested_suspend.glp
-test_defined_guards.glp
-append_dl.glp
-assign_reader_test.glp
+$GLP_DIR/test_defined_guards.glp
+$GLP_DIR/append_dl.glp
+$GLP_DIR/assign_reader_test.glp
 hello.
 p(X).
 merge([1,2,3], [a,b], Xs).
@@ -187,10 +188,10 @@ test(foo, Rdg2).
 test(Xdg?, Rdg3).
 assign_reader(Rar?, Xar).
 # Channel operations as defined guards
-test_channel_guards.glp
+$GLP_DIR/test_channel_guards.glp
 make_pair(ch(Achg?, Bchg), Rchg).
 # Comprehensive defined guards test suite
-test_defined_guards_all.glp
+$GLP_DIR/test_defined_guards_all.glp
 make_pair(Call1, Call2).
 bind_response(yes, RespYes, LocalYes).
 bind_response(no, RespNo, LocalNo).
@@ -689,8 +690,8 @@ echo ""
 echo "--- Module RPC Tests ---"
 
 module_output=$($DART run "$REPL" <<MODULE_INPUT
-mod_a.glp
-main_mod.glp
+$GLP_DIR/mod_a.glp
+$GLP_DIR/main_mod.glp
 test(R).
 :quit
 MODULE_INPUT
@@ -714,8 +715,8 @@ fi
 
 # Test 2: Recursive RPC - math#factorial
 factorial_output=$($DART run "$REPL" <<FACTORIAL_INPUT
-test_modules/math.glp
-test_modules/main.glp
+$MOD_DIR/math.glp
+$MOD_DIR/main.glp
 test_factorial(R).
 :quit
 FACTORIAL_INPUT
@@ -731,9 +732,9 @@ fi
 
 # Test 3: Chain RPC - A→B→C
 chain_output=$($DART run "$REPL" <<CHAIN_INPUT
-test_modules/utils.glp
-test_modules/chain_b.glp
-test_modules/chain_a.glp
+$MOD_DIR/utils.glp
+$MOD_DIR/chain_b.glp
+$MOD_DIR/chain_a.glp
 run(4, R).
 :quit
 CHAIN_INPUT
@@ -749,7 +750,7 @@ fi
 
 # Test 4: Missing module - RPC suspends
 missing_output=$($DART run "$REPL" <<MISSING_INPUT
-test_modules/main.glp
+$MOD_DIR/main.glp
 test_double(R).
 :quit
 MISSING_INPUT
@@ -765,7 +766,7 @@ fi
 
 # Test 5: Unexported procedure - error
 unexported_output=$($DART run "$REPL" <<UNEXPORTED_INPUT
-test_modules/math.glp
+$MOD_DIR/math.glp
 math # private_helper(X).
 :quit
 UNEXPORTED_INPUT
@@ -781,7 +782,7 @@ fi
 
 # Test 6: Backwards compatibility - no module declaration
 compat_output=$($DART run "$REPL" <<COMPAT_INPUT
-factorial.glp
+$GLP_DIR/factorial.glp
 factorial(5, R).
 :quit
 COMPAT_INPUT
@@ -797,7 +798,7 @@ fi
 
 # Test 7: Dynamic RPC - module as variable
 dynamic_output=$($DART run "$REPL" <<DYNAMIC_INPUT
-test_modules/math.glp
+$MOD_DIR/math.glp
 M = math, M? # double(7, R).
 :quit
 DYNAMIC_INPUT
@@ -817,7 +818,7 @@ echo "--- Auto-generated reduce/2 Tests ---"
 
 # Test 8: reduce/2 for fact
 reduce_fact_output=$($DART run "$REPL" <<REDUCE_FACT
-reduce_test.glp
+$GLP_DIR/reduce_test.glp
 reduce(hello(world), Body).
 :quit
 REDUCE_FACT
@@ -833,7 +834,7 @@ fi
 
 # Test 9: reduce/2 for rule without guard
 reduce_rule_output=$($DART run "$REPL" <<REDUCE_RULE
-reduce_test.glp
+$GLP_DIR/reduce_test.glp
 reduce(greet(foo, Y), Body).
 :quit
 REDUCE_RULE
@@ -849,7 +850,7 @@ fi
 
 # Test 10: reduce/2 for guarded rule
 reduce_guarded_output=$($DART run "$REPL" <<REDUCE_GUARDED
-reduce_test.glp
+$GLP_DIR/reduce_test.glp
 reduce(double(5, Y), Body).
 :quit
 REDUCE_GUARDED
@@ -869,7 +870,7 @@ echo "--- Quoted Atom Functor Tests ---"
 
 # Test: Quoted atom as functor in head
 quoted_head_output=$($DART run "$REPL" <<QUOTED_HEAD
-quoted_functor_test.glp
+$GLP_DIR/quoted_functor_test.glp
 '_test_kernel'(5, R).
 :quit
 QUOTED_HEAD
@@ -885,8 +886,8 @@ fi
 
 # Test: Quoted atom as functor in body
 quoted_body_output=$($DART run "$REPL" <<QUOTED_BODY
-quoted_functor_test.glp
-quoted_body_test.glp
+$GLP_DIR/quoted_functor_test.glp
+$GLP_DIR/quoted_body_test.glp
 wrapper(10, R).
 :quit
 QUOTED_BODY

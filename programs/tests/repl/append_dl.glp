@@ -1,0 +1,3 @@
+% append_dl - append two difference lists
+% DL1 = H1-T1, DL2 = T1-T2, Result = H1-T2
+append(H1, T1?, T1, T2?, H1?, T2).
