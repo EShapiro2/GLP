@@ -269,17 +269,21 @@ echo -e 'filename.glp\ngoal.' | dart run bin/glp_repl.dart
 
 **REPL Test Scripts (Linux):**
 ```bash
-# Quick tests (~2s) - basic features
+# Quick tests (~2s) - 30 basic tests
 bash /home/user/GLP/test/quick_run_repl_tests.sh
 
-# Full tests - complete coverage
+# Full tests - 181 comprehensive tests
 bash /home/user/GLP/test/full_run_repl_tests.sh
+
+# Book examples - 141 files (tests compilation only)
+bash /home/user/GLP/test/run_book_tests.sh
 ```
 
 **Key paths:**
 - REPL: `/home/user/GLP/glp_runtime/bin/glp_repl.dart`
-- stdlib: `/home/user/GLP/glp/stdlib/`
-- Test files go in: `/home/user/GLP/glp_runtime/glp/` (REPL prepends `glp/` to paths)
+- stdlib: `/home/user/GLP/programs/stdlib/`
+- GLP programs: `/home/user/GLP/programs/`
+- Test files: `/home/user/GLP/programs/tests/`
 
 **Commands that DON'T exist in this environment:**
 - `timeout` - not available
@@ -301,22 +305,38 @@ bash /home/user/GLP/test/full_run_repl_tests.sh
 │   ├── glp-bytecode-v216-complete.md  # ← Instruction set spec
 │   ├── glp-runtime-spec.txt           # ← Runtime architecture spec
 │   ├── wam.pdf                        # ← WAM paper
-│   └── 1-s2.0-0743106689900113-main.pdf  # ← FCP implementation
+│   └── 1-s2.0-0743106689890113-main.pdf  # ← FCP implementation
 │
-├── glp_runtime/                 # ← MAIN DART PROJECT (git tracked)
+├── glp_runtime/                 # ← MAIN DART PROJECT
 │   ├── lib/
 │   │   ├── bytecode/           # ← VM implementation (runner.dart, opcodes.dart)
 │   │   ├── compiler/           # ← GLP→bytecode compiler
 │   │   └── runtime/            # ← Heap, scheduler, cells, terms
-│   ├── test/                   # ← All tests (bytecode/, custom/, conformance/)
-│   └── bin/                    # ← Demos, utilities
+│   ├── test/                   # ← Dart unit tests
+│   ├── bin/
+│   │   └── glp_repl.dart      # ← REPL source
+│   └── glp_repl               # ← Compiled REPL executable
 │
-├── udi/                         # ← USER WORKSPACE (git tracked)
-│   ├── glp/                    # ← User GLP source files (*.glp)
-│   ├── bin/                    # ← Compiled bytecode files (*.glpc)
-│   └── glp_repl.dart          # ← REPL application
+├── programs/                    # ← ALL GLP SOURCE FILES (380 files total)
+│   ├── stdlib/                 # ← Standard library (6 files)
+│   ├── book/                   # ← Art of GLP book examples (140 files)
+│   │   ├── recursive/         # ← arithmetic_trees/, list_processing/, structure_processing/
+│   │   ├── streams/           # ← producers_consumers/, objects_monitors/, buffered_communication/
+│   │   ├── social_graph/      # ← Agent protocols, plays/
+│   │   ├── social_networks/   # ← Network protocols
+│   │   ├── meta/              # ← Metainterpreters (plain/, enhanced/, debugging/)
+│   │   ├── constants/         # ← Logic gates, circuits
+│   │   ├── cryptocurrencies/  # ← GC protocol
+│   │   └── constitutional_consensus/  # ← Consensus protocols
+│   ├── tests/                  # ← REPL test files (115 files)
+│   ├── lib/                    # ← Reusable library modules (8 files)
+│   ├── archive/                # ← Historical/experimental (76 files)
+│   └── misc/                   # ← Miscellaneous examples (26 files)
 │
-└── archive/                     # ← OLD/HISTORICAL FILES (ignore)
+└── test/                        # ← TEST SCRIPTS
+    ├── quick_run_repl_tests.sh # ← Quick tests (30 tests, ~2s)
+    ├── full_run_repl_tests.sh  # ← Full REPL tests (181 tests)
+    └── run_book_tests.sh       # ← Book examples compilation test (141 files)
 ```
 
 ## Mandatory Reading Order
@@ -348,79 +368,63 @@ You:
 
 ## Test Protocols
 
-### REPL Test Protocol
+### Test Suites Overview
 
-**REPL tests are part of the standard test suite** - run them alongside `dart test`.
-
-**Location:** `/Users/udi/GLP/udi/run_repl_tests.sh`
-
-**When to run:**
-- After REPL recompilation
-- Before commits (with dart test)
-- When testing REPL-related changes
-- As part of baseline/regression testing
-
-**Adding new tests:**
-When user says "add:" followed by description, add to `run_repl_tests.sh`:
-
-```bash
-run_test "Test description" \
-    "file.glp" \
-    "query." \
-    "expected_pattern"
-```
-
-### REPL Development Protocol
-1. Make changes to `glp_runtime/lib/` or `udi/glp_repl.dart`
-2. Update buildTime in `glp_repl.dart` to current timestamp
-3. Recompile: `cd /Users/udi/GLP/udi && dart compile exe glp_repl.dart -o glp_repl`
-4. Let user test REPL first (they will run queries)
-5. If user confirms success, run BOTH test suites:
-   - `dart test`
-   - `bash run_repl_tests.sh`
-6. Report full test results from both suites
+| Suite | Location | Tests | Purpose |
+|-------|----------|-------|---------|
+| Quick REPL | `test/quick_run_repl_tests.sh` | 30 | Fast sanity check (~2s) |
+| Full REPL | `test/full_run_repl_tests.sh` | 181 | Comprehensive REPL tests |
+| Book | `test/run_book_tests.sh` | 141 | Book examples compile check |
+| Unit | `glp_runtime/test/` | ~27 | Dart unit tests |
 
 ### Standard Test Protocol
 
-**ALWAYS run BOTH test suites:**
+**ALWAYS run tests before and after changes:**
 
 ```bash
-# Unit tests (glp_runtime/test/)
-cd /Users/udi/GLP/glp_runtime
+cd /home/user/GLP/glp_runtime
+
+# Quick sanity check
+bash ../test/quick_run_repl_tests.sh
+
+# Full REPL tests (run before commits)
+bash ../test/full_run_repl_tests.sh
+
+# Book examples (compilation test)
+bash ../test/run_book_tests.sh
+
+# Unit tests
 dart test
-
-# REPL integration tests (udi/run_repl_tests.sh)
-cd /Users/udi/GLP/udi
-bash run_repl_tests.sh
 ```
 
-**Before ANY changes:**
+**Expected results:**
+- Quick: 30/30 pass
+- Full: 181/181 pass
+- Book: 84/141 pass (57 fail due to SRSW violations in book code)
+- Unit: All pass
+
+### REPL Development Protocol
+1. Make changes to `glp_runtime/lib/` or `glp_runtime/bin/glp_repl.dart`
+2. Recompile: `cd /home/user/GLP/glp_runtime && dart compile exe bin/glp_repl.dart -o glp_repl`
+3. Run quick tests first: `bash ../test/quick_run_repl_tests.sh`
+4. If quick tests pass, run full tests: `bash ../test/full_run_repl_tests.sh`
+5. Report results
+
+### Adding New Tests
+
+Add to `test/full_run_repl_tests.sh` using the `run_test` function:
+
 ```bash
-dart test                    # Note baseline unit test count
-bash run_repl_tests.sh       # Note baseline REPL test count
-```
-
-**After changes:**
-```bash
-dart test                    # Compare to baseline
-bash run_repl_tests.sh       # Compare to baseline
-```
-
-**Report both results:**
-```
-Unit tests: 25/25 passing
-REPL tests: 101/101 passing
-```
-
-**For specific test:**
-```bash
-dart test test/specific_test.dart
+run_test "Test description" \
+    "programs/tests/file.glp" \
+    "query." \
+    "expected_pattern"
 ```
 
 ### Bug Fix Test Protocol
 
 **When a bug is detected and fixed:**
-1. Add the test case that exposed the bug to the REPL test suite
+1. Add the test case that exposed the bug to `test/full_run_repl_tests.sh`
 2. The test should verify the fix works (not just that it doesn't crash)
 3. This prevents regression - the bug should never reappear
 
@@ -434,9 +438,10 @@ dart test test/specific_test.dart
 
 ### 1. Test Before Changing
 ```bash
-# ALWAYS run BOTH test suites first
-dart test                 # Unit tests - should be 25 passing
-bash run_repl_tests.sh    # REPL tests - should be 101 passing
+# ALWAYS run test suites first
+cd /home/user/GLP/glp_runtime
+bash ../test/full_run_repl_tests.sh    # 181 REPL tests
+dart test                              # Unit tests
 ```
 If tests failing BEFORE changes, STOP and inform user.
 
@@ -529,7 +534,7 @@ This protocol is required when debugging GLP programs. Do not skip steps. Stop a
 - ✅ SRSW checking is mandatory for all code (including stdlib)
 - ✅ Anonymous variable `_` support for abort clauses
 - ✅ Reader/writer mode handling fixed in clause heads
-- ✅ Test suites passing (27 unit tests, 103 REPL tests)
+- ✅ Test suites passing (27 unit tests, 181 REPL tests)
 
 ## Bytecode Inspection Tools
 
@@ -578,11 +583,12 @@ PC 44: Proceed
 ## Known Working Tests
 These must continue passing:
 ```bash
-dart test  # Should show 25 passing
-bash run_repl_tests.sh  # Should show 101 passing
+cd /home/user/GLP/glp_runtime
+bash ../test/full_run_repl_tests.sh  # Should show 181 passing
+dart test                            # Should show ~27 passing
 ```
 
-REPL tests:
+Example REPL tests:
 ```
 > run(merge([1,5,3,3],[a,a,a,v,a,c],Xs1)).
 # Should execute MORE than 2 goals and bind Xs1
@@ -639,7 +645,7 @@ Claude B: work → push → branch-B ──────────────�
 
 **At session start:**
 1. Pull from main: `git pull origin main`
-2. Run baseline tests: `dart test` and `bash run_repl_tests.sh`
+2. Run baseline tests: `dart test` and `bash test/full_run_repl_tests.sh`
 3. Work on your branch
 
 **During work:**
@@ -710,7 +716,7 @@ git push origin main
 **To verify merge:**
 ```bash
 cd glp_runtime && dart test
-cd ../udi && bash run_repl_tests.sh
+bash ../test/full_run_repl_tests.sh
 ```
 
 ### Common Issues and Fixes
@@ -898,7 +904,7 @@ Key files:
 
 2. **Running the REPL**: Use compiled executable `./glp_repl` for faster testing, or `dart run bin/glp_repl.dart` if exe not compiled. Run from `glp_runtime/` directory.
 
-3. **Test file patterns**: The test suite uses a specific format - see `run_repl_tests.sh` for the `run_test` function.
+3. **Test file patterns**: The test suite uses a specific format - see `test/full_run_repl_tests.sh` for the `run_test` function.
 
 4. **CRITICAL - Reader/Writer modes in clause heads**: A reader in the head can ONLY be bound to a writer in the goal. If an argument of a goal is expected to be a reader or a ground term (non-variable), then the corresponding head argument MUST be a writer, not a reader!
    - WRONG: `Result := N? :- number(N?) | ...` - N? is reader, but goal `X := 3` has ground term 3
