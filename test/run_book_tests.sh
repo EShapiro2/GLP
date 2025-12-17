@@ -114,6 +114,13 @@ output=$($REPL <<'REPL_INPUT'
 /home/user/GLP/programs/book/social_graph/play_cold_call.glp
 /home/user/GLP/programs/book/social_graph/play_introduction.glp
 /home/user/GLP/programs/book/social_graph/test_4player.glp
+/home/user/GLP/programs/book/social_graph/agent_full.glp
+/home/user/GLP/programs/book/social_graph/channel.glp
+/home/user/GLP/programs/book/social_graph/network.glp
+/home/user/GLP/programs/book/social_graph/streams.glp
+/home/user/GLP/programs/book/social_graph/plays/play01_cold_call/alice.glp
+/home/user/GLP/programs/book/social_graph/plays/play01_cold_call/bob.glp
+/home/user/GLP/programs/book/social_graph/plays/play01_cold_call/main.glp
 /home/user/GLP/programs/book/social_networks/broadcast.glp
 /home/user/GLP/programs/book/social_networks/direct_messaging.glp
 /home/user/GLP/programs/book/social_networks/dm_simple.glp
