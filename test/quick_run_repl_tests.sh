@@ -9,7 +9,7 @@ DART=${DART:-$(which dart 2>/dev/null || echo "/home/user/dart-sdk/bin/dart")}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GLP_RUNTIME="$SCRIPT_DIR/../glp_runtime"
 GLP_DIR="$SCRIPT_DIR/../programs/tests/repl"
-REPL="bin/glp_repl.dart"
+REPL="./glp_repl"
 
 cd "$GLP_RUNTIME"
 
@@ -19,7 +19,7 @@ echo "======================================"
 echo ""
 
 # Load files and run queries in single session
-output=$($DART run "$REPL" <<REPL_INPUT
+output=$($REPL <<REPL_INPUT
 $GLP_DIR/hello.glp
 $GLP_DIR/p.glp
 $GLP_DIR/merge.glp
