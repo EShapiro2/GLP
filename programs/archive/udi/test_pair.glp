@@ -1,0 +1,12 @@
+% Test two parallel goals and combining result
+% Similar to fib pattern but without :=
+
+pair(0, zero).
+pair(1, one).
+pair(N, result(A?, B?)) :-
+  N? > 1 |
+  left(N?, A),
+  right(N?, B).
+
+left(N, left(N?)).
+right(N, right(N?)).

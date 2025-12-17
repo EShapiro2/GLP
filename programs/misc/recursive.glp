@@ -1,0 +1,67 @@
+%% recursive.glp - Recursive programming examples
+%% True recursion: multiple recursive calls spawn concurrent processes
+
+%% ===== MERGESORT =====
+
+mergesort([], []).
+mergesort([X], [X?]).
+mergesort(Xs, Sorted?) :-
+    split(Xs?, Left, Right),
+    mergesort(Left?, SortedL),
+    mergesort(Right?, SortedR),
+    merge_sorted(SortedL?, SortedR?, Sorted).
+
+split([], [], []).
+split([X], [X?], []).
+split([X,Y|Xs], [X?|Left?], [Y?|Right?]) :- split(Xs?, Left, Right).
+
+merge_sorted([], Ys, Ys?).
+merge_sorted(Xs, [], Xs?).
+merge_sorted([X|Xs], [Y|Ys], [X?|Zs?]) :-
+    X? =< Y? |
+    merge_sorted(Xs?, [Y?|Ys?], Zs).
+merge_sorted([X|Xs], [Y|Ys], [Y?|Zs?]) :-
+    Y? < X? |
+    merge_sorted([X?|Xs?], Ys?, Zs).
+
+%% ===== QUICKSORT =====
+
+quicksort(Unsorted, Sorted?) :- qsort(Unsorted?, Sorted, []).
+
+qsort([X|Unsorted], Sorted?, Rest) :-
+    number(X?) |
+    partition(Unsorted?, X?, Smaller, Larger),
+    qsort(Smaller?, Sorted, [X?|Sorted1?]),
+    qsort(Larger?, Sorted1, Rest?).
+qsort([], Rest?, Rest).
+
+partition([X|Xs], A, Smaller?, [X?|Larger?]) :-
+    A? < X? | partition(Xs?, A?, Smaller, Larger).
+partition([X|Xs], A, [X?|Smaller?], Larger?) :-
+    A? >= X? | partition(Xs?, A?, Smaller, Larger).
+partition([], A, [], []) :- number(A?) | true.
+
+%% ===== FIBONACCI =====
+
+fib(0, 0).
+fib(1, 1).
+fib(N, F?) :-
+    N? > 1 |
+    N1 := N? - 1,
+    N2 := N? - 2,
+    fib(N1?, F1),
+    fib(N2?, F2),
+    F := F1? + F2?.
+
+%% ===== FLATTEN =====
+
+flatten(Xs, Ys?) :- flatten_dl(Xs?, Ys, []).
+
+flatten_dl([], Front?, Front).
+flatten_dl([X|Xs], Front?, Back) :-
+    ground(X?), is_list(X?) |
+    flatten_dl(X?, Front, Mid?),
+    flatten_dl(Xs?, Mid, Back?).
+flatten_dl([X|Xs], [X?|Front?], Back) :-
+    otherwise |
+    flatten_dl(Xs?, Front, Back?).

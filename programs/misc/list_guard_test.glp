@@ -1,0 +1,3 @@
+% Test list/1 guard
+check_list(X, yes) :- list(X?) | true.
+check_list(_, no) :- otherwise | true.

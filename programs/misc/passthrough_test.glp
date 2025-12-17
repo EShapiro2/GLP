@@ -1,0 +1,4 @@
+%% passthrough_test.glp - Test WxW scenario
+%% passthrough(X, X?) - X is writer, X? is reader
+
+passthrough(X, X?).

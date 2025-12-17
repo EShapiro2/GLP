@@ -1,0 +1,2 @@
+% Test nested structure compilation  
+test(f(g(X?))) :- p(X).

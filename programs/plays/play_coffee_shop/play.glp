@@ -1,0 +1,137 @@
+%% play_coffee_shop.glp - Integration test for social graph protocols
+%%
+%% Scenario: Alice and Bob meet at a coffee shop and become friends via cold-call.
+%% Later, Bob introduces Alice to Carol. Dave attempts to befriend Alice but is
+%% rejected. Finally, Alice sends a message to Bob through their established channel.
+%%
+%% Actors: Alice, Bob, Carol, Dave
+%%
+%% NOTE: This play requires the following to be implemented:
+%% - cold_call_glpsam.glp with response_stream/merge pattern
+%% - friend_introduction_glpsam.glp
+%% - response_handling_glpsam.glp
+%% - agent_glpsam.glp
+%% - network switch
+%% - delay/3 for sequencing user inputs
+
+%% Main play entry point
+play(Results?) :-
+    % Create network switch
+    network(NetSwitch),
+
+    % Initialize agents with their user and network channels
+    agent(alice, ch(AUIn, AUOut), ch(ANIn, ANOut)),
+    agent(bob, ch(BUIn, BUOut), ch(BNIn, BNOut)),
+    agent(carol, ch(CUIn, CUOut), ch(CNIn, CNOut)),
+    agent(dave, ch(DUIn, DUOut), ch(DNIn, DNOut)),
+
+    % Connect all agents to network switch
+    connect_to_network(ANIn?, ANOut?, NetSwitch?),
+    connect_to_network(BNIn?, BNOut?, NetSwitch?),
+    connect_to_network(CNIn?, CNOut?, NetSwitch?),
+    connect_to_network(DNIn?, DNOut?, NetSwitch?),
+
+    % Pre-establish Bob-Carol friendship (precondition for Scene 4)
+    establish_friendship(bob, carol, BUIn?, BUIn0, CUIn?, CUIn0),
+
+    % Run the play scenes
+    run_scenes(AUIn?, AUIn1, BUIn0?, BUIn1, CUIn0?, CUIn1, DUIn?, DUIn1),
+
+    % Collect and verify results
+    collect_results(alice, bob, carol, dave, Results).
+
+%% Scene 2: Alice cold-calls Bob (accepted)
+scene2_alice_calls_bob(AUIn, AUIn1?, BUIn, BUIn1?) :-
+    % Alice's user requests connection to Bob
+    AUIn = [msg(user, alice, connect(bob))|AUIn1],
+    % Bob's user accepts the befriend request
+    delay(100, BUIn?, [msg(user, bob, decision(yes, alice, _))|BUIn1]).
+
+%% Scene 3: Dave cold-calls Alice (rejected)
+scene3_dave_calls_alice(DUIn, DUIn1?, AUIn, AUIn1?) :-
+    % Dave's user requests connection to Alice
+    DUIn = [msg(user, dave, connect(alice))|DUIn1],
+    % Alice's user rejects
+    delay(100, AUIn?, [msg(user, alice, decision(no, dave, _))|AUIn1]).
+
+%% Scene 4: Bob introduces Alice to Carol
+scene4_bob_introduces(BUIn, BUIn1?, AUIn, AUIn1?, CUIn, CUIn1?) :-
+    % Bob's user requests introduction
+    BUIn = [msg(user, bob, introduce(alice, carol))|BUIn1],
+    % Both Alice and Carol accept the introduction
+    delay(100, AUIn?, [msg(user, alice, accept_intro(carol, _))|AUIn1]),
+    delay(100, CUIn?, [msg(user, carol, accept_intro(alice, _))|CUIn1]).
+
+%% Scene 5: Alice messages Bob
+scene5_alice_messages_bob(AUIn, AUIn1?) :-
+    AUIn = [msg(user, alice, send(bob, hello_friend))|AUIn1].
+
+%% Run all scenes in sequence
+run_scenes(AUIn, AUInFinal?, BUIn, BUInFinal?, CUIn, CUInFinal?, DUIn, DUInFinal?) :-
+    % Scene 2: Alice cold-calls Bob
+    scene2_alice_calls_bob(AUIn?, AUIn1, BUIn?, BUIn1),
+
+    % Scene 3: Dave cold-calls Alice (after delay)
+    delay(200, DUIn?, DUIn2),
+    delay(200, AUIn1?, AUIn2),
+    scene3_dave_calls_alice(DUIn2?, DUIn3, AUIn2?, AUIn3),
+
+    % Scene 4: Bob introduces Alice to Carol (after delay)
+    delay(200, BUIn1?, BUIn2),
+    delay(200, AUIn3?, AUIn4),
+    delay(200, CUIn?, CUIn2),
+    scene4_bob_introduces(BUIn2?, BUIn3, AUIn4?, AUIn5, CUIn2?, CUIn3),
+
+    % Scene 5: Alice messages Bob (after delay)
+    delay(200, AUIn5?, AUIn6),
+    scene5_alice_messages_bob(AUIn6?, AUInFinal),
+
+    % Close remaining streams
+    BUInFinal = BUIn3?,
+    CUInFinal = CUIn3?,
+    DUInFinal = DUIn3?.
+
+%% Collect results from all agents
+collect_results(Alice, Bob, Carol, Dave, Results?) :-
+    observe_friends(Alice?, AliceFriends),
+    observe_friends(Bob?, BobFriends),
+    observe_friends(Carol?, CarolFriends),
+    observe_friends(Dave?, DaveFriends),
+    Results = results(AliceFriends?, BobFriends?, CarolFriends?, DaveFriends?).
+
+%% Verify expected final state
+verify_results(results(AF, BF, CF, DF)) :-
+    % Alice should have Bob and Carol as friends
+    member((bob, _), AF?),
+    member((carol, _), AF?),
+    % Alice should NOT have Dave
+    not_member((dave, _), AF?),
+    % Bob should have Alice
+    member((alice, _), BF?),
+    % Carol should have Alice
+    member((alice, _), CF?),
+    % Dave should NOT have Alice
+    not_member((alice, _), DF?)
+    |
+    report(success).
+
+verify_results(results(AF, BF, CF, DF)) :-
+    otherwise |
+    report(failure(AF?, BF?, CF?, DF?)).
+
+%% Helper: Check if element is not in list
+not_member(X, []) :- true.
+not_member(X, [H|T]) :- X? \= H? | not_member(X?, T?).
+
+%% Placeholder for delay - needs runtime support
+%% delay(Ms, In, Out) suspends for Ms milliseconds then binds Out to In
+delay(_, In, In?).
+
+%% Placeholder for observe_friends - extracts friends list from agent state
+observe_friends(_, []).
+
+%% Placeholder for report
+report(Status) :- ground(Status?) | true.
+
+%% Placeholder for establish_friendship
+establish_friendship(_, _, BIn, BIn?, CIn, CIn?).

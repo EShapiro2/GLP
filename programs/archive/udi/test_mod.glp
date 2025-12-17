@@ -1,0 +1,6 @@
+% test_mod.glp - Test mod in guards
+
+% Simple test: check if X mod 2 is 0
+% X is writer in head, X? is reader in guard
+is_even(X, Y?) :- ground(X?), X? mod 2 =:= 0 | Y := X?.
+is_odd(X, Y?) :- ground(X?), X? mod 2 =\= 0 | Y := X?.

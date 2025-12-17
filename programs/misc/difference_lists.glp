@@ -1,0 +1,13 @@
+% Create a difference list with N empty slots
+create_dl(0, H?, H).
+create_dl(N, [_|H?], T) :- N? > 0 | N1 := N? - 1, create_dl(N1?, H, T?).
+
+% Convert standard list to difference list
+list_to_dl([], T?, T).
+list_to_dl([X|Xs], [X?|Ys?], T) :- list_to_dl(Xs?, Ys, T?).
+
+% Append two difference lists (constant time)
+append_dl(H1, T1?, T1, T2?, H1?, T2).
+
+% Close a difference list to a standard list
+close_dl(H?, [], H).

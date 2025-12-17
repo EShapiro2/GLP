@@ -1,0 +1,2 @@
+% Simple test to check HEAD binding
+test_simple(X, Y, Z?) :- execute('write', [X?]), execute('write', [Y?]).

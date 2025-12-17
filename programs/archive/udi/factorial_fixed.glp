@@ -1,0 +1,14 @@
+% factorial_fixed.glp - Factorial computation (FIXED - prefix notation)
+%
+% Uses prefix notation for operators: -(N, one) instead of N - one
+% Demonstrates guards and arithmetic evaluation
+
+% Base case
+fact(zero, one).
+
+% Recursive case with guard
+fact(N, F) :-
+  known(N), ground(N) |
+  execute('evaluate', [-(N, one), N1]),
+  fact(N1?, F1),
+  execute('evaluate', [*(N, F1?), F]).
