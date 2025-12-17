@@ -1,7 +1,0 @@
-% Simpler: compute(X) binds X to value through intermediate
-compute(Result?) :-
-  inner(Temp),
-  Result := Temp? + 0.
-
-% Use arithmetic expression (5 + 0) since := only handles arithmetic
-inner(X?) :- X := 5 + 0.

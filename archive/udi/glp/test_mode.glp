@@ -1,2 +1,0 @@
-% Simple test to see what opcodes are emitted
-p(X?, X).

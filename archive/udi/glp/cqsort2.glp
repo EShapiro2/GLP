@@ -1,2 +1,0 @@
-% Isolated test for the faulty reduction
-clause(qsort([],Rest?,Rest), true).

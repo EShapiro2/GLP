@@ -1,2 +1,0 @@
-%% Two-arg structure
-test_two([bar(1, X) | _]) :- atom(X?) | true.

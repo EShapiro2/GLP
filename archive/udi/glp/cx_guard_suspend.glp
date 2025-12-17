@@ -1,9 +1,0 @@
-% Minimal test case for guard suspension on reader
-% Simulates: reduce(qsort(X132?,X129,[1 | X135?]), X154)
-% Where X132 is unbound reader and number(X132?) must be checked
-
-% Simplified clause that checks number guard on reader
-test(X?, Y) :- number(X?) | Y = ok.
-
-% Test query - X is unbound reader
-query :- test(X?, R).

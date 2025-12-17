@@ -1,9 +1,0 @@
-%% test_tracing.glp - Test tracing meta-interpreter
-
-test(Zs?, Tree?) :-
-    tracing_meta # run(object_merge_indexed, merge([1,2], [3,4], Zs), Tree).
-
-%% Run: test(Zs, Tree).
-%% Expected:
-%%   Zs = some interleaving of [1,2] and [3,4]
-%%   Tree = nested structure of reduction(Goal, ClauseId, Time, SubTree) and fork(T1, T2)

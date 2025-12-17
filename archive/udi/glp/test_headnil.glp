@@ -1,3 +1,0 @@
-% Direct test of HeadNil binding
-test_nil([]).
-test_query(X?) :- test_nil(X).

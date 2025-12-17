@@ -1,7 +1,0 @@
-% Minimal test for reduce/2 bug
-% Query: reduce(partition([2,3],1,X14,X15), X21).
-% Expected: X14=[], X15=[2,3]
-% Actual: X14=<unbound>, X15=[2|X8?]
-
-reduce(partition ([X | Xs], A, Smaller?, [X? | Larger?]),partition (Xs?, A?, Smaller, Larger)) :-
-	A? < X? | true.

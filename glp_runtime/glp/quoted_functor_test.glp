@@ -1,1 +1,0 @@
-'_test_kernel'(X, Y?) :- number(X?) | Y := X? + 1.

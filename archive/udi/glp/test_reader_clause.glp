@@ -1,3 +1,0 @@
-% Test if clause matching works with bound readers
-test(B?) :- clause(merge([],X?,[]), B), X=[] .
-clause(merge([],[],[]), true).

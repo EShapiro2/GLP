@@ -1,6 +1,0 @@
-% Minimal test case for q(X) explosion
-clause(q(X), p(X?)).
-clause(p(X?), (q(Y), r(Y?,X))).
-clause(p(a), true).
-clause(q(a), true).
-clause(r(a,b), true).

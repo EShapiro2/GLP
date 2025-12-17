@@ -1,8 +1,0 @@
-% Test for reader-before-writer bug
-% Pattern: p([H?], H) with call p([W], 42)
-% Expected: W = 42
-% Actual: clause fails or W = <unbound>
-
-gethead([H?], H).
-
-test2(R?) :- gethead([R], 42).

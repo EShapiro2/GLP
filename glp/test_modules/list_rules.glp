@@ -1,5 +1,0 @@
--module(list_rules).
--export([reduce/2]).
-
-reduce(len([], 0), true).
-reduce(len([_|T], N), (len(T?, N1), N := N1? + 1)).

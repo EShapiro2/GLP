@@ -1,2 +1,0 @@
-% Test file with just partition base case
-partition([], A, [], []) :- number(A?) | true.

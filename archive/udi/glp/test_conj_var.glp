@@ -1,4 +1,0 @@
-% Test conjunction with shared variable
-test_conj(Y?) :- foo((bar(X), baz(X?,Y))).
-
-foo((bar(a), baz(a,b))).

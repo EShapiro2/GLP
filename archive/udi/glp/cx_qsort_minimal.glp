@@ -1,8 +1,0 @@
-% Minimal test case for qsort base case bug
-% From qsort.glp line 38
-
-% The clause we're testing
-clause(qsort([], Rest?, Rest), true).
-
-% Test goal
-test :- clause(qsort([],X,[]), Body).

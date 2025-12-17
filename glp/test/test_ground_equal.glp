@@ -1,3 +1,0 @@
-% Test =?= ground equality guard
-test(X, Y, equal) :- X? =?= Y? | true.
-test(_, _, not_equal) :- otherwise | true.

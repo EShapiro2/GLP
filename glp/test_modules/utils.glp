@@ -1,4 +1,0 @@
--module(utils).
--export([triple/2]).
-
-triple(X, Y?) :- Y := X? * 3.

@@ -1,7 +1,0 @@
-% sum_list direct execution only
-sum(Xs, S?) :- sum_acc(Xs?, 0, S).
-
-sum_acc([], Acc, Acc?).
-sum_acc([X|Xs], Acc, S?) :-
-  Acc1 := Acc? + X?,
-  sum_acc(Xs?, Acc1?, S).

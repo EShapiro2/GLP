@@ -1,3 +1,0 @@
-% Test 1: Direct structure with nil
-struct1(merge([],[],[])).
-test1(X?) :- struct1(X).

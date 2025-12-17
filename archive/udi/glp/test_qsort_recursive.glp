@@ -1,6 +1,0 @@
-% qsort recursive case with structure in body
-qsort([X | Unsorted], Sorted?, Rest?) :-
-	number(X?) |
-	partition(Unsorted?, X?, Smaller, Larger),
-	qsort(Smaller?, Sorted, [X? | Sorted1?]),
-	qsort(Larger?, Sorted1, Rest).

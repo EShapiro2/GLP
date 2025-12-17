@@ -1,3 +1,0 @@
-test_trigger(Handle?) :-
-    create_equator(triggered, Eq, Handle),
-    equate(Eq?).

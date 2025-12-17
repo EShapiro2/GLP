@@ -1,3 +1,0 @@
-% Ultra-simple test - just pass through
-pass(a).
-test_pass(X) :- pass(X?).

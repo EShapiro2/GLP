@@ -1,6 +1,0 @@
-% Test: Variable shared between two arguments as reader then writer
-% Should bind both when writer is matched
-
-p(f(X?), g(X)).
-
-test :- p(f(A), g([])), write(A?).

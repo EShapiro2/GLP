@@ -1,5 +1,0 @@
-% Test otherwise guard behavior
-p(a,a).
-p(X,Y?) :- otherwise | q(X?,Y).
-
-q(b,b).

@@ -1,5 +1,0 @@
-% Minimal failing case for debugging
-% Clause: qsort([], Rest?, Rest)
-% Should unify second and third arguments
-
-qsort([], Rest?, Rest).

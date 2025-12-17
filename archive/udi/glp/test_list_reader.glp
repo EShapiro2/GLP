@@ -1,3 +1,0 @@
-% Test: list with reader and writer  
-test([X?, Y], Z?) :- q(X, Y?, Z).
-q(a, b, c).

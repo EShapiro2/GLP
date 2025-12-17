@@ -1,7 +1,0 @@
-% sum_list direct execution only (renamed to avoid conflict with sum_list.glp)
-sumd(Xs, S?) :- sumd_acc(Xs?, 0, S).
-
-sumd_acc([], Acc, Acc?).
-sumd_acc([X|Xs], Acc, S?) :-
-  Acc1 := Acc? + X?,
-  sumd_acc(Xs?, Acc1?, S).

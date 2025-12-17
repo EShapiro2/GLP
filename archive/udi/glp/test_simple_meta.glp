@@ -1,6 +1,0 @@
-% Simple test - does variable in structure compile and work?
-
-helper(a).
-
-% Test: X as writer in head, reader in body
-test_simple(X) :- helper(X?).

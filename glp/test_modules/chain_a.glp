@@ -1,5 +1,0 @@
--module(chain_a).
--import([chain_b]).
--export([run/2]).
-
-run(X, Y?) :- chain_b # process(X?, P), Y := P?.

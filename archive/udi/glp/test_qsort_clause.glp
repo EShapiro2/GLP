@@ -1,2 +1,0 @@
-% Test the specific qsort clause
-qsort([], Rest?, Rest).

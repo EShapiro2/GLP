@@ -1,5 +1,0 @@
-% Minimal clause with [] in third position
-clause(foo(a, b, []), true).
-
-% Query that should bind Z to []
-test(Z?) :- clause(foo(a, b, Z), Body), true.
