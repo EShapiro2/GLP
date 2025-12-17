@@ -1,0 +1,14 @@
+%% relay.glp - Stream-Channel Relay
+%% Source: GLP Papers (Program: Stream-Channel Relay)
+%%
+%% Bidirectional relay between a stream pair and a channel.
+%% Uses send/3 and receive/3 as defined guards (automatically partially evaluated).
+
+%% Channel operations (defined guards)
+send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
+
+%% Relay: bidirectional stream-channel bridge
+relay([X|In1], Out, Ch) :- send(X?, Ch?, Ch1) | relay(In1?, Out?, Ch1?).
+relay(In, [X?|Out1?], Ch) :- receive(X, Ch?, Ch1) | relay(In?, Out1, Ch1?).
+relay([], [], ch([], [])).

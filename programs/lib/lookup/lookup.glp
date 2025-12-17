@@ -1,0 +1,22 @@
+%% lookup.glp - List Lookup Utilities
+%% Source: GLP Papers (referenced in social graph protocols)
+%%
+%% Lookup and lookup_send for friends list operations.
+
+%% lookup(Key, List, Value) - find value associated with key
+lookup(Key, [(K, Value)|_], Value?) :- Key? =?= K? | true.
+lookup(Key, [_|Rest], Value?) :-
+    otherwise | lookup(Key?, Rest?, Value).
+
+%% lookup_send(Key, Msg, Fs, Fs1) - send message through channel, update list
+%% Single-pass version that traverses list once (SRSW compliant)
+lookup_send(Key, Msg, Fs, Fs1?) :-
+    ground(Key?) |
+    lookup_send_step(Key?, Msg?, Fs?, Fs1).
+
+lookup_send_step(Key, Msg, [(K, Out)|Rest], [(K?, Out1?)|Rest?]) :-
+    Key? =?= K? |
+    Out? = [Msg?|Out1].
+lookup_send_step(Key, Msg, [Pair|Rest], [Pair?|Rest1?]) :-
+    otherwise |
+    lookup_send_step(Key?, Msg?, Rest?, Rest1).

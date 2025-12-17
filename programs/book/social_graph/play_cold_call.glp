@@ -1,0 +1,73 @@
+%% play_cold_call.glp - Multi-agent cold-call scenario test
+%% 4 players: Alice, Bob, Carol, Dave
+
+%% Round 1: Alice cold-calls Bob, Bob accepts
+%% Alice's view:
+test_alice_round1(AliceFs1, Resp1) :-
+    social_graph(alice,
+        [msg(user, alice, connect(bob))|AliceIn1],
+        [(user, AliceUser), (net, AliceNet)]),
+    %% Alice sends intro, waits for response
+    AliceNet = [msg(alice, bob, intro(alice, alice, Resp1))|_].
+
+%% Bob's view - receives intro, user accepts:
+test_bob_round1(BobFs1, Resp1) :-
+    social_graph(bob,
+        [msg(alice, bob, intro(alice, alice, Resp1)),
+         msg(user, bob, decision(yes, alice, Resp1))|BobIn1],
+        [(user, BobUser), (net, BobNet)]).
+    %% Bob now has alice in friends, Resp1 = accept(ch(...))
+
+%% Round 2: Carol cold-calls Dave, Dave accepts
+test_carol_round2(CarolFs1, Resp2) :-
+    social_graph(carol,
+        [msg(user, carol, connect(dave))|CarolIn1],
+        [(user, CarolUser), (net, CarolNet)]),
+    CarolNet = [msg(carol, dave, intro(carol, carol, Resp2))|_].
+
+test_dave_round2(DaveFs1, Resp2) :-
+    social_graph(dave,
+        [msg(carol, dave, intro(carol, carol, Resp2)),
+         msg(user, dave, decision(yes, carol, Resp2))|DaveIn1],
+        [(user, DaveUser), (net, DaveNet)]).
+
+%% Round 3: Bob cold-calls Carol, Carol accepts
+test_bob_round3(BobFs2, Resp3) :-
+    social_graph(bob,
+        [msg(user, bob, connect(carol))|BobIn2],
+        [(alice, AliceOut), (user, BobUser), (net, BobNet)]),
+    BobNet = [msg(bob, carol, intro(bob, bob, Resp3))|_].
+
+test_carol_round3(CarolFs2, Resp3) :-
+    social_graph(carol,
+        [msg(bob, carol, intro(bob, bob, Resp3)),
+         msg(user, carol, decision(yes, bob, Resp3))|CarolIn2],
+        [(dave, DaveOut), (user, CarolUser), (net, CarolNet)]).
+
+%% Round 4: Dave cold-calls Alice, Alice REJECTS
+test_dave_round4(DaveFs2, Resp4) :-
+    social_graph(dave,
+        [msg(user, dave, connect(alice))|DaveIn2],
+        [(carol, CarolOut), (user, DaveUser), (net, DaveNet)]),
+    DaveNet = [msg(dave, alice, intro(dave, dave, Resp4))|_].
+
+test_alice_round4(AliceFs2, Resp4) :-
+    social_graph(alice,
+        [msg(dave, alice, intro(dave, dave, Resp4)),
+         msg(user, alice, decision(no, dave, Resp4))|AliceIn2],
+        [(bob, BobOut), (user, AliceUser), (net, AliceNet)]).
+    %% Resp4 = no, Dave NOT added to alice's friends
+
+%% Round 5: Alice cold-calls Carol, Carol accepts
+test_alice_round5(AliceFs3, Resp5) :-
+    social_graph(alice,
+        [msg(user, alice, connect(carol))|AliceIn3],
+        [(bob, BobOut), (user, AliceUser), (net, AliceNet)]),
+    AliceNet = [msg(alice, carol, intro(alice, alice, Resp5))|_].
+
+test_carol_round5(CarolFs3, Resp5) :-
+    social_graph(carol,
+        [msg(alice, carol, intro(alice, alice, Resp5)),
+         msg(user, carol, decision(yes, alice, Resp5))|CarolIn3],
+        [(bob, BobOut), (dave, DaveOut), (user, CarolUser), (net, CarolNet)]).
+    %% Carol now has 3 friends: bob, dave, alice

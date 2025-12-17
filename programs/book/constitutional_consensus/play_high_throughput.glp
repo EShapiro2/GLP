@@ -1,0 +1,90 @@
+%% play_high_throughput.glp - High-throughput consensus scenario
+%% Multiple transactions create conflict, formal leader resolves
+
+:- include(consensus).
+
+%% ============================================
+%% The Play
+%% ============================================
+
+%% Scenario: Alice and Bob both propose in the same round (conflict)
+%% Formal leader (Alice for wave 1) wins, Bob retries in wave 2
+
+play_high_throughput(Result) :-
+    Participants = [alice, bob, carol],
+    
+    %% Genesis block
+    Genesis = block(0, genesis(Participants?, 0.5, 1000), []),
+    
+    %% Wave 1, Round 1: CONFLICT - both Alice and Bob propose
+    AliceR1 = block(1, tx_a, [Genesis?]),
+    BobR1 = block(1, tx_b, [Genesis?]),
+    
+    %% Alice is leader for wave 1 (index 0 mod 3 = alice)
+    %% All endorse Alice's block (leader)
+    AliceR2 = block(2, empty, [AliceR1?]),
+    BobR2 = block(2, empty, [AliceR1?]),
+    CarolR2 = block(2, empty, [AliceR1?]),
+    
+    %% All ratify
+    AliceR3 = block(3, empty, [AliceR2?, BobR2?, CarolR2?]),
+    BobR3 = block(3, empty, [AliceR2?, BobR2?, CarolR2?]),
+    CarolR3 = block(3, empty, [AliceR2?, BobR2?, CarolR2?]),
+    
+    %% Wave 2: Bob retries (now no conflict)
+    BobR4 = block(4, tx_b, [AliceR3?, BobR3?, CarolR3?]),
+    
+    %% All endorse Bob
+    AliceR5 = block(5, empty, [BobR4?]),
+    BobR5 = block(5, empty, [BobR4?]),
+    CarolR5 = block(5, empty, [BobR4?]),
+    
+    %% All ratify
+    AliceR6 = block(6, empty, [AliceR5?, BobR5?, CarolR5?]),
+    BobR6 = block(6, empty, [AliceR5?, BobR5?, CarolR5?]),
+    CarolR6 = block(6, empty, [AliceR5?, BobR5?, CarolR5?]),
+    
+    %% Build blocklace
+    Blocklace = [AliceR6?, BobR6?, CarolR6?,
+                 AliceR5?, BobR5?, CarolR5?,
+                 BobR4?,
+                 AliceR3?, BobR3?, CarolR3?,
+                 AliceR2?, BobR2?, CarolR2?,
+                 AliceR1?, BobR1?,
+                 Genesis?],
+    
+    %% Compute finalized sequence
+    tau(Blocklace?, Participants?, Sequence),
+    
+    %% Verify: tx_a first (leader), then tx_b
+    verify_high_throughput(Sequence?, Result).
+
+verify_high_throughput([tx_a, tx_b], passed).
+verify_high_throughput(Other, failed(expected_tx_a_tx_b, got(Other?))).
+
+%% ============================================
+%% Test conflict detection
+%% ============================================
+
+test_conflict(Result) :-
+    Genesis = block(0, genesis, []),
+    B1 = block(1, tx_a, [Genesis?]),
+    B2 = block(1, tx_b, [Genesis?]),
+    Blocklace = [B1?, B2?, Genesis?],
+    check_conflict(1, Blocklace?, Result).
+
+check_conflict(Round, Blocklace, passed) :-
+    has_conflict(Round?, Blocklace?) | true.
+check_conflict(_, _, failed) :-
+    otherwise | true.
+
+test_no_conflict(Result) :-
+    Genesis = block(0, genesis, []),
+    B1 = block(1, tx_a, [Genesis?]),
+    Blocklace = [B1?, Genesis?],
+    check_no_conflict(1, Blocklace?, Result).
+
+check_no_conflict(Round, Blocklace, passed) :-
+    no_conflict(Round?, Blocklace?) | true.
+check_no_conflict(_, _, failed) :-
+    otherwise | true.

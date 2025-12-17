@@ -1,0 +1,40 @@
+%% test_switch2.glp - Switch test with destination routing
+
+%% Route ONLY bob messages (single clause test)
+route_bob_only([msg(Src, Dst, Content)|Rest], A, [msg(Src?, bob, Content?)|B1?]) :-
+    Dst? = bob |
+    route_bob_only(Rest?, A?, B1).
+route_bob_only([], [], []).
+
+%% Even simpler - just check destination
+check_bob([msg(_, Dst, _)|_]) :-
+    Dst? = bob |
+    true.
+check_bob([]) :- true.
+
+%% Route by destination using guard test
+%% Dest=alice goes to A, Dest=bob goes to B
+%% Use literal atom in output (since guard confirms the value)
+route([msg(Src, Dst, Content)|Rest], [msg(Src?, alice, Content?)|A1?], B) :-
+    Dst? = alice |
+    route(Rest?, A1, B?).
+route([msg(Src, Dst, Content)|Rest], A, [msg(Src?, bob, Content?)|B1?]) :-
+    Dst? = bob |
+    route(Rest?, A?, B1).
+route([], [], []).
+
+%% Test: message to bob should go to B
+test_bob(A?, B?) :-
+    route([msg(alice, bob, hello)], A, B).
+
+%% Test: message to alice should go to A
+test_alice(A?, B?) :-
+    route([msg(bob, alice, hello)], A, B).
+
+%% Simple struct match test
+match_foo(foo(X), X?).
+test_foo(Y?) :- match_foo(foo(hello), Y).
+
+%% Test: unpack msg struct
+unpack_msg(msg(S, D, C), S?, D?, C?).
+test_unpack(S?, D?, C?) :- unpack_msg(msg(alice, bob, hello), S, D, C).

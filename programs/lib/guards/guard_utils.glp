@@ -1,0 +1,14 @@
+%% guard_utils.glp - Common Guard Utilities
+%% Source: GLP Papers (various programs)
+%%
+%% Commonly used guard predicates.
+
+%% Ground check - succeeds when term contains no unbound variables
+%% ground(X) is built-in
+
+%% Known/unknown checks for synchronization
+%% known(X?) succeeds if X is bound
+%% unknown(X?) succeeds if X is unbound (follows binding chains)
+
+%% Otherwise guard - succeeds if no other clause matches
+%% otherwise is built-in

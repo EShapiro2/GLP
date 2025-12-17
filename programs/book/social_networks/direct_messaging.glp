@@ -1,0 +1,23 @@
+%% direct_messaging.glp - Direct Messaging Channel Establishment
+%% Source: GLP Papers (Program: Direct Messaging Channel Establishment)
+%%
+%% Establishes dedicated conversation channels between friends,
+%% separate from protocol control channels.
+
+% Modified establishment for direct messaging
+% Secure version - verifies DM channel attestation
+establish(yes, From, Resp, Fs, Fs1, In, In1) :-
+    new_channel(ch(FIn, FOut), FCh),
+    new_channel(ch(DMIn, DMOut), DMCh),
+    Resp = accept(FCh, DMCh),
+    attestation(DMCh, att(From, _)) |  % Verify DM channel from authenticated friend
+    handle_friend(From?, FIn?, FOut?, DMIn?, DMOut?, Fs?, Fs1, In?, In1).
+
+handle_friend(From, FIn, FOut, DMIn, DMOut, Fs,
+             [(From, FOut), (dm(From), DMOut)|Fs], In, In1) :-
+    tag_stream(From?, FIn?, Tagged),
+    merge(In?, Tagged?, In1),
+    forward_to_app(dm_channel(From?, DMIn?)).
+
+%% The protocol maintains separation between control and messaging channels.
+%% Each DM message carries attestation for non-repudiation.

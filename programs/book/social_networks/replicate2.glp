@@ -1,0 +1,7 @@
+%% replicate2.glp - Binary stream replication
+%% Replicates a stream to two outputs
+
+replicate2(X, X?, X?) :- ground(X?) | true.
+replicate2([X|Xs], [Y1?|Ys1?], [Y2?|Ys2?]) :-
+    replicate2(X?, Y1, Y2),
+    replicate2(Xs?, Ys1, Ys2).

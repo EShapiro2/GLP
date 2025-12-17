@@ -1,0 +1,20 @@
+%% test_reader_binding.glp - Focus on Resp sharing
+
+%% Intro: extracts Resp, passes Resp? somewhere
+agent([intro(From, Resp)|In], Out?) :-
+    ground(From?) |
+    use_resp(Resp?),
+    agent(In?, Out).
+
+%% Decision: extracts Resp?, binds it
+agent([decision(Dec, From, Resp?)|In], Out?) :-
+    bind_resp(Dec?, From?, Resp),
+    agent(In?, Out1),
+    Out = done(Out1?).
+
+agent([], done).
+
+use_resp(_) :- true.
+
+bind_resp(no, _, no).
+bind_resp(yes, F, accept(F?)).

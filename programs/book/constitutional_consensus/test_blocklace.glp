@@ -1,0 +1,131 @@
+%% test_blocklace.glp - Unit tests for blocklace operations
+
+:- include(consensus).
+
+%% ============================================
+%% Block Query Tests
+%% ============================================
+
+test_blocks_at_round(Result) :-
+    Genesis = block(0, genesis, []),
+    B1 = block(1, tx_a, [Genesis?]),
+    B2 = block(1, tx_b, [Genesis?]),
+    B3 = block(2, empty, [B1?]),
+    Blocklace = [B3?, B2?, B1?, Genesis?],
+    
+    blocks_at_round(1, Blocklace?, R1Blocks),
+    blocks_at_round(2, Blocklace?, R2Blocks),
+    blocks_at_round(0, Blocklace?, R0Blocks),
+    
+    length(R1Blocks?, L1),
+    length(R2Blocks?, L2),
+    length(R0Blocks?, L0),
+    
+    check_block_counts(L1?, L2?, L0?, Result).
+
+check_block_counts(2, 1, 1, passed).
+check_block_counts(L1, L2, L0, failed(L1?, L2?, L0?)) :-
+    otherwise | true.
+
+test_nonempty_blocks(Result) :-
+    Genesis = block(0, genesis, []),
+    B1 = block(1, tx_a, [Genesis?]),
+    B2 = block(1, empty, [Genesis?]),
+    Blocklace = [B2?, B1?, Genesis?],
+    
+    nonempty_blocks_at_round(1, Blocklace?, NonEmpty),
+    length(NonEmpty?, L),
+    
+    check_nonempty_count(L?, Result).
+
+check_nonempty_count(1, passed).
+check_nonempty_count(L, failed(L?)) :-
+    otherwise | true.
+
+test_max_round(Result) :-
+    Genesis = block(0, genesis, []),
+    B1 = block(1, tx_a, [Genesis?]),
+    B2 = block(2, empty, [B1?]),
+    B3 = block(3, empty, [B2?]),
+    
+    Blocklace1 = [Genesis?],
+    Blocklace2 = [B1?, Genesis?],
+    Blocklace3 = [B3?, B2?, B1?, Genesis?],
+    
+    max_round(Blocklace1?, M1),
+    max_round(Blocklace2?, M2),
+    max_round(Blocklace3?, M3),
+    
+    check_max_rounds(M1?, M2?, M3?, Result).
+
+check_max_rounds(0, 1, 3, passed).
+check_max_rounds(M1, M2, M3, failed(M1?, M2?, M3?)) :-
+    otherwise | true.
+
+%% ============================================
+%% Conflict Detection Tests  
+%% ============================================
+
+test_conflict_detection(Result) :-
+    Genesis = block(0, genesis, []),
+    
+    %% No conflict: single block
+    B1 = block(1, tx_a, [Genesis?]),
+    Blocklace1 = [B1?, Genesis?],
+    check_no_conflict(1, Blocklace1?, R1),
+    
+    %% No conflict: empty blocks don't count
+    B2 = block(1, empty, [Genesis?]),
+    Blocklace2 = [B2?, B1?, Genesis?],
+    check_no_conflict(1, Blocklace2?, R2),  %% Only one non-empty
+    
+    %% Conflict: two non-empty blocks
+    B3 = block(1, tx_b, [Genesis?]),
+    Blocklace3 = [B3?, B1?, Genesis?],
+    check_has_conflict(1, Blocklace3?, R3),
+    
+    combine_results3(R1?, R2?, R3?, Result).
+
+check_no_conflict(Round, Blocklace, passed) :-
+    no_conflict(Round?, Blocklace?) | true.
+check_no_conflict(_, _, failed) :-
+    otherwise | true.
+
+check_has_conflict(Round, Blocklace, passed) :-
+    has_conflict(Round?, Blocklace?) | true.
+check_has_conflict(_, _, failed) :-
+    otherwise | true.
+
+combine_results3(passed, passed, passed, passed).
+combine_results3(R1, R2, R3, failed(R1?, R2?, R3?)) :-
+    otherwise | true.
+
+%% ============================================
+%% Single Candidate Tests
+%% ============================================
+
+test_single_candidate(Result) :-
+    Genesis = block(0, genesis, []),
+    B1 = block(1, tx_a, [Genesis?]),
+    Blocklace = [B1?, Genesis?],
+    
+    single_candidate(1, Blocklace?, Candidate),
+    check_candidate(Candidate?, B1?, Result).
+
+check_candidate(C, B, passed) :-
+    C? =?= B? | true.
+check_candidate(_, _, failed) :-
+    otherwise | true.
+
+%% ============================================
+%% Run All Tests
+%% ============================================
+
+test_blocklace(Results) :-
+    test_blocks_at_round(R1),
+    test_nonempty_blocks(R2),
+    test_max_round(R3),
+    test_conflict_detection(R4),
+    test_single_candidate(R5),
+    Results = [blocks_at_round(R1?), nonempty(R2?), max_round(R3?),
+               conflict(R4?), single_candidate(R5?)].

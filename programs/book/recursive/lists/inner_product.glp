@@ -1,0 +1,10 @@
+%% inner_product.glp - Computing inner products of vectors (AoP 8.7a)
+%% inner_product(Xs,Ys,Value) :- Value is the inner product of vectors Xs and Ys.
+
+inner_product([X|Xs], [Y|Ys], IP) :-
+    inner_product(Xs?, Ys?, IP1), IP := X? * Y? + IP1?.
+inner_product([], [], 0).
+
+%% reduce clauses for metainterpreter
+reduce(inner_product([X|Xs], [Y|Ys], IP), (inner_product(Xs?, Ys?, IP1), IP := X? * Y? + IP1?)).
+reduce(inner_product([], [], 0), true).

@@ -1,0 +1,10 @@
+% Simulates the bind_response(no, ...) clause - passthrough
+bind_no(no, Fs, Fs?, In, In?).
+
+% Test with bound structure containing unbound parts
+% Fs is bound to [(bob, BobCh) | Tail?] where BobCh and Tail are unbound
+test_bind_struct(FsOut?, InOut?) :-
+    bind_no(no, [(bob, BobCh?) | Tail?], FsOut, [msg1 | InTail?], InOut),
+    BobCh = done,
+    Tail = [],
+    InTail = [].

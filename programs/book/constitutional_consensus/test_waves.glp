@@ -1,0 +1,119 @@
+%% test_waves.glp - Unit tests for wave and round utilities
+
+:- include(consensus).
+
+%% ============================================
+%% Wave/Round Tests
+%% ============================================
+
+test_wave_of_round(Result) :-
+    wave_of_round(1, W1), 
+    wave_of_round(2, W2), 
+    wave_of_round(3, W3), 
+    wave_of_round(4, W4), 
+    wave_of_round(5, W5), 
+    wave_of_round(6, W6), 
+    wave_of_round(7, W7),
+    check_waves(W1?, W2?, W3?, W4?, W5?, W6?, W7?, Result).
+
+check_waves(1, 1, 1, 2, 2, 2, 3, passed).
+check_waves(W1, W2, W3, W4, W5, W6, W7, failed(W1?, W2?, W3?, W4?, W5?, W6?, W7?)) :-
+    otherwise | true.
+
+test_round_in_wave(Result) :-
+    round_in_wave(1, P1), 
+    round_in_wave(2, P2), 
+    round_in_wave(3, P3), 
+    round_in_wave(4, P4), 
+    round_in_wave(5, P5), 
+    round_in_wave(6, P6),
+    check_positions(P1?, P2?, P3?, P4?, P5?, P6?, Result).
+
+check_positions(1, 2, 3, 1, 2, 3, passed).
+check_positions(P1, P2, P3, P4, P5, P6, failed(P1?, P2?, P3?, P4?, P5?, P6?)) :-
+    otherwise | true.
+
+test_first_round_of_wave(Result) :-
+    first_round_of_wave(1, R1), 
+    first_round_of_wave(2, R2), 
+    first_round_of_wave(3, R3),
+    check_first_rounds(R1?, R2?, R3?, Result).
+
+check_first_rounds(1, 4, 7, passed).
+check_first_rounds(R1, R2, R3, failed(R1?, R2?, R3?)) :-
+    otherwise | true.
+
+%% ============================================
+%% Leader Selection Tests
+%% ============================================
+
+test_leader_selection(Result) :-
+    Participants = [alice, bob, carol],
+    leader_of_wave(1, Participants?, L1), 
+    leader_of_wave(2, Participants?, L2), 
+    leader_of_wave(3, Participants?, L3), 
+    leader_of_wave(4, Participants?, L4),
+    check_leaders(L1?, L2?, L3?, L4?, Result).
+
+check_leaders(alice, bob, carol, alice, passed).
+check_leaders(L1, L2, L3, L4, failed(L1?, L2?, L3?, L4?)) :-
+    otherwise | true.
+
+test_is_leader(Result) :-
+    Participants = [alice, bob, carol],
+    check_is_leader(alice, 1, Participants?, R1),
+    check_is_leader(bob, 2, Participants?, R2),
+    check_is_leader(carol, 3, Participants?, R3),
+    combine_results(R1?, R2?, R3?, Result).
+
+check_is_leader(Agent, Wave, Participants, passed) :-
+    is_leader(Agent?, Wave?, Participants?) | true.
+check_is_leader(_, _, _, failed) :-
+    otherwise | true.
+
+combine_results(passed, passed, passed, passed).
+combine_results(R1, R2, R3, failed(R1?, R2?, R3?)) :-
+    otherwise | true.
+
+%% ============================================
+%% Majority Tests
+%% ============================================
+
+test_majority(Result) :-
+    check_majority(2, 3, R1),  %% 2 > 3/2 = 1, yes
+    check_majority(3, 5, R2),  %% 3 > 5/2 = 2, yes
+    check_majority(51, 100, R3),  %% 51 > 50, yes
+    combine_results(R1?, R2?, R3?, Result).
+
+check_majority(Count, Total, passed) :-
+    is_majority(Count?, Total?) | true.
+check_majority(_, _, failed) :-
+    otherwise | true.
+
+test_not_majority(Result) :-
+    check_not_majority(1, 3, R1),  %% 1 > 1, no
+    check_not_majority(2, 5, R2),  %% 2 > 2, no
+    check_not_majority(50, 100, R3),  %% 50 > 50, no
+    combine_results(R1?, R2?, R3?, Result).
+
+check_not_majority(Count, Total, passed) :-
+    is_majority(Count?, Total?) | 
+    failed.  %% Should not reach here
+check_not_majority(_, _, passed) :-
+    otherwise | true.
+
+%% ============================================
+%% Run All Tests
+%% ============================================
+
+test_waves(Results) :-
+    test_wave_of_round(R1),
+    test_round_in_wave(R2),
+    test_first_round_of_wave(R3),
+    test_leader_selection(R4),
+    test_is_leader(R5),
+    test_majority(R6),
+    test_not_majority(R7),
+    Results = [wave_of_round(R1?), round_in_wave(R2?), first_round(R3?),
+               leader_selection(R4?), is_leader(R5?), 
+               majority(R6?), not_majority(R7?)].

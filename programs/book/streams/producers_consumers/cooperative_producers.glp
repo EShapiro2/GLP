@@ -1,0 +1,23 @@
+%% cooperative_producers.glp - Cooperative stream production
+%% Source: GLP Papers (Program: Cooperative Producers)
+%%
+%% While single-writer constraint prevents competitive concurrent updates,
+%% GLP enables sophisticated cooperative techniques where multiple producers
+%% coordinate through explicit handover.
+%%
+%% control(Xs,Next) encapsulates both stream tail writer and continuation
+%% for transferring control, enabling round-robin production, priority-based
+%% handover, or dynamic producer pools.
+
+producer_a(control(Xs,Next)) :-
+    produce_batch_a(Xs,Xs1,Done),
+    handover(Done?,Xs1,Next).
+
+producer_b(control(Xs,Next)) :-
+    produce_batch_b(Xs,Xs1,Done),
+    handover(Done?,Xs1,Next).
+
+handover(done,Xs,control(Xs,Next)).
+
+produce_batch_a([a,b,c|Xs],Xs,done).
+produce_batch_b([d,e,f|Xs],Xs,done).

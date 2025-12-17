@@ -1,0 +1,13 @@
+% Test MutualRef: O(1) stream append
+
+% Build a stream [1,2,3] using MutualRef
+build_stream(Xs) :-
+    mutual_ref(Xs, Ref),
+    append_items(Ref?).
+
+append_items(Ref) :-
+    mutual_ref(Ref?) |
+    stream_append(Ref?, 1, _),
+    stream_append(Ref?, 2, _),
+    stream_append(Ref?, 3, _),
+    mutual_ref_close(Ref?).

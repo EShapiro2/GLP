@@ -1,0 +1,2 @@
+%% Ground constant in simple structure
+test_struct(foo(1)) :- true.

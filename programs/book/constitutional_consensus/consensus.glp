@@ -1,0 +1,364 @@
+%% consensus.glp - Constitutional Consensus
+%% Implementation of single-epoch Constitutional Consensus for GLP
+%% Reference: Constitutional Consensus paper (arXiv:2505.19216)
+
+%% ============================================
+%% Block Structure
+%% ============================================
+
+%% block(Round, Payload, Pointers)
+%% - Round: integer, determines position in wave
+%% - Payload: transaction or 'empty' for endorsement/ratification
+%% - Pointers: list of observed block references
+
+%% ============================================
+%% Wave and Round Utilities
+%% ============================================
+
+%% Wave number from round (waves are 1-indexed, rounds are 1-indexed)
+wave_of_round(Round, Wave) :-
+    Wave := (Round? - 1) // 3 + 1.
+
+%% Round position within wave (1, 2, or 3)
+round_in_wave(Round, Pos) :-
+    Pos := ((Round? - 1) mod 3) + 1.
+
+%% First round of a wave
+first_round_of_wave(Wave, Round) :-
+    Round := (Wave? - 1) * 3 + 1.
+
+%% ============================================
+%% Leader Selection (Round-Robin)
+%% ============================================
+
+%% Leader for a given wave
+leader_of_wave(Wave, Participants, Leader) :-
+    length(Participants?, N),
+    Index := (Wave? - 1) mod N?,
+    nth0(Index?, Participants?, Leader).
+
+%% Check if agent is leader for wave
+is_leader(Agent, Wave, Participants) :-
+    leader_of_wave(Wave?, Participants?, Leader),
+    Agent? =?= Leader? | true.
+
+%% ============================================
+%% Blocklace Operations
+%% ============================================
+
+%% Add block to blocklace
+add_block(Block, Blocklace, [Block?|Blocklace?]).
+
+%% Get all blocks at a given round
+blocks_at_round(_, [], []).
+blocks_at_round(Round, [block(R, P, Ptrs)|Bs], [block(R?, P?, Ptrs?)|Rest?]) :-
+    R? =:= Round? |
+    blocks_at_round(Round?, Bs?, Rest).
+blocks_at_round(Round, [block(R, _, _)|Bs], Rest?) :-
+    R? =\= Round? |
+    blocks_at_round(Round?, Bs?, Rest).
+
+%% Get non-empty blocks at round
+nonempty_blocks_at_round(Round, Blocklace, NonEmpty) :-
+    blocks_at_round(Round?, Blocklace?, All),
+    filter_nonempty(All?, NonEmpty).
+
+filter_nonempty([], []).
+filter_nonempty([block(R, empty, P)|Bs], Rest?) :-
+    filter_nonempty(Bs?, Rest).
+filter_nonempty([block(R, Payload, P)|Bs], [block(R?, Payload?, P?)|Rest?]) :-
+    ~(Payload? =?= empty) |
+    filter_nonempty(Bs?, Rest).
+
+%% Count blocks from distinct agents
+count_distinct_agents([], 0).
+count_distinct_agents([_|Bs], N) :-
+    count_distinct_agents(Bs?, M),
+    N := M? + 1.
+
+%% Get tips (blocks with no successors pointing to them)
+%% Simplified: just return all blocks at highest round
+tips(Blocklace, Tips) :-
+    max_round(Blocklace?, MaxR),
+    blocks_at_round(MaxR?, Blocklace?, Tips).
+
+max_round([], 0).
+max_round([block(R, _, _)|Bs], Max) :-
+    max_round(Bs?, RestMax),
+    R? >= RestMax? |
+    Max := R?.
+max_round([block(R, _, _)|Bs], Max?) :-
+    max_round(Bs?, RestMax),
+    R? < RestMax? |
+    Max = RestMax?.
+
+%% ============================================
+%% Majority Checking
+%% ============================================
+
+%% Simple majority: more than half
+is_majority(Count, Total) :-
+    Threshold := Total? // 2,
+    Count? > Threshold? | true.
+
+%% Check if we have majority of participants
+has_majority(Blocks, Participants) :-
+    count_distinct_agents(Blocks?, Count),
+    length(Participants?, Total),
+    is_majority(Count?, Total?).
+
+%% ============================================
+%% Conflict Detection
+%% ============================================
+
+%% Round has conflict if multiple non-empty blocks
+has_conflict(Round, Blocklace) :-
+    nonempty_blocks_at_round(Round?, Blocklace?, NonEmpty),
+    length(NonEmpty?, N),
+    N? > 1 | true.
+
+%% No conflict: zero or one non-empty block
+no_conflict(Round, Blocklace) :-
+    nonempty_blocks_at_round(Round?, Blocklace?, NonEmpty),
+    length(NonEmpty?, N),
+    N? =< 1 | true.
+
+%% ============================================
+%% Endorsement and Ratification
+%% ============================================
+
+%% Get the single candidate (if no conflict)
+single_candidate(Round, Blocklace, Candidate) :-
+    no_conflict(Round?, Blocklace?),
+    nonempty_blocks_at_round(Round?, Blocklace?, [Candidate?]).
+
+%% Check if block is endorsed by majority
+%% An endorsement is a round 2 block pointing to the candidate
+endorsements_for(Candidate, Blocklace, Endorsements) :-
+    Candidate = block(R1, _, _),
+    wave_of_round(R1?, Wave),
+    first_round_of_wave(Wave?, R1Check),
+    R2 := R1Check? + 1,
+    blocks_at_round(R2?, Blocklace?, R2Blocks),
+    filter_endorsing(Candidate?, R2Blocks?, Endorsements).
+
+filter_endorsing(_, [], []).
+filter_endorsing(Candidate, [block(R, _, Ptrs)|Bs], [block(R?, _, Ptrs?)|Rest?]) :-
+    member(Candidate?, Ptrs?) |
+    filter_endorsing(Candidate?, Bs?, Rest).
+filter_endorsing(Candidate, [block(R, _, Ptrs)|Bs], Rest?) :-
+    otherwise |
+    filter_endorsing(Candidate?, Bs?, Rest).
+
+%% Check if block has majority ratification
+ratifications_for(Candidate, Blocklace, Ratifications) :-
+    Candidate = block(R1, _, _),
+    wave_of_round(R1?, Wave),
+    first_round_of_wave(Wave?, R1Check),
+    R3 := R1Check? + 2,
+    blocks_at_round(R3?, Blocklace?, R3Blocks),
+    filter_ratifying(Candidate?, R3Blocks?, Blocklace?, Ratifications).
+
+filter_ratifying(_, [], _, []).
+filter_ratifying(Candidate, [B|Bs], Blocklace, [B?|Rest?]) :-
+    ratifies_candidate(B?, Candidate?, Blocklace?) |
+    filter_ratifying(Candidate?, Bs?, Blocklace?, Rest).
+filter_ratifying(Candidate, [B|Bs], Blocklace, Rest?) :-
+    otherwise |
+    filter_ratifying(Candidate?, Bs?, Blocklace?, Rest).
+
+%% A block ratifies candidate if it points to an endorsement of candidate
+ratifies_candidate(block(_, _, Ptrs), Candidate, Blocklace) :-
+    member(Endorsement?, Ptrs?),
+    member(Endorsement?, Blocklace?),
+    Endorsement = block(_, _, EPtrs),
+    member(Candidate?, EPtrs?) | true.
+
+%% ============================================
+%% Finality
+%% ============================================
+
+%% A block is finalized when it has majority endorsement and ratification
+is_finalized(Block, Blocklace, Participants) :-
+    endorsements_for(Block?, Blocklace?, Endorsements),
+    has_majority(Endorsements?, Participants?),
+    ratifications_for(Block?, Blocklace?, Ratifications),
+    has_majority(Ratifications?, Participants?).
+
+%% Find all finalized blocks
+find_finalized([], _, []).
+find_finalized([B|Bs], Participants, [B?|Rest?]) :-
+    B = block(R, Payload, _),
+    round_in_wave(R?, Pos),
+    Pos? =:= 1,
+    ~(Payload? =?= empty),
+    is_finalized(B?, [B?|Bs?], Participants?) |
+    find_finalized(Bs?, Participants?, Rest).
+find_finalized([B|Bs], Participants, Rest?) :-
+    B = block(R, _, _),
+    round_in_wave(R?, Pos),
+    Pos? =\= 1 |
+    find_finalized(Bs?, Participants?, Rest).
+find_finalized([B|Bs], Participants, Rest?) :-
+    B = block(_, empty, _) |
+    find_finalized(Bs?, Participants?, Rest).
+
+%% ============================================
+%% Quiescence
+%% ============================================
+
+%% A wave is quiescent if all its blocks are empty
+is_quiescent_wave(Wave, Blocklace) :-
+    first_round_of_wave(Wave?, R1),
+    R2 := R1? + 1,
+    R3 := R2? + 1,
+    nonempty_blocks_at_round(R1?, Blocklace?, []),
+    nonempty_blocks_at_round(R2?, Blocklace?, []),
+    nonempty_blocks_at_round(R3?, Blocklace?, []).
+
+%% ============================================
+%% Mode Management
+%% ============================================
+
+%% Determine mode based on blocklace state
+determine_mode(Blocklace, low) :-
+    max_round(Blocklace?, MaxR),
+    wave_of_round(MaxR?, Wave),
+    PrevWave := Wave? - 1,
+    PrevWave? > 0,
+    is_quiescent_wave(PrevWave?, Blocklace?) | true.
+determine_mode(Blocklace, low) :-
+    max_round(Blocklace?, MaxR),
+    MaxR? =< 3 | true.  %% First wave, start in low
+determine_mode(_, high) :- otherwise | true.
+
+%% ============================================
+%% Timeout Handling
+%% ============================================
+
+%% Wait for leader block or timeout
+%% wait/1 is a guard that suspends for Duration milliseconds
+wait_for_leader(Timeout, Block, timeout) :-
+    wait(Timeout?) | 
+    unknown(Block?) | true.
+wait_for_leader(_, Block, Block?) :-
+    known(Block?) | true.
+
+%% ============================================
+%% Agent Process
+%% ============================================
+
+%% Agent state: state(Blocklace, Mode, Participants, Pending, MyId)
+
+agent([], State, [], Finalized) :-
+    State = state(B?, _, Participants?, _, _),
+    find_finalized(B?, Participants?, Finalized).
+
+agent([Event|Events], State, OutStream, Finalized) :-
+    handle_event(Event?, State?, State1, OutStream?, OutStream1),
+    agent(Events?, State1?, OutStream1?, Finalized?).
+
+%% ============================================
+%% Event Handlers
+%% ============================================
+
+%% Receive a block from another participant
+handle_event(receive(Block), State, State1, Out, Out?) :-
+    State = state(B, Mode, P, Pend, MyId),
+    add_block(Block?, B?, B1),
+    determine_mode(B1?, Mode1),
+    State1 = state(B1?, Mode1?, P?, Pend?, MyId?).
+
+%% Submit a transaction to be proposed
+handle_event(submit(Tx), State, State1, Out, Out?) :-
+    State = state(B, Mode, P, Pend, MyId),
+    append(Pend?, [Tx?], Pend1),
+    State1 = state(B?, Mode?, P?, Pend1?, MyId?).
+
+%% Advance round (trigger block creation)
+handle_event(advance(Round), State, State1, Out, Out1) :-
+    State = state(B, Mode, P, Pend, MyId),
+    create_block(Round?, Mode?, B?, P?, Pend?, MyId?, Block, Pend1),
+    add_block(Block?, B?, B1),
+    determine_mode(B1?, Mode1),
+    Out = [Block? | Out1?],
+    State1 = state(B1?, Mode1?, P?, Pend1?, MyId?).
+
+%% Timeout (proceed without leader)
+handle_event(timeout(Round), State, State1, Out, Out1) :-
+    handle_event(advance(Round?), State?, State1, Out?, Out1).
+
+%% ============================================
+%% Block Creation
+%% ============================================
+
+%% Create block based on mode and round position
+create_block(Round, Mode, Blocklace, Participants, Pending, MyId, Block, PendOut) :-
+    round_in_wave(Round?, Pos),
+    tips(Blocklace?, Tips),
+    create_block_by_pos(Pos?, Round?, Mode?, Blocklace?, Participants?, 
+                        Pending?, MyId?, Tips?, Block, PendOut).
+
+%% Round 1: Propose transaction (if any)
+create_block_by_pos(1, Round, low, _, _, [Tx|Rest], _, Tips, 
+                    block(Round?, Tx?, Tips?), Rest?).
+create_block_by_pos(1, Round, low, _, _, [], _, Tips,
+                    block(Round?, empty, Tips?), []).
+
+%% Round 1 high-throughput: only leader proposes
+create_block_by_pos(1, Round, high, _, Participants, [Tx|Rest], MyId, Tips,
+                    block(Round?, Tx?, Tips?), Rest?) :-
+    wave_of_round(Round?, Wave),
+    is_leader(MyId?, Wave?, Participants?) | true.
+create_block_by_pos(1, Round, high, _, Participants, Pending, MyId, Tips,
+                    block(Round?, empty, Tips?), Pending?) :-
+    otherwise | true.
+
+%% Round 2: Endorse
+create_block_by_pos(2, Round, _, _, _, Pending, _, Tips,
+                    block(Round?, empty, Tips?), Pending?).
+
+%% Round 3: Ratify
+create_block_by_pos(3, Round, _, _, _, Pending, _, Tips,
+                    block(Round?, empty, Tips?), Pending?).
+
+%% ============================================
+%% Tau: Ordering Function
+%% ============================================
+
+%% Compute ordered sequence of finalized payloads
+tau(Blocklace, Participants, Sequence) :-
+    find_finalized(Blocklace?, Participants?, Finalized),
+    order_by_wave(Finalized?, Ordered),
+    extract_payloads(Ordered?, Sequence).
+
+order_by_wave(Blocks, Blocks?).
+    %% Simplified: blocks already roughly ordered by round
+
+extract_payloads([], []).
+extract_payloads([block(_, Payload, _)|Bs], [Payload?|Rest?]) :-
+    ~(Payload? =?= empty) |
+    extract_payloads(Bs?, Rest).
+extract_payloads([block(_, empty, _)|Bs], Rest?) :-
+    extract_payloads(Bs?, Rest).
+
+%% ============================================
+%% Helper: List Operations
+%% ============================================
+
+member(X, [X?|_]).
+member(X?, [_|Xs]) :- member(X, Xs?).
+
+append([], Ys, Ys?).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
+
+length([], 0).
+length([_|Xs], N) :-
+    length(Xs?, M),
+    N := M? + 1.
+
+nth0(0, [X|_], X?).
+nth0(N, [_|Xs], X?) :-
+    N? > 0 |
+    M := N? - 1,
+    nth0(M?, Xs?, X).

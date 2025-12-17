@@ -1,0 +1,25 @@
+%% heapify.glp - Adjusting a binary tree to satisfy the heap property (AoP 3.28)
+%% heapify(Tree,Heap) :- Heap has the same elements as Tree but satisfies the heap property.
+
+heapify(void, void).
+heapify(tree(X, L, R), Heap) :-
+    heapify(L?, HeapL), heapify(R?, HeapR), adjust(X?, HeapL?, HeapR?, Heap).
+
+adjust(X, HeapL, HeapR, tree(X, HeapL, HeapR)) :-
+    greater(X?, HeapL?) | greater(X?, HeapR?).
+adjust(X, tree(X1, L, R), HeapR, tree(X1, HeapL, HeapR)) :-
+    X? < X1?, greater(X1?, HeapR?) | adjust(X?, L?, R?, HeapL).
+adjust(X, HeapL, tree(X1, L, R), tree(X1, HeapL, HeapR)) :-
+    X? < X1?, greater(X1?, HeapL?) | adjust(X?, L?, R?, HeapR).
+
+greater(X, void).
+greater(X, tree(X1, L, R)) :- X? >= X1? | true.
+
+%% reduce clauses for metainterpreter
+reduce(heapify(void, void), true).
+reduce(heapify(tree(X, L, R), Heap), (heapify(L?, HeapL), heapify(R?, HeapR), adjust(X?, HeapL?, HeapR?, Heap))).
+reduce(adjust(X, HeapL, HeapR, tree(X, HeapL, HeapR)), (greater(X?, HeapL?), greater(X?, HeapR?))).
+reduce(adjust(X, tree(X1, L, R), HeapR, tree(X1, HeapL, HeapR)), adjust(X?, L?, R?, HeapL)) :- X? < X1?, greater(X1?, HeapR?).
+reduce(adjust(X, HeapL, tree(X1, L, R), tree(X1, HeapL, HeapR)), adjust(X?, L?, R?, HeapR)) :- X? < X1?, greater(X1?, HeapL?).
+reduce(greater(X, void), true).
+reduce(greater(X, tree(X1, L, R)), true) :- X? >= X1?.

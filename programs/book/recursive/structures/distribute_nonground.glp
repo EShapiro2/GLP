@@ -1,0 +1,28 @@
+%% distribute_nonground.glp - One-way stream distribute without ground guard
+%% Distributes incrementally-constructed messages to two consumers
+%% Suspends on unbound subterms until producer binds them
+
+distribute([X|Xs], [Y?|Ys?], [Z?|Zs?]) :-
+    copy(X?, Y, Z),
+    distribute(Xs?, Ys, Zs).
+distribute([], [], []).
+
+copy(X, Y?, Z?) :- atom(X?) | Y = X?, Z = X?.
+copy(X, Y?, Z?) :- number(X?) | Y = X?, Z = X?.
+copy(X, Y?, Z?) :- compound(X?) |
+    X? =.. List,
+    copy_list(List?, List1, List2),
+    Y =.. List1?,
+    Z =.. List2?.
+
+copy_list([], [], []).
+copy_list([H|T], [H1?|T1?], [H2?|T2?]) :-
+    copy(H?, H1, H2),
+    copy_list(T?, T1, T2).
+
+%% Test
+test_distribute(Out1?, Out2?) :-
+    In = [msg(a, R1?), msg(b, R2?)],
+    distribute(In?, Out1, Out2),
+    R1 = response1,
+    R2 = response2.

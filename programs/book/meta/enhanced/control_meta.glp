@@ -1,0 +1,26 @@
+%% control_meta.glp - GLP metainterpreter with run control
+%% Source: GLP Papers (Program: GLP metainterpreter with run control)
+%%
+%% Supports suspend, resume, and abort via control stream.
+%% Uses short-circuit L--R for state dump on abort.
+
+run(M, true, _, L, L?).                          % halt
+run(M, (A, B), Cs, L, R?) :-                     % fork
+    ground(Cs?) |
+    run(M?, A?, Cs?, L?, Mid),
+    run(M?, B?, Cs?, Mid?, R).
+run(M, M1 # G, Cs, L, R?) :-                     % cross-module
+    run(M1?, G?, Cs?, L?, R).
+run(M, A, [suspend|Cs], L, R?) :-                % suspend
+    suspended_run(M?, A?, Cs?, L?, R).
+run(M, A, Cs, L, R?) :-                          % reduce
+    tuple(A?) |
+    M? # reduce(A?, B),
+    run(M?, B?, Cs?, L?, R).
+
+suspended_run(M, A, [resume|Cs], L, R?) :-       % resume
+    run(M?, A?, Cs?, L?, R).
+suspended_run(_, A, [abort|_], L, [A?|L?]).      % abort + dump
+
+%% Example usage:
+%% ?- run(merge_module, Goal, [suspend, resume, abort|_], done, Dump).

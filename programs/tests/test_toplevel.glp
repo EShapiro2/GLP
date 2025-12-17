@@ -1,0 +1,2 @@
+%% Ground constant at top level of list (not nested)
+test_toplevel([1 | _]) :- true.
