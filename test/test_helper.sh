@@ -1,5 +1,6 @@
 #!/bin/bash
 # test_helper.sh - Common functions for AofGLP test scripts
+# Uses bash pattern matching instead of grep for portability
 
 # Colors for output
 RED='\033[0;31m'
@@ -17,6 +18,16 @@ GLP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPL_DIR="$GLP_ROOT/glp_runtime"
 BOOK_DIR="$GLP_ROOT/programs/book"
 
+# Dart path - check common locations
+if command -v dart &> /dev/null; then
+    DART="dart"
+elif [ -x "/home/user/dart-sdk/bin/dart" ]; then
+    DART="/home/user/dart-sdk/bin/dart"
+else
+    echo "Error: dart not found"
+    exit 1
+fi
+
 # Test if a file compiles (loads without error)
 test_compile() {
     local file="$1"
@@ -24,15 +35,27 @@ test_compile() {
 
     # Use absolute path - REPL handles them correctly
     cd "$REPL_DIR"
-    local output=$(echo -e "$file\n:quit" | dart run bin/glp_repl.dart 2>&1)
+    local output=$($DART run bin/glp_repl.dart <<EOF
+$file
+:quit
+EOF
+2>&1)
 
-    if echo "$output" | grep -q "Loaded:"; then
+    # Use bash pattern matching instead of grep
+    if [[ "$output" == *"Loaded:"* ]]; then
         echo -e "${GREEN}✓ PASS${NC}: $description"
         ((PASS_COUNT++))
         return 0
-    elif echo "$output" | grep -q "Error"; then
+    elif [[ "$output" == *"Error"* ]]; then
         echo -e "${RED}✗ FAIL${NC}: $description"
-        echo "$output" | grep -E "Error|violation" | head -3
+        # Extract first few error lines using bash
+        local count=0
+        while IFS= read -r line && [ $count -lt 3 ]; do
+            if [[ "$line" == *"Error"* ]] || [[ "$line" == *"violation"* ]]; then
+                echo "  $line"
+                ((count++))
+            fi
+        done <<< "$output"
         ((FAIL_COUNT++))
         return 1
     else
@@ -50,18 +73,30 @@ test_goal() {
 
     # Use absolute path - REPL handles them correctly
     cd "$REPL_DIR"
-    local output=$(echo -e "$file\n$goal\n:quit" | dart run bin/glp_repl.dart 2>&1)
+    local output=$($DART run bin/glp_repl.dart <<EOF
+$file
+$goal
+:quit
+EOF
+2>&1)
 
-    if echo "$output" | grep -q "→ succeeds"; then
+    # Use bash pattern matching instead of grep
+    if [[ "$output" == *"→ succeeds"* ]]; then
         echo -e "${GREEN}✓ PASS${NC}: $description"
         ((PASS_COUNT++))
         return 0
-    elif echo "$output" | grep -q "Error"; then
+    elif [[ "$output" == *"Error"* ]]; then
         echo -e "${RED}✗ FAIL${NC}: $description"
-        echo "$output" | grep -E "Error|violation" | head -3
+        local count=0
+        while IFS= read -r line && [ $count -lt 3 ]; do
+            if [[ "$line" == *"Error"* ]] || [[ "$line" == *"violation"* ]]; then
+                echo "  $line"
+                ((count++))
+            fi
+        done <<< "$output"
         ((FAIL_COUNT++))
         return 1
-    elif echo "$output" | grep -q "→ fails"; then
+    elif [[ "$output" == *"→ fails"* ]]; then
         echo -e "${RED}✗ FAIL${NC}: $description (goal failed)"
         ((FAIL_COUNT++))
         return 1
