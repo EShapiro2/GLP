@@ -7,11 +7,5 @@
 % Test goals:
 % distribute([a,b,c], Y, Z).
 
-%% Type definitions
-List := [] | [_ | List].
-
-%% Mode declarations
-Distribute := distribute(List?, List, List).
-
 distribute([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | distribute(Xs?, Ys, Zs).
 distribute([], [], []).
