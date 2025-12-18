@@ -11,7 +11,7 @@ receive_unbounded(Msg, [Msg|NStrm?], NStrm).
 %% Bounded buffer send/receive
 %% Buffer is represented as difference-list: Head--Tail
 send(Msg, [Msg|NBuf?], NBuf).
-receive(Msg, [Msg|NBuf]--[NSlot|NTail?], NBuf--NTail).
+receive(Msg, [Msg|NBuf]--[_|NTail?], NBuf--NTail).
 
 close([end_of_stream|_]).
 closed(end_of_stream).
