@@ -12,9 +12,9 @@
 The V2 unified opcodes are now the ONLY supported instruction format. Codegen emits V2 directly.
 
 ## 0. ISA Conventions
-- **σ̂w** denotes the goal-local tentative writer substitution; it exists only during HEAD/GUARD phases and is discarded at clause_next.
+- **σ̂w** denotes the goal-local tentative writers assignment; it exists only during HEAD/GUARD phases and is discarded at clause_next.
 - **U** denotes the goal-level suspension set (readers on which the goal is blocked).
-- **Suspension model**: HEAD unification uses two phases: (1) Collection—traverse arguments left-to-right, accumulating tentative writer bindings σ̂w and a preliminary suspension set S; (2) Resolution—compute S' = {X? ∈ S : X ∉ dom(σ̂w)}, succeed if S' empty, else add S' to U and try next clause.
+- **Suspension model**: HEAD term matching uses two phases: (1) Collection—traverse arguments left-to-right, accumulating tentative writer bindings σ̂w and a preliminary suspension set S; (2) Resolution—compute S' = {X? ∈ S : X ∉ dom(σ̂w)}, succeed if S' empty, else add S' to U and try next clause.
 - **Phases per clause Ci**: HEAD_i ; GUARDS_i ; BODY_i.
 - **Registers**: A (arguments), X (temporaries). Env stack E.
 - **κ** denotes the clause-selection entry PC of the current procedure (the PC where the first clause of the procedure begins).
@@ -115,7 +115,7 @@ Never expect bytecode instructions for the `clause/2` wrapper itself. The wrappe
    - `isReader: false` → writer access mode (write-once, goal can bind)
    - `isReader: true` → reader access mode (read-only, suspends if unbound)
    - Same `varId` can appear in multiple arguments with different access modes
-   - Enforces SRSW: variables occur as reader/writer PAIRS with exactly one writer AND one reader per clause (exception: ground guard allows multiple readers)
+   - Enforces SO invariant via SRSW syntactic restriction: each writer occurs exactly once and each reader occurs exactly once per clause (exception: ground guard allows multiple readers)
    - **Implementation**: Uses existing `VarRef` from `lib/runtime/terms.dart`
 
 2. **Constant Term**: `ConstTerm(value)` — immediate value (atom, number, nil)
@@ -143,9 +143,9 @@ Never expect bytecode instructions for the `clause/2` wrapper itself. The wrappe
 - **E**: Environment pointer (current frame for permanent variables)
 - **H**: Heap pointer (next free heap location)
 - **S**: Structure pointer (current position in structure traversal)
-- **Mode**: Current unification mode (READ/WRITE)
+- **Mode**: Current term matching mode (READ/WRITE)
 
-Note: The E, CP, and Y registers are used exclusively for deterministic environment frames that store permanent variables and return addresses. GLP uses committed-choice semantics where clause selection occurs only during initial head unification, with no ability to backtrack once a clause body begins execution.
+Note: The E, CP, and Y registers are used exclusively for deterministic environment frames that store permanent variables and return addresses. GLP uses committed-choice semantics where clause selection occurs only during initial head term matching, with no ability to backtrack once a clause body begins execution.
 
 ## 2. Control Instructions
 
@@ -241,7 +241,7 @@ A guard that demands an uninstantiated reader adds that reader to U, fails to ne
 
 ## 6. Head Processing Instructions
 
-All head_* operations are **tentative**: they update the σ̂w (tentative writer substitution) and/or the suspension set U **without mutating heap cells** during clause try. Heap mutations happen only at **commit**.
+All head_* operations are **tentative**: they update the σ̂w (tentative writers assignment) and/or the suspension set U **without mutating heap cells** during clause try. Heap mutations happen only at **commit**.
 
 **Key principle**: When a HEAD instruction encounters an unbound reader, it adds the reader to U and immediately fails to the next clause. The clause never reaches commit if any HEAD instruction suspends.
 
@@ -293,16 +293,16 @@ The unbound-reader case is critical: head writers receive reader references dire
 - **When used as top-level argument** (via GetValue after GetVariable):
   - If argument is an unbound writer W: bind W to the value of reader Xi in σ̂w
   - If argument is a bound writer: verify it matches reader Xi's value
-  - If argument is an unbound reader R: FAIL (the clause-local reader Xi can never be bound in the future, so this unification can never succeed in the future)
+  - If argument is an unbound reader R: FAIL (the clause-local reader Xi can never be bound in the future, so this term matching can never succeed in the future)
 - If writer Xi is unbound in tentative state: add to suspension set
 - Increment S after operation
 
-**Writer MGU semantics for reader in argument position**:
+**Term matching semantics for reader in argument position**:
 When a reader Xi? appears in a head argument position and the corresponding
-goal argument is an unbound writer W, the Writer MGU binds W to the term
-that Xi references. If the goal argument is an unbound reader R, unification
+goal argument is an unbound writer W, term matching assigns W to the term
+that Xi references. If the goal argument is an unbound reader R, term matching
 fails definitively because the clause-local reader Xi has no future binding
-that could make the unification succeed.
+that could make the match succeed.
 
 ### 6.4 head_constant c, Ai
 **Operation**: Match constant c with argument Ai
@@ -351,7 +351,7 @@ All put_*/body construction instructions used for **goal spawning** are **heap-m
 **Operation**: Place writer variable Xi in argument Ai  
 **Behavior**:
 - Copy writer reference from Xi to Ai
-- Track for SRSW enforcement
+- Track for SO/SRSW enforcement
 
 ### 7.3 put_reader Xi, Ai
 **Operation**: Place reader Xi? (reader of writer Xi) in argument Ai  
@@ -423,7 +423,7 @@ headStruct('[|]', 2, 11)       // Match X11 against [|]/2
     - clauseVars[i] always stores the writer (base variable) regardless of whether first occurrence is reader or writer, allowing the subsequent occurrence (which will be in opposite mode per SRSW) to access the same variable
 - Increment S (READ) or H (WRITE)
 
-**Note**: Writer-to-writer unification follows Writer MGU semantics. In READ mode, this instruction extracts any term (including nested structures and reader terms) for later matching. When a reader term is extracted, subsequent operations (like head_structure on that clause variable) will handle suspension if the reader remains unbound at match time.
+**Note**: Writer-to-writer term matching fails. In READ mode, this instruction extracts any term (including nested structures and reader terms) for later matching. When a reader term is extracted, subsequent operations (like head_structure on that clause variable) will handle suspension if the reader remains unbound at match time.
 
 ### 8.2 UnifyVariable Xi (isReader: true) — Reader Mode
 **Instruction**: `UnifyVariable(Xi, isReader: true)` (V2 unified opcode)
@@ -446,21 +446,21 @@ headStruct('[|]', 2, 11)       // Match X11 against [|]/2
     - Example: In `qsort([X|Xs], S, [X?|S1?])`, after HEAD matches X=1, BODY builds `[X?|S1?]` by creating a fresh variable V bound to 1, storing `VarRef(V, isReader: true)` in the list
 - Increment S (READ) or H (WRITE)
 
-**Note**: Reader unification follows Writer MGU semantics - readers can only be read, not written
+**Note**: Reader term matching follows GLP semantics - readers can only be read, not assigned
 
 ### 8.3 constant c
 **Operation**: Process constant in structure
 **Behavior**:
 - In READ mode:
   - If value at S is constant c: succeed
-  - If value at S is unbound writer W: bind W = c in σ̂w (writer MGU)
+  - If value at S is unbound writer W: assign W := c in σ̂w (term matching)
   - If value at S is reader R with unbound paired writer: add R to U and immediately try next clause
   - If value at S is reader R with bound paired writer ≠ c: fail
   - Otherwise: fail
 - In WRITE mode: write constant c at H
 - Increment S (READ) or H (WRITE)
 
-**Rationale**: Follows Writer MGU semantics from GLP spec Definition 2.1. In READ mode, we perform writer unification: constants unify with unbound writers by binding them, and with readers by checking their paired writer's value.
+**Rationale**: Follows term matching semantics from GLP spec. In READ mode, we perform term matching: constants match with unbound writers by assigning them, and with readers by checking their paired writer's value.
 
 ### 8.4 void n
 **Operation**: Process n anonymous variables
@@ -543,7 +543,7 @@ When processing nested structures in HEAD mode (e.g., `p(f(X,Y))` where `f(X,Y)`
 - Changes `currentStructure` to point to the nested structure
 - Resets S to 0 to begin processing nested structure's arguments
 - In WRITE mode, creates _TentativeStruct that will be converted to StructTerm at commit
-- Follows three-valued unification: success (match), suspend (N/A for structures), fail (mismatch)
+- Follows three-valued term matching: success, suspend (N/A for structures), fail (mismatch)
 
 **Commit-Time Conversion**: When `commit` executes, all _TentativeStruct objects in σ̂w are recursively converted to StructTerm objects before being applied to the heap. This ensures nested structures are properly materialized.
 
@@ -728,7 +728,7 @@ guard <, 2           % Evaluate A? < X? with 2 arguments
 2. If X contains unbound readers (but no unbound writers) → **SUSPEND** (add first unbound reader to U, immediately try next clause)
 3. If X contains unbound writers → **FAIL** (soft-fail to next clause via clause_next)
 
-**Rationale**: Due to SRSW restriction, unbound readers may become ground when their paired writers are bound, so suspension is appropriate. Unbound writers cannot be awaited (unknown future binding), so failure is definitive.
+**Rationale**: Due to SO invariant, unbound readers may become ground when their paired writers are bound, so suspension is appropriate. Unbound writers cannot be awaited (unknown future binding), so failure is definitive.
 
 **Usage**: Enables multiple reader occurrences by testing groundness before use.
 
@@ -826,7 +826,7 @@ compute(N, Result) :-
 
 ### 12.0 Overview
 
-Mode-aware argument loading distinguishes between reader and writer modes at the bytecode level, enabling correct SRSW semantics and mode conversion.
+Mode-aware argument loading distinguishes between reader and writer modes at the bytecode level, enabling correct SO/SRSW semantics and mode conversion.
 
 **V2 Unified Opcodes (v2.16.2)**: Two opcodes with `isReader` flag handle all cases:
 - `GetVariable(Xi, Ai, isReader: bool)` — First occurrence of variable
@@ -841,7 +841,7 @@ The `isReader` flag specifies the mode:
 1. **Mode is determined by clause syntax**: `X` = writer, `X?` = reader
 2. **Mode conversion happens during argument loading**: When argument mode differs from clause expectation
 3. **Fresh variables enable reader views**: Allocating fresh variables provides isolation for reader semantics
-4. **Three-valued unification**: Success, suspend (on unbound reader), or fail
+4. **Three-valued term matching**: Success, suspend (on unbound reader), or fail
 
 ### 12.0.1 Argument Term Types
 
@@ -870,7 +870,7 @@ if arg is StructTerm(functor, args):
 
 **GetWriterValue/GetReaderValue with structure arguments**:
 - When argument is `StructTerm(f, args)`: unify structure with clause variable
-- Structure arguments may trigger recursive unification or mode conversion
+- Structure arguments may trigger recursive term matching or mode conversion
 
 ---
 
@@ -996,7 +996,7 @@ Known terms create a fresh variable bound to the term value.
 
 **Precondition**: Variable Xi was previously loaded by GetWriterVariable or GetReaderVariable
 
-**Behavior**: Performs writer MGU between stored value and argument.
+**Behavior**: Performs term matching between stored value and argument.
 
 **Execution Cases**:
 
@@ -1009,7 +1009,7 @@ If storedValue.isWriterId && arg.isWriter:
   If storedValue == arg.writerId:
     // Same writer - succeed (idempotent)
   Else:
-    // Different writers - writer MGU
+    // Different writers - term matching fails
     If both unbound:
       σ̂w[arg.writerId] = VarRef(storedValue, isReader: false)
     Else if one bound:
@@ -1091,7 +1091,7 @@ If arg.isReader:
 If arg.isWriter:
   // Reader expects consistency
   // Writer must match reader's bound value
-  Perform three-valued unification
+  Perform three-valued term matching
 ```
 
 **Case 3: Argument is known term**
@@ -1107,7 +1107,7 @@ If arg.isKnown:
 
 | Clause Expects | Arg Provides | First Occ (Variable) | Subsequent (Value) |
 |---------------|-------------|---------------------|-------------------|
-| Writer (X) | Writer | Direct store | Writer MGU |
+| Writer (X) | Writer | Direct store | Term matching |
 | Writer (X) | Reader | Deref or suspend | Unify with bound value |
 | Writer (X) | Known | Store term | Unify terms |
 | Reader (X?) | Writer | Fresh var + σ̂w | Propagate binding |
@@ -1183,7 +1183,7 @@ The unified V2 opcodes use an `isReader` flag to distinguish writer vs reader mo
 
 2. **Reader-of-Reader Prevention**: The mode conversion design prevents reader-of-reader chains. A writer gets a reader view of a fresh variable, not a reader of another reader.
 
-3. **Suspension Semantics**: HEAD phase uses two-phase unification with deferred suspension:
+3. **Suspension Semantics**: HEAD phase uses two-phase term matching with deferred suspension:
 
    **Phase 1 (Collection):** HEAD instructions process arguments left-to-right, accumulating:
    - σ̂w: tentative writer bindings
@@ -1200,9 +1200,9 @@ The unified V2 opcodes use an `isReader` flag to distinguish writer vs reader mo
 
    **GUARD phase** retains immediate failure semantics: unbound readers in guards cause the clause to fail immediately (not suspend), since guards test preconditions rather than collect bindings.
 
-4. **SRSW Validation**: The compiler must validate SRSW constraints. Multiple reader occurrences require ground() guard.
+4. **SRSW Validation**: The compiler must validate SRSW syntactic restriction (preserves SO invariant). Multiple reader occurrences require ground() guard.
 
-5. **Known Terms**: Terms passed as arguments (constants, structures) are treated as bound values for unification purposes.
+5. **Known Terms**: Terms passed as arguments (constants, structures) are treated as bound values for term matching purposes.
 
 ---
 
@@ -1337,12 +1337,12 @@ The current Dart implementation represents instructions as Dart class instances 
 
 ## 16. Execution Model
 
-### Writer MGU Algorithm
-The writer MGU (Most General Unifier) differs from standard unification:
+### Term Matching Algorithm
+Term matching differs from standard unification:
 1. Only writers can be bound (not readers)
 2. Writers cannot be bound to other writers
 3. Readers can only be verified against their paired writers
-4. Suspension occurs when readers block unification
+4. Suspension occurs when readers block term matching
 
 ### Suspension Mechanism
 Goals suspend when encountering unbound readers:
@@ -1359,13 +1359,13 @@ The Single-Reader/Single-Writer constraint operates at two levels:
 - **Compile time (syntactic restriction)**: Each variable occurs as a reader/writer
   PAIR with exactly one writer AND one reader per clause (unless ground guard allows
   multiple readers)
-- **Runtime (invariant)**: No new occurrences created that violate SRSW
+- **Runtime (SO invariant)**: Each variable occurs at most once in any resolvent
 
 ### WxW (No Writer-to-Writer Binding) Restriction
 
 GLP prohibits writer-to-writer binding to ensure no readers are abandoned:
 - If writers X and Y unified, their readers X? and Y? would have no writer to provide values
-- Runtime must FAIL immediately on writer-to-writer unification attempts
+- Runtime must FAIL immediately on writer-to-writer term matching attempts
 - This is NOT a suspension case - it's a definitive failure
 
 ## 17. Memory Layout (Dart Implementation)
@@ -1579,7 +1579,7 @@ Guards provide read-only tests that determine clause selection. They appear betw
 
 ### 19.1 Guard Execution Model
 
-**Phase**: Between HEAD and BODY (after HEAD unification, before COMMIT)
+**Phase**: Between HEAD and BODY (after HEAD term matching, before COMMIT)
 **Semantics**: Three-valued (SUCCESS/FAILURE/SUSPEND)
 **Purity**: No heap mutations, no side effects, deterministic
 **Expression Evaluation**: Guards may contain arithmetic expressions that are evaluated before comparison
@@ -1708,7 +1708,7 @@ commit
 
 **Note**: All six comparison guards follow the same pattern: evaluate expressions, compare if ground, suspend if unbound readers present.
 
-**SRSW Implication**: When an arithmetic comparison guard **succeeds**, both operands are guaranteed to be ground (bound to numbers). This allows multiple reader occurrences of those variables in the clause body without violating SRSW, as ground values contain no unbound writers.
+**SO/SRSW Implication**: When an arithmetic comparison guard **succeeds**, both operands are guaranteed to be ground (bound to numbers). This allows multiple reader occurrences of those variables in the clause body without violating the SRSW syntactic restriction, as ground values contain no unbound writers.
 
 **Example**:
 ```prolog
@@ -1821,7 +1821,7 @@ classify(X, zero) :- otherwise | true.
 - Suspend if either contains unbound readers
 - Fail if either contains unbound writers
 
-**Note**: This guard tests term equality, not unification. It does not add bindings to σ̂w.
+**Note**: This guard tests term equality, not term matching. It does not add bindings to σ̂w.
 
 **Example**:
 ```prolog
@@ -1830,7 +1830,7 @@ lookup(Key, [(K,_)|Rest], V?) :- ~(Key =?= K?) | lookup(Key?, Rest?, V).
 ```
 
 **Removed guards**:
-- `guard_unify` (`=` in guard position): Removed. Unification in guards is not a built-in; define as unit clause if needed.
+- `guard_unify` (`=` in guard position): Removed. Term matching in guards is not a built-in; define as unit clause if needed.
 - `guard_not_unifiable` (`\=` in guard position): Removed. Use `~(X =?= Y)` for inequality testing.
 
 **Note on `=\=`**: The arithmetic inequality guard `=\=` is **redundant** once guard negation (`~`) is implemented. It becomes equivalent to `~(X =:= Y)` and will be removed in a future version.
@@ -1850,7 +1850,7 @@ lookup(Key, [(K,_)|Rest], V?) :- ~(Key =?= K?) | lookup(Key?, Rest?, V).
 | `=:=`  | ARITH_EQ      | 700      | non-assoc     | guard_arith_equal         |
 
 **Removed tokens** (no longer guard operators):
-- `=` (UNIFY) - Not a guard; use defined guards if unification testing needed
+- `=` (UNIFY) - Not a guard; use defined guards if term matching testing needed
 - `\=` (NOT_UNIFY) - Removed; use `~(X =?= Y)` instead
 - `=\=` (ARITH_NE) - Redundant; equivalent to `~(X =:= Y)`, will be removed
 

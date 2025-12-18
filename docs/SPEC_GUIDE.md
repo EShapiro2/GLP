@@ -1,6 +1,6 @@
 # GLP Specification Guide
 
-This document guides implementation of GLP according to the formal specification in `docs/glp_spec.tex`.
+This document guides implementation of GLP according to the formal specification in the book "The Art of Grassroots Logic Programming".
 
 ## Essential Reading
 
@@ -19,41 +19,51 @@ To understand the GLP implementation requirements, focus on these sections in or
 
 - **Writer** `X`: Single-assignment variable (promise) - can be written to exactly once
 - **Reader** `X?`: Paired read-only access to writer's future value
-- **SRSW Requirement**: Variables occur as reader/writer PAIRS in clauses, with exactly one writer AND one reader (exception: ground guard allows multiple readers)
-- This eliminates need for distributed unification - just point-to-point communication
+- **SO Invariant** (runtime): Each variable occurs at most once in any resolvent
+- **SRSW Syntactic Restriction** (compile-time): Each writer occurs exactly once and each reader occurs exactly once in a clause (exception: ground guard allows multiple readers)
+- This eliminates the need for distributed unification - just point-to-point communication
 
-### Writer Unification (Definition in Section 3)
+### Term Matching (Definition in Book Chapter: GLP Core)
 
-Writer unification of two terms has three possible outcomes:
+Term matching of two terms has three possible outcomes:
 
-1. **Succeeds with σ**: They have a writer mgu σ (most general unifier that only binds writers)
-2. **Suspends on W**: They have a regular mgu σ, but it would require binding readers (suspension set W = readers that would need to be instantiated)
-3. **Fails**: No unification possible
+1. **Succeeds with σ**: Returns a writers assignment σ (assigns values only to writers)
+2. **Suspends**: A reader requires a value not yet available
+3. **Fails**: Terms are structurally incompatible or two variables of the same kind meet
 
-**Key constraints on writer substitution σ**:
-- Only binds writers: Vσ ⊂ V
-- Does not bind writers to writers (would abandon paired readers)
-- No cycles through readers: X? does not occur in Xσ (prevents circular terms)
+**Term matching table** (T1 matched against T2):
 
-### WxW (No Writer-to-Writer Binding) Restriction
+| T1 \ T2 | Writer X2 | Reader X2? | Term f'/n' |
+|---------|-----------|------------|------------|
+| Writer X1 | fail | X1 := X2? | X1 := T2 |
+| Reader X1? | X2 := X1? | fail | suspend |
+| Term f/n | X2 := T1 | suspend | recurse if f=f' ∧ n=n' else fail |
 
-GLP prohibits writer-to-writer binding to ensure no readers are abandoned:
-- If writers X and Y unified, their readers X? and Y? would have no writer to provide values
-- Runtime must FAIL immediately on writer-to-writer unification attempts
+**Key properties**:
+- Only assigns writers (never readers)
+- Writer-to-writer (WxW) fails immediately (would abandon paired readers)
+- Reader-to-reader (RxR) fails (cannot be assigned or equated)
+- No occurs check needed (SO invariant prevents circular terms)
+
+### WxW (Writer-to-Writer Matching Fails)
+
+GLP term matching fails on writer-to-writer:
+- If writers X and Y were to match, their paired readers X? and Y? would be abandoned (no writer to provide values)
+- Runtime must FAIL immediately on writer-to-writer term matching
 - This is NOT a suspension case - it's a definitive failure
 
 ### GLP Transition System (Definition 10, line 317)
 
 An **asynchronous resolvent** is a pair `(G, σ)` where:
-- G ∈ 𝒢?(M): a goal (multiset of atoms) that may contain readers and writers
-- σ: a reader substitution (binds only readers)
+- G ∈ 𝒢?(M): a goal that may contain readers and writers
+- σ: a readers assignment (assigns only readers)
 
 **Transitions**: `(G, σ) → (G', σ')`
 
-1. **Reduce**: Pick atom A ∈ G, find first applicable clause C ∈ M
+1. **Reduce**: Pick unit goal A ∈ G, find first applicable clause C ∈ M
    - GLP reduction of A with C succeeds with result (B, σ̂)
-   - G' = (G \ {A} ∪ B)σ̂  (remove A, add body B, apply writer substitution)
-   - σ' = σ ∘ σ̂?  (compose with reader counterpart of writer substitution)
+   - G' = (G \ {A} ∪ B)σ̂  (remove A, add body B, apply writers assignment)
+   - σ' = σ ∘ σ̂?  (compose with readers counterpart of writers assignment)
 
 2. **Communicate**: Apply pending reader assignment
    - σ̂ = {X? := T} ∈ σ  (pick a reader binding from σ)
@@ -116,11 +126,11 @@ Otherwise (no clause succeeds or suspends):
 
 ## Key Properties (Section 3)
 
-### SRSW Invariant (Proposition at line 359)
-If initial goal G₀ satisfies SRSW, then every goal in the run satisfies SRSW.
+### SO Invariant
+If the initial goal G₀ satisfies SO (each variable occurs at most once), then every goal in the run satisfies SO.
 
-### Acyclicity (Proposition at line 366)
-The occurs check in readers prevents formation of circular terms.
+### Acyclicity
+The SO invariant prevents formation of circular terms: since each variable occurs at most once, a variable cannot appear in a term to which it is assigned.
 
 ### Monotonicity (Proposition at line 378)
 **Unlike LP**, in GLP: If atom A ∈ Gᵢ can reduce with clause C, then for any j > i:
@@ -200,11 +210,10 @@ partition(Pivot, [X | Xs?], Smaller, [X | Greater]) :-
 **Planned**:
 - ⏳ `true` - always succeeds (equivalent to no guard)
 
-#### Unification Guards
+#### Equality Guards
 
 **Planned**:
-- ⏳ `X = Y` - unification guard (suspends on unbound readers, fails if cannot unify)
-- ⏳ `X \= Y` - non-unification guard (succeeds if cannot unify, suspends on unbound readers)
+- ⏳ `X =?= Y` - ground equality guard (succeeds if both ground and equal, fails if both ground and different, suspends if either unbound)
 
 ### CRITICAL: Ground Guards - Exception to Strict SRSW
 
@@ -433,19 +442,20 @@ monitor([add(N)|Reqs],Sum) :-
 6. **Single-shot reactivation**: Each suspended goal reactivates at most once per suspension (use armed flag)
 7. **Immediate substitution application**: Apply σ̂σ̂? immediately to queue (workstation model)
 
-### Writer Unification Must:
+### Term Matching Must:
 
-1. Only bind writers (never readers)
-2. Never bind writer to writer (would abandon paired reader)
-3. Perform occurs check on readers (X? must not occur in Xσ)
-4. Return suspension set W when unification requires reader instantiation
-5. Fail when terms don't unify
+1. Only assign writers (never readers)
+2. Fail on writer-to-writer (would abandon paired readers)
+3. Fail on reader-to-reader (cannot be assigned or equated)
+4. Suspend when matching reader against ground term
+5. Fail when terms are structurally incompatible
+6. No occurs check needed (SO invariant prevents cycles)
 
-### SRSW Enforcement:
+### SO Invariant and SRSW Enforcement:
 
-1. Each variable occurs at most once in each clause (syntactic check)
-2. Runtime must preserve SRSW invariant across reductions
-3. `ground(X?)` guard relaxes single-reader for ground terms only
+1. **SO Invariant** (runtime): Each variable occurs at most once in any resolvent - preserved by reduction with SRSW clauses
+2. **SRSW Syntactic Restriction** (compile-time): Each writer exactly once, each reader exactly once per clause
+3. `ground(X?)` guard relaxes single-reader restriction for ground terms only
 
 ### Anonymous Variable `_` in SRSW
 
@@ -479,7 +489,7 @@ Result? := X / Y :-
 
 ## Bytecode Instruction Model
 
-The GLP bytecode is modeled after the Warren Abstract Machine (WAM) and Flat Concurrent Prolog (FCP) abstract machines, adapted for GLP's three-valued unification (success/suspend/fail) and SRSW semantics.
+The GLP bytecode is modeled after the Warren Abstract Machine (WAM) and Flat Concurrent Prolog (FCP) abstract machines, adapted for GLP's three-valued term matching (success/suspend/fail) and SO/SRSW semantics.
 
 ### Code Organization Hierarchy
 
@@ -539,7 +549,7 @@ If a goal executing q/2 suspends:
 **See `docs/glp-bytecode-v216-complete.md` for complete instruction set details.**
 
 1. **Three execution phases per clause**:
-   - **HEAD**: Tentative unification, builds σ̂w (tentative writer substitution)
+   - **HEAD**: Tentative term matching, builds σ̂w (tentative writers assignment)
    - **GUARDS**: Pure tests, may add to suspension set Si
    - **BODY**: Mutations allowed only after commit
 
@@ -554,7 +564,7 @@ If a goal executing q/2 suspends:
    - Goal suspends if U non-empty after all clauses tried
 
 4. **WAM-style structure traversal**:
-   - **Mode register**: READ (matching existing structure) / WRITE (building new structure)
+   - **Mode register**: READ (matching existing term) / WRITE (building new term)
    - **S register**: Current position in structure traversal
    - HEAD instructions operate tentatively, BODY instructions mutate heap
 
