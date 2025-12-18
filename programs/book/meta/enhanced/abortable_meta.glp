@@ -4,7 +4,7 @@
 %% Supports abort via equator (emergency brake).
 %% When Eq is bound, computation stops.
 
-run(M, true, _).                                 % halt
+run(_, true, _).                                 % halt
 run(M, (A, B), Eq) :-                            % fork
     unknown(Eq?) |
     run(M?, A?, Eq?), run(M?, B?, Eq?).

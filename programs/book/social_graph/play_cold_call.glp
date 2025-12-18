@@ -3,7 +3,7 @@
 
 %% Round 1: Alice cold-calls Bob, Bob accepts
 %% Alice's view:
-test_alice_round1(AliceFs1, Resp1) :-
+test_alice_round1(_, Resp1) :-
     social_graph(alice,
         [msg(user, alice, connect(bob))|AliceIn1],
         [(user, AliceUser), (net, AliceNet)]),

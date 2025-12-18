@@ -4,7 +4,7 @@
 %% Builds execution tree capturing each reduction.
 %% Uses observe/3 to capture goal state at each step.
 
-run(M, true, true).                              % halt
+run(_, true, true).                              % halt
 run(M, (A, B), fork(TA?, TB?)) :-                % fork
     run(M?, A?, TA),
     run(M?, B?, TB).

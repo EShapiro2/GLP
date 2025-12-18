@@ -3,7 +3,7 @@
 %%
 %% Uses short-circuit technique to detect distributed termination.
 
-run(M, true, L, L?).                             % halt - close circuit
+run(_, true, L, L?).                             % halt - close circuit
 run(M, (A, B), L, R?) :-                         % fork - split chain
     run(M?, A?, L?, Mid),
     run(M?, B?, Mid?, R).

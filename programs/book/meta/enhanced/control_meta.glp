@@ -4,7 +4,7 @@
 %% Supports suspend, resume, and abort via control stream.
 %% Uses short-circuit L--R for state dump on abort.
 
-run(M, true, _, L, L?).                          % halt
+run(_, true, _, L, L?).                          % halt
 run(M, (A, B), Cs, L, R?) :-                     % fork
     ground(Cs?) |
     run(M?, A?, Cs?, L?, Mid),
