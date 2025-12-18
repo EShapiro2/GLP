@@ -798,6 +798,7 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - i want  dart run glp_repl.dart  please remember that
 - always test all repl tests after a change
 - NEVER work not following precisely the spec
+- always offer to fetch/merge/push when finishing a task
 
 ## #remember Directive
 
