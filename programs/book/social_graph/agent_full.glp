@@ -58,5 +58,5 @@ agent_wait_response(MyId, UserCh, NetCh, Friends, Target, Resp) :-
 % lookup_friend/3: Find friend's channel
 lookup_friend(Target, [(Target?, Ch)|_], Ch?) :- true.
 lookup_friend(Target, [(Other, _)|Friends?], Ch?) :-
-    otherwise |
+    ~(Target? =?= Other?) |
     lookup_friend(Target?, Friends, Ch).
