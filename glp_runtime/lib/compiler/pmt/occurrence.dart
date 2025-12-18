@@ -135,16 +135,16 @@ class OccurrenceClassifier {
       // X := Expr - X is writer (receives result), Expr is reader (provides value)
       return [Mode.writer, Mode.reader];
     }
-    if (functor == 'allocate_mutual_reference' && arity == 2) {
-      // allocate_mutual_reference(Ref, Output) - Ref is writer, Output is writer
+    if (functor == '_allocate_mutual_reference' && arity == 2) {
+      // _allocate_mutual_reference(Ref, Output) - Ref is writer, Output is writer
       return [Mode.writer, Mode.writer];
     }
-    if (functor == 'kernel_stream_append' && arity == 3) {
-      // kernel_stream_append(RefIn, Value, RefOut)
+    if (functor == '_stream_append' && arity == 3) {
+      // _stream_append(RefIn, Value, RefOut)
       return [Mode.reader, Mode.reader, Mode.writer];
     }
-    if (functor == 'kernel_close_mutual_reference' && arity == 1) {
-      // kernel_close_mutual_reference(Ref)
+    if (functor == '_close_mutual_reference' && arity == 1) {
+      // _close_mutual_reference(Ref)
       return [Mode.reader];
     }
     return null;
