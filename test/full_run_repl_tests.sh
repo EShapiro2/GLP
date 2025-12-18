@@ -991,6 +991,30 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# Test ground and equality on actual circular terms
+circular_ops_output=$($DART run "$REPL" <<CIRCULAR_OPS
+$GLP_DIR/circular_test.glp
+link(A, f(B?)), link(B, f(A?)), test_ground(A?, R1), test_eq(A?, A?, R2).
+:quit
+CIRCULAR_OPS
+2>&1)
+
+if echo "$circular_ops_output" | grep -q "R1 = yes"; then
+    echo "PASS: ground(circular_term) = yes"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: ground(circular_term) (expected: R1 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$circular_ops_output" | grep -q "R2 = yes"; then
+    echo "PASS: circular_term =?= circular_term = yes"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: circular_term =?= circular_term (expected: R2 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""

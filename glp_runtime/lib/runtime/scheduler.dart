@@ -61,15 +61,23 @@ class Scheduler {
     _nextDisplayId = 1;
   }
 
-  String _formatTerm(Term term, {bool markReaders = true}) {
+  String _formatTerm(Term term, {bool markReaders = true, Set<int>? path}) {
+    path ??= <int>{};
+
     // Dereference in a loop to avoid recursive ? markers
     var current = term;
 
-    // Follow VarRef chains
+    // Follow VarRef chains with cycle detection
     while (current is VarRef) {
+      // Check for cycle
+      if (path.contains(current.varId)) {
+        return '<circular>';
+      }
+
       if (current.isReader) {
         final wid = rt.heap.writerIdForReader(current.varId);
         if (wid != null && rt.heap.isWriterBound(wid)) {
+          path.add(current.varId);
           final value = rt.heap.valueOfWriter(wid);
           if (value != null) {
             current = value;
@@ -82,6 +90,7 @@ class Scheduler {
       } else {
         // Writer VarRef
         if (rt.heap.isWriterBound(current.varId)) {
+          path.add(current.varId);
           final value = rt.heap.valueOfWriter(current.varId);
           if (value != null) {
             current = value;
@@ -110,7 +119,6 @@ class Scheduler {
       if (current.functor == '.' && current.args.length == 2) {
         final elements = <String>[];
         var listTerm = current;
-        final visited = <int>{};
 
         while (true) {
           if (listTerm is! StructTerm || listTerm.functor != '.') break;
@@ -118,16 +126,8 @@ class Scheduler {
           final head = listTerm.args[0];
           final tail = listTerm.args[1];
 
-          // Format head element
-          String headStr = _formatTerm(head, markReaders: markReaders);
-
-          // Check for circular reference in head (if VarRef)
-          if (head is VarRef && visited.contains(head.varId)) {
-            headStr = '<circular>';
-          } else if (head is VarRef) {
-            visited.add(head.varId);
-          }
-
+          // Format head element with cycle detection
+          String headStr = _formatTerm(head, markReaders: markReaders, path: path);
           elements.add(headStr);
 
           // Process tail
@@ -136,16 +136,15 @@ class Scheduler {
           } else if (tail is StructTerm && tail.functor == '.') {
             listTerm = tail;
           } else if (tail is VarRef) {
-            // Unbound tail - improper list
-            if (visited.contains(tail.varId)) {
+            // Check for circular tail
+            if (path.contains(tail.varId)) {
               return '[${elements.join(', ')} | <circular>]';
             }
-            visited.add(tail.varId);
-            final tailStr = _formatTerm(tail, markReaders: markReaders);
+            final tailStr = _formatTerm(tail, markReaders: markReaders, path: path);
             return '[${elements.join(', ')} | $tailStr]';
           } else {
             // Non-list tail
-            final tailStr = _formatTerm(tail, markReaders: markReaders);
+            final tailStr = _formatTerm(tail, markReaders: markReaders, path: path);
             return '[${elements.join(', ')} | $tailStr]';
           }
         }
@@ -155,13 +154,13 @@ class Scheduler {
 
       // Special formatting for conjunction
       if (current.functor == ',' && current.args.length == 2) {
-        final left = _formatTerm(current.args[0], markReaders: markReaders);
-        final right = _formatTerm(current.args[1], markReaders: markReaders);
+        final left = _formatTerm(current.args[0], markReaders: markReaders, path: path);
+        final right = _formatTerm(current.args[1], markReaders: markReaders, path: path);
         return '($left, $right)';
       }
 
-      // General structure formatting
-      final args = current.args.map((a) => _formatTerm(a, markReaders: markReaders)).join(', ');
+      // General structure formatting with cycle detection
+      final args = current.args.map((a) => _formatTerm(a, markReaders: markReaders, path: path)).join(', ');
       return '${current.functor}($args)';
     }
     return current.toString();

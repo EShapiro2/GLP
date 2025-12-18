@@ -24,3 +24,11 @@ show(X, X?).
 % Basic building block for circular terms
 % link(X?, X) - X receives the value from first arg, second arg gets X
 link(X?, X).
+
+% Test ground on circular term (should not loop)
+test_ground(X, yes) :- ground(X?) | true.
+test_ground(_, no) :- otherwise | true.
+
+% Test equality on circular term (should not loop)
+test_eq(X, Y, yes) :- X? =?= Y? | true.
+test_eq(_, _, no) :- otherwise | true.
