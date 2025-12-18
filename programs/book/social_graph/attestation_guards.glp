@@ -21,7 +21,7 @@ process_message(Msg, Result?) :-
 
 process_message(Msg, rejected) :-
     attestation(Msg, att(_, Module)),
-    \+ trusted_module(Module?) |
+    ~trusted_module(Module?) |
     true.
 
 %% Example: Check own module for protocol decisions
