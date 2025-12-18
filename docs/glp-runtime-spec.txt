@@ -263,7 +263,7 @@ class ROQueues {
 }
 ```
 
-**SRSW Enforcement**: Runtime assumes compiler-verified SRSW syntactic restriction. Runtime must fail on writer-to-writer unification attempts (WxW violation).
+**SO/SRSW Enforcement**: Runtime assumes compiler-verified SRSW syntactic restriction (which preserves SO invariant). Runtime must fail on writer-to-writer term matching attempts (WxW). Circular terms may form through cross-goal communication; implementations must handle them gracefully.
 
 ### Execution Pipeline
 
@@ -450,7 +450,7 @@ By suspending on the FINAL variable in a chain, we ensure goals wake when that u
 
 ### Head Processing Instructions
 
-Head instructions perform **tentative writer MGU**, building σ̂w without heap mutation:
+Head instructions perform **tentative term matching**, building σ̂w without heap mutation:
 
 **`head_constant value argSlot`**: Unify argument with constant
 - If arg is WriterTerm: add `σ̂w[writerId] = value`, continue
@@ -539,7 +539,7 @@ commit
 
 ### Body Construction Instructions  
 
-Body instructions prepare arguments for goal calls. The `put_structure` instruction allocates heap space and initializes structure headers. The `put_writer` and `put_reader` instructions place variable references in argument registers, with readers creating references to their paired writers. These instructions never suspend as they only prepare data rather than performing unification.
+Body instructions prepare arguments for goal calls. The `put_structure` instruction allocates heap space and initializes structure headers. The `put_writer` and `put_reader` instructions place variable references in argument registers, with readers creating references to their paired writers. These instructions never suspend as they only prepare data rather than performing term matching.
 
 ### Control Flow Implementation
 
@@ -607,7 +607,7 @@ The suspension table uses efficient indexing structures to quickly locate goals 
 ## Error Handling
 
 ### Runtime Errors
-The runtime detects and reports several categories of errors. SRSW violations occur when multiple writers or readers are created for the same variable. Type errors arise when operations receive unexpected argument types. Stack overflow is detected when the logical stack exceeds limits. Abandoned variable access happens when attempting to use variables whose writers are gone.
+The runtime detects and reports several categories of errors. SO violations occur when multiple writers or readers are created for the same variable. Type errors arise when operations receive unexpected argument types. Stack overflow is detected when the logical stack exceeds limits. Abandoned variable access happens when attempting to use variables whose writers are gone. Circular terms may form through cross-goal communication and must be handled gracefully.
 
 ### Debugging Support
 The runtime provides comprehensive debugging facilities. Execution tracing shows instruction-by-instruction execution with register and heap state. Breakpoints can be set on specific predicates or instructions. The suspension inspector shows currently suspended goals and their suspension sets. Variable tracking follows the lifecycle of specific variables through creation, binding, and abandonment.
@@ -616,7 +616,7 @@ The runtime provides comprehensive debugging facilities. Execution tracing shows
 
 ### Time Complexity
 **Instruction dispatch**: O(1) via Dart's type-based dispatch (if-else chain on instruction types)
-**Writer MGU**: O(n) in structure size (linear traversal, no deep recursion needed)
+**Term Matching**: O(n) in structure size (linear traversal, no deep recursion needed)
 **ROQ operations**: O(1) amortized for queue operations (Map lookup + Queue add/remove)
 **Reactivation**: O(k) for k suspended goals on a reader (linear scan of suspension notes)
 **Hanger check**: O(1) for single-shot armed flag check
@@ -635,7 +635,7 @@ This runtime is simpler than FCP's abstract machine by delegating to Dart for me
 ## Implementation Roadmap
 
 ### Phase 1: Core Runtime
-Implement the basic execution engine with the instruction set, heap and environment management, and writer MGU algorithm. This provides a working GLP system for single-agent programs.
+Implement the basic execution engine with the instruction set, heap and environment management, and term matching algorithm. This provides a working GLP system for single-agent programs.
 
 ### Phase 2: Suspension System  
 Add suspension table management, reactivation mechanisms, and abandonment detection. This enables concurrent GLP programs with reader/writer synchronization.
