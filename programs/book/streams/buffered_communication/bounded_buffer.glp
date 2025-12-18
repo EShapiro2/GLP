@@ -6,43 +6,36 @@
 
 %% Unbounded buffer send/receive (standard stream communication)
 send_unbounded(Msg, [Msg?|Tail], Tail?).
-receive_unbounded(Msg?, [Msg|Strm], Strm?).
+receive_unbounded(Msg?, [Msg|Tail], Tail?).
 
 %% Bounded buffer send/receive
 %% Buffer is represented as difference-list: Head--Tail
-send(Msg, [Msg?|NBuf], NBuf?).
-receive(Msg?, [Msg|NBuf]--[_|NTail], NBuf?--NTail?).
+send(Msg, [Msg?|Buf], Buf?).
+receive(Msg?, [Msg|Buf]--[_|Tail], Buf?--Tail?).
 
 close([end_of_stream|_]).
 closed(end_of_stream).
 
 %% Open a buffer of given size
 open(0, X--X?).
-open(N, Out) :- N? > 0 | Out = [_|Y?]--Z?, N1 := N? - 1, open(N1?, Y--Z).
+open(N, [_|Y?]--Z?) :- N? > 0 | N1 := N? - 1, open(N1?, Y--Z).
 
 %% Example: Buffered stream of squares
-sq_num_buffered(N, Ss, Size) :-
-    open(Size?, BufTail),
-    BufTail = Buf?--Tail?,
-    integers(1, N?, Buf),
+sq_num_buffered(N, Ss?, Size) :-
+    open(Size?, Buf--Tail),
+    integers(1, N?, Buf?),
     square(Buf?--Tail?, Ss).
 
-integers(I, N, Buf) :-
+integers(I, N, [I?|Buf?]) :-
     I? =< N? |
     J := I? + 1,
-    send(I?, Buf?, NBuf),
-    integers(J?, N?, NBuf?).
+    integers(J?, N?, Buf).
 integers(I, N, Buf) :-
     I? > N? |
     close(Buf?).
 
-square(Buf, Ss) :-
-    receive(I, Buf?, NBuf),
-    square2(I?, NBuf?, Ss).
-
-square2(I, _, []) :- closed(I?) | true.
-square2(I, Buf, Out) :-
+square([I|Buf], [I2?|Ss?]) :-
     number(I?) |
     I2 := I? * I?,
-    Out = [I2?|Ss?],
     square(Buf?, Ss).
+square([I|_], []) :- closed(I?) | true.
