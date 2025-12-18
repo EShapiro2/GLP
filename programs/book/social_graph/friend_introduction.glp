@@ -10,9 +10,9 @@ new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 % Friend introduces two others
 social_graph(Id, [msg(user, Id?, introduce(P, Q))|In], Fs) :-
     ground(Id?), ground(P?), ground(Q?),
-    new_channel(ch(PQIn, PQOut?), ch(QPIn, QPOut?)) |
-    lookup_send(P?, msg(Id?, P?, intro(Q?, ch(QPIn?, PQOut))), Fs?, Fs1),
-    lookup_send(Q?, msg(Id?, Q?, intro(P?, ch(PQIn?, QPOut))), Fs1?, Fs2),
+    new_channel(ch(PQ, QP?), ch(QP, PQ?)) |
+    lookup_send(P?, msg(Id?, P?, intro(Q?, ch(QP?, PQ))), Fs?, Fs1),
+    lookup_send(Q?, msg(Id?, Q?, intro(P?, ch(PQ?, QP))), Fs1?, Fs2),
     social_graph(Id?, In?, Fs2?).
 
 % Process introduction from friend
