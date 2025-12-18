@@ -1,6 +1,5 @@
 %% test_repayments.glp - Unit tests for repayment computation
 
-:- include(gc).
 
 %% ============================================
 %% Repayment Computation Tests

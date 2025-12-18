@@ -1,6 +1,5 @@
 %% test_blocklace.glp - Unit tests for blocklace operations
 
-:- include(consensus).
 
 %% ============================================
 %% Block Query Tests

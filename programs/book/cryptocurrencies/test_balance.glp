@@ -1,6 +1,5 @@
 %% test_balance.glp - Unit tests for balance management
 
-:- include(gc).
 
 %% ============================================
 %% Balance Tests

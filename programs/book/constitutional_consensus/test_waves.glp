@@ -1,6 +1,5 @@
 %% test_waves.glp - Unit tests for wave and round utilities
 
-:- include(consensus).
 
 %% ============================================
 %% Wave/Round Tests

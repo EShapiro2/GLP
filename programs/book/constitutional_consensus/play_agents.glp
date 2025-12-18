@@ -1,7 +1,6 @@
 %% play_agents.glp - Multi-agent consensus simulation
 %% Three agents running the full consensus protocol
 
-:- include(consensus).
 
 %% ============================================
 %% Three-Agent Play
