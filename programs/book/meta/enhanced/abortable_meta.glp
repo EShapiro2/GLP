@@ -6,9 +6,9 @@
 
 run(_, true, _).                                 % halt
 run(M, (A, B), Eq) :-                            % fork
-    unknown(Eq?) |
+    ground(M?), unknown(Eq?) |
     run(M?, A?, Eq?), run(M?, B?, Eq?).
-run(M, M1 # G, Eq) :- run(M1?, G?, Eq?).         % cross-module
+run(_, M1 # G, Eq) :- run(M1?, G?, Eq?).         % cross-module
 run(M, A, Eq) :-                                 % reduce
     tuple(A?), unknown(Eq?) |
     M? # reduce(A?, B),

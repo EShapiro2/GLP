@@ -22,7 +22,7 @@ fib_linear(N, F?) :- fib_acc(N?, 0, 1, F).
 
 fib_acc(0, A, _, A?).
 fib_acc(N, A, B, F?) :-
-    N? > 0 |
+    N? > 0, number(B?) |
     N1 := N? - 1,
     AB := A? + B?,
     fib_acc(N1?, B?, AB?, F).
@@ -30,4 +30,4 @@ fib_acc(N, A, B, F?) :-
 %% Metainterpreter support for linear version
 reduce(fib_linear(N, F?), fib_acc(N?, 0, 1, F)).
 reduce(fib_acc(0, A, _, A?), true).
-reduce(fib_acc(N, A, B, F?), (N1 := N? - 1, AB := A? + B?, fib_acc(N1?, B?, AB?, F))) :- N? > 0 | true.
+reduce(fib_acc(N, A, B, F?), (N1 := N? - 1, AB := A? + B?, fib_acc(N1?, B?, AB?, F))) :- N? > 0, number(B?) | true.

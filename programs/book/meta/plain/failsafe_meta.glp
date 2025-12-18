@@ -6,10 +6,11 @@
 
 run(_, true, L, L?).                             % halt - close circuit
 run(M, (A, B), L, R?) :-                         % fork - chain
+    ground(M?) |
     run(M?, A?, L?, Mid),
     run(M?, B?, Mid?, R).
-run(M, M1 # G, L, R?) :- run(M1?, G?, L?, R).    % cross-module
-run(M, failed(A), L, [failed(A?)|L?]).           % report failure
+run(_, M1 # G, L, R?) :- run(M1?, G?, L?, R).    % cross-module
+run(_, failed(A), L, [failed(A?)|L?]).           % report failure
 run(M, A, L, R?) :-                              % reduce
     tuple(A?) |
     M? # reduce(A?, B),
