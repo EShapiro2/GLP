@@ -77,47 +77,65 @@ class VariableTable {
 
   bool isGrounded(String varName) => _groundedVars.contains(varName);
 
-  void verifySRSW() {
+  /// Verify SRSW constraints and return list of violations (empty if valid)
+  List<String> collectSRSWViolations() {
+    final violations = <String>[];
+
     for (final info in _vars.values) {
-      // Check writer occurrences
+      // Check writer occurrences (multiple writers)
       if (info.writerOccurrences > 1) {
-        throw CompileError(
-          'SRSW violation: Writer variable "${info.name}" occurs ${info.writerOccurrences} times in clause',
-          info.firstOccurrence?.line ?? 0,
-          info.firstOccurrence?.column ?? 0,
-          phase: 'analyzer'
+        final line = info.firstOccurrence?.line ?? 0;
+        violations.add(
+          'Line $line: Writer variable "${info.name}" occurs ${info.writerOccurrences} times'
         );
       }
 
       // Check reader occurrences (unless grounded)
       if (info.readerOccurrences > 1 && !isGrounded(info.name)) {
-        throw CompileError(
-          'SRSW violation: Reader variable "${info.name}?" occurs ${info.readerOccurrences} times without ground guard',
-          info.firstOccurrence?.line ?? 0,
-          info.firstOccurrence?.column ?? 0,
-          phase: 'analyzer'
+        final line = info.firstOccurrence?.line ?? 0;
+        violations.add(
+          'Line $line: Reader variable "${info.name}?" occurs ${info.readerOccurrences} times without ground guard'
         );
       }
 
       // Check for complete reader/writer pairs (revised SRSW requirement)
       // Each variable must have exactly one writer AND at least one reader
-      if (info.writerOccurrences != 1) {
-        throw CompileError(
-          'SRSW violation: Variable "${info.name}" must have exactly one writer occurrence (found ${info.writerOccurrences})',
-          info.firstOccurrence?.line ?? 0,
-          info.firstOccurrence?.column ?? 0,
-          phase: 'analyzer'
+      if (info.writerOccurrences == 0) {
+        final line = info.firstOccurrence?.line ?? 0;
+        violations.add(
+          'Line $line: Variable "${info.name}" has no writer (must have exactly one)'
         );
       }
 
-      if (info.readerOccurrences == 0) {
-        throw CompileError(
-          'SRSW violation: Variable "${info.name}" has writer but no reader (must have at least one reader)',
-          info.firstOccurrence?.line ?? 0,
-          info.firstOccurrence?.column ?? 0,
-          phase: 'analyzer'
+      if (info.readerOccurrences == 0 && info.writerOccurrences > 0) {
+        final line = info.firstOccurrence?.line ?? 0;
+        violations.add(
+          'Line $line: Variable "${info.name}" has no reader'
         );
       }
+    }
+
+    return violations;
+  }
+
+  /// Legacy method - throws on first violation (for backwards compatibility)
+  void verifySRSW() {
+    final violations = collectSRSWViolations();
+    if (violations.isNotEmpty) {
+      // Find first violation's line for the error location
+      final firstVar = _vars.values.firstWhere(
+        (v) => v.writerOccurrences > 1 ||
+               (v.readerOccurrences > 1 && !isGrounded(v.name)) ||
+               v.writerOccurrences == 0 ||
+               (v.readerOccurrences == 0 && v.writerOccurrences > 0),
+        orElse: () => _vars.values.first,
+      );
+      throw CompileError(
+        'SRSW violation: ${violations.first.replaceFirst(RegExp(r'^Line \d+: '), '')}',
+        firstVar.firstOccurrence?.line ?? 0,
+        firstVar.firstOccurrence?.column ?? 0,
+        phase: 'analyzer'
+      );
     }
   }
 
@@ -187,9 +205,18 @@ class Analyzer {
         : transformed;
 
     final annotatedProcs = <AnnotatedProcedure>[];
+    final allViolations = <String>[];
 
     for (final proc in withReduce.procedures) {
-      annotatedProcs.add(_analyzeProcedure(proc));
+      final (annotatedProc, violations) = _analyzeProcedureCollectingErrors(proc);
+      annotatedProcs.add(annotatedProc);
+      allViolations.addAll(violations);
+    }
+
+    // Report all SRSW violations together
+    if (allViolations.isNotEmpty) {
+      final message = 'SRSW violations found:\n${allViolations.map((v) => '  • $v').join('\n')}';
+      throw CompileError(message, 0, 0, phase: 'analyzer');
     }
 
     return AnnotatedProgram(withReduce, annotatedProcs);
@@ -325,6 +352,20 @@ class Analyzer {
     return AnnotatedProcedure(proc, proc.name, proc.arity, annotatedClauses);
   }
 
+  /// Analyze procedure and collect SRSW violations instead of throwing
+  (AnnotatedProcedure, List<String>) _analyzeProcedureCollectingErrors(Procedure proc) {
+    final annotatedClauses = <AnnotatedClause>[];
+    final allViolations = <String>[];
+
+    for (final clause in proc.clauses) {
+      final (annotatedClause, violations) = _analyzeClauseCollectingErrors(clause, proc.name, proc.arity);
+      annotatedClauses.add(annotatedClause);
+      allViolations.addAll(violations);
+    }
+
+    return (AnnotatedProcedure(proc, proc.name, proc.arity, annotatedClauses), allViolations);
+  }
+
   AnnotatedClause _analyzeClause(Clause clause) {
     final varTable = VariableTable();
 
@@ -354,6 +395,39 @@ class Analyzer {
     _assignRegisters(varTable);
 
     return AnnotatedClause(clause, varTable, hasGuards: hasGuards, hasBody: hasBody);
+  }
+
+  /// Analyze clause and collect SRSW violations instead of throwing
+  (AnnotatedClause, List<String>) _analyzeClauseCollectingErrors(Clause clause, String procName, int procArity) {
+    final varTable = VariableTable();
+
+    // Analyze head
+    _analyzeAtom(clause.head, varTable);
+
+    // Analyze guards (if present)
+    final hasGuards = clause.guards != null && clause.guards!.isNotEmpty;
+    if (hasGuards) {
+      for (final guard in clause.guards!) {
+        _analyzeGuard(guard, varTable);
+      }
+    }
+
+    // Analyze body (if present)
+    final hasBody = clause.body != null && clause.body!.isNotEmpty;
+    if (hasBody) {
+      for (final goal in clause.body!) {
+        _analyzeGoal(goal, varTable);
+      }
+    }
+
+    // Collect SRSW violations instead of throwing
+    final violations = varTable.collectSRSWViolations();
+    final contextViolations = violations.map((v) => '$procName/$procArity: $v').toList();
+
+    // Assign register indices (even if there are violations, for partial analysis)
+    _assignRegisters(varTable);
+
+    return (AnnotatedClause(clause, varTable, hasGuards: hasGuards, hasBody: hasBody), contextViolations);
   }
 
   void _analyzeAtom(Atom atom, VariableTable varTable) {
