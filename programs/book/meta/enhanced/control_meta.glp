@@ -14,7 +14,7 @@ run(_, M1 # G, Cs, L, R?) :-                     % cross-module
 run(M, A, [suspend|Cs], L, R?) :-                % suspend
     suspended_run(M?, A?, Cs?, L?, R).
 run(M, A, Cs, L, R?) :-                          % reduce
-    tuple(A?) |
+    tuple(A?), ground(M?) |
     M? # reduce(A?, B),
     run(M?, B?, Cs?, L?, R).
 

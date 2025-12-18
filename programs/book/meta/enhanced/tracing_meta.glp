@@ -11,7 +11,7 @@ run(M, (A, B), fork(TA?, TB?)) :-                % fork
     run(M?, B?, TB).
 run(_, M1 # G, Tree?) :- run(M1?, G?, Tree).     % cross-module
 run(M, A, reduction(A_obs?, I?, TB?)) :-         % reduce
-    tuple(A?) |
+    tuple(A?), ground(M?) |
     observe(A?, A_exec, A_obs),
     M? # reduce(A_exec?, B, I),
     run(M?, B?, TB).
@@ -22,8 +22,10 @@ run(M, A, reduction(A_obs?, I?, TB?)) :-         % reduce
 %% Replay from trace
 replay(_, true, true).
 replay(M, fork(T1, T2), (A?, B?)) :-
+    ground(M?) |
     replay(M?, T1?, A),
     replay(M?, T2?, B).
 replay(M, reduction(_, I, SubTree), Goal?) :-
+    ground(M?) |
     M? # reduce_by_index(I?, Goal, Body),
     replay(M?, SubTree?, Body?).
