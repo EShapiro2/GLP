@@ -1,10 +1,11 @@
 /// PMT Occurrence Classifier: Classifies variable occurrences as reader or writer
 ///
-/// Classification rules (head inverts, body preserves):
-/// - Head reader arg (`T?`) → variable is **writer** occurrence
-/// - Head writer arg (`T`)  → variable is **reader** occurrence
-/// - Body reader arg (`T?`) → variable is **reader** occurrence
-/// - Body writer arg (`T`)  → variable is **writer** occurrence
+/// Classification rules (syntactic):
+/// - Variable with `?` suffix (e.g., `X?`) → **reader** occurrence
+/// - Variable without `?` suffix (e.g., `X`) → **writer** occurrence
+///
+/// The syntactic annotation in source code is authoritative for SRSW checking.
+/// Mode declarations are used for separate mode consistency validation.
 
 import '../ast.dart';
 import 'mode_table.dart';
@@ -74,12 +75,8 @@ class OccurrenceClassifier {
   /// Classify variables in clause head
   void _classifyHead(Atom head, List<Mode> headModes, List<Occurrence> out) {
     for (int i = 0; i < head.args.length && i < headModes.length; i++) {
-      final argMode = headModes[i];
-      // Head inverts: reader arg → writer occurrence, writer arg → reader occurrence
-      final occType = (argMode == Mode.reader)
-          ? OccurrenceType.writer
-          : OccurrenceType.reader;
-      _collectVariables(head.args[i], occType, out);
+      // Collect variables using syntactic annotations (headModes unused for now)
+      _collectVariables(head.args[i], out);
     }
   }
 
@@ -87,91 +84,38 @@ class OccurrenceClassifier {
   void _classifyGoal(Goal goal, List<Occurrence> out) {
     // Skip remote goals for now (would need cross-module mode lookup)
     if (goal is RemoteGoal) {
-      // For remote goals, we'd need to look up the target module's modes
-      // For now, skip classification (or could treat as unknown)
       return;
     }
 
-    // Handle built-in operations with known modes
-    final builtinModes = _getBuiltinModes(goal.functor, goal.arity);
-    if (builtinModes != null) {
-      for (int i = 0; i < goal.args.length && i < builtinModes.length; i++) {
-        final argMode = builtinModes[i];
-        final occType = (argMode == Mode.reader)
-            ? OccurrenceType.reader
-            : OccurrenceType.writer;
-        _collectVariables(goal.args[i], occType, out);
-      }
-      return;
+    // Collect variables from all arguments using syntactic annotations
+    for (final arg in goal.args) {
+      _collectVariables(arg, out);
     }
-
-    // Look up modes for this goal
-    final goalModes = modeTable.getModes(goal.functor, goal.arity);
-    if (goalModes == null) {
-      // No mode declaration for this predicate - skip classification
-      // (Could also treat all args as unknown/unclassified)
-      return;
-    }
-
-    for (int i = 0; i < goal.args.length && i < goalModes.length; i++) {
-      final argMode = goalModes[i];
-      // Body preserves: reader arg → reader occurrence, writer arg → writer occurrence
-      final occType = (argMode == Mode.reader)
-          ? OccurrenceType.reader
-          : OccurrenceType.writer;
-      _collectVariables(goal.args[i], occType, out);
-    }
-  }
-
-  /// Get modes for built-in operations
-  ///
-  /// Built-ins with known modes:
-  /// - `:=/2` - arithmetic assignment: writer(LHS), reader(RHS)
-  /// - `allocate_mutual_reference/2` - writer(Ref), writer(Output)
-  /// - `kernel_stream_append/3` - reader(RefIn), reader(Value), writer(RefOut)
-  /// - `kernel_close_mutual_reference/1` - reader(Ref)
-  List<Mode>? _getBuiltinModes(String functor, int arity) {
-    if (functor == ':=' && arity == 2) {
-      // X := Expr - X is writer (receives result), Expr is reader (provides value)
-      return [Mode.writer, Mode.reader];
-    }
-    if (functor == '_allocate_mutual_reference' && arity == 2) {
-      // _allocate_mutual_reference(Ref, Output) - Ref is writer, Output is writer
-      return [Mode.writer, Mode.writer];
-    }
-    if (functor == '_stream_append' && arity == 3) {
-      // _stream_append(RefIn, Value, RefOut)
-      return [Mode.reader, Mode.reader, Mode.writer];
-    }
-    if (functor == '_close_mutual_reference' && arity == 1) {
-      // _close_mutual_reference(Ref)
-      return [Mode.reader];
-    }
-    return null;
   }
 
   /// Classify variables in a guard
-  /// Guards only read values, so all variable occurrences are readers
   void _classifyGuard(Guard guard, List<Occurrence> out) {
     for (final arg in guard.args) {
-      _collectVariables(arg, OccurrenceType.reader, out);
+      _collectVariables(arg, out);
     }
   }
 
-  /// Recursively collect variable occurrences from a term
-  void _collectVariables(Term term, OccurrenceType type, List<Occurrence> out) {
+  /// Recursively collect variable occurrences from a term using syntactic annotations
+  void _collectVariables(Term term, List<Occurrence> out) {
     if (term is VarTerm) {
-      out.add(Occurrence(term.name, type, term.line, term.column));
+      // Use syntactic annotation: X? is reader, X is writer
+      final occType = term.isReader ? OccurrenceType.reader : OccurrenceType.writer;
+      out.add(Occurrence(term.name, occType, term.line, term.column));
     } else if (term is StructTerm) {
       for (final arg in term.args) {
-        _collectVariables(arg, type, out);
+        _collectVariables(arg, out);
       }
     } else if (term is ListTerm) {
       if (term.head != null) {
-        _collectVariables(term.head!, type, out);
+        _collectVariables(term.head!, out);
       }
       if (term.tail != null) {
-        _collectVariables(term.tail!, type, out);
+        _collectVariables(term.tail!, out);
       }
     }
     // ConstTerm, UnderscoreTerm — no variables to collect
