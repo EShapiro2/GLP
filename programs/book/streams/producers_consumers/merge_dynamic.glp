@@ -4,6 +4,14 @@
 % Test goals:
 % dmerge([a, merge([x,y]), b], [1, 2], Out).
 
+%% Type definitions
+List ::= [] ; [Any | List].
+
+%% Procedure type declarations
+procedure merge(List, List, List).
+procedure dmerge(List, List, List).
+procedure dmerger(List, List, List).
+
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).

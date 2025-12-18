@@ -6,11 +6,11 @@
 %% Uses guard X =\= Y which succeeds if arguments are not unifiable.
 
 %% Type definitions
-List := [] | [_ | List].
+List ::= [] ; [Any | List].
 
-%% Mode declarations
-Merger := merger(List?, List?, List).
-DynMerge := merge(List?, List?, List).
+%% Procedure type declarations
+procedure merger(List, List, List).
+procedure merge(List, List, List).
 
 merger(Ws, Xs, Out?) :- merge(Ws?, Xs?, Out).
 

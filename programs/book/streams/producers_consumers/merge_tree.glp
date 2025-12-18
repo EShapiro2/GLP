@@ -15,13 +15,13 @@
 % of many streams efficiently.
 
 %% Type definitions
-List := [] | [_ | List].
-ListOfLists := [] | [List | ListOfLists].
+List ::= [] ; [Any | List].
+ListOfLists ::= [] ; [List | ListOfLists].
 
-%% Mode declarations
-MergeTree := merge_tree(ListOfLists?, List).
-MergeLayer := merge_layer(ListOfLists?, ListOfLists).
-Merge := merge(List?, List?, List).
+%% Procedure type declarations
+procedure merge_tree(ListOfLists, List).
+procedure merge_layer(ListOfLists, ListOfLists).
+procedure merge(List, List, List).
 
 % Base case: single stream passes through unchanged
 merge_tree([Xs], Xs?).
