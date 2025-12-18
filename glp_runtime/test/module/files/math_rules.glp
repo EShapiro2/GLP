@@ -1,0 +1,8 @@
+% math_rules.glp - Math rules as clause/2 facts for meta-interpreter
+-module(math_rules).
+-export([clause/2]).
+
+clause(double(5, 10), true).
+clause(double(10, 20), true).
+clause(triple(5, 15), true).
+clause(triple(10, 30), true).

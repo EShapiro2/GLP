@@ -916,6 +916,105 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# --- Circular Term Tests ---
+# Tests for circular term creation and helper predicates
+echo ""
+echo "--- Circular Term Tests ---"
+
+circular_output=$($DART run "$REPL" <<CIRCULAR_INPUT
+$GLP_DIR/circular_test.glp
+link(A, f(B?)), link(B, f(A?)).
+is_ground(foo, R1).
+is_ground(f(a,b), R2).
+test_equal(foo, foo, R3).
+test_equal(foo, bar, R4).
+test_self_equal(f(a,b), R5).
+show(hello, X).
+:quit
+CIRCULAR_INPUT
+2>&1)
+
+# Test circular term creation and display
+if echo "$circular_output" | grep -q "<circular>"; then
+    echo "PASS: Circular term created and displayed with <circular> marker"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Circular term creation (expected: <circular> marker in output)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$circular_output" | grep -q "R1 = yes"; then
+    echo "PASS: is_ground(foo) = yes"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: is_ground(foo) (expected: R1 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$circular_output" | grep -q "R2 = yes"; then
+    echo "PASS: is_ground(f(a,b)) = yes"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: is_ground(f(a,b)) (expected: R2 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$circular_output" | grep -q "R3 = yes"; then
+    echo "PASS: test_equal(foo,foo) = yes"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: test_equal(foo,foo) (expected: R3 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$circular_output" | grep -q "R4 = no"; then
+    echo "PASS: test_equal(foo,bar) = no"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: test_equal(foo,bar) (expected: R4 = no)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$circular_output" | grep -q "R5 = yes"; then
+    echo "PASS: test_self_equal(f(a,b)) = yes"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: test_self_equal(f(a,b)) (expected: R5 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$circular_output" | grep -q "X = hello"; then
+    echo "PASS: show(hello,X) = hello"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: show(hello,X) (expected: X = hello)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test ground and equality on actual circular terms
+circular_ops_output=$($DART run "$REPL" <<CIRCULAR_OPS
+$GLP_DIR/circular_test.glp
+link(A, f(B?)), link(B, f(A?)), test_ground(A?, R1), test_eq(A?, A?, R2).
+:quit
+CIRCULAR_OPS
+2>&1)
+
+if echo "$circular_ops_output" | grep -q "R1 = yes"; then
+    echo "PASS: ground(circular_term) = yes"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: ground(circular_term) (expected: R1 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$circular_ops_output" | grep -q "R2 = yes"; then
+    echo "PASS: circular_term =?= circular_term = yes"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: circular_term =?= circular_term (expected: R2 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""

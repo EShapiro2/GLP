@@ -1,0 +1,7 @@
+% main.glp - Main module that imports math
+-module(main).
+-import([math]).
+-export([compute/2]).
+
+compute(5, Y?) :- math # double(5, Y).
+compute(10, Y?) :- math # double(10, Y).

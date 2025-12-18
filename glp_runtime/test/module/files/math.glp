@@ -1,0 +1,7 @@
+% math.glp - Math module for testing
+-module(math).
+-export([double/2]).
+
+double(5, 10).
+double(10, 20).
+double(X, Y?) :- integer(X?), X? > 0 | Y = unknown.

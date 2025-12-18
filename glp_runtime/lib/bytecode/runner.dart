@@ -3116,12 +3116,17 @@ class BytecodeRunner {
 
         // Collect unbound readers and check for unbound writers
         // NOTE: Must check BOTH sigmaHat (tentative bindings) AND heap bindings
+        // CYCLE DETECTION: Track visited variable IDs to handle circular terms
         final unboundReaders = <int>{};
+        final visited = <int>{};  // Track visited variable IDs for cycle detection
         bool hasUnboundWriter = false;
 
         void collectUnbound(Object? term) {
           if (term is VarRef && !term.isReader) {
             final wid = term.varId;
+            // Cycle detection: skip already-visited variables
+            if (visited.contains(wid)) return;
+            visited.add(wid);
             // First check sigmaHat for tentative binding
             final sigmaBinding = cx.sigmaHat[wid];
             if (sigmaBinding != null) {
@@ -3133,6 +3138,9 @@ class BytecodeRunner {
             }
           } else if (term is VarRef && term.isReader) {
             final rid = term.varId;
+            // Cycle detection: skip already-visited variables
+            if (visited.contains(rid)) return;
+            visited.add(rid);
             // First check sigmaHat for tentative binding on the reader
             final sigmaBinding = cx.sigmaHat[rid];
             if (sigmaBinding != null) {
@@ -4448,7 +4456,10 @@ class BytecodeRunner {
 
   /// Check structural equality of two ground terms
   /// cx is needed to dereference VarRefs inside structures
-  static bool _termsEqual(Object? a, Object? b, RunnerContext cx) {
+  /// CYCLE DETECTION: Uses visited pairs set to handle circular terms
+  static bool _termsEqual(Object? a, Object? b, RunnerContext cx, [Set<(int, int)>? visited]) {
+    visited ??= <(int, int)>{};
+
     // Handle null
     if (a == null && b == null) return true;
     if (a == null || b == null) return false;
@@ -4457,15 +4468,17 @@ class BytecodeRunner {
     if (a is ConstTerm) a = a.value;
     if (b is ConstTerm) b = b.value;
 
-    // Dereference VarRefs
+    // Dereference VarRefs with cycle detection
     if (a is VarRef) {
+      final aId = a.varId;
+      Object? aDeref;
       if (a.isReader) {
-        final wid = cx.rt.heap.writerIdForReader(a.varId);
+        final wid = cx.rt.heap.writerIdForReader(aId);
         if (wid != null) {
           if (cx.sigmaHat.containsKey(wid)) {
-            a = cx.sigmaHat[wid];
+            aDeref = cx.sigmaHat[wid];
           } else if (cx.rt.heap.isWriterBound(wid)) {
-            a = cx.rt.heap.valueOfWriter(wid);
+            aDeref = cx.rt.heap.valueOfWriter(wid);
           } else {
             return false; // Unbound - can't compare
           }
@@ -4473,25 +4486,37 @@ class BytecodeRunner {
           return false;
         }
       } else {
-        if (cx.sigmaHat.containsKey(a.varId)) {
-          a = cx.sigmaHat[a.varId];
-        } else if (cx.rt.heap.isWriterBound(a.varId)) {
-          a = cx.rt.heap.getValue(a.varId);
+        if (cx.sigmaHat.containsKey(aId)) {
+          aDeref = cx.sigmaHat[aId];
+        } else if (cx.rt.heap.isWriterBound(aId)) {
+          aDeref = cx.rt.heap.getValue(aId);
         } else {
           return false; // Unbound writer
         }
       }
-      // Recursively unwrap
-      return _termsEqual(a, b, cx);
+
+      // If b is also a VarRef, check for cycle
+      if (b is VarRef) {
+        final bId = b.varId;
+        final pair = (aId, bId);
+        if (visited.contains(pair)) {
+          return true; // Cycle detected at corresponding positions - equal
+        }
+        visited.add(pair);
+      }
+
+      return _termsEqual(aDeref, b, cx, visited);
     }
     if (b is VarRef) {
+      final bId = b.varId;
+      Object? bDeref;
       if (b.isReader) {
-        final wid = cx.rt.heap.writerIdForReader(b.varId);
+        final wid = cx.rt.heap.writerIdForReader(bId);
         if (wid != null) {
           if (cx.sigmaHat.containsKey(wid)) {
-            b = cx.sigmaHat[wid];
+            bDeref = cx.sigmaHat[wid];
           } else if (cx.rt.heap.isWriterBound(wid)) {
-            b = cx.rt.heap.valueOfWriter(wid);
+            bDeref = cx.rt.heap.valueOfWriter(wid);
           } else {
             return false;
           }
@@ -4499,15 +4524,15 @@ class BytecodeRunner {
           return false;
         }
       } else {
-        if (cx.sigmaHat.containsKey(b.varId)) {
-          b = cx.sigmaHat[b.varId];
-        } else if (cx.rt.heap.isWriterBound(b.varId)) {
-          b = cx.rt.heap.getValue(b.varId);
+        if (cx.sigmaHat.containsKey(bId)) {
+          bDeref = cx.sigmaHat[bId];
+        } else if (cx.rt.heap.isWriterBound(bId)) {
+          bDeref = cx.rt.heap.getValue(bId);
         } else {
           return false;
         }
       }
-      return _termsEqual(a, b, cx);
+      return _termsEqual(a, bDeref, cx, visited);
     }
 
     // Simple values (numbers, strings)
@@ -4519,7 +4544,7 @@ class BytecodeRunner {
       if (a.functor != b.functor) return false;
       if (a.args.length != b.args.length) return false;
       for (int i = 0; i < a.args.length; i++) {
-        if (!_termsEqual(a.args[i], b.args[i], cx)) return false;
+        if (!_termsEqual(a.args[i], b.args[i], cx, visited)) return false;
       }
       return true;
     }
