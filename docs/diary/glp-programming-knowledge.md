@@ -40,6 +40,28 @@ new_channel(ch(A, B?), ch(C, D?))
 
 ---
 
+## Channel Argument Mode Rule
+
+**When a channel appears in a goal, its two arguments must be in inverse modes: `ch(In?, Out)` — one reader, one writer.**
+
+- `In?` is the reader end (receive from channel)
+- `Out` is the writer end (send to channel)
+
+### Common Error
+
+```prolog
+% WRONG - both arguments are readers
+ch(QPIn?, PQOut?)
+
+% CORRECT - inverse modes
+ch(QPIn?, PQOut)
+```
+
+This applies whenever a channel structure is passed as an argument.
+
+---
+
 ## Change Log
 
 - 2025-12-18: Added Mode Inversion Rule based on friend_introduction.glp analysis
+- 2025-12-18: Added Channel Argument Mode Rule
