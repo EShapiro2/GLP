@@ -43,7 +43,7 @@ Term matching of two terms has three possible outcomes:
 - Only assigns writers (never readers)
 - Writer-to-writer (WxW) fails immediately (would abandon paired readers)
 - Reader-to-reader (RxR) fails (cannot be assigned or equated)
-- No occurs check needed (SO invariant prevents circular terms)
+- No occurs check is performed (infeasible in multiagent settings); circular terms may form and implementations must handle them gracefully
 
 ### WxW (Writer-to-Writer Matching Fails)
 
@@ -129,8 +129,8 @@ Otherwise (no clause succeeds or suspends):
 ### SO Invariant
 If the initial goal G₀ satisfies SO (each variable occurs at most once), then every goal in the run satisfies SO.
 
-### Acyclicity
-The SO invariant prevents formation of circular terms: since each variable occurs at most once, a variable cannot appear in a term to which it is assigned.
+### Circular Terms
+Circular terms may form through cross-goal communication; the occurs check is not performed as it is infeasible in multiagent settings. Implementations must handle circular terms gracefully (e.g., cycle detection during term traversal).
 
 ### Monotonicity (Proposition at line 378)
 **Unlike LP**, in GLP: If atom A ∈ Gᵢ can reduce with clause C, then for any j > i:
