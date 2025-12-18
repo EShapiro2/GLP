@@ -439,6 +439,27 @@ run_test "Test description" \
 2. The test should verify the fix works (not just that it doesn't crash)
 3. This prevents regression - the bug should never reappear
 
+### Test Troubleshooting
+
+If REPL tests fail unexpectedly, check these common causes:
+
+1. **Working directory** - Tests must run from proper location. The script handles this via `cd "$GLP_RUNTIME"`, but verify you're starting from `/home/user/GLP`
+2. **DART variable** - Should auto-detect or be `/home/user/dart-sdk/bin/dart`
+3. **Path resolution** - `$GLP_DIR` should resolve to absolute path
+
+**Standard test invocation:**
+```bash
+cd /home/user/GLP
+bash test/full_run_repl_tests.sh
+```
+
+**Debug individual test manually:**
+```bash
+cd /home/user/GLP/glp_runtime
+export PATH="/home/user/dart-sdk/bin:$PATH"
+echo -e '/home/user/GLP/programs/tests/repl/TESTFILE.glp\nQUERY.' | dart run bin/glp_repl.dart
+```
+
 ## Working Principles
 
 ### 0. FCP AM Adherence
