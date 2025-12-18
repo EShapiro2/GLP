@@ -1,7 +1,6 @@
 %% play_high_throughput.glp - High-throughput consensus scenario
 %% Multiple transactions create conflict, formal leader resolves
 
-:- include(consensus).
 
 %% ============================================
 %% The Play

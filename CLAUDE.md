@@ -5,7 +5,7 @@
 2. **INSTALL DART** - Check `/home/user/dart-sdk/bin/dart --version`. If missing, see "Dart Installation" section below
 3. **SET DART PATH** - `export PATH="/home/user/dart-sdk/bin:$PATH"`
 4. **MOUNT FCP** - Clone FCP repo: `git clone --depth 1 https://github.com/EShapiro2/FCP.git /tmp/FCP`
-5. **MOUNT GLP-2025** - Clone GLP-2025 repo: `git clone --depth 1 https://github.com/EShapiro2/GLP-2025.git /tmp/GLP-2025`
+5. **MOUNT Art-of-GLP-2025** - Clone Art-of-GLP-2025 repo: `git clone --depth 1 https://github.com/EShapiro2/Art-of-GLP-2025.git /tmp/Art-of-GLP-2025`
 6. **IDENTIFY CURRENT MODE** - Discussion or Implementation
 7. **FOLLOW MODE RULES** - Never mix modes
 8. **ASK FOR CURRENT STATE** - Request latest code/errors from user
@@ -46,11 +46,11 @@ The FCP (Flat Concurrent Prolog) implementation is available for reference:
 - **Key Docs**: `/tmp/FCP/Savannah/efcp/Logix/CONSTANTS.txt` - term syntax definitions
 - **GitHub**: https://github.com/EShapiro2/FCP
 
-### GLP-2025 Paper Repository
-The GLP paper and LaTeX sources:
-- **Location**: `/tmp/GLP-2025` (cloned at startup)
-- **Main file**: `/tmp/GLP-2025/main GLP 2025.tex`
-- **GitHub**: https://github.com/EShapiro2/GLP-2025
+### Art-of-GLP-2025 Paper Repository
+The Art of GLP book and LaTeX sources:
+- **Location**: `/tmp/Art-of-GLP-2025` (cloned at startup)
+- **Main file**: `/tmp/Art-of-GLP-2025/main_AofGLP.tex`
+- **GitHub**: https://github.com/EShapiro2/Art-of-GLP-2025
 
 ## GLP Fundamentals (READ FIRST)
 
@@ -798,6 +798,7 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - i want  dart run glp_repl.dart  please remember that
 - always test all repl tests after a change
 - NEVER work not following precisely the spec
+- always offer to fetch/merge/push when finishing a task
 
 ## #remember Directive
 

@@ -1,7 +1,6 @@
 %% play_payment.glp - Three-agent payment scenario
 %% Alice and Bob establish credit, then Alice pays Carol in Bob-coins
 
-:- include(gc).
 
 %% ============================================
 %% The Play

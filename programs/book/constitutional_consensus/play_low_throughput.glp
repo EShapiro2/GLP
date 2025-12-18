@@ -1,7 +1,6 @@
 %% play_low_throughput.glp - Low-throughput consensus scenario
 %% Single transaction, no conflicts, finalized in one wave
 
-:- include(consensus).
 
 %% ============================================
 %% The Play

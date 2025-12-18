@@ -1,7 +1,6 @@
 %% play_mutual_credit.glp - Mutual credit establishment
 %% Two agents exchange personal coins to establish a credit line
 
-:- include(gc).
 
 %% ============================================
 %% The Play

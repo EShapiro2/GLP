@@ -1,0 +1,14 @@
+% Test file with multiple SRSW violations
+% This file should report ALL violations, not just the first one
+
+% Violation 1: X appears twice as writer
+bad1(X, X) :- true.
+
+% Violation 2: Y? appears twice without ground guard
+bad2(Y?, Y?) :- true.
+
+% Violation 3: Z has no reader
+bad3(Z) :- true.
+
+% This one is correct
+good(A, A?) :- true.

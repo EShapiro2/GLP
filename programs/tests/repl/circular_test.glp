@@ -1,0 +1,34 @@
+% circular_test.glp - Tests for circular term creation and handling
+%
+% Circular terms form through cross-goal communication using link/2.
+% Example: link(A, f(B?)), link(B, f(A?)) creates A = f(f(f(<circular>)))
+% The runtime handles circular terms gracefully with <circular> markers.
+
+% Test ground guard on a value
+% is_ground(Val, Result) - Result is yes if Val is ground, no otherwise
+is_ground(X, yes) :- ground(X?) | true.
+is_ground(_, no) :- otherwise | true.
+
+% Test equality via =?= (both args must be ground)
+% test_equal(A, B, Result) - Result is yes if A =?= B, no otherwise
+test_equal(X, Y, yes) :- X? =?= Y? | true.
+test_equal(_, _, no) :- otherwise | true.
+
+% Self-equality test for a single term
+test_self_equal(X, yes) :- X? =?= X? | true.
+test_self_equal(_, no) :- otherwise | true.
+
+% Helper to display a value (for testing)
+show(X, X?).
+
+% Basic building block for circular terms
+% link(X?, X) - X receives the value from first arg, second arg gets X
+link(X?, X).
+
+% Test ground on circular term (should not loop)
+test_ground(X, yes) :- ground(X?) | true.
+test_ground(_, no) :- otherwise | true.
+
+% Test equality on circular term (should not loop)
+test_eq(X, Y, yes) :- X? =?= Y? | true.
+test_eq(_, _, no) :- otherwise | true.

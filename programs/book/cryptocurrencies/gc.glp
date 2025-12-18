@@ -29,18 +29,18 @@ agent([], _, []).
 agent([Request|Requests], Balances, Stream) :-
     handle(Request?, Balances?, Balances1, BlockOrBlocks),
     prepend_blocks(BlockOrBlocks?, Stream?, Stream1),
-    agent(Requests?, Balances1?, Stream1).
+    agent(Requests?, Balances1?, Stream1?).
 
 prepend_blocks(block(A,B,C), Stream, [block(A?,B?,C?) | Stream?]).
 prepend_blocks([], Stream, Stream?).
-prepend_blocks([B|Bs], Stream, [B? | Stream1]) :- prepend_blocks(Bs?, Stream?, Stream1).
+prepend_blocks([B|Bs], Stream, [B? | Stream1?]) :- prepend_blocks(Bs?, Stream?, Stream1).
 
 %% ============================================
 %% Request Handlers
 %% ============================================
 
 %% Issue: pay someone in a given currency
-handle(issue(To, Amount, Currency), Balances, BalancesOut, Block) :-
+handle(issue(To, Amount, Currency), Balances, BalancesOut?, Block?) :-
     ground(Currency?), ground(Amount?), ground(To?), ground(Balances?),
     get_balance(Currency?, Balances?, OldBal),
     Amount? =< OldBal? |
@@ -53,7 +53,7 @@ make_issue_block(Currency, To, Amount, NewBal,
 
 %% Accept: accept an incoming payment
 handle(accept(Amount, Currency, PaymentBlock, ApprovalBlock),
-       Balances, BalancesOut, Block) :-
+       Balances, BalancesOut?, Block?) :-
     ground(Amount?), ground(Currency?), ground(Balances?) |
     get_balance(Currency?, Balances?, OldBal),
     NewBal := OldBal? + Amount?,
@@ -68,7 +68,7 @@ handle(approve(PaymentBlock), Balances, Balances?,
        block(tx(self, []), approve, [PaymentBlock?])).
 
 %% Mint: sovereign creates new coins (only unbalanced operation)
-handle(mint(Amount), Balances, BalancesOut, Block) :-
+handle(mint(Amount), Balances, BalancesOut?, Block?) :-
     ground(Amount?), ground(Balances?) |
     get_balance(self, Balances?, OldBal),
     NewBal := OldBal? + Amount?,
@@ -83,7 +83,7 @@ make_mint_block(NewBal, block(tx(self, [payment(self, NewBal?)]), mint, [])).
 
 %% Redeem: claimer returns sovereign's coins, requests repayment
 handle(redeem(Sovereign, Amount, Preferences),
-       Balances, BalancesOut, Block) :-
+       Balances, BalancesOut?, Block?) :-
     ground(Sovereign?), ground(Amount?), ground(Balances?),
     get_balance(Sovereign?, Balances?, OldBal),
     Amount? =< OldBal? |
@@ -96,7 +96,7 @@ make_redeem_block(Sovereign, Amount, Preferences,
 
 %% Repay: sovereign repays a redemption claim
 handle(repay(Claimer, Amount, Preferences, ClaimHash),
-       Balances, BalancesOut, Blocks) :-
+       Balances, BalancesOut?, Blocks?) :-
     ground(Claimer?), ground(Amount?), ground(ClaimHash?), ground(Balances?) |
     compute_repayments(Amount?, Preferences?, Balances?, Repayments, BalancesOut),
     make_repay_blocks(Claimer?, Repayments?, ClaimHash?, Blocks).
@@ -113,26 +113,26 @@ compute_repayments(Amount, [], Balances, [(self, Amount?)], Balances?) :-
     Amount? > 0 | true.
 
 %% Try next currency in preference list
-compute_repayments(Amount, [Currency|Rest], Balances, Repayments?, Balances1) :-
+compute_repayments(Amount, [Currency|Rest], Balances, Repayments?, Balances1?) :-
     Amount? > 0 |
     get_balance(Currency?, Balances?, Available),
     take_from_currency(Amount?, Currency?, Available?, Rest?, 
                        Balances?, Repayments, Balances1).
 
 %% No coins of this currency available
-take_from_currency(Amount, _, 0, Rest, Balances, Repayments?, Balances1) :-
+take_from_currency(Amount, _, 0, Rest, Balances, Repayments?, Balances1?) :-
     compute_repayments(Amount?, Rest?, Balances?, Repayments, Balances1).
 
 %% Have enough: pay full amount in this currency
-take_from_currency(Amount, Currency, Available, _, Balances, 
-                   [(Currency?, Amount?)], Balances1) :-
+take_from_currency(Amount, Currency, Available, _, Balances,
+                   [(Currency?, Amount?)], Balances1?) :-
     Available? >= Amount? |
     NewBal := Available? - Amount?,
     set_balance(Currency?, NewBal?, Balances?, Balances1).
 
 %% Not enough: pay what we have, continue with remainder
 take_from_currency(Amount, Currency, Available, Rest, Balances,
-                   [(Currency?, Available?)|Repayments?], Balances1) :-
+                   [(Currency?, Available?)|Repayments?], Balances1?) :-
     Available? > 0, Available? < Amount? |
     Remainder := Amount? - Available?,
     set_balance(Currency?, 0, Balances?, Balances2),

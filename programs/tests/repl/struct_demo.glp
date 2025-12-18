@@ -10,4 +10,4 @@ get_age(person(Name?, age(Age?), _), Name, Age) :- true.
 
 get_city(person(Name?, _, city(City?)), Name, City) :- true.
 
-build_person(P) :- P = person(alice, age(thirty), city(seattle)).
+build_person(person(alice, age(thirty), city(seattle))).

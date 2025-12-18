@@ -4,17 +4,17 @@
 %% Supports suspend, resume, and abort via control stream.
 %% Uses short-circuit L--R for state dump on abort.
 
-run(M, true, _, L, L?).                          % halt
+run(_, true, _, L, L?).                          % halt
 run(M, (A, B), Cs, L, R?) :-                     % fork
-    ground(Cs?) |
+    ground(M?), ground(Cs?) |
     run(M?, A?, Cs?, L?, Mid),
     run(M?, B?, Cs?, Mid?, R).
-run(M, M1 # G, Cs, L, R?) :-                     % cross-module
+run(_, M1 # G, Cs, L, R?) :-                     % cross-module
     run(M1?, G?, Cs?, L?, R).
 run(M, A, [suspend|Cs], L, R?) :-                % suspend
     suspended_run(M?, A?, Cs?, L?, R).
 run(M, A, Cs, L, R?) :-                          % reduce
-    tuple(A?) |
+    tuple(A?), ground(M?) |
     M? # reduce(A?, B),
     run(M?, B?, Cs?, L?, R).
 

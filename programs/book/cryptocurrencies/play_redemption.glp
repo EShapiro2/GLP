@@ -1,7 +1,6 @@
 %% play_redemption.glp - Coin redemption scenario
 %% Bob redeems Alice-coins with preference list
 
-:- include(gc).
 
 %% ============================================
 %% The Play
