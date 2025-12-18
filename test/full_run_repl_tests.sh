@@ -916,15 +916,14 @@ else
     FAIL=$((FAIL + 1))
 fi
 
-# --- Circular Term Helper Tests ---
-# Tests for predicates used with circular terms
-# Note: Actual circular term creation requires multiagent settings
-# Phase 1 unit tests verify circular term handling works
+# --- Circular Term Tests ---
+# Tests for circular term creation and helper predicates
 echo ""
-echo "--- Circular Term Helper Tests ---"
+echo "--- Circular Term Tests ---"
 
 circular_output=$($DART run "$REPL" <<CIRCULAR_INPUT
 $GLP_DIR/circular_test.glp
+link(A, f(B?)), link(B, f(A?)).
 is_ground(foo, R1).
 is_ground(f(a,b), R2).
 test_equal(foo, foo, R3).
@@ -934,6 +933,15 @@ show(hello, X).
 :quit
 CIRCULAR_INPUT
 2>&1)
+
+# Test circular term creation and display
+if echo "$circular_output" | grep -q "<circular>"; then
+    echo "PASS: Circular term created and displayed with <circular> marker"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Circular term creation (expected: <circular> marker in output)"
+    FAIL=$((FAIL + 1))
+fi
 
 if echo "$circular_output" | grep -q "R1 = yes"; then
     echo "PASS: is_ground(foo) = yes"

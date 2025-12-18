@@ -1,9 +1,8 @@
-% circular_test.glp - Tests for term operations used with circular terms
+% circular_test.glp - Tests for circular term creation and handling
 %
-% NOTE: Circular terms form through cross-goal communication in MULTIAGENT
-% settings. In single-agent REPL, SRSW constraints prevent direct circular
-% term creation. Phase 1 unit tests verify circular term handling works.
-% These REPL tests verify the helper predicates work correctly.
+% Circular terms form through cross-goal communication using link/2.
+% Example: link(A, f(B?)), link(B, f(A?)) creates A = f(f(f(<circular>)))
+% The runtime handles circular terms gracefully with <circular> markers.
 
 % Test ground guard on a value
 % is_ground(Val, Result) - Result is yes if Val is ground, no otherwise
@@ -21,3 +20,7 @@ test_self_equal(_, no) :- otherwise | true.
 
 % Helper to display a value (for testing)
 show(X, X?).
+
+% Basic building block for circular terms
+% link(X?, X) - X receives the value from first arg, second arg gets X
+link(X?, X).
