@@ -1,0 +1,23 @@
+% circular_test.glp - Tests for term operations used with circular terms
+%
+% NOTE: Circular terms form through cross-goal communication in MULTIAGENT
+% settings. In single-agent REPL, SRSW constraints prevent direct circular
+% term creation. Phase 1 unit tests verify circular term handling works.
+% These REPL tests verify the helper predicates work correctly.
+
+% Test ground guard on a value
+% is_ground(Val, Result) - Result is yes if Val is ground, no otherwise
+is_ground(X, yes) :- ground(X?) | true.
+is_ground(_, no) :- otherwise | true.
+
+% Test equality via =?= (both args must be ground)
+% test_equal(A, B, Result) - Result is yes if A =?= B, no otherwise
+test_equal(X, Y, yes) :- X? =?= Y? | true.
+test_equal(_, _, no) :- otherwise | true.
+
+% Self-equality test for a single term
+test_self_equal(X, yes) :- X? =?= X? | true.
+test_self_equal(_, no) :- otherwise | true.
+
+% Helper to display a value (for testing)
+show(X, X?).

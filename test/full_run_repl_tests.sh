@@ -916,6 +916,73 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# --- Circular Term Helper Tests ---
+# Tests for predicates used with circular terms
+# Note: Actual circular term creation requires multiagent settings
+# Phase 1 unit tests verify circular term handling works
+echo ""
+echo "--- Circular Term Helper Tests ---"
+
+circular_output=$($DART run "$REPL" <<CIRCULAR_INPUT
+$GLP_DIR/circular_test.glp
+is_ground(foo, R1).
+is_ground(f(a,b), R2).
+test_equal(foo, foo, R3).
+test_equal(foo, bar, R4).
+test_self_equal(f(a,b), R5).
+show(hello, X).
+:quit
+CIRCULAR_INPUT
+2>&1)
+
+if echo "$circular_output" | grep -q "R1 = yes"; then
+    echo "PASS: is_ground(foo) = yes"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: is_ground(foo) (expected: R1 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$circular_output" | grep -q "R2 = yes"; then
+    echo "PASS: is_ground(f(a,b)) = yes"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: is_ground(f(a,b)) (expected: R2 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$circular_output" | grep -q "R3 = yes"; then
+    echo "PASS: test_equal(foo,foo) = yes"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: test_equal(foo,foo) (expected: R3 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$circular_output" | grep -q "R4 = no"; then
+    echo "PASS: test_equal(foo,bar) = no"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: test_equal(foo,bar) (expected: R4 = no)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$circular_output" | grep -q "R5 = yes"; then
+    echo "PASS: test_self_equal(f(a,b)) = yes"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: test_self_equal(f(a,b)) (expected: R5 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$circular_output" | grep -q "X = hello"; then
+    echo "PASS: show(hello,X) = hello"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: show(hello,X) (expected: X = hello)"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""
