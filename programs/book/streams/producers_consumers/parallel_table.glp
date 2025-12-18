@@ -7,7 +7,7 @@
 
 %% Lookup: exact key match returns value and true
 table(Self, LowKey, Value, HighKey) :-
-    read(lookup(LowKey, Value?, true), Self?, NewSelf) |
+    read(lookup(LowKey?, Value?, true), Self?, NewSelf) |
     table(NewSelf?, LowKey?, Value?, HighKey?).
 
 %% Lookup: key in range but not exact match returns false
@@ -27,7 +27,7 @@ table(Self, LowKey, Value, HighKey) :-
 
 %% Store: exact key match updates value
 table(Self, LowKey, _, HighKey) :-
-    read(store(LowKey, NewValue), Self?, NewSelf) |
+    read(store(LowKey?, NewValue), Self?, NewSelf) |
     table(NewSelf?, LowKey?, NewValue?, HighKey?).
 
 %% Example using channels for parallel processing:

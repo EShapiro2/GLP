@@ -17,7 +17,7 @@ producer_b(control(Xs,Next)) :-
     produce_batch_b(Xs,Xs1,Done),
     handover(Done?,Xs1,Next).
 
-handover(done,Xs,control(Xs,Next)).
+handover(done,Xs,control(Xs?,Next)).
 
-produce_batch_a([a,b,c|Xs],Xs,done).
-produce_batch_b([d,e,f|Xs],Xs,done).
+produce_batch_a([a,b,c|Xs],Xs?,done).
+produce_batch_b([d,e,f|Xs],Xs?,done).
