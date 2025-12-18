@@ -129,6 +129,32 @@ Based on file count and pattern importance:
 
 ---
 
+## GLP Programming Patterns Needed
+
+### GP1: Helper Predicate Pattern for Arithmetic Results
+
+**Status**: Pattern not yet documented
+**Files Affected**: gc.glp (partially fixed, needs helper predicate refactoring)
+**Issue**: Variables bound by `:=` arithmetic used multiple times in body goals violate SRSW
+
+**Current pattern (SRSW violation)**:
+```prolog
+handle(issue(...), Balances, BalancesOut?, Block?) :-
+    ground(...) |
+    NewBal := OldBal? - Amount?,
+    set_balance(Currency?, NewBal?, Balances?, BalancesOut),
+    make_issue_block(Currency?, To?, Amount?, NewBal?, Block).
+```
+
+Error: "Reader variable 'NewBal?' occurs 2 times without ground guard"
+
+**Needed solution**: Extract arithmetic to helper predicate or use ground guard pattern.
+
+**Status**: gc.glp has partial fixes (Output Parameter Pattern applied to BalancesOut?, Block?), but still needs NewBal? fix in 5+ handle clauses.
+
+---
+
 ## Change Log
 
 - 2025-12-18: Initial document created from book program analysis
+- 2025-12-18: Added GP1 (Helper Predicate Pattern) based on gc.glp analysis
