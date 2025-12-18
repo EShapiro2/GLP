@@ -29,11 +29,11 @@ agent([], _, []).
 agent([Request|Requests], Balances, Stream) :-
     handle(Request?, Balances?, Balances1, BlockOrBlocks),
     prepend_blocks(BlockOrBlocks?, Stream?, Stream1),
-    agent(Requests?, Balances1?, Stream1).
+    agent(Requests?, Balances1?, Stream1?).
 
 prepend_blocks(block(A,B,C), Stream, [block(A?,B?,C?) | Stream?]).
 prepend_blocks([], Stream, Stream?).
-prepend_blocks([B|Bs], Stream, [B? | Stream1]) :- prepend_blocks(Bs?, Stream?, Stream1).
+prepend_blocks([B|Bs], Stream, [B? | Stream1?]) :- prepend_blocks(Bs?, Stream?, Stream1).
 
 %% ============================================
 %% Request Handlers
