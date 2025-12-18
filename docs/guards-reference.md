@@ -4,11 +4,11 @@
 
 ---
 
-## WxW (No Writer-to-Writer Binding) Restriction
+## WxW (Writer-to-Writer Matching Fails)
 
-GLP prohibits writer-to-writer binding to ensure no readers are abandoned:
-- If writers X and Y unified, their readers X? and Y? would have no writer to provide values
-- Runtime must FAIL immediately on writer-to-writer unification attempts
+GLP term matching fails on writer-to-writer to ensure no readers are abandoned:
+- If writers X and Y were to match, their readers X? and Y? would have no writer to provide values
+- Runtime must FAIL immediately on writer-to-writer term matching attempts
 - This is NOT a suspension case - it's a definitive failure
 
 ---
@@ -32,7 +32,7 @@ Guards are pure tests with **three-valued semantics** (success/suspend/fail) tha
 
 **Syntax**: `~G` where G is an atomic built-in guard
 
-**Semantics**: `~G` succeeds iff G fails. Suspension behavior follows from the standard guard definition (a guard suspends if there exists a substitution to its readers that makes it succeed).
+**Semantics**: `~G` succeeds iff G fails. Suspension behavior follows from the standard guard definition (a guard suspends if there exists an assignment to its readers that makes it succeed).
 
 **Restrictions**:
 - Only atomic built-in guards can be negated
@@ -183,7 +183,7 @@ process(X, Y?) :- ground(X) | Y = computed(X?).  % Would fail, not suspend
 
 ---
 
-## CRITICAL: Ground Guards - The ONLY Exception to SRSW Syntactic Restriction
+## CRITICAL: Ground Guards - Exception to SRSW Syntactic Restriction
 
 Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The ONLY exception: when guards guarantee groundness, multiple reader occurrences are permitted because ground terms cannot expose writers.
 
@@ -340,7 +340,7 @@ lookup(Key, [_|Rest], Value?) :- otherwise | lookup(Key?, Rest?, Value).
 
 The guard `Key =?= K?` succeeds when `Key` and `K` are both ground and equal. If `K` is unbound (reader), it suspends. If `Key` is unbound writer, it fails.
 
-**Why not multiple head writers**: GLP maintains strict SRSW (one writer per variable). Instead of implicit equality via multiple head occurrences, use `=?=` for explicit, visible equality testing.
+**Why not multiple head writers**: GLP maintains the SO invariant via SRSW syntactic restriction (one writer per variable). Instead of implicit equality via multiple head occurrences, use `=?=` for explicit, visible equality testing.
 
 ---
 
@@ -570,7 +570,7 @@ test_known_fail :-
 - Suspend: X is unbound reader
 - Fail: X is any other value
 
-**SRSW Relaxation**: Like `ground(X?)`, the `equator(X?)` guard permits multiple occurrences of `X?` in the clause body. This enables distributing the equator structure to multiple spawned processes.
+**SRSW Relaxation**: Like `ground(X?)`, the `equator(X?)` guard permits multiple reader occurrences of `X?` in the clause body without violating the SRSW syntactic restriction. This enables distributing the equator structure to multiple spawned processes.
 
 **Example**:
 ```prolog
