@@ -544,13 +544,11 @@ class Analyzer {
     // Comparison guards implicitly test groundness of both operands
     // Per spec: comparison guards require both operands to be bound numeric values,
     // which means they're ground. This allows multiple reader occurrences.
+    // Arguments may be complex arithmetic expressions, so extract all reader variables.
     final comparisonOps = ['<', '>', '=<', '>=', '=:=', '=\\='];
     if (comparisonOps.contains(guard.predicate) && guard.args.length == 2) {
       for (final arg in guard.args) {
-        if (arg is VarTerm) {
-          // Mark the writer as grounded (readers of X are allowed multiple times)
-          varTable.markGrounded(arg.name);
-        }
+        _extractAndMarkGroundedVars(arg, varTable);
       }
     }
 
@@ -575,6 +573,28 @@ class Analyzer {
     for (final arg in guard.args) {
       _analyzeTerm(arg, varTable);
     }
+  }
+
+  /// Extract all reader variables from a term and mark them as grounded.
+  /// Used for arithmetic comparison guards where arguments may be complex expressions.
+  void _extractAndMarkGroundedVars(Term term, VariableTable varTable) {
+    if (term is VarTerm) {
+      // Mark the variable (reader or writer) as grounded
+      varTable.markGrounded(term.name);
+    } else if (term is StructTerm) {
+      // Recurse into structure arguments (e.g., X? + 1 has args [X?, 1])
+      for (final arg in term.args) {
+        _extractAndMarkGroundedVars(arg, varTable);
+      }
+    } else if (term is ListTerm) {
+      if (term.head != null) {
+        _extractAndMarkGroundedVars(term.head!, varTable);
+      }
+      if (term.tail != null) {
+        _extractAndMarkGroundedVars(term.tail!, varTable);
+      }
+    }
+    // ConstTerm and UnderscoreTerm have no variables to extract
   }
 
   void _analyzeTerm(Term term, VariableTable varTable) {

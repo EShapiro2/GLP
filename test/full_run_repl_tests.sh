@@ -1054,6 +1054,62 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# Arithmetic guards imply groundness tests
+# X? < Y? can only succeed if X and Y are ground, so multiple reader occurrences allowed
+echo ""
+echo "--- Arithmetic Guards Imply Groundness Tests ---"
+
+arith_ground_output=$($DART run "$REPL" <<ARITH_GROUND
+$GLP_DIR/arith_guard_ground.glp
+compare_and_use(3, 5, R1).
+max(7, 4, M1).
+in_range(5, 1, 10, R2).
+in_range(15, 1, 10, R3).
+compare_expr(1, 5, R4).
+:quit
+ARITH_GROUND
+2>&1)
+
+if echo "$arith_ground_output" | grep -q "R1 = pair(3, 5)"; then
+    echo "PASS: compare_and_use(3, 5, R) = pair(3, 5)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: compare_and_use(3, 5, R) (expected: R1 = pair(3, 5))"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$arith_ground_output" | grep -q "M1 = 7"; then
+    echo "PASS: max(7, 4, M) = 7"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: max(7, 4, M) (expected: M1 = 7)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$arith_ground_output" | grep -q "R2 = yes"; then
+    echo "PASS: in_range(5, 1, 10, R) = yes"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: in_range(5, 1, 10, R) (expected: R2 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$arith_ground_output" | grep -q "R3 = no"; then
+    echo "PASS: in_range(15, 1, 10, R) = no"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: in_range(15, 1, 10, R) (expected: R3 = no)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$arith_ground_output" | grep -q "R4 = pair(1, 5)"; then
+    echo "PASS: compare_expr(1, 5, R) with X?+1 < Y?*2 = pair(1, 5)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: compare_expr(1, 5, R) (expected: R4 = pair(1, 5))"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""
