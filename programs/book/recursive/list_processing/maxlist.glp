@@ -1,6 +1,15 @@
 %% maxlist.glp - Finding the maximum of a list of integers (AoP 8.9)
 %% maxlist(Xs,N) :- N is the maximum of the list of integers Xs.
 
+%% Type definitions
+NumList ::= [] ; [Number | NumList].
+
+%% Procedure type declarations
+procedure maxlist(NumList, Number).
+procedure maxlist(NumList, Number, Number).
+procedure maximum(Number, Number, Number).
+procedure reduce(Any, Any).
+
 maxlist([X|Xs], M) :- maxlist(Xs?, X?, M).
 
 maxlist([X|Xs], Y, M) :- maximum(X?, Y?, Y1), maxlist(Xs?, Y1?, M).

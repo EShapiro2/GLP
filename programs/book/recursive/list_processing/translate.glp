@@ -1,6 +1,14 @@
 %% translate.glp - Translating word for word (AoP 7.8)
 %% translate(Words,Mots) :- Mots is a French translation of the English words Words.
 
+%% Type definitions
+WordList ::= [] ; [Any | WordList].
+
+%% Procedure type declarations
+procedure translate(WordList, WordList).
+procedure dict(Any, Any).
+procedure reduce(Any, Any).
+
 translate([Word|Words], [Mot?|Mots?]) :- dict(Word?, Mot), translate(Words?, Mots).
 translate([], []).
 

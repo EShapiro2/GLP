@@ -2,6 +2,15 @@
 %%
 %% Two implementations demonstrating O(n^2) vs O(n) complexity.
 
+%% Type definitions
+List ::= [] ; [Any | List].
+
+%% Procedure type declarations
+procedure reverse_naive(List, List).
+procedure append(List, List, List).
+procedure reverse(List, List).
+procedure reverse_acc(List, List, List).
+
 %% Naive reverse - O(n^2) due to repeated append
 reverse_naive([], []).
 reverse_naive([X|Xs], Ys?) :-

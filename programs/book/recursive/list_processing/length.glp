@@ -1,6 +1,14 @@
 %% length.glp - List length with accumulator
 %% Source: Standard GLP list operations
 
+%% Type definitions
+List ::= [] ; [Any | List].
+
+%% Procedure type declarations
+procedure length(List, Number).
+procedure length_acc(List, Number, Number).
+procedure reduce(Any, Any).
+
 length(Xs, N?) :- length_acc(Xs?, 0, N).
 
 length_acc([], Acc, Acc?).

@@ -1,6 +1,15 @@
 %% flatten.glp - Flattening nested lists
 %% Source: AofGLP Book Chapter 6
 
+%% Type definitions
+List ::= [] ; [Any | List].
+
+%% Procedure type declarations
+procedure flatten(List, List).
+procedure flatten_dl(List, List, List).
+procedure is_list(Any).
+procedure reduce(Any, Any).
+
 flatten(Xs, Ys?) :- flatten_dl(Xs?, Ys, []).
 
 flatten_dl([], Front?, Front).
