@@ -1,6 +1,14 @@
 %% substitute.glp - Substituting for a term in a tree (AoP 3.26)
 %% substitute(X,Y,TreeX,TreeY) :- TreeY is the result of replacing all X in TreeX by Y.
 
+%% Type definitions
+Tree ::= void ; tree(Any, Tree, Tree).
+
+%% Procedure type declarations
+procedure substitute(Any, Any, Tree, Tree).
+procedure replace(Any, Any, Any, Any).
+procedure reduce(Any, Any).
+
 substitute(_, _, void, void).
 substitute(X, Y, tree(Leaf, Left, Right), tree(Leaf1?, Left1?, Right1?)) :-
     ground(X?), ground(Y?) |

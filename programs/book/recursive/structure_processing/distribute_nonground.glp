@@ -2,6 +2,12 @@
 %% Distributes incrementally-constructed messages to two consumers
 %% Suspends on unbound subterms until producer binds them
 
+%% Procedure type declarations
+procedure distribute(Any, Any, Any).
+procedure copy(Any, Any, Any).
+procedure copy_list(Any, Any, Any).
+procedure test_distribute(Any, Any).
+
 distribute([X|Xs], [Y?|Ys?], [Z?|Zs?]) :-
     copy(X?, Y, Z),
     distribute(Xs?, Ys, Zs).
