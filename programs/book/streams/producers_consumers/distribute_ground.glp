@@ -6,10 +6,10 @@
 %% since it verifies X to be ground.
 
 %% Type definitions
-List := [] | [_ | List].
+List ::= [] ; [Any | List].
 
-%% Mode declarations
-Distribute := distribute(List?, List, List).
+%% Procedure type declarations
+procedure distribute(List, List, List).
 
 distribute([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | distribute(Xs?, Ys, Zs).
 distribute([],[],[]).
