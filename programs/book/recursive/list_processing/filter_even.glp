@@ -3,13 +3,13 @@
 
 filter_even([], []).
 filter_even([X|Xs], [X?|Ys?]) :-
-    number(X?), X? mod 2 =:= 0 |
+    X? mod 2 =:= 0 |
     filter_even(Xs?, Ys).
 filter_even([X|Xs], Ys?) :-
-    number(X?), X? mod 2 =\= 0 |
+    X? mod 2 =\= 0 |
     filter_even(Xs?, Ys).
 
 %% Metainterpreter support
 reduce(filter_even([], []), true).
-reduce(filter_even([X|Xs], [X?|Ys?]), filter_even(Xs?, Ys)) :- number(X?), X? mod 2 =:= 0 | true.
-reduce(filter_even([X|Xs], Ys?), filter_even(Xs?, Ys)) :- number(X?), X? mod 2 =\= 0 | true.
+reduce(filter_even([X|Xs], [X?|Ys?]), filter_even(Xs?, Ys)) :- X? mod 2 =:= 0 | true.
+reduce(filter_even([X|Xs], Ys?), filter_even(Xs?, Ys)) :- X? mod 2 =\= 0 | true.
