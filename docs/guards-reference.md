@@ -140,6 +140,8 @@ replicate(X, [X?, X?, X?]) :- ground(X?) | true.
 
 **Key Property**: With `ground(X?)` guard, multiple occurrences of `X?` in the body don't violate SRSW, as ground terms don't expose writers.
 
+**Circular Term Behavior**: When `X?` is bound to a circular term (e.g., `f(f(f(...)))`), `ground(X?)` succeeds if the term contains no unbound variables on any branch. The cycle itself does not make a term non-ground.
+
 ---
 
 ### ✅ `otherwise`

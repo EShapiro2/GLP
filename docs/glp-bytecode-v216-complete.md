@@ -239,6 +239,24 @@ Only BODY_i may contain:
 **Allowed primitives**: tag/status tests; equality/inequality on constants; structural equality on ground terms; integer comparisons on ground values.
 A guard that demands an uninstantiated reader adds that reader to U, fails to next clause immediately; short-circuiting is only permitted when result is decidable independently of suspended subexpressions.
 
+## 5.5 Circular Term Handling
+
+Circular terms may form through cross-goal communication and must be handled gracefully.
+
+### Formation
+
+Circular terms arise when a variable appears (via its reader) within its own assigned value. Example: clause `p(X?,X)` with goals `p(X,f(Y?)), p(Y,f(X?))` produces `X = f(f(X?))`.
+
+### Required Behaviors
+
+| Operation | Requirement |
+|-----------|-------------|
+| Dereferencing | Detect cycles, terminate gracefully |
+| `guard_ground` | Succeed if no unbound variables on any branch; cycles do not imply non-ground |
+| `guard_equal` | Terminate; succeed iff identical structure including cycle points |
+| `copy_term` | Preserve cyclic structure in independent copy |
+| Term display | Terminate with finite representation |
+
 ## 6. Head Processing Instructions
 
 All head_* operations are **tentative**: they update the σ̂w (tentative writers assignment) and/or the suspension set U **without mutating heap cells** during clause try. Heap mutations happen only at **commit**.

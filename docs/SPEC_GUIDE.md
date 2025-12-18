@@ -449,7 +449,23 @@ monitor([add(N)|Reqs],Sum) :-
 3. Fail on reader-to-reader (cannot be assigned or equated)
 4. Suspend when matching reader against ground term
 5. Fail when terms are structurally incompatible
-6. No occurs check needed (SO invariant prevents cycles)
+6. No occurs check performed (see Circular Term Handling below)
+
+### Circular Term Handling
+
+Circular terms may form through cross-goal communication. For example, given clause `p(X?,X)` and goals `p(X,f(Y?)), p(Y,f(X?))`, after both reductions `X = f(f(X?))` — a circular term. In multiagent settings these goals may execute on different agents, making occurs checks infeasible.
+
+**Semantic requirements:**
+
+1. **Dereferencing**: Must detect cycles and terminate gracefully.
+
+2. **Ground test**: A term is ground if it contains no variables. Circular terms without unbound variables are ground.
+
+3. **Equality test (`=?=`)**: Must terminate on circular terms. Two circular terms are equal if they have identical structure including corresponding cycle points.
+
+4. **Term copying**: Must preserve cyclic structure in the copy.
+
+5. **Term display**: Must terminate and use a finite representation.
 
 ### SO Invariant and SRSW Enforcement:
 

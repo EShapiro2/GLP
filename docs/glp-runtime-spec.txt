@@ -201,6 +201,21 @@ The `dereference()` method follows variable chains (VarRef → VarRef → ... �
 
 This design eliminates manual dereferencing loops from opcode implementations (HeadNil, HeadList, HeadConstant, HeadStructure, etc.) and ensures consistent dereferencing behavior across all heap accesses.
 
+### Circular Term Handling
+
+Circular terms may form through cross-goal communication. The runtime must handle them gracefully rather than failing or diverging.
+
+**Formation**: Clause `p(X?,X)` with goals `p(X,f(Y?)), p(Y,f(X?))` produces `X = f(f(X?))`.
+
+**Semantic requirements**:
+- Dereferencing must detect cycles and terminate gracefully
+- Ground checking: a term is ground iff it contains no variables; cycles do not imply non-ground
+- Equality checking: must terminate; succeed iff identical structure including cycle points
+- Term copying: must preserve cyclic structure
+- Display: must terminate with finite representation
+
+Implementation approach will follow FCP precedent; see Phase 0 research.
+
 **Terms** (lib/runtime/terms.dart) are separate from cells:
 
 ```dart
