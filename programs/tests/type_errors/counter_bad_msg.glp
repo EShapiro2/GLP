@@ -1,8 +1,4 @@
-%% counter.glp - Simple stateful counter object
-%% Source: GLP Papers (monitor pattern)
-%%
-%% Message-driven counter with clear, up, down, show operations.
-%% Demonstrates accumulator pattern with bidirectional state access.
+%% counter_bad_msg.glp - Test error detection: wrong message type
 
 %% Type definitions
 CounterMsg ::= clear ; up ; down ; show(Number).
@@ -10,6 +6,10 @@ CounterStream ::= [] ; [CounterMsg | CounterStream].
 
 %% Procedure type declaration
 procedure counter(CounterStream, Number).
+
+% ERROR: 'reset' is not in CounterMsg type
+counter([reset|S], _) :-
+    counter(S?, 0).
 
 counter([clear|S], _) :-
     counter(S?, 0).

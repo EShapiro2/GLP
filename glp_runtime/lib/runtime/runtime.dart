@@ -9,7 +9,7 @@ import 'abandon.dart';
 import 'fairness.dart';
 import 'system_predicates.dart';
 import 'body_kernels.dart';
-import '../bytecode/runner.dart' show CallEnv;
+import 'package:glp_runtime/bytecode/runner.dart' show CallEnv;
 
 class GlpRuntime {
   final HeapFCP heap;

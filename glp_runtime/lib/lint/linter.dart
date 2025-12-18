@@ -1,5 +1,5 @@
-import '../bytecode/opcodes.dart';
-import '../bytecode/runner.dart';
+import 'package:glp_runtime/bytecode/opcodes.dart';
+import 'package:glp_runtime/bytecode/runner.dart';
 
 class LintIssue {
   final String code;
