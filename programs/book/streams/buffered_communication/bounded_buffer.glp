@@ -23,7 +23,7 @@ open(N, [_|Y?]--Z?) :- N? > 0 | N1 := N? - 1, open(N1?, Y--Z).
 %% Example: Buffered stream of squares
 sq_num_buffered(N, Ss?, Size) :-
     open(Size?, Buf--Tail),
-    integers(1, N?, Buf?),
+    integers(1, N?, Buf),
     square(Buf?--Tail?, Ss).
 
 integers(I, N, [I?|Buf?]) :-
