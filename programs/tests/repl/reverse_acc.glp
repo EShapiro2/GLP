@@ -1,0 +1,6 @@
+% reverse_acc.glp - Reverse with accumulator (multi-arity pattern)
+% reverse/2 is the wrapper, reverse/3 is the accumulator version
+
+reverse(Xs, Ys?) :- reverse(Xs?, [], Ys).
+reverse([], Acc, Acc?).
+reverse([X|Xs], Acc, Ys?) :- reverse(Xs?, [X?|Acc?], Ys).
