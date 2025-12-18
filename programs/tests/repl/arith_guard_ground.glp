@@ -1,0 +1,18 @@
+% arith_guard_ground.glp - Arithmetic guards imply groundness
+% Arithmetic comparison guards (<, >, =<, >=, =:=, =\=) can only succeed
+% if both arguments are ground numbers. This allows multiple reader
+% occurrences of those variables in the clause body.
+
+% Simple comparison - X? < Y? marks both X and Y as ground
+compare_and_use(X, Y, R?) :- X? < Y? | R = pair(X?, Y?).
+
+% Max function - X? >= Y? marks X and Y as ground
+max(X, Y, X?) :- X? >= Y? | true.
+max(X, Y, Y?) :- X? < Y? | true.
+
+% Range check - multiple comparisons, X, Lo, Hi all ground
+in_range(X, Lo, Hi, yes) :- X? >= Lo?, X? =< Hi? | true.
+in_range(_, _, _, no) :- otherwise | true.
+
+% Complex arithmetic expressions - X? + 1 < Y? * 2 marks X and Y as ground
+compare_expr(X, Y, R?) :- X? + 1 < Y? * 2 | R = pair(X?, Y?).
