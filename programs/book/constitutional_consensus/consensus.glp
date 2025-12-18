@@ -55,7 +55,7 @@ blocks_at_round(Round, [block(R, P, Ptrs)|Bs], [block(R?, P?, Ptrs?)|Rest?]) :-
     R? =:= Round? |
     blocks_at_round(Round?, Bs?, Rest).
 blocks_at_round(Round, [block(R, _, _)|Bs], Rest?) :-
-    R? =\= Round? |
+    otherwise |
     blocks_at_round(Round?, Bs?, Rest).
 
 %% Get non-empty blocks at round
@@ -195,12 +195,7 @@ find_finalized([B|Bs], Participants, [B?|Rest?]) :-
     is_finalized(B?, [B?|Bs?], Participants?) |
     find_finalized(Bs?, Participants?, Rest).
 find_finalized([B|Bs], Participants, Rest?) :-
-    B = block(R, _, _),
-    round_in_wave(R?, Pos),
-    Pos? =\= 1 |
-    find_finalized(Bs?, Participants?, Rest).
-find_finalized([B|Bs], Participants, Rest?) :-
-    B = block(_, empty, _) |
+    otherwise |
     find_finalized(Bs?, Participants?, Rest).
 
 %% ============================================
@@ -239,8 +234,7 @@ determine_mode(_, high) :- otherwise | true.
 %% Wait for leader block or timeout
 %% wait/1 is a guard that suspends for Duration milliseconds
 wait_for_leader(Timeout, Block, timeout) :-
-    wait(Timeout?) | 
-    unknown(Block?) | true.
+    wait(Timeout?), unknown(Block?) | true.
 wait_for_leader(_, Block, Block?) :-
     known(Block?) | true.
 
