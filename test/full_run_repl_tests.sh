@@ -1015,6 +1015,45 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# Multi-arity predicate tests (sum/2 calls sum/3, reverse/2 calls reverse/3, etc.)
+echo ""
+echo "--- Multi-Arity Predicate Tests ---"
+
+multi_arity_output=$($DART run "$REPL" <<MULTI_ARITY
+$GLP_DIR/sum_acc.glp
+$GLP_DIR/reverse_acc.glp
+$GLP_DIR/length_acc.glp
+sum([1,2,3,4,5], S1).
+reverse([1,2,3], R1).
+length([a,b,c,d], N1).
+:quit
+MULTI_ARITY
+2>&1)
+
+if echo "$multi_arity_output" | grep -q "S1 = 15"; then
+    echo "PASS: sum/2 with accumulator = 15"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: sum/2 with accumulator (expected: S1 = 15)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$multi_arity_output" | grep -q "R1 = \[3, 2, 1\]"; then
+    echo "PASS: reverse/2 with accumulator = [3,2,1]"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: reverse/2 with accumulator (expected: R1 = [3, 2, 1])"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$multi_arity_output" | grep -q "N1 = 4"; then
+    echo "PASS: length/2 with accumulator = 4"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: length/2 with accumulator (expected: N1 = 4)"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""

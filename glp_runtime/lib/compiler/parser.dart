@@ -7,6 +7,9 @@ class Parser {
   final List<Token> tokens;
   int _current = 0;
 
+  /// Clause that was parsed but belongs to a different procedure (different arity)
+  Clause? _pendingClause;
+
   Parser(this.tokens);
 
   /// Parse tokens into an AST (legacy method, skips declarations)
@@ -193,8 +196,14 @@ class Parser {
   Procedure _parseProcedure() {
     final clauses = <Clause>[];
 
-    // Parse first clause
-    final firstClause = _parseClause();
+    // Use pending clause if available, otherwise parse first clause
+    final Clause firstClause;
+    if (_pendingClause != null) {
+      firstClause = _pendingClause!;
+      _pendingClause = null;
+    } else {
+      firstClause = _parseClause();
+    }
     clauses.add(firstClause);
 
     final name = firstClause.head.functor;
@@ -207,7 +216,7 @@ class Parser {
       bool couldBeSameProcedure = false;
 
       if (_peek().type == TokenType.ATOM && _peek().lexeme == name) {
-        // Same predicate name
+        // Same predicate name (may have different arity - checked after parsing)
         couldBeSameProcedure = true;
       } else if (name == ':=' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER || _peek().type == TokenType.UNDERSCORE)) {
         // := clauses start with variable or underscore (e.g., "Result := X + Y" or "_ := X / 0")
@@ -233,14 +242,17 @@ class Parser {
 
       final clause = _parseClause();
 
-      // Verify same functor and arity
-      if (clause.head.functor != name || clause.head.arity != arity) {
-        throw CompileError(
-          'Clause for ${clause.head.functor}/${clause.head.arity} found, expected $name/$arity',
-          clause.line,
-          clause.column,
-          phase: 'parser'
-        );
+      // Check if arity matches - same functor with different arity is a separate procedure
+      if (clause.head.functor == name && clause.head.arity != arity) {
+        // Different arity - save for next procedure and stop
+        _pendingClause = clause;
+        break;
+      }
+
+      // Different functor entirely shouldn't happen (we checked above), but be safe
+      if (clause.head.functor != name) {
+        _pendingClause = clause;
+        break;
       }
 
       clauses.add(clause);
