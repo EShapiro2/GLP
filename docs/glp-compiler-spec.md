@@ -46,7 +46,7 @@ BytecodeProgram (ready for runtime)
 ### 1.2 Design Principles
 
 1. **Correctness First**: Strict adherence to GLP semantics and bytecode v2.16 spec
-2. **SRSW Enforcement**: Compile-time verification of Single-Reader/Single-Writer constraint
+2. **SRSW Enforcement**: Compile-time verification of Single-Reader/Single-Writer syntactic restriction (preserves SO invariant at runtime)
 3. **Clear Error Messages**: Provide source location and helpful diagnostics
 4. **Modularity**: Clean separation between compilation phases
 5. **Maintainability**: Well-documented, testable components
@@ -2001,7 +2001,7 @@ See `lib/bytecode/opcodes.dart` for complete opcode definitions. All opcodes men
 - `ConstantOp(value)` - Process constant in structure
 - `VoidOp(count)` - Skip anonymous variables
 - `GetVariableOp(varIndex, argSlot)` - Load argument into register
-- `GetValueOp(varIndex, argSlot)` - Unify argument with register
+- `GetValueOp(varIndex, argSlot)` - Match argument with register
 - `PutStructureOp(functor, arity, argSlot)` - Create structure in body
 - `PutWriterOp(varIndex, argSlot)` - Place writer in argument
 - `PutReaderOp(varIndex, argSlot)` - Place reader in argument
