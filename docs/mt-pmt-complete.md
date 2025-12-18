@@ -155,18 +155,9 @@ Observe := observe(Any?, Any, Any?) | observe(Any, Any?, Any?).
 
 **Mnemonic:** Head inverts, body preserves.
 
-### Double Inversion Rule
+### Variable Form
 
-When a reader-form variable (`X?`) appears, its occurrence type is inverted:
-
-| Arg Mode | Var Form | Occurrence |
-|----------|----------|------------|
-| reader | writer (`X`) | writer |
-| reader | reader (`X?`) | reader |
-| writer | writer (`X`) | reader |
-| writer | reader (`X?`) | writer |
-
-**Note:** Double inversion does NOT apply to guards — guards always produce reader occurrences.
+The occurrence classifier currently ignores the syntactic form of variables (`X` vs `X?`). Classification is based solely on argument position mode. The `?` annotation is used by the GLP runtime for reader/writer semantics but does not affect PMT occurrence counting.
 
 ### Example
 
@@ -309,39 +300,30 @@ dart run bin/validate_pmt.dart path/to/file.glp
 
 | File | Status | Notes |
 |------|--------|-------|
-| gates.glp | ✓ | Full PMT with BinaryDigit, List(A), Gates, Goals(X) |
-| gates_pmt.glp | ✓ | PMT version |
-| gates_pmt_valid.glp | ✓ | Validated version |
+| gates.glp | ✓ PASS | Full PMT with BinaryDigit, List(A), Gates, Goals(X) |
 
 ### streams/producers_consumers/
 
 | File | Status | Notes |
 |------|--------|-------|
-| observer.glp | ✓ | Multimodal (3 modes for bidirectional observe) |
+| observer.glp | ✓ PASS | Multimodal (3 modes for bidirectional observe) |
 | channels.glp | BUG | Uses `=` in guards — invalid GLP |
-| mwm.glp | ✓ | Multiway merge |
-| fair_merge.glp | ✓ | |
-| producer_consumer.glp | ✓ | |
-| cooperative_producers.glp | ✓ | |
-| dynamic_merger.glp | ✓ | |
-| merge_tree.glp | ✓ | |
-| distribute.glp | ✓ | |
-| distribute_binary.glp | ✓ | |
-| distribute_indexed.glp | ✓ | |
-| distribute_ground.glp | ✓ | |
+| mwm.glp | FAIL | 4 errors — needs work |
+| fair_merge.glp | ✓ PASS | |
+| producer_consumer.glp | ✓ PASS | |
 
 ### streams/buffered_communication/
 
 | File | Status | Notes |
 |------|--------|-------|
-| switch2x2.glp | ✓ | PE output passes PMT |
-| bounded_buffer.glp | ✓ | |
+| switch2x2.glp | FAIL | 24 errors — defined guards need PE |
+| bounded_buffer.glp | ✓ PASS | |
 
 ### streams/objects_monitors/
 
 | File | Status | Notes |
 |------|--------|-------|
-| counter.glp | WIP | 1 PMT error — investigating double inversion |
+| counter.glp | FAIL | 1 error — State has 2 writer occurrences |
 
 ---
 
@@ -373,27 +355,6 @@ dart run bin/validate_pmt.dart path/to/file.glp
 
 ## 9. Open Issues
 
-### Double Inversion in Body (ACTIVE)
-
-**Question:** Should the double inversion rule apply to BODY positions, or only HEAD?
-
-Current behavior applies double inversion to both HEAD and BODY (but not guards).
-
-**Test case under investigation:**
-```glp
-observe(X?, Y, Z?) :- observe(Y?, X, Z).
-```
-
-With mode `observe(reader, writer, reader)`:
-- Z? in head (reader mode + reader form) → reader occurrence
-- Z in body (reader mode + writer form) → reader occurrence
-- **Result:** Z has 0 writers, 2 readers — SRSW violation?
-
-The test comment claims this should be valid. Need to clarify:
-1. Is the double inversion rule correct as implemented?
-2. Should body behave differently?
-3. Is the test clause actually invalid GLP?
-
 ### counter.glp PMT Error
 
 ```glp
@@ -402,7 +363,17 @@ counter([show(State?)|S], State) :- number(State?) | counter(S?, State?).
 
 With mode `counter(List?, Any?)`:
 - State has 2 writer occurrences (reported error)
-- Investigating if this is a double inversion issue
+- State appears in head arg1 (inside show) AND head arg2
+- Both positions are reader mode → both get writer occurrence
+- Need different mode or restructured clause
+
+### switch2x2.glp — Defined Guards
+
+The file has defined guards (send/receive predicates) that bind variables. These need the partial evaluator to unfold before PMT validation will pass.
+
+### mwm.glp — Needs Mode Analysis
+
+4 PMT errors related to mutual reference operations. Needs careful mode analysis.
 
 ---
 
