@@ -5,6 +5,13 @@
 %% Creates a self-organizing merge tree.
 %% Uses guard X =\= Y which succeeds if arguments are not unifiable.
 
+%% Type definitions
+List := [] | [_ | List].
+
+%% Mode declarations
+Merger := merger(List?, List?, List).
+DynMerge := merge(List?, List?, List).
+
 merger(Ws, Xs, Out?) :- merge(Ws?, Xs?, Out).
 
 merge([merge(Ws)|Xs], Ys, Zs?) :-

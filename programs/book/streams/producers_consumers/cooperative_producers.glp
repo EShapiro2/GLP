@@ -9,6 +9,19 @@
 %% for transferring control, enabling round-robin production, priority-based
 %% handover, or dynamic producer pools.
 
+%% Type definitions
+List := [] | [_ | List].
+Done := done.
+Control := control(List, Control).
+
+%% Mode declarations
+%% Note: Complex control flow with continuation passing.
+%% handover/3 creates fresh continuation variables read by callers - skipped.
+ProducerA := producer_a(Control).
+ProducerB := producer_b(Control).
+ProduceBatchA := produce_batch_a(List, List?, Done).
+ProduceBatchB := produce_batch_b(List, List?, Done).
+
 producer_a(control(Xs,Next)) :-
     produce_batch_a(Xs,Xs1,Done),
     handover(Done?,Xs1,Next).
