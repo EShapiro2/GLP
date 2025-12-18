@@ -1,6 +1,17 @@
 %% hanoi.glp - Tower of Hanoi in GLP
 %% Source: Standard GLP examples
 
+%% Type definitions
+Move ::= move(Any, Any).
+MoveList ::= [] ; [Move | MoveList].
+
+%% Procedure type declarations
+procedure hanoi(Number, Any, Any, MoveList).
+procedure hanoi_two(Number, Any, Any, Any, MoveList, MoveList).
+procedure other(Any, Any, Any).
+procedure append(MoveList, MoveList, MoveList).
+procedure reduce(Any, Any).
+
 hanoi(0, _, _, []).
 hanoi(N, From, To, Moves?) :-
     number(N?), N? > 0, atom(From?), atom(To?) |

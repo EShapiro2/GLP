@@ -2,6 +2,16 @@
 %% minimum(N1,N2,Min) :- The minimum of natural numbers N1 and N2 is Min.
 %% Note: Uses lesseq check before binding result.
 
+%% Type definitions (Peano numerals)
+Nat ::= 0 ; s(Nat).
+
+%% Procedure type declarations
+procedure minimum(Nat, Nat, Nat).
+procedure min_check(Nat, Nat, Nat).
+procedure lesseq(Nat, Nat).
+procedure natural_number(Nat).
+procedure reduce(Any, Any).
+
 minimum(N1, N2, Out?) :- tuple(N1?), tuple(N2?) | min_check(N1?, N2?, Out).
 
 min_check(N1, N2, N1?) :- tuple(N1?), tuple(N2?) | lesseq(N1?, N2?).

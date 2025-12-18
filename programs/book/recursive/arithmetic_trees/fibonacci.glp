@@ -1,6 +1,12 @@
 %% fibonacci.glp - Fibonacci in GLP
 %% Source: Standard GLP arithmetic
 
+%% Procedure type declarations
+procedure fib(Number, Number).
+procedure fib_linear(Number, Number).
+procedure fib_acc(Number, Number, Number, Number).
+procedure reduce(Any, Any).
+
 fib(0, 0).
 fib(1, 1).
 fib(N, F?) :-
