@@ -8,8 +8,8 @@ merge([], Ys, Ys?).
 merge(Xs, [], Xs?).
 
 %% reduce clauses for metainterpreter
-reduce(merge([X|Xs], [Y|Ys], [X?|Zs?]), merge(Xs?, [Y?|Ys?], Zs)) :- X? < Y?.
-reduce(merge([X|Xs], [Y|Ys], [X?,Y?|Zs?]), merge(Xs?, Ys?, Zs)) :- X? =:= Y?.
-reduce(merge([X|Xs], [Y|Ys], [Y?|Zs?]), merge([X?|Xs?], Ys?, Zs)) :- X? > Y?.
+reduce(merge([X|Xs], [Y|Ys], [X?|Zs?]), merge(Xs?, [Y?|Ys?], Zs)) :- X? < Y? | true.
+reduce(merge([X|Xs], [Y|Ys], [X?,Y?|Zs?]), merge(Xs?, Ys?, Zs)) :- X? =:= Y? | true.
+reduce(merge([X|Xs], [Y|Ys], [Y?|Zs?]), merge([X?|Xs?], Ys?, Zs)) :- X? > Y? | true.
 reduce(merge([], Ys, Ys?), true).
 reduce(merge(Xs, [], Xs?), true).
