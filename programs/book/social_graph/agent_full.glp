@@ -1,5 +1,11 @@
 % Personal Agent - Cold Call Protocol
 % Based on GLP 2025 paper social graph
+%
+% NOTE: This file has deep SRSW violations throughout agent_loop and agent_wait_response:
+% - Resp variables appear twice (in pattern match and assignment)
+% - Reader variables (MyId?, Target?, Friends?, Ch?) occur multiple times
+% - Unused variables (Introducer, some Target occurrences)
+% These require fundamental protocol restructuring beyond simple fixes.
 
 % agent/3: Main agent process
 % Args: MyId, UserCh (channel to user), NetCh (channel to network)
@@ -57,6 +63,6 @@ agent_wait_response(MyId, UserCh, NetCh, Friends, Target, Resp) :-
 
 % lookup_friend/3: Find friend's channel
 lookup_friend(Target, [(Target?, Ch)|_], Ch?) :- true.
-lookup_friend(Target, [(Other, _)|Friends?], Ch?) :-
+lookup_friend(Target, [(Other, _)|Friends], Ch?) :-
     ~(Target? =?= Other?) |
-    lookup_friend(Target?, Friends, Ch).
+    lookup_friend(Target?, Friends?, Ch).

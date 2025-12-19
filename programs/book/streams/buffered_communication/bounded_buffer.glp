@@ -21,6 +21,11 @@ open(0, X--X?).
 open(N, [_|Y?]--Z?) :- N? > 0 | N1 := N? - 1, open(N1?, Y--Z).
 
 %% Example: Buffered stream of squares
+%% NOTE: This example has Pattern C stream sharing (Buf appears twice as writer).
+%% SRSW limitation: Single-reader/single-writer difference-list streams cannot
+%% be shared between multiple processes. This violates the fundamental assumption
+%% that each variable cell has exactly one writer and one reader.
+%% See: CP Collected Papers Ch 18, Section 4.2 on difference-list limitations.
 sq_num_buffered(N, Ss?, Size) :-
     open(Size?, Buf--Tail),
     integers(1, N?, Buf),
