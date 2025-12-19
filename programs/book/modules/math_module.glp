@@ -1,6 +1,11 @@
 %% math_module.glp - Simple math module
 %% Module name defaults to: math_module
 
+%% Procedure type declarations
+procedure factorial(Number, Number).
+procedure gcd(Number, Number, Number).
+procedure reduce(Any, Any).
+
 factorial(0, 1).
 factorial(N, F?) :-
     N? > 0 |
