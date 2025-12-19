@@ -1,4 +1,4 @@
-import '../bytecode/runner.dart';
+import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 

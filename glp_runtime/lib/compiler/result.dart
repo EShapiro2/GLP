@@ -1,4 +1,4 @@
-import '../bytecode/runner.dart' show BytecodeProgram;
+import 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
 
 /// Result of compilation including bytecode and metadata
 class CompilationResult {

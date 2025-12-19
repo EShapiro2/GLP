@@ -1,27 +1,33 @@
-%% debugger_meta.glp - Parallel debugger metainterpreter
+%% debugger_meta.glp - Parallel debugger metainterpreter (GLP adaptation)
 %% Source: CP Collected Papers, Ch 25 (Safra & Shapiro)
 %%
 %% Builds execution tree while simulating program.
 %% Processes run in "control" mode with limited reductions,
 %% or "raw" mode without interpretation.
+%%
+%% Tree format: halted, fork(T1,T2), reduction(Goal,BodyTree), or what_now(Mode)
 
-reduce(P, true, _, halted).                      %% halt
-reduce(P, (A, B), Time, (Ta?, Tb?)) :-           %% fork
+reduce(_, true, _, halted).                      %% halt
+reduce(P, (A, B), Time, fork(Ta?, Tb?)) :-       %% fork
+    ground(P?), ground(Time?) |
     reduce(P?, A?, Time?, Ta),
     reduce(P?, B?, Time?, Tb).
-reduce(P, G, Time, (G? :- Tbody?)) :-            %% reduce (with budget)
-    Time > 0,
+reduce(P, G, Time, reduction(G?, Tbody?)) :-     %% reduce (with budget)
+    ground(P?), ground(G?),
+    Time? > 0,
     New_t := Time? - 1,
-    ~(G =?= true), ~(G =?= (_, _)),
+    ~(G? =?= true), ~(G? =?= (_, _)),
     clause(G?, P?, Body) |
     reduce(P?, Body?, New_t?, Tbody).
-reduce(P, G, 0, what_now(Mode)) :-               %% wait for command
-    ~(G =?= true), ~(G =?= (_, _)) |
-    next(P?, G?, Mode?).
+reduce(P, G, Time, what_now(Mode?)) :-           %% wait for command
+    ground(G?),
+    Time? = 0,
+    ~(G? =?= true), ~(G? =?= (_, _)) |
+    next(P?, G?, Mode).
 
-next(P, G, debug(Time, Tree)) :-                 %% debug mode
+next(P, G, debug(Time, Tree?)) :-                %% debug mode
     reduce(P?, G?, Time?, Tree).
-next(_, G, raw) :- G?.                           %% raw mode - no interpretation
+next(_, G, raw) :- call(G?).                     %% raw mode - no interpretation
 
 %% Usage:
 %% reduce(Program, Goal, N, Tree)

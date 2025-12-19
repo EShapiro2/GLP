@@ -661,6 +661,46 @@ Goal execution:
       FAIL goal definitively
 ```
 
+## Type System and Static Analysis
+
+GLP includes a structural type system and multiple static analysis phases:
+
+### Type System (Yardeni-Shapiro)
+
+See **[glp-type-system-spec.md](glp-type-system-spec.md)** for complete specification.
+
+- **Regular types**: Structural types specifiable by RUL programs / tree automata
+- **Type declarations**: `TypeName ::= alt1 ; alt2 ; ...`
+- **Procedure declarations**: `procedure pred(Type1, Type2, ...).`
+- **Well-typing**: Program satisfies type fixpoint conditions
+
+Example:
+```prolog
+Nat ::= 0 ; s(Nat).
+NatList ::= [] ; [Nat | NatList].
+procedure append(NatList, NatList, NatList).
+```
+
+### Analysis Phases
+
+Multiple independent analysis phases:
+
+1. **SRSW Checker** (`lib/compiler/pmt/checker.dart`)
+   - Verifies Single-Reader/Single-Writer constraint
+   - Uses syntactic `?` annotations (reader vs writer occurrences)
+   - Ensures 1 writer + 1+ readers per variable
+
+2. **Type Checker** (future: `lib/analysis/type_checker/`)
+   - Validates structural types against Yardeni-Shapiro system
+   - Checks type fixpoint conditions
+   - Reports useless clauses and type errors
+
+3. **Mode Checker** (future: `lib/analysis/mode_checker/`)
+   - Validates mode consistency (separate from SRSW)
+   - Checks that source annotations match expected modes from types
+
+Analysis phases can run independently or together via `AnalysisRunner`.
+
 ## Current Implementation Status
 
 The v2.16 VM in `lib/bytecode/v216/` implements:

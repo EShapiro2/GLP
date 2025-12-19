@@ -1,0 +1,25 @@
+%% counter_bad_msg.glp - Test error detection: wrong message type
+
+%% Type definitions
+CounterMsg ::= clear ; up ; down ; show(Number).
+CounterStream ::= [] ; [CounterMsg | CounterStream].
+
+%% Procedure type declaration
+procedure counter(CounterStream, Number).
+
+% ERROR: 'reset' is not in CounterMsg type
+counter([reset|S], _) :-
+    counter(S?, 0).
+
+counter([clear|S], _) :-
+    counter(S?, 0).
+counter([up|S], State) :-
+    NewState := State? + 1,
+    counter(S?, NewState?).
+counter([down|S], State) :-
+    NewState := State? - 1,
+    counter(S?, NewState?).
+counter([show(State?)|S], State) :-
+    number(State?) |
+    counter(S?, State?).
+counter([], _).
