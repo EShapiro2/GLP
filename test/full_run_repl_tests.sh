@@ -1283,6 +1283,51 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# Difference list syntax (H\T) regression tests
+echo ""
+echo "--- Difference List Syntax Tests ---"
+
+dl_output=$($DART run "$REPL" <<DIFF_LIST
+$GLP_DIR/diff_list.glp
+dl_append([1,2|T]\\T, [3,4|U]\\U, R).
+dl_to_list([a,b,c]\\[], L).
+:quit
+DIFF_LIST
+2>&1)
+
+# Test that dl_append parses and executes (produces a \(...) structure)
+if echo "$dl_output" | grep -q 'R = \\'; then
+    echo "PASS: dl_append with H\\T syntax parses and executes"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: dl_append with H\\T syntax (expected: R = \\(...))"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test dl_to_list conversion
+if echo "$dl_output" | grep -q "L = \[a, b, c\]"; then
+    echo "PASS: dl_to_list converts difference list to regular list"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: dl_to_list conversion (expected: L = [a, b, c])"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test parsing of simple H\T term
+simple_dl_output=$($DART run "$REPL" <<SIMPLE_DL
+X = foo\\bar.
+:quit
+SIMPLE_DL
+2>&1)
+
+if echo "$simple_dl_output" | grep -q 'X = \\(foo, bar)'; then
+    echo "PASS: Simple H\\T term parses as \\(H, T) structure"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Simple H\\T term (expected: X = \\(foo, bar))"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""
