@@ -13,6 +13,15 @@
 %%   Agents use this to determine own module identity when evaluating
 %%   compatibility with other agents' attested modules.
 
+%% Procedure type declarations
+procedure process_message(Any, Any).
+procedure handle_verified(Any, Any, Any).
+procedure trusted_module(Any).
+procedure negotiate_protocol(Any, Any).
+procedure compatible(Any, Any).
+procedure attestation(Any, Any).
+procedure module(Any).
+
 %% Example: Verify message attestation before processing
 process_message(Msg, Result?) :-
     attestation(Msg, att(Agent, Module)),

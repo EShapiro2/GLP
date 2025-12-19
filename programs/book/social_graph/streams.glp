@@ -1,5 +1,12 @@
 % Stream Utilities
 
+%% Type definitions
+List ::= [] ; [Any | List].
+
+%% Procedure type declarations
+procedure observe(Any, Any, Any).
+procedure tag_stream(Any, List, List).
+
 % observe/3 - Stream observation (Program 14, SRSW-fixed)
 % Creates two copies of a stream for observation
 observe(X?, Y, Z?) :- observe(Y?, X, Z).

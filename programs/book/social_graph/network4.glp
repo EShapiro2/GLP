@@ -4,6 +4,9 @@
 %%
 %% Uses swap pattern: HEAD has Out?, BODY has Out (writer preserved)
 
+%% Procedure type declarations
+procedure network4(Any, Any, Any, Any).
+
 %% Alice sends to Bob
 network4((alice, ch([msg(alice, bob, X)|AliceIn], AliceOut?)),
          (bob, ch(BobIn, [msg(alice, bob, X?)|BobOut?])),

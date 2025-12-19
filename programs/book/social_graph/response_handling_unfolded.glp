@@ -5,6 +5,16 @@
 %% When offer is accepted, both agents establish symmetric channel
 %% configurations and merge new friend's input stream into main loop.
 
+%% Type definitions
+MsgList ::= [] ; [Any | MsgList].
+FriendList ::= [] ; [Any | FriendList].
+
+%% Procedure type declarations
+procedure bind_response(Any, Any, Any, FriendList, FriendList, MsgList, MsgList).
+procedure handle_response(Any, Any, FriendList, FriendList, MsgList, MsgList).
+procedure tag_stream(Any, MsgList, MsgList).
+procedure merge(MsgList, MsgList, MsgList).
+
 %% Bind response based on user decision
 %% Unfolded from: new_channel(ch(FIn, FOut), FCh) in guard
 bind_response(yes, From, accept(ch(FOut?, FIn)), Fs, Fs1?, In, In1?) :-
