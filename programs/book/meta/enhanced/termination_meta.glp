@@ -11,6 +11,10 @@
 %% Short-circuit: L--R pair where L is left endpoint, R is right endpoint
 %% When goal terminates, it closes its segment by unifying L with R
 
+%% Procedure type declarations
+procedure run(Any, Any, Any).
+procedure reduce(Any, Any).
+
 run(true, L, L?).  % halt - close the circuit
 run((A,B), L, R?) :-  % fork - split the chain
     run(A?, L?, M),

@@ -4,6 +4,15 @@
 %% Supports suspend, resume, and abort via control stream.
 %% Uses short-circuit L--R for state dump on abort.
 
+%% Type definitions
+ControlList ::= [] ; [Any | ControlList].
+DumpList ::= [] ; [Any | DumpList].
+
+%% Procedure type declarations
+procedure run(Any, Any, ControlList, DumpList, DumpList).
+procedure suspended_run(Any, Any, ControlList, DumpList, DumpList).
+procedure reduce(Any, Any).
+
 run(_, true, _, L, L?).                          % halt
 run(M, (A, B), Cs, L, R?) :-                     % fork
     ground(M?), ground(Cs?) |

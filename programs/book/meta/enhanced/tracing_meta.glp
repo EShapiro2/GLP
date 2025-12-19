@@ -4,6 +4,13 @@
 %% Builds execution tree capturing each reduction.
 %% Uses observe/3 to capture goal state at each step.
 
+%% Procedure type declarations
+procedure run(Any, Any, Any).
+procedure replay(Any, Any, Any).
+procedure reduce(Any, Any, Any).
+procedure reduce_by_index(Any, Any, Any).
+procedure observe(Any, Any, Any).
+
 run(_, true, true).                              % halt
 run(M, (A, B), fork(TA?, TB?)) :-                % fork
     ground(M?) |

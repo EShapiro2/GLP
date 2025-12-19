@@ -4,6 +4,11 @@
 %% Computes certainty factor of results.
 %% Each clause has associated certainty; result certainty is computed.
 
+%% Procedure type declarations
+procedure reduce(Any, Any, Number).
+procedure clause(Any, Any, Any, Number).
+procedure min(Number, Number, Number).
+
 reduce(_, true, 1).                              %% halt - certainty 1
 reduce(Program, (A, B), C?) :-                   %% fork - min of certainties
     ground(Program?) |

@@ -10,6 +10,14 @@
 %% If Cs is bound to [suspend, abort], R? will be bound to
 %% the current resolvent of the run.
 
+%% Type definitions
+ControlList ::= [] ; [Any | ControlList].
+ResolvList ::= [] ; [Any | ResolvList].
+
+%% Procedure type declarations
+procedure run(Any, ControlList, ResolvList, ResolvList).
+procedure suspended_run(Any, ControlList, ResolvList, ResolvList).
+
 suspended_run(A,[resume|Cs],L,R?) :- run(A?,Cs?,L?,R).
 suspended_run(A,[abort|_],L,[A?|L?]).
 
