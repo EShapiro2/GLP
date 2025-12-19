@@ -5,17 +5,23 @@
 %% The receiver controls buffer expansion by creating new slots.
 
 %% Type definitions
-List := [] | [_ | List].
+List ::= [] ; [Any | List].
 
 %% Note: Complex buffer state threading with difference lists.
 %% Many predicates have intricate modes. Basic modes provided where clear.
 
-%% Mode declarations
-SendUnbounded := send_unbounded(Any?, List, List?).
-ReceiveUnbounded := receive_unbounded(Any, List?, List).
-Send := send(Any?, List, List?).
-Close := close(List?).
-Closed := closed(Any?).
+%% Procedure type declarations
+procedure send_unbounded(Any, List, List).
+procedure receive_unbounded(Any, List, List).
+procedure send(Any, List, List).
+procedure receive(Any, Any, Any).
+procedure close(List).
+procedure closed(Any).
+procedure open(Number, Any).
+procedure sq_num_buffered(Number, List, Number).
+procedure integers(Number, Number, List).
+procedure square(Any, List).
+procedure square2(Number, List, List).
 
 %% Unbounded buffer send/receive (standard stream communication)
 send_unbounded(Msg, [Msg|NStrm], NStrm).

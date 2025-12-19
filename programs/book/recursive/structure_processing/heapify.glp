@@ -1,6 +1,15 @@
 %% heapify.glp - Adjusting a binary tree to satisfy the heap property (AoP 3.28)
 %% heapify(Tree,Heap) :- Heap has the same elements as Tree but satisfies the heap property.
 
+%% Type definitions
+Tree ::= void ; tree(Number, Tree, Tree).
+
+%% Procedure type declarations
+procedure heapify(Tree, Tree).
+procedure adjust(Number, Tree, Tree, Tree).
+procedure greater(Number, Tree).
+procedure reduce(Any, Any).
+
 heapify(void, void).
 heapify(tree(X, L, R), Heap?) :-
     heapify(L?, HeapL), heapify(R?, HeapR), adjust(X?, HeapL?, HeapR?, Heap).

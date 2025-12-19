@@ -3,6 +3,17 @@
 %% inorder(Tree,In) :- In is an inorder traversal of Tree.
 %% postorder(Tree,Post) :- Post is a postorder traversal of Tree.
 
+%% Type definitions
+Tree ::= void ; tree(Any, Tree, Tree).
+AnyList ::= [] ; [Any | AnyList].
+
+%% Procedure type declarations
+procedure preorder(Tree, AnyList).
+procedure inorder(Tree, AnyList).
+procedure postorder(Tree, AnyList).
+procedure append(AnyList, AnyList, AnyList).
+procedure reduce(Any, Any).
+
 preorder(tree(X, L, R), Xs?) :-
     preorder(L?, Ls), preorder(R?, Rs), append([X|Ls?], Rs?, Xs).
 preorder(void, []).

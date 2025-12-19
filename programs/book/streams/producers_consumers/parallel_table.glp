@@ -8,6 +8,9 @@
 %% Note: This file uses channel operations with complex state passing.
 %% MT validation skipped - requires channel infrastructure.
 
+%% Procedure type declarations
+procedure table(Any, Number, Any, Number).
+
 %% Lookup: exact key match returns value and true
 table(Self, LowKey, Value, HighKey) :-
     read(lookup(LowKey?, Value?, true), Self?, NewSelf) |
