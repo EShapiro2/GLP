@@ -1,0 +1,8 @@
+% diff_list.glp - Difference list operations
+% H\T syntax for difference lists
+
+% Append two difference lists: A\B appended to B?\C gives A?\C?
+dl_append(A\B, B?\C, A?\C?).
+
+% Convert difference list to regular list (hole must be [])
+dl_to_list(L\[], L?).
