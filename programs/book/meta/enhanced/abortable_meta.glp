@@ -4,10 +4,6 @@
 %% Supports abort via equator (emergency brake).
 %% When Eq is bound, computation stops.
 
-%% Procedure type declarations
-procedure run(Any, Any, Any).
-procedure reduce(Any, Any).
-
 run(_, true, _).                                 % halt
 run(M, (A, B), Eq) :-                            % fork
     ground(M?), unknown(Eq?) |

@@ -1,15 +1,9 @@
-%% counter.glp - Simple stateful counter object
-%% Source: GLP Papers (monitor pattern)
+%% counter.glp - Counter object example
+%% Source: CP Collected Papers, Ch 29 (Shapiro & Takeuchi)
 %%
-%% Message-driven counter with clear, up, down, show operations.
-%% Demonstrates accumulator pattern with bidirectional state access.
-
-%% Type definitions
-CounterMsg ::= clear ; up ; down ; show(Number).
-CounterStream ::= [] ; [CounterMsg | CounterStream].
-
-%% Procedure type declaration
-procedure counter(CounterStream, Number).
+%% Simple stateful object demonstrating OOP in logic programming.
+%% Responds to clear, up, down, show messages via input stream.
+%% show(X) fills X with current state.
 
 counter([clear|S], _) :-
     counter(S?, 0).
@@ -23,3 +17,7 @@ counter([show(State?)|S], State) :-
     number(State?) |
     counter(S?, State?).
 counter([], _).
+
+%% Usage example:
+%% counter([up, up, down, show(X)], 0).
+%% Result: X = 1

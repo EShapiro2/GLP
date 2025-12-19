@@ -1,0 +1,18 @@
+% Network Switch for 2 Agents (based on Program 12)
+
+%% Procedure type declarations
+procedure network(Any, Any).
+procedure receive(Any, Any, Any).
+procedure send(Any, Any, Any).
+
+network((P, ChP), (Q, ChQ)) :-
+    receive(Msg?, ChP?, ChP1),
+    Msg = msg(Q, X) |
+    send(X?, ChQ?, ChQ1),
+    network((P?, ChP1?), (Q?, ChQ1?)).
+
+network((P, ChP), (Q, ChQ)) :-
+    receive(Msg?, ChQ?, ChQ1),
+    Msg = msg(P, X) |
+    send(X?, ChP?, ChP1),
+    network((P?, ChP1?), (Q?, ChQ1?)).

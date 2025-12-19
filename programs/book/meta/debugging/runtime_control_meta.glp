@@ -11,17 +11,6 @@
 %% Second argument Cs: observed interrupt stream
 %% Last two arguments: difference-list for distributed accumulation
 
-%% Type definitions
-ControlList ::= [] ; [Any | ControlList].
-DumpList ::= [] ; [Any | DumpList].
-List ::= [] ; [Any | List].
-
-%% Procedure type declarations
-procedure run(Any, ControlList, DumpList, DumpList).
-procedure suspended_run(Any, ControlList, DumpList, DumpList).
-procedure reduce(Any, Any).
-procedure merge(List, List, List).
-
 run(true,_,L?,L).   % halt and close the dump
 run((A,B),Cs,L?,R) :-
     ground(Cs?) |  % control stream is ground, can be shared

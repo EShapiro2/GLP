@@ -5,9 +5,6 @@
 %% Agent writes addressed messages to Out, reads incoming from In.
 %% Switch holds inverse: ch(Out?, In) - reads agent's output, writes to agent's input.
 
-%% Procedure type declarations
-procedure network2(Any, Any).
-
 %% Alice sends to Bob
 network2((alice, ch([msg(alice, bob, X)|AliceIn], AliceOut?)),
          (bob, ch(BobIn, [msg(alice, bob, X?)|BobOut?]))) :-

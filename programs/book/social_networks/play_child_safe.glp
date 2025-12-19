@@ -1,8 +1,6 @@
 %% play_child_safe.glp - Child-Safe Social Networking Play
 %%
 %% Scenario: Two families - the Smiths and the Jones.
-
-%% Type definitions (test scenario - minimal declarations needed)
 %% Parent-Smith and Parent-Jones are friends in the parent network.
 %% Child-Smith wants to befriend Child-Jones.
 %% Both parents must approve before children can connect.

@@ -3,10 +3,6 @@
 %%
 %% Uses short-circuit technique to detect distributed termination.
 
-%% Procedure type declarations
-procedure run(Any, Any, Any, Any).
-procedure reduce(Any, Any).
-
 run(_, true, L, L?).                             % halt - close circuit
 run(M, (A, B), L, R?) :-                         % fork - split chain
     ground(M?) |

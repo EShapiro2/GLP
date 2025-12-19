@@ -1,8 +1,6 @@
 %% play_dm.glp - Direct Messaging Channel Establishment Play
 %%
 %% Scenario: Alice and Bob are already friends (have established friend channels
-
-%% Type definitions (test scenario - minimal declarations needed)
 %% from prior cold-call). They establish a dedicated DM channel and exchange messages.
 %%
 %% This play demonstrates:

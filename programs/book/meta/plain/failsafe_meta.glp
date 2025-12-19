@@ -4,13 +4,6 @@
 %% Reports failures via short-circuit instead of aborting.
 %% L--R threads through computation for failure collection.
 
-%% Type definitions
-FailList ::= [] ; [Any | FailList].
-
-%% Procedure type declarations
-procedure run(Any, Any, FailList, FailList).
-procedure reduce(Any, Any).
-
 run(_, true, L, L?).                             % halt - close circuit
 run(M, (A, B), L, R?) :-                         % fork - chain
     ground(M?) |

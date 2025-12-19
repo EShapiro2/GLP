@@ -5,13 +5,6 @@
 %% Demonstrates incomplete messages for bidirectional communication.
 %% value(V) request: monitor binds response variable V to current sum.
 
-%% Type definitions
-ReqList ::= [] ; [Any | ReqList].
-
-%% Procedure type declarations
-procedure monitor(ReqList).
-procedure monitor(ReqList, Number).
-
 monitor(Reqs) :- monitor(Reqs?,0).
 
 monitor([add(N)|Reqs],Sum) :-

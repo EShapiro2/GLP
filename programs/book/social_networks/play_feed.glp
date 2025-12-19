@@ -1,8 +1,6 @@
 %% play_feed.glp - Feed and Followers Play
 %%
 %% Scenario: Alice runs a feed. Bob and Carol subscribe. Alice posts messages.
-
-%% Type definitions (test scenario - minimal declarations needed)
 %% Bob and Carol receive the posts.
 %%
 %% This play demonstrates:

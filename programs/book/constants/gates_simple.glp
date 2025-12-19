@@ -4,12 +4,6 @@
 %% Basic gates for teaching constant unification.
 %% Each gate is defined by exhaustive enumeration.
 
-%% Procedure type declarations
-procedure and(Number, Number, Number).
-procedure or(Number, Number, Number).
-procedure not(Number, Number).
-procedure xor(Number, Number, Number).
-
 %% AND gate
 and(1, 1, 1).
 and(1, 0, 0).

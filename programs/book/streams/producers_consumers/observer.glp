@@ -5,14 +5,6 @@
 %% Forwards communication bidirectionally while producing a
 %% replicable audit stream.
 
-%% Type definitions
-List ::= [] ; [Any | List].
-
-%% Procedure type declarations
-procedure observe(Any, Any, Any).
-procedure copy_to(Any, Any, Any).
-procedure head_tail(List, Any, List).
-
 observe(X?, Y, Z?) :- observe(Y?, X, Z).
 observe(X, Out1?, Out2?) :- ground(X?) | copy_to(X?, Out1, Out2).
 observe(Xs, [Y1?|Ys1?], [Y2?|Ys2?]) :-

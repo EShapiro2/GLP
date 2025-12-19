@@ -4,26 +4,6 @@
 %% Leverages existing trust relationships to establish new connections.
 %% When agent r is friends with both p and q, r can introduce them.
 
-%% Type definitions
-
-%% Message operations for friend-mediated introductions
-MsgOp ::= introduce(Any, Any) ; intro(Any, Any) ; befriend_intro(Any, Any, Any) ; accept_intro(Any, Any) ; reject_intro(Any).
-
-%% Social graph messages
-SocialMsg ::= msg(Any, Any, MsgOp).
-MsgList ::= [] ; [SocialMsg | MsgList].
-
-%% Friend list entries
-FriendList ::= [] ; [Any | FriendList].
-
-%% Procedure type declarations
-procedure social_graph(Any, MsgList, FriendList).
-procedure new_channel(Any, Any).
-procedure lookup_send(Any, Any, FriendList, FriendList).
-procedure tag_stream(Any, MsgList, MsgList).
-procedure merge(MsgList, MsgList, MsgList).
-procedure add_friend(Any, Any, FriendList, FriendList).
-
 %% Channel operations (defined guard)
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 

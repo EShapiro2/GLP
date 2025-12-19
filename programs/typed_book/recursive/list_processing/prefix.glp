@@ -1,0 +1,16 @@
+%% prefix.glp - Prefixes of a list (AoP 3.13)
+%% prefix(Prefix,List) :- Prefix is a prefix of List.
+
+%% Type definitions
+List ::= [] ; [Any | List].
+
+%% Procedure type declarations
+procedure prefix(List, List).
+procedure reduce(Any, Any).
+
+prefix([], _).
+prefix([X|Xs], [X?|Ys]) :- prefix(Xs?, Ys?).
+
+%% reduce clauses for metainterpreter
+reduce(prefix([], _), true).
+reduce(prefix([X|Xs], [X?|Ys]), prefix(Xs?, Ys?)).

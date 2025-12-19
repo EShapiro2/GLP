@@ -5,15 +5,6 @@
 %% agent's unique identifier, ChUser provides bidirectional communication
 %% with the user interface, and ChNet connects to the network.
 
-%% Type definitions
-MsgList ::= [] ; [Any | MsgList].
-FriendList ::= [] ; [Any | FriendList].
-
-%% Procedure type declarations
-procedure agent(Any, Any, Any).
-procedure merge(MsgList, MsgList, MsgList).
-procedure social_graph(Any, MsgList, FriendList).
-
 agent(Id, ChUser, ChNet) :-
     ChUser = ch(UserIn, UserOut), ChNet = ch(NetIn, NetOut) |
     merge(UserIn?, NetIn?, In),

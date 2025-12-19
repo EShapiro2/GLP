@@ -4,15 +4,6 @@
 %% Content feeds leverage ground guard to broadcast to multiple followers
 %% while maintaining cryptographic proof of authorship.
 
-%% Type definitions
-FollowerList ::= [] ; [Any | FollowerList].
-
-%% Procedure type declarations
-procedure post(Any, FollowerList, FollowerList).
-procedure broadcast(Any, FollowerList, FollowerList).
-procedure create_post(Any, Number, Any).
-procedure current_time(Number).
-
 % Post distribution with attestation preservation
 post(Content, Followers, Followers1) :-
     ground(Content), current_time(Time) |

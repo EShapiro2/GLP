@@ -1,13 +1,6 @@
 %% ackermann.glp - Ackermann's function (AoP 3.9)
 %% ackermann(X,Y,A) :- A is the value of Ackermann's function for natural numbers X and Y.
 
-%% Type definitions (Peano numerals)
-Nat ::= 0 ; s(Nat).
-
-%% Procedure type declarations
-procedure ackermann(Nat, Nat, Nat).
-procedure reduce(Any, Any).
-
 ackermann(0, N, s(N?)).
 ackermann(s(M), 0, Val?) :- ackermann(M?, s(0), Val).
 ackermann(s(M), s(N), Val?) :- tuple(M?) | ackermann(s(M?), N?, Val1), ackermann(M?, Val1?, Val).

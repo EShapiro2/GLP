@@ -14,15 +14,6 @@
 % The tree structure provides logarithmic depth, enabling parallel merging
 % of many streams efficiently.
 
-%% Type definitions
-List ::= [] ; [Any | List].
-ListOfLists ::= [] ; [List | ListOfLists].
-
-%% Procedure type declarations
-procedure merge_tree(ListOfLists, List).
-procedure merge_layer(ListOfLists, ListOfLists).
-procedure merge(List, List, List).
-
 % Base case: single stream passes through unchanged
 merge_tree([Xs], Xs?).
 

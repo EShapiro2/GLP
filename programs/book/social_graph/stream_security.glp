@@ -18,17 +18,6 @@
 %% 4. ACYCLICITY: Occurs check prevents writer from being bound to term
 %%    containing its paired reader, ensuring strict temporal ordering.
 
-%% Type definitions
-List ::= [] ; [Any | List].
-
-%% Procedure type declarations
-procedure extend_stream(List, Any, Any).
-procedure producer_a(Any).
-procedure producer_b(Any).
-procedure handover(Any, Any, Any).
-procedure produce_batch_a(Any, Any, Any).
-procedure produce_batch_b(Any, Any, Any).
-
 %% Cooperative extension example - only holder of tail writer can extend
 extend_stream([H?|T], H, T).
 

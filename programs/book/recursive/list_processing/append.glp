@@ -1,13 +1,6 @@
 %% append.glp - List concatenation
 %% Source: Standard GLP list operations
 
-%% Type definitions
-List ::= [] ; [Any | List].
-
-%% Procedure type declaration
-procedure append(List, List, List).
-procedure reduce(Any, Any).
-
 append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 

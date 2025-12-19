@@ -1,11 +1,6 @@
 %% ancestor.glp - Ancestor relation (AoP 5.1)
 %% ancestor(X,Y) :- X is an ancestor of Y.
 
-%% Procedure type declarations
-procedure parent(Any, Any).
-procedure ancestor(Any, Any).
-procedure reduce(Any, Any).
-
 parent(terach, abraham).
 parent(abraham, isaac).
 parent(isaac, jacob).

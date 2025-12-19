@@ -1,14 +1,6 @@
 %% plus.glp - Addition (AoP 3.3)
 %% plus(X,Y,Z) :- X, Y and Z are natural numbers such that Z is the sum of X and Y.
 
-%% Type definitions (Peano numerals)
-Nat ::= 0 ; s(Nat).
-
-%% Procedure type declarations
-procedure plus(Nat, Nat, Nat).
-procedure natural_number(Nat).
-procedure reduce(Any, Any).
-
 plus(0, X, X?).
 plus(s(X), Y, s(Z?)) :- plus(X?, Y?, Z).
 

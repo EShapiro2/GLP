@@ -1,12 +1,6 @@
 %% observed_monitor.glp - Type/mode-aware observer for monitor streams
 %% Demonstrates observation of incomplete messages with duplicate
 
-%% Procedure type declarations
-procedure monitor(Any).
-procedure monitor_loop(Any, Number).
-procedure observe(Any, Any, Any).
-procedure copy_req(Any, Any, Any).
-
 % Accumulator monitor
 monitor(Reqs) :- monitor_loop(Reqs?, 0).
 

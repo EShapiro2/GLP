@@ -4,12 +4,6 @@
 %% Dynamic object creation and management.
 %% Creates counter instances and routes messages by name.
 
-%% Procedure type declarations
-procedure use_many_counters(Any, Any).
-procedure send(Any, Any, Any, Any).
-procedure counter(Any, Number).
-procedure wait_write(Any).
-
 use_many_counters([create(Name)|Input?], List_of_counters) :-
     counter(Com?, 0),
     use_many_counters(Input?, [(Name?, Com)|List_of_counters?]).

@@ -4,12 +4,6 @@
 %% Merges two input streams into one output stream.
 %% Alternates priority between streams for fairness.
 
-%% Type definitions
-List ::= [] ; [Any | List].
-
-%% Procedure type declaration
-procedure merge(List, List, List).
-
 merge([X|Xs],Ys,[X?|Zs?]) :- merge(Ys?,Xs?,Zs). % output from first stream
 merge(Xs,[Y|Ys],[Y?|Zs?]) :- merge(Xs?,Ys?,Zs). % output from second stream
 merge([],[],[]).                                % terminate on empty streams

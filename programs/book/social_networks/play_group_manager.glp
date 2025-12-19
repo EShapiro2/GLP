@@ -1,8 +1,6 @@
 %% play_group_manager.glp - Manager-Based Group Messaging Play
 %%
 %% Scenario: Alice creates a group, invites Bob and Carol.
-
-%% Type definitions (test scenario - minimal declarations needed)
 %% All messages go through Alice (manager) who serializes and distributes.
 %%
 %% This demonstrates:

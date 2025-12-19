@@ -1,7 +1,5 @@
 %% test_balance.glp - Unit tests for balance management
 
-%% Type definitions (test/play file - minimal declarations needed)
-
 
 %% ============================================
 %% Balance Tests

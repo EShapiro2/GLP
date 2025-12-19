@@ -1,16 +1,6 @@
 %% primes.glp - Sieve of Eratosthenes in GLP
 %% Source: Standard GLP arithmetic
 
-%% Type definitions
-NumList ::= [] ; [Number | NumList].
-
-%% Procedure type declarations
-procedure primes(Number, NumList).
-procedure integers(Number, Number, NumList).
-procedure sieve(NumList, NumList).
-procedure filter(NumList, Number, NumList).
-procedure reduce(Any, Any).
-
 primes(Max, Ps?) :- integers(2, Max?, Is), sieve(Is?, Ps).
 
 integers(N, Max, []) :- number(N?), number(Max?), N? > Max? | true.

@@ -1,17 +1,6 @@
 %% bubble_sort.glp - Bubble Sort in GLP
 %% Source: Standard GLP sorting
 
-%% Type definitions
-NumList ::= [] ; [Number | NumList].
-Flag ::= yes ; no.
-
-%% Procedure type declarations
-procedure bubble_sort(NumList, NumList).
-procedure bsort(NumList, NumList).
-procedure bubble(NumList, NumList, Flag).
-procedure continue(Flag, NumList, NumList).
-procedure reduce(Any, Any).
-
 bubble_sort(Xs, Sorted?) :- bsort(Xs?, Sorted).
 
 bsort(Xs, Sorted?) :-

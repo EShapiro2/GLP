@@ -1,6 +1,9 @@
 %% attestation_guards.glp - Security Guard Predicates
 %% Source: GLP Papers (Section: Securing Multiagent GLP)
 %%
+%% NOTE: This file uses built-in guards (attestation/2, module/1) that are not yet implemented.
+%% BLOCKED pending implementation of security built-in guards.
+%%
 %% Programs require ability to inspect attestations on received messages.
 %% GLP provides guard predicates for security operations.
 %%
@@ -13,29 +16,20 @@
 %%   Agents use this to determine own module identity when evaluating
 %%   compatibility with other agents' attested modules.
 
-%% Procedure type declarations
-procedure process_message(Any, Any).
-procedure handle_verified(Any, Any, Any).
-procedure trusted_module(Any).
-procedure negotiate_protocol(Any, Any).
-procedure compatible(Any, Any).
-procedure attestation(Any, Any).
-procedure module(Any).
-
 %% Example: Verify message attestation before processing
 process_message(Msg, Result?) :-
-    attestation(Msg, att(Agent, Module)),
+    attestation(Msg?, att(Agent, Module)),
     trusted_module(Module?) |
     handle_verified(Msg?, Agent?, Result).
 
 process_message(Msg, rejected) :-
-    attestation(Msg, att(_, Module)),
+    attestation(Msg?, att(_, Module)),
     ~trusted_module(Module?) |
     true.
 
 %% Example: Check own module for protocol decisions
 negotiate_protocol(Other, Result?) :-
     module(MyModule),
-    attestation(Other, att(_, OtherModule)),
+    attestation(Other?, att(_, OtherModule)),
     compatible(MyModule?, OtherModule?) |
     Result = accept.

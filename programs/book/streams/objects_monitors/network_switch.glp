@@ -5,11 +5,6 @@
 %% For three agents p, q, r and three channels Chp, Chq, Chr,
 %% initialize with: network((p,Chp?),(q,Chq?),(r,Chr?))
 
-%% Procedure type declarations
-procedure network(Any, Any, Any).
-procedure send(Any, Any, Any).
-procedure receive(Any, Any, Any).
-
 %% P to Q forwarding
 network((P,ChP),(Q,ChQ),(R,ChR)) :-
     ground(Q?), receive(ChP?,msg(Q?,X),ChP1), send(ChQ?,X?,ChQ1) |

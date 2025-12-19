@@ -1,13 +1,6 @@
 %% play_cold_call.glp - Multi-agent cold-call scenario test
 %% 4 players: Alice, Bob, Carol, Dave
 
-%% Type definitions
-MsgList ::= [] ; [Any | MsgList].
-FriendList ::= [] ; [Any | FriendList].
-
-%% Procedure type declarations
-procedure social_graph(Any, MsgList, FriendList).
-
 %% Round 1: Alice cold-calls Bob, Bob accepts
 %% Alice's view:
 test_alice_round1(_, Resp1) :-

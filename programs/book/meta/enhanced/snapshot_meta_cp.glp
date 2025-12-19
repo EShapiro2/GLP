@@ -6,14 +6,6 @@
 %%
 %% Uses chain(Left, Right) for short-circuit termination detection.
 
-%% Type definitions
-List ::= [] ; [Any | List].
-
-%% Procedure type declarations
-procedure run(Any, Any).
-procedure reduce(Any, Any).
-procedure merge(List, List, List).
-
 run(true, chain(Chain, Chain?)).                 %% halt - close circuit
 run((A, B), chain(Left, Right?)) :-              %% fork - split chain
     run(A?, chain(Left?, Middle)),

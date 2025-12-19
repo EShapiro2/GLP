@@ -7,22 +7,6 @@
 % allocate_mutual_reference/2 is a kernel predicate called directly.
 -stdlib.
 
-%% Type definitions
-List ::= [] ; [Any | List].
-Done ::= done.
-StreamCmd ::= stream(List) ; merge(StreamOfStreams).
-StreamOfStreams ::= [] ; [StreamCmd | StreamOfStreams].
-MutualRef ::= Any.  % Opaque kernel type
-
-%% Procedure type declarations
-procedure mwm(StreamOfStreams, List).
-procedure mwm_main(StreamOfStreams, MutualRef).
-procedure mwm1(StreamOfStreams, MutualRef, Done, Done).
-procedure mwm_copy(List, MutualRef, Done, Done).
-procedure close_when_done(Done, MutualRef).
-procedure stream_append(Any, MutualRef, MutualRef).
-procedure close_mutual_reference(MutualRef).
-
 mwm(In, Out?) :-
     '_allocate_mutual_reference'(Ref, Out),
     mwm_main(In?, Ref?).

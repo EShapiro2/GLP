@@ -5,10 +5,6 @@
 %% uninstantiated readers. Suspends when encountering readers,
 %% resumes as values become available.
 
-%% Procedure type declarations
-procedure replicate2(Any, Any, Any).
-procedure replicate3(Any, Any, Any, Any).
-
 %% Note: The ... notation in papers indicates this generalizes to n output copies.
 %% Binary version shown here:
 

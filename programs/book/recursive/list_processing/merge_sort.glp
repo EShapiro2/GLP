@@ -1,15 +1,6 @@
 %% merge_sort.glp - Merge Sort in GLP
 %% Source: Standard GLP sorting
 
-%% Type definitions
-NumList ::= [] ; [Number | NumList].
-
-%% Procedure type declarations
-procedure merge_sort(NumList, NumList).
-procedure split2(Number, Number, NumList, NumList, NumList).
-procedure merge_sorted(NumList, NumList, NumList).
-procedure merge_sorted_keep(Number, NumList, NumList, NumList).
-
 merge_sort([], []).
 merge_sort([X], [X?]).
 merge_sort([A,B|Xs], Sorted?) :-
