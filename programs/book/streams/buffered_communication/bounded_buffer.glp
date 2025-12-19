@@ -1,46 +1,46 @@
 %% bounded_buffer.glp - Bounded buffer stream communication
 %% Source: CP Collected Papers, Ch 18 (Takeuchi & Furukawa)
 %%
-%% Bounded buffer communication limits sender when buffer is full.
-%% The receiver controls buffer expansion by creating new slots.
+%% Buffer represented as difference list H\T where H is message queue head,
+%% T is the hole for new messages. Bounded size creates backpressure.
 
-%% Unbounded buffer send/receive (standard stream communication)
-send_unbounded(Msg, [Msg?|Tail], Tail?).
-receive_unbounded(Msg?, [Msg|Tail], Tail?).
+%% Send message to buffer
+send(Msg, [Msg?|Buf]\Tail?, Buf?\Tail?).
 
-%% Bounded buffer send/receive
-%% Buffer is represented as difference-list: Head--Tail
-send(Msg, [Msg?|Buf], Buf?).
-receive(Msg?, [Msg|Buf]--[_|Tail], Buf?--Tail?).
+%% Receive message from buffer
+receive(Msg?, [Msg|Buf]\[_|Tail], Buf?\Tail?).
 
-close([end_of_stream|_]).
+%% Close and test closure
+close([end_of_stream|_]\_).
 closed(end_of_stream).
 
 %% Open a buffer of given size
-open(0, X--X?).
-open(N, [_|Y?]--Z?) :- N? > 0 | N1 := N? - 1, open(N1?, Y--Z).
+open(0, X\X?).
+open(N, [_|H?]\T?, H?\T?) :- N? > 0 |
+    N1 := N? - 1,
+    open(N1?, H\T).
 
 %% Example: Buffered stream of squares
-%% NOTE: This example has Pattern C stream sharing (Buf appears twice as writer).
-%% SRSW limitation: Single-reader/single-writer difference-list streams cannot
-%% be shared between multiple processes. This violates the fundamental assumption
-%% that each variable cell has exactly one writer and one reader.
-%% See: CP Collected Papers Ch 18, Section 4.2 on difference-list limitations.
 sq_num_buffered(N, Ss?, Size) :-
-    open(Size?, Buf--Tail),
-    integers(1, N?, Buf),
-    square(Buf?--Tail?, Ss).
+    open(Size?, Buf\Tail),
+    integers(1, N?, Buf?\Tail?),
+    square(Buf?\Tail?, Ss).
 
-integers(I, N, [I?|Buf?]) :-
+integers(I, N, Buf\Tail?) :-
     I? =< N? |
     J := I? + 1,
-    integers(J?, N?, Buf).
-integers(I, N, Buf) :-
+    send(I?, Buf?, NBuf\NTail),
+    integers(J?, N?, NBuf?\NTail?).
+integers(I, N, Buf\_) :-
     I? > N? |
     close(Buf?).
 
-square([I|Buf], [I2?|Ss?]) :-
+square(Buf\Tail?, Ss?) :-
+    receive(I, Buf?\Tail?, NBuf\NTail),
+    square2(I?, NBuf?\NTail?, Ss).
+
+square2(I, _\_, []) :- closed(I?) | true.
+square2(I, Buf\Tail, [I2?|Ss?]) :-
     number(I?) |
     I2 := I? * I?,
-    square(Buf?, Ss).
-square([I|_], []) :- closed(I?) | true.
+    square(Buf?\Tail?, Ss).

@@ -1,22 +1,7 @@
-%% reverse.glp - List reversal examples
-%%
-%% Two implementations demonstrating O(n^2) vs O(n) complexity.
+%% reverse.glp - Efficient list reversal using difference list accumulator
+%% O(n) time complexity.
 
-%% Naive reverse - O(n^2) due to repeated append
-reverse_naive([], []).
-reverse_naive([X|Xs], Ys?) :-
-    reverse_naive(Xs?, Zs),
-    append(Zs?, [X?], Ys).
+reverse(Xs, Rev?) :- reverse_dl(Xs?, Rev\[]).
 
-append([], Ys, Ys?).
-append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
-
-%% Accumulator reverse - O(n) single pass
-reverse(Xs, Ys?) :- reverse_acc(Xs?, [], Ys).
-
-reverse_acc([], Acc, Acc?).
-reverse_acc([X|Xs], Acc, Ys?) :- reverse_acc(Xs?, [X?|Acc?], Ys).
-
-%% Test goals:
-%% reverse_naive([a,b,c], R).
-%% reverse([a,b,c], R).
+reverse_dl([], T\T?).
+reverse_dl([X|Xs], H?\T?) :- reverse_dl(Xs?, H\[X?|T]).
