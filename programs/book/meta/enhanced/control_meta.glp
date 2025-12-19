@@ -5,7 +5,8 @@
 %% Uses short-circuit L--R for state dump on abort.
 
 %% Type definitions
-ControlList ::= [] ; [Any | ControlList].
+ControlMsg ::= suspend ; resume ; abort.
+ControlList ::= [] ; [ControlMsg | ControlList].
 DumpList ::= [] ; [Any | DumpList].
 
 %% Procedure type declarations

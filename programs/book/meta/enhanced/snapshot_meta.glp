@@ -11,7 +11,8 @@
 %% the current resolvent of the run.
 
 %% Type definitions
-ControlList ::= [] ; [Any | ControlList].
+ControlMsg ::= suspend ; resume ; abort.
+ControlList ::= [] ; [ControlMsg | ControlList].
 ResolvList ::= [] ; [Any | ResolvList].
 
 %% Procedure type declarations

@@ -5,12 +5,11 @@
 
 %% Type definitions
 List ::= [] ; [Any | List].
-PayloadList ::= [] ; [Any | PayloadList].
 
 %% Procedure type declarations
 procedure streams(Any, Any).
-procedure produce_payloads(PayloadList).
-procedure interlace(PayloadList, Any, Any).
+procedure produce_payloads(Any).
+procedure interlace(Any, Any, Any).
 procedure collect_tips(Any, Any, Any).
 
 streams(stream(S?), Others) :-

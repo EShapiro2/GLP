@@ -12,7 +12,8 @@
 %% Last two arguments: difference-list for distributed accumulation
 
 %% Type definitions
-ControlList ::= [] ; [Any | ControlList].
+ControlMsg ::= suspend ; resume ; abort.
+ControlList ::= [] ; [ControlMsg | ControlList].
 DumpList ::= [] ; [Any | DumpList].
 List ::= [] ; [Any | List].
 
