@@ -5,7 +5,15 @@
 %% Result: All three are mutual friends
 
 %% Type definitions
-MsgList ::= [] ; [Any | MsgList].
+
+%% Message operations (combines cold-call and friend-mediated introduction)
+MsgOp ::= connect(Any) ; intro(Any, Any, Any) ; intro(Any, Any) ; befriend(Any, Any) ; decision(Any, Any, Any) ; response(Any) ; introduce(Any, Any) ; befriend_intro(Any, Any, Any) ; accept_intro(Any, Any) ; reject_intro(Any, Any).
+
+%% Social graph messages
+SocialMsg ::= msg(Any, Any, MsgOp).
+MsgList ::= [] ; [SocialMsg | MsgList].
+
+%% Friend list entries
 FriendList ::= [] ; [Any | FriendList].
 
 %% Procedure type declarations

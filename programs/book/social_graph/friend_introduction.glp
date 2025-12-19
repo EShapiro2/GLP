@@ -5,7 +5,15 @@
 %% When agent r is friends with both p and q, r can introduce them.
 
 %% Type definitions
-MsgList ::= [] ; [Any | MsgList].
+
+%% Message operations for friend-mediated introductions
+MsgOp ::= introduce(Any, Any) ; intro(Any, Any) ; befriend_intro(Any, Any, Any) ; accept_intro(Any, Any) ; reject_intro(Any).
+
+%% Social graph messages
+SocialMsg ::= msg(Any, Any, MsgOp).
+MsgList ::= [] ; [SocialMsg | MsgList].
+
+%% Friend list entries
 FriendList ::= [] ; [Any | FriendList].
 
 %% Procedure type declarations

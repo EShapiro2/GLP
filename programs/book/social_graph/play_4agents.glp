@@ -4,7 +4,15 @@
 %% This is a minimal test - just one cold-call through the 4-way network
 
 %% Type definitions
-MsgList ::= [] ; [Any | MsgList].
+
+%% Message operations for cold-call protocol
+MsgOp ::= connect(Any) ; intro(Any, Any, Any) ; befriend(Any, Any) ; decision(Any, Any, Any) ; response(Any).
+
+%% Social graph messages
+SocialMsg ::= msg(Any, Any, MsgOp).
+MsgList ::= [] ; [SocialMsg | MsgList].
+
+%% Friend list entries
 FriendList ::= [] ; [Any | FriendList].
 
 %% Procedure type declarations
