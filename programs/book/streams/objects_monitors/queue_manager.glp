@@ -4,6 +4,12 @@
 %% Demonstrates incomplete messages for resource management.
 %% dequeue returns immediately; actual value filled in later by enqueue.
 
+%% Type definitions
+ReqList ::= [] ; [Any | ReqList].
+
+%% Procedure type declarations
+procedure qm(ReqList, Any, Any).
+
 %% Queue manager - Head and Tail are difference list pointers
 %% Initial call: qm(Requests?, Q, Q) with same variable for empty queue
 

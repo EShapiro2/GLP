@@ -1,6 +1,15 @@
 %% play_absolute.glp - Four-actor play with absolute time targets
 %% Uses guard_sub for computing wait deltas from absolute targets
 
+%% Procedure type declarations
+procedure play_absolute(Any, Any, Any, Any, Any).
+procedure alice(Any, Any).
+procedure bob_at(Number, Number, Any, Any).
+procedure carol_at(Number, Number, Any, Any).
+procedure diana_at(Number, Number, Any, Any).
+procedure merge(Any, Any, Any).
+procedure monitor(Any).
+
 play_absolute(VA?, VB?, VC?, VD?, Log?) :-
     now(T0),
     T50 := T0? + 50,

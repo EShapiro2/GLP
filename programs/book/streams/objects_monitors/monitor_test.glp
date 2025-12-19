@@ -11,6 +11,16 @@
 %% Test goal:
 %% test_monitor(V1, V2).
 
+%% Procedure type declarations
+procedure client1(Any, Any).
+procedure client1_cont(Any).
+procedure client2(Any, Any).
+procedure client2_cont(Any).
+procedure test_monitor(Number, Number).
+procedure merge(Any, Any, Any).
+procedure monitor(Any).
+procedure monitor_loop(Any, Number).
+
 % Client 1: immediate - add 5, add 3, query value
 client1(V1, [add(5), add(3), value(V1?)|Xs?]) :- client1_cont(Xs).
 client1_cont([]).
