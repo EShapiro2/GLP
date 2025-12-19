@@ -1,4 +1,6 @@
 %% play_payment.glp - Three-agent payment scenario
+
+%% Type definitions (test/play file - minimal declarations needed)
 %% Alice and Bob establish credit, then Alice pays Carol in Bob-coins
 
 

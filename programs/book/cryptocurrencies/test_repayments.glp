@@ -1,5 +1,7 @@
 %% test_repayments.glp - Unit tests for repayment computation
 
+%% Type definitions (test/play file - minimal declarations needed)
+
 
 %% ============================================
 %% Repayment Computation Tests

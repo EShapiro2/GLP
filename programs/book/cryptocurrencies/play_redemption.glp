@@ -1,4 +1,6 @@
 %% play_redemption.glp - Coin redemption scenario
+
+%% Type definitions (test/play file - minimal declarations needed)
 %% Bob redeems Alice-coins with preference list
 
 
