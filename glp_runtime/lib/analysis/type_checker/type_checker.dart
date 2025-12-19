@@ -271,13 +271,69 @@ class TypeChecker {
 
   /// Check that ground paths in a term are accepted by the DFA
   GroundPathCheck _checkGroundPaths(ast.Term term, TypeDFA dfa) {
-    final paths = _extractGroundPaths(term);
+    // Use type-aware extraction that stops at Any positions
+    final paths = _extractTypedGroundPaths(term, dfa, TermPath.empty());
     for (final path in paths) {
       if (!dfa.acceptsPath(path)) {
         return GroundPathCheck(false, path);
       }
     }
     return GroundPathCheck(true, null);
+  }
+
+  /// Extract ground paths from term, consulting type to know when to stop
+  /// When we reach a position typed as Any, we accept it without descending further
+  Set<TermPath> _extractTypedGroundPaths(ast.Term term, TypeDFA dfa, TermPath currentPath) {
+    // Check if current position is typed as Any
+    final state = dfa.stateAfterPath(currentPath);
+    if (state != null && state.name.startsWith('_builtin_Any')) {
+      // This position accepts Any - don't descend further
+      // Return empty set since we don't need to check sub-paths
+      return {};
+    }
+
+    // For variables, no ground paths
+    if (term is ast.VarTerm || term is ast.UnderscoreTerm) {
+      return {};
+    }
+
+    // For structures, extract paths from arguments
+    if (term is ast.StructTerm) {
+      final paths = <TermPath>{};
+      for (int i = 0; i < term.args.length; i++) {
+        final elemPath = PathElement.functor(term.functor, term.arity, i + 1);
+        final newPath = TermPath([...currentPath.elements, elemPath]);
+        final argPaths = _extractTypedGroundPaths(term.args[i], dfa, newPath);
+        paths.addAll(argPaths);
+      }
+      return paths;
+    }
+
+    // For lists, extract from head and tail
+    if (term is ast.ListTerm) {
+      if (term.isNil) {
+        return {TermPath([...currentPath.elements, PathElement.nil()])};
+      }
+      final paths = <TermPath>{};
+      if (term.head != null) {
+        final headPath = TermPath([...currentPath.elements, PathElement.listHead()]);
+        final headPaths = _extractTypedGroundPaths(term.head!, dfa, headPath);
+        paths.addAll(headPaths);
+      }
+      if (term.tail != null) {
+        final tailPath = TermPath([...currentPath.elements, PathElement.listTail()]);
+        final tailPaths = _extractTypedGroundPaths(term.tail!, dfa, tailPath);
+        paths.addAll(tailPaths);
+      }
+      return paths;
+    }
+
+    // For constants
+    if (term is ast.ConstTerm && term.value != null) {
+      return {TermPath([...currentPath.elements, PathElement.constant(term.value!)])};
+    }
+
+    return {};
   }
 
   /// Infer variable types from a pattern and accumulate in varTypes map
