@@ -1,6 +1,8 @@
 %% play_group_interlaced.glp - Group Messaging via Interlaced Streams
 %%
 %% Scenario: Alice and Bob form a group where each posts blocks
+
+%% Type definitions (test scenario - minimal declarations needed)
 %% that reference the other's previous blocks (tips).
 %%
 %% This demonstrates:

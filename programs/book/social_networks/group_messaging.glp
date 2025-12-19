@@ -5,6 +5,19 @@
 %% ensure each member's block references all observed messages, creating
 %% natural causal ordering.
 
+%% Type definitions
+MsgList ::= [] ; [Any | MsgList].
+FriendList ::= [] ; [Any | FriendList].
+
+%% Procedure type declarations
+procedure group_member(Any, Any, Any).
+procedure lookup(Any, FriendList, Any).
+procedure compose_messages(Any, Any, MsgList).
+procedure find_my_stream(Any, Any, Any).
+procedure interlace(MsgList, Any, Any, Any).
+procedure await_user_input(Any, Any, Any).
+procedure format_message(Any, Any, Any).
+
 % Member participates in group
 group_member(Id, (Founder, Name), Streams) :-
     lookup((Founder,Name), Fs?, group(Role, Streams)),

@@ -4,6 +4,19 @@
 %% Establishes dedicated conversation channels between friends,
 %% separate from protocol control channels.
 
+%% Type definitions
+MsgList ::= [] ; [Any | MsgList].
+FriendList ::= [] ; [Any | FriendList].
+
+%% Procedure type declarations
+procedure establish(Any, Any, Any, FriendList, FriendList, MsgList, MsgList).
+procedure new_channel(Any, Any).
+procedure attestation(Any, Any).
+procedure handle_friend(Any, Any, Any, Any, Any, FriendList, FriendList, MsgList, MsgList).
+procedure tag_stream(Any, MsgList, MsgList).
+procedure merge(MsgList, MsgList, MsgList).
+procedure forward_to_app(Any).
+
 % Modified establishment for direct messaging
 % Secure version - verifies DM channel attestation
 establish(yes, From, Resp, Fs, Fs1, In, In1) :-

@@ -3,6 +3,16 @@
 %% Blocklace: DAG where each block references multiple predecessors.
 %% Enables concurrent block creation without consensus.
 
+%% Type definitions
+List ::= [] ; [Any | List].
+PayloadList ::= [] ; [Any | PayloadList].
+
+%% Procedure type declarations
+procedure streams(Any, Any).
+procedure produce_payloads(PayloadList).
+procedure interlace(PayloadList, Any, Any).
+procedure collect_tips(Any, Any, Any).
+
 streams(stream(S?), Others) :-
     produce_payloads(Payloads),
     interlace(Payloads?, S, Others?).
