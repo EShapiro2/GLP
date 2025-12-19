@@ -5,16 +5,30 @@
 %% Group identifier is (founder, name), preventing naming conflicts.
 
 %% Type definitions
-MsgList ::= [] ; [Any | MsgList].
+
+%% Message operations for group formation
+MsgOp ::= create_group(Any, Any) ; inv(Any, Any, Any) ; join_group(Any, Any, Any) ; join(Any, Any, Any, Any).
+
+%% Social graph messages
+SocialMsg ::= msg(Any, Any, MsgOp).
+MsgList ::= [] ; [SocialMsg | MsgList].
+
+%% Friend list entries
 FriendList ::= [] ; [Any | FriendList].
+
+%% User list
 UserList ::= [] ; [Any | UserList].
 
 %% Procedure type declarations
-%% Note: Parser bug prevents procedure declarations in this file - skipping for now
+procedure social_graph(Any, MsgList, FriendList).
+procedure send_invitations(FriendList, Any, Any, Any, FriendList, FriendList).
+procedure create_group_streams(UserList, Any).
+procedure lookup(Any, FriendList, Any).
+procedure lookup_send(Any, SocialMsg, FriendList, FriendList).
 
 % User creates group with friend list
 social_graph(Id, [msg(user, Id, create_group(Name, Friends))|In], Fs) :-
-    create_group_streams([Id|Friends]?, Streams),
+    create_group_streams([Id|Friends?], Streams),
     send_invitations(Friends?, Id?, Name?, Streams?, Fs?, Fs1),
     social_graph(Id, In?, [((Id,Name), group(admin, Streams?))|Fs1?]).
 
