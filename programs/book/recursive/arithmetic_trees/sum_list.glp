@@ -1,3 +1,11 @@
+%% Type definitions
+NumList ::= [] ; [Number | NumList].
+
+%% Procedure type declarations
+procedure sum(NumList, Number).
+procedure sum(NumList, Number, Number).
+procedure reduce(Any, Any).
+
 %% sum_list.glp - Sum elements of a list with accumulator
 
 sum(Xs, S?) :- sum(Xs?, 0, S).

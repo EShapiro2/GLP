@@ -1,3 +1,16 @@
+%% Type definitions
+MsgOp ::= connect(Any) ; intro(Any, Any, Any) ; befriend(Any, Any) ; decision(Any, Any, Any) ; response(Any).
+
+%% Type definitions
+SocialMsg ::= msg(Any, Any, MsgOp).
+MsgList ::= [] ; [SocialMsg | MsgList].
+
+%% Type definitions
+FriendList ::= [] ; [Any | FriendList].
+
+%% Procedure type declarations
+procedure social_graph(Any, MsgList, FriendList).
+
 %% play_4agents.glp - 4-agent cold-call play
 %% Round 1: Alice initiates connection to Bob, Bob accepts
 %%

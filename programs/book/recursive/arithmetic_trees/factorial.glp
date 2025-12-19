@@ -1,3 +1,7 @@
+%% Procedure type declarations
+procedure factorial(Number, Number).
+procedure reduce(Any, Any).
+
 %% factorial.glp - Factorial computation
 
 factorial(0, 1).

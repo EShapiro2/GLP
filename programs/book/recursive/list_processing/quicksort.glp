@@ -1,3 +1,12 @@
+%% Type definitions
+NumList ::= [] ; [Number | NumList].
+
+%% Procedure type declarations
+procedure quicksort(NumList, NumList).
+procedure qsort(NumList, NumList, NumList).
+procedure partition(NumList, Number, NumList, NumList).
+procedure reduce(Any, Any).
+
 %% quicksort.glp - Quicksort with difference list accumulator
 %% Efficient O(n log n) average without append overhead.
 

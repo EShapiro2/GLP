@@ -1,3 +1,9 @@
+%% Procedure type declarations
+procedure and(Number, Number, Number).
+procedure or(Number, Number, Number).
+procedure not(Number, Number).
+procedure xor(Number, Number, Number).
+
 %% gates_simple.glp - Simple logic gates as facts
 %% Source: AofGLP Book Chapter 4
 %%

@@ -1,3 +1,9 @@
+%% Type definitions
+ReqList ::= [] ; [Any | ReqList].
+
+%% Procedure type declarations
+procedure qm(ReqList, Any, Any).
+
 %% queue_manager.glp - Queue manager using incomplete messages
 %% Source: CP Collected Papers, Ch 29 (Shapiro & Takeuchi)
 %%

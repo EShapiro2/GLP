@@ -1,3 +1,10 @@
+%% Type definitions
+ReqList ::= [] ; [Any | ReqList].
+
+%% Procedure type declarations
+procedure monitor(ReqList).
+procedure monitor(ReqList, Number).
+
 %% monitor.glp - Concurrent monitor (accumulator)
 %% Source: GLP Papers (Program: Concurrent Monitor)
 %%

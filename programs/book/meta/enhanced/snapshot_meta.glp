@@ -1,3 +1,11 @@
+%% Type definitions
+ControlList ::= [] ; [Any | ControlList].
+ResolvList ::= [] ; [Any | ResolvList].
+
+%% Procedure type declarations
+procedure run(Any, ControlList, ResolvList, ResolvList).
+procedure suspended_run(Any, ControlList, ResolvList, ResolvList).
+
 %% snapshot_meta.glp - GLP metainterpreter with snapshot collection
 %% Source: GLP Papers (Program: GLP metainterpreter with run control and snapshot)
 %%

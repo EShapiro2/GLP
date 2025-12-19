@@ -1,3 +1,20 @@
+%% Type definitions
+MsgOp ::= connect(Any) ; intro(Any, Any, Any) ; befriend(Any, Any) ; decision(Any, Any, Any) ; response(Any).
+
+%% Type definitions
+SocialMsg ::= msg(Any, Any, MsgOp).
+MsgList ::= [] ; [SocialMsg | MsgList].
+
+%% Type definitions
+FriendList ::= [] ; [Any | FriendList].
+
+%% Procedure type declarations
+procedure social_graph(Any, MsgList, FriendList).
+procedure lookup_send(Any, Any, FriendList, FriendList).
+procedure inject_msg(Any, Any, Any, MsgList, MsgList).
+procedure bind_response(Any, Any, Any, FriendList, FriendList, MsgList, MsgList).
+procedure handle_response(Any, Any, FriendList, FriendList, MsgList, MsgList).
+
 %% cold_call_glpsam.glp - Cold Call Befriending Protocol (GLPSAM)
 %% Source: GLP-2025 Paper (Program: Social Graph Cold-Call Befriending Protocol)
 %% GLPSAM simulation version - attestation guards removed (assumes correct agents)

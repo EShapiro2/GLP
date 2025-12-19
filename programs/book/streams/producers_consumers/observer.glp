@@ -1,3 +1,11 @@
+%% Type definitions
+List ::= [] ; [Any | List].
+
+%% Procedure type declarations
+procedure observe(Any, Any, Any).
+procedure copy_to(Any, Any, Any).
+procedure head_tail(List, Any, List).
+
 %% observer.glp - Stream observation without consumption
 %% Source: GLP Papers (Program: Concurrent Observer)
 %%

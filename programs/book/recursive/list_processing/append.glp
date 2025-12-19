@@ -1,3 +1,10 @@
+%% Type definitions
+List ::= [] ; [Any | List].
+
+%% Procedure type declarations
+procedure append(List, List, List).
+procedure reduce(Any, Any).
+
 %% append.glp - List append
 %% append(Xs, Ys, Zs) :- Zs is Xs followed by Ys
 

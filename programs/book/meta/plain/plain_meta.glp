@@ -1,3 +1,11 @@
+%% Type definitions
+List ::= [] ; [Any | List].
+
+%% Procedure type declarations
+procedure run(Any).
+procedure reduce(Any, Any).
+procedure merge(List, List, List).
+
 %% plain_meta.glp - Plain GLP metainterpreter
 %% Source: GLP Papers (Program: GLP plain metainterpreter)
 %%

@@ -1,3 +1,6 @@
+%% Procedure type declarations
+procedure replicate2(Any, Any, Any).
+
 %% replicate2.glp - Binary stream replication
 %% Replicates a stream to two outputs
 

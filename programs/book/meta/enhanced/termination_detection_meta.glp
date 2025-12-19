@@ -1,3 +1,7 @@
+%% Procedure type declarations
+procedure run(Any, Any, Any, Any).
+procedure reduce(Any, Any).
+
 %% termination_detection_meta.glp - Termination detecting metainterpreter
 %% Source: CP Collected Papers, Ch 25 (Safra & Shapiro)
 %%
