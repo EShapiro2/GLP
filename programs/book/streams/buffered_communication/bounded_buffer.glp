@@ -4,10 +4,12 @@
 %% Buffer represented as difference list H\T where H is message queue head,
 %% T is the hole for new messages. Bounded size creates backpressure.
 
-%% Send message to buffer
-send(Msg, [Msg?|Buf]\Tail?, Buf\Tail).
+%% Unbounded buffer send/receive (standard stream communication)
+send_unbounded(Msg, [Msg?|NStrm], NStrm?).
+receive_unbounded(Msg?, [Msg|NStrm], NStrm?).
 
-%% Receive message from buffer
+%% Bounded buffer send/receive using difference list H\T
+send(Msg, [Msg?|Buf?]\Tail?, Buf\Tail).
 receive(Msg?, [Msg|Buf]\[_|Tail?], Buf?\Tail).
 
 %% Close and test closure
@@ -16,9 +18,7 @@ closed(end_of_stream).
 
 %% Open a buffer of given size
 open(0, X\X?).
-open(N, [_|H]\T?, H?\T) :- N? > 0 |
-    N1 := N? - 1,
-    open(N1?, H\T?).
+open(N, [_|H?]\T?) :- N? > 0 | N1 := N? - 1, open(N1?, H\T).
 
 %% Example: Buffered stream of squares
 sq_num_buffered(N, Ss?, Size) :-
