@@ -1,0 +1,23 @@
+%% agent_glpsam.glp - Social Graph Agent Initialization (GLPSAM)
+%% GLPSAM simulation version - identical to agent.glp (no attestation in init)
+%%
+%% Each agent begins with goal agent(Id, ChUser, ChNet) where Id is the
+%% agent's unique identifier, ChUser provides bidirectional communication
+%% with the user interface, and ChNet connects to the network.
+
+%% Type definitions
+List ::= [] ; [Any | List].
+FriendList ::= [] ; [Any | FriendList].
+
+%% Procedure type declarations
+procedure agent(Any, Any, Any).
+procedure merge(List, List, List).
+procedure build_friends(Any, Any, FriendList).
+procedure social_graph(Any, List, FriendList).
+
+agent(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
+    merge(UserIn?, NetIn?, In),
+    build_friends(UserOut?, NetOut?, Fs),
+    social_graph(Id?, In?, Fs?).
+
+build_friends(UserOut, NetOut, [(user, UserOut?), (net, NetOut?)]).

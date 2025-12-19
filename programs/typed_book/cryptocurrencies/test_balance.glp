@@ -1,0 +1,47 @@
+%% test_balance.glp - Unit tests for balance management
+
+%% Type definitions (test/play file - minimal declarations needed)
+
+
+%% ============================================
+%% Balance Tests
+%% ============================================
+
+%% Test get_balance on empty list returns 0
+test_get_empty :-
+    get_balance(alice, [], Bal),
+    Bal? = 0.
+
+%% Test get_balance finds existing entry
+test_get_found :-
+    get_balance(bob, [(alice, 10), (bob, 20), (carol, 30)], Bal),
+    Bal? = 20.
+
+%% Test get_balance returns 0 for missing entry
+test_get_missing :-
+    get_balance(dave, [(alice, 10), (bob, 20)], Bal),
+    Bal? = 0.
+
+%% Test set_balance on empty list
+test_set_empty :-
+    set_balance(alice, 100, [], Result),
+    Result? = [(alice, 100)].
+
+%% Test set_balance updates existing
+test_set_update :-
+    set_balance(bob, 50, [(alice, 10), (bob, 20)], Result),
+    Result? = [(alice, 10), (bob, 50)].
+
+%% Test set_balance adds new
+test_set_new :-
+    set_balance(carol, 30, [(alice, 10), (bob, 20)], Result),
+    Result? = [(alice, 10), (bob, 20), (carol, 30)].
+
+%% Run all balance tests
+test_balance :-
+    test_get_empty,
+    test_get_found,
+    test_get_missing,
+    test_set_empty,
+    test_set_update,
+    test_set_new.
