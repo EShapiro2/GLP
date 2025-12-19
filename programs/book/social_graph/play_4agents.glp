@@ -3,6 +3,13 @@
 %%
 %% This is a minimal test - just one cold-call through the 4-way network
 
+%% Type definitions
+MsgList ::= [] ; [Any | MsgList].
+FriendList ::= [] ; [Any | FriendList].
+
+%% Procedure type declarations
+procedure social_graph(Any, MsgList, FriendList).
+
 %% === Library predicates ===
 
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
