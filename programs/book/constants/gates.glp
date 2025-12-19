@@ -2,16 +2,14 @@
 %% Source: Standard GLP examples
 
 %% Type definitions
-BinaryDigit := zero | one.
-List(A) := [] | [A | List(A)].
-Gates := And | Or | Not.
-Goals(X) := true | X | (X, Goals(X)).
+BinaryDigit ::= zero ; one.
+BitList ::= [] ; [BinaryDigit | BitList].
 
-%% Mode declarations
-And := and(List(BinaryDigit)?, List(BinaryDigit)?, List(BinaryDigit)).
-Or := or(List(BinaryDigit)?, List(BinaryDigit)?, List(BinaryDigit)).
-Not := not(List(BinaryDigit)?, List(BinaryDigit)).
-Reduce := reduce(Gates?, Goals(Gates)).
+%% Procedure type declarations
+procedure and(BitList, BitList, BitList).
+procedure or(BitList, BitList, BitList).
+procedure not(BitList, BitList).
+procedure reduce(Any, Any).
 
 %% Clauses
 and([], [], []).
