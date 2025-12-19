@@ -1,0 +1,22 @@
+%% hanoi.glp - Tower of Hanoi with concurrent subproblems
+
+hanoi(0, From, To, (From?, To?)).
+hanoi(N, From, To, (Before?, (From?, To?), After?)) :-
+    N? > 0, ground(From?), ground(To?) |
+    N1 := N? - 1,
+    free(From?, To?, Free),
+    hanoi1(N1?, Free?, From?, To?, Before, After).
+
+hanoi1(N1, Free, From, To, Before?, After?) :-
+    ground(N1?), ground(Free?) |
+    hanoi(N1?, From?, Free?, Before),
+    hanoi(N1?, Free?, To?, After).
+
+free(a, b, c).
+free(a, c, b).
+free(b, a, c).
+free(b, c, a).
+free(c, a, b).
+free(c, b, a).
+
+%% Example goal: hanoi(2, a, c, Moves).

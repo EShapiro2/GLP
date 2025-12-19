@@ -1,9 +1,7 @@
-%% append.glp - List concatenation
-%% Source: Standard GLP list operations
+%% append.glp - List append
+%% append(Xs, Ys, Zs) :- Zs is Xs followed by Ys
 
 append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 
-%% Metainterpreter support
-reduce(append([], Ys, Ys?), true).
-reduce(append([X|Xs], Ys, [X?|Zs?]), append(Xs?, Ys?, Zs)).
+%% Example goal: append([a,b], [c,d], Zs).

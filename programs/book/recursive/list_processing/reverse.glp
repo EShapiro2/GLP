@@ -1,7 +1,9 @@
-%% reverse.glp - Efficient list reversal using difference list accumulator
-%% O(n) time complexity.
+%% reverse.glp - List reversal with accumulator
+%% O(n) time using accumulator.
 
-reverse(Xs, Rev?) :- reverse_dl(Xs?, Rev\[]).
+reverse(Xs, Ys?) :- rev(Xs?, [], Ys).
 
-reverse_dl([], T\T?).
-reverse_dl([X|Xs], H?\T?) :- reverse_dl(Xs?, H\[X?|T]).
+rev([], Acc, Acc?).
+rev([X|Xs], Acc, Ys?) :- rev(Xs?, [X?|Acc?], Ys).
+
+%% Example goal: reverse([a,b,c], Ys).
