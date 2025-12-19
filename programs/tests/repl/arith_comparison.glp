@@ -1,0 +1,27 @@
+% arith_comparison.glp - Test arithmetic comparison operators
+% Tests =:= (arithmetic equality) and =\= (arithmetic inequality)
+
+% =:= succeeds when arithmetic values are equal
+arith_eq(X, Y, equal) :- X? =:= Y? | true.
+arith_eq(_, _, not_equal) :- otherwise | true.
+
+% =\= succeeds when arithmetic values are not equal
+arith_neq(X, Y, not_equal) :- X? =\= Y? | true.
+arith_neq(_, _, equal) :- otherwise | true.
+
+% Test with arithmetic expressions
+expr_eq(X, Y, equal) :- X? + 1 =:= Y? - 1 | true.
+expr_eq(_, _, not_equal) :- otherwise | true.
+
+% All comparison operators for regression
+test_lt(X, Y, yes) :- X? < Y? | true.
+test_lt(_, _, no) :- otherwise | true.
+
+test_gt(X, Y, yes) :- X? > Y? | true.
+test_gt(_, _, no) :- otherwise | true.
+
+test_le(X, Y, yes) :- X? =< Y? | true.
+test_le(_, _, no) :- otherwise | true.
+
+test_ge(X, Y, yes) :- X? >= Y? | true.
+test_ge(_, _, no) :- otherwise | true.

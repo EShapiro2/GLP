@@ -1110,6 +1110,224 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# Arithmetic comparison operators (=:=, =\=, <, >, =<, >=) regression tests
+echo ""
+echo "--- Arithmetic Comparison Operators Tests ---"
+
+arith_cmp_output=$($DART run "$REPL" <<ARITH_CMP
+$GLP_DIR/arith_comparison.glp
+arith_eq(5, 5, R1).
+arith_eq(5, 3, R2).
+arith_neq(5, 3, R3).
+arith_neq(5, 5, R4).
+expr_eq(4, 6, R5).
+test_lt(3, 5, R6).
+test_gt(5, 3, R7).
+test_le(5, 5, R8).
+test_ge(3, 5, R9).
+:quit
+ARITH_CMP
+2>&1)
+
+if echo "$arith_cmp_output" | grep -q "R1 = equal"; then
+    echo "PASS: =:= equals (5 =:= 5)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =:= equals (expected: R1 = equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$arith_cmp_output" | grep -q "R2 = not_equal"; then
+    echo "PASS: =:= not equals via otherwise (5 =:= 3)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =:= not equals via otherwise (expected: R2 = not_equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$arith_cmp_output" | grep -q "R3 = not_equal"; then
+    echo "PASS: =\\= not equals (5 =\\= 3)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =\\= not equals (expected: R3 = not_equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$arith_cmp_output" | grep -q "R4 = equal"; then
+    echo "PASS: =\\= equals via otherwise (5 =\\= 5)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =\\= equals via otherwise (expected: R4 = equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$arith_cmp_output" | grep -q "R5 = equal"; then
+    echo "PASS: =:= with expressions (4+1 =:= 6-1)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =:= with expressions (expected: R5 = equal)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$arith_cmp_output" | grep -q "R6 = yes"; then
+    echo "PASS: < comparison (3 < 5)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: < comparison (expected: R6 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$arith_cmp_output" | grep -q "R7 = yes"; then
+    echo "PASS: > comparison (5 > 3)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: > comparison (expected: R7 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$arith_cmp_output" | grep -q "R8 = yes"; then
+    echo "PASS: =< comparison (5 =< 5)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: =< comparison (expected: R8 = yes)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$arith_cmp_output" | grep -q "R9 = no"; then
+    echo "PASS: >= comparison fails (3 >= 5)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: >= comparison fails (expected: R9 = no)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Otherwise guard regression tests
+echo ""
+echo "--- Otherwise Guard Tests ---"
+
+otherwise_output=$($DART run "$REPL" <<OTHERWISE
+$GLP_DIR/otherwise_guard.glp
+classify(5, R1).
+classify(-3, R2).
+classify(0, R3).
+grade(95, G1).
+grade(75, G2).
+grade(55, G3).
+type_of(42, T1).
+type_of(hello, T2).
+:quit
+OTHERWISE
+2>&1)
+
+if echo "$otherwise_output" | grep -q "R1 = positive"; then
+    echo "PASS: otherwise - classify 5 as positive"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: otherwise - classify 5 (expected: R1 = positive)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$otherwise_output" | grep -q "R2 = negative"; then
+    echo "PASS: otherwise - classify -3 as negative"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: otherwise - classify -3 (expected: R2 = negative)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$otherwise_output" | grep -q "R3 = zero"; then
+    echo "PASS: otherwise - classify 0 as zero (default)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: otherwise - classify 0 (expected: R3 = zero)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$otherwise_output" | grep -q "G1 = a"; then
+    echo "PASS: otherwise - grade 95 = a"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: otherwise - grade 95 (expected: G1 = a)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$otherwise_output" | grep -q "G2 = c"; then
+    echo "PASS: otherwise - grade 75 = c"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: otherwise - grade 75 (expected: G2 = c)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$otherwise_output" | grep -q "G3 = f"; then
+    echo "PASS: otherwise - grade 55 = f (default)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: otherwise - grade 55 (expected: G3 = f)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$otherwise_output" | grep -q "T1 = integer"; then
+    echo "PASS: otherwise - type_of 42 = integer"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: otherwise - type_of 42 (expected: T1 = integer)"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$otherwise_output" | grep -q "T2 = atom"; then
+    echo "PASS: otherwise - type_of hello = atom"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: otherwise - type_of hello (expected: T2 = atom)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Difference list syntax (H\T) regression tests
+echo ""
+echo "--- Difference List Syntax Tests ---"
+
+dl_output=$($DART run "$REPL" <<DIFF_LIST
+$GLP_DIR/diff_list.glp
+dl_append([1,2|T]\\T, [3,4|U]\\U, R).
+dl_to_list([a,b,c]\\[], L).
+:quit
+DIFF_LIST
+2>&1)
+
+# Test that dl_append parses and executes (produces a \(...) structure)
+if echo "$dl_output" | grep -q 'R = \\'; then
+    echo "PASS: dl_append with H\\T syntax parses and executes"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: dl_append with H\\T syntax (expected: R = \\(...))"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test dl_to_list conversion
+if echo "$dl_output" | grep -q "L = \[a, b, c\]"; then
+    echo "PASS: dl_to_list converts difference list to regular list"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: dl_to_list conversion (expected: L = [a, b, c])"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test parsing of simple H\T term
+simple_dl_output=$($DART run "$REPL" <<SIMPLE_DL
+X = foo\\bar.
+:quit
+SIMPLE_DL
+2>&1)
+
+if echo "$simple_dl_output" | grep -q 'X = \\(foo, bar)'; then
+    echo "PASS: Simple H\\T term parses as \\(H, T) structure"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Simple H\\T term (expected: X = \\(foo, bar))"
+    FAIL=$((FAIL + 1))
+fi
+
 TOTAL=$((PASS + FAIL))
 
 echo ""

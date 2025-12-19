@@ -50,6 +50,7 @@ enum TokenType {
   UNDERSCORE,     // _ (anonymous variable)
   TILDE,          // ~ (guard negation)
   HASH,           // # (module operator: Module # Goal)
+  BACKSLASH,      // \ (difference list operator: H\T)
 
   // End of file
   EOF

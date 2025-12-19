@@ -65,6 +65,17 @@ The Art of GLP book and LaTeX sources:
 - `reader(X?)` asks: "Is X? a reader?" — Yes
 - `ground(X?)` asks: "Is the value of X? ground?"
 
+### Arithmetic Guards Imply Groundness
+Arithmetic comparison guards (`<`, `>`, `=<`, `>=`, `=:=`, `=\=`) can only succeed when their arguments are ground numbers. Therefore, if such a guard succeeds, its arguments are guaranteed to be ground, and the SRSW analyzer permits multiple reader occurrences of those variables in the clause body.
+
+```glp
+% Valid: X? < Y? proves X and Y are ground, so X? and Y? can appear multiple times
+foo(X, Y, R?) :- X? < Y? | R = pair(X?, Y?).
+
+% Also works with complex expressions - all variables are marked ground
+bar(X, Y, R?) :- X? + 1 < Y? * 2 | R = sum(X?, Y?).
+```
+
 ### When Debugging
 - Start from language semantics, not implementation details
 - If confused, ask: "What does this mean in GLP terms?"
@@ -427,6 +438,27 @@ run_test "Test description" \
 1. Add the test case that exposed the bug to `test/full_run_repl_tests.sh`
 2. The test should verify the fix works (not just that it doesn't crash)
 3. This prevents regression - the bug should never reappear
+
+### Test Troubleshooting
+
+If REPL tests fail unexpectedly, check these common causes:
+
+1. **Working directory** - Tests must run from proper location. The script handles this via `cd "$GLP_RUNTIME"`, but verify you're starting from `/home/user/GLP`
+2. **DART variable** - Should auto-detect or be `/home/user/dart-sdk/bin/dart`
+3. **Path resolution** - `$GLP_DIR` should resolve to absolute path
+
+**Standard test invocation:**
+```bash
+cd /home/user/GLP
+bash test/full_run_repl_tests.sh
+```
+
+**Debug individual test manually:**
+```bash
+cd /home/user/GLP/glp_runtime
+export PATH="/home/user/dart-sdk/bin:$PATH"
+echo -e '/home/user/GLP/programs/tests/repl/TESTFILE.glp\nQUERY.' | dart run bin/glp_repl.dart
+```
 
 ## Working Principles
 
