@@ -5,10 +5,11 @@
 %% Result: All three are mutual friends
 
 %% Type definitions
-List ::= [] ; [Any | List].
+MsgList ::= [] ; [Any | MsgList].
+FriendList ::= [] ; [Any | FriendList].
 
 %% Procedure type declarations
-procedure social_graph(Any, Any, Any).
+procedure social_graph(Any, MsgList, FriendList).
 %%
 %% This tests both cold-call and friend introduction protocols
 

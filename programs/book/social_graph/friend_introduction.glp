@@ -5,15 +5,16 @@
 %% When agent r is friends with both p and q, r can introduce them.
 
 %% Type definitions
-List ::= [] ; [Any | List].
+MsgList ::= [] ; [Any | MsgList].
+FriendList ::= [] ; [Any | FriendList].
 
 %% Procedure type declarations
-procedure social_graph(Any, Any, Any).
+procedure social_graph(Any, MsgList, FriendList).
 procedure new_channel(Any, Any).
-procedure lookup_send(Any, Any, Any, Any).
-procedure tag_stream(Any, Any, Any).
-procedure merge(Any, Any, Any).
-procedure add_friend(Any, Any, Any, Any).
+procedure lookup_send(Any, Any, FriendList, FriendList).
+procedure tag_stream(Any, MsgList, MsgList).
+procedure merge(MsgList, MsgList, MsgList).
+procedure add_friend(Any, Any, FriendList, FriendList).
 
 %% Channel operations (defined guard)
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).

@@ -7,14 +7,15 @@
 %% channel establishment.
 
 %% Type definitions
-List ::= [] ; [Any | List].
+MsgList ::= [] ; [Any | MsgList].
+FriendList ::= [] ; [Any | FriendList].
 
 %% Procedure type declarations
-procedure social_graph(Any, Any, Any).
-procedure lookup_send(Any, Any, Any, Any).
-procedure inject_msg(Any, Any, Any, Any, Any).
-procedure bind_response(Any, Any, Any, Any, Any, Any, Any).
-procedure handle_response(Any, Any, Any, Any, Any, Any).
+procedure social_graph(Any, MsgList, FriendList).
+procedure lookup_send(Any, Any, FriendList, FriendList).
+procedure inject_msg(Any, Any, Any, MsgList, MsgList).
+procedure bind_response(Any, Any, Any, FriendList, FriendList, MsgList, MsgList).
+procedure handle_response(Any, Any, FriendList, FriendList, MsgList, MsgList).
 
 %% Process user request to connect (self-introduction)
 social_graph(Id, [msg(user, Id?, connect(Target))|In], Fs) :-

@@ -7,12 +7,13 @@
 
 %% Type definitions
 List ::= [] ; [Any | List].
+FriendList ::= [] ; [Any | FriendList].
 
 %% Procedure type declarations
 procedure agent(Any, Any, Any).
 procedure merge(List, List, List).
-procedure build_friends(Any, Any, Any).
-procedure social_graph(Any, List, Any).
+procedure build_friends(Any, Any, FriendList).
+procedure social_graph(Any, List, FriendList).
 
 agent(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
     merge(UserIn?, NetIn?, In),
