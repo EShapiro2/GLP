@@ -1,0 +1,12 @@
+%% dl_append.glp - Difference list operations
+%% Demonstrates O(1) append using difference list representation.
+
+%% dl_append(DL1, DL2, DL3) :- DL3 is concatenation of DL1 and DL2.
+dl_append(H1\Xs?, Xs\T2?, H1?\T2).
+
+%% Convert ordinary list to difference list
+list_to_dl([], T\T?).
+list_to_dl([X|Xs], [X?|H?]\T?) :- list_to_dl(Xs?, H\T).
+
+%% Convert difference list to ordinary list (close the hole)
+dl_to_list(H\[], H?).
