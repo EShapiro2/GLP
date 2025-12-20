@@ -78,14 +78,20 @@ The `?` suffix on a type reference indicates input mode.
 
 Types can embed mode information for complex data structures:
 ```
-% DiffList: first element is input (reader), second is output (writer)
-DiffList ::= dl(List?, List).
+% CounterMsg: show constructor has embedded input for response slot
+CounterMsg ::= clear ; up ; down ; show(Number?).
 
-% CounterMsg: show constructor has embedded writer for response
-CounterMsg ::= clear ; up ; down ; show(Number).
+% DiffList: head is output (content), tail is input (hole)
+DiffList ::= List \ List?.
+
+% Request: get has response slot (input), put has value slot (output)
+Request ::= get(Value?) ; put(Value).
+
+% QueueMsg: dequeue has response slot
+QueueMsg ::= enqueue(Any) ; dequeue(Any?).
 ```
 
-In `show(Number)`, the `Number` position is output mode — the program writes the response value there.
+In `show(Number?)`, the `Number?` marks an **input position in the type definition**. When the counter receives `CounterMsg?` (input stream), involution applies: `show(Number?)` → `show(Number)` — so the counter WRITES the response.
 
 ### 2.5 Examples
 
@@ -106,7 +112,7 @@ merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], [], []).
 
 % Counter with embedded response mode
-CounterMsg ::= clear ; up ; down ; show(Number).
+CounterMsg ::= clear ; up ; down ; show(Number?).
 CounterStream ::= [] ; [CounterMsg | CounterStream].
 procedure counter(CounterStream?, Number).
 
@@ -121,6 +127,15 @@ counter([show(State?)|S], State) :-
     number(State?) |
     counter(S?, State?).
 counter([], _).
+
+% Request/Response server
+Request ::= get(Value?) ; put(Value).
+RequestStream ::= [] ; [Request | RequestStream].
+procedure server(RequestStream?, State).
+
+% After complementation at server receiving RequestStream?:
+% - get(Value?) → get(Value) : server WRITES response
+% - put(Value) → put(Value?) : server READS provided value
 ```
 
 ---
