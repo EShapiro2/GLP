@@ -1,3 +1,13 @@
+%% Type definitions
+Nat ::= 0 ; s(Nat).
+
+%% Procedure type declarations
+procedure exp(Nat, Nat, Nat).
+procedure times(Nat, Nat, Nat).
+procedure plus(Nat, Nat, Nat).
+procedure natural_number(Nat).
+procedure reduce(Any, Any).
+
 %% exp.glp - Exponentiation as repeated multiplication (AoP 3.5)
 %% exp(N,X,Y) :- N, X and Y are natural numbers such that Y equals X raised to the power N.
 

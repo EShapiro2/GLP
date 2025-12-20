@@ -1,3 +1,12 @@
+%% Type definitions
+List ::= [] ; [Any | List].
+ListOfLists ::= [] ; [List | ListOfLists].
+
+%% Procedure type declarations
+procedure merge_tree(ListOfLists, List).
+procedure merge_layer(ListOfLists, ListOfLists).
+procedure merge(List, List, List).
+
 % merge_tree/2 - Tree-structured stream merger
 %
 % Merges N streams in O(log N) parallel stages using a balanced binary tree.

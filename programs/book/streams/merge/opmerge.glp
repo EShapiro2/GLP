@@ -1,0 +1,17 @@
+%% Type definitions
+NumStream ::= [] ; [Number | NumStream].
+
+%% Procedure type declarations
+procedure opmerge(NumStream, NumStream, NumStream).
+
+%% opmerge.glp - Ordered merge of sorted streams
+%% Removes duplicates when merging.
+
+opmerge([], Ys, Ys?).
+opmerge(Xs, [], Xs?).
+opmerge([U|X], [V|Y], [U?|Z?]) :- U? < V? | opmerge(X?, [V?|Y?], Z).
+opmerge([U|X], [V|Y], [V?|Z?]) :- U? > V? | opmerge([U?|X?], Y?, Z).
+opmerge([U|X], [V|Y], [U?|Z?]) :- U? >= V?, U? =< V? | opmerge(X?, Y?, Z).
+
+%% Example goal: opmerge([1,3,5], [2,3,6], Zs).
+%% Expected: Zs = [1,2,3,5,6]

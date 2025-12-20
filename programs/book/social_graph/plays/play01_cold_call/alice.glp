@@ -1,3 +1,8 @@
+%% Procedure type declarations
+procedure alice_actor(Any).
+procedure alice_wait_response(Any, Any).
+procedure alice_done(Any, Any).
+
 % Alice's Actor for Play 01: Cold Call
 % Each step is one clause; unexpected messages cause failure
 

@@ -1,0 +1,22 @@
+%% Type definitions
+NumList ::= [] ; [Number | NumList].
+
+%% Procedure type declarations
+procedure insertion_sort(NumList, NumList).
+procedure insert(Number, NumList, NumList).
+
+%% isort.glp - Insertion sort
+
+insertion_sort([], []).
+insertion_sort([X|Xs], Sorted?) :-
+    insertion_sort(Xs?, SortedTail),
+    insert(X?, SortedTail?, Sorted).
+
+insert(X, [], [X?]).
+insert(X, [Y|Ys], [X?|[Y?|Ys?]]) :-
+    X? < Y? | true.
+insert(X, [Y|Ys], [Y?|Zs?]) :-
+    X? >= Y? |
+    insert(X?, Ys?, Zs).
+
+%% Example goal: insertion_sort([3,1,4,1,5], Sorted).

@@ -1,3 +1,6 @@
+%% Procedure type declarations
+procedure network3(Any, Any, Any).
+
 %% network3.glp - 3-way network switch
 %% Messages are msg(From, To, Content) - switch routes based on To
 %% 6 clauses: each of 3 agents can send to 2 others

@@ -1,3 +1,8 @@
+%% Procedure type declarations
+procedure observe(Any, Any, Any).
+procedure observe_list(Any, Any, Any).
+procedure test_observe(Any, Any).
+
 %% observe.glp - General term observer
 %% Observes bidirectional communication between two endpoints
 %% Generalizes stream observer to arbitrary term structures

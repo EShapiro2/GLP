@@ -1,3 +1,11 @@
+%% Type definitions
+List ::= [] ; [Any | List].
+
+%% Procedure type declarations
+procedure switch2x2(List, List, List, List).
+procedure send(Any, List, List).
+procedure receive(Any, List, List).
+
 %% switch2x2.glp - 2x2 communication switch
 %% Source: CP Collected Papers, Ch 18 (Takeuchi & Furukawa)
 %%

@@ -1,3 +1,10 @@
+%% Type definitions
+NumList ::= [] ; [Number | NumList].
+
+%% Procedure type declarations
+procedure map_inc(NumList, NumList).
+procedure reduce(Any, Any).
+
 %% map_inc.glp - Increment each element of a list
 %% Source: AofGLP Book Solutions Appendix
 

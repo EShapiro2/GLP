@@ -1,3 +1,8 @@
+%% Procedure type declarations
+procedure reduce(Any, Any, Number).
+procedure clause(Any, Any, Any, Number).
+procedure min(Number, Number, Number).
+
 %% certainty_meta.glp - Metainterpreter computing certainties
 %% Source: CP Collected Papers, Ch 25 (Safra & Shapiro)
 %%

@@ -1,0 +1,22 @@
+%% filter_even.glp - Keep only even numbers from a list
+%% Source: AofGLP Book Solutions Appendix
+
+%% Type definitions
+NumList ::= [] ; [Number | NumList].
+
+%% Procedure type declarations
+procedure filter_even(NumList, NumList).
+procedure reduce(Any, Any).
+
+filter_even([], []).
+filter_even([X|Xs], [X?|Ys?]) :-
+    X? mod 2 =:= 0 |
+    filter_even(Xs?, Ys).
+filter_even([X|Xs], Ys?) :-
+    X? mod 2 =\= 0 |
+    filter_even(Xs?, Ys).
+
+%% Metainterpreter support
+reduce(filter_even([], []), true).
+reduce(filter_even([X|Xs], [X?|Ys?]), filter_even(Xs?, Ys)) :- X? mod 2 =:= 0 | true.
+reduce(filter_even([X|Xs], Ys?), filter_even(Xs?, Ys)) :- X? mod 2 =\= 0 | true.

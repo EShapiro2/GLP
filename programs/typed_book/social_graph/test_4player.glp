@@ -1,0 +1,30 @@
+%% test_4player.glp - 4-player cold-call scenario
+%% Tests: multiple agents, accept/reject, multiple friends per agent
+%%
+%% Scenario:
+%%   Round 1: Alice → Bob (accept)
+%%   Round 2: Carol → Dave (accept)
+%%   Round 3: Bob → Carol (accept)
+%%   Round 4: Dave → Alice (reject)
+%%   Round 5: Alice → Carol (accept)
+%%
+%% Load files:
+%%   AofGLP/lib/lookup/lookup.glp
+%%   AofGLP/lib/streams/tag_stream.glp
+%%   merge.glp
+%%   AofGLP/multiagent/social_graph/response_handling_glpsam.glp
+%%   AofGLP/multiagent/social_graph/cold_call_glpsam.glp
+%%
+%% Test Round 1 - Bob accepts Alice:
+%%   social_graph(bob, [msg(alice, bob, intro(alice, alice, R1)), msg(user, bob, decision(yes, alice, R1?))|_], [(user, U), (net, N)]).
+%%   Expected: R1 = accept(ch(...))
+%%
+%% Test Round 4 - Alice rejects Dave:
+%%   social_graph(alice, [msg(dave, alice, intro(dave, dave, R4)), msg(user, alice, decision(no, dave, R4?))|_], [(bob, B), (user, U), (net, N)]).
+%%   Expected: R4 = no, friends unchanged [(bob, B)|...]
+%%
+%% Final state:
+%%   Alice: friends with Bob, Carol (rejected Dave)
+%%   Bob: friends with Alice, Carol
+%%   Carol: friends with Dave, Bob, Alice
+%%   Dave: friends with Carol (rejected by Alice)

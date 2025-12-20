@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'runtime.dart';
-import '../bytecode/runner.dart';
+import 'package:glp_runtime/bytecode/runner.dart';
 import 'terms.dart';
 
 /// Result of scheduler execution

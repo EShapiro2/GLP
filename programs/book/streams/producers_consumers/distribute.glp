@@ -1,3 +1,9 @@
+%% Type definitions
+List ::= [] ; [Any | List].
+
+%% Procedure type declarations
+procedure distribute(List, List, List).
+
 % Topic: Ground-stream distribution (broadcast)
 % Section: Streams - Distribution
 %

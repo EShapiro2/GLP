@@ -1,8 +1,8 @@
-import '../bytecode/opcodes.dart' as bc;
-import '../bytecode/opcodes_v2.dart' as bcv2;
-import '../bytecode/asm.dart';
-import '../bytecode/runner.dart' show BytecodeProgram;
-import '../runtime/terms.dart' as rt;
+import 'package:glp_runtime/bytecode/opcodes.dart' as bc;
+import 'package:glp_runtime/bytecode/opcodes_v2.dart' as bcv2;
+import 'package:glp_runtime/bytecode/asm.dart';
+import 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
+import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'ast.dart';
 import 'analyzer.dart';
 import 'error.dart';
