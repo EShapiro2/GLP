@@ -1,9 +1,9 @@
 %% Type definitions
-WordList ::= [] ; [Any | WordList].
+WordList ::= [] ; [Atom | WordList].
 
 %% Procedure type declarations
 procedure translate(WordList, WordList).
-procedure dict(Any, Any).
+procedure dict(Atom, Atom).
 procedure reduce(Any, Any).
 
 %% translate.glp - Translating word for word (AoP 7.8)

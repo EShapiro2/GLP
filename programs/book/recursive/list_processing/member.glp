@@ -1,8 +1,8 @@
 %% Type definitions
-List ::= [] ; [Any | List].
+NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure member(Any, List).
+procedure member(Number, NumList).
 procedure reduce(Any, Any).
 
 %% member.glp - List Membership

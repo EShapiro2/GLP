@@ -1,5 +1,6 @@
 %% Type definitions
-PointList ::= [] ; [Any | PointList].
+Point ::= (Number, Number).
+PointList ::= [] ; [Point | PointList].
 
 %% Procedure type declarations
 procedure area(PointList, Number).
