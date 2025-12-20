@@ -1,0 +1,10 @@
+Nat ::= 0 ; s(Nat).
+List ::= [] ; [Any | List].
+
+procedure bad(Nat).
+procedure helper(List).
+
+% ERROR: X declared as Nat in head, but used as List in body
+bad(X) :- helper(X?).
+
+helper([]).

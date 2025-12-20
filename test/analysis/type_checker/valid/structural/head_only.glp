@@ -1,0 +1,6 @@
+Nat ::= 0 ; s(Nat).
+procedure zero(Nat).
+procedure succ(Nat, Nat).
+
+zero(0).
+succ(X, s(X?)).
