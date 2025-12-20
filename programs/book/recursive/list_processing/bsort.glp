@@ -1,3 +1,11 @@
+%% Type definitions
+NumList ::= [] ; [Number | NumList].
+
+%% Procedure type declarations
+procedure sort(NumList, NumList).
+procedure bbl(NumList, Number, NumList).
+procedure bbl1(Number, NumList, Number, NumList).
+
 %% bsort.glp - Selection sort (bubble sort variant)
 
 sort([], []).

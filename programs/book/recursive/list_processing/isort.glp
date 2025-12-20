@@ -1,3 +1,10 @@
+%% Type definitions
+NumList ::= [] ; [Number | NumList].
+
+%% Procedure type declarations
+procedure insertion_sort(NumList, NumList).
+procedure insert(Number, NumList, NumList).
+
 %% isort.glp - Insertion sort
 
 insertion_sort([], []).

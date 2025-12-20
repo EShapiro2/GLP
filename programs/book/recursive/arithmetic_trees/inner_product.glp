@@ -1,3 +1,10 @@
+%% Type definitions
+NumList ::= [] ; [Number | NumList].
+
+%% Procedure type declarations
+procedure ip(NumList, NumList, Number).
+procedure ip_acc(NumList, NumList, Number, Number).
+
 %% inner_product.glp - Inner product of two vectors
 
 ip(Xs, Ys, S?) :- ip_acc(Xs?, Ys?, 0, S).
