@@ -1,3 +1,10 @@
+%% Type definitions
+NumList ::= [] ; [Number | NumList].
+
+%% Procedure type declarations
+procedure producer(NumList, Number).
+procedure consumer(NumList, Number, Number).
+
 %% producer_consumer_countdown.glp - Countdown producer-consumer
 %% Source: AofGLP Book Chapter 5
 %%

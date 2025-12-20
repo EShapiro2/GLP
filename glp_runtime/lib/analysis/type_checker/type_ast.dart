@@ -12,18 +12,32 @@ abstract class TypeExpr {
 }
 
 /// Reference to a named type: Nat, List, Number, String, Any
+/// Optionally with input mode annotation (Type?)
 class TypeRef extends TypeExpr {
   final String name;
-  
-  TypeRef(this.name, int line, int column) : super(line, column);
-  
+  final bool isInput;  // true if Type?, false if Type
+
+  TypeRef(this.name, int line, int column, {this.isInput = false})
+      : super(line, column);
+
+  /// Mode complementation operator (·)?
+  /// Returns a new TypeRef with inverted mode
+  TypeRef complement() => TypeRef(name, line, column, isInput: !isInput);
+
   @override
-  String toString() => name;
-  
+  String toString() => isInput ? '$name?' : name;
+
   /// Built-in type names
   static const builtins = {'Number', 'String', 'Any'};
-  
+
   bool get isBuiltin => builtins.contains(name);
+
+  @override
+  bool operator ==(Object other) =>
+      other is TypeRef && other.name == name && other.isInput == isInput;
+
+  @override
+  int get hashCode => Object.hash(name, isInput);
 }
 
 /// A constant alternative in a type: 0, [], foo
@@ -87,13 +101,21 @@ class ProcDecl {
   final List<TypeRef> argTypes;
   final int line;
   final int column;
-  
+
   ProcDecl(this.name, this.argTypes, this.line, this.column);
-  
+
   int get arity => argTypes.length;
-  
+
   String get key => '$name/$arity';
-  
+
+  /// Get the mode for argument at index i (true = input mode)
+  bool isInputArg(int i) => argTypes[i].isInput;
+
+  /// Get complemented types (callee's perspective at call site)
+  /// What caller provides as output, callee sees as input, and vice versa
+  List<TypeRef> get calleeView =>
+      argTypes.map((t) => t.complement()).toList();
+
   @override
   String toString() => 'procedure $name(${argTypes.join(', ')}).';
 }

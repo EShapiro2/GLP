@@ -1,0 +1,14 @@
+List ::= [] ; [Any | List].
+
+procedure append(List, List, List).
+procedure reverse(List, List).
+
+append([], Ys, Ys?).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
+
+reverse(Xs, Ys?) :- reverse_acc(Xs?, [], Ys).
+
+procedure reverse_acc(List, List, List).
+
+reverse_acc([], Acc, Acc?).
+reverse_acc([X|Xs], Acc, Ys?) :- reverse_acc(Xs?, [X?|Acc?], Ys).

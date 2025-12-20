@@ -1,0 +1,14 @@
+%% Type definitions
+Stream ::= [] ; [Any | Stream].
+
+%% Procedure type declarations
+procedure merge(Stream, Stream, Stream).
+
+%% merge.glp - Fair stream merge
+%% Alternates between streams for fairness.
+
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], [], []).
+
+%% Example goal: merge([a,b,c], [1,2,3], Zs).

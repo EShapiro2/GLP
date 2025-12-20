@@ -1,3 +1,11 @@
+%% Type definitions
+WordList ::= [] ; [Atom | WordList].
+
+%% Procedure type declarations
+procedure translate(WordList, WordList).
+procedure dict(Atom, Atom).
+procedure reduce(Any, Any).
+
 %% translate.glp - Translating word for word (AoP 7.8)
 %% translate(Words,Mots) :- Mots is a French translation of the English words Words.
 

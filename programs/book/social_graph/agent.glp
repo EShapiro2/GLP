@@ -1,3 +1,12 @@
+%% Type definitions
+MsgList ::= [] ; [Any | MsgList].
+FriendList ::= [] ; [Any | FriendList].
+
+%% Procedure type declarations
+procedure agent(Any, Any, Any).
+procedure merge(MsgList, MsgList, MsgList).
+procedure social_graph(Any, MsgList, FriendList).
+
 %% agent.glp - Social Graph Agent Initialization
 %% Source: GLP Papers (Program: Social Graph Initialization)
 %%

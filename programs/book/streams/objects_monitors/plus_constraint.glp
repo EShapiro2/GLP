@@ -1,3 +1,6 @@
+%% Procedure type declarations
+procedure plus(Number, Number, Number).
+
 %% plus_constraint.glp - Constraint propagation example
 %% Source: CP Collected Papers, Ch 29 (Shapiro & Takeuchi)
 %%

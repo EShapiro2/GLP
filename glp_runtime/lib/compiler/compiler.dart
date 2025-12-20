@@ -56,7 +56,11 @@ class GlpCompiler {
   CompilationResult compileWithMetadata(String source, [CompileOptions? options]) {
     final opts = options ?? const CompileOptions();
     try {
-      // Phase 0: Strip type declarations if present (main lexer doesn't recognize ::=)
+      // Phase 0a: Detect stdlib status from original source BEFORE stripping
+      // (stripping removes -stdlib. directive, so we must detect it first)
+      final isStdlib = source.contains(RegExp(r'^\s*-stdlib\s*\.', multiLine: true));
+
+      // Phase 0b: Strip type declarations if present (main lexer doesn't recognize ::=)
       final sourceForParsing = _stripTypeDeclarations(source);
 
       // Phase 1: Lexical analysis
@@ -112,8 +116,9 @@ class GlpCompiler {
       }
 
       // Generate reduce/2 for all files except stdlib
-      // (stdlib files have -stdlib. declaration)
-      final generateReduce = !module.isStdlib;
+      // (use isStdlib detected from original source, not module.isStdlib which is
+      // unreliable after stripping directives)
+      final generateReduce = !isStdlib;
 
       // Phase 3: Semantic analysis (with reduce generation flag)
       final analyzer = _createAnalyzer();

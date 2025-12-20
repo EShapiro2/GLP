@@ -1,3 +1,10 @@
+%% Type definitions
+FailList ::= [] ; [Any | FailList].
+
+%% Procedure type declarations
+procedure run(Any, Any, FailList, FailList).
+procedure reduce(Any, Any).
+
 %% failsafe_meta.glp - Fail-safe GLP metainterpreter
 %% Source: GLP Papers (Program: GLP fail-safe metainterpreter)
 %%

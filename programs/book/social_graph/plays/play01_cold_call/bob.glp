@@ -1,3 +1,8 @@
+%% Procedure type declarations
+procedure bob_actor(Any).
+procedure bob_wait_msg(Any, Any).
+procedure bob_done(Any, Any).
+
 % Bob's Actor for Play 01: Cold Call
 % Each step is one clause; unexpected messages cause failure
 

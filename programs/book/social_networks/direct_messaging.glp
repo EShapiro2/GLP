@@ -1,3 +1,16 @@
+%% Type definitions
+MsgList ::= [] ; [Any | MsgList].
+FriendList ::= [] ; [Any | FriendList].
+
+%% Procedure type declarations
+procedure establish(Any, Any, Any, FriendList, FriendList, MsgList, MsgList).
+procedure new_channel(Any, Any).
+procedure attestation(Any, Any).
+procedure handle_friend(Any, Any, Any, Any, Any, FriendList, FriendList, MsgList, MsgList).
+procedure tag_stream(Any, MsgList, MsgList).
+procedure merge(MsgList, MsgList, MsgList).
+procedure forward_to_app(Any).
+
 %% direct_messaging.glp - Direct Messaging Channel Establishment
 %% Source: GLP Papers (Program: Direct Messaging Channel Establishment)
 %%

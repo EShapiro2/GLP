@@ -1,3 +1,10 @@
+%% Type definitions
+NumList ::= [] ; [Number | NumList].
+
+%% Procedure type declarations
+procedure member(Number, NumList).
+procedure reduce(Any, Any).
+
 %% member.glp - List Membership
 %% Source: Standard GLP list operations
 %% Note: Uses ground guard to allow comparison

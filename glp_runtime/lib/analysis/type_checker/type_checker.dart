@@ -200,7 +200,12 @@ class TypeChecker {
       }
 
       // Collect variable types from pattern
-      _inferVariableTypes(arg, argDFA, varTypes, TermPath.empty());
+      if (!_inferVariableTypes(arg, argDFA, varTypes, TermPath.empty())) {
+        errors.add(TypeError(
+          'Variable has inconsistent types across occurrences in clause head',
+          clause.line, clause.column, clause.toString()
+        ));
+      }
     }
 
     // Step 3: Check guards
@@ -337,7 +342,8 @@ class TypeChecker {
   }
 
   /// Infer variable types from a pattern and accumulate in varTypes map
-  void _inferVariableTypes(
+  /// Returns true if successful, false if intersection is empty (inconsistent types)
+  bool _inferVariableTypes(
     ast.Term term,
     TypeDFA dfa,
     Map<String, TypeDFA> varTypes,
@@ -348,35 +354,57 @@ class TypeChecker {
       final state = dfa.stateAfterPath(pathToHere);
       if (state != null) {
         final varName = term.name;
+        final typeAtPosition = _dfaFromState(dfa, state);
+
         // Intersect with existing type for this variable (if any)
         if (varTypes.containsKey(varName)) {
-          varTypes[varName] = varTypes[varName]!.intersect(
-            _dfaFromState(dfa, state)
-          );
+          final existingType = varTypes[varName]!;
+
+          // If both types have the same start state, they're likely the same type
+          // Skip intersection to avoid DFA sharing issues
+          if (existingType.startState.name != typeAtPosition.startState.name) {
+            final intersected = existingType.intersect(typeAtPosition);
+            if (intersected.isEmpty) {
+              // Variable has inconsistent types across occurrences
+              return false;
+            }
+            varTypes[varName] = intersected;
+          }
+          // else: types appear compatible, keep existing
         } else {
-          varTypes[varName] = _dfaFromState(dfa, state);
+          varTypes[varName] = typeAtPosition;
         }
       }
+      return true;
     } else if (term is ast.StructTerm) {
       for (int i = 0; i < term.args.length; i++) {
         final newPath = pathToHere.append(
           PathElement.functor(term.functor, term.arity, i + 1)
         );
-        _inferVariableTypes(term.args[i], dfa, varTypes, newPath);
+        if (!_inferVariableTypes(term.args[i], dfa, varTypes, newPath)) {
+          return false;  // Propagate failure
+        }
       }
+      return true;
     } else if (term is ast.ListTerm) {
       if (!term.isNil) {
         if (term.head != null) {
-          _inferVariableTypes(term.head!, dfa, varTypes,
-            pathToHere.append(PathElement.listHead()));
+          if (!_inferVariableTypes(term.head!, dfa, varTypes,
+              pathToHere.append(PathElement.listHead()))) {
+            return false;
+          }
         }
         if (term.tail != null) {
-          _inferVariableTypes(term.tail!, dfa, varTypes,
-            pathToHere.append(PathElement.listTail()));
+          if (!_inferVariableTypes(term.tail!, dfa, varTypes,
+              pathToHere.append(PathElement.listTail()))) {
+            return false;
+          }
         }
       }
+      return true;
     }
     // Constants and UnderscoreTerm have no variables
+    return true;
   }
   
   /// Create a DFA that accepts paths reachable from a given state
@@ -394,8 +422,49 @@ class TypeChecker {
   GoalCheckResult _checkGoal(ast.Goal goal, Map<String, TypeDFA> varTypes) {
     final errors = <TypeError>[];
 
-    // For procedure calls, we'd check that argument types match
-    // For now, this is a placeholder
+    // Look up procedure declaration for this goal
+    final procDecl = typeEnv.getProcedure(goal.functor, goal.arity);
+
+    if (procDecl == null) {
+      // No declaration - skip body checking for this goal
+      // This is not an error; unmoded predicates are allowed
+      return GoalCheckResult(errors);
+    }
+
+    // Compile argument types to DFAs (cache these to avoid recompilation)
+    final argDFAs = <TypeDFA>[];
+    for (final argType in procDecl.argTypes) {
+      try {
+        argDFAs.add(compiler.compile(argType.name));
+      } catch (e) {
+        // If we can't compile the type, skip this goal
+        return GoalCheckResult(errors);
+      }
+    }
+
+    // Check each argument against declared type
+    for (int i = 0; i < goal.args.length; i++) {
+      final arg = goal.args[i];
+      final argDFA = argDFAs[i];
+
+      // Check ground paths in body argument
+      final groundCheck = _checkGroundPaths(arg, argDFA);
+      if (!groundCheck.success) {
+        errors.add(TypeError(
+          'Body goal ${goal.functor}/${goal.arity} argument ${i + 1}: '
+          'ground path ${groundCheck.failedPath} not in declared type ${procDecl.argTypes[i].name}',
+          goal.line, goal.column,
+        ));
+      }
+
+      // Infer/constrain variable types from body occurrence
+      if (!_inferVariableTypes(arg, argDFA, varTypes, TermPath.empty())) {
+        errors.add(TypeError(
+          'Variable has inconsistent types between head and body goal ${goal.functor}/${goal.arity}',
+          goal.line, goal.column,
+        ));
+      }
+    }
 
     return GoalCheckResult(errors);
   }

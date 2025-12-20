@@ -1,3 +1,15 @@
+%% Type definitions
+FriendList ::= [] ; [Any | FriendList].
+
+%% Procedure type declarations
+procedure agent(Any, Any, Any).
+procedure agent_loop(Any, Any, Any, FriendList).
+procedure agent_wait_response(Any, Any, Any, FriendList, Any, Any).
+procedure lookup_friend(Any, FriendList, Any).
+procedure receive(Any, Any, Any).
+procedure send(Any, Any, Any).
+procedure new_channel(Any, Any).
+
 % Personal Agent - Cold Call Protocol
 % Based on GLP 2025 paper social graph
 %

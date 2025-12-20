@@ -1,3 +1,12 @@
+%% Type definitions
+FollowerList ::= [] ; [Any | FollowerList].
+
+%% Procedure type declarations
+procedure post(Any, FollowerList, FollowerList).
+procedure broadcast(Any, FollowerList, FollowerList).
+procedure create_post(Any, Number, Any).
+procedure current_time(Number).
+
 %% feed.glp - Authenticated Feed Distribution
 %% Source: GLP Papers (Program: Authenticated Feed Distribution)
 %%

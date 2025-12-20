@@ -1,3 +1,10 @@
+%% Type definitions
+Tree ::= empty ; node(Number, Tree, Tree).
+
+%% Procedure type declarations
+procedure tree_sum(Tree, Number).
+procedure reduce(Any, Any).
+
 %% tree_sum.glp - Sum all values in a numeric tree
 %% Source: AofGLP Book Chapter 6
 

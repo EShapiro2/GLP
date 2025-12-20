@@ -1,3 +1,13 @@
+%% Type definitions
+List ::= [] ; [Any | List].
+PayloadList ::= [] ; [Any | PayloadList].
+
+%% Procedure type declarations
+procedure streams(Any, Any).
+procedure produce_payloads(PayloadList).
+procedure interlace(PayloadList, Any, Any).
+procedure collect_tips(Any, Any, Any).
+
 %% interlaced_streams.glp - Interlaced Streams as Distributed Blocklace
 %%
 %% Blocklace: DAG where each block references multiple predecessors.

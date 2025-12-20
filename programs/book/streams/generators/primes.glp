@@ -1,0 +1,39 @@
+%% Type definitions
+NumStream ::= [] ; [Number | NumStream].
+
+%% Procedure type declarations
+procedure primes(Number, NumStream).
+procedure integers(Number, Number, NumStream).
+procedure sieve(NumStream, NumStream).
+procedure filter(Number, NumStream, NumStream).
+
+%% primes.glp - Sieve of Eratosthenes
+%% Concurrent stream filtering.
+
+primes(N, Ps?) :-
+    integers(2, N?, Is),
+    sieve(Is?, Ps).
+
+integers(From, To, [From?]) :-
+    From? =:= To? | true.
+integers(From, To, [From?|Xs?]) :-
+    From? < To? |
+    From1 := From? + 1,
+    integers(From1?, To?, Xs).
+
+sieve([], []).
+sieve([P|Xs], [P?|Ys?]) :-
+    ground(P?) |
+    filter(P?, Xs?, Zs),
+    sieve(Zs?, Ys).
+
+filter(_, [], []).
+filter(P, [X|Xs], Ys?) :-
+    ground(P?), ground(X?), X? mod P? =:= 0 |
+    filter(P?, Xs?, Ys).
+filter(P, [X|Xs], [X?|Ys?]) :-
+    ground(P?), ground(X?), X? mod P? =\= 0 |
+    filter(P?, Xs?, Ys).
+
+%% Example goal: primes(20, Ps).
+%% Expected: Ps = [2,3,5,7,11,13,17,19]

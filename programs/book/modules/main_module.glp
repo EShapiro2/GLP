@@ -1,3 +1,7 @@
+%% Procedure type declarations
+procedure compute(Any).
+procedure reduce(Any, Any).
+
 %% main_module.glp - Demonstrates cross-module RPC
 
 compute(Result?) :-

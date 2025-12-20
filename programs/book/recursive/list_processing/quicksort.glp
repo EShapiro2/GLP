@@ -1,19 +1,28 @@
-%% quicksort.glp - Quicksort using difference lists
-%% Efficient O(n log n) average case without append overhead.
+%% Type definitions
+NumList ::= [] ; [Number | NumList].
 
-quicksort(Xs, Sorted?) :- quicksort_dl(Xs?, Sorted\[]).
+%% Procedure type declarations
+procedure quicksort(NumList, NumList).
+procedure qsort(NumList, NumList, NumList).
+procedure partition(NumList, Number, NumList, NumList).
+procedure reduce(Any, Any).
 
-quicksort_dl([], T\T?).
-quicksort_dl([X|Xs], H?\T?) :-
-    ground(X?) |
-    partition(X?, Xs?, Smalls, Bigs),
-    quicksort_dl(Smalls?, H\[X?|M]),
-    quicksort_dl(Bigs?, M?\T).
+%% quicksort.glp - Quicksort with difference list accumulator
+%% Efficient O(n log n) average without append overhead.
 
-partition(_, [], [], []).
-partition(Pivot, [X|Xs], [X?|Smalls?], Bigs?) :-
-    X? =< Pivot? |
-    partition(Pivot?, Xs?, Smalls, Bigs).
-partition(Pivot, [X|Xs], Smalls?, [X?|Bigs?]) :-
-    X? > Pivot? |
-    partition(Pivot?, Xs?, Smalls, Bigs).
+quicksort(Unsorted, Sorted?) :- qsort(Unsorted?, Sorted, []).
+
+qsort([X|Unsorted], Sorted?, Rest) :-
+    number(X?) |
+    partition(Unsorted?, X?, Smaller, Larger),
+    qsort(Smaller?, Sorted, [X?|Sorted1?]),
+    qsort(Larger?, Sorted1, Rest?).
+qsort([], Rest?, Rest).
+
+partition([X|Xs], A, Smaller?, [X?|Larger?]) :-
+    A? < X? | partition(Xs?, A?, Smaller, Larger).
+partition([X|Xs], A, [X?|Smaller?], Larger?) :-
+    A? >= X? | partition(Xs?, A?, Smaller, Larger).
+partition([], A, [], []) :- number(A?) | true.
+
+%% Example goal: quicksort([3,1,4,1,5,9,2,6], Sorted).

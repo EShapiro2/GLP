@@ -1,0 +1,5 @@
+Nat ::= 0 ; s(Nat).
+procedure bad(Nat).
+
+% ERROR: 'foo' is not a valid Nat
+bad(_) :- bad(foo).
