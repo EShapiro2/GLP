@@ -1,0 +1,7 @@
+%% Test body checking - append with recursive call
+
+List ::= [] ; [Any | List].
+procedure append(List, List, List).
+
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
+append([], Ys, Ys?).
