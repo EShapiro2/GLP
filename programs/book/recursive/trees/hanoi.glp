@@ -1,3 +1,12 @@
+%% Type definitions
+Peg ::= a ; b ; c.
+MoveTree ::= (Peg, Peg) ; (MoveTree, (Peg, Peg), MoveTree).
+
+%% Procedure type declarations
+procedure hanoi(Number, Peg, Peg, MoveTree).
+procedure hanoi1(Number, Peg, Peg, Peg, MoveTree, MoveTree).
+procedure free(Peg, Peg, Peg).
+
 %% hanoi.glp - Tower of Hanoi with concurrent subproblems
 
 hanoi(0, From, To, (From?, To?)).
