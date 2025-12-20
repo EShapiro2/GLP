@@ -7,6 +7,7 @@
 //   type_decl  ::= type_name '::=' type_expr '.'
 //   type_expr  ::= type_alt (';' type_alt)*
 //   type_alt   ::= constant | functor '(' type_args ')' | '[]' | '[' type_ref '|' type_ref ']'
+//                | '(' type_ref (',' type_ref)+ ')'   -- tuple syntax
 //   type_args  ::= type_ref (',' type_ref)*
 //   type_ref   ::= type_name
 //   type_name  ::= UppercaseIdentifier
@@ -279,10 +280,30 @@ class TypeParser {
     return alts;
   }
   
-  /// Parse: constant | functor(args) | [] | [H|T]
+  /// Parse: constant | functor(args) | [] | [H|T] | (Type, Type, ...)
   TypeExpr _parseTypeAlt() {
     final token = _peek();
-    
+
+    // Tuple: (Type, Type, ...) - parsed as ','(Type, ','(Type, ...)) right-associative
+    if (_match(TypeTokenType.lparen)) {
+      final types = <TypeExpr>[_parseTypeRef()];
+      while (_match(TypeTokenType.comma)) {
+        types.add(_parseTypeRef());
+      }
+      _consume(TypeTokenType.rparen, 'Expected ")" after tuple types');
+
+      if (types.length < 2) {
+        throw TypeParseError('Tuple requires at least 2 types', token.line, token.column);
+      }
+
+      // Build right-associative tuple: (A, B, C) -> ','(A, ','(B, C))
+      TypeExpr result = types.last;
+      for (int i = types.length - 2; i >= 0; i--) {
+        result = StructAlt(',', [types[i], result], token.line, token.column);
+      }
+      return result;
+    }
+
     // Empty list: []
     if (_match(TypeTokenType.lbracket)) {
       if (_match(TypeTokenType.rbracket)) {
