@@ -1,0 +1,10 @@
+%% INVALID: Embedded mode error placeholder
+%% TODO: Requires type resolution to check embedded modes in structures
+%% Current mode checker only checks top-level modes
+
+Nat ::= 0 ; s(Nat).
+
+procedure foo(Nat?).
+
+%% Simple mode error: reader at input position
+foo(X?).

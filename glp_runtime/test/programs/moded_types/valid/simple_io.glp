@@ -1,0 +1,9 @@
+%% Simple input/output mode example
+%% Demonstrates basic mode patterns
+
+Nat ::= 0 ; s(Nat).
+
+procedure double(Nat?, Nat).
+
+double(0, 0).
+double(s(X), s(s(Y?))) :- double(X?, Y).
