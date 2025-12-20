@@ -1,0 +1,9 @@
+%% Well-moded counter with embedded modes
+%% Demonstrates proper mode usage with structured types
+
+Nat ::= 0 ; s(Nat).
+
+procedure add(Nat?, Nat?, Nat).
+
+add(0, Y, Y?).
+add(s(X), Y, s(Z?)) :- add(X?, Y?, Z).

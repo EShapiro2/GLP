@@ -1,0 +1,9 @@
+%% Well-moded merge procedure
+%% Demonstrates proper mode annotations
+
+List ::= [] ; [Any | List].
+
+procedure merge(List?, List?, List).
+
+merge([], Ys, Ys?).
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Xs?, Ys?, Zs).

@@ -3,7 +3,7 @@
 // Mode checker for moded type system.
 // Verifies that variable modes (reader/writer) match type modes (input/output).
 
-import 'package:glp_runtime/compiler/ast.dart';
+import '../../compiler/ast.dart' as ast;
 import 'type_ast.dart';
 import 'mode.dart';
 import 'mode_error.dart';
@@ -20,7 +20,7 @@ class ModeChecker {
   /// Check all clauses for a procedure against its type declaration
   ///
   /// Returns list of mode errors found (empty if all clauses are mode-correct)
-  List<ModeError> checkProcedure(String name, int arity, List<Clause> clauses) {
+  List<ModeError> checkProcedure(String name, int arity, List<ast.Clause> clauses) {
     final errors = <ModeError>[];
 
     // Look up procedure declaration
@@ -39,7 +39,7 @@ class ModeChecker {
   }
 
   /// Check a single clause against procedure declaration
-  List<ModeError> checkClause(Clause clause, ProcDecl procDecl) {
+  List<ModeError> checkClause(ast.Clause clause, ProcDecl procDecl) {
     final errors = <ModeError>[];
 
     // Check head arguments
@@ -56,7 +56,7 @@ class ModeChecker {
   }
 
   /// Check clause head arguments match procedure declaration modes
-  List<ModeError> _checkHead(Clause clause, ProcDecl procDecl) {
+  List<ModeError> _checkHead(ast.Clause clause, ProcDecl procDecl) {
     final errors = <ModeError>[];
     final head = clause.head;
 
@@ -89,7 +89,7 @@ class ModeChecker {
   /// At a call site, modes are complemented:
   /// - Callee declares input (Type?) → caller provides writer (X)
   /// - Callee declares output (Type) → caller provides reader (X?)
-  List<ModeError> _checkBodyGoal(Goal goal, String callerName) {
+  List<ModeError> _checkBodyGoal(ast.Goal goal, String callerName) {
     final errors = <ModeError>[];
 
     // Look up callee procedure declaration
@@ -129,19 +129,19 @@ class ModeChecker {
   ///
   /// Returns ModeError if mode mismatch found, null if ok
   ModeError? _checkTermMode(
-    Term term,
+    ast.Term term,
     Mode expectedMode,
     TypeExpr typeExpr,
     String predicate,
     int argIndex,
   ) {
     // Variable terms: check reader/writer matches expected mode
-    if (term is VarTerm) {
+    if (term is ast.VarTerm) {
       return _checkVariableMode(term, expectedMode, predicate, argIndex);
     }
 
     // Compound terms: recursively check subterms with embedded modes
-    if (term is StructTerm && typeExpr is StructAlt) {
+    if (term is ast.StructTerm && typeExpr is StructAlt) {
       return _checkCompoundMode(term, expectedMode, typeExpr, predicate, argIndex);
     }
 
@@ -155,7 +155,7 @@ class ModeChecker {
   /// - Output position expects reader (X?) - callee will write
   /// - Input position expects writer (X) - caller will provide value
   ModeError? _checkVariableMode(
-    VarTerm variable,
+    ast.VarTerm variable,
     Mode expectedMode,
     String predicate,
     int argIndex,
@@ -202,7 +202,7 @@ class ModeChecker {
   /// - input  ⊕ output = input
   /// - input  ⊕ input  = output (two inversions cancel)
   ModeError? _checkCompoundMode(
-    StructTerm term,
+    ast.StructTerm term,
     Mode parentMode,
     StructAlt typeAlt,
     String predicate,
