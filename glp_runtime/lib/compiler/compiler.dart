@@ -136,19 +136,29 @@ class GlpCompiler {
   }
 
   /// Strip type declarations (lines with ::= and procedure) from source
-  /// so the main GLP lexer doesn't choke on them
+  /// so the main GLP lexer doesn't choke on them.
+  /// Replaces stripped lines with empty lines to preserve line numbers for error reporting.
   String _stripTypeDeclarations(String source) {
     final lines = source.split('\n');
     final filtered = <String>[];
 
     for (final line in lines) {
       final trimmed = line.trim();
-      // Skip type definitions (TypeName ::= ...)
-      if (trimmed.contains('::=')) continue;
-      // Skip procedure declarations (procedure name(...))
-      if (trimmed.startsWith('procedure ')) continue;
-      // Skip module directives (-stdlib, -module, etc.)
-      if (trimmed.startsWith('-') && trimmed.endsWith('.')) continue;
+      // Replace type definitions with empty line (preserve line numbers)
+      if (trimmed.contains('::=')) {
+        filtered.add('');
+        continue;
+      }
+      // Replace procedure declarations with empty line
+      if (trimmed.startsWith('procedure ')) {
+        filtered.add('');
+        continue;
+      }
+      // Replace module directives with empty line (-stdlib, -module, etc.)
+      if (trimmed.startsWith('-') && trimmed.endsWith('.')) {
+        filtered.add('');
+        continue;
+      }
       // Keep everything else
       filtered.add(line);
     }
