@@ -62,12 +62,12 @@ void main() {
 
   group('Mode Checker - Variable Mode Checking', () {
     test('Writer at input position - VALID (caller provides value)', () {
-      // procedure foo(X).  % X is input (no ?)
+      // procedure foo(X?).  % X? is input mode (has ?)
       // foo(Y) :- ...       % Y is writer - VALID at input position
       final typeEnv = TypeEnvironment({}, {
         'foo/1': ProcDecl(
           'foo',
-          [TypeRef('Number', 1, 1, isInput: false)], // input mode (no ?)
+          [TypeRef('Number', 1, 1, isInput: true)], // input mode (has ?)
           1,
           1,
         ),
@@ -76,8 +76,7 @@ void main() {
       final checker = ModeChecker(typeEnv);
 
       // Parse clause: foo(Y) :- true.
-      final parser = Parser('foo(Y) :- true.');
-      final clauses = parser.parseClauses();
+      final clauses = parseClauses('foo(Y) :- true.');
       expect(clauses, hasLength(1));
 
       final errors = checker.checkClause(clauses[0], typeEnv.procedures['foo/1']!);
@@ -85,12 +84,12 @@ void main() {
     });
 
     test('Writer at output position - INVALID (mode violation)', () {
-      // procedure foo(X?).  % X? is output (has ?)
+      // procedure foo(X).  % X is output mode (no ?)
       // foo(Y) :- ...       % Y is writer - INVALID at output position
       final typeEnv = TypeEnvironment({}, {
         'foo/1': ProcDecl(
           'foo',
-          [TypeRef('Number', 1, 1, isInput: true)], // output mode (has ?)
+          [TypeRef('Number', 1, 1, isInput: false)], // output mode (no ?)
           1,
           1,
         ),
@@ -99,8 +98,7 @@ void main() {
       final checker = ModeChecker(typeEnv);
 
       // Parse clause: foo(Y) :- true.
-      final parser = Parser('foo(Y) :- true.');
-      final clauses = parser.parseClauses();
+      final clauses = parseClauses('foo(Y) :- true.');
       expect(clauses, hasLength(1));
 
       final errors = checker.checkClause(clauses[0], typeEnv.procedures['foo/1']!);
@@ -110,12 +108,12 @@ void main() {
     });
 
     test('Reader at output position - VALID (callee writes)', () {
-      // procedure foo(X?).  % X? is output (has ?)
+      // procedure foo(X).  % X is output mode (no ?)
       // foo(Y?) :- ...      % Y? is reader - VALID at output position
       final typeEnv = TypeEnvironment({}, {
         'foo/1': ProcDecl(
           'foo',
-          [TypeRef('Number', 1, 1, isInput: true)], // output mode (has ?)
+          [TypeRef('Number', 1, 1, isInput: false)], // output mode (no ?)
           1,
           1,
         ),
@@ -124,8 +122,7 @@ void main() {
       final checker = ModeChecker(typeEnv);
 
       // Parse clause: foo(Y?) :- true.
-      final parser = Parser('foo(Y?) :- true.');
-      final clauses = parser.parseClauses();
+      final clauses = parseClauses('foo(Y?) :- true.');
       expect(clauses, hasLength(1));
 
       final errors = checker.checkClause(clauses[0], typeEnv.procedures['foo/1']!);
@@ -133,12 +130,12 @@ void main() {
     });
 
     test('Reader at input position - INVALID (mode violation)', () {
-      // procedure foo(X).  % X is input (no ?)
+      // procedure foo(X?).  % X? is input mode (has ?)
       // foo(Y?) :- ...     % Y? is reader - INVALID at input position
       final typeEnv = TypeEnvironment({}, {
         'foo/1': ProcDecl(
           'foo',
-          [TypeRef('Number', 1, 1, isInput: false)], // input mode (no ?)
+          [TypeRef('Number', 1, 1, isInput: true)], // input mode (has ?)
           1,
           1,
         ),
@@ -147,8 +144,7 @@ void main() {
       final checker = ModeChecker(typeEnv);
 
       // Parse clause: foo(Y?) :- true.
-      final parser = Parser('foo(Y?) :- true.');
-      final clauses = parser.parseClauses();
+      final clauses = parseClauses('foo(Y?) :- true.');
       expect(clauses, hasLength(1));
 
       final errors = checker.checkClause(clauses[0], typeEnv.procedures['foo/1']!);
@@ -160,10 +156,11 @@ void main() {
 
   group('Mode Checker - Call Boundary Complementation', () {
     test('Call with complemented modes - input position at call site', () {
+      // procedure caller(X?).  % caller has input mode (receives writer Y in head)
       // procedure callee(X?).  % callee expects input (X?)
-      // caller(Y) :- callee(Y?).  % caller provides reader Y? - VALID
+      // caller(Y) :- callee(Y?).  % Y is writer in head, Y? is reader in call - VALID
       final typeEnv = TypeEnvironment({}, {
-        'caller/1': ProcDecl('caller', [TypeRef('Number', 1, 1)], 1, 1),
+        'caller/1': ProcDecl('caller', [TypeRef('Number', 1, 1, isInput: true)], 1, 1), // input mode
         'callee/1': ProcDecl(
           'callee',
           [TypeRef('Number', 1, 1, isInput: true)], // callee expects input
@@ -175,8 +172,7 @@ void main() {
       final checker = ModeChecker(typeEnv);
 
       // Parse clause: caller(Y) :- callee(Y?).
-      final parser = Parser('caller(Y) :- callee(Y?).');
-      final clauses = parser.parseClauses();
+      final clauses = parseClauses('caller(Y) :- callee(Y?).');
       expect(clauses, hasLength(1));
 
       final errors = checker.checkClause(clauses[0], typeEnv.procedures['caller/1']!);
@@ -184,10 +180,12 @@ void main() {
     });
 
     test('Call with wrong mode - writer where reader expected', () {
+      // procedure caller(X?).  % caller has input mode
       // procedure callee(X?).  % callee expects input (X?)
-      // caller(Y) :- callee(Y).  % caller provides writer Y - INVALID
+      // caller(Y) :- callee(Y).  % caller provides writer Y to callee - INVALID
+      // (callee(X?) complemented = callee expects output at call site, needs reader)
       final typeEnv = TypeEnvironment({}, {
-        'caller/1': ProcDecl('caller', [TypeRef('Number', 1, 1)], 1, 1),
+        'caller/1': ProcDecl('caller', [TypeRef('Number', 1, 1, isInput: true)], 1, 1), // input mode
         'callee/1': ProcDecl(
           'callee',
           [TypeRef('Number', 1, 1, isInput: true)], // callee expects input
@@ -199,8 +197,7 @@ void main() {
       final checker = ModeChecker(typeEnv);
 
       // Parse clause: caller(Y) :- callee(Y).
-      final parser = Parser('caller(Y) :- callee(Y).');
-      final clauses = parser.parseClauses();
+      final clauses = parseClauses('caller(Y) :- callee(Y).');
       expect(clauses, hasLength(1));
 
       final errors = checker.checkClause(clauses[0], typeEnv.procedures['caller/1']!);
@@ -241,8 +238,7 @@ void main() {
       final checker = ModeChecker(typeEnv);
 
       // Parse clause: foo(s(Y?)) :- true.
-      final parser = Parser('foo(s(Y?)) :- true.');
-      final clauses = parser.parseClauses();
+      final clauses = parseClauses('foo(s(Y?)) :- true.');
       expect(clauses, hasLength(1));
 
       // Note: This test checks the involution logic, but we need proper
@@ -310,8 +306,7 @@ void main() {
       final checker = ModeChecker(typeEnv);
 
       // Parse clause: merge([H|T], S, [H|R]) :- merge(T?, S?, R?).
-      final parser = Parser('merge([H|T], S, [H|R]) :- merge(T?, S?, R?).');
-      final clauses = parser.parseClauses();
+      final clauses = parseClauses('merge([H|T], S, [H|R]) :- merge(T?, S?, R?).');
       expect(clauses, hasLength(1));
 
       // This should find mode error: R? is reader at input position in body call
