@@ -1,3 +1,10 @@
+%% Type definitions
+PointList ::= [] ; [Any | PointList].
+
+%% Procedure type declarations
+procedure area(PointList, Number).
+procedure reduce(Any, Any).
+
 %% polygon_area.glp - Computing the area of polygons (AoP 8.8)
 %% area(Chain,Area) :- Area is the area of the polygon enclosed by the list of points Chain.
 

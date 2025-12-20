@@ -1,3 +1,11 @@
+%% Type definitions
+Nat ::= 0 ; s(Nat).
+
+%% Procedure type declarations
+procedure lesseq(Nat, Nat).
+procedure natural_number(Nat).
+procedure reduce(Any, Any).
+
 %% lesseq.glp - Less-than-or-equal for Peano numbers
 %% Source: AofGLP Book Chapter 6
 

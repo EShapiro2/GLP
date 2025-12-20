@@ -1,3 +1,6 @@
+%% Procedure type declarations
+procedure network4(Any, Any, Any, Any).
+
 %% network4.glp - 4-way network switch
 %% Messages are msg(From, To, Content) - switch routes based on To
 %% 12 clauses: each of 4 agents can send to 3 others

@@ -1,3 +1,9 @@
+%% Type definitions
+FollowerList ::= [] ; [Any | FollowerList].
+
+%% Procedure type declarations
+procedure broadcast(Any, FollowerList, FollowerList).
+
 %% broadcast.glp - Broadcast to multiple recipients
 %% Sends a message to all followers
 

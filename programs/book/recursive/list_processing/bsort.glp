@@ -1,0 +1,16 @@
+%% bsort.glp - Selection sort (bubble sort variant)
+
+sort([], []).
+sort([X|Xs], [Smallest?|Sorted?]) :-
+    bbl([X?|Xs?], Smallest, Rest),
+    sort(Rest?, Sorted).
+
+bbl([X|Xs], Y?, Ys?) :- bbl1(X?, Xs?, Y, Ys).
+
+bbl1(Min, [], Min?, []).
+bbl1(Min, [X|Xs], Smallest?, [X?|Ys?]) :-
+    Min? < X? | bbl1(Min?, Xs?, Smallest, Ys).
+bbl1(Min, [X|Xs], Smallest?, [Min?|Ys?]) :-
+    Min? >= X? | bbl1(X?, Xs?, Smallest, Ys).
+
+%% Example goal: sort([3,1,4,1,5,9,2,6], Ys).

@@ -1,3 +1,10 @@
+%% Type definitions
+CounterMsg ::= clear ; up ; down ; show(Number).
+CounterStream ::= [] ; [CounterMsg | CounterStream].
+
+%% Procedure type declarations
+procedure counter(CounterStream, Number).
+
 %% counter.glp - Counter object example
 %% Source: CP Collected Papers, Ch 29 (Shapiro & Takeuchi)
 %%

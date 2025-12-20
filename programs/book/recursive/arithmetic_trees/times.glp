@@ -1,3 +1,12 @@
+%% Type definitions
+Nat ::= 0 ; s(Nat).
+
+%% Procedure type declarations
+procedure times(Nat, Nat, Nat).
+procedure plus(Nat, Nat, Nat).
+procedure natural_number(Nat).
+procedure reduce(Any, Any).
+
 %% times.glp - Multiplication as repeated addition (AoP 3.4)
 %% times(X,Y,Z) :- X, Y and Z are natural numbers such that Z is the product of X and Y.
 

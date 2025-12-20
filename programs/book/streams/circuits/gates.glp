@@ -1,0 +1,14 @@
+%% gates.glp - Logic gate simulation on bit streams
+
+and([], [], []).
+and([one|In1], [one|In2], [one|Out?]) :- and(In1?, In2?, Out).
+and([zero|In1], [_|In2], [zero|Out?]) :- and(In1?, In2?, Out).
+and([_|In1], [zero|In2], [zero|Out?]) :- and(In1?, In2?, Out).
+
+or([], [], []).
+or([zero|In1], [zero|In2], [zero|Out?]) :- or(In1?, In2?, Out).
+or([one|In1], [_|In2], [one|Out?]) :- or(In1?, In2?, Out).
+or([_|In1], [one|In2], [one|Out?]) :- or(In1?, In2?, Out).
+
+%% Example goal: and([one,zero,one], [one,one,zero], Out).
+%% Expected: Out = [one,zero,zero]
