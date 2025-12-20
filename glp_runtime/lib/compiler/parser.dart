@@ -771,12 +771,30 @@ class Parser {
     // Number
     if (_check(TokenType.NUMBER)) {
       final token = _advance();
+      // Check for invalid reader mark on number
+      if (_check(TokenType.QUESTION)) {
+        throw CompileError(
+          'Reader mark "?" can only be applied to variables, not numbers',
+          _peek().line,
+          _peek().column,
+          phase: 'parser'
+        );
+      }
       return ConstTerm(token.literal, token.line, token.column);
     }
 
     // String
     if (_check(TokenType.STRING)) {
       final token = _advance();
+      // Check for invalid reader mark on string
+      if (_check(TokenType.QUESTION)) {
+        throw CompileError(
+          'Reader mark "?" can only be applied to variables, not strings',
+          _peek().line,
+          _peek().column,
+          phase: 'parser'
+        );
+      }
       return ConstTerm(token.literal, token.line, token.column);
     }
 
@@ -836,9 +854,27 @@ class Parser {
 
         _consume(TokenType.RPAREN, 'Expected ")" after structure arguments');
 
+        // Check for invalid reader mark on structure
+        if (_check(TokenType.QUESTION)) {
+          throw CompileError(
+            'Reader mark "?" can only be applied to variables, not structures like ${functorToken.lexeme}(...)',
+            _peek().line,
+            _peek().column,
+            phase: 'parser'
+          );
+        }
+
         return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
       } else {
-        // Constant atom
+        // Constant atom - check for invalid reader mark
+        if (_check(TokenType.QUESTION)) {
+          throw CompileError(
+            'Reader mark "?" can only be applied to variables, not constants like "${functorToken.lexeme}"',
+            _peek().line,
+            _peek().column,
+            phase: 'parser'
+          );
+        }
         return ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
       }
     }
@@ -947,6 +983,15 @@ class Parser {
 
     // Empty list []
     if (_match(TokenType.RBRACKET)) {
+      // Check for invalid reader mark on list
+      if (_check(TokenType.QUESTION)) {
+        throw CompileError(
+          'Reader mark "?" can only be applied to variables, not lists',
+          _peek().line,
+          _peek().column,
+          phase: 'parser'
+        );
+      }
       return ListTerm(null, null, bracketToken.line, bracketToken.column);
     }
 
@@ -966,6 +1011,16 @@ class Parser {
       tail = _parseTerm();
       _consume(TokenType.RBRACKET, 'Expected "]" after list tail');
 
+      // Check for invalid reader mark on list
+      if (_check(TokenType.QUESTION)) {
+        throw CompileError(
+          'Reader mark "?" can only be applied to variables, not lists',
+          _peek().line,
+          _peek().column,
+          phase: 'parser'
+        );
+      }
+
       // Build right-associative list: [X,Y,Z|T] -> [X|[Y|[Z|T]]]
       Term result = tail;
       for (int i = elements.length - 1; i >= 0; i--) {
@@ -975,6 +1030,16 @@ class Parser {
     }
 
     _consume(TokenType.RBRACKET, 'Expected "]" after list elements');
+
+    // Check for invalid reader mark on list
+    if (_check(TokenType.QUESTION)) {
+      throw CompileError(
+        'Reader mark "?" can only be applied to variables, not lists',
+        _peek().line,
+        _peek().column,
+        phase: 'parser'
+      );
+    }
 
     // Build right-associative list: [X, Y, Z] -> [X|[Y|[Z|[]]]]
     Term result = ListTerm(null, null, bracketToken.line, bracketToken.column); // []

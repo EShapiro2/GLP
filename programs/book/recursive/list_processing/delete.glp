@@ -1,8 +1,8 @@
 %% Type definitions
-List ::= [] ; [Any | List].
+NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure delete(List, Any, List).
+procedure delete(NumList, Number, NumList).
 procedure reduce(Any, Any).
 
 %% delete.glp - Deleting all occurrences of an element from a list (AoP 3.18)
