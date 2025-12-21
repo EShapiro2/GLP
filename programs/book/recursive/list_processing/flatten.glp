@@ -2,10 +2,10 @@
 List ::= [] ; [Any | List].
 
 %% Procedure type declarations
-procedure flatten(List, List).
-procedure flatten_dl(List, List, List).
-procedure is_list(Any).
-procedure reduce(Any, Any).
+procedure flatten(List?, List).
+procedure flatten_dl(List?, List, List).
+procedure is_list(Any?).
+procedure reduce(Any?, Any).
 
 %% flatten.glp - Flatten nested lists using difference lists
 %% Efficient single-pass flattening.

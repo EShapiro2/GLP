@@ -2,8 +2,8 @@
 NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure delete(NumList, Number, NumList).
-procedure reduce(Any, Any).
+procedure delete(NumList?, Number?, NumList).
+procedure reduce(Any?, Any).
 
 %% delete.glp - Deleting all occurrences of an element from a list (AoP 3.18)
 %% delete(List,X,HasNoXs) :- HasNoXs is the result of removing all occurrences of X from List.
