@@ -2,12 +2,12 @@
 List ::= [] ; [Any | List].
 
 %% Procedure type declarations
-procedure extend_stream(List, Any, Any).
-procedure producer_a(Any).
-procedure producer_b(Any).
-procedure handover(Any, Any, Any).
-procedure produce_batch_a(Any, Any, Any).
-procedure produce_batch_b(Any, Any, Any).
+procedure extend_stream(List?, Any?, Any).
+procedure producer_a(Any?).
+procedure producer_b(Any?).
+procedure handover(Any?, Any?, Any).
+procedure produce_batch_a(Any?, Any, Any).
+procedure produce_batch_b(Any?, Any, Any).
 
 %% stream_security.glp - Blockchain Security Properties of GLP Streams
 %% Source: GLP Papers (Section: Blockchain Security of GLP Streams)

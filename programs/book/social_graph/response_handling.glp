@@ -4,10 +4,10 @@ FriendList ::= [] ; [Any | FriendList].
 
 %% Procedure type declarations
 procedure new_channel(Any, Any).
-procedure bind_response(Any, Any, Any, FriendList, FriendList, MsgList, MsgList).
-procedure handle_response(Any, Any, FriendList, FriendList, MsgList, MsgList).
-procedure tag_stream(Any, MsgList, MsgList).
-procedure merge(MsgList, MsgList, MsgList).
+procedure bind_response(Any?, Any?, Any?, FriendList?, FriendList, MsgList?, MsgList).
+procedure handle_response(Any?, Any?, FriendList?, FriendList, MsgList?, MsgList).
+procedure tag_stream(Any?, MsgList?, MsgList).
+procedure merge(MsgList?, MsgList?, MsgList).
 
 %% response_handling.glp - Channel Establishment and Response Handling
 %% Source: GLP Papers (Program: Response Processing)

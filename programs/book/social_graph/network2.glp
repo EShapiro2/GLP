@@ -1,5 +1,5 @@
 %% Procedure type declarations
-procedure network2(Any, Any).
+procedure network2(Any?, Any).
 
 %% network2.glp - 2-way network switch
 %% Messages are msg(From, To, Content) - switch routes based on To
