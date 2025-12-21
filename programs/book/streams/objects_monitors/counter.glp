@@ -1,5 +1,5 @@
 %% Type definitions
-CounterMsg ::= clear ; up ; down ; show(Number).
+CounterMsg ::= clear ; up ; down ; show(Number?).
 CounterStream ::= [] ; [CounterMsg | CounterStream].
 
 %% Procedure type declarations
