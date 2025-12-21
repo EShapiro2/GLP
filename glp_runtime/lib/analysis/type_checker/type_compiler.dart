@@ -26,12 +26,6 @@ class TypeCompiler {
     }
     
     // Handle built-in types
-    if (typeName == 'Any') {
-      final dfa = AnyTypeDFA();
-      _cache[typeName] = dfa;
-      return dfa;
-    }
-    
     if (typeName == 'Number') {
       final dfa = NumberTypeDFA();
       _cache[typeName] = dfa;
@@ -81,25 +75,27 @@ class TypeCompiler {
     states.add(finalState);
     stateMap['_FINAL_'] = finalState;
     
-    // Build transitions
+    // Build transitions and track any-value states
     final transitions = <(DFAState, PathElement), DFAState>{};
-    
+    final anyValueStates = <DFAState>{};
+
     for (final typeName in reachableTypes) {
       final def = env.getType(typeName);
       if (def == null) continue;  // Built-in types handled separately
-      
+
       final state = stateMap[typeName]!;
-      
+
       for (final alt in def.alternatives) {
-        _addTransitionsForAlt(state, alt, stateMap, transitions, finalState);
+        _addTransitionsForAlt(state, alt, stateMap, transitions, finalState, anyValueStates);
       }
     }
-    
+
     return TypeDFA(
       states: states,
       startState: stateMap[typeDef.name]!,
       finalStates: {finalState},
       transitions: transitions,
+      anyValueStates: anyValueStates,
     );
   }
   
@@ -138,7 +134,7 @@ class TypeCompiler {
       _collectTypesFromAlt(alt.head, queue);
       _collectTypesFromAlt(alt.tail, queue);
     }
-    // ConstantAlt and ListNilAlt have no type references
+    // ConstantAlt, ListNilAlt, and PrimitiveModeAlt have no type references
   }
   
   /// Add DFA transitions for a type alternative
@@ -148,8 +144,14 @@ class TypeCompiler {
     Map<String, DFAState> stateMap,
     Map<(DFAState, PathElement), DFAState> transitions,
     DFAState finalState,
+    Set<DFAState> anyValueStates,
   ) {
-    if (alt is ConstantAlt) {
+    if (alt is PrimitiveModeAlt) {
+      // Primitive mode: mark state as any-value, don't create transitions
+      anyValueStates.add(fromState);
+      return;
+
+    } else if (alt is ConstantAlt) {
       // Constant: transition directly to final state
       final pathElem = PathElement.constant(alt.value);
       transitions[(fromState, pathElem)] = finalState;
@@ -198,7 +200,7 @@ class TypeCompiler {
   ) {
     if (expr is TypeRef) {
       // Built-in types need special handling
-      if (expr.name == 'Any' || expr.name == 'Number' || expr.name == 'String') {
+      if (expr.name == 'Number' || expr.name == 'String') {
         // For built-ins in argument positions, we create a special state
         // that accepts the appropriate values
         return stateMap[expr.name] ?? _createBuiltinState(expr.name, stateMap);

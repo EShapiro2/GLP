@@ -27,8 +27,11 @@ class TypeRef extends TypeExpr {
   @override
   String toString() => isInput ? '$name?' : name;
 
-  /// Built-in type names
-  static const builtins = {'Number', 'String', 'Any'};
+  /// Primitive types (not defined via ::=, handled specially by compiler)
+  static const builtins = {'Number', 'String'};
+
+  /// System types (defined via ::= but not redefinable by user)
+  static const systemTypes = {'Any', 'List'};
 
   bool get isBuiltin => builtins.contains(name);
 
@@ -75,24 +78,37 @@ class ListNilAlt extends TypeExpr {
 class ListConsAlt extends TypeExpr {
   final TypeExpr head;
   final TypeExpr tail;
-  
+
   ListConsAlt(this.head, this.tail, int line, int column) : super(line, column);
-  
+
   @override
   String toString() => '[$head | $tail]';
 }
 
+/// Primitive mode type alternative: _ (output) or _? (input)
+/// Used in type definitions like: Any ::= _ ; _?.
+class PrimitiveModeAlt extends TypeExpr {
+  final bool isInput;  // false = _ (output), true = _? (input)
+
+  PrimitiveModeAlt(this.isInput, int line, int column) : super(line, column);
+
+  @override
+  String toString() => isInput ? '_?' : '_';
+}
+
 /// A type definition: TypeName ::= alt1 ; alt2 ; ... .
+/// Or subtype declaration: TypeName ::< alt1 ; alt2 ; ... .
 class TypeDef {
   final String name;
   final List<TypeExpr> alternatives;
+  final bool isExact;  // true for ::= (exact), false for ::< (subtype)
   final int line;
   final int column;
-  
-  TypeDef(this.name, this.alternatives, this.line, this.column);
-  
+
+  TypeDef(this.name, this.alternatives, this.line, this.column, {this.isExact = true});
+
   @override
-  String toString() => '$name ::= ${alternatives.join(' ; ')}.';
+  String toString() => '$name ${isExact ? '::=' : '::<'} ${alternatives.join(' ; ')}.';
 }
 
 /// A procedure declaration: procedure name(Type1, Type2, ...).

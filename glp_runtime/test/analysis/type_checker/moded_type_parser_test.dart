@@ -124,8 +124,8 @@ procedure counter(CounterStream, Number).
 
       final env = parseTypes(source);
 
-      // Check types are parsed
-      expect(env.types, hasLength(2));
+      // Check types are parsed (includes Any and List from system prelude)
+      expect(env.types, hasLength(4));
       expect(env.types['CounterMsg'], isNotNull);
       expect(env.types['CounterStream'], isNotNull);
 

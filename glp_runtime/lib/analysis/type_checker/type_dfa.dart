@@ -97,29 +97,41 @@ class TypeDFA {
   final DFAState startState;
   final Set<DFAState> finalStates;
   final Map<(DFAState, PathElement), DFAState> transitions;
-  
+  final Set<DFAState> anyValueStates;  // States that accept any value (from _ or _?)
+
   /// Alphabet: all path elements that appear in transitions
   late final Set<PathElement> alphabet;
-  
+
   TypeDFA({
     required this.states,
     required this.startState,
     required this.finalStates,
     required this.transitions,
-  }) {
+    Set<DFAState>? anyValueStates,
+  }) : anyValueStates = anyValueStates ?? {} {
     alphabet = transitions.keys.map((k) => k.$2).toSet();
   }
   
   /// Check if DFA accepts a single path
   bool acceptsPath(TermPath path) {
     var current = startState;
-    
+
+    // Check if start state is any-value (accepts any structure)
+    if (anyValueStates.contains(current)) {
+      return true;
+    }
+
     for (final elem in path.elements) {
       final next = transitions[(current, elem)];
       if (next == null) return false;
       current = next;
+
+      // If we reach an any-value state, stop descent and accept
+      if (anyValueStates.contains(current)) {
+        return true;
+      }
     }
-    
+
     return finalStates.contains(current);
   }
   
@@ -131,13 +143,23 @@ class TypeDFA {
   /// Get the state reached after following a path (or null if undefined)
   DFAState? stateAfterPath(TermPath path) {
     var current = startState;
-    
+
+    // If start state is any-value, return it (stop descent)
+    if (anyValueStates.contains(current)) {
+      return current;
+    }
+
     for (final elem in path.elements) {
       final next = transitions[(current, elem)];
       if (next == null) return null;
       current = next;
+
+      // If we reach an any-value state, return it (stop descent)
+      if (anyValueStates.contains(current)) {
+        return current;
+      }
     }
-    
+
     return current;
   }
   
@@ -297,25 +319,6 @@ class TypeDFA {
     }
     return sb.toString();
   }
-}
-
-/// Special DFA that accepts everything (for Any type)
-class AnyTypeDFA extends TypeDFA {
-  AnyTypeDFA() : super(
-    states: {DFAState('q0', isFinal: true)},
-    startState: DFAState('q0', isFinal: true),
-    finalStates: {DFAState('q0', isFinal: true)},
-    transitions: {},
-  );
-  
-  @override
-  bool acceptsPath(TermPath path) => true;
-  
-  @override
-  bool accepts(Set<TermPath> termPaths) => true;
-  
-  @override
-  bool get isEmpty => false;
 }
 
 /// DFA that accepts only numbers (for Number type)

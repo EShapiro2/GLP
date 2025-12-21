@@ -35,6 +35,9 @@ class ModeChecker {
       errors.addAll(checkClause(clause, procDecl));
     }
 
+    // Check mode coverage for primitive types (Any, _, _?)
+    errors.addAll(_checkModeCoverage(procDecl, clauses));
+
     return errors;
   }
 
@@ -318,6 +321,109 @@ class ModeChecker {
   /// must handle all ground terms.
   bool _isPrimitiveType(String typeName) {
     return typeName == 'Any' || typeName == '_' || typeName == '_?';
+  }
+
+  /// Check if a type requires mode coverage checking
+  ///
+  /// Returns true if:
+  /// 1. Type is defined with ::= (exact semantics)
+  /// 2. Type contains primitive mode alternatives (_ or _?)
+  bool _requiresModeCoverage(TypeRef typeRef) {
+    // Look up type definition
+    final typeDef = typeEnv.getType(typeRef.name);
+    if (typeDef == null) return false;
+
+    // Only check ::= types, not ::< types
+    if (!typeDef.isExact) return false;
+
+    // Check if any alternative is a primitive mode
+    for (final alt in typeDef.alternatives) {
+      if (alt is PrimitiveModeAlt) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// Check mode coverage for primitive type positions
+  ///
+  /// For types with primitive modes (e.g., Any ::= _ ; _?), verify that
+  /// the clauses collectively cover both writer (_) and reader (_?) modes.
+  List<ModeError> _checkModeCoverage(ProcDecl procDecl, List<ast.Clause> clauses) {
+    final errors = <ModeError>[];
+
+    // Check each argument position
+    for (int argIndex = 0; argIndex < procDecl.argTypes.length; argIndex++) {
+      final typeRef = procDecl.argTypes[argIndex];
+
+      // Skip if this type doesn't require mode coverage
+      if (!_requiresModeCoverage(typeRef)) {
+        continue;
+      }
+
+      // Track which modes appear in clause heads for this position
+      bool hasWriter = false;
+      bool hasReader = false;
+
+      for (final clause in clauses) {
+        if (argIndex < clause.head.args.length) {
+          final arg = clause.head.args[argIndex];
+
+          // Only variables count towards coverage
+          if (arg is ast.VarTerm) {
+            if (arg.isReader) {
+              hasReader = true;
+            } else {
+              hasWriter = true;
+            }
+          }
+        }
+      }
+
+      // Check for missing modes
+      final typeDef = typeEnv.getType(typeRef.name);
+      if (typeDef == null) continue;
+
+      // Find which primitive modes are required
+      bool requiresWriter = false;
+      bool requiresReader = false;
+
+      for (final alt in typeDef.alternatives) {
+        if (alt is PrimitiveModeAlt) {
+          if (alt.isInput) {
+            requiresReader = true;
+          } else {
+            requiresWriter = true;
+          }
+        }
+      }
+
+      // Report missing modes
+      final missingModes = <String>[];
+      if (requiresWriter && !hasWriter) {
+        missingModes.add('writer (_)');
+      }
+      if (requiresReader && !hasReader) {
+        missingModes.add('reader (_?)');
+      }
+
+      if (missingModes.isNotEmpty) {
+        errors.add(ModeError(
+          'Incomplete mode coverage for argument ${argIndex + 1} of ${procDecl.name}/${procDecl.arity}\n'
+          'Type ${typeRef.name} requires both writer and reader modes, but clauses only provide:\n'
+          '  - ${hasWriter ? "writer (_)" : "(missing writer)"}\n'
+          '  - ${hasReader ? "reader (_?)" : "(missing reader)"}\n\n'
+          'Missing modes: ${missingModes.join(", ")}\n\n'
+          'For types with primitive modes (e.g., Any ::= _ ; _?), all clauses together must\n'
+          'cover both modes. Add clauses that pattern-match with the missing modes.',
+          procDecl.line,
+          procDecl.column,
+        ));
+      }
+    }
+
+    return errors;
   }
 
   /// Get a human-readable description of a term for error messages
