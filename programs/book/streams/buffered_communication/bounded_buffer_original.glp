@@ -4,6 +4,22 @@
 %% Bounded buffer communication limits sender when buffer is full.
 %% The receiver controls buffer expansion by creating new slots.
 
+
+%% Type definitions
+List ::= [] ; [Any | List].
+DiffList ::= diff(Any, Any).
+
+%% Procedure type declarations
+procedure send_unbounded(Any?, List, List).
+procedure receive_unbounded(Any, List?, List).
+procedure send(Any?, List, List).
+procedure receive(Any, DiffList?, DiffList).
+procedure close(List?).
+procedure closed(Any?).
+procedure open(Number?, DiffList).
+procedure sq_num_buffered(Number?, List, Number?).
+procedure integers(Number?, Number?, List).
+procedure square(DiffList?, List).
 %% Unbounded buffer send/receive (standard stream communication)
 send_unbounded(Msg, [Msg?|Tail], Tail?).
 receive_unbounded(Msg?, [Msg|Tail], Tail?).

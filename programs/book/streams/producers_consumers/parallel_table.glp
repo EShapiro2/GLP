@@ -1,5 +1,5 @@
 %% Procedure type declarations
-procedure table(Any?, Number?, Any, Number).
+procedure table(Any?, Number?, Any?, Number?).
 
 %% parallel_table.glp - Parallel lookup table using channels
 %% Source: CP Collected Papers, Ch 17 (Tribble et al.)

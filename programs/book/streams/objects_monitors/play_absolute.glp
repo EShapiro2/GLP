@@ -1,9 +1,9 @@
 %% Procedure type declarations
-procedure play_absolute(Any?, Any?, Any?, Any?, Any?).
-procedure alice(Any?, Any).
-procedure bob_at(Number?, Number?, Any?, Any).
-procedure carol_at(Number?, Number?, Any?, Any).
-procedure diana_at(Number?, Number?, Any?, Any).
+procedure play_absolute(Any, Any, Any, Any, Any).
+procedure alice(Any, Any).
+procedure bob_at(Number?, Number?, Any, Any).
+procedure carol_at(Number?, Number?, Any, Any).
+procedure diana_at(Number?, Number?, Any, Any).
 procedure merge(Any?, Any?, Any).
 procedure monitor(Any?).
 

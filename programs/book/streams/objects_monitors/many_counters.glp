@@ -1,5 +1,5 @@
 %% Procedure type declarations
-procedure use_many_counters(Any?, Any).
+procedure use_many_counters(Any?, Any?).
 procedure send(Any?, Any?, Any?, Any).
 procedure counter(Any?, Number?).
 procedure wait_write(Any?).
