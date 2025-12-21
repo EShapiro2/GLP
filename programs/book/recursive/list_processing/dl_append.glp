@@ -1,3 +1,11 @@
+%% Type definitions
+List ::= [] ; [Any | List].
+
+%% Procedure type declarations
+%% Note: Difference list types (List\List) not supported in type system
+procedure dl_append(Any?, Any?, Any).
+procedure dl_to_list(Any?, List).
+
 %% dl_append.glp - Difference list append
 %% O(1) concatenation using difference lists.
 
