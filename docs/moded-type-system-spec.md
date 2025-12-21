@@ -36,30 +36,66 @@ Moded types **subsume** unmoded types: every unmoded type is equivalent to a mod
 
 ### 2.1 Primitive Mode Types
 
-```
-_    output mode (program produces value)
-_?   input mode (environment provides value)
+The primitive mode types are the leaves of the type system:
+
+| Primitive | Mode | Clause Requirement |
+|-----------|------|-------------------|
+| `_` | output | Writer variable `X` |
+| `_?` | input | Reader variable `X?` |
+
+**Well-typing rule:** At a primitive type position, the clause head must use the corresponding variable form. Constructor patterns are ill-typed.
+
+```glp
+procedure sink(_?).    %% Consumes any term
+sink(X?).              %% Reader variable - well-typed
+sink(foo(Y?)).         %% Constructor - ILL-TYPED
+
+procedure source(_).   %% Produces any term
+source(X).             %% Writer variable - well-typed
+source(42).            %% Constant - ILL-TYPED
 ```
 
-The universal type is self-dual:
-```
+### 2.2 System Types
+
+Two types are defined by the system and cannot be redefined:
+
+```glp
 Any ::= _ ; _?.
-(Any)? = Any
+List ::= [] ; [Any | List].
 ```
 
-### 2.1.1 Well-Typing at Primitive Modes
+**`Any`** is self-dual: `(Any)? = Any`. A procedure with `Any` at some position must have clauses collectively covering both modes.
 
-The primitive mode types impose a well-typing constraint: a clause is well-typed at a primitive mode position only if it can handle **all** ground terms at that position. This requires a **variable pattern** in the clause head.
+**`List`** represents lists with elements of any type/mode. Clauses may use constructors `[]` and `[H|T]`, where:
+- `H` is at type `Any` (requires mode coverage)
+- `T` is at type `List` (recursive)
 
-| Clause | Type | Well-typed? | Reason |
-|--------|------|-------------|--------|
-| `p(X, Y?).` | `procedure p(_, _?).` | Yes | Variables handle all terms |
-| `p(s(X), Y?).` | `procedure p(_, _?).` | No | Position 1 only produces `s/1` |
-| `p(X, s(Y?)).` | `procedure p(_, _?).` | No | Position 2 only consumes `s/1` |
+```glp
+procedure copy(Any?, Any).
+copy(X, X?).           %% Writer at input, reader at output - well-typed
 
-Since `Any ::= _ | _?`, the constraint applies to `Any` positions as well.
+procedure length(List?, Number).
+length([], 0).
+length([_|T], N) :- length(T?, N1), N := N1? + 1.
+```
 
-### 2.2 Moded Type Expressions
+### 2.3 Type Definition vs Subtype Declaration
+
+| Syntax | Name | Meaning |
+|--------|------|---------|
+| `T ::= S` | Type definition | Clauses must cover all alternatives of S |
+| `T ::< S` | Subtype declaration | Escape hatch - any clause accepted |
+
+**Examples with `Any`:**
+
+| Declaration | Clause coverage required |
+|-------------|-------------------------|
+| `procedure p(Any).` | Must cover both `_` (writer) and `_?` (reader) |
+| `procedure q(T).` with `T ::< Any` | Any clause accepted |
+
+**Current implementation:** GLP supports only `::=`. The `::< ` form is reserved for future Polymorphic Moded Types (PMT).
+
+### 2.4 Moded Type Expressions
 
 Type definitions remain as before (using `::=` syntax):
 ```
@@ -76,7 +112,7 @@ This declares:
 - Arguments 1, 2: input mode (`List?`) — caller provides readers
 - Argument 3: output mode (`List`) — caller provides writer
 
-### 2.3 Grammar Extension
+### 2.5 Grammar Extension
 
 ```
 proc_decl     ::= 'procedure' atom '(' moded_type_refs ')' '.'
@@ -86,7 +122,7 @@ moded_type_ref  ::= type_ref '?'?
 
 The `?` suffix on a type reference indicates input mode.
 
-### 2.4 Embedded Modes in Type Definitions
+### 2.6 Embedded Modes in Type Definitions
 
 Types can embed mode information for complex data structures:
 ```
@@ -105,7 +141,7 @@ QueueMsg ::= enqueue(Any) ; dequeue(Any?).
 
 In `show(Number?)`, the `Number?` marks an **input position in the type definition**. When the counter receives `CounterMsg?` (input stream), involution applies: `show(Number?)` → `show(Number)` — so the counter WRITES the response.
 
-### 2.5 Examples
+### 2.7 Examples
 
 ```glp
 % Simple moded procedure
@@ -150,25 +186,7 @@ procedure server(RequestStream?, State).
 % - put(Value) → put(Value?) : server READS provided value
 ```
 
-### 2.6 Type Definition vs Subtype Declaration
-
-Following Yardeni-Shapiro (JLP 1991, Section 7), GLP distinguishes two declaration forms:
-
-| Syntax | Name | Meaning |
-|--------|------|---------|
-| `T ::= S` | Type definition | T **must** handle all terms in S |
-| `T ::< S` | Subtype declaration | T **can** take values from S (escape hatch) |
-
-**Examples with the Herbrand universe:**
-
-| Declaration | Well-typed programs |
-|-------------|---------------------|
-| `T ::= Any` | Only clauses with variable patterns at T positions |
-| `T ::< Any` | Any clause (escape hatch, bypasses checking) |
-
-**Current implementation:** GLP supports only `::=`. The `::< Any` escape is approximated by remote calls (see Section 2.7).
-
-### 2.7 Remote Calls and Polymorphic Moded Types (Future)
+### 2.8 Remote Calls and Polymorphic Moded Types (Future)
 
 The variable-pattern requirement for primitive modes applies to **local procedures** within a module. For **remote calls** of the form `M#G`, where module `M` may be unknown at compile time, this constraint is relaxed.
 
