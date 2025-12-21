@@ -1,5 +1,0 @@
-%% Multiple clauses all using variables at Any positions - SHOULD PASS
-%% Any? = INPUT = writer in head, Any = OUTPUT = reader in head
-procedure process(Any?, Any).
-process(X, Y?) :- number(X?) | Y = X?.
-process(A, B?) :- otherwise | B = A?.

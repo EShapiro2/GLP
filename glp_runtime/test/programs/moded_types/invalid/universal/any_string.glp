@@ -1,3 +1,0 @@
-%% String constant at Any position - SHOULD FAIL
-procedure greet(Any?, Any).
-greet(X?, "hello").

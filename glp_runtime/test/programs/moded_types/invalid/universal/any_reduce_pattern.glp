@@ -1,4 +1,4 @@
-%% Classic reduce misuse - SHOULD FAIL
+%% Classic reduce misuse - SHOULD FAIL (constructors at Any positions)
 procedure reduce(Any?, Any).
-reduce(and(A?, B?), Result).
-reduce(or(A?, B?), Result).
+reduce(and(A, B), Result?).
+reduce(or(A, B), Result?).

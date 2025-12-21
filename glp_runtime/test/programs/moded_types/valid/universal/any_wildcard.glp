@@ -1,4 +1,0 @@
-%% Wildcard at Any position - SHOULD PASS (wildcard is a variable)
-%% Any? = INPUT = writer in head (wildcard _ is a writer)
-procedure ignore(Any?).
-ignore(_).

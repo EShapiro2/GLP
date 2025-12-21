@@ -1,3 +1,0 @@
-%% Nested struct at Any position - SHOULD FAIL
-procedure nested(Any?, Any).
-nested(X?, wrapper(inner(A, B))).

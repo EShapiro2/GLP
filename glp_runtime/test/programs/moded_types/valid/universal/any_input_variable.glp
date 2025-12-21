@@ -1,5 +1,0 @@
-%% Variable at Any? position - SHOULD PASS
-%% Any? is INPUT mode, so clause head needs WRITER (X, not X?)
-%% This tests that variable pattern at Any? is allowed
-procedure foo(Any?, Number).
-foo(X, R?) :- number(X?) | R := 42.

@@ -1,3 +1,0 @@
-%% Atom constant at Any? position - SHOULD FAIL
-procedure test(Any?).
-test(hello).

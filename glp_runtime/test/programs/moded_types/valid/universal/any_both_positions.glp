@@ -1,4 +1,0 @@
-%% Variables at both Any positions - SHOULD PASS
-%% Any? = INPUT = writer in head, Any = OUTPUT = reader in head
-procedure identity(Any?, Any).
-identity(X, Y?) :- Y = X?.

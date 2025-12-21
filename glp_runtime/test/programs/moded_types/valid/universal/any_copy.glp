@@ -1,0 +1,3 @@
+%% Variable at Any positions with SRSW satisfied - SHOULD PASS
+procedure copy(Any?, Any).
+copy(X, X?).

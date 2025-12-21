@@ -1,6 +1,5 @@
-%% List type has Any elements - procedure uses List, not Any directly
-%% SHOULD PASS - constructor at List? position is fine
+%% List type has Any elements - SHOULD PASS
 List ::= [] ; [Any | List].
 procedure append(List?, List?, List).
-append([], Ys, Ys?).
+append([], Ys, Zs?) :- Zs = Ys?.
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).

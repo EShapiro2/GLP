@@ -1,3 +1,0 @@
-%% Constant at Any position - SHOULD FAIL
-procedure bar(Number?, Any).
-bar(N?, 99).

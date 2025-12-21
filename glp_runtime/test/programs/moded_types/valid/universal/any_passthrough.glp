@@ -1,0 +1,4 @@
+%% Variable at Any? with body goal - SHOULD PASS
+Wrapper ::= wrap(Any).
+procedure unwrap(Wrapper?, Any).
+unwrap(wrap(X), X?).
