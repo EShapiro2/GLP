@@ -323,30 +323,99 @@ class ModeChecker {
     return typeName == 'Any' || typeName == '_' || typeName == '_?';
   }
 
-  /// Check if a type requires mode coverage checking
-  ///
-  /// Returns true if:
-  /// 1. Type is defined with ::= (exact semantics)
-  /// 2. Type contains primitive mode alternatives (_ or _?)
-  bool _requiresModeCoverage(TypeRef typeRef) {
-    // Look up type definition
+  /// Find all positions within a type that have Any (or types with primitive modes)
+  /// Returns list of (path, typeName) pairs where path describes how to navigate there
+  List<({String path, String typeName})> _findPrimitiveTypePositions(
+    TypeRef typeRef,
+    String currentPath,
+    Set<String> visited,  // Prevent infinite recursion on recursive types
+  ) {
+    final positions = <({String path, String typeName})>[];
+
+    // Check if this type itself has primitive modes
     final typeDef = typeEnv.getType(typeRef.name);
-    if (typeDef == null) return false;
-
-    // Only check ::= types, not ::< types
-    if (!typeDef.isExact) return false;
-
-    // Check if any alternative is a primitive mode
-    for (final alt in typeDef.alternatives) {
-      if (alt is PrimitiveModeAlt) {
-        return true;
+    if (typeDef != null && typeDef.isExact) {
+      // Check if any alternative is a primitive mode
+      bool hasPrimitiveModes = typeDef.alternatives.any((alt) => alt is PrimitiveModeAlt);
+      if (hasPrimitiveModes) {
+        positions.add((path: currentPath, typeName: typeRef.name));
+        return positions;  // Don't recurse into primitive type definitions
       }
     }
 
-    return false;
+    // Recurse into type definition to find nested Any positions
+    if (typeDef != null && !visited.contains(typeRef.name)) {
+      visited.add(typeRef.name);
+
+      for (final alt in typeDef.alternatives) {
+        if (alt is ListConsAlt) {
+          // Check head type
+          if (alt.head is TypeRef) {
+            final headPath = currentPath.isEmpty ? 'head' : '$currentPath.head';
+            positions.addAll(_findPrimitiveTypePositions(
+              alt.head as TypeRef, headPath, visited));
+          }
+          // Check tail type (but avoid infinite recursion - already in visited)
+          if (alt.tail is TypeRef) {
+            final tailPath = currentPath.isEmpty ? 'tail' : '$currentPath.tail';
+            positions.addAll(_findPrimitiveTypePositions(
+              alt.tail as TypeRef, tailPath, visited));
+          }
+        } else if (alt is StructAlt) {
+          for (int i = 0; i < alt.args.length; i++) {
+            if (alt.args[i] is TypeRef) {
+              final argPath = currentPath.isEmpty
+                  ? '${alt.functor}[$i]'
+                  : '$currentPath.${alt.functor}[$i]';
+              positions.addAll(_findPrimitiveTypePositions(
+                alt.args[i] as TypeRef, argPath, visited));
+            }
+          }
+        }
+        // ConstantAlt, ListNilAlt, PrimitiveModeAlt - no nested types
+      }
+    }
+
+    return positions;
   }
 
-  /// Check mode coverage for primitive type positions
+  /// Navigate into a term following a path like "head" or "head.tail"
+  ast.Term? _getTermAtPath(ast.Term term, String path) {
+    if (path.isEmpty) return term;
+
+    final parts = path.split('.').where((p) => p.isNotEmpty).toList();
+    ast.Term? current = term;
+
+    for (final part in parts) {
+      if (current == null) return null;
+
+      if (part == 'head' && current is ast.ListTerm && !current.isNil) {
+        current = current.head;
+      } else if (part == 'tail' && current is ast.ListTerm && !current.isNil) {
+        current = current.tail;
+      } else if (part.contains('[') && current is ast.StructTerm) {
+        // Parse functor[index]
+        final match = RegExp(r'(\w+)\[(\d+)\]').firstMatch(part);
+        if (match != null && current.functor == match.group(1)) {
+          final index = int.parse(match.group(2)!);
+          if (index < current.args.length) {
+            current = current.args[index];
+          } else {
+            return null;
+          }
+        } else {
+          return null;
+        }
+      } else {
+        // Pattern doesn't match this path component
+        return null;
+      }
+    }
+
+    return current;
+  }
+
+  /// Check mode coverage for primitive type positions (including nested)
   ///
   /// For types with primitive modes (e.g., Any ::= _ ; _?), verify that
   /// the clauses collectively cover both writer (_) and reader (_?) modes.
@@ -357,69 +426,75 @@ class ModeChecker {
     for (int argIndex = 0; argIndex < procDecl.argTypes.length; argIndex++) {
       final typeRef = procDecl.argTypes[argIndex];
 
-      // Skip if this type doesn't require mode coverage
-      if (!_requiresModeCoverage(typeRef)) {
-        continue;
-      }
+      // Find all positions with primitive modes (including nested)
+      final primitivePositions = _findPrimitiveTypePositions(typeRef, '', <String>{});
 
-      // Track which modes appear in clause heads for this position
-      bool hasWriter = false;
-      bool hasReader = false;
+      for (final position in primitivePositions) {
+        // Track which modes appear in clause heads for this position
+        bool hasWriter = false;
+        bool hasReader = false;
 
-      for (final clause in clauses) {
-        if (argIndex < clause.head.args.length) {
-          final arg = clause.head.args[argIndex];
+        for (final clause in clauses) {
+          if (argIndex < clause.head.args.length) {
+            final topArg = clause.head.args[argIndex];
 
-          // Only variables count towards coverage
-          if (arg is ast.VarTerm) {
-            if (arg.isReader) {
-              hasReader = true;
+            // Navigate to the nested position
+            final termAtPosition = _getTermAtPath(topArg, position.path);
+
+            // Only variables count towards coverage
+            if (termAtPosition is ast.VarTerm) {
+              if (termAtPosition.isReader) {
+                hasReader = true;
+              } else {
+                hasWriter = true;
+              }
+            }
+            // Constructor at this position doesn't contribute to mode coverage
+          }
+        }
+
+        // Check for missing modes
+        final typeDef = typeEnv.getType(position.typeName);
+        if (typeDef == null) continue;
+
+        // Find which primitive modes are required
+        bool requiresWriter = false;
+        bool requiresReader = false;
+
+        for (final alt in typeDef.alternatives) {
+          if (alt is PrimitiveModeAlt) {
+            if (alt.isInput) {
+              requiresReader = true;
             } else {
-              hasWriter = true;
+              requiresWriter = true;
             }
           }
         }
-      }
 
-      // Check for missing modes
-      final typeDef = typeEnv.getType(typeRef.name);
-      if (typeDef == null) continue;
-
-      // Find which primitive modes are required
-      bool requiresWriter = false;
-      bool requiresReader = false;
-
-      for (final alt in typeDef.alternatives) {
-        if (alt is PrimitiveModeAlt) {
-          if (alt.isInput) {
-            requiresReader = true;
-          } else {
-            requiresWriter = true;
+        // Report missing modes
+        if ((requiresWriter && !hasWriter) || (requiresReader && !hasReader)) {
+          final missingModes = <String>[];
+          if (requiresWriter && !hasWriter) {
+            missingModes.add('writer (_)');
           }
+          if (requiresReader && !hasReader) {
+            missingModes.add('reader (_?)');
+          }
+
+          final positionDesc = position.path.isEmpty
+              ? 'argument ${argIndex + 1}'
+              : 'argument ${argIndex + 1} at path "${position.path}"';
+
+          errors.add(ModeError(
+            'Incomplete mode coverage for $positionDesc of ${procDecl.name}/${procDecl.arity}\n'
+            'Type ${position.typeName} at this position requires both writer and reader modes.\n'
+            'Clauses provide: ${hasWriter ? "writer (_)" : "(no writer)"}, ${hasReader ? "reader (_?)" : "(no reader)"}\n'
+            'Missing: ${missingModes.join(", ")}\n\n'
+            'Under ::= semantics, clauses must collectively cover all mode alternatives.',
+            procDecl.line,
+            procDecl.column,
+          ));
         }
-      }
-
-      // Report missing modes
-      final missingModes = <String>[];
-      if (requiresWriter && !hasWriter) {
-        missingModes.add('writer (_)');
-      }
-      if (requiresReader && !hasReader) {
-        missingModes.add('reader (_?)');
-      }
-
-      if (missingModes.isNotEmpty) {
-        errors.add(ModeError(
-          'Incomplete mode coverage for argument ${argIndex + 1} of ${procDecl.name}/${procDecl.arity}\n'
-          'Type ${typeRef.name} requires both writer and reader modes, but clauses only provide:\n'
-          '  - ${hasWriter ? "writer (_)" : "(missing writer)"}\n'
-          '  - ${hasReader ? "reader (_?)" : "(missing reader)"}\n\n'
-          'Missing modes: ${missingModes.join(", ")}\n\n'
-          'For types with primitive modes (e.g., Any ::= _ ; _?), all clauses together must\n'
-          'cover both modes. Add clauses that pattern-match with the missing modes.',
-          procDecl.line,
-          procDecl.column,
-        ));
       }
     }
 
