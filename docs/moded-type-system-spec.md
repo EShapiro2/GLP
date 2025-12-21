@@ -1,4 +1,7 @@
-# GLP Moded Type System Specification (v1.0)
+# GLP Moded Type System Specification (v1.1)
+
+**Updated:** 2025-12-21
+**Change:** Added Section 4.4 on mode coverage for union types with List Copy example
 
 ## 1. Overview
 
@@ -36,66 +39,33 @@ Moded types **subsume** unmoded types: every unmoded type is equivalent to a mod
 
 ### 2.1 Primitive Mode Types
 
-The primitive mode types are the leaves of the type system:
-
-| Primitive | Mode | Clause Requirement |
-|-----------|------|-------------------|
-| `_` | output | Writer variable `X` |
-| `_?` | input | Reader variable `X?` |
-
-**Well-typing rule:** At a primitive type position, the clause head must use the corresponding variable form. Constructor patterns are ill-typed.
-
-```glp
-procedure sink(_?).    %% Consumes any term
-sink(X?).              %% Reader variable - well-typed
-sink(foo(Y?)).         %% Constructor - ILL-TYPED
-
-procedure source(_).   %% Produces any term
-source(X).             %% Writer variable - well-typed
-source(42).            %% Constant - ILL-TYPED
+```
+_    output mode (program produces value)
+_?   input mode (environment provides value)
 ```
 
-### 2.2 System Types
-
-Two types are defined by the system and cannot be redefined:
-
-```glp
+The universal type is self-dual:
+```
 Any ::= _ ; _?.
-List ::= [] ; [Any | List].
+(Any)? = Any
 ```
 
-**`Any`** is self-dual: `(Any)? = Any`. A procedure with `Any` at some position must have clauses collectively covering both modes.
+### 2.2 Type Definitions vs. Subtype Declarations
 
-**`List`** represents lists with elements of any type/mode. Clauses may use constructors `[]` and `[H|T]`, where:
-- `H` is at type `Any` (requires mode coverage)
-- `T` is at type `List` (recursive)
+Following Yardeni-Shapiro, we distinguish two declaration forms:
 
-```glp
-procedure copy(Any?, Any).
-copy(X, X?).           %% Writer at input, reader at output - well-typed
+| Syntax | Semantics | Fixpoint Condition | Coverage |
+|--------|-----------|-------------------|----------|
+| `T ::= S` | Type definition | T_M^{α,m}(S) = S | Complete (equality) |
+| `T ::< S` | Subtype declaration | T_M^{α,m}(S') ⊆ S | Partial (subset) |
 
-procedure length(List?, Number).
-length([], 0).
-length([_|T], N) :- length(T?, N1), N := N1? + 1.
-```
+**Type definition (`::=`)**: Clauses must collectively cover ALL alternatives of S.
 
-### 2.3 Type Definition vs Subtype Declaration
+**Subtype declaration (`::<`)**: Clauses need only cover SOME SUBSET of S. This is an escape hatch for partial implementations.
 
-| Syntax | Name | Meaning |
-|--------|------|---------|
-| `T ::= S` | Type definition | Clauses must cover all alternatives of S |
-| `T ::< S` | Subtype declaration | Escape hatch - any clause accepted |
+**GLP Implementation Status:** GLP currently implements only `::=`. The `::< ` form is reserved for future Polymorphic Moded Types (PMT).
 
-**Examples with `Any`:**
-
-| Declaration | Clause coverage required |
-|-------------|-------------------------|
-| `procedure p(Any).` | Must cover both `_` (writer) and `_?` (reader) |
-| `procedure q(T).` with `T ::< Any` | Any clause accepted |
-
-**Current implementation:** GLP supports only `::=`. The `::< ` form is reserved for future Polymorphic Moded Types (PMT).
-
-### 2.4 Moded Type Expressions
+### 2.3 Moded Type Expressions
 
 Type definitions remain as before (using `::=` syntax):
 ```
@@ -112,7 +82,7 @@ This declares:
 - Arguments 1, 2: input mode (`List?`) — caller provides readers
 - Argument 3: output mode (`List`) — caller provides writer
 
-### 2.5 Grammar Extension
+### 2.4 Grammar Extension
 
 ```
 proc_decl     ::= 'procedure' atom '(' moded_type_refs ')' '.'
@@ -122,7 +92,7 @@ moded_type_ref  ::= type_ref '?'?
 
 The `?` suffix on a type reference indicates input mode.
 
-### 2.6 Embedded Modes in Type Definitions
+### 2.5 Embedded Modes in Type Definitions
 
 Types can embed mode information for complex data structures:
 ```
@@ -141,7 +111,7 @@ QueueMsg ::= enqueue(Any) ; dequeue(Any?).
 
 In `show(Number?)`, the `Number?` marks an **input position in the type definition**. When the counter receives `CounterMsg?` (input stream), involution applies: `show(Number?)` → `show(Number)` — so the counter WRITES the response.
 
-### 2.7 Examples
+### 2.6 Examples
 
 ```glp
 % Simple moded procedure
@@ -175,36 +145,7 @@ counter([show(State?)|S], State) :-
     number(State?) |
     counter(S?, State?).
 counter([], _).
-
-% Request/Response server
-Request ::= get(Value?) ; put(Value).
-RequestStream ::= [] ; [Request | RequestStream].
-procedure server(RequestStream?, State).
-
-% After complementation at server receiving RequestStream?:
-% - get(Value?) → get(Value) : server WRITES response
-% - put(Value) → put(Value?) : server READS provided value
 ```
-
-### 2.8 Remote Calls and Polymorphic Moded Types (Future)
-
-The variable-pattern requirement for primitive modes applies to **local procedures** within a module. For **remote calls** of the form `M#G`, where module `M` may be unknown at compile time, this constraint is relaxed.
-
-| Call Type | Any/Primitive constraint | Rationale |
-|-----------|--------------------------|-----------|
-| Local `p(...)` | Variable pattern required | Implementation known |
-| Remote `M#G` | Constructor patterns allowed | Implementation unknown |
-
-Remote calls with `Any` arguments serve as placeholders for future **Polymorphic Moded Type (PMT) interfaces**.
-
-**PMT (Future Work):**
-
-The full PMT system will provide:
-- Module interface declarations with polymorphic type parameters
-- Type instantiation at module boundaries
-- Cross-module type checking via interface contracts
-
-Until PMT is implemented, `Any` in remote call arguments is the sanctioned escape mechanism.
 
 ---
 
@@ -328,6 +269,97 @@ List<TypeRef> getBodyGoalTypes(ProcDecl decl) {
 }
 ```
 
+### 4.4 Mode Coverage for Union Types
+
+Under `::=` semantics, union types require coverage of **all** alternatives. This has critical implications for `Any ::= _ | _?`:
+
+**Mode Coverage Requirement:** If a type position has type `Any ::= _ | _?` under `::=` semantics, clauses must collectively cover **both** mode alternatives:
+- Some clause(s) must handle the `_` case (writer at that position)
+- Some clause(s) must handle the `_?` case (reader at that position)
+
+A single clause typically covers only one mode combination.
+
+#### Example: List Copy (Why Any Requires Mode Coverage)
+
+Consider:
+```glp
+List ::= [] ; [Any | List].
+
+procedure copy(List?, List).
+
+copy([], []).
+copy([H? | In], [H | Out?]) :- copy(In?, Out).
+```
+
+**SRSW check:** Each variable has exactly one writer and one reader ✓
+
+**Question:** Is this program well-moded-typed?
+
+**Analysis:** At the head position of `[H? | In]` and `[H | Out?]`, the type is `Any ::= _ | _?`. Under `::=` semantics, clauses must collectively cover both alternatives:
+- `_` requires a writer variable at that position
+- `_?` requires a reader variable at that position
+
+The single clause `copy([H? | In], [H | Out?])` covers only one mode combination:
+- Input head: `H?` (reader) → matches `_?`
+- Output head: `H` (writer) → matches `_`
+
+The opposite combination (writer at input head, reader at output head) is **not covered**.
+
+**Verdict: This program is NOT well-moded-typed.**
+
+#### Solution 1: Restrict to Output-Mode Heads
+
+```glp
+List1 ::= [] ; [_ | List1].
+
+procedure copy(List1?, List1).
+
+copy([], []).
+copy([H? | In], [H | Out?]) :- copy(In?, Out).
+```
+
+Head type is `_` (not `Any`), so only one mode needs coverage. **Well-moded-typed.**
+
+#### Solution 2: Restrict to Input-Mode Heads
+
+```glp
+List2 ::= [] ; [_? | List2].
+
+procedure copy(List2?, List2).
+
+copy([], []).
+copy([H | In], [H? | Out?]) :- copy(In?, Out).
+```
+
+Head type is `_?` (not `Any`), so only one mode needs coverage. **Well-moded-typed.**
+
+#### Solution 3: Cover Both Modes with Multiple Clauses
+
+```glp
+List ::= [] ; [Any | List].
+
+procedure copy(List?, List).
+
+copy([], []).
+copy([H? | In], [H | Out?]) :- copy(In?, Out).
+copy([H | In], [H? | Out?]) :- copy(In?, Out).
+```
+
+The two non-base clauses collectively cover both mode combinations:
+- First clause: reader at input head (`_?`), writer at output head (`_`)
+- Second clause: writer at input head (`_`), reader at output head (`_?`)
+
+**Well-moded-typed.**
+
+#### Design Principle
+
+Under `::=` semantics, `Any` positions in type definitions impose coverage obligations that typically require:
+1. **Restricting the type** to a single mode (`List1`, `List2`)
+2. **Multiple clauses** covering each mode alternative
+3. **Using `::< S`** to permit partial coverage (escape hatch, future PMT)
+
+The choice depends on intended semantics: does the procedure genuinely need to handle both modes at that position?
+
 ---
 
 ## 5. Moded Type DFA
@@ -427,7 +459,7 @@ For each procedure p/n with declared moded type (T₁^m₁, ..., Tₙ^mₙ):
     // Step 4: Compute clause contribution
     T_C^{α,m} := compute moded contribution
 
-  // Step 5: Check fixpoint
+  // Step 5: Check fixpoint (for ::= semantics)
   inferred := modedTupleDistributiveClosure(union(contributions))
   If inferred ≠ S:
     Report error: "inferred moded type ≠ declared type"
@@ -492,6 +524,54 @@ List<ModeError> checkBodyGoal(Goal goal, ProcDecl decl) {
 }
 ```
 
+### 6.4 Mode Coverage Check for Any Positions
+
+For positions with type `Any ::= _ | _?`, verify collective mode coverage:
+
+```dart
+/// Check that all mode alternatives are covered across clauses
+List<ModeError> checkModeCoverage(
+  List<Clause> clauses,
+  ProcDecl decl,
+  TypeEnvironment env,
+) {
+  final errors = <ModeError>[];
+
+  for (int argIndex = 0; argIndex < decl.arity; argIndex++) {
+    final argType = decl.argTypes[argIndex];
+
+    // Find positions with Any type that need coverage
+    final anyPositions = findAnyPositions(argType, env);
+
+    for (final position in anyPositions) {
+      final coveredModes = <Mode>{};
+
+      for (final clause in clauses) {
+        final termAtPosition = extractTermAtPosition(clause.head, argIndex, position);
+        if (termAtPosition is VarTerm) {
+          final mode = termAtPosition.isReader ? Mode.input : Mode.output;
+          coveredModes.add(mode);
+        }
+      }
+
+      // Check both modes are covered
+      if (!coveredModes.contains(Mode.output)) {
+        errors.add(ModeError(
+          'No clause covers output mode (_) at Any position $position in argument $argIndex',
+        ));
+      }
+      if (!coveredModes.contains(Mode.input)) {
+        errors.add(ModeError(
+          'No clause covers input mode (_?) at Any position $position in argument $argIndex',
+        ));
+      }
+    }
+  }
+
+  return errors;
+}
+```
+
 ---
 
 ## 7. Error Messages
@@ -503,6 +583,7 @@ List<ModeError> checkBodyGoal(Goal goal, ProcDecl decl) {
 | Writer at output position | `Writer variable 'X' at line 5 occurs at output position; expected input position (_?)` |
 | Reader at input position | `Reader variable 'X?' at line 7 occurs at input position; expected output position (_)` |
 | Mode mismatch in call | `Argument 2 of merge/3 at line 10: expected input mode, found output` |
+| Incomplete mode coverage | `No clause covers output mode (_) at Any position in list head` |
 
 ### 7.2 Example Error Output
 
@@ -516,6 +597,24 @@ Hint: The procedure declaration is:
          argument 2 ────────────┘ (output mode)
 
 At output positions, use a reader variable (Result?) to receive the value.
+```
+
+### 7.3 Mode Coverage Error
+
+```
+[MODE ERROR] Incomplete mode coverage at Any position in argument 1.
+
+The type 'List ::= [] ; [Any | List]' has Any at the head position.
+Under ::= semantics, clauses must cover BOTH mode alternatives:
+  - _ (output): requires writer variable
+  - _? (input): requires reader variable
+
+Current clauses only cover: _? (input)
+
+Solutions:
+  1. Add clause with writer at head position
+  2. Change type to List1 ::= [] ; [_ | List1] (single mode)
+  3. Use ::< List for partial coverage (future PMT feature)
 ```
 
 ---
@@ -533,6 +632,7 @@ At output positions, use a reader variable (Result?) to receive the value.
 - [ ] Implement `checkVariableMode()` for leaf position checking
 - [ ] Implement mode combination for nested positions
 - [ ] Implement call boundary complementation
+- [ ] Implement mode coverage check for Any positions
 - [ ] Add comprehensive tests
 
 ### Phase 3: Integrate with Type Checker (2 days)
@@ -597,6 +697,7 @@ This implementation follows the theory developed in "Moded Types for Grassroots 
 2. **Partial correctness guarantee**: Well-moded-typed programs have produced/consumed assignments conforming to declared types
 3. **EXPTIME-complete complexity** for moded type checking
 4. **Mode complementation `(·)?`** as the uniform mechanism for producer/consumer duality
+5. **Mode coverage requirement**: Under `::=` semantics, union types require coverage of all alternatives
 
 ---
 
@@ -605,3 +706,14 @@ This implementation follows the theory developed in "Moded Types for Grassroots 
 - Yardeni & Shapiro, "A Type System for Logic Programs", JLP 1991
 - Frühwirth, Shapiro, Vardi & Yardeni, "Logic Programs as Types for Logic Programs", LICS 1991
 - "Moded Types for Grassroots Logic Programs", 2024 (this project)
+
+---
+
+## Appendix A: Changelog
+
+### v1.1 (2025-12-21)
+- Added Section 2.2: Type Definitions vs. Subtype Declarations (`::=` vs `::<`)
+- Added Section 4.4: Mode Coverage for Union Types with List Copy example
+- Added Section 6.4: Mode Coverage Check for Any Positions
+- Added Section 7.3: Mode Coverage Error messages
+- Updated theoretical foundation with mode coverage requirement
