@@ -1,0 +1,19 @@
+%% List with embedded modes in elements
+%% Declaration: process(MsgList?) - input
+%% HEAD complement -> output
+%% List position: output
+%% Inside request(Value?): input embedded
+%% Combined: combine(output, input) = input
+%% Expects writer
+
+Msg ::= request(Number?) ; response(Number).
+MsgList ::= [] ; [Msg | MsgList].
+
+procedure process(MsgList?).
+procedure handle(Number).
+
+process([request(X)|Rest]) :- handle(X?), process(Rest?).
+process([response(Y?)|Rest]) :- process(Rest?).
+process([]).
+
+handle(N?) :- N =:= 0.

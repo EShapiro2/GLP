@@ -1,0 +1,14 @@
+%% THE INVOLUTION CASE
+%% Declaration: consume(Wrapper?) - input mode
+%% In HEAD: complement -> expects output at top level
+%% Inside wrap(Number?): embedded input
+%% Combined: combine(output, input) = input
+%% So expects writer X
+
+Wrapper ::= wrap(Number?).
+
+procedure consume(Wrapper?).
+procedure produce(Number).
+
+consume(wrap(X)) :- produce(X?).
+produce(0).

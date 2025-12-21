@@ -1,0 +1,10 @@
+%% combine(output, output) = output
+%% Result position expects reader
+
+Wrapper ::= wrap(Number).
+
+procedure produce(Wrapper).
+procedure gen(Number).
+
+produce(wrap(X?)) :- gen(X).
+gen(0).

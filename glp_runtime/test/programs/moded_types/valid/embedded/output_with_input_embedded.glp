@@ -1,0 +1,10 @@
+%% combine(output, input) = input
+%% Result position expects writer
+
+Wrapper ::= wrap(Number?).
+
+procedure produce(Wrapper).
+procedure use(Number?).
+
+produce(wrap(X)) :- use(X?).
+use(Y).

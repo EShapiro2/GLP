@@ -1,0 +1,14 @@
+%% ERROR: Writer at position that should have reader
+%% Declaration: produce(Wrapper) - output
+%% In HEAD: complement -> input
+%% Inside wrap(Number?): input embedded
+%% Combined: combine(input, input) = output (involution!)
+%% Expects reader, but X is writer - ERROR
+
+Wrapper ::= wrap(Number?).
+
+procedure produce(Wrapper).
+procedure use(Number?).
+
+produce(wrap(X)) :- use(X?).
+use(Y).
