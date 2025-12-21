@@ -1,18 +1,15 @@
-%% combine(input, output) = input
-%% Head complement: input -> output at top
-%% Then combine(output, output) = output
-%% Wait - need to think through head complement...
-%%
-%% Declaration: consume(Wrapper?) - input mode
-%% In HEAD: complement -> expects output (writer fills slot)
-%% Inside wrap(Number): Number is output (no ?)
-%% Combined: combine(output, output) = output
-%% So expects reader X?
+%% combine(input, output) = output
+%% Declaration: consume(Wrapper?) - input
+%% Top-level: input
+%% Inside wrap(Number): embedded output (no ?)
+%% combine(input, output) = output
+%% At output position, head expects READER
+%% X? is reader - CORRECT
 
 Wrapper ::= wrap(Number).
 
 procedure consume(Wrapper?).
-procedure use(Number?).
+procedure source(Number).
 
-consume(wrap(X?)) :- use(X?).
-use(Y).
+consume(wrap(X?)) :- source(X).
+source(0).

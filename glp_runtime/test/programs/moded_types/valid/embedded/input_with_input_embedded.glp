@@ -1,14 +1,15 @@
-%% THE INVOLUTION CASE
-%% Declaration: consume(Wrapper?) - input mode
-%% In HEAD: complement -> expects output at top level
+%% Involution case: combine(input, input) = output
+%% Declaration: consume(Wrapper?) - input
+%% Top-level: input
 %% Inside wrap(Number?): embedded input
-%% Combined: combine(output, input) = input
-%% So expects writer X
+%% combine(input, input) = output
+%% At output position, head expects READER
+%% X? is reader - CORRECT
 
 Wrapper ::= wrap(Number?).
 
 procedure consume(Wrapper?).
-procedure produce(Number).
+procedure source(Number).
 
-consume(wrap(X)) :- produce(X?).
-produce(0).
+consume(wrap(X?)) :- source(X).
+source(0).
