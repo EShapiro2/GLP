@@ -164,7 +164,46 @@ class ModeChecker {
       }
     }
 
-    // Constants, lists, etc. - no mode checking needed
+    // List terms: recursively check head and tail with embedded modes
+    if (term is ast.ListTerm) {
+      // Nil list - no checking needed
+      if (term.isNil) return null;
+
+      // Resolve TypeRef to find ListConsAlt
+      if (typeExpr is TypeRef) {
+        final typeDef = typeEnv.getType(typeExpr.name);
+        if (typeDef != null) {
+          for (final alt in typeDef.alternatives) {
+            if (alt is ListConsAlt) {
+              // Check head element against head type with same parent mode
+              if (term.head != null) {
+                final headError = _checkTermMode(
+                  term.head!,
+                  expectedMode,
+                  alt.head,
+                  predicate,
+                  argIndex,
+                );
+                if (headError != null) return headError;
+              }
+
+              // Check tail against tail type with same parent mode
+              if (term.tail != null) {
+                return _checkTermMode(
+                  term.tail!,
+                  expectedMode,
+                  alt.tail,
+                  predicate,
+                  argIndex,
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Constants, etc. - no mode checking needed
     return null;
   }
 
