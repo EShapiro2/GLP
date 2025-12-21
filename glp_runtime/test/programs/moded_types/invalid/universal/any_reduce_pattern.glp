@@ -1,0 +1,4 @@
+%% Classic reduce misuse - SHOULD FAIL
+procedure reduce(Any?, Any).
+reduce(and(A?, B?), Result).
+reduce(or(A?, B?), Result).

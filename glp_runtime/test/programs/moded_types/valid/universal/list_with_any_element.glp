@@ -1,0 +1,6 @@
+%% List type has Any elements - procedure uses List, not Any directly
+%% SHOULD PASS - constructor at List? position is fine
+List ::= [] ; [Any | List].
+procedure append(List?, List?, List).
+append([], Ys, Ys?).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).

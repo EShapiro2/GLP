@@ -1,0 +1,5 @@
+%% Variable at Any position - SHOULD PASS
+%% Number? is INPUT mode, Any is OUTPUT mode
+%% This tests that variable pattern at Any is allowed
+procedure bar(Number?, Any).
+bar(N, Y?) :- number(N?) | Y = N?.

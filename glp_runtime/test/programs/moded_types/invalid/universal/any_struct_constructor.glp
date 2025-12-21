@@ -1,0 +1,3 @@
+%% Struct constructor at Any? position - SHOULD FAIL
+procedure foo(Any?, Number).
+foo(pair(X?, Y?), 42).
