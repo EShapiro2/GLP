@@ -41,4 +41,4 @@ producer_b(control(Xs,Next)) :-
     produce_batch_b(Xs,Xs1,Done),
     handover(Done?,Xs1,Next).
 
-handover(done,Xs,control(Xs,Next)).
+handover(done,Xs,control(Xs?,Next)).
