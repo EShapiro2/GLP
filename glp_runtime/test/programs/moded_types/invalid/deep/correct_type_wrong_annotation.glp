@@ -1,0 +1,13 @@
+%% Type is correct with embedded mode
+%% But variable annotation is wrong
+
+Request ::= query(Number?).
+Stream ::= [] ; [Request | Stream].
+
+procedure answer(Stream?).
+
+%% query(Number?) at INPUT -> query(Number) by involution
+%% Position is OUTPUT, expects READER
+%% But we use Val (writer) = MODE ERROR
+answer([query(Val)|S]) :- answer(S?).
+answer([]).

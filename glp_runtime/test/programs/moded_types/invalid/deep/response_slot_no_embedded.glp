@@ -1,0 +1,11 @@
+%% BUG: Response slot should be show(Number?) not show(Number)
+%% Reader State? at input position should be MODE ERROR
+
+Msg ::= ping ; show(Number).
+Stream ::= [] ; [Msg | Stream].
+
+procedure handler(Stream?, Number?).
+
+handler([show(State?)|S], State) :- handler(S?, State?).
+handler([ping|S], State) :- handler(S?, State?).
+handler([], _).

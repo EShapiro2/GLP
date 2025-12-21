@@ -1,0 +1,14 @@
+%% Inner has response slot, Outer wraps it
+%% The inner Value should be writer, not reader
+
+Inner ::= get(Number).
+Outer ::= wrap(Inner).
+Stream ::= [] ; [Outer | Stream].
+
+procedure process(Stream?).
+
+%% wrap(get(Value?)) - Value? is reader
+%% But get(Number) has no embedded ?, so position is INPUT
+%% Reader at input = MODE ERROR
+process([wrap(get(Value?))|S]) :- process(S?).
+process([]).

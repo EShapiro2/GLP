@@ -1,0 +1,16 @@
+%% Tree with values at leaves
+%% Response slot buried in leaf
+
+Tree ::= leaf(Number) ; node(Tree, Tree).
+Forest ::= [] ; [Tree | Forest].
+
+procedure collect(Forest?, Number?).
+
+%% leaf(Number) no embedded ? -> input position at INPUT parent
+%% V? reader at input = MODE ERROR
+collect([leaf(V?)|Rest], Acc) :- 
+    NewAcc := Acc? + V?,
+    collect(Rest?, NewAcc?).
+collect([node(L,R)|Rest], Acc) :- 
+    collect([L?,R?|Rest?], Acc?).
+collect([], Acc).

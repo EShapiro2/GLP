@@ -1,0 +1,15 @@
+%% Triple nesting: List of Wrappers of Messages
+%% The response slot is deeply buried
+
+Response ::= val(Number).
+Message ::= ask(Response).
+Wrapper ::= box(Message).
+Stream ::= [] ; [Wrapper | Stream].
+
+procedure deep(Stream?).
+
+%% box(ask(val(X?))) - X? is reader
+%% val(Number) no embedded ? -> input position
+%% Reader at input = MODE ERROR
+deep([box(ask(val(X?)))|S]) :- deep(S?).
+deep([]).
