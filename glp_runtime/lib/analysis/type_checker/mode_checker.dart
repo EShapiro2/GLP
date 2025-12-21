@@ -140,6 +140,21 @@ class ModeChecker {
       return _checkVariableMode(term, expectedMode, predicate, argIndex);
     }
 
+    // Primitive mode types (_, _?, Any) require variable patterns
+    // Constructor patterns at these positions are ill-typed
+    if (typeExpr is TypeRef && _isPrimitiveType(typeExpr.name)) {
+      // term is NOT a variable but position has primitive/Any type
+      return ModeError(
+        'Constructor pattern at primitive type position\n'
+        'Argument ${argIndex + 1} of $predicate has type ${typeExpr.name}, '
+        'which requires a variable pattern. Found ${_termDescription(term)} instead.\n\n'
+        'Primitive types (_, _?, Any) must handle all ground terms, so only '
+        'variable patterns are allowed at these positions.',
+        term.line,
+        term.column,
+      );
+    }
+
     // Compound terms: recursively check subterms with embedded modes
     if (term is ast.StructTerm) {
       // If typeExpr is a StructAlt, use it directly
@@ -295,5 +310,29 @@ class ModeChecker {
     }
 
     return null; // All subterms ok
+  }
+
+  /// Check if a type name is a primitive mode type
+  ///
+  /// Primitive types (_, _?, Any) require variable patterns because they
+  /// must handle all ground terms.
+  bool _isPrimitiveType(String typeName) {
+    return typeName == 'Any' || typeName == '_' || typeName == '_?';
+  }
+
+  /// Get a human-readable description of a term for error messages
+  String _termDescription(ast.Term term) {
+    if (term is ast.StructTerm) {
+      return 'constructor ${term.functor}/${term.args.length}';
+    } else if (term is ast.ListTerm) {
+      if (term.isNil) {
+        return 'empty list []';
+      }
+      return 'list pattern [...]';
+    } else if (term is ast.ConstTerm) {
+      return 'constant ${term.value}';
+    } else {
+      return term.toString();
+    }
   }
 }
