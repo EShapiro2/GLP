@@ -2,8 +2,8 @@
 NumStream ::= [] ; [Number | NumStream].
 
 %% Procedure type declarations
-procedure producer(NumStream, Number).
-procedure consumer(NumStream, Number).
+procedure producer(NumStream, Number?).
+procedure consumer(NumStream?, Number?).
 
 %% producer_consumer.glp - Basic stream communication
 %% Producer generates integers, consumer sums them.

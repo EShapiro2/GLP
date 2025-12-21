@@ -3,8 +3,8 @@ Bit ::= zero ; one.
 BitStream ::= [] ; [Bit | BitStream].
 
 %% Procedure type declarations
-procedure and(BitStream, BitStream, BitStream).
-procedure or(BitStream, BitStream, BitStream).
+procedure and(BitStream?, BitStream?, BitStream).
+procedure or(BitStream?, BitStream?, BitStream).
 
 %% gates.glp - Logic gate simulation on bit streams
 

@@ -2,7 +2,7 @@
 Stream ::= [] ; [Any | Stream].
 
 %% Procedure type declarations
-procedure merge(Stream, Stream, Stream).
+procedure merge(Stream?, Stream?, Stream).
 
 %% merge.glp - Fair stream merge
 %% Alternates between streams for fairness.

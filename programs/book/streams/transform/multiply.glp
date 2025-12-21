@@ -2,7 +2,7 @@
 NumStream ::= [] ; [Number | NumStream].
 
 %% Procedure type declarations
-procedure multiply(Number, NumStream, NumStream).
+procedure multiply(Number?, NumStream?, NumStream).
 
 %% multiply.glp - Scalar multiply stream (stream map)
 %% multiply(N, Xs, Ys) :- Ys is Xs with each element multiplied by N

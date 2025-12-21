@@ -2,7 +2,7 @@
 NumStream ::= [] ; [Number | NumStream].
 
 %% Procedure type declarations
-procedure opmerge(NumStream, NumStream, NumStream).
+procedure opmerge(NumStream?, NumStream?, NumStream).
 
 %% opmerge.glp - Ordered merge of sorted streams
 %% Removes duplicates when merging.

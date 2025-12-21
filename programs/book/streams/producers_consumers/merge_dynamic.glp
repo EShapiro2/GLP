@@ -2,9 +2,9 @@
 List ::= [] ; [Any | List].
 
 %% Procedure type declarations
-procedure merge(List, List, List).
-procedure dmerge(List, List, List).
-procedure dmerger(List, List, List).
+procedure merge(List?, List?, List).
+procedure dmerge(List?, List?, List).
+procedure dmerger(List?, List?, List).
 
 % Topic: Dynamic merge
 % Section: Streams - Dynamic Merge
