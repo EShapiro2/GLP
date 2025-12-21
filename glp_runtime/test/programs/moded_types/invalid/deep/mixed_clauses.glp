@@ -1,0 +1,14 @@
+%% Some clauses correct, one incorrect
+%% Should catch the bad one
+
+Cmd ::= inc ; dec ; get(Number?).
+State ::= [] ; [Cmd | State].
+
+procedure counter(State?, Number?).
+
+counter([inc|S], N) :- N1 := N? + 1, counter(S?, N1?).
+counter([dec|S], N) :- N1 := N? - 1, counter(S?, N1?).
+%% get(Number?) at INPUT -> get(Number) = OUTPUT position
+%% Val is WRITER at OUTPUT = MODE ERROR (should be Val?)
+counter([get(Val)|S], N) :- counter(S?, N?).
+counter([], _).

@@ -1,0 +1,13 @@
+%% Simplified: Channel with wrong mode after involution
+%% ch(Number?, Number) at INPUT inverts to ch(Number, Number?)
+%% Second position becomes INPUT, expects WRITER
+%% But we use reader = MODE ERROR
+
+Channel ::= ch(Number?, Number).
+
+procedure bad_channel(Channel?).
+
+%% ch(Number?, Number) at INPUT mode
+%% Involution: first arg OUTPUT (ok with Req?), second arg INPUT
+%% Second arg expects WRITER, but Resp? is READER = MODE ERROR
+bad_channel(ch(Req?, Resp?)).
