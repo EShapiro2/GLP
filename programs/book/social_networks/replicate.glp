@@ -1,6 +1,6 @@
 %% Procedure type declarations
-procedure replicate2(Any, Any, Any).
-procedure replicate3(Any, Any, Any, Any).
+procedure replicate2(Any?, Any, Any).
+procedure replicate3(Any?, Any, Any, Any).
 
 %% replicate.glp - Non-Ground Term Replicator
 %% Source: GLP Papers (Program: Non-Ground Term Replicator)

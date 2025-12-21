@@ -1,5 +1,5 @@
 List ::= [] ; [Any | List].
-procedure append(List, List, List).
+procedure append(List?, List?, List).
 
 append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).

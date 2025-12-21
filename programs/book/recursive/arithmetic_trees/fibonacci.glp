@@ -1,8 +1,8 @@
 %% Procedure type declarations
-procedure fib(Number, Number).
-procedure fib_linear(Number, Number).
-procedure fib_acc(Number, Number, Number, Number).
-procedure reduce(Any, Any).
+procedure fib(Number?, Number).
+procedure fib_linear(Number?, Number).
+procedure fib_acc(Number?, Number?, Number?, Number).
+procedure reduce(Any?, Any).
 
 %% fibonacci.glp - Fibonacci with concurrent recursive calls
 %% Demonstrates true concurrent recursion.

@@ -3,9 +3,9 @@ List ::= [] ; [Any | List].
 ListOfLists ::= [] ; [List | ListOfLists].
 
 %% Procedure type declarations
-procedure merge_tree(ListOfLists, List).
-procedure merge_layer(ListOfLists, ListOfLists).
-procedure merge(List, List, List).
+procedure merge_tree(ListOfLists?, List).
+procedure merge_layer(ListOfLists?, ListOfLists).
+procedure merge(List?, List?, List).
 
 % merge_tree/2 - Tree-structured stream merger
 %

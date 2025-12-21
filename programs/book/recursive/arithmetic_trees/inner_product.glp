@@ -2,8 +2,8 @@
 NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure ip(NumList, NumList, Number).
-procedure ip_acc(NumList, NumList, Number, Number).
+procedure ip(NumList?, NumList?, Number).
+procedure ip_acc(NumList?, NumList?, Number?, Number).
 
 %% inner_product.glp - Inner product of two vectors
 

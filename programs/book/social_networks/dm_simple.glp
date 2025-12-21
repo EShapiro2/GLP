@@ -2,11 +2,11 @@
 List ::= [] ; [Any | List].
 
 %% Procedure type declarations
-procedure request_dm(List, Any, Any).
-procedure accept_dm(Any, Any).
-procedure bind_response(Any, Any).
-procedure dm_send(Any, Any, Any).
-procedure dm_receive(Any, Any, Any).
+procedure request_dm(List?, Any?, Any).
+procedure accept_dm(Any?, Any).
+procedure bind_response(Any?, Any).
+procedure dm_send(Any?, Any?, Any).
+procedure dm_receive(Any, Any?, Any).
 procedure new_channel(Any, Any).
 
 %% dm_simple.glp - Direct Messaging Channel Establishment

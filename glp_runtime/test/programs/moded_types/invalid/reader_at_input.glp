@@ -1,0 +1,10 @@
+%% INVALID: Reader at input position in clause head
+%% Should fail mode checking
+
+Nat ::= 0 ; s(Nat).
+
+procedure bar(Nat?).
+
+%% ERROR: Y? is reader but procedure expects input mode (writer)
+%% This is mode-incorrect but SRSW-compliant
+bar(Y?).

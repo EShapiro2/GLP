@@ -1,0 +1,11 @@
+%% The tail should be reader at output position
+
+Elem ::= a ; b ; c.
+List ::= [] ; [Elem | List].
+
+procedure append(List?, List?, List).
+
+%% Third arg is output, expects readers
+%% Zs is writer = MODE ERROR
+append([X|Xs], Ys, [X?|Zs]) :- append(Xs?, Ys?, Zs).
+append([], Ys, Ys?).

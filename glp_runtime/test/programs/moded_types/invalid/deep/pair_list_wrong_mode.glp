@@ -1,0 +1,13 @@
+%% Pair second element should be output (response slot)
+%% But no embedded ? in type
+
+Pair ::= pair(Number, Number).
+PairList ::= [] ; [Pair | PairList].
+
+procedure fill_pairs(PairList?).
+
+%% pair(Key?, Val?) - both readers
+%% pair(Number, Number) - both input positions
+%% Val? reader at input = MODE ERROR
+fill_pairs([pair(Key?, Val?)|Rest]) :- fill_pairs(Rest?).
+fill_pairs([]).

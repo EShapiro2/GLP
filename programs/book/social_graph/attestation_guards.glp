@@ -1,11 +1,11 @@
 %% Procedure type declarations
-procedure process_message(Any, Any).
-procedure handle_verified(Any, Any, Any).
-procedure trusted_module(Any).
-procedure negotiate_protocol(Any, Any).
-procedure compatible(Any, Any).
-procedure attestation(Any, Any).
-procedure module(Any).
+procedure process_message(Any?, Any).
+procedure handle_verified(Any?, Any?, Any).
+procedure trusted_module(Any?).
+procedure negotiate_protocol(Any?, Any).
+procedure compatible(Any?, Any?).
+procedure attestation(Any?, Any).
+procedure module(Any?).
 
 %% attestation_guards.glp - Security Guard Predicates
 %% Source: GLP Papers (Section: Securing Multiagent GLP)

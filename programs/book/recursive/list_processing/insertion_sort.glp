@@ -2,9 +2,9 @@
 NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure insertion_sort(NumList, NumList).
-procedure insert(Number, NumList, NumList).
-procedure reduce(Any, Any).
+procedure insertion_sort(NumList?, NumList).
+procedure insert(Number?, NumList?, NumList).
+procedure reduce(Any?, Any).
 
 %% insertion_sort.glp - Insertion sort in GLP
 %% Source: Standard GLP sorting

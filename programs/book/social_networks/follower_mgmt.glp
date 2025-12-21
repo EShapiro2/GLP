@@ -2,8 +2,8 @@
 FollowerList ::= [] ; [Any | FollowerList].
 
 %% Procedure type declarations
-procedure add_follower(Any, FollowerList, FollowerList, Any).
-procedure remove_follower(Any, FollowerList, FollowerList).
+procedure add_follower(Any?, FollowerList?, FollowerList, Any).
+procedure remove_follower(Any?, FollowerList?, FollowerList).
 
 %% follower_mgmt.glp - Follower management
 %% Add and remove followers

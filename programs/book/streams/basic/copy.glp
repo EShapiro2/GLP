@@ -2,7 +2,7 @@
 Stream ::= [] ; [Any | Stream].
 
 %% Procedure type declarations
-procedure copy(Stream, Stream).
+procedure copy(Stream?, Stream).
 
 %% copy.glp - Stream copy
 %% copy(Xs, Ys) :- Ys is a copy of stream Xs

@@ -3,10 +3,10 @@ BinaryDigit ::= zero ; one.
 BitList ::= [] ; [BinaryDigit | BitList].
 
 %% Procedure type declarations
-procedure and(BitList, BitList, BitList).
-procedure or(BitList, BitList, BitList).
-procedure not(BitList, BitList).
-procedure reduce(Any, Any).
+procedure and(BitList?, BitList?, BitList).
+procedure or(BitList?, BitList?, BitList).
+procedure not(BitList?, BitList).
+procedure reduce(Any?, Any).
 
 %% gates.glp - Logic gate simulation in GLP
 %% Source: Standard GLP examples

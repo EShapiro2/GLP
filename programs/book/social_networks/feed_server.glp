@@ -4,12 +4,12 @@ CmdList ::= [] ; [Any | CmdList].
 FollowerList ::= [] ; [Any | FollowerList].
 
 %% Procedure type declarations
-procedure replicate2(Any, Any, Any).
-procedure broadcast(Any, FollowerList, FollowerList).
-procedure add_follower(Any, FollowerList, FollowerList, Any).
-procedure remove_follower(Any, FollowerList, FollowerList).
-procedure feed_server(CmdList, FollowerList).
-procedure serve_feed(CmdList, FollowerList, FollowerList).
+procedure replicate2(Any?, Any, Any).
+procedure broadcast(Any?, FollowerList?, FollowerList).
+procedure add_follower(Any?, FollowerList?, FollowerList, Any).
+procedure remove_follower(Any?, FollowerList?, FollowerList).
+procedure feed_server(CmdList?, FollowerList?).
+procedure serve_feed(CmdList?, FollowerList?, FollowerList).
 
 %% feed_server.glp - Complete feed server
 %% Combines posting and follower management

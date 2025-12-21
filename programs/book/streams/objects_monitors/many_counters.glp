@@ -1,8 +1,8 @@
 %% Procedure type declarations
-procedure use_many_counters(Any, Any).
-procedure send(Any, Any, Any, Any).
-procedure counter(Any, Number).
-procedure wait_write(Any).
+procedure use_many_counters(Any?, Any?).
+procedure send(Any?, Any?, Any?, Any).
+procedure counter(Any?, Number?).
+procedure wait_write(Any?).
 
 %% many_counters.glp - Managing multiple counter instances
 %% Source: CP Collected Papers, Ch 29 (Shapiro & Takeuchi)

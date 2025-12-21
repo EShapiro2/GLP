@@ -1,0 +1,14 @@
+%% Accumulator pattern: Result is output (last arg)
+%% But clause has writer at output position
+
+Nat ::= z ; s(Nat).
+List ::= [] ; [Nat | List].
+
+procedure sum(List?, Nat?, Nat).
+
+%% Nat (output) expects READER in head
+%% Result is WRITER = MODE ERROR
+sum([X|Xs], Acc, Result) :-
+    NewAcc := Acc? + X?,
+    sum(Xs?, NewAcc?, Result).
+sum([], Acc, Acc?).

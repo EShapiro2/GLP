@@ -1,7 +1,7 @@
 %% Procedure type declarations
-procedure network(Any, Any, Any).
-procedure send(Any, Any, Any).
-procedure receive(Any, Any, Any).
+procedure network(Any?, Any?, Any).
+procedure send(Any?, Any?, Any).
+procedure receive(Any?, Any?, Any).
 
 %% network_switch.glp - 3-way network switch
 %% Source: GLP Papers (Program: 3-Way Network Switch)

@@ -2,8 +2,8 @@
 List ::= [] ; [Any | List].
 
 %% Procedure type declarations
-procedure merger(List, List, List).
-procedure merge(List, List, List).
+procedure merger(List?, List?, List).
+procedure merge(List?, List?, List).
 
 %% dynamic_merger.glp - Dynamic stream merger
 %% Source: GLP Papers (Program: Dynamic Stream Merger)

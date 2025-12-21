@@ -280,10 +280,7 @@ echo -e 'filename.glp\ngoal.' | dart run bin/glp_repl.dart
 
 **REPL Test Scripts (Linux):**
 ```bash
-# Quick tests (~2s) - 30 basic tests
-bash /home/user/GLP/test/quick_run_repl_tests.sh
-
-# Full tests - 181 comprehensive tests
+# Full REPL tests - 218 comprehensive tests (ALWAYS run this)
 bash /home/user/GLP/test/full_run_repl_tests.sh
 
 # Book examples - 141 files (tests compilation only)
@@ -345,7 +342,6 @@ bash /home/user/GLP/test/run_book_tests.sh
 │   └── misc/                   # ← Miscellaneous examples (26 files)
 │
 └── test/                        # ← TEST SCRIPTS
-    ├── quick_run_repl_tests.sh # ← Quick tests (30 tests, ~2s)
     ├── full_run_repl_tests.sh  # ← Full REPL tests (181 tests)
     └── run_book_tests.sh       # ← Book examples compilation test (141 files)
 ```
@@ -383,22 +379,18 @@ You:
 
 | Suite | Location | Tests | Purpose |
 |-------|----------|-------|---------|
-| Quick REPL | `test/quick_run_repl_tests.sh` | 30 | Fast sanity check (~2s) |
-| Full REPL | `test/full_run_repl_tests.sh` | 181 | Comprehensive REPL tests |
+| Full REPL | `test/full_run_repl_tests.sh` | 218 | Comprehensive REPL tests |
 | Book | `test/run_book_tests.sh` | 141 | Book examples compile check |
 | Unit | `glp_runtime/test/` | ~27 | Dart unit tests |
 
 ### Standard Test Protocol
 
-**ALWAYS run tests before and after changes:**
+**ALWAYS run the full REPL tests before and after changes:**
 
 ```bash
 cd /home/user/GLP/glp_runtime
 
-# Quick sanity check
-bash ../test/quick_run_repl_tests.sh
-
-# Full REPL tests (run before commits)
+# Full REPL tests (ALWAYS run this)
 bash ../test/full_run_repl_tests.sh
 
 # Book examples (compilation test)
@@ -409,17 +401,15 @@ dart test
 ```
 
 **Expected results:**
-- Quick: 30/30 pass
-- Full: 181/181 pass
+- Full REPL: 218/218 pass
 - Book: 84/141 pass (57 fail due to SRSW violations in book code)
 - Unit: All pass
 
 ### REPL Development Protocol
 1. Make changes to `glp_runtime/lib/` or `glp_runtime/bin/glp_repl.dart`
 2. Recompile: `cd /home/user/GLP/glp_runtime && dart compile exe bin/glp_repl.dart -o glp_repl`
-3. Run quick tests first: `bash ../test/quick_run_repl_tests.sh`
-4. If quick tests pass, run full tests: `bash ../test/full_run_repl_tests.sh`
-5. Report results
+3. Run full tests: `bash ../test/full_run_repl_tests.sh`
+4. Report results
 
 ### Adding New Tests
 

@@ -3,13 +3,13 @@ MsgList ::= [] ; [Any | MsgList].
 FriendList ::= [] ; [Any | FriendList].
 
 %% Procedure type declarations
-procedure group_member(Any, Any, Any).
-procedure lookup(Any, FriendList, Any).
-procedure compose_messages(Any, Any, MsgList).
-procedure find_my_stream(Any, Any, Any).
-procedure interlace(MsgList, Any, Any, Any).
-procedure await_user_input(Any, Any, Any).
-procedure format_message(Any, Any, Any).
+procedure group_member(Any?, Any?, Any?).
+procedure lookup(Any?, FriendList?, Any).
+procedure compose_messages(Any?, Any?, MsgList).
+procedure find_my_stream(Any?, Any?, Any).
+procedure interlace(MsgList?, Any?, Any?, Any).
+procedure await_user_input(Any?, Any?, Any).
+procedure format_message(Any?, Any?, Any).
 
 %% group_messaging.glp - Group Messaging via Interlaced Streams
 %% Source: GLP Papers (Program: Group Messaging)

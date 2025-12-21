@@ -2,8 +2,8 @@
 List ::= [] ; [Any | List].
 
 %% Procedure type declarations
-procedure list(List).
-procedure reduce(Any, Any).
+procedure list(List?).
+procedure reduce(Any?, Any).
 
 %% is_list.glp - Defining a list (AoP 3.11)
 %% list(Xs) :- Xs is a list.

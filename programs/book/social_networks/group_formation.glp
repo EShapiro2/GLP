@@ -12,11 +12,11 @@ FriendList ::= [] ; [Any | FriendList].
 UserList ::= [] ; [Any | UserList].
 
 %% Procedure type declarations
-procedure social_graph(Any, MsgList, FriendList).
-procedure send_invitations(FriendList, Any, Any, Any, FriendList, FriendList).
-procedure create_group_streams(UserList, Any).
-procedure lookup(Any, FriendList, Any).
-procedure lookup_send(Any, SocialMsg, FriendList, FriendList).
+procedure social_graph(Any, MsgList?, FriendList?).
+procedure send_invitations(FriendList?, Any?, Any?, Any?, FriendList?, FriendList).
+procedure create_group_streams(UserList?, Any).
+procedure lookup(Any?, FriendList?, Any).
+procedure lookup_send(Any?, Any?, FriendList?, FriendList).
 
 %% group_formation.glp - Group Formation Protocol
 %% Source: GLP Papers (Program: Group Formation Protocol)

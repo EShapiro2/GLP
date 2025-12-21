@@ -2,8 +2,8 @@
 Goal ::= true ; (Goal, Goal) ; Any.
 
 %% Procedure type declarations
-procedure run(Goal).
-procedure clause(Any, Goal).
+procedure run(Goal?).
+procedure clause(Any?, Goal).
 
 %% metainterpreter.glp - Basic GLP metainterpreter
 
