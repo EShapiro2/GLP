@@ -127,6 +127,13 @@ Present your findings and discuss what to do next:
 - Fix the bug
 - Add explanations to the docs so that the behavior becomes expected
 
+### Bug Protocol
+**NEVER bypass or circumvent a bug.** When you discover a bug:
+1. **STOP immediately** - Do not attempt workarounds or alternative approaches
+2. **Report precisely** - Describe what's wrong, what was expected, what actually happens
+3. **Wait for discussion** - Let the user decide how to proceed
+4. **No speculation** - Report facts, not guesses about causes or fixes
+
 ### Communication Style  
 - **BE TERSE** - Brief, direct responses
 - **NO LONG EXPLANATIONS** - Get to the point
