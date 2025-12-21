@@ -4,15 +4,15 @@ AnyList ::= [] ; [Any | AnyList].
 Done ::= done.
 
 %% Procedure type declarations
-procedure producer(NumList, Number).
-procedure consumer(NumList, Number, Number).
-procedure observer1(AnyList, AnyList, AnyList).
-procedure test_obs1(Number, AnyList).
-procedure bob(AnyList, Done).
-procedure alice(AnyList, Done).
-procedure bob_finish(AnyList, Done).
-procedure observe(AnyList, AnyList, AnyList).
-procedure test_obs2(AnyList, Done).
+procedure producer(NumList, Number?).
+procedure consumer(NumList?, Number?, Number?).
+procedure observer1(AnyList?, AnyList?, AnyList).
+procedure test_obs1(Number?, AnyList).
+procedure bob(AnyList?, Done).
+procedure alice(AnyList?, Done).
+procedure bob_finish(AnyList?, Done).
+procedure observe(AnyList?, AnyList?, AnyList).
+procedure test_obs2(AnyList?, Done).
 
 % Topic: Stream observers
 % Section: Streams - Stream Observers

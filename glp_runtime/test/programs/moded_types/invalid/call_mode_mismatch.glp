@@ -1,0 +1,15 @@
+%% INVALID: Call mode mismatch (mode complementation error)
+%% Should fail mode checking
+
+Nat ::= 0 ; s(Nat).
+
+procedure callee(Nat?).
+procedure caller(Nat?).
+
+%% Callee is well-moded: input mode (Nat?) expects writer
+callee(X) :- callee(X?).
+
+%% ERROR: caller has input mode (Nat?), so Y is writer in head (ok)
+%% Call to callee(Nat?) at call site requires output mode (complemented)
+%% Output mode expects reader, but Y is writer → call mode mismatch
+caller(Y) :- callee(Y).

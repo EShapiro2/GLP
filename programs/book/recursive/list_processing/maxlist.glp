@@ -2,10 +2,10 @@
 NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure maxlist(NumList, Number).
-procedure maxlist(NumList, Number, Number).
-procedure maximum(Number, Number, Number).
-procedure reduce(Any, Any).
+procedure maxlist(NumList?, Number).
+procedure maxlist(NumList?, Number?, Number).
+procedure maximum(Number?, Number?, Number).
+procedure reduce(Any?, Any).
 
 %% maxlist.glp - Finding the maximum of a list of integers (AoP 8.9)
 %% maxlist(Xs,N) :- N is the maximum of the list of integers Xs.

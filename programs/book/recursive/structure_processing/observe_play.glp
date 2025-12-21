@@ -1,19 +1,19 @@
 %% Procedure type declarations
-procedure observe(Any, Any, Any).
-procedure observe_list(Any, Any, Any).
-procedure test_play(Any).
-procedure alice(Any).
-procedure alice_wait1(Any, Any, Any).
-procedure alice_round2(Any).
-procedure alice_wait2(Any, Any, Any).
-procedure alice_round3(Any, Any).
-procedure alice_wait3(Any, Any, Any).
-procedure alice_round4(Any).
-procedure alice_wait4(Any).
-procedure bob(Any).
-procedure bob_round2(Any).
-procedure bob_round3(Any).
-procedure bob_round4(Any).
+procedure observe(Any?, Any, Any).
+procedure observe_list(Any?, Any, Any).
+procedure test_play(Any?).
+procedure alice(Any?).
+procedure alice_wait1(Any?, Any?, Any?).
+procedure alice_round2(Any?).
+procedure alice_wait2(Any?, Any?, Any?).
+procedure alice_round3(Any?, Any?).
+procedure alice_wait3(Any?, Any?, Any?).
+procedure alice_round4(Any?).
+procedure alice_wait4(Any?).
+procedure bob(Any?).
+procedure bob_round2(Any?).
+procedure bob_round3(Any?).
+procedure bob_round4(Any?).
 
 %% observe_play.glp - Multi-round protocol between Alice and Bob
 

@@ -1,0 +1,13 @@
+%% ERROR: Wrong mode in counter show response
+%% show(Number?) inside CounterStream?
+%% combine(input, input) = output
+%% At output position expects READER
+%% But State is writer - MODE ERROR
+
+CounterMsg ::= clear ; show(Number?).
+CounterStream ::= [] ; [CounterMsg | CounterStream].
+
+procedure counter(CounterStream?, Number).
+
+counter([show(State)|S], State?) :- number(State?) | counter(S?, State?).
+counter([], _).

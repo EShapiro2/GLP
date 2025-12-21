@@ -1,0 +1,21 @@
+%% INVALID: Embedded mode error - tests involution property
+%% Expected: Mode error due to writer at output position after involution
+%%
+%% Msg? = input mode at top level
+%% Inside request(Number?): embedded input mode
+%% Combined: input ⊕ input = output (involution)
+%% So the Number position expects reader (output mode)
+%% But X is writer → MODE ERROR
+
+Msg ::= request(Number?).
+
+procedure handle(Msg?).
+procedure produce(Number).
+
+%% ERROR: At Msg? position (input mode), inside request(X)
+%% Involution: input ⊕ input = output, so X should be reader
+%% But X is writer → mode error
+%% SRSW: X is writer in head, reader in body ✓
+handle(request(X)) :- produce(X?).
+
+produce(0).

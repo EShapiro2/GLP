@@ -1,0 +1,10 @@
+%%INVALID: Writer at output position in clause head
+%% Should fail mode checking
+
+Nat ::= 0 ; s(Nat).
+
+procedure foo(Nat).
+
+%% ERROR: X is writer but procedure expects output mode (reader)
+%% This is mode-incorrect but SRSW-compliant
+foo(X).

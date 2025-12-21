@@ -1,5 +1,5 @@
 %% Procedure type declarations
-procedure replicate3(Any, Any, Any, Any).
+procedure replicate3(Any?, Any, Any, Any).
 
 %% replicate3.glp - Ternary stream replication
 %% Replicates a stream to three outputs

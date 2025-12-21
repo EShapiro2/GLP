@@ -2,9 +2,9 @@
 FollowerList ::= [] ; [Any | FollowerList].
 
 %% Procedure type declarations
-procedure post(Any, FollowerList, FollowerList).
-procedure broadcast(Any, FollowerList, FollowerList).
-procedure create_post(Any, Number, Any).
+procedure post(Any?, FollowerList?, FollowerList).
+procedure broadcast(Any?, FollowerList?, FollowerList).
+procedure create_post(Any?, Number?, Any).
 procedure current_time(Number).
 
 %% feed.glp - Authenticated Feed Distribution
@@ -14,21 +14,22 @@ procedure current_time(Number).
 %% while maintaining cryptographic proof of authorship.
 
 % Post distribution with attestation preservation
-post(Content, Followers, Followers1) :-
-    ground(Content), current_time(Time) |
+post(Content, Followers, Followers1?) :-
+    ground(Content?), current_time(Time) |
     create_post(Content?, Time?, Post),
     broadcast(Post?, Followers?, Followers1).
 
 broadcast(_, [], []).
-broadcast(Post, [(Name,Out)|Fs], [(Name,[Post|Out1?])|Fs1]) :-
+broadcast(Post, [(Name,Out)|Fs], [(Name?,[Post?|Out?])|Fs1?]) :-
+    ground(Post?) |
     broadcast(Post?, Fs?, Fs1).
 
 % Defined guard for attestation preservation
-preserve_attestation(Post, Author, forward(Author?, Post)).
+preserve_attestation(Post, Author, forward(Author?, Post?)).
 
 % Forward with attestation verification
-forward(Post, Followers, Followers1) :-
-    ground(Post), attestation(Post, att(Author, _)),
+forward(Post, Followers, Followers1?) :-
+    ground(Post?), attestation(Post?, att(Author, _)),
     preserve_attestation(Post?, Author?, Forward) |
     broadcast(Forward?, Followers?, Followers1).
 

@@ -1,7 +1,7 @@
 %% Procedure type declarations
-procedure run(Any, Any).
-procedure reduce(Any, Any).
-procedure observe(Any, Any, Any).
+procedure run(Any?, Any).
+procedure reduce(Any?, Any).
+procedure observe(Any?, Any, Any).
 procedure time(Number).
 
 %% timestamped_tree_meta.glp - Timestamped execution tree metainterpreter

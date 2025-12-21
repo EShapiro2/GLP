@@ -1,0 +1,15 @@
+%% Involution case: combine(input, input) = output
+%% Declaration: consume(Wrapper?) - input
+%% Top-level: input
+%% Inside wrap(Number?): embedded input
+%% combine(input, input) = output
+%% At output position, head expects READER
+%% X? is reader - CORRECT
+
+Wrapper ::= wrap(Number?).
+
+procedure consume(Wrapper?).
+procedure source(Number).
+
+consume(wrap(X?)) :- source(X).
+source(0).

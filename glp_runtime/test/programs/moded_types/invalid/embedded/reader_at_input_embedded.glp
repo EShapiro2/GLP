@@ -1,0 +1,13 @@
+%% ERROR: Reader at input position
+%% Declaration: produce(Wrapper) - output
+%% combine(output, input) = input
+%% At input position, head expects WRITER
+%% But X? is reader - MODE ERROR
+
+Wrapper ::= wrap(Number?).
+
+procedure produce(Wrapper).
+procedure source(Number).
+
+produce(wrap(X?)) :- source(X).
+source(0).

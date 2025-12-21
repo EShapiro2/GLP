@@ -11,6 +11,8 @@ import 'type_ast.dart';
 import 'type_dfa.dart';
 import 'type_compiler.dart';
 import 'type_parser.dart';
+import 'mode_checker.dart';
+import 'mode_error.dart';
 import '../../compiler/ast.dart' as ast;
 
 /// Result of type checking
@@ -76,8 +78,11 @@ class TypeWarning {
 class TypeChecker {
   final TypeEnvironment typeEnv;
   final TypeCompiler compiler;
-  
-  TypeChecker(this.typeEnv) : compiler = TypeCompiler(typeEnv);
+  final ModeChecker modeChecker;
+
+  TypeChecker(this.typeEnv)
+      : compiler = TypeCompiler(typeEnv),
+        modeChecker = ModeChecker(typeEnv);
   
   /// Check a program (list of clauses) against declared types
   TypeCheckResult check(List<ast.Clause> clauses) {
@@ -148,15 +153,25 @@ class TypeChecker {
     
     for (final clause in clauses) {
       final clauseResult = _checkClause(clause, decl, argDFAs);
-      
+
       errors.addAll(clauseResult.errors);
       warnings.addAll(clauseResult.warnings);
-      
+
       if (clauseResult.contribution != null) {
         clauseContributions.add(clauseResult.contribution!);
       }
     }
-    
+
+    // Mode checking: verify reader/writer usage matches type modes
+    final modeErrors = modeChecker.checkProcedure(decl.name, decl.arity, clauses);
+    for (final modeError in modeErrors) {
+      errors.add(TypeError(
+        modeError.message,
+        modeError.line,
+        modeError.column,
+      ));
+    }
+
     // Fixpoint check: union of contributions should equal declared type
     // This is a simplified check - full implementation would compute T_P^α
     if (clauseContributions.isEmpty && clauses.isNotEmpty) {

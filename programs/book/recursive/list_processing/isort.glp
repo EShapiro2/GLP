@@ -2,8 +2,8 @@
 NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure insertion_sort(NumList, NumList).
-procedure insert(Number, NumList, NumList).
+procedure insertion_sort(NumList?, NumList).
+procedure insert(Number?, NumList?, NumList).
 
 %% isort.glp - Insertion sort
 

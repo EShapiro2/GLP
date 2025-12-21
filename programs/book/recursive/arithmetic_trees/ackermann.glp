@@ -2,8 +2,8 @@
 Nat ::= 0 ; s(Nat).
 
 %% Procedure type declarations
-procedure ackermann(Nat, Nat, Nat).
-procedure reduce(Any, Any).
+procedure ackermann(Nat?, Nat?, Nat).
+procedure reduce(Any?, Any).
 
 %% ackermann.glp - Ackermann's function (AoP 3.9)
 %% ackermann(X,Y,A) :- A is the value of Ackermann's function for natural numbers X and Y.

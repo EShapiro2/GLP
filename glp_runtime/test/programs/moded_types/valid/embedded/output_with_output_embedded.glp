@@ -1,0 +1,15 @@
+%% combine(output, output) = output
+%% Declaration: produce(Wrapper) - output
+%% Top-level: output
+%% Inside wrap(Number): embedded output
+%% combine(output, output) = output
+%% At output position, head expects READER
+%% X? is reader - CORRECT
+
+Wrapper ::= wrap(Number).
+
+procedure produce(Wrapper).
+procedure source(Number).
+
+produce(wrap(X?)) :- source(X).
+source(0).

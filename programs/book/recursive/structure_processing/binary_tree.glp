@@ -2,8 +2,8 @@
 Tree ::= void ; tree(Any, Tree, Tree).
 
 %% Procedure type declarations
-procedure binary_tree(Tree).
-procedure reduce(Any, Any).
+procedure binary_tree(Tree?).
+procedure reduce(Any?, Any).
 
 %% binary_tree.glp - Defining binary trees (AoP 3.23)
 %% binary_tree(Tree) :- Tree is a binary tree.

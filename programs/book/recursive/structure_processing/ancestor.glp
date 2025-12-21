@@ -1,7 +1,7 @@
 %% Procedure type declarations
-procedure parent(Any, Any).
-procedure ancestor(Any, Any).
-procedure reduce(Any, Any).
+procedure parent(Any?, Any?).
+procedure ancestor(Any?, Any?).
+procedure reduce(Any?, Any).
 
 %% ancestor.glp - Ancestor relation (AoP 5.1)
 %% ancestor(X,Y) :- X is an ancestor of Y.

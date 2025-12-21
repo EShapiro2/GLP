@@ -3,10 +3,10 @@ List ::= [] ; [Any | List].
 FriendList ::= [] ; [Any | FriendList].
 
 %% Procedure type declarations
-procedure agent(Any, Any, Any).
-procedure merge(List, List, List).
-procedure build_friends(Any, Any, FriendList).
-procedure social_graph(Any, List, FriendList).
+procedure agent(Any?, Any, Any).
+procedure merge(List?, List?, List).
+procedure build_friends(Any?, Any?, FriendList).
+procedure social_graph(Any?, List?, FriendList?).
 
 %% agent_glpsam.glp - Social Graph Agent Initialization (GLPSAM)
 %% GLPSAM simulation version - identical to agent.glp (no attestation in init)

@@ -3,11 +3,11 @@ Tree ::= void ; tree(Any, Tree, Tree).
 AnyList ::= [] ; [Any | AnyList].
 
 %% Procedure type declarations
-procedure preorder(Tree, AnyList).
-procedure inorder(Tree, AnyList).
-procedure postorder(Tree, AnyList).
-procedure append(AnyList, AnyList, AnyList).
-procedure reduce(Any, Any).
+procedure preorder(Tree?, AnyList).
+procedure inorder(Tree?, AnyList).
+procedure postorder(Tree?, AnyList).
+procedure append(AnyList?, AnyList?, AnyList).
+procedure reduce(Any?, Any).
 
 %% traversals.glp - Traversals of a binary tree (AoP 3.27)
 %% preorder(Tree,Pre) :- Pre is a preorder traversal of Tree.

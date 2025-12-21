@@ -2,8 +2,8 @@
 List ::= [] ; [Any | List].
 
 %% Procedure type declarations
-procedure send(Any, Any, Any).
-procedure receive(Any, Any, Any).
+procedure send(Any?, Any?, Any).
+procedure receive(Any, Any?, Any).
 procedure new_channel(Any, Any).
 
 % Channel Operations (Program 9 from GLP 2025 paper)

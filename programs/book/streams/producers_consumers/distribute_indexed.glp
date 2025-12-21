@@ -2,7 +2,7 @@
 List ::= [] ; [Any | List].
 
 %% Procedure type declarations
-procedure distribute_indexed(List, List, List).
+procedure distribute_indexed(List?, List, List).
 
 % Topic: Indexed stream distributor (routing)
 % Section: Streams - Distribution

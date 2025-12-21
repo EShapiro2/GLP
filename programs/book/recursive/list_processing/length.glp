@@ -2,9 +2,9 @@
 List ::= [] ; [Any | List].
 
 %% Procedure type declarations
-procedure length(List, Number).
-procedure length_acc(List, Number, Number).
-procedure reduce(Any, Any).
+procedure length(List?, Number).
+procedure length_acc(List?, Number?, Number).
+procedure reduce(Any?, Any).
 
 %% length.glp - List length with accumulator
 

@@ -1,5 +1,5 @@
 %% Procedure type declarations
-procedure network3(Any, Any, Any).
+procedure network3(Any?, Any, Any).
 
 %% network3.glp - 3-way network switch
 %% Messages are msg(From, To, Content) - switch routes based on To
