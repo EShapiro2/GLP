@@ -141,8 +141,27 @@ class ModeChecker {
     }
 
     // Compound terms: recursively check subterms with embedded modes
-    if (term is ast.StructTerm && typeExpr is StructAlt) {
-      return _checkCompoundMode(term, expectedMode, typeExpr, predicate, argIndex);
+    if (term is ast.StructTerm) {
+      // If typeExpr is a StructAlt, use it directly
+      if (typeExpr is StructAlt) {
+        return _checkCompoundMode(term, expectedMode, typeExpr, predicate, argIndex);
+      }
+
+      // If typeExpr is a TypeRef, resolve it to find the matching constructor
+      if (typeExpr is TypeRef) {
+        final typeDef = typeEnv.getType(typeExpr.name);
+        if (typeDef != null) {
+          // Find matching constructor in type definition
+          for (final alt in typeDef.alternatives) {
+            if (alt is StructAlt &&
+                alt.functor == term.functor &&
+                alt.arity == term.args.length) {
+              // Found matching constructor - check with embedded modes
+              return _checkCompoundMode(term, expectedMode, alt, predicate, argIndex);
+            }
+          }
+        }
+      }
     }
 
     // Constants, lists, etc. - no mode checking needed
