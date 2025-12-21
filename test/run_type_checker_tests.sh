@@ -75,6 +75,24 @@ echo ""
 run_type_check "$TEST_DIR/invalid/structural/body_undeclared_predicate.glp" "pass" "Undeclared predicate (skip checking)"
 
 echo ""
+echo "=== Moded Types - Embedded Mode Errors (should fail) ==="
+echo ""
+
+# Test ListTerm mode checking with embedded modes
+MODED_TEST_DIR="test/programs/moded_types"
+
+run_type_check "$MODED_TEST_DIR/invalid/deep/response_slot_no_embedded.glp" "fail" "Response slot without embedded mode (counter bug)"
+run_type_check "$MODED_TEST_DIR/invalid/deep/nested_struct_wrong_mode.glp" "fail" "Nested structure with wrong mode"
+run_type_check "$MODED_TEST_DIR/invalid/deep/double_nesting_error.glp" "fail" "Triple nesting mode error"
+run_type_check "$MODED_TEST_DIR/invalid/deep/pair_list_wrong_mode.glp" "fail" "List of pairs wrong mode"
+run_type_check "$MODED_TEST_DIR/invalid/deep/channel_wrong_inversion.glp" "fail" "Channel involution wrong mode"
+run_type_check "$MODED_TEST_DIR/invalid/deep/accumulator_wrong_mode.glp" "fail" "Accumulator output mode error"
+run_type_check "$MODED_TEST_DIR/invalid/deep/correct_type_wrong_annotation.glp" "fail" "Correct type wrong variable annotation"
+run_type_check "$MODED_TEST_DIR/invalid/deep/mixed_clauses.glp" "fail" "Mixed correct/incorrect clauses"
+run_type_check "$MODED_TEST_DIR/invalid/deep/recursive_type_deep_error.glp" "fail" "Recursive type deep mode error"
+run_type_check "$MODED_TEST_DIR/invalid/deep/list_tail_mode_error.glp" "fail" "List tail mode error"
+
+echo ""
 echo "=========================================="
 echo "Total: $((PASS + FAIL)) | Passed: $PASS | Failed: $FAIL"
 echo "=========================================="
