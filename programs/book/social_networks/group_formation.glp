@@ -16,7 +16,7 @@ procedure social_graph(Any?, MsgList?, FriendList?).
 procedure send_invitations(FriendList?, Any?, Any?, Any?, FriendList?, FriendList).
 procedure create_group_streams(UserList?, Any).
 procedure lookup(Any?, FriendList?, Any).
-procedure lookup_send(Any?, SocialMsg?, FriendList?, FriendList).
+procedure lookup_send(Any?, Any?, FriendList?, FriendList).
 
 %% group_formation.glp - Group Formation Protocol
 %% Source: GLP Papers (Program: Group Formation Protocol)
@@ -26,7 +26,7 @@ procedure lookup_send(Any?, SocialMsg?, FriendList?, FriendList).
 
 % User creates group with friend list
 social_graph(Id, [msg(user, Id, create_group(Name, Friends))|In], Fs) :-
-    create_group_streams([Id|Friends]?, Streams),
+    create_group_streams([Id|Friends?], Streams),
     send_invitations(Friends?, Id?, Name?, Streams?, Fs?, Fs1),
     social_graph(Id, In?, [((Id,Name), group(admin, Streams?))|Fs1?]).
 
