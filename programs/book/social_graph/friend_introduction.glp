@@ -9,12 +9,12 @@ MsgList ::= [] ; [SocialMsg | MsgList].
 FriendList ::= [] ; [Any | FriendList].
 
 %% Procedure type declarations
-procedure social_graph(Any, MsgList, FriendList).
+procedure social_graph(Any?, MsgList?, FriendList?).
 procedure new_channel(Any, Any).
-procedure lookup_send(Any, Any, FriendList, FriendList).
-procedure tag_stream(Any, MsgList, MsgList).
-procedure merge(MsgList, MsgList, MsgList).
-procedure add_friend(Any, Any, FriendList, FriendList).
+procedure lookup_send(Any?, Any?, FriendList?, FriendList).
+procedure tag_stream(Any?, MsgList?, MsgList).
+procedure merge(MsgList?, MsgList?, MsgList).
+procedure add_friend(Any?, Any?, FriendList?, FriendList).
 
 %% friend_introduction_glpsam.glp - Friend-Mediated Introduction Protocol (GLPSAM)
 %% GLPSAM simulation version - attestation guards removed (assumes correct agents)

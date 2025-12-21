@@ -2,8 +2,8 @@
 NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure merge(NumList, NumList, NumList).
-procedure reduce(Any, Any).
+procedure merge(NumList?, NumList?, NumList).
+procedure reduce(Any?, Any).
 
 %% merge_ordered.glp - Merging ordered lists (AoP 7.2)
 %% merge(Xs,Ys,Zs) :- Zs is an ordered list obtained from merging ordered lists Xs and Ys.

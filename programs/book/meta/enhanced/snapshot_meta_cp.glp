@@ -2,9 +2,9 @@
 List ::= [] ; [Any | List].
 
 %% Procedure type declarations
-procedure run(Any, Any).
-procedure reduce(Any, Any).
-procedure merge(List, List, List).
+procedure run(Any?, Any?).
+procedure reduce(Any?, Any).
+procedure merge(List?, List?, List).
 
 %% snapshot_meta_cp.glp - Snapshot metainterpreter
 %% Source: CP Collected Papers, Ch 25 (Safra & Shapiro)

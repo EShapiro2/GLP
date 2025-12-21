@@ -2,7 +2,7 @@
 List ::= [] ; [Any | List].
 
 %% Procedure type declarations
-procedure merge(List, List, List).
+procedure merge(List?, List?, List).
 
 %% fair_merge.glp - Fair binary stream merger
 %% Source: GLP Papers (Program: GLP Fair Stream Merger)

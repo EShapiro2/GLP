@@ -2,8 +2,8 @@
 List ::= [] ; [Any | List].
 
 %% Procedure type declarations
-procedure observe(Any, Any, Any).
-procedure tag_stream(Any, List, List).
+procedure observe(Any?, Any, Any).
+procedure tag_stream(Any?, List?, List).
 
 % Stream Utilities
 

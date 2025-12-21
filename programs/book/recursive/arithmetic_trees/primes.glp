@@ -2,11 +2,11 @@
 NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure primes(Number, NumList).
-procedure integers(Number, Number, NumList).
-procedure sieve(NumList, NumList).
-procedure filter(NumList, Number, NumList).
-procedure reduce(Any, Any).
+procedure primes(Number?, NumList).
+procedure integers(Number?, Number?, NumList).
+procedure sieve(NumList?, NumList).
+procedure filter(NumList?, Number?, NumList).
+procedure reduce(Any?, Any).
 
 %% primes.glp - Sieve of Eratosthenes in GLP
 %% Source: Standard GLP arithmetic

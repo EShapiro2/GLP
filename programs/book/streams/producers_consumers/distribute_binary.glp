@@ -2,7 +2,7 @@
 List ::= [] ; [Any | List].
 
 %% Procedure type declarations
-procedure distribute_binary(List, List, List).
+procedure distribute_binary(List?, List, List).
 
 %% distribute_binary.glp - Binary address-based distribution
 %% Source: GLP Papers

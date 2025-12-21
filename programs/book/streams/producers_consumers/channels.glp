@@ -8,6 +8,24 @@
 %% NOTE: stream_read/write fixed. Additional SRSW violations remain in read/3, branches/3,
 %% serialize/2, subset/2 - these require deeper analysis of the multistream semantics.
 
+%% Type definitions
+List ::= [] ; [Any | List].
+Channel ::= List ; branch(Channel, Channel).
+
+%% Procedure type declarations
+procedure stream_read(Any, List?, List).
+procedure stream_write(Any?, List, List).
+procedure stream_empty(List?).
+procedure read(Any, Channel?, Channel).
+procedure write(Any?, Channel?, Channel).
+procedure empty(Channel?).
+procedure close(Channel?).
+procedure min(Any, Channel?, Channel).
+procedure branches(Channel?, Channel, Channel).
+procedure serialize(Channel?, List).
+procedure subset(Channel?, Channel?).
+procedure merge(List?, List?, List).
+
 %% Basic stream operations (for comparison)
 stream_read(Message?, [Message|Stream], Stream?).
 stream_write(Message, [Message?|Stream], Stream?).

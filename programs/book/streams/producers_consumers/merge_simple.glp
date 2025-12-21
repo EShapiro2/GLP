@@ -2,7 +2,7 @@
 List ::= [] ; [Any | List].
 
 %% Procedure type declarations
-procedure merge(List, List, List).
+procedure merge(List?, List?, List).
 
 % Topic: Simple fair merge
 % Section: Streams - Simple Fair Merge

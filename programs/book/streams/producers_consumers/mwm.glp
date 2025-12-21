@@ -6,13 +6,13 @@ StreamOfStreams ::= [] ; [StreamCmd | StreamOfStreams].
 MutualRef ::= Any.  % Opaque kernel type
 
 %% Procedure type declarations
-procedure mwm(StreamOfStreams, List).
-procedure mwm_main(StreamOfStreams, MutualRef).
-procedure mwm1(StreamOfStreams, MutualRef, Done, Done).
-procedure mwm_copy(List, MutualRef, Done, Done).
-procedure close_when_done(Done, MutualRef).
-procedure stream_append(Any, MutualRef, MutualRef).
-procedure close_mutual_reference(MutualRef).
+procedure mwm(StreamOfStreams?, List).
+procedure mwm_main(StreamOfStreams?, MutualRef?).
+procedure mwm1(StreamOfStreams?, MutualRef?, Done?, Done).
+procedure mwm_copy(List?, MutualRef?, Done?, Done).
+procedure close_when_done(Done?, MutualRef?).
+procedure stream_append(Any?, MutualRef?, MutualRef).
+procedure close_mutual_reference(MutualRef?).
 
 % mwm/2 - Multiway merge with constant delay
 % In: stream of stream(Xs) terms, may include merge(NewStream)

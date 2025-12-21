@@ -30,6 +30,7 @@ enum TypeTokenType {
   rbracket,      // ]
   pipe,          // |
   comma,         // ,
+  question,      // ? (input mode marker)
   procedure,     // keyword 'procedure'
   unknown,       // Unknown token (skip)
   eof,
@@ -116,6 +117,8 @@ class TypeLexer {
         return TypeToken(TypeTokenType.semicolon, ';', startLine, startColumn);
       case '.':
         return TypeToken(TypeTokenType.dot, '.', startLine, startColumn);
+      case '?':
+        return TypeToken(TypeTokenType.question, '?', startLine, startColumn);
       case ':':
         if (_match(':') && _match('=')) {
           return TypeToken(TypeTokenType.colonColonEq, '::=', startLine, startColumn);
@@ -356,10 +359,14 @@ class TypeParser {
     throw TypeParseError('Expected type alternative', token.line, token.column);
   }
   
-  /// Parse: TypeName
+  /// Parse: TypeName or TypeName?
   TypeRef _parseTypeRef() {
     final token = _consume(TypeTokenType.typeName, 'Expected type name');
-    return TypeRef(token.lexeme, token.line, token.column);
+
+    // Check for ? suffix indicating input mode
+    final isInput = _match(TypeTokenType.question);
+
+    return TypeRef(token.lexeme, token.line, token.column, isInput: isInput);
   }
   
   /// Parse: procedure name(Type1, Type2, ...) .

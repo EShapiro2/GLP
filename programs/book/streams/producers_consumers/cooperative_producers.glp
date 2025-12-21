@@ -9,6 +9,18 @@
 %% for transferring control, enabling round-robin production, priority-based
 %% handover, or dynamic producer pools.
 
+
+%% Type definitions
+List ::= [] ; [Any | List].
+Done ::= done.
+Control ::= control(List, Control).
+
+%% Procedure type declarations
+procedure producer_a(Control?).
+procedure producer_b(Control?).
+procedure handover(Done?, List, Control).
+procedure produce_batch_a(List, List, Done).
+procedure produce_batch_b(List, List, Done).
 producer_a(control(Xs,Next)) :-
     produce_batch_a(Xs,Xs1,Done),
     handover(Done?,Xs1,Next).

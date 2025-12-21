@@ -1,0 +1,13 @@
+%% ERROR: Writer at output position (involution case)
+%% Declaration: consume(Wrapper?) - input
+%% combine(input, input) = output
+%% At output position, head expects READER
+%% But X is writer - MODE ERROR
+
+Wrapper ::= wrap(Number?).
+
+procedure consume(Wrapper?).
+procedure sink(Number?).
+
+consume(wrap(X)) :- sink(X?).
+sink(_).

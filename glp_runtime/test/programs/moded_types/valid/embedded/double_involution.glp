@@ -1,0 +1,16 @@
+%% Double involution: combine(combine(input, input), input) = combine(output, input) = input
+%% Declaration: foo(Outer?) - input
+%% Top-level: input
+%% outer(Inner?): combine(input, input) = output
+%% inner(Number?): combine(output, input) = input
+%% At input position, head expects WRITER
+%% X is writer - CORRECT
+
+Inner ::= inner(Number?).
+Outer ::= outer(Inner?).
+
+procedure foo(Outer?).
+procedure sink(Number?).
+
+foo(outer(inner(X))) :- sink(X?).
+sink(_).

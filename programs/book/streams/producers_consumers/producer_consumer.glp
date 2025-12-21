@@ -2,8 +2,8 @@
 NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure producer(NumList, Number).
-procedure consumer(NumList, Number, Number).
+procedure producer(NumList, Number?).
+procedure consumer(NumList?, Number?, Number?).
 
 % Topic: Producer and consumer
 % Section: Streams - Producers and Consumers

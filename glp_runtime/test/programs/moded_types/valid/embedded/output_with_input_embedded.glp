@@ -1,0 +1,15 @@
+%% combine(output, input) = input
+%% Declaration: produce(Wrapper) - output
+%% Top-level: output
+%% Inside wrap(Number?): embedded input
+%% combine(output, input) = input
+%% At input position, head expects WRITER
+%% X is writer - CORRECT
+
+Wrapper ::= wrap(Number?).
+
+procedure produce(Wrapper).
+procedure sink(Number?).
+
+produce(wrap(X)) :- sink(X?).
+sink(_).

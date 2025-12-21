@@ -4,11 +4,11 @@ RequestList ::= [] ; [Any | RequestList].
 BlockStream ::= [] ; [Any | BlockStream].
 
 %% Procedure type declarations
-procedure get_balance(Any, BalanceList, Number).
-procedure set_balance(Any, Number, BalanceList, BalanceList).
-procedure agent(RequestList, BalanceList, BlockStream).
-procedure handle(Any, BalanceList, BalanceList, Any).
-procedure prepend_blocks(Any, BlockStream, BlockStream).
+procedure get_balance(Any?, BalanceList?, Number).
+procedure set_balance(Any?, Number?, BalanceList?, BalanceList).
+procedure agent(RequestList?, BalanceList?, BlockStream?).
+procedure handle(Any?, BalanceList?, BalanceList, Any).
+procedure prepend_blocks(Any?, BlockStream?, BlockStream).
 
 %% gc.glp - Grassroots Cryptocurrencies
 %% Implementation of Grassroots Flash payment system
