@@ -348,11 +348,11 @@ class TypeParser {
       if (_match(TypeTokenType.rbracket)) {
         return ListNilAlt(token.line, token.column);
       }
-      
-      // List cons: [H | T]
-      final head = _parseTypeRef();
+
+      // List cons: [H | T] where H and T can be TypeRef or PrimitiveModeAlt
+      final head = _parseTypeExprElement();
       _consume(TypeTokenType.pipe, 'Expected "|" in list type');
-      final tail = _parseTypeRef();
+      final tail = _parseTypeExprElement();
       _consume(TypeTokenType.rbracket, 'Expected "]" after list type');
       return ListConsAlt(head, tail, token.line, token.column);
     }
@@ -404,7 +404,22 @@ class TypeParser {
 
     return TypeRef(token.lexeme, token.line, token.column, isInput: isInput);
   }
-  
+
+  /// Parse a type expression element (TypeRef or PrimitiveModeAlt)
+  /// Used in positions that can accept either, like list cons head/tail
+  TypeExpr _parseTypeExprElement() {
+    // Check for primitive mode: _ or _?
+    if (_match(TypeTokenType.underscore)) {
+      final line = _previous().line;
+      final column = _previous().column;
+      final isInput = _match(TypeTokenType.question);
+      return PrimitiveModeAlt(isInput, line, column);
+    }
+
+    // Otherwise expect a type reference
+    return _parseTypeRef();
+  }
+
   /// Parse: procedure name(Type1, Type2, ...) .
   ProcDecl _parseProcDecl() {
     _consume(TypeTokenType.procedure, 'Expected "procedure"');
