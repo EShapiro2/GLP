@@ -34,14 +34,14 @@ agent_loop(MyId, UserCh, NetCh, Friends) :-
 
 agent_loop(MyId, UserCh, NetCh, Friends) :-
     receive(Msg?, NetCh?, NetCh1),
-    Msg = intro(From, Introducer, Resp) |
+    Msg = intro(From, _, Resp?) |
     % Received introduction from network
     send(befriend(From?, Resp), UserCh?, UserCh1),
     agent_loop(MyId?, UserCh1?, NetCh1?, Friends?).
 
 agent_loop(MyId, UserCh, NetCh, Friends) :-
     receive(Msg?, UserCh?, UserCh1),
-    Msg = decision(yes, Target, Resp) |
+    Msg = decision(yes, Target, Resp?) |
     % User accepts befriend request
     new_channel(MyCh, TheirCh),
     Resp = accept(TheirCh?),
@@ -49,14 +49,14 @@ agent_loop(MyId, UserCh, NetCh, Friends) :-
 
 agent_loop(MyId, UserCh, NetCh, Friends) :-
     receive(Msg?, UserCh?, UserCh1),
-    Msg = decision(no, Target, Resp) |
+    Msg = decision(no, _, Resp?) |
     % User rejects befriend request
     Resp = reject,
     agent_loop(MyId?, UserCh1?, NetCh?, Friends?).
 
 agent_loop(MyId, UserCh, NetCh, Friends) :-
     receive(Msg?, UserCh?, UserCh1),
-    Msg = send(Target, Content) |
+    Msg = send(Target, Content), ground(MyId?), ground(Target?) |
     % User wants to send message to friend
     lookup_friend(Target?, Friends?, FriendCh),
     send(msg(MyId?, Target?, Content?), FriendCh?, _),
@@ -64,7 +64,7 @@ agent_loop(MyId, UserCh, NetCh, Friends) :-
 
 % agent_wait_response/6: Waiting for cold-call response
 agent_wait_response(MyId, UserCh, NetCh, Friends, Target, Resp) :-
-    Resp? = accept(Ch) |
+    Resp? = accept(Ch), ground(Target?), ground(Ch?) |
     send(response(accept(Ch?)), UserCh?, UserCh1),
     agent_loop(MyId?, UserCh1?, NetCh?, [(Target?, Ch?)|Friends?]).
 
