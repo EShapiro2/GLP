@@ -2,11 +2,11 @@
 Nat ::= 0 ; s(Nat).
 
 %% Procedure type declarations
-procedure minimum(Nat, Nat, Nat).
-procedure min_check(Nat, Nat, Nat).
-procedure lesseq(Nat, Nat).
-procedure natural_number(Nat).
-procedure reduce(Any, Any).
+procedure minimum(Nat?, Nat?, Nat).
+procedure min_check(Nat?, Nat?, Nat).
+procedure lesseq(Nat?, Nat?).
+procedure natural_number(Nat?).
+procedure reduce(Any?, Any).
 
 %% min.glp - The minimum of two numbers (AoP 3.7)
 %% minimum(N1,N2,Min) :- The minimum of natural numbers N1 and N2 is Min.

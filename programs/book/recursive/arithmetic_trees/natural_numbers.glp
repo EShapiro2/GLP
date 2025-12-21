@@ -2,8 +2,8 @@
 Nat ::= 0 ; s(Nat).
 
 %% Procedure type declarations
-procedure natural_number(Nat).
-procedure reduce(Any, Any).
+procedure natural_number(Nat?).
+procedure reduce(Any?, Any).
 
 %% natural_numbers.glp - Defining the natural numbers (AoP 3.1)
 %% natural_number(X) :- X is a natural number.

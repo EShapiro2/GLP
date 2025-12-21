@@ -3,11 +3,11 @@ Move ::= move(Any, Any).
 MoveList ::= [] ; [Move | MoveList].
 
 %% Procedure type declarations
-procedure hanoi(Number, Any, Any, MoveList).
-procedure hanoi_two(Number, Any, Any, Any, MoveList, MoveList).
-procedure other(Any, Any, Any).
-procedure append(MoveList, MoveList, MoveList).
-procedure reduce(Any, Any).
+procedure hanoi(Number?, Any?, Any?, MoveList).
+procedure hanoi_two(Number?, Any?, Any?, Any?, MoveList, MoveList).
+procedure other(Any?, Any?, Any).
+procedure append(MoveList?, MoveList?, MoveList).
+procedure reduce(Any?, Any).
 
 %% hanoi.glp - Tower of Hanoi in GLP
 %% Source: Standard GLP examples
