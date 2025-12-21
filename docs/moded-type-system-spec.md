@@ -47,6 +47,18 @@ Any ::= _ ; _?.
 (Any)? = Any
 ```
 
+### 2.1.1 Well-Typing at Primitive Modes
+
+The primitive mode types impose a well-typing constraint: a clause is well-typed at a primitive mode position only if it can handle **all** ground terms at that position. This requires a **variable pattern** in the clause head.
+
+| Clause | Type | Well-typed? | Reason |
+|--------|------|-------------|--------|
+| `p(X, Y?).` | `procedure p(_, _?).` | Yes | Variables handle all terms |
+| `p(s(X), Y?).` | `procedure p(_, _?).` | No | Position 1 only produces `s/1` |
+| `p(X, s(Y?)).` | `procedure p(_, _?).` | No | Position 2 only consumes `s/1` |
+
+Since `Any ::= _ | _?`, the constraint applies to `Any` positions as well.
+
 ### 2.2 Moded Type Expressions
 
 Type definitions remain as before (using `::=` syntax):
@@ -137,6 +149,44 @@ procedure server(RequestStream?, State).
 % - get(Value?) → get(Value) : server WRITES response
 % - put(Value) → put(Value?) : server READS provided value
 ```
+
+### 2.6 Type Definition vs Subtype Declaration
+
+Following Yardeni-Shapiro (JLP 1991, Section 7), GLP distinguishes two declaration forms:
+
+| Syntax | Name | Meaning |
+|--------|------|---------|
+| `T ::= S` | Type definition | T **must** handle all terms in S |
+| `T ::< S` | Subtype declaration | T **can** take values from S (escape hatch) |
+
+**Examples with the Herbrand universe:**
+
+| Declaration | Well-typed programs |
+|-------------|---------------------|
+| `T ::= Any` | Only clauses with variable patterns at T positions |
+| `T ::< Any` | Any clause (escape hatch, bypasses checking) |
+
+**Current implementation:** GLP supports only `::=`. The `::< Any` escape is approximated by remote calls (see Section 2.7).
+
+### 2.7 Remote Calls and Polymorphic Moded Types (Future)
+
+The variable-pattern requirement for primitive modes applies to **local procedures** within a module. For **remote calls** of the form `M#G`, where module `M` may be unknown at compile time, this constraint is relaxed.
+
+| Call Type | Any/Primitive constraint | Rationale |
+|-----------|--------------------------|-----------|
+| Local `p(...)` | Variable pattern required | Implementation known |
+| Remote `M#G` | Constructor patterns allowed | Implementation unknown |
+
+Remote calls with `Any` arguments serve as placeholders for future **Polymorphic Moded Type (PMT) interfaces**.
+
+**PMT (Future Work):**
+
+The full PMT system will provide:
+- Module interface declarations with polymorphic type parameters
+- Type instantiation at module boundaries
+- Cross-module type checking via interface contracts
+
+Until PMT is implemented, `Any` in remote call arguments is the sanctioned escape mechanism.
 
 ---
 
