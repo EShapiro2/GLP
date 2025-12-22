@@ -457,9 +457,16 @@ class TypeChecker {
         if (varTypes.containsKey(varName)) {
           final existingType = varTypes[varName]!;
 
-          // If both types have the same start state, they're likely the same type
-          // Skip intersection to avoid DFA sharing issues
-          if (existingType.startState.name != typeAtPosition.startState.name) {
+          // Check if types are compatible (same type, just different representations)
+          if (_areCompatibleTypes(existingType, typeAtPosition)) {
+            // Types are compatible, keep existing (or could intersect for precision)
+            // For built-ins, prefer the direct NumberTypeDFA over _builtin_ states
+            if (typeAtPosition is NumberTypeDFA || typeAtPosition is StringTypeDFA) {
+              varTypes[varName] = typeAtPosition;
+            }
+            // else: keep existing
+          } else {
+            // Different types - must intersect
             final intersected = existingType.intersect(typeAtPosition);
             if (intersected.isEmpty) {
               // Variable has inconsistent types across occurrences
@@ -467,7 +474,6 @@ class TypeChecker {
             }
             varTypes[varName] = intersected;
           }
-          // else: types appear compatible, keep existing
         } else {
           varTypes[varName] = typeAtPosition;
         }
@@ -503,7 +509,42 @@ class TypeChecker {
     // Constants and UnderscoreTerm have no variables
     return true;
   }
-  
+
+  /// Check if two DFAs represent compatible types
+  /// Handles the case where built-in types have different representations:
+  /// - _builtin_Number (from embedded position) vs NumberTypeDFA (direct compilation)
+  /// - Same start state name
+  bool _areCompatibleTypes(TypeDFA type1, TypeDFA type2) {
+    // Same start state → same type
+    if (type1.startState.name == type2.startState.name) {
+      return true;
+    }
+
+    // Both are NumberTypeDFA
+    if (type1 is NumberTypeDFA && type2 is NumberTypeDFA) {
+      return true;
+    }
+
+    // Both are StringTypeDFA
+    if (type1 is StringTypeDFA && type2 is StringTypeDFA) {
+      return true;
+    }
+
+    // One is _builtin_Number, other is NumberTypeDFA
+    if ((type1.startState.name == '_builtin_Number' && type2 is NumberTypeDFA) ||
+        (type1 is NumberTypeDFA && type2.startState.name == '_builtin_Number')) {
+      return true;
+    }
+
+    // One is _builtin_String, other is StringTypeDFA
+    if ((type1.startState.name == '_builtin_String' && type2 is StringTypeDFA) ||
+        (type1 is StringTypeDFA && type2.startState.name == '_builtin_String')) {
+      return true;
+    }
+
+    return false;
+  }
+
   /// Create a DFA that accepts paths reachable from a given state
   TypeDFA _dfaFromState(TypeDFA originalDfa, DFAState fromState) {
     // This creates a DFA with the given state as start state
@@ -512,6 +553,7 @@ class TypeChecker {
       startState: fromState,
       finalStates: originalDfa.finalStates,
       transitions: originalDfa.transitions,
+      anyValueStates: originalDfa.anyValueStates,  // Must preserve anyValueStates
     );
   }
   

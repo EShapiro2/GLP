@@ -192,26 +192,50 @@ class TypeDFA {
   
   /// Compute intersection of two DFAs (product construction)
   TypeDFA intersect(TypeDFA other) {
+    // Same DFA instance: intersection is self
+    if (identical(this, other)) {
+      return this;
+    }
+
+    // Same semantic DFA type (Number ∩ Number = Number, etc.)
+    if (this is NumberTypeDFA && other is NumberTypeDFA) {
+      return this;
+    }
+    if (this is StringTypeDFA && other is StringTypeDFA) {
+      return this;
+    }
+
+    // Handle anyValueStates: if one DFA's start accepts any value,
+    // the intersection is the other (more specific) DFA.
+    // This handles: Any ∩ Number = Number, Every ∩ String = String, etc.
+    if (anyValueStates.contains(startState)) {
+      return other;
+    }
+    if (other.anyValueStates.contains(other.startState)) {
+      return this;
+    }
+
+    // Standard product construction for non-anyValue DFAs
     final newStates = <DFAState>{};
     final newTransitions = <(DFAState, PathElement), DFAState>{};
     final newFinalStates = <DFAState>{};
-    
+
     // Product state naming
     String productName(DFAState a, DFAState b) => '(${a.name},${b.name})';
-    
+
     // BFS to build reachable product states
     final startName = productName(startState, other.startState);
-    final newStart = DFAState(startName, 
+    final newStart = DFAState(startName,
         isFinal: finalStates.contains(startState) && other.finalStates.contains(other.startState));
-    
+
     final queue = Queue<(DFAState, DFAState, DFAState)>();
     final visited = <String, DFAState>{};
-    
+
     visited[startName] = newStart;
     newStates.add(newStart);
     if (newStart.isFinal) newFinalStates.add(newStart);
     queue.add((startState, other.startState, newStart));
-    
+
     // Combined alphabet
     final combinedAlphabet = alphabet.union(other.alphabet);
     
@@ -375,10 +399,13 @@ class NumberTypeDFA extends TypeDFA {
     final sym = path.elements[0].symbol;
     return _isNumeric(sym);
   }
-  
+
   bool _isNumeric(String s) {
     return double.tryParse(s) != null || int.tryParse(s) != null;
   }
+
+  @override
+  bool get isEmpty => false;  // Accepts all numbers (non-empty language)
 }
 
 /// DFA that accepts only strings (for String type)
@@ -396,7 +423,10 @@ class StringTypeDFA extends TypeDFA {
     if (path.length != 1) return false;
     // In practice, strings would be marked distinctly
     // For now, any quoted value
-    return path.elements[0].symbol.startsWith('"') || 
+    return path.elements[0].symbol.startsWith('"') ||
            path.elements[0].symbol.startsWith("'");
   }
+
+  @override
+  bool get isEmpty => false;  // Accepts all strings (non-empty language)
 }
