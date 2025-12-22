@@ -8,6 +8,7 @@
 // - Transitions correspond to functor/arg-position pairs
 // - Final states mark complete terms
 
+import 'mode.dart';
 import 'type_ast.dart';
 import 'type_dfa.dart';
 
@@ -75,9 +76,9 @@ class TypeCompiler {
     states.add(finalState);
     stateMap['_FINAL_'] = finalState;
     
-    // Build transitions and track any-value states
+    // Build transitions and track primitive state modes
     final transitions = <(DFAState, PathElement), DFAState>{};
-    final anyValueStates = <DFAState>{};
+    final primitiveStateModes = <DFAState, Set<Mode>>{};
 
     for (final typeName in reachableTypes) {
       final def = env.getType(typeName);
@@ -86,7 +87,7 @@ class TypeCompiler {
       final state = stateMap[typeName]!;
 
       for (final alt in def.alternatives) {
-        _addTransitionsForAlt(state, alt, stateMap, transitions, finalState, anyValueStates);
+        _addTransitionsForAlt(state, alt, stateMap, transitions, finalState, primitiveStateModes);
       }
     }
 
@@ -95,7 +96,7 @@ class TypeCompiler {
       startState: stateMap[typeDef.name]!,
       finalStates: {finalState},
       transitions: transitions,
-      anyValueStates: anyValueStates,
+      primitiveStateModes: primitiveStateModes,
     );
   }
   
@@ -144,11 +145,15 @@ class TypeCompiler {
     Map<String, DFAState> stateMap,
     Map<(DFAState, PathElement), DFAState> transitions,
     DFAState finalState,
-    Set<DFAState> anyValueStates,
+    Map<DFAState, Set<Mode>> primitiveStateModes,
   ) {
     if (alt is PrimitiveModeAlt) {
-      // Primitive mode: mark state as any-value, don't create transitions
-      anyValueStates.add(fromState);
+      // Primitive mode: mark state with its mode, make it accepting
+      final mode = alt.isInput ? Mode.input : Mode.output;
+      primitiveStateModes[fromState] =
+          (primitiveStateModes[fromState] ?? <Mode>{})..add(mode);
+      // Primitive states are final (accepting)
+      // Note: finalState set management happens in caller
       return;
 
     } else if (alt is ConstantAlt) {

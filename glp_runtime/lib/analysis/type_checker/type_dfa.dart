@@ -8,6 +8,8 @@
 
 import 'dart:collection';
 
+import 'mode.dart';
+
 /// A path element in term tree traversal
 /// Format: functor(arity, argIndex) or constant
 class PathElement {
@@ -97,7 +99,17 @@ class TypeDFA {
   final DFAState startState;
   final Set<DFAState> finalStates;
   final Map<(DFAState, PathElement), DFAState> transitions;
-  final Set<DFAState> anyValueStates;  // States that accept any value (from _ or _?)
+
+  /// Mode information at primitive type states.
+  ///
+  /// A state appears in this map iff it corresponds to a primitive type
+  /// position (_ or _?) in a type definition:
+  /// - {Mode.output} for _ (program produces value)
+  /// - {Mode.input} for _? (program consumes value)
+  /// - {Mode.output, Mode.input} for Every ::= _ ; _?
+  ///
+  /// States not in this map are structural (non-primitive) positions.
+  final Map<DFAState, Set<Mode>> primitiveStateModes;
 
   /// Alphabet: all path elements that appear in transitions
   late final Set<PathElement> alphabet;
@@ -107,10 +119,18 @@ class TypeDFA {
     required this.startState,
     required this.finalStates,
     required this.transitions,
-    Set<DFAState>? anyValueStates,
-  }) : anyValueStates = anyValueStates ?? {} {
+    Map<DFAState, Set<Mode>>? primitiveStateModes,
+  }) : primitiveStateModes = primitiveStateModes ?? {} {
     alphabet = transitions.keys.map((k) => k.$2).toSet();
   }
+
+  /// Check if state is a primitive type position
+  bool isPrimitiveState(DFAState state) =>
+      primitiveStateModes.containsKey(state);
+
+  /// Get accepted modes at a primitive state (empty for non-primitive)
+  Set<Mode> getModesAt(DFAState state) =>
+      primitiveStateModes[state] ?? {};
 
   /// Create DFA accepting empty language (no strings accepted)
   factory TypeDFA.empty() {
@@ -143,8 +163,8 @@ class TypeDFA {
   bool acceptsPath(TermPath path) {
     var current = startState;
 
-    // Check if start state is any-value (accepts any structure)
-    if (anyValueStates.contains(current)) {
+    // Check if start state is primitive (accepts any structure at this position)
+    if (isPrimitiveState(current)) {
       return true;
     }
 
@@ -153,8 +173,8 @@ class TypeDFA {
       if (next == null) return false;
       current = next;
 
-      // If we reach an any-value state, stop descent and accept
-      if (anyValueStates.contains(current)) {
+      // If we reach a primitive state, stop descent and accept
+      if (isPrimitiveState(current)) {
         return true;
       }
     }
@@ -171,8 +191,8 @@ class TypeDFA {
   DFAState? stateAfterPath(TermPath path) {
     var current = startState;
 
-    // If start state is any-value, return it (stop descent)
-    if (anyValueStates.contains(current)) {
+    // If start state is primitive, return it (stop descent)
+    if (isPrimitiveState(current)) {
       return current;
     }
 
@@ -181,8 +201,8 @@ class TypeDFA {
       if (next == null) return null;
       current = next;
 
-      // If we reach an any-value state, return it (stop descent)
-      if (anyValueStates.contains(current)) {
+      // If we reach a primitive state, return it (stop descent)
+      if (isPrimitiveState(current)) {
         return current;
       }
     }
@@ -235,24 +255,34 @@ class TypeDFA {
       return TypeDFA.empty();
     }
 
-    // Handle anyValueStates: if one DFA has any anyValue states,
-    // it can accept any value, so the intersection is the other (more specific) DFA.
-    // This handles: Any ∩ Number = Number, Every ∩ String = String, etc.
-    // Note: For Any ::< Every, the start state is 'Any' but 'Every' is in anyValueStates
-    if (anyValueStates.isNotEmpty) {
-      return other;
-    }
-    if (other.anyValueStates.isNotEmpty) {
-      return this;
-    }
-
-    // Standard product construction for non-anyValue DFAs
+    // Standard product construction with mode intersection
     final newStates = <DFAState>{};
     final newTransitions = <(DFAState, PathElement), DFAState>{};
     final newFinalStates = <DFAState>{};
+    final newPrimitiveStateModes = <DFAState, Set<Mode>>{};
 
     // Product state naming
     String productName(DFAState a, DFAState b) => '(${a.name},${b.name})';
+
+    // Compute mode intersection for product state
+    void computeModesForProduct(DFAState state1, DFAState state2, DFAState productState) {
+      final modes1 = getModesAt(state1);
+      final modes2 = other.getModesAt(state2);
+
+      // If both states are primitive, intersect their mode sets
+      if (modes1.isNotEmpty && modes2.isNotEmpty) {
+        final intersectedModes = modes1.intersection(modes2);
+        if (intersectedModes.isNotEmpty) {
+          newPrimitiveStateModes[productState] = intersectedModes;
+        }
+      }
+      // If only one is primitive, use its modes
+      else if (modes1.isNotEmpty) {
+        newPrimitiveStateModes[productState] = modes1;
+      } else if (modes2.isNotEmpty) {
+        newPrimitiveStateModes[productState] = modes2;
+      }
+    }
 
     // BFS to build reachable product states
     final startName = productName(startState, other.startState);
@@ -265,6 +295,7 @@ class TypeDFA {
     visited[startName] = newStart;
     newStates.add(newStart);
     if (newStart.isFinal) newFinalStates.add(newStart);
+    computeModesForProduct(startState, other.startState, newStart);
     queue.add((startState, other.startState, newStart));
 
     // Combined alphabet
@@ -287,6 +318,7 @@ class TypeDFA {
             visited[nextName] = nextProduct;
             newStates.add(nextProduct);
             if (isFinal) newFinalStates.add(nextProduct);
+            computeModesForProduct(next1, next2, nextProduct);
             queue.add((next1, next2, nextProduct));
           }
           
@@ -300,6 +332,7 @@ class TypeDFA {
       startState: newStart,
       finalStates: newFinalStates,
       transitions: newTransitions,
+      primitiveStateModes: newPrimitiveStateModes,
     );
   }
   
@@ -317,9 +350,8 @@ class TypeDFA {
   
   /// Check if DFA language is empty
   bool get isEmpty {
-    // If we have anyValue states, language is non-empty (accepts all values)
-    // This handles types like Any ::< Every where "Every" is anyValue
-    if (anyValueStates.isNotEmpty) {
+    // If we have primitive states, language is non-empty (accepts all values at those positions)
+    if (primitiveStateModes.isNotEmpty) {
       return false;
     }
 

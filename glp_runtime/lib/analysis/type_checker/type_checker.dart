@@ -553,7 +553,7 @@ class TypeChecker {
       startState: fromState,
       finalStates: originalDfa.finalStates,
       transitions: originalDfa.transitions,
-      anyValueStates: originalDfa.anyValueStates,  // Must preserve anyValueStates
+      primitiveStateModes: originalDfa.primitiveStateModes,  // Must preserve mode information
     );
   }
   

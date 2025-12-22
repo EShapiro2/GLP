@@ -140,38 +140,38 @@ SmallNat ::< 0.
 
       final anyDFA = compiler.compile('Any');
 
-      expect(anyDFA.anyValueStates, isNotEmpty);
-      expect(anyDFA.anyValueStates.contains(anyDFA.startState), isTrue);
+      expect(anyDFA.primitiveStateModes, isNotEmpty);
+      expect(anyDFA.isPrimitiveState(anyDFA.startState), isTrue);
     });
 
-    test('Type with primitive mode creates any-value state', () {
+    test('Type with primitive mode creates primitive state', () {
       final source = 'MyType ::= _.';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
 
       final dfa = compiler.compile('MyType');
 
-      expect(dfa.anyValueStates, isNotEmpty);
+      expect(dfa.primitiveStateModes, isNotEmpty);
     });
 
-    test('Type with both primitive modes creates any-value state', () {
+    test('Type with both primitive modes creates primitive state', () {
       final source = 'Universal ::= _ ; _?.';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
 
       final dfa = compiler.compile('Universal');
 
-      expect(dfa.anyValueStates, isNotEmpty);
+      expect(dfa.primitiveStateModes, isNotEmpty);
     });
 
-    test('Structural type does not create any-value states', () {
+    test('Structural type does not create primitive states', () {
       final source = 'Nat ::= 0 ; s(Nat).';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
 
       final dfa = compiler.compile('Nat');
 
-      expect(dfa.anyValueStates, isEmpty);
+      expect(dfa.primitiveStateModes, isEmpty);
     });
   });
 
