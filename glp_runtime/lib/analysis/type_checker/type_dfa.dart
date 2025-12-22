@@ -255,6 +255,22 @@ class TypeDFA {
       return TypeDFA.empty();
     }
 
+    // Handle primitive type (with modes) ∩ semantic type
+    // Any ∩ Number = Number, Every ∩ String = String, etc.
+    // If this has primitive states and other is semantic, return semantic (more specific)
+    if (primitiveStateModes.isNotEmpty && other is NumberTypeDFA) {
+      return other;
+    }
+    if (primitiveStateModes.isNotEmpty && other is StringTypeDFA) {
+      return other;
+    }
+    if (other.primitiveStateModes.isNotEmpty && this is NumberTypeDFA) {
+      return this;
+    }
+    if (other.primitiveStateModes.isNotEmpty && this is StringTypeDFA) {
+      return this;
+    }
+
     // Standard product construction with mode intersection
     final newStates = <DFAState>{};
     final newTransitions = <(DFAState, PathElement), DFAState>{};
