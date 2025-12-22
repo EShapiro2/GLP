@@ -80,15 +80,6 @@ void main() {
             reason: 'ground(X?) certifies X has no unbound vars');
       });
 
-      test('ground(X?) covers all mode alternatives', () {
-        final result = checkTypes('''
-          procedure echo(Every?, Every).
-          echo(X, Y?) :- ground(X?) | Y = X?.
-        ''');
-        expect(result.errors, isEmpty,
-            reason: 'ground(X?) satisfies both _ and _? coverage');
-      });
-
       test('number guard implies ground for multiple use', () {
         final result = checkTypes('''
           procedure compute(Any?, Number, Number).
@@ -110,14 +101,54 @@ void main() {
             reason: 'known does not satisfy mode coverage');
       });
 
-      test('ground on nested structure covers nested modes', () {
+      test('POSITIVE: ground on type without mode complementations', () {
         final result = checkTypes('''
-          EveryList ::= [Every | EveryList] ; [].
-          procedure process(EveryList?, Any).
-          process(L, X?) :- ground(L?) | member(X, L?).
+          MyList ::= [] ; [_ | MyList].
+
+          procedure broadcast(MyList?, Any, Any).
+
+          broadcast(X, Y?, Z?) :- ground(X?) | Y = ok, Z = ok.
         ''');
         expect(result.errors, isEmpty,
-            reason: 'ground(L?) covers all nested Every positions');
+            reason: 'MyList has no mode complementations, ground(X?) is WMT');
+      });
+
+      test('NEGATIVE: ground on type with mode complementations', () {
+        final result = checkTypes('''
+          MyList ::= [] ; [_ | MyList].
+          MyDiffList ::= MyList \\ MyList?.
+
+          procedure bad(MyDiffList?, Any).
+
+          bad(X, Y?) :- ground(X?) | Y = ok.
+        ''');
+        expect(result.errors, isNotEmpty,
+            reason: 'MyDiffList has mode complementation (MyList?), ground(X?) is not WMT');
+      });
+
+      test('POSITIVE: ground on Nat (no mode complementations)', () {
+        final result = checkTypes('''
+          Nat ::= 0 ; s(Nat).
+
+          procedure check(Nat?, Any).
+
+          check(X, Y?) :- ground(X?) | Y = ok.
+        ''');
+        expect(result.errors, isEmpty,
+            reason: 'Nat has no mode complementations');
+      });
+
+      test('NEGATIVE: ground on Channel (has mode complementations)', () {
+        final result = checkTypes('''
+          MyStream ::< Any.
+          MyChannel ::= ch(MyStream?, MyStream).
+
+          procedure bad(MyChannel?, Any).
+
+          bad(X, Y?) :- ground(X?) | Y = ok.
+        ''');
+        expect(result.errors, isNotEmpty,
+            reason: 'MyChannel has mode complementation (MyStream?)');
       });
 
     });

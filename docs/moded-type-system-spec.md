@@ -864,32 +864,49 @@ For each guard G in clause C:
       Report error: "Guard type inconsistent with pattern type"
 ```
 
-### 7.3 Ground Guards and Mode Coverage
+### 7.3 Ground Guards
 
-The `ground(X?)` guard has special significance for mode checking.
+#### 7.3.1 Moded Type Without Mode Complementations
 
-**Syntactic Requirement:** Ground guards MUST be called with a reader variable:
-- `ground(X?)` — valid (reader variable)
-- `ground(X)` — syntax error (writer variable not permitted)
+A moded type definition `T ::= S` has **no mode complementations** if the symbol `?` does not appear in `S`.
 
-This is because `ground/1` tests whether a value IS ground, which requires reading it. A writer variable has no value to test.
-
-When `ground(X?)` succeeds:
-
-1. X contains no unbound variables
-2. All nested positions within X are fully determined
-3. No mode inversions can occur within X's structure
-
-**Consequence:** Variables protected by `ground/1` (or other ground-implying guards) satisfy all mode coverage requirements. A clause with `ground(X?)` in its guard contributes both writer and reader coverage for all nested positions within X.
-
+**Examples - No mode complementations:**
+```glp
+List ::= [] ; [_ | List].
+Nat ::= 0 ; s(Nat).
 ```
-groundVars := variables occurring in ground-implying guards
 
-For mode coverage at position P:
-  If term at P is variable V and V ∈ groundVars:
-    hasWriter := true
-    hasReader := true  // Ground covers both modes
+**Examples - Has mode complementations:**
+```glp
+DiffList ::= List \ List?.
+Channel ::= ch(Stream?, Stream).
 ```
+
+#### 7.3.2 Well-Moded-Typed Ground Guard
+
+A guard `ground(X?)` is **well-moded-typed (WMT)** if the moded type of X has no mode complementations.
+
+**Example - WMT ground guard:**
+```glp
+List ::= [] ; [_ | List].
+
+procedure broadcast(List?, List, List).
+broadcast(X, Y, Z) :- ground(X?) |
+    send(X?, Y),
+    send(X?, Z).
+```
+
+The guard `ground(X?)` is WMT because `List` has no mode complementations.
+
+**Example - Ill-typed ground guard:**
+```glp
+DiffList ::= List \ List?.
+
+procedure bad(DiffList?).
+bad(X) :- ground(X?) | process(X?).
+```
+
+The guard `ground(X?)` is **not** WMT because `DiffList` has a mode complementation (`List?`).
 
 ### 7.4 Defined Guards
 
@@ -1096,9 +1113,11 @@ This implementation follows the theory developed in "Moded Types for Grassroots 
   - Renamed examples from AnyList to EveryList
   - Added "Why Standard List Has No Coverage Requirement" subsection
 - **FIXED** Section 6.4: Renamed to "Mode Coverage Check for Every Positions"
-- **CLARIFIED** Section 7.3: Ground guards require reader variable syntax
-  - `ground(X?)` valid, `ground(X)` syntax error
-  - Reason: testing groundness requires reading the value
+- **REVISED** Section 7.3: Ground Guards aligned with paper formalization
+  - Introduced "moded type without mode complementations" (no `?` in definition)
+  - Well-Moded-Typed (WMT) ground guard: `ground(X?)` is WMT iff type of X has no mode complementations
+  - Removed incorrect "ground guards satisfy mode coverage" semantics
+  - Added examples: `List` (no complementations) vs `DiffList` (has `List?` complementation)
 - **Clarification:** Mode coverage applies only to `::=` types with primitive mode alternatives, not to `::< ` subtypes
 
 ### v1.5 (2025-12-22)

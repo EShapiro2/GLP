@@ -186,16 +186,6 @@ any_single(X).
       expect(result.errors, isEmpty, reason: 'Any ::< Every has no coverage requirement');
     });
 
-    test('POSITIVE: ground guard satisfies Every coverage', () {
-      final source = '''
-procedure grounded(Every).
-
-grounded(X?) :- ground(X?) | true.
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'ground(X?) covers both modes');
-    });
-
     // === NEGATIVE CONTROLS ===
 
     test('NEGATIVE: Every with single clause - incomplete coverage', () {
