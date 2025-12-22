@@ -279,7 +279,9 @@ class TypeChecker {
       }
 
       // Collect variable types from pattern
-      if (!_inferVariableTypes(arg, argDFA, varTypes, TermPath.empty())) {
+      final declaredMode = decl.argTypes[i].isInput ? Mode.input : Mode.output;
+      if (!_inferVariableTypes(arg, argDFA, varTypes, TermPath.empty(),
+          declaredMode, true)) {
         errors.add(TypeError(
           'Variable has inconsistent types across occurrences in clause head',
           clause.line, clause.column, clause.toString()
@@ -445,7 +447,9 @@ class TypeChecker {
     ast.Term term,
     TypeDFA dfa,
     Map<String, TypeDFA> varTypes,
-    TermPath pathToHere
+    TermPath pathToHere,
+    Mode declaredArgMode,  // Mode from procedure declaration
+    bool isHeadPosition,   // true for head, false for body goals
   ) {
     if (term is ast.VarTerm) {
       // Variable at this position gets the type reachable from current DFA state
@@ -453,10 +457,36 @@ class TypeChecker {
       if (state != null) {
         // Check mode at primitive positions
         if (dfa.isPrimitiveState(state)) {
-          final acceptedModes = dfa.getModesAt(state);
-          final varMode = term.isReader ? Mode.input : Mode.output;
+          final primitiveModes = dfa.getModesAt(state);
 
-          if (!acceptedModes.contains(varMode)) {
+          // For head positions, apply call boundary complementation
+          // Callee sees complement of what caller declares
+          final effectiveParentMode = isHeadPosition
+              ? declaredArgMode.complement
+              : declaredArgMode;
+
+          // Combine parent mode with primitive type's mode
+          // If parent is input, embedded mode is complemented
+          Mode combineModeFn(Mode parent, Mode embedded) {
+            return parent == Mode.input ? embedded.complement : embedded;
+          }
+
+          // The primitive modes tell us what the TYPE position accepts
+          // We need to check if ANY primitive mode, when combined, matches the variable
+          bool modeOK = false;
+          for (final primitiveMode in primitiveModes) {
+            final combinedMode = combineModeFn(effectiveParentMode, primitiveMode);
+            // At combined INPUT position, expect WRITER (output variable)
+            // At combined OUTPUT position, expect READER (input variable)
+            final expectedVarMode = combinedMode == Mode.input ? Mode.output : Mode.input;
+            final actualVarMode = term.isReader ? Mode.input : Mode.output;
+            if (actualVarMode == expectedVarMode) {
+              modeOK = true;
+              break;
+            }
+          }
+
+          if (!modeOK) {
             // Mode error at primitive position - reject this clause
             return false;
           }
@@ -496,7 +526,8 @@ class TypeChecker {
         final newPath = pathToHere.append(
           PathElement.functor(term.functor, term.arity, i + 1)
         );
-        if (!_inferVariableTypes(term.args[i], dfa, varTypes, newPath)) {
+        if (!_inferVariableTypes(term.args[i], dfa, varTypes, newPath,
+            declaredArgMode, isHeadPosition)) {
           return false;  // Propagate failure
         }
       }
@@ -505,13 +536,15 @@ class TypeChecker {
       if (!term.isNil) {
         if (term.head != null) {
           if (!_inferVariableTypes(term.head!, dfa, varTypes,
-              pathToHere.append(PathElement.listHead()))) {
+              pathToHere.append(PathElement.listHead()),
+              declaredArgMode, isHeadPosition)) {
             return false;
           }
         }
         if (term.tail != null) {
           if (!_inferVariableTypes(term.tail!, dfa, varTypes,
-              pathToHere.append(PathElement.listTail()))) {
+              pathToHere.append(PathElement.listTail()),
+              declaredArgMode, isHeadPosition)) {
             return false;
           }
         }
@@ -609,7 +642,9 @@ class TypeChecker {
       }
 
       // Infer/constrain variable types from body occurrence
-      if (!_inferVariableTypes(arg, argDFA, varTypes, TermPath.empty())) {
+      final declaredMode = procDecl.argTypes[i].isInput ? Mode.input : Mode.output;
+      if (!_inferVariableTypes(arg, argDFA, varTypes, TermPath.empty(),
+          declaredMode, false)) {
         errors.add(TypeError(
           'Variable has inconsistent types between head and body goal ${goal.functor}/${goal.arity}',
           goal.line, goal.column,
