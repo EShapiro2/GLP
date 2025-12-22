@@ -205,13 +205,44 @@ class TypeDFA {
       return this;
     }
 
-    // Handle anyValueStates: if one DFA's start accepts any value,
-    // the intersection is the other (more specific) DFA.
-    // This handles: Any ∩ Number = Number, Every ∩ String = String, etc.
-    if (anyValueStates.contains(startState)) {
+    // Handle NumberTypeDFA vs _builtin_Number state
+    if (this is NumberTypeDFA && other.startState.name == '_builtin_Number') {
+      return this;
+    }
+    if (other is NumberTypeDFA && startState.name == '_builtin_Number') {
       return other;
     }
-    if (other.anyValueStates.contains(other.startState)) {
+
+    // Handle StringTypeDFA vs _builtin_String state
+    if (this is StringTypeDFA && other.startState.name == '_builtin_String') {
+      return this;
+    }
+    if (other is StringTypeDFA && startState.name == '_builtin_String') {
+      return other;
+    }
+
+    // Handle incompatible built-in types
+    if (this is NumberTypeDFA && other.startState.name == '_builtin_String') {
+      return TypeDFA.empty();
+    }
+    if (this is StringTypeDFA && other.startState.name == '_builtin_Number') {
+      return TypeDFA.empty();
+    }
+    if (other is NumberTypeDFA && startState.name == '_builtin_String') {
+      return TypeDFA.empty();
+    }
+    if (other is StringTypeDFA && startState.name == '_builtin_Number') {
+      return TypeDFA.empty();
+    }
+
+    // Handle anyValueStates: if one DFA has any anyValue states,
+    // it can accept any value, so the intersection is the other (more specific) DFA.
+    // This handles: Any ∩ Number = Number, Every ∩ String = String, etc.
+    // Note: For Any ::< Every, the start state is 'Any' but 'Every' is in anyValueStates
+    if (anyValueStates.isNotEmpty) {
+      return other;
+    }
+    if (other.anyValueStates.isNotEmpty) {
       return this;
     }
 
