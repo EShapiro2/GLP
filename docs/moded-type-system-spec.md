@@ -504,58 +504,111 @@ The choice depends on intended semantics: does the procedure genuinely need to h
 
 ## 5. Moded Type DFA
 
-### 5.1 Extension to TypeDFA
+### 5.1 Moded Paths
+
+Following the paper (Definition 6.15), a **moded path** is a path together with the mode annotation at its leaf:
 
 ```dart
-class ModedTypeDFA extends TypeDFA {
-  /// Mode annotation for each state
-  final Map<String, Mode> stateModes;
+/// A path with mode annotation at the leaf
+class ModedPath {
+  final List<PathElement> steps;
+  final Mode mode;  // Mode at leaf position
 
-  ModedTypeDFA({
-    required super.states,
-    required super.startState,
-    required super.finalStates,
-    required super.transitions,
-    required this.stateModes,
-  });
-
-  /// Get mode at a given state
-  Mode getModeAt(String state) => stateModes[state] ?? Mode.output;
-
-  /// Check if a term matches with correct modes
-  bool acceptsWithModes(Term t, Map<String, Mode> varModes);
-
-  /// Extract moded paths from this DFA
-  Set<ModedPath> modedPaths();
+  ModedPath(this.steps, this.mode);
 }
 ```
 
-### 5.2 Compiling Moded Types to DFA
+A moded type is characterized by its set of moded paths: `paths^m(S)`.
 
-The compilation extends the unmoded case:
+### 5.2 Primitive State Modes
 
-1. **Parse type definition** → TypeDef with alternatives
-2. **Build state machine** → states for each type name + constructors
-3. **Annotate states with modes** → track mode at each position
-4. **Handle mode complementation** → when following `Type?` reference
+The type DFA tracks mode information at **primitive type positions** (`_` and `_?`). Non-primitive positions are purely structural.
 
 ```dart
-class ModedTypeCompiler {
-  final TypeEnvironment env;
+class TypeDFA {
+  final Set<DFAState> states;
+  final DFAState startState;
+  final Set<DFAState> finalStates;
+  final Map<(DFAState, PathElement), DFAState> transitions;
 
-  ModedTypeDFA compile(TypeRef typeRef) {
-    final baseDFA = compileUnmodedType(typeRef.name);
-    return annotateWithModes(baseDFA, typeRef.isInput);
-  }
+  /// Mode information at primitive type states.
+  ///
+  /// A state appears in this map iff it corresponds to a primitive type
+  /// position (_ or _?) in a type definition:
+  /// - {Mode.output} for _ (program produces value)
+  /// - {Mode.input} for _? (program consumes value)
+  /// - {Mode.output, Mode.input} for Every ::= _ ; _?
+  ///
+  /// States not in this map are structural (non-primitive) positions.
+  final Map<DFAState, Set<Mode>> primitiveStateModes;
 
-  ModedTypeDFA annotateWithModes(TypeDFA dfa, bool isInput) {
-    final stateModes = <String, Mode>{};
-    // Traverse DFA, tracking mode through transitions
-    // Apply complementation when entering Type? references
-    ...
-  }
+  /// Check if state is a primitive type position
+  bool isPrimitiveState(DFAState state) => primitiveStateModes.containsKey(state);
+
+  /// Get accepted modes at a primitive state (empty for non-primitive)
+  Set<Mode> getModesAt(DFAState state) => primitiveStateModes[state] ?? {};
 }
 ```
+
+### 5.3 Compiling Primitive Types
+
+When compiling a type definition to DFA:
+
+| Type alternative | `primitiveStateModes` entry |
+|-----------------|----------------------------|
+| `_` | `{Mode.output}` |
+| `_?` | `{Mode.input}` |
+| `Every ::= _ ; _?` | `{Mode.output, Mode.input}` |
+| `Any ::< Every` | `{Mode.output, Mode.input}` (inherited) |
+| Non-primitive | Not in map |
+
+```dart
+void _compileAlternative(DFAState state, TypeExpr alt) {
+  if (alt is PrimitiveModeAlt) {
+    final mode = alt.isInput ? Mode.input : Mode.output;
+    primitiveStateModes[state] =
+        (primitiveStateModes[state] ?? <Mode>{})..add(mode);
+    finalStates.add(state);  // Primitive positions are accepting
+    return;
+  }
+  // ... handle constructors, type references, etc.
+}
+```
+
+### 5.4 Accepting Moded Paths
+
+A DFA accepts moded path `(ξ, m)` iff:
+1. Path `ξ` leads from start state to a final state `q`, AND
+2. Either `q` is not primitive, OR `m ∈ primitiveStateModes[q]`
+
+```dart
+bool acceptsModedPath(ModedPath path) {
+  var current = startState;
+  for (final elem in path.steps) {
+    final next = transitions[(current, elem)];
+    if (next == null) return false;
+    current = next;
+  }
+
+  if (!finalStates.contains(current)) return false;
+
+  // At primitive positions, verify mode is accepted
+  if (isPrimitiveState(current)) {
+    return getModesAt(current).contains(path.mode);
+  }
+  return true;
+}
+```
+
+### 5.5 Mode Computation During Traversal
+
+During type checking, mode is computed while traversing term and type in parallel:
+
+1. Start with declared mode from procedure declaration
+2. At each type reference `T` or `T?`, apply `combineMode`
+3. At primitive positions, verify variable mode ∈ accepted modes
+
+This integrates mode checking with type checking — they are not separate passes.
 
 ---
 
