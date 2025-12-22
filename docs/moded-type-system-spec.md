@@ -1,7 +1,7 @@
-# GLP Moded Type System Specification (v1.1)
+# GLP Moded Type System Specification (v1.2)
 
-**Updated:** 2025-12-21
-**Change:** Added Section 4.4 on mode coverage for union types with List Copy example
+**Updated:** 2025-12-22
+**Change:** Added Section 7 on Guards and Type Inference with bidirectional channels example
 
 ## 1. Overview
 
@@ -449,6 +449,17 @@ For each procedure p/n with declared moded type (T₁^m₁, ..., Tₙ^mₙ):
         occurrenceTypes.add(type at position)
       varTypes[Y] := intersect(occurrenceTypes)
 
+    // Step 2.5: Apply guard constraints
+    For each guard G in C:
+      Extract type constraints from G's signature
+      For each variable X constrained by G:
+        varTypes[X] := varTypes[X] ∩ guardType(G, X)
+        If varTypes[X] = ∅:
+          Report error: "Guard inconsistent with pattern type"
+
+      If G implies groundness for variable X:
+        Mark X as recursively ground (covers all mode alternatives)
+
     // Step 3: Check head variable modes
     For each variable Y in head:
       expectedMode := mode at head position from declaration
@@ -574,9 +585,122 @@ List<ModeError> checkModeCoverage(
 
 ---
 
-## 7. Error Messages
+## 7. Guards and Type Inference
 
-### 7.1 Mode Errors
+Guards provide type and mode information that constrains variable types within a clause.
+
+### 7.1 Built-in Guard Signatures
+
+Built-in guards have known type signatures:
+
+| Guard | Argument Types | Implies Ground |
+|-------|---------------|----------------|
+| `number(X?)` | (Number) | Yes |
+| `integer(X?)` | (Number) | Yes |
+| `string(X?)` | (String) | Yes |
+| `ground(X?)` | (Any) | Yes (recursively) |
+| `known(X?)` | (Any) | No |
+| `unknown(X?)` | (Any) | No |
+| `X? < Y?` | (Number, Number) | Yes |
+| `X? > Y?` | (Number, Number) | Yes |
+| `X? =< Y?` | (Number, Number) | Yes |
+| `X? >= Y?` | (Number, Number) | Yes |
+| `X? =:= Y?` | (Number, Number) | Yes |
+| `X? =\= Y?` | (Number, Number) | Yes |
+| `X? =?= Y?` | (Any, Any) | Yes |
+
+### 7.2 Type Constraint Extraction
+
+When a guard succeeds, it constrains the types of its arguments. These constraints are intersected with types inferred from head patterns:
+
+```
+For each guard G in clause C:
+  For each argument position i of G:
+    Let T_guard = declared type for position i of G
+    Let X = variable at position i (if any)
+    varTypes[X] := varTypes[X] ∩ T_guard
+    If varTypes[X] = ∅:
+      Report error: "Guard type inconsistent with pattern type"
+```
+
+### 7.3 Ground Guards and Mode Coverage
+
+The `ground(X?)` guard has special significance for mode checking. When `ground(X?)` succeeds:
+
+1. X contains no unbound variables
+2. All nested positions within X are fully determined
+3. No mode inversions can occur within X's structure
+
+**Consequence:** Variables protected by `ground/1` (or other ground-implying guards) satisfy all mode coverage requirements. A clause with `ground(X?)` in its guard contributes both writer and reader coverage for all nested positions within X.
+
+```
+groundVars := variables occurring in ground-implying guards
+
+For mode coverage at position P:
+  If term at P is variable V and V ∈ groundVars:
+    hasWriter := true
+    hasReader := true  // Ground covers both modes
+```
+
+### 7.4 Defined Guards
+
+Defined guards (user-defined predicates callable in guard position) require procedure declarations with moded types, just like any other procedure. No special treatment is needed.
+
+```
+% Unit clause defining a type test
+channel(ch(_, _)).
+
+% Requires procedure declaration:
+procedure channel(Channel?).
+```
+
+The defined guard is type-checked as a body goal with call-boundary complementation applied.
+
+### 7.5 Example: Bidirectional Channels
+
+Streams and channels illustrate moded types for communication:
+
+```prolog
+% A stream is a possibly-open list
+Stream ::= [] ; [Any | Stream].
+
+% A channel pairs two streams with complementary modes
+% One endpoint reads from first stream, writes to second
+% Other endpoint has reversed modes
+Channel ::= ch(Stream?, Stream) ; ch(Stream, Stream?).
+
+procedure create_channel(Channel, Channel).
+create_channel(ch(AtoB?, BtoA), ch(BtoA?, AtoB)).
+```
+
+The `Channel` type has two alternatives capturing the duality:
+- `ch(Stream?, Stream)` — reads from first, writes to second
+- `ch(Stream, Stream?)` — writes to first, reads from second
+
+The `create_channel` procedure returns two complementary endpoints: what one side writes, the other reads.
+
+**Mode checking `create_channel`:**
+
+Declaration: `procedure create_channel(Channel, Channel).`
+
+Both arguments have output mode (no `?`). In the head, caller expects input mode (complemented).
+
+Argument 1: `ch(AtoB?, BtoA)`
+- Channel at input mode requires `ch(Stream, Stream?)` (complemented from `ch(Stream?, Stream)`)
+- `AtoB?` is reader at Stream position — expects reader ✓
+- `BtoA` is writer at Stream? position — complemented to output, expects writer ✓
+
+Argument 2: `ch(BtoA?, AtoB)`
+- `BtoA?` is reader ✓
+- `AtoB` is writer ✓
+
+The same variables with swapped modes correctly implement the complementary channel endpoints.
+
+---
+
+## 8. Error Messages
+
+### 8.1 Mode Errors
 
 | Situation | Message |
 |-----------|---------|
@@ -585,7 +709,7 @@ List<ModeError> checkModeCoverage(
 | Mode mismatch in call | `Argument 2 of merge/3 at line 10: expected input mode, found output` |
 | Incomplete mode coverage | `No clause covers output mode (_) at Any position in list head` |
 
-### 7.2 Example Error Output
+### 8.2 Example Error Output
 
 ```
 [MODE ERROR] Writer variable 'Result' at line 8, column 15 occurs at output
@@ -599,7 +723,7 @@ Hint: The procedure declaration is:
 At output positions, use a reader variable (Result?) to receive the value.
 ```
 
-### 7.3 Mode Coverage Error
+### 8.3 Mode Coverage Error
 
 ```
 [MODE ERROR] Incomplete mode coverage at Any position in argument 1.
@@ -619,7 +743,7 @@ Solutions:
 
 ---
 
-## 8. Implementation Plan
+## 9. Implementation Plan
 
 ### Phase 1: Parser Extension (1 day)
 - [ ] Extend `type_parser.dart` to parse `Type?` in procedure declarations
@@ -634,6 +758,15 @@ Solutions:
 - [ ] Implement call boundary complementation
 - [ ] Implement mode coverage check for Any positions
 - [ ] Add comprehensive tests
+
+### Phase 2.5: Guard Type Checking (1 day)
+- [ ] Create GuardTypeRegistry with built-in guard signatures
+- [ ] Implement guard constraint extraction
+- [ ] Integrate guard constraints into variable type inference
+- [ ] Track recursively-ground variables from ground-implying guards
+- [ ] Update mode coverage to recognize ground-protected variables
+- [ ] Tests for guard type constraints
+- [ ] Tests for ground guards bypassing mode coverage
 
 ### Phase 3: Integrate with Type Checker (2 days)
 - [ ] Extend `type_checker.dart` to invoke mode checker
@@ -652,11 +785,11 @@ Solutions:
 - [ ] Add mode checking examples to docs
 - [ ] Update SPEC_GUIDE.md
 
-**Total estimate: 9 days**
+**Total estimate: 10 days**
 
 ---
 
-## 9. File Organization
+## 10. File Organization
 
 ```
 lib/
@@ -673,7 +806,7 @@ lib/
 
 ---
 
-## 10. CLI Integration
+## 11. CLI Integration
 
 The `--type-check` flag performs both structural type checking and mode checking:
 
@@ -689,7 +822,7 @@ Mode checking is **not** a separate phase — it's integrated into type checking
 
 ---
 
-## 11. Theoretical Foundation
+## 12. Theoretical Foundation
 
 This implementation follows the theory developed in "Moded Types for Grassroots Logic Programs" (2024), which establishes:
 
@@ -701,7 +834,7 @@ This implementation follows the theory developed in "Moded Types for Grassroots 
 
 ---
 
-## 12. References
+## 13. References
 
 - Yardeni & Shapiro, "A Type System for Logic Programs", JLP 1991
 - Frühwirth, Shapiro, Vardi & Yardeni, "Logic Programs as Types for Logic Programs", LICS 1991
@@ -710,6 +843,18 @@ This implementation follows the theory developed in "Moded Types for Grassroots 
 ---
 
 ## Appendix A: Changelog
+
+### v1.2 (2025-12-22)
+- Added Section 7: Guards and Type Inference
+  - Section 7.1: Built-in Guard Signatures
+  - Section 7.2: Type Constraint Extraction
+  - Section 7.3: Ground Guards and Mode Coverage
+  - Section 7.4: Defined Guards
+  - Section 7.5: Bidirectional Channels Example
+- Added Step 2.5 to Section 6.1: Apply guard constraints in type checking algorithm
+- Added Phase 2.5 to Implementation Plan: Guard Type Checking (1 day)
+- Updated total implementation estimate to 10 days
+- Renumbered sections 7-12 to 8-13
 
 ### v1.1 (2025-12-21)
 - Added Section 2.2: Type Definitions vs. Subtype Declarations (`::=` vs `::<`)
