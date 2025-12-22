@@ -866,7 +866,15 @@ For each guard G in clause C:
 
 ### 7.3 Ground Guards and Mode Coverage
 
-The `ground(X?)` guard has special significance for mode checking. When `ground(X?)` succeeds:
+The `ground(X?)` guard has special significance for mode checking.
+
+**Syntactic Requirement:** Ground guards MUST be called with a reader variable:
+- `ground(X?)` — valid (reader variable)
+- `ground(X)` — syntax error (writer variable not permitted)
+
+This is because `ground/1` tests whether a value IS ground, which requires reading it. A writer variable has no value to test.
+
+When `ground(X?)` succeeds:
 
 1. X contains no unbound variables
 2. All nested positions within X are fully determined
@@ -1088,6 +1096,9 @@ This implementation follows the theory developed in "Moded Types for Grassroots 
   - Renamed examples from AnyList to EveryList
   - Added "Why Standard List Has No Coverage Requirement" subsection
 - **FIXED** Section 6.4: Renamed to "Mode Coverage Check for Every Positions"
+- **CLARIFIED** Section 7.3: Ground guards require reader variable syntax
+  - `ground(X?)` valid, `ground(X)` syntax error
+  - Reason: testing groundness requires reading the value
 - **Clarification:** Mode coverage applies only to `::=` types with primitive mode alternatives, not to `::< ` subtypes
 
 ### v1.5 (2025-12-22)
