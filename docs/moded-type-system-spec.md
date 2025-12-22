@@ -506,19 +506,7 @@ The choice depends on intended semantics: does the procedure genuinely need to h
 
 ### 5.1 Moded Paths
 
-Following the paper (Definition 6.15), a **moded path** is a path together with the mode annotation at its leaf:
-
-```dart
-/// A path with mode annotation at the leaf
-class ModedPath {
-  final List<PathElement> steps;
-  final Mode mode;  // Mode at leaf position
-
-  ModedPath(this.steps, this.mode);
-}
-```
-
-A moded type is characterized by its set of moded paths: `paths^m(S)`.
+A **moded path** (as defined in Section 3.3) is a path together with the mode annotation at its leaf. A moded type is characterized by its set of moded paths: `paths^m(S)`.
 
 ### 5.2 Primitive State Modes
 
