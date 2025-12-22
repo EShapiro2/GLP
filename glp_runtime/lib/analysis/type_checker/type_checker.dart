@@ -14,6 +14,7 @@ import 'type_parser.dart';
 import 'mode_checker.dart';
 import 'mode_error.dart';
 import 'clause_contribution.dart';
+import 'guard_types.dart';
 import '../../compiler/ast.dart' as ast;
 
 /// Result of type checking
@@ -285,12 +286,31 @@ class TypeChecker {
       }
     }
 
-    // Step 3: Check guards
-    if (clause.guards != null) {
-      for (final guard in clause.guards!) {
-        // TODO: Type check guard arguments
-        // Need procedure type declarations for guards
-        guard; // Suppress unused warning
+    // Step 3: Apply guard constraints
+    if (clause.guards != null && clause.guards!.isNotEmpty) {
+      final guardConstraints = extractGuardConstraints(
+        clause.guards,
+        typeEnv,
+        compiler,
+      );
+
+      for (final entry in guardConstraints.entries) {
+        final varName = entry.key;
+        final guardType = entry.value;
+
+        if (varTypes.containsKey(varName)) {
+          final intersected = varTypes[varName]!.intersect(guardType);
+          if (intersected.isEmpty) {
+            errors.add(TypeError(
+              'Guard type inconsistent with pattern type for variable $varName',
+              clause.line, clause.column, clause.toString()
+            ));
+          }
+          varTypes[varName] = intersected;
+        } else {
+          // Guard introduces type constraint for body-only variable
+          varTypes[varName] = guardType;
+        }
       }
     }
 

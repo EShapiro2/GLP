@@ -7,6 +7,7 @@ import '../../compiler/ast.dart' as ast;
 import 'type_ast.dart';
 import 'mode.dart';
 import 'mode_error.dart';
+import 'guard_types.dart';
 
 /// Mode checker for procedure definitions
 ///
@@ -453,12 +454,19 @@ class ModeChecker {
           if (argIndex < clause.head.args.length) {
             final topArg = clause.head.args[argIndex];
 
+            // Get variables protected by ground-implying guards
+            final groundVars = getRecursivelyGroundVars(clause.guards);
+
             // Navigate to the nested position
             final termAtPosition = _getTermAtPath(topArg, position.path);
 
             // Only variables count towards coverage
             if (termAtPosition is ast.VarTerm) {
-              if (termAtPosition.isReader) {
+              // Ground-protected variables cover ALL modes
+              if (groundVars.contains(termAtPosition.name)) {
+                hasWriter = true;
+                hasReader = true;
+              } else if (termAtPosition.isReader) {
                 hasReader = true;
               } else {
                 hasWriter = true;

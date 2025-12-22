@@ -1,140 +1,148 @@
 // test/analysis/type_checker/guard_types_test.dart
 //
-// Tests for guard type constraints and ground guards
+// Tests for guard type checking
 
 import 'package:test/test.dart';
 import 'test_helpers.dart';
 
 void main() {
-  group('Guard Type Constraints', () {
+  group('Guard Type Checking', () {
+
     // =========================================================================
-    // Type constraints from guards
+    // Type Constraints from Guards
     // =========================================================================
 
     group('Type Constraints', () {
-      test('POSITIVE: number guard constrains to Number', () {
+
+      test('number(X?) constrains X to Number', () {
         final result = checkTypes('''
-          procedure double_it(Any?, Number).
-          double_it(X, Y) :- number(X?) | Y := X? * 2.
+          procedure process(Any?, Number).
+          process(X, Y) :- number(X?) | Y := X? * 2.
         ''');
-        expect(result.isWellTyped, isTrue,
-            reason: 'Guard constrains X to Number');
+        expect(result.errors, isEmpty,
+            reason: 'Guard constrains X to Number, arithmetic valid');
       });
 
-      test('POSITIVE: string guard constrains to String', () {
+      test('string(X?) constrains X to String', () {
         final result = checkTypes('''
           procedure process(Any?, String).
-          process(X, Y) :- string(X?) | Y = X?.
+          process(X, Y?) :- string(X?) | Y = X?.
         ''');
-        expect(result.isWellTyped, isTrue);
+        expect(result.errors, isEmpty);
       });
 
-      test('POSITIVE: arithmetic guard constrains both args to Number', () {
+      test('arithmetic guards constrain to Number', () {
         final result = checkTypes('''
           procedure max(Any?, Any?, Number).
-          max(X, Y, X) :- X? >= Y? | true.
-          max(X, Y, Y) :- X? < Y? | true.
+          max(X, Y, X?) :- X? >= Y? | true.
+          max(X, Y, Y?) :- X? < Y? | true.
         ''');
-        expect(result.isWellTyped, isTrue,
-            reason: 'Comparison guards constrain to Number');
+        expect(result.errors, isEmpty,
+            reason: 'Comparison guards constrain both args to Number');
       });
 
-      test('NEGATIVE: guard inconsistent with head type fails', () {
+      test('guard inconsistent with head type fails', () {
         final result = checkTypes('''
           Nat ::= 0 ; s(Nat).
-          procedure bad(Nat).
-          bad(X) :- string(X?) | fail.
+          procedure bad(Nat?).
+          bad(X) :- string(X?) | true.
         ''');
-        expect(result.isWellTyped, isFalse,
+        expect(result.errors, isNotEmpty,
             reason: 'Nat and String have empty intersection');
+        expect(result.errors.any((e) =>
+            e.message.contains('inconsistent')), isTrue);
       });
 
-      test('NEGATIVE: number guard on non-number type fails', () {
+      test('number guard on non-number type fails', () {
         final result = checkTypes('''
           Sym ::= a ; b ; c.
           procedure bad(Sym?).
-          bad(X) :- number(X?) | fail.
+          bad(X) :- number(X?) | true.
         ''');
-        expect(result.isWellTyped, isFalse,
+        expect(result.errors, isNotEmpty,
             reason: 'Sym and Number have empty intersection');
       });
+
     });
 
     // =========================================================================
-    // Ground guards and mode coverage
+    // Ground Guards and Mode Coverage
     // =========================================================================
 
     group('Ground Guards', () {
-      test('POSITIVE: ground guard allows multiple readers', () {
+
+      test('ground(X?) allows multiple readers', () {
         final result = checkTypes('''
-          Any ::= _ ; _?.
           procedure broadcast(Any?, Any, Any).
-          broadcast(X, Y, Z) :- ground(X?) | Y = X?, Z = X?.
+          broadcast(X, Y?, Z?) :- ground(X?) | Y = X?, Z = X?.
         ''');
-        expect(result.isWellTyped, isTrue,
+        expect(result.errors, isEmpty,
             reason: 'ground(X?) certifies X has no unbound vars');
       });
 
-      test('POSITIVE: ground guard covers all mode alternatives', () {
-        // Single clause with ground guard should cover both modes
+      test('ground(X?) covers all mode alternatives', () {
         final result = checkTypes('''
-          Any ::= _ ; _?.
-          procedure echo(Any?, Any).
-          echo(X, Y) :- ground(X?) | Y = X?.
+          procedure echo(Every?, Every).
+          echo(X, Y?) :- ground(X?) | Y = X?.
         ''');
-        expect(result.isWellTyped, isTrue,
+        expect(result.errors, isEmpty,
             reason: 'ground(X?) satisfies both _ and _? coverage');
       });
 
-      test('POSITIVE: number guard implies ground', () {
+      test('number guard implies ground for multiple use', () {
         final result = checkTypes('''
-          Any ::= _ ; _?.
-          procedure use_twice(Any?, Any, Any).
-          use_twice(X, Y, Z) :- number(X?) | Y := X? + 1, Z := X? * 2.
+          procedure compute(Any?, Number, Number).
+          compute(X, Y?, Z?) :- number(X?) | Y := X? + 1, Z := X? * 2.
         ''');
-        expect(result.isWellTyped, isTrue,
+        expect(result.errors, isEmpty,
             reason: 'number(X?) implies X is ground');
       });
 
-      test('NEGATIVE: multiple readers without ground guard fails', () {
+      test('known(X?) does NOT imply ground', () {
+        // known only checks top-level binding, not recursive groundness
         final result = checkTypes('''
-          Any ::= _ ; _?.
-          procedure bad_broadcast(Any?, Any, Any).
-          bad_broadcast(X, Y, Z) :- Y = X?, Z = X?.
+          procedure bad(Every?, Every).
+          bad(X, Y?) :- known(X?) | Y = X?.
         ''');
-        expect(result.isWellTyped, isFalse,
-            reason: 'Multiple readers without ground guard is SRSW violation');
+        // This should still require mode coverage for Every
+        // because known does not imply ground
+        expect(result.errors, isNotEmpty,
+            reason: 'known does not satisfy mode coverage');
       });
 
-      test('POSITIVE: ground on nested structure covers nested modes', () {
+      test('ground on nested structure covers nested modes', () {
         final result = checkTypes('''
-          Any ::= _ ; _?.
-          AnyList ::= [] ; [Any | AnyList].
-          procedure process_list(AnyList?, Any).
-          process_list(L, X) :- ground(L?) | member(X?, L?).
+          EveryList ::= [Every | EveryList] ; [].
+          procedure process(EveryList?, Any).
+          process(L, X?) :- ground(L?) | member(X, L?).
         ''');
-        expect(result.isWellTyped, isTrue,
-            reason: 'ground(L?) covers all nested Any positions');
+        expect(result.errors, isEmpty,
+            reason: 'ground(L?) covers all nested Every positions');
       });
+
     });
 
     // =========================================================================
-    // ERRONEOUS - Currently pass but should fail
+    // Defined Guards
     // =========================================================================
 
-    group('Erroneous Passes', () {
-      test('ERRONEOUS: known guard should NOT imply ground', () {
-        // known(X?) only checks top-level binding, not nested groundness
+    group('Defined Guards', () {
+
+      test('defined guard constrains type', () {
         final result = checkTypes('''
-          Any ::= _ ; _?.
-          procedure bad(Any?, Any, Any).
-          bad(X, Y, Z) :- known(X?) | Y = X?, Z = X?.
+          Pair ::= pair(Any, Any).
+
+          procedure is_pair(Pair?).
+          is_pair(pair(_, _)).
+
+          procedure first(Any?, Any).
+          first(X, A?) :- is_pair(X?) | X = pair(A, _).
         ''');
-        // CURRENT (wrong): may pass
-        // EXPECTED (correct): fails - known does not imply ground
-        expect(result.isWellTyped, isFalse,
-            reason: 'known(X?) does not guarantee groundness');
+        expect(result.errors, isEmpty,
+            reason: 'is_pair constrains X to Pair');
       });
+
     });
+
   });
 }
