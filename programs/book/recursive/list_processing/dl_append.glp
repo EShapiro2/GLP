@@ -1,18 +1,18 @@
 %% Type definitions
 List ::= [] ; [Any | List].
+DiffList ::= List \ List?.
 
 %% Procedure type declarations
-%% Note: Difference list types (List\List) not supported in type system
-procedure dl_append(Any?, Any?, Any).
-procedure dl_to_list(Any?, List).
+procedure dl_append(DiffList?, DiffList?, DiffList).
+procedure dl_to_list(DiffList?, List).
 
 %% dl_append.glp - Difference list append
 %% O(1) concatenation using difference lists.
 
-%% With \ operator: A\B appended to B\C gives A\C
-dl_append(A\B, B?\C, A?\C?).
+%% With \ operator: A\B? appended to B\C? gives A?\C
+dl_append(A\B?, B\C?, A?\C).
 
 %% Convert difference list to regular list (close the hole)
 dl_to_list(L\[], L?).
 
-%% Example goal: dl_append([a,b|T1]\T1, [c,d|T2]\T2, Result).
+%% Example goal: dl_append([a,b|T1]\T1?, [c,d|T2]\T2?, Result).
