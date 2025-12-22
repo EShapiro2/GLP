@@ -1,7 +1,7 @@
-# GLP Moded Type System Specification (v1.5)
+# GLP Moded Type System Specification (v1.6)
 
 **Updated:** 2025-12-22
-**Change:** Revised Section 5 (Moded Type DFA) to match paper specification
+**Change:** Fixed mode coverage - Every requires coverage, Any does not
 
 ## 1. Overview
 
@@ -45,14 +45,6 @@ The primitive mode types are the atomic building blocks:
 _    output mode only (program produces value)
 _?   input mode only (program consumes value)
 ```
-
-These are distinct from the universal type `Any`:
-
-```
-Any ::= _ ; _?.
-```
-
-`Any` requires **both** mode alternatives to be covered under `::=` semantics. A single `_` or `_?` requires only that mode.
 
 ### 2.2 Type Definitions vs. Subtype Declarations
 
@@ -409,23 +401,29 @@ List<TypeRef> getBodyGoalTypes(ProcDecl decl) {
 }
 ```
 
-### 4.4 Mode Coverage for Union Types
+### 4.4 Mode Coverage for Exact Union Types (::=)
 
-Under `::=` semantics, union types require coverage of **all** alternatives. This has critical implications for `Any ::= _ | _?`:
+Under `::=` semantics, union types require coverage of **all** alternatives. This has critical implications for `Every ::= _ | _?`:
 
-**Mode Coverage Requirement:** If a type position has type `Any ::= _ | _?` under `::=` semantics, clauses must collectively cover **both** mode alternatives:
+**Important Distinction:**
+- `Every ::= _ ; _?` — exact definition, REQUIRES mode coverage
+- `Any ::< Every` — subtype declaration, NO coverage requirement
+
+Since `Any` uses `::< ` (subtype), not `::=` (exact), **`Any` positions have NO coverage requirement**. Procedures using `Any` need not cover both modes.
+
+**Mode Coverage Requirement:** If a type position has type `Every ::= _ | _?` under `::=` semantics, clauses must collectively cover **both** mode alternatives:
 - Some clause(s) must handle the `_` case (writer at that position)
 - Some clause(s) must handle the `_?` case (reader at that position)
 
 A single clause typically covers only one mode combination.
 
-#### Example: AnyList Copy (Why Any Requires Mode Coverage)
+#### Example: EveryList Copy (Why Every Requires Mode Coverage)
 
-Consider a list type with `Any` at the head position:
+Consider a list type with `Every` at the head position:
 ```glp
-AnyList ::= [] ; [Any | AnyList].
+EveryList ::= [] ; [Every | EveryList].
 
-procedure copy(AnyList?, AnyList).
+procedure copy(EveryList?, EveryList).
 
 copy([], []).
 copy([H? | In], [H | Out?]) :- copy(In?, Out).
@@ -435,7 +433,7 @@ copy([H? | In], [H | Out?]) :- copy(In?, Out).
 
 **Question:** Is this program well-moded-typed?
 
-**Analysis:** At the head position of `[H? | In]` and `[H | Out?]`, the type is `Any ::= _ | _?`. Under `::=` semantics, clauses must collectively cover both alternatives:
+**Analysis:** At the head position of `[H? | In]` and `[H | Out?]`, the type is `Every ::= _ | _?`. Under `::=` semantics, clauses must collectively cover both alternatives:
 - `_` requires a writer variable at that position
 - `_?` requires a reader variable at that position
 
@@ -476,9 +474,9 @@ Head type is `_?` (not `Any`), so only one mode needs coverage. **Well-moded-typ
 #### Solution 3: Cover Both Modes with Multiple Clauses
 
 ```glp
-AnyList ::= [] ; [Any | AnyList].
+EveryList ::= [] ; [Every | EveryList].
 
-procedure copy(AnyList?, AnyList).
+procedure copy(EveryList?, EveryList).
 
 copy([], []).
 copy([H? | In], [H | Out?]) :- copy(In?, Out).
@@ -491,9 +489,31 @@ The two non-base clauses collectively cover both mode combinations:
 
 **Well-moded-typed.**
 
+#### Why Standard List Has No Coverage Requirement
+
+The standard `List` type uses `Any` for elements:
+
+```glp
+List ::= [] ; [Any | List].
+```
+
+Since `Any ::< Every` (subtype, not exact), there is **NO mode coverage requirement** at the head position. A two-clause copy suffices:
+
+```glp
+procedure copy(List?, List).
+copy([], []).
+copy([H? | In], [H | Out?]) :- copy(In?, Out).
+```
+
+This is well-moded-typed because:
+1. `Any` has no coverage obligation (subtype semantics)
+2. The single clause's mode combination is valid (reader at input, writer at output)
+
+Compare with `EveryList ::= [Every | EveryList]` which WOULD require three clauses to cover all mode combinations.
+
 #### Design Principle
 
-Under `::=` semantics, `Any` positions in type definitions impose coverage obligations that typically require:
+Under `::=` semantics, `Every` positions in type definitions impose coverage obligations that typically require:
 1. **Restricting the type** to a single mode (`List1`, `List2`)
 2. **Multiple clauses** covering each mode alternative
 3. **Using `::< S`** to permit partial coverage (escape hatch, future PMT)
@@ -756,9 +776,9 @@ List<ModeError> checkBodyGoal(Goal goal, ProcDecl decl) {
 }
 ```
 
-### 6.4 Mode Coverage Check for Any Positions
+### 6.4 Mode Coverage Check for Every Positions (::= Types)
 
-For positions with type `Any ::= _ | _?`, verify collective mode coverage:
+For positions typed with `::=` union types containing primitive modes (e.g., `Every ::= _ | _?`), verify collective mode coverage:
 
 ```dart
 /// Check that all mode alternatives are covered across clauses
@@ -772,10 +792,10 @@ List<ModeError> checkModeCoverage(
   for (int argIndex = 0; argIndex < decl.arity; argIndex++) {
     final argType = decl.argTypes[argIndex];
 
-    // Find positions with Any type that need coverage
-    final anyPositions = findAnyPositions(argType, env);
+    // Find positions with ::= union types containing primitive modes
+    final everyPositions = findEveryPositions(argType, env);
 
-    for (final position in anyPositions) {
+    for (final position in everyPositions) {
       final coveredModes = <Mode>{};
 
       for (final clause in clauses) {
@@ -789,12 +809,12 @@ List<ModeError> checkModeCoverage(
       // Check both modes are covered
       if (!coveredModes.contains(Mode.output)) {
         errors.add(ModeError(
-          'No clause covers output mode (_) at Any position $position in argument $argIndex',
+          'No clause covers output mode (_) at Every position $position in argument $argIndex',
         ));
       }
       if (!coveredModes.contains(Mode.input)) {
         errors.add(ModeError(
-          'No clause covers input mode (_?) at Any position $position in argument $argIndex',
+          'No clause covers input mode (_?) at Every position $position in argument $argIndex',
         ));
       }
     }
@@ -1060,6 +1080,15 @@ This implementation follows the theory developed in "Moded Types for Grassroots 
 ---
 
 ## Appendix A: Changelog
+
+### v1.6 (2025-12-22)
+- **FIXED** Section 2.1: Removed incorrect `Any ::= _ ; _?` definition
+- **FIXED** Section 4.4: Renamed to "Mode Coverage for Exact Union Types (::=)"
+  - Clarified: `Every ::= _ ; _?` requires coverage, `Any ::< Every` does not
+  - Renamed examples from AnyList to EveryList
+  - Added "Why Standard List Has No Coverage Requirement" subsection
+- **FIXED** Section 6.4: Renamed to "Mode Coverage Check for Every Positions"
+- **Clarification:** Mode coverage applies only to `::=` types with primitive mode alternatives, not to `::< ` subtypes
 
 ### v1.5 (2025-12-22)
 - **REVISED Section 5: Moded Type DFA** to match paper specification
