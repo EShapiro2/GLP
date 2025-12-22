@@ -110,27 +110,6 @@ swap_modes(X?, Y).
       final result = checkTypes(source);
       expect(result.errors, isEmpty, reason: 'Any ::< Every has no coverage requirement');
     });
-
-    test('Every requires multiple clauses for full coverage', () {
-      final source = '''
-procedure full_coverage(Every, Every).
-
-full_coverage(X, Y?).    % writer at arg1, reader at arg2
-full_coverage(X?, Y).    % reader at arg1, writer at arg2
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Two clauses cover all mode combinations');
-    });
-
-    test('Every with single clause: INCOMPLETE coverage', () {
-      final source = '''
-procedure incomplete(Every, Every).
-
-incomplete(X, X?).
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isNotEmpty, reason: 'Every requires coverage of both modes at each position');
-    });
   });
 
   group('Mode Checking at Primitive Positions - NEGATIVE', () {
@@ -169,6 +148,121 @@ process(box(X?)).
 ''';
       final result = checkTypes(source);
       expect(result.errors, isNotEmpty, reason: 'Reader X? inside box at output position should be rejected');
+    });
+  });
+
+  group('Mode Coverage for Every (::= semantics)', () {
+    // === POSITIVE CONTROLS ===
+
+    test('POSITIVE: Every with two clauses covering both modes', () {
+      final source = '''
+procedure full_coverage(Every).
+
+full_coverage(X).   % writer covers _
+full_coverage(X?).  % reader covers _?
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isEmpty, reason: 'Two clauses cover both mode alternatives');
+    });
+
+    test('POSITIVE: Every with two clauses, two args, all combinations', () {
+      final source = '''
+procedure binary_coverage(Every, Every).
+
+binary_coverage(X, Y?).   % writer/reader
+binary_coverage(X?, Y).   % reader/writer
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isEmpty, reason: 'Two clauses cover all mode combinations');
+    });
+
+    test('POSITIVE: Any with single clause (no coverage required)', () {
+      final source = '''
+procedure any_single(Any).
+
+any_single(X).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isEmpty, reason: 'Any ::< Every has no coverage requirement');
+    });
+
+    test('POSITIVE: ground guard satisfies Every coverage', () {
+      final source = '''
+procedure grounded(Every).
+
+grounded(X?) :- ground(X?) | true.
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isEmpty, reason: 'ground(X?) covers both modes');
+    });
+
+    // === NEGATIVE CONTROLS ===
+
+    test('NEGATIVE: Every with single clause - incomplete coverage', () {
+      final source = '''
+procedure incomplete(Every).
+
+incomplete(X).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isNotEmpty, reason: 'Every requires both _ and _? coverage');
+    });
+
+    test('NEGATIVE: Every with two clauses but same mode - still incomplete', () {
+      final source = '''
+procedure same_mode(Every).
+
+same_mode(X).
+same_mode(Y).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isNotEmpty, reason: 'Both clauses are writers, missing reader');
+    });
+
+    test('NEGATIVE: Every binary with single clause - incomplete', () {
+      final source = '''
+procedure binary_incomplete(Every, Every).
+
+binary_incomplete(X, X?).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isNotEmpty, reason: 'Arg1 missing reader, Arg2 missing writer');
+    });
+
+    test('NEGATIVE: known guard does NOT satisfy coverage', () {
+      final source = '''
+procedure known_not_ground(Every).
+
+known_not_ground(X?) :- known(X?) | true.
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isNotEmpty, reason: 'known does not imply ground');
+    });
+
+    test('NEGATIVE: Nested Every with incomplete coverage', () {
+      final source = '''
+EveryList ::= [] ; [Every | EveryList].
+
+procedure process(EveryList).
+
+process([]).
+process([H? | T]) :- process(T?).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isNotEmpty, reason: 'Head position has Every, needs both modes');
+    });
+
+    // === POSITIVE: Nested Any (no coverage required) ===
+
+    test('POSITIVE: Nested Any with single clause', () {
+      final source = '''
+procedure process_list(List).
+
+process_list([]).
+process_list([H? | T]) :- process_list(T?).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isEmpty, reason: 'List uses Any at head, no coverage requirement');
     });
   });
 
