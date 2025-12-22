@@ -42,6 +42,25 @@ class ModeChecker {
     return errors;
   }
 
+  /// Check mode coverage only (no per-variable checking)
+  ///
+  /// This checks that clauses collectively cover all mode alternatives
+  /// for primitive types, without checking individual variable modes.
+  List<ModeError> checkModeCoverageOnly(String name, int arity, List<ast.Clause> clauses) {
+    final errors = <ModeError>[];
+
+    // Look up procedure declaration
+    final procDecl = typeEnv.getProcedure(name, arity);
+    if (procDecl == null) {
+      return errors;
+    }
+
+    // Check mode coverage for primitive types (Any, _, _?)
+    errors.addAll(_checkModeCoverage(procDecl, clauses));
+
+    return errors;
+  }
+
   /// Check a single clause against procedure declaration
   List<ModeError> checkClause(ast.Clause clause, ProcDecl procDecl) {
     final errors = <ModeError>[];
