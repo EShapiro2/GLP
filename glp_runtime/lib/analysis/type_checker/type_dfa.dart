@@ -111,6 +111,33 @@ class TypeDFA {
   }) : anyValueStates = anyValueStates ?? {} {
     alphabet = transitions.keys.map((k) => k.$2).toSet();
   }
+
+  /// Create DFA accepting empty language (no strings accepted)
+  factory TypeDFA.empty() {
+    final q0 = DFAState('q0');
+    return TypeDFA(
+      states: {q0},
+      startState: q0,
+      finalStates: {},  // No accepting states
+      transitions: {},  // No transitions
+    );
+  }
+
+  /// Create DFA accepting exactly one constant string
+  factory TypeDFA.singleton(String constant) {
+    final q0 = DFAState('q0');
+    final q1 = DFAState('q1', isFinal: true);
+    final elem = PathElement.constant(constant);
+
+    return TypeDFA(
+      states: {q0, q1},
+      startState: q0,
+      finalStates: {q1},
+      transitions: {
+        (q0, elem): q1,
+      },
+    );
+  }
   
   /// Check if DFA accepts a single path
   bool acceptsPath(TermPath path) {
@@ -224,8 +251,12 @@ class TypeDFA {
   /// Check if this DFA accepts a subset of another's language
   bool isSubsetOf(TypeDFA other) {
     // L(this) ⊆ L(other) iff L(this) ∩ L(complement(other)) = ∅
-    final complementOther = other.complement();
-    final intersection = intersect(complementOther);
+    // Must complete both DFAs with respect to combined alphabet first
+    final combinedAlphabet = alphabet.union(other.alphabet);
+    final thisCompleted = complete(combinedAlphabet);
+    final otherCompleted = other.complete(combinedAlphabet);
+    final complementOther = otherCompleted.complement();
+    final intersection = thisCompleted.intersect(complementOther);
     return intersection.isEmpty;
   }
   
@@ -272,24 +303,26 @@ class TypeDFA {
   }
   
   /// Make DFA complete by adding a sink state for missing transitions
-  TypeDFA complete() {
+  /// If [withAlphabet] is provided, use that alphabet; otherwise use this DFA's alphabet
+  TypeDFA complete([Set<PathElement>? withAlphabet]) {
+    final useAlphabet = withAlphabet ?? alphabet;
     final sink = DFAState('_sink_');
     final newStates = {...states, sink};
     final newTransitions = Map<(DFAState, PathElement), DFAState>.from(transitions);
-    
+
     for (final state in states) {
-      for (final sym in alphabet) {
+      for (final sym in useAlphabet) {
         if (!newTransitions.containsKey((state, sym))) {
           newTransitions[(state, sym)] = sink;
         }
       }
     }
-    
+
     // Sink loops to itself on all symbols
-    for (final sym in alphabet) {
+    for (final sym in useAlphabet) {
       newTransitions[(sink, sym)] = sink;
     }
-    
+
     return TypeDFA(
       states: newStates,
       startState: startState,
@@ -301,8 +334,10 @@ class TypeDFA {
   /// Union of two DFAs (using NFA conversion would be cleaner, but product works)
   TypeDFA union(TypeDFA other) {
     // L(A) ∪ L(B) = complement(complement(A) ∩ complement(B))
-    final compA = complete().complement();
-    final compB = other.complete().complement();
+    // Must complete both DFAs with respect to combined alphabet
+    final combinedAlphabet = alphabet.union(other.alphabet);
+    final compA = complete(combinedAlphabet).complement();
+    final compB = other.complete(combinedAlphabet).complement();
     return compA.intersect(compB).complement();
   }
   
