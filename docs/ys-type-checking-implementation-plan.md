@@ -357,6 +357,55 @@ makeNat(s(N)) :- makeNat(N).
 makeNat(foo).  % ERROR: foo not in Nat
 ```
 
+## Special Constructs in Moded Types
+
+### Defined Guards and Types
+
+From a moded-type perspective, **defined guards and type predicates are treated the same as procedures**:
+- They must have a moded-type procedure declaration
+- They are checked using the same fixpoint verification
+- No special treatment needed
+
+Example:
+```prolog
+Nat ::= 0 ; s(Nat).
+procedure number(Nat?).  % Guard predicate - same as any procedure
+number(0).
+number(s(N)) :- number(N).
+```
+
+### Channel Types: Complementary Stream Pairs
+
+**Channels** are complementary pairs of streams, where one is input and the other is output.
+
+**Note on terminology:** Should we use "Stream" or "List"? Streams emphasize infinite/ongoing nature.
+
+```prolog
+% Stream type: infinite list with suspension at tail
+Stream ::= [_ | Stream] ; Stream.
+
+% Channel type: complementary pair
+% One direction is reader (input), other is writer (output)
+Channel ::= ch(Stream?, Stream) ; ch(Stream, Stream?).
+
+% Channel creation procedure
+procedure create_channel(Channel, Channel).
+create_channel(ch(AtoB?, BtoA), ch(BtoA?, AtoB)).
+```
+
+**Key properties:**
+1. A channel has two ends: `ChannelAB` and `ChannelBA`
+2. What A writes to (`AtoB`), B reads from (`AtoB?`)
+3. What B writes to (`BtoA`), A reads from (`BtoA?`)
+4. The complementary mode structure ensures proper typing
+
+**Type checking considerations:**
+- The channel type naturally enforces complementarity through mode annotations
+- `create_channel/2` must produce two channels where:
+  - First arg: `ch(Stream?, Stream)` - reads from first stream, writes to second
+  - Second arg: `ch(Stream, Stream?)` - writes to first stream, reads from second
+- This is verified by standard fixpoint checking - no special logic needed
+
 ## Complexity Considerations
 
 **From the paper:** Type checking is EXPTIME-complete for regular types.
