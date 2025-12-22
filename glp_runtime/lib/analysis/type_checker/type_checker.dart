@@ -7,6 +7,7 @@
 // 1. No clause is useless relative to S
 // 2. T_P^α(S) = S (S is a fixpoint of the abstract consequence operator)
 
+import 'mode.dart';
 import 'type_ast.dart';
 import 'type_dfa.dart';
 import 'type_compiler.dart';
@@ -450,6 +451,17 @@ class TypeChecker {
       // Variable at this position gets the type reachable from current DFA state
       final state = dfa.stateAfterPath(pathToHere);
       if (state != null) {
+        // Check mode at primitive positions
+        if (dfa.isPrimitiveState(state)) {
+          final acceptedModes = dfa.getModesAt(state);
+          final varMode = term.isReader ? Mode.input : Mode.output;
+
+          if (!acceptedModes.contains(varMode)) {
+            // Mode error at primitive position - reject this clause
+            return false;
+          }
+        }
+
         final varName = term.name;
         final typeAtPosition = _dfaFromState(dfa, state);
 
