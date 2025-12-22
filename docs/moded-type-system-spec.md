@@ -1,7 +1,7 @@
-# GLP Moded Type System Specification (v1.3)
+# GLP Moded Type System Specification (v1.4)
 
 **Updated:** 2025-12-22
-**Change:** Clarified List/Stream/Any distinctions and added system type definitions
+**Change:** Added comprehensive predefined types with self-duality and operations
 
 ## 1. Overview
 
@@ -96,52 +96,141 @@ moded_type_ref  ::= type_ref '?'?
 
 The `?` suffix on a type reference indicates input mode.
 
-### 2.5 System Type Definitions
+### 2.5 Predefined Types
 
-The following types are predefined by the system:
+The following types and procedures are predefined by prepending their definitions to every module. A module cannot redefine a predefined type or procedure.
 
-```prolog
-% Primitives (built-in, not definable)
-Number.   % Dart int/double
-String.   % Dart string
-
-% Universal type (self-dual)
-Any ::= _ ; _?.
-
-% Standard list: elements are output mode
-List ::= [] ; [_ | List].
-
-% Stream: list that may not close (subtype, no coverage requirement)
-Stream ::< List.
-
-% Inverted stream: elements are input mode (for bounded buffer slots)
-InvStream ::= [] ; [_? | InvStream].
-```
-
-#### Distinction: List vs AnyList
-
-The standard `List` has `_` (output-only) elements. A list where elements can be either mode requires `Any`:
+#### 2.5.1 Primitive Types
 
 ```prolog
-AnyList ::= [] ; [Any | AnyList].
+Number.   % numeric values (built-in)
+String.   % string values (built-in)
 ```
 
-`AnyList` is primarily of **theoretical interest**. Procedures over `AnyList` must cover both mode alternatives at each element position:
+#### 2.5.2 Universal Types
 
 ```prolog
-procedure copy(AnyList?, AnyList).
-copy([], []).
-copy([X | In], [X? | Out]) :- copy(In?, Out).   % element flows in→out
-copy([X? | In], [X | Out]) :- copy(In?, Out).   % element flows out→in
+Every ::= _ ; _?.      % exact: requires both mode alternatives covered
+Any ::< Every.         % subtype: no coverage requirement
 ```
 
-With standard `List` (where elements are `_` only), copy needs only two clauses:
+**Self-Duality of Every and Any:**
+
+Since `Every ::= _ ; _?` contains both output and input modes as alternatives, the type is *self-dual*:
+
+```
+(Every)? = Every
+```
+
+Complementing `Every` yields `Every`. The same holds for `Any ::< Every`:
+
+```
+(Any)? = Any
+```
+
+**Consequence:** Mode annotations on `Any` positions are semantically irrelevant. Writing `Any` or `Any?` in a procedure declaration has the same meaning—both writer and reader variables are acceptable at such positions. Since `Any` uses subtype semantics (`::< `), there is no coverage requirement either.
+
+This self-duality means `Any` truly represents "any value with any mode"—the universal type for positions where mode is unconstrained.
+
+#### 2.5.3 Collections
+
+```prolog
+List ::= [Any | List] ; [].
+Stream ::< List.               % may remain open (no [] case required)
+DiffList ::= List \ List?.     % difference list with hole
+```
+
+**List** uses `Any` for elements. Since `Any` has no coverage requirement, a two-clause copy suffices:
 
 ```prolog
 procedure copy(List?, List).
 copy([], []).
 copy([X | In], [X? | Out]) :- copy(In?, Out).
 ```
+
+**Stream** uses subtype semantics, so procedures need not handle the `[]` case.
+
+**DiffList** represents a list with a hole at the end. The structure `List \ List?` pairs:
+- `List` (output): the content produced so far
+- `List?` (input): the hole where more content can be appended
+
+#### 2.5.4 Channels
+
+```prolog
+Channel ::= ch(Stream?, Stream).
+```
+
+A channel pairs two streams with complementary modes:
+- First stream (`Stream?`): input—messages received
+- Second stream (`Stream`): output—messages sent
+
+The `new_channel` operation creates two complementary endpoints by swapping the streams.
+
+#### 2.5.5 Predefined Procedures
+
+These unit clauses are predefined and can be used as defined guards:
+
+```prolog
+%% Difference List Operations
+procedure dl_append(DiffList?, DiffList?, DiffList).
+procedure dl_to_list(DiffList?, List).
+
+dl_append(A\B?, B\C?, A?\C).
+dl_to_list(L\[], L?).
+
+%% Channel Operations
+procedure new_channel(Channel, Channel).
+procedure send(Any, Channel?, Channel).
+procedure receive(Any, Channel?, Channel).
+
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
+```
+
+**dl_append** concatenates two difference lists in O(1) time by unifying the first list's hole with the second list's content.
+
+**dl_to_list** closes a difference list by unifying its hole with `[]`.
+
+**new_channel** creates two complementary channel endpoints. What one side sends, the other receives.
+
+**send** adds a message to the channel's output stream.
+
+**receive** takes a message from the channel's input stream.
+
+#### 2.5.6 Usage as Defined Guards
+
+Since the predefined procedures are unit clauses, they can be used in guard position:
+
+```prolog
+% Append in guard position
+process(DL1, DL2, Result) :- dl_append(DL1?, DL2?, Result) |
+    continue(Result?).
+
+% Receive in guard position (suspends until message available)
+handler(Ch) :- receive(Msg, Ch?, Ch2) |
+    process(Msg?),
+    handler(Ch2?).
+```
+
+#### 2.5.7 EveryList (Theoretical Example)
+
+For theoretical analysis, one may define a list requiring full mode coverage at element positions:
+
+```prolog
+EveryList ::= [Every | EveryList] ; [].
+```
+
+Unlike `List` (which uses `Any`), `EveryList` requires three clauses for copy:
+
+```prolog
+procedure copy(EveryList?, EveryList).
+copy([], []).
+copy([X | In], [X? | Out]) :- copy(In?, Out).   % element flows in→out
+copy([X? | In], [X | Out]) :- copy(In?, Out).   % element flows out→in
+```
+
+The third clause covers the `_?` alternative of `Every`. This is primarily of theoretical interest; practical programs use `List` with `Any` elements.
 
 ### 2.7 Embedded Modes in Type Definitions
 
@@ -890,6 +979,20 @@ This implementation follows the theory developed in "Moded Types for Grassroots 
 ---
 
 ## Appendix A: Changelog
+
+### v1.4 (2025-12-22)
+- **MAJOR REVISION** of Section 2.5: Predefined Types
+  - Introduced `Every ::= _ ; _?` and `Any ::< Every` distinction
+  - Added comprehensive explanation of self-duality: `(Every)? = Every` and `(Any)? = Any`
+  - Consequence: Mode annotations on `Any` positions are semantically irrelevant
+  - Changed `List` to use `Any` elements: `List ::= [Any | List] ; []`
+  - Added `DiffList ::= List \ List?` for difference lists with holes
+  - Added predefined procedures: `dl_append`, `dl_to_list`, `new_channel`, `send`, `receive`
+  - Added Section 2.5.6: Usage as Defined Guards
+  - Added Section 2.5.7: EveryList theoretical example (requires full mode coverage)
+  - Removed `InvStream` (no longer needed with new `Any` semantics)
+- Updated Section 2.5.4: Channels now use single constructor `ch(Stream?, Stream)`
+- Throughout document: replaced references to old List type with context-appropriate `List` (Any elements) or `EveryList` (Every elements)
 
 ### v1.3 (2025-12-22)
 - Updated Section 2.1: Clarified that `_` and `_?` are primitive modes, distinct from `Any ::= _ ; _?`
