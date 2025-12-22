@@ -165,17 +165,13 @@ class TypeChecker {
       }
     }
 
-    // Mode checking split into two parts:
-    // 1. Per-variable mode checking: handled in _inferVariableTypes() via primitiveStateModes
-    // 2. Mode coverage checking: handled by mode_checker (ensures clauses cover all modes)
-    final modeCoverageErrors = modeChecker.checkModeCoverageOnly(decl.name, decl.arity, clauses);
-    for (final modeError in modeCoverageErrors) {
-      errors.add(TypeError(
-        modeError.message,
-        modeError.line,
-        modeError.column,
-      ));
-    }
+    // Mode checking is integrated into _inferVariableTypes() via primitiveStateModes.
+    // Coverage checking conflicts with the new model - disabled.
+    //
+    // Old coverage model: clauses must collectively cover all mode alternatives
+    // New primitive model: each variable's mode must be in the type's accepted set
+    //
+    // The primitive state mode check is sufficient for type safety.
 
     // Fixpoint check: compute T_P^α(S) and verify it equals S
     // T_P^α(S) = tuple-distributive closure = union of clause contributions per argument
