@@ -14,12 +14,11 @@
 //   proc_decl  ::= 'procedure' atom '(' type_refs ')' '.'
 
 import 'type_ast.dart';
+import 'prelude.dart';
 
 /// System type prelude - loaded before user types
-const String _systemTypePrelude = '''
-Any ::= _ ; _?.
-List ::= [] ; [Any | List].
-''';
+/// Note: This is now superseded by the comprehensive prelude in prelude.dart
+const String _systemTypePrelude = typePrelude;
 
 /// Token types for type parsing
 enum TypeTokenType {
@@ -39,6 +38,7 @@ enum TypeTokenType {
   comma,         // ,
   question,      // ? (input mode marker)
   underscore,    // _ (primitive mode)
+  backslash,     // \ (difference list operator)
   procedure,     // keyword 'procedure'
   unknown,       // Unknown token (skip)
   eof,
@@ -127,6 +127,8 @@ class TypeLexer {
         return TypeToken(TypeTokenType.dot, '.', startLine, startColumn);
       case '?':
         return TypeToken(TypeTokenType.question, '?', startLine, startColumn);
+      case '\\':
+        return TypeToken(TypeTokenType.backslash, '\\', startLine, startColumn);
       case '_':
         // Check if it's just underscore (primitive mode) or start of identifier
         if (!_isAlphaNumeric(_peek())) {
@@ -369,9 +371,17 @@ class TypeParser {
       return ConstantAlt(strToken.literal!, strToken.line, strToken.column);
     }
     
-    // Type reference (uppercase)
+    // Type reference (uppercase) - possibly followed by backslash for DiffList
     if (_check(TypeTokenType.typeName)) {
-      return _parseTypeRef();
+      final typeRef = _parseTypeRef();
+
+      // Check for backslash operator (DiffList syntax: List \ List?)
+      if (_match(TypeTokenType.backslash)) {
+        final hole = _parseTypeExprElement();
+        return DiffListAlt(typeRef, hole, token.line, token.column);
+      }
+
+      return typeRef;
     }
     
     // Atom constant or functor
@@ -484,7 +494,29 @@ TypeEnvironment parseTypes(String source) {
   final parser = TypeParser(tokens);
   final userEnv = parser.parse();
 
-  // Merge: user types can override system types (except builtins)
+  // Check for redefinitions of predefined types
+  for (final typeName in userEnv.types.keys) {
+    if (isPredefinedType(typeName)) {
+      final typeDef = userEnv.types[typeName]!;
+      throw TypeParseError(
+        'Cannot redefine predefined type: $typeName',
+        typeDef.line, typeDef.column,
+      );
+    }
+  }
+
+  // Check for redefinitions of predefined procedures
+  for (final procKey in userEnv.procedures.keys) {
+    final procDecl = userEnv.procedures[procKey]!;
+    if (isPredefinedProcedure(procDecl.name)) {
+      throw TypeParseError(
+        'Cannot redefine predefined procedure: ${procDecl.name}/${procDecl.arity}',
+        procDecl.line, procDecl.column,
+      );
+    }
+  }
+
+  // Merge: user types can override system types (except predefined ones checked above)
   return preludeEnv.merge(userEnv);
 }
 

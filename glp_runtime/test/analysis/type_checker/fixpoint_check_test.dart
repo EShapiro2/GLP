@@ -28,8 +28,8 @@ void main() {
       test('List: both nil and cons case', () {
         final result = checkTypes('''
           Atom ::= a ; b ; c.
-          List ::= [] ; [Atom | List].
-          procedure test(List?).
+          MyList ::= [] ; [Atom | MyList].
+          procedure test(MyList?).
           test([]).
           test([X | Xs]) :- test(Xs?).
         ''');
@@ -119,8 +119,8 @@ void main() {
       test('List: missing nil case', () {
         final result = checkTypes('''
           Atom ::= a ; b ; c.
-          List ::= [] ; [Atom | List].
-          procedure test(List?).
+          MyList ::= [] ; [Atom | MyList].
+          procedure test(MyList?).
           test([X | Xs]) :- test(Xs?).
         ''');
         expect(result.isWellTyped, isFalse,
@@ -196,12 +196,12 @@ void main() {
       test('Stream: no nil case required (::< allows partial coverage)', () {
         final result = checkTypes('''
           Atom ::= a ; b ; c.
-          List ::= [] ; [Atom | List].
-          Stream ::< List.
-          procedure test(Stream?).
+          MyList ::= [] ; [Atom | MyList].
+          MyStream ::< MyList.
+          procedure test(MyStream?).
           test([X | Xs]) :- test(Xs?).
         ''');
-        // This should pass because Stream ::< List means partial coverage OK
+        // This should pass because MyStream ::< MyList means partial coverage OK
         // However, current implementation may not handle subtype semantics yet
         // Mark as expected to fail until subtype semantics are implemented
         if (!result.isWellTyped) {

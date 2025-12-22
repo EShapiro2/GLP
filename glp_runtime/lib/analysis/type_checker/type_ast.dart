@@ -96,6 +96,18 @@ class PrimitiveModeAlt extends TypeExpr {
   String toString() => isInput ? '_?' : '_';
 }
 
+/// Difference list alternative: List \ List?
+/// Used for DiffList type: DiffList ::= List \ List?.
+class DiffListAlt extends TypeExpr {
+  final TypeExpr content;  // The content list
+  final TypeExpr hole;     // The hole/tail
+
+  DiffListAlt(this.content, this.hole, int line, int column) : super(line, column);
+
+  @override
+  String toString() => '$content \\ $hole';
+}
+
 /// A type definition: TypeName ::= alt1 ; alt2 ; ... .
 /// Or subtype declaration: TypeName ::< alt1 ; alt2 ; ... .
 class TypeDef {
@@ -161,7 +173,10 @@ class TypeEnvironment {
   
   /// Check if a type name is defined (including built-ins)
   bool hasType(String name) => types.containsKey(name) || TypeRef.builtins.contains(name);
-  
+
+  /// Check if a procedure is defined
+  bool hasProcedure(String name, int arity) => procedures.containsKey('$name/$arity');
+
   @override
   String toString() {
     final sb = StringBuffer();
