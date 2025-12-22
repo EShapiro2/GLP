@@ -1,7 +1,7 @@
-# GLP Moded Type System Specification (v1.2)
+# GLP Moded Type System Specification (v1.3)
 
 **Updated:** 2025-12-22
-**Change:** Added Section 7 on Guards and Type Inference with bidirectional channels example
+**Change:** Clarified List/Stream/Any distinctions and added system type definitions
 
 ## 1. Overview
 
@@ -39,16 +39,20 @@ Moded types **subsume** unmoded types: every unmoded type is equivalent to a mod
 
 ### 2.1 Primitive Mode Types
 
+The primitive mode types are the atomic building blocks:
+
 ```
-_    output mode (program produces value)
-_?   input mode (environment provides value)
+_    output mode only (program produces value)
+_?   input mode only (program consumes value)
 ```
 
-The universal type is self-dual:
+These are distinct from the universal type `Any`:
+
 ```
 Any ::= _ ; _?.
-(Any)? = Any
 ```
+
+`Any` requires **both** mode alternatives to be covered under `::=` semantics. A single `_` or `_?` requires only that mode.
 
 ### 2.2 Type Definitions vs. Subtype Declarations
 
@@ -70,7 +74,7 @@ Following Yardeni-Shapiro, we distinguish two declaration forms:
 Type definitions remain as before (using `::=` syntax):
 ```
 Nat ::= 0 ; s(Nat).
-List ::= [] ; [Any | List].
+List ::= [] ; [_ | List].
 ```
 
 Mode annotations appear in **procedure declarations**:
@@ -92,7 +96,54 @@ moded_type_ref  ::= type_ref '?'?
 
 The `?` suffix on a type reference indicates input mode.
 
-### 2.5 Embedded Modes in Type Definitions
+### 2.5 System Type Definitions
+
+The following types are predefined by the system:
+
+```prolog
+% Primitives (built-in, not definable)
+Number.   % Dart int/double
+String.   % Dart string
+
+% Universal type (self-dual)
+Any ::= _ ; _?.
+
+% Standard list: elements are output mode
+List ::= [] ; [_ | List].
+
+% Stream: list that may not close (subtype, no coverage requirement)
+Stream ::< List.
+
+% Inverted stream: elements are input mode (for bounded buffer slots)
+InvStream ::= [] ; [_? | InvStream].
+```
+
+#### Distinction: List vs AnyList
+
+The standard `List` has `_` (output-only) elements. A list where elements can be either mode requires `Any`:
+
+```prolog
+AnyList ::= [] ; [Any | AnyList].
+```
+
+`AnyList` is primarily of **theoretical interest**. Procedures over `AnyList` must cover both mode alternatives at each element position:
+
+```prolog
+procedure copy(AnyList?, AnyList).
+copy([], []).
+copy([X | In], [X? | Out]) :- copy(In?, Out).   % element flows in→out
+copy([X? | In], [X | Out]) :- copy(In?, Out).   % element flows out→in
+```
+
+With standard `List` (where elements are `_` only), copy needs only two clauses:
+
+```prolog
+procedure copy(List?, List).
+copy([], []).
+copy([X | In], [X? | Out]) :- copy(In?, Out).
+```
+
+### 2.7 Embedded Modes in Type Definitions
 
 Types can embed mode information for complex data structures:
 ```
@@ -111,7 +162,7 @@ QueueMsg ::= enqueue(Any) ; dequeue(Any?).
 
 In `show(Number?)`, the `Number?` marks an **input position in the type definition**. When the counter receives `CounterMsg?` (input stream), involution applies: `show(Number?)` → `show(Number)` — so the counter WRITES the response.
 
-### 2.6 Examples
+### 2.8 Examples
 
 ```glp
 % Simple moded procedure
@@ -122,7 +173,7 @@ add(0, Y, Y?).
 add(s(X), Y, s(Z)?) :- add(X?, Y?, Z).
 
 % Stream merge with all modes explicit
-List ::= [] ; [Any | List].
+List ::= [] ; [_ | List].
 procedure merge(List?, List?, List).
 
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
@@ -279,13 +330,13 @@ Under `::=` semantics, union types require coverage of **all** alternatives. Thi
 
 A single clause typically covers only one mode combination.
 
-#### Example: List Copy (Why Any Requires Mode Coverage)
+#### Example: AnyList Copy (Why Any Requires Mode Coverage)
 
-Consider:
+Consider a list type with `Any` at the head position:
 ```glp
-List ::= [] ; [Any | List].
+AnyList ::= [] ; [Any | AnyList].
 
-procedure copy(List?, List).
+procedure copy(AnyList?, AnyList).
 
 copy([], []).
 copy([H? | In], [H | Out?]) :- copy(In?, Out).
@@ -336,9 +387,9 @@ Head type is `_?` (not `Any`), so only one mode needs coverage. **Well-moded-typ
 #### Solution 3: Cover Both Modes with Multiple Clauses
 
 ```glp
-List ::= [] ; [Any | List].
+AnyList ::= [] ; [Any | AnyList].
 
-procedure copy(List?, List).
+procedure copy(AnyList?, AnyList).
 
 copy([], []).
 copy([H? | In], [H | Out?]) :- copy(In?, Out).
@@ -658,43 +709,39 @@ The defined guard is type-checked as a body goal with call-boundary complementat
 
 ### 7.5 Example: Bidirectional Channels
 
-Streams and channels illustrate moded types for communication:
+Channels pair two streams with complementary modes:
 
 ```prolog
-% A stream is a possibly-open list
-Stream ::= [] ; [Any | Stream].
+% Stream may not close (subtype of List)
+Stream ::< List.
 
-% A channel pairs two streams with complementary modes
-% One endpoint reads from first stream, writes to second
-% Other endpoint has reversed modes
+% Channel pairs two streams with complementary modes
 Channel ::= ch(Stream?, Stream) ; ch(Stream, Stream?).
 
 procedure create_channel(Channel, Channel).
 create_channel(ch(AtoB?, BtoA), ch(BtoA?, AtoB)).
 ```
 
-The `Channel` type has two alternatives capturing the duality:
-- `ch(Stream?, Stream)` — reads from first, writes to second
-- `ch(Stream, Stream?)` — writes to first, reads from second
+The `Channel` type has two alternatives capturing endpoint duality:
+- `ch(Stream?, Stream)` — reads from first stream, writes to second
+- `ch(Stream, Stream?)` — writes to first stream, reads from second
 
-The `create_channel` procedure returns two complementary endpoints: what one side writes, the other reads.
+Since `Stream ::< List` uses subtype semantics, there is no requirement that streams close (the `[]` alternative need not be covered).
 
-**Mode checking `create_channel`:**
+**Bounded Buffer Example:**
 
-Declaration: `procedure create_channel(Channel, Channel).`
+A bounded buffer uses an inverted stream of empty slots:
 
-Both arguments have output mode (no `?`). In the head, caller expects input mode (complemented).
+```prolog
+InvStream ::= [] ; [_? | InvStream].
 
-Argument 1: `ch(AtoB?, BtoA)`
-- Channel at input mode requires `ch(Stream, Stream?)` (complemented from `ch(Stream?, Stream)`)
-- `AtoB?` is reader at Stream position — expects reader ✓
-- `BtoA` is writer at Stream? position — complemented to output, expects writer ✓
+procedure bounded_buffer(Stream?, InvStream?, Stream).
+bounded_buffer(In, Slots, Out) :-
+    % Takes values from In, consumes slots, produces Out
+    ...
+```
 
-Argument 2: `ch(BtoA?, AtoB)`
-- `BtoA?` is reader ✓
-- `AtoB` is writer ✓
-
-The same variables with swapped modes correctly implement the complementary channel endpoints.
+The `InvStream` of slots has `_?` elements (input mode), representing empty positions the buffer can fill.
 
 ---
 
@@ -728,7 +775,7 @@ At output positions, use a reader variable (Result?) to receive the value.
 ```
 [MODE ERROR] Incomplete mode coverage at Any position in argument 1.
 
-The type 'List ::= [] ; [Any | List]' has Any at the head position.
+The type 'AnyList ::= [] ; [Any | AnyList]' has Any at the head position.
 Under ::= semantics, clauses must cover BOTH mode alternatives:
   - _ (output): requires writer variable
   - _? (input): requires reader variable
@@ -737,8 +784,8 @@ Current clauses only cover: _? (input)
 
 Solutions:
   1. Add clause with writer at head position
-  2. Change type to List1 ::= [] ; [_ | List1] (single mode)
-  3. Use ::< List for partial coverage (future PMT feature)
+  2. Change type to List ::= [] ; [_ | List] (single mode, standard)
+  3. Use ::< AnyList for partial coverage (future PMT feature)
 ```
 
 ---
@@ -843,6 +890,19 @@ This implementation follows the theory developed in "Moded Types for Grassroots 
 ---
 
 ## Appendix A: Changelog
+
+### v1.3 (2025-12-22)
+- Updated Section 2.1: Clarified that `_` and `_?` are primitive modes, distinct from `Any ::= _ ; _?`
+- Added Section 2.5: System Type Definitions
+  - Defined `List ::= [] ; [_ | List]` (standard list with output-mode elements)
+  - Defined `Stream ::< List` (open-ended stream, subtype)
+  - Defined `InvStream ::= [] ; [_? | InvStream]` (input-mode elements, for bounded buffers)
+  - Introduced `AnyList ::= [] ; [Any | AnyList]` as theoretical type
+- Renamed Section 2.5 → 2.7, Section 2.6 → 2.8 (due to new Section 2.5)
+- Updated Section 4.4: Changed "List Copy" example to "AnyList Copy" to distinguish from standard List
+- Updated all `List ::= [] ; [Any | List]` occurrences to use `AnyList` when demonstrating mode coverage with Any
+- Updated Section 7.5: Changed Channel example to use `Stream ::< List`, added bounded buffer example with InvStream
+- Updated error message examples to use AnyList for Any-based lists
 
 ### v1.2 (2025-12-22)
 - Added Section 7: Guards and Type Inference
