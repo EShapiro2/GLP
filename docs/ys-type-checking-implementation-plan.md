@@ -374,15 +374,49 @@ number(0).
 number(s(N)) :- number(N).
 ```
 
+### System Types: List vs Stream vs Any
+
+**List vs Stream:**
+- `List ::= [] ; [_ | List].` — **closed lists** (must terminate with `[]`)
+- `Stream ::< List.` — **open-ended streams** (subtype, can suspend without closing)
+
+Both should be **system types** (built into the type system).
+
+**The `_` vs `Any` distinction:**
+- `_` is the **primitive output mode** (single alternative)
+- `Any ::= _ ; _?` is the **universal type** (both modes, requires coverage)
+- `AnyList ::= [] ; [Any | AnyList].` — theoretically interesting but **difficult to satisfy in practice**
+
+**Inverted Stream (for bounded buffers):**
+```prolog
+InvStream ::= [] ; [_? | InvStream].
+```
+Stream of empty slots - input mode at head position. Used in bounded buffer implementations.
+
+### AnyList Copy: Three-Clause Coverage
+
+For `AnyList` with `Any` at head position, mode coverage requires handling both mode alternatives:
+
+```prolog
+procedure copy(AnyList?, AnyList).
+
+copy([], []).
+copy([X | In], [X? | Out]) :- copy(In?, Out).   % Writer at input head, reader at output head
+copy([X? | In], [X | Out]) :- copy(In?, Out).   % Reader at input head, writer at output head
+```
+
+The two non-base clauses collectively cover both mode combinations at the list head position.
+
 ### Channel Types: Complementary Stream Pairs
 
 **Channels** are complementary pairs of streams, where one is input and the other is output.
 
-**Note on terminology:** Should we use "Stream" or "List"? Streams emphasize infinite/ongoing nature.
-
 ```prolog
-% Stream type: infinite list with suspension at tail
-Stream ::= [_ | Stream] ; Stream.
+% List: closed, must terminate
+List ::= [] ; [_ | List].
+
+% Stream: open-ended, subtype of List
+Stream ::< List.
 
 % Channel type: complementary pair
 % One direction is reader (input), other is writer (output)
