@@ -13,6 +13,7 @@ import 'type_compiler.dart';
 import 'type_parser.dart';
 import 'mode_checker.dart';
 import 'mode_error.dart';
+import 'clause_contribution.dart';
 import '../../compiler/ast.dart' as ast;
 
 /// Result of type checking
@@ -172,15 +173,76 @@ class TypeChecker {
       ));
     }
 
-    // Fixpoint check: union of contributions should equal declared type
-    // This is a simplified check - full implementation would compute T_P^α
-    if (clauseContributions.isEmpty && clauses.isNotEmpty) {
-      errors.add(TypeError(
-        'All clauses for ${decl.name}/${decl.arity} are useless',
-        decl.line, decl.column
-      ));
+    // Fixpoint check: compute T_P^α(S) and verify it equals S
+    // T_P^α(S) = tuple-distributive closure = union of clause contributions per argument
+    if (clauseContributions.isEmpty) {
+      if (clauses.isNotEmpty) {
+        errors.add(TypeError(
+          'All clauses for ${decl.name}/${decl.arity} are useless',
+          decl.line, decl.column
+        ));
+      }
+      return TypeCheckResult(errors, warnings);
     }
-    
+
+    // Create contribution computer
+    final contributionComputer = ClauseContributionComputer(typeEnv);
+
+    // Compute DFA contributions for each argument position across all clauses
+    for (int argIndex = 0; argIndex < decl.arity; argIndex++) {
+      // Union all clause contributions for this argument position
+      var inferredDFA = TypeDFA.empty();
+
+      for (final contribution in clauseContributions) {
+        final clause = contribution.clause;
+        final varTypes = contribution.variableTypes;
+
+        if (argIndex < clause.head.args.length) {
+          final argPattern = clause.head.args[argIndex];
+          final argContribution = contributionComputer.computeArgContribution(
+            argPattern,
+            varTypes,
+          );
+          inferredDFA = inferredDFA.union(argContribution);
+        }
+      }
+
+      // Check if inferred equals declared
+      final declaredDFA = argDFAs[argIndex];
+
+      if (!inferredDFA.isEquivalent(declaredDFA)) {
+        // Diagnose the type of mismatch
+        if (inferredDFA.isEmpty && !declaredDFA.isEmpty) {
+          errors.add(TypeError(
+            'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
+            'no clauses produce values for this argument',
+            decl.line, decl.column
+          ));
+        } else if (inferredDFA.isSubsetOf(declaredDFA)) {
+          // Inferred ⊂ Declared: incomplete definition
+          errors.add(TypeError(
+            'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
+            'clauses do not cover full declared type ${decl.argTypes[argIndex].name} (incomplete definition)',
+            decl.line, decl.column
+          ));
+        } else if (declaredDFA.isSubsetOf(inferredDFA)) {
+          // Declared ⊂ Inferred: produces values outside type
+          errors.add(TypeError(
+            'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
+            'clauses produce values outside declared type ${decl.argTypes[argIndex].name}',
+            decl.line, decl.column
+          ));
+        } else {
+          // Neither is subset of other
+          errors.add(TypeError(
+            'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
+            'inferred type does not match declared type ${decl.argTypes[argIndex].name}',
+            decl.line, decl.column
+          ));
+        }
+      }
+    }
+
     return TypeCheckResult(errors, warnings);
   }
   
