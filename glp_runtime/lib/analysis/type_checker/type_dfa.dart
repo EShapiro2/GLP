@@ -317,17 +317,23 @@ class TypeDFA {
   
   /// Check if DFA language is empty
   bool get isEmpty {
-    // BFS to see if any final state is reachable
+    // If we have anyValue states, language is non-empty (accepts all values)
+    // This handles types like Any ::< Every where "Every" is anyValue
+    if (anyValueStates.isNotEmpty) {
+      return false;
+    }
+
+    // Standard BFS to see if any final state is reachable
     final visited = <DFAState>{};
     final queue = Queue<DFAState>();
-    
+
     queue.add(startState);
     visited.add(startState);
-    
+
     while (queue.isNotEmpty) {
       final current = queue.removeFirst();
       if (finalStates.contains(current)) return false;
-      
+
       for (final sym in alphabet) {
         final next = transitions[(current, sym)];
         if (next != null && !visited.contains(next)) {
@@ -336,7 +342,7 @@ class TypeDFA {
         }
       }
     }
-    
+
     return true;
   }
   
