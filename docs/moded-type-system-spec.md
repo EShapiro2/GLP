@@ -1,4 +1,7 @@
-# GLP Moded Type System Specification (v1.0)
+# GLP Moded Type System Specification (v1.5)
+
+**Updated:** 2025-12-22
+**Change:** Revised Section 5 (Moded Type DFA) to match paper specification
 
 ## 1. Overview
 
@@ -36,23 +39,42 @@ Moded types **subsume** unmoded types: every unmoded type is equivalent to a mod
 
 ### 2.1 Primitive Mode Types
 
+The primitive mode types are the atomic building blocks:
+
 ```
-_    output mode (program produces value)
-_?   input mode (environment provides value)
+_    output mode only (program produces value)
+_?   input mode only (program consumes value)
 ```
 
-The universal type is self-dual:
+These are distinct from the universal type `Any`:
+
 ```
 Any ::= _ ; _?.
-(Any)? = Any
 ```
 
-### 2.2 Moded Type Expressions
+`Any` requires **both** mode alternatives to be covered under `::=` semantics. A single `_` or `_?` requires only that mode.
+
+### 2.2 Type Definitions vs. Subtype Declarations
+
+Following Yardeni-Shapiro, we distinguish two declaration forms:
+
+| Syntax | Semantics | Fixpoint Condition | Coverage |
+|--------|-----------|-------------------|----------|
+| `T ::= S` | Type definition | T_M^{α,m}(S) = S | Complete (equality) |
+| `T ::< S` | Subtype declaration | T_M^{α,m}(S') ⊆ S | Partial (subset) |
+
+**Type definition (`::=`)**: Clauses must collectively cover ALL alternatives of S.
+
+**Subtype declaration (`::<`)**: Clauses need only cover SOME SUBSET of S. This is an escape hatch for partial implementations.
+
+**GLP Implementation Status:** GLP currently implements only `::=`. The `::< ` form is reserved for future Polymorphic Moded Types (PMT).
+
+### 2.3 Moded Type Expressions
 
 Type definitions remain as before (using `::=` syntax):
 ```
 Nat ::= 0 ; s(Nat).
-List ::= [] ; [Any | List].
+List ::= [] ; [_ | List].
 ```
 
 Mode annotations appear in **procedure declarations**:
@@ -64,7 +86,7 @@ This declares:
 - Arguments 1, 2: input mode (`List?`) — caller provides readers
 - Argument 3: output mode (`List`) — caller provides writer
 
-### 2.3 Grammar Extension
+### 2.4 Grammar Extension
 
 ```
 proc_decl     ::= 'procedure' atom '(' moded_type_refs ')' '.'
@@ -74,7 +96,143 @@ moded_type_ref  ::= type_ref '?'?
 
 The `?` suffix on a type reference indicates input mode.
 
-### 2.4 Embedded Modes in Type Definitions
+### 2.5 Predefined Types
+
+The following types and procedures are predefined by prepending their definitions to every module. A module cannot redefine a predefined type or procedure.
+
+#### 2.5.1 Primitive Types
+
+```prolog
+Number.   % numeric values (built-in)
+String.   % string values (built-in)
+```
+
+#### 2.5.2 Universal Types
+
+```prolog
+Every ::= _ ; _?.      % exact: requires both mode alternatives covered
+Any ::< Every.         % subtype: no coverage requirement
+```
+
+**Self-Duality of Every and Any:**
+
+Since `Every ::= _ ; _?` contains both output and input modes as alternatives, the type is *self-dual*:
+
+```
+(Every)? = Every
+```
+
+Complementing `Every` yields `Every`. The same holds for `Any ::< Every`:
+
+```
+(Any)? = Any
+```
+
+**Consequence:** Mode annotations on `Any` positions are semantically irrelevant. Writing `Any` or `Any?` in a procedure declaration has the same meaning—both writer and reader variables are acceptable at such positions. Since `Any` uses subtype semantics (`::< `), there is no coverage requirement either.
+
+This self-duality means `Any` truly represents "any value with any mode"—the universal type for positions where mode is unconstrained.
+
+#### 2.5.3 Collections
+
+```prolog
+List ::= [Any | List] ; [].
+Stream ::< List.               % may remain open (no [] case required)
+DiffList ::= List \ List?.     % difference list with hole
+```
+
+**List** uses `Any` for elements. Since `Any` has no coverage requirement, a two-clause copy suffices:
+
+```prolog
+procedure copy(List?, List).
+copy([], []).
+copy([X | In], [X? | Out]) :- copy(In?, Out).
+```
+
+**Stream** uses subtype semantics, so procedures need not handle the `[]` case.
+
+**DiffList** represents a list with a hole at the end. The structure `List \ List?` pairs:
+- `List` (output): the content produced so far
+- `List?` (input): the hole where more content can be appended
+
+#### 2.5.4 Channels
+
+```prolog
+Channel ::= ch(Stream?, Stream).
+```
+
+A channel pairs two streams with complementary modes:
+- First stream (`Stream?`): input—messages received
+- Second stream (`Stream`): output—messages sent
+
+The `new_channel` operation creates two complementary endpoints by swapping the streams.
+
+#### 2.5.5 Predefined Procedures
+
+These unit clauses are predefined and can be used as defined guards:
+
+```prolog
+%% Difference List Operations
+procedure dl_append(DiffList?, DiffList?, DiffList).
+procedure dl_to_list(DiffList?, List).
+
+dl_append(A\B?, B\C?, A?\C).
+dl_to_list(L\[], L?).
+
+%% Channel Operations
+procedure new_channel(Channel, Channel).
+procedure send(Any, Channel?, Channel).
+procedure receive(Any, Channel?, Channel).
+
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
+```
+
+**dl_append** concatenates two difference lists in O(1) time by unifying the first list's hole with the second list's content.
+
+**dl_to_list** closes a difference list by unifying its hole with `[]`.
+
+**new_channel** creates two complementary channel endpoints. What one side sends, the other receives.
+
+**send** adds a message to the channel's output stream.
+
+**receive** takes a message from the channel's input stream.
+
+#### 2.5.6 Usage as Defined Guards
+
+Since the predefined procedures are unit clauses, they can be used in guard position:
+
+```prolog
+% Append in guard position
+process(DL1, DL2, Result) :- dl_append(DL1?, DL2?, Result) |
+    continue(Result?).
+
+% Receive in guard position (suspends until message available)
+handler(Ch) :- receive(Msg, Ch?, Ch2) |
+    process(Msg?),
+    handler(Ch2?).
+```
+
+#### 2.5.7 EveryList (Theoretical Example)
+
+For theoretical analysis, one may define a list requiring full mode coverage at element positions:
+
+```prolog
+EveryList ::= [Every | EveryList] ; [].
+```
+
+Unlike `List` (which uses `Any`), `EveryList` requires three clauses for copy:
+
+```prolog
+procedure copy(EveryList?, EveryList).
+copy([], []).
+copy([X | In], [X? | Out]) :- copy(In?, Out).   % element flows in→out
+copy([X? | In], [X | Out]) :- copy(In?, Out).   % element flows out→in
+```
+
+The third clause covers the `_?` alternative of `Every`. This is primarily of theoretical interest; practical programs use `List` with `Any` elements.
+
+### 2.7 Embedded Modes in Type Definitions
 
 Types can embed mode information for complex data structures:
 ```
@@ -93,7 +251,7 @@ QueueMsg ::= enqueue(Any) ; dequeue(Any?).
 
 In `show(Number?)`, the `Number?` marks an **input position in the type definition**. When the counter receives `CounterMsg?` (input stream), involution applies: `show(Number?)` → `show(Number)` — so the counter WRITES the response.
 
-### 2.5 Examples
+### 2.8 Examples
 
 ```glp
 % Simple moded procedure
@@ -104,7 +262,7 @@ add(0, Y, Y?).
 add(s(X), Y, s(Z)?) :- add(X?, Y?, Z).
 
 % Stream merge with all modes explicit
-List ::= [] ; [Any | List].
+List ::= [] ; [_ | List].
 procedure merge(List?, List?, List).
 
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
@@ -127,15 +285,6 @@ counter([show(State?)|S], State) :-
     number(State?) |
     counter(S?, State?).
 counter([], _).
-
-% Request/Response server
-Request ::= get(Value?) ; put(Value).
-RequestStream ::= [] ; [Request | RequestStream].
-procedure server(RequestStream?, State).
-
-% After complementation at server receiving RequestStream?:
-% - get(Value?) → get(Value) : server WRITES response
-% - put(Value) → put(Value?) : server READS provided value
 ```
 
 ---
@@ -260,62 +409,234 @@ List<TypeRef> getBodyGoalTypes(ProcDecl decl) {
 }
 ```
 
+### 4.4 Mode Coverage for Union Types
+
+Under `::=` semantics, union types require coverage of **all** alternatives. This has critical implications for `Any ::= _ | _?`:
+
+**Mode Coverage Requirement:** If a type position has type `Any ::= _ | _?` under `::=` semantics, clauses must collectively cover **both** mode alternatives:
+- Some clause(s) must handle the `_` case (writer at that position)
+- Some clause(s) must handle the `_?` case (reader at that position)
+
+A single clause typically covers only one mode combination.
+
+#### Example: AnyList Copy (Why Any Requires Mode Coverage)
+
+Consider a list type with `Any` at the head position:
+```glp
+AnyList ::= [] ; [Any | AnyList].
+
+procedure copy(AnyList?, AnyList).
+
+copy([], []).
+copy([H? | In], [H | Out?]) :- copy(In?, Out).
+```
+
+**SRSW check:** Each variable has exactly one writer and one reader ✓
+
+**Question:** Is this program well-moded-typed?
+
+**Analysis:** At the head position of `[H? | In]` and `[H | Out?]`, the type is `Any ::= _ | _?`. Under `::=` semantics, clauses must collectively cover both alternatives:
+- `_` requires a writer variable at that position
+- `_?` requires a reader variable at that position
+
+The single clause `copy([H? | In], [H | Out?])` covers only one mode combination:
+- Input head: `H?` (reader) → matches `_?`
+- Output head: `H` (writer) → matches `_`
+
+The opposite combination (writer at input head, reader at output head) is **not covered**.
+
+**Verdict: This program is NOT well-moded-typed.**
+
+#### Solution 1: Restrict to Output-Mode Heads
+
+```glp
+List1 ::= [] ; [_ | List1].
+
+procedure copy(List1?, List1).
+
+copy([], []).
+copy([H? | In], [H | Out?]) :- copy(In?, Out).
+```
+
+Head type is `_` (not `Any`), so only one mode needs coverage. **Well-moded-typed.**
+
+#### Solution 2: Restrict to Input-Mode Heads
+
+```glp
+List2 ::= [] ; [_? | List2].
+
+procedure copy(List2?, List2).
+
+copy([], []).
+copy([H | In], [H? | Out?]) :- copy(In?, Out).
+```
+
+Head type is `_?` (not `Any`), so only one mode needs coverage. **Well-moded-typed.**
+
+#### Solution 3: Cover Both Modes with Multiple Clauses
+
+```glp
+AnyList ::= [] ; [Any | AnyList].
+
+procedure copy(AnyList?, AnyList).
+
+copy([], []).
+copy([H? | In], [H | Out?]) :- copy(In?, Out).
+copy([H | In], [H? | Out?]) :- copy(In?, Out).
+```
+
+The two non-base clauses collectively cover both mode combinations:
+- First clause: reader at input head (`_?`), writer at output head (`_`)
+- Second clause: writer at input head (`_`), reader at output head (`_?`)
+
+**Well-moded-typed.**
+
+#### Design Principle
+
+Under `::=` semantics, `Any` positions in type definitions impose coverage obligations that typically require:
+1. **Restricting the type** to a single mode (`List1`, `List2`)
+2. **Multiple clauses** covering each mode alternative
+3. **Using `::< S`** to permit partial coverage (escape hatch, future PMT)
+
+The choice depends on intended semantics: does the procedure genuinely need to handle both modes at that position?
+
 ---
 
 ## 5. Moded Type DFA
 
-### 5.1 Extension to TypeDFA
+### 5.1 Moded Paths
+
+A **moded path** (as defined in Section 3.3) is a path together with the mode annotation at its leaf. A moded type is characterized by its set of moded paths: `paths^m(S)`.
+
+Following the paper (Definition 6.15):
+- A path describes a position in a term (sequence of functor/argument-index steps)
+- A moded path pairs this with the mode at that leaf position
+- The DFA accepts moded paths, not just structural paths
+
+### 5.2 Primitive State Modes
+
+The type DFA tracks mode information at **primitive type positions** (`_` and `_?`). Non-primitive positions are purely structural.
 
 ```dart
-class ModedTypeDFA extends TypeDFA {
-  /// Mode annotation for each state
-  final Map<String, Mode> stateModes;
-
-  ModedTypeDFA({
-    required super.states,
-    required super.startState,
-    required super.finalStates,
-    required super.transitions,
-    required this.stateModes,
-  });
-
-  /// Get mode at a given state
-  Mode getModeAt(String state) => stateModes[state] ?? Mode.output;
-
-  /// Check if a term matches with correct modes
-  bool acceptsWithModes(Term t, Map<String, Mode> varModes);
-
-  /// Extract moded paths from this DFA
-  Set<ModedPath> modedPaths();
+class TypeDFA {
+  final Set<DFAState> states;
+  final DFAState startState;
+  final Set<DFAState> finalStates;
+  final Map<(DFAState, PathElement), DFAState> transitions;
+  
+  /// Mode information at primitive type states.
+  /// 
+  /// A state appears in this map iff it corresponds to a primitive type
+  /// position (_ or _?) in a type definition:
+  /// - {Mode.output} for _ (program produces value)
+  /// - {Mode.input} for _? (program consumes value)
+  /// - {Mode.output, Mode.input} for Every ::= _ ; _?
+  ///
+  /// States not in this map are structural (non-primitive) positions.
+  final Map<DFAState, Set<Mode>> primitiveStateModes;
+  
+  /// Check if state is a primitive type position
+  bool isPrimitiveState(DFAState state) => 
+      primitiveStateModes.containsKey(state);
+  
+  /// Get accepted modes at a primitive state (empty for non-primitive)
+  Set<Mode> getModesAt(DFAState state) => 
+      primitiveStateModes[state] ?? {};
 }
 ```
 
-### 5.2 Compiling Moded Types to DFA
+### 5.3 Compiling Primitive Types
 
-The compilation extends the unmoded case:
+When compiling a type definition to DFA, primitive types map to mode sets:
 
-1. **Parse type definition** → TypeDef with alternatives
-2. **Build state machine** → states for each type name + constructors
-3. **Annotate states with modes** → track mode at each position
-4. **Handle mode complementation** → when following `Type?` reference
+| Type alternative | `primitiveStateModes` entry |
+|-----------------|----------------------------|
+| `_` | `{Mode.output}` |
+| `_?` | `{Mode.input}` |
+| `Every ::= _ ; _?` | `{Mode.output, Mode.input}` |
+| `Any ::< Every` | `{Mode.output, Mode.input}` (inherited) |
+| Non-primitive (constructors, type refs) | Not in map |
 
 ```dart
-class ModedTypeCompiler {
-  final TypeEnvironment env;
-
-  ModedTypeDFA compile(TypeRef typeRef) {
-    final baseDFA = compileUnmodedType(typeRef.name);
-    return annotateWithModes(baseDFA, typeRef.isInput);
+void _compileAlternative(DFAState state, TypeExpr alt) {
+  if (alt is PrimitiveModeAlt) {
+    // Primitive type: mark state with its mode
+    final mode = alt.isInput ? Mode.input : Mode.output;
+    primitiveStateModes[state] = 
+        (primitiveStateModes[state] ?? <Mode>{})..add(mode);
+    finalStates.add(state);  // Primitive positions are accepting
+    return;
   }
+  // ... handle constructors, type references, etc.
+}
+```
 
-  ModedTypeDFA annotateWithModes(TypeDFA dfa, bool isInput) {
-    final stateModes = <String, Mode>{};
-    // Traverse DFA, tracking mode through transitions
-    // Apply complementation when entering Type? references
-    ...
+### 5.4 Accepting Moded Paths
+
+A DFA accepts moded path `(ξ, m)` iff:
+1. Path `ξ` leads from start state to a final state `q`, AND
+2. Either `q` is not primitive, OR `m ∈ primitiveStateModes[q]`
+
+```dart
+bool acceptsModedPath(ModedPath path) {
+  var current = startState;
+  for (final elem in path.steps) {
+    final next = transitions[(current, elem)];
+    if (next == null) return false;
+    current = next;
+  }
+  
+  if (!finalStates.contains(current)) return false;
+  
+  // At primitive positions, verify mode is accepted
+  if (isPrimitiveState(current)) {
+    return getModesAt(current).contains(path.mode);
+  }
+  return true;
+}
+```
+
+### 5.5 Mode Computation During Traversal
+
+During type checking, mode is computed while traversing term and type in parallel. This integrates mode checking with type checking—they are **not** separate passes.
+
+1. Start with declared mode from procedure declaration
+2. At each type reference `T` or `T?`, apply `combineMode` (Section 4.2)
+3. At primitive positions, verify variable mode ∈ accepted modes
+
+```dart
+/// During type checking traversal
+void checkVariableAtPosition(
+  Variable variable,
+  DFAState typeState,
+  Mode currentMode,  // Accumulated mode through traversal
+) {
+  if (!isPrimitiveState(typeState)) {
+    // Non-primitive: structural check only
+    return;
+  }
+  
+  // Primitive position: check mode
+  final acceptedModes = getModesAt(typeState);
+  final variableMode = variable.isReader ? Mode.input : Mode.output;
+  
+  if (!acceptedModes.contains(variableMode)) {
+    reportModeError(variable, variableMode, acceptedModes);
   }
 }
 ```
+
+### 5.6 Correspondence with Paper
+
+This specification corresponds to the paper as follows:
+
+| Paper | Spec |
+|-------|------|
+| "moded path = path + mode at leaf" (Def 6.15) | `ModedPath(steps, mode)` |
+| `_` and `_?` are distinct primitives | Different entries in `primitiveStateModes` |
+| "alternating tree automata with mode annotations" (§7.4) | `primitiveStateModes: Map<DFAState, Set<Mode>>` |
+| `Every ::= _ ; _?` accepts both | `{Mode.output, Mode.input}` |
+| Mode combines via involution (§7.7) | `combineMode()` during traversal |
 
 ---
 
@@ -349,6 +670,17 @@ For each procedure p/n with declared moded type (T₁^m₁, ..., Tₙ^mₙ):
         occurrenceTypes.add(type at position)
       varTypes[Y] := intersect(occurrenceTypes)
 
+    // Step 2.5: Apply guard constraints
+    For each guard G in C:
+      Extract type constraints from G's signature
+      For each variable X constrained by G:
+        varTypes[X] := varTypes[X] ∩ guardType(G, X)
+        If varTypes[X] = ∅:
+          Report error: "Guard inconsistent with pattern type"
+
+      If G implies groundness for variable X:
+        Mark X as recursively ground (covers all mode alternatives)
+
     // Step 3: Check head variable modes
     For each variable Y in head:
       expectedMode := mode at head position from declaration
@@ -359,7 +691,7 @@ For each procedure p/n with declared moded type (T₁^m₁, ..., Tₙ^mₙ):
     // Step 4: Compute clause contribution
     T_C^{α,m} := compute moded contribution
 
-  // Step 5: Check fixpoint
+  // Step 5: Check fixpoint (for ::= semantics)
   inferred := modedTupleDistributiveClosure(union(contributions))
   If inferred ≠ S:
     Report error: "inferred moded type ≠ declared type"
@@ -424,19 +756,177 @@ List<ModeError> checkBodyGoal(Goal goal, ProcDecl decl) {
 }
 ```
 
+### 6.4 Mode Coverage Check for Any Positions
+
+For positions with type `Any ::= _ | _?`, verify collective mode coverage:
+
+```dart
+/// Check that all mode alternatives are covered across clauses
+List<ModeError> checkModeCoverage(
+  List<Clause> clauses,
+  ProcDecl decl,
+  TypeEnvironment env,
+) {
+  final errors = <ModeError>[];
+
+  for (int argIndex = 0; argIndex < decl.arity; argIndex++) {
+    final argType = decl.argTypes[argIndex];
+
+    // Find positions with Any type that need coverage
+    final anyPositions = findAnyPositions(argType, env);
+
+    for (final position in anyPositions) {
+      final coveredModes = <Mode>{};
+
+      for (final clause in clauses) {
+        final termAtPosition = extractTermAtPosition(clause.head, argIndex, position);
+        if (termAtPosition is VarTerm) {
+          final mode = termAtPosition.isReader ? Mode.input : Mode.output;
+          coveredModes.add(mode);
+        }
+      }
+
+      // Check both modes are covered
+      if (!coveredModes.contains(Mode.output)) {
+        errors.add(ModeError(
+          'No clause covers output mode (_) at Any position $position in argument $argIndex',
+        ));
+      }
+      if (!coveredModes.contains(Mode.input)) {
+        errors.add(ModeError(
+          'No clause covers input mode (_?) at Any position $position in argument $argIndex',
+        ));
+      }
+    }
+  }
+
+  return errors;
+}
+```
+
 ---
 
-## 7. Error Messages
+## 7. Guards and Type Inference
 
-### 7.1 Mode Errors
+Guards provide type and mode information that constrains variable types within a clause.
+
+### 7.1 Built-in Guard Signatures
+
+Built-in guards have known type signatures:
+
+| Guard | Argument Types | Implies Ground |
+|-------|---------------|----------------|
+| `number(X?)` | (Number) | Yes |
+| `integer(X?)` | (Number) | Yes |
+| `string(X?)` | (String) | Yes |
+| `ground(X?)` | (Any) | Yes (recursively) |
+| `known(X?)` | (Any) | No |
+| `unknown(X?)` | (Any) | No |
+| `X? < Y?` | (Number, Number) | Yes |
+| `X? > Y?` | (Number, Number) | Yes |
+| `X? =< Y?` | (Number, Number) | Yes |
+| `X? >= Y?` | (Number, Number) | Yes |
+| `X? =:= Y?` | (Number, Number) | Yes |
+| `X? =\= Y?` | (Number, Number) | Yes |
+| `X? =?= Y?` | (Any, Any) | Yes |
+
+### 7.2 Type Constraint Extraction
+
+When a guard succeeds, it constrains the types of its arguments. These constraints are intersected with types inferred from head patterns:
+
+```
+For each guard G in clause C:
+  For each argument position i of G:
+    Let T_guard = declared type for position i of G
+    Let X = variable at position i (if any)
+    varTypes[X] := varTypes[X] ∩ T_guard
+    If varTypes[X] = ∅:
+      Report error: "Guard type inconsistent with pattern type"
+```
+
+### 7.3 Ground Guards and Mode Coverage
+
+The `ground(X?)` guard has special significance for mode checking. When `ground(X?)` succeeds:
+
+1. X contains no unbound variables
+2. All nested positions within X are fully determined
+3. No mode inversions can occur within X's structure
+
+**Consequence:** Variables protected by `ground/1` (or other ground-implying guards) satisfy all mode coverage requirements. A clause with `ground(X?)` in its guard contributes both writer and reader coverage for all nested positions within X.
+
+```
+groundVars := variables occurring in ground-implying guards
+
+For mode coverage at position P:
+  If term at P is variable V and V ∈ groundVars:
+    hasWriter := true
+    hasReader := true  // Ground covers both modes
+```
+
+### 7.4 Defined Guards
+
+Defined guards (user-defined predicates callable in guard position) require procedure declarations with moded types, just like any other procedure. No special treatment is needed.
+
+```
+% Unit clause defining a type test
+channel(ch(_, _)).
+
+% Requires procedure declaration:
+procedure channel(Channel?).
+```
+
+The defined guard is type-checked as a body goal with call-boundary complementation applied.
+
+### 7.5 Example: Bidirectional Channels
+
+Channels pair two streams with complementary modes:
+
+```prolog
+% Stream may not close (subtype of List)
+Stream ::< List.
+
+% Channel pairs two streams with complementary modes
+Channel ::= ch(Stream?, Stream) ; ch(Stream, Stream?).
+
+procedure create_channel(Channel, Channel).
+create_channel(ch(AtoB?, BtoA), ch(BtoA?, AtoB)).
+```
+
+The `Channel` type has two alternatives capturing endpoint duality:
+- `ch(Stream?, Stream)` — reads from first stream, writes to second
+- `ch(Stream, Stream?)` — writes to first stream, reads from second
+
+Since `Stream ::< List` uses subtype semantics, there is no requirement that streams close (the `[]` alternative need not be covered).
+
+**Bounded Buffer Example:**
+
+A bounded buffer uses an inverted stream of empty slots:
+
+```prolog
+InvStream ::= [] ; [_? | InvStream].
+
+procedure bounded_buffer(Stream?, InvStream?, Stream).
+bounded_buffer(In, Slots, Out) :-
+    % Takes values from In, consumes slots, produces Out
+    ...
+```
+
+The `InvStream` of slots has `_?` elements (input mode), representing empty positions the buffer can fill.
+
+---
+
+## 8. Error Messages
+
+### 8.1 Mode Errors
 
 | Situation | Message |
 |-----------|---------|
 | Writer at output position | `Writer variable 'X' at line 5 occurs at output position; expected input position (_?)` |
 | Reader at input position | `Reader variable 'X?' at line 7 occurs at input position; expected output position (_)` |
 | Mode mismatch in call | `Argument 2 of merge/3 at line 10: expected input mode, found output` |
+| Incomplete mode coverage | `No clause covers output mode (_) at Any position in list head` |
 
-### 7.2 Example Error Output
+### 8.2 Example Error Output
 
 ```
 [MODE ERROR] Writer variable 'Result' at line 8, column 15 occurs at output
@@ -450,9 +940,27 @@ Hint: The procedure declaration is:
 At output positions, use a reader variable (Result?) to receive the value.
 ```
 
+### 8.3 Mode Coverage Error
+
+```
+[MODE ERROR] Incomplete mode coverage at Any position in argument 1.
+
+The type 'AnyList ::= [] ; [Any | AnyList]' has Any at the head position.
+Under ::= semantics, clauses must cover BOTH mode alternatives:
+  - _ (output): requires writer variable
+  - _? (input): requires reader variable
+
+Current clauses only cover: _? (input)
+
+Solutions:
+  1. Add clause with writer at head position
+  2. Change type to List ::= [] ; [_ | List] (single mode, standard)
+  3. Use ::< AnyList for partial coverage (future PMT feature)
+```
+
 ---
 
-## 8. Implementation Plan
+## 9. Implementation Plan
 
 ### Phase 1: Parser Extension (1 day)
 - [ ] Extend `type_parser.dart` to parse `Type?` in procedure declarations
@@ -465,7 +973,17 @@ At output positions, use a reader variable (Result?) to receive the value.
 - [ ] Implement `checkVariableMode()` for leaf position checking
 - [ ] Implement mode combination for nested positions
 - [ ] Implement call boundary complementation
+- [ ] Implement mode coverage check for Any positions
 - [ ] Add comprehensive tests
+
+### Phase 2.5: Guard Type Checking (1 day)
+- [ ] Create GuardTypeRegistry with built-in guard signatures
+- [ ] Implement guard constraint extraction
+- [ ] Integrate guard constraints into variable type inference
+- [ ] Track recursively-ground variables from ground-implying guards
+- [ ] Update mode coverage to recognize ground-protected variables
+- [ ] Tests for guard type constraints
+- [ ] Tests for ground guards bypassing mode coverage
 
 ### Phase 3: Integrate with Type Checker (2 days)
 - [ ] Extend `type_checker.dart` to invoke mode checker
@@ -484,11 +1002,11 @@ At output positions, use a reader variable (Result?) to receive the value.
 - [ ] Add mode checking examples to docs
 - [ ] Update SPEC_GUIDE.md
 
-**Total estimate: 9 days**
+**Total estimate: 10 days**
 
 ---
 
-## 9. File Organization
+## 10. File Organization
 
 ```
 lib/
@@ -505,7 +1023,7 @@ lib/
 
 ---
 
-## 10. CLI Integration
+## 11. CLI Integration
 
 The `--type-check` flag performs both structural type checking and mode checking:
 
@@ -521,7 +1039,7 @@ Mode checking is **not** a separate phase — it's integrated into type checking
 
 ---
 
-## 11. Theoretical Foundation
+## 12. Theoretical Foundation
 
 This implementation follows the theory developed in "Moded Types for Grassroots Logic Programs" (2024), which establishes:
 
@@ -529,11 +1047,73 @@ This implementation follows the theory developed in "Moded Types for Grassroots 
 2. **Partial correctness guarantee**: Well-moded-typed programs have produced/consumed assignments conforming to declared types
 3. **EXPTIME-complete complexity** for moded type checking
 4. **Mode complementation `(·)?`** as the uniform mechanism for producer/consumer duality
+5. **Mode coverage requirement**: Under `::=` semantics, union types require coverage of all alternatives
 
 ---
 
-## 12. References
+## 13. References
 
 - Yardeni & Shapiro, "A Type System for Logic Programs", JLP 1991
 - Frühwirth, Shapiro, Vardi & Yardeni, "Logic Programs as Types for Logic Programs", LICS 1991
 - "Moded Types for Grassroots Logic Programs", 2024 (this project)
+
+---
+
+## Appendix A: Changelog
+
+### v1.5 (2025-12-22)
+- **REVISED Section 5: Moded Type DFA** to match paper specification
+  - Replaced `Map<String, Mode> stateModes` with `Map<DFAState, Set<Mode>> primitiveStateModes`
+  - Removed incorrect default `Mode.output` for non-primitive states
+  - Added `isPrimitiveState()` to distinguish primitive from structural positions
+  - Added table mapping type alternatives to mode sets
+  - Added `acceptsModedPath()` specification
+  - Added Section 5.5: Mode Computation During Traversal
+  - Added Section 5.6: Correspondence with Paper
+  - Emphasized integration: mode checking happens during type traversal, not as separate pass
+
+### v1.4 (2025-12-22)
+- **MAJOR REVISION** of Section 2.5: Predefined Types
+  - Introduced `Every ::= _ ; _?` and `Any ::< Every` distinction
+  - Added comprehensive explanation of self-duality: `(Every)? = Every` and `(Any)? = Any`
+  - Consequence: Mode annotations on `Any` positions are semantically irrelevant
+  - Changed `List` to use `Any` elements: `List ::= [Any | List] ; []`
+  - Added `DiffList ::= List \ List?` for difference lists with holes
+  - Added predefined procedures: `dl_append`, `dl_to_list`, `new_channel`, `send`, `receive`
+  - Added Section 2.5.6: Usage as Defined Guards
+  - Added Section 2.5.7: EveryList theoretical example (requires full mode coverage)
+  - Removed `InvStream` (no longer needed with new `Any` semantics)
+- Updated Section 2.5.4: Channels now use single constructor `ch(Stream?, Stream)`
+- Throughout document: replaced references to old List type with context-appropriate `List` (Any elements) or `EveryList` (Every elements)
+
+### v1.3 (2025-12-22)
+- Updated Section 2.1: Clarified that `_` and `_?` are primitive modes, distinct from `Any ::= _ ; _?`
+- Added Section 2.5: System Type Definitions
+  - Defined `List ::= [] ; [_ | List]` (standard list with output-mode elements)
+  - Defined `Stream ::< List` (open-ended stream, subtype)
+  - Defined `InvStream ::= [] ; [_? | InvStream]` (input-mode elements, for bounded buffers)
+  - Introduced `AnyList ::= [] ; [Any | AnyList]` as theoretical type
+- Renamed Section 2.5 → 2.7, Section 2.6 → 2.8 (due to new Section 2.5)
+- Updated Section 4.4: Changed "List Copy" example to "AnyList Copy" to distinguish from standard List
+- Updated all `List ::= [] ; [Any | List]` occurrences to use `AnyList` when demonstrating mode coverage with Any
+- Updated Section 7.5: Changed Channel example to use `Stream ::< List`, added bounded buffer example with InvStream
+- Updated error message examples to use AnyList for Any-based lists
+
+### v1.2 (2025-12-22)
+- Added Section 7: Guards and Type Inference
+  - Section 7.1: Built-in Guard Signatures
+  - Section 7.2: Type Constraint Extraction
+  - Section 7.3: Ground Guards and Mode Coverage
+  - Section 7.4: Defined Guards
+  - Section 7.5: Bidirectional Channels Example
+- Added Step 2.5 to Section 6.1: Apply guard constraints in type checking algorithm
+- Added Phase 2.5 to Implementation Plan: Guard Type Checking (1 day)
+- Updated total implementation estimate to 10 days
+- Renumbered sections 7-12 to 8-13
+
+### v1.1 (2025-12-21)
+- Added Section 2.2: Type Definitions vs. Subtype Declarations (`::=` vs `::<`)
+- Added Section 4.4: Mode Coverage for Union Types with List Copy example
+- Added Section 6.4: Mode Coverage Check for Any Positions
+- Added Section 7.3: Mode Coverage Error messages
+- Updated theoretical foundation with mode coverage requirement
