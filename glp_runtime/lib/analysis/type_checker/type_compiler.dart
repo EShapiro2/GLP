@@ -187,12 +187,21 @@ class TypeCompiler {
       transitions[(fromState, tailElem)] = tailTarget;
       
     } else if (alt is TypeRef) {
-      // Type reference: this shouldn't happen at top level of alternative
-      // It means the type is an alias, which we handle by following the reference
-      final target = stateMap[alt.name];
-      if (target != null) {
-        // Copy all transitions from the referenced type
-        // This is a simplification; proper handling would merge states
+      // Type reference at top level (e.g., Any ::< Every)
+      // This means a subtype declaration - inherit primitive modes from supertype
+      // Note: This context is inside TypeCompiler, so we can call compile()
+      // The compile method has caching, so recursive calls are safe
+      try {
+        final referencedDFA = compile(alt.name);
+        if (referencedDFA.primitiveStateModes.containsKey(referencedDFA.startState)) {
+          // Inherit primitive modes from referenced type
+          final modes = referencedDFA.getModesAt(referencedDFA.startState);
+          primitiveStateModes[fromState] =
+              (primitiveStateModes[fromState] ?? <Mode>{})..addAll(modes);
+        }
+      } catch (e) {
+        // If compilation fails, skip mode inheritance
+        // This can happen for forward references or undefined types
       }
     }
   }

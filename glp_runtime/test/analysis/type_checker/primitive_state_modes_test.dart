@@ -76,7 +76,7 @@ procedure copy(OutputOnly).
 copy(X).
 ''';
       final result = checkTypes(source);
-      expect(result, isEmpty, reason: 'Writer X at output position _ should be accepted');
+      expect(result.errors, isEmpty, reason: 'Writer X at output position _ should be accepted');
     });
 
     test('reader variable at _? position: accepted', () {
@@ -88,7 +88,7 @@ procedure echo(InputOnly).
 echo(X?).
 ''';
       final result = checkTypes(source);
-      expect(result, isEmpty, reason: 'Reader X? at input position _? should be accepted');
+      expect(result.errors, isEmpty, reason: 'Reader X? at input position _? should be accepted');
     });
 
     test('Every accepts both writer and reader', () {
@@ -98,7 +98,7 @@ procedure identity(Every, Every).
 identity(X, X?).
 ''';
       final result = checkTypes(source);
-      expect(result, isEmpty, reason: 'Every accepts both modes');
+      expect(result.errors, isEmpty, reason: 'Every accepts both modes');
     });
 
     test('Every with reader then writer', () {
@@ -108,7 +108,7 @@ procedure swap_modes(Every, Every).
 swap_modes(X?, Y).
 ''';
       final result = checkTypes(source);
-      expect(result, isEmpty, reason: 'Every accepts reader at arg1, writer at arg2');
+      expect(result.errors, isEmpty, reason: 'Every accepts reader at arg1, writer at arg2');
     });
   });
 
@@ -122,7 +122,7 @@ procedure bad_copy(InputOnly).
 bad_copy(X).
 ''';
       final result = checkTypes(source);
-      expect(result, isNotEmpty, reason: 'Writer X at input position _? should be rejected');
+      expect(result.errors, isNotEmpty, reason: 'Writer X at input position _? should be rejected');
     });
 
     test('reader variable at _ position: REJECTED', () {
@@ -134,7 +134,7 @@ procedure bad_echo(OutputOnly).
 bad_echo(X?).
 ''';
       final result = checkTypes(source);
-      expect(result, isNotEmpty, reason: 'Reader X? at output position _ should be rejected');
+      expect(result.errors, isNotEmpty, reason: 'Reader X? at output position _ should be rejected');
     });
 
     test('mode mismatch at nested position', () {
@@ -147,7 +147,7 @@ procedure process(Container).
 process(box(X?)).
 ''';
       final result = checkTypes(source);
-      expect(result, isNotEmpty, reason: 'Reader X? inside box at output position should be rejected');
+      expect(result.errors, isNotEmpty, reason: 'Reader X? inside box at output position should be rejected');
     });
   });
 

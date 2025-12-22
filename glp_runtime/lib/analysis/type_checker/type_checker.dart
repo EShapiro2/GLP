@@ -165,15 +165,16 @@ class TypeChecker {
       }
     }
 
-    // Mode checking: verify reader/writer usage matches type modes
-    final modeErrors = modeChecker.checkProcedure(decl.name, decl.arity, clauses);
-    for (final modeError in modeErrors) {
-      errors.add(TypeError(
-        modeError.message,
-        modeError.line,
-        modeError.column,
-      ));
-    }
+    // Mode checking is now integrated into _inferVariableTypes() via primitiveStateModes.
+    // The mode_checker.checkProcedure() used different logic (call boundary complementation)
+    // which conflicts with the spec Section 5 design.
+    // TODO: Refactor mode_checker to only do mode COVERAGE checking, not per-variable checking.
+    //
+    // Old code (disabled):
+    // final modeErrors = modeChecker.checkProcedure(decl.name, decl.arity, clauses);
+    // for (final modeError in modeErrors) {
+    //   errors.add(TypeError(modeError.message, modeError.line, modeError.column));
+    // }
 
     // Fixpoint check: compute T_P^α(S) and verify it equals S
     // T_P^α(S) = tuple-distributive closure = union of clause contributions per argument
