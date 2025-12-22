@@ -91,24 +91,45 @@ echo(X?).
       expect(result.errors, isEmpty, reason: 'Reader X? at input position _? should be accepted');
     });
 
-    test('Every accepts both writer and reader', () {
+    test('Any accepts both writer and reader (no coverage requirement)', () {
       final source = '''
-procedure identity(Every, Every).
+procedure identity(Any, Any).
 
 identity(X, X?).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Every accepts both modes');
+      expect(result.errors, isEmpty, reason: 'Any ::< Every has no coverage requirement');
     });
 
-    test('Every with reader then writer', () {
+    test('Any with reader then writer (no coverage requirement)', () {
       final source = '''
-procedure swap_modes(Every, Every).
+procedure swap_modes(Any, Any).
 
 swap_modes(X?, Y).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Every accepts reader at arg1, writer at arg2');
+      expect(result.errors, isEmpty, reason: 'Any ::< Every has no coverage requirement');
+    });
+
+    test('Every requires multiple clauses for full coverage', () {
+      final source = '''
+procedure full_coverage(Every, Every).
+
+full_coverage(X, Y?).    % writer at arg1, reader at arg2
+full_coverage(X?, Y).    % reader at arg1, writer at arg2
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isEmpty, reason: 'Two clauses cover all mode combinations');
+    });
+
+    test('Every with single clause: INCOMPLETE coverage', () {
+      final source = '''
+procedure incomplete(Every, Every).
+
+incomplete(X, X?).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isNotEmpty, reason: 'Every requires coverage of both modes at each position');
     });
   });
 
