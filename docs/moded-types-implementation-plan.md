@@ -1,8 +1,8 @@
 # Moded Type System Implementation Plan
 
-**Version:** 2.0
+**Version:** 3.0
 **Date:** 2025-12-22
-**Status:** Ready for Implementation
+**Status:** Architectural Fix Required
 
 ---
 
@@ -12,813 +12,445 @@ This document describes the implementation plan for the complete moded type syst
 
 ### 1.1 Goals
 
-1. **Full YS Fixpoint Checking**: Verify T_P^α(S) = S (clauses collectively cover declared type)
+1. **Full YS Fixpoint Checking**: Verify T_M^{α,m}(S) = S
 2. **Mode Coverage**: Verify clauses cover required mode alternatives under `::=` semantics
 3. **Guard Integration**: Extract type constraints from guards; handle ground guards
 4. **Predefined Types**: Every, Any, List, Stream, DiffList, Channel with operations
 
-### 1.2 Current State
+### 1.2 Critical Discovery (2025-12-22)
+
+**The implementation has a fundamental architectural gap with the spec:**
+
+| Spec v1.5 (Section 5) | Current Implementation |
+|----------------------|----------------------|
+| `primitiveStateModes: Map<DFAState, Set<Mode>>` | `anyValueStates: Set<DFAState>` |
+| `_` → `{Mode.output}` | `_` → anyValueStates (mode lost) |
+| `_?` → `{Mode.input}` | `_?` → anyValueStates (mode lost) |
+| `Every` → `{Mode.output, Mode.input}` | `Every` → anyValueStates (mode lost) |
+| Mode checked during type traversal | ModeChecker walks AST separately |
+
+**Consequence:** Mode checking cannot work correctly because mode information is lost at compile time.
+
+### 1.3 Current State (from handover)
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Type Parser | ✓ Complete | Parses `::=`, `::< `, `?` suffix |
-| Type Compiler | ✓ Complete | Compiles types to DFAs |
-| Type DFA | Partial | Has `intersect`; missing `union`, `complement`, `isEquivalent` |
+| Type Parser | ✓ Complete | Parses `::=`, `::<`, `?` suffix |
+| Type Compiler | ⚠ Partial | Uses `anyValueStates`, not `primitiveStateModes` |
+| Type DFA | ⚠ Partial | Has intersection workarounds, missing mode tracking |
 | Ground Path Checking | ✓ Complete | Checks constructors match type |
-| Variable Type Inference | ✓ Complete | Infers types from head patterns |
-| Mode Checking (per-clause) | ✓ Complete | Checks reader/writer at positions |
-| Mode Coverage | Partial | Bug with nested positions being fixed |
-| Guard Type Constraints | ✗ Missing | TODO comment in code |
-| Clause Contribution | ✗ Missing | Does not compute T_{C}^α(S) |
+| Variable Type Inference | ✓ Complete | But doesn't track mode |
+| Mode Checking (per-clause) | ⚠ Broken | Separate system, disconnected from DFA |
+| Mode Coverage | ⚠ Partial | Can't work correctly without mode in DFA |
+| Guard Type Constraints | ✓ Partial | Extraction works, intersection has workarounds |
+| Clause Contribution | ✗ Missing | Does not compute T_{C}^{α,m}(S) |
 | Fixpoint Check | ✗ Missing | Comment admits "simplified check" |
-| Predefined Types | ✗ Missing | Not yet implemented |
+| Predefined Types | ✓ Complete | Every, Any, List, Stream, etc. |
+
+**Test Results:**
+- Guard types: 5/11 passing (6 failing due to mode issues)
+- Total: 137/199 passing
+- 62 failures from test redefinition errors (not implementation bugs)
 
 ---
 
-## 2. Predefined Types and Operations
+## 2. Implementation Phases
 
-The following definitions are prepended to every module. Redefinition is an error.
-
-### 2.1 Type Definitions
-
-```prolog
-% Primitives (built-in, not user-definable)
-Number.
-String.
-
-% Universal types
-Every ::= _ ; _?.      % exact: requires both mode alternatives covered
-Any ::< Every.         % subtype: no coverage requirement
-
-% Collections
-List ::= [Any | List] ; [].
-Stream ::< List.               % may remain open
-DiffList ::= List \ List?.     % difference list with hole
-
-% Communication
-Channel ::= ch(Stream?, Stream).
-```
-
-### 2.2 Predefined Procedures
-
-```prolog
-% Difference list operations
-procedure dl_append(DiffList?, DiffList?, DiffList).
-procedure dl_to_list(DiffList?, List).
-
-dl_append(A\B?, B\C?, A?\C).
-dl_to_list(L\[], L?).
-
-% Channel operations
-procedure new_channel(Channel, Channel).
-procedure send(Any, Channel?, Channel).
-procedure receive(Any, Channel?, Channel).
-
-new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
-send(X, ch(In, [X?|Out?]), ch(In?, Out)).
-receive(X?, ch([X|In], Out?), ch(In?, Out)).
-```
-
-### 2.3 Key Properties
-
-**Self-Duality of Every and Any:**
-
-Since `Every ::= _ ; _?` contains both modes:
-```
-(Every)? = (_)? ; (_?)? = _? ; _ = Every
-```
-
-Self-duality means `Any` and `Any?` are equivalent—mode annotations on `Any` positions are vacuous.
-
-**Every vs Any:**
-
-| Type | Definition | Coverage Requirement |
-|------|------------|---------------------|
-| Every | `::= _ ; _?` | Must cover both modes |
-| Any | `::< Every` | No requirement (subtype) |
-
----
-
-## 3. Implementation Phases
-
-### Phase 1: DFA Operations
+### Phase 0: Architectural Fix - Primitive State Modes (BLOCKING)
 **Effort:** 2-3 days
 **Dependencies:** None
-**Blocking:** Phases 4, 5
+**Blocking:** All other phases
 
-#### 3.1.1 Description
+This phase implements the spec Section 5 design, replacing `anyValueStates` with `primitiveStateModes`.
 
-Extend `lib/analysis/type_checker/type_dfa.dart` with operations required for fixpoint checking.
+#### 2.0.1 Changes to TypeDFA
 
-#### 3.1.2 New Methods
+**File:** `lib/analysis/type_checker/type_dfa.dart`
 
 ```dart
-class TypeDFA {
-  // === Existing ===
-  bool acceptsPath(TermPath path);
-  DFAState? stateAfterPath(TermPath path);
-  TypeDFA intersect(TypeDFA other);
+// REMOVE:
+final Set<DFAState> anyValueStates;
 
-  // === New: Required for fixpoint checking ===
+// ADD:
+/// Mode information at primitive type states.
+/// 
+/// A state appears in this map iff it corresponds to a primitive type
+/// position (_ or _?) in a type definition:
+/// - {Mode.output} for _ (program produces value)
+/// - {Mode.input} for _? (program consumes value)
+/// - {Mode.output, Mode.input} for Every ::= _ ; _?
+///
+/// States not in this map are structural (non-primitive) positions.
+final Map<DFAState, Set<Mode>> primitiveStateModes;
 
-  /// Union: accepts strings accepted by either DFA
-  /// Uses NFA union + subset construction for determinization
-  TypeDFA union(TypeDFA other);
+/// Check if state is a primitive type position
+bool isPrimitiveState(DFAState state) => 
+    primitiveStateModes.containsKey(state);
 
-  /// Complement: accepts strings this DFA rejects
-  /// Requires complete DFA (sink state for missing transitions)
-  TypeDFA complement();
+/// Get accepted modes at a primitive state (empty for non-primitive)
+Set<Mode> getModesAt(DFAState state) => 
+    primitiveStateModes[state] ?? {};
+```
 
-  /// Complete DFA by adding sink state for missing transitions
-  TypeDFA complete();
+**Update all DFA constructors** to use `primitiveStateModes` instead of `anyValueStates`.
 
-  /// Check if L(this) ⊆ L(other)
-  /// Implementation: L(this) ∩ L(complement(other)) = ∅
-  bool isSubsetOf(TypeDFA other);
+**Update `intersect()` method:**
+- Remove workarounds for `anyValueStates`
+- Implement proper mode-aware intersection
+- When intersecting primitive states, intersect their mode sets
 
-  /// Check if L(this) = L(other)
-  /// Implementation: isSubsetOf in both directions, or minimize + isomorphism
-  bool isEquivalent(TypeDFA other);
+**Update `NumberTypeDFA` and `StringTypeDFA`:**
+- These are ground types (no mode alternatives)
+- `primitiveStateModes` should be empty (they accept all values structurally)
 
-  /// Minimize DFA using Hopcroft's algorithm
-  TypeDFA minimize();
+#### 2.0.2 Changes to TypeCompiler
 
-  /// Check if language is empty (no accepting paths)
-  bool get isEmpty;
+**File:** `lib/analysis/type_checker/type_compiler.dart`
 
-  /// DFA accepting exactly one constant
-  static TypeDFA singleton(String constant);
-
-  /// DFA accepting empty language
-  static TypeDFA empty();
+```dart
+void _addTransitionsForAlt(DFAState fromState, TypeExpr alt, ...) {
+  if (alt is PrimitiveModeAlt) {
+    // Primitive type: mark state with its mode
+    final mode = alt.isInput ? Mode.input : Mode.output;
+    primitiveStateModes[fromState] = 
+        (primitiveStateModes[fromState] ?? <Mode>{})..add(mode);
+    finalStates.add(fromState);  // Primitive positions are accepting
+    return;
+  }
+  // ... handle constructors, type references
 }
 ```
 
-#### 3.1.3 Tests
+**Handle `TypeRef` for subtype declarations:**
+- When compiling `Any ::< Every`, copy mode set from `Every`
 
-Create `test/analysis/type_checker/type_dfa_operations_test.dart`:
+#### 2.0.3 Changes to TypeChecker
 
-- Union of disjoint types (Nat ∪ Bool)
-- Union of overlapping types
-- Complement of finite type
-- Complement of recursive type
-- isSubsetOf: Nat ⊆ Any
-- isSubsetOf: List ⊄ Nat
-- isEquivalent: same type defined differently
-- isEmpty: empty vs non-empty
-- singleton: accepts only given constant
+**File:** `lib/analysis/type_checker/type_checker.dart`
+
+Integrate mode checking into `_inferVariableTypes()`:
+
+```dart
+TypeDFA? _inferVariableTypes(ast.Clause clause, ...) {
+  // ... existing code ...
+  
+  // When reaching a variable at a primitive position:
+  for (final varInfo in variableInfos) {
+    final dfaState = stateAfterPath(varInfo.path);
+    if (dfaState != null && dfa.isPrimitiveState(dfaState)) {
+      // Check mode
+      final acceptedModes = dfa.getModesAt(dfaState);
+      final varMode = varInfo.isReader ? Mode.input : Mode.output;
+      
+      if (!acceptedModes.contains(varMode)) {
+        errors.add(ModeError(
+          'Variable ${varInfo.name} has ${varMode} mode, '
+          'but position accepts only $acceptedModes',
+          varInfo.line, varInfo.column,
+        ));
+      }
+    }
+  }
+}
+```
+
+#### 2.0.4 Simplify or Remove ModeChecker
+
+**File:** `lib/analysis/type_checker/mode_checker.dart`
+
+After mode is integrated into TypeChecker:
+- Mode coverage checking may still be needed as a separate pass
+- But per-variable mode checking should be in TypeChecker
+- Evaluate what remains needed in ModeChecker
+
+#### 2.0.5 Tests for Phase 0
+
+**Create:** `test/analysis/type_checker/primitive_state_modes_test.dart`
+
+```dart
+// Positive controls:
+test('_ state has {Mode.output}', ...);
+test('_? state has {Mode.input}', ...);
+test('Every state has {Mode.output, Mode.input}', ...);
+test('Any inherits modes from Every', ...);
+test('List element position has Any modes', ...);
+
+// Negative controls:
+test('writer at _? position rejected', ...);
+test('reader at _ position rejected', ...);
+test('non-primitive position has no mode constraint', ...);
+
+// Integration:
+test('mode checked during type inference', ...);
+test('guard constraints preserve mode information', ...);
+```
+
+---
+
+### Phase 1: DFA Operations
+**Effort:** 2-3 days
+**Dependencies:** Phase 0
+**Blocking:** Phases 4, 5
+
+After Phase 0, the DFA has proper mode tracking. Now implement full DFA operations.
+
+#### 2.1.1 New Methods
+
+```dart
+TypeDFA union(TypeDFA other);
+TypeDFA complement();
+TypeDFA complete();  // Add sink state
+bool isSubsetOf(TypeDFA other);
+bool isEquivalent(TypeDFA other);
+TypeDFA minimize();
+```
+
+#### 2.1.2 Mode-Aware Operations
+
+All operations must preserve/combine `primitiveStateModes`:
+
+- **Union:** `primitiveStateModes[s] = this.modes[s] ∪ other.modes[s]`
+- **Intersection:** `primitiveStateModes[s] = this.modes[s] ∩ other.modes[s]`
+- **Complement:** Structural complement only (modes unchanged)
 
 ---
 
 ### Phase 2: Predefined Types Prelude
-**Effort:** 1-2 days
-**Dependencies:** None
-**Blocking:** Phase 7 (tests need predefined types)
+**Effort:** 0.5 days
+**Dependencies:** Phase 0
+**Status:** ✓ Already implemented (needs verification after Phase 0)
 
-#### 3.2.1 Description
-
-Create prelude containing predefined type definitions and procedures. Prepend to every module before parsing.
-
-#### 3.2.2 Implementation
-
-Create `lib/analysis/type_checker/prelude.dart`:
-
-```dart
-/// Predefined type and procedure definitions
-/// Prepended to every module before parsing
-const String typePrelude = r'''
-% Universal types
-Every ::= _ ; _?.
-Any ::< Every.
-
-% Collections
-List ::= [Any | List] ; [].
-Stream ::< List.
-DiffList ::= List \ List?.
-
-% Communication
-Channel ::= ch(Stream?, Stream).
-
-% Difference list operations
-procedure dl_append(DiffList?, DiffList?, DiffList).
-procedure dl_to_list(DiffList?, List).
-
-dl_append(A\B?, B\C?, A?\C).
-dl_to_list(L\[], L?).
-
-% Channel operations
-procedure new_channel(Channel, Channel).
-procedure send(Any, Channel?, Channel).
-procedure receive(Any, Channel?, Channel).
-
-new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
-send(X, ch(In, [X?|Out?]), ch(In?, Out)).
-receive(X?, ch([X|In], Out?), ch(In?, Out)).
-''';
-
-/// Names of predefined types (cannot be redefined)
-const Set<String> predefinedTypeNames = {
-  'Number', 'String', 'Every', 'Any', 'List', 'Stream', 'DiffList', 'Channel',
-};
-
-/// Names of predefined procedures (cannot be redefined)
-const Set<String> predefinedProcedureNames = {
-  'dl_append', 'dl_to_list', 'new_channel', 'send', 'receive',
-};
-```
-
-Update `lib/analysis/type_checker/type_parser.dart`:
-
-```dart
-TypeEnvironment parseTypes(String source) {
-  // Prepend prelude
-  final fullSource = '$typePrelude\n$source';
-
-  // Parse combined source
-  final env = _parseTypeDeclarations(fullSource);
-
-  // Verify no redefinition of predefined types
-  // (error if user source redefines Any, List, etc.)
-
-  return env;
-}
-```
-
-#### 3.2.3 Parser Verification
-
-Verify parser correctly handles:
-- `\` operator in `DiffList ::= List \ List?`
-- Nested type refs in `ch(Stream?, Stream)`
-- `[Any | List]` syntax (already working)
-
-#### 3.2.4 Tests
-
-Create `test/analysis/type_checker/prelude_test.dart`:
-
-- Predefined types available without declaration
-- Redefinition of predefined type is error
-- Predefined procedures available as defined guards
-- dl_append is well-moded
-- Channel operations are well-moded
+Verify prelude works correctly with new `primitiveStateModes` design:
+- Every has `{output, input}` at start state
+- Any inherits from Every
+- List element positions have Any modes
 
 ---
 
 ### Phase 3: Guard Type Checking
-**Effort:** 1-2 days
-**Dependencies:** None
-**Blocking:** Phase 7
+**Effort:** 1 day
+**Dependencies:** Phase 0
+**Status:** Partially implemented (5/11 tests passing)
 
-#### 3.3.1 Description
+After Phase 0, the 6 failing tests should be re-evaluated:
 
-Extract type constraints from guards and integrate with variable type inference.
+| Test | Current Issue | Expected After Phase 0 |
+|------|---------------|----------------------|
+| number(X?) constrains X | Mode error | Should pass (mode in DFA) |
+| arithmetic guards | Variable inconsistent types | May need additional fix |
+| ground(X?) multiple readers | Guard type inconsistent | Should pass |
+| ground covers all modes | Missing implementation | Implement in mode coverage |
+| number implies ground | Guard type inconsistent | Should pass |
+| ground on nested | Missing implementation | Implement in mode coverage |
 
-#### 3.3.2 Implementation
-
-Create `lib/analysis/type_checker/guard_types.dart`:
-
-```dart
-/// Signature of a built-in guard
-class GuardSignature {
-  final List<TypeRef> argTypes;
-  final bool impliesGround;
-  final bool recursivelyGround;
-
-  const GuardSignature({
-    required this.argTypes,
-    this.impliesGround = false,
-    this.recursivelyGround = false,
-  });
-}
-
-/// Registry of built-in guard signatures
-class GuardTypeRegistry {
-  static const Map<String, GuardSignature> signatures = {
-    // Type guards
-    'number': GuardSignature(
-      argTypes: [TypeRef('Number')],
-      impliesGround: true,
-    ),
-    'integer': GuardSignature(
-      argTypes: [TypeRef('Number')],
-      impliesGround: true,
-    ),
-    'string': GuardSignature(
-      argTypes: [TypeRef('String')],
-      impliesGround: true,
-    ),
-    'ground': GuardSignature(
-      argTypes: [TypeRef('Any')],
-      impliesGround: true,
-      recursivelyGround: true,
-    ),
-    'known': GuardSignature(
-      argTypes: [TypeRef('Any')],
-      impliesGround: false,
-    ),
-    'unknown': GuardSignature(
-      argTypes: [TypeRef('Any')],
-      impliesGround: false,
-    ),
-
-    // Arithmetic comparisons
-    '<': GuardSignature(
-      argTypes: [TypeRef('Number'), TypeRef('Number')],
-      impliesGround: true,
-    ),
-    '>': GuardSignature(
-      argTypes: [TypeRef('Number'), TypeRef('Number')],
-      impliesGround: true,
-    ),
-    '=<': GuardSignature(
-      argTypes: [TypeRef('Number'), TypeRef('Number')],
-      impliesGround: true,
-    ),
-    '>=': GuardSignature(
-      argTypes: [TypeRef('Number'), TypeRef('Number')],
-      impliesGround: true,
-    ),
-    '=:=': GuardSignature(
-      argTypes: [TypeRef('Number'), TypeRef('Number')],
-      impliesGround: true,
-    ),
-    '=\\=': GuardSignature(
-      argTypes: [TypeRef('Number'), TypeRef('Number')],
-      impliesGround: true,
-    ),
-
-    // Equality
-    '=?=': GuardSignature(
-      argTypes: [TypeRef('Any'), TypeRef('Any')],
-      impliesGround: true,
-    ),
-  };
-
-  /// Get signature for guard, or null if not a built-in
-  static GuardSignature? getSignature(String functor) => signatures[functor];
-}
-
-/// Extract type constraints from clause guards
-Map<String, TypeDFA> extractGuardConstraints(
-  List<Guard>? guards,
-  TypeEnvironment typeEnv,
-  TypeCompiler compiler,
-) {
-  final constraints = <String, TypeDFA>{};
-  if (guards == null) return constraints;
-
-  for (final guard in guards) {
-    // Check built-in guards
-    final signature = GuardTypeRegistry.getSignature(guard.functor);
-    if (signature != null) {
-      for (int i = 0; i < guard.args.length && i < signature.argTypes.length; i++) {
-        final arg = guard.args[i];
-        if (arg is VarTerm) {
-          final typeDFA = compiler.compile(signature.argTypes[i].name);
-          final varName = arg.name;
-
-          if (constraints.containsKey(varName)) {
-            constraints[varName] = constraints[varName]!.intersect(typeDFA);
-          } else {
-            constraints[varName] = typeDFA;
-          }
-        }
-      }
-      continue;
-    }
-
-    // Check defined guards (user procedures used as guards)
-    final procDecl = typeEnv.getProcedure(guard.functor, guard.args.length);
-    if (procDecl != null) {
-      for (int i = 0; i < guard.args.length && i < procDecl.argTypes.length; i++) {
-        final arg = guard.args[i];
-        if (arg is VarTerm) {
-          final typeDFA = compiler.compile(procDecl.argTypes[i].name);
-          final varName = arg.name;
-
-          if (constraints.containsKey(varName)) {
-            constraints[varName] = constraints[varName]!.intersect(typeDFA);
-          } else {
-            constraints[varName] = typeDFA;
-          }
-        }
-      }
-    }
-  }
-
-  return constraints;
-}
-
-/// Get variables that are recursively ground due to guards
-Set<String> getRecursivelyGroundVars(List<Guard>? guards) {
-  if (guards == null) return {};
-
-  final result = <String>{};
-
-  for (final guard in guards) {
-    final signature = GuardTypeRegistry.getSignature(guard.functor);
-    if (signature == null) continue;
-
-    if (signature.recursivelyGround || signature.impliesGround) {
-      for (final arg in guard.args) {
-        if (arg is VarTerm) {
-          result.add(arg.name);
-        }
-      }
-    }
-  }
-
-  return result;
-}
-```
-
-#### 3.3.3 Integration
-
-Update `type_checker.dart` `_checkClause`:
-
-```dart
-// After variable type inference from head patterns...
-
-// Apply guard constraints
-if (clause.guards != null) {
-  final guardConstraints = extractGuardConstraints(
-    clause.guards, typeEnv, compiler);
-
-  for (final entry in guardConstraints.entries) {
-    final varName = entry.key;
-    final guardType = entry.value;
-
-    if (varTypes.containsKey(varName)) {
-      final intersected = varTypes[varName]!.intersect(guardType);
-      if (intersected.isEmpty) {
-        errors.add(TypeError(
-          'Guard type inconsistent with pattern type for variable $varName',
-          clause.line, clause.column,
-        ));
-      }
-      varTypes[varName] = intersected;
-    } else {
-      varTypes[varName] = guardType;
-    }
-  }
-}
-```
-
-Update `mode_checker.dart` `_checkModeCoverage`:
-
-```dart
-// Get recursively ground variables from guards
-final groundVars = getRecursivelyGroundVars(clause.guards);
-
-// When checking coverage, ground-protected variables cover all modes
-if (termAtPosition is VarTerm && groundVars.contains(termAtPosition.name)) {
-  hasWriter = true;
-  hasReader = true;  // Ground covers both modes
-}
-```
-
-#### 3.3.4 Tests
-
-Create `test/analysis/type_checker/guard_types_test.dart`:
-
-- number(X?) constrains X to Number
-- string(X?) constrains X to String
-- Guard inconsistent with head type → error
-- ground(X?) allows multiple readers
-- ground(X?) covers all mode alternatives
-- Defined guard constrains type
-- known(X?) does NOT imply ground
+**Remaining work after Phase 0:**
+1. Implement ground variable mode coverage in `_checkModeCoverage()`
+2. Handle variable reuse across positions
 
 ---
 
-### Phase 4: Clause Contribution Computation
+### Phase 4: Clause Contribution
 **Effort:** 2 days
-**Dependencies:** Phase 1 (DFA operations)
-**Blocking:** Phase 5
+**Dependencies:** Phase 0, Phase 1
 
-#### 3.4.1 Description
-
-Compute T_{C}^α(S) for each clause—the DFA of all ground head instances the clause can produce given inferred variable types.
-
-#### 3.4.2 Implementation
-
-Create `lib/analysis/type_checker/clause_contribution.dart`:
+Compute T_{C}^{α,m}(S) for each clause. With proper mode tracking, this becomes:
 
 ```dart
-/// Computes clause contributions for fixpoint checking
-class ClauseContributionComputer {
-  final TypeEnvironment typeEnv;
-  final TypeCompiler compiler;
-
-  ClauseContributionComputer(this.typeEnv, this.compiler);
-
-  /// Compute DFA for all ground terms matching a pattern
-  /// with variables replaced by their inferred types
-  TypeDFA computeArgContribution(
-    Term pattern,
-    Map<String, TypeDFA> varTypes,
-  ) {
-    if (pattern is VarTerm) {
-      return varTypes[pattern.name] ?? TypeDFA.empty();
-    }
-
-    if (pattern is ConstTerm) {
-      return TypeDFA.singleton(pattern.value.toString());
-    }
-
-    if (pattern is StructTerm) {
-      final argDFAs = pattern.args
-          .map((arg) => computeArgContribution(arg, varTypes))
-          .toList();
-      return _buildStructDFA(pattern.functor, pattern.arity, argDFAs);
-    }
-
-    if (pattern is ListTerm) {
-      if (pattern.isNil) {
-        return TypeDFA.singleton('[]');
-      }
-      final headDFA = computeArgContribution(pattern.head!, varTypes);
-      final tailDFA = computeArgContribution(pattern.tail!, varTypes);
-      return _buildListConsDFA(headDFA, tailDFA);
-    }
-
-    return TypeDFA.empty();
-  }
-
-  /// Build DFA accepting f(v1,...,vn) where vi ∈ L(argDFAs[i])
-  TypeDFA _buildStructDFA(String functor, int arity, List<TypeDFA> argDFAs) {
-    // Create DFA with:
-    // - Start state
-    // - Transition on functor/arity to intermediate state
-    // - For each argument position, transitions from argDFAs
-    // Implementation depends on DFA representation
-    throw UnimplementedError('TODO: implement struct DFA construction');
-  }
-
-  /// Build DFA accepting [h|t] where h ∈ L(head) and t ∈ L(tail)
-  TypeDFA _buildListConsDFA(TypeDFA head, TypeDFA tail) {
-    // Similar to struct but for list cons
-    throw UnimplementedError('TODO: implement list cons DFA construction');
-  }
+TypeDFA computeClauseContribution(Clause clause, varTypes) {
+  // Build DFA from head pattern using inferred variable types
+  // Include mode information at primitive positions
 }
 ```
-
-#### 3.4.3 Tests
-
-Create `test/analysis/type_checker/clause_contribution_test.dart`:
-
-- Constant pattern → singleton DFA
-- Variable pattern → variable's inferred type
-- Struct pattern → product DFA
-- List pattern → cons DFA
-- Nested patterns
 
 ---
 
 ### Phase 5: Fixpoint Check
 **Effort:** 1-2 days
-**Dependencies:** Phase 1 (DFA ops), Phase 4 (contribution)
-**Blocking:** Phase 7
-
-#### 3.5.1 Description
-
-Check that T_P^α(S) = S: the tuple-distributive closure of clause contributions equals the declared type.
-
-#### 3.5.2 Implementation
-
-Update `type_checker.dart` `_checkProcedure`:
+**Dependencies:** Phase 1, Phase 4
 
 ```dart
-TypeCheckResult _checkProcedure(ProcDecl decl, List<ast.Clause> clauses) {
-  final errors = <TypeError>[];
-  final warnings = <TypeWarning>[];
+// Tuple-distributive closure with modes
+final inferred = union(contributions).tupleDistributiveClosure();
 
-  // Compile declared argument types
-  final declaredDFAs = <TypeDFA>[];
-  for (final argType in decl.argTypes) {
-    declaredDFAs.add(compiler.compile(argType.name));
-  }
-
-  // Collect contributions from non-useless clauses
-  final contributionComputer = ClauseContributionComputer(typeEnv, compiler);
-  final perClauseContributions = <List<TypeDFA>>[];
-
-  for (final clause in clauses) {
-    // ... existing ground path checking ...
-    // ... existing variable type inference ...
-    // ... existing guard constraint application ...
-
-    if (clauseIsUseless) {
-      warnings.add(TypeWarning('Clause is useless', clause.line, clause.column));
-      continue;
-    }
-
-    // Compute clause contribution
-    final clauseContrib = <TypeDFA>[];
-    for (int i = 0; i < decl.arity; i++) {
-      clauseContrib.add(contributionComputer.computeArgContribution(
-        clause.head.args[i],
-        varTypes,
-      ));
-    }
-    perClauseContributions.add(clauseContrib);
-  }
-
-  // Tuple-distributive closure: union of contributions per position
-  for (int i = 0; i < decl.arity; i++) {
-    var inferredDFA = TypeDFA.empty();
-    for (final contrib in perClauseContributions) {
-      inferredDFA = inferredDFA.union(contrib[i]);
-    }
-
-    final declaredDFA = declaredDFAs[i];
-
-    // Check fixpoint: inferred should equal declared
-    if (!inferredDFA.isEquivalent(declaredDFA)) {
-      if (inferredDFA.isSubsetOf(declaredDFA)) {
-        // Inferred ⊂ Declared: incomplete definition
-        errors.add(TypeError(
-          'Procedure ${decl.name}/${decl.arity} argument ${i + 1}: '
-          'clauses do not cover full declared type (incomplete definition)',
-          decl.line, decl.column,
-        ));
-      } else if (declaredDFA.isSubsetOf(inferredDFA)) {
-        // Declared ⊂ Inferred: over-broad definition
-        errors.add(TypeError(
-          'Procedure ${decl.name}/${decl.arity} argument ${i + 1}: '
-          'clauses produce values outside declared type',
-          decl.line, decl.column,
-        ));
-      } else {
-        // Neither subset: both incomplete and over-broad
-        errors.add(TypeError(
-          'Procedure ${decl.name}/${decl.arity} argument ${i + 1}: '
-          'inferred type does not match declared type',
-          decl.line, decl.column,
-        ));
-      }
-    }
-  }
-
-  // Mode checking
-  final modeErrors = modeChecker.checkProcedure(decl.name, decl.arity, clauses);
-  for (final modeError in modeErrors) {
-    errors.add(TypeError(modeError.message, modeError.line, modeError.column));
-  }
-
-  return TypeCheckResult(errors, warnings);
+// Check fixpoint
+if (!inferred.isEquivalent(declared)) {
+  // Report incomplete or over-broad definition
 }
 ```
 
-#### 3.5.3 Tests
-
-Create `test/analysis/type_checker/fixpoint_check_test.dart`:
-
-**Positive (should pass):**
-- Complete Nat definition (both 0 and s(N) cases)
-- Complete List definition (both [] and [_|_] cases)
-- Complete binary tree definition
-
-**Negative - Incomplete (should fail):**
-- Missing base case (no 0 clause for Nat)
-- Missing recursive case (no s(N) clause for Nat)
-- Missing middle alternative (red/blue but no green for Color)
-
-**Negative - Over-broad (should fail):**
-- Clause produces value outside type (foo in Nat)
-- Wrong constructor (p(N) instead of s(N))
-
 ---
 
-### Phase 6: Nested Mode Coverage Fix
+### Phase 6: Fix Test Suite
 **Effort:** 0.5 days
-**Dependencies:** None (in progress)
-**Blocking:** Phase 7
+**Dependencies:** None (can be done anytime)
 
-#### 3.6.1 Description
-
-Fix bug where mode coverage only checks top-level arguments, not nested positions.
-
-#### 3.6.2 Implementation
-
-Already provided to Claude Code. Key changes to `mode_checker.dart`:
-
-- `_findPrimitiveTypePositions`: recurse into type definitions to find nested Every/Any
-- Track `::< ` entry to skip coverage requirements for subtypes
-- `_getTermAtPath`: navigate into clause head patterns following paths
-
-#### 3.6.3 Parser Fix
-
-Support `[_ | List]` syntax in type definitions (primitive mode as list head).
+Fix 62 test redefinition errors:
+- Option A: Remove redundant type definitions from tests
+- Option B: Add `--no-prelude` flag for tests
+- **Recommended:** Option A (simpler, cleaner tests)
 
 ---
 
 ### Phase 7: Comprehensive Tests
 **Effort:** 2 days
 **Dependencies:** All previous phases
-**Blocking:** None
 
-#### 3.7.1 Test Files
+Test all components with both positive and negative controls.
 
-| File | Coverage |
-|------|----------|
-| `type_dfa_operations_test.dart` | DFA union, complement, equivalence |
-| `prelude_test.dart` | Predefined types and procedures |
-| `guard_types_test.dart` | Guard constraints, ground guards |
-| `clause_contribution_test.dart` | T_{C}^α(S) computation |
-| `fixpoint_check_test.dart` | Complete, incomplete, over-broad |
-| `predefined_types_test.dart` | List, Stream, DiffList, Channel |
-| `predefined_operations_test.dart` | dl_append, send, receive |
-| `primitive_mode_coverage_test.dart` | _, _?, Every coverage |
-| `self_duality_test.dart` | Every/Any equivalence |
-| `nested_mode_coverage_test.dart` | Nested Any positions |
+---
 
-#### 3.7.2 Erroneous Pass Markers
+## 3. Dependency Graph
 
-Mark tests that currently pass but should fail after fixes:
+```
+Spec Section 5 (v1.5) ◄─── APPROVED
+         │
+         ▼
+Phase 0 (Primitive State Modes) ◄── BLOCKING, ARCHITECTURAL
+         │
+         ├───────────────────────────────┐
+         ▼                               ▼
+Phase 1 (DFA Ops)              Phase 2 (Prelude verify)
+         │                               │
+         ▼                               │
+Phase 4 (Contribution)                   │
+         │                               │
+         ▼                               │
+Phase 5 (Fixpoint) ──────────────────────┤
+                                         │
+Phase 3 (Guards) ────────────────────────┤
+                                         │
+Phase 6 (Test Suite) ────────────────────┤
+                                         ▼
+                                 Phase 7 (Tests)
+```
 
-```dart
-test('ERRONEOUS: Should fail after fixpoint check implemented', () {
-  // Current: passes (no fixpoint check)
-  // Expected: fails (incomplete definition)
-});
+**Critical Path:** Phase 0 → Phase 1 → Phase 4 → Phase 5 → Phase 7
+
+---
+
+## 4. Effort Summary
+
+| Phase | Description | Days | Status |
+|-------|-------------|------|--------|
+| **0** | **Primitive State Modes** | **2-3** | **NEW - BLOCKING** |
+| 1 | DFA Operations | 2-3 | Not started |
+| 2 | Predefined Types Prelude | 0.5 | Verify after Phase 0 |
+| 3 | Guard Type Checking | 1 | Re-evaluate after Phase 0 |
+| 4 | Clause Contribution | 2 | Not started |
+| 5 | Fixpoint Check | 1-2 | Not started |
+| 6 | Fix Test Suite | 0.5 | Can do anytime |
+| 7 | Comprehensive Tests | 2 | Not started |
+| **Total** | | **11-14 days** | |
+
+---
+
+## 5. Success Criteria
+
+### Phase 0 Success Criteria
+
+1. `anyValueStates` removed from codebase
+2. `primitiveStateModes: Map<DFAState, Set<Mode>>` implemented
+3. All existing passing tests still pass
+4. New primitive mode tests pass (both positive and negative)
+5. At least 4 of 6 failing guard tests now pass
+6. Mode checking integrated into type traversal
+
+### Overall Success Criteria
+
+1. All predefined types compile correctly with mode info
+2. Guard constraints work with mode tracking
+3. Fixpoint check catches incomplete/over-broad definitions
+4. 116+ book programs pass (82% target maintained)
+5. Spec ↔ Implementation gap closed
+
+---
+
+## 6. Questions Resolved
+
+From handover:
+
+1. **Test redefinition errors**: Update tests to avoid redefining prelude types (Phase 6)
+
+2. **Mode complementation**: The test may be incorrect. After Phase 0, mode checking will be integrated and we can evaluate properly.
+
+3. **Priority**: Phase 0 first (architectural fix), then guard tests will be re-evaluated.
+
+---
+
+## 7. Claude Code Instructions for Phase 0
+
+**Verbatim instruction to copy:**
+
+```
+Phase 0: Replace anyValueStates with primitiveStateModes
+
+SPEC REFERENCE: docs/moded-type-system-spec.md Section 5
+
+TASK: Implement the spec Section 5 design in the codebase.
+
+FILES TO MODIFY:
+1. lib/analysis/type_checker/type_dfa.dart
+2. lib/analysis/type_checker/type_compiler.dart  
+3. lib/analysis/type_checker/type_checker.dart
+
+STEP 1 - type_dfa.dart:
+- Remove: `final Set<DFAState> anyValueStates;`
+- Add: `final Map<DFAState, Set<Mode>> primitiveStateModes;`
+- Add: `bool isPrimitiveState(DFAState state) => primitiveStateModes.containsKey(state);`
+- Add: `Set<Mode> getModesAt(DFAState state) => primitiveStateModes[state] ?? {};`
+- Update all constructors to use primitiveStateModes
+- Update intersect() to handle mode sets:
+  - Intersection of mode sets at same position
+  - Remove anyValueStates workarounds
+- Update NumberTypeDFA and StringTypeDFA (empty primitiveStateModes)
+
+STEP 2 - type_compiler.dart:
+- In _addTransitionsForAlt(), when alt is PrimitiveModeAlt:
+  ```dart
+  final mode = alt.isInput ? Mode.input : Mode.output;
+  primitiveStateModes[fromState] = 
+      (primitiveStateModes[fromState] ?? <Mode>{})..add(mode);
+  finalStates.add(fromState);
+  ```
+- Handle TypeRef for ::< declarations: copy mode set from referenced type
+
+STEP 3 - type_checker.dart:
+- In _inferVariableTypes(), at variable positions:
+  - Check if state is primitive: dfa.isPrimitiveState(state)
+  - If primitive, verify variable mode ∈ dfa.getModesAt(state)
+  - Report mode error if mismatch
+
+STEP 4 - Create test:
+- test/analysis/type_checker/primitive_state_modes_test.dart
+- Positive: _ has {output}, _? has {input}, Every has {both}
+- Negative: writer at _? rejected, reader at _ rejected
+
+RUN TESTS:
+- dart test test/analysis/type_checker/primitive_state_modes_test.dart
+- dart test test/analysis/type_checker/guard_types_test.dart
+- dart test test/analysis/type_checker/
+
+EXPECTED: All existing passing tests still pass. At least 4 of 6 failing guard tests should now pass.
+
+DO NOT MERGE until all tests pass and I review.
 ```
 
 ---
 
-## 4. Dependency Graph
+## 8. References
 
-```
-Phase 1 (DFA Ops)
-    │
-    ├──────────────────┐
-    ▼                  ▼
-Phase 4 (Contribution)
-    │
-    ▼
-Phase 5 (Fixpoint) ────────────────────┐
-                                       │
-Phase 2 (Prelude) ─────────────────────┤
-                                       │
-Phase 3 (Guards) ──────────────────────┤
-                                       │
-Phase 6 (Nested Fix) ──────────────────┤
-                                       ▼
-                               Phase 7 (Tests)
-```
-
-**Critical Path:** Phase 1 → Phase 4 → Phase 5 → Phase 7
-
-**Parallelizable:** Phases 1, 2, 3, 6 can proceed simultaneously.
-
----
-
-## 5. Effort Summary
-
-| Phase | Description | Days |
-|-------|-------------|------|
-| 1 | DFA Operations | 2-3 |
-| 2 | Predefined Types Prelude | 1-2 |
-| 3 | Guard Type Checking | 1-2 |
-| 4 | Clause Contribution | 2 |
-| 5 | Fixpoint Check | 1-2 |
-| 6 | Nested Mode Coverage Fix | 0.5 |
-| 7 | Comprehensive Tests | 2 |
-| **Total** | | **9-13 days** |
-
----
-
-## 6. Success Criteria
-
-### 6.1 Functional Requirements
-
-1. All predefined types parse correctly
-2. Predefined procedures usable as defined guards
-3. `::=` types require full coverage; `::< ` types do not
-4. Guards constrain variable types
-5. `ground(X?)` satisfies all mode alternatives
-6. Fixpoint check detects incomplete definitions
-7. Fixpoint check detects over-broad definitions
-8. Nested mode coverage correctly checked
-
-### 6.2 Test Requirements
-
-1. All existing tests continue to pass
-2. New tests cover all phases
-3. "Erroneous pass" tests fail after fixes
-4. Book programs (82%) still pass
-
-### 6.3 Documentation Requirements
-
-1. Spec document updated with predefined types
-2. Paper updated with examples
-3. Implementation plan kept current
-
----
-
-## 7. References
-
+- Spec: `docs/moded-type-system-spec.md` (v1.5)
+- Paper: "Moded Types for Grassroots Logic Programs"
+- Handover: `docs/handover-2025-12-22-moded-types-phase3.md`
 - Yardeni & Shapiro, "A Type System for Logic Programs", JLP 1991
-- Frühwirth, Shapiro, Vardi & Yardeni, "Logic Programs as Types", LICS 1991
-- GLP Moded Type System Specification (docs/moded-type-system-spec.md)
 
 ---
+
+## Appendix A: Changelog
+
+### v3.0 (2025-12-22)
+- Added Phase 0: Architectural fix for primitiveStateModes
+- Identified spec ↔ implementation gap
+- Incorporated handover report status
+- Added Claude Code instructions for Phase 0
+- Updated all phases to depend on Phase 0
