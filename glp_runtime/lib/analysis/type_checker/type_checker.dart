@@ -269,6 +269,7 @@ class TypeChecker {
 
     // Step 2: Infer types for variables from head patterns
     final varTypes = <String, TypeDFA>{};
+    final varTypeNames = <String, String>{}; // Track type names for ground guard checking
 
     for (int i = 0; i < clause.head.args.length; i++) {
       final arg = clause.head.args[i];
@@ -292,6 +293,9 @@ class TypeChecker {
           clause.line, clause.column, clause.toString()
         ));
       }
+
+      // Track variable to type name mapping for ground guard checking
+      _collectVariableTypeNames(arg, decl.argTypes[i].name, varTypeNames);
     }
 
     // Step 3: Apply guard constraints
@@ -324,14 +328,7 @@ class TypeChecker {
 
     // Step 3.5: Check ground guards are WMT
     if (clause.guards != null && clause.guards!.isNotEmpty) {
-      // Extract type names from varTypes for ground guard checking
-      final varTypeNames = <String, String>{};
-      for (final entry in varTypes.entries) {
-        // Get the type name from the DFA's start state
-        final typeName = entry.value.startState.name;
-        varTypeNames[entry.key] = typeName;
-      }
-      final groundGuardErrors = modeChecker.checkGroundGuards(clause, varTypeNames);
+      final groundGuardErrors = modeChecker.checkGroundGuardsWithTypeNames(clause, varTypeNames);
       for (final modeError in groundGuardErrors) {
         errors.add(TypeError(
           modeError.message,
@@ -684,9 +681,33 @@ class TypeChecker {
 class GroundPathCheck {
   final bool success;
   final TermPath? failedPath;
-  
+
   GroundPathCheck(this.success, this.failedPath);
 }
+
+  /// Collect variable to type name mappings from a term pattern
+  void _collectVariableTypeNames(ast.Term term, String typeName, Map<String, String> varTypeNames) {
+    if (term is ast.VarTerm) {
+      // Map variable to its type name (without the ? for input types)
+      // Example: procedure f(List?), clause f(X), then X maps to "List" not "List?"
+      final baseTypeName = typeName.endsWith('?') ? typeName.substring(0, typeName.length - 1) : typeName;
+      varTypeNames[term.name] = baseTypeName;
+    } else if (term is ast.StructTerm) {
+      // Recursively collect from structure arguments
+      // We don't track nested structure types here since ground guards only check top-level variable types
+      for (final arg in term.args) {
+        _collectVariableTypeNames(arg, typeName, varTypeNames);
+      }
+    } else if (term is ast.ListTerm) {
+      if (!term.isNil && term.head != null) {
+        _collectVariableTypeNames(term.head!, typeName, varTypeNames);
+      }
+      if (term.tail != null) {
+        _collectVariableTypeNames(term.tail!, typeName, varTypeNames);
+      }
+    }
+    // For other term types (constants, etc.), no variables to collect
+  }
 
 /// Result of checking a single clause
 class ClauseCheckResult {

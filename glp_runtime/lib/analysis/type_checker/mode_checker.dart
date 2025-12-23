@@ -5,6 +5,7 @@
 
 import '../../compiler/ast.dart' as ast;
 import 'type_ast.dart';
+import 'type_dfa.dart';
 import 'mode.dart';
 import 'mode_error.dart';
 import 'guard_types.dart';
@@ -582,8 +583,10 @@ class ModeChecker {
       return alt.isInput;  // _? has complementation
     }
     if (alt is TypeRef) {
-      if (alt.isInput) return true;  // T? has complementation
-      return !_hasNoModeComplementations(alt.name, visited);
+      // Only T? (with explicit ?) is a complementation
+      // Type references like T in "List ::= [] ; [Any | List]" are not complementations
+      // Even if T itself has complementations, they don't propagate through non-complemented references
+      return alt.isInput;  // Only return true if this is T?, not just T
     }
     if (alt is StructAlt) {
       for (final arg in alt.args) {
@@ -605,7 +608,7 @@ class ModeChecker {
 
   /// Check ground guards are WMT: ground(X?) requires X's type has no mode complementations.
   /// Per spec Section 7.3.1: ground(X?) is WMT iff Input ∩ T_X = T_X.
-  List<ModeError> checkGroundGuards(ast.Clause clause, Map<String, String> varTypes) {
+  List<ModeError> checkGroundGuardsWithTypeNames(ast.Clause clause, Map<String, String> varTypeNames) {
     final errors = <ModeError>[];
 
     if (clause.guards == null) return errors;
@@ -614,9 +617,10 @@ class ModeChecker {
       if (guard.predicate == 'ground' && guard.args.length == 1) {
         final arg = guard.args[0];
         if (arg is ast.VarTerm) {
-          final typeName = varTypes[arg.name];
+          final typeName = varTypeNames[arg.name];
           if (typeName != null) {
-            if (!_hasNoModeComplementations(typeName, <String>{})) {
+            final hasNoComp = _hasNoModeComplementations(typeName, <String>{});
+            if (!hasNoComp) {
               errors.add(ModeError(
                 'Ground guard not WMT: type $typeName has mode complementations. '
                 'ground(${arg.name}) requires Input ∩ $typeName = $typeName, '
