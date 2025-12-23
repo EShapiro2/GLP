@@ -197,6 +197,12 @@ class TypeChecker {
 
     // Compute DFA contributions for each argument position across all clauses
     for (int argIndex = 0; argIndex < decl.arity; argIndex++) {
+      // Input-mode arguments receive values from callers, not from clauses.
+      // Skip the "produces values" check for input positions.
+      if (decl.argTypes[argIndex].isInput) {
+        continue;
+      }
+
       // Union all clause contributions for this argument position
       var inferredDFA = TypeDFA.empty();
 
