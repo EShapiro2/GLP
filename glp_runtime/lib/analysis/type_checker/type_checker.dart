@@ -242,7 +242,10 @@ class TypeChecker {
       // Look up type definition to check ::= vs ::< semantics
       final typeName = decl.argTypes[argIndex].name;
       final typeDef = typeEnv.getType(typeName);
-      final requiresExactCoverage = typeDef?.isExact ?? true;
+      // Built-in infinite types (Number, String) use subtype semantics
+      // because exact coverage checking is meaningless for infinite types
+      final isBuiltinInfiniteType = declaredDFA is NumberTypeDFA || declaredDFA is StringTypeDFA;
+      final requiresExactCoverage = !isBuiltinInfiniteType && (typeDef?.isExact ?? true);
 
       if (requiresExactCoverage) {
         // ::= semantics: inferred must equal declared (exact coverage required)
