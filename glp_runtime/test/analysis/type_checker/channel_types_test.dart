@@ -14,11 +14,11 @@ void main() {
     group('Channel Creation', () {
       test('POSITIVE: create_channel with complementary modes', () {
         final result = checkTypes('''
-          List ::= [] ; [_ | List].
-          Stream ::< List.
-          Channel ::= ch(Stream?, Stream) ; ch(Stream, Stream?).
+          MyList ::= [] ; [_ | MyList].
+          MyStream ::< MyList.
+          MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
 
-          procedure create_channel(Channel, Channel).
+          procedure create_channel(MyChannel, MyChannel).
           create_channel(ch(AtoB?, BtoA), ch(BtoA?, AtoB)).
         ''');
         expect(result.isWellTyped, isTrue,
@@ -27,12 +27,12 @@ void main() {
 
       test('POSITIVE: channel sender uses correct modes', () {
         final result = checkTypes('''
-          List ::= [] ; [_ | List].
-          Stream ::< List.
-          Channel ::= ch(Stream?, Stream) ; ch(Stream, Stream?).
+          MyList ::= [] ; [_ | MyList].
+          MyStream ::< MyList.
+          MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
 
-          procedure send(Channel?, Any?).
-          send(ch(_, Out), Msg) :- Out = [Msg? | Rest?], send(ch(_, Rest?), done).
+          procedure my_send(MyChannel?, Any?).
+          my_send(ch(_, Out), Msg) :- Out = [Msg? | Rest?], my_send(ch(_, Rest?), done).
         ''');
         // This is a simplified sender - real one would be more complex
         expect(result.isWellTyped, isTrue);
@@ -46,11 +46,11 @@ void main() {
     group('Bounded Buffer', () {
       test('POSITIVE: bounded buffer consumes slots', () {
         final result = checkTypes('''
-          List ::= [] ; [_ | List].
-          Stream ::< List.
-          InvStream ::= [] ; [_? | InvStream].
+          MyList ::= [] ; [_ | MyList].
+          MyStream ::< MyList.
+          MyInvStream ::= [] ; [_? | MyInvStream].
 
-          procedure bounded_buffer(Stream?, InvStream?, Stream).
+          procedure bounded_buffer(MyStream?, MyInvStream?, MyStream).
           bounded_buffer([], _, []).
           bounded_buffer([X | In], [Slot? | Slots], [X? | Out]) :-
               Slot = taken,
@@ -62,11 +62,11 @@ void main() {
 
       test('NEGATIVE: bounded buffer with wrong slot mode fails', () {
         final result = checkTypes('''
-          List ::= [] ; [_ | List].
-          Stream ::< List.
-          InvStream ::= [] ; [_? | InvStream].
+          MyList ::= [] ; [_ | MyList].
+          MyStream ::< MyList.
+          MyInvStream ::= [] ; [_? | MyInvStream].
 
-          procedure bounded_buffer(Stream?, InvStream?, Stream).
+          procedure bounded_buffer(MyStream?, MyInvStream?, MyStream).
           bounded_buffer([], _, []).
           bounded_buffer([X | In], [Slot | Slots], [X? | Out]) :-
               handle(Slot?),
@@ -84,11 +84,11 @@ void main() {
     group('Channel Coverage', () {
       test('POSITIVE: handler covers both channel orientations', () {
         final result = checkTypes('''
-          List ::= [] ; [_ | List].
-          Stream ::< List.
-          Channel ::= ch(Stream?, Stream) ; ch(Stream, Stream?).
+          MyList ::= [] ; [_ | MyList].
+          MyStream ::< MyList.
+          MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
 
-          procedure handle_channel(Channel?).
+          procedure handle_channel(MyChannel?).
           handle_channel(ch(In?, Out)) :- process_read(In?), process_write(Out).
           handle_channel(ch(Out, In?)) :- process_write(Out), process_read(In?).
         ''');
@@ -98,15 +98,15 @@ void main() {
 
       test('NEGATIVE: handler missing one channel orientation fails', () {
         final result = checkTypes('''
-          List ::= [] ; [_ | List].
-          Stream ::< List.
-          Channel ::= ch(Stream?, Stream) ; ch(Stream, Stream?).
+          MyList ::= [] ; [_ | MyList].
+          MyStream ::< MyList.
+          MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
 
-          procedure handle_channel(Channel?).
+          procedure handle_channel(MyChannel?).
           handle_channel(ch(In?, Out)) :- process_read(In?), process_write(Out).
         ''');
         expect(result.isWellTyped, isFalse,
-            reason: 'Missing ch(Stream, Stream?) case');
+            reason: 'Missing ch(MyStream, MyStream?) case');
       });
     });
   });

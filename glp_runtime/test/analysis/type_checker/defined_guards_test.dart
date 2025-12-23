@@ -9,11 +9,11 @@ void main() {
   group('Defined Guards', () {
     test('POSITIVE: Defined guard with procedure declaration', () {
       final result = checkTypes('''
-        List ::= [] ; [_ | List].
-        Stream ::< List.
-        Channel ::= ch(Stream?, Stream) ; ch(Stream, Stream?).
+        MyList ::= [] ; [_ | MyList].
+        MyStream ::< MyList.
+        MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
 
-        procedure channel(Channel?).
+        procedure channel(MyChannel?).
         channel(ch(_, _)).
 
         procedure process(Any?, String).

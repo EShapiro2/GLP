@@ -24,8 +24,8 @@ List<Clause> parseClauses(String source) {
 void main() {
   group('Direct Any argument mode coverage', () {
 
-    test('procedure with Any argument - single reader clause should FAIL', () {
-      final typeDecl = 'procedure echo(Any?, Any).';
+    test('procedure with Every argument - single reader clause should FAIL', () {
+      final typeDecl = 'procedure echo(Every?, Every).';
       final clauseCode = '''
 echo(X?, Y).
 ''';
@@ -48,11 +48,11 @@ echo(X?, Y).
         e.message.contains('coverage') || e.message.contains('Coverage'));
 
       expect(hasCoverageError, isTrue,
-        reason: 'Should detect missing writer mode for Any? argument 1');
+        reason: 'Should detect missing writer mode for Every? argument 1');
     });
 
-    test('procedure with Any argument - two clauses covering both modes should PASS', () {
-      final typeDecl = 'procedure echo(Any?, Any).';
+    test('procedure with Every argument - two clauses covering both modes should PASS', () {
+      final typeDecl = 'procedure echo(Every?, Every).';
       final clauseCode = '''
 echo(X?, Y).
 echo(X, Y?).
