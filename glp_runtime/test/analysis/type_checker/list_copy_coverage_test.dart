@@ -1,6 +1,6 @@
 // test/analysis/type_checker/list_copy_coverage_test.dart
 //
-// Tests for mode coverage checking with direct Any arguments
+// Tests for mode coverage checking with Every type
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/type_parser.dart';
@@ -22,20 +22,20 @@ List<Clause> parseClauses(String source) {
 }
 
 void main() {
-  group('Direct Any argument mode coverage', () {
+  group('Mode coverage for Every type', () {
 
-    test('procedure with Every argument - single reader clause should FAIL', () {
-      final typeDecl = 'procedure echo(Every?, Every).';
-      final clauseCode = '''
-echo(X?, Y).
-''';
+    test('Every INPUT arg - single writer clause, incomplete coverage FAILS', () {
+      // Every ::= _ ; _? requires BOTH modes covered
+      // Declared INPUT (Every?) → callee sees OUTPUT → expects WRITER
+      final typeDecl = 'procedure test(Every?).';
+      final clauseCode = 'test(X).';  // Only writer, missing reader
 
       final clauses = parseClauses(clauseCode);
       final typeEnv = parseTypes(typeDecl);
       final checker = ModeChecker(typeEnv);
-      final errors = checker.checkProcedure('echo', 2, clauses);
+      final errors = checker.checkProcedure('test', 1, clauses);
 
-      print('\n=== Test: Single reader clause ===');
+      print('\n=== Test: Single writer clause ===');
       print('Type: $typeDecl');
       print('Clauses: $clauseCode');
       print('Errors found: ${errors.length}');
@@ -43,25 +43,26 @@ echo(X?, Y).
         print('  - ${error.message}');
       }
 
-      // Should have mode coverage error - only covers reader mode for arg 1
       final hasCoverageError = errors.any((e) =>
         e.message.contains('coverage') || e.message.contains('Coverage'));
 
       expect(hasCoverageError, isTrue,
-        reason: 'Should detect missing writer mode for Every? argument 1');
+        reason: 'Every requires both modes, only writer provided');
     });
 
-    test('procedure with Every argument - two clauses covering both modes should PASS', () {
-      final typeDecl = 'procedure echo(Every?, Every).';
+    test('Every INPUT arg - two clauses covering both modes PASSES', () {
+      // Declared INPUT (Every?) → callee sees OUTPUT
+      // Need both writer X and reader X? across clauses
+      final typeDecl = 'procedure test(Every?).';
       final clauseCode = '''
-echo(X?, Y).
-echo(X, Y?).
+test(X).
+test(X?).
 ''';
 
       final clauses = parseClauses(clauseCode);
       final typeEnv = parseTypes(typeDecl);
       final checker = ModeChecker(typeEnv);
-      final errors = checker.checkProcedure('echo', 2, clauses);
+      final errors = checker.checkProcedure('test', 1, clauses);
 
       print('\n=== Test: Two clauses covering both modes ===');
       print('Type: $typeDecl');
@@ -71,27 +72,25 @@ echo(X, Y?).
         print('  - ${error.message}');
       }
 
-      // Should pass - both modes covered
       final hasCoverageError = errors.any((e) =>
         e.message.contains('coverage') || e.message.contains('Coverage'));
 
       expect(hasCoverageError, isFalse,
-        reason: 'Both reader and writer modes covered');
+        reason: 'Both writer and reader modes covered');
     });
 
-    test('procedure with custom universal type - should require coverage', () {
+    test('Custom universal type requires coverage', () {
+      // Universal ::= _ ; _? same as Every
       final typeDecl = '''
 Universal ::= _ ; _?.
-procedure transform(Universal?, Universal).
+procedure test(Universal?).
 ''';
-      final clauseCode = '''
-transform(X?, Y).
-''';
+      final clauseCode = 'test(X).';  // Only writer
 
       final clauses = parseClauses(clauseCode);
       final typeEnv = parseTypes(typeDecl);
       final checker = ModeChecker(typeEnv);
-      final errors = checker.checkProcedure('transform', 2, clauses);
+      final errors = checker.checkProcedure('test', 1, clauses);
 
       print('\n=== Test: Custom universal type ===');
       print('Type decl: $typeDecl');
@@ -101,7 +100,6 @@ transform(X?, Y).
         print('  - ${error.message}');
       }
 
-      // Should fail - missing writer mode
       final hasCoverageError = errors.any((e) =>
         e.message.contains('coverage') || e.message.contains('Coverage'));
 
@@ -109,14 +107,14 @@ transform(X?, Y).
         reason: 'Custom universal type should require coverage');
     });
 
-    test('subtype declaration should skip coverage check', () {
+    test('Subtype declaration skips coverage check', () {
+      // Partial ::< _ means subtype, no coverage required
+      // Declared OUTPUT (Partial) → callee sees INPUT → expects READER
       final typeDecl = '''
 Partial ::< _.
 procedure test(Partial).
 ''';
-      final clauseCode = '''
-test(X).
-''';
+      final clauseCode = 'test(X?).';  // Reader at callee INPUT position
 
       final clauses = parseClauses(clauseCode);
       final typeEnv = parseTypes(typeDecl);
@@ -131,7 +129,6 @@ test(X).
         print('  - ${error.message}');
       }
 
-      // Should pass - ::< types don't require coverage
       final hasCoverageError = errors.any((e) =>
         e.message.contains('coverage') || e.message.contains('Coverage'));
 
