@@ -354,6 +354,16 @@ class TypeDFA {
   
   /// Check if this DFA accepts a subset of another's language
   bool isSubsetOf(TypeDFA other) {
+    // Handle special built-in types as 'other'
+    if (other is NumberTypeDFA) {
+      // L(this) ⊆ L(Number) iff all paths accepted by this are numeric
+      return _allAcceptedPathsSatisfy((path) => other.acceptsPath(path));
+    }
+    if (other is StringTypeDFA) {
+      // L(this) ⊆ L(String) iff all paths accepted by this are strings
+      return _allAcceptedPathsSatisfy((path) => other.acceptsPath(path));
+    }
+
     // L(this) ⊆ L(other) iff L(this) ∩ L(complement(other)) = ∅
     // Must complete both DFAs with respect to combined alphabet first
     final combinedAlphabet = alphabet.union(other.alphabet);
@@ -362,6 +372,59 @@ class TypeDFA {
     final complementOther = otherCompleted.complement();
     final intersection = thisCompleted.intersect(complementOther);
     return intersection.isEmpty;
+  }
+
+  /// Check if all paths accepted by this DFA satisfy a predicate
+  /// Used for subset checking against special built-in types
+  bool _allAcceptedPathsSatisfy(bool Function(TermPath) predicate) {
+    // For empty DFA, trivially true
+    if (isEmpty) return true;
+
+    // For singleton DFAs, check the single path
+    if (transitions.isEmpty && finalStates.contains(startState)) {
+      // Single state that is final - accepts empty path only
+      return predicate(TermPath([]));
+    }
+
+    // Enumerate all accepting paths via DFS
+    // This works for small DFAs (singletons, small constructed DFAs)
+    final acceptingPaths = <TermPath>[];
+    _collectAcceptingPaths(startState, [], acceptingPaths, <DFAState>{}, 10);
+
+    // Check all collected paths
+    return acceptingPaths.every(predicate);
+  }
+
+  /// Collect accepting paths from a state (with depth limit)
+  void _collectAcceptingPaths(
+    DFAState state,
+    List<PathElement> currentPath,
+    List<TermPath> results,
+    Set<DFAState> visited,
+    int maxDepth,
+  ) {
+    if (maxDepth <= 0) return;
+    if (visited.contains(state)) return;
+    visited.add(state);
+
+    // If this is a final state, add current path
+    if (finalStates.contains(state)) {
+      results.add(TermPath(List.from(currentPath)));
+    }
+
+    // Explore all outgoing transitions
+    for (final entry in transitions.entries) {
+      final (fromState, pathElem) = entry.key;
+      final toState = entry.value;
+
+      if (fromState == state) {
+        currentPath.add(pathElem);
+        _collectAcceptingPaths(toState, currentPath, results, Set.from(visited), maxDepth - 1);
+        currentPath.removeLast();
+      }
+    }
+
+    visited.remove(state);
   }
   
   /// Check if DFA language is empty
@@ -491,6 +554,18 @@ class NumberTypeDFA extends TypeDFA {
 
   @override
   bool get isEmpty => false;  // Accepts all numbers (non-empty language)
+
+  @override
+  bool isSubsetOf(TypeDFA other) {
+    // Number ⊆ Number: true
+    if (other is NumberTypeDFA) return true;
+    // Number ⊆ String: false (disjoint)
+    if (other is StringTypeDFA) return false;
+    // Number ⊆ Any/Every: true (all numbers are values)
+    if (other.primitiveStateModes.isNotEmpty) return true;
+    // For other structured types: false (numbers don't match structures)
+    return false;
+  }
 }
 
 /// DFA that accepts only strings (for String type)
@@ -514,4 +589,16 @@ class StringTypeDFA extends TypeDFA {
 
   @override
   bool get isEmpty => false;  // Accepts all strings (non-empty language)
+
+  @override
+  bool isSubsetOf(TypeDFA other) {
+    // String ⊆ String: true
+    if (other is StringTypeDFA) return true;
+    // String ⊆ Number: false (disjoint)
+    if (other is NumberTypeDFA) return false;
+    // String ⊆ Any/Every: true (all strings are values)
+    if (other.primitiveStateModes.isNotEmpty) return true;
+    // For other structured types: false
+    return false;
+  }
 }
