@@ -1,0 +1,11 @@
+% Bounded buffer using sliding window
+% Buffer size is 2 (the number of pre-allocated slots X1, X2)
+% No difference lists - pure stream programming
+
+bb :- consumer([X1?, X2? | Xs], 10), producer(1, [X1, X2 | Xs?]).
+
+consumer([X1, X2, X3 | Xs?], N) :- known(X1?), N? > 0 |
+    N1 := N? - 1, consumer([X2?, X3? | Xs], N1?).
+consumer(_, 0).
+
+producer(N, [N? | Xs]) :- number(N?) | N1 := N? + 1, producer(N1?, Xs?).
