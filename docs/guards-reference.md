@@ -197,6 +197,18 @@ When a guard ensures a variable is ground (contains no unbound variables), that 
 
 Ground terms contain no unbound writers. Multiple readers of a ground term do not create single-writer violations because there's no writer to expose.
 
+### Guard Arguments Count as Reader Occurrences
+
+Guards take reader arguments. These reader occurrences count toward satisfying the SRSW syntactic restriction that each writer has a paired reader. A clause such as:
+
+```glp
+check(X) :- known(X?) | true.
+```
+
+is valid because X appears as writer in the head and X? appears as reader in the guard, satisfying SRSW with one writer and one reader.
+
+This is distinct from the multiple-reader relaxation below. Guard reader counting ensures guards participate in SRSW validation. The relaxation below determines which guards permit a variable to appear as reader more than once.
+
 ### Guards That Imply Groundness
 
 | Guard | Implies Ground | Allows Multiple Readers |
