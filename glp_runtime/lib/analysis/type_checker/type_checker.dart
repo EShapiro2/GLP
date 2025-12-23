@@ -481,71 +481,73 @@ class TypeChecker {
     if (term is ast.VarTerm) {
       // Variable at this position gets the type reachable from current DFA state
       final state = dfa.stateAfterPath(pathToHere);
-      if (state != null) {
-        // Check mode at primitive positions
-        if (dfa.isPrimitiveState(state)) {
-          final primitiveModes = dfa.getModesAt(state);
+      if (state == null) {
+        // Path doesn't exist in the type - pattern doesn't match
+        return false;
+      }
+      // Check mode at primitive positions
+      if (dfa.isPrimitiveState(state)) {
+        final primitiveModes = dfa.getModesAt(state);
 
-          // For head positions, apply call boundary complementation
-          // Callee sees complement of what caller declares
-          final effectiveParentMode = isHeadPosition
-              ? declaredArgMode.complement
-              : declaredArgMode;
+        // For head positions, apply call boundary complementation
+        // Callee sees complement of what caller declares
+        final effectiveParentMode = isHeadPosition
+            ? declaredArgMode.complement
+            : declaredArgMode;
 
-          // Combine parent mode with primitive type's mode
-          // If parent is input, embedded mode is complemented
-          Mode combineModeFn(Mode parent, Mode embedded) {
-            return parent == Mode.input ? embedded.complement : embedded;
+        // Combine parent mode with primitive type's mode
+        // If parent is input, embedded mode is complemented
+        Mode combineModeFn(Mode parent, Mode embedded) {
+          return parent == Mode.input ? embedded.complement : embedded;
+        }
+
+        // The primitive modes tell us what the TYPE position accepts
+        // We need to check if ANY primitive mode, when combined, matches the variable
+        bool modeOK = false;
+        for (final primitiveMode in primitiveModes) {
+          final combinedMode = combineModeFn(effectiveParentMode, primitiveMode);
+          // At combined INPUT position, expect WRITER (output variable)
+          // At combined OUTPUT position, expect READER (input variable)
+          final expectedVarMode = combinedMode == Mode.input ? Mode.output : Mode.input;
+          final actualVarMode = term.isReader ? Mode.input : Mode.output;
+          if (actualVarMode == expectedVarMode) {
+            modeOK = true;
+            break;
           }
+        }
 
-          // The primitive modes tell us what the TYPE position accepts
-          // We need to check if ANY primitive mode, when combined, matches the variable
-          bool modeOK = false;
-          for (final primitiveMode in primitiveModes) {
-            final combinedMode = combineModeFn(effectiveParentMode, primitiveMode);
-            // At combined INPUT position, expect WRITER (output variable)
-            // At combined OUTPUT position, expect READER (input variable)
-            final expectedVarMode = combinedMode == Mode.input ? Mode.output : Mode.input;
-            final actualVarMode = term.isReader ? Mode.input : Mode.output;
-            if (actualVarMode == expectedVarMode) {
-              modeOK = true;
-              break;
-            }
+        if (!modeOK) {
+          // Mode error at primitive position - reject this clause
+          return false;
+        }
+      }
+
+      final varName = term.name;
+      final typeAtPosition = _dfaFromState(dfa, state);
+
+      // Intersect with existing type for this variable (if any)
+      if (varTypes.containsKey(varName)) {
+        final existingType = varTypes[varName]!;
+
+        // Check if types are compatible (same type, just different representations)
+        if (_areCompatibleTypes(existingType, typeAtPosition)) {
+          // Types are compatible, keep existing (or could intersect for precision)
+          // For built-ins, prefer the direct NumberTypeDFA over _builtin_ states
+          if (typeAtPosition is NumberTypeDFA || typeAtPosition is StringTypeDFA) {
+            varTypes[varName] = typeAtPosition;
           }
-
-          if (!modeOK) {
-            // Mode error at primitive position - reject this clause
+          // else: keep existing
+        } else {
+          // Different types - must intersect
+          final intersected = existingType.intersect(typeAtPosition);
+          if (intersected.isEmpty) {
+            // Variable has inconsistent types across occurrences
             return false;
           }
+          varTypes[varName] = intersected;
         }
-
-        final varName = term.name;
-        final typeAtPosition = _dfaFromState(dfa, state);
-
-        // Intersect with existing type for this variable (if any)
-        if (varTypes.containsKey(varName)) {
-          final existingType = varTypes[varName]!;
-
-          // Check if types are compatible (same type, just different representations)
-          if (_areCompatibleTypes(existingType, typeAtPosition)) {
-            // Types are compatible, keep existing (or could intersect for precision)
-            // For built-ins, prefer the direct NumberTypeDFA over _builtin_ states
-            if (typeAtPosition is NumberTypeDFA || typeAtPosition is StringTypeDFA) {
-              varTypes[varName] = typeAtPosition;
-            }
-            // else: keep existing
-          } else {
-            // Different types - must intersect
-            final intersected = existingType.intersect(typeAtPosition);
-            if (intersected.isEmpty) {
-              // Variable has inconsistent types across occurrences
-              return false;
-            }
-            varTypes[varName] = intersected;
-          }
-        } else {
-          varTypes[varName] = typeAtPosition;
-        }
+      } else {
+        varTypes[varName] = typeAtPosition;
       }
       return true;
     } else if (term is ast.StructTerm) {
