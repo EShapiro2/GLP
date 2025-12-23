@@ -187,20 +187,31 @@ class TypeCompiler {
       transitions[(fromState, tailElem)] = tailTarget;
       
     } else if (alt is TypeRef) {
-      // Type reference at top level (e.g., Any ::< Every)
-      // This means a subtype declaration - inherit primitive modes from supertype
-      // Note: This context is inside TypeCompiler, so we can call compile()
-      // The compile method has caching, so recursive calls are safe
+      // Type reference at top level (e.g., Any ::< Every, Stream ::< List)
+      // This is a subtype declaration - inherit ALL structure from supertype
+      // Subtype values are a subset of supertype values, so same constructors apply
       try {
         final referencedDFA = compile(alt.name);
+
+        // Inherit primitive modes from referenced type's start state
         if (referencedDFA.primitiveStateModes.containsKey(referencedDFA.startState)) {
-          // Inherit primitive modes from referenced type
           final modes = referencedDFA.getModesAt(referencedDFA.startState);
           primitiveStateModes[fromState] =
               (primitiveStateModes[fromState] ?? <Mode>{})..addAll(modes);
         }
+
+        // Inherit ALL transitions from referenced type's start state
+        // This enables patterns valid for supertype to work for subtype
+        for (final entry in referencedDFA.transitions.entries) {
+          final (srcState, pathElem) = entry.key;
+          final dstState = entry.value;
+
+          if (srcState == referencedDFA.startState) {
+            transitions[(fromState, pathElem)] = dstState;
+          }
+        }
       } catch (e) {
-        // If compilation fails, skip mode inheritance
+        // If compilation fails, skip inheritance
         // This can happen for forward references or undefined types
       }
     }
