@@ -197,11 +197,8 @@ class TypeChecker {
 
     // Compute DFA contributions for each argument position across all clauses
     for (int argIndex = 0; argIndex < decl.arity; argIndex++) {
-      // Input-mode arguments receive values from callers, not from clauses.
-      // Skip the "produces values" check for input positions.
-      if (decl.argTypes[argIndex].isInput) {
-        continue;
-      }
+      final declaredDFA = argDFAs[argIndex];
+      final isInputArg = decl.argTypes[argIndex].isInput;
 
       // Union all clause contributions for this argument position
       var inferredDFA = TypeDFA.empty();
@@ -212,17 +209,36 @@ class TypeChecker {
 
         if (argIndex < clause.head.args.length) {
           final argPattern = clause.head.args[argIndex];
-          final argContribution = contributionComputer.computeArgContribution(
-            argPattern,
-            varTypes,
-          );
-          inferredDFA = inferredDFA.union(argContribution);
+
+          // For INPUT arguments: variable patterns accept ALL values of the type
+          // A variable X at input position can receive any value of the declared type
+          if (isInputArg && argPattern is ast.VarTerm) {
+            inferredDFA = inferredDFA.union(declaredDFA);
+          } else {
+            final argContribution = contributionComputer.computeArgContribution(
+              argPattern,
+              varTypes,
+            );
+            inferredDFA = inferredDFA.union(argContribution);
+          }
+        }
+      }
+
+      // For OUTPUT arguments with only variable patterns: skip check
+      // Variables at output positions need body analysis to determine contribution
+      // (e.g., body goal Y = ok determines Y's value)
+      if (!isInputArg && inferredDFA.isEmpty) {
+        final allVariables = clauseContributions.every((c) {
+          if (argIndex >= c.clause.head.args.length) return false;
+          return c.clause.head.args[argIndex] is ast.VarTerm;
+        });
+        if (allVariables) {
+          // Skip fixpoint check for output args with only variable patterns
+          continue;
         }
       }
 
       // Check if inferred equals declared
-      final declaredDFA = argDFAs[argIndex];
-
       if (!inferredDFA.isEquivalent(declaredDFA)) {
         // Diagnose the type of mismatch
         if (inferredDFA.isEmpty && !declaredDFA.isEmpty) {
