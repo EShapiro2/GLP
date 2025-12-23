@@ -18,7 +18,7 @@ void main() {
         final computer = ClauseContributionComputer(typeEnv);
 
         final pattern = ast.ConstTerm('foo', 0, 0);
-        final result = computer.computeArgContribution(pattern, {});
+        final result = computer.computeArgContribution(pattern, {}, TypeDFA.empty());
 
         final expected = TypeDFA.singleton('foo');
         expect(result.isEquivalent(expected), isTrue);
@@ -29,7 +29,7 @@ void main() {
         final computer = ClauseContributionComputer(typeEnv);
 
         final pattern = ast.ConstTerm(42, 0, 0);
-        final result = computer.computeArgContribution(pattern, {});
+        final result = computer.computeArgContribution(pattern, {}, TypeDFA.empty());
 
         final expected = TypeDFA.singleton('42');
         expect(result.isEquivalent(expected), isTrue);
@@ -40,7 +40,7 @@ void main() {
         final computer = ClauseContributionComputer(typeEnv);
 
         final pattern = ast.ConstTerm(3.14, 0, 0);
-        final result = computer.computeArgContribution(pattern, {});
+        final result = computer.computeArgContribution(pattern, {}, TypeDFA.empty());
 
         final expected = TypeDFA.singleton('3.14');
         expect(result.isEquivalent(expected), isTrue);
@@ -51,7 +51,7 @@ void main() {
         final computer = ClauseContributionComputer(typeEnv);
 
         final pattern = ast.ListTerm(null, null, 0, 0);
-        final result = computer.computeArgContribution(pattern, {});
+        final result = computer.computeArgContribution(pattern, {}, TypeDFA.empty());
 
         final expected = TypeDFA.singleton('[]');
         expect(result.isEquivalent(expected), isTrue);
@@ -70,7 +70,7 @@ Nat ::= 0 ; s(Nat).
         final pattern = ast.VarTerm('X', false, 0, 0);
         final varTypes = {'X': natDFA};
 
-        final result = computer.computeArgContribution(pattern, varTypes);
+        final result = computer.computeArgContribution(pattern, varTypes, TypeDFA.empty());
 
         expect(result.isEquivalent(natDFA), isTrue);
       });
@@ -87,8 +87,8 @@ Nat ::= 0 ; s(Nat).
         final readerPattern = ast.VarTerm('X', true, 0, 0);
         final varTypes = {'X': natDFA};
 
-        final writerResult = computer.computeArgContribution(writerPattern, varTypes);
-        final readerResult = computer.computeArgContribution(readerPattern, varTypes);
+        final writerResult = computer.computeArgContribution(writerPattern, varTypes, TypeDFA.empty());
+        final readerResult = computer.computeArgContribution(readerPattern, varTypes, TypeDFA.empty());
 
         expect(writerResult.isEquivalent(readerResult), isTrue);
       });
@@ -98,7 +98,7 @@ Nat ::= 0 ; s(Nat).
         final computer = ClauseContributionComputer(typeEnv);
 
         final pattern = ast.VarTerm('Unknown', false, 0, 0);
-        final result = computer.computeArgContribution(pattern, {});
+        final result = computer.computeArgContribution(pattern, {}, TypeDFA.empty());
 
         expect(result.isEmpty, isTrue);
       });
@@ -110,7 +110,7 @@ Nat ::= 0 ; s(Nat).
         final computer = ClauseContributionComputer(typeEnv);
 
         final pattern = ast.StructTerm('zero', [], 0, 0);
-        final result = computer.computeArgContribution(pattern, {});
+        final result = computer.computeArgContribution(pattern, {}, TypeDFA.empty());
 
         final expected = TypeDFA.singleton('zero');
         expect(result.isEquivalent(expected), isTrue);
@@ -123,7 +123,7 @@ Nat ::= 0 ; s(Nat).
         final pattern = ast.StructTerm('s', [ast.VarTerm('X', false, 0, 0)], 0, 0);
         final varTypes = {'X': TypeDFA.empty()};
 
-        final result = computer.computeArgContribution(pattern, varTypes);
+        final result = computer.computeArgContribution(pattern, varTypes, TypeDFA.empty());
 
         // If X has empty type, s(X) also has empty language
         expect(result.isEmpty, isTrue);
@@ -137,7 +137,7 @@ Nat ::= 0 ; s(Nat).
           ast.ConstTerm(0, 0, 0),
           ast.ConstTerm(1, 0, 0),
         ], 0, 0);
-        final result = computer.computeArgContribution(pattern, {});
+        final result = computer.computeArgContribution(pattern, {}, TypeDFA.empty());
 
         // Should produce a DFA that accepts f(0,1)
         // Check it's not empty
@@ -160,7 +160,7 @@ Nat ::= 0 ; s(Nat).
         ], 0, 0);
         final varTypes = {'X': xDFA, 'Y': yDFA};
 
-        final result = computer.computeArgContribution(pattern, varTypes);
+        final result = computer.computeArgContribution(pattern, varTypes, TypeDFA.empty());
 
         // Should produce DFA accepting pair(a, b)
         expect(result.isEmpty, isFalse);
@@ -182,7 +182,7 @@ Nat ::= 0 ; s(Nat).
           'Xs': TypeDFA.singleton('[]'),
         };
 
-        final result = computer.computeArgContribution(pattern, varTypes);
+        final result = computer.computeArgContribution(pattern, varTypes, TypeDFA.empty());
 
         // If head type is empty, list is empty
         expect(result.isEmpty, isTrue);
@@ -197,7 +197,7 @@ Nat ::= 0 ; s(Nat).
           ast.ListTerm(null, null, 0, 0),
           0, 0,
         );
-        final result = computer.computeArgContribution(pattern, {});
+        final result = computer.computeArgContribution(pattern, {}, TypeDFA.empty());
 
         // [a] should produce non-empty DFA
         expect(result.isEmpty, isFalse);
@@ -217,7 +217,7 @@ Nat ::= 0 ; s(Nat).
         );
         final varTypes = {'X': xDFA, 'Xs': xsDFA};
 
-        final result = computer.computeArgContribution(pattern, varTypes);
+        final result = computer.computeArgContribution(pattern, varTypes, TypeDFA.empty());
 
         // Should produce [a] = [a|[]]
         expect(result.isEmpty, isFalse);
@@ -232,8 +232,8 @@ Nat ::= 0 ; s(Nat).
         final pattern1 = ast.ConstTerm('a', 0, 0);
         final pattern2 = ast.ConstTerm('b', 0, 0);
 
-        final result1 = computer.computeArgContribution(pattern1, {});
-        final result2 = computer.computeArgContribution(pattern2, {});
+        final result1 = computer.computeArgContribution(pattern1, {}, TypeDFA.empty());
+        final result2 = computer.computeArgContribution(pattern2, {}, TypeDFA.empty());
         final union = result1.union(result2);
 
         // Union should accept both 'a' and 'b'
