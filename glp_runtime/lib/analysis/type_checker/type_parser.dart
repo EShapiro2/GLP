@@ -14,6 +14,11 @@
 //   proc_decl  ::= 'procedure' atom '(' type_refs ')' '.'
 
 import 'type_ast.dart';
+import 'prelude.dart';
+
+/// System type prelude - loaded before user types
+/// Note: This is now superseded by the comprehensive prelude in prelude.dart
+const String _systemTypePrelude = typePrelude;
 
 /// Token types for type parsing
 enum TypeTokenType {
@@ -22,6 +27,7 @@ enum TypeTokenType {
   number,        // 0, 42, 3.14
   string,        // "hello", 'world'
   colonColonEq,  // ::=
+  colonColonLt,  // ::<
   semicolon,     // ;
   dot,           // .
   lparen,        // (
@@ -31,6 +37,8 @@ enum TypeTokenType {
   pipe,          // |
   comma,         // ,
   question,      // ? (input mode marker)
+  underscore,    // _ (primitive mode)
+  backslash,     // \ (difference list operator)
   procedure,     // keyword 'procedure'
   unknown,       // Unknown token (skip)
   eof,
@@ -119,9 +127,22 @@ class TypeLexer {
         return TypeToken(TypeTokenType.dot, '.', startLine, startColumn);
       case '?':
         return TypeToken(TypeTokenType.question, '?', startLine, startColumn);
+      case '\\':
+        return TypeToken(TypeTokenType.backslash, '\\', startLine, startColumn);
+      case '_':
+        // Check if it's just underscore (primitive mode) or start of identifier
+        if (!_isAlphaNumeric(_peek())) {
+          return TypeToken(TypeTokenType.underscore, '_', startLine, startColumn);
+        }
+        // Otherwise it's an identifier starting with _
+        return _identifier(c, startLine, startColumn);
       case ':':
-        if (_match(':') && _match('=')) {
-          return TypeToken(TypeTokenType.colonColonEq, '::=', startLine, startColumn);
+        if (_match(':')) {
+          if (_match('=')) {
+            return TypeToken(TypeTokenType.colonColonEq, '::=', startLine, startColumn);
+          } else if (_match('<')) {
+            return TypeToken(TypeTokenType.colonColonLt, '::<', startLine, startColumn);
+          }
         }
         // Skip unknown characters (like : from :- in clauses)
         return TypeToken(TypeTokenType.unknown, c, startLine, startColumn);
@@ -235,8 +256,10 @@ class TypeParser {
     final procedures = <String, ProcDecl>{};
 
     while (!_isAtEnd()) {
-      // Check for type definition: TypeName ::= ...
-      if (_check(TypeTokenType.typeName) && _peekNext()?.type == TypeTokenType.colonColonEq) {
+      // Check for type definition: TypeName ::= ... or TypeName ::< ...
+      final nextType = _peekNext()?.type;
+      if (_check(TypeTokenType.typeName) &&
+          (nextType == TypeTokenType.colonColonEq || nextType == TypeTokenType.colonColonLt)) {
         final typeDef = _parseTypeDef();
         types[typeDef.name] = typeDef;
       }
@@ -260,16 +283,25 @@ class TypeParser {
     return tokens[_current + 1];
   }
   
-  /// Parse: TypeName ::= type_expr .
+  /// Parse: TypeName ::= type_expr . OR TypeName ::< type_expr .
   TypeDef _parseTypeDef() {
     final nameToken = _consume(TypeTokenType.typeName, 'Expected type name');
-    _consume(TypeTokenType.colonColonEq, 'Expected "::=" after type name');
-    
+
+    // Check for ::= or ::<
+    bool isExact;
+    if (_match(TypeTokenType.colonColonEq)) {
+      isExact = true;
+    } else if (_match(TypeTokenType.colonColonLt)) {
+      isExact = false;
+    } else {
+      throw TypeParseError('Expected "::=" or "::<" after type name', _peek().line, _peek().column);
+    }
+
     final alternatives = _parseTypeExpr();
-    
+
     _consume(TypeTokenType.dot, 'Expected "." after type definition');
-    
-    return TypeDef(nameToken.lexeme, alternatives, nameToken.line, nameToken.column);
+
+    return TypeDef(nameToken.lexeme, alternatives, nameToken.line, nameToken.column, isExact: isExact);
   }
   
   /// Parse: type_alt (; type_alt)*
@@ -283,9 +315,15 @@ class TypeParser {
     return alts;
   }
   
-  /// Parse: constant | functor(args) | [] | [H|T] | (Type, Type, ...)
+  /// Parse: constant | functor(args) | [] | [H|T] | (Type, Type, ...) | _ | _?
   TypeExpr _parseTypeAlt() {
     final token = _peek();
+
+    // Primitive mode: _ or _?
+    if (_match(TypeTokenType.underscore)) {
+      final isInput = _match(TypeTokenType.question);
+      return PrimitiveModeAlt(isInput, token.line, token.column);
+    }
 
     // Tuple: (Type, Type, ...) - parsed as ','(Type, ','(Type, ...)) right-associative
     if (_match(TypeTokenType.lparen)) {
@@ -312,11 +350,11 @@ class TypeParser {
       if (_match(TypeTokenType.rbracket)) {
         return ListNilAlt(token.line, token.column);
       }
-      
-      // List cons: [H | T]
-      final head = _parseTypeRef();
+
+      // List cons: [H | T] where H and T can be TypeRef or PrimitiveModeAlt
+      final head = _parseTypeExprElement();
       _consume(TypeTokenType.pipe, 'Expected "|" in list type');
-      final tail = _parseTypeRef();
+      final tail = _parseTypeExprElement();
       _consume(TypeTokenType.rbracket, 'Expected "]" after list type');
       return ListConsAlt(head, tail, token.line, token.column);
     }
@@ -333,9 +371,17 @@ class TypeParser {
       return ConstantAlt(strToken.literal!, strToken.line, strToken.column);
     }
     
-    // Type reference (uppercase)
+    // Type reference (uppercase) - possibly followed by backslash for DiffList
     if (_check(TypeTokenType.typeName)) {
-      return _parseTypeRef();
+      final typeRef = _parseTypeRef();
+
+      // Check for backslash operator (DiffList syntax: List \ List?)
+      if (_match(TypeTokenType.backslash)) {
+        final hole = _parseTypeExprElement();
+        return DiffListAlt(typeRef, hole, token.line, token.column);
+      }
+
+      return typeRef;
     }
     
     // Atom constant or functor
@@ -368,7 +414,22 @@ class TypeParser {
 
     return TypeRef(token.lexeme, token.line, token.column, isInput: isInput);
   }
-  
+
+  /// Parse a type expression element (TypeRef or PrimitiveModeAlt)
+  /// Used in positions that can accept either, like list cons head/tail
+  TypeExpr _parseTypeExprElement() {
+    // Check for primitive mode: _ or _?
+    if (_match(TypeTokenType.underscore)) {
+      final line = _previous().line;
+      final column = _previous().column;
+      final isInput = _match(TypeTokenType.question);
+      return PrimitiveModeAlt(isInput, line, column);
+    }
+
+    // Otherwise expect a type reference
+    return _parseTypeRef();
+  }
+
   /// Parse: procedure name(Type1, Type2, ...) .
   ProcDecl _parseProcDecl() {
     _consume(TypeTokenType.procedure, 'Expected "procedure"');
@@ -421,10 +482,42 @@ class TypeParser {
 
 /// Parse type declarations from GLP source
 TypeEnvironment parseTypes(String source) {
+  // Parse system type prelude first
+  final preludeLexer = TypeLexer(_systemTypePrelude);
+  final preludeTokens = preludeLexer.tokenize();
+  final preludeParser = TypeParser(preludeTokens);
+  final preludeEnv = preludeParser.parse();
+
+  // Parse user source
   final lexer = TypeLexer(source);
   final tokens = lexer.tokenize();
   final parser = TypeParser(tokens);
-  return parser.parse();
+  final userEnv = parser.parse();
+
+  // Check for redefinitions of predefined types
+  for (final typeName in userEnv.types.keys) {
+    if (isPredefinedType(typeName)) {
+      final typeDef = userEnv.types[typeName]!;
+      throw TypeParseError(
+        'Cannot redefine predefined type: $typeName',
+        typeDef.line, typeDef.column,
+      );
+    }
+  }
+
+  // Check for redefinitions of predefined procedures
+  for (final procKey in userEnv.procedures.keys) {
+    final procDecl = userEnv.procedures[procKey]!;
+    if (isPredefinedProcedure(procDecl.name)) {
+      throw TypeParseError(
+        'Cannot redefine predefined procedure: ${procDecl.name}/${procDecl.arity}',
+        procDecl.line, procDecl.column,
+      );
+    }
+  }
+
+  // Merge: user types can override system types (except predefined ones checked above)
+  return preludeEnv.merge(userEnv);
 }
 
 /// Error during type parsing

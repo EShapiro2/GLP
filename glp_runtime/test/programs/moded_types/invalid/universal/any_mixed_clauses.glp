@@ -1,0 +1,4 @@
+%% First clause OK, second clause BAD - SHOULD FAIL
+procedure mixed(Any?, Any).
+mixed(X, Y?).
+mixed(bad(Z), W?).

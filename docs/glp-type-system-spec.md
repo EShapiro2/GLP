@@ -37,15 +37,50 @@ type_refs     ::= type_ref (',' type_ref)*
 |------|---------|-------|
 | `Number` | Dart int/double | `number(X)` |
 | `String` | Dart string | `string(X)` |
-| `Any` | Herbrand universe | (none) |
 
-### 2.3 Standard Library Types
+### 2.3 Primitive Mode Types
+
+The primitive mode types are the leaves of the type system:
+
+| Type | Mode | Meaning |
+|------|------|---------|
+| `_` | output | Program produces a value |
+| `_?` | input | Environment provides a value |
+
+**Well-typing constraint:** A primitive mode type requires the clause to handle **all** ground terms at that position. This means the clause head must use a **variable pattern** (not a constructor).
+
+**Examples with `procedure p(_, _?)`:**
+
+```glp
+%% Well-typed: variables handle all terms
+p(X, Y?).
+
+%% NOT well-typed: first position only produces s/1 terms
+p(s(X), Y?).
+
+%% NOT well-typed: second position only consumes s/1 terms
+p(X, s(Y?)).
+```
+
+### 2.4 The Universal Type `Any`
+
+The universal type is defined as the union of primitives:
+
+```
+Any ::= _ | _?.
+```
+
+Since `Any` is self-dual (`Any? = Any`), it inherits the well-typing constraint from the primitives: a clause must use a variable pattern at any `Any` position.
+
+**Note:** The Y-S paper distinguishes `T ::= Any` (must handle all terms) from `T ::< Any` (subtype escape hatch). GLP currently only supports `::=`, so `Any` always requires variable patterns.
+
+### 2.5 Standard Library Types
 
 ```prolog
 Constant ::= Number ; String.
 ```
 
-### 2.4 Examples
+### 2.6 Examples
 
 ```prolog
 Nat ::= 0 ; s(Nat).

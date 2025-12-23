@@ -1,0 +1,3 @@
+%% Constant at Any? (input) position - SHOULD FAIL
+procedure baz(Any?).
+baz(42).

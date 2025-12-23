@@ -12,7 +12,8 @@ void main() {
       final source = 'procedure merge(List?, List?, List).';
       final env = parseTypes(source);
 
-      expect(env.procedures, hasLength(1));
+      // Check that merge/3 was parsed (prelude may contain other procedures)
+      expect(env.procedures.containsKey('merge/3'), isTrue);
       final proc = env.procedures['merge/3'];
       expect(proc, isNotNull);
       expect(proc!.name, equals('merge'));
@@ -124,8 +125,9 @@ procedure counter(CounterStream, Number).
 
       final env = parseTypes(source);
 
-      // Check types are parsed
-      expect(env.types, hasLength(2));
+      // Check types are parsed (prelude contains additional types)
+      expect(env.types.containsKey('CounterMsg'), isTrue);
+      expect(env.types.containsKey('CounterStream'), isTrue);
       expect(env.types['CounterMsg'], isNotNull);
       expect(env.types['CounterStream'], isNotNull);
 

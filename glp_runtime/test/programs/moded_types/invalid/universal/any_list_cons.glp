@@ -1,0 +1,3 @@
+%% List cons at Any? position - SHOULD FAIL
+procedure test2(Any?).
+test2([H|T]).

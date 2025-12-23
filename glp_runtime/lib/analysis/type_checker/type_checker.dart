@@ -7,12 +7,15 @@
 // 1. No clause is useless relative to S
 // 2. T_P^α(S) = S (S is a fixpoint of the abstract consequence operator)
 
+import 'mode.dart';
 import 'type_ast.dart';
 import 'type_dfa.dart';
 import 'type_compiler.dart';
 import 'type_parser.dart';
 import 'mode_checker.dart';
 import 'mode_error.dart';
+import 'clause_contribution.dart';
+import 'guard_types.dart';
 import '../../compiler/ast.dart' as ast;
 
 /// Result of type checking
@@ -162,9 +165,14 @@ class TypeChecker {
       }
     }
 
-    // Mode checking: verify reader/writer usage matches type modes
-    final modeErrors = modeChecker.checkProcedure(decl.name, decl.arity, clauses);
-    for (final modeError in modeErrors) {
+    // Mode checking split into two parts:
+    // 1. Per-variable mode checking: handled in _inferVariableTypes() via primitiveStateModes
+    // 2. Mode coverage checking: handled here (ensures ::= types with primitive modes are covered)
+    //
+    // Coverage checking only applies to ::= types (exact), not ::< types (subtype).
+    // Every ::= _ ; _? requires coverage, Any ::< Every does not.
+    final modeCoverageErrors = modeChecker.checkModeCoverageOnly(decl.name, decl.arity, clauses);
+    for (final modeError in modeCoverageErrors) {
       errors.add(TypeError(
         modeError.message,
         modeError.line,
@@ -172,15 +180,98 @@ class TypeChecker {
       ));
     }
 
-    // Fixpoint check: union of contributions should equal declared type
-    // This is a simplified check - full implementation would compute T_P^α
-    if (clauseContributions.isEmpty && clauses.isNotEmpty) {
-      errors.add(TypeError(
-        'All clauses for ${decl.name}/${decl.arity} are useless',
-        decl.line, decl.column
-      ));
+    // Fixpoint check: compute T_P^α(S) and verify it equals S
+    // T_P^α(S) = tuple-distributive closure = union of clause contributions per argument
+    if (clauseContributions.isEmpty) {
+      if (clauses.isNotEmpty) {
+        errors.add(TypeError(
+          'All clauses for ${decl.name}/${decl.arity} are useless',
+          decl.line, decl.column
+        ));
+      }
+      return TypeCheckResult(errors, warnings);
     }
-    
+
+    // Create contribution computer
+    final contributionComputer = ClauseContributionComputer(typeEnv);
+
+    // Compute DFA contributions for each argument position across all clauses
+    for (int argIndex = 0; argIndex < decl.arity; argIndex++) {
+      final declaredDFA = argDFAs[argIndex];
+      final isInputArg = decl.argTypes[argIndex].isInput;
+
+      // Union all clause contributions for this argument position
+      var inferredDFA = TypeDFA.empty();
+
+      for (final contribution in clauseContributions) {
+        final clause = contribution.clause;
+        final varTypes = contribution.variableTypes;
+
+        if (argIndex < clause.head.args.length) {
+          final argPattern = clause.head.args[argIndex];
+
+          // For INPUT arguments: variable patterns accept ALL values of the type
+          // A variable X at input position can receive any value of the declared type
+          if (isInputArg && argPattern is ast.VarTerm) {
+            inferredDFA = inferredDFA.union(declaredDFA);
+          } else {
+            final argContribution = contributionComputer.computeArgContribution(
+              argPattern,
+              varTypes,
+            );
+            inferredDFA = inferredDFA.union(argContribution);
+          }
+        }
+      }
+
+      // For OUTPUT arguments with only variable patterns: skip check
+      // Variables at output positions need body analysis to determine contribution
+      // (e.g., body goal Y = ok determines Y's value)
+      if (!isInputArg && inferredDFA.isEmpty) {
+        final allVariables = clauseContributions.every((c) {
+          if (argIndex >= c.clause.head.args.length) return false;
+          return c.clause.head.args[argIndex] is ast.VarTerm;
+        });
+        if (allVariables) {
+          // Skip fixpoint check for output args with only variable patterns
+          continue;
+        }
+      }
+
+      // Check if inferred equals declared
+      if (!inferredDFA.isEquivalent(declaredDFA)) {
+        // Diagnose the type of mismatch
+        if (inferredDFA.isEmpty && !declaredDFA.isEmpty) {
+          errors.add(TypeError(
+            'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
+            'no clauses produce values for this argument',
+            decl.line, decl.column
+          ));
+        } else if (inferredDFA.isSubsetOf(declaredDFA)) {
+          // Inferred ⊂ Declared: incomplete definition
+          errors.add(TypeError(
+            'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
+            'clauses do not cover full declared type ${decl.argTypes[argIndex].name} (incomplete definition)',
+            decl.line, decl.column
+          ));
+        } else if (declaredDFA.isSubsetOf(inferredDFA)) {
+          // Declared ⊂ Inferred: produces values outside type
+          errors.add(TypeError(
+            'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
+            'clauses produce values outside declared type ${decl.argTypes[argIndex].name}',
+            decl.line, decl.column
+          ));
+        } else {
+          // Neither is subset of other
+          errors.add(TypeError(
+            'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
+            'inferred type does not match declared type ${decl.argTypes[argIndex].name}',
+            decl.line, decl.column
+          ));
+        }
+      }
+    }
+
     return TypeCheckResult(errors, warnings);
   }
   
@@ -200,6 +291,7 @@ class TypeChecker {
 
     // Step 2: Infer types for variables from head patterns
     final varTypes = <String, TypeDFA>{};
+    final varTypeNames = <String, String>{}; // Track type names for ground guard checking
 
     for (int i = 0; i < clause.head.args.length; i++) {
       final arg = clause.head.args[i];
@@ -215,20 +307,56 @@ class TypeChecker {
       }
 
       // Collect variable types from pattern
-      if (!_inferVariableTypes(arg, argDFA, varTypes, TermPath.empty())) {
+      final declaredMode = decl.argTypes[i].isInput ? Mode.input : Mode.output;
+      if (!_inferVariableTypes(arg, argDFA, varTypes, TermPath.empty(),
+          declaredMode, true)) {
         errors.add(TypeError(
-          'Variable has inconsistent types across occurrences in clause head',
+          'Argument ${i + 1} pattern does not match declared type ${decl.argTypes[i].name}',
           clause.line, clause.column, clause.toString()
         ));
       }
+
+      // Track variable to type name mapping for ground guard checking
+      _collectVariableTypeNames(arg, decl.argTypes[i].name, varTypeNames);
     }
 
-    // Step 3: Check guards
-    if (clause.guards != null) {
-      for (final guard in clause.guards!) {
-        // TODO: Type check guard arguments
-        // Need procedure type declarations for guards
-        guard; // Suppress unused warning
+    // Step 3: Apply guard constraints
+    if (clause.guards != null && clause.guards!.isNotEmpty) {
+      final guardConstraints = extractGuardConstraints(
+        clause.guards,
+        typeEnv,
+        compiler,
+      );
+
+      for (final entry in guardConstraints.entries) {
+        final varName = entry.key;
+        final guardType = entry.value;
+
+        if (varTypes.containsKey(varName)) {
+          final intersected = varTypes[varName]!.intersect(guardType);
+          if (intersected.isEmpty) {
+            errors.add(TypeError(
+              'Guard type inconsistent with pattern type for variable $varName',
+              clause.line, clause.column, clause.toString()
+            ));
+          }
+          varTypes[varName] = intersected;
+        } else {
+          // Guard introduces type constraint for body-only variable
+          varTypes[varName] = guardType;
+        }
+      }
+    }
+
+    // Step 3.5: Check ground guards are WMT
+    if (clause.guards != null && clause.guards!.isNotEmpty) {
+      final groundGuardErrors = modeChecker.checkGroundGuardsWithTypeNames(clause, varTypeNames);
+      for (final modeError in groundGuardErrors) {
+        errors.add(TypeError(
+          modeError.message,
+          modeError.line,
+          modeError.column,
+        ));
       }
     }
 
@@ -362,33 +490,80 @@ class TypeChecker {
     ast.Term term,
     TypeDFA dfa,
     Map<String, TypeDFA> varTypes,
-    TermPath pathToHere
+    TermPath pathToHere,
+    Mode declaredArgMode,  // Mode from procedure declaration
+    bool isHeadPosition,   // true for head, false for body goals
   ) {
     if (term is ast.VarTerm) {
       // Variable at this position gets the type reachable from current DFA state
       final state = dfa.stateAfterPath(pathToHere);
-      if (state != null) {
-        final varName = term.name;
-        final typeAtPosition = _dfaFromState(dfa, state);
+      if (state == null) {
+        // Path doesn't exist in the type - pattern doesn't match
+        return false;
+      }
+      // Check mode at primitive positions
+      if (dfa.isPrimitiveState(state)) {
+        final primitiveModes = dfa.getModesAt(state);
 
-        // Intersect with existing type for this variable (if any)
-        if (varTypes.containsKey(varName)) {
-          final existingType = varTypes[varName]!;
+        // For head positions, apply call boundary complementation
+        // Callee sees complement of what caller declares
+        final effectiveParentMode = isHeadPosition
+            ? declaredArgMode.complement
+            : declaredArgMode;
 
-          // If both types have the same start state, they're likely the same type
-          // Skip intersection to avoid DFA sharing issues
-          if (existingType.startState.name != typeAtPosition.startState.name) {
-            final intersected = existingType.intersect(typeAtPosition);
-            if (intersected.isEmpty) {
-              // Variable has inconsistent types across occurrences
-              return false;
-            }
-            varTypes[varName] = intersected;
-          }
-          // else: types appear compatible, keep existing
-        } else {
-          varTypes[varName] = typeAtPosition;
+        // Combine parent mode with primitive type's mode
+        // If parent is input, embedded mode is complemented
+        Mode combineModeFn(Mode parent, Mode embedded) {
+          return parent == Mode.input ? embedded.complement : embedded;
         }
+
+        // The primitive modes tell us what the TYPE position accepts
+        // We need to check if ANY primitive mode, when combined, matches the variable
+        bool modeOK = false;
+        for (final primitiveMode in primitiveModes) {
+          final combinedMode = combineModeFn(effectiveParentMode, primitiveMode);
+          // At combined INPUT position, expect WRITER (output variable)
+          // At combined OUTPUT position, expect READER (input variable)
+          final expectedVarMode = combinedMode == Mode.input ? Mode.output : Mode.input;
+          final actualVarMode = term.isReader ? Mode.input : Mode.output;
+          if (actualVarMode == expectedVarMode) {
+            modeOK = true;
+            break;
+          }
+        }
+
+        if (!modeOK) {
+          // Mode error at primitive position - reject this clause
+          return false;
+        }
+      }
+
+      final varName = term.name;
+      final typeAtPosition = _dfaFromState(dfa, state);
+
+      // Intersect with existing type for this variable (if any)
+      if (varTypes.containsKey(varName)) {
+        final existingType = varTypes[varName]!;
+
+        // Check if types are compatible (same type, just different representations)
+        if (_areCompatibleTypes(existingType, typeAtPosition)) {
+          // Types are compatible, keep existing (or could intersect for precision)
+          // For built-ins, prefer the direct NumberTypeDFA over _builtin_ states
+          if (typeAtPosition is NumberTypeDFA || typeAtPosition is StringTypeDFA) {
+            varTypes[varName] = typeAtPosition;
+          }
+          // else: keep existing
+        } else {
+          // Different types - must intersect
+          final intersected = existingType.intersect(typeAtPosition);
+          if (intersected.isEmpty) {
+            // Variable has inconsistent types across occurrences
+            return false;
+          }
+          varTypes[varName] = intersected;
+        }
+      } else {
+        varTypes[varName] = typeAtPosition;
       }
       return true;
     } else if (term is ast.StructTerm) {
@@ -396,7 +571,8 @@ class TypeChecker {
         final newPath = pathToHere.append(
           PathElement.functor(term.functor, term.arity, i + 1)
         );
-        if (!_inferVariableTypes(term.args[i], dfa, varTypes, newPath)) {
+        if (!_inferVariableTypes(term.args[i], dfa, varTypes, newPath,
+            declaredArgMode, isHeadPosition)) {
           return false;  // Propagate failure
         }
       }
@@ -405,13 +581,15 @@ class TypeChecker {
       if (!term.isNil) {
         if (term.head != null) {
           if (!_inferVariableTypes(term.head!, dfa, varTypes,
-              pathToHere.append(PathElement.listHead()))) {
+              pathToHere.append(PathElement.listHead()),
+              declaredArgMode, isHeadPosition)) {
             return false;
           }
         }
         if (term.tail != null) {
           if (!_inferVariableTypes(term.tail!, dfa, varTypes,
-              pathToHere.append(PathElement.listTail()))) {
+              pathToHere.append(PathElement.listTail()),
+              declaredArgMode, isHeadPosition)) {
             return false;
           }
         }
@@ -421,7 +599,42 @@ class TypeChecker {
     // Constants and UnderscoreTerm have no variables
     return true;
   }
-  
+
+  /// Check if two DFAs represent compatible types
+  /// Handles the case where built-in types have different representations:
+  /// - _builtin_Number (from embedded position) vs NumberTypeDFA (direct compilation)
+  /// - Same start state name
+  bool _areCompatibleTypes(TypeDFA type1, TypeDFA type2) {
+    // Same start state → same type
+    if (type1.startState.name == type2.startState.name) {
+      return true;
+    }
+
+    // Both are NumberTypeDFA
+    if (type1 is NumberTypeDFA && type2 is NumberTypeDFA) {
+      return true;
+    }
+
+    // Both are StringTypeDFA
+    if (type1 is StringTypeDFA && type2 is StringTypeDFA) {
+      return true;
+    }
+
+    // One is _builtin_Number, other is NumberTypeDFA
+    if ((type1.startState.name == '_builtin_Number' && type2 is NumberTypeDFA) ||
+        (type1 is NumberTypeDFA && type2.startState.name == '_builtin_Number')) {
+      return true;
+    }
+
+    // One is _builtin_String, other is StringTypeDFA
+    if ((type1.startState.name == '_builtin_String' && type2 is StringTypeDFA) ||
+        (type1 is StringTypeDFA && type2.startState.name == '_builtin_String')) {
+      return true;
+    }
+
+    return false;
+  }
+
   /// Create a DFA that accepts paths reachable from a given state
   TypeDFA _dfaFromState(TypeDFA originalDfa, DFAState fromState) {
     // This creates a DFA with the given state as start state
@@ -430,6 +643,7 @@ class TypeChecker {
       startState: fromState,
       finalStates: originalDfa.finalStates,
       transitions: originalDfa.transitions,
+      primitiveStateModes: originalDfa.primitiveStateModes,  // Must preserve mode information
     );
   }
   
@@ -473,7 +687,9 @@ class TypeChecker {
       }
 
       // Infer/constrain variable types from body occurrence
-      if (!_inferVariableTypes(arg, argDFA, varTypes, TermPath.empty())) {
+      final declaredMode = procDecl.argTypes[i].isInput ? Mode.input : Mode.output;
+      if (!_inferVariableTypes(arg, argDFA, varTypes, TermPath.empty(),
+          declaredMode, false)) {
         errors.add(TypeError(
           'Variable has inconsistent types between head and body goal ${goal.functor}/${goal.arity}',
           goal.line, goal.column,
@@ -489,9 +705,33 @@ class TypeChecker {
 class GroundPathCheck {
   final bool success;
   final TermPath? failedPath;
-  
+
   GroundPathCheck(this.success, this.failedPath);
 }
+
+  /// Collect variable to type name mappings from a term pattern
+  void _collectVariableTypeNames(ast.Term term, String typeName, Map<String, String> varTypeNames) {
+    if (term is ast.VarTerm) {
+      // Map variable to its type name (without the ? for input types)
+      // Example: procedure f(List?), clause f(X), then X maps to "List" not "List?"
+      final baseTypeName = typeName.endsWith('?') ? typeName.substring(0, typeName.length - 1) : typeName;
+      varTypeNames[term.name] = baseTypeName;
+    } else if (term is ast.StructTerm) {
+      // Recursively collect from structure arguments
+      // We don't track nested structure types here since ground guards only check top-level variable types
+      for (final arg in term.args) {
+        _collectVariableTypeNames(arg, typeName, varTypeNames);
+      }
+    } else if (term is ast.ListTerm) {
+      if (!term.isNil && term.head != null) {
+        _collectVariableTypeNames(term.head!, typeName, varTypeNames);
+      }
+      if (term.tail != null) {
+        _collectVariableTypeNames(term.tail!, typeName, varTypeNames);
+      }
+    }
+    // For other term types (constants, etc.), no variables to collect
+  }
 
 /// Result of checking a single clause
 class ClauseCheckResult {

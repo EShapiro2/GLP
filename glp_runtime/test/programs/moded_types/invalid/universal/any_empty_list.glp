@@ -1,0 +1,3 @@
+%% Empty list at Any? position - SHOULD FAIL
+procedure test1(Any?).
+test1([]).

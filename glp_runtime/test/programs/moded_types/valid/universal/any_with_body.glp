@@ -1,0 +1,3 @@
+%% Variable at Any position with body goal - SHOULD PASS
+procedure echo(Any?, Any).
+echo(X, Y?) :- Y = X?.
