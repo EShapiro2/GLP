@@ -218,6 +218,7 @@ class TypeChecker {
             final argContribution = contributionComputer.computeArgContribution(
               argPattern,
               varTypes,
+              declaredDFA,
             );
             inferredDFA = inferredDFA.union(argContribution);
           }

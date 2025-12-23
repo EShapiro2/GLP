@@ -4,9 +4,12 @@
 // Given a clause head pattern and inferred variable types,
 // computes the DFA representing all ground terms the clause can produce.
 
+import 'dart:collection';
+
 import '../../compiler/ast.dart' as ast;
 import 'type_dfa.dart';
 import 'type_ast.dart';
+import 'mode.dart';
 
 /// Computes clause contributions for fixpoint checking
 class ClauseContributionComputer {
@@ -19,9 +22,13 @@ class ClauseContributionComputer {
   ///
   /// Given pattern f(X, g(Y)) and varTypes {X: Nat, Y: Bool},
   /// returns DFA accepting {f(n, g(b)) | n ∈ Nat, b ∈ Bool}
+  ///
+  /// [declaredDFA] is the DFA for the declared type at this pattern position.
+  /// Used for underscore (_) patterns which accept any value of the declared type.
   TypeDFA computeArgContribution(
     ast.Term pattern,
     Map<String, TypeDFA> varTypes,
+    TypeDFA declaredDFA,
   ) {
     if (pattern is ast.VarTerm) {
       // Variable: return its inferred type DFA
@@ -54,9 +61,13 @@ class ClauseContributionComputer {
     if (pattern is ast.StructTerm) {
       // f(t1, ..., tn): DFA accepting f(v1, ..., vn)
       // where each vi is in L(argDFA[i])
-      final argDFAs = pattern.args
-          .map((arg) => computeArgContribution(arg, varTypes))
-          .toList();
+      final argDFAs = <TypeDFA>[];
+      for (int i = 0; i < pattern.args.length; i++) {
+        final argPattern = pattern.args[i];
+        final argDeclaredDFA = _extractStructArgDFA(declaredDFA, pattern.functor, pattern.arity, i + 1);
+        final argContribution = computeArgContribution(argPattern, varTypes, argDeclaredDFA);
+        argDFAs.add(argContribution);
+      }
       return _buildStructDFA(pattern.functor, pattern.arity, argDFAs);
     }
 
@@ -66,16 +77,24 @@ class ClauseContributionComputer {
         return TypeDFA.singleton('[]');
       }
       // [H|T]: DFA for list cons
-      final headDFA = computeArgContribution(pattern.head!, varTypes);
-      final tailDFA = computeArgContribution(pattern.tail!, varTypes);
+      final headDeclaredDFA = _extractListHeadDFA(declaredDFA);
+      final tailDeclaredDFA = _extractListTailDFA(declaredDFA);
+      final headDFA = computeArgContribution(pattern.head!, varTypes, headDeclaredDFA);
+      final tailDFA = computeArgContribution(pattern.tail!, varTypes, tailDeclaredDFA);
       return _buildListConsDFA(headDFA, tailDFA);
     }
 
     if (pattern is ast.UnderscoreTerm) {
-      // Anonymous variable: could be any value
-      // Return a DFA that accepts any single term
-      // For now, return empty DFA (conservative)
-      return TypeDFA.empty();
+      // Anonymous variable accepts any value of the declared type
+      // If declaredDFA has no useful info (extracted sub-DFA from nested position),
+      // create a universal primitive DFA
+      if (declaredDFA.primitiveStateModes.isEmpty &&
+          declaredDFA.transitions.isEmpty &&
+          declaredDFA.finalStates.isNotEmpty) {
+        // This is a primitive final state with no mode info - create universal DFA
+        return _createUniversalPrimitiveDFA();
+      }
+      return declaredDFA;
     }
 
     // Unknown term type - should not happen
@@ -202,5 +221,92 @@ class ClauseContributionComputer {
 
       transitions[(renamedFrom, pathElem)] = renamedTo;
     }
+  }
+
+  /// Create a DFA that accepts any single primitive value (for _ patterns)
+  TypeDFA _createUniversalPrimitiveDFA() {
+    final primitiveState = DFAState('_prim', isFinal: true);
+    return TypeDFA(
+      states: {primitiveState},
+      startState: primitiveState,
+      finalStates: {primitiveState},
+      transitions: {},
+      primitiveStateModes: {primitiveState: {Mode.output}},
+    );
+  }
+
+  /// Extract the sub-DFA for a struct argument position
+  TypeDFA _extractStructArgDFA(TypeDFA declaredDFA, String functor, int arity, int argIndex) {
+    final pathElem = PathElement.functor(functor, arity, argIndex);
+    return _extractSubDFA(declaredDFA, pathElem);
+  }
+
+  /// Extract the sub-DFA for list head position
+  TypeDFA _extractListHeadDFA(TypeDFA declaredDFA) {
+    final pathElem = PathElement.listHead();
+    return _extractSubDFA(declaredDFA, pathElem);
+  }
+
+  /// Extract the sub-DFA for list tail position
+  TypeDFA _extractListTailDFA(TypeDFA declaredDFA) {
+    final pathElem = PathElement.listTail();
+    return _extractSubDFA(declaredDFA, pathElem);
+  }
+
+  /// Extract the sub-DFA reachable from start state via the given path element
+  TypeDFA _extractSubDFA(TypeDFA declaredDFA, PathElement pathElem) {
+    // Follow the path element from the start state
+    final targetState = declaredDFA.transitions[(declaredDFA.startState, pathElem)];
+    if (targetState == null) {
+      // Path doesn't exist in declared DFA - return empty
+      return TypeDFA.empty();
+    }
+
+    // Build a sub-DFA rooted at targetState
+    // Collect all states reachable from targetState
+    final reachableStates = <DFAState>{};
+    final newTransitions = <(DFAState, PathElement), DFAState>{};
+    final queue = Queue<DFAState>();
+    queue.add(targetState);
+    final visited = <DFAState>{};
+
+    while (queue.isNotEmpty) {
+      final current = queue.removeFirst();
+      if (visited.contains(current)) continue;
+      visited.add(current);
+      reachableStates.add(current);
+
+      // Find all transitions from current state
+      for (final entry in declaredDFA.transitions.entries) {
+        final (fromState, symbol) = entry.key;
+        final toState = entry.value;
+
+        if (fromState == current) {
+          newTransitions[(fromState, symbol)] = toState;
+          if (!visited.contains(toState)) {
+            queue.add(toState);
+          }
+        }
+      }
+    }
+
+    // Determine which reachable states are final
+    final newFinalStates = reachableStates.intersection(declaredDFA.finalStates);
+
+    // Extract primitive state modes for reachable states
+    final newPrimitiveStateModes = <DFAState, Set<Mode>>{};
+    for (final state in reachableStates) {
+      if (declaredDFA.primitiveStateModes.containsKey(state)) {
+        newPrimitiveStateModes[state] = declaredDFA.primitiveStateModes[state]!;
+      }
+    }
+
+    return TypeDFA(
+      states: reachableStates,
+      startState: targetState,
+      finalStates: newFinalStates,
+      transitions: newTransitions,
+      primitiveStateModes: newPrimitiveStateModes,
+    );
   }
 }
