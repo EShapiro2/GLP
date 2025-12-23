@@ -154,6 +154,75 @@ void main() {
     });
 
     // =========================================================================
+    // Input Argument Error Detection (verify fixpoint skip doesn't hide errors)
+    // =========================================================================
+
+    group('Input Argument Errors', () {
+
+      test('NEGATIVE: type mismatch at input position', () {
+        final result = checkTypes('''
+          Nat ::= 0 ; s(Nat).
+
+          procedure check(Nat?).
+
+          check(foo).
+        ''');
+        expect(result.errors, isNotEmpty,
+            reason: 'Atom foo does not match Nat type');
+      });
+
+      test('NEGATIVE: constructor mismatch at input position', () {
+        final result = checkTypes('''
+          Nat ::= 0 ; s(Nat).
+
+          procedure check(Nat?).
+
+          check([H | T]).
+        ''');
+        expect(result.errors, isNotEmpty,
+            reason: 'List constructor does not match Nat type');
+      });
+
+      test('NEGATIVE: mode mismatch at input position (reader where writer expected)', () {
+        final result = checkTypes('''
+          InputOnly ::= _?.
+
+          procedure check(InputOnly?).
+
+          check(X?).
+        ''');
+        expect(result.errors, isNotEmpty,
+            reason: 'Reader X? at InputOnly? position: after complementation expects writer');
+      });
+
+      test('POSITIVE: correct pattern at input position', () {
+        final result = checkTypes('''
+          Nat ::= 0 ; s(Nat).
+
+          procedure check(Nat?).
+
+          check(0).
+          check(s(N)) :- check(N?).
+        ''');
+        expect(result.errors, isEmpty,
+            reason: 'Pattern 0 and s(N) match Nat type');
+      });
+
+      test('POSITIVE: variable at input position accepts all', () {
+        final result = checkTypes('''
+          Nat ::= 0 ; s(Nat).
+
+          procedure check(Nat?).
+
+          check(X) :- ground(X?) | true.
+        ''');
+        expect(result.errors, isEmpty,
+            reason: 'Variable X accepts any Nat value');
+      });
+
+    });
+
+    // =========================================================================
     // Defined Guards
     // =========================================================================
 
