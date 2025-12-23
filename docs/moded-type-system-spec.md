@@ -124,7 +124,34 @@ Complementing `Every` yields `Every`. The same holds for `Any ::< Every`:
 
 This self-duality means `Any` truly represents "any value with any mode"—the universal type for positions where mode is unconstrained.
 
-#### 2.5.3 Collections
+#### 2.5.3 Output and Input Types
+
+```prolog
+Output.                % all variable positions have mode _ (writers)
+Input ::= Output?.     % all variable positions have mode _? (readers)
+```
+
+`Output` is the type of terms where all variable positions have mode `_` (writer variables). `Input` is defined as `Output?`, the type of terms where all variable positions have mode `_?` (reader variables).
+
+Neither `Output` nor `Input` contains mode complementations. The difference is whether the term's variables are all writers (`Output`) or all readers (`Input`).
+
+**Output Intersection Property:**
+
+For any type T:
+- If T has no mode complementations, then `Output ∩ T = T`
+- If T has mode complementations, then `Output ∩ T ≠ T`
+
+**Example:**
+```glp
+List ::= [] ; [_ | List].        % no mode complementations
+DiffList ::= List \ List?.       % has mode complementation (List?)
+```
+
+`Output ∩ List = List` (List has no `?` in its definition).
+
+`Output ∩ DiffList ≠ DiffList` (DiffList contains `List?`).
+
+#### 2.5.4 Collections
 
 ```prolog
 List ::= [Any | List] ; [].
@@ -146,7 +173,7 @@ copy([X | In], [X? | Out]) :- copy(In?, Out).
 - `List` (output): the content produced so far
 - `List?` (input): the hole where more content can be appended
 
-#### 2.5.4 Channels
+#### 2.5.5 Channels
 
 ```prolog
 Channel ::= ch(Stream?, Stream).
@@ -158,7 +185,7 @@ A channel pairs two streams with complementary modes:
 
 The `new_channel` operation creates two complementary endpoints by swapping the streams.
 
-#### 2.5.5 Predefined Procedures
+#### 2.5.6 Predefined Procedures
 
 These unit clauses are predefined and can be used as defined guards:
 
@@ -190,7 +217,7 @@ receive(X?, ch([X|In], Out?), ch(In?, Out)).
 
 **receive** takes a message from the channel's input stream.
 
-#### 2.5.6 Usage as Defined Guards
+#### 2.5.7 Usage as Defined Guards
 
 Since the predefined procedures are unit clauses, they can be used in guard position:
 
@@ -205,7 +232,7 @@ handler(Ch) :- receive(Msg, Ch?, Ch2) |
     handler(Ch2?).
 ```
 
-#### 2.5.7 EveryList (Theoretical Example)
+#### 2.5.8 EveryList (Theoretical Example)
 
 For theoretical analysis, one may define a list requiring full mode coverage at element positions:
 
@@ -839,7 +866,7 @@ Built-in guards have known type signatures:
 | `number(X?)` | (Number) | Yes |
 | `integer(X?)` | (Number) | Yes |
 | `string(X?)` | (String) | Yes |
-| `ground(X?)` | (Any) | Yes (recursively) |
+| `ground(X?)` | (Input) | Yes (recursively) |
 | `known(X?)` | (Any) | No |
 | `unknown(X?)` | (Any) | No |
 | `X? < Y?` | (Number, Number) | Yes |
@@ -866,25 +893,17 @@ For each guard G in clause C:
 
 ### 7.3 Ground Guards
 
-#### 7.3.1 Moded Type Without Mode Complementations
+The ground guard is typed using the `Input` type (Section 2.5.3):
 
-A moded type definition `T ::= S` has **no mode complementations** if the symbol `?` does not appear in `S`.
-
-**Examples - No mode complementations:**
-```glp
-List ::= [] ; [_ | List].
-Nat ::= 0 ; s(Nat).
+```prolog
+procedure ground(Input).
 ```
 
-**Examples - Has mode complementations:**
-```glp
-DiffList ::= List \ List?.
-Channel ::= ch(Stream?, Stream).
-```
+#### 7.3.1 Well-Moded-Typed Ground Guard
 
-#### 7.3.2 Well-Moded-Typed Ground Guard
+A call `ground(X?)` is **well-moded-typed (WMT)** iff `Input ∩ T_X = T_X`, where `T_X` is the type of X.
 
-A guard `ground(X?)` is **well-moded-typed (WMT)** if the moded type of X has no mode complementations.
+By the Output Intersection Property (Section 2.5.3) and `Input ::= Output?`, this holds iff `T_X` has no mode complementations (no `?` in type definition).
 
 **Example - WMT ground guard:**
 ```glp
@@ -896,7 +915,7 @@ broadcast(X, Y, Z) :- ground(X?) |
     send(X?, Z).
 ```
 
-The guard `ground(X?)` is WMT because `List` has no mode complementations.
+The call `ground(X?)` is WMT: `Input ∩ List = List` (List has no mode complementations).
 
 **Example - Ill-typed ground guard:**
 ```glp
@@ -906,7 +925,70 @@ procedure bad(DiffList?).
 bad(X) :- ground(X?) | process(X?).
 ```
 
-The guard `ground(X?)` is **not** WMT because `DiffList` has a mode complementation (`List?`).
+The call `ground(X?)` is **not** WMT: `Input ∩ DiffList ≠ DiffList` (DiffList contains `List?`).
+
+#### 7.3.2 Implementation
+
+The WMT check for ground guards reduces to checking that the variable's type has no mode complementations:
+
+```dart
+/// Check if a moded type has no mode complementations
+bool hasNoModeComplementations(String typeName, TypeEnvironment env, Set<String> visited) {
+  // Prevent infinite recursion on recursive types
+  if (visited.contains(typeName)) return true;
+
+  // Built-in types have no complementations
+  if (typeName == 'Number' || typeName == 'String') return true;
+  if (typeName == 'Output' || typeName == 'Input') return true;
+
+  // Primitive modes
+  if (typeName == '_') return true;
+  if (typeName == '_?') return false;  // Has complementation
+
+  final typeDef = env.getType(typeName);
+  if (typeDef == null) return true;
+
+  visited.add(typeName);
+
+  for (final alt in typeDef.alternatives) {
+    if (_containsModeComplementation(alt, env, visited)) return false;
+  }
+  return true;
+}
+
+bool _containsModeComplementation(TypeExpr expr, TypeEnvironment env, Set<String> visited) {
+  if (expr is TypeRef) {
+    if (expr.isInput) return true;  // T? has complementation
+    return !hasNoModeComplementations(expr.name, env, visited);
+  }
+  if (expr is StructAlt) {
+    return expr.args.any((a) => _containsModeComplementation(a, env, visited));
+  }
+  if (expr is ListConsAlt) {
+    return _containsModeComplementation(expr.head, env, visited) ||
+           _containsModeComplementation(expr.tail, env, visited);
+  }
+  if (expr is DiffListAlt) {
+    return _containsModeComplementation(expr.head, env, visited) ||
+           _containsModeComplementation(expr.tail, env, visited);
+  }
+  return false;  // Constants, primitives without ? have no complementation
+}
+
+/// Check ground guard well-moded-typing via Input ∩ T = T
+bool isGroundGuardWMT(ast.Goal guard, Map<String, TypeDFA> varTypes, TypeEnvironment env) {
+  if (guard.functor != 'ground') return true;
+  if (guard.args.isEmpty) return true;
+
+  final arg = guard.args[0];
+  if (arg is! ast.VarTerm) return true;
+
+  final varType = varTypes[arg.name];
+  if (varType == null) return true;
+
+  return hasNoModeComplementations(varType.startState.name, env, <String>{});
+}
+```
 
 ### 7.4 Defined Guards
 
@@ -1113,11 +1195,17 @@ This implementation follows the theory developed in "Moded Types for Grassroots 
   - Renamed examples from AnyList to EveryList
   - Added "Why Standard List Has No Coverage Requirement" subsection
 - **FIXED** Section 6.4: Renamed to "Mode Coverage Check for Every Positions"
-- **REVISED** Section 7.3: Ground Guards aligned with paper formalization
-  - Introduced "moded type without mode complementations" (no `?` in definition)
-  - Well-Moded-Typed (WMT) ground guard: `ground(X?)` is WMT iff type of X has no mode complementations
-  - Removed incorrect "ground guards satisfy mode coverage" semantics
-  - Added examples: `List` (no complementations) vs `DiffList` (has `List?` complementation)
+- **NEW** Section 2.5.3: Output and Input Types
+  - `Output` = type where all variable positions have mode `_` (writers)
+  - `Input ::= Output?` = type where all variable positions have mode `_?` (readers)
+  - Output Intersection Property: `Output ∩ T = T` iff T has no mode complementations
+  - Renumbered subsequent subsections (2.5.4-2.5.8)
+- **REWRITTEN** Section 7.3: Ground Guards
+  - Ground guard typed as `procedure ground(Input).`
+  - WMT condition: `ground(X?)` is WMT iff `Input ∩ T_X = T_X`
+  - Equivalently: WMT iff T_X has no mode complementations (no `?` in type definition)
+  - Added implementation pseudocode for `hasNoModeComplementations()` and `isGroundGuardWMT()`
+  - Removed previous "moded type without mode complementations" approach in favor of type intersection formalization
 - **Clarification:** Mode coverage applies only to `::=` types with primitive mode alternatives, not to `::< ` subtypes
 
 ### v1.5 (2025-12-22)
