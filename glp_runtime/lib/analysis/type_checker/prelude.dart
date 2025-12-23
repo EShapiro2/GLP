@@ -14,6 +14,10 @@ const String typePrelude = r'''
 Every ::= _ ; _?.
 Any ::< Every.
 
+% Output and Input types
+Output.
+Input ::= Output?.
+
 % Collections
 List ::= [Any | List] ; [].
 Stream ::< List.
@@ -25,6 +29,9 @@ Channel ::= ch(Stream?, Stream).
 % =============================================================================
 % Predefined Procedures (usable as defined guards)
 % =============================================================================
+
+% Ground guard
+procedure ground(Input).
 
 % Difference list operations
 procedure dl_append(DiffList?, DiffList?, DiffList).
@@ -49,6 +56,8 @@ const Set<String> predefinedTypeNames = {
   'String',   // Primitive builtin
   'Every',    // Universal type
   'Any',      // Universal type
+  'Output',   // All writers type
+  'Input',    // All readers type
   'List',     // Collection type
   'Stream',   // Collection type
   'DiffList', // Collection type
@@ -57,6 +66,7 @@ const Set<String> predefinedTypeNames = {
 
 /// Names of predefined procedures that cannot be redefined by user modules
 const Set<String> predefinedProcedureNames = {
+  'ground',
   'dl_append',
   'dl_to_list',
   'new_channel',

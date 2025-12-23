@@ -322,6 +322,25 @@ class TypeChecker {
       }
     }
 
+    // Step 3.5: Check ground guards are WMT
+    if (clause.guards != null && clause.guards!.isNotEmpty) {
+      // Extract type names from varTypes for ground guard checking
+      final varTypeNames = <String, String>{};
+      for (final entry in varTypes.entries) {
+        // Get the type name from the DFA's start state
+        final typeName = entry.value.startState.name;
+        varTypeNames[entry.key] = typeName;
+      }
+      final groundGuardErrors = modeChecker.checkGroundGuards(clause, varTypeNames);
+      for (final modeError in groundGuardErrors) {
+        errors.add(TypeError(
+          modeError.message,
+          modeError.line,
+          modeError.column,
+        ));
+      }
+    }
+
     // Step 4: Check body goals use variables consistently with inferred types
     for (final goal in (clause.body ?? [])) {
       final goalCheck = _checkGoal(goal, varTypes);

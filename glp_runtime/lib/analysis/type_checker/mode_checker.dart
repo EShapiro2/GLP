@@ -473,19 +473,12 @@ class ModeChecker {
           if (argIndex < clause.head.args.length) {
             final topArg = clause.head.args[argIndex];
 
-            // Get variables protected by ground-implying guards
-            final groundVars = getRecursivelyGroundVars(clause.guards);
-
             // Navigate to the nested position
             final termAtPosition = _getTermAtPath(topArg, position.path);
 
             // Only variables count towards coverage
             if (termAtPosition is ast.VarTerm) {
-              // Ground-protected variables cover ALL modes
-              if (groundVars.contains(termAtPosition.name)) {
-                hasWriter = true;
-                hasReader = true;
-              } else if (termAtPosition.isReader) {
+              if (termAtPosition.isReader) {
                 hasReader = true;
               } else {
                 hasWriter = true;
@@ -557,5 +550,86 @@ class ModeChecker {
     } else {
       return term.toString();
     }
+  }
+
+  /// Check if a moded type has no mode complementations (no ? in definition).
+  /// Per spec Section 7.3: Output ∩ T = T iff T has no mode complementations.
+  bool _hasNoModeComplementations(String typeName, Set<String> visited) {
+    // Prevent infinite recursion on recursive types
+    if (visited.contains(typeName)) return true;
+
+    // Built-in types have no complementations
+    if (typeName == 'Number' || typeName == 'String') return true;
+    if (typeName == 'Output' || typeName == 'Input') return true;
+
+    // Primitive modes
+    if (typeName == '_') return true;
+    if (typeName == '_?') return false;  // Has complementation
+
+    final typeDef = typeEnv.getType(typeName);
+    if (typeDef == null) return true;
+
+    visited.add(typeName);
+
+    for (final alt in typeDef.alternatives) {
+      if (_altHasModeComplementation(alt, visited)) return false;
+    }
+    return true;
+  }
+
+  bool _altHasModeComplementation(TypeExpr alt, Set<String> visited) {
+    if (alt is PrimitiveModeAlt) {
+      return alt.isInput;  // _? has complementation
+    }
+    if (alt is TypeRef) {
+      if (alt.isInput) return true;  // T? has complementation
+      return !_hasNoModeComplementations(alt.name, visited);
+    }
+    if (alt is StructAlt) {
+      for (final arg in alt.args) {
+        if (_altHasModeComplementation(arg, visited)) return true;
+      }
+      return false;
+    }
+    if (alt is ListConsAlt) {
+      return _altHasModeComplementation(alt.head, visited) ||
+             _altHasModeComplementation(alt.tail, visited);
+    }
+    if (alt is DiffListAlt) {
+      return _altHasModeComplementation(alt.content, visited) ||
+             _altHasModeComplementation(alt.hole, visited);
+    }
+    // ConstantAlt, ListNilAlt - no complementation
+    return false;
+  }
+
+  /// Check ground guards are WMT: ground(X?) requires X's type has no mode complementations.
+  /// Per spec Section 7.3.1: ground(X?) is WMT iff Input ∩ T_X = T_X.
+  List<ModeError> checkGroundGuards(ast.Clause clause, Map<String, String> varTypes) {
+    final errors = <ModeError>[];
+
+    if (clause.guards == null) return errors;
+
+    for (final guard in clause.guards!) {
+      if (guard.predicate == 'ground' && guard.args.length == 1) {
+        final arg = guard.args[0];
+        if (arg is ast.VarTerm) {
+          final typeName = varTypes[arg.name];
+          if (typeName != null) {
+            if (!_hasNoModeComplementations(typeName, <String>{})) {
+              errors.add(ModeError(
+                'Ground guard not WMT: type $typeName has mode complementations. '
+                'ground(${arg.name}) requires Input ∩ $typeName = $typeName, '
+                'but $typeName contains ? in its definition.',
+                guard.line,
+                guard.column,
+              ));
+            }
+          }
+        }
+      }
+    }
+
+    return errors;
   }
 }
