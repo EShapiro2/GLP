@@ -105,9 +105,9 @@ void main() {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
 
-          procedure broadcast(MyList?, Any, Any).
+          procedure check(MyList?, Any).
 
-          broadcast(X, Y?, Z?) :- ground(X?) | Y = ok, Z = ok.
+          check(X, Y) :- ground(X?) | Y = ok.
         ''');
         expect(result.errors, isEmpty,
             reason: 'MyList has no mode complementations, ground(X?) is WMT');
@@ -132,7 +132,7 @@ void main() {
 
           procedure check(Nat?, Any).
 
-          check(X, Y?) :- ground(X?) | Y = ok.
+          check(X, Y) :- ground(X?) | Y = ok.
         ''');
         expect(result.errors, isEmpty,
             reason: 'Nat has no mode complementations');
