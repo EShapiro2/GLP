@@ -562,14 +562,9 @@ class Analyzer {
       }
     }
 
-    // unknown/1 and known/1 are meta-tests (test if variable is unbound/bound)
-    // Their arguments should NOT count as reader occurrences for SRSW
-    // The variable must still have a writer and reader elsewhere
-    if ((guard.predicate == 'unknown' || guard.predicate == 'known') && guard.args.length == 1) {
-      return;  // Don't record this occurrence
-    }
-
     // Analyze guard arguments
+    // Per spec: guard reader occurrences count toward SRSW validation.
+    // A reader in a guard satisfies the reader requirement for its paired writer.
     for (final arg in guard.args) {
       _analyzeTerm(arg, varTable);
     }

@@ -1,0 +1,18 @@
+% Test: guard provides the sole reader occurrence for SRSW validation
+% Per spec: guard reader occurrences count toward SRSW validation.
+% A reader in a guard satisfies the reader requirement for its paired writer.
+
+% known/1 guard: X is writer in head, X? is reader in guard
+guard_known(X) :- known(X?) | true.
+
+% ground/1 guard 
+guard_ground(X) :- ground(X?) | true.
+
+% integer/1 guard
+guard_int(X) :- integer(X?) | true.
+
+% Arithmetic comparison guard: both X? and Y? are readers
+guard_compare(X, Y) :- X? < Y? | true.
+
+% Negated guard
+guard_neg_known(X) :- ~known(X?) | true.
