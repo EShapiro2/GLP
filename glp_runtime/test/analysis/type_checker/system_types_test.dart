@@ -58,7 +58,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'MyStream uses ::< so [] case not required');
-      }, skip: 'Subtype fixpoint semantics not yet implemented');
+      });
 
       test('POSITIVE: Stream handler with [] case also passes', () {
         final result = checkTypes('''
@@ -70,7 +70,7 @@ void main() {
           process([X | Xs]) :- handle(X?), process(Xs?).
         ''');
         expect(result.isWellTyped, isTrue);
-      }, skip: 'Subtype fixpoint semantics not yet implemented');
+      });
     });
 
     // =========================================================================

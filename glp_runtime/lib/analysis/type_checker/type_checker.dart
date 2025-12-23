@@ -238,37 +238,55 @@ class TypeChecker {
         }
       }
 
-      // Check if inferred equals declared
-      if (!inferredDFA.isEquivalent(declaredDFA)) {
-        // Diagnose the type of mismatch
-        if (inferredDFA.isEmpty && !declaredDFA.isEmpty) {
+      // Look up type definition to check ::= vs ::< semantics
+      final typeName = decl.argTypes[argIndex].name;
+      final typeDef = typeEnv.getType(typeName);
+      final requiresExactCoverage = typeDef?.isExact ?? true;
+
+      if (requiresExactCoverage) {
+        // ::= semantics: inferred must equal declared (exact coverage required)
+        if (!inferredDFA.isEquivalent(declaredDFA)) {
+          // Diagnose the type of mismatch
+          if (inferredDFA.isEmpty && !declaredDFA.isEmpty) {
+            errors.add(TypeError(
+              'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
+              'no clauses produce values for this argument',
+              decl.line, decl.column
+            ));
+          } else if (inferredDFA.isSubsetOf(declaredDFA)) {
+            // Inferred ⊂ Declared: incomplete definition
+            errors.add(TypeError(
+              'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
+              'clauses do not cover full declared type $typeName (incomplete definition)',
+              decl.line, decl.column
+            ));
+          } else if (declaredDFA.isSubsetOf(inferredDFA)) {
+            // Declared ⊂ Inferred: produces values outside type
+            errors.add(TypeError(
+              'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
+              'clauses produce values outside declared type $typeName',
+              decl.line, decl.column
+            ));
+          } else {
+            // Neither is subset of other
+            errors.add(TypeError(
+              'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
+              'inferred type does not match declared type $typeName',
+              decl.line, decl.column
+            ));
+          }
+        }
+      } else {
+        // ::< semantics: inferred can be subset of declared (partial coverage OK)
+        // Only error if inferred produces values OUTSIDE declared
+        if (!inferredDFA.isSubsetOf(declaredDFA)) {
           errors.add(TypeError(
             'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
-            'no clauses produce values for this argument',
-            decl.line, decl.column
-          ));
-        } else if (inferredDFA.isSubsetOf(declaredDFA)) {
-          // Inferred ⊂ Declared: incomplete definition
-          errors.add(TypeError(
-            'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
-            'clauses do not cover full declared type ${decl.argTypes[argIndex].name} (incomplete definition)',
-            decl.line, decl.column
-          ));
-        } else if (declaredDFA.isSubsetOf(inferredDFA)) {
-          // Declared ⊂ Inferred: produces values outside type
-          errors.add(TypeError(
-            'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
-            'clauses produce values outside declared type ${decl.argTypes[argIndex].name}',
-            decl.line, decl.column
-          ));
-        } else {
-          // Neither is subset of other
-          errors.add(TypeError(
-            'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
-            'inferred type does not match declared type ${decl.argTypes[argIndex].name}',
+            'clauses produce values outside declared type $typeName',
             decl.line, decl.column
           ));
         }
+        // Note: inferredDFA being a proper subset of declaredDFA is OK for ::<
       }
     }
 
