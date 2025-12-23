@@ -295,7 +295,7 @@ class TypeChecker {
       if (!_inferVariableTypes(arg, argDFA, varTypes, TermPath.empty(),
           declaredMode, true)) {
         errors.add(TypeError(
-          'Variable has inconsistent types across occurrences in clause head',
+          'Argument ${i + 1} pattern does not match declared type ${decl.argTypes[i].name}',
           clause.line, clause.column, clause.toString()
         ));
       }

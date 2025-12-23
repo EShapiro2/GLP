@@ -153,8 +153,10 @@ void main() {
         expect(result.isWellTyped, isFalse,
             reason: 'foo is not in Nat');
         expect(result.errors.any((e) =>
-            e.message.contains('outside') || e.message.contains('not in type')), isTrue,
-            reason: 'Should report value outside/not in type');
+            e.message.contains('outside') ||
+            e.message.contains('not in type') ||
+            e.message.contains('pattern does not match')), isTrue,
+            reason: 'Should report value outside/not in type or pattern mismatch');
       });
 
       test('Nat: wrong constructor', () {
@@ -183,6 +185,8 @@ void main() {
         ''');
         expect(result.isWellTyped, isFalse,
             reason: 'yellow not in Color');
+        expect(result.errors, isNotEmpty,
+            reason: 'Pattern does not match type');
       });
 
     });
