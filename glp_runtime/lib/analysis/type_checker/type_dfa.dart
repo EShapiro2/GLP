@@ -10,6 +10,13 @@ import 'dart:collection';
 
 import 'mode.dart';
 
+/// Classification of primitive states by their mode set (spec 5.8.1)
+enum PrimitiveKind {
+  outputOnly,  // μ(q) = {Mode.output}
+  inputOnly,   // μ(q) = {Mode.input}
+  biModed,     // μ(q) = {Mode.output, Mode.input}
+}
+
 /// A path element in term tree traversal
 /// Format: functor(arity, argIndex) or constant
 ///
@@ -139,6 +146,16 @@ class TypeDFA {
   /// Get accepted modes at a primitive state (empty for non-primitive)
   Set<Mode> getModesAt(DFAState state) =>
       primitiveStateModes[state] ?? {};
+
+  /// Get the primitive classification of a state, or null if not primitive (spec 5.8.1)
+  PrimitiveKind? getPrimitiveKind(DFAState state) {
+    final modes = primitiveStateModes[state];
+    if (modes == null || modes.isEmpty) return null;
+    if (modes.length == 2) return PrimitiveKind.biModed;
+    return modes.contains(Mode.output)
+        ? PrimitiveKind.outputOnly
+        : PrimitiveKind.inputOnly;
+  }
 
   /// Create DFA accepting empty language (no strings accepted)
   factory TypeDFA.empty() {
@@ -372,19 +389,31 @@ class TypeDFA {
   }
   
   /// Check if this DFA accepts a subset of another's language
+  /// Uses moded operations when primitiveStateModes are present (spec 5.8.2)
   bool isSubsetOf(TypeDFA other) {
     // Handle special built-in types as 'other'
     if (other is NumberTypeDFA) {
-      // L(this) ⊆ L(Number) iff all paths accepted by this are numeric
       return _allAcceptedPathsSatisfy((path) => other.acceptsPath(path));
     }
     if (other is StringTypeDFA) {
-      // L(this) ⊆ L(String) iff all paths accepted by this are strings
       return _allAcceptedPathsSatisfy((path) => other.acceptsPath(path));
     }
 
-    // L(this) ⊆ L(other) iff L(this) ∩ L(complement(other)) = ∅
-    // Must complete both DFAs with respect to combined alphabet first
+    // Optimization (spec 5.8.2): bi-moded start state accepts everything
+    if (other.isPrimitiveState(other.startState) &&
+        other.getModesAt(other.startState).length == 2) {
+      return true;
+    }
+
+    // Use moded operations if either DFA has primitive states
+    if (primitiveStateModes.isNotEmpty || other.primitiveStateModes.isNotEmpty) {
+      // L^m(this) ⊆ L^m(other) iff L^m(this) ∩ L^m(other̄) = ∅
+      final otherComplement = other.modedComplement();
+      final intersection = intersect(otherComplement);
+      return intersection.isModedEmpty;
+    }
+
+    // Standard unmoded subset check
     final combinedAlphabet = alphabet.union(other.alphabet);
     final thisCompleted = complete(combinedAlphabet);
     final otherCompleted = other.complete(combinedAlphabet);
@@ -475,14 +504,48 @@ class TypeDFA {
 
     return true;
   }
-  
+
+  /// Check if moded language is empty (spec 5.8.4)
+  /// Empty iff no reachable state is either:
+  /// - (a) structural final (in finalStates with empty μ), or
+  /// - (b) primitive with non-empty modes
+  bool get isModedEmpty {
+    final visited = <DFAState>{};
+    final worklist = <DFAState>[startState];
+
+    while (worklist.isNotEmpty) {
+      final state = worklist.removeLast();
+      if (visited.contains(state)) continue;
+      visited.add(state);
+
+      // Check if this state can accept
+      if (isPrimitiveState(state)) {
+        // Primitive: accepts if modes non-empty
+        if (getModesAt(state).isNotEmpty) return false;
+      } else if (finalStates.contains(state)) {
+        // Structural final: accepts
+        return false;
+      }
+
+      // Add successors
+      for (final entry in transitions.entries) {
+        final (from, _) = entry.key;
+        if (from == state) {
+          worklist.add(entry.value);
+        }
+      }
+    }
+
+    return true;
+  }
+
   /// Check if two DFAs accept the same language
   bool isEquivalent(TypeDFA other) {
     return isSubsetOf(other) && other.isSubsetOf(this);
   }
   
-  /// Complement DFA (swap final and non-final states)
-  /// Note: This assumes DFA is complete (has transitions for all alphabet symbols from all states)
+  /// Complement DFA for structural (unmoded) operations
+  /// Note: This assumes DFA is complete. Does NOT handle modes.
   TypeDFA complement() {
     final newFinalStates = states.difference(finalStates);
     return TypeDFA(
@@ -490,6 +553,38 @@ class TypeDFA {
       startState: startState,
       finalStates: newFinalStates,
       transitions: transitions,
+      primitiveStateModes: primitiveStateModes,
+    );
+  }
+
+  /// Moded complement (spec 5.8.5)
+  /// Complements both final states AND mode sets at primitive states.
+  TypeDFA modedComplement() {
+    final completed = complete();
+
+    // Complement final states (standard)
+    final newFinalStates = completed.states.difference(completed.finalStates);
+
+    // Complement mode sets at primitive states
+    final newPrimitiveModes = <DFAState, Set<Mode>>{};
+    for (final state in completed.states) {
+      final modes = completed.primitiveStateModes[state];
+      if (modes != null && modes.isNotEmpty) {
+        final complementModes = {Mode.output, Mode.input}.difference(modes);
+        if (complementModes.isNotEmpty) {
+          newPrimitiveModes[state] = complementModes;
+        }
+        // If complement is empty, state accepts no modes in complement
+      }
+      // Non-primitive states: no change to primitiveStateModes
+    }
+
+    return TypeDFA(
+      states: completed.states,
+      startState: completed.startState,
+      finalStates: newFinalStates,
+      transitions: completed.transitions,
+      primitiveStateModes: newPrimitiveModes,
     );
   }
   
