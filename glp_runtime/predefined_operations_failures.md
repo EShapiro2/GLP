@@ -30,6 +30,11 @@ test('POSITIVE: Any and Any? are equivalent', () {
 
 **Actual:** `isWellTyped = false`
 
+**Error message:**
+```
+Procedure foo/2 argument 1: clauses produce values outside declared type MyAny
+```
+
 **Similar failures in this category:**
 - "Every and Every? are equivalent"
 - "Writer at Any position is valid"
@@ -71,6 +76,14 @@ test('POSITIVE: dl_append is well-moded', () {
 
 **Actual:** `isWellTyped = false`
 
+**Error messages:**
+```
+- Argument 1 pattern does not match declared type MyDiffList
+- Argument 2 pattern does not match declared type MyDiffList
+- Argument 3 pattern does not match declared type MyDiffList
+- All clauses for my_dl_append/3 are useless
+```
+
 **Similar failures in this category:**
 - "dl_to_list is well-moded"
 - "dl_append demonstrates O(1) concatenation"
@@ -109,6 +122,12 @@ test('POSITIVE: send is well-moded', () {
 
 **Actual:** `isWellTyped = false`
 
+**Error messages:**
+```
+- Procedure my_send/3 argument 1: clauses produce values outside declared type MyAny
+- Procedure my_send/3 argument 2: inferred type does not match declared type MyChannel
+```
+
 **Similar failures in this category:**
 - "receive is well-moded"
 - "Producer-consumer pattern"
@@ -128,3 +147,29 @@ These tests are checking that the moded type system correctly handles:
 - Subtype relationships with self-dual types (`MyAny ::< MyEvery`)
 - Mode annotations in compound types (`MyList \ MyList?`, `ch(MyStream?, MyStream)`)
 - Mode coverage requirements for different type definitions
+
+---
+
+## Error Analysis
+
+**Common pattern in all errors:**
+
+1. **"clauses produce values outside declared type"**
+   - The type checker thinks the clause produces values that don't match the declared type
+   - Appears when using subtypes of self-dual types (e.g., `MyAny ::< MyEvery`)
+   - Issue: subtype relationship may not be properly propagating through mode annotations
+
+2. **"pattern does not match declared type"**
+   - The type checker can't match compound patterns against their declared types
+   - Appears with difference lists (`\(A, B?)`) and channels (`ch(In, [X?|Out?])`)
+   - Issue: compound type patterns with mode annotations aren't being recognized
+
+3. **"inferred type does not match declared type"**
+   - The type checker infers a different type than declared
+   - Appears when combining patterns with mode annotations
+   - Issue: type inference for compound patterns may not respect mode combinations
+
+**Root causes to investigate:**
+- How does subtype checking work with mode annotations (`MyAny` vs `MyAny?`)?
+- How are compound type patterns matched (difference lists, channels)?
+- How does mode combination work in parent type contexts (OUTPUT preserves, INPUT complements)?
