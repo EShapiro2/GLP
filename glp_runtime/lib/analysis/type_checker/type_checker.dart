@@ -242,7 +242,11 @@ class TypeChecker {
       // Determine if this type uses ::= (exact) or ::< (subtype) semantics
       final typeName = decl.argTypes[argIndex].name;
       final typeDef = typeEnv.getType(typeName);
-      final requiresEquality = typeDef?.isExact ?? true;
+
+      // Built-in infinite types (Number, String) can never have complete coverage
+      // from finite clauses, so they always use subset semantics
+      final isBuiltinInfiniteType = declaredDFA is NumberTypeDFA || declaredDFA is StringTypeDFA;
+      final requiresEquality = !isBuiltinInfiniteType && (typeDef?.isExact ?? true);
 
       if (requiresEquality) {
         // ::= semantics: inferred must equal declared (complete coverage)
