@@ -94,6 +94,8 @@ When receiving instructions from Claude Web (via user copy-paste):
 - **REVIEW FIRST** - Read and understand the instructions before executing
 - **RAISE CONCERNS** - Let Udi know if you have comments, questions, or see potential issues
 - **DON'T BLINDLY EXECUTE** - Wait for confirmation if something seems unclear or problematic
+- **NEVER REVISE CODE** - Never modify code provided by Claude Web unless you identify a trivial typo (in which case you can fix it)
+- **TEST AND REPORT** - Use the code exactly as provided, test it, and report results
 - Only proceed with execution after review is complete and any concerns are addressed
 
 ### Accuracy and Honesty
