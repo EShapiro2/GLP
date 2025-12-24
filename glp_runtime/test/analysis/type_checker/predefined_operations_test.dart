@@ -101,8 +101,8 @@ void main() {
           MyList ::= [MyAny | MyList] ; [].
           MyDiffList ::= MyList \\ MyList?.
 
-          procedure dl_append(MyDiffList?, MyDiffList?, MyDiffList).
-          dl_append(A\\B?, B\\C?, A?\\C).
+          procedure my_dl_append(MyDiffList?, MyDiffList?, MyDiffList).
+          my_dl_append(A\\B?, B\\C?, A?\\C).
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'dl_append has correct mode annotations');
@@ -115,8 +115,8 @@ void main() {
           MyList ::= [MyAny | MyList] ; [].
           MyDiffList ::= MyList \\ MyList?.
 
-          procedure dl_to_list(MyDiffList?, MyList).
-          dl_to_list(L\\[], L?).
+          procedure my_dl_to_list(MyDiffList?, MyList).
+          my_dl_to_list(L\\[], L?).
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'dl_to_list closes the hole correctly');
@@ -129,8 +129,8 @@ void main() {
           MyList ::= [MyAny | MyList] ; [].
           MyDiffList ::= MyList \\ MyList?.
 
-          procedure dl_append(MyDiffList?, MyDiffList?, MyDiffList).
-          dl_append(A?\\B, B?\\C, A\\C?).
+          procedure my_dl_append(MyDiffList?, MyDiffList?, MyDiffList).
+          my_dl_append(A?\\B, B?\\C, A\\C?).
         ''');
         expect(result.isWellTyped, isFalse,
             reason: 'Modes are inverted incorrectly');
@@ -143,15 +143,15 @@ void main() {
           MyList ::= [MyAny | MyList] ; [].
           MyDiffList ::= MyList \\ MyList?.
 
-          procedure dl_append(MyDiffList?, MyDiffList?, MyDiffList).
-          dl_append(A\\B?, B\\C?, A?\\C).
+          procedure my_dl_append(MyDiffList?, MyDiffList?, MyDiffList).
+          my_dl_append(A\\B?, B\\C?, A?\\C).
 
           procedure use_append(MyList?, MyList?, MyList).
           use_append(L1, L2, Result) :-
               dl1(L1?, DL1),
               dl2(L2?, DL2),
-              dl_append(DL1?, DL2?, DL3),
-              dl_to_list(DL3?, Result).
+              my_dl_append(DL1?, DL2?, DL3),
+              my_dl_to_list(DL3?, Result).
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'dl_append used to concatenate lists efficiently');
@@ -171,8 +171,8 @@ void main() {
           MyStream ::< MyList.
           MyChannel ::= ch(MyStream?, MyStream).
 
-          procedure new_channel(MyChannel, MyChannel).
-          new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+          procedure my_new_channel(MyChannel, MyChannel).
+          my_new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'new_channel swaps streams correctly');
@@ -186,8 +186,8 @@ void main() {
           MyStream ::< MyList.
           MyChannel ::= ch(MyStream?, MyStream).
 
-          procedure send(MyAny, MyChannel?, MyChannel).
-          send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+          procedure my_send(MyAny, MyChannel?, MyChannel).
+          my_send(X, ch(In, [X?|Out?]), ch(In?, Out)).
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'send adds message to output stream');
@@ -201,8 +201,8 @@ void main() {
           MyStream ::< MyList.
           MyChannel ::= ch(MyStream?, MyStream).
 
-          procedure receive(MyAny, MyChannel?, MyChannel).
-          receive(X?, ch([X|In], Out?), ch(In?, Out)).
+          procedure my_receive(MyAny, MyChannel?, MyChannel).
+          my_receive(X?, ch([X|In], Out?), ch(In?, Out)).
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'receive takes message from input stream');
@@ -216,8 +216,8 @@ void main() {
           MyStream ::< MyList.
           MyChannel ::= ch(MyStream?, MyStream).
 
-          procedure send(MyAny, MyChannel?, MyChannel).
-          send(X?, ch(In, [X|Out?]), ch(In?, Out)).
+          procedure my_send(MyAny, MyChannel?, MyChannel).
+          my_send(X?, ch(In, [X|Out?]), ch(In?, Out)).
         ''');
         expect(result.isWellTyped, isFalse,
             reason: 'X should be writer in first arg, reader in stream');
@@ -231,20 +231,20 @@ void main() {
           MyStream ::< MyList.
           MyChannel ::= ch(MyStream?, MyStream).
 
-          procedure send(MyAny, MyChannel?, MyChannel).
-          send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+          procedure my_send(MyAny, MyChannel?, MyChannel).
+          my_send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 
-          procedure receive(MyAny, MyChannel?, MyChannel).
-          receive(X?, ch([X|In], Out?), ch(In?, Out)).
+          procedure my_receive(MyAny, MyChannel?, MyChannel).
+          my_receive(X?, ch([X|In], Out?), ch(In?, Out)).
 
           procedure producer(MyChannel?).
           producer(Ch) :-
-              send(hello, Ch?, Ch2),
-              send(world, Ch2?, Ch3),
+              my_send(hello, Ch?, Ch2),
+              my_send(world, Ch2?, Ch3),
               done(Ch3?).
 
           procedure consumer(MyChannel?).
-          consumer(Ch) :- receive(Msg, Ch?, Ch2) |
+          consumer(Ch) :- my_receive(Msg, Ch?, Ch2) |
               process(Msg?),
               consumer(Ch2?).
         ''');
@@ -265,11 +265,11 @@ void main() {
           MyList ::= [MyAny | MyList] ; [].
           MyDiffList ::= MyList \\ MyList?.
 
-          procedure dl_append(MyDiffList?, MyDiffList?, MyDiffList).
-          dl_append(A\\B?, B\\C?, A?\\C).
+          procedure my_dl_append(MyDiffList?, MyDiffList?, MyDiffList).
+          my_dl_append(A\\B?, B\\C?, A?\\C).
 
           procedure process(MyDiffList?, MyDiffList?, MyDiffList).
-          process(DL1, DL2, Result) :- dl_append(DL1?, DL2?, Result) |
+          process(DL1, DL2, Result) :- my_dl_append(DL1?, DL2?, Result) |
               continue(Result?).
         ''');
         expect(result.isWellTyped, isTrue,
@@ -284,11 +284,11 @@ void main() {
           MyStream ::< MyList.
           MyChannel ::= ch(MyStream?, MyStream).
 
-          procedure receive(MyAny, MyChannel?, MyChannel).
-          receive(X?, ch([X|In], Out?), ch(In?, Out)).
+          procedure my_receive(MyAny, MyChannel?, MyChannel).
+          my_receive(X?, ch([X|In], Out?), ch(In?, Out)).
 
           procedure handler(MyChannel?).
-          handler(Ch) :- receive(Msg, Ch?, Ch2) |
+          handler(Ch) :- my_receive(Msg, Ch?, Ch2) |
               process(Msg?),
               handler(Ch2?).
         ''');
@@ -303,11 +303,11 @@ void main() {
           MyList ::= [MyAny | MyList] ; [].
           MyDiffList ::= MyList \\ MyList?.
 
-          procedure dl_to_list(MyDiffList?, MyList).
-          dl_to_list(L\\[], L?).
+          procedure my_dl_to_list(MyDiffList?, MyList).
+          my_dl_to_list(L\\[], L?).
 
           procedure finalize(MyDiffList?, MyList).
-          finalize(DL, L) :- dl_to_list(DL?, L) |
+          finalize(DL, L) :- my_dl_to_list(DL?, L) |
               output(L?).
         ''');
         expect(result.isWellTyped, isTrue,
