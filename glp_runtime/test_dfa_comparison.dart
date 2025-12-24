@@ -17,7 +17,7 @@ void main() {
   for (final entry in declaredDFA.transitions.entries) {
     final (from, pathElem) = entry.key;
     final to = entry.value;
-    print('  ${from.name} --[$pathElem]--> ${to.name}');
+    print('  ${from.name} --[${pathElem.symbol} mode=${pathElem.mode}]--> ${to.name}');
   }
   print('Primitive state modes:');
   for (final entry in declaredDFA.primitiveStateModes.entries) {
@@ -54,7 +54,7 @@ void main() {
   for (final entry in contributionDFA.transitions.entries) {
     final (from, pathElem) = entry.key;
     final to = entry.value;
-    print('  ${from.name} --[$pathElem]--> ${to.name}');
+    print('  ${from.name} --[${pathElem.symbol} mode=${pathElem.mode}]--> ${to.name}');
   }
   print('Primitive state modes:');
   for (final entry in contributionDFA.primitiveStateModes.entries) {

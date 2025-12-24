@@ -167,10 +167,6 @@ class TypeCompiler {
       transitions[(fromState, pathElem)] = finalState;
       
     } else if (alt is StructAlt) {
-      // Check if this alternative is mode-distinguished
-      // (has at least one TypeRef with explicit ? marker)
-      final isModedAlt = alt.args.any((arg) => arg is TypeRef && arg.isInput);
-
       // Structure: add transitions for each argument position
       for (int i = 0; i < alt.args.length; i++) {
         final argType = alt.args[i];
@@ -178,15 +174,10 @@ class TypeCompiler {
 
         // Determine mode encoding based on argument syntax
         final Mode? pathMode;
-        if (argType is TypeRef && argType.isInput) {
-          // Explicit ? marker → Mode.input
-          pathMode = Mode.input;
-        } else if (argType is TypeRef && !argType.isInput && isModedAlt) {
-          // TypeRef without ? in a moded alternative → Mode.output
-          pathMode = Mode.output;
+        if (argType is TypeRef) {
+          pathMode = argType.isInput ? Mode.input : Mode.output;
         } else {
-          // Unmoded TypeRef or PrimitiveModeAlt → no mode in PathElement
-          pathMode = null;
+          pathMode = null;  // PrimitiveModeAlt only
         }
 
         final pathElem = PathElement.functor(alt.functor, alt.arity, argIndex, mode: pathMode);
@@ -203,24 +194,14 @@ class TypeCompiler {
       }
       
     } else if (alt is ListConsAlt) {
-      // Check if this alternative is mode-distinguished
-      // (has at least one TypeRef with explicit ? marker)
-      final isModedAlt = (alt.head is TypeRef && (alt.head as TypeRef).isInput) ||
-                          (alt.tail is TypeRef && (alt.tail as TypeRef).isInput);
-
       // List cons: add head and tail transitions
       // Head element
       final headType = alt.head;
       final Mode? headMode;
-      if (headType is TypeRef && headType.isInput) {
-        // Explicit ? marker → Mode.input
-        headMode = Mode.input;
-      } else if (headType is TypeRef && !headType.isInput && isModedAlt) {
-        // TypeRef without ? in a moded alternative → Mode.output
-        headMode = Mode.output;
+      if (headType is TypeRef) {
+        headMode = headType.isInput ? Mode.input : Mode.output;
       } else {
-        // Unmoded TypeRef or PrimitiveModeAlt → no mode in PathElement
-        headMode = null;
+        headMode = null;  // PrimitiveModeAlt only
       }
       final headElem = PathElement.listHead(mode: headMode);
       final headTarget = _resolveTargetState(headType, stateMap, finalState);
@@ -237,15 +218,10 @@ class TypeCompiler {
       // Tail element
       final tailType = alt.tail;
       final Mode? tailMode;
-      if (tailType is TypeRef && tailType.isInput) {
-        // Explicit ? marker → Mode.input
-        tailMode = Mode.input;
-      } else if (tailType is TypeRef && !tailType.isInput && isModedAlt) {
-        // TypeRef without ? in a moded alternative → Mode.output
-        tailMode = Mode.output;
+      if (tailType is TypeRef) {
+        tailMode = tailType.isInput ? Mode.input : Mode.output;
       } else {
-        // Unmoded TypeRef or PrimitiveModeAlt → no mode in PathElement
-        tailMode = null;
+        tailMode = null;  // PrimitiveModeAlt only
       }
       final tailElem = PathElement.listTail(mode: tailMode);
       final tailTarget = _resolveTargetState(tailType, stateMap, finalState);

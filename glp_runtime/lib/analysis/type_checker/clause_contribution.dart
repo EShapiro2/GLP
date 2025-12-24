@@ -72,9 +72,12 @@ class ClauseContributionComputer {
         argDFAs.add(argContribution);
 
         // Determine mode for this position based on declared type and pattern
+        final symbol = '${pattern.functor}(${pattern.arity},$argIndex)';
+        final declaredModes = _getDeclaredModesAtPosition(declaredDFA, symbol);
         Mode? argMode;
-        final declaredHasMode = _declaredPositionHasMode(declaredDFA, pattern.functor, pattern.arity, argIndex);
-        if (declaredHasMode && argPattern is ast.VarTerm) {
+        if (declaredModes.length == 1) {
+          argMode = declaredModes.first;
+        } else if (declaredModes.length > 1 && argPattern is ast.VarTerm) {
           argMode = argPattern.isReader ? Mode.input : Mode.output;
         }
         argModes.add(argMode);
@@ -95,16 +98,21 @@ class ClauseContributionComputer {
       final tailDFA = computeArgContribution(pattern.tail!, varTypes, tailDeclaredDFA);
 
       // Determine modes for head and tail based on declared type and pattern
+      const headSymbol = '[|](2,1)';
+      final headDeclaredModes = _getDeclaredModesAtPosition(declaredDFA, headSymbol);
       Mode? headMode;
-      Mode? tailMode;
-
-      final headHasMode = _declaredListHeadHasMode(declaredDFA);
-      if (headHasMode && pattern.head is ast.VarTerm) {
+      if (headDeclaredModes.length == 1) {
+        headMode = headDeclaredModes.first;
+      } else if (headDeclaredModes.length > 1 && pattern.head is ast.VarTerm) {
         headMode = (pattern.head as ast.VarTerm).isReader ? Mode.input : Mode.output;
       }
 
-      final tailHasMode = _declaredListTailHasMode(declaredDFA);
-      if (tailHasMode && pattern.tail is ast.VarTerm) {
+      const tailSymbol = '[|](2,2)';
+      final tailDeclaredModes = _getDeclaredModesAtPosition(declaredDFA, tailSymbol);
+      Mode? tailMode;
+      if (tailDeclaredModes.length == 1) {
+        tailMode = tailDeclaredModes.first;
+      } else if (tailDeclaredModes.length > 1 && pattern.tail is ast.VarTerm) {
         tailMode = (pattern.tail as ast.VarTerm).isReader ? Mode.input : Mode.output;
       }
 
@@ -371,53 +379,18 @@ class ClauseContributionComputer {
   }
 
   /// Check if declared DFA has a moded transition at this struct position
-  bool _declaredPositionHasMode(
-    TypeDFA declaredDFA,
-    String functor,
-    int arity,
-    int argIndex,
-  ) {
-    final structuralSymbol = '$functor($arity,$argIndex)';
-
+  /// Get all declared modes at a given position (symbol)
+  /// Returns set of modes found in declared DFA transitions for this position.
+  /// Empty set means no moded transitions exist for this position.
+  Set<Mode?> _getDeclaredModesAtPosition(TypeDFA declaredDFA, String symbol) {
+    final modes = <Mode?>{};
     for (final entry in declaredDFA.transitions.entries) {
-      final (fromState, pathElem) = entry.key;
-      if (fromState == declaredDFA.startState &&
-          pathElem.symbol == structuralSymbol &&
-          pathElem.mode != null) {
-        return true;
+      final (_, pathElem) = entry.key;
+      if (pathElem.symbol == symbol) {
+        modes.add(pathElem.mode);
       }
     }
-    return false;
-  }
-
-  /// Check if declared DFA has a moded transition for list head
-  bool _declaredListHeadHasMode(TypeDFA declaredDFA) {
-    const headSymbol = '[|](2,1)';
-
-    for (final entry in declaredDFA.transitions.entries) {
-      final (fromState, pathElem) = entry.key;
-      if (fromState == declaredDFA.startState &&
-          pathElem.symbol == headSymbol &&
-          pathElem.mode != null) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /// Check if declared DFA has a moded transition for list tail
-  bool _declaredListTailHasMode(TypeDFA declaredDFA) {
-    const tailSymbol = '[|](2,2)';
-
-    for (final entry in declaredDFA.transitions.entries) {
-      final (fromState, pathElem) = entry.key;
-      if (fromState == declaredDFA.startState &&
-          pathElem.symbol == tailSymbol &&
-          pathElem.mode != null) {
-        return true;
-      }
-    }
-    return false;
+    return modes;
   }
 
 }
