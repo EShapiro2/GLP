@@ -166,7 +166,18 @@ class TypeDFA {
       },
     );
   }
-  
+
+  /// Find transition by symbol only (ignoring mode)
+  DFAState? _transitionBySymbol(DFAState from, String symbol) {
+    for (final entry in transitions.entries) {
+      final (fromState, pathElem) = entry.key;
+      if (fromState == from && pathElem.symbol == symbol) {
+        return entry.value;
+      }
+    }
+    return null;
+  }
+
   /// Check if DFA accepts a single path
   bool acceptsPath(TermPath path) {
     var current = startState;
@@ -177,7 +188,7 @@ class TypeDFA {
     }
 
     for (final elem in path.elements) {
-      final next = transitions[(current, elem)];
+      final next = _transitionBySymbol(current, elem.symbol);
       if (next == null) return false;
       current = next;
 
@@ -205,7 +216,7 @@ class TypeDFA {
     }
 
     for (final elem in path.elements) {
-      final next = transitions[(current, elem)];
+      final next = _transitionBySymbol(current, elem.symbol);
       if (next == null) return null;
       current = next;
 
