@@ -1,7 +1,7 @@
-# GLP Moded Type System Specification (v1.6)
+# GLP Moded Type System Specification (v1.7)
 
-**Updated:** 2025-12-22
-**Change:** Fixed mode coverage - Every requires coverage, Any does not
+**Updated:** 2025-12-24
+**Change:** Added Section 5.7 - Moded Path Elements for TypeRef Positions
 
 ## 1. Overview
 
@@ -685,6 +685,250 @@ This specification corresponds to the paper as follows:
 | `Every ::= _ ; _?` accepts both | `{Mode.output, Mode.input}` |
 | Mode combines via involution (§7.7) | `combineMode()` during traversal |
 
+## 5.7 Moded Path Elements for TypeRef Positions
+
+### 5.7.1 The Problem: Structural Ambiguity
+
+Consider a channel type with mode-distinguished alternatives:
+
+```glp
+MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
+```
+
+Both alternatives have **identical structure** but **different mode assignments**:
+- Alternative 1: position 1 is input (`MyStream?`), position 2 is output (`MyStream`)
+- Alternative 2: position 1 is output (`MyStream`), position 2 is input (`MyStream?`)
+
+If PathElement encodes only structural information (`ch(2,1)`, `ch(2,2)`), both alternatives produce identical DFA transitions, losing the mode distinction essential for coverage checking.
+
+### 5.7.2 Two Mode Tracking Mechanisms
+
+The type system uses **two distinct mechanisms** for mode tracking, depending on the syntactic form at each position:
+
+| Position Syntax | Example | Mode Tracking Mechanism |
+|-----------------|---------|-------------------------|
+| PrimitiveModeAlt | `_`, `_?` in `[_ \| List]` | `primitiveStateModes` map on target DFAState |
+| Moded TypeRef | `T`, `T?` in `ch(T?, T)` | `mode` field on PathElement |
+
+**Critical invariant**: These mechanisms must not be conflated. A position uses exactly one mechanism based on its syntactic form in the type definition.
+
+### 5.7.3 PathElement with Optional Mode
+
+Extend PathElement to carry an optional mode annotation:
+
+```dart
+class PathElement {
+  final String symbol;   // e.g., "ch(2,1)", "[|](2,1)"
+  final Mode? mode;      // non-null ONLY for moded TypeRef positions
+
+  PathElement(this.symbol, {this.mode});
+
+  factory PathElement.functor(String name, int arity, int argIndex, {Mode? mode}) {
+    return PathElement('$name($arity,$argIndex)', mode: mode);
+  }
+
+  factory PathElement.listHead({Mode? mode}) => PathElement('[|](2,1)', mode: mode);
+  factory PathElement.listTail({Mode? mode}) => PathElement('[|](2,2)', mode: mode);
+
+  @override
+  bool operator ==(Object other) =>
+      other is PathElement && symbol == other.symbol && mode == other.mode;
+
+  @override
+  int get hashCode => Object.hash(symbol, mode);
+
+  @override
+  String toString() => mode != null ? '$symbol${mode == Mode.input ? "?" : ""}' : symbol;
+}
+```
+
+**Key property**: `PathElement('ch(2,1)', mode: Mode.input)` ≠ `PathElement('ch(2,1)', mode: Mode.output)` ≠ `PathElement('ch(2,1)')`.
+
+### 5.7.4 Type Compilation Rules
+
+When compiling a type definition to DFA, determine mode encoding based on argument syntax:
+
+```dart
+void _addTransitionsForStructAlt(DFAState fromState, StructAlt alt, ...) {
+  for (int i = 0; i < alt.args.length; i++) {
+    final argType = alt.args[i];
+    final argIndex = i + 1;
+
+    // Determine mode encoding based on argument syntax
+    final Mode? pathMode;
+    if (argType is TypeRef) {
+      // Moded TypeRef: encode mode in PathElement
+      pathMode = argType.isInput ? Mode.input : Mode.output;
+    } else if (argType is PrimitiveModeAlt) {
+      // PrimitiveModeAlt: mode goes in primitiveStateModes, NOT in PathElement
+      pathMode = null;
+    } else {
+      pathMode = null;
+    }
+
+    final pathElem = PathElement.functor(alt.functor, alt.arity, argIndex, mode: pathMode);
+    final targetState = _resolveTargetState(argType, stateMap, finalState);
+    transitions[(fromState, pathElem)] = targetState;
+  }
+}
+```
+
+**Result for MyChannel**:
+```
+MyChannel --[ch(2,1)?]--> MyStream    (from ch(MyStream?, MyStream), pos 1)
+MyChannel --[ch(2,2)]--> MyStream     (from ch(MyStream?, MyStream), pos 2)
+MyChannel --[ch(2,1)]--> MyStream     (from ch(MyStream, MyStream?), pos 1)
+MyChannel --[ch(2,2)?]--> MyStream    (from ch(MyStream, MyStream?), pos 2)
+```
+
+Four distinct transitions, capturing all mode information.
+
+**Result for List** (`List ::= [] ; [_ | List]`):
+```
+List --[[|](2,1)]--> _FINAL_    (head is PrimitiveModeAlt _, no mode in PathElement)
+List --[[|](2,2)]--> List       (tail is TypeRef List, unmoded)
+```
+
+Mode for head position is tracked via `primitiveStateModes[_FINAL_] = {Mode.output}`, not in PathElement.
+
+### 5.7.5 Clause Contribution: Matching Declared Type
+
+When computing clause contribution, the mode to use in PathElement depends on whether the **declared type** has mode at that position:
+
+```dart
+TypeDFA computeClauseContribution(
+  ast.Term pattern,
+  TypeDFA declaredDFA,
+  Map<String, TypeDFA> varTypes,
+) {
+  if (pattern is ast.StructTerm) {
+    final argDFAs = <TypeDFA>[];
+    final argModes = <Mode?>[];
+
+    for (int i = 0; i < pattern.args.length; i++) {
+      final argPattern = pattern.args[i];
+      final argIndex = i + 1;
+
+      // Check if declared type has mode at this position
+      final declaredHasMode = _declaredPositionHasMode(
+        declaredDFA,
+        pattern.functor,
+        pattern.arity,
+        argIndex,
+      );
+
+      // Determine mode for this position
+      Mode? argMode;
+      if (declaredHasMode) {
+        // Declared type expects mode: use variable's mode
+        if (argPattern is ast.VarTerm) {
+          argMode = argPattern.isReader ? Mode.input : Mode.output;
+        }
+        // For non-variable patterns, recursively determine mode
+      }
+      // If !declaredHasMode, argMode remains null (use primitiveStateModes instead)
+
+      argModes.add(argMode);
+      argDFAs.add(_computeArgContribution(argPattern, declaredDFA, varTypes));
+    }
+
+    return _buildStructDFA(pattern.functor, pattern.arity, argDFAs, argModes);
+  }
+  // ... handle other pattern types
+}
+
+/// Check if declared DFA has a moded transition at this struct position
+bool _declaredPositionHasMode(
+  TypeDFA declaredDFA,
+  String functor,
+  int arity,
+  int argIndex,
+) {
+  final structuralSymbol = '$functor($arity,$argIndex)';
+
+  for (final entry in declaredDFA.transitions.entries) {
+    final (fromState, pathElem) = entry.key;
+    if (fromState == declaredDFA.startState &&
+        pathElem.symbol == structuralSymbol &&
+        pathElem.mode != null) {
+      return true;
+    }
+  }
+  return false;
+}
+```
+
+**Rationale**: The clause contribution must produce PathElements that can match the declared type's transitions. If the declared type encodes mode in PathElement, the contribution must do likewise; if not, neither should the contribution.
+
+### 5.7.6 Correspondence with Paper
+
+The paper (Section 7.7) describes mode computation **dynamically during traversal**:
+
+> "At each type reference `T` or `T?` encountered along the path, combine modes using [the involution rule]"
+
+This specification encodes the same information **statically in the DFA**:
+
+| Paper (Dynamic) | Spec (Static) |
+|-----------------|---------------|
+| "mode at position ξ in type τ" | PathElement.mode for TypeRef positions |
+| Combine modes via involution during traversal | Pre-computed during type compilation |
+| Mode at primitive leaf | `primitiveStateModes` on target state |
+
+The static encoding enables efficient DFA operations (intersection, union, equivalence checking) while preserving the paper's semantics.
+
+### 5.7.7 ListConsAlt Handling
+
+List syntax `[H | T]` is syntactic sugar for the `[|]/2` constructor. The same rules apply:
+
+```dart
+void _addTransitionsForListConsAlt(DFAState fromState, ListConsAlt alt, ...) {
+  // Head element
+  final headType = alt.head;
+  final Mode? headMode;
+  if (headType is TypeRef) {
+    headMode = headType.isInput ? Mode.input : Mode.output;
+  } else {
+    headMode = null;  // PrimitiveModeAlt uses primitiveStateModes
+  }
+
+  final headPath = PathElement.listHead(mode: headMode);
+  transitions[(fromState, headPath)] = _resolveTargetState(headType, ...);
+
+  // Tail element
+  final tailType = alt.tail;
+  final Mode? tailMode;
+  if (tailType is TypeRef) {
+    tailMode = tailType.isInput ? Mode.input : Mode.output;
+  } else {
+    tailMode = null;
+  }
+
+  final tailPath = PathElement.listTail(mode: tailMode);
+  transitions[(fromState, tailPath)] = _resolveTargetState(tailType, ...);
+}
+```
+
+### 5.7.8 Summary Table
+
+| Type Definition | Position | Syntax | Mode In PathElement? | Mode In primitiveStateModes? |
+|-----------------|----------|--------|---------------------|------------------------------|
+| `ch(MyStream?, MyStream)` | arg 1 | TypeRef `MyStream?` | Yes: `Mode.input` | No |
+| `ch(MyStream?, MyStream)` | arg 2 | TypeRef `MyStream` | Yes: `Mode.output` | No |
+| `[_ \| List]` | head | PrimitiveModeAlt `_` | No | Yes: `{Mode.output}` |
+| `[_ \| List]` | tail | TypeRef `List` | No (unmoded) | No |
+| `[Every \| EveryList]` | head | TypeRef `Every` | No (unmoded)* | No |
+| `show(Number?)` | arg 1 | TypeRef `Number?` | Yes: `Mode.input` | No |
+
+*`Every` is an unmoded TypeRef (no `?` suffix), so PathElement has no mode. The mode alternatives of `Every` are tracked via `primitiveStateModes` at the `Every` state itself.
+
+---
+
+**Version Information:**
+
+**Section 5.7 added:** 2025-12-24
+
+**Purpose:** Close gap between paper's dynamic mode traversal and spec's static DFA encoding for moded TypeRef positions in structured type alternatives.
+
 ---
 
 ## 6. Moded Type Checking Algorithm
@@ -1187,6 +1431,18 @@ This implementation follows the theory developed in "Moded Types for Grassroots 
 ---
 
 ## Appendix A: Changelog
+
+### v1.7 (2025-12-24)
+- **NEW** Section 5.7: Moded Path Elements for TypeRef Positions
+  - 5.7.1: The Problem - Structural ambiguity in channel types with mode-distinguished alternatives
+  - 5.7.2: Two Mode Tracking Mechanisms - `primitiveStateModes` vs `mode` field on PathElement
+  - 5.7.3: PathElement with Optional Mode - Extended PathElement class specification
+  - 5.7.4: Type Compilation Rules - How to encode mode in PathElement based on argument syntax
+  - 5.7.5: Clause Contribution - Matching declared type's mode encoding in contribution computation
+  - 5.7.6: Correspondence with Paper - Static DFA encoding vs dynamic mode traversal
+  - 5.7.7: ListConsAlt Handling - Same rules apply to list syntax
+  - 5.7.8: Summary Table - Complete examples of mode encoding by position type
+  - Purpose: Close gap between paper's dynamic mode traversal and spec's static DFA encoding
 
 ### v1.6 (2025-12-22)
 - **FIXED** Section 2.1: Removed incorrect `Any ::= _ ; _?` definition
