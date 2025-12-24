@@ -62,13 +62,25 @@ class ClauseContributionComputer {
       // f(t1, ..., tn): DFA accepting f(v1, ..., vn)
       // where each vi is in L(argDFA[i])
       final argDFAs = <TypeDFA>[];
+      final argModes = <Mode?>[];
+
       for (int i = 0; i < pattern.args.length; i++) {
         final argPattern = pattern.args[i];
-        final argDeclaredDFA = _extractStructArgDFA(declaredDFA, pattern.functor, pattern.arity, i + 1);
+        final argIndex = i + 1;
+        final argDeclaredDFA = _extractStructArgDFA(declaredDFA, pattern.functor, pattern.arity, argIndex);
         final argContribution = computeArgContribution(argPattern, varTypes, argDeclaredDFA);
         argDFAs.add(argContribution);
+
+        // Determine mode for this position based on declared type and pattern
+        Mode? argMode;
+        final declaredHasMode = _declaredPositionHasMode(declaredDFA, pattern.functor, pattern.arity, argIndex);
+        if (declaredHasMode && argPattern is ast.VarTerm) {
+          argMode = argPattern.isReader ? Mode.input : Mode.output;
+        }
+        argModes.add(argMode);
       }
-      return _buildStructDFA(pattern.functor, pattern.arity, argDFAs);
+
+      return _buildStructDFA(pattern.functor, pattern.arity, argDFAs, argModes);
     }
 
     if (pattern is ast.ListTerm) {
@@ -81,7 +93,22 @@ class ClauseContributionComputer {
       final tailDeclaredDFA = _extractListTailDFA(declaredDFA);
       final headDFA = computeArgContribution(pattern.head!, varTypes, headDeclaredDFA);
       final tailDFA = computeArgContribution(pattern.tail!, varTypes, tailDeclaredDFA);
-      return _buildListConsDFA(headDFA, tailDFA);
+
+      // Determine modes for head and tail based on declared type and pattern
+      Mode? headMode;
+      Mode? tailMode;
+
+      final headHasMode = _declaredListHeadHasMode(declaredDFA);
+      if (headHasMode && pattern.head is ast.VarTerm) {
+        headMode = (pattern.head as ast.VarTerm).isReader ? Mode.input : Mode.output;
+      }
+
+      final tailHasMode = _declaredListTailHasMode(declaredDFA);
+      if (tailHasMode && pattern.tail is ast.VarTerm) {
+        tailMode = (pattern.tail as ast.VarTerm).isReader ? Mode.input : Mode.output;
+      }
+
+      return _buildListConsDFA(headDFA, tailDFA, headMode: headMode, tailMode: tailMode);
     }
 
     if (pattern is ast.UnderscoreTerm) {
@@ -105,7 +132,10 @@ class ClauseContributionComputer {
   ///
   /// Strategy: Build a DFA with states and transitions that mirror
   /// the structure functor/arity with constraints on each argument position
-  TypeDFA _buildStructDFA(String functor, int arity, List<TypeDFA> argDFAs) {
+  ///
+  /// [argModes] specifies optional mode for each argument position.
+  /// Mode is non-null only when the declared type has a moded TypeRef at that position.
+  TypeDFA _buildStructDFA(String functor, int arity, List<TypeDFA> argDFAs, [List<Mode?>? argModes]) {
     // If any argument has empty type, the structure has empty type
     if (argDFAs.any((dfa) => dfa.isEmpty)) {
       return TypeDFA.empty();
@@ -127,7 +157,8 @@ class ClauseContributionComputer {
     for (int i = 0; i < argDFAs.length; i++) {
       final argDFA = argDFAs[i];
       final argIndex = i + 1; // PathElement uses 1-based indexing
-      final pathElem = PathElement.functor(functor, arity, argIndex);
+      final argMode = (argModes != null && i < argModes.length) ? argModes[i] : null;
+      final pathElem = PathElement.functor(functor, arity, argIndex, mode: argMode);
 
       // The transition from start on this arg-position path element
       // leads to a copy of the argument's DFA
@@ -156,7 +187,10 @@ class ClauseContributionComputer {
   /// Build DFA accepting [h|t] where h ∈ L(head) and t ∈ L(tail)
   ///
   /// This is essentially _buildStructDFA for the special list cons constructor
-  TypeDFA _buildListConsDFA(TypeDFA headDFA, TypeDFA tailDFA) {
+  ///
+  /// [headMode] and [tailMode] specify optional modes for head and tail positions.
+  /// Mode is non-null only when the declared type has a moded TypeRef at that position.
+  TypeDFA _buildListConsDFA(TypeDFA headDFA, TypeDFA tailDFA, {Mode? headMode, Mode? tailMode}) {
     // If either head or tail has empty type, the list has empty type
     if (headDFA.isEmpty || tailDFA.isEmpty) {
       return TypeDFA.empty();
@@ -168,13 +202,13 @@ class ClauseContributionComputer {
     final finalStates = <DFAState>{};
 
     // Head transition
-    final headElem = PathElement.listHead();
+    final headElem = PathElement.listHead(mode: headMode);
     final headStartInProduct = _renameState(headDFA.startState, 'head');
     transitions[(startState, headElem)] = headStartInProduct;
     _mergeSubDFA(headDFA, 'head', states, transitions, finalStates);
 
     // Tail transition
-    final tailElem = PathElement.listTail();
+    final tailElem = PathElement.listTail(mode: tailMode);
     final tailStartInProduct = _renameState(tailDFA.startState, 'tail');
     transitions[(startState, tailElem)] = tailStartInProduct;
     _mergeSubDFA(tailDFA, 'tail', states, transitions, finalStates);
@@ -236,34 +270,44 @@ class ClauseContributionComputer {
   }
 
   /// Extract the sub-DFA for a struct argument position
+  /// Extracts based on structural symbol only, trying all possible modes
   TypeDFA _extractStructArgDFA(TypeDFA declaredDFA, String functor, int arity, int argIndex) {
-    final pathElem = PathElement.functor(functor, arity, argIndex);
-    return _extractSubDFA(declaredDFA, pathElem);
+    // Try to find any transition with this structural symbol, regardless of mode
+    final structuralSymbol = '$functor($arity,$argIndex)';
+    return _extractSubDFABySymbol(declaredDFA, structuralSymbol);
   }
 
   /// Extract the sub-DFA for list head position
+  /// Extracts based on structural symbol only, trying all possible modes
   TypeDFA _extractListHeadDFA(TypeDFA declaredDFA) {
-    final pathElem = PathElement.listHead();
-    return _extractSubDFA(declaredDFA, pathElem);
+    const headSymbol = '[|](2,1)';
+    return _extractSubDFABySymbol(declaredDFA, headSymbol);
   }
 
   /// Extract the sub-DFA for list tail position
+  /// Extracts based on structural symbol only, trying all possible modes
   TypeDFA _extractListTailDFA(TypeDFA declaredDFA) {
-    final pathElem = PathElement.listTail();
-    return _extractSubDFA(declaredDFA, pathElem);
+    const tailSymbol = '[|](2,2)';
+    return _extractSubDFABySymbol(declaredDFA, tailSymbol);
   }
 
-  /// Extract the sub-DFA reachable from start state via the given path element
-  TypeDFA _extractSubDFA(TypeDFA declaredDFA, PathElement pathElem) {
-    // Follow the path element from the start state
-    final targetState = declaredDFA.transitions[(declaredDFA.startState, pathElem)];
+  /// Extract sub-DFA by structural symbol, ignoring mode
+  TypeDFA _extractSubDFABySymbol(TypeDFA declaredDFA, String symbol) {
+    // Find any transition from start state with this structural symbol
+    DFAState? targetState;
+    for (final entry in declaredDFA.transitions.entries) {
+      final (fromState, pathElem) = entry.key;
+      if (fromState == declaredDFA.startState && pathElem.symbol == symbol) {
+        targetState = entry.value;
+        break;  // Found a transition with this symbol
+      }
+    }
+
     if (targetState == null) {
-      // Path doesn't exist in declared DFA - return empty
       return TypeDFA.empty();
     }
 
     // Build a sub-DFA rooted at targetState
-    // Collect all states reachable from targetState
     final reachableStates = <DFAState>{};
     final newTransitions = <(DFAState, PathElement), DFAState>{};
     final queue = Queue<DFAState>();
@@ -278,11 +322,11 @@ class ClauseContributionComputer {
 
       // Find all transitions from current state
       for (final entry in declaredDFA.transitions.entries) {
-        final (fromState, symbol) = entry.key;
+        final (fromState, pathSymbol) = entry.key;
         final toState = entry.value;
 
         if (fromState == current) {
-          newTransitions[(fromState, symbol)] = toState;
+          newTransitions[(fromState, pathSymbol)] = toState;
           if (!visited.contains(toState)) {
             queue.add(toState);
           }
@@ -309,4 +353,55 @@ class ClauseContributionComputer {
       primitiveStateModes: newPrimitiveStateModes,
     );
   }
+
+  /// Check if declared DFA has a moded transition at this struct position
+  bool _declaredPositionHasMode(
+    TypeDFA declaredDFA,
+    String functor,
+    int arity,
+    int argIndex,
+  ) {
+    final structuralSymbol = '$functor($arity,$argIndex)';
+
+    for (final entry in declaredDFA.transitions.entries) {
+      final (fromState, pathElem) = entry.key;
+      if (fromState == declaredDFA.startState &&
+          pathElem.symbol == structuralSymbol &&
+          pathElem.mode != null) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Check if declared DFA has a moded transition for list head
+  bool _declaredListHeadHasMode(TypeDFA declaredDFA) {
+    const headSymbol = '[|](2,1)';
+
+    for (final entry in declaredDFA.transitions.entries) {
+      final (fromState, pathElem) = entry.key;
+      if (fromState == declaredDFA.startState &&
+          pathElem.symbol == headSymbol &&
+          pathElem.mode != null) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Check if declared DFA has a moded transition for list tail
+  bool _declaredListTailHasMode(TypeDFA declaredDFA) {
+    const tailSymbol = '[|](2,2)';
+
+    for (final entry in declaredDFA.transitions.entries) {
+      final (fromState, pathElem) = entry.key;
+      if (fromState == declaredDFA.startState &&
+          pathElem.symbol == tailSymbol &&
+          pathElem.mode != null) {
+        return true;
+      }
+    }
+    return false;
+  }
+
 }

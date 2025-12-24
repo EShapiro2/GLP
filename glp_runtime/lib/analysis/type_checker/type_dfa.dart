@@ -12,38 +12,46 @@ import 'mode.dart';
 
 /// A path element in term tree traversal
 /// Format: functor(arity, argIndex) or constant
+///
+/// May carry optional mode annotation for moded TypeRef positions.
+/// Mode is non-null ONLY when the position has a moded TypeRef (T or T?).
+/// For PrimitiveModeAlt positions (_, _?), mode is null (tracked via primitiveStateModes).
 class PathElement {
   final String symbol;  // e.g., "s(1,1)", "cons(2,1)", "0", "[]"
-  
-  PathElement(this.symbol);
-  
+  final Mode? mode;     // non-null ONLY for moded TypeRef positions
+
+  PathElement(this.symbol, {this.mode});
+
   /// Create path element for functor argument position
-  factory PathElement.functor(String name, int arity, int argIndex) {
-    return PathElement('$name($arity,$argIndex)');
+  factory PathElement.functor(String name, int arity, int argIndex, {Mode? mode}) {
+    return PathElement('$name($arity,$argIndex)', mode: mode);
   }
-  
+
   /// Create path element for constant
   factory PathElement.constant(Object value) {
     return PathElement(value.toString());
   }
-  
+
   /// Create path element for list cons head
-  factory PathElement.listHead() => PathElement('[|](2,1)');
-  
-  /// Create path element for list cons tail  
-  factory PathElement.listTail() => PathElement('[|](2,2)');
-  
+  factory PathElement.listHead({Mode? mode}) => PathElement('[|](2,1)', mode: mode);
+
+  /// Create path element for list cons tail
+  factory PathElement.listTail({Mode? mode}) => PathElement('[|](2,2)', mode: mode);
+
   /// Create path element for empty list
   factory PathElement.nil() => PathElement('[]');
-  
+
   @override
-  String toString() => symbol;
-  
+  String toString() => mode != null
+      ? '$symbol${mode == Mode.input ? "?" : ""}'
+      : symbol;
+
   @override
-  bool operator ==(Object other) => other is PathElement && symbol == other.symbol;
-  
+  bool operator ==(Object other) =>
+      other is PathElement && symbol == other.symbol && mode == other.mode;
+
   @override
-  int get hashCode => symbol.hashCode;
+  int get hashCode => Object.hash(symbol, mode);
 }
 
 /// A path in a term tree: sequence of path elements from root to leaf

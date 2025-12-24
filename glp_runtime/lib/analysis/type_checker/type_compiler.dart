@@ -169,21 +169,48 @@ class TypeCompiler {
     } else if (alt is StructAlt) {
       // Structure: add transitions for each argument position
       for (int i = 0; i < alt.args.length; i++) {
-        final pathElem = PathElement.functor(alt.functor, alt.arity, i + 1);
         final argType = alt.args[i];
+        final argIndex = i + 1;
+
+        // Determine mode encoding based on argument syntax
+        final Mode? pathMode;
+        if (argType is TypeRef) {
+          // Moded TypeRef: encode mode in PathElement
+          pathMode = argType.isInput ? Mode.input : Mode.output;
+        } else {
+          // PrimitiveModeAlt: mode goes in primitiveStateModes, NOT PathElement
+          pathMode = null;
+        }
+
+        final pathElem = PathElement.functor(alt.functor, alt.arity, argIndex, mode: pathMode);
         final targetState = _resolveTargetState(argType, stateMap, finalState);
         transitions[(fromState, pathElem)] = targetState;
       }
       
     } else if (alt is ListConsAlt) {
       // List cons: add head and tail transitions
-      final headElem = PathElement.listHead();
-      final tailElem = PathElement.listTail();
-      
-      final headTarget = _resolveTargetState(alt.head, stateMap, finalState);
-      final tailTarget = _resolveTargetState(alt.tail, stateMap, finalState);
-      
+      // Head element
+      final headType = alt.head;
+      final Mode? headMode;
+      if (headType is TypeRef) {
+        headMode = headType.isInput ? Mode.input : Mode.output;
+      } else {
+        headMode = null;
+      }
+      final headElem = PathElement.listHead(mode: headMode);
+      final headTarget = _resolveTargetState(headType, stateMap, finalState);
       transitions[(fromState, headElem)] = headTarget;
+
+      // Tail element
+      final tailType = alt.tail;
+      final Mode? tailMode;
+      if (tailType is TypeRef) {
+        tailMode = tailType.isInput ? Mode.input : Mode.output;
+      } else {
+        tailMode = null;
+      }
+      final tailElem = PathElement.listTail(mode: tailMode);
+      final tailTarget = _resolveTargetState(tailType, stateMap, finalState);
       transitions[(fromState, tailElem)] = tailTarget;
       
     } else if (alt is TypeRef) {
