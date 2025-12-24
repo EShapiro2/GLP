@@ -248,9 +248,18 @@ class TypeChecker {
       final isBuiltinInfiniteType = declaredDFA is NumberTypeDFA || declaredDFA is StringTypeDFA;
       final requiresEquality = !isBuiltinInfiniteType && (typeDef?.isExact ?? true);
 
+      // Bi-moded types trivially satisfy coverage (spec 5.8.2)
+      final isBiModed = declaredDFA.isPrimitiveState(declaredDFA.startState) &&
+          declaredDFA.getModesAt(declaredDFA.startState).length == 2;
+
       if (requiresEquality) {
         // ::= semantics: inferred must equal declared (complete coverage)
-        if (!inferredDFA.isEquivalent(declaredDFA)) {
+        // Exception: bi-moded types accept everything, so only check subset
+        final coverageOk = isBiModed
+            ? inferredDFA.isSubsetOf(declaredDFA)
+            : inferredDFA.isEquivalent(declaredDFA);
+
+        if (!coverageOk) {
           // Diagnose the type of mismatch
           if (inferredDFA.isEmpty && !declaredDFA.isEmpty) {
             errors.add(TypeError(
