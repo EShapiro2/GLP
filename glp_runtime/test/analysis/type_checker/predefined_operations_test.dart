@@ -14,9 +14,9 @@ void main() {
     group('Self-Duality', () {
       test('POSITIVE: Any and Any? are equivalent', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          procedure foo(Any, Any?).
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          procedure foo(MyAny, MyAny?).
           foo(X, X?).
         ''');
         expect(result.isWellTyped, isTrue,
@@ -25,8 +25,8 @@ void main() {
 
       test('POSITIVE: Every and Every? are equivalent', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          procedure foo(Every, Every?).
+          MyEvery ::= _ ; _?.
+          procedure foo(MyEvery, MyEvery?).
           foo(X, X?).
           foo(X?, X).
         ''');
@@ -36,9 +36,9 @@ void main() {
 
       test('POSITIVE: Writer at Any position is valid', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          procedure produce(Any).
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          procedure produce(MyAny).
           produce(X).
         ''');
         expect(result.isWellTyped, isTrue, reason: 'Any accepts writer');
@@ -46,9 +46,9 @@ void main() {
 
       test('POSITIVE: Reader at Any position is valid', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          procedure consume(Any).
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          procedure consume(MyAny).
           consume(X?).
         ''');
         expect(result.isWellTyped, isTrue, reason: 'Any accepts reader');
@@ -56,10 +56,10 @@ void main() {
 
       test('POSITIVE: List with Any elements needs only two clauses', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          procedure copy(List?, List).
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          MyList ::= [MyAny | MyList] ; [].
+          procedure copy(MyList?, MyList).
           copy([], []).
           copy([X | In], [X? | Out]) :- copy(In?, Out).
         ''');
@@ -69,8 +69,8 @@ void main() {
 
       test('NEGATIVE: Every needs both modes despite self-duality', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          procedure echo(Every?, Every).
+          MyEvery ::= _ ; _?.
+          procedure echo(MyEvery?, MyEvery).
           echo(X, Y?) :- Y = X?.
         ''');
         expect(result.isWellTyped, isFalse,
@@ -79,8 +79,8 @@ void main() {
 
       test('POSITIVE: Every with both modes covered', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          procedure echo(Every?, Every).
+          MyEvery ::= _ ; _?.
+          procedure echo(MyEvery?, MyEvery).
           echo(X, Y?) :- Y = X?.
           echo(X?, Y) :- Y? = X.
         ''');
@@ -96,12 +96,12 @@ void main() {
     group('DiffList', () {
       test('POSITIVE: dl_append is well-moded', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          DiffList ::= List \\ List?.
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          MyList ::= [MyAny | MyList] ; [].
+          MyDiffList ::= MyList \\ MyList?.
 
-          procedure dl_append(DiffList?, DiffList?, DiffList).
+          procedure dl_append(MyDiffList?, MyDiffList?, MyDiffList).
           dl_append(A\\B?, B\\C?, A?\\C).
         ''');
         expect(result.isWellTyped, isTrue,
@@ -110,12 +110,12 @@ void main() {
 
       test('POSITIVE: dl_to_list is well-moded', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          DiffList ::= List \\ List?.
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          MyList ::= [MyAny | MyList] ; [].
+          MyDiffList ::= MyList \\ MyList?.
 
-          procedure dl_to_list(DiffList?, List).
+          procedure dl_to_list(MyDiffList?, MyList).
           dl_to_list(L\\[], L?).
         ''');
         expect(result.isWellTyped, isTrue,
@@ -124,12 +124,12 @@ void main() {
 
       test('NEGATIVE: dl_append with wrong modes fails', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          DiffList ::= List \\ List?.
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          MyList ::= [MyAny | MyList] ; [].
+          MyDiffList ::= MyList \\ MyList?.
 
-          procedure dl_append(DiffList?, DiffList?, DiffList).
+          procedure dl_append(MyDiffList?, MyDiffList?, MyDiffList).
           dl_append(A?\\B, B?\\C, A\\C?).
         ''');
         expect(result.isWellTyped, isFalse,
@@ -138,15 +138,15 @@ void main() {
 
       test('POSITIVE: dl_append demonstrates O(1) concatenation', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          DiffList ::= List \\ List?.
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          MyList ::= [MyAny | MyList] ; [].
+          MyDiffList ::= MyList \\ MyList?.
 
-          procedure dl_append(DiffList?, DiffList?, DiffList).
+          procedure dl_append(MyDiffList?, MyDiffList?, MyDiffList).
           dl_append(A\\B?, B\\C?, A?\\C).
 
-          procedure use_append(List?, List?, List).
+          procedure use_append(MyList?, MyList?, MyList).
           use_append(L1, L2, Result) :-
               dl1(L1?, DL1),
               dl2(L2?, DL2),
@@ -165,13 +165,13 @@ void main() {
     group('Channel', () {
       test('POSITIVE: new_channel is well-moded', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          Stream ::< List.
-          Channel ::= ch(Stream?, Stream).
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          MyList ::= [MyAny | MyList] ; [].
+          MyStream ::< MyList.
+          MyChannel ::= ch(MyStream?, MyStream).
 
-          procedure new_channel(Channel, Channel).
+          procedure new_channel(MyChannel, MyChannel).
           new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
         ''');
         expect(result.isWellTyped, isTrue,
@@ -180,13 +180,13 @@ void main() {
 
       test('POSITIVE: send is well-moded', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          Stream ::< List.
-          Channel ::= ch(Stream?, Stream).
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          MyList ::= [MyAny | MyList] ; [].
+          MyStream ::< MyList.
+          MyChannel ::= ch(MyStream?, MyStream).
 
-          procedure send(Any, Channel?, Channel).
+          procedure send(MyAny, MyChannel?, MyChannel).
           send(X, ch(In, [X?|Out?]), ch(In?, Out)).
         ''');
         expect(result.isWellTyped, isTrue,
@@ -195,13 +195,13 @@ void main() {
 
       test('POSITIVE: receive is well-moded', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          Stream ::< List.
-          Channel ::= ch(Stream?, Stream).
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          MyList ::= [MyAny | MyList] ; [].
+          MyStream ::< MyList.
+          MyChannel ::= ch(MyStream?, MyStream).
 
-          procedure receive(Any, Channel?, Channel).
+          procedure receive(MyAny, MyChannel?, MyChannel).
           receive(X?, ch([X|In], Out?), ch(In?, Out)).
         ''');
         expect(result.isWellTyped, isTrue,
@@ -210,13 +210,13 @@ void main() {
 
       test('NEGATIVE: send with wrong message mode fails', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          Stream ::< List.
-          Channel ::= ch(Stream?, Stream).
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          MyList ::= [MyAny | MyList] ; [].
+          MyStream ::< MyList.
+          MyChannel ::= ch(MyStream?, MyStream).
 
-          procedure send(Any, Channel?, Channel).
+          procedure send(MyAny, MyChannel?, MyChannel).
           send(X?, ch(In, [X|Out?]), ch(In?, Out)).
         ''');
         expect(result.isWellTyped, isFalse,
@@ -225,25 +225,25 @@ void main() {
 
       test('POSITIVE: Producer-consumer pattern', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          Stream ::< List.
-          Channel ::= ch(Stream?, Stream).
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          MyList ::= [MyAny | MyList] ; [].
+          MyStream ::< MyList.
+          MyChannel ::= ch(MyStream?, MyStream).
 
-          procedure send(Any, Channel?, Channel).
+          procedure send(MyAny, MyChannel?, MyChannel).
           send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 
-          procedure receive(Any, Channel?, Channel).
+          procedure receive(MyAny, MyChannel?, MyChannel).
           receive(X?, ch([X|In], Out?), ch(In?, Out)).
 
-          procedure producer(Channel?).
+          procedure producer(MyChannel?).
           producer(Ch) :-
               send(hello, Ch?, Ch2),
               send(world, Ch2?, Ch3),
               done(Ch3?).
 
-          procedure consumer(Channel?).
+          procedure consumer(MyChannel?).
           consumer(Ch) :- receive(Msg, Ch?, Ch2) |
               process(Msg?),
               consumer(Ch2?).
@@ -260,15 +260,15 @@ void main() {
     group('Defined Guards', () {
       test('POSITIVE: dl_append usable in guard position', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          DiffList ::= List \\ List?.
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          MyList ::= [MyAny | MyList] ; [].
+          MyDiffList ::= MyList \\ MyList?.
 
-          procedure dl_append(DiffList?, DiffList?, DiffList).
+          procedure dl_append(MyDiffList?, MyDiffList?, MyDiffList).
           dl_append(A\\B?, B\\C?, A?\\C).
 
-          procedure process(DiffList?, DiffList?, DiffList).
+          procedure process(MyDiffList?, MyDiffList?, MyDiffList).
           process(DL1, DL2, Result) :- dl_append(DL1?, DL2?, Result) |
               continue(Result?).
         ''');
@@ -278,16 +278,16 @@ void main() {
 
       test('POSITIVE: receive usable in guard position', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          Stream ::< List.
-          Channel ::= ch(Stream?, Stream).
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          MyList ::= [MyAny | MyList] ; [].
+          MyStream ::< MyList.
+          MyChannel ::= ch(MyStream?, MyStream).
 
-          procedure receive(Any, Channel?, Channel).
+          procedure receive(MyAny, MyChannel?, MyChannel).
           receive(X?, ch([X|In], Out?), ch(In?, Out)).
 
-          procedure handler(Channel?).
+          procedure handler(MyChannel?).
           handler(Ch) :- receive(Msg, Ch?, Ch2) |
               process(Msg?),
               handler(Ch2?).
@@ -298,15 +298,15 @@ void main() {
 
       test('POSITIVE: dl_to_list in guard for closing difference list', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          DiffList ::= List \\ List?.
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          MyList ::= [MyAny | MyList] ; [].
+          MyDiffList ::= MyList \\ MyList?.
 
-          procedure dl_to_list(DiffList?, List).
+          procedure dl_to_list(MyDiffList?, MyList).
           dl_to_list(L\\[], L?).
 
-          procedure finalize(DiffList?, List).
+          procedure finalize(MyDiffList?, MyList).
           finalize(DL, L) :- dl_to_list(DL?, L) |
               output(L?).
         ''');
@@ -322,8 +322,8 @@ void main() {
     group('EveryList', () {
       test('POSITIVE: EveryList copy with three clauses', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          EveryList ::= [Every | EveryList] ; [].
+          MyEvery ::= _ ; _?.
+          EveryList ::= [MyEvery | EveryList] ; [].
 
           procedure copy(EveryList?, EveryList).
           copy([], []).
@@ -336,8 +336,8 @@ void main() {
 
       test('NEGATIVE: EveryList copy with only two clauses fails', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          EveryList ::= [Every | EveryList] ; [].
+          MyEvery ::= _ ; _?.
+          EveryList ::= [MyEvery | EveryList] ; [].
 
           procedure copy(EveryList?, EveryList).
           copy([], []).
@@ -350,12 +350,12 @@ void main() {
       test('POSITIVE: List (with Any) needs only two clauses vs EveryList three',
           () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          EveryList ::= [Every | EveryList] ; [].
+          MyEvery ::= _ ; _?.
+          MyAny ::< MyEvery.
+          MyList ::= [MyAny | MyList] ; [].
+          EveryList ::= [MyEvery | EveryList] ; [].
 
-          procedure copy_list(List?, List).
+          procedure copy_list(MyList?, MyList).
           copy_list([], []).
           copy_list([X | In], [X? | Out]) :- copy_list(In?, Out).
 
