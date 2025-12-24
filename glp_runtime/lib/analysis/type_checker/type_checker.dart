@@ -239,16 +239,13 @@ class TypeChecker {
         }
       }
 
-      // Look up type definition to check ::= vs ::< semantics
+      // Determine if this type uses ::= (exact) or ::< (subtype) semantics
       final typeName = decl.argTypes[argIndex].name;
       final typeDef = typeEnv.getType(typeName);
-      // Built-in infinite types (Number, String) use subtype semantics
-      // because exact coverage checking is meaningless for infinite types
-      final isBuiltinInfiniteType = declaredDFA is NumberTypeDFA || declaredDFA is StringTypeDFA;
-      final requiresExactCoverage = !isBuiltinInfiniteType && (typeDef?.isExact ?? true);
+      final requiresEquality = typeDef?.isExact ?? true;
 
-      if (requiresExactCoverage) {
-        // ::= semantics: inferred must equal declared (exact coverage required)
+      if (requiresEquality) {
+        // ::= semantics: inferred must equal declared (complete coverage)
         if (!inferredDFA.isEquivalent(declaredDFA)) {
           // Diagnose the type of mismatch
           if (inferredDFA.isEmpty && !declaredDFA.isEmpty) {
@@ -281,8 +278,7 @@ class TypeChecker {
           }
         }
       } else {
-        // ::< semantics: inferred can be subset of declared (partial coverage OK)
-        // Only error if inferred produces values OUTSIDE declared
+        // ::< semantics: inferred must be subset of declared (partial coverage OK)
         if (!inferredDFA.isSubsetOf(declaredDFA)) {
           errors.add(TypeError(
             'Procedure ${decl.name}/${decl.arity} argument ${argIndex + 1}: '
@@ -290,7 +286,7 @@ class TypeChecker {
             decl.line, decl.column
           ));
         }
-        // Note: inferredDFA being a proper subset of declaredDFA is OK for ::<
+        // Note: for ::< types, incomplete coverage is acceptable - no error
       }
     }
 
