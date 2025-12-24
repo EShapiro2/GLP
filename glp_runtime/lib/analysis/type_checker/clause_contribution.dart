@@ -151,6 +151,7 @@ class ClauseContributionComputer {
     final states = <DFAState>{startState};
     final transitions = <(DFAState, PathElement), DFAState>{};
     final finalStates = <DFAState>{};
+    final primitiveStateModes = <DFAState, Set<Mode>>{};
 
     // For each argument position, create transitions
     // that constrain that argument to its DFA
@@ -173,6 +174,7 @@ class ClauseContributionComputer {
         states,
         transitions,
         finalStates,
+        primitiveStateModes,
       );
     }
 
@@ -181,6 +183,7 @@ class ClauseContributionComputer {
       startState: startState,
       finalStates: finalStates,
       transitions: transitions,
+      primitiveStateModes: primitiveStateModes,
     );
   }
 
@@ -200,24 +203,26 @@ class ClauseContributionComputer {
     final states = <DFAState>{startState};
     final transitions = <(DFAState, PathElement), DFAState>{};
     final finalStates = <DFAState>{};
+    final primitiveStateModes = <DFAState, Set<Mode>>{};
 
     // Head transition
     final headElem = PathElement.listHead(mode: headMode);
     final headStartInProduct = _renameState(headDFA.startState, 'head');
     transitions[(startState, headElem)] = headStartInProduct;
-    _mergeSubDFA(headDFA, 'head', states, transitions, finalStates);
+    _mergeSubDFA(headDFA, 'head', states, transitions, finalStates, primitiveStateModes);
 
     // Tail transition
     final tailElem = PathElement.listTail(mode: tailMode);
     final tailStartInProduct = _renameState(tailDFA.startState, 'tail');
     transitions[(startState, tailElem)] = tailStartInProduct;
-    _mergeSubDFA(tailDFA, 'tail', states, transitions, finalStates);
+    _mergeSubDFA(tailDFA, 'tail', states, transitions, finalStates, primitiveStateModes);
 
     return TypeDFA(
       states: states,
       startState: startState,
       finalStates: finalStates,
       transitions: transitions,
+      primitiveStateModes: primitiveStateModes,
     );
   }
 
@@ -233,6 +238,7 @@ class ClauseContributionComputer {
     Set<DFAState> states,
     Map<(DFAState, PathElement), DFAState> transitions,
     Set<DFAState> finalStates,
+    Map<DFAState, Set<Mode>> primitiveStateModes,
   ) {
     // Create mapping from original states to renamed states
     final stateMap = <DFAState, DFAState>{};
@@ -254,6 +260,16 @@ class ClauseContributionComputer {
       final renamedTo = stateMap[toState]!;
 
       transitions[(renamedFrom, pathElem)] = renamedTo;
+    }
+
+    // Copy primitive state modes with renamed states
+    for (final entry in subDFA.primitiveStateModes.entries) {
+      final state = entry.key;
+      final modes = entry.value;
+      final renamed = stateMap[state];
+      if (renamed != null) {
+        primitiveStateModes[renamed] = modes;
+      }
     }
   }
 

@@ -167,6 +167,10 @@ class TypeCompiler {
       transitions[(fromState, pathElem)] = finalState;
       
     } else if (alt is StructAlt) {
+      // Check if this alternative is mode-distinguished
+      // (has at least one TypeRef with explicit ? marker)
+      final isModedAlt = alt.args.any((arg) => arg is TypeRef && arg.isInput);
+
       // Structure: add transitions for each argument position
       for (int i = 0; i < alt.args.length; i++) {
         final argType = alt.args[i];
@@ -175,48 +179,84 @@ class TypeCompiler {
         // Determine mode encoding based on argument syntax
         final Mode? pathMode;
         if (argType is TypeRef && argType.isInput) {
-          // ONLY moded TypeRef with explicit ? gets mode in PathElement
-          // Input mode TypeRef (T?) → Mode.input
+          // Explicit ? marker → Mode.input
           pathMode = Mode.input;
-        } else if (argType is TypeRef && !argType.isInput) {
-          // Output mode TypeRef without ? (T) → Mode.output
-          // But ONLY if it's explicitly different from the unmoded default
-          // For now, treat unmoded TypeRefs as having output mode
+        } else if (argType is TypeRef && !argType.isInput && isModedAlt) {
+          // TypeRef without ? in a moded alternative → Mode.output
           pathMode = Mode.output;
         } else {
-          // PrimitiveModeAlt: mode goes in primitiveStateModes, NOT PathElement
+          // Unmoded TypeRef or PrimitiveModeAlt → no mode in PathElement
           pathMode = null;
         }
 
         final pathElem = PathElement.functor(alt.functor, alt.arity, argIndex, mode: pathMode);
         final targetState = _resolveTargetState(argType, stateMap, finalState);
+
+        // If arg is PrimitiveModeAlt, mark target state with its mode
+        if (argType is PrimitiveModeAlt) {
+          final mode = argType.isInput ? Mode.input : Mode.output;
+          primitiveStateModes[targetState] =
+              (primitiveStateModes[targetState] ?? <Mode>{})..add(mode);
+        }
+
         transitions[(fromState, pathElem)] = targetState;
       }
       
     } else if (alt is ListConsAlt) {
+      // Check if this alternative is mode-distinguished
+      // (has at least one TypeRef with explicit ? marker)
+      final isModedAlt = (alt.head is TypeRef && (alt.head as TypeRef).isInput) ||
+                          (alt.tail is TypeRef && (alt.tail as TypeRef).isInput);
+
       // List cons: add head and tail transitions
       // Head element
       final headType = alt.head;
       final Mode? headMode;
-      if (headType is TypeRef) {
-        headMode = headType.isInput ? Mode.input : Mode.output;
+      if (headType is TypeRef && headType.isInput) {
+        // Explicit ? marker → Mode.input
+        headMode = Mode.input;
+      } else if (headType is TypeRef && !headType.isInput && isModedAlt) {
+        // TypeRef without ? in a moded alternative → Mode.output
+        headMode = Mode.output;
       } else {
+        // Unmoded TypeRef or PrimitiveModeAlt → no mode in PathElement
         headMode = null;
       }
       final headElem = PathElement.listHead(mode: headMode);
       final headTarget = _resolveTargetState(headType, stateMap, finalState);
+
+      // If head is PrimitiveModeAlt, mark target state with its mode
+      if (headType is PrimitiveModeAlt) {
+        final mode = headType.isInput ? Mode.input : Mode.output;
+        primitiveStateModes[headTarget] =
+            (primitiveStateModes[headTarget] ?? <Mode>{})..add(mode);
+      }
+
       transitions[(fromState, headElem)] = headTarget;
 
       // Tail element
       final tailType = alt.tail;
       final Mode? tailMode;
-      if (tailType is TypeRef) {
-        tailMode = tailType.isInput ? Mode.input : Mode.output;
+      if (tailType is TypeRef && tailType.isInput) {
+        // Explicit ? marker → Mode.input
+        tailMode = Mode.input;
+      } else if (tailType is TypeRef && !tailType.isInput && isModedAlt) {
+        // TypeRef without ? in a moded alternative → Mode.output
+        tailMode = Mode.output;
       } else {
+        // Unmoded TypeRef or PrimitiveModeAlt → no mode in PathElement
         tailMode = null;
       }
       final tailElem = PathElement.listTail(mode: tailMode);
       final tailTarget = _resolveTargetState(tailType, stateMap, finalState);
+
+      // If tail is PrimitiveModeAlt, mark target state with its mode
+      if (tailType is PrimitiveModeAlt) {
+        final mode = tailType.isInput ? Mode.input : Mode.output;
+        primitiveStateModes[tailTarget] =
+            (primitiveStateModes[tailTarget] ?? <Mode>{})..add(mode);
+      }
+
       transitions[(fromState, tailElem)] = tailTarget;
       
     } else if (alt is TypeRef) {
