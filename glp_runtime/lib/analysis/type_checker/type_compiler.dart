@@ -174,9 +174,15 @@ class TypeCompiler {
 
         // Determine mode encoding based on argument syntax
         final Mode? pathMode;
-        if (argType is TypeRef) {
-          // Moded TypeRef: encode mode in PathElement
-          pathMode = argType.isInput ? Mode.input : Mode.output;
+        if (argType is TypeRef && argType.isInput) {
+          // ONLY moded TypeRef with explicit ? gets mode in PathElement
+          // Input mode TypeRef (T?) → Mode.input
+          pathMode = Mode.input;
+        } else if (argType is TypeRef && !argType.isInput) {
+          // Output mode TypeRef without ? (T) → Mode.output
+          // But ONLY if it's explicitly different from the unmoded default
+          // For now, treat unmoded TypeRefs as having output mode
+          pathMode = Mode.output;
         } else {
           // PrimitiveModeAlt: mode goes in primitiveStateModes, NOT PathElement
           pathMode = null;
