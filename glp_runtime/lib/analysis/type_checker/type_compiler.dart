@@ -134,6 +134,9 @@ class TypeCompiler {
     } else if (alt is ListConsAlt) {
       _collectTypesFromAlt(alt.head, queue);
       _collectTypesFromAlt(alt.tail, queue);
+    } else if (alt is DiffListAlt) {
+      _collectTypesFromAlt(alt.content, queue);
+      _collectTypesFromAlt(alt.hole, queue);
     }
     // ConstantAlt, ListNilAlt, and PrimitiveModeAlt have no type references
   }
@@ -234,7 +237,52 @@ class TypeCompiler {
       }
 
       transitions[(fromState, tailElem)] = tailTarget;
-      
+
+    } else if (alt is DiffListAlt) {
+      // Difference list: Content \ Hole
+      // Treated as binary functor \(Content, Hole)
+      // DiffList ::= List \ List? compiles to:
+      //   \(2,1) -> List state (content, output mode)
+      //   \(2,2) -> List? state (hole, input mode)
+
+      // Content (first argument of \)
+      final contentType = alt.content;
+      final Mode? contentMode;
+      if (contentType is TypeRef) {
+        contentMode = contentType.isInput ? Mode.input : Mode.output;
+      } else {
+        contentMode = null;
+      }
+      final contentElem = PathElement.functor('\\', 2, 1, mode: contentMode);
+      final contentTarget = _resolveTargetState(contentType, stateMap, finalState);
+
+      if (contentType is PrimitiveModeAlt) {
+        final mode = contentType.isInput ? Mode.input : Mode.output;
+        primitiveStateModes[contentTarget] =
+            (primitiveStateModes[contentTarget] ?? <Mode>{})..add(mode);
+      }
+
+      transitions[(fromState, contentElem)] = contentTarget;
+
+      // Hole (second argument of \)
+      final holeType = alt.hole;
+      final Mode? holeMode;
+      if (holeType is TypeRef) {
+        holeMode = holeType.isInput ? Mode.input : Mode.output;
+      } else {
+        holeMode = null;
+      }
+      final holeElem = PathElement.functor('\\', 2, 2, mode: holeMode);
+      final holeTarget = _resolveTargetState(holeType, stateMap, finalState);
+
+      if (holeType is PrimitiveModeAlt) {
+        final mode = holeType.isInput ? Mode.input : Mode.output;
+        primitiveStateModes[holeTarget] =
+            (primitiveStateModes[holeTarget] ?? <Mode>{})..add(mode);
+      }
+
+      transitions[(fromState, holeElem)] = holeTarget;
+
     } else if (alt is TypeRef) {
       // Type reference at top level (e.g., Any ::< Every, Stream ::< List)
       // This is a subtype declaration - inherit ALL structure from supertype
