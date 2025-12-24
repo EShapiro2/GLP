@@ -31,10 +31,27 @@ class ClauseContributionComputer {
     TypeDFA declaredDFA,
   ) {
     if (pattern is ast.VarTerm) {
-      // Variable: return its inferred type DFA
-      // Handle both writer (X) and reader (X?) - same variable name
       final name = pattern.name;
-      return varTypes[name] ?? TypeDFA.empty();
+      final varType = varTypes[name] ?? TypeDFA.empty();
+
+      // If declared type at this position is primitive, contribution must inherit
+      // the primitive modes for DFA equivalence checking to work correctly.
+      // Example: producer(Number?, Buffer) where N: Number is at position typed _?
+      if (declaredDFA.isPrimitiveState(declaredDFA.startState)) {
+        final declaredModes = declaredDFA.getModesAt(declaredDFA.startState);
+        if (declaredModes.isNotEmpty) {
+          final primitiveState = DFAState('_VAR_', isFinal: true);
+          return TypeDFA(
+            states: {primitiveState},
+            startState: primitiveState,
+            finalStates: {primitiveState},
+            transitions: {},
+            primitiveStateModes: {primitiveState: declaredModes},
+          );
+        }
+      }
+
+      return varType;
     }
 
     if (pattern is ast.ConstTerm) {
