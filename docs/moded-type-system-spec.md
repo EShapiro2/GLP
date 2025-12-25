@@ -844,11 +844,121 @@ where S₁, S₂, S₃, S₄ are the MyStream start states for each argument
 
 After ε-removal and determinization, this becomes a DFA with four distinct transitions from the start state.
 
-### 5.4 NFA to DFA Conversion (Subset Construction)
+### 5.4 Clause Contribution via NFA Construction
+
+Following Yardeni-Shapiro and the paper (Section 7.4), clause contributions are computed via NFA construction and determinization—the **same pipeline** used for type definitions.
+
+> "Each type definition alternative contributes states and transitions to a nondeterministic finite automaton (NFA). Union types introduce nondeterminism... **Each clause of a procedure similarly contributes to the NFA** representing the inferred type." — Paper, Section 7.4
+
+#### 5.4.1 Principle
+
+A clause head pattern is semantically a type expression where:
+- Ground positions (constants) contribute constant alternatives
+- Variable positions contribute the variable's inferred type
+
+The NFA for a clause contribution is built using the same `TypeNFACompiler` infrastructure as type definitions, but with pattern terms instead of type AST.
+
+#### 5.4.2 Pattern-to-Type Correspondence
+
+Each pattern construct corresponds to a type construct:
+
+| Pattern | Equivalent Type Expression |
+|---------|---------------------------|
+| Constant `c` | `ConstantAlt(c)` |
+| Variable `X` (writer) | `varTypes[X]` with mode output |
+| Variable `X?` (reader) | `varTypes[X]` with mode input |
+| Structure `f(t₁,...,tₙ)` | `StructAlt(f, [T₁,...,Tₙ])` where Tᵢ = patternToType(tᵢ) |
+| List `[H\|T]` | `ListConsAlt(patternToType(H), patternToType(T))` |
+| List `[]` | `ListNilAlt` |
+
+#### 5.4.3 NFA Construction Algorithm
+
+```
+ClauseContributionNFA(pattern, varTypes, declaredArgMode):
+  // Convert pattern to type expression
+  typeExpr = patternToTypeExpr(pattern, varTypes, declaredArgMode)
+
+  // Use standard NFA compiler
+  nfaCompiler = TypeNFACompiler(typeEnv)
+  nfa = nfaCompiler.compileExpr(typeExpr)
+
+  return nfa
+
+patternToTypeExpr(term, varTypes, contextMode):
+
+  if term is VarTerm:
+    // Variable: reference to inferred type with variable's mode
+    varTypeName = varTypes[term.name].typeName
+    varMode = term.isReader ? Mode.input : Mode.output
+
+    // Create TypeRef with appropriate mode annotation
+    // The mode is encoded in the TypeRef's isInput flag
+    return TypeRef(varTypeName, isInput: varMode == Mode.input)
+
+  elif term is ConstTerm:
+    return ConstantAlt(term.value)
+
+  elif term is StructTerm:
+    argExprs = []
+    for i in 0..term.arity:
+      argExpr = patternToTypeExpr(term.args[i], varTypes, contextMode)
+      argExprs.add(argExpr)
+    return StructAlt(term.functor, argExprs)
+
+  elif term is ListTerm:
+    if term.isNil:
+      return ListNilAlt()
+    else:
+      headExpr = patternToTypeExpr(term.head, varTypes, contextMode)
+      tailExpr = patternToTypeExpr(term.tail, varTypes, contextMode)
+      return ListConsAlt(headExpr, tailExpr)
+
+  elif term is UnderscoreTerm:
+    // Anonymous variable: accepts any value at any mode
+    return TypeRef("Every")
+```
+
+#### 5.4.4 Variable Type as TypeRef
+
+When a pattern contains variable `X` with inferred type `T`:
+- Writer `X` → `TypeRef(T, isInput: false)` (output mode)
+- Reader `X?` → `TypeRef(T, isInput: true)` (input mode)
+
+The NFA compiler creates a transition with the mode encoded in `ModedLabel`:
+
+```
+For pattern [X | Xs] where type(X) = Any, type(Xs) = List:
+
+patternToTypeExpr produces:
+  ListConsAlt(
+    TypeRef("Any", isInput: false),   // X is writer → output
+    TypeRef("List", isInput: false)   // Xs is writer → output
+  )
+
+NFA compiler produces transitions:
+  start --[[|](2,1), output]--> Any_state
+  start --[[|](2,2), output]--> List_state
+```
+
+#### 5.4.5 Correspondence with Paper
+
+| Paper (Section 7.4) | Spec |
+|---------------------|------|
+| "Each clause similarly contributes to the NFA" | `patternToTypeExpr` + `TypeNFACompiler` |
+| "NFA converted to DFA via subset construction" | Section 5.5 `NFAToDFAConverter.convert()` |
+| "Union of clause contributions" | `TypeDFA.union()` (Section 5.8) |
+| "Fixpoint check T_M^{α,m}(S) = S" | Section 6.1 with subset check |
+
+**Key insight**: By converting patterns to type expressions, we reuse the existing NFA→DFA pipeline rather than building a parallel infrastructure. This ensures:
+1. **Uniform representation**: Both type definitions and clause contributions use same NFA→DFA
+2. **Correct mode encoding**: ModedLabel modes set from variable modes via TypeRef.isInput
+3. **Primitive mode preservation**: Subset construction correctly merges bi-moded states
+
+### 5.5 NFA to DFA Conversion (Subset Construction)
 
 The NFA is converted to a DFA using standard subset construction with mode set tracking.
 
-#### 5.4.1 ε-Closure
+#### 5.5.1 ε-Closure
 
 Compute the ε-closure of a set of NFA states:
 
@@ -874,7 +984,7 @@ Set<NFAState> epsilonClosure(Set<NFAState> states, TypeNFA nfa) {
 }
 ```
 
-#### 5.4.2 Subset Construction Algorithm
+#### 5.5.2 Subset Construction Algorithm
 
 ```dart
 TypeDFA nfaToDfa(TypeNFA nfa) {
@@ -966,7 +1076,7 @@ TypeDFA nfaToDfa(TypeNFA nfa) {
 }
 ```
 
-#### 5.4.3 Mode Set Union in Subset Construction
+#### 5.5.3 Mode Set Union in Subset Construction
 
 **Key property:** When multiple NFA states with different primitive modes are merged into a single DFA state, the DFA state accepts the **union** of their mode sets.
 
@@ -978,7 +1088,7 @@ Example: `Every ::= _ ; _?`
 
 This is how bi-moded types arise naturally from subset construction.
 
-### 5.5 DFA Representation
+### 5.6 DFA Representation
 
 The final DFA representation is the same as the NFA structure, but with deterministic transitions:
 
@@ -1012,7 +1122,7 @@ class TypeDFA {
 
 **Invariant:** For all `(state, label)`, there is at most one entry in `transitions`. This is the determinism property.
 
-### 5.6 Accepting Moded Paths
+### 5.7 Accepting Moded Paths
 
 A moded type DFA accepts a moded path ξ = π₁·π₂···πₙ where each πᵢ is a moded label, iff:
 
@@ -1044,11 +1154,11 @@ bool acceptsModedPath(List<ModedLabel> path, Mode leafMode) {
 }
 ```
 
-### 5.7 Operations on Moded Type DFA
+### 5.8 Operations on Moded Type DFA
 
 This section specifies DFA operations required for type checking: containment, intersection, complement, and emptiness.
 
-#### 5.7.1 Moded Type Containment
+#### 5.8.1 Moded Type Containment
 
 **Definition:** For moded type DFAs A and B:
 ```
@@ -1073,7 +1183,7 @@ bool isSubsetOf(TypeDFA other) {
 }
 ```
 
-#### 5.7.2 Moded Type Intersection
+#### 5.8.2 Moded Type Intersection
 
 Product construction with mode set intersection:
 
@@ -1156,7 +1266,7 @@ TypeDFA intersect(TypeDFA other) {
 }
 ```
 
-#### 5.7.3 Moded Type Complement
+#### 5.8.3 Moded Type Complement
 
 For a complete DFA A, the complement Āᵐ swaps final/non-final states and complements primitive mode sets:
 
@@ -1186,7 +1296,7 @@ TypeDFA modedComplement() {
 }
 ```
 
-#### 5.7.4 Moded Emptiness Check
+#### 5.8.4 Moded Emptiness Check
 
 A moded DFA is empty iff no reachable state is accepting:
 
@@ -1218,7 +1328,7 @@ bool get isModedEmpty {
 }
 ```
 
-#### 5.7.5 DFA Completion
+#### 5.8.5 DFA Completion
 
 Add a sink state for missing transitions:
 
@@ -1262,19 +1372,20 @@ Set<ModedLabel> _computeAlphabet() {
 }
 ```
 
-### 5.8 Correspondence with Paper
+### 5.9 Correspondence with Paper
 
 | Paper Section | Spec Section | Notes |
 |---------------|--------------|-------|
-| Definition (Moded Paths) | 5.6 | Paths are sequences of moded labels |
-| Definition (Moded Type Automaton) | 5.2 (NFA), 5.5 (DFA) | NFA with ε-transitions, then DFA |
+| Definition (Moded Paths) | 5.7 | Paths are sequences of moded labels |
+| Definition (Moded Type Automaton) | 5.2 (NFA), 5.6 (DFA) | NFA with ε-transitions, then DFA |
 | Construction Algorithm | 5.3 | Union creates ε-transitions |
-| Subset Construction | 5.4 | Standard NFA→DFA with mode set union |
-| Bi-Moded Types | 5.4.3 | Arise from mode set union in subset construction |
-| Containment | 5.7.1 | A ⊆ B iff L(A ∩ B̄) = ∅ |
-| Intersection | 5.7.2 | Product construction with mode intersection |
-| Complement | 5.7.3 | Swap final states, complement mode sets |
-| Emptiness | 5.7.4 | Reachability to accepting states |
+| Clause Contribution to NFA | 5.4 | Pattern-to-type conversion + NFA compilation |
+| Subset Construction | 5.5 | Standard NFA→DFA with mode set union |
+| Bi-Moded Types | 5.5.3 | Arise from mode set union in subset construction |
+| Containment | 5.8.1 | A ⊆ B iff L(A ∩ B̄) = ∅ |
+| Intersection | 5.8.2 | Product construction with mode intersection |
+| Complement | 5.8.3 | Swap final states, complement mode sets |
+| Emptiness | 5.8.4 | Reachability to accepting states |
 
 ---
 
@@ -1326,13 +1437,16 @@ For each procedure p/n with declared moded type (T₁^m₁, ..., Tₙ^mₙ):
       If expectedMode.complement ≠ actualMode:
         Report error: "head mode mismatch for Y"
 
-    // Step 4: Compute clause contribution
-    T_C^{α,m} := compute moded contribution
+    // Step 4: Compute clause contribution via NFA (Section 5.4)
+    typeExpr_C := patternToTypeExpr(head, varTypes)
+    nfa_C := TypeNFACompiler.compileExpr(typeExpr_C)
+    T_C^{α,m}(S) := NFAToDFAConverter.convert(nfa_C)
 
-  // Step 5: Check fixpoint (for ::= semantics)
-  inferred := modedTupleDistributiveClosure(union(contributions))
-  If inferred ≠ S:
-    Report error: "inferred moded type ≠ declared type"
+  // Step 5: Check fixpoint
+  inferred := union(T_C^{α,m}(S) for all clauses C)
+  If NOT inferred ⊆ S:
+    Report error: "inferred moded type not subset of declared type"
+  // For ::= semantics, also check S ⊆ inferred (coverage)
 ```
 
 ### 6.2 Mode Checking at Leaf Positions
@@ -1778,6 +1892,23 @@ This implementation follows the theory developed in "Moded Types for Grassroots 
 ---
 
 ## Appendix A: Changelog
+
+### v1.10 (2025-12-25)
+- **NEW** Section 5.4: Clause Contribution via NFA Construction
+  - 5.4.1: Principle - Clause patterns as type expressions
+  - 5.4.2: Pattern-to-Type Correspondence - Mapping pattern constructs to type constructs
+  - 5.4.3: NFA Construction Algorithm - `patternToTypeExpr` + `TypeNFACompiler`
+  - 5.4.4: Variable Type as TypeRef - Mode encoding via `isInput` flag
+  - 5.4.5: Correspondence with Paper - Alignment with Section 7.4
+- **UPDATED** Section 6.1: Algorithm Steps 4-5 to reference NFA-based clause contribution
+- **RENUMBERED** Sections 5.4-5.8:
+  - Old 5.4 → 5.5 (NFA to DFA Conversion)
+  - Old 5.5 → 5.6 (DFA Representation)
+  - Old 5.6 → 5.7 (Accepting Moded Paths)
+  - Old 5.7 → 5.8 (Operations on Moded Type DFA)
+  - Old 5.8 → 5.9 (Correspondence with Paper)
+- **UPDATED** Section 5.9: Correspondence table with new section numbers and clause contribution row
+- **RATIONALE:** Aligns spec with paper Section 7.4: "Each clause of a procedure similarly contributes to the NFA representing the inferred type." By converting patterns to type expressions, we reuse the existing NFA→DFA pipeline rather than building parallel infrastructure. This ensures uniform representation, correct mode encoding, and primitive mode preservation.
 
 ### v1.9 (2025-12-25)
 - **COMPLETE REWRITE** Section 5: Moded Type Automata - NFA Construction and DFA Conversion
