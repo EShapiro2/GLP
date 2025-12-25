@@ -52,15 +52,16 @@ pred(0, 0).
           reason: 'pred with complete coverage should be well-typed: ${result.errors}');
     });
 
-    test('DiffList dl_append - well-typed', () {
+    test('DiffList my_dl_append - well-typed', () {
+      // Use different name to avoid conflict with predefined dl_append
       final source = '''
-procedure dl_append(DiffList?, DiffList?, DiffList).
-dl_append(A\\B?, B\\C?, A?\\C).
+procedure my_dl_append(DiffList?, DiffList?, DiffList).
+my_dl_append(A\\B?, B\\C?, A?\\C).
 ''';
       final result = checkTypes(source);
 
       expect(result.isWellTyped, isTrue,
-          reason: 'dl_append should be well-typed: ${result.errors}');
+          reason: 'my_dl_append should be well-typed: ${result.errors}');
     });
 
     test('swap with Pair type - well-typed', () {

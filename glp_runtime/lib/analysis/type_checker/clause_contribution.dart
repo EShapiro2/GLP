@@ -32,14 +32,21 @@ class ClauseContributionComputer {
     bool declaredIsInput,
   ) {
     // Step 1: Convert pattern to type expression with declared mode
-    // Use declaredIsInput, NOT variable's reader/writer status
     final typeExpr = patternToTypeExpr(pattern, varTypeNames, declaredIsInput);
 
     // Step 2: Compile via NFA→DFA pipeline (spec 5.4.3)
     final nfaCompiler = TypeNFACompiler(typeEnv);
     final nfa = nfaCompiler.compileExpr(typeExpr);
     final dfaConverter = NFAToDFAConverter(nfa);
-    final dfa = dfaConverter.convert();
+    var dfa = dfaConverter.convert();
+
+    // Step 3: Apply same mode transformation as declaredDFA
+    // For input arguments, declaredDFA has applyModeComplement() applied,
+    // so we must apply the same to inferredDFA for subset comparison to work.
+    // Without this, the alphabets differ (e.g., [.|output] vs [.|input]).
+    if (declaredIsInput) {
+      dfa = dfa.applyModeComplement();
+    }
 
     return dfa;
   }
