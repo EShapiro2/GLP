@@ -421,43 +421,58 @@ class TypeChecker {
 
   /// Check if a type has no mode complementations
   bool _typeHasNoModeComplementations(String typeName) {
+    return _typeHasNoModeComplementationsWithVisited(typeName, <String>{});
+  }
+
+  bool _typeHasNoModeComplementationsWithVisited(String typeName, Set<String> visited) {
+    if (visited.contains(typeName)) return true;  // Break cycles
+
     final typeDef = typeEnv.getType(typeName);
     if (typeDef == null) {
       return TypeRef.builtins.contains(typeName);
     }
 
-    return _exprHasNoModeComplementations(typeDef.alternatives);
+    visited.add(typeName);
+    return _exprHasNoModeComplementationsWithVisited(typeDef.alternatives, visited);
   }
 
   bool _exprHasNoModeComplementations(List<TypeExpr> alts) {
+    return _exprHasNoModeComplementationsWithVisited(alts, <String>{});
+  }
+
+  bool _exprHasNoModeComplementationsWithVisited(List<TypeExpr> alts, Set<String> visited) {
     for (final alt in alts) {
-      if (!_singleExprHasNoModeComplementations(alt)) {
+      if (!_singleExprHasNoModeComplementations(alt, visited)) {
         return false;
       }
     }
     return true;
   }
 
-  bool _singleExprHasNoModeComplementations(TypeExpr expr) {
+  bool _singleExprHasNoModeComplementations(TypeExpr expr, [Set<String>? visited]) {
+    visited ??= <String>{};
+
     if (expr is TypeRef) {
       if (expr.isInput) return false;
-      return _typeHasNoModeComplementations(expr.name);
+      // Check for recursive types
+      if (visited.contains(expr.name)) return true;  // Assume OK to break cycle
+      return _typeHasNoModeComplementationsWithVisited(expr.name, visited);
     }
     if (expr is StructAlt) {
       for (final arg in expr.args) {
-        if (!_singleExprHasNoModeComplementations(arg)) {
+        if (!_singleExprHasNoModeComplementations(arg, visited)) {
           return false;
         }
       }
       return true;
     }
     if (expr is ListConsAlt) {
-      return _singleExprHasNoModeComplementations(expr.head) &&
-             _singleExprHasNoModeComplementations(expr.tail);
+      return _singleExprHasNoModeComplementations(expr.head, visited) &&
+             _singleExprHasNoModeComplementations(expr.tail, visited);
     }
     if (expr is DiffListAlt) {
-      return _singleExprHasNoModeComplementations(expr.content) &&
-             _singleExprHasNoModeComplementations(expr.hole);
+      return _singleExprHasNoModeComplementations(expr.content, visited) &&
+             _singleExprHasNoModeComplementations(expr.hole, visited);
     }
     return true;
   }

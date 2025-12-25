@@ -21,51 +21,41 @@ class ClauseContributionComputer {
   /// Compute DFA contribution for a clause head argument pattern.
   ///
   /// Per spec 5.4: Convert pattern to type expression, then use NFA→DFA pipeline.
+  ///
+  /// IMPORTANT: declaredIsInput determines the mode used in TypeRefs.
+  /// This ensures inferred DFA has same modes as declared DFA for fixpoint check.
   TypeDFA computeArgContribution(
     ast.Term pattern,
     Map<String, TypeDFA> varTypes,
     Map<String, String> varTypeNames,
     TypeDFA declaredDFA,
-    bool isInputArg,
+    bool declaredIsInput,
   ) {
-    // Step 1: Convert pattern to type expression (spec 5.4.2-5.4.3)
-    final typeExpr = patternToTypeExpr(pattern, varTypeNames);
+    // Step 1: Convert pattern to type expression with declared mode
+    // Use declaredIsInput, NOT variable's reader/writer status
+    final typeExpr = patternToTypeExpr(pattern, varTypeNames, declaredIsInput);
 
     // Step 2: Compile via NFA→DFA pipeline (spec 5.4.3)
     final nfaCompiler = TypeNFACompiler(typeEnv);
     final nfa = nfaCompiler.compileExpr(typeExpr);
     final dfaConverter = NFAToDFAConverter(nfa);
-    var dfa = dfaConverter.convert();
-
-    // Step 3: Apply mode complement for input arguments
-    // This matches how declared types are processed (line 146-147 in type_checker.dart)
-    if (isInputArg) {
-      dfa = dfa.applyModeComplement();
-    }
+    final dfa = dfaConverter.convert();
 
     return dfa;
   }
 
   /// Convert a pattern term to an equivalent type expression.
   ///
-  /// Spec 5.4.2 Pattern-to-Type Correspondence:
-  /// | Pattern              | Equivalent Type Expression                    |
-  /// |----------------------|-----------------------------------------------|
-  /// | Constant c           | ConstantAlt(c)                                |
-  /// | Variable X (writer)  | TypeRef(varTypes[X], isInput: false)          |
-  /// | Variable X? (reader) | TypeRef(varTypes[X], isInput: true)           |
-  /// | Structure f(t₁,...,tₙ) | StructAlt(f, [T₁,...,Tₙ])                   |
-  /// | List [H|T]           | ListConsAlt(patternToType(H), patternToType(T))|
-  /// | List []              | ListNilAlt                                    |
-  /// | Underscore _         | TypeRef("Every")                              |
-  TypeExpr patternToTypeExpr(ast.Term term, Map<String, String> varTypeNames) {
+  /// IMPORTANT: Mode is determined by declaredIsInput (the procedure declaration's
+  /// mode for this argument), NOT by the variable's reader/writer status.
+  ///
+  /// The variable's reader/writer status is for SRSW checking at call boundaries.
+  /// The type contribution mode must match the declared mode for fixpoint checking.
+  TypeExpr patternToTypeExpr(ast.Term term, Map<String, String> varTypeNames, bool declaredIsInput) {
     if (term is ast.VarTerm) {
-      // Variable: reference to inferred type with variable's mode
-      // Writer X → TypeRef(T, isInput: false) (output mode)
-      // Reader X? → TypeRef(T, isInput: true) (input mode)
+      // Variable: reference to inferred type with DECLARED mode (not variable mode)
       final varTypeName = varTypeNames[term.name] ?? 'Any';
-      final isInput = term.isReader;
-      return TypeRef(varTypeName, term.line, term.column, isInput: isInput);
+      return TypeRef(varTypeName, term.line, term.column, isInput: declaredIsInput);
     }
 
     if (term is ast.ConstTerm) {
@@ -79,35 +69,31 @@ class ClauseContributionComputer {
     }
 
     if (term is ast.StructTerm) {
-      // Structure: recursively convert arguments
+      // Structure: recursively convert arguments with same declared mode
       final argExprs = <TypeExpr>[];
       for (final arg in term.args) {
-        argExprs.add(patternToTypeExpr(arg, varTypeNames));
+        argExprs.add(patternToTypeExpr(arg, varTypeNames, declaredIsInput));
       }
       return StructAlt(term.functor, argExprs, term.line, term.column);
     }
 
     if (term is ast.ListTerm) {
       if (term.isNil) {
-        // Empty list
         return ListNilAlt(term.line, term.column);
       }
-      // List cons: [H | T]
       final headExpr = term.head != null
-          ? patternToTypeExpr(term.head!, varTypeNames)
-          : TypeRef('Any', term.line, term.column);
+          ? patternToTypeExpr(term.head!, varTypeNames, declaredIsInput)
+          : TypeRef('Any', term.line, term.column, isInput: declaredIsInput);
       final tailExpr = term.tail != null
-          ? patternToTypeExpr(term.tail!, varTypeNames)
-          : TypeRef('List', term.line, term.column);
+          ? patternToTypeExpr(term.tail!, varTypeNames, declaredIsInput)
+          : TypeRef('List', term.line, term.column, isInput: declaredIsInput);
       return ListConsAlt(headExpr, tailExpr, term.line, term.column);
     }
 
     if (term is ast.UnderscoreTerm) {
-      // Anonymous variable: accepts any value at any mode
-      return TypeRef('Every', term.line, term.column);
+      return TypeRef('Every', term.line, term.column, isInput: declaredIsInput);
     }
 
-    // Fallback: treat as Any type
-    return TypeRef('Any', term.line, term.column);
+    return TypeRef('Any', term.line, term.column, isInput: declaredIsInput);
   }
 }

@@ -129,7 +129,7 @@ Nat ::= 0 ; s(Nat).
 
 procedure double(Nat?, Nat).
 double(0, 0).
-double(s(N), s(s(M)?)) :- double(N?, M).
+double(s(N), s(s(M?))) :- double(N?, M).
 ''';
       final result = checkTypes(source);
 
