@@ -200,4 +200,42 @@ always_true(_, true).
           reason: 'Should FAIL: only produces true, missing false');
     });
   });
+
+  group('Hypothesis Tests', () {
+
+    test('Hypothesis 1: double with EvenNat output type', () {
+      // Test if double with precise EvenNat type passes
+      final source = '''
+Nat ::= 0 ; s(Nat).
+EvenNat ::= 0 ; s(s(EvenNat)).
+
+procedure double(Nat?, EvenNat).
+double(0, 0).
+double(s(N), s(s(M?))) :- double(N?, M).
+''';
+      final result = checkTypes(source);
+
+      print('Test 1 - double with EvenNat:');
+      print('  Well-typed: ${result.isWellTyped}');
+      print('  Errors: ${result.errors}');
+      print('  Warnings: ${result.warnings}');
+    });
+
+    test('Hypothesis 2: always_true with ground guard', () {
+      // Test if strict SRSW with ground guard detects coverage error
+      final source = '''
+Nat ::= 0 ; s(Nat).
+Bool ::= true ; false.
+
+procedure always_true(Nat?, Bool).
+always_true(X, true) :- ground(X?) | true.
+''';
+      final result = checkTypes(source);
+
+      print('Test 2 - always_true with ground guard:');
+      print('  Well-typed: ${result.isWellTyped}');
+      print('  Errors: ${result.errors}');
+      print('  Warnings: ${result.warnings}');
+    });
+  });
 }
