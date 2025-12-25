@@ -215,7 +215,7 @@ class TypeDFA {
     // Otherwise, labels in A but not in B would have no transition in B̄,
     // causing incorrect rejection (the label would go nowhere instead of sink).
     final combinedAlphabet = alphabet.union(other.alphabet);
-    final otherComplement = other.complete(combinedAlphabet).modedComplement();
+    final otherComplement = other.modedComplement(combinedAlphabet);
     final intersection = modedIntersect(otherComplement);
     return intersection.isModedEmpty;
   }
@@ -327,10 +327,10 @@ class TypeDFA {
   }
 
   /// Moded complement (spec 5.7.3)
-  /// Note: Assumes DFA is already complete over the relevant alphabet.
-  /// For subset checking, use complete(combinedAlphabet) before calling this.
-  TypeDFA modedComplement() {
-    final completed = complete();
+  /// Takes optional alphabet to complete over before complementing.
+  /// IMPORTANT: Always pass the relevant alphabet to ensure correct complement.
+  TypeDFA modedComplement([Set<ModedLabel>? withAlphabet]) {
+    final completed = complete(withAlphabet);
 
     // Complement final states
     final newFinalStates = completed.states.difference(completed.finalStates);
@@ -389,10 +389,27 @@ class TypeDFA {
   /// Union of two DFAs
   TypeDFA union(TypeDFA other) {
     // L(A) ∪ L(B) = complement(complement(A) ∩ complement(B))
+    // IMPORTANT: All complements must be complete over combined alphabet
     final combinedAlphabet = alphabet.union(other.alphabet);
-    final compA = complete(combinedAlphabet).modedComplement();
-    final compB = other.complete(combinedAlphabet).modedComplement();
-    return compA.modedIntersect(compB).modedComplement();
+    final compA = modedComplement(combinedAlphabet);
+    final compB = other.modedComplement(combinedAlphabet);
+    final intersection = compA.modedIntersect(compB);
+    final result = intersection.modedComplement(combinedAlphabet);
+
+    // IMPORTANT: Remove _sink_ from final states.
+    // The sink state represents rejected paths and should never be accepting.
+    // The complement operation may incorrectly make _sink_ final because it
+    // wasn't final in the intersection (complete() adds it as non-final).
+    final sinkState = DFAState('_sink_');
+    final cleanedFinals = result.finalStates.where((s) => s.name != '_sink_').toSet();
+
+    return TypeDFA(
+      states: result.states,
+      startState: result.startState,
+      finalStates: cleanedFinals,
+      transitions: result.transitions,
+      primitiveStateModes: result.primitiveStateModes,
+    );
   }
 
   @override

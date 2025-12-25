@@ -251,9 +251,8 @@ class TypeChecker {
       // Per spec 6.1: For ::= semantics, also check S ⊆ inferred
       final typeDef = typeEnv.getType(decl.argTypes[argIndex].name);
       final isExactType = typeDef?.isExact ?? true;
+
       if (isExactType && !isInputArg) {
-        // Only check coverage for output arguments with ::= types
-        // Input arguments (Type?) are provided by caller, not covered by clauses
         if (!declaredDFA.isSubsetOf(inferredDFA)) {
           // Check if this is due to all-variable patterns (which is OK)
           final allVariables = clauseContributions.every((c) {
