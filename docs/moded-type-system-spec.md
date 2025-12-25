@@ -363,16 +363,19 @@ extension ModeOps on Mode {
 
 ### 3.3 Moded Path Representation
 
-```dart
-/// A path with mode annotation at the leaf
-class ModedPath {
-  final List<PathStep> steps;  // e.g., [f(2,1), g(3,2)]
-  final Mode mode;             // Mode at leaf position
+A **moded path** is a sequence of path elements where each position carries mode information. Mode is tracked via two mechanisms (see Section 5.7):
+- `PathElement.mode` for TypeRef positions (e.g., `T?` in `ch(T?, T)`)
+- `primitiveStateModes` for primitive positions (e.g., `_` or `_?`)
 
-  ModedPath(this.steps, this.mode);
+```dart
+/// A moded path: sequence of path elements with mode at every position.
+class ModedPath {
+  final List<PathElement> steps;  // Each PathElement may carry mode
+
+  ModedPath(this.steps);
 
   @override
-  String toString() => '${steps.join('·')}:${mode.name}';
+  String toString() => steps.map((s) => s.toString()).join('·');
 }
 
 /// Extract moded paths from a term given its expected type
@@ -553,12 +556,12 @@ The choice depends on intended semantics: does the procedure genuinely need to h
 
 ### 5.1 Moded Paths
 
-A **moded path** (as defined in Section 3.3) is a path together with the mode annotation at its leaf. A moded type is characterized by its set of moded paths: `paths^m(S)`.
+A **moded path** (as defined in Section 3.3) is a sequence of (path element, mode) pairs where every position carries its mode annotation. A moded type is characterized by its set of moded paths: `paths^m(S)`.
 
-Following the paper (Definition 6.15):
-- A path describes a position in a term (sequence of functor/argument-index steps)
-- A moded path pairs this with the mode at that leaf position
-- The DFA accepts moded paths, not just structural paths
+Following the paper (Definition [Moded Paths]):
+- A path describes a sequence of positions in a term (functor/argument-index steps)
+- A moded path annotates each position with its mode
+- The DFA accepts moded paths by tracking mode at every position via two mechanisms: `PathElement.mode` for TypeRef positions, and `primitiveStateModes` for primitive type positions
 
 ### 5.2 Primitive State Modes
 
@@ -620,7 +623,7 @@ void _compileAlternative(DFAState state, TypeExpr alt) {
 
 ### 5.4 Accepting Moded Paths
 
-A moded type DFA accepts moded path `(ξ, m)` where ξ = π₁·π₂···πₙ is a sequence of path elements and m ∈ {output, input} is the leaf mode, iff there exist states q₁, ..., qₙ such that:
+A moded type DFA accepts a moded path ξ = π₁·π₂···πₙ where each πᵢ is a path element (possibly carrying mode via `PathElement.mode`), iff there exist states q₁, ..., qₙ such that:
 
 1. For each i ∈ [1..n]: δ(qᵢ₋₁, πᵢ) = qᵢ (where q₀ is the start state)
 2. Either:
@@ -688,11 +691,12 @@ This specification corresponds to the paper as follows:
 
 | Paper | Spec |
 |-------|------|
-| "moded path = path + mode at leaf" (Def 6.15) | `ModedPath(steps, mode)` |
+| "moded path = sequence of (path element, mode) pairs" (Def [Moded Paths]) | `ModedPath` with `List<PathElement>` where each carries mode |
+| Mode at every position | `PathElement.mode` for TypeRef; `primitiveStateModes` for primitives |
 | `_` and `_?` are distinct primitives | Different entries in `primitiveStateModes` |
-| "alternating tree automata with mode annotations" (§7.4) | `primitiveStateModes: Map<DFAState, Set<Mode>>` |
+| "alternating tree automata with mode annotations" (§7.4) | Mode in transitions (`PathElement.mode`) and states (`primitiveStateModes`) |
 | `Every ::= _ ; _?` accepts both | `{Mode.output, Mode.input}` |
-| Mode combines via involution (§7.7) | `combineMode()` during traversal |
+| Mode combines via involution (§7.7) | Pre-computed during type compilation |
 
 ### 5.7 Moded Path Elements for TypeRef Positions
 
@@ -881,7 +885,7 @@ This specification encodes the same information **statically in the DFA**:
 |-----------------|---------------|
 | "mode at position ξ in type τ" | PathElement.mode for TypeRef positions |
 | Combine modes via involution during traversal | Pre-computed during type compilation |
-| Mode at primitive leaf | `primitiveStateModes` on target state |
+| Mode at primitive position | `primitiveStateModes` on target state |
 
 The static encoding enables efficient DFA operations (intersection, union, equivalence checking) while preserving the paper's semantics.
 
