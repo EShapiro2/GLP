@@ -387,17 +387,19 @@ class TypeParser {
     // Atom constant or functor
     if (_check(TypeTokenType.atom)) {
       final atomToken = _advance();
-      
+
       // Check for functor(args)
       if (_match(TypeTokenType.lparen)) {
-        final args = <TypeExpr>[_parseTypeRef()];
+        // Parse arguments as full type alternatives (allows nested structures)
+        // This enables: s(s(EvenNat)), node(Tree, Tree), pair(s(Nat), 0), etc.
+        final args = <TypeExpr>[_parseTypeAlt()];
         while (_match(TypeTokenType.comma)) {
-          args.add(_parseTypeRef());
+          args.add(_parseTypeAlt());
         }
         _consume(TypeTokenType.rparen, 'Expected ")" after functor arguments');
         return StructAlt(atomToken.lexeme, args, atomToken.line, atomToken.column);
       }
-      
+
       // Plain atom constant
       return ConstantAlt(atomToken.lexeme, atomToken.line, atomToken.column);
     }
