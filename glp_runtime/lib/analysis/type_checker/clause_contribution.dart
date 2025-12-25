@@ -1,16 +1,16 @@
 // lib/analysis/type_checker/clause_contribution.dart
 //
-// Computes clause contributions T_{C}^α(S) for fixpoint checking.
-// Given a clause head pattern and inferred variable types,
-// computes the DFA representing all ground terms the clause can produce.
-
-import 'dart:collection';
+// Computes clause contributions T_{C}^{α,m}(S) for fixpoint checking.
+// Follows spec v1.10 Section 5.4: patterns are converted to type expressions,
+// then compiled via the NFA→DFA pipeline.
 
 import '../../compiler/ast.dart' as ast;
 import 'type_dfa.dart';
 import 'type_ast.dart';
+import 'type_nfa.dart';
+import 'nfa_compiler.dart';
+import 'nfa_to_dfa.dart';
 import 'mode.dart';
-import 'moded_label.dart';
 
 /// Computes clause contributions for fixpoint checking
 class ClauseContributionComputer {
@@ -18,327 +18,89 @@ class ClauseContributionComputer {
 
   ClauseContributionComputer(this.typeEnv);
 
-  /// Compute DFA for all ground terms matching a pattern
-  /// with variables instantiated to their inferred types
+  /// Compute DFA contribution for a clause head argument pattern.
+  ///
+  /// Per spec 5.4: Convert pattern to type expression, then use NFA→DFA pipeline.
   TypeDFA computeArgContribution(
     ast.Term pattern,
     Map<String, TypeDFA> varTypes,
+    Map<String, String> varTypeNames,
     TypeDFA declaredDFA,
   ) {
-    if (pattern is ast.VarTerm) {
-      final name = pattern.name;
-      final varType = varTypes[name] ?? TypeDFA.empty();
+    // Step 1: Convert pattern to type expression (spec 5.4.2-5.4.3)
+    final typeExpr = patternToTypeExpr(pattern, varTypeNames);
 
-      // If declared type at this position is primitive, contribution must inherit
-      // the primitive modes for DFA equivalence checking to work correctly.
-      if (declaredDFA.isPrimitiveState(declaredDFA.startState)) {
-        final declaredModes = declaredDFA.getModesAt(declaredDFA.startState);
-        if (declaredModes.isNotEmpty) {
-          final primitiveState = DFAState('_VAR_', isFinal: true);
-          return TypeDFA(
-            states: {primitiveState},
-            startState: primitiveState,
-            finalStates: {primitiveState},
-            transitions: {},
-            primitiveStateModes: {primitiveState: declaredModes},
-          );
-        }
-      }
+    // Step 2: Compile via NFA→DFA pipeline (spec 5.4.3)
+    final nfaCompiler = TypeNFACompiler(typeEnv);
+    final nfa = nfaCompiler.compileExpr(typeExpr);
+    final dfaConverter = NFAToDFAConverter(nfa);
+    final dfa = dfaConverter.convert();
 
-      return varType;
-    }
-
-    if (pattern is ast.ConstTerm) {
-      final value = pattern.value;
-      if (value == null) {
-        return TypeDFA.empty();
-      }
-
-      if (value is String) {
-        return TypeDFA.singleton(value);
-      } else if (value is num) {
-        return TypeDFA.singleton(value.toString());
-      } else {
-        return TypeDFA.singleton(value.toString());
-      }
-    }
-
-    if (pattern is ast.StructTerm) {
-      final argDFAs = <TypeDFA>[];
-      final argModes = <Mode?>[];
-
-      for (int i = 0; i < pattern.args.length; i++) {
-        final argPattern = pattern.args[i];
-        final argIndex = i + 1;
-        final argDeclaredDFA = _extractStructArgDFA(declaredDFA, pattern.functor, pattern.arity, argIndex);
-        final argContribution = computeArgContribution(argPattern, varTypes, argDeclaredDFA);
-        argDFAs.add(argContribution);
-
-        final symbol = '${pattern.functor}(${pattern.arity},$argIndex)';
-        final declaredModes = _getDeclaredModesAtPosition(declaredDFA, symbol);
-        Mode? argMode;
-        if (declaredModes.length == 1) {
-          argMode = declaredModes.first;
-        } else if (declaredModes.length > 1 && argPattern is ast.VarTerm) {
-          argMode = argPattern.isReader ? Mode.input : Mode.output;
-        }
-        argModes.add(argMode);
-      }
-
-      return _buildStructDFA(pattern.functor, pattern.arity, argDFAs, argModes);
-    }
-
-    if (pattern is ast.ListTerm) {
-      if (pattern.isNil) {
-        return TypeDFA.singleton('[]');
-      }
-
-      final headDeclaredDFA = _extractListHeadDFA(declaredDFA);
-      final tailDeclaredDFA = _extractListTailDFA(declaredDFA);
-      final headDFA = computeArgContribution(pattern.head!, varTypes, headDeclaredDFA);
-      final tailDFA = computeArgContribution(pattern.tail!, varTypes, tailDeclaredDFA);
-
-      const headSymbol = '[|](2,1)';
-      final headDeclaredModes = _getDeclaredModesAtPosition(declaredDFA, headSymbol);
-      Mode? headMode;
-      if (headDeclaredModes.length == 1) {
-        headMode = headDeclaredModes.first;
-      } else if (headDeclaredModes.length > 1 && pattern.head is ast.VarTerm) {
-        headMode = (pattern.head as ast.VarTerm).isReader ? Mode.input : Mode.output;
-      }
-
-      const tailSymbol = '[|](2,2)';
-      final tailDeclaredModes = _getDeclaredModesAtPosition(declaredDFA, tailSymbol);
-      Mode? tailMode;
-      if (tailDeclaredModes.length == 1) {
-        tailMode = tailDeclaredModes.first;
-      } else if (tailDeclaredModes.length > 1 && pattern.tail is ast.VarTerm) {
-        tailMode = (pattern.tail as ast.VarTerm).isReader ? Mode.input : Mode.output;
-      }
-
-      return _buildListConsDFA(headDFA, tailDFA, headMode: headMode, tailMode: tailMode);
-    }
-
-    if (pattern is ast.UnderscoreTerm) {
-      if (declaredDFA.primitiveStateModes.isEmpty &&
-          declaredDFA.transitions.isEmpty &&
-          declaredDFA.finalStates.isNotEmpty) {
-        return _createUniversalPrimitiveDFA();
-      }
-      return declaredDFA;
-    }
-
-    return TypeDFA.empty();
+    return dfa;
   }
 
-  /// Build DFA accepting f(v1,...,vn) where vi ∈ L(argDFAs[i])
-  TypeDFA _buildStructDFA(String functor, int arity, List<TypeDFA> argDFAs, [List<Mode?>? argModes]) {
-    if (argDFAs.any((dfa) => dfa.isModedEmpty)) {
-      return TypeDFA.empty();
+  /// Convert a pattern term to an equivalent type expression.
+  ///
+  /// Spec 5.4.2 Pattern-to-Type Correspondence:
+  /// | Pattern              | Equivalent Type Expression                    |
+  /// |----------------------|-----------------------------------------------|
+  /// | Constant c           | ConstantAlt(c)                                |
+  /// | Variable X (writer)  | TypeRef(varTypes[X], isInput: false)          |
+  /// | Variable X? (reader) | TypeRef(varTypes[X], isInput: true)           |
+  /// | Structure f(t₁,...,tₙ) | StructAlt(f, [T₁,...,Tₙ])                   |
+  /// | List [H|T]           | ListConsAlt(patternToType(H), patternToType(T))|
+  /// | List []              | ListNilAlt                                    |
+  /// | Underscore _         | TypeRef("Every")                              |
+  TypeExpr patternToTypeExpr(ast.Term term, Map<String, String> varTypeNames) {
+    if (term is ast.VarTerm) {
+      // Variable: reference to inferred type with variable's mode
+      // Writer X → TypeRef(T, isInput: false) (output mode)
+      // Reader X? → TypeRef(T, isInput: true) (input mode)
+      final varTypeName = varTypeNames[term.name] ?? 'Any';
+      final isInput = term.isReader;
+      return TypeRef(varTypeName, term.line, term.column, isInput: isInput);
     }
 
-    if (argDFAs.isEmpty) {
-      return TypeDFA.singleton(functor);
-    }
-
-    final startState = DFAState('start');
-    final states = <DFAState>{startState};
-    final transitions = <(DFAState, ModedLabel), DFAState>{};
-    final finalStates = <DFAState>{};
-    final primitiveStateModes = <DFAState, Set<Mode>>{};
-
-    for (int i = 0; i < argDFAs.length; i++) {
-      final argDFA = argDFAs[i];
-      final argIndex = i + 1;
-      final argMode = (argModes != null && i < argModes.length) ? argModes[i] : null;
-      final label = ModedLabel.functor(functor, arity, argIndex, mode: argMode);
-
-      final argStartInProduct = _renameState(argDFA.startState, 'arg$argIndex');
-      transitions[(startState, label)] = argStartInProduct;
-
-      _mergeSubDFA(
-        argDFA,
-        'arg$argIndex',
-        states,
-        transitions,
-        finalStates,
-        primitiveStateModes,
-      );
-    }
-
-    return TypeDFA(
-      states: states,
-      startState: startState,
-      finalStates: finalStates,
-      transitions: transitions,
-      primitiveStateModes: primitiveStateModes,
-    );
-  }
-
-  /// Build DFA accepting [h|t] where h ∈ L(head) and t ∈ L(tail)
-  TypeDFA _buildListConsDFA(TypeDFA headDFA, TypeDFA tailDFA, {Mode? headMode, Mode? tailMode}) {
-    if (headDFA.isModedEmpty || tailDFA.isModedEmpty) {
-      return TypeDFA.empty();
-    }
-
-    final startState = DFAState('start');
-    final states = <DFAState>{startState};
-    final transitions = <(DFAState, ModedLabel), DFAState>{};
-    final finalStates = <DFAState>{};
-    final primitiveStateModes = <DFAState, Set<Mode>>{};
-
-    final headLabel = ModedLabel.listHead(mode: headMode);
-    final headStartInProduct = _renameState(headDFA.startState, 'head');
-    transitions[(startState, headLabel)] = headStartInProduct;
-    _mergeSubDFA(headDFA, 'head', states, transitions, finalStates, primitiveStateModes);
-
-    final tailLabel = ModedLabel.listTail(mode: tailMode);
-    final tailStartInProduct = _renameState(tailDFA.startState, 'tail');
-    transitions[(startState, tailLabel)] = tailStartInProduct;
-    _mergeSubDFA(tailDFA, 'tail', states, transitions, finalStates, primitiveStateModes);
-
-    return TypeDFA(
-      states: states,
-      startState: startState,
-      finalStates: finalStates,
-      transitions: transitions,
-      primitiveStateModes: primitiveStateModes,
-    );
-  }
-
-  DFAState _renameState(DFAState state, String prefix) {
-    return DFAState('$prefix.${state.name}', isFinal: state.isFinal);
-  }
-
-  void _mergeSubDFA(
-    TypeDFA subDFA,
-    String prefix,
-    Set<DFAState> states,
-    Map<(DFAState, ModedLabel), DFAState> transitions,
-    Set<DFAState> finalStates,
-    Map<DFAState, Set<Mode>> primitiveStateModes,
-  ) {
-    final stateMap = <DFAState, DFAState>{};
-    for (final state in subDFA.states) {
-      final renamed = _renameState(state, prefix);
-      stateMap[state] = renamed;
-      states.add(renamed);
-      if (subDFA.finalStates.contains(state)) {
-        finalStates.add(renamed);
+    if (term is ast.ConstTerm) {
+      // Constant: create constant alternative
+      final value = term.value;
+      if (value != null) {
+        return ConstantAlt(value, term.line, term.column);
       }
+      // Null value - treat as atom with empty string
+      return ConstantAlt('', term.line, term.column);
     }
 
-    for (final entry in subDFA.transitions.entries) {
-      final (fromState, label) = entry.key;
-      final toState = entry.value;
-
-      final renamedFrom = stateMap[fromState]!;
-      final renamedTo = stateMap[toState]!;
-
-      transitions[(renamedFrom, label)] = renamedTo;
-    }
-
-    for (final entry in subDFA.primitiveStateModes.entries) {
-      final state = entry.key;
-      final modes = entry.value;
-      final renamed = stateMap[state];
-      if (renamed != null) {
-        primitiveStateModes[renamed] = modes;
+    if (term is ast.StructTerm) {
+      // Structure: recursively convert arguments
+      final argExprs = <TypeExpr>[];
+      for (final arg in term.args) {
+        argExprs.add(patternToTypeExpr(arg, varTypeNames));
       }
+      return StructAlt(term.functor, argExprs, term.line, term.column);
     }
-  }
 
-  TypeDFA _createUniversalPrimitiveDFA() {
-    final primitiveState = DFAState('_prim', isFinal: true);
-    return TypeDFA(
-      states: {primitiveState},
-      startState: primitiveState,
-      finalStates: {primitiveState},
-      transitions: {},
-      primitiveStateModes: {primitiveState: {Mode.output}},
-    );
-  }
-
-  TypeDFA _extractStructArgDFA(TypeDFA declaredDFA, String functor, int arity, int argIndex) {
-    final structuralSymbol = '$functor($arity,$argIndex)';
-    return _extractSubDFABySymbol(declaredDFA, structuralSymbol);
-  }
-
-  TypeDFA _extractListHeadDFA(TypeDFA declaredDFA) {
-    const headSymbol = '[|](2,1)';
-    return _extractSubDFABySymbol(declaredDFA, headSymbol);
-  }
-
-  TypeDFA _extractListTailDFA(TypeDFA declaredDFA) {
-    const tailSymbol = '[|](2,2)';
-    return _extractSubDFABySymbol(declaredDFA, tailSymbol);
-  }
-
-  TypeDFA _extractSubDFABySymbol(TypeDFA declaredDFA, String symbol) {
-    DFAState? targetState;
-    for (final entry in declaredDFA.transitions.entries) {
-      final (fromState, label) = entry.key;
-      if (fromState == declaredDFA.startState && label.pathElement == symbol) {
-        targetState = entry.value;
-        break;
+    if (term is ast.ListTerm) {
+      if (term.isNil) {
+        // Empty list
+        return ListNilAlt(term.line, term.column);
       }
+      // List cons: [H | T]
+      final headExpr = term.head != null
+          ? patternToTypeExpr(term.head!, varTypeNames)
+          : TypeRef('Any', term.line, term.column);
+      final tailExpr = term.tail != null
+          ? patternToTypeExpr(term.tail!, varTypeNames)
+          : TypeRef('List', term.line, term.column);
+      return ListConsAlt(headExpr, tailExpr, term.line, term.column);
     }
 
-    if (targetState == null) {
-      return TypeDFA.empty();
+    if (term is ast.UnderscoreTerm) {
+      // Anonymous variable: accepts any value at any mode
+      return TypeRef('Every', term.line, term.column);
     }
 
-    final reachableStates = <DFAState>{};
-    final newTransitions = <(DFAState, ModedLabel), DFAState>{};
-    final queue = Queue<DFAState>();
-    queue.add(targetState);
-    final visited = <DFAState>{};
-
-    while (queue.isNotEmpty) {
-      final current = queue.removeFirst();
-      if (visited.contains(current)) continue;
-      visited.add(current);
-      reachableStates.add(current);
-
-      for (final entry in declaredDFA.transitions.entries) {
-        final (fromState, label) = entry.key;
-        final toState = entry.value;
-
-        if (fromState == current) {
-          newTransitions[(fromState, label)] = toState;
-          if (!visited.contains(toState)) {
-            queue.add(toState);
-          }
-        }
-      }
-    }
-
-    final newFinalStates = reachableStates.intersection(declaredDFA.finalStates);
-
-    final newPrimitiveStateModes = <DFAState, Set<Mode>>{};
-    for (final state in reachableStates) {
-      if (declaredDFA.primitiveStateModes.containsKey(state)) {
-        newPrimitiveStateModes[state] = declaredDFA.primitiveStateModes[state]!;
-      }
-    }
-
-    return TypeDFA(
-      states: reachableStates,
-      startState: targetState,
-      finalStates: newFinalStates,
-      transitions: newTransitions,
-      primitiveStateModes: newPrimitiveStateModes,
-    );
-  }
-
-  Set<Mode?> _getDeclaredModesAtPosition(TypeDFA declaredDFA, String symbol) {
-    final modes = <Mode?>{};
-    for (final entry in declaredDFA.transitions.entries) {
-      final (_, label) = entry.key;
-      if (label.pathElement == symbol) {
-        modes.add(label.mode);
-      }
-    }
-    return modes;
+    // Fallback: treat as Any type
+    return TypeRef('Any', term.line, term.column);
   }
 }

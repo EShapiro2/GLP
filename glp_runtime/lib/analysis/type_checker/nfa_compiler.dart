@@ -84,6 +84,32 @@ class TypeNFACompiler {
     );
   }
 
+  /// Compile an arbitrary type expression to NFA
+  /// Used for clause contribution where patterns are converted to type expressions
+  TypeNFA compileExpr(TypeExpr expr) {
+    // Reset state for fresh compilation
+    _typeStates.clear();
+    _allStates.clear();
+    _transitions.clear();
+    _primitiveStateModes.clear();
+    _epsilonTransitions.clear();
+    _finalStates.clear();
+    _compiledTypes.clear();
+    _stateCounter = 0;
+
+    final startState = _createState('start');
+    _compileAlternative(startState, expr);
+
+    return TypeNFA(
+      states: Set.from(_allStates),
+      startState: startState,
+      finalStates: Set.from(_finalStates),
+      transitions: Map.from(_transitions),
+      primitiveStateModes: Map.from(_primitiveStateModes),
+      epsilonTransitions: Map.from(_epsilonTransitions),
+    );
+  }
+
   /// Compile a type definition (recursively handles referenced types)
   void _compileTypeDef(String typeName, TypeDef typeDef) {
     if (_compiledTypes.contains(typeName)) return;

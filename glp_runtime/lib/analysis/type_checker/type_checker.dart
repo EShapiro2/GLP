@@ -205,6 +205,7 @@ class TypeChecker {
       for (final contribution in clauseContributions) {
         final clause = contribution.clause;
         final varTypes = contribution.variableTypes;
+        final clauseVarTypeNames = contribution.variableTypeNames;
 
         if (argIndex < clause.head.args.length) {
           final argPattern = clause.head.args[argIndex];
@@ -215,6 +216,7 @@ class TypeChecker {
             final argContribution = contributionComputer.computeArgContribution(
               argPattern,
               varTypes,
+              clauseVarTypeNames,
               declaredDFA,
             );
             inferredDFA = inferredDFA.union(argContribution);
@@ -241,6 +243,29 @@ class TypeChecker {
             'inferred type is not a subset of declared type ${decl.argTypes[argIndex]}',
             decl.line, decl.column
           ));
+        }
+      }
+
+      // Coverage check for ::= types: declared ⊆ inferred
+      // Per spec 6.1: For ::= semantics, also check S ⊆ inferred
+      final typeDef = typeEnv.getType(decl.argTypes[argIndex].name);
+      final isExactType = typeDef?.isExact ?? true;
+      if (isExactType && !isInputArg) {
+        // Only check coverage for output arguments with ::= types
+        // Input arguments (Type?) are provided by caller, not covered by clauses
+        if (!declaredDFA.isSubsetOf(inferredDFA)) {
+          // Check if this is due to all-variable patterns (which is OK)
+          final allVariables = clauseContributions.every((c) {
+            if (argIndex >= c.clause.head.args.length) return false;
+            return c.clause.head.args[argIndex] is ast.VarTerm;
+          });
+          if (!allVariables && !declaredDFA.isModedEmpty) {
+            errors.add(TypeError(
+              'Argument ${argIndex + 1} of ${decl.name}/${decl.arity}: '
+              'clauses do not cover all alternatives of declared type ${decl.argTypes[argIndex].name}',
+              decl.line, decl.column
+            ));
+          }
         }
       }
     }
@@ -323,7 +348,7 @@ class TypeChecker {
     return ClauseCheckResult(
       errors,
       warnings,
-      ClauseContribution(clause, varTypes)
+      ClauseContribution(clause, varTypes, varTypeNames)
     );
   }
 
@@ -712,8 +737,9 @@ class ClauseCheckResult {
 class ClauseContribution {
   final ast.Clause clause;
   final Map<String, TypeDFA> variableTypes;
+  final Map<String, String> variableTypeNames;
 
-  ClauseContribution(this.clause, this.variableTypes);
+  ClauseContribution(this.clause, this.variableTypes, this.variableTypeNames);
 }
 
 /// Result of checking a body goal
