@@ -1,7 +1,10 @@
-# GLP Moded Type System Specification (v1.9)
+# GLP Moded Type System Specification (v1.10)
 
 **Updated:** 2025-12-25
-**Change:** Complete rewrite of Section 5 - NFA construction with moded labels followed by subset construction to DFA
+**Changes:**
+- Section 5.4: Added clause contribution via NFA construction
+- Section 6.1: Expanded fixpoint check comments to reference both coverage types
+- Section 6.5 (NEW): Added Structural Coverage Check section with examples and implementation
 
 ## 1. Overview
 
@@ -1442,11 +1445,20 @@ For each procedure p/n with declared moded type (T₁^m₁, ..., Tₙ^mₙ):
     nfa_C := TypeNFACompiler.compileExpr(typeExpr_C)
     T_C^{α,m}(S) := NFAToDFAConverter.convert(nfa_C)
 
-  // Step 5: Check fixpoint
+  // Step 5: Check fixpoint (Yardeni-Shapiro: T_P^α(S) = S)
   inferred := union(T_C^{α,m}(S) for all clauses C)
+
+  // Check inferred ⊆ S (clauses don't produce outside declared type)
   If NOT inferred ⊆ S:
     Report error: "inferred moded type not subset of declared type"
-  // For ::= semantics, also check S ⊆ inferred (coverage)
+
+  // Check S ⊆ inferred (coverage - for ::= semantics only)
+  // This enforces BOTH:
+  //   - Mode coverage: all mode alternatives (_, _?) covered
+  //   - Structural coverage: all constructor alternatives covered
+  // See Section 6.4 (mode coverage) and Section 6.5 (structural coverage)
+  If declaredType.isExact AND NOT S ⊆ inferred:
+    Report error: "declared type not fully covered by clauses"
 ```
 
 ### 6.2 Mode Checking at Leaf Positions
@@ -1555,6 +1567,123 @@ List<ModeError> checkModeCoverage(
   return errors;
 }
 ```
+
+### 6.5 Structural Coverage Check (::= Types)
+
+The fixpoint condition T_M^{α,m}(S) = S requires BOTH directions:
+1. **inferred ⊆ S**: What clauses produce must be within declared type
+2. **S ⊆ inferred**: Declared type must be fully covered by what clauses produce
+
+The second condition enforces **structural coverage**: clauses must collectively cover all constructor alternatives of the declared type.
+
+#### 6.5.1 Structural Coverage Requirement
+
+For a procedure with declaration `procedure p(T₁, ..., Tₙ)` where some Tᵢ uses `::=` (exact type definition), the clauses defining p must produce values covering ALL alternatives of Tᵢ.
+
+**Example (Structural Coverage Failure):**
+
+```glp
+Nat ::= 0 ; s(Nat).
+
+procedure succ(Nat?, Nat).
+succ(N, s(N?)).
+```
+
+The clause produces only terms of the form `s(Nat)`—it never produces `0`. Computing the clause contribution:
+
+```
+T_{succ}^{α,m}(Nat × Nat) = Nat × s(Nat)
+```
+
+The declared type for argument 2 is `Nat = 0 | s(Nat)`, but the inferred type is `s(Nat) ⊊ Nat`. Since `s(Nat) ≠ Nat`, the fixpoint condition `T_P^{α,m}(S) = S` is violated.
+
+**This program is NOT well-moded-typed.**
+
+**Solution (Precise Output Type):**
+
+```glp
+Nat ::= 0 ; s(Nat).
+PosNat ::= s(Nat).
+
+procedure succ(Nat?, PosNat).
+succ(N, s(N?)).
+```
+
+Now the inferred type `s(Nat) = PosNat` equals the declared type.
+
+**Well-moded-typed.**
+
+#### 6.5.2 Structural vs. Mode Coverage
+
+The fixpoint condition T_P^{α,m}(S) = S enforces two kinds of coverage:
+
+| Kind | What it checks | Example |
+|------|---------------|---------|
+| **Mode coverage** | All mode alternatives (`_` and `_?`) covered | `Every ::= _ ; _?` requires clauses with both writer and reader variables |
+| **Structural coverage** | All constructor alternatives covered | `Nat ::= 0 ; s(Nat)` requires clauses producing both `0` and `s(...)` |
+
+Both arise from the same fixpoint equality requirement from Yardeni-Shapiro.
+
+#### 6.5.3 Implementation
+
+```dart
+/// Check structural coverage: declared ⊆ inferred
+/// For ::= types, the declared type must be fully covered
+List<TypeError> checkStructuralCoverage(
+  ProcDecl decl,
+  List<TypeDFA> declaredDFAs,
+  List<TypeDFA> inferredDFAs,
+  TypeEnvironment env,
+) {
+  final errors = <TypeError>[];
+
+  for (int i = 0; i < decl.arity; i++) {
+    final declaredDFA = declaredDFAs[i];
+    final inferredDFA = inferredDFAs[i];
+    final argType = decl.argTypes[i];
+
+    // Only check ::= types (exact definitions)
+    final typeDef = env.getType(argType.name);
+    if (typeDef == null || !typeDef.isExact) continue;
+
+    // Skip input arguments (caller provides, not clause)
+    if (argType.isInput) continue;
+
+    // Check: declared ⊆ inferred
+    if (!declaredDFA.isSubsetOf(inferredDFA)) {
+      errors.add(TypeError(
+        'Structural coverage error: argument ${i + 1} of ${decl.name}/${decl.arity}\n'
+        'Declared type ${argType.name} is not fully covered by clauses.\n'
+        'Hint: Either add clauses for missing constructors, '
+        'or use a more precise output type.',
+        decl.line,
+        decl.column,
+      ));
+    }
+  }
+
+  return errors;
+}
+```
+
+#### 6.5.4 When Structural Coverage Applies
+
+Structural coverage is checked for:
+- **Output arguments** (Type, not Type?) with `::=` definitions
+- Arguments where clauses produce structured values
+
+Structural coverage is NOT checked for:
+- **Input arguments** (Type?) — caller provides these values
+- **Subtype declarations** (`::< `) — partial coverage permitted
+- **All-variable argument patterns** — these accept/produce any value in the type
+
+#### 6.5.5 Correspondence with Paper
+
+This section implements the structural coverage requirement from:
+- Paper Section 6: Example (Structural Coverage: Precise Output Types)
+- Paper Remark (Structural vs. Mode Coverage)
+
+The fixpoint equality T_P^{α,m}(S) = S from Yardeni-Shapiro enforces both mode and structural coverage through a single unified condition.
 
 ---
 
