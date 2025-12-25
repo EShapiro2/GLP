@@ -348,6 +348,38 @@ class TypeDFA {
     );
   }
 
+  /// Apply mode complement: flip all modes (output ↔ input)
+  /// Used for reader arguments (Type?) - flip all modes in transitions and primitive states
+  TypeDFA applyModeComplement() {
+    // Flip mode in each transition label
+    final newTransitions = <(DFAState, ModedLabel), DFAState>{};
+    for (final entry in transitions.entries) {
+      final (fromState, label) = entry.key;
+      final toState = entry.value;
+
+      final flippedMode = label.mode?.complement;  // null stays null
+      final flippedLabel = ModedLabel(label.pathElement, mode: flippedMode);
+      newTransitions[(fromState, flippedLabel)] = toState;
+    }
+
+    // Flip modes in primitive state mode sets
+    final newPrimitiveModes = <DFAState, Set<Mode>>{};
+    for (final entry in primitiveStateModes.entries) {
+      final state = entry.key;
+      final modes = entry.value;
+      final flippedModes = modes.map((m) => m.complement).toSet();
+      newPrimitiveModes[state] = flippedModes;
+    }
+
+    return TypeDFA(
+      states: states,
+      startState: startState,
+      finalStates: finalStates,
+      transitions: newTransitions,
+      primitiveStateModes: newPrimitiveModes,
+    );
+  }
+
   /// Union of two DFAs
   TypeDFA union(TypeDFA other) {
     // L(A) ∪ L(B) = complement(complement(A) ∩ complement(B))

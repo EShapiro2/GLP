@@ -141,7 +141,12 @@ class TypeChecker {
     final argDFAs = <TypeDFA>[];
     for (final argType in decl.argTypes) {
       try {
-        argDFAs.add(compiler.compile(argType.name));
+        var dfa = compiler.compile(argType.name);
+        // Apply mode complement for reader arguments (Type?)
+        if (argType.isInput) {
+          dfa = dfa.applyModeComplement();
+        }
+        argDFAs.add(dfa);
       } catch (e) {
         errors.add(TypeError(
           'Cannot compile type ${argType.name}: $e',
@@ -630,7 +635,12 @@ class TypeChecker {
     final argDFAs = <TypeDFA>[];
     for (final argType in procDecl.argTypes) {
       try {
-        argDFAs.add(compiler.compile(argType.name));
+        var dfa = compiler.compile(argType.name);
+        // Apply mode complement for reader arguments (Type?)
+        if (argType.isInput) {
+          dfa = dfa.applyModeComplement();
+        }
+        argDFAs.add(dfa);
       } catch (e) {
         return GoalCheckResult(errors);
       }
