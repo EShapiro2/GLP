@@ -436,7 +436,7 @@ class TypeChecker {
     final paths = _extractGroundPaths(term, <ModedLabel>[]);
 
     for (final path in paths) {
-      if (!dfa.acceptsModedPath(path, Mode.output)) {
+      if (!dfa.acceptsStructuralPath(path)) {
         return GroundPathCheck(false, path);
       }
     }

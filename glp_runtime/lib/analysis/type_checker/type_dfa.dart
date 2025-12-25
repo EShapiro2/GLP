@@ -148,6 +148,29 @@ class TypeDFA {
     }
   }
 
+  /// Check if DFA accepts a structural path (ignoring modes in labels)
+  /// Used for ground path checking where we verify structure, not modes
+  bool acceptsStructuralPath(List<ModedLabel> path) {
+    var current = startState;
+
+    for (final label in path) {
+      // Find transition by symbol only, ignoring mode
+      DFAState? next;
+      for (final entry in transitions.entries) {
+        final (fromState, transLabel) = entry.key;
+        if (fromState == current && transLabel.pathElement == label.pathElement) {
+          next = entry.value;
+          break;
+        }
+      }
+      if (next == null) return false;
+      current = next;
+    }
+
+    // Accept if we reach a final state or a primitive state
+    return finalStates.contains(current) || isPrimitiveState(current);
+  }
+
   /// Check if moded language is empty (spec 5.7.4)
   bool get isModedEmpty {
     final visited = <DFAState>{};
