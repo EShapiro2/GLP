@@ -46,16 +46,19 @@ class ClauseContributionComputer {
 
   /// Convert a pattern term to an equivalent type expression.
   ///
-  /// IMPORTANT: Mode is determined by declaredIsInput (the procedure declaration's
-  /// mode for this argument), NOT by the variable's reader/writer status.
+  /// Per spec Section 5.4.4 and paper Section 6 (Example 6.22):
+  /// - Writer variable X → TypeRef with output mode (isInput: false)
+  /// - Reader variable X? → TypeRef with input mode (isInput: true)
   ///
-  /// The variable's reader/writer status is for SRSW checking at call boundaries.
-  /// The type contribution mode must match the declared mode for fixpoint checking.
+  /// The variable's reader/writer status determines the mode annotation,
+  /// which affects how the clause contribution DFA is built.
   TypeExpr patternToTypeExpr(ast.Term term, Map<String, String> varTypeNames, bool declaredIsInput) {
     if (term is ast.VarTerm) {
-      // Variable: reference to inferred type with DECLARED mode (not variable mode)
+      // Variable: reference to inferred type with VARIABLE's mode (reader/writer)
+      // Per spec 5.4.4: Writer X → output mode, Reader X? → input mode
       final varTypeName = varTypeNames[term.name] ?? 'Any';
-      return TypeRef(varTypeName, term.line, term.column, isInput: declaredIsInput);
+      final varIsInput = term.isReader;  // reader X? → input, writer X → output
+      return TypeRef(varTypeName, term.line, term.column, isInput: varIsInput);
     }
 
     if (term is ast.ConstTerm) {
