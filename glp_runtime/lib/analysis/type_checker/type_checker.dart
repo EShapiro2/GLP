@@ -218,6 +218,7 @@ class TypeChecker {
               varTypes,
               clauseVarTypeNames,
               declaredDFA,
+              isInputArg,
             );
             inferredDFA = inferredDFA.union(argContribution);
           }

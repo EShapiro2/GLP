@@ -266,8 +266,13 @@ class TypeNFACompiler {
       _primitiveStateModes[state] = {mode};
       return state;
     }
-    // Nested structures would need more handling
-    throw TypeCompileError('Unsupported nested type expression: $expr');
+
+    // For nested structures, constants, lists: compile inline
+    // Create a fresh state and compile the expression from there
+    // This handles cases like s(s(N)) where we have StructAlt(s, [StructAlt(s, [...])])
+    final state = _createState('nested');
+    _compileAlternative(state, expr);
+    return state;
   }
 
   /// Compile a built-in type (Number, String)

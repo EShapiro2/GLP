@@ -26,6 +26,7 @@ class ClauseContributionComputer {
     Map<String, TypeDFA> varTypes,
     Map<String, String> varTypeNames,
     TypeDFA declaredDFA,
+    bool isInputArg,
   ) {
     // Step 1: Convert pattern to type expression (spec 5.4.2-5.4.3)
     final typeExpr = patternToTypeExpr(pattern, varTypeNames);
@@ -34,7 +35,13 @@ class ClauseContributionComputer {
     final nfaCompiler = TypeNFACompiler(typeEnv);
     final nfa = nfaCompiler.compileExpr(typeExpr);
     final dfaConverter = NFAToDFAConverter(nfa);
-    final dfa = dfaConverter.convert();
+    var dfa = dfaConverter.convert();
+
+    // Step 3: Apply mode complement for input arguments
+    // This matches how declared types are processed (line 146-147 in type_checker.dart)
+    if (isInputArg) {
+      dfa = dfa.applyModeComplement();
+    }
 
     return dfa;
   }
