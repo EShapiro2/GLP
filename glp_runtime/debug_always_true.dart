@@ -4,6 +4,7 @@ import 'package:glp_runtime/analysis/type_checker/clause_contribution.dart';
 import 'package:glp_runtime/analysis/type_checker/nfa_compiler.dart';
 import 'package:glp_runtime/analysis/type_checker/nfa_to_dfa.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
+import 'package:glp_runtime/analysis/type_checker/moded_label.dart';
 import 'package:glp_runtime/compiler/lexer.dart' as glp;
 import 'package:glp_runtime/compiler/parser.dart' as glp;
 
@@ -78,15 +79,44 @@ always_true(X, true) :- ground(X?) | true.
   print(inferredDFA);
   print('');
 
-  // Check subset
-  print('=== Subset Check ===');
-  print('declaredDFA.isSubsetOf(inferredDFA) = ${declaredDFA.isSubsetOf(inferredDFA)}');
-  print('inferredDFA.isSubsetOf(declaredDFA) = ${inferredDFA.isSubsetOf(declaredDFA)}');
+  // Check subset - detailed debugging
+  print('=== Subset Check Details ===');
 
-  // Check if inferredDFA start state is primitive
+  // Step 1: Compute complement of inferredDFA
+  print('Step 1: Computing complement of inferredDFA...');
+  final inferredComplement = inferredDFA.modedComplement();
+  print('Inferred Complement DFA:');
+  print(inferredComplement);
   print('');
-  print('=== Start State Analysis ===');
-  print('inferred start: ${inferredDFA.startState}');
-  print('inferred isPrimitive(start): ${inferredDFA.isPrimitiveState(inferredDFA.startState)}');
-  print('inferred modes at start: ${inferredDFA.getModesAt(inferredDFA.startState)}');
+
+  // Step 2: Compute intersection (declared ∩ inferred̄)
+  print('Step 2: Computing intersection (declared ∩ inferredComplement)...');
+  final intersection = declaredDFA.modedIntersect(inferredComplement);
+  print('Intersection DFA:');
+  print(intersection);
+  print('');
+
+  // Step 3: Check if intersection is empty
+  print('Step 3: Checking if intersection is empty...');
+  print('intersection.isModedEmpty = ${intersection.isModedEmpty}');
+  print('');
+
+  // Step 4: Final result
+  print('Step 4: Final isSubsetOf result...');
+  print('declaredDFA.isSubsetOf(inferredDFA) = ${declaredDFA.isSubsetOf(inferredDFA)}');
+  print('');
+
+  // Additional: Check what paths each DFA accepts
+  print('=== Path Acceptance Tests ===');
+  final truePath = [ModedLabel.constant('true')];
+  final falsePath = [ModedLabel.constant('false')];
+
+  print('declaredDFA.acceptsStructuralPath([true]) = ${declaredDFA.acceptsStructuralPath(truePath)}');
+  print('declaredDFA.acceptsStructuralPath([false]) = ${declaredDFA.acceptsStructuralPath(falsePath)}');
+  print('inferredDFA.acceptsStructuralPath([true]) = ${inferredDFA.acceptsStructuralPath(truePath)}');
+  print('inferredDFA.acceptsStructuralPath([false]) = ${inferredDFA.acceptsStructuralPath(falsePath)}');
+  print('inferredComplement.acceptsStructuralPath([true]) = ${inferredComplement.acceptsStructuralPath(truePath)}');
+  print('inferredComplement.acceptsStructuralPath([false]) = ${inferredComplement.acceptsStructuralPath(falsePath)}');
+  print('intersection.acceptsStructuralPath([true]) = ${intersection.acceptsStructuralPath(truePath)}');
+  print('intersection.acceptsStructuralPath([false]) = ${intersection.acceptsStructuralPath(falsePath)}');
 }
