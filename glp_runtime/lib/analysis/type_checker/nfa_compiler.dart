@@ -247,6 +247,7 @@ class TypeNFACompiler {
   }
 
   /// Resolve target state for a type expression
+  /// Handles all expression types including nested structures
   NFAState _resolveTargetState(TypeExpr expr) {
     if (expr is TypeRef) {
       final state = _getTypeState(expr.name);
@@ -259,6 +260,7 @@ class TypeNFACompiler {
       }
       return state;
     }
+
     if (expr is PrimitiveModeAlt) {
       // Create a unique state for this primitive position
       final state = _createState('prim');
@@ -267,12 +269,48 @@ class TypeNFACompiler {
       return state;
     }
 
-    // For nested structures, constants, lists: compile inline
-    // Create a fresh state and compile the expression from there
-    // This handles cases like s(s(N)) where we have StructAlt(s, [StructAlt(s, [...])])
-    final state = _createState('nested');
-    _compileAlternative(state, expr);
-    return state;
+    if (expr is ConstantAlt) {
+      // Constant: create intermediate state leading to final state
+      final state = _createState('const_${expr.value}');
+      final label = ModedLabel.constant(expr.value);
+      final target = _createState('final_${expr.value}');
+      _finalStates.add(target);
+      _addTransition(state, label, target);
+      return state;
+    }
+
+    if (expr is StructAlt) {
+      // Nested structure: create state and compile recursively
+      final state = _createState('struct_${expr.functor}');
+      _compileStructAlt(state, expr);
+      return state;
+    }
+
+    if (expr is ListNilAlt) {
+      // Empty list constant
+      final state = _createState('nil');
+      final label = ModedLabel.nil();
+      final target = _createState('final_nil');
+      _finalStates.add(target);
+      _addTransition(state, label, target);
+      return state;
+    }
+
+    if (expr is ListConsAlt) {
+      // List cons: create state and compile recursively
+      final state = _createState('cons');
+      _compileListConsAlt(state, expr);
+      return state;
+    }
+
+    if (expr is DiffListAlt) {
+      // Difference list: create state and compile recursively
+      final state = _createState('difflist');
+      _compileDiffListAlt(state, expr);
+      return state;
+    }
+
+    throw TypeCompileError('Unsupported type expression: $expr');
   }
 
   /// Compile a built-in type (Number, String)

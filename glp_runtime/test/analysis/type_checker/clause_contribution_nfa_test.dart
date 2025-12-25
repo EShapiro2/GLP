@@ -1,16 +1,15 @@
 // test/analysis/type_checker/clause_contribution_nfa_test.dart
 //
 // Tests for NFA-based clause contribution (spec v1.10 Section 5.4)
-// Per Yardeni-Shapiro: P is well-typed by S iff T_P^α(S) = S (fixpoint)
+// Per Yardeni-Shapiro: P is well-typed by S iff T_P^α(S) = S (fixpoint equality)
 
 import 'package:test/test.dart';
 import 'test_helpers.dart';
 
 void main() {
-  group('Clause Contribution via NFA Pipeline', () {
+  group('Clause Contribution via NFA Pipeline - Positive Controls', () {
 
-    test('Simple list copy - well-typed', () {
-      // Use predefined List, don't redefine
+    test('List copy with predefined List - well-typed', () {
       final source = '''
 procedure copy(List?, List).
 copy([], []).
@@ -19,12 +18,12 @@ copy([H | In], [H? | Out?]) :- copy(In?, Out).
       final result = checkTypes(source);
 
       expect(result.isWellTyped, isTrue,
-          reason: 'Simple list copy should be well-typed: ${result.errors}');
+          reason: 'List copy should be well-typed: ${result.errors}');
     });
 
-    test('succ with precise output type s(Nat) - well-typed', () {
+    test('succ with precise output type PosNat - well-typed', () {
       // Per YS: declared type must equal inferred type (fixpoint)
-      // succ only produces s(Nat), so declare s(Nat) not Nat
+      // succ only produces s(Nat), so declare s(Nat) as output type
       final source = '''
 Nat ::= 0 ; s(Nat).
 PosNat ::= s(Nat).
@@ -35,10 +34,11 @@ succ(N, s(N?)).
       final result = checkTypes(source);
 
       expect(result.isWellTyped, isTrue,
-          reason: 'succ with precise type should be well-typed: ${result.errors}');
+          reason: 'succ with precise PosNat output should be well-typed: ${result.errors}');
     });
 
-    test('pred with complete coverage - well-typed', () {
+    test('pred with complete Nat coverage - well-typed', () {
+      // pred covers both 0 and s(N) cases, so Nat output is correct
       final source = '''
 Nat ::= 0 ; s(Nat).
 
@@ -52,8 +52,7 @@ pred(0, 0).
           reason: 'pred with complete coverage should be well-typed: ${result.errors}');
     });
 
-    test('DiffList type - well-typed dl_append', () {
-      // Use predefined List and DiffList
+    test('DiffList dl_append - well-typed', () {
       final source = '''
 procedure dl_append(DiffList?, DiffList?, DiffList).
 dl_append(A\\B?, B\\C?, A?\\C).
@@ -64,7 +63,8 @@ dl_append(A\\B?, B\\C?, A?\\C).
           reason: 'dl_append should be well-typed: ${result.errors}');
     });
 
-    test('swap with complete coverage - well-typed', () {
+    test('swap with Pair type - well-typed', () {
+      // swap covers the single constructor pair/2
       final source = '''
 Nat ::= 0 ; s(Nat).
 Pair ::= pair(Nat, Nat).
@@ -78,7 +78,8 @@ swap(pair(X, Y), pair(Y?, X?)).
           reason: 'swap should be well-typed: ${result.errors}');
     });
 
-    test('Constant in clause with complete coverage', () {
+    test('is_zero with Bool output - well-typed', () {
+      // Covers both Nat constructors (0 and s), produces both Bool constructors
       final source = '''
 Nat ::= 0 ; s(Nat).
 Bool ::= true ; false.
@@ -93,7 +94,8 @@ is_zero(s(_), false).
           reason: 'is_zero should be well-typed: ${result.errors}');
     });
 
-    test('Underscore matches any - uses Every', () {
+    test('ignore with Unit output - well-typed', () {
+      // Underscore matches any Nat, produces single Unit constructor
       final source = '''
 Nat ::= 0 ; s(Nat).
 Unit ::= unit.
@@ -104,29 +106,44 @@ ignore(_, unit).
       final result = checkTypes(source);
 
       expect(result.isWellTyped, isTrue,
-          reason: 'ignore with underscore should be well-typed: ${result.errors}');
+          reason: 'ignore should be well-typed: ${result.errors}');
     });
 
-    test('Subtype ::< does not require coverage', () {
-      // Stream ::< List means partial coverage is OK
+    test('Stream echo - partial coverage OK with ::< subtype', () {
+      // Stream ::< List means no coverage requirement for []
       final source = '''
 procedure echo(Stream?, Stream).
 echo([H | T], [H? | Out?]) :- echo(T?, Out).
 ''';
-      // Missing: echo([], []). but Stream ::< means no coverage required
       final result = checkTypes(source);
 
       expect(result.isWellTyped, isTrue,
-          reason: 'Stream ::< should not require [] coverage: ${result.errors}');
+          reason: 'Stream with ::< should allow partial coverage: ${result.errors}');
+    });
+
+    test('double with precise output type - well-typed', () {
+      // double(N) = s(s(...N times...)) which is PosNat for N>0, but 0 maps to 0
+      // So we need Nat output since we produce both 0 and s(...)
+      final source = '''
+Nat ::= 0 ; s(Nat).
+
+procedure double(Nat?, Nat).
+double(0, 0).
+double(s(N), s(s(M)?)) :- double(N?, M).
+''';
+      final result = checkTypes(source);
+
+      expect(result.isWellTyped, isTrue,
+          reason: 'double should be well-typed: ${result.errors}');
     });
   });
 
-  group('Negative Controls - Should Fail (per YS fixpoint requirement)', () {
+  group('Clause Contribution - Negative Controls (Should Fail)', () {
 
-    test('succ with imprecise type Nat - SHOULD FAIL', () {
+    test('succ with imprecise Nat output - FAILS structural coverage', () {
       // Per YS: T_P^α(S) must equal S
-      // succ produces only s(Nat), not full Nat
-      // So Nat is NOT a fixpoint - this should fail
+      // succ produces only s(Nat), not full Nat (missing 0)
+      // So Nat output violates fixpoint equality
       final source = '''
 Nat ::= 0 ; s(Nat).
 
@@ -136,10 +153,10 @@ succ(N, s(N?)).
       final result = checkTypes(source);
 
       expect(result.errors.isNotEmpty, isTrue,
-          reason: 'succ(Nat?, Nat) should fail: output s(Nat) ≠ Nat');
+          reason: 'succ(Nat?, Nat) should FAIL: output s(Nat) does not cover full Nat');
     });
 
-    test('Missing constructor coverage - SHOULD FAIL', () {
+    test('half missing base cases - FAILS structural coverage', () {
       // half is missing cases for 0 and s(0)
       final source = '''
 Nat ::= 0 ; s(Nat).
@@ -150,10 +167,11 @@ half(s(s(N)), s(M?)) :- half(N?, M).
       final result = checkTypes(source);
 
       expect(result.errors.isNotEmpty, isTrue,
-          reason: 'half should fail: missing 0 and s(0) coverage');
+          reason: 'half should FAIL: missing coverage for 0 and s(0)');
     });
 
-    test('Type mismatch - wrong constructor', () {
+    test('wrong constructor in output - FAILS type check', () {
+      // Produces Nat constant 0 where Bool expected
       final source = '''
 Nat ::= 0 ; s(Nat).
 Bool ::= true ; false.
@@ -161,11 +179,25 @@ Bool ::= true ; false.
 procedure bad(Nat?, Bool).
 bad(0, 0).
 ''';
-      // 0 is Nat, not Bool
       final result = checkTypes(source);
 
       expect(result.errors.isNotEmpty, isTrue,
-          reason: 'Should reject 0 where Bool expected');
+          reason: 'Should FAIL: 0 is Nat, not Bool');
+    });
+
+    test('missing constructor alternative - FAILS structural coverage', () {
+      // Only produces true, never false
+      final source = '''
+Nat ::= 0 ; s(Nat).
+Bool ::= true ; false.
+
+procedure always_true(Nat?, Bool).
+always_true(_, true).
+''';
+      final result = checkTypes(source);
+
+      expect(result.errors.isNotEmpty, isTrue,
+          reason: 'Should FAIL: only produces true, missing false');
     });
   });
 }
