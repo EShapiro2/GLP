@@ -318,21 +318,22 @@ class TypeDFA {
 
     // Compute mode intersection for product state
     void computeModesForProduct(DFAState state1, DFAState state2, DFAState productState) {
-      final modes1 = getModesAt(state1);
-      final modes2 = other.getModesAt(state2);
+      final isPrim1 = isPrimitiveState(state1);
+      final isPrim2 = other.isPrimitiveState(state2);
 
-      // If both states are primitive, intersect their mode sets
-      if (modes1.isNotEmpty && modes2.isNotEmpty) {
+      // If both states are primitive, intersect their mode sets (even if result is empty)
+      if (isPrim1 && isPrim2) {
+        final modes1 = getModesAt(state1);
+        final modes2 = other.getModesAt(state2);
         final intersectedModes = modes1.intersection(modes2);
-        if (intersectedModes.isNotEmpty) {
-          newPrimitiveStateModes[productState] = intersectedModes;
-        }
+        // Always add to preserve primitive status, even if intersection is empty
+        newPrimitiveStateModes[productState] = intersectedModes;
       }
       // If only one is primitive, use its modes
-      else if (modes1.isNotEmpty) {
-        newPrimitiveStateModes[productState] = modes1;
-      } else if (modes2.isNotEmpty) {
-        newPrimitiveStateModes[productState] = modes2;
+      else if (isPrim1) {
+        newPrimitiveStateModes[productState] = getModesAt(state1);
+      } else if (isPrim2) {
+        newPrimitiveStateModes[productState] = other.getModesAt(state2);
       }
     }
 
@@ -571,10 +572,8 @@ class TypeDFA {
       final modes = completed.primitiveStateModes[state];
       if (modes != null && modes.isNotEmpty) {
         final complementModes = {Mode.output, Mode.input}.difference(modes);
-        if (complementModes.isNotEmpty) {
-          newPrimitiveModes[state] = complementModes;
-        }
-        // If complement is empty, state accepts no modes in complement
+        // Always add the state to preserve primitive status, even if complement is empty
+        newPrimitiveModes[state] = complementModes;
       }
       // Non-primitive states: no change to primitiveStateModes
     }
@@ -614,6 +613,7 @@ class TypeDFA {
       startState: startState,
       finalStates: finalStates,
       transitions: newTransitions,
+      primitiveStateModes: primitiveStateModes,  // Preserve primitive modes
     );
   }
   
