@@ -133,7 +133,7 @@ class ClauseContributionComputer {
 
   /// Build DFA accepting f(v1,...,vn) where vi ∈ L(argDFAs[i])
   TypeDFA _buildStructDFA(String functor, int arity, List<TypeDFA> argDFAs, [List<Mode?>? argModes]) {
-    if (argDFAs.any((dfa) => dfa.isEmpty)) {
+    if (argDFAs.any((dfa) => dfa.isModedEmpty)) {
       return TypeDFA.empty();
     }
 
@@ -177,7 +177,7 @@ class ClauseContributionComputer {
 
   /// Build DFA accepting [h|t] where h ∈ L(head) and t ∈ L(tail)
   TypeDFA _buildListConsDFA(TypeDFA headDFA, TypeDFA tailDFA, {Mode? headMode, Mode? tailMode}) {
-    if (headDFA.isEmpty || tailDFA.isEmpty) {
+    if (headDFA.isModedEmpty || tailDFA.isModedEmpty) {
       return TypeDFA.empty();
     }
 

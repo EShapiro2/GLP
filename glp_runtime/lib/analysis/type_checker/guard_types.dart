@@ -146,7 +146,7 @@ void _processGuard(
 
         if (constraints.containsKey(varName)) {
           // Intersect with existing constraint
-          constraints[varName] = constraints[varName]!.intersect(typeDFA);
+          constraints[varName] = constraints[varName]!.modedIntersect(typeDFA);
         } else {
           constraints[varName] = typeDFA;
         }
@@ -166,7 +166,7 @@ void _processGuard(
         final varName = arg.name;
 
         if (constraints.containsKey(varName)) {
-          constraints[varName] = constraints[varName]!.intersect(typeDFA);
+          constraints[varName] = constraints[varName]!.modedIntersect(typeDFA);
         } else {
           constraints[varName] = typeDFA;
         }
