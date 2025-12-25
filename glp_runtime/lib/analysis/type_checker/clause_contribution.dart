@@ -10,6 +10,7 @@ import '../../compiler/ast.dart' as ast;
 import 'type_dfa.dart';
 import 'type_ast.dart';
 import 'mode.dart';
+import 'moded_label.dart';
 
 /// Computes clause contributions for fixpoint checking
 class ClauseContributionComputer {
@@ -19,12 +20,6 @@ class ClauseContributionComputer {
 
   /// Compute DFA for all ground terms matching a pattern
   /// with variables instantiated to their inferred types
-  ///
-  /// Given pattern f(X, g(Y)) and varTypes {X: Nat, Y: Bool},
-  /// returns DFA accepting {f(n, g(b)) | n ∈ Nat, b ∈ Bool}
-  ///
-  /// [declaredDFA] is the DFA for the declared type at this pattern position.
-  /// Used for underscore (_) patterns which accept any value of the declared type.
   TypeDFA computeArgContribution(
     ast.Term pattern,
     Map<String, TypeDFA> varTypes,
@@ -36,7 +31,6 @@ class ClauseContributionComputer {
 
       // If declared type at this position is primitive, contribution must inherit
       // the primitive modes for DFA equivalence checking to work correctly.
-      // Example: producer(Number?, Buffer) where N: Number is at position typed _?
       if (declaredDFA.isPrimitiveState(declaredDFA.startState)) {
         final declaredModes = declaredDFA.getModesAt(declaredDFA.startState);
         if (declaredModes.isNotEmpty) {
@@ -55,29 +49,21 @@ class ClauseContributionComputer {
     }
 
     if (pattern is ast.ConstTerm) {
-      // Constant: can be int, double, or String (atom/string literal)
       final value = pattern.value;
       if (value == null) {
         return TypeDFA.empty();
       }
 
-      // Convert to string representation for DFA
       if (value is String) {
-        // String literals are quoted in toString, atoms are not
-        // Use the value directly as the constant symbol
         return TypeDFA.singleton(value);
       } else if (value is num) {
-        // Numbers use toString representation
         return TypeDFA.singleton(value.toString());
       } else {
-        // Other types: use toString
         return TypeDFA.singleton(value.toString());
       }
     }
 
     if (pattern is ast.StructTerm) {
-      // f(t1, ..., tn): DFA accepting f(v1, ..., vn)
-      // where each vi is in L(argDFA[i])
       final argDFAs = <TypeDFA>[];
       final argModes = <Mode?>[];
 
@@ -88,7 +74,6 @@ class ClauseContributionComputer {
         final argContribution = computeArgContribution(argPattern, varTypes, argDeclaredDFA);
         argDFAs.add(argContribution);
 
-        // Determine mode for this position based on declared type and pattern
         final symbol = '${pattern.functor}(${pattern.arity},$argIndex)';
         final declaredModes = _getDeclaredModesAtPosition(declaredDFA, symbol);
         Mode? argMode;
@@ -105,16 +90,14 @@ class ClauseContributionComputer {
 
     if (pattern is ast.ListTerm) {
       if (pattern.isNil) {
-        // Empty list: singleton DFA
         return TypeDFA.singleton('[]');
       }
-      // [H|T]: DFA for list cons
+
       final headDeclaredDFA = _extractListHeadDFA(declaredDFA);
       final tailDeclaredDFA = _extractListTailDFA(declaredDFA);
       final headDFA = computeArgContribution(pattern.head!, varTypes, headDeclaredDFA);
       final tailDFA = computeArgContribution(pattern.tail!, varTypes, tailDeclaredDFA);
 
-      // Determine modes for head and tail based on declared type and pattern
       const headSymbol = '[|](2,1)';
       final headDeclaredModes = _getDeclaredModesAtPosition(declaredDFA, headSymbol);
       Mode? headMode;
@@ -137,62 +120,42 @@ class ClauseContributionComputer {
     }
 
     if (pattern is ast.UnderscoreTerm) {
-      // Anonymous variable accepts any value of the declared type
-      // If declaredDFA has no useful info (extracted sub-DFA from nested position),
-      // create a universal primitive DFA
       if (declaredDFA.primitiveStateModes.isEmpty &&
           declaredDFA.transitions.isEmpty &&
           declaredDFA.finalStates.isNotEmpty) {
-        // This is a primitive final state with no mode info - create universal DFA
         return _createUniversalPrimitiveDFA();
       }
       return declaredDFA;
     }
 
-    // Unknown term type - should not happen
     return TypeDFA.empty();
   }
 
   /// Build DFA accepting f(v1,...,vn) where vi ∈ L(argDFAs[i])
-  ///
-  /// Strategy: Build a DFA with states and transitions that mirror
-  /// the structure functor/arity with constraints on each argument position
-  ///
-  /// [argModes] specifies optional mode for each argument position.
-  /// Mode is non-null only when the declared type has a moded TypeRef at that position.
   TypeDFA _buildStructDFA(String functor, int arity, List<TypeDFA> argDFAs, [List<Mode?>? argModes]) {
-    // If any argument has empty type, the structure has empty type
     if (argDFAs.any((dfa) => dfa.isEmpty)) {
       return TypeDFA.empty();
     }
 
-    // Nullary functor = constant
     if (argDFAs.isEmpty) {
       return TypeDFA.singleton(functor);
     }
 
-    // Create start state
     final startState = DFAState('start');
     final states = <DFAState>{startState};
-    final transitions = <(DFAState, PathElement), DFAState>{};
+    final transitions = <(DFAState, ModedLabel), DFAState>{};
     final finalStates = <DFAState>{};
     final primitiveStateModes = <DFAState, Set<Mode>>{};
 
-    // For each argument position, create transitions
-    // that constrain that argument to its DFA
     for (int i = 0; i < argDFAs.length; i++) {
       final argDFA = argDFAs[i];
-      final argIndex = i + 1; // PathElement uses 1-based indexing
+      final argIndex = i + 1;
       final argMode = (argModes != null && i < argModes.length) ? argModes[i] : null;
-      final pathElem = PathElement.functor(functor, arity, argIndex, mode: argMode);
+      final label = ModedLabel.functor(functor, arity, argIndex, mode: argMode);
 
-      // The transition from start on this arg-position path element
-      // leads to a copy of the argument's DFA
       final argStartInProduct = _renameState(argDFA.startState, 'arg$argIndex');
+      transitions[(startState, label)] = argStartInProduct;
 
-      transitions[(startState, pathElem)] = argStartInProduct;
-
-      // Add all states and transitions from argument DFA with renaming
       _mergeSubDFA(
         argDFA,
         'arg$argIndex',
@@ -213,33 +176,25 @@ class ClauseContributionComputer {
   }
 
   /// Build DFA accepting [h|t] where h ∈ L(head) and t ∈ L(tail)
-  ///
-  /// This is essentially _buildStructDFA for the special list cons constructor
-  ///
-  /// [headMode] and [tailMode] specify optional modes for head and tail positions.
-  /// Mode is non-null only when the declared type has a moded TypeRef at that position.
   TypeDFA _buildListConsDFA(TypeDFA headDFA, TypeDFA tailDFA, {Mode? headMode, Mode? tailMode}) {
-    // If either head or tail has empty type, the list has empty type
     if (headDFA.isEmpty || tailDFA.isEmpty) {
       return TypeDFA.empty();
     }
 
     final startState = DFAState('start');
     final states = <DFAState>{startState};
-    final transitions = <(DFAState, PathElement), DFAState>{};
+    final transitions = <(DFAState, ModedLabel), DFAState>{};
     final finalStates = <DFAState>{};
     final primitiveStateModes = <DFAState, Set<Mode>>{};
 
-    // Head transition
-    final headElem = PathElement.listHead(mode: headMode);
+    final headLabel = ModedLabel.listHead(mode: headMode);
     final headStartInProduct = _renameState(headDFA.startState, 'head');
-    transitions[(startState, headElem)] = headStartInProduct;
+    transitions[(startState, headLabel)] = headStartInProduct;
     _mergeSubDFA(headDFA, 'head', states, transitions, finalStates, primitiveStateModes);
 
-    // Tail transition
-    final tailElem = PathElement.listTail(mode: tailMode);
+    final tailLabel = ModedLabel.listTail(mode: tailMode);
     final tailStartInProduct = _renameState(tailDFA.startState, 'tail');
-    transitions[(startState, tailElem)] = tailStartInProduct;
+    transitions[(startState, tailLabel)] = tailStartInProduct;
     _mergeSubDFA(tailDFA, 'tail', states, transitions, finalStates, primitiveStateModes);
 
     return TypeDFA(
@@ -251,21 +206,18 @@ class ClauseContributionComputer {
     );
   }
 
-  /// Rename a state by prefixing its name
   DFAState _renameState(DFAState state, String prefix) {
     return DFAState('$prefix.${state.name}', isFinal: state.isFinal);
   }
 
-  /// Merge a sub-DFA into the product DFA with renamed states
   void _mergeSubDFA(
     TypeDFA subDFA,
     String prefix,
     Set<DFAState> states,
-    Map<(DFAState, PathElement), DFAState> transitions,
+    Map<(DFAState, ModedLabel), DFAState> transitions,
     Set<DFAState> finalStates,
     Map<DFAState, Set<Mode>> primitiveStateModes,
   ) {
-    // Create mapping from original states to renamed states
     final stateMap = <DFAState, DFAState>{};
     for (final state in subDFA.states) {
       final renamed = _renameState(state, prefix);
@@ -276,18 +228,16 @@ class ClauseContributionComputer {
       }
     }
 
-    // Copy transitions with renamed states
     for (final entry in subDFA.transitions.entries) {
-      final (fromState, pathElem) = entry.key;
+      final (fromState, label) = entry.key;
       final toState = entry.value;
 
       final renamedFrom = stateMap[fromState]!;
       final renamedTo = stateMap[toState]!;
 
-      transitions[(renamedFrom, pathElem)] = renamedTo;
+      transitions[(renamedFrom, label)] = renamedTo;
     }
 
-    // Copy primitive state modes with renamed states
     for (final entry in subDFA.primitiveStateModes.entries) {
       final state = entry.key;
       final modes = entry.value;
@@ -298,7 +248,6 @@ class ClauseContributionComputer {
     }
   }
 
-  /// Create a DFA that accepts any single primitive value (for _ patterns)
   TypeDFA _createUniversalPrimitiveDFA() {
     final primitiveState = DFAState('_prim', isFinal: true);
     return TypeDFA(
@@ -310,37 +259,28 @@ class ClauseContributionComputer {
     );
   }
 
-  /// Extract the sub-DFA for a struct argument position
-  /// Extracts based on structural symbol only, trying all possible modes
   TypeDFA _extractStructArgDFA(TypeDFA declaredDFA, String functor, int arity, int argIndex) {
-    // Try to find any transition with this structural symbol, regardless of mode
     final structuralSymbol = '$functor($arity,$argIndex)';
     return _extractSubDFABySymbol(declaredDFA, structuralSymbol);
   }
 
-  /// Extract the sub-DFA for list head position
-  /// Extracts based on structural symbol only, trying all possible modes
   TypeDFA _extractListHeadDFA(TypeDFA declaredDFA) {
     const headSymbol = '[|](2,1)';
     return _extractSubDFABySymbol(declaredDFA, headSymbol);
   }
 
-  /// Extract the sub-DFA for list tail position
-  /// Extracts based on structural symbol only, trying all possible modes
   TypeDFA _extractListTailDFA(TypeDFA declaredDFA) {
     const tailSymbol = '[|](2,2)';
     return _extractSubDFABySymbol(declaredDFA, tailSymbol);
   }
 
-  /// Extract sub-DFA by structural symbol, ignoring mode
   TypeDFA _extractSubDFABySymbol(TypeDFA declaredDFA, String symbol) {
-    // Find any transition from start state with this structural symbol
     DFAState? targetState;
     for (final entry in declaredDFA.transitions.entries) {
-      final (fromState, pathElem) = entry.key;
-      if (fromState == declaredDFA.startState && pathElem.symbol == symbol) {
+      final (fromState, label) = entry.key;
+      if (fromState == declaredDFA.startState && label.pathElement == symbol) {
         targetState = entry.value;
-        break;  // Found a transition with this symbol
+        break;
       }
     }
 
@@ -348,9 +288,8 @@ class ClauseContributionComputer {
       return TypeDFA.empty();
     }
 
-    // Build a sub-DFA rooted at targetState
     final reachableStates = <DFAState>{};
-    final newTransitions = <(DFAState, PathElement), DFAState>{};
+    final newTransitions = <(DFAState, ModedLabel), DFAState>{};
     final queue = Queue<DFAState>();
     queue.add(targetState);
     final visited = <DFAState>{};
@@ -361,13 +300,12 @@ class ClauseContributionComputer {
       visited.add(current);
       reachableStates.add(current);
 
-      // Find all transitions from current state
       for (final entry in declaredDFA.transitions.entries) {
-        final (fromState, pathSymbol) = entry.key;
+        final (fromState, label) = entry.key;
         final toState = entry.value;
 
         if (fromState == current) {
-          newTransitions[(fromState, pathSymbol)] = toState;
+          newTransitions[(fromState, label)] = toState;
           if (!visited.contains(toState)) {
             queue.add(toState);
           }
@@ -375,10 +313,8 @@ class ClauseContributionComputer {
       }
     }
 
-    // Determine which reachable states are final
     final newFinalStates = reachableStates.intersection(declaredDFA.finalStates);
 
-    // Extract primitive state modes for reachable states
     final newPrimitiveStateModes = <DFAState, Set<Mode>>{};
     for (final state in reachableStates) {
       if (declaredDFA.primitiveStateModes.containsKey(state)) {
@@ -395,19 +331,14 @@ class ClauseContributionComputer {
     );
   }
 
-  /// Check if declared DFA has a moded transition at this struct position
-  /// Get all declared modes at a given position (symbol)
-  /// Returns set of modes found in declared DFA transitions for this position.
-  /// Empty set means no moded transitions exist for this position.
   Set<Mode?> _getDeclaredModesAtPosition(TypeDFA declaredDFA, String symbol) {
     final modes = <Mode?>{};
     for (final entry in declaredDFA.transitions.entries) {
-      final (_, pathElem) = entry.key;
-      if (pathElem.symbol == symbol) {
-        modes.add(pathElem.mode);
+      final (_, label) = entry.key;
+      if (label.pathElement == symbol) {
+        modes.add(label.mode);
       }
     }
     return modes;
   }
-
 }
