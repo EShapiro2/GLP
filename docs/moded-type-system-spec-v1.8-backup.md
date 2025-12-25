@@ -1,7 +1,7 @@
-# GLP Moded Type System Specification (v1.9)
+# GLP Moded Type System Specification (v1.8)
 
-**Updated:** 2025-12-25
-**Change:** Complete rewrite of Section 5 - NFA construction with moded labels followed by subset construction to DFA
+**Updated:** 2025-12-24
+**Change:** Added Section 5.8 - Operations on Moded Type DFA; Revised Section 5.4
 
 ## 1. Overview
 
@@ -363,14 +363,14 @@ extension ModeOps on Mode {
 
 ### 3.3 Moded Path Representation
 
-A **moded path** is a sequence of moded labels where each position carries mode information. Mode is tracked via two mechanisms (see Section 5):
-- `ModedLabel.mode` for TypeRef positions (e.g., `T?` in `ch(T?, T)`)
+A **moded path** is a sequence of path elements where each position carries mode information. Mode is tracked via two mechanisms (see Section 5.7):
+- `PathElement.mode` for TypeRef positions (e.g., `T?` in `ch(T?, T)`)
 - `primitiveStateModes` for primitive positions (e.g., `_` or `_?`)
 
 ```dart
-/// A moded path: sequence of moded labels with mode at every position.
+/// A moded path: sequence of path elements with mode at every position.
 class ModedPath {
-  final List<ModedLabel> steps;  // Each ModedLabel may carry mode
+  final List<PathElement> steps;  // Each PathElement may carry mode
 
   ModedPath(this.steps);
 
@@ -552,35 +552,200 @@ The choice depends on intended semantics: does the procedure genuinely need to h
 
 ---
 
-## 5. Moded Type Automata: NFA Construction and DFA Conversion
+## 5. Moded Type DFA
 
-This section describes how moded types are compiled to finite automata following the Yardeni-Shapiro approach. The compilation has two stages:
+### 5.1 Moded Paths
 
-1. **NFA Construction** (§5.1-5.3): Type definitions with union (`T ::= A ; B`) are compiled to NFAs with ε-transitions representing nondeterministic choice
-2. **DFA Conversion** (§5.4): The NFA is converted to a DFA using subset construction
+A **moded path** (as defined in Section 3.3) is a sequence of (path element, mode) pairs where every position carries its mode annotation. A moded type is characterized by its set of moded paths: `paths^m(S)`.
 
-### 5.1 Moded Transition Labels
+Following the paper (Definition [Moded Paths]):
+- A path describes a sequence of positions in a term (functor/argument-index steps)
+- A moded path annotates each position with its mode
+- The DFA accepts moded paths by tracking mode at every position via two mechanisms: `PathElement.mode` for TypeRef positions, and `primitiveStateModes` for primitive type positions
 
-A **moded label** is a transition label in the type automaton that encodes both structural information (functor name, argument position) and optional mode annotation.
+### 5.2 Primitive State Modes
+
+The type DFA tracks mode information at **primitive type positions** (`_` and `_?`). Non-primitive positions are purely structural.
 
 ```dart
-/// Transition label in moded type automata
-class ModedLabel {
-  final String symbol;   // Structural: "f(n,i)" for functor f/n position i
-  final Mode? mode;      // Optional mode annotation
+class TypeDFA {
+  final Set<DFAState> states;
+  final DFAState startState;
+  final Set<DFAState> finalStates;
+  final Map<(DFAState, PathElement), DFAState> transitions;
+  
+  /// Mode information at primitive type states.
+  /// 
+  /// A state appears in this map iff it corresponds to a primitive type
+  /// position (_ or _?) in a type definition:
+  /// - {Mode.output} for _ (program produces value)
+  /// - {Mode.input} for _? (program consumes value)
+  /// - {Mode.output, Mode.input} for Every ::= _ ; _?
+  ///
+  /// States not in this map are structural (non-primitive) positions.
+  final Map<DFAState, Set<Mode>> primitiveStateModes;
+  
+  /// Check if state is a primitive type position
+  bool isPrimitiveState(DFAState state) => 
+      primitiveStateModes.containsKey(state);
+  
+  /// Get accepted modes at a primitive state (empty for non-primitive)
+  Set<Mode> getModesAt(DFAState state) => 
+      primitiveStateModes[state] ?? {};
+}
+```
 
-  ModedLabel(this.symbol, {this.mode});
+### 5.3 Compiling Primitive Types
 
-  factory ModedLabel.functor(String name, int arity, int argIndex, {Mode? mode}) {
-    return ModedLabel('$name($arity,$argIndex)', mode: mode);
+When compiling a type definition to DFA, primitive types map to mode sets:
+
+| Type alternative | `primitiveStateModes` entry |
+|-----------------|----------------------------|
+| `_` | `{Mode.output}` |
+| `_?` | `{Mode.input}` |
+| `Every ::= _ ; _?` | `{Mode.output, Mode.input}` |
+| `Any ::< Every` | `{Mode.output, Mode.input}` (inherited) |
+| Non-primitive (constructors, type refs) | Not in map |
+
+```dart
+void _compileAlternative(DFAState state, TypeExpr alt) {
+  if (alt is PrimitiveModeAlt) {
+    // Primitive type: mark state with its mode
+    final mode = alt.isInput ? Mode.input : Mode.output;
+    primitiveStateModes[state] = 
+        (primitiveStateModes[state] ?? <Mode>{})..add(mode);
+    finalStates.add(state);  // Primitive positions are accepting
+    return;
+  }
+  // ... handle constructors, type references, etc.
+}
+```
+
+### 5.4 Accepting Moded Paths
+
+A moded type DFA accepts a moded path ξ = π₁·π₂···πₙ where each πᵢ is a path element (possibly carrying mode via `PathElement.mode`), iff there exist states q₁, ..., qₙ such that:
+
+1. For each i ∈ [1..n]: δ(qᵢ₋₁, πᵢ) = qᵢ (where q₀ is the start state)
+2. Either:
+   - (a) qₙ ∈ F and μ(qₙ) = ∅ (**structural acceptance**), or
+   - (b) μ(qₙ) ≠ ∅ and m ∈ μ(qₙ) (**primitive acceptance**)
+
+The **moded language** of DFA A is: L^m(A) = {(ξ, m) | A accepts (ξ, m)}
+
+```dart
+/// Check if this DFA accepts the given moded path
+bool acceptsModedPath(List<PathElement> path, Mode leafMode) {
+  var current = startState;
+  for (final elem in path) {
+    final next = transitions[(current, elem)];
+    if (next == null) return false;
+    current = next;
   }
 
-  factory ModedLabel.listHead({Mode? mode}) => ModedLabel('[|](2,1)', mode: mode);
-  factory ModedLabel.listTail({Mode? mode}) => ModedLabel('[|](2,2)', mode: mode);
+  // Check acceptance condition (two cases)
+  if (isPrimitiveState(current)) {
+    // Case (b): primitive acceptance - mode must be in μ(current)
+    return getModesAt(current).contains(leafMode);
+  } else {
+    // Case (a): structural acceptance - must be in finalStates
+    return finalStates.contains(current);
+  }
+}
+```
+
+**Remark:** If the start state q₀ is primitive with μ(q₀) = {output, input}, the DFA accepts the empty path (ε, m) for both modes. This corresponds to types like `Every ::= _ ; _?` which accept any value at either mode.
+
+### 5.5 Mode Computation During Traversal
+
+During type checking, mode is computed while traversing term and type in parallel. This integrates mode checking with type checking—they are **not** separate passes.
+
+1. Start with declared mode from procedure declaration
+2. At each type reference `T` or `T?`, apply `combineMode` (Section 4.2)
+3. At primitive positions, verify variable mode ∈ accepted modes
+
+```dart
+/// During type checking traversal
+void checkVariableAtPosition(
+  Variable variable,
+  DFAState typeState,
+  Mode currentMode,  // Accumulated mode through traversal
+) {
+  if (!isPrimitiveState(typeState)) {
+    // Non-primitive: structural check only
+    return;
+  }
+  
+  // Primitive position: check mode
+  final acceptedModes = getModesAt(typeState);
+  final variableMode = variable.isReader ? Mode.input : Mode.output;
+  
+  if (!acceptedModes.contains(variableMode)) {
+    reportModeError(variable, variableMode, acceptedModes);
+  }
+}
+```
+
+### 5.6 Correspondence with Paper
+
+This specification corresponds to the paper as follows:
+
+| Paper | Spec |
+|-------|------|
+| "moded path = sequence of (path element, mode) pairs" (Def [Moded Paths]) | `ModedPath` with `List<PathElement>` where each carries mode |
+| Mode at every position | `PathElement.mode` for TypeRef; `primitiveStateModes` for primitives |
+| `_` and `_?` are distinct primitives | Different entries in `primitiveStateModes` |
+| "alternating tree automata with mode annotations" (§7.4) | Mode in transitions (`PathElement.mode`) and states (`primitiveStateModes`) |
+| `Every ::= _ ; _?` accepts both | `{Mode.output, Mode.input}` |
+| Mode combines via involution (§7.7) | Pre-computed during type compilation |
+
+### 5.7 Moded Path Elements for TypeRef Positions
+
+#### 5.7.1 The Problem: Structural Ambiguity
+
+Consider a channel type with mode-distinguished alternatives:
+
+```glp
+MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
+```
+
+Both alternatives have **identical structure** but **different mode assignments**:
+- Alternative 1: position 1 is input (`MyStream?`), position 2 is output (`MyStream`)
+- Alternative 2: position 1 is output (`MyStream`), position 2 is input (`MyStream?`)
+
+If PathElement encodes only structural information (`ch(2,1)`, `ch(2,2)`), both alternatives produce identical DFA transitions, losing the mode distinction essential for coverage checking.
+
+#### 5.7.2 Two Mode Tracking Mechanisms
+
+The type system uses **two distinct mechanisms** for mode tracking, depending on the syntactic form at each position:
+
+| Position Syntax | Example | Mode Tracking Mechanism |
+|-----------------|---------|-------------------------|
+| PrimitiveModeAlt | `_`, `_?` in `[_ \| List]` | `primitiveStateModes` map on target DFAState |
+| Moded TypeRef | `T`, `T?` in `ch(T?, T)` | `mode` field on PathElement |
+
+**Critical invariant**: These mechanisms must not be conflated. A position uses exactly one mechanism based on its syntactic form in the type definition.
+
+#### 5.7.3 PathElement with Optional Mode
+
+Extend PathElement to carry an optional mode annotation:
+
+```dart
+class PathElement {
+  final String symbol;   // e.g., "ch(2,1)", "[|](2,1)"
+  final Mode? mode;      // non-null ONLY for moded TypeRef positions
+
+  PathElement(this.symbol, {this.mode});
+
+  factory PathElement.functor(String name, int arity, int argIndex, {Mode? mode}) {
+    return PathElement('$name($arity,$argIndex)', mode: mode);
+  }
+
+  factory PathElement.listHead({Mode? mode}) => PathElement('[|](2,1)', mode: mode);
+  factory PathElement.listTail({Mode? mode}) => PathElement('[|](2,2)', mode: mode);
 
   @override
   bool operator ==(Object other) =>
-      other is ModedLabel && symbol == other.symbol && mode == other.mode;
+      other is PathElement && symbol == other.symbol && mode == other.mode;
 
   @override
   int get hashCode => Object.hash(symbol, mode);
@@ -590,534 +755,267 @@ class ModedLabel {
 }
 ```
 
-**Key property:** Labels with different modes are distinct:
-- `ModedLabel('f(2,1)', mode: Mode.input)` ≠ `ModedLabel('f(2,1)', mode: Mode.output)`
-- `ModedLabel('f(2,1)')` (no mode) ≠ `ModedLabel('f(2,1)', mode: Mode.output)`
+**Key property**: `PathElement('ch(2,1)', mode: Mode.input)` ≠ `PathElement('ch(2,1)', mode: Mode.output)` ≠ `PathElement('ch(2,1)')`.
 
-**Epsilon transition:** A special label `ModedLabel.epsilon()` represents ε-transitions in the NFA.
+#### 5.7.4 Type Compilation Rules
 
-### 5.2 Moded Type NFA
-
-A **moded type NFA** is a nondeterministic finite automaton with moded labels on transitions and mode sets on states.
+When compiling a type definition to DFA, determine mode encoding based on argument syntax:
 
 ```dart
-class TypeNFA {
-  final Set<NFAState> states;
-  final NFAState startState;
-  final Set<NFAState> finalStates;
-
-  /// Transition relation: state × (label ∪ {ε}) → Set<NFAState>
-  /// Maps (from-state, label) to set of possible next states
-  final Map<(NFAState, ModedLabel), Set<NFAState>> transitions;
-
-  /// Mode information at primitive type states
-  /// Maps NFAState to set of accepted modes {output, input}
-  /// Only primitive states (_, _?) appear in this map
-  final Map<NFAState, Set<Mode>> primitiveStateModes;
-
-  TypeNFA({
-    required this.states,
-    required this.startState,
-    required this.finalStates,
-    required this.transitions,
-    required this.primitiveStateModes,
-  });
-
-  /// Check if state is primitive (appears in primitiveStateModes)
-  bool isPrimitiveState(NFAState state) =>
-      primitiveStateModes.containsKey(state);
-
-  /// Get accepted modes at primitive state (empty if non-primitive)
-  Set<Mode> getModesAt(NFAState state) =>
-      primitiveStateModes[state] ?? {};
-
-  /// Add ε-transition from -> to
-  void addEpsilonTransition(NFAState from, NFAState to) {
-    final epsilonLabel = ModedLabel.epsilon();
-    transitions.putIfAbsent((from, epsilonLabel), () => {}).add(to);
-  }
-
-  /// Add labeled transition from --[label]--> to
-  void addTransition(NFAState from, ModedLabel label, NFAState to) {
-    transitions.putIfAbsent((from, label), () => {}).add(to);
-  }
-}
-```
-
-### 5.3 NFA Construction from Type Definitions
-
-Type definitions are compiled to NFAs using the following rules:
-
-#### 5.3.1 Union Types (Disjunction)
-
-For a type definition `T ::= A ; B`, create an NFA that accepts paths accepted by either A or B:
-
-```
-    ε         ε
-q₀ ---> A ---> qf
-  \            /
-   ε          ε
-    ---> B --->
-```
-
-```dart
-TypeNFA compileUnion(TypeExpr typeA, TypeExpr typeB) {
-  final nfaA = compileTypeExpr(typeA);
-  final nfaB = compileTypeExpr(typeB);
-
-  final startState = NFAState.fresh();
-  final finalState = NFAState.fresh();
-
-  final nfa = TypeNFA(
-    states: {startState, finalState, ...nfaA.states, ...nfaB.states},
-    startState: startState,
-    finalStates: {finalState},
-    transitions: {},
-    primitiveStateModes: {...nfaA.primitiveStateModes, ...nfaB.primitiveStateModes},
-  );
-
-  // ε-transitions to alternatives
-  nfa.addEpsilonTransition(startState, nfaA.startState);
-  nfa.addEpsilonTransition(startState, nfaB.startState);
-
-  // ε-transitions from alternative finals to combined final
-  for (final finalA in nfaA.finalStates) {
-    nfa.addEpsilonTransition(finalA, finalState);
-  }
-  for (final finalB in nfaB.finalStates) {
-    nfa.addEpsilonTransition(finalB, finalState);
-  }
-
-  // Merge transitions from both NFAs
-  nfa.transitions.addAll(nfaA.transitions);
-  nfa.transitions.addAll(nfaB.transitions);
-
-  return nfa;
-}
-```
-
-#### 5.3.2 Primitive Types
-
-For primitive types `_` and `_?`, create a single-state NFA marked with the appropriate mode:
-
-```dart
-TypeNFA compilePrimitive(bool isInput) {
-  final state = NFAState.fresh();
-  final mode = isInput ? Mode.input : Mode.output;
-
-  return TypeNFA(
-    states: {state},
-    startState: state,
-    finalStates: {state},
-    transitions: {},
-    primitiveStateModes: {state: {mode}},
-  );
-}
-```
-
-For `Every ::= _ ; _?`, the union construction creates:
-
-```
-    ε         ε
-q₀ ---> q_out ---> qf
-  \            /
-   ε          ε
-    ---> q_in -->
-```
-
-where `primitiveStateModes[q_out] = {Mode.output}` and `primitiveStateModes[q_in] = {Mode.input}`.
-
-After ε-removal and minimization (§5.4), this becomes a single state with `primitiveStateModes[q] = {Mode.output, Mode.input}`.
-
-#### 5.3.3 Structure Types
-
-For a structure `f(T₁, T₂, ..., Tₙ)`, compile each argument type and connect with labeled transitions:
-
-```dart
-TypeNFA compileStruct(String functor, int arity, List<TypeExpr> args) {
-  final startState = NFAState.fresh();
-  final finalState = NFAState.fresh();
-  final nfa = TypeNFA(
-    states: {startState, finalState},
-    startState: startState,
-    finalStates: {finalState},
-    transitions: {},
-    primitiveStateModes: {},
-  );
-
-  for (int i = 0; i < args.length; i++) {
-    final argType = args[i];
+void _addTransitionsForStructAlt(DFAState fromState, StructAlt alt, ...) {
+  for (int i = 0; i < alt.args.length; i++) {
+    final argType = alt.args[i];
     final argIndex = i + 1;
-    final argNFA = compileTypeExpr(argType);
 
-    // Determine mode for this position
-    final Mode? labelMode;
+    // Determine mode encoding based on argument syntax
+    final Mode? pathMode;
     if (argType is TypeRef) {
-      // Moded TypeRef: encode mode in label
-      labelMode = argType.isInput ? Mode.input : Mode.output;
+      // Moded TypeRef: encode mode in PathElement
+      pathMode = argType.isInput ? Mode.input : Mode.output;
+    } else if (argType is PrimitiveModeAlt) {
+      // PrimitiveModeAlt: mode goes in primitiveStateModes, NOT in PathElement
+      pathMode = null;
     } else {
-      // PrimitiveModeAlt: mode in primitiveStateModes, not label
-      labelMode = null;
+      pathMode = null;
     }
 
-    final label = ModedLabel.functor(functor, arity, argIndex, mode: labelMode);
-
-    // Add transition: startState --[label]--> argNFA.start
-    nfa.addTransition(startState, label, argNFA.startState);
-
-    // Add ε-transitions: argNFA.finals --[ε]--> finalState
-    for (final argFinal in argNFA.finalStates) {
-      nfa.addEpsilonTransition(argFinal, finalState);
-    }
-
-    // Merge argument NFA
-    nfa.states.addAll(argNFA.states);
-    nfa.transitions.addAll(argNFA.transitions);
-    nfa.primitiveStateModes.addAll(argNFA.primitiveStateModes);
+    final pathElem = PathElement.functor(alt.functor, alt.arity, argIndex, mode: pathMode);
+    final targetState = _resolveTargetState(argType, stateMap, finalState);
+    transitions[(fromState, pathElem)] = targetState;
   }
-
-  return nfa;
 }
 ```
 
-#### 5.3.4 Type References
+**Result for MyChannel**:
+```
+MyChannel --[ch(2,1)?]--> MyStream    (from ch(MyStream?, MyStream), pos 1)
+MyChannel --[ch(2,2)]--> MyStream     (from ch(MyStream?, MyStream), pos 2)
+MyChannel --[ch(2,1)]--> MyStream     (from ch(MyStream, MyStream?), pos 1)
+MyChannel --[ch(2,2)?]--> MyStream    (from ch(MyStream, MyStream?), pos 2)
+```
 
-For a type reference `T` or `T?`, recursively compile the referenced type and apply mode transformation if needed:
+Four distinct transitions, capturing all mode information.
+
+**Result for List** (`List ::= [] ; [_ | List]`):
+```
+List --[[|](2,1)]--> _FINAL_    (head is PrimitiveModeAlt _, no mode in PathElement)
+List --[[|](2,2)]--> List       (tail is TypeRef List, unmoded)
+```
+
+Mode for head position is tracked via `primitiveStateModes[_FINAL_] = {Mode.output}`, not in PathElement.
+
+#### 5.7.5 Clause Contribution: Matching Declared Type
+
+When computing clause contribution, the mode to use in PathElement depends on whether the **declared type** has mode at that position:
 
 ```dart
-TypeNFA compileTypeRef(String typeName, bool isInput) {
-  final typeDef = typeEnvironment.getTypeDef(typeName);
-  final nfa = compileTypeDef(typeDef);
+TypeDFA computeClauseContribution(
+  ast.Term pattern,
+  TypeDFA declaredDFA,
+  Map<String, TypeDFA> varTypes,
+) {
+  if (pattern is ast.StructTerm) {
+    final argDFAs = <TypeDFA>[];
+    final argModes = <Mode?>[];
 
-  if (isInput) {
-    // Apply mode complementation: swap all modes in primitiveStateModes
-    return nfa.withComplementedModes();
-  }
+    for (int i = 0; i < pattern.args.length; i++) {
+      final argPattern = pattern.args[i];
+      final argIndex = i + 1;
 
-  return nfa;
-}
-```
+      // Check if declared type has mode at this position
+      final declaredHasMode = _declaredPositionHasMode(
+        declaredDFA,
+        pattern.functor,
+        pattern.arity,
+        argIndex,
+      );
 
-**Mode complementation** for `T?`:
-```dart
-TypeNFA withComplementedModes() {
-  final newPrimitiveModes = <NFAState, Set<Mode>>{};
-
-  for (final entry in primitiveStateModes.entries) {
-    final state = entry.key;
-    final modes = entry.value;
-    final complemented = modes.map((m) =>
-      m == Mode.output ? Mode.input : Mode.output
-    ).toSet();
-    newPrimitiveModes[state] = complemented;
-  }
-
-  return TypeNFA(
-    states: states,
-    startState: startState,
-    finalStates: finalStates,
-    transitions: transitions,
-    primitiveStateModes: newPrimitiveModes,
-  );
-}
-```
-
-#### 5.3.5 Example: Channel Type
-
-For `MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?)`:
-
-```
-NFA before ε-removal:
-
-              ch(2,1)?          ε
-    ε    ┌──────────────> S₁ ──────┐
-q₀ ────> q₁                         ├──> qf
-    ε    │   ch(2,2)         ε     │
-    ────> q₂ ──────────> S₂ ──────┘
-         │   ch(2,1)         ε
-         └──────────────> S₃ ──────┤
-             ch(2,2)?         ε     │
-         └──────────────> S₄ ──────┘
-
-where S₁, S₂, S₃, S₄ are the MyStream start states for each argument
-```
-
-After ε-removal and determinization, this becomes a DFA with four distinct transitions from the start state.
-
-### 5.4 NFA to DFA Conversion (Subset Construction)
-
-The NFA is converted to a DFA using standard subset construction with mode set tracking.
-
-#### 5.4.1 ε-Closure
-
-Compute the ε-closure of a set of NFA states:
-
-```dart
-Set<NFAState> epsilonClosure(Set<NFAState> states, TypeNFA nfa) {
-  final closure = <NFAState>{...states};
-  final worklist = [...states];
-
-  while (worklist.isNotEmpty) {
-    final state = worklist.removeLast();
-    final epsilonLabel = ModedLabel.epsilon();
-    final epsilonTargets = nfa.transitions[(state, epsilonLabel)] ?? {};
-
-    for (final target in epsilonTargets) {
-      if (!closure.contains(target)) {
-        closure.add(target);
-        worklist.add(target);
-      }
-    }
-  }
-
-  return closure;
-}
-```
-
-#### 5.4.2 Subset Construction Algorithm
-
-```dart
-TypeDFA nfaToDfa(TypeNFA nfa) {
-  final dfaStateMap = <Set<NFAState>, DFAState>{};
-  final dfaTransitions = <(DFAState, ModedLabel), DFAState>{};
-  final dfaFinalStates = <DFAState>{};
-  final dfaPrimitiveModes = <DFAState, Set<Mode>>{};
-
-  int stateCounter = 0;
-  DFAState getDFAState(Set<NFAState> nfaStates) {
-    return dfaStateMap.putIfAbsent(nfaStates, () {
-      final dfaState = DFAState('q${stateCounter++}');
-
-      // Check if any NFA state is final
-      final hasFinal = nfaStates.any((s) => nfa.finalStates.contains(s));
-
-      // Compute mode set for this DFA state
-      final modes = <Mode>{};
-      var hasPrimitive = false;
-
-      for (final nfaState in nfaStates) {
-        if (nfa.isPrimitiveState(nfaState)) {
-          hasPrimitive = true;
-          modes.addAll(nfa.getModesAt(nfaState));
+      // Determine mode for this position
+      Mode? argMode;
+      if (declaredHasMode) {
+        // Declared type expects mode: use variable's mode
+        if (argPattern is ast.VarTerm) {
+          argMode = argPattern.isReader ? Mode.input : Mode.output;
         }
+        // For non-variable patterns, recursively determine mode
       }
+      // If !declaredHasMode, argMode remains null (use primitiveStateModes instead)
 
-      if (hasPrimitive) {
-        // Primitive DFA state: mark with union of modes
-        dfaPrimitiveModes[dfaState] = modes;
-      } else if (hasFinal) {
-        // Structural accepting state
-        dfaFinalStates.add(dfaState);
-      }
-
-      return dfaState;
-    });
-  }
-
-  // Start state: ε-closure of NFA start
-  final startNFAStates = epsilonClosure({nfa.startState}, nfa);
-  final startDFAState = getDFAState(startNFAStates);
-
-  final worklist = [startNFAStates];
-  final visited = <Set<NFAState>>{};
-
-  while (worklist.isNotEmpty) {
-    final currentNFAStates = worklist.removeLast();
-    if (visited.contains(currentNFAStates)) continue;
-    visited.add(currentNFAStates);
-
-    final currentDFAState = getDFAState(currentNFAStates);
-
-    // Collect all non-ε transitions from current NFA state set
-    final labelMap = <ModedLabel, Set<NFAState>>{};
-
-    for (final nfaState in currentNFAStates) {
-      for (final entry in nfa.transitions.entries) {
-        final (from, label) = entry.key;
-        if (from != nfaState) continue;
-        if (label.symbol == 'ε') continue;  // Skip ε-transitions
-
-        final targets = entry.value;
-        labelMap.putIfAbsent(label, () => {}).addAll(targets);
-      }
+      argModes.add(argMode);
+      argDFAs.add(_computeArgContribution(argPattern, declaredDFA, varTypes));
     }
 
-    // Create DFA transitions
-    for (final entry in labelMap.entries) {
-      final label = entry.key;
-      final targetNFAStates = epsilonClosure(entry.value, nfa);
-      final targetDFAState = getDFAState(targetNFAStates);
+    return _buildStructDFA(pattern.functor, pattern.arity, argDFAs, argModes);
+  }
+  // ... handle other pattern types
+}
 
-      dfaTransitions[(currentDFAState, label)] = targetDFAState;
+/// Check if declared DFA has a moded transition at this struct position
+bool _declaredPositionHasMode(
+  TypeDFA declaredDFA,
+  String functor,
+  int arity,
+  int argIndex,
+) {
+  final structuralSymbol = '$functor($arity,$argIndex)';
 
-      if (!visited.contains(targetNFAStates)) {
-        worklist.add(targetNFAStates);
-      }
+  for (final entry in declaredDFA.transitions.entries) {
+    final (fromState, pathElem) = entry.key;
+    if (fromState == declaredDFA.startState &&
+        pathElem.symbol == structuralSymbol &&
+        pathElem.mode != null) {
+      return true;
     }
   }
-
-  return TypeDFA(
-    states: dfaStateMap.values.toSet(),
-    startState: startDFAState,
-    finalStates: dfaFinalStates,
-    transitions: dfaTransitions,
-    primitiveStateModes: dfaPrimitiveModes,
-  );
+  return false;
 }
 ```
 
-#### 5.4.3 Mode Set Union in Subset Construction
+**Rationale**: The clause contribution must produce PathElements that can match the declared type's transitions. If the declared type encodes mode in PathElement, the contribution must do likewise; if not, neither should the contribution.
 
-**Key property:** When multiple NFA states with different primitive modes are merged into a single DFA state, the DFA state accepts the **union** of their mode sets.
+#### 5.7.6 Correspondence with Paper
 
-Example: `Every ::= _ ; _?`
+The paper (Section 7.7) describes mode computation **dynamically during traversal**:
 
-- NFA has two states: `q_out` with `{Mode.output}` and `q_in` with `{Mode.input}`
-- After ε-removal, both are in the ε-closure of the start state
-- DFA state `q₀ = {q_out, q_in}` gets `primitiveStateModes[q₀] = {Mode.output, Mode.input}`
+> "At each type reference `T` or `T?` encountered along the path, combine modes using [the involution rule]"
 
-This is how bi-moded types arise naturally from subset construction.
+This specification encodes the same information **statically in the DFA**:
 
-### 5.5 DFA Representation
+| Paper (Dynamic) | Spec (Static) |
+|-----------------|---------------|
+| "mode at position ξ in type τ" | PathElement.mode for TypeRef positions |
+| Combine modes via involution during traversal | Pre-computed during type compilation |
+| Mode at primitive position | `primitiveStateModes` on target state |
 
-The final DFA representation is the same as the NFA structure, but with deterministic transitions:
+The static encoding enables efficient DFA operations (intersection, union, equivalence checking) while preserving the paper's semantics.
 
-```dart
-class TypeDFA {
-  final Set<DFAState> states;
-  final DFAState startState;
-  final Set<DFAState> finalStates;
+#### 5.7.7 ListConsAlt Handling
 
-  /// Deterministic transitions: state × label → state
-  final Map<(DFAState, ModedLabel), DFAState> transitions;
-
-  /// Mode information at primitive states
-  final Map<DFAState, Set<Mode>> primitiveStateModes;
-
-  TypeDFA({
-    required this.states,
-    required this.startState,
-    required this.finalStates,
-    required this.transitions,
-    required this.primitiveStateModes,
-  });
-
-  bool isPrimitiveState(DFAState state) =>
-      primitiveStateModes.containsKey(state);
-
-  Set<Mode> getModesAt(DFAState state) =>
-      primitiveStateModes[state] ?? {};
-}
-```
-
-**Invariant:** For all `(state, label)`, there is at most one entry in `transitions`. This is the determinism property.
-
-### 5.6 Accepting Moded Paths
-
-A moded type DFA accepts a moded path ξ = π₁·π₂···πₙ where each πᵢ is a moded label, iff:
-
-1. There exist states q₀, q₁, ..., qₙ such that:
-   - q₀ is the start state
-   - For each i ∈ [1..n]: transitions[(qᵢ₋₁, πᵢ)] = qᵢ
-2. Either:
-   - (a) qₙ ∈ finalStates and primitiveStateModes[qₙ] = ∅ (**structural acceptance**)
-   - (b) qₙ ∈ primitiveStateModes.keys and the mode m ∈ primitiveStateModes[qₙ] (**primitive acceptance**)
+List syntax `[H | T]` is syntactic sugar for the `[|]/2` constructor. The same rules apply:
 
 ```dart
-bool acceptsModedPath(List<ModedLabel> path, Mode leafMode) {
-  var current = startState;
-
-  for (final label in path) {
-    final next = transitions[(current, label)];
-    if (next == null) return false;
-    current = next;
-  }
-
-  // Check acceptance
-  if (isPrimitiveState(current)) {
-    // Primitive acceptance: mode must be in mode set
-    return getModesAt(current).contains(leafMode);
+void _addTransitionsForListConsAlt(DFAState fromState, ListConsAlt alt, ...) {
+  // Head element
+  final headType = alt.head;
+  final Mode? headMode;
+  if (headType is TypeRef) {
+    headMode = headType.isInput ? Mode.input : Mode.output;
   } else {
-    // Structural acceptance: must be final state
-    return finalStates.contains(current);
+    headMode = null;  // PrimitiveModeAlt uses primitiveStateModes
   }
+
+  final headPath = PathElement.listHead(mode: headMode);
+  transitions[(fromState, headPath)] = _resolveTargetState(headType, ...);
+
+  // Tail element
+  final tailType = alt.tail;
+  final Mode? tailMode;
+  if (tailType is TypeRef) {
+    tailMode = tailType.isInput ? Mode.input : Mode.output;
+  } else {
+    tailMode = null;
+  }
+
+  final tailPath = PathElement.listTail(mode: tailMode);
+  transitions[(fromState, tailPath)] = _resolveTargetState(tailType, ...);
 }
 ```
 
-### 5.7 Operations on Moded Type DFA
+#### 5.7.8 Summary Table
 
-This section specifies DFA operations required for type checking: containment, intersection, complement, and emptiness.
+| Type Definition | Position | Syntax | Mode In PathElement? | Mode In primitiveStateModes? |
+|-----------------|----------|--------|---------------------|------------------------------|
+| `ch(MyStream?, MyStream)` | arg 1 | TypeRef `MyStream?` | Yes: `Mode.input` | No |
+| `ch(MyStream?, MyStream)` | arg 2 | TypeRef `MyStream` | Yes: `Mode.output` | No |
+| `[_ \| List]` | head | PrimitiveModeAlt `_` | No | Yes: `{Mode.output}` |
+| `[_ \| List]` | tail | TypeRef `List` | No (unmoded) | No |
+| `[Every \| EveryList]` | head | TypeRef `Every` | No (unmoded)* | No |
+| `show(Number?)` | arg 1 | TypeRef `Number?` | Yes: `Mode.input` | No |
 
-#### 5.7.1 Moded Type Containment
+*`Every` is an unmoded TypeRef (no `?` suffix), so PathElement has no mode. The mode alternatives of `Every` are tracked via `primitiveStateModes` at the `Every` state itself.
+
+### 5.8 Operations on Moded Type DFA
+
+This section specifies DFA operations required for type checking: containment, intersection, complement, and emptiness. These correspond to paper Section 7.5.1.
+
+#### 5.8.1 Primitive State Classification
+
+```dart
+/// Classification of primitive states by their mode set
+enum PrimitiveKind {
+  outputOnly,  // μ(q) = {Mode.output}
+  inputOnly,   // μ(q) = {Mode.input}
+  biModed,     // μ(q) = {Mode.output, Mode.input}
+}
+
+PrimitiveKind? getPrimitiveKind(DFAState state) {
+  final modes = primitiveStateModes[state];
+  if (modes == null || modes.isEmpty) return null;
+  if (modes.length == 2) return PrimitiveKind.biModed;
+  return modes.contains(Mode.output)
+      ? PrimitiveKind.outputOnly
+      : PrimitiveKind.inputOnly;
+}
+```
+
+#### 5.8.2 Moded Type Containment
 
 **Definition:** For moded type DFAs A and B:
 ```
 A ⊆ᵐ B  iff  Lᵐ(A) ⊆ Lᵐ(B)
 ```
 
-**Proposition (Bi-Moded Start State):** If B has a bi-moded start state (primitiveStateModes[q₀] = {output, input}), then A ⊆ᵐ B for any A.
+**Proposition (Bi-Moded Start State):** If B has a bi-moded start state (μ_B(q₀) = {output, input}), then A ⊆ᵐ B for any moded type DFA A.
 
-**Algorithm:** A ⊆ᵐ B iff Lᵐ(A ∩ᵐ B̄) = ∅
+*Proof:* A bi-moded start state accepts all moded paths of length zero. Combined with accepting transitions, this means L^m(B) contains all constructible moded paths, so L^m(A) ⊆ L^m(B) trivially.
 
 ```dart
+/// Check if L^m(this) ⊆ L^m(other)
 bool isSubsetOf(TypeDFA other) {
-  // Optimization: bi-moded start accepts everything
+  // Optimization: bi-moded start state accepts everything
   if (other.isPrimitiveState(other.startState) &&
       other.getModesAt(other.startState).length == 2) {
     return true;
   }
 
+  // Standard algorithm: L(A) ⊆ L(B) iff L(A) ∩ L(B̄) = ∅
   final otherComplement = other.modedComplement();
-  final intersection = this.intersect(otherComplement);
+  final intersection = this.modedIntersect(otherComplement);
   return intersection.isModedEmpty;
 }
 ```
 
-#### 5.7.2 Moded Type Intersection
+#### 5.8.3 Moded Type Intersection
 
-Product construction with mode set intersection:
+For moded type DFAs A = (Q_A, q₀^A, F_A, δ_A, μ_A) and B = (Q_B, q₀^B, F_B, δ_B, μ_B), the moded intersection A ∩ᵐ B is the DFA (Q, q₀, F, δ, μ) where:
+
+| Component | Definition |
+|-----------|------------|
+| Q | Q_A × Q_B |
+| q₀ | (q₀^A, q₀^B) |
+| δ((q_A, q_B), π) | (δ_A(q_A, π), δ_B(q_B, π)) when both defined |
+| F | {(q_A, q_B) \| q_A ∈ F_A ∧ q_B ∈ F_B ∧ μ_A(q_A) = ∅ ∧ μ_B(q_B) = ∅} |
+| μ((q_A, q_B)) | μ_A(q_A) ∩ μ_B(q_B) |
+
+**Proposition:** L^m(A ∩ᵐ B) = L^m(A) ∩ L^m(B)
 
 ```dart
-TypeDFA intersect(TypeDFA other) {
+/// Compute moded intersection using product construction
+TypeDFA modedIntersect(TypeDFA other) {
   final productStates = <(DFAState, DFAState), DFAState>{};
-  final newTransitions = <(DFAState, ModedLabel), DFAState>{};
+  final newTransitions = <(DFAState, PathElement), DFAState>{};
   final newFinalStates = <DFAState>{};
   final newPrimitiveModes = <DFAState, Set<Mode>>{};
 
-  int counter = 0;
-  DFAState getProduct(DFAState qA, DFAState qB) {
-    return productStates.putIfAbsent((qA, qB), () {
-      final product = DFAState('p${counter++}');
-
-      // Compute mode set for product
-      final isPrimA = isPrimitiveState(qA);
-      final isPrimB = other.isPrimitiveState(qB);
-
-      if (isPrimA && isPrimB) {
-        // Both primitive: intersect modes
-        final modesA = getModesAt(qA);
-        final modesB = other.getModesAt(qB);
-        final intersection = modesA.intersection(modesB);
-        // Always add, even if empty, to preserve primitive status
-        newPrimitiveModes[product] = intersection;
-      } else if (isPrimA && !isPrimB) {
-        // Only A primitive: keep A's modes
-        newPrimitiveModes[product] = getModesAt(qA);
-      } else if (!isPrimA && isPrimB) {
-        // Only B primitive: keep B's modes
-        newPrimitiveModes[product] = other.getModesAt(qB);
-      } else {
-        // Both structural: check if both final
-        if (finalStates.contains(qA) && other.finalStates.contains(qB)) {
-          newFinalStates.add(product);
-        }
-      }
-
-      return product;
-    });
+  int stateCounter = 0;
+  DFAState getProductState(DFAState qA, DFAState qB) {
+    return productStates.putIfAbsent(
+      (qA, qB),
+      () => DFAState('p${stateCounter++}'),
+    );
   }
 
-  final start = getProduct(startState, other.startState);
+  final startProduct = getProductState(startState, other.startState);
   final worklist = [(startState, other.startState)];
   final visited = <(DFAState, DFAState)>{};
 
@@ -1126,19 +1024,38 @@ TypeDFA intersect(TypeDFA other) {
     if (visited.contains((qA, qB))) continue;
     visited.add((qA, qB));
 
-    final product = getProduct(qA, qB);
+    final productState = getProductState(qA, qB);
 
-    // Find common transitions
-    for (final entryA in transitions.entries) {
-      final (fromA, label) = entryA.key;
+    // Compute primitive modes for product state
+    final modesA = primitiveStateModes[qA] ?? <Mode>{};
+    final modesB = other.primitiveStateModes[qB] ?? <Mode>{};
+
+    if (modesA.isNotEmpty || modesB.isNotEmpty) {
+      // At least one is primitive: intersect mode sets
+      final intersectedModes = modesA.isEmpty ? modesB
+          : modesB.isEmpty ? modesA
+          : modesA.intersection(modesB);
+      if (intersectedModes.isNotEmpty) {
+        newPrimitiveModes[productState] = intersectedModes;
+      }
+    } else {
+      // Both structural: check if both final
+      if (finalStates.contains(qA) && other.finalStates.contains(qB)) {
+        newFinalStates.add(productState);
+      }
+    }
+
+    // Add transitions for common path elements
+    for (final entry in transitions.entries) {
+      final (fromA, pathElem) = entry.key;
       if (fromA != qA) continue;
 
-      final toA = entryA.value;
-      final toB = other.transitions[(qB, label)];
+      final toA = entry.value;
+      final toB = other.transitions[(qB, pathElem)];
       if (toB == null) continue;
 
-      final toProduct = getProduct(toA, toB);
-      newTransitions[(product, label)] = toProduct;
+      final toProduct = getProductState(toA, toB);
+      newTransitions[(productState, pathElem)] = toProduct;
 
       if (!visited.contains((toA, toB))) {
         worklist.add((toA, toB));
@@ -1148,7 +1065,7 @@ TypeDFA intersect(TypeDFA other) {
 
   return TypeDFA(
     states: productStates.values.toSet(),
-    startState: start,
+    startState: startProduct,
     finalStates: newFinalStates,
     transitions: newTransitions,
     primitiveStateModes: newPrimitiveModes,
@@ -1156,41 +1073,14 @@ TypeDFA intersect(TypeDFA other) {
 }
 ```
 
-#### 5.7.3 Moded Type Complement
+#### 5.8.4 Moded Type Emptiness
 
-For a complete DFA A, the complement Āᵐ swaps final/non-final states and complements primitive mode sets:
-
-```dart
-TypeDFA modedComplement() {
-  final completed = complete();  // Add sink state if needed
-
-  final newFinalStates = completed.states.difference(completed.finalStates);
-  final newPrimitiveModes = <DFAState, Set<Mode>>{};
-
-  for (final state in completed.states) {
-    final modes = completed.primitiveStateModes[state];
-    if (modes != null && modes.isNotEmpty) {
-      final complement = {Mode.output, Mode.input}.difference(modes);
-      // Always add to preserve primitive status, even if complement is empty
-      newPrimitiveModes[state] = complement;
-    }
-  }
-
-  return TypeDFA(
-    states: completed.states,
-    startState: completed.startState,
-    finalStates: newFinalStates,
-    transitions: completed.transitions,
-    primitiveStateModes: newPrimitiveModes,
-  );
-}
-```
-
-#### 5.7.4 Moded Emptiness Check
-
-A moded DFA is empty iff no reachable state is accepting:
+A moded type DFA has empty moded language iff no state q reachable from q₀ satisfies:
+- q ∈ F and μ(q) = ∅ (structural accepting), OR
+- μ(q) ≠ ∅ (primitive with non-empty modes)
 
 ```dart
+/// Check if L^m(this) = ∅
 bool get isModedEmpty {
   final visited = <DFAState>{};
   final worklist = [startState];
@@ -1200,7 +1090,7 @@ bool get isModedEmpty {
     if (visited.contains(state)) continue;
     visited.add(state);
 
-    // Check if accepting
+    // Check if this state can accept
     if (isPrimitiveState(state)) {
       if (getModesAt(state).isNotEmpty) return false;
     } else if (finalStates.contains(state)) {
@@ -1218,63 +1108,72 @@ bool get isModedEmpty {
 }
 ```
 
-#### 5.7.5 DFA Completion
+#### 5.8.5 Moded Type Complement
 
-Add a sink state for missing transitions:
+For a **complete** moded type DFA A = (Q, q₀, F, δ, μ), the moded complement Āᵐ = (Q, q₀, F', δ, μ') where:
+
+| Component | Definition |
+|-----------|------------|
+| F' | Q \ F |
+| μ'(q) | {output, input} \ μ(q) if μ(q) ≠ ∅; else ∅ |
 
 ```dart
-TypeDFA complete([Set<ModedLabel>? alphabet]) {
-  final allLabels = alphabet ?? _computeAlphabet();
-  final sinkState = DFAState('sink');
-  var needsSink = false;
+/// Compute moded complement (requires complete DFA)
+TypeDFA modedComplement() {
+  final completed = this.complete();  // Add sink state if needed
 
-  final newTransitions = Map<(DFAState, ModedLabel), DFAState>.from(transitions);
+  final newFinalStates = completed.states.difference(completed.finalStates);
 
-  for (final state in states) {
-    for (final label in allLabels) {
-      if (!transitions.containsKey((state, label))) {
-        newTransitions[(state, label)] = sinkState;
-        needsSink = true;
+  final newPrimitiveModes = <DFAState, Set<Mode>>{};
+  for (final state in completed.states) {
+    final modes = completed.primitiveStateModes[state];
+    if (modes != null && modes.isNotEmpty) {
+      final complementModes = {Mode.output, Mode.input}.difference(modes);
+      if (complementModes.isNotEmpty) {
+        newPrimitiveModes[state] = complementModes;
       }
     }
   }
 
-  if (needsSink) {
-    // Add self-loops on sink
-    for (final label in allLabels) {
-      newTransitions[(sinkState, label)] = sinkState;
-    }
-
-    return TypeDFA(
-      states: {...states, sinkState},
-      startState: startState,
-      finalStates: finalStates,  // sink is not final
-      transitions: newTransitions,
-      primitiveStateModes: primitiveStateModes,  // sink not primitive
-    );
-  }
-
-  return this;
-}
-
-Set<ModedLabel> _computeAlphabet() {
-  return transitions.keys.map((pair) => pair.$2).toSet();
+  return TypeDFA(
+    states: completed.states,
+    startState: completed.startState,
+    finalStates: newFinalStates,
+    transitions: completed.transitions,
+    primitiveStateModes: newPrimitiveModes,
+  );
 }
 ```
 
-### 5.8 Correspondence with Paper
+#### 5.8.6 Correspondence with Paper
 
-| Paper Section | Spec Section | Notes |
-|---------------|--------------|-------|
-| Definition (Moded Paths) | 5.6 | Paths are sequences of moded labels |
-| Definition (Moded Type Automaton) | 5.2 (NFA), 5.5 (DFA) | NFA with ε-transitions, then DFA |
-| Construction Algorithm | 5.3 | Union creates ε-transitions |
-| Subset Construction | 5.4 | Standard NFA→DFA with mode set union |
-| Bi-Moded Types | 5.4.3 | Arise from mode set union in subset construction |
-| Containment | 5.7.1 | A ⊆ B iff L(A ∩ B̄) = ∅ |
-| Intersection | 5.7.2 | Product construction with mode intersection |
-| Complement | 5.7.3 | Swap final states, complement mode sets |
-| Emptiness | 5.7.4 | Reachability to accepting states |
+| Paper Section 7.5.1 | Spec Section |
+|---------------------|--------------|
+| Definition (Moded Type Automaton) | 5.2 (TypeDFA structure) |
+| Definition (Primitive State) | 5.8.1 |
+| Definition (Acceptance of Moded Path) | 5.4 |
+| Definition (Moded Type Containment) | 5.8.2 |
+| Proposition (Bi-Moded Start State) | 5.8.2 optimization |
+| Definition (Moded Type Intersection) | 5.8.3 |
+| Definition (Emptiness) | 5.8.4 |
+| Definition (Moded Complement) | 5.8.5 |
+| Proposition (Containment Algorithm) | 5.8.2 `isSubsetOf` |
+
+---
+
+**Version Information:**
+
+**Section 5.8 added:** 2025-12-24
+
+**Purpose:** Define operations on moded type DFA (containment, intersection, complement, emptiness) corresponding to paper Section 7.5.1.
+
+**Section 5.7 added:** 2025-12-24
+
+**Purpose:** Close gap between paper's dynamic mode traversal and spec's static DFA encoding for moded TypeRef positions in structured type alternatives.
+
+**Section 5.4 revised:** 2025-12-24
+
+**Purpose:** Clarify acceptance definition to match paper's two-case formulation (structural vs primitive acceptance).
 
 ---
 
@@ -1779,33 +1678,6 @@ This implementation follows the theory developed in "Moded Types for Grassroots 
 
 ## Appendix A: Changelog
 
-### v1.9 (2025-12-25)
-- **COMPLETE REWRITE** Section 5: Moded Type Automata - NFA Construction and DFA Conversion
-  - 5.1: Moded Transition Labels - Renamed PathElement to ModedLabel, added epsilon transitions
-  - 5.2: Moded Type NFA - Full NFA representation with ε-transitions and mode sets
-  - 5.3: NFA Construction from Type Definitions
-    - 5.3.1: Union Types (Disjunction) - ε-transitions for nondeterministic choice
-    - 5.3.2: Primitive Types - Single-state NFAs with mode annotations
-    - 5.3.3: Structure Types - Labeled transitions with mode encoding
-    - 5.3.4: Type References - Mode complementation for `T?`
-    - 5.3.5: Example: Channel Type - Complete NFA construction walkthrough
-  - 5.4: NFA to DFA Conversion (Subset Construction)
-    - 5.4.1: ε-Closure algorithm
-    - 5.4.2: Subset Construction Algorithm with mode set union
-    - 5.4.3: Mode Set Union in Subset Construction - How bi-moded types arise naturally
-  - 5.5: DFA Representation - Final deterministic automaton structure
-  - 5.6: Accepting Moded Paths - Acceptance criteria for moded paths
-  - 5.7: Operations on Moded Type DFA
-    - 5.7.1: Moded Type Containment (A ⊆ᵐ B)
-    - 5.7.2: Moded Type Intersection (product construction)
-    - 5.7.3: Moded Type Complement (mode set complementation)
-    - 5.7.4: Moded Emptiness Check
-    - 5.7.5: DFA Completion (sink state addition)
-  - 5.8: Correspondence with Paper - Complete mapping to paper definitions
-- **RENAMED** PathElement → ModedLabel throughout entire specification
-- **UPDATED** Section 3.3: Moded Path Representation to reference ModedLabel
-- **RATIONALE:** This rewrite properly implements the Yardeni-Shapiro NFA→DFA algorithm. Union types (`T ::= A ; B`) create ε-transitions representing nondeterministic choice. Bi-moded types like `Every ::= _ ; _?` arise naturally from subset construction merging NFA states with different modes. The previous v1.8 approach attempted to encode modes directly in the DFA, which could not correctly handle union types and led to undebuggable implementation issues.
-
 ### v1.8 (2025-12-24)
 - **REVISED** Section 5.4: Accepting Moded Paths
   - Clarified two-case acceptance: structural (qₙ ∈ F, non-primitive) vs primitive (m ∈ μ(qₙ))
@@ -1823,9 +1695,9 @@ This implementation follows the theory developed in "Moded Types for Grassroots 
 ### v1.7 (2025-12-24)
 - **NEW** Section 5.7: Moded Path Elements for TypeRef Positions
   - 5.7.1: The Problem - Structural ambiguity in channel types with mode-distinguished alternatives
-  - 5.7.2: Two Mode Tracking Mechanisms - `primitiveStateModes` vs `mode` field on ModedLabel
-  - 5.7.3: ModedLabel with Optional Mode - Extended ModedLabel class specification
-  - 5.7.4: Type Compilation Rules - How to encode mode in ModedLabel based on argument syntax
+  - 5.7.2: Two Mode Tracking Mechanisms - `primitiveStateModes` vs `mode` field on PathElement
+  - 5.7.3: PathElement with Optional Mode - Extended PathElement class specification
+  - 5.7.4: Type Compilation Rules - How to encode mode in PathElement based on argument syntax
   - 5.7.5: Clause Contribution - Matching declared type's mode encoding in contribution computation
   - 5.7.6: Correspondence with Paper - Static DFA encoding vs dynamic mode traversal
   - 5.7.7: ListConsAlt Handling - Same rules apply to list syntax
