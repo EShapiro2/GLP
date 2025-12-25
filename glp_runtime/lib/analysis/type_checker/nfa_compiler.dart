@@ -184,6 +184,15 @@ class TypeNFACompiler {
 
   /// Compile a structure alternative
   void _compileStructAlt(NFAState fromState, StructAlt alt) {
+    // Zero-arity struct is semantically a constant (like atoms true, false, nil)
+    if (alt.args.isEmpty) {
+      final label = ModedLabel.constant(alt.functor);
+      final target = _createState('final_${alt.functor}');
+      _finalStates.add(target);
+      _addTransition(fromState, label, target);
+      return;
+    }
+
     for (int i = 0; i < alt.args.length; i++) {
       final argType = alt.args[i];
       final argIndex = i + 1;
