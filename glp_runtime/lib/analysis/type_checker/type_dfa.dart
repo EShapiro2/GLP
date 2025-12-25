@@ -211,7 +211,11 @@ class TypeDFA {
     }
 
     // L^m(A) ⊆ L^m(B) iff L^m(A) ∩ L^m(B̄) = ∅
-    final otherComplement = other.modedComplement();
+    // IMPORTANT: Complement must be complete over BOTH alphabets.
+    // Otherwise, labels in A but not in B would have no transition in B̄,
+    // causing incorrect rejection (the label would go nowhere instead of sink).
+    final combinedAlphabet = alphabet.union(other.alphabet);
+    final otherComplement = other.complete(combinedAlphabet).modedComplement();
     final intersection = modedIntersect(otherComplement);
     return intersection.isModedEmpty;
   }
@@ -323,6 +327,8 @@ class TypeDFA {
   }
 
   /// Moded complement (spec 5.7.3)
+  /// Note: Assumes DFA is already complete over the relevant alphabet.
+  /// For subset checking, use complete(combinedAlphabet) before calling this.
   TypeDFA modedComplement() {
     final completed = complete();
 
