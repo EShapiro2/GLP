@@ -1,13 +1,20 @@
 # GLP Moded Type System Specification (v1.12)
 
 **Updated:** 2025-12-27
-**Changes (v1.12):**
-- Fixed cross-references: Section 2.5.3 → 2.4.3 in Section 7.3
-- Section 2.4.2: Clarified universal type wording
-- Section 5.8.3: Simplified withComplementedModes to use m.complement
-- Section 6.1: Simplified Step 5 comment
+**Changes in v1.12:**
+- Fixed cross-references to Section 2.4.x (was 2.5.x)
+- Fixed "semantically irrelevant" wording for Any type
+- Fixed withComplementedModes to handle structured positions
+- Added Section 3.4: Moded Path Extraction from Terms
+- Added Section 4.4: Mode at Position Algorithm
+- Added Section 5.3.5: Recursive Type Handling
+- Added Section 5.8.5: DFA Union
+- Added Section 6.0: Useless Clause Definition
+- Added Section 6.1.1: Variable Type Inference Algorithm
+- Clarified headToTypeExpr in Section 6.1 Step 4
+- Various wording improvements
 
-**Changes (v1.11):**
+**Changes in v1.11:**
 - Section 1.1: Changed to asymmetric well-typing (output containment + input coverage)
 - Section 2.2: Removed ::< subtype syntax (only ::= exists now)
 - Section 2.5.2: Replaced Every/Any with single Any type
@@ -119,7 +126,8 @@ Complementing `Any` yields itself. This self-duality makes `Any` the universal t
 **Coverage Implications:**
 At **input** positions, the asymmetric well-typing condition requires coverage of both mode alternatives: clauses must collectively handle both the `_` case (writer) and the `_?` case (reader). At **output** positions, output containment is automatically satisfied since any produced value is within `Any`.
 
-Mode annotations on `Any` positions are semantically irrelevant. Writing `Any` or `Any?` in a procedure declaration has the same meaning—both writer and reader variables are acceptable at such positions.
+**Self-Duality and Mode Annotations:**
+Because `(Any)? = Any`, writing `Any` or `Any?` in a procedure declaration denotes the **same type**. Both writer and reader variables are acceptable at such positions. However, mode coverage obligations at input positions still apply—the annotations are equivalent, not ignored.
 
 #### 2.4.3 Output and Input Types
 
@@ -384,6 +392,123 @@ class ModedPath {
 Set<ModedPath> extractModedPaths(Term term, TypeRef expectedType, TypeEnvironment env);
 ```
 
+### 3.4 Extracting Moded Paths from Terms
+
+Given a term and its expected type, we extract the set of moded paths that the term contributes. This algorithm traverses the term and type in parallel, accumulating mode at each step.
+
+```dart
+/// Extract moded paths from a term given its expected type
+///
+/// Parameters:
+/// - term: The term to extract paths from
+/// - expectedType: The type context for mode information
+/// - env: Type environment for resolving type references
+///
+/// Returns: Set of moded paths, where each path is a sequence of
+///          moded labels ending at a leaf (variable or constant)
+Set<ModedPath> extractModedPaths(
+  Term term,
+  TypeRef expectedType,
+  TypeEnvironment env,
+) {
+  return _extractPaths(term, expectedType, Mode.output, [], env);
+}
+
+Set<ModedPath> _extractPaths(
+  Term term,
+  TypeRef typeRef,
+  Mode currentMode,        // Accumulated mode from traversal
+  List<ModedLabel> prefix, // Path prefix so far
+  TypeEnvironment env,
+) {
+  // Apply mode from type reference
+  final effectiveMode = typeRef.isInput
+      ? currentMode.complement
+      : currentMode;
+
+  // Resolve type definition
+  final typeDef = env.getType(typeRef.name);
+
+  if (term is VarTerm) {
+    // Leaf case: variable
+    // The path ends here with the variable's mode
+    final varMode = term.isReader ? Mode.input : Mode.output;
+    return {ModedPath(prefix, leafMode: varMode)};
+  }
+
+  if (term is ConstTerm) {
+    // Leaf case: constant
+    // Constants are modeless, path ends at final state
+    final label = ModedLabel.constant(term.value);
+    return {ModedPath([...prefix, label], leafMode: null)};
+  }
+
+  if (term is StructTerm) {
+    // Recursive case: structure f(t₁, ..., tₙ)
+    final paths = <ModedPath>{};
+
+    // Find matching alternative in type definition
+    final alt = typeDef?.findAlternative(term.functor, term.arity);
+    if (alt == null) return {};  // Type mismatch - will be caught elsewhere
+
+    for (int i = 0; i < term.args.length; i++) {
+      final argTerm = term.args[i];
+      final argType = alt.argTypes[i];
+
+      // Create label for this position
+      final label = ModedLabel.functor(
+        term.functor,
+        term.arity,
+        i + 1,
+        mode: argType.isInput ? effectiveMode.complement : effectiveMode,
+      );
+
+      // Recurse into argument
+      final argPaths = _extractPaths(
+        argTerm,
+        argType,
+        effectiveMode,
+        [...prefix, label],
+        env,
+      );
+      paths.addAll(argPaths);
+    }
+
+    return paths;
+  }
+
+  // Handle list cons [H | T] similarly
+  if (term is ListConsTerm) {
+    final paths = <ModedPath>{};
+    final listType = typeDef;  // Assumes List-like type
+
+    // Head path
+    final headLabel = ModedLabel.listHead(mode: effectiveMode);
+    final headType = listType?.headType ?? TypeRef('Any');
+    paths.addAll(_extractPaths(
+      term.head, headType, effectiveMode, [...prefix, headLabel], env
+    ));
+
+    // Tail path
+    final tailLabel = ModedLabel.listTail(mode: effectiveMode);
+    final tailType = listType?.tailType ?? typeRef;
+    paths.addAll(_extractPaths(
+      term.tail, tailType, effectiveMode, [...prefix, tailLabel], env
+    ));
+
+    return paths;
+  }
+
+  return {};
+}
+```
+
+**Key Properties:**
+1. Mode accumulates through traversal via `combineMode`
+2. Type references with `?` complement the current mode
+3. Variable leaves record their syntactic mode (reader/writer)
+4. The path structure mirrors the term structure
+
 ---
 
 ## 4. Mode Complementation Semantics
@@ -441,7 +566,111 @@ List<TypeRef> getBodyGoalTypes(ProcDecl decl) {
 }
 ```
 
-### 4.4 Mode Coverage for Any Type (Asymmetric)
+### 4.4 Mode at Position
+
+Given a type and a path through its structure, compute the mode at that position. This implements the mode combination rule applied along the path.
+
+```dart
+/// Compute the mode at a given path within a type
+///
+/// Starting from output mode (the default for type definitions),
+/// traverse the path and apply mode combination at each step.
+///
+/// Returns null if the path is invalid for the type.
+Mode? modeAtPosition(
+  TypeRef typeRef,
+  List<ModedLabel> path,
+  TypeEnvironment env,
+) {
+  return _modeAtPath(typeRef, path, 0, Mode.output, env);
+}
+
+Mode? _modeAtPath(
+  TypeRef typeRef,
+  List<ModedLabel> path,
+  int pathIndex,
+  Mode currentMode,
+  TypeEnvironment env,
+) {
+  // Apply mode from type reference
+  final effectiveMode = typeRef.isInput
+      ? currentMode.complement
+      : currentMode;
+
+  // Base case: end of path
+  if (pathIndex >= path.length) {
+    return effectiveMode;
+  }
+
+  final label = path[pathIndex];
+  final typeDef = env.getType(typeRef.name);
+
+  // Handle primitive types
+  if (typeDef == null) {
+    // Built-in type (Number, String) or primitive (_, _?)
+    if (typeRef.name == '_') return Mode.output;
+    if (typeRef.name == '_?') return Mode.input;
+    return effectiveMode;  // Built-in, path should be empty
+  }
+
+  // Find the alternative and argument matching this label
+  for (final alt in typeDef.alternatives) {
+    final argType = _findArgTypeForLabel(alt, label);
+    if (argType != null) {
+      // Recurse into the argument
+      return _modeAtPath(argType, path, pathIndex + 1, effectiveMode, env);
+    }
+  }
+
+  // Path doesn't match any alternative
+  return null;
+}
+
+/// Find the argument type corresponding to a label in a type alternative
+TypeRef? _findArgTypeForLabel(TypeAlternative alt, ModedLabel label) {
+  if (alt is StructAlt) {
+    // Label format: "f(n,i)" for functor f/n position i
+    final match = RegExp(r'(\w+)\((\d+),(\d+)\)').firstMatch(label.symbol);
+    if (match != null) {
+      final functor = match.group(1);
+      final arity = int.parse(match.group(2)!);
+      final argIndex = int.parse(match.group(3)!);
+
+      if (alt.functor == functor && alt.arity == arity) {
+        return alt.argTypes[argIndex - 1];
+      }
+    }
+  }
+
+  if (alt is ListConsAlt) {
+    if (label.symbol == '[|](2,1)') return alt.headType;
+    if (label.symbol == '[|](2,2)') return alt.tailType;
+  }
+
+  if (alt is DiffListAlt) {
+    if (label.symbol == '\\(2,1)') return alt.headType;
+    if (label.symbol == '\\(2,2)') return alt.tailType;
+  }
+
+  return null;
+}
+```
+
+**Mode Combination Rule Recap:**
+```
+combineMode(parent, embedded) =
+  if parent == input then embedded.complement
+  else embedded
+```
+
+**Example:**
+For `DiffList ::= List \ List?` and path `[\(2,2)]` (second argument):
+1. Start: mode = output (default)
+2. At `\(2,2)`: argument type is `List?`
+3. Apply: `combineMode(output, input) = input`
+4. Result: mode at this position is `input`
+
+### 4.5 Mode Coverage for Any Type (Asymmetric)
 
 With asymmetric well-typing, mode coverage applies **only to input positions**. The `Any ::= _ ; _?` type contains both mode alternatives.
 
@@ -750,27 +979,139 @@ TypeNFA compileTypeRef(String typeName, bool isInput) {
 
 **Mode complementation** for `T?`:
 ```dart
+/// Apply mode complementation to entire NFA
+///
+/// Mode complementation (·)? must be applied to BOTH:
+/// 1. Primitive state modes (for leaf positions)
+/// 2. Moded transition labels (for structured positions)
+///
+/// This implements the paper's Definition 6.5 which applies
+/// complementation recursively through the entire type structure.
 TypeNFA withComplementedModes() {
-  final newPrimitiveModes = <NFAState, Set<Mode>>{};
+  // Complement primitive state modes
+  final newPrimitiveModes = primitiveStateModes.map(
+    (state, modes) => MapEntry(state, modes.map((m) => m.complement).toSet())
+  );
 
-  for (final entry in primitiveStateModes.entries) {
-    final state = entry.key;
-    final modes = entry.value;
-    final complemented = modes.map((m) => m.complement).toSet();
-    newPrimitiveModes[state] = complemented;
+  // Complement moded transition labels
+  final newTransitions = <(NFAState, ModedLabel), Set<NFAState>>{};
+  for (final entry in transitions.entries) {
+    final (fromState, label) = entry.key;
+    final toStates = entry.value;
+
+    // Complement the label's mode if present
+    final newLabel = label.mode != null
+        ? ModedLabel(label.symbol, mode: label.mode!.complement)
+        : label;
+
+    newTransitions[(fromState, newLabel)] = toStates;
   }
 
   return TypeNFA(
     states: states,
     startState: startState,
     finalStates: finalStates,
-    transitions: transitions,
+    transitions: newTransitions,
     primitiveStateModes: newPrimitiveModes,
   );
 }
 ```
 
-#### 5.3.5 Example: Channel Type
+Also add corresponding method to `ModedLabel` class (Section 5.1):
+
+```dart
+/// Create a new label with complemented mode
+ModedLabel withComplementedMode() {
+  if (mode == null) return this;
+  return ModedLabel(symbol, mode: mode!.complement);
+}
+```
+
+#### 5.3.5 Recursive Type Handling
+
+Recursive types (e.g., `List ::= [] ; [_ | List]`) require special handling during NFA construction to ensure termination and correct state sharing.
+
+**Approach: State Memoization**
+
+When compiling a type definition, we maintain a map from type names to their start states. Recursive references reuse existing states rather than creating infinite expansions.
+
+```dart
+class TypeNFACompiler {
+  /// Map from type name to its NFA start state (for recursion)
+  final Map<String, NFAState> _typeStartStates = {};
+
+  /// Compile a type definition to NFA with recursion handling
+  TypeNFA compileType(String typeName, TypeDef typeDef, TypeEnvironment env) {
+    // Check if already compiling this type (recursion)
+    if (_typeStartStates.containsKey(typeName)) {
+      // Return a stub NFA that references the existing start state
+      return _createRecursiveReference(typeName);
+    }
+
+    // Allocate start state before compiling (for recursive references)
+    final startState = NFAState.fresh();
+    _typeStartStates[typeName] = startState;
+
+    // Compile the type definition body
+    final bodyNFA = compileTypeExpr(typeDef.body, env);
+
+    // Connect start state to body NFA via ε-transition
+    final nfa = TypeNFA(
+      states: {startState, ...bodyNFA.states},
+      startState: startState,
+      finalStates: bodyNFA.finalStates,
+      transitions: {...bodyNFA.transitions},
+      primitiveStateModes: bodyNFA.primitiveStateModes,
+    );
+    nfa.addEpsilonTransition(startState, bodyNFA.startState);
+
+    return nfa;
+  }
+
+  /// Create a reference to a recursively-defined type
+  TypeNFA _createRecursiveReference(String typeName) {
+    final existingStart = _typeStartStates[typeName]!;
+
+    // Return an NFA that transitions directly to the existing start state
+    // This creates a cycle in the automaton, representing the recursive type
+    return TypeNFA(
+      states: {existingStart},
+      startState: existingStart,
+      finalStates: {},  // No new final states; reuses existing structure
+      transitions: {},
+      primitiveStateModes: {},
+    );
+  }
+}
+```
+
+**Example: List Type**
+
+For `List ::= [] ; [_ | List]`:
+
+1. Allocate start state `q_list`
+2. Compile alternatives:
+   - `[]`: Creates final state for nil
+   - `[_ | List]`: Creates transitions for cons, with tail recursively referencing `q_list`
+3. Result: Cyclic NFA where list tail transitions back to `q_list`
+
+```
+       ε           []
+q_list ---> q_nil -----> (accept)
+   |
+   |  ε        [|](2,1)        [|](2,2)
+   +-----> q_cons -------> q_head -------> q_list (back-edge)
+                              |
+                              v
+                          (primitive _)
+```
+
+**Key Properties:**
+1. **Termination:** Each type is compiled at most once; recursive references reuse states
+2. **Correctness:** The cyclic structure correctly represents the recursive type's infinite tree language
+3. **Determinism:** After NFA→DFA conversion, cycles become self-loops on DFA states
+
+#### 5.3.6 Example: Channel Type
 
 For `MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?)`:
 
@@ -895,7 +1236,7 @@ NFA compiler produces transitions:
 | "Each clause similarly contributes to the NFA" | `patternToTypeExpr` + `TypeNFACompiler` |
 | "NFA converted to DFA via subset construction" | Section 5.5 `NFAToDFAConverter.convert()` |
 | "Union of clause contributions" | `TypeDFA.union()` (Section 5.8) |
-| "Fixpoint check T_M^{α,m}(S) = S" | Section 6.1 with subset check |
+| "Asymmetric well-typing conditions" | Section 6.1: output containment + input coverage |
 
 **Key insight**: By converting patterns to type expressions, we reuse the existing NFA→DFA pipeline rather than building a parallel infrastructure. This ensures:
 1. **Uniform representation**: Both type definitions and clause contributions use same NFA→DFA
@@ -1276,7 +1617,103 @@ bool get isModedEmpty {
 }
 ```
 
-#### 5.8.5 DFA Completion
+#### 5.8.5 Moded Type Union
+
+Union of moded type DFAs computes a DFA accepting paths accepted by either operand. This is used in Section 6.1 Step 5 to combine clause contributions.
+
+**Approach: Via NFA**
+
+The most straightforward approach converts DFAs to NFAs, creates a union NFA, then converts back to DFA:
+
+```dart
+/// Compute union of moded type DFAs
+TypeDFA union(TypeDFA other) {
+  // Convert both DFAs to NFAs (trivial: DFA is a special case of NFA)
+  final nfa1 = this.toNFA();
+  final nfa2 = other.toNFA();
+
+  // Create union NFA with new start state
+  final unionStart = NFAState.fresh();
+  final unionNFA = TypeNFA(
+    states: {unionStart, ...nfa1.states, ...nfa2.states},
+    startState: unionStart,
+    finalStates: {...nfa1.finalStates, ...nfa2.finalStates},
+    transitions: {...nfa1.transitions, ...nfa2.transitions},
+    primitiveStateModes: {...nfa1.primitiveStateModes, ...nfa2.primitiveStateModes},
+  );
+
+  // Add ε-transitions from union start to both original starts
+  unionNFA.addEpsilonTransition(unionStart, nfa1.startState);
+  unionNFA.addEpsilonTransition(unionStart, nfa2.startState);
+
+  // Convert back to DFA
+  return NFAToDFAConverter.convert(unionNFA);
+}
+
+/// Convert DFA to NFA (trivial conversion)
+TypeNFA toNFA() {
+  // DFA transitions become singleton NFA transitions
+  final nfaTransitions = <(NFAState, ModedLabel), Set<NFAState>>{};
+  for (final entry in transitions.entries) {
+    nfaTransitions[entry.key] = {entry.value};
+  }
+
+  return TypeNFA(
+    states: states.map((s) => NFAState(s.id)).toSet(),
+    startState: NFAState(startState.id),
+    finalStates: finalStates.map((s) => NFAState(s.id)).toSet(),
+    transitions: nfaTransitions,
+    primitiveStateModes: primitiveStateModes.map(
+      (k, v) => MapEntry(NFAState(k.id), v)
+    ),
+  );
+}
+```
+
+**Alternative: Direct Product Construction**
+
+For efficiency, union can also be computed directly via product construction with disjunctive acceptance:
+
+```dart
+/// Direct DFA union via product construction
+TypeDFA unionDirect(TypeDFA other) {
+  // Product construction similar to intersection (Section 5.8.2)
+  // but with disjunctive acceptance condition
+
+  final productStates = <(DFAState, DFAState), DFAState>{};
+  final newTransitions = <(DFAState, ModedLabel), DFAState>{};
+  final newFinalStates = <DFAState>{};
+  final newPrimitiveModes = <DFAState, Set<Mode>>{};
+
+  // ... (similar to intersection, but:)
+
+  // Acceptance: (q1, q2) is final if q1 OR q2 is final
+  // Primitive modes: union of mode sets (not intersection)
+
+  for (final entry in productStates.entries) {
+    final (q1, q2) = entry.key;
+    final productState = entry.value;
+
+    // Final if either is final
+    if (finalStates.contains(q1) || other.finalStates.contains(q2)) {
+      newFinalStates.add(productState);
+    }
+
+    // Mode sets: union
+    final modes1 = getModesAt(q1);
+    final modes2 = other.getModesAt(q2);
+    if (modes1.isNotEmpty || modes2.isNotEmpty) {
+      newPrimitiveModes[productState] = {...modes1, ...modes2};
+    }
+  }
+
+  return TypeDFA(...);
+}
+```
+
+**Note:** The NFA-based approach is simpler and leverages the existing subset construction. The direct approach is more efficient for large automata but requires careful handling of mode set union.
+
+#### 5.8.6 DFA Completion
 
 Add a sink state for missing transitions:
 
@@ -1371,6 +1808,67 @@ Set<ModedPath> inputPaths(TypeDFA dfa) {
 
 ## 6. Moded Type Checking Algorithm
 
+### 6.0 Useless Clauses
+
+**Definition (Useless Clause):**
+A clause C defining procedure p is *useless* relative to moded type S iff the clause contribution T_C^{α,m}(S) is empty. Equivalently, C is useless iff no ground moded path from the clause head is contained in paths^m(S).
+
+A clause is useless when:
+1. The head contains a ground subterm not in the declared type, OR
+2. The head's structure is incompatible with the declared type, OR
+3. Variable types inferred from the body are empty (unsatisfiable constraints)
+
+**Detection Algorithm:**
+
+```dart
+/// Check if a clause is useless relative to declared type
+bool isUselessClause(
+  Clause clause,
+  ProcDecl decl,
+  TypeEnvironment env,
+) {
+  // Step 1: Check ground paths in head
+  final headPaths = extractGroundPaths(clause.head, decl.argTypes, env);
+  final declaredPaths = extractModedPaths(decl, env);
+
+  for (final path in headPaths) {
+    if (!declaredPaths.contains(path)) {
+      return true;  // Ground path not in declared type
+    }
+  }
+
+  // Step 2: Compute clause contribution
+  final varTypes = inferVariableTypes(clause, decl, env);
+
+  // Check for empty variable types (unsatisfiable)
+  for (final vt in varTypes.values) {
+    if (vt.isEmpty) {
+      return true;  // Variable has no valid type
+    }
+  }
+
+  // Step 3: Build clause contribution NFA and check emptiness
+  final contribution = computeClauseContribution(clause, decl, varTypes, env);
+  return contribution.isEmpty;
+}
+
+/// Extract ground (non-variable) paths from a term
+Set<ModedPath> extractGroundPaths(
+  Term term,
+  List<TypeRef> argTypes,
+  TypeEnvironment env,
+) {
+  final paths = <ModedPath>{};
+  // Traverse term, collecting paths that don't end at variables
+  // These are the structural constraints the clause imposes
+  // ... implementation similar to extractModedPaths but filtering variable leaves
+  return paths;
+}
+```
+
+**Correspondence with Paper:**
+This implements the "no useless clauses" precondition in Definition 6.12 (Well-Moded-Typing). Useless clauses are excluded before computing the asymmetric well-typing conditions.
+
 ### 6.1 Overview
 
 The moded type checker extends the Yardeni-Shapiro algorithm with mode tracking:
@@ -1418,11 +1916,26 @@ For each procedure p/n with declared moded type (T₁^m₁, ..., Tₙ^mₙ):
         Report error: "head mode mismatch for Y"
 
     // Step 4: Compute clause contribution via NFA
-    typeExpr_C := headToTypeExpr(head, varTypes)
+    //
+    // headToTypeExpr converts the clause head to a type expression using the
+    // CALLEE'S VIEW of modes (modes complemented from the procedure declaration).
+    // This is equivalent to patternToTypeExpr with declaration modes already
+    // complemented via decl.calleeView.
+    //
+    // For example, if the declaration is `procedure p(T?, T)`:
+    // - Callee view: (T, T?)  [modes complemented]
+    // - Head pattern with writer X at position 1 → type T with output mode ✓
+    // - Head pattern with reader X? at position 2 → type T? with input mode ✓
+    typeExpr_C := headToTypeExpr(head, varTypes, decl.calleeView)
     nfa_C := TypeNFACompiler.compileExpr(typeExpr_C)
     T_C^{α,m}(S) := NFAToDFAConverter.convert(nfa_C)
 
   // Step 5: Asymmetric well-moded-typing conditions
+  //
+  // Compute the union of all clause contributions.
+  // Note: The NFA→DFA pipeline produces tuple-distributive sets by construction
+  // (regular tree languages are tuple-distributive), so no separate closure step
+  // is needed. Union is computed via NFA union + subset construction.
   inferred := union(T_C^{α,m}(S) for all clauses C)
 
   // Output Containment: T_M^{α,m}(S)|↓ ⊆ S|↓
@@ -1433,6 +1946,170 @@ For each procedure p/n with declared moded type (T₁^m₁, ..., Tₙ^mₙ):
   If NOT declared|↑ ⊆ inferred|↑:
     Report error: "input coverage violated - declared input alternative not handled by any clause"
 ```
+
+**headToTypeExpr Implementation:**
+
+```dart
+/// Convert clause head to type expression for NFA construction
+///
+/// Uses the callee's view of types (modes complemented from declaration).
+/// This captures what the clause PRODUCES (for output positions) and
+/// ACCEPTS (for input positions).
+TypeExpr headToTypeExpr(
+  Goal head,
+  Map<String, TypeDFA> varTypes,
+  List<TypeRef> calleeTypes,  // decl.calleeView
+) {
+  final argExprs = <TypeExpr>[];
+
+  for (int i = 0; i < head.args.length; i++) {
+    final term = head.args[i];
+    final expectedType = calleeTypes[i];
+    argExprs.add(_termToTypeExpr(term, expectedType, varTypes));
+  }
+
+  return TupleTypeExpr(argExprs);
+}
+
+TypeExpr _termToTypeExpr(
+  Term term,
+  TypeRef expectedType,
+  Map<String, TypeDFA> varTypes,
+) {
+  if (term is VarTerm) {
+    // Use inferred type for this variable
+    final varType = varTypes[term.baseName];
+    if (varType != null) {
+      return TypeRefExpr.fromDFA(varType, isInput: term.isReader);
+    }
+    return TypeRefExpr(expectedType.name, isInput: term.isReader);
+  }
+
+  if (term is ConstTerm) {
+    return ConstTypeExpr(term.value);
+  }
+
+  if (term is StructTerm) {
+    final argExprs = <TypeExpr>[];
+    // Recursively convert arguments
+    // ... (implementation details)
+    return StructTypeExpr(term.functor, argExprs);
+  }
+
+  // ... handle other term types
+}
+```
+
+### 6.1.1 Variable Type Inference
+
+Variable type inference computes the moded type of each variable from its occurrences. This is the detailed algorithm for Step 2 of Section 6.1.
+
+```dart
+/// Infer moded types for all variables in a clause
+///
+/// For each variable, we:
+/// 1. Collect the type at each occurrence position
+/// 2. Verify mode consistency (writer→output position, reader→input position)
+/// 3. Intersect all occurrence types to get the variable's type
+///
+/// SRSW ensures each variable occurs exactly once as writer and once as reader,
+/// so typically there are exactly two occurrences to consider.
+Map<String, TypeDFA> inferVariableTypes(
+  Clause clause,
+  ProcDecl decl,
+  TypeEnvironment env,
+) {
+  final varTypes = <String, TypeDFA>{};
+  final varOccurrences = <String, List<(TypeDFA, Mode, bool)>>{}; // (type, expectedMode, isHead)
+
+  // Collect head occurrences (with complemented modes)
+  final headTypes = decl.calleeView;  // Modes complemented for callee
+  for (int i = 0; i < clause.head.args.length; i++) {
+    _collectOccurrences(
+      clause.head.args[i],
+      headTypes[i],
+      env,
+      varOccurrences,
+      isHead: true,
+    );
+  }
+
+  // Collect body occurrences
+  for (final goal in clause.body) {
+    final goalDecl = env.getProcedure(goal.functor, goal.arity);
+    if (goalDecl == null) continue;
+
+    final bodyTypes = goalDecl.calleeView;  // Caller's view → callee's view
+    for (int i = 0; i < goal.args.length; i++) {
+      _collectOccurrences(
+        goal.args[i],
+        bodyTypes[i],
+        env,
+        varOccurrences,
+        isHead: false,
+      );
+    }
+  }
+
+  // Compute type for each variable
+  for (final entry in varOccurrences.entries) {
+    final varName = entry.key;
+    final occurrences = entry.value;
+
+    if (occurrences.isEmpty) {
+      varTypes[varName] = env.getAnyDFA();
+      continue;
+    }
+
+    // Start with first occurrence's type
+    var resultType = occurrences.first.$1;
+
+    // Intersect with remaining occurrences
+    for (int i = 1; i < occurrences.length; i++) {
+      resultType = resultType.intersect(occurrences[i].$1);
+    }
+
+    varTypes[varName] = resultType;
+  }
+
+  return varTypes;
+}
+
+void _collectOccurrences(
+  Term term,
+  TypeRef typeRef,
+  TypeEnvironment env,
+  Map<String, List<(TypeDFA, Mode, bool)>> varOccurrences,
+  {required bool isHead},
+) {
+  if (term is VarTerm) {
+    final typeDFA = env.getTypeDFA(typeRef.name);
+    final expectedMode = typeRef.isInput ? Mode.input : Mode.output;
+
+    varOccurrences.putIfAbsent(term.baseName, () => []);
+    varOccurrences[term.baseName]!.add((typeDFA, expectedMode, isHead));
+    return;
+  }
+
+  if (term is StructTerm) {
+    final typeDef = env.getType(typeRef.name);
+    final alt = typeDef?.findAlternative(term.functor, term.arity);
+    if (alt == null) return;
+
+    for (int i = 0; i < term.args.length; i++) {
+      _collectOccurrences(term.args[i], alt.argTypes[i], env, varOccurrences, isHead: isHead);
+    }
+  }
+
+  // Similar handling for ListConsTerm, DiffListTerm, etc.
+}
+```
+
+**Mode Consistency Check:**
+During collection, verify that each variable's syntactic form matches the expected mode:
+- Writer variable `X` at position with mode `output` after complementation → ✓
+- Reader variable `X?` at position with mode `input` after complementation → ✓
+- Mismatch → Report mode error
 
 ### 6.2 Mode Checking at Leaf Positions
 
