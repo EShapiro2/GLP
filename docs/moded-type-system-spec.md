@@ -1,10 +1,12 @@
-# GLP Moded Type System Specification (v1.10)
+# GLP Moded Type System Specification (v1.11)
 
-**Updated:** 2025-12-25
+**Updated:** 2025-12-27
 **Changes:**
-- Section 5.4: Added clause contribution via NFA construction
-- Section 6.1: Expanded fixpoint check comments to reference both coverage types
-- Section 6.5 (NEW): Added Structural Coverage Check section with examples and implementation
+- Section 1.1: Changed to asymmetric well-typing (output containment + input coverage)
+- Section 2.2: Removed ::< subtype syntax (only ::= exists now)
+- Section 2.5.2: Replaced Every/Any with single Any type
+- Section 6: Rewrote algorithm for asymmetric conditions
+- Section 6.4-6.5: Coverage applies only to input positions
 
 ## 1. Overview
 
@@ -17,7 +19,13 @@ This document extends the GLP Type System Specification to include **moded types
 | Semantics | Model-theoretic (success set) | Trace semantics (produced/consumed) |
 | What it checks | Structural correctness | Structural + directional correctness |
 | Abstraction | T_P^α (tuple-distributive closure) | T_M^{α,m} (moded tuple-distributive closure) |
-| Fixpoint | T_P^α(S) = S | T_M^{α,m}(S) = S |
+| Well-Typing | T_P^α(S) = S | Asymmetric: output containment |
+ | (fixpoint equality) | + input coverage |
+| Correctness | Types ⊇ ⟦P⟧ | Outputs ⊆ S, Inputs ⊇ S |
+
+**Asymmetric Well-Typing Conditions:**
+- **Output Containment:** `T_M^{α,m}(S)|↓ ⊆ S|↓` — produced values must be within declared type
+- **Input Coverage:** `S|↑ ⊆ T_M^{α,m}(S)|↑` — all declared input alternatives must be handled
 
 Moded types **subsume** unmoded types: every unmoded type is equivalent to a moded type where all positions have the universal mode `Any = _ | _?`.
 
@@ -49,22 +57,7 @@ _    output mode only (program produces value)
 _?   input mode only (program consumes value)
 ```
 
-### 2.2 Type Definitions vs. Subtype Declarations
-
-Following Yardeni-Shapiro, we distinguish two declaration forms:
-
-| Syntax | Semantics | Fixpoint Condition | Coverage |
-|--------|-----------|-------------------|----------|
-| `T ::= S` | Type definition | T_M^{α,m}(S) = S | Complete (equality) |
-| `T ::< S` | Subtype declaration | T_M^{α,m}(S') ⊆ S | Partial (subset) |
-
-**Type definition (`::=`)**: Clauses must collectively cover ALL alternatives of S.
-
-**Subtype declaration (`::<`)**: Clauses need only cover SOME SUBSET of S. This is an escape hatch for partial implementations.
-
-**GLP Implementation Status:** GLP currently implements only `::=`. The `::< ` form is reserved for future Polymorphic Moded Types (PMT).
-
-### 2.3 Moded Type Expressions
+### 2.2 Moded Type Expressions
 
 Type definitions remain as before (using `::=` syntax):
 ```
@@ -81,7 +74,7 @@ This declares:
 - Arguments 1, 2: input mode (`List?`) — caller provides readers
 - Argument 3: output mode (`List`) — caller provides writer
 
-### 2.4 Grammar Extension
+### 2.3 Grammar Extension
 
 ```
 proc_decl     ::= 'procedure' atom '(' moded_type_refs ')' '.'
@@ -91,43 +84,38 @@ moded_type_ref  ::= type_ref '?'?
 
 The `?` suffix on a type reference indicates input mode.
 
-### 2.5 Predefined Types
+### 2.4 Predefined Types
 
 The following types and procedures are predefined by prepending their definitions to every module. A module cannot redefine a predefined type or procedure.
 
-#### 2.5.1 Primitive Types
+#### 2.4.1 Primitive Types
 
 ```prolog
 Number.   % numeric values (built-in)
 String.   % string values (built-in)
 ```
 
-#### 2.5.2 Universal Types
+#### 2.4.2 Universal Type
 
 ```prolog
-Every ::= _ ; _?.      % exact: requires both mode alternatives covered
-Any ::< Every.         % subtype: no coverage requirement
+Any ::= _ ; _?.
 ```
 
-**Self-Duality of Every and Any:**
-
-Since `Every ::= _ ; _?` contains both output and input modes as alternatives, the type is *self-dual*:
-
-```
-(Every)? = Every
-```
-
-Complementing `Every` yields `Every`. The same holds for `Any ::< Every`:
+**Self-Duality:**
+Since `Any ::= _ ; _?` contains both primitive modes, it is *self-dual*:
 
 ```
-(Any)? = Any
+(Any)? = (_ ; _?)? = _? ; _ = Any
 ```
 
-**Consequence:** Mode annotations on `Any` positions are semantically irrelevant. Writing `Any` or `Any?` in a procedure declaration has the same meaning—both writer and reader variables are acceptable at such positions. Since `Any` uses subtype semantics (`::< `), there is no coverage requirement either.
+Complementing `Any` yields itself. This self-duality makes `Any` the true universal type—any value at any mode.
 
-This self-duality means `Any` truly represents "any value with any mode"—the universal type for positions where mode is unconstrained.
+**Coverage Implications:**
+At **input** positions, the asymmetric well-typing condition requires coverage of both mode alternatives: clauses must collectively handle both the `_` case (writer) and the `_?` case (reader). At **output** positions, output containment is automatically satisfied since any produced value is within `Any`.
 
-#### 2.5.3 Output and Input Types
+Mode annotations on `Any` positions are semantically irrelevant. Writing `Any` or `Any?` in a procedure declaration has the same meaning—both writer and reader variables are acceptable at such positions.
+
+#### 2.4.3 Output and Input Types
 
 ```prolog
 Output.                % all variable positions have mode _ (writers)
@@ -154,29 +142,23 @@ DiffList ::= List \ List?.       % has mode complementation (List?)
 
 `Output ∩ DiffList ≠ DiffList` (DiffList contains `List?`).
 
-#### 2.5.4 Collections
+#### 2.4.4 Collections
 
 ```prolog
 List ::= [Any | List] ; [].
-Stream ::< List.               % may remain open (no [] case required)
+Stream ::= [Any | Stream].
 DiffList ::= List \ List?.     % difference list with hole
 ```
 
-**List** uses `Any` for elements. Since `Any` has no coverage requirement, a two-clause copy suffices:
+**List** uses `Any` for elements. At input positions, `Any` requires mode coverage; at output positions, no coverage required.
 
-```prolog
-procedure copy(List?, List).
-copy([], []).
-copy([X | In], [X? | Out]) :- copy(In?, Out).
-```
-
-**Stream** uses subtype semantics, so procedures need not handle the `[]` case.
+**Stream** is defined without the nil case `[]`. Procedures operating on streams need not handle empty streams—the type simply doesn't include that alternative.
 
 **DiffList** represents a list with a hole at the end. The structure `List \ List?` pairs:
 - `List` (output): the content produced so far
 - `List?` (input): the hole where more content can be appended
 
-#### 2.5.5 Channels
+#### 2.4.5 Channels
 
 ```prolog
 Channel ::= ch(Stream?, Stream).
@@ -188,7 +170,7 @@ A channel pairs two streams with complementary modes:
 
 The `new_channel` operation creates two complementary endpoints by swapping the streams.
 
-#### 2.5.6 Predefined Procedures
+#### 2.4.6 Predefined Procedures
 
 These unit clauses are predefined and can be used as defined guards:
 
@@ -220,7 +202,7 @@ receive(X?, ch([X|In], Out?), ch(In?, Out)).
 
 **receive** takes a message from the channel's input stream.
 
-#### 2.5.7 Usage as Defined Guards
+#### 2.4.7 Usage as Defined Guards
 
 Since the predefined procedures are unit clauses, they can be used in guard position:
 
@@ -235,26 +217,37 @@ handler(Ch) :- receive(Msg, Ch?, Ch2) |
     handler(Ch2?).
 ```
 
-#### 2.5.8 EveryList (Theoretical Example)
+#### 2.4.8 Any List and Mode Coverage
 
-For theoretical analysis, one may define a list requiring full mode coverage at element positions:
+Lists with `Any` at element positions require mode coverage at input positions:
 
-```prolog
-EveryList ::= [Every | EveryList] ; [].
-```
+```glp
+List ::= [] ; [Any | List].
 
-Unlike `List` (which uses `Any`), `EveryList` requires three clauses for copy:
+procedure copy(List?, List).
 
-```prolog
-procedure copy(EveryList?, EveryList).
 copy([], []).
-copy([X | In], [X? | Out]) :- copy(In?, Out).   % element flows in→out
-copy([X? | In], [X | Out]) :- copy(In?, Out).   % element flows out→in
+copy([H? | In], [H | Out?]) :- copy(In?, Out).
+copy([H | In], [H? | Out?]) :- copy(In?, Out).
 ```
 
-The third clause covers the `_?` alternative of `Every`. This is primarily of theoretical interest; practical programs use `List` with `Any` elements.
+The two non-base clauses collectively cover both mode combinations at the `Any` position:
+- First clause: reader at input head (`_?`), writer at output head (`_`)
+- Second clause: writer at input head (`_`), reader at output head (`_?`)
 
-### 2.7 Embedded Modes in Type Definitions
+This is required because at **input** positions, `Any ::= _ ; _?` demands coverage of both alternatives.
+
+For **output** positions, a single clause suffices:
+
+```glp
+procedure generate(List).
+generate([X | Xs?]) :- generate(Xs).
+generate([]).
+```
+
+Output containment (`T_M^{α,m}(S)|↓ ⊆ S|↓`) only requires that produced values be within `Any`—no coverage obligation.
+
+### 2.5 Embedded Modes in Type Definitions
 
 Types can embed mode information for complex data structures:
 ```
@@ -273,7 +266,7 @@ QueueMsg ::= enqueue(Any) ; dequeue(Any?).
 
 In `show(Number?)`, the `Number?` marks an **input position in the type definition**. When the counter receives `CounterMsg?` (input stream), involution applies: `show(Number?)` → `show(Number)` — so the counter WRITES the response.
 
-### 2.8 Examples
+### 2.6 Examples
 
 ```glp
 % Simple moded procedure
@@ -401,6 +394,14 @@ Mode complementation is defined recursively on type expressions:
 ((τ₁ ; ... ; τₙ))?            = (τ₁)? ; ... ; (τₙ)?
 ```
 
+**Primitive Complementation:**
+```
+(_)?  = _?          (output primitive → input primitive)
+(_?)? = _           (input primitive → output primitive)
+```
+
+These follow the involution property: `((_)?)? = (_?)? = _`.
+
 ### 4.2 Mode Combination at Nested Positions
 
 When traversing into a type structure, modes combine:
@@ -434,124 +435,64 @@ List<TypeRef> getBodyGoalTypes(ProcDecl decl) {
 }
 ```
 
-### 4.4 Mode Coverage for Exact Union Types (::=)
+### 4.4 Mode Coverage for Any Type (Asymmetric)
 
-Under `::=` semantics, union types require coverage of **all** alternatives. This has critical implications for `Every ::= _ | _?`:
+With asymmetric well-typing, mode coverage applies **only to input positions**. The `Any ::= _ ; _?` type contains both mode alternatives.
 
-**Important Distinction:**
-- `Every ::= _ ; _?` — exact definition, REQUIRES mode coverage
-- `Any ::< Every` — subtype declaration, NO coverage requirement
+**Asymmetric Mode Coverage:**
+- At **input** positions (`Type?`): clauses must cover both `_` and `_?` alternatives
+- At **output** positions (`Type`): no coverage required—output containment only checks subset
 
-Since `Any` uses `::< ` (subtype), not `::=` (exact), **`Any` positions have NO coverage requirement**. Procedures using `Any` need not cover both modes.
-
-**Mode Coverage Requirement:** If a type position has type `Every ::= _ | _?` under `::=` semantics, clauses must collectively cover **both** mode alternatives:
-- Some clause(s) must handle the `_` case (writer at that position)
-- Some clause(s) must handle the `_?` case (reader at that position)
-
-A single clause typically covers only one mode combination.
-
-#### Example: EveryList Copy (Why Every Requires Mode Coverage)
-
-Consider a list type with `Every` at the head position:
-```glp
-EveryList ::= [] ; [Every | EveryList].
-
-procedure copy(EveryList?, EveryList).
-
-copy([], []).
-copy([H? | In], [H | Out?]) :- copy(In?, Out).
-```
-
-**SRSW check:** Each variable has exactly one writer and one reader ✓
-
-**Question:** Is this program well-moded-typed?
-
-**Analysis:** At the head position of `[H? | In]` and `[H | Out?]`, the type is `Every ::= _ | _?`. Under `::=` semantics, clauses must collectively cover both alternatives:
-- `_` requires a writer variable at that position
-- `_?` requires a reader variable at that position
-
-The single clause `copy([H? | In], [H | Out?])` covers only one mode combination:
-- Input head: `H?` (reader) → matches `_?`
-- Output head: `H` (writer) → matches `_`
-
-The opposite combination (writer at input head, reader at output head) is **not covered**.
-
-**Verdict: This program is NOT well-moded-typed.**
-
-#### Solution 1: Restrict to Output-Mode Heads
-
-```glp
-List1 ::= [] ; [_ | List1].
-
-procedure copy(List1?, List1).
-
-copy([], []).
-copy([H? | In], [H | Out?]) :- copy(In?, Out).
-```
-
-Head type is `_` (not `Any`), so only one mode needs coverage. **Well-moded-typed.**
-
-#### Solution 2: Restrict to Input-Mode Heads
-
-```glp
-List2 ::= [] ; [_? | List2].
-
-procedure copy(List2?, List2).
-
-copy([], []).
-copy([H | In], [H? | Out?]) :- copy(In?, Out).
-```
-
-Head type is `_?` (not `Any`), so only one mode needs coverage. **Well-moded-typed.**
-
-#### Solution 3: Cover Both Modes with Multiple Clauses
-
-```glp
-EveryList ::= [] ; [Every | EveryList].
-
-procedure copy(EveryList?, EveryList).
-
-copy([], []).
-copy([H? | In], [H | Out?]) :- copy(In?, Out).
-copy([H | In], [H? | Out?]) :- copy(In?, Out).
-```
-
-The two non-base clauses collectively cover both mode combinations:
-- First clause: reader at input head (`_?`), writer at output head (`_`)
-- Second clause: writer at input head (`_`), reader at output head (`_?`)
-
-**Well-moded-typed.**
-
-#### Why Standard List Has No Coverage Requirement
-
-The standard `List` type uses `Any` for elements:
+#### Example: List Copy with Any Elements
 
 ```glp
 List ::= [] ; [Any | List].
+
+procedure copy(List?, List).
+
+copy([], []).
+copy([H? | In], [H | Out?]) :- copy(In?, Out).
+copy([H | In], [H? | Out?]) :- copy(In?, Out).
 ```
 
-Since `Any ::< Every` (subtype, not exact), there is **NO mode coverage requirement** at the head position. A two-clause copy suffices:
+The first argument `List?` is an **input position**. At the `Any` head position:
+- First non-base clause: `H?` (reader) covers `_?`
+- Second non-base clause: `H` (writer) covers `_`
+
+Both mode alternatives are covered. **Well-moded-typed.**
+
+#### Output Positions Need No Mode Coverage
+
+For output-only procedures, a single clause suffices:
 
 ```glp
-procedure copy(List?, List).
+procedure generate(List).
+generate([]).
+generate([X | Xs?]) :- generate(Xs).
+```
+
+The argument is an **output position**. Output containment only requires that produced values be within `List`—no obligation to produce both modes.
+
+#### Restricting to Single Mode
+
+If coverage overhead is undesirable, restrict element type to single mode:
+
+```glp
+List1 ::= [] ; [_ | List1].    % output-mode elements only
+
+procedure copy(List1?, List1).
 copy([], []).
 copy([H? | In], [H | Out?]) :- copy(In?, Out).
 ```
 
-This is well-moded-typed because:
-1. `Any` has no coverage obligation (subtype semantics)
-2. The single clause's mode combination is valid (reader at input, writer at output)
-
-Compare with `EveryList ::= [Every | EveryList]` which WOULD require three clauses to cover all mode combinations.
+With `_` instead of `Any`, input position only needs to cover output mode. **Well-moded-typed.**
 
 #### Design Principle
 
-Under `::=` semantics, `Every` positions in type definitions impose coverage obligations that typically require:
-1. **Restricting the type** to a single mode (`List1`, `List2`)
-2. **Multiple clauses** covering each mode alternative
-3. **Using `::< S`** to permit partial coverage (escape hatch, future PMT)
-
-The choice depends on intended semantics: does the procedure genuinely need to handle both modes at that position?
+The asymmetric well-typing condition reduces coverage burden:
+- Use `Any` when both modes genuinely need handling at input positions
+- Use `_` or `_?` to restrict to single mode when appropriate
+- Output positions never require mode coverage
 
 ---
 
@@ -718,7 +659,7 @@ TypeNFA compilePrimitive(bool isInput) {
 }
 ```
 
-For `Every ::= _ ; _?`, the union construction creates:
+For `Any ::= _ ; _?`, the union construction creates:
 
 ```
     ε         ε
@@ -918,7 +859,7 @@ patternToTypeExpr(term, varTypes, contextMode):
 
   elif term is UnderscoreTerm:
     // Anonymous variable: accepts any value at any mode
-    return TypeRef("Every")
+    return TypeRef("Any")
 ```
 
 #### 5.4.4 Variable Type as TypeRef
@@ -1083,7 +1024,7 @@ TypeDFA nfaToDfa(TypeNFA nfa) {
 
 **Key property:** When multiple NFA states with different primitive modes are merged into a single DFA state, the DFA state accepts the **union** of their mode sets.
 
-Example: `Every ::= _ ; _?`
+Example: `Any ::= _ ; _?`
 
 - NFA has two states: `q_out` with `{Mode.output}` and `q_in` with `{Mode.input}`
 - After ε-removal, both are in the ε-closure of the start state
@@ -1375,7 +1316,39 @@ Set<ModedLabel> _computeAlphabet() {
 }
 ```
 
-### 5.9 Correspondence with Paper
+### 5.9 Mode Restriction Notation
+
+For a set P of moded paths, we define mode restrictions:
+
+```
+P|↓ = {(ξ, m) ∈ P | m = ↓}    (paths ending at output mode)
+P|↑ = {(ξ, m) ∈ P | m = ↑}    (paths ending at input mode)
+```
+
+For a moded type S (represented as a DFA), we extend this notation via paths:
+
+```
+S|↓ = paths^m(S)|↓
+S|↑ = paths^m(S)|↑
+```
+
+The well-moded-typing conditions compare these path sets:
+- **Output Containment:** `T_M^{α,m}(S)|↓ ⊆ S|↓`
+- **Input Coverage:** `S|↑ ⊆ T_M^{α,m}(S)|↑`
+
+```dart
+/// Extract paths at output mode from a moded type DFA
+Set<ModedPath> outputPaths(TypeDFA dfa) {
+  return extractModedPaths(dfa).where((p) => p.mode == Mode.output).toSet();
+}
+
+/// Extract paths at input mode from a moded type DFA
+Set<ModedPath> inputPaths(TypeDFA dfa) {
+  return extractModedPaths(dfa).where((p) => p.mode == Mode.input).toSet();
+}
+```
+
+### 5.10 Correspondence with Paper
 
 | Paper Section | Spec Section | Notes |
 |---------------|--------------|-------|
@@ -1428,10 +1401,10 @@ For each procedure p/n with declared moded type (T₁^m₁, ..., Tₙ^mₙ):
       For each variable X constrained by G:
         varTypes[X] := varTypes[X] ∩ guardType(G, X)
         If varTypes[X] = ∅:
-          Report error: "Guard inconsistent with pattern type"
+          Report error: "Guard inconsistent with head type"
 
       If G implies groundness for variable X:
-        Mark X as recursively ground (covers all mode alternatives)
+        Mark X as recursively ground
 
     // Step 3: Check head variable modes
     For each variable Y in head:
@@ -1440,25 +1413,21 @@ For each procedure p/n with declared moded type (T₁^m₁, ..., Tₙ^mₙ):
       If expectedMode.complement ≠ actualMode:
         Report error: "head mode mismatch for Y"
 
-    // Step 4: Compute clause contribution via NFA (Section 5.4)
-    typeExpr_C := patternToTypeExpr(head, varTypes)
+    // Step 4: Compute clause contribution via NFA
+    typeExpr_C := headToTypeExpr(head, varTypes)
     nfa_C := TypeNFACompiler.compileExpr(typeExpr_C)
     T_C^{α,m}(S) := NFAToDFAConverter.convert(nfa_C)
 
-  // Step 5: Check fixpoint (Yardeni-Shapiro: T_P^α(S) = S)
+  // Step 5: Check asymmetric well-moded-typing conditions
   inferred := union(T_C^{α,m}(S) for all clauses C)
 
-  // Check inferred ⊆ S (clauses don't produce outside declared type)
-  If NOT inferred ⊆ S:
-    Report error: "inferred moded type not subset of declared type"
+  // Output Containment: T_M^{α,m}(S)|↓ ⊆ S|↓
+  If NOT inferred|↓ ⊆ declared|↓:
+    Report error: "output containment violated - clause produces value outside declared type"
 
-  // Check S ⊆ inferred (coverage - for ::= semantics only)
-  // This enforces BOTH:
-  //   - Mode coverage: all mode alternatives (_, _?) covered
-  //   - Structural coverage: all constructor alternatives covered
-  // See Section 6.4 (mode coverage) and Section 6.5 (structural coverage)
-  If declaredType.isExact AND NOT S ⊆ inferred:
-    Report error: "declared type not fully covered by clauses"
+  // Input Coverage: S|↑ ⊆ T_M^{α,m}(S)|↑
+  If NOT declared|↑ ⊆ inferred|↑:
+    Report error: "input coverage violated - declared input alternative not handled by any clause"
 ```
 
 ### 6.2 Mode Checking at Leaf Positions
@@ -1520,12 +1489,12 @@ List<ModeError> checkBodyGoal(Goal goal, ProcDecl decl) {
 }
 ```
 
-### 6.4 Mode Coverage Check for Every Positions (::= Types)
+### 6.4 Mode Coverage Check (Input Positions Only)
 
-For positions typed with `::=` union types containing primitive modes (e.g., `Every ::= _ | _?`), verify collective mode coverage:
+Mode coverage applies **only to input positions**. At input positions, clauses must collectively handle all mode alternatives in the declared type.
 
 ```dart
-/// Check that all mode alternatives are covered across clauses
+/// Check mode coverage at input positions
 List<ModeError> checkModeCoverage(
   List<Clause> clauses,
   ProcDecl decl,
@@ -1536,29 +1505,38 @@ List<ModeError> checkModeCoverage(
   for (int argIndex = 0; argIndex < decl.arity; argIndex++) {
     final argType = decl.argTypes[argIndex];
 
-    // Find positions with ::= union types containing primitive modes
-    final everyPositions = findEveryPositions(argType, env);
+    // Mode coverage applies only to INPUT positions
+    if (!argType.isInput) continue;
 
-    for (final position in everyPositions) {
+    // Find positions with Any type (requires both mode alternatives)
+    final anyPositions = findAnyPositions(argType, env);
+
+    for (final position in anyPositions) {
       final coveredModes = <Mode>{};
 
       for (final clause in clauses) {
         final termAtPosition = extractTermAtPosition(clause.head, argIndex, position);
         if (termAtPosition is VarTerm) {
+          // Head position: mode is complemented from declaration
+          // Declaration says Type? (input) → head expects writer (output)
+          // Declaration says Type (output) → head expects reader (input)
           final mode = termAtPosition.isReader ? Mode.input : Mode.output;
           coveredModes.add(mode);
         }
+        // Ground terms cover all modes at that position
+        if (termAtPosition != null && isGround(termAtPosition)) {
+          coveredModes.add(Mode.output);
+          coveredModes.add(Mode.input);
+        }
       }
 
-      // Check both modes are covered
-      if (!coveredModes.contains(Mode.output)) {
+      if (coveredModes.length < 2) {
+        final missing = coveredModes.contains(Mode.output) ? 'input' : 'output';
         errors.add(ModeError(
-          'No clause covers output mode (_) at Every position $position in argument $argIndex',
-        ));
-      }
-      if (!coveredModes.contains(Mode.input)) {
-        errors.add(ModeError(
-          'No clause covers input mode (_?) at Every position $position in argument $argIndex',
+          'Input coverage violated: mode $missing not covered at position $position '
+          'of argument ${argIndex + 1}',
+          decl.line,
+          decl.column,
         ));
       }
     }
@@ -1568,19 +1546,23 @@ List<ModeError> checkModeCoverage(
 }
 ```
 
-### 6.5 Structural Coverage Check (::= Types)
+**Key Point:** At output positions, no mode coverage is required. Output containment only checks that produced values are within the declared type, not that all alternatives are covered.
 
-The fixpoint condition T_M^{α,m}(S) = S requires BOTH directions:
-1. **inferred ⊆ S**: What clauses produce must be within declared type
-2. **S ⊆ inferred**: Declared type must be fully covered by what clauses produce
+### 6.5 Structural Coverage (Input Positions Only)
 
-The second condition enforces **structural coverage**: clauses must collectively cover all constructor alternatives of the declared type.
+Structural coverage, like mode coverage, applies **only to input positions**. At input positions, clauses must collectively handle all constructor alternatives in the declared type.
 
-#### 6.5.1 Structural Coverage Requirement
+#### 6.5.1 Output Containment Permits Subtyping
 
-For a procedure with declaration `procedure p(T₁, ..., Tₙ)` where some Tᵢ uses `::=` (exact type definition), the clauses defining p must produce values covering ALL alternatives of Tᵢ.
+At **output** positions, the well-moded-typing condition is output containment:
 
-**Example (Structural Coverage Failure):**
+```
+T_M^{α,m}(S)|↓ ⊆ S|↓
+```
+
+This is a **subset** condition, not equality. A procedure may produce only a subset of its declared output type.
+
+**Example (Well-Moded-Typed):**
 
 ```glp
 Nat ::= 0 ; s(Nat).
@@ -1589,73 +1571,131 @@ procedure succ(Nat?, Nat).
 succ(N, s(N?)).
 ```
 
-The clause produces only terms of the form `s(Nat)`—it never produces `0`. Computing the clause contribution:
+The clause produces only terms of the form `s(Nat)`—it never produces `0`. Computing the clause contribution at output positions:
 
 ```
-T_{succ}^{α,m}(Nat × Nat) = Nat × s(Nat)
+T_{succ}^{α,m}(S)|↓ = s(Nat)
 ```
 
-The declared type for argument 2 is `Nat = 0 | s(Nat)`, but the inferred type is `s(Nat) ⊊ Nat`. Since `s(Nat) ≠ Nat`, the fixpoint condition `T_P^{α,m}(S) = S` is violated.
+The declared output type is `Nat = 0 | s(Nat)`, and `s(Nat) ⊆ Nat`. Output containment is satisfied.
 
-**This program is NOT well-moded-typed.**
+**This program IS well-moded-typed.**
 
-**Solution (Precise Output Type):**
+For input coverage, the clause head `succ(N, ...)` with writer `N` handles all `Nat` values at input position 1.
+
+If a more precise output type is desired:
 
 ```glp
-Nat ::= 0 ; s(Nat).
 PosNat ::= s(Nat).
 
 procedure succ(Nat?, PosNat).
 succ(N, s(N?)).
 ```
 
-Now the inferred type `s(Nat) = PosNat` equals the declared type.
+Both declarations are well-moded-typed. The choice is a matter of precision in the interface specification.
 
-**Well-moded-typed.**
+#### 6.5.2 Input Coverage Requires Completeness
 
-#### 6.5.2 Structural vs. Mode Coverage
+At **input** positions, the well-moded-typing condition is input coverage:
 
-The fixpoint condition T_P^{α,m}(S) = S enforces two kinds of coverage:
+```
+S|↑ ⊆ T_M^{α,m}(S)|↑
+```
 
-| Kind | What it checks | Example |
-|------|---------------|---------|
-| **Mode coverage** | All mode alternatives (`_` and `_?`) covered | `Every ::= _ ; _?` requires clauses with both writer and reader variables |
-| **Structural coverage** | All constructor alternatives covered | `Nat ::= 0 ; s(Nat)` requires clauses producing both `0` and `s(...)` |
+This is a **superset** condition. Clauses must handle all alternatives in the declared input type.
 
-Both arise from the same fixpoint equality requirement from Yardeni-Shapiro.
+**Example (NOT Well-Moded-Typed):**
 
-#### 6.5.3 Implementation
+```glp
+Nat ::= 0 ; s(Nat).
+
+procedure pred(Nat?, Nat).
+pred(s(N), N?).
+```
+
+The clause only handles `s(N)` at input position 1—it doesn't handle `0`. The declared input type is `Nat = 0 | s(Nat)`, but only `s(Nat)` is covered.
+
+**This program is NOT well-moded-typed** — input coverage violated.
+
+**Solution (Precise Input Type):**
+
+```glp
+PosNat ::= s(Nat).
+
+procedure pred(PosNat?, Nat).
+pred(s(N), N?).
+```
+
+Now the declared input type is `PosNat = s(Nat)`, which is fully covered.
+
+#### 6.5.3 Summary: Asymmetric Coverage Requirements
+
+| Position | Condition | Requirement |
+|----------|-----------|-------------|
+| Output (↓) | Output Containment | `inferred ⊆ declared` — no full coverage needed |
+| Input (↑) | Input Coverage | `declared ⊆ inferred` — all alternatives must be handled |
+
+This asymmetry reflects the compositional semantics:
+- Writers (outputs) only need to produce valid values
+- Readers (inputs) must accept all possible values
+
+#### 6.5.4 Implementation
 
 ```dart
-/// Check structural coverage: declared ⊆ inferred
-/// For ::= types, the declared type must be fully covered
+/// Check structural coverage at input positions
 List<TypeError> checkStructuralCoverage(
   ProcDecl decl,
   List<TypeDFA> declaredDFAs,
   List<TypeDFA> inferredDFAs,
-  TypeEnvironment env,
 ) {
   final errors = <TypeError>[];
 
   for (int i = 0; i < decl.arity; i++) {
-    final declaredDFA = declaredDFAs[i];
-    final inferredDFA = inferredDFAs[i];
     final argType = decl.argTypes[i];
 
-    // Only check ::= types (exact definitions)
-    final typeDef = env.getType(argType.name);
-    if (typeDef == null || !typeDef.isExact) continue;
+    // Structural coverage applies only to INPUT positions
+    if (!argType.isInput) continue;
 
-    // Skip input arguments (caller provides, not clause)
+    final declaredDFA = declaredDFAs[i];
+    final inferredDFA = inferredDFAs[i];
+
+    // Input Coverage: declared|↑ ⊆ inferred|↑
+    if (!inputPaths(declaredDFA).isSubsetOf(inputPaths(inferredDFA))) {
+      errors.add(TypeError(
+        'Input coverage error: argument ${i + 1} of ${decl.name}/${decl.arity}\n'
+        'Declared input type not fully covered by clauses.\n'
+        'Hint: Add clauses for missing constructors, or use a more precise input type.',
+        decl.line,
+        decl.column,
+      ));
+    }
+  }
+
+  return errors;
+}
+
+/// Check output containment at output positions
+List<TypeError> checkOutputContainment(
+  ProcDecl decl,
+  List<TypeDFA> declaredDFAs,
+  List<TypeDFA> inferredDFAs,
+) {
+  final errors = <TypeError>[];
+
+  for (int i = 0; i < decl.arity; i++) {
+    final argType = decl.argTypes[i];
+
+    // Output containment applies only to OUTPUT positions
     if (argType.isInput) continue;
 
-    // Check: declared ⊆ inferred
-    if (!declaredDFA.isSubsetOf(inferredDFA)) {
+    final declaredDFA = declaredDFAs[i];
+    final inferredDFA = inferredDFAs[i];
+
+    // Output Containment: inferred|↓ ⊆ declared|↓
+    if (!outputPaths(inferredDFA).isSubsetOf(outputPaths(declaredDFA))) {
       errors.add(TypeError(
-        'Structural coverage error: argument ${i + 1} of ${decl.name}/${decl.arity}\n'
-        'Declared type ${argType.name} is not fully covered by clauses.\n'
-        'Hint: Either add clauses for missing constructors, '
-        'or use a more precise output type.',
+        'Output containment error: argument ${i + 1} of ${decl.name}/${decl.arity}\n'
+        'Clause produces value outside declared output type.',
         decl.line,
         decl.column,
       ));
@@ -1666,24 +1706,12 @@ List<TypeError> checkStructuralCoverage(
 }
 ```
 
-#### 6.5.4 When Structural Coverage Applies
-
-Structural coverage is checked for:
-- **Output arguments** (Type, not Type?) with `::=` definitions
-- Arguments where clauses produce structured values
-
-Structural coverage is NOT checked for:
-- **Input arguments** (Type?) — caller provides these values
-- **Subtype declarations** (`::< `) — partial coverage permitted
-- **All-variable argument patterns** — these accept/produce any value in the type
-
 #### 6.5.5 Correspondence with Paper
 
-This section implements the structural coverage requirement from:
-- Paper Section 6: Example (Structural Coverage: Precise Output Types)
-- Paper Remark (Structural vs. Mode Coverage)
-
-The fixpoint equality T_P^{α,m}(S) = S from Yardeni-Shapiro enforces both mode and structural coverage through a single unified condition.
+This section implements:
+- Paper Definition 6.12 (Well-Moded-Typing) with asymmetric conditions
+- Paper Example (Output Containment Permits Subtyping)
+- Paper Remark (Asymmetric Coverage Requirements)
 
 ---
 
@@ -1843,8 +1871,8 @@ The defined guard is type-checked as a body goal with call-boundary complementat
 Channels pair two streams with complementary modes:
 
 ```prolog
-% Stream may not close (subtype of List)
-Stream ::< List.
+% Stream has no nil case - may remain open
+Stream ::= [Any | Stream].
 
 % Channel pairs two streams with complementary modes
 Channel ::= ch(Stream?, Stream) ; ch(Stream, Stream?).
@@ -1857,7 +1885,7 @@ The `Channel` type has two alternatives capturing endpoint duality:
 - `ch(Stream?, Stream)` — reads from first stream, writes to second
 - `ch(Stream, Stream?)` — writes to first stream, reads from second
 
-Since `Stream ::< List` uses subtype semantics, there is no requirement that streams close (the `[]` alternative need not be covered).
+Since `Stream ::= [Any | Stream]` has no `[]` alternative, there is no requirement that streams close.
 
 **Bounded Buffer Example:**
 
@@ -1906,8 +1934,8 @@ At output positions, use a reader variable (Result?) to receive the value.
 ```
 [MODE ERROR] Incomplete mode coverage at Any position in argument 1.
 
-The type 'AnyList ::= [] ; [Any | AnyList]' has Any at the head position.
-Under ::= semantics, clauses must cover BOTH mode alternatives:
+The type 'List ::= [] ; [Any | List]' has Any at the head position.
+At input positions, clauses must cover BOTH mode alternatives:
   - _ (output): requires writer variable
   - _? (input): requires reader variable
 
@@ -1915,8 +1943,7 @@ Current clauses only cover: _? (input)
 
 Solutions:
   1. Add clause with writer at head position
-  2. Change type to List ::= [] ; [_ | List] (single mode, standard)
-  3. Use ::< AnyList for partial coverage (future PMT feature)
+  2. Change type to use single mode: [_ | List] (output only)
 ```
 
 ---
