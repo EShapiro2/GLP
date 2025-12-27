@@ -1,6 +1,11 @@
-# GLP Moded Type System Specification (v1.12)
+# GLP Moded Type System Specification (v1.13)
 
 **Updated:** 2025-12-27
+**Changes in v1.13:**
+- Fixed Section 3.3: Added `leafMode` parameter to `ModedPath` class (consistency with Section 3.4)
+- Fixed Section 5.8.5: Completed `unionDirect` algorithm with full traversal logic
+- Fixed Section 6.1.1: Clarified caller/callee view comment
+
 **Changes in v1.12:**
 - Fixed cross-references to Section 2.4.x (was 2.5.x)
 - Fixed "semantically irrelevant" wording for Any type
@@ -378,14 +383,42 @@ A **moded path** is a sequence of moded labels where each position carries mode 
 - `primitiveStateModes` for primitive positions (e.g., `_` or `_?`)
 
 ```dart
-/// A moded path: sequence of moded labels with mode at every position.
+/// A moded path: sequence of moded labels with optional leaf mode.
+///
+/// For paths ending at variables, `leafMode` records the variable's mode
+/// (output for writers, input for readers). For paths ending at constants,
+/// `leafMode` is null since constants are modeless.
 class ModedPath {
   final List<ModedLabel> steps;  // Each ModedLabel may carry mode
+  final Mode? leafMode;          // Mode at leaf position (null for constants)
 
-  ModedPath(this.steps);
+  ModedPath(this.steps, {this.leafMode});
+
+  /// Check if this path ends at a primitive (variable) position
+  bool get endsAtPrimitive => leafMode != null;
 
   @override
-  String toString() => steps.map((s) => s.toString()).join('·');
+  String toString() {
+    final pathStr = steps.map((s) => s.toString()).join('·');
+    return leafMode != null ? '$pathStr → ${leafMode!.name}' : pathStr;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is ModedPath &&
+      _listEquals(steps, other.steps) &&
+      leafMode == other.leafMode;
+
+  @override
+  int get hashCode => Object.hash(Object.hashAll(steps), leafMode);
+}
+
+bool _listEquals<T>(List<T> a, List<T> b) {
+  if (a.length != b.length) return false;
+  for (int i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }
 
 /// Extract moded paths from a term given its expected type
@@ -1676,38 +1709,91 @@ For efficiency, union can also be computed directly via product construction wit
 
 ```dart
 /// Direct DFA union via product construction
+///
+/// This is more efficient than the NFA-based approach for large automata,
+/// but requires both DFAs to be complete (have transitions for all labels).
 TypeDFA unionDirect(TypeDFA other) {
-  // Product construction similar to intersection (Section 5.8.2)
-  // but with disjunctive acceptance condition
-
   final productStates = <(DFAState, DFAState), DFAState>{};
   final newTransitions = <(DFAState, ModedLabel), DFAState>{};
   final newFinalStates = <DFAState>{};
   final newPrimitiveModes = <DFAState, Set<Mode>>{};
 
-  // ... (similar to intersection, but:)
+  int counter = 0;
+  DFAState getProduct(DFAState qA, DFAState qB) {
+    return productStates.putIfAbsent((qA, qB), () {
+      final product = DFAState('u${counter++}');
 
-  // Acceptance: (q1, q2) is final if q1 OR q2 is final
-  // Primitive modes: union of mode sets (not intersection)
+      // Compute mode set for product state
+      final isPrimA = isPrimitiveState(qA);
+      final isPrimB = other.isPrimitiveState(qB);
 
-  for (final entry in productStates.entries) {
-    final (q1, q2) = entry.key;
-    final productState = entry.value;
+      if (isPrimA || isPrimB) {
+        // Union: if either is primitive, product is primitive
+        // Mode set is union of both (empty set if non-primitive)
+        final modesA = isPrimA ? getModesAt(qA) : <Mode>{};
+        final modesB = isPrimB ? other.getModesAt(qB) : <Mode>{};
+        newPrimitiveModes[product] = {...modesA, ...modesB};
+      } else {
+        // Both structural: final if EITHER is final (disjunction)
+        if (finalStates.contains(qA) || other.finalStates.contains(qB)) {
+          newFinalStates.add(product);
+        }
+      }
 
-    // Final if either is final
-    if (finalStates.contains(q1) || other.finalStates.contains(q2)) {
-      newFinalStates.add(productState);
-    }
+      return product;
+    });
+  }
 
-    // Mode sets: union
-    final modes1 = getModesAt(q1);
-    final modes2 = other.getModesAt(q2);
-    if (modes1.isNotEmpty || modes2.isNotEmpty) {
-      newPrimitiveModes[productState] = {...modes1, ...modes2};
+  final start = getProduct(startState, other.startState);
+  final worklist = [(startState, other.startState)];
+  final visited = <(DFAState, DFAState)>{};
+
+  while (worklist.isNotEmpty) {
+    final (qA, qB) = worklist.removeLast();
+    if (visited.contains((qA, qB))) continue;
+    visited.add((qA, qB));
+
+    final product = getProduct(qA, qB);
+
+    // Collect all labels from both DFAs at current states
+    final labelsA = transitions.keys
+        .where((k) => k.$1 == qA)
+        .map((k) => k.$2)
+        .toSet();
+    final labelsB = other.transitions.keys
+        .where((k) => k.$1 == qB)
+        .map((k) => k.$2)
+        .toSet();
+    final allLabels = {...labelsA, ...labelsB};
+
+    for (final label in allLabels) {
+      final toA = transitions[(qA, label)];
+      final toB = other.transitions[(qB, label)];
+
+      // For union, we need transitions even if only one DFA has them
+      // This requires complete DFAs (with sink states for missing transitions)
+      if (toA == null || toB == null) {
+        // Skip if either DFA lacks this transition
+        // (caller should complete DFAs first, or use NFA-based union)
+        continue;
+      }
+
+      final toProduct = getProduct(toA, toB);
+      newTransitions[(product, label)] = toProduct;
+
+      if (!visited.contains((toA, toB))) {
+        worklist.add((toA, toB));
+      }
     }
   }
 
-  return TypeDFA(...);
+  return TypeDFA(
+    states: productStates.values.toSet(),
+    startState: start,
+    finalStates: newFinalStates,
+    transitions: newTransitions,
+    primitiveStateModes: newPrimitiveModes,
+  );
 }
 ```
 
@@ -2039,7 +2125,13 @@ Map<String, TypeDFA> inferVariableTypes(
     final goalDecl = env.getProcedure(goal.functor, goal.arity);
     if (goalDecl == null) continue;
 
-    final bodyTypes = goalDecl.calleeView;  // Caller's view → callee's view
+    // For body goals, we need the callee's expected types.
+    // goalDecl.calleeView returns modes complemented from the declaration:
+    // - Declaration `procedure p(T?, T)` has caller's view (T?, T)
+    // - calleeView returns (T, T?) — what the callee expects
+    // This represents call-boundary complementation: what the caller
+    // provides as output, the callee receives as input, and vice versa.
+    final bodyTypes = goalDecl.calleeView;
     for (int i = 0; i < goal.args.length; i++) {
       _collectOccurrences(
         goal.args[i],
