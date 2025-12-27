@@ -1,7 +1,13 @@
-# GLP Moded Type System Specification (v1.11)
+# GLP Moded Type System Specification (v1.12)
 
 **Updated:** 2025-12-27
-**Changes:**
+**Changes (v1.12):**
+- Fixed cross-references: Section 2.5.3 → 2.4.3 in Section 7.3
+- Section 2.4.2: Clarified universal type wording
+- Section 5.8.3: Simplified withComplementedModes to use m.complement
+- Section 6.1: Simplified Step 5 comment
+
+**Changes (v1.11):**
 - Section 1.1: Changed to asymmetric well-typing (output containment + input coverage)
 - Section 2.2: Removed ::< subtype syntax (only ::= exists now)
 - Section 2.5.2: Replaced Every/Any with single Any type
@@ -108,7 +114,7 @@ Since `Any ::= _ ; _?` contains both primitive modes, it is *self-dual*:
 (Any)? = (_ ; _?)? = _? ; _ = Any
 ```
 
-Complementing `Any` yields itself. This self-duality makes `Any` the true universal type—any value at any mode.
+Complementing `Any` yields itself. This self-duality makes `Any` the universal type that matches any value at any mode position.
 
 **Coverage Implications:**
 At **input** positions, the asymmetric well-typing condition requires coverage of both mode alternatives: clauses must collectively handle both the `_` case (writer) and the `_?` case (reader). At **output** positions, output containment is automatically satisfied since any produced value is within `Any`.
@@ -750,9 +756,7 @@ TypeNFA withComplementedModes() {
   for (final entry in primitiveStateModes.entries) {
     final state = entry.key;
     final modes = entry.value;
-    final complemented = modes.map((m) =>
-      m == Mode.output ? Mode.input : Mode.output
-    ).toSet();
+    final complemented = modes.map((m) => m.complement).toSet();
     newPrimitiveModes[state] = complemented;
   }
 
@@ -1418,7 +1422,7 @@ For each procedure p/n with declared moded type (T₁^m₁, ..., Tₙ^mₙ):
     nfa_C := TypeNFACompiler.compileExpr(typeExpr_C)
     T_C^{α,m}(S) := NFAToDFAConverter.convert(nfa_C)
 
-  // Step 5: Check asymmetric well-moded-typing conditions
+  // Step 5: Asymmetric well-moded-typing conditions
   inferred := union(T_C^{α,m}(S) for all clauses C)
 
   // Output Containment: T_M^{α,m}(S)|↓ ⊆ S|↓
@@ -1755,7 +1759,7 @@ For each guard G in clause C:
 
 ### 7.3 Ground Guards
 
-The ground guard is typed using the `Input` type (Section 2.5.3):
+The ground guard is typed using the `Input` type (Section 2.4.3):
 
 ```prolog
 procedure ground(Input).
@@ -1765,7 +1769,7 @@ procedure ground(Input).
 
 A call `ground(X?)` is **well-moded-typed (WMT)** iff `Input ∩ T_X = T_X`, where `T_X` is the type of X.
 
-By the Output Intersection Property (Section 2.5.3) and `Input ::= Output?`, this holds iff `T_X` has no mode complementations (no `?` in type definition).
+By the Output Intersection Property (Section 2.4.3) and `Input ::= Output?`, this holds iff `T_X` has no mode complementations (no `?` in type definition).
 
 **Example - WMT ground guard:**
 ```glp
