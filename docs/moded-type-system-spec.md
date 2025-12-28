@@ -2545,12 +2545,11 @@ By the Output Intersection Property (Section 2.4.3) and `Input ::= Output?`, thi
 List ::= [] ; [_ | List].
 
 procedure broadcast(List?, List, List).
-broadcast(X, Y, Z) :- ground(X?) |
-    send(X?, Y),
-    send(X?, Z).
+broadcast([], [], []).
+broadcast([H|T], [H?|Y?], [H?|Z?]) :- ground(H?) | broadcast(T?, Y, Z).
 ```
 
-The call `ground(X?)` is WMT: `Input ∩ List = List` (List has no mode complementations).
+The call `ground(H?)` is WMT: `Input ∩ List = List` (List has no mode complementations). The ground guard allows `H?` to be replicated into both output lists.
 
 **Example - Ill-typed ground guard:**
 ```glp
