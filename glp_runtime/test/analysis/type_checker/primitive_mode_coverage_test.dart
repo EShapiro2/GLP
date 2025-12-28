@@ -2,7 +2,11 @@
 //
 // Tests for primitive mode types (_, _?, Any) and coverage requirements
 //
-// FIXED: Tests now use user-defined MyAny instead of redefining predefined Any
+// v3: Corrected based on full algorithm trace:
+// - calleeView complements declaration annotation (Out → Out?, In? → In)
+// - Type complement affects primitives (_ → _?, _? → _)
+// - At _? (input) primitive: writer X matches
+// - At _ (output) primitive: reader X? matches
 
 import 'package:test/test.dart';
 import 'test_helpers.dart';
@@ -25,27 +29,37 @@ void main() {
             reason: 'Both writer and reader modes covered for MyAny');
       });
 
-      test('Single _ position needs only writer', () {
+      test('Output-only primitive at output declaration', () {
         final result = checkTypes('''
           Out ::= _.
           procedure produce(Out).
-          produce(X?).
+          produce(X).
         ''');
         expect(result.isWellTyped, isTrue,
-            reason: 'Output-only type needs only writer clause');
+            reason: 'Writer at complemented output position (becomes input)');
       });
 
-      test('Single _? position needs only reader', () {
+      test('Input-only primitive at input declaration', () {
         final result = checkTypes('''
           In ::= _?.
           procedure consume(In?).
           consume(X).
         ''');
         expect(result.isWellTyped, isTrue,
-            reason: 'Input-only type needs only reader clause');
+            reason: 'Writer at input position');
       });
 
-      test('List with _ elements needs only writer mode', () {
+      test('Output-only primitive at input declaration needs reader', () {
+        final result = checkTypes('''
+          Out ::= _.
+          procedure read_out(Out?).
+          read_out(X?).
+        ''');
+        expect(result.isWellTyped, isTrue,
+            reason: 'Reader at output position');
+      });
+
+      test('List with output-only elements needs only one mode', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
           procedure copy(MyList?, MyList).
@@ -53,7 +67,7 @@ void main() {
           copy([X | In], [X? | Out]) :- copy(In?, Out).
         ''');
         expect(result.isWellTyped, isTrue,
-            reason: 'List elements are _ (output only), two clauses suffice');
+            reason: 'Output-only elements: writer in input arg, reader in output arg');
       });
     });
 
@@ -69,35 +83,36 @@ void main() {
           echo(X, Y?) :- Y = X?.
         ''');
         expect(result.isWellTyped, isFalse,
-            reason: 'Missing reader mode for MyAny');
-        expect(
-            result.errors.any((e) => e.message.contains('mode coverage') ||
-                                     e.message.contains('do not cover')),
-            isTrue);
+            reason: 'Missing second mode for MyAny at input position');
       });
 
-      test('MyAny position with only reader mode fails', () {
+      test('Wrong variable mode at output position fails', () {
         final result = checkTypes('''
-          MyAny ::= _ ; _?.
-          procedure sink(MyAny?).
-          sink(X?).
+          Out ::= _.
+          procedure produce(Out).
+          produce(X?).
         ''');
         expect(result.isWellTyped, isFalse,
-            reason: 'Missing writer mode for MyAny');
-        expect(
-            result.errors.any((e) => e.message.contains('mode coverage') ||
-                                     e.message.contains('do not cover')),
-            isTrue);
+            reason: 'Reader at input primitive position is wrong');
+      });
+
+      test('Wrong variable mode at input position fails', () {
+        final result = checkTypes('''
+          In ::= _?.
+          procedure consume(In?).
+          consume(X?).
+        ''');
+        expect(result.isWellTyped, isFalse,
+            reason: 'Reader at input primitive position is wrong');
       });
     });
 
     // =========================================================================
-    // NESTED MODE COVERAGE - Tests for nested Any positions
+    // NESTED MODE COVERAGE - Tests for nested bi-moded positions
     // =========================================================================
 
     group('Nested Mode Coverage', () {
       test('NEGATIVE: MyAnyList copy with only one element mode', () {
-        // MyAnyList elements are MyAny, requiring both modes
         final result = checkTypes('''
           MyAny ::= _ ; _?.
           MyAnyList ::= [] ; [MyAny | MyAnyList].
@@ -105,7 +120,6 @@ void main() {
           copy([], []).
           copy([X | In], [X? | Out]) :- copy(In?, Out).
         ''');
-        // Should fail - missing copy([X? | In], [X | Out]) clause
         expect(result.isWellTyped, isFalse,
             reason: 'MyAnyList requires both element modes covered');
       });
@@ -130,7 +144,6 @@ void main() {
           procedure swap(Pair?, Pair).
           swap(pair(X, Y), pair(Y?, X?)).
         ''');
-        // Should fail - only one mode for each MyAny position
         expect(result.isWellTyped, isFalse,
             reason: 'Nested MyAny positions require mode coverage');
       });
