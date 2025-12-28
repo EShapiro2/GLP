@@ -242,7 +242,11 @@ class TypeDFA {
     return structuralThis.isSubsetOf(structuralOther);
   }
 
-  /// Convert to structural DFA by stripping all modes from labels
+  /// Convert to structural DFA by normalizing all modes to Mode.output
+  ///
+  /// This allows comparing structure without mode differences affecting
+  /// the subset check. Both DFAs are normalized to the same mode so
+  /// modedComplement and modedIntersect work correctly.
   TypeDFA _toStructuralDFA() {
     final newTransitions = <(DFAState, ModedLabel), DFAState>{};
 
@@ -250,16 +254,15 @@ class TypeDFA {
       final (fromState, label) = entry.key;
       final toState = entry.value;
 
-      // Strip mode from label
-      final structuralLabel = ModedLabel(label.pathElement, mode: null);
+      // Normalize mode to output (consistent mode for structural comparison)
+      final structuralLabel = ModedLabel(label.pathElement, mode: Mode.output);
       newTransitions[(fromState, structuralLabel)] = toState;
     }
 
-    // For primitive states, keep them but with both modes (bi-moded)
-    // This ensures structural acceptance at primitive positions
+    // For primitive states, set to output mode only
     final newPrimitiveModes = <DFAState, Set<Mode>>{};
     for (final state in primitiveStateModes.keys) {
-      newPrimitiveModes[state] = {Mode.output, Mode.input};
+      newPrimitiveModes[state] = {Mode.output};
     }
 
     return TypeDFA(

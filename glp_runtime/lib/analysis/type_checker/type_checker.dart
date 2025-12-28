@@ -715,19 +715,61 @@ class TypeChecker {
   }
 
   void _collectVariableTypeNames(ast.Term term, String typeName, Map<String, String> varTypeNames) {
+    final baseTypeName = typeName.endsWith('?') ? typeName.substring(0, typeName.length - 1) : typeName;
+
     if (term is ast.VarTerm) {
-      final baseTypeName = typeName.endsWith('?') ? typeName.substring(0, typeName.length - 1) : typeName;
       varTypeNames[term.name] = baseTypeName;
     } else if (term is ast.StructTerm) {
+      // Look up the type definition to find the matching struct alternative
+      final typeDef = typeEnv.getType(baseTypeName);
+      String? argTypeName;
+
+      if (typeDef != null) {
+        for (final alt in typeDef.alternatives) {
+          if (alt is StructAlt && alt.functor == term.functor && alt.args.length == term.args.length) {
+            // Found matching struct alternative - extract arg types
+            for (int i = 0; i < term.args.length; i++) {
+              final altArg = alt.args[i];
+              final argType = (altArg is TypeRef) ? altArg.name : baseTypeName;
+              _collectVariableTypeNames(term.args[i], argType, varTypeNames);
+            }
+            return;
+          }
+        }
+      }
+
+      // Fallback: use same type for all args
       for (final arg in term.args) {
-        _collectVariableTypeNames(arg, typeName, varTypeNames);
+        _collectVariableTypeNames(arg, baseTypeName, varTypeNames);
       }
     } else if (term is ast.ListTerm) {
-      if (!term.isNil && term.head != null) {
-        _collectVariableTypeNames(term.head!, typeName, varTypeNames);
+      if (term.isNil) return;
+
+      // Look up the type definition to find the ListConsAlt alternative
+      final typeDef = typeEnv.getType(baseTypeName);
+      String headTypeName = baseTypeName;
+      String tailTypeName = baseTypeName;
+
+      if (typeDef != null) {
+        for (final alt in typeDef.alternatives) {
+          if (alt is ListConsAlt) {
+            // Found cons alternative - extract head and tail types
+            if (alt.head is TypeRef) {
+              headTypeName = (alt.head as TypeRef).name;
+            }
+            if (alt.tail is TypeRef) {
+              tailTypeName = (alt.tail as TypeRef).name;
+            }
+            break;
+          }
+        }
+      }
+
+      if (term.head != null) {
+        _collectVariableTypeNames(term.head!, headTypeName, varTypeNames);
       }
       if (term.tail != null) {
-        _collectVariableTypeNames(term.tail!, typeName, varTypeNames);
+        _collectVariableTypeNames(term.tail!, tailTypeName, varTypeNames);
       }
     }
   }

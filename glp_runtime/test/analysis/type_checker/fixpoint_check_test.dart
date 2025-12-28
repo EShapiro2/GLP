@@ -102,7 +102,7 @@ void main() {
         expect(result.isWellTyped, isFalse,
             reason: 'Missing s(Nat) case should fail');
         expect(result.errors.any((e) =>
-            e.message.contains('incomplete')), isTrue);
+            e.message.contains('do not cover')), isTrue);
       });
 
       test('Color: missing middle alternative', () {
@@ -153,10 +153,10 @@ void main() {
         expect(result.isWellTyped, isFalse,
             reason: 'foo is not in Nat');
         expect(result.errors.any((e) =>
+            e.message.contains('not a subset') ||
             e.message.contains('outside') ||
-            e.message.contains('not in type') ||
-            e.message.contains('pattern does not match')), isTrue,
-            reason: 'Should report value outside/not in type or pattern mismatch');
+            e.message.contains('not in type')), isTrue,
+            reason: 'Should report containment violation');
       });
 
       test('Nat: wrong constructor', () {
@@ -169,9 +169,9 @@ void main() {
         expect(result.isWellTyped, isFalse,
             reason: 'p(M) not in Nat');
         expect(result.errors.any((e) =>
+            e.message.contains('not a subset') ||
             e.message.contains('outside') ||
-            e.message.contains('not in type') ||
-            e.message.contains('does not match declared type')), isTrue);
+            e.message.contains('not in type')), isTrue);
       });
 
       test('Color: extra alternative', () {
