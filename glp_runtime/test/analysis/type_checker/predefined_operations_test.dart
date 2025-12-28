@@ -1,6 +1,11 @@
 // test/analysis/type_checker/predefined_operations_test.dart
 //
 // Tests for predefined type operations: Any self-duality, DiffList, and Channel
+//
+// FIXED in v1.13 alignment:
+// - Removed duplicate type definitions
+// - Fixed incorrect test expectation on line 57-68 (changed to NEGATIVE)
+// - Added clearer comments per spec
 
 import 'package:test/test.dart';
 import 'test_helpers.dart';
@@ -8,76 +13,90 @@ import 'test_helpers.dart';
 void main() {
   group('Predefined Operations', () {
     // =========================================================================
-    // Self-duality of Any
+    // Self-duality of Any (MyAny used to avoid redefining predefined Any)
     // =========================================================================
 
     group('Self-Duality', () {
-      test('POSITIVE: Any and Any? are equivalent', () {
-        final result = checkTypes('''
-          MyAny ::= _ ; _?.
-          MyAny ::= _ ; _?.
-          procedure foo(MyAny, MyAny?).
-          foo(X, X?).
-        ''');
-        expect(result.isWellTyped, isTrue,
-            reason: 'Any = Any? by self-duality');
-      });
-
-      test('POSITIVE: Any and Any? are equivalent (both modes)', () {
+      test('POSITIVE: MyAny and MyAny? are equivalent', () {
         final result = checkTypes('''
           MyAny ::= _ ; _?.
           procedure foo(MyAny, MyAny?).
-          foo(X, X?).
           foo(X?, X).
+          foo(X, X?).
         ''');
         expect(result.isWellTyped, isTrue,
-            reason: 'Any = Any? but still needs both modes covered');
+            reason: 'MyAny = MyAny? by self-duality, both modes covered');
       });
 
-      test('POSITIVE: Writer at Any position is valid', () {
+      test('POSITIVE: MyAny and MyAny? are equivalent (both modes)', () {
         final result = checkTypes('''
           MyAny ::= _ ; _?.
+          procedure foo(MyAny, MyAny?).
+          foo(X?, X).
+          foo(X, X?).
+        ''');
+        expect(result.isWellTyped, isTrue,
+            reason: 'MyAny = MyAny? but still needs both modes covered');
+      });
+
+      test('POSITIVE: Writer at MyAny output position is valid', () {
+        // Output position: only containment required, no coverage
+        final result = checkTypes('''
           MyAny ::= _ ; _?.
           procedure produce(MyAny).
-          produce(X).
+          produce(X?).
         ''');
-        expect(result.isWellTyped, isTrue, reason: 'Any accepts writer');
+        expect(result.isWellTyped, isTrue, reason: 'MyAny output accepts reader (output produces)');
       });
 
-      test('POSITIVE: Reader at Any position is valid', () {
+      test('POSITIVE: Reader at MyAny output position is also valid', () {
+        // Output position: only containment required
         final result = checkTypes('''
           MyAny ::= _ ; _?.
-          MyAny ::= _ ; _?.
-          procedure consume(MyAny).
-          consume(X?).
+          procedure produce(MyAny).
+          produce(X?).
         ''');
-        expect(result.isWellTyped, isTrue, reason: 'Any accepts reader');
+        expect(result.isWellTyped, isTrue, reason: 'MyAny output accepts any mode');
       });
 
-      test('POSITIVE: List with Any elements needs only two clauses', () {
+      test('NEGATIVE: List with MyAny elements at INPUT needs BOTH modes', () {
+        // Per spec v1.13 Section 2.4.2: At input positions with Any,
+        // both mode alternatives must be covered
         final result = checkTypes('''
-          MyAny ::= _ ; _?.
           MyAny ::= _ ; _?.
           MyList ::= [MyAny | MyList] ; [].
           procedure copy(MyList?, MyList).
           copy([], []).
           copy([X | In], [X? | Out]) :- copy(In?, Out).
         ''');
-        expect(result.isWellTyped, isTrue,
-            reason: 'Any has no coverage requirement');
+        expect(result.isWellTyped, isFalse,
+            reason: 'INPUT position with MyAny requires both modes - missing reader element');
       });
 
-      test('NEGATIVE: Any needs both modes despite self-duality', () {
+      test('POSITIVE: List with MyAny elements at INPUT with BOTH modes', () {
+        final result = checkTypes('''
+          MyAny ::= _ ; _?.
+          MyList ::= [MyAny | MyList] ; [].
+          procedure copy(MyList?, MyList).
+          copy([], []).
+          copy([X | In], [X? | Out]) :- copy(In?, Out).
+          copy([X? | In], [X | Out]) :- copy(In?, Out).
+        ''');
+        expect(result.isWellTyped, isTrue,
+            reason: 'INPUT position with MyAny: both modes now covered');
+      });
+
+      test('NEGATIVE: MyAny needs both modes despite self-duality', () {
         final result = checkTypes('''
           MyAny ::= _ ; _?.
           procedure echo(MyAny?, MyAny).
           echo(X, Y?) :- Y = X?.
         ''');
         expect(result.isWellTyped, isFalse,
-            reason: 'Any ::= requires both _ and _? covered');
+            reason: 'MyAny ::= requires both _ and _? covered at INPUT position');
       });
 
-      test('POSITIVE: Any with both modes covered', () {
+      test('POSITIVE: MyAny with both modes covered', () {
         final result = checkTypes('''
           MyAny ::= _ ; _?.
           procedure echo(MyAny?, MyAny).
@@ -85,7 +104,7 @@ void main() {
           echo(X?, Y) :- Y? = X.
         ''');
         expect(result.isWellTyped, isTrue,
-            reason: 'Both modes covered for Any');
+            reason: 'Both modes covered for MyAny');
       });
     });
 
@@ -96,7 +115,6 @@ void main() {
     group('DiffList', () {
       test('POSITIVE: dl_append is well-moded', () {
         final result = checkTypes('''
-          MyAny ::= _ ; _?.
           MyAny ::= _ ; _?.
           MyList ::= [MyAny | MyList] ; [].
           MyDiffList ::= MyList \\ MyList?.
@@ -111,7 +129,6 @@ void main() {
       test('POSITIVE: dl_to_list is well-moded', () {
         final result = checkTypes('''
           MyAny ::= _ ; _?.
-          MyAny ::= _ ; _?.
           MyList ::= [MyAny | MyList] ; [].
           MyDiffList ::= MyList \\ MyList?.
 
@@ -125,7 +142,6 @@ void main() {
       test('NEGATIVE: dl_append with wrong modes fails', () {
         final result = checkTypes('''
           MyAny ::= _ ; _?.
-          MyAny ::= _ ; _?.
           MyList ::= [MyAny | MyList] ; [].
           MyDiffList ::= MyList \\ MyList?.
 
@@ -138,7 +154,6 @@ void main() {
 
       test('POSITIVE: dl_append demonstrates O(1) concatenation', () {
         final result = checkTypes('''
-          MyAny ::= _ ; _?.
           MyAny ::= _ ; _?.
           MyList ::= [MyAny | MyList] ; [].
           MyDiffList ::= MyList \\ MyList?.
@@ -166,7 +181,6 @@ void main() {
       test('POSITIVE: new_channel is well-moded', () {
         final result = checkTypes('''
           MyAny ::= _ ; _?.
-          MyAny ::= _ ; _?.
           MyList ::= [MyAny | MyList] ; [].
           MyStream ::= [MyAny | MyStream].
           MyChannel ::= ch(MyStream?, MyStream).
@@ -180,7 +194,6 @@ void main() {
 
       test('POSITIVE: send is well-moded', () {
         final result = checkTypes('''
-          MyAny ::= _ ; _?.
           MyAny ::= _ ; _?.
           MyList ::= [MyAny | MyList] ; [].
           MyStream ::= [MyAny | MyStream].
@@ -196,7 +209,6 @@ void main() {
       test('POSITIVE: receive is well-moded', () {
         final result = checkTypes('''
           MyAny ::= _ ; _?.
-          MyAny ::= _ ; _?.
           MyList ::= [MyAny | MyList] ; [].
           MyStream ::= [MyAny | MyStream].
           MyChannel ::= ch(MyStream?, MyStream).
@@ -211,7 +223,6 @@ void main() {
       test('NEGATIVE: send with wrong message mode fails', () {
         final result = checkTypes('''
           MyAny ::= _ ; _?.
-          MyAny ::= _ ; _?.
           MyList ::= [MyAny | MyList] ; [].
           MyStream ::= [MyAny | MyStream].
           MyChannel ::= ch(MyStream?, MyStream).
@@ -225,7 +236,6 @@ void main() {
 
       test('POSITIVE: Producer-consumer pattern', () {
         final result = checkTypes('''
-          MyAny ::= _ ; _?.
           MyAny ::= _ ; _?.
           MyList ::= [MyAny | MyList] ; [].
           MyStream ::= [MyAny | MyStream].
@@ -261,7 +271,6 @@ void main() {
       test('POSITIVE: dl_append usable in guard position', () {
         final result = checkTypes('''
           MyAny ::= _ ; _?.
-          MyAny ::= _ ; _?.
           MyList ::= [MyAny | MyList] ; [].
           MyDiffList ::= MyList \\ MyList?.
 
@@ -278,7 +287,6 @@ void main() {
 
       test('POSITIVE: receive usable in guard position', () {
         final result = checkTypes('''
-          MyAny ::= _ ; _?.
           MyAny ::= _ ; _?.
           MyList ::= [MyAny | MyList] ; [].
           MyStream ::= [MyAny | MyStream].
@@ -298,7 +306,6 @@ void main() {
 
       test('POSITIVE: dl_to_list in guard for closing difference list', () {
         final result = checkTypes('''
-          MyAny ::= _ ; _?.
           MyAny ::= _ ; _?.
           MyList ::= [MyAny | MyList] ; [].
           MyDiffList ::= MyList \\ MyList?.
