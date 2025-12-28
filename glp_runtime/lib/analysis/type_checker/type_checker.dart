@@ -252,7 +252,7 @@ class TypeChecker {
       final typeDef = typeEnv.getType(decl.argTypes[argIndex].name);
       final isExactType = typeDef?.isExact ?? true;
 
-      if (isExactType && !isInputArg) {
+      if (isInputArg) {
         if (!declaredDFA.isSubsetOf(inferredDFA)) {
           // Check if this is due to all-variable patterns (which is OK)
           final allVariables = clauseContributions.every((c) {

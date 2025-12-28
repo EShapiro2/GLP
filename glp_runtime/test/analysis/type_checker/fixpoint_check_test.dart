@@ -257,5 +257,36 @@ void main() {
 
     });
 
+    // =========================================================================
+    // ASYMMETRIC SEMANTICS - Output needs no coverage
+    // =========================================================================
+
+    group('Asymmetric Semantics', () {
+
+      test('POSITIVE: output produces subset (no coverage needed)', () {
+        // Second argument is OUTPUT - only needs containment, not coverage
+        final result = checkTypes('''
+          Nat ::= 0 ; s(Nat).
+          procedure increment(Nat?, Nat).
+          increment(0, s(0)).
+          increment(s(N), s(s(N?))).
+        ''');
+        expect(result.isWellTyped, isTrue,
+            reason: 'Output only needs containment: s(Nat) ⊆ Nat');
+      });
+
+      test('NEGATIVE: input incomplete despite full output', () {
+        // First argument is INPUT - must cover all of Nat
+        final result = checkTypes('''
+          Nat ::= 0 ; s(Nat).
+          procedure decrement(Nat?, Nat).
+          decrement(s(N), N?).
+        ''');
+        expect(result.isWellTyped, isFalse,
+            reason: 'Input must be covered: 0 not handled');
+      });
+
+    });
+
   });
 }

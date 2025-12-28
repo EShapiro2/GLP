@@ -462,6 +462,9 @@ class ModeChecker {
     for (int argIndex = 0; argIndex < procDecl.argTypes.length; argIndex++) {
       final typeRef = procDecl.argTypes[argIndex];
 
+      // Only check coverage for INPUT positions (asymmetric semantics)
+      if (!typeRef.isInput) continue;
+
       // Find all positions with primitive modes (including nested)
       final primitivePositions = _findPrimitiveTypePositions(typeRef, '', <String>{}, false);
 
