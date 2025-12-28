@@ -260,7 +260,7 @@ For **output** positions, a single clause suffices:
 
 ```glp
 procedure generate(List).
-generate([X | Xs?]) :- generate(Xs).
+generate([a | Xs?]) :- generate(Xs).
 generate([]).
 ```
 
@@ -304,11 +304,11 @@ merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], [], []).
 
 % Counter with embedded response mode
-CounterMsg ::= clear ; up ; down ; show(Number?).
+CounterMsg ::= clear(Number) ; up ; down ; show(Number?).
 CounterStream ::= [] ; [CounterMsg | CounterStream].
 procedure counter(CounterStream?, Number).
 
-counter([clear|S], _) :- counter(S?, 0).
+counter([clear(X?)|S], X) :- counter(S?, 0).
 counter([up|S], State) :-
     NewState := State? + 1,
     counter(S?, NewState?).
@@ -318,7 +318,7 @@ counter([down|S], State) :-
 counter([show(State?)|S], State) :-
     number(State?) |
     counter(S?, State?).
-counter([], _).
+counter([done(X?)|S], X) :- number(X?).
 ```
 
 ---
@@ -736,7 +736,7 @@ For output-only procedures, a single clause suffices:
 ```glp
 procedure generate(List).
 generate([]).
-generate([X | Xs?]) :- generate(Xs).
+generate([a | Xs?]) :- generate(Xs).
 ```
 
 The argument is an **output position**. Output containment only requires that produced values be within `List`—no obligation to produce both modes.
@@ -2631,10 +2631,8 @@ Defined guards (user-defined predicates callable in guard position) require proc
 
 ```
 % Unit clause defining a type test
-channel(ch(_, _)).
-
-% Requires procedure declaration:
-procedure channel(Channel?).
+procedure is_nil(List?).
+is_nil([]).
 ```
 
 The defined guard is type-checked as a body goal with call-boundary complementation applied.
@@ -2662,18 +2660,21 @@ Since `Stream ::= [Any | Stream]` has no `[]` alternative, there is no requireme
 
 **Bounded Buffer Example:**
 
-A bounded buffer uses an inverted stream of empty slots:
+A bounded buffer demonstrates how streams interact with mode annotations:
 
 ```prolog
-InvStream ::= [] ; [_? | InvStream].
+procedure bb().
+procedure consumer(List?).
+procedure producer(Number?, List).
 
-procedure bounded_buffer(Stream?, InvStream?, Stream).
-bounded_buffer(In, Slots, Out) :-
-    % Takes values from In, consumes slots, produces Out
-    ...
+bb :- consumer([X1?, X2? | Xs]), producer(1, [X1, X2 | Xs?]).
+
+consumer([X1, X2, X3 | Xs?]) :- known(X1?) | consumer([X2?, X3? | Xs]).
+
+producer(N, [N? | Xs]) :- number(N?) | N1 := N? + 1, producer(N1?, Xs?).
 ```
 
-The `InvStream` of slots has `_?` elements (input mode), representing empty positions the buffer can fill.
+The `consumer` reads values from the list head while the `producer` writes values. The buffer window `[X1, X2, X3 | Xs?]` allows up to two unconsumed values before the producer must wait.
 
 ---
 
