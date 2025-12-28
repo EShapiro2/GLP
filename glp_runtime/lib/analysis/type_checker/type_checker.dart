@@ -200,6 +200,7 @@ class TypeChecker {
       final isInputArg = decl.argTypes[argIndex].isInput;
 
       // Union all clause contributions for this argument position
+      // Normalize null modes to output before union to ensure consistent alphabet
       var inferredDFA = TypeDFA.empty();
 
       for (final contribution in clauseContributions) {
@@ -211,7 +212,7 @@ class TypeChecker {
           final argPattern = clause.head.args[argIndex];
 
           if (isInputArg && argPattern is ast.VarTerm) {
-            inferredDFA = inferredDFA.union(declaredDFA);
+            inferredDFA = inferredDFA.union(declaredDFA.normalizeNullModes());
           } else {
             final argContribution = contributionComputer.computeArgContribution(
               argPattern,
@@ -220,7 +221,8 @@ class TypeChecker {
               declaredDFA,
               isInputArg,
             );
-            inferredDFA = inferredDFA.union(argContribution);
+            // Normalize null modes before union to avoid mode alphabet mismatch
+            inferredDFA = inferredDFA.union(argContribution.normalizeNullModes());
           }
         }
       }
@@ -236,26 +238,50 @@ class TypeChecker {
         }
       }
 
-      // Structural containment check: inferred ⊆ declared
+      // Structural containment check: each clause's contribution ⊆ declared
       // Uses STRUCTURAL comparison (ignores modes) per spec v1.13 Section 6.1
       // Modes are checked separately by mode_checker
-      if (!inferredDFA.structuralIsSubsetOf(declaredDFA)) {
-        if (!inferredDFA.isModedEmpty) {
-          errors.add(TypeError(
-            'Argument ${argIndex + 1} of ${decl.name}/${decl.arity}: '
-            'inferred type is not a subset of declared type ${decl.argTypes[argIndex]}',
-            decl.line, decl.column
-          ));
+      // Note: We check per-clause instead of union because union may lose
+      // primitive state information needed for structural comparison.
+      for (final contribution in clauseContributions) {
+        final clause = contribution.clause;
+        final varTypes = contribution.variableTypes;
+        final clauseVarTypeNames = contribution.variableTypeNames;
+
+        if (argIndex < clause.head.args.length) {
+          final argPattern = clause.head.args[argIndex];
+
+          // Skip variable patterns at input positions (they accept declared type)
+          if (isInputArg && argPattern is ast.VarTerm) continue;
+
+          final argContribution = contributionComputer.computeArgContribution(
+            argPattern,
+            varTypes,
+            clauseVarTypeNames,
+            declaredDFA,
+            isInputArg,
+          ).normalizeNullModes();
+
+          if (!argContribution.structuralIsSubsetOf(declaredDFA.normalizeNullModes())) {
+            if (!argContribution.isModedEmpty) {
+              errors.add(TypeError(
+                'Argument ${argIndex + 1} of ${decl.name}/${decl.arity}: '
+                'inferred type is not a subset of declared type ${decl.argTypes[argIndex]}',
+                decl.line, decl.column
+              ));
+              break; // One error per argument is enough
+            }
+          }
         }
       }
 
-      // Coverage check for ::= types: declared ⊆ inferred
-      // Per spec 6.1: For ::= semantics, also check S ⊆ inferred
-      final typeDef = typeEnv.getType(decl.argTypes[argIndex].name);
-      final isExactType = typeDef?.isExact ?? true;
-
+      // Coverage check for ::= types: all alternatives must be covered
+      // Per spec 6.1: For ::= semantics, check that clauses cover all structural alternatives
+      // NOTE: We don't use DFA union here because union loses primitive state information.
+      // Instead, we check coverage per-alternative at the type AST level.
       if (isInputArg) {
-        if (!declaredDFA.structuralIsSubsetOf(inferredDFA)) {
+        final typeName = decl.argTypes[argIndex].name;
+        if (!_clausesCoverAllAlternatives(clauseContributions, argIndex, typeName)) {
           // Check if this is due to all-variable patterns (which is OK)
           final allVariables = clauseContributions.every((c) {
             if (argIndex >= c.clause.head.args.length) return false;
@@ -264,7 +290,7 @@ class TypeChecker {
           if (!allVariables && !declaredDFA.isModedEmpty) {
             errors.add(TypeError(
               'Argument ${argIndex + 1} of ${decl.name}/${decl.arity}: '
-              'clauses do not cover all alternatives of declared type ${decl.argTypes[argIndex].name}',
+              'clauses do not cover all alternatives of declared type ${typeName}',
               decl.line, decl.column
             ));
           }
@@ -570,9 +596,15 @@ class TypeChecker {
         final acceptedModes = dfa.getModesAt(state);
         final varMode = term.isReader ? Mode.input : Mode.output;
 
-        final expectedMode = isHeadPosition ? declaredArgMode.complement : declaredArgMode;
+        // Determine if this is a nested primitive position (inside a list/struct)
+        final isNestedPrimitive = pathToHere.isNotEmpty;
 
-        if (acceptedModes.length == 1 && !acceptedModes.contains(varMode)) {
+        // For nested single-mode primitives in lists/structs, be lenient about
+        // variable mode because operations like copy can use either mode.
+        // For top-level primitives and bi-moded primitives, check strictly.
+        if (isNestedPrimitive && acceptedModes.length == 1) {
+          // Skip mode check for nested single-mode primitives
+        } else if (!acceptedModes.contains(varMode)) {
           return false;
         }
       }
@@ -730,7 +762,15 @@ class TypeChecker {
             // Found matching struct alternative - extract arg types
             for (int i = 0; i < term.args.length; i++) {
               final altArg = alt.args[i];
-              final argType = (altArg is TypeRef) ? altArg.name : baseTypeName;
+              String argType;
+              if (altArg is TypeRef) {
+                argType = altArg.name;
+              } else if (altArg is PrimitiveModeAlt) {
+                // Primitive modes (_ or _?) represent Any with mode annotation
+                argType = 'Any';
+              } else {
+                argType = baseTypeName;
+              }
               _collectVariableTypeNames(term.args[i], argType, varTypeNames);
             }
             return;
@@ -756,9 +796,14 @@ class TypeChecker {
             // Found cons alternative - extract head and tail types
             if (alt.head is TypeRef) {
               headTypeName = (alt.head as TypeRef).name;
+            } else if (alt.head is PrimitiveModeAlt) {
+              // Primitive modes (_ or _?) represent Any with mode annotation
+              headTypeName = 'Any';
             }
             if (alt.tail is TypeRef) {
               tailTypeName = (alt.tail as TypeRef).name;
+            } else if (alt.tail is PrimitiveModeAlt) {
+              tailTypeName = 'Any';
             }
             break;
           }
@@ -772,6 +817,89 @@ class TypeChecker {
         _collectVariableTypeNames(term.tail!, tailTypeName, varTypeNames);
       }
     }
+  }
+
+  /// Check if clauses cover all structural alternatives of a type
+  ///
+  /// For each alternative in the type definition, checks if at least one
+  /// clause's head pattern can match values of that alternative.
+  bool _clausesCoverAllAlternatives(
+    List<ClauseContribution> clauseContributions,
+    int argIndex,
+    String typeName,
+  ) {
+    final typeDef = typeEnv.getType(typeName);
+    if (typeDef == null) return true; // Unknown type, assume covered
+
+    for (final alt in typeDef.alternatives) {
+      // Primitive alternatives (_ or _?) are covered by any clause with a variable
+      // at that position, since variables match any value
+      if (alt is PrimitiveModeAlt) continue;
+
+      // Check if any clause covers this alternative
+      final covered = clauseContributions.any((c) {
+        if (argIndex >= c.clause.head.args.length) return false;
+        final pattern = c.clause.head.args[argIndex];
+        return _patternCoversAlternative(pattern, alt);
+      });
+
+      if (!covered) return false;
+    }
+
+    return true;
+  }
+
+  /// Check if a head pattern can cover a type alternative (structural match)
+  ///
+  /// A pattern covers an alternative if:
+  /// - Pattern is a variable (covers any alternative)
+  /// - Pattern structurally matches the alternative (same constructor/structure)
+  bool _patternCoversAlternative(ast.Term pattern, TypeExpr alternative) {
+    // Variable patterns cover any alternative
+    if (pattern is ast.VarTerm) {
+      return true;
+    }
+
+    // Empty list pattern covers ListNilAlt
+    if (pattern is ast.ListTerm && pattern.isNil) {
+      return alternative is ListNilAlt;
+    }
+
+    // Cons pattern covers ListConsAlt
+    if (pattern is ast.ListTerm && !pattern.isNil) {
+      return alternative is ListConsAlt;
+    }
+
+    // Struct pattern covers StructAlt with matching functor/arity
+    if (pattern is ast.StructTerm) {
+      if (alternative is StructAlt) {
+        return pattern.functor == alternative.functor &&
+               pattern.args.length == alternative.args.length;
+      }
+      return false;
+    }
+
+    // Constant pattern covers ConstantAlt with matching value
+    if (pattern is ast.ConstTerm) {
+      if (alternative is ConstantAlt) {
+        return pattern.value == alternative.value;
+      }
+      return false;
+    }
+
+    // Primitive mode alt - any pattern covers it (handled above, but be safe)
+    if (alternative is PrimitiveModeAlt) {
+      return true;
+    }
+
+    // TypeRef in declared type - check if pattern matches that type's alternatives
+    if (alternative is TypeRef) {
+      final typeDef = typeEnv.getType(alternative.name);
+      if (typeDef == null) return true; // Unknown type, assume covered
+      return typeDef.alternatives.any((alt) => _patternCoversAlternative(pattern, alt));
+    }
+
+    return false;
   }
 }
 

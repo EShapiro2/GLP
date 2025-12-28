@@ -243,32 +243,67 @@ class TypeDFA {
   }
 
   /// Convert to structural DFA by normalizing all modes to Mode.output
+  /// and merging all primitive states into a single canonical state.
   ///
   /// This allows comparing structure without mode differences affecting
   /// the subset check. Both DFAs are normalized to the same mode so
   /// modedComplement and modedIntersect work correctly.
+  ///
+  /// All primitive states (including Any, _, _?, prim_N) are merged into
+  /// a single _PRIM_ state so that they're considered structurally equivalent.
   TypeDFA _toStructuralDFA() {
+    // Create canonical primitive state
+    final canonicalPrim = DFAState('_PRIM_');
+
+    // Build mapping from primitive states to canonical
+    final stateMapping = <DFAState, DFAState>{};
+    for (final state in states) {
+      if (primitiveStateModes.containsKey(state) ||
+          state.name == 'Any' ||
+          state.name.startsWith('prim_')) {
+        stateMapping[state] = canonicalPrim;
+      } else {
+        stateMapping[state] = state;
+      }
+    }
+
+    // Map start state
+    final newStartState = stateMapping[startState] ?? startState;
+
     final newTransitions = <(DFAState, ModedLabel), DFAState>{};
+    final newStates = <DFAState>{newStartState};
 
     for (final entry in transitions.entries) {
       final (fromState, label) = entry.key;
       final toState = entry.value;
 
+      // Map states to their canonical forms
+      final mappedFrom = stateMapping[fromState] ?? fromState;
+      final mappedTo = stateMapping[toState] ?? toState;
+
+      newStates.add(mappedFrom);
+      newStates.add(mappedTo);
+
       // Normalize mode to output (consistent mode for structural comparison)
       final structuralLabel = ModedLabel(label.pathElement, mode: Mode.output);
-      newTransitions[(fromState, structuralLabel)] = toState;
+      newTransitions[(mappedFrom, structuralLabel)] = mappedTo;
     }
 
-    // For primitive states, set to output mode only
+    // Map final states
+    final newFinalStates = finalStates.map((s) => stateMapping[s] ?? s).toSet();
+
+    // All primitive states map to canonical, with output mode only
     final newPrimitiveModes = <DFAState, Set<Mode>>{};
-    for (final state in primitiveStateModes.keys) {
-      newPrimitiveModes[state] = {Mode.output};
+    if (primitiveStateModes.isNotEmpty ||
+        states.any((s) => s.name == 'Any' || s.name.startsWith('prim_'))) {
+      newPrimitiveModes[canonicalPrim] = {Mode.output};
+      newStates.add(canonicalPrim);
     }
 
     return TypeDFA(
-      states: states,
-      startState: startState,
-      finalStates: finalStates,
+      states: newStates,
+      startState: newStartState,
+      finalStates: newFinalStates,
       transitions: newTransitions,
       primitiveStateModes: newPrimitiveModes,
     );
@@ -408,6 +443,32 @@ class TypeDFA {
     );
   }
 
+  /// Normalize null modes to output mode
+  ///
+  /// This is used before union operations to ensure consistent moding.
+  /// Constants (like []) produce null modes, while variable positions produce
+  /// explicit modes. Normalizing ensures they use the same alphabet.
+  TypeDFA normalizeNullModes() {
+    final newTransitions = <(DFAState, ModedLabel), DFAState>{};
+    for (final entry in transitions.entries) {
+      final (fromState, label) = entry.key;
+      final toState = entry.value;
+
+      // Normalize null to output
+      final normalizedMode = label.mode ?? Mode.output;
+      final normalizedLabel = ModedLabel(label.pathElement, mode: normalizedMode);
+      newTransitions[(fromState, normalizedLabel)] = toState;
+    }
+
+    return TypeDFA(
+      states: states,
+      startState: startState,
+      finalStates: finalStates,
+      transitions: newTransitions,
+      primitiveStateModes: primitiveStateModes,
+    );
+  }
+
   /// Apply mode complement: flip all modes (output ↔ input)
   /// Used for reader arguments (Type?) - flip all modes in transitions and primitive states
   TypeDFA applyModeComplement() {
@@ -442,6 +503,15 @@ class TypeDFA {
 
   /// Union of two DFAs
   TypeDFA union(TypeDFA other) {
+    // Optimization: empty union is identity
+    // This avoids complex complement operations that may lose primitive state info
+    if (isModedEmpty && transitions.isEmpty) {
+      return other;
+    }
+    if (other.isModedEmpty && other.transitions.isEmpty) {
+      return this;
+    }
+
     // L(A) ∪ L(B) = complement(complement(A) ∩ complement(B))
     // IMPORTANT: All complements must be complete over combined alphabet
     final combinedAlphabet = alphabet.union(other.alphabet);
