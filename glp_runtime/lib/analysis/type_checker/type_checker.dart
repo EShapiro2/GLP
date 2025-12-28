@@ -236,8 +236,10 @@ class TypeChecker {
         }
       }
 
-      // Fixpoint check: inferred ⊆ declared
-      if (!inferredDFA.isSubsetOf(declaredDFA)) {
+      // Structural containment check: inferred ⊆ declared
+      // Uses STRUCTURAL comparison (ignores modes) per spec v1.13 Section 6.1
+      // Modes are checked separately by mode_checker
+      if (!inferredDFA.structuralIsSubsetOf(declaredDFA)) {
         if (!inferredDFA.isModedEmpty) {
           errors.add(TypeError(
             'Argument ${argIndex + 1} of ${decl.name}/${decl.arity}: '
@@ -253,7 +255,7 @@ class TypeChecker {
       final isExactType = typeDef?.isExact ?? true;
 
       if (isInputArg) {
-        if (!declaredDFA.isSubsetOf(inferredDFA)) {
+        if (!declaredDFA.structuralIsSubsetOf(inferredDFA)) {
           // Check if this is due to all-variable patterns (which is OK)
           final allVariables = clauseContributions.every((c) {
             if (argIndex >= c.clause.head.args.length) return false;

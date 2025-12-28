@@ -220,6 +220,57 @@ class TypeDFA {
     return intersection.isModedEmpty;
   }
 
+  /// Check if L^struct(this) ⊆ L^struct(other)
+  ///
+  /// Structural subset: ignores modes, compares only path structure.
+  /// Used for containment checking where we care about VALUES, not dataflow.
+  ///
+  /// Per spec v1.13 Section 6.1: Containment checks what values are produced,
+  /// independent of the reader/writer mode annotations on variables.
+  bool structuralIsSubsetOf(TypeDFA other) {
+    // Optimization: bi-moded start state accepts everything structurally
+    if (other.isPrimitiveState(other.startState) &&
+        other.getModesAt(other.startState).isNotEmpty) {
+      return true;
+    }
+
+    // Build structural versions (all modes stripped to null)
+    final structuralThis = _toStructuralDFA();
+    final structuralOther = other._toStructuralDFA();
+
+    // Now do regular subset check on structural DFAs
+    return structuralThis.isSubsetOf(structuralOther);
+  }
+
+  /// Convert to structural DFA by stripping all modes from labels
+  TypeDFA _toStructuralDFA() {
+    final newTransitions = <(DFAState, ModedLabel), DFAState>{};
+
+    for (final entry in transitions.entries) {
+      final (fromState, label) = entry.key;
+      final toState = entry.value;
+
+      // Strip mode from label
+      final structuralLabel = ModedLabel(label.pathElement, mode: null);
+      newTransitions[(fromState, structuralLabel)] = toState;
+    }
+
+    // For primitive states, keep them but with both modes (bi-moded)
+    // This ensures structural acceptance at primitive positions
+    final newPrimitiveModes = <DFAState, Set<Mode>>{};
+    for (final state in primitiveStateModes.keys) {
+      newPrimitiveModes[state] = {Mode.output, Mode.input};
+    }
+
+    return TypeDFA(
+      states: states,
+      startState: startState,
+      finalStates: finalStates,
+      transitions: newTransitions,
+      primitiveStateModes: newPrimitiveModes,
+    );
+  }
+
   /// Moded intersection (product construction with mode intersection)
   TypeDFA modedIntersect(TypeDFA other) {
     final productStates = <String, DFAState>{};
