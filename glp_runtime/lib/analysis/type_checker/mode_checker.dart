@@ -502,10 +502,14 @@ class ModeChecker {
 
         for (final alt in typeDef.alternatives) {
           if (alt is PrimitiveModeAlt) {
+            // At INPUT positions (which this function checks), call-boundary
+            // complementation inverts the relationship:
+            // - _? (input primitive) → caller writes, so head needs writer X
+            // - _ (output primitive) → caller reads, so head needs reader X?
             if (alt.isInput) {
-              requiresReader = true;
+              requiresWriter = true;  // _? at input position → writer in head
             } else {
-              requiresWriter = true;
+              requiresReader = true;  // _ at input position → reader in head
             }
           }
         }
