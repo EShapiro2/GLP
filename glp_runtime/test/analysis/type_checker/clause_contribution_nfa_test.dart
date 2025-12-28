@@ -110,8 +110,8 @@ ignore(_, unit).
           reason: 'ignore should be well-typed: ${result.errors}');
     });
 
-    test('Stream echo - partial coverage OK with ::< subtype', () {
-      // Stream ::< List means no coverage requirement for []
+    test('Stream echo - partial coverage OK (Stream has no nil)', () {
+      // Stream ::= [Any | Stream] means no [] case exists
       final source = '''
 procedure echo(Stream?, Stream).
 echo([H | T], [H? | Out?]) :- echo(T?, Out).
@@ -119,7 +119,7 @@ echo([H | T], [H? | Out?]) :- echo(T?, Out).
       final result = checkTypes(source);
 
       expect(result.isWellTyped, isTrue,
-          reason: 'Stream with ::< should allow partial coverage: ${result.errors}');
+          reason: 'Stream has no [] constructor: ${result.errors}');
     });
 
     test('double with precise output type - well-typed', () {

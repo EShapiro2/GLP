@@ -43,11 +43,11 @@ void main() {
 
   group('NFA Construction', () {
     test('POSITIVE: Primitive type _ creates output-mode state', () {
-      // Use predefined Every from prelude
+      // Use predefined Any from prelude
       final env = parseTypes('');  // Empty, will use prelude
 
       final compiler = TypeNFACompiler(env);
-      final nfa = compiler.compile('Every');
+      final nfa = compiler.compile('Any');
 
       // Start state should be primitive with both modes
       expect(nfa.isPrimitiveState(nfa.startState), isTrue);
@@ -74,7 +74,7 @@ void main() {
       // Channel is predefined as: ch(Stream?, Stream)
       // But we need both alternatives - let's define our own test type
       final env = parseTypes('''
-        MyStream ::< List.
+        MyStream ::= [Any | MyStream].
         MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
       ''');
 
@@ -124,28 +124,31 @@ void main() {
       expect(hole.length, equals(1), reason: 'Hole should be input mode');
     });
 
-    test('POSITIVE: Subtype creates epsilon transition', () {
-      // Stream is predefined as: Stream ::< List
+    test('POSITIVE: Stream creates cons-only transitions (no nil)', () {
+      // Stream is predefined as: Stream ::= [Any | Stream]
       final env = parseTypes('');  // Empty, will use prelude
 
       final compiler = TypeNFACompiler(env);
       final nfa = compiler.compile('Stream');
 
-      // Stream should have ε-transition to List
-      final epsTargets = nfa.epsilonTransitions[nfa.startState] ?? {};
-      final targetNames = epsTargets.map((s) => s.name).toSet();
+      // Stream should only have cons transitions, no nil
+      final startClosure = nfa.epsilonClosure(nfa.startState);
+      final labels = nfa.collectLabels(startClosure);
+      final labelStrings = labels.map((l) => l.pathElement).toSet();
 
-      expect(targetNames, contains('List'));
+      expect(labelStrings, contains('[|](2,1)'));
+      expect(labelStrings, contains('[|](2,2)'));
+      expect(labelStrings, isNot(contains('[]')));
     });
   });
 
   group('Subset Construction', () {
-    test('POSITIVE: Every produces bi-moded DFA start state', () {
-      // Use predefined Every from prelude
+    test('POSITIVE: Any produces bi-moded DFA start state', () {
+      // Use predefined Any from prelude
       final env = parseTypes('');  // Empty, will use prelude
 
       final compiler = TypeNFACompiler(env);
-      final nfa = compiler.compile('Every');
+      final nfa = compiler.compile('Any');
       final converter = NFAToDFAConverter(nfa);
       final dfa = converter.convert();
 
@@ -176,7 +179,7 @@ void main() {
     test('POSITIVE: Channel DFA preserves mode distinctions', () {
       // Define our own bi-directional channel type
       final env = parseTypes('''
-        MyStream ::< List.
+        MyStream ::= [Any | MyStream].
         MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
       ''');
 
@@ -204,7 +207,7 @@ void main() {
     test('POSITIVE: DFA accepts matching moded path', () {
       // Define our own bi-directional channel type
       final env = parseTypes('''
-        MyStream ::< List.
+        MyStream ::= [Any | MyStream].
         MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
       ''');
 
@@ -230,7 +233,7 @@ void main() {
 
       final compiler = TypeNFACompiler(env);
 
-      final everyNFA = compiler.compile('Every');
+      final everyNFA = compiler.compile('Any');
       final everyDFA = NFAToDFAConverter(everyNFA).convert();
 
       // Recompile for List
@@ -238,7 +241,7 @@ void main() {
       final listNFA = listCompiler.compile('List');
       final listDFA = NFAToDFAConverter(listNFA).convert();
 
-      // List ⊆ Every should be true (Every accepts everything)
+      // List ⊆ Any should be true (Any accepts everything)
       expect(listDFA.isSubsetOf(everyDFA), isTrue);
     });
 
@@ -246,10 +249,10 @@ void main() {
       final emptyDFA = TypeDFA.empty();
       expect(emptyDFA.isModedEmpty, isTrue);
 
-      // Use predefined Every from prelude
+      // Use predefined Any from prelude
       final env = parseTypes('');  // Empty, will use prelude
       final compiler = TypeNFACompiler(env);
-      final nfa = compiler.compile('Every');
+      final nfa = compiler.compile('Any');
       final dfa = NFAToDFAConverter(nfa).convert();
       expect(dfa.isModedEmpty, isFalse);
     });

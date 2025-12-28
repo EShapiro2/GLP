@@ -90,7 +90,7 @@ void main() {
     });
   });
 
-  group('Type Definition vs Subtype Declaration', () {
+  group('Type Definition Syntax', () {
     test('Parse ::= as exact type definition', () {
       final source = 'Nat ::= 0 ; s(Nat).';
       final env = parseTypes(source);
@@ -101,35 +101,10 @@ void main() {
       expect(typeDef.toString(), contains('::='));
     });
 
-    test('Parse ::< as subtype declaration with single constant', () {
+    test('::< syntax is rejected', () {
       final source = 'SmallNat ::< 0.';
-      final env = parseTypes(source);
-
-      final typeDef = env.types['SmallNat'];
-      expect(typeDef, isNotNull);
-      expect(typeDef!.isExact, isFalse);
-      expect(typeDef.toString(), contains('::<'));
-    });
-
-    test('Parse ::< with multiple constants', () {
-      final source = 'SmallNat ::< 0 ; 1 ; 2.';
-      final env = parseTypes(source);
-
-      final typeDef = env.types['SmallNat'];
-      expect(typeDef, isNotNull);
-      expect(typeDef!.isExact, isFalse);
-      expect(typeDef!.alternatives, hasLength(3));
-    });
-
-    test('Parse file with both ::= and ::<', () {
-      final source = '''
-Nat ::= 0 ; s(Nat).
-SmallNat ::< 0.
-''';
-      final env = parseTypes(source);
-
-      expect(env.types['Nat']!.isExact, isTrue);
-      expect(env.types['SmallNat']!.isExact, isFalse);
+      expect(() => parseTypes(source), throwsA(anything),
+          reason: '::< syntax is no longer supported');
     });
   });
 
@@ -181,13 +156,6 @@ SmallNat ::< 0.
       final env = parseTypes(source);
 
       expect(env.types['MyType']!.isExact, isTrue);
-    });
-
-    test('Subtype declaration (::&lt;) has isExact = false', () {
-      final source = 'MyType ::< 0.';
-      final env = parseTypes(source);
-
-      expect(env.types['MyType']!.isExact, isFalse);
     });
 
     test('System types Any and List are exact (::=)', () {

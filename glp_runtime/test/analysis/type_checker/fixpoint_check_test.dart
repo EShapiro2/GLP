@@ -192,25 +192,21 @@ void main() {
     });
 
     // =========================================================================
-    // SUBTYPE SEMANTICS - ::< does not require full coverage
+    // STREAM SEMANTICS - Stream has no [] constructor
     // =========================================================================
 
-    group('Subtype Definitions', () {
+    group('Stream Definitions', () {
 
-      test('Stream: no nil case required (::< allows partial coverage)', () {
+      test('Stream: no nil case required (Stream has no [] constructor)', () {
         final result = checkTypes('''
           Atom ::= a ; b ; c.
-          MyList ::= [] ; [Atom | MyList].
-          MyStream ::< MyList.
+          MyStream ::= [Atom | MyStream].
           procedure test(MyStream?).
           test([X | Xs]) :- test(Xs?).
         ''');
-        // This should pass because MyStream ::< MyList means partial coverage OK
-        // However, current implementation may not handle subtype semantics yet
-        // Mark as expected to fail until subtype semantics are implemented
-        if (!result.isWellTyped) {
-          print('Note: Subtype semantics not yet implemented - test marked as known limitation');
-        }
+        // Stream has no [] constructor, so only cons case needed
+        expect(result.isWellTyped, isTrue,
+            reason: 'Stream has no [] constructor');
       });
 
     });

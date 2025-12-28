@@ -101,7 +101,7 @@ class ClauseContributionComputer {
     }
 
     if (term is ast.UnderscoreTerm) {
-      return TypeRef('Every', term.line, term.column, isInput: declaredIsInput);
+      return TypeRef('Any', term.line, term.column, isInput: declaredIsInput);
     }
 
     return TypeRef('Any', term.line, term.column, isInput: declaredIsInput);

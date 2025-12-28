@@ -26,18 +26,11 @@ void main() {
         expect(() => parsePreludeOnly(), returnsNormally);
       });
 
-      test('Every type is defined', () {
-        final env = parsePreludeOnly();
-        expect(env.hasType('Every'), isTrue);
-        final every = env.getType('Every')!;
-        expect(every.isExact, isTrue); // ::= semantics
-      });
-
-      test('Any type is subtype of Every', () {
+      test('Any type is defined with exact semantics', () {
         final env = parsePreludeOnly();
         expect(env.hasType('Any'), isTrue);
         final any = env.getType('Any')!;
-        expect(any.isExact, isFalse); // ::< semantics
+        expect(any.isExact, isTrue); // ::= semantics
       });
 
       test('List type is defined with Any elements', () {
@@ -47,11 +40,11 @@ void main() {
         expect(list.isExact, isTrue);
       });
 
-      test('Stream is subtype of List', () {
+      test('Stream type is defined', () {
         final env = parsePreludeOnly();
         expect(env.hasType('Stream'), isTrue);
         final stream = env.getType('Stream')!;
-        expect(stream.isExact, isFalse); // ::< semantics
+        expect(stream.isExact, isTrue); // ::= semantics (no longer ::<)
       });
 
       test('DiffList type is defined', () {
@@ -96,13 +89,6 @@ void main() {
     });
 
     group('Redefinition Prevention', () {
-
-      test('cannot redefine Every', () {
-        expect(
-          () => checkTypes('Every ::= foo ; bar.'),
-          throwsA(predicate((e) => e.toString().contains('redefine'))),
-        );
-      });
 
       test('cannot redefine List', () {
         expect(

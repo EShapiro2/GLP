@@ -10,8 +10,7 @@ import '../../../lib/compiler/parser.dart';
 void main() {
   test('DEBUG: DiffList clause contribution', () {
     final source = r'''
-      MyEvery ::= _ ; _?.
-      MyAny ::< MyEvery.
+      MyAny ::= _ ; _?.
       MyList ::= [MyAny | MyList] ; [].
       MyDiffList ::= MyList \ MyList?.
 

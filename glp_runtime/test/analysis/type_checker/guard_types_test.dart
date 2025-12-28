@@ -92,10 +92,10 @@ void main() {
       test('known(X?) does NOT imply ground', () {
         // known only checks top-level binding, not recursive groundness
         final result = checkTypes('''
-          procedure bad(Every?, Every).
+          procedure bad(Any?, Any).
           bad(X, Y?) :- known(X?) | Y = X?.
         ''');
-        // This should still require mode coverage for Every
+        // This should still require mode coverage for Any
         // because known does not imply ground
         expect(result.errors, isNotEmpty,
             reason: 'known does not satisfy mode coverage');
@@ -140,7 +140,7 @@ void main() {
 
       test('NEGATIVE: ground on Channel (has mode complementations)', () {
         final result = checkTypes('''
-          MyStream ::< Any.
+          MyStream ::= [Any | MyStream].
           MyChannel ::= ch(MyStream?, MyStream).
 
           procedure bad(MyChannel?, Any).

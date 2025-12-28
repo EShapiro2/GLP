@@ -6,8 +6,7 @@ import '../../../lib/analysis/type_checker/type_parser.dart';
 void main() {
   test('DEBUG: DiffList DFA structure', () {
     final source = '''
-      MyEvery ::= _ ; _?.
-      MyAny ::< MyEvery.
+      MyAny ::= _ ; _?.
       MyList ::= [MyAny | MyList] ; [].
       MyDiffList ::= MyList \\ MyList?.
 

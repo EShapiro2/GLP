@@ -10,17 +10,16 @@ const String typePrelude = r'''
 % Predefined Types
 % =============================================================================
 
-% Universal types
-Every ::= _ ; _?.
-Any ::< Every.
+% Universal type (accepts any ground term with any mode)
+Any ::= _ ; _?.
 
-% Output and Input types
-Output.
-Input ::= Output?.
+% Output and Input mode types
+Output ::= _.
+Input ::= _?.
 
 % Collections
-List ::= [Any | List] ; [].
-Stream ::< List.
+List ::= [] ; [Any | List].
+Stream ::= [Any | Stream].
 DiffList ::= List \ List?.
 
 % Communication
@@ -54,10 +53,9 @@ receive(X?, ch([X|In], Out?), ch(In?, Out)).
 const Set<String> predefinedTypeNames = {
   'Number',   // Primitive builtin
   'String',   // Primitive builtin
-  'Every',    // Universal type
   'Any',      // Universal type
-  'Output',   // All writers type
-  'Input',    // All readers type
+  'Output',   // Output mode type
+  'Input',    // Input mode type
   'List',     // Collection type
   'Stream',   // Collection type
   'DiffList', // Collection type

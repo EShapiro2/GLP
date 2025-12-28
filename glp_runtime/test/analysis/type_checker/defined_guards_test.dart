@@ -10,7 +10,7 @@ void main() {
     test('POSITIVE: Defined guard with procedure declaration', () {
       final result = checkTypes('''
         MyList ::= [] ; [_ | MyList].
-        MyStream ::< MyList.
+        MyStream ::= [Any | MyStream].
         MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
 
         procedure channel(MyChannel?).

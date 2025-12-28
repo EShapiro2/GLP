@@ -51,19 +51,19 @@ void main() {
       test('POSITIVE: Stream handler without [] case passes', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::< MyList.
+          MyStream ::= [Any | MyStream].
           procedure handle(Any?).
           procedure process(MyStream?).
           process([X | Xs]) :- handle(X?), process(Xs?).
         ''');
         expect(result.isWellTyped, isTrue,
-            reason: 'MyStream uses ::< so [] case not required');
+            reason: 'MyStream has no [] constructor');
       });
 
       test('POSITIVE: Stream handler with [] case also passes', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::< MyList.
+          MyStream ::= [Any | MyStream].
           procedure handle(Any?).
           procedure process(MyStream?).
           process([]).

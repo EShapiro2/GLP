@@ -283,25 +283,28 @@ class TypeParser {
     return tokens[_current + 1];
   }
   
-  /// Parse: TypeName ::= type_expr . OR TypeName ::< type_expr .
+  /// Parse: TypeName ::= type_expr .
+  /// Note: ::< syntax is no longer supported (spec v1.13)
   TypeDef _parseTypeDef() {
     final nameToken = _consume(TypeTokenType.typeName, 'Expected type name');
 
-    // Check for ::= or ::<
-    bool isExact;
+    // Only ::= is supported; ::< is deprecated
     if (_match(TypeTokenType.colonColonEq)) {
-      isExact = true;
+      // OK - exact type definition
     } else if (_match(TypeTokenType.colonColonLt)) {
-      isExact = false;
+      throw TypeParseError(
+        'Subtype syntax "::< " is no longer supported. Use "::=" instead.',
+        _peek().line, _peek().column);
     } else {
-      throw TypeParseError('Expected "::=" or "::<" after type name', _peek().line, _peek().column);
+      throw TypeParseError('Expected "::=" after type name', _peek().line, _peek().column);
     }
 
     final alternatives = _parseTypeExpr();
 
     _consume(TypeTokenType.dot, 'Expected "." after type definition');
 
-    return TypeDef(nameToken.lexeme, alternatives, nameToken.line, nameToken.column, isExact: isExact);
+    // isExact is always true now (::= semantics only)
+    return TypeDef(nameToken.lexeme, alternatives, nameToken.line, nameToken.column, isExact: true);
   }
   
   /// Parse: type_alt (; type_alt)*
