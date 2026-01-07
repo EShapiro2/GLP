@@ -38,30 +38,17 @@ void main() {
       expect(modes.contains(Mode.produce), isFalse);
     });
 
-    test('Output predefined type has {Mode.produce}', () {
-      final source = ''; // Output is predefined
+    test('Bimodal state has {Mode.produce, Mode.consume}', () {
+      final source = 'Bimodal ::= _ ; _?.';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
 
-      final dfa = compiler.compile('Output');
+      final dfa = compiler.compile('Bimodal');
 
       expect(dfa.primitiveStateModes, isNotEmpty);
       final modes = dfa.getModesAt(dfa.startState);
       expect(modes, contains(Mode.produce));
-      expect(modes.contains(Mode.consume), isFalse);
-    });
-
-    test('Input predefined type has {Mode.consume}', () {
-      final source = ''; // Input is predefined
-      final env = parseTypes(source);
-      final compiler = TypeCompiler(env);
-
-      final dfa = compiler.compile('Input');
-
-      expect(dfa.primitiveStateModes, isNotEmpty);
-      final modes = dfa.getModesAt(dfa.startState);
       expect(modes, contains(Mode.consume));
-      expect(modes.contains(Mode.produce), isFalse);
     });
   });
 
@@ -90,24 +77,24 @@ echo(X?).
       expect(result.errors, isEmpty, reason: 'Reader X? at input position _? should be accepted');
     });
 
-    test('Output type with writer variable: accepted', () {
+    test('_ accepts writer variable', () {
       final source = '''
-procedure copy_output(Output).
+procedure identity(_, _).
 
-copy_output(X).
+identity(X, X?).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Writer X at Output position should be accepted');
+      expect(result.errors, isEmpty, reason: 'Primitive _ accepts writer');
     });
 
-    test('Input type with reader variable: accepted', () {
+    test('_ accepts reader and writer in different args', () {
       final source = '''
-procedure read_input(Input).
+procedure swap_modes(_, _).
 
-read_input(X?).
+swap_modes(X?, Y).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Reader X? at Input position should be accepted');
+      expect(result.errors, isEmpty, reason: 'Primitive _ accepts any variable');
     });
   });
 
@@ -150,8 +137,128 @@ process(box(X?)).
     });
   });
 
+  group('Mode Coverage for Bimodal type (::= semantics)', () {
+    // === POSITIVE CONTROLS ===
+
+    test('POSITIVE: Bimodal with two clauses covering both modes', () {
+      final source = '''
+Bimodal ::= _ ; _?.
+
+procedure full_coverage(Bimodal).
+
+full_coverage(X).
+full_coverage(X?).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isEmpty, reason: 'Two clauses cover both mode alternatives');
+    });
+
+    test('POSITIVE: Bimodal with two clauses, two args, all combinations', () {
+      final source = '''
+Bimodal ::= _ ; _?.
+
+procedure binary_coverage(Bimodal, Bimodal).
+
+binary_coverage(X, Y?).
+binary_coverage(X?, Y).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isEmpty, reason: 'Two clauses cover all mode combinations');
+    });
+
+    test('POSITIVE: _ with single clause (no coverage required for primitive)', () {
+      final source = '''
+procedure prim_single(_).
+
+prim_single(X).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isEmpty, reason: 'Primitive _ has no coverage requirement');
+    });
+
+    // === NEGATIVE CONTROLS ===
+
+    test('NEGATIVE: Bimodal with single clause - incomplete coverage', () {
+      final source = '''
+Bimodal ::= _ ; _?.
+
+procedure incomplete(Bimodal).
+
+incomplete(X).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isNotEmpty, reason: 'Bimodal requires both _ and _? coverage');
+    });
+
+    test('NEGATIVE: Bimodal with two clauses but same mode - still incomplete', () {
+      final source = '''
+Bimodal ::= _ ; _?.
+
+procedure same_mode(Bimodal).
+
+same_mode(X).
+same_mode(Y).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isNotEmpty, reason: 'Both clauses are writers, missing reader');
+    });
+
+    test('NEGATIVE: Bimodal binary with single clause - incomplete', () {
+      final source = '''
+Bimodal ::= _ ; _?.
+
+procedure binary_incomplete(Bimodal, Bimodal).
+
+binary_incomplete(X, X?).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isNotEmpty, reason: 'Arg1 missing reader, Arg2 missing writer');
+    });
+
+    test('NEGATIVE: known guard does NOT satisfy coverage', () {
+      final source = '''
+Bimodal ::= _ ; _?.
+
+procedure known_not_ground(Bimodal).
+
+known_not_ground(X?) :- known(X?) | true.
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isNotEmpty, reason: 'known does not imply ground');
+    });
+
+    test('NEGATIVE: Nested Bimodal with incomplete coverage', () {
+      final source = '''
+Bimodal ::= _ ; _?.
+BimodalList ::= [] ; [Bimodal | BimodalList].
+
+procedure process(BimodalList).
+
+process([]).
+process([H? | T]) :- process(T?).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isNotEmpty, reason: 'Head position has Bimodal, needs both modes');
+    });
+
+    // === POSITIVE: Nested _ (no coverage required) ===
+
+    test('POSITIVE: Nested _ with single clause', () {
+      final source = '''
+PrimList ::= [] ; [_ | PrimList].
+
+procedure process_list(PrimList).
+
+process_list([]).
+process_list([H? | T]) :- process_list(T?).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isEmpty, reason: 'PrimList uses _ at head, no coverage requirement');
+    });
+  });
+
   group('Mode Intersection', () {
-    test('OutputOnly ∩ InputOnly = empty (empty)', () {
+    test('OutputOnly ∩ InputOnly = ∅ (empty)', () {
       final source = 'OutputOnly ::= _. InputOnly ::= _?.';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
@@ -164,36 +271,36 @@ process(box(X?)).
       expect(intersection.isEmpty, isTrue, reason: 'Output-only ∩ Input-only = empty set');
     });
 
-    test('Output ∩ OutputOnly is not empty', () {
-      final source = 'OutputOnly ::= _.';
+    test('Bimodal ∩ OutputOnly = OutputOnly', () {
+      final source = 'Bimodal ::= _ ; _?. OutputOnly ::= _.';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
 
-      final output = compiler.compile('Output');
-      final outOnly = compiler.compile('OutputOnly');
+      final bimodal = compiler.compile('Bimodal');
+      final out = compiler.compile('OutputOnly');
 
-      final intersection = output.intersect(outOnly);
+      final intersection = bimodal.intersect(out);
 
-      // Both are output-only, so intersection should be non-empty
-      expect(intersection.isEmpty, isFalse);
+      // Intersection should have only output mode
       final modes = intersection.getModesAt(intersection.startState);
       expect(modes, contains(Mode.produce));
+      expect(modes.contains(Mode.consume), isFalse);
     });
 
-    test('Input ∩ InputOnly is not empty', () {
-      final source = 'InputOnly ::= _?.';
+    test('Bimodal ∩ InputOnly = InputOnly', () {
+      final source = 'Bimodal ::= _ ; _?. InputOnly ::= _?.';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
 
-      final input = compiler.compile('Input');
-      final inpOnly = compiler.compile('InputOnly');
+      final bimodal = compiler.compile('Bimodal');
+      final inp = compiler.compile('InputOnly');
 
-      final intersection = input.intersect(inpOnly);
+      final intersection = bimodal.intersect(inp);
 
-      // Both are input-only, so intersection should be non-empty
-      expect(intersection.isEmpty, isFalse);
+      // Intersection should have only input mode
       final modes = intersection.getModesAt(intersection.startState);
       expect(modes, contains(Mode.consume));
+      expect(modes.contains(Mode.produce), isFalse);
     });
   });
 
