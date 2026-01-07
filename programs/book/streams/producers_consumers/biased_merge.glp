@@ -1,4 +1,4 @@
-%% Type definitions
+§%% Type definitions
 Msg ::= started ; halted ; Any.
 Stream ::= [] ; [Msg | Stream].
 

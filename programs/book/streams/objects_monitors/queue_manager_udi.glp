@@ -1,0 +1,57 @@
+%% Type definitions
+QReqs ::= [] ; [QReq | QReqs].
+
+QReq ::= enqueue(_) ; dequeue(_?).
+
+procedure queue(QReqs?).
+queue(In) :-
+	queue_split(In?,Enqs,Deqs), queue_match(Enqs?,Deqs?).
+
+
+procedure queue_split(QReqs?,Stream,Stream).
+queue_split([enquque(X)|In],[X?|Enqs?],Deqs?) :-
+	queue_split(In?,Enqs,Deqs).
+queue_split([dequque(X?)|In],Enqs?,[X|Deqs?]) :-
+	queue_split(In?,Enqs,Deqs).
+queue_splot([],[],[]).
+
+procedure queue_match(Stream?,Stream?).
+queue_match([X|Enqs],[X?|Deqs]) :-
+	queue_match(Enqs?,Deqs?).
+queue_match([],_).
+queue_match(_,[]).
+
+
+% The following does not work in GLP
+
+%% Procedure type declarations
+procedure qm(QReqList?,Q?,Q).
+
+%% queue_manager.glp - Queue manager using incomplete messages
+%% Source: CP Collected Papers, Ch 29 (Shapiro & Takeuchi)
+%%
+%% Demonstrates incomplete messages for resource management.
+%% dequeue returns immediately; actual value filled in later by enqueue.
+
+%% Queue manager - Head and Tail are difference list pointers
+%% Initial call: qm(Requests?, Q, Q) with same variable for empty queue
+
+%qm([dequeue(X?)|S?], Q) :-	dequeue(X,Q?,Q1), qm(S?, Q1?).
+
+% qm([enqueue(X)|S?], Head, [X|Tail?]) :-    qm(S?, Head?, Tail?).
+
+%% Example setup:
+%% user1(X), user2(Y), merge(X?, Y?, Z), qm(Z?, Q, Q)
+%%
+%% Key insight: When queue is empty and dequeue(X) arrives,
+%% X is unified with the head variable (still unbound).
+%% When later enqueue(V) arrives, V fills that slot.
+%% The dequeuing process gets V through X without extra communication.
+%%
+%% This is "incomplete messages" - sender provides variable,
+%% receiver fills it in later. No negative responses needed.
+
+%% merge/3 for combining request streams
+merge([A|Xs?], Ys, [A|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge(Xs, [A|Ys?], [A|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], [], []).
