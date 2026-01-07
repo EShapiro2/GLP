@@ -46,15 +46,17 @@ A defined GLP type D defines a regular set of moded paths, denoted **paths(D)**:
 - The last symbol is a primitive type (`_`, `_?`, `Integer`, `String`, or constant)
 - Edges are labelled with `(argIndex, mode)`
 
-### Primitive Types (Paper lines 17, 219-223)
+### Primitive Types (Paper page 6)
 
-| Primitive Type | Meaning | Intrinsic Mode |
-|----------------|---------|----------------|
-| `_` | Any produced term | produce (↑) |
-| `_?` | Any consumed term | consume (↓) |
-| `Integer` | Any integer | bi-moded |
-| `String` | Any string | bi-moded |
-| constant (e.g., `[]`, `1`) | Exact value | from context |
+| Primitive Type | Meaning |
+|----------------|---------|
+| `_` | Any produced term |
+| `_?` | Any consumed term |
+| `Integer` | Any integer constant |
+| `String` | Any string constant |
+| constant (e.g., `[]`, `1`) | Exact value |
+
+Note: `_` has intrinsic mode produce (↑), `_?` has intrinsic mode consume (↓). Constants and `Integer`/`String` take their mode from context.
 
 ### Mode Propagation (Paper lines 9-17)
 
@@ -351,24 +353,9 @@ Transitions:
 
 The paper requires deterministic types (line 30-35). Union (`;`) in type definitions is NOT nondeterminism—alternatives have different leading symbols. This allows direct DFA construction, which is simpler and more efficient than NFA→DFA conversion.
 
-### Existing Infrastructure
-
-The branch has `type_dfa.dart` with correct DFA operations. Keep:
-- `TypeDFA` class structure
-- `intersect`, `complement`, `union`, `isSubsetOf`, `isEmpty`
-- `complete` for adding sink state
-- `applyModeComplement`
-
-Discard:
-- `type_nfa.dart`
-- `nfa_compiler.dart`
-- `nfa_to_dfa.dart`
-
-Rewrite:
-- `type_compiler.dart` to follow this direct compilation algorithm
-
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft — direct DFA compilation, no NFA |
+| 0.2 | 2025-01-07 | Remove implementation notes, clarify primitive types |

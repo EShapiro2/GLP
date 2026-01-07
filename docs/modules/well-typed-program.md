@@ -99,45 +99,55 @@ Checks if program (Cs, D) is well-typed.
 checkProgram(cs, d):
   errors = []
   clauseResults = []
-  
+
   // Condition 1: Covariance
   for c in cs:
     result = checkClause(c, d)
     clauseResults.add(result)
     if not result.isWellTyped:
       errors.add("Clause not well-typed: " + c)
-  
-  // Condition 2: Contravariance
+
+  // Condition 2: Contravariance (using DFA operations)
   for proc in d.procedures:
     for argIndex, argType in enumerate(proc.argTypes):
       if argType.isInput:  // Type?, not Type
-        inputPaths = extractInputPaths(d, proc, argIndex)
-        for path in inputPaths:
-          if not anyClauseAccepts(cs, path, d):
-            errors.add("Uncovered input path: " + path)
-  
-  return ProgramCheckResult(errors.isEmpty, clauseResults, errors)
+        // Get the declared input type DFA
+        inputTypeDFA = compileType(argType, d)
 
-anyClauseAccepts(cs, path, d):
-  for c in cs:
-    if c.head.functor == path.procedure:
-      if accepts(c, path, d):
-        return true
-  return false
+        // Compute union of clause contributions at this position
+        clausePatternsDFA = emptyDFA()
+        for c in cs where c.head.functor == proc.name:
+          patternDFA = extractHeadPatternDFA(c.head, argIndex)
+          clausePatternsDFA = union(clausePatternsDFA, patternDFA)
+
+        // Check coverage: inputTypeDFA ⊆ clausePatternsDFA
+        if not isSubsetOf(inputTypeDFA, clausePatternsDFA):
+          // Find witness path in the difference
+          uncoveredDFA = intersect(inputTypeDFA, complement(clausePatternsDFA))
+          witness = findAcceptingPath(uncoveredDFA)
+          errors.add("Uncovered input path at arg " + argIndex + ": " + witness)
+
+  return ProgramCheckResult(errors.isEmpty, clauseResults, errors)
 ```
 
-## Implementation Note: Finite Representation
+## Implementation Note: DFA-Based Contravariance
 
-Input paths form a regular language (represented by the type DFA). Since this language is infinite for recursive types, contravariance checking must work with the DFA representation rather than enumerating paths.
+The algorithm above uses DFA operations rather than path enumeration because:
+1. Input paths form an infinite regular language for recursive types
+2. DFA subset checking (`isSubsetOf`) decides inclusion in finite time
+3. When coverage fails, DFA intersection with complement provides a witness path
 
-**Approach:** For each input argument position, verify that the union of clause contributions covers the declared type. This is equivalent to checking that every path is accepted.
-
-Specifically, for input argument i of procedure p:
-1. Compute the DFA of patterns at position i across all clauses for p
-2. Check that this DFA is a superset of (or equal to) the declared input type DFA
+Required DFA operations (from `type-dfa` module):
+- `compileType(typeName, env)` — compile type to DFA
+- `union(dfa1, dfa2)` — language union
+- `intersect(dfa1, dfa2)` — language intersection
+- `complement(dfa)` — language complement
+- `isSubsetOf(dfa1, dfa2)` — check L(dfa1) ⊆ L(dfa2)
+- `findAcceptingPath(dfa)` — find a path accepted by DFA (for error reporting)
 
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft from paper |
+| 0.2 | 2025-01-07 | Replace path enumeration with DFA operations |

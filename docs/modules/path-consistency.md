@@ -261,22 +261,16 @@ Variable assignment: `X` has type `_` (produced).
 
 ### Example: Case 1 — Equal Length with Constant
 
+For Case 1, both paths must have equal length and reach their respective leaves:
+
 Term path:
 ```
-(0,↓) --> merge --(1,↓)--> []
+(0,↓) --> foo --(1,↑)--> 42
 ```
 
 Type path:
 ```
-(0,↓) --> merge --(1,↓)--> Stream? --(1,↓)--> []
-```
-
-Wait, these aren't equal length. Let me reconsider...
-
-Actually for Case 1, both paths must reach a leaf:
-```
-Term: (0,↓) --> foo --(1,↑)--> 42
-Type: (0,↓) --> foo --(1,↑)--> Integer
+(0,↓) --> foo --(1,↑)--> Integer
 ```
 
 **Analysis:**
@@ -330,3 +324,4 @@ This is checked at the clause level, not within path consistency.
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft |
+| 0.2 | 2025-01-07 | Fix Case 1 example |

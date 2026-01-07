@@ -79,8 +79,8 @@ For a type reference `T` or `T?` at position with parent mode `m`:
 From the produce perspective (↑):
 ```
 Path 1: (0,↑) → Stream --(1,↑)--> []
-Path 2: (0,↑) → Stream --(1,↑)--> [|] --(1,↑)--> _
-Path 3: (0,↑) → Stream --(1,↑)--> [|] --(2,↑)--> Stream → ...
+Path 2: (0,↑) → Stream --(1,↑)--> "."/2 --(1,↑)--> _
+Path 3: (0,↑) → Stream --(1,↑)--> "."/2 --(2,↑)--> Stream → ...
 ```
 
 ### Example: paths(Stream?) — complemented
@@ -88,8 +88,8 @@ Path 3: (0,↑) → Stream --(1,↑)--> [|] --(2,↑)--> Stream → ...
 From the consume perspective (↓):
 ```
 Path 1: (0,↓) → Stream? --(1,↓)--> []
-Path 2: (0,↓) → Stream? --(1,↓)--> [|] --(1,↓)--> _?
-Path 3: (0,↓) → Stream? --(1,↓)--> [|] --(2,↓)--> Stream? → ...
+Path 2: (0,↓) → Stream? --(1,↓)--> "."/2 --(1,↓)--> _?
+Path 3: (0,↓) → Stream? --(1,↓)--> "."/2 --(2,↓)--> Stream? → ...
 ```
 
 ### Example: Type paths for merge(Stream?, Stream?, Stream)
@@ -135,3 +135,4 @@ The DFA **accepts** exactly paths(D).
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft |
 | 0.2 | 2025-01-07 | Simplified to paper definitions only |
+| 0.3 | 2025-01-07 | Standardize list notation to "."/2 |
