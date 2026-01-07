@@ -83,6 +83,11 @@ bar(X, Y, R?) :- X? + 1 < Y? * 2 | R = sum(X?, Y?).
 
 ## Core Rules
 
+### Do Exactly What Is Asked
+- **When the user asks something, do exactly as asked and nothing else**
+- Do not add extra steps, analysis, or actions beyond the specific request
+- If clarification is needed, ask first rather than assuming
+
 ### Never Implement Without a Plan
 - **NEVER start implementation without an agreed upon plan**
 - First discuss and document the design
