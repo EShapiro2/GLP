@@ -176,7 +176,6 @@ The following standard DFA operations are required:
 TypeDFA intersect(TypeDFA a, TypeDFA b);      // L(A) ∩ L(B)
 TypeDFA complement(TypeDFA dfa);               // L̄(A)
 TypeDFA union(TypeDFA a, TypeDFA b);           // L(A) ∪ L(B)
-bool isSubsetOf(TypeDFA a, TypeDFA b);         // L(A) ⊆ L(B)
 bool isEmpty(TypeDFA dfa);                     // L(A) = ∅
 TypeDFA complete(TypeDFA dfa, Set<ModedLabel> alphabet);  // Add sink state
 ```
