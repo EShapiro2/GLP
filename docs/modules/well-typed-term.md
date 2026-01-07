@@ -3,7 +3,7 @@
 **Version**: 0.1  
 **Date**: 2025-01-07  
 **Status**: DRAFT  
-**Paper References**: Definition 4.4 (Well-Typed Moded Term), lines 275-277
+**Paper References**: Definition 4.5 (Well-Typed Moded Term), lines 275-277
 
 ## Purpose
 
@@ -17,7 +17,7 @@ Determines when a moded term is well-typed by a GLP type. This is the foundation
 
 ## Definitions
 
-### Well-Typed Moded Term (Paper Definition 4.4, lines 275-277)
+### Well-Typed Moded Term (Paper Definition 4.5, lines 275-277)
 
 > A moded term T is **well-typed** by a GLP type D if:
 > 1. For each term path x ∈ paths(T) there is a consistent path y ∈ paths(D), and
@@ -204,17 +204,23 @@ checkComplementaryVariables(variableTypes):
   return errors
 
 areComplementaryTypes(writerType, readerType):
-  // T and T? are complements
-  if readerType == writerType + "?":
-    return true
-  // _ and _? are complements
-  if writerType == "_" and readerType == "_?":
-    return true
-  // Check involution: (T?)? = T
-  if writerType.endsWith("?") and readerType == writerType.dropLast(1):
-    return true
-  return false
+  // Extract base type name and complement status
+  writerBase = writerType.baseName
+  writerIsComplement = writerType.isComplement
+
+  readerBase = readerType.baseName
+  readerIsComplement = readerType.isComplement
+
+  // Must reference the same base type
+  if writerBase != readerBase:
+    return false
+
+  // Writer must be uncomplemented (T), reader must be complemented (T?)
+  // OR writer is complemented (T?) and reader is uncomplemented (T)
+  return writerIsComplement != readerIsComplement
 ```
+
+**Note:** This function uses the `TypeExpr` structure from `type-environment` module rather than string manipulation, ensuring correct handling of all type forms including primitive types.
 
 ## Examples
 
@@ -303,3 +309,4 @@ A variable may occur multiple times in a term. Each occurrence must yield the sa
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft |
+| 0.2 | 2025-01-07 | Fix definition numbers, improve complement check |

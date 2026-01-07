@@ -3,7 +3,7 @@
 **Version**: 0.1  
 **Date**: 2025-01-07  
 **Status**: DRAFT  
-**Paper References**: Definition 4.7 (lines 351-357)
+**Paper References**: Definition 4.10 (lines 351-357)
 
 ## Purpose
 
@@ -16,7 +16,7 @@ Determines when a typed GLP program P = (Cs, D) is well-typed. This is the top-l
 
 ## Paper Definition
 
-### Definition 4.7: Well-typed GLP Program (lines 351-357)
+### Definition 4.10: Well-typed GLP Program (lines 351-357)
 
 > A typed GLP program P = (Cs, D) is **well-typed** if:
 >
@@ -27,7 +27,7 @@ Determines when a typed GLP program P = (Cs, D) is well-typed. This is the top-l
 
 ### Covariance (Condition 1)
 
-Every clause must satisfy all three conditions of Definition 4.6:
+Every clause must satisfy all three conditions of Definition 4.8:
 - Head is well-typed
 - Body atoms are well-typed
 - Variable pairs have complementary types
@@ -60,7 +60,7 @@ merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 
 ### Covariance Check
 
-Both clauses must be well-typed (per Definition 4.6).
+Both clauses must be well-typed (per Definition 4.8).
 
 ### Contravariance Check
 
@@ -151,3 +151,4 @@ Required DFA operations (from `type-dfa` module):
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft from paper |
 | 0.2 | 2025-01-07 | Replace path enumeration with DFA operations |
+| 0.3 | 2025-01-07 | Fix definition numbers |

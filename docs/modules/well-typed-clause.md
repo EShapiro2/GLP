@@ -3,7 +3,7 @@
 **Version**: 0.1  
 **Date**: 2025-01-07  
 **Status**: DRAFT  
-**Paper References**: Definition 4.6 (lines 311-321), Example (lines 323-349)
+**Paper References**: Definition 4.8 (lines 311-321), Example (lines 323-349)
 
 ## Purpose
 
@@ -18,7 +18,7 @@ Determines when a GLP clause is well-typed by a type D, and defines when a claus
 
 ## Paper Definition
 
-### Definition 4.6: Well-typed Clause (lines 311-321)
+### Definition 4.8: Well-typed Clause (lines 311-321)
 
 > Let C = (H :- B) be a GLP clause and D a GLP type for all its procedures.
 > Then C is **well-typed** by D if:
@@ -28,12 +28,14 @@ Determines when a GLP clause is well-typed by a type D, and defines when a claus
 > 3. Every pair of variables that occur in C are assigned complementary types by D.
 >
 > In addition, C **accepts** an input path x ∈ paths(D) if H' has a path consistent with x.
+>
+> — Definition 4.9
 
 ## Three Conditions
 
 ### Condition 1: Head Well-Typed
 
-Construct moded head H' (Definition 4.5) and verify it is well-typed by D (Definition 4.4).
+Construct moded head H' (Definition 4.6) and verify it is well-typed by D (Definition 4.5).
 
 The moded head:
 - Is I/O moded (root ↓, at most one inversion to ↑)
@@ -55,7 +57,7 @@ Every variable pair (X, X?) must be assigned complementary types:
 
 A clause C **accepts** an input path x ∈ paths(D) if the moded head H' has a path consistent with x.
 
-This is used in Definition 4.7 (Contravariance): every input path must be accepted by some clause.
+This is used in Definition 4.10 (Contravariance): every input path must be accepted by some clause.
 
 ## Example (lines 323-349)
 
@@ -164,3 +166,4 @@ accepts(c, inputPath, d):
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft from paper |
+| 0.2 | 2025-01-07 | Fix definition numbers |

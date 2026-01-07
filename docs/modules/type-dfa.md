@@ -46,6 +46,15 @@ A defined GLP type D defines a regular set of moded paths, denoted **paths(D)**:
 - The last symbol is a primitive type (`_`, `_?`, `Integer`, `String`, or constant)
 - Edges are labelled with `(argIndex, mode)`
 
+### Notation
+
+This spec uses internal DFA label encoding:
+- `[|](2,1)` — list cons, arity 2, argument 1 (head)
+- `[|](2,2)` — list cons, arity 2, argument 2 (tail)
+- `functor(arity,argIndex)` — general compound term
+
+The paper uses `"."/2` for list cons. The internal encoding adds argument index to enable distinct transitions for each argument position.
+
 ### Primitive Types (Paper page 6)
 
 | Primitive Type | Meaning |
@@ -359,3 +368,4 @@ The paper requires deterministic types (line 30-35). Union (`;`) in type definit
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft — direct DFA compilation, no NFA |
 | 0.2 | 2025-01-07 | Remove implementation notes, clarify primitive types |
+| 0.3 | 2025-01-07 | Add notation clarification |

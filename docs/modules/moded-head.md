@@ -3,7 +3,7 @@
 **Version**: 0.1  
 **Date**: 2025-01-07  
 **Status**: DRAFT  
-**Paper References**: Definition 4.5 (lines 285-288), Example (lines 290-308)
+**Paper References**: Definition 4.6 (lines 285-288), Example (lines 290-308)
 
 ## Purpose
 
@@ -15,7 +15,7 @@ Constructs a moded head H' from a clause head H. The moded head is used for well
 
 ## Paper Definition
 
-### Definition 4.5: Moded Head (lines 285-288)
+### Definition 4.6: Moded Head (lines 285-288)
 
 > Given a head H, a **moded head** H' is obtained by:
 > 1. Constructing an I/O-moded term corresponding to H, then
@@ -127,7 +127,7 @@ flipVariables(term):
 
 ## Relationship to Well-Typing
 
-The moded head H' is used in Definition 4.6 (Well-typed Clause):
+The moded head H' is used in Definition 4.8 (Well-typed Clause):
 - Condition 1 requires H' to be well-typed by D
 - The "accepts" predicate checks if H' has paths consistent with input paths of D
 
@@ -136,3 +136,4 @@ The moded head H' is used in Definition 4.6 (Well-typed Clause):
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft from paper |
+| 0.2 | 2025-01-07 | Fix definition numbers |
