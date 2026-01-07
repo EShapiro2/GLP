@@ -13,9 +13,9 @@ import 'moded_label.dart';
 
 /// Classification of primitive states by their mode set (spec 5.7.1)
 enum PrimitiveKind {
-  outputOnly,  // μ(q) = {Mode.output}
-  inputOnly,   // μ(q) = {Mode.input}
-  biModed,     // μ(q) = {Mode.output, Mode.input}
+  outputOnly,  // μ(q) = {Mode.produce}
+  inputOnly,   // μ(q) = {Mode.consume}
+  biModed,     // μ(q) = {Mode.produce, Mode.consume}
 }
 
 /// DFA state
@@ -77,9 +77,9 @@ class TypeDFA {
   ///
   /// A state appears in this map iff it corresponds to a primitive type
   /// position (_ or _?) in a type definition:
-  /// - {Mode.output} for _ (program produces value)
-  /// - {Mode.input} for _? (program consumes value)
-  /// - {Mode.output, Mode.input} for Every ::= _ ; _?
+  /// - {Mode.produce} for _ (program produces value)
+  /// - {Mode.consume} for _? (program consumes value)
+  /// - {Mode.produce, Mode.consume} for Every ::= _ ; _?
   ///
   /// States not in this map are structural (non-primitive) positions.
   final Map<DFAState, Set<Mode>> primitiveStateModes;
@@ -111,7 +111,7 @@ class TypeDFA {
     final modes = primitiveStateModes[state];
     if (modes == null || modes.isEmpty) return null;
     if (modes.length == 2) return PrimitiveKind.biModed;
-    return modes.contains(Mode.output)
+    return modes.contains(Mode.produce)
         ? PrimitiveKind.outputOnly
         : PrimitiveKind.inputOnly;
   }
@@ -316,7 +316,7 @@ class TypeDFA {
     return structuralThis.isSubsetOf(structuralOther);
   }
 
-  /// Convert to structural DFA by normalizing all modes to Mode.output
+  /// Convert to structural DFA by normalizing all modes to Mode.produce
   /// and merging all primitive states into a single canonical state.
   ///
   /// This allows comparing structure without mode differences affecting
@@ -359,7 +359,7 @@ class TypeDFA {
       newStates.add(mappedTo);
 
       // Normalize mode to output (consistent mode for structural comparison)
-      final structuralLabel = ModedLabel(label.pathElement, mode: Mode.output);
+      final structuralLabel = ModedLabel(label.pathElement, mode: Mode.produce);
       newTransitions[(mappedFrom, structuralLabel)] = mappedTo;
     }
 
@@ -370,7 +370,7 @@ class TypeDFA {
     final newPrimitiveModes = <DFAState, Set<Mode>>{};
     if (primitiveStateModes.isNotEmpty ||
         states.any((s) => s.name == 'Any' || s.name.startsWith('prim_'))) {
-      newPrimitiveModes[canonicalPrim] = {Mode.output};
+      newPrimitiveModes[canonicalPrim] = {Mode.produce};
       newStates.add(canonicalPrim);
     }
 
@@ -503,7 +503,7 @@ class TypeDFA {
     for (final state in completed.states) {
       final modes = completed.primitiveStateModes[state];
       if (modes != null && modes.isNotEmpty) {
-        final complementModes = {Mode.output, Mode.input}.difference(modes);
+        final complementModes = {Mode.produce, Mode.consume}.difference(modes);
         newPrimitiveModes[state] = complementModes;
       }
     }
@@ -529,7 +529,7 @@ class TypeDFA {
       final toState = entry.value;
 
       // Normalize null to output
-      final normalizedMode = label.mode ?? Mode.output;
+      final normalizedMode = label.mode ?? Mode.produce;
       final normalizedLabel = ModedLabel(label.pathElement, mode: normalizedMode);
       newTransitions[(fromState, normalizedLabel)] = toState;
     }
@@ -552,7 +552,7 @@ class TypeDFA {
       final (fromState, label) = entry.key;
       final toState = entry.value;
 
-      final flippedMode = label.mode?.complement;  // null stays null
+      final flippedMode = label.mode?.flip;  // null stays null
       final flippedLabel = ModedLabel(label.pathElement, mode: flippedMode);
       newTransitions[(fromState, flippedLabel)] = toState;
     }
@@ -562,7 +562,7 @@ class TypeDFA {
     for (final entry in primitiveStateModes.entries) {
       final state = entry.key;
       final modes = entry.value;
-      final flippedModes = modes.map((m) => m.complement).toSet();
+      final flippedModes = modes.map((m) => m.flip).toSet();
       newPrimitiveModes[state] = flippedModes;
     }
 
@@ -636,7 +636,7 @@ class NumberTypeDFA extends TypeDFA {
     startState: DFAState('Number'),
     finalStates: {},
     transitions: {},
-    primitiveStateModes: {DFAState('Number'): {Mode.output, Mode.input}},
+    primitiveStateModes: {DFAState('Number'): {Mode.produce, Mode.consume}},
   );
 
   @override
@@ -669,7 +669,7 @@ class StringTypeDFA extends TypeDFA {
     startState: DFAState('String'),
     finalStates: {},
     transitions: {},
-    primitiveStateModes: {DFAState('String'): {Mode.output, Mode.input}},
+    primitiveStateModes: {DFAState('String'): {Mode.produce, Mode.consume}},
   );
 
   @override

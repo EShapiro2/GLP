@@ -150,7 +150,7 @@ class TypeCompiler {
   ) {
     if (alt is PrimitiveModeAlt) {
       // Primitive mode: mark state with its mode, make it accepting
-      final mode = alt.isInput ? Mode.input : Mode.output;
+      final mode = alt.isInput ? Mode.consume : Mode.produce;
       primitiveStateModes[fromState] =
           (primitiveStateModes[fromState] ?? <Mode>{})..add(mode);
       // Primitive states are final (accepting)

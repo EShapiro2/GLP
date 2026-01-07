@@ -90,7 +90,7 @@ class ModeChecker {
       final typeRef = procDecl.argTypes[i];
 
       // Determine expected mode from type declaration
-      final expectedMode = typeRef.isInput ? Mode.input : Mode.output;
+      final expectedMode = typeRef.isInput ? Mode.consume : Mode.produce;
 
       // Check term mode against expected mode
       final error = _checkTermMode(
@@ -130,8 +130,8 @@ class ModeChecker {
       // At call boundary, complement the callee's mode to get caller's expected mode
       // Callee's input (Type?) → caller must provide output mode (writer X)
       // Callee's output (Type) → caller must provide input mode (reader X?)
-      final calleeMode = calleeTypeRef.isInput ? Mode.input : Mode.output;
-      final callerExpectedMode = calleeMode.complement;
+      final calleeMode = calleeTypeRef.isInput ? Mode.consume : Mode.produce;
+      final callerExpectedMode = calleeMode.flip;
 
       // Check term mode against caller's expected mode
       final error = _checkTermMode(
@@ -260,7 +260,7 @@ class ModeChecker {
     final isReader = variable.isReader;
 
     switch (expectedMode) {
-      case Mode.output:
+      case Mode.produce:
         // Output position: callee writes, so caller must provide reader (X?)
         if (!isReader) {
           return ModeError.writerAtOutput(
@@ -273,7 +273,7 @@ class ModeChecker {
         }
         break;
 
-      case Mode.input:
+      case Mode.consume:
         // Input position: caller provides value, so must be writer (X)
         if (isReader) {
           return ModeError.readerAtInput(
@@ -311,9 +311,9 @@ class ModeChecker {
       final subtypeExpr = typeAlt.args[i];
 
       // Determine embedded mode from subtype
-      Mode embeddedMode = Mode.output; // default
+      Mode embeddedMode = Mode.produce; // default
       if (subtypeExpr is TypeRef && subtypeExpr.isInput) {
-        embeddedMode = Mode.input;
+        embeddedMode = Mode.consume;
       }
 
       // Combine parent mode with embedded mode (involution)

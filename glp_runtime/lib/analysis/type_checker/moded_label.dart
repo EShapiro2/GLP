@@ -52,6 +52,6 @@ class ModedLabel {
   @override
   String toString() {
     if (mode == null) return pathElement;
-    return '$pathElement${mode == Mode.input ? "?" : ""}';
+    return '$pathElement${mode == Mode.consume ? "?" : ""}';
   }
 }

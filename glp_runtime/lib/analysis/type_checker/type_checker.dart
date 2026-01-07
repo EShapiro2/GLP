@@ -308,7 +308,7 @@ class TypeChecker {
       }
 
       // Collect variable types from pattern
-      final declaredMode = decl.argTypes[i].isInput ? Mode.input : Mode.output;
+      final declaredMode = decl.argTypes[i].isInput ? Mode.consume : Mode.produce;
       if (!_inferVariableTypes(arg, argDFA, varTypes, TermPath.empty(),
           declaredMode, true)) {
         errors.add(TypeError(
@@ -509,13 +509,13 @@ class TypeChecker {
         // For head positions, apply call boundary complementation
         // Callee sees complement of what caller declares
         final effectiveParentMode = isHeadPosition
-            ? declaredArgMode.complement
+            ? declaredArgMode.flip
             : declaredArgMode;
 
         // Combine parent mode with primitive type's mode
         // If parent is input, embedded mode is complemented
         Mode combineModeFn(Mode parent, Mode embedded) {
-          return parent == Mode.input ? embedded.complement : embedded;
+          return parent == Mode.consume ? embedded.flip : embedded;
         }
 
         // The primitive modes tell us what the TYPE position accepts
@@ -525,8 +525,8 @@ class TypeChecker {
           final combinedMode = combineModeFn(effectiveParentMode, primitiveMode);
           // At combined INPUT position, expect WRITER (output variable)
           // At combined OUTPUT position, expect READER (input variable)
-          final expectedVarMode = combinedMode == Mode.input ? Mode.output : Mode.input;
-          final actualVarMode = term.isReader ? Mode.input : Mode.output;
+          final expectedVarMode = combinedMode == Mode.consume ? Mode.produce : Mode.consume;
+          final actualVarMode = term.isReader ? Mode.consume : Mode.produce;
           if (actualVarMode == expectedVarMode) {
             modeOK = true;
             break;
@@ -688,7 +688,7 @@ class TypeChecker {
       }
 
       // Infer/constrain variable types from body occurrence
-      final declaredMode = procDecl.argTypes[i].isInput ? Mode.input : Mode.output;
+      final declaredMode = procDecl.argTypes[i].isInput ? Mode.consume : Mode.produce;
       if (!_inferVariableTypes(arg, argDFA, varTypes, TermPath.empty(),
           declaredMode, false)) {
         errors.add(TypeError(
