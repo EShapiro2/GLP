@@ -1,0 +1,46 @@
+%% bounded_buffer.glp - Bounded buffer stream communication
+%% Source: CP Collected Papers, Ch 18 (Takeuchi & Furukawa)
+%%
+%% Bounded buffer communication limits sender when buffer is full.
+%% The receiver controls buffer expansion by creating new slots.
+
+%% Unbounded buffer send/receive (standard stream communication)
+send_unbounded(Msg, [Msg|NStrm], NStrm).
+receive_unbounded(Msg, [Msg|NStrm?], NStrm).
+
+%% Bounded buffer send/receive
+%% Buffer is represented as difference-list: Head--Tail
+send(Msg, [Msg|NBuf?], NBuf).
+receive(Msg, [Msg|NBuf]--[NSlot|NTail?], NBuf--NTail).
+
+close([end_of_stream|_]).
+closed(end_of_stream).
+
+%% Open a buffer of given size
+open(0, X--X).
+open(N, [_|Y]--Z) :- N > 0 | N1 := N? - 1, open(N1?, Y--Z).
+
+%% Example: Buffered stream of squares
+sq_num_buffered(N, Ss, Size) :-
+    open(Size?, Buf--Tail),
+    integers(1, N?, Buf?),
+    square(Buf?--Tail, Ss).
+
+integers(I, N, Buf) :-
+    I =< N |
+    J := I? + 1,
+    send(I?, Buf?, NBuf),
+    integers(J?, N?, NBuf?).
+integers(I, N, Buf) :-
+    I > N |
+    close(Buf?).
+
+square(Buf, Ss) :-
+    receive(I, Buf?, NBuf),
+    square2(I?, NBuf?, Ss).
+
+square2(I, _, []) :- closed(I?) | true.
+square2(I, Buf, [I2|Ss?]) :-
+    number(I?) |
+    I2 := I? * I?,
+    square(Buf?, Ss).

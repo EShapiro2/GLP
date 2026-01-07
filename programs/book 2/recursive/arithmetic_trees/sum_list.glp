@@ -1,0 +1,12 @@
+%% sum_list.glp - Sum of list elements in GLP
+%% Source: Standard GLP arithmetic
+
+sum(Xs, S?) :- sum(Xs?, 0, S).
+sum([], Acc?, Acc?).
+sum([X?|Xs], Acc, S?) :- Acc1 := Acc? + X?, sum(Xs?, Acc1?, S).
+
+%% Metainterpreter support
+reduce(sum(Xs, S?), sum(Xs?, 0, S)).
+reduce(sum([], Acc?, Acc?), true).
+reduce(sum([X?|Xs], Acc, S?), (Acc1 := Acc? + X?, sum(Xs?, Acc1?, S))).
+reduce((X? := T), true) :- X := T? | true.

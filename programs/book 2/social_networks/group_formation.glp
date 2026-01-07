@@ -1,0 +1,31 @@
+%% group_formation.glp - Group Formation Protocol
+%% Source: GLP Papers (Program: Group Formation Protocol)
+%%
+%% Founder-administered model: users create groups with selected friends.
+%% Group identifier is (founder, name), preventing naming conflicts.
+
+% User creates group with friend list
+social_graph(Id, [msg(user, Id, create_group(Name, Friends))|In], Fs) :-
+    create_group_streams([Id|Friends]?, Streams),
+    send_invitations(Friends?, Id?, Name?, Streams?, Fs?, Fs1),
+    social_graph(Id, In?, [((Id,Name), group(admin, Streams?))|Fs1?]).
+
+% Send invitations through friend channels
+send_invitations([], _, _, _, Fs, Fs).
+send_invitations([Friend|Friends], Founder, Name, Streams, Fs, Fs1) :-
+    lookup(Friend, Fs?, Ch),
+    Ch = [inv(Founder?, Name?, Streams?)|Ch1?],
+    send_invitations(Friends?, Founder?, Name?, Streams?, [(Friend,Ch1?)|Fs2?], Fs1).
+
+% Receive invitation from friend
+social_graph(Id, [msg(From, Id, inv(Founder, Name, Streams))|In], Fs) :-
+    attestation(inv(Founder, Name, Streams), att(From, _)) |
+    lookup_send(user, msg(agent, user,
+                join_group(From?, Founder?, Name?)), Fs?, Fs1),
+    social_graph(Id, In?, Fs1?).
+
+% User decision on invitation
+social_graph(Id, [msg(user, Id, join(yes, Founder, Name, Streams))|In], Fs) :-
+    social_graph(Id, In?, [((Founder,Name), group(member, Streams?))|Fs?]).
+social_graph(Id, [msg(user, Id, join(no, _, _, _))|In], Fs) :-
+    social_graph(Id, In?, Fs?).

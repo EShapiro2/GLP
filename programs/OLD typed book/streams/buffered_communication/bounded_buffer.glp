@@ -1,0 +1,20 @@
+%% bounded_buffer.glp - Bounded buffer via consumer pattern
+%% Buffer size is implicit in how many elements consumer requires.
+
+%% Producer: generates N, N+1, N+2, ... into stream
+bb_producer([N?|Xs], N) :- ground(N?) | N1 := N? + 1, bb_producer(Xs?, N1?).
+
+%% Consumer buffer size 1: requires 2 elements before proceeding
+%% This limits producer to at most 1 element ahead.
+bb_consumer([X1,X2|Xs?], Sum) :-
+    integer(X1?), ground(Sum?) |
+    Sum1 := Sum? + X1?,
+    bb_consumer([X2?|Xs], Sum1?).
+
+%% Buffer size 2: requires 3 elements
+bb_consumer3([X1,X2,X3|Xs?], Sum) :-
+    integer(X1?), ground(Sum?) |
+    Sum1 := Sum? + X1?,
+    bb_consumer3([X2?,X3?|Xs], Sum1?).
+
+%% Example goal: bb_producer(Xs, 1), bb_consumer(Xs?, 0).

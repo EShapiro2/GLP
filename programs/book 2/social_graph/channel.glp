@@ -1,0 +1,4 @@
+% Channel Operations (Program 9 from GLP 2025 paper)
+send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).

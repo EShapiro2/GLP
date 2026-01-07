@@ -1,0 +1,18 @@
+%% Type definitions
+List ::= [] ; [Any | List].
+
+%% Procedure type declarations
+procedure reverse_naive(List, List).
+procedure append(List, List, List).
+procedure reverse(List, List).
+procedure reverse_acc(List, List, List).
+
+%% reverse.glp - List reversal with accumulator
+%% O(n) time using accumulator.
+
+reverse(Xs, Ys?) :- rev(Xs?, [], Ys).
+
+rev([], Acc, Acc?).
+rev([X|Xs], Acc, Ys?) :- rev(Xs?, [X?|Acc?], Ys).
+
+%% Example goal: reverse([a,b,c], Ys).
