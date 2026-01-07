@@ -1,8 +1,8 @@
 # Module: moded-term
 
-**Version**: 0.1
-**Date**: 2025-01-07
-**Status**: DRAFT
+**Version**: 0.1  
+**Date**: 2025-01-07  
+**Status**: DRAFT  
 **Paper References**: Definition 4.2 (Moded Term, Complement), lines 179-211
 
 ## Purpose
@@ -119,10 +119,10 @@ A variable (reader or writer). Variables have implicit mode based on reader/writ
 class ModedVariable extends ModedTerm {
   final String name;
   final bool isReader;  // true for X?, false for X
-
+  
   // Implicit mode: readers are consumed, writers are produced
   Mode get mode => isReader ? Mode.consume : Mode.produce;
-
+  
   // Paired variable: flip reader/writer status
   ModedVariable get paired => ModedVariable(name, !isReader);
 }
@@ -134,10 +134,10 @@ A path through a moded term-tree.
 ```dart
 class ModedPath {
   final List<PathStep> steps;
-
+  
   bool get isInput => steps.first.mode == Mode.consume;
   bool get isOutput => steps.first.mode == Mode.produce;
-
+  
   PathStep get leaf => steps.last;
 }
 ```
@@ -176,7 +176,7 @@ Constructs a produced moded term (all annotations ↑) from a GLP term.
 #### `ModedTerm ioModedTerm(Term t, TypeDFA type)`
 Constructs an I/O moded term from a GLP term guided by a type.
 
-**Preconditions:**
+**Preconditions:** 
 - `t` is a valid GLP term
 - `type` provides mode information for each position
 
@@ -236,7 +236,7 @@ extractPaths(t, currentArgIndex, prefix, result):
     symbol: symbolOf(t)
   )
   newPrefix = prefix + [currentStep]
-
+  
   match t:
     ModedCompound(_, _, _, args):
       for i in 1..args.length:
@@ -262,7 +262,7 @@ ioModedTerm(t, type):
 buildIO(t, typeState, parentMode, inversionOccurred):
   // Determine this node's mode from the type
   thisMode = modeFromType(typeState)
-
+  
   // Check I/O constraint
   if parentMode == Mode.consume and thisMode == Mode.produce:
     if inversionOccurred:
@@ -270,7 +270,7 @@ buildIO(t, typeState, parentMode, inversionOccurred):
     inversionOccurred = true
   else if parentMode == Mode.produce and thisMode == Mode.consume:
     throw InvalidIOModeError("Inversion from produce back to consume")
-
+  
   match t:
     Compound(functor, args):
       modedArgs = []

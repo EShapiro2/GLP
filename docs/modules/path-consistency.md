@@ -1,8 +1,8 @@
 # Module: path-consistency
 
-**Version**: 0.1
-**Date**: 2025-01-07
-**Status**: DRAFT
+**Version**: 0.1  
+**Date**: 2025-01-07  
+**Status**: DRAFT  
 **Paper References**: Definition 4.3 (Consistent Paths), lines 229-245; Example 4.4, lines 247-273
 
 ## Purpose
@@ -98,19 +98,19 @@ areConsistent(termPath, typePath):
   // Get path lengths (excluding root annotation)
   termLen = termPath.steps.length
   typeLen = typePath.steps.length
-
+  
   // Case 1: Equal length
   if termLen == typeLen:
     return checkEqualLengthConsistency(termPath, typePath)
-
+  
   // Case 2: Term path is prefix of type path
   if termLen < typeLen:
     return checkTermPrefixConsistency(termPath, typePath)
-
+  
   // Case 3: Type path is prefix of term path
   if typeLen < termLen:
     return checkTypePrefixConsistency(termPath, typePath)
-
+  
   return false
 
 checkEqualLengthConsistency(termPath, typePath):
@@ -118,7 +118,7 @@ checkEqualLengthConsistency(termPath, typePath):
   for i in 0..<termPath.steps.length - 1:
     if not stepsMatch(termPath.steps[i], typePath.steps[i]):
       return false
-
+  
   // Last symbols must be consistent endings
   termLeaf = termPath.leaf
   typeLeaf = typePath.leaf
@@ -127,53 +127,53 @@ checkEqualLengthConsistency(termPath, typePath):
 checkTermPrefixConsistency(termPath, typePath):
   // Term path is shorter; its leaf must be a variable
   termLeaf = termPath.leaf
-
+  
   if not isVariable(termLeaf):
     return false
-
+  
   // All term steps except last must match corresponding type steps
   for i in 0..<termPath.steps.length - 1:
     if not stepsMatch(termPath.steps[i], typePath.steps[i]):
       return false
-
+  
   // Get the type symbol at the position where term path ends
   correspondingTypeStep = typePath.steps[termPath.steps.length - 1]
   typeMode = correspondingTypeStep.mode
-
+  
   // Case 2(a): reader X? with consume mode
   if isReader(termLeaf) and typeMode == Mode.consume:
     return true
-
-  // Case 2(b): writer X with produce mode
+  
+  // Case 2(b): writer X with produce mode  
   if isWriter(termLeaf) and typeMode == Mode.produce:
     return true
-
+  
   return false
 
 checkTypePrefixConsistency(termPath, typePath):
   // Type path is shorter; its leaf must be a primitive type
   typeLeaf = typePath.leaf
-
+  
   if not isPrimitiveType(typeLeaf):
     return false
-
+  
   // All type steps except last must match corresponding term steps
   for i in 0..<typePath.steps.length - 1:
     if not stepsMatch(termPath.steps[i], typePath.steps[i]):
       return false
-
+  
   // Get the term symbol at the position where type path ends
   correspondingTermStep = termPath.steps[typePath.steps.length - 1]
   termMode = correspondingTermStep.mode
-
+  
   // Case 3(a): _? with consume mode
   if typeLeaf.symbol == "_?" and termMode == Mode.consume:
     return true
-
+  
   // Case 3(b): _ with produce mode
   if typeLeaf.symbol == "_" and termMode == Mode.produce:
     return true
-
+  
   return false
 
 stepsMatch(termStep, typeStep):
@@ -190,23 +190,23 @@ structuresMatch(termSymbol, typeSymbol):
 areConsistentEndings(termLeaf, typeLeaf):
   termSymbol = termLeaf.symbol
   typeSymbol = typeLeaf.symbol
-
+  
   // Integer constant matches Integer or same value
   if isInteger(termSymbol):
     return typeSymbol == "Integer" or typeSymbol == termSymbol
-
+  
   // String constant matches String or same value
   if isString(termSymbol):
     return typeSymbol == "String" or typeSymbol == termSymbol
-
+  
   // Reader matches _?
   if isReader(termSymbol):
     return typeSymbol == "_?"
-
+  
   // Writer matches _
   if isWriter(termSymbol):
     return typeSymbol == "_"
-
+  
   // Atom/constant matches same atom/constant
   return termSymbol == typeSymbol
 ```

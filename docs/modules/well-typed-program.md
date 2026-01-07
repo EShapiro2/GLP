@@ -1,8 +1,8 @@
 # Module: well-typed-program
 
-**Version**: 0.1
-**Date**: 2025-01-07
-**Status**: DRAFT
+**Version**: 0.1  
+**Date**: 2025-01-07  
+**Status**: DRAFT  
 **Paper References**: Definition 4.7 (lines 351-357)
 
 ## Purpose
@@ -99,14 +99,14 @@ Checks if program (Cs, D) is well-typed.
 checkProgram(cs, d):
   errors = []
   clauseResults = []
-
+  
   // Condition 1: Covariance
   for c in cs:
     result = checkClause(c, d)
     clauseResults.add(result)
     if not result.isWellTyped:
       errors.add("Clause not well-typed: " + c)
-
+  
   // Condition 2: Contravariance
   for proc in d.procedures:
     for argIndex, argType in enumerate(proc.argTypes):
@@ -115,7 +115,7 @@ checkProgram(cs, d):
         for path in inputPaths:
           if not anyClauseAccepts(cs, path, d):
             errors.add("Uncovered input path: " + path)
-
+  
   return ProgramCheckResult(errors.isEmpty, clauseResults, errors)
 
 anyClauseAccepts(cs, path, d):

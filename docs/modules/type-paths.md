@@ -1,8 +1,8 @@
 # Module: type-paths
 
-**Version**: 0.2
-**Date**: 2025-01-07
-**Status**: DRAFT
+**Version**: 0.2  
+**Date**: 2025-01-07  
+**Status**: DRAFT  
 **Paper References**: Lines 30-35, 213-228
 
 ## Purpose
@@ -124,7 +124,7 @@ Returns the (conceptually infinite) regular set of moded paths for type D.
 
 Per line 30, type D corresponds to a DFA where:
 - States = defined type names
-- Final states = primitive types
+- Final states = primitive types  
 - Transitions labelled by (argIndex, mode)
 
 The DFA **accepts** exactly paths(D).

@@ -1,8 +1,8 @@
 # Module: type-dfa
 
-**Version**: 0.1
-**Date**: 2025-01-07
-**Status**: DRAFT
+**Version**: 0.1  
+**Date**: 2025-01-07  
+**Status**: DRAFT  
 **Paper References**: Section 4.1 (lines 7-35), lines 213-226
 
 ## Purpose
@@ -105,7 +105,7 @@ class ModedLabel {
 #### `TypeDFA compileType(String typeName, TypeEnvironment env)`
 Compiles a type definition to a DFA.
 
-**Preconditions:**
+**Preconditions:** 
 - `typeName` is defined in `env`
 - Type definition is deterministic
 
@@ -160,20 +160,20 @@ compileType(typeName, env):
   finalStates = {}
   primitiveStateModes = {}
   compiled = {}
-
+  
   startState = getOrCreateState(typeName, states)
-  compileTypeDef(typeName, env, states, transitions, finalStates,
+  compileTypeDef(typeName, env, states, transitions, finalStates, 
                  primitiveStateModes, compiled)
-
+  
   return TypeDFA(states, startState, finalStates, transitions, primitiveStateModes)
 
 compileTypeDef(typeName, env, states, transitions, finalStates, primitiveStateModes, compiled):
   if typeName in compiled: return
   compiled.add(typeName)
-
+  
   fromState = states[typeName]
   typeDef = env.getType(typeName)
-
+  
   for alt in typeDef.alternatives:
     compileAlternative(fromState, alt, ...)
 
@@ -181,36 +181,36 @@ compileAlternative(fromState, alt, states, transitions, finalStates, primitiveSt
   match alt:
     PrimitiveModeAlt(isInput):
       mode = isInput ? Mode.consume : Mode.produce
-      primitiveStateModes[fromState] =
+      primitiveStateModes[fromState] = 
         (primitiveStateModes[fromState] ?? {}).add(mode)
-
+    
     ConstantAlt(value):
       label = ModedLabel(value.toString())
       finalState = DFAState("_final_$value", isFinal: true)
       finalStates.add(finalState)
       states.add(finalState)
       transitions[(fromState, label)] = finalState
-
+    
     ListNilAlt:
       label = ModedLabel("[]")
       finalState = DFAState("_final_nil", isFinal: true)
       finalStates.add(finalState)
       states.add(finalState)
       transitions[(fromState, label)] = finalState
-
+    
     ListConsAlt(head, tail):
       // Head transition
       headMode = modeOf(head)
       headLabel = ModedLabel("[|](2,1)", mode: headMode)
       headState = resolveTarget(head, states, env, compiled, ...)
       transitions[(fromState, headLabel)] = headState
-
-      // Tail transition
+      
+      // Tail transition  
       tailMode = modeOf(tail)
       tailLabel = ModedLabel("[|](2,2)", mode: tailMode)
       tailState = resolveTarget(tail, states, env, compiled, ...)
       transitions[(fromState, tailLabel)] = tailState
-
+    
     StructAlt(functor, arity, args):
       for i in 0..<args.length:
         argMode = modeOf(args[i])
@@ -262,12 +262,12 @@ applyModeComplement(dfa):
     flippedMode = label.mode?.flip  // null stays null
     newLabel = ModedLabel(label.symbol, mode: flippedMode)
     newTransitions[(from, newLabel)] = to
-
+  
   newPrimitiveModes = {}
   for (state, modes) in dfa.primitiveStateModes:
     flippedModes = modes.map(m => m.flip).toSet()
     newPrimitiveModes[state] = flippedModes
-
+  
   return TypeDFA(
     states: dfa.states,
     startState: dfa.startState,
