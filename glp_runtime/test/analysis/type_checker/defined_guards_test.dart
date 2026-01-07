@@ -10,13 +10,13 @@ void main() {
     test('POSITIVE: Defined guard with procedure declaration', () {
       final result = checkTypes('''
         MyList ::= [] ; [_ | MyList].
-        MyStream ::= [] ; [_ | MyStream].
+        MyStream ::< MyList.
         MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
 
         procedure channel(MyChannel?).
         channel(ch(_, _)).
 
-        procedure process(Output?, String).
+        procedure process(_?, String).
         process(X, ok) :- channel(X?) | handle(X?).
         process(_, error) :- otherwise | true.
       ''');
@@ -27,7 +27,7 @@ void main() {
       final result = checkTypes('''
         my_guard(foo).
 
-        procedure use_guard(Output?).
+        procedure use_guard(_?).
         use_guard(X) :- my_guard(X?) | handle(X?).
       ''');
       expect(result.isWellTyped, isFalse,
@@ -36,12 +36,12 @@ void main() {
 
     test('POSITIVE: Defined guard constrains type', () {
       final result = checkTypes('''
-        Pair ::= pair(Output, Output).
+        Pair ::= pair(_, _).
 
         procedure is_pair(Pair?).
         is_pair(pair(_, _)).
 
-        procedure swap(Output?, Pair).
+        procedure swap(_?, Pair).
         swap(X, pair(B?, A?)) :- is_pair(X?) | X = pair(A, B).
       ''');
       expect(result.isWellTyped, isTrue,

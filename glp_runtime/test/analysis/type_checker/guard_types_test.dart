@@ -16,7 +16,7 @@ void main() {
 
       test('number(X?) constrains X to Number', () {
         final result = checkTypes('''
-          procedure process(Output?, Number).
+          procedure process(_?, Number).
           process(X, Y) :- number(X?) | Y := X? * 2.
         ''');
         expect(result.errors, isEmpty,
@@ -25,7 +25,7 @@ void main() {
 
       test('string(X?) constrains X to String', () {
         final result = checkTypes('''
-          procedure process(Output?, String).
+          procedure process(_?, String).
           process(X, Y?) :- string(X?) | Y = X?.
         ''');
         expect(result.errors, isEmpty);
@@ -33,7 +33,7 @@ void main() {
 
       test('arithmetic guards constrain to Number', () {
         final result = checkTypes('''
-          procedure max(Output?, Output?, Number).
+          procedure max(_?, _?, Number).
           max(X, Y, X?) :- X? >= Y? | true.
           max(X, Y, Y?) :- X? < Y? | true.
         ''');
@@ -73,7 +73,7 @@ void main() {
 
       test('ground(X?) allows multiple readers', () {
         final result = checkTypes('''
-          procedure broadcast(Output?, Output, Output).
+          procedure broadcast(_?, _, _).
           broadcast(X, Y?, Z?) :- ground(X?) | Y = X?, Z = X?.
         ''');
         expect(result.errors, isEmpty,
@@ -82,18 +82,31 @@ void main() {
 
       test('number guard implies ground for multiple use', () {
         final result = checkTypes('''
-          procedure compute(Output?, Number, Number).
+          procedure compute(_?, Number, Number).
           compute(X, Y?, Z?) :- number(X?) | Y := X? + 1, Z := X? * 2.
         ''');
         expect(result.errors, isEmpty,
             reason: 'number(X?) implies X is ground');
       });
 
+      test('known(X?) does NOT imply ground', () {
+        // known only checks top-level binding, not recursive groundness
+        final result = checkTypes('''
+          Bimodal ::= _ ; _?.
+          procedure bad(Bimodal?, Bimodal).
+          bad(X, Y?) :- known(X?) | Y = X?.
+        ''');
+        // This should still require mode coverage for Bimodal
+        // because known does not imply ground
+        expect(result.errors, isNotEmpty,
+            reason: 'known does not satisfy mode coverage');
+      });
+
       test('POSITIVE: ground on type without mode complementations', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
 
-          procedure check(MyList?, Output).
+          procedure check(MyList?, _).
 
           check(X, Y) :- ground(X?) | Y = ok.
         ''');
@@ -106,7 +119,7 @@ void main() {
           MyList ::= [] ; [_ | MyList].
           MyDiffList ::= MyList \\ MyList?.
 
-          procedure bad(MyDiffList?, Output).
+          procedure bad(MyDiffList?, _).
 
           bad(X, Y?) :- ground(X?) | Y = ok.
         ''');
@@ -118,7 +131,7 @@ void main() {
         final result = checkTypes('''
           Nat ::= 0 ; s(Nat).
 
-          procedure check(Nat?, Output).
+          procedure check(Nat?, _).
 
           check(X, Y) :- ground(X?) | Y = ok.
         ''');
@@ -128,10 +141,11 @@ void main() {
 
       test('NEGATIVE: ground on Channel (has mode complementations)', () {
         final result = checkTypes('''
-          MyStream ::= [] ; [_ | MyStream].
+          MyList ::= [] ; [_ | MyList].
+          MyStream ::< MyList.
           MyChannel ::= ch(MyStream?, MyStream).
 
-          procedure bad(MyChannel?, Output).
+          procedure bad(MyChannel?, _).
 
           bad(X, Y?) :- ground(X?) | Y = ok.
         ''');
@@ -218,12 +232,12 @@ void main() {
 
       test('defined guard constrains type', () {
         final result = checkTypes('''
-          Pair ::= pair(Output, Output).
+          Pair ::= pair(_, _).
 
           procedure is_pair(Pair?).
           is_pair(pair(_, _)).
 
-          procedure first(Output?, Output).
+          procedure first(_?, _).
           first(X, A?) :- is_pair(X?) | X = pair(A, _).
         ''');
         expect(result.errors, isEmpty,
