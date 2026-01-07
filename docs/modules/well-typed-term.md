@@ -1,120 +1,139 @@
 # Module: well-typed-term
 
-**Version**: 0.1  
-**Date**: 2025-01-07  
+**Version**: 0.3  
+**Date**: 2025-01-08  
 **Status**: DRAFT  
-**Paper References**: Definition 4.5 (Well-Typed Moded Term), lines 275-277
+**Paper References**: Definition 4.3 (Consistent Paths, lines 229-245), Definition 4.5 (Well-Typed Moded Term, lines 275-277)
 
 ## Purpose
 
-Determines when a moded term is well-typed by a GLP type. This is the foundation for clause and program well-typing.
+Determines when a moded term is well-typed by a type DFA. This includes checking path consistency by traversing the DFA alongside moded paths.
 
 ## Dependencies
 
-- `moded-term` — ModedTerm, paths(T)
-- `type-dfa` — TypeDFA, paths(D)
-- `path-consistency` — areConsistent
+- `mode` — Mode enum
+- `moded-term` — ModedTerm, ModedPath, paths()
+- `type-dfa` — TypeDFA, DFAState, DFALabel, stateAfterLabel, isLeafState, getLeafType, getLeafMode
 
 ## Definitions
 
-### Well-Typed Moded Term (Paper Definition 4.5, lines 275-277)
+### Definition 4.5: Well-Typed Moded Term (lines 275-277)
 
 > A moded term T is **well-typed** by a GLP type D if:
-> 1. For each term path x ∈ paths(T) there is a consistent path y ∈ paths(D), and
-> 2. For every pair of variables in T, their types as determined by D are complementary.
+> 1. For each term path x ∈ paths(T) there is a consistent path in the type DFA, and
+> 2. For every pair of variables in T, their types are complementary.
 
-### Variable Type Determination
+### Definition 4.3: Consistent Paths (lines 229-245)
 
-When checking path consistency (Definition 4.3), variables are assigned types:
-- A reader `X?` at a position with type `T` and mode `↓` has type `T` (consumed form)
-- A writer `X` at a position with type `T` and mode `↑` has type `T` (produced form)
+A moded path is **consistent** with the type DFA if, when traversing the DFA alongside the path:
+
+1. **Structure matches:** Each non-leaf step in the path corresponds to a valid transition in the DFA (same functor, arity, argument index, mode).
+
+2. **Leaf consistency:** When the path reaches a leaf:
+   - **Variable at DFA non-leaf:** Reader X? is consistent if DFA state has mode ↓; Writer X is consistent if DFA state has mode ↑
+   - **Variable at DFA leaf:** Reader X? matches `_?`; Writer X matches `_`
+   - **Constant at DFA leaf:** Integer matches `Integer` or same value; String matches `String` or same value; other constants match exactly
+
+### Variable Type Assignment
+
+When a path ends in a variable, the variable is assigned the type at that DFA position:
+- Reader `X?` at position with type state S → X? has type S (consumed)
+- Writer `X` at position with type state S → X has type S (produced)
 
 ### Complementary Types
 
-Two types are complementary if one is the mode-complement of the other:
-- `T` and `T?` are complements
-- `_` and `_?` are complements
-- A type is its own complement under double complementation: `(T?)? = T`
-
-For paired variables `X` and `X?`:
-- If `X` has type `T` (produced)
-- Then `X?` must have type `T?` (consumed)
+Two variable types are complementary if:
+- Both reach the same DFA state (or equivalent states)
+- One is in consume mode, the other in produce mode
 
 ## Public Interface
-
-### Functions
-
-#### `WellTypedResult checkWellTyped(ModedTerm term, TypeDFA typeDfa)`
-Checks if a moded term is well-typed by a type DFA.
-
-**Preconditions:**
-- `term` is a valid moded term
-- `typeDfa` is a compiled type DFA
-
-**Postconditions:** Returns result indicating:
-- Whether term is well-typed
-- Variable type assignments
-- Any inconsistencies found
-
-#### `bool isWellTyped(ModedTerm term, TypeDFA typeDfa)`
-Simplified check returning only boolean.
 
 ### Types
 
 #### `class WellTypedResult`
+
 ```dart
 class WellTypedResult {
   final bool isWellTyped;
   final Map<String, VariableTypeInfo> variableTypes;
-  final List<WellTypingError> errors;
+  final List<TypeError> errors;
 }
 
 class VariableTypeInfo {
-  final String typeName;
+  final DFAState typeState;  // DFA state where variable appears
   final Mode mode;           // consume for readers, produce for writers
-  final bool isReader;
 }
 
-abstract class WellTypingError {}
+abstract class TypeError {}
 
-class InconsistentPathError extends WellTypingError {
-  final ModedPath termPath;
-  final String message;
+class InconsistentPathError extends TypeError {
+  final ModedPath path;
+  final String reason;
 }
 
-class NonComplementaryVariablesError extends WellTypingError {
+class NonComplementaryError extends TypeError {
   final String variableName;
-  final String writerType;
-  final String readerType;
+  final VariableTypeInfo writerType;
+  final VariableTypeInfo readerType;
 }
 ```
+
+### Functions
+
+#### `WellTypedResult checkModedTerm(ModedTerm term, TypeDFA dfa)`
+
+Checks if a moded term is well-typed by a type DFA.
+
+**Preconditions:**
+- `term` is a valid moded term
+- `dfa` is a compiled type DFA
+
+**Postconditions:** Returns WellTypedResult where:
+- `isWellTyped` is true iff all paths are consistent and variable pairs are complementary
+- `variableTypes` maps each variable (including reader/writer variants) to its assigned type
+- `errors` lists all violations found
+
+#### `PathCheckResult checkPathAgainstDFA(ModedPath path, TypeDFA dfa)`
+
+Checks if a single moded path is consistent with the type DFA.
+
+**Preconditions:**
+- `path` is a valid moded path
+- `dfa` is a compiled type DFA
+
+**Postconditions:** Returns PathCheckResult indicating:
+- Whether path is consistent
+- If path ends in variable, the variable's type assignment
 
 ## Algorithms
 
 ### Algorithm: Well-Typed Moded Term Check
 
 ```
-checkWellTyped(term, typeDfa):
+checkModedTerm(term, dfa):
   errors = []
   variableTypes = {}
   
-  // Step 1: Extract all paths from the moded term
+  // Step 1: Extract and check all paths
   termPaths = paths(term)
   
-  // Step 2: For each term path, find a consistent type path
-  for termPath in termPaths:
-    result = findConsistentTypePath(termPath, typeDfa)
+  for path in termPaths:
+    result = checkPathAgainstDFA(path, dfa)
     
-    if not result.found:
-      errors.add(InconsistentPathError(termPath, 
-        "No consistent type path found"))
-    else:
-      // Record variable type assignments
-      if result.variableAssignment != null:
-        recordVariableType(variableTypes, result.variableAssignment)
+    if not result.isConsistent:
+      errors.add(InconsistentPathError(path, result.reason))
+    else if result.variableAssignment != null:
+      // Record variable type
+      varKey = result.variableAssignment.varName
+      if varKey in variableTypes:
+        // Same variable appears multiple times - types must match
+        if variableTypes[varKey].typeState != result.variableAssignment.typeState:
+          errors.add(InconsistentVariableError(varKey))
+      else:
+        variableTypes[varKey] = result.variableAssignment
   
-  // Step 3: Check that variable pairs have complementary types
-  complementErrors = checkComplementaryVariables(variableTypes)
+  // Step 2: Check variable pair complementarity
+  complementErrors = checkComplementarity(variableTypes)
   errors.addAll(complementErrors)
   
   return WellTypedResult(
@@ -122,191 +141,217 @@ checkWellTyped(term, typeDfa):
     variableTypes: variableTypes,
     errors: errors
   )
-
-findConsistentTypePath(termPath, typeDfa):
-  // Traverse the DFA following the term path structure
-  // Check consistency at each step
-  
-  currentState = typeDfa.startState
-  typePathSteps = []
-  
-  for i, termStep in enumerate(termPath.steps):
-    if isPrimitiveState(currentState, typeDfa):
-      // Type path is prefix of term path (Case 3)
-      return checkCase3Consistency(termPath, typePathSteps, i, typeDfa)
-    
-    // Find matching transition in DFA
-    transition = findMatchingTransition(currentState, termStep, typeDfa)
-    
-    if transition == null:
-      // If term step is a variable, check Case 2
-      if isVariable(termStep):
-        return checkCase2Consistency(termPath, typePathSteps, termStep, 
-                                     currentState, typeDfa)
-      else:
-        return ConsistencySearchResult(found: false)
-    
-    typePathSteps.add(transition.label)
-    currentState = transition.target
-  
-  // Reached end of term path
-  if isPrimitiveState(currentState, typeDfa):
-    // Case 1 or Case 2: check final consistency
-    return checkFinalConsistency(termPath, typePathSteps, currentState, typeDfa)
-  
-  return ConsistencySearchResult(found: false)
-
-checkCase2Consistency(termPath, typePathSteps, variableStep, currentState, typeDfa):
-  // Term path ends in variable, type path continues
-  varName = variableStep.symbol
-  isReader = isReaderVariable(variableStep)
-  
-  // Get mode at current type position
-  typeMode = getModeAtState(currentState, typeDfa)
-  
-  // Case 2(a): reader at consumed position
-  if isReader and typeMode == Mode.consume:
-    typeName = getTypeNameAtState(currentState, typeDfa)
-    return ConsistencySearchResult(
-      found: true,
-      variableAssignment: VariableAssignment(varName, typeName, Mode.consume, true)
-    )
-  
-  // Case 2(b): writer at produced position
-  if not isReader and typeMode == Mode.produce:
-    typeName = getTypeNameAtState(currentState, typeDfa)
-    return ConsistencySearchResult(
-      found: true,
-      variableAssignment: VariableAssignment(varName, typeName, Mode.produce, false)
-    )
-  
-  return ConsistencySearchResult(found: false)
-
-checkComplementaryVariables(variableTypes):
-  errors = []
-  
-  // Group by base variable name (X and X? share name "X")
-  baseNames = getUniqueBaseNames(variableTypes)
-  
-  for baseName in baseNames:
-    writerInfo = variableTypes[baseName]      // Writer X
-    readerInfo = variableTypes[baseName + "?"] // Reader X?
-    
-    if writerInfo != null and readerInfo != null:
-      // Both forms appear - check complementarity
-      if not areComplementaryTypes(writerInfo.typeName, readerInfo.typeName):
-        errors.add(NonComplementaryVariablesError(
-          baseName,
-          writerInfo.typeName,
-          readerInfo.typeName
-        ))
-  
-  return errors
-
-areComplementaryTypes(writerType, readerType):
-  // Extract base type name and complement status
-  writerBase = writerType.baseName
-  writerIsComplement = writerType.isComplement
-
-  readerBase = readerType.baseName
-  readerIsComplement = readerType.isComplement
-
-  // Must reference the same base type
-  if writerBase != readerBase:
-    return false
-
-  // Writer must be uncomplemented (T), reader must be complemented (T?)
-  // OR writer is complemented (T?) and reader is uncomplemented (T)
-  return writerIsComplement != readerIsComplement
 ```
 
-**Note:** This function uses the `TypeExpr` structure from `type-environment` module rather than string manipulation, ensuring correct handling of all type forms including primitive types.
+### Algorithm: Path Consistency Check (DFA Traversal)
+
+```
+checkPathAgainstDFA(path, dfa):
+  state = dfa.startState
+  
+  // Traverse path, following DFA transitions
+  for i in 0..<path.steps.length - 1:
+    step = path.steps[i]
+    nextStep = path.steps[i + 1]
+    
+    // Build label from next step
+    label = DFALabel(
+      symbol: extractFunctor(step.symbol),
+      arity: extractArity(step.symbol),
+      argIndex: nextStep.argIndex,
+      mode: nextStep.mode
+    )
+    
+    // Try to follow transition
+    nextState = stateAfterLabel(state, label, dfa)
+    
+    if nextState == null:
+      return PathCheckResult(
+        isConsistent: false,
+        reason: "No transition for ${label} from state ${state.name}"
+      )
+    
+    state = nextState
+  
+  // Check leaf consistency
+  leafStep = path.leaf
+  return checkLeafConsistency(leafStep, state, dfa)
+
+checkLeafConsistency(leafStep, dfaState, dfa):
+  if leafStep.isVariable:
+    // Variable leaf
+    if leafStep.isReader:
+      // Reader X? must be at consume position
+      if isLeafState(dfaState):
+        leafType = getLeafType(dfaState)
+        if leafType == LeafType.primitiveInput:
+          return PathCheckResult(
+            isConsistent: true,
+            variableAssignment: VariableTypeInfo(dfaState, Mode.consume)
+          )
+        else:
+          return PathCheckResult(isConsistent: false, reason: "Reader at non-input leaf")
+      else:
+        // Non-leaf state - check if state accepts consume mode
+        // (state must have transitions with consume mode, or be primitive)
+        return PathCheckResult(
+          isConsistent: true,  // Variable can appear at any type position
+          variableAssignment: VariableTypeInfo(dfaState, Mode.consume)
+        )
+    else:
+      // Writer X must be at produce position
+      if isLeafState(dfaState):
+        leafType = getLeafType(dfaState)
+        if leafType == LeafType.primitiveOutput:
+          return PathCheckResult(
+            isConsistent: true,
+            variableAssignment: VariableTypeInfo(dfaState, Mode.produce)
+          )
+        else:
+          return PathCheckResult(isConsistent: false, reason: "Writer at non-output leaf")
+      else:
+        return PathCheckResult(
+          isConsistent: true,
+          variableAssignment: VariableTypeInfo(dfaState, Mode.produce)
+        )
+  
+  else:
+    // Constant leaf
+    if not isLeafState(dfaState):
+      return PathCheckResult(isConsistent: false, reason: "Constant at non-leaf state")
+    
+    leafType = getLeafType(dfaState)
+    
+    if leafType == LeafType.integer:
+      if leafStep.value is int:
+        return PathCheckResult(isConsistent: true)
+      else:
+        return PathCheckResult(isConsistent: false, reason: "Expected integer")
+    
+    if leafType == LeafType.string:
+      if leafStep.value is String:
+        return PathCheckResult(isConsistent: true)
+      else:
+        return PathCheckResult(isConsistent: false, reason: "Expected string")
+    
+    if leafType == LeafType.constant:
+      if dfaState.constantValue == leafStep.value:
+        return PathCheckResult(isConsistent: true)
+      else:
+        return PathCheckResult(isConsistent: false, 
+          reason: "Expected ${dfaState.constantValue}, got ${leafStep.value}")
+    
+    return PathCheckResult(isConsistent: false, reason: "Unexpected leaf type")
+```
+
+### Algorithm: Complementarity Check
+
+```
+checkComplementarity(variableTypes):
+  errors = []
+  
+  // Group by base name (X and X? share base "X")
+  baseNames = {}
+  for (varKey, info) in variableTypes:
+    baseName = varKey.endsWith("?") ? varKey.substring(0, varKey.length-1) : varKey
+    baseNames[baseName] = baseNames[baseName] ?? {}
+    baseNames[baseName][varKey] = info
+  
+  for (baseName, variants) in baseNames:
+    writerKey = baseName
+    readerKey = "${baseName}?"
+    
+    if writerKey in variants and readerKey in variants:
+      writerInfo = variants[writerKey]
+      readerInfo = variants[readerKey]
+      
+      // Must be at same type state with complementary modes
+      if writerInfo.typeState != readerInfo.typeState:
+        errors.add(NonComplementaryError(baseName, writerInfo, readerInfo))
+      else if writerInfo.mode != Mode.produce or readerInfo.mode != Mode.consume:
+        errors.add(NonComplementaryError(baseName, writerInfo, readerInfo))
+  
+  return errors
+```
 
 ## Examples
 
-### Example: Well-Typed merge Head
+### Example: Well-Typed Moded Head
 
-Moded head (from paper):
+Moded head:
 ```
 H' = ↓merge(↓[↓X?|Xs?], Ys?, ↑[↑X|Zs])
 ```
 
-Type: `merge(Stream?, Stream?, Stream)`
+Type DFA for `merge(Stream?, Stream?, Stream)`:
+- Arg 1, 2: Stream? (complemented)
+- Arg 3: Stream (not complemented)
 
-**Paths and consistency:**
+**Path checks:**
 
-1. Path to `X?`:
-   - Term: `(0,↓) --> merge --(1,↓)--> "."/2 --(1,↓)--> X?`
-   - Type: `(0,↓) --> merge --(1,↓)--> Stream? --(1,↓)--> "."/2 --(1,↓)--> _?`
-   - Case 2(a): reader at ↓ position ✓
-   - Assignment: `X? : _?`
+1. Path to X?: `(0,↓) → merge --(1,↓)--> [|] --(1,↓)--> X?`
+   - Traverse: Stream? state → head position (↓) → primitive _?
+   - X? is reader at _? (consume) ✓
+   - Assignment: X? → (_?, consume)
 
-2. Path to `X`:
-   - Term: `(0,↓) --> merge --(3,↑)--> "."/2 --(1,↑)--> X`
-   - Type: `(0,↓) --> merge --(3,↑)--> Stream --(1,↑)--> "."/2 --(1,↑)--> _`
-   - Case 2(b): writer at ↑ position ✓
-   - Assignment: `X : _`
+2. Path to X: `(0,↓) → merge --(3,↑)--> [|] --(1,↑)--> X`
+   - Traverse: Stream state → head position (↑) → primitive _
+   - X is writer at _ (produce) ✓
+   - Assignment: X → (_, produce)
 
-3. Variable complementarity:
-   - `X : _` (produced)
-   - `X? : _?` (consumed)
-   - `_` and `_?` are complements ✓
+**Complementarity:**
+- X: (_, produce)
+- X?: (_?, consume)
+- Same base type position, complementary modes ✓
 
 **Result: Well-typed**
 
-### Example: Ill-Typed — Wrong Mode
+### Example: Not Well-Typed — Mode Mismatch
 
 Moded term:
 ```
-↓foo(↓X)   // Writer at consumed position!
+↓foo(↓X)   // Writer X at consumed position!
 ```
 
-Type: `foo(T?)` where `T?` has mode consume.
+Type: `foo(T?)` where T? has mode consume.
 
-**Analysis:**
-- Path: `(0,↓) --> foo --(1,↓)--> X`
-- X is a writer, but position has mode ↓
-- Case 2(b) requires ↑, not ↓
-- **No consistent type path found**
+**Path check:**
+- Path: `(0,↓) → foo --(1,↓)--> X`
+- X is writer but at ↓ position
+- Writer requires ↑ position
 
-**Result: Not well-typed**
+**Result: InconsistentPathError("Writer at consume position")**
 
-### Example: Ill-Typed — Non-Complementary Variables
+### Example: Not Well-Typed — Non-Complementary Variables
 
 Moded term:
 ```
-↓bar(↓X?, ↑X)
+↓bar(↓X?, ↑Y)
 ```
 
-Type: `bar(T?, S)` where T ≠ S.
+Type: `bar(Stream?, NatStream)` where Stream ≠ NatStream.
 
-**Analysis:**
-- `X?` at position 1 gets type `T` (consumed)
-- `X` at position 2 gets type `S` (produced)
-- If T ≠ S, types are not complementary
+**Variable assignments:**
+- X?: (Stream?, consume)
+- Y: (NatStream, produce)
 
-**Result: Not well-typed**
+If X and X? both appeared, and X was assigned NatStream while X? was assigned Stream, they would not be complementary.
+
+**Result: NonComplementaryError**
 
 ## Error Conditions
 
 | Condition | Error Type |
 |-----------|------------|
-| Term path has no consistent type path | `InconsistentPathError` |
-| Variable pair has non-complementary types | `NonComplementaryVariablesError` |
-
-## Notes
-
-### Checking Against DFA vs Path Set
-
-The algorithm checks term paths against the type DFA directly rather than enumerating all type paths (which would be infinite for recursive types). The DFA structure allows efficient path-by-path consistency checking.
-
-### Variable Occurrence Tracking
-
-A variable may occur multiple times in a term. Each occurrence must yield the same type assignment. If occurrences yield different types, this indicates a type error (the term structure is inconsistent with the type).
+| Path has no matching DFA transition | `InconsistentPathError` |
+| Variable at wrong mode position | `InconsistentPathError` |
+| Constant doesn't match type leaf | `InconsistentPathError` |
+| Same variable has different types at different occurrences | `InconsistentVariableError` |
+| Variable pair not complementary | `NonComplementaryError` |
 
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft |
-| 0.2 | 2025-01-07 | Fix definition numbers, improve complement check |
+| 0.3 | 2025-01-08 | Merged path-consistency into this module; complete DFA traversal algorithm |

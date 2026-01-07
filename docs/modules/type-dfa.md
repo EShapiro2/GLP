@@ -1,17 +1,18 @@
 # Module: type-dfa
 
-**Version**: 0.1  
-**Date**: 2025-01-07  
+**Version**: 0.5  
+**Date**: 2025-01-08  
 **Status**: DRAFT  
-**Paper References**: Section 4.1 (lines 7-35), lines 30-35 (DFA correspondence), lines 213-228 (type paths)
+**Paper References**: Section 4.1 (lines 7-35), lines 30-35 (DFA correspondence)
 
 ## Purpose
 
-Compiles GLP type definitions directly to DFAs and provides operations for working with moded type paths. Types are deterministic by construction—each state has at most one transition per symbol.
+Compiles GLP type definitions to DFAs and provides traversal operations. Types are deterministic by construction—each state has at most one transition per symbol.
 
 ## Dependencies
 
-- `moded-term` — Mode enum
+- `mode` — Mode enum
+- `type-environment` — TypeDef, TypeEnvironment
 
 ## Definitions
 
@@ -22,8 +23,7 @@ Compiles GLP type definitions directly to DFAs and provides operations for worki
 GLP type definitions compile **directly** to a DFA:
 - Each defined type name is a DFA state
 - Each alternative adds transitions from that state
-- Primitive types (`_`, `_?`) mark accepting states
-- Constants (`[]`, `1`, etc.) lead to accepting states
+- Leaf types mark accepting states
 
 ### Determinism Requirement (Paper lines 31-35)
 
@@ -39,61 +39,17 @@ Any ::= _ ; _?.                % ILLEGAL: same position, different modes
 AnyOne ::= 1 ; 1?.             % ILLEGAL: same constant, different modes
 ```
 
-### Type Paths (Paper line 213)
+### Leaf Types
 
-A defined GLP type D defines a regular set of moded paths, denoted **paths(D)**:
-- Every intermediate symbol is a type name
-- The last symbol is a primitive type (`_`, `_?`, `Integer`, `String`, or constant)
-- Edges are labelled with `(argIndex, mode)`
+A **leaf type** terminates a type path. The DFA has leaf states for:
 
-#### Formal Definition
-
-A **type path** is a sequence:
-```
-(0,m₀) → T₀ --(i₁,m₁)--> T₁ --(i₂,m₂)--> ... --(iₙ,mₙ)--> Tₙ
-```
-
-Where:
-- Each `Tₖ` is a type (defined type name or primitive type)
-- Each `(iₖ,mₖ)` is an edge label with argument index `iₖ` and mode `mₖ ∈ {↓,↑}`
-- `Tₙ` is a **primitive type**: `_`, `_?`, `Integer`, `String`, or a constant
-
-#### Path Classification
-
-- **inputPaths(D)** = {p ∈ paths(D) | p starts with mode ↓}
-- **outputPaths(D)** = {p ∈ paths(D) | p starts with mode ↑}
-
-### Vocabulary Difference (Paper lines 214-226)
-
-Type paths and term paths have different vocabularies at their leaves:
-
-| Primitive Term | Primitive Type |
-|----------------|----------------|
-| `1` (integer) | `Integer`, or `1` |
-| `c` (string) | `String`, or `c` |
-| `X?` (reader) | `_?` (consumed) |
-| `X` (writer) | `_` (produced) |
-
-### Notation
-
-This spec uses internal DFA label encoding:
-- `[|](2,1)` — list cons, arity 2, argument 1 (head)
-- `[|](2,2)` — list cons, arity 2, argument 2 (tail)
-- `functor(arity,argIndex)` — general compound term
-
-The paper uses `"."/2` for list cons. The internal encoding adds argument index to enable distinct transitions for each argument position.
-
-### Primitive Types (Paper page 6)
-
-| Primitive Type | Meaning |
-|----------------|---------|
-| `_` | Any produced term |
-| `_?` | Any consumed term |
-| `Integer` | Any integer constant |
-| `String` | Any string constant |
-| constant (e.g., `[]`, `1`) | Exact value |
-
-Note: `_` has intrinsic mode produce (↑), `_?` has intrinsic mode consume (↓). Constants and `Integer`/`String` take their mode from context.
+| Leaf Type | Description | Intrinsic Mode |
+|-----------|-------------|----------------|
+| `_` | Any produced term | produce (↑) |
+| `_?` | Any consumed term | consume (↓) |
+| `Integer` | Any integer constant | from context |
+| `String` | Any string constant | from context |
+| constant (e.g., `[]`, `1`) | Exact value | from context |
 
 ### Mode Propagation (Paper lines 9-17)
 
@@ -107,34 +63,48 @@ Modes propagate through type structure via complementation:
 ### Types
 
 #### `class TypeDFA`
+
 A DFA representing a compiled type definition.
 
 ```dart
 class TypeDFA {
-  final Set<DFAState> states;
+  final Map<String, DFAState> states;
   final DFAState startState;
-  final Set<DFAState> finalStates;         // Constant-accepting states
-  final Map<(DFAState, ModedLabel), DFAState> transitions;
-  final Map<DFAState, Set<Mode>> primitiveStateModes;  // For _ and _? states
+  final Map<(DFAState, DFALabel), DFAState> transitions;
 }
 ```
 
 #### `class DFAState`
+
 A state in the type DFA.
 
 ```dart
 class DFAState {
-  final String name;       // Type name or generated name
-  final bool isFinal;      // True for constant-accepting states
+  final String name;           // Type name or generated name
+  final bool isLeaf;           // True for leaf type states
+  final LeafType? leafType;    // If isLeaf, what kind
+  final Mode? intrinsicMode;   // For _ and _?, their intrinsic mode
+  final Object? constantValue; // For constant leaves, the value
+}
+
+enum LeafType {
+  primitiveOutput,   // _
+  primitiveInput,    // _?
+  integer,           // Integer
+  string,            // String  
+  constant,          // Specific constant value ([], 1, foo, etc.)
 }
 ```
 
-#### `class ModedLabel`
-A transition label with optional mode annotation.
+#### `class DFALabel`
+
+A transition label encoding functor, arity, argument position, and mode.
 
 ```dart
-class ModedLabel {
-  final String symbol;     // e.g., "[|](2,1)", "[]", "ch(2,1)"
+class DFALabel {
+  final String symbol;     // e.g., "[|]", "[]", "ch", "foo"
+  final int arity;         // Number of arguments (0 for constants)
+  final int argIndex;      // 1-based argument position (0 for constants)
   final Mode? mode;        // Mode at this position (null for constants)
 }
 ```
@@ -142,199 +112,236 @@ class ModedLabel {
 ### Functions
 
 #### `TypeDFA compileType(String typeName, TypeEnvironment env)`
+
 Compiles a type definition to a DFA.
 
 **Preconditions:** 
-- `typeName` is defined in `env`
-- Type definition is deterministic
+- `typeName` is defined in `env` or is a predefined type
+- Type definition is deterministic (distinct leading symbols per alternative)
 
 **Postconditions:** Returns a DFA where:
 - Start state corresponds to `typeName`
 - Each reachable type has a corresponding state
-- Primitive positions are marked in `primitiveStateModes`
+- Leaf types have appropriate leaf states
 
-**Errors:** Throws `NonDeterministicTypeError` if alternatives have conflicting symbols.
+**Errors:** 
+- Throws `UndefinedTypeError` if type not defined
+- Throws `NonDeterministicTypeError` if alternatives have conflicting symbols
 
-#### `TypeDFA applyModeComplement(TypeDFA dfa)`
-Applies mode complementation to all transitions and primitive states.
+#### `TypeDFA complementDFA(TypeDFA dfa)`
+
+Applies mode complementation to all transitions and leaf states.
 
 **Postconditions:** Returns DFA with:
 - All transition modes flipped (↑ ↔ ↓)
-- All primitive state modes flipped
+- Primitive leaf intrinsic modes flipped (`_` ↔ `_?`)
 
-#### `bool isPrimitiveState(DFAState state, TypeDFA dfa)`
-Returns true if state corresponds to a primitive type position.
+**Use case:** For procedure argument `T?`, compile `T` then call `complementDFA`.
 
-#### `Set<Mode> getModesAt(DFAState state, TypeDFA dfa)`
-Returns the mode set at a primitive state (empty for non-primitive).
+#### `DFAState? stateAfterLabel(DFAState from, DFALabel label, TypeDFA dfa)`
 
-#### DFA Operations
+Returns the target state for a transition, or null if no such transition exists.
 
-The following standard DFA operations are required:
+**Preconditions:**
+- `from` is a state in `dfa`
 
-```dart
-TypeDFA intersect(TypeDFA a, TypeDFA b);      // L(A) ∩ L(B)
-TypeDFA complement(TypeDFA dfa);               // L̄(A)
-TypeDFA union(TypeDFA a, TypeDFA b);           // L(A) ∪ L(B)
-bool isSubsetOf(TypeDFA a, TypeDFA b);         // L(A) ⊆ L(B)
-bool isEmpty(TypeDFA dfa);                     // L(A) = ∅
-TypeDFA complete(TypeDFA dfa, Set<ModedLabel> alphabet);  // Add sink state
-```
+**Postconditions:** Returns the target state if transition exists, null otherwise.
 
-These operations must correctly handle `primitiveStateModes`:
-- **Intersection**: mode sets are intersected
-- **Complement**: mode sets are complemented ({↑,↓} - modes)
-- **Union**: mode sets are unioned
+#### `List<(DFALabel, DFAState)> getTransitions(DFAState state, TypeDFA dfa)`
+
+Returns all outgoing transitions from a state.
+
+**Preconditions:**
+- `state` is a state in `dfa`
+
+**Postconditions:** Returns list of (label, targetState) pairs. Empty list for leaf states.
+
+#### `bool isLeafState(DFAState state)`
+
+Returns true if state is a leaf type state.
+
+#### `LeafType? getLeafType(DFAState state)`
+
+Returns the leaf type kind if state is a leaf, null otherwise.
+
+#### `Mode? getLeafMode(DFAState state)`
+
+Returns the intrinsic mode of a primitive leaf state (`_` → produce, `_?` → consume), or null for non-primitive leaves (Integer, String, constants).
 
 ## Algorithms
 
 ### Algorithm: Direct DFA Compilation
 
-Type definitions compile directly to DFA (no NFA intermediate):
-
 ```
 compileType(typeName, env):
   states = {}
   transitions = {}
-  finalStates = {}
-  primitiveStateModes = {}
   compiled = {}
   
-  startState = getOrCreateState(typeName, states)
-  compileTypeDef(typeName, env, states, transitions, finalStates, 
-                 primitiveStateModes, compiled)
+  startState = compileTypeRec(typeName, Mode.produce, env, states, transitions, compiled)
   
-  return TypeDFA(states, startState, finalStates, transitions, primitiveStateModes)
+  return TypeDFA(states, startState, transitions)
 
-compileTypeDef(typeName, env, states, transitions, finalStates, primitiveStateModes, compiled):
-  if typeName in compiled: return
-  compiled.add(typeName)
+compileTypeRec(typeName, contextMode, env, states, transitions, compiled):
+  key = typeName
+  if key in compiled:
+    return states[key]
   
-  fromState = states[typeName]
+  // Handle predefined leaf types
+  if typeName == "_":
+    state = DFAState(
+      name: "_", 
+      isLeaf: true, 
+      leafType: LeafType.primitiveOutput,
+      intrinsicMode: Mode.produce
+    )
+    states[key] = state
+    compiled.add(key)
+    return state
+  
+  if typeName == "_?":
+    state = DFAState(
+      name: "_?", 
+      isLeaf: true, 
+      leafType: LeafType.primitiveInput,
+      intrinsicMode: Mode.consume
+    )
+    states[key] = state
+    compiled.add(key)
+    return state
+  
+  if typeName == "Integer":
+    state = DFAState(name: "Integer", isLeaf: true, leafType: LeafType.integer)
+    states[key] = state
+    compiled.add(key)
+    return state
+  
+  if typeName == "String":
+    state = DFAState(name: "String", isLeaf: true, leafType: LeafType.string)
+    states[key] = state
+    compiled.add(key)
+    return state
+  
+  // Create state for user-defined type
+  state = DFAState(name: typeName, isLeaf: false)
+  states[key] = state
+  compiled.add(key)
+  
   typeDef = env.getType(typeName)
+  if typeDef is null:
+    throw UndefinedTypeError(typeName)
   
   for alt in typeDef.alternatives:
-    compileAlternative(fromState, alt, ...)
+    compileAlternative(state, alt, contextMode, env, states, transitions, compiled)
+  
+  return state
 
-compileAlternative(fromState, alt, states, transitions, finalStates, primitiveStateModes, env, compiled):
+compileAlternative(fromState, alt, contextMode, env, states, transitions, compiled):
   match alt:
-    PrimitiveModeAlt(isInput):
-      mode = isInput ? Mode.consume : Mode.produce
-      primitiveStateModes[fromState] = 
-        (primitiveStateModes[fromState] ?? {}).add(mode)
+    PrimitiveAlt(isInput):
+      // _ or _? as an alternative
+      // This makes fromState also act as a leaf
+      fromState.isLeaf = true
+      fromState.leafType = isInput ? LeafType.primitiveInput : LeafType.primitiveOutput
+      fromState.intrinsicMode = isInput ? Mode.consume : Mode.produce
     
     ConstantAlt(value):
-      label = ModedLabel(value.toString())
-      finalState = DFAState("_final_$value", isFinal: true)
-      finalStates.add(finalState)
-      states.add(finalState)
-      transitions[(fromState, label)] = finalState
+      label = DFALabel(symbol: value.toString(), arity: 0, argIndex: 0, mode: null)
+      leafState = DFAState(
+        name: "_const_$value",
+        isLeaf: true,
+        leafType: LeafType.constant,
+        constantValue: value
+      )
+      states["_const_$value"] = leafState
+      transitions[(fromState, label)] = leafState
     
     ListNilAlt:
-      label = ModedLabel("[]")
-      finalState = DFAState("_final_nil", isFinal: true)
-      finalStates.add(finalState)
-      states.add(finalState)
-      transitions[(fromState, label)] = finalState
+      label = DFALabel(symbol: "[]", arity: 0, argIndex: 0, mode: null)
+      leafState = DFAState(
+        name: "_nil",
+        isLeaf: true,
+        leafType: LeafType.constant,
+        constantValue: []
+      )
+      states["_nil"] = leafState
+      transitions[(fromState, label)] = leafState
     
-    ListConsAlt(head, tail):
+    ListConsAlt(headTypeExpr, tailTypeExpr):
       // Head transition
-      headMode = modeOf(head)
-      headLabel = ModedLabel("[|](2,1)", mode: headMode)
-      headState = resolveTarget(head, states, env, compiled, ...)
-      transitions[(fromState, headLabel)] = headState
+      headMode = modeOfTypeExpr(headTypeExpr, contextMode)
+      headLabel = DFALabel(symbol: "[|]", arity: 2, argIndex: 1, mode: headMode)
+      headTarget = resolveTypeExpr(headTypeExpr, headMode, env, states, transitions, compiled)
+      transitions[(fromState, headLabel)] = headTarget
       
-      // Tail transition  
-      tailMode = modeOf(tail)
-      tailLabel = ModedLabel("[|](2,2)", mode: tailMode)
-      tailState = resolveTarget(tail, states, env, compiled, ...)
-      transitions[(fromState, tailLabel)] = tailState
+      // Tail transition
+      tailMode = modeOfTypeExpr(tailTypeExpr, contextMode)
+      tailLabel = DFALabel(symbol: "[|]", arity: 2, argIndex: 2, mode: tailMode)
+      tailTarget = resolveTypeExpr(tailTypeExpr, tailMode, env, states, transitions, compiled)
+      transitions[(fromState, tailLabel)] = tailTarget
     
-    StructAlt(functor, arity, args):
-      for i in 0..<args.length:
-        argMode = modeOf(args[i])
-        label = ModedLabel("$functor($arity,${i+1})", mode: argMode)
-        targetState = resolveTarget(args[i], states, env, compiled, ...)
-        transitions[(fromState, label)] = targetState
+    StructAlt(functor, argTypeExprs):
+      arity = argTypeExprs.length
+      for i in 1..arity:
+        argTypeExpr = argTypeExprs[i-1]
+        argMode = modeOfTypeExpr(argTypeExpr, contextMode)
+        label = DFALabel(symbol: functor, arity: arity, argIndex: i, mode: argMode)
+        target = resolveTypeExpr(argTypeExpr, argMode, env, states, transitions, compiled)
+        transitions[(fromState, label)] = target
 
-modeOf(typeExpr):
+modeOfTypeExpr(typeExpr, parentMode):
   match typeExpr:
-    TypeRef(_, isInput): return isInput ? Mode.consume : Mode.produce
-    PrimitiveModeAlt(isInput): return isInput ? Mode.consume : Mode.produce
-    _: return null
+    TypeRef(_, isComplement):
+      return isComplement ? parentMode.flip : parentMode
+    PrimitiveAlt(isInput):
+      return isInput ? Mode.consume : Mode.produce
 
-resolveTarget(typeExpr, states, env, compiled, ...):
+resolveTypeExpr(typeExpr, contextMode, env, states, transitions, compiled):
   match typeExpr:
-    TypeRef(name, _):
-      targetState = getOrCreateState(name, states)
-      compileTypeDef(name, env, ...)  // Recursive compilation
-      return targetState
-    PrimitiveModeAlt(isInput):
-      state = DFAState("_prim_${counter++}")
-      states.add(state)
-      mode = isInput ? Mode.consume : Mode.produce
-      primitiveStateModes[state] = {mode}
-      return state
-    ConstantAlt(value):
-      // Create intermediate state that accepts the constant
-      state = DFAState("_const_$value")
-      states.add(state)
-      label = ModedLabel(value.toString())
-      finalState = DFAState("_final_$value", isFinal: true)
-      finalStates.add(finalState)
-      states.add(finalState)
-      transitions[(state, label)] = finalState
-      return state
-    ListNilAlt:
-      // Similar to ConstantAlt for []
-      ...
+    TypeRef(name, isComplement):
+      return compileTypeRec(name, contextMode, env, states, transitions, compiled)
+    PrimitiveAlt(isInput):
+      primName = isInput ? "_?" : "_"
+      return compileTypeRec(primName, contextMode, env, states, transitions, compiled)
 ```
 
-### Algorithm: Mode Complement Application
-
-For `T?` arguments, apply mode complement to the compiled DFA:
+### Algorithm: DFA Mode Complementation
 
 ```
-applyModeComplement(dfa):
+complementDFA(dfa):
+  newStates = {}
   newTransitions = {}
-  for ((from, label), to) in dfa.transitions:
-    flippedMode = label.mode?.flip  // null stays null
-    newLabel = ModedLabel(label.symbol, mode: flippedMode)
-    newTransitions[(from, newLabel)] = to
   
-  newPrimitiveModes = {}
-  for (state, modes) in dfa.primitiveStateModes:
-    flippedModes = modes.map(m => m.flip).toSet()
-    newPrimitiveModes[state] = flippedModes
+  // Complement all states
+  for (name, state) in dfa.states:
+    if state.isLeaf and state.leafType in {primitiveOutput, primitiveInput}:
+      // Flip primitive type
+      newLeafType = state.leafType == primitiveOutput ? primitiveInput : primitiveOutput
+      newMode = state.intrinsicMode.flip
+      newName = newMode == Mode.consume ? "_?" : "_"
+      newStates[name] = DFAState(
+        name: newName,
+        isLeaf: true,
+        leafType: newLeafType,
+        intrinsicMode: newMode
+      )
+    else:
+      newStates[name] = state
   
-  return TypeDFA(
-    states: dfa.states,
-    startState: dfa.startState,
-    finalStates: dfa.finalStates,
-    transitions: newTransitions,
-    primitiveStateModes: newPrimitiveModes
-  )
+  // Complement all transition modes
+  for ((fromState, label), toState) in dfa.transitions:
+    newLabel = DFALabel(
+      symbol: label.symbol,
+      arity: label.arity,
+      argIndex: label.argIndex,
+      mode: label.mode?.flip
+    )
+    newTransitions[(newStates[fromState.name], newLabel)] = newStates[toState.name]
+  
+  return TypeDFA(newStates, newStates[dfa.startState.name], newTransitions)
 ```
 
 ## Examples
-
-### Example: paths(Stream)
-
-From the produce perspective (↑):
-```
-Path 1: (0,↑) → Stream --(1,↑)--> []
-Path 2: (0,↑) → Stream --(1,↑)--> "."/2 --(1,↑)--> _
-Path 3: (0,↑) → Stream --(1,↑)--> "."/2 --(2,↑)--> Stream → ...
-```
-
-### Example: paths(Stream?) — Complemented
-
-From the consume perspective (↓):
-```
-Path 1: (0,↓) → Stream? --(1,↓)--> []
-Path 2: (0,↓) → Stream? --(1,↓)--> "."/2 --(1,↓)--> _?
-Path 3: (0,↓) → Stream? --(1,↓)--> "."/2 --(2,↓)--> Stream? → ...
-```
 
 ### Example: Stream Type Compilation
 
@@ -344,15 +351,51 @@ Stream ::= [] ; [_|Stream].
 
 Compiles to DFA:
 ```
-States: {Stream, _prim_0, _final_nil}
+States: 
+  Stream (non-leaf)
+  _nil (leaf: constant [])
+  _ (leaf: primitiveOutput, intrinsicMode=produce)
+
 Start: Stream
-Final: {_final_nil}
-Primitive: {_prim_0: {↑}}
 
 Transitions:
-  Stream --[[]]---------> _final_nil
-  Stream --[[|](2,1), ↑]--> _prim_0
-  Stream --[[|](2,2), ↑]--> Stream
+  Stream --[[], 0, 0, null]--> _nil
+  Stream --[[|], 2, 1, ↑]--> _
+  Stream --[[|], 2, 2, ↑]--> Stream
+```
+
+### Example: Stream? (Complemented)
+
+After `complementDFA(StreamDFA)`:
+```
+States:
+  Stream (non-leaf)
+  _nil (leaf: constant [])
+  _? (leaf: primitiveInput, intrinsicMode=consume)  // Flipped from _
+
+Transitions:
+  Stream --[[], 0, 0, null]--> _nil
+  Stream --[[|], 2, 1, ↓]--> _?     // Mode flipped ↑→↓
+  Stream --[[|], 2, 2, ↓]--> Stream // Mode flipped ↑→↓
+```
+
+### Example: HollowStream (Interactive Type)
+
+```
+HollowStream ::= [] ; [_?|HollowStream].
+```
+
+Compiles to:
+```
+States:
+  HollowStream (non-leaf)
+  _nil (leaf: constant [])
+  _? (leaf: primitiveInput, intrinsicMode=consume)
+
+Transitions:
+  HollowStream --[[], 0, 0, null]--> _nil
+  HollowStream --[[|], 2, 1, ↓]--> _?           // _? has consume mode
+  HollowStream --[[|], 2, 2, ↑]--> HollowStream // No complement on recursive ref
 ```
 
 ### Example: Procedure Type for merge
@@ -362,37 +405,8 @@ procedure merge(Stream?, Stream?, Stream).
 ```
 
 Argument DFAs:
-- Args 1, 2: Compile `Stream`, then apply `applyModeComplement()`
-- Arg 3: Compile `Stream` as-is
-
-After complement for args 1, 2:
-```
-Transitions:
-  Stream --[[]]---------> _final_nil
-  Stream --[[|](2,1), ↓]--> _prim_0    // ↑ flipped to ↓
-  Stream --[[|](2,2), ↓]--> Stream     // ↑ flipped to ↓
-
-Primitive: {_prim_0: {↓}}              // ↑ flipped to ↓
-```
-
-### Example: Interactive Type (HollowStream)
-
-```
-HollowStream ::= [] ; [_?|HollowStream].
-```
-
-Compiles to:
-```
-States: {HollowStream, _prim_0, _final_nil}
-Start: HollowStream
-Final: {_final_nil}
-Primitive: {_prim_0: {↓}}              // _? has consume mode
-
-Transitions:
-  HollowStream --[[]]---------> _final_nil
-  HollowStream --[[|](2,1), ↓]--> _prim_0
-  HollowStream --[[|](2,2), ↑]--> HollowStream  // No ? on recursive ref
-```
+- Args 1, 2: Compile `Stream`, then call `complementDFA()` 
+- Arg 3: Compile `Stream` as-is (no complement)
 
 ### Example: INVALID — Non-deterministic Type
 
@@ -402,7 +416,7 @@ BadTree ::= leaf(Integer) ; leaf(String).   % ILLEGAL
 
 **Problem:** Both alternatives start with `leaf/1`. The DFA would need two transitions from `BadTree` state with label `leaf(1,1)` — this violates determinism.
 
-**Error:** Compilation throws `NonDeterministicTypeError`.
+**Error:** `NonDeterministicTypeError("BadTree: multiple transitions for leaf/1")`
 
 **Fix:** Use distinct constructors:
 ```
@@ -414,20 +428,22 @@ Tree ::= int_leaf(Integer) ; str_leaf(String).   % LEGAL
 | Condition | Exception |
 |-----------|-----------|
 | Type not defined | `UndefinedTypeError` |
-| Non-deterministic alternatives (same symbol) | `NonDeterministicTypeError` |
-| Redefinition of predefined type | `PredefinedTypeError` |
+| Non-deterministic alternatives (same leading symbol) | `NonDeterministicTypeError` |
 
 ## Notes
 
-### Why Not NFA?
+### Why No DFA Set Operations?
 
-The paper requires deterministic types (line 30-35). Union (`;`) in type definitions is NOT nondeterminism—alternatives have different leading symbols. This allows direct DFA construction, which is simpler and more efficient than NFA→DFA conversion.
+Previous versions of this spec included union, intersection, complement (set), and subset operations. These are **not needed** because:
+
+1. **Covariance checking** traverses the DFA alongside moded paths — no set operations needed
+2. **Contravariance checking** uses structural coverage — traverse the type DFA and verify each transition is accepted by some clause head
+
+The only DFA operation needed beyond compilation is `complementDFA` for handling `T?` procedure arguments.
 
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.1 | 2025-01-07 | Initial draft — direct DFA compilation, no NFA |
-| 0.2 | 2025-01-07 | Remove implementation notes, clarify primitive types |
-| 0.3 | 2025-01-07 | Add notation clarification |
-| 0.4 | 2025-01-07 | Merge type-paths.md content; add paths(D) formal definition, vocabulary difference, path classification, negative example |
+| 0.1 | 2025-01-07 | Initial draft |
+| 0.5 | 2025-01-08 | Major simplification: removed DFA set operations (union, intersect, subset, isEmpty); clarified leaf types; improved algorithms |

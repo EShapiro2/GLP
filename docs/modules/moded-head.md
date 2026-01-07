@@ -1,19 +1,21 @@
 # Module: moded-head
 
-**Version**: 0.1  
-**Date**: 2025-01-07  
+**Version**: 0.5  
+**Date**: 2025-01-08  
 **Status**: DRAFT  
 **Paper References**: Definition 4.6 (lines 285-288), Example (lines 290-308)
 
 ## Purpose
 
-Constructs a moded head H' from a clause head H. The moded head is used for well-typing checks.
+Constructs a moded head H' from a clause head H and a procedure declaration. The moded head is used for well-typing checks.
 
 ## Dependencies
 
-- `moded-term` — ModedTerm, Mode, I/O moded term construction
+- `mode` — Mode enum
+- `moded-term` — ModedTerm, ModedCompound, ModedConstant, ModedVariable
+- `type-environment` — ProcDecl
 
-## Paper Definition
+## Definitions
 
 ### Definition 4.6: Moded Head (lines 285-288)
 
@@ -21,102 +23,99 @@ Constructs a moded head H' from a clause head H. The moded head is used for well
 > 1. Constructing an I/O-moded term corresponding to H, then
 > 2. Replacing each variable by its paired variable.
 
-### Context (lines 279-282)
+### I/O Moded Term
+
+An **I/O moded term** is a moded term where:
+- Root mode is ↓ (consume)
+- Input argument positions (Type?) have mode ↓
+- Output argument positions (Type) have mode ↑
+- Nested structure preserves/flips mode based on type complementation
+
+### Variable Flip (lines 279-282)
 
 The variable flip in step 2 captures inverted roles:
 - Head writer `X` becomes reader `X?` (serves as **input**—bound by the goal)
 - Head reader `X?` becomes writer `X` (serves as **output**—will be bound by the body)
 
-### I/O Moded Term (from moded-term module)
+## Public Interface
 
-An I/O moded term has:
-- Root mode ↓ (consume)
-- At most one mode inversion from ↓ to ↑ on any path
-- No inversion from ↑ back to ↓
+### Functions
 
-## Example (lines 290-308)
+#### `ModedTerm modedHead(Term head, ProcDecl decl)`
 
-### Input
-
-Clause head:
-```
-H = merge([X|Xs], Ys, [X?|Zs?])
-```
-
-Type declaration:
-```
-merge(Stream?, Stream?, Stream)
-```
-
-### Step 1: Construct I/O-moded term
-
-Arguments 1, 2 are consumed (Stream?), argument 3 is produced (Stream):
-```
-↓merge(↓[↓X|Xs], Ys, ↑[↑X?|Zs?])
-```
-
-### Step 2: Replace each variable by its paired variable
-
-```
-H' = ↓merge(↓[↓X?|Xs?], Ys?, ↑[↑X|Zs])
-```
-
-### Result
-
-The moded head H' has paths:
-```
-(0,↓) → merge --(1,↓)--> "."/2 --(1,↓)--> X?
-(0,↓) → merge --(1,↓)--> "."/2 --(2,↓)--> Xs?
-(0,↓) → merge --(2,↓)--> Ys?
-(0,↓) → merge --(3,↑)--> "."/2 --(1,↑)--> X
-(0,↓) → merge --(3,↑)--> "."/2 --(2,↑)--> Zs
-```
-
-## Interface
-
-### `ModedTerm modedHead(Head h, ProcDecl decl)`
-
-Constructs a moded head H' from head H using procedure declaration for mode information.
+Constructs a moded head H' from clause head H per Definition 4.6.
 
 **Preconditions:**
-- `h` is a valid clause head
-- `decl` provides the procedure type (argument modes)
+- `head` is a valid clause head (compound term)
+- `decl` provides the procedure type declaration
+- `head.functor == decl.name` and `head.arity == decl.arity`
 
-**Postconditions:**
-- Returns an I/O moded term with all variables flipped to their pairs
+**Postconditions:** Returns a ModedTerm where:
 - Root mode is ↓ (consume)
-- Output arguments (Type, not Type?) have mode ↑
-- Input arguments (Type?) have mode ↓
+- Each argument has mode based on declared type: Type? → ↓, Type → ↑
+- All variables are flipped (X ↔ X?)
 
-### Algorithm
+**Errors:**
+- Throws `ArityMismatchError` if head arity doesn't match declaration
+
+#### `ModedTerm producedTerm(Term atom, ProcDecl decl)`
+
+Constructs a produced moded term from a body atom.
+
+**Preconditions:**
+- `atom` is a valid body atom (compound term)  
+- `decl` provides the procedure type declaration
+
+**Postconditions:** Returns a ModedTerm where:
+- Root mode is ↑ (produce)
+- Each argument has mode based on declared type: Type? → ↓, Type → ↑
+- Variables are NOT flipped (body atoms use original variable forms)
+
+**Errors:**
+- Throws `ArityMismatchError` if atom arity doesn't match declaration
+
+## Algorithms
+
+### Algorithm: Moded Head Construction
 
 ```
-modedHead(h, decl):
-  // Step 1: Build I/O moded term from head
-  ioTerm = buildIOModed(h, decl)
+modedHead(head, decl):
+  // Step 1: Build I/O moded term
+  ioTerm = buildIOModedTerm(head, decl, Mode.consume)
   
   // Step 2: Flip all variables
-  return flipVariables(ioTerm)
+  return flipAllVariables(ioTerm)
 
-buildIOModed(term, typeInfo, parentMode = consume):
+buildIOModedTerm(term, decl, parentMode):
   match term:
     Compound(functor, args):
       modedArgs = []
-      for i, arg in enumerate(args):
-        argMode = typeInfo.argMode(i)  // consume for T?, produce for T
-        modedArgs.add(buildIOModed(arg, typeInfo.argType(i), argMode))
+      for i in 1..args.length:
+        argType = decl.argTypes[i-1]
+        // Input (Type?) preserves consume, Output (Type) flips to produce
+        argMode = argType.isInput ? Mode.consume : Mode.produce
+        modedArg = buildModedSubterm(args[i-1], argMode)
+        modedArgs.add(modedArg)
       return ModedCompound(parentMode, functor, args.length, modedArgs)
     
+    _: throw InvalidHeadError("Head must be compound term")
+
+buildModedSubterm(term, mode):
+  match term:
+    Compound(functor, args):
+      modedArgs = args.map(arg => buildModedSubterm(arg, mode))
+      return ModedCompound(mode, functor, args.length, modedArgs)
+    
     Constant(value):
-      return ModedConstant(parentMode, value)
+      return ModedConstant(mode, value)
     
     Variable(name, isReader):
-      return ModedVariable(name, isReader)  // Keep original reader/writer
+      return ModedVariable(name, isReader)
 
-flipVariables(term):
+flipAllVariables(term):
   match term:
     ModedCompound(mode, functor, arity, args):
-      return ModedCompound(mode, functor, arity, args.map(flipVariables))
+      return ModedCompound(mode, functor, arity, args.map(flipAllVariables))
     
     ModedConstant(mode, value):
       return ModedConstant(mode, value)
@@ -125,35 +124,109 @@ flipVariables(term):
       return ModedVariable(name, !isReader)  // Flip: X ↔ X?
 ```
 
-### Example: INVALID — Undeclared Procedure
+### Algorithm: Produced Term Construction (for body atoms)
 
 ```
-% No procedure declaration for 'unknown'
-unknown(X, Y).
+producedTerm(atom, decl):
+  return buildIOModedTerm(atom, decl, Mode.produce)
+  // Note: no variable flip for body atoms
 ```
 
-**Error:** `UndeclaredProcedureError("unknown/2")`
+## Examples
 
-Moded head construction requires a procedure declaration to determine argument modes.
+### Example: merge Clause Head
 
-## Relationship to Well-Typing
+**Input:**
 
-The moded head H' is used in Definition 4.8 (Well-typed Clause):
-- Condition 1 requires H' to be well-typed by D
-- The "accepts" predicate checks if H' has paths consistent with input paths of D
+Clause head:
+```
+H = merge([X|Xs], Ys, [X?|Zs?])
+```
+
+Type declaration:
+```
+procedure merge(Stream?, Stream?, Stream).
+```
+
+**Step 1: Build I/O moded term**
+
+- Root mode: ↓ (consume)
+- Arg 1 declared `Stream?` (input) → mode ↓
+- Arg 2 declared `Stream?` (input) → mode ↓  
+- Arg 3 declared `Stream` (output) → mode ↑
+
+Result:
+```
+↓merge(↓[↓X|Xs], Ys, ↑[↑X?|Zs?])
+```
+
+**Step 2: Flip all variables**
+
+- X → X?
+- Xs → Xs?
+- Ys → Ys?
+- X? → X
+- Zs? → Zs
+
+Result:
+```
+H' = ↓merge(↓[↓X?|Xs?], Ys?, ↑[↑X|Zs])
+```
+
+### Example: merge Body Atom
+
+**Input:**
+
+Body atom:
+```
+A = merge(Ys?, Xs?, Zs)
+```
+
+Type declaration:
+```
+procedure merge(Stream?, Stream?, Stream).
+```
+
+**Produced moded term (no variable flip):**
+
+- Root mode: ↑ (produce)
+- Arg 1 declared `Stream?` (input) → mode ↓
+- Arg 2 declared `Stream?` (input) → mode ↓
+- Arg 3 declared `Stream` (output) → mode ↑
+
+Result:
+```
+A' = ↑merge(Ys?, Xs?, Zs)
+```
+
+Variables stay as-is because body atoms are goals being called, not definitions being matched.
+
+### Example: Paths of Moded Head
+
+Moded head:
+```
+H' = ↓merge(↓[↓X?|Xs?], Ys?, ↑[↑X|Zs])
+```
+
+Paths:
+```
+(0,↓) → merge/3 --(1,↓)--> [|]/2 --(1,↓)--> X?
+(0,↓) → merge/3 --(1,↓)--> [|]/2 --(2,↓)--> Xs?
+(0,↓) → merge/3 --(2,↓)--> Ys?
+(0,↓) → merge/3 --(3,↑)--> [|]/2 --(1,↑)--> X
+(0,↓) → merge/3 --(3,↑)--> [|]/2 --(2,↑)--> Zs
+```
 
 ## Error Conditions
 
 | Condition | Exception |
 |-----------|-----------|
-| Procedure not declared in type environment | `UndeclaredProcedureError` |
-| Type would require invalid I/O moding | `InvalidIOModeError` |
+| Head arity doesn't match declaration | `ArityMismatchError` |
+| Head is not a compound term | `InvalidHeadError` |
 
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.1 | 2025-01-07 | Initial draft from paper |
-| 0.2 | 2025-01-07 | Fix definition numbers |
-| 0.3 | 2025-01-07 | Add Error Conditions |
-| 0.4 | 2025-01-07 | Add negative example (undeclared procedure) |
+| 0.1 | 2025-01-07 | Initial draft |
+| 0.5 | 2025-01-08 | Add producedTerm for body atoms; complete algorithms; more examples |

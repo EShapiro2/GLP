@@ -1,21 +1,21 @@
 # Module: well-typed-program
 
-**Version**: 0.1  
-**Date**: 2025-01-07  
+**Version**: 0.5  
+**Date**: 2025-01-08  
 **Status**: DRAFT  
 **Paper References**: Definition 4.10 (lines 351-357)
 
 ## Purpose
 
-Determines when a typed GLP program P = (Cs, D) is well-typed. This is the top-level type checking predicate.
+Determines when a typed GLP program P = (Cs, D) is well-typed. This is the top-level type checking entry point.
 
 ## Dependencies
 
-- `well-typed-clause` — checkClause, accepts
-- `type-dfa` — compileType, union, intersect, complement, isSubsetOf, findAcceptingPath, emptyDFA
-- `clause-contribution` — extractHeadPatternDFA
+- `well-typed-clause` — checkClause(), getAcceptedLabels()
+- `type-dfa` — compileType(), complementDFA(), getTransitions(), isLeafState()
+- `type-environment` — TypeEnvironment, ProcDecl
 
-## Paper Definition
+## Definitions
 
 ### Definition 4.10: Well-typed GLP Program (lines 351-357)
 
@@ -37,19 +37,176 @@ This ensures that clauses **produce** terms within the declared types.
 
 ### Contravariance (Condition 2)
 
-For every procedure with input arguments, every possible input path must be accepted by at least one clause.
+For every procedure with input arguments, every possible input must be accepted by at least one clause.
 
 This ensures that the program can **consume** all values allowed by the input types.
 
-**Input paths** are paths in paths(D) that:
-- Correspond to input argument positions (Type?, not Type)
-- Start with mode ↓ (consume)
+**Structural coverage checking:** Rather than DFA set operations, we traverse the input type DFA and verify that each transition (alternative) is covered by some clause head.
 
-A clause **accepts** a path if its moded head has a consistent path.
+## Public Interface
 
-## Example
+### Types
 
-### Program
+#### `class ProgramCheckResult`
+
+```dart
+class ProgramCheckResult {
+  final bool isWellTyped;
+  final List<ClauseCheckResult> clauseResults;
+  final List<CoverageError> coverageErrors;
+}
+
+class CoverageError {
+  final String procedure;
+  final int argIndex;
+  final DFALabel uncoveredLabel;
+  final String path;  // Human-readable path to uncovered position
+}
+```
+
+### Functions
+
+#### `ProgramCheckResult checkProgram(List<Clause> clauses, TypeEnvironment env)`
+
+Checks if program (Cs, D) is well-typed per Definition 4.10.
+
+**Preconditions:**
+- `clauses` is a non-empty list of valid GLP clauses
+- `env` contains type definitions and procedure declarations for all types and predicates
+
+**Postconditions:** Returns ProgramCheckResult where:
+- `isWellTyped` is true iff both covariance and contravariance hold
+- `clauseResults` contains individual check results for each clause
+- `coverageErrors` lists uncovered input paths (empty if all covered)
+
+**Errors:**
+- Throws `UndeclaredProcedureError` if any clause uses an undeclared procedure
+- Throws `UndefinedTypeError` if any procedure references an undefined type
+
+## Algorithms
+
+### Algorithm: Program Well-Typing Check
+
+```
+checkProgram(clauses, env):
+  clauseResults = []
+  coverageErrors = []
+  
+  // Condition 1: Covariance — check each clause
+  for clause in clauses:
+    result = checkClause(clause, env)
+    clauseResults.add(result)
+  
+  // Condition 2: Contravariance — check coverage for each input argument
+  for proc in env.procedures:
+    procClauses = clauses.filter(c => c.head.functor == proc.name 
+                                   && c.head.arity == proc.arity)
+    
+    for argIndex in 1..proc.arity:
+      if proc.argTypes[argIndex - 1].isInput:
+        errors = checkCoverage(procClauses, proc, argIndex, env)
+        coverageErrors.addAll(errors)
+  
+  isWellTyped = clauseResults.all(r => r.isWellTyped) && coverageErrors.isEmpty
+  
+  return ProgramCheckResult(isWellTyped, clauseResults, coverageErrors)
+```
+
+### Algorithm: Structural Coverage Check
+
+```
+checkCoverage(clauses, proc, argIndex, env):
+  // Get the input type DFA (already complemented for T?)
+  inputType = proc.argTypes[argIndex - 1]
+  baseDFA = compileType(inputType.baseName, env)
+  inputDFA = complementDFA(baseDFA)  // T? needs complement
+  
+  errors = []
+  visited = {}
+  
+  checkStateCoverage(inputDFA.startState, clauses, argIndex, "", visited, errors, inputDFA)
+  
+  return errors
+
+checkStateCoverage(state, clauses, argIndex, pathPrefix, visited, errors, dfa):
+  // Prevent infinite recursion on recursive types
+  if state in visited:
+    return  // Already checked this state
+  visited.add(state)
+  
+  // Leaf states don't need coverage - they're reached by matching structure
+  if isLeafState(state):
+    return
+  
+  // Get all transitions (alternatives) from this state
+  transitions = getTransitions(state, dfa)
+  
+  for (label, targetState) in transitions:
+    // Check if some clause accepts this transition at this argument position
+    if clauseAcceptsLabel(clauses, argIndex, label, pathPrefix):
+      // Recursively check the target state
+      newPath = pathPrefix + " → " + label.toString()
+      checkStateCoverage(targetState, clauses, argIndex, newPath, visited, errors, dfa)
+    else:
+      // No clause covers this alternative
+      errors.add(CoverageError(
+        procedure: proc.name,
+        argIndex: argIndex,
+        uncoveredLabel: label,
+        path: pathPrefix + " → " + label.toString()
+      ))
+
+clauseAcceptsLabel(clauses, argIndex, label, pathPrefix):
+  for clause in clauses:
+    acceptedLabels = getAcceptedLabels(clause, argIndex, env)
+    
+    if acceptedLabels == ALL_LABELS:
+      // Variable at this position - accepts anything
+      return true
+    
+    if label in acceptedLabels:
+      // Clause explicitly matches this label
+      return true
+  
+  return false
+```
+
+### Algorithm: Deep Coverage Check
+
+For nested structures, we need to check coverage at each level:
+
+```
+checkDeepCoverage(clauses, argIndex, dfaState, termPath, env):
+  // termPath tracks the path through the argument structure
+  // e.g., for [X|Xs], termPath might be "head" or "tail"
+  
+  if isLeafState(dfaState):
+    return []  // Leaf covered by variable matching
+  
+  errors = []
+  transitions = getTransitions(dfaState)
+  
+  for (label, targetState) in transitions:
+    // Find clauses that match at this position in the structure
+    matchingClauses = findClausesMatching(clauses, argIndex, termPath, label)
+    
+    if matchingClauses.isEmpty:
+      errors.add(CoverageError(...))
+    else:
+      // Check deeper coverage for matching clauses
+      for nestedPath in getNestedPaths(label):
+        nestedErrors = checkDeepCoverage(
+          matchingClauses, argIndex, targetState, 
+          termPath + "." + nestedPath, env
+        )
+        errors.addAll(nestedErrors)
+  
+  return errors
+```
+
+## Examples
+
+### Example: Well-Typed merge Program
 
 ```
 Stream ::= [] ; [_|Stream].
@@ -59,29 +216,24 @@ merge([], Ys, Ys?).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 ```
 
-### Covariance Check
+**Covariance:** Both clauses are well-typed ✓
 
-Both clauses must be well-typed (per Definition 4.8).
+**Contravariance for argument 1 (Stream?):**
 
-### Contravariance Check
+Input type DFA transitions from Stream state:
+- `[]` → nil (leaf)
+- `[|](2,1)` → _ (primitive leaf)
+- `[|](2,2)` → Stream (recursive)
 
-Input paths for `merge` (arguments 1 and 2, both `Stream?`):
+Coverage:
+- `[]`: Clause 1 matches with `[]` ✓
+- `[|]`: Clause 2 matches with `[X|Xs]` ✓
+  - Head position: Variable X accepts any _ ✓
+  - Tail position: Variable Xs accepts any Stream ✓
 
-**Argument 1 paths:**
-```
-(0,↓) → merge --(1,↓)--> Stream? --(1,↓)--> []
-(0,↓) → merge --(1,↓)--> Stream? --(1,↓)--> [|] --(1,↓)--> _?
-(0,↓) → merge --(1,↓)--> Stream? --(1,↓)--> [|] --(2,↓)--> Stream? → ...
-```
+**Contravariance for argument 2 (Stream?):** Similar analysis ✓
 
-**Checking acceptance:**
-- Path ending in `[]`: Accepted by clause 1 (pattern `[]`)
-- Path ending in `_?`: Accepted by clause 2 (pattern `[X|Xs]` with X at that position)
-- Recursive paths: Accepted by clause 2
-
-**Argument 2 paths:** Similar analysis.
-
-All input paths are accepted → program is well-typed.
+**Result: Well-typed program**
 
 ### Example: INVALID — Covariance Failure
 
@@ -89,13 +241,12 @@ All input paths are accepted → program is well-typed.
 Stream ::= [] ; [_|Stream].
 procedure merge(Stream?, Stream?, Stream).
 
-% Clause produces integer at output position expecting Stream
-merge([], Ys, 42).
+merge([], Ys, 42).  // Integer at Stream position!
 ```
 
-**Problem:** Argument 3 has type `Stream`, but the head produces integer `42`. The clause is not well-typed (violates Condition 1 of Definition 4.8).
+**Problem:** Clause 1 produces integer `42` at output position expecting `Stream`.
 
-**Error:** `ClauseNotWellTypedError("merge/3 clause 1: output argument 3 not well-typed")`
+**Error:** `ClauseCheckResult.errors = [HeadNotWellTypedError(...)]`
 
 ### Example: INVALID — Contravariance Failure
 
@@ -103,100 +254,71 @@ merge([], Ys, 42).
 Stream ::= [] ; [_|Stream].
 procedure merge(Stream?, Stream?, Stream).
 
-% Only handles cons case, not nil
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+// Missing: merge([], Ys, Ys?).
 ```
 
-**Problem:** Input type `Stream?` includes paths ending in `[]`, but no clause accepts the nil case. The input path `(0,↓) → merge --(1,↓)--> []` is not accepted by any clause.
+**Problem:** Input type `Stream?` includes `[]` alternative, but no clause accepts nil at argument 1.
 
-**Error:** `UncoveredInputPathError("Argument 1: uncovered input path ending in []")`
-
-**Fix:** Add base case `merge([], Ys, Ys?).`
-
-## Interface
-
-### `ProgramCheckResult checkProgram(List<Clause> cs, TypeEnv d)`
-
-Checks if program (Cs, D) is well-typed per Definition 4.10.
-
-**Preconditions:**
-- `cs` is a non-empty list of valid GLP clauses
-- `d` contains type definitions and procedure declarations for all types and predicates used in `cs`
-
-**Postconditions:** Returns `ProgramCheckResult` where:
-- `isWellTyped` is true iff both covariance and contravariance conditions hold
-- `clauseResults` contains individual check results for each clause
-- `uncoveredPaths` lists witness paths for any contravariance failures (empty if all covered)
-
-**Errors:**
-- Throws `UndeclaredProcedureError` if any clause uses an undeclared procedure
-- Throws `UndefinedTypeError` if any procedure declaration references an undefined type
-
-### Algorithm
-
+**Error:** 
 ```
-checkProgram(cs, d):
-  errors = []
-  clauseResults = []
-
-  // Condition 1: Covariance
-  for c in cs:
-    result = checkClause(c, d)
-    clauseResults.add(result)
-    if not result.isWellTyped:
-      errors.add("Clause not well-typed: " + c)
-
-  // Condition 2: Contravariance (using DFA operations)
-  for proc in d.procedures:
-    for argIndex, argType in enumerate(proc.argTypes):
-      if argType.isInput:  // Type?, not Type
-        // Get the declared input type DFA
-        inputTypeDFA = compileType(argType, d)
-
-        // Compute union of clause contributions at this position
-        clausePatternsDFA = emptyDFA()
-        for c in cs where c.head.functor == proc.name:
-          patternDFA = extractHeadPatternDFA(c.head, argIndex)
-          clausePatternsDFA = union(clausePatternsDFA, patternDFA)
-
-        // Check coverage: inputTypeDFA ⊆ clausePatternsDFA
-        if not isSubsetOf(inputTypeDFA, clausePatternsDFA):
-          // Find witness path in the difference
-          uncoveredDFA = intersect(inputTypeDFA, complement(clausePatternsDFA))
-          witness = findAcceptingPath(uncoveredDFA)
-          errors.add("Uncovered input path at arg " + argIndex + ": " + witness)
-
-  return ProgramCheckResult(errors.isEmpty, clauseResults, errors)
+CoverageError(
+  procedure: "merge",
+  argIndex: 1,
+  uncoveredLabel: DFALabel("[]", 0, 0, null),
+  path: "Stream? → []"
+)
 ```
 
-## Implementation Note: DFA-Based Contravariance
+### Example: Deep Coverage
 
-The algorithm above uses DFA operations rather than path enumeration because:
-1. Input paths form an infinite regular language for recursive types
-2. DFA subset checking (`isSubsetOf`) decides inclusion in finite time
-3. When coverage fails, DFA intersection with complement provides a witness path
+```
+Tree ::= leaf(Integer) ; node(Tree, Tree).
+procedure sum(Tree?, Integer).
 
-Required DFA operations (from `type-dfa` module):
-- `compileType(typeName, env)` — compile type to DFA
-- `union(dfa1, dfa2)` — language union
-- `intersect(dfa1, dfa2)` — language intersection
-- `complement(dfa)` — language complement
-- `isSubsetOf(dfa1, dfa2)` — check L(dfa1) ⊆ L(dfa2)
-- `findAcceptingPath(dfa)` — find a path accepted by DFA (for error reporting)
+sum(leaf(N), N?).
+sum(node(L, R), S) :- sum(L?, X), sum(R?, Y), add(X?, Y?, S).
+```
+
+**Contravariance for argument 1 (Tree?):**
+
+- `leaf`: Clause 1 matches with `leaf(N)` 
+  - Inside leaf: Variable N accepts any Integer ✓
+- `node`: Clause 2 matches with `node(L, R)`
+  - Left subtree: Variable L accepts any Tree ✓
+  - Right subtree: Variable R accepts any Tree ✓
+
+**Result: Well-typed**
 
 ## Error Conditions
 
-| Condition | Exception |
-|-----------|-----------|
-| Clause not well-typed | `ClauseNotWellTypedError` |
-| Input path not covered by any clause | `UncoveredInputPathError` |
+| Condition | Error |
+|-----------|-------|
+| Clause not well-typed | In `clauseResults` with errors |
+| Input alternative not covered | `CoverageError` |
+
+## Notes
+
+### Why Structural Coverage Instead of DFA Operations?
+
+Previous approaches used DFA union/intersection/subset:
+```
+inputDFA ⊆ union(clausePatternDFAs)
+```
+
+Structural coverage is simpler:
+1. No need to build clause pattern DFAs
+2. No need for DFA set operations
+3. Directly answers "which alternative is missing?"
+4. Naturally handles recursive types via visited set
+
+### Variable Coverage
+
+A variable at an argument position is a **wildcard** — it accepts all values of the declared type. This is why `getAcceptedLabels` returns `ALL_LABELS` for variables.
 
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.1 | 2025-01-07 | Initial draft from paper |
-| 0.2 | 2025-01-07 | Replace path enumeration with DFA operations |
-| 0.3 | 2025-01-07 | Fix definition numbers |
-| 0.4 | 2025-01-07 | Add dependencies, Error Conditions |
-| 0.5 | 2025-01-07 | Add negative examples (covariance/contravariance failures), complete function spec |
+| 0.1 | 2025-01-07 | Initial draft |
+| 0.5 | 2025-01-08 | Replace DFA set operations with structural coverage; simplified algorithms |
