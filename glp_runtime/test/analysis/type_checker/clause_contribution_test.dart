@@ -5,6 +5,7 @@
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/clause_contribution.dart';
 import 'package:glp_runtime/analysis/type_checker/type_dfa.dart';
+import 'package:glp_runtime/analysis/type_checker/moded_label.dart';
 import 'package:glp_runtime/analysis/type_checker/type_parser.dart';
 import 'package:glp_runtime/analysis/type_checker/type_compiler.dart';
 import 'package:glp_runtime/compiler/ast.dart' as ast;
@@ -237,9 +238,9 @@ Nat ::= 0 ; s(Nat).
         final union = result1.union(result2);
 
         // Union should accept both 'a' and 'b'
-        final pathA = TermPath([PathElement.constant('a')]);
-        final pathB = TermPath([PathElement.constant('b')]);
-        final pathC = TermPath([PathElement.constant('c')]);
+        final pathA = TermPath([ModedLabel.constant('a')]);
+        final pathB = TermPath([ModedLabel.constant('b')]);
+        final pathC = TermPath([ModedLabel.constant('c')]);
 
         expect(union.acceptsPath(pathA), isTrue);
         expect(union.acceptsPath(pathB), isTrue);
@@ -261,8 +262,8 @@ Nat ::= 0 ; s(Nat).
 
         expect(ab.isEmpty, isFalse);
 
-        final pathA = TermPath([PathElement.constant('a')]);
-        final pathB = TermPath([PathElement.constant('b')]);
+        final pathA = TermPath([ModedLabel.constant('a')]);
+        final pathB = TermPath([ModedLabel.constant('b')]);
 
         expect(ab.acceptsPath(pathA), isTrue);
         expect(ab.acceptsPath(pathB), isTrue);

@@ -4,6 +4,7 @@
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/type_dfa.dart';
+import 'package:glp_runtime/analysis/type_checker/moded_label.dart';
 
 void main() {
   group('TypeDFA Operations', () {
@@ -19,17 +20,17 @@ void main() {
         expect(dfa.isEmpty, isFalse);
 
         // Should accept path with just 'foo'
-        final fooPath = TermPath([PathElement.constant('foo')]);
+        final fooPath = TermPath([ModedLabel.constant('foo')]);
         expect(dfa.acceptsPath(fooPath), isTrue);
 
         // Should reject different constant
-        final barPath = TermPath([PathElement.constant('bar')]);
+        final barPath = TermPath([ModedLabel.constant('bar')]);
         expect(dfa.acceptsPath(barPath), isFalse);
 
         // Should reject longer paths
         final longerPath = TermPath([
-          PathElement.constant('foo'),
-          PathElement.constant('bar'),
+          ModedLabel.constant('foo'),
+          ModedLabel.constant('bar'),
         ]);
         expect(dfa.acceptsPath(longerPath), isFalse);
       });
@@ -41,9 +42,9 @@ void main() {
         final b = TypeDFA.singleton('b');
         final ab = a.union(b);
 
-        final pathA = TermPath([PathElement.constant('a')]);
-        final pathB = TermPath([PathElement.constant('b')]);
-        final pathC = TermPath([PathElement.constant('c')]);
+        final pathA = TermPath([ModedLabel.constant('a')]);
+        final pathB = TermPath([ModedLabel.constant('b')]);
+        final pathC = TermPath([ModedLabel.constant('c')]);
 
         expect(ab.acceptsPath(pathA), isTrue);
         expect(ab.acceptsPath(pathB), isTrue);
@@ -72,15 +73,15 @@ void main() {
     group('complement', () {
       test('complement of singleton rejects that constant', () {
         final a = TypeDFA.singleton('a');
-        final notA = a.complete().complement();
+        final notA = a.complete().flip();
 
-        final pathA = TermPath([PathElement.constant('a')]);
+        final pathA = TermPath([ModedLabel.constant('a')]);
         expect(notA.acceptsPath(pathA), isFalse);
       });
 
       test('double complement is identity', () {
         final a = TypeDFA.singleton('a');
-        final doubleComp = a.complete().complement().complement();
+        final doubleComp = a.complete().flip().flip();
 
         expect(doubleComp.isEquivalent(a.complete()), isTrue);
       });
@@ -223,8 +224,8 @@ void main() {
         final a = TypeDFA.singleton('a');
         final completed = a.complete();
 
-        final pathA = TermPath([PathElement.constant('a')]);
-        final pathB = TermPath([PathElement.constant('b')]);
+        final pathA = TermPath([ModedLabel.constant('a')]);
+        final pathB = TermPath([ModedLabel.constant('b')]);
 
         // Same acceptance behavior
         expect(completed.acceptsPath(pathA), equals(a.acceptsPath(pathA)));
@@ -275,9 +276,9 @@ void main() {
         // ¬(A ∪ B) = ¬A ∩ ¬B
         // Must use combined alphabet for all operations
         final combinedAlphabet = a.alphabet.union(b.alphabet);
-        final left = a.union(b).complete(combinedAlphabet).complement();
-        final right = a.complete(combinedAlphabet).complement()
-            .intersect(b.complete(combinedAlphabet).complement());
+        final left = a.union(b).complete(combinedAlphabet).flip();
+        final right = a.complete(combinedAlphabet).flip()
+            .intersect(b.complete(combinedAlphabet).flip());
 
         expect(left.isEquivalent(right), isTrue);
       });
@@ -289,9 +290,9 @@ void main() {
         // ¬(A ∩ B) = ¬A ∪ ¬B
         // Must use combined alphabet for all operations
         final combinedAlphabet = a.alphabet.union(b.alphabet);
-        final left = a.intersect(b).complete(combinedAlphabet).complement();
-        final right = a.complete(combinedAlphabet).complement()
-            .union(b.complete(combinedAlphabet).complement());
+        final left = a.intersect(b).complete(combinedAlphabet).flip();
+        final right = a.complete(combinedAlphabet).flip()
+            .union(b.complete(combinedAlphabet).flip());
 
         expect(left.isEquivalent(right), isTrue);
       });

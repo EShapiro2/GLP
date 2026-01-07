@@ -27,36 +27,36 @@ List<Clause> parseClauses(String source) {
 void main() {
   group('Mode Enum', () {
     test('complement inverts mode', () {
-      expect(Mode.output.complement, equals(Mode.input));
-      expect(Mode.input.complement, equals(Mode.output));
+      expect(Mode.produce.flip, equals(Mode.consume));
+      expect(Mode.consume.flip, equals(Mode.produce));
     });
 
     test('complement is involution - (M?)? = M', () {
-      expect(Mode.output.complement.complement, equals(Mode.output));
-      expect(Mode.input.complement.complement, equals(Mode.input));
+      expect(Mode.produce.flip.flip, equals(Mode.produce));
+      expect(Mode.consume.flip.flip, equals(Mode.consume));
     });
 
     test('toString returns mode name', () {
-      expect(Mode.output.toString(), equals('output'));
-      expect(Mode.input.toString(), equals('input'));
+      expect(Mode.produce.toString(), equals('output'));
+      expect(Mode.consume.toString(), equals('input'));
     });
   });
 
   group('combineMode - Involution Property', () {
     test('output ⊕ output = output (no inversions)', () {
-      expect(combineMode(Mode.output, Mode.output), equals(Mode.output));
+      expect(combineMode(Mode.produce, Mode.produce), equals(Mode.produce));
     });
 
     test('output ⊕ input = input (one inversion)', () {
-      expect(combineMode(Mode.output, Mode.input), equals(Mode.input));
+      expect(combineMode(Mode.produce, Mode.consume), equals(Mode.consume));
     });
 
     test('input ⊕ output = input (one inversion)', () {
-      expect(combineMode(Mode.input, Mode.output), equals(Mode.input));
+      expect(combineMode(Mode.consume, Mode.produce), equals(Mode.consume));
     });
 
     test('input ⊕ input = output (two inversions cancel)', () {
-      expect(combineMode(Mode.input, Mode.input), equals(Mode.output));
+      expect(combineMode(Mode.consume, Mode.consume), equals(Mode.produce));
     });
   });
 
@@ -262,15 +262,15 @@ void main() {
       // This demonstrates involution: (output ⊕ input) ⊕ input = output
 
       // Verify combineMode handles this:
-      final outerMode = Mode.output;
-      final firstEmbedded = Mode.input;
-      final secondEmbedded = Mode.input;
+      final outerMode = Mode.produce;
+      final firstEmbedded = Mode.consume;
+      final secondEmbedded = Mode.consume;
 
       final afterFirst = combineMode(outerMode, firstEmbedded);
-      expect(afterFirst, equals(Mode.input));
+      expect(afterFirst, equals(Mode.consume));
 
       final afterSecond = combineMode(afterFirst, secondEmbedded);
-      expect(afterSecond, equals(Mode.output));
+      expect(afterSecond, equals(Mode.produce));
     });
   });
 
@@ -354,8 +354,8 @@ void main() {
       final error = ModeError.callModeMismatch(
         predicate: 'baz',
         argIndex: 2,
-        expectedMode: Mode.input,
-        actualMode: Mode.output,
+        expectedMode: Mode.consume,
+        actualMode: Mode.produce,
         line: 30,
         column: 15,
       );

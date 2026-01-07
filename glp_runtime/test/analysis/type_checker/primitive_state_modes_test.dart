@@ -12,7 +12,7 @@ import 'test_helpers.dart';
 
 void main() {
   group('Primitive State Modes', () {
-    test('_ state has {Mode.output}', () {
+    test('_ state has {Mode.produce}', () {
       final source = 'OutputOnly ::= _.';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
@@ -21,11 +21,11 @@ void main() {
 
       expect(dfa.primitiveStateModes, isNotEmpty);
       final modes = dfa.getModesAt(dfa.startState);
-      expect(modes, contains(Mode.output));
-      expect(modes.contains(Mode.input), isFalse);
+      expect(modes, contains(Mode.produce));
+      expect(modes.contains(Mode.consume), isFalse);
     });
 
-    test('_? state has {Mode.input}', () {
+    test('_? state has {Mode.consume}', () {
       final source = 'InputOnly ::= _?.';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
@@ -34,11 +34,11 @@ void main() {
 
       expect(dfa.primitiveStateModes, isNotEmpty);
       final modes = dfa.getModesAt(dfa.startState);
-      expect(modes, contains(Mode.input));
-      expect(modes.contains(Mode.output), isFalse);
+      expect(modes, contains(Mode.consume));
+      expect(modes.contains(Mode.produce), isFalse);
     });
 
-    test('Every state has {Mode.output, Mode.input}', () {
+    test('Every state has {Mode.produce, Mode.consume}', () {
       final source = ''; // Every is predefined
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
@@ -47,8 +47,8 @@ void main() {
 
       expect(dfa.primitiveStateModes, isNotEmpty);
       final modes = dfa.getModesAt(dfa.startState);
-      expect(modes, contains(Mode.output));
-      expect(modes, contains(Mode.input));
+      expect(modes, contains(Mode.produce));
+      expect(modes, contains(Mode.consume));
     });
 
     test('Any inherits Every modes via ::<', () {
@@ -282,8 +282,8 @@ process_list([H? | T]) :- process_list(T?).
 
       // Intersection should have only output mode
       final modes = intersection.getModesAt(intersection.startState);
-      expect(modes, contains(Mode.output));
-      expect(modes.contains(Mode.input), isFalse);
+      expect(modes, contains(Mode.produce));
+      expect(modes.contains(Mode.consume), isFalse);
     });
 
     test('Every ∩ InputOnly = InputOnly', () {
@@ -298,8 +298,8 @@ process_list([H? | T]) :- process_list(T?).
 
       // Intersection should have only input mode
       final modes = intersection.getModesAt(intersection.startState);
-      expect(modes, contains(Mode.input));
-      expect(modes.contains(Mode.output), isFalse);
+      expect(modes, contains(Mode.consume));
+      expect(modes.contains(Mode.produce), isFalse);
     });
   });
 

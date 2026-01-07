@@ -66,7 +66,7 @@ void main() {
           [ModedConstant(Mode.consume, 1)]
         );
 
-        final complemented = original.complement;
+        final complemented = original.flip;
 
         expect(complemented.mode, equals(Mode.produce));
         expect((complemented as ModedCompound).args[0].mode, equals(Mode.produce));
@@ -83,7 +83,7 @@ void main() {
           ]
         );
 
-        final complemented = original.complement as ModedCompound;
+        final complemented = original.flip as ModedCompound;
 
         expect((complemented.args[0] as ModedVariable).isReader, isTrue);  // X -> X?
         expect((complemented.args[1] as ModedVariable).isReader, isFalse); // Y? -> Y
@@ -97,7 +97,7 @@ void main() {
           [ModedVariable('X', isReader: false)]
         );
 
-        final doubleComplement = original.complement.complement;
+        final doubleComplement = original.flip.flip;
 
         expect(doubleComplement.mode, equals(original.mode));
         expect(
