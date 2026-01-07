@@ -35,6 +35,37 @@ class DFAState {
   int get hashCode => name.hashCode;
 }
 
+/// A path through a term tree (sequence of moded labels)
+/// Used for path-based type checking operations
+class TermPath {
+  final List<ModedLabel> elements;
+
+  TermPath(this.elements);
+
+  factory TermPath.empty() => TermPath([]);
+
+  TermPath append(ModedLabel elem) => TermPath([...elements, elem]);
+
+  bool get isEmpty => elements.isEmpty;
+  int get length => elements.length;
+
+  @override
+  String toString() => elements.join(' · ');
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! TermPath) return false;
+    if (elements.length != other.elements.length) return false;
+    for (int i = 0; i < elements.length; i++) {
+      if (elements[i] != other.elements[i]) return false;
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hashAll(elements);
+}
+
 /// DFA for recognizing moded paths of a regular type
 class TypeDFA {
   final Set<DFAState> states;
@@ -200,6 +231,49 @@ class TypeDFA {
     }
 
     return true;
+  }
+
+  /// Alias for isModedEmpty (spec-compliant name)
+  bool get isEmpty => isModedEmpty;
+
+  /// Alias for modedIntersect (spec-compliant name)
+  TypeDFA intersect(TypeDFA other) => modedIntersect(other);
+
+  /// Check language equivalence
+  bool isEquivalent(TypeDFA other) => isSubsetOf(other) && other.isSubsetOf(this);
+
+  /// Accept a TermPath (compatibility wrapper)
+  bool acceptsPath(TermPath path) => acceptsStructuralPath(path.elements);
+
+  /// Get state after following a path
+  DFAState? stateAfterPath(TermPath path) {
+    var current = startState;
+
+    // If start state is primitive, return it
+    if (isPrimitiveState(current)) {
+      return current;
+    }
+
+    for (final label in path.elements) {
+      // Find transition by symbol only, ignoring mode
+      DFAState? next;
+      for (final entry in transitions.entries) {
+        final (fromState, transLabel) = entry.key;
+        if (fromState == current && transLabel.pathElement == label.pathElement) {
+          next = entry.value;
+          break;
+        }
+      }
+      if (next == null) return null;
+      current = next;
+
+      // If we reach a primitive state, return it
+      if (isPrimitiveState(current)) {
+        return current;
+      }
+    }
+
+    return current;
   }
 
   /// Check if L^m(this) ⊆ L^m(other)
