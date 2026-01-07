@@ -31,7 +31,7 @@ class TypeRef extends TypeExpr {
   static const builtins = {'Number', 'String'};
 
   /// System types (defined via ::= but not redefinable by user)
-  static const systemTypes = {'Any', 'List'};
+  static const systemTypes = {'List'};
 
   bool get isBuiltin => builtins.contains(name);
 
@@ -109,18 +109,16 @@ class DiffListAlt extends TypeExpr {
 }
 
 /// A type definition: TypeName ::= alt1 ; alt2 ; ... .
-/// Or subtype declaration: TypeName ::< alt1 ; alt2 ; ... .
 class TypeDef {
   final String name;
   final List<TypeExpr> alternatives;
-  final bool isExact;  // true for ::= (exact), false for ::< (subtype)
   final int line;
   final int column;
 
-  TypeDef(this.name, this.alternatives, this.line, this.column, {this.isExact = true});
+  TypeDef(this.name, this.alternatives, this.line, this.column);
 
   @override
-  String toString() => '$name ${isExact ? '::=' : '::<'} ${alternatives.join(' ; ')}.';
+  String toString() => '$name ::= ${alternatives.join(' ; ')}.';
 }
 
 /// A procedure declaration: procedure name(Type1, Type2, ...).

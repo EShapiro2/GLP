@@ -38,31 +38,30 @@ void main() {
       expect(modes.contains(Mode.produce), isFalse);
     });
 
-    test('Every state has {Mode.produce, Mode.consume}', () {
-      final source = ''; // Every is predefined
+    test('Output predefined type has {Mode.produce}', () {
+      final source = ''; // Output is predefined
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
 
-      final dfa = compiler.compile('Every');
+      final dfa = compiler.compile('Output');
 
       expect(dfa.primitiveStateModes, isNotEmpty);
       final modes = dfa.getModesAt(dfa.startState);
       expect(modes, contains(Mode.produce));
-      expect(modes, contains(Mode.consume));
+      expect(modes.contains(Mode.consume), isFalse);
     });
 
-    test('Any inherits Every modes via ::<', () {
-      final source = ''; // Any ::< Every is predefined
+    test('Input predefined type has {Mode.consume}', () {
+      final source = ''; // Input is predefined
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
 
-      final anyDFA = compiler.compile('Any');
-      final everyDFA = compiler.compile('Every');
+      final dfa = compiler.compile('Input');
 
-      // Any should have same modes as Every (inherited)
-      final anyModes = anyDFA.getModesAt(anyDFA.startState);
-      final everyModes = everyDFA.getModesAt(everyDFA.startState);
-      expect(anyModes, equals(everyModes));
+      expect(dfa.primitiveStateModes, isNotEmpty);
+      final modes = dfa.getModesAt(dfa.startState);
+      expect(modes, contains(Mode.consume));
+      expect(modes.contains(Mode.produce), isFalse);
     });
   });
 
@@ -91,24 +90,24 @@ echo(X?).
       expect(result.errors, isEmpty, reason: 'Reader X? at input position _? should be accepted');
     });
 
-    test('Any accepts both writer and reader (no coverage requirement)', () {
+    test('Output type with writer variable: accepted', () {
       final source = '''
-procedure identity(Any, Any).
+procedure copy_output(Output).
 
-identity(X, X?).
+copy_output(X).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Any ::< Every has no coverage requirement');
+      expect(result.errors, isEmpty, reason: 'Writer X at Output position should be accepted');
     });
 
-    test('Any with reader then writer (no coverage requirement)', () {
+    test('Input type with reader variable: accepted', () {
       final source = '''
-procedure swap_modes(Any, Any).
+procedure read_input(Input).
 
-swap_modes(X?, Y).
+read_input(X?).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Any ::< Every has no coverage requirement');
+      expect(result.errors, isEmpty, reason: 'Reader X? at Input position should be accepted');
     });
   });
 
@@ -151,113 +150,8 @@ process(box(X?)).
     });
   });
 
-  group('Mode Coverage for Every (::= semantics)', () {
-    // === POSITIVE CONTROLS ===
-
-    test('POSITIVE: Every with two clauses covering both modes', () {
-      final source = '''
-procedure full_coverage(Every).
-
-full_coverage(X).   % writer covers _
-full_coverage(X?).  % reader covers _?
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Two clauses cover both mode alternatives');
-    });
-
-    test('POSITIVE: Every with two clauses, two args, all combinations', () {
-      final source = '''
-procedure binary_coverage(Every, Every).
-
-binary_coverage(X, Y?).   % writer/reader
-binary_coverage(X?, Y).   % reader/writer
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Two clauses cover all mode combinations');
-    });
-
-    test('POSITIVE: Any with single clause (no coverage required)', () {
-      final source = '''
-procedure any_single(Any).
-
-any_single(X).
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Any ::< Every has no coverage requirement');
-    });
-
-    // === NEGATIVE CONTROLS ===
-
-    test('NEGATIVE: Every with single clause - incomplete coverage', () {
-      final source = '''
-procedure incomplete(Every).
-
-incomplete(X).
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isNotEmpty, reason: 'Every requires both _ and _? coverage');
-    });
-
-    test('NEGATIVE: Every with two clauses but same mode - still incomplete', () {
-      final source = '''
-procedure same_mode(Every).
-
-same_mode(X).
-same_mode(Y).
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isNotEmpty, reason: 'Both clauses are writers, missing reader');
-    });
-
-    test('NEGATIVE: Every binary with single clause - incomplete', () {
-      final source = '''
-procedure binary_incomplete(Every, Every).
-
-binary_incomplete(X, X?).
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isNotEmpty, reason: 'Arg1 missing reader, Arg2 missing writer');
-    });
-
-    test('NEGATIVE: known guard does NOT satisfy coverage', () {
-      final source = '''
-procedure known_not_ground(Every).
-
-known_not_ground(X?) :- known(X?) | true.
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isNotEmpty, reason: 'known does not imply ground');
-    });
-
-    test('NEGATIVE: Nested Every with incomplete coverage', () {
-      final source = '''
-EveryList ::= [] ; [Every | EveryList].
-
-procedure process(EveryList).
-
-process([]).
-process([H? | T]) :- process(T?).
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isNotEmpty, reason: 'Head position has Every, needs both modes');
-    });
-
-    // === POSITIVE: Nested Any (no coverage required) ===
-
-    test('POSITIVE: Nested Any with single clause', () {
-      final source = '''
-procedure process_list(List).
-
-process_list([]).
-process_list([H? | T]) :- process_list(T?).
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'List uses Any at head, no coverage requirement');
-    });
-  });
-
   group('Mode Intersection', () {
-    test('OutputOnly ∩ InputOnly = ∅ (empty)', () {
+    test('OutputOnly ∩ InputOnly = empty (empty)', () {
       final source = 'OutputOnly ::= _. InputOnly ::= _?.';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
@@ -270,36 +164,36 @@ process_list([H? | T]) :- process_list(T?).
       expect(intersection.isEmpty, isTrue, reason: 'Output-only ∩ Input-only = empty set');
     });
 
-    test('Every ∩ OutputOnly = OutputOnly', () {
+    test('Output ∩ OutputOnly is not empty', () {
       final source = 'OutputOnly ::= _.';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
 
-      final every = compiler.compile('Every');
-      final out = compiler.compile('OutputOnly');
+      final output = compiler.compile('Output');
+      final outOnly = compiler.compile('OutputOnly');
 
-      final intersection = every.intersect(out);
+      final intersection = output.intersect(outOnly);
 
-      // Intersection should have only output mode
+      // Both are output-only, so intersection should be non-empty
+      expect(intersection.isEmpty, isFalse);
       final modes = intersection.getModesAt(intersection.startState);
       expect(modes, contains(Mode.produce));
-      expect(modes.contains(Mode.consume), isFalse);
     });
 
-    test('Every ∩ InputOnly = InputOnly', () {
+    test('Input ∩ InputOnly is not empty', () {
       final source = 'InputOnly ::= _?.';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
 
-      final every = compiler.compile('Every');
-      final inp = compiler.compile('InputOnly');
+      final input = compiler.compile('Input');
+      final inpOnly = compiler.compile('InputOnly');
 
-      final intersection = every.intersect(inp);
+      final intersection = input.intersect(inpOnly);
 
-      // Intersection should have only input mode
+      // Both are input-only, so intersection should be non-empty
+      expect(intersection.isEmpty, isFalse);
       final modes = intersection.getModesAt(intersection.startState);
       expect(modes, contains(Mode.consume));
-      expect(modes.contains(Mode.produce), isFalse);
     });
   });
 

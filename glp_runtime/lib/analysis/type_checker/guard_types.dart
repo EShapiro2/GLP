@@ -48,28 +48,28 @@ class GuardTypeRegistry {
       impliesGround: true,
     ),
     'atom': GuardSignature(
-      argTypeNames: ['Any'],
+      argTypeNames: ['Output'],
       impliesGround: true,
     ),
     'ground': GuardSignature(
-      argTypeNames: ['Any'],
+      argTypeNames: ['Output'],
       impliesGround: true,
       recursivelyGround: true,
     ),
     'known': GuardSignature(
-      argTypeNames: ['Any'],
+      argTypeNames: ['Output'],
       impliesGround: false,  // known does NOT imply ground
     ),
     'unknown': GuardSignature(
-      argTypeNames: ['Any'],
+      argTypeNames: ['Output'],
       impliesGround: false,
     ),
     'compound': GuardSignature(
-      argTypeNames: ['Any'],
+      argTypeNames: ['Output'],
       impliesGround: false,
     ),
     'is_list': GuardSignature(
-      argTypeNames: ['Any'],
+      argTypeNames: ['Output'],
       impliesGround: false,
     ),
 
@@ -101,7 +101,7 @@ class GuardTypeRegistry {
 
     // Ground equality - implies ground
     '=?=': GuardSignature(
-      argTypeNames: ['Any', 'Any'],
+      argTypeNames: ['Output', 'Output'],
       impliesGround: true,
     ),
   };

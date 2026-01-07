@@ -3,6 +3,11 @@
 // Predefined type and procedure definitions for GLP.
 // These are prepended to every module before parsing.
 // Redefinition of predefined types/procedures is an error.
+//
+// Note: The paper explicitly states that "Any ::= _ ; _?" is ILLEGAL
+// because it violates BNF determinism (same position, different modes).
+// Therefore we do NOT define a universal type. Users should use
+// _ (output primitive) and _? (input primitive) directly in type definitions.
 
 /// The prelude source containing all predefined definitions
 const String typePrelude = r'''
@@ -10,27 +15,29 @@ const String typePrelude = r'''
 % Predefined Types
 % =============================================================================
 
-% Universal types
-Every ::= _ ; _?.
-Any ::< Every.
+% Primitive output type (program produces value)
+Output ::= _.
 
-% Output and Input types
-Output.
-Input ::= Output?.
+% Primitive input type (program consumes value)
+Input ::= _?.
 
-% Collections
-List ::= [Any | List] ; [].
-Stream ::< List.
+% List with output-mode elements
+List ::= [] ; [_ | List].
+
+% Stream is just List (no ::< subtype syntax per paper)
+Stream ::= [] ; [_ | Stream].
+
+% Difference list: content list with input-mode hole
 DiffList ::= List \ List?.
 
-% Communication
+% Channel for bidirectional communication
 Channel ::= ch(Stream?, Stream).
 
 % =============================================================================
 % Predefined Procedures (usable as defined guards)
 % =============================================================================
 
-% Ground guard
+% Ground guard - argument must be recursively ground
 procedure ground(Input).
 
 % Difference list operations
@@ -42,8 +49,8 @@ dl_to_list(L\[], L?).
 
 % Channel operations
 procedure new_channel(Channel, Channel).
-procedure send(Any, Channel?, Channel).
-procedure receive(Any, Channel?, Channel).
+procedure send(Output, Channel?, Channel).
+procedure receive(Input, Channel?, Channel).
 
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
@@ -54,13 +61,11 @@ receive(X?, ch([X|In], Out?), ch(In?, Out)).
 const Set<String> predefinedTypeNames = {
   'Number',   // Primitive builtin
   'String',   // Primitive builtin
-  'Every',    // Universal type
-  'Any',      // Universal type
-  'Output',   // All writers type
-  'Input',    // All readers type
+  'Output',   // Primitive output type
+  'Input',    // Primitive input type
   'List',     // Collection type
   'Stream',   // Collection type
-  'DiffList', // Collection type
+  'DiffList', // Difference list type
   'Channel',  // Communication type
 };
 

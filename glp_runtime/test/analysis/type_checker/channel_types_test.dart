@@ -15,7 +15,7 @@ void main() {
       test('POSITIVE: create_channel with complementary modes', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::< MyList.
+          MyStream ::= [] ; [_ | MyStream].
           MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
 
           procedure create_channel(MyChannel, MyChannel).
@@ -28,10 +28,10 @@ void main() {
       test('POSITIVE: channel sender uses correct modes', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::< MyList.
+          MyStream ::= [] ; [_ | MyStream].
           MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
 
-          procedure my_send(MyChannel?, Any?).
+          procedure my_send(MyChannel?, Output?).
           my_send(ch(_, Out), Msg) :- Out = [Msg? | Rest?], my_send(ch(_, Rest?), done).
         ''');
         // This is a simplified sender - real one would be more complex
@@ -47,7 +47,7 @@ void main() {
       test('POSITIVE: bounded buffer consumes slots', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::< MyList.
+          MyStream ::= [] ; [_ | MyStream].
           MyInvStream ::= [] ; [_? | MyInvStream].
 
           procedure bounded_buffer(MyStream?, MyInvStream?, MyStream).
@@ -63,7 +63,7 @@ void main() {
       test('NEGATIVE: bounded buffer with wrong slot mode fails', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::< MyList.
+          MyStream ::= [] ; [_ | MyStream].
           MyInvStream ::= [] ; [_? | MyInvStream].
 
           procedure bounded_buffer(MyStream?, MyInvStream?, MyStream).
@@ -85,7 +85,7 @@ void main() {
       test('POSITIVE: handler covers both channel orientations', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::< MyList.
+          MyStream ::= [] ; [_ | MyStream].
           MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
 
           procedure handle_channel(MyChannel?).
@@ -99,7 +99,7 @@ void main() {
       test('NEGATIVE: handler missing one channel orientation fails', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::< MyList.
+          MyStream ::= [] ; [_ | MyStream].
           MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
 
           procedure handle_channel(MyChannel?).

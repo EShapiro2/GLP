@@ -16,7 +16,7 @@ void main() {
 
       test('number(X?) constrains X to Number', () {
         final result = checkTypes('''
-          procedure process(Any?, Number).
+          procedure process(Output?, Number).
           process(X, Y) :- number(X?) | Y := X? * 2.
         ''');
         expect(result.errors, isEmpty,
@@ -25,7 +25,7 @@ void main() {
 
       test('string(X?) constrains X to String', () {
         final result = checkTypes('''
-          procedure process(Any?, String).
+          procedure process(Output?, String).
           process(X, Y?) :- string(X?) | Y = X?.
         ''');
         expect(result.errors, isEmpty);
@@ -33,7 +33,7 @@ void main() {
 
       test('arithmetic guards constrain to Number', () {
         final result = checkTypes('''
-          procedure max(Any?, Any?, Number).
+          procedure max(Output?, Output?, Number).
           max(X, Y, X?) :- X? >= Y? | true.
           max(X, Y, Y?) :- X? < Y? | true.
         ''');
@@ -73,7 +73,7 @@ void main() {
 
       test('ground(X?) allows multiple readers', () {
         final result = checkTypes('''
-          procedure broadcast(Any?, Any, Any).
+          procedure broadcast(Output?, Output, Output).
           broadcast(X, Y?, Z?) :- ground(X?) | Y = X?, Z = X?.
         ''');
         expect(result.errors, isEmpty,
@@ -82,30 +82,18 @@ void main() {
 
       test('number guard implies ground for multiple use', () {
         final result = checkTypes('''
-          procedure compute(Any?, Number, Number).
+          procedure compute(Output?, Number, Number).
           compute(X, Y?, Z?) :- number(X?) | Y := X? + 1, Z := X? * 2.
         ''');
         expect(result.errors, isEmpty,
             reason: 'number(X?) implies X is ground');
       });
 
-      test('known(X?) does NOT imply ground', () {
-        // known only checks top-level binding, not recursive groundness
-        final result = checkTypes('''
-          procedure bad(Every?, Every).
-          bad(X, Y?) :- known(X?) | Y = X?.
-        ''');
-        // This should still require mode coverage for Every
-        // because known does not imply ground
-        expect(result.errors, isNotEmpty,
-            reason: 'known does not satisfy mode coverage');
-      });
-
       test('POSITIVE: ground on type without mode complementations', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
 
-          procedure check(MyList?, Any).
+          procedure check(MyList?, Output).
 
           check(X, Y) :- ground(X?) | Y = ok.
         ''');
@@ -118,7 +106,7 @@ void main() {
           MyList ::= [] ; [_ | MyList].
           MyDiffList ::= MyList \\ MyList?.
 
-          procedure bad(MyDiffList?, Any).
+          procedure bad(MyDiffList?, Output).
 
           bad(X, Y?) :- ground(X?) | Y = ok.
         ''');
@@ -130,7 +118,7 @@ void main() {
         final result = checkTypes('''
           Nat ::= 0 ; s(Nat).
 
-          procedure check(Nat?, Any).
+          procedure check(Nat?, Output).
 
           check(X, Y) :- ground(X?) | Y = ok.
         ''');
@@ -140,10 +128,10 @@ void main() {
 
       test('NEGATIVE: ground on Channel (has mode complementations)', () {
         final result = checkTypes('''
-          MyStream ::< Any.
+          MyStream ::= [] ; [_ | MyStream].
           MyChannel ::= ch(MyStream?, MyStream).
 
-          procedure bad(MyChannel?, Any).
+          procedure bad(MyChannel?, Output).
 
           bad(X, Y?) :- ground(X?) | Y = ok.
         ''');
@@ -230,12 +218,12 @@ void main() {
 
       test('defined guard constrains type', () {
         final result = checkTypes('''
-          Pair ::= pair(Any, Any).
+          Pair ::= pair(Output, Output).
 
           procedure is_pair(Pair?).
           is_pair(pair(_, _)).
 
-          procedure first(Any?, Any).
+          procedure first(Output?, Output).
           first(X, A?) :- is_pair(X?) | X = pair(A, _).
         ''');
         expect(result.errors, isEmpty,

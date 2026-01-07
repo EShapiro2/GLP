@@ -27,7 +27,6 @@ enum TypeTokenType {
   number,        // 0, 42, 3.14
   string,        // "hello", 'world'
   colonColonEq,  // ::=
-  colonColonLt,  // ::<
   semicolon,     // ;
   dot,           // .
   lparen,        // (
@@ -140,8 +139,6 @@ class TypeLexer {
         if (_match(':')) {
           if (_match('=')) {
             return TypeToken(TypeTokenType.colonColonEq, '::=', startLine, startColumn);
-          } else if (_match('<')) {
-            return TypeToken(TypeTokenType.colonColonLt, '::<', startLine, startColumn);
           }
         }
         // Skip unknown characters (like : from :- in clauses)
@@ -256,10 +253,9 @@ class TypeParser {
     final procedures = <String, ProcDecl>{};
 
     while (!_isAtEnd()) {
-      // Check for type definition: TypeName ::= ... or TypeName ::< ...
+      // Check for type definition: TypeName ::= ...
       final nextType = _peekNext()?.type;
-      if (_check(TypeTokenType.typeName) &&
-          (nextType == TypeTokenType.colonColonEq || nextType == TypeTokenType.colonColonLt)) {
+      if (_check(TypeTokenType.typeName) && nextType == TypeTokenType.colonColonEq) {
         final typeDef = _parseTypeDef();
         types[typeDef.name] = typeDef;
       }
@@ -283,25 +279,17 @@ class TypeParser {
     return tokens[_current + 1];
   }
   
-  /// Parse: TypeName ::= type_expr . OR TypeName ::< type_expr .
+  /// Parse: TypeName ::= type_expr .
   TypeDef _parseTypeDef() {
     final nameToken = _consume(TypeTokenType.typeName, 'Expected type name');
 
-    // Check for ::= or ::<
-    bool isExact;
-    if (_match(TypeTokenType.colonColonEq)) {
-      isExact = true;
-    } else if (_match(TypeTokenType.colonColonLt)) {
-      isExact = false;
-    } else {
-      throw TypeParseError('Expected "::=" or "::<" after type name', _peek().line, _peek().column);
-    }
+    _consume(TypeTokenType.colonColonEq, 'Expected "::=" after type name');
 
     final alternatives = _parseTypeExpr();
 
     _consume(TypeTokenType.dot, 'Expected "." after type definition');
 
-    return TypeDef(nameToken.lexeme, alternatives, nameToken.line, nameToken.column, isExact: isExact);
+    return TypeDef(nameToken.lexeme, alternatives, nameToken.line, nameToken.column);
   }
   
   /// Parse: type_alt (; type_alt)*
