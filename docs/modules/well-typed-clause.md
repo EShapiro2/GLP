@@ -96,24 +96,96 @@ Paths are consistent with type `merge(Stream?, Stream?, Stream)`:
 
 All conditions satisfied → clause is well-typed.
 
+### Example: INVALID — Condition 1 Violation (Head not well-typed)
+
+```
+Stream ::= [] ; [_|Stream].
+procedure merge(Stream?, Stream?, Stream).
+
+% Head has integer where Stream? is expected
+merge(42, Ys, Zs).
+```
+
+**Problem:** Argument 1 has type `Stream?`, but the head has integer `42`. No type path in `Stream?` reaches an integer constant.
+
+**Error:** `HeadNotWellTypedError("No consistent type path for term path ending in 42")`
+
+### Example: INVALID — Condition 2 Violation (Body atom not well-typed)
+
+```
+Stream ::= [] ; [_|Stream].
+procedure merge(Stream?, Stream?, Stream).
+
+% Body atom passes integer where Stream? expected
+merge(Xs, Ys, Zs) :- merge(42, Ys?, Zs?).
+```
+
+**Problem:** The body atom `merge(42, Ys?, Zs?)` has integer `42` at argument 1, which expects `Stream?`.
+
+**Error:** `BodyAtomNotWellTypedError("Body atom merge/3: no consistent type path for 42")`
+
+### Example: INVALID — Condition 3 Violation (Non-complementary types)
+
+```
+Stream ::= [] ; [_|Stream].
+List ::= [] ; [_|List].
+procedure foo(Stream?, List).
+
+% X? has type _? (from Stream?), X has type _ (from List)
+% These are complementary, OK.
+
+% But consider:
+procedure bar(Stream?, List?).
+bar([X|Xs], [X?|Ys?]).  % X and X? both readers - INVALID
+```
+
+**Problem:** In `bar`, at argument 1 position 1, `X` is a writer getting type `_`. At argument 2 position 1, `X?` is a reader getting type `_?`. But wait—in the moded head, the variables are flipped: writer X becomes reader X?, and reader X? becomes writer X. So both positions try to assign X as output—this is an SRSW violation caught earlier, not a type violation.
+
+Better example:
+
+```
+Stream ::= [] ; [_|Stream].
+NatStream ::= [] ; [Integer|NatStream].
+procedure convert(Stream?, NatStream).
+
+convert([X|Xs], [X?|Ys]) :- convert(Xs?, Ys?).
+```
+
+**Problem:** `X` at argument 1 gets type `_` (any consumed element). `X?` at argument 2 gets type `Integer` (produced). But `_` and `Integer` are not complements—`_` would need to complement to `_?`, not `Integer`.
+
+**Error:** `NonComplementaryVariablesError("X has type _, X? has type Integer—not complements")`
+
 ## Interface
 
 ### `ClauseCheckResult checkClause(Clause c, TypeEnv d)`
 
 Checks if clause C is well-typed by type environment D.
 
-**Returns:**
-- `isWellTyped`: true if all three conditions hold
-- `variableTypes`: map from variable name to assigned type
-- `errors`: list of specific violations found
+**Preconditions:**
+- `c` is a valid GLP clause
+- `d` contains procedure declarations for all predicates used in `c`
+
+**Postconditions:** Returns `ClauseCheckResult` where:
+- `isWellTyped` is true iff all three conditions of Definition 4.8 hold
+- `variableTypes` maps each variable name to its assigned type
+- `errors` lists all violations found (empty if well-typed)
+
+**Errors:**
+- Throws `UndeclaredProcedureError` if head or any body atom's procedure is not declared in `d`
 
 ### `bool accepts(Clause c, TypePath inputPath, TypeEnv d)`
 
-Returns true if clause C accepts input path x.
+Returns true if clause C accepts input path x (per Definition 4.8).
 
-**Implementation:**
-1. Construct moded head H' from C
-2. Check if any path in paths(H') is consistent with inputPath
+**Preconditions:**
+- `c` is a valid GLP clause
+- `inputPath` is a valid type path with root mode ↓
+- `d` contains the procedure declaration for `c`'s head predicate
+
+**Postconditions:** Returns true iff the moded head H' has a path consistent with `inputPath`.
+
+**Errors:**
+- Throws `UndeclaredProcedureError` if procedure is not declared in `d`
 
 ### Algorithm
 
@@ -175,3 +247,4 @@ accepts(c, inputPath, d):
 | 0.1 | 2025-01-07 | Initial draft from paper |
 | 0.2 | 2025-01-07 | Fix definition numbers |
 | 0.3 | 2025-01-07 | Add Error Conditions, remove spurious ref |
+| 0.4 | 2025-01-07 | Add negative examples for all three conditions, complete function specs |

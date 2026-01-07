@@ -3,7 +3,7 @@
 **Version**: 0.1  
 **Date**: 2025-01-07  
 **Status**: DRAFT  
-**Paper References**: Section 4.1 (lines 7-35), lines 213-226
+**Paper References**: Section 4.1 (lines 7-35), lines 30-35 (DFA correspondence), lines 213-228 (type paths)
 
 ## Purpose
 
@@ -45,6 +45,34 @@ A defined GLP type D defines a regular set of moded paths, denoted **paths(D)**:
 - Every intermediate symbol is a type name
 - The last symbol is a primitive type (`_`, `_?`, `Integer`, `String`, or constant)
 - Edges are labelled with `(argIndex, mode)`
+
+#### Formal Definition
+
+A **type path** is a sequence:
+```
+(0,m₀) → T₀ --(i₁,m₁)--> T₁ --(i₂,m₂)--> ... --(iₙ,mₙ)--> Tₙ
+```
+
+Where:
+- Each `Tₖ` is a type (defined type name or primitive type)
+- Each `(iₖ,mₖ)` is an edge label with argument index `iₖ` and mode `mₖ ∈ {↓,↑}`
+- `Tₙ` is a **primitive type**: `_`, `_?`, `Integer`, `String`, or a constant
+
+#### Path Classification
+
+- **inputPaths(D)** = {p ∈ paths(D) | p starts with mode ↓}
+- **outputPaths(D)** = {p ∈ paths(D) | p starts with mode ↑}
+
+### Vocabulary Difference (Paper lines 214-226)
+
+Type paths and term paths have different vocabularies at their leaves:
+
+| Primitive Term | Primitive Type |
+|----------------|----------------|
+| `1` (integer) | `Integer`, or `1` |
+| `c` (string) | `String`, or `c` |
+| `X?` (reader) | `_?` (consumed) |
+| `X` (writer) | `_` (produced) |
 
 ### Notation
 
@@ -290,6 +318,24 @@ applyModeComplement(dfa):
 
 ## Examples
 
+### Example: paths(Stream)
+
+From the produce perspective (↑):
+```
+Path 1: (0,↑) → Stream --(1,↑)--> []
+Path 2: (0,↑) → Stream --(1,↑)--> "."/2 --(1,↑)--> _
+Path 3: (0,↑) → Stream --(1,↑)--> "."/2 --(2,↑)--> Stream → ...
+```
+
+### Example: paths(Stream?) — Complemented
+
+From the consume perspective (↓):
+```
+Path 1: (0,↓) → Stream? --(1,↓)--> []
+Path 2: (0,↓) → Stream? --(1,↓)--> "."/2 --(1,↓)--> _?
+Path 3: (0,↓) → Stream? --(1,↓)--> "."/2 --(2,↓)--> Stream? → ...
+```
+
 ### Example: Stream Type Compilation
 
 ```
@@ -348,6 +394,21 @@ Transitions:
   HollowStream --[[|](2,2), ↑]--> HollowStream  // No ? on recursive ref
 ```
 
+### Example: INVALID — Non-deterministic Type
+
+```
+BadTree ::= leaf(Integer) ; leaf(String).   % ILLEGAL
+```
+
+**Problem:** Both alternatives start with `leaf/1`. The DFA would need two transitions from `BadTree` state with label `leaf(1,1)` — this violates determinism.
+
+**Error:** Compilation throws `NonDeterministicTypeError`.
+
+**Fix:** Use distinct constructors:
+```
+Tree ::= int_leaf(Integer) ; str_leaf(String).   % LEGAL
+```
+
 ## Error Conditions
 
 | Condition | Exception |
@@ -369,3 +430,4 @@ The paper requires deterministic types (line 30-35). Union (`;`) in type definit
 | 0.1 | 2025-01-07 | Initial draft — direct DFA compilation, no NFA |
 | 0.2 | 2025-01-07 | Remove implementation notes, clarify primitive types |
 | 0.3 | 2025-01-07 | Add notation clarification |
+| 0.4 | 2025-01-07 | Merge type-paths.md content; add paths(D) formal definition, vocabulary difference, path classification, negative example |

@@ -164,6 +164,8 @@ Constructs a consumed moded term (all annotations ↓) from a GLP term.
 - The root mode is `consume`
 - Every non-variable subterm has mode `consume`
 
+**Errors:** None. Always succeeds for valid terms.
+
 #### `ModedTerm producedTerm(Term t)`
 Constructs a produced moded term (all annotations ↑) from a GLP term.
 
@@ -172,6 +174,8 @@ Constructs a produced moded term (all annotations ↑) from a GLP term.
 **Postconditions:** Returns a ModedTerm where:
 - The root mode is `produce`
 - Every non-variable subterm has mode `produce`
+
+**Errors:** None. Always succeeds for valid terms.
 
 #### `ModedTerm ioModedTerm(Term t, TypeDFA type)`
 Constructs an I/O moded term from a GLP term guided by a type.
@@ -191,11 +195,29 @@ Constructs an I/O moded term from a GLP term guided by a type.
 #### `bool isConsumed(ModedTerm t)`
 Returns true if all mode annotations in `t` are `consume`.
 
+**Preconditions:** `t` is a valid ModedTerm.
+
+**Postconditions:** Returns true iff every mode annotation in `t` is `consume`.
+
+**Errors:** None. Always succeeds.
+
 #### `bool isProduced(ModedTerm t)`
 Returns true if all mode annotations in `t` are `produce`.
 
+**Preconditions:** `t` is a valid ModedTerm.
+
+**Postconditions:** Returns true iff every mode annotation in `t` is `produce`.
+
+**Errors:** None. Always succeeds.
+
 #### `bool isIO(ModedTerm t)`
 Returns true if `t` is I/O moded: root is ↓ with at most one ↓→↑ inversion on any path and no ↑→↓ inversions.
+
+**Preconditions:** `t` is a valid ModedTerm.
+
+**Postconditions:** Returns true iff `t` satisfies the I/O moded term definition.
+
+**Errors:** None. Always succeeds.
 
 ## Algorithms
 
@@ -367,6 +389,38 @@ Complement:
 
 Note: modes flipped (↓↔↑), variables flipped (Xs?↔Xs, Ys?↔Ys, Zs↔Zs?).
 
+### Example: INVALID — Multiple Inversions on Path
+
+Attempting to construct an I/O moded term where a path has more than one inversion:
+
+```
+% Hypothetical type where list element is consumed but element's subfield is produced
+BadType ::= bad([inner]).
+inner ::= wrap(_?).  % _? inside a produce position would cause ↓→↑→↓
+
+% Attempting: ↓bad(↑[↓wrap(↑X)])  -- TWO inversions on the path to X
+```
+
+**Error:** `InvalidIOModeError("Multiple inversions on path")`
+
+I/O moded terms allow at most ONE inversion (from ↓ to ↑) on any path.
+
+### Example: INVALID — Inversion from Produce back to Consume
+
+Attempting to construct an I/O moded term with ↑→↓ inversion:
+
+```
+% Hypothetical type structure
+BadStructure ::= outer(Inner?).  % Inner? is consumed
+Inner ::= inner(_).              % But _ is produced
+
+% This would require: ↑outer(↓inner(↑X))  -- inversion from ↑ to ↓ then back to ↑
+```
+
+**Error:** `InvalidIOModeError("Inversion from produce back to consume")`
+
+Once mode has inverted to ↑ (produce), it cannot revert to ↓ (consume).
+
 ## Error Conditions
 
 | Condition | Exception |
@@ -379,3 +433,4 @@ Note: modes flipped (↓↔↑), variables flipped (Xs?↔Xs, Ys?↔Ys, Zs↔Zs?
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft |
+| 0.2 | 2025-01-07 | Add negative examples (invalid I/O terms), complete function specs with Errors sections |

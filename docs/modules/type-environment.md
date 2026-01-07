@@ -107,6 +107,52 @@ Adds a type definition. Throws `RedefinitionError` if already defined or is pred
 
 Adds a procedure declaration. Throws `RedefinitionError` if already declared.
 
+## Algorithms
+
+### Algorithm: Type Lookup
+
+```
+getType(name):
+  if name in predefinedTypes:
+    return null  // Predefined types don't have definitions
+  return types[name]  // Returns null if not found
+```
+
+### Algorithm: Procedure Lookup
+
+```
+getProcedure(name, arity):
+  key = "$name/$arity"
+  return procedures[key]  // Returns null if not found
+```
+
+### Algorithm: Add Type Definition
+
+```
+addType(def):
+  if def.name in predefinedTypes:
+    throw PredefinedTypeError("Cannot redefine predefined type: " + def.name)
+  if def.name in types:
+    throw RedefinitionError("Type already defined: " + def.name)
+  types[def.name] = def
+```
+
+### Algorithm: Add Procedure Declaration
+
+```
+addProcedure(decl):
+  key = "$decl.name/$decl.arity"
+  if key in procedures:
+    throw RedefinitionError("Procedure already declared: " + key)
+
+  // Validate all referenced types exist
+  for argType in decl.argTypes:
+    if not isTypeDefined(argType.baseName):
+      throw UndefinedTypeError("Undefined type: " + argType.baseName)
+
+  procedures[key] = decl
+```
+
 ## Construction
 
 A `TypeEnvironment` is constructed by parsing type declarations from source:
@@ -135,6 +181,46 @@ TypeEnvironment(
 )
 ```
 
+## Examples
+
+### Example: Valid Environment
+
+```
+Stream ::= [] ; [_|Stream].
+NatStream ::= [] ; [Integer|NatStream].
+procedure merge(Stream?, Stream?, Stream).
+procedure sum(NatStream?, Integer).
+```
+
+### Example: INVALID — Redefine Predefined Type
+
+```
+Integer ::= 0 ; succ(Integer).
+```
+
+**Error:** `PredefinedTypeError("Cannot redefine predefined type: Integer")`
+
+Predefined types (`Integer`, `String`, `_`, `_?`) cannot be redefined.
+
+### Example: INVALID — Duplicate Type Definition
+
+```
+Stream ::= [] ; [_|Stream].
+Stream ::= nil ; cons(_, Stream).  % Duplicate!
+```
+
+**Error:** `RedefinitionError("Type already defined: Stream")`
+
+### Example: INVALID — Undefined Type in Procedure
+
+```
+procedure foo(UndefinedType?, Integer).
+```
+
+**Error:** `UndefinedTypeError("Undefined type: UndefinedType")`
+
+All types referenced in procedure declarations must be defined.
+
 ## Error Conditions
 
 | Condition | Exception |
@@ -150,3 +236,4 @@ TypeEnvironment(
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft |
 | 0.2 | 2025-01-07 | Add Dependencies section |
+| 0.3 | 2025-01-07 | Add algorithms, positive and negative examples |

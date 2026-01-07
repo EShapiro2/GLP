@@ -83,16 +83,54 @@ Input paths for `merge` (arguments 1 and 2, both `Stream?`):
 
 All input paths are accepted → program is well-typed.
 
+### Example: INVALID — Covariance Failure
+
+```
+Stream ::= [] ; [_|Stream].
+procedure merge(Stream?, Stream?, Stream).
+
+% Clause produces integer at output position expecting Stream
+merge([], Ys, 42).
+```
+
+**Problem:** Argument 3 has type `Stream`, but the head produces integer `42`. The clause is not well-typed (violates Condition 1 of Definition 4.8).
+
+**Error:** `ClauseNotWellTypedError("merge/3 clause 1: output argument 3 not well-typed")`
+
+### Example: INVALID — Contravariance Failure
+
+```
+Stream ::= [] ; [_|Stream].
+procedure merge(Stream?, Stream?, Stream).
+
+% Only handles cons case, not nil
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+```
+
+**Problem:** Input type `Stream?` includes paths ending in `[]`, but no clause accepts the nil case. The input path `(0,↓) → merge --(1,↓)--> []` is not accepted by any clause.
+
+**Error:** `UncoveredInputPathError("Argument 1: uncovered input path ending in []")`
+
+**Fix:** Add base case `merge([], Ys, Ys?).`
+
 ## Interface
 
 ### `ProgramCheckResult checkProgram(List<Clause> cs, TypeEnv d)`
 
-Checks if program (Cs, D) is well-typed.
+Checks if program (Cs, D) is well-typed per Definition 4.10.
 
-**Returns:**
-- `isWellTyped`: true if both conditions hold
-- `clauseResults`: individual clause check results
-- `uncoveredPaths`: input paths not accepted by any clause (if any)
+**Preconditions:**
+- `cs` is a non-empty list of valid GLP clauses
+- `d` contains type definitions and procedure declarations for all types and predicates used in `cs`
+
+**Postconditions:** Returns `ProgramCheckResult` where:
+- `isWellTyped` is true iff both covariance and contravariance conditions hold
+- `clauseResults` contains individual check results for each clause
+- `uncoveredPaths` lists witness paths for any contravariance failures (empty if all covered)
+
+**Errors:**
+- Throws `UndeclaredProcedureError` if any clause uses an undeclared procedure
+- Throws `UndefinedTypeError` if any procedure declaration references an undefined type
 
 ### Algorithm
 
@@ -161,3 +199,4 @@ Required DFA operations (from `type-dfa` module):
 | 0.2 | 2025-01-07 | Replace path enumeration with DFA operations |
 | 0.3 | 2025-01-07 | Fix definition numbers |
 | 0.4 | 2025-01-07 | Add dependencies, Error Conditions |
+| 0.5 | 2025-01-07 | Add negative examples (covariance/contravariance failures), complete function spec |

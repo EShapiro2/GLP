@@ -125,6 +125,17 @@ flipVariables(term):
       return ModedVariable(name, !isReader)  // Flip: X ↔ X?
 ```
 
+### Example: INVALID — Undeclared Procedure
+
+```
+% No procedure declaration for 'unknown'
+unknown(X, Y).
+```
+
+**Error:** `UndeclaredProcedureError("unknown/2")`
+
+Moded head construction requires a procedure declaration to determine argument modes.
+
 ## Relationship to Well-Typing
 
 The moded head H' is used in Definition 4.8 (Well-typed Clause):
@@ -145,3 +156,4 @@ The moded head H' is used in Definition 4.8 (Well-typed Clause):
 | 0.1 | 2025-01-07 | Initial draft from paper |
 | 0.2 | 2025-01-07 | Fix definition numbers |
 | 0.3 | 2025-01-07 | Add Error Conditions |
+| 0.4 | 2025-01-07 | Add negative example (undeclared procedure) |
