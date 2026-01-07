@@ -5,6 +5,10 @@
 **Status**: DRAFT
 **Paper References**: Definition 4.1 (page 5)
 
+## Dependencies
+
+None (leaf module).
+
 ## Purpose
 
 Stores and provides lookup for type definitions and procedure declarations in a typed GLP program.
@@ -145,3 +149,4 @@ TypeEnvironment(
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft |
+| 0.2 | 2025-01-07 | Add Dependencies section |

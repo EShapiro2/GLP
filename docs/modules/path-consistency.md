@@ -306,7 +306,7 @@ This module does not throw exceptions—it returns boolean or result indicating 
 
 ### Relationship to Well-Typing
 
-Path consistency is used in Definition 4.4 (Well-Typed Moded Term):
+Path consistency is used in Definition 4.5 (Well-Typed Moded Term):
 > A moded term T is well-typed by a GLP type D if for each term path x ∈ paths(T) there is a consistent path y ∈ paths(D).
 
 The type checker iterates over all term paths and checks each against the type DFA.
@@ -325,3 +325,4 @@ This is checked at the clause level, not within path consistency.
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft |
 | 0.2 | 2025-01-07 | Fix Case 1 example |
+| 0.3 | 2025-01-07 | Fix definition reference (4.4→4.5) |

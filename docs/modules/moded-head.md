@@ -131,9 +131,17 @@ The moded head H' is used in Definition 4.8 (Well-typed Clause):
 - Condition 1 requires H' to be well-typed by D
 - The "accepts" predicate checks if H' has paths consistent with input paths of D
 
+## Error Conditions
+
+| Condition | Exception |
+|-----------|-----------|
+| Procedure not declared in type environment | `UndeclaredProcedureError` |
+| Type would require invalid I/O moding | `InvalidIOModeError` |
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft from paper |
 | 0.2 | 2025-01-07 | Fix definition numbers |
+| 0.3 | 2025-01-07 | Add Error Conditions |

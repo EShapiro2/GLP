@@ -28,8 +28,6 @@ Determines when a GLP clause is well-typed by a type D, and defines when a claus
 > 3. Every pair of variables that occur in C are assigned complementary types by D.
 >
 > In addition, C **accepts** an input path x ∈ paths(D) if H' has a path consistent with x.
->
-> — Definition 4.9
 
 ## Three Conditions
 
@@ -161,9 +159,19 @@ accepts(c, inputPath, d):
   return false
 ```
 
+## Error Conditions
+
+| Condition | Exception |
+|-----------|-----------|
+| Procedure not declared in type environment | `UndeclaredProcedureError` |
+| Head not well-typed by D | `HeadNotWellTypedError` |
+| Body atom not well-typed by D | `BodyAtomNotWellTypedError` |
+| Variable pair has non-complementary types | `NonComplementaryVariablesError` |
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft from paper |
 | 0.2 | 2025-01-07 | Fix definition numbers |
+| 0.3 | 2025-01-07 | Add Error Conditions, remove spurious ref |

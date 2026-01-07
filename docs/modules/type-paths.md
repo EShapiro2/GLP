@@ -129,6 +129,10 @@ Per line 30, type D corresponds to a DFA where:
 
 The DFA **accepts** exactly paths(D).
 
+## Error Conditions
+
+This module defines conceptual operations on infinite path sets. The actual implementation is via DFA (see `type-dfa` module). No exceptions are thrown by this module directly.
+
 ## Version History
 
 | Version | Date | Changes |
@@ -136,3 +140,4 @@ The DFA **accepts** exactly paths(D).
 | 0.1 | 2025-01-07 | Initial draft |
 | 0.2 | 2025-01-07 | Simplified to paper definitions only |
 | 0.3 | 2025-01-07 | Standardize list notation to "."/2 |
+| 0.4 | 2025-01-07 | Add Error Conditions note |

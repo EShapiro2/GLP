@@ -12,7 +12,8 @@ Determines when a typed GLP program P = (Cs, D) is well-typed. This is the top-l
 ## Dependencies
 
 - `well-typed-clause` — checkClause, accepts
-- `type-paths` — inputPaths(D)
+- `type-dfa` — compileType, union, intersect, complement, isSubsetOf, findAcceptingPath, emptyDFA
+- `clause-contribution` — extractHeadPatternDFA
 
 ## Paper Definition
 
@@ -145,6 +146,13 @@ Required DFA operations (from `type-dfa` module):
 - `isSubsetOf(dfa1, dfa2)` — check L(dfa1) ⊆ L(dfa2)
 - `findAcceptingPath(dfa)` — find a path accepted by DFA (for error reporting)
 
+## Error Conditions
+
+| Condition | Exception |
+|-----------|-----------|
+| Clause not well-typed | `ClauseNotWellTypedError` |
+| Input path not covered by any clause | `UncoveredInputPathError` |
+
 ## Version History
 
 | Version | Date | Changes |
@@ -152,3 +160,4 @@ Required DFA operations (from `type-dfa` module):
 | 0.1 | 2025-01-07 | Initial draft from paper |
 | 0.2 | 2025-01-07 | Replace path enumeration with DFA operations |
 | 0.3 | 2025-01-07 | Fix definition numbers |
+| 0.4 | 2025-01-07 | Add dependencies, Error Conditions |
