@@ -16,6 +16,7 @@ import 'mode_checker.dart';
 import 'mode_error.dart';
 import 'clause_contribution.dart';
 import 'guard_types.dart';
+import 'moded_label.dart';
 import '../../compiler/ast.dart' as ast;
 
 /// Result of type checking
@@ -389,29 +390,29 @@ class TypeChecker {
       for (int i = 0; i < term.args.length; i++) {
         final argPaths = _extractGroundPaths(term.args[i]);
         for (final p in argPaths) {
-          paths.add(TermPath([PathElement.functor(term.functor, term.arity, i + 1), ...p.elements]));
+          paths.add(TermPath([ModedLabel.functor(term.functor, term.arity, i + 1), ...p.elements]));
         }
       }
       return paths;
     } else if (term is ast.ListTerm) {
       if (term.isNil) {
-        return {TermPath([PathElement.nil()])};
+        return {TermPath([ModedLabel.nil()])};
       }
       final paths = <TermPath>{};
       if (term.head != null) {
         for (final p in _extractGroundPaths(term.head!)) {
-          paths.add(TermPath([PathElement.listHead(), ...p.elements]));
+          paths.add(TermPath([ModedLabel.listHead(), ...p.elements]));
         }
       }
       if (term.tail != null) {
         for (final p in _extractGroundPaths(term.tail!)) {
-          paths.add(TermPath([PathElement.listTail(), ...p.elements]));
+          paths.add(TermPath([ModedLabel.listTail(), ...p.elements]));
         }
       }
       return paths;
     } else if (term is ast.ConstTerm) {
       if (term.value != null) {
-        return {TermPath([PathElement.constant(term.value!)])};
+        return {TermPath([ModedLabel.constant(term.value!)])};
       }
     }
     return {};
@@ -449,7 +450,7 @@ class TypeChecker {
     if (term is ast.StructTerm) {
       final paths = <TermPath>{};
       for (int i = 0; i < term.args.length; i++) {
-        final elemPath = PathElement.functor(term.functor, term.arity, i + 1);
+        final elemPath = ModedLabel.functor(term.functor, term.arity, i + 1);
         final newPath = TermPath([...currentPath.elements, elemPath]);
         final argPaths = _extractTypedGroundPaths(term.args[i], dfa, newPath);
         paths.addAll(argPaths);
@@ -460,16 +461,16 @@ class TypeChecker {
     // For lists, extract from head and tail
     if (term is ast.ListTerm) {
       if (term.isNil) {
-        return {TermPath([...currentPath.elements, PathElement.nil()])};
+        return {TermPath([...currentPath.elements, ModedLabel.nil()])};
       }
       final paths = <TermPath>{};
       if (term.head != null) {
-        final headPath = TermPath([...currentPath.elements, PathElement.listHead()]);
+        final headPath = TermPath([...currentPath.elements, ModedLabel.listHead()]);
         final headPaths = _extractTypedGroundPaths(term.head!, dfa, headPath);
         paths.addAll(headPaths);
       }
       if (term.tail != null) {
-        final tailPath = TermPath([...currentPath.elements, PathElement.listTail()]);
+        final tailPath = TermPath([...currentPath.elements, ModedLabel.listTail()]);
         final tailPaths = _extractTypedGroundPaths(term.tail!, dfa, tailPath);
         paths.addAll(tailPaths);
       }
@@ -478,7 +479,7 @@ class TypeChecker {
 
     // For constants
     if (term is ast.ConstTerm && term.value != null) {
-      return {TermPath([...currentPath.elements, PathElement.constant(term.value!)])};
+      return {TermPath([...currentPath.elements, ModedLabel.constant(term.value!)])};
     }
 
     return {};
@@ -569,7 +570,7 @@ class TypeChecker {
     } else if (term is ast.StructTerm) {
       for (int i = 0; i < term.args.length; i++) {
         final newPath = pathToHere.append(
-          PathElement.functor(term.functor, term.arity, i + 1)
+          ModedLabel.functor(term.functor, term.arity, i + 1)
         );
         if (!_inferVariableTypes(term.args[i], dfa, varTypes, newPath,
             declaredArgMode, isHeadPosition)) {
@@ -581,14 +582,14 @@ class TypeChecker {
       if (!term.isNil) {
         if (term.head != null) {
           if (!_inferVariableTypes(term.head!, dfa, varTypes,
-              pathToHere.append(PathElement.listHead()),
+              pathToHere.append(ModedLabel.listHead()),
               declaredArgMode, isHeadPosition)) {
             return false;
           }
         }
         if (term.tail != null) {
           if (!_inferVariableTypes(term.tail!, dfa, varTypes,
-              pathToHere.append(PathElement.listTail()),
+              pathToHere.append(ModedLabel.listTail()),
               declaredArgMode, isHeadPosition)) {
             return false;
           }

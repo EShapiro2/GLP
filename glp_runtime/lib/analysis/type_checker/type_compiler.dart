@@ -11,6 +11,7 @@
 import 'mode.dart';
 import 'type_ast.dart';
 import 'type_dfa.dart';
+import 'moded_label.dart';
 
 /// Compiles TypeDef AST to TypeDFA
 class TypeCompiler {
@@ -77,7 +78,7 @@ class TypeCompiler {
     stateMap['_FINAL_'] = finalState;
     
     // Build transitions and track primitive state modes
-    final transitions = <(DFAState, PathElement), DFAState>{};
+    final transitions = <(DFAState, ModedLabel), DFAState>{};
     final primitiveStateModes = <DFAState, Set<Mode>>{};
 
     for (final typeName in reachableTypes) {
@@ -143,7 +144,7 @@ class TypeCompiler {
     DFAState fromState,
     TypeExpr alt,
     Map<String, DFAState> stateMap,
-    Map<(DFAState, PathElement), DFAState> transitions,
+    Map<(DFAState, ModedLabel), DFAState> transitions,
     DFAState finalState,
     Map<DFAState, Set<Mode>> primitiveStateModes,
   ) {
@@ -158,18 +159,18 @@ class TypeCompiler {
 
     } else if (alt is ConstantAlt) {
       // Constant: transition directly to final state
-      final pathElem = PathElement.constant(alt.value);
+      final pathElem = ModedLabel.constant(alt.value);
       transitions[(fromState, pathElem)] = finalState;
       
     } else if (alt is ListNilAlt) {
       // Empty list: transition to final state
-      final pathElem = PathElement.nil();
+      final pathElem = ModedLabel.nil();
       transitions[(fromState, pathElem)] = finalState;
       
     } else if (alt is StructAlt) {
       // Structure: add transitions for each argument position
       for (int i = 0; i < alt.args.length; i++) {
-        final pathElem = PathElement.functor(alt.functor, alt.arity, i + 1);
+        final pathElem = ModedLabel.functor(alt.functor, alt.arity, i + 1);
         final argType = alt.args[i];
         final targetState = _resolveTargetState(argType, stateMap, finalState);
         transitions[(fromState, pathElem)] = targetState;
@@ -177,8 +178,8 @@ class TypeCompiler {
       
     } else if (alt is ListConsAlt) {
       // List cons: add head and tail transitions
-      final headElem = PathElement.listHead();
-      final tailElem = PathElement.listTail();
+      final headElem = ModedLabel.listHead();
+      final tailElem = ModedLabel.listTail();
       
       final headTarget = _resolveTargetState(alt.head, stateMap, finalState);
       final tailTarget = _resolveTargetState(alt.tail, stateMap, finalState);
@@ -249,24 +250,24 @@ void _extractPathsHelper(dynamic term, TermPath currentPath, Set<TermPath> paths
   
   if (term is num) {
     // Number constant
-    paths.add(currentPath.append(PathElement.constant(term)));
+    paths.add(currentPath.append(ModedLabel.constant(term)));
     return;
   }
   
   if (term is String) {
     // Atom or string constant
-    paths.add(currentPath.append(PathElement.constant(term)));
+    paths.add(currentPath.append(ModedLabel.constant(term)));
     return;
   }
   
   if (term is List) {
     if (term.isEmpty) {
       // Empty list
-      paths.add(currentPath.append(PathElement.nil()));
+      paths.add(currentPath.append(ModedLabel.nil()));
     } else {
       // Non-empty list [H|T]
-      _extractPathsHelper(term.first, currentPath.append(PathElement.listHead()), paths);
-      _extractPathsHelper(term.sublist(1), currentPath.append(PathElement.listTail()), paths);
+      _extractPathsHelper(term.first, currentPath.append(ModedLabel.listHead()), paths);
+      _extractPathsHelper(term.sublist(1), currentPath.append(ModedLabel.listTail()), paths);
     }
     return;
   }
@@ -278,7 +279,7 @@ void _extractPathsHelper(dynamic term, TermPath currentPath, Set<TermPath> paths
     final args = term['args'] as List;
     
     for (int i = 0; i < args.length; i++) {
-      final pathElem = PathElement.functor(functor, args.length, i + 1);
+      final pathElem = ModedLabel.functor(functor, args.length, i + 1);
       _extractPathsHelper(args[i], currentPath.append(pathElem), paths);
     }
     return;

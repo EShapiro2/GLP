@@ -7,6 +7,7 @@
 import '../../compiler/ast.dart' as ast;
 import 'type_dfa.dart';
 import 'type_ast.dart';
+import 'moded_label.dart';
 
 /// Computes clause contributions for fixpoint checking
 class ClauseContributionComputer {
@@ -100,15 +101,15 @@ class ClauseContributionComputer {
     // Create start state
     final startState = DFAState('start');
     final states = <DFAState>{startState};
-    final transitions = <(DFAState, PathElement), DFAState>{};
+    final transitions = <(DFAState, ModedLabel), DFAState>{};
     final finalStates = <DFAState>{};
 
     // For each argument position, create transitions
     // that constrain that argument to its DFA
     for (int i = 0; i < argDFAs.length; i++) {
       final argDFA = argDFAs[i];
-      final argIndex = i + 1; // PathElement uses 1-based indexing
-      final pathElem = PathElement.functor(functor, arity, argIndex);
+      final argIndex = i + 1; // 1-based indexing
+      final pathElem = ModedLabel.functor(functor, arity, argIndex);
 
       // The transition from start on this arg-position path element
       // leads to a copy of the argument's DFA
@@ -145,17 +146,17 @@ class ClauseContributionComputer {
 
     final startState = DFAState('start');
     final states = <DFAState>{startState};
-    final transitions = <(DFAState, PathElement), DFAState>{};
+    final transitions = <(DFAState, ModedLabel), DFAState>{};
     final finalStates = <DFAState>{};
 
     // Head transition
-    final headElem = PathElement.listHead();
+    final headElem = ModedLabel.listHead();
     final headStartInProduct = _renameState(headDFA.startState, 'head');
     transitions[(startState, headElem)] = headStartInProduct;
     _mergeSubDFA(headDFA, 'head', states, transitions, finalStates);
 
     // Tail transition
-    final tailElem = PathElement.listTail();
+    final tailElem = ModedLabel.listTail();
     final tailStartInProduct = _renameState(tailDFA.startState, 'tail');
     transitions[(startState, tailElem)] = tailStartInProduct;
     _mergeSubDFA(tailDFA, 'tail', states, transitions, finalStates);
@@ -178,7 +179,7 @@ class ClauseContributionComputer {
     TypeDFA subDFA,
     String prefix,
     Set<DFAState> states,
-    Map<(DFAState, PathElement), DFAState> transitions,
+    Map<(DFAState, ModedLabel), DFAState> transitions,
     Set<DFAState> finalStates,
   ) {
     // Create mapping from original states to renamed states
