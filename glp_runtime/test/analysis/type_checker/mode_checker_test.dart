@@ -36,9 +36,9 @@ void main() {
       expect(Mode.consume.flip.flip, equals(Mode.consume));
     });
 
-    test('toString returns mode name', () {
-      expect(Mode.produce.toString(), equals('output'));
-      expect(Mode.consume.toString(), equals('input'));
+    test('toString returns mode symbol', () {
+      expect(Mode.produce.toString(), equals('↑'));
+      expect(Mode.consume.toString(), equals('↓'));
     });
   });
 
@@ -362,8 +362,8 @@ void main() {
 
       expect(error.message, contains('baz'));
       expect(error.message, contains('argument 2'));
-      expect(error.message, contains('input'));
-      expect(error.message, contains('output'));
+      expect(error.message, contains('↓'));
+      expect(error.message, contains('↑'));
       expect(error.line, equals(30));
       expect(error.column, equals(15));
     });

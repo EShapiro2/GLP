@@ -73,7 +73,7 @@ void main() {
     group('complement', () {
       test('complement of singleton rejects that constant', () {
         final a = TypeDFA.singleton('a');
-        final notA = a.complete().flip();
+        final notA = a.complete().modedComplement();
 
         final pathA = TermPath([ModedLabel.constant('a')]);
         expect(notA.acceptsPath(pathA), isFalse);
@@ -81,7 +81,7 @@ void main() {
 
       test('double complement is identity', () {
         final a = TypeDFA.singleton('a');
-        final doubleComp = a.complete().flip().flip();
+        final doubleComp = a.complete().modedComplement().modedComplement();
 
         expect(doubleComp.isEquivalent(a.complete()), isTrue);
       });
@@ -276,9 +276,9 @@ void main() {
         // ¬(A ∪ B) = ¬A ∩ ¬B
         // Must use combined alphabet for all operations
         final combinedAlphabet = a.alphabet.union(b.alphabet);
-        final left = a.union(b).complete(combinedAlphabet).flip();
-        final right = a.complete(combinedAlphabet).flip()
-            .intersect(b.complete(combinedAlphabet).flip());
+        final left = a.union(b).complete(combinedAlphabet).modedComplement();
+        final right = a.complete(combinedAlphabet).modedComplement()
+            .intersect(b.complete(combinedAlphabet).modedComplement());
 
         expect(left.isEquivalent(right), isTrue);
       });
@@ -290,9 +290,9 @@ void main() {
         // ¬(A ∩ B) = ¬A ∪ ¬B
         // Must use combined alphabet for all operations
         final combinedAlphabet = a.alphabet.union(b.alphabet);
-        final left = a.intersect(b).complete(combinedAlphabet).flip();
-        final right = a.complete(combinedAlphabet).flip()
-            .union(b.complete(combinedAlphabet).flip());
+        final left = a.intersect(b).complete(combinedAlphabet).modedComplement();
+        final right = a.complete(combinedAlphabet).modedComplement()
+            .union(b.complete(combinedAlphabet).modedComplement());
 
         expect(left.isEquivalent(right), isTrue);
       });
