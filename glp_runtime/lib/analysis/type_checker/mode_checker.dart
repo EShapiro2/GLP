@@ -349,7 +349,7 @@ class ModeChecker {
   List<({String path, String typeName})> _findPrimitiveTypePositions(
     TypeRef typeRef,
     String currentPath,
-    Set<String> visited,
+    Set<String> visited,  // Prevent infinite recursion on recursive types
   ) {
     final positions = <({String path, String typeName})>[];
 
@@ -437,14 +437,23 @@ class ModeChecker {
 
   /// Check mode coverage for primitive type positions (including nested)
   ///
-  /// For types with primitive modes (e.g., Any ::= _ ; _?), verify that
+  /// For types with primitive modes (e.g., Bimodal ::= _ ; _?), verify that
   /// the clauses collectively cover both writer (_) and reader (_?) modes.
+  ///
+  /// Mode coverage only applies to OUTPUT positions where the procedure must
+  /// produce values. At INPUT positions, any reader can handle any incoming value.
   List<ModeError> _checkModeCoverage(ProcDecl procDecl, List<ast.Clause> clauses) {
     final errors = <ModeError>[];
 
     // Check each argument position
     for (int argIndex = 0; argIndex < procDecl.argTypes.length; argIndex++) {
       final typeRef = procDecl.argTypes[argIndex];
+
+      // Mode coverage only matters for OUTPUT positions (where procedure produces values)
+      // At INPUT positions (Type?), a reader variable can handle any incoming value
+      if (typeRef.isInput) {
+        continue;  // Skip coverage checking for input positions
+      }
 
       // Find all positions with primitive modes (including nested)
       final primitivePositions = _findPrimitiveTypePositions(typeRef, '', <String>{});
@@ -505,9 +514,17 @@ class ModeChecker {
               ? 'argument ${argIndex + 1}'
               : 'argument ${argIndex + 1} at path "${position.path}"';
 
+          // Build description of required modes
+          final requiredModes = <String>[];
+          if (requiresWriter) requiredModes.add('writer (_)');
+          if (requiresReader) requiredModes.add('reader (_?)');
+          final requiresDesc = requiredModes.length == 2
+              ? 'both writer and reader modes'
+              : requiredModes.join(' and ') + ' mode';
+
           errors.add(ModeError(
             'Incomplete mode coverage for $positionDesc of ${procDecl.name}/${procDecl.arity}\n'
-            'Type ${position.typeName} at this position requires both writer and reader modes.\n'
+            'Type ${position.typeName} at this position requires $requiresDesc.\n'
             'Clauses provide: ${hasWriter ? "writer (_)" : "(no writer)"}, ${hasReader ? "reader (_?)" : "(no reader)"}\n'
             'Missing: ${missingModes.join(", ")}\n\n'
             'Under ::= semantics, clauses must collectively cover all mode alternatives.',

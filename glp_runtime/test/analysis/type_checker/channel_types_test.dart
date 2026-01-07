@@ -107,7 +107,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isFalse,
             reason: 'Missing ch(MyStream, MyStream?) case');
-      }, skip: 'Subtype fixpoint semantics not yet implemented');
+      }, skip: 'Constructor coverage checking not yet implemented');
     });
   });
 }

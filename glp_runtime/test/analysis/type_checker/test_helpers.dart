@@ -10,7 +10,7 @@ import 'package:glp_runtime/compiler/parser.dart';
 /// Parse and type-check GLP source code
 TypeCheckResult checkTypes(String source) {
   // Separate type declarations from clauses
-  // Type declarations contain ::= or ::<
+  // Type declarations contain ::=
   // Procedure declarations contain 'procedure'
   // Everything else is clause code
   final lines = source.split('\n');
@@ -20,7 +20,6 @@ TypeCheckResult checkTypes(String source) {
     final trimmed = line.trim();
     // Skip type declarations and procedure declarations
     if (trimmed.contains('::=') ||
-        trimmed.contains('::<') ||
         trimmed.startsWith('procedure ')) {
       continue;
     }

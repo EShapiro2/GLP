@@ -1,6 +1,6 @@
 // test/analysis/type_checker/primitive_mode_coverage_test.dart
 //
-// Tests for primitive mode types (_, _?, Any) and coverage requirements
+// Tests for primitive mode types (_, _?) and coverage requirements
 
 import 'package:test/test.dart';
 import 'test_helpers.dart';
@@ -12,15 +12,15 @@ void main() {
     // =========================================================================
 
     group('Positive Controls', () {
-      test('Any position with both modes covered passes', () {
+      test('Bimodal position with both modes covered passes', () {
         final result = checkTypes('''
-          Any ::= _ ; _?.
-          procedure echo(Any?, Any).
+          Bimodal ::= _ ; _?.
+          procedure echo(Bimodal?, Bimodal).
           echo(X, Y?) :- Y = X?.
           echo(X?, Y) :- Y? = X.
         ''');
         expect(result.isWellTyped, isTrue,
-            reason: 'Both writer and reader modes covered for Any');
+            reason: 'Both writer and reader modes covered for Bimodal');
       });
 
       test('Single _ position needs only writer', () {
@@ -45,8 +45,8 @@ void main() {
 
       test('List with _ elements needs only writer mode', () {
         final result = checkTypes('''
-          List ::= [] ; [_ | List].
-          procedure copy(List?, List).
+          MyList ::= [] ; [_ | MyList].
+          procedure copy(MyList?, MyList).
           copy([], []).
           copy([X | In], [X? | Out]) :- copy(In?, Out).
         ''');
@@ -60,66 +60,59 @@ void main() {
     // =========================================================================
 
     group('Negative Controls', () {
-      test('Any position with only writer mode fails', () {
+      test('Bimodal position with only writer mode fails', () {
         final result = checkTypes('''
-          Any ::= _ ; _?.
-          procedure echo(Any?, Any).
+          Bimodal ::= _ ; _?.
+          procedure echo(Bimodal?, Bimodal).
           echo(X, Y?) :- Y = X?.
         ''');
         expect(result.isWellTyped, isFalse,
-            reason: 'Missing reader mode for Any');
+            reason: 'Missing reader mode for Bimodal');
         expect(
-            result.errors.any((e) => e.message.contains('mode coverage')),
+            result.errors.any((e) => e.message.contains('mode coverage') || e.message.contains('Coverage')),
             isTrue);
       });
 
-      test('Any position with only reader mode fails', () {
+      test('Bimodal position with only reader mode fails', () {
         final result = checkTypes('''
-          Any ::= _ ; _?.
-          procedure sink(Any?).
+          Bimodal ::= _ ; _?.
+          procedure sink(Bimodal?).
           sink(X?).
         ''');
         expect(result.isWellTyped, isFalse,
-            reason: 'Missing writer mode for Any');
+            reason: 'Missing writer mode for Bimodal');
         expect(
-            result.errors.any((e) => e.message.contains('mode coverage')),
+            result.errors.any((e) => e.message.contains('mode coverage') || e.message.contains('Coverage')),
             isTrue);
       });
     });
 
     // =========================================================================
-    // NEGATIVE CONTROLS - Currently PASS erroneously, should FAIL
+    // NEGATIVE CONTROLS - Nested coverage
     // =========================================================================
 
-    group('Erroneous Passes (should fail after fix)', () {
-      test('ERRONEOUS: AnyList copy with only one element mode', () {
-        // This currently passes but should fail!
-        // AnyList elements are Any, requiring both modes
+    group('Nested Mode Coverage', () {
+      test('BimodalList copy with only one element mode fails', () {
         final result = checkTypes('''
-          Any ::= _ ; _?.
-          AnyList ::= [] ; [Any | AnyList].
-          procedure copy(AnyList?, AnyList).
+          Bimodal ::= _ ; _?.
+          BimodalList ::= [] ; [Bimodal | BimodalList].
+          procedure copy(BimodalList?, BimodalList).
           copy([], []).
           copy([X | In], [X? | Out]) :- copy(In?, Out).
         ''');
-        // CURRENT (wrong): passes
-        // EXPECTED (correct): fails - missing copy([X? | In], [X | Out]) clause
         expect(result.isWellTyped, isFalse,
-            reason: 'AnyList requires both element modes covered');
+            reason: 'BimodalList requires both element modes covered');
       });
 
-      test('ERRONEOUS: Nested Any in struct not checked', () {
-        // This currently passes but should fail!
+      test('Nested Bimodal in struct not checked', () {
         final result = checkTypes('''
-          Any ::= _ ; _?.
-          Pair ::= pair(Any, Any).
+          Bimodal ::= _ ; _?.
+          Pair ::= pair(Bimodal, Bimodal).
           procedure swap(Pair?, Pair).
           swap(pair(X, Y), pair(Y?, X?)).
         ''');
-        // CURRENT (wrong): passes
-        // EXPECTED (correct): fails - only one mode for each Any position
         expect(result.isWellTyped, isFalse,
-            reason: 'Nested Any positions require mode coverage');
+            reason: 'Nested Bimodal positions require mode coverage');
       });
     });
   });

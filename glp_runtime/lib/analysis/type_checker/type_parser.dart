@@ -393,8 +393,21 @@ class TypeParser {
     throw TypeParseError('Expected type alternative', token.line, token.column);
   }
   
-  /// Parse: TypeName or TypeName?
+  /// Parse: TypeName or TypeName? or _ or _?
+  /// In procedure declarations, _ means Output type and _? means Input type
   TypeRef _parseTypeRef() {
+    // Check for underscore (primitive mode type in procedure position)
+    if (_match(TypeTokenType.underscore)) {
+      final line = _previous().line;
+      final column = _previous().column;
+      // Check for ? suffix - _? means Input mode
+      if (_match(TypeTokenType.question)) {
+        return TypeRef('Input', line, column, isInput: false);
+      }
+      // _ means Output type
+      return TypeRef('Output', line, column, isInput: false);
+    }
+
     final token = _consume(TypeTokenType.typeName, 'Expected type name');
 
     // Check for ? suffix indicating input mode
