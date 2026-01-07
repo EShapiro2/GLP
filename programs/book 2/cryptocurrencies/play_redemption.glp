@@ -1,0 +1,40 @@
+%% play_redemption.glp - Coin redemption scenario
+%% Bob redeems Alice-coins with preference list
+
+
+%% ============================================
+%% The Play
+%% ============================================
+
+%% Scenario:
+%% - Bob holds 50 Alice-coins
+%% - Bob redeems with preference [carol, dave]
+%% - Alice has: 20 Carol-coins, 15 Dave-coins
+%% - Alice repays: 20 Carol + 15 Dave + 15 Alice = 50
+
+play_redemption :-
+    %% Bob: redeem 50 Alice-coins
+    agent([redeem(alice, 50, [carol, dave])],
+          [(alice, 50)], BobStream),
+    
+    %% Alice: repay according to preference list
+    %% She has 20 Carol-coins, 15 Dave-coins
+    agent([repay(bob, 50, [carol, dave], claim_hash)],
+          [(carol, 20), (dave, 15)], AliceStream),
+    
+    %% Verify
+    verify_redemption(AliceStream?, BobStream?).
+
+verify_redemption(AliceStream, BobStream) :-
+    ground(AliceStream?), ground(BobStream?) |
+    report_redemption(AliceStream?, BobStream?).
+
+report_redemption(AliceStream, BobStream) :-
+    %% Bob: 1 block (redemption claim)
+    %% Alice: 3 blocks (20 Carol, 15 Dave, 15 Alice)
+    check_stream_length(BobStream?, 1),
+    check_stream_length(AliceStream?, 3).
+
+check_stream_length([_], 1).
+check_stream_length([_,_], 2).
+check_stream_length([_,_,_], 3).

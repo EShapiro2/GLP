@@ -1,0 +1,33 @@
+%% stream_security.glp - Blockchain Security Properties of GLP Streams
+%% Source: GLP Papers (Section: Blockchain Security of GLP Streams)
+%%
+%% Authenticated GLP streams achieve blockchain security through
+%% language-level guarantees:
+%%
+%% 1. IMMUTABILITY: Once stream element [X|Xs] is created with X bound
+%%    to value T, single-assignment semantics prevents any subsequent
+%%    assignment of X.
+%%
+%% 2. UNFORKABILITY: SRSW invariant ensures each writer Xs has exactly
+%%    one occurrence. Attempting two continuations Xs=[Y|Ys] and
+%%    Xs=[Z|Zs] would require two occurrences of writer Xs, violating SRSW.
+%%
+%% 3. NON-REPUDIATION: Stream extensions carry attestations (Xs:=[Y|Ys])_{M,p,q}.
+%%    Signature by agent p provides cryptographic proof of authorship.
+%%
+%% 4. ACYCLICITY: Occurs check prevents writer from being bound to term
+%%    containing its paired reader, ensuring strict temporal ordering.
+
+%% Cooperative extension example - only holder of tail writer can extend
+extend_stream([H?|T], H, T).
+
+%% Round-robin production through explicit handover
+producer_a(control(Xs,Next)) :-
+    produce_batch_a(Xs,Xs1,Done),
+    handover(Done?,Xs1,Next).
+
+producer_b(control(Xs,Next)) :-
+    produce_batch_b(Xs,Xs1,Done),
+    handover(Done?,Xs1,Next).
+
+handover(done,Xs,control(Xs,Next)).

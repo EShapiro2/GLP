@@ -1,0 +1,14 @@
+%% plus.glp - Addition (AoP 3.3)
+%% plus(X,Y,Z) :- X, Y and Z are natural numbers such that Z is the sum of X and Y.
+
+plus(0, X, X?).
+plus(s(X), Y, s(Z?)) :- plus(X?, Y?, Z).
+
+natural_number(0).
+natural_number(s(X)) :- natural_number(X?).
+
+%% reduce clauses for metainterpreter
+reduce(plus(0, X, X?), true).
+reduce(plus(s(X), Y, s(Z?)), plus(X?, Y?, Z)).
+reduce(natural_number(0), true).
+reduce(natural_number(s(X)), natural_number(X?)).

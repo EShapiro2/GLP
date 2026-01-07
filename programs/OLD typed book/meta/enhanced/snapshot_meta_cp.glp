@@ -1,0 +1,39 @@
+%% Type definitions
+List ::= [] ; [Any | List].
+
+%% Procedure type declarations
+procedure run(Any, Any).
+procedure reduce(Any, Any).
+procedure merge(List, List, List).
+
+%% snapshot_meta_cp.glp - Snapshot metainterpreter
+%% Source: CP Collected Papers, Ch 25 (Safra & Shapiro)
+%%
+%% Allows inspection of running computation state.
+%% When 'shot(Ps)' appears on interrupt stream, collects current processes.
+%%
+%% Uses chain(Left, Right) for short-circuit termination detection.
+
+run(true, chain(Chain, Chain?)).                 %% halt - close circuit
+run((A, B), chain(Left, Right?)) :-              %% fork - split chain
+    run(A?, chain(Left?, Middle)),
+    run(B?, chain(Middle?, Right)).
+run(Goal, chain(Left, Right?)) :-                %% reduce
+    ground(Goal?),
+    ~(Goal? =?= true), ~(Goal? =?= (_, _)),
+    unknown(Left?) |
+    reduce(Goal?, Body),
+    run(Body?, chain(Left?, Right)).
+run(Goal, chain([shot(Ps)|Left], [shot([Goal?|Ps?])|Right?])) :-  %% shot
+    ground(Goal?) |
+    run(Goal?, chain(Left?, Right)).
+
+%% Object program: merge
+reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge([], [], []), true).
+
+%% Usage:
+%% run(Goal, chain(Left?, Right))
+%% When Left bound to [shot([])|Rest], Right? gets [shot(Processes)|...]
+%% Processes is list of currently active goals

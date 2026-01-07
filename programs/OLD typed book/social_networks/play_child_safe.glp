@@ -1,0 +1,59 @@
+%% play_child_safe.glp - Child-Safe Social Networking Play
+%%
+%% Scenario: Two families - the Smiths and the Jones.
+%% Parent-Smith and Parent-Jones are friends in the parent network.
+%% Child-Smith wants to befriend Child-Jones.
+%% Both parents must approve before children can connect.
+%%
+%% This demonstrates:
+%% 1. Parents are friends (pre-established)
+%% 2. Child-Smith requests to befriend Child-Jones
+%% 3. Parent-Smith sends approval_request with embedded response variable
+%% 4. Parent-Jones approves by binding the response variable
+%% 5. Parent-Smith sees approval and establishes channel
+
+%% === Helpers ===
+
+bind_resp(Resp?, Resp).
+
+%% === Simplified version for testing ===
+
+%% Parent-Smith initiates approval request to Parent-Jones
+%% The Resp variable is embedded in the request - Jones binds it to approve
+
+%% Send approval request on ToJones channel
+parent_smith([approval_request(smith, child_smith, Resp)|_], Result?) :-
+    smith_wait(Resp?, Result).
+
+%% Wait for approval response (via embedded Resp variable)
+smith_wait(Resp, Result?) :-
+    known(Resp?) |
+    smith_done(Resp?, Result).
+
+smith_done(approved, result(approved, channel_ready)).
+
+%% Parent-Jones receives and approves request
+parent_jones([approval_request(FromParent, Child, Resp)|_], Decision?) :-
+    %% Approve the request by binding embedded Resp
+    bind_resp(Resp?, approved),
+    jones_done(FromParent?, Child?, Decision).
+
+jones_done(FromParent, Child, approved(FromParent?, Child?)).
+
+%% === The Play ===
+
+play_child_safe :-
+    %% Parent channel (pre-established friendship)
+    %% Smith writes to StoJ, Jones reads from StoJ
+    %% Response comes through embedded Resp variable in request
+
+    %% Child-Smith requests befriending Child-Jones
+    parent_smith(StoJ, SmithResult),
+    parent_jones(StoJ?, JonesDecision),
+    verify_child_safe(SmithResult?, JonesDecision?).
+
+verify_child_safe(result(approved, channel_ready),
+                  approved(smith, child_smith)) :-
+    report_success.
+
+report_success.

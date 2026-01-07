@@ -1,0 +1,57 @@
+%% play_4agent.glp - Full 4-agent cold-call scenario
+%% Runs all agents concurrently with network routing messages
+%%
+%% Scenario:
+%%   Round 1: Alice → Bob (accept)
+%%   Round 2: Carol → Dave (accept)
+%%   Round 3: Bob → Carol (accept)
+%%   Round 4: Dave → Alice (reject)
+%%   Round 5: Alice → Carol (accept)
+
+%% Main entry point
+play :-
+    %% Merge all agent outputs into single stream for network
+    merge(AliceToNet?, BobToNet?, M1),
+    merge(CarolToNet?, DaveToNet?, M2),
+    merge(M1?, M2?, NetIn),
+    %% Network switch demuxes to agent inputs
+    switch4(NetIn?, AliceFromNet, BobFromNet, CarolFromNet, DaveFromNet),
+    %% Alice: Round 1 connect(bob), Round 4 receives intro from Dave, Round 5 connect(carol)
+    social_graph(alice,
+        [msg(user, alice, connect(bob)),
+         msg(dave, alice, intro(dave, dave, R4)),
+         msg(user, alice, decision(no, dave, R4?)),
+         msg(user, alice, connect(carol))|AliceFromNet?],
+        [(user, _), (net, AliceToNet)]),
+    %% Bob: Round 1 receives intro, accepts; Round 3 connect(carol)
+    social_graph(bob,
+        [msg(alice, bob, intro(alice, alice, R1)),
+         msg(user, bob, decision(yes, alice, R1?)),
+         msg(user, bob, connect(carol))|BobFromNet?],
+        [(user, _), (net, BobToNet)]),
+    %% Carol: Round 2 connect(dave); Round 3 receives intro from Bob; Round 5 receives intro from Alice
+    social_graph(carol,
+        [msg(user, carol, connect(dave)),
+         msg(bob, carol, intro(bob, bob, R3)),
+         msg(user, carol, decision(yes, bob, R3?)),
+         msg(alice, carol, intro(alice, alice, R5)),
+         msg(user, carol, decision(yes, alice, R5?))|CarolFromNet?],
+        [(user, _), (net, CarolToNet)]),
+    %% Dave: Round 2 receives intro from Carol; Round 4 connect(alice)
+    social_graph(dave,
+        [msg(carol, dave, intro(carol, carol, R2)),
+         msg(user, dave, decision(yes, carol, R2?)),
+         msg(user, dave, connect(alice))|DaveFromNet?],
+        [(user, _), (net, DaveToNet)]).
+
+%% Network switch - routes messages to destination agent
+%% Clauses are mutually exclusive by destination atom - no guards needed
+switch4([msg(Src, alice, Content)|Rest], [msg(Src?, alice, Content?)|A1?], B, C, D) :-
+    switch4(Rest?, A1, B?, C?, D?).
+switch4([msg(Src, bob, Content)|Rest], A, [msg(Src?, bob, Content?)|B1?], C, D) :-
+    switch4(Rest?, A?, B1, C?, D?).
+switch4([msg(Src, carol, Content)|Rest], A, B, [msg(Src?, carol, Content?)|C1?], D) :-
+    switch4(Rest?, A?, B?, C1, D?).
+switch4([msg(Src, dave, Content)|Rest], A, B, C, [msg(Src?, dave, Content?)|D1?]) :-
+    switch4(Rest?, A?, B?, C?, D1).
+switch4([], [], [], [], []).

@@ -1,0 +1,15 @@
+%% Type definitions
+NumStream ::= [] ; [Number | NumStream].
+
+%% Procedure type declarations
+procedure producer(NumStream, Number).
+procedure consumer(NumStream, Number).
+
+%% producer_consumer.glp - Basic stream communication
+%% Producer generates integers, consumer sums them.
+
+producer([N?|Xs?], N) :- ground(N?) | N1 := N? + 1, producer(Xs, N1?).
+
+consumer([X|Xs], Sum) :- ground(X?), ground(Sum?) | Sum1 := Sum? + X?, consumer(Xs?, Sum1?).
+
+%% Example goal: producer(Xs, 1), consumer(Xs?, 0).

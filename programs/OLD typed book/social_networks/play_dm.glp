@@ -1,0 +1,61 @@
+%% play_dm.glp - Direct Messaging Channel Establishment Play
+%%
+%% Scenario: Alice and Bob are already friends (have established friend channels
+%% from prior cold-call). They establish a dedicated DM channel and exchange messages.
+%%
+%% This play demonstrates:
+%% 1. Alice sends dm_request through friend channel to Bob
+%% 2. Bob receives request, creates DM channel pair, responds
+%% 3. Alice receives her DM channel endpoint via response variable
+%% 4. Both exchange messages on the DM channel
+
+%% === Channel primitives ===
+
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+dm_send(Msg, ch(In, [Msg?|Out?]), ch(In?, Out)).
+
+dm_receive(Msg?, ch([Msg|In], Out?), ch(In?, Out)).
+
+%% === DM Protocol ===
+
+bind_resp(Ch?, Ch).
+
+%% === Alice's process ===
+%% Sends DM request, waits for channel, sends message, receives reply
+
+alice([dm_request(Resp)|_], FriendIn?, AliceResult?) :-
+    alice_continue(Resp?, FriendIn, AliceResult).
+
+alice_continue(DMCh, _, result(sent, Reply?)) :-
+    known(DMCh?) |
+    dm_send(hello_bob, DMCh?, DMCh1),
+    dm_receive(Reply, DMCh1?, _).
+
+%% === Bob's process ===
+%% Receives DM request, creates channel, responds, receives message, replies
+
+bob([dm_request(Resp)|_], _, BobResult?) :-
+    new_channel(BobDM, AliceDM),
+    bind_resp(Resp?, AliceDM?),
+    bob_continue(BobDM?, BobResult).
+
+bob_continue(DMCh, result(Msg?, replied)) :-
+    dm_receive(Msg, DMCh?, DMCh1),
+    dm_send(hello_alice, DMCh1?, _).
+
+%% === Result verification ===
+
+verify(result(sent, Reply), result(Msg, replied)) :-
+    report(Msg?, Reply?).
+
+report(hello_bob, hello_alice).
+
+%% === The Play ===
+
+play_dm :-
+    %% Alice and Bob communicate through friend channel
+    %% FriendOut (Alice writes) connects to FriendIn (Bob reads)
+    alice(FriendOut, FriendIn?, AliceResult),
+    bob(FriendOut?, FriendIn, BobResult),
+    verify(AliceResult?, BobResult?).

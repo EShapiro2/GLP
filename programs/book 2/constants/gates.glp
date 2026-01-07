@@ -1,0 +1,26 @@
+%% gates.glp - Logic gate simulation in GLP
+%% Source: Standard GLP examples
+
+and([], [], []).
+and([one|Xs], [one|Ys], [one|Zs?]) :- and(Xs?, Ys?, Zs).
+and([one|Xs], [zero|Ys], [zero|Zs?]) :- and(Xs?, Ys?, Zs).
+and([zero|Xs], [one|Ys], [zero|Zs?]) :- and(Xs?, Ys?, Zs).
+and([zero|Xs], [zero|Ys], [zero|Zs?]) :- and(Xs?, Ys?, Zs).
+
+or([], [], []).
+or([one|Xs], [one|Ys], [one|Zs?]) :- or(Xs?, Ys?, Zs).
+or([one|Xs], [zero|Ys], [one|Zs?]) :- or(Xs?, Ys?, Zs).
+or([zero|Xs], [one|Ys], [one|Zs?]) :- or(Xs?, Ys?, Zs).
+or([zero|Xs], [zero|Ys], [zero|Zs?]) :- or(Xs?, Ys?, Zs).
+
+%% Metainterpreter support
+reduce(and([], [], []), true).
+reduce(and([one|Xs], [one|Ys], [one|Zs?]), and(Xs?, Ys?, Zs)).
+reduce(and([one|Xs], [zero|Ys], [zero|Zs?]), and(Xs?, Ys?, Zs)).
+reduce(and([zero|Xs], [one|Ys], [zero|Zs?]), and(Xs?, Ys?, Zs)).
+reduce(and([zero|Xs], [zero|Ys], [zero|Zs?]), and(Xs?, Ys?, Zs)).
+reduce(or([], [], []), true).
+reduce(or([one|Xs], [one|Ys], [one|Zs?]), or(Xs?, Ys?, Zs)).
+reduce(or([one|Xs], [zero|Ys], [one|Zs?]), or(Xs?, Ys?, Zs)).
+reduce(or([zero|Xs], [one|Ys], [one|Zs?]), or(Xs?, Ys?, Zs)).
+reduce(or([zero|Xs], [zero|Ys], [zero|Zs?]), or(Xs?, Ys?, Zs)).

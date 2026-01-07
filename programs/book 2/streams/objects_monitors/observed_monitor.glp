@@ -1,0 +1,78 @@
+%% observed_monitor.glp - Type/mode-aware observer for monitor streams
+%% Demonstrates observation of incomplete messages with duplicate
+
+% Accumulator monitor
+monitor(Reqs) :- monitor_loop(Reqs?, 0).
+
+monitor_loop([add(N)|Reqs], Sum) :-
+    Sum1 := Sum? + N?, monitor_loop(Reqs?, Sum1?).
+monitor_loop([subtract(N)|Reqs], Sum) :-
+    Sum1 := Sum? - N?, monitor_loop(Reqs?, Sum1?).
+monitor_loop([value(V?)|Reqs], Sum) :-
+    ground(Sum?) | V = Sum?, monitor_loop(Reqs?, Sum?).
+monitor_loop([], _).
+
+% Type/mode-aware observer for accumulator
+% Input mode: add(N), subtract(N) - N is ground
+% Output mode: value(V) - V is bound by monitor
+observe_accum([add(N)|In], [add(N?)|Out?], [add(N?)|Log?]) :-
+    ground(N?) | observe_accum(In?, Out, Log).
+observe_accum([subtract(N)|In], [subtract(N?)|Out?], [subtract(N?)|Log?]) :-
+    ground(N?) | observe_accum(In?, Out, Log).
+observe_accum([value(V1?)|In], [value(V)|Out?], [value(V2?)|Log?]) :-
+    duplicate(V?, V1, V2),
+    observe_accum(In?, Out, Log).
+observe_accum([], [], []).
+
+% Duplicate: waits for X to be ground, then binds both outputs
+duplicate(X, X?, X?) :- ground(X?) | true.
+
+% Fair merge
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], [], []).
+
+% Alice: immediate, adds and queries
+alice(V, [add(10), add(5), value(V?)|Xs?]) :- alice_done(Xs).
+alice_done([]).
+
+% Bob: delayed 50ms, subtracts and queries
+bob(V, Ys?) :-
+    wait(50) |
+    Ys = [subtract(3), value(V?)|Ys1?],
+    bob_done(Ys1).
+bob_done([]).
+
+% Carol: delayed 100ms, adds and queries
+carol(V, Zs?) :-
+    wait(100) |
+    Zs = [add(20), value(V?)|Zs1?],
+    carol_done(Zs1).
+carol_done([]).
+
+% Diana: delayed 150ms, just queries
+diana(V, Ws?) :-
+    wait(150) |
+    Ws = [value(V?)|Ws1?],
+    diana_done(Ws1).
+diana_done([]).
+
+% Test harness: 4 actors, observed monitor
+play_accum(VA?, VB?, VC?, VD?, Log?) :-
+    alice(VA, As),
+    bob(VB, Bs),
+    carol(VC, Cs),
+    diana(VD, Ds),
+    merge(As?, Bs?, AB),
+    merge(Cs?, Ds?, CD),
+    merge(AB?, CD?, All),
+    observe_accum(All?, Reqs, Log),
+    monitor(Reqs?).
+
+% Simple 2-actor test
+test_observed(V1?, V2?, Log?) :-
+    alice(V1, As),
+    bob(V2, Bs),
+    merge(As?, Bs?, All),
+    observe_accum(All?, Reqs, Log),
+    monitor(Reqs?).

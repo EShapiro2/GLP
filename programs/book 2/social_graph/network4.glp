@@ -1,0 +1,125 @@
+%% network4.glp - 4-way network switch
+%% Messages are msg(From, To, Content) - switch routes based on To
+%% 12 clauses: each of 4 agents can send to 3 others
+%%
+%% Uses swap pattern: HEAD has Out?, BODY has Out (writer preserved)
+
+%% Alice sends to Bob
+network4((alice, ch([msg(alice, bob, X)|AliceIn], AliceOut?)),
+         (bob, ch(BobIn, [msg(alice, bob, X?)|BobOut?])),
+         (carol, ch(CarolIn, CarolOut?)),
+         (dave, ch(DaveIn, DaveOut?))) :-
+    network4((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut)),
+             (dave, ch(DaveIn?, DaveOut))).
+
+%% Alice sends to Carol
+network4((alice, ch([msg(alice, carol, X)|AliceIn], AliceOut?)),
+         (bob, ch(BobIn, BobOut?)),
+         (carol, ch(CarolIn, [msg(alice, carol, X?)|CarolOut?])),
+         (dave, ch(DaveIn, DaveOut?))) :-
+    network4((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut)),
+             (dave, ch(DaveIn?, DaveOut))).
+
+%% Alice sends to Dave
+network4((alice, ch([msg(alice, dave, X)|AliceIn], AliceOut?)),
+         (bob, ch(BobIn, BobOut?)),
+         (carol, ch(CarolIn, CarolOut?)),
+         (dave, ch(DaveIn, [msg(alice, dave, X?)|DaveOut?]))) :-
+    network4((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut)),
+             (dave, ch(DaveIn?, DaveOut))).
+
+%% Bob sends to Alice
+network4((alice, ch(AliceIn, [msg(bob, alice, X?)|AliceOut?])),
+         (bob, ch([msg(bob, alice, X)|BobIn], BobOut?)),
+         (carol, ch(CarolIn, CarolOut?)),
+         (dave, ch(DaveIn, DaveOut?))) :-
+    network4((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut)),
+             (dave, ch(DaveIn?, DaveOut))).
+
+%% Bob sends to Carol
+network4((alice, ch(AliceIn, AliceOut?)),
+         (bob, ch([msg(bob, carol, X)|BobIn], BobOut?)),
+         (carol, ch(CarolIn, [msg(bob, carol, X?)|CarolOut?])),
+         (dave, ch(DaveIn, DaveOut?))) :-
+    network4((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut)),
+             (dave, ch(DaveIn?, DaveOut))).
+
+%% Bob sends to Dave
+network4((alice, ch(AliceIn, AliceOut?)),
+         (bob, ch([msg(bob, dave, X)|BobIn], BobOut?)),
+         (carol, ch(CarolIn, CarolOut?)),
+         (dave, ch(DaveIn, [msg(bob, dave, X?)|DaveOut?]))) :-
+    network4((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut)),
+             (dave, ch(DaveIn?, DaveOut))).
+
+%% Carol sends to Alice
+network4((alice, ch(AliceIn, [msg(carol, alice, X?)|AliceOut?])),
+         (bob, ch(BobIn, BobOut?)),
+         (carol, ch([msg(carol, alice, X)|CarolIn], CarolOut?)),
+         (dave, ch(DaveIn, DaveOut?))) :-
+    network4((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut)),
+             (dave, ch(DaveIn?, DaveOut))).
+
+%% Carol sends to Bob
+network4((alice, ch(AliceIn, AliceOut?)),
+         (bob, ch(BobIn, [msg(carol, bob, X?)|BobOut?])),
+         (carol, ch([msg(carol, bob, X)|CarolIn], CarolOut?)),
+         (dave, ch(DaveIn, DaveOut?))) :-
+    network4((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut)),
+             (dave, ch(DaveIn?, DaveOut))).
+
+%% Carol sends to Dave
+network4((alice, ch(AliceIn, AliceOut?)),
+         (bob, ch(BobIn, BobOut?)),
+         (carol, ch([msg(carol, dave, X)|CarolIn], CarolOut?)),
+         (dave, ch(DaveIn, [msg(carol, dave, X?)|DaveOut?]))) :-
+    network4((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut)),
+             (dave, ch(DaveIn?, DaveOut))).
+
+%% Dave sends to Alice
+network4((alice, ch(AliceIn, [msg(dave, alice, X?)|AliceOut?])),
+         (bob, ch(BobIn, BobOut?)),
+         (carol, ch(CarolIn, CarolOut?)),
+         (dave, ch([msg(dave, alice, X)|DaveIn], DaveOut?))) :-
+    network4((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut)),
+             (dave, ch(DaveIn?, DaveOut))).
+
+%% Dave sends to Bob
+network4((alice, ch(AliceIn, AliceOut?)),
+         (bob, ch(BobIn, [msg(dave, bob, X?)|BobOut?])),
+         (carol, ch(CarolIn, CarolOut?)),
+         (dave, ch([msg(dave, bob, X)|DaveIn], DaveOut?))) :-
+    network4((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut)),
+             (dave, ch(DaveIn?, DaveOut))).
+
+%% Dave sends to Carol
+network4((alice, ch(AliceIn, AliceOut?)),
+         (bob, ch(BobIn, BobOut?)),
+         (carol, ch(CarolIn, [msg(dave, carol, X?)|CarolOut?])),
+         (dave, ch([msg(dave, carol, X)|DaveIn], DaveOut?))) :-
+    network4((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (carol, ch(CarolIn?, CarolOut)),
+             (dave, ch(DaveIn?, DaveOut))).

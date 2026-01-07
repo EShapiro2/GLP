@@ -1,0 +1,22 @@
+%% reverse.glp - List reversal examples
+%%
+%% Two implementations demonstrating O(n^2) vs O(n) complexity.
+
+%% Naive reverse - O(n^2) due to repeated append
+reverse_naive([], []).
+reverse_naive([X|Xs], Ys?) :-
+    reverse_naive(Xs?, Zs),
+    append(Zs?, [X?], Ys).
+
+append([], Ys, Ys?).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
+
+%% Accumulator reverse - O(n) single pass
+reverse(Xs, Ys?) :- reverse_acc(Xs?, [], Ys).
+
+reverse_acc([], Acc, Acc?).
+reverse_acc([X|Xs], Acc, Ys?) :- reverse_acc(Xs?, [X?|Acc?], Ys).
+
+%% Test goals:
+%% reverse_naive([a,b,c], R).
+%% reverse([a,b,c], R).

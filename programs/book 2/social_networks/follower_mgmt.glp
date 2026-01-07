@@ -1,0 +1,9 @@
+%% follower_mgmt.glp - Follower management
+%% Add and remove followers
+
+add_follower(Name, Followers, [(Name?, Stream)|Followers?], Stream?).
+
+remove_follower(Name, [(First, _)|Fs], Fs?) :- Name? =?= First? | true.
+remove_follower(Name, [(Other, Stream)|Fs], [(Other?, Stream?)|Fs1?]) :-
+    ~(Name? =?= Other?) |
+    remove_follower(Name?, Fs?, Fs1).
