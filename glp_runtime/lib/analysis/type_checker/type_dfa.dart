@@ -203,7 +203,7 @@ class TypeDFA {
   }
 
   /// Check if moded language is empty (spec 5.7.4)
-  bool get isModedEmpty {
+  bool get isEmpty {
     final visited = <DFAState>{};
     final worklist = <DFAState>[startState];
 
@@ -232,12 +232,6 @@ class TypeDFA {
 
     return true;
   }
-
-  /// Alias for isModedEmpty (spec-compliant name)
-  bool get isEmpty => isModedEmpty;
-
-  /// Alias for modedIntersect (spec-compliant name)
-  TypeDFA intersect(TypeDFA other) => modedIntersect(other);
 
   /// Check language equivalence
   bool isEquivalent(TypeDFA other) => isSubsetOf(other) && other.isSubsetOf(this);
@@ -289,9 +283,9 @@ class TypeDFA {
     // Otherwise, labels in A but not in B would have no transition in B̄,
     // causing incorrect rejection (the label would go nowhere instead of sink).
     final combinedAlphabet = alphabet.union(other.alphabet);
-    final otherComplement = other.modedComplement(combinedAlphabet);
-    final intersection = modedIntersect(otherComplement);
-    return intersection.isModedEmpty;
+    final otherComplement = other.complement(combinedAlphabet);
+    final intersection = intersect(otherComplement);
+    return intersection.isEmpty;
   }
 
   /// Check if L^struct(this) ⊆ L^struct(other)
@@ -321,7 +315,7 @@ class TypeDFA {
   ///
   /// This allows comparing structure without mode differences affecting
   /// the subset check. Both DFAs are normalized to the same mode so
-  /// modedComplement and modedIntersect work correctly.
+  /// complement and intersect work correctly.
   ///
   /// All primitive states (including Any, _, _?, prim_N) are merged into
   /// a single _PRIM_ state so that they're considered structurally equivalent.
@@ -384,7 +378,7 @@ class TypeDFA {
   }
 
   /// Moded intersection (product construction with mode intersection)
-  TypeDFA modedIntersect(TypeDFA other) {
+  TypeDFA intersect(TypeDFA other) {
     final productStates = <String, DFAState>{};
     final newTransitions = <(DFAState, ModedLabel), DFAState>{};
     final newFinalStates = <DFAState>{};
@@ -492,7 +486,7 @@ class TypeDFA {
   /// Moded complement (spec 5.7.3)
   /// Takes optional alphabet to complete over before complementing.
   /// IMPORTANT: Always pass the relevant alphabet to ensure correct complement.
-  TypeDFA modedComplement([Set<ModedLabel>? withAlphabet]) {
+  TypeDFA complement([Set<ModedLabel>? withAlphabet]) {
     final completed = complete(withAlphabet);
 
     // Complement final states
@@ -579,20 +573,20 @@ class TypeDFA {
   TypeDFA union(TypeDFA other) {
     // Optimization: empty union is identity
     // This avoids complex complement operations that may lose primitive state info
-    if (isModedEmpty && transitions.isEmpty) {
+    if (isEmpty && transitions.isEmpty) {
       return other;
     }
-    if (other.isModedEmpty && other.transitions.isEmpty) {
+    if (other.isEmpty && other.transitions.isEmpty) {
       return this;
     }
 
     // L(A) ∪ L(B) = complement(complement(A) ∩ complement(B))
     // IMPORTANT: All complements must be complete over combined alphabet
     final combinedAlphabet = alphabet.union(other.alphabet);
-    final compA = modedComplement(combinedAlphabet);
-    final compB = other.modedComplement(combinedAlphabet);
-    final intersection = compA.modedIntersect(compB);
-    final result = intersection.modedComplement(combinedAlphabet);
+    final compA = complement(combinedAlphabet);
+    final compB = other.complement(combinedAlphabet);
+    final intersection = compA.intersect(compB);
+    final result = intersection.complement(combinedAlphabet);
 
     // IMPORTANT: Remove _sink_ from final states.
     // The sink state represents rejected paths and should never be accepting.
@@ -650,7 +644,7 @@ class NumberTypeDFA extends TypeDFA {
   }
 
   @override
-  bool get isModedEmpty => false;
+  bool get isEmpty => false;
 
   @override
   bool isSubsetOf(TypeDFA other) {
@@ -681,7 +675,7 @@ class StringTypeDFA extends TypeDFA {
   }
 
   @override
-  bool get isModedEmpty => false;
+  bool get isEmpty => false;
 
   @override
   bool isSubsetOf(TypeDFA other) {
