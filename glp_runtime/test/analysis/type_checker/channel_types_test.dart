@@ -12,11 +12,13 @@ void main() {
     // =========================================================================
 
     group('Channel Creation', () {
+      // Note: Type aliasing (MyStream ::= MyList) is not allowed.
+      // Use base types directly in type definitions.
+
       test('POSITIVE: create_channel with complementary modes', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::= MyList.
-          MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
+          MyChannel ::= ch(MyList?, MyList) ; ch(MyList, MyList?).
 
           procedure create_channel(MyChannel, MyChannel).
           create_channel(ch(AtoB?, BtoA), ch(BtoA?, AtoB)).
@@ -28,8 +30,7 @@ void main() {
       test('POSITIVE: channel sender uses correct modes', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::= MyList.
-          MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
+          MyChannel ::= ch(MyList?, MyList) ; ch(MyList, MyList?).
 
           procedure my_send(MyChannel?, _?).
           my_send(ch(_, Out), Msg) :- Out = [Msg? | Rest?], my_send(ch(_, Rest?), done).
@@ -47,10 +48,9 @@ void main() {
       test('POSITIVE: bounded buffer consumes slots', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::= MyList.
           MyInvStream ::= [] ; [_? | MyInvStream].
 
-          procedure bounded_buffer(MyStream?, MyInvStream?, MyStream).
+          procedure bounded_buffer(MyList?, MyInvStream?, MyList).
           bounded_buffer([], _, []).
           bounded_buffer([X | In], [Slot? | Slots], [X? | Out]) :-
               Slot = taken,
@@ -63,10 +63,10 @@ void main() {
       test('NEGATIVE: bounded buffer with wrong slot mode fails', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::= MyList.
           MyInvStream ::= [] ; [_? | MyInvStream].
 
-          procedure bounded_buffer(MyStream?, MyInvStream?, MyStream).
+          procedure handle(_?).
+          procedure bounded_buffer(MyList?, MyInvStream?, MyList).
           bounded_buffer([], _, []).
           bounded_buffer([X | In], [Slot | Slots], [X? | Out]) :-
               handle(Slot?),
@@ -85,9 +85,10 @@ void main() {
       test('POSITIVE: handler covers both channel orientations', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::= MyList.
-          MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
+          MyChannel ::= ch(MyList?, MyList) ; ch(MyList, MyList?).
 
+          procedure process_read(MyList?).
+          procedure process_write(MyList).
           procedure handle_channel(MyChannel?).
           handle_channel(ch(In?, Out)) :- process_read(In?), process_write(Out).
           handle_channel(ch(Out, In?)) :- process_write(Out), process_read(In?).
@@ -99,14 +100,15 @@ void main() {
       test('NEGATIVE: handler missing one channel orientation fails', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::= MyList.
-          MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
+          MyChannel ::= ch(MyList?, MyList) ; ch(MyList, MyList?).
 
+          procedure process_read(MyList?).
+          procedure process_write(MyList).
           procedure handle_channel(MyChannel?).
           handle_channel(ch(In?, Out)) :- process_read(In?), process_write(Out).
         ''');
         expect(result.isWellTyped, isFalse,
-            reason: 'Missing ch(MyStream, MyStream?) case');
+            reason: 'Missing ch(MyList, MyList?) case');
       }, skip: 'Subtype fixpoint semantics not yet implemented');
     });
   });

@@ -129,11 +129,13 @@ void main() {
     // =========================================================================
 
     group('Channel', () {
+      // Note: Type aliasing (Stream ::= List) is not allowed.
+      // Use base types directly in type definitions.
+
       test('POSITIVE: new_channel is well-moded', () {
         final result = checkTypes('''
-          List ::= [_ | List] ; [].
-          Stream ::= List.
-          Channel ::= ch(Stream?, Stream).
+          MyList ::= [_ | MyList] ; [].
+          Channel ::= ch(MyList?, MyList).
 
           procedure new_channel(Channel, Channel).
           new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
@@ -144,9 +146,8 @@ void main() {
 
       test('POSITIVE: send is well-moded', () {
         final result = checkTypes('''
-          List ::= [_ | List] ; [].
-          Stream ::= List.
-          Channel ::= ch(Stream?, Stream).
+          MyList ::= [_ | MyList] ; [].
+          Channel ::= ch(MyList?, MyList).
 
           procedure send(_, Channel?, Channel).
           send(X, ch(In, [X?|Out?]), ch(In?, Out)).
@@ -157,9 +158,8 @@ void main() {
 
       test('POSITIVE: receive is well-moded', () {
         final result = checkTypes('''
-          List ::= [_ | List] ; [].
-          Stream ::= List.
-          Channel ::= ch(Stream?, Stream).
+          MyList ::= [_ | MyList] ; [].
+          Channel ::= ch(MyList?, MyList).
 
           procedure receive(_?, Channel?, Channel).
           receive(X?, ch([X|In], Out?), ch(In?, Out)).
@@ -170,9 +170,8 @@ void main() {
 
       test('NEGATIVE: send with wrong message mode fails', () {
         final result = checkTypes('''
-          List ::= [_ | List] ; [].
-          Stream ::= List.
-          Channel ::= ch(Stream?, Stream).
+          MyList ::= [_ | MyList] ; [].
+          Channel ::= ch(MyList?, MyList).
 
           procedure send(_, Channel?, Channel).
           send(X?, ch(In, [X|Out?]), ch(In?, Out)).
@@ -183,10 +182,11 @@ void main() {
 
       test('POSITIVE: Producer-consumer pattern', () {
         final result = checkTypes('''
-          List ::= [_ | List] ; [].
-          Stream ::= List.
-          Channel ::= ch(Stream?, Stream).
+          MyList ::= [_ | MyList] ; [].
+          Channel ::= ch(MyList?, MyList).
 
+          procedure done(Channel?).
+          procedure process(_?).
           procedure send(_, Channel?, Channel).
           send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 
@@ -232,10 +232,10 @@ void main() {
 
       test('POSITIVE: receive usable in guard position', () {
         final result = checkTypes('''
-          List ::= [_ | List] ; [].
-          Stream ::= List.
-          Channel ::= ch(Stream?, Stream).
+          MyList ::= [_ | MyList] ; [].
+          Channel ::= ch(MyList?, MyList).
 
+          procedure process(_?).
           procedure receive(_?, Channel?, Channel).
           receive(X?, ch([X|In], Out?), ch(In?, Out)).
 

@@ -187,15 +187,10 @@ class TypeCompiler {
       transitions[(fromState, tailElem)] = tailTarget;
 
     } else if (alt is TypeRef) {
-      // Type alias: MyStream ::= MyList
-      // Add all transitions from the referenced type's alternatives
-      final refDef = env.getType(alt.name);
-      if (refDef != null) {
-        for (final refAlt in refDef.alternatives) {
-          _addTransitionsForAlt(fromState, refAlt, stateMap, transitions,
-              finalState, primitiveStateModes);
-        }
-      }
+      // Type alias (A ::= B) is illegal - creates epsilon transitions (NFA)
+      throw TypeCompileError(
+          '${fromState.name}: type alias "${alt.name}" not allowed; '
+          'use constructor wrapper instead');
     }
   }
   

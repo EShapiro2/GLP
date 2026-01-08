@@ -49,15 +49,17 @@ void main() {
 
     group('Stream', () {
       test('POSITIVE: Stream handler with complete coverage', () {
+        // Note: Type aliasing (MyStream ::= MyList) is not allowed
+        // because it creates epsilon transitions. Use the base type directly.
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::= MyList.
-          procedure process(MyStream?).
+          procedure handle(_?).
+          procedure process(MyList?).
           process([]).
           process([X | Xs]) :- handle(X?), process(Xs?).
         ''');
         expect(result.isWellTyped, isTrue,
-            reason: 'Both cases covered for Stream');
+            reason: 'Both cases covered for List');
       });
     });
 

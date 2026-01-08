@@ -8,14 +8,15 @@ import 'test_helpers.dart';
 void main() {
   group('Defined Guards', () {
     test('POSITIVE: Defined guard with procedure declaration', () {
+      // Note: Type aliasing is not allowed, use base types directly
       final result = checkTypes('''
         MyList ::= [] ; [_ | MyList].
-        MyStream ::= MyList.
-        MyChannel ::= ch(MyStream?, MyStream) ; ch(MyStream, MyStream?).
+        MyChannel ::= ch(MyList?, MyList) ; ch(MyList, MyList?).
 
         procedure channel(MyChannel?).
         channel(ch(_, _)).
 
+        procedure handle(_?).
         procedure process(_?, String).
         process(X, ok) :- channel(X?) | handle(X?).
         process(_, error) :- otherwise | true.

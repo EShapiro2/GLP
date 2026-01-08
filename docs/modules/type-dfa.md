@@ -39,6 +39,25 @@ Any ::= _ ; _?.                % ILLEGAL: same position, different modes
 AnyOne ::= 1 ; 1?.             % ILLEGAL: same constant, different modes
 ```
 
+### No Type Aliasing (Epsilon Transitions)
+
+Type definitions must have **concrete alternatives only**. Each alternative must be one of:
+- A constant (`[]`, `0`, `foo`)
+- A primitive mode (`_`, `_?`)
+- A structure with arguments (`s(Nat)`, `[_|List]`, `ch(Stream?, Stream)`)
+
+Type aliasing (referencing another type directly) is **illegal** because it creates epsilon transitions, converting the DFA to an NFA:
+
+```
+Stream ::= List.               % ILLEGAL: type alias creates epsilon transition
+Combined ::= List1 ; List2.    % ILLEGAL: merging types creates NFA
+Wrapper ::= inner(Other).      % LEGAL: Other appears inside a constructor
+```
+
+**Rationale:** Each DFA state must have explicit transitions labeled with symbols (constants or functor/arity/position). A bare type reference `A ::= B` would require an epsilon transition from state A to state B, violating the DFA structure.
+
+**Error:** `TypeAliasError("A: type alias not allowed; use constructor wrapper")`
+
 ### Leaf Types
 
 A **leaf type** terminates a type path. The DFA has leaf states for:
