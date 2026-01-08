@@ -1,7 +1,7 @@
 # Module: moded-term
 
-**Version**: 0.3  
-**Date**: 2025-01-08  
+**Version**: 0.4
+**Date**: 2025-01-09
 **Status**: DRAFT  
 **Paper References**: Definition 4.2 (Moded Term, Complement), lines 179-211
 
@@ -31,6 +31,27 @@ Given a moded term T, its **complement** T? is obtained by:
 2. Replacing every variable by its paired variable (`X` ↔ `X?`)
 
 The complement operation is an involution: (T?)? = T.
+
+### Moded Term Classification (Paper lines 186-194)
+
+A moded term is classified by its mode structure:
+
+| Classification | Definition | Example |
+|----------------|------------|---------|
+| **Consumed** | All modes are ↓ | `↓[↓X?\|Xs?]` |
+| **Produced** | All modes are ↑ | `↑[↑X\|Xs]` |
+| **I/O** | Root mode is ↓, with at most one flip to ↑ (for a produced subtree) | `↓merge(↓[↓X?\|Xs?], Ys?, ↑[↑X\|Zs])` |
+
+**Invariant:** A well-formed moded head is always I/O—it starts consumed (↓) and may contain produced (↑) subtrees for output arguments.
+
+### Path Direction (Paper lines 202-210)
+
+A moded path has a **direction** determined by its root mode:
+
+| Direction | Root Mode | Variable at Leaf |
+|-----------|-----------|------------------|
+| **Input path** | ↓ (consume) | Reader (X?) |
+| **Output path** | ↑ (produce) | Writer (X) |
 
 ### Moded Paths (Paper lines 202-210)
 

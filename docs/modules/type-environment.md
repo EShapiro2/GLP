@@ -1,7 +1,7 @@
 # Module: type-environment
 
-**Version**: 0.1
-**Date**: 2025-01-07
+**Version**: 0.4
+**Date**: 2025-01-09
 **Status**: DRAFT
 **Paper References**: Definition 4.1 (page 5)
 
@@ -20,6 +20,18 @@ Stores and provides lookup for type definitions and procedure declarations in a 
 > A typed GLP program P = (Cs, D) has GLP clauses Cs and a GLP type D defining the type of every procedure in Cs.
 
 The type environment represents "D" — the collection of type definitions and procedure declarations.
+
+### Type Classification (Paper lines 9-17)
+
+Types are classified by their mode structure:
+
+| Classification | Definition | Example |
+|----------------|------------|---------|
+| **Output type** | No complementation in definition | `Stream ::= [] ; [_\|Stream]` |
+| **Input type** | Complement of an output type | `Stream?` (all modes flipped) |
+| **Interactive type** | Contains internal complementation | `HollowStream ::= [] ; [_?\|HollowStream]` |
+
+**Key insight:** Interactive types like `HollowStream` have some positions that consume (`_?`) while the overall structure is produced. This enables bidirectional communication patterns.
 
 ## Public Interface
 
@@ -237,3 +249,4 @@ All types referenced in procedure declarations must be defined.
 | 0.1 | 2025-01-07 | Initial draft |
 | 0.2 | 2025-01-07 | Add Dependencies section |
 | 0.3 | 2025-01-07 | Add algorithms, positive and negative examples |
+| 0.4 | 2025-01-09 | Add Type Classification section (Paper lines 9-17) |
