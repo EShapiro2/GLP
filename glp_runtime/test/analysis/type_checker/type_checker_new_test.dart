@@ -232,9 +232,9 @@ procedure iszero(Nat?, Bool).
 
 Bool ::= true ; false.
 
-iszero(0, true?).
+iszero(0, R) :- R = true.
 ''';
-        // Missing: iszero(s(N), false?).
+        // Missing: iszero(s(N), R) :- R = false.
         final result = checkTypes(source);
         expect(result.isWellTyped, isFalse);
         expect(result.errors.any((e) => e.message.contains('s')), isTrue,

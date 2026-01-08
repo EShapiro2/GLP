@@ -34,8 +34,8 @@ void main() {
 
       test('List with _ elements needs only writer mode', () {
         final result = checkTypes('''
-          List ::= [] ; [_ | List].
-          procedure copy(List?, List).
+          MyList ::= [] ; [_ | MyList].
+          procedure copy(MyList?, MyList).
           copy([], []).
           copy([X | In], [X? | Out]) :- copy(In?, Out).
         ''');
@@ -77,8 +77,8 @@ void main() {
     group('Single-mode Types', () {
       test('List copy with _ elements - only one mode needed', () {
         final result = checkTypes('''
-          List ::= [] ; [_ | List].
-          procedure copy(List?, List).
+          MyList ::= [] ; [_ | MyList].
+          procedure copy(MyList?, MyList).
           copy([], []).
           copy([X | In], [X? | Out]) :- copy(In?, Out).
         ''');

@@ -379,9 +379,10 @@ class TypeParser {
       
       // Check for functor(args)
       if (_match(TypeTokenType.lparen)) {
-        final args = <TypeExpr>[_parseTypeRef()];
+        // Use _parseTypeExprElement to allow primitive modes like _ and _?
+        final args = <TypeExpr>[_parseTypeExprElement()];
         while (_match(TypeTokenType.comma)) {
-          args.add(_parseTypeRef());
+          args.add(_parseTypeExprElement());
         }
         _consume(TypeTokenType.rparen, 'Expected ")" after functor arguments');
         return StructAlt(atomToken.lexeme, args, atomToken.line, atomToken.column);
