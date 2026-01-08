@@ -1,6 +1,7 @@
 // test/analysis/type_checker/predefined_operations_test.dart
 //
-// Tests for predefined type operations: Every/Any self-duality, DiffList, and Channel
+// Tests for predefined type operations: DiffList and Channel
+// Note: Any/Every types removed - use _ and _? primitives directly
 
 import 'package:test/test.dart';
 import 'test_helpers.dart';
@@ -8,84 +9,57 @@ import 'test_helpers.dart';
 void main() {
   group('Predefined Operations', () {
     // =========================================================================
-    // Self-duality of Every and Any
+    // Primitive mode types
     // =========================================================================
 
-    group('Self-Duality', () {
-      test('POSITIVE: Any and Any? are equivalent', () {
+    group('Primitive Types', () {
+      test('POSITIVE: Output position with writer', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          procedure foo(Any, Any?).
-          foo(X, X?).
-        ''');
-        expect(result.isWellTyped, isTrue,
-            reason: 'Any = Any? by self-duality');
-      });
-
-      test('POSITIVE: Every and Every? are equivalent', () {
-        final result = checkTypes('''
-          Every ::= _ ; _?.
-          procedure foo(Every, Every?).
-          foo(X, X?).
-          foo(X?, X).
-        ''');
-        expect(result.isWellTyped, isTrue,
-            reason: 'Every = Every? but still needs both modes covered');
-      });
-
-      test('POSITIVE: Writer at Any position is valid', () {
-        final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          procedure produce(Any).
+          Output ::= _.
+          procedure produce(Output).
           produce(X).
         ''');
-        expect(result.isWellTyped, isTrue, reason: 'Any accepts writer');
+        expect(result.isWellTyped, isTrue,
+            reason: 'Output _ accepts writer');
       });
 
-      test('POSITIVE: Reader at Any position is valid', () {
+      test('POSITIVE: Input position with reader', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          procedure consume(Any).
+          Input ::= _?.
+          procedure consume(Input?).
           consume(X?).
         ''');
-        expect(result.isWellTyped, isTrue, reason: 'Any accepts reader');
+        expect(result.isWellTyped, isTrue,
+            reason: 'Input _? accepts reader');
       });
 
-      test('POSITIVE: List with Any elements needs only two clauses', () {
+      test('POSITIVE: Writer at _ position is valid', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
+          Output ::= _.
+          procedure produce(Output).
+          produce(X).
+        ''');
+        expect(result.isWellTyped, isTrue, reason: '_ accepts writer');
+      });
+
+      test('POSITIVE: Reader at _? position is valid', () {
+        final result = checkTypes('''
+          Input ::= _?.
+          procedure consume(Input?).
+          consume(X?).
+        ''');
+        expect(result.isWellTyped, isTrue, reason: '_? accepts reader');
+      });
+
+      test('POSITIVE: List with _ elements needs only two clauses', () {
+        final result = checkTypes('''
+          List ::= [_ | List] ; [].
           procedure copy(List?, List).
           copy([], []).
           copy([X | In], [X? | Out]) :- copy(In?, Out).
         ''');
         expect(result.isWellTyped, isTrue,
-            reason: 'Any has no coverage requirement');
-      });
-
-      test('NEGATIVE: Every needs both modes despite self-duality', () {
-        final result = checkTypes('''
-          Every ::= _ ; _?.
-          procedure echo(Every?, Every).
-          echo(X, Y?) :- Y = X?.
-        ''');
-        expect(result.isWellTyped, isFalse,
-            reason: 'Every ::= requires both _ and _? covered');
-      });
-
-      test('POSITIVE: Every with both modes covered', () {
-        final result = checkTypes('''
-          Every ::= _ ; _?.
-          procedure echo(Every?, Every).
-          echo(X, Y?) :- Y = X?.
-          echo(X?, Y) :- Y? = X.
-        ''');
-        expect(result.isWellTyped, isTrue,
-            reason: 'Both modes covered for Every');
+            reason: '_ has single mode, no coverage requirement');
       });
     });
 
@@ -96,9 +70,7 @@ void main() {
     group('DiffList', () {
       test('POSITIVE: dl_append is well-moded', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
+          List ::= [_ | List] ; [].
           DiffList ::= List \\ List?.
 
           procedure dl_append(DiffList?, DiffList?, DiffList).
@@ -110,9 +82,7 @@ void main() {
 
       test('POSITIVE: dl_to_list is well-moded', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
+          List ::= [_ | List] ; [].
           DiffList ::= List \\ List?.
 
           procedure dl_to_list(DiffList?, List).
@@ -124,9 +94,7 @@ void main() {
 
       test('NEGATIVE: dl_append with wrong modes fails', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
+          List ::= [_ | List] ; [].
           DiffList ::= List \\ List?.
 
           procedure dl_append(DiffList?, DiffList?, DiffList).
@@ -138,9 +106,7 @@ void main() {
 
       test('POSITIVE: dl_append demonstrates O(1) concatenation', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
+          List ::= [_ | List] ; [].
           DiffList ::= List \\ List?.
 
           procedure dl_append(DiffList?, DiffList?, DiffList).
@@ -165,10 +131,8 @@ void main() {
     group('Channel', () {
       test('POSITIVE: new_channel is well-moded', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          Stream ::< List.
+          List ::= [_ | List] ; [].
+          Stream ::= List.
           Channel ::= ch(Stream?, Stream).
 
           procedure new_channel(Channel, Channel).
@@ -180,13 +144,11 @@ void main() {
 
       test('POSITIVE: send is well-moded', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          Stream ::< List.
+          List ::= [_ | List] ; [].
+          Stream ::= List.
           Channel ::= ch(Stream?, Stream).
 
-          procedure send(Any, Channel?, Channel).
+          procedure send(_, Channel?, Channel).
           send(X, ch(In, [X?|Out?]), ch(In?, Out)).
         ''');
         expect(result.isWellTyped, isTrue,
@@ -195,13 +157,11 @@ void main() {
 
       test('POSITIVE: receive is well-moded', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          Stream ::< List.
+          List ::= [_ | List] ; [].
+          Stream ::= List.
           Channel ::= ch(Stream?, Stream).
 
-          procedure receive(Any, Channel?, Channel).
+          procedure receive(_?, Channel?, Channel).
           receive(X?, ch([X|In], Out?), ch(In?, Out)).
         ''');
         expect(result.isWellTyped, isTrue,
@@ -210,13 +170,11 @@ void main() {
 
       test('NEGATIVE: send with wrong message mode fails', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          Stream ::< List.
+          List ::= [_ | List] ; [].
+          Stream ::= List.
           Channel ::= ch(Stream?, Stream).
 
-          procedure send(Any, Channel?, Channel).
+          procedure send(_, Channel?, Channel).
           send(X?, ch(In, [X|Out?]), ch(In?, Out)).
         ''');
         expect(result.isWellTyped, isFalse,
@@ -225,16 +183,14 @@ void main() {
 
       test('POSITIVE: Producer-consumer pattern', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          Stream ::< List.
+          List ::= [_ | List] ; [].
+          Stream ::= List.
           Channel ::= ch(Stream?, Stream).
 
-          procedure send(Any, Channel?, Channel).
+          procedure send(_, Channel?, Channel).
           send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 
-          procedure receive(Any, Channel?, Channel).
+          procedure receive(_?, Channel?, Channel).
           receive(X?, ch([X|In], Out?), ch(In?, Out)).
 
           procedure producer(Channel?).
@@ -260,9 +216,7 @@ void main() {
     group('Defined Guards', () {
       test('POSITIVE: dl_append usable in guard position', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
+          List ::= [_ | List] ; [].
           DiffList ::= List \\ List?.
 
           procedure dl_append(DiffList?, DiffList?, DiffList).
@@ -278,13 +232,11 @@ void main() {
 
       test('POSITIVE: receive usable in guard position', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          Stream ::< List.
+          List ::= [_ | List] ; [].
+          Stream ::= List.
           Channel ::= ch(Stream?, Stream).
 
-          procedure receive(Any, Channel?, Channel).
+          procedure receive(_?, Channel?, Channel).
           receive(X?, ch([X|In], Out?), ch(In?, Out)).
 
           procedure handler(Channel?).
@@ -298,9 +250,7 @@ void main() {
 
       test('POSITIVE: dl_to_list in guard for closing difference list', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
+          List ::= [_ | List] ; [].
           DiffList ::= List \\ List?.
 
           procedure dl_to_list(DiffList?, List).
@@ -316,57 +266,32 @@ void main() {
     });
 
     // =========================================================================
-    // EveryList theoretical example
+    // List with single mode elements (no coverage requirement)
     // =========================================================================
 
-    group('EveryList', () {
-      test('POSITIVE: EveryList copy with three clauses', () {
+    group('Single-mode List', () {
+      test('POSITIVE: List copy with two clauses passes', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          EveryList ::= [Every | EveryList] ; [].
+          List ::= [_ | List] ; [].
 
-          procedure copy(EveryList?, EveryList).
+          procedure copy(List?, List).
           copy([], []).
           copy([X | In], [X? | Out]) :- copy(In?, Out).
-          copy([X? | In], [X | Out]) :- copy(In?, Out).
         ''');
         expect(result.isWellTyped, isTrue,
-            reason: 'EveryList requires both element mode alternatives');
+            reason: 'List with _ elements only needs two clauses');
       });
 
-      test('NEGATIVE: EveryList copy with only two clauses fails', () {
+      test('POSITIVE: List (with _ elements) simple copy', () {
         final result = checkTypes('''
-          Every ::= _ ; _?.
-          EveryList ::= [Every | EveryList] ; [].
-
-          procedure copy(EveryList?, EveryList).
-          copy([], []).
-          copy([X | In], [X? | Out]) :- copy(In?, Out).
-        ''');
-        expect(result.isWellTyped, isFalse,
-            reason: 'Missing second element mode');
-      });
-
-      test('POSITIVE: List (with Any) needs only two clauses vs EveryList three',
-          () {
-        final result = checkTypes('''
-          Every ::= _ ; _?.
-          Any ::< Every.
-          List ::= [Any | List] ; [].
-          EveryList ::= [Every | EveryList] ; [].
+          List ::= [_ | List] ; [].
 
           procedure copy_list(List?, List).
           copy_list([], []).
           copy_list([X | In], [X? | Out]) :- copy_list(In?, Out).
-
-          procedure copy_everylist(EveryList?, EveryList).
-          copy_everylist([], []).
-          copy_everylist([X | In], [X? | Out]) :- copy_everylist(In?, Out).
-          copy_everylist([X? | In], [X | Out]) :- copy_everylist(In?, Out).
         ''');
         expect(result.isWellTyped, isTrue,
-            reason:
-                'List (Any elements) simpler than EveryList (Every elements)');
+            reason: 'List (_ elements) simpler than lists with multiple modes');
       });
     });
   });

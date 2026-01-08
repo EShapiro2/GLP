@@ -192,30 +192,6 @@ void main() {
     });
 
     // =========================================================================
-    // SUBTYPE SEMANTICS - ::< does not require full coverage
-    // =========================================================================
-
-    group('Subtype Definitions', () {
-
-      test('Stream: no nil case required (::< allows partial coverage)', () {
-        final result = checkTypes('''
-          Atom ::= a ; b ; c.
-          MyList ::= [] ; [Atom | MyList].
-          MyStream ::< MyList.
-          procedure test(MyStream?).
-          test([X | Xs]) :- test(Xs?).
-        ''');
-        // This should pass because MyStream ::< MyList means partial coverage OK
-        // However, current implementation may not handle subtype semantics yet
-        // Mark as expected to fail until subtype semantics are implemented
-        if (!result.isWellTyped) {
-          print('Note: Subtype semantics not yet implemented - test marked as known limitation');
-        }
-      });
-
-    });
-
-    // =========================================================================
     // EDGE CASES
     // =========================================================================
 

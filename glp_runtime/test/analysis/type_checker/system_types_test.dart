@@ -44,33 +44,21 @@ void main() {
     });
 
     // =========================================================================
-    // Stream (subtype semantics, may not close)
+    // Stream (same as List in new type system)
     // =========================================================================
 
     group('Stream', () {
-      test('POSITIVE: Stream handler without [] case passes', () {
+      test('POSITIVE: Stream handler with complete coverage', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].
-          MyStream ::< MyList.
-          procedure handle(Any?).
-          procedure process(MyStream?).
-          process([X | Xs]) :- handle(X?), process(Xs?).
-        ''');
-        expect(result.isWellTyped, isTrue,
-            reason: 'MyStream uses ::< so [] case not required');
-      }, skip: 'Subtype fixpoint semantics not yet implemented');
-
-      test('POSITIVE: Stream handler with [] case also passes', () {
-        final result = checkTypes('''
-          MyList ::= [] ; [_ | MyList].
-          MyStream ::< MyList.
-          procedure handle(Any?).
+          MyStream ::= MyList.
           procedure process(MyStream?).
           process([]).
           process([X | Xs]) :- handle(X?), process(Xs?).
         ''');
-        expect(result.isWellTyped, isTrue);
-      }, skip: 'Subtype fixpoint semantics not yet implemented');
+        expect(result.isWellTyped, isTrue,
+            reason: 'Both cases covered for Stream');
+      });
     });
 
     // =========================================================================
@@ -92,7 +80,6 @@ void main() {
       test('NEGATIVE: InvStream with wrong element mode fails', () {
         final result = checkTypes('''
           InvStream ::= [] ; [_? | InvStream].
-          procedure handle(Any?).
           procedure fill_slots(InvStream?).
           fill_slots([]).
           fill_slots([Slot | Rest]) :- handle(Slot?), fill_slots(Rest?).
@@ -103,33 +90,19 @@ void main() {
     });
 
     // =========================================================================
-    // AnyList (theoretical, requires full mode coverage)
+    // Single-mode List (standard case, no extra coverage)
     // =========================================================================
 
-    group('AnyList', () {
-      test('POSITIVE: AnyList copy with three clauses passes', () {
+    group('Single-mode List', () {
+      test('POSITIVE: List copy with two clauses passes', () {
         final result = checkTypes('''
-          MyAny ::= _ ; _?.
-          MyAnyList ::= [] ; [MyAny | MyAnyList].
-          procedure copy(MyAnyList?, MyAnyList).
+          MyList ::= [] ; [_ | MyList].
+          procedure copy(MyList?, MyList).
           copy([], []).
           copy([X | In], [X? | Out]) :- copy(In?, Out).
-          copy([X? | In], [X | Out]) :- copy(In?, Out).
         ''');
         expect(result.isWellTyped, isTrue,
-            reason: 'All three clauses cover both modes at element position');
-      });
-
-      test('NEGATIVE: AnyList copy with two clauses fails', () {
-        final result = checkTypes('''
-          MyAny ::= _ ; _?.
-          MyAnyList ::= [] ; [MyAny | MyAnyList].
-          procedure copy(MyAnyList?, MyAnyList).
-          copy([], []).
-          copy([X | In], [X? | Out]) :- copy(In?, Out).
-        ''');
-        expect(result.isWellTyped, isFalse,
-            reason: 'Missing reverse mode clause');
+            reason: 'Two clauses cover all cases for List with _ elements');
       });
     });
   });

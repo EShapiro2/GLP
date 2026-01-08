@@ -1,6 +1,6 @@
 // test/analysis/type_checker/primitive_mode_coverage_test.dart
 //
-// Tests for primitive mode types (_, _?, Any) and coverage requirements
+// Tests for primitive mode types (_, _?) and coverage requirements
 
 import 'package:test/test.dart';
 import 'test_helpers.dart';
@@ -12,17 +12,6 @@ void main() {
     // =========================================================================
 
     group('Positive Controls', () {
-      test('Any position with both modes covered passes', () {
-        final result = checkTypes('''
-          Any ::= _ ; _?.
-          procedure echo(Any?, Any).
-          echo(X, Y?) :- Y = X?.
-          echo(X?, Y) :- Y? = X.
-        ''');
-        expect(result.isWellTyped, isTrue,
-            reason: 'Both writer and reader modes covered for Any');
-      });
-
       test('Single _ position needs only writer', () {
         final result = checkTypes('''
           Out ::= _.
@@ -60,66 +49,51 @@ void main() {
     // =========================================================================
 
     group('Negative Controls', () {
-      test('Any position with only writer mode fails', () {
+      test('Wrong mode at output position fails', () {
         final result = checkTypes('''
-          Any ::= _ ; _?.
-          procedure echo(Any?, Any).
-          echo(X, Y?) :- Y = X?.
+          Out ::= _.
+          procedure produce(Out).
+          produce(X?).
         ''');
         expect(result.isWellTyped, isFalse,
-            reason: 'Missing reader mode for Any');
-        expect(
-            result.errors.any((e) => e.message.contains('mode coverage')),
-            isTrue);
+            reason: 'Reader X? at output _ position is wrong mode');
       });
 
-      test('Any position with only reader mode fails', () {
+      test('Wrong mode at input position fails', () {
         final result = checkTypes('''
-          Any ::= _ ; _?.
-          procedure sink(Any?).
-          sink(X?).
+          In ::= _?.
+          procedure consume(In?).
+          consume(X).
         ''');
         expect(result.isWellTyped, isFalse,
-            reason: 'Missing writer mode for Any');
-        expect(
-            result.errors.any((e) => e.message.contains('mode coverage')),
-            isTrue);
+            reason: 'Writer X at input _? position is wrong mode');
       });
     });
 
     // =========================================================================
-    // NEGATIVE CONTROLS - Currently PASS erroneously, should FAIL
+    // Single-mode types (no coverage requirement)
     // =========================================================================
 
-    group('Erroneous Passes (should fail after fix)', () {
-      test('ERRONEOUS: AnyList copy with only one element mode', () {
-        // This currently passes but should fail!
-        // AnyList elements are Any, requiring both modes
+    group('Single-mode Types', () {
+      test('List copy with _ elements - only one mode needed', () {
         final result = checkTypes('''
-          Any ::= _ ; _?.
-          AnyList ::= [] ; [Any | AnyList].
-          procedure copy(AnyList?, AnyList).
+          List ::= [] ; [_ | List].
+          procedure copy(List?, List).
           copy([], []).
           copy([X | In], [X? | Out]) :- copy(In?, Out).
         ''');
-        // CURRENT (wrong): passes
-        // EXPECTED (correct): fails - missing copy([X? | In], [X | Out]) clause
-        expect(result.isWellTyped, isFalse,
-            reason: 'AnyList requires both element modes covered');
+        expect(result.isWellTyped, isTrue,
+            reason: 'List elements are _ - single mode, no coverage requirement');
       });
 
-      test('ERRONEOUS: Nested Any in struct not checked', () {
-        // This currently passes but should fail!
+      test('Nested struct with single-mode primitives', () {
         final result = checkTypes('''
-          Any ::= _ ; _?.
-          Pair ::= pair(Any, Any).
+          Pair ::= pair(_, _).
           procedure swap(Pair?, Pair).
           swap(pair(X, Y), pair(Y?, X?)).
         ''');
-        // CURRENT (wrong): passes
-        // EXPECTED (correct): fails - only one mode for each Any position
-        expect(result.isWellTyped, isFalse,
-            reason: 'Nested Any positions require mode coverage');
+        expect(result.isWellTyped, isTrue,
+            reason: 'Pair with _ elements - single mode per position');
       });
     });
   });

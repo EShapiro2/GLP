@@ -25,7 +25,6 @@ void main() {
       for (final line in lines) {
         final trimmed = line.trim();
         if (trimmed.contains('::=') ||
-            trimmed.contains('::<') ||
             trimmed.startsWith('procedure ')) {
           continue;
         }
@@ -58,10 +57,9 @@ void main() {
 
     group('Well-Typed Programs', () {
       test('identity procedure', () {
-        // Use MyAny to avoid conflict with predefined Any
+        // Using single-mode primitive type
         final source = '''
-MyAny ::= _ ; _?.
-procedure id(MyAny?, MyAny).
+procedure id(_?, _).
 
 id(X, X?).
 ''';
@@ -264,9 +262,7 @@ copy(X, X?).
       test('variable at list input covers nil and cons', () {
         final source = '''
 MyList ::= [] ; [_|MyList].
-procedure last(MyList?, MyAny).
-
-MyAny ::= _ ; _?.
+procedure last(MyList?, _).
 
 last(Xs, Y?).
 ''';
@@ -324,9 +320,7 @@ mirror(node(L, R), node(R2?, L2?)) :- mirror(L?, L2), mirror(R?, R2).
       test('option type', () {
         final source = '''
 Option ::= none ; some(_).
-procedure get(Option?, MyAny).
-
-MyAny ::= _ ; _?.
+procedure get(Option?, _).
 
 get(some(X), X?).
 ''';

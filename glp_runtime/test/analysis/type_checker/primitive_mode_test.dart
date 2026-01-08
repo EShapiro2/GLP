@@ -1,6 +1,8 @@
 // test/analysis/type_checker/primitive_mode_test.dart
 //
 // Tests for primitive mode types (_ and _?)
+// Note: Types like `BiMode ::= _ ; _?` are ILLEGAL because they create
+// non-deterministic DFAs (both _ and _? match any value at that position)
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/type_parser.dart';
@@ -35,21 +37,6 @@ void main() {
       expect(alt, isA<PrimitiveModeAlt>());
       expect((alt as PrimitiveModeAlt).isInput, isTrue);
       expect(alt.toString(), equals('_?'));
-    });
-
-    test('Parse type with both primitive modes', () {
-      final source = 'Universal ::= _ ; _?.';
-      final env = parseTypes(source);
-
-      final typeDef = env.types['Universal'];
-      expect(typeDef, isNotNull);
-      expect(typeDef!.alternatives, hasLength(2));
-
-      final alt0 = typeDef.alternatives[0] as PrimitiveModeAlt;
-      final alt1 = typeDef.alternatives[1] as PrimitiveModeAlt;
-
-      expect(alt0.isInput, isFalse); // _
-      expect(alt1.isInput, isTrue);  // _?
     });
 
     test('System type prelude defines Output and Input', () {
@@ -127,16 +114,6 @@ void main() {
       final compiler = TypeCompiler(env);
 
       final dfa = compiler.compile('MyType');
-
-      expect(dfa.primitiveStateModes, isNotEmpty);
-    });
-
-    test('Type with both primitive modes creates primitive state', () {
-      final source = 'Universal ::= _ ; _?.';
-      final env = parseTypes(source);
-      final compiler = TypeCompiler(env);
-
-      final dfa = compiler.compile('Universal');
 
       expect(dfa.primitiveStateModes, isNotEmpty);
     });
