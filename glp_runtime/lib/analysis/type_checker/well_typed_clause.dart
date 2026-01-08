@@ -360,8 +360,8 @@ WellTypedResult _checkHead(
   ProcDecl procDecl,
   TypeCompiler compiler,
 ) {
-  // Build the procedure type DFA for the head
-  final procDFA = _buildProcedureTypeDFA(procDecl, compiler);
+  // Build the procedure type DFA for the head (with complement - callee's view)
+  final procDFA = _buildProcedureTypeDFA(procDecl, compiler, complement: true);
 
   // Build moded head term
   try {
@@ -401,8 +401,8 @@ WellTypedResult _checkBodyAtom(
     ]);
   }
 
-  // Build the procedure type DFA for body atom (with mode complement)
-  final procDFA = _buildProcedureTypeDFA(procDecl, compiler, complement: true);
+  // Build the procedure type DFA for body atom (no complement - caller's view)
+  final procDFA = _buildProcedureTypeDFA(procDecl, compiler);
 
   // Build produced term (no variable flip for body atoms)
   try {
@@ -426,9 +426,8 @@ WellTypedResult _checkBodyAtom(
 /// If [complement] is true, apply mode complement (for body atoms at call sites).
 ///
 /// Mode complement logic:
-/// - For HEADS (complement=false): Use type's modes directly
-/// - For BODY ATOMS (complement=true): Flip modes because at call site,
-///   caller's output = callee's input
+/// - For HEADS (complement=true): Callee sees complement of caller's view
+/// - For BODY ATOMS (complement=false): Caller's view matches declaration
 TypeDFA _buildProcedureTypeDFA(
   ProcDecl procDecl,
   TypeCompiler compiler, {
@@ -446,8 +445,8 @@ TypeDFA _buildProcedureTypeDFA(
     final argType = procDecl.argTypes[i];
     var argDFA = compiler.compile(argType.name);
 
-    // For body atoms (call sites), apply complement
-    // This captures: caller's output = callee's input
+    // For heads (callee's view), apply complement
+    // This captures: callee receives what caller sends
     if (complement) {
       argDFA = argDFA.applyModeComplement();
 
@@ -456,8 +455,8 @@ TypeDFA _buildProcedureTypeDFA(
         argDFA = argDFA.applyModeComplement();
       }
     }
-    // For heads: DON'T apply any complement
-    // The type's modes are used directly
+    // For body atoms (caller's view): DON'T apply complement
+    // The type's modes match the declaration directly
 
     // Add transition from procedure state to argument type state
     final pathElem = PathElement.functor(procDecl.name, procDecl.arity, i + 1);
