@@ -52,6 +52,17 @@ The Art of GLP book and LaTeX sources:
 - **Main file**: `/tmp/Art-of-GLP-2025/main_AofGLP.tex`
 - **GitHub**: https://github.com/EShapiro2/Art-of-GLP-2025
 
+### GitHub Directory Zip Downloads
+When user asks for a zip of a GitHub directory, use this format:
+```
+https://download-directory.github.io/?url=https://github.com/EShapiro2/GLP/tree/BRANCH/path/to/directory
+```
+
+Example:
+```
+https://download-directory.github.io/?url=https://github.com/EShapiro2/GLP/tree/claude/moded-type-helper-7svFn/glp_runtime/lib/analysis/type_checker
+```
+
 ## GLP Fundamentals (READ FIRST)
 
 ### Reader/Writer Basics
