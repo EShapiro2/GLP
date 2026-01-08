@@ -10,7 +10,7 @@
 7. **FOLLOW MODE RULES** - Never mix modes
 8. **ASK FOR CURRENT STATE** - Request latest code/errors from user
 9. **READ SPECS AS NEEDED** - Don't read all specs upfront, only when relevant to task
-10. **WAIT FOR INSTRUCTIONS** - After setup is complete, do nothing until instructed by Claude Web or user
+10. **READ DEVELOPMENT DISCIPLINE** - Read `docs/development-discipline.md` for TDD/BDD standards
 
 ### Dart Installation (if needed)
 
@@ -53,6 +53,17 @@ The Art of GLP book and LaTeX sources:
 - **Main file**: `/tmp/Art-of-GLP-2025/main_AofGLP.tex`
 - **GitHub**: https://github.com/EShapiro2/Art-of-GLP-2025
 
+### GitHub Directory Zip Downloads
+When user asks for a zip of a GitHub directory, use this format:
+```
+https://download-directory.github.io/?url=https://github.com/EShapiro2/GLP/tree/BRANCH/path/to/directory
+```
+
+Example:
+```
+https://download-directory.github.io/?url=https://github.com/EShapiro2/GLP/tree/claude/moded-type-helper-7svFn/glp_runtime/lib/analysis/type_checker
+```
+
 ## GLP Fundamentals (READ FIRST)
 
 ### Reader/Writer Basics
@@ -83,6 +94,11 @@ bar(X, Y, R?) :- X? + 1 < Y? * 2 | R = sum(X?, Y?).
 - Don't reason about VarRefs/isReader flags — reason about readers and writers
 
 ## Core Rules
+
+### Do Exactly What Is Asked
+- **When the user asks something, do exactly as asked and nothing else**
+- Do not add extra steps, analysis, or actions beyond the specific request
+- If clarification is needed, ask first rather than assuming
 
 ### Never Implement Without a Plan
 - **NEVER start implementation without an agreed upon plan**
