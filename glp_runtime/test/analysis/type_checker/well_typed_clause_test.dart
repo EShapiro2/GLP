@@ -3,6 +3,10 @@
 // Tests for well_typed_clause.dart
 // Specification: docs/modules/well-typed-clause.md v0.1
 // Paper Reference: Definition 4.8
+//
+// Note: Types like `BiMode ::= _ ; _?` are ILLEGAL because they create
+// non-deterministic transitions (NFA instead of DFA). Each position
+// has exactly ONE mode.
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/mode.dart';
@@ -22,13 +26,18 @@ void main() {
     TypeEnvironment createBasicEnvironment() {
       final env = TypeEnvironment.empty();
 
-      // Define BiMode type: BiMode ::= _ ; _? (accepts both reader and writer)
+      // Define Output type: Output ::= _ (produce mode only)
       env.addType(TypeDef(
-        'BiMode',
-        [
-          PrimitiveModeAlt(false, 0, 0), // _
-          PrimitiveModeAlt(true, 0, 0),  // _?
-        ],
+        'Output',
+        [PrimitiveModeAlt(false, 0, 0)], // _
+        0,
+        0,
+      ));
+
+      // Define Input type: Input ::= _? (consume mode only)
+      env.addType(TypeDef(
+        'Input',
+        [PrimitiveModeAlt(true, 0, 0)], // _?
         0,
         0,
       ));
@@ -49,12 +58,42 @@ void main() {
         0,
       ));
 
+      // Define HollowStream type: HollowStream ::= [] ; [_?|HollowStream]
+      env.addType(TypeDef(
+        'HollowStream',
+        [
+          ListNilAlt(0, 0),
+          ListConsAlt(
+            PrimitiveModeAlt(true, 0, 0), // _? for head
+            TypeRef('HollowStream', 0, 0),
+            0,
+            0,
+          ),
+        ],
+        0,
+        0,
+      ));
+
       // Define Nat type: Nat ::= 0 ; s(Nat)
       env.addType(TypeDef(
         'Nat',
         [
           ConstantAlt(0, 0, 0),
           StructAlt('s', [TypeRef('Nat', 0, 0)], 0, 0),
+        ],
+        0,
+        0,
+      ));
+
+      // Define Pair type: Pair ::= pair(_, _?)
+      // First arg is output, second is input
+      env.addType(TypeDef(
+        'Pair',
+        [
+          StructAlt('pair', [
+            PrimitiveModeAlt(false, 0, 0), // _ output
+            PrimitiveModeAlt(true, 0, 0),  // _? input
+          ], 0, 0),
         ],
         0,
         0,
@@ -99,12 +138,12 @@ void main() {
 
     group('Basic Well-Typed Clauses', () {
       test('simple fact with output variable is well-typed', () {
-        // procedure foo(Any).
+        // procedure foo(Output).
         // foo(X).
         final env = createBasicEnvironment();
         env.addProcedure(ProcDecl(
           'foo',
-          [TypeRef('BiMode', 0, 0)],
+          [TypeRef('Output', 0, 0)],
           0,
           0,
         ));
@@ -121,12 +160,12 @@ void main() {
       });
 
       test('simple fact with input variable is well-typed', () {
-        // procedure bar(Any?).
+        // procedure bar(Input?).
         // bar(X?).
         final env = createBasicEnvironment();
         env.addProcedure(ProcDecl(
           'bar',
-          [TypeRef('Any', 0, 0, isInput: true)],
+          [TypeRef('Input', 0, 0, isInput: true)],
           0,
           0,
         ));
@@ -169,33 +208,20 @@ void main() {
     // =========================================================================
 
     group('Mode Mismatches', () {
-      test('writer in output-only position is NOT well-typed', () {
-        // procedure foo(OutOnly).  -- output position, only produces
-        // foo(X).  -- writer in source → reader in moded head → needs consume → FAILS
-        //
-        // Per Definition 4.6: modedHead flips variables
-        // Source writer X → moded reader X? → needs consume mode
-        // But OutOnly only has produce mode → MISMATCH
+      test('reader in output-only position is NOT well-typed', () {
+        // procedure foo(Output).  -- output position, only produces
+        // foo(X?).  -- reader needs consume mode but Output only has produce
         final env = createBasicEnvironment();
-
-        // Create type with only output mode (produce)
-        env.addType(TypeDef(
-          'OutOnly',
-          [PrimitiveModeAlt(false, 0, 0)], // only _ (produce)
-          0,
-          0,
-        ));
-
         env.addProcedure(ProcDecl(
           'foo',
-          [TypeRef('OutOnly', 0, 0)],
+          [TypeRef('Output', 0, 0)],
           0,
           0,
         ));
 
         final compiler = TypeCompiler(env);
         final clause = TypedClause(
-          head: goal('foo', [varTerm('X')]), // writer in source
+          head: goal('foo', [varTerm('X', isReader: true)]), // reader
         );
 
         final result = checkClause(clause, env, compiler);
@@ -205,33 +231,20 @@ void main() {
         expect(result.errors.first, isA<HeadError>());
       });
 
-      test('reader in input-only position is NOT well-typed', () {
-        // procedure bar(InOnly?).  -- input position, only consumes
-        // bar(X?).  -- reader in source → writer in moded head → needs produce → FAILS
-        //
-        // Per Definition 4.6: modedHead flips variables
-        // Source reader X? → moded writer X → needs produce mode
-        // But InOnly only has consume mode → MISMATCH
+      test('writer in input-only position is NOT well-typed', () {
+        // procedure bar(Input?).  -- input position, only consumes
+        // bar(X).  -- writer needs produce mode but Input only has consume
         final env = createBasicEnvironment();
-
-        // Create type with only input mode (consume)
-        env.addType(TypeDef(
-          'InOnly',
-          [PrimitiveModeAlt(true, 0, 0)], // only _? (consume)
-          0,
-          0,
-        ));
-
         env.addProcedure(ProcDecl(
           'bar',
-          [TypeRef('InOnly', 0, 0, isInput: true)],
+          [TypeRef('Input', 0, 0, isInput: true)],
           0,
           0,
         ));
 
         final compiler = TypeCompiler(env);
         final clause = TypedClause(
-          head: goal('bar', [varTerm('X', isReader: true)]), // reader in source
+          head: goal('bar', [varTerm('X')]), // writer
         );
 
         final result = checkClause(clause, env, compiler);
@@ -301,7 +314,7 @@ void main() {
         final env = createBasicEnvironment();
         env.addProcedure(ProcDecl(
           'foo',
-          [TypeRef('BiMode', 0, 0)],
+          [TypeRef('Output', 0, 0)],
           0,
           0,
         ));
@@ -326,25 +339,25 @@ void main() {
     // =========================================================================
 
     group('Variable Complementarity', () {
-      test('X and X? at same type are complementary', () {
-        // procedure pair(Any, Any?).
-        // pair(X, X?).  -- X writer, X? reader at same Any type
+      test('X and X? at complementary positions in Pair are well-typed', () {
+        // Pair ::= pair(_, _?)
+        // procedure test(Pair).
+        // test(pair(X, X?)).  -- X writer at _ position, X? reader at _? position
         final env = createBasicEnvironment();
         env.addProcedure(ProcDecl(
-          'pair',
-          [
-            TypeRef('BiMode', 0, 0),            // output
-            TypeRef('Any', 0, 0, isInput: true), // input
-          ],
+          'test',
+          [TypeRef('Pair', 0, 0)],
           0,
           0,
         ));
 
         final compiler = TypeCompiler(env);
         final clause = TypedClause(
-          head: goal('pair', [
-            varTerm('X'),
-            varTerm('X', isReader: true),
+          head: goal('test', [
+            structTerm('pair', [
+              varTerm('X'),
+              varTerm('X', isReader: true),
+            ]),
           ]),
         );
 
@@ -406,11 +419,10 @@ void main() {
       test('wrong arity returns undefined procedure error', () {
         // Note: Procedures are looked up by name+arity, so calling foo/1
         // when only foo/2 is defined results in UndefinedProcedureError
-        // (not ArityMismatchClauseError)
         final env = createBasicEnvironment();
         env.addProcedure(ProcDecl(
           'foo',
-          [TypeRef('BiMode', 0, 0), TypeRef('BiMode', 0, 0)], // foo/2
+          [TypeRef('Output', 0, 0), TypeRef('Output', 0, 0)], // foo/2
           0,
           0,
         ));
@@ -483,22 +495,6 @@ void main() {
         final complemented = dfa.applyModeComplement();
 
         expect(complemented.getModesAt(state), equals({Mode.consume}));
-      });
-
-      test('flips both modes in bi-moded state', () {
-        final state = DFAState('BiMode');
-        final dfa = TypeDFA(
-          states: {state},
-          startState: state,
-          finalStates: {},
-          transitions: {},
-          primitiveStateModes: {state: {Mode.consume, Mode.produce}},
-        );
-
-        final complemented = dfa.applyModeComplement();
-
-        // Both flipped means same set (complement of {↓,↑} = {↑,↓})
-        expect(complemented.getModesAt(state), equals({Mode.consume, Mode.produce}));
       });
     });
   });

@@ -3,6 +3,10 @@
 // Tests for primitive state modes (Phase 0 implementation).
 // Verifies that primitiveStateModes correctly tracks mode information
 // and that mode checking at primitive positions works as expected.
+//
+// Note: Types like `BiMode ::= _ ; _?` are ILLEGAL because they create
+// non-deterministic transitions (NFA instead of DFA). Each position
+// has exactly ONE mode.
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/mode.dart';
@@ -36,19 +40,6 @@ void main() {
       final modes = dfa.getModesAt(dfa.startState);
       expect(modes, contains(Mode.consume));
       expect(modes.contains(Mode.produce), isFalse);
-    });
-
-    test('BiMode state has {Mode.produce, Mode.consume}', () {
-      final source = 'BiMode ::= _ ; _?.';
-      final env = parseTypes(source);
-      final compiler = TypeCompiler(env);
-
-      final dfa = compiler.compile('BiMode');
-
-      expect(dfa.primitiveStateModes, isNotEmpty);
-      final modes = dfa.getModesAt(dfa.startState);
-      expect(modes, contains(Mode.produce));
-      expect(modes, contains(Mode.consume));
     });
 
     test('Output type has produce mode', () {
@@ -161,36 +152,8 @@ process(box(X?)).
     });
   });
 
-  group('Mode Coverage for BiMode (::= semantics)', () {
-    // === POSITIVE CONTROLS ===
-
-    test('POSITIVE: BiMode with two clauses covering both modes', () {
-      final source = '''
-BiMode ::= _ ; _?.
-
-procedure full_coverage(BiMode).
-
-full_coverage(X).   % writer covers _
-full_coverage(X?).  % reader covers _?
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Two clauses cover both mode alternatives');
-    });
-
-    test('POSITIVE: BiMode with two clauses, two args, all combinations', () {
-      final source = '''
-BiMode ::= _ ; _?.
-
-procedure binary_coverage(BiMode, BiMode).
-
-binary_coverage(X, Y?).   % writer/reader
-binary_coverage(X?, Y).   % reader/writer
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Two clauses cover all mode combinations');
-    });
-
-    test('POSITIVE: Output with single clause (no coverage required)', () {
+  group('Single-mode Types (no coverage requirement)', () {
+    test('POSITIVE: Output with single clause', () {
       final source = '''
 procedure output_single(Output).
 
@@ -200,76 +163,19 @@ output_single(X).
       expect(result.errors, isEmpty, reason: 'Output has single mode, no coverage requirement');
     });
 
-    // === NEGATIVE CONTROLS ===
-
-    test('NEGATIVE: BiMode with single clause - incomplete coverage', () {
+    test('POSITIVE: Input with single clause', () {
       final source = '''
-BiMode ::= _ ; _?.
+procedure input_single(Input).
 
-procedure incomplete(BiMode).
-
-incomplete(X).
+input_single(X?).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isNotEmpty, reason: 'BiMode requires both _ and _? coverage');
+      expect(result.errors, isEmpty, reason: 'Input has single mode, no coverage requirement');
     });
-
-    test('NEGATIVE: BiMode with two clauses but same mode - still incomplete', () {
-      final source = '''
-BiMode ::= _ ; _?.
-
-procedure same_mode(BiMode).
-
-same_mode(X).
-same_mode(Y).
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isNotEmpty, reason: 'Both clauses are writers, missing reader');
-    });
-
-    test('NEGATIVE: BiMode binary with single clause - incomplete', () {
-      final source = '''
-BiMode ::= _ ; _?.
-
-procedure binary_incomplete(BiMode, BiMode).
-
-binary_incomplete(X, X?).
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isNotEmpty, reason: 'Arg1 missing reader, Arg2 missing writer');
-    });
-
-    test('NEGATIVE: known guard does NOT satisfy coverage', () {
-      final source = '''
-BiMode ::= _ ; _?.
-
-procedure known_not_ground(BiMode).
-
-known_not_ground(X?) :- known(X?) | true.
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isNotEmpty, reason: 'known does not imply ground');
-    });
-
-    test('NEGATIVE: Nested BiMode with incomplete coverage', () {
-      final source = '''
-BiMode ::= _ ; _?.
-BiModeList ::= [] ; [BiMode | BiModeList].
-
-procedure process(BiModeList).
-
-process([]).
-process([H? | T]) :- process(T?).
-''';
-      final result = checkTypes(source);
-      expect(result.errors, isNotEmpty, reason: 'Head position has BiMode, needs both modes');
-    });
-
-    // === POSITIVE: Nested single-mode (no coverage required) ===
 
     test('POSITIVE: Nested Output with single clause', () {
       final source = '''
-OutputList ::= [] ; [Output | OutputList].
+OutputList ::= [] ; [_ | OutputList].
 
 procedure process_list(OutputList).
 
@@ -277,7 +183,20 @@ process_list([]).
 process_list([H | T]) :- process_list(T?).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'OutputList uses Output at head, no coverage requirement');
+      expect(result.errors, isEmpty, reason: 'List uses _ at head, no coverage requirement');
+    });
+
+    test('POSITIVE: Nested Input with single clause', () {
+      final source = '''
+InputList ::= [] ; [_? | InputList].
+
+procedure consume_list(InputList).
+
+consume_list([]).
+consume_list([H? | T]) :- consume_list(T?).
+''';
+      final result = checkTypes(source);
+      expect(result.errors, isEmpty, reason: 'List uses _? at head, no coverage requirement');
     });
   });
 
@@ -295,36 +214,19 @@ process_list([H | T]) :- process_list(T?).
       expect(intersection.isEmpty, isTrue, reason: 'Output-only ∩ Input-only = empty set');
     });
 
-    test('BiMode ∩ OutputOnly = OutputOnly', () {
-      final source = 'BiMode ::= _ ; _?. OutputOnly ::= _.';
+    test('Output ∩ Output = Output (same type)', () {
+      final source = 'OutputOnly ::= _.';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
 
-      final biMode = compiler.compile('BiMode');
-      final out = compiler.compile('OutputOnly');
+      final out1 = compiler.compile('OutputOnly');
+      final out2 = compiler.compile('OutputOnly');
 
-      final intersection = biMode.intersect(out);
+      final intersection = out1.intersect(out2);
 
-      // Intersection should have only produce mode
+      expect(intersection.isEmpty, isFalse, reason: 'Same type intersection is non-empty');
       final modes = intersection.getModesAt(intersection.startState);
       expect(modes, contains(Mode.produce));
-      expect(modes.contains(Mode.consume), isFalse);
-    });
-
-    test('BiMode ∩ InputOnly = InputOnly', () {
-      final source = 'BiMode ::= _ ; _?. InputOnly ::= _?.';
-      final env = parseTypes(source);
-      final compiler = TypeCompiler(env);
-
-      final biMode = compiler.compile('BiMode');
-      final inp = compiler.compile('InputOnly');
-
-      final intersection = biMode.intersect(inp);
-
-      // Intersection should have only consume mode
-      final modes = intersection.getModesAt(intersection.startState);
-      expect(modes, contains(Mode.consume));
-      expect(modes.contains(Mode.produce), isFalse);
     });
   });
 
