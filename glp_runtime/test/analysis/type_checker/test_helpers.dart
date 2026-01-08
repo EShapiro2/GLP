@@ -20,7 +20,6 @@ TypeCheckResult checkTypes(String source) {
     final trimmed = line.trim();
     // Skip type declarations and procedure declarations
     if (trimmed.contains('::=') ||
-        trimmed.contains('::<') ||
         trimmed.startsWith('procedure ')) {
       continue;
     }

@@ -338,48 +338,34 @@ class ModeChecker {
 
   /// Check if a type name is a primitive mode type
   ///
-  /// Primitive types (_, _?, Any) require variable patterns because they
+  /// Primitive types (_, _?) require variable patterns because they
   /// must handle all ground terms.
   bool _isPrimitiveType(String typeName) {
-    return typeName == 'Any' || typeName == '_' || typeName == '_?';
+    return typeName == '_' || typeName == '_?';
   }
 
-  /// Find all positions within a type that have Any (or types with primitive modes)
+  /// Find all positions within a type that have primitive modes (_, _?)
   /// Returns list of (path, typeName) pairs where path describes how to navigate there
-  ///
-  /// insideSubtype: if true, we entered through a ::< type and should not report
   List<({String path, String typeName})> _findPrimitiveTypePositions(
     TypeRef typeRef,
     String currentPath,
     Set<String> visited,  // Prevent infinite recursion on recursive types
-    bool insideSubtype,  // true if we entered through a ::< type
   ) {
     final positions = <({String path, String typeName})>[];
 
     final typeDef = typeEnv.getType(typeRef.name);
 
-    // If this type is ::< (subtype), mark that we're inside a subtype
-    // and don't require coverage for anything nested within
-    final nowInsideSubtype = insideSubtype || (typeDef != null && !typeDef.isExact);
-
     // Check if this type itself has primitive modes
-    if (typeDef != null && typeDef.isExact) {
+    if (typeDef != null) {
       // Check if any alternative is a primitive mode
       bool hasPrimitiveModes = typeDef.alternatives.any((alt) => alt is PrimitiveModeAlt);
-      if (hasPrimitiveModes && !insideSubtype) {
-        // Only report if we didn't enter through a ::< type
+      if (hasPrimitiveModes) {
         positions.add((path: currentPath, typeName: typeRef.name));
         return positions;  // Don't recurse into primitive type definitions
       }
     }
 
-    // If we're inside a subtype (entered via ::<), don't recurse further
-    // Subtype semantics means no coverage requirement
-    if (nowInsideSubtype) {
-      return positions;
-    }
-
-    // Recurse into type definition to find nested Any positions
+    // Recurse into type definition to find nested primitive mode positions
     if (typeDef != null && !visited.contains(typeRef.name)) {
       visited.add(typeRef.name);
 
@@ -389,13 +375,13 @@ class ModeChecker {
           if (alt.head is TypeRef) {
             final headPath = currentPath.isEmpty ? 'head' : '$currentPath.head';
             positions.addAll(_findPrimitiveTypePositions(
-              alt.head as TypeRef, headPath, visited, nowInsideSubtype));
+              alt.head as TypeRef, headPath, visited));
           }
           // Check tail type (but avoid infinite recursion - already in visited)
           if (alt.tail is TypeRef) {
             final tailPath = currentPath.isEmpty ? 'tail' : '$currentPath.tail';
             positions.addAll(_findPrimitiveTypePositions(
-              alt.tail as TypeRef, tailPath, visited, nowInsideSubtype));
+              alt.tail as TypeRef, tailPath, visited));
           }
         } else if (alt is StructAlt) {
           for (int i = 0; i < alt.args.length; i++) {
@@ -404,7 +390,7 @@ class ModeChecker {
                   ? '${alt.functor}[$i]'
                   : '$currentPath.${alt.functor}[$i]';
               positions.addAll(_findPrimitiveTypePositions(
-                alt.args[i] as TypeRef, argPath, visited, nowInsideSubtype));
+                alt.args[i] as TypeRef, argPath, visited));
             }
           }
         }
@@ -463,7 +449,7 @@ class ModeChecker {
       final typeRef = procDecl.argTypes[argIndex];
 
       // Find all positions with primitive modes (including nested)
-      final primitivePositions = _findPrimitiveTypePositions(typeRef, '', <String>{}, false);
+      final primitivePositions = _findPrimitiveTypePositions(typeRef, '', <String>{});
 
       for (final position in primitivePositions) {
         // Track which modes appear in clause heads for this position

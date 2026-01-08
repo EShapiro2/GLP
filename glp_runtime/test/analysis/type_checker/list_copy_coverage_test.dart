@@ -1,6 +1,6 @@
 // test/analysis/type_checker/list_copy_coverage_test.dart
 //
-// Tests for mode coverage checking with Every type
+// Tests for mode coverage checking with bi-mode types
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/type_parser.dart';
@@ -22,12 +22,15 @@ List<Clause> parseClauses(String source) {
 }
 
 void main() {
-  group('Mode coverage for Every type', () {
+  group('Mode coverage for bi-mode types', () {
 
-    test('Every INPUT arg - single writer clause, incomplete coverage FAILS', () {
-      // Every ::= _ ; _? requires BOTH modes covered
-      // Declared INPUT (Every?) → callee sees OUTPUT → expects WRITER
-      final typeDecl = 'procedure test(Every?).';
+    test('BiMode INPUT arg - single writer clause, incomplete coverage FAILS', () {
+      // BiMode ::= _ ; _? requires BOTH modes covered
+      // Declared INPUT (BiMode?) → callee sees OUTPUT → expects WRITER
+      final typeDecl = '''
+BiMode ::= _ ; _?.
+procedure test(BiMode?).
+''';
       final clauseCode = 'test(X).';  // Only writer, missing reader
 
       final clauses = parseClauses(clauseCode);
@@ -47,13 +50,16 @@ void main() {
         e.message.contains('coverage') || e.message.contains('Coverage'));
 
       expect(hasCoverageError, isTrue,
-        reason: 'Every requires both modes, only writer provided');
+        reason: 'BiMode requires both modes, only writer provided');
     });
 
-    test('Every INPUT arg - two clauses covering both modes PASSES', () {
-      // Declared INPUT (Every?) → callee sees OUTPUT
+    test('BiMode INPUT arg - two clauses covering both modes PASSES', () {
+      // Declared INPUT (BiMode?) → callee sees OUTPUT
       // Need both writer X and reader X? across clauses
-      final typeDecl = 'procedure test(Every?).';
+      final typeDecl = '''
+BiMode ::= _ ; _?.
+procedure test(BiMode?).
+''';
       final clauseCode = '''
 test(X).
 test(X?).
@@ -80,7 +86,7 @@ test(X?).
     });
 
     test('Custom universal type requires coverage', () {
-      // Universal ::= _ ; _? same as Every
+      // Universal ::= _ ; _? same as BiMode
       final typeDecl = '''
 Universal ::= _ ; _?.
 procedure test(Universal?).
@@ -107,12 +113,12 @@ procedure test(Universal?).
         reason: 'Custom universal type should require coverage');
     });
 
-    test('Subtype declaration skips coverage check', () {
-      // Partial ::< _ means subtype, no coverage required
-      // Declared OUTPUT (Partial) → callee sees INPUT → expects READER
+    test('Single-mode type does not require coverage', () {
+      // OutputOnly ::= _ means only output mode, no coverage required
+      // Declared OUTPUT (OutputOnly) → callee sees INPUT → expects READER
       final typeDecl = '''
-Partial ::< _.
-procedure test(Partial).
+OutputOnly ::= _.
+procedure test(OutputOnly).
 ''';
       final clauseCode = 'test(X?).';  // Reader at callee INPUT position
 
@@ -121,7 +127,7 @@ procedure test(Partial).
       final checker = ModeChecker(typeEnv);
       final errors = checker.checkProcedure('test', 1, clauses);
 
-      print('\n=== Test: Subtype declaration ===');
+      print('\n=== Test: Single-mode type ===');
       print('Type decl: $typeDecl');
       print('Clauses: $clauseCode');
       print('Errors found: ${errors.length}');
@@ -133,7 +139,7 @@ procedure test(Partial).
         e.message.contains('coverage') || e.message.contains('Coverage'));
 
       expect(hasCoverageError, isFalse,
-        reason: '::< types should not require mode coverage');
+        reason: 'Single-mode types should not require multi-mode coverage');
     });
   });
 }

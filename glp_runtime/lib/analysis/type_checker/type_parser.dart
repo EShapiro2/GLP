@@ -27,7 +27,6 @@ enum TypeTokenType {
   number,        // 0, 42, 3.14
   string,        // "hello", 'world'
   colonColonEq,  // ::=
-  colonColonLt,  // ::<
   semicolon,     // ;
   dot,           // .
   lparen,        // (
@@ -39,6 +38,7 @@ enum TypeTokenType {
   question,      // ? (input mode marker)
   underscore,    // _ (primitive mode)
   backslash,     // \ (difference list operator)
+  equals,        // = (for procedure = declaration)
   procedure,     // keyword 'procedure'
   unknown,       // Unknown token (skip)
   eof,
@@ -137,15 +137,13 @@ class TypeLexer {
         // Otherwise it's an identifier starting with _
         return _identifier(c, startLine, startColumn);
       case ':':
-        if (_match(':')) {
-          if (_match('=')) {
-            return TypeToken(TypeTokenType.colonColonEq, '::=', startLine, startColumn);
-          } else if (_match('<')) {
-            return TypeToken(TypeTokenType.colonColonLt, '::<', startLine, startColumn);
-          }
+        if (_match(':') && _match('=')) {
+          return TypeToken(TypeTokenType.colonColonEq, '::=', startLine, startColumn);
         }
-        // Skip unknown characters (like : from :- in clauses)
+        // Skip unknown characters (like : from :- in clauses, or ::< which is no longer supported)
         return TypeToken(TypeTokenType.unknown, c, startLine, startColumn);
+      case '=':
+        return TypeToken(TypeTokenType.equals, '=', startLine, startColumn);
       case '"':
       case "'":
         return _string(c, startLine, startColumn);
@@ -256,10 +254,9 @@ class TypeParser {
     final procedures = <String, ProcDecl>{};
 
     while (!_isAtEnd()) {
-      // Check for type definition: TypeName ::= ... or TypeName ::< ...
+      // Check for type definition: TypeName ::= ...
       final nextType = _peekNext()?.type;
-      if (_check(TypeTokenType.typeName) &&
-          (nextType == TypeTokenType.colonColonEq || nextType == TypeTokenType.colonColonLt)) {
+      if (_check(TypeTokenType.typeName) && nextType == TypeTokenType.colonColonEq) {
         final typeDef = _parseTypeDef();
         types[typeDef.name] = typeDef;
       }
@@ -283,25 +280,17 @@ class TypeParser {
     return tokens[_current + 1];
   }
   
-  /// Parse: TypeName ::= type_expr . OR TypeName ::< type_expr .
+  /// Parse: TypeName ::= type_expr .
   TypeDef _parseTypeDef() {
     final nameToken = _consume(TypeTokenType.typeName, 'Expected type name');
 
-    // Check for ::= or ::<
-    bool isExact;
-    if (_match(TypeTokenType.colonColonEq)) {
-      isExact = true;
-    } else if (_match(TypeTokenType.colonColonLt)) {
-      isExact = false;
-    } else {
-      throw TypeParseError('Expected "::=" or "::<" after type name', _peek().line, _peek().column);
-    }
+    _consume(TypeTokenType.colonColonEq, 'Expected "::=" after type name');
 
     final alternatives = _parseTypeExpr();
 
     _consume(TypeTokenType.dot, 'Expected "." after type definition');
 
-    return TypeDef(nameToken.lexeme, alternatives, nameToken.line, nameToken.column, isExact: isExact);
+    return TypeDef(nameToken.lexeme, alternatives, nameToken.line, nameToken.column);
   }
   
   /// Parse: type_alt (; type_alt)*
@@ -433,21 +422,43 @@ class TypeParser {
   /// Parse: procedure name(Type1, Type2, ...) .
   ProcDecl _parseProcDecl() {
     _consume(TypeTokenType.procedure, 'Expected "procedure"');
-    final nameToken = _consume(TypeTokenType.atom, 'Expected procedure name');
+    // Procedure name can be atom or = operator
+    TypeToken nameToken;
+    if (_check(TypeTokenType.equals)) {
+      nameToken = _advance();
+    } else {
+      nameToken = _consume(TypeTokenType.atom, 'Expected procedure name');
+    }
     _consume(TypeTokenType.lparen, 'Expected "(" after procedure name');
-    
+
     final argTypes = <TypeRef>[];
     if (!_check(TypeTokenType.rparen)) {
-      argTypes.add(_parseTypeRef());
+      argTypes.add(_parseProcArgType());
       while (_match(TypeTokenType.comma)) {
-        argTypes.add(_parseTypeRef());
+        argTypes.add(_parseProcArgType());
       }
     }
-    
+
     _consume(TypeTokenType.rparen, 'Expected ")" after procedure arguments');
     _consume(TypeTokenType.dot, 'Expected "." after procedure declaration');
-    
+
     return ProcDecl(nameToken.lexeme, argTypes, nameToken.line, nameToken.column);
+  }
+
+  /// Parse a procedure argument type (TypeRef or primitive _ / _?)
+  /// Primitives _ and _? are converted to Output and Input types
+  TypeRef _parseProcArgType() {
+    // Check for primitive mode: _ or _?
+    if (_match(TypeTokenType.underscore)) {
+      final line = _previous().line;
+      final column = _previous().column;
+      final isInput = _match(TypeTokenType.question);
+      // _ maps to Output, _? maps to Input
+      return TypeRef(isInput ? 'Input' : 'Output', line, column, isInput: isInput);
+    }
+
+    // Otherwise expect a type reference
+    return _parseTypeRef();
   }
   
   // Helper methods

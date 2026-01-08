@@ -149,6 +149,17 @@ class ArityMismatchClauseError extends ClauseError {
   String toString() => message;
 }
 
+/// Exception thrown when a procedure is not declared (for use by type_checker.dart)
+class UndeclaredProcedureError implements Exception {
+  final String functor;
+  final int arity;
+
+  UndeclaredProcedureError(this.functor, this.arity);
+
+  @override
+  String toString() => 'UndeclaredProcedureError: $functor/$arity';
+}
+
 // =============================================================================
 // Clause Representation
 // =============================================================================
@@ -257,6 +268,86 @@ ClauseCheckResult checkClause(
     variableTypes: allVariableTypes,
     errors: errors,
   );
+}
+
+/// Convenience overload: Check if an ast.Clause is well-typed.
+///
+/// Creates a TypeCompiler internally and converts ast.Clause to TypedClause.
+/// Throws [UndeclaredProcedureError] if the procedure is not declared.
+ClauseCheckResult checkClauseFromAst(
+  ast.Clause clause,
+  TypeEnvironment env,
+) {
+  final compiler = TypeCompiler(env);
+
+  // Convert ast.Clause to TypedClause
+  // Note: ast.Clause.head is Atom, but Goal has same structure
+  final head = ast.Goal(clause.head.functor, clause.head.args, clause.line, clause.column);
+
+  // Convert body goals (or empty list)
+  final bodyAtoms = clause.body ?? [];
+
+  final typedClause = TypedClause(
+    head: head,
+    bodyAtoms: bodyAtoms,
+    guardAtoms: [], // Guards not checked yet
+  );
+
+  // Check if procedure is declared
+  if (!env.hasProcedure(typedClause.headFunctor, typedClause.headArity)) {
+    throw UndeclaredProcedureError(typedClause.headFunctor, typedClause.headArity);
+  }
+
+  return checkClause(typedClause, env, compiler);
+}
+
+/// Get the set of labels (functor/arity or constant) that a clause accepts
+/// at a given argument position (1-indexed).
+///
+/// Returns null if the argument is a variable (wildcard - accepts everything).
+/// Returns a set of strings like "[]", "[|]", "s/1", "0" etc.
+Set<String>? getAcceptedLabels(
+  ast.Clause clause,
+  int argIndex,
+  TypeEnvironment env,
+) {
+  // argIndex is 1-indexed
+  if (argIndex < 1 || argIndex > clause.head.args.length) {
+    return {}; // Out of bounds - accepts nothing
+  }
+
+  final arg = clause.head.args[argIndex - 1];
+  return _getLabelsFromTerm(arg);
+}
+
+/// Extract labels from a term
+Set<String>? _getLabelsFromTerm(ast.Term term) {
+  if (term is ast.VarTerm || term is ast.UnderscoreTerm) {
+    // Variable - wildcard, accepts anything
+    return null;
+  }
+
+  if (term is ast.ConstTerm) {
+    // Constant - accepts only this value
+    return {term.value.toString()};
+  }
+
+  if (term is ast.ListTerm) {
+    if (term.isNil) {
+      return {'[]'};
+    } else {
+      // Non-empty list [H|T]
+      return {'[|]'};
+    }
+  }
+
+  if (term is ast.StructTerm) {
+    // Structure - accepts functor/arity
+    return {'${term.functor}/${term.arity}'};
+  }
+
+  // Unknown term type - conservative: empty set
+  return {};
 }
 
 // =============================================================================

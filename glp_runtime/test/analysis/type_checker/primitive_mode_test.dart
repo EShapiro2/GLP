@@ -1,6 +1,6 @@
 // test/analysis/type_checker/primitive_mode_test.dart
 //
-// Tests for primitive mode types (_ and _?) and ::= vs ::< semantics
+// Tests for primitive mode types (_ and _?)
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/type_parser.dart';
@@ -13,7 +13,6 @@ void main() {
       final source = 'MyType ::= _.';
       final env = parseTypes(source);
 
-      // Should have MyType + Any + List from prelude
       expect(env.types.containsKey('MyType'), isTrue);
       final typeDef = env.types['MyType'];
       expect(typeDef, isNotNull);
@@ -53,24 +52,25 @@ void main() {
       expect(alt1.isInput, isTrue);  // _?
     });
 
-    test('System type prelude defines Any', () {
-      // Even with empty source, prelude should define Any
+    test('System type prelude defines Output and Input', () {
+      // Even with empty source, prelude should define Output and Input
       final env = parseTypes('');
 
-      expect(env.types['Any'], isNotNull);
-      final anyType = env.types['Any']!;
+      expect(env.types['Output'], isNotNull);
+      expect(env.types['Input'], isNotNull);
 
-      expect(anyType.name, equals('Any'));
-      expect(anyType.alternatives, hasLength(2));
+      final outputType = env.types['Output']!;
+      expect(outputType.alternatives, hasLength(1));
+      expect(outputType.alternatives[0], isA<PrimitiveModeAlt>());
+      expect((outputType.alternatives[0] as PrimitiveModeAlt).isInput, isFalse);
 
-      final alt0 = anyType.alternatives[0] as PrimitiveModeAlt;
-      final alt1 = anyType.alternatives[1] as PrimitiveModeAlt;
-
-      expect(alt0.isInput, isFalse); // _
-      expect(alt1.isInput, isTrue);  // _?
+      final inputType = env.types['Input']!;
+      expect(inputType.alternatives, hasLength(1));
+      expect(inputType.alternatives[0], isA<PrimitiveModeAlt>());
+      expect((inputType.alternatives[0] as PrimitiveModeAlt).isInput, isTrue);
     });
 
-    test('System type prelude defines List with Any', () {
+    test('System type prelude defines List with primitive head', () {
       final env = parseTypes('');
 
       expect(env.types['List'], isNotNull);
@@ -78,70 +78,47 @@ void main() {
 
       expect(listType.alternatives, hasLength(2));
 
-      // First alternative: []
-      expect(listType.alternatives[0], isA<ListNilAlt>());
-
-      // Second alternative: [Any | List]
-      final consAlt = listType.alternatives[1] as ListConsAlt;
-      expect(consAlt.head, isA<TypeRef>());
-      expect((consAlt.head as TypeRef).name, equals('Any'));
+      // First alternative: [_ | List]
+      final consAlt = listType.alternatives[0] as ListConsAlt;
+      expect(consAlt.head, isA<PrimitiveModeAlt>());
+      expect((consAlt.head as PrimitiveModeAlt).isInput, isFalse);
       expect(consAlt.tail, isA<TypeRef>());
       expect((consAlt.tail as TypeRef).name, equals('List'));
+
+      // Second alternative: []
+      expect(listType.alternatives[1], isA<ListNilAlt>());
     });
   });
 
-  group('Type Definition vs Subtype Declaration', () {
-    test('Parse ::= as exact type definition', () {
+  group('Type Definition Syntax', () {
+    test('Parse ::= as type definition', () {
       final source = 'Nat ::= 0 ; s(Nat).';
       final env = parseTypes(source);
 
       final typeDef = env.types['Nat'];
       expect(typeDef, isNotNull);
-      expect(typeDef!.isExact, isTrue);
       expect(typeDef.toString(), contains('::='));
     });
 
-    test('Parse ::< as subtype declaration with single constant', () {
-      final source = 'SmallNat ::< 0.';
+    test('Parse structural type with multiple alternatives', () {
+      final source = 'SmallNat ::= 0 ; 1 ; 2.';
       final env = parseTypes(source);
 
       final typeDef = env.types['SmallNat'];
       expect(typeDef, isNotNull);
-      expect(typeDef!.isExact, isFalse);
-      expect(typeDef.toString(), contains('::<'));
-    });
-
-    test('Parse ::< with multiple constants', () {
-      final source = 'SmallNat ::< 0 ; 1 ; 2.';
-      final env = parseTypes(source);
-
-      final typeDef = env.types['SmallNat'];
-      expect(typeDef, isNotNull);
-      expect(typeDef!.isExact, isFalse);
       expect(typeDef!.alternatives, hasLength(3));
-    });
-
-    test('Parse file with both ::= and ::<', () {
-      final source = '''
-Nat ::= 0 ; s(Nat).
-SmallNat ::< 0.
-''';
-      final env = parseTypes(source);
-
-      expect(env.types['Nat']!.isExact, isTrue);
-      expect(env.types['SmallNat']!.isExact, isFalse);
     });
   });
 
   group('DFA Compilation with Primitive Modes', () {
-    test('Compile Any type creates DFA with any-value states', () {
+    test('Compile Output type creates DFA with primitive state', () {
       final env = parseTypes('');
       final compiler = TypeCompiler(env);
 
-      final anyDFA = compiler.compile('Any');
+      final outputDFA = compiler.compile('Output');
 
-      expect(anyDFA.primitiveStateModes, isNotEmpty);
-      expect(anyDFA.isPrimitiveState(anyDFA.startState), isTrue);
+      expect(outputDFA.primitiveStateModes, isNotEmpty);
+      expect(outputDFA.isPrimitiveState(outputDFA.startState), isTrue);
     });
 
     test('Type with primitive mode creates primitive state', () {
@@ -172,29 +149,6 @@ SmallNat ::< 0.
       final dfa = compiler.compile('Nat');
 
       expect(dfa.primitiveStateModes, isEmpty);
-    });
-  });
-
-  group('Type Definition Properties', () {
-    test('Exact type definition (::=) has isExact = true', () {
-      final source = 'MyType ::= 0 ; 1.';
-      final env = parseTypes(source);
-
-      expect(env.types['MyType']!.isExact, isTrue);
-    });
-
-    test('Subtype declaration (::&lt;) has isExact = false', () {
-      final source = 'MyType ::< 0.';
-      final env = parseTypes(source);
-
-      expect(env.types['MyType']!.isExact, isFalse);
-    });
-
-    test('System types Any and List are exact (::=)', () {
-      final env = parseTypes('');
-
-      expect(env.types['Any']!.isExact, isTrue);
-      expect(env.types['List']!.isExact, isTrue);
     });
   });
 }

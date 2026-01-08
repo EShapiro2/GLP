@@ -10,17 +10,13 @@ const String typePrelude = r'''
 % Predefined Types
 % =============================================================================
 
-% Universal types
-Every ::= _ ; _?.
-Any ::< Every.
-
 % Output and Input types
-Output.
-Input ::= Output?.
+Output ::= _.
+Input ::= _?.
 
 % Collections
-List ::= [Any | List] ; [].
-Stream ::< List.
+List ::= [_ | List] ; [].
+Stream ::= [_ | Stream] ; [].
 DiffList ::= List \ List?.
 
 % Communication
@@ -33,6 +29,10 @@ Channel ::= ch(Stream?, Stream).
 % Ground guard
 procedure ground(Input).
 
+% Unification (output = input)
+procedure =(_, _?).
+X? = X.
+
 % Difference list operations
 procedure dl_append(DiffList?, DiffList?, DiffList).
 procedure dl_to_list(DiffList?, List).
@@ -42,8 +42,8 @@ dl_to_list(L\[], L?).
 
 % Channel operations
 procedure new_channel(Channel, Channel).
-procedure send(Any, Channel?, Channel).
-procedure receive(Any, Channel?, Channel).
+procedure send(_?, Channel?, Channel).
+procedure receive(_, Channel?, Channel).
 
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
@@ -54,8 +54,6 @@ receive(X?, ch([X|In], Out?), ch(In?, Out)).
 const Set<String> predefinedTypeNames = {
   'Number',   // Primitive builtin
   'String',   // Primitive builtin
-  'Every',    // Universal type
-  'Any',      // Universal type
   'Output',   // All writers type
   'Input',    // All readers type
   'List',     // Collection type
@@ -66,6 +64,7 @@ const Set<String> predefinedTypeNames = {
 
 /// Names of predefined procedures that cannot be redefined by user modules
 const Set<String> predefinedProcedureNames = {
+  '=',
   'ground',
   'dl_append',
   'dl_to_list',

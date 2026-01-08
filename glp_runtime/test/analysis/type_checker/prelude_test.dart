@@ -26,32 +26,36 @@ void main() {
         expect(() => parsePreludeOnly(), returnsNormally);
       });
 
-      test('Every type is defined', () {
+      test('Output type is defined', () {
         final env = parsePreludeOnly();
-        expect(env.hasType('Every'), isTrue);
-        final every = env.getType('Every')!;
-        expect(every.isExact, isTrue); // ::= semantics
+        expect(env.hasType('Output'), isTrue);
+        final output = env.getType('Output')!;
+        expect(output.alternatives, hasLength(1));
+        expect(output.alternatives[0], isA<PrimitiveModeAlt>());
+        expect((output.alternatives[0] as PrimitiveModeAlt).isInput, isFalse);
       });
 
-      test('Any type is subtype of Every', () {
+      test('Input type is defined', () {
         final env = parsePreludeOnly();
-        expect(env.hasType('Any'), isTrue);
-        final any = env.getType('Any')!;
-        expect(any.isExact, isFalse); // ::< semantics
+        expect(env.hasType('Input'), isTrue);
+        final input = env.getType('Input')!;
+        expect(input.alternatives, hasLength(1));
+        expect(input.alternatives[0], isA<PrimitiveModeAlt>());
+        expect((input.alternatives[0] as PrimitiveModeAlt).isInput, isTrue);
       });
 
-      test('List type is defined with Any elements', () {
+      test('List type is defined with primitive elements', () {
         final env = parsePreludeOnly();
         expect(env.hasType('List'), isTrue);
         final list = env.getType('List')!;
-        expect(list.isExact, isTrue);
+        expect(list.alternatives, hasLength(2));
       });
 
-      test('Stream is subtype of List', () {
+      test('Stream type is defined', () {
         final env = parsePreludeOnly();
         expect(env.hasType('Stream'), isTrue);
         final stream = env.getType('Stream')!;
-        expect(stream.isExact, isFalse); // ::< semantics
+        expect(stream.alternatives, hasLength(2));
       });
 
       test('DiffList type is defined', () {
@@ -67,6 +71,16 @@ void main() {
     });
 
     group('Predefined Procedures', () {
+
+      test('= procedure is declared', () {
+        final env = parsePreludeOnly();
+        expect(env.hasProcedure('=', 2), isTrue);
+      });
+
+      test('ground procedure is declared', () {
+        final env = parsePreludeOnly();
+        expect(env.hasProcedure('ground', 1), isTrue);
+      });
 
       test('dl_append procedure is declared', () {
         final env = parsePreludeOnly();
@@ -97,9 +111,16 @@ void main() {
 
     group('Redefinition Prevention', () {
 
-      test('cannot redefine Every', () {
+      test('cannot redefine Output', () {
         expect(
-          () => checkTypes('Every ::= foo ; bar.'),
+          () => checkTypes('Output ::= foo ; bar.'),
+          throwsA(predicate((e) => e.toString().contains('redefine'))),
+        );
+      });
+
+      test('cannot redefine Input', () {
+        expect(
+          () => checkTypes('Input ::= foo ; bar.'),
           throwsA(predicate((e) => e.toString().contains('redefine'))),
         );
       });
@@ -128,7 +149,7 @@ void main() {
       test('cannot redefine dl_append', () {
         expect(
           () => checkTypes('''
-            procedure dl_append(Any, Any, Any).
+            procedure dl_append(Output, Output, Output).
             dl_append(_, _, _).
           '''),
           throwsA(predicate((e) => e.toString().contains('redefine'))),
@@ -138,7 +159,7 @@ void main() {
       test('cannot redefine send', () {
         expect(
           () => checkTypes('''
-            procedure send(Any, Any, Any).
+            procedure send(Output, Output, Output).
             send(_, _, _).
           '''),
           throwsA(predicate((e) => e.toString().contains('redefine'))),
@@ -166,23 +187,22 @@ void main() {
           myLength([], a).
           myLength([X | Xs], b) :- myLength(Xs?, a).
         ''');
-        // May have mode coverage errors for Any inside List, but should recognize List type
+        // Check that List is recognized as predefined type
         expect(result.errors.where((e) =>
           e.message.contains('List') && e.message.contains('not') && e.message.contains('defined')),
           isEmpty,
           reason: 'List should be recognized as predefined type');
       });
 
-      test('can use Any without declaring it', () {
+      test('can use Output without declaring it', () {
         final result = checkTypes('''
-          procedure identity(Any?, Any).
-          identity(X, X?).
-          identity(X?, X).
+          procedure identity(Output, Output).
+          identity(X, Y).
         ''');
         expect(result.errors.where((e) =>
-          e.message.contains('Any') && e.message.contains('not') && e.message.contains('defined')),
+          e.message.contains('Output') && e.message.contains('not') && e.message.contains('defined')),
           isEmpty,
-          reason: 'Any should be recognized as predefined type');
+          reason: 'Output should be recognized as predefined type');
       });
 
       test('can use Channel in program', () {

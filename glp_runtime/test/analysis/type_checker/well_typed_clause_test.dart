@@ -22,9 +22,9 @@ void main() {
     TypeEnvironment createBasicEnvironment() {
       final env = TypeEnvironment.empty();
 
-      // Define Any type: Any ::= _ ; _?
+      // Define BiMode type: BiMode ::= _ ; _? (accepts both reader and writer)
       env.addType(TypeDef(
-        'Any',
+        'BiMode',
         [
           PrimitiveModeAlt(false, 0, 0), // _
           PrimitiveModeAlt(true, 0, 0),  // _?
@@ -33,13 +33,13 @@ void main() {
         0,
       ));
 
-      // Define Stream type: Stream ::= [] ; [Any|Stream]
+      // Define Stream type: Stream ::= [] ; [_|Stream]
       env.addType(TypeDef(
         'Stream',
         [
           ListNilAlt(0, 0),
           ListConsAlt(
-            TypeRef('Any', 0, 0),
+            PrimitiveModeAlt(false, 0, 0), // _ for head
             TypeRef('Stream', 0, 0),
             0,
             0,
@@ -104,7 +104,7 @@ void main() {
         final env = createBasicEnvironment();
         env.addProcedure(ProcDecl(
           'foo',
-          [TypeRef('Any', 0, 0)],
+          [TypeRef('BiMode', 0, 0)],
           0,
           0,
         ));
@@ -301,7 +301,7 @@ void main() {
         final env = createBasicEnvironment();
         env.addProcedure(ProcDecl(
           'foo',
-          [TypeRef('Any', 0, 0)],
+          [TypeRef('BiMode', 0, 0)],
           0,
           0,
         ));
@@ -333,7 +333,7 @@ void main() {
         env.addProcedure(ProcDecl(
           'pair',
           [
-            TypeRef('Any', 0, 0),            // output
+            TypeRef('BiMode', 0, 0),            // output
             TypeRef('Any', 0, 0, isInput: true), // input
           ],
           0,
@@ -410,7 +410,7 @@ void main() {
         final env = createBasicEnvironment();
         env.addProcedure(ProcDecl(
           'foo',
-          [TypeRef('Any', 0, 0), TypeRef('Any', 0, 0)], // foo/2
+          [TypeRef('BiMode', 0, 0), TypeRef('BiMode', 0, 0)], // foo/2
           0,
           0,
         ));
@@ -486,7 +486,7 @@ void main() {
       });
 
       test('flips both modes in bi-moded state', () {
-        final state = DFAState('Any');
+        final state = DFAState('BiMode');
         final dfa = TypeDFA(
           states: {state},
           startState: state,

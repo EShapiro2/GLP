@@ -42,7 +42,7 @@ void main() {
 
     /// Create a DFA for type: T ::= _ ; _? (bi-moded primitive)
     TypeDFA createBiModedPrimitiveDFA() {
-      final state = DFAState('Any');
+      final state = DFAState('BiMode');
       return TypeDFA(
         states: {state},
         startState: state,
@@ -110,7 +110,7 @@ void main() {
       });
 
       test('writer at bi-moded position is well-typed', () {
-        // Type: Any ::= _ ; _? (bi-moded)
+        // Type: BiMode ::= _ ; _? (bi-moded)
         // Term: X (writer)
         final dfa = createBiModedPrimitiveDFA();
         final term = ModedVariable.writer('X');
@@ -121,7 +121,7 @@ void main() {
       });
 
       test('reader at bi-moded position is well-typed', () {
-        // Type: Any ::= _ ; _? (bi-moded)
+        // Type: BiMode ::= _ ; _? (bi-moded)
         // Term: X? (reader)
         final dfa = createBiModedPrimitiveDFA();
         final term = ModedVariable.reader('X');
@@ -205,18 +205,18 @@ void main() {
 
     group('Variable Complementarity', () {
       test('X and X? at same type are complementary', () {
-        // Type: Any (bi-moded)
+        // Type: BiMode (bi-moded)
         // Term: ↓f(↓X?, ↑X) - X? reads, X writes at same type
-        final anyState = DFAState('Any');
+        final biModeState = DFAState('BiMode');
         final dfa = TypeDFA(
-          states: {anyState},
-          startState: anyState,
+          states: {biModeState},
+          startState: biModeState,
           finalStates: {},
           transitions: {
-            (anyState, PathElement.functor('f', 2, 1)): anyState,
-            (anyState, PathElement.functor('f', 2, 2)): anyState,
+            (biModeState, PathElement.functor('f', 2, 1)): biModeState,
+            (biModeState, PathElement.functor('f', 2, 2)): biModeState,
           },
-          primitiveStateModes: {anyState: {Mode.produce, Mode.consume}},
+          primitiveStateModes: {biModeState: {Mode.produce, Mode.consume}},
         );
 
         final term = ModedCompound(Mode.consume, 'f', 2, [
@@ -446,16 +446,16 @@ void main() {
 
       test('multiple occurrences of same variable', () {
         // Same variable appears twice - should have consistent type
-        final anyState = DFAState('Any');
+        final biModeState = DFAState('BiMode');
         final dfa = TypeDFA(
-          states: {anyState},
-          startState: anyState,
+          states: {biModeState},
+          startState: biModeState,
           finalStates: {},
           transitions: {
-            (anyState, PathElement.functor('f', 2, 1)): anyState,
-            (anyState, PathElement.functor('f', 2, 2)): anyState,
+            (biModeState, PathElement.functor('f', 2, 1)): biModeState,
+            (biModeState, PathElement.functor('f', 2, 2)): biModeState,
           },
-          primitiveStateModes: {anyState: {Mode.produce, Mode.consume}},
+          primitiveStateModes: {biModeState: {Mode.produce, Mode.consume}},
         );
 
         // f(X?, X?) - same reader variable twice
