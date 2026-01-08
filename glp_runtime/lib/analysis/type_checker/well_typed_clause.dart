@@ -520,8 +520,8 @@ List<ClauseComplementaryError> _checkClauseComplementarity(
       final writerLoc = locations[writerKey] ?? 'unknown';
       final readerLoc = locations[readerKey] ?? 'unknown';
 
-      // Must be at same type state
-      if (writerInfo.typeState != readerInfo.typeState) {
+      // Check type compatibility (primitives are compatible with any type)
+      if (!_areComplementaryTypes(writerInfo, readerInfo)) {
         errors.add(ClauseComplementaryError(
           baseName,
           writerInfo,
@@ -534,4 +534,27 @@ List<ClauseComplementaryError> _checkClauseComplementarity(
   }
 
   return errors;
+}
+
+/// Check if writer and reader types are complementary
+bool _areComplementaryTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
+  // If either is a primitive type state, they're compatible
+  // (primitives _ and _? accept any value)
+  if (_isPrimitiveTypeName(writerInfo.typeState.name) ||
+      _isPrimitiveTypeName(readerInfo.typeState.name)) {
+    return true;
+  }
+
+  // Otherwise, must be at same type state
+  return writerInfo.typeState.name == readerInfo.typeState.name;
+}
+
+/// Check if a type state name represents a primitive type
+bool _isPrimitiveTypeName(String name) {
+  return name == '_' ||
+         name == '_?' ||
+         name == 'Output' ||
+         name == 'Input' ||
+         name.startsWith('_prim') ||
+         name.startsWith('_arg');
 }
