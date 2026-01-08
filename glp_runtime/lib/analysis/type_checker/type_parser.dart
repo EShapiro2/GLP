@@ -400,9 +400,9 @@ class TypeParser {
     if (_match(TypeTokenType.underscore)) {
       final line = _previous().line;
       final column = _previous().column;
-      // Check for ? suffix - _? means Input mode
+      // Check for ? suffix - _? means Input mode position
       if (_match(TypeTokenType.question)) {
-        return TypeRef('Input', line, column, isInput: false);
+        return TypeRef('Output', line, column, isInput: true);
       }
       // _ means Output type
       return TypeRef('Output', line, column, isInput: false);
