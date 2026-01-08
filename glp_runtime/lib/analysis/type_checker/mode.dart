@@ -5,12 +5,26 @@
 // vs output (callee writes, caller reads).
 
 /// Data flow mode for procedure arguments
+///
+/// Two naming conventions are supported:
+/// - input/output: Traditional GLP naming
+/// - consume/produce: Paper Definition 4.2 naming (↓/↑)
+///
+/// Mapping:
+/// - consume (↓) = input = caller writes, callee reads
+/// - produce (↑) = output = callee writes, caller reads
 enum Mode {
-  output,  // Callee writes, caller reads (default, no ? marker)
-  input;   // Caller writes, callee reads (Type? syntax)
+  output,  // Callee writes, caller reads (default, no ? marker) = produce (↑)
+  input;   // Caller writes, callee reads (Type? syntax) = consume (↓)
+
+  /// Alias for input mode (↓) per paper Definition 4.2
+  static const consume = Mode.input;
+
+  /// Alias for output mode (↑) per paper Definition 4.2
+  static const produce = Mode.output;
 
   /// Mode complementation operator (·)?
-  /// Inverts mode: output ↔ input
+  /// Inverts mode: output ↔ input, produce ↔ consume
   /// Used at call boundaries: caller's output = callee's input
   Mode get complement {
     switch (this) {
@@ -20,6 +34,9 @@ enum Mode {
         return Mode.output;
     }
   }
+
+  /// Alias for complement (per paper notation)
+  Mode get flip => complement;
 
   @override
   String toString() {
