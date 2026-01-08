@@ -644,6 +644,16 @@ class NumberTypeDFA extends TypeDFA {
   }
 
   @override
+  bool acceptsStructuralPath(List<ModedLabel> path) {
+    // Number accepts empty path (primitive type)
+    if (path.isEmpty) return true;
+    // A path of length 1 with a numeric constant
+    if (path.length != 1) return false;
+    final sym = path[0].pathElement;
+    return double.tryParse(sym) != null || int.tryParse(sym) != null;
+  }
+
+  @override
   bool get isEmpty => false;
 
   @override
@@ -668,6 +678,14 @@ class StringTypeDFA extends TypeDFA {
 
   @override
   bool acceptsModedPath(List<ModedLabel> path, Mode leafMode) {
+    if (path.isEmpty) return true;
+    if (path.length != 1) return false;
+    final sym = path[0].pathElement;
+    return sym.startsWith('"') || sym.startsWith("'");
+  }
+
+  @override
+  bool acceptsStructuralPath(List<ModedLabel> path) {
     if (path.isEmpty) return true;
     if (path.length != 1) return false;
     final sym = path[0].pathElement;
