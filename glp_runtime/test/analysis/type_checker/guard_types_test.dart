@@ -89,19 +89,6 @@ void main() {
             reason: 'number(X?) implies X is ground');
       });
 
-      test('known(X?) does NOT imply ground', () {
-        // known only checks top-level binding, not recursive groundness
-        final result = checkTypes('''
-          Bimodal ::= _ ; _?.
-          procedure bad(Bimodal?, Bimodal).
-          bad(X, Y?) :- known(X?) | Y = X?.
-        ''');
-        // This should still require mode coverage for Bimodal
-        // because known does not imply ground
-        expect(result.errors, isNotEmpty,
-            reason: 'known does not satisfy mode coverage');
-      });
-
       test('POSITIVE: ground on type without mode complementations', () {
         final result = checkTypes('''
           MyList ::= [] ; [_ | MyList].

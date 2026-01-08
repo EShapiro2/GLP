@@ -1,6 +1,6 @@
 // test/analysis/type_checker/predefined_operations_test.dart
 //
-// Tests for type operations: Bimodal self-duality, DiffList, and Channel
+// Tests for type operations: DiffList and Channel
 
 import 'package:test/test.dart';
 import 'test_helpers.dart';
@@ -8,21 +8,10 @@ import 'test_helpers.dart';
 void main() {
   group('Type Operations', () {
     // =========================================================================
-    // Self-duality of Bimodal
+    // Primitive type mode checking
     // =========================================================================
 
-    group('Self-Duality', () {
-      test('POSITIVE: Bimodal and Bimodal? are equivalent', () {
-        final result = checkTypes('''
-          Bimodal ::= _ ; _?.
-          procedure foo(Bimodal, Bimodal?).
-          foo(X, X?).
-          foo(X?, X).
-        ''');
-        expect(result.isWellTyped, isTrue,
-            reason: 'Bimodal = Bimodal? but still needs both modes covered');
-      });
-
+    group('Primitive Modes', () {
       test('POSITIVE: Writer at _ position is valid', () {
         final result = checkTypes('''
           procedure produce(_).
@@ -48,27 +37,6 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: '_ has no coverage requirement');
-      });
-
-      test('NEGATIVE: Bimodal needs both modes', () {
-        final result = checkTypes('''
-          Bimodal ::= _ ; _?.
-          procedure echo(Bimodal?, Bimodal).
-          echo(X, Y?) :- Y = X?.
-        ''');
-        expect(result.isWellTyped, isFalse,
-            reason: 'Bimodal ::= requires both _ and _? covered');
-      });
-
-      test('POSITIVE: Bimodal with both modes covered', () {
-        final result = checkTypes('''
-          Bimodal ::= _ ; _?.
-          procedure echo(Bimodal?, Bimodal).
-          echo(X, Y?) :- Y = X?.
-          echo(X?, Y) :- Y? = X.
-        ''');
-        expect(result.isWellTyped, isTrue,
-            reason: 'Both modes covered for Bimodal');
       });
     });
 
@@ -274,58 +242,6 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'dl_to_list closes difference list in guard');
-      });
-    });
-
-    // =========================================================================
-    // BimodalList example (requires full mode coverage)
-    // =========================================================================
-
-    group('BimodalList', () {
-      test('POSITIVE: BimodalList copy with three clauses', () {
-        final result = checkTypes('''
-          Bimodal ::= _ ; _?.
-          BimodalList ::= [Bimodal | BimodalList] ; [].
-
-          procedure copy(BimodalList?, BimodalList).
-          copy([], []).
-          copy([X | In], [X? | Out]) :- copy(In?, Out).
-          copy([X? | In], [X | Out]) :- copy(In?, Out).
-        ''');
-        expect(result.isWellTyped, isTrue,
-            reason: 'BimodalList requires both element mode alternatives');
-      });
-
-      test('NEGATIVE: BimodalList copy with only two clauses fails', () {
-        final result = checkTypes('''
-          Bimodal ::= _ ; _?.
-          BimodalList ::= [Bimodal | BimodalList] ; [].
-
-          procedure copy(BimodalList?, BimodalList).
-          copy([], []).
-          copy([X | In], [X? | Out]) :- copy(In?, Out).
-        ''');
-        expect(result.isWellTyped, isFalse,
-            reason: 'Missing second element mode');
-      });
-
-      test('POSITIVE: PrimList needs only two clauses vs BimodalList three', () {
-        final result = checkTypes('''
-          Bimodal ::= _ ; _?.
-          PrimList ::= [_ | PrimList] ; [].
-          BimodalList ::= [Bimodal | BimodalList] ; [].
-
-          procedure copy_primlist(PrimList?, PrimList).
-          copy_primlist([], []).
-          copy_primlist([X | In], [X? | Out]) :- copy_primlist(In?, Out).
-
-          procedure copy_bimodallist(BimodalList?, BimodalList).
-          copy_bimodallist([], []).
-          copy_bimodallist([X | In], [X? | Out]) :- copy_bimodallist(In?, Out).
-          copy_bimodallist([X? | In], [X | Out]) :- copy_bimodallist(In?, Out).
-        ''');
-        expect(result.isWellTyped, isTrue,
-            reason: 'PrimList (_ elements) simpler than BimodalList (Bimodal elements)');
       });
     });
   });

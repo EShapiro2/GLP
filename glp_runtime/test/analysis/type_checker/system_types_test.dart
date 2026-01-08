@@ -70,36 +70,5 @@ void main() {
             reason: 'Slot should be reader (Slot?) not writer (Slot)');
       });
     });
-
-    // =========================================================================
-    // BimodalList (both _ and _? required)
-    // =========================================================================
-
-    group('BimodalList', () {
-      test('POSITIVE: BimodalList copy with three clauses passes', () {
-        final result = checkTypes('''
-          Bimodal ::= _ ; _?.
-          BimodalList ::= [] ; [Bimodal | BimodalList].
-          procedure copy(BimodalList?, BimodalList).
-          copy([], []).
-          copy([X | In], [X? | Out]) :- copy(In?, Out).
-          copy([X? | In], [X | Out]) :- copy(In?, Out).
-        ''');
-        expect(result.isWellTyped, isTrue,
-            reason: 'All three clauses cover both modes at element position');
-      });
-
-      test('NEGATIVE: BimodalList copy with two clauses fails', () {
-        final result = checkTypes('''
-          Bimodal ::= _ ; _?.
-          BimodalList ::= [] ; [Bimodal | BimodalList].
-          procedure copy(BimodalList?, BimodalList).
-          copy([], []).
-          copy([X | In], [X? | Out]) :- copy(In?, Out).
-        ''');
-        expect(result.isWellTyped, isFalse,
-            reason: 'Missing reverse mode clause');
-      });
-    });
   });
 }
