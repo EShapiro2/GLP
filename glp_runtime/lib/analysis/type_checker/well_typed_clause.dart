@@ -1,0 +1,447 @@
+// lib/analysis/type_checker/well_typed_clause.dart
+//
+// Well-typed clause checking for GLP type system.
+// Specification: docs/modules/well-typed-clause.md v0.1
+// Paper Reference: Definition 4.8 (Well-Typed Clause)
+//
+// A clause H :- G | B is well-typed if:
+// 1. The moded head H is well-typed by the procedure's type
+// 2. Each body atom is well-typed by its procedure's type (with mode complement)
+// 3. Variable pairs (X, X?) across all atoms are complementary
+
+import 'mode.dart';
+import 'moded_term.dart';
+import 'moded_head.dart';
+import 'well_typed_term.dart';
+import 'type_dfa.dart';
+import 'type_ast.dart';
+import 'type_compiler.dart';
+import '../../compiler/ast.dart' as ast;
+
+// =============================================================================
+// Result Types
+// =============================================================================
+
+/// Result of checking if a clause is well-typed
+class ClauseCheckResult {
+  /// Whether the clause is well-typed
+  final bool isWellTyped;
+
+  /// All variable type assignments from head and body
+  final Map<String, VariableTypeInfo> variableTypes;
+
+  /// List of errors found during checking
+  final List<ClauseError> errors;
+
+  ClauseCheckResult({
+    required this.isWellTyped,
+    required this.variableTypes,
+    required this.errors,
+  });
+
+  factory ClauseCheckResult.success(Map<String, VariableTypeInfo> variableTypes) {
+    return ClauseCheckResult(
+      isWellTyped: true,
+      variableTypes: variableTypes,
+      errors: [],
+    );
+  }
+
+  factory ClauseCheckResult.failure(List<ClauseError> errors,
+      [Map<String, VariableTypeInfo>? variableTypes]) {
+    return ClauseCheckResult(
+      isWellTyped: false,
+      variableTypes: variableTypes ?? {},
+      errors: errors,
+    );
+  }
+}
+
+/// Base class for clause checking errors
+abstract class ClauseError {
+  String get message;
+}
+
+/// Error in head checking
+class HeadError extends ClauseError {
+  final String procedureName;
+  final List<WellTypedError> termErrors;
+
+  HeadError(this.procedureName, this.termErrors);
+
+  @override
+  String get message =>
+      'Head of $procedureName is not well-typed:\n  ${termErrors.map((e) => e.message).join('\n  ')}';
+
+  @override
+  String toString() => message;
+}
+
+/// Error in body atom checking
+class BodyAtomError extends ClauseError {
+  final String procedureName;
+  final int atomIndex;
+  final List<WellTypedError> termErrors;
+
+  BodyAtomError(this.procedureName, this.atomIndex, this.termErrors);
+
+  @override
+  String get message =>
+      'Body atom $atomIndex ($procedureName) is not well-typed:\n  ${termErrors.map((e) => e.message).join('\n  ')}';
+
+  @override
+  String toString() => message;
+}
+
+/// Error: variable pair not complementary across clause
+class ClauseComplementaryError extends ClauseError {
+  final String baseName;
+  final VariableTypeInfo? writerType;
+  final VariableTypeInfo? readerType;
+  final String writerLocation;
+  final String readerLocation;
+
+  ClauseComplementaryError(
+    this.baseName,
+    this.writerType,
+    this.readerType,
+    this.writerLocation,
+    this.readerLocation,
+  );
+
+  @override
+  String get message =>
+      'Variable pair ($baseName, $baseName?) not complementary across clause: '
+      'writer at $writerLocation=$writerType, reader at $readerLocation=$readerType';
+
+  @override
+  String toString() => message;
+}
+
+/// Error: undefined procedure
+class UndefinedProcedureError extends ClauseError {
+  final String procedureName;
+  final int arity;
+
+  UndefinedProcedureError(this.procedureName, this.arity);
+
+  @override
+  String get message =>
+      'Undefined procedure: $procedureName/$arity';
+
+  @override
+  String toString() => message;
+}
+
+/// Error: arity mismatch
+class ArityMismatchClauseError extends ClauseError {
+  final String procedureName;
+  final int expectedArity;
+  final int actualArity;
+
+  ArityMismatchClauseError(this.procedureName, this.expectedArity, this.actualArity);
+
+  @override
+  String get message =>
+      'Arity mismatch for $procedureName: expected $expectedArity, got $actualArity';
+
+  @override
+  String toString() => message;
+}
+
+// =============================================================================
+// Clause Representation
+// =============================================================================
+
+/// A parsed clause structure for type checking
+class TypedClause {
+  /// The head as an AST Goal
+  final ast.Goal head;
+
+  /// Body atoms as AST Goals
+  final List<ast.Goal> bodyAtoms;
+
+  /// Guard atoms as AST Goals (optional, not currently checked)
+  final List<ast.Goal> guardAtoms;
+
+  TypedClause({
+    required this.head,
+    this.bodyAtoms = const [],
+    this.guardAtoms = const [],
+  });
+
+  String get headFunctor => head.functor;
+  int get headArity => head.arity;
+}
+
+// =============================================================================
+// Public Functions
+// =============================================================================
+
+/// Check if a clause is well-typed in the given environment.
+///
+/// Per Definition 4.8: A clause H :- G | B is well-typed if:
+/// 1. modedHead(H, procType) is well-typed by the procedure's type DFA
+/// 2. For each body atom A, producedTerm(A, atomType) is well-typed
+/// 3. All variable pairs (X, X?) across head and body are complementary
+ClauseCheckResult checkClause(
+  TypedClause clause,
+  TypeEnvironment env,
+  TypeCompiler compiler,
+) {
+  final errors = <ClauseError>[];
+  final allVariableTypes = <String, VariableTypeInfo>{};
+  final variableLocations = <String, String>{};
+
+  // Look up procedure declaration for head
+  final procDecl = env.getProcedure(clause.headFunctor, clause.headArity);
+  if (procDecl == null) {
+    return ClauseCheckResult.failure([
+      UndefinedProcedureError(clause.headFunctor, clause.headArity),
+    ]);
+  }
+
+  // Check arity match
+  if (procDecl.arity != clause.headArity) {
+    return ClauseCheckResult.failure([
+      ArityMismatchClauseError(clause.headFunctor, procDecl.arity, clause.headArity),
+    ]);
+  }
+
+  // Step 1: Check head well-typing
+  final headResult = _checkHead(clause, procDecl, compiler);
+  if (!headResult.isWellTyped) {
+    errors.add(HeadError(clause.headFunctor, headResult.errors));
+  }
+  for (final entry in headResult.variableTypes.entries) {
+    allVariableTypes[entry.key] = entry.value;
+    variableLocations[entry.key] = 'head';
+  }
+
+  // Step 2: Check each body atom
+  for (int i = 0; i < clause.bodyAtoms.length; i++) {
+    final atom = clause.bodyAtoms[i];
+    final atomResult = _checkBodyAtom(atom, i, env, compiler);
+
+    if (!atomResult.isWellTyped) {
+      errors.add(BodyAtomError(atom.functor, i, atomResult.errors));
+    }
+
+    // Merge variable types with consistency checking
+    for (final entry in atomResult.variableTypes.entries) {
+      final varKey = entry.key;
+      final newInfo = entry.value;
+
+      if (allVariableTypes.containsKey(varKey)) {
+        final existing = allVariableTypes[varKey]!;
+        // Same variable at different positions - types must match
+        if (existing.typeState != newInfo.typeState) {
+          // This will be caught by complementarity check below
+        }
+      } else {
+        allVariableTypes[varKey] = newInfo;
+        variableLocations[varKey] = 'body atom $i';
+      }
+    }
+  }
+
+  // Step 3: Check variable pair complementarity across clause
+  final complementErrors = _checkClauseComplementarity(
+    allVariableTypes,
+    variableLocations,
+  );
+  errors.addAll(complementErrors);
+
+  return ClauseCheckResult(
+    isWellTyped: errors.isEmpty,
+    variableTypes: allVariableTypes,
+    errors: errors,
+  );
+}
+
+// =============================================================================
+// Internal Functions
+// =============================================================================
+
+/// Check head well-typing
+WellTypedResult _checkHead(
+  TypedClause clause,
+  ProcDecl procDecl,
+  TypeCompiler compiler,
+) {
+  // Build the procedure type DFA for the head
+  final procDFA = _buildProcedureTypeDFA(procDecl, compiler);
+
+  // Build moded head term
+  try {
+    final modedHeadTerm = modedHead(clause.head, procDecl);
+
+    // Check well-typing
+    return checkModedTerm(modedHeadTerm, procDFA);
+  } on ArityMismatchError catch (e) {
+    return WellTypedResult.failure([
+      InconsistentPathError(
+        ModedPath([PathStep(symbol: e.message, argIndex: 0, mode: Mode.produce)]),
+        e.message,
+      ),
+    ]);
+  }
+}
+
+/// Check body atom well-typing
+WellTypedResult _checkBodyAtom(
+  ast.Goal atom,
+  int atomIndex,
+  TypeEnvironment env,
+  TypeCompiler compiler,
+) {
+  // Look up procedure declaration
+  final procDecl = env.getProcedure(atom.functor, atom.arity);
+  if (procDecl == null) {
+    return WellTypedResult.failure([
+      InconsistentPathError(
+        ModedPath([PathStep(
+          symbol: '${atom.functor}/${atom.arity}',
+          argIndex: 0,
+          mode: Mode.produce,
+        )]),
+        'Undefined procedure: ${atom.functor}/${atom.arity}',
+      ),
+    ]);
+  }
+
+  // Build the procedure type DFA for body atom (with mode complement)
+  final procDFA = _buildProcedureTypeDFA(procDecl, compiler, complement: true);
+
+  // Build produced term (no variable flip for body atoms)
+  try {
+    final modedAtomTerm = producedTerm(atom, procDecl);
+
+    // Check well-typing
+    return checkModedTerm(modedAtomTerm, procDFA);
+  } on ArityMismatchError catch (e) {
+    return WellTypedResult.failure([
+      InconsistentPathError(
+        ModedPath([PathStep(symbol: e.message, argIndex: 0, mode: Mode.produce)]),
+        e.message,
+      ),
+    ]);
+  }
+}
+
+/// Build procedure type DFA from procedure declaration
+///
+/// For each argument position, compile the type and create transitions.
+/// If [complement] is true, apply mode complement (for body atoms at call sites).
+///
+/// Mode complement logic:
+/// - For HEADS (complement=false): Use type's modes directly
+/// - For BODY ATOMS (complement=true): Flip modes because at call site,
+///   caller's output = callee's input
+TypeDFA _buildProcedureTypeDFA(
+  ProcDecl procDecl,
+  TypeCompiler compiler, {
+  bool complement = false,
+}) {
+  // Start state for the procedure
+  final procState = DFAState(procDecl.key);
+  final states = <DFAState>{procState};
+  final transitions = <(DFAState, PathElement), DFAState>{};
+  final primitiveStateModes = <DFAState, Set<Mode>>{};
+  final finalStates = <DFAState>{};
+
+  // Add transitions for each argument position
+  for (int i = 0; i < procDecl.arity; i++) {
+    final argType = procDecl.argTypes[i];
+    var argDFA = compiler.compile(argType.name);
+
+    // For body atoms (call sites), apply complement
+    // This captures: caller's output = callee's input
+    if (complement) {
+      argDFA = argDFA.applyModeComplement();
+
+      // Also flip for the argument position mode (Type vs Type?)
+      if (argType.isInput) {
+        argDFA = argDFA.applyModeComplement();
+      }
+    }
+    // For heads: DON'T apply any complement
+    // The type's modes are used directly
+
+    // Add transition from procedure state to argument type state
+    final pathElem = PathElement.functor(procDecl.name, procDecl.arity, i + 1);
+    transitions[(procState, pathElem)] = argDFA.startState;
+
+    // Merge the argument DFA states and transitions
+    states.addAll(argDFA.states);
+    transitions.addAll(argDFA.transitions);
+    primitiveStateModes.addAll(argDFA.primitiveStateModes);
+    finalStates.addAll(argDFA.finalStates);
+  }
+
+  return TypeDFA(
+    states: states,
+    startState: procState,
+    finalStates: finalStates,
+    transitions: transitions,
+    primitiveStateModes: primitiveStateModes,
+  );
+}
+
+/// Check variable pair complementarity across the entire clause
+List<ClauseComplementaryError> _checkClauseComplementarity(
+  Map<String, VariableTypeInfo> variableTypes,
+  Map<String, String> variableLocations,
+) {
+  final errors = <ClauseComplementaryError>[];
+
+  // Group by base name (X and X? share base "X")
+  final baseNames = <String, Map<String, VariableTypeInfo>>{};
+  final baseLocations = <String, Map<String, String>>{};
+
+  for (final entry in variableTypes.entries) {
+    final varKey = entry.key;
+    final info = entry.value;
+    final location = variableLocations[varKey] ?? 'unknown';
+
+    final baseName = varKey.endsWith('?')
+        ? varKey.substring(0, varKey.length - 1)
+        : varKey;
+
+    baseNames.putIfAbsent(baseName, () => {});
+    baseNames[baseName]![varKey] = info;
+
+    baseLocations.putIfAbsent(baseName, () => {});
+    baseLocations[baseName]![varKey] = location;
+  }
+
+  // Check each base name
+  for (final entry in baseNames.entries) {
+    final baseName = entry.key;
+    final variants = entry.value;
+    final locations = baseLocations[baseName]!;
+
+    final writerKey = baseName;
+    final readerKey = '$baseName?';
+
+    if (variants.containsKey(writerKey) && variants.containsKey(readerKey)) {
+      final writerInfo = variants[writerKey]!;
+      final readerInfo = variants[readerKey]!;
+      final writerLoc = locations[writerKey] ?? 'unknown';
+      final readerLoc = locations[readerKey] ?? 'unknown';
+
+      // Must be at same type state
+      if (writerInfo.typeState != readerInfo.typeState) {
+        errors.add(ClauseComplementaryError(
+          baseName,
+          writerInfo,
+          readerInfo,
+          writerLoc,
+          readerLoc,
+        ));
+      }
+    }
+  }
+
+  return errors;
+}

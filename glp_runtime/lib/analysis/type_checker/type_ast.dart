@@ -177,6 +177,16 @@ class TypeEnvironment {
   /// Check if a procedure is defined
   bool hasProcedure(String name, int arity) => procedures.containsKey('$name/$arity');
 
+  /// Add a type definition to the environment
+  void addType(TypeDef typeDef) {
+    types[typeDef.name] = typeDef;
+  }
+
+  /// Add a procedure declaration to the environment
+  void addProcedure(ProcDecl procDecl) {
+    procedures[procDecl.key] = procDecl;
+  }
+
   @override
   String toString() {
     final sb = StringBuffer();

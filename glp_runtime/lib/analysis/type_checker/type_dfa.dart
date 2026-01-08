@@ -440,6 +440,26 @@ class TypeDFA {
     );
   }
   
+  /// Apply mode complement to all primitive state modes
+  ///
+  /// Per Definition 4.2: (↓)? = ↑ and (↑)? = ↓
+  /// This is used when building procedure type DFAs at call sites
+  /// where caller's view is complemented.
+  TypeDFA applyModeComplement() {
+    final newPrimitiveStateModes = <DFAState, Set<Mode>>{};
+    for (final entry in primitiveStateModes.entries) {
+      newPrimitiveStateModes[entry.key] =
+          entry.value.map((m) => m.flip).toSet();
+    }
+    return TypeDFA(
+      states: states,
+      startState: startState,
+      finalStates: finalStates,
+      transitions: transitions,
+      primitiveStateModes: newPrimitiveStateModes,
+    );
+  }
+
   /// Union of two DFAs (using NFA conversion would be cleaner, but product works)
   TypeDFA union(TypeDFA other) {
     // L(A) ∪ L(B) = complement(complement(A) ∩ complement(B))
