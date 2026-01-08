@@ -687,6 +687,32 @@ Claude A: work → push → branch-A               │
 Claude B: work → push → branch-B ──────────────┘
 ```
 
+### Session-Specific Branch Restrictions
+
+**CRITICAL:** Each Claude Code session can ONLY push to its own branch (branch name includes session ID). Attempting to push to another session's branch will result in HTTP 403 error.
+
+**If you need to continue work from a previous session's branch:**
+
+Option 1 - Pull from previous branch, work on your own:
+```bash
+git fetch origin claude/<previous-session-branch>
+git checkout -b claude/<your-session-branch> origin/claude/<previous-session-branch>
+# Work and commit
+git push -u origin claude/<your-session-branch>
+```
+
+Option 2 (Recommended) - User merges previous work to main first:
+```bash
+# User runs on their Mac:
+cd /Users/udi/GLP
+git checkout main
+git pull origin main
+git fetch origin claude/<previous-session-branch>
+git merge -m "Merge previous work" origin/claude/<previous-session-branch>
+git push origin main
+```
+Then new Claude session pulls from main and starts fresh.
+
 ### Claude's Responsibilities
 
 **At session start:**
