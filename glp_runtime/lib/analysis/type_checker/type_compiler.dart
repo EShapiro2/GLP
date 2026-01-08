@@ -179,15 +179,24 @@ class TypeCompiler {
       // List cons: add head and tail transitions
       final headElem = PathElement.listHead();
       final tailElem = PathElement.listTail();
-      
+
       final headTarget = _resolveTargetState(alt.head, stateMap, finalState);
       final tailTarget = _resolveTargetState(alt.tail, stateMap, finalState);
-      
+
       transitions[(fromState, headElem)] = headTarget;
       transitions[(fromState, tailElem)] = tailTarget;
-      
+
+    } else if (alt is TypeRef) {
+      // Type alias: MyStream ::= MyList
+      // Add all transitions from the referenced type's alternatives
+      final refDef = env.getType(alt.name);
+      if (refDef != null) {
+        for (final refAlt in refDef.alternatives) {
+          _addTransitionsForAlt(fromState, refAlt, stateMap, transitions,
+              finalState, primitiveStateModes);
+        }
+      }
     }
-    // Note: TypeRef at top level (subtype declaration with ::<) is no longer supported
   }
   
   /// Resolve target state for a type expression in an argument position
