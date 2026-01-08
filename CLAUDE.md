@@ -10,6 +10,7 @@
 7. **FOLLOW MODE RULES** - Never mix modes
 8. **ASK FOR CURRENT STATE** - Request latest code/errors from user
 9. **READ SPECS AS NEEDED** - Don't read all specs upfront, only when relevant to task
+10. **WAIT FOR INSTRUCTIONS** - After setup is complete, do nothing until instructed by Claude Web or user
 
 ### Dart Installation (if needed)
 
