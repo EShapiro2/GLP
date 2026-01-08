@@ -538,10 +538,18 @@ List<ClauseComplementaryError> _checkClauseComplementarity(
 
 /// Check if writer and reader types are complementary
 bool _areComplementaryTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
-  // If either is a primitive type state, they're compatible
-  // (primitives _ and _? accept any value)
-  if (_isPrimitiveTypeName(writerInfo.typeState.name) ||
-      _isPrimitiveTypeName(readerInfo.typeState.name)) {
+  // Mode check: writer must produce, reader must consume
+  if (writerInfo.mode != Mode.produce || readerInfo.mode != Mode.consume) {
+    return false;
+  }
+
+  // Output primitive (_) as writer is compatible with any reader
+  if (_isOutputPrimitive(writerInfo.typeState.name)) {
+    return true;
+  }
+
+  // Input primitive (_?) as reader is compatible with any writer
+  if (_isInputPrimitive(readerInfo.typeState.name)) {
     return true;
   }
 
@@ -549,12 +557,12 @@ bool _areComplementaryTypes(VariableTypeInfo writerInfo, VariableTypeInfo reader
   return writerInfo.typeState.name == readerInfo.typeState.name;
 }
 
-/// Check if a type state name represents a primitive type
-bool _isPrimitiveTypeName(String name) {
-  return name == '_' ||
-         name == '_?' ||
-         name == 'Output' ||
-         name == 'Input' ||
-         name.startsWith('_prim') ||
-         name.startsWith('_arg');
+/// Check if a type state name represents an output primitive (_)
+bool _isOutputPrimitive(String name) {
+  return name == '_' || name == 'Output' || name.startsWith('_prim');
+}
+
+/// Check if a type state name represents an input primitive (_?)
+bool _isInputPrimitive(String name) {
+  return name == '_?' || name == 'Input';
 }
