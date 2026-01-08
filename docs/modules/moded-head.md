@@ -1,7 +1,7 @@
 # Module: moded-head
 
-**Version**: 0.5  
-**Date**: 2025-01-08  
+**Version**: 0.6
+**Date**: 2025-01-09  
 **Status**: DRAFT  
 **Paper References**: Definition 4.6 (lines 285-288), Example (lines 290-308)
 
@@ -51,6 +51,7 @@ Constructs a moded head H' from clause head H per Definition 4.6.
 - `head.functor == decl.name` and `head.arity == decl.arity`
 
 **Postconditions:** Returns a ModedTerm where:
+- `isIO(result)` is true (the result is an I/O moded term)
 - Root mode is ↓ (consume)
 - Each argument has mode based on declared type: Type? → ↓, Type → ↑
 - All variables are flipped (X ↔ X?)
@@ -67,6 +68,7 @@ Constructs a produced moded term from a body atom.
 - `decl` provides the procedure type declaration
 
 **Postconditions:** Returns a ModedTerm where:
+- `isProduced(result)` is true (the result is a produced moded term)
 - Root mode is ↑ (produce)
 - Each argument has mode based on declared type: Type? → ↓, Type → ↑
 - Variables are NOT flipped (body atoms use original variable forms)
@@ -230,3 +232,4 @@ Paths:
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft |
 | 0.5 | 2025-01-08 | Add producedTerm for body atoms; complete algorithms; more examples |
+| 0.6 | 2025-01-09 | Add isIO/isProduced postconditions per paper Definition 4.6 and Well-typed Clause |

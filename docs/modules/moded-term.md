@@ -1,6 +1,6 @@
 # Module: moded-term
 
-**Version**: 0.4
+**Version**: 0.5
 **Date**: 2025-01-09
 **Status**: DRAFT  
 **Paper References**: Definition 4.2 (Moded Term, Complement), lines 179-211
@@ -150,6 +150,53 @@ class PathStep {
 
 ### Functions
 
+#### `bool isConsumed(ModedTerm t)`
+
+Returns true if all mode annotations in t are consume (↓).
+
+**Postconditions:**
+- Returns true iff every non-variable subterm has mode = Mode.consume
+
+#### `bool isProduced(ModedTerm t)`
+
+Returns true if all mode annotations in t are produce (↑).
+
+**Postconditions:**
+- Returns true iff every non-variable subterm has mode = Mode.produce
+
+#### `bool isIO(ModedTerm t)`
+
+Returns true if t is an I/O moded term: root is consume (↓) with at most one mode-inversion to produce (↑) on any path.
+
+**Preconditions:**
+- t is a valid moded term
+
+**Postconditions:**
+- Returns true iff:
+  - Root mode is Mode.consume, AND
+  - On every path from root to leaf, mode transitions only in the direction ↓ → ↑ (never ↑ → ↓)
+
+**Algorithm:**
+```
+isIO(t):
+  if t.mode != Mode.consume:
+    return false
+  return allPathsValidIO(t, Mode.consume)
+
+allPathsValidIO(t, parentMode):
+  currentMode = t.mode
+
+  // Check valid transition: only ↓→↑ allowed, not ↑→↓
+  if parentMode == Mode.produce and currentMode == Mode.consume:
+    return false  // Invalid: flipped back from ↑ to ↓
+
+  match t:
+    ModedCompound(_, _, _, args):
+      return args.all(arg => allPathsValidIO(arg, currentMode))
+    ModedConstant, ModedVariable:
+      return true  // Leaf reached
+```
+
 #### `ModedTerm complement(ModedTerm t)`
 
 Constructs the complement of a moded term per Definition 4.2.
@@ -268,3 +315,5 @@ None. All operations succeed on valid moded terms.
 | 0.1 | 2025-01-07 | Initial draft |
 | 0.2 | 2025-01-07 | Add negative examples |
 | 0.3 | 2025-01-08 | Simplify: remove consumedTerm, producedTerm, ioModedTerm (moved to moded-head); depend on mode module |
+| 0.4 | 2025-01-09 | Format cleanup |
+| 0.5 | 2025-01-09 | Add isConsumed(), isProduced(), isIO() classification methods per paper lines 210-211 |
