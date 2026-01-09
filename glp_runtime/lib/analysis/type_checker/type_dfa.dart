@@ -487,16 +487,19 @@ class TypeDFA {
 
 /// DFA that accepts only numbers (for Number type)
 class NumberTypeDFA extends TypeDFA {
+  static final _startState = DFAState('_Number_');
+  static final _finalState = DFAState('_Number_final_', isFinal: true);
+
   NumberTypeDFA() : super(
-    states: {DFAState('q0'), DFAState('qNum', isFinal: true)},
-    startState: DFAState('q0'),
-    finalStates: {DFAState('qNum', isFinal: true)},
+    states: {_startState, _finalState},
+    startState: _startState,
+    finalStates: {_finalState},
     transitions: {},  // Transitions added dynamically based on actual numbers seen
   ) {
     // Numbers are recognized by their literal value
     // This is a pseudo-DFA - actual checking done in accepts()
   }
-  
+
   @override
   bool acceptsPath(TermPath path) {
     // A path of length 1 with a numeric constant
@@ -514,24 +517,35 @@ class NumberTypeDFA extends TypeDFA {
 }
 
 /// DFA that accepts only strings (for String type)
+/// In GLP, String type accepts both quoted strings and unquoted atoms
 class StringTypeDFA extends TypeDFA {
+  static final _startState = DFAState('_String_');
+  static final _finalState = DFAState('_String_final_', isFinal: true);
+
   StringTypeDFA() : super(
-    states: {DFAState('q0'), DFAState('qStr', isFinal: true)},
-    startState: DFAState('q0'),
-    finalStates: {DFAState('qStr', isFinal: true)},
+    states: {_startState, _finalState},
+    startState: _startState,
+    finalStates: {_finalState},
     transitions: {},
   );
-  
+
   @override
   bool acceptsPath(TermPath path) {
-    // String paths are recognized specially
+    // String/atom paths are recognized specially
     if (path.length != 1) return false;
-    // In practice, strings would be marked distinctly
-    // For now, any quoted value
-    return path.elements[0].symbol.startsWith('"') ||
-           path.elements[0].symbol.startsWith("'");
+    final sym = path.elements[0].symbol;
+    // Accept:
+    // - Quoted strings: "..." or '...'
+    // - Unquoted atoms: lowercase identifiers (not numbers, not structures)
+    // - NOT structures (contain parentheses)
+    // - NOT list constructors (contain brackets)
+    if (sym.contains('(') || sym.contains('[')) return false;
+    // Numbers are not strings
+    if (double.tryParse(sym) != null || int.tryParse(sym) != null) return false;
+    // Accept quoted strings or atoms
+    return true;
   }
 
   @override
-  bool get isEmpty => false;  // Accepts all strings (non-empty language)
+  bool get isEmpty => false;  // Accepts all strings/atoms (non-empty language)
 }

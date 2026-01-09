@@ -134,6 +134,9 @@ class TypeCompiler {
     } else if (alt is ListConsAlt) {
       _collectTypesFromAlt(alt.head, queue);
       _collectTypesFromAlt(alt.tail, queue);
+    } else if (alt is DiffListAlt) {
+      _collectTypesFromAlt(alt.content, queue);
+      _collectTypesFromAlt(alt.hole, queue);
     }
     // ConstantAlt, ListNilAlt, and PrimitiveModeAlt have no type references
   }
@@ -185,6 +188,19 @@ class TypeCompiler {
 
       transitions[(fromState, headElem)] = headTarget;
       transitions[(fromState, tailElem)] = tailTarget;
+
+    } else if (alt is DiffListAlt) {
+      // Difference list: add content and hole transitions
+      // DiffList is represented as A \ B where A is content, B is hole
+      // Functor is '\' with arity 2
+      final contentElem = PathElement.functor('\\', 2, 1);
+      final holeElem = PathElement.functor('\\', 2, 2);
+
+      final contentTarget = _resolveTargetState(alt.content, stateMap, finalState);
+      final holeTarget = _resolveTargetState(alt.hole, stateMap, finalState);
+
+      transitions[(fromState, contentElem)] = contentTarget;
+      transitions[(fromState, holeElem)] = holeTarget;
 
     } else if (alt is TypeRef) {
       // Type alias (A ::= B) is illegal - creates epsilon transitions (NFA)

@@ -276,7 +276,14 @@ ModedLabel _buildTransitionLabel(PathStep currentStep, PathStep nextStep) {
 ///
 /// First tries exact match (pathElement + mode), then falls back to structural
 /// match (pathElement only) if DFA has unmoded transitions.
+/// For primitive states (_ or _?), returns a universal accepting state since
+/// primitive types accept any term structure.
 DFAState? _findTransition(DFAState from, ModedLabel label, TypeDFA dfa) {
+  // Universal state accepts any structure - stay in universal state
+  if (from == _universalAcceptingState) {
+    return _universalAcceptingState;
+  }
+
   // Convert ModedLabel to PathElement for lookup (current TypeDFA uses PathElement)
   final pathElement = label.toPathElement();
 
@@ -292,8 +299,21 @@ DFAState? _findTransition(DFAState from, ModedLabel label, TypeDFA dfa) {
     }
   }
 
+  // For primitive states (_ or _?), accept any structure by returning
+  // a universal accepting state. Primitive types accept any term.
+  if (dfa.isPrimitiveState(from)) {
+    return _universalAcceptingState;
+  }
+
   return null;
 }
+
+/// Universal accepting state for primitive type positions
+/// This state accepts any term structure at primitive type positions
+final _universalAcceptingState = DFAState('_UNIVERSAL_', isFinal: true);
+
+/// Check if a state is the universal accepting state
+bool _isUniversalState(DFAState state) => state == _universalAcceptingState;
 
 /// Check leaf consistency with DFA state
 PathCheckResult _checkLeafConsistency(PathStep leaf, DFAState state, TypeDFA dfa) {
@@ -310,6 +330,15 @@ PathCheckResult _checkLeafConsistency(PathStep leaf, DFAState state, TypeDFA dfa
 PathCheckResult _checkVariableLeaf(PathStep leaf, DFAState state, TypeDFA dfa) {
   final isReader = leaf.isReader;
   final requiredMode = isReader ? Mode.consume : Mode.produce;
+
+  // Universal state accepts any variable (from primitive type positions)
+  if (_isUniversalState(state)) {
+    return PathCheckResult.consistent(VariableTypeInfo(
+      typeState: state,
+      mode: requiredMode,
+      isReader: isReader,
+    ));
+  }
 
   if (dfa.isPrimitiveState(state)) {
     // At primitive state - check if mode is accepted
@@ -340,6 +369,46 @@ PathCheckResult _checkVariableLeaf(PathStep leaf, DFAState state, TypeDFA dfa) {
 
 /// Check constant at leaf position
 PathCheckResult _checkConstantLeaf(PathStep leaf, DFAState state, TypeDFA dfa) {
+  // Universal state accepts any constant (from primitive type positions)
+  if (_isUniversalState(state)) {
+    return PathCheckResult.consistent();
+  }
+
+  // For built-in semantic types (NumberTypeDFA, StringTypeDFA), use their
+  // special acceptance logic via acceptsPath
+  if (dfa is NumberTypeDFA || dfa is StringTypeDFA) {
+    final path = TermPath([PathElement.constant(leaf.symbol)]);
+    if (dfa.acceptsPath(path)) {
+      return PathCheckResult.consistent();
+    }
+    return PathCheckResult.inconsistent(
+        'Constant ${leaf.symbol} not accepted by ${dfa.runtimeType}');
+  }
+
+  // Check for built-in type states (_String_, _Number_, _builtin_String, _builtin_Number)
+  // These are created when procedure DFAs reference built-in types
+  if (state.name == '_builtin_String' || state.name == 'String' || state.name == '_String_') {
+    // String accepts atoms and quoted strings, not numbers or structures
+    final sym = leaf.symbol;
+    if (!sym.contains('(') && !sym.contains('[')) {
+      // Not a structure or list - could be a string/atom
+      if (double.tryParse(sym) == null && int.tryParse(sym) == null) {
+        return PathCheckResult.consistent();
+      }
+    }
+    return PathCheckResult.inconsistent(
+        'Constant ${leaf.symbol} is not a valid String');
+  }
+
+  if (state.name == '_builtin_Number' || state.name == 'Number' || state.name == '_Number_') {
+    // Number accepts only numeric constants
+    if (double.tryParse(leaf.symbol) != null || int.tryParse(leaf.symbol) != null) {
+      return PathCheckResult.consistent();
+    }
+    return PathCheckResult.inconsistent(
+        'Constant ${leaf.symbol} is not a valid Number');
+  }
+
   // Constants must reach a leaf state (primitive or final)
   if (dfa.isPrimitiveState(state)) {
     // At primitive state - constant matches if modes allow
