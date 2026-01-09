@@ -456,12 +456,13 @@ TypeDFA _buildProcedureTypeDFA(
     // when multiple arguments have the same type
     argDFA = argDFA.withSuffix('@arg${i + 1}');
 
-    // For heads (callee's view), apply complement for INPUT args only.
-    // Per spec: input args have modes flipped at call boundary.
-    // Output args keep their original modes.
+    // For heads (complement=true): complement INPUT argument DFAs only
     //
-    // For body atoms (caller's view): DON'T apply complement.
-    // The type's modes match the declaration directly.
+    // The variable flip in modedHead() flips ALL variables (X ↔ X?).
+    // For INPUT args: type produce → complement to consume → matches flipped reader
+    // For OUTPUT args: type produce → stays produce → matches flipped writer
+    //
+    // For body atoms (complement=false): use DFA as-is
     if (complement && argType.isInput) {
       argDFA = argDFA.applyModeComplement();
     }
