@@ -449,6 +449,43 @@ class TypeDFA {
     );
   }
   
+  /// Create a copy of this DFA with all states renamed using a suffix.
+  ///
+  /// This is used to prevent state collision when merging multiple DFAs
+  /// for different argument positions in a procedure type DFA.
+  TypeDFA withSuffix(String suffix) {
+    // Create mapping from old states to new states
+    final stateMap = <DFAState, DFAState>{};
+    for (final state in states) {
+      stateMap[state] = DFAState('${state.name}$suffix', isFinal: state.isFinal);
+    }
+
+    // Remap all states and transitions
+    final newStates = stateMap.values.toSet();
+    final newStartState = stateMap[startState]!;
+    final newFinalStates = finalStates.map((s) => stateMap[s]!).toSet();
+
+    final newTransitions = <(DFAState, PathElement), DFAState>{};
+    for (final entry in transitions.entries) {
+      final (fromState, pathElem) = entry.key;
+      final toState = entry.value;
+      newTransitions[(stateMap[fromState]!, pathElem)] = stateMap[toState]!;
+    }
+
+    final newPrimitiveStateModes = <DFAState, Set<Mode>>{};
+    for (final entry in primitiveStateModes.entries) {
+      newPrimitiveStateModes[stateMap[entry.key]!] = entry.value;
+    }
+
+    return TypeDFA(
+      states: newStates,
+      startState: newStartState,
+      finalStates: newFinalStates,
+      transitions: newTransitions,
+      primitiveStateModes: newPrimitiveStateModes,
+    );
+  }
+
   /// Apply mode complement to all primitive state modes AND transition modes
   ///
   /// Per Definition 4.2: (↓)? = ↑ and (↑)? = ↓

@@ -452,15 +452,16 @@ TypeDFA _buildProcedureTypeDFA(
     final argType = procDecl.argTypes[i];
     var argDFA = compiler.compile(argType.name);
 
-    // For heads (callee's view), apply complement
-    // This captures: callee receives what caller sends
-    if (complement) {
-      argDFA = argDFA.applyModeComplement();
+    // Rename states with argument index suffix to prevent collision
+    // when multiple arguments have the same type
+    argDFA = argDFA.withSuffix('@arg${i + 1}');
 
-      // Also flip for the argument position mode (Type vs Type?)
-      if (argType.isInput) {
-        argDFA = argDFA.applyModeComplement();
-      }
+    // For heads (callee's view), apply complement for INPUT args only
+    // Per spec (type-dfa.md lines 139, 408-409):
+    // - Input arg (Type?): compile T, then applyModeComplement() → 1 complement
+    // - Output arg (Type): compile T as-is → 0 complements
+    if (complement && argType.isInput) {
+      argDFA = argDFA.applyModeComplement();
     }
     // For body atoms (caller's view): DON'T apply complement
     // The type's modes match the declaration directly
@@ -550,18 +551,28 @@ bool _areComplementaryTypes(VariableTypeInfo writerInfo, VariableTypeInfo reader
     return false;
   }
 
+  final writerTypeName = _baseTypeName(writerInfo.typeState.name);
+  final readerTypeName = _baseTypeName(readerInfo.typeState.name);
+
   // Output primitive (_) as writer is compatible with any reader
-  if (_isOutputPrimitive(writerInfo.typeState.name)) {
+  if (_isOutputPrimitive(writerTypeName)) {
     return true;
   }
 
   // Input primitive (_?) as reader is compatible with any writer
-  if (_isInputPrimitive(readerInfo.typeState.name)) {
+  if (_isInputPrimitive(readerTypeName)) {
     return true;
   }
 
-  // Otherwise, must be at same type state
-  return writerInfo.typeState.name == readerInfo.typeState.name;
+  // Otherwise, must be at same type (strip argument suffixes like @arg1)
+  return writerTypeName == readerTypeName;
+}
+
+/// Extract base type name by stripping argument position suffix (e.g., "MyList@arg1" -> "MyList")
+String _baseTypeName(String name) {
+  final atIndex = name.indexOf('@');
+  if (atIndex == -1) return name;
+  return name.substring(0, atIndex);
 }
 
 /// Check if a type state name represents an output primitive (_)

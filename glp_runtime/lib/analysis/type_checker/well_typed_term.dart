@@ -472,8 +472,10 @@ List<NonComplementaryError> _checkComplementarity(
       final writerInfo = variants[writerKey]!;
       final readerInfo = variants[readerKey]!;
 
-      // Must be at same type state
-      if (writerInfo.typeState != readerInfo.typeState) {
+      // Must be at same type (compare base type names, stripping arg suffixes)
+      final writerTypeName = _baseTypeName(writerInfo.typeState.name);
+      final readerTypeName = _baseTypeName(readerInfo.typeState.name);
+      if (writerTypeName != readerTypeName) {
         errors.add(NonComplementaryError(baseName, writerInfo, readerInfo));
       }
       // Mode complementarity is implicit: writer has produce, reader has consume
@@ -482,4 +484,11 @@ List<NonComplementaryError> _checkComplementarity(
   }
 
   return errors;
+}
+
+/// Extract base type name by stripping argument position suffix (e.g., "MyList@arg1" -> "MyList")
+String _baseTypeName(String name) {
+  final atIndex = name.indexOf('@');
+  if (atIndex == -1) return name;
+  return name.substring(0, atIndex);
 }
