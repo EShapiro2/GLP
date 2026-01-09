@@ -33,6 +33,8 @@ procedure ground(Input).
 procedure =(_, _?).
 X? = X.
 
+% Note: := (arithmetic assignment) and true/0 are handled specially
+
 % Difference list operations
 procedure dl_append(DiffList?, DiffList?, DiffList).
 procedure dl_to_list(DiffList?, List).
@@ -73,8 +75,20 @@ const Set<String> predefinedProcedureNames = {
   'receive',
 };
 
+/// Built-in goals that don't need type checking
+/// - true, otherwise: 0-arity, always succeed
+/// - :=: arithmetic assignment, handled specially
+const Set<String> builtinGoals = {
+  'true',
+  'otherwise',
+  ':=',
+};
+
 /// Check if a type name is predefined
 bool isPredefinedType(String name) => predefinedTypeNames.contains(name);
+
+/// Check if a goal name is a builtin that doesn't need type checking
+bool isBuiltinGoal(String name) => builtinGoals.contains(name);
 
 /// Check if a procedure name/arity is predefined
 bool isPredefinedProcedure(String name) => predefinedProcedureNames.contains(name);

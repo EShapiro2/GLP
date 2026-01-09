@@ -9,6 +9,7 @@ import 'type_dfa.dart';
 import 'mode.dart';
 import 'mode_error.dart';
 import 'guard_types.dart';
+import 'prelude.dart';
 
 /// Mode checker for procedure definitions
 ///
@@ -115,6 +116,11 @@ class ModeChecker {
   /// - Callee declares output (Type) → caller provides reader (X?)
   List<ModeError> _checkBodyGoal(ast.Goal goal, String callerName) {
     final errors = <ModeError>[];
+
+    // Skip builtin goals (true, otherwise, :=)
+    if (isBuiltinGoal(goal.functor)) {
+      return errors;
+    }
 
     // Look up callee procedure declaration
     final calleeProcDecl = typeEnv.getProcedure(goal.functor, goal.args.length);

@@ -16,6 +16,7 @@ import 'well_typed_term.dart';
 import 'type_dfa.dart';
 import 'type_ast.dart';
 import 'type_compiler.dart';
+import 'prelude.dart';
 import '../../compiler/ast.dart' as ast;
 
 // =============================================================================
@@ -386,6 +387,11 @@ WellTypedResult _checkBodyAtom(
   TypeEnvironment env,
   TypeCompiler compiler,
 ) {
+  // Skip builtin goals (true, otherwise, :=)
+  if (isBuiltinGoal(atom.functor)) {
+    return WellTypedResult.success({});
+  }
+
   // Look up procedure declaration
   final procDecl = env.getProcedure(atom.functor, atom.arity);
   if (procDecl == null) {
