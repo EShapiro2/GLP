@@ -274,8 +274,7 @@ ModedLabel _buildTransitionLabel(PathStep currentStep, PathStep nextStep) {
 
 /// Find a DFA transition matching the label
 ///
-/// First tries exact match (pathElement + mode), then falls back to structural
-/// match (pathElement only) if DFA has unmoded transitions.
+/// Strict matching: symbol AND mode must match.
 /// For primitive states (_ or _?), returns a universal accepting state since
 /// primitive types accept any term structure.
 DFAState? _findTransition(DFAState from, ModedLabel label, TypeDFA dfa) {
@@ -284,28 +283,28 @@ DFAState? _findTransition(DFAState from, ModedLabel label, TypeDFA dfa) {
     return _universalAcceptingState;
   }
 
-  // Convert ModedLabel to PathElement for lookup (current TypeDFA uses PathElement)
-  final pathElement = label.toPathElement();
-
-  // Try exact match
-  final exact = dfa.transitions[(from, pathElement)];
-  if (exact != null) return exact;
-
-  // Try structural match (same pathElement string, any mode)
-  for (final entry in dfa.transitions.entries) {
-    final (fromState, transPathElem) = entry.key;
-    if (fromState == from && transPathElem.symbol == pathElement.symbol) {
-      return entry.value;
-    }
-  }
-
   // For primitive states (_ or _?), accept any structure by returning
   // a universal accepting state. Primitive types accept any term.
   if (dfa.isPrimitiveState(from)) {
     return _universalAcceptingState;
   }
 
-  return null;
+  // Strict matching: symbol AND mode must match
+  for (final entry in dfa.transitions.entries) {
+    final (fromState, transPathElem) = entry.key;
+    if (fromState != from) continue;
+    if (transPathElem.symbol != label.pathElement) continue;
+
+    // Mode matching:
+    // - If DFA transition has no mode (null): accept any label mode (backward compat)
+    // - If DFA transition has mode: must match exactly
+    if (transPathElem.mode == null || transPathElem.mode == label.mode) {
+      return entry.value;
+    }
+    // Mode mismatch: continue searching (might be another transition)
+  }
+
+  return null;  // No matching transition found
 }
 
 /// Universal accepting state for primitive type positions

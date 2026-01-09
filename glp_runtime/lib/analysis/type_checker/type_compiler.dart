@@ -141,6 +141,21 @@ class TypeCompiler {
     // ConstantAlt, ListNilAlt, and PrimitiveModeAlt have no type references
   }
   
+  /// Compute mode for a type expression at a given context mode
+  ///
+  /// Per spec (type-dfa.md lines 292-297):
+  /// - Complemented type (T?) → flip the parent mode
+  /// - Uncomplemented type (T) → keep the parent mode
+  Mode _modeOfTypeExpr(TypeExpr typeExpr, Mode contextMode) {
+    if (typeExpr is TypeRef && typeExpr.isInput) {
+      return contextMode.flip;
+    }
+    if (typeExpr is PrimitiveModeAlt && typeExpr.isInput) {
+      return contextMode.flip;
+    }
+    return contextMode;
+  }
+
   /// Add DFA transitions for a type alternative
   void _addTransitionsForAlt(
     DFAState fromState,
@@ -148,8 +163,9 @@ class TypeCompiler {
     Map<String, DFAState> stateMap,
     Map<(DFAState, PathElement), DFAState> transitions,
     DFAState finalState,
-    Map<DFAState, Set<Mode>> primitiveStateModes,
-  ) {
+    Map<DFAState, Set<Mode>> primitiveStateModes, {
+    Mode contextMode = Mode.produce,  // Root starts as produce
+  }) {
     if (alt is PrimitiveModeAlt) {
       // Primitive mode: mark state with its mode, make it accepting
       final mode = alt.isInput ? Mode.input : Mode.output;
@@ -163,25 +179,29 @@ class TypeCompiler {
       // Constant: transition directly to final state
       final pathElem = PathElement.constant(alt.value);
       transitions[(fromState, pathElem)] = finalState;
-      
+
     } else if (alt is ListNilAlt) {
       // Empty list: transition to final state
       final pathElem = PathElement.nil();
       transitions[(fromState, pathElem)] = finalState;
-      
+
     } else if (alt is StructAlt) {
-      // Structure: add transitions for each argument position
+      // Structure: add transitions for each argument position with modes
       for (int i = 0; i < alt.args.length; i++) {
-        final pathElem = PathElement.functor(alt.functor, alt.arity, i + 1);
         final argType = alt.args[i];
+        final argMode = _modeOfTypeExpr(argType, contextMode);
+        final pathElem = PathElement.functor(alt.functor, alt.arity, i + 1, mode: argMode);
         final targetState = _resolveTargetState(argType, stateMap, finalState);
         transitions[(fromState, pathElem)] = targetState;
       }
-      
+
     } else if (alt is ListConsAlt) {
-      // List cons: add head and tail transitions
-      final headElem = PathElement.listHead();
-      final tailElem = PathElement.listTail();
+      // List cons: add head and tail transitions with modes
+      final headMode = _modeOfTypeExpr(alt.head, contextMode);
+      final tailMode = _modeOfTypeExpr(alt.tail, contextMode);
+
+      final headElem = PathElement.listHead(mode: headMode);
+      final tailElem = PathElement.listTail(mode: tailMode);
 
       final headTarget = _resolveTargetState(alt.head, stateMap, finalState);
       final tailTarget = _resolveTargetState(alt.tail, stateMap, finalState);
@@ -190,11 +210,14 @@ class TypeCompiler {
       transitions[(fromState, tailElem)] = tailTarget;
 
     } else if (alt is DiffListAlt) {
-      // Difference list: add content and hole transitions
+      // Difference list: add content and hole transitions with modes
       // DiffList is represented as A \ B where A is content, B is hole
       // Functor is '\' with arity 2
-      final contentElem = PathElement.functor('\\', 2, 1);
-      final holeElem = PathElement.functor('\\', 2, 2);
+      final contentMode = _modeOfTypeExpr(alt.content, contextMode);
+      final holeMode = _modeOfTypeExpr(alt.hole, contextMode);
+
+      final contentElem = PathElement.functor('\\', 2, 1, mode: contentMode);
+      final holeElem = PathElement.functor('\\', 2, 2, mode: holeMode);
 
       final contentTarget = _resolveTargetState(alt.content, stateMap, finalState);
       final holeTarget = _resolveTargetState(alt.hole, stateMap, finalState);

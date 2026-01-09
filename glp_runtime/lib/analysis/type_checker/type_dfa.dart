@@ -12,38 +12,47 @@ import 'mode.dart';
 
 /// A path element in term tree traversal
 /// Format: functor(arity, argIndex) or constant
+///
+/// Per spec (type-dfa.md lines 99-110), transitions carry mode information
+/// based on whether the target type is complemented in the type definition.
 class PathElement {
   final String symbol;  // e.g., "s(1,1)", "cons(2,1)", "0", "[]"
-  
-  PathElement(this.symbol);
-  
+  final Mode? mode;     // Mode at this position (null for constants/unmoded)
+
+  PathElement(this.symbol, {this.mode});
+
   /// Create path element for functor argument position
-  factory PathElement.functor(String name, int arity, int argIndex) {
-    return PathElement('$name($arity,$argIndex)');
+  factory PathElement.functor(String name, int arity, int argIndex, {Mode? mode}) {
+    return PathElement('$name($arity,$argIndex)', mode: mode);
   }
-  
+
   /// Create path element for constant
   factory PathElement.constant(Object value) {
     return PathElement(value.toString());
   }
-  
+
   /// Create path element for list cons head
-  factory PathElement.listHead() => PathElement('[|](2,1)');
-  
-  /// Create path element for list cons tail  
-  factory PathElement.listTail() => PathElement('[|](2,2)');
-  
+  factory PathElement.listHead({Mode? mode}) => PathElement('[|](2,1)', mode: mode);
+
+  /// Create path element for list cons tail
+  factory PathElement.listTail({Mode? mode}) => PathElement('[|](2,2)', mode: mode);
+
   /// Create path element for empty list
   factory PathElement.nil() => PathElement('[]');
-  
+
   @override
-  String toString() => symbol;
-  
+  String toString() {
+    if (mode == null) return symbol;
+    final modeStr = mode == Mode.consume ? '↓' : '↑';
+    return '$symbol:$modeStr';
+  }
+
   @override
-  bool operator ==(Object other) => other is PathElement && symbol == other.symbol;
-  
+  bool operator ==(Object other) =>
+      other is PathElement && symbol == other.symbol && mode == other.mode;
+
   @override
-  int get hashCode => symbol.hashCode;
+  int get hashCode => Object.hash(symbol, mode);
 }
 
 /// A path in a term tree: sequence of path elements from root to leaf
@@ -440,22 +449,35 @@ class TypeDFA {
     );
   }
   
-  /// Apply mode complement to all primitive state modes
+  /// Apply mode complement to all primitive state modes AND transition modes
   ///
   /// Per Definition 4.2: (↓)? = ↑ and (↑)? = ↓
   /// This is used when building procedure type DFAs at call sites
   /// where caller's view is complemented.
   TypeDFA applyModeComplement() {
+    // Flip primitive state modes
     final newPrimitiveStateModes = <DFAState, Set<Mode>>{};
     for (final entry in primitiveStateModes.entries) {
       newPrimitiveStateModes[entry.key] =
           entry.value.map((m) => m.flip).toSet();
     }
+
+    // Flip transition modes
+    final newTransitions = <(DFAState, PathElement), DFAState>{};
+    for (final entry in transitions.entries) {
+      final (fromState, pathElem) = entry.key;
+      final toState = entry.value;
+
+      final newMode = pathElem.mode?.flip;
+      final newPathElem = PathElement(pathElem.symbol, mode: newMode);
+      newTransitions[(fromState, newPathElem)] = toState;
+    }
+
     return TypeDFA(
       states: states,
       startState: startState,
       finalStates: finalStates,
-      transitions: transitions,
+      transitions: newTransitions,
       primitiveStateModes: newPrimitiveStateModes,
     );
   }

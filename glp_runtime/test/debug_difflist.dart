@@ -86,7 +86,7 @@ void main() {
   for (final entry in diffListDFA.transitions.entries) {
     final (from, label) = entry.key;
     final to = entry.value;
-    print('  ${from.name} --[${label.symbol}]--> ${to.name}');
+    print('  ${from.name} --[$label]--> ${to.name}');  // Use label.toString() to show mode
   }
   print('Primitive state modes:');
   for (final state in diffListDFA.states) {
