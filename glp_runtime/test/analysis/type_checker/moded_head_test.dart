@@ -1,7 +1,7 @@
 // test/analysis/type_checker/moded_head_test.dart
 //
 // Tests for moded_head.dart
-// Specification: docs/modules/moded-head.md v0.5
+// Specification: docs/modules/moded-head.md v0.6
 // Paper Reference: Definition 4.6
 
 import 'package:test/test.dart';
@@ -436,6 +436,61 @@ void main() {
         (p) => p.leaf.symbol == 'X' && p.steps[1].argIndex == 3,
       );
       expect(pathToX2.steps[1].mode, equals(Mode.produce)); // output arg
+    });
+  });
+
+  // ===========================================================================
+  // Postcondition Verification Tests
+  // Spec: moded-head.md v0.6
+  // ===========================================================================
+
+  group('Postcondition Verification', () {
+    test('modedHead result satisfies isIO', () {
+      // procedure merge(Stream?, Stream?, Stream).
+      // head: merge([X|Xs], Ys, [X?|Zs?])
+      final decl = ProcDecl('merge', [
+        TypeRef('Stream', 1, 1, isInput: true),
+        TypeRef('Stream', 1, 1, isInput: true),
+        TypeRef('Stream', 1, 1, isInput: false),
+      ], 1, 1);
+
+      final head = ast.Goal('merge', [
+        ast.ListTerm(
+          ast.VarTerm('X', false, 1, 1),
+          ast.VarTerm('Xs', false, 1, 1),
+          1, 1,
+        ),
+        ast.VarTerm('Ys', false, 1, 1),
+        ast.ListTerm(
+          ast.VarTerm('X', true, 1, 1),
+          ast.VarTerm('Zs', true, 1, 1),
+          1, 1,
+        ),
+      ], 1, 1);
+
+      final result = modedHead(head, decl);
+
+      // Per moded-head.md v0.6: isIO(result) must be true
+      expect(isIO(result), isTrue,
+          reason: 'modedHead result must be an I/O moded term');
+    });
+
+    test('producedTerm result satisfies isProduced', () {
+      // procedure test(Nat).
+      // body atom: test(Y)
+      final decl = ProcDecl('test', [
+        TypeRef('Nat', 1, 1, isInput: false),
+      ], 1, 1);
+
+      final atom = ast.Goal('test', [
+        ast.VarTerm('Y', false, 1, 1),  // writer
+      ], 1, 1);
+
+      final result = producedTerm(atom, decl);
+
+      // Per moded-head.md v0.6: isProduced(result) must be true
+      expect(isProduced(result), isTrue,
+          reason: 'producedTerm result must be a produced moded term');
     });
   });
 }

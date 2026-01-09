@@ -1,7 +1,7 @@
 // test/analysis/type_checker/moded_term_test.dart
 //
 // Tests for moded_term.dart
-// Specification: docs/modules/moded-term.md v0.3
+// Specification: docs/modules/moded-term.md v0.5
 // Paper Reference: Definition 4.2
 
 import 'package:test/test.dart';
@@ -531,6 +531,175 @@ void main() {
         final s1 = PathStep(symbol: 'f/2', argIndex: 1, mode: Mode.consume);
         final s2 = PathStep(symbol: 'f/2', argIndex: 1, mode: Mode.produce);
         expect(s1, isNot(equals(s2)));
+      });
+    });
+
+    // =========================================================================
+    // Classification Methods Tests (isConsumed, isProduced, isIO)
+    // Spec: moded-term.md v0.5
+    // =========================================================================
+
+    group('isConsumed', () {
+      test('returns true for fully consumed term', () {
+        // ↓merge(↓[↓X?|Xs?], Ys?) - all modes are ↓
+        final term = ModedCompound(Mode.consume, 'merge', 2, [
+          ModedCompound.listCons(
+            Mode.consume,
+            ModedVariable.reader('X'),
+            ModedVariable.reader('Xs'),
+          ),
+          ModedVariable.reader('Ys'),
+        ]);
+        expect(isConsumed(term), isTrue);
+      });
+
+      test('returns true for single consumed constant', () {
+        final term = ModedConstant(Mode.consume, 42);
+        expect(isConsumed(term), isTrue);
+      });
+
+      test('returns true for single consumed variable (reader)', () {
+        // Variables have implicit mode based on reader/writer
+        final term = ModedVariable.reader('X');
+        expect(isConsumed(term), isTrue);
+      });
+
+      test('returns false when any annotation is produce', () {
+        // ↓merge(↓[↓X?|Xs?], Ys?, ↑[↑X|Zs]) - has ↑ in output arg
+        final term = ModedCompound(Mode.consume, 'merge', 3, [
+          ModedCompound.listCons(
+            Mode.consume,
+            ModedVariable.reader('X'),
+            ModedVariable.reader('Xs'),
+          ),
+          ModedVariable.reader('Ys'),
+          ModedCompound.listCons(
+            Mode.produce, // This makes it not fully consumed
+            ModedVariable.writer('X'),
+            ModedVariable.writer('Zs'),
+          ),
+        ]);
+        expect(isConsumed(term), isFalse);
+      });
+
+      test('returns false for produced constant', () {
+        final term = ModedConstant(Mode.produce, 42);
+        expect(isConsumed(term), isFalse);
+      });
+    });
+
+    group('isProduced', () {
+      test('returns true for fully produced term', () {
+        // ↑merge(↑[↑X|Xs], Ys) - all modes are ↑
+        final term = ModedCompound(Mode.produce, 'merge', 2, [
+          ModedCompound.listCons(
+            Mode.produce,
+            ModedVariable.writer('X'),
+            ModedVariable.writer('Xs'),
+          ),
+          ModedVariable.writer('Ys'),
+        ]);
+        expect(isProduced(term), isTrue);
+      });
+
+      test('returns true for single produced constant', () {
+        final term = ModedConstant(Mode.produce, 42);
+        expect(isProduced(term), isTrue);
+      });
+
+      test('returns true for single produced variable (writer)', () {
+        final term = ModedVariable.writer('X');
+        expect(isProduced(term), isTrue);
+      });
+
+      test('returns false when any annotation is consume', () {
+        // ↑merge(↓X?, Y) - has ↓ in first arg
+        final term = ModedCompound(Mode.produce, 'merge', 2, [
+          ModedVariable.reader('X'), // reader has consume mode
+          ModedVariable.writer('Y'),
+        ]);
+        expect(isProduced(term), isFalse);
+      });
+
+      test('returns false for consumed constant', () {
+        final term = ModedConstant(Mode.consume, 42);
+        expect(isProduced(term), isFalse);
+      });
+    });
+
+    group('isIO', () {
+      test('returns true for valid I/O term (paper example)', () {
+        // H' = ↓merge(↓[↓X?|Xs?], Ys?, ↑[↑X|Zs])
+        // Root ↓, args 1-2 stay ↓, arg 3 flips to ↑ and stays ↑
+        final term = ModedCompound(Mode.consume, 'merge', 3, [
+          ModedCompound.listCons(
+            Mode.consume,
+            ModedVariable.reader('X'),
+            ModedVariable.reader('Xs'),
+          ),
+          ModedVariable.reader('Ys'),
+          ModedCompound.listCons(
+            Mode.produce,
+            ModedVariable.writer('X'),
+            ModedVariable.writer('Zs'),
+          ),
+        ]);
+        expect(isIO(term), isTrue);
+      });
+
+      test('returns true for fully consumed term (no mode inversions)', () {
+        // ↓[↓X?|Xs?] - all ↓, valid I/O (zero inversions)
+        final term = ModedCompound.listCons(
+          Mode.consume,
+          ModedVariable.reader('X'),
+          ModedVariable.reader('Xs'),
+        );
+        expect(isIO(term), isTrue);
+      });
+
+      test('returns false when root is produce', () {
+        // ↑merge(...) - root is ↑, not valid I/O
+        final term = ModedCompound(Mode.produce, 'merge', 2, [
+          ModedVariable.writer('X'),
+          ModedVariable.writer('Y'),
+        ]);
+        expect(isIO(term), isFalse);
+      });
+
+      test('returns false when mode flips back from produce to consume', () {
+        // ↓f(↑g(↓h(X?))) - path goes ↓ → ↑ → ↓, invalid
+        final term = ModedCompound(Mode.consume, 'f', 1, [
+          ModedCompound(Mode.produce, 'g', 1, [
+            ModedCompound(Mode.consume, 'h', 1, [ // Invalid: ↑ → ↓
+              ModedVariable.reader('X'),
+            ]),
+          ]),
+        ]);
+        expect(isIO(term), isFalse);
+      });
+
+      test('returns false for single produced constant', () {
+        // ↑42 - root is produce
+        final term = ModedConstant(Mode.produce, 42);
+        expect(isIO(term), isFalse);
+      });
+
+      test('returns true for single consumed constant', () {
+        // ↓42 - root is consume, valid I/O
+        final term = ModedConstant(Mode.consume, 42);
+        expect(isIO(term), isTrue);
+      });
+
+      test('returns false for writer variable (implicit produce mode)', () {
+        // X (writer) has implicit produce mode - not valid I/O root
+        final term = ModedVariable.writer('X');
+        expect(isIO(term), isFalse);
+      });
+
+      test('returns true for reader variable (implicit consume mode)', () {
+        // X? (reader) has implicit consume mode - valid I/O root
+        final term = ModedVariable.reader('X');
+        expect(isIO(term), isTrue);
       });
     });
   });

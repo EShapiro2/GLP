@@ -1,7 +1,7 @@
 // lib/analysis/type_checker/moded_term.dart
 //
 // Moded terms for GLP type checking.
-// Specification: docs/modules/moded-term.md v0.3
+// Specification: docs/modules/moded-term.md v0.5
 // Paper Reference: Definition 4.2 (Moded Term, Complement), lines 179-211
 //
 // A moded term is a GLP term with mode annotations (↓ consume, ↑ produce)
@@ -253,6 +253,102 @@ class PathStep {
   @override
   int get hashCode =>
       Object.hash(symbol, argIndex, mode, isVariable, isReader);
+}
+
+// =============================================================================
+// Classification Methods (isConsumed, isProduced, isIO)
+// Spec: moded-term.md v0.5
+// =============================================================================
+
+/// Returns true if all mode annotations in t are consume (↓).
+///
+/// Per spec: Returns true iff every non-variable subterm has mode = Mode.consume
+bool isConsumed(ModedTerm t) {
+  return t.accept(_IsConsumedVisitor());
+}
+
+class _IsConsumedVisitor implements ModedTermVisitor<bool> {
+  @override
+  bool visitCompound(ModedCompound term) {
+    if (term.mode != Mode.consume) return false;
+    return term.args.every((arg) => arg.accept(this));
+  }
+
+  @override
+  bool visitConstant(ModedConstant term) {
+    return term.mode == Mode.consume;
+  }
+
+  @override
+  bool visitVariable(ModedVariable term) {
+    // Variables have implicit mode based on reader/writer status
+    return term.mode == Mode.consume;
+  }
+}
+
+/// Returns true if all mode annotations in t are produce (↑).
+///
+/// Per spec: Returns true iff every non-variable subterm has mode = Mode.produce
+bool isProduced(ModedTerm t) {
+  return t.accept(_IsProducedVisitor());
+}
+
+class _IsProducedVisitor implements ModedTermVisitor<bool> {
+  @override
+  bool visitCompound(ModedCompound term) {
+    if (term.mode != Mode.produce) return false;
+    return term.args.every((arg) => arg.accept(this));
+  }
+
+  @override
+  bool visitConstant(ModedConstant term) {
+    return term.mode == Mode.produce;
+  }
+
+  @override
+  bool visitVariable(ModedVariable term) {
+    // Variables have implicit mode based on reader/writer status
+    return term.mode == Mode.produce;
+  }
+}
+
+/// Returns true if t is an I/O moded term.
+///
+/// An I/O moded term has:
+/// - Root mode is consume (↓)
+/// - On every path from root to leaf, mode transitions only in the
+///   direction ↓ → ↑ (never ↑ → ↓)
+///
+/// Per spec algorithm:
+/// ```
+/// isIO(t):
+///   if t.mode != Mode.consume:
+///     return false
+///   return allPathsValidIO(t, Mode.consume)
+/// ```
+bool isIO(ModedTerm t) {
+  if (t.mode != Mode.consume) return false;
+  return _allPathsValidIO(t, Mode.consume);
+}
+
+/// Helper: Check all paths have valid I/O mode transitions.
+///
+/// Valid transitions: ↓ → ↓, ↓ → ↑, ↑ → ↑
+/// Invalid transitions: ↑ → ↓ (flipping back from produce to consume)
+bool _allPathsValidIO(ModedTerm t, Mode parentMode) {
+  final currentMode = t.mode;
+
+  // Check valid transition: only ↓→↑ allowed, not ↑→↓
+  if (parentMode == Mode.produce && currentMode == Mode.consume) {
+    return false; // Invalid: flipped back from ↑ to ↓
+  }
+
+  if (t is ModedCompound) {
+    return t.args.every((arg) => _allPathsValidIO(arg, currentMode));
+  }
+
+  // Leaf reached (constant or variable)
+  return true;
 }
 
 // =============================================================================
