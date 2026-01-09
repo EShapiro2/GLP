@@ -221,7 +221,7 @@ ClauseCheckResult checkClause(
   }
 
   // Step 1: Check head well-typing
-  final headResult = _checkHead(clause, procDecl, compiler);
+  final headResult = _checkHead(clause, procDecl, compiler, env);
   if (!headResult.isWellTyped) {
     errors.add(HeadError(clause.headFunctor, headResult.errors));
   }
@@ -360,13 +360,14 @@ WellTypedResult _checkHead(
   TypedClause clause,
   ProcDecl procDecl,
   TypeCompiler compiler,
+  TypeEnvironment env,
 ) {
   // Build the procedure type DFA for the head (with complement - callee's view)
   final procDFA = _buildProcedureTypeDFA(procDecl, compiler, complement: true);
 
-  // Build moded head term
+  // Build moded head term (pass env for embedded mode handling in structures)
   try {
-    final modedHeadTerm = modedHead(clause.head, procDecl);
+    final modedHeadTerm = modedHead(clause.head, procDecl, typeEnv: env);
 
     // Check well-typing
     return checkModedTerm(modedHeadTerm, procDFA);

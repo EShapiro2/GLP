@@ -34,11 +34,12 @@ import '../../compiler/ast.dart' as ast;
 /// **Postconditions:** Returns a ModedTerm where:
 /// - Root mode is ↓ (consume)
 /// - Each argument has mode based on declared type: Type? → ↓, Type → ↑
+/// - Embedded modes within structures are combined via involution
 /// - All variables are flipped (X ↔ X?)
 ///
 /// Throws [ArityMismatchError] if head arity doesn't match declaration.
 /// Throws [InvalidHeadError] if head is not a compound term.
-ModedTerm modedHead(ast.Goal head, ProcDecl decl) {
+ModedTerm modedHead(ast.Goal head, ProcDecl decl, {TypeEnvironment? typeEnv}) {
   // Validate arity
   if (head.arity != decl.arity) {
     throw ArityMismatchError(
@@ -47,7 +48,7 @@ ModedTerm modedHead(ast.Goal head, ProcDecl decl) {
   }
 
   // Step 1: Build I/O moded term (root mode = consume)
-  final ioTerm = _buildIOModedTerm(head, decl, Mode.consume);
+  final ioTerm = _buildIOModedTerm(head, decl, Mode.consume, typeEnv);
 
   // Step 2: Flip all variables
   return _flipAllVariables(ioTerm);
@@ -66,10 +67,11 @@ ModedTerm modedHead(ast.Goal head, ProcDecl decl) {
 /// **Postconditions:** Returns a ModedTerm where:
 /// - Root mode is ↑ (produce)
 /// - Each argument has mode based on declared type: Type? → ↓, Type → ↑
+/// - Embedded modes within structures are combined via involution
 /// - Variables are NOT flipped
 ///
 /// Throws [ArityMismatchError] if atom arity doesn't match declaration.
-ModedTerm producedTerm(ast.Goal atom, ProcDecl decl) {
+ModedTerm producedTerm(ast.Goal atom, ProcDecl decl, {TypeEnvironment? typeEnv}) {
   // Validate arity
   if (atom.arity != decl.arity) {
     throw ArityMismatchError(
@@ -79,7 +81,7 @@ ModedTerm producedTerm(ast.Goal atom, ProcDecl decl) {
 
   // Build I/O moded term with root mode = produce
   // Note: NO variable flip for body atoms
-  return _buildIOModedTerm(atom, decl, Mode.produce);
+  return _buildIOModedTerm(atom, decl, Mode.produce, typeEnv);
 }
 
 // =============================================================================
@@ -91,14 +93,15 @@ ModedTerm producedTerm(ast.Goal atom, ProcDecl decl) {
 /// - Root mode is [parentMode] (consume for heads, produce for body atoms)
 /// - Input arguments (Type?) have mode ↓
 /// - Output arguments (Type) have mode ↑
-ModedTerm _buildIOModedTerm(ast.Goal term, ProcDecl decl, Mode parentMode) {
+/// - Embedded modes within structures are combined via involution
+ModedTerm _buildIOModedTerm(ast.Goal term, ProcDecl decl, Mode parentMode, TypeEnvironment? typeEnv) {
   final modedArgs = <ModedTerm>[];
 
   for (int i = 0; i < term.args.length; i++) {
     final argType = decl.argTypes[i];
     // Input (Type?) → consume, Output (Type) → produce
     final argMode = argType.isInput ? Mode.consume : Mode.produce;
-    final modedArg = _buildModedSubterm(term.args[i], argMode);
+    final modedArg = _buildModedSubterm(term.args[i], argMode, argType, typeEnv);
     modedArgs.add(modedArg);
   }
 
@@ -108,16 +111,24 @@ ModedTerm _buildIOModedTerm(ast.Goal term, ProcDecl decl, Mode parentMode) {
 /// Build a moded subterm from an AST term.
 ///
 /// Recursively converts AST term to ModedTerm with the given mode.
+/// For structures, looks up type definition to compute combined modes
+/// for each subterm position using mode involution.
 /// Variables preserve their reader/writer status (flip happens later if needed).
-ModedTerm _buildModedSubterm(ast.Term term, Mode mode) {
+ModedTerm _buildModedSubterm(ast.Term term, Mode mode, TypeExpr? expectedType, TypeEnvironment? typeEnv) {
   if (term is ast.VarTerm) {
     // Variable: preserve reader/writer status
     return ModedVariable(term.name, isReader: term.isReader);
   }
 
   if (term is ast.StructTerm) {
-    // Structure: recursively convert arguments
-    final modedArgs = term.args.map((arg) => _buildModedSubterm(arg, mode)).toList();
+    // Structure: look up type definition for embedded modes
+    final subtermModes = _getSubtermModes(term.functor, term.arity, mode, expectedType, typeEnv);
+
+    final modedArgs = <ModedTerm>[];
+    for (int i = 0; i < term.args.length; i++) {
+      final (subtermMode, subtermType) = subtermModes[i];
+      modedArgs.add(_buildModedSubterm(term.args[i], subtermMode, subtermType, typeEnv));
+    }
     return ModedCompound(mode, term.functor, term.arity, modedArgs);
   }
 
@@ -126,9 +137,13 @@ ModedTerm _buildModedSubterm(ast.Term term, Mode mode) {
       // Empty list []
       return ModedConstant.nil(mode);
     }
-    // Non-empty list [H|T]
-    final head = _buildModedSubterm(term.head!, mode);
-    final tail = _buildModedSubterm(term.tail!, mode);
+    // Non-empty list [H|T] - get embedded modes for head and tail
+    final listModes = _getListSubtermModes(mode, expectedType, typeEnv);
+    final (headMode, headType) = listModes.$1;
+    final (tailMode, tailType) = listModes.$2;
+
+    final head = _buildModedSubterm(term.head!, headMode, headType, typeEnv);
+    final tail = _buildModedSubterm(term.tail!, tailMode, tailType, typeEnv);
     return ModedCompound.listCons(mode, head, tail);
   }
 
@@ -144,6 +159,123 @@ ModedTerm _buildModedSubterm(ast.Term term, Mode mode) {
   }
 
   throw InvalidHeadError('Unknown term type: ${term.runtimeType}');
+}
+
+/// Get subterm modes for a structure by looking up type definition.
+///
+/// Uses mode involution: combinedMode = parentMode ⊕ embeddedMode
+/// where ⊕ is XOR-like: same modes → produce, different → consume
+List<(Mode, TypeExpr?)> _getSubtermModes(
+  String functor,
+  int arity,
+  Mode parentMode,
+  TypeExpr? expectedType,
+  TypeEnvironment? typeEnv
+) {
+  // Default: propagate parent mode if no type info available
+  final defaultModes = List.generate(arity, (_) => (parentMode, null as TypeExpr?));
+
+  if (typeEnv == null || expectedType == null) {
+    return defaultModes;
+  }
+
+  // Resolve type reference to get the type definition
+  String? typeName;
+  if (expectedType is TypeRef) {
+    typeName = expectedType.name;
+  }
+
+  if (typeName == null) {
+    return defaultModes;
+  }
+
+  final typeDef = typeEnv.getType(typeName);
+  if (typeDef == null) {
+    return defaultModes;
+  }
+
+  // Find matching structure alternative in type definition
+  for (final alt in typeDef.alternatives) {
+    if (alt is StructAlt && alt.functor == functor && alt.arity == arity) {
+      // Found matching constructor - compute combined modes for each arg
+      final result = <(Mode, TypeExpr?)>[];
+      for (final argType in alt.args) {
+        final embeddedMode = _getEmbeddedMode(argType);
+        final combinedMode = combineMode(parentMode, embeddedMode);
+        result.add((combinedMode, argType));
+      }
+      return result;
+    }
+
+    // Handle DiffList: \ operator
+    if (alt is DiffListAlt && functor == r'\' && arity == 2) {
+      final contentMode = _getEmbeddedMode(alt.content);
+      final holeMode = _getEmbeddedMode(alt.hole);
+      return [
+        (combineMode(parentMode, contentMode), alt.content),
+        (combineMode(parentMode, holeMode), alt.hole),
+      ];
+    }
+  }
+
+  return defaultModes;
+}
+
+/// Get subterm modes for list [H|T] by looking up type definition.
+///
+/// Returns a tuple of (headModeInfo, tailModeInfo) where each is (Mode, TypeExpr?).
+((Mode, TypeExpr?), (Mode, TypeExpr?)) _getListSubtermModes(
+  Mode parentMode,
+  TypeExpr? expectedType,
+  TypeEnvironment? typeEnv
+) {
+  // Default: propagate parent mode
+  final defaultResult = ((parentMode, null as TypeExpr?), (parentMode, null as TypeExpr?));
+
+  if (typeEnv == null || expectedType == null) {
+    return defaultResult;
+  }
+
+  String? typeName;
+  if (expectedType is TypeRef) {
+    typeName = expectedType.name;
+  }
+
+  if (typeName == null) {
+    return defaultResult;
+  }
+
+  final typeDef = typeEnv.getType(typeName);
+  if (typeDef == null) {
+    return defaultResult;
+  }
+
+  // Find ListConsAlt in type definition
+  for (final alt in typeDef.alternatives) {
+    if (alt is ListConsAlt) {
+      final headEmbeddedMode = _getEmbeddedMode(alt.head);
+      final tailEmbeddedMode = _getEmbeddedMode(alt.tail);
+      return (
+        (combineMode(parentMode, headEmbeddedMode), alt.head),
+        (combineMode(parentMode, tailEmbeddedMode), alt.tail),
+      );
+    }
+  }
+
+  return defaultResult;
+}
+
+/// Get the embedded mode from a type expression.
+///
+/// TypeRef with isInput=true → consume (↓)
+/// TypeRef with isInput=false → produce (↑)
+/// Other expressions → produce (↑) by default
+Mode _getEmbeddedMode(TypeExpr expr) {
+  if (expr is TypeRef) {
+    return expr.isInput ? Mode.consume : Mode.produce;
+  }
+  // Default to produce for non-TypeRef expressions
+  return Mode.produce;
 }
 
 /// Flip all variables in a moded term.
