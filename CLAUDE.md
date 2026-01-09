@@ -1,16 +1,18 @@
 # Instructions for Claude Code (Terminal Interface)
 
 ## 🔴 CRITICAL - START OF EVERY CONVERSATION
-1. **READ CLAUDE.md** - Always read this file first
-2. **INSTALL DART** - Check `/home/user/dart-sdk/bin/dart --version`. If missing, see "Dart Installation" section below
-3. **SET DART PATH** - `export PATH="/home/user/dart-sdk/bin:$PATH"`
-4. **MOUNT FCP** - Clone FCP repo: `git clone --depth 1 https://github.com/EShapiro2/FCP.git /tmp/FCP`
-5. **MOUNT Art-of-GLP-2025** - Clone Art-of-GLP-2025 repo: `git clone --depth 1 https://github.com/EShapiro2/Art-of-GLP-2025.git /tmp/Art-of-GLP-2025`
-6. **IDENTIFY CURRENT MODE** - Discussion or Implementation
-7. **FOLLOW MODE RULES** - Never mix modes
-8. **ASK FOR CURRENT STATE** - Request latest code/errors from user
-9. **READ SPECS AS NEEDED** - Don't read all specs upfront, only when relevant to task
-10. **READ DEVELOPMENT DISCIPLINE** - Read `docs/development-discipline.md` for TDD/BDD standards
+1. **READ CLAUDE.md** - Always read this file first (thoroughly)
+2. **READ DEVELOPMENT DISCIPLINE** - Read `docs/development-discipline.md` for TDD/BDD standards
+3. **ACKNOWLEDGE** - State that you have read both documents thoroughly and are ready for discussion
+4. **DO NOTHING ELSE** - Wait for user direction before any other action
+5. **INSTALL DART** - Only when needed: Check `/home/user/dart-sdk/bin/dart --version`. If missing, see "Dart Installation" section below
+6. **SET DART PATH** - `export PATH="/home/user/dart-sdk/bin:$PATH"`
+7. **MOUNT FCP** - Clone FCP repo: `git clone --depth 1 https://github.com/EShapiro2/FCP.git /tmp/FCP`
+8. **MOUNT Art-of-GLP-2025** - Clone Art-of-GLP-2025 repo: `git clone --depth 1 https://github.com/EShapiro2/Art-of-GLP-2025.git /tmp/Art-of-GLP-2025`
+9. **IDENTIFY CURRENT MODE** - Discussion or Implementation
+10. **FOLLOW MODE RULES** - Never mix modes
+11. **ASK FOR CURRENT STATE** - Request latest code/errors from user
+12. **READ SPECS AS NEEDED** - Don't read all specs upfront, only when relevant to task
 
 ### Dart Installation (if needed)
 
