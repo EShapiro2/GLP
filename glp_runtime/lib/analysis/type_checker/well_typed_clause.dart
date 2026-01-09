@@ -456,15 +456,15 @@ TypeDFA _buildProcedureTypeDFA(
     // when multiple arguments have the same type
     argDFA = argDFA.withSuffix('@arg${i + 1}');
 
-    // For heads (callee's view), apply complement for INPUT args only
-    // Per spec (type-dfa.md lines 139, 408-409):
-    // - Input arg (Type?): compile T, then applyModeComplement() → 1 complement
-    // - Output arg (Type): compile T as-is → 0 complements
+    // For heads (callee's view), apply complement for INPUT args only.
+    // Per spec: input args have modes flipped at call boundary.
+    // Output args keep their original modes.
+    //
+    // For body atoms (caller's view): DON'T apply complement.
+    // The type's modes match the declaration directly.
     if (complement && argType.isInput) {
       argDFA = argDFA.applyModeComplement();
     }
-    // For body atoms (caller's view): DON'T apply complement
-    // The type's modes match the declaration directly
 
     // Add transition from procedure state to argument type state
     final pathElem = PathElement.functor(procDecl.name, procDecl.arity, i + 1);
