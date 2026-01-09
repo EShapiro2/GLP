@@ -285,7 +285,10 @@ class TypeChecker {
     return errors;
   }
 
-  /// Recursively check coverage at a DFA state
+  /// Recursively check coverage at a DFA state, tracking structural path
+  ///
+  /// structPath: list of argument indices taken from root (e.g., [1, 2] means
+  /// "arg 1 of root, then arg 2 of that substructure")
   List<CoverageError> _checkStateCoverage(
     DFAState state,
     List<ast.Clause> clauses,
@@ -293,8 +296,9 @@ class TypeChecker {
     String pathPrefix,
     Set<String> visited,
     TypeDFA dfa,
-    ProcDecl decl,
-  ) {
+    ProcDecl decl, {
+    List<int> structPath = const [],
+  }) {
     final errors = <CoverageError>[];
 
     // Prevent infinite recursion on recursive types
@@ -314,6 +318,12 @@ class TypeChecker {
       return errors;
     }
 
+    // Check if any clause has a VARIABLE at this path position
+    // If so, the variable covers ALL alternatives - no need to check further
+    if (_anyClauseHasVariableAtPath(clauses, argIndex, structPath)) {
+      return errors;  // Variable covers everything
+    }
+
     // Get all transitions (alternatives) from this state
     final transitions = _getTransitionsFromState(state, dfa);
 
@@ -322,10 +332,15 @@ class TypeChecker {
       final targetState = entry.value;
       final labelStr = pathElem.symbol;
 
-      // Check if some clause accepts this transition at this argument position
-      if (_clauseAcceptsLabel(clauses, argIndex, labelStr)) {
-        // Recursively check the target state
+      // Check if some clause accepts this transition at the current path
+      if (_clauseAcceptsLabelAtPath(clauses, argIndex, structPath, labelStr)) {
+        // Recursively check the target state with extended path
         final newPath = '$pathPrefix → $labelStr';
+        // Extract arg index from symbol like "f(2,1)" or "\(2,1)" or "[|](2,1)"
+        final argIdxFromLabel = _extractArgIndex(labelStr);
+        final newStructPath = argIdxFromLabel != null
+            ? [...structPath, argIdxFromLabel]
+            : structPath;
         final nestedErrors = _checkStateCoverage(
           targetState,
           clauses,
@@ -334,6 +349,7 @@ class TypeChecker {
           visited,
           dfa,
           decl,
+          structPath: newStructPath,
         );
         errors.addAll(nestedErrors);
       } else {
@@ -348,6 +364,96 @@ class TypeChecker {
     }
 
     return errors;
+  }
+
+  /// Check if any clause has a variable at the given structural path
+  bool _anyClauseHasVariableAtPath(
+    List<ast.Clause> clauses,
+    int argIndex,
+    List<int> structPath,
+  ) {
+    for (final clause in clauses) {
+      if (argIndex > clause.head.args.length) continue;
+      final topArg = clause.head.args[argIndex - 1];
+      final termAtPath = _navigateToPath(topArg, structPath);
+      if (termAtPath is ast.VarTerm || termAtPath is ast.UnderscoreTerm) {
+        return true;  // Variable at this path covers all alternatives
+      }
+    }
+    return false;
+  }
+
+  /// Check if any clause accepts the label at the given structural path
+  bool _clauseAcceptsLabelAtPath(
+    List<ast.Clause> clauses,
+    int argIndex,
+    List<int> structPath,
+    String labelStr,
+  ) {
+    for (final clause in clauses) {
+      if (argIndex > clause.head.args.length) continue;
+      final topArg = clause.head.args[argIndex - 1];
+      final termAtPath = _navigateToPath(topArg, structPath);
+
+      if (termAtPath == null) continue;
+
+      // Variable accepts anything
+      if (termAtPath is ast.VarTerm || termAtPath is ast.UnderscoreTerm) {
+        return true;
+      }
+
+      // Get labels from the term at this path
+      final labels = wtc.getLabelsFromTerm(termAtPath);
+      if (labels == null) {
+        return true;  // null means wildcard
+      }
+
+      if (_labelsMatch(labels, labelStr)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Navigate into a term following a structural path
+  ///
+  /// structPath is a list of 1-based argument indices
+  ast.Term? _navigateToPath(ast.Term term, List<int> structPath) {
+    ast.Term? current = term;
+    for (final idx in structPath) {
+      if (current == null) return null;
+
+      if (current is ast.StructTerm) {
+        if (idx < 1 || idx > current.args.length) return null;
+        current = current.args[idx - 1];
+      } else if (current is ast.ListTerm && !current.isNil) {
+        // List [H|T]: idx 1 is head, idx 2 is tail
+        if (idx == 1) {
+          current = current.head;
+        } else if (idx == 2) {
+          current = current.tail;
+        } else {
+          return null;
+        }
+      } else {
+        // Can't navigate into constants, variables, or nil
+        return null;
+      }
+    }
+    return current;
+  }
+
+  /// Extract argument index from a path element symbol
+  ///
+  /// Symbols like "f(2,1)" or "\(2,1)" or "[|](2,1)" have format functor(arity,argIndex)
+  int? _extractArgIndex(String symbol) {
+    // Try pattern like "name(arity,argIndex)"
+    final match = RegExp(r'\((\d+),(\d+)\)$').firstMatch(symbol);
+    if (match != null) {
+      return int.tryParse(match.group(2)!);
+    }
+    // For constants or other formats, no arg index
+    return null;
   }
 
   /// Get all transitions from a state
@@ -400,6 +506,22 @@ class TypeChecker {
     // Handle nil: [] is both a label and constant
     if (labelStr == '[]') {
       return acceptedLabels.contains('[]');
+    }
+
+    // Handle DiffList labels: \(2,1) and \(2,2) should match \/2
+    if (labelStr.startsWith(r'\(')) {
+      // Extract arity from \(2,1) format -> 2
+      final diffMatch = RegExp(r'\\\((\d+),').firstMatch(labelStr);
+      if (diffMatch != null) {
+        final arity = diffMatch.group(1)!;
+        if (acceptedLabels.contains('\\/$arity')) {
+          return true;
+        }
+      }
+      // Also check raw \ or \\
+      if (acceptedLabels.contains(r'\') || acceptedLabels.contains(r'\\')) {
+        return true;
+      }
     }
 
     // Handle functor labels: f(2,1) should match f/2

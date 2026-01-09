@@ -318,11 +318,11 @@ Set<String>? getAcceptedLabels(
   }
 
   final arg = clause.head.args[argIndex - 1];
-  return _getLabelsFromTerm(arg);
+  return getLabelsFromTerm(arg);
 }
 
-/// Extract labels from a term
-Set<String>? _getLabelsFromTerm(ast.Term term) {
+/// Extract labels from a term (public for coverage checking)
+Set<String>? getLabelsFromTerm(ast.Term term) {
   if (term is ast.VarTerm || term is ast.UnderscoreTerm) {
     // Variable - wildcard, accepts anything
     return null;

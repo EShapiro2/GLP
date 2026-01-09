@@ -23,14 +23,16 @@ void main() {
             reason: 'Output _ accepts writer');
       });
 
-      test('POSITIVE: Input position with reader', () {
+      test('POSITIVE: Input position with writer (flips to reader)', () {
+        // Per spec: Input positions expect HEAD WRITERS (which flip to readers)
+        // X in head → X? after flip (serves as input)
         final result = checkTypes('''
           In ::= _?.
           procedure consume(In?).
-          consume(X?).
+          consume(X).
         ''');
         expect(result.isWellTyped, isTrue,
-            reason: 'Input _? accepts reader');
+            reason: 'Input _? accepts writer in head (flips to reader)');
       });
 
       test('POSITIVE: Writer at _ position is valid', () {
@@ -42,13 +44,15 @@ void main() {
         expect(result.isWellTyped, isTrue, reason: '_ accepts writer');
       });
 
-      test('POSITIVE: Reader at _? position is valid', () {
+      test('POSITIVE: Writer at _? (input) position is valid', () {
+        // Per spec: Input positions expect HEAD WRITERS (which flip to readers)
+        // Head writer X → reader X? after flip (serves as input)
         final result = checkTypes('''
           In ::= _?.
           procedure consume(In?).
-          consume(X?).
+          consume(X).
         ''');
-        expect(result.isWellTyped, isTrue, reason: '_? accepts reader');
+        expect(result.isWellTyped, isTrue, reason: '_? accepts writer (flips to reader)');
       });
 
       test('POSITIVE: List with _ elements needs only two clauses', () {
