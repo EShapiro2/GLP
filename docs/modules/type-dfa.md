@@ -1,76 +1,85 @@
 # Module: type-dfa
 
-**Version**: 0.7
+**Version**: 0.8
 **Date**: 2025-01-10
 **Status**: DRAFT
-**Paper References**: Section 4.1 (lines 32-44), Definition 4.3 (lines 247-262)
+**Paper References**: Section 4.1 (lines 19-24, 47-53), Example 4.1 (lines 55-80), Definition 4.3 (lines 283-298)
 
 ## Purpose
 
-Represents the single DFA for a typed GLP program. The DFA is built once from the type environment. Path consistency checking uses a complement flag to flip mode expectations for `T?` positions.
+Represents the DFA for a typed GLP program. Each type T has a complement type T? with a corresponding complement automaton. The complement automaton is derived by flipping states and modes.
 
 ## Dependencies
 
 - `mode` — Mode enum
 - `type-environment` — TypeEnvironment, TypeDef, ProcDecl
 
-## DFA Structure (Paper lines 42-44)
+## DFA Structure (Paper lines 47-53)
 
-A typed GLP program P = (Cs, D) has a **single DFA** where:
+A typed GLP program P = (Cs, D) has a DFA where:
 
-**States:**
-- One state per defined type name (e.g., `Stream`, `CounterCall`)
-- One state per procedure (e.g., `merge/3`, `sum/2`)
-- System type states: `Integer`, `String` (NOT final; have conceptual transitions to `_FINAL_`)
-- Final states: `_` (any produced term), `_?` (any consumed term), `_FINAL_` (anonymous final for constant/literal matches)
+**States come in complement pairs:**
+- For each defined type `T`: states `T` and `T?`
+- System states: `Integer` and `Integer?`, `String` and `String?`
+- Primitive final states: `_` and `_?`
+- Anonymous final state: `_FINAL_` (for constant/literal matches)
+- Procedure states: `merge/3`, etc. (no complement—procedures are not types)
+
+**Automata come in complement pairs:**
+- For each type `T`: automaton for `T` (producer view) and automaton for `T?` (consumer view)
+- The automaton for `T?` is derived from `T` by flipping states and modes
 
 **Transitions:**
-- From procedure states: labeled (procName, arity, argIndex), leading to argument type states
-- From defined type states: labeled (functor, arity, argIndex, mode), leading to type states or final states
-- From `Integer`/`String`: conceptually one per literal value, all leading to `_FINAL_`; implemented as type membership check rather than explicit transitions
-- Constant alternatives (e.g., `[]`): transition labeled with the constant, leading to `_FINAL_`
+- From procedure states: to declared argument type states directly (`Stream?` or `Stream`)
+- From type states: based on BNF alternatives, with modes from producer view
+- From complement type states: same structure with flipped states and modes
 
-**No separate DFAs per type. No merging. No `withSuffix`.**
+## Complementation (Paper lines 19-24)
 
-## Complementation (Paper line 19)
+For each type T, the complement automaton T? is obtained by:
+1. Replacing each state S with its complement state S?
+2. Replacing each mode: ↑ becomes ↓, and ↓ becomes ↑
 
-Complementation does **not** create additional states. When checking paths at a `T?` position, mode expectations are flipped during traversal:
-- Where `T` expects produce ↑, check expects consume ↓
-- Where `T` expects consume ↓, check expects produce ↑
+This defines complementation as an involution: (T?)? = T.
 
-This preserves the involution property: flipping twice returns to original expectations.
+**Example (Paper lines 55-80):**
+
+For `Stream ::= [] ; [_|Stream]`:
+
+**Stream automaton** (producer view):
+- State `Stream` with transitions:
+  - `[]` → `_FINAL_`
+  - `[|](2,1):↑` → `_`
+  - `[|](2,2):↑` → `Stream`
+
+**Stream? automaton** (consumer view):
+- State `Stream?` with transitions:
+  - `[]` → `_FINAL_`
+  - `[|](2,1):↓` → `_?`
+  - `[|](2,2):↓` → `Stream?`
 
 ## Public Interface
 
 ### Types
 
-#### `class ProgramDFA`
-
-The single DFA for a typed GLP program.
-
-```dart
-class ProgramDFA {
-  final Map<String, DFAState> states;
-  final Map<(DFAState, TransitionLabel), DFAState> transitions;
-
-  DFAState getState(String name);  // Type name or procedure key
-  DFAState? transition(DFAState from, TransitionLabel label);
-}
-```
-
 #### `class DFAState`
 
 ```dart
 class DFAState {
-  final String name;
+  final String baseName;      // e.g., "Stream", "Integer", "_"
+  final bool isComplement;    // true for Stream?, Integer?, _?
   final bool isFinal;
 
-  bool get isWildcard => name == '_' || name == '_?';
-  bool get isProducedWildcard => name == '_';
-  bool get isConsumedWildcard => name == '_?';
-  bool get isIntegerType => name == 'Integer';
-  bool get isStringType => name == 'String';
-  bool get isAnonymousFinal => name == '_FINAL_';
+  String get name => isComplement ? '$baseName?' : baseName;
+
+  DFAState get complement => DFAState(baseName, isComplement: !isComplement, isFinal: isFinal);
+
+  bool get isWildcard => baseName == '_';
+  bool get isProducedWildcard => baseName == '_' && !isComplement;
+  bool get isConsumedWildcard => baseName == '_' && isComplement;
+  bool get isIntegerType => baseName == 'Integer';
+  bool get isStringType => baseName == 'String';
+  bool get isAnonymousFinal => baseName == '_FINAL_';
 }
 ```
 
@@ -85,6 +94,38 @@ class TransitionLabel {
 
   factory TransitionLabel.functor(String name, int arity, int argIndex, {Mode? mode});
   factory TransitionLabel.constant(Object value);
+
+  TransitionLabel get complement => TransitionLabel(symbol, arity, argIndex, mode: mode?.flip);
+}
+```
+
+#### `class Automaton`
+
+An automaton for a single type (either T or T?).
+
+```dart
+class Automaton {
+  final DFAState startState;
+  final Map<(DFAState, TransitionLabel), DFAState> transitions;
+
+  DFAState? transition(DFAState from, TransitionLabel label);
+
+  /// Create complement automaton by flipping all states and modes
+  Automaton get complement;
+}
+```
+
+#### `class ProgramDFA`
+
+The complete DFA for a typed GLP program.
+
+```dart
+class ProgramDFA {
+  final Map<String, DFAState> states;       // All states including complements
+  final Map<String, Automaton> automata;    // One per type name (T and T? are separate entries)
+
+  DFAState getState(String name);           // e.g., "Stream" or "Stream?"
+  Automaton getAutomaton(String typeName);  // e.g., "Stream" or "Stream?"
 }
 ```
 
@@ -92,58 +133,78 @@ class TransitionLabel {
 
 #### `ProgramDFA buildProgramDFA(TypeEnvironment env)`
 
-Builds the single DFA from the type environment.
+Builds the complete DFA from the type environment.
 
 ## Algorithm: Build Program DFA
 
 ```
 buildProgramDFA(env):
   states = {}
+  automata = {}
+
+  // Create system states (complement pairs)
+  states['_'] = DFAState('_', isComplement: false, isFinal: true)
+  states['_?'] = DFAState('_', isComplement: true, isFinal: true)
+  states['Integer'] = DFAState('Integer', isComplement: false, isFinal: false)
+  states['Integer?'] = DFAState('Integer', isComplement: true, isFinal: false)
+  states['String'] = DFAState('String', isComplement: false, isFinal: false)
+  states['String?'] = DFAState('String', isComplement: true, isFinal: false)
+  states['_FINAL_'] = DFAState('_FINAL_', isComplement: false, isFinal: true)
+
+  // Create automata for system types
+  automata['_'] = finalAutomaton(states['_'])
+  automata['_?'] = finalAutomaton(states['_?'])
+  automata['Integer'] = integerAutomaton(states['Integer'], states['_FINAL_'])
+  automata['Integer?'] = integerAutomaton(states['Integer?'], states['_FINAL_'])
+  automata['String'] = stringAutomaton(states['String'], states['_FINAL_'])
+  automata['String?'] = stringAutomaton(states['String?'], states['_FINAL_'])
+
+  // Create states and automata for defined types
+  for (typeName, typeDef) in env.types:
+    // Create state pair
+    states[typeName] = DFAState(typeName, isComplement: false, isFinal: false)
+    states[typeName + '?'] = DFAState(typeName, isComplement: true, isFinal: false)
+
+    // Build producer automaton
+    automata[typeName] = buildTypeAutomaton(typeDef, states, isComplement: false)
+
+    // Build consumer automaton (complement)
+    automata[typeName + '?'] = buildTypeAutomaton(typeDef, states, isComplement: true)
+
+  // Create procedure states (no complement)
+  for (procKey, procDecl) in env.procedures:
+    states[procKey] = DFAState(procKey, isComplement: false, isFinal: false)
+
+  // Build procedure automata
+  for (procKey, procDecl) in env.procedures:
+    automata[procKey] = buildProcedureAutomaton(procDecl, states, automata)
+
+  return ProgramDFA(states, automata)
+```
+
+## Algorithm: Build Type Automaton
+
+```
+buildTypeAutomaton(typeDef, states, isComplement):
+  typeName = typeDef.name
+  startStateName = isComplement ? typeName + '?' : typeName
+  startState = states[startStateName]
+
   transitions = {}
 
-  // Create final states (only _ and _? are true finals accepting variables)
-  states['_'] = DFAState('_', isFinal: true)
-  states['_?'] = DFAState('_?', isFinal: true)
-  states['_FINAL_'] = DFAState('_FINAL_', isFinal: true)  // anonymous final for constants/literals
+  for alt in typeDef.alternatives:
+    addTypeTransitions(startState, alt, Mode.produce, states, transitions, isComplement)
 
-  // Create system type states (NOT final - they have conceptual transitions to _FINAL_)
-  states['Integer'] = DFAState('Integer', isFinal: false)
-  states['String'] = DFAState('String', isFinal: false)
-
-  // Integer and String have conceptual transitions to _FINAL_ for any literal.
-  // These are not explicitly enumerated; instead, checkLeafConsistency performs
-  // a membership check when the current state is Integer or String.
-
-  // Create states for defined types
-  for typeName in env.types.keys:
-    states[typeName] = DFAState(typeName, isFinal: false)
-
-  // Create states for procedures
-  for procKey in env.procedures.keys:
-    states[procKey] = DFAState(procKey, isFinal: false)
-
-  // Add transitions from type definitions
-  for (typeName, typeDef) in env.types:
-    fromState = states[typeName]
-    for alt in typeDef.alternatives:
-      addTypeTransitions(fromState, alt, Mode.produce, states, transitions)
-
-  // Add transitions from procedure declarations
-  for (procKey, procDecl) in env.procedures:
-    fromState = states[procKey]
-    for i in 0..<procDecl.arity:
-      argType = procDecl.argTypes[i]
-      label = TransitionLabel.functor(procDecl.name, procDecl.arity, i+1, mode: null)
-      targetState = resolveTypeExpr(argType, states)
-      transitions[(fromState, label)] = targetState
-
-  return ProgramDFA(states, transitions)
+  return Automaton(startState, transitions)
 ```
 
 ## Algorithm: Add Type Transitions
 
 ```
-addTypeTransitions(fromState, alt, contextMode, states, transitions):
+addTypeTransitions(fromState, alt, contextMode, states, transitions, isComplement):
+  // Apply complement to mode if building complement automaton
+  effectiveMode = isComplement ? contextMode.flip : contextMode
+
   match alt:
     ConstantAlt(value):
       label = TransitionLabel.constant(value)
@@ -157,53 +218,71 @@ addTypeTransitions(fromState, alt, contextMode, states, transitions):
       headMode = modeOf(headType, contextMode)
       tailMode = modeOf(tailType, contextMode)
 
+      // Apply complement to modes
+      if isComplement:
+        headMode = headMode.flip
+        tailMode = tailMode.flip
+
       headLabel = TransitionLabel.functor('[|]', 2, 1, mode: headMode)
       tailLabel = TransitionLabel.functor('[|]', 2, 2, mode: tailMode)
 
-      transitions[(fromState, headLabel)] = resolveTypeExpr(headType, states)
-      transitions[(fromState, tailLabel)] = resolveTypeExpr(tailType, states)
+      transitions[(fromState, headLabel)] = resolveTypeExpr(headType, states, isComplement)
+      transitions[(fromState, tailLabel)] = resolveTypeExpr(tailType, states, isComplement)
 
     StructAlt(functor, args):
       for i in 0..<args.length:
         argType = args[i]
         argMode = modeOf(argType, contextMode)
+        if isComplement:
+          argMode = argMode.flip
         label = TransitionLabel.functor(functor, args.length, i+1, mode: argMode)
-        transitions[(fromState, label)] = resolveTypeExpr(argType, states)
+        transitions[(fromState, label)] = resolveTypeExpr(argType, states, isComplement)
 
     DiffListAlt(content, hole):
       contentMode = modeOf(content, contextMode)
       holeMode = modeOf(hole, contextMode)
+      if isComplement:
+        contentMode = contentMode.flip
+        holeMode = holeMode.flip
 
       contentLabel = TransitionLabel.functor('\\', 2, 1, mode: contentMode)
       holeLabel = TransitionLabel.functor('\\', 2, 2, mode: holeMode)
 
-      transitions[(fromState, contentLabel)] = resolveTypeExpr(content, states)
-      transitions[(fromState, holeLabel)] = resolveTypeExpr(hole, states)
+      transitions[(fromState, contentLabel)] = resolveTypeExpr(content, states, isComplement)
+      transitions[(fromState, holeLabel)] = resolveTypeExpr(hole, states, isComplement)
 ```
 
 ## Algorithm: Resolve Type Expression
 
 ```
-resolveTypeExpr(typeExpr, states):
+resolveTypeExpr(typeExpr, states, isComplement):
   match typeExpr:
     PrimitiveModeAlt(isInput):
-      // _ and _? are final states
-      return isInput ? states['_?'] : states['_']
+      // Determine base state
+      baseIsComplement = isInput
+      // XOR with automaton complement flag
+      finalIsComplement = baseIsComplement XOR isComplement
+      return finalIsComplement ? states['_?'] : states['_']
 
     TypeRef(name, isInput):
-      // Integer and String are type states (not final)
-      // They have conceptual transitions to _FINAL_ for each literal
-      if name == 'Integer': return states['Integer']
-      if name == 'String': return states['String']
-      // Note: isInput flag is NOT used here - complementation happens during path checking
-      return states[name]
+      // Determine base state
+      baseIsComplement = isInput
+      // XOR with automaton complement flag
+      finalIsComplement = baseIsComplement XOR isComplement
+
+      if name == 'Integer':
+        return finalIsComplement ? states['Integer?'] : states['Integer']
+      if name == 'String':
+        return finalIsComplement ? states['String?'] : states['String']
+
+      return finalIsComplement ? states[name + '?'] : states[name]
 ```
 
 ## Algorithm: Mode Computation
 
 ```
 modeOf(typeExpr, contextMode):
-  // T? flips mode, T keeps mode
+  // T? flips mode, T keeps mode (before complement is applied)
   if typeExpr is TypeRef && typeExpr.isInput:
     return contextMode.flip
   if typeExpr is PrimitiveModeAlt && typeExpr.isInput:
@@ -211,153 +290,159 @@ modeOf(typeExpr, contextMode):
   return contextMode
 ```
 
-## Path Consistency Checking (Definition 4.3)
-
-Path consistency is checked by traversing the DFA alongside a moded term path. The `complement` flag indicates whether modes should be flipped (for `T?` positions).
+## Algorithm: Build Procedure Automaton
 
 ```
-checkPathConsistency(termPath, dfa, startState, complement):
-  state = startState
+buildProcedureAutomaton(procDecl, states, automata):
+  procState = states[procDecl.key]
+  transitions = {}
+
+  for i in 0..<procDecl.arity:
+    argType = procDecl.argTypes[i]
+    label = TransitionLabel.functor(procDecl.name, procDecl.arity, i+1, mode: null)
+
+    // Target is the declared type directly (Stream? or Stream)
+    targetStateName = getFullTypeName(argType)
+    transitions[(procState, label)] = states[targetStateName]
+
+  return Automaton(procState, transitions)
+
+getFullTypeName(typeExpr):
+  match typeExpr:
+    PrimitiveModeAlt(isInput):
+      return isInput ? '_?' : '_'
+    TypeRef(name, isInput):
+      return isInput ? name + '?' : name
+```
+
+## Path Consistency Checking (Definition 4.3)
+
+Path consistency is checked by traversing the appropriate automaton directly. No complement flag needed.
+
+```
+checkPathConsistency(termPath, automaton):
+  state = automaton.startState
 
   for i in 0..<termPath.length - 1:
     step = termPath[i]
     nextStep = termPath[i + 1]
 
-    // Build expected label with mode adjustment for complement
-    expectedMode = nextStep.mode
-    if complement:
-      expectedMode = expectedMode.flip
+    label = TransitionLabel.functor(step.functor, step.arity, nextStep.argIndex, mode: nextStep.mode)
 
-    label = TransitionLabel.functor(step.functor, step.arity, nextStep.argIndex, mode: expectedMode)
-
-    // Follow transition
-    nextState = dfa.transition(state, label)
+    nextState = automaton.transition(state, label)
     if nextState == null:
       return PathCheckResult.inconsistent("No transition for $label from $state")
 
     state = nextState
 
-  // Check leaf consistency
-  return checkLeafConsistency(termPath.leaf, state, dfa, complement)
+  return checkLeafConsistency(termPath.leaf, state)
 ```
 
 ## Algorithm: Leaf Consistency (Definition 4.3 cases)
 
 ```
-checkLeafConsistency(leaf, state, dfa, complement):
-  expectedMode = leaf.mode
-  if complement:
-    expectedMode = expectedMode.flip
-
+checkLeafConsistency(leaf, state):
   // Case: Produced wildcard final state (_)
   if state.isProducedWildcard:
-    // Definition 4.3 case 3(b): type path ends in _ and term has produce mode
-    if leaf.isVariable && !leaf.isReader && expectedMode == Mode.produce:
+    if leaf.isVariable && !leaf.isReader && leaf.mode == Mode.produce:
       return consistent(type: state)
     return inconsistent("_ expects writer at produce position")
 
   // Case: Consumed wildcard final state (_?)
   if state.isConsumedWildcard:
-    // Definition 4.3 case 3(a): type path ends in _? and term has consume mode
-    if leaf.isVariable && leaf.isReader && expectedMode == Mode.consume:
+    if leaf.isVariable && leaf.isReader && leaf.mode == Mode.consume:
       return consistent(type: state)
     return inconsistent("_? expects reader at consume position")
 
-  // Case: Integer type state (conceptual infinite transitions)
+  // Case: Integer type state
   if state.isIntegerType:
+    expectedMode = state.isComplement ? Mode.consume : Mode.produce
     if leaf.isInteger:
-      // Conceptually: follow transition labeled with this integer to _FINAL_
-      return consistent(type: dfa.states['_FINAL_'])
+      return consistent(type: states['_FINAL_'])
     if leaf.isVariable:
-      // Definition 4.3 case 2: term path is prefix ending in variable
-      if leaf.isReader && expectedMode == Mode.consume:
+      if leaf.isReader && leaf.mode == Mode.consume && state.isComplement:
         return consistent(type: state)
-      if !leaf.isReader && expectedMode == Mode.produce:
+      if !leaf.isReader && leaf.mode == Mode.produce && !state.isComplement:
         return consistent(type: state)
       return inconsistent("Variable mode mismatch at Integer")
     return inconsistent("Integer type requires integer literal or variable")
 
-  // Case: String type state (conceptual infinite transitions)
+  // Case: String type state
   if state.isStringType:
     if leaf.isString:
-      // Conceptually: follow transition labeled with this string to _FINAL_
-      return consistent(type: dfa.states['_FINAL_'])
+      return consistent(type: states['_FINAL_'])
     if leaf.isVariable:
-      if leaf.isReader && expectedMode == Mode.consume:
+      if leaf.isReader && leaf.mode == Mode.consume && state.isComplement:
         return consistent(type: state)
-      if !leaf.isReader && expectedMode == Mode.produce:
+      if !leaf.isReader && leaf.mode == Mode.produce && !state.isComplement:
         return consistent(type: state)
       return inconsistent("Variable mode mismatch at String")
     return inconsistent("String type requires string literal or variable")
 
-  // Case: Anonymous final state (reached via exact constant match)
+  // Case: Anonymous final state
   if state.isAnonymousFinal:
-    // Definition 4.3 case 1: equal length, last symbols consistent
-    // We only reach here if a constant transition was followed, so it matched
     return consistent(type: state)
 
   // Case: Non-final type state with variable
-  // Definition 4.3 case 2: term path is prefix ending in reader/writer
   if leaf.isVariable:
-    if leaf.isReader && expectedMode == Mode.consume:
-      return consistent(type: state)  // Case 2(a)
-    if !leaf.isReader && expectedMode == Mode.produce:
-      return consistent(type: state)  // Case 2(b)
+    expectedMode = state.isComplement ? Mode.consume : Mode.produce
+    if leaf.isReader && leaf.mode == Mode.consume && state.isComplement:
+      return consistent(type: state)
+    if !leaf.isReader && leaf.mode == Mode.produce && !state.isComplement:
+      return consistent(type: state)
     return inconsistent("Variable mode mismatch at type position")
 
-  // Case: Non-final type state with constant - must follow transition
-  // Definition 4.3 case 1: check if constant matches a transition
+  // Case: Constant at type state - check transition
   constLabel = TransitionLabel.constant(leaf.value)
-  nextState = dfa.transition(state, constLabel)
-  if nextState != null:
-    return consistent(type: nextState)
+  if automaton.transition(state, constLabel) != null:
+    return consistent(type: states['_FINAL_'])
 
   return inconsistent("Constant at type state without matching transition")
 ```
 
-## Procedure Argument Complement Flag
-
-When checking a clause head or body atom against a procedure declaration, each argument may need the complement flag:
+## Checking a Procedure Argument
 
 ```
-getArgumentComplement(procDecl, argIndex):
+checkProcedureArg(procDecl, argIndex, termPath, dfa):
   argType = procDecl.argTypes[argIndex]
+  argTypeName = getFullTypeName(argType)  // e.g., "Stream?" or "Stream"
 
-  if argType is TypeRef:
-    return argType.isInput  // T? means complement=true
+  automaton = dfa.getAutomaton(argTypeName)
 
-  if argType is PrimitiveModeAlt:
-    return argType.isInput  // _? means complement=true
-
-  return false
+  return checkPathConsistency(termPath, automaton)
 ```
-
-For heads (callee's view), an additional global complement is applied due to the caller/callee perspective flip. This is detailed in the well-typed-clause module.
 
 ## Error Conditions
 
 | Error | Condition |
 |-------|-----------|
 | `NoTransitionError` | No matching transition from current state |
-| `ModeMismatchError` | Variable mode doesn't match expected mode at position |
+| `ModeMismatchError` | Variable mode doesn't match state's expected mode |
 | `TypeMismatchError` | Constant doesn't match expected type (Integer/String) |
 | `UnknownTypeError` | Type name not found in environment |
 | `UnknownProcedureError` | Procedure key not found in environment |
 
 ## Examples
 
-### Example 1: Stream Type DFA
+### Example 1: Stream Type Automata
 
 ```
 Stream ::= [] ; [_|Stream].
 ```
 
-**States:** `Stream`, `_`, `_FINAL_`
+**Stream automaton:**
+- Start state: `Stream`
+- Transitions:
+  - `(Stream, []) → _FINAL_`
+  - `(Stream, [|](2,1):↑) → _`
+  - `(Stream, [|](2,2):↑) → Stream`
 
-**Transitions:**
-- `(Stream, []) → _FINAL_`
-- `(Stream, [|](2,1):↑) → _`
-- `(Stream, [|](2,2):↑) → Stream`
+**Stream? automaton:**
+- Start state: `Stream?`
+- Transitions:
+  - `(Stream?, []) → _FINAL_`
+  - `(Stream?, [|](2,1):↓) → _?`
+  - `(Stream?, [|](2,2):↓) → Stream?`
 
 ### Example 2: merge Procedure
 
@@ -365,79 +450,49 @@ Stream ::= [] ; [_|Stream].
 procedure merge(Stream?, Stream?, Stream).
 ```
 
-**Additional state:** `merge/3`
+**merge/3 automaton:**
+- Start state: `merge/3`
+- Transitions:
+  - `(merge/3, merge(3,1)) → Stream?`
+  - `(merge/3, merge(3,2)) → Stream?`
+  - `(merge/3, merge(3,3)) → Stream`
 
-**Transitions:**
-- `(merge/3, merge(3,1)) → Stream`
-- `(merge/3, merge(3,2)) → Stream`
-- `(merge/3, merge(3,3)) → Stream`
+Arguments 1 and 2 use the `Stream?` automaton. Argument 3 uses the `Stream` automaton.
 
-Note: All three arguments point to the same `Stream` state. The complement flag is:
-- Arg 1: complement=true (declared as `Stream?`)
-- Arg 2: complement=true (declared as `Stream?`)
-- Arg 3: complement=false (declared as `Stream`)
-
-### Example 3: Path Consistency Check
+### Example 3: Path Consistency (Paper lines 306-314)
 
 For the first `merge` clause:
 ```
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 ```
-with type `merge(Stream?, Stream?, Stream)`.
 
-**Step 1: Construct moded head** (after variable flip per Definition 4.7):
+**Term path to X?:**
 ```
-H' = ↓merge(↓[↓X?|Xs?], Ys?, ↑[↑X|Zs])
-```
-
-**Step 2: Extract term path** to first element of first argument:
-```
-Term path: (0,↓) --> merge/3 --(1,↓)--> [|]/2 --(1,↓)--> X?
+(0,↓) --> merge/3 --(1,↓)--> [|]/2 --(1,↓)--> X?
 ```
 
-**Step 3: Build type path** by traversing DFA with complement:
-
-The DFA has:
-- `(merge/3, merge(3,1)) → Stream`
-- `(Stream, [|](2,1):↑) → _`
-
-Since arg 1 is declared `Stream?`, we set complement=true. This means when we record the type path, we flip the DFA's modes:
-
+**Type path (using Stream? automaton):**
 ```
-Type path: (0,↓) --> merge/3 --(1,↓)--> Stream? --(1,↓)--> [|]/2 --(1,↓)--> _?
+(0,↓) --> merge --(1,↓)--> Stream? --(1,↓)--> [|]/2 --(1,↓)--> _?
 ```
 
-Note: The DFA transition has mode ↑, but with complement=true, the type path records mode ↓.
+Since arg 1 is declared `Stream?`, we use the `Stream?` automaton which already has:
+- Modes: all ↓
+- States: `Stream?`, `_?`
 
-**Step 4: Check consistency** (Definition 4.3 case 2a):
-- Term path ends in reader `X?`
-- Type path at corresponding position has mode ↓ (consume)
-- ✓ Consistent! Variable `X?` is assigned type `_?`
-
----
-
-**Key clarification:**
-
-| Concept | Source | Modes |
-|---------|--------|-------|
-| Term path | Extracted from clause/moded head | Based on reader/writer annotations and procedure type |
-| DFA transitions | Type definitions | Always from producer's view (↑ by default) |
-| Type path | Traversal of DFA | DFA modes, flipped if complement=true |
-| Consistency check | Compare term path vs type path | Per Definition 4.3 |
+The term path has mode ↓ and ends in reader `X?`. The type path has mode ↓ and reaches `_?`. These are consistent by Definition 4.3 case 2(a): reader at consume position.
 
 ## Removed from Previous Spec
 
-- `withSuffix()` — no longer needed
-- `applyModeComplement()` — replaced by `complement` flag during checking
-- `primitiveStateModes` map — replaced by checking state names (`_` vs `_?`)
-- Separate per-type DFA compilation — single program DFA
-- DFA merging for procedures — procedures are states in the same DFA
-- `TypeDFA` class — replaced by `ProgramDFA`
+- `complement` parameter in path checking functions
+- Mode flipping during path checking
+- Single automaton with flag approach
 
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.5 | 2025-01-08 | Previous version with per-type DFAs |
-| 0.6 | 2025-01-10 | Single program DFA; complement during checking not construction |
-| 0.7 | 2025-01-10 | Integer/String as type states (not final); _FINAL_ for literals |
+| 0.5 | 2025-01-08 | Per-type DFAs with merging |
+| 0.6 | 2025-01-10 | Single program DFA; complement flag during checking |
+| 0.7 | 2025-01-10 | Integer/String as type states; _FINAL_ for literals |
+| 0.8 | 2025-01-10 | Complement automata model: two automata per type, no runtime flag |
