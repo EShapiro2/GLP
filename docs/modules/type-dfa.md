@@ -1,6 +1,6 @@
 # Module: type-dfa
 
-**Version**: 0.8
+**Version**: 0.9
 **Date**: 2025-01-10
 **Status**: DRAFT
 **Paper References**: Section 4.1 (lines 19-24, 47-53), Example 4.1 (lines 55-80), Definition 4.3 (lines 283-298)
@@ -20,7 +20,7 @@ A typed GLP program P = (Cs, D) has a DFA where:
 
 **States come in complement pairs:**
 - For each defined type `T`: states `T` and `T?`
-- System states: `Integer` and `Integer?`, `String` and `String?`
+- System states: `Integer` and `Integer?`, `Real` and `Real?`, `Number` and `Number?`, `String` and `String?`
 - Primitive final states: `_` and `_?`
 - Anonymous final state: `_FINAL_` (for constant/literal matches)
 - Procedure states: `merge/3`, etc. (no complement—procedures are not types)
@@ -78,6 +78,8 @@ class DFAState {
   bool get isProducedWildcard => baseName == '_' && !isComplement;
   bool get isConsumedWildcard => baseName == '_' && isComplement;
   bool get isIntegerType => baseName == 'Integer';
+  bool get isRealType => baseName == 'Real';
+  bool get isNumberType => baseName == 'Number';
   bool get isStringType => baseName == 'String';
   bool get isAnonymousFinal => baseName == '_FINAL_';
 }
@@ -147,6 +149,10 @@ buildProgramDFA(env):
   states['_?'] = DFAState('_', isComplement: true, isFinal: true)
   states['Integer'] = DFAState('Integer', isComplement: false, isFinal: false)
   states['Integer?'] = DFAState('Integer', isComplement: true, isFinal: false)
+  states['Real'] = DFAState('Real', isComplement: false, isFinal: false)
+  states['Real?'] = DFAState('Real', isComplement: true, isFinal: false)
+  states['Number'] = DFAState('Number', isComplement: false, isFinal: false)
+  states['Number?'] = DFAState('Number', isComplement: true, isFinal: false)
   states['String'] = DFAState('String', isComplement: false, isFinal: false)
   states['String?'] = DFAState('String', isComplement: true, isFinal: false)
   states['_FINAL_'] = DFAState('_FINAL_', isComplement: false, isFinal: true)
@@ -156,6 +162,10 @@ buildProgramDFA(env):
   automata['_?'] = finalAutomaton(states['_?'])
   automata['Integer'] = integerAutomaton(states['Integer'], states['_FINAL_'])
   automata['Integer?'] = integerAutomaton(states['Integer?'], states['_FINAL_'])
+  automata['Real'] = realAutomaton(states['Real'], states['_FINAL_'])
+  automata['Real?'] = realAutomaton(states['Real?'], states['_FINAL_'])
+  automata['Number'] = numberAutomaton(states['Number'], states['_FINAL_'])
+  automata['Number?'] = numberAutomaton(states['Number?'], states['_FINAL_'])
   automata['String'] = stringAutomaton(states['String'], states['_FINAL_'])
   automata['String?'] = stringAutomaton(states['String?'], states['_FINAL_'])
 
@@ -272,6 +282,10 @@ resolveTypeExpr(typeExpr, states, isComplement):
 
       if name == 'Integer':
         return finalIsComplement ? states['Integer?'] : states['Integer']
+      if name == 'Real':
+        return finalIsComplement ? states['Real?'] : states['Real']
+      if name == 'Number':
+        return finalIsComplement ? states['Number?'] : states['Number']
       if name == 'String':
         return finalIsComplement ? states['String?'] : states['String']
 
@@ -366,6 +380,30 @@ checkLeafConsistency(leaf, state):
         return consistent(type: state)
       return inconsistent("Variable mode mismatch at Integer")
     return inconsistent("Integer type requires integer literal or variable")
+
+  // Case: Real type state
+  if state.isRealType:
+    if leaf.isReal:
+      return consistent(type: states['_FINAL_'])
+    if leaf.isVariable:
+      if leaf.isReader && leaf.mode == Mode.consume && state.isComplement:
+        return consistent(type: state)
+      if !leaf.isReader && leaf.mode == Mode.produce && !state.isComplement:
+        return consistent(type: state)
+      return inconsistent("Variable mode mismatch at Real")
+    return inconsistent("Real type requires real literal or variable")
+
+  // Case: Number type state
+  if state.isNumberType:
+    if leaf.isInteger || leaf.isReal:
+      return consistent(type: states['_FINAL_'])
+    if leaf.isVariable:
+      if leaf.isReader && leaf.mode == Mode.consume && state.isComplement:
+        return consistent(type: state)
+      if !leaf.isReader && leaf.mode == Mode.produce && !state.isComplement:
+        return consistent(type: state)
+      return inconsistent("Variable mode mismatch at Number")
+    return inconsistent("Number type requires numeric literal or variable")
 
   // Case: String type state
   if state.isStringType:
@@ -496,3 +534,4 @@ The term path has mode ↓ and ends in reader `X?`. The type path has mode ↓ a
 | 0.6 | 2025-01-10 | Single program DFA; complement flag during checking |
 | 0.7 | 2025-01-10 | Integer/String as type states; _FINAL_ for literals |
 | 0.8 | 2025-01-10 | Complement automata model: two automata per type, no runtime flag |
+| 0.9 | 2025-01-10 | Added Real, Number system types |
