@@ -1,6 +1,6 @@
 // lib/analysis/type_checker/program_dfa.dart
 //
-// ProgramDFA implementation per spec: docs/modules/type-dfa.md v0.8
+// ProgramDFA implementation per spec: docs/modules/type-dfa.md v0.9
 // Paper Reference: Section 4.1 (lines 19-24, 47-53), Definition 4.3 (lines 283-298)
 
 import 'type_ast.dart';
@@ -39,6 +39,12 @@ class DFAState {
 
   /// True for `Integer` type state (either complement or not)
   bool get isIntegerType => baseName == 'Integer';
+
+  /// True for `Real` type state (either complement or not)
+  bool get isRealType => baseName == 'Real';
+
+  /// True for `Number` type state (either complement or not)
+  bool get isNumberType => baseName == 'Number';
 
   /// True for `String` type state (either complement or not)
   bool get isStringType => baseName == 'String';
@@ -184,6 +190,10 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   states['_?'] = DFAState('_', isComplement: true, isFinal: true);
   states['Integer'] = DFAState('Integer', isComplement: false, isFinal: false);
   states['Integer?'] = DFAState('Integer', isComplement: true, isFinal: false);
+  states['Real'] = DFAState('Real', isComplement: false, isFinal: false);
+  states['Real?'] = DFAState('Real', isComplement: true, isFinal: false);
+  states['Number'] = DFAState('Number', isComplement: false, isFinal: false);
+  states['Number?'] = DFAState('Number', isComplement: true, isFinal: false);
   states['String'] = DFAState('String', isComplement: false, isFinal: false);
   states['String?'] = DFAState('String', isComplement: true, isFinal: false);
   states['_FINAL_'] = DFAState('_FINAL_', isComplement: false, isFinal: true);
@@ -193,6 +203,10 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   automata['_?'] = _finalAutomaton(states['_?']!);
   automata['Integer'] = _primitiveTypeAutomaton(states['Integer']!, states['_FINAL_']!);
   automata['Integer?'] = _primitiveTypeAutomaton(states['Integer?']!, states['_FINAL_']!);
+  automata['Real'] = _primitiveTypeAutomaton(states['Real']!, states['_FINAL_']!);
+  automata['Real?'] = _primitiveTypeAutomaton(states['Real?']!, states['_FINAL_']!);
+  automata['Number'] = _primitiveTypeAutomaton(states['Number']!, states['_FINAL_']!);
+  automata['Number?'] = _primitiveTypeAutomaton(states['Number?']!, states['_FINAL_']!);
   automata['String'] = _primitiveTypeAutomaton(states['String']!, states['_FINAL_']!);
   automata['String?'] = _primitiveTypeAutomaton(states['String?']!, states['_FINAL_']!);
 
@@ -349,6 +363,12 @@ DFAState _resolveTypeExpr(
     if (typeExpr.name == 'Integer') {
       return finalIsComplement ? states['Integer?']! : states['Integer']!;
     }
+    if (typeExpr.name == 'Real') {
+      return finalIsComplement ? states['Real?']! : states['Real']!;
+    }
+    if (typeExpr.name == 'Number') {
+      return finalIsComplement ? states['Number?']! : states['Number']!;
+    }
     if (typeExpr.name == 'String') {
       return finalIsComplement ? states['String?']! : states['String']!;
     }
@@ -425,6 +445,7 @@ class LeafTerm {
   final Mode? mode; // Mode at this position
   final Object? value; // Constant value, or null for variables
   final bool isInteger; // True if value is an integer
+  final bool isReal; // True if value is a real (floating-point)
   final bool isString; // True if value is a string
 
   LeafTerm._({
@@ -434,6 +455,7 @@ class LeafTerm {
     this.mode,
     this.value,
     this.isInteger = false,
+    this.isReal = false,
     this.isString = false,
   });
 
@@ -450,6 +472,11 @@ class LeafTerm {
   /// Create an integer constant leaf.
   factory LeafTerm.integerConstant(int value) {
     return LeafTerm._(isVariable: false, value: value, isInteger: true);
+  }
+
+  /// Create a real constant leaf.
+  factory LeafTerm.realConstant(double value) {
+    return LeafTerm._(isVariable: false, value: value, isReal: true);
   }
 
   /// Create a string constant leaf.
@@ -523,6 +550,42 @@ LeafConsistencyResult checkLeafConsistency(
     }
     return LeafConsistencyResult.inconsistent(
         'Integer type requires integer literal or variable');
+  }
+
+  // Case: Real type state
+  if (state.isRealType) {
+    if (leaf.isReal) {
+      return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
+    }
+    if (leaf.isVariable) {
+      if (leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
+        return LeafConsistencyResult.consistent(state);
+      }
+      if (!leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
+        return LeafConsistencyResult.consistent(state);
+      }
+      return LeafConsistencyResult.inconsistent('Variable mode mismatch at Real');
+    }
+    return LeafConsistencyResult.inconsistent(
+        'Real type requires real literal or variable');
+  }
+
+  // Case: Number type state
+  if (state.isNumberType) {
+    if (leaf.isInteger || leaf.isReal) {
+      return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
+    }
+    if (leaf.isVariable) {
+      if (leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
+        return LeafConsistencyResult.consistent(state);
+      }
+      if (!leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
+        return LeafConsistencyResult.consistent(state);
+      }
+      return LeafConsistencyResult.inconsistent('Variable mode mismatch at Number');
+    }
+    return LeafConsistencyResult.inconsistent(
+        'Number type requires numeric literal or variable');
   }
 
   // Case: String type state (conceptual infinite transitions)
