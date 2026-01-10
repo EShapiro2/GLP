@@ -41,7 +41,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'List elements are _ (output only), two clauses suffice');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
     });
 
     // =========================================================================
@@ -86,7 +86,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'List elements are _ - single mode, no coverage requirement');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
 
       test('Nested struct with single-mode primitives', () {
         final result = checkTypes('''

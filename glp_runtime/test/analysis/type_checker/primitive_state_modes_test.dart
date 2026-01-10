@@ -27,7 +27,7 @@ void main() {
       // The list type should have primitive states for the head element
       expect(dfa.primitiveStateModes, isNotEmpty,
           reason: 'List with _ head should have primitive state modes');
-    }, skip: 'Nested primitive state mode tracking not yet implemented');
+    });
 
     test('List with _? head has consume mode at head position', () {
       final source = 'InputList ::= [] ; [_? | InputList].';
@@ -38,7 +38,7 @@ void main() {
 
       expect(dfa.primitiveStateModes, isNotEmpty,
           reason: 'List with _? head should have primitive state modes');
-    }, skip: 'Nested primitive state mode tracking not yet implemented');
+    });
   });
 
   group('Mode Checking at Primitive Positions - POSITIVE', () {
@@ -159,7 +159,7 @@ process_list([H? | T]) :- process_list(T?).
 ''';
       final result = checkTypes(source);
       expect(result.errors, isEmpty, reason: 'List uses _ at head, reader H? matches after mode complement');
-    }, skip: 'Nested primitive mode checking in lists not yet implemented');
+    });
 
     test('POSITIVE: Nested _? in list with single clause', () {
       final source = '''
@@ -172,7 +172,7 @@ consume_list([H | T]) :- consume_list(T?).
 ''';
       final result = checkTypes(source);
       expect(result.errors, isEmpty, reason: 'List uses _? at head, writer H matches after mode complement');
-    }, skip: 'Nested primitive mode checking in lists not yet implemented');
+    });
   });
 
   group('Structural vs Primitive States', () {
@@ -207,6 +207,6 @@ consume_list([H | T]) :- consume_list(T?).
       expect(dfa.isPrimitiveState(dfa.startState), isFalse);
       // But there should be primitive states for the head element
       expect(dfa.primitiveStateModes.isNotEmpty, isTrue);
-    }, skip: 'Nested primitive state mode tracking not yet implemented');
+    });
   });
 }

@@ -62,7 +62,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: '_ has single mode, no coverage requirement');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
     });
 
     // =========================================================================
@@ -80,7 +80,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'dl_append has correct mode annotations');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
 
       test('POSITIVE: dl_to_list is well-moded', () {
         final result = checkTypes('''
@@ -92,7 +92,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'dl_to_list closes the hole correctly');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
 
       test('NEGATIVE: dl_append with wrong modes fails', () {
         final result = checkTypes('''
@@ -104,7 +104,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isFalse,
             reason: 'Modes are inverted incorrectly');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
 
       test('POSITIVE: dl_append demonstrates O(1) concatenation', () {
         final result = checkTypes('''
@@ -126,7 +126,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'dl_append used to concatenate lists efficiently');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
     });
 
     // =========================================================================
@@ -147,7 +147,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'new_channel swaps streams correctly');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
 
       test('POSITIVE: send is well-moded', () {
         final result = checkTypes('''
@@ -159,7 +159,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'send adds message to output stream');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
 
       test('POSITIVE: receive is well-moded', () {
         final result = checkTypes('''
@@ -171,7 +171,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'receive takes message from input stream');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
 
       test('NEGATIVE: send with wrong message mode fails', () {
         final result = checkTypes('''
@@ -183,7 +183,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isFalse,
             reason: 'X should be writer in first arg, reader in stream');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
 
       test('POSITIVE: Producer-consumer pattern', () {
         final result = checkTypes('''
@@ -211,7 +211,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'Producer-consumer pattern is well-typed');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
     });
 
     // =========================================================================
@@ -233,7 +233,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'Unit clause can be used as guard');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
 
       test('POSITIVE: receive usable in guard position', () {
         final result = checkTypes('''
@@ -251,7 +251,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'receive in guard position suspends until message');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
 
       test('POSITIVE: dl_to_list in guard for closing difference list', () {
         final result = checkTypes('''
@@ -267,7 +267,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'dl_to_list closes difference list in guard');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
     });
 
     // =========================================================================
@@ -285,7 +285,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'List with _ elements only needs two clauses');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
 
       test('POSITIVE: List (with _ elements) simple copy', () {
         final result = checkTypes('''
@@ -297,7 +297,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'List (_ elements) simpler than lists with multiple modes');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
     });
   });
 }

@@ -111,7 +111,7 @@ void main() {
         ''');
         expect(result.errors, isEmpty,
             reason: 'MyList has no mode complementations, ground(X?) is WMT');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
 
       test('NEGATIVE: ground on type with mode complementations', () {
         final result = checkTypes('''
@@ -149,7 +149,7 @@ void main() {
         ''');
         expect(result.errors, isNotEmpty,
             reason: 'MyChannel has mode complementation (MyStream?)');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
 
     });
 

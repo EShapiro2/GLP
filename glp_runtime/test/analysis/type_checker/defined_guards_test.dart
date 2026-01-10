@@ -22,7 +22,7 @@ void main() {
         process(_, error) :- otherwise | true.
       ''');
       expect(result.isWellTyped, isTrue);
-    }, skip: 'Nested primitive mode checking in lists not yet implemented');
+    });
 
     test('NEGATIVE: Defined guard without declaration fails', () {
       final result = checkTypes('''

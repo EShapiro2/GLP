@@ -101,6 +101,7 @@ bar(X, Y, R?) :- X? + 1 < Y? * 2 | R = sum(X?, Y?).
 - **When the user asks something, do exactly as asked and nothing else**
 - Do not add extra steps, analysis, or actions beyond the specific request
 - If clarification is needed, ask first rather than assuming
+- **NEVER EXCEED THE SCOPE** of instructions given by Claude Web or the user
 
 ### Never Implement Without a Plan
 - **NEVER start implementation without an agreed upon plan**
@@ -113,6 +114,7 @@ When receiving instructions from Claude Web (via user copy-paste):
 - **REVIEW FIRST** - Read and understand the instructions before executing
 - **RAISE CONCERNS** - Let Udi know if you have comments, questions, or see potential issues
 - **DON'T BLINDLY EXECUTE** - Wait for confirmation if something seems unclear or problematic
+- **DO NOT EXCEED SCOPE** - Execute only what is specified in the instructions, nothing more
 - Only proceed with execution after review is complete and any concerns are addressed
 
 ### Accuracy and Honesty

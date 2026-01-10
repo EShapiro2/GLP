@@ -20,7 +20,7 @@ void main() {
           length([_ | Xs], N) :- length(Xs?, M), N := M? + 1.
         ''');
         expect(result.isWellTyped, isTrue);
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
 
       test('NEGATIVE: Missing [] case fails', () {
         final result = checkTypes('''
@@ -105,7 +105,7 @@ void main() {
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'Two clauses cover all cases for List with _ elements');
-      }, skip: 'Nested primitive mode checking in lists not yet implemented');
+      });
     });
   });
 }

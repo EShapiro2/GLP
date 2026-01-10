@@ -445,9 +445,7 @@ Commits are atomic and well-described:
 
 ### 9.3 Merge Requirements
 
-Code merges to `main` only when:
-1. All tests pass
-2. Code review completed (see Section 10)
+Merging to `main` is at the user's discretion. The user decides when work is ready to be integrated, regardless of test status.
 
 ---
 

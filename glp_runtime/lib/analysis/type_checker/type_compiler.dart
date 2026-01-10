@@ -146,17 +146,19 @@ class TypeCompiler {
   
   /// Compute mode for a type expression at a given context mode
   ///
-  /// Per spec (type-dfa.md lines 292-297):
-  /// - Complemented type (T?) → flip the parent mode
-  /// - Uncomplemented type (T) → keep the parent mode
-  Mode _modeOfTypeExpr(TypeExpr typeExpr, Mode contextMode) {
+  /// Returns null for plain TypeRef positions (any mode acceptable).
+  /// Returns strict mode for PrimitiveModeAlt or annotated TypeRef (Type?).
+  Mode? _modeOfTypeExpr(TypeExpr typeExpr, Mode contextMode) {
+    // Primitives have strict mode requirements
+    if (typeExpr is PrimitiveModeAlt) {
+      return typeExpr.isInput ? contextMode.flip : contextMode;
+    }
+    // Explicitly annotated TypeRef (Type?) requires strict consume mode
     if (typeExpr is TypeRef && typeExpr.isInput) {
-      return contextMode.flip;
+      return contextMode.flip;  // flip produce→consume
     }
-    if (typeExpr is PrimitiveModeAlt && typeExpr.isInput) {
-      return contextMode.flip;
-    }
-    return contextMode;
+    // Plain TypeRef without annotation accepts any mode - return null
+    return null;
   }
 
   /// Add DFA transitions for a type alternative
