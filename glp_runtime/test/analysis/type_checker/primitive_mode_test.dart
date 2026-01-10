@@ -106,7 +106,7 @@ void main() {
 
       expect(outputDFA.primitiveStateModes, isNotEmpty);
       expect(outputDFA.isPrimitiveState(outputDFA.startState), isTrue);
-    });
+    }, skip: 'Predefined Output type removed - use _ directly in procedure declarations');
 
     test('Type with primitive mode creates primitive state', () {
       final source = 'MyType ::= _.';
@@ -116,7 +116,7 @@ void main() {
       final dfa = compiler.compile('MyType');
 
       expect(dfa.primitiveStateModes, isNotEmpty);
-    });
+    }, skip: 'Bare primitive type definitions now illegal - use _ directly in procedure declarations');
 
     test('Structural type does not create primitive states', () {
       final source = 'Nat ::= 0 ; s(Nat).';
