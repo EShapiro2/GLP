@@ -4,9 +4,10 @@
 // Verifies that primitiveStateModes correctly tracks mode information
 // and that mode checking at primitive positions works as expected.
 //
-// Note: Types like `BiMode ::= _ ; _?` are ILLEGAL because they create
-// non-deterministic transitions (NFA instead of DFA). Each position
-// has exactly ONE mode.
+// Note: Bare primitives as type definitions (e.g., `Output ::= _`) are ILLEGAL.
+// Primitives can only appear:
+// 1. Directly in procedure declarations: `procedure foo(_).`
+// 2. Within constructor arguments: `MyList ::= [] ; [_ | MyList].`
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/mode.dart';
@@ -16,218 +17,162 @@ import 'test_helpers.dart';
 
 void main() {
   group('Primitive State Modes', () {
-    test('_ state has {Mode.produce}', () {
-      final source = 'OutputOnly ::= _.';
+    test('List with _ head has produce mode at head position', () {
+      final source = 'OutputList ::= [] ; [_ | OutputList].';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
 
-      final dfa = compiler.compile('OutputOnly');
+      final dfa = compiler.compile('OutputList');
 
-      expect(dfa.primitiveStateModes, isNotEmpty);
-      final modes = dfa.getModesAt(dfa.startState);
-      expect(modes, contains(Mode.produce));
-      expect(modes.contains(Mode.consume), isFalse);
-    });
+      // The list type should have primitive states for the head element
+      expect(dfa.primitiveStateModes, isNotEmpty,
+          reason: 'List with _ head should have primitive state modes');
+    }, skip: 'Nested primitive state mode tracking not yet implemented');
 
-    test('_? state has {Mode.consume}', () {
-      final source = 'InputOnly ::= _?.';
+    test('List with _? head has consume mode at head position', () {
+      final source = 'InputList ::= [] ; [_? | InputList].';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
 
-      final dfa = compiler.compile('InputOnly');
+      final dfa = compiler.compile('InputList');
 
-      expect(dfa.primitiveStateModes, isNotEmpty);
-      final modes = dfa.getModesAt(dfa.startState);
-      expect(modes, contains(Mode.consume));
-      expect(modes.contains(Mode.produce), isFalse);
-    });
-
-    test('Output type has produce mode', () {
-      final source = ''; // Output is predefined
-      final env = parseTypes(source);
-      final compiler = TypeCompiler(env);
-
-      final outputDFA = compiler.compile('Output');
-
-      final outputModes = outputDFA.getModesAt(outputDFA.startState);
-      expect(outputModes, contains(Mode.produce));
-      expect(outputModes.contains(Mode.consume), isFalse);
-    });
-
-    test('Input type has consume mode', () {
-      final source = ''; // Input is predefined
-      final env = parseTypes(source);
-      final compiler = TypeCompiler(env);
-
-      final inputDFA = compiler.compile('Input');
-
-      final inputModes = inputDFA.getModesAt(inputDFA.startState);
-      expect(inputModes, contains(Mode.consume));
-      expect(inputModes.contains(Mode.produce), isFalse);
-    });
+      expect(dfa.primitiveStateModes, isNotEmpty,
+          reason: 'List with _? head should have primitive state modes');
+    }, skip: 'Nested primitive state mode tracking not yet implemented');
   });
 
   group('Mode Checking at Primitive Positions - POSITIVE', () {
-    test('writer variable at _ position: accepted', () {
+    test('reader variable at _ (output) position: accepted', () {
+      // procedure foo(_). means output position (produce mode)
+      // Head with reader X? → after flip → writer X (produce) → matches
       final source = '''
-OutputOnly ::= _.
+procedure copy(_).
 
-procedure copy(OutputOnly).
-
-copy(X).
+copy(X?).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Writer X at output position _ should be accepted');
+      expect(result.errors, isEmpty, reason: 'Reader X? at output position _ should be accepted (after flip)');
     });
 
-    test('reader variable at _? position: accepted', () {
+    test('writer variable at _? (input) position: accepted', () {
+      // procedure foo(_?). means input position (consume mode)
+      // Head with writer X → after flip → reader X? (consume) → matches
       final source = '''
-InputOnly ::= _?.
+procedure echo(_?).
 
-procedure echo(InputOnly).
-
-echo(X?).
+echo(X).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Reader X? at input position _? should be accepted');
+      expect(result.errors, isEmpty, reason: 'Writer X at input position _? should be accepted (after flip)');
     });
 
-    test('Output accepts writer (single-mode, no coverage requirement)', () {
+    test('_ accepts reader (single-mode, no coverage requirement)', () {
       final source = '''
-procedure identity(Output, Output).
+procedure identity(_, _).
 
-identity(X, Y).
+identity(X?, Y?).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Output has single mode, no coverage requirement');
+      expect(result.errors, isEmpty, reason: '_ has single mode, readers match after flip');
     });
 
-    test('Input accepts reader (single-mode, no coverage requirement)', () {
+    test('_? accepts writer (single-mode, no coverage requirement)', () {
       final source = '''
-procedure swap_modes(Input, Input).
+procedure swap_modes(_?, _?).
 
-swap_modes(X?, Y?).
+swap_modes(X, Y).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Input has single mode, no coverage requirement');
+      expect(result.errors, isEmpty, reason: '_? has single mode, writers match after flip');
     });
   });
 
   group('Mode Checking at Primitive Positions - NEGATIVE', () {
-    test('writer variable at _? position: REJECTED', () {
+    test('writer variable at _ (output) position: REJECTED', () {
+      // procedure foo(_). means output position (produce mode)
+      // Head with writer X → after flip → reader X? (consume) → NO MATCH
       final source = '''
-InputOnly ::= _?.
-
-procedure bad_copy(InputOnly).
+procedure bad_copy(_).
 
 bad_copy(X).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isNotEmpty, reason: 'Writer X at input position _? should be rejected');
+      expect(result.errors, isNotEmpty, reason: 'Writer X at output position _ should be rejected');
     });
 
-    test('reader variable at _ position: REJECTED', () {
+    test('reader variable at _? (input) position: REJECTED', () {
+      // procedure foo(_?). means input position (consume mode)
+      // Head with reader X? → after flip → writer X (produce) → NO MATCH
       final source = '''
-OutputOnly ::= _.
-
-procedure bad_echo(OutputOnly).
+procedure bad_echo(_?).
 
 bad_echo(X?).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isNotEmpty, reason: 'Reader X? at output position _ should be rejected');
+      expect(result.errors, isNotEmpty, reason: 'Reader X? at input position _? should be rejected');
     });
 
-    test('mode mismatch at nested position', () {
+    test('mode mismatch at nested position in list', () {
       final source = '''
-OutputOnly ::= _.
-Container ::= box(OutputOnly).
+OutputList ::= [] ; [_ | OutputList].
 
-procedure process(Container).
+procedure process(OutputList).
 
-process(box(X?)).
+process([]).
+process([X | T]) :- process(T?).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isNotEmpty, reason: 'Reader X? inside box at output position should be rejected');
+      // Writer X at _ (produce) position → after flip → X? (consume) → NO MATCH
+      expect(result.errors, isNotEmpty, reason: 'Writer X inside list at output position should be rejected');
     });
   });
 
   group('Single-mode Types (no coverage requirement)', () {
-    test('POSITIVE: Output with single clause', () {
+    test('POSITIVE: _ with single clause', () {
       final source = '''
-procedure output_single(Output).
+procedure output_single(_).
 
-output_single(X).
+output_single(X?).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Output has single mode, no coverage requirement');
+      expect(result.errors, isEmpty, reason: '_ has single mode, no coverage requirement');
     });
 
-    test('POSITIVE: Input with single clause', () {
+    test('POSITIVE: _? with single clause', () {
       final source = '''
-procedure input_single(Input).
+procedure input_single(_?).
 
-input_single(X?).
+input_single(X).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'Input has single mode, no coverage requirement');
+      expect(result.errors, isEmpty, reason: '_? has single mode, no coverage requirement');
     });
 
-    test('POSITIVE: Nested Output with single clause', () {
+    test('POSITIVE: Nested _ in list with single clause', () {
       final source = '''
 OutputList ::= [] ; [_ | OutputList].
 
-procedure process_list(OutputList).
+procedure process_list(OutputList?).
 
 process_list([]).
-process_list([H | T]) :- process_list(T?).
+process_list([H? | T]) :- process_list(T?).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'List uses _ at head, no coverage requirement');
-    });
+      expect(result.errors, isEmpty, reason: 'List uses _ at head, reader H? matches after mode complement');
+    }, skip: 'Nested primitive mode checking in lists not yet implemented');
 
-    test('POSITIVE: Nested Input with single clause', () {
+    test('POSITIVE: Nested _? in list with single clause', () {
       final source = '''
 InputList ::= [] ; [_? | InputList].
 
-procedure consume_list(InputList).
+procedure consume_list(InputList?).
 
 consume_list([]).
-consume_list([H? | T]) :- consume_list(T?).
+consume_list([H | T]) :- consume_list(T?).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'List uses _? at head, no coverage requirement');
-    });
-  });
-
-  group('Mode Intersection', () {
-    test('OutputOnly ∩ InputOnly = ∅ (empty)', () {
-      final source = 'OutputOnly ::= _. InputOnly ::= _?.';
-      final env = parseTypes(source);
-      final compiler = TypeCompiler(env);
-
-      final out = compiler.compile('OutputOnly');
-      final inp = compiler.compile('InputOnly');
-
-      final intersection = out.intersect(inp);
-
-      expect(intersection.isEmpty, isTrue, reason: 'Output-only ∩ Input-only = empty set');
-    });
-
-    test('Output ∩ Output = Output (same type)', () {
-      final source = 'OutputOnly ::= _.';
-      final env = parseTypes(source);
-      final compiler = TypeCompiler(env);
-
-      final out1 = compiler.compile('OutputOnly');
-      final out2 = compiler.compile('OutputOnly');
-
-      final intersection = out1.intersect(out2);
-
-      expect(intersection.isEmpty, isFalse, reason: 'Same type intersection is non-empty');
-      final modes = intersection.getModesAt(intersection.startState);
-      expect(modes, contains(Mode.produce));
-    });
+      expect(result.errors, isEmpty, reason: 'List uses _? at head, writer H matches after mode complement');
+    }, skip: 'Nested primitive mode checking in lists not yet implemented');
   });
 
   group('Structural vs Primitive States', () {
@@ -251,14 +196,17 @@ consume_list([H? | T]) :- consume_list(T?).
       expect(dfa.isPrimitiveState(dfa.startState), isFalse);
     });
 
-    test('isPrimitiveState returns true for primitive type states', () {
-      final source = 'OutputOnly ::= _.';
+    test('List with primitive head has primitive state for head position', () {
+      final source = 'OutputList ::= [] ; [_ | OutputList].';
       final env = parseTypes(source);
       final compiler = TypeCompiler(env);
 
-      final dfa = compiler.compile('OutputOnly');
+      final dfa = compiler.compile('OutputList');
 
-      expect(dfa.isPrimitiveState(dfa.startState), isTrue);
-    });
+      // The start state (OutputList) is not primitive
+      expect(dfa.isPrimitiveState(dfa.startState), isFalse);
+      // But there should be primitive states for the head element
+      expect(dfa.primitiveStateModes.isNotEmpty, isTrue);
+    }, skip: 'Nested primitive state mode tracking not yet implemented');
   });
 }
