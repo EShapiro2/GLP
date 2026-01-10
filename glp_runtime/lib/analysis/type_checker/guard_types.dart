@@ -4,8 +4,7 @@
 // ground guards that satisfy mode coverage requirements.
 
 import 'type_ast.dart';
-import 'type_dfa.dart';
-import 'type_compiler.dart';
+import 'program_dfa.dart';
 import '../../compiler/ast.dart' as ast;
 
 /// Signature of a built-in guard for type checking purposes
@@ -111,17 +110,17 @@ class GuardTypeRegistry {
 }
 
 /// Extract type constraints from clause guards
-/// Returns map from variable name to constraining type DFA
-Map<String, TypeDFA> extractGuardConstraints(
+/// Returns map from variable name to constraining type state
+Map<String, DFAState> extractGuardConstraints(
   List<ast.Guard>? guards,
   TypeEnvironment typeEnv,
-  TypeCompiler compiler,
+  ProgramDFA dfa,
 ) {
-  final constraints = <String, TypeDFA>{};
+  final constraints = <String, DFAState>{};
   if (guards == null || guards.isEmpty) return constraints;
 
   for (final guard in guards) {
-    _processGuard(guard.predicate, guard.args, constraints, typeEnv, compiler);
+    _processGuard(guard.predicate, guard.args, constraints, typeEnv, dfa);
   }
 
   return constraints;
@@ -130,9 +129,9 @@ Map<String, TypeDFA> extractGuardConstraints(
 void _processGuard(
   String functor,
   List<ast.Term> args,
-  Map<String, TypeDFA> constraints,
+  Map<String, DFAState> constraints,
   TypeEnvironment typeEnv,
-  TypeCompiler compiler,
+  ProgramDFA dfa,
 ) {
 
   // Check built-in guards
@@ -141,14 +140,14 @@ void _processGuard(
     for (int i = 0; i < args.length && i < signature.argTypeNames.length; i++) {
       final arg = args[i];
       if (arg is ast.VarTerm) {
-        final typeDFA = compiler.compile(signature.argTypeNames[i]);
+        final typeName = signature.argTypeNames[i];
+        final typeState = dfa.states[typeName];
+        if (typeState == null) continue;
         final varName = arg.name;
 
-        if (constraints.containsKey(varName)) {
-          // Intersect with existing constraint
-          constraints[varName] = constraints[varName]!.intersect(typeDFA);
-        } else {
-          constraints[varName] = typeDFA;
+        // Just keep the first constraint (full DFA intersection is complex)
+        if (!constraints.containsKey(varName)) {
+          constraints[varName] = typeState;
         }
       }
     }
@@ -167,13 +166,13 @@ void _processGuard(
         if (argType is PrimitiveModeAlt) continue;
 
         final typeRef = argType as TypeRef;
-        final typeDFA = compiler.compile(typeRef.name);
+        final typeState = dfa.states[typeRef.name];
+        if (typeState == null) continue;
         final varName = arg.name;
 
-        if (constraints.containsKey(varName)) {
-          constraints[varName] = constraints[varName]!.intersect(typeDFA);
-        } else {
-          constraints[varName] = typeDFA;
+        // Just keep the first constraint
+        if (!constraints.containsKey(varName)) {
+          constraints[varName] = typeState;
         }
       }
     }

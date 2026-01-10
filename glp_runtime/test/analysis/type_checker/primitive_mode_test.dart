@@ -7,7 +7,7 @@
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/type_parser.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
-import 'package:glp_runtime/analysis/type_checker/type_compiler.dart';
+import 'package:glp_runtime/analysis/type_checker/program_dfa.dart';
 
 void main() {
   group('Primitive Mode Type Parsing', () {
@@ -118,14 +118,16 @@ void main() {
       expect(dfa.primitiveStateModes, isNotEmpty);
     }, skip: 'Bare primitive type definitions now illegal - use _ directly in procedure declarations');
 
-    test('Structural type does not create primitive states', () {
+    test('Structural type does not have wildcard start state', () {
       final source = 'Nat ::= 0 ; s(Nat).';
       final env = parseTypes(source);
-      final compiler = TypeCompiler(env);
+      final dfa = buildProgramDFA(env);
 
-      final dfa = compiler.compile('Nat');
+      // Get the Nat automaton's start state
+      final natAutomaton = dfa.getAutomaton('Nat');
 
-      expect(dfa.primitiveStateModes, isEmpty);
+      // Structural types should not have primitive/wildcard start states
+      expect(natAutomaton.startState.isWildcard, isFalse);
     });
   });
 }

@@ -5,7 +5,6 @@
 
 import '../../compiler/ast.dart' as ast;
 import 'type_ast.dart';
-import 'type_dfa.dart';
 import 'mode.dart';
 import 'mode_error.dart';
 import 'guard_types.dart';

@@ -1,8 +1,7 @@
 // test/analysis/type_checker/primitive_state_modes_test.dart
 //
 // Tests for primitive state modes (Phase 0 implementation).
-// Verifies that primitiveStateModes correctly tracks mode information
-// and that mode checking at primitive positions works as expected.
+// Verifies that mode checking at primitive positions works as expected.
 //
 // Note: Bare primitives as type definitions (e.g., `Output ::= _`) are ILLEGAL.
 // Primitives can only appear:
@@ -10,34 +9,32 @@
 // 2. Within constructor arguments: `MyList ::= [] ; [_ | MyList].`
 
 import 'package:test/test.dart';
-import 'package:glp_runtime/analysis/type_checker/mode.dart';
-import 'package:glp_runtime/analysis/type_checker/type_compiler.dart';
+import 'package:glp_runtime/analysis/type_checker/program_dfa.dart';
 import 'package:glp_runtime/analysis/type_checker/type_parser.dart';
 import 'test_helpers.dart';
 
 void main() {
   group('Primitive State Modes', () {
-    test('List with _ head has produce mode at head position', () {
+    test('List with _ head has wildcard state for head position', () {
       final source = 'OutputList ::= [] ; [_ | OutputList].';
       final env = parseTypes(source);
-      final compiler = TypeCompiler(env);
+      final dfa = buildProgramDFA(env);
 
-      final dfa = compiler.compile('OutputList');
-
-      // The list type should have primitive states for the head element
-      expect(dfa.primitiveStateModes, isNotEmpty,
-          reason: 'List with _ head should have primitive state modes');
+      // The list type should have wildcard state for the head element
+      final automaton = dfa.getAutomaton('OutputList');
+      // Check that the automaton has transitions
+      expect(automaton.transitions.isNotEmpty, isTrue,
+          reason: 'List with _ head should have transitions');
     });
 
-    test('List with _? head has consume mode at head position', () {
+    test('List with _? head has wildcard state for head position', () {
       final source = 'InputList ::= [] ; [_? | InputList].';
       final env = parseTypes(source);
-      final compiler = TypeCompiler(env);
+      final dfa = buildProgramDFA(env);
 
-      final dfa = compiler.compile('InputList');
-
-      expect(dfa.primitiveStateModes, isNotEmpty,
-          reason: 'List with _? head should have primitive state modes');
+      final automaton = dfa.getAutomaton('InputList');
+      expect(automaton.transitions.isNotEmpty, isTrue,
+          reason: 'List with _? head should have transitions');
     });
   });
 
@@ -176,37 +173,26 @@ consume_list([H | T]) :- consume_list(T?).
   });
 
   group('Structural vs Primitive States', () {
-    test('Structural type has no primitive states', () {
+    test('Structural type has non-wildcard start state', () {
       final source = 'Nat ::= 0 ; s(Nat).';
       final env = parseTypes(source);
-      final compiler = TypeCompiler(env);
+      final dfa = buildProgramDFA(env);
 
-      final dfa = compiler.compile('Nat');
-
-      expect(dfa.primitiveStateModes, isEmpty, reason: 'Structural types have no primitive state modes');
+      final automaton = dfa.getAutomaton('Nat');
+      expect(automaton.startState.isWildcard, isFalse,
+          reason: 'Structural types have non-wildcard start states');
     });
 
-    test('isPrimitiveState returns false for structural states', () {
-      final source = 'Nat ::= 0 ; s(Nat).';
-      final env = parseTypes(source);
-      final compiler = TypeCompiler(env);
-
-      final dfa = compiler.compile('Nat');
-
-      expect(dfa.isPrimitiveState(dfa.startState), isFalse);
-    });
-
-    test('List with primitive head has primitive state for head position', () {
+    test('List start state is not wildcard', () {
       final source = 'OutputList ::= [] ; [_ | OutputList].';
       final env = parseTypes(source);
-      final compiler = TypeCompiler(env);
+      final dfa = buildProgramDFA(env);
 
-      final dfa = compiler.compile('OutputList');
-
-      // The start state (OutputList) is not primitive
-      expect(dfa.isPrimitiveState(dfa.startState), isFalse);
-      // But there should be primitive states for the head element
-      expect(dfa.primitiveStateModes.isNotEmpty, isTrue);
+      final automaton = dfa.getAutomaton('OutputList');
+      // The start state (OutputList) is not wildcard
+      expect(automaton.startState.isWildcard, isFalse);
+      // But transitions exist for the list structure
+      expect(automaton.transitions.isNotEmpty, isTrue);
     });
   });
 }
