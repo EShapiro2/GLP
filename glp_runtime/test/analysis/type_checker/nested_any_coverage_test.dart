@@ -53,7 +53,11 @@ copy([H | In], [H? | Out?]) :- copy(In?, Out).
         reason: 'List1 with single mode head should not require full coverage');
     });
 
-    test('List with input-only head - should PASS', () {
+    test('NEGATIVE: InvList with wrong variable placement fails', () {
+      // InvList ::= [] ; [_? | InvList] - elements are _? (input mode)
+      // procedure fill(InvList?, _) - arg1 is input, arg2 is output
+      // At input position (InvList?), clause head needs writers
+      // But [Slot? | Rest] has reader Slot? - WRONG
       final typeDecl = '''
 InvList ::= [] ; [_? | InvList].
 procedure fill(InvList?, _).
@@ -68,18 +72,47 @@ fill([Slot? | Rest], Val) :- Slot = Val?, fill(Rest?, Val?).
       final checker = ModeChecker(typeEnv);
       final errors = checker.checkProcedure('fill', 2, clauses);
 
-      print('\n=== Test: InvList with input-only head ===');
+      print('\n=== Test: NEGATIVE InvList wrong placement ===');
       print('Errors found: ${errors.length}');
       for (var error in errors) {
         print('  - ${error.message}');
       }
 
-      // Should pass - InvList head is _? only (single mode)
-      final hasCoverageError = errors.any((e) =>
-        e.message.contains('coverage'));
+      // Should FAIL - reader Slot? at input position is wrong
+      expect(errors.isNotEmpty, isTrue,
+        reason: 'Reader at input position should fail');
+    });
 
-      expect(hasCoverageError, isFalse,
-        reason: 'InvList with single mode head should not require full coverage');
+    test('POSITIVE: InvList with correct variable placement passes', () {
+      // InvList ::= [] ; [_? | InvList] - elements are _? (input mode)
+      // procedure fill(InvList?, _?) - arg1 is input (list), arg2 is input (value)
+      // At input position, clause head needs writers
+      // [Slot | Rest] has writer Slot - CORRECT for list
+      // Val is writer - CORRECT for value
+      // Body: Slot = Val? reads Val and writes to Slot
+      final typeDecl = '''
+InvList ::= [] ; [_? | InvList].
+procedure fill(InvList?, _?).
+''';
+      final clauseCode = '''
+fill([], _).
+fill([Slot | Rest], Val) :- Slot = Val?, fill(Rest?, Val?).
+''';
+
+      final clauses = parseClauses(clauseCode);
+      final typeEnv = parseTypes(typeDecl);
+      final checker = ModeChecker(typeEnv);
+      final errors = checker.checkProcedure('fill', 2, clauses);
+
+      print('\n=== Test: POSITIVE InvList correct placement ===');
+      print('Errors found: ${errors.length}');
+      for (var error in errors) {
+        print('  - ${error.message}');
+      }
+
+      // Should PASS - correct variable placement
+      expect(errors, isEmpty,
+        reason: 'Correct variable placement should pass');
     });
   });
 }
