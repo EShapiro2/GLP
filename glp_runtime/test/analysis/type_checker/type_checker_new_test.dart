@@ -107,24 +107,24 @@ succ(s(N), R) :- succ(N?, M), R = s(M?).
       }, skip: 'Complementarity checking for = with _UNIVERSAL_ type not yet implemented');
 
       test('fact clause only (no body)', () {
-        // Using = to bind output values
+        // Constant directly at output position - no body needed
         final source = '''
 Nat ::= 0 ; s(Nat).
 procedure zero(Nat).
 
-zero(X) :- X = 0.
+zero(0).
 ''';
         final result = checkTypes(source);
         expect(result.isWellTyped, isTrue, reason: result.toString());
       });
 
       test('single output argument', () {
-        // Using = to bind output values
+        // Constant directly at output position - no body needed
         final source = '''
 MyBool ::= mytrue ; myfalse.
 procedure yes(MyBool).
 
-yes(X) :- X = mytrue.
+yes(mytrue).
 ''';
         final result = checkTypes(source);
         expect(result.isWellTyped, isTrue, reason: result.toString());
@@ -310,7 +310,7 @@ undeclared(X, X?).
 Tree ::= leaf ; node(Tree, Tree).
 procedure mirror(Tree?, Tree).
 
-mirror(leaf, R) :- R = leaf.
+mirror(leaf, leaf).
 mirror(node(L, R), node(R2?, L2?)) :- mirror(L?, L2), mirror(R?, R2).
 ''';
         final result = checkTypes(source);
@@ -341,10 +341,10 @@ get(some(X), X?).
 MyBool ::= mytrue ; myfalse.
 procedure myand(MyBool?, MyBool?, MyBool).
 
-myand(mytrue, mytrue, R) :- R = mytrue.
-myand(mytrue, myfalse, R) :- R = myfalse.
-myand(myfalse, mytrue, R) :- R = myfalse.
-myand(myfalse, myfalse, R) :- R = myfalse.
+myand(mytrue, mytrue, mytrue).
+myand(mytrue, myfalse, myfalse).
+myand(myfalse, mytrue, myfalse).
+myand(myfalse, myfalse, myfalse).
 ''';
         final result = checkTypes(source);
         expect(result.isWellTyped, isTrue, reason: result.toString());
@@ -384,7 +384,7 @@ procedure test(Nat?, Nat).
 Nat ::= 0 ; s(Nat).
 procedure zero(Nat).
 
-zero(R) :- R = 0.
+zero(0).
 ''';
         // No input arguments - contravariance check should be vacuous
         final result = checkTypes(source);
