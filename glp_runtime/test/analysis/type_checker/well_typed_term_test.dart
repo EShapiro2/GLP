@@ -88,7 +88,7 @@ void main() {
         // Term: X (writer)
         final dfa = buildProgramDFA(TypeEnvironment.empty());
         final automaton = dfa.getAutomaton('_');
-        final term = ModedVariable.writer('X');
+        final term = ModedVariable.writer('X', structuralMode: Mode.produce);
 
         final result = checkModedTerm(term, automaton, dfa);
 
@@ -103,7 +103,7 @@ void main() {
         // Term: X? (reader)
         final dfa = buildProgramDFA(TypeEnvironment.empty());
         final automaton = dfa.getAutomaton('_?');
-        final term = ModedVariable.reader('X');
+        final term = ModedVariable.reader('X', structuralMode: Mode.consume);
 
         final result = checkModedTerm(term, automaton, dfa);
 
@@ -121,8 +121,8 @@ void main() {
         final automaton = dfa.getAutomaton('Stream');
         final term = ModedCompound.listCons(
           Mode.produce,
-          ModedVariable.writer('X'),
-          ModedVariable.writer('Xs'),
+          ModedVariable.writer('X', structuralMode: Mode.produce),
+          ModedVariable.writer('Xs', structuralMode: Mode.produce),
         );
 
         final result = checkModedTerm(term, automaton, dfa);
@@ -138,8 +138,8 @@ void main() {
         final automaton = dfa.getAutomaton('HollowStream');
         final term = ModedCompound.listCons(
           Mode.consume,
-          ModedVariable.reader('X'),
-          ModedVariable.reader('Xs'),
+          ModedVariable.reader('X', structuralMode: Mode.consume),
+          ModedVariable.reader('Xs', structuralMode: Mode.consume),
         );
 
         final result = checkModedTerm(term, automaton, dfa);
@@ -158,7 +158,7 @@ void main() {
         // Term: X (writer) - WRONG! needs consume but writer has produce
         final dfa = buildProgramDFA(TypeEnvironment.empty());
         final automaton = dfa.getAutomaton('_?');
-        final term = ModedVariable.writer('X');
+        final term = ModedVariable.writer('X', structuralMode: Mode.produce);
 
         final result = checkModedTerm(term, automaton, dfa);
 
@@ -172,7 +172,7 @@ void main() {
         // Term: X? (reader) - WRONG! needs produce but reader has consume
         final dfa = buildProgramDFA(TypeEnvironment.empty());
         final automaton = dfa.getAutomaton('_');
-        final term = ModedVariable.reader('X');
+        final term = ModedVariable.reader('X', structuralMode: Mode.consume);
 
         final result = checkModedTerm(term, automaton, dfa);
 
@@ -189,8 +189,8 @@ void main() {
         final automaton = dfa.getAutomaton('Stream');
         final term = ModedCompound.listCons(
           Mode.produce,
-          ModedVariable.reader('X'), // Wrong! produce position needs writer
-          ModedVariable.writer('Xs'),
+          ModedVariable.reader('X', structuralMode: Mode.consume), // Wrong! produce position needs writer
+          ModedVariable.writer('Xs', structuralMode: Mode.produce),
         );
 
         final result = checkModedTerm(term, automaton, dfa);
@@ -226,8 +226,8 @@ void main() {
 
         final term = ModedCompound.listCons(
           Mode.produce,
-          ModedVariable.writer('X'),
-          ModedVariable.writer('Xs'),
+          ModedVariable.writer('X', structuralMode: Mode.produce),
+          ModedVariable.writer('Xs', structuralMode: Mode.produce),
         );
 
         final result = checkModedTerm(term, automaton, dfa);
@@ -251,8 +251,8 @@ void main() {
         final automaton = dfa.getAutomaton('Pair');
 
         final term = ModedCompound(Mode.produce, 'pair', 2, [
-          ModedVariable.writer('X'),  // arg1: produce position
-          ModedVariable.reader('X'),  // arg2: consume position
+          ModedVariable.writer('X', structuralMode: Mode.produce),  // arg1: produce position
+          ModedVariable.reader('X', structuralMode: Mode.consume),  // arg2: consume position
         ]);
 
         final result = checkModedTerm(term, automaton, dfa);
@@ -270,8 +270,8 @@ void main() {
         final automaton = dfa.getAutomaton('Pair');
 
         final term = ModedCompound(Mode.produce, 'pair', 2, [
-          ModedVariable.reader('X'),  // arg1: produce position - WRONG
-          ModedVariable.writer('X'),  // arg2: consume position - WRONG
+          ModedVariable.reader('X', structuralMode: Mode.consume),  // arg1: produce position - WRONG
+          ModedVariable.writer('X', structuralMode: Mode.produce),  // arg2: consume position - WRONG
         ]);
 
         final result = checkModedTerm(term, automaton, dfa);
@@ -465,13 +465,13 @@ void main() {
 
         final inner = ModedCompound.listCons(
           Mode.produce,
-          ModedVariable.writer('Y'),
-          ModedVariable.writer('Zs'),
+          ModedVariable.writer('Y', structuralMode: Mode.produce),
+          ModedVariable.writer('Zs', structuralMode: Mode.produce),
         );
 
         final term = ModedCompound.listCons(
           Mode.produce,
-          ModedVariable.writer('X'),
+          ModedVariable.writer('X', structuralMode: Mode.produce),
           inner,
         );
 
