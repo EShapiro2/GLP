@@ -91,8 +91,11 @@ class TypeCompiler {
       }
     }
 
+    // Rebuild states from stateMap to include any primitive states created during transition processing
+    final allStates = stateMap.values.toSet();
+
     return TypeDFA(
-      states: states,
+      states: allStates,
       startState: stateMap[typeDef.name]!,
       finalStates: {finalState},
       transitions: transitions,
@@ -197,7 +200,7 @@ class TypeCompiler {
         final argType = alt.args[i];
         final argMode = _modeOfTypeExpr(argType, contextMode);
         final pathElem = PathElement.functor(alt.functor, alt.arity, i + 1, mode: argMode);
-        final targetState = _resolveTargetState(argType, stateMap, finalState);
+        final targetState = _resolveTargetState(argType, stateMap, finalState, primitiveStateModes);
         transitions[(fromState, pathElem)] = targetState;
       }
 
@@ -209,8 +212,8 @@ class TypeCompiler {
       final headElem = PathElement.listHead(mode: headMode);
       final tailElem = PathElement.listTail(mode: tailMode);
 
-      final headTarget = _resolveTargetState(alt.head, stateMap, finalState);
-      final tailTarget = _resolveTargetState(alt.tail, stateMap, finalState);
+      final headTarget = _resolveTargetState(alt.head, stateMap, finalState, primitiveStateModes);
+      final tailTarget = _resolveTargetState(alt.tail, stateMap, finalState, primitiveStateModes);
 
       transitions[(fromState, headElem)] = headTarget;
       transitions[(fromState, tailElem)] = tailTarget;
@@ -225,8 +228,8 @@ class TypeCompiler {
       final contentElem = PathElement.functor('\\', 2, 1, mode: contentMode);
       final holeElem = PathElement.functor('\\', 2, 2, mode: holeMode);
 
-      final contentTarget = _resolveTargetState(alt.content, stateMap, finalState);
-      final holeTarget = _resolveTargetState(alt.hole, stateMap, finalState);
+      final contentTarget = _resolveTargetState(alt.content, stateMap, finalState, primitiveStateModes);
+      final holeTarget = _resolveTargetState(alt.hole, stateMap, finalState, primitiveStateModes);
 
       transitions[(fromState, contentElem)] = contentTarget;
       transitions[(fromState, holeElem)] = holeTarget;
@@ -238,6 +241,7 @@ class TypeCompiler {
     TypeExpr expr,
     Map<String, DFAState> stateMap,
     DFAState finalState,
+    Map<DFAState, Set<Mode>> primitiveStateModes,
   ) {
     if (expr is TypeRef) {
       // Built-in types need special handling
@@ -248,6 +252,25 @@ class TypeCompiler {
       }
       return stateMap[expr.name] ?? finalState;
     }
+
+    // Handle primitive mode types (_ and _?)
+    // Use same base state name for both modes so complementarity check works
+    // (X at _ position and X? at _? position should be complementary)
+    if (expr is PrimitiveModeAlt) {
+      final mode = expr.isInput ? Mode.consume : Mode.produce;
+      const stateName = '_prim';
+
+      // Create the primitive state if needed
+      if (!stateMap.containsKey(stateName)) {
+        final primState = DFAState(stateName, isFinal: true);
+        stateMap[stateName] = primState;
+        primitiveStateModes[primState] = {};
+      }
+      // Add this mode to the accepted modes
+      primitiveStateModes[stateMap[stateName]!]!.add(mode);
+      return stateMap[stateName]!;
+    }
+
     // For inline type expressions, we'd need to create intermediate states
     // For now, assume all type arguments are references
     return finalState;
