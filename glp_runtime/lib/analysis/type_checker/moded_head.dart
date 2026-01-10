@@ -194,6 +194,9 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
     return defaultModes;
   }
 
+  // Check if expected type is a complement (isInput=true)
+  final isComplement = expectedType is TypeRef && expectedType.isInput;
+
   // Find matching structure alternative in type definition
   for (final alt in typeDef.alternatives) {
     if (alt is StructAlt && alt.functor == functor && alt.arity == arity) {
@@ -202,7 +205,9 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
       for (final argType in alt.args) {
         final embeddedMode = _getEmbeddedMode(argType);
         final combinedMode = combineMode(parentMode, embeddedMode);
-        result.add((combinedMode, argType));
+        // For complement types, flip the subterm type for DFA leaf checking
+        final subtermType = isComplement ? _complementType(argType) : argType;
+        result.add((combinedMode, subtermType));
       }
       return result;
     }
@@ -211,9 +216,11 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
     if (alt is DiffListAlt && functor == r'\' && arity == 2) {
       final contentMode = _getEmbeddedMode(alt.content);
       final holeMode = _getEmbeddedMode(alt.hole);
+      final contentType = isComplement ? _complementType(alt.content) : alt.content;
+      final holeType = isComplement ? _complementType(alt.hole) : alt.hole;
       return [
-        (combineMode(parentMode, contentMode), alt.content),
-        (combineMode(parentMode, holeMode), alt.hole),
+        (combineMode(parentMode, contentMode), contentType),
+        (combineMode(parentMode, holeMode), holeType),
       ];
     }
   }
@@ -250,14 +257,24 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
     return defaultResult;
   }
 
+  // Check if expected type is a complement (isInput=true)
+  final isComplement = expectedType is TypeRef && expectedType.isInput;
+
   // Find ListConsAlt in type definition
   for (final alt in typeDef.alternatives) {
     if (alt is ListConsAlt) {
       final headEmbeddedMode = _getEmbeddedMode(alt.head);
       final tailEmbeddedMode = _getEmbeddedMode(alt.tail);
+      final headMode = combineMode(parentMode, headEmbeddedMode);
+      final tailMode = combineMode(parentMode, tailEmbeddedMode);
+
+      // For complement types, flip the subterm types for DFA leaf checking
+      final headType = isComplement ? _complementType(alt.head) : alt.head;
+      final tailType = isComplement ? _complementType(alt.tail) : alt.tail;
+
       return (
-        (combineMode(parentMode, headEmbeddedMode), alt.head),
-        (combineMode(parentMode, tailEmbeddedMode), alt.tail),
+        (headMode, headType),
+        (tailMode, tailType),
       );
     }
   }
@@ -281,6 +298,21 @@ Mode _getEmbeddedMode(TypeExpr expr) {
   }
   // Default to produce for other expressions
   return Mode.produce;
+}
+
+/// Get the complement of a type expression.
+///
+/// Flips the isInput flag for TypeRef and PrimitiveModeAlt.
+/// Returns the expression unchanged for other types.
+TypeExpr _complementType(TypeExpr expr) {
+  if (expr is TypeRef) {
+    // TypeRef has a complement() method
+    return expr.complement();
+  }
+  if (expr is PrimitiveModeAlt) {
+    return PrimitiveModeAlt(!expr.isInput, expr.line, expr.column);
+  }
+  return expr;
 }
 
 /// Flip all variables in a moded term.

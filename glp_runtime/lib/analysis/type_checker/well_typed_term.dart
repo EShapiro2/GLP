@@ -300,10 +300,11 @@ PathCheckResult _checkLeafConsistencyForPath(PathStep leaf, DFAState state, Prog
 /// Convert PathStep to LeafTerm for checkLeafConsistency
 LeafTerm _pathStepToLeafTerm(PathStep step) {
   if (step.isVariable) {
+    // Use the actual structural mode from the path step, not a hardcoded mode
     if (step.isReader) {
-      return LeafTerm.reader(step.symbol, mode: Mode.consume);
+      return LeafTerm.reader(step.symbol, mode: step.mode);
     } else {
-      return LeafTerm.writer(step.symbol, mode: Mode.produce);
+      return LeafTerm.writer(step.symbol, mode: step.mode);
     }
   } else {
     // Constant - determine type

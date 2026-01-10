@@ -16,7 +16,7 @@ void main() {
 
     group('ModedVariable', () {
       test('reader has consume mode', () {
-        final v = ModedVariable.reader('X');
+        final v = ModedVariable.reader('X', structuralMode: Mode.consume);
         expect(v.name, equals('X'));
         expect(v.isReader, isTrue);
         expect(v.isWriter, isFalse);
@@ -24,7 +24,7 @@ void main() {
       });
 
       test('writer has produce mode', () {
-        final v = ModedVariable.writer('X');
+        final v = ModedVariable.writer('X', structuralMode: Mode.produce);
         expect(v.name, equals('X'));
         expect(v.isReader, isFalse);
         expect(v.isWriter, isTrue);
@@ -32,15 +32,15 @@ void main() {
       });
 
       test('toString includes ? for readers', () {
-        expect(ModedVariable.reader('X').toString(), equals('X?'));
-        expect(ModedVariable.writer('X').toString(), equals('X'));
+        expect(ModedVariable.reader('X', structuralMode: Mode.consume).toString(), equals('X?'));
+        expect(ModedVariable.writer('X', structuralMode: Mode.produce).toString(), equals('X'));
       });
 
       test('equality based on name and reader status', () {
-        expect(ModedVariable.reader('X'), equals(ModedVariable.reader('X')));
-        expect(ModedVariable.writer('X'), equals(ModedVariable.writer('X')));
-        expect(ModedVariable.reader('X'), isNot(equals(ModedVariable.writer('X'))));
-        expect(ModedVariable.reader('X'), isNot(equals(ModedVariable.reader('Y'))));
+        expect(ModedVariable.reader('X', structuralMode: Mode.consume), equals(ModedVariable.reader('X', structuralMode: Mode.consume)));
+        expect(ModedVariable.writer('X', structuralMode: Mode.produce), equals(ModedVariable.writer('X', structuralMode: Mode.produce)));
+        expect(ModedVariable.reader('X', structuralMode: Mode.consume), isNot(equals(ModedVariable.writer('X', structuralMode: Mode.produce))));
+        expect(ModedVariable.reader('X', structuralMode: Mode.consume), isNot(equals(ModedVariable.reader('Y', structuralMode: Mode.consume))));
       });
     });
 
@@ -89,7 +89,7 @@ void main() {
     group('ModedCompound', () {
       test('simple compound with mode', () {
         final c = ModedCompound(Mode.consume, 's', 1, [
-          ModedVariable.reader('N'),
+          ModedVariable.reader('N', structuralMode: Mode.consume),
         ]);
         expect(c.functor, equals('s'));
         expect(c.arity, equals(1));
@@ -100,8 +100,8 @@ void main() {
       test('list cons detection', () {
         final cons = ModedCompound.listCons(
           Mode.consume,
-          ModedVariable.reader('X'),
-          ModedVariable.reader('Xs'),
+          ModedVariable.reader('X', structuralMode: Mode.consume),
+          ModedVariable.reader('Xs', structuralMode: Mode.consume),
         );
         expect(cons.functor, equals('[|]'));
         expect(cons.arity, equals(2));
@@ -110,8 +110,8 @@ void main() {
 
       test('toString for regular compound', () {
         final c = ModedCompound(Mode.consume, 'foo', 2, [
-          ModedVariable.reader('X'),
-          ModedVariable.writer('Y'),
+          ModedVariable.reader('X', structuralMode: Mode.consume),
+          ModedVariable.writer('Y', structuralMode: Mode.produce),
         ]);
         expect(c.toString(), equals('↓foo(X?, Y)'));
       });
@@ -119,8 +119,8 @@ void main() {
       test('toString for list cons', () {
         final cons = ModedCompound.listCons(
           Mode.consume,
-          ModedVariable.reader('X'),
-          ModedVariable.reader('Xs'),
+          ModedVariable.reader('X', structuralMode: Mode.consume),
+          ModedVariable.reader('Xs', structuralMode: Mode.consume),
         );
         expect(cons.toString(), equals('↓[X?|Xs?]'));
       });
@@ -131,10 +131,10 @@ void main() {
       });
 
       test('equality based on mode, functor, arity, and args', () {
-        final c1 = ModedCompound(Mode.consume, 'f', 1, [ModedVariable.reader('X')]);
-        final c2 = ModedCompound(Mode.consume, 'f', 1, [ModedVariable.reader('X')]);
-        final c3 = ModedCompound(Mode.produce, 'f', 1, [ModedVariable.reader('X')]);
-        final c4 = ModedCompound(Mode.consume, 'g', 1, [ModedVariable.reader('X')]);
+        final c1 = ModedCompound(Mode.consume, 'f', 1, [ModedVariable.reader('X', structuralMode: Mode.consume)]);
+        final c2 = ModedCompound(Mode.consume, 'f', 1, [ModedVariable.reader('X', structuralMode: Mode.consume)]);
+        final c3 = ModedCompound(Mode.produce, 'f', 1, [ModedVariable.reader('X', structuralMode: Mode.consume)]);
+        final c4 = ModedCompound(Mode.consume, 'g', 1, [ModedVariable.reader('X', structuralMode: Mode.consume)]);
 
         expect(c1, equals(c2));
         expect(c1, isNot(equals(c3))); // different mode
@@ -148,7 +148,7 @@ void main() {
 
     group('complement', () {
       test('complement of reader is writer', () {
-        final v = ModedVariable.reader('X');
+        final v = ModedVariable.reader('X', structuralMode: Mode.consume);
         final c = complement(v) as ModedVariable;
         expect(c.name, equals('X'));
         expect(c.isReader, isFalse);
@@ -156,7 +156,7 @@ void main() {
       });
 
       test('complement of writer is reader', () {
-        final v = ModedVariable.writer('X');
+        final v = ModedVariable.writer('X', structuralMode: Mode.produce);
         final c = complement(v) as ModedVariable;
         expect(c.name, equals('X'));
         expect(c.isReader, isTrue);
@@ -173,7 +173,7 @@ void main() {
       test('complement flips compound mode and recurses', () {
         // ↓f(X?) => ↑f(X)
         final original = ModedCompound(Mode.consume, 'f', 1, [
-          ModedVariable.reader('X'),
+          ModedVariable.reader('X', structuralMode: Mode.consume),
         ]);
         final comp = complement(original) as ModedCompound;
 
@@ -187,7 +187,7 @@ void main() {
 
       test('complement is involution: complement(complement(t)) == t', () {
         // Test with variable
-        final v = ModedVariable.reader('X');
+        final v = ModedVariable.reader('X', structuralMode: Mode.consume);
         expect(complement(complement(v)), equals(v));
 
         // Test with constant
@@ -196,7 +196,7 @@ void main() {
 
         // Test with nested compound
         final compound = ModedCompound(Mode.consume, 'f', 2, [
-          ModedVariable.reader('X'),
+          ModedVariable.reader('X', structuralMode: Mode.consume),
           ModedCompound(Mode.produce, 'g', 1, [
             ModedConstant(Mode.produce, 'a'),
           ]),
@@ -209,13 +209,13 @@ void main() {
         final original = ModedCompound(Mode.consume, 'merge', 3, [
           ModedCompound.listCons(
             Mode.consume,
-            ModedVariable.reader('X'),
-            ModedVariable.reader('Xs'),
+            ModedVariable.reader('X', structuralMode: Mode.consume),
+            ModedVariable.reader('Xs', structuralMode: Mode.consume),
           ),
           ModedVariable.reader('Ys'),
           ModedCompound.listCons(
             Mode.produce,
-            ModedVariable.writer('X'),
+            ModedVariable.writer('X', structuralMode: Mode.produce),
             ModedVariable.writer('Zs'),
           ),
         ]);
@@ -323,7 +323,7 @@ void main() {
 
     group('paths', () {
       test('single variable term has one path', () {
-        final v = ModedVariable.reader('X');
+        final v = ModedVariable.reader('X', structuralMode: Mode.consume);
         final ps = paths(v);
 
         expect(ps.length, equals(1));
@@ -349,8 +349,8 @@ void main() {
       test('simple compound has paths to each argument', () {
         // ↓f(X?, Y)
         final compound = ModedCompound(Mode.consume, 'f', 2, [
-          ModedVariable.reader('X'),
-          ModedVariable.writer('Y'),
+          ModedVariable.reader('X', structuralMode: Mode.consume),
+          ModedVariable.writer('Y', structuralMode: Mode.produce),
         ]);
         final ps = paths(compound);
 
@@ -373,7 +373,7 @@ void main() {
         // ↓f(↑g(X?))
         final compound = ModedCompound(Mode.consume, 'f', 1, [
           ModedCompound(Mode.produce, 'g', 1, [
-            ModedVariable.reader('X'),
+            ModedVariable.reader('X', structuralMode: Mode.consume),
           ]),
         ]);
         final ps = paths(compound);
@@ -404,13 +404,13 @@ void main() {
         final modedHead = ModedCompound(Mode.consume, 'merge', 3, [
           ModedCompound.listCons(
             Mode.consume,
-            ModedVariable.reader('X'),
-            ModedVariable.reader('Xs'),
+            ModedVariable.reader('X', structuralMode: Mode.consume),
+            ModedVariable.reader('Xs', structuralMode: Mode.consume),
           ),
           ModedVariable.reader('Ys'),
           ModedCompound.listCons(
             Mode.produce,
-            ModedVariable.writer('X'),
+            ModedVariable.writer('X', structuralMode: Mode.produce),
             ModedVariable.writer('Zs'),
           ),
         ]);
@@ -462,7 +462,7 @@ void main() {
         // ↓[↓X?|↓[]]
         final term = ModedCompound.listCons(
           Mode.consume,
-          ModedVariable.reader('X'),
+          ModedVariable.reader('X', structuralMode: Mode.consume),
           ModedConstant.nil(Mode.consume),
         );
 
@@ -486,11 +486,11 @@ void main() {
 
     group('Negative Controls', () {
       test('different variable names are not equal', () {
-        expect(ModedVariable.reader('X'), isNot(equals(ModedVariable.reader('Y'))));
+        expect(ModedVariable.reader('X', structuralMode: Mode.consume), isNot(equals(ModedVariable.reader('Y', structuralMode: Mode.consume))));
       });
 
       test('reader and writer of same name are not equal', () {
-        expect(ModedVariable.reader('X'), isNot(equals(ModedVariable.writer('X'))));
+        expect(ModedVariable.reader('X', structuralMode: Mode.consume), isNot(equals(ModedVariable.writer('X', structuralMode: Mode.produce))));
       });
 
       test('constants with different modes are not equal', () {
@@ -513,10 +513,10 @@ void main() {
       });
 
       test('compounds with different arities are not equal', () {
-        final c1 = ModedCompound(Mode.consume, 'f', 1, [ModedVariable.reader('X')]);
+        final c1 = ModedCompound(Mode.consume, 'f', 1, [ModedVariable.reader('X', structuralMode: Mode.consume)]);
         final c2 = ModedCompound(Mode.consume, 'f', 2, [
-          ModedVariable.reader('X'),
-          ModedVariable.reader('Y'),
+          ModedVariable.reader('X', structuralMode: Mode.consume),
+          ModedVariable.reader('Y', structuralMode: Mode.consume),
         ]);
         expect(c1, isNot(equals(c2)));
       });
@@ -545,8 +545,8 @@ void main() {
         final term = ModedCompound(Mode.consume, 'merge', 2, [
           ModedCompound.listCons(
             Mode.consume,
-            ModedVariable.reader('X'),
-            ModedVariable.reader('Xs'),
+            ModedVariable.reader('X', structuralMode: Mode.consume),
+            ModedVariable.reader('Xs', structuralMode: Mode.consume),
           ),
           ModedVariable.reader('Ys'),
         ]);
@@ -560,7 +560,7 @@ void main() {
 
       test('returns true for single consumed variable (reader)', () {
         // Variables have implicit mode based on reader/writer
-        final term = ModedVariable.reader('X');
+        final term = ModedVariable.reader('X', structuralMode: Mode.consume);
         expect(isConsumed(term), isTrue);
       });
 
@@ -569,13 +569,13 @@ void main() {
         final term = ModedCompound(Mode.consume, 'merge', 3, [
           ModedCompound.listCons(
             Mode.consume,
-            ModedVariable.reader('X'),
-            ModedVariable.reader('Xs'),
+            ModedVariable.reader('X', structuralMode: Mode.consume),
+            ModedVariable.reader('Xs', structuralMode: Mode.consume),
           ),
           ModedVariable.reader('Ys'),
           ModedCompound.listCons(
             Mode.produce, // This makes it not fully consumed
-            ModedVariable.writer('X'),
+            ModedVariable.writer('X', structuralMode: Mode.produce),
             ModedVariable.writer('Zs'),
           ),
         ]);
@@ -594,8 +594,8 @@ void main() {
         final term = ModedCompound(Mode.produce, 'merge', 2, [
           ModedCompound.listCons(
             Mode.produce,
-            ModedVariable.writer('X'),
-            ModedVariable.writer('Xs'),
+            ModedVariable.writer('X', structuralMode: Mode.produce),
+            ModedVariable.writer('Xs', structuralMode: Mode.produce),
           ),
           ModedVariable.writer('Ys'),
         ]);
@@ -608,15 +608,15 @@ void main() {
       });
 
       test('returns true for single produced variable (writer)', () {
-        final term = ModedVariable.writer('X');
+        final term = ModedVariable.writer('X', structuralMode: Mode.produce);
         expect(isProduced(term), isTrue);
       });
 
       test('returns false when any annotation is consume', () {
         // ↑merge(↓X?, Y) - has ↓ in first arg
         final term = ModedCompound(Mode.produce, 'merge', 2, [
-          ModedVariable.reader('X'), // reader has consume mode
-          ModedVariable.writer('Y'),
+          ModedVariable.reader('X', structuralMode: Mode.consume), // reader has consume mode
+          ModedVariable.writer('Y', structuralMode: Mode.produce),
         ]);
         expect(isProduced(term), isFalse);
       });
@@ -634,13 +634,13 @@ void main() {
         final term = ModedCompound(Mode.consume, 'merge', 3, [
           ModedCompound.listCons(
             Mode.consume,
-            ModedVariable.reader('X'),
-            ModedVariable.reader('Xs'),
+            ModedVariable.reader('X', structuralMode: Mode.consume),
+            ModedVariable.reader('Xs', structuralMode: Mode.consume),
           ),
           ModedVariable.reader('Ys'),
           ModedCompound.listCons(
             Mode.produce,
-            ModedVariable.writer('X'),
+            ModedVariable.writer('X', structuralMode: Mode.produce),
             ModedVariable.writer('Zs'),
           ),
         ]);
@@ -651,8 +651,8 @@ void main() {
         // ↓[↓X?|Xs?] - all ↓, valid I/O (zero inversions)
         final term = ModedCompound.listCons(
           Mode.consume,
-          ModedVariable.reader('X'),
-          ModedVariable.reader('Xs'),
+          ModedVariable.reader('X', structuralMode: Mode.consume),
+          ModedVariable.reader('Xs', structuralMode: Mode.consume),
         );
         expect(isIO(term), isTrue);
       });
@@ -660,8 +660,8 @@ void main() {
       test('returns false when root is produce', () {
         // ↑merge(...) - root is ↑, not valid I/O
         final term = ModedCompound(Mode.produce, 'merge', 2, [
-          ModedVariable.writer('X'),
-          ModedVariable.writer('Y'),
+          ModedVariable.writer('X', structuralMode: Mode.produce),
+          ModedVariable.writer('Y', structuralMode: Mode.produce),
         ]);
         expect(isIO(term), isFalse);
       });
@@ -671,7 +671,7 @@ void main() {
         final term = ModedCompound(Mode.consume, 'f', 1, [
           ModedCompound(Mode.produce, 'g', 1, [
             ModedCompound(Mode.consume, 'h', 1, [ // Invalid: ↑ → ↓
-              ModedVariable.reader('X'),
+              ModedVariable.reader('X', structuralMode: Mode.consume),
             ]),
           ]),
         ]);
@@ -692,13 +692,13 @@ void main() {
 
       test('returns false for writer variable (implicit produce mode)', () {
         // X (writer) has implicit produce mode - not valid I/O root
-        final term = ModedVariable.writer('X');
+        final term = ModedVariable.writer('X', structuralMode: Mode.produce);
         expect(isIO(term), isFalse);
       });
 
       test('returns true for reader variable (implicit consume mode)', () {
         // X? (reader) has implicit consume mode - valid I/O root
-        final term = ModedVariable.reader('X');
+        final term = ModedVariable.reader('X', structuralMode: Mode.consume);
         expect(isIO(term), isTrue);
       });
     });
