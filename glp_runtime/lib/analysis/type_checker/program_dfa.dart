@@ -514,6 +514,17 @@ LeafConsistencyResult checkLeafConsistency(
   DFAState state,
   ProgramDFA dfa,
 ) {
+  // DEBUG - REMOVE AFTER FIXING
+  print('DEBUG checkLeafConsistency:');
+  print('  leaf.name=${leaf.name}');
+  print('  leaf.isVariable=${leaf.isVariable}');
+  print('  leaf.isReader=${leaf.isReader}');
+  print('  leaf.mode=${leaf.mode}');
+  print('  state.name=${state.name}');
+  print('  state.baseName=${state.baseName}');
+  print('  state.isComplement=${state.isComplement}');
+  print('  state.isProducedWildcard=${state.isProducedWildcard}');
+
   // Case: Produced wildcard final state (_)
   if (state.isProducedWildcard) {
     // Definition 4.3 case 3(b): type path ends in _ and term has produce mode
