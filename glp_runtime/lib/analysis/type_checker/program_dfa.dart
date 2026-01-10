@@ -121,6 +121,9 @@ class Automaton {
     return _transitions[(from, label)];
   }
 
+  /// Get all transitions (for iteration by coverage checker).
+  Map<(DFAState, TransitionLabel), DFAState> get transitions => _transitions;
+
   /// Create complement automaton by flipping all states and modes.
   Automaton get complement {
     final newTransitions = <(DFAState, TransitionLabel), DFAState>{};

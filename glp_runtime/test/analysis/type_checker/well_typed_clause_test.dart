@@ -1,7 +1,7 @@
 // test/analysis/type_checker/well_typed_clause_test.dart
 //
 // Tests for well_typed_clause.dart
-// Specification: docs/modules/well-typed-clause.md v0.1
+// Specification: docs/modules/well-typed-clause.md v0.6
 // Paper Reference: Definition 4.8
 //
 // Note: Types like `BiMode ::= _ ; _?` are ILLEGAL because they create
@@ -11,8 +11,7 @@
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/mode.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
-import 'package:glp_runtime/analysis/type_checker/type_dfa.dart';
-import 'package:glp_runtime/analysis/type_checker/type_compiler.dart';
+import 'package:glp_runtime/analysis/type_checker/program_dfa.dart';
 import 'package:glp_runtime/analysis/type_checker/well_typed_clause.dart';
 import 'package:glp_runtime/compiler/ast.dart' as ast;
 
@@ -148,12 +147,12 @@ void main() {
           0,
         ));
 
-        final compiler = TypeCompiler(env);
+        final dfa = buildProgramDFA(env);
         final clause = TypedClause(
           head: goal('foo', [varTerm('X', isReader: true)]),
         );
 
-        final result = checkClause(clause, env, compiler);
+        final result = checkClause(clause, dfa, env);
 
         expect(result.isWellTyped, isTrue);
         expect(result.errors, isEmpty);
@@ -171,12 +170,12 @@ void main() {
           0,
         ));
 
-        final compiler = TypeCompiler(env);
+        final dfa = buildProgramDFA(env);
         final clause = TypedClause(
           head: goal('bar', [varTerm('X')]),
         );
 
-        final result = checkClause(clause, env, compiler);
+        final result = checkClause(clause, dfa, env);
 
         expect(result.isWellTyped, isTrue);
         expect(result.errors, isEmpty);
@@ -194,12 +193,12 @@ void main() {
           0,
         ));
 
-        final compiler = TypeCompiler(env);
+        final dfa = buildProgramDFA(env);
         final clause = TypedClause(
           head: goal('foo', [varTerm('X')]),
         );
 
-        final result = checkClause(clause, env, compiler);
+        final result = checkClause(clause, dfa, env);
 
         expect(result.isWellTyped, isFalse);
         expect(result.errors, hasLength(1));
@@ -218,12 +217,12 @@ void main() {
           0,
         ));
 
-        final compiler = TypeCompiler(env);
+        final dfa = buildProgramDFA(env);
         final clause = TypedClause(
           head: goal('bar', [varTerm('X', isReader: true)]),
         );
 
-        final result = checkClause(clause, env, compiler);
+        final result = checkClause(clause, dfa, env);
 
         expect(result.isWellTyped, isFalse);
         expect(result.errors, hasLength(1));
@@ -241,12 +240,12 @@ void main() {
           0,
         ));
 
-        final compiler = TypeCompiler(env);
+        final dfa = buildProgramDFA(env);
         final clause = TypedClause(
           head: goal('nat', [constTerm(0)]),
         );
 
-        final result = checkClause(clause, env, compiler);
+        final result = checkClause(clause, dfa, env);
 
         expect(result.isWellTyped, isTrue);
       });
@@ -280,7 +279,7 @@ void main() {
           0,
         ));
 
-        final compiler = TypeCompiler(env);
+        final dfa = buildProgramDFA(env);
 
         // Test first clause: append([], Ys, Ys?).
         // Arg 1 (input): [] constant - OK
@@ -294,7 +293,7 @@ void main() {
           ]),
         );
 
-        final result1 = checkClause(clause1, env, compiler);
+        final result1 = checkClause(clause1, dfa, env);
         expect(result1.isWellTyped, isTrue);
 
         // Test second clause: append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
@@ -319,7 +318,7 @@ void main() {
           ],
         );
 
-        final result2 = checkClause(clause2, env, compiler);
+        final result2 = checkClause(clause2, dfa, env);
         expect(result2.isWellTyped, isTrue);
       });
 
@@ -341,7 +340,7 @@ void main() {
           0,
         ));
 
-        final compiler = TypeCompiler(env);
+        final dfa = buildProgramDFA(env);
 
         final clause = TypedClause(
           head: goal('append', [
@@ -351,7 +350,7 @@ void main() {
           ]),
         );
 
-        final result = checkClause(clause, env, compiler);
+        final result = checkClause(clause, dfa, env);
         expect(result.isWellTyped, isFalse);
       });
 
@@ -364,7 +363,7 @@ void main() {
           0,
         ));
 
-        final compiler = TypeCompiler(env);
+        final dfa = buildProgramDFA(env);
         final clause = TypedClause(
           head: goal('foo', [varTerm('X', isReader: true)]),  // reader at output
           bodyAtoms: [
@@ -372,7 +371,7 @@ void main() {
           ],
         );
 
-        final result = checkClause(clause, env, compiler);
+        final result = checkClause(clause, dfa, env);
 
         expect(result.isWellTyped, isFalse);
         expect(result.errors.any((e) => e is BodyAtomError), isTrue);
@@ -411,7 +410,7 @@ void main() {
           0,
         ));
 
-        final compiler = TypeCompiler(env);
+        final dfa = buildProgramDFA(env);
         final clause = TypedClause(
           head: goal('test', [
             structTerm('pair', [
@@ -421,7 +420,7 @@ void main() {
           ]),
         );
 
-        final result = checkClause(clause, env, compiler);
+        final result = checkClause(clause, dfa, env);
 
         expect(result.isWellTyped, isTrue);
         expect(result.variableTypes, contains('X'));
@@ -442,7 +441,7 @@ void main() {
           0,
         ));
 
-        final compiler = TypeCompiler(env);
+        final dfa = buildProgramDFA(env);
         final clause = TypedClause(
           head: goal('test', [
             structTerm('pair', [
@@ -452,7 +451,7 @@ void main() {
           ]),
         );
 
-        final result = checkClause(clause, env, compiler);
+        final result = checkClause(clause, dfa, env);
 
         expect(result.isWellTyped, isFalse);
       });
@@ -474,7 +473,7 @@ void main() {
           0,
         ));
 
-        final compiler = TypeCompiler(env);
+        final dfa = buildProgramDFA(env);
         final clause = TypedClause(
           head: goal('mismatch', [
             varTerm('X', isReader: true),  // reader at output position
@@ -482,7 +481,7 @@ void main() {
           ]),
         );
 
-        final result = checkClause(clause, env, compiler);
+        final result = checkClause(clause, dfa, env);
 
         expect(result.isWellTyped, isFalse);
         expect(result.errors.any((e) => e is ClauseComplementaryError), isTrue);
@@ -496,13 +495,13 @@ void main() {
     group('Error Handling', () {
       test('undefined procedure returns error', () {
         final env = createBasicEnvironment();
-        final compiler = TypeCompiler(env);
+        final dfa = buildProgramDFA(env);
 
         final clause = TypedClause(
           head: goal('undefined', [varTerm('X')]),
         );
 
-        final result = checkClause(clause, env, compiler);
+        final result = checkClause(clause, dfa, env);
 
         expect(result.isWellTyped, isFalse);
         expect(result.errors.first, isA<UndefinedProcedureError>());
@@ -519,12 +518,12 @@ void main() {
           0,
         ));
 
-        final compiler = TypeCompiler(env);
+        final dfa = buildProgramDFA(env);
         final clause = TypedClause(
           head: goal('foo', [varTerm('X', isReader: true)]), // foo/1 - not defined
         );
 
-        final result = checkClause(clause, env, compiler);
+        final result = checkClause(clause, dfa, env);
 
         expect(result.isWellTyped, isFalse);
         expect(result.errors.first, isA<UndefinedProcedureError>());
@@ -551,42 +550,6 @@ void main() {
 
         expect(result.isWellTyped, isFalse);
         expect(result.errors, hasLength(1));
-      });
-    });
-
-    // =========================================================================
-    // TypeDFA.applyModeComplement Tests
-    // =========================================================================
-
-    group('TypeDFA.applyModeComplement', () {
-      test('flips consume to produce', () {
-        final state = DFAState('T');
-        final dfa = TypeDFA(
-          states: {state},
-          startState: state,
-          finalStates: {},
-          transitions: {},
-          primitiveStateModes: {state: {Mode.consume}},
-        );
-
-        final complemented = dfa.applyModeComplement();
-
-        expect(complemented.getModesAt(state), equals({Mode.produce}));
-      });
-
-      test('flips produce to consume', () {
-        final state = DFAState('T');
-        final dfa = TypeDFA(
-          states: {state},
-          startState: state,
-          finalStates: {},
-          transitions: {},
-          primitiveStateModes: {state: {Mode.produce}},
-        );
-
-        final complemented = dfa.applyModeComplement();
-
-        expect(complemented.getModesAt(state), equals({Mode.consume}));
       });
     });
   });

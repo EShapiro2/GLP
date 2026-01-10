@@ -10,8 +10,7 @@
 //    a clause C ∈ Cs that accepts it
 
 import 'type_ast.dart';
-import 'type_dfa.dart';
-import 'type_compiler.dart';
+import 'program_dfa.dart';
 import 'type_parser.dart';
 import 'well_typed_clause.dart' as wtc;
 import '../../compiler/ast.dart' as ast;
@@ -105,9 +104,9 @@ class CoverageError {
 /// The main type checker implementing Definition 4.10
 class TypeChecker {
   final TypeEnvironment typeEnv;
-  final TypeCompiler compiler;
+  final ProgramDFA dfa;
 
-  TypeChecker(this.typeEnv) : compiler = TypeCompiler(typeEnv);
+  TypeChecker(this.typeEnv) : dfa = buildProgramDFA(typeEnv);
 
   /// Check a program (list of clauses) against declared types
   ///
@@ -195,7 +194,7 @@ class TypeChecker {
     final errors = <TypeError>[];
 
     try {
-      final result = wtc.checkClauseFromAst(clause, typeEnv);
+      final result = wtc.checkClauseFromAst(clause, dfa, typeEnv);
 
       if (!result.isWellTyped) {
         // Convert ClauseErrors to TypeErrors
@@ -255,13 +254,17 @@ class TypeChecker {
     // Handle named type references
     final typeRef = argType as TypeRef;
 
-    // Compile base type to DFA
-    TypeDFA inputDFA;
+    // For input arguments, we need the complement automaton (T?)
+    // to check what values the argument can receive
+    final inputTypeName = typeRef.isInput ? '${typeRef.name}?' : typeRef.name;
+
+    // Get automaton for the input type
+    Automaton inputAutomaton;
     try {
-      inputDFA = compiler.compile(typeRef.name);
+      inputAutomaton = dfa.getAutomaton(inputTypeName);
     } catch (e) {
       errors.add(TypeError(
-        'Cannot compile type ${typeRef.name}: $e',
+        'Cannot get automaton for type $inputTypeName: $e',
         decl.line,
         decl.column,
       ));
@@ -273,12 +276,12 @@ class TypeChecker {
 
     // Check coverage starting from the start state
     final coverageErrors = _checkStateCoverage(
-      inputDFA.startState,
+      inputAutomaton.startState,
       clauses,
       argIndex,
       typeRef.name,
       visited,
-      inputDFA,
+      inputAutomaton,
       decl,
     );
 
@@ -303,7 +306,7 @@ class TypeChecker {
     int argIndex,
     String pathPrefix,
     Set<String> visited,
-    TypeDFA dfa,
+    Automaton automaton,
     ProcDecl decl, {
     List<int> structPath = const [],
   }) {
@@ -317,12 +320,13 @@ class TypeChecker {
 
     // Leaf states (primitives) don't need structural coverage
     // They're covered by variables matching the appropriate mode
-    if (dfa.isPrimitiveState(state)) {
+    // Primitive states are _ or _?
+    if (state.baseName == '_') {
       return errors;
     }
 
     // Final states also don't need further coverage
-    if (dfa.finalStates.contains(state)) {
+    if (state.isFinal) {
       return errors;
     }
 
@@ -333,19 +337,18 @@ class TypeChecker {
     }
 
     // Get all transitions (alternatives) from this state
-    final transitions = _getTransitionsFromState(state, dfa);
+    final transitions = _getTransitionsFromState(state, automaton);
 
     for (final entry in transitions.entries) {
-      final pathElem = entry.key;
+      final label = entry.key;
       final targetState = entry.value;
-      final labelStr = pathElem.symbol;
 
       // Check if some clause accepts this transition at the current path
-      if (_clauseAcceptsLabelAtPath(clauses, argIndex, structPath, labelStr)) {
+      if (_clauseAcceptsLabelAtPath(clauses, argIndex, structPath, label)) {
         // Recursively check the target state with extended path
-        final newPath = '$pathPrefix → $labelStr';
+        final newPath = '$pathPrefix → $label';
         // Extract arg index from symbol like "f(2,1)" or "\(2,1)" or "[|](2,1)"
-        final argIdxFromLabel = _extractArgIndex(labelStr);
+        final argIdxFromLabel = _extractArgIndex(label);
         final newStructPath = argIdxFromLabel != null
             ? [...structPath, argIdxFromLabel]
             : structPath;
@@ -355,7 +358,7 @@ class TypeChecker {
           argIndex,
           newPath,
           visited,
-          dfa,
+          automaton,
           decl,
           structPath: newStructPath,
         );
@@ -365,8 +368,8 @@ class TypeChecker {
         errors.add(CoverageError(
           procedure: decl.name,
           argIndex: argIndex,
-          uncoveredLabel: labelStr,
-          path: '$pathPrefix → $labelStr',
+          uncoveredLabel: label,
+          path: '$pathPrefix → $label',
         ));
       }
     }
@@ -465,13 +468,14 @@ class TypeChecker {
   }
 
   /// Get all transitions from a state
-  Map<PathElement, DFAState> _getTransitionsFromState(DFAState state, TypeDFA dfa) {
-    final result = <PathElement, DFAState>{};
+  Map<String, DFAState> _getTransitionsFromState(DFAState state, Automaton automaton) {
+    final result = <String, DFAState>{};
 
-    for (final entry in dfa.transitions.entries) {
+    for (final entry in automaton.transitions.entries) {
       final (fromState, label) = entry.key;
       if (fromState == state) {
-        result[label] = entry.value;
+        // Convert TransitionLabel to string for label matching
+        result[label.toString()] = entry.value;
       }
     }
 

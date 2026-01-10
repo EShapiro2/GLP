@@ -1,16 +1,15 @@
 // lib/analysis/type_checker/well_typed_term.dart
 //
 // Well-typed moded term checking for GLP type system.
-// Specification: docs/modules/well-typed-term.md v0.3
+// Specification: docs/modules/well-typed-term.md v0.4
 // Paper Reference: Definition 4.3 (Consistent Paths), Definition 4.5 (Well-Typed Moded Term)
 //
-// Determines when a moded term is well-typed by a type DFA by checking path
-// consistency via DFA traversal.
+// Determines when a moded term is well-typed by an automaton by checking path
+// consistency via automaton traversal.
 
 import 'mode.dart';
 import 'moded_term.dart';
-import 'type_dfa.dart';
-import 'moded_label.dart';
+import 'program_dfa.dart';
 
 // =============================================================================
 // Result Types
@@ -18,7 +17,7 @@ import 'moded_label.dart';
 
 /// Result of checking if a moded term is well-typed
 class WellTypedResult {
-  /// Whether the moded term is well-typed by the DFA
+  /// Whether the moded term is well-typed by the automaton
   final bool isWellTyped;
 
   /// Type assignments for each variable occurrence
@@ -54,7 +53,7 @@ class WellTypedResult {
 
 /// Type information for a variable occurrence
 class VariableTypeInfo {
-  /// The DFA state where this variable appears
+  /// The DFA state where this variable appears (includes isComplement)
   final DFAState typeState;
 
   /// The mode at this position (consume for readers, produce for writers)
@@ -88,7 +87,7 @@ abstract class WellTypedError {
   String get message;
 }
 
-/// Error: path has no matching DFA transition
+/// Error: path has no matching automaton transition
 class InconsistentPathError extends WellTypedError {
   final ModedPath path;
   final String reason;
@@ -124,18 +123,21 @@ class NonComplementaryError extends WellTypedError {
   final String baseName;
   final VariableTypeInfo? writerType;
   final VariableTypeInfo? readerType;
+  final String? reason;
 
-  NonComplementaryError(this.baseName, this.writerType, this.readerType);
+  NonComplementaryError(this.baseName, this.writerType, this.readerType, [this.reason]);
 
   @override
-  String get message =>
-      'Variable pair ($baseName, $baseName?) not complementary: writer=$writerType, reader=$readerType';
+  String get message {
+    final reasonStr = reason != null ? ': $reason' : '';
+    return 'Variable pair ($baseName, $baseName?) not complementary$reasonStr: writer=$writerType, reader=$readerType';
+  }
 
   @override
   String toString() => message;
 }
 
-/// Result of checking a single path against DFA
+/// Result of checking a single path against automaton
 class PathCheckResult {
   final bool isConsistent;
   final String? reason;
@@ -166,17 +168,17 @@ class PathCheckResult {
 // Public Functions
 // =============================================================================
 
-/// Check if a moded term is well-typed by a type DFA.
+/// Check if a moded term is well-typed by an automaton.
 ///
 /// Per Definition 4.5: A moded term T is well-typed by a GLP type D if:
-/// 1. For each term path x ∈ paths(T) there is a consistent path in the type DFA
+/// 1. For each term path x ∈ paths(T) there is a consistent path in the automaton
 /// 2. For every pair of variables in T, their types are complementary
 ///
 /// Returns WellTypedResult with:
 /// - isWellTyped: true iff all paths consistent and variable pairs complementary
 /// - variableTypes: type assignments for each variable
 /// - errors: list of all violations found
-WellTypedResult checkModedTerm(ModedTerm term, TypeDFA dfa) {
+WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA dfa) {
   final errors = <WellTypedError>[];
   final variableTypes = <String, VariableTypeInfo>{};
 
@@ -184,7 +186,7 @@ WellTypedResult checkModedTerm(ModedTerm term, TypeDFA dfa) {
   final termPaths = paths(term);
 
   for (final path in termPaths) {
-    final result = checkPathAgainstDFA(path, dfa);
+    final result = checkPathAgainstAutomaton(path, automaton, dfa);
 
     if (!result.isConsistent) {
       errors.add(InconsistentPathError(path, result.reason ?? 'Unknown'));
@@ -195,7 +197,7 @@ WellTypedResult checkModedTerm(ModedTerm term, TypeDFA dfa) {
       if (variableTypes.containsKey(varKey)) {
         // Same variable appears multiple times - types must match
         final existing = variableTypes[varKey]!;
-        if (existing.typeState != result.variableAssignment!.typeState) {
+        if (existing.typeState.name != result.variableAssignment!.typeState.name) {
           errors.add(InconsistentVariableError(
               varKey, existing, result.variableAssignment!));
         }
@@ -216,40 +218,40 @@ WellTypedResult checkModedTerm(ModedTerm term, TypeDFA dfa) {
   );
 }
 
-/// Check if a single moded path is consistent with the type DFA.
+/// Check if a single moded path is consistent with the automaton.
 ///
-/// Per Definition 4.3: A moded path is consistent with the type DFA if:
-/// 1. Structure matches: each non-leaf step corresponds to valid DFA transition
+/// Per Definition 4.3: A moded path is consistent with the automaton if:
+/// 1. Structure matches: each non-leaf step corresponds to valid transition
 /// 2. Leaf consistency: variable/constant at leaf matches DFA state
-PathCheckResult checkPathAgainstDFA(ModedPath path, TypeDFA dfa) {
-  var state = dfa.startState;
+PathCheckResult checkPathAgainstAutomaton(ModedPath path, Automaton automaton, ProgramDFA dfa) {
+  var state = automaton.startState;
 
   // Handle single-step paths (just a variable or constant at root)
   if (path.length == 1) {
-    return _checkLeafConsistency(path.leaf, state, dfa);
+    return _checkLeafConsistencyForPath(path.leaf, state, dfa);
   }
 
-  // Traverse path, following DFA transitions
+  // Traverse path, following automaton transitions
   for (int i = 0; i < path.length - 1; i++) {
     final step = path.steps[i];
     final nextStep = path.steps[i + 1];
 
-    // Build label for the transition we need to follow
+    // Build transition label from path step
     final label = _buildTransitionLabel(step, nextStep);
 
-    // Find transition (matching by pathElement, considering mode)
-    final nextState = _findTransition(state, label, dfa);
+    // Try to follow transition
+    final nextState = automaton.transition(state, label);
 
     if (nextState == null) {
       return PathCheckResult.inconsistent(
-          'No transition for ${label.pathElement} (mode: ${label.mode}) from state ${state.name}');
+          'No transition for $label from state ${state.name}');
     }
 
     state = nextState;
   }
 
   // Check leaf consistency
-  return _checkLeafConsistency(path.leaf, state, dfa);
+  return _checkLeafConsistencyForPath(path.leaf, state, dfa);
 }
 
 // =============================================================================
@@ -257,181 +259,67 @@ PathCheckResult checkPathAgainstDFA(ModedPath path, TypeDFA dfa) {
 // =============================================================================
 
 /// Build transition label from path steps
-ModedLabel _buildTransitionLabel(PathStep currentStep, PathStep nextStep) {
+TransitionLabel _buildTransitionLabel(PathStep currentStep, PathStep nextStep) {
   // Parse functor/arity from current step symbol (e.g., "[|]/2" → "[|]", 2)
   final parts = currentStep.symbol.split('/');
   if (parts.length != 2) {
     // Leaf node (variable or constant) - shouldn't happen for non-leaf steps
-    return ModedLabel(currentStep.symbol, mode: nextStep.mode);
+    return TransitionLabel.functor(currentStep.symbol, 0, nextStep.argIndex, mode: nextStep.mode);
   }
 
   final functor = parts[0];
   final arity = int.tryParse(parts[1]) ?? 0;
 
   // Label encodes: functor(arity, argIndex) with mode from next step
-  return ModedLabel.functor(functor, arity, nextStep.argIndex, mode: nextStep.mode);
+  return TransitionLabel.functor(functor, arity, nextStep.argIndex, mode: nextStep.mode);
 }
 
-/// Find a DFA transition matching the label
-///
-/// Strict matching: symbol AND mode must match.
-/// For primitive states (_ or _?), returns a universal accepting state since
-/// primitive types accept any term structure.
-DFAState? _findTransition(DFAState from, ModedLabel label, TypeDFA dfa) {
-  // Universal state accepts any structure - stay in universal state
-  if (from == _universalAcceptingState) {
-    return _universalAcceptingState;
-  }
+/// Check leaf consistency with DFA state using program_dfa.dart's checkLeafConsistency
+PathCheckResult _checkLeafConsistencyForPath(PathStep leaf, DFAState state, ProgramDFA dfa) {
+  // Convert PathStep to LeafTerm for checkLeafConsistency
+  final leafTerm = _pathStepToLeafTerm(leaf);
 
-  // For primitive states (_ or _?), accept any structure by returning
-  // a universal accepting state. Primitive types accept any term.
-  if (dfa.isPrimitiveState(from)) {
-    return _universalAcceptingState;
-  }
+  final result = checkLeafConsistency(leafTerm, state, dfa);
 
-  // Strict matching: symbol AND mode must match
-  for (final entry in dfa.transitions.entries) {
-    final (fromState, transPathElem) = entry.key;
-    if (fromState != from) continue;
-    if (transPathElem.symbol != label.pathElement) continue;
-
-    // Mode matching:
-    // - If DFA transition has no mode (null): accept any label mode (backward compat)
-    // - If DFA transition has mode: must match exactly
-    if (transPathElem.mode == null || transPathElem.mode == label.mode) {
-      return entry.value;
-    }
-    // Mode mismatch: continue searching (might be another transition)
-  }
-
-  return null;  // No matching transition found
-}
-
-/// Universal accepting state for primitive type positions
-/// This state accepts any term structure at primitive type positions
-final _universalAcceptingState = DFAState('_UNIVERSAL_', isFinal: true);
-
-/// Check if a state is the universal accepting state
-bool _isUniversalState(DFAState state) => state == _universalAcceptingState;
-
-/// Check leaf consistency with DFA state
-PathCheckResult _checkLeafConsistency(PathStep leaf, DFAState state, TypeDFA dfa) {
-  if (leaf.isVariable) {
-    // Variable leaf
-    return _checkVariableLeaf(leaf, state, dfa);
-  } else {
-    // Constant leaf
-    return _checkConstantLeaf(leaf, state, dfa);
-  }
-}
-
-/// Check variable at leaf position
-PathCheckResult _checkVariableLeaf(PathStep leaf, DFAState state, TypeDFA dfa) {
-  final isReader = leaf.isReader;
-  final requiredMode = isReader ? Mode.consume : Mode.produce;
-
-  // Universal state accepts any variable (from primitive type positions)
-  if (_isUniversalState(state)) {
-    return PathCheckResult.consistent(VariableTypeInfo(
-      typeState: state,
-      mode: requiredMode,
-      isReader: isReader,
-    ));
-  }
-
-  if (dfa.isPrimitiveState(state)) {
-    // At primitive state - check if mode is accepted
-    final acceptedModes = dfa.getModesAt(state);
-
-    if (acceptedModes.contains(requiredMode)) {
+  if (result.isConsistent) {
+    if (leaf.isVariable) {
+      final isReader = leaf.isReader;
+      final mode = isReader ? Mode.consume : Mode.produce;
       return PathCheckResult.consistent(VariableTypeInfo(
-        typeState: state,
-        mode: requiredMode,
+        typeState: result.type ?? state,
+        mode: mode,
         isReader: isReader,
       ));
-    } else {
-      final modeStr = isReader ? 'Reader (↓)' : 'Writer (↑)';
-      return PathCheckResult.inconsistent(
-          '$modeStr variable ${leaf.symbol} at state ${state.name} which accepts $acceptedModes');
     }
+    return PathCheckResult.consistent();
   } else {
-    // Non-primitive state - variable can appear here if it represents
-    // a subterm of the appropriate type
-    // This is a valid position for a variable (accepts any value of this type)
-    return PathCheckResult.consistent(VariableTypeInfo(
-      typeState: state,
-      mode: requiredMode,
-      isReader: isReader,
-    ));
+    return PathCheckResult.inconsistent(result.reason ?? 'Leaf inconsistent');
   }
 }
 
-/// Check constant at leaf position
-PathCheckResult _checkConstantLeaf(PathStep leaf, DFAState state, TypeDFA dfa) {
-  // Universal state accepts any constant (from primitive type positions)
-  if (_isUniversalState(state)) {
-    return PathCheckResult.consistent();
-  }
-
-  // For built-in semantic types (NumberTypeDFA, StringTypeDFA), use their
-  // special acceptance logic via acceptsPath
-  if (dfa is NumberTypeDFA || dfa is StringTypeDFA) {
-    final path = TermPath([PathElement.constant(leaf.symbol)]);
-    if (dfa.acceptsPath(path)) {
-      return PathCheckResult.consistent();
+/// Convert PathStep to LeafTerm for checkLeafConsistency
+LeafTerm _pathStepToLeafTerm(PathStep step) {
+  if (step.isVariable) {
+    if (step.isReader) {
+      return LeafTerm.reader(step.symbol, mode: Mode.consume);
+    } else {
+      return LeafTerm.writer(step.symbol, mode: Mode.produce);
     }
-    return PathCheckResult.inconsistent(
-        'Constant ${leaf.symbol} not accepted by ${dfa.runtimeType}');
-  }
-
-  // Check for built-in type states (_String_, _Number_, _builtin_String, _builtin_Number)
-  // These are created when procedure DFAs reference built-in types
-  if (state.name == '_builtin_String' || state.name == 'String' || state.name == '_String_') {
-    // String accepts atoms and quoted strings, not numbers or structures
-    final sym = leaf.symbol;
-    if (!sym.contains('(') && !sym.contains('[')) {
-      // Not a structure or list - could be a string/atom
-      if (double.tryParse(sym) == null && int.tryParse(sym) == null) {
-        return PathCheckResult.consistent();
-      }
+  } else {
+    // Constant - determine type
+    final value = step.symbol;
+    final intVal = int.tryParse(value);
+    if (intVal != null) {
+      return LeafTerm.integerConstant(intVal);
     }
-    return PathCheckResult.inconsistent(
-        'Constant ${leaf.symbol} is not a valid String');
-  }
-
-  if (state.name == '_builtin_Number' || state.name == 'Number' || state.name == '_Number_') {
-    // Number accepts only numeric constants
-    if (double.tryParse(leaf.symbol) != null || int.tryParse(leaf.symbol) != null) {
-      return PathCheckResult.consistent();
+    // Check for string (quoted)
+    if ((value.startsWith("'") && value.endsWith("'")) ||
+        (value.startsWith('"') && value.endsWith('"'))) {
+      return LeafTerm.stringConstant(value.substring(1, value.length - 1));
     }
-    return PathCheckResult.inconsistent(
-        'Constant ${leaf.symbol} is not a valid Number');
+    // Otherwise it's an atom/constant
+    return LeafTerm.constant(value);
   }
-
-  // Constants must reach a leaf state (primitive or final)
-  if (dfa.isPrimitiveState(state)) {
-    // At primitive state - constant matches if modes allow
-    // For constants, we check against the state's acceptance
-    // Primitive states like Number or String accept appropriate constants
-    return PathCheckResult.consistent();
-  }
-
-  if (dfa.finalStates.contains(state)) {
-    // At final state - constant accepted
-    return PathCheckResult.consistent();
-  }
-
-  // Check if there's a transition for this constant
-  final constPathElem = PathElement.constant(leaf.symbol);
-  final nextState = dfa.transitions[(state, constPathElem)];
-
-  if (nextState != null && (dfa.finalStates.contains(nextState) ||
-      dfa.isPrimitiveState(nextState))) {
-    return PathCheckResult.consistent();
-  }
-
-  return PathCheckResult.inconsistent(
-      'Constant ${leaf.symbol} not accepted at state ${state.name}');
 }
 
 /// Get variable key for the variable types map
@@ -441,6 +329,7 @@ String _variableKey(PathStep leaf) {
 }
 
 /// Check complementarity of variable pairs
+/// Per spec v0.4: uses DFAState.baseName and isComplement
 List<NonComplementaryError> _checkComplementarity(
     Map<String, VariableTypeInfo> variableTypes) {
   final errors = <NonComplementaryError>[];
@@ -472,23 +361,31 @@ List<NonComplementaryError> _checkComplementarity(
       final writerInfo = variants[writerKey]!;
       final readerInfo = variants[readerKey]!;
 
-      // Must be at same type (compare base type names, stripping arg suffixes)
-      final writerTypeName = _baseTypeName(writerInfo.typeState.name);
-      final readerTypeName = _baseTypeName(readerInfo.typeState.name);
-      if (writerTypeName != readerTypeName) {
-        errors.add(NonComplementaryError(baseName, writerInfo, readerInfo));
+      // Check modes
+      if (writerInfo.mode != Mode.produce) {
+        errors.add(NonComplementaryError(baseName, writerInfo, readerInfo,
+            'Writer must have produce mode'));
+        continue;
       }
-      // Mode complementarity is implicit: writer has produce, reader has consume
-      // which are by definition complementary
+      if (readerInfo.mode != Mode.consume) {
+        errors.add(NonComplementaryError(baseName, writerInfo, readerInfo,
+            'Reader must have consume mode'));
+        continue;
+      }
+
+      // Check states are complements (same baseName, opposite isComplement)
+      if (writerInfo.typeState.baseName != readerInfo.typeState.baseName) {
+        errors.add(NonComplementaryError(baseName, writerInfo, readerInfo,
+            'Types must have same base: ${writerInfo.typeState.name} vs ${readerInfo.typeState.name}'));
+        continue;
+      }
+
+      if (writerInfo.typeState.isComplement == readerInfo.typeState.isComplement) {
+        errors.add(NonComplementaryError(baseName, writerInfo, readerInfo,
+            'One must be complement, other not: ${writerInfo.typeState.name} vs ${readerInfo.typeState.name}'));
+      }
     }
   }
 
   return errors;
-}
-
-/// Extract base type name by stripping argument position suffix (e.g., "MyList@arg1" -> "MyList")
-String _baseTypeName(String name) {
-  final atIndex = name.indexOf('@');
-  if (atIndex == -1) return name;
-  return name.substring(0, atIndex);
 }

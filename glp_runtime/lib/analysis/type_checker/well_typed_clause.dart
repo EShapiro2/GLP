@@ -1,21 +1,20 @@
 // lib/analysis/type_checker/well_typed_clause.dart
 //
 // Well-typed clause checking for GLP type system.
-// Specification: docs/modules/well-typed-clause.md v0.1
+// Specification: docs/modules/well-typed-clause.md v0.6
 // Paper Reference: Definition 4.8 (Well-Typed Clause)
 //
 // A clause H :- G | B is well-typed if:
 // 1. The moded head H is well-typed by the procedure's type
-// 2. Each body atom is well-typed by its procedure's type (with mode complement)
+// 2. Each body atom is well-typed by its procedure's type
 // 3. Variable pairs (X, X?) across all atoms are complementary
 
 import 'mode.dart';
 import 'moded_term.dart';
 import 'moded_head.dart';
 import 'well_typed_term.dart';
-import 'type_dfa.dart';
+import 'program_dfa.dart';
 import 'type_ast.dart';
-import 'type_compiler.dart';
 import 'prelude.dart';
 import '../../compiler/ast.dart' as ast;
 
@@ -101,19 +100,23 @@ class ClauseComplementaryError extends ClauseError {
   final VariableTypeInfo? readerType;
   final String writerLocation;
   final String readerLocation;
+  final String? reason;
 
   ClauseComplementaryError(
     this.baseName,
     this.writerType,
     this.readerType,
     this.writerLocation,
-    this.readerLocation,
-  );
+    this.readerLocation, [
+    this.reason,
+  ]);
 
   @override
-  String get message =>
-      'Variable pair ($baseName, $baseName?) not complementary across clause: '
-      'writer at $writerLocation=$writerType, reader at $readerLocation=$readerType';
+  String get message {
+    final reasonStr = reason != null ? ': $reason' : '';
+    return 'Variable pair ($baseName, $baseName?) not complementary across clause$reasonStr: '
+        'writer at $writerLocation=$writerType, reader at $readerLocation=$readerType';
+  }
 
   @override
   String toString() => message;
@@ -193,13 +196,13 @@ class TypedClause {
 /// Check if a clause is well-typed in the given environment.
 ///
 /// Per Definition 4.8: A clause H :- G | B is well-typed if:
-/// 1. modedHead(H, procType) is well-typed by the procedure's type DFA
+/// 1. modedHead(H, procType) is well-typed by the procedure's type
 /// 2. For each body atom A, producedTerm(A, atomType) is well-typed
 /// 3. All variable pairs (X, X?) across head and body are complementary
 ClauseCheckResult checkClause(
   TypedClause clause,
+  ProgramDFA dfa,
   TypeEnvironment env,
-  TypeCompiler compiler,
 ) {
   final errors = <ClauseError>[];
   final allVariableTypes = <String, VariableTypeInfo>{};
@@ -221,7 +224,7 @@ ClauseCheckResult checkClause(
   }
 
   // Step 1: Check head well-typing
-  final headResult = _checkHead(clause, procDecl, compiler, env);
+  final headResult = _checkHead(clause, procDecl, dfa, env);
   if (!headResult.isWellTyped) {
     errors.add(HeadError(clause.headFunctor, headResult.errors));
   }
@@ -233,7 +236,7 @@ ClauseCheckResult checkClause(
   // Step 2: Check each body atom
   for (int i = 0; i < clause.bodyAtoms.length; i++) {
     final atom = clause.bodyAtoms[i];
-    final atomResult = _checkBodyAtom(atom, i, env, compiler);
+    final atomResult = _checkBodyAtom(atom, i, dfa, env);
 
     if (!atomResult.isWellTyped) {
       errors.add(BodyAtomError(atom.functor, i, atomResult.errors));
@@ -247,7 +250,7 @@ ClauseCheckResult checkClause(
       if (allVariableTypes.containsKey(varKey)) {
         final existing = allVariableTypes[varKey]!;
         // Same variable at different positions - types must match
-        if (existing.typeState != newInfo.typeState) {
+        if (existing.typeState.name != newInfo.typeState.name) {
           // This will be caught by complementarity check below
         }
       } else {
@@ -273,14 +276,12 @@ ClauseCheckResult checkClause(
 
 /// Convenience overload: Check if an ast.Clause is well-typed.
 ///
-/// Creates a TypeCompiler internally and converts ast.Clause to TypedClause.
 /// Throws [UndeclaredProcedureError] if the procedure is not declared.
 ClauseCheckResult checkClauseFromAst(
   ast.Clause clause,
+  ProgramDFA dfa,
   TypeEnvironment env,
 ) {
-  final compiler = TypeCompiler(env);
-
   // Convert ast.Clause to TypedClause
   // Note: ast.Clause.head is Atom, but Goal has same structure
   final head = ast.Goal(clause.head.functor, clause.head.args, clause.line, clause.column);
@@ -299,7 +300,7 @@ ClauseCheckResult checkClauseFromAst(
     throw UndeclaredProcedureError(typedClause.headFunctor, typedClause.headArity);
   }
 
-  return checkClause(typedClause, env, compiler);
+  return checkClause(typedClause, dfa, env);
 }
 
 /// Get the set of labels (functor/arity or constant) that a clause accepts
@@ -352,25 +353,37 @@ Set<String>? getLabelsFromTerm(ast.Term term) {
 }
 
 // =============================================================================
+// Helper Functions
+// =============================================================================
+
+/// Get the full type name including ? if input mode.
+String getFullTypeName(TypeExpr typeExpr) {
+  if (typeExpr is PrimitiveModeAlt) {
+    return typeExpr.isInput ? '_?' : '_';
+  }
+  if (typeExpr is TypeRef) {
+    return typeExpr.isInput ? '${typeExpr.name}?' : typeExpr.name;
+  }
+  throw ArgumentError('Unknown type expression: $typeExpr');
+}
+
+// =============================================================================
 // Internal Functions
 // =============================================================================
 
-/// Check head well-typing
+/// Check head well-typing by checking each argument against its declared type's automaton
 WellTypedResult _checkHead(
   TypedClause clause,
   ProcDecl procDecl,
-  TypeCompiler compiler,
+  ProgramDFA dfa,
   TypeEnvironment env,
 ) {
-  // Build the procedure type DFA for the head (with complement - callee's view)
-  final procDFA = _buildProcedureTypeDFA(procDecl, compiler, complement: true);
-
-  // Build moded head term (pass env for embedded mode handling in structures)
   try {
+    // Build moded head term (pass env for embedded mode handling in structures)
     final modedHeadTerm = modedHead(clause.head, procDecl, typeEnv: env);
 
-    // Check well-typing
-    return checkModedTerm(modedHeadTerm, procDFA);
+    // Check each argument against its declared type's automaton
+    return _checkModedTermPerArg(modedHeadTerm, procDecl, dfa);
   } on ArityMismatchError catch (e) {
     return WellTypedResult.failure([
       InconsistentPathError(
@@ -385,8 +398,8 @@ WellTypedResult _checkHead(
 WellTypedResult _checkBodyAtom(
   ast.Goal atom,
   int atomIndex,
+  ProgramDFA dfa,
   TypeEnvironment env,
-  TypeCompiler compiler,
 ) {
   // Skip builtin goals (true, otherwise, :=)
   if (isBuiltinGoal(atom.functor)) {
@@ -408,15 +421,12 @@ WellTypedResult _checkBodyAtom(
     ]);
   }
 
-  // Build the procedure type DFA for body atom (no complement - caller's view)
-  final procDFA = _buildProcedureTypeDFA(procDecl, compiler);
-
   // Build produced term (no variable flip for body atoms)
   try {
     final modedAtomTerm = producedTerm(atom, procDecl);
 
-    // Check well-typing
-    return checkModedTerm(modedAtomTerm, procDFA);
+    // Check each argument against its declared type's automaton
+    return _checkModedTermPerArg(modedAtomTerm, procDecl, dfa);
   } on ArityMismatchError catch (e) {
     return WellTypedResult.failure([
       InconsistentPathError(
@@ -427,89 +437,118 @@ WellTypedResult _checkBodyAtom(
   }
 }
 
-/// Build procedure type DFA from procedure declaration
+/// Check moded term per argument against declared type automata
 ///
-/// For each argument position, compile the type and create transitions.
-/// If [complement] is true, apply mode complement (for body atoms at call sites).
-///
-/// Mode complement logic:
-/// - For HEADS (complement=true): Callee sees complement of caller's view
-/// - For BODY ATOMS (complement=false): Caller's view matches declaration
-TypeDFA _buildProcedureTypeDFA(
-  ProcDecl procDecl,
-  TypeCompiler compiler, {
-  bool complement = false,
-}) {
-  // Start state for the procedure
-  final procState = DFAState(procDecl.key);
-  final states = <DFAState>{procState};
-  final transitions = <(DFAState, PathElement), DFAState>{};
-  final primitiveStateModes = <DFAState, Set<Mode>>{};
-  final finalStates = <DFAState>{};
+/// Per spec v0.6: Each argument is checked against its declared type's automaton directly.
+WellTypedResult _checkModedTermPerArg(
+  ModedTerm modedTerm,
+  ProcDecl decl,
+  ProgramDFA dfa,
+) {
+  final errors = <WellTypedError>[];
+  final variableTypes = <String, VariableTypeInfo>{};
 
-  // Add transitions for each argument position
-  for (int i = 0; i < procDecl.arity; i++) {
-    final argType = procDecl.argTypes[i];
+  // modedTerm should be a ModedCompound with args
+  if (modedTerm is! ModedCompound) {
+    return WellTypedResult.failure([
+      InconsistentPathError(
+        ModedPath([PathStep(symbol: 'not-compound', argIndex: 0, mode: Mode.produce)]),
+        'Expected compound term for procedure',
+      ),
+    ]);
+  }
 
-    // Handle primitive types (_ or _?) directly in procedure declarations
-    if (argType is PrimitiveModeAlt) {
-      // Create a primitive DFA for this argument
-      // The mode is intrinsic to the primitive syntax:
-      // - _ = produce (output) - callee provides value
-      // - _? = consume (input) - callee receives value
-      // No complement needed - unlike named types (T vs T?), the mode is
-      // already encoded in the primitive syntax itself.
-      final primStateName = argType.isInput ? '_?@arg${i + 1}' : '_@arg${i + 1}';
-      final primState = DFAState(primStateName, isFinal: true);
-      final primMode = argType.isInput ? Mode.input : Mode.output;
+  // Check each argument
+  for (int i = 0; i < decl.arity; i++) {
+    final argType = decl.argTypes[i];
 
-      states.add(primState);
-      finalStates.add(primState);
-      primitiveStateModes[primState] = {primMode};
+    // Get the automaton for the declared type directly
+    // Type? → use T? automaton; Type → use T automaton
+    final argTypeName = getFullTypeName(argType);
 
-      // Add transition from procedure state to primitive state
-      final pathElem = PathElement.functor(procDecl.name, procDecl.arity, i + 1);
-      transitions[(procState, pathElem)] = primState;
+    Automaton argAutomaton;
+    try {
+      argAutomaton = dfa.getAutomaton(argTypeName);
+    } on StateError {
+      errors.add(InconsistentPathError(
+        ModedPath([PathStep(symbol: argTypeName, argIndex: i + 1, mode: Mode.produce)]),
+        'Unknown type: $argTypeName',
+      ));
       continue;
     }
 
-    // Handle named type references
-    final typeRef = argType as TypeRef;
-    var argDFA = compiler.compile(typeRef.name);
+    // Extract paths from this argument and check against automaton
+    final argTerm = modedTerm.args[i];
+    final argPaths = paths(argTerm);
 
-    // Rename states with argument index suffix to prevent collision
-    // when multiple arguments have the same type
-    argDFA = argDFA.withSuffix('@arg${i + 1}');
+    for (final path in argPaths) {
+      final result = checkPathAgainstAutomaton(path, argAutomaton, dfa);
 
-    // For heads (complement=true): complement INPUT argument DFAs only
-    //
-    // The variable flip in modedHead() flips ALL variables (X ↔ X?).
-    // For INPUT args: type produce → complement to consume → matches flipped reader
-    // For OUTPUT args: type produce → stays produce → matches flipped writer
-    //
-    // For body atoms (complement=false): use DFA as-is
-    if (complement && typeRef.isInput) {
-      argDFA = argDFA.applyModeComplement();
+      if (!result.isConsistent) {
+        errors.add(InconsistentPathError(path, result.reason ?? 'Unknown'));
+      } else if (result.variableAssignment != null) {
+        final varKey = path.leaf.symbol;
+        if (variableTypes.containsKey(varKey)) {
+          if (variableTypes[varKey]!.typeState.name != result.variableAssignment!.typeState.name) {
+            errors.add(InconsistentVariableError(varKey, variableTypes[varKey]!, result.variableAssignment!));
+          }
+        } else {
+          variableTypes[varKey] = result.variableAssignment!;
+        }
+      }
     }
-
-    // Add transition from procedure state to argument type state
-    final pathElem = PathElement.functor(procDecl.name, procDecl.arity, i + 1);
-    transitions[(procState, pathElem)] = argDFA.startState;
-
-    // Merge the argument DFA states and transitions
-    states.addAll(argDFA.states);
-    transitions.addAll(argDFA.transitions);
-    primitiveStateModes.addAll(argDFA.primitiveStateModes);
-    finalStates.addAll(argDFA.finalStates);
   }
 
-  return TypeDFA(
-    states: states,
-    startState: procState,
-    finalStates: finalStates,
-    transitions: transitions,
-    primitiveStateModes: primitiveStateModes,
+  // Check complementarity within this term
+  final complementErrors = _checkTermComplementarity(variableTypes);
+  errors.addAll(complementErrors);
+
+  return WellTypedResult(
+    isWellTyped: errors.isEmpty,
+    variableTypes: variableTypes,
+    errors: errors,
   );
+}
+
+/// Check complementarity within a term (same logic as well_typed_term.dart)
+List<NonComplementaryError> _checkTermComplementarity(
+    Map<String, VariableTypeInfo> variableTypes) {
+  final errors = <NonComplementaryError>[];
+
+  // Group by base name (X and X? share base "X")
+  final baseNames = <String, Map<String, VariableTypeInfo>>{};
+
+  for (final entry in variableTypes.entries) {
+    final varKey = entry.key;
+    final info = entry.value;
+
+    final baseName = varKey.endsWith('?')
+        ? varKey.substring(0, varKey.length - 1)
+        : varKey;
+
+    baseNames.putIfAbsent(baseName, () => {});
+    baseNames[baseName]![varKey] = info;
+  }
+
+  // Check each base name
+  for (final entry in baseNames.entries) {
+    final baseName = entry.key;
+    final variants = entry.value;
+
+    final writerKey = baseName;
+    final readerKey = '$baseName?';
+
+    if (variants.containsKey(writerKey) && variants.containsKey(readerKey)) {
+      final writerInfo = variants[writerKey]!;
+      final readerInfo = variants[readerKey]!;
+
+      if (!_areComplementaryTypes(writerInfo, readerInfo)) {
+        errors.add(NonComplementaryError(baseName, writerInfo, readerInfo));
+      }
+    }
+  }
+
+  return errors;
 }
 
 /// Check variable pair complementarity across the entire clause
@@ -554,14 +593,16 @@ List<ClauseComplementaryError> _checkClauseComplementarity(
       final writerLoc = locations[writerKey] ?? 'unknown';
       final readerLoc = locations[readerKey] ?? 'unknown';
 
-      // Check type compatibility (primitives are compatible with any type)
-      if (!_areComplementaryTypes(writerInfo, readerInfo)) {
+      // Check type compatibility using spec v0.6 logic
+      final (isCompat, reason) = _areComplementaryTypesWithReason(writerInfo, readerInfo);
+      if (!isCompat) {
         errors.add(ClauseComplementaryError(
           baseName,
           writerInfo,
           readerInfo,
           writerLoc,
           readerLoc,
+          reason,
         ));
       }
     }
@@ -571,42 +612,31 @@ List<ClauseComplementaryError> _checkClauseComplementarity(
 }
 
 /// Check if writer and reader types are complementary
+/// Per spec v0.6: uses DFAState.baseName and isComplement
 bool _areComplementaryTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
+  final (isCompat, _) = _areComplementaryTypesWithReason(writerInfo, readerInfo);
+  return isCompat;
+}
+
+/// Check complementarity with reason for failure
+(bool, String?) _areComplementaryTypesWithReason(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
   // Mode check: writer must produce, reader must consume
-  if (writerInfo.mode != Mode.produce || readerInfo.mode != Mode.consume) {
-    return false;
+  if (writerInfo.mode != Mode.produce) {
+    return (false, 'Writer must have produce mode');
+  }
+  if (readerInfo.mode != Mode.consume) {
+    return (false, 'Reader must have consume mode');
   }
 
-  final writerTypeName = _baseTypeName(writerInfo.typeState.name);
-  final readerTypeName = _baseTypeName(readerInfo.typeState.name);
-
-  // Output primitive (_) as writer is compatible with any reader
-  if (_isOutputPrimitive(writerTypeName)) {
-    return true;
+  // States must be complements: same baseName, opposite isComplement
+  if (writerInfo.typeState.baseName != readerInfo.typeState.baseName) {
+    return (false, 'Types must have same base: ${writerInfo.typeState.name} vs ${readerInfo.typeState.name}');
   }
 
-  // Input primitive (_?) as reader is compatible with any writer
-  if (_isInputPrimitive(readerTypeName)) {
-    return true;
+  // One must be complement, the other not
+  if (writerInfo.typeState.isComplement == readerInfo.typeState.isComplement) {
+    return (false, 'One must be complement, other not: ${writerInfo.typeState.name} vs ${readerInfo.typeState.name}');
   }
 
-  // Otherwise, must be at same type (strip argument suffixes like @arg1)
-  return writerTypeName == readerTypeName;
-}
-
-/// Extract base type name by stripping argument position suffix (e.g., "MyList@arg1" -> "MyList")
-String _baseTypeName(String name) {
-  final atIndex = name.indexOf('@');
-  if (atIndex == -1) return name;
-  return name.substring(0, atIndex);
-}
-
-/// Check if a type state name represents an output primitive (_)
-bool _isOutputPrimitive(String name) {
-  return name == '_' || name == 'Output' || name.startsWith('_prim');
-}
-
-/// Check if a type state name represents an input primitive (_?)
-bool _isInputPrimitive(String name) {
-  return name == '_?' || name == 'Input';
+  return (true, null);
 }
