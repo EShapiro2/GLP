@@ -1,7 +1,7 @@
 // lib/analysis/type_checker/program_dfa.dart
 //
-// ProgramDFA implementation per spec: docs/modules/type-dfa.md v0.7
-// Paper Reference: Section 4.1 (lines 32-44), Definition 4.3 (lines 247-262)
+// ProgramDFA implementation per spec: docs/modules/type-dfa.md v0.8
+// Paper Reference: Section 4.1 (lines 19-24, 47-53), Definition 4.3 (lines 283-298)
 
 import 'type_ast.dart';
 import 'mode.dart';
@@ -9,43 +9,54 @@ import 'mode.dart';
 /// A state in the program DFA.
 ///
 /// States represent:
-/// - Defined types (e.g., `Stream`, `CounterCall`)
-/// - Procedures (e.g., `merge/3`, `sum/2`)
-/// - System types: `Integer`, `String` (NOT final)
-/// - Final states: `_`, `_?`, `_FINAL_`
+/// - Defined types in complement pairs (e.g., `Stream`, `Stream?`)
+/// - System types: `Integer`/`Integer?`, `String`/`String?`
+/// - Primitive finals: `_` (produced), `_?` (consumed)
+/// - Anonymous final: `_FINAL_` (for constant/literal matches)
+/// - Procedure states: `merge/3` (no complement)
 class DFAState {
-  final String name;
+  final String baseName;
+  final bool isComplement;
   final bool isFinal;
 
-  DFAState(this.name, {required this.isFinal});
+  DFAState(this.baseName, {required this.isComplement, required this.isFinal});
+
+  /// Returns the full name: baseName? if complement, else baseName
+  String get name => isComplement ? '$baseName?' : baseName;
+
+  /// Returns the complement state
+  DFAState get complement =>
+      DFAState(baseName, isComplement: !isComplement, isFinal: isFinal);
 
   /// True for `_` or `_?`
-  bool get isWildcard => name == '_' || name == '_?';
+  bool get isWildcard => baseName == '_';
 
-  /// True for `_` (produced wildcard)
-  bool get isProducedWildcard => name == '_';
+  /// True for `_` (produced wildcard, non-complement)
+  bool get isProducedWildcard => baseName == '_' && !isComplement;
 
-  /// True for `_?` (consumed wildcard)
-  bool get isConsumedWildcard => name == '_?';
+  /// True for `_?` (consumed wildcard, complement)
+  bool get isConsumedWildcard => baseName == '_' && isComplement;
 
-  /// True for `Integer` type state
-  bool get isIntegerType => name == 'Integer';
+  /// True for `Integer` type state (either complement or not)
+  bool get isIntegerType => baseName == 'Integer';
 
-  /// True for `String` type state
-  bool get isStringType => name == 'String';
+  /// True for `String` type state (either complement or not)
+  bool get isStringType => baseName == 'String';
 
   /// True for `_FINAL_` (anonymous final for constant/literal matches)
-  bool get isAnonymousFinal => name == '_FINAL_';
+  bool get isAnonymousFinal => baseName == '_FINAL_';
 
   @override
   String toString() => name;
 
   @override
   bool operator ==(Object other) =>
-      other is DFAState && other.name == name;
+      other is DFAState &&
+      other.baseName == baseName &&
+      other.isComplement == isComplement;
 
   @override
-  int get hashCode => name.hashCode;
+  int get hashCode => Object.hash(baseName, isComplement);
 }
 
 /// A transition label in the program DFA.
@@ -64,7 +75,8 @@ class TransitionLabel {
   TransitionLabel._(this.symbol, this.arity, this.argIndex, this.mode);
 
   /// Create a functor transition label.
-  factory TransitionLabel.functor(String name, int arity, int argIndex, {Mode? mode}) {
+  factory TransitionLabel.functor(String name, int arity, int argIndex,
+      {Mode? mode}) {
     return TransitionLabel._(name, arity, argIndex, mode);
   }
 
@@ -73,10 +85,15 @@ class TransitionLabel {
     return TransitionLabel._(value.toString(), 0, 0, null);
   }
 
+  /// Returns a complemented label with flipped mode
+  TransitionLabel get complement =>
+      TransitionLabel._(symbol, arity, argIndex, mode?.flip);
+
   @override
   String toString() {
     if (arity == 0) return symbol;
-    final modeStr = mode != null ? ':${mode == Mode.produce ? '↑' : '↓'}' : '';
+    final modeStr =
+        mode != null ? ':${mode == Mode.produce ? '↑' : '↓'}' : '';
     return '$symbol($arity,$argIndex)$modeStr';
   }
 
@@ -92,14 +109,39 @@ class TransitionLabel {
   int get hashCode => Object.hash(symbol, arity, argIndex, mode);
 }
 
-/// The single DFA for a typed GLP program.
-class ProgramDFA {
-  final Map<String, DFAState> states;
+/// An automaton for a single type (either T or T?).
+class Automaton {
+  final DFAState startState;
   final Map<(DFAState, TransitionLabel), DFAState> _transitions;
 
-  ProgramDFA(this.states, this._transitions);
+  Automaton(this.startState, this._transitions);
 
-  /// Get a state by name.
+  /// Get the target state for a transition, or null if no such transition.
+  DFAState? transition(DFAState from, TransitionLabel label) {
+    return _transitions[(from, label)];
+  }
+
+  /// Create complement automaton by flipping all states and modes.
+  Automaton get complement {
+    final newTransitions = <(DFAState, TransitionLabel), DFAState>{};
+    for (final entry in _transitions.entries) {
+      final (fromState, label) = entry.key;
+      final toState = entry.value;
+      newTransitions[(fromState.complement, label.complement)] =
+          toState.complement;
+    }
+    return Automaton(startState.complement, newTransitions);
+  }
+}
+
+/// The complete DFA for a typed GLP program.
+class ProgramDFA {
+  final Map<String, DFAState> states;
+  final Map<String, Automaton> automata;
+
+  ProgramDFA(this.states, this.automata);
+
+  /// Get a state by name (e.g., "Stream" or "Stream?").
   DFAState getState(String name) {
     final state = states[name];
     if (state == null) {
@@ -108,9 +150,13 @@ class ProgramDFA {
     return state;
   }
 
-  /// Get the target state for a transition, or null if no such transition.
-  DFAState? transition(DFAState from, TransitionLabel label) {
-    return _transitions[(from, label)];
+  /// Get an automaton by type name (e.g., "Stream" or "Stream?").
+  Automaton getAutomaton(String typeName) {
+    final automaton = automata[typeName];
+    if (automaton == null) {
+      throw StateError('Automaton not found: $typeName');
+    }
+    return automaton;
   }
 }
 
@@ -123,56 +169,95 @@ class UnknownTypeError extends Error {
   String toString() => 'UnknownTypeError: $typeName';
 }
 
-/// Build the single program DFA from the type environment.
+/// Build the complete program DFA from the type environment.
 ///
 /// Implements spec algorithm: buildProgramDFA(env)
 ProgramDFA buildProgramDFA(TypeEnvironment env) {
   final states = <String, DFAState>{};
-  final transitions = <(DFAState, TransitionLabel), DFAState>{};
+  final automata = <String, Automaton>{};
 
-  // Create final states (only _ and _? are true finals accepting variables)
-  states['_'] = DFAState('_', isFinal: true);
-  states['_?'] = DFAState('_?', isFinal: true);
-  states['_FINAL_'] = DFAState('_FINAL_', isFinal: true);
+  // Create system states (complement pairs)
+  states['_'] = DFAState('_', isComplement: false, isFinal: true);
+  states['_?'] = DFAState('_', isComplement: true, isFinal: true);
+  states['Integer'] = DFAState('Integer', isComplement: false, isFinal: false);
+  states['Integer?'] = DFAState('Integer', isComplement: true, isFinal: false);
+  states['String'] = DFAState('String', isComplement: false, isFinal: false);
+  states['String?'] = DFAState('String', isComplement: true, isFinal: false);
+  states['_FINAL_'] = DFAState('_FINAL_', isComplement: false, isFinal: true);
 
-  // Create system type states (NOT final - they have conceptual transitions to _FINAL_)
-  states['Integer'] = DFAState('Integer', isFinal: false);
-  states['String'] = DFAState('String', isFinal: false);
+  // Create automata for system types
+  automata['_'] = _finalAutomaton(states['_']!);
+  automata['_?'] = _finalAutomaton(states['_?']!);
+  automata['Integer'] = _primitiveTypeAutomaton(states['Integer']!, states['_FINAL_']!);
+  automata['Integer?'] = _primitiveTypeAutomaton(states['Integer?']!, states['_FINAL_']!);
+  automata['String'] = _primitiveTypeAutomaton(states['String']!, states['_FINAL_']!);
+  automata['String?'] = _primitiveTypeAutomaton(states['String?']!, states['_FINAL_']!);
 
-  // Create states for defined types
-  for (final typeName in env.types.keys) {
-    states[typeName] = DFAState(typeName, isFinal: false);
-  }
-
-  // Create states for procedures
-  for (final procKey in env.procedures.keys) {
-    states[procKey] = DFAState(procKey, isFinal: false);
-  }
-
-  // Add transitions from type definitions
+  // Create states and automata for defined types
   for (final entry in env.types.entries) {
     final typeName = entry.key;
     final typeDef = entry.value;
-    final fromState = states[typeName]!;
-    for (final alt in typeDef.alternatives) {
-      _addTypeTransitions(fromState, alt, Mode.produce, states, transitions);
-    }
+
+    // Create state pair
+    states[typeName] = DFAState(typeName, isComplement: false, isFinal: false);
+    states['$typeName?'] =
+        DFAState(typeName, isComplement: true, isFinal: false);
+
+    // Build producer automaton (T)
+    automata[typeName] =
+        _buildTypeAutomaton(typeDef, states, isComplement: false);
+
+    // Build consumer automaton (T?)
+    automata['$typeName?'] =
+        _buildTypeAutomaton(typeDef, states, isComplement: true);
   }
 
-  // Add transitions from procedure declarations
+  // Create procedure states (no complement)
+  for (final procKey in env.procedures.keys) {
+    states[procKey] = DFAState(procKey, isComplement: false, isFinal: false);
+  }
+
+  // Build procedure automata
   for (final entry in env.procedures.entries) {
     final procKey = entry.key;
     final procDecl = entry.value;
-    final fromState = states[procKey]!;
-    for (var i = 0; i < procDecl.arity; i++) {
-      final argType = procDecl.argTypes[i];
-      final label = TransitionLabel.functor(procDecl.name, procDecl.arity, i + 1);
-      final targetState = _resolveTypeExpr(argType, states);
-      transitions[(fromState, label)] = targetState;
-    }
+    automata[procKey] = _buildProcedureAutomaton(procDecl, states);
   }
 
-  return ProgramDFA(states, transitions);
+  return ProgramDFA(states, automata);
+}
+
+/// Create a final automaton (no transitions).
+Automaton _finalAutomaton(DFAState state) {
+  return Automaton(state, {});
+}
+
+/// Create a primitive type automaton (conceptual infinite transitions to _FINAL_).
+Automaton _primitiveTypeAutomaton(DFAState state, DFAState finalState) {
+  // No explicit transitions - handled specially in leaf consistency
+  return Automaton(state, {});
+}
+
+/// Build an automaton for a type definition.
+///
+/// Implements spec algorithm: buildTypeAutomaton
+Automaton _buildTypeAutomaton(
+  TypeDef typeDef,
+  Map<String, DFAState> states, {
+  required bool isComplement,
+}) {
+  final typeName = typeDef.name;
+  final startStateName = isComplement ? '$typeName?' : typeName;
+  final startState = states[startStateName]!;
+
+  final transitions = <(DFAState, TransitionLabel), DFAState>{};
+
+  for (final alt in typeDef.alternatives) {
+    _addTypeTransitions(
+        startState, alt, Mode.produce, states, transitions, isComplement);
+  }
+
+  return Automaton(startState, transitions);
 }
 
 /// Add transitions from a type alternative.
@@ -184,6 +269,7 @@ void _addTypeTransitions(
   Mode contextMode,
   Map<String, DFAState> states,
   Map<(DFAState, TransitionLabel), DFAState> transitions,
+  bool isComplement,
 ) {
   if (alt is ConstantAlt) {
     final label = TransitionLabel.constant(alt.value);
@@ -192,51 +278,84 @@ void _addTypeTransitions(
     final label = TransitionLabel.constant('[]');
     transitions[(fromState, label)] = states['_FINAL_']!;
   } else if (alt is ListConsAlt) {
-    final headMode = _modeOf(alt.head, contextMode);
-    final tailMode = _modeOf(alt.tail, contextMode);
+    var headMode = _modeOf(alt.head, contextMode);
+    var tailMode = _modeOf(alt.tail, contextMode);
+
+    // Apply complement to modes if building complement automaton
+    if (isComplement) {
+      headMode = headMode.flip;
+      tailMode = tailMode.flip;
+    }
 
     final headLabel = TransitionLabel.functor('[|]', 2, 1, mode: headMode);
     final tailLabel = TransitionLabel.functor('[|]', 2, 2, mode: tailMode);
 
-    transitions[(fromState, headLabel)] = _resolveTypeExpr(alt.head, states);
-    transitions[(fromState, tailLabel)] = _resolveTypeExpr(alt.tail, states);
+    transitions[(fromState, headLabel)] =
+        _resolveTypeExpr(alt.head, states, isComplement);
+    transitions[(fromState, tailLabel)] =
+        _resolveTypeExpr(alt.tail, states, isComplement);
   } else if (alt is StructAlt) {
     for (var i = 0; i < alt.args.length; i++) {
       final argType = alt.args[i];
-      final argMode = _modeOf(argType, contextMode);
-      final label = TransitionLabel.functor(alt.functor, alt.args.length, i + 1, mode: argMode);
-      transitions[(fromState, label)] = _resolveTypeExpr(argType, states);
+      var argMode = _modeOf(argType, contextMode);
+      if (isComplement) {
+        argMode = argMode.flip;
+      }
+      final label =
+          TransitionLabel.functor(alt.functor, alt.args.length, i + 1, mode: argMode);
+      transitions[(fromState, label)] =
+          _resolveTypeExpr(argType, states, isComplement);
     }
   } else if (alt is DiffListAlt) {
-    final contentMode = _modeOf(alt.content, contextMode);
-    final holeMode = _modeOf(alt.hole, contextMode);
+    var contentMode = _modeOf(alt.content, contextMode);
+    var holeMode = _modeOf(alt.hole, contextMode);
+    if (isComplement) {
+      contentMode = contentMode.flip;
+      holeMode = holeMode.flip;
+    }
 
-    final contentLabel = TransitionLabel.functor('\\\\', 2, 1, mode: contentMode);
-    final holeLabel = TransitionLabel.functor('\\\\', 2, 2, mode: holeMode);
+    final contentLabel = TransitionLabel.functor('\\', 2, 1, mode: contentMode);
+    final holeLabel = TransitionLabel.functor('\\', 2, 2, mode: holeMode);
 
-    transitions[(fromState, contentLabel)] = _resolveTypeExpr(alt.content, states);
-    transitions[(fromState, holeLabel)] = _resolveTypeExpr(alt.hole, states);
+    transitions[(fromState, contentLabel)] =
+        _resolveTypeExpr(alt.content, states, isComplement);
+    transitions[(fromState, holeLabel)] =
+        _resolveTypeExpr(alt.hole, states, isComplement);
   }
-  // PrimitiveModeAlt is handled differently - it's a leaf, not a constructor
+  // PrimitiveModeAlt is handled in resolveTypeExpr - it's a leaf, not a constructor
 }
 
 /// Resolve a type expression to a DFA state.
 ///
 /// Implements spec algorithm: resolveTypeExpr
-DFAState _resolveTypeExpr(TypeExpr typeExpr, Map<String, DFAState> states) {
+/// Uses XOR logic for nested complements.
+DFAState _resolveTypeExpr(
+    TypeExpr typeExpr, Map<String, DFAState> states, bool isComplement) {
   if (typeExpr is PrimitiveModeAlt) {
-    // _ and _? are final states
-    return typeExpr.isInput ? states['_?']! : states['_']!;
+    // Determine base state: isInput means _? base
+    final baseIsComplement = typeExpr.isInput;
+    // XOR with automaton complement flag
+    final finalIsComplement = baseIsComplement != isComplement; // XOR
+    return finalIsComplement ? states['_?']! : states['_']!;
   } else if (typeExpr is TypeRef) {
-    // Integer and String are type states (not final)
-    if (typeExpr.name == 'Integer') return states['Integer']!;
-    if (typeExpr.name == 'String') return states['String']!;
-    // Note: isInput flag is NOT used here - complementation happens during path checking
-    final state = states[typeExpr.name];
-    if (state == null) {
-      throw UnknownTypeError(typeExpr.name);
+    // Determine base state
+    final baseIsComplement = typeExpr.isInput;
+    // XOR with automaton complement flag
+    final finalIsComplement = baseIsComplement != isComplement; // XOR
+
+    if (typeExpr.name == 'Integer') {
+      return finalIsComplement ? states['Integer?']! : states['Integer']!;
     }
-    return state;
+    if (typeExpr.name == 'String') {
+      return finalIsComplement ? states['String?']! : states['String']!;
+    }
+
+    final targetName = typeExpr.name;
+    final targetState = finalIsComplement ? states['$targetName?'] : states[targetName];
+    if (targetState == null) {
+      throw UnknownTypeError(targetName);
+    }
+    return targetState;
   }
   throw StateError('Cannot resolve type expression: $typeExpr');
 }
@@ -244,7 +363,7 @@ DFAState _resolveTypeExpr(TypeExpr typeExpr, Map<String, DFAState> states) {
 /// Compute mode for a type expression at a given context mode.
 ///
 /// Implements spec algorithm: modeOf
-/// T? flips mode, T keeps mode
+/// T? flips mode, T keeps mode (before complement is applied)
 Mode _modeOf(TypeExpr typeExpr, Mode contextMode) {
   if (typeExpr is TypeRef && typeExpr.isInput) {
     return contextMode.flip;
@@ -255,19 +374,55 @@ Mode _modeOf(TypeExpr typeExpr, Mode contextMode) {
   return contextMode;
 }
 
+/// Build an automaton for a procedure declaration.
+///
+/// Implements spec algorithm: buildProcedureAutomaton
+Automaton _buildProcedureAutomaton(
+    ProcDecl procDecl, Map<String, DFAState> states) {
+  final procState = states[procDecl.key]!;
+  final transitions = <(DFAState, TransitionLabel), DFAState>{};
+
+  for (var i = 0; i < procDecl.arity; i++) {
+    final argType = procDecl.argTypes[i];
+    final label =
+        TransitionLabel.functor(procDecl.name, procDecl.arity, i + 1, mode: null);
+
+    // Target is the declared type directly (Stream? or Stream)
+    final targetStateName = _getFullTypeName(argType);
+    final targetState = states[targetStateName];
+    if (targetState == null) {
+      throw UnknownTypeError(targetStateName);
+    }
+    transitions[(procState, label)] = targetState;
+  }
+
+  return Automaton(procState, transitions);
+}
+
+/// Get the full type name including ? if input mode.
+String _getFullTypeName(TypeExpr typeExpr) {
+  if (typeExpr is PrimitiveModeAlt) {
+    return typeExpr.isInput ? '_?' : '_';
+  }
+  if (typeExpr is TypeRef) {
+    return typeExpr.isInput ? '${typeExpr.name}?' : typeExpr.name;
+  }
+  throw StateError('Cannot get type name from: $typeExpr');
+}
+
 // ============================================================================
 // Leaf Consistency Checking (Definition 4.3)
 // ============================================================================
 
 /// Represents a leaf term in a term path.
 class LeafTerm {
-  final String? name;       // Variable name, or null for constants
+  final String? name; // Variable name, or null for constants
   final bool isVariable;
-  final bool isReader;      // Only meaningful if isVariable
-  final Mode? mode;         // Mode at this position
-  final Object? value;      // Constant value, or null for variables
-  final bool isInteger;     // True if value is an integer
-  final bool isString;      // True if value is a string
+  final bool isReader; // Only meaningful if isVariable
+  final Mode? mode; // Mode at this position
+  final Object? value; // Constant value, or null for variables
+  final bool isInteger; // True if value is an integer
+  final bool isString; // True if value is a string
 
   LeafTerm._({
     this.name,
@@ -323,36 +478,25 @@ class LeafConsistencyResult {
 /// Check leaf consistency per Definition 4.3.
 ///
 /// Implements spec algorithm: checkLeafConsistency
+/// Note: No complement parameter - the state already encodes complement via isComplement.
 LeafConsistencyResult checkLeafConsistency(
   LeafTerm leaf,
   DFAState state,
-  ProgramDFA dfa, {
-  required bool complement,
-}) {
-  // Compute expected mode with complement adjustment
-  Mode? expectedMode = leaf.mode;
-  if (complement && expectedMode != null) {
-    expectedMode = expectedMode.flip;
-  }
-
-  // For wildcard states, complement flips which wildcard behavior applies
-  // _ with complement behaves like _?, and vice versa
-  final effectiveProducedWildcard = complement ? state.isConsumedWildcard : state.isProducedWildcard;
-  final effectiveConsumedWildcard = complement ? state.isProducedWildcard : state.isConsumedWildcard;
-
-  // Case: Produced wildcard final state (_) or _? with complement
-  if (effectiveProducedWildcard) {
+  ProgramDFA dfa,
+) {
+  // Case: Produced wildcard final state (_)
+  if (state.isProducedWildcard) {
     // Definition 4.3 case 3(b): type path ends in _ and term has produce mode
-    if (leaf.isVariable && !leaf.isReader && expectedMode == Mode.produce) {
+    if (leaf.isVariable && !leaf.isReader && leaf.mode == Mode.produce) {
       return LeafConsistencyResult.consistent(state);
     }
     return LeafConsistencyResult.inconsistent('_ expects writer at produce position');
   }
 
-  // Case: Consumed wildcard final state (_?) or _ with complement
-  if (effectiveConsumedWildcard) {
+  // Case: Consumed wildcard final state (_?)
+  if (state.isConsumedWildcard) {
     // Definition 4.3 case 3(a): type path ends in _? and term has consume mode
-    if (leaf.isVariable && leaf.isReader && expectedMode == Mode.consume) {
+    if (leaf.isVariable && leaf.isReader && leaf.mode == Mode.consume) {
       return LeafConsistencyResult.consistent(state);
     }
     return LeafConsistencyResult.inconsistent('_? expects reader at consume position');
@@ -365,16 +509,17 @@ LeafConsistencyResult checkLeafConsistency(
       return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
     }
     if (leaf.isVariable) {
-      // Definition 4.3 case 2: term path is prefix ending in variable
-      if (leaf.isReader && expectedMode == Mode.consume) {
+      // Use state.isComplement to determine expected mode
+      if (leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
         return LeafConsistencyResult.consistent(state);
       }
-      if (!leaf.isReader && expectedMode == Mode.produce) {
+      if (!leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
         return LeafConsistencyResult.consistent(state);
       }
       return LeafConsistencyResult.inconsistent('Variable mode mismatch at Integer');
     }
-    return LeafConsistencyResult.inconsistent('Integer type requires integer literal or variable');
+    return LeafConsistencyResult.inconsistent(
+        'Integer type requires integer literal or variable');
   }
 
   // Case: String type state (conceptual infinite transitions)
@@ -384,15 +529,16 @@ LeafConsistencyResult checkLeafConsistency(
       return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
     }
     if (leaf.isVariable) {
-      if (leaf.isReader && expectedMode == Mode.consume) {
+      if (leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
         return LeafConsistencyResult.consistent(state);
       }
-      if (!leaf.isReader && expectedMode == Mode.produce) {
+      if (!leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
         return LeafConsistencyResult.consistent(state);
       }
       return LeafConsistencyResult.inconsistent('Variable mode mismatch at String');
     }
-    return LeafConsistencyResult.inconsistent('String type requires string literal or variable');
+    return LeafConsistencyResult.inconsistent(
+        'String type requires string literal or variable');
   }
 
   // Case: Anonymous final state (reached via exact constant match)
@@ -405,24 +551,29 @@ LeafConsistencyResult checkLeafConsistency(
   // Case: Non-final type state with variable
   // Definition 4.3 case 2: term path is prefix ending in reader/writer
   if (leaf.isVariable) {
-    if (leaf.isReader && expectedMode == Mode.consume) {
+    if (leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
       return LeafConsistencyResult.consistent(state); // Case 2(a)
     }
-    if (!leaf.isReader && expectedMode == Mode.produce) {
+    if (!leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
       return LeafConsistencyResult.consistent(state); // Case 2(b)
     }
     return LeafConsistencyResult.inconsistent('Variable mode mismatch at type position');
   }
 
-  // Case: Non-final type state with constant - must follow transition
+  // Case: Non-final type state with constant - must check transition
   // Definition 4.3 case 1: check if constant matches a transition
   if (leaf.value != null) {
-    final constLabel = TransitionLabel.constant(leaf.value!);
-    final nextState = dfa.transition(state, constLabel);
-    if (nextState != null) {
-      return LeafConsistencyResult.consistent(nextState);
+    // Get the automaton for this state's type to check transitions
+    final automaton = dfa.automata[state.name];
+    if (automaton != null) {
+      final constLabel = TransitionLabel.constant(leaf.value!);
+      final nextState = automaton.transition(state, constLabel);
+      if (nextState != null) {
+        return LeafConsistencyResult.consistent(nextState);
+      }
     }
   }
 
-  return LeafConsistencyResult.inconsistent('Constant at type state without matching transition');
+  return LeafConsistencyResult.inconsistent(
+      'Constant at type state without matching transition');
 }

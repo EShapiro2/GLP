@@ -1,7 +1,7 @@
 // test/analysis/type_checker/program_dfa_test.dart
 //
-// Tests for ProgramDFA per spec: docs/modules/type-dfa.md v0.7
-// Paper Reference: Section 4.1 (lines 32-44), Definition 4.3 (lines 247-262)
+// Tests for ProgramDFA per spec: docs/modules/type-dfa.md v0.8
+// Paper Reference: Section 4.1 (lines 19-24, 47-53), Definition 4.3 (lines 283-298)
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/program_dfa.dart';
@@ -9,38 +9,162 @@ import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/analysis/type_checker/mode.dart';
 
 void main() {
+  group('DFAState', () {
+    test('name getter returns baseName for non-complement state', () {
+      final state = DFAState('Stream', isComplement: false, isFinal: false);
+      expect(state.name, equals('Stream'));
+    });
+
+    test('name getter returns baseName? for complement state', () {
+      final state = DFAState('Stream', isComplement: true, isFinal: false);
+      expect(state.name, equals('Stream?'));
+    });
+
+    test('complement returns opposite state', () {
+      final state = DFAState('Stream', isComplement: false, isFinal: false);
+      final comp = state.complement;
+      expect(comp.baseName, equals('Stream'));
+      expect(comp.isComplement, isTrue);
+      expect(comp.isFinal, isFalse);
+    });
+
+    test('double complement returns original state', () {
+      final state = DFAState('Stream', isComplement: false, isFinal: false);
+      final doubleComp = state.complement.complement;
+      expect(doubleComp.baseName, equals(state.baseName));
+      expect(doubleComp.isComplement, equals(state.isComplement));
+    });
+
+    test('isWildcard returns true for _ and _?', () {
+      final produced = DFAState('_', isComplement: false, isFinal: true);
+      final consumed = DFAState('_', isComplement: true, isFinal: true);
+      expect(produced.isWildcard, isTrue);
+      expect(consumed.isWildcard, isTrue);
+    });
+
+    test('isProducedWildcard and isConsumedWildcard', () {
+      final produced = DFAState('_', isComplement: false, isFinal: true);
+      final consumed = DFAState('_', isComplement: true, isFinal: true);
+
+      expect(produced.isProducedWildcard, isTrue);
+      expect(produced.isConsumedWildcard, isFalse);
+      expect(consumed.isProducedWildcard, isFalse);
+      expect(consumed.isConsumedWildcard, isTrue);
+    });
+
+    test('isIntegerType and isStringType', () {
+      final intState = DFAState('Integer', isComplement: false, isFinal: false);
+      final strState = DFAState('String', isComplement: false, isFinal: false);
+
+      expect(intState.isIntegerType, isTrue);
+      expect(intState.isStringType, isFalse);
+      expect(strState.isIntegerType, isFalse);
+      expect(strState.isStringType, isTrue);
+    });
+
+    test('isAnonymousFinal', () {
+      final anonFinal = DFAState('_FINAL_', isComplement: false, isFinal: true);
+      final produced = DFAState('_', isComplement: false, isFinal: true);
+
+      expect(anonFinal.isAnonymousFinal, isTrue);
+      expect(produced.isAnonymousFinal, isFalse);
+    });
+
+    test('equality based on baseName and isComplement', () {
+      final s1 = DFAState('Stream', isComplement: false, isFinal: false);
+      final s2 = DFAState('Stream', isComplement: false, isFinal: false);
+      final s3 = DFAState('Stream', isComplement: true, isFinal: false);
+
+      expect(s1 == s2, isTrue);
+      expect(s1 == s3, isFalse);
+      expect(s1.hashCode, equals(s2.hashCode));
+    });
+  });
+
+  group('TransitionLabel', () {
+    test('functor label with mode', () {
+      final label = TransitionLabel.functor('[|]', 2, 1, mode: Mode.produce);
+      expect(label.symbol, equals('[|]'));
+      expect(label.arity, equals(2));
+      expect(label.argIndex, equals(1));
+      expect(label.mode, equals(Mode.produce));
+    });
+
+    test('constant label has arity 0 and argIndex 0', () {
+      final label = TransitionLabel.constant(42);
+      expect(label.symbol, equals('42'));
+      expect(label.arity, equals(0));
+      expect(label.argIndex, equals(0));
+      expect(label.mode, isNull);
+    });
+
+    test('complement flips mode', () {
+      final label = TransitionLabel.functor('[|]', 2, 1, mode: Mode.produce);
+      final comp = label.complement;
+      expect(comp.symbol, equals('[|]'));
+      expect(comp.mode, equals(Mode.consume));
+    });
+
+    test('complement with null mode stays null', () {
+      final label = TransitionLabel.functor('merge', 3, 1, mode: null);
+      final comp = label.complement;
+      expect(comp.mode, isNull);
+    });
+
+    test('equality includes mode', () {
+      final l1 = TransitionLabel.functor('[|]', 2, 1, mode: Mode.produce);
+      final l2 = TransitionLabel.functor('[|]', 2, 1, mode: Mode.produce);
+      final l3 = TransitionLabel.functor('[|]', 2, 1, mode: Mode.consume);
+
+      expect(l1 == l2, isTrue);
+      expect(l1 == l3, isFalse);
+    });
+  });
+
   group('ProgramDFA Construction', () {
-    test('ProgramDFA has final states _ and _?', () {
+    test('system states exist in pairs', () {
       final env = TypeEnvironment.empty();
       final dfa = buildProgramDFA(env);
 
+      // Wildcard pair
       expect(dfa.getState('_').isFinal, isTrue);
+      expect(dfa.getState('_').isComplement, isFalse);
       expect(dfa.getState('_?').isFinal, isTrue);
+      expect(dfa.getState('_?').isComplement, isTrue);
+
+      // Integer pair
+      expect(dfa.getState('Integer').isFinal, isFalse);
+      expect(dfa.getState('Integer?').isFinal, isFalse);
+
+      // String pair
+      expect(dfa.getState('String').isFinal, isFalse);
+      expect(dfa.getState('String?').isFinal, isFalse);
+
+      // Anonymous final
       expect(dfa.getState('_FINAL_').isFinal, isTrue);
     });
 
-    test('ProgramDFA has type states Integer and String (not final)', () {
+    test('defined type creates state pair', () {
       final env = TypeEnvironment.empty();
-      final dfa = buildProgramDFA(env);
-
-      expect(dfa.getState('Integer').isFinal, isFalse);
-      expect(dfa.getState('String').isFinal, isFalse);
-    });
-
-    test('Defined type creates state in DFA', () {
-      final env = TypeEnvironment.empty();
-      env.addType(TypeDef('Stream', [
-        ListNilAlt(0, 0),
-        ListConsAlt(PrimitiveModeAlt(false, 0, 0), TypeRef('Stream', 0, 0), 0, 0),
-      ], 0, 0));
+      env.addType(TypeDef('Stream', [ListNilAlt(0, 0)], 0, 0));
 
       final dfa = buildProgramDFA(env);
 
-      expect(dfa.getState('Stream'), isNotNull);
-      expect(dfa.getState('Stream').isFinal, isFalse);
+      expect(dfa.getState('Stream').isComplement, isFalse);
+      expect(dfa.getState('Stream?').isComplement, isTrue);
     });
 
-    test('Procedure declaration creates state in DFA', () {
+    test('defined type creates automaton pair', () {
+      final env = TypeEnvironment.empty();
+      env.addType(TypeDef('Stream', [ListNilAlt(0, 0)], 0, 0));
+
+      final dfa = buildProgramDFA(env);
+
+      expect(dfa.getAutomaton('Stream'), isNotNull);
+      expect(dfa.getAutomaton('Stream?'), isNotNull);
+    });
+
+    test('procedure creates single state (no complement)', () {
       final env = TypeEnvironment.empty();
       env.addType(TypeDef('Stream', [ListNilAlt(0, 0)], 0, 0));
       env.addProcedure(ProcDecl('merge', [
@@ -52,252 +176,294 @@ void main() {
       final dfa = buildProgramDFA(env);
 
       expect(dfa.getState('merge/3'), isNotNull);
+      expect(() => dfa.getState('merge/3?'), throwsStateError);
     });
+  });
 
-    test('List type creates transitions for nil and cons', () {
+  group('Stream Automaton', () {
+    late ProgramDFA dfa;
+
+    setUp(() {
       final env = TypeEnvironment.empty();
+      // Stream ::= [] ; [_|Stream]
       env.addType(TypeDef('Stream', [
         ListNilAlt(0, 0),
         ListConsAlt(PrimitiveModeAlt(false, 0, 0), TypeRef('Stream', 0, 0), 0, 0),
       ], 0, 0));
+      dfa = buildProgramDFA(env);
+    });
 
-      final dfa = buildProgramDFA(env);
-      final streamState = dfa.getState('Stream');
+    test('Stream automaton has produce modes', () {
+      final automaton = dfa.getAutomaton('Stream');
+      final state = automaton.startState;
 
       // [] → _FINAL_
       final nilLabel = TransitionLabel.constant('[]');
-      expect(dfa.transition(streamState, nilLabel)?.name, equals('_FINAL_'));
+      expect(automaton.transition(state, nilLabel)?.name, equals('_FINAL_'));
 
       // [|](2,1):↑ → _
       final headLabel = TransitionLabel.functor('[|]', 2, 1, mode: Mode.produce);
-      expect(dfa.transition(streamState, headLabel)?.name, equals('_'));
+      expect(automaton.transition(state, headLabel)?.name, equals('_'));
 
       // [|](2,2):↑ → Stream
       final tailLabel = TransitionLabel.functor('[|]', 2, 2, mode: Mode.produce);
-      expect(dfa.transition(streamState, tailLabel)?.name, equals('Stream'));
+      expect(automaton.transition(state, tailLabel)?.name, equals('Stream'));
     });
 
-    test('Procedure state has transitions to argument type states', () {
+    test('Stream? automaton has consume modes', () {
+      final automaton = dfa.getAutomaton('Stream?');
+      final state = automaton.startState;
+
+      // [] → _FINAL_
+      final nilLabel = TransitionLabel.constant('[]');
+      expect(automaton.transition(state, nilLabel)?.name, equals('_FINAL_'));
+
+      // [|](2,1):↓ → _?
+      final headLabel = TransitionLabel.functor('[|]', 2, 1, mode: Mode.consume);
+      expect(automaton.transition(state, headLabel)?.name, equals('_?'));
+
+      // [|](2,2):↓ → Stream?
+      final tailLabel = TransitionLabel.functor('[|]', 2, 2, mode: Mode.consume);
+      expect(automaton.transition(state, tailLabel)?.name, equals('Stream?'));
+    });
+
+    test('Stream and Stream? automata have different start states', () {
+      final streamAuto = dfa.getAutomaton('Stream');
+      final streamCompAuto = dfa.getAutomaton('Stream?');
+
+      expect(streamAuto.startState.name, equals('Stream'));
+      expect(streamCompAuto.startState.name, equals('Stream?'));
+    });
+  });
+
+  group('HollowStream (nested complement)', () {
+    late ProgramDFA dfa;
+
+    setUp(() {
+      final env = TypeEnvironment.empty();
+      // HollowStream ::= [] ; [_?|HollowStream]
+      env.addType(TypeDef('HollowStream', [
+        ListNilAlt(0, 0),
+        ListConsAlt(PrimitiveModeAlt(true, 0, 0), TypeRef('HollowStream', 0, 0), 0, 0),
+      ], 0, 0));
+      dfa = buildProgramDFA(env);
+    });
+
+    test('HollowStream automaton has consume mode for head', () {
+      final automaton = dfa.getAutomaton('HollowStream');
+      final state = automaton.startState;
+
+      // [|](2,1):↓ → _? (isInput=true flips to consume)
+      final headLabel = TransitionLabel.functor('[|]', 2, 1, mode: Mode.consume);
+      expect(automaton.transition(state, headLabel)?.name, equals('_?'));
+
+      // [|](2,2):↑ → HollowStream
+      final tailLabel = TransitionLabel.functor('[|]', 2, 2, mode: Mode.produce);
+      expect(automaton.transition(state, tailLabel)?.name, equals('HollowStream'));
+    });
+
+    test('HollowStream? automaton has produce mode for head (XOR)', () {
+      final automaton = dfa.getAutomaton('HollowStream?');
+      final state = automaton.startState;
+
+      // [|](2,1):↑ → _ (XOR: isInput ^ isComplement = true ^ true = false)
+      final headLabel = TransitionLabel.functor('[|]', 2, 1, mode: Mode.produce);
+      expect(automaton.transition(state, headLabel)?.name, equals('_'));
+
+      // [|](2,2):↓ → HollowStream?
+      final tailLabel = TransitionLabel.functor('[|]', 2, 2, mode: Mode.consume);
+      expect(automaton.transition(state, tailLabel)?.name, equals('HollowStream?'));
+    });
+  });
+
+  group('Procedure Automaton', () {
+    late ProgramDFA dfa;
+
+    setUp(() {
       final env = TypeEnvironment.empty();
       env.addType(TypeDef('Stream', [ListNilAlt(0, 0)], 0, 0));
+      // procedure merge(Stream?, Stream?, Stream)
       env.addProcedure(ProcDecl('merge', [
         TypeRef('Stream', 0, 0, isInput: true),
         TypeRef('Stream', 0, 0, isInput: true),
         TypeRef('Stream', 0, 0),
       ], 0, 0));
-
-      final dfa = buildProgramDFA(env);
-      final procState = dfa.getState('merge/3');
-
-      final arg1Label = TransitionLabel.functor('merge', 3, 1);
-      final arg2Label = TransitionLabel.functor('merge', 3, 2);
-      final arg3Label = TransitionLabel.functor('merge', 3, 3);
-
-      expect(dfa.transition(procState, arg1Label)?.name, equals('Stream'));
-      expect(dfa.transition(procState, arg2Label)?.name, equals('Stream'));
-      expect(dfa.transition(procState, arg3Label)?.name, equals('Stream'));
+      dfa = buildProgramDFA(env);
     });
 
-    test('Complemented type in definition flips transition mode', () {
-      final env = TypeEnvironment.empty();
-      // HollowStream ::= [] ; [_?|HollowStream].
-      env.addType(TypeDef('HollowStream', [
-        ListNilAlt(0, 0),
-        ListConsAlt(PrimitiveModeAlt(true, 0, 0), TypeRef('HollowStream', 0, 0), 0, 0),
-      ], 0, 0));
+    test('procedure automaton transitions to declared types directly', () {
+      final automaton = dfa.getAutomaton('merge/3');
+      final state = automaton.startState;
 
-      final dfa = buildProgramDFA(env);
-      final state = dfa.getState('HollowStream');
+      // merge(3,1) → Stream? (declared as Stream?)
+      final arg1Label = TransitionLabel.functor('merge', 3, 1, mode: null);
+      expect(automaton.transition(state, arg1Label)?.name, equals('Stream?'));
 
-      // [|](2,1):↓ → _? (mode flipped because _?)
-      final headLabel = TransitionLabel.functor('[|]', 2, 1, mode: Mode.consume);
-      expect(dfa.transition(state, headLabel)?.name, equals('_?'));
-    });
+      // merge(3,2) → Stream? (declared as Stream?)
+      final arg2Label = TransitionLabel.functor('merge', 3, 2, mode: null);
+      expect(automaton.transition(state, arg2Label)?.name, equals('Stream?'));
 
-    test('NEGATIVE: Unknown type in procedure declaration throws error', () {
-      final env = TypeEnvironment.empty();
-      env.addProcedure(ProcDecl('foo', [TypeRef('Unknown', 0, 0)], 0, 0));
-
-      expect(() => buildProgramDFA(env), throwsA(isA<UnknownTypeError>()));
+      // merge(3,3) → Stream (declared as Stream)
+      final arg3Label = TransitionLabel.functor('merge', 3, 3, mode: null);
+      expect(automaton.transition(state, arg3Label)?.name, equals('Stream'));
     });
   });
 
   group('Leaf Consistency', () {
-    test('Writer variable at _ state with produce mode is consistent', () {
-      final dfa = buildProgramDFA(TypeEnvironment.empty());
+    late ProgramDFA dfa;
+
+    setUp(() {
+      dfa = buildProgramDFA(TypeEnvironment.empty());
+    });
+
+    test('writer at _ state with produce mode is consistent', () {
       final state = dfa.getState('_');
       final leaf = LeafTerm.writer('X', mode: Mode.produce);
 
-      final result = checkLeafConsistency(leaf, state, dfa, complement: false);
+      final result = checkLeafConsistency(leaf, state, dfa);
 
       expect(result.isConsistent, isTrue);
       expect(result.type?.name, equals('_'));
     });
 
-    test('NEGATIVE: Reader variable at _ state is inconsistent', () {
-      final dfa = buildProgramDFA(TypeEnvironment.empty());
+    test('NEGATIVE: reader at _ state is inconsistent', () {
       final state = dfa.getState('_');
       final leaf = LeafTerm.reader('X?', mode: Mode.consume);
 
-      final result = checkLeafConsistency(leaf, state, dfa, complement: false);
+      final result = checkLeafConsistency(leaf, state, dfa);
 
       expect(result.isConsistent, isFalse);
+      expect(result.reason, contains('_ expects writer'));
     });
 
-    test('Reader variable at _? state with consume mode is consistent', () {
-      final dfa = buildProgramDFA(TypeEnvironment.empty());
+    test('reader at _? state with consume mode is consistent', () {
       final state = dfa.getState('_?');
       final leaf = LeafTerm.reader('X?', mode: Mode.consume);
 
-      final result = checkLeafConsistency(leaf, state, dfa, complement: false);
+      final result = checkLeafConsistency(leaf, state, dfa);
 
       expect(result.isConsistent, isTrue);
       expect(result.type?.name, equals('_?'));
     });
 
-    test('NEGATIVE: Writer variable at _? state is inconsistent', () {
-      final dfa = buildProgramDFA(TypeEnvironment.empty());
+    test('NEGATIVE: writer at _? state is inconsistent', () {
       final state = dfa.getState('_?');
       final leaf = LeafTerm.writer('X', mode: Mode.produce);
 
-      final result = checkLeafConsistency(leaf, state, dfa, complement: false);
+      final result = checkLeafConsistency(leaf, state, dfa);
 
       expect(result.isConsistent, isFalse);
+      expect(result.reason, contains('_? expects reader'));
     });
 
-    test('Integer literal at Integer state is consistent', () {
-      final dfa = buildProgramDFA(TypeEnvironment.empty());
+    test('integer literal at Integer state is consistent', () {
       final state = dfa.getState('Integer');
       final leaf = LeafTerm.integerConstant(42);
 
-      final result = checkLeafConsistency(leaf, state, dfa, complement: false);
+      final result = checkLeafConsistency(leaf, state, dfa);
 
       expect(result.isConsistent, isTrue);
       expect(result.type?.name, equals('_FINAL_'));
     });
 
-    test('NEGATIVE: String literal at Integer state is inconsistent', () {
-      final dfa = buildProgramDFA(TypeEnvironment.empty());
+    test('NEGATIVE: string literal at Integer state is inconsistent', () {
       final state = dfa.getState('Integer');
       final leaf = LeafTerm.stringConstant('hello');
 
-      final result = checkLeafConsistency(leaf, state, dfa, complement: false);
+      final result = checkLeafConsistency(leaf, state, dfa);
 
       expect(result.isConsistent, isFalse);
     });
 
-    test('Writer variable at Integer state with produce mode is consistent', () {
-      final dfa = buildProgramDFA(TypeEnvironment.empty());
+    test('writer at Integer state (non-complement) with produce is consistent', () {
       final state = dfa.getState('Integer');
       final leaf = LeafTerm.writer('N', mode: Mode.produce);
 
-      final result = checkLeafConsistency(leaf, state, dfa, complement: false);
+      final result = checkLeafConsistency(leaf, state, dfa);
 
       expect(result.isConsistent, isTrue);
       expect(result.type?.name, equals('Integer'));
     });
 
-    test('Reader variable at Integer state with consume mode is consistent', () {
-      final dfa = buildProgramDFA(TypeEnvironment.empty());
+    test('reader at Integer? state (complement) with consume is consistent', () {
+      final state = dfa.getState('Integer?');
+      final leaf = LeafTerm.reader('N?', mode: Mode.consume);
+
+      final result = checkLeafConsistency(leaf, state, dfa);
+
+      expect(result.isConsistent, isTrue);
+      expect(result.type?.name, equals('Integer?'));
+    });
+
+    test('NEGATIVE: reader at Integer (non-complement) is inconsistent', () {
       final state = dfa.getState('Integer');
       final leaf = LeafTerm.reader('N?', mode: Mode.consume);
 
-      final result = checkLeafConsistency(leaf, state, dfa, complement: false);
+      final result = checkLeafConsistency(leaf, state, dfa);
 
-      expect(result.isConsistent, isTrue);
-      expect(result.type?.name, equals('Integer'));
+      expect(result.isConsistent, isFalse);
     });
 
-    test('Writer variable at type state with produce mode is consistent', () {
+    test('writer at type state (non-complement) with produce is consistent', () {
       final env = TypeEnvironment.empty();
       env.addType(TypeDef('Stream', [ListNilAlt(0, 0)], 0, 0));
       final dfa = buildProgramDFA(env);
+
       final state = dfa.getState('Stream');
       final leaf = LeafTerm.writer('Xs', mode: Mode.produce);
 
-      final result = checkLeafConsistency(leaf, state, dfa, complement: false);
+      final result = checkLeafConsistency(leaf, state, dfa);
 
       expect(result.isConsistent, isTrue);
       expect(result.type?.name, equals('Stream'));
     });
 
-    test('NEGATIVE: Reader variable at type state with produce mode is inconsistent', () {
+    test('reader at type? state (complement) with consume is consistent', () {
       final env = TypeEnvironment.empty();
       env.addType(TypeDef('Stream', [ListNilAlt(0, 0)], 0, 0));
       final dfa = buildProgramDFA(env);
+
+      final state = dfa.getState('Stream?');
+      final leaf = LeafTerm.reader('Xs?', mode: Mode.consume);
+
+      final result = checkLeafConsistency(leaf, state, dfa);
+
+      expect(result.isConsistent, isTrue);
+      expect(result.type?.name, equals('Stream?'));
+    });
+
+    test('NEGATIVE: reader at type state (non-complement) is inconsistent', () {
+      final env = TypeEnvironment.empty();
+      env.addType(TypeDef('Stream', [ListNilAlt(0, 0)], 0, 0));
+      final dfa = buildProgramDFA(env);
+
       final state = dfa.getState('Stream');
-      final leaf = LeafTerm.reader('Xs?', mode: Mode.produce);
+      final leaf = LeafTerm.reader('Xs?', mode: Mode.consume);
 
-      final result = checkLeafConsistency(leaf, state, dfa, complement: false);
-
-      expect(result.isConsistent, isFalse);
-    });
-  });
-
-  group('Complement Flag', () {
-    test('With complement, reader at _ is consistent (mode flips to produce)', () {
-      final dfa = buildProgramDFA(TypeEnvironment.empty());
-      final state = dfa.getState('_');
-      final leaf = LeafTerm.reader('X?', mode: Mode.consume);
-
-      final result = checkLeafConsistency(leaf, state, dfa, complement: true);
-
-      expect(result.isConsistent, isTrue);
-    });
-
-    test('With complement, writer at _? is consistent (mode flips to consume)', () {
-      final dfa = buildProgramDFA(TypeEnvironment.empty());
-      final state = dfa.getState('_?');
-      final leaf = LeafTerm.writer('X', mode: Mode.produce);
-
-      final result = checkLeafConsistency(leaf, state, dfa, complement: true);
-
-      expect(result.isConsistent, isTrue);
-    });
-
-    test('NEGATIVE: With complement, writer at _ is inconsistent', () {
-      final dfa = buildProgramDFA(TypeEnvironment.empty());
-      final state = dfa.getState('_');
-      final leaf = LeafTerm.writer('X', mode: Mode.produce);
-
-      final result = checkLeafConsistency(leaf, state, dfa, complement: true);
+      final result = checkLeafConsistency(leaf, state, dfa);
 
       expect(result.isConsistent, isFalse);
     });
   });
 
-  group('DFAState properties', () {
-    test('isWildcard returns true for _ and _?', () {
-      final dfa = buildProgramDFA(TypeEnvironment.empty());
+  group('Error conditions', () {
+    test('NEGATIVE: unknown type in procedure throws error', () {
+      final env = TypeEnvironment.empty();
+      env.addProcedure(ProcDecl('foo', [TypeRef('Unknown', 0, 0)], 0, 0));
 
-      expect(dfa.getState('_').isWildcard, isTrue);
-      expect(dfa.getState('_?').isWildcard, isTrue);
-      expect(dfa.getState('Integer').isWildcard, isFalse);
+      expect(() => buildProgramDFA(env), throwsA(isA<UnknownTypeError>()));
     });
 
-    test('isProducedWildcard and isConsumedWildcard', () {
+    test('NEGATIVE: unknown state name throws StateError', () {
       final dfa = buildProgramDFA(TypeEnvironment.empty());
 
-      expect(dfa.getState('_').isProducedWildcard, isTrue);
-      expect(dfa.getState('_').isConsumedWildcard, isFalse);
-      expect(dfa.getState('_?').isProducedWildcard, isFalse);
-      expect(dfa.getState('_?').isConsumedWildcard, isTrue);
+      expect(() => dfa.getState('NotAState'), throwsStateError);
     });
 
-    test('isIntegerType and isStringType', () {
+    test('NEGATIVE: unknown automaton name throws StateError', () {
       final dfa = buildProgramDFA(TypeEnvironment.empty());
 
-      expect(dfa.getState('Integer').isIntegerType, isTrue);
-      expect(dfa.getState('Integer').isStringType, isFalse);
-      expect(dfa.getState('String').isIntegerType, isFalse);
-      expect(dfa.getState('String').isStringType, isTrue);
-    });
-
-    test('isAnonymousFinal', () {
-      final dfa = buildProgramDFA(TypeEnvironment.empty());
-
-      expect(dfa.getState('_FINAL_').isAnonymousFinal, isTrue);
-      expect(dfa.getState('_').isAnonymousFinal, isFalse);
+      expect(() => dfa.getAutomaton('NotAType'), throwsStateError);
     });
   });
 }
