@@ -514,26 +514,40 @@ LeafConsistencyResult checkLeafConsistency(
   DFAState state,
   ProgramDFA dfa,
 ) {
-  // Case: Produced wildcard final state (_)
+  // Case: Produced wildcard final state (_) - non-complement context
   if (state.isProducedWildcard) {
-    // Definition 4.3 case 3(b): type path ends in _ and term has produce mode
-    // Note: For moded heads, variables are flipped, so we check structural mode only.
-    // The structural mode correctly represents the semantic role after flipping.
-    if (leaf.isVariable && leaf.mode == Mode.produce) {
+    // _ means "any value" at produce position.
+    // For variables: writer at produce position (mode-consistent after flip from reader).
+    // Constants at produce position are also acceptable.
+    if (leaf.isVariable) {
+      if (!leaf.isReader && leaf.mode == Mode.produce) {
+        return LeafConsistencyResult.consistent(state);
+      }
+      return LeafConsistencyResult.inconsistent('_ expects writer at produce position');
+    }
+    // Constants are acceptable at wildcard positions
+    if (leaf.mode == Mode.produce) {
       return LeafConsistencyResult.consistent(state);
     }
-    return LeafConsistencyResult.inconsistent('_ expects variable at produce position');
+    return LeafConsistencyResult.inconsistent('_ expects produce mode');
   }
 
-  // Case: Consumed wildcard final state (_?)
+  // Case: Consumed wildcard final state (_?) - complement context
   if (state.isConsumedWildcard) {
-    // Definition 4.3 case 3(a): type path ends in _? and term has consume mode
-    // Note: For moded heads, variables are flipped, so we check structural mode only.
-    // The structural mode correctly represents the semantic role after flipping.
-    if (leaf.isVariable && leaf.mode == Mode.consume) {
+    // _? means "any value" at consume position.
+    // For variables: reader at consume position (mode-consistent after flip from writer).
+    // Constants at consume position are also acceptable.
+    if (leaf.isVariable) {
+      if (leaf.isReader && leaf.mode == Mode.consume) {
+        return LeafConsistencyResult.consistent(state);
+      }
+      return LeafConsistencyResult.inconsistent('_? expects reader at consume position');
+    }
+    // Constants are acceptable at wildcard positions
+    if (leaf.mode == Mode.consume) {
       return LeafConsistencyResult.consistent(state);
     }
-    return LeafConsistencyResult.inconsistent('_? expects variable at consume position');
+    return LeafConsistencyResult.inconsistent('_? expects consume mode');
   }
 
   // Case: Integer type state (conceptual infinite transitions)

@@ -146,29 +146,37 @@ input_single(X).
     });
 
     test('POSITIVE: Nested _ in list with single clause', () {
+      // OutputList has _ (produce) at head.
+      // OutputList? (complement) has consume at head.
+      // At consume position: source needs WRITER H (to receive value).
+      // After flip: H becomes H? (reader) at consume position.
       final source = '''
 OutputList ::= [] ; [_ | OutputList].
 
 procedure process_list(OutputList?).
 
 process_list([]).
-process_list([H? | T]) :- process_list(T?).
+process_list([H | T]) :- process_list(T?).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'List uses _ at head, reader H? matches after mode complement');
+      expect(result.errors, isEmpty, reason: 'List uses _ at head, writer H matches in complement context');
     });
 
     test('POSITIVE: Nested _? in list with single clause', () {
+      // InputList has _? (consume) at head.
+      // InputList? (complement) has produce at head.
+      // At produce position: source needs READER H? (to provide value).
+      // After flip: H? becomes H (writer) at produce position.
       final source = '''
 InputList ::= [] ; [_? | InputList].
 
 procedure consume_list(InputList?).
 
 consume_list([]).
-consume_list([H | T]) :- consume_list(T?).
+consume_list([H? | T]) :- consume_list(T?).
 ''';
       final result = checkTypes(source);
-      expect(result.errors, isEmpty, reason: 'List uses _? at head, writer H matches after mode complement');
+      expect(result.errors, isEmpty, reason: 'List uses _? at head, reader H? matches in complement context');
     });
   });
 

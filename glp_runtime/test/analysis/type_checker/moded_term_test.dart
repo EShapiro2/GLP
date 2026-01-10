@@ -212,11 +212,11 @@ void main() {
             ModedVariable.reader('X', structuralMode: Mode.consume),
             ModedVariable.reader('Xs', structuralMode: Mode.consume),
           ),
-          ModedVariable.reader('Ys'),
+          ModedVariable.reader('Ys', structuralMode: Mode.consume),
           ModedCompound.listCons(
             Mode.produce,
             ModedVariable.writer('X', structuralMode: Mode.produce),
-            ModedVariable.writer('Zs'),
+            ModedVariable.writer('Zs', structuralMode: Mode.produce),
           ),
         ]);
 
@@ -407,11 +407,11 @@ void main() {
             ModedVariable.reader('X', structuralMode: Mode.consume),
             ModedVariable.reader('Xs', structuralMode: Mode.consume),
           ),
-          ModedVariable.reader('Ys'),
+          ModedVariable.reader('Ys', structuralMode: Mode.consume),
           ModedCompound.listCons(
             Mode.produce,
             ModedVariable.writer('X', structuralMode: Mode.produce),
-            ModedVariable.writer('Zs'),
+            ModedVariable.writer('Zs', structuralMode: Mode.produce),
           ),
         ]);
 
@@ -548,7 +548,7 @@ void main() {
             ModedVariable.reader('X', structuralMode: Mode.consume),
             ModedVariable.reader('Xs', structuralMode: Mode.consume),
           ),
-          ModedVariable.reader('Ys'),
+          ModedVariable.reader('Ys', structuralMode: Mode.consume),
         ]);
         expect(isConsumed(term), isTrue);
       });
@@ -572,11 +572,11 @@ void main() {
             ModedVariable.reader('X', structuralMode: Mode.consume),
             ModedVariable.reader('Xs', structuralMode: Mode.consume),
           ),
-          ModedVariable.reader('Ys'),
+          ModedVariable.reader('Ys', structuralMode: Mode.consume),
           ModedCompound.listCons(
             Mode.produce, // This makes it not fully consumed
             ModedVariable.writer('X', structuralMode: Mode.produce),
-            ModedVariable.writer('Zs'),
+            ModedVariable.writer('Zs', structuralMode: Mode.produce),
           ),
         ]);
         expect(isConsumed(term), isFalse);
@@ -597,7 +597,7 @@ void main() {
             ModedVariable.writer('X', structuralMode: Mode.produce),
             ModedVariable.writer('Xs', structuralMode: Mode.produce),
           ),
-          ModedVariable.writer('Ys'),
+          ModedVariable.writer('Ys', structuralMode: Mode.produce),
         ]);
         expect(isProduced(term), isTrue);
       });
@@ -637,11 +637,11 @@ void main() {
             ModedVariable.reader('X', structuralMode: Mode.consume),
             ModedVariable.reader('Xs', structuralMode: Mode.consume),
           ),
-          ModedVariable.reader('Ys'),
+          ModedVariable.reader('Ys', structuralMode: Mode.consume),
           ModedCompound.listCons(
             Mode.produce,
             ModedVariable.writer('X', structuralMode: Mode.produce),
-            ModedVariable.writer('Zs'),
+            ModedVariable.writer('Zs', structuralMode: Mode.produce),
           ),
         ]);
         expect(isIO(term), isTrue);
