@@ -432,7 +432,7 @@ class TypeParser {
     }
     _consume(TypeTokenType.lparen, 'Expected "(" after procedure name');
 
-    final argTypes = <TypeRef>[];
+    final argTypes = <TypeExpr>[];
     if (!_check(TypeTokenType.rparen)) {
       argTypes.add(_parseProcArgType());
       while (_match(TypeTokenType.comma)) {
@@ -447,15 +447,15 @@ class TypeParser {
   }
 
   /// Parse a procedure argument type (TypeRef or primitive _ / _?)
-  /// Primitives _ and _? are converted to Output and Input types
-  TypeRef _parseProcArgType() {
+  /// Primitives _ and _? return PrimitiveModeAlt directly
+  TypeExpr _parseProcArgType() {
     // Check for primitive mode: _ or _?
     if (_match(TypeTokenType.underscore)) {
       final line = _previous().line;
       final column = _previous().column;
       final isInput = _match(TypeTokenType.question);
-      // _ maps to Output, _? maps to Input
-      return TypeRef(isInput ? 'Input' : 'Output', line, column, isInput: isInput);
+      // Return PrimitiveModeAlt directly instead of TypeRef('Input'/'Output')
+      return PrimitiveModeAlt(isInput, line, column);
     }
 
     // Otherwise expect a type reference
