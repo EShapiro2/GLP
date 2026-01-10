@@ -1,483 +1,443 @@
 # Module: type-dfa
 
-**Version**: 0.5  
-**Date**: 2025-01-08  
-**Status**: DRAFT  
-**Paper References**: Section 4.1 (lines 7-35), lines 30-35 (DFA correspondence)
+**Version**: 0.7
+**Date**: 2025-01-10
+**Status**: DRAFT
+**Paper References**: Section 4.1 (lines 32-44), Definition 4.3 (lines 247-262)
 
 ## Purpose
 
-Compiles GLP type definitions to DFAs and provides traversal operations. Types are deterministic by construction—each state has at most one transition per symbol.
+Represents the single DFA for a typed GLP program. The DFA is built once from the type environment. Path consistency checking uses a complement flag to flip mode expectations for `T?` positions.
 
 ## Dependencies
 
 - `mode` — Mode enum
-- `type-environment` — TypeDef, TypeEnvironment
+- `type-environment` — TypeEnvironment, TypeDef, ProcDecl
 
-## Definitions
+## DFA Structure (Paper lines 42-44)
 
-### DFA Correspondence (Paper line 30)
+A typed GLP program P = (Cs, D) has a **single DFA** where:
 
-> "We impose standard restrictions on GLP type definitions so that they correspond to a DFA in which every state is a defined type, except for final states which are primitive types."
+**States:**
+- One state per defined type name (e.g., `Stream`, `CounterCall`)
+- One state per procedure (e.g., `merge/3`, `sum/2`)
+- System type states: `Integer`, `String` (NOT final; have conceptual transitions to `_FINAL_`)
+- Final states: `_` (any produced term), `_?` (any consumed term), `_FINAL_` (anonymous final for constant/literal matches)
 
-GLP type definitions compile **directly** to a DFA:
-- Each defined type name is a DFA state
-- Each alternative adds transitions from that state
-- Leaf types mark accepting states
+**Transitions:**
+- From procedure states: labeled (procName, arity, argIndex), leading to argument type states
+- From defined type states: labeled (functor, arity, argIndex, mode), leading to type states or final states
+- From `Integer`/`String`: conceptually one per literal value, all leading to `_FINAL_`; implemented as type membership check rather than explicit transitions
+- Constant alternatives (e.g., `[]`): transition labeled with the constant, leading to `_FINAL_`
 
-### Determinism Requirement (Paper lines 31-35)
+**No separate DFAs per type. No merging. No `withSuffix`.**
 
-Type definitions must be deterministic. Alternatives must have **distinct leading symbols**:
+## Complementation (Paper line 19)
 
-```
-Stream ::= [] ; [_|Stream].    % LEGAL: [] vs [|] are different symbols
-```
+Complementation does **not** create additional states. When checking paths at a `T?` position, mode expectations are flipped during traversal:
+- Where `T` expects produce ↑, check expects consume ↓
+- Where `T` expects consume ↓, check expects produce ↑
 
-The following are **illegal** (same symbol, different modes):
-```
-Any ::= _ ; _?.                % ILLEGAL: same position, different modes
-AnyOne ::= 1 ; 1?.             % ILLEGAL: same constant, different modes
-```
-
-### No Type Aliasing (Epsilon Transitions)
-
-Type definitions must have **constructor alternatives only**. Each alternative must introduce a distinct constructor symbol:
-- A constant (`[]`, `0`, `foo`)
-- A structure with arguments (`s(Nat)`, `[_|List]`, `ch(Stream?, Stream)`)
-
-Bare type references and bare primitives are **illegal** as alternatives—they create aliases:
-
-```
-Stream ::= List.                      % ILLEGAL: alias to another type
-Output ::= _.                         % ILLEGAL: alias to primitive
-Input ::= _?.                         % ILLEGAL: alias to primitive
-IntAlias ::= Integer.                 % ILLEGAL: alias to built-in
-Combined ::= List1 ; List2.           % ILLEGAL: merging types creates NFA
-```
-
-Primitives (`_`, `_?`) and type references (`Integer`, `Stream`, etc.) may only appear as **arguments within constructors**:
-
-```
-Stream ::= [] ; [_|Stream].           % LEGAL: _ is argument to [|]
-Pair ::= pair(Integer, String).       % LEGAL: Integer, String are arguments
-Wrapper ::= inner(Other).             % LEGAL: Other appears inside a constructor
-```
-
-**Rationale:** Each DFA state must have explicit transitions labeled with symbols (constants or functor/arity/position). A bare reference `A ::= B` or `A ::= _` would require an epsilon transition, violating the DFA structure.
-
-**Error:** `TypeAliasError("A: type alias not allowed; use constructor wrapper")`
-
-**For primitive-typed procedure arguments, use `_` or `_?` directly in the declaration:**
-```
-procedure foo(_).                     % LEGAL: primitive used directly
-procedure bar(_?, Stream).            % LEGAL: mixed primitives and types
-```
-
-### Leaf Types
-
-A **leaf type** terminates a type path. The DFA has leaf states for:
-
-| Leaf Type | Description | Intrinsic Mode |
-|-----------|-------------|----------------|
-| `_` | Any produced term | produce (↑) |
-| `_?` | Any consumed term | consume (↓) |
-| `Integer` | Any integer constant | from context |
-| `String` | Any string constant | from context |
-| constant (e.g., `[]`, `1`) | Exact value | from context |
-
-### Mode Propagation (Paper lines 9-17)
-
-Modes propagate through type structure via complementation:
-- Uncomplemented type `T` preserves parent mode
-- Complemented type `T?` flips parent mode
-- Complementation is an involution: `(T?)? = T`
+This preserves the involution property: flipping twice returns to original expectations.
 
 ## Public Interface
 
 ### Types
 
-#### `class TypeDFA`
+#### `class ProgramDFA`
 
-A DFA representing a compiled type definition.
+The single DFA for a typed GLP program.
 
 ```dart
-class TypeDFA {
+class ProgramDFA {
   final Map<String, DFAState> states;
-  final DFAState startState;
-  final Map<(DFAState, DFALabel), DFAState> transitions;
+  final Map<(DFAState, TransitionLabel), DFAState> transitions;
+
+  DFAState getState(String name);  // Type name or procedure key
+  DFAState? transition(DFAState from, TransitionLabel label);
 }
 ```
 
 #### `class DFAState`
 
-A state in the type DFA.
-
 ```dart
 class DFAState {
-  final String name;           // Type name or generated name
-  final bool isLeaf;           // True for leaf type states
-  final LeafType? leafType;    // If isLeaf, what kind
-  final Mode? intrinsicMode;   // For _ and _?, their intrinsic mode
-  final Object? constantValue; // For constant leaves, the value
-}
+  final String name;
+  final bool isFinal;
 
-enum LeafType {
-  primitiveOutput,   // _
-  primitiveInput,    // _?
-  integer,           // Integer
-  string,            // String  
-  constant,          // Specific constant value ([], 1, foo, etc.)
+  bool get isWildcard => name == '_' || name == '_?';
+  bool get isProducedWildcard => name == '_';
+  bool get isConsumedWildcard => name == '_?';
+  bool get isIntegerType => name == 'Integer';
+  bool get isStringType => name == 'String';
+  bool get isAnonymousFinal => name == '_FINAL_';
 }
 ```
 
-#### `class DFALabel`
-
-A transition label encoding functor, arity, argument position, and mode.
+#### `class TransitionLabel`
 
 ```dart
-class DFALabel {
-  final String symbol;     // e.g., "[|]", "[]", "ch", "foo"
-  final int arity;         // Number of arguments (0 for constants)
-  final int argIndex;      // 1-based argument position (0 for constants)
-  final Mode? mode;        // Mode at this position (null for constants)
+class TransitionLabel {
+  final String symbol;    // functor name or constant value
+  final int arity;        // 0 for constants
+  final int argIndex;     // 1-based, 0 for constants
+  final Mode? mode;       // null for procedure arg transitions and constants
+
+  factory TransitionLabel.functor(String name, int arity, int argIndex, {Mode? mode});
+  factory TransitionLabel.constant(Object value);
 }
 ```
 
 ### Functions
 
-#### `TypeDFA compileType(String typeName, TypeEnvironment env)`
+#### `ProgramDFA buildProgramDFA(TypeEnvironment env)`
 
-Compiles a type definition to a DFA.
+Builds the single DFA from the type environment.
 
-**Preconditions:** 
-- `typeName` is defined in `env` or is a predefined type
-- Type definition is deterministic (distinct leading symbols per alternative)
-
-**Postconditions:** Returns a DFA where:
-- Start state corresponds to `typeName`
-- Each reachable type has a corresponding state
-- Leaf types have appropriate leaf states
-
-**Errors:** 
-- Throws `UndefinedTypeError` if type not defined
-- Throws `NonDeterministicTypeError` if alternatives have conflicting symbols
-
-#### `TypeDFA complementDFA(TypeDFA dfa)`
-
-Applies mode complementation to all transitions and leaf states.
-
-**Postconditions:** Returns DFA with:
-- All transition modes flipped (↑ ↔ ↓)
-- Primitive leaf intrinsic modes flipped (`_` ↔ `_?`)
-
-**Use case:** For procedure argument `T?`, compile `T` then call `complementDFA`.
-
-#### `DFAState? stateAfterLabel(DFAState from, DFALabel label, TypeDFA dfa)`
-
-Returns the target state for a transition, or null if no such transition exists.
-
-**Preconditions:**
-- `from` is a state in `dfa`
-
-**Postconditions:** Returns the target state if transition exists, null otherwise.
-
-#### `List<(DFALabel, DFAState)> getTransitions(DFAState state, TypeDFA dfa)`
-
-Returns all outgoing transitions from a state.
-
-**Preconditions:**
-- `state` is a state in `dfa`
-
-**Postconditions:** Returns list of (label, targetState) pairs. Empty list for leaf states.
-
-#### `bool isLeafState(DFAState state)`
-
-Returns true if state is a leaf type state.
-
-#### `LeafType? getLeafType(DFAState state)`
-
-Returns the leaf type kind if state is a leaf, null otherwise.
-
-#### `Mode? getLeafMode(DFAState state)`
-
-Returns the intrinsic mode of a primitive leaf state (`_` → produce, `_?` → consume), or null for non-primitive leaves (Integer, String, constants).
-
-## Algorithms
-
-### Algorithm: Direct DFA Compilation
+## Algorithm: Build Program DFA
 
 ```
-compileType(typeName, env):
+buildProgramDFA(env):
   states = {}
   transitions = {}
-  compiled = {}
-  
-  startState = compileTypeRec(typeName, Mode.produce, env, states, transitions, compiled)
-  
-  return TypeDFA(states, startState, transitions)
 
-compileTypeRec(typeName, contextMode, env, states, transitions, compiled):
-  key = typeName
-  if key in compiled:
-    return states[key]
-  
-  // Handle predefined leaf types
-  if typeName == "_":
-    state = DFAState(
-      name: "_", 
-      isLeaf: true, 
-      leafType: LeafType.primitiveOutput,
-      intrinsicMode: Mode.produce
-    )
-    states[key] = state
-    compiled.add(key)
-    return state
-  
-  if typeName == "_?":
-    state = DFAState(
-      name: "_?", 
-      isLeaf: true, 
-      leafType: LeafType.primitiveInput,
-      intrinsicMode: Mode.consume
-    )
-    states[key] = state
-    compiled.add(key)
-    return state
-  
-  if typeName == "Integer":
-    state = DFAState(name: "Integer", isLeaf: true, leafType: LeafType.integer)
-    states[key] = state
-    compiled.add(key)
-    return state
-  
-  if typeName == "String":
-    state = DFAState(name: "String", isLeaf: true, leafType: LeafType.string)
-    states[key] = state
-    compiled.add(key)
-    return state
-  
-  // Create state for user-defined type
-  state = DFAState(name: typeName, isLeaf: false)
-  states[key] = state
-  compiled.add(key)
-  
-  typeDef = env.getType(typeName)
-  if typeDef is null:
-    throw UndefinedTypeError(typeName)
-  
-  for alt in typeDef.alternatives:
-    compileAlternative(state, alt, contextMode, env, states, transitions, compiled)
-  
-  return state
+  // Create final states (only _ and _? are true finals accepting variables)
+  states['_'] = DFAState('_', isFinal: true)
+  states['_?'] = DFAState('_?', isFinal: true)
+  states['_FINAL_'] = DFAState('_FINAL_', isFinal: true)  // anonymous final for constants/literals
 
-compileAlternative(fromState, alt, contextMode, env, states, transitions, compiled):
+  // Create system type states (NOT final - they have conceptual transitions to _FINAL_)
+  states['Integer'] = DFAState('Integer', isFinal: false)
+  states['String'] = DFAState('String', isFinal: false)
+
+  // Integer and String have conceptual transitions to _FINAL_ for any literal.
+  // These are not explicitly enumerated; instead, checkLeafConsistency performs
+  // a membership check when the current state is Integer or String.
+
+  // Create states for defined types
+  for typeName in env.types.keys:
+    states[typeName] = DFAState(typeName, isFinal: false)
+
+  // Create states for procedures
+  for procKey in env.procedures.keys:
+    states[procKey] = DFAState(procKey, isFinal: false)
+
+  // Add transitions from type definitions
+  for (typeName, typeDef) in env.types:
+    fromState = states[typeName]
+    for alt in typeDef.alternatives:
+      addTypeTransitions(fromState, alt, Mode.produce, states, transitions)
+
+  // Add transitions from procedure declarations
+  for (procKey, procDecl) in env.procedures:
+    fromState = states[procKey]
+    for i in 0..<procDecl.arity:
+      argType = procDecl.argTypes[i]
+      label = TransitionLabel.functor(procDecl.name, procDecl.arity, i+1, mode: null)
+      targetState = resolveTypeExpr(argType, states)
+      transitions[(fromState, label)] = targetState
+
+  return ProgramDFA(states, transitions)
+```
+
+## Algorithm: Add Type Transitions
+
+```
+addTypeTransitions(fromState, alt, contextMode, states, transitions):
   match alt:
-    PrimitiveAlt(isInput):
-      // _ or _? as an alternative
-      // This makes fromState also act as a leaf
-      fromState.isLeaf = true
-      fromState.leafType = isInput ? LeafType.primitiveInput : LeafType.primitiveOutput
-      fromState.intrinsicMode = isInput ? Mode.consume : Mode.produce
-    
     ConstantAlt(value):
-      label = DFALabel(symbol: value.toString(), arity: 0, argIndex: 0, mode: null)
-      leafState = DFAState(
-        name: "_const_$value",
-        isLeaf: true,
-        leafType: LeafType.constant,
-        constantValue: value
-      )
-      states["_const_$value"] = leafState
-      transitions[(fromState, label)] = leafState
-    
+      label = TransitionLabel.constant(value)
+      transitions[(fromState, label)] = states['_FINAL_']
+
     ListNilAlt:
-      label = DFALabel(symbol: "[]", arity: 0, argIndex: 0, mode: null)
-      leafState = DFAState(
-        name: "_nil",
-        isLeaf: true,
-        leafType: LeafType.constant,
-        constantValue: []
-      )
-      states["_nil"] = leafState
-      transitions[(fromState, label)] = leafState
-    
-    ListConsAlt(headTypeExpr, tailTypeExpr):
-      // Head transition
-      headMode = modeOfTypeExpr(headTypeExpr, contextMode)
-      headLabel = DFALabel(symbol: "[|]", arity: 2, argIndex: 1, mode: headMode)
-      headTarget = resolveTypeExpr(headTypeExpr, headMode, env, states, transitions, compiled)
-      transitions[(fromState, headLabel)] = headTarget
-      
-      // Tail transition
-      tailMode = modeOfTypeExpr(tailTypeExpr, contextMode)
-      tailLabel = DFALabel(symbol: "[|]", arity: 2, argIndex: 2, mode: tailMode)
-      tailTarget = resolveTypeExpr(tailTypeExpr, tailMode, env, states, transitions, compiled)
-      transitions[(fromState, tailLabel)] = tailTarget
-    
-    StructAlt(functor, argTypeExprs):
-      arity = argTypeExprs.length
-      for i in 1..arity:
-        argTypeExpr = argTypeExprs[i-1]
-        argMode = modeOfTypeExpr(argTypeExpr, contextMode)
-        label = DFALabel(symbol: functor, arity: arity, argIndex: i, mode: argMode)
-        target = resolveTypeExpr(argTypeExpr, argMode, env, states, transitions, compiled)
-        transitions[(fromState, label)] = target
+      label = TransitionLabel.constant('[]')
+      transitions[(fromState, label)] = states['_FINAL_']
 
-modeOfTypeExpr(typeExpr, parentMode):
+    ListConsAlt(headType, tailType):
+      headMode = modeOf(headType, contextMode)
+      tailMode = modeOf(tailType, contextMode)
+
+      headLabel = TransitionLabel.functor('[|]', 2, 1, mode: headMode)
+      tailLabel = TransitionLabel.functor('[|]', 2, 2, mode: tailMode)
+
+      transitions[(fromState, headLabel)] = resolveTypeExpr(headType, states)
+      transitions[(fromState, tailLabel)] = resolveTypeExpr(tailType, states)
+
+    StructAlt(functor, args):
+      for i in 0..<args.length:
+        argType = args[i]
+        argMode = modeOf(argType, contextMode)
+        label = TransitionLabel.functor(functor, args.length, i+1, mode: argMode)
+        transitions[(fromState, label)] = resolveTypeExpr(argType, states)
+
+    DiffListAlt(content, hole):
+      contentMode = modeOf(content, contextMode)
+      holeMode = modeOf(hole, contextMode)
+
+      contentLabel = TransitionLabel.functor('\\', 2, 1, mode: contentMode)
+      holeLabel = TransitionLabel.functor('\\', 2, 2, mode: holeMode)
+
+      transitions[(fromState, contentLabel)] = resolveTypeExpr(content, states)
+      transitions[(fromState, holeLabel)] = resolveTypeExpr(hole, states)
+```
+
+## Algorithm: Resolve Type Expression
+
+```
+resolveTypeExpr(typeExpr, states):
   match typeExpr:
-    TypeRef(_, isComplement):
-      return isComplement ? parentMode.flip : parentMode
-    PrimitiveAlt(isInput):
-      return isInput ? Mode.consume : Mode.produce
+    PrimitiveModeAlt(isInput):
+      // _ and _? are final states
+      return isInput ? states['_?'] : states['_']
 
-resolveTypeExpr(typeExpr, contextMode, env, states, transitions, compiled):
-  match typeExpr:
-    TypeRef(name, isComplement):
-      return compileTypeRec(name, contextMode, env, states, transitions, compiled)
-    PrimitiveAlt(isInput):
-      primName = isInput ? "_?" : "_"
-      return compileTypeRec(primName, contextMode, env, states, transitions, compiled)
+    TypeRef(name, isInput):
+      // Integer and String are type states (not final)
+      // They have conceptual transitions to _FINAL_ for each literal
+      if name == 'Integer': return states['Integer']
+      if name == 'String': return states['String']
+      // Note: isInput flag is NOT used here - complementation happens during path checking
+      return states[name]
 ```
 
-### Algorithm: DFA Mode Complementation
+## Algorithm: Mode Computation
 
 ```
-complementDFA(dfa):
-  newStates = {}
-  newTransitions = {}
-  
-  // Complement all states
-  for (name, state) in dfa.states:
-    if state.isLeaf and state.leafType in {primitiveOutput, primitiveInput}:
-      // Flip primitive type
-      newLeafType = state.leafType == primitiveOutput ? primitiveInput : primitiveOutput
-      newMode = state.intrinsicMode.flip
-      newName = newMode == Mode.consume ? "_?" : "_"
-      newStates[name] = DFAState(
-        name: newName,
-        isLeaf: true,
-        leafType: newLeafType,
-        intrinsicMode: newMode
-      )
-    else:
-      newStates[name] = state
-  
-  // Complement all transition modes
-  for ((fromState, label), toState) in dfa.transitions:
-    newLabel = DFALabel(
-      symbol: label.symbol,
-      arity: label.arity,
-      argIndex: label.argIndex,
-      mode: label.mode?.flip
-    )
-    newTransitions[(newStates[fromState.name], newLabel)] = newStates[toState.name]
-  
-  return TypeDFA(newStates, newStates[dfa.startState.name], newTransitions)
+modeOf(typeExpr, contextMode):
+  // T? flips mode, T keeps mode
+  if typeExpr is TypeRef && typeExpr.isInput:
+    return contextMode.flip
+  if typeExpr is PrimitiveModeAlt && typeExpr.isInput:
+    return contextMode.flip
+  return contextMode
 ```
+
+## Path Consistency Checking (Definition 4.3)
+
+Path consistency is checked by traversing the DFA alongside a moded term path. The `complement` flag indicates whether modes should be flipped (for `T?` positions).
+
+```
+checkPathConsistency(termPath, dfa, startState, complement):
+  state = startState
+
+  for i in 0..<termPath.length - 1:
+    step = termPath[i]
+    nextStep = termPath[i + 1]
+
+    // Build expected label with mode adjustment for complement
+    expectedMode = nextStep.mode
+    if complement:
+      expectedMode = expectedMode.flip
+
+    label = TransitionLabel.functor(step.functor, step.arity, nextStep.argIndex, mode: expectedMode)
+
+    // Follow transition
+    nextState = dfa.transition(state, label)
+    if nextState == null:
+      return PathCheckResult.inconsistent("No transition for $label from $state")
+
+    state = nextState
+
+  // Check leaf consistency
+  return checkLeafConsistency(termPath.leaf, state, dfa, complement)
+```
+
+## Algorithm: Leaf Consistency (Definition 4.3 cases)
+
+```
+checkLeafConsistency(leaf, state, dfa, complement):
+  expectedMode = leaf.mode
+  if complement:
+    expectedMode = expectedMode.flip
+
+  // Case: Produced wildcard final state (_)
+  if state.isProducedWildcard:
+    // Definition 4.3 case 3(b): type path ends in _ and term has produce mode
+    if leaf.isVariable && !leaf.isReader && expectedMode == Mode.produce:
+      return consistent(type: state)
+    return inconsistent("_ expects writer at produce position")
+
+  // Case: Consumed wildcard final state (_?)
+  if state.isConsumedWildcard:
+    // Definition 4.3 case 3(a): type path ends in _? and term has consume mode
+    if leaf.isVariable && leaf.isReader && expectedMode == Mode.consume:
+      return consistent(type: state)
+    return inconsistent("_? expects reader at consume position")
+
+  // Case: Integer type state (conceptual infinite transitions)
+  if state.isIntegerType:
+    if leaf.isInteger:
+      // Conceptually: follow transition labeled with this integer to _FINAL_
+      return consistent(type: dfa.states['_FINAL_'])
+    if leaf.isVariable:
+      // Definition 4.3 case 2: term path is prefix ending in variable
+      if leaf.isReader && expectedMode == Mode.consume:
+        return consistent(type: state)
+      if !leaf.isReader && expectedMode == Mode.produce:
+        return consistent(type: state)
+      return inconsistent("Variable mode mismatch at Integer")
+    return inconsistent("Integer type requires integer literal or variable")
+
+  // Case: String type state (conceptual infinite transitions)
+  if state.isStringType:
+    if leaf.isString:
+      // Conceptually: follow transition labeled with this string to _FINAL_
+      return consistent(type: dfa.states['_FINAL_'])
+    if leaf.isVariable:
+      if leaf.isReader && expectedMode == Mode.consume:
+        return consistent(type: state)
+      if !leaf.isReader && expectedMode == Mode.produce:
+        return consistent(type: state)
+      return inconsistent("Variable mode mismatch at String")
+    return inconsistent("String type requires string literal or variable")
+
+  // Case: Anonymous final state (reached via exact constant match)
+  if state.isAnonymousFinal:
+    // Definition 4.3 case 1: equal length, last symbols consistent
+    // We only reach here if a constant transition was followed, so it matched
+    return consistent(type: state)
+
+  // Case: Non-final type state with variable
+  // Definition 4.3 case 2: term path is prefix ending in reader/writer
+  if leaf.isVariable:
+    if leaf.isReader && expectedMode == Mode.consume:
+      return consistent(type: state)  // Case 2(a)
+    if !leaf.isReader && expectedMode == Mode.produce:
+      return consistent(type: state)  // Case 2(b)
+    return inconsistent("Variable mode mismatch at type position")
+
+  // Case: Non-final type state with constant - must follow transition
+  // Definition 4.3 case 1: check if constant matches a transition
+  constLabel = TransitionLabel.constant(leaf.value)
+  nextState = dfa.transition(state, constLabel)
+  if nextState != null:
+    return consistent(type: nextState)
+
+  return inconsistent("Constant at type state without matching transition")
+```
+
+## Procedure Argument Complement Flag
+
+When checking a clause head or body atom against a procedure declaration, each argument may need the complement flag:
+
+```
+getArgumentComplement(procDecl, argIndex):
+  argType = procDecl.argTypes[argIndex]
+
+  if argType is TypeRef:
+    return argType.isInput  // T? means complement=true
+
+  if argType is PrimitiveModeAlt:
+    return argType.isInput  // _? means complement=true
+
+  return false
+```
+
+For heads (callee's view), an additional global complement is applied due to the caller/callee perspective flip. This is detailed in the well-typed-clause module.
+
+## Error Conditions
+
+| Error | Condition |
+|-------|-----------|
+| `NoTransitionError` | No matching transition from current state |
+| `ModeMismatchError` | Variable mode doesn't match expected mode at position |
+| `TypeMismatchError` | Constant doesn't match expected type (Integer/String) |
+| `UnknownTypeError` | Type name not found in environment |
+| `UnknownProcedureError` | Procedure key not found in environment |
 
 ## Examples
 
-### Example: Stream Type Compilation
+### Example 1: Stream Type DFA
 
 ```
 Stream ::= [] ; [_|Stream].
 ```
 
-Compiles to DFA:
-```
-States: 
-  Stream (non-leaf)
-  _nil (leaf: constant [])
-  _ (leaf: primitiveOutput, intrinsicMode=produce)
+**States:** `Stream`, `_`, `_FINAL_`
 
-Start: Stream
+**Transitions:**
+- `(Stream, []) → _FINAL_`
+- `(Stream, [|](2,1):↑) → _`
+- `(Stream, [|](2,2):↑) → Stream`
 
-Transitions:
-  Stream --[[], 0, 0, null]--> _nil
-  Stream --[[|], 2, 1, ↑]--> _
-  Stream --[[|], 2, 2, ↑]--> Stream
-```
-
-### Example: Stream? (Complemented)
-
-After `complementDFA(StreamDFA)`:
-```
-States:
-  Stream (non-leaf)
-  _nil (leaf: constant [])
-  _? (leaf: primitiveInput, intrinsicMode=consume)  // Flipped from _
-
-Transitions:
-  Stream --[[], 0, 0, null]--> _nil
-  Stream --[[|], 2, 1, ↓]--> _?     // Mode flipped ↑→↓
-  Stream --[[|], 2, 2, ↓]--> Stream // Mode flipped ↑→↓
-```
-
-### Example: HollowStream (Interactive Type)
-
-```
-HollowStream ::= [] ; [_?|HollowStream].
-```
-
-Compiles to:
-```
-States:
-  HollowStream (non-leaf)
-  _nil (leaf: constant [])
-  _? (leaf: primitiveInput, intrinsicMode=consume)
-
-Transitions:
-  HollowStream --[[], 0, 0, null]--> _nil
-  HollowStream --[[|], 2, 1, ↓]--> _?           // _? has consume mode
-  HollowStream --[[|], 2, 2, ↑]--> HollowStream // No complement on recursive ref
-```
-
-### Example: Procedure Type for merge
+### Example 2: merge Procedure
 
 ```
 procedure merge(Stream?, Stream?, Stream).
 ```
 
-Argument DFAs:
-- Args 1, 2: Compile `Stream`, then call `complementDFA()` 
-- Arg 3: Compile `Stream` as-is (no complement)
+**Additional state:** `merge/3`
 
-### Example: INVALID — Non-deterministic Type
+**Transitions:**
+- `(merge/3, merge(3,1)) → Stream`
+- `(merge/3, merge(3,2)) → Stream`
+- `(merge/3, merge(3,3)) → Stream`
+
+Note: All three arguments point to the same `Stream` state. The complement flag is:
+- Arg 1: complement=true (declared as `Stream?`)
+- Arg 2: complement=true (declared as `Stream?`)
+- Arg 3: complement=false (declared as `Stream`)
+
+### Example 3: Path Consistency Check
+
+For the first `merge` clause:
+```
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+```
+with type `merge(Stream?, Stream?, Stream)`.
+
+**Step 1: Construct moded head** (after variable flip per Definition 4.7):
+```
+H' = ↓merge(↓[↓X?|Xs?], Ys?, ↑[↑X|Zs])
+```
+
+**Step 2: Extract term path** to first element of first argument:
+```
+Term path: (0,↓) --> merge/3 --(1,↓)--> [|]/2 --(1,↓)--> X?
+```
+
+**Step 3: Build type path** by traversing DFA with complement:
+
+The DFA has:
+- `(merge/3, merge(3,1)) → Stream`
+- `(Stream, [|](2,1):↑) → _`
+
+Since arg 1 is declared `Stream?`, we set complement=true. This means when we record the type path, we flip the DFA's modes:
 
 ```
-BadTree ::= leaf(Integer) ; leaf(String).   % ILLEGAL
+Type path: (0,↓) --> merge/3 --(1,↓)--> Stream? --(1,↓)--> [|]/2 --(1,↓)--> _?
 ```
 
-**Problem:** Both alternatives start with `leaf/1`. The DFA would need two transitions from `BadTree` state with label `leaf(1,1)` — this violates determinism.
+Note: The DFA transition has mode ↑, but with complement=true, the type path records mode ↓.
 
-**Error:** `NonDeterministicTypeError("BadTree: multiple transitions for leaf/1")`
+**Step 4: Check consistency** (Definition 4.3 case 2a):
+- Term path ends in reader `X?`
+- Type path at corresponding position has mode ↓ (consume)
+- ✓ Consistent! Variable `X?` is assigned type `_?`
 
-**Fix:** Use distinct constructors:
-```
-Tree ::= int_leaf(Integer) ; str_leaf(String).   % LEGAL
-```
+---
 
-## Error Conditions
+**Key clarification:**
 
-| Condition | Exception |
-|-----------|-----------|
-| Type not defined | `UndefinedTypeError` |
-| Non-deterministic alternatives (same leading symbol) | `NonDeterministicTypeError` |
+| Concept | Source | Modes |
+|---------|--------|-------|
+| Term path | Extracted from clause/moded head | Based on reader/writer annotations and procedure type |
+| DFA transitions | Type definitions | Always from producer's view (↑ by default) |
+| Type path | Traversal of DFA | DFA modes, flipped if complement=true |
+| Consistency check | Compare term path vs type path | Per Definition 4.3 |
 
-## Notes
+## Removed from Previous Spec
 
-### Why No DFA Set Operations?
-
-Previous versions of this spec included union, intersection, complement (set), and subset operations. These are **not needed** because:
-
-1. **Covariance checking** traverses the DFA alongside moded paths — no set operations needed
-2. **Contravariance checking** uses structural coverage — traverse the type DFA and verify each transition is accepted by some clause head
-
-The only DFA operation needed beyond compilation is `complementDFA` for handling `T?` procedure arguments.
+- `withSuffix()` — no longer needed
+- `applyModeComplement()` — replaced by `complement` flag during checking
+- `primitiveStateModes` map — replaced by checking state names (`_` vs `_?`)
+- Separate per-type DFA compilation — single program DFA
+- DFA merging for procedures — procedures are states in the same DFA
+- `TypeDFA` class — replaced by `ProgramDFA`
 
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.1 | 2025-01-07 | Initial draft |
-| 0.5 | 2025-01-08 | Major simplification: removed DFA set operations (union, intersect, subset, isEmpty); clarified leaf types; improved algorithms |
+| 0.5 | 2025-01-08 | Previous version with per-type DFAs |
+| 0.6 | 2025-01-10 | Single program DFA; complement during checking not construction |
+| 0.7 | 2025-01-10 | Integer/String as type states (not final); _FINAL_ for literals |

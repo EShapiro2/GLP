@@ -143,22 +143,20 @@ class TypeCompiler {
     }
     // ConstantAlt, ListNilAlt, and PrimitiveModeAlt have no type references
   }
-  
+
   /// Compute mode for a type expression at a given context mode
   ///
-  /// Returns null for plain TypeRef positions (any mode acceptable).
-  /// Returns strict mode for PrimitiveModeAlt or annotated TypeRef (Type?).
-  Mode? _modeOfTypeExpr(TypeExpr typeExpr, Mode contextMode) {
-    // Primitives have strict mode requirements
-    if (typeExpr is PrimitiveModeAlt) {
-      return typeExpr.isInput ? contextMode.flip : contextMode;
-    }
-    // Explicitly annotated TypeRef (Type?) requires strict consume mode
+  /// T? flips parent mode, T keeps parent mode.
+  Mode _modeOfTypeExpr(TypeExpr typeExpr, Mode contextMode) {
+    // T? flips parent mode
     if (typeExpr is TypeRef && typeExpr.isInput) {
-      return contextMode.flip;  // flip produce→consume
+      return contextMode.flip;
     }
-    // Plain TypeRef without annotation accepts any mode - return null
-    return null;
+    if (typeExpr is PrimitiveModeAlt && typeExpr.isInput) {
+      return contextMode.flip;
+    }
+    // T keeps parent mode
+    return contextMode;
   }
 
   /// Add DFA transitions for a type alternative
