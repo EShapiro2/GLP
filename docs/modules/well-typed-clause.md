@@ -1,9 +1,9 @@
 # Module: well-typed-clause
 
-**Version**: 0.5  
-**Date**: 2025-01-08  
-**Status**: DRAFT  
-**Paper References**: Definition 4.8 (lines 311-321), Example (lines 323-349)
+**Version**: 0.6
+**Date**: 2025-01-10
+**Status**: DRAFT
+**Paper References**: Definition 4.8 (lines 366-377), Example (lines 382-408)
 
 ## Purpose
 
@@ -14,12 +14,12 @@ Determines when a GLP clause is well-typed by a type environment D.
 - `mode` — Mode enum
 - `moded-head` — modedHead(), producedTerm()
 - `well-typed-term` — checkModedTerm()
-- `type-dfa` — compileType(), complementDFA()
+- `type-dfa` — ProgramDFA, Automaton, DFAState, buildProgramDFA()
 - `type-environment` — TypeEnvironment, ProcDecl
 
 ## Definitions
 
-### Definition 4.8: Well-typed Clause (lines 311-321)
+### Definition 4.8: Well-typed Clause (lines 366-377)
 
 > Let C = (H :- B) be a GLP clause and D a GLP type for all its procedures.
 > Then C is **well-typed** by D if:
@@ -82,12 +82,13 @@ class ClauseVariableNotComplementaryError extends ClauseError {
 
 ### Functions
 
-#### `ClauseCheckResult checkClause(Clause clause, TypeEnvironment env)`
+#### `ClauseCheckResult checkClause(Clause clause, ProgramDFA dfa, TypeEnvironment env)`
 
 Checks if a clause is well-typed per Definition 4.8.
 
 **Preconditions:**
 - `clause` is a valid GLP clause
+- `dfa` is the compiled ProgramDFA for the type environment
 - `env` contains procedure declarations for head and all body atoms
 
 **Postconditions:** Returns ClauseCheckResult where:
@@ -98,150 +99,157 @@ Checks if a clause is well-typed per Definition 4.8.
 **Errors:**
 - Throws `UndeclaredProcedureError` if any procedure is not declared
 
-#### `Set<DFALabel> getAcceptedLabels(Clause clause, int argIndex, TypeEnvironment env)`
-
-Returns the set of DFA labels that the clause head accepts at the given argument position. Used for coverage checking.
-
-**Preconditions:**
-- `clause` is a valid GLP clause
-- `argIndex` is 1-based, within head arity
-- `env` contains the procedure declaration
-
-**Postconditions:** Returns set of DFA labels the head argument can match:
-- Variable → accepts all labels (wildcard)
-- Constant → accepts that specific constant
-- Compound → accepts that functor/arity with nested structure
-
 ## Algorithms
 
 ### Algorithm: Clause Well-Typing Check
 
 ```
-checkClause(clause, env):
+checkClause(clause, dfa, env):
   errors = []
   allVariableTypes = {}
-  
+
   // Get procedure declaration for head
   headDecl = env.getProcedure(clause.head.functor, clause.head.arity)
   if headDecl == null:
     throw UndeclaredProcedureError(clause.head.functor, clause.head.arity)
-  
+
   // Condition 1: Head well-typed
   modedH = modedHead(clause.head, headDecl)
-  headDFA = buildProcedureTypeDFA(headDecl, env)
-  headResult = checkModedTerm(modedH, headDFA)
-  
+  headAutomaton = dfa.getAutomaton(headDecl.key)  // e.g., "merge/3"
+  headResult = checkModedTermPerArg(modedH, headDecl, dfa)
+
   if not headResult.isWellTyped:
     errors.add(HeadNotWellTypedError(headResult.errors))
-  
+
   allVariableTypes.addAll(headResult.variableTypes)
-  
+
   // Condition 2: Body atoms well-typed
   for i, atom in enumerate(clause.body):
     atomDecl = env.getProcedure(atom.functor, atom.arity)
     if atomDecl == null:
       throw UndeclaredProcedureError(atom.functor, atom.arity)
-    
+
     modedA = producedTerm(atom, atomDecl)
-    atomDFA = buildProcedureTypeDFA(atomDecl, env)
-    atomResult = checkModedTerm(modedA, atomDFA)
-    
+    atomResult = checkModedTermPerArg(modedA, atomDecl, dfa)
+
     if not atomResult.isWellTyped:
       errors.add(BodyAtomNotWellTypedError(i, atom, atomResult.errors))
-    
+
     // Merge variable types, checking consistency
     for (varKey, info) in atomResult.variableTypes:
       if varKey in allVariableTypes:
-        if allVariableTypes[varKey].typeState != info.typeState:
+        if allVariableTypes[varKey].typeState.name != info.typeState.name:
           errors.add(InconsistentVariableAcrossClauseError(varKey))
       else:
         allVariableTypes[varKey] = info
-  
+
   // Condition 3: Complementary variable types across entire clause
   complementErrors = checkClauseComplementarity(allVariableTypes)
   errors.addAll(complementErrors)
-  
+
   return ClauseCheckResult(
     isWellTyped: errors.isEmpty,
     variableTypes: allVariableTypes,
     errors: errors
   )
+```
 
-buildProcedureTypeDFA(decl, env):
-  // Build a composite DFA for the procedure
-  // Each argument position has its own type DFA
-  argDFAs = []
-  for argType in decl.argTypes:
-    baseDFA = compileType(argType.baseName, env)
-    if argType.isInput:  // Type?
-      argDFAs.add(complementDFA(baseDFA))
-    else:
-      argDFAs.add(baseDFA)
-  
-  return ProcedureTypeDFA(decl.name, decl.arity, argDFAs)
+### Algorithm: Check Moded Term Per Argument
 
+Each argument is checked against its declared type's automaton directly.
+
+```
+checkModedTermPerArg(modedTerm, decl, dfa):
+  errors = []
+  variableTypes = {}
+
+  // modedTerm is a ModedCompound with args
+  for i in 0..<decl.arity:
+    argTerm = modedTerm.args[i]
+    argType = decl.argTypes[i]
+
+    // Get the automaton for the declared type directly
+    // Type? → use T? automaton; Type → use T automaton
+    argTypeName = getFullTypeName(argType)  // e.g., "Stream?" or "Stream"
+    argAutomaton = dfa.getAutomaton(argTypeName)
+
+    // Extract paths from this argument and check against automaton
+    argPaths = pathsFromArg(modedTerm, i)
+
+    for path in argPaths:
+      result = checkPathAgainstAutomaton(path, argAutomaton, dfa)
+
+      if not result.isConsistent:
+        errors.add(InconsistentPathError(path, result.reason))
+      else if result.variableAssignment != null:
+        varKey = result.variableAssignment.varName
+        if varKey in variableTypes:
+          if variableTypes[varKey].typeState.name != result.variableAssignment.typeState.name:
+            errors.add(InconsistentVariableError(varKey))
+        else:
+          variableTypes[varKey] = result.variableAssignment
+
+  // Check complementarity within this term
+  complementErrors = checkComplementarity(variableTypes)
+  errors.addAll(complementErrors)
+
+  return WellTypedResult(
+    isWellTyped: errors.isEmpty,
+    variableTypes: variableTypes,
+    errors: errors
+  )
+
+getFullTypeName(typeExpr):
+  match typeExpr:
+    PrimitiveModeAlt(isInput):
+      return isInput ? '_?' : '_'
+    TypeRef(name, isInput):
+      return isInput ? name + '?' : name
+```
+
+### Algorithm: Complementarity Check Across Clause
+
+```
 checkClauseComplementarity(variableTypes):
   errors = []
-  
+
   baseNames = groupByBaseName(variableTypes)
-  
+
   for (baseName, variants) in baseNames:
     writerKey = baseName
     readerKey = "${baseName}?"
-    
+
     if writerKey in variants and readerKey in variants:
       writerInfo = variants[writerKey]
       readerInfo = variants[readerKey]
-      
+
       if not areComplementaryTypes(writerInfo, readerInfo):
         errors.add(ClauseVariableNotComplementaryError(baseName, writerInfo, readerInfo))
-  
+
   return errors
 
 areComplementaryTypes(writerInfo, readerInfo):
   // Writer must be in produce mode, reader in consume mode
   if writerInfo.mode != Mode.produce or readerInfo.mode != Mode.consume:
     return false
-  
-  // Type states must be "the same type" (complementary positions)
-  // For primitive types: _ complements _?
-  // For defined types: T complements T?
-  return typesAreComplements(writerInfo.typeState, readerInfo.typeState)
-```
 
-### Algorithm: Get Accepted Labels (for Coverage)
+  // States must be complements: same baseName, opposite isComplement
+  if writerInfo.typeState.baseName != readerInfo.typeState.baseName:
+    return false
 
-```
-getAcceptedLabels(clause, argIndex, env):
-  argTerm = clause.head.args[argIndex - 1]
-  headDecl = env.getProcedure(clause.head.functor, clause.head.arity)
-  argType = headDecl.argTypes[argIndex - 1]
-  
-  return extractAcceptedLabels(argTerm, argType, env)
-
-extractAcceptedLabels(term, typeExpr, env):
-  match term:
-    Variable(name, isReader):
-      // Variable accepts ALL labels for this type (wildcard)
-      return ALL_LABELS  // Special marker meaning "accepts anything"
-    
-    Constant(value):
-      // Constant accepts only its specific label
-      return {DFALabel(symbol: value.toString(), arity: 0, argIndex: 0, mode: null)}
-    
-    Compound(functor, args):
-      // Returns labels for this specific functor/arity
-      // Used to check if clause accepts a specific alternative
-      return {DFALabel(symbol: functor, arity: args.length, argIndex: 0, mode: contextMode)}
+  // One must be complement, the other not
+  return writerInfo.typeState.isComplement != readerInfo.typeState.isComplement
 ```
 
 ## Examples
 
-### Example: Well-Typed merge Clause
+### Example: Well-Typed merge Clause (Paper lines 382-408)
 
 ```
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 ```
+
+Type: `procedure merge(Stream?, Stream?, Stream).`
 
 **Condition 1: Head well-typed**
 
@@ -250,7 +258,10 @@ Moded head:
 H' = ↓merge(↓[↓X?|Xs?], Ys?, ↑[↑X|Zs])
 ```
 
-All paths consistent with type DFA ✓
+Check each argument against its declared type's automaton:
+- Arg 1 (`Stream?`): Use `Stream?` automaton → paths consistent ✓
+- Arg 2 (`Stream?`): Use `Stream?` automaton → paths consistent ✓
+- Arg 3 (`Stream`): Use `Stream` automaton → paths consistent ✓
 
 **Condition 2: Body atom well-typed**
 
@@ -259,54 +270,52 @@ Produced moded term:
 A' = ↑merge(Ys?, Xs?, Zs)
 ```
 
-All paths consistent ✓
+Check each argument:
+- Arg 1 (`Stream?`): Ys? is reader at `Stream?` state ✓
+- Arg 2 (`Stream?`): Xs? is reader at `Stream?` state ✓
+- Arg 3 (`Stream`): Zs is writer at `Stream` state ✓
 
-**Condition 3: Complementary types**
+**Condition 3: Complementary types (Paper lines 400-407)**
 
-| Variable | Type | Mode |
-|----------|------|------|
-| X | _ | produce |
-| X? | _? | consume |
-| Xs | Stream | produce |
-| Xs? | Stream? | consume |
-| Ys | Stream? | produce |
-| Ys? | Stream | consume |
-| Zs | Stream | produce |
-| Zs? | Stream? | consume |
+| Variable | Type State | Mode |
+|----------|------------|------|
+| X | `_` (isComplement: false) | produce |
+| X? | `_?` (isComplement: true) | consume |
+| Xs | `Stream` (isComplement: false) | produce |
+| Xs? | `Stream?` (isComplement: true) | consume |
+| Ys | `Stream?` (isComplement: true) | produce |
+| Ys? | `Stream` (isComplement: false) | consume |
+| Zs | `Stream` (isComplement: false) | produce |
+| Zs? | `Stream?` (isComplement: true) | consume |
 
-All pairs complementary ✓
+All pairs: same baseName, opposite isComplement ✓
 
 **Result: Well-typed**
 
-### Example: INVALID — Head Not Well-Typed
+### Example: NEGATIVE — Head Not Well-Typed
 
 ```
 merge(42, Ys, Zs).
 ```
 
-**Problem:** Argument 1 has type `Stream?`, but head has integer `42`. No path in `Stream?` accepts integer.
+**Problem:** Argument 1 uses `Stream?` automaton. Integer 42 has no matching transition from `Stream?` state.
 
 **Error:** `HeadNotWellTypedError([InconsistentPathError(...)])`
 
-### Example: INVALID — Body Atom Not Well-Typed
-
-```
-merge(Xs, Ys, Zs) :- merge(42, Ys?, Zs?).
-```
-
-**Problem:** Body atom passes integer `42` at argument 1 expecting `Stream?`.
-
-**Error:** `BodyAtomNotWellTypedError(0, merge(42, Ys?, Zs?), [...])`
-
-### Example: INVALID — Non-Complementary Variables
+### Example: NEGATIVE — Non-Complementary Variables
 
 ```
 convert([X|Xs], [X?|Ys]) :- convert(Xs?, Ys?).
 ```
 
-With type `convert(Stream?, NatStream)` where Stream has `_` elements and NatStream has `Integer` elements.
+With type `convert(Stream?, NatStream)` where:
+- `Stream ::= [] ; [_|Stream]`
+- `NatStream ::= [] ; [Integer|NatStream]`
 
-**Problem:** X from Stream? gets type _, X? from NatStream gets type Integer. These are not complements.
+**Problem:**
+- X from `Stream?` arg gets type `_?`
+- X? from `NatStream` arg gets type `Integer`
+- `_?` and `Integer` have different baseNames — not complements!
 
 **Error:** `ClauseVariableNotComplementaryError("X", ...)`
 
@@ -320,9 +329,17 @@ With type `convert(Stream?, NatStream)` where Stream has `_` elements and NatStr
 | Variable inconsistent across clause | `InconsistentVariableAcrossClauseError` |
 | Variable pair not complementary | `ClauseVariableNotComplementaryError` |
 
+## Changes from v0.5
+
+- Use `ProgramDFA` and `Automaton` instead of `TypeDFA`
+- `buildProcedureTypeDFA()` removed — use `dfa.getAutomaton(typeName)` directly
+- No complement flag logic — automaton for `T?` already has correct states/modes
+- Complementarity check uses `DFAState.baseName` and `isComplement`
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1 | 2025-01-07 | Initial draft |
-| 0.5 | 2025-01-08 | Add getAcceptedLabels for coverage; complete algorithms; more examples |
+| 0.5 | 2025-01-08 | Add getAcceptedLabels; complete algorithms |
+| 0.6 | 2025-01-10 | Update for ProgramDFA v0.8: direct automaton lookup, no complement flag |
