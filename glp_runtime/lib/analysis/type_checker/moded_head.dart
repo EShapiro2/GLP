@@ -116,8 +116,8 @@ ModedTerm _buildIOModedTerm(ast.Goal term, ProcDecl decl, Mode parentMode, TypeE
 /// Variables preserve their reader/writer status (flip happens later if needed).
 ModedTerm _buildModedSubterm(ast.Term term, Mode mode, TypeExpr? expectedType, TypeEnvironment? typeEnv) {
   if (term is ast.VarTerm) {
-    // Variable: preserve reader/writer status
-    return ModedVariable(term.name, isReader: term.isReader);
+    // Variable: pass structural mode from context (per moded-term v0.6)
+    return ModedVariable(term.name, isReader: term.isReader, structuralMode: mode);
   }
 
   if (term is ast.StructTerm) {
@@ -155,7 +155,7 @@ ModedTerm _buildModedSubterm(ast.Term term, Mode mode, TypeExpr? expectedType, T
   if (term is ast.UnderscoreTerm) {
     // Anonymous variable: treat as a unique writer variable
     // Use a synthetic name to avoid confusion
-    return ModedVariable('_', isReader: false);
+    return ModedVariable('_', isReader: false, structuralMode: mode);
   }
 
   throw InvalidHeadError('Unknown term type: ${term.runtimeType}');
@@ -299,8 +299,9 @@ ModedTerm _flipAllVariables(ModedTerm term) {
   }
 
   if (term is ModedVariable) {
-    // Flip reader/writer
-    return ModedVariable(term.name, isReader: !term.isReader);
+    // Flip reader/writer but preserve structural mode
+    // (structural mode already correct from step 1)
+    return ModedVariable(term.name, isReader: !term.isReader, structuralMode: term.mode);
   }
 
   throw InvalidHeadError('Unknown moded term type: ${term.runtimeType}');

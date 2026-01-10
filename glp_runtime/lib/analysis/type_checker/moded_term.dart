@@ -110,11 +110,13 @@ class ModedConstant extends ModedTerm {
   int get hashCode => Object.hash(mode, value);
 }
 
-/// A variable (reader or writer).
+/// A variable (reader or writer) with structural mode annotation.
 ///
-/// Variables have implicit mode based on reader/writer status:
-/// - Reader X? → consumed (↓)
-/// - Writer X → produced (↑)
+/// Per Remark 4.1 (Structural Mode vs. Variable Mode):
+/// - Structural mode: inherited from enclosing type context (stored)
+/// - Implicit mode: determined by reader/writer form (computed)
+///
+/// For well-typing, implicit mode must equal structural mode at variable positions.
 ///
 /// Example: X? (reader), X (writer)
 class ModedVariable extends ModedTerm {
@@ -123,19 +125,31 @@ class ModedVariable extends ModedTerm {
   /// true for reader X?, false for writer X
   final bool isReader;
 
-  ModedVariable(this.name, {required this.isReader});
+  /// Structural mode from parent context
+  final Mode _structuralMode;
+
+  ModedVariable(this.name, {required this.isReader, required Mode structuralMode})
+      : _structuralMode = structuralMode;
 
   /// Convenience constructor for reader
-  factory ModedVariable.reader(String name) =>
-      ModedVariable(name, isReader: true);
+  factory ModedVariable.reader(String name, {required Mode structuralMode}) =>
+      ModedVariable(name, isReader: true, structuralMode: structuralMode);
 
   /// Convenience constructor for writer
-  factory ModedVariable.writer(String name) =>
-      ModedVariable(name, isReader: false);
+  factory ModedVariable.writer(String name, {required Mode structuralMode}) =>
+      ModedVariable(name, isReader: false, structuralMode: structuralMode);
 
-  /// Implicit mode: readers are consumed, writers are produced
+  /// Structural mode (used in path traversal for automaton lookup)
   @override
-  Mode get mode => isReader ? Mode.consume : Mode.produce;
+  Mode get mode => _structuralMode;
+
+  /// Implicit mode based on reader/writer form
+  Mode get implicitMode => isReader ? Mode.consume : Mode.produce;
+
+  /// Whether this variable is mode-consistent (for well-typing)
+  /// Note: This is a convenience property. The authoritative mode consistency
+  /// check is in Definition 4.3 (Consistent Paths) / well-typed-term module.
+  bool get isModeConsistent => implicitMode == _structuralMode;
 
   /// Whether this is a writer
   bool get isWriter => !isReader;
@@ -148,10 +162,13 @@ class ModedVariable extends ModedTerm {
 
   @override
   bool operator ==(Object other) =>
-      other is ModedVariable && name == other.name && isReader == other.isReader;
+      other is ModedVariable &&
+      name == other.name &&
+      isReader == other.isReader &&
+      _structuralMode == other._structuralMode;
 
   @override
-  int get hashCode => Object.hash(name, isReader);
+  int get hashCode => Object.hash(name, isReader, _structuralMode);
 }
 
 /// Visitor for moded terms
@@ -384,8 +401,8 @@ class _ComplementVisitor implements ModedTermVisitor<ModedTerm> {
 
   @override
   ModedTerm visitVariable(ModedVariable term) {
-    // Flip reader/writer: X ↔ X?
-    return ModedVariable(term.name, isReader: !term.isReader);
+    // Flip both reader/writer and structural mode
+    return ModedVariable(term.name, isReader: !term.isReader, structuralMode: term.mode.flip);
   }
 }
 
