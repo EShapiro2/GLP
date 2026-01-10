@@ -41,48 +41,36 @@ AnyOne ::= 1 ; 1?.             % ILLEGAL: same constant, different modes
 
 ### No Type Aliasing (Epsilon Transitions)
 
-Type definitions must have **concrete alternatives only**. Each alternative must be one of:
+Type definitions must have **constructor alternatives only**. Each alternative must introduce a distinct constructor symbol:
 - A constant (`[]`, `0`, `foo`)
-- A primitive mode (`_`, `_?`)
 - A structure with arguments (`s(Nat)`, `[_|List]`, `ch(Stream?, Stream)`)
 
-Type aliasing (referencing another type directly) is **illegal** because it creates epsilon transitions, converting the DFA to an NFA:
+Bare type references and bare primitives are **illegal** as alternatives—they create aliases:
 
 ```
-Stream ::= List.               % ILLEGAL: type alias creates epsilon transition
-Combined ::= List1 ; List2.    % ILLEGAL: merging types creates NFA
-Wrapper ::= inner(Other).      % LEGAL: Other appears inside a constructor
+Stream ::= List.                      % ILLEGAL: alias to another type
+Output ::= _.                         % ILLEGAL: alias to primitive
+Input ::= _?.                         % ILLEGAL: alias to primitive
+IntAlias ::= Integer.                 % ILLEGAL: alias to built-in
+Combined ::= List1 ; List2.           % ILLEGAL: merging types creates NFA
 ```
 
-**Rationale:** Each DFA state must have explicit transitions labeled with symbols (constants or functor/arity/position). A bare type reference `A ::= B` would require an epsilon transition from state A to state B, violating the DFA structure.
+Primitives (`_`, `_?`) and type references (`Integer`, `Stream`, etc.) may only appear as **arguments within constructors**:
+
+```
+Stream ::= [] ; [_|Stream].           % LEGAL: _ is argument to [|]
+Pair ::= pair(Integer, String).       % LEGAL: Integer, String are arguments
+Wrapper ::= inner(Other).             % LEGAL: Other appears inside a constructor
+```
+
+**Rationale:** Each DFA state must have explicit transitions labeled with symbols (constants or functor/arity/position). A bare reference `A ::= B` or `A ::= _` would require an epsilon transition, violating the DFA structure.
 
 **Error:** `TypeAliasError("A: type alias not allowed; use constructor wrapper")`
 
-### Primitive Modes Cannot Be Standalone Type Definitions
-
-Primitive modes (`_` and `_?`) can only appear **within** compound type structures as arguments, not as the sole alternative(s) of a type definition.
-
-**Legal:**
+**For primitive-typed procedure arguments, use `_` or `_?` directly in the declaration:**
 ```
-Stream ::= [] ; [_|Stream].           % _ as list element type
-Pair ::= pair(_, _?).                 % _ and _? as structure arguments
-```
-
-**Illegal:**
-```
-Output ::= _.                         % ILLEGAL: primitive as sole definition
-Input ::= _?.                         % ILLEGAL: primitive as sole definition
-Any ::= _.                            % ILLEGAL: primitive as sole definition
-```
-
-**Rationale (Paper line 30):** Defined types correspond to non-final DFA states; primitive types are final states. A type defined solely as `_` or `_?` conflates these, breaking the DFA structure.
-
-**Error:** `PrimitiveTypeDefinitionError("Output: cannot define type as primitive mode alone")`
-
-**For primitive-typed procedure arguments, use `_` or `_?` directly:**
-```
-procedure foo(_).                     % LEGAL: primitive used directly in declaration
-procedure bar(_?, Stream).            % LEGAL: mixed
+procedure foo(_).                     % LEGAL: primitive used directly
+procedure bar(_?, Stream).            % LEGAL: mixed primitives and types
 ```
 
 ### Leaf Types
