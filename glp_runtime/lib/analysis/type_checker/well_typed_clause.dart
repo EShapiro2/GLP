@@ -450,7 +450,32 @@ TypeDFA _buildProcedureTypeDFA(
   // Add transitions for each argument position
   for (int i = 0; i < procDecl.arity; i++) {
     final argType = procDecl.argTypes[i];
-    var argDFA = compiler.compile(argType.name);
+
+    // Handle primitive types (_ or _?) directly in procedure declarations
+    if (argType is PrimitiveModeAlt) {
+      // Create a primitive DFA for this argument
+      // The mode is intrinsic to the primitive syntax:
+      // - _ = produce (output) - callee provides value
+      // - _? = consume (input) - callee receives value
+      // No complement needed - unlike named types (T vs T?), the mode is
+      // already encoded in the primitive syntax itself.
+      final primStateName = argType.isInput ? '_?@arg${i + 1}' : '_@arg${i + 1}';
+      final primState = DFAState(primStateName, isFinal: true);
+      final primMode = argType.isInput ? Mode.input : Mode.output;
+
+      states.add(primState);
+      finalStates.add(primState);
+      primitiveStateModes[primState] = {primMode};
+
+      // Add transition from procedure state to primitive state
+      final pathElem = PathElement.functor(procDecl.name, procDecl.arity, i + 1);
+      transitions[(procState, pathElem)] = primState;
+      continue;
+    }
+
+    // Handle named type references
+    final typeRef = argType as TypeRef;
+    var argDFA = compiler.compile(typeRef.name);
 
     // Rename states with argument index suffix to prevent collision
     // when multiple arguments have the same type
@@ -463,7 +488,7 @@ TypeDFA _buildProcedureTypeDFA(
     // For OUTPUT args: type produce → stays produce → matches flipped writer
     //
     // For body atoms (complement=false): use DFA as-is
-    if (complement && argType.isInput) {
+    if (complement && typeRef.isInput) {
       argDFA = argDFA.applyModeComplement();
     }
 

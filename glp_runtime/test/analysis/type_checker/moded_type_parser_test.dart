@@ -20,14 +20,14 @@ void main() {
       expect(proc.arity, equals(3));
 
       // First two args are input mode (List?)
-      expect(proc.argTypes[0].name, equals('List'));
-      expect(proc.argTypes[0].isInput, isTrue);
-      expect(proc.argTypes[1].name, equals('List'));
-      expect(proc.argTypes[1].isInput, isTrue);
+      expect(proc.argTypes[0].typeName, equals('List'));
+      expect(proc.argTypes[0].isInputMode, isTrue);
+      expect(proc.argTypes[1].typeName, equals('List'));
+      expect(proc.argTypes[1].isInputMode, isTrue);
 
       // Third arg is output mode (List)
-      expect(proc.argTypes[2].name, equals('List'));
-      expect(proc.argTypes[2].isInput, isFalse);
+      expect(proc.argTypes[2].typeName, equals('List'));
+      expect(proc.argTypes[2].isInputMode, isFalse);
     });
 
     test('Parse procedure with all output modes - foo(A, B, C)', () {
@@ -38,9 +38,9 @@ void main() {
       expect(proc, isNotNull);
 
       // All args are output mode (no ?)
-      expect(proc!.argTypes[0].isInput, isFalse);
-      expect(proc.argTypes[1].isInput, isFalse);
-      expect(proc.argTypes[2].isInput, isFalse);
+      expect(proc!.argTypes[0].isInputMode, isFalse);
+      expect(proc.argTypes[1].isInputMode, isFalse);
+      expect(proc.argTypes[2].isInputMode, isFalse);
     });
 
     test('Parse procedure with mixed modes - bar(X?, Y, Z?)', () {
@@ -50,9 +50,9 @@ void main() {
       final proc = env.procedures['bar/3'];
       expect(proc, isNotNull);
 
-      expect(proc!.argTypes[0].isInput, isTrue);   // X?
-      expect(proc!.argTypes[1].isInput, isFalse);  // Y
-      expect(proc!.argTypes[2].isInput, isTrue);   // Z?
+      expect(proc!.argTypes[0].isInputMode, isTrue);   // X?
+      expect(proc!.argTypes[1].isInputMode, isFalse);  // Y
+      expect(proc!.argTypes[2].isInputMode, isTrue);   // Z?
     });
 
     test('Parse type definition with embedded modes - embedded not yet supported', () {
@@ -101,19 +101,8 @@ void main() {
       expect(proc.isInputArg(2), isTrue);    // C?
     });
 
-    test('ProcDecl calleeView returns complemented types', () {
-      final source = 'procedure foo(X?, Y, Z?).';
-      final env = parseTypes(source);
-      final proc = env.procedures['foo/3'];
-
-      final calleeView = proc!.calleeView;
-      expect(calleeView, hasLength(3));
-
-      // Modes are complemented at call boundary
-      expect(calleeView[0].isInput, isFalse);  // X? -> X
-      expect(calleeView[1].isInput, isTrue);   // Y -> Y?
-      expect(calleeView[2].isInput, isFalse);  // Z? -> Z
-    });
+    // Note: calleeView is no longer part of ProcDecl - mode complement
+    // is handled during type checking, not at the declaration level.
 
     test('Parse counter.glp - real example from typed_book', () {
       final source = '''
@@ -134,10 +123,10 @@ procedure counter(CounterStream, Number).
       // Check procedure
       final proc = env.procedures['counter/2'];
       expect(proc, isNotNull);
-      expect(proc!.argTypes[0].name, equals('CounterStream'));
-      expect(proc.argTypes[0].isInput, isFalse);  // Output mode (no ?)
-      expect(proc.argTypes[1].name, equals('Number'));
-      expect(proc.argTypes[1].isInput, isFalse);  // Output mode (no ?)
+      expect(proc!.argTypes[0].typeName, equals('CounterStream'));
+      expect(proc.argTypes[0].isInputMode, isFalse);  // Output mode (no ?)
+      expect(proc.argTypes[1].typeName, equals('Number'));
+      expect(proc.argTypes[1].isInputMode, isFalse);  // Output mode (no ?)
     });
   });
 }

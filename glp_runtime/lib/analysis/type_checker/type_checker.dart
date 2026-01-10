@@ -177,8 +177,7 @@ class TypeChecker {
     // Condition 2: Contravariance — check input coverage
     // =======================================================================
     for (int argIndex = 1; argIndex <= decl.arity; argIndex++) {
-      final argType = decl.argTypes[argIndex - 1];
-      if (argType.isInput) {
+      if (decl.isInputArg(argIndex - 1)) {
         final coverageErrors = _checkInputCoverage(clauses, decl, argIndex);
         errors.addAll(coverageErrors);
       }
@@ -247,13 +246,22 @@ class TypeChecker {
     // Get the input type
     final argType = decl.argTypes[argIndex - 1];
 
+    // Handle primitive types (_ or _?) - no coverage check needed
+    // Primitives accept any value, so coverage is automatically satisfied
+    if (argType is PrimitiveModeAlt) {
+      return errors; // No errors - primitives trivially cover all inputs
+    }
+
+    // Handle named type references
+    final typeRef = argType as TypeRef;
+
     // Compile base type to DFA
     TypeDFA inputDFA;
     try {
-      inputDFA = compiler.compile(argType.name);
+      inputDFA = compiler.compile(typeRef.name);
     } catch (e) {
       errors.add(TypeError(
-        'Cannot compile type ${argType.name}: $e',
+        'Cannot compile type ${typeRef.name}: $e',
         decl.line,
         decl.column,
       ));
@@ -268,7 +276,7 @@ class TypeChecker {
       inputDFA.startState,
       clauses,
       argIndex,
-      argType.name,
+      typeRef.name,
       visited,
       inputDFA,
       decl,

@@ -88,16 +88,16 @@ class ModeChecker {
     // Check each argument
     for (int i = 0; i < head.args.length && i < procDecl.argTypes.length; i++) {
       final arg = head.args[i];
-      final typeRef = procDecl.argTypes[i];
+      final argType = procDecl.argTypes[i];
 
       // Determine expected mode from type declaration
-      final expectedMode = typeRef.isInput ? Mode.input : Mode.output;
+      final expectedMode = argType.isInputMode ? Mode.input : Mode.output;
 
       // Check term mode against expected mode
       final error = _checkTermMode(
         arg,
         expectedMode,
-        typeRef,
+        argType,
         procDecl.name,
         i,
       );
@@ -131,19 +131,19 @@ class ModeChecker {
     // Check each argument with call boundary complementation
     for (int i = 0; i < goal.args.length && i < calleeProcDecl.argTypes.length; i++) {
       final arg = goal.args[i];
-      final calleeTypeRef = calleeProcDecl.argTypes[i];
+      final calleeArgType = calleeProcDecl.argTypes[i];
 
       // At call boundary, complement the callee's mode to get caller's expected mode
       // Callee's input (Type?) → caller must provide output mode (writer X)
       // Callee's output (Type) → caller must provide input mode (reader X?)
-      final calleeMode = calleeTypeRef.isInput ? Mode.input : Mode.output;
+      final calleeMode = calleeArgType.isInputMode ? Mode.input : Mode.output;
       final callerExpectedMode = calleeMode.complement;
 
       // Check term mode against caller's expected mode
       final error = _checkTermMode(
         arg,
         callerExpectedMode,
-        calleeTypeRef,
+        calleeArgType,
         goal.functor,
         i,
       );
@@ -452,9 +452,16 @@ class ModeChecker {
 
     // Check each argument position
     for (int argIndex = 0; argIndex < procDecl.argTypes.length; argIndex++) {
-      final typeRef = procDecl.argTypes[argIndex];
+      final argType = procDecl.argTypes[argIndex];
 
-      // Find all positions with primitive modes (including nested)
+      // Handle primitives directly in procedure declarations - no coverage check needed
+      // Primitives accept both writers and readers depending on context
+      if (argType is PrimitiveModeAlt) {
+        continue; // Primitives trivially satisfy coverage
+      }
+
+      // Handle named type references - find nested primitive positions
+      final typeRef = argType as TypeRef;
       final primitivePositions = _findPrimitiveTypePositions(typeRef, '', <String>{});
 
       for (final position in primitivePositions) {

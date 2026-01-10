@@ -26,15 +26,8 @@ void main() {
     TypeEnvironment createBasicEnvironment() {
       final env = TypeEnvironment.empty();
 
-      // Define Any type: Any ::= _ (produce mode)
-      // Used at output position: Any → no complement → produce mode
-      // Used at input position: Any? → complement → consume mode
-      env.addType(TypeDef(
-        'Any',
-        [PrimitiveModeAlt(false, 0, 0)], // _
-        0,
-        0,
-      ));
+      // Note: No "Any" type needed - primitives (_ and _?) are used
+      // directly in procedure declarations
 
       // Define Stream type: Stream ::= [] ; [_|Stream]
       env.addType(TypeDef(
@@ -139,18 +132,18 @@ void main() {
       // - Writer X → Reader X? (consume mode)
       // - Reader X? → Writer X (produce mode)
       //
-      // Type Any ::= _ has produce mode.
-      // - At output position (Any): no complement → produce mode
-      // - At input position (Any?): complement → consume mode
+      // Using primitives directly in procedure declarations:
+      // - _ (output) has produce mode
+      // - _? (input) has consume mode
 
       test('POSITIVE: reader at output position is well-typed', () {
-        // procedure foo(Any).  -- OUTPUT position, type has produce mode
+        // procedure foo(_).  -- OUTPUT position, _ has produce mode
         // foo(X?).  -- reader provides value to goal
-        // After flip: X (produce) matches Any's produce mode (no complement)
+        // After flip: X (produce) matches _ produce mode
         final env = createBasicEnvironment();
         env.addProcedure(ProcDecl(
           'foo',
-          [TypeRef('Any', 0, 0)],  // OUTPUT position
+          [PrimitiveModeAlt(false, 0, 0)],  // _ = OUTPUT/produce
           0,
           0,
         ));
@@ -167,13 +160,13 @@ void main() {
       });
 
       test('POSITIVE: writer at input position is well-typed', () {
-        // procedure bar(Any?).  -- INPUT position, type has produce mode
+        // procedure bar(_?).  -- INPUT position, _? has consume mode
         // bar(X).  -- writer receives value from goal
-        // After flip: X? (consume) matches Any's produce mode after complement (consume)
+        // After flip: X? (consume) matches _? consume mode
         final env = createBasicEnvironment();
         env.addProcedure(ProcDecl(
           'bar',
-          [TypeRef('Any', 0, 0, isInput: true)],  // INPUT position
+          [PrimitiveModeAlt(true, 0, 0)],  // _? = INPUT/consume
           0,
           0,
         ));
@@ -190,13 +183,13 @@ void main() {
       });
 
       test('NEGATIVE: writer at output position is NOT well-typed', () {
-        // procedure foo(Any).  -- OUTPUT position, type has produce mode
+        // procedure foo(_).  -- OUTPUT position, _ has produce mode
         // foo(X).  -- writer is WRONG for output position
-        // After flip: X? (consume) does NOT match Any's produce mode
+        // After flip: X? (consume) does NOT match _ produce mode
         final env = createBasicEnvironment();
         env.addProcedure(ProcDecl(
           'foo',
-          [TypeRef('Any', 0, 0)],  // OUTPUT position
+          [PrimitiveModeAlt(false, 0, 0)],  // _ = OUTPUT/produce
           0,
           0,
         ));
@@ -214,13 +207,13 @@ void main() {
       });
 
       test('NEGATIVE: reader at input position is NOT well-typed', () {
-        // procedure bar(Any?).  -- INPUT position, type has produce mode
+        // procedure bar(_?).  -- INPUT position, _? has consume mode
         // bar(X?).  -- reader is WRONG for input position
-        // After flip: X (produce) does NOT match Any's produce mode after complement (consume)
+        // After flip: X (produce) does NOT match _? consume mode
         final env = createBasicEnvironment();
         env.addProcedure(ProcDecl(
           'bar',
-          [TypeRef('Any', 0, 0, isInput: true)],  // INPUT position
+          [PrimitiveModeAlt(true, 0, 0)],  // _? = INPUT/consume
           0,
           0,
         ));
@@ -366,7 +359,7 @@ void main() {
         final env = createBasicEnvironment();
         env.addProcedure(ProcDecl(
           'foo',
-          [TypeRef('Any', 0, 0)],  // output position
+          [PrimitiveModeAlt(false, 0, 0)],  // _ = output/produce
           0,
           0,
         ));
@@ -521,7 +514,7 @@ void main() {
         final env = createBasicEnvironment();
         env.addProcedure(ProcDecl(
           'foo',
-          [TypeRef('Any', 0, 0), TypeRef('Any', 0, 0)], // foo/2
+          [PrimitiveModeAlt(false, 0, 0), PrimitiveModeAlt(false, 0, 0)], // foo/2 with two _ args
           0,
           0,
         ));

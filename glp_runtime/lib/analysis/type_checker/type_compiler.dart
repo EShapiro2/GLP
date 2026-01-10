@@ -166,16 +166,22 @@ class TypeCompiler {
     Map<DFAState, Set<Mode>> primitiveStateModes, {
     Mode contextMode = Mode.produce,  // Root starts as produce
   }) {
+    // Reject alternatives that don't introduce constructors (aliases)
+    if (alt is TypeRef) {
+      // Type alias (A ::= B) is illegal - creates epsilon transitions (NFA)
+      throw TypeCompileError(
+          '${fromState.name}: type alias "${alt.name}" not allowed; '
+          'each alternative must introduce a constructor');
+    }
     if (alt is PrimitiveModeAlt) {
-      // Primitive mode: mark state with its mode, make it accepting
-      final mode = alt.isInput ? Mode.input : Mode.output;
-      primitiveStateModes[fromState] =
-          (primitiveStateModes[fromState] ?? <Mode>{})..add(mode);
-      // Primitive states are final (accepting)
-      // Note: finalState set management happens in caller
-      return;
+      // Bare primitive (A ::= _) is illegal - creates alias to primitive
+      final prim = alt.isInput ? '_?' : '_';
+      throw TypeCompileError(
+          '${fromState.name}: bare primitive "$prim" not allowed as type definition; '
+          'use $prim directly in procedure declarations or as constructor argument');
+    }
 
-    } else if (alt is ConstantAlt) {
+    if (alt is ConstantAlt) {
       // Constant: transition directly to final state
       final pathElem = PathElement.constant(alt.value);
       transitions[(fromState, pathElem)] = finalState;
@@ -224,12 +230,6 @@ class TypeCompiler {
 
       transitions[(fromState, contentElem)] = contentTarget;
       transitions[(fromState, holeElem)] = holeTarget;
-
-    } else if (alt is TypeRef) {
-      // Type alias (A ::= B) is illegal - creates epsilon transitions (NFA)
-      throw TypeCompileError(
-          '${fromState.name}: type alias "${alt.name}" not allowed; '
-          'use constructor wrapper instead');
     }
   }
   

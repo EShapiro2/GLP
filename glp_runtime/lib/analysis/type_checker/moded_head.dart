@@ -99,8 +99,8 @@ ModedTerm _buildIOModedTerm(ast.Goal term, ProcDecl decl, Mode parentMode, TypeE
 
   for (int i = 0; i < term.args.length; i++) {
     final argType = decl.argTypes[i];
-    // Input (Type?) → consume, Output (Type) → produce
-    final argMode = argType.isInput ? Mode.consume : Mode.produce;
+    // Input (Type? or _?) → consume, Output (Type or _) → produce
+    final argMode = decl.isInputArg(i) ? Mode.consume : Mode.produce;
     final modedArg = _buildModedSubterm(term.args[i], argMode, argType, typeEnv);
     modedArgs.add(modedArg);
   }
@@ -269,12 +269,17 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
 ///
 /// TypeRef with isInput=true → consume (↓)
 /// TypeRef with isInput=false → produce (↑)
+/// PrimitiveModeAlt with isInput=true → consume (↓)
+/// PrimitiveModeAlt with isInput=false → produce (↑)
 /// Other expressions → produce (↑) by default
 Mode _getEmbeddedMode(TypeExpr expr) {
   if (expr is TypeRef) {
     return expr.isInput ? Mode.consume : Mode.produce;
   }
-  // Default to produce for non-TypeRef expressions
+  if (expr is PrimitiveModeAlt) {
+    return expr.isInput ? Mode.consume : Mode.produce;
+  }
+  // Default to produce for other expressions
   return Mode.produce;
 }
 

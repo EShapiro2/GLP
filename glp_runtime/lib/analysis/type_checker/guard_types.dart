@@ -161,7 +161,12 @@ void _processGuard(
     for (int i = 0; i < args.length && i < procDecl.argTypes.length; i++) {
       final arg = args[i];
       if (arg is ast.VarTerm) {
-        final typeRef = procDecl.argTypes[i];
+        final argType = procDecl.argTypes[i];
+
+        // Skip primitives - they don't add type constraints
+        if (argType is PrimitiveModeAlt) continue;
+
+        final typeRef = argType as TypeRef;
         final typeDFA = compiler.compile(typeRef.name);
         final varName = arg.name;
 

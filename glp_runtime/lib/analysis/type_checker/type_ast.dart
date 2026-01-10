@@ -7,8 +7,33 @@
 abstract class TypeExpr {
   final int line;
   final int column;
-  
+
   TypeExpr(this.line, this.column);
+}
+
+/// Extension to extract common properties from TypeExpr subclasses
+/// that can appear in procedure argument positions (TypeRef or PrimitiveModeAlt)
+extension ProcArgTypeExpr on TypeExpr {
+  /// Whether this type expression represents an input (consume) mode.
+  /// - TypeRef with isInput=true (T?) → true
+  /// - PrimitiveModeAlt with isInput=true (_?) → true
+  /// - Otherwise → false
+  bool get isInputMode {
+    if (this is TypeRef) return (this as TypeRef).isInput;
+    if (this is PrimitiveModeAlt) return (this as PrimitiveModeAlt).isInput;
+    return false;
+  }
+
+  /// The type name for named types, or null for primitives.
+  /// - TypeRef → the name
+  /// - PrimitiveModeAlt → null
+  String? get typeName {
+    if (this is TypeRef) return (this as TypeRef).name;
+    return null;
+  }
+
+  /// Whether this is a primitive type (_ or _?)
+  bool get isPrimitive => this is PrimitiveModeAlt;
 }
 
 /// Reference to a named type: Nat, List, Number, String, Any
@@ -122,9 +147,13 @@ class TypeDef {
 }
 
 /// A procedure declaration: procedure name(Type1, Type2, ...).
+///
+/// Argument types can be:
+/// - TypeRef: a named type reference (e.g., Nat, Stream?)
+/// - PrimitiveModeAlt: a primitive type directly (e.g., _, _?)
 class ProcDecl {
   final String name;
-  final List<TypeRef> argTypes;
+  final List<TypeExpr> argTypes;  // TypeRef or PrimitiveModeAlt
   final int line;
   final int column;
 
@@ -135,12 +164,20 @@ class ProcDecl {
   String get key => '$name/$arity';
 
   /// Get the mode for argument at index i (true = input mode)
-  bool isInputArg(int i) => argTypes[i].isInput;
+  bool isInputArg(int i) {
+    final arg = argTypes[i];
+    if (arg is TypeRef) return arg.isInput;
+    if (arg is PrimitiveModeAlt) return arg.isInput;
+    return false;
+  }
 
-  /// Get complemented types (callee's perspective at call site)
-  /// What caller provides as output, callee sees as input, and vice versa
-  List<TypeRef> get calleeView =>
-      argTypes.map((t) => t.complement()).toList();
+  /// Get the base type name for argument at index i
+  /// Returns null for primitive types (_ or _?)
+  String? getTypeName(int i) {
+    final arg = argTypes[i];
+    if (arg is TypeRef) return arg.name;
+    return null;  // Primitive types have no name
+  }
 
   @override
   String toString() => 'procedure $name(${argTypes.join(', ')}).';
