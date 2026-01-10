@@ -4,7 +4,7 @@
 
 run(true, _Module).
 run((A, B), Module) :-
-    known(A?), known(B?), ground(Module?) |
+    ground(A?), ground(B?), ground(Module?) |
     run(A?, Module?), run(B?, Module?).
 run(Goal, Module) :-
     ground(Module?), constant(Module?), otherwise |
