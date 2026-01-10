@@ -58,6 +58,33 @@ Wrapper ::= inner(Other).      % LEGAL: Other appears inside a constructor
 
 **Error:** `TypeAliasError("A: type alias not allowed; use constructor wrapper")`
 
+### Primitive Modes Cannot Be Standalone Type Definitions
+
+Primitive modes (`_` and `_?`) can only appear **within** compound type structures as arguments, not as the sole alternative(s) of a type definition.
+
+**Legal:**
+```
+Stream ::= [] ; [_|Stream].           % _ as list element type
+Pair ::= pair(_, _?).                 % _ and _? as structure arguments
+```
+
+**Illegal:**
+```
+Output ::= _.                         % ILLEGAL: primitive as sole definition
+Input ::= _?.                         % ILLEGAL: primitive as sole definition
+Any ::= _.                            % ILLEGAL: primitive as sole definition
+```
+
+**Rationale (Paper line 30):** Defined types correspond to non-final DFA states; primitive types are final states. A type defined solely as `_` or `_?` conflates these, breaking the DFA structure.
+
+**Error:** `PrimitiveTypeDefinitionError("Output: cannot define type as primitive mode alone")`
+
+**For primitive-typed procedure arguments, use `_` or `_?` directly:**
+```
+procedure foo(_).                     % LEGAL: primitive used directly in declaration
+procedure bar(_?, Stream).            % LEGAL: mixed
+```
+
 ### Leaf Types
 
 A **leaf type** terminates a type path. The DFA has leaf states for:
