@@ -98,25 +98,9 @@ void main() {
   });
 
   group('DFA Compilation with Primitive Modes', () {
-    test('Compile Output type creates DFA with primitive state', () {
-      final env = parseTypes('');
-      final compiler = TypeCompiler(env);
-
-      final outputDFA = compiler.compile('Output');
-
-      expect(outputDFA.primitiveStateModes, isNotEmpty);
-      expect(outputDFA.isPrimitiveState(outputDFA.startState), isTrue);
-    }, skip: 'Predefined Output type removed - use _ directly in procedure declarations');
-
-    test('Type with primitive mode creates primitive state', () {
-      final source = 'MyType ::= _.';
-      final env = parseTypes(source);
-      final compiler = TypeCompiler(env);
-
-      final dfa = compiler.compile('MyType');
-
-      expect(dfa.primitiveStateModes, isNotEmpty);
-    }, skip: 'Bare primitive type definitions now illegal - use _ directly in procedure declarations');
+    // Note: TypeCompiler has been removed from the API.
+    // Tests that used TypeCompiler are now obsolete.
+    // Use buildProgramDFA instead.
 
     test('Structural type does not have wildcard start state', () {
       final source = 'Nat ::= 0 ; s(Nat).';

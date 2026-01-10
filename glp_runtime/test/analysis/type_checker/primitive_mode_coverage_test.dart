@@ -37,7 +37,7 @@ void main() {
           MyList ::= [] ; [_ | MyList].
           procedure copy(MyList?, MyList).
           copy([], []).
-          copy([X | In], [X? | Out]) :- copy(In?, Out).
+          copy([X | In], [X? | Out?]) :- copy(In?, Out).
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'List elements are _ (output only), two clauses suffice');
@@ -82,7 +82,7 @@ void main() {
           MyList ::= [] ; [_ | MyList].
           procedure copy(MyList?, MyList).
           copy([], []).
-          copy([X | In], [X? | Out]) :- copy(In?, Out).
+          copy([X | In], [X? | Out?]) :- copy(In?, Out).
         ''');
         expect(result.isWellTyped, isTrue,
             reason: 'List elements are _ - single mode, no coverage requirement');
