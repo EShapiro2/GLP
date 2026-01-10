@@ -137,6 +137,12 @@ Example of WRONG spec reading:
 Example of CORRECT spec reading:
 > "Spec 19.4.5 says: 'writer(X) in guard position - Test if Xi is an unbound writer. Succeed if Xi is unbound writer variable. Fail otherwise.'"
 
+### Code Changes Must Follow Spec
+- **Every code change must be backed by reference to the spec**
+- **NEVER make any change that is not implied by the spec**
+- **NEVER make any change that is inconsistent with the spec**
+- **If the spec is not clear, STOP and ask for clarification** before making any code changes
+
 ### Handling Unexpected GLP Behavior
 When encountering unexpected behavior of GLP, **STOP!** Find out:
 1. Is the unexpected behavior consistent with the spec?
