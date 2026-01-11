@@ -1,6 +1,6 @@
 # Module: type-environment
 
-**Version**: 0.5
+**Version**: 0.6
 **Date**: 2025-01-11
 **Status**: DRAFT
 **Paper References**: Definition 4.1, Section 4.1 (Type Definition Constraints)
@@ -74,6 +74,70 @@ Any ::= _ ; _?.          % overlapping: both accept all terms — ILLEGAL
 AnyOne ::= 1 ; 1?.       % overlapping: 1 matches both — ILLEGAL  
 Ambiguous ::= _ ; Integer.  % overlapping: integers match both — ILLEGAL
 ```
+
+## Predefined Types and Procedures
+
+### Predefined Types
+
+The following types are predefined and cannot be redefined by user modules:
+
+| Type | Definition | Purpose |
+|------|------------|--------|
+| `Number` | (primitive) | Any numeric literal |
+| `Integer` | (primitive) | Integer literals |
+| `Real` | (primitive) | Floating-point literals |
+| `String` | (primitive) | String literals |
+| `Exp` | `Number ; Exp + Exp ; Exp - Exp ; Exp * Exp ; Exp / Exp ; Exp // Exp ; Exp mod Exp` | Arithmetic expressions |
+| `List` | `[_ \| List] ; []` | Standard list |
+| `Stream` | `[_ \| Stream] ; []` | Stream (alias for List) |
+| `DiffList` | `List \ List?` | Difference list |
+| `Channel` | `ch(Stream?, Stream)` | Bidirectional channel |
+
+### Guard Procedures
+
+Guards are procedure calls. For type checking purposes, a clause `H :- G | B` is treated as `H :- G, B` (conjunction).
+
+**Type Guards:**
+
+| Guard | Signature | Semantics |
+|-------|-----------|----------|
+| `integer(X?)` | `procedure integer(Integer?).` | X must be Integer |
+| `number(X?)` | `procedure number(Number?).` | X must be Number |
+| `string(X?)` | `procedure string(String?).` | X must be String |
+| `atom(X?)` | `procedure atom(String?).` | X must be atom |
+| `ground(X?)` | `procedure ground(_?).` | X may be any type |
+| `known(X?)` | `procedure known(_?).` | X may be any type |
+| `unknown(X?)` | `procedure unknown(_?).` | X may be any type |
+| `compound(X?)` | `procedure compound(_?).` | X may be any type |
+| `is_list(X?)` | `procedure is_list(List?).` | X must be List |
+
+**Arithmetic Comparison Guards:**
+
+| Guard | Signature |
+|-------|----------|
+| `X < Y` | `procedure <(Exp?, Exp?).` |
+| `X > Y` | `procedure >(Exp?, Exp?).` |
+| `X =< Y` | `procedure =<(Exp?, Exp?).` |
+| `X >= Y` | `procedure >=(Exp?, Exp?).` |
+| `X =:= Y` | `procedure =:=(Exp?, Exp?).` |
+| `X =\= Y` | `procedure =\=(Exp?, Exp?).` |
+
+**Equality Guard:**
+
+| Guard | Signature |
+|-------|----------|
+| `X =?= Y` | `procedure =?=(_, _).` |
+
+### Other Predefined Procedures
+
+| Procedure | Signature |
+|-----------|----------|
+| Unification | `procedure =(_, _?).` |
+| DiffList append | `procedure dl_append(DiffList?, DiffList?, DiffList).` |
+| DiffList to list | `procedure dl_to_list(DiffList?, List).` |
+| New channel | `procedure new_channel(Channel, Channel).` |
+| Send on channel | `procedure send(_?, Channel?, Channel).` |
+| Receive on channel | `procedure receive(_, Channel?, Channel).` |
 
 ## Public Interface
 

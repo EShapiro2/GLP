@@ -277,6 +277,9 @@ ClauseCheckResult checkClause(
 /// Convenience overload: Check if an ast.Clause is well-typed.
 ///
 /// Throws [UndeclaredProcedureError] if the procedure is not declared.
+///
+/// Per spec: For type checking, H :- G | B is treated as H :- G, B (conjunction).
+/// Guards are procedure calls with predefined type signatures.
 ClauseCheckResult checkClauseFromAst(
   ast.Clause clause,
   ProgramDFA dfa,
@@ -286,13 +289,25 @@ ClauseCheckResult checkClauseFromAst(
   // Note: ast.Clause.head is Atom, but Goal has same structure
   final head = ast.Goal(clause.head.functor, clause.head.args, clause.line, clause.column);
 
+  // Convert guards to goals (guards are procedure calls for type checking)
+  final guardGoals = <ast.Goal>[];
+  if (clause.guards != null) {
+    for (final guard in clause.guards!) {
+      // Convert Guard to Goal - same structure
+      guardGoals.add(ast.Goal(guard.predicate, guard.args, guard.line, guard.column));
+    }
+  }
+
   // Convert body goals (or empty list)
-  final bodyAtoms = clause.body ?? [];
+  final bodyGoals = clause.body ?? [];
+
+  // Combine guards and body: H :- G | B is treated as H :- G, B
+  final allBodyAtoms = [...guardGoals, ...bodyGoals];
 
   final typedClause = TypedClause(
     head: head,
-    bodyAtoms: bodyAtoms,
-    guardAtoms: [], // Guards not checked yet
+    bodyAtoms: allBodyAtoms,
+    guardAtoms: guardGoals,
   );
 
   // Check if procedure is declared

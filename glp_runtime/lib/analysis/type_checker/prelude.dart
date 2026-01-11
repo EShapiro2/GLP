@@ -3,12 +3,18 @@
 // Predefined type and procedure definitions for GLP.
 // These are prepended to every module before parsing.
 // Redefinition of predefined types/procedures is an error.
+//
+// Specification: docs/modules/type-environment.md
+// Paper Reference: Section 4.x (Guards)
 
 /// The prelude source containing all predefined definitions
 const String typePrelude = r'''
 % =============================================================================
 % Predefined Types
 % =============================================================================
+
+% Arithmetic expressions (for guard type checking)
+Exp ::= Number ; Exp + Exp ; Exp - Exp ; Exp * Exp ; Exp / Exp ; Exp // Exp ; Exp mod Exp.
 
 % Collections
 List ::= [_ | List] ; [].
@@ -19,11 +25,38 @@ DiffList ::= List \ List?.
 Channel ::= ch(Stream?, Stream).
 
 % =============================================================================
-% Predefined Procedures (usable as defined guards)
+% Guard Procedures
 % =============================================================================
+% Guards are procedure calls. For type checking, H :- G | B is treated as H :- G, B.
 
-% Ground guard
+% Type guards
+procedure integer(Integer?).
+procedure number(Number?).
+procedure string(String?).
+procedure atom(String?).
+procedure constant(Number?).
+procedure compound(_?).
+procedure is_list(List?).
+
+% Groundness guards
 procedure ground(_?).
+procedure known(_?).
+procedure unknown(_?).
+
+% Arithmetic comparison guards
+procedure <(Exp?, Exp?).
+procedure >(Exp?, Exp?).
+procedure =<(Exp?, Exp?).
+procedure >=(Exp?, Exp?).
+procedure =:=(Exp?, Exp?).
+procedure =\=(Exp?, Exp?).
+
+% Equality guard
+procedure =?=(_, _).
+
+% =============================================================================
+% Predefined Procedures
+% =============================================================================
 
 % Unification (output = input)
 procedure =(_, _?).
@@ -51,7 +84,10 @@ receive(X?, ch([X|In], Out?), ch(In?, Out)).
 /// Names of predefined types that cannot be redefined by user modules
 const Set<String> predefinedTypeNames = {
   'Number',   // Primitive builtin
+  'Integer',  // Primitive builtin
+  'Real',     // Primitive builtin
   'String',   // Primitive builtin
+  'Exp',      // Arithmetic expressions
   'List',     // Collection type
   'Stream',   // Collection type
   'DiffList', // Collection type
@@ -60,17 +96,39 @@ const Set<String> predefinedTypeNames = {
 
 /// Names of predefined procedures that cannot be redefined by user modules
 const Set<String> predefinedProcedureNames = {
-  '=',
+  // Type guards
+  'integer',
+  'number',
+  'string',
+  'atom',
+  'constant',
+  'compound',
+  'is_list',
+  // Groundness guards
   'ground',
+  'known',
+  'unknown',
+  // Comparison guards
+  '<',
+  '>',
+  '=<',
+  '>=',
+  '=:=',
+  '=\\=',
+  // Equality
+  '=?=',
+  '=',
+  // Difference list
   'dl_append',
   'dl_to_list',
+  // Channel
   'new_channel',
   'send',
   'receive',
 };
 
 /// Built-in goals that don't need type checking
-/// - true, otherwise: 0-arity, always succeed
+/// - true, otherwise: 0-arity control
 /// - :=: arithmetic assignment, handled specially
 const Set<String> builtinGoals = {
   'true',
