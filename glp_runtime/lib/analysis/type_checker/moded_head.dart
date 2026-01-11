@@ -50,8 +50,8 @@ ModedTerm modedHead(ast.Goal head, ProcDecl decl, {TypeEnvironment? typeEnv}) {
   // Step 1: Build I/O moded term (root mode = consume)
   final ioTerm = _buildIOModedTerm(head, decl, Mode.consume, typeEnv);
 
-  // Step 2: Flip all variables
-  return _flipAllVariables(ioTerm);
+  // Step 2: Ensure each variable's form matches its position's mode
+  return _ensureVariablesMatchModes(ioTerm);
 }
 
 /// Constructs a produced moded term from a body atom.
@@ -315,14 +315,19 @@ TypeExpr _complementType(TypeExpr expr) {
   return expr;
 }
 
-/// Flip all variables in a moded term.
+/// Ensure each variable's form matches its position's structural mode.
 ///
-/// X → X?, X? → X
-/// This captures the inverted roles at the call boundary.
-ModedTerm _flipAllVariables(ModedTerm term) {
+/// Per Definition 4.8 step 2:
+/// - A variable at mode ↓ (consume) should be a reader (X?)
+/// - A variable at mode ↑ (produce) should be a writer (X)
+///
+/// For simple input/output types, this typically means flipping all variables.
+/// For interactive types with internal mode complementation, some variables
+/// may already have the correct form and require no change.
+ModedTerm _ensureVariablesMatchModes(ModedTerm term) {
   if (term is ModedCompound) {
-    final flippedArgs = term.args.map(_flipAllVariables).toList();
-    return ModedCompound(term.mode, term.functor, term.arity, flippedArgs);
+    final adjustedArgs = term.args.map(_ensureVariablesMatchModes).toList();
+    return ModedCompound(term.mode, term.functor, term.arity, adjustedArgs);
   }
 
   if (term is ModedConstant) {
@@ -331,9 +336,17 @@ ModedTerm _flipAllVariables(ModedTerm term) {
   }
 
   if (term is ModedVariable) {
-    // Flip reader/writer but preserve structural mode
-    // (structural mode already correct from step 1)
-    return ModedVariable(term.name, isReader: !term.isReader, structuralMode: term.mode);
+    // Check if variable form matches structural mode
+    // Mode ↓ (consume) requires reader; Mode ↑ (produce) requires writer
+    final shouldBeReader = (term.mode == Mode.consume);
+
+    if (term.isReader == shouldBeReader) {
+      // Already correct form - no change needed
+      return term;
+    } else {
+      // Flip to correct form
+      return ModedVariable(term.name, isReader: !term.isReader, structuralMode: term.mode);
+    }
   }
 
   throw InvalidHeadError('Unknown moded term type: ${term.runtimeType}');
