@@ -1,6 +1,6 @@
 // test/analysis/type_checker/program_dfa_test.dart
 //
-// Tests for ProgramDFA per spec: docs/modules/type-dfa.md v0.8
+// Tests for ProgramDFA per spec: docs/modules/type-dfa.md v1.0
 // Paper Reference: Section 4.1 (lines 19-24, 47-53), Definition 4.3 (lines 283-298)
 
 import 'package:test/test.dart';
@@ -326,14 +326,16 @@ void main() {
       expect(result.type?.name, equals('_'));
     });
 
-    test('NEGATIVE: reader at _ state is inconsistent', () {
+    test('NEGATIVE: reader at produce mode is inconsistent (at _ state)', () {
       final state = dfa.getState('_');
-      final leaf = LeafTerm.reader('X?', mode: Mode.consume);
+      // With Mode Correspondence Property, we check mode matches variable type
+      // Reader requires consume mode, not produce mode
+      final leaf = LeafTerm.reader('X?', mode: Mode.produce);
 
       final result = checkLeafConsistency(leaf, state, dfa);
 
       expect(result.isConsistent, isFalse);
-      expect(result.reason, contains('_ expects writer'));
+      expect(result.reason, contains('reader'));
     });
 
     test('reader at _? state with consume mode is consistent', () {
@@ -346,14 +348,16 @@ void main() {
       expect(result.type?.name, equals('_?'));
     });
 
-    test('NEGATIVE: writer at _? state is inconsistent', () {
+    test('NEGATIVE: writer at consume mode is inconsistent (at _? state)', () {
       final state = dfa.getState('_?');
-      final leaf = LeafTerm.writer('X', mode: Mode.produce);
+      // With Mode Correspondence Property, we check mode matches variable type
+      // Writer requires produce mode, not consume mode
+      final leaf = LeafTerm.writer('X', mode: Mode.consume);
 
       final result = checkLeafConsistency(leaf, state, dfa);
 
       expect(result.isConsistent, isFalse);
-      expect(result.reason, contains('_? expects reader'));
+      expect(result.reason, contains('writer'));
     });
 
     test('integer literal at Integer state is consistent', () {
