@@ -1,7 +1,7 @@
 # Module: type-dfa
 
-**Version**: 0.9
-**Date**: 2025-01-10
+**Version**: 1.0
+**Date**: 2025-01-11
 **Status**: DRAFT
 **Paper References**: Section 4.1 (lines 19-24, 47-53), Example 4.1 (lines 55-80), Definition 4.3 (lines 283-298)
 
@@ -331,6 +331,22 @@ getFullTypeName(typeExpr):
 
 ## Path Consistency Checking (Definition 4.3)
 
+### Mode Correspondence Property
+
+When a moded head H' is constructed per the moded-head module (Definition 4.6) using type declaration D, the structural mode at each position in paths(H') equals the mode at the corresponding position in paths(D). This follows directly from the construction: modes are assigned based on the type declaration.
+
+**Consequence:** For variable leaves, path consistency can be checked using only the term path's structural mode—no separate type path traversal or DFA state inspection is required. Specifically:
+- Reader X? is consistent iff the path's structural mode at that position is ↓ (consume)
+- Writer X is consistent iff the path's structural mode at that position is ↑ (produce)
+
+The DFA is still needed for:
+1. Building the moded term (determining argument modes from type declaration)
+2. Checking that constants are valid at type positions
+3. Assigning types to variables (the DFA state reached)
+4. Contravariance/coverage checking
+
+### Path Consistency Algorithm
+
 Path consistency is checked by traversing the appropriate automaton directly. No complement flag needed.
 
 ```
@@ -354,88 +370,55 @@ checkPathConsistency(termPath, automaton):
 
 ## Algorithm: Leaf Consistency (Definition 4.3 cases)
 
+Leaf consistency checks whether the term path leaf is consistent with the DFA state reached. By the Mode Correspondence Property, variable mode checking uses only the path's structural mode.
+
 ```
-checkLeafConsistency(leaf, state):
-  // Case: Produced wildcard final state (_)
-  if state.isProducedWildcard:
-    if leaf.isVariable && !leaf.isReader && leaf.mode == Mode.produce:
+checkLeafConsistency(leaf, state, automaton):
+  // Case 1: Variable leaf — check path mode matches variable's implicit mode
+  if leaf.isVariable:
+    if leaf.isReader && leaf.mode == Mode.consume:
       return consistent(type: state)
-    return inconsistent("_ expects writer at produce position")
-
-  // Case: Consumed wildcard final state (_?)
-  if state.isConsumedWildcard:
-    if leaf.isVariable && leaf.isReader && leaf.mode == Mode.consume:
+    if !leaf.isReader && leaf.mode == Mode.produce:
       return consistent(type: state)
-    return inconsistent("_? expects reader at consume position")
+    return inconsistent("Variable mode mismatch: reader requires ↓, writer requires ↑")
 
-  // Case: Integer type state
-  if state.isIntegerType:
-    expectedMode = state.isComplement ? Mode.consume : Mode.produce
-    if leaf.isInteger:
-      return consistent(type: states['_FINAL_'])
-    if leaf.isVariable:
-      if leaf.isReader && leaf.mode == Mode.consume && state.isComplement:
-        return consistent(type: state)
-      if !leaf.isReader && leaf.mode == Mode.produce && !state.isComplement:
-        return consistent(type: state)
-      return inconsistent("Variable mode mismatch at Integer")
-    return inconsistent("Integer type requires integer literal or variable")
+  // Case 2: Constant leaf — check type accepts this constant
 
-  // Case: Real type state
-  if state.isRealType:
-    if leaf.isReal:
-      return consistent(type: states['_FINAL_'])
-    if leaf.isVariable:
-      if leaf.isReader && leaf.mode == Mode.consume && state.isComplement:
-        return consistent(type: state)
-      if !leaf.isReader && leaf.mode == Mode.produce && !state.isComplement:
-        return consistent(type: state)
-      return inconsistent("Variable mode mismatch at Real")
-    return inconsistent("Real type requires real literal or variable")
-
-  // Case: Number type state
-  if state.isNumberType:
-    if leaf.isInteger || leaf.isReal:
-      return consistent(type: states['_FINAL_'])
-    if leaf.isVariable:
-      if leaf.isReader && leaf.mode == Mode.consume && state.isComplement:
-        return consistent(type: state)
-      if !leaf.isReader && leaf.mode == Mode.produce && !state.isComplement:
-        return consistent(type: state)
-      return inconsistent("Variable mode mismatch at Number")
-    return inconsistent("Number type requires numeric literal or variable")
-
-  // Case: String type state
-  if state.isStringType:
-    if leaf.isString:
-      return consistent(type: states['_FINAL_'])
-    if leaf.isVariable:
-      if leaf.isReader && leaf.mode == Mode.consume && state.isComplement:
-        return consistent(type: state)
-      if !leaf.isReader && leaf.mode == Mode.produce && !state.isComplement:
-        return consistent(type: state)
-      return inconsistent("Variable mode mismatch at String")
-    return inconsistent("String type requires string literal or variable")
-
-  // Case: Anonymous final state
+  // Case 2a: At anonymous final state (already matched a constant transition)
   if state.isAnonymousFinal:
     return consistent(type: state)
 
-  // Case: Non-final type state with variable
-  if leaf.isVariable:
-    expectedMode = state.isComplement ? Mode.consume : Mode.produce
-    if leaf.isReader && leaf.mode == Mode.consume && state.isComplement:
-      return consistent(type: state)
-    if !leaf.isReader && leaf.mode == Mode.produce && !state.isComplement:
-      return consistent(type: state)
-    return inconsistent("Variable mode mismatch at type position")
+  // Case 2b: At primitive type state (Integer, Real, Number, String)
+  if state.isIntegerType:
+    if leaf.isInteger:
+      return consistent(type: states['_FINAL_'])
+    return inconsistent("Integer type requires integer literal")
 
-  // Case: Constant at type state - check transition
+  if state.isRealType:
+    if leaf.isReal:
+      return consistent(type: states['_FINAL_'])
+    return inconsistent("Real type requires real literal")
+
+  if state.isNumberType:
+    if leaf.isInteger || leaf.isReal:
+      return consistent(type: states['_FINAL_'])
+    return inconsistent("Number type requires numeric literal")
+
+  if state.isStringType:
+    if leaf.isString:
+      return consistent(type: states['_FINAL_'])
+    return inconsistent("String type requires string literal")
+
+  // Case 2c: At wildcard state — wildcards accept any value
+  if state.isWildcard:
+    return consistent(type: state)
+
+  // Case 2d: At user-defined type state — check for matching transition
   constLabel = TransitionLabel.constant(leaf.value)
   if automaton.transition(state, constLabel) != null:
     return consistent(type: states['_FINAL_'])
 
-  return inconsistent("Constant at type state without matching transition")
+  return inconsistent("Constant does not match any alternative at this type position")
 ```
 
 ## Checking a Procedure Argument
@@ -535,3 +518,4 @@ The term path has mode ↓ and ends in reader `X?`. The type path has mode ↓ a
 | 0.7 | 2025-01-10 | Integer/String as type states; _FINAL_ for literals |
 | 0.8 | 2025-01-10 | Complement automata model: two automata per type, no runtime flag |
 | 0.9 | 2025-01-10 | Added Real, Number system types |
+| 1.0 | 2025-01-11 | Simplified leaf consistency: Mode Correspondence Property; variable checks use path mode only |

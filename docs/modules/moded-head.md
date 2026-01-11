@@ -1,7 +1,7 @@
 # Module: moded-head
 
-**Version**: 0.6
-**Date**: 2025-01-09  
+**Version**: 0.7
+**Date**: 2025-01-11  
 **Status**: DRAFT  
 **Paper References**: Definition 4.6 (lines 285-288), Example (lines 290-308)
 
@@ -36,6 +36,12 @@ An **I/O moded term** is a moded term where:
 The variable flip in step 2 captures inverted roles:
 - Head writer `X` becomes reader `X?` (serves as **input**—bound by the goal)
 - Head reader `X?` becomes writer `X` (serves as **output**—will be bound by the body)
+
+### Mode Correspondence Property
+
+Because modedHead() assigns modes based on the type declaration D, the structural mode at each position in paths(H') equals the mode at the corresponding position in paths(D).
+
+**Consequence:** When checking path consistency for the moded head, variable mode checking can use the term path's structural mode directly—no separate type traversal is needed. See type-dfa.md for details.
 
 ## Public Interface
 
@@ -233,3 +239,4 @@ Paths:
 | 0.1 | 2025-01-07 | Initial draft |
 | 0.5 | 2025-01-08 | Add producedTerm for body atoms; complete algorithms; more examples |
 | 0.6 | 2025-01-09 | Add isIO/isProduced postconditions per paper Definition 4.6 and Well-typed Clause |
+| 0.7 | 2025-01-11 | Added Mode Correspondence Property note |

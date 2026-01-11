@@ -1,7 +1,7 @@
 # Module: well-typed-term
 
-**Version**: 0.4
-**Date**: 2025-01-10
+**Version**: 0.5
+**Date**: 2025-01-11
 **Status**: DRAFT
 **Paper References**: Definition 4.3 (Consistent Paths, lines 283-298), Definition 4.5 (Well-Typed Moded Term, lines 330-332)
 
@@ -30,13 +30,19 @@ A moded path is **consistent** with the type automaton if, when traversing the a
 1. **Structure matches:** Each non-leaf step in the path corresponds to a valid transition in the automaton (same functor, arity, argument index, mode).
 
 2. **Leaf consistency:** When the path reaches a leaf:
-   - **Variable at non-complement state:** Writer X with mode ↑ is consistent
-   - **Variable at complement state:** Reader X? with mode ↓ is consistent
-   - **Variable at _ state:** Writer X with mode ↑
-   - **Variable at _? state:** Reader X? with mode ↓
-   - **Integer literal at Integer/Integer? state:** Consistent (reaches _FINAL_)
-   - **String literal at String/String? state:** Consistent (reaches _FINAL_)
-   - **Constant matching transition:** Consistent if transition exists to _FINAL_
+
+   **For variables** (using Mode Correspondence Property — see type-dfa.md):
+   - Reader X? is consistent iff path's structural mode is ↓ (consume)
+   - Writer X is consistent iff path's structural mode is ↑ (produce)
+
+   The variable is assigned the type of the DFA state reached.
+
+   **For constants:**
+   - Integer literal at Integer/Number state: consistent (reaches _FINAL_)
+   - Real literal at Real/Number state: consistent (reaches _FINAL_)
+   - String literal at String state: consistent (reaches _FINAL_)
+   - Any constant at wildcard state (_/_?): consistent
+   - Constant matching a type alternative: consistent if transition exists to _FINAL_
 
 ### Variable Type Assignment
 
@@ -50,6 +56,12 @@ Two variable types are complementary if their states are complements:
 - `_` and `_?` are complements
 - `Stream` and `Stream?` are complements
 - `Integer` and `Integer?` are complements
+
+**Wildcard universality:** The wildcard types `_` and `_?` are universal complements:
+- `_` complements any consumed type (any T?)
+- `_?` complements any produced type (any T)
+
+This reflects that a wildcard can represent any value, so it is compatible with any specific type.
 
 ## Public Interface
 
@@ -310,3 +322,4 @@ Using `Stream?` automaton (complement):
 | 0.1 | 2025-01-07 | Initial draft |
 | 0.3 | 2025-01-08 | Merged path-consistency; complete DFA traversal algorithm |
 | 0.4 | 2025-01-10 | Update for ProgramDFA v0.8: Automaton, complement states |
+| 0.5 | 2025-01-11 | Simplified leaf consistency using Mode Correspondence Property; wildcard universality |
