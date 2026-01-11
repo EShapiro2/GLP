@@ -1,7 +1,7 @@
 // test/analysis/type_checker/well_typed_term_test.dart
 //
 // Tests for well_typed_term.dart
-// Specification: docs/modules/well-typed-term.md v0.4
+// Specification: docs/modules/well-typed-term.md v0.5
 // Paper Reference: Definition 4.3, Definition 4.5
 
 import 'package:test/test.dart';
@@ -149,16 +149,47 @@ void main() {
     });
 
     // =========================================================================
-    // Negative Controls: Mode Mismatches
+    // Mode Correspondence Property Tests
+    // Per spec: Variables check only that mode matches variable type:
+    //   - Reader X? requires consume mode (↓)
+    //   - Writer X requires produce mode (↑)
+    // The DFA state (complement or not) is already encoded in the structural mode
+    // by modedHead() construction.
     // =========================================================================
 
-    group('Negative: Mode Mismatches', () {
-      test('NEGATIVE: writer at _? (input-only) position is NOT well-typed', () {
-        // Type: _? (input only)
-        // Term: X (writer) - WRONG! needs consume but writer has produce
+    group('Mode Correspondence Property', () {
+      // --- Writer mode tests ---
+      
+      test('POSITIVE: writer with produce mode is well-typed (at _ state)', () {
+        // Writer + produce mode = consistent
+        final dfa = buildProgramDFA(TypeEnvironment.empty());
+        final automaton = dfa.getAutomaton('_');
+        final term = ModedVariable.writer('X', structuralMode: Mode.produce);
+
+        final result = checkModedTerm(term, automaton, dfa);
+
+        expect(result.isWellTyped, isTrue);
+        expect(result.errors, isEmpty);
+      });
+
+      test('POSITIVE: writer with produce mode is well-typed (at _? state)', () {
+        // Writer + produce mode = consistent (state doesn't matter for mode check)
         final dfa = buildProgramDFA(TypeEnvironment.empty());
         final automaton = dfa.getAutomaton('_?');
         final term = ModedVariable.writer('X', structuralMode: Mode.produce);
+
+        final result = checkModedTerm(term, automaton, dfa);
+
+        expect(result.isWellTyped, isTrue);
+        expect(result.errors, isEmpty);
+      });
+
+      test('NEGATIVE: writer with consume mode is NOT well-typed', () {
+        // Writer requires produce mode, but got consume mode
+        // This represents a malformed moded term (would not be produced by modedHead)
+        final dfa = buildProgramDFA(TypeEnvironment.empty());
+        final automaton = dfa.getAutomaton('_?');
+        final term = ModedVariable.writer('X', structuralMode: Mode.consume);
 
         final result = checkModedTerm(term, automaton, dfa);
 
@@ -167,12 +198,38 @@ void main() {
         expect(result.errors.first, isA<InconsistentPathError>());
       });
 
-      test('NEGATIVE: reader at _ (output-only) position is NOT well-typed', () {
-        // Type: _ (output only)
-        // Term: X? (reader) - WRONG! needs produce but reader has consume
+      // --- Reader mode tests ---
+      
+      test('POSITIVE: reader with consume mode is well-typed (at _? state)', () {
+        // Reader + consume mode = consistent
+        final dfa = buildProgramDFA(TypeEnvironment.empty());
+        final automaton = dfa.getAutomaton('_?');
+        final term = ModedVariable.reader('X', structuralMode: Mode.consume);
+
+        final result = checkModedTerm(term, automaton, dfa);
+
+        expect(result.isWellTyped, isTrue);
+        expect(result.errors, isEmpty);
+      });
+
+      test('POSITIVE: reader with consume mode is well-typed (at _ state)', () {
+        // Reader + consume mode = consistent (state doesn't matter for mode check)
         final dfa = buildProgramDFA(TypeEnvironment.empty());
         final automaton = dfa.getAutomaton('_');
         final term = ModedVariable.reader('X', structuralMode: Mode.consume);
+
+        final result = checkModedTerm(term, automaton, dfa);
+
+        expect(result.isWellTyped, isTrue);
+        expect(result.errors, isEmpty);
+      });
+
+      test('NEGATIVE: reader with produce mode is NOT well-typed', () {
+        // Reader requires consume mode, but got produce mode
+        // This represents a malformed moded term (would not be produced by modedHead)
+        final dfa = buildProgramDFA(TypeEnvironment.empty());
+        final automaton = dfa.getAutomaton('_');
+        final term = ModedVariable.reader('X', structuralMode: Mode.produce);
 
         final result = checkModedTerm(term, automaton, dfa);
 
