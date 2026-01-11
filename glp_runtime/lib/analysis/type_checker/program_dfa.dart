@@ -508,12 +508,14 @@ class LeafConsistencyResult {
 /// Check leaf consistency per Definition 4.3.
 ///
 /// Implements spec algorithm: checkLeafConsistency
-/// Note: No complement parameter - the state already encodes complement via isComplement.
+/// [isFlipped] indicates whether checking a moded head (variables flipped)
+/// vs a produced term (variables not flipped).
 LeafConsistencyResult checkLeafConsistency(
   LeafTerm leaf,
   DFAState state,
-  ProgramDFA dfa,
-) {
+  ProgramDFA dfa, {
+  bool isFlipped = false,
+}) {
   // Case: Produced wildcard final state (_) - non-complement context
   if (state.isProducedWildcard) {
     // _ means "any value" at produce position.
@@ -557,12 +559,21 @@ LeafConsistencyResult checkLeafConsistency(
       return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
     }
     if (leaf.isVariable) {
-      // Use state.isComplement to determine expected mode
+      // Standard pattern: reader at consume/complement, writer at produce/non-complement
       if (leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
         return LeafConsistencyResult.consistent(state);
       }
       if (!leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
         return LeafConsistencyResult.consistent(state);
+      }
+      // Flipped pattern for nested type modes in heads
+      if (isFlipped) {
+        if (!leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
+          return LeafConsistencyResult.consistent(state);
+        }
+        if (leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
+          return LeafConsistencyResult.consistent(state);
+        }
       }
       return LeafConsistencyResult.inconsistent('Variable mode mismatch at Integer');
     }
@@ -576,11 +587,21 @@ LeafConsistencyResult checkLeafConsistency(
       return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
     }
     if (leaf.isVariable) {
+      // Standard pattern: reader at consume/complement, writer at produce/non-complement
       if (leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
         return LeafConsistencyResult.consistent(state);
       }
       if (!leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
         return LeafConsistencyResult.consistent(state);
+      }
+      // Flipped pattern for nested type modes in heads
+      if (isFlipped) {
+        if (!leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
+          return LeafConsistencyResult.consistent(state);
+        }
+        if (leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
+          return LeafConsistencyResult.consistent(state);
+        }
       }
       return LeafConsistencyResult.inconsistent('Variable mode mismatch at Real');
     }
@@ -594,11 +615,21 @@ LeafConsistencyResult checkLeafConsistency(
       return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
     }
     if (leaf.isVariable) {
+      // Standard pattern: reader at consume/complement, writer at produce/non-complement
       if (leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
         return LeafConsistencyResult.consistent(state);
       }
       if (!leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
         return LeafConsistencyResult.consistent(state);
+      }
+      // Flipped pattern for nested type modes in heads
+      if (isFlipped) {
+        if (!leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
+          return LeafConsistencyResult.consistent(state);
+        }
+        if (leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
+          return LeafConsistencyResult.consistent(state);
+        }
       }
       return LeafConsistencyResult.inconsistent('Variable mode mismatch at Number');
     }
@@ -613,11 +644,21 @@ LeafConsistencyResult checkLeafConsistency(
       return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
     }
     if (leaf.isVariable) {
+      // Standard pattern: reader at consume/complement, writer at produce/non-complement
       if (leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
         return LeafConsistencyResult.consistent(state);
       }
       if (!leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
         return LeafConsistencyResult.consistent(state);
+      }
+      // Flipped pattern for nested type modes in heads
+      if (isFlipped) {
+        if (!leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
+          return LeafConsistencyResult.consistent(state);
+        }
+        if (leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
+          return LeafConsistencyResult.consistent(state);
+        }
       }
       return LeafConsistencyResult.inconsistent('Variable mode mismatch at String');
     }
@@ -635,11 +676,21 @@ LeafConsistencyResult checkLeafConsistency(
   // Case: Non-final type state with variable
   // Definition 4.3 case 2: term path is prefix ending in reader/writer
   if (leaf.isVariable) {
+    // Standard pattern: reader at consume/complement, writer at produce/non-complement
     if (leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
-      return LeafConsistencyResult.consistent(state); // Case 2(a)
+      return LeafConsistencyResult.consistent(state);
     }
     if (!leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
-      return LeafConsistencyResult.consistent(state); // Case 2(b)
+      return LeafConsistencyResult.consistent(state);
+    }
+    // Flipped pattern for nested type modes in heads
+    if (isFlipped) {
+      if (!leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
+        return LeafConsistencyResult.consistent(state);
+      }
+      if (leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
+        return LeafConsistencyResult.consistent(state);
+      }
     }
     return LeafConsistencyResult.inconsistent('Variable mode mismatch at type position');
   }

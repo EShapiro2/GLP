@@ -223,12 +223,17 @@ WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA d
 /// Per Definition 4.3: A moded path is consistent with the automaton if:
 /// 1. Structure matches: each non-leaf step corresponds to valid transition
 /// 2. Leaf consistency: variable/constant at leaf matches DFA state
-PathCheckResult checkPathAgainstAutomaton(ModedPath path, Automaton automaton, ProgramDFA dfa) {
+PathCheckResult checkPathAgainstAutomaton(
+  ModedPath path,
+  Automaton automaton,
+  ProgramDFA dfa, {
+  bool isFlipped = false,
+}) {
   var state = automaton.startState;
 
   // Handle single-step paths (just a variable or constant at root)
   if (path.length == 1) {
-    return _checkLeafConsistencyForPath(path.leaf, state, dfa);
+    return _checkLeafConsistencyForPath(path.leaf, state, dfa, isFlipped: isFlipped);
   }
 
   // Traverse path, following automaton transitions
@@ -251,7 +256,7 @@ PathCheckResult checkPathAgainstAutomaton(ModedPath path, Automaton automaton, P
   }
 
   // Check leaf consistency
-  return _checkLeafConsistencyForPath(path.leaf, state, dfa);
+  return _checkLeafConsistencyForPath(path.leaf, state, dfa, isFlipped: isFlipped);
 }
 
 // =============================================================================
@@ -275,11 +280,16 @@ TransitionLabel _buildTransitionLabel(PathStep currentStep, PathStep nextStep) {
 }
 
 /// Check leaf consistency with DFA state using program_dfa.dart's checkLeafConsistency
-PathCheckResult _checkLeafConsistencyForPath(PathStep leaf, DFAState state, ProgramDFA dfa) {
+PathCheckResult _checkLeafConsistencyForPath(
+  PathStep leaf,
+  DFAState state,
+  ProgramDFA dfa, {
+  bool isFlipped = false,
+}) {
   // Convert PathStep to LeafTerm for checkLeafConsistency
   final leafTerm = _pathStepToLeafTerm(leaf);
 
-  final result = checkLeafConsistency(leafTerm, state, dfa);
+  final result = checkLeafConsistency(leafTerm, state, dfa, isFlipped: isFlipped);
 
   if (result.isConsistent) {
     if (leaf.isVariable) {
@@ -371,6 +381,26 @@ List<NonComplementaryError> _checkComplementarity(
       if (readerInfo.mode != Mode.consume) {
         errors.add(NonComplementaryError(baseName, writerInfo, readerInfo,
             'Reader must have consume mode'));
+        continue;
+      }
+
+      // Special case: wildcards are universal
+      final writerIsWildcard = writerInfo.typeState.baseName == '_';
+      final readerIsWildcard = readerInfo.typeState.baseName == '_';
+
+      if (writerIsWildcard || readerIsWildcard) {
+        // Wildcards complement anything
+        if (writerIsWildcard && writerInfo.typeState.isComplement) {
+          errors.add(NonComplementaryError(baseName, writerInfo, readerInfo,
+              'Writer wildcard must be _ (non-complement), not _?'));
+          continue;
+        }
+        if (readerIsWildcard && !readerInfo.typeState.isComplement) {
+          errors.add(NonComplementaryError(baseName, writerInfo, readerInfo,
+              'Reader wildcard must be _? (complement), not _'));
+          continue;
+        }
+        // Wildcards are OK - no error
         continue;
       }
 

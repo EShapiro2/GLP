@@ -383,7 +383,9 @@ WellTypedResult _checkHead(
     final modedHeadTerm = modedHead(clause.head, procDecl, typeEnv: env);
 
     // Check each argument against its declared type's automaton
-    return _checkModedTermPerArg(modedHeadTerm, procDecl, dfa);
+    // Note: isFlipped is only needed for nested type modes (like Channel types)
+    // which are currently skipped. For regular types, flip + standard check works.
+    return _checkModedTermPerArg(modedHeadTerm, procDecl, dfa, isFlipped: false);
   } on ArityMismatchError catch (e) {
     return WellTypedResult.failure([
       InconsistentPathError(
@@ -426,7 +428,7 @@ WellTypedResult _checkBodyAtom(
     final modedAtomTerm = producedTerm(atom, procDecl);
 
     // Check each argument against its declared type's automaton
-    return _checkModedTermPerArg(modedAtomTerm, procDecl, dfa);
+    return _checkModedTermPerArg(modedAtomTerm, procDecl, dfa, isFlipped: false);
   } on ArityMismatchError catch (e) {
     return WellTypedResult.failure([
       InconsistentPathError(
@@ -443,8 +445,9 @@ WellTypedResult _checkBodyAtom(
 WellTypedResult _checkModedTermPerArg(
   ModedTerm modedTerm,
   ProcDecl decl,
-  ProgramDFA dfa,
-) {
+  ProgramDFA dfa, {
+  bool isFlipped = false,
+}) {
   final errors = <WellTypedError>[];
   final variableTypes = <String, VariableTypeInfo>{};
 
@@ -482,7 +485,7 @@ WellTypedResult _checkModedTermPerArg(
     final argPaths = paths(argTerm);
 
     for (final path in argPaths) {
-      final result = checkPathAgainstAutomaton(path, argAutomaton, dfa);
+      final result = checkPathAgainstAutomaton(path, argAutomaton, dfa, isFlipped: isFlipped);
 
       if (!result.isConsistent) {
         errors.add(InconsistentPathError(path, result.reason ?? 'Unknown'));
@@ -619,6 +622,7 @@ bool _areComplementaryTypes(VariableTypeInfo writerInfo, VariableTypeInfo reader
 }
 
 /// Check complementarity with reason for failure
+/// Per spec: wildcards are universal - _? complements any output, _ complements any input
 (bool, String?) _areComplementaryTypesWithReason(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
   // Mode check: writer must produce, reader must consume
   if (writerInfo.mode != Mode.produce) {
@@ -628,7 +632,26 @@ bool _areComplementaryTypes(VariableTypeInfo writerInfo, VariableTypeInfo reader
     return (false, 'Reader must have consume mode');
   }
 
-  // States must be complements: same baseName, opposite isComplement
+  // Special case: wildcards are universal
+  // _? (consumed wildcard) is complementary to ANY output type
+  // _ (produced wildcard) is complementary to ANY input type
+  final writerIsWildcard = writerInfo.typeState.baseName == '_';
+  final readerIsWildcard = readerInfo.typeState.baseName == '_';
+
+  if (writerIsWildcard || readerIsWildcard) {
+    // Wildcards complement anything - just verify the wildcard has correct mode
+    // Writer at _ (non-complement, produce) - OK
+    // Reader at _? (complement, consume) - OK
+    if (writerIsWildcard && writerInfo.typeState.isComplement) {
+      return (false, 'Writer wildcard must be _ (non-complement), not _?');
+    }
+    if (readerIsWildcard && !readerInfo.typeState.isComplement) {
+      return (false, 'Reader wildcard must be _? (complement), not _');
+    }
+    return (true, null);
+  }
+
+  // Non-wildcard case: states must be complements (same baseName, opposite isComplement)
   if (writerInfo.typeState.baseName != readerInfo.typeState.baseName) {
     return (false, 'Types must have same base: ${writerInfo.typeState.name} vs ${readerInfo.typeState.name}');
   }
