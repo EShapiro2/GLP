@@ -395,13 +395,16 @@ void main() {
       expect(result.type?.name, equals('Integer?'));
     });
 
-    test('NEGATIVE: reader at Integer (non-complement) is inconsistent', () {
+    // Note: With Mode Correspondence Property, reader at consume is always consistent
+    // (the state's complement status is already encoded in the structural mode)
+    test('NEGATIVE: reader at produce mode is inconsistent', () {
       final state = dfa.getState('Integer');
-      final leaf = LeafTerm.reader('N?', mode: Mode.consume);
+      final leaf = LeafTerm.reader('N?', mode: Mode.produce);
 
       final result = checkLeafConsistency(leaf, state, dfa);
 
-      expect(result.isConsistent, isFalse);
+      expect(result.isConsistent, isFalse,
+          reason: 'Reader requires consume mode, not produce mode');
     });
 
     test('writer at type state (non-complement) with produce is consistent', () {
@@ -432,17 +435,20 @@ void main() {
       expect(result.type?.name, equals('Stream?'));
     });
 
-    test('NEGATIVE: reader at type state (non-complement) is inconsistent', () {
+    // Note: With Mode Correspondence Property, reader at consume is always consistent
+    // (the state's complement status is already encoded in the structural mode)
+    test('NEGATIVE: reader at produce mode at type state is inconsistent', () {
       final env = TypeEnvironment.empty();
       env.addType(TypeDef('Stream', [ListNilAlt(0, 0)], 0, 0));
       final dfa = buildProgramDFA(env);
 
       final state = dfa.getState('Stream');
-      final leaf = LeafTerm.reader('Xs?', mode: Mode.consume);
+      final leaf = LeafTerm.reader('Xs?', mode: Mode.produce);
 
       final result = checkLeafConsistency(leaf, state, dfa);
 
-      expect(result.isConsistent, isFalse);
+      expect(result.isConsistent, isFalse,
+          reason: 'Reader requires consume mode, not produce mode');
     });
   });
 

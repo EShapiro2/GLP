@@ -226,14 +226,13 @@ WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA d
 PathCheckResult checkPathAgainstAutomaton(
   ModedPath path,
   Automaton automaton,
-  ProgramDFA dfa, {
-  bool isFlipped = false,
-}) {
+  ProgramDFA dfa,
+) {
   var state = automaton.startState;
 
   // Handle single-step paths (just a variable or constant at root)
   if (path.length == 1) {
-    return _checkLeafConsistencyForPath(path.leaf, state, dfa, isFlipped: isFlipped);
+    return _checkLeafConsistencyForPath(path.leaf, state, dfa);
   }
 
   // Traverse path, following automaton transitions
@@ -256,7 +255,7 @@ PathCheckResult checkPathAgainstAutomaton(
   }
 
   // Check leaf consistency
-  return _checkLeafConsistencyForPath(path.leaf, state, dfa, isFlipped: isFlipped);
+  return _checkLeafConsistencyForPath(path.leaf, state, dfa);
 }
 
 // =============================================================================
@@ -283,13 +282,12 @@ TransitionLabel _buildTransitionLabel(PathStep currentStep, PathStep nextStep) {
 PathCheckResult _checkLeafConsistencyForPath(
   PathStep leaf,
   DFAState state,
-  ProgramDFA dfa, {
-  bool isFlipped = false,
-}) {
+  ProgramDFA dfa,
+) {
   // Convert PathStep to LeafTerm for checkLeafConsistency
   final leafTerm = _pathStepToLeafTerm(leaf);
 
-  final result = checkLeafConsistency(leafTerm, state, dfa, isFlipped: isFlipped);
+  final result = checkLeafConsistency(leafTerm, state, dfa);
 
   if (result.isConsistent) {
     if (leaf.isVariable) {

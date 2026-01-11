@@ -507,198 +507,74 @@ class LeafConsistencyResult {
 
 /// Check leaf consistency per Definition 4.3.
 ///
-/// Implements spec algorithm: checkLeafConsistency
-/// [isFlipped] indicates whether checking a moded head (variables flipped)
-/// vs a produced term (variables not flipped).
+/// Implements the simplified algorithm using Mode Correspondence Property:
+/// - For variables: check path's structural mode matches variable's implicit mode
+/// - For constants: check type accepts this constant
 LeafConsistencyResult checkLeafConsistency(
   LeafTerm leaf,
   DFAState state,
-  ProgramDFA dfa, {
-  bool isFlipped = false,
-}) {
-  // Case: Produced wildcard final state (_) - non-complement context
-  if (state.isProducedWildcard) {
-    // _ means "any value" at produce position.
-    // For variables: writer at produce position (mode-consistent after flip from reader).
-    // Constants at produce position are also acceptable.
-    if (leaf.isVariable) {
-      if (!leaf.isReader && leaf.mode == Mode.produce) {
-        return LeafConsistencyResult.consistent(state);
-      }
-      return LeafConsistencyResult.inconsistent('_ expects writer at produce position');
-    }
-    // Constants are acceptable at wildcard positions
-    if (leaf.mode == Mode.produce) {
+  ProgramDFA dfa,
+) {
+  // Case 1: Variable leaf — check path mode matches variable's implicit mode
+  // By Mode Correspondence Property, we don't need to inspect state.isComplement
+  if (leaf.isVariable) {
+    // Reader X? must be at consume position (mode ↓)
+    // Writer X must be at produce position (mode ↑)
+    if (leaf.isReader && leaf.mode == Mode.consume) {
       return LeafConsistencyResult.consistent(state);
     }
-    return LeafConsistencyResult.inconsistent('_ expects produce mode');
-  }
-
-  // Case: Consumed wildcard final state (_?) - complement context
-  if (state.isConsumedWildcard) {
-    // _? means "any value" at consume position.
-    // For variables: reader at consume position (mode-consistent after flip from writer).
-    // Constants at consume position are also acceptable.
-    if (leaf.isVariable) {
-      if (leaf.isReader && leaf.mode == Mode.consume) {
-        return LeafConsistencyResult.consistent(state);
-      }
-      return LeafConsistencyResult.inconsistent('_? expects reader at consume position');
-    }
-    // Constants are acceptable at wildcard positions
-    if (leaf.mode == Mode.consume) {
+    if (!leaf.isReader && leaf.mode == Mode.produce) {
       return LeafConsistencyResult.consistent(state);
     }
-    return LeafConsistencyResult.inconsistent('_? expects consume mode');
+    final expected = leaf.isReader ? '↓ (consume)' : '↑ (produce)';
+    final actual = leaf.mode == Mode.consume ? '↓ (consume)' : '↑ (produce)';
+    return LeafConsistencyResult.inconsistent(
+        'Variable mode mismatch: ${leaf.isReader ? "reader" : "writer"} requires $expected, got $actual');
   }
 
-  // Case: Integer type state (conceptual infinite transitions)
+  // Case 2: Constant leaf — check type accepts this constant
+
+  // Case 2a: At anonymous final state (already matched a constant transition)
+  if (state.isAnonymousFinal) {
+    return LeafConsistencyResult.consistent(state);
+  }
+
+  // Case 2b: At primitive type state (Integer, Real, Number, String)
   if (state.isIntegerType) {
     if (leaf.isInteger) {
-      // Conceptually: follow transition labeled with this integer to _FINAL_
       return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
     }
-    if (leaf.isVariable) {
-      // Standard pattern: reader at consume/complement, writer at produce/non-complement
-      if (leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
-        return LeafConsistencyResult.consistent(state);
-      }
-      if (!leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
-        return LeafConsistencyResult.consistent(state);
-      }
-      // Flipped pattern for nested type modes in heads
-      if (isFlipped) {
-        if (!leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
-          return LeafConsistencyResult.consistent(state);
-        }
-        if (leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
-          return LeafConsistencyResult.consistent(state);
-        }
-      }
-      return LeafConsistencyResult.inconsistent('Variable mode mismatch at Integer');
-    }
-    return LeafConsistencyResult.inconsistent(
-        'Integer type requires integer literal or variable');
+    return LeafConsistencyResult.inconsistent('Integer type requires integer literal');
   }
 
-  // Case: Real type state
   if (state.isRealType) {
     if (leaf.isReal) {
       return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
     }
-    if (leaf.isVariable) {
-      // Standard pattern: reader at consume/complement, writer at produce/non-complement
-      if (leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
-        return LeafConsistencyResult.consistent(state);
-      }
-      if (!leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
-        return LeafConsistencyResult.consistent(state);
-      }
-      // Flipped pattern for nested type modes in heads
-      if (isFlipped) {
-        if (!leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
-          return LeafConsistencyResult.consistent(state);
-        }
-        if (leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
-          return LeafConsistencyResult.consistent(state);
-        }
-      }
-      return LeafConsistencyResult.inconsistent('Variable mode mismatch at Real');
-    }
-    return LeafConsistencyResult.inconsistent(
-        'Real type requires real literal or variable');
+    return LeafConsistencyResult.inconsistent('Real type requires real literal');
   }
 
-  // Case: Number type state
   if (state.isNumberType) {
     if (leaf.isInteger || leaf.isReal) {
       return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
     }
-    if (leaf.isVariable) {
-      // Standard pattern: reader at consume/complement, writer at produce/non-complement
-      if (leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
-        return LeafConsistencyResult.consistent(state);
-      }
-      if (!leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
-        return LeafConsistencyResult.consistent(state);
-      }
-      // Flipped pattern for nested type modes in heads
-      if (isFlipped) {
-        if (!leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
-          return LeafConsistencyResult.consistent(state);
-        }
-        if (leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
-          return LeafConsistencyResult.consistent(state);
-        }
-      }
-      return LeafConsistencyResult.inconsistent('Variable mode mismatch at Number');
-    }
-    return LeafConsistencyResult.inconsistent(
-        'Number type requires numeric literal or variable');
+    return LeafConsistencyResult.inconsistent('Number type requires numeric literal');
   }
 
-  // Case: String type state (conceptual infinite transitions)
   if (state.isStringType) {
     if (leaf.isString) {
-      // Conceptually: follow transition labeled with this string to _FINAL_
       return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
     }
-    if (leaf.isVariable) {
-      // Standard pattern: reader at consume/complement, writer at produce/non-complement
-      if (leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
-        return LeafConsistencyResult.consistent(state);
-      }
-      if (!leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
-        return LeafConsistencyResult.consistent(state);
-      }
-      // Flipped pattern for nested type modes in heads
-      if (isFlipped) {
-        if (!leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
-          return LeafConsistencyResult.consistent(state);
-        }
-        if (leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
-          return LeafConsistencyResult.consistent(state);
-        }
-      }
-      return LeafConsistencyResult.inconsistent('Variable mode mismatch at String');
-    }
-    return LeafConsistencyResult.inconsistent(
-        'String type requires string literal or variable');
+    return LeafConsistencyResult.inconsistent('String type requires string literal');
   }
 
-  // Case: Anonymous final state (reached via exact constant match)
-  if (state.isAnonymousFinal) {
-    // Definition 4.3 case 1: equal length, last symbols consistent
-    // We only reach here if a constant transition was followed, so it matched
+  // Case 2c: At wildcard state — wildcards accept any constant
+  if (state.isWildcard) {
     return LeafConsistencyResult.consistent(state);
   }
 
-  // Case: Non-final type state with variable
-  // Definition 4.3 case 2: term path is prefix ending in reader/writer
-  if (leaf.isVariable) {
-    // Standard pattern: reader at consume/complement, writer at produce/non-complement
-    if (leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
-      return LeafConsistencyResult.consistent(state);
-    }
-    if (!leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
-      return LeafConsistencyResult.consistent(state);
-    }
-    // Flipped pattern for nested type modes in heads
-    if (isFlipped) {
-      if (!leaf.isReader && leaf.mode == Mode.consume && state.isComplement) {
-        return LeafConsistencyResult.consistent(state);
-      }
-      if (leaf.isReader && leaf.mode == Mode.produce && !state.isComplement) {
-        return LeafConsistencyResult.consistent(state);
-      }
-    }
-    return LeafConsistencyResult.inconsistent('Variable mode mismatch at type position');
-  }
-
-  // Case: Non-final type state with constant - must check transition
-  // Definition 4.3 case 1: check if constant matches a transition
+  // Case 2d: At user-defined type state — check for matching transition
   if (leaf.value != null) {
-    // Get the automaton for this state's type to check transitions
     final automaton = dfa.automata[state.name];
     if (automaton != null) {
       final constLabel = TransitionLabel.constant(leaf.value!);
@@ -710,5 +586,5 @@ LeafConsistencyResult checkLeafConsistency(
   }
 
   return LeafConsistencyResult.inconsistent(
-      'Constant at type state without matching transition');
+      'Constant does not match any alternative at type position ${state.name}');
 }

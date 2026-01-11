@@ -383,9 +383,7 @@ WellTypedResult _checkHead(
     final modedHeadTerm = modedHead(clause.head, procDecl, typeEnv: env);
 
     // Check each argument against its declared type's automaton
-    // Note: isFlipped is only needed for nested type modes (like Channel types)
-    // which are currently skipped. For regular types, flip + standard check works.
-    return _checkModedTermPerArg(modedHeadTerm, procDecl, dfa, isFlipped: false);
+    return _checkModedTermPerArg(modedHeadTerm, procDecl, dfa);
   } on ArityMismatchError catch (e) {
     return WellTypedResult.failure([
       InconsistentPathError(
@@ -428,7 +426,7 @@ WellTypedResult _checkBodyAtom(
     final modedAtomTerm = producedTerm(atom, procDecl);
 
     // Check each argument against its declared type's automaton
-    return _checkModedTermPerArg(modedAtomTerm, procDecl, dfa, isFlipped: false);
+    return _checkModedTermPerArg(modedAtomTerm, procDecl, dfa);
   } on ArityMismatchError catch (e) {
     return WellTypedResult.failure([
       InconsistentPathError(
@@ -445,9 +443,8 @@ WellTypedResult _checkBodyAtom(
 WellTypedResult _checkModedTermPerArg(
   ModedTerm modedTerm,
   ProcDecl decl,
-  ProgramDFA dfa, {
-  bool isFlipped = false,
-}) {
+  ProgramDFA dfa,
+) {
   final errors = <WellTypedError>[];
   final variableTypes = <String, VariableTypeInfo>{};
 
@@ -485,7 +482,7 @@ WellTypedResult _checkModedTermPerArg(
     final argPaths = paths(argTerm);
 
     for (final path in argPaths) {
-      final result = checkPathAgainstAutomaton(path, argAutomaton, dfa, isFlipped: isFlipped);
+      final result = checkPathAgainstAutomaton(path, argAutomaton, dfa);
 
       if (!result.isConsistent) {
         errors.add(InconsistentPathError(path, result.reason ?? 'Unknown'));
