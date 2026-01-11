@@ -1,0 +1,5 @@
+%% INVALID: Type alias to primitive
+%% Should be rejected by type parser
+%% Per spec type-environment.md v0.5: Type aliases are prohibited
+
+Output ::= _.

@@ -75,6 +75,32 @@ echo ""
 run_type_check "$TEST_DIR/invalid/structural/body_undeclared_predicate.glp" "pass" "Undeclared predicate (skip checking)"
 
 echo ""
+echo "=== Type Alias Errors (should fail) ==="
+echo ""
+
+# Helper for alias errors - checks for "alias prohibited" in output
+run_alias_check() {
+    local file="$1"
+    local test_name="$2"
+
+    output=$($DART run "$GLPC" --type-check "$file" 2>&1 || true)
+
+    if echo "$output" | grep -qi "alias prohibited"; then
+        echo "PASS: $test_name (correctly rejected)"
+        PASS=$((PASS + 1))
+    else
+        echo "FAIL: $test_name (should have alias error)"
+        echo "      File: $file"
+        echo "      Output: $output"
+        FAIL=$((FAIL + 1))
+    fi
+}
+
+run_alias_check "$TEST_DIR/invalid/alias_primitive.glp" "Alias to primitive _ rejected"
+run_alias_check "$TEST_DIR/invalid/alias_primitive_input.glp" "Alias to primitive _? rejected"
+run_alias_check "$TEST_DIR/invalid/alias_type_ref.glp" "Alias to type reference rejected"
+
+echo ""
 echo "=== Moded Types - Embedded Mode Errors (should fail) ==="
 echo ""
 

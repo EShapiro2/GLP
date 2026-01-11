@@ -281,6 +281,8 @@ class TypeParser {
   }
   
   /// Parse: TypeName ::= type_expr .
+  /// Validates that the definition is not an alias (single primitive or type reference).
+  /// Per spec type-environment.md v0.5: Type aliases are prohibited.
   TypeDef _parseTypeDef() {
     final nameToken = _consume(TypeTokenType.typeName, 'Expected type name');
 
@@ -289,6 +291,29 @@ class TypeParser {
     final alternatives = _parseTypeExpr();
 
     _consume(TypeTokenType.dot, 'Expected "." after type definition');
+
+    // Validate: reject aliases (single alternative that is just a primitive or type reference)
+    if (alternatives.length == 1) {
+      final alt = alternatives[0];
+      if (alt is PrimitiveModeAlt) {
+        final primStr = alt.isInput ? '_?' : '_';
+        throw TypeParseError(
+          'Type alias prohibited: ${nameToken.lexeme} ::= $primStr. '
+          'Type definitions must introduce structure (constants, functors, or list constructors).',
+          nameToken.line,
+          nameToken.column,
+        );
+      }
+      if (alt is TypeRef) {
+        final refStr = alt.isInput ? '${alt.name}?' : alt.name;
+        throw TypeParseError(
+          'Type alias prohibited: ${nameToken.lexeme} ::= $refStr. '
+          'Type definitions must introduce structure (constants, functors, or list constructors).',
+          nameToken.line,
+          nameToken.column,
+        );
+      }
+    }
 
     return TypeDef(nameToken.lexeme, alternatives, nameToken.line, nameToken.column);
   }

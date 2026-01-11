@@ -3,7 +3,7 @@
 **Version**: 0.7
 **Date**: 2025-01-11  
 **Status**: DRAFT  
-**Paper References**: Definition 4.6 (lines 285-288), Example (lines 290-308)
+**Paper References**: Definition 4.8 (Moded Head), Example 4.9
 
 ## Purpose
 
@@ -17,11 +17,11 @@ Constructs a moded head H' from a clause head H and a procedure declaration. The
 
 ## Definitions
 
-### Definition 4.6: Moded Head (lines 285-288)
+### Definition 4.8: Moded Head
 
 > Given a head H, a **moded head** H' is obtained by:
 > 1. Constructing an I/O-moded term corresponding to H, then
-> 2. Replacing each variable by its paired variable.
+> 2. For each variable, if its form does not match its position's structural mode, replacing it with its paired variable. Specifically, a variable at a position with structural mode ↓ should be a reader, and a variable at a position with structural mode ↑ should be a writer.
 
 ### I/O Moded Term
 
@@ -29,19 +29,19 @@ An **I/O moded term** is a moded term where:
 - Root mode is ↓ (consume)
 - Input argument positions (Type?) have mode ↓
 - Output argument positions (Type) have mode ↑
-- Nested structure preserves/flips mode based on type complementation
+- Nested structure computes combined modes via involution based on type complementation
 
-### Variable Flip (lines 279-282)
+### Step 2: Ensuring Variable-Mode Consistency
 
-The variable flip in step 2 captures inverted roles:
-- Head writer `X` becomes reader `X?` (serves as **input**—bound by the goal)
-- Head reader `X?` becomes writer `X` (serves as **output**—will be bound by the body)
+Step 2 ensures each variable's form matches its position's structural mode:
+- A variable at mode ↓ should be a reader (X?)
+- A variable at mode ↑ should be a writer (X)
 
-### Mode Correspondence Property
+For **simple input/output types**, this typically means replacing all variables:
+- Head writer `X` at input position (mode ↓) becomes reader `X?`
+- Head reader `X?` at output position (mode ↑) becomes writer `X`
 
-Because modedHead() assigns modes based on the type declaration D, the structural mode at each position in paths(H') equals the mode at the corresponding position in paths(D).
-
-**Consequence:** When checking path consistency for the moded head, variable mode checking can use the term path's structural mode directly—no separate type traversal is needed. See type-dfa.md for details.
+For **interactive types** with internal mode complementation, some variables may already have the correct form and require no change.
 
 ## Public Interface
 
@@ -49,7 +49,7 @@ Because modedHead() assigns modes based on the type declaration D, the structura
 
 #### `ModedTerm modedHead(Term head, ProcDecl decl)`
 
-Constructs a moded head H' from clause head H per Definition 4.6.
+Constructs a moded head H' from clause head H per Definition 4.8.
 
 **Preconditions:**
 - `head` is a valid clause head (compound term)
@@ -60,7 +60,7 @@ Constructs a moded head H' from clause head H per Definition 4.6.
 - `isIO(result)` is true (the result is an I/O moded term)
 - Root mode is ↓ (consume)
 - Each argument has mode based on declared type: Type? → ↓, Type → ↑
-- All variables are flipped (X ↔ X?)
+- Each variable's form matches its position's structural mode
 
 **Errors:**
 - Throws `ArityMismatchError` if head arity doesn't match declaration
@@ -77,7 +77,7 @@ Constructs a produced moded term from a body atom.
 - `isProduced(result)` is true (the result is a produced moded term)
 - Root mode is ↑ (produce)
 - Each argument has mode based on declared type: Type? → ↓, Type → ↑
-- Variables are NOT flipped (body atoms use original variable forms)
+- Variables are NOT modified (body atoms use original variable forms)
 
 **Errors:**
 - Throws `ArityMismatchError` if atom arity doesn't match declaration
@@ -91,8 +91,8 @@ modedHead(head, decl):
   // Step 1: Build I/O moded term
   ioTerm = buildIOModedTerm(head, decl, Mode.consume)
   
-  // Step 2: Flip all variables
-  return flipAllVariables(ioTerm)
+  // Step 2: Ensure each variable's form matches its position's mode
+  return ensureVariablesMatchModes(ioTerm)
 
 buildIOModedTerm(term, decl, parentMode):
   match term:
@@ -100,36 +100,48 @@ buildIOModedTerm(term, decl, parentMode):
       modedArgs = []
       for i in 1..args.length:
         argType = decl.argTypes[i-1]
-        // Input (Type?) preserves consume, Output (Type) flips to produce
+        // Input (Type?) → consume, Output (Type) → produce
         argMode = argType.isInput ? Mode.consume : Mode.produce
-        modedArg = buildModedSubterm(args[i-1], argMode)
+        modedArg = buildModedSubterm(args[i-1], argMode, argType, typeEnv)
         modedArgs.add(modedArg)
       return ModedCompound(parentMode, functor, args.length, modedArgs)
     
     _: throw InvalidHeadError("Head must be compound term")
 
-buildModedSubterm(term, mode):
+buildModedSubterm(term, mode, expectedType, typeEnv):
   match term:
     Compound(functor, args):
-      modedArgs = args.map(arg => buildModedSubterm(arg, mode))
+      // Look up type definition for embedded modes
+      subtermModes = getSubtermModes(functor, arity, mode, expectedType, typeEnv)
+      modedArgs = []
+      for i in 0..<args.length:
+        (subtermMode, subtermType) = subtermModes[i]
+        modedArgs.add(buildModedSubterm(args[i], subtermMode, subtermType, typeEnv))
       return ModedCompound(mode, functor, args.length, modedArgs)
     
     Constant(value):
       return ModedConstant(mode, value)
     
     Variable(name, isReader):
-      return ModedVariable(name, isReader)
+      // Preserve original reader/writer form; structural mode stored separately
+      return ModedVariable(name, isReader, structuralMode: mode)
 
-flipAllVariables(term):
+ensureVariablesMatchModes(term):
   match term:
     ModedCompound(mode, functor, arity, args):
-      return ModedCompound(mode, functor, arity, args.map(flipAllVariables))
+      return ModedCompound(mode, functor, arity, args.map(ensureVariablesMatchModes))
     
     ModedConstant(mode, value):
       return ModedConstant(mode, value)
     
-    ModedVariable(name, isReader):
-      return ModedVariable(name, !isReader)  // Flip: X ↔ X?
+    ModedVariable(name, isReader, structuralMode):
+      // Check if variable form matches structural mode
+      // Mode ↓ requires reader; Mode ↑ requires writer
+      shouldBeReader = (structuralMode == Mode.consume)
+      if isReader == shouldBeReader:
+        return term  // Already correct form
+      else:
+        return ModedVariable(name, !isReader, structuralMode: structuralMode)  // Flip
 ```
 
 ### Algorithm: Produced Term Construction (for body atoms)
@@ -137,12 +149,12 @@ flipAllVariables(term):
 ```
 producedTerm(atom, decl):
   return buildIOModedTerm(atom, decl, Mode.produce)
-  // Note: no variable flip for body atoms
+  // Note: no variable modification for body atoms
 ```
 
 ## Examples
 
-### Example: merge Clause Head
+### Example 1: merge Clause Head (Simple Input/Output Types)
 
 **Input:**
 
@@ -168,20 +180,69 @@ Result:
 ↓merge(↓[↓X|Xs], Ys, ↑[↑X?|Zs?])
 ```
 
-**Step 2: Flip all variables**
+**Step 2: Ensure variables match modes**
 
-- X → X?
-- Xs → Xs?
-- Ys → Ys?
-- X? → X
-- Zs? → Zs
+| Variable | Position Mode | Current Form | Required Form | Action |
+|----------|---------------|--------------|---------------|--------|
+| X | ↓ | writer | reader | flip → X? |
+| Xs | ↓ | writer | reader | flip → Xs? |
+| Ys | ↓ | writer | reader | flip → Ys? |
+| X? | ↑ | reader | writer | flip → X |
+| Zs? | ↑ | reader | writer | flip → Zs |
 
 Result:
 ```
 H' = ↓merge(↓[↓X?|Xs?], Ys?, ↑[↑X|Zs])
 ```
 
-### Example: merge Body Atom
+### Example 2: new_channel Clause Head (Interactive Type)
+
+**Input:**
+
+Clause head:
+```
+H = new_channel(ch(Xs?, Ys), ch(Ys?, Xs))
+```
+
+Type declarations:
+```
+MyChan ::= ch(MyList?, MyList).
+procedure new_channel(MyChan, MyChan).
+```
+
+**Step 1: Build I/O moded term**
+
+- Root mode: ↓ (consume)
+- Arg 1 declared `MyChan` (output) → mode ↑
+- Arg 2 declared `MyChan` (output) → mode ↑
+
+Inside `ch(...)` with type `MyChan = ch(MyList?, MyList)`:
+- Position 1 has `MyList?` (isInput=true) → embedded mode ↓
+- Position 2 has `MyList` (isInput=false) → embedded mode ↑
+- Combined modes: pos1 = ↑⊕↓ = ↓, pos2 = ↑⊕↑ = ↑
+
+Result:
+```
+↓new_channel(↑ch(↓Xs?, ↑Ys), ↑ch(↓Ys?, ↑Xs))
+```
+
+**Step 2: Ensure variables match modes**
+
+| Variable | Position Mode | Current Form | Required Form | Action |
+|----------|---------------|--------------|---------------|--------|
+| Xs? | ↓ | reader | reader | no change |
+| Ys | ↑ | writer | writer | no change |
+| Ys? | ↓ | reader | reader | no change |
+| Xs | ↑ | writer | writer | no change |
+
+Result:
+```
+H' = ↓new_channel(↑ch(↓Xs?, ↑Ys), ↑ch(↓Ys?, ↑Xs))
+```
+
+**Key insight:** For interactive types, the programmer has already placed variables in the correct form to match the type's internal mode structure. No flipping is needed.
+
+### Example 3: merge Body Atom
 
 **Input:**
 
@@ -195,7 +256,7 @@ Type declaration:
 procedure merge(Stream?, Stream?, Stream).
 ```
 
-**Produced moded term (no variable flip):**
+**Produced moded term (no variable modification):**
 
 - Root mode: ↑ (produce)
 - Arg 1 declared `Stream?` (input) → mode ↓
@@ -208,22 +269,6 @@ A' = ↑merge(Ys?, Xs?, Zs)
 ```
 
 Variables stay as-is because body atoms are goals being called, not definitions being matched.
-
-### Example: Paths of Moded Head
-
-Moded head:
-```
-H' = ↓merge(↓[↓X?|Xs?], Ys?, ↑[↑X|Zs])
-```
-
-Paths:
-```
-(0,↓) → merge/3 --(1,↓)--> [|]/2 --(1,↓)--> X?
-(0,↓) → merge/3 --(1,↓)--> [|]/2 --(2,↓)--> Xs?
-(0,↓) → merge/3 --(2,↓)--> Ys?
-(0,↓) → merge/3 --(3,↑)--> [|]/2 --(1,↑)--> X
-(0,↓) → merge/3 --(3,↑)--> [|]/2 --(2,↑)--> Zs
-```
 
 ## Error Conditions
 
@@ -239,4 +284,4 @@ Paths:
 | 0.1 | 2025-01-07 | Initial draft |
 | 0.5 | 2025-01-08 | Add producedTerm for body atoms; complete algorithms; more examples |
 | 0.6 | 2025-01-09 | Add isIO/isProduced postconditions per paper Definition 4.6 and Well-typed Clause |
-| 0.7 | 2025-01-11 | Added Mode Correspondence Property note |
+| 0.7 | 2025-01-11 | Fix Definition 4.8 step 2: conditional variable replacement for interactive types |

@@ -10,10 +10,6 @@ const String typePrelude = r'''
 % Predefined Types
 % =============================================================================
 
-% Output and Input types
-Output ::= _.
-Input ::= _?.
-
 % Collections
 List ::= [_ | List] ; [].
 Stream ::= [_ | Stream] ; [].
@@ -27,7 +23,7 @@ Channel ::= ch(Stream?, Stream).
 % =============================================================================
 
 % Ground guard
-procedure ground(Input).
+procedure ground(_?).
 
 % Unification (output = input)
 procedure =(_, _?).
@@ -56,8 +52,6 @@ receive(X?, ch([X|In], Out?), ch(In?, Out)).
 const Set<String> predefinedTypeNames = {
   'Number',   // Primitive builtin
   'String',   // Primitive builtin
-  'Output',   // All writers type
-  'Input',    // All readers type
   'List',     // Collection type
   'Stream',   // Collection type
   'DiffList', // Collection type
