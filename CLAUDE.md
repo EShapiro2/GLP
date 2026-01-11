@@ -103,6 +103,14 @@ bar(X, Y, R?) :- X? + 1 < Y? * 2 | R = sum(X?, Y?).
 - If clarification is needed, ask first rather than assuming
 - **NEVER EXCEED THE SCOPE** of instructions given by Claude Web or the user
 
+### 🔴 NEVER Deviate From Instructions
+- **NEVER decide on your own not to implement a change you were instructed to implement**
+- **NEVER revert a change you were instructed to make without explicit permission**
+- **Perform every task to completion** - or if impossible, STOP and report why
+- **NEVER divert** from the instructed task to do something else
+- **NEVER continue** with actions not based on instructions
+- If you encounter an obstacle: STOP, REPORT, WAIT for direction
+
 ### Never Implement Without a Plan
 - **NEVER start implementation without an agreed upon plan**
 - First discuss and document the design
