@@ -337,7 +337,7 @@ ModedTerm _ensureVariablesMatchModes(ModedTerm term) {
 
   if (term is ModedVariable) {
     // Check if variable form matches structural mode
-    // Mode ↓ (consume) requires reader; Mode ↑ (produce) requires writer
+    // Mode ↓ requires reader; Mode ↑ requires writer
     final shouldBeReader = (term.mode == Mode.consume);
 
     if (term.isReader == shouldBeReader) {

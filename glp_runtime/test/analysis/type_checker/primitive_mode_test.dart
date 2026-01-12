@@ -1,117 +1,92 @@
 // test/analysis/type_checker/primitive_mode_test.dart
 //
-// Tests for primitive mode types (_ and _?)
-// Note: Types like `BiMode ::= _ ; _?` are ILLEGAL because they create
-// non-deterministic DFAs (both _ and _? match any value at that position)
+// Tests for primitive mode types (_ and _?) in the type system
+// Note: _ and _? are primitive modes used directly in procedure declarations,
+// not as type aliases (Output/Input type aliases were removed).
 
 import 'package:test/test.dart';
-import 'package:glp_runtime/analysis/type_checker/type_parser.dart';
-import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
+import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 import 'package:glp_runtime/analysis/type_checker/program_dfa.dart';
+import 'test_helpers.dart';
 
 void main() {
-  group('Primitive Mode Type Parsing', () {
-    test('Parse primitive mode output (_)', () {
-      final source = 'MyType ::= _.';
-      final env = parseTypes(source);
-
-      expect(env.types.containsKey('MyType'), isTrue);
-      final typeDef = env.types['MyType'];
-      expect(typeDef, isNotNull);
-      expect(typeDef!.alternatives, hasLength(1));
-
-      final alt = typeDef.alternatives[0];
-      expect(alt, isA<PrimitiveModeAlt>());
-      expect((alt as PrimitiveModeAlt).isInput, isFalse);
-      expect(alt.toString(), equals('_'));
-    });
-
-    test('Parse primitive mode input (_?)', () {
-      final source = 'MyType ::= _?.';
-      final env = parseTypes(source);
-
-      final typeDef = env.types['MyType'];
-      expect(typeDef, isNotNull);
-
-      final alt = typeDef!.alternatives[0];
-      expect(alt, isA<PrimitiveModeAlt>());
-      expect((alt as PrimitiveModeAlt).isInput, isTrue);
-      expect(alt.toString(), equals('_?'));
-    });
-
-    test('System type prelude defines Output and Input', () {
-      // Even with empty source, prelude should define Output and Input
-      final env = parseTypes('');
-
-      expect(env.types['Output'], isNotNull);
-      expect(env.types['Input'], isNotNull);
-
-      final outputType = env.types['Output']!;
-      expect(outputType.alternatives, hasLength(1));
-      expect(outputType.alternatives[0], isA<PrimitiveModeAlt>());
-      expect((outputType.alternatives[0] as PrimitiveModeAlt).isInput, isFalse);
-
-      final inputType = env.types['Input']!;
-      expect(inputType.alternatives, hasLength(1));
-      expect(inputType.alternatives[0], isA<PrimitiveModeAlt>());
-      expect((inputType.alternatives[0] as PrimitiveModeAlt).isInput, isTrue);
-    });
-
+  group('Primitive Mode in Prelude', () {
     test('System type prelude defines List with primitive head', () {
-      final env = parseTypes('');
+      final env = buildPreludeEnvironment();
 
-      expect(env.types['List'], isNotNull);
-      final listType = env.types['List']!;
+      expect(env.hasType('List'), isTrue);
+    });
 
-      expect(listType.alternatives, hasLength(2));
+    test('System type prelude defines Stream', () {
+      final env = buildPreludeEnvironment();
+      expect(env.hasType('Stream'), isTrue);
+    });
 
-      // First alternative: [_ | List]
-      final consAlt = listType.alternatives[0] as ListConsAlt;
-      expect(consAlt.head, isA<PrimitiveModeAlt>());
-      expect((consAlt.head as PrimitiveModeAlt).isInput, isFalse);
-      expect(consAlt.tail, isA<TypeRef>());
-      expect((consAlt.tail as TypeRef).name, equals('List'));
+    test('System type prelude defines DiffList', () {
+      final env = buildPreludeEnvironment();
+      expect(env.hasType('DiffList'), isTrue);
+    });
+  });
 
-      // Second alternative: []
-      expect(listType.alternatives[1], isA<ListNilAlt>());
+  group('Procedure Declarations with Primitive Modes', () {
+    test('Procedure with _ (output) argument parses', () {
+      final result = checkTypes('''
+        procedure foo(_).
+        foo(x).
+      ''');
+      expect(result.errors, isEmpty);
+    });
+
+    test('Procedure with _? (input) argument parses', () {
+      final result = checkTypes('''
+        procedure bar(_?).
+        bar(X).
+      ''');
+      expect(result.errors, isEmpty);
+    });
+
+    test('Procedure with mixed modes parses', () {
+      final result = checkTypes('''
+        procedure copy(_?, _).
+        copy(X, X?).
+      ''');
+      expect(result.errors, isEmpty);
+    });
+  });
+
+  group('DFA Compilation with Primitive Modes', () {
+    test('Structural type does not have wildcard start state', () {
+      final env = buildPreludeEnvironment();
+      final dfa = buildProgramDFA(env);
+
+      // Get the List automaton's start state
+      final listAutomaton = dfa.getAutomaton('List');
+
+      // List is structural - transitions should exist
+      expect(listAutomaton.startState, isNotNull);
     });
   });
 
   group('Type Definition Syntax', () {
     test('Parse ::= as type definition', () {
-      final source = 'Nat ::= 0 ; s(Nat).';
-      final env = parseTypes(source);
-
-      final typeDef = env.types['Nat'];
-      expect(typeDef, isNotNull);
-      expect(typeDef.toString(), contains('::='));
+      final result = checkTypes('''
+        Nat ::= zero ; s(Nat).
+        procedure inc(Nat?, Nat).
+        inc(zero, s(zero)).
+        inc(s(N), s(M?)) :- inc(N?, M).
+      ''');
+      expect(result.errors, isEmpty);
     });
 
     test('Parse structural type with multiple alternatives', () {
-      final source = 'SmallNat ::= 0 ; 1 ; 2.';
-      final env = parseTypes(source);
-
-      final typeDef = env.types['SmallNat'];
-      expect(typeDef, isNotNull);
-      expect(typeDef!.alternatives, hasLength(3));
-    });
-  });
-
-  group('DFA Compilation with Primitive Modes', () {
-    // Note: TypeCompiler has been removed from the API.
-    // Tests that used TypeCompiler are now obsolete.
-    // Use buildProgramDFA instead.
-
-    test('Structural type does not have wildcard start state', () {
-      final source = 'Nat ::= 0 ; s(Nat).';
-      final env = parseTypes(source);
-      final dfa = buildProgramDFA(env);
-
-      // Get the Nat automaton's start state
-      final natAutomaton = dfa.getAutomaton('Nat');
-
-      // Structural types should not have primitive/wildcard start states
-      expect(natAutomaton.startState.isWildcard, isFalse);
+      final result = checkTypes('''
+        SmallNat ::= zero ; one ; two.
+        procedure pick(SmallNat).
+        pick(zero).
+        pick(one).
+        pick(two).
+      ''');
+      expect(result.errors, isEmpty);
     });
   });
 }

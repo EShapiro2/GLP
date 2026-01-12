@@ -11,9 +11,11 @@
 
 import 'type_ast.dart';
 import 'program_dfa.dart';
-import 'type_parser.dart';
+import 'type_environment_builder.dart';
 import 'well_typed_clause.dart' as wtc;
 import '../../compiler/ast.dart' as ast;
+import '../../compiler/lexer.dart';
+import '../../compiler/parser.dart';
 
 // =============================================================================
 // Result Types
@@ -564,15 +566,35 @@ class TypeChecker {
 }
 
 // =============================================================================
-// Convenience function for checking GLP source
+// Convenience functions for type checking
 // =============================================================================
 
-/// Parse and type-check GLP source code
-TypeCheckResult checkSource(String source, List<ast.Clause> clauses) {
-  // Parse type declarations from source
-  final typeEnv = parseTypes(source);
+/// Type-check a parsed Module
+///
+/// This is the primary entry point for type checking.
+/// The module should be parsed using the main parser.
+TypeCheckResult checkModule(ast.Module module) {
+  // Build type environment from module (includes prelude)
+  final typeEnv = buildTypeEnvironment(module);
+
+  // Extract clauses from module's procedures
+  final clauses = extractClauses(module);
 
   // Run type checker
   final checker = TypeChecker(typeEnv);
   return checker.check(clauses);
+}
+
+/// Parse and type-check GLP source code
+///
+/// Convenience function that parses source and runs type checker.
+TypeCheckResult checkSource(String source) {
+  // Parse using main parser
+  final lexer = Lexer(source);
+  final tokens = lexer.tokenize();
+  final parser = Parser(tokens);
+  final module = parser.parseModule();
+
+  // Type check the module
+  return checkModule(module);
 }

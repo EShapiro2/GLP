@@ -1,0 +1,12 @@
+% test: new_channel
+% expected: pass
+% description: Bidirectional channel from paper (lines 233-238)
+% This tests interactive types with internal mode complementation
+% Paper: Channel(X) ::= ch(Stream(X)?, Stream(X)).
+
+MyList ::= [] ; [_|MyList].
+MyChannel ::= ch(MyList?, MyList).
+
+procedure my_new_channel(MyChannel, MyChannel).
+
+my_new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).

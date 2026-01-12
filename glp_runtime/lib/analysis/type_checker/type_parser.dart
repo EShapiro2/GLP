@@ -39,6 +39,7 @@ enum TypeTokenType {
   underscore,    // _ (primitive mode)
   backslash,     // \ (difference list operator)
   equals,        // = (for procedure = declaration)
+  operator,      // <, >, =<, >=, =:=, =\=, =?=, +, -, *, /, //, mod
   procedure,     // keyword 'procedure'
   unknown,       // Unknown token (skip)
   eof,
@@ -143,7 +144,36 @@ class TypeLexer {
         // Skip unknown characters (like : from :- in clauses, or ::< which is no longer supported)
         return TypeToken(TypeTokenType.unknown, c, startLine, startColumn);
       case '=':
+        // Check for multi-character operators starting with =
+        if (_match(':') && _match('=')) {
+          return TypeToken(TypeTokenType.operator, '=:=', startLine, startColumn);
+        }
+        if (_match('\\') && _match('=')) {
+          return TypeToken(TypeTokenType.operator, '=\\=', startLine, startColumn);
+        }
+        if (_match('?') && _match('=')) {
+          return TypeToken(TypeTokenType.operator, '=?=', startLine, startColumn);
+        }
+        if (_match('<')) {
+          return TypeToken(TypeTokenType.operator, '=<', startLine, startColumn);
+        }
         return TypeToken(TypeTokenType.equals, '=', startLine, startColumn);
+      case '<':
+        return TypeToken(TypeTokenType.operator, '<', startLine, startColumn);
+      case '>':
+        if (_match('=')) {
+          return TypeToken(TypeTokenType.operator, '>=', startLine, startColumn);
+        }
+        return TypeToken(TypeTokenType.operator, '>', startLine, startColumn);
+      case '+':
+        return TypeToken(TypeTokenType.operator, '+', startLine, startColumn);
+      case '*':
+        return TypeToken(TypeTokenType.operator, '*', startLine, startColumn);
+      case '/':
+        if (_match('/')) {
+          return TypeToken(TypeTokenType.operator, '//', startLine, startColumn);
+        }
+        return TypeToken(TypeTokenType.operator, '/', startLine, startColumn);
       case '"':
       case "'":
         return _string(c, startLine, startColumn);
@@ -448,9 +478,11 @@ class TypeParser {
   /// Parse: procedure name(Type1, Type2, ...) .
   ProcDecl _parseProcDecl() {
     _consume(TypeTokenType.procedure, 'Expected "procedure"');
-    // Procedure name can be atom or = operator
+    // Procedure name can be atom, = operator, or other operators (<, >, =<, etc.)
     TypeToken nameToken;
     if (_check(TypeTokenType.equals)) {
+      nameToken = _advance();
+    } else if (_check(TypeTokenType.operator)) {
       nameToken = _advance();
     } else {
       nameToken = _consume(TypeTokenType.atom, 'Expected procedure name');

@@ -1,0 +1,10 @@
+% test: functor_mismatch
+% expected: fail
+% description: Wrong functor at type position - real type error
+
+IntList ::= [] ; [Integer|IntList].
+
+procedure sum(IntList?, Integer).
+
+% foo/2 is not a valid IntList constructor
+sum(foo(X, Y), Z).

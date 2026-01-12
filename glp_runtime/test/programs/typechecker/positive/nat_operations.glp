@@ -1,0 +1,12 @@
+% test: nat_operations
+% expected: pass
+% description: POSITIVE control for functor_mismatch.glp
+% Correct functor at type position
+
+Nat ::= zero ; succ(Nat).
+
+procedure add(Nat?, Nat?, Nat).
+
+% Uses correct functors: zero and succ/1
+add(zero, Y, Y?).
+add(succ(X), Y, succ(Z?)) :- add(X?, Y?, Z).

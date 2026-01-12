@@ -1,0 +1,16 @@
+% test: append_bad_type
+% expected: fail
+% description: NEGATIVE control for append_list.glp
+% Output has wrong element type (Integer instead of matching input element)
+
+IntList ::= [] ; [Integer|IntList].
+StrList ::= [] ; [String|StrList].
+
+procedure bad_append(IntList?, StrList?, IntList).
+
+% X comes from IntList? (Integer), but X? goes to IntList output (Integer)
+% That's fine - but Y comes from StrList? (String) and Y? goes to IntList (Integer)
+% String and Integer are NOT complements - type error
+bad_append([X|Xs], [Y|Ys], [X?|Zs?]) :- bad_append(Xs?, Ys?, Zs).
+bad_append([], Ys, Ys?).
+bad_append(Xs, [], Xs?).

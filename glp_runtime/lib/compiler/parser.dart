@@ -1,6 +1,7 @@
 import 'token.dart';
 import 'ast.dart';
 import 'error.dart';
+import '../analysis/type_checker/type_ast.dart';
 
 /// Parser for GLP source code
 class Parser {
@@ -87,47 +88,23 @@ class Parser {
       }
     }
 
-    // Parse PMT mode declarations and type definitions (after module declarations, before procedures)
-    // Mode declarations: CapitalizedName(Params) := predicate(ModedArg, ...).
-    // Type definitions: TypeName := constructor | constructor | ...
-    final modeDeclarations = <ModeDeclaration>[];
-    final typeDefinitions = <TypeDefinition>[];
+    // Parse type definitions and procedure declarations (Yardeni-Shapiro syntax)
+    // Type definitions: TypeName ::= alt ; alt ; alt.
+    // Procedure declarations: procedure name(Type?, Type).
+    final typeDefs = <TypeDef>[];
+    final procDeclarations = <ProcDecl>[];
 
-    // Collect type definitions by name for merging multi-line definitions
-    final typeDefsByName = <String, List<TypeConstructor>>{};
-    final typeDefLocations = <String, (int, int, List<String>)>{};  // name -> (line, col, typeParams)
-
-    while (!_isAtEnd() && _isPmtDeclaration()) {
-      final results = _parseModeOrTypeDeclaration();
-      for (final result in results) {
-        if (result is ModeDeclaration) {
-          modeDeclarations.add(result);
-        } else if (result is TypeDefinition) {
-          // Merge with existing definition if same type name
-          final existing = typeDefsByName[result.typeName];
-          if (existing != null) {
-            existing.addAll(result.constructors);
-          } else {
-            typeDefsByName[result.typeName] = List.from(result.constructors);
-            typeDefLocations[result.typeName] = (result.line, result.column, result.typeParams);
-          }
-        }
+    while (!_isAtEnd() && _isTypeOrProcDeclaration()) {
+      if (_check(TokenType.PROCEDURE)) {
+        procDeclarations.add(_parseProcDeclaration());
+      } else if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
+        typeDefs.add(_parseTypeDef());
+      } else {
+        break;
       }
     }
 
-    // Convert merged type definitions to final list
-    for (final entry in typeDefsByName.entries) {
-      final loc = typeDefLocations[entry.key]!;
-      typeDefinitions.add(TypeDefinition(
-        entry.key,
-        loc.$3,  // typeParams from first definition
-        entry.value,
-        loc.$1,
-        loc.$2,
-      ));
-    }
-
-    // Parse procedures
+    // Parse procedures (clauses)
     final procedures = <Procedure>[];
     while (!_isAtEnd()) {
       procedures.add(_parseProcedure());
@@ -137,8 +114,8 @@ class Parser {
       declaration: moduleDecl,
       exports: exports,
       imports: imports,
-      modeDeclarations: modeDeclarations,
-      typeDefinitions: typeDefinitions,
+      typeDefs: typeDefs,
+      procDeclarations: procDeclarations,
       procedures: procedures,
       isStdlib: isStdlib,
       line: 1,
@@ -1080,445 +1057,209 @@ class Parser {
   }
 
   // ============================================================================
-  // PMT (Polymorphic Moded Types) Parser Methods
+  // Yardeni-Shapiro Type Declaration Parser Methods
   // ============================================================================
 
-  /// Check if a string is capitalized (starts with uppercase letter)
-  bool _isCapitalized(String s) {
-    if (s.isEmpty) return false;
-    final first = s.codeUnitAt(0);
-    return first >= 65 && first <= 90;  // A-Z
-  }
+  /// Check if we're at a type definition or procedure declaration
+  bool _isTypeOrProcDeclaration() {
+    // procedure keyword
+    if (_check(TokenType.PROCEDURE)) return true;
 
-  /// Check if we're at a PMT mode declaration: CapitalizedName(...) := pred(...).
-  /// or CapitalizedName := pred(...).
-  /// Note: Capitalized names are tokenized as VARIABLE, not ATOM
-  bool _isPmtDeclaration() {
-    // PMT type names are capitalized, so they're tokenized as VARIABLE
-    if (!_check(TokenType.VARIABLE)) return false;
+    // TypeName ::= ... (type names are capitalized, tokenized as VARIABLE)
+    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
+      // Look ahead for ::=
+      final saved = _current;
+      _advance();  // consume type name
 
-    // Look ahead for := (optionally with type params in between)
-    final saved = _current;
+      final isTypeDef = _check(TokenType.COLONCOLONEQ);
 
-    _advance();  // consume type name
-
-    // Skip optional type params: (A, B, ...)
-    if (_check(TokenType.LPAREN)) {
-      _advance();
-      int depth = 1;
-      while (!_isAtEnd() && depth > 0) {
-        if (_check(TokenType.LPAREN)) depth++;
-        if (_check(TokenType.RPAREN)) depth--;
-        _advance();
-      }
+      _current = saved;  // restore position
+      return isTypeDef;
     }
 
-    // Check for :=
-    final isDecl = _check(TokenType.ASSIGN);
-
-    _current = saved;  // restore position
-    return isDecl;
+    return false;
   }
 
-  /// Parse a PMT mode declaration: TypeName(Params) := predicate(ModedArg, ...).
-  ModeDeclaration _parseModeDeclaration() {
-    // Type names are capitalized, so they're tokenized as VARIABLE
-    final typeNameToken = _consume(TokenType.VARIABLE, 'Expected type name');
+  /// Parse a type definition: TypeName ::= alt ; alt ; alt.
+  TypeDef _parseTypeDef() {
+    final typeNameToken = _check(TokenType.READER)
+        ? _advance()
+        : _consume(TokenType.VARIABLE, 'Expected type name');
     final typeName = typeNameToken.lexeme;
+    final line = typeNameToken.line;
+    final column = typeNameToken.column;
 
-    // Optional type parameters: (A, B, ...) - also capitalized, so VARIABLE
-    final typeParams = <String>[];
-    if (_match(TokenType.LPAREN)) {
-      // Parse type params (single capital letters like A, B)
-      typeParams.add(_consume(TokenType.VARIABLE, 'Expected type parameter').lexeme);
-      while (_match(TokenType.COMMA)) {
-        typeParams.add(_consume(TokenType.VARIABLE, 'Expected type parameter').lexeme);
-      }
-      _consume(TokenType.RPAREN, 'Expected ")" after type parameters');
+    _consume(TokenType.COLONCOLONEQ, 'Expected "::=" in type definition');
+
+    // Parse alternatives separated by ;
+    final alternatives = <TypeExpr>[];
+    alternatives.add(_parseTypeAlt());
+
+    while (_match(TokenType.SEMICOLON)) {
+      alternatives.add(_parseTypeAlt());
     }
 
-    _consume(TokenType.ASSIGN, 'Expected ":=" in mode declaration');
+    _consume(TokenType.DOT, 'Expected "." after type definition');
 
-    // Predicate name (lowercase atom)
-    final predToken = _consume(TokenType.ATOM, 'Expected predicate name');
-    final predicate = predToken.lexeme;
-
-    // Arguments with modes: (ModedArg, ModedArg, ...)
-    final args = <ModedArg>[];
-    _consume(TokenType.LPAREN, 'Expected "(" after predicate name');
-    if (!_check(TokenType.RPAREN)) {
-      args.add(_parseModedArg());
-      while (_match(TokenType.COMMA)) {
-        args.add(_parseModedArg());
-      }
-    }
-    _consume(TokenType.RPAREN, 'Expected ")" after moded arguments');
-    _consume(TokenType.DOT, 'Expected "." after mode declaration');
-
-    return ModeDeclaration(
-      typeName,
-      typeParams,
-      predicate,
-      args,
-      typeNameToken.line,
-      typeNameToken.column,
-    );
+    return TypeDef(typeName, alternatives, line, column);
   }
 
-  /// Parse either a mode declaration or a type definition
-  /// Returns list of ModeDeclaration or TypeDefinition based on RHS structure
-  /// Union of mode declarations returns multiple ModeDeclarations
-  List<AstNode> _parseModeOrTypeDeclaration() {
-    // Type names are capitalized, so they're tokenized as VARIABLE
-    final typeNameToken = _consume(TokenType.VARIABLE, 'Expected type name');
-    final typeName = typeNameToken.lexeme;
+  /// Parse a single type alternative
+  TypeExpr _parseTypeAlt() {
+    final line = _peek().line;
+    final column = _peek().column;
 
-    // Optional type parameters: (A, B, ...) - also capitalized, so VARIABLE
-    final typeParams = <String>[];
-    if (_match(TokenType.LPAREN)) {
-      typeParams.add(_consume(TokenType.VARIABLE, 'Expected type parameter').lexeme);
-      while (_match(TokenType.COMMA)) {
-        typeParams.add(_consume(TokenType.VARIABLE, 'Expected type parameter').lexeme);
-      }
-      _consume(TokenType.RPAREN, 'Expected ")" after type parameters');
+    // Primitive mode: _ or _?
+    if (_match(TokenType.UNDERSCORE)) {
+      final isInput = _match(TokenType.QUESTION);
+      return PrimitiveModeAlt(isInput, line, column);
     }
 
-    _consume(TokenType.ASSIGN, 'Expected ":=" in declaration');
-
-    // Now we need to determine if this is a mode declaration or type definition
-    // Look at the RHS:
-    // - Mode declaration: pred(Type?, Type) - predicate with moded args
-    // - Type definition: atom | struct | [] | [_|T] | union of these
-    // - Union of mode declarations: pred(T?, T) | pred(T, T?)
-
-    // Parse all constructors/alternatives separated by |
-    final constructors = <TypeConstructor>[];
-    final modeAlternatives = <_ModeDeclarationParts>[];
-    bool firstHasModeMarkers = false;
-    String? firstPredicateName;
-
-    // Parse first constructor/alternative
-    final firstResult = _parseConstructorOrModeArg();
-    if (firstResult is _ModeDeclarationParts) {
-      firstPredicateName = firstResult.predicate;
-      firstHasModeMarkers = firstResult.hasModeMarkers;
-      if (firstResult.hasModeMarkers || firstResult.args.isEmpty) {
-        modeAlternatives.add(firstResult);
-      } else {
-        // First alternative is struct constructor (no mode markers)
-        final structArgs = firstResult.args.map((a) => TypeArg(a.typeName, a.typeParams, isReader: a.isReader)).toList();
-        constructors.add(StructConstructor(firstResult.predicate, structArgs));
-      }
-    } else {
-      constructors.add(firstResult as TypeConstructor);
-    }
-
-    // Parse additional alternatives with |
-    while (_match(TokenType.PIPE)) {
-      final result = _parseConstructorOrModeArg();
-      if (result is _ModeDeclarationParts) {
-        if (result.hasModeMarkers) {
-          // Union of mode declarations
-          if (modeAlternatives.isEmpty && firstPredicateName != null) {
-            // First was a struct constructor, but this is a mode - error
-            throw CompileError(
-              'Cannot mix type constructors and mode declarations in union.',
-              typeNameToken.line,
-              typeNameToken.column,
-              phase: 'parser',
-            );
-          }
-          // Verify same predicate name and arity
-          if (modeAlternatives.isNotEmpty) {
-            final first = modeAlternatives.first;
-            if (result.predicate != first.predicate) {
-              throw CompileError(
-                'Mode union must use same predicate name: expected "${first.predicate}", got "${result.predicate}".',
-                typeNameToken.line,
-                typeNameToken.column,
-                phase: 'parser',
-              );
-            }
-            if (result.args.length != first.args.length) {
-              throw CompileError(
-                'Mode union must have same arity: expected ${first.args.length}, got ${result.args.length}.',
-                typeNameToken.line,
-                typeNameToken.column,
-                phase: 'parser',
-              );
-            }
-          }
-          modeAlternatives.add(result);
-        } else {
-          // Struct constructor without mode markers
-          final structArgs = result.args.map((a) => TypeArg(a.typeName, a.typeParams, isReader: a.isReader)).toList();
-          constructors.add(StructConstructor(result.predicate, structArgs));
-        }
-      } else {
-        constructors.add(result as TypeConstructor);
-      }
-    }
-
-    _consume(TokenType.DOT, 'Expected "." after declaration');
-
-    // Decide what to return based on what we parsed
-    if (modeAlternatives.isNotEmpty) {
-      // Mode declaration(s): return one ModeDeclaration per alternative
-      return modeAlternatives.map((parts) => ModeDeclaration(
-        typeName,
-        typeParams,
-        parts.predicate,
-        parts.args,
-        typeNameToken.line,
-        typeNameToken.column,
-      )).toList();
-    } else if (firstPredicateName != null && !firstHasModeMarkers && constructors.isEmpty) {
-      // Edge case: single struct with args but no mode markers treated as struct constructor
-      // This shouldn't happen if we handled first result correctly above
-      return [TypeDefinition(typeName, typeParams, constructors, typeNameToken.line, typeNameToken.column)];
-    } else {
-      // This is a type definition with constructors
-      return [TypeDefinition(typeName, typeParams, constructors, typeNameToken.line, typeNameToken.column)];
-    }
-  }
-
-  /// Parse a constructor or mode declaration arguments
-  /// Returns TypeConstructor for type definitions, _ModeDeclarationParts for mode declarations
-  dynamic _parseConstructorOrModeArg() {
-    // Check for tuple constructors: (X, Y, ...)
-    if (_check(TokenType.LPAREN)) {
-      return _parseTupleConstructor();
-    }
-
-    // Check for list constructors: [] or [_|T]
+    // Empty list: []
     if (_check(TokenType.LBRACKET)) {
-      return _parseListConstructor();
+      _advance();  // consume [
+      if (_match(TokenType.RBRACKET)) {
+        return ListNilAlt(line, column);
+      }
+      // List cons: [Head | Tail]
+      final head = _parseTypeAlt();
+      _consume(TokenType.PIPE, 'Expected "|" in list type');
+      final tail = _parseTypeAlt();
+      _consume(TokenType.RBRACKET, 'Expected "]" after list type');
+      return ListConsAlt(head, tail, line, column);
     }
 
-    // Check for atom or struct
+    // Difference list: Content \ Hole
+    // Need to check for struct first, then look for \
+
+    // Number literal
+    if (_check(TokenType.NUMBER)) {
+      final token = _advance();
+      return ConstantAlt(token.literal!, line, column);
+    }
+
+    // Type reference (capitalized) or atom constant (lowercase)
+    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
+      final token = _advance();
+      final isInput = token.type == TokenType.READER || _match(TokenType.QUESTION);
+      final typeRef = TypeRef(token.lexeme, line, column, isInput: isInput);
+
+      // Check for difference list: TypeRef \ hole (e.g., List \ List?)
+      if (_match(TokenType.BACKSLASH)) {
+        final hole = _parseTypeAlt();
+        return DiffListAlt(typeRef, hole, line, column);
+      }
+
+      return typeRef;
+    }
+
     if (_check(TokenType.ATOM)) {
       final token = _advance();
-
-      // Nullary atom (type constructor)
-      if (!_check(TokenType.LPAREN)) {
-        return AtomConstructor(token.lexeme);
-      }
-
-      // Has arguments - could be struct constructor or mode declaration
-      _advance();  // consume (
-      final args = <ModedArg>[];
-      bool hasModeMarkers = false;
-
-      if (!_check(TokenType.RPAREN)) {
-        final arg = _parseModedArg();
-        if (arg.isReader) hasModeMarkers = true;
-        args.add(arg);
-
-        while (_match(TokenType.COMMA)) {
-          final arg = _parseModedArg();
-          if (arg.isReader) hasModeMarkers = true;
-          args.add(arg);
-        }
-      }
-
-      _consume(TokenType.RPAREN, 'Expected ")" after arguments');
-
-      // If no args, it's a nullary mode declaration (pred())
-      if (args.isEmpty) {
-        return _ModeDeclarationParts(token.lexeme, args, false);
-      }
-
-      return _ModeDeclarationParts(token.lexeme, args, hasModeMarkers);
-    }
-
-    // Check for VARIABLE (could be type param reference in type definition)
-    if (_check(TokenType.VARIABLE)) {
-      final token = _advance();
-      // Check for () which makes it a nullary mode declaration
+      // Check if it's a struct: atom(args)
       if (_match(TokenType.LPAREN)) {
-        _consume(TokenType.RPAREN, 'Expected ")" after predicate name');
-        return _ModeDeclarationParts(token.lexeme, [], false);
+        final args = <TypeExpr>[];
+        if (!_check(TokenType.RPAREN)) {
+          args.add(_parseTypeAlt());
+          while (_match(TokenType.COMMA)) {
+            args.add(_parseTypeAlt());
+          }
+        }
+        _consume(TokenType.RPAREN, 'Expected ")" after struct arguments');
+        return StructAlt(token.lexeme, args, line, column);
       }
-      // Type parameter reference as constructor (rare but possible)
-      return AtomConstructor(token.lexeme);
+      // Check for difference list: atom \ hole
+      if (_match(TokenType.BACKSLASH)) {
+        final content = ConstantAlt(token.lexeme, line, column);
+        final hole = _parseTypeAlt();
+        return DiffListAlt(content, hole, line, column);
+      }
+      // Just a constant atom
+      return ConstantAlt(token.lexeme, line, column);
     }
 
     throw CompileError(
-      'Expected constructor or predicate',
+      'Expected type alternative',
       _peek().line,
       _peek().column,
       phase: 'parser',
     );
   }
 
-  /// Parse a list constructor: [] or [head|tail]
-  ListConstructor _parseListConstructor() {
-    _consume(TokenType.LBRACKET, 'Expected "["');
+  /// Parse a procedure declaration: procedure name(Type?, Type).
+  ProcDecl _parseProcDeclaration() {
+    final procToken = _consume(TokenType.PROCEDURE, 'Expected "procedure" keyword');
+    final line = procToken.line;
+    final column = procToken.column;
 
-    // Empty list []
-    if (_match(TokenType.RBRACKET)) {
-      return const ListConstructor(null, null);
+    // Procedure name can be atom or operator (<, >, =<, >=, =:=, =\=, =?=, =)
+    Token nameToken;
+    if (_check(TokenType.ATOM)) {
+      nameToken = _advance();
+    } else if (_check(TokenType.LESS)) {
+      nameToken = _advance();
+    } else if (_check(TokenType.GREATER)) {
+      nameToken = _advance();
+    } else if (_check(TokenType.LESS_EQUAL)) {
+      nameToken = _advance();
+    } else if (_check(TokenType.GREATER_EQUAL)) {
+      nameToken = _advance();
+    } else if (_check(TokenType.ARITH_EQUAL)) {
+      nameToken = _advance();
+    } else if (_check(TokenType.ARITH_NOT_EQUAL)) {
+      nameToken = _advance();
+    } else if (_check(TokenType.GROUND_EQUAL)) {
+      nameToken = _advance();
+    } else if (_check(TokenType.EQUALS)) {
+      nameToken = _advance();
+    } else {
+      throw CompileError(
+        'Expected procedure name',
+        _peek().line,
+        _peek().column,
+        phase: 'parser',
+      );
     }
+    final name = nameToken.lexeme;
 
-    // Parse head: _ or _? or TypeName or TypeName?
-    final head = _parseTypeArgForList();
+    _consume(TokenType.LPAREN, 'Expected "(" after procedure name');
 
-    // Expect |
-    _consume(TokenType.PIPE, 'Expected "|" in list constructor');
-
-    // Parse tail: TypeName or TypeName?
-    final tail = _parseTypeArgForList();
-
-    _consume(TokenType.RBRACKET, 'Expected "]" after list constructor');
-
-    return ListConstructor(head, tail);
-  }
-
-  /// Parse a tuple constructor: (X, Goals(X)), (A, B), etc.
-  TupleConstructor _parseTupleConstructor() {
-    _consume(TokenType.LPAREN, 'Expected "("');
-
-    final elements = <TypeArg>[];
-
-    // Parse first element
-    elements.add(_parseTypeArgForTuple());
-
-    // Parse remaining elements
-    while (_match(TokenType.COMMA)) {
-      elements.add(_parseTypeArgForTuple());
-    }
-
-    _consume(TokenType.RPAREN, 'Expected ")" after tuple');
-
-    return TupleConstructor(elements);
-  }
-
-  /// Parse a type arg for tuple: TypeName, TypeName?, TypeName(Params), etc.
-  TypeArg _parseTypeArgForTuple() {
-    // Type name (VARIABLE because capitalized)
-    if (_check(TokenType.VARIABLE)) {
-      final token = _advance();
-
-      // Optional type params: Goals(X) -> Goals with param X
-      final typeParams = <String>[];
-      if (_match(TokenType.LPAREN)) {
-        typeParams.add(_parseTypeParam());
-        while (_match(TokenType.COMMA)) {
-          typeParams.add(_parseTypeParam());
-        }
-        _consume(TokenType.RPAREN, 'Expected ")" after type parameters');
-      }
-
-      // Check for ?
-      final isReader = _match(TokenType.QUESTION);
-      return TypeArg(token.lexeme, typeParams, isReader: isReader);
-    }
-
-    // Reader type without params: Type?
-    if (_check(TokenType.READER)) {
-      final token = _advance();
-      return TypeArg(token.lexeme, [], isReader: true);
-    }
-
-    throw CompileError(
-      'Expected type in tuple',
-      _peek().line,
-      _peek().column,
-      phase: 'parser',
-    );
-  }
-
-  /// Parse a type arg for list constructor: _ or _? or TypeName or TypeName?
-  TypeArg _parseTypeArgForList() {
-    // Underscore
-    if (_match(TokenType.UNDERSCORE)) {
-      // Check for ?
-      final isReader = _match(TokenType.QUESTION);
-      return TypeArg('_', [], isReader: isReader);
-    }
-
-    // Reader type without params: Type?
-    if (_check(TokenType.READER)) {
-      final token = _advance();
-      return TypeArg(token.lexeme, [], isReader: true);
-    }
-
-    // Type name (VARIABLE because capitalized)
-    if (_check(TokenType.VARIABLE)) {
-      final token = _advance();
-
-      // Optional type params
-      final typeParams = <String>[];
-      if (_match(TokenType.LPAREN)) {
-        typeParams.add(_parseTypeParam());
-        while (_match(TokenType.COMMA)) {
-          typeParams.add(_parseTypeParam());
-        }
-        _consume(TokenType.RPAREN, 'Expected ")" after type parameters');
-      }
-
-      // Check for ?
-      final isReader = _match(TokenType.QUESTION);
-      return TypeArg(token.lexeme, typeParams, isReader: isReader);
-    }
-
-    throw CompileError(
-      'Expected type in list constructor',
-      _peek().line,
-      _peek().column,
-      phase: 'parser',
-    );
-  }
-
-  /// Parse a moded argument: TypeName(Params)? or TypeName(Params)
-  /// Note: The lexer tokenizes "Num?" as a single READER token with lexeme "Num"
-  ModedArg _parseModedArg() {
-    // Type names can be:
-    // - VARIABLE: "Num" (writer) or "List" (with type params)
-    // - READER: "Num?" (reader without type params)
-    String typeName;
-    bool isReader;
-
-    if (_check(TokenType.READER)) {
-      // Simple reader type without type params: Num?
-      final token = _advance();
-      typeName = token.lexeme;
-      isReader = true;
-      // No type params possible since ? was consumed by lexer
-      return ModedArg(typeName, [], isReader: isReader);
-    }
-
-    // VARIABLE: type name possibly with type params
-    final typeToken = _consume(TokenType.VARIABLE, 'Expected type name');
-    typeName = typeToken.lexeme;
-
-    // Optional type parameters: (A, B) - also capitalized, so VARIABLE or READER
-    final typeParams = <String>[];
-    if (_match(TokenType.LPAREN)) {
-      typeParams.add(_parseTypeParam());
+    final argTypes = <TypeExpr>[];
+    if (!_check(TokenType.RPAREN)) {
+      argTypes.add(_parseProcArgType());
       while (_match(TokenType.COMMA)) {
-        typeParams.add(_parseTypeParam());
+        argTypes.add(_parseProcArgType());
       }
-      _consume(TokenType.RPAREN, 'Expected ")" after type parameters');
     }
 
-    // Check for reader marker (?) after type params
-    isReader = _match(TokenType.QUESTION);
+    _consume(TokenType.RPAREN, 'Expected ")" after procedure arguments');
+    _consume(TokenType.DOT, 'Expected "." after procedure declaration');
 
-    return ModedArg(typeName, typeParams, isReader: isReader);
+    return ProcDecl(name, argTypes, line, column);
   }
 
-  /// Parse a type parameter (VARIABLE)
-  String _parseTypeParam() {
-    return _consume(TokenType.VARIABLE, 'Expected type parameter').lexeme;
+  /// Parse a procedure argument type: TypeName, TypeName?, _, or _?
+  TypeExpr _parseProcArgType() {
+    final line = _peek().line;
+    final column = _peek().column;
+
+    // Primitive: _ or _?
+    if (_match(TokenType.UNDERSCORE)) {
+      final isInput = _match(TokenType.QUESTION);
+      return PrimitiveModeAlt(isInput, line, column);
+    }
+
+    // Type reference with optional mode
+    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
+      final token = _advance();
+      final isInput = token.type == TokenType.READER || _match(TokenType.QUESTION);
+      return TypeRef(token.lexeme, line, column, isInput: isInput);
+    }
+
+    throw CompileError(
+      'Expected type in procedure argument',
+      _peek().line,
+      _peek().column,
+      phase: 'parser',
+    );
   }
-}
-
-/// Helper class to hold parsed mode declaration parts during disambiguation
-class _ModeDeclarationParts {
-  final String predicate;
-  final List<ModedArg> args;
-  final bool hasModeMarkers;
-
-  _ModeDeclarationParts(this.predicate, this.args, this.hasModeMarkers);
 }

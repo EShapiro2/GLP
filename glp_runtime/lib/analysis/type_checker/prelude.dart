@@ -8,13 +8,13 @@
 // Paper Reference: Section 4.x (Guards)
 
 /// The prelude source containing all predefined definitions
+///
+/// IMPORTANT: All type definitions and procedure declarations must come BEFORE
+/// any clauses. The parser processes declarations first, then clauses.
 const String typePrelude = r'''
 % =============================================================================
-% Predefined Types
+% TYPE DEFINITIONS
 % =============================================================================
-
-% Arithmetic expressions (for guard type checking)
-Exp ::= Number ; Exp + Exp ; Exp - Exp ; Exp * Exp ; Exp / Exp ; Exp // Exp ; Exp mod Exp.
 
 % Collections
 List ::= [_ | List] ; [].
@@ -25,9 +25,8 @@ DiffList ::= List \ List?.
 Channel ::= ch(Stream?, Stream).
 
 % =============================================================================
-% Guard Procedures
+% PROCEDURE DECLARATIONS
 % =============================================================================
-% Guards are procedure calls. For type checking, H :- G | B is treated as H :- G, B.
 
 % Type guards
 procedure integer(Integer?).
@@ -44,38 +43,40 @@ procedure known(_?).
 procedure unknown(_?).
 
 % Arithmetic comparison guards
-procedure <(Exp?, Exp?).
-procedure >(Exp?, Exp?).
-procedure =<(Exp?, Exp?).
-procedure >=(Exp?, Exp?).
-procedure =:=(Exp?, Exp?).
-procedure =\=(Exp?, Exp?).
+procedure <(Number?, Number?).
+procedure >(Number?, Number?).
+procedure =<(Number?, Number?).
+procedure >=(Number?, Number?).
+procedure =:=(Number?, Number?).
+procedure =\=(Number?, Number?).
 
 % Equality guard
 procedure =?=(_, _).
 
-% =============================================================================
-% Predefined Procedures
-% =============================================================================
-
-% Unification (output = input)
+% Unification
 procedure =(_, _?).
-X? = X.
-
-% Note: := (arithmetic assignment) and true/0 are handled specially
 
 % Difference list operations
 procedure dl_append(DiffList?, DiffList?, DiffList).
 procedure dl_to_list(DiffList?, List).
-
-dl_append(A\B?, B\C?, A?\C).
-dl_to_list(L\[], L?).
 
 % Channel operations
 procedure new_channel(Channel, Channel).
 procedure send(_?, Channel?, Channel).
 procedure receive(_, Channel?, Channel).
 
+% =============================================================================
+% CLAUSES
+% =============================================================================
+
+% Unification clause
+X? = X.
+
+% Difference list clauses
+dl_append(A\B?, B\C?, A?\C).
+dl_to_list(L\[], L?).
+
+% Channel clauses
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
@@ -87,7 +88,6 @@ const Set<String> predefinedTypeNames = {
   'Integer',  // Primitive builtin
   'Real',     // Primitive builtin
   'String',   // Primitive builtin
-  'Exp',      // Arithmetic expressions
   'List',     // Collection type
   'Stream',   // Collection type
   'DiffList', // Collection type

@@ -1,0 +1,14 @@
+% test: copy_stream
+% expected: pass
+% description: POSITIVE control for non_complementary_types.glp
+% All variable pairs have complementary types
+
+MyList ::= [] ; [_|MyList].
+
+procedure copy(MyList?, MyList).
+
+% X? at input gets type _? (consumed wildcard)
+% X at output gets type _ (produced wildcard)
+% _? and _ are complements ✓
+copy([], []).
+copy([X|Xs], [X?|Ys?]) :- copy(Xs?, Ys).

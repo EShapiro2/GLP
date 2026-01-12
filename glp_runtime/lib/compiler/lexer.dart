@@ -103,6 +103,13 @@ class Lexer {
         return _makeToken(TokenType.EQUALS, startLine, startColumn);
 
       case ':':
+        if (_match(':')) {
+          if (_match('=')) {
+            final lexeme = source.substring(_current - 3, _current);
+            return Token(TokenType.COLONCOLONEQ, lexeme, startLine, startColumn);
+          }
+          throw CompileError('Expected "=" after "::"', startLine, startColumn, phase: 'lexer');
+        }
         if (_match('-')) {
           final lexeme = source.substring(_current - 2, _current);
           return Token(TokenType.IMPLIES, lexeme, startLine, startColumn);
@@ -154,6 +161,11 @@ class Lexer {
     // Check for 'mod' keyword - but only if not followed by '(' (predicate call)
     if (text == 'mod' && _peek() != '(') {
       return Token(TokenType.MOD, text, line, column);
+    }
+
+    // Check for 'procedure' keyword
+    if (text == 'procedure') {
+      return Token(TokenType.PROCEDURE, text, line, column);
     }
 
     // Check for reader syntax (Variable?)

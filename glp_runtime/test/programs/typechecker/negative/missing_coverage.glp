@@ -1,0 +1,11 @@
+% test: missing_coverage
+% expected: fail
+% description: Contravariance violation - missing clause for [] case
+
+MyList ::= [] ; [_|MyList].
+
+procedure process(MyList?, MyList).
+
+% Only handles non-empty list, missing case for []
+% This violates contravariance - not all inputs are accepted
+process([X|Xs], [X?|Ys?]) :- process(Xs?, Ys).

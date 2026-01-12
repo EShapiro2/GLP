@@ -1,0 +1,56 @@
+==========================================
+GLP Type Checker Test Suite
+==========================================
+
+--- Positive Tests (should pass) ---
+[0;32m✓ PASS[0m: append_list.glp
+[0;32m✓ PASS[0m: copy_stream.glp
+[0;32m✓ PASS[0m: dl_append.glp
+[0;32m✓ PASS[0m: int_list_sum.glp
+[0;32m✓ PASS[0m: merge_basic.glp
+[0;31m✗ FAIL[0m: monitor.glp (expected pass)
+  Output: Type Errors (1):
+  ✗ Head of monitor_loop is not well-typed:
+  Inconsistent path: No transition for read(1,1):↑ from state CounterCall?
+  Path: ([|]/2, 0, input) → (read/1, 1, input) → (N, 1, output) at line 17, column 1
+    in: monitor_loop(2 args) :- 1 goals.
+Warnings (23):
+  ⚠ Procedure integer/1 declared but not defined at line 18, column 1
+  ⚠ Procedure number/1 declared but not defined at line 19, column 1
+  ⚠ Procedure string/1 declared but not defined at line 20, column 1
+  ⚠ Procedure atom/1 declared but not defined at line 21, column 1
+  ⚠ Procedure constant/1 declared but not defined at line 22, column 1
+  ⚠ Procedure compound/1 declared but not defined at line 23, column 1
+  ⚠ Procedure is_list/1 declared but not defined at line 24, column 1
+  ⚠ Procedure ground/1 declared but not defined at line 27, column 1
+  ⚠ Procedure known/1 declared but not defined at line 28, column 1
+  ⚠ Procedure unknown/1 declared but not defined at line 29, column 1
+  ⚠ Procedure </2 declared but not defined at line 32, column 1
+  ⚠ Procedure >/2 declared but not defined at line 33, column 1
+  ⚠ Procedure =</2 declared but not defined at line 34, column 1
+  ⚠ Procedure >=/2 declared but not defined at line 35, column 1
+  ⚠ Procedure =:=/2 declared but not defined at line 36, column 1
+  ⚠ Procedure =\=/2 declared but not defined at line 37, column 1
+  ⚠ Procedure =?=/2 declared but not defined at line 40, column 1
+  ⚠ Procedure =/2 declared but not defined at line 43, column 1
+  ⚠ Procedure dl_append/3 declared but not defined at line 46, column 1
+  ⚠ Procedure dl_to_list/2 declared but not defined at line 47, column 1
+  ⚠ Procedure new_channel/2 declared but not defined at line 50, column 1
+  ⚠ Procedure send/3 declared but not defined at line 51, column 1
+  ⚠ Procedure receive/3 declared but not defined at line 52, column 1
+[0;32m✓ PASS[0m: nat_operations.glp
+[0;32m✓ PASS[0m: new_channel.glp
+[0;32m✓ PASS[0m: process_complete.glp
+
+--- Negative Tests (should fail) ---
+[0;32m✓ PASS[0m: append_bad_type.glp (correctly rejected)
+[0;32m✓ PASS[0m: channel_non_complementary.glp (correctly rejected)
+[0;32m✓ PASS[0m: constant_at_wrong_type.glp (correctly rejected)
+[0;32m✓ PASS[0m: functor_mismatch.glp (correctly rejected)
+[0;32m✓ PASS[0m: merge_incomplete.glp (correctly rejected)
+[0;32m✓ PASS[0m: missing_coverage.glp (correctly rejected)
+[0;32m✓ PASS[0m: non_complementary_types.glp (correctly rejected)
+
+==========================================
+Summary: 15/16 passed
+[0;31m1 test(s) failed[0m

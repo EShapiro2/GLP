@@ -1,0 +1,10 @@
+% test: dl_append
+% expected: pass
+% description: Difference list append from paper (lines 228-232)
+
+MyList ::= [] ; [_|MyList].
+MyDiffList ::= MyList? \ MyList.
+
+procedure my_dl_append(MyDiffList?, MyDiffList?, MyDiffList).
+
+my_dl_append(A\B?, B\C?, A?\C).

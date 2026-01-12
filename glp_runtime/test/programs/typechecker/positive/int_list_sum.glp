@@ -1,0 +1,12 @@
+% test: int_list_sum
+% expected: pass
+% description: POSITIVE control for constant_at_wrong_type.glp
+% Integer constant at Integer position
+
+IntList ::= [] ; [Integer|IntList].
+
+procedure sum_list(IntList?, Integer).
+
+% 0 is an integer literal at Integer position - correct
+sum_list([], 0).
+sum_list([X|Xs], N) :- sum_list(Xs?, M), N := X? + M?.

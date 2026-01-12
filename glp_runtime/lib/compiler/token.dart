@@ -52,6 +52,10 @@ enum TokenType {
   HASH,           // # (module operator: Module # Goal)
   BACKSLASH,      // \ (difference list operator: H\T)
 
+  // Type declarations
+  COLONCOLONEQ,   // ::= (type definition)
+  PROCEDURE,      // procedure (keyword)
+
   // End of file
   EOF
 }

@@ -1,0 +1,10 @@
+% test: append_list
+% expected: pass
+% description: Simple list append - analogous to LP append (Example 2.2)
+
+MyList ::= [] ; [_|MyList].
+
+procedure append(MyList?, MyList?, MyList).
+
+append([], Ys, Ys?).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).

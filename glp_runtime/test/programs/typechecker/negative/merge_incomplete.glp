@@ -1,0 +1,14 @@
+% test: merge_incomplete
+% expected: fail
+% description: NEGATIVE control for merge_basic.glp  
+% Missing clause for first argument being [] - contravariance violation
+% All clauses explicitly match [X|Xs] at arg 1, so [] is uncovered
+
+MyStream ::= [] ; [_|MyStream].
+
+procedure merge_bad(MyStream?, MyStream?, MyStream).
+
+% All clauses require non-empty first argument [X|Xs]
+% NO clause accepts [] at first argument position
+merge_bad([X|Xs], [], [X?|Zs?]) :- merge_bad([], Xs?, Zs).
+merge_bad([X|Xs], [Y|Ys], [X?|Zs?]) :- merge_bad([Y?|Ys?], Xs?, Zs).

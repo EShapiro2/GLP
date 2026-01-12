@@ -1,0 +1,13 @@
+% test: non_complementary_types
+% expected: fail
+% description: Variable pair with non-complementary types
+
+IntList ::= [] ; [Integer|IntList].
+StrList ::= [] ; [String|StrList].
+
+procedure convert(IntList?, StrList).
+
+% X? comes from IntList? so has type Integer?
+% X goes to StrList so has type String
+% Integer? and String are NOT complements - type error
+convert([X|Xs], [X?|Ys?]) :- convert(Xs?, Ys).

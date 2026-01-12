@@ -1,0 +1,12 @@
+% test: process_complete
+% expected: pass
+% description: POSITIVE control for missing_coverage.glp
+% Complete coverage of all input alternatives
+
+MyList ::= [] ; [_|MyList].
+
+procedure process(MyList?, MyList).
+
+% Handles BOTH alternatives: [] and [_|_]
+process([], []).
+process([X|Xs], [X?|Ys?]) :- process(Xs?, Ys).

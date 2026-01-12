@@ -1,0 +1,10 @@
+% test: constant_at_wrong_type
+% expected: fail  
+% description: String constant where Integer expected
+
+IntList ::= [] ; [Integer|IntList].
+
+procedure sum(IntList?, Integer).
+
+% "hello" is a string, not an Integer
+sum(["hello"|Xs], N).

@@ -1,0 +1,16 @@
+% test: channel_non_complementary
+% expected: fail
+% description: NEGATIVE control for new_channel.glp
+% Variable pair has non-complementary types in interactive type
+
+MyList ::= [] ; [_|MyList].
+OtherList ::= [] ; [Integer|OtherList].
+MyChannel ::= ch(MyList?, MyList).
+OtherChannel ::= ch(OtherList?, OtherList).
+
+procedure bad_channel(MyChannel, OtherChannel).
+
+% Xs? at MyList? position → type MyList?
+% Xs at OtherList position → type OtherList
+% MyList? and OtherList are NOT complements - type error
+bad_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
