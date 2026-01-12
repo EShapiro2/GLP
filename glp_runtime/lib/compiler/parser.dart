@@ -760,7 +760,7 @@ class Parser {
       return ConstTerm(token.literal, token.line, token.column);
     }
 
-    // String
+    // String - preserve quotes for type checking string detection
     if (_check(TokenType.STRING)) {
       final token = _advance();
       // Check for invalid reader mark on string
@@ -772,7 +772,8 @@ class Parser {
           phase: 'parser'
         );
       }
-      return ConstTerm(token.literal, token.line, token.column);
+      // Wrap in quotes so type checker can distinguish strings from atoms
+      return ConstTerm('"${token.literal}"', token.line, token.column);
     }
 
     // List

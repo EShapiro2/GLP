@@ -247,10 +247,22 @@ class TypeChecker {
     // Get the input type
     final argType = decl.argTypes[argIndex - 1];
 
-    // Handle primitive types (_ or _?) - no coverage check needed
-    // Primitives accept any value, so coverage is automatically satisfied
+    // Handle primitive types
     if (argType is PrimitiveModeAlt) {
-      return errors; // No errors - primitives trivially cover all inputs
+      // For _ (output): no coverage check needed - produces any value
+      // For _? (input): must have a variable to cover all possible inputs
+      if (argType.isInput) {
+        // Check that some clause has a variable at this position
+        if (!_anyClauseHasVariableAtPath(clauses, argIndex, const [])) {
+          errors.add(TypeError(
+            'Coverage error: argument $argIndex has type _? (universal input) '
+            'but no clause has a variable at this position to accept all inputs',
+            decl.line,
+            decl.column,
+          ));
+        }
+      }
+      return errors;
     }
 
     // Handle named type references
