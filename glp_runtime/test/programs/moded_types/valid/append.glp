@@ -1,7 +1,5 @@
 %% Well-moded append procedure
-%% Demonstrates input/output mode annotations
-
-List ::= [] ; [Any | List].
+%% Uses predefined List type from prelude
 
 procedure append(List?, List?, List).
 

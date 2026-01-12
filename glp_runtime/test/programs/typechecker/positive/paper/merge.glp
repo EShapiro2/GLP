@@ -1,8 +1,7 @@
 % Test: Stream Merge
 % Paper: Appendix A.1
 % Description: Classic fair merge of two streams into one
-
-Stream ::= [] ; [_|Stream].
+% Uses predefined Stream type from prelude
 
 procedure merge(Stream?, Stream?, Stream).
 

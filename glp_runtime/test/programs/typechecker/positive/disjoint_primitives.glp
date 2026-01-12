@@ -1,0 +1,11 @@
+% test: disjoint_primitives
+% expected: pass
+% description: Disjoint primitive types Integer and String should be valid
+%              (per type-environment.md spec example)
+
+Constant ::= Integer ; String.
+
+procedure test(Constant).
+
+test(42).
+test("hello").

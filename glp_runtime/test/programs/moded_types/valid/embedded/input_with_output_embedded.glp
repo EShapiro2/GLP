@@ -1,10 +1,20 @@
-%% combine(input, output) = output
-%% Declaration: consume(Wrapper?) - input
-%% Top-level: input
-%% Inside wrap(Number): embedded output (no ?)
-%% combine(input, output) = output
-%% At output position, head expects READER
-%% X? is reader - CORRECT
+%% VALID: No involution - combine(↓, ↑) = ↓
+%%
+%% Type: Wrapper ::= wrap(Number)
+%%       Number position has embedded mode ↑ (output, no ?)
+%%
+%% Mode trace for consume(wrap(X?)):
+%%   - consume(Wrapper?) → arg mode ↓ (input)
+%%   - Inside Wrapper?, wrap(Number) position: ↑ preserves parent = ↓
+%%   - Structural mode at X? position: ↓ (consume)
+%%
+%% Definition 4.8 check:
+%%   - At ↓ position, expects reader
+%%   - X? is reader, matches ↓
+%%   - No flip needed
+%%
+%% SRSW check (on original clause):
+%%   - X? reader in head, X writer in body → satisfied ✓
 
 Wrapper ::= wrap(Number).
 

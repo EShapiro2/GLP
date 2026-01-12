@@ -1,0 +1,20 @@
+[DEBUG] PC 7: COMMIT - Applying 2 bindings to heap...
+[DEBUG] PC 7: COMMIT - Applied successfully, reactivating 0 goal(s)
+[DISPATCH math_rules] Done
+[TEST] Processed 2 queued goals
+[TEST] Result W1000 = Const(10)
+[TEST] Meta-interpreter test passed!
+00:02 [32m+353[0m[33m ~30[0m[31m -18[0m: test/module/module_e2e_test.dart: End-to-End Module Execution meta-interpreter: run(double(5, R), math_rules) binds R=10[0m                                                           00:02 [32m+353[0m[33m ~30[0m[31m -18[0m: test/module/module_e2e_test.dart: End-to-End Module Execution backwards compatibility: program without module declarations[0m                                                         00:02 [32m+353[0m[33m ~30[0m[31m -18[0m: test/module/module_e2e_test.dart: End-to-End Module Execution backwards compatibility: program without module declarations[0m                                                         
+[TEST] factorial/2 auto-exported: {factorial/2}
+[TEST] imports empty: []
+00:02 [32m+353[0m[33m ~30[0m[31m -19[0m: test/module/module_e2e_test.dart: End-to-End Module Execution backwards compatibility: program without module declarations [1m[31m[E][0m[0m                                                     
+  PathNotFoundException: Cannot open file, path = '/home/user/GLP/glp/stdlib/assign.glp' (OS Error: No such file or directory, errno = 2)
+  dart:io                                   _File.readAsStringSync
+  test/module/module_e2e_test.dart 1016:73  main.<fn>.<fn>
+  
+
+[1m[36mTo run this test again:[0m /opt/homebrew/share/flutter/bin/cache/dart-sdk/bin/dart test test/module/module_e2e_test.dart -p vm --plain-name 'End-to-End Module Execution backwards compatibility: program without module declarations'
+00:02 [32m+353[0m[33m ~30[0m[31m -19[0m: [31mSome tests failed.[0m                                                                                                                                                                 
+
+Consider enabling the flag chain-stack-traces to receive more detailed exceptions.
+For example, 'dart test --chain-stack-traces'.

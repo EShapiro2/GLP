@@ -1,16 +1,21 @@
-%% INVALID: SRSW violation - Req and Resp have no corresponding pairs
+%% INVALID: Mode error AND SRSW violation
 %%
-%% Mode analysis for ch(Number?, Number) at INPUT (↓):
-%%   - First arg Number? at ↓: combine(↓, ↓) = ↑, expects writer
-%%   - Second arg Number at ↓: combine(↓, ↑) = ↑, expects writer
-%%   - Req? is reader at position expecting writer → mode error
-%%   - Resp? is reader at position expecting writer → mode error
+%% Type: Channel ::= ch(Number?, Number)
+%% Procedure: bad_channel(Channel?) - input (↓)
 %%
-%% Also SRSW violations: Req? without Req, Resp? without Resp
+%% Mode analysis for ch(Req?, Resp?) in Channel?:
+%%   - First arg Number? at ↓: input flips → ↓.flip = ↑, expects writer
+%%     Req? is reader at ↑ → MODE ERROR
+%%   - Second arg Number at ↓: output preserves → ↓, expects reader
+%%     Resp? is reader at ↓ → mode OK
+%%
+%% SRSW violations: 
+%%   - Req? appears but Req never appears → SRSW violation
+%%   - Resp? appears but Resp never appears → SRSW violation
 
 Channel ::= ch(Number?, Number).
 
 procedure bad_channel(Channel?).
 
-%% ERROR: Mode errors (readers where writers expected) AND SRSW violations
+%% ERROR: Mode error at arg 1 AND SRSW violations for both variables
 bad_channel(ch(Req?, Resp?)).

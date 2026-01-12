@@ -1,0 +1,24 @@
+╔════════════════════════════════════════╗
+║  GLP REPL - With Type Checking         ║
+╚════════════════════════════════════════╝
+
+Build: 9b49777 Type checker wildcard mode checking verified - 270 tests pass, 14 fail due to inverted test expectations
+Compiled: 2026-01-12 (Type checker integration)
+Working directory: udi/
+Source files: glp/*.glp
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit
+
+Loaded stdlib: assign.glp (931 ops)
+Loaded stdlib: univ.glp (28 ops)
+Loaded stdlib: unify.glp (8 ops)
+Loaded stdlib: mwm.glp (161 ops)
+Loaded stdlib: equator.glp (11 ops)
+Loaded stdlib: time.glp (9 ops)
+GLP> Type errors in /Users/udi/GLP/glp_runtime/test/programs/typechecker/positive/disjoint_primitives.glp:
+  ✗ Head of test is not well-typed:
+  Inconsistent path: Constant does not match any alternative at type position Constant
+  Path: (hello, 0, output) at line 11, column 1
+    in: test(1 args).
+GLP> Goodbye!

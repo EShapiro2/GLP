@@ -1,10 +1,20 @@
-%% combine(output, input) = input
-%% Declaration: produce(Wrapper) - output
-%% Top-level: output
-%% Inside wrap(Number?): embedded input
-%% combine(output, input) = input
-%% At input position, head expects WRITER
-%% X is writer - CORRECT
+%% VALID: Involution - combine(↑, ↓) = ↓
+%%
+%% Type: Wrapper ::= wrap(Number?)
+%%       Number? position has embedded mode ↓ (input)
+%%
+%% Mode trace for produce(wrap(X)):
+%%   - produce(Wrapper) → arg mode ↑ (output)
+%%   - Inside Wrapper, wrap(Number?) position: ↓ flips parent → ↑.flip = ↓
+%%   - Structural mode at X position: ↓ (consume)
+%%
+%% Definition 4.8 transformation:
+%%   - At ↓ position, expects reader
+%%   - X is writer, doesn't match ↓
+%%   - X flipped to X? (reader) in moded head
+%%
+%% SRSW check (on original clause):
+%%   - X writer in head, X? reader in body → satisfied ✓
 
 Wrapper ::= wrap(Number?).
 

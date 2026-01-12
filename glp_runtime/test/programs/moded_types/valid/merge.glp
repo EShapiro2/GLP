@@ -1,7 +1,5 @@
 %% Well-moded merge procedure
-%% Demonstrates proper mode annotations
-
-List ::= [] ; [Any | List].
+%% Uses predefined List type from prelude
 
 procedure merge(List?, List?, List).
 
