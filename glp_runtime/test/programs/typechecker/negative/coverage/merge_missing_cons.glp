@@ -1,0 +1,16 @@
+% Test: Merge - missing cons clauses
+% Paper: Appendix A.1 (negative control)
+% Description: Coverage violation - no clause accepts [|] at arg 1 or arg 2
+
+%% TEST: Merge missing cons clauses
+%% PAPER: Appendix A.1
+%% EXPECT: ill-typed
+%% ERROR: coverage: merge/3 arg 1 missing [|]
+%% ERROR: coverage: merge/3 arg 2 missing [|]
+
+Stream ::= [] ; [_|Stream].
+
+procedure merge(Stream?, Stream?, Stream).
+
+merge(Xs, [], Xs?).
+merge([], Ys, Ys?).

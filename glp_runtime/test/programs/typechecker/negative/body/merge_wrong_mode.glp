@@ -1,0 +1,18 @@
+% Test: Merge - wrong mode in body atom
+% Paper: Appendix A.1 (negative control)
+% Description: Body error - reader at output position in body
+
+%% TEST: Merge wrong mode in body
+%% PAPER: Appendix A.1
+%% EXPECT: ill-typed
+%% ERROR: body: mode mismatch
+
+Stream ::= [] ; [_|Stream].
+
+procedure merge(Stream?, Stream?, Stream).
+
+% WRONG: Zs? is reader at output position in body (should be writer Zs)
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs?).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge(Xs, [], Xs?).
+merge([], Ys, Ys?).

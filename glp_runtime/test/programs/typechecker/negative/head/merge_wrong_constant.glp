@@ -1,0 +1,18 @@
+% Test: Merge - wrong constant at output
+% Paper: Appendix A.1 (negative control)
+% Description: Head error - constant 42 at Stream output position
+
+%% TEST: Merge wrong constant at output
+%% PAPER: Appendix A.1
+%% EXPECT: ill-typed
+%% ERROR: head: constant 42 not in type Stream
+
+Stream ::= [] ; [_|Stream].
+
+procedure merge(Stream?, Stream?, Stream).
+
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+% WRONG: 42 is not a valid Stream value
+merge(Xs, [], 42).
+merge([], Ys, Ys?).

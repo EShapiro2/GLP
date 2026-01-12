@@ -1,0 +1,18 @@
+% Test: Merge - wrong functor at input
+% Paper: Appendix A.1 (negative control)
+% Description: Head error - functor cons/2 instead of list [|]
+
+%% TEST: Merge wrong functor at input
+%% PAPER: Appendix A.1
+%% EXPECT: ill-typed
+%% ERROR: head: functor cons not in type Stream
+
+Stream ::= [] ; [_|Stream].
+
+procedure merge(Stream?, Stream?, Stream).
+
+% WRONG: cons(X, Xs) is not valid Stream syntax (should be [X|Xs])
+merge(cons(X, Xs), Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge(Xs, [], Xs?).
+merge([], Ys, Ys?).

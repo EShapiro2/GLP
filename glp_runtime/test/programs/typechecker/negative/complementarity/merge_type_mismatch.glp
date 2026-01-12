@@ -1,0 +1,18 @@
+% Test: Merge - variable at incompatible types
+% Paper: Appendix A.1 (negative control)
+% Description: Complementarity error - Xs used at Stream and _ positions
+
+%% TEST: Merge variable at incompatible types
+%% PAPER: Appendix A.1
+%% EXPECT: ill-typed
+%% ERROR: complementarity: Xs has type Stream, Xs? has type _?
+
+Stream ::= [] ; [_|Stream].
+
+procedure merge(Stream?, Stream?, Stream).
+
+% WRONG: Xs is tail (Stream) but Xs? used as head element (_?)
+merge([X|Xs], Ys, [Xs?|Zs?]) :- merge(Ys?, X?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge(Xs, [], Xs?).
+merge([], Ys, Ys?).

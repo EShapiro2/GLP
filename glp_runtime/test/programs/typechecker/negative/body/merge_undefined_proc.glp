@@ -1,0 +1,18 @@
+% Test: Merge - undefined procedure in body
+% Paper: Appendix A.1 (negative control)
+% Description: Body error - call to undefined procedure
+
+%% TEST: Merge undefined procedure in body
+%% PAPER: Appendix A.1
+%% EXPECT: ill-typed
+%% ERROR: body: undefined procedure unknown/3
+
+Stream ::= [] ; [_|Stream].
+
+procedure merge(Stream?, Stream?, Stream).
+
+% WRONG: unknown/3 is not declared
+merge([X|Xs], Ys, [X?|Zs?]) :- unknown(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge(Xs, [], Xs?).
+merge([], Ys, Ys?).

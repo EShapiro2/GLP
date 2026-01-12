@@ -1,0 +1,49 @@
+% Test: Stream Merge
+% Paper: Appendix A.1
+% Description: Classic fair merge of two streams into one
+
+%% TEST: Stream Merge
+%% PAPER: Appendix A.1
+%% EXPECT: well-typed
+
+Stream ::= [] ; [_|Stream].
+
+procedure merge(Stream?, Stream?, Stream).
+
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge(Xs, [], Xs?).
+merge([], Ys, Ys?).
+
+%% AUTOMATON Stream
+%% [] -> ✓
+%% [|] 1 ↑ -> _
+%% [|] 2 ↑ -> Stream
+
+%% AUTOMATON Stream?
+%% [] -> ✓
+%% [|] 1 ↓ -> _?
+%% [|] 2 ↓ -> Stream?
+
+%% AUTOMATON merge/3
+%% merge 1 ↓ -> Stream?
+%% merge 2 ↓ -> Stream?
+%% merge 3 ↑ -> Stream
+
+%% CLAUSE 1
+%% HEAD: ↓merge(↓[↓X?|Xs?], Ys?, ↑[↑X|Zs])
+%% BODY: ↑merge(Ys?, Xs?, Zs)
+%% VARS: X:_, X?:_?, Xs:Stream, Xs?:Stream?, Ys:Stream?, Ys?:Stream, Zs:Stream, Zs?:Stream?
+
+%% CLAUSE 2
+%% HEAD: ↓merge(Xs?, ↓[↓Y?|Ys?], ↑[↑Y|Zs])
+%% BODY: ↑merge(Xs?, Ys?, Zs)
+%% VARS: Xs:Stream?, Xs?:Stream, Y:_, Y?:_?, Ys:Stream, Ys?:Stream?, Zs:Stream, Zs?:Stream?
+
+%% CLAUSE 3
+%% HEAD: ↓merge(Xs?, ↓[], ↑Xs)
+%% VARS: Xs:Stream, Xs?:Stream?
+
+%% CLAUSE 4
+%% HEAD: ↓merge(↓[], Ys?, ↑Ys)
+%% VARS: Ys:Stream, Ys?:Stream?
