@@ -1,13 +1,17 @@
-%% Accumulator pattern: Result is output (last arg)
-%% But clause has writer at output position
+%% INVALID: SRSW violation - Result has no corresponding reader
+%% 
+%% Mode analysis:
+%%   - Nat (output, ↑) expects writer in head → Result is writer ✓
+%% 
+%% SRSW analysis:
+%%   - Result is writer, but Result? never appears → SRSW violation
 
 Nat ::= z ; s(Nat).
 List ::= [] ; [Nat | List].
 
 procedure sum(List?, Nat?, Nat).
 
-%% Nat (output) expects READER in head
-%% Result is WRITER = MODE ERROR
+%% ERROR: Result is writer but Result? never appears → SRSW violation
 sum([X|Xs], Acc, Result) :-
     NewAcc := Acc? + X?,
     sum(Xs?, NewAcc?, Result).

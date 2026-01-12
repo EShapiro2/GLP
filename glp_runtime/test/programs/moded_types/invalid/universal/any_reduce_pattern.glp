@@ -1,4 +1,7 @@
-%% Classic reduce misuse - SHOULD FAIL (constructors at Any positions)
-procedure reduce(Any?, Any).
+%% Classic reduce test - INVALID (coverage failure)
+%% Per spec v0.6: _? accepts consumed terms, but coverage requires
+%% clauses to accept ALL input paths. and(...) and or(...) alone don't cover _?.
+%% Also: Result? in original at output position needs moded head flip to Result.
+procedure reduce(_?, _).
 reduce(and(A, B), Result?).
 reduce(or(A, B), Result?).

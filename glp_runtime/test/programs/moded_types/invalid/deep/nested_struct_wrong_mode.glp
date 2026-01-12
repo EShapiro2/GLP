@@ -1,5 +1,14 @@
-%% Inner has response slot, Outer wraps it
-%% The inner Value should be writer, not reader
+%% INVALID: SRSW violation - Value? has no corresponding writer
+%%
+%% Inner = get(Number) - no embedded ?
+%% Outer = wrap(Inner) - no embedded ?
+%% At Stream? (input ↓):
+%%   - wrap position at ↓
+%%   - get position at ↓
+%%   - Number position at ↓ (no ? flips)
+%%   - At ↓, expects reader → Value? is reader ✓
+%%
+%% SRSW: Value? is reader but Value never appears → SRSW violation
 
 Inner ::= get(Number).
 Outer ::= wrap(Inner).
@@ -7,8 +16,6 @@ Stream ::= [] ; [Outer | Stream].
 
 procedure process(Stream?).
 
-%% wrap(get(Value?)) - Value? is reader
-%% But get(Number) has no embedded ?, so position is INPUT
-%% Reader at input = MODE ERROR
+%% ERROR: Value? is reader but Value never appears → SRSW violation
 process([wrap(get(Value?))|S]) :- process(S?).
 process([]).

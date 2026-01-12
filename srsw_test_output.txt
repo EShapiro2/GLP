@@ -1,0 +1,95 @@
+=== Testing SRSW: reader_at_input.glp ===
+╔════════════════════════════════════════╗
+║  GLP REPL - With Type Checking         ║
+╚════════════════════════════════════════╝
+
+Build: fe00905 Baseline before type checker remediation
+Compiled: 2026-01-12 (Type checker integration)
+Working directory: udi/
+Source files: glp/*.glp
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit
+
+Loaded stdlib: assign.glp (931 ops)
+Loaded stdlib: univ.glp (28 ops)
+Loaded stdlib: unify.glp (8 ops)
+Loaded stdlib: mwm.glp (161 ops)
+Loaded stdlib: equator.glp (11 ops)
+Loaded stdlib: time.glp (9 ops)
+GLP>   ⚠ Procedure integer/1 declared but not defined at line 18, column 1
+  ⚠ Procedure number/1 declared but not defined at line 19, column 1
+  ⚠ Procedure string/1 declared but not defined at line 20, column 1
+  ⚠ Procedure atom/1 declared but not defined at line 21, column 1
+  ⚠ Procedure constant/1 declared but not defined at line 22, column 1
+  ⚠ Procedure compound/1 declared but not defined at line 23, column 1
+  ⚠ Procedure is_list/1 declared but not defined at line 24, column 1
+  ⚠ Procedure ground/1 declared but not defined at line 27, column 1
+  ⚠ Procedure known/1 declared but not defined at line 28, column 1
+  ⚠ Procedure unknown/1 declared but not defined at line 29, column 1
+  ⚠ Procedure </2 declared but not defined at line 32, column 1
+  ⚠ Procedure >/2 declared but not defined at line 33, column 1
+  ⚠ Procedure =</2 declared but not defined at line 34, column 1
+  ⚠ Procedure >=/2 declared but not defined at line 35, column 1
+  ⚠ Procedure =:=/2 declared but not defined at line 36, column 1
+  ⚠ Procedure =\=/2 declared but not defined at line 37, column 1
+  ⚠ Procedure =?=/2 declared but not defined at line 40, column 1
+  ⚠ Procedure =/2 declared but not defined at line 43, column 1
+  ⚠ Procedure dl_append/3 declared but not defined at line 46, column 1
+  ⚠ Procedure dl_to_list/2 declared but not defined at line 47, column 1
+  ⚠ Procedure new_channel/2 declared but not defined at line 50, column 1
+  ⚠ Procedure send/3 declared but not defined at line 51, column 1
+  ⚠ Procedure receive/3 declared but not defined at line 52, column 1
+  ✓ Type check passed (1 procedures)
+Error loading /Users/udi/GLP/glp_runtime/test/programs/moded_types/invalid/reader_at_input.glp: SRSW violations found:
+  • bar/1: Line 11: Variable "Y" has no writer (must have exactly one)
+  • reduce/2: Line 11: Variable "Y" has no writer (must have exactly one) at Line 0, Column 0
+GLP> Goodbye!
+
+=== Testing SRSW: writer_at_output.glp ===
+╔════════════════════════════════════════╗
+║  GLP REPL - With Type Checking         ║
+╚════════════════════════════════════════╝
+
+Build: fe00905 Baseline before type checker remediation
+Compiled: 2026-01-12 (Type checker integration)
+Working directory: udi/
+Source files: glp/*.glp
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit
+
+Loaded stdlib: assign.glp (931 ops)
+Loaded stdlib: univ.glp (28 ops)
+Loaded stdlib: unify.glp (8 ops)
+Loaded stdlib: mwm.glp (161 ops)
+Loaded stdlib: equator.glp (11 ops)
+Loaded stdlib: time.glp (9 ops)
+GLP>   ⚠ Procedure integer/1 declared but not defined at line 18, column 1
+  ⚠ Procedure number/1 declared but not defined at line 19, column 1
+  ⚠ Procedure string/1 declared but not defined at line 20, column 1
+  ⚠ Procedure atom/1 declared but not defined at line 21, column 1
+  ⚠ Procedure constant/1 declared but not defined at line 22, column 1
+  ⚠ Procedure compound/1 declared but not defined at line 23, column 1
+  ⚠ Procedure is_list/1 declared but not defined at line 24, column 1
+  ⚠ Procedure ground/1 declared but not defined at line 27, column 1
+  ⚠ Procedure known/1 declared but not defined at line 28, column 1
+  ⚠ Procedure unknown/1 declared but not defined at line 29, column 1
+  ⚠ Procedure </2 declared but not defined at line 32, column 1
+  ⚠ Procedure >/2 declared but not defined at line 33, column 1
+  ⚠ Procedure =</2 declared but not defined at line 34, column 1
+  ⚠ Procedure >=/2 declared but not defined at line 35, column 1
+  ⚠ Procedure =:=/2 declared but not defined at line 36, column 1
+  ⚠ Procedure =\=/2 declared but not defined at line 37, column 1
+  ⚠ Procedure =?=/2 declared but not defined at line 40, column 1
+  ⚠ Procedure =/2 declared but not defined at line 43, column 1
+  ⚠ Procedure dl_append/3 declared but not defined at line 46, column 1
+  ⚠ Procedure dl_to_list/2 declared but not defined at line 47, column 1
+  ⚠ Procedure new_channel/2 declared but not defined at line 50, column 1
+  ⚠ Procedure send/3 declared but not defined at line 51, column 1
+  ⚠ Procedure receive/3 declared but not defined at line 52, column 1
+  ✓ Type check passed (1 procedures)
+Error loading /Users/udi/GLP/glp_runtime/test/programs/moded_types/invalid/writer_at_output.glp: SRSW violations found:
+  • foo/1: Line 11: Variable "X" has no reader
+  • reduce/2: Line 11: Variable "X" has no reader at Line 0, Column 0
+GLP> Goodbye!

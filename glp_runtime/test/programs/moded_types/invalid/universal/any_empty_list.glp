@@ -1,3 +1,5 @@
-%% Empty list at Any? position - SHOULD FAIL
-procedure test1(Any?).
+%% Empty list at _? position - INVALID (coverage failure)
+%% Per spec v0.6: _? accepts consumed terms, but coverage requires
+%% clauses to accept ALL input paths. [] alone doesn't cover _?.
+procedure test1(_?).
 test1([]).

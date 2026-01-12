@@ -3,6 +3,14 @@
 // AST nodes for GLP type declarations following Yardeni-Shapiro.
 // Types are first-class syntactic elements parsed alongside clauses.
 
+/// Classification of types by mode structure
+/// Per spec (type-environment.md): Types are classified based on internal complementation
+enum TypeClassification {
+  output,      // No complementation in definition (pure output structure)
+  input,       // Complement of an output type (not directly defined)
+  interactive  // Contains internal complementation (_? or T? in alternatives)
+}
+
 /// Base class for type expressions
 abstract class TypeExpr {
   final int line;
@@ -53,7 +61,7 @@ class TypeRef extends TypeExpr {
   String toString() => isInput ? '$name?' : name;
 
   /// Primitive types (not defined via ::=, handled specially by compiler)
-  static const builtins = {'Number', 'String'};
+  static const builtins = {'Integer', 'Real', 'Number', 'String'};
 
   /// System types (defined via ::= but not redefinable by user)
   static const systemTypes = {'Any', 'List'};
@@ -141,6 +149,37 @@ class TypeDef {
   final int column;
 
   TypeDef(this.name, this.alternatives, this.line, this.column);
+
+  /// Classify this type based on mode structure
+  /// Per spec (type-environment.md v0.5):
+  /// - output: no complementation in any alternative
+  /// - interactive: contains internal complementation (_? or T?)
+  TypeClassification get classification {
+    for (final alt in alternatives) {
+      if (_containsComplement(alt)) {
+        return TypeClassification.interactive;
+      }
+    }
+    return TypeClassification.output;
+  }
+
+  /// Check if a type expression contains any complementation
+  static bool _containsComplement(TypeExpr expr) {
+    if (expr is TypeRef && expr.isInput) return true;
+    if (expr is PrimitiveModeAlt && expr.isInput) return true;
+
+    if (expr is ListConsAlt) {
+      return _containsComplement(expr.head) || _containsComplement(expr.tail);
+    }
+    if (expr is StructAlt) {
+      return expr.args.any(_containsComplement);
+    }
+    if (expr is DiffListAlt) {
+      return _containsComplement(expr.content) || _containsComplement(expr.hole);
+    }
+
+    return false;
+  }
 
   @override
   String toString() => '$name ::= ${alternatives.join(' ; ')}.';

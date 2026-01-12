@@ -1,13 +1,18 @@
-%% Pair second element should be output (response slot)
-%% But no embedded ? in type
+%% INVALID: SRSW violations - Key? and Val? have no corresponding writers
+%%
+%% Pair = pair(Number, Number) - no embedded ?
+%% At PairList? (input ↓):
+%%   - pair position at ↓
+%%   - Both Number positions at ↓ (no ? to flip)
+%%   - At ↓, expects reader → Key? and Val? are readers ✓
+%%
+%% SRSW: Key? without Key, Val? without Val → SRSW violations
 
 Pair ::= pair(Number, Number).
 PairList ::= [] ; [Pair | PairList].
 
 procedure fill_pairs(PairList?).
 
-%% pair(Key?, Val?) - both readers
-%% pair(Number, Number) - both input positions
-%% Val? reader at input = MODE ERROR
+%% ERROR: Key? and Val? are readers but Key and Val never appear → SRSW violations
 fill_pairs([pair(Key?, Val?)|Rest]) :- fill_pairs(Rest?).
 fill_pairs([]).

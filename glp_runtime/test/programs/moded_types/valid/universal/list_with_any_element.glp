@@ -1,5 +1,5 @@
-%% List type has Any elements - SHOULD PASS
-List ::= [] ; [Any | List].
-procedure append(List?, List?, List).
-append([], Ys, Zs?) :- Zs = Ys?.
+%% User list type has wildcard elements - SHOULD PASS
+MyList ::= [] ; [_ | MyList].
+procedure append(MyList?, MyList?, MyList).
+append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).

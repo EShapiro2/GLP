@@ -1,3 +1,0 @@
-%% Constant at Any (output) position - SHOULD FAIL
-procedure qux(Any).
-qux(hello).

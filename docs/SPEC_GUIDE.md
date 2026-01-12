@@ -20,7 +20,7 @@ To understand the GLP implementation requirements, focus on these sections in or
 - **Writer** `X`: Single-assignment variable (promise) - can be written to exactly once
 - **Reader** `X?`: Paired read-only access to writer's future value
 - **SO Invariant** (runtime): Each variable occurs at most once in any resolvent
-- **SRSW Syntactic Restriction** (compile-time): Each writer occurs exactly once and each reader occurs exactly once in a clause (exception: ground guard allows multiple readers)
+- **SRSW Syntactic Restriction** (compile-time): Each writer occurs exactly once and each reader occurs exactly once in a clause (exception: ground guard allows multiple readers). **SRSW is checked by the parser before type checking.** The type checker assumes all clauses satisfy SRSW.
 - This eliminates the need for distributed unification - just point-to-point communication
 
 ### Term Matching (Definition in Book Chapter: GLP Core)

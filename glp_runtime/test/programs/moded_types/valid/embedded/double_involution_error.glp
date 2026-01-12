@@ -1,0 +1,19 @@
+%% VALID: Double involution results in input mode expecting reader
+%%
+%% Mode trace:
+%%   - foo(Outer?) → ↓ (input)
+%%   - outer(Inner?) at ↓: combine(↓, ↓) = ↑ (first involution)
+%%   - inner(Number?) at ↑: combine(↑, ↓) = ↓ (second involution)
+%%   - Final mode at X? position: ↓ (input)
+%%   - At ↓, expects reader. X? IS reader → mode CORRECT ✓
+%%
+%% SRSW: X? reader in head, X writer in body → satisfied ✓
+
+Inner ::= inner(Number?).
+Outer ::= outer(Inner?).
+
+procedure foo(Outer?).
+procedure source(Number).
+
+foo(outer(inner(X?))) :- source(X).
+source(0).

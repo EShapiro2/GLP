@@ -1,3 +1,5 @@
-%% List cons at Any? position - SHOULD FAIL
-procedure test2(Any?).
+%% List cons at _? position - INVALID (coverage failure)
+%% Per spec v0.6: _? accepts consumed terms, but coverage requires
+%% clauses to accept ALL input paths. [H|T] alone doesn't cover _?.
+procedure test2(_?).
 test2([H|T]).

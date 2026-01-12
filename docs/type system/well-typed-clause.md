@@ -1,6 +1,6 @@
 # Module: well-typed-clause
 
-**Version**: 0.7
+**Version**: 0.8
 **Date**: 2025-01-12
 **Status**: DRAFT
 **Paper References**: Definition 4.10 (Well-typed Clause), Example 4.11 (Well-typed Clause Verification)
@@ -16,6 +16,19 @@ Determines when a GLP clause is well-typed by a type environment D.
 - `well-typed-term` — checkModedTerm(), WellTypedResult
 - `type-dfa` — ProgramDFA, Automaton, DFAState
 - `type-environment` — TypeEnvironment, ProcDecl
+
+## Preconditions
+
+### SRSW Checked by Parser
+
+The **Single-Reader/Single-Writer (SRSW) syntactic restriction** is a compile-time check performed by the parser **before** type checking. The type checker assumes all input clauses satisfy SRSW:
+
+- Every variable X that occurs in a clause has its paired variable X? also occurring in the clause
+- Each variable (reader or writer) occurs exactly once
+
+This means the type checker will never encounter unpaired variables (e.g., X without X?, or X? without X). The complementarity check in Condition 3 only verifies that paired variables have complementary **types**, not that pairs exist.
+
+See `docs/SPEC_GUIDE.md` for SRSW enforcement details.
 
 ## Definitions
 
@@ -562,14 +575,10 @@ Complementarity:
 | Variable inconsistent across clause | `InconsistentVariableAcrossClauseError` |
 | Variable pair not complementary | `ClauseVariableNotComplementaryError` |
 
-## Changes from v0.6
+## Changes from v0.7
 
-- Updated to reference Definition 4.10 (was 4.8)
-- Added `modedHead` and `modedBodyAtoms` to ClauseCheckResult
-- Added detailed complementarity failure descriptions
-- Added `groupByBaseName` helper
-- Added interactive type example (monitor)
-- Clarified that complementarity only checked for pairs where both forms appear
+- Added Preconditions section documenting SRSW is checked by parser before type checking
+- Clarified that complementarity check verifies types are complementary, not that pairs exist (SRSW guarantees pair existence)
 
 ## Version History
 
@@ -579,3 +588,4 @@ Complementarity:
 | 0.5 | 2025-01-08 | Add getAcceptedLabels; complete algorithms |
 | 0.6 | 2025-01-10 | Update for ProgramDFA v0.8 |
 | 0.7 | 2025-01-12 | Update for paper Definition 4.10; add interactive type examples |
+| 0.8 | 2025-01-12 | Add SRSW precondition; clarify complementarity checks types not existence |

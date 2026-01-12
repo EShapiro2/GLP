@@ -182,7 +182,6 @@ ensureVariablesMatchModes(term):
     
     ModedVariable(name, isReader):
       // Get the structural mode from context (passed during recursion)
-      // This is the mode of the parent position
       structuralMode = getCurrentStructuralMode()  // from traversal context
       
       // Check if variable form matches structural mode
@@ -398,7 +397,7 @@ A' = ↑merge(↓Ys?, ↓Xs?, ↑Zs)
 
 ## Changes from v0.6
 
-- **Definition 4.8 updated**: Step 2 now conditionally replaces variables based on structural mode match, not unconditionally
+- **Definition 4.8 updated**: Step 2 conditionally replaces variables based on structural mode match
 - Added `TypeEnvironment` dependency for resolving nested type modes
 - Added Mode Correspondence Property remark
 - Added Variable Replacement Rule table
@@ -408,8 +407,8 @@ A' = ↑merge(↓Ys?, ↓Xs?, ↑Zs)
 ## Version History
 
 | Version | Date | Changes |
-|---------|------|---------|
+|---------|------|---------|  
 | 0.1 | 2025-01-07 | Initial draft |
 | 0.5 | 2025-01-08 | Add producedTerm for body atoms; complete algorithms; more examples |
 | 0.6 | 2025-01-09 | Add isIO/isProduced postconditions |
-| 0.7 | 2025-01-12 | **BREAKING**: Conditional variable flip per paper Definition 4.8; add interactive type examples |
+| 0.7 | 2025-01-12 | Conditional variable flip per paper Definition 4.8; add interactive type examples |

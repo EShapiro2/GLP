@@ -1,0 +1,18 @@
+%% VALID: Writer at output position after involution
+%%
+%% Wrapper ::= wrap(Number?) with procedure consume(Wrapper?)
+%% Mode trace:
+%%   - Wrapper? = input (↓)
+%%   - Number? at ↓: combine(↓, ↓) = ↑ (output) - involution
+%%   - At ↑ position, expects writer
+%%   - X is writer → mode CORRECT ✓
+%%
+%% SRSW: X writer in head, X? reader in body → satisfied ✓
+
+Wrapper ::= wrap(Number?).
+
+procedure consume(Wrapper?).
+procedure sink(Number?).
+
+consume(wrap(X)) :- sink(X?).
+sink(_).

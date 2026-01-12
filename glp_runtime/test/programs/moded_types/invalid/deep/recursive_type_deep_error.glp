@@ -1,13 +1,19 @@
-%% Tree with values at leaves
-%% Response slot buried in leaf
+%% INVALID: SRSW violation - V? appears but V never does
+%%
+%% Tree = leaf(Number) ; node(Tree, Tree) - no embedded ?
+%% At Forest? (input ↓):
+%%   - leaf position at ↓
+%%   - Number position at ↓ (no ? to flip)
+%%   - At ↓, expects reader → V? is reader ✓
+%%
+%% SRSW: V? is reader in head AND body, but V never appears → SRSW violation
 
 Tree ::= leaf(Number) ; node(Tree, Tree).
 Forest ::= [] ; [Tree | Forest].
 
 procedure collect(Forest?, Number?).
 
-%% leaf(Number) no embedded ? -> input position at INPUT parent
-%% V? reader at input = MODE ERROR
+%% ERROR: V? is reader but V never appears → SRSW violation
 collect([leaf(V?)|Rest], Acc) :- 
     NewAcc := Acc? + V?,
     collect(Rest?, NewAcc?).

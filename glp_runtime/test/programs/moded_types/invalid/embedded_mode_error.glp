@@ -1,21 +1,18 @@
 %% INVALID: Embedded mode error - tests involution property
-%% Expected: Mode error due to writer at output position after involution
+%% Expected: Mode error due to writer at involution output position
 %%
-%% Msg? = input mode at top level
-%% Inside request(Number?): embedded input mode
-%% Combined: input ⊕ input = output (involution)
-%% So the Number position expects reader (output mode)
-%% But X is writer → MODE ERROR
+%% Msg? (↓) + Number? (↓) = ↑ (output via involution)
+%% At involution output (response slot), head expects READER
+%% But X is writer = MODE ERROR (should be X?)
+%% SRSW is fine: X in head, X? in body
 
 Msg ::= request(Number?).
 
 procedure handle(Msg?).
 procedure produce(Number).
 
-%% ERROR: At Msg? position (input mode), inside request(X)
-%% Involution: input ⊕ input = output, so X should be reader
-%% But X is writer → mode error
-%% SRSW: X is writer in head, reader in body ✓
+%% ERROR: X is writer at response slot position (should be X?)
+%% Compare to valid test that would have handle(request(X?)) :- produce(X).
 handle(request(X)) :- produce(X?).
 
 produce(0).

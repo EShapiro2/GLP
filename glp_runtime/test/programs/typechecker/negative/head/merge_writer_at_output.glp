@@ -1,17 +1,17 @@
-% Test: Merge - writer at output position
+% Test: Merge - writers at output position (mode error)
 % Paper: Appendix A.1 (negative control)
-% Description: Head error - writer X at output position (should be reader X?)
+% Description: Head error - writers X, Zs at output position (should be readers)
 
 %% TEST: Merge writer at output position
 %% PAPER: Appendix A.1
 %% EXPECT: ill-typed
-%% ERROR: head: mode mismatch
+%% ERROR: Arg 3 has mode error: X, Zs are writers at output (should be readers X?, Zs?)
 
 Stream ::= [] ; [_|Stream].
 
 procedure merge(Stream?, Stream?, Stream).
 
-% WRONG: X and Zs are writers at output position (should be readers)
+% WRONG: Arg 3 output position expects readers, but X and Zs are writers
 merge([X|Xs], Ys, [X|Zs]) :- merge(Ys?, Xs?, Zs?).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge(Xs, [], Xs?).

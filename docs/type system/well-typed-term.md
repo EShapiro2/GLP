@@ -1,6 +1,6 @@
 # Module: well-typed-term
 
-**Version**: 0.5
+**Version**: 0.6
 **Date**: 2025-01-12
 **Status**: DRAFT
 **Paper References**: Definition 4.5 (Consistent Paths), Definition 4.7 (Well-Typed Moded Term)
@@ -53,6 +53,8 @@ Let x be a moded term path and y a GLP type path. Then x and y are **consistent*
 | numeric literal | Number | Number? | any numeric literal |
 | "foo" (string) | String | String? | any string literal |
 | [] (constant) | — | — | exact match required |
+
+**Note:** The wildcard states `_` and `_?` accept any term of the appropriate mode, including literals and constants—they subsume all specific primitive types listed above.
 
 ### Variable Type Assignment
 
@@ -243,32 +245,54 @@ checkLeafConsistency(leaf, state, automaton, dfa):
   structuralMode = leaf.mode
 
   // Case 3(b): Produced wildcard state (_)
+  // Per paper: "_ accepts any produced term (a writer or ground term with mode ↑)"
   if state.isProducedWildcard:
-    if leaf.isVariable && !leaf.isReader:
-      // Writer at produce position - consistent
+    if leaf.isVariable:
+      if !leaf.isReader:
+        // Writer at produce position - consistent
+        return PathCheckResult(
+          isConsistent: true,
+          variableAssignment: VariableTypeInfo(leaf.symbol, state, Mode.produce),
+          finalState: state
+        )
+      // Reader at produce position - mode mismatch
       return PathCheckResult(
-        isConsistent: true,
-        variableAssignment: VariableTypeInfo(leaf.symbol, state, Mode.produce),
+        isConsistent: false,
+        reason: "_ expects produced term, got reader ${leaf.symbol}",
         finalState: state
       )
+    // Constant/literal - consistent if structural mode is produce
+    if structuralMode == Mode.produce:
+      return PathCheckResult(isConsistent: true, finalState: state)
     return PathCheckResult(
       isConsistent: false,
-      reason: "_ expects writer variable, got ${describeLeaf(leaf)}",
+      reason: "_ expects produced term, got consumed ${describeLeaf(leaf)}",
       finalState: state
     )
 
   // Case 3(a): Consumed wildcard state (_?)
+  // Per paper: "_? accepts any consumed term (a reader or ground term with mode ↓)"
   if state.isConsumedWildcard:
-    if leaf.isVariable && leaf.isReader:
-      // Reader at consume position - consistent
+    if leaf.isVariable:
+      if leaf.isReader:
+        // Reader at consume position - consistent
+        return PathCheckResult(
+          isConsistent: true,
+          variableAssignment: VariableTypeInfo(leaf.symbol, state, Mode.consume),
+          finalState: state
+        )
+      // Writer at consume position - mode mismatch
       return PathCheckResult(
-        isConsistent: true,
-        variableAssignment: VariableTypeInfo(leaf.symbol, state, Mode.consume),
+        isConsistent: false,
+        reason: "_? expects consumed term, got writer ${leaf.symbol}",
         finalState: state
       )
+    // Constant/literal - consistent if structural mode is consume
+    if structuralMode == Mode.consume:
+      return PathCheckResult(isConsistent: true, finalState: state)
     return PathCheckResult(
       isConsistent: false,
-      reason: "_? expects reader variable, got ${describeLeaf(leaf)}",
+      reason: "_? expects consumed term, got produced ${describeLeaf(leaf)}",
       finalState: state
     )
 
@@ -550,3 +574,4 @@ Complementarity check:
 | 0.3 | 2025-01-08 | Merged path-consistency; complete DFA traversal algorithm |
 | 0.4 | 2025-01-10 | Update for ProgramDFA v0.8: Automaton, complement states |
 | 0.5 | 2025-01-12 | Add Definition 4.5 three cases; automaton switching; interactive type examples |
+| 0.6 | 2025-01-12 | Fix wildcard states to accept any term of appropriate mode (not just variables) |

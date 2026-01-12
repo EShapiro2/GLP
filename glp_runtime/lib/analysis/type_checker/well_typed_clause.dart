@@ -23,6 +23,7 @@ import '../../compiler/ast.dart' as ast;
 // =============================================================================
 
 /// Result of checking if a clause is well-typed
+/// Fix 5.1: Includes modedHead and modedBodyAtoms for inspection/debugging
 class ClauseCheckResult {
   /// Whether the clause is well-typed
   final bool isWellTyped;
@@ -33,26 +34,46 @@ class ClauseCheckResult {
   /// List of errors found during checking
   final List<ClauseError> errors;
 
+  /// The constructed moded head term (if available)
+  final ModedTerm? modedHead;
+
+  /// The constructed moded body atom terms
+  final List<ModedTerm> modedBodyAtoms;
+
   ClauseCheckResult({
     required this.isWellTyped,
     required this.variableTypes,
     required this.errors,
+    this.modedHead,
+    this.modedBodyAtoms = const [],
   });
 
-  factory ClauseCheckResult.success(Map<String, VariableTypeInfo> variableTypes) {
+  factory ClauseCheckResult.success(
+    Map<String, VariableTypeInfo> variableTypes, {
+    ModedTerm? modedHead,
+    List<ModedTerm> modedBodyAtoms = const [],
+  }) {
     return ClauseCheckResult(
       isWellTyped: true,
       variableTypes: variableTypes,
       errors: [],
+      modedHead: modedHead,
+      modedBodyAtoms: modedBodyAtoms,
     );
   }
 
-  factory ClauseCheckResult.failure(List<ClauseError> errors,
-      [Map<String, VariableTypeInfo>? variableTypes]) {
+  factory ClauseCheckResult.failure(
+    List<ClauseError> errors, [
+    Map<String, VariableTypeInfo>? variableTypes,
+    ModedTerm? modedHead,
+    List<ModedTerm>? modedBodyAtoms,
+  ]) {
     return ClauseCheckResult(
       isWellTyped: false,
       variableTypes: variableTypes ?? {},
       errors: errors,
+      modedHead: modedHead,
+      modedBodyAtoms: modedBodyAtoms ?? [],
     );
   }
 }
@@ -199,6 +220,8 @@ class TypedClause {
 /// 1. modedHead(H, procType) is well-typed by the procedure's type
 /// 2. For each body atom A, producedTerm(A, atomType) is well-typed
 /// 3. All variable pairs (X, X?) across head and body are complementary
+///
+/// Fix 5.1: Returns constructed moded terms for inspection
 ClauseCheckResult checkClause(
   TypedClause clause,
   ProgramDFA dfa,
@@ -207,6 +230,8 @@ ClauseCheckResult checkClause(
   final errors = <ClauseError>[];
   final allVariableTypes = <String, VariableTypeInfo>{};
   final variableLocations = <String, String>{};
+  ModedTerm? constructedModedHead;
+  final constructedModedBodyAtoms = <ModedTerm>[];
 
   // Look up procedure declaration for head
   final procDecl = env.getProcedure(clause.headFunctor, clause.headArity);
@@ -224,7 +249,8 @@ ClauseCheckResult checkClause(
   }
 
   // Step 1: Check head well-typing
-  final headResult = _checkHead(clause, procDecl, dfa, env);
+  final (headResult, modedHeadTerm) = _checkHeadWithTerm(clause, procDecl, dfa, env);
+  constructedModedHead = modedHeadTerm;
   if (!headResult.isWellTyped) {
     errors.add(HeadError(clause.headFunctor, headResult.errors));
   }
@@ -236,7 +262,11 @@ ClauseCheckResult checkClause(
   // Step 2: Check each body atom
   for (int i = 0; i < clause.bodyAtoms.length; i++) {
     final atom = clause.bodyAtoms[i];
-    final atomResult = _checkBodyAtom(atom, i, dfa, env);
+    final (atomResult, modedAtomTerm) = _checkBodyAtomWithTerm(atom, i, dfa, env);
+
+    if (modedAtomTerm != null) {
+      constructedModedBodyAtoms.add(modedAtomTerm);
+    }
 
     if (!atomResult.isWellTyped) {
       errors.add(BodyAtomError(atom.functor, i, atomResult.errors));
@@ -271,6 +301,8 @@ ClauseCheckResult checkClause(
     isWellTyped: errors.isEmpty,
     variableTypes: allVariableTypes,
     errors: errors,
+    modedHead: constructedModedHead,
+    modedBodyAtoms: constructedModedBodyAtoms,
   );
 }
 
@@ -393,19 +425,32 @@ WellTypedResult _checkHead(
   ProgramDFA dfa,
   TypeEnvironment env,
 ) {
+  final (result, _) = _checkHeadWithTerm(clause, procDecl, dfa, env);
+  return result;
+}
+
+/// Check head well-typing and return the constructed moded term
+/// Fix 5.1: Returns both result and moded term
+(WellTypedResult, ModedTerm?) _checkHeadWithTerm(
+  TypedClause clause,
+  ProcDecl procDecl,
+  ProgramDFA dfa,
+  TypeEnvironment env,
+) {
   try {
     // Build moded head term (pass env for embedded mode handling in structures)
     final modedHeadTerm = modedHead(clause.head, procDecl, typeEnv: env);
 
     // Check each argument against its declared type's automaton
-    return _checkModedTermPerArg(modedHeadTerm, procDecl, dfa);
+    final result = _checkModedTermPerArg(modedHeadTerm, procDecl, dfa);
+    return (result, modedHeadTerm);
   } on ArityMismatchError catch (e) {
-    return WellTypedResult.failure([
+    return (WellTypedResult.failure([
       InconsistentPathError(
         ModedPath([PathStep(symbol: e.message, argIndex: 0, mode: Mode.produce)]),
         e.message,
       ),
-    ]);
+    ]), null);
   }
 }
 
@@ -416,15 +461,27 @@ WellTypedResult _checkBodyAtom(
   ProgramDFA dfa,
   TypeEnvironment env,
 ) {
+  final (result, _) = _checkBodyAtomWithTerm(atom, atomIndex, dfa, env);
+  return result;
+}
+
+/// Check body atom well-typing and return the constructed moded term
+/// Fix 5.1: Returns both result and moded term
+(WellTypedResult, ModedTerm?) _checkBodyAtomWithTerm(
+  ast.Goal atom,
+  int atomIndex,
+  ProgramDFA dfa,
+  TypeEnvironment env,
+) {
   // Skip builtin goals (true, otherwise, :=)
   if (isBuiltinGoal(atom.functor)) {
-    return WellTypedResult.success({});
+    return (WellTypedResult.success({}), null);
   }
 
   // Look up procedure declaration
   final procDecl = env.getProcedure(atom.functor, atom.arity);
   if (procDecl == null) {
-    return WellTypedResult.failure([
+    return (WellTypedResult.failure([
       InconsistentPathError(
         ModedPath([PathStep(
           symbol: '${atom.functor}/${atom.arity}',
@@ -433,7 +490,7 @@ WellTypedResult _checkBodyAtom(
         )]),
         'Undefined procedure: ${atom.functor}/${atom.arity}',
       ),
-    ]);
+    ]), null);
   }
 
   // Build produced term (no variable flip for body atoms)
@@ -441,14 +498,15 @@ WellTypedResult _checkBodyAtom(
     final modedAtomTerm = producedTerm(atom, procDecl);
 
     // Check each argument against its declared type's automaton
-    return _checkModedTermPerArg(modedAtomTerm, procDecl, dfa);
+    final result = _checkModedTermPerArg(modedAtomTerm, procDecl, dfa);
+    return (result, modedAtomTerm);
   } on ArityMismatchError catch (e) {
-    return WellTypedResult.failure([
+    return (WellTypedResult.failure([
       InconsistentPathError(
         ModedPath([PathStep(symbol: e.message, argIndex: 0, mode: Mode.produce)]),
         e.message,
       ),
-    ]);
+    ]), null);
   }
 }
 

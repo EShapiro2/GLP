@@ -1,11 +1,20 @@
-%% BUG: Response slot should be show(Number?) not show(Number)
-%% Reader State? at input position should be MODE ERROR
+%% INVALID: SRSW violation - State? has no corresponding writer
+%%
+%% Msg = ping ; show(Number) - no embedded ? in show!
+%% At Stream? (input ↓):
+%%   - show position at ↓
+%%   - Number position at ↓ (no ? to flip)
+%%   - At ↓, expects reader → State? is reader ✓
+%%
+%% SRSW: State? is reader but State writer never appears → SRSW violation
+%% Note: If this were show(Number?), then involution would give ↑ expecting writer
 
 Msg ::= ping ; show(Number).
 Stream ::= [] ; [Msg | Stream].
 
 procedure handler(Stream?, Number?).
 
+%% ERROR: State? is reader but State never appears → SRSW violation
 handler([show(State?)|S], State) :- handler(S?, State?).
 handler([ping|S], State) :- handler(S?, State?).
 handler([], _).

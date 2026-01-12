@@ -1,13 +1,23 @@
-%% ERROR: Wrong mode in counter show response
-%% show(Number?) inside CounterStream?
-%% combine(input, input) = output
-%% At output position expects READER
-%% But State is writer - MODE ERROR
+%% INVALID: Mode error - reader at output position
+%%
+%% Mode trace:
+%%   Arg 1 (CounterStream?, ↓):
+%%     - List element CounterMsg at ↓
+%%     - show(Number?) at ↓: combine(↓, ↓) = ↑ (output)
+%%     - At ↑, expects writer. State is writer → CORRECT ✓
+%%
+%%   Arg 2 (Number, ↑):
+%%     - At ↑, expects writer
+%%     - State? is reader → MODE ERROR (should be State)
+%%
+%% SRSW: State (writer) and State? (reader) both appear → satisfied ✓
+%% But mode is wrong at arg 2.
 
 CounterMsg ::= clear ; show(Number?).
 CounterStream ::= [] ; [CounterMsg | CounterStream].
 
 procedure counter(CounterStream?, Number).
 
+%% ERROR: State? at arg 2 is reader but output position expects writer
 counter([show(State)|S], State?) :- number(State?) | counter(S?, State?).
 counter([], _).

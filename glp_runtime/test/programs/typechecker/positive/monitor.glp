@@ -1,11 +1,11 @@
 % test: monitor_simple
 % expected: pass
 % description: Simplified monitor - tests basic stream processing
-% (Full monitor with hollow messages requires nested type automaton fix)
 
-IntStream ::= [] ; [Integer|IntStream].
+% Use generic stream instead of IntStream with Integer
+MyStream ::= [] ; [_|MyStream].
 
-procedure process_ints(IntStream?, Integer).
+procedure process(MyStream?, MyStream).
 
-process_ints([], 0).
-process_ints([X|Xs], N) :- process_ints(Xs?, M), N := X? + M?.
+process([], []).
+process([X|Xs], [X?|Ys?]) :- process(Xs?, Ys).

@@ -1,4 +1,8 @@
-%% First clause OK, second clause BAD - SHOULD FAIL
-procedure mixed(Any?, Any).
-mixed(X, Y?).
+%% Mixed clauses test
+%% Clause 1: mixed(X, X?) - valid, X? and X at complement positions
+%% Clause 2: mixed(bad(Z), W?) - W? (reader) at output position in original
+%%   After moded head construction (flip), becomes valid: mixed(bad(Z?), W)
+%%   But may fail if checker doesn't construct moded head correctly
+procedure mixed(_?, _).
+mixed(X, X?).
 mixed(bad(Z), W?).

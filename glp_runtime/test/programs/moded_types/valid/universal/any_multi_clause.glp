@@ -1,3 +1,3 @@
 %% Multiple clauses, each satisfies SRSW - SHOULD PASS
-procedure transform(Any?, Any).
+procedure transform(_?, _).
 transform(X, X?).

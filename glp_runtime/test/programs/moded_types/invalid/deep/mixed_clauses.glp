@@ -1,5 +1,12 @@
-%% Some clauses correct, one incorrect
-%% Should catch the bad one
+%% INVALID: Mode error in third clause (get handler)
+%%
+%% Cmd = inc ; dec ; get(Number?)
+%% For get(Number?) at State? (input ↓):
+%%   - Number? at ↓: combine(↓, ↓) = ↑ (output)
+%%   - At ↑ position, expects writer
+%%   - Val is writer → mode CORRECT ✓
+%%
+%% But Val has no Val? → SRSW violation
 
 Cmd ::= inc ; dec ; get(Number?).
 State ::= [] ; [Cmd | State].
@@ -8,7 +15,6 @@ procedure counter(State?, Number?).
 
 counter([inc|S], N) :- N1 := N? + 1, counter(S?, N1?).
 counter([dec|S], N) :- N1 := N? - 1, counter(S?, N1?).
-%% get(Number?) at INPUT -> get(Number) = OUTPUT position
-%% Val is WRITER at OUTPUT = MODE ERROR (should be Val?)
+%% ERROR: Val is writer but Val? never appears → SRSW violation
 counter([get(Val)|S], N) :- counter(S?, N?).
 counter([], _).

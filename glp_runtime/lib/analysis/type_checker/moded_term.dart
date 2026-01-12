@@ -93,6 +93,29 @@ class ModedConstant extends ModedTerm {
   /// Check if this is nil
   bool get isNil => value == '[]';
 
+  /// True if value is an integer
+  bool get isInteger => value is int;
+
+  /// True if value is a real (floating-point) number
+  bool get isReal => value is double;
+
+  /// True if value is numeric (integer or real)
+  bool get isNumeric => value is num;
+
+  /// True if value is a quoted string
+  bool get isString {
+    if (value is! String) return false;
+    final s = value as String;
+    return (s.startsWith('"') && s.endsWith('"')) ||
+           (s.startsWith("'") && s.endsWith("'"));
+  }
+
+  /// True if value is an unquoted atom (includes nil)
+  bool get isAtom {
+    if (value is! String) return false;
+    return !isString;
+  }
+
   @override
   T accept<T>(ModedTermVisitor<T> visitor) => visitor.visitConstant(this);
 

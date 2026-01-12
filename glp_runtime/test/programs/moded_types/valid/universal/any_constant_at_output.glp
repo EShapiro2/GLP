@@ -1,0 +1,4 @@
+%% Constant at _ (output) position - VALID per spec v0.6
+%% _ accepts any produced term including constants with mode ↑
+procedure qux(_).
+qux(hello).

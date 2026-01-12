@@ -1,8 +1,8 @@
 // lib/analysis/type_checker/moded_head.dart
 //
 // Moded head construction for GLP type checking.
-// Specification: docs/modules/moded-head.md v0.5
-// Paper Reference: Definition 4.6 (lines 285-288)
+// Specification: docs/type system/moded-head.md v0.8
+// Paper Reference: Definition 4.8 (corrected - unconditional flip)
 //
 // Constructs a moded head H' from a clause head H and a procedure declaration.
 // The moded head is used for well-typing checks.
@@ -35,7 +35,7 @@ import '../../compiler/ast.dart' as ast;
 /// - Root mode is ↓ (consume)
 /// - Each argument has mode based on declared type: Type? → ↓, Type → ↑
 /// - Embedded modes within structures are combined via involution
-/// - All variables are flipped (X ↔ X?)
+/// - All variables are unconditionally flipped (X ↔ X?)
 ///
 /// Throws [ArityMismatchError] if head arity doesn't match declaration.
 /// Throws [InvalidHeadError] if head is not a compound term.
@@ -315,19 +315,19 @@ TypeExpr _complementType(TypeExpr expr) {
   return expr;
 }
 
-/// Ensure each variable's form matches its position's structural mode.
+/// Flip all variables unconditionally per Definition 4.8 step 2.
 ///
-/// Per Definition 4.8 step 2:
-/// - A variable at mode ↓ (consume) should be a reader (X?)
-/// - A variable at mode ↑ (produce) should be a writer (X)
+/// "Replacing each variable by its paired variable"
+/// - Every writer X becomes reader X?
+/// - Every reader X? becomes writer X
 ///
-/// For simple input/output types, this typically means flipping all variables.
-/// For interactive types with internal mode complementation, some variables
-/// may already have the correct form and require no change.
-ModedTerm _ensureVariablesMatchModes(ModedTerm term) {
+/// This captures the inverted roles at the call boundary.
+/// The flip is UNCONDITIONAL - it applies to all variables regardless
+/// of their current form or the structural mode at their position.
+ModedTerm _flipAllVariables(ModedTerm term) {
   if (term is ModedCompound) {
-    final adjustedArgs = term.args.map(_ensureVariablesMatchModes).toList();
-    return ModedCompound(term.mode, term.functor, term.arity, adjustedArgs);
+    final flippedArgs = term.args.map(_flipAllVariables).toList();
+    return ModedCompound(term.mode, term.functor, term.arity, flippedArgs);
   }
 
   if (term is ModedConstant) {
@@ -336,15 +336,35 @@ ModedTerm _ensureVariablesMatchModes(ModedTerm term) {
   }
 
   if (term is ModedVariable) {
-    // Check if variable form matches structural mode
-    // Mode ↓ requires reader; Mode ↑ requires writer
-    final shouldBeReader = (term.mode == Mode.consume);
+    // Unconditionally flip: X → X?, X? → X
+    return ModedVariable(term.name, isReader: !term.isReader, structuralMode: term.mode);
+  }
 
+  throw InvalidHeadError('Unknown moded term type: ${term.runtimeType}');
+}
+
+/// Ensure each variable's form matches its position's structural mode.
+///
+/// Per Definition 4.8 step 2:
+/// - A variable at mode ↓ (consume) should be a reader (X?)
+/// - A variable at mode ↑ (produce) should be a writer (X)
+///
+/// If form doesn't match, flip to the paired variable.
+ModedTerm _ensureVariablesMatchModes(ModedTerm term) {
+  if (term is ModedCompound) {
+    final adjustedArgs = term.args.map(_ensureVariablesMatchModes).toList();
+    return ModedCompound(term.mode, term.functor, term.arity, adjustedArgs);
+  }
+
+  if (term is ModedConstant) {
+    return term;
+  }
+
+  if (term is ModedVariable) {
+    final shouldBeReader = (term.mode == Mode.consume);
     if (term.isReader == shouldBeReader) {
-      // Already correct form - no change needed
-      return term;
+      return term;  // Already correct
     } else {
-      // Flip to correct form
       return ModedVariable(term.name, isReader: !term.isReader, structuralMode: term.mode);
     }
   }

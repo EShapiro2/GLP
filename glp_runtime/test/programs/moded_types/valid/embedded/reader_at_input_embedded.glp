@@ -1,0 +1,14 @@
+%% VALID: Reader at embedded input position
+%% Declaration: produce(Wrapper) where Wrapper ::= wrap(Number?)
+%% Root mode: output (↑), embedded mode: input (↓ from Number?)
+%% Combined mode at X position: ↑ × ↓ = ↓ (input)
+%% At INPUT position in head, clause CONSUMES → needs READER
+%% X? is reader - CORRECT
+
+Wrapper ::= wrap(Number?).
+
+procedure produce(Wrapper).
+procedure source(Number).
+
+produce(wrap(X?)) :- source(X).
+source(0).

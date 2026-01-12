@@ -1,13 +1,17 @@
-%% Type is correct with embedded mode
-%% But variable annotation is wrong
+%% INVALID: SRSW violation - Val has no corresponding reader
+%%
+%% Mode analysis for query(Number?) at INPUT (↓):
+%%   - Number? at ↓: combine(↓, ↓) = ↑ (output), expects writer
+%%   - Val is writer at ↑ position → mode CORRECT ✓
+%%
+%% SRSW analysis:
+%%   - Val is writer but Val? never appears → SRSW violation
 
 Request ::= query(Number?).
 Stream ::= [] ; [Request | Stream].
 
 procedure answer(Stream?).
 
-%% query(Number?) at INPUT -> query(Number) by involution
-%% Position is OUTPUT, expects READER
-%% But we use Val (writer) = MODE ERROR
+%% ERROR: Val is writer but Val? never appears → SRSW violation
 answer([query(Val)|S]) :- answer(S?).
 answer([]).

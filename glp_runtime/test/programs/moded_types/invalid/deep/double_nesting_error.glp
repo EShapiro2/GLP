@@ -1,5 +1,14 @@
-%% Triple nesting: List of Wrappers of Messages
-%% The response slot is deeply buried
+%% INVALID: SRSW violation - X has no corresponding reader
+%%
+%% Mode trace for box(ask(val(X?))) at Stream? (↓):
+%%   - Wrapper position at ↓: ↓
+%%   - box(Message): Message at ↓
+%%   - ask(Response): Response at ↓  
+%%   - val(Number): Number at ↓, no embedded ?, stays ↓ (input)
+%%   - X? is reader at ↓ position → mode CORRECT ✓
+%%
+%% SRSW analysis:
+%%   - X? is reader but X never appears → SRSW violation
 
 Response ::= val(Number).
 Message ::= ask(Response).
@@ -8,8 +17,6 @@ Stream ::= [] ; [Wrapper | Stream].
 
 procedure deep(Stream?).
 
-%% box(ask(val(X?))) - X? is reader
-%% val(Number) no embedded ? -> input position
-%% Reader at input = MODE ERROR
+%% ERROR: X? is reader but X never appears → SRSW violation
 deep([box(ask(val(X?)))|S]) :- deep(S?).
 deep([]).

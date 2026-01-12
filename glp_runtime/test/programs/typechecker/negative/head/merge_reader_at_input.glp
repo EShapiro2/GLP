@@ -1,17 +1,20 @@
-% Test: Merge - reader at input position
+% Test: Merge - multiple errors in first clause
 % Paper: Appendix A.1 (negative control)
-% Description: Head error - reader X? at input position (should be writer X)
+% Description: Mode errors in output position + SRSW violations
 
-%% TEST: Merge reader at input position
+%% TEST: Merge with incorrect modes and SRSW violations
 %% PAPER: Appendix A.1
 %% EXPECT: ill-typed
-%% ERROR: head: mode mismatch
+%% ERROR: Arg 1 is correct (readers X?, Xs? at input positions)
+%% ERROR: Arg 3 has mode error: X, Zs are writers at output (should be readers)
+%% ERROR: SRSW violation: Zs has no Zs? in clause 1
 
 Stream ::= [] ; [_|Stream].
 
 procedure merge(Stream?, Stream?, Stream).
 
-% WRONG: X? and Xs? are readers at input positions (should be writers)
+% WRONG: Output arg 3 has writers X, Zs (should be readers X?, Zs?)
+% Also SRSW: Zs writer without Zs? reader
 merge([X?|Xs?], Ys, [X|Zs]) :- merge(Ys?, Xs, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge(Xs, [], Xs?).

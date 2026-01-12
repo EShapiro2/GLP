@@ -1,13 +1,16 @@
-%% Simplified: Channel with wrong mode after involution
-%% ch(Number?, Number) at INPUT inverts to ch(Number, Number?)
-%% Second position becomes INPUT, expects WRITER
-%% But we use reader = MODE ERROR
+%% INVALID: SRSW violation - Req and Resp have no corresponding pairs
+%%
+%% Mode analysis for ch(Number?, Number) at INPUT (↓):
+%%   - First arg Number? at ↓: combine(↓, ↓) = ↑, expects writer
+%%   - Second arg Number at ↓: combine(↓, ↑) = ↑, expects writer
+%%   - Req? is reader at position expecting writer → mode error
+%%   - Resp? is reader at position expecting writer → mode error
+%%
+%% Also SRSW violations: Req? without Req, Resp? without Resp
 
 Channel ::= ch(Number?, Number).
 
 procedure bad_channel(Channel?).
 
-%% ch(Number?, Number) at INPUT mode
-%% Involution: first arg OUTPUT (ok with Req?), second arg INPUT
-%% Second arg expects WRITER, but Resp? is READER = MODE ERROR
+%% ERROR: Mode errors (readers where writers expected) AND SRSW violations
 bad_channel(ch(Req?, Resp?)).

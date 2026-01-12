@@ -1,3 +1,5 @@
-%% Struct constructor at Any? (input) position - SHOULD FAIL
-procedure foo(Any?).
+%% Struct constructor at _? (input) position - INVALID (coverage failure)
+%% Per spec v0.6: _? accepts consumed terms, but coverage requires
+%% clauses to accept ALL input paths. pair(X,Y) alone doesn't cover _?.
+procedure foo(_?).
 foo(pair(X, Y)).

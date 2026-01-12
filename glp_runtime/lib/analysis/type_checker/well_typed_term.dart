@@ -223,12 +223,15 @@ WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA d
 /// Per Definition 4.3: A moded path is consistent with the automaton if:
 /// 1. Structure matches: each non-leaf step corresponds to valid transition
 /// 2. Leaf consistency: variable/constant at leaf matches DFA state
+///
+/// Fix 4.1: Switches automata at type boundaries when entering user-defined types
 PathCheckResult checkPathAgainstAutomaton(
   ModedPath path,
   Automaton automaton,
   ProgramDFA dfa,
 ) {
   var state = automaton.startState;
+  var currentAutomaton = automaton;  // Track current automaton for type switching
 
   // Handle single-step paths (just a variable or constant at root)
   if (path.length == 1) {
@@ -244,11 +247,22 @@ PathCheckResult checkPathAgainstAutomaton(
     final label = _buildTransitionLabel(step, nextStep);
 
     // Try to follow transition
-    final nextState = automaton.transition(state, label);
+    final nextState = currentAutomaton.transition(state, label);
 
     if (nextState == null) {
       return PathCheckResult.inconsistent(
           'No transition for $label from state ${state.name}');
+    }
+
+    // Fix 4.1: Switch automata at type boundaries
+    // When entering a user-defined type, switch to that type's automaton
+    if (nextState.isUserDefinedType && nextState.baseName != state.baseName) {
+      try {
+        currentAutomaton = dfa.getAutomaton(nextState.name);
+      } catch (e) {
+        return PathCheckResult.inconsistent(
+            'Cannot get automaton for type ${nextState.name}');
+      }
     }
 
     state = nextState;
@@ -306,6 +320,7 @@ PathCheckResult _checkLeafConsistencyForPath(
 }
 
 /// Convert PathStep to LeafTerm for checkLeafConsistency
+/// Fix 4.2: Properly detects real literals (floating-point numbers)
 LeafTerm _pathStepToLeafTerm(PathStep step) {
   if (step.isVariable) {
     // Use the actual structural mode from the path step, not a hardcoded mode
@@ -315,19 +330,29 @@ LeafTerm _pathStepToLeafTerm(PathStep step) {
       return LeafTerm.writer(step.symbol, mode: step.mode);
     }
   } else {
-    // Constant - determine type
+    // Constant - pass structural mode for wildcard checking (spec v0.6)
     final value = step.symbol;
+
+    // Check for integer first (more specific - no decimal point)
     final intVal = int.tryParse(value);
     if (intVal != null) {
-      return LeafTerm.integerConstant(intVal);
+      return LeafTerm.integerConstant(intVal, mode: step.mode);
     }
+
+    // Fix 4.2: Check for real (floating-point) - includes scientific notation
+    final doubleVal = double.tryParse(value);
+    if (doubleVal != null) {
+      return LeafTerm.realConstant(doubleVal, mode: step.mode);
+    }
+
     // Check for string (quoted)
     if ((value.startsWith("'") && value.endsWith("'")) ||
         (value.startsWith('"') && value.endsWith('"'))) {
-      return LeafTerm.stringConstant(value.substring(1, value.length - 1));
+      return LeafTerm.stringConstant(value.substring(1, value.length - 1), mode: step.mode);
     }
+
     // Otherwise it's an atom/constant
-    return LeafTerm.constant(value);
+    return LeafTerm.constant(value, mode: step.mode);
   }
 }
 

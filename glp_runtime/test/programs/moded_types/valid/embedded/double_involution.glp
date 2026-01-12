@@ -1,10 +1,16 @@
-%% Double involution: combine(combine(input, input), input) = combine(output, input) = input
-%% Declaration: foo(Outer?) - input
-%% Top-level: input
-%% outer(Inner?): combine(input, input) = output
-%% inner(Number?): combine(output, input) = input
-%% At input position, head expects WRITER
-%% X is writer - CORRECT
+%% VALID: Double involution with moded head transformation
+%%
+%% Mode trace:
+%%   - foo(Outer?) → ↓ (input)
+%%   - outer(Inner?) at ↓: combine(↓, ↓) = ↑ (first involution)
+%%   - inner(Number?) at ↑: combine(↑, ↓) = ↓ (second involution)
+%%   - Final mode at X position: ↓ (input), expects READER
+%%
+%% Original clause has X (writer) at ↓ position.
+%% Moded head transformation (Definition 4.8) flips X → X? to match expected mode.
+%% After transformation: X? is reader at ↓ → CORRECT ✓
+%%
+%% SRSW: X (original writer) pairs with X? (in body) → satisfied ✓
 
 Inner ::= inner(Number?).
 Outer ::= outer(Inner?).

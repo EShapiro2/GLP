@@ -1,11 +1,18 @@
-%% The tail should be reader at output position
+%% INVALID: Mode error - reader at output position where writer expected
+%%
+%% Third arg is List (output, ↑)
+%% Inside [X?|Zs]:
+%%   - Element _ at ↑: expects writer, but X? is reader → MODE ERROR
+%%   - Tail List at ↑: expects writer, Zs is writer → correct
+%%
+%% Also SRSW violation: Zs has no Zs?
 
 Elem ::= a ; b ; c.
 List ::= [] ; [Elem | List].
 
 procedure append(List?, List?, List).
 
-%% Third arg is output, expects readers
-%% Zs is writer = MODE ERROR
+%% ERROR: X? is reader at output (↑) element position, should be X
+%% Also Zs writer has no Zs? reader → SRSW violation
 append([X|Xs], Ys, [X?|Zs]) :- append(Xs?, Ys?, Zs).
 append([], Ys, Ys?).

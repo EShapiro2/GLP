@@ -1,10 +1,11 @@
-%% INVALID: Reader at input position in clause head
-%% Should fail mode checking
+%% INVALID: SRSW violation - reader without corresponding writer
+%% Mode is CORRECT: Nat? = input (↓), expects reader, Y? is reader ✓
+%% But Y? has no corresponding writer Y anywhere in the clause
+%% SRSW requires every reader X? to have a corresponding writer X
 
 Nat ::= 0 ; s(Nat).
 
 procedure bar(Nat?).
 
-%% ERROR: Y? is reader but procedure expects input mode (writer)
-%% This is mode-incorrect but SRSW-compliant
+%% ERROR: Y? is reader but there's no Y writer → SRSW violation
 bar(Y?).

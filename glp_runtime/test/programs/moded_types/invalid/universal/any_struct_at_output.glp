@@ -1,3 +1,6 @@
-%% Struct constructor at Any (output) position - SHOULD FAIL
-procedure bar(Any).
+%% Struct constructor at _ (output) position
+%% Note: X? in head becomes X in moded head (flip at output position)
+%% X (writer) at ↑ position is type-valid
+%% However: X? has no paired X - may be SRSW violation (separate from typing)
+procedure bar(_).
 bar(wrapper(X?)).

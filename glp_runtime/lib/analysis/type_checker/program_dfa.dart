@@ -18,15 +18,23 @@ class DFAState {
   final String baseName;
   final bool isComplement;
   final bool isFinal;
+  final bool isProcedure;  // Fix 3.1: distinguish procedure states
 
-  DFAState(this.baseName, {required this.isComplement, required this.isFinal});
+  DFAState(this.baseName, {
+    required this.isComplement,
+    required this.isFinal,
+    this.isProcedure = false,
+  });
 
   /// Returns the full name: baseName? if complement, else baseName
   String get name => isComplement ? '$baseName?' : baseName;
 
   /// Returns the complement state
   DFAState get complement =>
-      DFAState(baseName, isComplement: !isComplement, isFinal: isFinal);
+      DFAState(baseName,
+        isComplement: !isComplement,
+        isFinal: isFinal,
+        isProcedure: isProcedure);
 
   /// True for `_` or `_?`
   bool get isWildcard => baseName == '_';
@@ -51,6 +59,19 @@ class DFAState {
 
   /// True for `_FINAL_` (anonymous final for constant/literal matches)
   bool get isAnonymousFinal => baseName == '_FINAL_';
+
+  // Fix 3.3: Combined property for numeric types
+  /// True for numeric types: Integer, Real, Number
+  bool get isNumericType => isIntegerType || isRealType || isNumberType;
+
+  // Fix 3.2: Computed properties for type classification
+  /// True for primitive types: _, Integer, Real, Number, String
+  bool get isPrimitiveType =>
+      isWildcard || isIntegerType || isRealType || isNumberType || isStringType;
+
+  /// True for user-defined types (not primitive, not procedure, not anonymous final)
+  bool get isUserDefinedType =>
+      !isPrimitiveType && !isProcedure && !isAnonymousFinal;
 
   @override
   String toString() => name;
@@ -119,8 +140,12 @@ class TransitionLabel {
 class Automaton {
   final DFAState startState;
   final Map<(DFAState, TransitionLabel), DFAState> _transitions;
+  
+  /// Set of primitive type names this type accepts as alternatives
+  /// (e.g., {'Integer', 'String'} for Constant ::= Integer ; String.)
+  final Set<String> acceptedPrimitives;
 
-  Automaton(this.startState, this._transitions);
+  Automaton(this.startState, this._transitions, {this.acceptedPrimitives = const {}});
 
   /// Get the target state for a transition, or null if no such transition.
   DFAState? transition(DFAState from, TransitionLabel label) {
@@ -139,7 +164,8 @@ class Automaton {
       newTransitions[(fromState.complement, label.complement)] =
           toState.complement;
     }
-    return Automaton(startState.complement, newTransitions);
+    return Automaton(startState.complement, newTransitions, 
+        acceptedPrimitives: acceptedPrimitives);
   }
 }
 
@@ -231,7 +257,10 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
 
   // Create procedure states (no complement)
   for (final procKey in env.procedures.keys) {
-    states[procKey] = DFAState(procKey, isComplement: false, isFinal: false);
+    states[procKey] = DFAState(procKey,
+      isComplement: false,
+      isFinal: false,
+      isProcedure: true);  // Fix 3.1: mark as procedure
   }
 
   // Build procedure automata
@@ -268,13 +297,18 @@ Automaton _buildTypeAutomaton(
   final startState = states[startStateName]!;
 
   final transitions = <(DFAState, TransitionLabel), DFAState>{};
+  final acceptedPrimitives = <String>{};
 
   for (final alt in typeDef.alternatives) {
+    // Collect primitive type alternatives (Integer, Real, Number, String)
+    if (alt is TypeRef && {'Integer', 'Real', 'Number', 'String'}.contains(alt.name)) {
+      acceptedPrimitives.add(alt.name);
+    }
     _addTypeTransitions(
         startState, alt, Mode.produce, states, transitions, isComplement);
   }
 
-  return Automaton(startState, transitions);
+  return Automaton(startState, transitions, acceptedPrimitives: acceptedPrimitives);
 }
 
 /// Add transitions from a type alternative.
@@ -470,23 +504,23 @@ class LeafTerm {
   }
 
   /// Create an integer constant leaf.
-  factory LeafTerm.integerConstant(int value) {
-    return LeafTerm._(isVariable: false, value: value, isInteger: true);
+  factory LeafTerm.integerConstant(int value, {Mode? mode}) {
+    return LeafTerm._(isVariable: false, value: value, isInteger: true, mode: mode);
   }
 
   /// Create a real constant leaf.
-  factory LeafTerm.realConstant(double value) {
-    return LeafTerm._(isVariable: false, value: value, isReal: true);
+  factory LeafTerm.realConstant(double value, {Mode? mode}) {
+    return LeafTerm._(isVariable: false, value: value, isReal: true, mode: mode);
   }
 
   /// Create a string constant leaf.
-  factory LeafTerm.stringConstant(String value) {
-    return LeafTerm._(isVariable: false, value: value, isString: true);
+  factory LeafTerm.stringConstant(String value, {Mode? mode}) {
+    return LeafTerm._(isVariable: false, value: value, isString: true, mode: mode);
   }
 
   /// Create a constant leaf (atom or other).
-  factory LeafTerm.constant(Object value) {
-    return LeafTerm._(isVariable: false, value: value);
+  factory LeafTerm.constant(Object value, {Mode? mode}) {
+    return LeafTerm._(isVariable: false, value: value, mode: mode);
   }
 }
 
@@ -568,19 +602,49 @@ LeafConsistencyResult checkLeafConsistency(
     return LeafConsistencyResult.inconsistent('String type requires string literal');
   }
 
-  // Case 2c: At wildcard state — wildcards accept any constant
-  if (state.isWildcard) {
-    return LeafConsistencyResult.consistent(state);
+  // Case 2c: At wildcard state
+  // Per spec v0.6: _ accepts any produced term (mode ↑), _? accepts any consumed term (mode ↓)
+  if (state.isProducedWildcard) {
+    if (leaf.mode == Mode.produce) {
+      return LeafConsistencyResult.consistent(state);
+    }
+    return LeafConsistencyResult.inconsistent(
+        '_ expects produced term (mode ↑), got consumed term');
+  }
+  if (state.isConsumedWildcard) {
+    if (leaf.mode == Mode.consume) {
+      return LeafConsistencyResult.consistent(state);
+    }
+    return LeafConsistencyResult.inconsistent(
+        '_? expects consumed term (mode ↓), got produced term');
   }
 
-  // Case 2d: At user-defined type state — check for matching transition
+  // Case 2d: At user-defined type state — check for matching transition or primitive
   if (leaf.value != null) {
     final automaton = dfa.automata[state.name];
     if (automaton != null) {
+      // First, try explicit constant transition
       final constLabel = TransitionLabel.constant(leaf.value!);
       final nextState = automaton.transition(state, constLabel);
       if (nextState != null) {
         return LeafConsistencyResult.consistent(nextState);
+      }
+      
+      // Second, check if type accepts primitive types that match this constant
+      if (automaton.acceptedPrimitives.isNotEmpty) {
+        if (leaf.isInteger &&
+            (automaton.acceptedPrimitives.contains('Integer') ||
+             automaton.acceptedPrimitives.contains('Number'))) {
+          return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
+        }
+        if (leaf.isReal &&
+            (automaton.acceptedPrimitives.contains('Real') ||
+             automaton.acceptedPrimitives.contains('Number'))) {
+          return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
+        }
+        if (leaf.isString && automaton.acceptedPrimitives.contains('String')) {
+          return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
+        }
       }
     }
   }

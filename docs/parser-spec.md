@@ -549,6 +549,18 @@ StructTerm('neg', [VarTerm('X', isReader: true)])
 - [ ] Test three-valued semantics (success/suspend/fail)
 - [ ] Verify error messages are clear
 
+## SRSW Checking
+
+The parser is responsible for checking the **Single-Reader/Single-Writer (SRSW) syntactic restriction** on all clauses:
+
+1. Every variable X that occurs in a clause must have its paired variable X? also occur in the clause
+2. Each variable (reader or writer) occurs exactly once
+3. Exception: Multiple readers allowed if guarded by `ground(X?)`
+
+**SRSW is checked before type checking.** The type checker assumes all input clauses satisfy SRSW and does not verify variable pairing.
+
+See `SPEC_GUIDE.md` for detailed SRSW semantics.
+
 ## References
 
 - **WAM Paper** (Section 8): Structure building and traversal
@@ -558,3 +570,4 @@ StructTerm('neg', [VarTerm('X', isReader: true)])
 ## Version History
 
 - **v1.0 (2025-11-12)**: Initial specification for arithmetic expression parsing
+- **v1.1 (2025-01-12)**: Added SRSW checking section documenting parser responsibility
