@@ -142,7 +142,15 @@ class ConstTerm extends Term {
 
   @override
   String toString() {
-    if (value is String) return '"$value"';
+    if (value is String) {
+      final s = value as String;
+      // Don't double-quote if already quoted (string literals)
+      if ((s.startsWith('"') && s.endsWith('"')) ||
+          (s.startsWith("'") && s.endsWith("'"))) {
+        return s;
+      }
+      return '"$value"';
+    }
     return value.toString();
   }
 }
