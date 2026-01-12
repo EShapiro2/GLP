@@ -1,0 +1,6 @@
+%% Struct constructor at _ (output) position - VALID per spec v0.6
+%% After moded head flip: X? becomes X (writer) at ↑ position - valid
+%% X has no paired X? - vacuously satisfies complementarity
+%% (SRSW checking is separate from type checking)
+procedure bar(_).
+bar(wrapper(X?)).

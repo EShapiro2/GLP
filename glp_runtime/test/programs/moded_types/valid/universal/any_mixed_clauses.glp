@@ -1,0 +1,7 @@
+%% Mixed clauses with wildcards - VALID per spec v0.6
+%% Clause 1: mixed(X, X?) → moded head: mixed(X?, X) - X?/_? and X/_ are complements
+%% Clause 2: mixed(bad(Z), W?) → moded head: mixed(bad(Z?), W) - Z? at ↓, W at ↑
+%% Coverage: clause 1 with variable X covers all inputs to _?
+procedure mixed(_?, _).
+mixed(X, X?).
+mixed(bad(Z), W?).
