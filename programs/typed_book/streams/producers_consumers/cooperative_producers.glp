@@ -10,27 +10,25 @@
 %% handover, or dynamic producer pools.
 
 %% Type definitions
-List := [] | [_ | List].
-Done := done.
-Control := control(List, Control).
+Done ::= done.
+Control ::= control(List, Control).
 
-%% Mode declarations
-%% Note: Complex control flow with continuation passing.
-%% handover/3 creates fresh continuation variables read by callers - skipped.
-ProducerA := producer_a(Control).
-ProducerB := producer_b(Control).
-ProduceBatchA := produce_batch_a(List, List?, Done).
-ProduceBatchB := produce_batch_b(List, List?, Done).
+%% Procedure type declarations
+procedure producer_a(Control).
+procedure producer_b(Control).
+procedure produce_batch_a(List, List?, Done).
+procedure produce_batch_b(List, List?, Done).
+procedure handover(Done?, List, Control).
 
-producer_a(control(Xs,Next)) :-
+producer_a(control(Xs,Next?)) :-
     produce_batch_a(Xs,Xs1,Done),
-    handover(Done?,Xs1,Next).
+    handover(Done?,Xs1?,Next).
 
-producer_b(control(Xs,Next)) :-
+producer_b(control(Xs,Next?)) :-
     produce_batch_b(Xs,Xs1,Done),
-    handover(Done?,Xs1,Next).
+    handover(Done?,Xs1?,Next).
 
-handover(done,Xs,control(Xs?,Next)).
+handover(done,Xs,control(Xs?,Next?)).
 
 produce_batch_a([a,b,c|Xs],Xs?,done).
 produce_batch_b([d,e,f|Xs],Xs?,done).

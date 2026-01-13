@@ -11,10 +11,11 @@
 %% distribute_binary([req([0],a), req([1],b), req([0],c)], Y, Z).
 
 %% Type definitions
-List ::= [] ; [Any | List].
+Req ::= req(List, _).
+ReqStream ::= [] ; [Req | ReqStream].
 
 %% Procedure type declarations
-procedure distribute_binary(List, List, List).
+procedure distribute_binary(ReqStream?, ReqStream, ReqStream).
 
 distribute_binary([req([0|Addr],C)|In], [req(Addr?,C?)|Out1?], Out2?) :-
     distribute_binary(In?, Out1, Out2).

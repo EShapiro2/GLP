@@ -1,12 +1,11 @@
 %% copy.glp - List copying
 %% Source: Standard GLP list operations
 
-%% Type definitions
-List ::= [] ; [Any | List].
+%% Uses predefined List type
 
 %% Procedure type declarations
-procedure copy(List, List).
-procedure reduce(Any, Any).
+procedure copy(List?, List).
+procedure reduce(_?, _).
 
 copy([], []).
 copy([X|Xs], [X?|Ys?]) :- copy(Xs?, Ys).

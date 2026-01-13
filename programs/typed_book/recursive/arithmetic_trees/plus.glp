@@ -5,9 +5,9 @@
 Nat ::= 0 ; s(Nat).
 
 %% Procedure type declarations
-procedure plus(Nat, Nat, Nat).
-procedure natural_number(Nat).
-procedure reduce(Any, Any).
+procedure plus(Nat?, Nat?, Nat).
+procedure natural_number(Nat?).
+procedure reduce(_?, _).
 
 plus(0, X, X?).
 plus(s(X), Y, s(Z?)) :- plus(X?, Y?, Z).

@@ -1,0 +1,7 @@
+%% POSITIVE: Universal type _ should accept any term including procedure calls
+%% This tests that procedure reduce(_?, _) can accept structured terms
+%% BUG: Type checker fails with "No transition for X(n,m):↓ from state _?"
+
+procedure reduce(_?, _).
+
+reduce(foo(X?, Y?), bar(X, Y)).

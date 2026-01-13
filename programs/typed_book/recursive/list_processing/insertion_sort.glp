@@ -5,9 +5,9 @@
 NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure insertion_sort(NumList, NumList).
-procedure insert(Number, NumList, NumList).
-procedure reduce(Any, Any).
+procedure insertion_sort(NumList?, NumList).
+procedure insert(Number?, NumList?, NumList).
+procedure reduce(_?, _).
 
 insertion_sort([], []).
 insertion_sort([X|Xs], Sorted?) :-

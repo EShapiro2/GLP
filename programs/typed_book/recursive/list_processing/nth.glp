@@ -1,12 +1,11 @@
 %% nth.glp - Nth Element of List
 %% Source: Standard GLP list operations
 
-%% Type definitions
-List ::= [] ; [Any | List].
+%% Uses predefined List type
 
 %% Procedure type declarations
-procedure nth(Number, List, Any).
-procedure reduce(Any, Any).
+procedure nth(Number?, List?, _).
+procedure reduce(_?, _).
 
 nth(1, [X|_], X?).
 nth(N, [_|Xs], X?) :- N? > 1 | N1 := N? - 1, nth(N1?, Xs?, X).

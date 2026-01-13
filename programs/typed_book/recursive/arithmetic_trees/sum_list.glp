@@ -5,9 +5,9 @@
 NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure sum(NumList, Number).
-procedure sum(NumList, Number, Number).
-procedure reduce(Any, Any).
+procedure sum(NumList?, Number).
+procedure sum(NumList?, Number?, Number).
+procedure reduce(_?, _).
 
 sum(Xs, S?) :- sum(Xs?, 0, S).
 sum([], Acc?, Acc?).

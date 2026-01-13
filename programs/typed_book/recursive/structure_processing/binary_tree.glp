@@ -2,11 +2,11 @@
 %% binary_tree(Tree) :- Tree is a binary tree.
 
 %% Type definitions
-Tree ::= void ; tree(Any, Tree, Tree).
+Tree ::= void ; tree(_, Tree, Tree).
 
 %% Procedure type declarations
-procedure binary_tree(Tree).
-procedure reduce(Any, Any).
+procedure binary_tree(Tree?).
+procedure reduce(_?, _).
 
 binary_tree(void).
 binary_tree(tree(_, Left, Right)) :- binary_tree(Left?), binary_tree(Right?).

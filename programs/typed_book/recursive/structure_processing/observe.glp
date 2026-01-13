@@ -3,9 +3,9 @@
 %% Generalizes stream observer to arbitrary term structures
 
 %% Procedure type declarations
-procedure observe(Any, Any, Any).
-procedure observe_list(Any, Any, Any).
-procedure test_observe(Any, Any).
+procedure observe(_?, _, _).
+procedure observe_list(List?, List, List).
+procedure test_observe(_, _).
 
 %% observe(A, B, Log) - observe communication between A and B
 

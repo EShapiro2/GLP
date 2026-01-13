@@ -4,15 +4,14 @@
 %% postorder(Tree,Post) :- Post is a postorder traversal of Tree.
 
 %% Type definitions
-Tree ::= void ; tree(Any, Tree, Tree).
-AnyList ::= [] ; [Any | AnyList].
+Tree ::= void ; tree(_, Tree, Tree).
 
 %% Procedure type declarations
-procedure preorder(Tree, AnyList).
-procedure inorder(Tree, AnyList).
-procedure postorder(Tree, AnyList).
-procedure append(AnyList, AnyList, AnyList).
-procedure reduce(Any, Any).
+procedure preorder(Tree?, List).
+procedure inorder(Tree?, List).
+procedure postorder(Tree?, List).
+procedure append(List?, List?, List).
+procedure reduce(_?, _).
 
 preorder(tree(X, L, R), Xs?) :-
     preorder(L?, Ls), preorder(R?, Rs), append([X|Ls?], Rs?, Xs).
@@ -31,7 +30,7 @@ postorder(void, []).
 
 %% append for use in traversals
 append([], Ys, Ys?).
-append([X|Xs], Ys, [X?|Zs]) :- append(Xs?, Ys?, Zs).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 
 %% reduce clauses for metainterpreter
 reduce(preorder(tree(X, L, R), Xs?), (preorder(L?, Ls), preorder(R?, Rs), append([X|Ls?], Rs?, Xs))).
@@ -41,4 +40,4 @@ reduce(inorder(void, []), true).
 reduce(postorder(tree(X, L, R), Xs?), (postorder(L?, Ls), postorder(R?, Rs), append(Rs?, [X], Rs1), append(Ls?, Rs1?, Xs))).
 reduce(postorder(void, []), true).
 reduce(append([], Ys, Ys?), true).
-reduce(append([X|Xs], Ys, [X?|Zs]), append(Xs?, Ys?, Zs)).
+reduce(append([X|Xs], Ys, [X?|Zs?]), append(Xs?, Ys?, Zs)).

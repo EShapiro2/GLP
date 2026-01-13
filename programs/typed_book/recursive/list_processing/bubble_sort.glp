@@ -6,11 +6,11 @@ NumList ::= [] ; [Number | NumList].
 Flag ::= yes ; no.
 
 %% Procedure type declarations
-procedure bubble_sort(NumList, NumList).
-procedure bsort(NumList, NumList).
-procedure bubble(NumList, NumList, Flag).
-procedure continue(Flag, NumList, NumList).
-procedure reduce(Any, Any).
+procedure bubble_sort(NumList?, NumList).
+procedure bsort(NumList?, NumList).
+procedure bubble(NumList?, NumList, Flag).
+procedure continue(Flag?, NumList?, NumList).
+procedure reduce(_?, _).
 
 bubble_sort(Xs, Sorted?) :- bsort(Xs?, Sorted).
 

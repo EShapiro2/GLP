@@ -6,11 +6,11 @@
 Nat ::= 0 ; s(Nat).
 
 %% Procedure type declarations
-procedure minimum(Nat, Nat, Nat).
-procedure min_check(Nat, Nat, Nat).
-procedure lesseq(Nat, Nat).
-procedure natural_number(Nat).
-procedure reduce(Any, Any).
+procedure minimum(Nat?, Nat?, Nat).
+procedure min_check(Nat?, Nat?, Nat).
+procedure lesseq(Nat?, Nat?).
+procedure natural_number(Nat?).
+procedure reduce(_?, _).
 
 minimum(N1, N2, Out?) :- tuple(N1?), tuple(N2?) | min_check(N1?, N2?, Out).
 

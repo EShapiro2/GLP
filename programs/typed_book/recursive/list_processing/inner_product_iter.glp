@@ -5,17 +5,17 @@
 NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure inner_product(NumList, NumList, Number).
-procedure inner_product(NumList, NumList, Number, Number).
-procedure reduce(Any, Any).
+procedure inner_product(NumList?, NumList?, Number).
+procedure inner_product(NumList?, NumList?, Number?, Number).
+procedure reduce(_?, _).
 
-inner_product(Xs, Ys, IP) :- inner_product(Xs?, Ys?, 0, IP).
+inner_product(Xs, Ys, IP?) :- inner_product(Xs?, Ys?, 0, IP).
 
-inner_product([X|Xs], [Y|Ys], Temp, IP) :-
+inner_product([X|Xs], [Y|Ys], Temp, IP?) :-
     Temp1 := X? * Y? + Temp?, inner_product(Xs?, Ys?, Temp1?, IP).
-inner_product([], [], IP, IP).
+inner_product([], [], IP, IP?).
 
 %% reduce clauses for metainterpreter
-reduce(inner_product(Xs, Ys, IP), inner_product(Xs?, Ys?, 0, IP)).
-reduce(inner_product([X|Xs], [Y|Ys], Temp, IP), (Temp1 := X? * Y? + Temp?, inner_product(Xs?, Ys?, Temp1?, IP))).
-reduce(inner_product([], [], IP, IP), true).
+reduce(inner_product(Xs, Ys, IP?), inner_product(Xs?, Ys?, 0, IP)).
+reduce(inner_product([X|Xs], [Y|Ys], Temp, IP?), (Temp1 := X? * Y? + Temp?, inner_product(Xs?, Ys?, Temp1?, IP))).
+reduce(inner_product([], [], IP, IP?), true).

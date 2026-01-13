@@ -5,8 +5,8 @@
 Tree ::= empty ; node(Number, Tree, Tree).
 
 %% Procedure type declarations
-procedure tree_sum(Tree, Number).
-procedure reduce(Any, Any).
+procedure tree_sum(Tree?, Number).
+procedure reduce(_?, _).
 
 tree_sum(empty, 0).
 tree_sum(node(V, L, R), S?) :-

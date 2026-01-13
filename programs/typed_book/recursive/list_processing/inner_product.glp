@@ -5,8 +5,8 @@
 NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure inner_product(NumList, NumList, Number).
-procedure reduce(Any, Any).
+procedure inner_product(NumList?, NumList?, Number).
+procedure reduce(_?, _).
 
 inner_product([X|Xs], [Y|Ys], IP?) :-
     inner_product(Xs?, Ys?, IP1), IP := X? * Y? + IP1?.

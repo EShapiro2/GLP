@@ -1,12 +1,12 @@
 %% observe_minimal.glp - Minimal case exposing observe limitation
 
 %% Procedure type declarations
-procedure observe(Any, Any, Any).
-procedure observe_list(Any, Any, Any).
-procedure test_minimal(Any).
-procedure alice(Any).
-procedure got_reply(Any).
-procedure bob(Any).
+procedure observe(_?, _, _).
+procedure observe_list(List?, List, List).
+procedure test_minimal(_).
+procedure alice(_).
+procedure got_reply(_?).
+procedure bob(_?).
 
 %% === observe.glp (inlined - consult not supported) ===
 

@@ -250,6 +250,41 @@ PathCheckResult checkPathAgainstAutomaton(
     final nextState = currentAutomaton.transition(state, label);
 
     if (nextState == null) {
+      // Special case: wildcard states accept ANY term structure
+      // When at _ or _?, we don't need transitions - just verify mode consistency
+      if (state.isWildcard) {
+        // Wildcard accepts everything - just check the leaf's mode matches
+        final leafStep = path.leaf;
+        if (leafStep.isVariable) {
+          // Variable at wildcard: check mode consistency
+          final expectedMode = state.isComplement ? Mode.consume : Mode.produce;
+          if (leafStep.isReader && expectedMode == Mode.consume) {
+            return PathCheckResult.consistent(VariableTypeInfo(
+              typeState: state,
+              mode: Mode.consume,
+              isReader: true,
+            ));
+          }
+          if (!leafStep.isReader && expectedMode == Mode.produce) {
+            return PathCheckResult.consistent(VariableTypeInfo(
+              typeState: state,
+              mode: Mode.produce,
+              isReader: false,
+            ));
+          }
+          // Mode mismatch for variable at wildcard
+          return PathCheckResult.inconsistent(
+              'Variable mode mismatch at wildcard ${state.name}');
+        }
+        // Constant at wildcard: check mode consistency
+        final expectedMode = state.isComplement ? Mode.consume : Mode.produce;
+        if (leafStep.mode == expectedMode) {
+          return PathCheckResult.consistent();
+        }
+        return PathCheckResult.inconsistent(
+            'Mode mismatch at wildcard: expected ${expectedMode == Mode.consume ? "↓" : "↑"}, got ${leafStep.mode == Mode.consume ? "↓" : "↑"}');
+      }
+      
       return PathCheckResult.inconsistent(
           'No transition for $label from state ${state.name}');
     }

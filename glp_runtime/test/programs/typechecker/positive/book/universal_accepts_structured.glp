@@ -1,0 +1,21 @@
+%% Universal type _ accepts structured terms
+%%
+%% The universal type _ should match ANY term, including compound terms.
+%% This test verifies that procedure arguments typed as _? accept structured terms.
+%%
+%% Covariance: Each clause's structured term must be accepted at _? position
+%% Contravariance: At least one clause needs a variable to cover all inputs
+%%
+%% Expected: PASS (this is well-typed)
+
+procedure test(_?).
+
+%% Underscore clause provides coverage for all inputs
+%% (underscore accepts any term without requiring a paired writer)
+test(_).
+
+%% These test that structured terms are accepted at _? position (covariance)
+test(foo(1)).
+test(bar(a, b)).
+test([1, 2, 3]).
+test(42).

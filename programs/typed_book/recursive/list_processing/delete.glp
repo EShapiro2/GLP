@@ -2,12 +2,11 @@
 %% delete(List,X,HasNoXs) :- HasNoXs is the result of removing all occurrences of X from List.
 %% Note: Requires numeric elements for =:= guard
 
-%% Type definitions
-List ::= [] ; [Any | List].
+%% Uses predefined List type
 
 %% Procedure type declarations
-procedure delete(List, Any, List).
-procedure reduce(Any, Any).
+procedure delete(List?, _?, List).
+procedure reduce(_?, _).
 
 delete([X|Xs], Y, Ys?) :- X? =:= Y? | delete(Xs?, Y?, Ys).
 delete([H|Xs], Z, [H?|Ys?]) :- otherwise | delete(Xs?, Z?, Ys).

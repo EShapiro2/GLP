@@ -2,7 +2,7 @@
    GLP Type Checker Test Suite v2.0   
 ======================================
 
-Running 28 positive + 39 negative + 2 SRSW tests...
+Running 29 positive + 39 negative + 2 SRSW tests...
 
 --- Positive Tests (should load successfully) ---
 PASS: merge_basic
@@ -14,8 +14,9 @@ PASS: monitor
 PASS: int_list_sum
 PASS: nat_operations
 PASS: process_complete
-FAIL: merge (unexpected type errors)
-FAIL: disjoint_primitives (unexpected type errors)
+PASS: merge
+PASS: disjoint_primitives
+PASS: universal_accepts_structured
 PASS: append
 PASS: counter
 PASS: simple_io
@@ -66,20 +67,20 @@ PASS: mixed_clauses (rejected: SRSW violation)
 PASS: nested_struct_wrong_mode (rejected: loading error)
 PASS: pair_list_wrong_mode (rejected: SRSW violation)
 PASS: recursive_type_deep_error (rejected: SRSW violation)
-PASS: response_slot_no_embedded (rejected: loading error)
-FAIL: any_constant_at_input (should have been rejected)
+PASS: response_slot_no_embedded (rejected: type errors)
+PASS: any_constant_at_input (rejected: type errors)
 PASS: any_empty_list (rejected: type errors)
 PASS: any_list_cons (rejected: type errors)
 PASS: any_mixed_clauses (rejected: type errors)
 PASS: any_reduce_pattern (rejected: type errors)
 PASS: any_struct_at_input (rejected: type errors)
-PASS: any_struct_at_output (rejected: type errors)
+PASS: any_struct_at_output (rejected: SRSW violation)
 
 --- SRSW Tests (should be rejected by parser for SRSW violations) ---
 PASS: merge_reader_at_input (rejected: loading error)
 PASS: merge_writer_at_output (rejected: loading error)
 
 ======================================
-Total: 69 | Passed: 66 | Failed: 3
+Total: 70 | Passed: 70 | Failed: 0
 ======================================
-SOME TESTS FAILED
+ALL TYPE CHECKER TESTS PASSED!

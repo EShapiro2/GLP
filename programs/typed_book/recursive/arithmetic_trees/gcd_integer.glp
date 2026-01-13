@@ -2,8 +2,8 @@
 %% greatest_common_divisor(X,Y,Z) :- Z is the gcd of integers X and Y.
 
 %% Procedure type declarations
-procedure greatest_common_divisor(Number, Number, Number).
-procedure reduce(Any, Any).
+procedure greatest_common_divisor(Number?, Number?, Number).
+procedure reduce(_?, _).
 
 greatest_common_divisor(I, 0, I?).
 greatest_common_divisor(I, J, Gcd?) :-

@@ -1,5 +1,14 @@
-%% flatten.glp - Flattening nested lists
+%% flatten_original.glp - Flattening nested lists (original without types)
 %% Source: AofGLP Book Chapter 6
+
+%% Type definitions
+NestedList ::= [] ; [_ | NestedList].
+
+%% Procedure type declarations
+procedure flatten(NestedList?, List).
+procedure flatten_dl(NestedList?, List, List?).
+procedure is_list(_?).
+procedure reduce(_?, _).
 
 flatten(Xs, Ys?) :- flatten_dl(Xs?, Ys, []).
 

@@ -2,12 +2,12 @@
 %% substitute(X,Y,TreeX,TreeY) :- TreeY is the result of replacing all X in TreeX by Y.
 
 %% Type definitions
-Tree ::= void ; tree(Any, Tree, Tree).
+Tree ::= void ; tree(_, Tree, Tree).
 
 %% Procedure type declarations
-procedure substitute(Any, Any, Tree, Tree).
-procedure replace(Any, Any, Any, Any).
-procedure reduce(Any, Any).
+procedure substitute(_?, _?, Tree?, Tree).
+procedure replace(_?, _?, _?, _).
+procedure reduce(_?, _).
 
 substitute(_, _, void, void).
 substitute(X, Y, tree(Leaf, Left, Right), tree(Leaf1?, Left1?, Right1?)) :-

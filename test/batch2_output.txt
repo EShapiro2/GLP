@@ -1,0 +1,490 @@
+╔════════════════════════════════════════╗
+║  GLP REPL - With Type Checking         ║
+╚════════════════════════════════════════╝
+
+Build: 591cf5a Fix parser string literal recognition and type checker coverage
+Compiled: 2026-01-12 (Type checker integration)
+Working directory: udi/
+Source files: glp/*.glp
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit
+
+Loaded stdlib: assign.glp (931 ops)
+Loaded stdlib: univ.glp (28 ops)
+Loaded stdlib: unify.glp (8 ops)
+Loaded stdlib: mwm.glp (161 ops)
+Loaded stdlib: equator.glp (11 ops)
+Loaded stdlib: time.glp (9 ops)
+GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/append.glp:
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for append(3,1):↓ from state _?
+  Path: (append/3, 0, input) → ([], 1, input)
+  Inconsistent path: No transition for append(3,2):↓ from state _?
+  Path: (append/3, 0, input) → (Ys?, 2, input)
+  Inconsistent path: No transition for append(3,3):↓ from state _?
+  Path: (append/3, 0, input) → (Ys?, 3, input) at line 14, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for append(3,1):↓ from state _?
+  Path: (append/3, 0, input) → ([|]/2, 1, input) → (X?, 1, input)
+  Inconsistent path: No transition for append(3,1):↓ from state _?
+  Path: (append/3, 0, input) → ([|]/2, 1, input) → (Xs?, 2, input)
+  Inconsistent path: No transition for append(3,2):↓ from state _?
+  Path: (append/3, 0, input) → (Ys?, 2, input)
+  Inconsistent path: No transition for append(3,3):↓ from state _?
+  Path: (append/3, 0, input) → ([|]/2, 3, input) → (X?, 1, input)
+  Inconsistent path: No transition for append(3,3):↓ from state _?
+  Path: (append/3, 0, input) → ([|]/2, 3, input) → (Zs?, 2, input)
+  Inconsistent path: No transition for append(3,1):↑ from state _
+  Path: (append/3, 0, output) → (Xs, 1, output)
+  Inconsistent path: No transition for append(3,2):↑ from state _
+  Path: (append/3, 0, output) → (Ys, 2, output)
+  Inconsistent path: No transition for append(3,3):↑ from state _
+  Path: (append/3, 0, output) → (Zs, 3, output) at line 15, column 1
+    in: reduce(2 args).
+  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 8, column 1
+GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/copy.glp:
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for copy(2,1):↓ from state _?
+  Path: (copy/2, 0, input) → ([], 1, input)
+  Inconsistent path: No transition for copy(2,2):↓ from state _?
+  Path: (copy/2, 0, input) → ([], 2, input) at line 14, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for copy(2,1):↓ from state _?
+  Path: (copy/2, 0, input) → ([|]/2, 1, input) → (X?, 1, input)
+  Inconsistent path: No transition for copy(2,1):↓ from state _?
+  Path: (copy/2, 0, input) → ([|]/2, 1, input) → (Xs?, 2, input)
+  Inconsistent path: No transition for copy(2,2):↓ from state _?
+  Path: (copy/2, 0, input) → ([|]/2, 2, input) → (X?, 1, input)
+  Inconsistent path: No transition for copy(2,2):↓ from state _?
+  Path: (copy/2, 0, input) → ([|]/2, 2, input) → (Ys?, 2, input)
+  Inconsistent path: No transition for copy(2,1):↑ from state _
+  Path: (copy/2, 0, output) → (Xs, 1, output)
+  Inconsistent path: No transition for copy(2,2):↑ from state _
+  Path: (copy/2, 0, output) → (Ys, 2, output) at line 15, column 1
+    in: reduce(2 args).
+  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 8, column 1
+GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/delete.glp:
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for delete(3,1):↓ from state _?
+  Path: (delete/3, 0, input) → ([|]/2, 1, input) → (X?, 1, input)
+  Inconsistent path: No transition for delete(3,1):↓ from state _?
+  Path: (delete/3, 0, input) → ([|]/2, 1, input) → (Xs?, 2, input)
+  Inconsistent path: No transition for delete(3,2):↓ from state _?
+  Path: (delete/3, 0, input) → (Y?, 2, input)
+  Inconsistent path: No transition for delete(3,3):↓ from state _?
+  Path: (delete/3, 0, input) → (Ys?, 3, input)
+  Inconsistent path: No transition for delete(3,1):↑ from state _
+  Path: (delete/3, 0, output) → (Xs, 1, output)
+  Inconsistent path: No transition for delete(3,2):↑ from state _
+  Path: (delete/3, 0, output) → (Y, 2, output)
+  Inconsistent path: No transition for delete(3,3):↑ from state _
+  Path: (delete/3, 0, output) → (Ys, 3, output) at line 16, column 1
+    in: reduce(2 args) :- 1 goals.
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for delete(3,1):↓ from state _?
+  Path: (delete/3, 0, input) → ([|]/2, 1, input) → (H?, 1, input)
+  Inconsistent path: No transition for delete(3,1):↓ from state _?
+  Path: (delete/3, 0, input) → ([|]/2, 1, input) → (Xs?, 2, input)
+  Inconsistent path: No transition for delete(3,2):↓ from state _?
+  Path: (delete/3, 0, input) → (Z?, 2, input)
+  Inconsistent path: No transition for delete(3,3):↓ from state _?
+  Path: (delete/3, 0, input) → ([|]/2, 3, input) → (H?, 1, input)
+  Inconsistent path: No transition for delete(3,3):↓ from state _?
+  Path: (delete/3, 0, input) → ([|]/2, 3, input) → (Ys?, 2, input)
+  Inconsistent path: No transition for delete(3,1):↑ from state _
+  Path: (delete/3, 0, output) → (Xs, 1, output)
+  Inconsistent path: No transition for delete(3,2):↑ from state _
+  Path: (delete/3, 0, output) → (Z, 2, output)
+  Inconsistent path: No transition for delete(3,3):↑ from state _
+  Path: (delete/3, 0, output) → (Ys, 3, output) at line 17, column 1
+    in: reduce(2 args) :- 1 goals.
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for delete(3,1):↓ from state _?
+  Path: (delete/3, 0, input) → ([], 1, input)
+  Inconsistent path: No transition for delete(3,2):↓ from state _?
+  Path: (delete/3, 0, input) → (_?, 2, input)
+  Inconsistent path: No transition for delete(3,3):↓ from state _?
+  Path: (delete/3, 0, input) → ([], 3, input) at line 18, column 1
+    in: reduce(2 args).
+  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 9, column 1
+GLP> ✓ Loaded: /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/dl_append.glp
+GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/filter_even.glp:
+  ✗ Body atom 0 (=:=) is not well-typed:
+  Inconsistent path: No transition for mod(2,1):↓ from state Number?
+  Path: (mod/2, 0, input) → (X?, 1, input)
+  Inconsistent path: No transition for mod(2,2):↓ from state Number?
+  Path: (mod/2, 0, input) → (2, 2, input) at line 12, column 1
+    in: filter_even(2 args) :- 1 goals.
+  ✗ Body atom 0 (=\=) is not well-typed:
+  Inconsistent path: No transition for mod(2,1):↓ from state Number?
+  Path: (mod/2, 0, input) → (X?, 1, input)
+  Inconsistent path: No transition for mod(2,2):↓ from state Number?
+  Path: (mod/2, 0, input) → (2, 2, input) at line 15, column 1
+    in: filter_even(2 args) :- 1 goals.
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for filter_even(2,1):↓ from state _?
+  Path: (filter_even/2, 0, input) → ([], 1, input)
+  Inconsistent path: No transition for filter_even(2,2):↓ from state _?
+  Path: (filter_even/2, 0, input) → ([], 2, input) at line 20, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for filter_even(2,1):↓ from state _?
+  Path: (filter_even/2, 0, input) → ([|]/2, 1, input) → (X?, 1, input)
+  Inconsistent path: No transition for filter_even(2,1):↓ from state _?
+  Path: (filter_even/2, 0, input) → ([|]/2, 1, input) → (Xs?, 2, input)
+  Inconsistent path: No transition for filter_even(2,2):↓ from state _?
+  Path: (filter_even/2, 0, input) → ([|]/2, 2, input) → (X?, 1, input)
+  Inconsistent path: No transition for filter_even(2,2):↓ from state _?
+  Path: (filter_even/2, 0, input) → ([|]/2, 2, input) → (Ys?, 2, input)
+  Inconsistent path: No transition for filter_even(2,1):↑ from state _
+  Path: (filter_even/2, 0, output) → (Xs, 1, output)
+  Inconsistent path: No transition for filter_even(2,2):↑ from state _
+  Path: (filter_even/2, 0, output) → (Ys, 2, output) at line 21, column 1
+    in: reduce(2 args) :- 1 goals.
+  ✗ Body atom 0 (=:=) is not well-typed:
+  Inconsistent path: No transition for mod(2,1):↓ from state Number?
+  Path: (mod/2, 0, input) → (X?, 1, input)
+  Inconsistent path: No transition for mod(2,2):↓ from state Number?
+  Path: (mod/2, 0, input) → (2, 2, input) at line 21, column 1
+    in: reduce(2 args) :- 1 goals.
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for filter_even(2,1):↓ from state _?
+  Path: (filter_even/2, 0, input) → ([|]/2, 1, input) → (X?, 1, input)
+  Inconsistent path: No transition for filter_even(2,1):↓ from state _?
+  Path: (filter_even/2, 0, input) → ([|]/2, 1, input) → (Xs?, 2, input)
+  Inconsistent path: No transition for filter_even(2,2):↓ from state _?
+  Path: (filter_even/2, 0, input) → (Ys?, 2, input)
+  Inconsistent path: No transition for filter_even(2,1):↑ from state _
+  Path: (filter_even/2, 0, output) → (Xs, 1, output)
+  Inconsistent path: No transition for filter_even(2,2):↑ from state _
+  Path: (filter_even/2, 0, output) → (Ys, 2, output) at line 22, column 1
+    in: reduce(2 args) :- 1 goals.
+  ✗ Body atom 0 (=\=) is not well-typed:
+  Inconsistent path: No transition for mod(2,1):↓ from state Number?
+  Path: (mod/2, 0, input) → (X?, 1, input)
+  Inconsistent path: No transition for mod(2,2):↓ from state Number?
+  Path: (mod/2, 0, input) → (2, 2, input) at line 22, column 1
+    in: reduce(2 args) :- 1 goals.
+  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 9, column 1
+GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/is_list.glp:
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for list(1,1):↓ from state _?
+  Path: (list/1, 0, input) → ([], 1, input) at line 14, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for list(1,1):↓ from state _?
+  Path: (list/1, 0, input) → ([|]/2, 1, input) → (_?, 1, input)
+  Inconsistent path: No transition for list(1,1):↓ from state _?
+  Path: (list/1, 0, input) → ([|]/2, 1, input) → (Xs?, 2, input)
+  Inconsistent path: No transition for list(1,1):↑ from state _
+  Path: (list/1, 0, output) → (Xs, 1, output) at line 15, column 1
+    in: reduce(2 args).
+  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 8, column 1
+GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/length.glp:
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for length(2,1):↓ from state _?
+  Path: (length/2, 0, input) → (Xs?, 1, input)
+  Inconsistent path: No transition for length(2,2):↓ from state _?
+  Path: (length/2, 0, input) → (N?, 2, input)
+  Inconsistent path: No transition for length_acc(3,1):↑ from state _
+  Path: (length_acc/3, 0, output) → (Xs, 1, output)
+  Inconsistent path: No transition for length_acc(3,2):↑ from state _
+  Path: (length_acc/3, 0, output) → (0, 2, output)
+  Inconsistent path: No transition for length_acc(3,3):↑ from state _
+  Path: (length_acc/3, 0, output) → (N, 3, output) at line 19, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for length_acc(3,1):↓ from state _?
+  Path: (length_acc/3, 0, input) → ([], 1, input)
+  Inconsistent path: No transition for length_acc(3,2):↓ from state _?
+  Path: (length_acc/3, 0, input) → (Acc?, 2, input)
+  Inconsistent path: No transition for length_acc(3,3):↓ from state _?
+  Path: (length_acc/3, 0, input) → (Acc?, 3, input) at line 20, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for length_acc(3,1):↓ from state _?
+  Path: (length_acc/3, 0, input) → ([|]/2, 1, input) → (_?, 1, input)
+  Inconsistent path: No transition for length_acc(3,1):↓ from state _?
+  Path: (length_acc/3, 0, input) → ([|]/2, 1, input) → (Xs?, 2, input)
+  Inconsistent path: No transition for length_acc(3,2):↓ from state _?
+  Path: (length_acc/3, 0, input) → (Acc?, 2, input)
+  Inconsistent path: No transition for length_acc(3,3):↓ from state _?
+  Path: (length_acc/3, 0, input) → (N?, 3, input)
+  Inconsistent path: No transition for ,(2,1):↑ from state _
+  Path: (,/2, 0, output) → (:=/2, 1, output) → (Acc1, 1, output)
+  Inconsistent path: No transition for ,(2,1):↑ from state _
+  Path: (,/2, 0, output) → (:=/2, 1, output) → (+/2, 2, output) → (Acc, 1, output)
+  Inconsistent path: No transition for ,(2,1):↑ from state _
+  Path: (,/2, 0, output) → (:=/2, 1, output) → (+/2, 2, output) → (1, 2, output)
+  Inconsistent path: No transition for ,(2,2):↑ from state _
+  Path: (,/2, 0, output) → (length_acc/3, 2, output) → (Xs, 1, output)
+  Inconsistent path: No transition for ,(2,2):↑ from state _
+  Path: (,/2, 0, output) → (length_acc/3, 2, output) → (Acc1, 2, output)
+  Inconsistent path: No transition for ,(2,2):↑ from state _
+  Path: (,/2, 0, output) → (length_acc/3, 2, output) → (N, 3, output) at line 21, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for :=(2,1):↓ from state _?
+  Path: (:=/2, 0, input) → (X?, 1, input)
+  Inconsistent path: No transition for :=(2,2):↓ from state _?
+  Path: (:=/2, 0, input) → (T?, 2, input) at line 22, column 1
+    in: reduce(2 args) :- 1 goals.
+  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 9, column 1
+GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/map_inc.glp:
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for map_inc(2,1):↓ from state _?
+  Path: (map_inc/2, 0, input) → ([], 1, input)
+  Inconsistent path: No transition for map_inc(2,2):↓ from state _?
+  Path: (map_inc/2, 0, input) → ([], 2, input) at line 17, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for map_inc(2,1):↓ from state _?
+  Path: (map_inc/2, 0, input) → ([|]/2, 1, input) → (X?, 1, input)
+  Inconsistent path: No transition for map_inc(2,1):↓ from state _?
+  Path: (map_inc/2, 0, input) → ([|]/2, 1, input) → (Xs?, 2, input)
+  Inconsistent path: No transition for map_inc(2,2):↓ from state _?
+  Path: (map_inc/2, 0, input) → ([|]/2, 2, input) → (Y?, 1, input)
+  Inconsistent path: No transition for map_inc(2,2):↓ from state _?
+  Path: (map_inc/2, 0, input) → ([|]/2, 2, input) → (Ys?, 2, input)
+  Inconsistent path: No transition for ,(2,1):↑ from state _
+  Path: (,/2, 0, output) → (:=/2, 1, output) → (Y, 1, output)
+  Inconsistent path: No transition for ,(2,1):↑ from state _
+  Path: (,/2, 0, output) → (:=/2, 1, output) → (+/2, 2, output) → (X, 1, output)
+  Inconsistent path: No transition for ,(2,1):↑ from state _
+  Path: (,/2, 0, output) → (:=/2, 1, output) → (+/2, 2, output) → (1, 2, output)
+  Inconsistent path: No transition for ,(2,2):↑ from state _
+  Path: (,/2, 0, output) → (map_inc/2, 2, output) → (Xs, 1, output)
+  Inconsistent path: No transition for ,(2,2):↑ from state _
+  Path: (,/2, 0, output) → (map_inc/2, 2, output) → (Ys, 2, output) at line 18, column 1
+    in: reduce(2 args).
+  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 9, column 1
+GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/maxlist.glp:
+  ✗ maxlist argument 1: uncovered alternative "[]" at path: NumList → [] at line 8, column 1
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for maxlist(2,1):↓ from state _?
+  Path: (maxlist/2, 0, input) → ([|]/2, 1, input) → (X?, 1, input)
+  Inconsistent path: No transition for maxlist(2,1):↓ from state _?
+  Path: (maxlist/2, 0, input) → ([|]/2, 1, input) → (Xs?, 2, input)
+  Inconsistent path: No transition for maxlist(2,2):↓ from state _?
+  Path: (maxlist/2, 0, input) → (M?, 2, input)
+  Inconsistent path: No transition for maxlist(3,1):↑ from state _
+  Path: (maxlist/3, 0, output) → (Xs, 1, output)
+  Inconsistent path: No transition for maxlist(3,2):↑ from state _
+  Path: (maxlist/3, 0, output) → (X, 2, output)
+  Inconsistent path: No transition for maxlist(3,3):↑ from state _
+  Path: (maxlist/3, 0, output) → (M, 3, output) at line 22, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for maxlist(3,1):↓ from state _?
+  Path: (maxlist/3, 0, input) → ([|]/2, 1, input) → (X?, 1, input)
+  Inconsistent path: No transition for maxlist(3,1):↓ from state _?
+  Path: (maxlist/3, 0, input) → ([|]/2, 1, input) → (Xs?, 2, input)
+  Inconsistent path: No transition for maxlist(3,2):↓ from state _?
+  Path: (maxlist/3, 0, input) → (Y?, 2, input)
+  Inconsistent path: No transition for maxlist(3,3):↓ from state _?
+  Path: (maxlist/3, 0, input) → (M?, 3, input)
+  Inconsistent path: No transition for ,(2,1):↑ from state _
+  Path: (,/2, 0, output) → (maximum/3, 1, output) → (X, 1, output)
+  Inconsistent path: No transition for ,(2,1):↑ from state _
+  Path: (,/2, 0, output) → (maximum/3, 1, output) → (Y, 2, output)
+  Inconsistent path: No transition for ,(2,1):↑ from state _
+  Path: (,/2, 0, output) → (maximum/3, 1, output) → (Y1, 3, output)
+  Inconsistent path: No transition for ,(2,2):↑ from state _
+  Path: (,/2, 0, output) → (maxlist/3, 2, output) → (Xs, 1, output)
+  Inconsistent path: No transition for ,(2,2):↑ from state _
+  Path: (,/2, 0, output) → (maxlist/3, 2, output) → (Y1, 2, output)
+  Inconsistent path: No transition for ,(2,2):↑ from state _
+  Path: (,/2, 0, output) → (maxlist/3, 2, output) → (M, 3, output) at line 23, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for maxlist(3,1):↓ from state _?
+  Path: (maxlist/3, 0, input) → ([], 1, input)
+  Inconsistent path: No transition for maxlist(3,2):↓ from state _?
+  Path: (maxlist/3, 0, input) → (M?, 2, input)
+  Inconsistent path: No transition for maxlist(3,3):↓ from state _?
+  Path: (maxlist/3, 0, input) → (M?, 3, input) at line 24, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for maximum(3,1):↓ from state _?
+  Path: (maximum/3, 0, input) → (X?, 1, input)
+  Inconsistent path: No transition for maximum(3,2):↓ from state _?
+  Path: (maximum/3, 0, input) → (Y?, 2, input)
+  Inconsistent path: No transition for maximum(3,3):↓ from state _?
+  Path: (maximum/3, 0, input) → (Y?, 3, input) at line 25, column 1
+    in: reduce(2 args) :- 1 goals.
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for maximum(3,1):↓ from state _?
+  Path: (maximum/3, 0, input) → (X?, 1, input)
+  Inconsistent path: No transition for maximum(3,2):↓ from state _?
+  Path: (maximum/3, 0, input) → (Y?, 2, input)
+  Inconsistent path: No transition for maximum(3,3):↓ from state _?
+  Path: (maximum/3, 0, input) → (X?, 3, input) at line 26, column 1
+    in: reduce(2 args) :- 1 goals.
+  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 11, column 1
+GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/member.glp:
+  ✗ member argument 2: uncovered alternative "[]" at path: List → [] at line 8, column 1
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for member(2,1):↓ from state _?
+  Path: (member/2, 0, input) → (X?, 1, input)
+  Inconsistent path: No transition for member(2,2):↓ from state _?
+  Path: (member/2, 0, input) → ([|]/2, 2, input) → (H?, 1, input)
+  Inconsistent path: No transition for member(2,2):↓ from state _?
+  Path: (member/2, 0, input) → ([|]/2, 2, input) → (_?, 2, input) at line 15, column 1
+    in: reduce(2 args) :- 1 goals.
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for member(2,1):↓ from state _?
+  Path: (member/2, 0, input) → (X?, 1, input)
+  Inconsistent path: No transition for member(2,2):↓ from state _?
+  Path: (member/2, 0, input) → ([|]/2, 2, input) → (_?, 1, input)
+  Inconsistent path: No transition for member(2,2):↓ from state _?
+  Path: (member/2, 0, input) → ([|]/2, 2, input) → (Xs?, 2, input)
+  Inconsistent path: No transition for member(2,1):↑ from state _
+  Path: (member/2, 0, output) → (X, 1, output)
+  Inconsistent path: No transition for member(2,2):↑ from state _
+  Path: (member/2, 0, output) → (Xs, 2, output) at line 16, column 1
+    in: reduce(2 args).
+  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 9, column 1
+GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/nth.glp:
+  ✗ nth argument 2: uncovered alternative "[]" at path: List → [] at line 7, column 1
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for nth(3,1):↓ from state _?
+  Path: (nth/3, 0, input) → (1, 1, input)
+  Inconsistent path: No transition for nth(3,2):↓ from state _?
+  Path: (nth/3, 0, input) → ([|]/2, 2, input) → (X?, 1, input)
+  Inconsistent path: No transition for nth(3,2):↓ from state _?
+  Path: (nth/3, 0, input) → ([|]/2, 2, input) → (_?, 2, input)
+  Inconsistent path: No transition for nth(3,3):↓ from state _?
+  Path: (nth/3, 0, input) → (X?, 3, input) at line 14, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for nth(3,1):↓ from state _?
+  Path: (nth/3, 0, input) → (N?, 1, input)
+  Inconsistent path: No transition for nth(3,2):↓ from state _?
+  Path: (nth/3, 0, input) → ([|]/2, 2, input) → (_?, 1, input)
+  Inconsistent path: No transition for nth(3,2):↓ from state _?
+  Path: (nth/3, 0, input) → ([|]/2, 2, input) → (Xs?, 2, input)
+  Inconsistent path: No transition for nth(3,3):↓ from state _?
+  Path: (nth/3, 0, input) → (X?, 3, input)
+  Inconsistent path: No transition for ,(2,1):↑ from state _
+  Path: (,/2, 0, output) → (:=/2, 1, output) → (N1, 1, output)
+  Inconsistent path: No transition for ,(2,1):↑ from state _
+  Path: (,/2, 0, output) → (:=/2, 1, output) → (-/2, 2, output) → (N, 1, output)
+  Inconsistent path: No transition for ,(2,1):↑ from state _
+  Path: (,/2, 0, output) → (:=/2, 1, output) → (-/2, 2, output) → (1, 2, output)
+  Inconsistent path: No transition for ,(2,2):↑ from state _
+  Path: (,/2, 0, output) → (nth/3, 2, output) → (N1, 1, output)
+  Inconsistent path: No transition for ,(2,2):↑ from state _
+  Path: (,/2, 0, output) → (nth/3, 2, output) → (Xs, 2, output)
+  Inconsistent path: No transition for ,(2,2):↑ from state _
+  Path: (,/2, 0, output) → (nth/3, 2, output) → (X, 3, output) at line 15, column 1
+    in: reduce(2 args) :- 1 goals.
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for :=(2,1):↓ from state _?
+  Path: (:=/2, 0, input) → (X?, 1, input)
+  Inconsistent path: No transition for :=(2,2):↓ from state _?
+  Path: (:=/2, 0, input) → (T?, 2, input) at line 16, column 1
+    in: reduce(2 args) :- 1 goals.
+  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 8, column 1
+GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/prefix.glp:
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for prefix(2,1):↓ from state _?
+  Path: (prefix/2, 0, input) → ([], 1, input)
+  Inconsistent path: No transition for prefix(2,2):↓ from state _?
+  Path: (prefix/2, 0, input) → (_?, 2, input) at line 14, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for prefix(2,1):↓ from state _?
+  Path: (prefix/2, 0, input) → ([|]/2, 1, input) → (X?, 1, input)
+  Inconsistent path: No transition for prefix(2,1):↓ from state _?
+  Path: (prefix/2, 0, input) → ([|]/2, 1, input) → (Xs?, 2, input)
+  Inconsistent path: No transition for prefix(2,2):↓ from state _?
+  Path: (prefix/2, 0, input) → ([|]/2, 2, input) → (X?, 1, input)
+  Inconsistent path: No transition for prefix(2,2):↓ from state _?
+  Path: (prefix/2, 0, input) → ([|]/2, 2, input) → (Ys?, 2, input)
+  Inconsistent path: No transition for prefix(2,1):↑ from state _
+  Path: (prefix/2, 0, output) → (Xs, 1, output)
+  Inconsistent path: No transition for prefix(2,2):↑ from state _
+  Path: (prefix/2, 0, output) → (Ys, 2, output) at line 15, column 1
+    in: reduce(2 args).
+  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 8, column 1
+GLP>   ⚠ Procedure integer/1 declared but not defined at line 18, column 1
+  ⚠ Procedure number/1 declared but not defined at line 19, column 1
+  ⚠ Procedure string/1 declared but not defined at line 20, column 1
+  ⚠ Procedure atom/1 declared but not defined at line 21, column 1
+  ⚠ Procedure constant/1 declared but not defined at line 22, column 1
+  ⚠ Procedure compound/1 declared but not defined at line 23, column 1
+  ⚠ Procedure is_list/1 declared but not defined at line 24, column 1
+  ⚠ Procedure ground/1 declared but not defined at line 27, column 1
+  ⚠ Procedure known/1 declared but not defined at line 28, column 1
+  ⚠ Procedure unknown/1 declared but not defined at line 29, column 1
+  ⚠ Procedure </2 declared but not defined at line 32, column 1
+  ⚠ Procedure >/2 declared but not defined at line 33, column 1
+  ⚠ Procedure =</2 declared but not defined at line 34, column 1
+  ⚠ Procedure >=/2 declared but not defined at line 35, column 1
+  ⚠ Procedure =:=/2 declared but not defined at line 36, column 1
+  ⚠ Procedure =\=/2 declared but not defined at line 37, column 1
+  ⚠ Procedure =?=/2 declared but not defined at line 40, column 1
+  ⚠ Procedure =/2 declared but not defined at line 43, column 1
+  ⚠ Procedure dl_append/3 declared but not defined at line 46, column 1
+  ⚠ Procedure dl_to_list/2 declared but not defined at line 47, column 1
+  ⚠ Procedure new_channel/2 declared but not defined at line 50, column 1
+  ⚠ Procedure send/3 declared but not defined at line 51, column 1
+  ⚠ Procedure receive/3 declared but not defined at line 52, column 1
+  ✓ Type check passed (4 procedures)
+✓ Loaded: /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/reverse.glp
+GLP> ✓ Loaded: /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/reverse_naive.glp
+GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/translate.glp:
+  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 9, column 1
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for translate(2,1):↓ from state _?
+  Path: (translate/2, 0, input) → ([|]/2, 1, input) → (Word?, 1, input)
+  Inconsistent path: No transition for translate(2,1):↓ from state _?
+  Path: (translate/2, 0, input) → ([|]/2, 1, input) → (Words?, 2, input)
+  Inconsistent path: No transition for translate(2,2):↓ from state _?
+  Path: (translate/2, 0, input) → ([|]/2, 2, input) → (Mot?, 1, input)
+  Inconsistent path: No transition for translate(2,2):↓ from state _?
+  Path: (translate/2, 0, input) → ([|]/2, 2, input) → (Mots?, 2, input)
+  Inconsistent path: No transition for ,(2,1):↑ from state _
+  Path: (,/2, 0, output) → (dict/2, 1, output) → (Word, 1, output)
+  Inconsistent path: No transition for ,(2,1):↑ from state _
+  Path: (,/2, 0, output) → (dict/2, 1, output) → (Mot, 2, output)
+  Inconsistent path: No transition for ,(2,2):↑ from state _
+  Path: (,/2, 0, output) → (translate/2, 2, output) → (Words, 1, output)
+  Inconsistent path: No transition for ,(2,2):↑ from state _
+  Path: (,/2, 0, output) → (translate/2, 2, output) → (Mots, 2, output) at line 21, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for translate(2,1):↓ from state _?
+  Path: (translate/2, 0, input) → ([], 1, input)
+  Inconsistent path: No transition for translate(2,2):↓ from state _?
+  Path: (translate/2, 0, input) → ([], 2, input) at line 22, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for dict(2,1):↓ from state _?
+  Path: (dict/2, 0, input) → (the, 1, input)
+  Inconsistent path: No transition for dict(2,2):↓ from state _?
+  Path: (dict/2, 0, input) → (le, 2, input) at line 23, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for dict(2,1):↓ from state _?
+  Path: (dict/2, 0, input) → (dog, 1, input)
+  Inconsistent path: No transition for dict(2,2):↓ from state _?
+  Path: (dict/2, 0, input) → (chien, 2, input) at line 24, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for dict(2,1):↓ from state _?
+  Path: (dict/2, 0, input) → (chases, 1, input)
+  Inconsistent path: No transition for dict(2,2):↓ from state _?
+  Path: (dict/2, 0, input) → (chasse, 2, input) at line 25, column 1
+    in: reduce(2 args).
+  ✗ Head of reduce is not well-typed:
+  Inconsistent path: No transition for dict(2,1):↓ from state _?
+  Path: (dict/2, 0, input) → (cat, 1, input)
+  Inconsistent path: No transition for dict(2,2):↓ from state _?
+  Path: (dict/2, 0, input) → (chat, 2, input) at line 26, column 1
+    in: reduce(2 args).
+  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 10, column 1
+GLP> Goodbye!

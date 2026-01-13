@@ -7,8 +7,8 @@
 NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure producer(NumList, Number).
-procedure consumer(NumList, Number, Number).
+procedure producer(NumList, Number?).
+procedure consumer(NumList?, Number?, Number).
 
 producer([], 0).
 producer([N?|Xs?], N) :- N? > 0 | N1 := N? - 1, producer(Xs, N1?).

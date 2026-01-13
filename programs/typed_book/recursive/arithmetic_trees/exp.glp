@@ -5,11 +5,11 @@
 Nat ::= 0 ; s(Nat).
 
 %% Procedure type declarations
-procedure exp(Nat, Nat, Nat).
-procedure times(Nat, Nat, Nat).
-procedure plus(Nat, Nat, Nat).
-procedure natural_number(Nat).
-procedure reduce(Any, Any).
+procedure exp(Nat?, Nat?, Nat).
+procedure times(Nat?, Nat?, Nat).
+procedure plus(Nat?, Nat?, Nat).
+procedure natural_number(Nat?).
+procedure reduce(_?, _).
 
 exp(s(_), 0, 0).
 exp(0, s(_), s(0)).

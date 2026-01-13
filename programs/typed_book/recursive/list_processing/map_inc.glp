@@ -5,8 +5,8 @@
 NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure map_inc(NumList, NumList).
-procedure reduce(Any, Any).
+procedure map_inc(NumList?, NumList).
+procedure reduce(_?, _).
 
 map_inc([], []).
 map_inc([X|Xs], [Y?|Ys?]) :-

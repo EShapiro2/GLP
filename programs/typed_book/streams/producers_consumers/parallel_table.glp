@@ -9,7 +9,8 @@
 %% MT validation skipped - requires channel infrastructure.
 
 %% Procedure type declarations
-procedure table(Any, Number, Any, Number).
+procedure table(_?, Number?, _?, Number?).
+procedure read(_, _?, _).
 
 %% Lookup: exact key match returns value and true
 table(Self, LowKey, Value, HighKey) :-
@@ -18,22 +19,20 @@ table(Self, LowKey, Value, HighKey) :-
 
 %% Lookup: key in range but not exact match returns false
 table(Self, LowKey, Value, HighKey) :-
-    read(lookup(Key, _, false), Self?, NewSelf),
-    LowKey < Key,
-    Key < HighKey |
+    read(lookup(Key?, _, false), Self?, NewSelf),
+    LowKey? < Key?, Key? < HighKey? |
     table(NewSelf?, LowKey?, Value?, HighKey?).
 
 %% Store: key in range creates two new table segments
 table(Self, LowKey, Value, HighKey) :-
-    read(store(Key, HighValue), Self?, NewSelf),
-    LowKey < Key,
-    Key < HighKey |
+    read(store(Key?, HighValue?), Self?, NewSelf),
+    LowKey? < Key?, Key? < HighKey? |
     table(NewSelf?, LowKey?, Value?, Key?),
     table(NewSelf?, Key?, HighValue?, HighKey?).
 
 %% Store: exact key match updates value
 table(Self, LowKey, _, HighKey) :-
-    read(store(LowKey?, NewValue), Self?, NewSelf) |
+    read(store(LowKey?, NewValue?), Self?, NewSelf) |
     table(NewSelf?, LowKey?, NewValue?, HighKey?).
 
 %% Example using channels for parallel processing:

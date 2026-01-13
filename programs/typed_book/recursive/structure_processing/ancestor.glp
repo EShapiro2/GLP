@@ -2,9 +2,9 @@
 %% ancestor(X,Y) :- X is an ancestor of Y.
 
 %% Procedure type declarations
-procedure parent(Any, Any).
-procedure ancestor(Any, Any).
-procedure reduce(Any, Any).
+procedure parent(_?, _).
+procedure ancestor(_?, _).
+procedure reduce(_?, _).
 
 parent(terach, abraham).
 parent(abraham, isaac).

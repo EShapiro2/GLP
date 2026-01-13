@@ -6,32 +6,21 @@
 %% Implemented using "multistream" - a polymorphic stream with branch elements.
 
 %% Type definitions
-List := [] | [_ | List].
-Multistream := [] | [_ | Multistream] | branch(Multistream, Multistream).
+Multistream ::= [] ; [_ | Multistream] ; branch(Multistream, Multistream).
 
-%% Mode declarations - basic stream operations
-StreamRead := stream_read(Any, List?, List).
-StreamWrite := stream_write(Any?, List, List?).
-StreamEmpty := stream_empty(List?).
-
-%% Mode declarations - channel read (can branch left or right)
-Read := read(Any, Multistream?, Multistream).
-
-%% Mode declarations - channel write
-Write := write(Any?, Multistream?, Multistream).
-
-%% Mode declarations - channel state
-Empty := empty(Multistream?).
-Close := close(Multistream?).
-
-%% Mode declarations - channel access
-Min := min(Any, Multistream?, Multistream).
-Branches := branches(Multistream?, Multistream, Multistream).
-
-%% Mode declarations - channel transformations
-Serialize := serialize(Multistream?, List).
-Subset := subset(Multistream?, Multistream?).
-Merge := merge(List?, List?, List).
+%% Procedure type declarations
+procedure stream_read(_, List?, List).
+procedure stream_write(_?, List, List?).
+procedure stream_empty(List?).
+procedure read(_, Multistream?, Multistream).
+procedure write(_?, Multistream?, Multistream).
+procedure empty(Multistream?).
+procedure close(Multistream?).
+procedure min(_, Multistream?, Multistream).
+procedure branches(Multistream?, Multistream, Multistream).
+procedure serialize(Multistream?, List).
+procedure subset(Multistream?, Multistream?).
+procedure merge(List?, List?, List).
 
 %% Basic stream operations (for comparison)
 stream_read(Message, [Message?|Stream?], Stream).
@@ -41,9 +30,9 @@ stream_empty([]).
 %% Channel operations using multistream representation
 %% Read from channel - nondeterministically reads a minimal element
 read(Message, [Message?|Channel?], Channel).
-read(Message, branch(Left1, Right?), branch(Left2, Right)) :-
+read(Message, branch(Left1, Right?), branch(Left2?, Right)) :-
     read(Message?, Left1?, Left2).
-read(Message, branch(Left?, Right1), branch(Left, Right2)) :-
+read(Message, branch(Left?, Right1), branch(Left, Right2?)) :-
     read(Message?, Right1?, Right2).
 
 %% Write to channel - creates branch for concurrent writers
@@ -65,13 +54,13 @@ close(branch(Left, Right)) :-
 min(Message, [Message?|Channel?], Channel).
 
 %% Split channel into two disjoint subchannels
-branches(branch(C1, C2?), C1, C2).
+branches(branch(C1, C2?), C1?, C2).
 
 %% Serialize: convert channel to totally ordered stream
-serialize(Channel, [Message|Stream?]) :-
+serialize(Channel, [Message?|Stream?]) :-
     min(Message?, Channel?, Channel2) |
     serialize(Channel2?, Stream).
-serialize(Channel, Stream) :-
+serialize(Channel, Stream?) :-
     branches(Channel?, C1, C2) |
     serialize(C1?, S1),
     serialize(C2?, S2),

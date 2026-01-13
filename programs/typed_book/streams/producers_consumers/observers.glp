@@ -7,19 +7,18 @@
 
 %% Type definitions
 NumList ::= [] ; [Number | NumList].
-AnyList ::= [] ; [Any | AnyList].
 Done ::= done.
 
 %% Procedure type declarations
-procedure producer(NumList, Number).
-procedure consumer(NumList, Number, Number).
-procedure observer1(AnyList, AnyList, AnyList).
-procedure test_obs1(Number, AnyList).
-procedure bob(AnyList, Done).
-procedure alice(AnyList, Done).
-procedure bob_finish(AnyList, Done).
-procedure observe(AnyList, AnyList, AnyList).
-procedure test_obs2(AnyList, Done).
+procedure producer(NumList, Number?).
+procedure consumer(NumList?, Number?, Number).
+procedure observer1(List?, List, List).
+procedure test_obs1(Number, List).
+procedure bob(List, Done).
+procedure alice(List, Done).
+procedure bob_finish(List, Done).
+procedure observe(List?, List, List).
+procedure test_obs2(List, Done).
 
 % Producer and consumer for testing
 producer([], 0).

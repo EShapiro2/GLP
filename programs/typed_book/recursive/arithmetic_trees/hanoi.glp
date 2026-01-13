@@ -2,15 +2,15 @@
 %% Source: Standard GLP examples
 
 %% Type definitions
-Move ::= move(Any, Any).
+Move ::= move(_, _).
 MoveList ::= [] ; [Move | MoveList].
 
 %% Procedure type declarations
-procedure hanoi(Number, Any, Any, MoveList).
-procedure hanoi_two(Number, Any, Any, Any, MoveList, MoveList).
-procedure other(Any, Any, Any).
-procedure append(MoveList, MoveList, MoveList).
-procedure reduce(Any, Any).
+procedure hanoi(Number?, _?, _?, MoveList).
+procedure hanoi_two(Number?, _?, _?, _?, MoveList, MoveList).
+procedure other(_?, _?, _).
+procedure append(MoveList?, MoveList?, MoveList).
+procedure reduce(_?, _).
 
 hanoi(0, _, _, []).
 hanoi(N, From, To, Moves?) :-
@@ -29,6 +29,9 @@ hanoi_two(N, From, To, Via, M1?, M2?) :-
 other(a, b, c). other(a, c, b).
 other(b, a, c). other(b, c, a).
 other(c, a, b). other(c, b, a).
+
+append([], Ys, Ys?).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 
 %% Metainterpreter support
 reduce(hanoi(0, _, _, []), true).

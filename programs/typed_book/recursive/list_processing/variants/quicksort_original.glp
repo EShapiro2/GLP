@@ -1,5 +1,14 @@
-%% quicksort.glp - Quicksort in GLP
+%% quicksort_original.glp - Quicksort in GLP (original without types)
 %% Source: Standard GLP sorting
+
+%% Type definitions
+NumList ::= [] ; [Number | NumList].
+
+%% Procedure type declarations
+procedure quicksort(NumList?, NumList).
+procedure qsort(NumList?, NumList, NumList?).
+procedure partition(NumList?, Number?, NumList, NumList).
+procedure reduce(_?, _).
 
 quicksort(Unsorted, Sorted?) :- qsort(Unsorted?, Sorted, []).
 

@@ -5,8 +5,8 @@
 Nat ::= 0 ; s(Nat).
 
 %% Procedure type declarations
-procedure natural_number(Nat).
-procedure reduce(Any, Any).
+procedure natural_number(Nat?).
+procedure reduce(_?, _).
 
 natural_number(0).
 natural_number(s(X)) :- natural_number(X?).

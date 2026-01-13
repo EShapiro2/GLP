@@ -2,12 +2,11 @@
 %% Source: Standard GLP list operations
 %% Note: Uses ground guard to allow comparison
 
-%% Type definitions
-List ::= [] ; [Any | List].
+%% Uses predefined List type
 
 %% Procedure type declarations
-procedure member(Any, List).
-procedure reduce(Any, Any).
+procedure member(_?, List?).
+procedure reduce(_?, _).
 
 member(X, [H|_]) :- ground(X?), ground(H?), X? =:= H? | true.
 member(X, [_|Xs]) :- member(X?, Xs?).

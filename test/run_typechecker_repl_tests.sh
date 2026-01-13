@@ -34,6 +34,7 @@ POSITIVE_FILES=(
     "$TEST_DIR/positive/process_complete.glp"
     "$TEST_DIR/positive/paper/merge.glp"
     "$TEST_DIR/positive/disjoint_primitives.glp"
+    "$TEST_DIR/positive/book/universal_accepts_structured.glp"
     
     # === moded_types/valid (no duplicates) ===
     "$MODED_DIR/valid/append.glp"
@@ -165,10 +166,11 @@ echo "--- Positive Tests (should load successfully) ---"
 for f in "${POSITIVE_FILES[@]}"; do
     name=$(basename "$f" .glp)
     # Check if this file had type errors or SRSW violations
-    if echo "$output" | grep -A5 "$f" | grep -q "Type errors"; then
+    # Use specific pattern "Type errors in $f" to avoid matching errors from other files
+    if echo "$output" | grep -q "Type errors in $f"; then
         echo "FAIL: $name (unexpected type errors)"
         FAIL=$((FAIL + 1))
-    elif echo "$output" | grep -A5 "$f" | grep -q "SRSW violations"; then
+    elif echo "$output" | grep -q "SRSW violations in $f"; then
         echo "FAIL: $name (unexpected SRSW violations)"
         FAIL=$((FAIL + 1))
     elif echo "$output" | grep -q "Loaded: $f"; then
