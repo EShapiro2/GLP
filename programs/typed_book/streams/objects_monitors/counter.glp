@@ -1,15 +1,15 @@
 %% counter.glp - Simple stateful counter object
-%% Source: GLP Papers (monitor pattern)
+%% Source: GLP Papers (monitor idiom)
 %%
 %% Message-driven counter with clear, up, down, show operations.
-%% Demonstrates accumulator pattern with bidirectional state access.
+%% Demonstrates accumulator idiom with bidirectional state access.
 
 %% Type definitions
 CounterMsg ::= clear ; up ; down ; show(Number).
 CounterStream ::= [] ; [CounterMsg | CounterStream].
 
 %% Procedure type declaration
-procedure counter(CounterStream, Number).
+procedure counter(CounterStream?, Number?).
 
 counter([clear|S], _) :-
     counter(S?, 0).

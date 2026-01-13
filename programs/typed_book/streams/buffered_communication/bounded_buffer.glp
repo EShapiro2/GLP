@@ -4,6 +4,22 @@
 %% Buffer represented as difference list H\T where H is message queue head,
 %% T is the hole for new messages. Bounded size creates backpressure.
 
+%% Type definitions
+Buffer ::= List \ List?.
+
+%% Procedure type declarations
+procedure send_unbounded(_?, List, List?).
+procedure receive_unbounded(_, List?, List).
+procedure send(_?, Buffer?, Buffer).
+procedure receive(_, Buffer?, Buffer).
+procedure close(List?).
+procedure closed(_?).
+procedure open(Number?, Buffer).
+procedure sq_num_buffered(Number?, List, Number?).
+procedure integers(Number?, Number?, Buffer?).
+procedure square(Buffer?, List).
+procedure square2(_?, Buffer?, List).
+
 %% Unbounded buffer send/receive (standard stream communication)
 send_unbounded(Msg, [Msg?|NStrm], NStrm?).
 receive_unbounded(Msg?, [Msg|NStrm], NStrm?).
@@ -35,7 +51,7 @@ integers(I, N, Buf\_) :-
     I? > N? |
     close(Buf?).
 
-square(Buf\Tail, Ss) :-
+square(Buf\Tail, Ss?) :-
     receive(I, Buf?\Tail?, NBuf\NTail),
     square2(I?, NBuf?\NTail?, Ss).
 

@@ -2,7 +2,7 @@
    GLP Type Checker Test Suite v2.0   
 ======================================
 
-Running 29 positive + 39 negative + 2 SRSW tests...
+Running 31 positive + 37 negative + 2 SRSW tests...
 
 --- Positive Tests (should load successfully) ---
 PASS: merge_basic
@@ -34,6 +34,8 @@ PASS: any_multi_clause
 PASS: any_with_body
 PASS: list_with_any_element
 PASS: any_constant_at_output
+PASS: any_constant_at_input
+PASS: any_empty_list
 
 --- Negative Tests (should be rejected by type checker) ---
 PASS: merge_missing_both_nil (rejected: loading error)
@@ -67,13 +69,11 @@ PASS: mixed_clauses (rejected: SRSW violation)
 PASS: nested_struct_wrong_mode (rejected: loading error)
 PASS: pair_list_wrong_mode (rejected: SRSW violation)
 PASS: recursive_type_deep_error (rejected: SRSW violation)
-PASS: response_slot_no_embedded (rejected: type errors)
-PASS: any_constant_at_input (rejected: type errors)
-PASS: any_empty_list (rejected: type errors)
-PASS: any_list_cons (rejected: type errors)
-PASS: any_mixed_clauses (rejected: type errors)
-PASS: any_reduce_pattern (rejected: type errors)
-PASS: any_struct_at_input (rejected: type errors)
+PASS: response_slot_no_embedded (rejected: loading error)
+PASS: any_list_cons (rejected: SRSW violation)
+PASS: any_mixed_clauses (rejected: SRSW violation)
+PASS: any_reduce_pattern (rejected: SRSW violation)
+PASS: any_struct_at_input (rejected: SRSW violation)
 PASS: any_struct_at_output (rejected: SRSW violation)
 
 --- SRSW Tests (should be rejected by parser for SRSW violations) ---

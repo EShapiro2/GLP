@@ -1,0 +1,11 @@
+%% Constant at _? (input) position - VALID
+%% Per spec v0.7: _? is a FINAL STATE requiring NO coverage checking.
+%% The type _? means "accept any consumed term" - it does NOT mean
+%% "clauses must cover all possible terms".
+%%
+%% Covariance: 42 at _? position is accepted (wildcard accepts any term)
+%% Contravariance: No coverage check needed for _? (final state)
+%%
+%% Expected: PASS
+procedure baz(_?).
+baz(42).

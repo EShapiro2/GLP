@@ -59,6 +59,8 @@ POSITIVE_FILES=(
     "$MODED_DIR/valid/universal/any_with_body.glp"
     "$MODED_DIR/valid/universal/list_with_any_element.glp"
     "$MODED_DIR/valid/universal/any_constant_at_output.glp"
+    "$MODED_DIR/valid/universal/any_constant_at_input.glp"
+    "$MODED_DIR/valid/universal/any_empty_list.glp"
 )
 
 # =============================================================================
@@ -118,8 +120,6 @@ NEGATIVE_FILES=(
     "$MODED_DIR/invalid/deep/response_slot_no_embedded.glp"
     
     # === moded_types/invalid/universal ===
-    "$MODED_DIR/invalid/universal/any_constant_at_input.glp"
-    "$MODED_DIR/invalid/universal/any_empty_list.glp"
     "$MODED_DIR/invalid/universal/any_list_cons.glp"
     "$MODED_DIR/invalid/universal/any_mixed_clauses.glp"
     "$MODED_DIR/invalid/universal/any_reduce_pattern.glp"

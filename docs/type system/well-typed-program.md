@@ -1,9 +1,9 @@
 # Module: well-typed-program
 
-**Version**: 0.6  
-**Date**: 2025-01-12  
+**Version**: 0.7  
+**Date**: 2025-01-13  
 **Status**: DRAFT  
-**Paper References**: Definition [Well-typed GLP program], Definition [Type Complementarity], Definition [Complementarily-Typed Variables]
+**Paper References**: Definition [Well-typed GLP program], Definition [Type Automaton], Definition [Type Complementarity]
 
 ## Purpose
 
@@ -40,6 +40,33 @@ For every procedure with input arguments, every possible input must be accepted 
 This ensures that the program can **consume** all values allowed by the input types.
 
 **Structural coverage checking:** We traverse the input type automaton and verify that each transition (alternative) is covered by some clause head.
+
+### Definition: Wildcard Types and Final States (Paper Section 4.2)
+
+From the paper's Definition [Type Automaton]:
+
+> **Wildcard states:** The states `_` and `_?` accept any term:
+> - `_` accepts any produced term (a writer or ground term with mode ↑)
+> - `_?` accepts any consumed term (a reader or ground term with mode ↓)
+> - **These are final states; no outgoing transitions are required.**
+
+**CRITICAL:** Wildcard types `_` and `_?` are **final states** in the type automaton. This has two important consequences:
+
+1. **For covariance (clause well-typing):** A term at a position typed `_` or `_?` is automatically well-typed—the wildcard accepts any term structure.
+
+2. **For contravariance (coverage checking):** A procedure argument typed `_?` requires **NO coverage checking**. Since `_?` is a final state with no outgoing transitions, there are no alternatives to cover. The type simply declares "any consumed term is acceptable here"—it does NOT require clauses to handle all possible terms.
+
+### Distinction: Type Acceptance vs. Clause Coverage
+
+The type `_?` means:
+- **Type automaton perspective:** "This position accepts any consumed term" — the automaton immediately accepts (final state)
+- **NOT:** "Clauses must cover all possible input terms"
+
+A procedure declared as `procedure reduce(_?, _)` is well-typed as long as:
+1. Each clause's head is well-typed (covariance) — any structure at argument 1 is fine since `_?` accepts anything
+2. No coverage check is needed for argument 1 (contravariance) — `_?` is a final state
+
+The clauses can match specific structures like `reduce(foo(X), ...)` without needing a catch-all clause. The type declaration describes what the **type system** accepts, not what the **clauses** must cover.
 
 ### Definition: Type Complementarity (Paper Section 4.3)
 
@@ -121,13 +148,24 @@ checkProgram(clauses, dfa, env):
       c.head.functor == proc.name && c.head.arity == proc.arity)
     
     for argIndex in 1..proc.arity:
-      if proc.argTypes[argIndex - 1].isInput:
+      argType = proc.argTypes[argIndex - 1]
+      if argType.isInput:
+        // CRITICAL: Skip coverage check for wildcard input type _?
+        // Wildcard types are final states - no transitions to cover
+        if isWildcardType(argType):
+          continue  // No coverage check needed
+        
         errors = checkCoverage(procClauses, proc, argIndex, dfa, env)
         coverageErrors.addAll(errors)
   
   isWellTyped = clauseResults.all(r => r.isWellTyped) && coverageErrors.isEmpty
   
   return ProgramCheckResult(isWellTyped, clauseResults, coverageErrors)
+
+isWildcardType(argType):
+  // Returns true if the argument type is the universal wildcard _?
+  // The base type name (without ?) would be "_"
+  return argType.baseName == "_"
 ```
 
 ### Algorithm: Structural Coverage Check
@@ -137,6 +175,10 @@ checkCoverage(clauses, proc, argIndex, dfa, env):
   // Get the input type automaton directly (already the T? automaton)
   inputTypeName = getFullTypeName(proc.argTypes[argIndex - 1])
   inputAutomaton = dfa.getAutomaton(inputTypeName)
+  
+  // CRITICAL: If start state is final (wildcard), no coverage needed
+  if inputAutomaton.startState.isFinal:
+    return []  // No errors - wildcard accepts everything
   
   errors = []
   visited = {}
@@ -160,8 +202,14 @@ checkStateCoverage(state, clauses, argIndex, pathPrefix, visited, errors, automa
     return  // Already checked this state
   visited.add(state.name)
   
-  // Wildcard and primitive states don't need coverage - they're matched by variables
-  if state.isFinal or state.isPrimitiveType:
+  // CRITICAL: Final states (including wildcards _/_?) need no coverage
+  // They have no outgoing transitions - nothing to cover
+  if state.isFinal:
+    return
+  
+  // Primitive type states (Integer?, String?, Number?) are also effectively final
+  // Variables of appropriate type will match them
+  if state.isPrimitiveType:
     return
   
   // Get all transitions (alternatives) from this state
@@ -340,6 +388,54 @@ At `Stream(CounterCall)?` state:
 
 **Result: Well-typed**
 
+### Example 6: Wildcard Input Type — No Coverage Required
+
+```
+Nat ::= 0 ; s(Nat).
+
+procedure natural_number(Nat?).
+procedure reduce(_?, _).
+
+natural_number(0).
+natural_number(s(X)) :- natural_number(X?).
+
+reduce(natural_number(0), true).
+reduce(natural_number(s(X)), natural_number(X?)).
+```
+
+**Covariance:** 
+- `natural_number` clauses: Well-typed ✓
+- `reduce` clauses: Well-typed ✓ (any structure at `_?` position is accepted)
+
+**Contravariance for `natural_number` argument 1 (Nat?):**
+- `0`: Clause 1 matches ✓
+- `s`: Clause 2 matches ✓
+
+**Contravariance for `reduce` argument 1 (_?):**
+- **NO COVERAGE CHECK NEEDED** — `_?` is a final state
+- The type `_?` means "accept any consumed term"
+- It does NOT mean "clauses must handle all possible terms"
+
+**Result: Well-typed program**
+
+### Example 7: Metainterpreter with reduce(_?, _)
+
+```
+procedure reduce(_?, _).
+
+reduce(append([], Ys, Ys?), true).
+reduce(append([X|Xs], Ys, [X?|Zs?]), append(Xs?, Ys?, Zs)).
+reduce(member(X, [X?|_]), true).
+reduce(member(X, [_|Xs]), member(X?, Xs?)).
+```
+
+**Analysis:**
+- Each `reduce` clause is well-typed: the head structures are valid consumed terms at `_?`
+- NO coverage error for argument 1: `_?` is a final state, no transitions to cover
+- The clauses intentionally only handle specific goal forms — this is correct behavior
+
+**Result: Well-typed program**
+
 ## Error Conditions
 
 | Condition | Error |
@@ -368,6 +464,15 @@ Structural coverage is simpler:
 
 A variable at an argument position is a **wildcard** — it accepts all values of the declared type. This is why `getAcceptedLabels` returns `ALL_LABELS` for variables.
 
+### Wildcard Types Are Final States
+
+The types `_` and `_?` are **final states** in the type automaton:
+- They have no outgoing transitions
+- They immediately accept any term of the appropriate mode
+- Coverage checking terminates immediately for these types
+
+This is different from a user-defined type with alternatives—those have transitions that must be covered.
+
 ### Type Complementarity vs Exact Complement
 
 The paper defines type complementarity (S ⊴ T) as a generalization of exact complementation. For most programs, paired variables have exactly complementary types (S = T?). Type complementarity allows asymmetric client/server interactions where a client uses a subset of operations.
@@ -381,3 +486,4 @@ The current implementation checks exact complementation. Full type complementari
 | 0.1 | 2025-01-07 | Initial draft |
 | 0.5 | 2025-01-08 | Replace DFA set operations with structural coverage |
 | 0.6 | 2025-01-12 | Update for ProgramDFA; add paper references; add type complementarity definitions; add interactive type example |
+| 0.7 | 2025-01-13 | **CRITICAL FIX:** Clarify that wildcard types `_` and `_?` are final states requiring NO coverage checking. Add Examples 6 and 7 demonstrating `reduce(_?, _)`. Update algorithms to skip coverage check for wildcard input types. |

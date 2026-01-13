@@ -1,7 +1,7 @@
 // lib/analysis/type_checker/type_checker.dart
 //
 // Main type checker implementing GLP well-typed program checking.
-// Specification: docs/modules/well-typed-program.md v0.5
+// Specification: docs/modules/well-typed-program.md v0.7
 // Paper Reference: Definition 4.10 (lines 351-357)
 //
 // A typed GLP program P = (Cs, D) is well-typed if:
@@ -247,22 +247,12 @@ class TypeChecker {
     // Get the input type
     final argType = decl.argTypes[argIndex - 1];
 
-    // Handle primitive types
+    // Handle primitive/wildcard types (_ or _?)
+    // Per spec v0.7: Wildcard types are FINAL STATES requiring NO coverage checking.
+    // The type _? means "accept any consumed term" - it does NOT mean
+    // "clauses must cover all possible terms".
     if (argType is PrimitiveModeAlt) {
-      // For _ (output): no coverage check needed - produces any value
-      // For _? (input): must have a variable to cover all possible inputs
-      if (argType.isInput) {
-        // Check that some clause has a variable at this position
-        if (!_anyClauseHasVariableAtPath(clauses, argIndex, const [])) {
-          errors.add(TypeError(
-            'Coverage error: argument $argIndex has type _? (universal input) '
-            'but no clause has a variable at this position to accept all inputs',
-            decl.line,
-            decl.column,
-          ));
-        }
-      }
-      return errors;
+      return errors;  // No coverage check needed for wildcards
     }
 
     // Handle named type references

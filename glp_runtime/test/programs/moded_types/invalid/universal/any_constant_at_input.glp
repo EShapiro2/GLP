@@ -1,5 +1,0 @@
-%% Constant at _? (input) position - INVALID (coverage failure)
-%% Per spec v0.6: _? accepts consumed terms, but coverage requires
-%% clauses to accept ALL input paths. A single constant (42) doesn't cover _?.
-procedure baz(_?).
-baz(42).

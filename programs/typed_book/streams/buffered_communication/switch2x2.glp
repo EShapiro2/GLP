@@ -5,13 +5,12 @@
 %% Uses bounded buffer for flow control.
 %% Suspends when both output ports are full.
 
-%% Type definitions
-List ::= [] ; [Any | List].
+%% Uses predefined List type
 
 %% Procedure type declarations
-procedure switch2x2(List, List, List, List).
-procedure send(Any, List, List).
-procedure receive(Any, List, List).
+procedure switch2x2(List?, List?, List, List).
+procedure send(_?, List?, List).
+procedure receive(_, List?, List).
 
 switch2x2(In1, In2, Out1, Out2) :-
     receive(M, In1?, Ins1), send(M?, Out1?, Outs1) |
@@ -27,5 +26,5 @@ switch2x2(In1, In2, Out1, Out2) :-
     switch2x2(In1?, Ins2?, Out1?, Outs2?).
 
 %% Helper predicates (from bounded_buffer.glp)
-send(Msg, [Msg|NBuf?], NBuf).
-receive(Msg, [Msg|NBuf?], NBuf).
+send(Msg, [Msg?|NBuf?], NBuf).
+receive(Msg?, [Msg|NBuf?], NBuf).
