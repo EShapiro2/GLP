@@ -12,5 +12,5 @@
 % Composition: list → tuple
 X? =.. [Y|Ys] :- list(Ys?) | '_list_to_tuple'([Y?|Ys?], X).
 
-% Decomposition: tuple → list
-X =.. Y? :- tuple(X?) | '_tuple_to_list'(X?, Y).
+% Decomposition: compound → list
+X =.. Y? :- compound(X?) | '_tuple_to_list'(X?, Y).
