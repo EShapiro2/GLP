@@ -1,8 +1,8 @@
 %% main_module.glp - Demonstrates cross-module RPC
 
 %% Procedure type declarations
-procedure compute(Any).
-procedure reduce(Any, Any).
+procedure compute(_).
+procedure reduce(_?, _).
 
 compute(Result?) :-
     math_module # factorial(5, F),

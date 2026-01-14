@@ -1,8 +1,6 @@
 %% play_group_manager.glp - Manager-Based Group Messaging Play
 %%
 %% Scenario: Alice creates a group, invites Bob and Carol.
-
-%% Type definitions (test scenario - minimal declarations needed)
 %% All messages go through Alice (manager) who serializes and distributes.
 %%
 %% This demonstrates:
@@ -11,6 +9,25 @@
 %% 3. Bob posts a message -> goes to Alice -> distributed to all
 %% 4. Carol posts a message -> goes to Alice -> distributed to all
 %% 5. All members see messages in same order (manager serializes)
+
+%% Type definitions
+Msg ::= msg(_, _).
+MsgList ::= [] ; [Msg | MsgList].
+MemberEntry ::= (_, MsgList).
+MemberList ::= [] ; [MemberEntry | MemberList].
+GroupCmd ::= invite(_?) ; post(_?, _?).
+CmdList ::= [] ; [GroupCmd | CmdList].
+
+%% Procedure type declarations
+procedure manager(CmdList?, MsgList, MemberList).
+procedure manage(CmdList?, MemberList?, MsgList?, MsgList, MemberList).
+procedure prepend_all(Msg?, MemberList?, MemberList).
+procedure get_member_stream(_?, MemberList?, MsgList).
+procedure play_group_manager.
+procedure play_continue(MsgList?, MemberList?).
+procedure verify_group(MsgList?, MsgList?, MsgList?).
+procedure check_feed(MsgList?).
+procedure check_streams(MsgList?, MsgList?).
 
 %% === Manager: processes commands, returns feed and member streams ===
 

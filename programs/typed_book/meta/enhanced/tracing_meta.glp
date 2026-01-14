@@ -4,12 +4,15 @@
 %% Builds execution tree capturing each reduction.
 %% Uses observe/3 to capture goal state at each step.
 
+%% Type definitions
+ExecTree ::= true ; fork(ExecTree, ExecTree) ; reduction(_, _?, ExecTree).
+
 %% Procedure type declarations
-procedure run(Any, Any, Any).
-procedure replay(Any, Any, Any).
-procedure reduce(Any, Any, Any).
-procedure reduce_by_index(Any, Any, Any).
-procedure observe(Any, Any, Any).
+procedure run(_?, _?, ExecTree).
+procedure replay(_?, ExecTree?, _).
+procedure reduce(_?, _, _).
+procedure reduce_by_index(_?, _, _).
+procedure observe(_?, _, _).
 
 run(_, true, true).                              % halt
 run(M, (A, B), fork(TA?, TB?)) :-                % fork
@@ -18,7 +21,7 @@ run(M, (A, B), fork(TA?, TB?)) :-                % fork
     run(M?, B?, TB).
 run(_, M1 # G, Tree?) :- run(M1?, G?, Tree).     % cross-module
 run(M, A, reduction(A_obs?, I?, TB?)) :-         % reduce
-    tuple(A?), ground(M?) |
+    compound(A?), ground(M?) |
     observe(A?, A_exec, A_obs),
     M? # reduce(A_exec?, B, I),
     run(M?, B?, TB).

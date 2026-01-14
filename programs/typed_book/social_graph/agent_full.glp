@@ -2,16 +2,18 @@
 % Based on GLP 2025 paper social graph
 
 %% Type definitions
-FriendList ::= [] ; [Any | FriendList].
+FriendEntry ::= (_, _).
+FriendList ::= [] ; [FriendEntry | FriendList].
+Channel ::= ch(List?, List).
 
 %% Procedure type declarations
-procedure agent(Any, Any, Any).
-procedure agent_loop(Any, Any, Any, FriendList).
-procedure agent_wait_response(Any, Any, Any, FriendList, Any, Any).
-procedure lookup_friend(Any, FriendList, Any).
-procedure receive(Any, Any, Any).
-procedure send(Any, Any, Any).
-procedure new_channel(Any, Any).
+procedure agent(_?, Channel?, Channel?).
+procedure agent_loop(_?, Channel?, Channel?, FriendList?).
+procedure agent_wait_response(_?, Channel?, Channel?, FriendList?, _?, _?).
+procedure lookup_friend(_?, FriendList?, _).
+procedure receive(_, Channel?, Channel).
+procedure send(_?, Channel?, Channel).
+procedure new_channel(Channel, Channel).
 
 % agent/3: Main agent process
 % Args: MyId, UserCh (channel to user), NetCh (channel to network)

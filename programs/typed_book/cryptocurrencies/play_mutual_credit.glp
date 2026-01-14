@@ -1,8 +1,18 @@
 %% play_mutual_credit.glp - Mutual credit establishment
-
-%% Type definitions (test/play file - minimal declarations needed)
 %% Two agents exchange personal coins to establish a credit line
 
+%% Type definitions
+BalanceList ::= [] ; [_ | BalanceList].
+RequestList ::= [] ; [_ | RequestList].
+BlockStream ::= [] ; [_ | BlockStream].
+
+%% Procedure type declarations
+procedure agent(RequestList?, BalanceList?, BlockStream).
+procedure find_payment_to(_?, BlockStream?, _).
+procedure play_mutual_credit.
+procedure verify_mutual_credit(BlockStream?, BlockStream?).
+procedure report_mutual_credit(BlockStream?, BlockStream?).
+procedure check_stream_length(BlockStream?, Number).
 
 %% ============================================
 %% The Play

@@ -7,14 +7,14 @@
 BitList ::= [] ; [Number | BitList].
 
 %% Procedure type declarations
-procedure and(Number, Number, Number).
-procedure or(Number, Number, Number).
-procedure not(Number, Number).
-procedure xor(Number, Number, Number).
-procedure nand(Number, Number, Number).
-procedure half_adder(Number, Number, Number, Number).
-procedure full_adder(Number, Number, Number, Number, Number).
-procedure adder(BitList, BitList, Number, BitList).
+procedure and(Number?, Number?, Number).
+procedure or(Number?, Number?, Number).
+procedure not(Number?, Number).
+procedure xor(Number?, Number?, Number).
+procedure nand(Number?, Number?, Number).
+procedure half_adder(Number?, Number?, Number, Number).
+procedure full_adder(Number?, Number?, Number?, Number, Number).
+procedure adder(BitList?, BitList?, Number?, BitList).
 
 %% Import simple gates (or include inline)
 and(1, 1, 1).

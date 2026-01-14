@@ -1,8 +1,19 @@
 %% play_payment.glp - Three-agent payment scenario
-
-%% Type definitions (test/play file - minimal declarations needed)
 %% Alice and Bob establish credit, then Alice pays Carol in Bob-coins
 
+%% Type definitions
+BalanceList ::= [] ; [_ | BalanceList].
+RequestList ::= [] ; [_ | RequestList].
+BlockStream ::= [] ; [_ | BlockStream].
+
+%% Procedure type declarations
+procedure agent(RequestList?, BalanceList?, BlockStream).
+procedure find_payment_to(_?, BlockStream?, _).
+procedure find_approval(BlockStream?, _).
+procedure play_payment.
+procedure verify_payment(BlockStream?, BlockStream?, BlockStream?).
+procedure report_payment(BlockStream?, BlockStream?, BlockStream?).
+procedure check_stream_length(BlockStream?, Number).
 
 %% ============================================
 %% The Play

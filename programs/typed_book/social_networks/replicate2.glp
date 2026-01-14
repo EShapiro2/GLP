@@ -2,7 +2,7 @@
 %% Replicates a stream to two outputs
 
 %% Procedure type declarations
-procedure replicate2(Any, Any, Any).
+procedure replicate2(_?, _, _).
 
 replicate2(X, X?, X?) :- ground(X?) | true.
 replicate2([X|Xs], [Y1?|Ys1?], [Y2?|Ys2?]) :-

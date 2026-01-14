@@ -1,5 +1,32 @@
 %% test_blocklace.glp - Unit tests for blocklace operations
 
+%% Type definitions
+Block ::= block(Number, _, List).
+Blocklace ::= [] ; [Block | Blocklace].
+Result ::= passed ; failed(_).
+ResultList ::= [] ; [_ | ResultList].
+
+%% Procedure type declarations
+procedure blocks_at_round(Number?, Blocklace?, Blocklace).
+procedure nonempty_blocks_at_round(Number?, Blocklace?, Blocklace).
+procedure max_round(Blocklace?, Number).
+procedure length(List?, Number).
+procedure no_conflict(Number?, Blocklace?).
+procedure has_conflict(Number?, Blocklace?).
+procedure single_candidate(Number?, Blocklace?, Block).
+procedure test_blocks_at_round(Result).
+procedure check_block_counts(Number?, Number?, Number?, Result).
+procedure test_nonempty_blocks(Result).
+procedure check_nonempty_count(Number?, Result).
+procedure test_max_round(Result).
+procedure check_max_rounds(Number?, Number?, Number?, Result).
+procedure test_conflict_detection(Result).
+procedure check_no_conflict(Number?, Blocklace?, Result).
+procedure check_has_conflict(Number?, Blocklace?, Result).
+procedure combine_results3(Result?, Result?, Result?, Result).
+procedure test_single_candidate(Result).
+procedure check_candidate(Block?, Block?, Result).
+procedure test_blocklace(ResultList).
 
 %% ============================================
 %% Block Query Tests

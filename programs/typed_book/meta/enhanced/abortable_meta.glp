@@ -5,8 +5,8 @@
 %% When Eq is bound, computation stops.
 
 %% Procedure type declarations
-procedure run(Any, Any, Any).
-procedure reduce(Any, Any).
+procedure run(_?, _?, _?).
+procedure reduce(_?, _).
 
 run(_, true, _).                                 % halt
 run(M, (A, B), Eq) :-                            % fork
@@ -14,7 +14,7 @@ run(M, (A, B), Eq) :-                            % fork
     run(M?, A?, Eq?), run(M?, B?, Eq?).
 run(_, M1 # G, Eq) :- run(M1?, G?, Eq?).         % cross-module
 run(M, A, Eq) :-                                 % reduce
-    tuple(A?), unknown(Eq?) |
+    compound(A?), unknown(Eq?) |
     M? # reduce(A?, B),
     run(M?, B?, Eq?).
 run(_, _, Eq) :- known(Eq?) | true.              % abort - brake pulled

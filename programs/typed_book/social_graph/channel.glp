@@ -1,12 +1,12 @@
 % Channel Operations (Program 9 from GLP 2025 paper)
 
 %% Type definitions
-List ::= [] ; [Any | List].
+Channel ::= ch(List?, List).
 
 %% Procedure type declarations
-procedure send(Any, Any, Any).
-procedure receive(Any, Any, Any).
-procedure new_channel(Any, Any).
+procedure send(_?, Channel?, Channel).
+procedure receive(_, Channel?, Channel).
+procedure new_channel(Channel, Channel).
 
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).

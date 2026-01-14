@@ -2,7 +2,7 @@
 ║  GLP REPL - With Type Checking         ║
 ╚════════════════════════════════════════╝
 
-Build: 9418c86 Fix wildcard type handling: accept structured terms at _ and _? positions
+Build: 4ed06ae Fix coverage check: wildcard _? is final state per spec v0.7
 Compiled: 2026-01-12 (Type checker integration)
 Working directory: udi/
 Source files: glp/*.glp
@@ -16,10 +16,56 @@ Loaded stdlib: unify.glp (8 ops)
 Loaded stdlib: mwm.glp (161 ops)
 Loaded stdlib: equator.glp (11 ops)
 Loaded stdlib: time.glp (9 ops)
-GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/natural_numbers.glp:
-  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 9, column 1
-GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/plus.glp:
-  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 10, column 1
+GLP>   ⚠ Procedure integer/1 declared but not defined at line 18, column 1
+  ⚠ Procedure number/1 declared but not defined at line 19, column 1
+  ⚠ Procedure string/1 declared but not defined at line 20, column 1
+  ⚠ Procedure atom/1 declared but not defined at line 21, column 1
+  ⚠ Procedure constant/1 declared but not defined at line 22, column 1
+  ⚠ Procedure compound/1 declared but not defined at line 23, column 1
+  ⚠ Procedure is_list/1 declared but not defined at line 24, column 1
+  ⚠ Procedure ground/1 declared but not defined at line 27, column 1
+  ⚠ Procedure known/1 declared but not defined at line 28, column 1
+  ⚠ Procedure unknown/1 declared but not defined at line 29, column 1
+  ⚠ Procedure </2 declared but not defined at line 32, column 1
+  ⚠ Procedure >/2 declared but not defined at line 33, column 1
+  ⚠ Procedure =</2 declared but not defined at line 34, column 1
+  ⚠ Procedure >=/2 declared but not defined at line 35, column 1
+  ⚠ Procedure =:=/2 declared but not defined at line 36, column 1
+  ⚠ Procedure =\=/2 declared but not defined at line 37, column 1
+  ⚠ Procedure =?=/2 declared but not defined at line 40, column 1
+  ⚠ Procedure =/2 declared but not defined at line 43, column 1
+  ⚠ Procedure dl_append/3 declared but not defined at line 46, column 1
+  ⚠ Procedure dl_to_list/2 declared but not defined at line 47, column 1
+  ⚠ Procedure new_channel/2 declared but not defined at line 50, column 1
+  ⚠ Procedure send/3 declared but not defined at line 51, column 1
+  ⚠ Procedure receive/3 declared but not defined at line 52, column 1
+  ✓ Type check passed (2 procedures)
+✓ Loaded: /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/natural_numbers.glp
+GLP>   ⚠ Procedure integer/1 declared but not defined at line 18, column 1
+  ⚠ Procedure number/1 declared but not defined at line 19, column 1
+  ⚠ Procedure string/1 declared but not defined at line 20, column 1
+  ⚠ Procedure atom/1 declared but not defined at line 21, column 1
+  ⚠ Procedure constant/1 declared but not defined at line 22, column 1
+  ⚠ Procedure compound/1 declared but not defined at line 23, column 1
+  ⚠ Procedure is_list/1 declared but not defined at line 24, column 1
+  ⚠ Procedure ground/1 declared but not defined at line 27, column 1
+  ⚠ Procedure known/1 declared but not defined at line 28, column 1
+  ⚠ Procedure unknown/1 declared but not defined at line 29, column 1
+  ⚠ Procedure </2 declared but not defined at line 32, column 1
+  ⚠ Procedure >/2 declared but not defined at line 33, column 1
+  ⚠ Procedure =</2 declared but not defined at line 34, column 1
+  ⚠ Procedure >=/2 declared but not defined at line 35, column 1
+  ⚠ Procedure =:=/2 declared but not defined at line 36, column 1
+  ⚠ Procedure =\=/2 declared but not defined at line 37, column 1
+  ⚠ Procedure =?=/2 declared but not defined at line 40, column 1
+  ⚠ Procedure =/2 declared but not defined at line 43, column 1
+  ⚠ Procedure dl_append/3 declared but not defined at line 46, column 1
+  ⚠ Procedure dl_to_list/2 declared but not defined at line 47, column 1
+  ⚠ Procedure new_channel/2 declared but not defined at line 50, column 1
+  ⚠ Procedure send/3 declared but not defined at line 51, column 1
+  ⚠ Procedure receive/3 declared but not defined at line 52, column 1
+  ✓ Type check passed (3 procedures)
+✓ Loaded: /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/plus.glp
 GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/times.glp:
   ✗ Body atom 0 (tuple) is not well-typed:
   Inconsistent path: Undefined procedure: tuple/1
@@ -29,9 +75,31 @@ GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithme
   Inconsistent path: Undefined procedure: tuple/1
   Path: (tuple/1, 0, output) at line 24, column 1
     in: reduce(2 args) :- 1 goals.
-  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 11, column 1
-GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/lesseq.glp:
-  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 10, column 1
+GLP>   ⚠ Procedure integer/1 declared but not defined at line 18, column 1
+  ⚠ Procedure number/1 declared but not defined at line 19, column 1
+  ⚠ Procedure string/1 declared but not defined at line 20, column 1
+  ⚠ Procedure atom/1 declared but not defined at line 21, column 1
+  ⚠ Procedure constant/1 declared but not defined at line 22, column 1
+  ⚠ Procedure compound/1 declared but not defined at line 23, column 1
+  ⚠ Procedure is_list/1 declared but not defined at line 24, column 1
+  ⚠ Procedure ground/1 declared but not defined at line 27, column 1
+  ⚠ Procedure known/1 declared but not defined at line 28, column 1
+  ⚠ Procedure unknown/1 declared but not defined at line 29, column 1
+  ⚠ Procedure </2 declared but not defined at line 32, column 1
+  ⚠ Procedure >/2 declared but not defined at line 33, column 1
+  ⚠ Procedure =</2 declared but not defined at line 34, column 1
+  ⚠ Procedure >=/2 declared but not defined at line 35, column 1
+  ⚠ Procedure =:=/2 declared but not defined at line 36, column 1
+  ⚠ Procedure =\=/2 declared but not defined at line 37, column 1
+  ⚠ Procedure =?=/2 declared but not defined at line 40, column 1
+  ⚠ Procedure =/2 declared but not defined at line 43, column 1
+  ⚠ Procedure dl_append/3 declared but not defined at line 46, column 1
+  ⚠ Procedure dl_to_list/2 declared but not defined at line 47, column 1
+  ⚠ Procedure new_channel/2 declared but not defined at line 50, column 1
+  ⚠ Procedure send/3 declared but not defined at line 51, column 1
+  ⚠ Procedure receive/3 declared but not defined at line 52, column 1
+  ✓ Type check passed (3 procedures)
+✓ Loaded: /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/lesseq.glp
 GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/min.glp:
   ✗ Body atom 0 (tuple) is not well-typed:
   Inconsistent path: Undefined procedure: tuple/1
@@ -81,7 +149,6 @@ GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithme
   Inconsistent path: Undefined procedure: tuple/1
   Path: (tuple/1, 0, output) at line 29, column 1
     in: reduce(2 args) :- 1 goals.
-  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 13, column 1
 GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/exp.glp:
   ✗ Body atom 0 (tuple) is not well-typed:
   Inconsistent path: Undefined procedure: tuple/1
@@ -99,7 +166,6 @@ GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithme
   Inconsistent path: Undefined procedure: tuple/1
   Path: (tuple/1, 0, output) at line 32, column 1
     in: reduce(2 args) :- 1 goals.
-  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 12, column 1
 GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/ackermann.glp:
   ✗ Body atom 0 (tuple) is not well-typed:
   Inconsistent path: Undefined procedure: tuple/1
@@ -109,17 +175,106 @@ GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithme
   Inconsistent path: Undefined procedure: tuple/1
   Path: (tuple/1, 0, output) at line 18, column 1
     in: reduce(2 args) :- 1 goals.
-  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 9, column 1
-GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/factorial.glp:
-  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 6, column 1
-GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/fibonacci.glp:
-  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 8, column 1
-GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/gcd_integer.glp:
-  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 6, column 1
-GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/hanoi.glp:
-  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 11, column 1
-  ✗ Coverage error: argument 2 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 11, column 1
-  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 13, column 1
+GLP>   ⚠ Procedure integer/1 declared but not defined at line 18, column 1
+  ⚠ Procedure number/1 declared but not defined at line 19, column 1
+  ⚠ Procedure string/1 declared but not defined at line 20, column 1
+  ⚠ Procedure atom/1 declared but not defined at line 21, column 1
+  ⚠ Procedure constant/1 declared but not defined at line 22, column 1
+  ⚠ Procedure compound/1 declared but not defined at line 23, column 1
+  ⚠ Procedure is_list/1 declared but not defined at line 24, column 1
+  ⚠ Procedure ground/1 declared but not defined at line 27, column 1
+  ⚠ Procedure known/1 declared but not defined at line 28, column 1
+  ⚠ Procedure unknown/1 declared but not defined at line 29, column 1
+  ⚠ Procedure </2 declared but not defined at line 32, column 1
+  ⚠ Procedure >/2 declared but not defined at line 33, column 1
+  ⚠ Procedure =</2 declared but not defined at line 34, column 1
+  ⚠ Procedure >=/2 declared but not defined at line 35, column 1
+  ⚠ Procedure =:=/2 declared but not defined at line 36, column 1
+  ⚠ Procedure =\=/2 declared but not defined at line 37, column 1
+  ⚠ Procedure =?=/2 declared but not defined at line 40, column 1
+  ⚠ Procedure =/2 declared but not defined at line 43, column 1
+  ⚠ Procedure dl_append/3 declared but not defined at line 46, column 1
+  ⚠ Procedure dl_to_list/2 declared but not defined at line 47, column 1
+  ⚠ Procedure new_channel/2 declared but not defined at line 50, column 1
+  ⚠ Procedure send/3 declared but not defined at line 51, column 1
+  ⚠ Procedure receive/3 declared but not defined at line 52, column 1
+  ✓ Type check passed (2 procedures)
+✓ Loaded: /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/factorial.glp
+GLP>   ⚠ Procedure integer/1 declared but not defined at line 18, column 1
+  ⚠ Procedure number/1 declared but not defined at line 19, column 1
+  ⚠ Procedure string/1 declared but not defined at line 20, column 1
+  ⚠ Procedure atom/1 declared but not defined at line 21, column 1
+  ⚠ Procedure constant/1 declared but not defined at line 22, column 1
+  ⚠ Procedure compound/1 declared but not defined at line 23, column 1
+  ⚠ Procedure is_list/1 declared but not defined at line 24, column 1
+  ⚠ Procedure ground/1 declared but not defined at line 27, column 1
+  ⚠ Procedure known/1 declared but not defined at line 28, column 1
+  ⚠ Procedure unknown/1 declared but not defined at line 29, column 1
+  ⚠ Procedure </2 declared but not defined at line 32, column 1
+  ⚠ Procedure >/2 declared but not defined at line 33, column 1
+  ⚠ Procedure =</2 declared but not defined at line 34, column 1
+  ⚠ Procedure >=/2 declared but not defined at line 35, column 1
+  ⚠ Procedure =:=/2 declared but not defined at line 36, column 1
+  ⚠ Procedure =\=/2 declared but not defined at line 37, column 1
+  ⚠ Procedure =?=/2 declared but not defined at line 40, column 1
+  ⚠ Procedure =/2 declared but not defined at line 43, column 1
+  ⚠ Procedure dl_append/3 declared but not defined at line 46, column 1
+  ⚠ Procedure dl_to_list/2 declared but not defined at line 47, column 1
+  ⚠ Procedure new_channel/2 declared but not defined at line 50, column 1
+  ⚠ Procedure send/3 declared but not defined at line 51, column 1
+  ⚠ Procedure receive/3 declared but not defined at line 52, column 1
+  ✓ Type check passed (4 procedures)
+✓ Loaded: /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/fibonacci.glp
+GLP>   ⚠ Procedure integer/1 declared but not defined at line 18, column 1
+  ⚠ Procedure number/1 declared but not defined at line 19, column 1
+  ⚠ Procedure string/1 declared but not defined at line 20, column 1
+  ⚠ Procedure atom/1 declared but not defined at line 21, column 1
+  ⚠ Procedure constant/1 declared but not defined at line 22, column 1
+  ⚠ Procedure compound/1 declared but not defined at line 23, column 1
+  ⚠ Procedure is_list/1 declared but not defined at line 24, column 1
+  ⚠ Procedure ground/1 declared but not defined at line 27, column 1
+  ⚠ Procedure known/1 declared but not defined at line 28, column 1
+  ⚠ Procedure unknown/1 declared but not defined at line 29, column 1
+  ⚠ Procedure </2 declared but not defined at line 32, column 1
+  ⚠ Procedure >/2 declared but not defined at line 33, column 1
+  ⚠ Procedure =</2 declared but not defined at line 34, column 1
+  ⚠ Procedure >=/2 declared but not defined at line 35, column 1
+  ⚠ Procedure =:=/2 declared but not defined at line 36, column 1
+  ⚠ Procedure =\=/2 declared but not defined at line 37, column 1
+  ⚠ Procedure =?=/2 declared but not defined at line 40, column 1
+  ⚠ Procedure =/2 declared but not defined at line 43, column 1
+  ⚠ Procedure dl_append/3 declared but not defined at line 46, column 1
+  ⚠ Procedure dl_to_list/2 declared but not defined at line 47, column 1
+  ⚠ Procedure new_channel/2 declared but not defined at line 50, column 1
+  ⚠ Procedure send/3 declared but not defined at line 51, column 1
+  ⚠ Procedure receive/3 declared but not defined at line 52, column 1
+  ✓ Type check passed (2 procedures)
+✓ Loaded: /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/gcd_integer.glp
+GLP>   ⚠ Procedure integer/1 declared but not defined at line 18, column 1
+  ⚠ Procedure number/1 declared but not defined at line 19, column 1
+  ⚠ Procedure string/1 declared but not defined at line 20, column 1
+  ⚠ Procedure atom/1 declared but not defined at line 21, column 1
+  ⚠ Procedure constant/1 declared but not defined at line 22, column 1
+  ⚠ Procedure compound/1 declared but not defined at line 23, column 1
+  ⚠ Procedure is_list/1 declared but not defined at line 24, column 1
+  ⚠ Procedure ground/1 declared but not defined at line 27, column 1
+  ⚠ Procedure known/1 declared but not defined at line 28, column 1
+  ⚠ Procedure unknown/1 declared but not defined at line 29, column 1
+  ⚠ Procedure </2 declared but not defined at line 32, column 1
+  ⚠ Procedure >/2 declared but not defined at line 33, column 1
+  ⚠ Procedure =</2 declared but not defined at line 34, column 1
+  ⚠ Procedure >=/2 declared but not defined at line 35, column 1
+  ⚠ Procedure =:=/2 declared but not defined at line 36, column 1
+  ⚠ Procedure =\=/2 declared but not defined at line 37, column 1
+  ⚠ Procedure =?=/2 declared but not defined at line 40, column 1
+  ⚠ Procedure =/2 declared but not defined at line 43, column 1
+  ⚠ Procedure dl_append/3 declared but not defined at line 46, column 1
+  ⚠ Procedure dl_to_list/2 declared but not defined at line 47, column 1
+  ⚠ Procedure new_channel/2 declared but not defined at line 50, column 1
+  ⚠ Procedure send/3 declared but not defined at line 51, column 1
+  ⚠ Procedure receive/3 declared but not defined at line 52, column 1
+  ✓ Type check passed (5 procedures)
+✓ Loaded: /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/hanoi.glp
 GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/primes.glp:
   ✗ Body atom 2 (=:=) is not well-typed:
   Inconsistent path: No transition for mod(2,1):↓ from state Number?
@@ -145,7 +300,41 @@ GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithme
   Inconsistent path: No transition for mod(2,2):↓ from state Number?
   Path: (mod/2, 0, input) → (P?, 2, input) at line 34, column 1
     in: reduce(2 args) :- 1 goals.
-  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 12, column 1
-GLP> Type errors in /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/sum_list.glp:
-  ✗ Coverage error: argument 1 has type _? (universal input) but no clause has a variable at this position to accept all inputs at line 10, column 1
+GLP>   ⚠ Procedure integer/1 declared but not defined at line 18, column 1
+  ⚠ Procedure number/1 declared but not defined at line 19, column 1
+  ⚠ Procedure string/1 declared but not defined at line 20, column 1
+  ⚠ Procedure atom/1 declared but not defined at line 21, column 1
+  ⚠ Procedure constant/1 declared but not defined at line 22, column 1
+  ⚠ Procedure compound/1 declared but not defined at line 23, column 1
+  ⚠ Procedure is_list/1 declared but not defined at line 24, column 1
+  ⚠ Procedure ground/1 declared but not defined at line 27, column 1
+  ⚠ Procedure known/1 declared but not defined at line 28, column 1
+  ⚠ Procedure unknown/1 declared but not defined at line 29, column 1
+  ⚠ Procedure </2 declared but not defined at line 32, column 1
+  ⚠ Procedure >/2 declared but not defined at line 33, column 1
+  ⚠ Procedure =</2 declared but not defined at line 34, column 1
+  ⚠ Procedure >=/2 declared but not defined at line 35, column 1
+  ⚠ Procedure =:=/2 declared but not defined at line 36, column 1
+  ⚠ Procedure =\=/2 declared but not defined at line 37, column 1
+  ⚠ Procedure =?=/2 declared but not defined at line 40, column 1
+  ⚠ Procedure =/2 declared but not defined at line 43, column 1
+  ⚠ Procedure dl_append/3 declared but not defined at line 46, column 1
+  ⚠ Procedure dl_to_list/2 declared but not defined at line 47, column 1
+  ⚠ Procedure new_channel/2 declared but not defined at line 50, column 1
+  ⚠ Procedure send/3 declared but not defined at line 51, column 1
+  ⚠ Procedure receive/3 declared but not defined at line 52, column 1
+  ✓ Type check passed (3 procedures)
+Error loading /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/sum_list.glp: SRSW violations found:
+  • sum/3: Line 13: Reader variable "Acc?" occurs 2 times without ground guard
+  • sum/3: Line 13: Variable "Acc" has no writer (must have exactly one)
+  • sum/3: Line 14: Reader variable "X?" occurs 2 times without ground guard
+  • sum/3: Line 14: Variable "X" has no writer (must have exactly one)
+  • reduce/2: Line 18: Reader variable "Acc?" occurs 2 times without ground guard
+  • reduce/2: Line 18: Variable "Acc" has no writer (must have exactly one)
+  • reduce/2: Line 19: Reader variable "X?" occurs 2 times without ground guard
+  • reduce/2: Line 19: Variable "X" has no writer (must have exactly one)
+  • reduce/2: Line 13: Reader variable "Acc?" occurs 2 times without ground guard
+  • reduce/2: Line 13: Variable "Acc" has no writer (must have exactly one)
+  • reduce/2: Line 14: Reader variable "X?" occurs 2 times without ground guard
+  • reduce/2: Line 14: Variable "X" has no writer (must have exactly one) at Line 0, Column 0
 GLP> Goodbye!

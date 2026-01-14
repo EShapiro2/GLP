@@ -7,22 +7,24 @@
 %% Type definitions
 
 %% Message operations for friend-mediated introductions
-MsgOp ::= introduce(Any, Any) ; intro(Any, Any) ; befriend_intro(Any, Any, Any) ; accept_intro(Any, Any) ; reject_intro(Any).
+MsgOp ::= introduce(_, _) ; intro(_, _) ; befriend_intro(_, _, _) ; accept_intro(_, _) ; reject_intro(_).
 
 %% Social graph messages
-SocialMsg ::= msg(Any, Any, MsgOp).
+SocialMsg ::= msg(_, _, MsgOp).
 MsgList ::= [] ; [SocialMsg | MsgList].
 
 %% Friend list entries
-FriendList ::= [] ; [Any | FriendList].
+FriendEntry ::= (_, _).
+FriendList ::= [] ; [FriendEntry | FriendList].
+Channel ::= ch(List?, List).
 
 %% Procedure type declarations
-procedure social_graph(Any, MsgList, FriendList).
-procedure new_channel(Any, Any).
-procedure lookup_send(Any, Any, FriendList, FriendList).
-procedure tag_stream(Any, MsgList, MsgList).
-procedure merge(MsgList, MsgList, MsgList).
-procedure add_friend(Any, Any, FriendList, FriendList).
+procedure social_graph(_?, MsgList?, FriendList?).
+procedure new_channel(Channel, Channel).
+procedure lookup_send(_?, _?, FriendList?, FriendList).
+procedure tag_stream(_?, MsgList?, MsgList).
+procedure merge(MsgList?, MsgList?, MsgList).
+procedure add_friend(_?, _?, FriendList?, FriendList).
 
 %% Channel operations (defined guard)
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).

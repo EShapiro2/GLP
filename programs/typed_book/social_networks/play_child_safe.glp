@@ -1,8 +1,6 @@
 %% play_child_safe.glp - Child-Safe Social Networking Play
 %%
 %% Scenario: Two families - the Smiths and the Jones.
-
-%% Type definitions (test scenario - minimal declarations needed)
 %% Parent-Smith and Parent-Jones are friends in the parent network.
 %% Child-Smith wants to befriend Child-Jones.
 %% Both parents must approve before children can connect.
@@ -13,6 +11,23 @@
 %% 3. Parent-Smith sends approval_request with embedded response variable
 %% 4. Parent-Jones approves by binding the response variable
 %% 5. Parent-Smith sees approval and establishes channel
+
+%% Type definitions
+ApprovalReq ::= approval_request(_, _, _).
+ReqList ::= [] ; [ApprovalReq | ReqList].
+SmithResult ::= result(_, _).
+JonesDecision ::= approved(_, _).
+
+%% Procedure type declarations
+procedure bind_resp(_, _).
+procedure parent_smith(ReqList?, SmithResult).
+procedure smith_wait(_?, SmithResult).
+procedure smith_done(_?, SmithResult).
+procedure parent_jones(ReqList?, JonesDecision).
+procedure jones_done(_?, _?, JonesDecision).
+procedure play_child_safe.
+procedure verify_child_safe(SmithResult?, JonesDecision?).
+procedure report_success.
 
 %% === Helpers ===
 

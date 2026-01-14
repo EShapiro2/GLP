@@ -55,7 +55,6 @@ These guards can be negated with `~`:
 | `string(X?)` | Test for string type | `~string(X?)` succeeds if X is not a string |
 | `constant(X?)` | Test for constant | `~constant(X?)` succeeds if X is not a constant |
 | `compound(X?)` | Test for compound term | `~compound(X?)` succeeds if X is not compound |
-| `tuple(X?)` | Test for tuple type | `~tuple(X?)` succeeds if X is not a tuple |
 | `list(X?)` | Test for list type | `~list(X?)` succeeds if X is not a list |
 | `is_list(X?)` | Test for proper list | `~is_list(X?)` succeeds if X is not a proper list |
 | `unknown(X?)` | Test for unbound variable | `~unknown(X?)` succeeds if X is bound |
@@ -105,12 +104,14 @@ In GLP, guards have **input-only variables** - they test but don't bind. This ma
 ## Currently Implemented Guards
 
 ### ✅ `known(X)`
-**Test if X is bound to a value**
+**Test if X is bound to a constant or compound term**
 
 **Semantics**:
-- Success: X bound to any value (including structures with variables)
+- Success: X bound to constant (number/string) or compound term (may contain unbound subterms)
 - Suspend: X is unbound reader
 - Fail: X is unbound writer
+
+**Logical Definition**: `known(X)` ≡ `constant(X) ∨ compound(X)`
 
 **Example**:
 ```prolog
@@ -118,7 +119,49 @@ In GLP, guards have **input-only variables** - they test but don't bind. This ma
 echo(Input, Output) :- known(Input) | Output = Input?.
 ```
 
-**Difference from ground**: `known(f(Y))` succeeds even if Y is unbound, because the structure f(Y) itself is bound. `ground(f(Y))` would suspend on unbound Y.
+**Difference from ground**: `known(f(Y))` succeeds even if Y is unbound, because the structure f(Y) itself is a compound term. `ground(f(Y))` would suspend waiting for Y to be bound.
+
+---
+
+### ⏳ `constant(X?)`
+**Test for atomic constant (number or string)**
+
+**Semantics**:
+- Success: X? bound to a number (integer or real) or string atom
+- Suspend: X? is unbound reader
+- Fail: X? bound to compound term
+
+**Example**:
+```prolog
+% Safe copying of constants (allows multiple reader occurrences)
+copy(X, Y, Z) :- constant(X?) | Y = X?, Z = X?.
+```
+
+**Note**: Constants are ground by definition (they contain no variables), so this guard permits multiple reader occurrences of X? in the clause body without violating SRSW.
+
+---
+
+### ⏳ `compound(X?)`
+**Test for compound term (structure with functor and arguments)**
+
+**Semantics**:
+- Success: X? bound to compound term f(T₁, ..., Tₙ) where n > 0
+- Suspend: X? is unbound reader
+- Fail: X? bound to constant (number or string)
+
+**Example**:
+```prolog
+% Process only compound terms
+copy(X, Y, Z) :- compound(X?) |
+    X? =.. [F|Args],
+    copy_list(Args?, Args1, Args2),
+    Y =.. [F?|Args1?],
+    Z =.. [F?|Args2?].
+```
+
+**Relationship to known**: The semantics of `known(X)` can be understood as `constant(X) ∨ compound(X)` — a variable is bound to a value if it's bound to either a constant or a compound term.
+
+**Lists are compound**: In GLP, the list cons `[X|Xs]` is syntactic sugar for the compound term `'.'(X, Xs)`, so lists are compound terms and `compound([a,b,c])` succeeds.
 
 ---
 
@@ -214,6 +257,7 @@ This is distinct from the multiple-reader relaxation below. Guard reader countin
 | Guard | Implies Ground | Allows Multiple Readers |
 |-------|----------------|-------------------------|
 | ✅ `ground(X?)` | Yes | ✅ Yes |
+| ⏳ `constant(X?)` | Yes | ✅ Yes |
 | ✅ `integer(X?)` | Yes | ✅ Yes |
 | ✅ `number(X?)` | Yes | ✅ Yes |
 | 📝 `X? < Y?` | Yes (both operands, when succeeds) | ✅ Yes |
@@ -222,12 +266,13 @@ This is distinct from the multiple-reader relaxation below. Guard reader countin
 | 📝 `X? >= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
 | 📝 `X? =:= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
 | 📝 `X? =\= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| ⏳ `compound(X?)` | **NO** | ❌ No |
 | ✅ `known(X?)` | **NO** | ❌ No |
 | ✅ `otherwise` | No | ❌ No |
 
 **Note**: Arithmetic comparison guards suspend if operands are unbound and only succeed if both operands are bound to numbers. Therefore, when they succeed, both operands are guaranteed to be ground.
 
-**Critical Difference**: `known(X)` only tests if X is bound, not if it's ground. A structure like `f(Y)` is known (bound) but not ground (Y may be unbound).
+**Critical Difference**: `known(X)` tests if X is bound to either a constant or compound term (i.e., `constant(X) ∨ compound(X)`), but does not require groundness. A compound term like `f(Y)` is known but not ground if Y is unbound. Similarly, `compound(X)` succeeds on `f(Y)` even when Y is unbound.
 
 ### Correct Patterns
 

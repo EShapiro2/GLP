@@ -44,11 +44,21 @@ The following types are predefined and cannot be redefined:
 | `Real` | `Real?` | Any real (floating-point) literal |
 | `Number` | `Number?` | Any numeric literal (Integer or Real) |
 | `String` | `String?` | Any string literal |
+| `Exp` | `Exp?` | Arithmetic expression evaluating to Number |
 
 **Numeric type hierarchy:**
 - `Integer` literals: no decimal point (e.g., `42`, `-1`, `0`)
 - `Real` literals: with decimal point or exponent (e.g., `3.14`, `2.5e10`)
 - `Number` accepts both Integer and Real literals
+
+**Arithmetic expression type:**
+- `Exp` accepts arithmetic expressions built from:
+  - Numeric literals (Integer, Real)
+  - Numeric variables (Number?)
+  - Binary operators: `+`, `-`, `*`, `/`, `//`, `mod`
+  - Unary operator: `-` (negation)
+- `Exp` is used in comparison guards (`<`, `>`, `=<`, `>=`, `=:=`, `=\=`) which expect `Exp?` arguments
+- At runtime, `Exp` evaluates to `Number`
 
 ### Determinism Requirement (Paper Section 4.2)
 
@@ -95,12 +105,13 @@ class TypeEnvironment {
     'Real', 'Real?', 
     'Number', 'Number?',
     'String', 'String?',
+    'Exp', 'Exp?',
     '_', '_?'
   };
   
   /// Base predefined type names (without complement marker)
   static final Set<String> predefinedBaseTypes = {
-    'Integer', 'Real', 'Number', 'String', '_'
+    'Integer', 'Real', 'Number', 'String', 'Exp', '_'
   };
 }
 ```

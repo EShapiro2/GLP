@@ -174,11 +174,18 @@ class TypeLexer {
           return TypeToken(TypeTokenType.operator, '//', startLine, startColumn);
         }
         return TypeToken(TypeTokenType.operator, '/', startLine, startColumn);
+      case '-':
+        // Check for negative number
+        if (_isDigit(_peek())) {
+          return _number(c, startLine, startColumn);
+        }
+        // Otherwise it's the minus operator
+        return TypeToken(TypeTokenType.operator, '-', startLine, startColumn);
       case '"':
       case "'":
         return _string(c, startLine, startColumn);
       default:
-        if (_isDigit(c) || (c == '-' && _isDigit(_peek()))) {
+        if (_isDigit(c)) {
           return _number(c, startLine, startColumn);
         }
         if (_isAlpha(c)) {
@@ -199,6 +206,11 @@ class TypeLexer {
     // Check for keywords
     if (lexeme == 'procedure') {
       return TypeToken(TypeTokenType.procedure, lexeme, line, column);
+    }
+    
+    // Check for mod operator (used in Exp type)
+    if (lexeme == 'mod') {
+      return TypeToken(TypeTokenType.operator, lexeme, line, column);
     }
     
     // Type names start with uppercase
@@ -445,6 +457,24 @@ class TypeParser {
       
       // Plain atom constant
       return ConstantAlt(atomToken.lexeme, atomToken.line, atomToken.column);
+    }
+    
+    // Operator as functor (for types like Exp ::= +(Exp?, Exp?))
+    if (_check(TypeTokenType.operator)) {
+      final opToken = _advance();
+      
+      // Check for functor(args)
+      if (_match(TypeTokenType.lparen)) {
+        final args = <TypeExpr>[_parseTypeExprElement()];
+        while (_match(TypeTokenType.comma)) {
+          args.add(_parseTypeExprElement());
+        }
+        _consume(TypeTokenType.rparen, 'Expected ")" after operator functor arguments');
+        return StructAlt(opToken.lexeme, args, opToken.line, opToken.column);
+      }
+      
+      // Plain operator as constant (unusual but allow it)
+      return ConstantAlt(opToken.lexeme, opToken.line, opToken.column);
     }
     
     throw TypeParseError('Expected type alternative', token.line, token.column);

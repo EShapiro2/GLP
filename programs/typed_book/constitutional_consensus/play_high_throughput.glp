@@ -1,6 +1,22 @@
 %% play_high_throughput.glp - High-throughput consensus scenario
 %% Multiple transactions create conflict, formal leader resolves
 
+%% Type definitions
+Block ::= block(Number, _, List).
+Blocklace ::= [] ; [Block | Blocklace].
+Result ::= passed ; failed(_, _).
+ParticipantList ::= [] ; [_ | ParticipantList].
+
+%% Procedure type declarations
+procedure tau(Blocklace?, ParticipantList?, List).
+procedure has_conflict(Number?, Blocklace?).
+procedure no_conflict(Number?, Blocklace?).
+procedure play_high_throughput(Result).
+procedure verify_high_throughput(List?, Result).
+procedure test_conflict(Result).
+procedure check_conflict(Number?, Blocklace?, Result).
+procedure test_no_conflict(Result).
+procedure check_no_conflict(Number?, Blocklace?, Result).
 
 %% ============================================
 %% The Play

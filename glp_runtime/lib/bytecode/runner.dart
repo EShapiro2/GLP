@@ -4234,12 +4234,14 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
-      case 'tuple':
-        // Succeeds if X is a tuple (a term with a functor and arguments)
+      case 'compound':
+        // Succeeds if X is a compound term (structure with functor and arity > 0)
+        // Per guards-reference.md: "Test for compound term"
+        // Lists are compound since [X|Xs] = '.'(X, Xs)
+        // Does NOT imply groundness - may contain unbound subterms
         if (args.isEmpty) return GuardResult.failure;
         final val = getValue(args[0]);
-        // Tuple: any StructTerm (including '.' list cons cells per paper definition)
-        if (val is StructTerm) {
+        if (val is StructTerm && val.args.isNotEmpty) {
           return GuardResult.success;
         }
         return GuardResult.failure;

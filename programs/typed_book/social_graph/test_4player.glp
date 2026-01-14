@@ -1,6 +1,12 @@
-%% test_4player.glp - 4-player cold-call scenario
+%% test_4player.glp - 4-player cold-call scenario documentation
 %% Tests: multiple agents, accept/reject, multiple friends per agent
 %%
+%% NOTE: This file contains test documentation only, not runnable code.
+%% The actual test predicates are in the referenced files.
+
+%% Procedure type declarations (for referenced predicates)
+procedure social_graph(_?, List?, List?).
+
 %% Scenario:
 %%   Round 1: Alice → Bob (accept)
 %%   Round 2: Carol → Dave (accept)

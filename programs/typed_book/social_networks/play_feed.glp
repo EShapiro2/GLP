@@ -1,8 +1,6 @@
 %% play_feed.glp - Feed and Followers Play
 %%
 %% Scenario: Alice runs a feed. Bob and Carol subscribe. Alice posts messages.
-
-%% Type definitions (test scenario - minimal declarations needed)
 %% Bob and Carol receive the posts.
 %%
 %% This play demonstrates:
@@ -11,6 +9,30 @@
 %% 3. Carol subscribes, gets a stream for receiving posts
 %% 4. Alice posts two messages
 %% 5. Both Bob and Carol receive both messages
+
+%% Type definitions
+Feed ::= feed(List).
+FollowerEntry ::= (_, Feed).
+FollowerList ::= [] ; [FollowerEntry | FollowerList].
+FeedCmd ::= post(_?) ; subscribe(_?).
+CmdList ::= [] ; [FeedCmd | CmdList].
+Result ::= result(_, _).
+
+%% Procedure type declarations
+procedure broadcast(_?, FollowerList?, FollowerList).
+procedure make_feed(Feed).
+procedure extend_feed(_?, Feed?, Feed).
+procedure get_feed(_?, FollowerList?, Feed).
+procedure serve_feed(CmdList?, FollowerList?, FollowerList).
+procedure alice(CmdList?, FollowerList?, FollowerList).
+procedure bob(List?, Result).
+procedure bob_receive(Feed?, Result).
+procedure carol(Feed?, Result).
+procedure carol_receive(Feed?, Result).
+procedure verify(Result?, Result?).
+procedure check(_?, _?, _?, _?).
+procedure play_feed.
+procedure play_continue(FollowerList?).
 
 %% === Broadcast with ground guard ===
 

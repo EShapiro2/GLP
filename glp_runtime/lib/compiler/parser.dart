@@ -1178,6 +1178,26 @@ class Parser {
       return ConstantAlt(token.lexeme, line, column);
     }
 
+    // Operators as functors in type definitions (e.g., Exp ::= +(Exp?, Exp?))
+    if (_check(TokenType.PLUS) || _check(TokenType.MINUS) || _check(TokenType.STAR) ||
+        _check(TokenType.SLASH) || _check(TokenType.SLASH_SLASH) || _check(TokenType.MOD)) {
+      final token = _advance();
+      // Must be followed by ( for struct syntax
+      if (_match(TokenType.LPAREN)) {
+        final args = <TypeExpr>[];
+        if (!_check(TokenType.RPAREN)) {
+          args.add(_parseTypeAlt());
+          while (_match(TokenType.COMMA)) {
+            args.add(_parseTypeAlt());
+          }
+        }
+        _consume(TokenType.RPAREN, 'Expected ")" after operator struct arguments');
+        return StructAlt(token.lexeme, args, line, column);
+      }
+      // Plain operator as constant (unusual but allow it)
+      return ConstantAlt(token.lexeme, line, column);
+    }
+
     throw CompileError(
       'Expected type alternative',
       _peek().line,

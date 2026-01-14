@@ -1,8 +1,26 @@
-%% bounded_buffer.glp - Bounded buffer stream communication
+%% bounded_buffer_original.glp - Bounded buffer stream communication (original version)
 %% Source: CP Collected Papers, Ch 18 (Takeuchi & Furukawa)
+%%
+%% NOTE: This is the original version with SRSW violations.
+%% See bounded_buffer.glp for the corrected version.
 %%
 %% Bounded buffer communication limits sender when buffer is full.
 %% The receiver controls buffer expansion by creating new slots.
+
+%% Type definitions
+DiffList ::= List -- List?.
+
+%% Procedure type declarations
+procedure send_unbounded(_?, List?, List).
+procedure receive_unbounded(_, List?, List).
+procedure send(_?, List?, List).
+procedure receive(_, DiffList?, DiffList).
+procedure close(List?).
+procedure closed(_?).
+procedure open(Number?, DiffList).
+procedure sq_num_buffered(Number?, List?, Number?).
+procedure integers(Number?, Number?, List?).
+procedure square(DiffList?, List).
 
 %% Unbounded buffer send/receive (standard stream communication)
 send_unbounded(Msg, [Msg?|Tail], Tail?).
@@ -21,7 +39,7 @@ open(0, X--X?).
 open(N, [_|Y?]--Z?) :- N? > 0 | N1 := N? - 1, open(N1?, Y--Z).
 
 %% Example: Buffered stream of squares
-%% NOTE: This example has Pattern C stream sharing (Buf appears twice as writer).
+%% NOTE: This example has SRSW violation (Buf appears twice as writer).
 %% SRSW limitation: Single-reader/single-writer difference-list streams cannot
 %% be shared between multiple processes. This violates the fundamental assumption
 %% that each variable cell has exactly one writer and one reader.

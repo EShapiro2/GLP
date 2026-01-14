@@ -1,9 +1,13 @@
 % Network Switch for 2 Agents (based on Program 12)
 
+%% Type definitions
+Channel ::= ch(List?, List).
+AgentEntry ::= (_, Channel?).
+
 %% Procedure type declarations
-procedure network(Any, Any).
-procedure receive(Any, Any, Any).
-procedure send(Any, Any, Any).
+procedure network(AgentEntry?, AgentEntry?).
+procedure receive(_, Channel?, Channel).
+procedure send(_?, Channel?, Channel).
 
 network((P, ChP), (Q, ChQ)) :-
     receive(Msg?, ChP?, ChP1),

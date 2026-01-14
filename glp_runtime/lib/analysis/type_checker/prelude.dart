@@ -24,6 +24,10 @@ DiffList ::= List \ List?.
 % Communication
 Channel ::= ch(Stream?, Stream).
 
+% Arithmetic expressions
+% Exp accepts numeric literals and arithmetic operator expressions
+Exp ::= Number ; +(Exp?, Exp?) ; -(Exp?, Exp?) ; *(Exp?, Exp?) ; /(Exp?, Exp?) ; //(Exp?, Exp?) ; mod(Exp?, Exp?) ; neg(Exp?).
+
 % =============================================================================
 % PROCEDURE DECLARATIONS
 % =============================================================================
@@ -43,12 +47,12 @@ procedure known(_?).
 procedure unknown(_?).
 
 % Arithmetic comparison guards
-procedure <(Number?, Number?).
-procedure >(Number?, Number?).
-procedure =<(Number?, Number?).
-procedure >=(Number?, Number?).
-procedure =:=(Number?, Number?).
-procedure =\=(Number?, Number?).
+procedure <(Exp?, Exp?).
+procedure >(Exp?, Exp?).
+procedure =<(Exp?, Exp?).
+procedure >=(Exp?, Exp?).
+procedure =:=(Exp?, Exp?).
+procedure =\=(Exp?, Exp?).
 
 % Equality guard
 procedure =?=(_, _).
@@ -88,6 +92,7 @@ const Set<String> predefinedTypeNames = {
   'Integer',  // Primitive builtin
   'Real',     // Primitive builtin
   'String',   // Primitive builtin
+  'Exp',      // Arithmetic expression type
   'List',     // Collection type
   'Stream',   // Collection type
   'DiffList', // Collection type

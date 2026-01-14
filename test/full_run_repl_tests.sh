@@ -666,7 +666,9 @@ echo ""
 echo "--- Invalid Guard Tests ---"
 
 # Create temp file with true in guard position
-TMP_TRUE_GUARD=$(mktemp --suffix=.glp)
+TMP_TRUE_GUARD=$(mktemp /tmp/glp_test.XXXXXX)
+mv "$TMP_TRUE_GUARD" "${TMP_TRUE_GUARD}.glp"
+TMP_TRUE_GUARD="${TMP_TRUE_GUARD}.glp"
 echo 'bad_guard(X?) :- true | X = done.' > "$TMP_TRUE_GUARD"
 
 true_guard_output=$($DART run "$REPL" <<TRUE_INPUT

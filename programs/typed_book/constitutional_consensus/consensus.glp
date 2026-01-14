@@ -3,6 +3,61 @@
 %% Reference: Constitutional Consensus paper (arXiv:2505.19216)
 
 %% ============================================
+%% Type Definitions
+%% ============================================
+
+Block ::= block(Number, _, List).
+Blocklace ::= [] ; [Block | Blocklace].
+Mode ::= low ; high.
+Event ::= receive(Block) ; submit(_) ; advance(Number) ; timeout(Number).
+EventList ::= [] ; [Event | EventList].
+State ::= state(Blocklace, Mode, List, List, _).
+ParticipantList ::= [] ; [_ | ParticipantList].
+
+%% ============================================
+%% Procedure Type Declarations
+%% ============================================
+
+procedure wave_of_round(Number?, Number).
+procedure round_in_wave(Number?, Number).
+procedure first_round_of_wave(Number?, Number).
+procedure leader_of_wave(Number?, ParticipantList?, _).
+procedure is_leader(_?, Number?, ParticipantList?).
+procedure add_block(Block?, Blocklace?, Blocklace).
+procedure blocks_at_round(Number?, Blocklace?, Blocklace).
+procedure nonempty_blocks_at_round(Number?, Blocklace?, Blocklace).
+procedure filter_nonempty(Blocklace?, Blocklace).
+procedure count_distinct_agents(Blocklace?, Number).
+procedure tips(Blocklace?, Blocklace).
+procedure max_round(Blocklace?, Number).
+procedure is_majority(Number?, Number?).
+procedure has_majority(Blocklace?, ParticipantList?).
+procedure has_conflict(Number?, Blocklace?).
+procedure no_conflict(Number?, Blocklace?).
+procedure single_candidate(Number?, Blocklace?, Block).
+procedure endorsements_for(Block?, Blocklace?, Blocklace).
+procedure filter_endorsing(Block?, Blocklace?, Blocklace).
+procedure ratifications_for(Block?, Blocklace?, Blocklace).
+procedure filter_ratifying(Block?, Blocklace?, Blocklace?, Blocklace).
+procedure ratifies_candidate(Block?, Block?, Blocklace?).
+procedure is_finalized(Block?, Blocklace?, ParticipantList?).
+procedure find_finalized(Blocklace?, ParticipantList?, Blocklace).
+procedure is_quiescent_wave(Number?, Blocklace?).
+procedure determine_mode(Blocklace?, Mode).
+procedure wait_for_leader(Number?, Block?, _).
+procedure agent(EventList?, State?, Blocklace, Blocklace).
+procedure handle_event(Event?, State?, State, Blocklace?, Blocklace).
+procedure create_block(Number?, Mode?, Blocklace?, ParticipantList?, List?, _?, Block, List).
+procedure create_block_by_pos(Number?, Number?, Mode?, Blocklace?, ParticipantList?, List?, _?, Blocklace?, Block, List).
+procedure tau(Blocklace?, ParticipantList?, List).
+procedure order_by_wave(Blocklace?, Blocklace).
+procedure extract_payloads(Blocklace?, List).
+procedure member(_?, List?).
+procedure append(List?, List?, List).
+procedure length(List?, Number).
+procedure nth0(Number?, List?, _).
+
+%% ============================================
 %% Block Structure
 %% ============================================
 

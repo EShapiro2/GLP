@@ -5,13 +5,14 @@
 %% Uses short-circuit L--R for state dump on abort.
 
 %% Type definitions
-ControlList ::= [] ; [Any | ControlList].
-DumpList ::= [] ; [Any | DumpList].
+ControlCmd ::= suspend ; resume ; abort.
+ControlList ::= [] ; [ControlCmd | ControlList].
+DumpList ::= [] ; [_ | DumpList].
 
 %% Procedure type declarations
-procedure run(Any, Any, ControlList, DumpList, DumpList).
-procedure suspended_run(Any, Any, ControlList, DumpList, DumpList).
-procedure reduce(Any, Any).
+procedure run(_?, _?, ControlList?, DumpList?, DumpList).
+procedure suspended_run(_?, _?, ControlList?, DumpList?, DumpList).
+procedure reduce(_?, _).
 
 run(_, true, _, L, L?).                          % halt
 run(M, (A, B), Cs, L, R?) :-                     % fork
@@ -23,7 +24,7 @@ run(_, M1 # G, Cs, L, R?) :-                     % cross-module
 run(M, A, [suspend|Cs], L, R?) :-                % suspend
     suspended_run(M?, A?, Cs?, L?, R).
 run(M, A, Cs, L, R?) :-                          % reduce
-    tuple(A?), ground(M?) |
+    compound(A?), ground(M?) |
     M? # reduce(A?, B),
     run(M?, B?, Cs?, L?, R).
 

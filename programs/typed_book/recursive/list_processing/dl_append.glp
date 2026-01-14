@@ -1,6 +1,14 @@
 %% dl_append.glp - Difference list operations
 %% Demonstrates O(1) append using difference list representation.
 
+%% Type definitions
+DiffList ::= List \ List?.
+
+%% Procedure type declarations
+procedure dl_append(DiffList?, DiffList?, DiffList).
+procedure list_to_dl(List?, DiffList).
+procedure dl_to_list(DiffList?, List).
+
 %% dl_append(DL1, DL2, DL3) :- DL3 is concatenation of DL1 and DL2.
 dl_append(H1\Xs?, Xs\T2?, H1?\T2).
 

@@ -1,8 +1,6 @@
 %% play_dm.glp - Direct Messaging Channel Establishment Play
 %%
 %% Scenario: Alice and Bob are already friends (have established friend channels
-
-%% Type definitions (test scenario - minimal declarations needed)
 %% from prior cold-call). They establish a dedicated DM channel and exchange messages.
 %%
 %% This play demonstrates:
@@ -10,6 +8,25 @@
 %% 2. Bob receives request, creates DM channel pair, responds
 %% 3. Alice receives her DM channel endpoint via response variable
 %% 4. Both exchange messages on the DM channel
+
+%% Type definitions
+Channel ::= ch(List?, List).
+DMReq ::= dm_request(_).
+ReqList ::= [] ; [DMReq | ReqList].
+Result ::= result(_, _).
+
+%% Procedure type declarations
+procedure new_channel(Channel, Channel).
+procedure dm_send(_?, Channel?, Channel).
+procedure dm_receive(_, Channel?, Channel).
+procedure bind_resp(_, _).
+procedure alice(ReqList?, List?, Result).
+procedure alice_continue(Channel?, List?, Result).
+procedure bob(ReqList?, List?, Result).
+procedure bob_continue(Channel?, Result).
+procedure verify(Result?, Result?).
+procedure report(_?, _?).
+procedure play_dm.
 
 %% === Channel primitives ===
 

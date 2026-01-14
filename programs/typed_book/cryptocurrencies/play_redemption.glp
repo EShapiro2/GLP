@@ -1,8 +1,17 @@
 %% play_redemption.glp - Coin redemption scenario
-
-%% Type definitions (test/play file - minimal declarations needed)
 %% Bob redeems Alice-coins with preference list
 
+%% Type definitions
+BalanceList ::= [] ; [_ | BalanceList].
+RequestList ::= [] ; [_ | RequestList].
+BlockStream ::= [] ; [_ | BlockStream].
+
+%% Procedure type declarations
+procedure agent(RequestList?, BalanceList?, BlockStream).
+procedure play_redemption.
+procedure verify_redemption(BlockStream?, BlockStream?).
+procedure report_redemption(BlockStream?, BlockStream?).
+procedure check_stream_length(BlockStream?, Number).
 
 %% ============================================
 %% The Play

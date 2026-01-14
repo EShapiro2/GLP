@@ -5,15 +5,18 @@
 %% configurations and merge new friend's input stream into main loop.
 
 %% Type definitions
-MsgList ::= [] ; [Any | MsgList].
-FriendList ::= [] ; [Any | FriendList].
+MsgList ::= [] ; [_ | MsgList].
+FriendEntry ::= (_, _).
+FriendList ::= [] ; [FriendEntry | FriendList].
+Channel ::= ch(List?, List).
+Response ::= accept(Channel) ; no.
 
 %% Procedure type declarations
-procedure new_channel(Any, Any).
-procedure bind_response(Any, Any, Any, FriendList, FriendList, MsgList, MsgList).
-procedure handle_response(Any, Any, FriendList, FriendList, MsgList, MsgList).
-procedure tag_stream(Any, MsgList, MsgList).
-procedure merge(MsgList, MsgList, MsgList).
+procedure new_channel(Channel, Channel).
+procedure bind_response(_?, _?, Response, FriendList?, FriendList, MsgList?, MsgList).
+procedure handle_response(Response?, _?, FriendList?, FriendList, MsgList?, MsgList).
+procedure tag_stream(_?, MsgList?, MsgList).
+procedure merge(MsgList?, MsgList?, MsgList).
 
 %% Channel operations (defined guard)
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).

@@ -1,7 +1,19 @@
 %% test_balance.glp - Unit tests for balance management
 
-%% Type definitions (test/play file - minimal declarations needed)
+%% Type definitions
+BalanceEntry ::= (_, Number).
+BalanceList ::= [] ; [BalanceEntry | BalanceList].
 
+%% Procedure type declarations
+procedure get_balance(_?, BalanceList?, Number).
+procedure set_balance(_?, Number?, BalanceList?, BalanceList).
+procedure test_get_empty.
+procedure test_get_found.
+procedure test_get_missing.
+procedure test_set_empty.
+procedure test_set_update.
+procedure test_set_new.
+procedure test_balance.
 
 %% ============================================
 %% Balance Tests

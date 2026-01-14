@@ -1,0 +1,185 @@
+======================================
+   GLP REPL Full Test Suite (FAST)   
+======================================
+
+PASS: Hello World
+PASS: Simple Unification
+PASS: Merge [1,2,3] and [a,b]
+PASS: Merge standalone
+PASS: Clause Lookup
+PASS: Simple Run
+PASS: Merge via Metainterpreter
+PASS: Insertion Sort via Meta
+PASS: Append two lists
+PASS: Append empty list
+PASS: Append to empty list
+PASS: Reverse list
+PASS: Reverse empty list
+PASS: Reverse single element
+PASS: Copy list
+PASS: Copy empty list
+PASS: Ordered merge
+PASS: Ordered merge duplicates
+PASS: Ordered merge empty
+PASS: Fair stable merge
+PASS: Fair stable merge unequal
+PASS: AND gate
+PASS: OR gate
+PASS: AND gate all ones
+PASS: OR gate all zeros
+PASS: Quicksort empty
+PASS: Quicksort single
+PASS: Quicksort two
+PASS: Quicksort larger
+PASS: Quicksort five
+PASS: Quicksort non-number
+PASS: Quicksort unbound tail
+PASS: Insertion sort empty
+PASS: Insertion sort single
+PASS: Insertion sort two
+PASS: Bubble sort
+PASS: Bubble sort empty
+PASS: Bubble sort single
+PASS: Structure Demo
+PASS: Meta merge [a],[b]
+PASS: Meta merge [a],[b,c,d]
+PASS: Meta run2
+PASS: Meta merge chain
+PASS: Meta quicksort empty
+PASS: Meta quicksort single
+PASS: Nested meta quicksort 1
+PASS: Nested meta quicksort 6
+PASS: Sum list direct
+PASS: Sum empty direct
+PASS: Inner product direct
+PASS: Inner product single
+PASS: Multiply stream
+PASS: Multiply stream empty
+PASS: Fibonacci 0 direct
+PASS: Fibonacci 1 direct
+PASS: Fibonacci 2 direct
+PASS: Hanoi 0
+PASS: Hanoi 1
+PASS: Hanoi 2
+PASS: Sum list full
+PASS: Inner product full
+PASS: Multiply stream full
+PASS: Fibonacci 0 full
+PASS: Fibonacci 1 full
+PASS: Factorial 1
+PASS: Factorial 2
+PASS: Fibonacci 3
+PASS: Fibonacci 10
+PASS: Factorial 3
+PASS: Factorial 5
+PASS: Meta factorial 5
+PASS: Meta multiply
+PASS: Meta sum
+PASS: Meta inner product
+PASS: Meta hanoi 2
+PASS: Univ compose [foo]
+PASS: Univ compose [bar,x,y]
+FAIL: Univ decompose foo(a,b) (expected: L1 = \[foo, a, b\])
+FAIL: Univ decompose bar(1,2,3) (expected: L2 = \[bar, 1, 2, 3\])
+PASS: Unify atom
+PASS: Unify number
+PASS: Unify structure
+PASS: Unify list
+PASS: Unify nested
+PASS: Unify suspend
+PASS: Assign plain
+PASS: Assign add
+PASS: Assign sub
+PASS: Assign mul
+PASS: Assign div
+PASS: Assign precedence
+PASS: Assign parens
+PASS: Assign negative
+PASS: Time advances
+PASS: Time past
+PASS: Time future
+PASS: Time wait
+PASS: Primes 20
+PASS: Primes 10
+PASS: Guard - no guard
+PASS: Guard - with guard
+PASS: Structs in list
+PASS: Two structs in list
+PASS: Nested binary with var
+PASS: Ternary all vars
+PASS: Deep binary tree
+PASS: Multiple writers nested
+PASS: Open buffer
+PASS: Open2 buffer
+PASS: DL append
+PASS: Non-ground list pass
+PASS: Non-ground list build
+PASS: Unwrap list element
+PASS: Identity returns value
+PASS: p(X,X?) succeeds
+PASS: p(X?,X) succeeds
+PASS: Suspend bob(X?) unbound
+PASS: Suspend level1(X?) unbound
+PASS: Suspend level2 nested
+PASS: Suspend level3 deep nested
+PASS: Defined guard match
+PASS: Defined guard fail
+PASS: Defined guard suspend
+PASS: Channel make_pair
+PASS: DG make_pair creates channels
+PASS: DG bind_response yes
+PASS: DG bind_response yes local
+PASS: DG bind_response no
+PASS: DG bind_response no local
+PASS: DG channel test success
+PASS: DG channel test fail atom
+PASS: DG channel test fail pair
+PASS: DG pair test success
+PASS: DG pair test fail
+PASS: DG wrapper test success
+PASS: DG wrapper test fail
+PASS: DG nested wrapper with pair
+PASS: DG nested just wrapper
+PASS: DG nested neither
+PASS: DG wrap binding
+PASS: DG deep binding
+PASS: DG triple binding
+PASS: DG relay_send base
+PASS: DG relay_recv base
+PASS: DG relay base
+PASS: DG switch2x2 base
+PASS: Goal reader to head writer
+
+--- SRSW Violation Tests ---
+PASS: SRSW Check - merge_with_reader.glp rejected
+
+--- Arithmetic Fixed Tests (separate session) ---
+PASS: Addition 5+3
+PASS: Multiplication 4*7
+PASS: Compound (2*3)+4
+
+--- MWM (Multiway Merge) Tests ---
+PASS: MWM empty
+PASS: MWM single stream
+PASS: MWM two streams
+
+--- Ground Equality (=?=) Guard Tests ---
+PASS: =?= atoms equal
+PASS: =?= atoms not equal
+PASS: =?= structures equal
+PASS: =?= structures not equal
+PASS: =?= lists equal
+PASS: =?= lists not equal
+
+--- Guard Negation (~G) Tests ---
+PASS: ~integer(5) fails, integer succeeds
+PASS: ~integer(hello) succeeds
+PASS: ~number(3.14) fails, number succeeds
+PASS: ~number(hello) succeeds
+PASS: ~(5 =?= 5) fails, equality succeeds
+PASS: ~(5 =?= 3) succeeds
+
+--- Invalid Guard Tests ---
+mktemp: unrecognized option `--suffix=.glp'
+usage: mktemp [-d] [-p tmpdir] [-q] [-t prefix] [-u] template ...
+       mktemp [-d] [-p tmpdir] [-q] [-u] -t prefix 

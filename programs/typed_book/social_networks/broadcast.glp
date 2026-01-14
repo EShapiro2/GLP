@@ -2,10 +2,11 @@
 %% Sends a message to all followers
 
 %% Type definitions
-FollowerList ::= [] ; [Any | FollowerList].
+FollowerEntry ::= (_, List).
+FollowerList ::= [] ; [FollowerEntry | FollowerList].
 
 %% Procedure type declarations
-procedure broadcast(Any, FollowerList, FollowerList).
+procedure broadcast(_?, FollowerList?, FollowerList).
 
 broadcast(_, [], []).
 broadcast(Post, [(Name, Out)|Fs], [(Name?, [Post?|Out?])|Fs1?]) :-

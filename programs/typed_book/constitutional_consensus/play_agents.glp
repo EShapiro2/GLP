@@ -1,6 +1,24 @@
 %% play_agents.glp - Multi-agent consensus simulation
 %% Three agents running the full consensus protocol
 
+%% Type definitions
+Block ::= block(Number, _, List).
+Blocklace ::= [] ; [Block | Blocklace].
+Mode ::= low ; high.
+Event ::= receive(Block) ; submit(_) ; advance(Number) ; timeout(Number).
+State ::= state(Blocklace, Mode, List, List, _).
+Result ::= passed ; failed(_).
+ResultList ::= [] ; [_ | ResultList].
+
+%% Procedure type declarations
+procedure agent(List?, State?, Blocklace, Blocklace).
+procedure handle_event(Event?, State?, State, Blocklace?, Blocklace).
+procedure play_agents(Blocklace, Blocklace).
+procedure test_agent_propose(Result).
+procedure check_propose_result(Blocklace?, Result).
+procedure test_agent_endorse(Result).
+procedure check_endorse_result(Blocklace?, Result).
+procedure test_agents(ResultList).
 
 %% ============================================
 %% Three-Agent Play

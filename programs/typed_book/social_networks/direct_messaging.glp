@@ -5,17 +5,20 @@
 %% separate from protocol control channels.
 
 %% Type definitions
-MsgList ::= [] ; [Any | MsgList].
-FriendList ::= [] ; [Any | FriendList].
+MsgList ::= [] ; [_ | MsgList].
+FriendEntry ::= (_, _).
+FriendList ::= [] ; [FriendEntry | FriendList].
+Channel ::= ch(List?, List).
+AttInfo ::= att(_, _).
 
 %% Procedure type declarations
-procedure establish(Any, Any, Any, FriendList, FriendList, MsgList, MsgList).
-procedure new_channel(Any, Any).
-procedure attestation(Any, Any).
-procedure handle_friend(Any, Any, Any, Any, Any, FriendList, FriendList, MsgList, MsgList).
-procedure tag_stream(Any, MsgList, MsgList).
-procedure merge(MsgList, MsgList, MsgList).
-procedure forward_to_app(Any).
+procedure establish(_?, _?, _, FriendList?, FriendList, MsgList?, MsgList).
+procedure new_channel(Channel, Channel).
+procedure attestation(_?, AttInfo).
+procedure handle_friend(_?, _?, _?, _?, _?, FriendList?, FriendList, MsgList?, MsgList).
+procedure tag_stream(_?, MsgList?, MsgList).
+procedure merge(MsgList?, MsgList?, MsgList).
+procedure forward_to_app(_).
 
 % Modified establishment for direct messaging
 % Secure version - verifies DM channel attestation

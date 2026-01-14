@@ -2,9 +2,9 @@
 %% Module name defaults to: math_module
 
 %% Procedure type declarations
-procedure factorial(Number, Number).
-procedure gcd(Number, Number, Number).
-procedure reduce(Any, Any).
+procedure factorial(Number?, Number).
+procedure gcd(Number?, Number?, Number).
+procedure reduce(_?, _).
 
 factorial(0, 1).
 factorial(N, F?) :-

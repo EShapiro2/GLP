@@ -11,15 +11,19 @@
 %% Test goal:
 %% test_monitor(V1, V2).
 
+%% Type definitions
+MonitorReq ::= add(Number?) ; subtract(Number?) ; value(Number).
+ReqList ::= [] ; [MonitorReq | ReqList].
+
 %% Procedure type declarations
-procedure client1(Any, Any).
-procedure client1_cont(Any).
-procedure client2(Any, Any).
-procedure client2_cont(Any).
+procedure client1(Number, ReqList).
+procedure client1_cont(ReqList).
+procedure client2(Number, ReqList).
+procedure client2_cont(ReqList).
 procedure test_monitor(Number, Number).
-procedure merge(Any, Any, Any).
-procedure monitor(Any).
-procedure monitor_loop(Any, Number).
+procedure merge(ReqList?, ReqList?, ReqList).
+procedure monitor(ReqList?).
+procedure monitor_loop(ReqList?, Number?).
 
 % Client 1: immediate - add 5, add 3, query value
 client1(V1, [add(5), add(3), value(V1?)|Xs?]) :- client1_cont(Xs).

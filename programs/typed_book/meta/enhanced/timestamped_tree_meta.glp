@@ -10,15 +10,18 @@
 %%
 %% Tree format: reduction(ObservedGoal, Timestamp, BodyTree) or fork(T1, T2)
 
+%% Type definitions
+ExecTree ::= true ; fork(ExecTree, ExecTree) ; reduction(_, Number?, ExecTree).
+
 %% Procedure type declarations
-procedure run(Any, Any).
-procedure reduce(Any, Any).
-procedure observe(Any, Any, Any).
+procedure run(_?, ExecTree).
+procedure reduce(_?, _).
+procedure observe(_?, _, _).
 procedure time(Number).
 
-run(true,true).  % halt
-run((A,B),fork(TA?,TB?)) :- run(A?,TA), run(B?,TB). % fork
-run(A,reduction(A_obs?,Time?,TB?)) :- otherwise, time(Time) |
+run(true, true).  % halt
+run((A,B), fork(TA?,TB?)) :- run(A?,TA), run(B?,TB). % fork
+run(A, reduction(A_obs?,Time?,TB?)) :- otherwise, time(Time) |
     observe(A?, A_exec, A_obs),
     reduce(A_exec?, B),
     run(B?, TB).

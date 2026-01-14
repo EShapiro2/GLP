@@ -19,26 +19,27 @@
 %%    containing its paired reader, ensuring strict temporal ordering.
 
 %% Type definitions
-List ::= [] ; [Any | List].
+Done ::= done.
+Control ::= control(List, Control).
 
 %% Procedure type declarations
-procedure extend_stream(List, Any, Any).
-procedure producer_a(Any).
-procedure producer_b(Any).
-procedure handover(Any, Any, Any).
-procedure produce_batch_a(Any, Any, Any).
-procedure produce_batch_b(Any, Any, Any).
+procedure extend_stream(List?, _, List).
+procedure producer_a(Control?).
+procedure producer_b(Control?).
+procedure handover(Done?, List, Control).
+procedure produce_batch_a(List, List?, Done).
+procedure produce_batch_b(List, List?, Done).
 
 %% Cooperative extension example - only holder of tail writer can extend
 extend_stream([H?|T], H, T).
 
 %% Round-robin production through explicit handover
-producer_a(control(Xs,Next)) :-
+producer_a(control(Xs,Next?)) :-
     produce_batch_a(Xs,Xs1,Done),
-    handover(Done?,Xs1,Next).
+    handover(Done?,Xs1?,Next).
 
-producer_b(control(Xs,Next)) :-
+producer_b(control(Xs,Next?)) :-
     produce_batch_b(Xs,Xs1,Done),
-    handover(Done?,Xs1,Next).
+    handover(Done?,Xs1?,Next).
 
-handover(done,Xs,control(Xs,Next)).
+handover(done, Xs, control(Xs?,Next?)).

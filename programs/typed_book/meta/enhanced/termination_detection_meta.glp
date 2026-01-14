@@ -4,8 +4,8 @@
 %% Uses short-circuit technique to detect distributed termination.
 
 %% Procedure type declarations
-procedure run(Any, Any, Any, Any).
-procedure reduce(Any, Any).
+procedure run(_?, _?, _?, _).
+procedure reduce(_?, _).
 
 run(_, true, L, L?).                             % halt - close circuit
 run(M, (A, B), L, R?) :-                         % fork - split chain
@@ -14,7 +14,7 @@ run(M, (A, B), L, R?) :-                         % fork - split chain
     run(M?, B?, Mid?, R).
 run(_, M1 # G, L, R?) :- run(M1?, G?, L?, R).    % cross-module
 run(M, A, L, R?) :-                              % reduce
-    tuple(A?), ground(M?) |
+    compound(A?), ground(M?) |
     M? # reduce(A?, B),
     run(M?, B?, L?, R).
 

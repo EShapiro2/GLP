@@ -5,17 +5,14 @@
 %% If a goal unifies with reduce's first argument, the body is
 %% returned in the second argument.
 
-%% Type definitions
-List ::= [] ; [Any | List].
-
 %% Procedure type declarations
-procedure run(Any).
-procedure reduce(Any, Any).
-procedure merge(List, List, List).
+procedure run(_?).
+procedure reduce(_?, _).
+procedure merge(List?, List?, List).
 
 run(true).  % halt
 run((A,B)) :- run(A?), run(B?). % fork
-run(A) :- tuple(A?) | reduce(A?, B), run(B?). % reduce
+run(A) :- compound(A?) | reduce(A?, B), run(B?). % reduce
 
 %% Example: reduce encoding of merge
 reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).

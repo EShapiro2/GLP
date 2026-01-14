@@ -5,18 +5,20 @@
 %% dequeue returns immediately; actual value filled in later by enqueue.
 
 %% Type definitions
-ReqList ::= [] ; [Any | ReqList].
+QueueReq ::= dequeue(_) ; enqueue(_?).
+ReqList ::= [] ; [QueueReq | ReqList].
 
 %% Procedure type declarations
-procedure qm(ReqList, Any, Any).
+procedure qm(ReqList?, List, List).
+procedure merge(ReqList?, ReqList?, ReqList).
 
 %% Queue manager - Head and Tail are difference list pointers
 %% Initial call: qm(Requests?, Q, Q) with same variable for empty queue
 
-qm([dequeue(X)|S?], [X|Head?], Tail) :-
+qm([dequeue(X?)|S?], [X|Head?], Tail) :-
     qm(S?, Head?, Tail?).
 
-qm([enqueue(X)|S?], Head, [X|Tail?]) :-
+qm([enqueue(X)|S?], Head, [X?|Tail?]) :-
     qm(S?, Head?, Tail?).
 
 %% Example setup:
@@ -31,6 +33,6 @@ qm([enqueue(X)|S?], Head, [X|Tail?]) :-
 %% receiver fills it in later. No negative responses needed.
 
 %% merge/3 for combining request streams
-merge([A|Xs?], Ys, [A|Zs?]) :- merge(Xs?, Ys?, Zs).
-merge(Xs, [A|Ys?], [A|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([A|Xs?], Ys, [A?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge(Xs, [A|Ys?], [A?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], [], []).

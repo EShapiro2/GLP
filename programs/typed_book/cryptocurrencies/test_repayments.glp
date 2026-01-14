@@ -1,7 +1,22 @@
 %% test_repayments.glp - Unit tests for repayment computation
 
-%% Type definitions (test/play file - minimal declarations needed)
+%% Type definitions
+BalanceEntry ::= (_, Number).
+BalanceList ::= [] ; [BalanceEntry | BalanceList].
+PrefList ::= [] ; [_ | PrefList].
+RepayEntry ::= (_, Number).
+RepayList ::= [] ; [RepayEntry | RepayList].
 
+%% Procedure type declarations
+procedure compute_repayments(Number?, PrefList?, BalanceList?, RepayList, BalanceList).
+procedure get_balance(_?, BalanceList?, Number).
+procedure test_repay_zero.
+procedure test_repay_enough.
+procedure test_repay_exact.
+procedure test_repay_fallback.
+procedure test_repay_multi.
+procedure test_repay_skip_zero.
+procedure test_repayments.
 
 %% ============================================
 %% Repayment Computation Tests

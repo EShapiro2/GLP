@@ -4,11 +4,18 @@
 %% Dynamic object creation and management.
 %% Creates counter instances and routes messages by name.
 
+%% Type definitions
+CounterMsg ::= clear ; up ; down ; show(Number).
+CounterEntry ::= (_, List).
+CounterList ::= [] ; [CounterEntry | CounterList].
+Command ::= create(_) ; (_, CounterMsg).
+CommandStream ::= [] ; [Command | CommandStream].
+
 %% Procedure type declarations
-procedure use_many_counters(Any, Any).
-procedure send(Any, Any, Any, Any).
-procedure counter(Any, Number).
-procedure wait_write(Any).
+procedure use_many_counters(CommandStream?, CounterList).
+procedure send(CounterList?, _?, CounterMsg?, CounterList).
+procedure counter(List?, Number?).
+procedure wait_write(_?).
 
 use_many_counters([create(Name)|Input?], List_of_counters) :-
     counter(Com?, 0),

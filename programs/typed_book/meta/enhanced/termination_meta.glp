@@ -12,8 +12,8 @@
 %% When goal terminates, it closes its segment by unifying L with R
 
 %% Procedure type declarations
-procedure run(Any, Any, Any).
-procedure reduce(Any, Any).
+procedure run(_?, _?, _).
+procedure reduce(_?, _).
 
 run(true, L, L?).  % halt - close the circuit
 run((A,B), L, R?) :-  % fork - split the chain
