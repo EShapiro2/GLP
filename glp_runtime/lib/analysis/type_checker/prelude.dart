@@ -87,49 +87,46 @@ receive(X?, ch([X|In], Out?), ch(In?, Out)).
 ''';
 
 /// Names of predefined types that cannot be redefined by user modules
+/// Note: Only fundamental primitive types are protected.
+/// Library-level types (DiffList, Channel) can be redefined by user programs.
 const Set<String> predefinedTypeNames = {
   'Number',   // Primitive builtin
   'Integer',  // Primitive builtin
   'Real',     // Primitive builtin
   'String',   // Primitive builtin
   'Exp',      // Arithmetic expression type
-  'List',     // Collection type
-  'Stream',   // Collection type
-  'DiffList', // Collection type
-  'Channel',  // Communication type
+  'List',     // Fundamental collection type
+  'Stream',   // Fundamental collection type
+  // Note: DiffList, Channel are NOT protected - they are library-level
 };
 
 /// Names of predefined procedures that cannot be redefined by user modules
+/// Note: Only truly fundamental guards/operations are protected.
+/// Library-level operations (channels, diff-lists) can be redefined by user programs.
 const Set<String> predefinedProcedureNames = {
-  // Type guards
+  // Type guards (fundamental - implemented by runtime)
   'integer',
   'number',
   'string',
   'atom',
   'constant',
   'compound',
-  'is_list',
-  // Groundness guards
+  // Groundness guards (fundamental - implemented by runtime)
   'ground',
   'known',
   'unknown',
-  // Comparison guards
+  // Comparison guards (fundamental - implemented by runtime)
   '<',
   '>',
   '=<',
   '>=',
   '=:=',
   '=\\=',
-  // Equality
+  // Equality (fundamental)
   '=?=',
   '=',
-  // Difference list
-  'dl_append',
-  'dl_to_list',
-  // Channel
-  'new_channel',
-  'send',
-  'receive',
+  // Note: is_list, dl_append, dl_to_list, new_channel, send, receive
+  // are NOT protected - they are library-level and can be redefined
 };
 
 /// Built-in goals that don't need type checking

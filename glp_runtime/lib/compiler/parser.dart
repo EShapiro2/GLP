@@ -1116,6 +1116,28 @@ class Parser {
       return PrimitiveModeAlt(isInput, line, column);
     }
 
+    // Compound term shorthand: (T1, T2, ...) → ','(T1, ','(T2, ...))
+    // Per spec: "The parenthesized syntax (T1, T2, T3) is right-associative
+    // shorthand for ','(T1, ','(T2, T3))"
+    if (_check(TokenType.LPAREN)) {
+      _advance();  // consume (
+      final elements = <TypeExpr>[];
+      elements.add(_parseTypeAlt());
+      while (_match(TokenType.COMMA)) {
+        elements.add(_parseTypeAlt());
+      }
+      _consume(TokenType.RPAREN, 'Expected ")" after compound type');
+      // Build right-associative structure with functor ','
+      if (elements.length == 1) {
+        return elements[0];  // Just parenthesized expression
+      }
+      TypeExpr result = elements.last;
+      for (int i = elements.length - 2; i >= 0; i--) {
+        result = StructAlt(',', [elements[i], result], line, column);
+      }
+      return result;
+    }
+
     // Empty list: []
     if (_check(TokenType.LBRACKET)) {
       _advance();  // consume [

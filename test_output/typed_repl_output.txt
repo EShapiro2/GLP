@@ -53,9 +53,9 @@ PASS: recursive/list_processing/append
 PASS: recursive/list_processing/bubble_sort
 PASS: recursive/list_processing/copy
 PASS: recursive/list_processing/delete
-FAIL: recursive/list_processing/dl_append (loading error)
+FAIL: recursive/list_processing/dl_append (unexpected type errors)
 FAIL: recursive/list_processing/filter_even (unexpected type errors)
-FAIL: recursive/list_processing/flatten (loading error)
+PASS: recursive/list_processing/flatten
 PASS: recursive/list_processing/inner_product
 PASS: recursive/list_processing/inner_product_iter
 PASS: recursive/list_processing/insertion_sort
@@ -67,13 +67,13 @@ FAIL: recursive/list_processing/member (unexpected type errors)
 FAIL: recursive/list_processing/merge_ordered (unexpected type errors)
 PASS: recursive/list_processing/merge_sort
 FAIL: recursive/list_processing/nth (unexpected type errors)
-FAIL: recursive/list_processing/polygon_area (loading error)
+FAIL: recursive/list_processing/polygon_area (unexpected type errors)
 PASS: recursive/list_processing/prefix
 PASS: recursive/list_processing/quicksort
 PASS: recursive/list_processing/reverse
 PASS: recursive/list_processing/reverse_naive
 PASS: recursive/list_processing/translate
-FAIL: recursive/list_processing/variants/flatten_original (loading error)
+PASS: recursive/list_processing/variants/flatten_original
 PASS: recursive/list_processing/variants/quicksort_original
 FAIL: recursive/structure_processing/ancestor (unexpected type errors)
 PASS: recursive/structure_processing/binary_tree
@@ -105,11 +105,11 @@ FAIL: streams/producers_consumers/observers (unexpected type errors)
 FAIL: streams/producers_consumers/parallel_table (unexpected type errors)
 PASS: streams/producers_consumers/producer_consumer
 PASS: streams/producers_consumers/producer_consumer_countdown
-FAIL: streams/buffered_communication/bounded_buffer (loading error)
+FAIL: streams/buffered_communication/bounded_buffer (unexpected type errors)
 FAIL: streams/buffered_communication/bounded_buffer_original (loading error)
-FAIL: streams/buffered_communication/switch2x2 (loading error)
+FAIL: streams/buffered_communication/switch2x2 (unexpected type errors)
 PASS: streams/objects_monitors/counter
-FAIL: streams/objects_monitors/many_counters (loading error)
+FAIL: streams/objects_monitors/many_counters (unexpected type errors)
 PASS: streams/objects_monitors/monitor
 FAIL: streams/objects_monitors/monitor_test (unexpected type errors)
 FAIL: streams/objects_monitors/network_switch (loading error)
@@ -135,17 +135,17 @@ FAIL: meta/enhanced/tracing_meta (unexpected type errors)
 FAIL: meta/debugging/runtime_control_meta (unexpected type errors)
 FAIL: modules/main_module (unexpected type errors)
 PASS: modules/math_module
-FAIL: social_graph/agent (loading error)
-FAIL: social_graph/agent_full (loading error)
-FAIL: social_graph/agent_simple (loading error)
+FAIL: social_graph/agent (unexpected type errors)
+FAIL: social_graph/agent_full (unexpected type errors)
+FAIL: social_graph/agent_simple (unexpected type errors)
 FAIL: social_graph/attestation_guards (unexpected type errors)
-FAIL: social_graph/channel (loading error)
-FAIL: social_graph/cold_call (loading error)
-FAIL: social_graph/friend_introduction (loading error)
-FAIL: social_graph/network (loading error)
-FAIL: social_graph/network2 (loading error)
-FAIL: social_graph/network3 (loading error)
-FAIL: social_graph/network4 (loading error)
+PASS: social_graph/channel
+FAIL: social_graph/cold_call (unexpected type errors)
+FAIL: social_graph/friend_introduction (unexpected type errors)
+FAIL: social_graph/network (unexpected type errors)
+FAIL: social_graph/network2 (unexpected type errors)
+FAIL: social_graph/network3 (unexpected type errors)
+FAIL: social_graph/network4 (unexpected type errors)
 FAIL: social_graph/play_4agent (loading error)
 FAIL: social_graph/play_4agents (loading error)
 FAIL: social_graph/play_alice_bob (loading error)
@@ -154,13 +154,13 @@ FAIL: social_graph/play_introduction (loading error)
 FAIL: social_graph/plays/play01_cold_call/alice (loading error)
 FAIL: social_graph/plays/play01_cold_call/bob (loading error)
 FAIL: social_graph/plays/play01_cold_call/main (loading error)
-FAIL: social_graph/response_handling (loading error)
-FAIL: social_graph/response_handling_unfolded (loading error)
+FAIL: social_graph/response_handling (unexpected type errors)
+FAIL: social_graph/response_handling_unfolded (unexpected type errors)
 FAIL: social_graph/stream_security (unexpected type errors)
 FAIL: social_graph/streams (unexpected type errors)
 PASS: social_graph/test_4player
-FAIL: social_networks/broadcast (loading error)
-FAIL: social_networks/direct_messaging (loading error)
+PASS: social_networks/broadcast
+FAIL: social_networks/direct_messaging (unexpected type errors)
 FAIL: social_networks/dm_simple (loading error)
 FAIL: social_networks/feed (loading error)
 FAIL: social_networks/feed_server (loading error)
@@ -213,7 +213,7 @@ PASS: call_mode_mismatch (rejected: type errors)
 PASS: embedded_mode_error (rejected: type errors)
 PASS: counter_wrong_mode (rejected: type errors)
 PASS: accumulator_wrong_mode (rejected: loading error)
-PASS: channel_wrong_inversion (rejected: loading error)
+PASS: channel_wrong_inversion (rejected: SRSW violation)
 PASS: correct_type_wrong_annotation (rejected: loading error)
 PASS: double_nesting_error (rejected: loading error)
 PASS: list_tail_mode_error (rejected: loading error)
@@ -233,7 +233,7 @@ PASS: merge_reader_at_input (rejected: loading error)
 PASS: merge_writer_at_output (rejected: loading error)
 
 ======================================
-Total: 222 | Passed: 122 | Failed: 100
+Total: 222 | Passed: 126 | Failed: 96
 ======================================
 
 Failed positive tests (need investigation):
@@ -241,13 +241,11 @@ Failed positive tests (need investigation):
   - /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/sum_list.glp
   - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/dl_append.glp
   - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/filter_even.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/flatten.glp
   - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/maxlist.glp
   - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/member.glp
   - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/merge_ordered.glp
   - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/nth.glp
   - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/polygon_area.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/variants/flatten_original.glp
   - /Users/udi/GLP/test/../programs/typed_book/recursive/structure_processing/ancestor.glp
   - /Users/udi/GLP/test/../programs/typed_book/recursive/structure_processing/distribute_nonground.glp
   - /Users/udi/GLP/test/../programs/typed_book/recursive/structure_processing/heapify.glp
@@ -291,7 +289,6 @@ Failed positive tests (need investigation):
   - /Users/udi/GLP/test/../programs/typed_book/social_graph/agent_full.glp
   - /Users/udi/GLP/test/../programs/typed_book/social_graph/agent_simple.glp
   - /Users/udi/GLP/test/../programs/typed_book/social_graph/attestation_guards.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/channel.glp
   - /Users/udi/GLP/test/../programs/typed_book/social_graph/cold_call.glp
   - /Users/udi/GLP/test/../programs/typed_book/social_graph/friend_introduction.glp
   - /Users/udi/GLP/test/../programs/typed_book/social_graph/network.glp
@@ -310,7 +307,6 @@ Failed positive tests (need investigation):
   - /Users/udi/GLP/test/../programs/typed_book/social_graph/response_handling_unfolded.glp
   - /Users/udi/GLP/test/../programs/typed_book/social_graph/stream_security.glp
   - /Users/udi/GLP/test/../programs/typed_book/social_graph/streams.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_networks/broadcast.glp
   - /Users/udi/GLP/test/../programs/typed_book/social_networks/direct_messaging.glp
   - /Users/udi/GLP/test/../programs/typed_book/social_networks/dm_simple.glp
   - /Users/udi/GLP/test/../programs/typed_book/social_networks/feed.glp

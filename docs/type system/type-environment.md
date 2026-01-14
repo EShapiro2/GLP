@@ -1,7 +1,7 @@
 # Module: type-environment
 
-**Version**: 0.5
-**Date**: 2025-01-12
+**Version**: 0.6
+**Date**: 2025-01-14
 **Status**: DRAFT
 **Paper References**: Definition 4.1 (Typed GLP Program), Section 4.1 (Type Classification), Section 4.2 (Type Automaton - Determinism and Alias Prohibition)
 
@@ -84,6 +84,35 @@ MyStream ::= Stream?.     % alias for complement of defined type
 ```
 
 A valid type definition must have at least one alternative with a compound structure or constant.
+
+### Type Alternative Syntax
+
+Type alternatives use the same term syntax as program terms. This ensures consistency between type definitions and the terms they describe.
+
+**Syntactic forms:**
+
+| Syntax | Meaning | TypeAlternative Class |
+|--------|---------|----------------------|
+| `atom` | Constant atom | `ConstantAlt` |
+| `42`, `3.14` | Numeric constant | `ConstantAlt` |
+| `[]` | Empty list | `ListNilAlt` |
+| `[H \| T]` | List cons | `ListConsAlt` |
+| `functor(A1, ..., An)` | Structure | `StructAlt` |
+| `(T1, T2)` | Compound (shorthand for `','(T1, T2)`) | `StructAlt` with functor `,` |
+| `Content \ Hole` | Difference list | `DiffListAlt` |
+| `_` | Output wildcard | `PrimitiveModeAlt(isInput: false)` |
+| `_?` | Input wildcard | `PrimitiveModeAlt(isInput: true)` |
+| `TypeName` | Type reference (output) | `TypeRef(isInput: false)` |
+| `TypeName?` | Type reference (input) | `TypeRef(isInput: true)` |
+
+**Compound term shorthand:** The parenthesized syntax `(T1, T2, T3)` is right-associative shorthand for `','(T1, ','(T2, T3))`. This matches the term parser behavior for compound terms in program clauses.
+
+**Example:**
+```
+Pair ::= (_, _).                    % Equivalent to: Pair ::= ','(_, _).
+Triple ::= (_, _, _).               % Equivalent to: Triple ::= ','(_, ','(_, _)).
+FriendEntry ::= (String, Channel).  % Compound with named types
+```
 
 ## Public Interface
 
@@ -569,6 +598,11 @@ BadNumeric ::= Number ; Integer.
 | Redeclaring procedure | `RedefinitionError` |
 | Reference to undefined type | `UndefinedTypeError` |
 
+## Changes from v0.5
+
+- Added "Type Alternative Syntax" section clarifying that type definitions use the same term syntax as program terms
+- Documented compound term shorthand: `(T1, T2)` is `','(T1, T2)`
+
 ## Changes from v0.4
 
 - Added `Real`, `Number` to predefined types
@@ -588,3 +622,4 @@ BadNumeric ::= Number ; Integer.
 | 0.3 | 2025-01-07 | Add algorithms, positive and negative examples |
 | 0.4 | 2025-01-09 | Add Type Classification section |
 | 0.5 | 2025-01-12 | Add Real/Number types; type alias prohibition; determinism requirement |
+| 0.6 | 2025-01-14 | Add Type Alternative Syntax section; document compound term shorthand |

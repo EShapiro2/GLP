@@ -23,10 +23,29 @@ Run `bash /Users/udi/GLP/run_typed_repl_tests.sh` to get current numbers.
 | `glp_runtime/test/programs/typechecker/` | Type checker unit tests |
 | `glp_runtime/test/programs/moded_types/` | Mode checking unit tests |
 
+## Specifications
+
+All specification files are in `/Users/udi/GLP/docs/type system/`:
+
+| File | Purpose |
+|------|---------|
+| `mode.md` | Mode definitions |
+| `type-environment.md` | Type environment spec |
+| `moded-term.md` | Moded term spec |
+| `moded-head.md` | Moded head spec |
+| `type-dfa.md` | Type DFA spec |
+| `well-typed-term.md` | Well-typed term spec |
+| `well-typed-clause.md` | Well-typed clause spec |
+| `well-typed-program.md` | Well-typed program spec |
+| `testing.md` | Testing strategy |
+
 ## Known Issues
 
 The test output file is authoritative. Check failed tests there.
 
-## Specs
+## Remaining Diary Files
 
-All specification files are in `/Users/udi/GLP/docs/modules/` (not in `docs/type system/`).
+| File | Purpose |
+|------|---------|
+| `docs/diary/book-fixes-tracker.md` | Tracks SRSW violations in original `book/` programs |
+| `docs/diary/glp-programming-knowledge.md` | Accumulated GLP programming wisdom |
