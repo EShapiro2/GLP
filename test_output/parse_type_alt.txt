@@ -1,0 +1,101 @@
+    while (_match(TokenType.SEMICOLON)) {
+      alternatives.add(_parseTypeAlt());
+    }
+
+    _consume(TokenType.DOT, 'Expected "." after type definition');
+
+    return TypeDef(typeName, alternatives, line, column);
+  }
+
+  /// Parse a single type alternative
+  TypeExpr _parseTypeAlt() {
+    final line = _peek().line;
+    final column = _peek().column;
+
+    // Primitive mode: _ or _?
+    if (_match(TokenType.UNDERSCORE)) {
+      final isInput = _match(TokenType.QUESTION);
+      return PrimitiveModeAlt(isInput, line, column);
+    }
+
+    // Compound term shorthand: (T1, T2, ...) → ','(T1, ','(T2, ...))
+    // Per spec: "The parenthesized syntax (T1, T2, T3) is right-associative
+    // shorthand for ','(T1, ','(T2, T3))"
+    if (_check(TokenType.LPAREN)) {
+      _advance();  // consume (
+      final elements = <TypeExpr>[];
+      elements.add(_parseTypeAlt());
+      while (_match(TokenType.COMMA)) {
+        elements.add(_parseTypeAlt());
+      }
+      _consume(TokenType.RPAREN, 'Expected ")" after compound type');
+      // Build right-associative structure with functor ','
+      if (elements.length == 1) {
+        return elements[0];  // Just parenthesized expression
+      }
+      TypeExpr result = elements.last;
+      for (int i = elements.length - 2; i >= 0; i--) {
+        result = StructAlt(',', [elements[i], result], line, column);
+      }
+      return result;
+    }
+
+    // Empty list: []
+    if (_check(TokenType.LBRACKET)) {
+      _advance();  // consume [
+      if (_match(TokenType.RBRACKET)) {
+        return ListNilAlt(line, column);
+      }
+      // List cons: [Head | Tail]
+      final head = _parseTypeAlt();
+      _consume(TokenType.PIPE, 'Expected "|" in list type');
+      final tail = _parseTypeAlt();
+      _consume(TokenType.RBRACKET, 'Expected "]" after list type');
+      return ListConsAlt(head, tail, line, column);
+    }
+
+    // Difference list: Content \ Hole
+    // Need to check for struct first, then look for \
+
+    // Number literal
+    if (_check(TokenType.NUMBER)) {
+      final token = _advance();
+      return ConstantAlt(token.literal!, line, column);
+    }
+
+    // Type reference (capitalized) or atom constant (lowercase)
+    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
+      final token = _advance();
+      final isInput = token.type == TokenType.READER || _match(TokenType.QUESTION);
+      final typeRef = TypeRef(token.lexeme, line, column, isInput: isInput);
+
+      // Check for difference list: TypeRef \ hole (e.g., List \ List?)
+      if (_match(TokenType.BACKSLASH)) {
+        final hole = _parseTypeAlt();
+        return DiffListAlt(typeRef, hole, line, column);
+      }
+
+      return typeRef;
+    }
+
+    if (_check(TokenType.ATOM)) {
+      final token = _advance();
+      // Check if it's a struct: atom(args)
+      if (_match(TokenType.LPAREN)) {
+        final args = <TypeExpr>[];
+        if (!_check(TokenType.RPAREN)) {
+          args.add(_parseTypeAlt());
+          while (_match(TokenType.COMMA)) {
+            args.add(_parseTypeAlt());
+          }
+        }
+        _consume(TokenType.RPAREN, 'Expected ")" after struct arguments');
+        return StructAlt(token.lexeme, args, line, column);
+      }
+      // Check for difference list: atom \ hole
+      if (_match(TokenType.BACKSLASH)) {
+        final content = ConstantAlt(token.lexeme, line, column);
+        final hole = _parseTypeAlt();
+        return DiffListAlt(content, hole, line, column);
+      }
+      // Just a constant atom

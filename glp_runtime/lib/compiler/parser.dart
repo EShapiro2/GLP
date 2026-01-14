@@ -2,6 +2,7 @@ import 'token.dart';
 import 'ast.dart';
 import 'error.dart';
 import '../analysis/type_checker/type_ast.dart';
+import '../analysis/type_checker/type_conversion.dart';
 
 /// Parser for GLP source code
 class Parser {
@@ -717,6 +718,27 @@ class Parser {
 
   // Primary expression: variable, number, string, list, structure, parenthesized, unary minus
   Term _parsePrimary() {
+    // Operator as functor (for type definitions like Exp ::= +(Exp?, Exp?))
+    // Must check BEFORE unary minus so -(X,Y) is parsed as struct, not neg((X,Y))
+    if (_check(TokenType.PLUS) || _check(TokenType.MINUS) || _check(TokenType.STAR) ||
+        _check(TokenType.SLASH) || _check(TokenType.SLASH_SLASH) || _check(TokenType.MOD)) {
+      // Look ahead: if followed by (, treat as functor
+      if (_current + 1 < tokens.length && tokens[_current + 1].type == TokenType.LPAREN) {
+        final functorToken = _advance();
+        _advance();  // consume (
+        final args = <Term>[];
+        if (!_check(TokenType.RPAREN)) {
+          args.add(_parseExpression());
+          while (_match(TokenType.COMMA)) {
+            args.add(_parseExpression());
+          }
+        }
+        _consume(TokenType.RPAREN, 'Expected ")" after operator struct arguments');
+        return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
+      }
+      // Otherwise fall through - will be handled as unary minus or infix operator
+    }
+
     // Unary minus: -X becomes neg(X)
     if (_match(TokenType.MINUS)) {
       final minusToken = _previous();
@@ -739,10 +761,11 @@ class Parser {
       return VarTerm(token.lexeme, isReader, token.line, token.column);
     }
 
-    // Underscore (anonymous variable)
+    // Underscore (anonymous variable) - can have reader mark: _ or _?
     if (_match(TokenType.UNDERSCORE)) {
       final token = _previous();
-      return UnderscoreTerm(token.line, token.column);
+      final isReader = _match(TokenType.QUESTION);
+      return UnderscoreTerm(token.line, token.column, isReader: isReader);
     }
 
     // Number
@@ -1105,127 +1128,11 @@ class Parser {
     return TypeDef(typeName, alternatives, line, column);
   }
 
-  /// Parse a single type alternative
+  /// Parse a single type alternative using unified term parsing.
+  /// Per spec (type-conversion.md): Parse as Term, then convert to TypeExpr.
   TypeExpr _parseTypeAlt() {
-    final line = _peek().line;
-    final column = _peek().column;
-
-    // Primitive mode: _ or _?
-    if (_match(TokenType.UNDERSCORE)) {
-      final isInput = _match(TokenType.QUESTION);
-      return PrimitiveModeAlt(isInput, line, column);
-    }
-
-    // Compound term shorthand: (T1, T2, ...) → ','(T1, ','(T2, ...))
-    // Per spec: "The parenthesized syntax (T1, T2, T3) is right-associative
-    // shorthand for ','(T1, ','(T2, T3))"
-    if (_check(TokenType.LPAREN)) {
-      _advance();  // consume (
-      final elements = <TypeExpr>[];
-      elements.add(_parseTypeAlt());
-      while (_match(TokenType.COMMA)) {
-        elements.add(_parseTypeAlt());
-      }
-      _consume(TokenType.RPAREN, 'Expected ")" after compound type');
-      // Build right-associative structure with functor ','
-      if (elements.length == 1) {
-        return elements[0];  // Just parenthesized expression
-      }
-      TypeExpr result = elements.last;
-      for (int i = elements.length - 2; i >= 0; i--) {
-        result = StructAlt(',', [elements[i], result], line, column);
-      }
-      return result;
-    }
-
-    // Empty list: []
-    if (_check(TokenType.LBRACKET)) {
-      _advance();  // consume [
-      if (_match(TokenType.RBRACKET)) {
-        return ListNilAlt(line, column);
-      }
-      // List cons: [Head | Tail]
-      final head = _parseTypeAlt();
-      _consume(TokenType.PIPE, 'Expected "|" in list type');
-      final tail = _parseTypeAlt();
-      _consume(TokenType.RBRACKET, 'Expected "]" after list type');
-      return ListConsAlt(head, tail, line, column);
-    }
-
-    // Difference list: Content \ Hole
-    // Need to check for struct first, then look for \
-
-    // Number literal
-    if (_check(TokenType.NUMBER)) {
-      final token = _advance();
-      return ConstantAlt(token.literal!, line, column);
-    }
-
-    // Type reference (capitalized) or atom constant (lowercase)
-    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
-      final token = _advance();
-      final isInput = token.type == TokenType.READER || _match(TokenType.QUESTION);
-      final typeRef = TypeRef(token.lexeme, line, column, isInput: isInput);
-
-      // Check for difference list: TypeRef \ hole (e.g., List \ List?)
-      if (_match(TokenType.BACKSLASH)) {
-        final hole = _parseTypeAlt();
-        return DiffListAlt(typeRef, hole, line, column);
-      }
-
-      return typeRef;
-    }
-
-    if (_check(TokenType.ATOM)) {
-      final token = _advance();
-      // Check if it's a struct: atom(args)
-      if (_match(TokenType.LPAREN)) {
-        final args = <TypeExpr>[];
-        if (!_check(TokenType.RPAREN)) {
-          args.add(_parseTypeAlt());
-          while (_match(TokenType.COMMA)) {
-            args.add(_parseTypeAlt());
-          }
-        }
-        _consume(TokenType.RPAREN, 'Expected ")" after struct arguments');
-        return StructAlt(token.lexeme, args, line, column);
-      }
-      // Check for difference list: atom \ hole
-      if (_match(TokenType.BACKSLASH)) {
-        final content = ConstantAlt(token.lexeme, line, column);
-        final hole = _parseTypeAlt();
-        return DiffListAlt(content, hole, line, column);
-      }
-      // Just a constant atom
-      return ConstantAlt(token.lexeme, line, column);
-    }
-
-    // Operators as functors in type definitions (e.g., Exp ::= +(Exp?, Exp?))
-    if (_check(TokenType.PLUS) || _check(TokenType.MINUS) || _check(TokenType.STAR) ||
-        _check(TokenType.SLASH) || _check(TokenType.SLASH_SLASH) || _check(TokenType.MOD)) {
-      final token = _advance();
-      // Must be followed by ( for struct syntax
-      if (_match(TokenType.LPAREN)) {
-        final args = <TypeExpr>[];
-        if (!_check(TokenType.RPAREN)) {
-          args.add(_parseTypeAlt());
-          while (_match(TokenType.COMMA)) {
-            args.add(_parseTypeAlt());
-          }
-        }
-        _consume(TokenType.RPAREN, 'Expected ")" after operator struct arguments');
-        return StructAlt(token.lexeme, args, line, column);
-      }
-      // Plain operator as constant (unusual but allow it)
-      return ConstantAlt(token.lexeme, line, column);
-    }
-
-    throw CompileError(
-      'Expected type alternative',
-      _peek().line,
-      _peek().column,
-      phase: 'parser',
-    );
+    final term = _parseTerm();
+    return termToTypeExpr(term);
   }
 
   /// Parse a procedure declaration: procedure name(Type?, Type).

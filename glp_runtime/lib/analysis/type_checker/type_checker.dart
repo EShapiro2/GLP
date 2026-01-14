@@ -13,9 +13,11 @@ import 'type_ast.dart';
 import 'program_dfa.dart';
 import 'type_environment_builder.dart';
 import 'well_typed_clause.dart' as wtc;
+import 'clause_validation.dart';
 import '../../compiler/ast.dart' as ast;
 import '../../compiler/lexer.dart';
 import '../../compiler/parser.dart';
+import '../../compiler/error.dart';
 
 // =============================================================================
 // Result Types
@@ -118,6 +120,47 @@ class TypeChecker {
   TypeCheckResult check(List<ast.Clause> clauses) {
     final errors = <TypeError>[];
     final warnings = <TypeWarning>[];
+
+    // =======================================================================
+    // Phase 0: Validate clause terms (anonymous variable restrictions)
+    // Per spec: clause-validation.md - reject _? everywhere, reject _ in bodies
+    // =======================================================================
+    for (final clause in clauses) {
+      try {
+        // Validate head arguments
+        for (final arg in clause.head.args) {
+          validateClauseHead(arg);
+        }
+        // Validate guard arguments
+        if (clause.guards != null) {
+          for (final guard in clause.guards!) {
+            for (final arg in guard.args) {
+              validateGuard(arg);
+            }
+          }
+        }
+        // Validate body arguments
+        if (clause.body != null) {
+          for (final goal in clause.body!) {
+            for (final arg in goal.args) {
+              validateClauseBody(arg);
+            }
+          }
+        }
+      } on CompileError catch (e) {
+        errors.add(TypeError(
+          e.message,
+          e.line,
+          e.column,
+          _clauseToString(clause),
+        ));
+      }
+    }
+
+    // If validation errors, return early
+    if (errors.isNotEmpty) {
+      return TypeCheckResult(errors, warnings);
+    }
 
     // Group clauses by procedure (name/arity)
     final procedureClauses = <String, List<ast.Clause>>{};

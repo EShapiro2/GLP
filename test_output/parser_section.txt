@@ -1,0 +1,21 @@
+    }
+
+    // Underscore (anonymous variable)
+    if (_match(TokenType.UNDERSCORE)) {
+      final token = _previous();
+      return UnderscoreTerm(token.line, token.column);
+    }
+
+    // Number
+    if (_check(TokenType.NUMBER)) {
+      final token = _advance();
+      // Check for invalid reader mark on number
+      if (_check(TokenType.QUESTION)) {
+        throw CompileError(
+          'Reader mark "?" can only be applied to variables, not numbers',
+          _peek().line,
+          _peek().column,
+          phase: 'parser'
+        );
+      }
+      return ConstTerm(token.literal, token.line, token.column);

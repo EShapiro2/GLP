@@ -31,6 +31,8 @@ All specification files are in `/Users/udi/GLP/docs/type system/`:
 |------|---------|
 | `mode.md` | Mode definitions |
 | `type-environment.md` | Type environment spec |
+| `type-conversion.md` | Term to TypeExpr conversion |
+| `clause-validation.md` | Clause term validation |
 | `moded-term.md` | Moded term spec |
 | `moded-head.md` | Moded head spec |
 | `type-dfa.md` | Type DFA spec |

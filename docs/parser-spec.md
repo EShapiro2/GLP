@@ -1,19 +1,98 @@
-# GLP Parser Specification - Arithmetic Expressions
+# GLP Parser Specification
+
+**Version**: 2.0
+**Date**: 2025-01-14
+**Status**: DRAFT
+
+## Overview
+
+The GLP parser performs **uniform term parsing** for all syntactic contexts:
+- Program clause heads and bodies
+- Type definition alternatives
+- Procedure declaration argument types
+
+The parser produces a single `Term` AST. Semantic validation (what is allowed where) happens in separate compliance checking phases.
 
 ## Goal Syntax Principle
 
 **The syntax of body goals and queries is identical.**
 
-Any term that can appear as a top-level query can also appear as a goal in a clause body, and vice versa. This includes:
-- Regular predicate calls: `foo(X, Y)`
-- Infix predicates: `X =.. [foo, a, b]`, `X := Y`
-- Arithmetic comparisons: `X > Y`, `X =:= Y`
+Any term that can appear as a top-level query can also appear as a goal in a clause body, and vice versa.
 
-If the parser accepts a term as a query but rejects the same term in a clause body, that is a parser bug.
+## Uniform Term Syntax
 
-## Overview
+The parser accepts the following term forms:
 
-This document specifies the parsing of arithmetic expressions in GLP source code. Arithmetic expressions use infix notation in source but are transformed to prefix (structure) notation in the AST for bytecode generation.
+| Syntax | AST Node | Description |
+|--------|----------|-------------|
+| `foo` | `ConstTerm('foo')` | Atom constant |
+| `42`, `3.14` | `ConstTerm(42)`, `ConstTerm(3.14)` | Numeric constant |
+| `"hello"` | `ConstTerm('"hello"')` | String constant |
+| `X` | `VarTerm('X', isReader: false)` | Writer variable |
+| `X?` | `VarTerm('X', isReader: true)` | Reader variable |
+| `_` | `UnderscoreTerm(isReader: false)` | Anonymous variable |
+| `_?` | `UnderscoreTerm(isReader: true)` | Anonymous reader |
+| `[]` | `ListTerm(null, null)` | Empty list |
+| `[H \| T]` | `ListTerm(H, T)` | List cons |
+| `[a, b, c]` | `ListTerm(a, ListTerm(b, ListTerm(c, [])))` | List sugar |
+| `foo(A, B)` | `StructTerm('foo', [A, B])` | Structure |
+| `(A, B)` | `StructTerm(',', [A, B])` | Conjunction |
+| `(A, B, C)` | `StructTerm(',', [A, StructTerm(',', [B, C])])` | Right-associative |
+| `A + B` | `StructTerm('+', [A, B])` | Infix operator |
+| `A \ B` | `StructTerm('\\', [A, B])` | Difference list |
+
+### Anonymous Variables
+
+The parser accepts both `_` and `_?` syntactically. Semantic restrictions (e.g., `_?` forbidden in programs) are enforced by separate validation phases, not by the parser.
+
+### Conjunction Syntax
+
+Parenthesized comma-separated terms are parsed as right-associative conjunction:
+- `(A, B)` → `StructTerm(',', [A, B])`
+- `(A, B, C)` → `StructTerm(',', [A, StructTerm(',', [B, C])])`
+
+This matches standard Prolog conjunction syntax.
+
+## Parsing Contexts
+
+The same `_parseTerm()` method is used in all contexts:
+
+| Context | Post-parsing Phase |
+|---------|-------------------|
+| Type definition alternatives | `termToTypeExpr()` conversion |
+| Procedure declaration args | `termToTypeExpr()` conversion |
+| Clause heads | `validateClauseTerm()` + SRSW check |
+| Clause bodies | `validateClauseTerm()` + SRSW check |
+| Guard expressions | `validateClauseTerm()` |
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         PARSER LAYER                            │
+│                                                                 │
+│  _parseTerm() → Term AST                                        │
+│    - VarTerm(name, isReader)                                    │
+│    - StructTerm(functor, args)   includes ','(A,B) for (A,B)   │
+│    - ListTerm(head, tail)                                       │
+│    - ConstTerm(value)                                           │
+│    - UnderscoreTerm(isReader)    _ or _?                        │
+│                                                                 │
+│  Uniform parsing - no semantic checks                           │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┴───────────────┐
+              ▼                               ▼
+┌─────────────────────────────┐   ┌─────────────────────────────┐
+│   TYPE DEFINITION PATH      │   │   PROGRAM CLAUSE PATH       │
+│                             │   │                             │
+│  termToTypeExpr(Term)       │   │  validateClauseTerm(Term)   │
+│    → TypeExpr AST           │   │    - Reject _? anywhere     │
+│                             │   │    - Reject _ in body       │
+│  See: type-conversion.md    │   │                             │
+│                             │   │  See: clause-validation.md  │
+└─────────────────────────────┘   └─────────────────────────────┘
+```
 
 ## Motivation
 
@@ -571,3 +650,4 @@ See `SPEC_GUIDE.md` for detailed SRSW semantics.
 
 - **v1.0 (2025-11-12)**: Initial specification for arithmetic expression parsing
 - **v1.1 (2025-01-12)**: Added SRSW checking section documenting parser responsibility
+- **v2.0 (2025-01-14)**: Unified term parsing architecture; separate compliance checks for types vs clauses

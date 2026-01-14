@@ -98,20 +98,20 @@ Type alternatives use the same term syntax as program terms. This ensures consis
 | `[]` | Empty list | `ListNilAlt` |
 | `[H \| T]` | List cons | `ListConsAlt` |
 | `functor(A1, ..., An)` | Structure | `StructAlt` |
-| `(T1, T2)` | Compound (shorthand for `','(T1, T2)`) | `StructAlt` with functor `,` |
+| `(T1, T2)` | Conjunction (shorthand for `','(T1, T2)`) | `StructAlt` with functor `,` |
 | `Content \ Hole` | Difference list | `DiffListAlt` |
 | `_` | Output wildcard | `PrimitiveModeAlt(isInput: false)` |
 | `_?` | Input wildcard | `PrimitiveModeAlt(isInput: true)` |
 | `TypeName` | Type reference (output) | `TypeRef(isInput: false)` |
 | `TypeName?` | Type reference (input) | `TypeRef(isInput: true)` |
 
-**Compound term shorthand:** The parenthesized syntax `(T1, T2, T3)` is right-associative shorthand for `','(T1, ','(T2, T3))`. This matches the term parser behavior for compound terms in program clauses.
+**Conjunction shorthand:** The parenthesized syntax `(T1, T2, T3)` is right-associative shorthand for `','(T1, ','(T2, T3))`. This matches the term parser behavior for conjunction in program clauses.
 
 **Example:**
 ```
 Pair ::= (_, _).                    % Equivalent to: Pair ::= ','(_, _).
 Triple ::= (_, _, _).               % Equivalent to: Triple ::= ','(_, ','(_, _)).
-FriendEntry ::= (String, Channel).  % Compound with named types
+FriendEntry ::= (String, Channel).  % Conjunction with named types
 ```
 
 ## Public Interface
@@ -601,7 +601,7 @@ BadNumeric ::= Number ; Integer.
 ## Changes from v0.5
 
 - Added "Type Alternative Syntax" section clarifying that type definitions use the same term syntax as program terms
-- Documented compound term shorthand: `(T1, T2)` is `','(T1, T2)`
+- Documented conjunction shorthand: `(T1, T2)` is `','(T1, T2)`
 
 ## Changes from v0.4
 

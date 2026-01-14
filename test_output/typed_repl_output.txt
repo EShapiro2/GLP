@@ -50,7 +50,7 @@ PASS: recursive/arithmetic_trees/ackermann
 FAIL: recursive/arithmetic_trees/primes (unexpected type errors)
 FAIL: recursive/arithmetic_trees/sum_list (loading error)
 PASS: recursive/list_processing/append
-PASS: recursive/list_processing/bubble_sort
+FAIL: recursive/list_processing/bubble_sort (unexpected type errors)
 PASS: recursive/list_processing/copy
 PASS: recursive/list_processing/delete
 FAIL: recursive/list_processing/dl_append (unexpected type errors)
@@ -88,7 +88,7 @@ FAIL: recursive/structure_processing/traversals (unexpected type errors)
 PASS: recursive/structure_processing/tree_sum
 FAIL: streams/producers_consumers/biased_merge (unexpected type errors)
 FAIL: streams/producers_consumers/channels (unexpected type errors)
-PASS: streams/producers_consumers/cooperative
+FAIL: streams/producers_consumers/cooperative (unexpected type errors)
 FAIL: streams/producers_consumers/cooperative_producers (unexpected type errors)
 PASS: streams/producers_consumers/distribute
 PASS: streams/producers_consumers/distribute_binary
@@ -233,12 +233,13 @@ PASS: merge_reader_at_input (rejected: loading error)
 PASS: merge_writer_at_output (rejected: loading error)
 
 ======================================
-Total: 222 | Passed: 126 | Failed: 96
+Total: 222 | Passed: 124 | Failed: 98
 ======================================
 
 Failed positive tests (need investigation):
   - /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/primes.glp
   - /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/sum_list.glp
+  - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/bubble_sort.glp
   - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/dl_append.glp
   - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/filter_even.glp
   - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/maxlist.glp
@@ -257,6 +258,7 @@ Failed positive tests (need investigation):
   - /Users/udi/GLP/test/../programs/typed_book/recursive/structure_processing/traversals.glp
   - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/biased_merge.glp
   - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/channels.glp
+  - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/cooperative.glp
   - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/cooperative_producers.glp
   - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/dynamic_merger.glp
   - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/merge_tree.glp

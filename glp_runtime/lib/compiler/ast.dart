@@ -156,11 +156,13 @@ class ConstTerm extends Term {
 }
 
 class UnderscoreTerm extends Term {
-  // Anonymous variable _
-  UnderscoreTerm(int line, int column) : super(line, column);
+  // Anonymous variable _ or _?
+  final bool isReader;  // false for _, true for _?
+  
+  UnderscoreTerm(int line, int column, {this.isReader = false}) : super(line, column);
 
   @override
-  String toString() => '_';
+  String toString() => isReader ? '_?' : '_';
 }
 
 // ============================================================================
