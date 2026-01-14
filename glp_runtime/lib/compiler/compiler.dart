@@ -7,8 +7,7 @@ import 'token.dart';
 import 'result.dart';
 import 'ast.dart' show Program;
 import 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
-import '../analysis/type_checker/type_parser.dart' show parseTypes;
-import '../analysis/type_checker/type_checker.dart' show TypeChecker;
+import '../analysis/type_checker/type_checker.dart' show checkModule;
 
 // Re-export for users of this module
 export 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
@@ -60,11 +59,9 @@ class GlpCompiler {
       // (stripping removes -stdlib. directive, so we must detect it first)
       final isStdlib = source.contains(RegExp(r'^\s*-stdlib\s*\.', multiLine: true));
 
-      // Phase 0b: Strip type declarations if present (main lexer doesn't recognize ::=)
-      final sourceForParsing = _stripTypeDeclarations(source);
-
       // Phase 1: Lexical analysis
-      final lexer = _createLexer(sourceForParsing);
+      // Note: Main lexer now handles type declarations (::= and procedure)
+      final lexer = _createLexer(source);
       final tokens = lexer.tokenize();
 
       // Phase 2: Syntax analysis (use parseModule to get module info)
@@ -77,15 +74,8 @@ class GlpCompiler {
       // Phase 2.5: Type checking (optional)
       if (opts.typeCheck) {
         try {
-          final typeEnv = parseTypes(source);
-          final typeChecker = TypeChecker(typeEnv);
-
-          // Collect all clauses from procedures
-          final allClauses = ast.procedures
-              .expand((proc) => proc.clauses)
-              .toList();
-
-          final typeResult = typeChecker.check(allClauses);
+          // Use checkModule which builds TypeEnvironment from Module AST
+          final typeResult = checkModule(module);
 
           // Report type errors and warnings
           if (typeResult.errors.isNotEmpty) {
@@ -133,36 +123,5 @@ class GlpCompiler {
       // Rethrow with source context
       throw CompileError(e.message, e.line, e.column, source: source, phase: e.category?.toString().split('.').last);
     }
-  }
-
-  /// Strip type declarations (lines with ::= and procedure) from source
-  /// so the main GLP lexer doesn't choke on them.
-  /// Replaces stripped lines with empty lines to preserve line numbers for error reporting.
-  String _stripTypeDeclarations(String source) {
-    final lines = source.split('\n');
-    final filtered = <String>[];
-
-    for (final line in lines) {
-      final trimmed = line.trim();
-      // Replace type definitions with empty line (preserve line numbers)
-      if (trimmed.contains('::=')) {
-        filtered.add('');
-        continue;
-      }
-      // Replace procedure declarations with empty line
-      if (trimmed.startsWith('procedure ')) {
-        filtered.add('');
-        continue;
-      }
-      // Replace module directives with empty line (-stdlib, -module, etc.)
-      if (trimmed.startsWith('-') && trimmed.endsWith('.')) {
-        filtered.add('');
-        continue;
-      }
-      // Keep everything else
-      filtered.add(line);
-    }
-
-    return filtered.join('\n');
   }
 }
