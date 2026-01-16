@@ -495,7 +495,7 @@ WellTypedResult _checkBodyAtom(
 
   // Build produced term (no variable flip for body atoms)
   try {
-    final modedAtomTerm = producedTerm(atom, procDecl);
+    final modedAtomTerm = producedTerm(atom, procDecl, typeEnv: env);
 
     // Check each argument against its declared type's automaton
     final result = _checkModedTermPerArg(modedAtomTerm, procDecl, dfa);
