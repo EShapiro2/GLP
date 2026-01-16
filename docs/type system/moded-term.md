@@ -1,7 +1,7 @@
 # Module: moded-term
 
-**Version**: 0.7
-**Date**: 2025-01-14
+**Version**: 0.8
+**Date**: 2025-01-16
 **Status**: DRAFT  
 **Paper References**: Definition 4.3 (Moded Term, Complement), Remark 4.4 (Structural Mode vs. Variable Mode)
 
@@ -46,32 +46,31 @@ The anonymous variable `_` in GLP programs is distinct from `_` as a type symbol
 |---------|--------|--------|
 | Type definition | `_` | Primitive output type (any produced term) |
 | Type definition | `_?` | Primitive input type (any consumed term) |
-| Clause (program) | `_` | Anonymous variable (discards a value) |
-| Clause (program) | `_?` | **Not allowed** (syntax error) |
+| Program | `_` | Anonymous variable (discards a value) |
+| Program | `_?` | **Not allowed** (no use case) |
 
 **SRSW Exception for Anonymous Variables:**
 
 The SRSW restriction requires every variable to have a paired counterpart (`X` paired with `X?`). The anonymous variable `_` is an exception to this rule:
 
-1. Each occurrence of `_` is treated as a **fresh, unpaired variable**
-2. Anonymous `_` may only appear in **clause heads** at **input (consume) positions** to discard unneeded reader values from goals
-3. Anonymous `_` is **not permitted** in clause bodies (would create unbound output)
+1. Each occurrence of `_` is treated as a **fresh writer with no paired reader**
+2. Anonymous `_` may appear anywhere a writer variable may appear
+3. Values assigned to `_` are discarded
 4. `_?` is **never permitted** in programs—there is no use case for an anonymous reader
 
 **Example:**
 ```
-% Valid: _ discards unneeded input values
-project_first([X|_], X).
-ignore_message(_, State, State).
+% Valid: _ discards values in head
+second([_, X | _], X?).
 
-% Invalid: _ in body would produce unbound value
-bad(X) :- | foo(X, _).  % Error: anonymous variable in body
+% Valid: _ discards output in body
+foo(X) :- bar(_, X?).
 
 % Invalid: _? is never allowed in programs  
-bad2(_?, X).  % Syntax error
+bad(_?, X).  % Error: anonymous reader not permitted
 ```
 
-**Rationale:** The anonymous variable allows programmers to indicate that a value is intentionally discarded without cluttering the namespace with unused variable names. Since discarded values are always incoming (consumed), only `_` (not `_?`) makes sense.
+**Rationale:** The anonymous variable allows programmers to indicate that a value is intentionally discarded without cluttering the namespace with unused variable names.
 
 For a moded term to be well-typed, each variable's implicit mode must be **consistent** with the structural mode of its position. Specifically:
 - A reader X? (implicit mode ↓) may appear at a position with structural mode ↓
@@ -467,3 +466,4 @@ None. All operations succeed on valid moded terms.
 | 0.5 | 2025-01-09 | Add isConsumed(), isProduced(), isIO() classification methods |
 | 0.6 | 2025-01-12 | Add Remark 4.4 (Structural vs Variable Mode); add interactive type examples |
 | 0.7 | 2025-01-14 | Add Anonymous Variables in Programs section (SRSW exception, _ vs _? distinction) |
+| 0.8 | 2025-01-16 | Allow anonymous `_` anywhere (paper update) |

@@ -1,7 +1,7 @@
 # Module: clause-validation
 
-**Version**: 1.0
-**Date**: 2025-01-14
+**Version**: 1.1
+**Date**: 2025-01-16
 **Status**: DRAFT
 **Paper References**: Section 3 (GLP), SRSW Restriction
 
@@ -22,13 +22,12 @@ The parser accepts `_` and `_?` uniformly (see parser-spec.md). This module enfo
 
 | Context | `_` | `_?` |
 |---------|-----|------|
-| Clause head | ✓ Allowed (discard input) | ✗ Forbidden |
-| Clause body | ✗ Forbidden | ✗ Forbidden |
-| Guard | ✓ Allowed (discard input) | ✗ Forbidden |
+| Clause head | ✓ Allowed | ✗ Forbidden |
+| Clause body | ✓ Allowed | ✗ Forbidden |
+| Guard | ✓ Allowed | ✗ Forbidden |
 
 **Rationale:**
-- `_` in head/guard: Discards incoming values at input positions (valid)
-- `_` in body: SRSW violation - writer with no paired reader
+- `_` anywhere: Each occurrence is a fresh writer with no paired reader, providing a controlled exception to SRSW. Values assigned to `_` are discarded.
 - `_?` anywhere: No use case — cannot write into an anonymous position
 
 See moded-term.md, "Anonymous Variables in Programs" for full specification.
@@ -60,11 +59,10 @@ Validates a term in clause body context.
 
 **Postconditions:**
 - Returns normally if valid
-- Throws error if `_` or `_?` found
+- Throws error if `_?` found
 
 **Errors:**
 - `AnonymousReaderError`: `_?` not permitted in program clauses
-- `AnonymousInBodyError`: `_` not permitted in clause bodies (SRSW violation)
 
 #### `void validateGuard(Term term)`
 
@@ -104,11 +102,6 @@ validateClauseBody(term):
         "_? (anonymous reader) not permitted in program clauses",
         node.line, node.column
       )
-    if node is UnderscoreTerm(isReader: false):
-      throw AnonymousInBodyError(
-        "Anonymous variable _ not permitted in clause body (violates SRSW: no paired reader)",
-        node.line, node.column
-      )
 ```
 
 ### Algorithm: Validate Guard
@@ -128,11 +121,6 @@ validateGuard(term):
 ```dart
 class AnonymousReaderError extends CompileError {
   AnonymousReaderError(String message, int line, int column)
-      : super(message, line, column, phase: 'validation');
-}
-
-class AnonymousInBodyError extends CompileError {
-  AnonymousInBodyError(String message, int line, int column)
       : super(message, line, column, phase: 'validation');
 }
 ```
@@ -173,19 +161,19 @@ Atom('bad', [
 
 **Result:** `AnonymousReaderError: "_? (anonymous reader) not permitted in program clauses"`
 
-### Example 3: Invalid — Anonymous Variable in Body
+### Example 3: Valid — Anonymous Variable in Body
 
 **Input:**
 ```prolog
-bad(X) :- | foo(X, _).
+foo(X) :- bar(_, X?).
 ```
 
 **Body term:**
 ```dart
-Atom('foo', [VarTerm('X'), UnderscoreTerm(isReader: false)])
+Atom('bar', [UnderscoreTerm(isReader: false), VarTerm('X', isReader: true)])
 ```
 
-**Result:** `AnonymousInBodyError: "Anonymous variable _ not permitted in clause body (violates SRSW: no paired reader)"`
+**Result:** Valid ✓ (anonymous `_` discards output from `bar`)
 
 ### Example 4: Valid Guard with Anonymous Variable
 
@@ -222,3 +210,4 @@ SRSW checking happens **after** clause validation. Anonymous `_` is an exception
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2025-01-14 | Initial specification |
+| 1.1 | 2025-01-16 | Allow anonymous `_` in clause bodies (paper update) |
