@@ -1,5 +1,7 @@
 %% bubble_sort.glp - Bubble Sort in GLP
 %% Source: Standard GLP sorting
+%% STATUS: ILL-TYPED - uses anonymous _ in body (SRSW violation)
+%%         Cannot be fixed without changing program structure
 
 %% Type definitions
 NumList ::= [] ; [Number | NumList].

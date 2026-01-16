@@ -54,7 +54,7 @@ Let x be a moded term path and y a GLP type path. Then x and y are **consistent*
 | "foo" (string) | String | String? | any string literal |
 | [] (constant) | — | — | exact match required |
 
-**Note:** The wildcard states `_` and `_?` accept any term of the appropriate mode, including literals and constants—they subsume all specific primitive types listed above.
+**Note:** The wildcard states `_` and `_?` accept any term of the same mode, including literals and constants—they subsume all specific primitive types listed above.
 
 ### Variable Type Assignment
 

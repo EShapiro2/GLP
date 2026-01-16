@@ -26,7 +26,9 @@ Channel ::= ch(Stream?, Stream).
 
 % Arithmetic expressions
 % Exp accepts numeric literals and arithmetic operator expressions
-Exp ::= Number ; +(Exp?, Exp?) ; -(Exp?, Exp?) ; *(Exp?, Exp?) ; /(Exp?, Exp?) ; //(Exp?, Exp?) ; mod(Exp?, Exp?) ; neg(Exp?).
+% Note: Arguments are NOT moded (Exp, not Exp?) because expression types
+% are homogeneous - consuming an expression means consuming its subexpressions.
+Exp ::= Number ; +(Exp, Exp) ; -(Exp, Exp) ; *(Exp, Exp) ; /(Exp, Exp) ; //(Exp, Exp) ; mod(Exp, Exp) ; neg(Exp).
 
 % =============================================================================
 % PROCEDURE DECLARATIONS

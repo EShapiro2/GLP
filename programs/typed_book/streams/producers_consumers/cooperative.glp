@@ -1,5 +1,7 @@
 %% cooperative.glp - Cooperative stream production example
 %% Source: AofGLP Book
+%% STATUS: ILL-TYPED - uses anonymous _ in body (SRSW violation)
+%%         Cannot be fixed without changing program structure
 
 %% Type definitions
 Done ::= done.

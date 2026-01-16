@@ -1,0 +1,3 @@
+Type Errors (1):
+  ✗ Anonymous variable _ is not permitted in clause body (would produce unbound value) at line 36, column 17
+    in: test_read(1 args) :- 2 goals.

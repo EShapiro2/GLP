@@ -59,7 +59,7 @@ void _checkNoAnonymousReader(Term term) {
 void _checkNoAnonymousInBody(Term term) {
   if (term is UnderscoreTerm && !term.isReader) {
     throw CompileError(
-      'Anonymous variable _ is not permitted in clause body (would produce unbound value)',
+      'Anonymous variable _ is not permitted in clause body (violates SRSW: no paired reader)',
       term.line,
       term.column,
       phase: 'validation',

@@ -1,0 +1,56 @@
+=== programs/typed_book/recursive/list_processing/bubble_sort.glp ===
+Type Errors (1):
+  ✗ Anonymous variable _ is not permitted in clause body (violates SRSW: no paired reader) at line 22, column 36
+    in: bubble(3 args) :- 1 goals.
+=== programs/typed_book/streams/producers_consumers/cooperative.glp ===
+Type Errors (1):
+  ✗ Anonymous variable _ is not permitted in clause body (violates SRSW: no paired reader) at line 36, column 17
+    in: test_read(1 args) :- 2 goals.
+=== programs/typed_book/recursive/arithmetic_trees/primes.glp ===
+Type Errors (4):
+  ✗ Body atom 2 (=:=) is not well-typed:
+  Inconsistent path: No transition for mod(2,1):↓ from state Exp?
+  Path: (mod/2, 0, input) → (X?, 1, input)
+  Inconsistent path: No transition for mod(2,2):↓ from state Exp?
+=== programs/typed_book/recursive/list_processing/dl_append.glp ===
+Type Errors (1):
+  ✗ Body atom 0 (list_to_dl) is not well-typed:
+  Inconsistent path: No transition for \(2,2):↑ from state DiffList
+  Path: (\/2, 0, output) → (T, 2, output) at line 17, column 1
+    in: list_to_dl(2 args) :- 1 goals.
+=== programs/typed_book/recursive/list_processing/filter_even.glp ===
+Type Errors (4):
+  ✗ Body atom 0 (=:=) is not well-typed:
+  Inconsistent path: No transition for mod(2,1):↓ from state Exp?
+  Path: (mod/2, 0, input) → (X?, 1, input)
+  Inconsistent path: No transition for mod(2,2):↓ from state Exp?
+=== programs/typed_book/recursive/list_processing/maxlist.glp ===
+Type Errors (1):
+  ✗ maxlist argument 1: uncovered alternative "[]" at path: NumList → [] at line 8, column 1
+Warnings (23):
+  ⚠ Procedure integer/1 declared but not defined at line 22, column 1
+  ⚠ Procedure number/1 declared but not defined at line 23, column 1
+=== programs/typed_book/recursive/list_processing/member.glp ===
+Type Errors (1):
+  ✗ member argument 2: uncovered alternative "[]" at path: List → [] at line 8, column 1
+Warnings (23):
+  ⚠ Procedure integer/1 declared but not defined at line 22, column 1
+  ⚠ Procedure number/1 declared but not defined at line 23, column 1
+=== programs/typed_book/recursive/list_processing/merge_ordered.glp ===
+Type Errors (2):
+  ✗ Body atom 1 (merge) is not well-typed:
+  Inconsistent path: Variable mode mismatch: writer requires ↑ (produce), got ↓ (consume)
+  Path: ([|]/2, 0, input) → (Y, 1, input) at line 11, column 1
+    in: merge(3 args) :- 1 goals.
+=== programs/typed_book/recursive/list_processing/nth.glp ===
+Type Errors (1):
+  ✗ nth argument 2: uncovered alternative "[]" at path: List → [] at line 7, column 1
+Warnings (23):
+  ⚠ Procedure integer/1 declared but not defined at line 22, column 1
+  ⚠ Procedure number/1 declared but not defined at line 23, column 1
+=== programs/typed_book/recursive/list_processing/polygon_area.glp ===
+Type Errors (1):
+  ✗ area argument 1: uncovered alternative "[]" at path: PointList → [] at line 9, column 1
+Warnings (23):
+  ⚠ Procedure integer/1 declared but not defined at line 22, column 1
+  ⚠ Procedure number/1 declared but not defined at line 23, column 1

@@ -28,7 +28,7 @@ The parser accepts `_` and `_?` uniformly (see parser-spec.md). This module enfo
 
 **Rationale:**
 - `_` in head/guard: Discards incoming values at input positions (valid)
-- `_` in body: Would produce unbound value at output position (invalid)
+- `_` in body: SRSW violation - writer with no paired reader
 - `_?` anywhere: No use case — cannot write into an anonymous position
 
 See moded-term.md, "Anonymous Variables in Programs" for full specification.
@@ -64,7 +64,7 @@ Validates a term in clause body context.
 
 **Errors:**
 - `AnonymousReaderError`: `_?` not permitted in program clauses
-- `AnonymousInBodyError`: `_` not permitted in clause bodies
+- `AnonymousInBodyError`: `_` not permitted in clause bodies (SRSW violation)
 
 #### `void validateGuard(Term term)`
 
@@ -106,7 +106,7 @@ validateClauseBody(term):
       )
     if node is UnderscoreTerm(isReader: false):
       throw AnonymousInBodyError(
-        "Anonymous variable _ not permitted in clause body",
+        "Anonymous variable _ not permitted in clause body (violates SRSW: no paired reader)",
         node.line, node.column
       )
 ```
@@ -185,7 +185,7 @@ bad(X) :- | foo(X, _).
 Atom('foo', [VarTerm('X'), UnderscoreTerm(isReader: false)])
 ```
 
-**Result:** `AnonymousInBodyError: "Anonymous variable _ not permitted in clause body"`
+**Result:** `AnonymousInBodyError: "Anonymous variable _ not permitted in clause body (violates SRSW: no paired reader)"`
 
 ### Example 4: Valid Guard with Anonymous Variable
 
