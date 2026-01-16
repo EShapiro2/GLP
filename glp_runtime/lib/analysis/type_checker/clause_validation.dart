@@ -16,12 +16,10 @@ void validateClauseHead(Term term) {
 
 /// Validates a term in clause body context.
 /// 
-/// Rejects both _ and _? in clause bodies:
-/// - _? is never permitted in programs
-/// - _ in body would produce unbound output value
+/// Rejects _? (anonymous reader) which is never permitted in programs.
+/// Allows _ (anonymous variable) to discard output values.
 void validateClauseBody(Term term) {
   _checkNoAnonymousReader(term);
-  _checkNoAnonymousInBody(term);
 }
 
 /// Validates a term in guard context.
@@ -52,28 +50,5 @@ void _checkNoAnonymousReader(Term term) {
   if (term is ListTerm) {
     if (term.head != null) _checkNoAnonymousReader(term.head!);
     if (term.tail != null) _checkNoAnonymousReader(term.tail!);
-  }
-}
-
-/// Recursively check for _ in body and throw if found.
-void _checkNoAnonymousInBody(Term term) {
-  if (term is UnderscoreTerm && !term.isReader) {
-    throw CompileError(
-      'Anonymous variable _ is not permitted in clause body (violates SRSW: no paired reader)',
-      term.line,
-      term.column,
-      phase: 'validation',
-    );
-  }
-  
-  if (term is StructTerm) {
-    for (final arg in term.args) {
-      _checkNoAnonymousInBody(arg);
-    }
-  }
-  
-  if (term is ListTerm) {
-    if (term.head != null) _checkNoAnonymousInBody(term.head!);
-    if (term.tail != null) _checkNoAnonymousInBody(term.tail!);
   }
 }
