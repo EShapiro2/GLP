@@ -10,7 +10,7 @@ RUNTIME_DIR="$SCRIPT_DIR/../glp_runtime"
 TEST_DIR="$RUNTIME_DIR/test/programs/typechecker"
 MODED_DIR="$RUNTIME_DIR/test/programs/moded_types"
 BOOK_DIR="$SCRIPT_DIR/../programs/typed_book"
-REPL="bin/glp_repl_typed.dart"
+REPL="bin/glp_repl.dart"
 
 cd "$RUNTIME_DIR"
 

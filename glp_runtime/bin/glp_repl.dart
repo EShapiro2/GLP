@@ -1,7 +1,8 @@
-/// GLP REPL (Read-Eval-Print Loop) for udi workspace
+/// GLP REPL with Type Checking
 ///
-/// Interactive GLP interpreter with file loading support
-/// Run from /Users/udi/GLP/udi with: dart run glp_repl.dart
+/// Development version of REPL that integrates the type checker.
+/// Programs with procedure declarations are type-checked before compilation.
+/// Programs without procedure declarations skip type checking.
 library;
 
 import 'dart:io';
@@ -19,6 +20,7 @@ import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/compiler/partial_evaluator.dart';
 import 'package:glp_runtime/compiler/glp_printer.dart';
+import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
 
 /// Module info for REPL module tracking
 class ModuleInfo {
@@ -32,11 +34,11 @@ class ModuleInfo {
 void main() async {
   // Get git commit info
   final gitCommit = await _getGitCommit();
-  // Build timestamp (updated at compile time)
-  final buildTime = '2025-12-05 (Added conjunctive goals support)';
+  // Build timestamp
+  final buildTime = '2026-01-12 (Type checker integration)';
 
   print('╔════════════════════════════════════════╗');
-  print('║   GLP REPL - Interactive Interpreter   ║');
+  print('║  GLP REPL - With Type Checking         ║');
   print('╚════════════════════════════════════════╝');
   print('');
   if (gitCommit != null) {
@@ -45,7 +47,6 @@ void main() async {
   print('Compiled: $buildTime');
   print('Working directory: udi/');
   print('Source files: glp/*.glp');
-  print('Compiled files: bin/*.glpc');
   print('');
   print('Input: filename.glp to load, or goal to execute');
   print('Commands: :quit, :help, :trace, :debug, :limit');
@@ -82,9 +83,9 @@ void main() async {
   }
 
   var goalId = 1;
-  var debugTrace = true; // Toggle with :trace command
-  var debugOutput = false; // Toggle with :debug command
-  var maxCycles = 10000; // Set with :limit command
+  var debugTrace = true;
+  var debugOutput = false;
+  var maxCycles = 10000;
 
   while (true) {
     stdout.write('GLP> ');
@@ -98,7 +99,6 @@ void main() async {
       continue;
     }
 
-    // Strip trailing . if present (allow goals without .)
     var trimmed = input.trim();
     if (trimmed.endsWith('.') && !trimmed.endsWith('.glp')) {
       trimmed = trimmed.substring(0, trimmed.length - 1).trim();
@@ -144,7 +144,6 @@ void main() async {
     }
 
     if (trimmed.startsWith(':bytecode') || trimmed.startsWith(':bc')) {
-      // Display bytecode for loaded programs
       if (loadedPrograms.isEmpty) {
         print('No programs loaded');
         continue;
@@ -156,85 +155,6 @@ void main() async {
         for (int i = 0; i < prog.ops.length; i++) {
           print('  ${i.toString().padLeft(4)}: ${prog.ops[i]}');
         }
-      }
-      continue;
-    }
-
-    // :pe - Partial evaluation command
-    if (trimmed.startsWith(':pe')) {
-      final parts = trimmed.split(RegExp(r'\s+'));
-      String? inputFile;
-
-      if (parts.length > 1) {
-        inputFile = parts[1];
-      } else if (loadedPrograms.isNotEmpty) {
-        // Use last loaded file
-        inputFile = loadedPrograms.keys.last;
-        inputFile = 'glp/$inputFile';
-      }
-
-      if (inputFile == null) {
-        print('Usage: :pe [filename.glp]');
-        print('No file loaded and no file specified');
-        continue;
-      }
-
-      // Ensure path starts with glp/ if not absolute
-      if (!inputFile.startsWith('/') && !inputFile.startsWith('glp/')) {
-        inputFile = 'glp/$inputFile';
-      }
-
-      final outputFile = inputFile.replaceAll('.glp', '_specialized.glp');
-
-      try {
-        final file = File(inputFile);
-        if (!file.existsSync()) {
-          print('Error: File not found: $inputFile');
-          continue;
-        }
-
-        final source = file.readAsStringSync();
-        final lexer = Lexer(source);
-        final tokens = lexer.tokenize();
-        final parser = Parser(tokens);
-        final program = parser.parse();
-
-        // Count initial clauses
-        int initialClauses = 0;
-        for (final proc in program.procedures) {
-          initialClauses += proc.clauses.length;
-        }
-
-        print('Partial Evaluating: $inputFile');
-        print('  Initial: $initialClauses clauses');
-
-        // Stage 1: Defined guards
-        final pe = PartialEvaluator();
-        final stage1 = pe.transformDefinedGuards(program);
-        int stage1Clauses = 0;
-        for (final proc in stage1.procedures) {
-          stage1Clauses += proc.clauses.length;
-        }
-        print('  Stage 1 (guards): $stage1Clauses clauses');
-
-        // Stage 2: reduce/2 unfolding
-        final stage2 = pe.unfoldReduceCalls(stage1);
-        int stage2Clauses = 0;
-        for (final proc in stage2.procedures) {
-          stage2Clauses += proc.clauses.length;
-        }
-        print('  Stage 2 (reduce): $stage2Clauses clauses');
-
-        // Serialize
-        final printer = GlpPrinter();
-        final output = printer.printProgram(stage2);
-
-        // Write output
-        File(outputFile).writeAsStringSync(output);
-        print('Written to: $outputFile');
-
-      } catch (e) {
-        print('Error during partial evaluation: $e');
       }
       continue;
     }
@@ -251,11 +171,8 @@ void main() async {
 
     // Compile and run the goal
     try {
-      // Check if this is a conjunction (contains comma outside of argument lists)
-      // For conjunctions, parse as a term and execute each goal in sequence
+      // Check if this is a conjunction
       if (_isConjunction(trimmed)) {
-        // Parse the conjunction by wrapping it as a clause body:
-        // _conj_wrapper_ :- <conjunction>.
         final parseInput = '_conj_wrapper_ :- $trimmed.';
         final lexer = Lexer(parseInput);
         final tokens = lexer.tokenize();
@@ -267,14 +184,12 @@ void main() async {
           continue;
         }
 
-        // Get the body goals from the parsed clause
         final clause = ast.procedures[0].clauses[0];
         if (clause.body == null || clause.body!.isEmpty) {
           print('Error: No goals in conjunction');
           continue;
         }
 
-        // Convert Goals to Atoms for uniform handling
         final goals = clause.body!.map((g) => Atom(g.functor, g.args, g.line, g.column)).toList();
 
         if (debugOutput) {
@@ -284,18 +199,15 @@ void main() async {
           }
         }
 
-        // Combine all loaded programs
         final allOps = <dynamic>[];
         for (final loaded in loadedPrograms.values) {
           allOps.addAll(loaded.ops);
         }
         final combinedProgram = BytecodeProgram(allOps);
 
-        // Track variables across goals
         final queryVarWriters = <String, int>{};
-        final varNameToId = <String, int>{}; // Map variable names to their IDs
+        final varNameToId = <String, int>{};
 
-        // Create runner and scheduler
         final runner = BytecodeRunner(combinedProgram);
         final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
         scheduler.resetDisplayNumbering();
@@ -303,7 +215,6 @@ void main() async {
         var allSucceeded = true;
         var anySuspended = false;
 
-        // Execute each goal in sequence
         for (final goal in goals) {
           final functor = goal.functor;
           final arity = goal.args.length;
@@ -314,12 +225,10 @@ void main() async {
             final moduleArg = args[0];
             final goalArg = args[1];
 
-            // Resolve module name
             String? moduleName;
             if (moduleArg is ConstTerm) {
               moduleName = moduleArg.value.toString();
             } else if (moduleArg is VarTerm) {
-              // Look up variable value
               final varName = moduleArg.name;
               final writerId = varNameToId[varName];
               if (writerId != null && runtime.heap.isBound(writerId)) {
@@ -341,7 +250,6 @@ void main() async {
               break;
             }
 
-            // Extract inner goal functor and args from goalArg
             String innerFunctor;
             List<Term> innerArgs;
             if (goalArg is StructTerm) {
@@ -356,7 +264,6 @@ void main() async {
               break;
             }
 
-            // Find target module and procedure
             final targetModule = loadedModules[moduleName];
             if (targetModule == null) {
               print('Error: Module $moduleName not loaded');
@@ -372,19 +279,16 @@ void main() async {
               break;
             }
 
-            // Set up arguments for inner goal
             final argSlots = <int, rt.Term>{};
             for (int i = 0; i < innerArgs.length; i++) {
               final arg = innerArgs[i];
               _setupConjunctionArg(runtime, arg, i, argSlots, queryVarWriters, varNameToId, debugOutput: debugOutput);
             }
 
-            // Set up goal environment
             final env = CallEnv(args: argSlots);
             runtime.setGoalEnv(goalId, env);
             runtime.setGoalProgram(goalId, 'main');
 
-            // Set module context for the remote call
             final modCtx = _buildModuleContext(targetModule, loadedModules, combinedProgram: combinedProgram);
             if (modCtx != null) {
               runtime.setGoalModuleContext(goalId, modCtx);
@@ -394,7 +298,6 @@ void main() async {
             runtime.gq.enqueue(GoalRef(goalId, entryPC));
             goalId++;
 
-            // Run until this goal completes
             final result = await scheduler.drainAsyncWithStatus(
               maxCycles: maxCycles,
               debug: debugTrace,
@@ -408,10 +311,9 @@ void main() async {
             } else if (result.status == ExecutionStatus.suspended) {
               anySuspended = true;
             }
-            continue; // Next goal
+            continue;
           }
 
-          // Find entry point for this goal
           final procedureLabel = '$functor/$arity';
           final entryPC = combinedProgram.labels[procedureLabel];
           if (entryPC == null) {
@@ -420,19 +322,16 @@ void main() async {
             break;
           }
 
-          // Set up arguments, reusing existing variables where needed
           final argSlots = <int, rt.Term>{};
           for (int i = 0; i < args.length; i++) {
             final arg = args[i];
             _setupConjunctionArg(runtime, arg, i, argSlots, queryVarWriters, varNameToId, debugOutput: debugOutput);
           }
 
-          // Set up goal environment
           final env = CallEnv(args: argSlots);
           runtime.setGoalEnv(goalId, env);
           runtime.setGoalProgram(goalId, 'main');
 
-          // Set module context if procedure belongs to a module with imports
           final module = _findModuleForProcedure(procedureLabel, loadedModules);
           if (module != null) {
             final modCtx = _buildModuleContext(module, loadedModules, combinedProgram: combinedProgram);
@@ -441,13 +340,11 @@ void main() async {
             }
           }
 
-          // Set query variable names for display
           scheduler.setQueryVarNames(queryVarWriters);
 
           runtime.gq.enqueue(GoalRef(goalId, entryPC));
           goalId++;
 
-          // Run until this goal completes
           final result = await scheduler.drainAsyncWithStatus(
             maxCycles: maxCycles,
             debug: debugTrace,
@@ -460,11 +357,9 @@ void main() async {
             break;
           } else if (result.status == ExecutionStatus.suspended) {
             anySuspended = true;
-            // Continue with next goal - may unblock
           }
         }
 
-        // Display variable bindings
         if (debugOutput) print('[DEBUG REPL] queryVarWriters = $queryVarWriters');
         if (queryVarWriters.isNotEmpty) {
           for (final entry in queryVarWriters.entries) {
@@ -481,7 +376,6 @@ void main() async {
           }
         }
 
-        // Print final status
         if (!allSucceeded) {
           _printStatus(ExecutionStatus.failed);
         } else if (anySuspended) {
@@ -492,8 +386,7 @@ void main() async {
         continue;
       }
 
-      // Single goal - parse directly
-      // Add . back for parser (parser requires it)
+      // Single goal
       final parseInput = trimmed.endsWith('.') ? trimmed : '$trimmed.';
       final lexer = Lexer(parseInput);
       final tokens = lexer.tokenize();
@@ -517,14 +410,12 @@ void main() async {
       final arity = goalAtom.arity;
       final args = goalAtom.args;
 
-      // Combine all loaded programs
       final allOps = <dynamic>[];
       for (final loaded in loadedPrograms.values) {
         allOps.addAll(loaded.ops);
       }
       final combinedProgram = BytecodeProgram(allOps);
 
-      // Find the entry point for the predicate
       final procedureLabel = '$functor/$arity';
       final entryPC = combinedProgram.labels[procedureLabel];
       if (entryPC == null) {
@@ -533,9 +424,8 @@ void main() async {
         continue;
       }
 
-      // Set up heap cells for each argument and track variable writers
       final queryVarWriters = <String, int>{};
-      final varNameToId = <String, int>{}; // Track all variables by name
+      final varNameToId = <String, int>{};
       final argSlots = <int, rt.Term>{};
 
       for (int i = 0; i < args.length; i++) {
@@ -543,12 +433,10 @@ void main() async {
         _setupArgument(runtime, arg, i, argSlots, queryVarWriters, varNameToId, debugOutput: debugOutput);
       }
 
-      // Set up goal environment
       final env = CallEnv(args: argSlots);
       runtime.setGoalEnv(goalId, env);
       runtime.setGoalProgram(goalId, 'main');
 
-      // Set module context if procedure belongs to a module with imports
       final module = _findModuleForProcedure(procedureLabel, loadedModules);
       if (module != null) {
         final modCtx = _buildModuleContext(module, loadedModules, combinedProgram: combinedProgram);
@@ -557,36 +445,30 @@ void main() async {
         }
       }
 
-      // Create scheduler and run
       final runner = BytecodeRunner(combinedProgram);
       final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
 
-      // Reset variable numbering and set query variable names
       scheduler.resetDisplayNumbering();
       scheduler.setQueryVarNames(queryVarWriters);
 
       runtime.gq.enqueue(GoalRef(goalId, entryPC));
-      final currentGoalId = goalId;
       goalId++;
 
       final result = await scheduler.drainAsyncWithStatus(
         maxCycles: maxCycles,
         debug: debugTrace,
-        showBindings: false,  // Don't show internal bindings
+        showBindings: false,
         debugOutput: debugOutput,
       );
 
-      // Display variable bindings using clean format
       if (debugOutput) print('[DEBUG REPL] queryVarWriters = $queryVarWriters');
       if (queryVarWriters.isNotEmpty) {
         for (final entry in queryVarWriters.entries) {
           final varName = entry.key;
           final writerId = entry.value;
-          // Use single-ID heap methods (writerId == readerId in single-ID system)
           final rawValue = runtime.heap.getValue(writerId);
           if (debugOutput) print('[DEBUG] $varName (W$writerId), isBound=${runtime.heap.isBound(writerId)}, rawValue=$rawValue');
           if (runtime.heap.isBound(writerId)) {
-            // Dereference the value to follow binding chains (e.g., X2 → X2? → [])
             final varRef = rt.VarRef(writerId, isReader: false);
             final derefValue = runtime.heap.dereference(varRef);
             print('$varName = ${_formatTerm(derefValue, runtime)}');
@@ -596,7 +478,6 @@ void main() async {
         }
       }
 
-      // Print final status
       _printStatus(result.status);
 
     } catch (e) {
@@ -607,7 +488,6 @@ void main() async {
   }
 }
 
-/// Print execution status
 void _printStatus(ExecutionStatus status) {
   switch (status) {
     case ExecutionStatus.succeeded:
@@ -621,13 +501,10 @@ void _printStatus(ExecutionStatus status) {
 
 bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProgram> loadedPrograms, Map<String, ModuleInfo> loadedModules) {
   try {
-    // Support absolute paths or relative paths in glp/ subdirectory
     final File sourceFile;
     if (filename.startsWith('/')) {
-      // Absolute path - use directly
       sourceFile = File(filename);
     } else {
-      // Relative path - look in glp/ subdirectory
       sourceFile = File('glp/$filename');
     }
 
@@ -637,11 +514,35 @@ bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProg
     }
 
     final source = sourceFile.readAsStringSync();
+    
+    // Parse to get Module AST for type checking
+    final lexer = Lexer(source);
+    final tokens = lexer.tokenize();
+    final parser = Parser(tokens);
+    final module = parser.parseModule();
+    
+    // Type check if program has procedure declarations
+    if (module.procDeclarations.isNotEmpty) {
+      final typeResult = checkModule(module);
+      if (!typeResult.isWellTyped) {
+        print('Type errors in $filename:');
+        for (final error in typeResult.errors) {
+          print('  ✗ $error');
+        }
+        return false;
+      }
+      // Show warnings if any
+      for (final warning in typeResult.warnings) {
+        print('  ⚠ $warning');
+      }
+      print('  ✓ Type check passed (${module.procDeclarations.length} procedures)');
+    }
+    
+    // Compile
     final program = compiler.compile(source);
 
     loadedPrograms[filename] = program;
 
-    // Extract module metadata from source (always registers, defaults name from filename)
     final moduleInfo = _extractModuleInfo(source, program, filename);
     loadedModules[moduleInfo.name] = moduleInfo;
 
@@ -652,20 +553,15 @@ bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProg
   }
 }
 
-/// Extract module name and imports from GLP source
-/// If no -module declaration, derives name from filename
 ModuleInfo _extractModuleInfo(String source, BytecodeProgram program, String filename) {
-  // Extract -module(name) or default to filename-based name
   String name;
   final moduleMatch = RegExp(r'-module\((\w+)\)\.').firstMatch(source);
   if (moduleMatch != null) {
     name = moduleMatch.group(1)!;
   } else {
-    // Default: derive from filename (glp/math_module.glp → math_module)
     name = _moduleNameFromFilename(filename);
   }
 
-  // Extract -import([...])
   final imports = <String>[];
   final importMatch = RegExp(r'-import\(\[([^\]]*)\]\)\.').firstMatch(source);
   if (importMatch != null) {
@@ -678,9 +574,7 @@ ModuleInfo _extractModuleInfo(String source, BytecodeProgram program, String fil
   return ModuleInfo(name: name, program: program, imports: imports);
 }
 
-/// Derive module name from filename
 String _moduleNameFromFilename(String filename) {
-  // Remove path and extension: "glp/math_module.glp" → "math_module"
   final baseName = filename.split('/').last;
   if (baseName.endsWith('.glp')) {
     return baseName.substring(0, baseName.length - 4);
@@ -688,19 +582,17 @@ String _moduleNameFromFilename(String filename) {
   return baseName;
 }
 
-/// Build ReplModuleContext for a module (if it has imports)
 ReplModuleContext? _buildModuleContext(ModuleInfo module, Map<String, ModuleInfo> loadedModules, {BytecodeProgram? combinedProgram}) {
   if (module.imports.isEmpty) {
-    return null;  // No imports, no context needed
+    return null;
   }
 
-  // Build import map: import index (1-based) -> target module
   final imports = <int, ReplModuleTarget>{};
   for (int i = 0; i < module.imports.length; i++) {
     final importName = module.imports[i];
     final target = loadedModules[importName];
     if (target != null) {
-      imports[i + 1] = ReplModuleTarget(target.name, target.program);  // 1-based indexing
+      imports[i + 1] = ReplModuleTarget(target.name, target.program);
     }
   }
 
@@ -712,7 +604,6 @@ ReplModuleContext? _buildModuleContext(ModuleInfo module, Map<String, ModuleInfo
   );
 }
 
-/// Find the module that defines a given procedure
 ModuleInfo? _findModuleForProcedure(String procedureLabel, Map<String, ModuleInfo> loadedModules) {
   for (final module in loadedModules.values) {
     if (module.program.labels.containsKey(procedureLabel)) {
@@ -724,7 +615,7 @@ ModuleInfo? _findModuleForProcedure(String procedureLabel, Map<String, ModuleInf
 
 void printHelp() {
   print('');
-  print('GLP REPL Usage:');
+  print('GLP REPL (With Type Checking) Usage:');
   print('  filename.glp           Load and compile glp/<filename>');
   print('  goal.                  Execute a goal (must end with .)');
   print('');
@@ -735,24 +626,19 @@ void printHelp() {
   print('  :debug, :d             Toggle DEBUG output');
   print('  :limit <n>             Set goal reduction limit to <n>');
   print('  :bytecode, :bc         Show loaded bytecode');
-  print('  :pe [file.glp]         Partial evaluate (unfold reduce/2)');
   print('');
-  print('File Organization:');
-  print('  glp/           GLP source files (.glp)');
-  print('  bin/           Compiled bytecode files (.glpc)');
+  print('Type Checking:');
+  print('  Programs with procedure declarations are type-checked');
+  print('  Programs without procedure declarations skip type checking');
   print('');
   print('Examples:');
-  print('  GLP> hello.glp                        # Load program');
-  print('  GLP> hello.                           # Execute goal');
-  print("  GLP> execute('write', ['Hello']).");
-  print('  GLP> merge([1,2,3], [a,b], Xs).');
-  print('  GLP> :limit 5000                      # Set reduction limit');
+  print('  GLP> merge.glp                        # Load typed program');
+  print('  GLP> merge([1,2],[a,b],X).            # Execute goal');
   print('');
 }
 
-// Check if query contains conjunction (comma outside of argument lists/structures)
 bool _isConjunction(String query) {
-  int depth = 0;  // Track parentheses/bracket depth
+  int depth = 0;
   for (int i = 0; i < query.length; i++) {
     final char = query[i];
     if (char == '(' || char == '[') {
@@ -760,42 +646,12 @@ bool _isConjunction(String query) {
     } else if (char == ')' || char == ']') {
       depth--;
     } else if (char == ',' && depth == 0) {
-      // Comma at top level - this is a conjunction
       return true;
     }
   }
   return false;
 }
 
-// Flatten a conjunction term into a list of goals
-// (A, (B, C)) -> [A, B, C]
-List<Atom> _flattenConjunction(Atom term) {
-  final goals = <Atom>[];
-
-  void flatten(dynamic t) {
-    if (t is StructTerm && t.functor == ',' && t.args.length == 2) {
-      flatten(t.args[0]);
-      flatten(t.args[1]);
-    } else if (t is Atom) {
-      goals.add(t);
-    } else if (t is StructTerm) {
-      // Convert StructTerm to Atom
-      goals.add(Atom(t.functor, t.args, t.line, t.column));
-    }
-  }
-
-  // Start with the atom itself - check if it's a conjunction
-  if (term.functor == ',' && term.args.length == 2) {
-    flatten(term.args[0]);
-    flatten(term.args[1]);
-  } else {
-    goals.add(term);
-  }
-
-  return goals;
-}
-
-// Set up an argument for a conjunction goal, reusing existing variables
 void _setupConjunctionArg(
   GlpRuntime runtime,
   Term arg,
@@ -810,13 +666,11 @@ void _setupConjunctionArg(
     final existingId = varNameToId[baseName];
 
     if (existingId != null) {
-      // Reuse existing variable
       if (debugOutput) print('[DEBUG] Reusing var $baseName: ${arg.isReader ? "R" : "W"}$existingId');
       argSlots[argSlot] = rt.VarRef(existingId, isReader: arg.isReader);
     } else {
-      // Create new variable
       final (writerId, readerId) = runtime.heap.allocateFreshPair();
-      varNameToId[baseName] = writerId;  // In single-ID, writerId == readerId conceptually
+      varNameToId[baseName] = writerId;
 
       if (!arg.isReader) {
         queryVarWriters[baseName] = writerId;
@@ -826,7 +680,6 @@ void _setupConjunctionArg(
       argSlots[argSlot] = rt.VarRef(arg.isReader ? readerId : writerId, isReader: arg.isReader);
     }
   } else if (arg is ListTerm) {
-    // List - build recursively
     final (writerId, readerId) = runtime.heap.allocateFreshPair();
     final listValue = _buildListTermForConj(runtime, arg, queryVarWriters, varNameToId);
     if (listValue is rt.ConstTerm) {
@@ -849,7 +702,6 @@ void _setupConjunctionArg(
   }
 }
 
-// Build a structure term for conjunction, reusing existing variables
 rt.Term _buildStructTermForConj(
   GlpRuntime runtime,
   StructTerm struct,
@@ -902,7 +754,6 @@ rt.Term _buildStructTermForConj(
   return rt.StructTerm(struct.functor, argTerms);
 }
 
-// Build a list term for conjunction, reusing existing variables
 rt.Term _buildListTermForConj(
   GlpRuntime runtime,
   ListTerm list,
@@ -963,8 +814,6 @@ rt.Term _buildListTermForConj(
   return rt.StructTerm('.', [headTerm, tailTerm]);
 }
 
-// Set up heap cells for a query argument
-// Returns (readerId, writerId) for the argument slot
 void _setupArgument(
   GlpRuntime runtime,
   Term arg,
@@ -979,15 +828,12 @@ void _setupArgument(
     final existingId = varNameToId[baseName];
 
     if (existingId != null) {
-      // Already seen this variable - reuse the same ID
       if (debugOutput) print('[DEBUG] Existing var $baseName: ${arg.isReader ? "R" : "W"}$existingId');
       argSlots[argSlot] = rt.VarRef(existingId, isReader: arg.isReader);
     } else {
-      // First time seeing this variable - create fresh pair
       final (writerId, _) = runtime.heap.allocateFreshPair();
       varNameToId[baseName] = writerId;
 
-      // Track writer for display
       if (!arg.isReader) {
         queryVarWriters[baseName] = writerId;
       }
@@ -996,10 +842,8 @@ void _setupArgument(
       argSlots[argSlot] = rt.VarRef(writerId, isReader: arg.isReader);
     }
   } else if (arg is ListTerm) {
-    // List: create structure and bind it (FCP: both cells created internally)
     final (writerId, readerId) = runtime.heap.allocateFreshPair();
 
-    // Build list structure recursively
     final listValue = _buildListTerm(runtime, arg, queryVarWriters, varNameToId);
     if (listValue is rt.ConstTerm) {
       runtime.heap.bindWriterConst(writerId, listValue.value);
@@ -1007,19 +851,15 @@ void _setupArgument(
       runtime.heap.bindWriterStruct(writerId, listValue.functor, listValue.args);
     }
 
-    // Always use reader for pre-bound values
     argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
   } else if (arg is ConstTerm) {
-    // Constant: create bound writer/reader (FCP: both cells created internally)
     final (writerId, readerId) = runtime.heap.allocateFreshPair();
     runtime.heap.bindWriterConst(writerId, arg.value);
 
     argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
   } else if (arg is StructTerm) {
-    // Structure: create and bind it (FCP: both cells created internally)
     final (writerId, readerId) = runtime.heap.allocateFreshPair();
 
-    // Build structure term recursively
     final structValue = _buildStructTerm(runtime, arg, queryVarWriters, varNameToId, debugOutput: debugOutput) as rt.StructTerm;
     runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
 
@@ -1029,28 +869,23 @@ void _setupArgument(
   }
 }
 
-// Build a structure term recursively
 rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int> queryVarWriters, Map<String, int> varNameToId, {bool debugOutput = false}) {
   final argTerms = <rt.Term>[];
 
   for (final arg in struct.args) {
     if (arg is ConstTerm) {
-      // Constant in structure - create bound writer/reader (FCP: both cells created internally)
       final (writerId, readerId) = runtime.heap.allocateFreshPair();
       runtime.heap.bindWriterConst(writerId, arg.value);
       argTerms.add(rt.VarRef(readerId, isReader: true));
     } else if (arg is VarTerm) {
-      // Variable in structure - check if already exists
       final baseName = arg.name;
       final existingId = varNameToId[baseName];
       if (debugOutput) print('[DEBUG REPL] Structure arg: $baseName (isReader=${arg.isReader}), existing=$existingId');
 
       if (existingId != null) {
-        // Already seen this variable - reuse the same ID
         if (debugOutput) print('[DEBUG REPL]   Reusing: ${arg.isReader ? "R" : "W"}$existingId');
         argTerms.add(rt.VarRef(existingId, isReader: arg.isReader));
       } else {
-        // First occurrence - create fresh pair (FCP: both cells created internally)
         final (writerId, _) = runtime.heap.allocateFreshPair();
         varNameToId[baseName] = writerId;
         if (debugOutput) print('[DEBUG REPL]   Creating fresh: W$writerId');
@@ -1061,19 +896,16 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
       }
     } else if (arg is ListTerm) {
       if (arg.isNil) {
-        // Empty list in structure - create bound writer/reader for 'nil' (FCP: both cells created internally)
         final (writerId, readerId) = runtime.heap.allocateFreshPair();
         runtime.heap.bindWriterConst(writerId, 'nil');
         argTerms.add(rt.VarRef(readerId, isReader: true));
       } else {
-        // Non-empty list - recursively build and create writer/reader (FCP: both cells created internally)
         final (writerId, readerId) = runtime.heap.allocateFreshPair();
         final listValue = _buildListTerm(runtime, arg, queryVarWriters, varNameToId) as rt.StructTerm;
         runtime.heap.bindWriterStruct(writerId, listValue.functor, listValue.args);
         argTerms.add(rt.VarRef(readerId, isReader: true));
       }
     } else if (arg is StructTerm) {
-      // Nested structure - create bound writer/reader (FCP: both cells created internally)
       final (writerId, readerId) = runtime.heap.allocateFreshPair();
       final structValue = _buildStructTerm(runtime, arg, queryVarWriters, varNameToId, debugOutput: debugOutput) as rt.StructTerm;
       runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
@@ -1086,16 +918,14 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
   return rt.StructTerm(struct.functor, argTerms);
 }
 
-// Build a list term recursively
 rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> queryVarWriters, Map<String, int> varNameToId) {
   if (list.isNil) {
-    return rt.ConstTerm('nil');  // Empty list represented as 'nil'
+    return rt.ConstTerm('nil');
   }
 
   final head = list.head;
   final tail = list.tail;
 
-  // Convert head to runtime term
   rt.Term headTerm;
   if (head is ConstTerm) {
     headTerm = rt.ConstTerm(head.value);
@@ -1120,7 +950,6 @@ rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> query
     throw Exception('Unsupported list head type: ${head.runtimeType}');
   }
 
-  // Convert tail to runtime term
   rt.Term tailTerm;
   if (tail is ListTerm) {
     tailTerm = _buildListTerm(runtime, tail, queryVarWriters, varNameToId);
@@ -1156,7 +985,6 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? path]) {
   }
 
   if (term is rt.StructTerm && term.functor == '.' && term.args.length == 2) {
-    // List cons cell - expand to readable format
     final elements = <String>[];
     rt.Term? current = term;
 
@@ -1166,10 +994,8 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? path]) {
       final head = current.args[0];
       final tail = current.args[1];
 
-      // Format head element
       String headStr;
       if (head is rt.VarRef && runtime != null) {
-        // Dereference VarRef (single-ID system) - fully recursive
         final varId = head.varId;
         if (path.contains(varId)) {
           headStr = '<circular>';
@@ -1177,30 +1003,12 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? path]) {
           path.add(varId);
           final derefHead = runtime.heap.dereference(head);
           if (derefHead is rt.VarRef) {
-            // Still unbound after dereferencing
             final displayId = derefHead.varId >= 1000 ? derefHead.varId - 1000 : derefHead.varId;
             headStr = derefHead.isReader ? 'X$displayId?' : 'X$displayId';
           } else {
             headStr = _formatTerm(derefHead, runtime, path);
           }
-          path.remove(varId);  // Remove after processing children
-        }
-      } else if (head is rt.VarRef && runtime != null) {
-        // OLD: Dereference reader (for backward compatibility)
-        final readerId = head.varId;
-        if (path.contains(readerId)) {
-          headStr = '<circular>';
-        } else {
-          path.add(readerId);
-          final writer = _findPairedWriter(runtime, readerId);
-          if (writer != null && runtime.heap.isWriterBound(writer)) {
-            final value = runtime.heap.valueOfWriter(writer);
-            headStr = _formatTerm(value, runtime, path);
-          } else {
-            final displayId = readerId >= 1000 ? readerId - 1000 : readerId;
-            headStr = 'X$displayId';
-          }
-          path.remove(readerId);  // Remove after processing children
+          path.remove(varId);
         }
       } else {
         headStr = _formatTerm(head, runtime, path);
@@ -1208,56 +1016,29 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? path]) {
 
       elements.add(headStr);
 
-      // Move to tail
       if (tail is rt.VarRef && runtime != null) {
-        // Handle VarRef (single-ID system) - dereference fully
         final varId = tail.varId;
         if (path.contains(varId)) {
-          // Circular reference in tail
           final displayId = varId >= 1000 ? varId - 1000 : varId;
           final label = tail.isReader ? 'X$displayId?' : 'X$displayId';
           return '[${elements.join(', ')} | <circular $label>]';
         }
         path.add(varId);
-        // Dereference recursively to get final value
         final derefTail = runtime.heap.dereference(tail);
         if (derefTail is rt.VarRef) {
-          // Still unbound after dereferencing
           path.remove(varId);
           final displayId = derefTail.varId >= 1000 ? derefTail.varId - 1000 : derefTail.varId;
           final label = derefTail.isReader ? 'X$displayId?' : 'X$displayId';
           return '[${elements.join(', ')} | $label]';
         }
         current = derefTail;
-        path.remove(varId);  // Remove after processing
+        path.remove(varId);
         if (current == null || current is! rt.StructTerm) break;
-      } else if (tail is rt.VarRef && runtime != null) {
-        // OLD: Handle ReaderTerm (backward compatibility)
-        final readerId = tail.varId;
-        if (path.contains(readerId)) {
-          // Circular reference in tail
-          final displayId = readerId >= 1000 ? readerId - 1000 : readerId;
-          return '[${elements.join(', ')} | <circular X$displayId>]';
-        }
-        path.add(readerId);
-        final writer = _findPairedWriter(runtime, readerId);
-        if (writer != null && runtime.heap.isWriterBound(writer)) {
-          current = runtime.heap.valueOfWriter(writer);
-          path.remove(readerId);  // Remove after processing
-          if (current == null || current is! rt.StructTerm) break;
-        } else {
-          // Unbound reader in tail - show it
-          path.remove(readerId);
-          final displayId = readerId >= 1000 ? readerId - 1000 : readerId;
-          return '[${elements.join(', ')} | X$displayId]';
-        }
       } else if (tail is rt.ConstTerm && (tail.value == 'nil' || tail.value == null)) {
-        break;  // End of list
+        break;
       } else if (tail is rt.StructTerm && tail.functor == '.') {
-        // Tail is already a properly formed cons cell - continue with it
         current = tail;
       } else {
-        // Any other term in tail position - not a proper list
         break;
       }
     }
@@ -1266,8 +1047,7 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? path]) {
   }
 
   if (term is rt.StructTerm) {
-    // General structure - recursively format arguments with dereferencing
-    final currentPath = path;  // Capture for closure
+    final currentPath = path;
     final formattedArgs = term.args.map((arg) {
       if (arg is rt.VarRef && runtime != null) {
         final varId = arg.varId;
@@ -1278,13 +1058,12 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? path]) {
         final deref = runtime.heap.dereference(arg);
         String result;
         if (deref is rt.VarRef) {
-          // Still unbound
           final displayId = deref.varId >= 1000 ? deref.varId - 1000 : deref.varId;
           result = deref.isReader ? 'X$displayId?' : 'X$displayId';
         } else {
           result = _formatTerm(deref, runtime, currentPath);
         }
-        currentPath.remove(varId);  // Remove after processing children
+        currentPath.remove(varId);
         return result;
       }
       return _formatTerm(arg, runtime, currentPath);
@@ -1295,13 +1074,6 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? path]) {
   return term.toString();
 }
 
-int? _findPairedWriter(GlpRuntime runtime, int readerId) {
-  // In single-ID system: readerId == writerId
-  // Just check if the variable exists
-  return runtime.heap.allVarIds.contains(readerId) ? readerId : null;
-}
-
-// Get git commit info for build identification
 Future<String?> _getGitCommit() async {
   try {
     final result = await Process.run('git', ['log', '-1', '--format=%h %s']);
