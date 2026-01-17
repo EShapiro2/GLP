@@ -28,6 +28,34 @@ These programs should pass type checking without errors:
    - Tests append and reverse with reverse_acc helper
    - Tests body goal checking across multiple procedure calls
 
+### Type Alias Tests (valid/)
+
+As of v0.7, type aliases are permitted and resolved at preprocessing:
+
+1. **alias_primitive.glp** - Alias to primitives `_` and `_?`
+   - Tests: `Output ::= _.` and `Input ::= _?.`
+   - Uses aliases in procedure declaration
+
+2. **alias_type_ref.glp** - Alias to type references
+   - Tests: `MyStream ::= Stream.` and `ConsumedStream ::= Stream?.`
+   - Uses aliases in procedure declarations
+
+3. **alias_transitive.glp** - Transitive alias chain
+   - Tests: `UserId ::= AgentId. AgentId ::= Id. Id ::= Constant.`
+   - Resolves through multiple levels
+
+4. **alias_in_type_def.glp** - Alias used within type definition
+   - Tests: `Element ::= Integer. MyList ::= [] ; [Element|MyList].`
+   - Alias as argument in another type
+
+### Circular Alias Errors (invalid/)
+
+These should fail with circular alias chain errors:
+
+1. **circular_alias_self.glp** - Self-referential: `A ::= A.`
+2. **circular_alias_pair.glp** - Pair cycle: `A ::= B. B ::= A.`
+3. **circular_alias_chain.glp** - Longer cycle: `A ::= B. B ::= C. C ::= A.`
+
 ### Negative Controls (invalid/structural/)
 
 These programs should FAIL type checking with appropriate errors:

@@ -1,13 +1,14 @@
-/// GLP Multiagent - Phase 3: Two Windows with MethodChannel
+/// GLP Multiagent - Social Graph Agent with Friends List
 ///
 /// Coordinator window spawns agent windows, routes messages between them.
+/// GLP program loaded from external file.
 library;
 
 import 'dart:convert';
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/compiler/parser.dart';
@@ -21,46 +22,8 @@ import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/external_io.dart';
 
-/// Embedded ping_pong_agent.glp program source (typed, SRSW-correct)
-const _agentSource = '''
-%% ping_pong_agent.glp - Corrected with proper SRSW
-%% Procedure types:
-%%   procedure agent(Constant?, Channel?, Channel?).
-%%   procedure agent_loop(Constant?, Stream?, Stream, Stream).
-
-%% Main agent entry
-agent(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
-    merge(UserIn?, NetIn?, In),
-    agent_loop(Id?, In?, UserOut, NetOut).
-
-%% User sends a message to another agent
-agent_loop(Id, [send(To, Content)|In], [sent(To?, Content?)|UserOut?], [msg(Id?, To?, Content?)|NetOut?]) :-
-    ground(Id?), ground(To?), ground(Content?) |
-    agent_loop(Id?, In?, UserOut, NetOut).
-
-%% Receive ping from network - reply with pong
-agent_loop(Id, [msg(From, ping)|In], [received_ping(From?)|UserOut?], [msg(Id?, From?, pong)|NetOut?]) :-
-    ground(Id?), ground(From?) |
-    agent_loop(Id?, In?, UserOut, NetOut).
-
-%% Receive pong from network - display to user only (no network reply)
-agent_loop(Id, [msg(From, pong)|In], [received_pong(From?)|UserOut?], NetOut?) :-
-    ground(Id?), ground(From?) |
-    agent_loop(Id?, In?, UserOut, NetOut).
-
-%% Receive any other message from network - display to user only
-agent_loop(Id, [msg(From, Content)|In], [received(From?, Content?)|UserOut?], NetOut?) :-
-    ground(Id?), ground(From?), ground(Content?) |
-    agent_loop(Id?, In?, UserOut, NetOut).
-
-%% Unknown command - echo back as error (otherwise = no other clause matched)
-agent_loop(Id, [Cmd|In], [error(unknown_command, Cmd?)|UserOut?], NetOut?) :-
-    ground(Cmd?), otherwise |
-    agent_loop(Id?, In?, UserOut, NetOut).
-
-%% Empty input - close both output streams
-agent_loop(_, [], [], []).
-''';
+/// Default GLP program path
+const _defaultGlpPath = '/Users/udi/Grassroots/GLP/programs/multiagent/social_agent.glp';
 
 /// Entry point - checks if spawned window or main coordinator
 void main(List<String> args) {
@@ -71,8 +34,10 @@ void main(List<String> args) {
     final windowId = int.parse(args[1]);
     final params = jsonDecode(args[2]) as Map<String, dynamic>;
     final agentId = params['agentId'] as String;
-    debugPrint('=== SPAWNED AGENT WINDOW: $agentId (windowId=$windowId) ===');
-    runAgentWindow(windowId, agentId);
+    final friendId = params['friendId'] as String;
+    final glpSource = params['glpSource'] as String;
+    debugPrint('=== SPAWNED AGENT WINDOW: $agentId (friend=$friendId, windowId=$windowId) ===');
+    runAgentWindow(windowId, agentId, friendId, glpSource);
   } else {
     // Main/coordinator window
     debugPrint('=== COORDINATOR WINDOW ===');
@@ -86,8 +51,8 @@ void runCoordinatorWindow() {
 }
 
 /// Run an agent window (spawned by coordinator)
-void runAgentWindow(int windowId, String agentId) {
-  runApp(AgentApp(windowId: windowId, agentId: agentId));
+void runAgentWindow(int windowId, String agentId, String friendId, String glpSource) {
+  runApp(AgentApp(windowId: windowId, agentId: agentId, friendId: friendId, glpSource: glpSource));
 }
 
 // ============================================================================
@@ -110,6 +75,11 @@ class SimpleRouter {
   void _log(String message) {
     final timestamp = DateTime.now().toIso8601String().substring(11, 19);
     _routingLog.add('[$timestamp] $message');
+    onLogUpdate?.call();
+  }
+
+  void clearLog() {
+    _routingLog.clear();
     onLogUpdate?.call();
   }
 
@@ -192,6 +162,9 @@ class CoordinatorScreen extends StatefulWidget {
 class _CoordinatorScreenState extends State<CoordinatorScreen> {
   final Map<String, WindowController> _windows = {};
   final List<String> _log = [];
+  final TextEditingController _glpPathController = TextEditingController(text: _defaultGlpPath);
+  String _currentGlpPath = _defaultGlpPath;
+  String? _cachedGlpSource;
 
   @override
   void initState() {
@@ -214,18 +187,60 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     });
 
     _log.add('Coordinator started');
+    _log.add('GLP: $_currentGlpPath');
   }
 
-  Future<void> _spawnAgent(String agentId, double x, double y) async {
+  @override
+  void dispose() {
+    _glpPathController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _updateGlpPath() async {
+    final newPath = _glpPathController.text.trim();
+    if (newPath.isNotEmpty && File(newPath).existsSync()) {
+      try {
+        _cachedGlpSource = await File(newPath).readAsString();
+        setState(() {
+          _currentGlpPath = newPath;
+          _log.add('GLP loaded: $newPath (${_cachedGlpSource!.length} chars)');
+        });
+      } catch (e) {
+        setState(() {
+          _log.add('ERROR reading file: $e');
+        });
+      }
+    } else {
+      setState(() {
+        _log.add('ERROR: File not found: $newPath');
+      });
+    }
+  }
+
+  Future<void> _spawnAgent(String agentId, String friendId, double x, double y) async {
     if (_windows.containsKey(agentId)) {
       _log.add('$agentId already spawned');
       setState(() {});
       return;
     }
 
+    // Load GLP source if not cached
+    if (_cachedGlpSource == null) {
+      await _updateGlpPath();
+      if (_cachedGlpSource == null) {
+        _log.add('ERROR: Could not load GLP source');
+        setState(() {});
+        return;
+      }
+    }
+
     try {
       final window = await DesktopMultiWindow.createWindow(
-        jsonEncode({'agentId': agentId}),
+        jsonEncode({
+          'agentId': agentId,
+          'friendId': friendId,
+          'glpSource': _cachedGlpSource,
+        }),
       );
       await window.setTitle('$agentId - GLP Agent');
       await window.setFrame(Rect.fromLTWH(x, y, 400, 600));
@@ -234,7 +249,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       _windows[agentId] = window;
       SimpleRouter.instance.register(agentId, window.windowId);
 
-      _log.add('Spawned $agentId (window ${window.windowId})');
+      _log.add('Spawned $agentId (friend=$friendId, window ${window.windowId})');
       setState(() {});
     } catch (e) {
       _log.add('ERROR spawning $agentId: $e');
@@ -243,8 +258,9 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   }
 
   Future<void> _spawnAliceAndBob() async {
-    await _spawnAgent('Alice', 100, 100);
-    await _spawnAgent('Bob', 520, 100);
+    // Alice's friend is Bob, Bob's friend is Alice
+    await _spawnAgent('Alice', 'Bob', 100, 100);
+    await _spawnAgent('Bob', 'Alice', 520, 100);
   }
 
   Future<void> _closeAll() async {
@@ -257,6 +273,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       }
     }
     _windows.clear();
+    SimpleRouter.instance.clearLog();
     _log.add('Closed all windows');
     setState(() {});
   }
@@ -269,6 +286,34 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       ),
       body: Column(
         children: [
+          // GLP file path input
+          Container(
+            padding: const EdgeInsets.all(8.0),
+            color: Colors.orange.shade100,
+            child: Row(
+              children: [
+                const Text('GLP: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                Expanded(
+                  child: TextField(
+                    controller: _glpPathController,
+                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      border: OutlineInputBorder(),
+                    ),
+                    onSubmitted: (_) => _updateGlpPath(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _updateGlpPath,
+                  child: const Text('Set'),
+                ),
+              ],
+            ),
+          ),
+
           // Control buttons
           Container(
             padding: const EdgeInsets.all(16.0),
@@ -279,12 +324,6 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                   onPressed: _spawnAliceAndBob,
                   icon: const Icon(Icons.people),
                   label: const Text('Spawn Alice & Bob'),
-                ),
-                const SizedBox(width: 16),
-                ElevatedButton.icon(
-                  onPressed: () => _spawnAgent('Charlie', 940, 100),
-                  icon: const Icon(Icons.person_add),
-                  label: const Text('Add Charlie'),
                 ),
                 const SizedBox(width: 16),
                 ElevatedButton.icon(
@@ -362,11 +401,15 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
 class AgentApp extends StatelessWidget {
   final int windowId;
   final String agentId;
+  final String friendId;
+  final String glpSource;
 
   const AgentApp({
     super.key,
     required this.windowId,
     required this.agentId,
+    required this.friendId,
+    required this.glpSource,
   });
 
   @override
@@ -391,7 +434,12 @@ class AgentApp extends StatelessWidget {
           ),
         ),
       ),
-      home: AgentScreen(windowId: windowId, agentId: agentId),
+      home: AgentScreen(
+        windowId: windowId,
+        agentId: agentId,
+        friendId: friendId,
+        glpSource: glpSource,
+      ),
     );
   }
 }
@@ -399,11 +447,15 @@ class AgentApp extends StatelessWidget {
 class AgentScreen extends StatefulWidget {
   final int windowId;
   final String agentId;
+  final String friendId;
+  final String glpSource;
 
   const AgentScreen({
     super.key,
     required this.windowId,
     required this.agentId,
+    required this.friendId,
+    required this.glpSource,
   });
 
   @override
@@ -424,7 +476,7 @@ class _AgentScreenState extends State<AgentScreen> {
 
   // Pending output terms (to be dereferenced after execution)
   final List<rt.Term> _pendingUserOutputTerms = [];
-  final List<rt.Term> _pendingNetOutputTerms = [];
+  final List<rt.Term> _pendingFriendOutputTerms = [];
 
   int _goalCount = 0;
   int _heapVars = 0;
@@ -440,31 +492,32 @@ class _AgentScreenState extends State<AgentScreen> {
   }
 
   void _setupMethodChannel() {
-    // Handle messages from coordinator - inject into GLP NetIn
+    // Handle messages from coordinator - inject into GLP friend input
     DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
       debugPrint('=== AGENT ${widget.agentId} RECEIVED: ${call.method} ===');
       if (call.method == 'deliver') {
         final args = jsonDecode(call.arguments as String) as Map<String, dynamic>;
         final from = args['from'] as String;
         final payload = args['payload'];
-        _onNetworkMessageReceived(from, payload);
+        _onFriendMessageReceived(from, payload);
       }
       return null;
     });
   }
 
-  void _onNetworkMessageReceived(String from, dynamic payload) {
-    _addOutput('[NET RECV from $from] $payload');
+  void _onFriendMessageReceived(String from, dynamic payload) {
+    _addOutput('[RECV from $from] $payload');
 
     if (_ioContext == null || _runtime == null) return;
 
-    // Inject msg(From, Payload) into NetIn for GLP to process
+    // Inject msg(From, Id, Payload) into friend input stream
     final msgTerm = rt.StructTerm('msg', [
-      rt.ConstTerm(from),
+      rt.ConstTerm(from.toLowerCase()),
+      rt.ConstTerm(widget.agentId.toLowerCase()),
       rt.ConstTerm(payload),
     ]);
 
-    final activations = _ioContext!.netInput.inject(msgTerm);
+    final activations = _ioContext!.friendInput.inject(msgTerm);
     for (final goal in activations) {
       _runtime!.gq.enqueue(goal);
     }
@@ -473,8 +526,8 @@ class _AgentScreenState extends State<AgentScreen> {
     _runUntilQuiescent();
   }
 
-  Future<void> _sendNetworkMessage(String to, dynamic payload) async {
-    _addOutput('[NET SEND to $to] $payload');
+  Future<void> _sendFriendMessage(String to, dynamic payload) async {
+    _addOutput('[SEND to $to] $payload');
 
     // Send to coordinator for routing
     try {
@@ -495,6 +548,10 @@ class _AgentScreenState extends State<AgentScreen> {
   Future<void> _initializeRuntime() async {
     try {
       _addOutput('[INIT] Creating GLP runtime...');
+      _addOutput('[INIT] GLP source: ${widget.glpSource.length} chars');
+
+      // Use GLP source passed from coordinator
+      final glpSource = widget.glpSource;
 
       // Create runtime
       _runtime = GlpRuntime();
@@ -503,12 +560,11 @@ class _AgentScreenState extends State<AgentScreen> {
       // Create channels
       final userChannel = createExternalChannel(_runtime!.heap, 'user');
       final netChannel = createExternalChannel(_runtime!.heap, 'net');
+      final friendChannel = createExternalChannel(_runtime!.heap, 'friend');
 
-      // Create user input injector
+      // Create input injectors
       final userInput = InputInjector(_runtime!.heap, 'user', userChannel.inputVarId);
-
-      // Create net input injector (for incoming network messages)
-      final netInput = InputInjector(_runtime!.heap, 'net', netChannel.inputVarId);
+      final friendInput = InputInjector(_runtime!.heap, 'friend', friendChannel.inputVarId);
 
       // Create user output observer - displays to UI
       final userOutput = OutputObserver(
@@ -525,51 +581,41 @@ class _AgentScreenState extends State<AgentScreen> {
         },
       );
 
-      // Create net output observer - sends to network via MethodChannel
-      final netOutput = OutputObserver(
+      // Create friend output observer - sends to friend via coordinator
+      final friendOutput = OutputObserver(
         _runtime!.heap,
-        'net',
-        netChannel.outputVarId,
+        'friend',
+        friendChannel.outputVarId,
         (term) {
-          _pendingNetOutputTerms.add(term);
+          _pendingFriendOutputTerms.add(term);
         },
         () {
-          debugPrint('=== NET OUTPUT CLOSED ===');
+          debugPrint('=== FRIEND OUTPUT CLOSED ===');
         },
       );
 
       _ioContext = _FullIOContext(
         userChannel: userChannel,
         netChannel: netChannel,
+        friendChannel: friendChannel,
         userInput: userInput,
-        netInput: netInput,
+        friendInput: friendInput,
         userOutput: userOutput,
-        netOutput: netOutput,
+        friendOutput: friendOutput,
       );
 
-      _addOutput('[INIT] Loading ping_pong_agent.glp...');
-
-      // Compile embedded agent program + stdlib merge
+      // Compile GLP program
       final compiler = GlpCompiler();
-      final program = compiler.compile(_agentSource);
+      final program = compiler.compile(glpSource);
       _programs['agent.glp'] = program;
 
-      // Load stdlib for merge (SRSW-correct)
-      final stdlibSource = '''
-merge([H|T1], T2, [H?|T3?]) :- merge(T1?, T2?, T3).
-merge(T1, [H|T2], [H?|T3?]) :- merge(T1?, T2?, T3).
-merge([], Ys, Ys?).
-merge(Xs, [], Xs?).
-''';
-      final stdlibProgram = compiler.compile(stdlibSource);
-      _programs['stdlib.glp'] = stdlibProgram;
+      _addOutput('[INIT] Loaded GLP program');
 
-      _addOutput('[INIT] Loaded agent program');
-
-      // Start goal: agent(Id, UserCh, NetCh)
+      // Start goal: agent(Id, FriendName, UserCh, NetCh, FriendOut)
       final agentIdLower = widget.agentId.toLowerCase();
-      _addOutput('[INIT] Starting goal: agent($agentIdLower, UserCh, NetCh)');
-      _startAgentGoal(agentIdLower);
+      final friendIdLower = widget.friendId.toLowerCase();
+      _addOutput('[INIT] Starting: agent($agentIdLower, $friendIdLower, ...)');
+      _startAgentGoal(agentIdLower, friendIdLower);
 
       setState(() {
         _initialized = true;
@@ -577,14 +623,17 @@ merge(Xs, [], Xs?).
         _updateStats();
       });
 
-      _addOutput('[INIT] Ready! Type: send(bob, ping)');
+      _addOutput('[INIT] Ready! Type: send($friendIdLower, ping)');
     } catch (e, st) {
       _addOutput('[ERROR] $e');
       debugPrint('$st');
+      setState(() {
+        _status = 'Error: $e';
+      });
     }
   }
 
-  void _startAgentGoal(String agentId) {
+  void _startAgentGoal(String agentId, String friendId) {
     if (_runtime == null || _ioContext == null) return;
 
     try {
@@ -595,18 +644,20 @@ merge(Xs, [], Xs?).
       }
       final combinedProgram = BytecodeProgram(allOps);
 
-      // Find entry point for agent/3
-      final entryPC = combinedProgram.labels['agent/3'];
+      // Find entry point for agent/5
+      final entryPC = combinedProgram.labels['agent/5'];
       if (entryPC == null) {
-        _addOutput('[ERROR] Predicate agent/3 not found');
+        _addOutput('[ERROR] Predicate agent/5 not found');
         return;
       }
 
-      // Set up arguments: agent(Id, UserCh, NetCh)
+      // Set up arguments: agent(Id, FriendName, UserCh, NetCh, FriendOut)
       final argSlots = <int, rt.Term>{
         0: rt.ConstTerm(agentId),
-        1: _ioContext!.userChannelTerm,
-        2: _ioContext!.netChannelTerm,
+        1: rt.ConstTerm(friendId),
+        2: _ioContext!.userChannelTerm,
+        3: _ioContext!.netChannelTerm,
+        4: rt.VarRef(_ioContext!.friendChannel.outputVarId, isReader: false),
       };
 
       // Set up goal environment
@@ -623,7 +674,7 @@ merge(Xs, [], Xs?).
       _runtime!.gq.enqueue(GoalRef(_goalId, entryPC));
       _goalId++;
 
-      _addOutput('[GOAL] Started agent($agentId, UserCh, NetCh)');
+      _addOutput('[GOAL] Started agent($agentId, $friendId, ...)');
 
       // Initial run to set up merge
       _runUntilQuiescent();
@@ -757,19 +808,19 @@ merge(Xs, [], Xs?).
     }
     _pendingUserOutputTerms.clear();
 
-    // Process net output terms - send via MethodChannel
-    for (final term in _pendingNetOutputTerms) {
+    // Process friend output terms - send via coordinator
+    for (final term in _pendingFriendOutputTerms) {
       final derefTerm = _derefTerm(term);
       // Expect msg(From, To, Content) from GLP
       if (derefTerm is rt.StructTerm && derefTerm.functor == 'msg' && derefTerm.args.length == 3) {
         final to = _termToString(derefTerm.args[1]);
         final content = _termToString(derefTerm.args[2]);
-        _sendNetworkMessage(to, content);
+        _sendFriendMessage(to, content);
       } else {
-        _addOutput('[NET OUT] ${_formatTerm(derefTerm)}');
+        _addOutput('[FRIEND OUT] ${_formatTerm(derefTerm)}');
       }
     }
-    _pendingNetOutputTerms.clear();
+    _pendingFriendOutputTerms.clear();
     _scrollToBottom();
   }
 
@@ -855,7 +906,7 @@ merge(Xs, [], Xs?).
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.agentId),
+        title: Text('${widget.agentId} (friend: ${widget.friendId})'),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -914,7 +965,7 @@ merge(Xs, [], Xs?).
             ),
           ),
 
-          // GLP input area - user types terms like send(bob, ping)
+          // GLP input area
           Container(
             padding: const EdgeInsets.all(8.0),
             color: Colors.orange.shade50,
@@ -925,7 +976,9 @@ merge(Xs, [], Xs?).
                     controller: _inputController,
                     enabled: _initialized,
                     decoration: InputDecoration(
-                      hintText: _initialized ? 'send(bob, ping)' : 'Initializing...',
+                      hintText: _initialized 
+                          ? 'send(${widget.friendId.toLowerCase()}, ping)' 
+                          : 'Initializing...',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -948,30 +1001,31 @@ merge(Xs, [], Xs?).
 
           // Status bar
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
             color: Colors.orange.shade100,
             child: Row(
               children: [
                 Text(
-                  'Goals: $_goalCount',
-                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
+                  'G:$_goalCount H:$_heapVars',
+                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 10),
                 ),
-                const SizedBox(width: 16),
-                Text(
-                  'Heap: $_heapVars',
-                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
-                ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 Container(
-                  width: 10,
-                  height: 10,
+                  width: 8,
+                  height: 8,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: _isRunning ? Colors.green : (_initialized ? Colors.orange : Colors.grey),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Text(_status, style: const TextStyle(fontSize: 11)),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    _status,
+                    style: const TextStyle(fontSize: 10),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
@@ -985,22 +1039,24 @@ merge(Xs, [], Xs?).
 // HELPER CLASS
 // ============================================================================
 
-/// Full I/O context with both user and network channels
+/// Full I/O context with user, network, and friend channels
 class _FullIOContext {
   final ExternalChannel userChannel;
   final ExternalChannel netChannel;
+  final ExternalChannel friendChannel;
   final InputInjector userInput;
-  final InputInjector netInput;
+  final InputInjector friendInput;
   final OutputObserver userOutput;
-  final OutputObserver netOutput;
+  final OutputObserver friendOutput;
 
   _FullIOContext({
     required this.userChannel,
     required this.netChannel,
+    required this.friendChannel,
     required this.userInput,
-    required this.netInput,
+    required this.friendInput,
     required this.userOutput,
-    required this.netOutput,
+    required this.friendOutput,
   });
 
   rt.Term get userChannelTerm => buildChannelTerm(userChannel);
@@ -1008,6 +1064,6 @@ class _FullIOContext {
 
   void dispose() {
     userOutput.dispose();
-    netOutput.dispose();
+    friendOutput.dispose();
   }
 }

@@ -1,0 +1,14 @@
+%% VALID: Transitive alias chain (v0.7)
+%% Aliases are resolved transitively at preprocessing
+%% Per spec type-environment.md v0.7
+
+%% A resolves to Constant through the chain: A -> B -> Constant
+Constant ::= Integer ; String.
+Id ::= Constant.
+AgentId ::= Id.
+UserId ::= AgentId.
+
+%% Use the final alias in a procedure
+procedure get_user(UserId).
+get_user(42).
+get_user(alice).

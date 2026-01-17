@@ -1,9 +1,9 @@
 # Module: type-environment
 
-**Version**: 0.6
-**Date**: 2025-01-14
+**Version**: 0.7
+**Date**: 2025-01-17
 **Status**: DRAFT
-**Paper References**: Definition 4.1 (Typed GLP Program), Section 4.1 (Type Classification), Section 4.2 (Type Automaton - Determinism and Alias Prohibition)
+**Paper References**: Definition 4.1 (Typed GLP Program), Section 4.1 (Type Classification), Section 4.2 (Type Automaton - Determinism, Type Aliases)
 
 ## Dependencies
 
@@ -11,7 +11,7 @@ None (leaf module).
 
 ## Purpose
 
-Stores and provides lookup for type definitions and procedure declarations in a typed GLP program. Enforces validity constraints on type definitions including determinism and alias prohibition.
+Stores and provides lookup for type definitions and procedure declarations in a typed GLP program. Enforces validity constraints on type definitions including determinism. Resolves type aliases during preprocessing.
 
 ## Paper Definitions
 
@@ -71,19 +71,23 @@ AnyOne ::= 1 ; 1?.        % overlapping: 1 matches both alternatives
 Ambiguous ::= _ ; Integer. % overlapping: integers match both
 ```
 
-### Type Alias Prohibition (Paper Section 4.2)
+### Type Aliases (Paper Section 4.2)
 
-Type definitions must introduce **new structure**, not rename existing types.
+For documentation and readability, type aliases are permitted in source programs:
 
-**Illegal aliases:**
 ```
-Output ::= _.             % alias for primitive
-Input ::= _?.             % alias for primitive
-MyStream ::= Stream.     % alias for defined type
-MyStream ::= Stream?.     % alias for complement of defined type
+AgentId ::= Constant.       % alias for primitive type
+MyStream ::= Stream.        % alias for defined type
+ConsumedStream ::= Stream?. % alias for dual of defined type
 ```
 
-A valid type definition must have at least one alternative with a compound structure or constant.
+Aliases are fully resolved during preprocessing: every occurrence of the alias name is replaced by its target type before type automaton construction and well-typing analysis. The type checker therefore never encounters alias definitions—it operates only on resolved types.
+
+**Circular alias chains are prohibited:**
+```
+A ::= B.
+B ::= A.    % Error: circular alias chain
+```
 
 ### Type Alternative Syntax
 
@@ -273,8 +277,8 @@ Adds a type definition after validation.
 **Throws:**
 - `PredefinedTypeError` if redefining a predefined type
 - `RedefinitionError` if type already defined
-- `TypeAliasError` if definition is an alias
 - `NonDeterministicTypeError` if alternatives overlap
+- `CircularAliasError` if alias chain is circular
 
 #### `void addProcedure(ProcDecl decl)`
 
@@ -318,12 +322,8 @@ addType(def):
   if def.name in types:
     throw RedefinitionError("Type already defined: ${def.name}")
   
-  // Check 3: Not an alias (must have structure)
-  if isTypeAlias(def):
-    throw TypeAliasError("Type definition must introduce structure, not alias: ${def.name}")
-  
-  // Check 4: Deterministic (no overlapping alternatives)
-  if not isDeterministic(def):
+  // Check 3: Deterministic (no overlapping alternatives) - only for non-aliases
+  if not isTypeAlias(def) and not isDeterministic(def):
     throw NonDeterministicTypeError("Type alternatives must be distinguishable: ${def.name}")
   
   types[def.name] = def
@@ -334,23 +334,94 @@ addType(def):
 ```
 isTypeAlias(def):
   // A type is an alias if it has exactly one alternative that is:
-  // - A single type reference (TypeRef or PrimitiveType) with no structure
+  // - A single type reference (TypeRef) or primitive (PrimitiveModeAlt)
   
   if def.alternatives.length != 1:
     return false  // Multiple alternatives = not an alias
   
   alt = def.alternatives[0]
   
-  match alt:
-    // Single type reference without structure
-    TypeRefAlt(typeExpr) where typeExpr has no compound structure:
-      return true
-    
-    // Any compound structure is valid
-    ListNilAlt, ListConsAlt, StructAlt, DiffListAlt, ConstantAlt:
-      return false
+  // Single TypeRef (T or T?) = alias
+  if alt is TypeRef:
+    return true
   
+  // Single PrimitiveModeAlt (_ or _?) = alias  
+  if alt is PrimitiveModeAlt:
+    return true
+  
+  // Any compound structure is not an alias:
+  // ConstantAlt, ListNilAlt, ListConsAlt, StructAlt, DiffListAlt
   return false
+```
+
+### Algorithm: Alias Resolution (Preprocessing)
+
+Alias resolution happens before type checking, transforming all alias references to their target types.
+
+```
+resolveAliases(types, procedures):
+  // Step 1: Identify aliases and build alias graph
+  aliases = {}  // name -> target type expression
+  for def in types:
+    if isTypeAlias(def):
+      aliases[def.name] = def.alternatives[0]  // The single TypeRef or PrimitiveModeAlt
+  
+  // Step 2: Detect circular alias chains via topological sort
+  visited = {}
+  resolved = {}
+  
+  for aliasName in aliases:
+    if aliasName not in resolved:
+      resolveAlias(aliasName, aliases, visited, resolved)
+  
+  // Step 3: Replace alias usages in all type definitions
+  for def in types:
+    if def.name not in aliases:  // Skip alias definitions themselves
+      for alt in def.alternatives:
+        replaceAliasReferences(alt, resolved)
+  
+  // Step 4: Replace alias usages in procedure declarations
+  for proc in procedures:
+    for argType in proc.argTypes:
+      replaceAliasReferences(argType, resolved)
+  
+  // Step 5: Remove alias definitions from types map
+  for aliasName in aliases:
+    types.remove(aliasName)
+
+resolveAlias(name, aliases, visiting, resolved):
+  if name in resolved:
+    return resolved[name]
+  
+  if name in visiting:
+    throw CircularAliasError("Circular alias chain detected: ${name}")
+  
+  visiting.add(name)
+  
+  target = aliases[name]
+  if target is TypeRef and target.name in aliases:
+    // Alias to another alias - resolve transitively
+    finalTarget = resolveAlias(target.name, aliases, visiting, resolved)
+    // Preserve complement marker: if target was T? and finalTarget is S, result is S?
+    resolved[name] = applyComplement(finalTarget, target.isInput)
+  else:
+    resolved[name] = target
+  
+  visiting.remove(name)
+  return resolved[name]
+
+replaceAliasReferences(typeExpr, resolved):
+  if typeExpr is TypeRef and typeExpr.name in resolved:
+    // Replace with resolved target, preserving complement
+    target = resolved[typeExpr.name]
+    return applyComplement(target, typeExpr.isInput)
+  
+  // Recursively process nested type expressions
+  if typeExpr has nested types (e.g., StructAlt, ListConsAlt):
+    for nested in typeExpr.nestedTypes:
+      replaceAliasReferences(nested, resolved)
+  
+  return typeExpr
 ```
 
 ### Algorithm: Determinism Check
@@ -521,21 +592,39 @@ Integer ::= 0 ; succ(Integer).
 
 **Error:** `PredefinedTypeError("Cannot redefine predefined type: Integer")`
 
-### Example: INVALID — Type Alias
+### Example: VALID — Type Aliases
 
 ```
+AgentId ::= Constant.
 MyStream ::= Stream.
+ConsumedStream ::= Stream?.
 ```
 
-**Error:** `TypeAliasError("Type definition must introduce structure, not alias: MyStream")`
+These are resolved during preprocessing:
+- `AgentId` → `Constant`
+- `MyStream` → `Stream`  
+- `ConsumedStream` → `Stream?`
 
-### Example: INVALID — Type Alias to Primitive
+After resolution, the type checker operates on the target types.
+
+### Example: VALID — Transitive Alias Chain
 
 ```
-Output ::= _.
+Id ::= Constant.
+AgentId ::= Id.
+UserId ::= AgentId.
 ```
 
-**Error:** `TypeAliasError("Type definition must introduce structure, not alias: Output")`
+Resolved: `UserId` → `AgentId` → `Id` → `Constant`
+
+### Example: INVALID — Circular Alias Chain
+
+```
+A ::= B.
+B ::= A.
+```
+
+**Error:** `CircularAliasError("Circular alias chain detected: A")`
 
 ### Example: INVALID — Non-Deterministic Type
 
@@ -593,10 +682,17 @@ BadNumeric ::= Number ; Integer.
 |-----------|-----------|
 | Redefining predefined type | `PredefinedTypeError` |
 | Redefining existing type | `RedefinitionError` |
-| Type definition is an alias | `TypeAliasError` |
+| Circular alias chain | `CircularAliasError` |
 | Type alternatives overlap | `NonDeterministicTypeError` |
 | Redeclaring procedure | `RedefinitionError` |
 | Reference to undefined type | `UndefinedTypeError` |
+
+## Changes from v0.6
+
+- Changed type aliases from prohibited to permitted (resolved at preprocessing)
+- Added alias resolution algorithm
+- Replaced `TypeAliasError` with `CircularAliasError` (only circular chains are errors)
+- Updated examples to show valid aliases and circular chain error
 
 ## Changes from v0.5
 
@@ -606,7 +702,6 @@ BadNumeric ::= Number ; Integer.
 ## Changes from v0.4
 
 - Added `Real`, `Number` to predefined types
-- Added type alias prohibition (new validation)
 - Added determinism requirement (new validation)  
 - Added `TypeClassification` enum
 - Added `TypeAlternative` class hierarchy
@@ -623,3 +718,4 @@ BadNumeric ::= Number ; Integer.
 | 0.4 | 2025-01-09 | Add Type Classification section |
 | 0.5 | 2025-01-12 | Add Real/Number types; type alias prohibition; determinism requirement |
 | 0.6 | 2025-01-14 | Add Type Alternative Syntax section; document compound term shorthand |
+| 0.7 | 2025-01-17 | Allow type aliases (resolved at preprocessing); add alias resolution algorithm |

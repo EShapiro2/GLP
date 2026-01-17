@@ -1,0 +1,7 @@
+%% INVALID: Longer circular alias chain
+%% Should be rejected: A -> B -> C -> A
+%% Per spec type-environment.md v0.7
+
+A ::= B.
+B ::= C.
+C ::= A.

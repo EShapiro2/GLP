@@ -1,0 +1,10 @@
+%% VALID: Type alias to primitive (v0.7)
+%% Aliases are resolved at preprocessing
+%% Per spec type-environment.md v0.7
+
+Output ::= _.
+Input ::= _?.
+
+%% Use the aliases in a procedure
+procedure id(Output?, Output).
+id(X, X?).

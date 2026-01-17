@@ -75,30 +75,39 @@ echo ""
 run_type_check "$TEST_DIR/invalid/structural/body_undeclared_predicate.glp" "pass" "Undeclared predicate (skip checking)"
 
 echo ""
-echo "=== Type Alias Errors (should fail) ==="
+echo "=== Type Alias Tests (v0.7 - aliases permitted) ==="
 echo ""
 
-# Helper for alias errors - checks for "alias prohibited" in output
-run_alias_check() {
+run_type_check "$TEST_DIR/valid/alias_primitive.glp" "pass" "Alias to primitives _ and _?"
+run_type_check "$TEST_DIR/valid/alias_type_ref.glp" "pass" "Alias to type reference"
+run_type_check "$TEST_DIR/valid/alias_transitive.glp" "pass" "Transitive alias chain"
+run_type_check "$TEST_DIR/valid/alias_in_type_def.glp" "pass" "Alias used in type definition"
+
+echo ""
+echo "=== Circular Alias Errors (should fail) ==="
+echo ""
+
+# Helper for circular alias errors - checks for "circular" in output
+run_circular_check() {
     local file="$1"
     local test_name="$2"
 
     output=$($DART run "$GLPC" --type-check "$file" 2>&1 || true)
 
-    if echo "$output" | grep -qi "alias prohibited"; then
+    if echo "$output" | grep -qi "circular"; then
         echo "PASS: $test_name (correctly rejected)"
         PASS=$((PASS + 1))
     else
-        echo "FAIL: $test_name (should have alias error)"
+        echo "FAIL: $test_name (should have circular alias error)"
         echo "      File: $file"
         echo "      Output: $output"
         FAIL=$((FAIL + 1))
     fi
 }
 
-run_alias_check "$TEST_DIR/invalid/alias_primitive.glp" "Alias to primitive _ rejected"
-run_alias_check "$TEST_DIR/invalid/alias_primitive_input.glp" "Alias to primitive _? rejected"
-run_alias_check "$TEST_DIR/invalid/alias_type_ref.glp" "Alias to type reference rejected"
+run_circular_check "$TEST_DIR/invalid/circular_alias_self.glp" "Self-referential alias rejected"
+run_circular_check "$TEST_DIR/invalid/circular_alias_pair.glp" "Circular pair A->B->A rejected"
+run_circular_check "$TEST_DIR/invalid/circular_alias_chain.glp" "Circular chain A->B->C->A rejected"
 
 echo ""
 echo "=== Moded Types - Embedded Mode Errors (should fail) ==="

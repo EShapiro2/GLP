@@ -2,8 +2,9 @@
 //
 // Builds TypeEnvironment from a parsed Module.
 // Loads prelude, merges with user definitions, validates.
+// Resolves type aliases at preprocessing time.
 //
-// Specification: docs/modules/type-environment.md v0.6
+// Specification: docs/modules/type-environment.md v0.7
 
 import 'type_ast.dart';
 import 'prelude.dart';
@@ -23,13 +24,13 @@ class RedefinitionError implements Exception {
   String toString() => '$message at line $line, column $column';
 }
 
-/// Error for type alias (no new structure introduced)
-class TypeAliasError implements Exception {
+/// Error for circular alias chain
+class CircularAliasError implements Exception {
   final String message;
   final int line;
   final int column;
 
-  TypeAliasError(this.message, this.line, this.column);
+  CircularAliasError(this.message, this.line, this.column);
 
   @override
   String toString() => '$message at line $line, column $column';
@@ -80,7 +81,7 @@ TypeEnvironment _buildEnvironmentFromModule(
   final types = <String, TypeDef>{};
   final procedures = <String, ProcDecl>{};
 
-  // Add type definitions
+  // Add type definitions (including aliases - will be resolved later)
   for (final typeDef in module.typeDefs) {
     if (checkRedefinitions && isPredefinedType(typeDef.name)) {
       throw RedefinitionError(
@@ -89,16 +90,10 @@ TypeEnvironment _buildEnvironmentFromModule(
         typeDef.column,
       );
     }
-    // Check for type aliases (must introduce structure)
-    if (_isTypeAlias(typeDef)) {
-      throw TypeAliasError(
-        'Type definition must introduce structure, not alias: ${typeDef.name}',
-        typeDef.line,
-        typeDef.column,
-      );
+    // Note: Aliases are allowed (v0.7) - determinism check skipped for them
+    if (!_isTypeAlias(typeDef)) {
+      _checkDeterminism(typeDef);
     }
-    // Check for determinism (alternatives must be distinguishable)
-    _checkDeterminism(typeDef);
     types[typeDef.name] = typeDef;
   }
 
@@ -127,6 +122,9 @@ TypeEnvironment _buildEnvironmentFromModule(
     }
   }
 
+  // Resolve aliases (preprocessing step per v0.7 spec)
+  _resolveAliases(types, procedures);
+
   return TypeEnvironment(types, procedures);
 }
 
@@ -141,12 +139,13 @@ List<ast.Clause> extractClauses(ast.Module module) {
 
 /// Check if a type definition is an alias (no new structure introduced)
 /// 
-/// Per spec (type-environment.md v0.5):
-/// Type definitions must introduce new structure, not alias existing types.
+/// Per spec (type-environment.md v0.7):
+/// Type aliases are permitted for documentation and readability.
+/// They are resolved at preprocessing time.
 /// 
-/// Illegal aliases:
+/// Aliases are:
 /// - Output ::= _.         (alias for primitive wildcard)
-/// - Input ::= _?.          (alias for primitive wildcard complement)
+/// - Input ::= _?.          (alias for primitive wildcard complement)  
 /// - MyList ::= List.       (alias for defined type)
 /// - MyStream ::= Stream?.  (alias for complement of defined type)
 bool _isTypeAlias(TypeDef def) {
@@ -164,6 +163,185 @@ bool _isTypeAlias(TypeDef def) {
   // Compound structures introduce new structure:
   // ConstantAlt, ListNilAlt, ListConsAlt, StructAlt, DiffListAlt
   return false;
+}
+
+/// Resolve type aliases at preprocessing time.
+///
+/// Per spec (type-environment.md v0.7):
+/// Aliases are fully resolved during preprocessing. Every occurrence of an
+/// alias name is replaced by its target type. The type checker operates only
+/// on resolved types. Circular alias chains are detected and rejected.
+void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedures) {
+  // Step 1: Identify aliases
+  final aliases = <String, TypeDef>{};
+  for (final entry in types.entries) {
+    if (_isTypeAlias(entry.value)) {
+      aliases[entry.key] = entry.value;
+    }
+  }
+
+  if (aliases.isEmpty) return;  // No aliases to resolve
+
+  // Step 2: Resolve aliases transitively, detecting cycles
+  final resolved = <String, TypeExpr>{};  // name -> final resolved TypeExpr
+  final visiting = <String>{};  // Currently being resolved (for cycle detection)
+
+  TypeExpr resolveAlias(String name) {
+    if (resolved.containsKey(name)) {
+      return resolved[name]!;
+    }
+
+    final aliasDef = aliases[name];
+    if (aliasDef == null) {
+      // Not an alias - return a TypeRef to it
+      return TypeRef(name, 0, 0);
+    }
+
+    if (visiting.contains(name)) {
+      throw CircularAliasError(
+        'Circular alias chain detected: $name',
+        aliasDef.line,
+        aliasDef.column,
+      );
+    }
+
+    visiting.add(name);
+
+    final target = aliasDef.alternatives.first;
+    TypeExpr result;
+
+    if (target is TypeRef) {
+      // Target is another type reference - check if it's also an alias
+      if (aliases.containsKey(target.name)) {
+        // Resolve transitively
+        final resolvedTarget = resolveAlias(target.name);
+        // Apply complement if needed: (T?)? = T
+        result = _applyComplement(resolvedTarget, target.isInput, target.line, target.column);
+      } else {
+        // Target is a real type, keep as TypeRef
+        result = target;
+      }
+    } else if (target is PrimitiveModeAlt) {
+      // Target is _ or _?
+      result = target;
+    } else {
+      // Shouldn't happen if _isTypeAlias is correct
+      result = target;
+    }
+
+    visiting.remove(name);
+    resolved[name] = result;
+    return result;
+  }
+
+  // Resolve all aliases
+  for (final name in aliases.keys) {
+    resolveAlias(name);
+  }
+
+  // Step 3: Replace alias references in type definitions
+  final nonAliasTypes = types.entries
+      .where((e) => !aliases.containsKey(e.key))
+      .toList();
+
+  for (final entry in nonAliasTypes) {
+    final newAlternatives = <TypeExpr>[];
+    for (final alt in entry.value.alternatives) {
+      newAlternatives.add(_replaceAliasReferences(alt, resolved));
+    }
+    types[entry.key] = TypeDef(
+      entry.value.name,
+      newAlternatives,
+      entry.value.line,
+      entry.value.column,
+    );
+  }
+
+  // Step 4: Replace alias references in procedure declarations
+  for (final entry in procedures.entries.toList()) {
+    final newArgTypes = <TypeExpr>[];
+    for (final argType in entry.value.argTypes) {
+      newArgTypes.add(_replaceAliasReferences(argType, resolved));
+    }
+    procedures[entry.key] = ProcDecl(
+      entry.value.name,
+      newArgTypes,
+      entry.value.line,
+      entry.value.column,
+      isBuiltin: entry.value.isBuiltin,
+    );
+  }
+
+  // Step 5: Remove alias definitions from types map
+  for (final name in aliases.keys) {
+    types.remove(name);
+  }
+}
+
+/// Apply complement to a TypeExpr if needed.
+/// Implements the involution (T?)? = T.
+TypeExpr _applyComplement(TypeExpr expr, bool applyComplement, int line, int column) {
+  if (!applyComplement) return expr;
+
+  if (expr is TypeRef) {
+    return TypeRef(expr.name, line, column, isInput: !expr.isInput);
+  } else if (expr is PrimitiveModeAlt) {
+    return PrimitiveModeAlt(!expr.isInput, line, column);
+  }
+  return expr;
+}
+
+/// Replace alias references in a TypeExpr recursively.
+TypeExpr _replaceAliasReferences(TypeExpr expr, Map<String, TypeExpr> resolved) {
+  if (expr is TypeRef) {
+    final resolvedTarget = resolved[expr.name];
+    if (resolvedTarget != null) {
+      // Replace with resolved target, applying complement if needed
+      return _applyComplement(resolvedTarget, expr.isInput, expr.line, expr.column);
+    }
+    return expr;  // Not an alias, keep as-is
+  }
+
+  if (expr is PrimitiveModeAlt) {
+    return expr;  // Primitives don't reference other types
+  }
+
+  if (expr is ConstantAlt) {
+    return expr;  // Constants don't reference other types
+  }
+
+  if (expr is ListNilAlt) {
+    return expr;  // Empty list doesn't reference other types
+  }
+
+  if (expr is ListConsAlt) {
+    return ListConsAlt(
+      _replaceAliasReferences(expr.head, resolved),
+      _replaceAliasReferences(expr.tail, resolved),
+      expr.line,
+      expr.column,
+    );
+  }
+
+  if (expr is StructAlt) {
+    return StructAlt(
+      expr.functor,
+      expr.args.map((a) => _replaceAliasReferences(a, resolved)).toList(),
+      expr.line,
+      expr.column,
+    );
+  }
+
+  if (expr is DiffListAlt) {
+    return DiffListAlt(
+      _replaceAliasReferences(expr.content, resolved),
+      _replaceAliasReferences(expr.hole, resolved),
+      expr.line,
+      expr.column,
+    );
+  }
+
+  return expr;  // Unknown type, return as-is
 }
 
 /// Check if type alternatives are deterministic (distinguishable)
