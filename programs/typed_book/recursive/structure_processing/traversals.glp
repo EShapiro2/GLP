@@ -14,17 +14,17 @@ procedure append(List?, List?, List).
 procedure reduce(_?, _).
 
 preorder(tree(X, L, R), Xs?) :-
-    preorder(L?, Ls), preorder(R?, Rs), append([X|Ls?], Rs?, Xs).
+    preorder(L?, Ls), preorder(R?, Rs), append([X?|Ls?], Rs?, Xs).
 preorder(void, []).
 
 inorder(tree(X, L, R), Xs?) :-
-    inorder(L?, Ls), inorder(R?, Rs), append(Ls?, [X|Rs?], Xs).
+    inorder(L?, Ls), inorder(R?, Rs), append(Ls?, [X?|Rs?], Xs).
 inorder(void, []).
 
 postorder(tree(X, L, R), Xs?) :-
     postorder(L?, Ls),
     postorder(R?, Rs),
-    append(Rs?, [X], Rs1),
+    append(Rs?, [X?], Rs1),
     append(Ls?, Rs1?, Xs).
 postorder(void, []).
 
@@ -33,11 +33,11 @@ append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 
 %% reduce clauses for metainterpreter
-reduce(preorder(tree(X, L, R), Xs?), (preorder(L?, Ls), preorder(R?, Rs), append([X|Ls?], Rs?, Xs))).
+reduce(preorder(tree(X, L, R), Xs?), (preorder(L?, Ls), preorder(R?, Rs), append([X?|Ls?], Rs?, Xs))).
 reduce(preorder(void, []), true).
-reduce(inorder(tree(X, L, R), Xs?), (inorder(L?, Ls), inorder(R?, Rs), append(Ls?, [X|Rs?], Xs))).
+reduce(inorder(tree(X, L, R), Xs?), (inorder(L?, Ls), inorder(R?, Rs), append(Ls?, [X?|Rs?], Xs))).
 reduce(inorder(void, []), true).
-reduce(postorder(tree(X, L, R), Xs?), (postorder(L?, Ls), postorder(R?, Rs), append(Rs?, [X], Rs1), append(Ls?, Rs1?, Xs))).
+reduce(postorder(tree(X, L, R), Xs?), (postorder(L?, Ls), postorder(R?, Rs), append(Rs?, [X?], Rs1), append(Ls?, Rs1?, Xs))).
 reduce(postorder(void, []), true).
 reduce(append([], Ys, Ys?), true).
 reduce(append([X|Xs], Ys, [X?|Zs?]), append(Xs?, Ys?, Zs)).

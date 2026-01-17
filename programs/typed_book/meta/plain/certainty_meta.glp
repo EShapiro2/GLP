@@ -6,7 +6,7 @@
 
 %% Procedure type declarations
 procedure reduce(_?, _?, Number).
-procedure clause(_?, _?, _, Number?).
+procedure clause(_?, _?, _, Number).
 procedure min(Number?, Number?, Number).
 
 reduce(_, true, 1).                              %% halt - certainty 1

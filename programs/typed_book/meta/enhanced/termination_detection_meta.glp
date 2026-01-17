@@ -1,6 +1,9 @@
 %% termination_detection_meta.glp - Termination detecting metainterpreter
 %% Source: CP Collected Papers, Ch 25 (Safra & Shapiro)
 %%
+%% TYPE CHECKER NOTE: This program requires parameterized types and a typed
+%% module system (cross-module calls via #). Will be supported in a future version.
+%%
 %% Uses short-circuit technique to detect distributed termination.
 
 %% Procedure type declarations

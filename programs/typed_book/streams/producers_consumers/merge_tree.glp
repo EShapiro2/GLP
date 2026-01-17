@@ -22,6 +22,9 @@ procedure merge_tree(ListOfLists?, List).
 procedure merge_layer(ListOfLists?, ListOfLists).
 procedure merge(List?, List?, List).
 
+% Base case: empty list of streams
+merge_tree([], []).
+
 % Base case: single stream passes through unchanged
 merge_tree([Xs], Xs?).
 

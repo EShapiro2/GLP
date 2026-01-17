@@ -1,9 +1,13 @@
 %% ancestor.glp - Ancestor relation (AoP 5.1)
 %% ancestor(X,Y) :- X is an ancestor of Y.
 
+%% Type definitions
+Parent ::= terach ; abraham ; isaac ; jacob.
+Person ::= terach ; abraham ; isaac ; jacob ; benjamin.
+
 %% Procedure type declarations
-procedure parent(_?, _).
-procedure ancestor(_?, _).
+procedure parent(Parent?, Person).
+procedure ancestor(Person?, Person).
 procedure reduce(_?, _).
 
 parent(terach, abraham).
@@ -11,13 +15,13 @@ parent(abraham, isaac).
 parent(isaac, jacob).
 parent(jacob, benjamin).
 
-ancestor(X, Y) :- parent(X?, Y?) | true.
-ancestor(X, Z) :- parent(X?, Y), ancestor(Y?, Z?).
+ancestor(X, Y?) :- parent(X?, Y).
+ancestor(X, Z?) :- parent(X?, Y), ancestor(Y?, Z).
 
 %% reduce clauses for metainterpreter
 reduce(parent(terach, abraham), true).
 reduce(parent(abraham, isaac), true).
 reduce(parent(isaac, jacob), true).
 reduce(parent(jacob, benjamin), true).
-reduce(ancestor(X, Y), parent(X?, Y?)).
-reduce(ancestor(X, Z), (parent(X?, Y), ancestor(Y?, Z?))).
+reduce(ancestor(X, Y?), parent(X?, Y)).
+reduce(ancestor(X, Z?), (parent(X?, Y), ancestor(Y?, Z))).

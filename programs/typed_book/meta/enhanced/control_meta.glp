@@ -1,6 +1,9 @@
 %% control_meta.glp - GLP metainterpreter with run control
 %% Source: GLP Papers (Program: GLP metainterpreter with run control)
 %%
+%% TYPE CHECKER NOTE: This program requires parameterized types and a typed
+%% module system (cross-module calls via #). Will be supported in a future version.
+%%
 %% Supports suspend, resume, and abort via control stream.
 %% Uses short-circuit L--R for state dump on abort.
 

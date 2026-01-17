@@ -14,7 +14,7 @@ procedure bob(_?).
 observe(A, A?, A?) :- atom(A?) | true.
 observe(A, A?, A?) :- number(A?) | true.
 observe(A, B?, Log?) :- compound(A?) |
-    A? =.. ListA,
+    ListA ..= A?,
     observe_list(ListA?, ListB, Logs),
     B =.. ListB?,
     Log =.. Logs?.
@@ -23,7 +23,7 @@ observe(A, B?, Log?) :- compound(A?) |
 observe(A?, A, A?) :- atom(A?) | true.
 observe(A?, A, A?) :- number(A?) | true.
 observe(A?, B, Log?) :- compound(B?) |
-    B? =.. ListB,
+    ListB ..= B?,
     observe_list(ListB?, ListA, Logs),
     A =.. ListA?,
     Log =.. Logs?.

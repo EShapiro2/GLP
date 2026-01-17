@@ -2,15 +2,16 @@
 %% Source: Standard GLP list operations
 %% Note: Uses ground guard to allow comparison
 
-%% Uses predefined List type
+%% Type definitions
+NonEmptyList ::= [_ | List].
 
 %% Procedure type declarations
-procedure member(_?, List?).
+procedure member(_?, NonEmptyList?).
 procedure reduce(_?, _).
 
 member(X, [H|_]) :- ground(X?), ground(H?), X? =:= H? | true.
 member(X, [_|Xs]) :- member(X?, Xs?).
 
 %% Metainterpreter support
-reduce(member(X, [H|_]), true) :- ground(X?), ground(H?), X? =:= H? | true.
+reduce(member(X, [H|_]), true) :- X? =:= H? | true.
 reduce(member(X, [_|Xs]), member(X?, Xs?)).

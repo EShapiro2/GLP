@@ -12,8 +12,8 @@ Done ::= done.
 %% Procedure type declarations
 procedure producer(NumList, Number?).
 procedure consumer(NumList?, Number?, Number).
-procedure observer1(List?, List, List).
-procedure test_obs1(Number, List).
+procedure observer1(NumList?, NumList, NumList).
+procedure test_obs1(Number, NumList).
 procedure bob(List, Done).
 procedure alice(List, Done).
 procedure bob_finish(List, Done).
@@ -48,7 +48,7 @@ bob_finish([a,a], done).
 observe([X|Xs], Ys?, [X?|Zs?]) :- ground(X?) |
     Ys = [X?|Ys1?], observe(Xs?, Ys1, Zs).
 observe([X|Xs?], Ys, [X?|Zs?]) :- ground(X?) |
-    Ys = [X?|Ys1], observe(Ys1?, Xs, Zs).
+    Ys = [X?|Ys1?], observe(Ys1?, Xs, Zs).
 observe([], [], []).
 
 % Test cooperative observer

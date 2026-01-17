@@ -1,0 +1,22 @@
+%% hollow_integers.glp - Bounded Buffer using Hollow Integers
+%% Source: Moded Types Paper, Appendix A.3
+%%
+%% Buffer represented as stream with hollow (unfilled) integer slots.
+%% Producer fills slots, consumer reads filled values.
+%% Bounded size (3 elements lookahead) creates backpressure.
+
+%% Type definitions
+%% UnboundedHollowIntegers has no [] base case - infinite stream
+UnboundedHollowIntegers ::= [Integer?|UnboundedHollowIntegers].
+
+%% Procedure type declarations
+procedure consumer(UnboundedHollowIntegers).
+procedure producer(Integer?, UnboundedHollowIntegers?).
+
+%% Consumer: reads 3 elements ahead, creating bounded buffer
+consumer([X1, X2, X3 | Xs?]) :- 
+    integer(X1?) | consumer([X2?, X3? | Xs]).
+
+%% Producer: fills hollow slots with successive integers
+producer(N, [N? | Xs]) :- 
+    number(N?) | N1 := N? + 1, producer(N1?, Xs?).

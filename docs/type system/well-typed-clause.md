@@ -1,7 +1,7 @@
 # Module: well-typed-clause
 
-**Version**: 0.8
-**Date**: 2025-01-12
+**Version**: 0.9
+**Date**: 2025-01-17
 **Status**: DRAFT
 **Paper References**: Definition 4.10 (Well-typed Clause), Example 4.11 (Well-typed Clause Verification)
 
@@ -39,7 +39,9 @@ See `docs/SPEC_GUIDE.md` for SRSW enforcement details.
 >
 > 1. There is a moded head H' corresponding to H that is well-typed by D.
 > 2. For each atom A ∈ B, the produced moded term A' corresponding to A is well-typed by D.
-> 3. Every pair of variables that occur in C are assigned complementary types by D.
+> 3. For every pair of dual variables X and X? in C:
+>    - (a) If both occur in H, or both occur in B, they are assigned dual types by D.
+>    - (b) If one occurs in H and the other in B, they are assigned the same type by D.
 
 ### Clause Acceptance
 
@@ -61,9 +63,14 @@ For each body atom A, construct the **produced** moded term A' using `producedTe
 
 Body atoms are produced because they represent goals being called—the clause produces these goals.
 
-### Condition 3: Complementary Variable Types
+### Condition 3: Variable Type Consistency
 
-Every variable pair (X, X?) in the clause must be assigned complementary types. This is checked by aggregating variable types from the head and all body atoms, then verifying complementarity.
+For every variable pair (X, X?) in the clause, the type relationship depends on where each occurs:
+
+- **Head-Head or Body-Body**: If both occur in the same clause part (both in head, or both in body), they must be assigned **dual types**.
+- **Head-Body**: If one occurs in the head and the other in the body, they must be assigned the **same type**.
+
+This is checked by tracking variable locations (head vs body) during type aggregation, then verifying the appropriate relationship based on location.
 
 ## Public Interface
 
@@ -98,12 +105,15 @@ class BodyAtomNotWellTypedError extends ClauseError {
   final List<TypeError> termErrors;
 }
 
-class ClauseVariableNotComplementaryError extends ClauseError {
+class ClauseVariableTypeError extends ClauseError {
   final String variableBaseName;
   final VariableTypeInfo writerType;
   final VariableTypeInfo readerType;
   final String reason;
 }
+
+/// Tracks where a variable was found: head or body
+enum VariableLocation { head, body }
 
 class InconsistentVariableAcrossClauseError extends ClauseError {
   final String varName;
@@ -152,7 +162,8 @@ Returns the set of transition labels that the clause head accepts at the given a
 ```
 checkClause(clause, dfa, env):
   errors = []
-  allVariableTypes = {}
+  headVariableTypes = {}  // Variables from moded head
+  bodyVariableTypes = {}  // Variables from body atoms
   modedBodyAtoms = []
 
   // Get procedure declaration for head
@@ -167,7 +178,7 @@ checkClause(clause, dfa, env):
   if not headResult.isWellTyped:
     errors.add(HeadNotWellTypedError(headResult.errors, modedH))
 
-  allVariableTypes.addAll(headResult.variableTypes)
+  headVariableTypes.addAll(headResult.variableTypes)
 
   // Condition 2: Body atoms well-typed
   for i, atom in enumerate(clause.body):
@@ -182,18 +193,23 @@ checkClause(clause, dfa, env):
     if not atomResult.isWellTyped:
       errors.add(BodyAtomNotWellTypedError(i, atom, modedA, atomResult.errors))
 
-    // Merge variable types, checking consistency
+    // Merge variable types within body, checking consistency
     for (varKey, info) in atomResult.variableTypes:
-      if varKey in allVariableTypes:
-        if allVariableTypes[varKey].typeState.name != info.typeState.name:
+      if varKey in bodyVariableTypes:
+        if bodyVariableTypes[varKey].typeState.name != info.typeState.name:
           errors.add(InconsistentVariableAcrossClauseError(
-            varKey, allVariableTypes[varKey], info))
+            varKey, bodyVariableTypes[varKey], info))
       else:
-        allVariableTypes[varKey] = info
+        bodyVariableTypes[varKey] = info
 
-  // Condition 3: Complementary variable types across entire clause
-  complementErrors = checkClauseComplementarity(allVariableTypes)
-  errors.addAll(complementErrors)
+  // Condition 3: Variable type consistency based on location
+  consistencyErrors = checkClauseVariableTypes(headVariableTypes, bodyVariableTypes)
+  errors.addAll(consistencyErrors)
+
+  // Merge for result (both head and body)
+  allVariableTypes = {}
+  allVariableTypes.addAll(headVariableTypes)
+  allVariableTypes.addAll(bodyVariableTypes)
 
   return ClauseCheckResult(
     isWellTyped: errors.isEmpty,
@@ -252,58 +268,71 @@ getFullTypeName(typeExpr):
       return isInput ? name + '?' : name
 ```
 
-### Algorithm: Complementarity Check Across Clause
+### Algorithm: Variable Type Consistency Check Across Clause
+
+The algorithm tracks where each variable occurs (head vs body) and applies location-dependent rules:
 
 ```
-checkClauseComplementarity(variableTypes):
+checkClauseVariableTypes(headVariableTypes, bodyVariableTypes):
   errors = []
-
-  baseNames = groupByBaseName(variableTypes)
-
-  for (baseName, variants) in baseNames:
-    writerKey = baseName
-    readerKey = "${baseName}?"
-
-    if writerKey in variants and readerKey in variants:
-      writerInfo = variants[writerKey]
-      readerInfo = variants[readerKey]
-
-      if not areComplementaryTypes(writerInfo, readerInfo):
-        errors.add(ClauseVariableNotComplementaryError(
-          baseName, writerInfo, readerInfo,
-          describeComplementaryFailure(writerInfo, readerInfo)))
-
+  
+  // Merge all variables with their locations
+  allVariables = {}  // baseName -> {writer: (info, location), reader: (info, location)}
+  
+  for (varKey, info) in headVariableTypes:
+    addVariableWithLocation(allVariables, varKey, info, VariableLocation.head)
+  
+  for (varKey, info) in bodyVariableTypes:
+    addVariableWithLocation(allVariables, varKey, info, VariableLocation.body)
+  
+  // Check each variable pair
+  for (baseName, pair) in allVariables:
+    if pair.writer != null and pair.reader != null:
+      writerInfo, writerLoc = pair.writer
+      readerInfo, readerLoc = pair.reader
+      
+      if writerLoc == readerLoc:  // Both head-head or both body-body
+        // Require DUAL types
+        if not areDualTypes(writerInfo, readerInfo):
+          errors.add(ClauseVariableTypeError(
+            baseName, writerInfo, readerInfo,
+            "Variables in same clause part (${writerLoc}) must have dual types"))
+      else:  // One in head, one in body
+        // Require SAME type
+        if not areSameType(writerInfo, readerInfo):
+          errors.add(ClauseVariableTypeError(
+            baseName, writerInfo, readerInfo,
+            "Variables across head/body must have same type"))
+  
   return errors
 
-areComplementaryTypes(writerInfo, readerInfo):
-  // Writer must be in produce mode, reader in consume mode
-  if writerInfo.mode != Mode.produce or readerInfo.mode != Mode.consume:
-    return false
+addVariableWithLocation(allVariables, varKey, info, location):
+  baseName = stripReaderSuffix(varKey)
+  isReader = varKey.endsWith('?')
+  
+  if baseName not in allVariables:
+    allVariables[baseName] = {writer: null, reader: null}
+  
+  if isReader:
+    allVariables[baseName].reader = (info, location)
+  else:
+    allVariables[baseName].writer = (info, location)
 
+areDualTypes(writerInfo, readerInfo):
+  // Writer at T, reader at T? (or vice versa by mode)
   // States must be complements: same baseName, opposite isComplement
   if writerInfo.typeState.baseName != readerInfo.typeState.baseName:
     return false
-
-  // One must be complement, the other not
   return writerInfo.typeState.isComplement != readerInfo.typeState.isComplement
 
-describeComplementaryFailure(writerInfo, readerInfo):
-  if writerInfo.mode != Mode.produce:
-    return "Writer ${writerInfo.varName} has mode ${writerInfo.mode}, expected produce"
-  if readerInfo.mode != Mode.consume:
-    return "Reader ${readerInfo.varName} has mode ${readerInfo.mode}, expected consume"
-  if writerInfo.typeState.baseName != readerInfo.typeState.baseName:
-    return "Types have different bases: ${writerInfo.typeState.name} vs ${readerInfo.typeState.name}"
-  return "Both types have same complement status"
+areSameType(writerInfo, readerInfo):
+  // Both must have identical type states
+  return writerInfo.typeState.name == readerInfo.typeState.name
 
-groupByBaseName(variableTypes):
-  groups = {}
-  for (varKey, info) in variableTypes:
-    baseName = info.baseName
-    if baseName not in groups:
-      groups[baseName] = {}
-    groups[baseName][varKey] = info
-  return groups
+stripReaderSuffix(varKey):
+  if varKey.endsWith('?'):
+    return varKey.substring(0, varKey.length - 1)
+  return varKey
 ```
 
 ### Algorithm: Get Accepted Labels
@@ -357,148 +386,30 @@ Check each argument:
 - Arg 2 (`Stream?`): Xs? is reader at `Stream?` state ✓
 - Arg 3 (`Stream`): Zs is writer at `Stream` state ✓
 
-**Condition 3: Complementary types**
+**Condition 3: Variable type consistency**
 
-| Variable | Type State | Mode |
-|----------|------------|------|
-| X | `_` | produce |
-| X? | `_?` | consume |
-| Xs | `Stream` | produce |
-| Xs? | `Stream?` | consume |
-| Ys | `Stream?` | produce |
-| Ys? | `Stream?` | consume |
-| Zs | `Stream` | produce |
-| Zs? | `Stream?` | consume |
+**From moded head H':**
+- X? at arg 1 element → type `_?` (location: head)
+- Xs? at arg 1 tail → type `Stream?` (location: head)
+- Ys? at arg 2 → type `Stream?` (location: head)
+- X at arg 3 element → type `_` (location: head)
+- Zs at arg 3 tail → type `Stream` (location: head)
 
-Wait—Ys has type `Stream?` but Ys? also has type... let me recalculate.
+**From moded body A':**
+- Ys? at arg 1 → type `Stream?` (location: body)
+- Xs? at arg 2 → type `Stream?` (location: body)
+- Zs at arg 3 → type `Stream` (location: body)
 
-Actually from the head:
-- Ys? (at arg 2) → type `Stream?`
+**Variable pair analysis:**
 
-From the body:
-- Ys? (at arg 1 of body merge) → type `Stream?` ✓
+| Pair | Writer Location | Reader Location | Relationship | Check |
+|------|-----------------|-----------------|--------------|-------|
+| X/X? | head | head | head-head | dual types: `_` / `_?` ✓ |
+| Xs/Xs? | — | head+body | only Xs? appears | — |
+| Ys/Ys? | — | head+body | only Ys? appears | — |
+| Zs/Zs? | head+body | — | only Zs appears | — |
 
-So Ys? appears twice with same type. Now for Ys:
-- Ys doesn't appear directly—only Ys?
-
-So the pairs are:
-- (X, X?): `_` and `_?` ✓
-- (Xs, Xs?): from head Xs? has type `Stream?`, from body Xs? has type `Stream?`. Xs appears in head as... wait, in the moded head Xs becomes Xs?.
-
-Let me redo this more carefully:
-
-**In moded head H':**
-- X? at arg 1, element → type `_?`
-- Xs? at arg 1, tail → type `Stream?`
-- Ys? at arg 2 → type `Stream?`
-- X at arg 3, element → type `_`
-- Zs at arg 3, tail → type `Stream`
-
-**In moded body A':**
-- Ys? at arg 1 → type `Stream?`
-- Xs? at arg 2 → type `Stream?`
-- Zs at arg 3 → type `Stream`
-
-**Variable pairs:**
-- (X, X?): X has `_`, X? has `_?` → complements ✓
-- (Xs, Xs?): Xs? has `Stream?`. Where is Xs? In original clause, arg 1 has `[X|Xs]`. In moded head, it becomes Xs?. So Xs (writer) doesn't appear in moded clause. Actually the original Xs in the head became Xs? in moded head. So there's no explicit Xs writer... 
-
-Actually, SRSW requires both X and X? appear. In the original clause:
-- Head: X (writer), Xs (writer), Ys (writer), X? (reader), Zs? (reader)
-- Body: Ys? (reader), Xs? (reader), Zs (writer)
-
-Pairs in original clause: (X, X?), (Xs, Xs?), (Ys, Ys?), (Zs, Zs?)
-
-In the moded head, variables are conditionally flipped to match structural modes. In the moded body, variables are unchanged.
-
-After moding:
-- Head: X?, Xs?, Ys?, X, Zs
-- Body: Ys?, Xs?, Zs
-
-Aggregated variable types:
-- X? (head arg 1 element, mode ↓) → type `_?`, mode consume
-- Xs? (head arg 1 tail, mode ↓) → type `Stream?`, mode consume
-- Ys? (head arg 2, mode ↓) → type `Stream?`, mode consume
-- X (head arg 3 element, mode ↑) → type `_`, mode produce
-- Zs (head arg 3 tail, mode ↑) → type `Stream`, mode produce
-- Ys? (body arg 1, mode ↓) → type `Stream?`, mode consume [same as head]
-- Xs? (body arg 2, mode ↓) → type `Stream?`, mode consume [same as head]
-- Zs (body arg 3, mode ↑) → type `Stream`, mode produce [same as head]
-
-Variable pairs and complementarity:
-- X/X?: X (`_`, produce) and X? (`_?`, consume) → same base `_`, opposite complement ✓
-- Xs/Xs?: We only have Xs? in the moded clause. Where's Xs?
-
-This is the key insight: after moding, we don't have explicit Xs anymore—only Xs?. But the SRSW requirement on the original clause means both must exist. The type checker works on the **moded** clause, but complementarity is about **original** variable pairs.
-
-Actually, the types are assigned based on where variables appear in the moded term. If Xs doesn't appear (because it was flipped to Xs?), then Xs has no type assignment, and complementarity checking only applies to pairs where both appear.
-
-Let me re-read the paper... Definition 4.10 says "Every pair of variables that occur in C are assigned complementary types by D."
-
-In the moded representation, after step 2 of Definition 4.8, some variables are flipped. The complementarity check should be on the types assigned to the flipped variables.
-
-Actually, I think the intent is: the original clause has variable pairs (X, X?), (Xs, Xs?), etc. The moded clause assigns types to the variables as they appear (possibly flipped). We need to check that for each original pair, the types are complementary.
-
-But that's tricky because after flipping, we might have Xs? appearing where Xs was. The assigned type goes to Xs? now.
-
-I think the cleaner interpretation: collect all variable types from the moded clause. For each base name B, if both B and B? have type assignments, check they're complementary. If only one has an assignment, that's fine (the other might not appear in this clause).
-
-With this interpretation:
-- X: `_`, X?: `_?` → complementary ✓
-- Xs: not assigned, Xs?: `Stream?` → no check needed
-- Ys: not assigned, Ys?: `Stream?` → no check needed  
-- Zs: `Stream`, Zs?: not assigned → no check needed
-
-Wait, but Zs? appears in the original head: `[X?|Zs?]`. In the moded head, this becomes `[X|Zs]`. So Zs? was flipped to Zs.
-
-Let me be very precise. Original head: `merge([X|Xs], Ys, [X?|Zs?])`
-
-Args with their structural modes (from type):
-- Arg 1 (Stream?): mode ↓
-- Arg 2 (Stream?): mode ↓
-- Arg 3 (Stream): mode ↑
-
-Building moded head:
-- Arg 1 `[X|Xs]` at mode ↓:
-  - List at mode ↓
-  - Element X at mode ↓ (from `_?` in Stream?): X is writer, mode is ↓ → mismatch → flip to X?
-  - Tail Xs at mode ↓ (from `Stream?` in Stream?): Xs is writer, mode is ↓ → mismatch → flip to Xs?
-- Arg 2 `Ys` at mode ↓:
-  - Ys is writer, mode is ↓ → mismatch → flip to Ys?
-- Arg 3 `[X?|Zs?]` at mode ↑:
-  - List at mode ↑
-  - Element X? at mode ↑ (from `_` in Stream): X? is reader, mode is ↑ → mismatch → flip to X
-  - Tail Zs? at mode ↑ (from `Stream` in Stream): Zs? is reader, mode is ↑ → mismatch → flip to Zs
-
-So moded head is: `↓merge(↓[↓X?|Xs?], Ys?, ↑[↑X|Zs])`
-
-Now in the moded head, the variables are: X?, Xs?, Ys?, X, Zs
-
-Their type assignments:
-- X? at `_?` → (`_?`, consume)
-- Xs? at `Stream?` → (`Stream?`, consume)
-- Ys? at `Stream?` → (`Stream?`, consume)
-- X at `_` → (`_`, produce)
-- Zs at `Stream` → (`Stream`, produce)
-
-Pairs where both appear:
-- X and X? both appear → check: `_` and `_?` → complementary ✓
-
-Other base names (Xs, Ys, Zs) only have one form appearing, so no complementarity check needed within the head.
-
-Now add body: `merge(Ys?, Xs?, Zs)` as produced term (no flipping)
-
-Moded body: `↑merge(↓Ys?, ↓Xs?, ↑Zs)`
-
-Types:
-- Ys? at `Stream?` → (`Stream?`, consume) [consistent with head]
-- Xs? at `Stream?` → (`Stream?`, consume) [consistent with head]
-- Zs at `Stream` → (`Stream`, produce) [consistent with head]
-
-After merging head and body, pairs where both forms appear:
-- X and X?: both in head → complementary ✓
-
-The other base names still only have one form. So all complementarity checks pass.
+**Note:** After moded head construction (Definition 4.8), some original variables are flipped. Here, only the X/X? pair has both forms appearing in the moded clause. For that pair, both occur in the head, so they must have dual types (`_` and `_?`), which they do.
 
 **Result: Well-typed** ✓
 
@@ -573,7 +484,7 @@ Complementarity:
 | Head not well-typed | `HeadNotWellTypedError` |
 | Body atom not well-typed | `BodyAtomNotWellTypedError` |
 | Variable inconsistent across clause | `InconsistentVariableAcrossClauseError` |
-| Variable pair not complementary | `ClauseVariableNotComplementaryError` |
+| Variable pair type mismatch | `ClauseVariableTypeError` |
 
 ## Changes from v0.7
 
@@ -589,3 +500,4 @@ Complementarity:
 | 0.6 | 2025-01-10 | Update for ProgramDFA v0.8 |
 | 0.7 | 2025-01-12 | Update for paper Definition 4.10; add interactive type examples |
 | 0.8 | 2025-01-12 | Add SRSW precondition; clarify complementarity checks types not existence |
+| 0.9 | 2025-01-17 | Updated Condition 3: location-aware variable type consistency (head-head/body-body = dual types, head-body = same type) |

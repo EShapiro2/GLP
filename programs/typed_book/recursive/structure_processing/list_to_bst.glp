@@ -3,10 +3,11 @@
 
 %% Type definitions
 BST ::= empty ; node(_, BST, BST).
+NonEmptyList ::= [_ | List].
 
 %% Procedure type declarations
 procedure list_to_bst(List?, BST).
-procedure split_at(List?, Number?, List, _, List).
+procedure split_at(NonEmptyList?, Number?, List, _, List).
 procedure length(List?, Number).
 procedure length_acc(List?, Number?, Number).
 

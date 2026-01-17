@@ -1,6 +1,9 @@
 %% snapshot_meta_cp.glp - Snapshot metainterpreter
 %% Source: CP Collected Papers, Ch 25 (Safra & Shapiro)
 %%
+%% TYPE CHECKER NOTE: This program requires parameterized types and a typed
+%% module system (cross-module calls via #). Will be supported in a future version.
+%%
 %% Allows inspection of running computation state.
 %% When 'shot(Ps)' appears on interrupt stream, collects current processes.
 %%

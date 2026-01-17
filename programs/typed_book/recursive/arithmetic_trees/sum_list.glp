@@ -1,9 +1,5 @@
 %% sum_list.glp - Sum of list elements in GLP
 %% Source: Standard GLP arithmetic
-%%
-%% STATUS: ILL-TYPED - SRSW violations in reduce/2 meta-interpreter clauses
-%% Line 20: reduce((X := T?), true) :- X := T? | true.
-%% Variables X and T appear in both head and guard, violating SRSW.
 
 %% Type definitions
 NumList ::= [] ; [Number | NumList].
@@ -21,4 +17,4 @@ sum([X|Xs], Acc, S?) :- Acc1 := Acc? + X?, sum(Xs?, Acc1?, S).
 reduce(sum(Xs, S?), sum(Xs?, 0, S)).
 reduce(sum([], Acc, Acc?), true).
 reduce(sum([X|Xs], Acc, S?), (Acc1 := Acc? + X?, sum(Xs?, Acc1?, S))).
-reduce((X := T?), true) :- X := T? | true.
+reduce((X? := T), true) :- X := T?.

@@ -39,7 +39,18 @@ class Lexer {
       case ']': return _makeToken(TokenType.RBRACKET, startLine, startColumn);
       case '{': return _makeToken(TokenType.LBRACE, startLine, startColumn);
       case '}': return _makeToken(TokenType.RBRACE, startLine, startColumn);
-      case '.': return _makeToken(TokenType.DOT, startLine, startColumn);
+      case '.':
+        if (_match('.')) {
+          if (_match('=')) {
+            final lexeme = source.substring(_current - 3, _current);
+            return Token(TokenType.UNIV_DECOMPOSE, lexeme, startLine, startColumn);
+          }
+          // Two dots not followed by = - back up and return single DOT
+          _current--;
+          _column--;
+          return _makeToken(TokenType.DOT, startLine, startColumn);
+        }
+        return _makeToken(TokenType.DOT, startLine, startColumn);
       case ',': return _makeToken(TokenType.COMMA, startLine, startColumn);
       case '?': return _makeToken(TokenType.QUESTION, startLine, startColumn);
       case '|': return _makeToken(TokenType.PIPE, startLine, startColumn);

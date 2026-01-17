@@ -1,13 +1,15 @@
 // lib/analysis/type_checker/well_typed_clause.dart
 //
 // Well-typed clause checking for GLP type system.
-// Specification: docs/modules/well-typed-clause.md v0.6
-// Paper Reference: Definition 4.8 (Well-Typed Clause)
+// Specification: docs/type system/well-typed-clause.md v0.9
+// Paper Reference: Definition 4.10 (Well-Typed Clause)
 //
 // A clause H :- G | B is well-typed if:
 // 1. The moded head H is well-typed by the procedure's type
 // 2. Each body atom is well-typed by its procedure's type
-// 3. Variable pairs (X, X?) across all atoms are complementary
+// 3. Variable pairs (X, X?) have:
+//    - dual types if both in head or both in body
+//    - same type if one in head and one in body
 
 import 'mode.dart';
 import 'moded_term.dart';
@@ -624,7 +626,18 @@ List<NonComplementaryError> _checkTermComplementarity(
   return errors;
 }
 
-/// Check variable pair complementarity across the entire clause
+/// Normalize location to 'head' or 'body'
+String _normalizeLocation(String location) {
+  if (location == 'head') return 'head';
+  if (location.startsWith('body')) return 'body';
+  return location; // unknown stays as-is
+}
+
+/// Check variable pair type consistency across the entire clause
+/// 
+/// Per Definition 4.10 (spec v0.9):
+/// - If both occur in head, or both in body: require DUAL types
+/// - If one in head and one in body: require SAME type
 List<ClauseComplementaryError> _checkClauseComplementarity(
   Map<String, VariableTypeInfo> variableTypes,
   Map<String, String> variableLocations,
@@ -665,18 +678,38 @@ List<ClauseComplementaryError> _checkClauseComplementarity(
       final readerInfo = variants[readerKey]!;
       final writerLoc = locations[writerKey] ?? 'unknown';
       final readerLoc = locations[readerKey] ?? 'unknown';
-
-      // Check type compatibility using spec v0.6 logic
-      final (isCompat, reason) = _areComplementaryTypesWithReason(writerInfo, readerInfo);
-      if (!isCompat) {
-        errors.add(ClauseComplementaryError(
-          baseName,
-          writerInfo,
-          readerInfo,
-          writerLoc,
-          readerLoc,
-          reason,
-        ));
+      
+      // Normalize locations to 'head' or 'body'
+      final writerNormLoc = _normalizeLocation(writerLoc);
+      final readerNormLoc = _normalizeLocation(readerLoc);
+      
+      // Apply location-dependent rule (spec v0.9, Definition 4.10 condition 3)
+      if (writerNormLoc == readerNormLoc) {
+        // Both in head OR both in body: require DUAL types
+        final (isCompat, reason) = _areComplementaryTypesWithReason(writerInfo, readerInfo);
+        if (!isCompat) {
+          errors.add(ClauseComplementaryError(
+            baseName,
+            writerInfo,
+            readerInfo,
+            writerLoc,
+            readerLoc,
+            'Variables in same clause part ($writerNormLoc) must have dual types: $reason',
+          ));
+        }
+      } else {
+        // One in head, one in body: require SAME type
+        final (isSame, reason) = _areSameTypeWithReason(writerInfo, readerInfo);
+        if (!isSame) {
+          errors.add(ClauseComplementaryError(
+            baseName,
+            writerInfo,
+            readerInfo,
+            writerLoc,
+            readerLoc,
+            'Variables across head/body must have same type: $reason',
+          ));
+        }
       }
     }
   }
@@ -689,6 +722,18 @@ List<ClauseComplementaryError> _checkClauseComplementarity(
 bool _areComplementaryTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
   final (isCompat, _) = _areComplementaryTypesWithReason(writerInfo, readerInfo);
   return isCompat;
+}
+
+/// Check if two variable types are the SAME type
+/// Per spec v0.9: For head-body pairs, types must have same BASE type
+/// (e.g., _ and _? are same base type, Stream and Stream? are same base type)
+(bool, String?) _areSameTypeWithReason(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
+  // For same-type check, the BASE type names must be identical
+  // Writer at T has baseName T, reader at T? has baseName T
+  if (writerInfo.typeState.baseName != readerInfo.typeState.baseName) {
+    return (false, '${writerInfo.typeState.name} (base: ${writerInfo.typeState.baseName}) != ${readerInfo.typeState.name} (base: ${readerInfo.typeState.baseName})');
+  }
+  return (true, null);
 }
 
 /// Check complementarity with reason for failure

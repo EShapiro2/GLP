@@ -159,14 +159,24 @@ void main() async {
       continue;
     }
 
-    // Check if input is a .glp file to load
-    if (trimmed.endsWith('.glp') && !trimmed.contains(' ')) {
-      final filename = trimmed;
-      if (!loadProgram(filename, compiler, loadedPrograms, loadedModules)) {
+    // Check if input is a .glp file to load (with or without 'load' command)
+    if (trimmed.endsWith('.glp')) {
+      String filename;
+      if (trimmed.startsWith('load ')) {
+        filename = trimmed.substring(5).trim();
+      } else if (!trimmed.contains(' ')) {
+        filename = trimmed;
+      } else {
+        // Has space but doesn't start with 'load' - not a file load
+        filename = '';
+      }
+      if (filename.isNotEmpty) {
+        if (!loadProgram(filename, compiler, loadedPrograms, loadedModules)) {
+          continue;
+        }
+        print('✓ Loaded: $filename');
         continue;
       }
-      print('✓ Loaded: $filename');
-      continue;
     }
 
     // Compile and run the goal
@@ -502,7 +512,7 @@ void _printStatus(ExecutionStatus status) {
 bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProgram> loadedPrograms, Map<String, ModuleInfo> loadedModules) {
   try {
     final File sourceFile;
-    if (filename.startsWith('/')) {
+    if (filename.startsWith('/') || filename.startsWith('../') || filename.startsWith('./')) {
       sourceFile = File(filename);
     } else {
       sourceFile = File('glp/$filename');

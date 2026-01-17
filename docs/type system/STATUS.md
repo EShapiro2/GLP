@@ -1,11 +1,11 @@
 # Type Checker Status
 
 **Last Updated**: 2025-01-14
-**Test Output**: `/Users/udi/GLP/test_output/typed_repl_output.txt`
+**Test Output**: `/Users/udi/Grassroots/GLP/test_output/typed_repl_output.txt`
 
 ## Current State
 
-Run `bash /Users/udi/GLP/run_typed_repl_tests.sh` to get current numbers.
+Run `bash /Users/udi/Grassroots/GLP/run_typed_repl_tests.sh` to get current numbers.
 
 ## Test Infrastructure
 
@@ -25,7 +25,7 @@ Run `bash /Users/udi/GLP/run_typed_repl_tests.sh` to get current numbers.
 
 ## Specifications
 
-All specification files are in `/Users/udi/GLP/docs/type system/`:
+All specification files are in `/Users/udi/Grassroots/GLP/docs/type system/`:
 
 | File | Purpose |
 |------|---------|

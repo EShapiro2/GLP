@@ -1,0 +1,1 @@
+zsh: permission denied: ./diagnose_failures.sh

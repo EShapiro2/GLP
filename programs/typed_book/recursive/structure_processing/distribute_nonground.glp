@@ -16,7 +16,7 @@ distribute([], [], []).
 copy(X, Y?, Z?) :- atom(X?) | Y = X?, Z = X?.
 copy(X, Y?, Z?) :- number(X?) | Y = X?, Z = X?.
 copy(X, Y?, Z?) :- compound(X?) |
-    X? =.. List,
+    List ..= X?,
     copy_list(List?, List1, List2),
     Y =.. List1?,
     Z =.. List2?.

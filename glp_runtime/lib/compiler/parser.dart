@@ -248,6 +248,12 @@ class Parser {
         if (_current + 1 < tokens.length && tokens[_current + 1].type == TokenType.UNIV) {
           couldBeSameProcedure = true;
         }
+      } else if (name == '..=' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER || _peek().type == TokenType.UNDERSCORE)) {
+        // ..= clauses start with variable or underscore (e.g., "List ..= X?")
+        // Look ahead to see if it's followed by ..=
+        if (_current + 1 < tokens.length && tokens[_current + 1].type == TokenType.UNIV_DECOMPOSE) {
+          couldBeSameProcedure = true;
+        }
       } else if (name == '=' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER || _peek().type == TokenType.UNDERSCORE)) {
         // = clauses start with variable or underscore (e.g., "X? = Y")
         // Look ahead to see if it's followed by =
@@ -403,6 +409,12 @@ class Parser {
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
         final expr = _parseTerm();
         return Goal('=..', [varTerm, expr], varToken.line, varToken.column);
+      } else if (tokens.length > _current + 1 && tokens[_current + 1].type == TokenType.UNIV_DECOMPOSE) {
+        _advance(); // consume variable
+        _advance(); // consume ..=
+        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
+        final expr = _parseTerm();
+        return Goal('..=', [varTerm, expr], varToken.line, varToken.column);
       } else if (tokens.length > _current + 1 && tokens[_current + 1].type == TokenType.EQUALS) {
         _advance(); // consume variable
         _advance(); // consume =
@@ -548,6 +560,11 @@ class Parser {
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
         final expr = _parseTerm();
         return Atom('=..', [varTerm, expr], varToken.line, varToken.column);
+      } else if (_match(TokenType.UNIV_DECOMPOSE)) {
+        // Parse as '..='(Var, Expr)
+        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
+        final expr = _parseTerm();
+        return Atom('..=', [varTerm, expr], varToken.line, varToken.column);
       } else if (_match(TokenType.EQUALS)) {
         // Parse as '='(Var, Term) - unification
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
@@ -618,6 +635,11 @@ class Parser {
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
         final expr = _parseTerm();
         return Goal('=..', [varTerm, expr], varToken.line, varToken.column);
+      } else if (_match(TokenType.UNIV_DECOMPOSE)) {
+        // Parse as '..='(Var, Expr)
+        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
+        final expr = _parseTerm();
+        return Goal('..=', [varTerm, expr], varToken.line, varToken.column);
       } else if (_match(TokenType.EQUALS)) {
         // Parse as '='(Var, Term) - unification
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
@@ -1160,6 +1182,10 @@ class Parser {
     } else if (_check(TokenType.GROUND_EQUAL)) {
       nameToken = _advance();
     } else if (_check(TokenType.EQUALS)) {
+      nameToken = _advance();
+    } else if (_check(TokenType.UNIV)) {
+      nameToken = _advance();
+    } else if (_check(TokenType.UNIV_DECOMPOSE)) {
       nameToken = _advance();
     } else {
       throw CompileError(

@@ -24,6 +24,7 @@ procedure test_monitor(Number, Number).
 procedure merge(ReqList?, ReqList?, ReqList).
 procedure monitor(ReqList?).
 procedure monitor_loop(ReqList?, Number?).
+procedure wait(Number?).
 
 % Client 1: immediate - add 5, add 3, query value
 client1(V1, [add(5), add(3), value(V1?)|Xs?]) :- client1_cont(Xs).

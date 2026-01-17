@@ -24,6 +24,9 @@ DiffList ::= List \ List?.
 % Communication
 Channel ::= ch(Stream?, Stream).
 
+% Primitive types
+Constant ::= Number ; String.
+
 % Arithmetic expressions
 % Exp accepts numeric literals and arithmetic operator expressions
 % Note: Arguments are NOT moded (Exp, not Exp?) because expression types
@@ -39,7 +42,7 @@ procedure integer(Integer?).
 procedure number(Number?).
 procedure string(String?).
 procedure atom(String?).
-procedure constant(Number?).
+procedure constant(Constant?).
 procedure compound(_?).
 procedure is_list(List?).
 
@@ -57,7 +60,11 @@ procedure =:=(Exp?, Exp?).
 procedure =\=(Exp?, Exp?).
 
 % Equality guard
-procedure =?=(_, _).
+procedure =?=(_?, _?).
+
+% Univ operations (term ↔ list conversion)
+procedure =..(_, List?).      % Compose: List? → Compound
+procedure ..=(List, _?).      % Decompose: Compound? → List
 
 % Unification
 procedure =(_, _?).
@@ -96,6 +103,7 @@ const Set<String> predefinedTypeNames = {
   'Integer',  // Primitive builtin
   'Real',     // Primitive builtin
   'String',   // Primitive builtin
+  'Constant', // Primitive builtin (Number ; String)
   'Exp',      // Arithmetic expression type
   'List',     // Fundamental collection type
   'Stream',   // Fundamental collection type
@@ -127,6 +135,9 @@ const Set<String> predefinedProcedureNames = {
   // Equality (fundamental)
   '=?=',
   '=',
+  // Univ operations (fundamental)
+  '=..',
+  '..=',
   // Note: is_list, dl_append, dl_to_list, new_channel, send, receive
   // are NOT protected - they are library-level and can be redefined
 };

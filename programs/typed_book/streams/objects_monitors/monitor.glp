@@ -6,7 +6,7 @@
 %% value(V) request: monitor binds response variable V to current sum.
 
 %% Type definitions
-MonitorReq ::= add(Number?) ; subtract(Number?) ; value(Number).
+MonitorReq ::= add(Number?) ; subtract(Number?) ; value(Number?).
 ReqList ::= [] ; [MonitorReq | ReqList].
 
 %% Procedure type declarations

@@ -6,18 +6,17 @@
 %% with the user interface, and ChNet connects to the network.
 
 %% Type definitions
-MsgList ::= [] ; [_ | MsgList].
-FriendEntry ::= (_, _).
+FriendEntry ::= (Constant?, List).
 FriendList ::= [] ; [FriendEntry | FriendList].
 Channel ::= ch(List?, List).
 
 %% Procedure type declarations
-procedure agent(_?, Channel?, Channel?).
+procedure agent(Constant?, Channel?, Channel?).
 procedure merge(List?, List?, List).
-procedure social_graph(_?, List?, FriendList?).
+procedure social_graph(Constant?, List?, FriendList?).
 
 agent(Id, ChUser, ChNet) :-
-    ChUser = ch(UserIn, UserOut), ChNet = ch(NetIn, NetOut) |
+    ChUser? = ch(UserIn, UserOut?), ChNet? = ch(NetIn, NetOut?) |
     merge(UserIn?, NetIn?, In),
     social_graph(Id?, In?, [(user, UserOut), (net, NetOut)]).
 

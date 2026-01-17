@@ -4,9 +4,10 @@
 %% Type definitions
 Point ::= (Number, Number).
 PointList ::= [] ; [Point | PointList].
+NonEmptyPointList ::= [Point | PointList].
 
 %% Procedure type declarations
-procedure area(PointList?, Number).
+procedure area(NonEmptyPointList?, Number).
 procedure reduce(_?, _).
 
 area([_], 0).

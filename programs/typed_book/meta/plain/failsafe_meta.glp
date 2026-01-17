@@ -1,6 +1,9 @@
 %% failsafe_meta.glp - Fail-safe GLP metainterpreter
 %% Source: GLP Papers (Program: GLP fail-safe metainterpreter)
 %%
+%% TYPE CHECKER NOTE: This program requires parameterized types and a typed
+%% module system (cross-module calls via #). Will be supported in a future version.
+%%
 %% Reports failures via short-circuit instead of aborting.
 %% L--R threads through computation for failure collection.
 

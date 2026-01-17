@@ -44,7 +44,8 @@ enum TokenType {
   ARITH_EQUAL,    // =:= (arithmetic equality)
   ARITH_NOT_EQUAL,// =\= (arithmetic inequality)
   GROUND_EQUAL,   // =?= (ground equality)
-  UNIV,           // =.. (structure decomposition/composition)
+  UNIV,           // =.. (structure composition: list to compound)
+  UNIV_DECOMPOSE, // ..= (structure decomposition: compound to list)
 
   // Special
   UNDERSCORE,     // _ (anonymous variable)

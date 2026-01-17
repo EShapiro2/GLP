@@ -1,6 +1,9 @@
 %% tracing_meta.glp - Tracing GLP metainterpreter
 %% Source: GLP Papers (Program: GLP tracing metainterpreter)
 %%
+%% TYPE CHECKER NOTE: This program requires parameterized types and a typed
+%% module system (cross-module calls via #). Will be supported in a future version.
+%%
 %% Builds execution tree capturing each reduction.
 %% Uses observe/3 to capture goal state at each step.
 

@@ -1,6 +1,9 @@
 %% snapshot_meta.glp - GLP metainterpreter with snapshot collection
 %% Source: GLP Papers (Program: GLP metainterpreter with run control and snapshot)
 %%
+%% TYPE CHECKER NOTE: This program requires parameterized types and a typed
+%% module system (cross-module calls via #). Will be supported in a future version.
+%%
 %% Collects snapshot of running processes when aborted.
 %% Uses short-circuit technique: upon abort, resolvent is passed
 %% from left to right, with each metainterpreter instance adding

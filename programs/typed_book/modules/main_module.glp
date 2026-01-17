@@ -1,4 +1,7 @@
 %% main_module.glp - Demonstrates cross-module RPC
+%%
+%% TYPE CHECKER NOTE: This program requires parameterized types and a typed
+%% module system (cross-module calls via #). Will be supported in a future version.
 
 %% Procedure type declarations
 procedure compute(_).

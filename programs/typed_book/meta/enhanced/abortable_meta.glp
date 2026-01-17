@@ -1,6 +1,9 @@
 %% abortable_meta.glp - Abortable GLP metainterpreter
 %% Source: CP Collected Papers, Ch 25 (Safra & Shapiro)
 %%
+%% TYPE CHECKER NOTE: This program requires parameterized types and a typed
+%% module system (cross-module calls via #). Will be supported in a future version.
+%%
 %% Supports abort via equator (emergency brake).
 %% When Eq is bound, computation stops.
 
