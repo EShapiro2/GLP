@@ -533,7 +533,14 @@ bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProg
     
     // Type check if program has procedure declarations
     if (module.procDeclarations.isNotEmpty) {
-      final typeResult = checkModule(module);
+      // Apply partial evaluation (defined guard expansion) BEFORE type checking
+      // This transforms clauses to unfold unit clause guards, which affects coverage checking
+      final ast = Program(module.procedures, module.line, module.column);
+      final partialEvaluator = PartialEvaluator();
+      final transformedAst = partialEvaluator.transformDefinedGuards(ast);
+      
+      // Type check with transformed procedures
+      final typeResult = checkModule(module, transformedProcedures: transformedAst.procedures);
       if (!typeResult.isWellTyped) {
         print('Type errors in $filename:');
         for (final error in typeResult.errors) {
