@@ -111,7 +111,20 @@ TypeEnvironment _buildEnvironmentFromModule(
         procDecl.column,
       );
     }
-    procedures[procDecl.key] = procDecl;
+    // Mark procedure as builtin if it's a true builtin (implemented in Dart)
+    final isBuiltin = isBuiltinProcedure(procDecl.key);
+    if (isBuiltin && !procDecl.isBuiltin) {
+      // Create new ProcDecl with isBuiltin flag set
+      procedures[procDecl.key] = ProcDecl(
+        procDecl.name,
+        procDecl.argTypes,
+        procDecl.line,
+        procDecl.column,
+        isBuiltin: true,
+      );
+    } else {
+      procedures[procDecl.key] = procDecl;
+    }
   }
 
   return TypeEnvironment(types, procedures);

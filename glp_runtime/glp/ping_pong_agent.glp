@@ -1,0 +1,50 @@
+%% ping_pong_agent.glp - Corrected with proper SRSW
+%% Following Ohad's pattern from play_read_with_buffer3.glp
+
+%% ========== Procedure Type Declarations ==========
+
+procedure agent(Constant?, Channel?, Channel?).
+procedure agent_loop(Constant?, Stream?, Stream, Stream).
+procedure merge(Stream?, Stream?, Stream).
+
+%% ========== Program ==========
+
+%% Main agent entry
+agent(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
+    merge(UserIn?, NetIn?, In),
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% User sends a message to another agent
+agent_loop(Id, [send(To, Content)|In], [sent(To?, Content?)|UserOut?], [msg(Id?, To?, Content?)|NetOut?]) :-
+    ground(Id?), ground(To?), ground(Content?) |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% Receive ping from network - reply with pong
+agent_loop(Id, [msg(From, ping)|In], [received_ping(From?)|UserOut?], [msg(Id?, From?, pong)|NetOut?]) :-
+    ground(Id?), ground(From?) |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% Receive pong from network - display to user only (no network reply)
+agent_loop(Id, [msg(From, pong)|In], [received_pong(From?)|UserOut?], NetOut?) :-
+    ground(Id?), ground(From?) |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% Receive any other message from network - display to user only
+agent_loop(Id, [msg(From, Content)|In], [received(From?, Content?)|UserOut?], NetOut?) :-
+    ground(Id?), ground(From?), ground(Content?) |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% Unknown command - echo back as error (otherwise = no other clause matched)
+agent_loop(Id, [Cmd|In], [error(unknown_command, Cmd?)|UserOut?], NetOut?) :-
+    ground(Cmd?), otherwise |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% Empty input - close both output streams
+agent_loop(_, [], [], []).
+
+%% ========== Standard merge ==========
+
+merge([H|T1], T2, [H?|T3?]) :- merge(T1?, T2?, T3).
+merge(T1, [H|T2], [H?|T3?]) :- merge(T1?, T2?, T3).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).

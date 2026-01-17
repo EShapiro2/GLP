@@ -175,11 +175,14 @@ class TypeChecker {
       final procClauses = procedureClauses[key];
 
       if (procClauses == null || procClauses.isEmpty) {
-        warnings.add(TypeWarning(
-          'Procedure ${procDecl.name}/${procDecl.arity} declared but not defined',
-          procDecl.line,
-          procDecl.column,
-        ));
+        // Skip warning for builtins (implemented in Dart, no GLP clauses)
+        if (!procDecl.isBuiltin) {
+          warnings.add(TypeWarning(
+            'Procedure ${procDecl.name}/${procDecl.arity} declared but not defined',
+            procDecl.line,
+            procDecl.column,
+          ));
+        }
         continue;
       }
 

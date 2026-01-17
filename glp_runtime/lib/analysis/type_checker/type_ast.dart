@@ -195,8 +195,9 @@ class ProcDecl {
   final List<TypeExpr> argTypes;  // TypeRef or PrimitiveModeAlt
   final int line;
   final int column;
+  final bool isBuiltin;  // True if implemented in Dart runtime (no GLP clauses)
 
-  ProcDecl(this.name, this.argTypes, this.line, this.column);
+  ProcDecl(this.name, this.argTypes, this.line, this.column, {this.isBuiltin = false});
 
   int get arity => argTypes.length;
 

@@ -151,6 +151,37 @@ const Set<String> builtinGoals = {
   ':=',
 };
 
+/// True builtins: procedures implemented in Dart runtime with NO GLP clauses.
+/// These are distinct from predefinedProcedureNames which includes procedures
+/// with prelude clauses (like =, dl_append, etc.).
+/// Keyed by "name/arity" for precise matching.
+const Set<String> builtinProcedures = {
+  // Type guards
+  'integer/1',
+  'number/1',
+  'string/1',
+  'atom/1',
+  'constant/1',
+  'compound/1',
+  'is_list/1',
+  // Groundness guards
+  'ground/1',
+  'known/1',
+  'unknown/1',
+  // Arithmetic comparison guards
+  '</2',
+  '>/2',
+  '=</2',
+  '>=/2',
+  '=:=/2',
+  '=\\=/2',
+  // Structural equality guard
+  '=?=/2',
+  // Univ operations
+  '=../2',
+  '..=/2',
+};
+
 /// Check if a type name is predefined
 bool isPredefinedType(String name) => predefinedTypeNames.contains(name);
 
@@ -159,3 +190,6 @@ bool isBuiltinGoal(String name) => builtinGoals.contains(name);
 
 /// Check if a procedure name/arity is predefined
 bool isPredefinedProcedure(String name) => predefinedProcedureNames.contains(name);
+
+/// Check if a procedure (name/arity) is a true builtin (implemented in Dart, no GLP clauses)
+bool isBuiltinProcedure(String nameArity) => builtinProcedures.contains(nameArity);

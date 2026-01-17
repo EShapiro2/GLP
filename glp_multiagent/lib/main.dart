@@ -21,37 +21,44 @@ import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/external_io.dart';
 
-/// Embedded ping_pong_agent.glp program source
+/// Embedded ping_pong_agent.glp program source (typed, SRSW-correct)
 const _agentSource = '''
-%% ping_pong_agent.glp - Agent that handles user input and network messages
-%% SRSW: ground(X?) guard allows multiple reader occurrences of X?
+%% ping_pong_agent.glp - Corrected with proper SRSW
+%% Procedure types:
+%%   procedure agent(Constant?, Channel?, Channel?).
+%%   procedure agent_loop(Constant?, Stream?, Stream, Stream).
 
-%% Main agent entry: merge user and net inputs, process in loop
-agent(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
+%% Main agent entry
+agent(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
     merge(UserIn?, NetIn?, In),
     agent_loop(Id?, In?, UserOut, NetOut).
 
 %% User sends a message to another agent
-agent_loop(Id, [send(To, Content)|In], [sent(To?, Content?)|UserOut], [msg(Id?, To?, Content?)|NetOut]) :-
+agent_loop(Id, [send(To, Content)|In], [sent(To?, Content?)|UserOut?], [msg(Id?, To?, Content?)|NetOut?]) :-
     ground(Id?), ground(To?), ground(Content?) |
     agent_loop(Id?, In?, UserOut, NetOut).
 
 %% Receive ping from network - reply with pong
-agent_loop(Id, [msg(From, ping)|In], [received_ping(From?)|UserOut], [msg(Id?, From?, pong)|NetOut]) :-
+agent_loop(Id, [msg(From, ping)|In], [received_ping(From?)|UserOut?], [msg(Id?, From?, pong)|NetOut?]) :-
     ground(Id?), ground(From?) |
     agent_loop(Id?, In?, UserOut, NetOut).
 
-%% Receive pong from network - display to user
-agent_loop(Id, [msg(From, pong)|In], [received_pong(From?)|UserOut], NetOut?) :-
+%% Receive pong from network - display to user only (no network reply)
+agent_loop(Id, [msg(From, pong)|In], [received_pong(From?)|UserOut?], NetOut?) :-
     ground(Id?), ground(From?) |
     agent_loop(Id?, In?, UserOut, NetOut).
 
-%% Receive any other message from network - display to user
-agent_loop(Id, [msg(From, Content)|In], [received(From?, Content?)|UserOut], NetOut?) :-
+%% Receive any other message from network - display to user only
+agent_loop(Id, [msg(From, Content)|In], [received(From?, Content?)|UserOut?], NetOut?) :-
     ground(Id?), ground(From?), ground(Content?) |
     agent_loop(Id?, In?, UserOut, NetOut).
 
-%% Empty input - close outputs
+%% Unknown command - echo back as error (otherwise = no other clause matched)
+agent_loop(Id, [Cmd|In], [error(unknown_command, Cmd?)|UserOut?], NetOut?) :-
+    ground(Cmd?), otherwise |
+    agent_loop(Id?, In?, UserOut, NetOut).
+
+%% Empty input - close both output streams
 agent_loop(_, [], [], []).
 ''';
 
@@ -107,19 +114,19 @@ class SimpleRouter {
   }
 
   void register(String agentId, int windowId) {
-    _agentWindows[agentId] = windowId;
+    _agentWindows[agentId.toLowerCase()] = windowId;
     _log('Registered $agentId (window $windowId)');
   }
 
   void unregister(String agentId) {
-    _agentWindows.remove(agentId);
+    _agentWindows.remove(agentId.toLowerCase());
     _log('Unregistered $agentId');
   }
 
   Future<void> route(String from, String to, dynamic payload) async {
     _log('Route: $from -> $to: $payload');
 
-    final targetWindowId = _agentWindows[to];
+    final targetWindowId = _agentWindows[to.toLowerCase()];
     if (targetWindowId == null) {
       _log('ERROR: Unknown recipient $to');
       return;
@@ -547,12 +554,12 @@ class _AgentScreenState extends State<AgentScreen> {
       final program = compiler.compile(_agentSource);
       _programs['agent.glp'] = program;
 
-      // Load stdlib for merge
+      // Load stdlib for merge (SRSW-correct)
       final stdlibSource = '''
-merge([H|T1], T2, [H|T3]) :- merge(T1?, T2?, T3).
-merge(T1, [H|T2], [H|T3]) :- merge(T1?, T2?, T3).
-merge([], T2, T2?).
-merge(T1, [], T1?).
+merge([H|T1], T2, [H?|T3?]) :- merge(T1?, T2?, T3).
+merge(T1, [H|T2], [H?|T3?]) :- merge(T1?, T2?, T3).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
 ''';
       final stdlibProgram = compiler.compile(stdlibSource);
       _programs['stdlib.glp'] = stdlibProgram;
