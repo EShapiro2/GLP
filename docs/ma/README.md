@@ -1,7 +1,7 @@
 # irmaGLP Documentation Package
 
 **Date**: 2026-01-17  
-**Status**: Phase 5 Complete (128 tests passing)  
+**Status**: Phase 6 In Progress (139 tests passing)  
 **Location**: `/Users/udi/Grassroots/GLP/docs/ma/`
 
 ---
@@ -15,12 +15,28 @@
 | 3. Serialization | ✅ Complete | 36 | payload_serializer.dart |
 | 4. Helper Routines | ✅ Complete | 26 | helpers.dart, relay.glp |
 | 5. Runtime Integration | ✅ Complete | 24 | irma_context.dart |
-| 6. Multiagent Integration | ⏳ Pending | - | - |
+| 6. Multiagent Integration | ⏳ In Progress | 11 | irma_agent.dart |
 | 7. End-to-End Testing | ⏳ Pending | - | - |
 
-**Total**: 128 multiagent tests passing
+**Total**: 139 multiagent tests passing
 
 **Implementation Location**: `/glp_runtime/lib/multiagent/`
+
+---
+
+## Phase 6 Progress: Multiagent Integration
+
+**Completed**:
+- ✅ `IrmaAgent` class wrapping GLP runtime with IrmaContext
+- ✅ Message serialization/deserialization for coordinator transport
+- ✅ Incoming message handlers (assignment, readRequest, abandon)
+- ✅ Outbound message callback to coordinator
+- ✅ 11 IrmaAgent unit tests
+
+**Remaining**:
+- ⏳ Modify `glp_multiagent/main.dart` to use IrmaAgent
+- ⏳ Replace SimpleRouter with serialized payload routing
+- ⏳ End-to-end variable synchronization test
 
 ---
 
@@ -37,8 +53,8 @@
 
 ## Documents
 
-### irmaGLP-implementation-plan-v2.md (v2.2)
-**Status**: Phase 5 Complete  
+### irmaGLP-implementation-plan-v2.md (v2.3)
+**Status**: Phase 6 In Progress  
 Step-by-step implementation guide with Dart code examples, test specifications, and phase breakdown.
 
 ### irmaGLP-spec.md (v1.1)
@@ -57,10 +73,9 @@ Original session handover (Phases 1-4).
 
 ## Next Steps
 
-**Phase 6: Multiagent Integration**
-- Connect agents via coordinator with serialized payloads
-- Replace SimpleRouter with irmaGLP message routing
-- Use V_p-based routing (not message content)
+**Phase 6 completion**:
+- Integrate IrmaAgent into glp_multiagent Flutter app
+- Replace SimpleRouter with serialized payload routing
 
 **Phase 7: End-to-End Testing**
 - Variable synchronization (Alice→Bob)
@@ -98,7 +113,7 @@ dart test test/multiagent/
 /docs/ma/
 ├── README.md                                  (This file)
 ├── irmaGLP-spec.md                            (Specification v1.1)
-├── irmaGLP-implementation-plan-v2.md          (Implementation plan v2.2)
+├── irmaGLP-implementation-plan-v2.md          (Implementation plan v2.3)
 ├── irmaGLP-paper-issues-and-resolutions.md    (Paper errata)
 └── HANDOVER-2026-01-17-irmaGLP-phase1-4.md    (Old handover)
 
@@ -108,12 +123,14 @@ dart test test/multiagent/
 ├── payload_serializer.dart  (Phase 3)
 ├── helpers.dart             (Phase 4)
 ├── relay.glp                (Phase 4)
-└── irma_context.dart        (Phase 5)
+├── irma_context.dart        (Phase 5)
+└── irma_agent.dart          (Phase 6)
 
 /glp_runtime/test/multiagent/
 ├── variable_table_test.dart
 ├── message_queue_test.dart
 ├── payload_serializer_test.dart
 ├── helpers_test.dart
-└── irma_context_test.dart
+├── irma_context_test.dart
+└── irma_agent_test.dart
 ```

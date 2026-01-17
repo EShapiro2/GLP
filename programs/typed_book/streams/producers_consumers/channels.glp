@@ -12,11 +12,11 @@ Multistream ::= [] ; [_ | Multistream] ; branch(Multistream, Multistream).
 procedure stream_read(_, Stream?, Stream).
 procedure stream_write(_?, Stream, Stream?).
 procedure stream_empty(Stream?).
-procedure read(_, Multistream?, Multistream).
+procedure read(_?, Multistream?, Multistream).
 procedure write(_?, Multistream?, Multistream).
 procedure empty(Multistream?).
 procedure close(Multistream?).
-procedure min(_, Multistream?, Multistream).
+procedure min(_?, Multistream?, Multistream).
 procedure branches(Multistream?, Multistream, Multistream).
 procedure serialize(Multistream?, Stream).
 procedure subset(Multistream?, Multistream?).

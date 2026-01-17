@@ -15,7 +15,7 @@ procedure forward_msg(Msg?, Number?, Number?, Number?, MsgStream?, MsgStream?, M
 bmerge(X, Y, [started|Z?]) :- bmerge(1, 1, 1, X?, Y?, Z).
 
 %% Counter exhausted: switch priorities
-bmerge(Bx, By, 0, X, Y, Z?) :- bmerge(By?, Bx?, By?, Y?, X?, Z).
+bmerge(Bx, By, 0, X, Y, Z?) :- ground(By?) | bmerge(By?, Bx?, By?, Y?, X?, Z).
 
 %% Forward from high-priority stream
 bmerge(Bx, By, N, [M|X], Y, Out?) :- N? > 0 |

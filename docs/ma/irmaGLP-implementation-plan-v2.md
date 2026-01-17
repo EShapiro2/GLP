@@ -942,10 +942,24 @@ The coordinator may have its own GLPSAM for simulation control, but that's separ
 | 3. Serialization | ✅ Complete | 36 | payload_serializer.dart |
 | 4. Helper Routines | ✅ Complete | 26 | helpers.dart, relay.glp |
 | 5. Runtime Integration | ✅ Complete | 24 | irma_context.dart |
-| 6. Multiagent Integration | ⏳ Pending | - | - |
+| 6. Multiagent Integration | ⏳ In Progress | 11 | irma_agent.dart |
 | 7. End-to-End Testing | ⏳ Pending | - | - |
 
-**Total Tests**: 128 passing
+**Total Tests**: 139 passing
+
+### Phase 6 In Progress: Multiagent Integration
+
+**Completed**:
+- ✅ `IrmaAgent` class wrapping GLP runtime with IrmaContext
+- ✅ Message serialization/deserialization for coordinator transport
+- ✅ Incoming message handlers (assignment, readRequest, abandon)
+- ✅ Outbound message callback to coordinator
+- ✅ 11 IrmaAgent unit tests
+
+**Remaining**:
+- ⏳ Modify `glp_multiagent/main.dart` to use IrmaAgent
+- ⏳ Replace SimpleRouter with serialized payload routing
+- ⏳ End-to-end variable synchronization test
 
 ### Phase 5 Completed: Runtime Integration
 
@@ -980,3 +994,4 @@ The coordinator may have its own GLPSAM for simulation control, but that's separ
 | 2.0 | 2026-01-17 | Claude | Aligned with irmaGLP-spec.md v1.1, all corrections applied |
 | 2.1 | 2026-01-17 | Claude | Phase 5 progress: IrmaContext created (19 tests), total 123 tests |
 | 2.2 | 2026-01-17 | Claude | Phase 5 complete: Heap callback integration (24 tests), total 128 tests |
+| 2.3 | 2026-01-17 | Claude | Phase 6 started: IrmaAgent created (11 tests), total 139 tests |

@@ -45,7 +45,7 @@ class IrmaContext {
   final IrmaHelpers helpers;
   
   /// Payload serializer for message encoding
-  final PayloadSerializer _serializer = PayloadSerializer();
+  late final PayloadSerializer _serializer;
   
   /// Optional callback for message delivery (set by coordinator)
   MessageDeliveryCallback? onMessageReady;
@@ -55,7 +55,9 @@ class IrmaContext {
     required this.runtime,
   }) : vp = VariableTable(agentId),
        mp = MessageQueue(),
-       helpers = IrmaHelpers();
+       helpers = IrmaHelpers(agentId) {
+    _serializer = PayloadSerializer(agentId);
+  }
   
   // =========================================================================
   // Writer Binding Observation (Heap Callback Approach)

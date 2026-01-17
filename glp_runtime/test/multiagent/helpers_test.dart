@@ -16,7 +16,7 @@ void main() {
     test('abandon imported reader notifies creator', () {
       final vp = VariableTable('alice');
       final mp = MessageQueue();
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       // Alice imported reader 100 from bob
       vp.add(100, VariableEntry(
@@ -41,7 +41,7 @@ void main() {
     test('abandon created reader with requester notifies requester', () {
       final vp = VariableTable('alice');
       final mp = MessageQueue();
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       // Alice created reader 200, bob requested it
       vp.add(200, VariableEntry(
@@ -67,7 +67,7 @@ void main() {
     test('abandon created reader without requester just removes', () {
       final vp = VariableTable('alice');
       final mp = MessageQueue();
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       // Alice created reader 300, no requester yet
       vp.add(300, VariableEntry(
@@ -88,7 +88,7 @@ void main() {
     test('abandon on missing variable does nothing', () {
       final vp = VariableTable('alice');
       final mp = MessageQueue();
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       // Variable 999 not in table
       helpers.abandon(999, vp, mp);
@@ -102,7 +102,7 @@ void main() {
     test('request sends message on first call', () {
       final vp = VariableTable('alice');
       final mp = MessageQueue();
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       // Alice imported reader 100 from bob, not requested yet
       vp.add(100, VariableEntry(
@@ -127,7 +127,7 @@ void main() {
     test('request is idempotent - second call does nothing', () {
       final vp = VariableTable('alice');
       final mp = MessageQueue();
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       // Alice imported reader 100 from bob, already requested
       vp.add(100, VariableEntry(
@@ -148,7 +148,7 @@ void main() {
     test('request on missing variable does nothing', () {
       final vp = VariableTable('alice');
       final mp = MessageQueue();
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       helpers.request(999, 'alice', vp, mp);
       
@@ -158,7 +158,7 @@ void main() {
     test('request on created reader does nothing', () {
       final vp = VariableTable('alice');
       final mp = MessageQueue();
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       // Alice created this reader (not imported)
       vp.add(200, VariableEntry(
@@ -176,7 +176,7 @@ void main() {
     test('request on writer does nothing', () {
       final vp = VariableTable('alice');
       final mp = MessageQueue();
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       // Alice holds writer
       vp.add(300, VariableEntry(
@@ -195,7 +195,7 @@ void main() {
   group('reactivate(readerId, suspendedSet)', () {
     test('reactivates goals blocked on reader', () {
       final suspendedSet = <GoalRef, Set<int>>{};
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       // Goals suspended on different readers
       final goal1 = GoalRef(1, 100);
@@ -222,7 +222,7 @@ void main() {
     
     test('reactivate on unblocking reader returns empty set', () {
       final suspendedSet = <GoalRef, Set<int>>{};
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       final goal1 = GoalRef(1, 100);
       suspendedSet[goal1] = {10, 20};
@@ -236,7 +236,7 @@ void main() {
     
     test('reactivate on empty suspended set returns empty', () {
       final suspendedSet = <GoalRef, Set<int>>{};
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       final reactivated = helpers.reactivate(10, suspendedSet);
       
@@ -245,7 +245,7 @@ void main() {
     
     test('reactivate removes goal from suspended set', () {
       final suspendedSet = <GoalRef, Set<int>>{};
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       final goal = GoalRef(1, 100);
       suspendedSet[goal] = {10};
@@ -261,7 +261,7 @@ void main() {
   group('export(term, agentId, vp) - Local Variables', () {
     test('export local variable adds to V_p', () {
       final vp = VariableTable('alice');
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       final relayGoals = <GoalRef>[];
       
       // Alice exports local writer 100
@@ -290,7 +290,7 @@ void main() {
     
     test('export local reader adds to V_p as createdReader', () {
       final vp = VariableTable('alice');
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       final relayGoals = <GoalRef>[];
       
       // Alice exports local reader 200
@@ -314,7 +314,7 @@ void main() {
   group('export(term, agentId, vp) - Non-local Variables', () {
     test('export writer from other agent removes from V_p', () {
       final vp = VariableTable('alice');
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       final relayGoals = <GoalRef>[];
       
       // Alice has bob's writer (should not happen normally, but test removal)
@@ -333,7 +333,7 @@ void main() {
     
     test('export non-requested reader removes from V_p', () {
       final vp = VariableTable('alice');
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       final relayGoals = <GoalRef>[];
       
       // Alice has bob's reader, not requested
@@ -355,7 +355,7 @@ void main() {
   group('export(term, agentId, vp) - Relay Mechanism', () {
     test('export requested reader creates relay', () {
       final vp = VariableTable('alice');
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       final relayGoals = <GoalRef>[];
       
       // Alice has bob's reader, already requested
@@ -394,7 +394,7 @@ void main() {
   group('export(term, agentId, vp) - Structures', () {
     test('export structure with local variables', () {
       final vp = VariableTable('alice');
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       final relayGoals = <GoalRef>[];
       
       // Structure with local variables
@@ -421,7 +421,7 @@ void main() {
     
     test('export nested structure processes all variables', () {
       final vp = VariableTable('alice');
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       final relayGoals = <GoalRef>[];
       
       // Nested structure
@@ -446,7 +446,7 @@ void main() {
     
     test('export constant term leaves V_p unchanged', () {
       final vp = VariableTable('alice');
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       final relayGoals = <GoalRef>[];
       
       final term = ConstTerm('hello');
@@ -464,7 +464,7 @@ void main() {
   group('export(term, agentId, vp) - Already Exported', () {
     test('export same variable twice only adds once', () {
       final vp = VariableTable('alice');
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       // First export
       final term1 = VarRef(100, isReader: false);
@@ -485,7 +485,7 @@ void main() {
   group('reactivate(readerId, suspendedSet) - Multiple Goals', () {
     test('reactivates all goals blocked on reader', () {
       final suspendedSet = <GoalRef, Set<int>>{};
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       // Three goals, all blocked on reader 50
       final goal1 = GoalRef(1, 100);
@@ -510,7 +510,7 @@ void main() {
     
     test('reactivate on partial blocker only affects relevant goals', () {
       final suspendedSet = <GoalRef, Set<int>>{};
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       final goal1 = GoalRef(1, 100);
       final goal2 = GoalRef(2, 200);
@@ -538,7 +538,7 @@ void main() {
     test('abandon + request workflow', () {
       final vp = VariableTable('alice');
       final mp = MessageQueue();
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       // Alice imports reader from bob
       vp.add(100, VariableEntry(
@@ -561,7 +561,7 @@ void main() {
     test('export + reactivate workflow', () {
       final vp = VariableTable('alice');
       final suspendedSet = <GoalRef, Set<int>>{};
-      final helpers = IrmaHelpers();
+      final helpers = IrmaHelpers('alice');
       
       // Goal suspended on reader 100
       final goal = GoalRef(1, 100);

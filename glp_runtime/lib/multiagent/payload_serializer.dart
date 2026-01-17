@@ -52,11 +52,173 @@ class GlobalVarId {
 
 /// Payload serializer for terms and messages
 class PayloadSerializer {
+  final String agentId;
+  
+  PayloadSerializer(this.agentId);
+  
   /// Type tags for serialization
   static const int _tagConstant = 1;
   static const int _tagVariable = 2;
   static const int _tagStruct = 3;
   static const int _tagList = 4;
+  
+  // ============================================================================
+  // High-level message serialization
+  // ============================================================================
+  
+  /// Serialize an OutboundMessage to bytes for transport
+  Uint8List serializeMessage(OutboundMessage message) {
+    final builder = BytesBuilder();
+    
+    // Type tag
+    builder.addByte(message.type.index);
+    
+    // Destination
+    final destBytes = utf8.encode(message.destination);
+    builder.add(_encodeLength(destBytes.length));
+    builder.add(destBytes);
+    
+    // Payload
+    builder.add(_encodeLength(message.payload.length));
+    builder.add(message.payload);
+    
+    return builder.toBytes();
+  }
+  
+  /// Deserialize bytes to OutboundMessage
+  OutboundMessage deserializeMessage(Uint8List bytes) {
+    int offset = 0;
+    
+    // Type
+    final typeIndex = bytes[offset];
+    offset++;
+    final type = MessageType.values[typeIndex];
+    
+    // Destination
+    final (destLength, destLengthSize) = _decodeLength(bytes, offset);
+    offset += destLengthSize;
+    final destBytes = bytes.sublist(offset, offset + destLength);
+    offset += destLength;
+    final destination = utf8.decode(destBytes);
+    
+    // Payload
+    final (payloadLength, payloadLengthSize) = _decodeLength(bytes, offset);
+    offset += payloadLengthSize;
+    final payload = bytes.sublist(offset, offset + payloadLength);
+    
+    return OutboundMessage(
+      destination: destination,
+      type: type,
+      payload: payload,
+    );
+  }
+  
+  // ============================================================================
+  // Assignment message payload
+  // ============================================================================
+  
+  /// Create assignment payload: varId + serialized term
+  List<int> createAssignmentPayload(int varId, Term value) {
+    final builder = BytesBuilder();
+    
+    // Variable ID (as global ID)
+    final globalId = GlobalVarId(agentId, varId);
+    final idBytes = utf8.encode(globalId.encode());
+    builder.add(_encodeLength(idBytes.length));
+    builder.add(idBytes);
+    
+    // Serialized term
+    final termBytes = serializeTerm(value, agentId);
+    builder.add(termBytes);
+    
+    return builder.toBytes();
+  }
+  
+  /// Parse assignment payload to (varId, value)
+  (int, Term) deserializeAssignmentPayload(List<int> payload) {
+    int offset = 0;
+    
+    // Parse global variable ID
+    final (idLength, idLengthSize) = _decodeLength(payload, offset);
+    offset += idLengthSize;
+    final idBytes = payload.sublist(offset, offset + idLength);
+    offset += idLength;
+    final globalId = GlobalVarId.decode(utf8.decode(idBytes));
+    
+    // Parse term
+    final (term, _) = deserializeTerm(payload, offset);
+    
+    return (globalId.localId, term);
+  }
+  
+  // ============================================================================
+  // Read request message payload
+  // ============================================================================
+  
+  /// Create read request payload: varId + requester
+  List<int> createReadRequestPayload(int varId, String requester) {
+    final builder = BytesBuilder();
+    
+    // Variable ID (as global ID)
+    final globalId = GlobalVarId(agentId, varId);
+    final idBytes = utf8.encode(globalId.encode());
+    builder.add(_encodeLength(idBytes.length));
+    builder.add(idBytes);
+    
+    // Requester
+    final reqBytes = utf8.encode(requester);
+    builder.add(_encodeLength(reqBytes.length));
+    builder.add(reqBytes);
+    
+    return builder.toBytes();
+  }
+  
+  /// Parse read request payload to varId (requester is in message header)
+  int deserializeReadRequestPayload(List<int> payload) {
+    int offset = 0;
+    
+    // Parse global variable ID
+    final (idLength, idLengthSize) = _decodeLength(payload, offset);
+    offset += idLengthSize;
+    final idBytes = payload.sublist(offset, offset + idLength);
+    final globalId = GlobalVarId.decode(utf8.decode(idBytes));
+    
+    return globalId.localId;
+  }
+  
+  // ============================================================================
+  // Abandon message payload
+  // ============================================================================
+  
+  /// Create abandon payload: varId (the writer being abandoned)
+  List<int> createAbandonPayload(int writerId) {
+    final builder = BytesBuilder();
+    
+    // Writer ID (as global ID)
+    final globalId = GlobalVarId(agentId, writerId);
+    final idBytes = utf8.encode(globalId.encode());
+    builder.add(_encodeLength(idBytes.length));
+    builder.add(idBytes);
+    
+    return builder.toBytes();
+  }
+  
+  /// Parse abandon payload to varId
+  int deserializeAbandonPayload(List<int> payload) {
+    int offset = 0;
+    
+    // Parse global variable ID
+    final (idLength, idLengthSize) = _decodeLength(payload, offset);
+    offset += idLengthSize;
+    final idBytes = payload.sublist(offset, offset + idLength);
+    final globalId = GlobalVarId.decode(utf8.decode(idBytes));
+    
+    return globalId.localId;
+  }
+  
+  // ============================================================================
+  // Term serialization
+  // ============================================================================
   
   /// Serialize a term to bytes
   /// 
@@ -220,54 +382,9 @@ class PayloadSerializer {
     }
   }
   
-  /// Serialize an outbound message
-  List<int> serializeMessage(OutboundMessage message) {
-    final builder = BytesBuilder();
-    
-    // Type tag
-    builder.addByte(message.type.index);
-    
-    // Destination
-    final destBytes = utf8.encode(message.destination);
-    builder.add(_encodeLength(destBytes.length));
-    builder.add(destBytes);
-    
-    // Payload
-    builder.add(_encodeLength(message.payload.length));
-    builder.add(message.payload);
-    
-    return builder.toBytes();
-  }
-  
-  /// Deserialize an outbound message
-  OutboundMessage deserializeMessage(List<int> bytes) {
-    int offset = 0;
-    
-    // Type
-    final typeIndex = bytes[offset];
-    offset++;
-    final type = MessageType.values[typeIndex];
-    
-    // Destination
-    final (destLength, destLengthSize) = _decodeLength(bytes, offset);
-    offset += destLengthSize;
-    final destBytes = bytes.sublist(offset, offset + destLength);
-    offset += destLength;
-    final destination = utf8.decode(destBytes);
-    
-    // Payload
-    final (payloadLength, payloadLengthSize) = _decodeLength(bytes, offset);
-    offset += payloadLengthSize;
-    final payload = bytes.sublist(offset, offset + payloadLength);
-    
-    return OutboundMessage(
-      destination: destination,
-      type: type,
-      payload: payload,
-    );
-  }
-  
+  // ============================================================================
   // Encoding/decoding helpers
+  // ============================================================================
   
   List<int> _encodeLength(int length) {
     // Use variable-length encoding

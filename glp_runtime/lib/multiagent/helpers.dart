@@ -20,7 +20,12 @@ import 'package:glp_runtime/multiagent/payload_serializer.dart';
 
 /// Helper routines for irmaGLP transactions
 class IrmaHelpers {
-  final PayloadSerializer _serializer = PayloadSerializer();
+  final String agentId;
+  late final PayloadSerializer _serializer;
+  
+  IrmaHelpers(this.agentId) {
+    _serializer = PayloadSerializer(agentId);
+  }
   
   /// abandon(readerId) for agent p
   /// 

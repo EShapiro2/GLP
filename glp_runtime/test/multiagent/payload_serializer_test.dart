@@ -62,7 +62,7 @@ void main() {
     late PayloadSerializer serializer;
     
     setUp(() {
-      serializer = PayloadSerializer();
+      serializer = PayloadSerializer('alice');
     });
     
     test('serializes and deserializes nil', () {
@@ -136,7 +136,7 @@ void main() {
     late PayloadSerializer serializer;
     
     setUp(() {
-      serializer = PayloadSerializer();
+      serializer = PayloadSerializer('alice');
     });
     
     test('serializes writer with global ID', () {
@@ -180,7 +180,7 @@ void main() {
     late PayloadSerializer serializer;
     
     setUp(() {
-      serializer = PayloadSerializer();
+      serializer = PayloadSerializer('alice');
     });
     
     test('serializes simple structure', () {
@@ -272,7 +272,7 @@ void main() {
     late PayloadSerializer serializer;
     
     setUp(() {
-      serializer = PayloadSerializer();
+      serializer = PayloadSerializer('alice');
     });
     
     test('serializes assignment message', () {
@@ -352,7 +352,7 @@ void main() {
     late PayloadSerializer serializer;
     
     setUp(() {
-      serializer = PayloadSerializer();
+      serializer = PayloadSerializer('alice');
     });
     
     test('constant round-trip preserves value', () {
@@ -466,7 +466,7 @@ void main() {
     late PayloadSerializer serializer;
     
     setUp(() {
-      serializer = PayloadSerializer();
+      serializer = PayloadSerializer('alice');
     });
     
     test('handles empty structure', () {
@@ -526,7 +526,7 @@ void main() {
     late PayloadSerializer serializer;
     
     setUp(() {
-      serializer = PayloadSerializer();
+      serializer = PayloadSerializer('alice');
     });
     
     test('all message types round-trip correctly', () {
