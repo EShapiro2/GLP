@@ -1,101 +1,65 @@
-# GLP Type Checker Test Infrastructure
+# GLP Test Suite
 
-**Location:** `/Users/udi/Grassroots/GLP/test/`
-**Last Updated:** 2025-01-16
+**Location**: `/Users/udi/Grassroots/GLP/test/`  
+**Last Updated**: 2026-01-17
 
-## Test Scripts
+## Official Test Scripts
 
-### Main Test Suites
-
-**`run_typechecker_repl_tests.sh`**
-- Primary type checker test suite
-- Runs 183 positive + 37 negative + 2 SRSW tests in a single REPL session
-- Reports PASS/FAIL summary for each file
-- Usage: `cd /Users/udi/Grassroots/GLP && ./test/run_typechecker_repl_tests.sh`
-- Output to file: `./test/run_typechecker_repl_tests.sh > /private/tmp/test_output.txt 2>&1`
-
-**`get_detailed_errors.sh`**
-- Captures detailed error messages for all 96 failing tests
-- Uses `check_types.dart` which provides full error details
-- Filters out builtin procedure warnings for cleaner output
-- Usage: `chmod +x /Users/udi/Grassroots/GLP/test/get_detailed_errors.sh && /Users/udi/Grassroots/GLP/test/get_detailed_errors.sh > /private/tmp/detailed_errors.txt 2>&1`
-
-**`run_book_tests.sh`**
-- Tests book examples in the untyped REPL
-- Verifies programs compile without syntax errors
-- Usage: `cd /Users/udi/Grassroots/GLP && ./test/run_book_tests.sh`
-
-**`run_type_checker_tests.sh`**
-- Runs Dart unit tests for the type checker
-- Usage: `cd /Users/udi/Grassroots/GLP/glp_runtime && dart test test/analysis/type_checker/`
-
-### Batch Test Scripts
-
-**`test_batch1_arithmetic.sh`** - Arithmetic tree programs
-**`test_batch2_list.sh`** - List processing programs
-**`full_run_repl_tests.sh`** - Complete REPL test run
-
-## Key Directories
-
-**Test Programs:**
-- `/Users/udi/Grassroots/GLP/glp_runtime/test/programs/typechecker/` - Type checker test cases
-- `/Users/udi/Grassroots/GLP/glp_runtime/test/programs/moded_types/` - Mode checking test cases
-- `/Users/udi/Grassroots/GLP/programs/typed_book/` - Typed book examples (main test corpus)
-
-**Implementation:**
-- `/Users/udi/Grassroots/GLP/glp_runtime/lib/analysis/type_checker/` - Type checker source
-
-**Specifications:**
-- `/Users/udi/Grassroots/GLP/docs/modules/` - Spec files (authoritative for implementation)
-
-## Command-Line Tools
-
-**Type check a single file:**
+### 1. Main REPL Tests (full_run_repl_tests.sh)
+**Purpose**: Comprehensive REPL test suite - 218 tests  
+**Command**:
 ```bash
-cd /Users/udi/Grassroots/GLP/glp_runtime && dart run bin/check_types.dart <file.glp>
+cd /Users/udi/Grassroots/GLP && bash test/full_run_repl_tests.sh
+```
+**Output**: Prints pass/fail for each test, summary at end
+
+### 2. Typed REPL Tests (run_typechecker_repl_tests.sh)
+**Purpose**: Type checker REPL tests  
+**Command**:
+```bash
+cd /Users/udi/Grassroots/GLP && bash test/run_typechecker_repl_tests.sh
 ```
 
-**Load file in typed REPL (interactive):**
+### 3. Book Tests (run_book_tests.sh)
+**Purpose**: Compile all book examples (141 files)  
+**Command**:
 ```bash
-cd /Users/udi/Grassroots/GLP/glp_runtime && echo "<absolute-path.glp>" | dart run bin/glp_repl_typed.dart
+cd /Users/udi/Grassroots/GLP && bash test/run_book_tests.sh
 ```
 
-**Run Dart unit tests:**
+### 4. Dart Unit Tests
+**Purpose**: Unit tests for glp_runtime (including multiagent - 139 tests)  
+**Command**:
 ```bash
-cd /Users/udi/Grassroots/GLP/glp_runtime && dart test test/analysis/type_checker/
+cd /Users/udi/Grassroots/GLP/glp_runtime && dart test
 ```
 
-## Output Locations
+**Multiagent only**:
+```bash
+cd /Users/udi/Grassroots/GLP/glp_runtime && dart test test/multiagent/
+```
 
-Scripts should write output to `/private/tmp/` for Claude to read:
-- `/private/tmp/test_output.txt` - General test output
-- `/private/tmp/detailed_errors.txt` - Detailed error messages
-- `/private/tmp/all_errors.txt` - Raw REPL output
+## Quick Reference
 
-## Current Test Status (2025-01-16)
+| Test Suite | Command | Tests |
+|------------|---------|-------|
+| Main REPL | `bash test/full_run_repl_tests.sh` | 218 |
+| Typed REPL | `bash test/run_typechecker_repl_tests.sh` | varies |
+| Book | `bash test/run_book_tests.sh` | 141 files |
+| Dart Unit | `dart test` (in glp_runtime) | ~150+ |
+| Multiagent | `dart test test/multiagent/` | 139 |
 
-- **Total:** 222 tests
-- **Passing:** 126
-- **Failing:** 96
+## Running All Tests
 
-### Failure Categories
+```bash
+cd /Users/udi/Grassroots/GLP
 
-1. **SRSW violations** - Programs use `_` in body or have multiple writer occurrences
-2. **Type errors** - Structural type mismatches
-3. **Loading errors** - Parse/syntax issues or missing definitions
-4. **Coverage errors** - Missing clause alternatives
+# REPL tests
+bash test/full_run_repl_tests.sh
 
-### Already Marked as Ill-Typed
+# Book tests  
+bash test/run_book_tests.sh
 
-Files with `STATUS: ILL-TYPED` comments:
-- `sum_list.glp` - SRSW violations in reduce/2 meta-interpreter clauses
-- `bubble_sort.glp` - Uses `_` in body
-- `cooperative.glp` - Uses `_` in body (per handover)
-
-## Workflow for Debugging
-
-1. Run full test suite: `./test/run_typechecker_repl_tests.sh > /private/tmp/test_output.txt 2>&1`
-2. Get detailed errors: `./test/get_detailed_errors.sh > /private/tmp/detailed_errors.txt 2>&1`
-3. Analyze specific file: `dart run bin/check_types.dart <file.glp>`
-4. Read source to determine if program bug or type checker bug
-5. Either fix program, mark as ill-typed, or fix type checker implementation
+# Unit tests
+cd glp_runtime && dart test && cd ..
+```
