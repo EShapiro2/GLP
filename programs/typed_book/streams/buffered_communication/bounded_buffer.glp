@@ -5,20 +5,20 @@
 %% T is the hole for new messages. Bounded size creates backpressure.
 
 %% Type definitions
-Buffer ::= List \ List?.
+Buffer ::= Stream \ Stream?.
 
 %% Procedure type declarations
-procedure send_unbounded(_?, List, List?).
-procedure receive_unbounded(_, List?, List).
+procedure send_unbounded(_?, Stream, Stream?).
+procedure receive_unbounded(_, Stream?, Stream).
 procedure send(_?, Buffer?, Buffer).
 procedure receive(_, Buffer?, Buffer).
-procedure close(List?).
+procedure close(Stream?).
 procedure closed(_?).
 procedure open(Number?, Buffer).
-procedure sq_num_buffered(Number?, List, Number?).
+procedure sq_num_buffered(Number?, Stream, Number?).
 procedure integers(Number?, Number?, Buffer?).
-procedure square(Buffer?, List).
-procedure square2(_?, Buffer?, List).
+procedure square(Buffer?, Stream).
+procedure square2(_?, Buffer?, Stream).
 
 %% Unbounded buffer send/receive (standard stream communication)
 send_unbounded(Msg, [Msg?|NStrm], NStrm?).

@@ -30,7 +30,7 @@ tag_stream(Name, [M|In], [msg(Name?, M?)|Out?]) :-
     ground(Name?) | tag_stream(Name?, In?, Out).
 tag_stream(_, [], []).
 
-%% lookup(Key, List, Value) - find value associated with key
+%% lookup(Key, Stream, Value) - find value associated with key
 lookup(Key, [(K, Value)|_], Value?) :- Key? =?= K? | true.
 lookup(Key, [_|Rest], Value?) :-
     otherwise | lookup(Key?, Rest?, Value).

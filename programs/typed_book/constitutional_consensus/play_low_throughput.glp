@@ -2,16 +2,16 @@
 %% Single transaction, no conflicts, finalized in one wave
 
 %% Type definitions
-Block ::= block(Number, _, List).
+Block ::= block(Number, _, Stream).
 Blocklace ::= [] ; [Block | Blocklace].
 Result ::= passed ; failed(_, _).
 ParticipantList ::= [] ; [_ | ParticipantList].
 
 %% Procedure type declarations
-procedure tau(Blocklace?, ParticipantList?, List).
+procedure tau(Blocklace?, ParticipantList?, Stream).
 procedure is_finalized(Block?, Blocklace?, ParticipantList?).
 procedure play_low_throughput(Result).
-procedure verify_low_throughput(List?, Result).
+procedure verify_low_throughput(Stream?, Result).
 procedure test_finality(Result).
 procedure check_finalized(Block?, Blocklace?, ParticipantList?, Result).
 

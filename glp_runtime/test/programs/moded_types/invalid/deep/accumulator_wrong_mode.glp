@@ -7,9 +7,9 @@
 %%   - Result is writer, but Result? never appears → SRSW violation
 
 Nat ::= z ; s(Nat).
-List ::= [] ; [Nat | List].
+Stream ::= [] ; [Nat | Stream].
 
-procedure sum(List?, Nat?, Nat).
+procedure sum(Stream?, Nat?, Nat).
 
 %% ERROR: Result is writer but Result? never appears → SRSW violation
 sum([X|Xs], Acc, Result) :-

@@ -1,7 +1,7 @@
 % Network Switch for 2 Agents (based on Program 12)
 
 %% Type definitions
-Channel ::= ch(List?, List).
+Channel ::= ch(Stream?, Stream).
 AgentEntry ::= (_, Channel?).
 
 %% Procedure type declarations

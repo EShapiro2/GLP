@@ -2,17 +2,17 @@
 %% Multiple transactions create conflict, formal leader resolves
 
 %% Type definitions
-Block ::= block(Number, _, List).
+Block ::= block(Number, _, Stream).
 Blocklace ::= [] ; [Block | Blocklace].
 Result ::= passed ; failed(_, _).
 ParticipantList ::= [] ; [_ | ParticipantList].
 
 %% Procedure type declarations
-procedure tau(Blocklace?, ParticipantList?, List).
+procedure tau(Blocklace?, ParticipantList?, Stream).
 procedure has_conflict(Number?, Blocklace?).
 procedure no_conflict(Number?, Blocklace?).
 procedure play_high_throughput(Result).
-procedure verify_high_throughput(List?, Result).
+procedure verify_high_throughput(Stream?, Result).
 procedure test_conflict(Result).
 procedure check_conflict(Number?, Blocklace?, Result).
 procedure test_no_conflict(Result).

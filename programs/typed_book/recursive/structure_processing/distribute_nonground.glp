@@ -3,9 +3,9 @@
 %% Suspends on unbound subterms until producer binds them
 
 %% Procedure type declarations
-procedure distribute(List?, List, List).
+procedure distribute(Stream?, Stream, Stream).
 procedure copy(_?, _, _).
-procedure copy_list(List?, List, List).
+procedure copy_list(Stream?, Stream, Stream).
 procedure test_distribute(_, _).
 
 distribute([X|Xs], [Y?|Ys?], [Z?|Zs?]) :-
@@ -16,10 +16,10 @@ distribute([], [], []).
 copy(X, Y?, Z?) :- atom(X?) | Y = X?, Z = X?.
 copy(X, Y?, Z?) :- number(X?) | Y = X?, Z = X?.
 copy(X, Y?, Z?) :- compound(X?) |
-    List ..= X?,
-    copy_list(List?, List1, List2),
-    Y =.. List1?,
-    Z =.. List2?.
+    Stream ..= X?,
+    copy_list(Stream?, Stream1, Stream2),
+    Y =.. Stream1?,
+    Z =.. Stream2?.
 
 copy_list([], [], []).
 copy_list([H|T], [H1?|T1?], [H2?|T2?]) :-

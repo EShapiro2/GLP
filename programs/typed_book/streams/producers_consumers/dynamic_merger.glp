@@ -6,8 +6,8 @@
 %% Uses guard X =\= Y which succeeds if arguments are not unifiable.
 
 %% Procedure type declarations
-procedure merger(List?, List?, List).
-procedure merge(List?, List?, List).
+procedure merger(Stream?, Stream?, Stream).
+procedure merge(Stream?, Stream?, Stream).
 
 merger(Ws, Xs, Out?) :- merge(Ws?, Xs?, Out).
 

@@ -1,10 +1,10 @@
-%% append.glp - List concatenation
+%% append.glp - Stream concatenation
 %% Source: Standard GLP list operations
 
-%% Uses predefined List type
+%% Uses predefined Stream type
 
 %% Procedure type declaration
-procedure append(List?, List?, List).
+procedure append(Stream?, Stream?, Stream).
 procedure reduce(_?, _).
 
 append([], Ys, Ys?).

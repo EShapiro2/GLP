@@ -6,7 +6,7 @@
 
 %% Type definitions
 Msg ::= msg(_, _, _).
-Channel ::= ch(List?, List).
+Channel ::= ch(Stream?, Stream).
 AgentEntry ::= (_, Channel?).
 
 %% Procedure type declarations

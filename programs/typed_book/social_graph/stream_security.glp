@@ -20,15 +20,15 @@
 
 %% Type definitions
 Done ::= done.
-Control ::= control(List, Control).
+Control ::= control(Stream, Control).
 
 %% Procedure type declarations
-procedure extend_stream(List?, _, List).
+procedure extend_stream(Stream?, _, Stream).
 procedure producer_a(Control?).
 procedure producer_b(Control?).
-procedure handover(Done?, List, Control).
-procedure produce_batch_a(List, List?, Done).
-procedure produce_batch_b(List, List?, Done).
+procedure handover(Done?, Stream, Control).
+procedure produce_batch_a(Stream, Stream?, Done).
+procedure produce_batch_b(Stream, Stream?, Done).
 
 %% Cooperative extension example - only holder of tail writer can extend
 extend_stream([H?|T], H, T).

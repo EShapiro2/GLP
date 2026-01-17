@@ -5,8 +5,8 @@
 NestedList ::= [] ; [_ | NestedList].
 
 %% Procedure type declarations
-procedure flatten(NestedList?, List).
-procedure flatten_dl(NestedList?, List, List?).
+procedure flatten(NestedList?, Stream).
+procedure flatten_dl(NestedList?, Stream, Stream?).
 procedure is_list(_?).
 procedure reduce(_?, _).
 

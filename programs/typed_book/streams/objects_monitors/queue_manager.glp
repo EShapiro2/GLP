@@ -9,7 +9,7 @@ QueueReq ::= dequeue(_) ; enqueue(_?).
 ReqList ::= [] ; [QueueReq | ReqList].
 
 %% Procedure type declarations
-procedure qm(ReqList?, List, List).
+procedure qm(ReqList?, Stream, Stream).
 procedure merge(ReqList?, ReqList?, ReqList).
 
 %% Queue manager - Head and Tail are difference list pointers

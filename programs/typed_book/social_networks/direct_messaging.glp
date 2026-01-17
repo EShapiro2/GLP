@@ -8,7 +8,7 @@
 MsgList ::= [] ; [_ | MsgList].
 FriendEntry ::= (_, _).
 FriendList ::= [] ; [FriendEntry | FriendList].
-Channel ::= ch(List?, List).
+Channel ::= ch(Stream?, Stream).
 AttInfo ::= att(_, _).
 
 %% Procedure type declarations

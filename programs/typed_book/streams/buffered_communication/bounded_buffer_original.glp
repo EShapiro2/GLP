@@ -8,19 +8,19 @@
 %% The receiver controls buffer expansion by creating new slots.
 
 %% Type definitions
-DiffList ::= List -- List?.
+DiffList ::= Stream -- Stream?.
 
 %% Procedure type declarations
-procedure send_unbounded(_?, List?, List).
-procedure receive_unbounded(_, List?, List).
-procedure send(_?, List?, List).
+procedure send_unbounded(_?, Stream?, Stream).
+procedure receive_unbounded(_, Stream?, Stream).
+procedure send(_?, Stream?, Stream).
 procedure receive(_, DiffList?, DiffList).
-procedure close(List?).
+procedure close(Stream?).
 procedure closed(_?).
 procedure open(Number?, DiffList).
-procedure sq_num_buffered(Number?, List?, Number?).
-procedure integers(Number?, Number?, List?).
-procedure square(DiffList?, List).
+procedure sq_num_buffered(Number?, Stream?, Number?).
+procedure integers(Number?, Number?, Stream?).
+procedure square(DiffList?, Stream).
 
 %% Unbounded buffer send/receive (standard stream communication)
 send_unbounded(Msg, [Msg?|Tail], Tail?).

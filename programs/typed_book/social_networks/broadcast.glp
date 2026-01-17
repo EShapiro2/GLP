@@ -2,7 +2,7 @@
 %% Sends a message to all followers
 
 %% Type definitions
-FollowerEntry ::= (_, List).
+FollowerEntry ::= (_, Stream).
 FollowerList ::= [] ; [FollowerEntry | FollowerList].
 
 %% Procedure type declarations

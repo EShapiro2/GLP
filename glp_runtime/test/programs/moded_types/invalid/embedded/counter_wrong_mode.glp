@@ -2,7 +2,7 @@
 %%
 %% Mode trace:
 %%   Arg 1 (CounterStream?, ↓):
-%%     - List element CounterMsg at ↓
+%%     - Stream element CounterMsg at ↓
 %%     - show(Number?) at ↓: combine(↓, ↓) = ↑ (output)
 %%     - At ↑, expects writer. State is writer → CORRECT ✓
 %%

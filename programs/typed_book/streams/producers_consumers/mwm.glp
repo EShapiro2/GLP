@@ -9,14 +9,14 @@
 
 %% Type definitions
 Done ::= done.
-StreamCmd ::= stream(List) ; merge(StreamOfStreams).
+StreamCmd ::= stream(Stream) ; merge(StreamOfStreams).
 StreamOfStreams ::= [] ; [StreamCmd | StreamOfStreams].
 
 %% Procedure type declarations
-procedure mwm(StreamOfStreams?, List).
+procedure mwm(StreamOfStreams?, Stream).
 procedure mwm_main(StreamOfStreams?, _?).
 procedure mwm1(StreamOfStreams?, _?, Done?, Done).
-procedure mwm_copy(List?, _?, Done?, Done).
+procedure mwm_copy(Stream?, _?, Done?, Done).
 procedure close_when_done(Done?, _?).
 procedure stream_append(_?, _?, _).
 procedure close_mutual_reference(_?).

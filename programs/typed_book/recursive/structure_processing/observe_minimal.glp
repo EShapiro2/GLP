@@ -2,7 +2,7 @@
 
 %% Procedure type declarations
 procedure observe(_?, _, _).
-procedure observe_list(List?, List, List).
+procedure observe_list(Stream?, Stream, Stream).
 procedure test_minimal(_).
 procedure alice(_).
 procedure got_reply(_?).

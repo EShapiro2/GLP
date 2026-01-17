@@ -9,18 +9,18 @@
 Multistream ::= [] ; [_ | Multistream] ; branch(Multistream, Multistream).
 
 %% Procedure type declarations
-procedure stream_read(_, List?, List).
-procedure stream_write(_?, List, List?).
-procedure stream_empty(List?).
+procedure stream_read(_, Stream?, Stream).
+procedure stream_write(_?, Stream, Stream?).
+procedure stream_empty(Stream?).
 procedure read(_, Multistream?, Multistream).
 procedure write(_?, Multistream?, Multistream).
 procedure empty(Multistream?).
 procedure close(Multistream?).
 procedure min(_, Multistream?, Multistream).
 procedure branches(Multistream?, Multistream, Multistream).
-procedure serialize(Multistream?, List).
+procedure serialize(Multistream?, Stream).
 procedure subset(Multistream?, Multistream?).
-procedure merge(List?, List?, List).
+procedure merge(Stream?, Stream?, Stream).
 
 %% Basic stream operations (for comparison)
 stream_read(Message, [Message?|Stream?], Stream).

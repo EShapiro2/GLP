@@ -5,12 +5,12 @@
 %% Uses bounded buffer for flow control.
 %% Suspends when both output ports are full.
 
-%% Uses predefined List type
+%% Uses predefined Stream type
 
 %% Procedure type declarations
-procedure switch2x2(List?, List?, List, List).
-procedure send(_?, List?, List).
-procedure receive(_, List?, List).
+procedure switch2x2(Stream?, Stream?, Stream, Stream).
+procedure send(_?, Stream?, Stream).
+procedure receive(_, Stream?, Stream).
 
 switch2x2(In1, In2, Out1, Out2) :-
     receive(M, In1?, Ins1), send(M?, Out1?, Outs1) |

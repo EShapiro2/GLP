@@ -8,7 +8,7 @@
 %% Procedure type declarations
 procedure run(_?).
 procedure reduce(_?, _).
-procedure merge(List?, List?, List).
+procedure merge(Stream?, Stream?, Stream).
 
 run(true).  % halt
 run((A,B)) :- run(A?), run(B?). % fork

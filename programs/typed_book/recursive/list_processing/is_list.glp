@@ -1,10 +1,10 @@
 %% is_list.glp - Defining a list (AoP 3.11)
 %% list(Xs) :- Xs is a list.
 
-%% Uses predefined List type
+%% Uses predefined Stream type
 
 %% Procedure type declarations
-procedure list(List?).
+procedure list(Stream?).
 procedure reduce(_?, _).
 
 list([]).

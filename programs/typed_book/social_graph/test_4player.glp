@@ -5,7 +5,7 @@
 %% The actual test predicates are in the referenced files.
 
 %% Procedure type declarations (for referenced predicates)
-procedure social_graph(_?, List?, List?).
+procedure social_graph(_?, Stream?, Stream?).
 
 %% Scenario:
 %%   Round 1: Alice → Bob (accept)

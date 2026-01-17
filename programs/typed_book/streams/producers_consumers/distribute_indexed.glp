@@ -12,7 +12,7 @@ SendMsg ::= send(Number, _).
 SendStream ::= [] ; [SendMsg | SendStream].
 
 %% Procedure type declarations
-procedure distribute_indexed(SendStream?, List, List).
+procedure distribute_indexed(SendStream?, Stream, Stream).
 
 distribute_indexed([send(1,X)|In], [X?|Out1?], Out2?) :-
     distribute_indexed(In?, Out1, Out2).

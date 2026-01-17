@@ -1,10 +1,10 @@
 %% prefix.glp - Prefixes of a list (AoP 3.13)
-%% prefix(Prefix,List) :- Prefix is a prefix of List.
+%% prefix(Prefix,Stream) :- Prefix is a prefix of Stream.
 
-%% Uses predefined List type
+%% Uses predefined Stream type
 
 %% Procedure type declarations
-procedure prefix(List?, List?).
+procedure prefix(Stream?, Stream?).
 procedure reduce(_?, _).
 
 prefix([], _).

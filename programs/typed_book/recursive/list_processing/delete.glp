@@ -1,11 +1,11 @@
 %% delete.glp - Deleting all occurrences of an element from a list (AoP 3.18)
-%% delete(List,X,HasNoXs) :- HasNoXs is the result of removing all occurrences of X from List.
+%% delete(Stream,X,HasNoXs) :- HasNoXs is the result of removing all occurrences of X from Stream.
 %% Note: Requires numeric elements for =:= guard
 
-%% Uses predefined List type
+%% Uses predefined Stream type
 
 %% Procedure type declarations
-procedure delete(List?, _?, List).
+procedure delete(Stream?, _?, Stream).
 procedure reduce(_?, _).
 
 delete([X|Xs], Y, Ys?) :- X? =:= Y? | delete(Xs?, Y?, Ys).

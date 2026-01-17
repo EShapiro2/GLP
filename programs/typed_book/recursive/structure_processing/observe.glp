@@ -4,7 +4,7 @@
 
 %% Procedure type declarations
 procedure observe(_?, _, _).
-procedure observe_list(List?, List, List).
+procedure observe_list(Stream?, Stream, Stream).
 procedure test_observe(_, _).
 
 %% observe(A, B, Log) - observe communication between A and B

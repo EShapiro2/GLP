@@ -1,7 +1,7 @@
 % Channel Operations (Program 9 from GLP 2025 paper)
 
 %% Type definitions
-Channel ::= ch(List?, List).
+Channel ::= ch(Stream?, Stream).
 
 %% Procedure type declarations
 procedure send(_?, Channel?, Channel).

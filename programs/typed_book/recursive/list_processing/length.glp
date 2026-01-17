@@ -1,11 +1,11 @@
-%% length.glp - List length with accumulator
+%% length.glp - Stream length with accumulator
 %% Source: Standard GLP list operations
 
-%% Uses predefined List type
+%% Uses predefined Stream type
 
 %% Procedure type declarations
-procedure length(List?, Number).
-procedure length_acc(List?, Number?, Number).
+procedure length(Stream?, Number).
+procedure length_acc(Stream?, Number?, Number).
 procedure reduce(_?, _).
 
 length(Xs, N?) :- length_acc(Xs?, 0, N).

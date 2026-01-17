@@ -20,7 +20,7 @@ DumpList ::= [] ; [_ | DumpList].
 procedure run(_?, ControlList?, DumpList, DumpList?).
 procedure suspended_run(_?, ControlList?, DumpList, DumpList?).
 procedure reduce(_?, _).
-procedure merge(List?, List?, List).
+procedure merge(Stream?, Stream?, Stream).
 
 run(true, _, L, L?).   % halt and close the dump
 run((A,B), Cs, L, R?) :-

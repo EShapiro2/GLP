@@ -2,7 +2,7 @@
 %% Source: Standard GLP list operations
 
 %% Type definitions
-NonEmptyList ::= [_ | List].
+NonEmptyList ::= [_ | Stream].
 
 %% Procedure type declarations
 procedure nth(Number?, NonEmptyList?, _).

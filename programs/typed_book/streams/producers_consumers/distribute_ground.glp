@@ -6,7 +6,7 @@
 %% since it verifies X to be ground.
 
 %% Procedure type declarations
-procedure distribute(List?, List, List).
+procedure distribute(Stream?, Stream, Stream).
 
 distribute([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | distribute(Xs?, Ys, Zs).
 distribute([],[],[]).

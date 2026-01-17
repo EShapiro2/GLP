@@ -4,10 +4,10 @@
 %% Merges two input streams into one output stream.
 %% Alternates priority between streams for fairness.
 
-%% Uses predefined List type
+%% Uses predefined Stream type
 
 %% Procedure type declaration
-procedure merge(List?, List?, List).
+procedure merge(Stream?, Stream?, Stream).
 
 merge([X|Xs],Ys,[X?|Zs?]) :- merge(Ys?,Xs?,Zs). % output from first stream
 merge(Xs,[Y|Ys],[Y?|Zs?]) :- merge(Xs?,Ys?,Zs). % output from second stream

@@ -9,8 +9,8 @@
 procedure observe(_?, _, _).
 procedure copy_to(_?, _, _).
 
-NonEmptyList ::= [_ | List].
-procedure head_tail(NonEmptyList?, _, List).
+NonEmptyList ::= [_ | Stream].
+procedure head_tail(NonEmptyList?, _, Stream).
 
 observe(X?, Y, Z?) :- observe(Y?, X, Z).
 observe(X, Out1?, Out2?) :- ground(X?) | copy_to(X?, Out1, Out2).

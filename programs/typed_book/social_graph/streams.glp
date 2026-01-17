@@ -5,7 +5,7 @@ TaggedList ::= [] ; [_ | TaggedList].
 
 %% Procedure type declarations
 procedure observe(_?, _, _).
-procedure tag_stream(_?, List?, TaggedList).
+procedure tag_stream(_?, Stream?, TaggedList).
 
 % observe/3 - Stream observation (Program 14, SRSW-fixed)
 % Creates two copies of a stream for observation

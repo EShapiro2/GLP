@@ -7,10 +7,10 @@
 Tree ::= void ; tree(_, Tree, Tree).
 
 %% Procedure type declarations
-procedure preorder(Tree?, List).
-procedure inorder(Tree?, List).
-procedure postorder(Tree?, List).
-procedure append(List?, List?, List).
+procedure preorder(Tree?, Stream).
+procedure inorder(Tree?, Stream).
+procedure postorder(Tree?, Stream).
+procedure append(Stream?, Stream?, Stream).
 procedure reduce(_?, _).
 
 preorder(tree(X, L, R), Xs?) :-

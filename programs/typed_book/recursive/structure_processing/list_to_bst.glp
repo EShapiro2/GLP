@@ -3,13 +3,13 @@
 
 %% Type definitions
 BST ::= empty ; node(_, BST, BST).
-NonEmptyList ::= [_ | List].
+NonEmptyList ::= [_ | Stream].
 
 %% Procedure type declarations
-procedure list_to_bst(List?, BST).
-procedure split_at(NonEmptyList?, Number?, List, _, List).
-procedure length(List?, Number).
-procedure length_acc(List?, Number?, Number).
+procedure list_to_bst(Stream?, BST).
+procedure split_at(NonEmptyList?, Number?, Stream, _, Stream).
+procedure length(Stream?, Number).
+procedure length_acc(Stream?, Number?, Number).
 
 list_to_bst([], empty).
 list_to_bst(Xs, node(Mid?, L?, R?)) :-
@@ -20,7 +20,7 @@ list_to_bst(Xs, node(Mid?, L?, R?)) :-
     list_to_bst(Left?, L),
     list_to_bst(Right?, R).
 
-%% split_at(List, N, Left, Mid, Right) - split list at position N
+%% split_at(Stream, N, Left, Mid, Right) - split list at position N
 split_at([X|Xs], 0, [], X?, Xs?).
 split_at([X|Xs], N, [X?|Left?], Mid?, Right?) :-
     N? > 0 |

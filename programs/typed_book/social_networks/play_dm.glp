@@ -10,7 +10,7 @@
 %% 4. Both exchange messages on the DM channel
 
 %% Type definitions
-Channel ::= ch(List?, List).
+Channel ::= ch(Stream?, Stream).
 DMReq ::= dm_request(_).
 ReqList ::= [] ; [DMReq | ReqList].
 Result ::= result(_, _).
@@ -20,9 +20,9 @@ procedure new_channel(Channel, Channel).
 procedure dm_send(_?, Channel?, Channel).
 procedure dm_receive(_, Channel?, Channel).
 procedure bind_resp(_, _).
-procedure alice(ReqList?, List?, Result).
-procedure alice_continue(Channel?, List?, Result).
-procedure bob(ReqList?, List?, Result).
+procedure alice(ReqList?, Stream?, Result).
+procedure alice_continue(Channel?, Stream?, Result).
+procedure bob(ReqList?, Stream?, Result).
 procedure bob_continue(Channel?, Result).
 procedure verify(Result?, Result?).
 procedure report(_?, _?).

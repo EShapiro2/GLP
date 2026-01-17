@@ -4,7 +4,7 @@
 %% Enables concurrent block creation without consensus.
 
 %% Type definitions
-List ::= [] ; [Any | List].
+Stream ::= [] ; [Any | Stream].
 PayloadList ::= [] ; [Any | PayloadList].
 
 %% Procedure type declarations

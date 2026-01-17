@@ -11,14 +11,14 @@
 
 %% Type definitions
 Done ::= done.
-Control ::= control(List, Control).
+Control ::= control(Stream, Control).
 
 %% Procedure type declarations
 procedure producer_a(Control).
 procedure producer_b(Control).
-procedure produce_batch_a(List, List, Done).
-procedure produce_batch_b(List, List, Done).
-procedure handover(Done?, List?, Control).
+procedure produce_batch_a(Stream, Stream, Done).
+procedure produce_batch_b(Stream, Stream, Done).
+procedure handover(Done?, Stream?, Control).
 
 producer_a(control(Xs,Next?)) :-
     produce_batch_a(Xs,Xs1,Done),

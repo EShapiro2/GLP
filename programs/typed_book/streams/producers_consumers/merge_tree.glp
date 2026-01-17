@@ -15,12 +15,12 @@
 % of many streams efficiently.
 
 %% Type definitions
-ListOfLists ::= [] ; [List | ListOfLists].
+ListOfLists ::= [] ; [Stream | ListOfLists].
 
 %% Procedure type declarations
-procedure merge_tree(ListOfLists?, List).
+procedure merge_tree(ListOfLists?, Stream).
 procedure merge_layer(ListOfLists?, ListOfLists).
-procedure merge(List?, List?, List).
+procedure merge(Stream?, Stream?, Stream).
 
 % Base case: empty list of streams
 merge_tree([], []).

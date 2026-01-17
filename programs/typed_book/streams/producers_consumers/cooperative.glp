@@ -7,13 +7,13 @@
 Done ::= done.
 
 %% Procedure type declarations
-procedure bob(List, Done).
-procedure alice(List, Done).
-procedure bob_finish(List, Done).
-procedure reader(List?, Number?, Number).
-procedure test_coop(List, Done).
+procedure bob(Stream, Done).
+procedure alice(Stream, Done).
+procedure bob_finish(Stream, Done).
+procedure reader(Stream?, Number?, Number).
+procedure test_coop(Stream, Done).
 procedure test_read(Number).
-procedure start_reader(List?, Number).
+procedure start_reader(Stream?, Number).
 
 % Bob produces two a's then hands tail to Alice
 bob([a,a|Tail?], Result?) :- alice(Tail, Result).

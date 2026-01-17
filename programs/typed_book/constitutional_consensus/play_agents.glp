@@ -2,16 +2,16 @@
 %% Three agents running the full consensus protocol
 
 %% Type definitions
-Block ::= block(Number, _, List).
+Block ::= block(Number, _, Stream).
 Blocklace ::= [] ; [Block | Blocklace].
 Mode ::= low ; high.
 Event ::= receive(Block) ; submit(_) ; advance(Number) ; timeout(Number).
-State ::= state(Blocklace, Mode, List, List, _).
+State ::= state(Blocklace, Mode, Stream, Stream, _).
 Result ::= passed ; failed(_).
 ResultList ::= [] ; [_ | ResultList].
 
 %% Procedure type declarations
-procedure agent(List?, State?, Blocklace, Blocklace).
+procedure agent(Stream?, State?, Blocklace, Blocklace).
 procedure handle_event(Event?, State?, State, Blocklace?, Blocklace).
 procedure play_agents(Blocklace, Blocklace).
 procedure test_agent_propose(Result).

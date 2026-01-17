@@ -6,12 +6,12 @@
 %% Type Definitions
 %% ============================================
 
-Block ::= block(Number, _, List).
+Block ::= block(Number, _, Stream).
 Blocklace ::= [] ; [Block | Blocklace].
 Mode ::= low ; high.
 Event ::= receive(Block) ; submit(_) ; advance(Number) ; timeout(Number).
 EventList ::= [] ; [Event | EventList].
-State ::= state(Blocklace, Mode, List, List, _).
+State ::= state(Blocklace, Mode, Stream, Stream, _).
 ParticipantList ::= [] ; [_ | ParticipantList].
 
 %% ============================================
@@ -47,15 +47,15 @@ procedure determine_mode(Blocklace?, Mode).
 procedure wait_for_leader(Number?, Block?, _).
 procedure agent(EventList?, State?, Blocklace, Blocklace).
 procedure handle_event(Event?, State?, State, Blocklace?, Blocklace).
-procedure create_block(Number?, Mode?, Blocklace?, ParticipantList?, List?, _?, Block, List).
-procedure create_block_by_pos(Number?, Number?, Mode?, Blocklace?, ParticipantList?, List?, _?, Blocklace?, Block, List).
-procedure tau(Blocklace?, ParticipantList?, List).
+procedure create_block(Number?, Mode?, Blocklace?, ParticipantList?, Stream?, _?, Block, Stream).
+procedure create_block_by_pos(Number?, Number?, Mode?, Blocklace?, ParticipantList?, Stream?, _?, Blocklace?, Block, Stream).
+procedure tau(Blocklace?, ParticipantList?, Stream).
 procedure order_by_wave(Blocklace?, Blocklace).
-procedure extract_payloads(Blocklace?, List).
-procedure member(_?, List?).
-procedure append(List?, List?, List).
-procedure length(List?, Number).
-procedure nth0(Number?, List?, _).
+procedure extract_payloads(Blocklace?, Stream).
+procedure member(_?, Stream?).
+procedure append(Stream?, Stream?, Stream).
+procedure length(Stream?, Number).
+procedure nth0(Number?, Stream?, _).
 
 %% ============================================
 %% Block Structure
@@ -392,7 +392,7 @@ extract_payloads([block(_, empty, _)|Bs], Rest?) :-
     extract_payloads(Bs?, Rest).
 
 %% ============================================
-%% Helper: List Operations
+%% Helper: Stream Operations
 %% ============================================
 
 member(X, [X?|_]).

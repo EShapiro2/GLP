@@ -10,13 +10,13 @@
 %% Uses chain(Left, Right) for short-circuit termination detection.
 
 %% Type definitions
-Chain ::= chain(List?, List).
+Chain ::= chain(Stream?, Stream).
 ShotList ::= [] ; [_ | ShotList].
 
 %% Procedure type declarations
 procedure run(_?, Chain).
 procedure reduce(_?, _).
-procedure merge(List?, List?, List).
+procedure merge(Stream?, Stream?, Stream).
 
 run(true, chain(Chain, Chain?)).                 %% halt - close circuit
 run((A, B), chain(Left, Right?)) :-              %% fork - split chain

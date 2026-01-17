@@ -1,10 +1,10 @@
-%% copy.glp - List copying
+%% copy.glp - Stream copying
 %% Source: Standard GLP list operations
 
-%% Uses predefined List type
+%% Uses predefined Stream type
 
 %% Procedure type declarations
-procedure copy(List?, List).
+procedure copy(Stream?, Stream).
 procedure reduce(_?, _).
 
 copy([], []).

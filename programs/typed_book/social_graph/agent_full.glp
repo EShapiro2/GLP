@@ -4,7 +4,7 @@
 %% Type definitions
 FriendEntry ::= (_, _).
 FriendList ::= [] ; [FriendEntry | FriendList].
-Channel ::= ch(List?, List).
+Channel ::= ch(Stream?, Stream).
 
 %% Procedure type declarations
 procedure agent(_?, Channel?, Channel?).

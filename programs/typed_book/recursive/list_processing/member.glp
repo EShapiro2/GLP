@@ -1,9 +1,9 @@
-%% member.glp - List Membership
+%% member.glp - Stream Membership
 %% Source: Standard GLP list operations
 %% Note: Uses ground guard to allow comparison
 
 %% Type definitions
-NonEmptyList ::= [_ | List].
+NonEmptyList ::= [_ | Stream].
 
 %% Procedure type declarations
 procedure member(_?, NonEmptyList?).

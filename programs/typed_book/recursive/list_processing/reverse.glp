@@ -1,14 +1,14 @@
-%% reverse.glp - List reversal examples
+%% reverse.glp - Stream reversal examples
 %%
 %% Two implementations demonstrating O(n^2) vs O(n) complexity.
 
-%% Uses predefined List type
+%% Uses predefined Stream type
 
 %% Procedure type declarations
-procedure reverse_naive(List?, List).
-procedure append(List?, List?, List).
-procedure reverse(List?, List).
-procedure reverse_acc(List?, List?, List).
+procedure reverse_naive(Stream?, Stream).
+procedure append(Stream?, Stream?, Stream).
+procedure reverse(Stream?, Stream).
+procedure reverse_acc(Stream?, Stream?, Stream).
 
 %% Naive reverse - O(n^2) due to repeated append
 reverse_naive([], []).

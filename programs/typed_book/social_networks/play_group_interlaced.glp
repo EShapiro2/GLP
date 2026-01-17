@@ -14,7 +14,7 @@
 %% Type definitions
 Msg ::= msg(_, _).
 MsgList ::= [] ; [Msg | MsgList].
-Block ::= block(Msg, List).
+Block ::= block(Msg, Stream).
 BlockStream ::= [] ; [Block | BlockStream].
 TipList ::= [] ; [Block | TipList].
 

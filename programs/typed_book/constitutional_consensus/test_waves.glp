@@ -8,8 +8,8 @@ ResultList ::= [] ; [_ | ResultList].
 procedure wave_of_round(Number?, Number).
 procedure round_in_wave(Number?, Number).
 procedure first_round_of_wave(Number?, Number).
-procedure leader_of_wave(Number?, List?, _).
-procedure is_leader(_?, Number?, List?).
+procedure leader_of_wave(Number?, Stream?, _).
+procedure is_leader(_?, Number?, Stream?).
 procedure is_majority(Number?, Number?).
 procedure test_wave_of_round(Result).
 procedure check_waves(Number?, Number?, Number?, Number?, Number?, Number?, Number?, Result).
@@ -20,7 +20,7 @@ procedure check_first_rounds(Number?, Number?, Number?, Result).
 procedure test_leader_selection(Result).
 procedure check_leaders(_?, _?, _?, _?, Result).
 procedure test_is_leader(Result).
-procedure check_is_leader(_?, Number?, List?, Result).
+procedure check_is_leader(_?, Number?, Stream?, Result).
 procedure combine_results(Result?, Result?, Result?, Result).
 procedure test_majority(Result).
 procedure check_majority(Number?, Number?, Result).
