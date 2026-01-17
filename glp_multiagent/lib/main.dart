@@ -1,12 +1,13 @@
-/// GLP Multiagent - Social Graph Agent with Friends List
+/// GLP Multiagent - irmaGLP Integration
 ///
 /// Coordinator window spawns agent windows, routes messages between them.
-/// GLP program loaded from external file.
-/// Supports multiple friends per agent.
+/// Uses IrmaAgent for proper multiagent V_p/M_p semantics.
+/// Supports opaque byte payloads for inter-agent communication.
 library;
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -22,6 +23,9 @@ import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/external_io.dart';
+import 'package:glp_runtime/multiagent/irma_agent.dart';
+
+import 'irma_router.dart';
 
 /// Default GLP program path
 const _defaultGlpPath = '/Users/udi/Grassroots/GLP/programs/multiagent/social_agent.glp';
@@ -57,69 +61,6 @@ void runCoordinatorWindow() {
 /// Run an agent window (spawned by coordinator)
 void runAgentWindow(int windowId, String agentId, List<String> friends, String glpSource) {
   runApp(AgentApp(windowId: windowId, agentId: agentId, friends: friends, glpSource: glpSource));
-}
-
-// ============================================================================
-// SIMPLE ROUTER - Routes messages between agent windows
-// ============================================================================
-
-/// Simple message router using MethodChannel
-class SimpleRouter {
-  static final SimpleRouter _instance = SimpleRouter._();
-  static SimpleRouter get instance => _instance;
-
-  SimpleRouter._();
-
-  final Map<String, int> _agentWindows = {}; // agentId -> windowId
-  final List<String> _routingLog = [];
-  VoidCallback? onLogUpdate;
-
-  List<String> get routingLog => List.unmodifiable(_routingLog);
-
-  void _log(String message) {
-    final timestamp = DateTime.now().toIso8601String().substring(11, 19);
-    _routingLog.add('[$timestamp] $message');
-    onLogUpdate?.call();
-  }
-
-  void clearLog() {
-    _routingLog.clear();
-    onLogUpdate?.call();
-  }
-
-  void register(String agentId, int windowId) {
-    _agentWindows[agentId.toLowerCase()] = windowId;
-    _log('Registered $agentId (window $windowId)');
-  }
-
-  void unregister(String agentId) {
-    _agentWindows.remove(agentId.toLowerCase());
-    _log('Unregistered $agentId');
-  }
-
-  Future<void> route(String from, String to, dynamic payload) async {
-    _log('Route: $from -> $to: $payload');
-
-    final targetWindowId = _agentWindows[to.toLowerCase()];
-    if (targetWindowId == null) {
-      _log('ERROR: Unknown recipient $to');
-      return;
-    }
-
-    try {
-      await DesktopMultiWindow.invokeMethod(
-        targetWindowId,
-        'deliver',
-        jsonEncode({
-          'from': from,
-          'payload': payload,
-        }),
-      );
-      _log('Delivered to $to');
-    } catch (e) {
-      _log('ERROR delivering to $to: $e');
-    }
-  }
 }
 
 // ============================================================================
@@ -173,24 +114,36 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   @override
   void initState() {
     super.initState();
-    SimpleRouter.instance.onLogUpdate = () {
+    IrmaRouter.instance.onLogUpdate = () {
       setState(() {});
     };
 
     // Set up handler for messages from agent windows
     DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
       debugPrint('=== COORDINATOR RECEIVED: ${call.method} from $fromWindowId ===');
-      if (call.method == 'send') {
+      
+      if (call.method == 'send_irma') {
+        // Handle irmaGLP binary message routing
+        final args = jsonDecode(call.arguments as String) as Map<String, dynamic>;
+        final from = args['from'] as String;
+        final to = args['to'] as String;
+        final encodedPayload = args['payload'] as String;
+        final payload = base64Decode(encodedPayload);
+        await IrmaRouter.instance.route(from, to, Uint8List.fromList(payload));
+      } else if (call.method == 'send') {
+        // Legacy JSON message routing (for backwards compatibility)
         final args = jsonDecode(call.arguments as String) as Map<String, dynamic>;
         final from = args['from'] as String;
         final to = args['to'] as String;
         final payload = args['payload'];
-        await SimpleRouter.instance.route(from, to, payload);
+        // Convert to simple string payload for legacy support
+        final payloadBytes = utf8.encode(jsonEncode(payload));
+        await IrmaRouter.instance.route(from, to, Uint8List.fromList(payloadBytes));
       }
       return null;
     });
 
-    _log.add('Coordinator started');
+    _log.add('Coordinator started (irmaGLP mode)');
     _log.add('GLP: $_currentGlpPath');
   }
 
@@ -261,12 +214,12 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
           'glpSource': _cachedGlpSource,
         }),
       );
-      await window.setTitle('$agentId - GLP Agent');
+      await window.setTitle('$agentId - irmaGLP Agent');
       await window.setFrame(Rect.fromLTWH(x, y, 400, 600));
       await window.show();
 
       _windows[agentId] = window;
-      SimpleRouter.instance.register(agentId, window.windowId);
+      IrmaRouter.instance.register(agentId, window.windowId);
 
       _log.add('Spawned $agentId (friends=${friends.join(", ")}, window ${window.windowId})');
       setState(() {});
@@ -290,13 +243,13 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     for (final entry in _windows.entries) {
       try {
         await entry.value.close();
-        SimpleRouter.instance.unregister(entry.key);
+        IrmaRouter.instance.unregister(entry.key);
       } catch (e) {
         _log.add('ERROR closing ${entry.key}: $e');
       }
     }
     _windows.clear();
-    SimpleRouter.instance.clearLog();
+    IrmaRouter.instance.clearLog();
     _log.add('Closed all windows');
     setState(() {});
   }
@@ -305,7 +258,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('GLP Coordinator'),
+        title: const Text('GLP Coordinator (irmaGLP)'),
       ),
       body: Column(
         children: [
@@ -382,10 +335,10 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
               color: Colors.grey.shade100,
               child: ListView.builder(
                 padding: const EdgeInsets.all(8.0),
-                itemCount: SimpleRouter.instance.routingLog.length,
+                itemCount: IrmaRouter.instance.routingLog.length,
                 itemBuilder: (context, index) {
                   return Text(
-                    SimpleRouter.instance.routingLog[index],
+                    IrmaRouter.instance.routingLog[index],
                     style: const TextStyle(
                       fontFamily: 'monospace',
                       fontSize: 12,
@@ -438,7 +391,7 @@ class AgentApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '$agentId - GLP Agent',
+      title: '$agentId - irmaGLP Agent',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.orange,
@@ -490,8 +443,8 @@ class _AgentScreenState extends State<AgentScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<String> _outputLog = [];
 
-  // GLP Runtime components
-  GlpRuntime? _runtime;
+  // IrmaAgent wraps GlpRuntime with multiagent support
+  IrmaAgent? _agent;
   Scheduler? _scheduler;
   _MultiAgentIOContext? _ioContext;
   Map<String, BytecodeProgram> _programs = {};
@@ -503,6 +456,8 @@ class _AgentScreenState extends State<AgentScreen> {
 
   int _goalCount = 0;
   int _heapVars = 0;
+  int _vpSize = 0;
+  int _mpSize = 0;
   bool _isRunning = false;
   bool _initialized = false;
   String _status = 'Not initialized';
@@ -515,23 +470,49 @@ class _AgentScreenState extends State<AgentScreen> {
   }
 
   void _setupMethodChannel() {
-    // Handle messages from coordinator - inject into GLP input
+    // Handle messages from coordinator
     DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
       debugPrint('=== AGENT ${widget.agentId} RECEIVED: ${call.method} ===');
-      if (call.method == 'deliver') {
+      
+      if (call.method == 'deliver_irma') {
+        // Handle irmaGLP binary message
+        final args = jsonDecode(call.arguments as String) as Map<String, dynamic>;
+        final from = args['from'] as String;
+        final encodedPayload = args['payload'] as String;
+        final payload = Uint8List.fromList(base64Decode(encodedPayload));
+        _onIrmaMessageReceived(from, payload);
+      } else if (call.method == 'deliver') {
+        // Legacy JSON message (backwards compatibility)
         final args = jsonDecode(call.arguments as String) as Map<String, dynamic>;
         final from = args['from'] as String;
         final payload = args['payload'];
-        _onFriendMessageReceived(from, payload);
+        _onLegacyMessageReceived(from, payload);
       }
       return null;
     });
   }
 
-  void _onFriendMessageReceived(String from, dynamic payload) {
+  /// Handle incoming irmaGLP binary message
+  void _onIrmaMessageReceived(String from, Uint8List payload) {
+    _addOutput('[IRMA RECV from $from] ${payload.length} bytes');
+
+    if (_agent == null) return;
+
+    // Route to IrmaAgent for proper handling
+    _agent!.handleIncomingMessage(from, payload);
+    
+    // Update stats
+    _updateStats();
+    
+    // Run to process any reactivated goals
+    _runUntilQuiescent();
+  }
+
+  /// Handle legacy JSON message (backwards compatibility)
+  void _onLegacyMessageReceived(String from, dynamic payload) {
     _addOutput('[RECV from $from] $payload');
 
-    if (_ioContext == null || _runtime == null) return;
+    if (_ioContext == null || _agent == null) return;
 
     // Find the friend's input injector
     final friendInputs = _ioContext!.friendInputs;
@@ -551,17 +532,37 @@ class _AgentScreenState extends State<AgentScreen> {
 
     final activations = friendInputs[fromLower]!.inject(msgTerm);
     for (final goal in activations) {
-      _runtime!.gq.enqueue(goal);
+      _agent!.runtime.gq.enqueue(goal);
     }
 
     // Run to process the message
     _runUntilQuiescent();
   }
 
-  Future<void> _sendFriendMessage(String to, dynamic payload) async {
+  /// Send irmaGLP binary message to coordinator for routing
+  Future<void> _sendIrmaMessage(String to, Uint8List payload) async {
+    _addOutput('[IRMA SEND to $to] ${payload.length} bytes');
+
+    try {
+      final encodedPayload = base64Encode(payload);
+      await DesktopMultiWindow.invokeMethod(
+        0, // Main window ID is always 0
+        'send_irma',
+        jsonEncode({
+          'from': widget.agentId,
+          'to': to,
+          'payload': encodedPayload,
+        }),
+      );
+    } catch (e) {
+      _addOutput('[ERROR] Failed to send irma message: $e');
+    }
+  }
+
+  /// Send legacy message (for backwards compatibility)
+  Future<void> _sendLegacyMessage(String to, dynamic payload) async {
     _addOutput('[SEND to $to] $payload');
 
-    // Send to coordinator for routing
     try {
       await DesktopMultiWindow.invokeMethod(
         0, // Main window ID is always 0
@@ -579,26 +580,35 @@ class _AgentScreenState extends State<AgentScreen> {
 
   Future<void> _initializeRuntime() async {
     try {
-      _addOutput('[INIT] Creating GLP runtime...');
+      _addOutput('[INIT] Creating IrmaAgent...');
       _addOutput('[INIT] Friends: ${widget.friends.join(", ")}');
 
-      // Use GLP source passed from coordinator
-      final glpSource = widget.glpSource;
+      // Create IrmaAgent (wraps GlpRuntime with multiagent support)
+      _agent = IrmaAgent(agentId: widget.agentId.toLowerCase());
+      
+      // Set up coordinator callback for outbound messages
+      _agent!.onSendToCoordinator = (destination, payload) async {
+        await _sendIrmaMessage(destination, payload);
+      };
+      
+      // Set up logging callback
+      _agent!.onLog = (message) {
+        debugPrint(message);
+      };
 
-      // Create runtime
-      _runtime = GlpRuntime();
-      registerStandardPredicates(_runtime!.systemPredicates);
+      // Register standard predicates
+      registerStandardPredicates(_agent!.runtime.systemPredicates);
 
       // Create user and net channels
-      final userChannel = createExternalChannel(_runtime!.heap, 'user');
-      final netChannel = createExternalChannel(_runtime!.heap, 'net');
+      final userChannel = createExternalChannel(_agent!.runtime.heap, 'user');
+      final netChannel = createExternalChannel(_agent!.runtime.heap, 'net');
 
       // Create input injector for user
-      final userInput = InputInjector(_runtime!.heap, 'user', userChannel.inputVarId);
+      final userInput = InputInjector(_agent!.runtime.heap, 'user', userChannel.inputVarId);
 
       // Create user output observer - displays to UI
       final userOutput = OutputObserver(
-        _runtime!.heap,
+        _agent!.runtime.heap,
         'user',
         userChannel.outputVarId,
         (term) {
@@ -618,19 +628,19 @@ class _AgentScreenState extends State<AgentScreen> {
 
       for (final friend in widget.friends) {
         final friendLower = friend.toLowerCase();
-        final channel = createExternalChannel(_runtime!.heap, friendLower);
+        final channel = createExternalChannel(_agent!.runtime.heap, friendLower);
         friendChannels[friendLower] = channel;
         
         // Input injector for receiving from this friend
         friendInputs[friendLower] = InputInjector(
-          _runtime!.heap, 
+          _agent!.runtime.heap, 
           friendLower, 
           channel.inputVarId,
         );
         
         // Output observer for sending to this friend
         friendOutputs[friendLower] = OutputObserver(
-          _runtime!.heap,
+          _agent!.runtime.heap,
           friendLower,
           channel.outputVarId,
           (term) {
@@ -654,7 +664,7 @@ class _AgentScreenState extends State<AgentScreen> {
 
       // Compile GLP program
       final compiler = GlpCompiler();
-      final program = compiler.compile(glpSource);
+      final program = compiler.compile(widget.glpSource);
       _programs['agent.glp'] = program;
 
       _addOutput('[INIT] Loaded GLP program');
@@ -682,7 +692,7 @@ class _AgentScreenState extends State<AgentScreen> {
   }
 
   void _startAgentGoal(String agentId) {
-    if (_runtime == null || _ioContext == null) return;
+    if (_agent == null || _ioContext == null) return;
 
     try {
       // Combine loaded programs
@@ -712,16 +722,16 @@ class _AgentScreenState extends State<AgentScreen> {
 
       // Set up goal environment
       final env = CallEnv(args: argSlots);
-      _runtime!.setGoalEnv(_goalId, env);
-      _runtime!.setGoalProgram(_goalId, 'main');
+      _agent!.runtime.setGoalEnv(_goalId, env);
+      _agent!.runtime.setGoalProgram(_goalId, 'main');
 
       // Create scheduler
       final runner = BytecodeRunner(combinedProgram);
-      _scheduler = Scheduler(rt: _runtime!, runners: {'main': runner});
+      _scheduler = Scheduler(rt: _agent!.runtime, runners: {'main': runner});
       _scheduler!.resetDisplayNumbering();
 
       // Enqueue goal
-      _runtime!.gq.enqueue(GoalRef(_goalId, entryPC));
+      _agent!.runtime.gq.enqueue(GoalRef(_goalId, entryPC));
       _goalId++;
 
       _addOutput('[GOAL] Started agent($agentId, [${widget.friends.join(", ")}], ...)');
@@ -758,7 +768,7 @@ class _AgentScreenState extends State<AgentScreen> {
 
   void _sendInput() {
     final text = _inputController.text.trim();
-    if (text.isEmpty || _ioContext == null || _runtime == null) return;
+    if (text.isEmpty || _ioContext == null || _agent == null) return;
 
     setState(() {
       _outputLog.add('> $text');
@@ -771,7 +781,7 @@ class _AgentScreenState extends State<AgentScreen> {
 
       // Enqueue activated goals
       for (final goal in activations) {
-        _runtime!.gq.enqueue(goal);
+        _agent!.runtime.gq.enqueue(goal);
       }
 
       _inputController.clear();
@@ -807,7 +817,7 @@ class _AgentScreenState extends State<AgentScreen> {
     if (astTerm is ast.ConstTerm) {
       return rt.ConstTerm(astTerm.value);
     } else if (astTerm is ast.VarTerm) {
-      final (writerId, readerId) = _runtime!.heap.allocateFreshPair();
+      final (writerId, readerId) = _agent!.runtime.heap.allocateFreshPair();
       return rt.VarRef(astTerm.isReader ? readerId : writerId, isReader: astTerm.isReader);
     } else if (astTerm is ast.StructTerm) {
       final args = astTerm.args.map(_astToRuntimeTerm).toList();
@@ -834,7 +844,7 @@ class _AgentScreenState extends State<AgentScreen> {
   }
 
   Future<void> _runUntilQuiescent() async {
-    if (_scheduler == null) return;
+    if (_scheduler == null || _agent == null) return;
 
     setState(() {
       _isRunning = true;
@@ -847,6 +857,12 @@ class _AgentScreenState extends State<AgentScreen> {
         debug: false,
       );
       _goalCount += result.goalsRan.length;
+
+      // Flush any pending irmaGLP messages
+      final messagesFlushed = _agent!.flushMessages();
+      if (messagesFlushed > 0) {
+        _addOutput('[IRMA] Flushed $messagesFlushed messages');
+      }
 
       // Display pending output
       _displayPendingOutput();
@@ -865,8 +881,10 @@ class _AgentScreenState extends State<AgentScreen> {
   }
 
   void _updateStats() {
-    if (_runtime != null) {
-      _heapVars = _runtime!.heap.allVarIds.length;
+    if (_agent != null) {
+      _heapVars = _agent!.runtime.heap.allVarIds.length;
+      _vpSize = _agent!.vp.entries.length;
+      _mpSize = _agent!.mp.totalLength;
     }
   }
 
@@ -888,7 +906,7 @@ class _AgentScreenState extends State<AgentScreen> {
         if (derefTerm is rt.StructTerm && derefTerm.functor == 'msg' && derefTerm.args.length == 3) {
           final to = _termToString(derefTerm.args[1]);
           final content = _termToString(derefTerm.args[2]);
-          _sendFriendMessage(to, content);
+          _sendLegacyMessage(to, content);
         } else {
           _addOutput('[FRIEND ${entry.key} OUT] ${_formatTerm(derefTerm)}');
         }
@@ -925,10 +943,10 @@ class _AgentScreenState extends State<AgentScreen> {
   }
 
   rt.Term _derefTerm(rt.Term term) {
-    if (_runtime == null) return term;
+    if (_agent == null) return term;
 
     if (term is rt.VarRef) {
-      final value = _runtime!.heap.getValue(term.varId);
+      final value = _agent!.runtime.heap.getValue(term.varId);
       if (value != null && value is! rt.VarRef) {
         return _derefTerm(value);
       }
@@ -1007,8 +1025,9 @@ class _AgentScreenState extends State<AgentScreen> {
                   final line = _outputLog[index];
                   final isInput = line.startsWith('>');
                   final isOutput = line.startsWith('<');
-                  final isSend = line.startsWith('[SEND');
-                  final isRecv = line.startsWith('[RECV');
+                  final isSend = line.startsWith('[SEND') || line.startsWith('[IRMA SEND');
+                  final isRecv = line.startsWith('[RECV') || line.startsWith('[IRMA RECV');
+                  final isIrma = line.startsWith('[IRMA');
                   final isControl = line.startsWith('[');
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2.0),
@@ -1025,10 +1044,12 @@ class _AgentScreenState extends State<AgentScreen> {
                                     ? Colors.purple.shade800
                                     : isRecv
                                         ? Colors.teal.shade800
-                                        : isControl
-                                            ? Colors.orange.shade800
-                                            : Colors.black87,
-                        fontWeight: (isControl || isOutput || isSend || isRecv)
+                                        : isIrma
+                                            ? Colors.deepPurple.shade800
+                                            : isControl
+                                                ? Colors.orange.shade800
+                                                : Colors.black87,
+                        fontWeight: (isControl || isOutput || isSend || isRecv || isIrma)
                             ? FontWeight.bold
                             : FontWeight.normal,
                       ),
@@ -1073,14 +1094,14 @@ class _AgentScreenState extends State<AgentScreen> {
             ),
           ),
 
-          // Status bar
+          // Status bar with V_p and M_p stats
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
             color: Colors.orange.shade100,
             child: Row(
               children: [
                 Text(
-                  'G:$_goalCount H:$_heapVars',
+                  'G:$_goalCount H:$_heapVars V:$_vpSize M:$_mpSize',
                   style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 10),
                 ),
                 const SizedBox(width: 8),

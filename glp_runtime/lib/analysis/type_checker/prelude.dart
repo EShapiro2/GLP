@@ -66,17 +66,11 @@ procedure =?=(_?, _?).
 procedure =..(_, Stream?).      % Compose: Stream? → Compound
 procedure ..=(Stream, _?).      % Decompose: Compound? → Stream
 
-% Unification
-procedure =(_, _?).
-
-% Difference list operations
-procedure dl_append(DiffList?, DiffList?, DiffList).
-procedure dl_to_list(DiffList?, Stream).
-
-% Channel operations
-procedure new_channel(Channel, Channel).
-procedure send(_?, Channel?, Channel).
-procedure receive(_, Channel?, Channel).
+% The following are defined guards (unit clauses) - no procedure declarations needed.
+% They are unfolded at compile time by partial evaluation.
+% - =/2 (unification)
+% - dl_append/3, dl_to_list/2 (difference list operations)
+% - new_channel/2, send/3, receive/3 (channel operations)
 
 % =============================================================================
 % CLAUSES
