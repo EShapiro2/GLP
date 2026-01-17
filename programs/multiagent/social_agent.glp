@@ -1,16 +1,21 @@
 %% social_agent.glp - Social graph agent with friends list
 %% Based on GLP-2025 paper architecture
 %% For use with glp_multiagent Flutter app
+%% 
+%% Supports multiple pre-configured friends via FriendPairs list.
 
 %% ========== Agent Initialization ==========
 
-agent(Id, FriendName, ch(UserIn, UserOut?), ch(NetIn, NetOut?), FriendOut?) :-
+%% agent(Id, FriendPairs, UserCh, NetCh)
+%% FriendPairs is a list of (Name, OutStream) pairs for pre-configured friends
+agent(Id, FriendPairs, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
     merge(UserIn?, NetIn?, In),
-    build_friends(FriendName?, UserOut, NetOut, FriendOut, Fs),
+    build_friends(FriendPairs?, UserOut, NetOut, Fs),
     social_graph(Id?, In?, Fs?).
 
-build_friends(FriendName, UserOut, NetOut, FriendOut, 
-    [(user, UserOut?), (net, NetOut?), (FriendName?, FriendOut?)]).
+%% Build friends list from pairs, adding user and net channels
+build_friends(FriendPairs, UserOut, NetOut, Fs?) :-
+    append([(user, UserOut?), (net, NetOut?)], FriendPairs?, Fs).
 
 %% ========== Social Graph Main Loop ==========
 
@@ -74,6 +79,11 @@ lookup_send(Key, Msg, [(K, Out)|Rest], [(K?, Out1?)|Rest?], found) :-
 lookup_send(Key, Msg, [Pair|Rest], [Pair?|Rest1?], Status?) :-
     otherwise |
     lookup_send(Key?, Msg?, Rest?, Rest1, Status).
+
+%% ========== Append ==========
+
+append([], Ys, Ys?).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 
 %% ========== Merge ==========
 

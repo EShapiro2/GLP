@@ -2,6 +2,7 @@
 ///
 /// Coordinator window spawns agent windows, routes messages between them.
 /// GLP program loaded from external file.
+/// Supports multiple friends per agent.
 library;
 
 import 'dart:convert';
@@ -37,10 +38,10 @@ void main(List<String> args) {
     final windowId = int.parse(args[1]);
     final params = jsonDecode(args[2]) as Map<String, dynamic>;
     final agentId = params['agentId'] as String;
-    final friendId = params['friendId'] as String;
+    final friends = (params['friends'] as List).cast<String>();
     final glpSource = params['glpSource'] as String;
-    debugPrint('=== SPAWNED AGENT WINDOW: $agentId (friend=$friendId, windowId=$windowId) ===');
-    runAgentWindow(windowId, agentId, friendId, glpSource);
+    debugPrint('=== SPAWNED AGENT WINDOW: $agentId (friends=$friends, windowId=$windowId) ===');
+    runAgentWindow(windowId, agentId, friends, glpSource);
   } else {
     // Main/coordinator window
     debugPrint('=== COORDINATOR WINDOW ===');
@@ -54,8 +55,8 @@ void runCoordinatorWindow() {
 }
 
 /// Run an agent window (spawned by coordinator)
-void runAgentWindow(int windowId, String agentId, String friendId, String glpSource) {
-  runApp(AgentApp(windowId: windowId, agentId: agentId, friendId: friendId, glpSource: glpSource));
+void runAgentWindow(int windowId, String agentId, List<String> friends, String glpSource) {
+  runApp(AgentApp(windowId: windowId, agentId: agentId, friends: friends, glpSource: glpSource));
 }
 
 // ============================================================================
@@ -235,7 +236,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     }
   }
 
-  Future<void> _spawnAgent(String agentId, String friendId, double x, double y) async {
+  Future<void> _spawnAgent(String agentId, List<String> friends, double x, double y) async {
     if (_windows.containsKey(agentId)) {
       _log.add('$agentId already spawned');
       setState(() {});
@@ -256,7 +257,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       final window = await DesktopMultiWindow.createWindow(
         jsonEncode({
           'agentId': agentId,
-          'friendId': friendId,
+          'friends': friends,
           'glpSource': _cachedGlpSource,
         }),
       );
@@ -267,7 +268,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       _windows[agentId] = window;
       SimpleRouter.instance.register(agentId, window.windowId);
 
-      _log.add('Spawned $agentId (friend=$friendId, window ${window.windowId})');
+      _log.add('Spawned $agentId (friends=${friends.join(", ")}, window ${window.windowId})');
       setState(() {});
     } catch (e) {
       _log.add('ERROR spawning $agentId: $e');
@@ -275,10 +276,14 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     }
   }
 
-  Future<void> _spawnAliceAndBob() async {
-    // Alice's friend is Bob, Bob's friend is Alice
-    await _spawnAgent('Alice', 'Bob', 100, 100);
-    await _spawnAgent('Bob', 'Alice', 520, 100);
+  Future<void> _spawnLinearTopology() async {
+    // Linear: Alice↔Bob↔Charlie
+    // Alice knows Bob only
+    // Bob knows Alice and Charlie
+    // Charlie knows Bob only
+    await _spawnAgent('Alice', ['Bob'], 100, 100);
+    await _spawnAgent('Bob', ['Alice', 'Charlie'], 520, 100);
+    await _spawnAgent('Charlie', ['Bob'], 940, 100);
   }
 
   Future<void> _closeAll() async {
@@ -339,9 +344,9 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
             child: Row(
               children: [
                 ElevatedButton.icon(
-                  onPressed: _spawnAliceAndBob,
+                  onPressed: _spawnLinearTopology,
                   icon: const Icon(Icons.people),
-                  label: const Text('Spawn Alice & Bob'),
+                  label: const Text('Alice↔Bob↔Charlie'),
                 ),
                 const SizedBox(width: 16),
                 ElevatedButton.icon(
@@ -419,14 +424,14 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
 class AgentApp extends StatelessWidget {
   final int windowId;
   final String agentId;
-  final String friendId;
+  final List<String> friends;
   final String glpSource;
 
   const AgentApp({
     super.key,
     required this.windowId,
     required this.agentId,
-    required this.friendId,
+    required this.friends,
     required this.glpSource,
   });
 
@@ -455,7 +460,7 @@ class AgentApp extends StatelessWidget {
       home: AgentScreen(
         windowId: windowId,
         agentId: agentId,
-        friendId: friendId,
+        friends: friends,
         glpSource: glpSource,
       ),
     );
@@ -465,14 +470,14 @@ class AgentApp extends StatelessWidget {
 class AgentScreen extends StatefulWidget {
   final int windowId;
   final String agentId;
-  final String friendId;
+  final List<String> friends;
   final String glpSource;
 
   const AgentScreen({
     super.key,
     required this.windowId,
     required this.agentId,
-    required this.friendId,
+    required this.friends,
     required this.glpSource,
   });
 
@@ -488,13 +493,13 @@ class _AgentScreenState extends State<AgentScreen> {
   // GLP Runtime components
   GlpRuntime? _runtime;
   Scheduler? _scheduler;
-  _FullIOContext? _ioContext;
+  _MultiAgentIOContext? _ioContext;
   Map<String, BytecodeProgram> _programs = {};
   int _goalId = 1;
 
   // Pending output terms (to be dereferenced after execution)
   final List<rt.Term> _pendingUserOutputTerms = [];
-  final List<rt.Term> _pendingFriendOutputTerms = [];
+  final Map<String, List<rt.Term>> _pendingFriendOutputTerms = {};
 
   int _goalCount = 0;
   int _heapVars = 0;
@@ -510,7 +515,7 @@ class _AgentScreenState extends State<AgentScreen> {
   }
 
   void _setupMethodChannel() {
-    // Handle messages from coordinator - inject into GLP friend input
+    // Handle messages from coordinator - inject into GLP input
     DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
       debugPrint('=== AGENT ${widget.agentId} RECEIVED: ${call.method} ===');
       if (call.method == 'deliver') {
@@ -528,14 +533,23 @@ class _AgentScreenState extends State<AgentScreen> {
 
     if (_ioContext == null || _runtime == null) return;
 
-    // Inject msg(From, Id, Payload) into friend input stream
+    // Find the friend's input injector
+    final friendInputs = _ioContext!.friendInputs;
+    final fromLower = from.toLowerCase();
+    
+    if (!friendInputs.containsKey(fromLower)) {
+      _addOutput('[ERROR] No input channel for friend $from');
+      return;
+    }
+
+    // Inject msg(From, Id, Payload) into that friend's input stream
     final msgTerm = rt.StructTerm('msg', [
-      rt.ConstTerm(from.toLowerCase()),
+      rt.ConstTerm(fromLower),
       rt.ConstTerm(widget.agentId.toLowerCase()),
       rt.ConstTerm(payload),
     ]);
 
-    final activations = _ioContext!.friendInput.inject(msgTerm);
+    final activations = friendInputs[fromLower]!.inject(msgTerm);
     for (final goal in activations) {
       _runtime!.gq.enqueue(goal);
     }
@@ -566,7 +580,7 @@ class _AgentScreenState extends State<AgentScreen> {
   Future<void> _initializeRuntime() async {
     try {
       _addOutput('[INIT] Creating GLP runtime...');
-      _addOutput('[INIT] GLP source: ${widget.glpSource.length} chars');
+      _addOutput('[INIT] Friends: ${widget.friends.join(", ")}');
 
       // Use GLP source passed from coordinator
       final glpSource = widget.glpSource;
@@ -575,14 +589,12 @@ class _AgentScreenState extends State<AgentScreen> {
       _runtime = GlpRuntime();
       registerStandardPredicates(_runtime!.systemPredicates);
 
-      // Create channels
+      // Create user and net channels
       final userChannel = createExternalChannel(_runtime!.heap, 'user');
       final netChannel = createExternalChannel(_runtime!.heap, 'net');
-      final friendChannel = createExternalChannel(_runtime!.heap, 'friend');
 
-      // Create input injectors
+      // Create input injector for user
       final userInput = InputInjector(_runtime!.heap, 'user', userChannel.inputVarId);
-      final friendInput = InputInjector(_runtime!.heap, 'friend', friendChannel.inputVarId);
 
       // Create user output observer - displays to UI
       final userOutput = OutputObserver(
@@ -599,27 +611,45 @@ class _AgentScreenState extends State<AgentScreen> {
         },
       );
 
-      // Create friend output observer - sends to friend via coordinator
-      final friendOutput = OutputObserver(
-        _runtime!.heap,
-        'friend',
-        friendChannel.outputVarId,
-        (term) {
-          _pendingFriendOutputTerms.add(term);
-        },
-        () {
-          debugPrint('=== FRIEND OUTPUT CLOSED ===');
-        },
-      );
+      // Create channels for each friend
+      final friendChannels = <String, ExternalChannel>{};
+      final friendInputs = <String, InputInjector>{};
+      final friendOutputs = <String, OutputObserver>{};
 
-      _ioContext = _FullIOContext(
+      for (final friend in widget.friends) {
+        final friendLower = friend.toLowerCase();
+        final channel = createExternalChannel(_runtime!.heap, friendLower);
+        friendChannels[friendLower] = channel;
+        
+        // Input injector for receiving from this friend
+        friendInputs[friendLower] = InputInjector(
+          _runtime!.heap, 
+          friendLower, 
+          channel.inputVarId,
+        );
+        
+        // Output observer for sending to this friend
+        friendOutputs[friendLower] = OutputObserver(
+          _runtime!.heap,
+          friendLower,
+          channel.outputVarId,
+          (term) {
+            _pendingFriendOutputTerms.putIfAbsent(friendLower, () => []).add(term);
+          },
+          () {
+            debugPrint('=== FRIEND $friendLower OUTPUT CLOSED ===');
+          },
+        );
+      }
+
+      _ioContext = _MultiAgentIOContext(
         userChannel: userChannel,
         netChannel: netChannel,
-        friendChannel: friendChannel,
+        friendChannels: friendChannels,
         userInput: userInput,
-        friendInput: friendInput,
+        friendInputs: friendInputs,
         userOutput: userOutput,
-        friendOutput: friendOutput,
+        friendOutputs: friendOutputs,
       );
 
       // Compile GLP program
@@ -629,11 +659,10 @@ class _AgentScreenState extends State<AgentScreen> {
 
       _addOutput('[INIT] Loaded GLP program');
 
-      // Start goal: agent(Id, FriendName, UserCh, NetCh, FriendOut)
+      // Start goal: agent(Id, FriendPairs, UserCh, NetCh)
       final agentIdLower = widget.agentId.toLowerCase();
-      final friendIdLower = widget.friendId.toLowerCase();
-      _addOutput('[INIT] Starting: agent($agentIdLower, $friendIdLower, ...)');
-      _startAgentGoal(agentIdLower, friendIdLower);
+      _addOutput('[INIT] Starting: agent($agentIdLower, [...], ...)');
+      _startAgentGoal(agentIdLower);
 
       setState(() {
         _initialized = true;
@@ -641,7 +670,8 @@ class _AgentScreenState extends State<AgentScreen> {
         _updateStats();
       });
 
-      _addOutput('[INIT] Ready! Type: send($friendIdLower, ping)');
+      final firstFriend = widget.friends.isNotEmpty ? widget.friends.first.toLowerCase() : 'friend';
+      _addOutput('[INIT] Ready! Type: send($firstFriend, ping)');
     } catch (e, st) {
       _addOutput('[ERROR] $e');
       debugPrint('$st');
@@ -651,7 +681,7 @@ class _AgentScreenState extends State<AgentScreen> {
     }
   }
 
-  void _startAgentGoal(String agentId, String friendId) {
+  void _startAgentGoal(String agentId) {
     if (_runtime == null || _ioContext == null) return;
 
     try {
@@ -662,20 +692,22 @@ class _AgentScreenState extends State<AgentScreen> {
       }
       final combinedProgram = BytecodeProgram(allOps);
 
-      // Find entry point for agent/5
-      final entryPC = combinedProgram.labels['agent/5'];
+      // Find entry point for agent/4
+      final entryPC = combinedProgram.labels['agent/4'];
       if (entryPC == null) {
-        _addOutput('[ERROR] Predicate agent/5 not found');
+        _addOutput('[ERROR] Predicate agent/4 not found');
         return;
       }
 
-      // Set up arguments: agent(Id, FriendName, UserCh, NetCh, FriendOut)
+      // Build FriendPairs list: [(name1, out1), (name2, out2), ...]
+      final friendPairsList = _buildFriendPairsList();
+
+      // Set up arguments: agent(Id, FriendPairs, UserCh, NetCh)
       final argSlots = <int, rt.Term>{
         0: rt.ConstTerm(agentId),
-        1: rt.ConstTerm(friendId),
+        1: friendPairsList,
         2: _ioContext!.userChannelTerm,
         3: _ioContext!.netChannelTerm,
-        4: rt.VarRef(_ioContext!.friendChannel.outputVarId, isReader: false),
       };
 
       // Set up goal environment
@@ -692,7 +724,7 @@ class _AgentScreenState extends State<AgentScreen> {
       _runtime!.gq.enqueue(GoalRef(_goalId, entryPC));
       _goalId++;
 
-      _addOutput('[GOAL] Started agent($agentId, $friendId, ...)');
+      _addOutput('[GOAL] Started agent($agentId, [${widget.friends.join(", ")}], ...)');
 
       // Initial run to set up merge
       _runUntilQuiescent();
@@ -700,6 +732,28 @@ class _AgentScreenState extends State<AgentScreen> {
       _addOutput('[ERROR] Starting goal: $e');
       debugPrint('$st');
     }
+  }
+
+  /// Build GLP list: [(name1, Out1), (name2, Out2), ...]
+  rt.Term _buildFriendPairsList() {
+    rt.Term list = rt.ConstTerm('nil');
+    
+    // Build in reverse order so first friend is at head
+    for (int i = widget.friends.length - 1; i >= 0; i--) {
+      final friendLower = widget.friends[i].toLowerCase();
+      final channel = _ioContext!.friendChannels[friendLower]!;
+      
+      // Create pair: (name, OutStream)
+      final pair = rt.StructTerm(',', [
+        rt.ConstTerm(friendLower),
+        rt.VarRef(channel.outputVarId, isReader: false),
+      ]);
+      
+      // Cons onto list
+      list = rt.StructTerm('.', [pair, list]);
+    }
+    
+    return list;
   }
 
   void _sendInput() {
@@ -827,15 +881,17 @@ class _AgentScreenState extends State<AgentScreen> {
     _pendingUserOutputTerms.clear();
 
     // Process friend output terms - send via coordinator
-    for (final term in _pendingFriendOutputTerms) {
-      final derefTerm = _derefTerm(term);
-      // Expect msg(From, To, Content) from GLP
-      if (derefTerm is rt.StructTerm && derefTerm.functor == 'msg' && derefTerm.args.length == 3) {
-        final to = _termToString(derefTerm.args[1]);
-        final content = _termToString(derefTerm.args[2]);
-        _sendFriendMessage(to, content);
-      } else {
-        _addOutput('[FRIEND OUT] ${_formatTerm(derefTerm)}');
+    for (final entry in _pendingFriendOutputTerms.entries) {
+      for (final term in entry.value) {
+        final derefTerm = _derefTerm(term);
+        // Expect msg(From, To, Content) from GLP
+        if (derefTerm is rt.StructTerm && derefTerm.functor == 'msg' && derefTerm.args.length == 3) {
+          final to = _termToString(derefTerm.args[1]);
+          final content = _termToString(derefTerm.args[2]);
+          _sendFriendMessage(to, content);
+        } else {
+          _addOutput('[FRIEND ${entry.key} OUT] ${_formatTerm(derefTerm)}');
+        }
       }
     }
     _pendingFriendOutputTerms.clear();
@@ -924,13 +980,13 @@ class _AgentScreenState extends State<AgentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.agentId} (friend: ${widget.friendId})'),
+        title: Text('${widget.agentId} (${widget.friends.join(", ")})'),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Center(
               child: Text(
-                'Window ${widget.windowId}',
+                'Win ${widget.windowId}',
                 style: const TextStyle(fontSize: 12),
               ),
             ),
@@ -995,7 +1051,7 @@ class _AgentScreenState extends State<AgentScreen> {
                     enabled: _initialized,
                     decoration: InputDecoration(
                       hintText: _initialized 
-                          ? 'send(${widget.friendId.toLowerCase()}, ping)' 
+                          ? 'send(${widget.friends.isNotEmpty ? widget.friends.first.toLowerCase() : "friend"}, ping)' 
                           : 'Initializing...',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -1057,24 +1113,24 @@ class _AgentScreenState extends State<AgentScreen> {
 // HELPER CLASS
 // ============================================================================
 
-/// Full I/O context with user, network, and friend channels
-class _FullIOContext {
+/// Multi-agent I/O context with user, network, and multiple friend channels
+class _MultiAgentIOContext {
   final ExternalChannel userChannel;
   final ExternalChannel netChannel;
-  final ExternalChannel friendChannel;
+  final Map<String, ExternalChannel> friendChannels;
   final InputInjector userInput;
-  final InputInjector friendInput;
+  final Map<String, InputInjector> friendInputs;
   final OutputObserver userOutput;
-  final OutputObserver friendOutput;
+  final Map<String, OutputObserver> friendOutputs;
 
-  _FullIOContext({
+  _MultiAgentIOContext({
     required this.userChannel,
     required this.netChannel,
-    required this.friendChannel,
+    required this.friendChannels,
     required this.userInput,
-    required this.friendInput,
+    required this.friendInputs,
     required this.userOutput,
-    required this.friendOutput,
+    required this.friendOutputs,
   });
 
   rt.Term get userChannelTerm => buildChannelTerm(userChannel);
@@ -1082,6 +1138,8 @@ class _FullIOContext {
 
   void dispose() {
     userOutput.dispose();
-    friendOutput.dispose();
+    for (final output in friendOutputs.values) {
+      output.dispose();
+    }
   }
 }

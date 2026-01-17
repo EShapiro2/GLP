@@ -67,7 +67,7 @@ TypeEnvironment buildPreludeEnvironment() {
   final parser = Parser(tokens);
   final module = parser.parseModule();
 
-  return _buildEnvironmentFromModule(module, checkRedefinitions: false);
+  return _buildEnvironmentFromModule(module, checkRedefinitions: false, resolveAliasesNow: true);
 }
 
 /// Build TypeEnvironment from a parsed Module
@@ -75,20 +75,28 @@ TypeEnvironment buildPreludeEnvironment() {
 /// Loads prelude first, then merges user definitions.
 /// Throws RedefinitionError if user redefines predefined types/procedures.
 TypeEnvironment buildTypeEnvironment(ast.Module module) {
-  // Load prelude
+  // Load prelude (with aliases resolved)
   final preludeEnv = buildPreludeEnvironment();
 
-  // Build user environment
-  final userEnv = _buildEnvironmentFromModule(module, checkRedefinitions: true);
+  // Build user environment WITHOUT resolving aliases yet
+  final userEnv = _buildEnvironmentFromModule(module, checkRedefinitions: true, resolveAliasesNow: false);
 
   // Merge: prelude first, then user (user can shadow non-predefined)
-  return preludeEnv.merge(userEnv);
+  final merged = preludeEnv.merge(userEnv);
+
+  // Now resolve aliases on the merged environment (so user aliases can reference prelude types)
+  final types = Map<String, TypeDef>.from(merged.types);
+  final procedures = Map<String, ProcDecl>.from(merged.procedures);
+  _resolveAliases(types, procedures);
+
+  return TypeEnvironment(types, procedures);
 }
 
 /// Build TypeEnvironment from Module's type definitions and procedure declarations
 TypeEnvironment _buildEnvironmentFromModule(
   ast.Module module, {
   required bool checkRedefinitions,
+  required bool resolveAliasesNow,
 }) {
   final types = <String, TypeDef>{};
   final procedures = <String, ProcDecl>{};
@@ -134,8 +142,10 @@ TypeEnvironment _buildEnvironmentFromModule(
     }
   }
 
-  // Resolve aliases (preprocessing step per v0.7 spec)
-  _resolveAliases(types, procedures);
+  // Resolve aliases (preprocessing step per v0.8 spec) - only if requested
+  if (resolveAliasesNow) {
+    _resolveAliases(types, procedures);
+  }
 
   return TypeEnvironment(types, procedures);
 }
@@ -171,18 +181,23 @@ bool _isSimpleAlias(TypeDef def) {
   return false;
 }
 
-/// Check if a type definition is a union alias (multiple type references)
+/// Check if a type definition is a union alias (multiple type references to defined types)
 ///
 /// Per spec (type-environment.md v0.8):
-/// Union aliases have multiple alternatives, all of which are TypeRefs:
+/// Union aliases have multiple alternatives, all of which are TypeRefs to defined types:
 /// - Msg ::= NetMsg ; UserMsg.   (union of two message types)
+///
+/// A type like `Constant ::= Number ; String` is NOT a union alias because
+/// Number and String are predefined types, not user-defined types to expand.
 bool _isUnionAlias(TypeDef def) {
   // Must have multiple alternatives
   if (def.alternatives.length < 2) return false;
 
-  // All alternatives must be TypeRefs (not PrimitiveModeAlt)
+  // All alternatives must be TypeRefs to non-predefined types
   for (final alt in def.alternatives) {
     if (alt is! TypeRef) return false;
+    // If it's a predefined type, this is not a union alias
+    if (isPredefinedType(alt.name)) return false;
   }
 
   return true;
@@ -289,6 +304,12 @@ void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedure
         );
       }
 
+      // Check if this is a predefined type - if so, keep the TypeRef as an alternative
+      if (isPredefinedType(ref.name)) {
+        expandedAlts.add(ref);
+        continue;
+      }
+
       // Get the target type definition
       final targetDef = types[ref.name];
       if (targetDef == null) {
@@ -365,6 +386,44 @@ TypeExpr _applyComplement(TypeExpr expr, bool applyComplement, int line, int col
     return PrimitiveModeAlt(!expr.isInput, line, column);
   }
   return expr;
+}
+
+/// Apply complement to all type references within a type alternative.
+/// Used for union alias expansion when the reference is complemented (e.g., Msg ::= NetMsg?).
+TypeExpr _applyComplementToAlt(TypeExpr alt, bool applyComplement, int line, int column) {
+  if (!applyComplement) return alt;
+
+  if (alt is TypeRef) {
+    return TypeRef(alt.name, line, column, isInput: !alt.isInput);
+  } else if (alt is PrimitiveModeAlt) {
+    return PrimitiveModeAlt(!alt.isInput, line, column);
+  } else if (alt is ConstantAlt) {
+    return alt;  // Constants don't have modes
+  } else if (alt is ListNilAlt) {
+    return alt;  // [] doesn't have modes
+  } else if (alt is ListConsAlt) {
+    return ListConsAlt(
+      _applyComplementToAlt(alt.head, true, line, column),
+      _applyComplementToAlt(alt.tail, true, line, column),
+      line,
+      column,
+    );
+  } else if (alt is StructAlt) {
+    return StructAlt(
+      alt.functor,
+      alt.args.map((a) => _applyComplementToAlt(a, true, line, column)).toList(),
+      line,
+      column,
+    );
+  } else if (alt is DiffListAlt) {
+    return DiffListAlt(
+      _applyComplementToAlt(alt.content, true, line, column),
+      _applyComplementToAlt(alt.hole, true, line, column),
+      line,
+      column,
+    );
+  }
+  return alt;
 }
 
 /// Replace alias references in a TypeExpr recursively.

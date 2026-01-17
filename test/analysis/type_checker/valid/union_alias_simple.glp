@@ -1,0 +1,13 @@
+% Test: Basic union alias - simplified
+% Expected: PASS
+
+TypeA ::= a.
+TypeB ::= b.
+
+% Union alias combining two types  
+Union ::= TypeA ; TypeB.
+
+procedure test(Union?).
+
+test(a).
+test(b).
