@@ -79,7 +79,7 @@ Type definitions must introduce **new structure**, not rename existing types.
 ```
 Output ::= _.             % alias for primitive
 Input ::= _?.             % alias for primitive
-MyList ::= List.          % alias for defined type
+MyStream ::= Stream.     % alias for defined type
 MyStream ::= Stream?.     % alias for complement of defined type
 ```
 
@@ -524,10 +524,10 @@ Integer ::= 0 ; succ(Integer).
 ### Example: INVALID — Type Alias
 
 ```
-MyList ::= Stream.
+MyStream ::= Stream.
 ```
 
-**Error:** `TypeAliasError("Type definition must introduce structure, not alias: MyList")`
+**Error:** `TypeAliasError("Type definition must introduce structure, not alias: MyStream")`
 
 ### Example: INVALID — Type Alias to Primitive
 

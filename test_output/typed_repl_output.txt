@@ -17,7 +17,7 @@ PASS: positive/process_complete
 PASS: positive/paper/merge
 PASS: positive/disjoint_primitives
 PASS: positive/book/universal_accepts_structured
-PASS: valid/append
+FAIL: valid/append (loading error)
 PASS: valid/counter
 PASS: valid/simple_io
 PASS: valid/embedded/counter_show
@@ -47,105 +47,105 @@ PASS: recursive/arithmetic_trees/times
 PASS: recursive/arithmetic_trees/min
 PASS: recursive/arithmetic_trees/exp
 PASS: recursive/arithmetic_trees/ackermann
-FAIL: recursive/arithmetic_trees/primes (unexpected type errors)
-FAIL: recursive/arithmetic_trees/sum_list (loading error)
-PASS: recursive/list_processing/append
-FAIL: recursive/list_processing/bubble_sort (unexpected type errors)
-PASS: recursive/list_processing/copy
-PASS: recursive/list_processing/delete
-FAIL: recursive/list_processing/dl_append (unexpected type errors)
-FAIL: recursive/list_processing/filter_even (unexpected type errors)
-PASS: recursive/list_processing/flatten
+PASS: recursive/arithmetic_trees/primes
+PASS: recursive/arithmetic_trees/sum_list
+FAIL: recursive/list_processing/append (loading error)
+PASS: recursive/list_processing/bubble_sort
+FAIL: recursive/list_processing/copy (loading error)
+FAIL: recursive/list_processing/delete (loading error)
+PASS: recursive/list_processing/dl_append
+PASS: recursive/list_processing/filter_even
+FAIL: recursive/list_processing/flatten (loading error)
 PASS: recursive/list_processing/inner_product
 PASS: recursive/list_processing/inner_product_iter
 PASS: recursive/list_processing/insertion_sort
-PASS: recursive/list_processing/is_list
-PASS: recursive/list_processing/length
+FAIL: recursive/list_processing/is_list (loading error)
+FAIL: recursive/list_processing/length (loading error)
 PASS: recursive/list_processing/map_inc
-FAIL: recursive/list_processing/maxlist (unexpected type errors)
-FAIL: recursive/list_processing/member (unexpected type errors)
-FAIL: recursive/list_processing/merge_ordered (unexpected type errors)
+PASS: recursive/list_processing/maxlist
+FAIL: recursive/list_processing/member (loading error)
+FAIL: recursive/list_processing/merge_ordered (loading error)
 PASS: recursive/list_processing/merge_sort
-FAIL: recursive/list_processing/nth (unexpected type errors)
-FAIL: recursive/list_processing/polygon_area (unexpected type errors)
-PASS: recursive/list_processing/prefix
+FAIL: recursive/list_processing/nth (loading error)
+PASS: recursive/list_processing/polygon_area
+FAIL: recursive/list_processing/prefix (loading error)
 PASS: recursive/list_processing/quicksort
-PASS: recursive/list_processing/reverse
-PASS: recursive/list_processing/reverse_naive
+FAIL: recursive/list_processing/reverse (loading error)
+FAIL: recursive/list_processing/reverse_naive (loading error)
 PASS: recursive/list_processing/translate
-PASS: recursive/list_processing/variants/flatten_original
+FAIL: recursive/list_processing/variants/flatten_original (loading error)
 PASS: recursive/list_processing/variants/quicksort_original
-FAIL: recursive/structure_processing/ancestor (unexpected type errors)
+FAIL: recursive/structure_processing/ancestor (unknown failure)
 PASS: recursive/structure_processing/binary_tree
-FAIL: recursive/structure_processing/distribute_nonground (unexpected type errors)
+FAIL: recursive/structure_processing/distribute_nonground (loading error)
 FAIL: recursive/structure_processing/heapify (loading error)
-FAIL: recursive/structure_processing/list_to_bst (unexpected type errors)
-FAIL: recursive/structure_processing/observe (unexpected type errors)
-FAIL: recursive/structure_processing/observe_minimal (unexpected type errors)
-FAIL: recursive/structure_processing/observe_play (unexpected type errors)
-FAIL: recursive/structure_processing/substitute (unexpected type errors)
-FAIL: recursive/structure_processing/traversals (unexpected type errors)
+FAIL: recursive/structure_processing/list_to_bst (loading error)
+FAIL: recursive/structure_processing/observe (loading error)
+FAIL: recursive/structure_processing/observe_minimal (loading error)
+FAIL: recursive/structure_processing/observe_play (loading error)
+PASS: recursive/structure_processing/substitute
+FAIL: recursive/structure_processing/traversals (loading error)
 PASS: recursive/structure_processing/tree_sum
-FAIL: streams/producers_consumers/biased_merge (unexpected type errors)
-FAIL: streams/producers_consumers/channels (unexpected type errors)
-FAIL: streams/producers_consumers/cooperative (unexpected type errors)
-FAIL: streams/producers_consumers/cooperative_producers (unexpected type errors)
-PASS: streams/producers_consumers/distribute
-PASS: streams/producers_consumers/distribute_binary
-PASS: streams/producers_consumers/distribute_ground
-PASS: streams/producers_consumers/distribute_indexed
-FAIL: streams/producers_consumers/dynamic_merger (unexpected type errors)
-PASS: streams/producers_consumers/fair_merge
-PASS: streams/producers_consumers/merge_dynamic
-PASS: streams/producers_consumers/merge_simple
-FAIL: streams/producers_consumers/merge_tree (unexpected type errors)
+FAIL: streams/producers_consumers/biased_merge (loading error)
+FAIL: streams/producers_consumers/channels (loading error)
+FAIL: streams/producers_consumers/cooperative (loading error)
+FAIL: streams/producers_consumers/cooperative_producers (loading error)
+FAIL: streams/producers_consumers/distribute (loading error)
+FAIL: streams/producers_consumers/distribute_binary (loading error)
+FAIL: streams/producers_consumers/distribute_ground (loading error)
+FAIL: streams/producers_consumers/distribute_indexed (loading error)
+FAIL: streams/producers_consumers/dynamic_merger (loading error)
+FAIL: streams/producers_consumers/fair_merge (loading error)
+FAIL: streams/producers_consumers/merge_dynamic (loading error)
+FAIL: streams/producers_consumers/merge_simple (loading error)
+FAIL: streams/producers_consumers/merge_tree (loading error)
 FAIL: streams/producers_consumers/mwm (loading error)
-FAIL: streams/producers_consumers/observer (unexpected type errors)
-FAIL: streams/producers_consumers/observers (unexpected type errors)
+FAIL: streams/producers_consumers/observer (loading error)
+FAIL: streams/producers_consumers/observers (loading error)
 FAIL: streams/producers_consumers/parallel_table (unexpected type errors)
 PASS: streams/producers_consumers/producer_consumer
 PASS: streams/producers_consumers/producer_consumer_countdown
-FAIL: streams/buffered_communication/bounded_buffer (unexpected type errors)
+FAIL: streams/buffered_communication/bounded_buffer (loading error)
 FAIL: streams/buffered_communication/bounded_buffer_original (loading error)
-FAIL: streams/buffered_communication/switch2x2 (unexpected type errors)
+FAIL: streams/buffered_communication/switch2x2 (loading error)
 PASS: streams/objects_monitors/counter
-FAIL: streams/objects_monitors/many_counters (unexpected type errors)
+FAIL: streams/objects_monitors/many_counters (loading error)
 PASS: streams/objects_monitors/monitor
-FAIL: streams/objects_monitors/monitor_test (unexpected type errors)
+PASS: streams/objects_monitors/monitor_test
 FAIL: streams/objects_monitors/network_switch (loading error)
 FAIL: streams/objects_monitors/network_switch_3way (loading error)
 FAIL: streams/objects_monitors/observed_monitor (loading error)
 FAIL: streams/objects_monitors/play_absolute (loading error)
 PASS: streams/objects_monitors/plus_constraint
-FAIL: streams/objects_monitors/queue_manager (unexpected type errors)
+FAIL: streams/objects_monitors/queue_manager (loading error)
 PASS: constants/circuits
 PASS: constants/gates
 PASS: constants/gates_simple
-FAIL: meta/plain/certainty_meta (unexpected type errors)
+PASS: meta/plain/certainty_meta
 FAIL: meta/plain/failsafe_meta (unexpected type errors)
-PASS: meta/plain/plain_meta
+FAIL: meta/plain/plain_meta (loading error)
 FAIL: meta/enhanced/abortable_meta (unexpected type errors)
 FAIL: meta/enhanced/control_meta (unexpected type errors)
 FAIL: meta/enhanced/snapshot_meta (unexpected type errors)
-FAIL: meta/enhanced/snapshot_meta_cp (unexpected type errors)
+FAIL: meta/enhanced/snapshot_meta_cp (loading error)
 FAIL: meta/enhanced/termination_detection_meta (unexpected type errors)
 FAIL: meta/enhanced/termination_meta (loading error)
 PASS: meta/enhanced/timestamped_tree_meta
 FAIL: meta/enhanced/tracing_meta (unexpected type errors)
-FAIL: meta/debugging/runtime_control_meta (unexpected type errors)
+FAIL: meta/debugging/runtime_control_meta (loading error)
 FAIL: modules/main_module (unexpected type errors)
 PASS: modules/math_module
-FAIL: social_graph/agent (unexpected type errors)
-FAIL: social_graph/agent_full (unexpected type errors)
-FAIL: social_graph/agent_simple (unexpected type errors)
+FAIL: social_graph/agent (loading error)
+FAIL: social_graph/agent_full (loading error)
+FAIL: social_graph/agent_simple (loading error)
 FAIL: social_graph/attestation_guards (unexpected type errors)
-PASS: social_graph/channel
+FAIL: social_graph/channel (loading error)
 FAIL: social_graph/cold_call (unexpected type errors)
-FAIL: social_graph/friend_introduction (unexpected type errors)
-FAIL: social_graph/network (unexpected type errors)
-FAIL: social_graph/network2 (unexpected type errors)
-FAIL: social_graph/network3 (unexpected type errors)
-FAIL: social_graph/network4 (unexpected type errors)
+FAIL: social_graph/friend_introduction (loading error)
+FAIL: social_graph/network (loading error)
+FAIL: social_graph/network2 (loading error)
+FAIL: social_graph/network3 (loading error)
+FAIL: social_graph/network4 (loading error)
 FAIL: social_graph/play_4agent (loading error)
 FAIL: social_graph/play_4agents (loading error)
 FAIL: social_graph/play_alice_bob (loading error)
@@ -154,13 +154,13 @@ FAIL: social_graph/play_introduction (loading error)
 FAIL: social_graph/plays/play01_cold_call/alice (loading error)
 FAIL: social_graph/plays/play01_cold_call/bob (loading error)
 FAIL: social_graph/plays/play01_cold_call/main (loading error)
-FAIL: social_graph/response_handling (unexpected type errors)
-FAIL: social_graph/response_handling_unfolded (unexpected type errors)
-FAIL: social_graph/stream_security (unexpected type errors)
-FAIL: social_graph/streams (unexpected type errors)
-PASS: social_graph/test_4player
-PASS: social_networks/broadcast
-FAIL: social_networks/direct_messaging (unexpected type errors)
+FAIL: social_graph/response_handling (loading error)
+FAIL: social_graph/response_handling_unfolded (loading error)
+FAIL: social_graph/stream_security (loading error)
+FAIL: social_graph/streams (loading error)
+FAIL: social_graph/test_4player (loading error)
+FAIL: social_networks/broadcast (loading error)
+FAIL: social_networks/direct_messaging (loading error)
 FAIL: social_networks/dm_simple (loading error)
 FAIL: social_networks/feed (loading error)
 FAIL: social_networks/feed_server (loading error)
@@ -176,12 +176,12 @@ FAIL: social_networks/play_group_manager (loading error)
 FAIL: social_networks/replicate (unexpected type errors)
 PASS: social_networks/replicate2
 PASS: social_networks/replicate3
-FAIL: constitutional_consensus/consensus (unexpected type errors)
-FAIL: constitutional_consensus/play_agents (unexpected type errors)
-FAIL: constitutional_consensus/play_high_throughput (unexpected type errors)
-FAIL: constitutional_consensus/play_low_throughput (unexpected type errors)
-FAIL: constitutional_consensus/test_blocklace (unexpected type errors)
-FAIL: constitutional_consensus/test_waves (unexpected type errors)
+FAIL: constitutional_consensus/consensus (loading error)
+FAIL: constitutional_consensus/play_agents (loading error)
+FAIL: constitutional_consensus/play_high_throughput (loading error)
+FAIL: constitutional_consensus/play_low_throughput (loading error)
+FAIL: constitutional_consensus/test_blocklace (loading error)
+FAIL: constitutional_consensus/test_waves (loading error)
 FAIL: cryptocurrencies/gc (loading error)
 FAIL: cryptocurrencies/play_mutual_credit (loading error)
 FAIL: cryptocurrencies/play_payment (loading error)
@@ -212,11 +212,11 @@ PASS: writer_at_output (rejected: type errors)
 PASS: call_mode_mismatch (rejected: type errors)
 PASS: embedded_mode_error (rejected: type errors)
 PASS: counter_wrong_mode (rejected: type errors)
-PASS: accumulator_wrong_mode (rejected: loading error)
+PASS: accumulator_wrong_mode (rejected: SRSW violation)
 PASS: channel_wrong_inversion (rejected: SRSW violation)
 PASS: correct_type_wrong_annotation (rejected: loading error)
 PASS: double_nesting_error (rejected: loading error)
-PASS: list_tail_mode_error (rejected: loading error)
+PASS: list_tail_mode_error (rejected: SRSW violation)
 PASS: mixed_clauses (rejected: SRSW violation)
 PASS: nested_struct_wrong_mode (rejected: loading error)
 PASS: pair_list_wrong_mode (rejected: SRSW violation)
@@ -233,107 +233,119 @@ PASS: merge_reader_at_input (rejected: loading error)
 PASS: merge_writer_at_output (rejected: loading error)
 
 ======================================
-Total: 222 | Passed: 124 | Failed: 98
+Total: 222 | Passed: 112 | Failed: 110
 ======================================
 
 Failed positive tests (need investigation):
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/primes.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/arithmetic_trees/sum_list.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/bubble_sort.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/dl_append.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/filter_even.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/maxlist.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/member.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/merge_ordered.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/nth.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/list_processing/polygon_area.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/structure_processing/ancestor.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/structure_processing/distribute_nonground.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/structure_processing/heapify.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/structure_processing/list_to_bst.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/structure_processing/observe.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/structure_processing/observe_minimal.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/structure_processing/observe_play.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/structure_processing/substitute.glp
-  - /Users/udi/GLP/test/../programs/typed_book/recursive/structure_processing/traversals.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/biased_merge.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/channels.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/cooperative.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/cooperative_producers.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/dynamic_merger.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/merge_tree.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/mwm.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/observer.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/observers.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/producers_consumers/parallel_table.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/buffered_communication/bounded_buffer.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/buffered_communication/bounded_buffer_original.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/buffered_communication/switch2x2.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/objects_monitors/many_counters.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/objects_monitors/monitor_test.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/objects_monitors/network_switch.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/objects_monitors/network_switch_3way.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/objects_monitors/observed_monitor.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/objects_monitors/play_absolute.glp
-  - /Users/udi/GLP/test/../programs/typed_book/streams/objects_monitors/queue_manager.glp
-  - /Users/udi/GLP/test/../programs/typed_book/meta/plain/certainty_meta.glp
-  - /Users/udi/GLP/test/../programs/typed_book/meta/plain/failsafe_meta.glp
-  - /Users/udi/GLP/test/../programs/typed_book/meta/enhanced/abortable_meta.glp
-  - /Users/udi/GLP/test/../programs/typed_book/meta/enhanced/control_meta.glp
-  - /Users/udi/GLP/test/../programs/typed_book/meta/enhanced/snapshot_meta.glp
-  - /Users/udi/GLP/test/../programs/typed_book/meta/enhanced/snapshot_meta_cp.glp
-  - /Users/udi/GLP/test/../programs/typed_book/meta/enhanced/termination_detection_meta.glp
-  - /Users/udi/GLP/test/../programs/typed_book/meta/enhanced/termination_meta.glp
-  - /Users/udi/GLP/test/../programs/typed_book/meta/enhanced/tracing_meta.glp
-  - /Users/udi/GLP/test/../programs/typed_book/meta/debugging/runtime_control_meta.glp
-  - /Users/udi/GLP/test/../programs/typed_book/modules/main_module.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/agent.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/agent_full.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/agent_simple.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/attestation_guards.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/cold_call.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/friend_introduction.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/network.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/network2.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/network3.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/network4.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/play_4agent.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/play_4agents.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/play_alice_bob.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/play_cold_call.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/play_introduction.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/plays/play01_cold_call/alice.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/plays/play01_cold_call/bob.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/plays/play01_cold_call/main.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/response_handling.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/response_handling_unfolded.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/stream_security.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_graph/streams.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_networks/direct_messaging.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_networks/dm_simple.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_networks/feed.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_networks/feed_server.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_networks/follower_mgmt.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_networks/group_formation.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_networks/group_messaging.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_networks/interlaced_streams.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_networks/play_child_safe.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_networks/play_dm.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_networks/play_feed.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_networks/play_group_interlaced.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_networks/play_group_manager.glp
-  - /Users/udi/GLP/test/../programs/typed_book/social_networks/replicate.glp
-  - /Users/udi/GLP/test/../programs/typed_book/constitutional_consensus/consensus.glp
-  - /Users/udi/GLP/test/../programs/typed_book/constitutional_consensus/play_agents.glp
-  - /Users/udi/GLP/test/../programs/typed_book/constitutional_consensus/play_high_throughput.glp
-  - /Users/udi/GLP/test/../programs/typed_book/constitutional_consensus/play_low_throughput.glp
-  - /Users/udi/GLP/test/../programs/typed_book/constitutional_consensus/test_blocklace.glp
-  - /Users/udi/GLP/test/../programs/typed_book/constitutional_consensus/test_waves.glp
-  - /Users/udi/GLP/test/../programs/typed_book/cryptocurrencies/gc.glp
-  - /Users/udi/GLP/test/../programs/typed_book/cryptocurrencies/play_mutual_credit.glp
-  - /Users/udi/GLP/test/../programs/typed_book/cryptocurrencies/play_payment.glp
-  - /Users/udi/GLP/test/../programs/typed_book/cryptocurrencies/play_redemption.glp
-  - /Users/udi/GLP/test/../programs/typed_book/cryptocurrencies/test_balance.glp
-  - /Users/udi/GLP/test/../programs/typed_book/cryptocurrencies/test_repayments.glp
+  - /Users/udi/Grassroots/GLP/test/../glp_runtime/test/programs/moded_types/valid/append.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/list_processing/append.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/list_processing/copy.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/list_processing/delete.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/list_processing/flatten.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/list_processing/is_list.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/list_processing/length.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/list_processing/member.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/list_processing/merge_ordered.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/list_processing/nth.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/list_processing/prefix.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/list_processing/reverse.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/list_processing/reverse_naive.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/list_processing/variants/flatten_original.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/structure_processing/ancestor.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/structure_processing/distribute_nonground.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/structure_processing/heapify.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/structure_processing/list_to_bst.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/structure_processing/observe.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/structure_processing/observe_minimal.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/structure_processing/observe_play.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/recursive/structure_processing/traversals.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/biased_merge.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/channels.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/cooperative.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/cooperative_producers.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/distribute.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/distribute_binary.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/distribute_ground.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/distribute_indexed.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/dynamic_merger.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/fair_merge.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/merge_dynamic.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/merge_simple.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/merge_tree.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/mwm.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/observer.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/observers.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/producers_consumers/parallel_table.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/buffered_communication/bounded_buffer.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/buffered_communication/bounded_buffer_original.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/buffered_communication/switch2x2.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/objects_monitors/many_counters.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/objects_monitors/network_switch.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/objects_monitors/network_switch_3way.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/objects_monitors/observed_monitor.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/objects_monitors/play_absolute.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/streams/objects_monitors/queue_manager.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/meta/plain/failsafe_meta.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/meta/plain/plain_meta.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/meta/enhanced/abortable_meta.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/meta/enhanced/control_meta.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/meta/enhanced/snapshot_meta.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/meta/enhanced/snapshot_meta_cp.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/meta/enhanced/termination_detection_meta.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/meta/enhanced/termination_meta.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/meta/enhanced/tracing_meta.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/meta/debugging/runtime_control_meta.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/modules/main_module.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/agent.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/agent_full.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/agent_simple.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/attestation_guards.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/channel.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/cold_call.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/friend_introduction.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/network.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/network2.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/network3.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/network4.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/play_4agent.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/play_4agents.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/play_alice_bob.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/play_cold_call.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/play_introduction.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/plays/play01_cold_call/alice.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/plays/play01_cold_call/bob.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/plays/play01_cold_call/main.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/response_handling.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/response_handling_unfolded.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/stream_security.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/streams.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/test_4player.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_networks/broadcast.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_networks/direct_messaging.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_networks/dm_simple.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_networks/feed.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_networks/feed_server.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_networks/follower_mgmt.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_networks/group_formation.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_networks/group_messaging.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_networks/interlaced_streams.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_networks/play_child_safe.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_networks/play_dm.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_networks/play_feed.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_networks/play_group_interlaced.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_networks/play_group_manager.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_networks/replicate.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/constitutional_consensus/consensus.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/constitutional_consensus/play_agents.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/constitutional_consensus/play_high_throughput.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/constitutional_consensus/play_low_throughput.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/constitutional_consensus/test_blocklace.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/constitutional_consensus/test_waves.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/cryptocurrencies/gc.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/cryptocurrencies/play_mutual_credit.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/cryptocurrencies/play_payment.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/cryptocurrencies/play_redemption.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/cryptocurrencies/test_balance.glp
+  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/cryptocurrencies/test_repayments.glp
 
 SOME TESTS FAILED - see above for details

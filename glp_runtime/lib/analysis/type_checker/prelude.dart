@@ -17,9 +17,9 @@ const String typePrelude = r'''
 % =============================================================================
 
 % Collections
-List ::= [_ | List] ; [].
-Stream ::= [_ | Stream] ; [].
-DiffList ::= List \ List?.
+Stream ::= [] ; [_|Stream].
+OpenStream ::= [_|Stream].
+DiffList ::= Stream \ Stream?.
 
 % Communication
 Channel ::= ch(Stream?, Stream).
@@ -44,7 +44,7 @@ procedure string(String?).
 procedure atom(String?).
 procedure constant(Constant?).
 procedure compound(_?).
-procedure is_list(List?).
+procedure is_list(Stream?).
 
 % Groundness guards
 procedure ground(_?).
@@ -63,15 +63,15 @@ procedure =\=(Exp?, Exp?).
 procedure =?=(_?, _?).
 
 % Univ operations (term ↔ list conversion)
-procedure =..(_, List?).      % Compose: List? → Compound
-procedure ..=(List, _?).      % Decompose: Compound? → List
+procedure =..(_, Stream?).      % Compose: Stream? → Compound
+procedure ..=(Stream, _?).      % Decompose: Compound? → Stream
 
 % Unification
 procedure =(_, _?).
 
 % Difference list operations
 procedure dl_append(DiffList?, DiffList?, DiffList).
-procedure dl_to_list(DiffList?, List).
+procedure dl_to_list(DiffList?, Stream).
 
 % Channel operations
 procedure new_channel(Channel, Channel).
@@ -105,8 +105,8 @@ const Set<String> predefinedTypeNames = {
   'String',   // Primitive builtin
   'Constant', // Primitive builtin (Number ; String)
   'Exp',      // Arithmetic expression type
-  'List',     // Fundamental collection type
   'Stream',   // Fundamental collection type
+  'OpenStream', // Non-empty stream
   // Note: DiffList, Channel are NOT protected - they are library-level
 };
 

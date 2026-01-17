@@ -31,9 +31,8 @@ client1(V1, [add(5), add(3), value(V1?)|Xs?]) :- client1_cont(Xs).
 client1_cont([]).
 
 % Client 2: delayed by 100ms - uses body list construction
-client2(V, Ys?) :-
+client2(V, [add(10), subtract(2), value(V?)|Ys1?]) :-
     wait(100) |
-    Ys = [add(10), subtract(2), value(V?)|Ys1?],
     client2_cont(Ys1).
 client2_cont([]).
 
@@ -51,8 +50,8 @@ monitor_loop([add(N)|Reqs], Sum) :-
     Sum1 := Sum? + N?, monitor_loop(Reqs?, Sum1?).
 monitor_loop([subtract(N)|Reqs], Sum) :-
     Sum1 := Sum? - N?, monitor_loop(Reqs?, Sum1?).
-monitor_loop([value(V?)|Reqs], Sum) :-
-    ground(Sum?) | V = Sum?, monitor_loop(Reqs?, Sum?).
+monitor_loop([value(Sum?)|Reqs], Sum) :-
+    ground(Sum?) | monitor_loop(Reqs?, Sum?).
 monitor_loop([], _).
 
 % Fair binary merge
