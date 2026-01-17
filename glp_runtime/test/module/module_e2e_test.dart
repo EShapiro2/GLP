@@ -78,7 +78,8 @@ void main() {
 
     /// Load stdlib bytecode for arithmetic operations
     BytecodeProgram loadStdlib() {
-      final stdlibSource = File('/home/user/GLP/glp/stdlib/assign.glp').readAsStringSync();
+      // Use relative path from glp_runtime directory
+      final stdlibSource = File('../programs/stdlib/assign.glp').readAsStringSync();
       final compiler = GlpCompiler();
       return compiler.compile(stdlibSource);
     }
@@ -1013,7 +1014,8 @@ factorial(N, F?) :- N? > 0 | N1 := N? - 1, factorial(N1?, F1), F := N? * F1?.
 
       // Verify the module can actually execute
       // Merge with stdlib for := support
-      final stdlibSource = File('/home/user/GLP/glp/stdlib/assign.glp').readAsStringSync();
+      // Use relative path from glp_runtime directory
+      final stdlibSource = File('../programs/stdlib/assign.glp').readAsStringSync();
       final compiler = GlpCompiler();
       final stdlib = compiler.compile(stdlibSource);
       final mergedBytecode = module.bytecode.merge(stdlib);

@@ -621,12 +621,19 @@ class TypeChecker {
 ///
 /// This is the primary entry point for type checking.
 /// The module should be parsed using the main parser.
-TypeCheckResult checkModule(ast.Module module) {
+/// 
+/// If transformedProcedures is provided, uses those instead of module.procedures.
+/// This allows running partial evaluation (defined guard expansion) before type checking.
+TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures}) {
   // Build type environment from module (includes prelude)
   final typeEnv = buildTypeEnvironment(module);
 
-  // Extract clauses from module's procedures
-  final clauses = extractClauses(module);
+  // Extract clauses - from transformed procedures if provided, otherwise from module
+  final clauses = <ast.Clause>[];
+  final procedures = transformedProcedures ?? module.procedures;
+  for (final proc in procedures) {
+    clauses.addAll(proc.clauses);
+  }
 
   // Run type checker
   final checker = TypeChecker(typeEnv);

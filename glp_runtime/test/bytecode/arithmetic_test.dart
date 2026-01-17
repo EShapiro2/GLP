@@ -13,7 +13,8 @@ void main() {
 
   setUpAll(() {
     // Compile assign.glp - now SRSW compliant
-    final stdlibSource = File('/home/user/GLP/glp/stdlib/assign.glp').readAsStringSync();
+    // Use relative path from glp_runtime directory
+    final stdlibSource = File('../programs/stdlib/assign.glp').readAsStringSync();
     final stdlibCompiler = GlpCompiler();
     stdlibProg = stdlibCompiler.compile(stdlibSource);
     print('Stdlib compiled: ${stdlibProg.ops.length} instructions');
@@ -216,7 +217,8 @@ void main() {
   group('End-to-end := system predicate', () {
     test('assign.glp compiles and merges correctly', () {
       // Load stdlib (assign.glp) - now SRSW compliant
-      final stdlibSource = File('/home/user/GLP/glp/stdlib/assign.glp').readAsStringSync();
+      // Use relative path from glp_runtime directory
+      final stdlibSource = File('../programs/stdlib/assign.glp').readAsStringSync();
       final stdlibCompiler = GlpCompiler();
       final stdlibProg = stdlibCompiler.compile(stdlibSource);
 
@@ -259,7 +261,8 @@ void main() {
       print('\n=== END-TO-END ARITHMETIC TEST ===');
 
       // Load stdlib (assign.glp) - now SRSW compliant
-      final stdlibSource = File('/home/user/GLP/glp/stdlib/assign.glp').readAsStringSync();
+      // Use relative path from glp_runtime directory
+      final stdlibSource = File('../programs/stdlib/assign.glp').readAsStringSync();
       final stdlibCompiler = GlpCompiler();
       final stdlibProg = stdlibCompiler.compile(stdlibSource);
 

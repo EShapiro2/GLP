@@ -71,11 +71,17 @@ class GlpCompiler {
       // Convert Module to Program for analyzer
       final ast = Program(module.procedures, module.line, module.column);
 
+      // Phase 2.4: Apply partial evaluation (defined guard expansion) BEFORE type checking
+      // This transforms clauses to unfold unit clause guards, which affects coverage checking
+      final partialEvaluator = PartialEvaluator();
+      final transformedAst = partialEvaluator.transformDefinedGuards(ast);
+
       // Phase 2.5: Type checking (optional)
       if (opts.typeCheck) {
         try {
-          // Use checkModule which builds TypeEnvironment from Module AST
-          final typeResult = checkModule(module);
+          // Use checkModule with transformed procedures
+          // This ensures type checking sees the expanded guards
+          final typeResult = checkModule(module, transformedProcedures: transformedAst.procedures);
 
           // Report type errors and warnings
           if (typeResult.errors.isNotEmpty) {
