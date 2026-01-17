@@ -1,0 +1,10 @@
+% Test: Difference List Append
+% Paper: Appendix A.5
+% Description: O(1) list append using difference lists
+% Tests interactive DiffList type with embedded modes
+
+MyStream ::= [] ; [_|MyStream].
+MyDiffList ::= MyStream? \ MyStream.
+
+procedure my_dl_append(MyDiffList?, MyDiffList?, MyDiffList).
+my_dl_append(A\B?, B\C?, A?\C).

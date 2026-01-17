@@ -1,0 +1,16 @@
+% Test: Bidirectional Channel
+% Paper: Appendix A.6
+% Description: Two-way communication channel with send/receive
+% Tests interactive Channel type with complementary streams
+
+MyStream ::= [] ; [_|MyStream].
+MyChannel ::= ch(MyStream?, MyStream).
+
+procedure my_new_channel(MyChannel, MyChannel).
+my_new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+procedure my_send(_, MyChannel?, MyChannel).
+my_send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+
+procedure my_receive(_?, MyChannel?, MyChannel).
+my_receive(X?, ch([X|In], Out?), ch(In?, Out)).

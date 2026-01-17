@@ -1,0 +1,14 @@
+% Test: Bounded Buffer
+% Paper: Appendix A.3
+% Description: Producer-consumer with hollow integers (back-pressure)
+% Tests embedded input type (Integer? slots filled by consumer)
+
+HollowIntegers ::= [Integer?|HollowIntegers].
+
+procedure consumer(HollowIntegers).
+consumer([X1, X2, X3 | Xs?]) :- 
+    integer(X1?) | consumer([X2?, X3? | Xs]).
+
+procedure producer(Integer?, HollowIntegers?).
+producer(N, [N? | Xs]) :- 
+    number(N?) | N1 := N? + 1, producer(N1?, Xs?).
