@@ -110,6 +110,38 @@ run_circular_check "$TEST_DIR/invalid/circular_alias_pair.glp" "Circular pair A-
 run_circular_check "$TEST_DIR/invalid/circular_alias_chain.glp" "Circular chain A->B->C->A rejected"
 
 echo ""
+echo "=== Union Alias Tests (v0.8) ==="
+echo ""
+
+run_type_check "$TEST_DIR/valid/union_alias_basic.glp" "pass" "Basic union alias (two types)"
+run_type_check "$TEST_DIR/valid/union_alias_three.glp" "pass" "Union alias with three types"
+
+echo ""
+echo "=== Union Alias Errors (should fail) ==="
+echo ""
+
+# Helper for union alias errors - checks for error output
+run_union_error_check() {
+    local file="$1"
+    local test_name="$2"
+    local pattern="$3"
+
+    output=$($DART run "$GLPC" --type-check "$file" 2>&1 || true)
+
+    if echo "$output" | grep -qiE "$pattern"; then
+        echo "PASS: $test_name (correctly rejected)"
+        PASS=$((PASS + 1))
+    else
+        echo "FAIL: $test_name (should have alias/determinism error)"
+        echo "      File: $file"
+        FAIL=$((FAIL + 1))
+    fi
+}
+
+run_union_error_check "$TEST_DIR/invalid/union_alias_overlap.glp" "Union alias with overlapping functors" "deterministic|overlap"
+run_union_error_check "$TEST_DIR/invalid/union_alias_refs_alias.glp" "Union alias references another alias" "alias|cannot"
+
+echo ""
 echo "=== Moded Types - Embedded Mode Errors (should fail) ==="
 echo ""
 

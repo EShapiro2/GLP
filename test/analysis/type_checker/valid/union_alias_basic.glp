@@ -1,0 +1,15 @@
+% Test: Basic union alias
+% Expected: PASS - union alias should expand to combined alternatives
+
+NetMsg ::= msg(Constant, Constant, _).
+UserMsg ::= sent(Constant, _) ; received(Constant, _).
+
+% Union alias combining two types
+Msg ::= NetMsg ; UserMsg.
+
+procedure handle(Msg?).
+
+% Should accept any alternative from either type
+handle(msg(From?, To?, Content?)).
+handle(sent(To?, Content?)).
+handle(received(From?, Content?)).

@@ -4,7 +4,7 @@
 // Loads prelude, merges with user definitions, validates.
 // Resolves type aliases at preprocessing time.
 //
-// Specification: docs/modules/type-environment.md v0.7
+// Specification: docs/modules/type-environment.md v0.8
 
 import 'type_ast.dart';
 import 'prelude.dart';
@@ -43,6 +43,18 @@ class NonDeterministicTypeError implements Exception {
   final int column;
 
   NonDeterministicTypeError(this.message, this.line, this.column);
+
+  @override
+  String toString() => '$message at line $line, column $column';
+}
+
+/// Error for union alias expansion failure
+class AliasExpansionError implements Exception {
+  final String message;
+  final int line;
+  final int column;
+
+  AliasExpansionError(this.message, this.line, this.column);
 
   @override
   String toString() => '$message at line $line, column $column';
@@ -137,63 +149,83 @@ List<ast.Clause> extractClauses(ast.Module module) {
   return clauses;
 }
 
-/// Check if a type definition is an alias (no new structure introduced)
+/// Check if a type definition is a simple alias (single type reference)
 /// 
-/// Per spec (type-environment.md v0.7):
-/// Type aliases are permitted for documentation and readability.
-/// They are resolved at preprocessing time.
-/// 
-/// Aliases are:
+/// Per spec (type-environment.md v0.8):
+/// Simple aliases have a single alternative that is a TypeRef or PrimitiveModeAlt:
 /// - Output ::= _.         (alias for primitive wildcard)
 /// - Input ::= _?.          (alias for primitive wildcard complement)  
 /// - MyList ::= List.       (alias for defined type)
 /// - MyStream ::= Stream?.  (alias for complement of defined type)
-bool _isTypeAlias(TypeDef def) {
-  // Multiple alternatives = not an alias (introduces structure through alternatives)
+bool _isSimpleAlias(TypeDef def) {
   if (def.alternatives.length != 1) return false;
 
   final alt = def.alternatives.first;
 
-  // Single PrimitiveModeAlt (_ or _?) = alias
+  // Single PrimitiveModeAlt (_ or _?) = simple alias
   if (alt is PrimitiveModeAlt) return true;
 
-  // Single TypeRef (T or T?) = alias
+  // Single TypeRef (T or T?) = simple alias
   if (alt is TypeRef) return true;
 
-  // Compound structures introduce new structure:
-  // ConstantAlt, ListNilAlt, ListConsAlt, StructAlt, DiffListAlt
   return false;
+}
+
+/// Check if a type definition is a union alias (multiple type references)
+///
+/// Per spec (type-environment.md v0.8):
+/// Union aliases have multiple alternatives, all of which are TypeRefs:
+/// - Msg ::= NetMsg ; UserMsg.   (union of two message types)
+bool _isUnionAlias(TypeDef def) {
+  // Must have multiple alternatives
+  if (def.alternatives.length < 2) return false;
+
+  // All alternatives must be TypeRefs (not PrimitiveModeAlt)
+  for (final alt in def.alternatives) {
+    if (alt is! TypeRef) return false;
+  }
+
+  return true;
+}
+
+/// Check if a type definition is any kind of alias
+bool _isTypeAlias(TypeDef def) {
+  return _isSimpleAlias(def) || _isUnionAlias(def);
 }
 
 /// Resolve type aliases at preprocessing time.
 ///
-/// Per spec (type-environment.md v0.7):
-/// Aliases are fully resolved during preprocessing. Every occurrence of an
-/// alias name is replaced by its target type. The type checker operates only
-/// on resolved types. Circular alias chains are detected and rejected.
+/// Per spec (type-environment.md v0.8):
+/// - Simple aliases are resolved transitively and replaced everywhere
+/// - Union aliases are expanded by collecting alternatives from referenced types
+/// - Circular alias chains are detected and rejected
 void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedures) {
-  // Step 1: Identify aliases
-  final aliases = <String, TypeDef>{};
+  // Step 1: Identify simple and union aliases
+  final simpleAliases = <String, TypeDef>{};
+  final unionAliases = <String, TypeDef>{};
+  
   for (final entry in types.entries) {
-    if (_isTypeAlias(entry.value)) {
-      aliases[entry.key] = entry.value;
+    if (_isSimpleAlias(entry.value)) {
+      simpleAliases[entry.key] = entry.value;
+    } else if (_isUnionAlias(entry.value)) {
+      unionAliases[entry.key] = entry.value;
     }
   }
 
-  if (aliases.isEmpty) return;  // No aliases to resolve
+  if (simpleAliases.isEmpty && unionAliases.isEmpty) return;
 
-  // Step 2: Resolve aliases transitively, detecting cycles
+  // Step 2: Resolve simple aliases transitively, detecting cycles
   final resolved = <String, TypeExpr>{};  // name -> final resolved TypeExpr
   final visiting = <String>{};  // Currently being resolved (for cycle detection)
 
-  TypeExpr resolveAlias(String name) {
+  TypeExpr resolveSimpleAlias(String name) {
     if (resolved.containsKey(name)) {
       return resolved[name]!;
     }
 
-    final aliasDef = aliases[name];
+    final aliasDef = simpleAliases[name];
     if (aliasDef == null) {
-      // Not an alias - return a TypeRef to it
+      // Not a simple alias - return a TypeRef to it
       return TypeRef(name, 0, 0);
     }
 
@@ -212,9 +244,9 @@ void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedure
 
     if (target is TypeRef) {
       // Target is another type reference - check if it's also an alias
-      if (aliases.containsKey(target.name)) {
+      if (simpleAliases.containsKey(target.name)) {
         // Resolve transitively
-        final resolvedTarget = resolveAlias(target.name);
+        final resolvedTarget = resolveSimpleAlias(target.name);
         // Apply complement if needed: (T?)? = T
         result = _applyComplement(resolvedTarget, target.isInput, target.line, target.column);
       } else {
@@ -225,7 +257,7 @@ void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedure
       // Target is _ or _?
       result = target;
     } else {
-      // Shouldn't happen if _isTypeAlias is correct
+      // Shouldn't happen if _isSimpleAlias is correct
       result = target;
     }
 
@@ -234,17 +266,60 @@ void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedure
     return result;
   }
 
-  // Resolve all aliases
-  for (final name in aliases.keys) {
-    resolveAlias(name);
+  // Resolve all simple aliases
+  for (final name in simpleAliases.keys) {
+    resolveSimpleAlias(name);
   }
 
-  // Step 3: Replace alias references in type definitions
-  final nonAliasTypes = types.entries
-      .where((e) => !aliases.containsKey(e.key))
+  // Step 3: Expand union aliases
+  for (final entry in unionAliases.entries) {
+    final name = entry.key;
+    final def = entry.value;
+    final expandedAlts = <TypeExpr>[];
+
+    for (final alt in def.alternatives) {
+      final ref = alt as TypeRef;  // Already verified by _isUnionAlias
+      
+      // Check: union alias cannot reference another alias
+      if (simpleAliases.containsKey(ref.name) || unionAliases.containsKey(ref.name)) {
+        throw AliasExpansionError(
+          'Union alias cannot reference another alias: ${ref.name}',
+          def.line,
+          def.column,
+        );
+      }
+
+      // Get the target type definition
+      final targetDef = types[ref.name];
+      if (targetDef == null) {
+        throw AliasExpansionError(
+          'Union alias references undefined type: ${ref.name}',
+          def.line,
+          def.column,
+        );
+      }
+
+      // Collect alternatives from the target type, applying complement if needed
+      for (final targetAlt in targetDef.alternatives) {
+        expandedAlts.add(_applyComplementToAlt(targetAlt, ref.isInput, def.line, def.column));
+      }
+    }
+
+    // Replace union alias definition with expanded definition
+    final expandedDef = TypeDef(name, expandedAlts, def.line, def.column);
+    
+    // Check determinism of expanded type
+    _checkDeterminism(expandedDef);
+    
+    types[name] = expandedDef;
+  }
+
+  // Step 4: Replace simple alias references in all type definitions
+  final nonSimpleAliasTypes = types.entries
+      .where((e) => !simpleAliases.containsKey(e.key))
       .toList();
 
-  for (final entry in nonAliasTypes) {
+  for (final entry in nonSimpleAliasTypes) {
     final newAlternatives = <TypeExpr>[];
     for (final alt in entry.value.alternatives) {
       newAlternatives.add(_replaceAliasReferences(alt, resolved));
@@ -257,7 +332,7 @@ void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedure
     );
   }
 
-  // Step 4: Replace alias references in procedure declarations
+  // Step 5: Replace alias references in procedure declarations
   for (final entry in procedures.entries.toList()) {
     final newArgTypes = <TypeExpr>[];
     for (final argType in entry.value.argTypes) {
@@ -272,8 +347,9 @@ void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedure
     );
   }
 
-  // Step 5: Remove alias definitions from types map
-  for (final name in aliases.keys) {
+  // Step 6: Remove simple alias definitions from types map
+  // (Union aliases are already expanded in place, so keep them)
+  for (final name in simpleAliases.keys) {
     types.remove(name);
   }
 }

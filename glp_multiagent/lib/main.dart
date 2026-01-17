@@ -25,6 +25,9 @@ import 'package:glp_runtime/runtime/external_io.dart';
 /// Default GLP program path
 const _defaultGlpPath = '/Users/udi/Grassroots/GLP/programs/multiagent/social_agent.glp';
 
+/// Stdlib directory
+const _stdlibPath = '/Users/udi/Grassroots/GLP/programs/stdlib';
+
 /// Entry point - checks if spawned window or main coordinator
 void main(List<String> args) {
   debugPrint('=== MAIN ARGS: $args ===');
@@ -200,7 +203,22 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     final newPath = _glpPathController.text.trim();
     if (newPath.isNotEmpty && File(newPath).existsSync()) {
       try {
-        _cachedGlpSource = await File(newPath).readAsString();
+        // Load stdlib unify.glp first (provides =/2)
+        String stdlibSource = '';
+        final unifyFile = File('$_stdlibPath/unify.glp');
+        if (unifyFile.existsSync()) {
+          stdlibSource = await unifyFile.readAsString();
+        } else {
+          // Inline the minimal unify.glp if file not found
+          stdlibSource = 'X? = X.\n';
+        }
+        
+        // Load user GLP program
+        final userSource = await File(newPath).readAsString();
+        
+        // Combine: stdlib first, then user program
+        _cachedGlpSource = '$stdlibSource\n$userSource';
+        
         setState(() {
           _currentGlpPath = newPath;
           _log.add('GLP loaded: $newPath (${_cachedGlpSource!.length} chars)');

@@ -1,7 +1,7 @@
 # Module: type-environment
 
-**Version**: 0.7
-**Date**: 2025-01-17
+**Version**: 0.8
+**Date**: 2026-01-17
 **Status**: DRAFT
 **Paper References**: Definition 4.1 (Typed GLP Program), Section 4.1 (Type Classification), Section 4.2 (Type Automaton - Determinism, Type Aliases)
 
@@ -73,15 +73,31 @@ Ambiguous ::= _ ; Integer. % overlapping: integers match both
 
 ### Type Aliases (Paper Section 4.2)
 
-For documentation and readability, type aliases are permitted in source programs:
+For documentation and readability, type aliases are permitted in source programs.
 
+**Simple aliases** have a single alternative that is a type reference:
 ```
 AgentId ::= Constant.       % alias for primitive type
 MyStream ::= Stream.        % alias for defined type
 ConsumedStream ::= Stream?. % alias for dual of defined type
 ```
 
-Aliases are fully resolved during preprocessing: every occurrence of the alias name is replaced by its target type before type automaton construction and well-typing analysis. The type checker therefore never encounters alias definitions—it operates only on resolved types.
+**Union aliases** have multiple alternatives, each of which is a type reference:
+```
+Msg ::= NetMsg ; UserMsg.   % union of two message types
+```
+
+Union aliases are expanded by collecting all alternatives from the referenced types. For example:
+```
+NetMsg ::= msg(_, _, _).
+UserMsg ::= sent(_, _) ; received(_, _).
+Msg ::= NetMsg ; UserMsg.
+```
+Expands `Msg` to: `Msg ::= msg(_, _, _) ; sent(_, _) ; received(_, _).`
+
+The referenced types must be defined types (not simple aliases, union aliases, or primitives), and the expanded alternatives must satisfy the determinism requirement.
+
+All aliases are fully resolved during preprocessing: every occurrence of an alias name is replaced by its expansion before type automaton construction and well-typing analysis. The type checker therefore never encounters alias definitions—it operates only on resolved types.
 
 **Circular alias chains are prohibited:**
 ```
@@ -332,26 +348,38 @@ addType(def):
 ### Algorithm: Type Alias Check
 
 ```
-isTypeAlias(def):
-  // A type is an alias if it has exactly one alternative that is:
-  // - A single type reference (TypeRef) or primitive (PrimitiveModeAlt)
+isSimpleAlias(def):
+  // A simple alias has exactly one alternative that is a TypeRef or PrimitiveModeAlt
   
   if def.alternatives.length != 1:
-    return false  // Multiple alternatives = not an alias
+    return false
   
   alt = def.alternatives[0]
   
-  // Single TypeRef (T or T?) = alias
+  // Single TypeRef (T or T?) = simple alias
   if alt is TypeRef:
     return true
   
-  // Single PrimitiveModeAlt (_ or _?) = alias  
+  // Single PrimitiveModeAlt (_ or _?) = simple alias  
   if alt is PrimitiveModeAlt:
     return true
   
-  // Any compound structure is not an alias:
-  // ConstantAlt, ListNilAlt, ListConsAlt, StructAlt, DiffListAlt
   return false
+
+isUnionAlias(def):
+  // A union alias has multiple alternatives, all of which are TypeRefs (not PrimitiveModeAlt)
+  
+  if def.alternatives.length < 2:
+    return false
+  
+  for alt in def.alternatives:
+    if not (alt is TypeRef):
+      return false
+  
+  return true
+
+isTypeAlias(def):
+  return isSimpleAlias(def) or isUnionAlias(def)
 ```
 
 ### Algorithm: Alias Resolution (Preprocessing)
@@ -360,36 +388,61 @@ Alias resolution happens before type checking, transforming all alias references
 
 ```
 resolveAliases(types, procedures):
-  // Step 1: Identify aliases and build alias graph
-  aliases = {}  // name -> target type expression
+  // Step 1: Identify simple and union aliases
+  simpleAliases = {}   // name -> single TypeExpr
+  unionAliases = {}    // name -> list of TypeRef
+  
   for def in types:
-    if isTypeAlias(def):
-      aliases[def.name] = def.alternatives[0]  // The single TypeRef or PrimitiveModeAlt
+    if isSimpleAlias(def):
+      simpleAliases[def.name] = def.alternatives[0]
+    else if isUnionAlias(def):
+      unionAliases[def.name] = def.alternatives
   
-  // Step 2: Detect circular alias chains via topological sort
-  visited = {}
-  resolved = {}
+  // Step 2: Resolve simple aliases (with cycle detection)
+  visiting = {}
+  resolvedSimple = {}
   
-  for aliasName in aliases:
-    if aliasName not in resolved:
-      resolveAlias(aliasName, aliases, visited, resolved)
+  for aliasName in simpleAliases:
+    if aliasName not in resolvedSimple:
+      resolveSimpleAlias(aliasName, simpleAliases, visiting, resolvedSimple)
   
-  // Step 3: Replace alias usages in all type definitions
+  // Step 3: Expand union aliases
+  //   For each union alias, collect alternatives from referenced types
+  //   Referenced types must be non-alias defined types
+  for (name, refs) in unionAliases:
+    expandedAlts = []
+    for ref in refs:
+      if ref.name in simpleAliases or ref.name in unionAliases:
+        throw AliasExpansionError("Union alias cannot reference another alias: ${ref.name}")
+      targetDef = types[ref.name]
+      if targetDef is null:
+        throw UndefinedTypeError("Union alias references undefined type: ${ref.name}")
+      // Collect alternatives, applying complement if ref.isInput
+      for alt in targetDef.alternatives:
+        expandedAlts.add(applyComplementToAlt(alt, ref.isInput))
+    // Check determinism of expanded type
+    if not isDeterministic(TypeDef(name, expandedAlts)):
+      throw NonDeterministicTypeError("Expanded union alias has overlapping alternatives: ${name}")
+    // Replace union alias definition with expanded definition
+    types[name] = TypeDef(name, expandedAlts, ...)
+  
+  // Step 4: Replace simple alias usages in all type definitions
   for def in types:
-    if def.name not in aliases:  // Skip alias definitions themselves
+    if def.name not in simpleAliases:  // Skip simple alias definitions
       for alt in def.alternatives:
-        replaceAliasReferences(alt, resolved)
+        replaceAliasReferences(alt, resolvedSimple)
   
-  // Step 4: Replace alias usages in procedure declarations
+  // Step 5: Replace alias usages in procedure declarations
   for proc in procedures:
     for argType in proc.argTypes:
-      replaceAliasReferences(argType, resolved)
+      replaceAliasReferences(argType, resolvedSimple)
   
-  // Step 5: Remove alias definitions from types map
-  for aliasName in aliases:
+  // Step 6: Remove simple alias definitions from types map
+  //   (Union aliases are already expanded in place, so keep them)
+  for aliasName in simpleAliases:
     types.remove(aliasName)
 
-resolveAlias(name, aliases, visiting, resolved):
+resolveSimpleAlias(name, simpleAliases, visiting, resolved):
   if name in resolved:
     return resolved[name]
   
@@ -398,10 +451,10 @@ resolveAlias(name, aliases, visiting, resolved):
   
   visiting.add(name)
   
-  target = aliases[name]
-  if target is TypeRef and target.name in aliases:
+  target = simpleAliases[name]
+  if target is TypeRef and target.name in simpleAliases:
     // Alias to another alias - resolve transitively
-    finalTarget = resolveAlias(target.name, aliases, visiting, resolved)
+    finalTarget = resolveSimpleAlias(target.name, simpleAliases, visiting, resolved)
     // Preserve complement marker: if target was T? and finalTarget is S, result is S?
     resolved[name] = applyComplement(finalTarget, target.isInput)
   else:
@@ -422,6 +475,14 @@ replaceAliasReferences(typeExpr, resolved):
       replaceAliasReferences(nested, resolved)
   
   return typeExpr
+
+applyComplementToAlt(alt, applyComplement):
+  // Apply complement to all TypeRef/PrimitiveModeAlt within an alternative
+  if not applyComplement:
+    return alt  // No change
+  
+  // Recursively flip isInput on all type references in the alternative
+  return transformAlt(alt, flipModes: true)
 ```
 
 ### Algorithm: Determinism Check
@@ -617,6 +678,40 @@ UserId ::= AgentId.
 
 Resolved: `UserId` → `AgentId` → `Id` → `Constant`
 
+### Example: VALID — Union Alias
+
+```
+NetMsg ::= msg(Constant, Constant, _).
+UserMsg ::= sent(Constant, _) ; received(Constant, _).
+Msg ::= NetMsg ; UserMsg.
+```
+
+`Msg` is expanded to: `Msg ::= msg(Constant, Constant, _) ; sent(Constant, _) ; received(Constant, _).`
+
+After expansion, the type checker operates on the expanded definition.
+
+### Example: INVALID — Union Alias with Overlapping Alternatives
+
+```
+TypeA ::= foo(Integer).
+TypeB ::= foo(String).
+BadUnion ::= TypeA ; TypeB.
+```
+
+**Error:** `NonDeterministicTypeError("Expanded union alias has overlapping alternatives: BadUnion")`
+
+(Both types have `foo/1` alternative, which violates determinism)
+
+### Example: INVALID — Union Alias References Another Alias
+
+```
+BaseType ::= x.
+AliasToBase ::= BaseType.
+BadUnion ::= AliasToBase ; OtherType.
+```
+
+**Error:** `AliasExpansionError("Union alias cannot reference another alias: AliasToBase")`
+
 ### Example: INVALID — Circular Alias Chain
 
 ```
@@ -683,9 +778,20 @@ BadNumeric ::= Number ; Integer.
 | Redefining predefined type | `PredefinedTypeError` |
 | Redefining existing type | `RedefinitionError` |
 | Circular alias chain | `CircularAliasError` |
+| Union alias references another alias | `AliasExpansionError` |
 | Type alternatives overlap | `NonDeterministicTypeError` |
+| Expanded union alias alternatives overlap | `NonDeterministicTypeError` |
 | Redeclaring procedure | `RedefinitionError` |
 | Reference to undefined type | `UndefinedTypeError` |
+
+## Changes from v0.7
+
+- Added union alias support (e.g., `Msg ::= NetMsg ; UserMsg.`)
+- Union aliases are expanded by collecting alternatives from referenced types
+- Added `isSimpleAlias()` and `isUnionAlias()` helper functions
+- Added `AliasExpansionError` for union alias validation failures
+- Updated alias resolution algorithm for two-phase processing
+- Added examples for valid and invalid union aliases
 
 ## Changes from v0.6
 
@@ -712,6 +818,7 @@ BadNumeric ::= Number ; Integer.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.8 | 2026-01-17 | Add union alias support; expand by collecting alternatives from referenced types |
 | 0.1 | 2025-01-07 | Initial draft |
 | 0.2 | 2025-01-07 | Add Dependencies section |
 | 0.3 | 2025-01-07 | Add algorithms, positive and negative examples |
