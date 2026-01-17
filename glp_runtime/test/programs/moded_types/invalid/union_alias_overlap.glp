@@ -1,0 +1,21 @@
+%% INVALID: Union alias with overlapping alternatives
+%% 
+%% Both TypeA and TypeB have foo/1 alternative, which violates determinism
+%% after expansion.
+%% 
+%% Type expansion:
+%%   TypeA ::= foo(Integer).
+%%   TypeB ::= foo(String).
+%%   BadUnion ::= TypeA ; TypeB.
+%% 
+%% Would expand to: BadUnion ::= foo(Integer) ; foo(String).
+%% 
+%% Expected: NonDeterministicTypeError - duplicate functor foo/1
+
+TypeA ::= foo(Integer).
+TypeB ::= foo(String).
+BadUnion ::= TypeA ; TypeB.
+
+procedure process(BadUnion?).
+
+process(foo(X)) :- integer(X?).

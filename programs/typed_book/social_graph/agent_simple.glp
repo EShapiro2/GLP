@@ -13,7 +13,7 @@ Channel ::= ch(Stream?, Stream).
 %% Procedure type declarations
 procedure agent(_?, Channel?, Channel?).
 procedure merge(Stream?, Stream?, Stream).
-procedure build_friends(Stream, Stream, FriendList).
+procedure build_friends(Stream?, Stream?, FriendList).
 procedure social_graph(_?, Stream?, FriendList?).
 
 agent(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-

@@ -1,0 +1,27 @@
+%% VALID: Basic union alias with structured message types
+%% 
+%% Tests union alias expansion with compound terms.
+%% 
+%% Type expansion:
+%%   NetMsg ::= msg(Constant, Constant, _).
+%%   UserMsg ::= sent(Constant, _) ; received(Constant, _).
+%%   Msg ::= NetMsg ; UserMsg.
+%% 
+%% Expands to: Msg ::= msg(Constant, Constant, _) ; sent(Constant, _) ; received(Constant, _).
+%% 
+%% Expected: Type check passes
+
+NetMsg ::= msg(Constant, Constant, _).
+UserMsg ::= sent(Constant, _) ; received(Constant, _).
+Msg ::= NetMsg ; UserMsg.
+
+procedure handle(Msg?).
+
+handle(msg(Id, To, Content)) :- 
+    constant(Id?), constant(To?), known(Content?).
+    
+handle(sent(To, Content)) :- 
+    constant(To?), known(Content?).
+    
+handle(received(From, Content)) :- 
+    constant(From?), known(Content?).

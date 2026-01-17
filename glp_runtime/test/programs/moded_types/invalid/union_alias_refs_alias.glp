@@ -1,0 +1,21 @@
+%% INVALID: Union alias references another alias
+%% 
+%% Union aliases can only reference concrete user-defined types,
+%% not other aliases.
+%% 
+%% Type expansion:
+%%   BaseType ::= x.
+%%   AliasToBase ::= BaseType.     % This is a simple alias
+%%   BadUnion ::= AliasToBase ; y. % Cannot reference an alias
+%% 
+%% Expected: AliasExpansionError - union alias cannot reference another alias
+
+BaseType ::= x.
+AliasToBase ::= BaseType.
+OtherType ::= y.
+BadUnion ::= AliasToBase ; OtherType.
+
+procedure process(BadUnion?).
+
+process(x).
+process(y).

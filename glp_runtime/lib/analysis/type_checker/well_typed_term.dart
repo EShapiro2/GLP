@@ -356,6 +356,7 @@ PathCheckResult _checkLeafConsistencyForPath(
 
 /// Convert PathStep to LeafTerm for checkLeafConsistency
 /// Fix 4.2: Properly detects real literals (floating-point numbers)
+/// Fix Bug 1: Atoms are strings per paper Section 4.1
 LeafTerm _pathStepToLeafTerm(PathStep step) {
   if (step.isVariable) {
     // Use the actual structural mode from the path step, not a hardcoded mode
@@ -386,8 +387,10 @@ LeafTerm _pathStepToLeafTerm(PathStep step) {
       return LeafTerm.stringConstant(value.substring(1, value.length - 1), mode: step.mode);
     }
 
-    // Otherwise it's an atom/constant
-    return LeafTerm.constant(value, mode: step.mode);
+    // Fix Bug 1: Atoms (unquoted identifiers) are strings per paper Section 4.1
+    // Paper line 49: "String ::= ... ; a ; b ; ... ; foo ; bar ; ..."
+    // Therefore atoms like 'user', 'net', 'foo' etc. are strings
+    return LeafTerm.stringConstant(value, mode: step.mode);
   }
 }
 

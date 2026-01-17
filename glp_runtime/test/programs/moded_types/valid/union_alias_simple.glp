@@ -1,0 +1,21 @@
+%% VALID: Minimal union alias test
+%% 
+%% Tests basic union alias expansion with two simple message types.
+%% 
+%% Type expansion:
+%%   TypeA ::= foo.
+%%   TypeB ::= bar.
+%%   Msg ::= TypeA ; TypeB.
+%% 
+%% Expands to: Msg ::= foo ; bar.
+%% 
+%% Expected: Type check passes
+
+TypeA ::= foo.
+TypeB ::= bar.
+Msg ::= TypeA ; TypeB.
+
+procedure process(Msg?).
+
+process(foo).
+process(bar).

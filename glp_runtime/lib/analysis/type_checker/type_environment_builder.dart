@@ -184,11 +184,12 @@ bool _isSimpleAlias(TypeDef def) {
 /// Check if a type definition is a union alias (multiple type references to defined types)
 ///
 /// Per spec (type-environment.md v0.8):
-/// Union aliases have multiple alternatives, all of which are TypeRefs to defined types:
-/// - Msg ::= NetMsg ; UserMsg.   (union of two message types)
+/// Union aliases have multiple alternatives, all of which are TypeRefs to
+/// user-defined types (not predefined primitives):
+/// - Msg ::= NetMsg ; UserMsg.   (union of two user-defined message types)
 ///
-/// A type like `Constant ::= Number ; String` is NOT a union alias because
-/// Number and String are predefined types, not user-defined types to expand.
+/// NOT a union alias:
+/// - Constant ::= Number ; String.  (references predefined primitives)
 bool _isUnionAlias(TypeDef def) {
   // Must have multiple alternatives
   if (def.alternatives.length < 2) return false;
@@ -196,8 +197,11 @@ bool _isUnionAlias(TypeDef def) {
   // All alternatives must be TypeRefs to non-predefined types
   for (final alt in def.alternatives) {
     if (alt is! TypeRef) return false;
-    // If it's a predefined type, this is not a union alias
-    if (isPredefinedType(alt.name)) return false;
+    // If it references a predefined type, it's not a union alias
+    final typeName = (alt as TypeRef).name;
+    if (isPredefinedType(typeName)) {
+      return false;
+    }
   }
 
   return true;

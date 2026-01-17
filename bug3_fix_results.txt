@@ -1,0 +1,14 @@
+Testing with MsgStream - Bug 3 should be fixed:
+================================================
+[TYPE ERROR] Variable pair (In, In?) not complementary across clause: Variables in same clause part (body) must have dual types: Types must have same base: Stream vs MsgStream?: writer at body atom 0=(Stream, ↑), reader at body atom 2=(MsgStream?, ↓) at line 32
+[TYPE ERROR] Head of social_graph is not well-typed:
+[TYPE ERROR] Head of social_graph is not well-typed:
+[TYPE ERROR] Body atom 1 (=) is not well-typed:
+[TYPE ERROR] Variable pair (Out, Out?) not complementary across clause: Variables across head/body must have same type: _ (base: _) != Stream? (base: Stream): writer at body atom 1=(_, ↑), reader at head=(Stream?, ↓) at line 95
+[TYPE WARNING] Procedure =/2 declared but not defined at line 56
+[TYPE WARNING] Procedure dl_append/3 declared but not defined at line 59
+[TYPE WARNING] Procedure dl_to_list/2 declared but not defined at line 60
+[TYPE WARNING] Procedure new_channel/2 declared but not defined at line 63
+[TYPE WARNING] Procedure send/3 declared but not defined at line 64
+[TYPE WARNING] Procedure receive/3 declared but not defined at line 65
+✗ Compilation failed:

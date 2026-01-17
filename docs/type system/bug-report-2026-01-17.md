@@ -214,3 +214,74 @@ SRSW checking is more fundamental than type checking and should run first, regar
 2. Type checking (optional static analysis)
 
 Both should report all violations found, and neither should prevent the other from running.
+
+---
+
+## Union Alias Expansion (v0.8) - Implementation Progress
+
+**Status:** IN PROGRESS - Core implementation done, testing in progress
+
+### Feature Summary
+
+Implementing union aliases that combine multiple type definitions into a single type name:
+```glp
+Msg ::= NetMsg ; UserMsg.  % Expands to all alternatives from both types
+```
+
+This is relevant to Bug 2 above (`Msg ::= NetMsg ; UserMsg`).
+
+### Completed Work
+
+1. **Paper Update** (`/Users/udi/Grassroots/Moded-Types/sections/well-typing.tex`)
+   - Extended "Type aliases" section distinguishing simple vs union aliases
+   - Documented expansion semantics and constraints
+
+2. **Spec Update** (`type-environment.md` v0.7 → v0.8)
+   - Added `isSimpleAlias()` and `isUnionAlias()` functions
+   - Documented two-phase alias resolution algorithm
+   - Added `AliasExpansionError` for validation failures
+
+3. **Implementation** (`type_environment_builder.dart`)
+   - Added `AliasExpansionError` exception class
+   - Split `_isTypeAlias()` into `_isSimpleAlias()` and `_isUnionAlias()`
+   - Rewrote `_resolveAliases()` for two-phase processing
+   - Added `_applyComplementToAlt()` for recursive complement application
+
+4. **Test Files Created**
+   - `valid/union_alias_basic.glp` - Basic union of two types
+   - `valid/union_alias_three.glp` - Union of three types  
+   - `valid/union_alias_simple.glp` - Minimal test (✅ PASSES)
+   - `invalid/union_alias_overlap.glp` - Overlapping functors error
+   - `invalid/union_alias_refs_alias.glp` - Reference to alias error
+
+### Bugs Found and Fixed During Implementation
+
+#### Bug A: Alias resolution before prelude merge
+**Problem:** Union aliases in user code couldn't reference prelude types because alias resolution happened during `_buildEnvironmentFromModule`, before prelude was merged.
+
+**Fix:** Restructured `buildTypeEnvironment()` to resolve aliases AFTER merging prelude and user environment.
+
+#### Bug B: Prelude's `Constant` misclassified as union alias
+**Problem:** `Constant ::= Number ; String.` was being treated as a union alias because it has multiple TypeRef alternatives. But `Number` and `String` are predefined primitives, not user-defined types to expand.
+
+**Fix:** Updated `_isUnionAlias()` to return `false` when any referenced type is predefined:
+```dart
+if (isPredefinedType(typeName)) {
+  return false;  // Not a union alias
+}
+```
+
+### Next Steps for Union Alias
+
+1. Run updated tests:
+   ```bash
+   cd /Users/udi/Grassroots/GLP/glp_runtime
+   dart run bin/glpc.dart --type-check ../test/analysis/type_checker/valid/union_alias_basic.glp
+   dart run bin/glpc.dart --type-check ../test/analysis/type_checker/valid/union_alias_three.glp
+   dart run bin/glpc.dart --type-check ../test/analysis/type_checker/invalid/union_alias_overlap.glp
+   dart run bin/glpc.dart --type-check ../test/analysis/type_checker/invalid/union_alias_refs_alias.glp
+   ```
+
+2. Run full regression suite
+
+3. After union alias expansion works, revisit Bug 2 (Msg? transitions)

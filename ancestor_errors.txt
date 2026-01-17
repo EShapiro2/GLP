@@ -1,0 +1,1 @@
+Error: File not found: ../programs/typed_book/recursive/structure_processing/ancestor.glp

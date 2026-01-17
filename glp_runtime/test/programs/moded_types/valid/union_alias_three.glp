@@ -1,0 +1,26 @@
+%% VALID: Union alias with three types
+%% 
+%% Tests union alias expansion with three distinct message types.
+%% 
+%% Type expansion:
+%%   ControlMsg ::= start ; stop ; pause.
+%%   DataMsg ::= data(Integer).
+%%   ErrorMsg ::= error(String).
+%%   Event ::= ControlMsg ; DataMsg ; ErrorMsg.
+%% 
+%% Expands to: Event ::= start ; stop ; pause ; data(Integer) ; error(String).
+%% 
+%% Expected: Type check passes
+
+ControlMsg ::= start ; stop ; pause.
+DataMsg ::= data(Integer).
+ErrorMsg ::= error(String).
+Event ::= ControlMsg ; DataMsg ; ErrorMsg.
+
+procedure process_event(Event?).
+
+process_event(start).
+process_event(stop).
+process_event(pause).
+process_event(data(N)) :- integer(N?).
+process_event(error(Msg)) :- string(Msg?).

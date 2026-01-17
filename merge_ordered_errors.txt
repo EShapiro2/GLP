@@ -1,0 +1,18 @@
+Compiling: ../programs/typed_book/recursive/list_processing/merge_ordered.glp
+Type checking: enabled
+Mode: warning (continue on errors)
+
+[TYPE WARNING] Procedure =/2 declared but not defined at line 56
+[TYPE WARNING] Procedure dl_append/3 declared but not defined at line 59
+[TYPE WARNING] Procedure dl_to_list/2 declared but not defined at line 60
+[TYPE WARNING] Procedure new_channel/2 declared but not defined at line 63
+[TYPE WARNING] Procedure send/3 declared but not defined at line 64
+[TYPE WARNING] Procedure receive/3 declared but not defined at line 65
+✗ Compilation failed:
+  SRSW violations found:
+  • reduce/2: Line 18: Reader variable "X?" occurs 2 times without ground guard
+  • reduce/2: Line 18: Reader variable "Y?" occurs 2 times without ground guard
+  • reduce/2: Line 19: Reader variable "X?" occurs 2 times without ground guard
+  • reduce/2: Line 19: Reader variable "Y?" occurs 2 times without ground guard
+  • reduce/2: Line 20: Reader variable "X?" occurs 2 times without ground guard
+  • reduce/2: Line 20: Reader variable "Y?" occurs 2 times without ground guard at Line 0, Column 0

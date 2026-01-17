@@ -1,0 +1,18 @@
+%% relay.glp
+%% Relay forwarding for requested readers being re-exported
+%%
+%% Specification: irmaGLP-spec.md Section 4.4 (Forwarding Goal Semantics)
+%% Paper: glp_appendix_smartphone.tex Definition of export(T) routine
+%% 
+%% When a requested reader is re-exported, a relay pair (Z, Z?) is created:
+%% - Original reader Y? is replaced with relay reader Z? in the exported term
+%% - Forwarding goal relay(Y, Z) is added to active queue
+%% - When relay reader Z? receives value V, original writer Y is bound to V
+%%
+%% This maintains the request relationship across export boundaries.
+
+%% relay(OriginalWriter, RelayWriter)
+%% 
+%% Suspends on RelayWriter's paired reader until bound,
+%% then unifies OriginalWriter with the relay value.
+relay(Y, Z) :- known(Z?) | Y = Z?.

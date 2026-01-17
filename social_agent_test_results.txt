@@ -1,0 +1,88 @@
+Testing social_agent_typed.glp to reproduce bugs from 2026-01-17 report:
+==========================================
+Compiling: glp/social_agent_typed.glp
+Type checking: enabled
+Mode: warning (continue on errors)
+
+[TYPE ERROR] Head of build_friends is not well-typed:
+  Inconsistent path: Constant does not match any alternative at type position Constant?
+  Path: ([|]/2, 0, output) → (,/2, 1, output) → (user, 1, input)
+  Inconsistent path: Constant does not match any alternative at type position Constant?
+  Path: ([|]/2, 0, output) → ([|]/2, 2, output) → (,/2, 1, output) → (net, 1, input) at line 35
+[TYPE ERROR] Head of social_graph is not well-typed:
+  Variable Id? has inconsistent types: (Constant?, ↓) vs (_?, ↓) at line 48
+[TYPE ERROR] Body atom 2 (lookup_send) is not well-typed:
+  Inconsistent path: Constant does not match any alternative at type position Constant?
+  Path: (user, 0, input) at line 48
+[TYPE ERROR] Head of social_graph is not well-typed:
+  Variable Id? has inconsistent types: (Constant?, ↓) vs (_?, ↓) at line 56
+[TYPE ERROR] Body atom 2 (lookup_send) is not well-typed:
+  Inconsistent path: Constant does not match any alternative at type position Constant?
+  Path: (user, 0, input) at line 56
+[TYPE ERROR] Head of social_graph is not well-typed:
+  Variable Id? has inconsistent types: (Constant?, ↓) vs (_?, ↓) at line 62
+[TYPE ERROR] Body atom 3 (lookup_send) is not well-typed:
+  Inconsistent path: Constant does not match any alternative at type position Constant?
+  Path: (user, 0, input) at line 62
+[TYPE ERROR] Body atom 3 (lookup_send) is not well-typed:
+  Inconsistent path: Constant does not match any alternative at type position Constant?
+  Path: (user, 0, input)
+  Inconsistent path: Constant does not match any alternative at type position Constant?
+  Path: (error/2, 0, input) → (unknown_command, 1, input) at line 68
+[TYPE ERROR] Head of social_graph is not well-typed:
+  Variable _? has inconsistent types: (Constant?, ↓) vs (FriendList?, ↓) at line 74
+[TYPE ERROR] Body atom 1 (=) is not well-typed:
+  Inconsistent path: Variable mode mismatch at wildcard _?
+  Path: ([|]/2, 0, input) → (Out1, 2, input) at line 93
+[TYPE ERROR] Variable pair (Out, Out?) not complementary across clause: Variables across head/body must have same type: _ (base: _) != Stream? (base: Stream): writer at body atom 1=(_, ↑), reader at head=(Stream?, ↓) at line 93
+[TYPE ERROR] Body atom 0 (lookup_send) is not well-typed:
+  Inconsistent path: Constant does not match any alternative at type position Constant?
+  Path: (user, 0, input) at line 78
+[TYPE ERROR] Body atom 0 (lookup_send) is not well-typed:
+  Inconsistent path: Constant does not match any alternative at type position Constant?
+  Path: (user, 0, input)
+  Inconsistent path: Constant does not match any alternative at type position Constant?
+  Path: (error/2, 0, input) → (unknown_recipient, 1, input) at line 81
+[TYPE ERROR] Body atom 0 (lookup_send) is not well-typed:
+  Inconsistent path: Constant does not match any alternative at type position Constant?
+  Path: (user, 0, input)
+  Inconsistent path: Constant does not match any alternative at type position Constant?
+  Path: (error/2, 0, input) → (ping_reply_failed, 1, input) at line 86
+[TYPE WARNING] Procedure =/2 declared but not defined at line 56
+[TYPE WARNING] Procedure dl_append/3 declared but not defined at line 59
+[TYPE WARNING] Procedure dl_to_list/2 declared but not defined at line 60
+[TYPE WARNING] Procedure new_channel/2 declared but not defined at line 63
+[TYPE WARNING] Procedure send/3 declared but not defined at line 64
+[TYPE WARNING] Procedure receive/3 declared but not defined at line 65
+✗ Compilation failed:
+  SRSW violations found:
+  • social_graph/3: Line 50: Variable "S1" has no reader
+  • social_graph/3: Line 58: Variable "S1" has no reader
+  • social_graph/3: Line 64: Variable "S1" has no reader
+  • social_graph/3: Line 70: Variable "S1" has no reader
+  • handle_send_status/5: Line 79: Variable "S1" has no reader
+  • handle_send_status/5: Line 81: Variable "Content" has no reader
+  • handle_send_status/5: Line 82: Variable "S1" has no reader
+  • handle_ping_status/5: Line 84: Variable "Id" has no reader
+  • handle_ping_status/5: Line 84: Variable "From" has no reader
+  • handle_ping_status/5: Line 86: Variable "Id" has no reader
+  • handle_ping_status/5: Line 87: Variable "S1" has no reader
+  • lookup_send/5: Line 91: Variable "Key" has no reader
+  • lookup_send/5: Line 91: Variable "Msg" has no reader
+  • lookup_send/5: Line 93: Writer variable "Out" occurs 2 times
+  • lookup_send/5: Line 93: Variable "Out" has no reader
+  • reduce/2: Line 50: Variable "S1" has no reader
+  • reduce/2: Line 58: Variable "S1" has no reader
+  • reduce/2: Line 64: Variable "S1" has no reader
+  • reduce/2: Line 70: Variable "S1" has no reader
+  • reduce/2: Line 79: Variable "S1" has no reader
+  • reduce/2: Line 81: Variable "Content" has no reader
+  • reduce/2: Line 82: Variable "S1" has no reader
+  • reduce/2: Line 84: Variable "Id" has no reader
+  • reduce/2: Line 84: Variable "From" has no reader
+  • reduce/2: Line 86: Variable "Id" has no reader
+  • reduce/2: Line 87: Variable "S1" has no reader
+  • reduce/2: Line 91: Variable "Key" has no reader
+  • reduce/2: Line 91: Variable "Msg" has no reader
+  • reduce/2: Line 93: Writer variable "Out" occurs 2 times
+  • reduce/2: Line 93: Variable "Out" has no reader at Line 0, Column 0

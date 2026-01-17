@@ -16,6 +16,24 @@ import '../../compiler/ast.dart' as ast;
 // Public Functions
 // =============================================================================
 
+// Counter for generating unique anonymous variable names
+// Bug 4 fix: Each occurrence of _ must be treated as a fresh, independent variable
+// Paper Remark 3.1: "Each occurrence [of _] denotes a fresh writer"
+int _anonVarCounter = 0;
+
+/// Reset the anonymous variable counter.
+/// Should be called before processing each clause.
+void resetAnonVarCounter() {
+  _anonVarCounter = 0;
+}
+
+/// Generate a unique name for an anonymous variable.
+/// Returns names like "_#1", "_#2", etc.
+String _freshAnonVarName() {
+  _anonVarCounter++;
+  return '_#$_anonVarCounter';
+}
+
 /// Constructs a moded head H' from clause head H per Definition 4.6.
 ///
 /// Given a head H, a moded head H' is obtained by:
@@ -40,6 +58,8 @@ import '../../compiler/ast.dart' as ast;
 /// Throws [ArityMismatchError] if head arity doesn't match declaration.
 /// Throws [InvalidHeadError] if head is not a compound term.
 ModedTerm modedHead(ast.Goal head, ProcDecl decl, {TypeEnvironment? typeEnv}) {
+  // Reset counter for each clause to ensure unique names within the clause
+  resetAnonVarCounter();
   // Validate arity
   if (head.arity != decl.arity) {
     throw ArityMismatchError(
@@ -72,6 +92,7 @@ ModedTerm modedHead(ast.Goal head, ProcDecl decl, {TypeEnvironment? typeEnv}) {
 ///
 /// Throws [ArityMismatchError] if atom arity doesn't match declaration.
 ModedTerm producedTerm(ast.Goal atom, ProcDecl decl, {TypeEnvironment? typeEnv}) {
+  // Note: Do NOT reset counter here - body atoms share the same clause namespace
   // Validate arity
   if (atom.arity != decl.arity) {
     throw ArityMismatchError(
@@ -153,9 +174,12 @@ ModedTerm _buildModedSubterm(ast.Term term, Mode mode, TypeExpr? expectedType, T
   }
 
   if (term is ast.UnderscoreTerm) {
-    // Anonymous variable: treat as a unique writer variable
-    // Use a synthetic name to avoid confusion
-    return ModedVariable('_', isReader: false, structuralMode: mode);
+    // Bug 4 fix: Each anonymous variable must be treated as a FRESH writer
+    // Paper Remark 3.1: "Each occurrence denotes a fresh writer with no paired reader,
+    // providing a controlled exception to the SRSW restriction."
+    // Generate unique name to ensure each _ is independent
+    final uniqueName = _freshAnonVarName();
+    return ModedVariable(uniqueName, isReader: false, structuralMode: mode);
   }
 
   throw InvalidHeadError('Unknown term type: ${term.runtimeType}');

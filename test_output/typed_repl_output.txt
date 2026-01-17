@@ -137,7 +137,7 @@ FAIL: modules/main_module (unexpected type errors)
 PASS: modules/math_module
 FAIL: social_graph/agent (unexpected type errors)
 FAIL: social_graph/agent_full (unexpected type errors)
-FAIL: social_graph/agent_simple (unexpected type errors)
+PASS: social_graph/agent_simple
 FAIL: social_graph/attestation_guards (unexpected type errors)
 PASS: social_graph/channel
 FAIL: social_graph/cold_call (unexpected type errors)
@@ -177,7 +177,7 @@ FAIL: social_networks/replicate (unexpected type errors)
 PASS: social_networks/replicate2
 PASS: social_networks/replicate3
 FAIL: constitutional_consensus/consensus (unexpected type errors)
-FAIL: constitutional_consensus/play_agents (unexpected type errors)
+FAIL: constitutional_consensus/play_agents (loading error)
 FAIL: constitutional_consensus/play_high_throughput (unexpected type errors)
 FAIL: constitutional_consensus/play_low_throughput (unexpected type errors)
 FAIL: constitutional_consensus/test_blocklace (unexpected type errors)
@@ -233,7 +233,7 @@ PASS: merge_reader_at_input (rejected: loading error)
 PASS: merge_writer_at_output (rejected: loading error)
 
 ======================================
-Total: 222 | Passed: 144 | Failed: 78
+Total: 222 | Passed: 145 | Failed: 77
 ======================================
 
 Failed positive tests (need investigation):
@@ -269,7 +269,6 @@ Failed positive tests (need investigation):
   - /Users/udi/Grassroots/GLP/test/../programs/typed_book/modules/main_module.glp
   - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/agent.glp
   - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/agent_full.glp
-  - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/agent_simple.glp
   - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/attestation_guards.glp
   - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/cold_call.glp
   - /Users/udi/Grassroots/GLP/test/../programs/typed_book/social_graph/friend_introduction.glp
