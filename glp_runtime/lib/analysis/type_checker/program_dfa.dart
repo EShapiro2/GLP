@@ -236,15 +236,19 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   automata['String'] = _primitiveTypeAutomaton(states['String']!, states['_FINAL_']!);
   automata['String?'] = _primitiveTypeAutomaton(states['String?']!, states['_FINAL_']!);
 
-  // Create states and automata for defined types
+  // Create states for ALL defined types FIRST
+  // (Automata may reference other types, so all states must exist before building automata)
   for (final entry in env.types.entries) {
     final typeName = entry.key;
-    final typeDef = entry.value;
-
-    // Create state pair
     states[typeName] = DFAState(typeName, isComplement: false, isFinal: false);
     states['$typeName?'] =
         DFAState(typeName, isComplement: true, isFinal: false);
+  }
+
+  // THEN build automata for all defined types
+  for (final entry in env.types.entries) {
+    final typeName = entry.key;
+    final typeDef = entry.value;
 
     // Build producer automaton (T)
     automata[typeName] =

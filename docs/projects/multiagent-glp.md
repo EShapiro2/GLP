@@ -78,3 +78,15 @@ Anything needed to make multiagent work:
 
 - `docs/ma/phase6-handover-2026-01-17.md` - Latest handover
 - `docs/ma/HANDOVER-2026-01-17-irmaGLP-phase1-4.md` - Earlier phases
+
+## Testing
+
+**READ FIRST:** `docs/DISCIPLINE.md` Part II for complete testing protocol.
+
+```bash
+# Multiagent unit tests
+cd /Users/udi/Grassroots/GLP/glp_runtime && dart test test/multiagent/ > /tmp/ma-tests.txt 2>&1
+
+# Flutter build
+cd /Users/udi/Grassroots/GLP/glp_multiagent && flutter build macos
+```

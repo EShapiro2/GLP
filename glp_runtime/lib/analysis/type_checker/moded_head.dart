@@ -135,7 +135,19 @@ ModedTerm _buildIOModedTerm(ast.Goal term, ProcDecl decl, Mode parentMode, TypeE
 /// For structures, looks up type definition to compute combined modes
 /// for each subterm position using mode involution.
 /// Variables preserve their reader/writer status (flip happens later if needed).
+///
+/// FIX: When expectedType is a wildcard (_ or _?), we don't recurse with
+/// type-driven mode computation. Instead, all subterms inherit the wildcard's
+/// mode uniformly. This implements Definition 4.5 Case 3 correctly.
 ModedTerm _buildModedSubterm(ast.Term term, Mode mode, TypeExpr? expectedType, TypeEnvironment? typeEnv) {
+  // FIX: When type is wildcard (_ or _?) OR unknown (null), don't use type-driven mode computation.
+  // Wildcards accept any term at this position - all subterms inherit the same mode.
+  // Unknown types (null) occur when we can't resolve the type definition.
+  // This handles Definition 4.5 Case 3: type path ends at wildcard.
+  if (expectedType == null || expectedType is PrimitiveModeAlt) {
+    return _buildOpaqueModedTerm(term, mode);
+  }
+
   if (term is ast.VarTerm) {
     // Variable: pass structural mode from context (per moded-term v0.6)
     return ModedVariable(term.name, isReader: term.isReader, structuralMode: mode);
@@ -365,6 +377,49 @@ ModedTerm _flipAllVariables(ModedTerm term) {
   }
 
   throw InvalidHeadError('Unknown moded term type: ${term.runtimeType}');
+}
+
+/// Build a moded term without type-driven mode computation.
+///
+/// Used when the expected type is a wildcard (_ or _?). The entire term
+/// and all its subterms inherit the same mode from the wildcard position.
+/// Variables are still collected so they can be type-checked for complementarity.
+///
+/// This implements Definition 4.5 Case 3: when the type path ends at a wildcard,
+/// the term at that position is accepted without examining its internal structure
+/// against any type definition.
+ModedTerm _buildOpaqueModedTerm(ast.Term term, Mode mode) {
+  if (term is ast.VarTerm) {
+    return ModedVariable(term.name, isReader: term.isReader, structuralMode: mode);
+  }
+
+  if (term is ast.ConstTerm) {
+    return ModedConstant(mode, term.value ?? 'null');
+  }
+
+  if (term is ast.UnderscoreTerm) {
+    // Each anonymous variable is a fresh writer (paper Remark 3.1)
+    final uniqueName = _freshAnonVarName();
+    return ModedVariable(uniqueName, isReader: false, structuralMode: mode);
+  }
+
+  if (term is ast.ListTerm) {
+    if (term.isNil) {
+      return ModedConstant.nil(mode);
+    }
+    // Build list structure - all children inherit the same mode
+    final head = _buildOpaqueModedTerm(term.head!, mode);
+    final tail = _buildOpaqueModedTerm(term.tail!, mode);
+    return ModedCompound.listCons(mode, head, tail);
+  }
+
+  if (term is ast.StructTerm) {
+    // Build structure - all children inherit the same mode (no type-driven computation)
+    final modedArgs = term.args.map((arg) => _buildOpaqueModedTerm(arg, mode)).toList();
+    return ModedCompound(mode, term.functor, term.arity, modedArgs);
+  }
+
+  throw InvalidHeadError('Unknown term type in opaque context: ${term.runtimeType}');
 }
 
 /// Ensure each variable's form matches its position's structural mode.

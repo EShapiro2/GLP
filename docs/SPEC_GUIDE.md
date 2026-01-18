@@ -20,7 +20,7 @@ To understand the GLP implementation requirements, focus on these sections in or
 - **Writer** `X`: Single-assignment variable (promise) - can be written to exactly once
 - **Reader** `X?`: Paired read-only access to writer's future value
 - **SO Invariant** (runtime): Each variable occurs at most once in any resolvent
-- **SRSW Syntactic Restriction** (compile-time): Each writer occurs exactly once and each reader occurs exactly once in a clause (exception: ground guard allows multiple readers). **SRSW is checked by the parser before type checking.** The type checker assumes all clauses satisfy SRSW.
+- **SRSW Syntactic Restriction** (compile-time): Each writer occurs exactly once and each reader occurs exactly once in the head or body of a clause; guard occurrences do not count toward SRSW satisfaction (exception: ground guard allows multiple reader occurrences in the body). **SRSW is checked by the parser before type checking.** The type checker assumes all clauses satisfy SRSW.
 - This eliminates the need for distributed unification - just point-to-point communication
 
 ### Term Matching (Definition in Book Chapter: GLP Core)
@@ -153,6 +153,8 @@ Circular terms may form through cross-goal communication; the occurs check is no
 - **Patient**: Suspend on unbound variables rather than fail
 - Execute during HEAD/GUARDS phase (before commit)
 - Never have side effects
+
+**Guards and SRSW**: Guard occurrences do not count toward SRSW satisfaction. Guards are pure tests that examine values without participating in data flow. For SRSW purposes, a variable must have its writer and reader in the head and/or body—a reader appearing only in guards does not satisfy the pairing requirement.
 
 #### Type Guards
 
@@ -470,7 +472,7 @@ Circular terms may form through cross-goal communication. For example, given cla
 ### SO Invariant and SRSW Enforcement:
 
 1. **SO Invariant** (runtime): Each variable occurs at most once in any resolvent - preserved by reduction with SRSW clauses
-2. **SRSW Syntactic Restriction** (compile-time): Each writer exactly once, each reader exactly once per clause
+2. **SRSW Syntactic Restriction** (compile-time): Each writer exactly once, each reader exactly once in the head or body of a clause; guard occurrences do not count
 3. `ground(X?)` guard relaxes single-reader restriction for ground terms only
 
 ### Anonymous Variable `_` in SRSW

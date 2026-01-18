@@ -1,18 +1,22 @@
 # Type Checker Status
 
-**Last Updated**: 2025-01-14
+**Last Updated**: 2026-01-18
 **Test Output**: `/Users/udi/Grassroots/GLP/test_output/typed_repl_output.txt`
 
 ## Current State
 
-Run `bash /Users/udi/Grassroots/GLP/run_typed_repl_tests.sh` to get current numbers.
+**Test Results (2026-01-18):** 141/222 passing (63.5%)
+
+Baseline verified after DFA state creation fix — no regressions.
+
+Run `bash /Users/udi/Grassroots/GLP/test/run_typechecker_repl_tests.sh` to get current numbers.
 
 ## Test Infrastructure
 
 | Script | Output |
 |--------|--------|
-| `run_typed_repl_tests.sh` | `test_output/typed_repl_output.txt` |
-| `run_main_repl_tests.sh` | `test_output/main_repl_output.txt` |
+| `test/run_typechecker_repl_tests.sh` | `test_output/typed_repl_output.txt` |
+| `test/run_book_tests.sh` | `test_output/main_repl_output.txt` |
 
 ## Directories
 
@@ -29,6 +33,7 @@ All specification files are in `/Users/udi/Grassroots/GLP/docs/type system/`:
 
 | File | Purpose |
 |------|---------|
+| `compilation-pipeline.md` | **Pipeline architecture: SRSW vs typing distinction** |
 | `mode.md` | Mode definitions |
 | `type-environment.md` | Type environment spec |
 | `type-conversion.md` | Term to TypeExpr conversion |
@@ -41,9 +46,11 @@ All specification files are in `/Users/udi/Grassroots/GLP/docs/type system/`:
 | `well-typed-program.md` | Well-typed program spec |
 | `testing.md` | Testing strategy |
 
-## Known Issues
+## Known Errors
 
-The test output file is authoritative. Check failed tests there.
+1. **SRSW display bug** — SRSW violations not shown when type errors present (bug-report-2026-01-17.md, Bug 7).
+
+2. **81 failing typed tests** — See test output for details. Categories include social_graph, social_networks, meta, cryptocurrencies, and constitutional_consensus programs.
 
 ## Remaining Diary Files
 

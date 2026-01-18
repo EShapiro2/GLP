@@ -70,6 +70,8 @@ If something doesn't fit coherently in the book, it reveals an inconsistency in 
 
 ## Build Process
 
+**READ FIRST:** `docs/DISCIPLINE.md` Part II for complete testing protocol.
+
 ```bash
 # Build book PDF
 cd book && pdflatex main.tex

@@ -1,0 +1,7 @@
+%% test_minimal.glp - Absolute minimal test
+
+%% Just two clauses: one pattern, one base case
+minimal(Id, [cmd(X)|In], [X?|Out?]) :-
+    ground(Id?), ground(X?) |
+    minimal(Id?, In?, Out).
+minimal(_, [], []).

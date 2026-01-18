@@ -21,10 +21,14 @@ Each project has a mission to complete. Projects can potentially "finish" when t
 Any project can modify any file as needed for its mission. Specs are updated by each project; Overview GLP ensures no conflicts or overlaps.
 
 ### Discipline (enforced by Overview GLP)
+
+See `docs/DISCIPLINE.md` for the complete development discipline. Key principles:
+
 1. **Types First**: Type declarations → procedure declarations → code
-2. **Testing**: All tests must pass. Positive and negative controls for every feature.
+2. **Testing**: Baseline check before and after every change. Positive and negative controls for every feature.
 3. **Consistency**: Paper ↔ spec ↔ code must align
 4. **No Shortcuts**: No cutting corners, no bypassing problems, no workarounds for bugs
+5. **Handover**: Write handover documents when ending work sessions (see Part III of DISCIPLINE.md)
 
 ### Overlap Handling
 When missions overlap (e.g., Multiagent GLP needs type declarations):

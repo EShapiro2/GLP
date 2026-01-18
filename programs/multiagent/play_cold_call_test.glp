@@ -1,0 +1,164 @@
+%% play_cold_call_test.glp - Test cold-call protocol with 2 agents
+%%
+%% Alice cold-calls Bob through the network, Bob accepts.
+%% Based on social_agent.glp patterns with SRSW-compliant cold-call.
+%%
+%% Run: play_cold_call.
+
+%% ========== Type Definitions ==========
+
+NetMsg ::= msg(_, _, _).
+MsgStream ::= [] ; [_ | MsgStream].
+Channel ::= ch(MsgStream?, MsgStream).
+FriendEntry ::= (_, MsgStream).
+FriendList ::= [] ; [FriendEntry | FriendList].
+Status ::= found ; not_found.
+BefriendResp ::= accept(Channel) ; no.
+
+%% ========== Procedure Declarations ==========
+
+procedure play_cold_call().
+procedure network2(_?, _?).
+procedure agent(_?, Channel?, Channel?).
+procedure social_graph(_?, MsgStream?, FriendList?).
+procedure lookup_send(_?, _?, FriendList?, FriendList, Status).
+procedure inject_msg(_?, _?, _?, MsgStream?, MsgStream).
+procedure bind_response(_?, _?, BefriendResp, FriendList?, FriendList, MsgStream?, MsgStream).
+procedure handle_response(BefriendResp?, _?, FriendList?, FriendList, MsgStream?, MsgStream).
+procedure add_friend(_?, MsgStream?, FriendList?, FriendList).
+procedure tag_stream(_?, MsgStream?, MsgStream).
+procedure merge(MsgStream?, MsgStream?, MsgStream).
+procedure alice_actor(MsgStream?, MsgStream).
+procedure bob_actor(MsgStream?, MsgStream).
+
+%% ========== The Play ==========
+
+play_cold_call :-
+    %% Network switch (inverse channels: ch(AgentOut?, AgentIn))
+    network2((alice, ch(AliceNetOut?, AliceNetIn)),
+             (bob, ch(BobNetOut?, BobNetIn))),
+
+    %% Agents (receive channels: ch(In?, Out))
+    agent(alice, ch(AliceUserIn?, AliceUserOut), ch(AliceNetIn?, AliceNetOut)),
+    agent(bob, ch(BobUserIn?, BobUserOut), ch(BobNetIn?, BobNetOut)),
+
+    %% Actors
+    alice_actor(AliceUserOut?, AliceUserIn),
+    bob_actor(BobUserOut?, BobUserIn).
+
+%% ========== Agent ==========
+
+agent(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
+    merge(UserIn?, NetIn?, In),
+    social_graph(Id?, In?, [(user, UserOut), (net, NetOut)]).
+
+%% ========== Social Graph (Cold-Call Protocol) ==========
+
+%% User requests connection
+social_graph(Id, [msg(user, Id?, connect(Target))|In], Fs) :-
+    ground(Id?), ground(Target?) |
+    lookup_send(net, msg(Id?, Target?, intro(Id?, Id?, Resp)), Fs?, Fs1, _),
+    inject_msg(Resp?, Target?, Id?, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+%% Receive self-introduction (cold-call)
+social_graph(Id, [msg(From, Id?, intro(From?, From?, Resp))|In], Fs) :-
+    ground(Id?), ground(From?) |
+    lookup_send(user, msg(agent, user, befriend(From?, Resp?)), Fs?, Fs1, _),
+    social_graph(Id?, In?, Fs1?).
+
+%% User decision on befriend request
+social_graph(Id, [msg(user, Id?, decision(Dec, From, Resp))|In], Fs) :-
+    ground(Id?) |
+    bind_response(Dec?, From?, Resp?, Fs?, Fs1, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+%% Response to our introduction
+social_graph(Id, [msg(From, Id?, response(Resp))|In], Fs) :-
+    ground(Id?) |
+    handle_response(Resp?, From?, Fs?, Fs1, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+%% Skip unrecognized messages
+social_graph(Id, [_|In], Fs) :-
+    ground(Id?), otherwise |
+    social_graph(Id?, In?, Fs?).
+
+%% Termination
+social_graph(_, [], _).
+
+%% ========== Inject Response Message ==========
+
+inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
+    known(Resp?) | true.
+inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
+    otherwise | 
+    inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
+
+%% ========== Response Handling ==========
+
+bind_response(yes, From, accept(ch(FOut?, FIn)), Fs, Fs1?, In, In1?) :-
+    constant(From?) |
+    handle_response(accept(ch(FIn?, FOut)), From?, Fs?, Fs1, In?, In1).
+bind_response(no, _, no, Fs, Fs?, In, In?).
+
+handle_response(accept(ch(FIn, FOut)), From, Fs, Fs1?, In, In1?) :-
+    constant(From?) |
+    tag_stream(From?, FIn?, Tagged),
+    merge(In?, Tagged?, In1),
+    add_friend(From?, FOut?, Fs?, Fs1).
+handle_response(no, _, Fs, Fs?, In, In?).
+
+%% ========== Friend Management ==========
+
+add_friend(Name, Out, Fs, [(Name?, Out?)|Fs?]).
+
+tag_stream(_, [], []).
+tag_stream(From, [Content|Rest], [msg(From?, _, Content?)|Tagged?]) :-
+    ground(From?) |
+    tag_stream(From?, Rest?, Tagged).
+
+%% ========== Lookup Send ==========
+
+lookup_send(_, _, [], [], not_found).
+
+lookup_send(Key, Msg, [(K, Out)|Rest], [(K?, Out1?)|Rest?], found) :-
+    Key? =?= K? |
+    Out? = [Msg?|Out1].
+
+lookup_send(Key, Msg, [Pair|Rest], [Pair?|Rest1?], Status?) :-
+    otherwise |
+    lookup_send(Key?, Msg?, Rest?, Rest1, Status).
+
+%% ========== Merge ==========
+
+merge([H|T1], T2, [H?|T3?]) :- merge(T1?, T2?, T3).
+merge(T1, [H|T2], [H?|T3?]) :- merge(T1?, T2?, T3).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
+
+%% ========== Network Switch (2-way) ==========
+
+%% Alice sends to Bob
+network2((alice, ch([msg(alice, bob, X)|AliceIn], AliceOut?)),
+         (bob, ch(BobIn, [msg(alice, bob, X?)|BobOut?]))) :-
+    network2((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut))).
+
+%% Bob sends to Alice
+network2((alice, ch(AliceIn, [msg(bob, alice, X?)|AliceOut?])),
+         (bob, ch([msg(bob, alice, X)|BobIn], BobOut?))) :-
+    network2((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut))).
+
+%% Termination
+network2((_, ch([], _)), (_, ch([], _))).
+
+%% ========== Actors ==========
+
+%% Alice: send connect command
+alice_actor(_, [msg(user, alice, connect(bob))|_]).
+
+%% Bob: wait for befriend, send acceptance
+bob_actor([msg(agent, user, befriend(From, Resp))|_],
+          [msg(user, bob, decision(yes, From?, Resp?))|_]).

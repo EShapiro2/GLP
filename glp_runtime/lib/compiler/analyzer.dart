@@ -6,9 +6,14 @@ class VariableInfo {
   final String name;
   final bool isWriter;
 
-  // Occurrence tracking
+  // Occurrence tracking (total - for register allocation, etc.)
   int writerOccurrences = 0;
   int readerOccurrences = 0;
+  
+  // Head/body occurrences only (for SRSW validation)
+  // Guard occurrences do NOT count toward SRSW satisfaction per spec
+  int writerOccurrencesHeadBody = 0;
+  int readerOccurrencesHeadBody = 0;
 
   // First occurrence location
   AstNode? firstOccurrence;
@@ -54,13 +59,20 @@ class VariableTable {
   bool _hasGroundGuard = false;
   final Set<String> _groundedVars = {};
 
-  void recordWriterOccurrence(String name, AstNode node) {
+  /// Record a writer occurrence.
+  /// [inHeadOrBody]: true if in head or body (counts toward SRSW), false if in guard
+  void recordWriterOccurrence(String name, AstNode node, {bool inHeadOrBody = true}) {
     final info = _vars.putIfAbsent(name, () => VariableInfo(name, true));
     info.writerOccurrences++;
+    if (inHeadOrBody) {
+      info.writerOccurrencesHeadBody++;
+    }
     info.firstOccurrence ??= node;
   }
 
-  void recordReaderOccurrence(String name, AstNode node) {
+  /// Record a reader occurrence.
+  /// [inHeadOrBody]: true if in head or body (counts toward SRSW), false if in guard
+  void recordReaderOccurrence(String name, AstNode node, {bool inHeadOrBody = true}) {
     final writerName = name;  // Reader X? pairs with writer X
 
     // Ensure writer exists or create it
@@ -68,6 +80,9 @@ class VariableTable {
 
     // Record reader occurrence
     writerInfo.readerOccurrences++;
+    if (inHeadOrBody) {
+      writerInfo.readerOccurrencesHeadBody++;
+    }
     writerInfo.firstOccurrence ??= node;
   }
 
@@ -78,11 +93,18 @@ class VariableTable {
   bool isGrounded(String varName) => _groundedVars.contains(varName);
 
   /// Verify SRSW constraints and return list of violations (empty if valid)
+  /// 
+  /// SRSW rules:
+  /// - Each variable must have exactly one writer
+  /// - Each variable must have at least one reader
+  /// - Guard occurrences count toward SRSW IF the guard implies groundness
+  ///   (e.g., number(X?), integer(X?), ground(X?) mark X as grounded)
+  /// - Grounded variables can be read multiple times safely
   List<String> collectSRSWViolations() {
     final violations = <String>[];
 
     for (final info in _vars.values) {
-      // Check writer occurrences (multiple writers)
+      // Check writer occurrences (multiple writers always bad)
       if (info.writerOccurrences > 1) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
@@ -90,16 +112,18 @@ class VariableTable {
         );
       }
 
-      // Check reader occurrences (unless grounded)
-      if (info.readerOccurrences > 1 && !isGrounded(info.name)) {
+      // Check reader occurrences (multiple readers require grounded)
+      // Per SPEC_GUIDE.md: "Guard occurrences do not count toward SRSW satisfaction."
+      // Use readerOccurrencesHeadBody (not readerOccurrences) for SRSW validation.
+      if (info.readerOccurrencesHeadBody > 1 && !isGrounded(info.name)) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
-          'Line $line: Reader variable "${info.name}?" occurs ${info.readerOccurrences} times without ground guard'
+          'Line $line: Reader variable "${info.name}?" occurs ${info.readerOccurrencesHeadBody} times without ground guard'
         );
       }
 
-      // Check for complete reader/writer pairs (revised SRSW requirement)
-      // Each variable must have exactly one writer AND at least one reader
+      // Check for complete reader/writer pairs
+      // Each variable must have exactly one writer
       if (info.writerOccurrences == 0) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
@@ -107,10 +131,16 @@ class VariableTable {
         );
       }
 
-      if (info.readerOccurrences == 0 && info.writerOccurrences > 0) {
+      // Each variable must have at least one reader
+      // Guard occurrences count IF the variable is grounded by that guard
+      // (grounded variables can be safely read multiple times)
+      final hasBodyReader = info.readerOccurrencesHeadBody > 0;
+      final hasGroundedGuardReader = isGrounded(info.name) && info.readerOccurrences > 0;
+      
+      if (!hasBodyReader && !hasGroundedGuardReader && info.writerOccurrences > 0) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
-          'Line $line: Variable "${info.name}" has no reader'
+          'Line $line: Variable "${info.name}" has no reader (guard occurrences only count if grounded)'
         );
       }
     }
@@ -124,10 +154,15 @@ class VariableTable {
     if (violations.isNotEmpty) {
       // Find first violation's line for the error location
       final firstVar = _vars.values.firstWhere(
-        (v) => v.writerOccurrences > 1 ||
-               (v.readerOccurrences > 1 && !isGrounded(v.name)) ||
-               v.writerOccurrences == 0 ||
-               (v.readerOccurrences == 0 && v.writerOccurrences > 0),
+        (v) {
+          if (v.writerOccurrences > 1) return true;
+          if (v.readerOccurrences > 1 && !isGrounded(v.name)) return true;
+          if (v.writerOccurrences == 0) return true;
+          final hasBodyReader = v.readerOccurrencesHeadBody > 0;
+          final hasGroundedGuardReader = isGrounded(v.name) && v.readerOccurrences > 0;
+          if (!hasBodyReader && !hasGroundedGuardReader && v.writerOccurrences > 0) return true;
+          return false;
+        },
         orElse: () => _vars.values.first,
       );
       throw CompileError(
@@ -494,10 +529,11 @@ class Analyzer {
       // defer to runtime or codegen phase for now
     }
 
-    // Special handling for ground/1 and known/1
+    // Special handling for ground/1
+    // ground(X?) implies the argument is fully ground (no unbound variables)
     if (guard.predicate == 'ground' && guard.args.length == 1) {
       final arg = guard.args[0];
-      if (arg is VarTerm && arg.isReader) {
+      if (arg is VarTerm) {
         // ground(X?) allows multiple reader occurrences
         varTable.markGrounded(arg.name);
       }
@@ -563,10 +599,11 @@ class Analyzer {
     }
 
     // Analyze guard arguments
-    // Per spec: guard reader occurrences count toward SRSW validation.
-    // A reader in a guard satisfies the reader requirement for its paired writer.
+    // Per spec: guard occurrences do NOT count toward SRSW validation.
+    // A reader appearing only in guards does not satisfy the pairing requirement.
+    // Pass inHeadOrBody: false so these occurrences are tracked but don't count for SRSW.
     for (final arg in guard.args) {
-      _analyzeTerm(arg, varTable);
+      _analyzeTerm(arg, varTable, inHeadOrBody: false);
     }
   }
 
@@ -592,23 +629,26 @@ class Analyzer {
     // ConstTerm and UnderscoreTerm have no variables to extract
   }
 
-  void _analyzeTerm(Term term, VariableTable varTable) {
+  /// Analyze a term, recording variable occurrences.
+  /// [inHeadOrBody]: true if analyzing head or body (counts for SRSW),
+  ///                 false if analyzing guards (does not count for SRSW)
+  void _analyzeTerm(Term term, VariableTable varTable, {bool inHeadOrBody = true}) {
     if (term is VarTerm) {
       if (term.isReader) {
-        varTable.recordReaderOccurrence(term.name, term);
+        varTable.recordReaderOccurrence(term.name, term, inHeadOrBody: inHeadOrBody);
       } else {
-        varTable.recordWriterOccurrence(term.name, term);
+        varTable.recordWriterOccurrence(term.name, term, inHeadOrBody: inHeadOrBody);
       }
     } else if (term is StructTerm) {
       for (final arg in term.args) {
-        _analyzeTerm(arg, varTable);
+        _analyzeTerm(arg, varTable, inHeadOrBody: inHeadOrBody);
       }
     } else if (term is ListTerm) {
       if (term.head != null) {
-        _analyzeTerm(term.head!, varTable);
+        _analyzeTerm(term.head!, varTable, inHeadOrBody: inHeadOrBody);
       }
       if (term.tail != null) {
-        _analyzeTerm(term.tail!, varTable);
+        _analyzeTerm(term.tail!, varTable, inHeadOrBody: inHeadOrBody);
       }
     }
     // ConstTerm and UnderscoreTerm have no variables to track

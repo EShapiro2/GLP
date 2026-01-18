@@ -1187,6 +1187,8 @@ class Parser {
       nameToken = _advance();
     } else if (_check(TokenType.UNIV_DECOMPOSE)) {
       nameToken = _advance();
+    } else if (_check(TokenType.ASSIGN)) {
+      nameToken = _advance();
     } else {
       throw CompileError(
         'Expected procedure name',

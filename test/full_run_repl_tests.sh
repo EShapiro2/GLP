@@ -1331,36 +1331,28 @@ else
 fi
 
 # Guard reader occurrence tests
-# Per spec: guard reader occurrences count toward SRSW validation.
-# A reader in a guard satisfies the reader requirement for its paired writer.
+# Per spec: guard reader occurrences count toward SRSW IF the guard implies groundness.
+# ground/1, integer/1, number/1, comparison ops - all imply groundness
+# known/1 does NOT imply groundness (bound value may contain unbound vars)
 echo ""
 echo "--- Guard Reader Occurrence Tests ---"
 
 guard_reader_output=$($DART run "$REPL" <<GUARD_READER
 $GLP_DIR/guard_reader.glp
-guard_known(hello).
 guard_ground(42).
 guard_int(7).
 guard_compare(3, 5).
+guard_known_valid(hello, Y).
 :quit
 GUARD_READER
 2>&1)
 
 # Check that file loaded successfully (no SRSW errors)
 if echo "$guard_reader_output" | grep -q "Loaded.*guard_reader.glp"; then
-    echo "PASS: guard_reader.glp loads (guard readers count for SRSW)"
+    echo "PASS: guard_reader.glp loads (grounding guards satisfy SRSW)"
     PASS=$((PASS + 1))
 else
     echo "FAIL: guard_reader.glp should load without SRSW errors"
-    FAIL=$((FAIL + 1))
-fi
-
-# Check that guard_known succeeds
-if echo "$guard_reader_output" | grep -q "guard_known(hello)"; then
-    echo "PASS: guard_known(hello) with known/1 guard"
-    PASS=$((PASS + 1))
-else
-    echo "FAIL: guard_known(hello) (expected: succeeds)"
     FAIL=$((FAIL + 1))
 fi
 
@@ -1370,6 +1362,15 @@ if echo "$guard_reader_output" | grep -q "guard_ground(42)"; then
     PASS=$((PASS + 1))
 else
     echo "FAIL: guard_ground(42) (expected: succeeds)"
+    FAIL=$((FAIL + 1))
+fi
+
+# Check that guard_int succeeds
+if echo "$guard_reader_output" | grep -q "guard_int(7)"; then
+    echo "PASS: guard_int(7) with integer/1 guard"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: guard_int(7) (expected: succeeds)"
     FAIL=$((FAIL + 1))
 fi
 

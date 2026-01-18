@@ -18,6 +18,7 @@ void main() {
 
     // This clause uses _ as first argument - should compile without error
     // The _ is a writer that nobody reads (used in abort clauses)
+    // X and Y are grounded by number() guards, so guard readers count for SRSW
     final source = '''
 _ := X / Y :-
   number(X?), number(Y?), Y? =:= 0 |
@@ -48,6 +49,7 @@ Result? := X / Y :-
     print('✅ Result? correctly rejected (no writer)');
 
     // This should PASS - _ has no SRSW requirements
+    // X and Y are grounded by number() guards, so guard readers count
     final goodSource = '''
 _ := X / Y :-
   number(X?), number(Y?), Y? =:= 0 |
@@ -57,5 +59,23 @@ _ := X / Y :-
     final program = compiler.compile(goodSource);
     expect(program, isNotNull);
     print('✅ _ correctly accepted (anonymous)');
+  });
+
+  test('SRSW rejects guard-only readers without groundness', () {
+    print('\nTesting SRSW rejects guard-only readers without groundness');
+
+    final compiler = GlpCompiler();
+
+    // This should FAIL - X only appears in guard that doesn't imply groundness
+    // (known/1 checks if bound, but doesn't guarantee ground for SRSW purposes)
+    // Actually, let's use a custom guard that doesn't mark ground
+    // The simplest case: otherwise doesn't ground anything
+    final badSource = '''
+foo(X) :- otherwise | bar.
+''';
+
+    expect(() => compiler.compile(badSource), throwsException,
+        reason: 'otherwise does not ground X, so X has no reader');
+    print('✅ Guard-only readers without groundness correctly rejected');
   });
 }

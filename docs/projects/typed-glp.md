@@ -72,6 +72,8 @@ procedure social_graph(_?, MsgList?, FriendList?).
 
 ## Testing Commands
 
+**READ FIRST:** `docs/DISCIPLINE.md` Part II for complete testing protocol.
+
 ```bash
 # Type check a specific program
 cd glp_runtime && dart run bin/check_types.dart <program.glp>

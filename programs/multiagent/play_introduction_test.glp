@@ -1,0 +1,224 @@
+%% play_introduction.glp - Attempting SRSW-compliant version
+%% Based on Art-of-GLP-2025 Chapter 8
+
+%% ========== 2-Way Network Switch ==========
+%% This part works - direct pattern matching in head
+
+%% Alice sends to Bob
+network2((alice, ch([msg(alice, bob, X)|AliceIn], AliceOut?)),
+         (bob, ch(BobIn, [msg(alice, bob, X?)|BobOut?]))) :-
+    network2((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut))).
+
+%% Bob sends to Alice
+network2((alice, ch(AliceIn, [msg(bob, alice, X?)|AliceOut?])),
+         (bob, ch([msg(bob, alice, X)|BobIn], BobOut?))) :-
+    network2((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut))).
+
+%% Termination
+network2((_, ch([], _)), (_, ch([], _))).
+
+%% ========== Play: Alice befriends Bob ==========
+
+play_alice_bob :-
+    %% Network switch
+    network2((alice, ch(AliceNetOut?, AliceNetIn)),
+             (bob, ch(BobNetOut?, BobNetIn))),
+
+    %% Agents - PROBLEM: book uses ch(In?, Out) but we need to pass channels
+    %% The book pattern: agent(alice, ch(AliceUserIn?, AliceUserOut), ch(AliceNetIn?, AliceNetOut))
+    %% passes channels to agent, which destructures them in guard.
+    %% 
+    %% ATTEMPT 1: Destructure in play_alice_bob head instead
+    agent(alice, AliceUserIn?, AliceUserOut, AliceNetIn?, AliceNetOut),
+    agent(bob, BobUserIn?, BobUserOut, BobNetIn?, BobNetOut),
+
+    %% Actors
+    alice_actor(AliceUserOut?, AliceUserIn),
+    bob_actor(BobUserOut?, BobUserIn).
+
+%% ========== Agent ==========
+%% PROBLEM: Book has agent(Id, ChUser, ChNet) with guard ChUser = ch(UserIn, UserOut)
+%% This creates UserOut as writer appearing twice (in guard binding AND in friends list)
+%% 
+%% SOLUTION: Expand agent to take 5 args, destructure at call site
+
+agent(Id, UserIn, UserOut, NetIn, NetOut) :-
+    merge(UserIn?, NetIn?, In),
+    social_graph(Id?, In?, [(user, UserOut), (net, NetOut)]).
+
+%% PROBLEM: UserOut and NetOut are writers in the head, but they appear in the 
+%% friends list structure. The friends list is passed to social_graph which will
+%% eventually write to these streams via lookup_send.
+%%
+%% This is actually correct! UserOut and NetOut are writers, and they get ONE
+%% reader each when lookup_send writes to them: Out? = [Msg?|Out1]
+%% But wait - they appear in the list structure [(user, UserOut), ...] which
+%% is passed as Fs? to social_graph. So Fs? reads them... but they're writers.
+%%
+%% ISSUE IDENTIFIED: The list [(user, UserOut), (net, NetOut)] contains writers
+%% but the list itself is read (Fs?). This is the "output collection" pattern
+%% where a data structure contains output channels.
+
+%% ========== Actors ==========
+%% PROBLEM: alice_actor(Out?, [msg(...)|In?]) has Out? appearing twice
+%% - once in head for pattern match
+%% - once passed to alice_wait_response
+%%
+%% Book pattern:
+%%   alice_actor(Out?, [msg(user, alice, connect(bob))|In?]) :-
+%%       alice_wait_response(Out?, In).
+%%
+%% The Out? is a reader (input from agent's UserOut stream)
+%% It appears twice: in head and passed to continuation
+%% This violates "reader appears once unless ground guard"
+
+%% ATTEMPT: Split into separate clauses that don't reuse Out?
+%% But this doesn't work because we need to pass Out to continuation...
+
+%% Actually, looking more carefully: Out? in head means we're READING from Out
+%% We then pass Out? to the continuation to continue reading.
+%% This is the standard stream consumption pattern!
+%% 
+%% The SRSW rule is: reader can appear multiple times IF grounded.
+%% But Out? is NOT ground - it's an unbound stream.
+%%
+%% FUNDAMENTAL ISSUE: The standard pattern of reading a stream and passing
+%% the tail to a recursive call requires the stream variable to appear twice
+%% as a reader. The book assumes this is allowed for stream variables.
+
+alice_actor(Out?, [msg(user, alice, connect(bob))|In?]) :-
+    alice_wait_response(Out?, In).
+
+alice_wait_response([msg(agent, user, connected(bob))|_], _).
+alice_wait_response([_|Out], In?) :- alice_wait_response(Out?, In).
+
+bob_actor([msg(agent, user, befriend(alice, Resp))|Out?],
+          [msg(user, bob, decision(yes, alice, Resp?))|In?]) :-
+    bob_done(Out?, In).
+bob_actor([_|Out], In?) :- bob_actor(Out?, In).
+
+bob_done(_, _).
+
+%% ========== Social Graph ==========
+
+social_graph(Id, [msg(user, Id?, connect(Target))|In], Fs) :-
+    ground(Id?), ground(Target?) |
+    lookup_send(net, msg(Id?, Target?, intro(Id?, Id?, Resp)), Fs?, Fs1, Status),
+    response_stream(Resp?, Target?, Id?, Rs),
+    merge(In?, Rs?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+social_graph(Id, [msg(From, Id?, intro(From?, From?, Resp))|In], Fs) :-
+    ground(Id?), ground(From?) |
+    lookup_send(user, msg(agent, user, befriend(From?, Resp?)), Fs?, Fs1, _),
+    social_graph(Id?, In?, Fs1?).
+
+social_graph(Id, [msg(user, Id?, decision(Dec, From, Resp))|In], Fs) :-
+    ground(Id?) |
+    bind_response(Dec?, From?, Resp?, Fs?, Fs1, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+social_graph(Id, [msg(From, Id?, response(Resp))|In], Fs) :-
+    ground(Id?) |
+    handle_response(Resp?, From?, Fs?, Fs1, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+social_graph(Id, [_|In], Fs) :-
+    ground(Id?), otherwise |
+    social_graph(Id?, In?, Fs?).
+
+social_graph(_, [], _).
+
+%% ========== Response Handling ==========
+
+%% PROBLEM: response_stream uses known(Resp?) guard where Resp? appears twice
+%% - once in guard known(Resp?)
+%% - once in output [msg(Target?, Id?, response(Resp?))]
+%%
+%% The known/1 guard succeeds when its argument is bound.
+%% Resp? appearing in guard should count as "guarded by ground" for SRSW purposes
+%% since known(X?) implies X is bound (hence ground-ish).
+
+response_stream(Resp, Target, Id, [msg(Target?, Id?, response(Resp?))]) :-
+    known(Resp?) | true.
+
+%% PROBLEM: bind_response creates ch(FOut?, FIn) where FOut? and FIn are fresh
+%% variables. FOut? appears in the accept() term sent back, FIn? appears in
+%% handle_accept. This is the channel creation pattern.
+%%
+%% The book writes: accept(ch(FOut?, FIn)) 
+%% This creates a channel where FOut is writer (sent to remote), FIn is reader (kept local)
+%% But the term ch(FOut?, FIn) contains FOut? as reader... 
+%%
+%% Actually: ch(FOut?, FIn) means:
+%% - FOut? is the INPUT to the remote (they read from it)
+%% - FIn is the OUTPUT from the remote (they write to it)
+%% 
+%% So from OUR perspective:
+%% - We WRITE to FOut (their input) - so FOut should be writer in our clause
+%% - We READ from FIn (their output) - so FIn? should be reader in our clause
+%%
+%% The accept(ch(FOut?, FIn)) sends ch(FOut?, FIn) to remote.
+%% Remote will see ch(X?, Y) where X? is their input (our FOut) and Y is their output (our FIn).
+%% Remote reads X? (our FOut?) and writes Y (our FIn).
+%% So we need: our FOut is writer, our FIn is reader.
+%% But in accept(ch(FOut?, FIn)), FOut? is marked as reader (has ?).
+%%
+%% CONFUSION: The ? annotation in channel terms like ch(In?, Out) describes
+%% the HOLDER's perspective. In accept(ch(FOut?, FIn)), from the SENDER's view:
+%% - FOut? is what the RECEIVER will read from (receiver's input)
+%% - FIn is what the RECEIVER will write to (receiver's output)
+%%
+%% But we're the SENDER. We will:
+%% - Write to FOut (so FOut should be our writer)
+%% - Read from FIn (so FIn? should be our reader)
+%%
+%% The book's pattern accept(ch(FOut?, FIn)) seems to have this backwards...
+%% Or the ? in the term is describing the RECEIVER's view, not ours.
+
+bind_response(yes, From, accept(ch(FOut?, FIn)), Fs, Fs1?, In, In1?) :-
+    constant(From?) |
+    handle_accept(From?, ch(FIn?, FOut), Fs?, Fs1, In?, In1).
+bind_response(no, _, no, Fs, Fs?, In, In?).
+
+handle_accept(From, ch(FIn, FOut), Fs, Fs1?, In, In1?) :-
+    constant(From?) |
+    tag_stream(From?, FIn?, Tagged),
+    merge(In?, Tagged?, In1),
+    add_friend(From?, FOut?, Fs?, Fs1).
+
+%% PROBLEM: handle_response uses Fs1 twice - once as output of add_friend,
+%% once as input to lookup_send. This is standard threading but violates
+%% single-writer if Fs1 is writer.
+
+handle_response(accept(ch(FIn, FOut)), From, Fs, Fs2?, In, In1?) :-
+    constant(From?) |
+    tag_stream(From?, FIn?, Tagged),
+    merge(In?, Tagged?, In1),
+    add_friend(From?, FOut?, Fs?, Fs1),
+    lookup_send(user, msg(agent, user, connected(From?)), Fs1?, Fs2, _).
+handle_response(no, _, Fs, Fs?, In, In?).
+
+add_friend(Name, Out, Fs, [(Name?, Out?)|Fs?]).
+
+%% ========== Utilities ==========
+
+lookup_send(_, _, [], [], not_found).
+lookup_send(Key, Msg, [(K, Out)|Rest], [(K?, Out1?)|Rest?], found) :-
+    Key? =?= K? |
+    Out? = [Msg?|Out1].
+lookup_send(Key, Msg, [Pair|Rest], [Pair?|Rest1?], Status?) :-
+    otherwise |
+    lookup_send(Key?, Msg?, Rest?, Rest1, Status).
+
+tag_stream(_, [], []).
+tag_stream(From, [Content|Rest], [msg(From?, _, Content?)|Tagged?]) :-
+    ground(From?) |
+    tag_stream(From?, Rest?, Tagged).
+
+merge([H|T1], T2, [H?|T3?]) :- merge(T1?, T2?, T3).
+merge(T1, [H|T2], [H?|T3?]) :- merge(T1?, T2?, T3).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).

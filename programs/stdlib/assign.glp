@@ -4,6 +4,11 @@
 % Loaded at runtime with grantBodyKernelAccess: true
 -stdlib.
 
+% Type: Exp is defined in prelude (Number ; +(Exp,Exp) ; -(Exp,Exp) ; ...)
+% Procedure declaration for arithmetic assignment
+% Result (left side) is always a Number, input (right side) is an Exp
+procedure :=(Number, Exp?).
+
 % ============================================================================
 % BASE CASE: Plain number assignment
 % ============================================================================

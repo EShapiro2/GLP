@@ -1,7 +1,7 @@
 # Module: well-typed-term
 
-**Version**: 0.6
-**Date**: 2025-01-12
+**Version**: 0.7
+**Date**: 2026-01-18
 **Status**: DRAFT
 **Paper References**: Definition 4.5 (Consistent Paths), Definition 4.7 (Well-Typed Moded Term)
 
@@ -25,22 +25,24 @@ Determines when a moded term is well-typed by an automaton. This includes checki
 
 ### Definition 4.5: Consistent Paths
 
-Let x be a moded term path and y a GLP type path. Then x and y are **consistent** if:
+Let x be a moded term path and y a GLP type path, with lengths |x| and |y| respectively. Then x and y are **consistent** if one of the following holds:
 
-**Case 1 (Equal length):** They are of equal length and identical except for their last symbols, which are consistent:
+**Case 1 (Equal length):** |x| = |y| and x and y are identical except for their last symbols, which are consistent:
 - Integer literal at Integer/Integer? state → consistent
 - Real literal at Real/Real? state → consistent
 - Numeric literal at Number/Number? state → consistent
 - String literal at String/String? state → consistent
 - Constant c at state with transition on c → consistent
 
-**Case 2 (Term path is prefix):** x is a prefix of y except for its last symbol that is:
-- **(a)** a reader X? and the mode of the corresponding type symbol is consume ↓, or
-- **(b)** a writer X and the mode of the corresponding type symbol is produce ↑
+**Case 2 (Term path shorter — variable at leaf):** |x| < |y| and x is a prefix of y except for its last symbol, which is:
+- **(a)** a reader X? and the structural mode at that position is consume ↓, or
+- **(b)** a writer X and the structural mode at that position is produce ↑
 
-**Case 3 (Type path is prefix):** y is a prefix of x except for its last symbol that is:
-- **(a)** _? (consumed wildcard) and the mode of the corresponding term symbol is consume ↓, or
-- **(b)** _ (produced wildcard) and the mode of the corresponding term symbol is produce ↑
+**Case 3 (Type path shorter — wildcard in type):** |y| < |x| and y ends at a wildcard state (`_` or `_?`), and:
+- **(a)** if `_?`, the structural mode at position |y| in the term path is consume ↓, or
+- **(b)** if `_`, the structural mode at position |y| in the term path is produce ↑
+
+**The remainder of the term path beyond position |y| is not examined; the wildcard accepts the entire subterm at that position.**
 
 ### Primitive Term to Type Correspondence
 
@@ -575,3 +577,4 @@ Complementarity check:
 | 0.4 | 2025-01-10 | Update for ProgramDFA v0.8: Automaton, complement states |
 | 0.5 | 2025-01-12 | Add Definition 4.5 three cases; automaton switching; interactive type examples |
 | 0.6 | 2025-01-12 | Fix wildcard states to accept any term of appropriate mode (not just variables) |
+| 0.7 | 2026-01-18 | Clarify Definition 4.5 Case 3: wildcards accept entire subterm at position, no further traversal |

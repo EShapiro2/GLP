@@ -53,6 +53,12 @@ Write the GLP paper for ICLP (International Conference on Logic Programming).
 - Core language sections drafted
 - Examples from `programs/paper/`
 
+## Testing
+
+**READ FIRST:** `docs/DISCIPLINE.md` Part II for complete testing protocol.
+
+All example programs in the paper must pass baseline tests.
+
 ## Quality Criteria
 
 1. **Novel contribution** clearly stated

@@ -1,0 +1,7 @@
+%% test_social_fail.glp - ONLY social_graph clauses
+
+%% User sends message to a friend
+social_graph(Id, [send(To, Content)|In], Fs) :-
+    ground(Id?), ground(To?), ground(Content?) |
+    social_graph(Id?, In?, Fs?).
+

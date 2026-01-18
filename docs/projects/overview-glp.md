@@ -39,18 +39,27 @@ Maintain the working codebase, specs, and papers all consistent. Directory struc
 
 ## Testing Commands
 
+**READ FIRST:** `docs/DISCIPLINE.md` Part II for complete testing protocol.
+
+**Standard Testing One-Liner (copy-paste this exact command):**
+
 ```bash
-# All Dart unit tests
-cd glp_runtime && dart test
+cd /Users/udi/Grassroots/GLP/glp_runtime && dart test > /tmp/glp-tests.txt 2>&1 && cd .. && bash test/full_run_repl_tests.sh >> /tmp/glp-tests.txt 2>&1
+```
 
-# All REPL tests  
-cd glp_runtime && dart test test/repl/
+This runs both Dart tests and REPL tests, writing all output to `/tmp/glp-tests.txt`. After user runs the command, read the results with `Filesystem:read_text_file` on `/tmp/glp-tests.txt`.
 
+**Other test commands:**
+
+```bash
 # Flutter build
-cd glp_multiagent && flutter build macos
+cd /Users/udi/Grassroots/GLP/glp_multiagent && flutter build macos > /tmp/flutter-build.txt 2>&1
 
 # Type check a program
-cd glp_runtime && dart run bin/check_types.dart <program.glp>
+cd /Users/udi/Grassroots/GLP/glp_runtime && dart run bin/check_types.dart <program.glp> > /tmp/typecheck.txt 2>&1
+
+# Book tests
+cd /Users/udi/Grassroots/GLP && bash test/run_book_tests.sh > /tmp/book-tests.txt 2>&1
 ```
 
 ## Current Test Status (2026-01-17)

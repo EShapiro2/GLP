@@ -1,0 +1,49 @@
+%% test_social_fail.glp - ONLY social_graph clauses
+
+%% User sends message to a friend
+social_graph(Id, [send(To, Content)|In], Fs) :-
+    ground(Id?), ground(To?), ground(Content?) |
+    social_graph(Id?, In?, Fs?).
+
+%% User requests introduction
+social_graph(Id, [introduce(P, Q)|In], Fs) :-
+    ground(Id?), ground(P?), ground(Q?) |
+    social_graph(Id?, In?, Fs?).
+
+%% Receive introduction from a friend
+social_graph(Id, [msg(From, Id?, intro(Other, Ch))|In], Fs) :-
+    ground(Id?), ground(From?), ground(Other?) |
+    social_graph(Id?, In?, Fs?).
+
+%% User accepts introduction
+social_graph(Id, [accept_intro(Other, ch(FIn, FOut))|In], Fs) :-
+    ground(Id?), ground(Other?) |
+    social_graph(Id?, In?, Fs?).
+
+%% User rejects introduction
+social_graph(Id, [reject_intro(Other, _)|In], Fs) :-
+    ground(Id?), ground(Other?) |
+    social_graph(Id?, In?, Fs?).
+
+%% Receive ping
+social_graph(Id, [msg(From, Id?, ping)|In], Fs) :-
+    ground(Id?), ground(From?) |
+    social_graph(Id?, In?, Fs?).
+
+%% Receive pong
+social_graph(Id, [msg(From, Id?, pong)|In], Fs) :-
+    ground(Id?), ground(From?) |
+    social_graph(Id?, In?, Fs?).
+
+%% Receive other message
+social_graph(Id, [msg(From, Id?, Content)|In], Fs) :-
+    ground(Id?), ground(From?), ground(Content?) |
+    social_graph(Id?, In?, Fs?).
+
+%% Unknown command
+social_graph(Id, [Cmd|In], Fs) :-
+    ground(Id?), ground(Cmd?), otherwise |
+    social_graph(Id?, In?, Fs?).
+
+%% Empty input - done
+social_graph(_, [], _).

@@ -2,10 +2,16 @@
 //
 // Standalone type checker for GLP programs
 // Uses the integrated parser that handles types, procedures, and clauses
+//
+// Pipeline: Parse → Partial Evaluation → Type Check
+// Per compilation-pipeline.md: Partial evaluation unfolds defined guards
+// before type checking so the type checker sees the expanded program.
 
 import 'dart:io';
 import '../lib/compiler/lexer.dart';
 import '../lib/compiler/parser.dart';
+import '../lib/compiler/ast.dart';
+import '../lib/compiler/partial_evaluator.dart';
 import '../lib/analysis/type_checker/type_checker.dart';
 
 void main(List<String> args) {
@@ -32,7 +38,7 @@ void main(List<String> args) {
   }
 
   try {
-    // Parse using main parser (handles types, procedures, clauses)
+    // Phase 1: Parse using main parser (handles types, procedures, clauses)
     final lexer = Lexer(source);
     final tokens = lexer.tokenize();
     final parser = Parser(tokens);
@@ -49,8 +55,19 @@ void main(List<String> args) {
       print('');
     }
 
-    // Type check the module
-    final result = checkModule(module);
+    // Phase 2: Apply partial evaluation (defined guard expansion) BEFORE type checking
+    // This transforms clauses to unfold unit clause guards like =/2, new_channel/2, etc.
+    final ast = Program(module.procedures, module.line, module.column);
+    final partialEvaluator = PartialEvaluator();
+    final transformedAst = partialEvaluator.transformDefinedGuards(ast);
+
+    if (verbose) {
+      print('Partial evaluation applied (defined guards expanded)');
+      print('');
+    }
+
+    // Phase 3: Type check with transformed procedures
+    final result = checkModule(module, transformedProcedures: transformedAst.procedures);
 
     // Display results
     if (result.isWellTyped && result.warnings.isEmpty) {

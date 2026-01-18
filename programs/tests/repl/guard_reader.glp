@@ -1,18 +1,20 @@
-% Test: guard provides the sole reader occurrence for SRSW validation
-% Per spec: guard reader occurrences count toward SRSW validation.
-% A reader in a guard satisfies the reader requirement for its paired writer.
+% Test: guards that imply groundness allow guard-only reader occurrences
+% Per spec: guard reader occurrences count toward SRSW IF the guard implies groundness.
+% Guards that imply groundness: ground/1, integer/1, number/1, atom/1, string/1, etc.
+% Guards that do NOT imply groundness: known/1 (bound but may contain unbound vars)
 
-% known/1 guard: X is writer in head, X? is reader in guard
-guard_known(X) :- known(X?) | true.
-
-% ground/1 guard 
+% ground/1 guard: implies groundness, so X? in guard satisfies SRSW
 guard_ground(X) :- ground(X?) | true.
 
-% integer/1 guard
+% integer/1 guard: implies groundness (integers are ground)
 guard_int(X) :- integer(X?) | true.
 
-% Arithmetic comparison guard: both X? and Y? are readers
+% Arithmetic comparison guard: both X? and Y? are grounded (comparison requires ground numbers)
 guard_compare(X, Y) :- X? < Y? | true.
 
-% Negated guard
-guard_neg_known(X) :- ~known(X?) | true.
+% known/1 does NOT imply groundness - bound value may contain unbound vars
+% So this would be an SRSW violation if X? only appears in guard:
+% guard_known(X) :- known(X?) | true.  % INVALID - X has no grounded reader
+
+% To use known/1 correctly, X? must also appear in body or with a grounding guard:
+guard_known_valid(X, Y?) :- known(X?) | Y = X?.  % X? in body satisfies SRSW

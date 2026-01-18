@@ -1,4 +1,9 @@
 %% equator.glp - Equator system predicate
 -stdlib.
 
+% Equator type (opaque internal structure)
+Equator ::= '_equator'(_, _).
+
+procedure equate(Equator?).
+
 equate(Eq) :- equator(Eq?) | '_equator'(Eq?).

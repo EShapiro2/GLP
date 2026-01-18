@@ -540,19 +540,18 @@ bool loadProgram(String filename, GlpCompiler compiler, Map<String, BytecodeProg
       final transformedAst = partialEvaluator.transformDefinedGuards(ast);
       
       // Type check with transformed procedures
+      // Per compilation-pipeline.md: Type errors are ADVISORY, not fatal
+      // Programs should compile and run regardless of type errors
       final typeResult = checkModule(module, transformedProcedures: transformedAst.procedures);
       if (!typeResult.isWellTyped) {
         print('Type errors in $filename:');
         for (final error in typeResult.errors) {
           print('  ✗ $error');
         }
-        return false;
+        print('  [Continuing despite type errors]');
+      } else {
+        print('  ✓ Type check passed (${module.procDeclarations.length} procedures)');
       }
-      // Show warnings if any
-      for (final warning in typeResult.warnings) {
-        print('  ⚠ $warning');
-      }
-      print('  ✓ Type check passed (${module.procDeclarations.length} procedures)');
     }
     
     // Compile

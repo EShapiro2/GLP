@@ -1,8 +1,8 @@
 // lib/analysis/type_checker/well_typed_term.dart
 //
 // Well-typed moded term checking for GLP type system.
-// Specification: docs/modules/well-typed-term.md v0.4
-// Paper Reference: Definition 4.3 (Consistent Paths), Definition 4.5 (Well-Typed Moded Term)
+// Specification: docs/type system/well-typed-term.md v0.7
+// Paper Reference: Definition 4.5 (Consistent Paths), Definition 4.7 (Well-Typed Moded Term)
 //
 // Determines when a moded term is well-typed by an automaton by checking path
 // consistency via automaton traversal.
@@ -250,39 +250,26 @@ PathCheckResult checkPathAgainstAutomaton(
     final nextState = currentAutomaton.transition(state, label);
 
     if (nextState == null) {
-      // Special case: wildcard states accept ANY term structure
-      // When at _ or _?, we don't need transitions - just verify mode consistency
+      // Case 3 (Type path shorter - wildcard in type): Per Definition 4.5 v0.7
+      // When at a wildcard state with no outgoing transition, check ONLY the
+      // structural mode at this position. The remainder of the term path beyond
+      // the wildcard is NOT examined - the wildcard accepts the entire subterm.
       if (state.isWildcard) {
-        // Wildcard accepts everything - just check the leaf's mode matches
-        final leafStep = path.leaf;
-        if (leafStep.isVariable) {
-          // Variable at wildcard: check mode consistency
-          final expectedMode = state.isComplement ? Mode.consume : Mode.produce;
-          if (leafStep.isReader && expectedMode == Mode.consume) {
-            return PathCheckResult.consistent(VariableTypeInfo(
-              typeState: state,
-              mode: Mode.consume,
-              isReader: true,
-            ));
-          }
-          if (!leafStep.isReader && expectedMode == Mode.produce) {
-            return PathCheckResult.consistent(VariableTypeInfo(
-              typeState: state,
-              mode: Mode.produce,
-              isReader: false,
-            ));
-          }
-          // Mode mismatch for variable at wildcard
-          return PathCheckResult.inconsistent(
-              'Variable mode mismatch at wildcard ${state.name}');
-        }
-        // Constant at wildcard: check mode consistency
+        // The structural mode at position |y| is nextStep.mode (the mode at
+        // the first position beyond where the type path can follow)
+        final structuralModeAtWildcard = nextStep.mode;
         final expectedMode = state.isComplement ? Mode.consume : Mode.produce;
-        if (leafStep.mode == expectedMode) {
+        
+        if (structuralModeAtWildcard == expectedMode) {
+          // Mode matches - wildcard accepts entire subterm, path is consistent.
+          // We don't record variable assignments here because the variables
+          // inside the wildcard-accepted subterm are handled separately.
           return PathCheckResult.consistent();
         }
+        
+        // Mode mismatch at wildcard position
         return PathCheckResult.inconsistent(
-            'Mode mismatch at wildcard: expected ${expectedMode == Mode.consume ? "↓" : "↑"}, got ${leafStep.mode == Mode.consume ? "↓" : "↑"}');
+            'Mode mismatch at wildcard ${state.name}: expected ${expectedMode == Mode.consume ? "↓" : "↑"}, got ${structuralModeAtWildcard == Mode.consume ? "↓" : "↑"}');
       }
       
       return PathCheckResult.inconsistent(

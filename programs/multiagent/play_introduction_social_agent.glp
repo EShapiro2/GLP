@@ -1,0 +1,291 @@
+%% play_introduction_social_agent.glp - Test social_agent.glp with friend-mediated introduction
+%%
+%% Tests the friend-mediated introduction protocol from social_agent.glp
+%% 
+%% Topology (pre-configured):
+%%   Alice <-> Bob <-> Charlie
+%%   (Alice and Charlie do NOT initially know each other)
+%%
+%% Scenario:
+%%   1. Bob types: introduce(alice, charlie)
+%%   2. Alice receives: intro_offer(bob, charlie, Ch)
+%%   3. Charlie receives: intro_offer(bob, alice, Ch)
+%%   4. Alice types: accept_intro(charlie, Ch)
+%%   5. Charlie types: accept_intro(alice, Ch)
+%%   6. Alice sends: send(charlie, hello)
+%%   7. Charlie receives: received(alice, hello)
+
+%% ========== Type Definitions (from social_agent.glp) ==========
+
+NetMsg ::= msg(_, _, _).
+
+UserCmd ::= send(_, _) ; introduce(_, _) ; accept_intro(_, _) ; reject_intro(_, _).
+
+UserFeedback ::= sent(_, _) ; received(_, _) ; received_ping(_) ; received_pong(_) 
+              ; intro_offer(_, _, _) ; introduced(_, _) ; accepted_intro(_) ; rejected_intro(_)
+              ; error(_, _).
+
+Msg ::= NetMsg ; UserCmd ; UserFeedback.
+
+MsgStream ::= [] ; [Msg | MsgStream].
+
+Channel ::= ch(MsgStream?, MsgStream).
+
+FriendEntry ::= (_, MsgStream).
+FriendList ::= [] ; [FriendEntry | FriendList].
+
+FriendPairs ::= [] ; [FriendEntry | FriendPairs].
+
+Status ::= found ; not_found.
+
+%% ========== Procedure Declarations ==========
+
+procedure play_introduction().
+procedure agent(_?, FriendPairs?, Channel?, Channel?).
+procedure build_friends(FriendPairs?, MsgStream, MsgStream, FriendList).
+procedure social_graph(_?, MsgStream?, FriendList?).
+procedure lookup_send(_?, Msg?, FriendList?, FriendList, Status).
+procedure handle_send_status(Status?, _?, _?, FriendList?, FriendList).
+procedure handle_intro_status(Status?, Status?, _?, _?, FriendList?, FriendList).
+procedure handle_ping_status(Status?, _?, _?, FriendList?, FriendList).
+procedure add_friend(_?, MsgStream?, FriendList?, FriendList).
+procedure tag_stream(_?, MsgStream?, MsgStream).
+procedure append(FriendList?, FriendList?, FriendList).
+procedure merge(MsgStream?, MsgStream?, MsgStream).
+procedure network3(_?, _?, _?).
+procedure alice_actor(MsgStream?, MsgStream).
+procedure alice_wait_intro(MsgStream?, MsgStream).
+procedure alice_after_accept(MsgStream?, MsgStream).
+procedure bob_actor(MsgStream?, MsgStream).
+procedure charlie_actor(MsgStream?, MsgStream).
+procedure charlie_wait_intro(MsgStream?, MsgStream).
+
+%% ========== The Play ==========
+
+play_introduction :-
+    %% Network switch routes messages between agents
+    network3((alice, ch(AliceNetOut?, AliceNetIn)),
+             (bob, ch(BobNetOut?, BobNetIn)),
+             (charlie, ch(CharlieNetOut?, CharlieNetIn))),
+
+    %% Alice knows Bob (via pre-configured FriendPairs)
+    agent(alice, [(bob, AliceToBob?)], 
+          ch(AliceUserIn?, AliceUserOut), ch(AliceNetIn?, AliceNetOut)),
+
+    %% Bob knows Alice and Charlie
+    agent(bob, [(alice, BobToAlice?), (charlie, BobToCharlie?)],
+          ch(BobUserIn?, BobUserOut), ch(BobNetIn?, BobNetOut)),
+
+    %% Charlie knows Bob
+    agent(charlie, [(bob, CharlieToBob?)],
+          ch(CharlieUserIn?, CharlieUserOut), ch(CharlieNetIn?, CharlieNetOut)),
+
+    %% Wire up friend channels through network
+    %% (These go through network3 which routes based on msg(From, To, _))
+    merge(AliceToBob?, [], AliceNetOut),
+    merge(BobToAlice?, BobToCharlie?, BobNetOut),
+    merge(CharlieToBob?, [], CharlieNetOut),
+
+    %% Actors (scripts for each user)
+    alice_actor(AliceUserOut?, AliceUserIn),
+    bob_actor(BobUserOut?, BobUserIn),
+    charlie_actor(CharlieUserOut?, CharlieUserIn).
+
+%% ========== Actors ==========
+
+%% Alice: wait for intro_offer, accept it, then send hello to charlie
+alice_actor(AgentOut, UserIn?) :-
+    alice_wait_intro(AgentOut?, UserIn).
+
+alice_wait_intro([intro_offer(bob, charlie, Ch)|AgentOut], [accept_intro(charlie, Ch?)|UserIn?]) :-
+    alice_after_accept(AgentOut?, UserIn).
+alice_wait_intro([_|AgentOut], UserIn?) :-
+    otherwise |
+    alice_wait_intro(AgentOut?, UserIn).
+
+alice_after_accept([accepted_intro(charlie)|AgentOut], [send(charlie, hello)|UserIn?]) :-
+    true.  %% Done after sending hello
+alice_after_accept([_|AgentOut], UserIn?) :-
+    otherwise |
+    alice_after_accept(AgentOut?, UserIn).
+
+%% Bob: immediately initiate introduction
+bob_actor(_, [introduce(alice, charlie)|_]).
+
+%% Charlie: wait for intro_offer, accept it
+charlie_actor(AgentOut, UserIn?) :-
+    charlie_wait_intro(AgentOut?, UserIn).
+
+charlie_wait_intro([intro_offer(bob, alice, Ch)|_], [accept_intro(alice, Ch?)|_]).
+charlie_wait_intro([_|AgentOut], UserIn?) :-
+    otherwise |
+    charlie_wait_intro(AgentOut?, UserIn).
+
+%% ========== Agent (from social_agent.glp) ==========
+
+agent(Id, FriendPairs, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
+    merge(UserIn?, NetIn?, In),
+    build_friends(FriendPairs?, UserOut, NetOut, Fs),
+    social_graph(Id?, In?, Fs?).
+
+build_friends(FriendPairs, UserOut, NetOut, Fs) :-
+    append([(user, UserOut?), (net, NetOut?)], FriendPairs?, Fs?).
+
+%% ========== Social Graph (from social_agent.glp) ==========
+
+%% User sends message to a friend
+social_graph(Id, [send(To, Content)|In], Fs) :-
+    ground(Id?), ground(To?), ground(Content?) |
+    lookup_send(To?, msg(Id?, To?, Content?), Fs?, Fs1, Status),
+    handle_send_status(Status?, To?, Content?, Fs1?, Fs2),
+    social_graph(Id?, In?, Fs2?).
+
+%% User requests introduction: introduce(P, Q)
+social_graph(Id, [introduce(P, Q)|In], Fs) :-
+    ground(Id?), ground(P?), ground(Q?) |
+    lookup_send(P?, msg(Id?, P?, intro(Q?, ch(QtoP?, PtoQ))), Fs?, Fs1, Status1),
+    lookup_send(Q?, msg(Id?, Q?, intro(P?, ch(PtoQ?, QtoP))), Fs1?, Fs2, Status2),
+    handle_intro_status(Status1?, Status2?, P?, Q?, Fs2?, Fs3),
+    social_graph(Id?, In?, Fs3?).
+
+handle_intro_status(found, found, P, Q, Fs, Fs1?) :-
+    lookup_send(user, introduced(P?, Q?), Fs?, Fs1, _).
+
+handle_intro_status(not_found, _, P, _, Fs, Fs1?) :-
+    lookup_send(user, error(intro_failed, P?), Fs?, Fs1, _).
+
+handle_intro_status(_, not_found, _, Q, Fs, Fs1?) :-
+    lookup_send(user, error(intro_failed, Q?), Fs?, Fs1, _).
+
+%% Receive introduction from a friend
+social_graph(Id, [msg(From, Id?, intro(Other, Ch))|In], Fs) :-
+    ground(Id?), ground(From?), ground(Other?) |
+    lookup_send(user, intro_offer(From?, Other?, Ch?), Fs?, Fs1, _),
+    social_graph(Id?, In?, Fs1?).
+
+%% User accepts introduction
+social_graph(Id, [accept_intro(Other, ch(FIn, FOut))|In], Fs) :-
+    ground(Id?), ground(Other?) |
+    tag_stream(Other?, FIn?, Tagged),
+    merge(In?, Tagged?, In1),
+    add_friend(Other?, FOut?, Fs?, Fs1),
+    lookup_send(user, accepted_intro(Other?), Fs1?, Fs2, _),
+    social_graph(Id?, In1?, Fs2?).
+
+%% User rejects introduction
+social_graph(Id, [reject_intro(Other, _)|In], Fs) :-
+    ground(Id?), ground(Other?) |
+    lookup_send(user, rejected_intro(Other?), Fs?, Fs1, _),
+    social_graph(Id?, In?, Fs1?).
+
+%% Receive other message
+social_graph(Id, [msg(From, Id?, Content)|In], Fs) :-
+    ground(Id?), ground(From?), ground(Content?) |
+    lookup_send(user, received(From?, Content?), Fs?, Fs1, _),
+    social_graph(Id?, In?, Fs1?).
+
+%% Unknown command
+social_graph(Id, [Cmd|In], Fs) :-
+    ground(Id?), ground(Cmd?), otherwise |
+    lookup_send(user, error(unknown_command, Cmd?), Fs?, Fs1, _),
+    social_graph(Id?, In?, Fs1?).
+
+%% Empty input
+social_graph(_, [], _).
+
+%% ========== Status Handlers ==========
+
+handle_send_status(found, To, Content, Fs, Fs1?) :-
+    lookup_send(user, sent(To?, Content?), Fs?, Fs1, _).
+
+handle_send_status(not_found, To, _, Fs, Fs1?) :-
+    lookup_send(user, error(unknown_recipient, To?), Fs?, Fs1, _).
+
+handle_ping_status(found, _, _, Fs, Fs?).
+
+handle_ping_status(not_found, _, From, Fs, Fs1?) :-
+    lookup_send(user, error(ping_reply_failed, From?), Fs?, Fs1, _).
+
+%% ========== Friend Management ==========
+
+add_friend(Name, Out, Fs, [(Name?, Out?)|Fs?]).
+
+tag_stream(_, [], []).
+tag_stream(From, [Content|Rest], [msg(From?, _, Content?)|Tagged?]) :-
+    ground(From?) |
+    tag_stream(From?, Rest?, Tagged).
+
+%% ========== Lookup Send ==========
+
+lookup_send(_, _, [], [], not_found).
+
+lookup_send(Key, Msg, [(K, Out)|Rest], [(K?, Out1?)|Rest?], found) :-
+    Key? =?= K? |
+    Out? = [Msg?|Out1].
+
+lookup_send(Key, Msg, [Pair|Rest], [Pair?|Rest1?], Status?) :-
+    otherwise |
+    lookup_send(Key?, Msg?, Rest?, Rest1, Status).
+
+%% ========== Utilities ==========
+
+append([], Ys, Ys?).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
+
+merge([H|T1], T2, [H?|T3?]) :- merge(T1?, T2?, T3).
+merge(T1, [H|T2], [H?|T3?]) :- merge(T1?, T2?, T3).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
+
+%% ========== Network Switch (3-way) ==========
+
+%% Alice sends to Bob
+network3((alice, ch([msg(alice, bob, X)|AliceIn], AliceOut?)),
+         (bob, ch(BobIn, [msg(alice, bob, X?)|BobOut?])),
+         (charlie, ch(CharlieIn, CharlieOut?))) :-
+    network3((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (charlie, ch(CharlieIn?, CharlieOut))).
+
+%% Alice sends to Charlie
+network3((alice, ch([msg(alice, charlie, X)|AliceIn], AliceOut?)),
+         (bob, ch(BobIn, BobOut?)),
+         (charlie, ch(CharlieIn, [msg(alice, charlie, X?)|CharlieOut?]))) :-
+    network3((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (charlie, ch(CharlieIn?, CharlieOut))).
+
+%% Bob sends to Alice
+network3((alice, ch(AliceIn, [msg(bob, alice, X?)|AliceOut?])),
+         (bob, ch([msg(bob, alice, X)|BobIn], BobOut?)),
+         (charlie, ch(CharlieIn, CharlieOut?))) :-
+    network3((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (charlie, ch(CharlieIn?, CharlieOut))).
+
+%% Bob sends to Charlie
+network3((alice, ch(AliceIn, AliceOut?)),
+         (bob, ch([msg(bob, charlie, X)|BobIn], BobOut?)),
+         (charlie, ch(CharlieIn, [msg(bob, charlie, X?)|CharlieOut?]))) :-
+    network3((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (charlie, ch(CharlieIn?, CharlieOut))).
+
+%% Charlie sends to Alice
+network3((alice, ch(AliceIn, [msg(charlie, alice, X?)|AliceOut?])),
+         (bob, ch(BobIn, BobOut?)),
+         (charlie, ch([msg(charlie, alice, X)|CharlieIn], CharlieOut?))) :-
+    network3((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (charlie, ch(CharlieIn?, CharlieOut))).
+
+%% Charlie sends to Bob
+network3((alice, ch(AliceIn, AliceOut?)),
+         (bob, ch(BobIn, [msg(charlie, bob, X?)|BobOut?])),
+         (charlie, ch([msg(charlie, bob, X)|CharlieIn], CharlieOut?))) :-
+    network3((alice, ch(AliceIn?, AliceOut)),
+             (bob, ch(BobIn?, BobOut)),
+             (charlie, ch(CharlieIn?, CharlieOut))).
+
+%% Termination
+network3((_, ch([], _)), (_, ch([], _)), (_, ch([], _))).
