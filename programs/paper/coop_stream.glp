@@ -1,17 +1,16 @@
 % Test: Cooperative Stream
 % Paper: Appendix A.4
 % Description: Reader and writer take turns on shared stream
-% Tests interactive type with mixed-mode alternatives
+% Tests interactive type with embedded mode in one alternative
 
-CoopStream ::= [Integer|CoopStream] ; [switch|CoopStream]? ; [].
+CoopStream ::= [Integer|CoopStream] ; [switch|CoopStream?] ; [].
 
 procedure coop_read(Integer?, CoopStream?).
+procedure coop_write(Integer?, CoopStream).
+procedure coop_write(Integer?, Integer?, CoopStream).
+
 coop_read(N, [X|Xs]) :- integer(X?) | coop_read(N?, Xs?).
 coop_read(N, [switch|Xs?]) :- coop_write(N?, Xs).
-
-procedure coop_write(Integer?, CoopStream).
 coop_write(N, Xs?) :- integer(N?) | coop_write(N?, N?, Xs).
-
-procedure coop_write(Integer?, Integer?, CoopStream).
 coop_write(N, 0, [switch|Xs]) :- coop_read(N?, Xs?).
 coop_write(N, K, [N?|Xs?]) :- K? > 0 | K1 := K? - 1, coop_write(N?, K1?, Xs).
