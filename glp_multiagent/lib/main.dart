@@ -30,9 +30,6 @@ import 'irma_router.dart';
 /// Default GLP program path
 const _defaultGlpPath = '/Users/udi/Grassroots/GLP/programs/multiagent/social_agent.glp';
 
-/// Stdlib directory
-const _stdlibPath = '/Users/udi/Grassroots/GLP/programs/stdlib';
-
 /// Entry point - checks if spawned window or main coordinator
 void main(List<String> args) {
   debugPrint('=== MAIN ARGS: $args ===');
@@ -157,21 +154,9 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     final newPath = _glpPathController.text.trim();
     if (newPath.isNotEmpty && File(newPath).existsSync()) {
       try {
-        // Load stdlib unify.glp first (provides =/2)
-        String stdlibSource = '';
-        final unifyFile = File('$_stdlibPath/unify.glp');
-        if (unifyFile.existsSync()) {
-          stdlibSource = await unifyFile.readAsString();
-        } else {
-          // Inline the minimal unify.glp if file not found
-          stdlibSource = 'X? = X.\n';
-        }
-        
-        // Load user GLP program
+        // Load user GLP program only (stdlib compiled separately in agent)
         final userSource = await File(newPath).readAsString();
-        
-        // Combine: stdlib first, then user program
-        _cachedGlpSource = '$stdlibSource\n$userSource';
+        _cachedGlpSource = userSource;
         
         setState(() {
           _currentGlpPath = newPath;
@@ -662,10 +647,16 @@ class _AgentScreenState extends State<AgentScreen> {
         friendOutputs: friendOutputs,
       );
 
-      // Compile GLP program
-      final compiler = GlpCompiler();
-      final program = compiler.compile(widget.glpSource);
-      _programs['agent.glp'] = program;
+      // Compile stdlib separately (provides =/2)
+      const stdlibSource = 'X? = X.\n';
+      final stdlibCompiler = GlpCompiler();
+      final stdlibProgram = stdlibCompiler.compile(stdlibSource);
+      _programs['stdlib'] = stdlibProgram;
+
+      // Compile user program separately (preserves type definition ordering)
+      final userCompiler = GlpCompiler();
+      final userProgram = userCompiler.compile(widget.glpSource);
+      _programs['user'] = userProgram;
 
       _addOutput('[INIT] Loaded GLP program');
 
