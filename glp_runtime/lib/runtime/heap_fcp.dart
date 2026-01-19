@@ -41,18 +41,13 @@ class Pointer {
 /// - Variables are identified by heap addresses, not separate IDs
 /// - allocateVariable() returns writerAddr (the "varId" IS the address)
 /// - Writer is at addr N, reader is at addr N+1
-/// - varTable maps writerAddr -> (writerAddr, writerAddr+1) for compatibility
 class HeapFCP {
   final List<HeapCell> cells = [];
-  
-  /// Compatibility: varTable maps writerAddr -> (writerAddr, readerAddr)
-  /// This is an identity mapping that will be removed in Phase 4
-  final Map<int, (int, int)> varTable = {};
   
   int HP = 0;  // Heap pointer (next free address)
 
   /// Callbacks for external observation (Phase 0 I/O)
-  /// Keyed by writerAddr (not varId, since varId == writerAddr now)
+  /// Keyed by writerAddr (varId == writerAddr)
   final Map<int, void Function(Term)> _bindCallbacks = {};
 
   /// Allocate a fresh variable
@@ -67,16 +62,12 @@ class HeapFCP {
 
     // Reader cell is initially unbound (null content, RoTag)
     cells.add(HeapCell(null, CellTag.RoTag));
-
-    // Compatibility: populate varTable with identity mapping
-    // varId == wAddr, so varTable[wAddr] = (wAddr, rAddr)
-    varTable[wAddr] = (wAddr, rAddr);
     
     return wAddr;  // Return writerAddr as "varId"
   }
 
   // ==========================================================================
-  // Address Helper Methods (new in address-based design)
+  // Address Helper Methods
   // ==========================================================================
 
   /// Get paired reader address from writer address
@@ -104,7 +95,7 @@ class HeapFCP {
   // ==========================================================================
 
   /// Register callback for when variable is bound (Phase 0 I/O)
-  /// Takes writerAddr (which is also the varId in current design)
+  /// Takes writerAddr (which is also the varId)
   void onBind(int writerAddr, void Function(Term) callback) {
     // Check if already bound
     if (isFullyBound(writerAddr)) {
@@ -124,7 +115,7 @@ class HeapFCP {
   }
 
   /// Address-based dereferencing
-  /// Follows variable chains using address arithmetic, no varTable lookup
+  /// Follows variable chains using address arithmetic
   Term derefAddr(int addr) {
     var current = addr;
     Set<int> visited = {};
@@ -196,7 +187,7 @@ class HeapFCP {
   /// Takes writerAddr (which is also varId)
   /// Returns list of goals to reactivate
   List<GoalRef> bindVariable(int writerAddr, Term value) {
-    final rAddr = writerAddr + 1;  // Address arithmetic, no varTable lookup
+    final rAddr = writerAddr + 1;  // Address arithmetic
 
     // Dereference value if it's a VarRef
     var finalValue = value;
@@ -319,14 +310,8 @@ class HeapFCP {
   }
 
   // ==========================================================================
-  // Compatibility Methods (to be removed in Phase 4)
+  // Compatibility Methods (API aliases for migration)
   // ==========================================================================
-
-  /// Compatibility: Forward suspension list to another variable (by varId)
-  /// varId IS writerAddr, so this just calls the address-based version
-  void _forwardSuspensions(SuspensionListNode? list, int targetVarId) {
-    _forwardSuspensionsByAddr(list, targetVarId + 1);  // +1 to get reader addr
-  }
 
   bool isWriterBound(int writerId) => isFullyBound(writerId);
 
@@ -338,28 +323,27 @@ class HeapFCP {
     return bindVariableStruct(writerId, f, args);
   }
 
-  /// Compatibility: Get (writerId, readerId) pair
-  /// Both are the same value (writerAddr) since readerId doesn't exist separately
+  /// Get (writerId, readerId) pair - both are the same value (writerAddr)
   (int, int) allocateFreshPair() {
     final writerAddr = allocateVariable();
     return (writerAddr, writerAddr);  // Same value for compatibility
   }
 
-  /// Compatibility: writerIdForReader - returns the same value since varId == writerAddr
+  /// writerIdForReader - returns the same value since varId == writerAddr
   int? writerIdForReader(int readerId) => readerId;
 
-  /// Compatibility: allocateFreshVar
+  /// allocateFreshVar - alias for allocateVariable
   int allocateFreshVar() => allocateVariable();
 
-  /// Compatibility: addVariable - no-op
+  /// addVariable - no-op (variables are created by allocateVariable)
   void addVariable(int varId) {
-    // No-op - variables already in varTable from allocateVariable
+    // No-op
   }
 
-  /// Compatibility: writer - no-op stub
+  /// writer - compatibility stub
   Object? writer(int writerId) => null;
 
-  /// Compatibility: dereference term
+  /// dereference term
   Term dereference(Term term) {
     if (term is VarRef) {
       // varId IS writerAddr
@@ -368,22 +352,13 @@ class HeapFCP {
     return term;
   }
 
-  /// Compatibility: isBound
+  /// isBound - alias for isFullyBound
   bool isBound(int varId) => isFullyBound(varId);
 
-  /// Compatibility: allVarIds - returns all writerAddrs
-  Iterable<int> get allVarIds => varTable.keys;
-
-  // ==========================================================================
-  // Phase 1 Compatibility: varTable lookup emulation
-  // These methods allow code that hasn't been migrated yet to continue working
-  // ==========================================================================
-
-  /// Compatibility: Emulate varTable lookup
-  /// Returns (addr, addr+1) if addr is a valid writer, null otherwise
-  (int, int)? varTableLookup(int addr) {
-    if (addr < 0 || addr >= HP) return null;
-    if (!isWriter(addr)) return null;
-    return (addr, addr + 1);
+  /// allVarIds - returns all valid writerAddrs (even addresses from 0 to HP-2)
+  Iterable<int> get allVarIds sync* {
+    for (int addr = 0; addr < HP; addr += 2) {
+      yield addr;
+    }
   }
 }

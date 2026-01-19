@@ -274,7 +274,8 @@ class BytecodeRunner {
     final wid = cx.rt.heap.writerIdForReader(readerId);
     if (wid == null) return readerId;
 
-    final (wAddr, _) = cx.rt.heap.varTable[wid]!;
+    // Phase 4: Use address arithmetic directly (varId == writerAddr)
+    final wAddr = wid;  // wid IS the writer address
     // derefAddr follows the entire VarRef chain automatically
     final derefResult = cx.rt.heap.derefAddr(wAddr);
 
