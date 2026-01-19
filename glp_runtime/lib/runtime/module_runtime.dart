@@ -103,11 +103,15 @@ class ModuleRuntime {
       }
 
       // Create boot message
+      // If no args provided, create a fresh writer variable for the result
+      final bootArgs = args.isEmpty
+          ? [VarRef(rt.heap.allocateVariable(), isReader: false)]
+          : args;
       final bootMessage = ExportMessage.trust(
         sourceModule: '_system',
         functor: 'boot',
-        arity: args.isEmpty ? 1 : args.length,
-        args: args.isEmpty ? [VarRef(rt.heap.nextVarId++, isReader: false)] : args,
+        arity: bootArgs.length,
+        args: bootArgs,
       );
 
       // Send to module's input channel

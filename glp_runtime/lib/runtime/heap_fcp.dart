@@ -1,5 +1,6 @@
-/// FCP Two-Cell Heap with Address-Based Dereferencing
-/// Follows FCP AM design exactly: two cells per variable, suspension lists in reader cells
+/// FCP Two-Cell Heap with Address-Based Design
+/// Variables are identified by heap addresses directly, with no separate ID namespace.
+/// Each variable consists of two consecutive cells: writer at addr N, reader at addr N+1.
 library;
 
 import 'terms.dart';
@@ -34,21 +35,30 @@ class Pointer {
   String toString() => 'Ptr($targetAddr)';
 }
 
-/// FCP Two-Cell Heap
+/// FCP Two-Cell Heap with Address-Based Variable Identity
+/// 
+/// In this design:
+/// - Variables are identified by heap addresses, not separate IDs
+/// - allocateVariable() returns writerAddr (the "varId" IS the address)
+/// - Writer is at addr N, reader is at addr N+1
+/// - varTable maps writerAddr -> (writerAddr, writerAddr+1) for compatibility
 class HeapFCP {
   final List<HeapCell> cells = [];
-  final Map<int, (int, int)> varTable = {};  // varId -> (writerAddr, readerAddr)
+  
+  /// Compatibility: varTable maps writerAddr -> (writerAddr, readerAddr)
+  /// This is an identity mapping that will be removed in Phase 4
+  final Map<int, (int, int)> varTable = {};
+  
   int HP = 0;  // Heap pointer (next free address)
-  int nextVarId = 1000;
 
   /// Callbacks for external observation (Phase 0 I/O)
-  /// When a variable is bound, registered callbacks are invoked
+  /// Keyed by writerAddr (not varId, since varId == writerAddr now)
   final Map<int, void Function(Term)> _bindCallbacks = {};
 
-  /// Allocate a fresh variable (FCP notify.c lines 194-195)
-  /// Returns varId, stores (writerAddr, readerAddr) in varTable
+  /// Allocate a fresh variable
+  /// Returns writerAddr, which serves as the variable's identity ("varId")
+  /// Writer cell is at writerAddr, reader cell is at writerAddr + 1
   int allocateVariable() {
-    final varId = nextVarId++;
     final wAddr = HP++;
     final rAddr = HP++;
 
@@ -56,37 +66,65 @@ class HeapFCP {
     cells.add(HeapCell(Pointer(rAddr), CellTag.WrtTag));
 
     // Reader cell is initially unbound (null content, RoTag)
-    // NOT pointing back to writer - that would create a cycle
     cells.add(HeapCell(null, CellTag.RoTag));
 
-    varTable[varId] = (wAddr, rAddr);
-    return varId;
+    // Compatibility: populate varTable with identity mapping
+    // varId == wAddr, so varTable[wAddr] = (wAddr, rAddr)
+    varTable[wAddr] = (wAddr, rAddr);
+    
+    return wAddr;  // Return writerAddr as "varId"
   }
 
+  // ==========================================================================
+  // Address Helper Methods (new in address-based design)
+  // ==========================================================================
+
+  /// Get paired reader address from writer address
+  /// This is the allocation pair relationship: reader = writer + 1
+  int readerAddrFor(int writerAddr) => writerAddr + 1;
+
+  /// Get paired writer address from reader address  
+  /// This is the allocation pair relationship: writer = reader - 1
+  int writerAddrFor(int readerAddr) => readerAddr - 1;
+
+  /// Check if address is a writer cell
+  bool isWriter(int addr) => addr < cells.length && cells[addr].tag == CellTag.WrtTag;
+
+  /// Check if address is a reader cell
+  bool isReader(int addr) => addr < cells.length && cells[addr].tag == CellTag.RoTag;
+
+  /// Get address from VarRef (accounts for isReader flag)
+  int addrFromVarRef(VarRef ref) {
+    // varId IS writerAddr, isReader determines +0 or +1
+    return ref.isReader ? ref.varId + 1 : ref.varId;
+  }
+
+  // ==========================================================================
+  // Core Operations
+  // ==========================================================================
+
   /// Register callback for when variable is bound (Phase 0 I/O)
-  /// If variable is already bound, callback is invoked immediately.
-  /// Otherwise, callback is stored and invoked when bindVariable() is called.
-  void onBind(int varId, void Function(Term) callback) {
+  /// Takes writerAddr (which is also the varId in current design)
+  void onBind(int writerAddr, void Function(Term) callback) {
     // Check if already bound
-    if (isFullyBound(varId)) {
-      final value = getValue(varId);
+    if (isFullyBound(writerAddr)) {
+      final value = getValue(writerAddr);
       if (value != null) {
         callback(value);
       }
       return;
     }
-    // Register for later invocation
-    _bindCallbacks[varId] = callback;
+    // Register for later invocation (keyed by writerAddr)
+    _bindCallbacks[writerAddr] = callback;
   }
 
   /// Remove a registered callback (for cleanup)
-  void removeBindCallback(int varId) {
-    _bindCallbacks.remove(varId);
+  void removeBindCallback(int writerAddr) {
+    _bindCallbacks.remove(writerAddr);
   }
 
-  /// Address-based dereferencing (FCP-exact)
-  /// Follows addresses directly like FCP's pointer arithmetic: p = *p
-  /// No reverse lookup during traversal - only at exit when constructing VarRef
+  /// Address-based dereferencing
+  /// Follows variable chains using address arithmetic, no varTable lookup
   Term derefAddr(int addr) {
     var current = addr;
     Set<int> visited = {};
@@ -103,11 +141,10 @@ class HeapFCP {
       if (cell.tag == CellTag.ValueTag) {
         final content = cell.content;
 
-        // If bound to VarRef, follow the chain (variable→variable binding)
-        // IMPORTANT: Use reader address if VarRef is reader, writer address if writer
+        // If bound to VarRef, follow the chain
         if (content is VarRef) {
-          final (targetWAddr, targetRAddr) = varTable[content.varId]!;
-          current = content.isReader ? targetRAddr : targetWAddr;
+          // varId IS writerAddr, isReader tells us +0 or +1
+          current = content.isReader ? content.varId + 1 : content.varId;
           continue;
         }
 
@@ -116,11 +153,10 @@ class HeapFCP {
       }
 
       // Check if this is a writer cell pointing to its paired reader
-      // Writer cells contain Pointer(readerAddr) but should NOT be dereferenced
-      // Instead, return the writer VarRef
       if (cell.content is Pointer && cell.tag == CellTag.WrtTag) {
-        // This is an unbound writer → return writer VarRef, don't follow to reader
-        return _varRefFromAddr(current);
+        // Unbound writer → return writer VarRef
+        // Since varId == writerAddr, we use current as varId
+        return VarRef(current, isReader: false);
       }
 
       // Follow pointer to another cell (for other pointer types)
@@ -129,61 +165,52 @@ class HeapFCP {
         continue;
       }
 
-      // Unbound - construct VarRef from address (API boundary only)
-      return _varRefFromAddr(current);
-    }
-  }
+      // Unbound reader → return reader VarRef
+      // For a reader at addr N+1, the varId (writerAddr) is N
+      if (cell.tag == CellTag.RoTag) {
+        final writerAddr = current - 1;
+        return VarRef(writerAddr, isReader: true);
+      }
 
-  /// Helper: Convert address to VarRef (only at API boundary)
-  /// This is O(n) but only happens when returning unbound VarRef to external API
-  VarRef _varRefFromAddr(int addr) {
-    for (final entry in varTable.entries) {
-      final (wAddr, rAddr) = entry.value;
-      if (wAddr == addr) {
-        return VarRef(entry.key, isReader: false);  // Writer
-      }
-      if (rAddr == addr) {
-        return VarRef(entry.key, isReader: true);   // Reader
-      }
+      // Unbound (other case) - construct VarRef
+      // This shouldn't normally happen with proper two-cell design
+      return VarRef(current, isReader: false);
     }
-    throw StateError('Address $addr not found in varTable');
   }
 
   /// API: Check if variable is fully bound to ground term
-  bool isFullyBound(int varId) {
-    final (wAddr, _) = varTable[varId]!;
-    final result = derefAddr(wAddr);
+  /// Takes writerAddr (which is also varId)
+  bool isFullyBound(int writerAddr) {
+    final result = derefAddr(writerAddr);
     return result is! VarRef;
   }
 
   /// API: Get variable value (dereferenced)
-  Term? getValue(int varId) {
-    final (wAddr, _) = varTable[varId]!;
-    final result = derefAddr(wAddr);
+  /// Takes writerAddr (which is also varId)
+  Term? getValue(int writerAddr) {
+    final result = derefAddr(writerAddr);
     return result is VarRef ? null : result;
   }
 
   /// API: Bind variable to a term
-  /// Returns list of goals to reactivate (FCP: ALL bindings process suspensions)
-  List<GoalRef> bindVariable(int varId, Term value) {
-    final (wAddr, rAddr) = varTable[varId]!;
+  /// Takes writerAddr (which is also varId)
+  /// Returns list of goals to reactivate
+  List<GoalRef> bindVariable(int writerAddr, Term value) {
+    final rAddr = writerAddr + 1;  // Address arithmetic, no varTable lookup
 
     // Dereference value if it's a VarRef
     var finalValue = value;
     if (value is VarRef) {
-      final (targetWAddr, _) = varTable[value.varId]!;
-      finalValue = derefAddr(targetWAddr);
+      // varId IS writerAddr
+      finalValue = derefAddr(value.varId);
     }
-
-    // NOTE: WxW check removed - the constraint is enforced at unification time,
-    // not at commit time. σ̂w can legitimately contain W→W forward bindings.
 
     // Save suspension list BEFORE overwriting reader content
     final oldContent = cells[rAddr].content;
 
     // Bind both cells to the dereferenced value
-    cells[wAddr].content = finalValue;
-    cells[wAddr].tag = CellTag.ValueTag;
+    cells[writerAddr].content = finalValue;
+    cells[writerAddr].tag = CellTag.ValueTag;
     cells[rAddr].content = finalValue;
     cells[rAddr].tag = CellTag.ValueTag;
 
@@ -191,21 +218,20 @@ class HeapFCP {
     final activations = <GoalRef>[];
     if (oldContent is SuspensionListNode) {
       if (finalValue is VarRef) {
-        // Binding to another variable (still unbound) - FORWARD suspensions
-        // Don't activate now; merge into target's suspension list
-        _forwardSuspensions(oldContent, finalValue.varId);
+        // Binding to another variable - FORWARD suspensions
+        _forwardSuspensionsByAddr(oldContent, finalValue.varId + 1);  // target reader addr
       } else {
         // Binding to ground value - activate suspensions
         _walkAndActivate(oldContent, activations);
       }
     }
 
-    // Notify external observer if registered (Phase 0 I/O)
-    final callback = _bindCallbacks.remove(varId);
+    // Notify external observer if registered
+    final callback = _bindCallbacks.remove(writerAddr);
     if (callback != null) {
       if (finalValue is VarRef) {
         // Binding to another variable - forward callback to target
-        _bindCallbacks[finalValue.varId] = callback;
+        _bindCallbacks[finalValue.varId] = callback;  // varId IS writerAddr
       } else {
         // Binding to ground value - invoke callback now
         callback(finalValue);
@@ -215,70 +241,65 @@ class HeapFCP {
     return activations;
   }
 
-  /// Forward suspension list to another variable (for reader chains)
-  void _forwardSuspensions(SuspensionListNode? list, int targetVarId) {
-    final (_, targetRAddr) = varTable[targetVarId]!;
+  /// Forward suspension list to another reader cell (by address)
+  void _forwardSuspensionsByAddr(SuspensionListNode? list, int targetReaderAddr) {
     var current = list;
 
     while (current != null) {
       if (current.armed) {
         // Create a new node sharing the same SuspensionRecord
-        // This ensures disarming one disarms all copies (FCP shared state)
         final newNode = SuspensionListNode(current.record);
-        final targetContent = cells[targetRAddr].content;
+        final targetContent = cells[targetReaderAddr].content;
         newNode.next = targetContent is SuspensionListNode ? targetContent : null;
-        cells[targetRAddr].content = newNode;
+        cells[targetReaderAddr].content = newNode;
       }
       current = current.next;
     }
   }
 
-  /// Walk suspension list and activate armed records (from commit.dart)
+  /// Walk suspension list and activate armed records
   static void _walkAndActivate(SuspensionListNode? list, List<GoalRef> acts) {
     var current = list;
 
     while (current != null) {
       if (current.armed) {
         acts.add(GoalRef(current.goalId!, current.resumePC));
-        current.record.disarm();  // Disarm shared record - affects all nodes
+        current.record.disarm();
       }
       current = current.next;
     }
   }
 
   /// API: Bind variable to constant
-  /// Returns list of goals to reactivate
-  List<GoalRef> bindVariableConst(int varId, Object? v) {
-    return bindVariable(varId, ConstTerm(v));
+  List<GoalRef> bindVariableConst(int writerAddr, Object? v) {
+    return bindVariable(writerAddr, ConstTerm(v));
   }
 
   /// API: Bind variable to structure
-  /// Returns list of goals to reactivate
-  List<GoalRef> bindVariableStruct(int varId, String functor, List<Term> args) {
-    return bindVariable(varId, StructTerm(functor, args));
+  List<GoalRef> bindVariableStruct(int writerAddr, String functor, List<Term> args) {
+    return bindVariable(writerAddr, StructTerm(functor, args));
   }
 
-  /// Get suspension list from reader cell (if any)
-  SuspensionListNode? getSuspensions(int varId) {
-    final (_, rAddr) = varTable[varId]!;
+  /// Get suspension list from reader cell (by writerAddr/varId)
+  SuspensionListNode? getSuspensions(int writerAddr) {
+    final rAddr = writerAddr + 1;
     final cell = cells[rAddr];
     return cell.content is SuspensionListNode ? cell.content as SuspensionListNode : null;
   }
 
-  /// Add suspension to reader cell (prepend to list)
-  void addSuspension(int varId, SuspensionListNode node) {
-    final (_, rAddr) = varTable[varId]!;
+  /// Add suspension to reader cell (by writerAddr/varId)
+  void addSuspension(int writerAddr, SuspensionListNode node) {
+    final rAddr = writerAddr + 1;
     final oldContent = cells[rAddr].content;
 
     // Prepend new node to existing list
     node.next = oldContent is SuspensionListNode ? oldContent : null;
-    cells[rAddr].content = node;  // REPLACE content
+    cells[rAddr].content = node;
   }
 
-  /// Process suspensions after binding (FCP commit-like operation for BODY bindings)
-  /// Returns list of goals to wake
-  List<GoalRef> processBindSuspensions(int varId) {
-    final (_, rAddr) = varTable[varId]!;
+  /// Process suspensions after binding
+  List<GoalRef> processBindSuspensions(int writerAddr) {
+    final rAddr = writerAddr + 1;
     final oldContent = cells[rAddr].content;
 
     final activations = <GoalRef>[];
@@ -297,7 +318,15 @@ class HeapFCP {
     return activations;
   }
 
-  /// Compatibility methods for existing code (can be removed later)
+  // ==========================================================================
+  // Compatibility Methods (to be removed in Phase 4)
+  // ==========================================================================
+
+  /// Compatibility: Forward suspension list to another variable (by varId)
+  /// varId IS writerAddr, so this just calls the address-based version
+  void _forwardSuspensions(SuspensionListNode? list, int targetVarId) {
+    _forwardSuspensionsByAddr(list, targetVarId + 1);  // +1 to get reader addr
+  }
 
   bool isWriterBound(int writerId) => isFullyBound(writerId);
 
@@ -310,38 +339,51 @@ class HeapFCP {
   }
 
   /// Compatibility: Get (writerId, readerId) pair
-  /// In two-cell FCP design, both are the same varId but map to different addresses
+  /// Both are the same value (writerAddr) since readerId doesn't exist separately
   (int, int) allocateFreshPair() {
-    final varId = allocateVariable();
-    return (varId, varId);  // Same ID for compatibility
+    final writerAddr = allocateVariable();
+    return (writerAddr, writerAddr);  // Same value for compatibility
   }
 
-  /// Compatibility: writerIdForReader - in FCP two-cell, both map to same varId
+  /// Compatibility: writerIdForReader - returns the same value since varId == writerAddr
   int? writerIdForReader(int readerId) => readerId;
 
-  /// Compatibility: allocateFreshVar - allocates a fresh variable
+  /// Compatibility: allocateFreshVar
   int allocateFreshVar() => allocateVariable();
 
-  /// Compatibility: addVariable - no-op in FCP (vars allocated on demand)
+  /// Compatibility: addVariable - no-op
   void addVariable(int varId) {
-    // No-op - variables already in varTable from allocateFreshVar
+    // No-op - variables already in varTable from allocateVariable
   }
 
-  /// Compatibility: writer - no-op stub (not used in FCP design)
+  /// Compatibility: writer - no-op stub
   Object? writer(int writerId) => null;
 
-  /// Compatibility: dereference - wraps derefAddr for API compatibility
+  /// Compatibility: dereference term
   Term dereference(Term term) {
     if (term is VarRef) {
-      final (wAddr, _) = varTable[term.varId]!;
-      return derefAddr(wAddr);
+      // varId IS writerAddr
+      return derefAddr(term.varId);
     }
     return term;
   }
 
-  /// Compatibility: isBound - checks if variable is bound
+  /// Compatibility: isBound
   bool isBound(int varId) => isFullyBound(varId);
 
-  /// Compatibility: allVarIds - returns all variable IDs in varTable
+  /// Compatibility: allVarIds - returns all writerAddrs
   Iterable<int> get allVarIds => varTable.keys;
+
+  // ==========================================================================
+  // Phase 1 Compatibility: varTable lookup emulation
+  // These methods allow code that hasn't been migrated yet to continue working
+  // ==========================================================================
+
+  /// Compatibility: Emulate varTable lookup
+  /// Returns (addr, addr+1) if addr is a valid writer, null otherwise
+  (int, int)? varTableLookup(int addr) {
+    if (addr < 0 || addr >= HP) return null;
+    if (!isWriter(addr)) return null;
+    return (addr, addr + 1);
+  }
 }
