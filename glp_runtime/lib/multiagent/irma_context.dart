@@ -465,8 +465,9 @@ class IrmaContext {
       print('[DEBUG IRMA $agentId] handleReadRequest: found writer entry, state=${writerEntry.state}');
       
       // Check if variable is already bound in heap
+      // Phase 3: Use isWriterBound instead of varTable (varId == writerAddr)
       Term? value;
-      if (runtime.heap.varTable.containsKey(varId)) {
+      if (runtime.heap.isWriterBound(varId)) {
         value = runtime.heap.getValue(varId);
       }
       print('[DEBUG IRMA $agentId] handleReadRequest: created writer, heap value=$value');
