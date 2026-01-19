@@ -85,6 +85,9 @@ class IrmaContext {
   }
   
   /// Called when a writer in V_p is bound to a value
+  /// 
+  /// Phase 6: For imported writers with heap-attached entries, also stores
+  /// value in entry.state so derefAddr() can return it.
   void _onWriterBound(int writerId, Term value) {
     print('[DEBUG IRMA $agentId] _onWriterBound: writerId=$writerId, value=$value');
     final key = VarKey(writerId, false); // writer
@@ -100,13 +103,15 @@ class IrmaContext {
       final requester = entry.state as String;
       print('[DEBUG IRMA $agentId] _onWriterBound: CREATED WRITER with requester=$requester, sending assignment');
       _queueAssignmentFromEntry(entry, value, requester);
-      // Update entry state to store the value
+      // Update entry state to store the value (Phase 6: updates both V_p and heap cell)
+      entry.state = value;
       vp.updateState(key, value);
     } else if (entry.role == VariableRole.importedWriter) {
       // Imported writer - notify creator (creator routes to requester)
       print('[DEBUG IRMA $agentId] _onWriterBound: IMPORTED WRITER, notifying creator=${entry.creator}');
       _queueAssignmentFromEntry(entry, value, entry.creator);
-      // Update entry state to store the value
+      // Update entry state to store the value (Phase 6: updates both V_p and heap cell)
+      entry.state = value;
       vp.updateState(key, value);
     } else {
       print('[DEBUG IRMA $agentId] _onWriterBound: NO ACTION (role=${entry.role}, state=${entry.state})');
@@ -502,6 +507,9 @@ class IrmaContext {
   /// 2. Created reader with pending request → forward to requester
   /// 3. Created reader, no request yet → store value
   /// 4. Not in V_p but we're creator → local variable, apply directly
+  /// 
+  /// Phase 5: For imported readers with heap-attached entries, stores value
+  /// in entry.state so derefAddr() can return it.
   void handleAssignment(String creator, int creatorLocalId, Term value) {
     print('[DEBUG IRMA $agentId] handleAssignment: creator=$creator, creatorLocalId=$creatorLocalId, value=$value');
     
@@ -511,8 +519,14 @@ class IrmaContext {
     
     if (entry != null) {
       if (entry.role == VariableRole.importedReader) {
-        // Imported reader - translate to our local varId and apply
+        // Imported reader - store value in entry and bind on heap
         print('[DEBUG IRMA $agentId] handleAssignment: IMPORTED READER - binding local varId=${entry.varId}');
+        
+        // Phase 5: Store value in entry.state (updates both V_p and heap cell
+        // since they share the same VariableEntry object)
+        entry.state = value;
+        
+        // Also bind on heap for normal variable semantics
         final activations = runtime.heap.bindVariable(entry.varId, value);
         print('[DEBUG IRMA $agentId] handleAssignment: bindVariable returned ${activations.length} activations');
         for (final act in activations) {
@@ -527,10 +541,12 @@ class IrmaContext {
           // Created reader with pending request - forward to requester
           print('[DEBUG IRMA $agentId] handleAssignment: CREATED READER with requester=$storedState, forwarding');
           _queueAssignmentFromEntry(entry, value, storedState);
+          entry.state = value;  // Phase 5: Update entry directly
           vp.updateState(entry.key, value);
         } else {
           // No requester yet - store value
           print('[DEBUG IRMA $agentId] handleAssignment: CREATED READER, no requester yet, storing value');
+          entry.state = value;  // Phase 5: Update entry directly
           vp.updateState(entry.key, value);
         }
       } else {
