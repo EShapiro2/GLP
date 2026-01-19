@@ -3365,6 +3365,146 @@ class BytecodeRunner {
         }
       }
 
+      if (op is GroundEqual) {
+        // Ground equality test: X =?= Y
+        // Succeeds if both arguments are ground and structurally equal.
+        //
+        // Three-valued semantics:
+        // 1. If either contains unbound readers → SUSPEND (add to Si/U, fail to next clause)
+        // 2. If either contains unbound writers → FAIL (cannot become equal via SRSW)
+        // 3. If both ground and equal → SUCCEED
+        // 4. If both ground and not equal → FAIL
+        //
+        // For ~(X =?= Y) (negated):
+        // - Invert success/failure (suspend unchanged)
+
+        final leftValue = cx.clauseVars[op.leftVarIndex];
+        final rightValue = cx.clauseVars[op.rightVarIndex];
+        
+        if (cx.debugOutput) print('[DEBUG] PC $pc: GroundEqual${op.negated ? " (negated)" : ""} left=X${op.leftVarIndex}=$leftValue, right=X${op.rightVarIndex}=$rightValue');
+
+        if (leftValue == null || rightValue == null) {
+          // Variable doesn't exist - fail
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        }
+
+        // Collect unbound readers and check for unbound writers in both terms
+        final unboundReaders = <int>{};
+        final visited = <int>{};  // Cycle detection
+        bool hasUnboundWriter = false;
+
+        void collectUnbound(Object? term) {
+          if (term is VarRef && !term.isReader) {
+            final wid = term.varId;
+            if (visited.contains(wid)) return;
+            visited.add(wid);
+            // Check sigmaHat first for tentative binding
+            final sigmaBinding = cx.sigmaHat[wid];
+            if (sigmaBinding != null) {
+              collectUnbound(sigmaBinding);
+            } else if (!cx.rt.heap.isWriterBound(wid)) {
+              hasUnboundWriter = true;
+            } else {
+              collectUnbound(cx.rt.heap.valueOfWriter(wid));
+            }
+          } else if (term is VarRef && term.isReader) {
+            final rid = term.varId;
+            if (visited.contains(rid)) return;
+            visited.add(rid);
+            // Check sigmaHat first
+            final sigmaBinding = cx.sigmaHat[rid];
+            if (sigmaBinding != null) {
+              collectUnbound(sigmaBinding);
+            } else {
+              final wid = cx.rt.heap.writerIdForReader(rid);
+              if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
+                unboundReaders.add(rid);
+              } else {
+                collectUnbound(cx.rt.heap.valueOfWriter(wid));
+              }
+            }
+          } else if (term is StructTerm) {
+            for (final arg in term.args) {
+              collectUnbound(arg);
+            }
+          } else if (term is _TentativeStruct) {
+            for (final arg in term.args) {
+              collectUnbound(arg);
+            }
+          } else if (term is int) {
+            // Bare int could be writer ID or reader ID
+            if (visited.contains(term)) return;
+            visited.add(term);
+            final sigmaBinding = cx.sigmaHat[term];
+            if (sigmaBinding != null) {
+              collectUnbound(sigmaBinding);
+            } else {
+              final wc = cx.rt.heap.writer(term);
+              if (wc != null) {
+                // It's a writer ID
+                if (!cx.rt.heap.isWriterBound(term)) {
+                  hasUnboundWriter = true;
+                } else {
+                  collectUnbound(cx.rt.heap.valueOfWriter(term));
+                }
+              } else {
+                // It's a reader ID
+                final wid = cx.rt.heap.writerIdForReader(term);
+                if (wid == null || !cx.rt.heap.isWriterBound(wid)) {
+                  unboundReaders.add(term);
+                } else {
+                  collectUnbound(cx.rt.heap.valueOfWriter(wid));
+                }
+              }
+            }
+          }
+          // Constants contribute nothing
+        }
+
+        // Check left term
+        collectUnbound(leftValue);
+        // Check right term  
+        collectUnbound(rightValue);
+
+        // Decision logic with negation support
+        if (hasUnboundWriter) {
+          // Contains unbound writer(s) → FAIL (cannot determine equality)
+          if (cx.debugOutput) print('[DEBUG] GroundEqual - FAIL (unbound writer)');
+          _softFailToNextClause(cx, pc);
+          pc = _findNextClauseTry(pc);
+          continue;
+        } else if (unboundReaders.isNotEmpty) {
+          // Contains unbound readers → SUSPEND
+          if (cx.debugOutput) print('[DEBUG] GroundEqual - SUSPEND on readers: $unboundReaders');
+          pc = _suspendAndFailMulti(cx, unboundReaders, pc);
+          continue;
+        } else {
+          // Both terms are ground - dereference fully and compare
+          final (leftDeref, _) = _dereferenceWithTracking(leftValue, cx);
+          final (rightDeref, _) = _dereferenceWithTracking(rightValue, cx);
+          
+          final areEqual = _termsEqual(leftDeref, rightDeref, cx);
+          
+          bool success = areEqual;
+          if (op.negated) {
+            success = !success;
+          }
+          
+          if (success) {
+            if (cx.debugOutput) print('[DEBUG] GroundEqual${op.negated ? " (negated)" : ""} - SUCCESS');
+            pc++;
+            continue;
+          } else {
+            if (cx.debugOutput) print('[DEBUG] GroundEqual${op.negated ? " (negated)" : ""} - FAIL (not equal)');
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
+        }
+      }
+
       // ===== SET CLAUSE VARIABLE =====
       if (op is SetClauseVar) {
         // Set a clause variable directly to a value

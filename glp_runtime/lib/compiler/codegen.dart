@@ -420,6 +420,24 @@ class CodeGenerator {
       return;
     }
 
+    // Ground equality guard: X =?= Y
+    if (guard.predicate == '=?=' && guard.args.length == 2) {
+      final leftArg = guard.args[0];
+      final rightArg = guard.args[1];
+      if (leftArg is VarTerm && rightArg is VarTerm) {
+        final leftInfo = varTable.getVar(leftArg.name);
+        final rightInfo = varTable.getVar(rightArg.name);
+        if (leftInfo != null && rightInfo != null) {
+          ctx.emit(bc.GroundEqual(
+            leftInfo.registerIndex!,
+            rightInfo.registerIndex!,
+            negated: guard.negated,
+          ));
+          return;
+        }
+      }
+    }
+
     // Generic guard predicate call (runtime evaluation)
     // Setup arguments, then call guard
     for (int i = 0; i < guard.args.length; i++) {

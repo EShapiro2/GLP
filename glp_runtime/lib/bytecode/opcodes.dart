@@ -239,6 +239,26 @@ class Known implements Op {
   Known(this.varIndex, {this.negated = false});
 }
 
+/// Ground equality test: X =?= Y
+/// Tests if two terms are structurally equal when both are ground.
+/// Three-valued semantics:
+/// - SUCCESS: Both terms ground and structurally equal
+/// - SUSPEND: Either term contains unbound readers (add to Si)
+/// - FAILURE: Both terms ground but not equal
+/// Left-to-right evaluation order: checks X first, then Y.
+/// If negated: inverts success/failure (suspend unchanged)
+class GroundEqual implements Op {
+  final int leftVarIndex;   // clause variable index for left operand
+  final int rightVarIndex;  // clause variable index for right operand
+  final bool negated;       // true if ~(X =?= Y)
+  GroundEqual(this.leftVarIndex, this.rightVarIndex, {this.negated = false});
+
+  @override
+  String toString() => negated 
+      ? '~(X$leftVarIndex =?= X$rightVarIndex)' 
+      : 'X$leftVarIndex =?= X$rightVarIndex';
+}
+
 // ===== SYSTEM PREDICATE execution =====
 /// Execute system predicate: call registered Dart function
 /// Used for I/O, arithmetic, and other operations requiring side effects
