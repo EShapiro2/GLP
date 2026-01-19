@@ -121,11 +121,11 @@ void main() {
       // Set up a writer in alice's heap
       final (writerId, readerId) = agent.runtime.heap.allocateFreshPair();
       
-      // Add to V_p as writer (alice created it)
+      // Add to V_p as createdWriter (alice created it)
       agent.vp.add(writerId, VariableEntry(
         varId: writerId,
         creator: 'alice',
-        role: VariableRole.writer,
+        role: VariableRole.createdWriter,
       ));
       
       // Create read request message from bob
@@ -153,11 +153,11 @@ void main() {
       // Set up a writer in alice's heap
       final (writerId, readerId) = agent.runtime.heap.allocateFreshPair();
       
-      // Add to V_p as writer
+      // Add to V_p as createdWriter
       agent.vp.add(writerId, VariableEntry(
         varId: writerId,
         creator: 'alice',
-        role: VariableRole.writer,
+        role: VariableRole.createdWriter,
       ));
       
       // Create abandon message from bob
@@ -189,7 +189,7 @@ void main() {
       agent.registerWriter(writerId);
       
       expect(agent.vp.contains(writerId), isTrue);
-      expect(agent.vp.lookup(writerId)!.role, VariableRole.writer);
+      expect(agent.vp.lookup(writerId)!.role, VariableRole.createdWriter);
     });
     
     test('registerCreatedReader adds to V_p', () {
@@ -203,6 +203,20 @@ void main() {
       
       expect(agent.vp.contains(readerId), isTrue);
       expect(agent.vp.lookup(readerId)!.role, VariableRole.createdReader);
+    });
+    
+    test('registerImportedWriter adds to V_p', () {
+      final agent = IrmaAgent(agentId: 'alice');
+      
+      // Allocate a variable to represent imported writer
+      final writerId = agent.runtime.heap.allocateVariable();
+      
+      // Register as imported writer from bob
+      agent.registerImportedWriter(writerId, 'bob');
+      
+      expect(agent.vp.contains(writerId), isTrue);
+      expect(agent.vp.lookup(writerId)!.role, VariableRole.importedWriter);
+      expect(agent.vp.lookup(writerId)!.creator, 'bob');
     });
   });
   

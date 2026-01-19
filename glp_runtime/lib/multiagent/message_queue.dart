@@ -21,6 +21,10 @@ enum MessageType {
   /// Abandon notification: (abandon(Y), destination)
   /// Variable became unreachable
   abandon,
+  
+  /// Agent message: structured term sent between agents
+  /// Used for friend-to-friend communication (msg/3 terms)
+  agentMessage,
 }
 
 /// An outbound message to another agent

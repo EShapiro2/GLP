@@ -182,7 +182,7 @@ void main() {
       vp.add(300, VariableEntry(
         varId: 300,
         creator: 'alice',
-        role: VariableRole.writer,
+        role: VariableRole.createdWriter,
       ));
       
       helpers.request(300, 'alice', vp, mp);
@@ -274,10 +274,10 @@ void main() {
         (_, __) => [0, 0], // No allocation needed
       );
       
-      // Should add to V_p as writer
+      // Should add to V_p as createdWriter
       expect(vp.contains(100), isTrue);
       final entry = vp.lookup(100);
-      expect(entry!.role, VariableRole.writer);
+      expect(entry!.role, VariableRole.createdWriter);
       expect(entry.creator, 'alice');
       
       // Term unchanged
@@ -317,11 +317,11 @@ void main() {
       final helpers = IrmaHelpers('alice');
       final relayGoals = <GoalRef>[];
       
-      // Alice has bob's writer (should not happen normally, but test removal)
+      // Alice has bob's writer (imported via introduction)
       vp.add(100, VariableEntry(
         varId: 100,
         creator: 'bob',
-        role: VariableRole.importedReader, // Pretend it's imported
+        role: VariableRole.importedWriter,
       ));
       
       final term = VarRef(100, isReader: false);
@@ -409,7 +409,7 @@ void main() {
       // Should add both variables to V_p
       expect(vp.contains(10), isTrue);
       expect(vp.contains(20), isTrue);
-      expect(vp.lookup(10)!.role, VariableRole.writer);
+      expect(vp.lookup(10)!.role, VariableRole.createdWriter);
       expect(vp.lookup(20)!.role, VariableRole.createdReader);
       
       // Structure preserved
@@ -578,6 +578,28 @@ void main() {
       
       expect(reactivated.length, 1);
       expect(reactivated.contains(goal), isTrue);
+    });
+  });
+  
+  group('Imported Writer Scenario', () {
+    test('alice imports writer from bob and binds it', () {
+      final vp = VariableTable('alice');
+      final mp = MessageQueue();
+      final helpers = IrmaHelpers('alice');
+      
+      // Alice imports writer CA from bob (via introduction)
+      vp.add(100, VariableEntry(
+        varId: 100,
+        creator: 'bob',
+        role: VariableRole.importedWriter,
+        state: null,
+      ));
+      
+      // When Alice binds the imported writer, she should notify bob
+      // This is handled by processWriterBindings in IrmaContext
+      // Here we just verify the V_p setup is correct
+      expect(vp.lookup(100)!.role, VariableRole.importedWriter);
+      expect(vp.lookup(100)!.creator, 'bob');
     });
   });
 }

@@ -69,11 +69,11 @@ class IrmaContext {
   /// 1. Check if there's a requester for the paired reader
   /// 2. If so, queue an assignment message to the requester
   void registerWriter(int varId) {
-    // Add to V_p as writer
+    // Add to V_p as createdWriter
     vp.add(varId, VariableEntry(
       varId: varId,
       creator: agentId,
-      role: VariableRole.writer,
+      role: VariableRole.createdWriter,
     ));
     
     // Register heap callback to observe when this writer is bound
@@ -87,22 +87,17 @@ class IrmaContext {
     final entry = vp.lookup(writerId);
     if (entry == null) return;
     
-    // Check if there's a requester for the paired reader
-    // The requester is stored in the reader entry's state field
-    // But wait - for writers, we need to find the paired reader entry
-    // In our design, writer and reader share the same varId
-    // The reader entry would have role=createdReader if we created it
-    
-    // Actually, when we export a variable:
-    // - If we export the writer, we add (varId, agentId, writer) to V_p
-    // - The remote agent gets the reader
-    // - When remote agent requests, we get a read request message
-    // - We record the requester in the writer entry's state
-    
-    if (entry.role == VariableRole.writer && entry.state != null) {
-      // Writer has a requester - send assignment
+    if (entry.role == VariableRole.createdWriter && entry.state != null) {
+      // Created writer has a requester - send assignment directly
       final requester = entry.state as String;
       _queueAssignment(writerId, value, requester);
+      // Update entry state to store the value
+      vp.updateState(writerId, value);
+    } else if (entry.role == VariableRole.importedWriter) {
+      // Imported writer - notify creator (creator routes to requester)
+      _queueAssignment(writerId, value, entry.creator);
+      // Update entry state to store the value
+      vp.updateState(writerId, value);
     }
   }
   
@@ -122,6 +117,23 @@ class IrmaContext {
     // When it's bound, send value to requester (if any)
     runtime.heap.onBind(varId, (Term value) {
       _onCreatedReaderWriterBound(varId, value);
+    });
+  }
+  
+  /// Register an imported writer in V_p
+  /// 
+  /// An imported writer is one created by another agent but transferred to us
+  /// (e.g., via friend introduction). When we bind it, we notify the creator.
+  void registerImportedWriter(int varId, String creator) {
+    vp.add(varId, VariableEntry(
+      varId: varId,
+      creator: creator,
+      role: VariableRole.importedWriter,
+    ));
+    
+    // Register heap callback to notify creator when bound
+    runtime.heap.onBind(varId, (Term value) {
+      _onWriterBound(varId, value);
     });
   }
   
@@ -201,17 +213,29 @@ class IrmaContext {
   /// Import a term received from another agent
   /// 
   /// For each variable Y in term where (Y, ·, ·) ∉ V_p:
-  /// - Add (Y, creator, ⊥) to V_p as imported reader
+  /// - Add to V_p as imported reader or writer based on VarRef.isReader
   void importTerm(Term term, String fromAgent) {
-    final varIds = _extractVariables(term);
-    for (final varId in varIds) {
-      if (!vp.contains(varId)) {
-        // Variable not in V_p - add as imported reader
-        vp.add(varId, VariableEntry(
-          varId: varId,
-          creator: fromAgent,
-          role: VariableRole.importedReader,
-        ));
+    _importTermRecursive(term, fromAgent);
+  }
+  
+  void _importTermRecursive(Term term, String fromAgent) {
+    if (term is VarRef) {
+      if (!vp.contains(term.varId)) {
+        // Variable not in V_p - add based on type
+        if (term.isReader) {
+          vp.add(term.varId, VariableEntry(
+            varId: term.varId,
+            creator: fromAgent,
+            role: VariableRole.importedReader,
+          ));
+        } else {
+          // Imported writer - register with callback
+          registerImportedWriter(term.varId, fromAgent);
+        }
+      }
+    } else if (term is StructTerm) {
+      for (final arg in term.args) {
+        _importTermRecursive(arg, fromAgent);
       }
     }
   }
@@ -259,42 +283,80 @@ class IrmaContext {
   /// Handle incoming assignment message
   /// 
   /// Called by coordinator when (X?:=T) arrives from another agent.
+  /// 
+  /// Three cases per spec:
+  /// 1. Reader is local (not in V_p) → apply directly
+  /// 2. Created reader with pending request → forward to requester, store value
+  /// 3. Created reader, no request yet → store value for later
   void handleAssignment(int varId, Term value) {
-    // 1. Apply assignment to heap
-    final activations = runtime.heap.bindVariable(varId, value);
+    final entry = vp.lookup(varId);
     
-    // 2. Enqueue reactivated goals
-    for (final act in activations) {
-      runtime.gq.enqueue(act);
+    if (entry == null) {
+      // Case 1: Reader is local (not in V_p) - apply directly
+      final activations = runtime.heap.bindVariable(varId, value);
+      for (final act in activations) {
+        runtime.gq.enqueue(act);
+      }
+    } else if (entry.role == VariableRole.createdReader) {
+      // This agent created the reader - check for pending requester
+      final storedState = entry.state;
+      
+      if (storedState != null && storedState is String) {
+        // Case 2: Created reader with pending request - forward to requester
+        _queueAssignment(varId, value, storedState);
+        // Update entry to store the value
+        vp.updateState(varId, value);
+      } else {
+        // Case 3: Created reader, no request yet - store value
+        vp.updateState(varId, value);
+      }
+    } else if (entry.role == VariableRole.importedReader) {
+      // We imported this reader - apply directly and remove from V_p
+      final activations = runtime.heap.bindVariable(varId, value);
+      for (final act in activations) {
+        runtime.gq.enqueue(act);
+      }
+      vp.remove(varId);
     }
-    
-    // 3. Remove from V_p (variable is now fully local)
-    vp.remove(varId);
-    
-    // 4. Import variables from value
-    // (handled by the coordinator when deserializing)
   }
   
   /// Handle incoming read request message
   /// 
   /// Called by coordinator when request(X?, requester) arrives.
+  /// 
+  /// Per spec:
+  /// - If value already stored → reply immediately
+  /// - Else if created reader with no request → record requester
+  /// - Else if created writer → reply if bound, else record requester
   void handleReadRequest(int varId, String requester) {
     final entry = vp.lookup(varId);
     if (entry == null) return;
     
-    // Check if variable exists in heap and is already bound
-    Term? value;
-    if (runtime.heap.varTable.containsKey(varId)) {
-      value = runtime.heap.getValue(varId);
-    }
+    final storedState = entry.state;
     
-    if (value != null) {
-      // Already bound - send value immediately
-      _queueAssignment(varId, value, requester);
-    } else {
-      // Not yet bound - record requester
-      // When the variable is bound, the onBind callback will send the value
-      vp.updateState(varId, requester);
+    if (entry.role == VariableRole.createdReader) {
+      if (storedState != null && storedState is Term) {
+        // Value already stored - reply immediately
+        _queueAssignment(varId, storedState, requester);
+      } else if (storedState == null) {
+        // No request yet - record requester
+        vp.updateState(varId, requester);
+      }
+      // If storedState is a String (another requester), ignore duplicate
+    } else if (entry.role == VariableRole.createdWriter) {
+      // Check if variable is already bound in heap
+      Term? value;
+      if (runtime.heap.varTable.containsKey(varId)) {
+        value = runtime.heap.getValue(varId);
+      }
+      
+      if (value != null) {
+        // Already bound - send value immediately
+        _queueAssignment(varId, value, requester);
+      } else {
+        // Not yet bound - record requester
+        vp.updateState(varId, requester);
+      }
     }
   }
   

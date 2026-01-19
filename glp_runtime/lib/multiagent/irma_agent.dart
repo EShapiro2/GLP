@@ -87,6 +87,10 @@ class IrmaAgent {
       case MessageType.abandon:
         _handleAbandon(msg);
         break;
+      case MessageType.agentMessage:
+        // Agent messages are handled at the Flutter app level, not here
+        _log('WARNING: agentMessage received in IrmaAgent - should be handled by app');
+        break;
     }
   }
   
@@ -149,6 +153,11 @@ class IrmaAgent {
   /// Register a created reader for export
   void registerCreatedReader(int varId) {
     context.registerCreatedReader(varId);
+  }
+  
+  /// Register an imported writer (e.g., from introduction protocol)
+  void registerImportedWriter(int varId, String creator) {
+    context.registerImportedWriter(varId, creator);
   }
   
   /// Get current V_p state for debugging

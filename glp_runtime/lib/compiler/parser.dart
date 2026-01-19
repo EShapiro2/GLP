@@ -23,7 +23,35 @@ class Parser {
       procedures.add(_parseProcedure());
     }
 
+    // Check for non-contiguous clauses (same name/arity appearing multiple times)
+    _checkContiguousClauses(procedures);
+
     return Program(procedures, 1, 1);
+  }
+
+  /// Check that all clauses for each procedure are contiguous in the source.
+  /// GLP requires clauses to be grouped together - non-contiguous clauses
+  /// cause the compiler to generate incorrect bytecode.
+  void _checkContiguousClauses(List<Procedure> procedures) {
+    final seen = <String, Procedure>{};  // signature -> first occurrence
+    
+    for (final proc in procedures) {
+      final sig = '${proc.name}/${proc.arity}';
+      
+      if (seen.containsKey(sig)) {
+        final first = seen[sig]!;
+        throw CompileError(
+          'Non-contiguous clauses for "$sig".\n'
+          '  First group at line ${first.line}, second group at line ${proc.line}.\n'
+          '  All clauses for a predicate must be together in the source file.',
+          proc.line,
+          proc.column,
+          phase: 'parser'
+        );
+      }
+      
+      seen[sig] = proc;
+    }
   }
 
   /// Parse tokens into a Module AST (includes declarations)
@@ -110,6 +138,9 @@ class Parser {
     while (!_isAtEnd()) {
       procedures.add(_parseProcedure());
     }
+
+    // Check for non-contiguous clauses (same name/arity appearing multiple times)
+    _checkContiguousClauses(procedures);
 
     return Module(
       declaration: moduleDecl,
@@ -1199,17 +1230,23 @@ class Parser {
     }
     final name = nameToken.lexeme;
 
-    _consume(TokenType.LPAREN, 'Expected "(" after procedure name');
-
+    // Parentheses are optional for nullary procedures:
+    // procedure play_introduction.    (valid - nullary)
+    // procedure play_introduction().  (valid - nullary with explicit parens)
+    // procedure double(Number?, Number). (valid - with args)
     final argTypes = <TypeExpr>[];
-    if (!_check(TokenType.RPAREN)) {
-      argTypes.add(_parseProcArgType());
-      while (_match(TokenType.COMMA)) {
+    if (_match(TokenType.LPAREN)) {
+      // Parse argument types if not empty
+      if (!_check(TokenType.RPAREN)) {
         argTypes.add(_parseProcArgType());
+        while (_match(TokenType.COMMA)) {
+          argTypes.add(_parseProcArgType());
+        }
       }
+      _consume(TokenType.RPAREN, 'Expected ")" after procedure arguments');
     }
+    // If no LPAREN, argTypes remains empty (nullary procedure)
 
-    _consume(TokenType.RPAREN, 'Expected ")" after procedure arguments');
     _consume(TokenType.DOT, 'Expected "." after procedure declaration');
 
     return ProcDecl(name, argTypes, line, column);

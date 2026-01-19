@@ -24,6 +24,8 @@ import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/external_io.dart';
 import 'package:glp_runtime/multiagent/irma_agent.dart';
+import 'package:glp_runtime/multiagent/message_queue.dart';
+import 'package:glp_runtime/multiagent/payload_serializer.dart';
 
 import 'irma_router.dart';
 
@@ -481,10 +483,34 @@ class _AgentScreenState extends State<AgentScreen> {
   void _onIrmaMessageReceived(String from, Uint8List payload) {
     _addOutput('[IRMA RECV from $from] ${payload.length} bytes');
 
-    if (_agent == null) return;
+    if (_agent == null || _ioContext == null) return;
 
-    // Route to IrmaAgent for proper handling
-    _agent!.handleIncomingMessage(from, payload);
+    // Deserialize the outer message to check type
+    final serializer = PayloadSerializer(widget.agentId.toLowerCase());
+    final msg = serializer.deserializeMessage(payload);
+    
+    if (msg.type == MessageType.agentMessage) {
+      // Agent message: deserialize term with fresh variable allocation
+      final term = serializer.deserializeAgentMessagePayload(
+        msg.payload,
+        () {
+          // Allocate fresh variable pair, return the writer ID
+          final (writerId, _) = _agent!.runtime.heap.allocateFreshPair();
+          return writerId;
+        },
+      );
+      
+      _addOutput('[AGENT MSG] ${_formatTerm(term)}');
+      
+      // Inject into the NET input stream (goes through merge with UserIn)
+      final activations = _ioContext!.netInput.inject(term);
+      for (final goal in activations) {
+        _agent!.runtime.gq.enqueue(goal);
+      }
+    } else {
+      // V_p operation (assignment, readRequest, abandon) - route to IrmaAgent
+      _agent!.handleIncomingMessage(from, payload);
+    }
     
     // Update stats
     _updateStats();
@@ -499,23 +525,16 @@ class _AgentScreenState extends State<AgentScreen> {
 
     if (_ioContext == null || _agent == null) return;
 
-    // Find the friend's input injector
-    final friendInputs = _ioContext!.friendInputs;
     final fromLower = from.toLowerCase();
-    
-    if (!friendInputs.containsKey(fromLower)) {
-      _addOutput('[ERROR] No input channel for friend $from');
-      return;
-    }
 
-    // Inject msg(From, Id, Payload) into that friend's input stream
+    // Inject msg(From, Id, Payload) into NET input stream
     final msgTerm = rt.StructTerm('msg', [
       rt.ConstTerm(fromLower),
       rt.ConstTerm(widget.agentId.toLowerCase()),
       rt.ConstTerm(payload),
     ]);
 
-    final activations = friendInputs[fromLower]!.inject(msgTerm);
+    final activations = _ioContext!.netInput.inject(msgTerm);
     for (final goal in activations) {
       _agent!.runtime.gq.enqueue(goal);
     }
@@ -563,6 +582,30 @@ class _AgentScreenState extends State<AgentScreen> {
     }
   }
 
+  /// Send agent message with proper term serialization
+  /// This preserves structure and variables for cross-agent communication
+  Future<void> _sendAgentMessage(String to, rt.Term msgTerm) async {
+    if (_agent == null) return;
+
+    try {
+      // Serialize the full term (preserving structure and variables)
+      final serializer = PayloadSerializer(widget.agentId.toLowerCase());
+      final termPayload = serializer.createAgentMessagePayload(msgTerm);
+      
+      // Wrap in OutboundMessage with agentMessage type
+      final msg = OutboundMessage(
+        destination: to,
+        type: MessageType.agentMessage,
+        payload: termPayload,
+      );
+      final payload = serializer.serializeMessage(msg);
+      
+      await _sendIrmaMessage(to, payload);
+    } catch (e) {
+      _addOutput('[ERROR] Failed to send agent message: $e');
+    }
+  }
+
   Future<void> _initializeRuntime() async {
     try {
       _addOutput('[INIT] Creating IrmaAgent...');
@@ -588,8 +631,9 @@ class _AgentScreenState extends State<AgentScreen> {
       final userChannel = createExternalChannel(_agent!.runtime.heap, 'user');
       final netChannel = createExternalChannel(_agent!.runtime.heap, 'net');
 
-      // Create input injector for user
+      // Create input injectors for user and network
       final userInput = InputInjector(_agent!.runtime.heap, 'user', userChannel.inputVarId);
+      final netInput = InputInjector(_agent!.runtime.heap, 'net', netChannel.inputVarId);
 
       // Create user output observer - displays to UI
       final userOutput = OutputObserver(
@@ -642,6 +686,7 @@ class _AgentScreenState extends State<AgentScreen> {
         netChannel: netChannel,
         friendChannels: friendChannels,
         userInput: userInput,
+        netInput: netInput,
         friendInputs: friendInputs,
         userOutput: userOutput,
         friendOutputs: friendOutputs,
@@ -834,6 +879,9 @@ class _AgentScreenState extends State<AgentScreen> {
     return rt.StructTerm('.', [head, tail]);
   }
 
+  // Enable GLP trace output
+  bool _glpTraceEnabled = false;
+
   Future<void> _runUntilQuiescent() async {
     if (_scheduler == null || _agent == null) return;
 
@@ -845,7 +893,7 @@ class _AgentScreenState extends State<AgentScreen> {
     try {
       final result = await _scheduler!.drainAsyncWithStatus(
         maxCycles: 1000,
-        debug: false,
+        debug: _glpTraceEnabled,
       );
       _goalCount += result.goalsRan.length;
 
@@ -889,15 +937,15 @@ class _AgentScreenState extends State<AgentScreen> {
     }
     _pendingUserOutputTerms.clear();
 
-    // Process friend output terms - send via coordinator
+    // Process friend output terms - send via IRMA binary path
     for (final entry in _pendingFriendOutputTerms.entries) {
       for (final term in entry.value) {
         final derefTerm = _derefTerm(term);
         // Expect msg(From, To, Content) from GLP
         if (derefTerm is rt.StructTerm && derefTerm.functor == 'msg' && derefTerm.args.length == 3) {
           final to = _termToString(derefTerm.args[1]);
-          final content = _termToString(derefTerm.args[2]);
-          _sendLegacyMessage(to, content);
+          _addOutput('[SEND to $to] ${_formatTerm(derefTerm.args[2])}');
+          _sendAgentMessage(to, derefTerm);
         } else {
           _addOutput('[FRIEND ${entry.key} OUT] ${_formatTerm(derefTerm)}');
         }
@@ -1131,6 +1179,7 @@ class _MultiAgentIOContext {
   final ExternalChannel netChannel;
   final Map<String, ExternalChannel> friendChannels;
   final InputInjector userInput;
+  final InputInjector netInput;  // For incoming network messages
   final Map<String, InputInjector> friendInputs;
   final OutputObserver userOutput;
   final Map<String, OutputObserver> friendOutputs;
@@ -1140,6 +1189,7 @@ class _MultiAgentIOContext {
     required this.netChannel,
     required this.friendChannels,
     required this.userInput,
+    required this.netInput,
     required this.friendInputs,
     required this.userOutput,
     required this.friendOutputs,

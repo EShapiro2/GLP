@@ -345,6 +345,53 @@ foo.
     });
   });
 
+  group('Module Parser - Procedure Declarations', () {
+    test('parser parses nullary procedure without parentheses', () {
+      final source = '''
+procedure play_introduction.
+play_introduction :- true | print("Hello").
+''';
+      final lexer = Lexer(source);
+      final tokens = lexer.tokenize();
+      final parser = Parser(tokens);
+      final module = parser.parseModule();
+
+      expect(module.procDeclarations.length, 1);
+      expect(module.procDeclarations[0].name, 'play_introduction');
+      expect(module.procDeclarations[0].argTypes.length, 0);
+    });
+
+    test('parser parses nullary procedure with empty parentheses', () {
+      final source = '''
+procedure play_introduction().
+play_introduction :- true | print("Hello").
+''';
+      final lexer = Lexer(source);
+      final tokens = lexer.tokenize();
+      final parser = Parser(tokens);
+      final module = parser.parseModule();
+
+      expect(module.procDeclarations.length, 1);
+      expect(module.procDeclarations[0].name, 'play_introduction');
+      expect(module.procDeclarations[0].argTypes.length, 0);
+    });
+
+    test('parser parses procedure with arguments', () {
+      final source = '''
+procedure double(Number?, Number).
+double(N, R) :- true | R := N? * 2.
+''';
+      final lexer = Lexer(source);
+      final tokens = lexer.tokenize();
+      final parser = Parser(tokens);
+      final module = parser.parseModule();
+
+      expect(module.procDeclarations.length, 1);
+      expect(module.procDeclarations[0].name, 'double');
+      expect(module.procDeclarations[0].argTypes.length, 2);
+    });
+  });
+
   group('Module Parser - Remote Goal in Module', () {
     test('parser parses module with remote goals', () {
       final source = '''

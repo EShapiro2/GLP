@@ -90,8 +90,9 @@ class CodeGenContext {
 
   int allocateTemp() => nextTempVar++;
 
-  void resetTemps() {
-    nextTempVar = 10;  // Reset to 10 to avoid argument register collision
+  void resetTemps(int variableCount) {
+    // Start temps after all variable registers to avoid collision
+    nextTempVar = variableCount > 10 ? variableCount : 10;
     tempAllocation.clear();
   }
 }
@@ -171,6 +172,14 @@ class CodeGenerator {
           details = ' UnifyConstant(${instr.value})';
         } else if (instr is bc.PutStructure) {
           details = ' PutStructure("${instr.functor}", ${instr.arity}, ${instr.argSlot})';
+        } else if (instr is bcv2.PutVariable) {
+          details = ' PutVariable(reg=${instr.varIndex}, slot=${instr.argSlot}, reader=${instr.isReader})';
+        } else if (instr is bcv2.GetVariable) {
+          details = ' GetVariable(reg=${instr.varIndex}, slot=${instr.argSlot}, reader=${instr.isReader})';
+        } else if (instr is bcv2.UnifyVariable) {
+          details = ' UnifyVariable(reg=${instr.varIndex}, reader=${instr.isReader})';
+        } else if (instr is bc.Spawn) {
+          details = ' Spawn("${instr.procedureLabel}", arity=${instr.arity})';
         }
         print('  $i: ${instr.runtimeType}$details');
       }
@@ -179,7 +188,7 @@ class CodeGenerator {
   }
 
   void _generateClause(AnnotatedClause clause, CodeGenContext ctx, String nextLabel, bool isLastClause) {
-    ctx.resetTemps();
+    ctx.resetTemps(clause.varTable.getAllVars().length);
     ctx.seenHeadVars.clear();  // Clear head variable tracking for new clause
 
     // Emit label for non-first clauses

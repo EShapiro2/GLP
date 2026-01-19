@@ -78,6 +78,7 @@ build_friends(FriendPairs, UserOut, NetOut, Fs?) :-
     append([(user, UserOut?), (net, NetOut?)], FriendPairs?, Fs).
 
 %% ========== Social Graph Main Loop ==========
+%% NOTE: ALL social_graph/3 clauses must be contiguous!
 
 %% User sends message to a friend
 social_graph(Id, [send(To, Content)|In], Fs) :-
@@ -85,8 +86,6 @@ social_graph(Id, [send(To, Content)|In], Fs) :-
     lookup_send(To?, msg(Id?, To?, Content?), Fs?, Fs1, Status),
     handle_send_status(Status?, To?, Content?, Fs1?, Fs2),
     social_graph(Id?, In?, Fs2?).
-
-%% ========== Friend-Mediated Introduction Protocol ==========
 
 %% User requests introduction: introduce(P, Q)
 social_graph(Id, [introduce(P, Q)|In], Fs) :-
@@ -98,16 +97,6 @@ social_graph(Id, [introduce(P, Q)|In], Fs) :-
     lookup_send(Q?, msg(Id?, Q?, intro(P?, ch(PtoQ?, QtoP))), Fs1?, Fs2, Status2),
     handle_intro_status(Status1?, Status2?, P?, Q?, Fs2?, Fs3),
     social_graph(Id?, In?, Fs3?).
-
-%% Handle introduction status
-handle_intro_status(found, found, P, Q, Fs, Fs1?) :-
-    lookup_send(user, introduced(P?, Q?), Fs?, Fs1, _).
-
-handle_intro_status(not_found, _, P, _, Fs, Fs1?) :-
-    lookup_send(user, error(intro_failed, P?), Fs?, Fs1, _).
-
-handle_intro_status(_, not_found, _, Q, Fs, Fs1?) :-
-    lookup_send(user, error(intro_failed, Q?), Fs?, Fs1, _).
 
 %% Receive introduction from a friend
 social_graph(Id, [msg(From, Id?, intro(Other, Ch))|In], Fs) :-
@@ -130,8 +119,7 @@ social_graph(Id, [reject_intro(Other, _)|In], Fs) :-
     lookup_send(user, rejected_intro(Other?), Fs?, Fs1, _),
     social_graph(Id?, In?, Fs1?).
 
-%% ========== Ping/Pong Protocol ==========
-
+%% Receive ping - reply with pong
 social_graph(Id, [msg(From, Id?, ping)|In], Fs) :-
     ground(Id?), ground(From?) |
     lookup_send(user, received_ping(From?), Fs?, Fs1, _),
@@ -139,27 +127,38 @@ social_graph(Id, [msg(From, Id?, ping)|In], Fs) :-
     handle_ping_status(Status?, Id?, From?, Fs2?, Fs3),
     social_graph(Id?, In?, Fs3?).
 
+%% Receive pong - display only
 social_graph(Id, [msg(From, Id?, pong)|In], Fs) :-
     ground(Id?), ground(From?) |
     lookup_send(user, received_pong(From?), Fs?, Fs1, _),
     social_graph(Id?, In?, Fs1?).
 
-%% Receive other message
+%% Receive other message - display only
 social_graph(Id, [msg(From, Id?, Content)|In], Fs) :-
     ground(Id?), ground(From?), ground(Content?) |
     lookup_send(user, received(From?, Content?), Fs?, Fs1, _),
     social_graph(Id?, In?, Fs1?).
 
-%% Unknown command
+%% Unknown command - report error
 social_graph(Id, [Cmd|In], Fs) :-
     ground(Id?), ground(Cmd?), otherwise |
     lookup_send(user, error(unknown_command, Cmd?), Fs?, Fs1, _),
     social_graph(Id?, In?, Fs1?).
 
-%% Empty input
+%% Empty input - done
 social_graph(_, [], _).
 
 %% ========== Status Handlers ==========
+%% NOTE: These must come AFTER all social_graph clauses
+
+handle_intro_status(found, found, P, Q, Fs, Fs1?) :-
+    lookup_send(user, introduced(P?, Q?), Fs?, Fs1, _).
+
+handle_intro_status(not_found, _, P, _, Fs, Fs1?) :-
+    lookup_send(user, error(intro_failed, P?), Fs?, Fs1, _).
+
+handle_intro_status(_, not_found, _, Q, Fs, Fs1?) :-
+    lookup_send(user, error(intro_failed, Q?), Fs?, Fs1, _).
 
 handle_send_status(found, To, Content, Fs, Fs1?) :-
     lookup_send(user, sent(To?, Content?), Fs?, Fs1, _).

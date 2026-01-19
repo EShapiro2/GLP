@@ -191,7 +191,7 @@ class IrmaHelpers {
       
       if (creator == agentId && !vp.contains(varId)) {
         // Local variable being exported for first time
-        final role = term.isReader ? VariableRole.createdReader : VariableRole.writer;
+        final role = term.isReader ? VariableRole.createdReader : VariableRole.createdWriter;
         vp.add(varId, VariableEntry(
           varId: varId,
           creator: agentId,

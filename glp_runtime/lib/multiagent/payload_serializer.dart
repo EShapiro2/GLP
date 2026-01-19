@@ -345,6 +345,109 @@ class PayloadSerializer {
     }
   }
   
+  // ============================================================================
+  // Agent message payload (term serialization for agent-to-agent messages)
+  // ============================================================================
+  
+  /// Create agent message payload: just the serialized term
+  List<int> createAgentMessagePayload(Term term) {
+    return serializeTerm(term, agentId);
+  }
+  
+  /// Deserialize agent message payload with fresh variable allocation
+  /// 
+  /// This is used when receiving a term from another agent. Remote variables
+  /// are mapped to fresh local variables using the provided allocator.
+  /// 
+  /// [payload] - The serialized term bytes
+  /// [allocateFreshVar] - Callback to allocate a fresh local variable, returns varId
+  Term deserializeAgentMessagePayload(
+    List<int> payload,
+    int Function() allocateFreshVar,
+  ) {
+    // Map from global var ID string -> local varId
+    final varMapping = <String, int>{};
+    
+    final (term, _) = _deserializeTermWithMapping(payload, 0, varMapping, allocateFreshVar);
+    return term;
+  }
+  
+  /// Deserialize term with variable remapping for cross-agent terms
+  (Term, int) _deserializeTermWithMapping(
+    List<int> bytes,
+    int offset,
+    Map<String, int> varMapping,
+    int Function() allocateFreshVar,
+  ) {
+    final startOffset = offset;
+    
+    if (offset >= bytes.length) {
+      throw FormatException('Unexpected end of input');
+    }
+    
+    final tag = bytes[offset];
+    offset++;
+    
+    switch (tag) {
+      case _tagConstant:
+        final (value, constSize) = _deserializeConstant(bytes, offset);
+        return (ConstTerm(value), 1 + constSize);
+        
+      case _tagVariable:
+        // Decode global ID length
+        final (idLength, lengthSize) = _decodeLength(bytes, offset);
+        offset += lengthSize;
+        
+        // Decode global ID string (e.g., "bob:1117")
+        final idBytes = bytes.sublist(offset, offset + idLength);
+        offset += idLength;
+        final globalIdStr = utf8.decode(idBytes);
+        
+        // Decode isReader flag
+        final isReader = bytes[offset] == 1;
+        offset++;
+        
+        // Map to local variable (allocate fresh if first time seeing this global ID)
+        int localVarId;
+        if (varMapping.containsKey(globalIdStr)) {
+          localVarId = varMapping[globalIdStr]!;
+        } else {
+          localVarId = allocateFreshVar();
+          varMapping[globalIdStr] = localVarId;
+        }
+        
+        return (VarRef(localVarId, isReader: isReader), offset - startOffset);
+        
+      case _tagStruct:
+        // Decode functor length
+        final (functorLength, functorLengthSize) = _decodeLength(bytes, offset);
+        offset += functorLengthSize;
+        
+        // Decode functor string
+        final functorBytes = bytes.sublist(offset, offset + functorLength);
+        offset += functorLength;
+        final functor = utf8.decode(functorBytes);
+        
+        // Decode arity
+        final (arity, aritySize) = _decodeLength(bytes, offset);
+        offset += aritySize;
+        
+        // Decode args with same mapping
+        final args = <Term>[];
+        for (int i = 0; i < arity; i++) {
+          final (arg, argSize) = _deserializeTermWithMapping(
+            bytes, offset, varMapping, allocateFreshVar);
+          args.add(arg);
+          offset += argSize;
+        }
+        
+        return (StructTerm(functor, args), offset - startOffset);
+        
+      default:
+        throw FormatException('Unknown term tag: $tag');
+    }
+  }
+
   (dynamic, int) _deserializeConstant(List<int> bytes, int offset) {
     final startOffset = offset;
     

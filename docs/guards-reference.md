@@ -410,7 +410,14 @@ The guard `Key =?= K?` succeeds when `Key` and `K` are both ground and equal. If
 A **unit clause** (head-only, no guards, no body) can define a guard predicate:
 
 ```prolog
-% Define channel/1 as a guard predicate
+% Define equality guard - matching both arguments against the same variable
+X = X.
+```
+
+When `A = B` is used in guard position, the compiler unfolds it to matching both `A` and `B` against the same variable `X`. This succeeds when both terms unify with the same value, suspends if either contains unbound readers, and fails if they cannot match.
+
+```prolog
+% Define channel/1 as a type guard predicate
 channel(ch(_, _)).
 ```
 

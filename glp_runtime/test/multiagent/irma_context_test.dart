@@ -32,7 +32,7 @@ void main() {
       alice.vp.add(100, VariableEntry(
         varId: 100,
         creator: 'alice',
-        role: VariableRole.writer,
+        role: VariableRole.createdWriter,
       ));
       
       // Bob's V_p should be unaffected
@@ -413,7 +413,7 @@ void main() {
       ctx.vp.add(100, VariableEntry(
         varId: 100,
         creator: 'alice',
-        role: VariableRole.writer,
+        role: VariableRole.createdWriter,
       ));
       
       // Receive abandon notification
@@ -424,6 +424,106 @@ void main() {
     });
   });
   
+  group('IrmaContext - Introduction Protocol', () {
+    test('scenario: alice imports writer from bob and binds it', () {
+      final rt = GlpRuntime();
+      final ctx = IrmaContext(agentId: 'alice', runtime: rt);
+      
+      // Allocate a variable to represent the imported writer
+      final writerId = rt.heap.allocateVariable();
+      
+      // Alice imports writer CA from bob (created by bob)
+      ctx.registerImportedWriter(writerId, 'bob');
+      
+      // Verify V_p entry
+      expect(ctx.vp.contains(writerId), isTrue);
+      final entry = ctx.vp.lookup(writerId);
+      expect(entry!.role, VariableRole.importedWriter);
+      expect(entry.creator, 'bob');
+      
+      // When Alice binds the imported writer, it should notify bob
+      rt.heap.bindVariable(writerId, ConstTerm('hello'));
+      
+      // Should queue message to bob (the creator)
+      expect(ctx.mp.countFor('bob'), 1);
+      final msg = ctx.mp.poll('bob');
+      expect(msg, isNotNull);
+      expect(msg!.type, MessageType.assignment);
+    });
+    
+    test('scenario: bob receives assignment and forwards to charlie', () {
+      final rt = GlpRuntime();
+      final ctx = IrmaContext(agentId: 'bob', runtime: rt);
+      
+      // Bob created reader CA? and exported it
+      final readerId = rt.heap.allocateVariable();
+      ctx.registerCreatedReader(readerId);
+      
+      // Charlie requests the reader
+      ctx.handleReadRequest(readerId, 'charlie');
+      expect(ctx.vp.lookup(readerId)!.state, 'charlie');
+      
+      // Alice sends assignment to bob (the creator)
+      ctx.handleAssignment(readerId, ConstTerm('hello from alice'));
+      
+      // Bob should forward to charlie
+      expect(ctx.mp.countFor('charlie'), 1);
+      final msg = ctx.mp.poll('charlie');
+      expect(msg, isNotNull);
+      expect(msg!.type, MessageType.assignment);
+    });
+    
+    test('scenario: value arrives before request', () {
+      final rt = GlpRuntime();
+      final ctx = IrmaContext(agentId: 'bob', runtime: rt);
+      
+      // Bob created reader CA?
+      final readerId = rt.heap.allocateVariable();
+      ctx.registerCreatedReader(readerId);
+      
+      // Alice sends value BEFORE Charlie requests
+      ctx.handleAssignment(readerId, ConstTerm('early value'));
+      
+      // Value should be stored
+      expect(ctx.vp.lookup(readerId)!.state, isA<Term>());
+      expect(ctx.mp.isEmpty, isTrue); // No message yet
+      
+      // Now Charlie requests
+      ctx.handleReadRequest(readerId, 'charlie');
+      
+      // Bob should reply immediately with stored value
+      expect(ctx.mp.countFor('charlie'), 1);
+      final msg = ctx.mp.poll('charlie');
+      expect(msg, isNotNull);
+      expect(msg!.type, MessageType.assignment);
+    });
+    
+    test('importTerm handles writers correctly', () {
+      final rt = GlpRuntime();
+      final ctx = IrmaContext(agentId: 'alice', runtime: rt);
+      
+      // Allocate actual variables in the heap
+      final readerId = rt.heap.allocateVariable();
+      final writerId = rt.heap.allocateVariable();
+      
+      // Receive a term containing both writer and reader from bob
+      final term = StructTerm('ch', [
+        VarRef(readerId, isReader: true),   // AC? - reader
+        VarRef(writerId, isReader: false),  // CA - writer
+      ]);
+      
+      ctx.importTerm(term, 'bob');
+      
+      // Reader should be imported reader
+      expect(ctx.vp.lookup(readerId)!.role, VariableRole.importedReader);
+      expect(ctx.vp.lookup(readerId)!.creator, 'bob');
+      
+      // Writer should be imported writer
+      expect(ctx.vp.lookup(writerId)!.role, VariableRole.importedWriter);
+      expect(ctx.vp.lookup(writerId)!.creator, 'bob');
+    });
+  });
+
   group('IrmaContext - Heap Callback Integration', () {
     test('registerWriter sets up binding callback', () {
       final rt = GlpRuntime();
@@ -437,7 +537,7 @@ void main() {
       
       // Variable should be in V_p
       expect(ctx.vp.contains(varId), isTrue);
-      expect(ctx.vp.lookup(varId)!.role, VariableRole.writer);
+      expect(ctx.vp.lookup(varId)!.role, VariableRole.createdWriter);
     });
     
     test('binding callback queues message when requester exists', () {

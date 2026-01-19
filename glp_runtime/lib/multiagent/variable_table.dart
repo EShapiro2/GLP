@@ -10,8 +10,11 @@ library;
 
 /// Role of a variable in the variable table
 enum VariableRole {
-  /// We hold writer X, paired reader X? is remote
-  writer,
+  /// We created and hold writer X, paired reader X? is remote
+  createdWriter,
+  
+  /// We received writer X from another agent, paired reader X? is remote
+  importedWriter,
   
   /// We created reader X? (and paired writer X), writer is remote
   createdReader,
@@ -64,18 +67,7 @@ class VariableTable {
   VariableTable(this.agentId);
   
   /// Add a variable entry to the table
-  /// 
-  /// INVARIANT: For writer entries, creator must equal agentId.
-  /// Writers are never imported - only readers can be imported.
   void add(int varId, VariableEntry entry) {
-    // Enforce writer invariant
-    if (entry.role == VariableRole.writer && entry.creator != agentId) {
-      throw AssertionError(
-        'INVARIANT VIOLATION: Writer entry must have creator = $agentId, '
-        'got creator = ${entry.creator} for varId $varId'
-      );
-    }
-    
     _entries[varId] = entry;
   }
   

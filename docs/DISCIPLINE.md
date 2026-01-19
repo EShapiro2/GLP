@@ -377,7 +377,28 @@ main                    # Stable, all tests pass
 
 Types: `feat`, `fix`, `test`, `spec`, `refactor`, `docs`
 
-### 6.3 Before Merging to Main
+### 6.3 Commit After Every Revision
+
+**Rule:** Commit after every code revision, even minor ones.
+
+**Rationale:** Frequent commits create restore points. If a change introduces a subtle bug or breaks something unexpectedly, you can revert to any prior state. Without commits, all uncommitted work is lost if you need to roll back.
+
+**Practice:**
+1. Make a change (even a single line)
+2. Test that it works (or at least compiles)
+3. Commit immediately with a descriptive message
+4. Repeat
+
+**Commit messages for minor changes:**
+```
+fix(parser): correct off-by-one in line count
+refactor(types): rename variable for clarity
+test(repl): add edge case for empty list
+```
+
+Do not batch multiple unrelated changes into a single commit. Each commit should be atomic and revertible.
+
+### 6.4 Before Merging to Main
 
 - [ ] All tests pass (baseline check)
 - [ ] Handover document written (if work is significant)
@@ -428,4 +449,5 @@ cd glp_multiagent && flutter build macos
 | 1.1 | 2025-01-12 | Added filesystem access section |
 | 2.0 | 2026-01-18 | Consolidated with test protocol and handover standards |
 | 2.1 | 2026-01-18 | Added section 1.7: Bug Handling - Never Bypass, Always Report |
+| 2.2 | 2026-01-18 | Added section 6.3: Commit After Every Revision |
 

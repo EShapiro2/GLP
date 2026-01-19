@@ -1348,6 +1348,7 @@ GUARD_READER
 2>&1)
 
 # Check that file loaded successfully (no SRSW errors)
+# The REPL prints "✓ Loaded: <filename>" on success
 if echo "$guard_reader_output" | grep -q "Loaded.*guard_reader.glp"; then
     echo "PASS: guard_reader.glp loads (grounding guards satisfy SRSW)"
     PASS=$((PASS + 1))
@@ -1356,30 +1357,26 @@ else
     FAIL=$((FAIL + 1))
 fi
 
-# Check that guard_ground succeeds
-if echo "$guard_reader_output" | grep -q "guard_ground(42)"; then
+# The REPL prints "→ succeeds" after each successful goal execution.
+# Count the number of "succeeds" to verify all 4 goals passed.
+succeed_count=$(echo "$guard_reader_output" | grep -c "succeeds" || true)
+if [ "$succeed_count" -ge 4 ]; then
     echo "PASS: guard_ground(42) with ground/1 guard"
+    PASS=$((PASS + 1))
+    echo "PASS: guard_int(7) with integer/1 guard"
+    PASS=$((PASS + 1))
+    echo "PASS: guard_compare(3,5) with X?<Y? guard"
+    PASS=$((PASS + 1))
+    echo "PASS: guard_known_valid(hello, Y) with known/1 guard + body reader"
     PASS=$((PASS + 1))
 else
     echo "FAIL: guard_ground(42) (expected: succeeds)"
     FAIL=$((FAIL + 1))
-fi
-
-# Check that guard_int succeeds
-if echo "$guard_reader_output" | grep -q "guard_int(7)"; then
-    echo "PASS: guard_int(7) with integer/1 guard"
-    PASS=$((PASS + 1))
-else
     echo "FAIL: guard_int(7) (expected: succeeds)"
     FAIL=$((FAIL + 1))
-fi
-
-# Check that guard_compare succeeds
-if echo "$guard_reader_output" | grep -q "guard_compare(3, 5)"; then
-    echo "PASS: guard_compare(3,5) with X?<Y? guard"
-    PASS=$((PASS + 1))
-else
     echo "FAIL: guard_compare(3,5) (expected: succeeds)"
+    FAIL=$((FAIL + 1))
+    echo "FAIL: guard_known_valid(hello, Y) (expected: succeeds)"
     FAIL=$((FAIL + 1))
 fi
 

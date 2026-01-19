@@ -1,0 +1,21 @@
+%% Test with actual message structure from social_agent.glp
+%% Testing if the complex msg(Id?, P?, intro(Q?, ch(QtoP?, PtoQ))) causes issues
+
+procedure social_graph(_?, _?, _?).
+procedure lookup_send(_?, _?, _?, _, _).
+procedure handle_intro_status(_?, _?, _?, _?, _?, _).
+
+social_graph(Id, [introduce(P, Q)|In], Fs) :-
+    ground(Id?), ground(P?), ground(Q?) |
+    lookup_send(P?, msg(Id?, P?, intro(Q?, ch(QtoP?, PtoQ))), Fs?, Fs1, Status1),
+    lookup_send(Q?, msg(Id?, Q?, intro(P?, ch(PtoQ?, QtoP))), Fs1?, Fs2, Status2),
+    handle_intro_status(Status1?, Status2?, P?, Q?, Fs2?, Fs3),
+    social_graph(Id?, In?, Fs3?).
+
+social_graph(_, [], _).
+
+%% Simple lookup_send that always succeeds with 'found'
+lookup_send(_, _, Fs, Fs?, found).
+
+%% Simple handler that just passes through
+handle_intro_status(_, _, _, _, Fs, Fs?).

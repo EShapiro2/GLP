@@ -66,15 +66,16 @@ procedure =?=(_?, _?).
 procedure =..(_, Stream?).      % Compose: Stream? → Compound
 procedure ..=(Stream, _?).      % Decompose: Compound? → Stream
 
-% Defined predicates (have clauses below, can appear in body)
-% These are unfolded when used in guard position (before |) but execute
-% as normal goals in body position (after |). Declarations enable type checking.
+% Defined guards and system predicates
+% These have clauses below. They are unfolded when used in guard position
+% (before |) but execute as normal goals in body position (after |).
+% Procedure declarations are required so body uses can be type-checked.
 procedure =(_?, _).
-procedure new_channel(Channel?, Channel).
-procedure send(_, Channel?, Channel).
-procedure receive(_?, Channel?, Channel).
-procedure dl_append(DiffList?, DiffList?, DiffList).
-procedure dl_to_list(DiffList?, Stream).
+procedure dl_append(_?, _?, _).
+procedure dl_to_list(_?, _).
+procedure new_channel(_, _).
+procedure send(_, _, _).
+procedure receive(_, _, _).
 
 % =============================================================================
 % CLAUSES
