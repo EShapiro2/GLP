@@ -95,14 +95,14 @@ class IrmaAgent {
   }
   
   void _handleAssignment(OutboundMessage msg) {
-    // Extract varId and value from payload
+    // Extract globalVarId and value from payload
     final serializer = PayloadSerializer(agentId);
-    final (varId, value) = serializer.deserializeAssignmentPayload(msg.payload);
+    final (globalId, value) = serializer.deserializeAssignmentPayload(msg.payload);
     
-    _log('Assignment: var $varId = ${_formatTerm(value)}');
+    _log('Assignment: ${globalId.creator}:${globalId.localId} = ${_formatTerm(value)}');
     
-    // Apply to context
-    context.handleAssignment(varId, value);
+    // Apply to context with full global ID for V_p lookup
+    context.handleAssignment(globalId.creator, globalId.localId, value);
   }
   
   void _handleReadRequest(OutboundMessage msg, String requester) {

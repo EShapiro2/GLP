@@ -92,8 +92,10 @@ void main() {
       final (writerId, readerId) = agent.runtime.heap.allocateFreshPair();
       
       // Add to V_p as imported reader
-      agent.vp.add(readerId, VariableEntry(
+      final readerKey = VarKey(readerId, true);
+      agent.vp.add(readerKey, VariableEntry(
         varId: readerId,
+        isReader: true,
         creator: 'alice',
         role: VariableRole.importedReader,
       ));
@@ -112,7 +114,7 @@ void main() {
       agent.handleIncomingMessage('alice', bytes);
       
       // Variable should be removed from V_p after assignment
-      expect(agent.vp.contains(readerId), isFalse);
+      expect(agent.vp.contains(readerKey), isFalse);
     });
     
     test('handles incoming read request message', () {
@@ -122,8 +124,10 @@ void main() {
       final (writerId, readerId) = agent.runtime.heap.allocateFreshPair();
       
       // Add to V_p as createdWriter (alice created it)
-      agent.vp.add(writerId, VariableEntry(
+      final writerKey = VarKey(writerId, false);
+      agent.vp.add(writerKey, VariableEntry(
         varId: writerId,
+        isReader: false,
         creator: 'alice',
         role: VariableRole.createdWriter,
       ));
@@ -142,9 +146,9 @@ void main() {
       agent.handleIncomingMessage('bob', bytes);
       
       // Entry should now have requester recorded
-      final entry = agent.vp.lookup(writerId);
+      final entry = agent.vp.lookup(writerKey);
       expect(entry, isNotNull);
-      // Note: handleReadRequest records requester in createdReader entries
+      // Note: handleReadRequest records requester in createdWriter entries when no reader entry exists
     });
     
     test('handles incoming abandon message', () {
@@ -154,8 +158,10 @@ void main() {
       final (writerId, readerId) = agent.runtime.heap.allocateFreshPair();
       
       // Add to V_p as createdWriter
-      agent.vp.add(writerId, VariableEntry(
+      final writerKey = VarKey(writerId, false);
+      agent.vp.add(writerKey, VariableEntry(
         varId: writerId,
+        isReader: false,
         creator: 'alice',
         role: VariableRole.createdWriter,
       ));
@@ -174,7 +180,7 @@ void main() {
       agent.handleIncomingMessage('bob', bytes);
       
       // Writer should be removed from V_p
-      expect(agent.vp.contains(writerId), isFalse);
+      expect(agent.vp.contains(writerKey), isFalse);
     });
   });
   
@@ -188,8 +194,9 @@ void main() {
       // Register as writer
       agent.registerWriter(writerId);
       
-      expect(agent.vp.contains(writerId), isTrue);
-      expect(agent.vp.lookup(writerId)!.role, VariableRole.createdWriter);
+      final writerKey = VarKey(writerId, false);
+      expect(agent.vp.contains(writerKey), isTrue);
+      expect(agent.vp.lookup(writerKey)!.role, VariableRole.createdWriter);
     });
     
     test('registerCreatedReader adds to V_p', () {
@@ -201,8 +208,9 @@ void main() {
       // Register as created reader
       agent.registerCreatedReader(readerId);
       
-      expect(agent.vp.contains(readerId), isTrue);
-      expect(agent.vp.lookup(readerId)!.role, VariableRole.createdReader);
+      final readerKey = VarKey(readerId, true);
+      expect(agent.vp.contains(readerKey), isTrue);
+      expect(agent.vp.lookup(readerKey)!.role, VariableRole.createdReader);
     });
     
     test('registerImportedWriter adds to V_p', () {
@@ -214,9 +222,10 @@ void main() {
       // Register as imported writer from bob
       agent.registerImportedWriter(writerId, 'bob');
       
-      expect(agent.vp.contains(writerId), isTrue);
-      expect(agent.vp.lookup(writerId)!.role, VariableRole.importedWriter);
-      expect(agent.vp.lookup(writerId)!.creator, 'bob');
+      final writerKey = VarKey(writerId, false);
+      expect(agent.vp.contains(writerKey), isTrue);
+      expect(agent.vp.lookup(writerKey)!.role, VariableRole.importedWriter);
+      expect(agent.vp.lookup(writerKey)!.creator, 'bob');
     });
   });
   
@@ -231,8 +240,10 @@ void main() {
       final (writerId, readerId) = agent.runtime.heap.allocateFreshPair();
       
       // Add to V_p as imported reader
-      agent.vp.add(readerId, VariableEntry(
+      final readerKey = VarKey(readerId, true);
+      agent.vp.add(readerKey, VariableEntry(
         varId: readerId,
+        isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
       ));

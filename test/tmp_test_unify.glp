@@ -1,0 +1,11 @@
+% Test =/2 in body position (no guard)
+test_body(X) :- X = foo.
+
+% Test =/2 in guard position
+test_guard(X) :- X = foo | true.
+
+% Test =/2 with variable on right (body)
+test_var(X, Y) :- X = Y?.
+
+% Test with reader on left (standard usage per stdlib: X? = X)
+test_reader_left(X) :- X? = X.

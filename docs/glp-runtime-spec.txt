@@ -1,17 +1,25 @@
-# GLP Runtime System Specification for Dart Implementation v2.16
+# GLP Runtime System Specification for Dart Implementation v2.17.2
 
 ## Version History
 
-**v2.16.2 (November 2025)**: V1 opcode sunset complete. Separate writer/reader opcodes replaced with unified V2 opcodes using `isReader` flag:
-- `GetVariable(varIndex, argSlot, isReader: bool)` — replaces GetWriterVariable/GetReaderVariable
-- `GetValue(varIndex, argSlot, isReader: bool)` — replaces GetWriterValue/GetReaderValue
-- `SetVariable(varIndex, isReader: bool)` — replaces SetWriter/SetReader
-- `PutVariable(varIndex, argSlot, isReader: bool)` — replaces PutWriter/PutReader
-- `UnifyVariable(varIndex, isReader: bool)` — replaces UnifyWriter/UnifyReader
+**v2.17.2 (January 2026)**: Added "Suspension Processing at Bind Time" section clarifying the distinction between bind-time behavior (always use writerAddr + 1) and suspension-time behavior (follow chains). Documented suspension forwarding when binding to another variable.
+
+**v2.17.1 (January 2026)**: Clarified VarRef inheritance from Term in code examples.
+
+**v2.17 (January 2026)**: Heap design clarification. Variables are identified by heap addresses directly, with no separate ID namespace. Writer and reader are two distinct addresses. Removed historical references to focus on design description.
+
+**v2.16.2 (November 2025)**: V1 opcode sunset complete. Separate writer/reader opcodes replaced with unified V2 opcodes:
+- `GetVariable(varIndex, argSlot)` — replaces GetWriterVariable/GetReaderVariable
+- `GetValue(varIndex, argSlot)` — replaces GetWriterValue/GetReaderValue
+- `SetVariable(varIndex)` — replaces SetWriter/SetReader
+- `PutVariable(varIndex, argSlot)` — replaces PutWriter/PutReader
+- `UnifyVariable(varIndex)` — replaces UnifyWriter/UnifyReader
+
+*Note: The compiler knows at compile time whether a variable is a writer or reader and generates appropriate code. The runtime determines the role by examining the cell tag.*
 
 ## Overview
 
-The GLP runtime system executes bytecode on a Dart-based virtual machine that leverages Dart's native features for memory management, scheduling, and concurrency. Unlike the FCP abstract machine which manages its own process queue and garbage collection, this runtime delegates these responsibilities to Dart while focusing on GLP-specific semantics: reader/writer variables, suspension management, and SRSW enforcement.
+The GLP runtime system executes bytecode on a Dart-based virtual machine that leverages Dart's native features for memory management, scheduling, and concurrency. The runtime delegates memory management and process scheduling to Dart while focusing on GLP-specific semantics: reader/writer variables, suspension management, and SRSW enforcement.
 
 ## Opcode Name Mappings
 
@@ -44,15 +52,15 @@ The scheduler manages goals using Dart's event loop with two-level fairness:
 
 **Intra-GLP fairness**: Active goals are queued as Dart microtasks in FIFO order. Both `spawn` and `requeue` place goals at the tail of the queue, ensuring fair scheduling among concurrent GLP goals. 
 
-**System-level fairness**: To prevent GLP computations from starving the event queue (timers, I/O, UI), the runtime implements bounded tail recursion following FCP's approach. Each goal has a tail-recursion budget counter that decrements on each `requeue` operation. When the counter reaches zero, the goal is scheduled via `Timer.run()` instead of `scheduleMicrotask()`, yielding to the event queue before continuing. This prevents compute-intensive tail-recursive goals from monopolizing the microtask queue.
+**System-level fairness**: To prevent GLP computations from starving the event queue (timers, I/O, UI), the runtime implements bounded tail recursion. Each goal has a tail-recursion budget counter that decrements on each `requeue` operation. When the counter reaches zero, the goal is scheduled via `Timer.run()` instead of `scheduleMicrotask()`, yielding to the event queue before continuing. This prevents compute-intensive tail-recursive goals from monopolizing the microtask queue.
 
-Suspended goals are stored in a suspension table indexed by reader variables, with each entry containing the suspended goal's state and its suspension set. Failed goals are retained for debugging and error reporting but removed from active scheduling. The scheduler uses Dart's `scheduleMicrotask()` for goal activation when the tail-recursion budget is positive, and `Timer.run()` when yielding is required, eliminating the need for explicit time-slicing as in FCP.
+Suspended goals are stored in suspension lists within reader cells, with each entry containing the suspended goal's state and its resumption address. Failed goals are retained for debugging and error reporting but removed from active scheduling. The scheduler uses Dart's `scheduleMicrotask()` for goal activation when the tail-recursion budget is positive, and `Timer.run()` when yielding is required.
 
 #### Memory Management
-The runtime leverages Dart's garbage collector rather than implementing stop-and-copy collection as in FCP. The heap is implemented as a Dart List of tagged cells, growing dynamically as needed. Stack frames are Dart objects that participate in standard garbage collection. The variable table uses weak references where appropriate to avoid preventing collection of abandoned variables. This design significantly simplifies the runtime compared to FCP's explicit memory management while maintaining efficient execution.
+The runtime leverages Dart's garbage collector. The heap is implemented as a Dart List of tagged cells, growing dynamically as needed. Stack frames are Dart objects that participate in standard garbage collection. This design simplifies the runtime while maintaining efficient execution.
 
 #### Unification Engine
-The writer MGU algorithm forms the core of goal reduction. Unlike standard Prolog unification, it enforces GLP's asymmetric variable semantics where only writers can be bound, readers can only be verified, and writer-to-writer bindings cause immediate failure (not tracked or deferred) to prevent abandoned readers per WxW restriction. The engine maintains a mode flag (READ/WRITE) that determines instruction behavior, similar to the WAM but adapted for reader/writer semantics. Head unification proceeds in two phases: (1) Collection—arguments are processed left-to-right, accumulating tentative writer bindings and a preliminary suspension set of readers matched against constants or structures; (2) Resolution—the preliminary set is filtered against the collected bindings, removing readers whose paired writers were bound. If the resolved set is empty, unification succeeds; otherwise the clause suspends on the remaining readers.
+The writer MGU algorithm forms the core of goal reduction. Unlike standard Prolog unification, it enforces GLP's asymmetric variable semantics where only writers can be bound, readers can only be verified, and writer-to-writer bindings cause immediate failure (not tracked or deferred) to prevent abandoned readers per WxW restriction. The engine maintains a mode flag (READ/WRITE) that determines instruction behavior. Head unification proceeds in two phases: (1) Collection—arguments are processed left-to-right, accumulating tentative writer bindings and a preliminary suspension set of readers matched against constants or structures; (2) Resolution—the preliminary set is filtered against the collected bindings, removing readers whose paired writers were bound. If the resolved set is empty, unification succeeds; otherwise the clause suspends on the remaining readers.
 
 ### Data Structures
 
@@ -76,7 +84,7 @@ class RunnerContext {
   bool inBody = false;            // Phase: HEAD/GUARDS vs BODY
   int tailRecursionBudget = 26;   // Budget for tail call fairness
 
-  // Structure traversal (WAM-style)
+  // Structure traversal
   int S = 0;                      // Subterm pointer for structure unification
   Mode mode = Mode.read;          // READ or WRITE mode for structures
 }
@@ -84,46 +92,77 @@ class RunnerContext {
 
 **Note**: Goals do not store bytecode - the `BytecodeRunner` holds the `BytecodeProgram`, and each goal references it via `runtime.setGoalProgram(goalId, programKey)`.
 
-#### Heap Storage (FCP Two-Cell Design)
+#### Heap Storage (Two-Cell Design)
 
-Each logical variable consists of TWO heap cells following FCP AM precisely:
+Each logical variable consists of two heap cells at consecutive addresses.
 
-**1. Writer Cell**:
-   - Initially: Points to its paired reader cell (tagged RoTag)
-   - When bound: Points to bound value or dereferenced ultimate value
-   - Always knows its paired reader
-   - Never changes after binding (no updates when other variables bind)
+**Cell Structure:**
 
-**2. Reader Cell**:
-   - Initially: **null content** (unbound, tagged RoTag)
-   - With suspensions: Head of suspension list (replaces null)
-   - When writer bound: Content replaced with bound value
-   - **Critical**: Reader cell content is REPLACED, not extended
-   - Only ONE thing stored at a time: null OR suspension list OR bound value
-   - **NOT pointing back to writer** - that would create an immediate cycle
-
-**Variable Allocation** (FCP notify.c lines 194-195):
 ```dart
-// Allocate two cells on heap
-final writerAddr = HP++;  // Writer cell address
-final readerAddr = HP++;  // Reader cell address
+enum CellTag {
+  WrtTag,    // Writer cell
+  RoTag,     // Reader cell  
+  ValueTag,  // Bound to value
+}
 
-// Writer points to reader
-heap[writerAddr] = Pointer(readerAddr, RoTag);  // Writer → Reader
-
-// Reader is initially UNBOUND (null content, NOT pointing back to writer)
-heap[readerAddr] = HeapCell(null, RoTag);  // Unbound reader
-
-return (writerAddr, readerAddr);  // Both addresses needed
+class HeapCell {
+  dynamic content;  // Pointer | SuspensionListNode | Term
+  CellTag tag;
+}
 ```
 
-**Key operations**:
-- `allocateVariable()`: Creates both cells, writer points to reader, reader initially null
-- `bindWriter(w, value)`: Dereferences value if needed, updates writer cell, processes reader's suspension queue
-- `suspendOnReader(r, suspension)`: Prepends suspension record to reader's list (replaces reader content)
+**Variable Allocation:**
 
-**Critical Design Fix** (2025-11-17):
-The reader cell must NOT point back to the writer initially. This would create an immediate cycle:
+```dart
+(int, int) allocateVariable() {
+  final writerAddr = HP++;
+  final readerAddr = HP++;
+
+  // Writer cell points to reader
+  cells.add(HeapCell(Pointer(readerAddr), CellTag.WrtTag));
+
+  // Reader cell is initially unbound
+  cells.add(HeapCell(null, CellTag.RoTag));
+
+  return (writerAddr, readerAddr);
+}
+```
+
+The function returns two distinct addresses. There is no separate variable ID namespace; the address itself identifies the cell.
+
+**Variable References:**
+
+A variable reference is simply an address:
+
+```dart
+class VarRef extends Term {
+  final int addr;
+  VarRef(this.addr);
+}
+```
+
+To determine whether an address refers to a writer or reader, examine the cell's tag:
+
+```dart
+bool isWriter(int addr) => cells[addr].tag == CellTag.WrtTag;
+bool isReader(int addr) => cells[addr].tag == CellTag.RoTag;
+```
+
+**Cell Lifecycle:**
+
+The writer cell initially contains a pointer to its paired reader. When bound, both cells are updated to contain the bound value and tagged `ValueTag`.
+
+The reader cell initially contains null. When goals suspend on the reader, it contains the head of a suspension list. When the writer binds, the suspension list is processed and the cell content is replaced with the bound value.
+
+**Key Operations:**
+
+- `allocateVariable()`: Creates both cells, returns `(writerAddr, readerAddr)`
+- `bindWriter(writerAddr, value)`: Dereferences value if needed, updates both cells, processes reader's suspension list
+- `suspendOnReader(readerAddr, suspension)`: Prepends suspension record to reader's list
+
+**Critical Constraint:**
+
+The reader cell must NOT point back to the writer. This would create an immediate cycle:
 - Writer at addr=10 → Reader at addr=11
 - Reader at addr=11 → Writer at addr=10  ← CYCLE!
 
@@ -133,19 +172,9 @@ Dereferencing would fail immediately with cycle detection. Instead:
 
 This allows proper dereferencing and suspension list storage.
 
-**IDs vs Addresses**: FCP uses heap addresses directly. Dart implementation can use integer IDs that map to (writerAddr, readerAddr) pairs via lookup table
+**Dereferencing:**
 
-**Address-First Design**:
-
-VarIds are external handles. Internal operations use addresses directly:
-- `allocateVariable()` returns varId but stores addresses internally
-- API converts varId→(wAddr,rAddr) at entry
-- Dereferencing follows addresses without varId lookups
-- Results convert addr→varId only when needed for external API
-
-**Dereferencing by Address (FCP Design)**:
-
-Following FCP AM exactly, dereferencing operates on heap addresses directly:
+Dereferencing operates on heap addresses directly:
 
 ```dart
 Term derefAddr(int addr) {
@@ -154,52 +183,41 @@ Term derefAddr(int addr) {
 
   while (true) {
     if (visited.contains(current)) {
-      throw StateError('Cycle detected - SRSW violation!');
+      throw StateError('Cycle detected');
     }
     visited.add(current);
 
     final cell = cells[current];
 
-    // If bound to value, return it
-    if (cell.tag == ValueTag) {
-      return cell.content as Term;
+    if (cell.tag == CellTag.ValueTag) {
+      final content = cell.content;
+      if (content is VarRef) {
+        current = content.addr;
+        continue;
+      }
+      return content as Term;
     }
 
-    // If pointer to another cell, follow it
     if (cell.content is Pointer) {
+      // Writer pointing to unbound reader — return writer reference
+      if (cell.tag == CellTag.WrtTag) {
+        return VarRef(current);
+      }
       current = (cell.content as Pointer).targetAddr;
       continue;
     }
 
-    // Unbound - construct VarRef from address
-    return VarRef.fromAddr(current);
+    // Unbound reader
+    return VarRef(current);
   }
 }
 ```
 
-**Key Principle**: No reverse lookup (addr→varId) during dereferencing. Addresses followed directly like FCP's pointer arithmetic.
-
-**Dereferencing Semantics (FCP AM)**:
-Following the FCP Abstract Machine design, dereferencing is performed automatically when reading values from the heap. This ensures that all code working with heap values sees fully dereferenced terms, eliminating the need for manual dereferencing loops in opcode handlers.
-
-The `valueOfWriter()` method implements automatic dereferencing:
-```dart
-Term? valueOfWriter(int writerId) {
-  final value = getValue(writerId);
-  if (value == null) return null;
-  return dereference(value);  // Automatically dereference before returning
-}
-```
-
-The `dereference()` method follows variable chains (VarRef → VarRef → ... → ground term or unbound VarRef) in a read-only manner - it does not modify the heap or compress paths. This matches FCP AM semantics where variable chains remain in the heap as created, and dereferencing traverses them on each access.
-
-**Key properties**:
+**Key Properties:**
 - **Read-only**: Dereferencing never modifies heap cells or compresses paths
 - **Transparent**: Opcode handlers receive fully dereferenced values automatically
-- **Chain-preserving**: Variable chains (e.g., W1001 → R1002 → W1003) remain in heap
+- **Chain-preserving**: Variable chains remain in heap as created
 - **Suspension-safe**: Dereferencing stops at unbound readers, allowing proper suspension detection
-
-This design eliminates manual dereferencing loops from opcode implementations (HeadNil, HeadList, HeadConstant, HeadStructure, etc.) and ensures consistent dereferencing behavior across all heap accesses.
 
 ### Circular Term Handling
 
@@ -214,16 +232,31 @@ Circular terms may form through cross-goal communication. The runtime must handl
 - Term copying: must preserve cyclic structure
 - Display: must terminate with finite representation
 
-Implementation approach will follow FCP precedent; see Phase 0 research.
+**Terms** (lib/runtime/terms.dart):
 
-**Terms** (lib/runtime/terms.dart) are separate from cells:
+All terms implement the `Term` interface:
 
 ```dart
-class WriterTerm { final int writerId; }
-class ReaderTerm { final int readerId; }
-class StructTerm { final String functor; final List<Object?> args; }
-class ConstTerm { final Object? value; }
+abstract class Term {}
+
+class VarRef extends Term {
+  final int addr;
+  VarRef(this.addr);
+}
+
+class StructTerm extends Term {
+  final String functor;
+  final List<Term> args;
+  StructTerm(this.functor, this.args);
+}
+
+class ConstTerm extends Term {
+  final Object? value;
+  ConstTerm(this.value);
+}
 ```
+
+`VarRef` holds a heap address. The cell at that address has a tag indicating whether it is a writer or reader.
 
 #### Environment Frame
 Stack frames for permanent variables:
@@ -232,48 +265,62 @@ Stack frames for permanent variables:
 class Environment {
   final Environment? parent;
   final int continuationPointer;
-  final List<Cell> permanentVariables;
+  final List<HeapCell> permanentVariables;
   
   Environment(this.parent, this.continuationPointer, int size) 
-    : permanentVariables = List.filled(size, WriterCell.unbound());
+    : permanentVariables = List.filled(size, HeapCell(null, CellTag.RoTag));
 }
 ```
 
-#### ROQ (Read-Only Queues)
-Suspension tracking is managed by ROQ (lib/runtime/roq.dart), NOT a variable table:
+#### Suspension Lists
 
+Suspension tracking is stored directly in reader cells. There is no separate suspension table data structure.
+
+**Data Structure**:
 ```dart
-class SuspensionNote {
-  final int goalId;       // Which goal is suspended
-  final int kappa;        // Entry PC to resume at
-  final Hanger hanger;    // Single-shot reactivation mechanism
-}
+class SuspensionRecord {
+  int? goalId;        // Process ID - can be nulled to prevent re-activation
+  int resumePC;       // Where to resume (kappa - procedure entry point)
+  SuspensionRecord? next;  // Next record in this variable's list
 
-class Hanger {
-  bool armed = true;      // Prevents duplicate reactivation
-
-  void fire(GlpRuntime rt, int goalId, int kappa) {
-    if (!armed) return;   // Already fired - ignore
-    armed = false;
-    rt.gq.enqueue(GoalRef(goalId, kappa));  // Reactivate goal
-  }
-}
-
-class ROQueues {
-  final Map<int, Queue<SuspensionNote>> _queues = {};  // readerId → suspension queue
-
-  void addSuspension(int readerId, SuspensionNote note) {
-    _queues.putIfAbsent(readerId, () => Queue()).add(note);
+  void disarm() {
+    goalId = null;    // Prevent future activation
   }
 
-  void processOnBind(int readerId, GlpRuntime rt) {
-    final queue = _queues[readerId];
-    if (queue == null) return;
+  bool get armed => goalId != null;
+}
+```
 
-    for (final note in queue) {
-      note.hanger.fire(rt, note.goalId, note.kappa);  // Single-shot reactivation
+**Key Properties**:
+- The **same record object** appears in multiple variables' suspension lists when a goal suspends on multiple readers
+- When goal suspends on readers {R1, R2, R3}:
+  - ONE SuspensionRecord is created
+  - That same record is prepended to R1's list, R2's list, R3's list
+- When ANY variable binds:
+  - Walk its suspension list
+  - For each armed record: activate goal, then disarm
+  - Other variables' lists still have the record, but goalId is now null (disarmed)
+
+**Storage Location**:
+Suspension records are stored directly in reader cell's content field. Reader cell progression:
+1. Initially: `null` (unbound)
+2. First suspension: `SuspensionRecord(goal1, kappa, null)`
+3. More suspensions: `SuspensionRecord(goal2, kappa, next: previousRecord)`
+4. Writer binds: Content saved, replaced with bound value, saved list walked to activate goals
+
+**Checking for suspensions**:
+```dart
+// To check if reader R has suspensions:
+final content = cells[readerAddr].content;
+if (content is SuspensionRecord) {
+  // Has suspensions - walk the list
+  SuspensionRecord? current = content;
+  while (current != null) {
+    if (current.armed) {
+      activate(current.goalId!, current.resumePC);
+      current.disarm();
     }
-    queue.clear();
+    current = current.next;
   }
 }
 ```
@@ -306,7 +353,7 @@ Each active goal executes in a microtask that runs until it suspends, fails, or 
 3. **Execute**: Run instruction handler, updating context
 4. **Branch**: Based on result:
    - **CONTINUE**: Increment PC and continue loop
-   - **SUSPENDED**: Goal suspended on unbound readers in U, create suspension notes in ROQ
+   - **SUSPENDED**: Goal suspended on unbound readers in U, create suspension records
    - **TERMINATED**: Goal completed (success via `proceed` or failure via `no_more_clauses`)
    - **OUT_OF_REDUCTIONS**: Reduction budget exhausted (for testing)
 
@@ -317,146 +364,92 @@ Suspension occurs when `no_more_clauses` instruction executes with non-empty U s
 
 **Suspension Process** (`no_more_clauses` with U ≠ ∅):
 1. Runtime calls `suspendGoal(goalId, kappa, readers)` with U set
-2. For each reader ID in U, create a `SuspensionNote(goalId, kappa, hanger)`
-3. Add suspension note to reader's ROQ via `roq.addSuspension(readerId, note)`
+2. Create ONE `SuspensionRecord(goalId, kappa)`
+3. For each reader address in U, prepend the same record to that reader's suspension list
 4. Goal returns `RunResult.suspended` and is removed from GQ
 
 **Reactivation Process** (during `commit` when writer binds):
-1. `CommitOps.applySigmaHat()` binds writer X on heap
-2. Calls `roq.processOnBind(readerId)` where readerId is X's paired reader
-3. For each suspension note in reader's queue:
-   - Check if `hanger.armed` is true
-   - If yes: set `armed = false` and enqueue `GoalRef(goalId, kappa)` to GQ
-   - If no: skip (already reactivated by another reader binding)
-4. Clear reader's suspension queue
-5. Reactivated goal resumes at PC = kappa (first clause), NOT at suspension point
+1. `bindWriter(writerAddr, value)` binds writer
+2. Get paired reader address (writerAddr + 1)
+3. Save and clear reader's suspension list
+4. Replace reader content with bound value
+5. Walk saved list, for each armed record:
+   - Enqueue `GoalRef(goalId, kappa)` to GQ
+   - Disarm the record (set goalId = null)
+6. Reactivated goal resumes at PC = kappa (first clause), NOT at suspension point
 
-**Single-shot mechanism**: The `armed` flag prevents duplicate reactivation if a goal was suspended on multiple readers and more than one binds.
+**Single-shot mechanism**: The shared record with `armed` flag prevents duplicate reactivation if a goal was suspended on multiple readers and more than one binds.
 
-#### Shared Suspension Records (FCP Design)
+#### Suspension Processing at Bind Time
 
-Following FCP AM precisely, suspension records are SHARED across multiple variables.
+When `commit` applies σ̂w and binds writers, there is an important distinction between bind-time behavior and suspension-time behavior:
 
-**Data Structure**:
+**At bind time (commit):** Always process the reader at `writerAddr + 1`. This is the allocation pair — the reader that was created together with this writer. No chain-following occurs at bind time. The address arithmetic `readerAddr = writerAddr + 1` is always correct here.
+
+**At suspension time:** Follow variable chains via `derefAddr()` to find the final unbound reader, then add suspension records there. This is described in the "Variable Chain Suspension" section below.
+
+**Suspension processing depends on what the writer is bound to:**
+
+1. **Bound to ground value:** Activate all armed suspension records in the paired reader's list. Walk the list, enqueue each armed goal, then disarm the record. Goals wake and retry from their procedure entry point (kappa).
+
+2. **Bound to another variable (VarRef):** Forward suspension records from the paired reader to the target variable's reader cell. Do NOT activate goals yet. This preserves wake-and-retry semantics: goals that were waiting for this variable will now wait for the target variable instead, and will wake when that target is eventually bound to ground.
+
+**Forwarding implementation:**
+
 ```dart
-class SuspensionRecord {
-  int? goalId;        // Process ID - can be nulled to prevent re-activation
-  int resumePC;       // Where to resume (kappa - procedure entry point)
-  SuspensionRecord? next;  // Next record in this variable's list
-
-  void disarm() {
-    goalId = null;    // Prevent future activation
-  }
-
-  bool get armed => goalId != null;
-}
-```
-
-**Key Properties**:
-- **SAME record object** appears in multiple variables' suspension lists
-- When goal suspends on readers {R1, R2, R3}:
-  - ONE SuspensionRecord created
-  - That same record prepended to R1's list, R2's list, R3's list
-- When ANY variable binds:
-  - Walk its suspension list
-  - For each armed record: activate process, then disarm
-  - Other variables' lists still have the record, but goalId is now null
-- **No separate ROQ structure** - suspension lists IN reader cells ARE the ROQ
-
-**Storage Location**:
-Suspension records stored directly in reader cell's value field, replacing the
-initial back-pointer to writer. Reader cell progression:
-1. Initially: `Pointer(writerAddr, WrtTag)`
-2. First suspension: `SuspensionRecord(goal1, kappa, null)`
-3. More suspensions: `SuspensionRecord(goal2, kappa, next: previousRecord)`
-4. Writer binds: Content saved, replaced with bound value, saved list walked
-
-#### ROQ Structure (None - FCP Uses Suspension Lists Directly)
-
-Unlike designs with separate ROQ maps, FCP stores suspension information
-DIRECTLY in reader cells. There is NO separate ROQ data structure.
-
-**Checking for suspensions**:
-```dart
-// To check if reader R has suspensions:
-final content = heap[readerAddr];
-if (content is SuspensionRecord) {
-  // Has suspensions - walk the list
-  SuspensionRecord? current = content;
+void forwardSuspensions(SuspensionListNode? list, int targetReaderAddr) {
+  var current = list;
   while (current != null) {
     if (current.armed) {
-      activate(current.goalId, current.resumePC);
-      current.disarm();
+      // Create new node sharing the same SuspensionRecord
+      // Sharing ensures disarming one disarms all copies
+      final newNode = SuspensionListNode(current.record);
+      // Prepend to target's suspension list
+      final targetContent = cells[targetReaderAddr].content;
+      newNode.next = targetContent is SuspensionListNode ? targetContent : null;
+      cells[targetReaderAddr].content = newNode;
     }
     current = current.next;
   }
 }
 ```
 
-**Advantages**:
-- No synchronization issues between heap and separate ROQ
-- Suspension state co-located with variable
-- Matches FCP AM exactly
+**Key insight:** The distinction between bind-time arithmetic (`writerAddr + 1`) and suspension-time chain-following (`derefAddr()`) is critical. Bind-time processes the allocation pair; suspension-time finds where to wait. These are different questions with different answers.
 
-#### Variable Chain Suspension (FCP Wake-and-Retry)
+#### Variable Chain Suspension (Wake-and-Retry)
 
-When a writer is bound to another unbound variable (e.g., W1009→R1014 where R1014 is unbound), HEAD instruction suspension logic must handle this case correctly.
+When a writer is bound to another unbound variable (e.g., W at addr 10 → R at addr 15 where addr 15 is unbound), HEAD instruction suspension logic must handle this case correctly.
 
 **The Problem**:
 ```
-W1009 → R1014 (unbound)
-Goal G suspends on R1009
-Later: W1014 → nil
+Writer at 10 → Reader at 15 (unbound)
+Goal G suspends on reader at 11 (paired with writer at 10)
+Later: Writer at 14 binds (which is paired with reader at 15)
 ```
 
-If G suspended on R1009, it will never wake because R1014 (not R1009) gets bound.
+If G suspended on reader 11, it will never wake because reader 15 (not reader 11) gets bound.
 
 **The Solution - Suspend on Final Variable**:
 When HEAD instructions encounter an unbound reader, they must follow variable chains to find the ultimate unbound variable:
 
 ```dart
-/// Find the final unbound variable in a chain (FCP: follow var→var bindings)
-int _finalUnboundVar(RunnerContext cx, int readerId) {
-  final wid = cx.rt.heap.writerIdForReader(readerId);
-  if (wid == null) return readerId;
-
-  final (wAddr, _) = cx.rt.heap.varTable[wid]!;
-  final derefResult = cx.rt.heap.derefAddr(wAddr);
+/// Find the final unbound variable in a chain
+int _finalUnboundVar(int readerAddr) {
+  final derefResult = derefAddr(readerAddr);
 
   if (derefResult is VarRef) {
-    // Bound to another unbound variable - return that one
-    return derefResult.varId;
+    // Still unbound - return the address we ended at
+    return derefResult.addr;
   }
 
-  return readerId;
+  return readerAddr;
 }
 ```
 
-**Updated Suspension Points**:
-All HEAD instructions that suspend must use this helper:
-- HeadConstant
-- HeadNil
-- HeadList
-- HeadStructure
-- UnifyVariable (isReader: true, Si case)
-- GetVariable (isReader: false)
-- GetVariable (isReader: true)
-
-**Example (HeadNil)**:
-```dart
-if (wid == null || !bound) {
-  // Find the final unbound variable in the chain
-  final suspendOnVar = _finalUnboundVar(cx, arg.readerId!);
-  pc = _suspendAndFail(cx, suspendOnVar, pc);
-  continue;
-}
-```
-
-**FCP Wake-and-Retry Semantics**:
-- Goals wake when ANY binding occurs (even W→R bindings)
+**Wake-and-Retry Semantics**:
+- Goals wake when ANY binding occurs (even variable-to-variable bindings)
 - If still unbound after waking, goal re-suspends (possibly on different variable)
 - This is simpler than transitive chain tracking
-- No need to maintain `Map<int, Set<int>> chainedVars`
 
 **Key Insight**:
 By suspending on the FINAL variable in a chain, we ensure goals wake when that ultimate variable gets bound. The wake-and-retry mechanism handles all other cases - if a goal wakes but still can't proceed, it simply suspends again.
@@ -468,25 +461,25 @@ By suspending on the FINAL variable in a chain, we ensure goals wake when that u
 Head instructions perform **tentative term matching**, building σ̂w without heap mutation:
 
 **`head_constant value argSlot`**: Unify argument with constant
-- If arg is WriterTerm: add `σ̂w[writerId] = value`, continue
-- If arg is ReaderTerm: add readerId to Si, continue (may match later)
+- If arg is writer VarRef: add `σ̂w[writerAddr] = value`, continue
+- If arg is reader VarRef: add readerAddr to Si, continue (may match later)
 - If arg is ConstTerm: check `arg.value == value`, fail if mismatch
 - Does NOT mutate heap - only builds σ̂w
 
 **`head_structure functor arity argSlot`**: Match structure and set traversal mode
-- If arg is WriterTerm: set mode=WRITE, create structure in σ̂w, set S=0
+- If arg is writer VarRef: set mode=WRITE, create structure in σ̂w, set S=0
 - If arg is StructTerm with matching functor/arity: set mode=READ, set S=0
-- If arg is ReaderTerm: add to Si, continue (suspension, not failure)
+- If arg is reader VarRef: add to Si, continue (suspension, not failure)
 - If arg is StructTerm with wrong functor/arity: soft-fail to next clause
 
 **`head_writer varIndex`**: Process writer at position S within structure
 - If mode=READ: unify structure arg at S with clause var, update σ̂w
-- If mode=WRITE: add WriterTerm to structure being built
+- If mode=WRITE: add writer VarRef to structure being built
 - Increment S
 
 **`head_reader varIndex`**: Process reader at position S within structure
 - If mode=READ: check if structure arg matches reader's writer, add to Si if unbound
-- If mode=WRITE: add ReaderTerm to structure being built
+- If mode=WRITE: add reader VarRef to structure being built
 - Increment S
 
 All head instructions are **pure** - they never mutate the heap, only extend σ̂w and Si.
@@ -503,7 +496,6 @@ When processing nested structures in HEAD mode (e.g., `p(f(X,Y))` where `f(X,Y)`
 **`push regIndex`**: Save current structure processing state
 - Store `(S, mode, currentStructure)` triple in clause variable `clauseVars[regIndex]`
 - Used before entering a nested structure
-- Following FCP AM's approach to nested structure handling
 
 **`pop regIndex`**: Restore structure processing state
 - Retrieve `(S, mode, currentStructure)` from `clauseVars[regIndex]`
@@ -512,8 +504,6 @@ When processing nested structures in HEAD mode (e.g., `p(f(X,Y))` where `f(X,Y)`
 - Must correspond to a previous `push` instruction
 
 **`unify_structure functor arity`**: Process nested structure at current S position
-- Following FCP AM's `unify_compound` instruction
-- Operates at the current S position within the parent structure
 
 **In READ mode**:
 1. Get value at `currentStructure.args[S]`
@@ -554,13 +544,13 @@ commit
 
 ### Body Construction Instructions  
 
-Body instructions prepare arguments for goal calls. The `put_structure` instruction allocates heap space and initializes structure headers. The `put_writer` and `put_reader` instructions place variable references in argument registers, with readers creating references to their paired writers. These instructions never suspend as they only prepare data rather than performing term matching.
+Body instructions prepare arguments for goal calls. The `put_structure` instruction allocates heap space and initializes structure headers. The `put_writer` and `put_reader` instructions place variable references in argument registers. These instructions never suspend as they only prepare data rather than performing term matching.
 
 ### Control Flow Implementation
 
 The `spawn` instruction creates a new process in Dart's microtask queue for executing a procedure. For all body goals except the final one, this instruction ensures fair scheduling by placing the new process at the tail of the queue. This prevents any single recursive predicate from monopolizing execution time while allowing concurrent goals to make progress.
 
-The `requeue` instruction implements tail recursion optimization with bounded iterations. It reuses the current process frame and decrements a tail-recursion budget counter. When the counter is positive, the process is rescheduled as a microtask, maintaining GLP-internal fairness. When the counter reaches zero, it resets and the process is scheduled via the event queue using `Timer.run()`, ensuring system-level responsiveness. This mirrors FCP's reduction-counting mechanism, preventing tail-recursive computations from starving other system events while avoiding unbounded process queue growth.
+The `requeue` instruction implements tail recursion optimization with bounded iterations. It reuses the current process frame and decrements a tail-recursion budget counter. When the counter is positive, the process is rescheduled as a microtask, maintaining GLP-internal fairness. When the counter reaches zero, it resets and the process is scheduled via the event queue using `Timer.run()`, ensuring system-level responsiveness.
 
 The `proceed` instruction completes the current procedure and returns control to the continuation point saved by the previous `spawn` instruction. This allows the spawning process to continue with its next instruction after the spawned goal completes.
 
@@ -578,7 +568,7 @@ The `proceed` instruction completes the current procedure and returns control to
 
 **`commit`**: Commit to current clause
 - Apply σ̂w to heap atomically (bind all writers)
-- For each newly bound writer, call `roq.processOnBind(readerId)` to reactivate suspended goals
+- For each newly bound writer, process paired reader's suspension list to reactivate suspended goals
 - Clear σ̂w and Si
 - Set `inBody = true` (enable heap mutations)
 
@@ -594,16 +584,16 @@ There are NO explicit `suspend`, `reactivate`, or `abandon` bytecode instruction
 ## Integration with Dart
 
 ### Memory Management
-The runtime relies entirely on Dart's garbage collector, eliminating the complex memory management in FCP. Heap cells are regular Dart objects subject to standard collection. Environment frames are collected when no longer referenced by active goals. The variable table uses weak references to allow collection of abandoned variables. No explicit memory barriers or generation tracking is needed as in FCP.
+The runtime relies entirely on Dart's garbage collector. Heap cells are regular Dart objects subject to standard collection. Environment frames are collected when no longer referenced by active goals. No explicit memory barriers or generation tracking is needed.
 
 ### Concurrency Model
 Each goal runs as a Dart microtask, providing cooperative concurrency without preemption. The runtime implements two levels of fairness:
 
 1. **Fairness among GLP goals**: Both `spawn` and `requeue` add goals at the tail of the microtask queue, ensuring FIFO scheduling between concurrent GLP goals.
 
-2. **System responsiveness**: To avoid starving event-queue tasks (timers, I/O, UI), goals track a tail-recursion budget. After a fixed number of consecutive `requeue` operations (e.g., 26), the goal yields to the event queue via `Timer.run()` instead of `scheduleMicrotask()`, then continues. This bounded tail-recursion mirrors FCP's reduction-counting mechanism.
+2. **System responsiveness**: To avoid starving event-queue tasks (timers, I/O, UI), goals track a tail-recursion budget. After a fixed number of consecutive `requeue` operations (e.g., 26), the goal yields to the event queue via `Timer.run()` instead of `scheduleMicrotask()`, then continues.
 
-I/O operations use Dart's async/await, suspending the goal naturally. This model is simpler than FCP's explicit process queue while maintaining both fairness and responsiveness.
+I/O operations use Dart's async/await, suspending the goal naturally.
 
 ### Native Integration
 System predicates are implemented as Dart functions registered with the runtime. These can access Dart libraries directly for functionality like file I/O, networking, and GUI operations. Guards are special system predicates that return success/failure without side effects. The runtime provides a foreign function interface (FFI) for calling native code when necessary.
@@ -617,7 +607,7 @@ Common instruction sequences are detected and fused into single operations. For 
 The compiler performs register allocation to minimize register spilling. Temporary variables that don't cross procedure calls use X registers. Variables with non-overlapping lifetimes share registers. The first few arguments are passed in registers, with remaining arguments using the stack.
 
 ### Suspension Optimization
-The suspension table uses efficient indexing structures to quickly locate goals suspended on specific variables. Batch reactivation processes all goals suspended on a variable in a single scheduler operation. Early abandonment detection prevents unnecessary suspension by detecting permanently unbound variables during compilation where possible.
+Batch reactivation processes all goals suspended on a variable in a single operation. Early abandonment detection prevents unnecessary suspension by detecting permanently unbound variables during compilation where possible.
 
 ## Error Handling
 
@@ -632,20 +622,17 @@ The runtime provides comprehensive debugging facilities. Execution tracing shows
 ### Time Complexity
 **Instruction dispatch**: O(1) via Dart's type-based dispatch (if-else chain on instruction types)
 **Term Matching**: O(n) in structure size (linear traversal, no deep recursion needed)
-**ROQ operations**: O(1) amortized for queue operations (Map lookup + Queue add/remove)
-**Reactivation**: O(k) for k suspended goals on a reader (linear scan of suspension notes)
-**Hanger check**: O(1) for single-shot armed flag check
+**Suspension operations**: O(1) for prepending to suspension list
+**Reactivation**: O(k) for k suspended goals on a reader (linear scan of suspension list)
+**Armed check**: O(1) for single-shot armed flag check
 
 Note: Current implementation uses if-else dispatch, not jump tables. Dart's branch prediction makes this efficient for moderate instruction counts.
 
 ### Space Complexity
 **Per goal**: O(1) base overhead (`RunnerContext`) plus O(v) for v clause variables in `clauseVars`
-**Heap**: O(t) for t total terms created (cells + bindings in `writerValue` map)
-**ROQ**: O(s) for s suspension notes across all readers
+**Heap**: O(t) for t total terms created (cells)
+**Suspensions**: O(s) for s suspension records across all readers
 **No trail stack**: Committed-choice semantics eliminate backtracking, so no trail needed
-
-### Comparison with FCP
-This runtime is simpler than FCP's abstract machine by delegating to Dart for memory management, process scheduling, and garbage collection. Performance is comparable for most workloads, with overhead from Dart's abstractions offset by elimination of manual memory management. The design prioritizes maintainability and integration with the Dart ecosystem over maximum theoretical performance.
 
 ## Implementation Roadmap
 
@@ -653,7 +640,7 @@ This runtime is simpler than FCP's abstract machine by delegating to Dart for me
 Implement the basic execution engine with the instruction set, heap and environment management, and term matching algorithm. This provides a working GLP system for single-agent programs.
 
 ### Phase 2: Suspension System  
-Add suspension table management, reactivation mechanisms, and abandonment detection. This enables concurrent GLP programs with reader/writer synchronization.
+Add suspension list management, reactivation mechanisms, and abandonment detection. This enables concurrent GLP programs with reader/writer synchronization.
 
 ### Phase 3: Optimizations
 Implement instruction fusion, register allocation improvements, and tail call optimization. These optimizations improve performance for production workloads.

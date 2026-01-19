@@ -134,8 +134,11 @@ class PayloadSerializer {
     return builder.toBytes();
   }
   
-  /// Parse assignment payload to (varId, value)
-  (int, Term) deserializeAssignmentPayload(List<int> payload) {
+  /// Parse assignment payload to (globalVarId, value)
+  /// 
+  /// Returns the full GlobalVarId (creator + localId) so the receiver
+  /// can translate to their local varId via V_p lookup.
+  (GlobalVarId, Term) deserializeAssignmentPayload(List<int> payload) {
     int offset = 0;
     
     // Parse global variable ID
@@ -148,7 +151,7 @@ class PayloadSerializer {
     // Parse term
     final (term, _) = deserializeTerm(payload, offset);
     
-    return (globalId.localId, term);
+    return (globalId, term);
   }
   
   // ============================================================================
@@ -352,6 +355,29 @@ class PayloadSerializer {
   /// Create agent message payload: just the serialized term
   List<int> createAgentMessagePayload(Term term) {
     return serializeTerm(term, agentId);
+  }
+  
+  /// Result of deserializing an agent message payload
+  /// 
+  /// Contains the deserialized term and a mapping from local varIds to their
+  /// original global IDs (creator:creatorLocalId).
+  static (Term, Map<int, GlobalVarId>) deserializeAgentMessagePayloadWithMapping(
+    List<int> payload,
+    int Function() allocateFreshVar,
+  ) {
+    // Map from global var ID string -> local varId
+    final globalToLocal = <String, int>{};
+    
+    final serializer = PayloadSerializer('');
+    final (term, _) = serializer._deserializeTermWithMapping(payload, 0, globalToLocal, allocateFreshVar);
+    
+    // Invert to get local -> global mapping
+    final localToGlobal = <int, GlobalVarId>{};
+    for (final entry in globalToLocal.entries) {
+      localToGlobal[entry.value] = GlobalVarId.decode(entry.key);
+    }
+    
+    return (term, localToGlobal);
   }
   
   /// Deserialize agent message payload with fresh variable allocation

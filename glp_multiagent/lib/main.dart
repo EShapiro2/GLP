@@ -490,8 +490,8 @@ class _AgentScreenState extends State<AgentScreen> {
     final msg = serializer.deserializeMessage(payload);
     
     if (msg.type == MessageType.agentMessage) {
-      // Agent message: deserialize term with fresh variable allocation
-      final term = serializer.deserializeAgentMessagePayload(
+      // Agent message: deserialize term with fresh variable allocation AND mapping
+      final (term, globalIdMapping) = PayloadSerializer.deserializeAgentMessagePayloadWithMapping(
         msg.payload,
         () {
           // Allocate fresh variable pair, return the writer ID
@@ -501,6 +501,10 @@ class _AgentScreenState extends State<AgentScreen> {
       );
       
       _addOutput('[AGENT MSG] ${_formatTerm(term)}');
+      
+      // CRITICAL: Register imported variables in V_p with heap callbacks
+      // Pass the globalIdMapping so we store creator's original IDs
+      _agent!.context.importTerm(term, from.toLowerCase(), globalIdMapping: globalIdMapping);
       
       // Inject into the NET input stream (goes through merge with UserIn)
       final activations = _ioContext!.netInput.inject(term);
@@ -588,6 +592,10 @@ class _AgentScreenState extends State<AgentScreen> {
     if (_agent == null) return;
 
     try {
+      // Per spec section 4.3: register exported variables in V_p before sending
+      // This enables Bob to route assignments for variables he creates and sends
+      _agent!.context.exportTerm(msgTerm);
+
       // Serialize the full term (preserving structure and variables)
       final serializer = PayloadSerializer(widget.agentId.toLowerCase());
       final termPayload = serializer.createAgentMessagePayload(msgTerm);
@@ -896,6 +904,12 @@ class _AgentScreenState extends State<AgentScreen> {
         debug: _glpTraceEnabled,
       );
       _goalCount += result.goalsRan.length;
+
+      // Per spec section 5.2 Case 2: On suspension, call request(X?) for blocking readers
+      if (result.status == ExecutionStatus.suspended && result.blockingReaders.isNotEmpty) {
+        _agent!.context.processSuspension(result.blockingReaders);
+        _addOutput('[IRMA] Sent read requests for ${result.blockingReaders.length} blocking readers');
+      }
 
       // Flush any pending irmaGLP messages
       final messagesFlushed = _agent!.flushMessages();

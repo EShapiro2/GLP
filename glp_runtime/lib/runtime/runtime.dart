@@ -44,6 +44,11 @@ class GlpRuntime {
   // When goal resumes, we check if this reader is bound (timer fired)
   final Map<int, int> _waitReaders = <int, int>{};
 
+  // Suspension tracking for scheduler-IRMA integration (spec section 8.4)
+  // Maps reader varId -> Set<GoalRef> of goals blocked on that reader
+  // Updated by suspendGoalFCP, cleared when goals reactivate
+  final Map<int, Set<GoalRef>> suspended = <int, Set<GoalRef>>{};
+
   /// Check if a goal has a pending wait and if the timer has fired
   /// Returns null if no wait state, true if timer fired, false if still waiting
   bool? checkWaitState(int goalId) {
@@ -108,6 +113,12 @@ class GlpRuntime {
     required int kappa,
     required Set<int> readerVarIds,
   }) {
+    // Track which readers have this goal suspended (spec section 8.4)
+    final goalRef = GoalRef(goalId, kappa);
+    for (final readerId in readerVarIds) {
+      suspended.putIfAbsent(readerId, () => <GoalRef>{}).add(goalRef);
+    }
+
     SuspendOps.suspendGoalFCP(
       heap: heap,
       goalId: goalId,

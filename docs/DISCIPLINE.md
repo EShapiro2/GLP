@@ -66,15 +66,15 @@ When providing shell commands for the user to execute:
 
 1. **Always provide complete one-liner scripts** that can be copy-pasted directly
 2. **If user explicitly requests terminal output** (e.g., merge, push commands): output goes to terminal
-3. **Otherwise**: redirect ALL output to a file in `/tmp` that Claude can read later
+3. **Otherwise**: redirect ALL output to a file in `/private/tmp` that Claude can read later
 
 **Standard Testing One-Liner (use this exact format):**
 
 ```bash
-cd /Users/udi/Grassroots/GLP/glp_runtime && dart test > /tmp/glp-tests.txt 2>&1 && cd .. && bash test/full_run_repl_tests.sh >> /tmp/glp-tests.txt 2>&1
+cd /Users/udi/Grassroots/GLP/glp_runtime && dart test > /private/tmp/glp-tests.txt 2>&1 && cd .. && bash test/full_run_repl_tests.sh >> /private/tmp/glp-tests.txt 2>&1
 ```
 
-This runs both Dart tests and REPL tests, appending all output to `/tmp/glp-tests.txt`.
+This runs both Dart tests and REPL tests, appending all output to `/private/tmp/glp-tests.txt`.
 
 **Other Examples:**
 
@@ -82,14 +82,14 @@ This runs both Dart tests and REPL tests, appending all output to `/tmp/glp-test
 # User asks for merge commands → output to terminal (user explicitly wants to see it)
 cd /Users/udi/Grassroots/GLP && git checkout main && git pull origin main && git merge origin/claude/branch-name
 
-# Claude needs to see any output → redirect to /tmp file
-cd /Users/udi/Grassroots/GLP && bash test/run_book_tests.sh > /tmp/book-tests.txt 2>&1
+# Claude needs to see any output → redirect to /private/tmp file
+cd /Users/udi/Grassroots/GLP && bash test/run_book_tests.sh > /private/tmp/book-tests.txt 2>&1
 ```
 
 **Rules:**
-- Use `> /tmp/filename.txt 2>&1` for first command, `>> /tmp/filename.txt 2>&1` to append
+- Use `> /private/tmp/filename.txt 2>&1` for first command, `>> /private/tmp/filename.txt 2>&1` to append
 - Never use `| cat` or `| tee` 
-- Never ask user to paste output — read from /tmp file instead
+- Never ask user to paste output — read from /private/tmp file instead
 
 ### 1.6 Terminology: Errors, Not "Limitations" or "Issues"
 

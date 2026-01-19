@@ -5,8 +5,33 @@
 /// Core Invariant: V_p contains exactly those variables whose paired 
 /// counterparts are non-local (i.e., in a remote agent's resolvent).
 /// 
+/// Per spec, V_p ⊆ 𝒱 × Π × (𝒯 ∪ Π ∪ {⊥}) where 𝒱 includes both X (writers)
+/// and X? (readers) as distinct elements. Therefore, the same varId can have
+/// both a writer entry and a reader entry.
+/// 
 /// Specification: /docs/ma/irmaGLP-spec.md Section 3.2
 library;
+
+/// Key for variable table entries
+/// 
+/// Per spec, X and X? are distinct elements of 𝒱. A single heap variable ID
+/// can have separate entries for its reader and writer views.
+class VarKey {
+  final int varId;
+  final bool isReader;
+  
+  const VarKey(this.varId, this.isReader);
+  
+  @override
+  bool operator ==(Object other) =>
+      other is VarKey && other.varId == varId && other.isReader == isReader;
+  
+  @override
+  int get hashCode => Object.hash(varId, isReader);
+  
+  @override
+  String toString() => isReader ? 'R$varId?' : 'W$varId';
+}
 
 /// Role of a variable in the variable table
 enum VariableRole {
@@ -28,8 +53,18 @@ class VariableEntry {
   /// Variable ID (local heap ID)
   final int varId;
   
+  /// Whether this entry is for the reader view (true) or writer view (false)
+  final bool isReader;
+  
   /// Agent who created this variable
   final String creator;
+  
+  /// Creator's original local ID for this variable
+  /// 
+  /// For imported variables, this is the creator's varId that we need to use
+  /// when sending messages back to the creator. For created variables, this
+  /// is the same as varId.
+  final int creatorLocalId;
   
   /// Role of this variable
   final VariableRole role;
@@ -42,14 +77,21 @@ class VariableEntry {
   
   VariableEntry({
     required this.varId,
+    required this.isReader,
     required this.creator,
     required this.role,
+    int? creatorLocalId,
     this.state,
-  });
+  }) : creatorLocalId = creatorLocalId ?? varId;
+  
+  /// Get the key for this entry
+  VarKey get key => VarKey(varId, isReader);
   
   @override
   String toString() {
-    return 'VarEntry($varId, creator=$creator, role=$role, state=$state)';
+    final keyStr = isReader ? 'R$varId?' : 'W$varId';
+    final creatorIdStr = creatorLocalId != varId ? ', creatorLocalId=$creatorLocalId' : '';
+    return 'VarEntry($keyStr, creator=$creator, role=$role$creatorIdStr, state=$state)';
   }
 }
 
@@ -57,28 +99,36 @@ class VariableEntry {
 /// 
 /// Maintains the invariant: V_p contains exactly those variables whose
 /// paired counterparts are non-local.
+/// 
+/// Per spec Section 3.1.2, V_p can contain both (X, p, s) for a created writer
+/// and (X?, p, s) for a created reader with the same underlying varId.
 class VariableTable {
   /// Current agent ID
   final String agentId;
   
-  /// Map from varId to entry
-  final Map<int, VariableEntry> _entries = {};
+  /// Map from (varId, isReader) to entry
+  final Map<VarKey, VariableEntry> _entries = {};
   
   VariableTable(this.agentId);
   
   /// Add a variable entry to the table
-  void add(int varId, VariableEntry entry) {
-    _entries[varId] = entry;
+  void add(VarKey key, VariableEntry entry) {
+    _entries[key] = entry;
   }
   
   /// Remove a variable entry from the table
-  void remove(int varId) {
-    _entries.remove(varId);
+  void remove(VarKey key) {
+    _entries.remove(key);
   }
   
-  /// Lookup a variable entry by ID
-  VariableEntry? lookup(int varId) {
-    return _entries[varId];
+  /// Lookup a variable entry by key
+  VariableEntry? lookup(VarKey key) {
+    return _entries[key];
+  }
+  
+  /// Lookup by varId and isReader separately
+  VariableEntry? lookupByIdAndRole(int varId, bool isReader) {
+    return _entries[VarKey(varId, isReader)];
   }
   
   /// Get all entries created by a specific agent
@@ -91,21 +141,26 @@ class VariableTable {
   /// Update the state of an existing entry
   /// 
   /// Throws if entry doesn't exist.
-  void updateState(int varId, dynamic newState) {
-    final entry = _entries[varId];
+  void updateState(VarKey key, dynamic newState) {
+    final entry = _entries[key];
     if (entry == null) {
-      throw ArgumentError('Variable $varId not in table');
+      throw ArgumentError('Variable $key not in table');
     }
     entry.state = newState;
   }
   
-  /// Check if a variable is in the table
-  bool contains(int varId) {
-    return _entries.containsKey(varId);
+  /// Check if a variable key is in the table
+  bool contains(VarKey key) {
+    return _entries.containsKey(key);
   }
   
-  /// Get all variable IDs in the table
-  Iterable<int> get varIds => _entries.keys;
+  /// Check if varId with given isReader is in table
+  bool containsByIdAndRole(int varId, bool isReader) {
+    return _entries.containsKey(VarKey(varId, isReader));
+  }
+  
+  /// Get all keys in the table
+  Iterable<VarKey> get keys => _entries.keys;
   
   /// Get all entries
   Iterable<VariableEntry> get entries => _entries.values;
@@ -118,6 +173,21 @@ class VariableTable {
   
   /// Check if table is not empty
   bool get isNotEmpty => _entries.isNotEmpty;
+  
+  /// Find entry by creator's global ID (creator + creatorLocalId)
+  /// 
+  /// Used when receiving assignment messages that contain global IDs
+  /// but we need to find our local varId for heap binding.
+  VariableEntry? findByCreatorLocalId(String creator, int creatorLocalId, {required bool isReader}) {
+    for (final entry in _entries.values) {
+      if (entry.creator == creator && 
+          entry.creatorLocalId == creatorLocalId && 
+          entry.isReader == isReader) {
+        return entry;
+      }
+    }
+    return null;
+  }
   
   /// Clear all entries
   void clear() {

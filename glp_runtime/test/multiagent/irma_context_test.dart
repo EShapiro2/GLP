@@ -1,6 +1,7 @@
 /// Unit tests for IrmaContext
 /// 
 /// Tests integration of V_p/M_p with GLP runtime
+/// Updated for VarKey composite key architecture
 library;
 
 import 'package:test/test.dart';
@@ -29,15 +30,16 @@ void main() {
       final bob = IrmaContext(agentId: 'bob', runtime: rtBob);
       
       // Add variable to alice's V_p
-      alice.vp.add(100, VariableEntry(
+      alice.vp.add(VarKey(100, false), VariableEntry(
         varId: 100,
+        isReader: false,
         creator: 'alice',
         role: VariableRole.createdWriter,
       ));
       
       // Bob's V_p should be unaffected
-      expect(alice.vp.contains(100), isTrue);
-      expect(bob.vp.contains(100), isFalse);
+      expect(alice.vp.contains(VarKey(100, false)), isTrue);
+      expect(bob.vp.contains(VarKey(100, false)), isFalse);
     });
   });
   
@@ -47,8 +49,9 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Alice created reader 100, bob requested it
-      ctx.vp.add(100, VariableEntry(
+      ctx.vp.add(VarKey(100, true), VariableEntry(
         varId: 100,
+        isReader: true,
         creator: 'alice',
         role: VariableRole.createdReader,
         state: 'bob', // bob requested
@@ -71,8 +74,9 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Alice created reader 100, no one requested yet
-      ctx.vp.add(100, VariableEntry(
+      ctx.vp.add(VarKey(100, true), VariableEntry(
         varId: 100,
+        isReader: true,
         creator: 'alice',
         role: VariableRole.createdReader,
         state: null, // No requester
@@ -90,8 +94,9 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Alice imported reader 100 from bob, not yet requested
-      ctx.vp.add(100, VariableEntry(
+      ctx.vp.add(VarKey(100, true), VariableEntry(
         varId: 100,
+        isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
         state: null,
@@ -101,7 +106,7 @@ void main() {
       ctx.processReaderBindings(sigmaHatReader);
       
       // State should be updated to creator
-      expect(ctx.vp.lookup(100)!.state, 'bob');
+      expect(ctx.vp.lookup(VarKey(100, true))!.state, 'bob');
     });
     
     test('ignores variables not in V_p', () {
@@ -123,8 +128,9 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Alice imported reader 100 from bob
-      ctx.vp.add(100, VariableEntry(
+      ctx.vp.add(VarKey(100, true), VariableEntry(
         varId: 100,
+        isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
       ));
@@ -142,15 +148,16 @@ void main() {
       expect(msg!.type, MessageType.abandon);
       
       // Should remove from V_p
-      expect(ctx.vp.contains(100), isFalse);
+      expect(ctx.vp.contains(VarKey(100, true)), isFalse);
     });
     
     test('does not abandon readers that were assigned', () {
       final rt = GlpRuntime();
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
-      ctx.vp.add(100, VariableEntry(
+      ctx.vp.add(VarKey(100, true), VariableEntry(
         varId: 100,
+        isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
       ));
@@ -165,15 +172,16 @@ void main() {
       // No abandon message
       expect(ctx.mp.isEmpty, isTrue);
       // Still in V_p
-      expect(ctx.vp.contains(100), isTrue);
+      expect(ctx.vp.contains(VarKey(100, true)), isTrue);
     });
     
     test('does not abandon readers that appear in body', () {
       final rt = GlpRuntime();
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
-      ctx.vp.add(100, VariableEntry(
+      ctx.vp.add(VarKey(100, true), VariableEntry(
         varId: 100,
+        isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
       ));
@@ -196,8 +204,9 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Alice imported reader 100 from bob, not yet requested
-      ctx.vp.add(100, VariableEntry(
+      ctx.vp.add(VarKey(100, true), VariableEntry(
         varId: 100,
+        isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
         state: null,
@@ -212,7 +221,7 @@ void main() {
       expect(msg!.type, MessageType.readRequest);
       
       // State should be updated
-      expect(ctx.vp.lookup(100)!.state, 'bob');
+      expect(ctx.vp.lookup(VarKey(100, true))!.state, 'bob');
     });
     
     test('does not send duplicate request', () {
@@ -220,8 +229,9 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Alice imported reader 100 from bob, already requested
-      ctx.vp.add(100, VariableEntry(
+      ctx.vp.add(VarKey(100, true), VariableEntry(
         varId: 100,
+        isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
         state: 'bob', // Already requested
@@ -240,13 +250,15 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Alice imported readers 100 and 101 from bob
-      ctx.vp.add(100, VariableEntry(
+      ctx.vp.add(VarKey(100, true), VariableEntry(
         varId: 100,
+        isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
       ));
-      ctx.vp.add(101, VariableEntry(
+      ctx.vp.add(VarKey(101, true), VariableEntry(
         varId: 101,
+        isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
       ));
@@ -258,8 +270,8 @@ void main() {
       expect(ctx.mp.countFor('bob'), 2);
       
       // Both removed from V_p
-      expect(ctx.vp.contains(100), isFalse);
-      expect(ctx.vp.contains(101), isFalse);
+      expect(ctx.vp.contains(VarKey(100, true)), isFalse);
+      expect(ctx.vp.contains(VarKey(101, true)), isFalse);
     });
   });
   
@@ -269,13 +281,15 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Queue messages to multiple destinations
-      ctx.vp.add(100, VariableEntry(
+      ctx.vp.add(VarKey(100, true), VariableEntry(
         varId: 100,
+        isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
       ));
-      ctx.vp.add(101, VariableEntry(
+      ctx.vp.add(VarKey(101, true), VariableEntry(
         varId: 101,
+        isReader: true,
         creator: 'charlie',
         role: VariableRole.importedReader,
       ));
@@ -300,8 +314,9 @@ void main() {
       final rt = GlpRuntime();
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
-      ctx.vp.add(100, VariableEntry(
+      ctx.vp.add(VarKey(100, true), VariableEntry(
         varId: 100,
+        isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
       ));
@@ -329,9 +344,9 @@ void main() {
       
       ctx.importTerm(term, 'bob');
       
-      // Variable 200 should be in V_p
-      expect(ctx.vp.contains(200), isTrue);
-      final entry = ctx.vp.lookup(200);
+      // Variable 200 should be in V_p as reader
+      expect(ctx.vp.contains(VarKey(200, true)), isTrue);
+      final entry = ctx.vp.lookup(VarKey(200, true));
       expect(entry!.creator, 'bob');
       expect(entry.role, VariableRole.importedReader);
     });
@@ -341,8 +356,9 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Variable 200 already in V_p
-      ctx.vp.add(200, VariableEntry(
+      ctx.vp.add(VarKey(200, true), VariableEntry(
         varId: 200,
+        isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
         state: 'bob', // Already requested
@@ -352,7 +368,7 @@ void main() {
       ctx.importTerm(term, 'bob');
       
       // State should be unchanged
-      expect(ctx.vp.lookup(200)!.state, 'bob');
+      expect(ctx.vp.lookup(VarKey(200, true))!.state, 'bob');
     });
   });
   
@@ -365,21 +381,22 @@ void main() {
       final varId = rt.heap.allocateVariable();
       
       // Add to V_p as imported reader
-      ctx.vp.add(varId, VariableEntry(
+      ctx.vp.add(VarKey(varId, true), VariableEntry(
         varId: varId,
+        isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
       ));
       
-      // Receive assignment
-      ctx.handleAssignment(varId, ConstTerm('hello'));
+      // Receive assignment (from bob, the creator)
+      ctx.handleAssignment('bob', varId, ConstTerm('hello'));
       
       // Variable should be bound
       expect(rt.heap.isFullyBound(varId), isTrue);
       expect((rt.heap.getValue(varId) as ConstTerm).value, 'hello');
       
       // Should be removed from V_p
-      expect(ctx.vp.contains(varId), isFalse);
+      expect(ctx.vp.contains(VarKey(varId, true)), isFalse);
     });
   });
   
@@ -389,8 +406,9 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Alice created reader 100
-      ctx.vp.add(100, VariableEntry(
+      ctx.vp.add(VarKey(100, true), VariableEntry(
         varId: 100,
+        isReader: true,
         creator: 'alice',
         role: VariableRole.createdReader,
         state: null,
@@ -400,7 +418,7 @@ void main() {
       ctx.handleReadRequest(100, 'bob');
       
       // State should record bob as requester
-      expect(ctx.vp.lookup(100)!.state, 'bob');
+      expect(ctx.vp.lookup(VarKey(100, true))!.state, 'bob');
     });
   });
   
@@ -410,8 +428,9 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Alice has writer 100
-      ctx.vp.add(100, VariableEntry(
+      ctx.vp.add(VarKey(100, false), VariableEntry(
         varId: 100,
+        isReader: false,
         creator: 'alice',
         role: VariableRole.createdWriter,
       ));
@@ -420,7 +439,7 @@ void main() {
       ctx.handleAbandon(100);
       
       // Writer should be removed from V_p
-      expect(ctx.vp.contains(100), isFalse);
+      expect(ctx.vp.contains(VarKey(100, false)), isFalse);
     });
   });
   
@@ -436,8 +455,8 @@ void main() {
       ctx.registerImportedWriter(writerId, 'bob');
       
       // Verify V_p entry
-      expect(ctx.vp.contains(writerId), isTrue);
-      final entry = ctx.vp.lookup(writerId);
+      expect(ctx.vp.contains(VarKey(writerId, false)), isTrue);
+      final entry = ctx.vp.lookup(VarKey(writerId, false));
       expect(entry!.role, VariableRole.importedWriter);
       expect(entry.creator, 'bob');
       
@@ -461,10 +480,10 @@ void main() {
       
       // Charlie requests the reader
       ctx.handleReadRequest(readerId, 'charlie');
-      expect(ctx.vp.lookup(readerId)!.state, 'charlie');
+      expect(ctx.vp.lookup(VarKey(readerId, true))!.state, 'charlie');
       
       // Alice sends assignment to bob (the creator)
-      ctx.handleAssignment(readerId, ConstTerm('hello from alice'));
+      ctx.handleAssignment('bob', readerId, ConstTerm('hello from alice'));
       
       // Bob should forward to charlie
       expect(ctx.mp.countFor('charlie'), 1);
@@ -482,10 +501,10 @@ void main() {
       ctx.registerCreatedReader(readerId);
       
       // Alice sends value BEFORE Charlie requests
-      ctx.handleAssignment(readerId, ConstTerm('early value'));
+      ctx.handleAssignment('bob', readerId, ConstTerm('early value'));
       
       // Value should be stored
-      expect(ctx.vp.lookup(readerId)!.state, isA<Term>());
+      expect(ctx.vp.lookup(VarKey(readerId, true))!.state, isA<Term>());
       expect(ctx.mp.isEmpty, isTrue); // No message yet
       
       // Now Charlie requests
@@ -515,12 +534,12 @@ void main() {
       ctx.importTerm(term, 'bob');
       
       // Reader should be imported reader
-      expect(ctx.vp.lookup(readerId)!.role, VariableRole.importedReader);
-      expect(ctx.vp.lookup(readerId)!.creator, 'bob');
+      expect(ctx.vp.lookup(VarKey(readerId, true))!.role, VariableRole.importedReader);
+      expect(ctx.vp.lookup(VarKey(readerId, true))!.creator, 'bob');
       
       // Writer should be imported writer
-      expect(ctx.vp.lookup(writerId)!.role, VariableRole.importedWriter);
-      expect(ctx.vp.lookup(writerId)!.creator, 'bob');
+      expect(ctx.vp.lookup(VarKey(writerId, false))!.role, VariableRole.importedWriter);
+      expect(ctx.vp.lookup(VarKey(writerId, false))!.creator, 'bob');
     });
   });
 
@@ -536,8 +555,8 @@ void main() {
       ctx.registerWriter(varId);
       
       // Variable should be in V_p
-      expect(ctx.vp.contains(varId), isTrue);
-      expect(ctx.vp.lookup(varId)!.role, VariableRole.createdWriter);
+      expect(ctx.vp.contains(VarKey(varId, false)), isTrue);
+      expect(ctx.vp.lookup(VarKey(varId, false))!.role, VariableRole.createdWriter);
     });
     
     test('binding callback queues message when requester exists', () {
@@ -551,7 +570,7 @@ void main() {
       ctx.registerWriter(varId);
       
       // Simulate bob requesting the value
-      ctx.vp.updateState(varId, 'bob');
+      ctx.vp.updateState(VarKey(varId, false), 'bob');
       
       // Now bind the variable (triggers onBind callback)
       rt.heap.bindVariable(varId, ConstTerm('hello'));
@@ -590,8 +609,8 @@ void main() {
       ctx.registerCreatedReader(varId);
       
       // Variable should be in V_p
-      expect(ctx.vp.contains(varId), isTrue);
-      expect(ctx.vp.lookup(varId)!.role, VariableRole.createdReader);
+      expect(ctx.vp.contains(VarKey(varId, true)), isTrue);
+      expect(ctx.vp.lookup(VarKey(varId, true))!.role, VariableRole.createdReader);
     });
     
     test('created reader binding callback queues message when requester exists', () {
@@ -605,7 +624,7 @@ void main() {
       ctx.registerCreatedReader(varId);
       
       // Simulate charlie requesting the value
-      ctx.vp.updateState(varId, 'charlie');
+      ctx.vp.updateState(VarKey(varId, true), 'charlie');
       
       // Bind the variable (triggers onBind callback)
       rt.heap.bindVariable(varId, ConstTerm('world'));

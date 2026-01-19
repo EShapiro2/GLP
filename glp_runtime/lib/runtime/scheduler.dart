@@ -15,8 +15,9 @@ class DrainResult {
   final List<int> goalsRan;
   final ExecutionStatus status;
   final List<String> suspendedGoals;
+  final Set<int> blockingReaders;  // varIds of readers causing suspension (per spec 8.4)
 
-  DrainResult(this.goalsRan, this.status, this.suspendedGoals);
+  DrainResult(this.goalsRan, this.status, this.suspendedGoals, [this.blockingReaders = const {}]);
 }
 
 class Scheduler {
@@ -309,7 +310,13 @@ class Scheduler {
       g.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(')
     ).toList();
 
-    return DrainResult(ran, status, suspendedList);
+    // Per spec section 8.4: collect blocking readers from runtime's suspended set
+    // rt.suspended maps reader varId -> Set<GoalRef> of goals blocked on that reader
+    final blockingReaders = status == ExecutionStatus.suspended
+        ? rt.suspended.keys.toSet()
+        : <int>{};
+
+    return DrainResult(ran, status, suspendedList, blockingReaders);
   }
 
   /// Legacy drain for backward compatibility
@@ -323,6 +330,7 @@ class Scheduler {
     var totalCycles = 0;
     ExecutionStatus lastStatus = ExecutionStatus.succeeded;
     List<String> lastSuspended = [];
+    Set<int> lastBlockingReaders = {};
 
     while (totalCycles < maxCycles) {
       // Run synchronous drain until queue is empty
@@ -336,6 +344,7 @@ class Scheduler {
       totalCycles += result.goalsRan.length;
       lastStatus = result.status;
       lastSuspended = result.suspendedGoals;
+      lastBlockingReaders = result.blockingReaders;
 
       // Stop on failure
       if (lastStatus == ExecutionStatus.failed) {
@@ -358,7 +367,7 @@ class Scheduler {
       }
     }
 
-    return DrainResult(ran, lastStatus, lastSuspended);
+    return DrainResult(ran, lastStatus, lastSuspended, lastBlockingReaders);
   }
 
   /// Legacy async drain for backward compatibility

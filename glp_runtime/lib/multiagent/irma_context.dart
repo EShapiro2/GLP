@@ -69,9 +69,11 @@ class IrmaContext {
   /// 1. Check if there's a requester for the paired reader
   /// 2. If so, queue an assignment message to the requester
   void registerWriter(int varId) {
+    final key = VarKey(varId, false); // writer
     // Add to V_p as createdWriter
-    vp.add(varId, VariableEntry(
+    vp.add(key, VariableEntry(
       varId: varId,
+      isReader: false,
       creator: agentId,
       role: VariableRole.createdWriter,
     ));
@@ -84,20 +86,30 @@ class IrmaContext {
   
   /// Called when a writer in V_p is bound to a value
   void _onWriterBound(int writerId, Term value) {
-    final entry = vp.lookup(writerId);
-    if (entry == null) return;
+    print('[DEBUG IRMA $agentId] _onWriterBound: writerId=$writerId, value=$value');
+    final key = VarKey(writerId, false); // writer
+    final entry = vp.lookup(key);
+    if (entry == null) {
+      print('[DEBUG IRMA $agentId] _onWriterBound: NO ENTRY in V_p for $writerId');
+      return;
+    }
+    print('[DEBUG IRMA $agentId] _onWriterBound: entry.role=${entry.role}, entry.state=${entry.state}, entry.creator=${entry.creator}');
     
     if (entry.role == VariableRole.createdWriter && entry.state != null) {
       // Created writer has a requester - send assignment directly
       final requester = entry.state as String;
-      _queueAssignment(writerId, value, requester);
+      print('[DEBUG IRMA $agentId] _onWriterBound: CREATED WRITER with requester=$requester, sending assignment');
+      _queueAssignmentFromEntry(entry, value, requester);
       // Update entry state to store the value
-      vp.updateState(writerId, value);
+      vp.updateState(key, value);
     } else if (entry.role == VariableRole.importedWriter) {
       // Imported writer - notify creator (creator routes to requester)
-      _queueAssignment(writerId, value, entry.creator);
+      print('[DEBUG IRMA $agentId] _onWriterBound: IMPORTED WRITER, notifying creator=${entry.creator}');
+      _queueAssignmentFromEntry(entry, value, entry.creator);
       // Update entry state to store the value
-      vp.updateState(writerId, value);
+      vp.updateState(key, value);
+    } else {
+      print('[DEBUG IRMA $agentId] _onWriterBound: NO ACTION (role=${entry.role}, state=${entry.state})');
     }
   }
   
@@ -107,8 +119,10 @@ class IrmaContext {
   /// When the paired writer (also local) is bound, we need to send the value
   /// to whoever requested this reader.
   void registerCreatedReader(int varId) {
-    vp.add(varId, VariableEntry(
+    final key = VarKey(varId, true); // reader
+    vp.add(key, VariableEntry(
       varId: varId,
+      isReader: true,
       creator: agentId,
       role: VariableRole.createdReader,
     ));
@@ -124,28 +138,38 @@ class IrmaContext {
   /// 
   /// An imported writer is one created by another agent but transferred to us
   /// (e.g., via friend introduction). When we bind it, we notify the creator.
-  void registerImportedWriter(int varId, String creator) {
-    vp.add(varId, VariableEntry(
+  /// 
+  /// [varId] - Our local heap ID for this variable
+  /// [creator] - The agent who created this variable
+  /// [creatorLocalId] - The creator's original local ID for this variable
+  void registerImportedWriter(int varId, String creator, {int? creatorLocalId}) {
+    print('[DEBUG IRMA $agentId] registerImportedWriter: varId=$varId, creator=$creator, creatorLocalId=${creatorLocalId ?? varId}');
+    final key = VarKey(varId, false); // writer
+    vp.add(key, VariableEntry(
       varId: varId,
+      isReader: false,
       creator: creator,
       role: VariableRole.importedWriter,
+      creatorLocalId: creatorLocalId ?? varId,
     ));
     
     // Register heap callback to notify creator when bound
     runtime.heap.onBind(varId, (Term value) {
+      print('[DEBUG IRMA $agentId] HEAP CALLBACK fired for imported writer $varId, value=$value');
       _onWriterBound(varId, value);
     });
   }
   
   /// Called when the writer paired with a created reader is bound
   void _onCreatedReaderWriterBound(int varId, Term value) {
-    final entry = vp.lookup(varId);
+    final key = VarKey(varId, true); // reader
+    final entry = vp.lookup(key);
     if (entry == null) return;
     
     if (entry.role == VariableRole.createdReader && entry.state != null) {
       // Someone requested this reader - send them the value
       final requester = entry.state as String;
-      _queueAssignment(varId, value, requester);
+      _queueAssignmentFromEntry(entry, value, requester);
     }
   }
   
@@ -154,13 +178,26 @@ class IrmaContext {
   // =========================================================================
   
   /// Queue an assignment message for a remote reader
-  void _queueAssignment(int varId, Term value, String destination) {
-    final payload = _serializer.serializeTerm(value, agentId);
+  /// 
+  /// Uses the creator's local ID (creatorLocalId) in the global ID format,
+  /// not our local varId. This ensures the creator can look it up in their V_p.
+  void _queueAssignmentFromEntry(VariableEntry entry, Term value, String destination) {
+    // Use creator's local ID for the global variable ID
+    final creatorLocalId = entry.creatorLocalId;
+    final creator = entry.creator;
+    
+    print('[DEBUG IRMA $agentId] _queueAssignment: varId=${entry.varId}, creatorLocalId=$creatorLocalId, creator=$creator, value=$value, destination=$destination');
+    
+    // Create assignment payload with proper global ID
+    final globalIdSerializer = PayloadSerializer(creator);
+    final payload = globalIdSerializer.createAssignmentPayload(creatorLocalId, value);
+    
     mp.add(OutboundMessage(
       destination: destination,
       type: MessageType.assignment,
       payload: payload,
     ));
+    print('[DEBUG IRMA $agentId] _queueAssignment: message queued, mp.totalLength=${mp.totalLength}');
   }
   
   // =========================================================================
@@ -192,17 +229,23 @@ class IrmaContext {
   /// 
   /// Returns number of messages flushed.
   int flushMessages() {
-    if (onMessageReady == null) return 0;
+    if (onMessageReady == null) {
+      print('[DEBUG IRMA $agentId] flushMessages: NO CALLBACK SET');
+      return 0;
+    }
     
+    print('[DEBUG IRMA $agentId] flushMessages: mp.totalLength=${mp.totalLength}, destinations=${mp.destinations}');
     int count = 0;
     for (final destination in mp.destinations) {
       while (true) {
         final msg = mp.poll(destination);
         if (msg == null) break;
+        print('[DEBUG IRMA $agentId] flushMessages: sending ${msg.type} to $destination');
         onMessageReady!(destination, msg);
         count++;
       }
     }
+    print('[DEBUG IRMA $agentId] flushMessages: flushed $count messages');
     return count;
   }
   
@@ -214,28 +257,44 @@ class IrmaContext {
   /// 
   /// For each variable Y in term where (Y, ·, ·) ∉ V_p:
   /// - Add to V_p as imported reader or writer based on VarRef.isReader
-  void importTerm(Term term, String fromAgent) {
-    _importTermRecursive(term, fromAgent);
+  /// 
+  /// [term] - The deserialized term
+  /// [fromAgent] - The agent who sent this term (usually the creator)
+  /// [globalIdMapping] - Optional mapping from local varId -> GlobalVarId
+  ///   This maps our local heap IDs to the creator's global IDs.
+  void importTerm(Term term, String fromAgent, {Map<int, GlobalVarId>? globalIdMapping}) {
+    _importTermRecursive(term, fromAgent, globalIdMapping ?? {});
   }
   
-  void _importTermRecursive(Term term, String fromAgent) {
+  void _importTermRecursive(Term term, String fromAgent, Map<int, GlobalVarId> globalIdMapping) {
     if (term is VarRef) {
-      if (!vp.contains(term.varId)) {
+      final key = VarKey(term.varId, term.isReader);
+      if (!vp.contains(key)) {
+        // Look up the global ID for this variable
+        final globalId = globalIdMapping[term.varId];
+        final creator = globalId?.creator ?? fromAgent;
+        final creatorLocalId = globalId?.localId;
+        
         // Variable not in V_p - add based on type
         if (term.isReader) {
-          vp.add(term.varId, VariableEntry(
+          print('[DEBUG IRMA $agentId] _importTermRecursive: registering imported reader ${term.varId} from $creator (creatorLocalId=$creatorLocalId)');
+          vp.add(key, VariableEntry(
             varId: term.varId,
-            creator: fromAgent,
+            isReader: true,
+            creator: creator,
             role: VariableRole.importedReader,
+            creatorLocalId: creatorLocalId,
           ));
+          // NOTE: Do NOT send request here. Per spec section 5.2, request() is
+          // called when a goal SUSPENDS on this reader, not at import time.
         } else {
           // Imported writer - register with callback
-          registerImportedWriter(term.varId, fromAgent);
+          registerImportedWriter(term.varId, creator, creatorLocalId: creatorLocalId);
         }
       }
     } else if (term is StructTerm) {
       for (final arg in term.args) {
-        _importTermRecursive(arg, fromAgent);
+        _importTermRecursive(arg, fromAgent, globalIdMapping);
       }
     }
   }
@@ -245,35 +304,58 @@ class IrmaContext {
   /// For each local variable in term:
   /// - Add to V_p and register binding callback
   /// 
-  /// Returns modified term (with relay variables if needed).
+  /// For requested readers being re-exported:
+  /// - Create relay pair (Z, Z?) per spec Section 4.3
+  /// - Set up forwarding callback: when Y? is bound, bind Z
+  /// - This implements: export_reader(Y?, Z) :- Z = Y?.
+  /// 
+  /// Returns modified term (with relay variables substituted if needed).
   Term exportTerm(Term term) {
-    final varIds = _extractVariables(term);
-    
-    for (final varId in varIds) {
-      if (!vp.contains(varId)) {
-        // Local variable being exported for first time
-        // Determine if it's a writer or reader based on the term
-        // For now, assume we're exporting the writer (reader goes to remote)
-        registerWriter(varId);
-      }
-    }
-    
     // For relay handling, use the helpers.export method
-    final relayGoals = <GoalRef>[];
+    final relaySetups = <RelaySetup>[];
     final result = helpers.export(
       term,
       agentId,
       vp,
-      relayGoals,
+      relaySetups,
       (_, __) => [runtime.heap.allocateVariable(), runtime.heap.allocateVariable()],
     );
     
-    // TODO: Add relay goals to active queue
-    for (final goal in relayGoals) {
-      // runtime.gq.enqueue(goal); // Need proper PC lookup for relay/2
+    // Set up relay forwarding callbacks
+    // This implements: export_reader(Y?, Z) :- Z = Y?.
+    for (final relay in relaySetups) {
+      _setupRelayForwarding(relay);
     }
     
     return result.term;
+  }
+  
+  /// Set up forwarding callback for a relay
+  /// 
+  /// When the original reader (Y?) receives a value, bind the relay writer (Z)
+  /// to the same value. This propagates the value to whoever holds Z?.
+  /// 
+  /// Implements: export_reader(Y?, Z) :- Z = Y?.
+  void _setupRelayForwarding(RelaySetup relay) {
+    print('[DEBUG IRMA $agentId] _setupRelayForwarding: Y?=${relay.originalReaderId} -> Z=${relay.relayWriterId}, Z?=${relay.relayReaderId}');
+    
+    // Register callback: when Y? is bound, bind Z to same value
+    runtime.heap.onBind(relay.originalReaderId, (Term value) {
+      print('[DEBUG IRMA $agentId] RELAY FORWARD: Y?=${relay.originalReaderId} bound to $value, binding Z=${relay.relayWriterId}');
+      
+      // Bind the relay writer Z to the same value
+      // This will trigger _onWriterBound if Z has a requester
+      final activations = runtime.heap.bindVariable(relay.relayWriterId, value);
+      for (final act in activations) {
+        runtime.gq.enqueue(act);
+      }
+    });
+    
+    // Also register the relay writer's callback for message routing
+    // (The relay writer Z is in V_p and needs to send assignments when bound)
+    runtime.heap.onBind(relay.relayWriterId, (Term value) {
+      _onWriterBound(relay.relayWriterId, value);
+    });
   }
   
   // =========================================================================
@@ -283,40 +365,60 @@ class IrmaContext {
   /// Handle incoming assignment message
   /// 
   /// Called by coordinator when (X?:=T) arrives from another agent.
+  /// Per spec Section 5.3 Type 1, assignments are always for readers (X?).
   /// 
-  /// Three cases per spec:
-  /// 1. Reader is local (not in V_p) → apply directly
-  /// 2. Created reader with pending request → forward to requester, store value
-  /// 3. Created reader, no request yet → store value for later
-  void handleAssignment(int varId, Term value) {
-    final entry = vp.lookup(varId);
+  /// The assignment contains a global ID (creator:creatorLocalId) which we
+  /// must translate to our local varId via V_p lookup.
+  /// 
+  /// Cases:
+  /// 1. Imported reader found in V_p → translate to local varId, apply
+  /// 2. Created reader with pending request → forward to requester
+  /// 3. Created reader, no request yet → store value
+  /// 4. Not in V_p but we're creator → local variable, apply directly
+  void handleAssignment(String creator, int creatorLocalId, Term value) {
+    print('[DEBUG IRMA $agentId] handleAssignment: creator=$creator, creatorLocalId=$creatorLocalId, value=$value');
     
-    if (entry == null) {
-      // Case 1: Reader is local (not in V_p) - apply directly
-      final activations = runtime.heap.bindVariable(varId, value);
-      for (final act in activations) {
-        runtime.gq.enqueue(act);
-      }
-    } else if (entry.role == VariableRole.createdReader) {
-      // This agent created the reader - check for pending requester
-      final storedState = entry.state;
-      
-      if (storedState != null && storedState is String) {
-        // Case 2: Created reader with pending request - forward to requester
-        _queueAssignment(varId, value, storedState);
-        // Update entry to store the value
-        vp.updateState(varId, value);
+    // Search V_p for entry matching this global ID
+    final entry = vp.findByCreatorLocalId(creator, creatorLocalId, isReader: true);
+    print('[DEBUG IRMA $agentId] handleAssignment: entry=${entry?.role}, localVarId=${entry?.varId}, state=${entry?.state}');
+    
+    if (entry != null) {
+      if (entry.role == VariableRole.importedReader) {
+        // Imported reader - translate to our local varId and apply
+        print('[DEBUG IRMA $agentId] handleAssignment: IMPORTED READER - binding local varId=${entry.varId}');
+        final activations = runtime.heap.bindVariable(entry.varId, value);
+        print('[DEBUG IRMA $agentId] handleAssignment: bindVariable returned ${activations.length} activations');
+        for (final act in activations) {
+          runtime.gq.enqueue(act);
+        }
+        vp.remove(entry.key);
+      } else if (entry.role == VariableRole.createdReader) {
+        // We created this reader - check for pending requester
+        final storedState = entry.state;
+        
+        if (storedState != null && storedState is String) {
+          // Created reader with pending request - forward to requester
+          print('[DEBUG IRMA $agentId] handleAssignment: CREATED READER with requester=$storedState, forwarding');
+          _queueAssignmentFromEntry(entry, value, storedState);
+          vp.updateState(entry.key, value);
+        } else {
+          // No requester yet - store value
+          print('[DEBUG IRMA $agentId] handleAssignment: CREATED READER, no requester yet, storing value');
+          vp.updateState(entry.key, value);
+        }
       } else {
-        // Case 3: Created reader, no request yet - store value
-        vp.updateState(varId, value);
+        print('[DEBUG IRMA $agentId] handleAssignment: UNHANDLED ROLE - ${entry.role}');
       }
-    } else if (entry.role == VariableRole.importedReader) {
-      // We imported this reader - apply directly and remove from V_p
-      final activations = runtime.heap.bindVariable(varId, value);
+    } else if (creator == agentId) {
+      // Not in V_p, but we created it - local variable, apply directly
+      print('[DEBUG IRMA $agentId] handleAssignment: LOCAL (not in V_p) - binding varId=$creatorLocalId');
+      final activations = runtime.heap.bindVariable(creatorLocalId, value);
       for (final act in activations) {
         runtime.gq.enqueue(act);
       }
-      vp.remove(varId);
+    } else {
+      // Not in V_p and we didn't create it - should not happen
+      print('[DEBUG IRMA $agentId] handleAssignment: ERROR - no entry for $creator:$creatorLocalId and we are not creator');
     }
   }
   
@@ -324,48 +426,73 @@ class IrmaContext {
   /// 
   /// Called by coordinator when request(X?, requester) arrives.
   /// 
-  /// Per spec:
-  /// - If value already stored → reply immediately
-  /// - Else if created reader with no request → record requester
-  /// - Else if created writer → reply if bound, else record requester
+  /// Per spec Section 5.3 Type 2:
+  /// - If (X?, q, T) ∈ V_q where T ∈ 𝒯 → reply immediately with stored value
+  /// - Else if (X?, q, ⊥) ∈ V_q → record requester
+  /// - Else if (X, q, T) ∈ V_q → reply with writer's value (direct communication case)
   void handleReadRequest(int varId, String requester) {
-    final entry = vp.lookup(varId);
-    if (entry == null) return;
+    print('[DEBUG IRMA $agentId] handleReadRequest: varId=$varId, requester=$requester');
     
-    final storedState = entry.state;
+    // First check reader entry
+    final readerKey = VarKey(varId, true);
+    final readerEntry = vp.lookup(readerKey);
     
-    if (entry.role == VariableRole.createdReader) {
-      if (storedState != null && storedState is Term) {
-        // Value already stored - reply immediately
-        _queueAssignment(varId, storedState, requester);
-      } else if (storedState == null) {
-        // No request yet - record requester
-        vp.updateState(varId, requester);
+    if (readerEntry != null) {
+      print('[DEBUG IRMA $agentId] handleReadRequest: found reader entry, role=${readerEntry.role}, state=${readerEntry.state}');
+      
+      if (readerEntry.role == VariableRole.createdReader) {
+        final storedState = readerEntry.state;
+        if (storedState != null && storedState is Term) {
+          // Value already stored - reply immediately
+          print('[DEBUG IRMA $agentId] handleReadRequest: created reader has value, replying immediately');
+          _queueAssignmentFromEntry(readerEntry, storedState, requester);
+        } else if (storedState == null) {
+          // No request yet - record requester
+          print('[DEBUG IRMA $agentId] handleReadRequest: created reader, recording requester=$requester');
+          vp.updateState(readerKey, requester);
+        } else {
+          print('[DEBUG IRMA $agentId] handleReadRequest: created reader, already has requester=$storedState, ignoring');
+        }
+        return;
       }
-      // If storedState is a String (another requester), ignore duplicate
-    } else if (entry.role == VariableRole.createdWriter) {
+    }
+    
+    // Check writer entry (direct communication case per spec)
+    final writerKey = VarKey(varId, false);
+    final writerEntry = vp.lookup(writerKey);
+    
+    if (writerEntry != null && writerEntry.role == VariableRole.createdWriter) {
+      print('[DEBUG IRMA $agentId] handleReadRequest: found writer entry, state=${writerEntry.state}');
+      
       // Check if variable is already bound in heap
       Term? value;
       if (runtime.heap.varTable.containsKey(varId)) {
         value = runtime.heap.getValue(varId);
       }
+      print('[DEBUG IRMA $agentId] handleReadRequest: created writer, heap value=$value');
       
       if (value != null) {
         // Already bound - send value immediately
-        _queueAssignment(varId, value, requester);
+        print('[DEBUG IRMA $agentId] handleReadRequest: writer already bound, sending immediately');
+        _queueAssignmentFromEntry(writerEntry, value, requester);
       } else {
         // Not yet bound - record requester
-        vp.updateState(varId, requester);
+        print('[DEBUG IRMA $agentId] handleReadRequest: writer not bound, recording requester=$requester');
+        vp.updateState(writerKey, requester);
       }
+      return;
     }
+    
+    print('[DEBUG IRMA $agentId] handleReadRequest: NO ENTRY in V_p for reader or writer');
   }
   
   /// Handle incoming abandon notification
   /// 
   /// Called by coordinator when abandon(Y) arrives.
   void handleAbandon(int varId) {
-    // Remove from V_p
-    vp.remove(varId);
+    // Remove both reader and writer entries if present
+    vp.remove(VarKey(varId, true));
+    vp.remove(VarKey(varId, false));
     
     // Remove any pending bind callback
     runtime.heap.removeBindCallback(varId);
@@ -407,19 +534,20 @@ class IrmaContext {
       final varId = entry.key;
       final value = entry.value;
       
-      final vpEntry = vp.lookup(varId);
+      final readerKey = VarKey(varId, true);
+      final vpEntry = vp.lookup(readerKey);
       if (vpEntry == null) continue;
       
       if (vpEntry.role == VariableRole.createdReader && 
           vpEntry.creator == agentId &&
           vpEntry.state != null) {
         final requester = vpEntry.state as String;
-        _queueAssignment(varId, value, requester);
+        _queueAssignmentFromEntry(vpEntry, value, requester);
       }
       else if (vpEntry.role == VariableRole.importedReader &&
                vpEntry.creator != agentId &&
                vpEntry.state == null) {
-        vp.updateState(varId, vpEntry.creator);
+        vp.updateState(readerKey, vpEntry.creator);
       }
     }
   }

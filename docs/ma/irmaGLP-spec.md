@@ -122,6 +122,14 @@ For each variable Y occurring in T:
 
 T' is the result of applying variable replacements (if any) to T.
 
+The `export_reader` goal spawned by the export helper is a simple forwarding process that waits for the original reader to receive its value and then assigns that value to the relay writer:
+
+```prolog
+export_reader(Y?, Z) :- Z = Y?.
+```
+
+This ensures that when the creator eventually binds the original variable, the value flows through the relay to the new recipient.
+
 ### 4.4 reactivate(X?) returns R
 
 **Definition [routine reactivate(X?) for agent p returns R]**
@@ -476,6 +484,36 @@ Terms must be serialized to bytes for inter-agent transport:
 
 **Round-trip requirement**: deserialize(serialize(T)) ≡ T (up to variable renaming)
 
+### 8.4 Scheduler-IRMA Integration
+
+The Reduce transaction (Section 5.2) modifies both the resolvent R_p and the variable/message structures V_p/M_p atomically. In a modular implementation where the scheduler and IRMA context are separate components:
+
+**On suspension (Case 2):**
+- The scheduler must provide the set of blocking readers W to the IRMA layer
+- The IRMA layer then calls `request(X?)` for each X? ∈ W
+- This may be implemented either as a callback during suspension or by returning W from the drain operation
+
+**Implementation approach:**
+
+The `DrainResult` structure should include the blocking reader set:
+
+```
+DrainResult {
+  goalsRan: List<int>
+  status: ExecutionStatus  // succeeded | failed | suspended
+  suspendedGoals: List<String>  // for debugging/display
+  blockingReaders: Set<int>  // varIds of readers causing suspension
+}
+```
+
+After each drain operation, if `status == suspended`, the caller should invoke:
+
+```
+context.processSuspension(result.blockingReaders)
+```
+
+This ensures read requests are sent for imported readers per Section 5.2 Case 2, while maintaining separation between the scheduler (which tracks goal execution) and the IRMA context (which manages V_p/M_p).
+
 ---
 
 ## 9. References
@@ -497,3 +535,5 @@ Terms must be serialized to bytes for inter-agent transport:
 | 1.1 | 2026-01-17 | Claude | Incorporated paper issue resolutions (some incorrect) |
 | 2.0 | 2026-01-18 | Claude | Revised to faithfully match original paper |
 | 2.1 | 2026-01-18 | Claude | Added Imported Writer, revised Reduce/Communicate transactions, added example scenarios |
+| 2.2 | 2026-01-19 | Claude | Added section 8.4: Scheduler-IRMA Integration |
+| 2.3 | 2026-01-19 | Claude | Added export_reader/2 definition in Section 4.3 |
