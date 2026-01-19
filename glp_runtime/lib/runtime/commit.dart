@@ -38,15 +38,16 @@ class CommitOps {
       // Skip null values (writer declared but not bound in HEAD)
       if (value == null) continue;
 
-      // Convert varId to addresses
-      final (wAddr, rAddr) = heap.varTable[varId]!;
+      // Phase 2: Use address arithmetic directly (varId == wAddr)
+      final wAddr = varId;
+      final rAddr = varId + 1;
 
       // FCP line 226: CRITICAL - dereference by ADDRESS before binding
       // This prevents W1009→R1014→nil chains
       // IMPORTANT: Use reader address if VarRef is reader, writer address if writer
       if (value is VarRef) {
-        final (targetWAddr, targetRAddr) = heap.varTable[value.varId]!;
-        final targetAddr = value.isReader ? targetRAddr : targetWAddr;
+        // Phase 2: Compute target address from VarRef
+        final targetAddr = value.isReader ? value.varId + 1 : value.varId;
         value = heap.derefAddr(targetAddr);
         // print('[TRACE Commit FCP] Dereferenced VarRef(${(entry.value as VarRef).varId}) → $value');
       }
@@ -64,13 +65,15 @@ class CommitOps {
     // After second pass: W1002 contains nil (dereferenced through chain)
     // print('[TRACE Commit FCP] Re-dereferencing cells with VarRef values...');
     for (final varId in sigmaHat.keys) {
-      final (wAddr, rAddr) = heap.varTable[varId]!;
+      // Phase 2: Use address arithmetic directly
+      final wAddr = varId;
+      final rAddr = varId + 1;
       final wContent = heap.cells[wAddr].content;
 
       if (wContent is VarRef) {
         // Dereference again (target may now be bound)
-        final (targetWAddr, _) = heap.varTable[wContent.varId]!;
-        final derefValue = heap.derefAddr(targetWAddr);
+        // Phase 2: varId IS writerAddr
+        final derefValue = heap.derefAddr(wContent.varId);
 
         if (derefValue is! VarRef) {
           // Target is now bound - update both cells
@@ -102,7 +105,8 @@ class CommitOps {
   /// When binding W → R? where R is unbound, suspensions waiting on W should
   /// be moved to R's reader cell so they wake when R is eventually bound.
   static void _forwardSuspensions(HeapFCP heap, SuspensionListNode? list, int targetVarId) {
-    final (_, targetRAddr) = heap.varTable[targetVarId]!;
+    // Phase 2: Use address arithmetic directly (varId == wAddr)
+    final targetRAddr = targetVarId + 1;
     var current = list;
 
     while (current != null) {

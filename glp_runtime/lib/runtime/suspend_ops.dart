@@ -24,14 +24,16 @@ class SuspendOps {
     // Create wrapper node for each reader cell (independent next pointers)
     for (final varId in readerVarIds) {
       var finalVarId = varId;
-      var (_, rAddr) = heap.varTable[finalVarId]!;
+      // Phase 2: Use address arithmetic directly (varId == wAddr)
+      var rAddr = finalVarId + 1;
       var cell = heap.cells[rAddr];
 
       // Follow variable chain if reader is bound to another variable
       while (cell.content is VarRef) {
         final nextVar = cell.content as VarRef;
         finalVarId = nextVar.varId;
-        (_, rAddr) = heap.varTable[finalVarId]!;
+        // Phase 2: Use address arithmetic
+        rAddr = finalVarId + 1;
         cell = heap.cells[rAddr];
       }
 
