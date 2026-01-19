@@ -1,6 +1,8 @@
-# GLP Runtime System Specification for Dart Implementation v2.17.2
+# GLP Runtime System Specification for Dart Implementation v2.18
 
 ## Version History
+
+**v2.18 (January 2026)**: Extended heap representation for multiagent GLP. Reader cells can now point to V_p entries (VariableEntry) for imported readers, not just local writer cells. Dereferencing extended to handle V_p entry targets. Added "Imported Variables" subsection under Heap Storage.
 
 **v2.17.2 (January 2026)**: Added "Suspension Processing at Bind Time" section clarifying the distinction between bind-time behavior (always use writerAddr + 1) and suspension-time behavior (follow chains). Documented suspension forwarding when binding to another variable.
 
@@ -172,6 +174,26 @@ Dereferencing would fail immediately with cycle detection. Instead:
 
 This allows proper dereferencing and suspension list storage.
 
+**Imported Variables (Multiagent Extension):**
+
+In multiagent GLP, a reader may be imported from another agent. The paired writer exists at the remote agent's heap, not locally. For imported readers:
+
+- **Single cell allocation**: Only a reader cell is allocated, not a writer/reader pair
+- **Content**: The reader cell's content is the V_p entry (VariableEntry) representing the remote writer
+- **No local writer**: There is no local writer cell because the writer is remote
+
+Similarly, for imported writers:
+
+- **Single cell allocation**: Only a writer cell is allocated
+- **Content**: The writer cell's content is the V_p entry representing this variable
+- **Binding callback**: When bound, the onBind callback detects the V_p entry and queues an assignment message to the creator
+
+The V_p entry serves as the representation of the remote variable. It tracks:
+
+- `creator`: The agent who created the variable
+- `creatorLocalId`: The creator's heap address for this variable
+- `state`: Request state (before assignment) or received value (after assignment)
+
 **Dereferencing:**
 
 Dereferencing operates on heap addresses directly:
@@ -189,6 +211,24 @@ Term derefAddr(int addr) {
 
     final cell = cells[current];
 
+    // Imported reader: content is V_p entry
+    if (cell.tag == CellTag.RoTag && cell.content is VariableEntry) {
+      final entry = cell.content as VariableEntry;
+      if (entry.state is Term) {
+        return entry.state as Term;  // Value received from remote
+      }
+      return entry;  // Unbound imported reader - return V_p entry
+    }
+
+    // Imported writer: content is V_p entry
+    if (cell.tag == CellTag.WrtTag && cell.content is VariableEntry) {
+      final entry = cell.content as VariableEntry;
+      if (entry.state is Term) {
+        return entry.state as Term;  // Bound value
+      }
+      return entry;  // Unbound imported writer - return V_p entry
+    }
+
     if (cell.tag == CellTag.ValueTag) {
       final content = cell.content;
       if (content is VarRef) {
@@ -198,16 +238,17 @@ Term derefAddr(int addr) {
       return content as Term;
     }
 
+    if (cell.content is Pointer && cell.tag == CellTag.WrtTag) {
+      // Unbound local writer → return writer reference
+      return VarRef(current);
+    }
+
     if (cell.content is Pointer) {
-      // Writer pointing to unbound reader — return writer reference
-      if (cell.tag == CellTag.WrtTag) {
-        return VarRef(current);
-      }
       current = (cell.content as Pointer).targetAddr;
       continue;
     }
 
-    // Unbound reader
+    // Unbound local reader
     return VarRef(current);
   }
 }
@@ -218,6 +259,22 @@ Term derefAddr(int addr) {
 - **Transparent**: Opcode handlers receive fully dereferenced values automatically
 - **Chain-preserving**: Variable chains remain in heap as created
 - **Suspension-safe**: Dereferencing stops at unbound readers, allowing proper suspension detection
+
+**Dereference Results:**
+
+Dereferencing returns one of:
+
+| Result Type | Meaning |
+|-------------|----------|
+| `Term` (ground) | Variable is bound to this value |
+| `VarRef` | Unbound local variable at this address |
+| `VariableEntry` | Unbound imported variable; entry contains routing info |
+
+When the result is a `VariableEntry`, the caller can determine:
+
+- It is an imported reader (if originally dereferencing a reader cell)
+- The creator agent and their local ID for routing messages
+- Whether a request has been sent (entry.state == creator) or not (entry.state == null)
 
 ### Circular Term Handling
 

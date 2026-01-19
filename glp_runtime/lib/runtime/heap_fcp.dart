@@ -1,11 +1,15 @@
 /// FCP Two-Cell Heap with Address-Based Design
 /// Variables are identified by heap addresses directly, with no separate ID namespace.
 /// Each variable consists of two consecutive cells: writer at addr N, reader at addr N+1.
+///
+/// Imported variables (from other agents) use a single cell whose content is
+/// the VariableEntry from V_p, per irmaGLP spec.
 library;
 
 import 'terms.dart';
 import 'suspension.dart';
 import 'machine_state.dart';
+import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 
 /// Cell tags matching FCP design
 enum CellTag {
@@ -66,6 +70,32 @@ class HeapFCP {
     return wAddr;  // Return writerAddr as "varId"
   }
 
+  /// Allocate a single reader cell for an imported variable (no local writer)
+  /// 
+  /// Per irmaGLP spec, imported readers have no local paired writer - the writer
+  /// exists at the remote agent. The cell content will be set to a VariableEntry
+  /// by the caller (IrmaContext.importTerm).
+  /// 
+  /// Returns the reader cell address (which is also the varId for this imported reader)
+  int allocateImportedReader() {
+    final readerAddr = HP++;
+    cells.add(HeapCell(null, CellTag.RoTag));
+    return readerAddr;
+  }
+
+  /// Allocate a single writer cell for an imported variable (no local reader)
+  /// 
+  /// Per irmaGLP spec, imported writers have no local paired reader - the reader
+  /// exists at the remote agent. The cell content will be set to a VariableEntry
+  /// by the caller (IrmaContext.importTerm).
+  /// 
+  /// Returns the writer cell address (which is also the varId for this imported writer)
+  int allocateImportedWriter() {
+    final writerAddr = HP++;
+    cells.add(HeapCell(null, CellTag.WrtTag));
+    return writerAddr;
+  }
+
   // ==========================================================================
   // Address Helper Methods
   // ==========================================================================
@@ -116,7 +146,14 @@ class HeapFCP {
 
   /// Address-based dereferencing
   /// Follows variable chains using address arithmetic
-  Term derefAddr(int addr) {
+  /// 
+  /// For imported variables (content is VariableEntry):
+  /// - If entry.state is a Term, returns that value
+  /// - Otherwise returns the VariableEntry itself for routing
+  /// 
+  /// Returns: Term (for bound values) or VariableEntry (for imported unbound)
+  /// Callers should check: `if (result is VariableEntry) { ... }`
+  Object derefAddr(int addr) {
     var current = addr;
     Set<int> visited = {};
 
@@ -127,6 +164,28 @@ class HeapFCP {
       visited.add(current);
 
       final cell = cells[current];
+
+      // Imported reader - content is V_p entry
+      // Per irmaGLP spec, imported readers have VariableEntry as content
+      if (cell.tag == CellTag.RoTag && cell.content is VariableEntry) {
+        final entry = cell.content as VariableEntry;
+        if (entry.state is Term) {
+          return entry.state as Term;
+        }
+        // Return entry for routing (caller uses creator, creatorLocalId)
+        return entry;
+      }
+
+      // Imported writer - content is V_p entry
+      // Per irmaGLP spec, imported writers have VariableEntry as content
+      if (cell.tag == CellTag.WrtTag && cell.content is VariableEntry) {
+        final entry = cell.content as VariableEntry;
+        if (entry.state is Term) {
+          return entry.state as Term;
+        }
+        // Return entry for routing
+        return entry;
+      }
 
       // Bound to value
       if (cell.tag == CellTag.ValueTag) {
@@ -171,16 +230,24 @@ class HeapFCP {
 
   /// API: Check if variable is fully bound to ground term
   /// Takes writerAddr (which is also varId)
+  /// 
+  /// Returns false for VarRef (unbound) or VariableEntry (imported unbound)
   bool isFullyBound(int writerAddr) {
     final result = derefAddr(writerAddr);
-    return result is! VarRef;
+    // VarRef = local unbound, VariableEntry = imported unbound
+    return result is! VarRef && result is! VariableEntry;
   }
 
   /// API: Get variable value (dereferenced)
   /// Takes writerAddr (which is also varId)
+  /// 
+  /// Returns null if unbound (VarRef or VariableEntry)
   Term? getValue(int writerAddr) {
     final result = derefAddr(writerAddr);
-    return result is VarRef ? null : result;
+    if (result is VarRef || result is VariableEntry) {
+      return null;
+    }
+    return result as Term;
   }
 
   /// API: Bind variable to a term
@@ -190,10 +257,16 @@ class HeapFCP {
     final rAddr = writerAddr + 1;  // Address arithmetic
 
     // Dereference value if it's a VarRef
-    var finalValue = value;
+    Term finalValue = value;
     if (value is VarRef) {
       // varId IS writerAddr
-      finalValue = derefAddr(value.varId);
+      final derefResult = derefAddr(value.varId);
+      if (derefResult is VariableEntry) {
+        // Cannot bind to an imported unbound variable - keep as VarRef
+        finalValue = value;
+      } else {
+        finalValue = derefResult as Term;
+      }
     }
 
     // Save suspension list BEFORE overwriting reader content
@@ -343,11 +416,18 @@ class HeapFCP {
   /// writer - compatibility stub
   Object? writer(int writerId) => null;
 
-  /// dereference term
+  /// Dereference term
+  /// 
+  /// If the result is a VariableEntry (imported unbound), returns the original VarRef
   Term dereference(Term term) {
     if (term is VarRef) {
       // varId IS writerAddr
-      return derefAddr(term.varId);
+      final result = derefAddr(term.varId);
+      if (result is VariableEntry) {
+        // Imported unbound - return original VarRef
+        return term;
+      }
+      return result as Term;
     }
     return term;
   }
