@@ -215,9 +215,68 @@ class IrmaContext {
   /// 
   /// For each X? ∈ W (suspension set):
   /// - Call request(X?) to send read request to creator
+  /// 
+  /// This version uses heap dereference to get VariableEntry directly
+  /// instead of V_p lookup, per Phase 4 of implementation plan.
   void processSuspension(Set<int> blockingReaders) {
     for (final readerId in blockingReaders) {
-      helpers.request(readerId, agentId, vp, mp);
+      _requestFromHeap(readerId);
+    }
+  }
+  
+  /// Send read request for an imported reader using heap-based lookup
+  /// 
+  /// Dereferences the reader's heap cell to get the VariableEntry directly,
+  /// eliminating the need for V_p lookup during request routing.
+  /// 
+  /// Falls back to legacy V_p lookup for variables created via legacy importTerm.
+  void _requestFromHeap(int readerAddr) {
+    // Check if this address exists in the heap
+    // (Legacy importTerm doesn't allocate heap cells, so we need to fall back)
+    if (readerAddr >= runtime.heap.cells.length) {
+      print('[DEBUG IRMA $agentId] _requestFromHeap: addr $readerAddr out of bounds, using legacy request');
+      helpers.request(readerAddr, agentId, vp, mp);
+      return;
+    }
+    
+    // Dereference to get either Term (if bound) or VariableEntry (if imported unbound)
+    final result = runtime.heap.derefAddr(readerAddr);
+    
+    if (result is VariableEntry) {
+      final entry = result;
+      
+      // Only send request for imported readers that haven't been requested yet
+      if (entry.role == VariableRole.importedReader && 
+          entry.creator != agentId && 
+          entry.state == null) {
+        print('[DEBUG IRMA $agentId] _requestFromHeap: sending request for reader $readerAddr to ${entry.creator}');
+        
+        // Update state to mark request sent (in both V_p and heap cell)
+        final readerKey = VarKey(entry.varId, true);
+        vp.updateState(readerKey, entry.creator);
+        entry.state = entry.creator;  // Also update the heap cell's entry
+        
+        // Queue read request message using creator's ID namespace
+        final creatorSerializer = PayloadSerializer(entry.creator);
+        final payload = creatorSerializer.createReadRequestPayload(
+          entry.creatorLocalId,  // Use creator's original ID
+          agentId,
+        );
+        mp.add(OutboundMessage(
+          destination: entry.creator,
+          type: MessageType.readRequest,
+          payload: payload,
+        ));
+      } else {
+        print('[DEBUG IRMA $agentId] _requestFromHeap: skipping reader $readerAddr (role=${entry.role}, state=${entry.state})');
+      }
+    } else if (result is VarRef) {
+      // Local unbound variable - use legacy V_p lookup
+      print('[DEBUG IRMA $agentId] _requestFromHeap: local unbound VarRef, using legacy request');
+      helpers.request(readerAddr, agentId, vp, mp);
+    } else {
+      // Already bound - no request needed
+      print('[DEBUG IRMA $agentId] _requestFromHeap: reader $readerAddr already bound to $result');
     }
   }
   
@@ -252,9 +311,77 @@ class IrmaContext {
   // =========================================================================
   // Term Import/Export
   // =========================================================================
-  
-  /// Import a term received from another agent
+
+  /// Deserialize and import a term received from another agent
   /// 
+  /// This is the preferred method for receiving terms from other agents.
+  /// It uses the new heap allocators to create single-cell representations
+  /// for imported variables, with VariableEntry attached directly to the cell.
+  /// 
+  /// [payload] - The serialized term bytes
+  /// [fromAgent] - The agent who sent this term (usually the creator)
+  /// 
+  /// Returns the deserialized term with local variable IDs.
+  Term deserializeAndImportTerm(List<int> payload, String fromAgent) {
+    final (term, globalIdMapping) = PayloadSerializer.deserializeAgentMessagePayloadWithMapping(
+      payload,
+      // Allocator callback: create single-cell for imported variable
+      (bool isReader) {
+        if (isReader) {
+          return runtime.heap.allocateImportedReader();
+        } else {
+          return runtime.heap.allocateImportedWriter();
+        }
+      },
+      // Entry creator callback: create and attach VariableEntry to cell
+      onVariableImported: (int localAddr, bool isReader, GlobalVarId globalId) {
+        _attachImportedVariableEntry(localAddr, isReader, globalId, fromAgent);
+      },
+    );
+    
+    return term;
+  }
+  
+  /// Attach a VariableEntry to an imported variable's heap cell
+  /// 
+  /// Creates the entry and stores it both in V_p and in the heap cell content.
+  void _attachImportedVariableEntry(
+    int localAddr, 
+    bool isReader, 
+    GlobalVarId globalId,
+    String fromAgent,
+  ) {
+    final creator = globalId.creator;
+    final creatorLocalId = globalId.localId;
+    
+    final entry = VariableEntry(
+      varId: localAddr,
+      isReader: isReader,
+      creator: creator,
+      role: isReader ? VariableRole.importedReader : VariableRole.importedWriter,
+      creatorLocalId: creatorLocalId,
+    );
+    
+    // Add to V_p
+    final key = VarKey(localAddr, isReader);
+    vp.add(key, entry);
+    
+    // Attach entry to heap cell content
+    runtime.heap.cells[localAddr].content = entry;
+    
+    print('[DEBUG IRMA $agentId] _attachImportedVariableEntry: localAddr=$localAddr, isReader=$isReader, creator=$creator, creatorLocalId=$creatorLocalId');
+    
+    // For imported writers, register binding callback
+    if (!isReader) {
+      runtime.heap.onBind(localAddr, (Term value) {
+        print('[DEBUG IRMA $agentId] HEAP CALLBACK fired for imported writer $localAddr, value=$value');
+        _onWriterBound(localAddr, value);
+      });
+    }
+  }
+
+  /// Import a term received from another agent (legacy method)
+  ///
   /// For each variable Y in term where (Y, ·, ·) ∉ V_p:
   /// - Add to V_p as imported reader or writer based on VarRef.isReader
   /// 
