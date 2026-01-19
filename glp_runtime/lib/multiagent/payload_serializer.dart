@@ -361,7 +361,42 @@ class PayloadSerializer {
   /// 
   /// Contains the deserialized term and a mapping from local varIds to their
   /// original global IDs (creator:creatorLocalId).
+  /// 
+  /// [allocateImportedVar] - Callback to allocate a single cell for imported variable.
+  ///   Takes isReader flag and returns the cell address (varId).
+  ///   For readers: calls heap.allocateImportedReader()
+  ///   For writers: calls heap.allocateImportedWriter()
+  /// 
+  /// [onVariableImported] - Optional callback invoked after allocating each variable.
+  ///   Used by IrmaContext to create and attach VariableEntry to the cell.
+  ///   Parameters: (localAddr, isReader, globalId)
   static (Term, Map<int, GlobalVarId>) deserializeAgentMessagePayloadWithMapping(
+    List<int> payload,
+    int Function(bool isReader) allocateImportedVar,
+    {void Function(int localAddr, bool isReader, GlobalVarId globalId)? onVariableImported}
+  ) {
+    // Map from global var ID string -> local varId
+    final globalToLocal = <String, int>{};
+    
+    final serializer = PayloadSerializer('');
+    final (term, _) = serializer._deserializeTermWithMappingV2(
+      payload, 0, globalToLocal, allocateImportedVar, onVariableImported);
+    
+    // Invert to get local -> global mapping
+    final localToGlobal = <int, GlobalVarId>{};
+    for (final entry in globalToLocal.entries) {
+      localToGlobal[entry.value] = GlobalVarId.decode(entry.key);
+    }
+    
+    return (term, localToGlobal);
+  }
+  
+  /// Legacy version for backward compatibility
+  /// 
+  /// Uses allocateFreshVar() which allocates a full two-cell pair.
+  /// Prefer deserializeAgentMessagePayloadWithMapping with isReader-aware allocator.
+  @Deprecated('Use deserializeAgentMessagePayloadWithMapping with isReader-aware allocator')
+  static (Term, Map<int, GlobalVarId>) deserializeAgentMessagePayloadWithMappingLegacy(
     List<int> payload,
     int Function() allocateFreshVar,
   ) {
@@ -386,8 +421,25 @@ class PayloadSerializer {
   /// are mapped to fresh local variables using the provided allocator.
   /// 
   /// [payload] - The serialized term bytes
-  /// [allocateFreshVar] - Callback to allocate a fresh local variable, returns varId
+  /// [allocateImportedVar] - Callback to allocate imported variable cell.
+  ///   Takes isReader flag and returns the cell address (varId).
+  /// [onVariableImported] - Optional callback invoked after allocating each variable.
   Term deserializeAgentMessagePayload(
+    List<int> payload,
+    int Function(bool isReader) allocateImportedVar,
+    {void Function(int localAddr, bool isReader, GlobalVarId globalId)? onVariableImported}
+  ) {
+    // Map from global var ID string -> local varId
+    final varMapping = <String, int>{};
+    
+    final (term, _) = _deserializeTermWithMappingV2(
+      payload, 0, varMapping, allocateImportedVar, onVariableImported);
+    return term;
+  }
+  
+  /// Legacy version for backward compatibility
+  @Deprecated('Use deserializeAgentMessagePayload with isReader-aware allocator')
+  Term deserializeAgentMessagePayloadLegacy(
     List<int> payload,
     int Function() allocateFreshVar,
   ) {
@@ -398,7 +450,94 @@ class PayloadSerializer {
     return term;
   }
   
-  /// Deserialize term with variable remapping for cross-agent terms
+  /// Deserialize term with variable remapping for cross-agent terms (V2 - isReader aware)
+  /// 
+  /// This version uses isReader-aware allocation for imported variables,
+  /// allocating single cells instead of full pairs.
+  (Term, int) _deserializeTermWithMappingV2(
+    List<int> bytes,
+    int offset,
+    Map<String, int> varMapping,
+    int Function(bool isReader) allocateImportedVar,
+    void Function(int localAddr, bool isReader, GlobalVarId globalId)? onVariableImported,
+  ) {
+    final startOffset = offset;
+    
+    if (offset >= bytes.length) {
+      throw FormatException('Unexpected end of input');
+    }
+    
+    final tag = bytes[offset];
+    offset++;
+    
+    switch (tag) {
+      case _tagConstant:
+        final (value, constSize) = _deserializeConstant(bytes, offset);
+        return (ConstTerm(value), 1 + constSize);
+        
+      case _tagVariable:
+        // Decode global ID length
+        final (idLength, lengthSize) = _decodeLength(bytes, offset);
+        offset += lengthSize;
+        
+        // Decode global ID string (e.g., "bob:1117")
+        final idBytes = bytes.sublist(offset, offset + idLength);
+        offset += idLength;
+        final globalIdStr = utf8.decode(idBytes);
+        final globalId = GlobalVarId.decode(globalIdStr);
+        
+        // Decode isReader flag
+        final isReader = bytes[offset] == 1;
+        offset++;
+        
+        // Map to local variable (allocate fresh if first time seeing this global ID)
+        int localVarId;
+        if (varMapping.containsKey(globalIdStr)) {
+          localVarId = varMapping[globalIdStr]!;
+        } else {
+          // Allocate appropriate cell type based on isReader
+          localVarId = allocateImportedVar(isReader);
+          varMapping[globalIdStr] = localVarId;
+          
+          // Notify caller to create VariableEntry and attach to cell
+          onVariableImported?.call(localVarId, isReader, globalId);
+        }
+        
+        return (VarRef(localVarId, isReader: isReader), offset - startOffset);
+        
+      case _tagStruct:
+        // Decode functor length
+        final (functorLength, functorLengthSize) = _decodeLength(bytes, offset);
+        offset += functorLengthSize;
+        
+        // Decode functor string
+        final functorBytes = bytes.sublist(offset, offset + functorLength);
+        offset += functorLength;
+        final functor = utf8.decode(functorBytes);
+        
+        // Decode arity
+        final (arity, aritySize) = _decodeLength(bytes, offset);
+        offset += aritySize;
+        
+        // Decode args with same mapping
+        final args = <Term>[];
+        for (int i = 0; i < arity; i++) {
+          final (arg, argSize) = _deserializeTermWithMappingV2(
+            bytes, offset, varMapping, allocateImportedVar, onVariableImported);
+          args.add(arg);
+          offset += argSize;
+        }
+        
+        return (StructTerm(functor, args), offset - startOffset);
+        
+      default:
+        throw FormatException('Unknown term tag: $tag');
+    }
+  }
+
+  /// Deserialize term with variable remapping for cross-agent terms (legacy)
+  /// 
+  /// Uses allocateFreshVar() which allocates full two-cell pairs.
   (Term, int) _deserializeTermWithMapping(
     List<int> bytes,
     int offset,
