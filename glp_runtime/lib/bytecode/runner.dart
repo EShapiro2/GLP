@@ -9,6 +9,7 @@ import 'package:glp_runtime/runtime/system_predicates.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
 import 'package:glp_runtime/runtime/module_runtime.dart' show ModuleGoalContext;
 import 'package:glp_runtime/runtime/module_messages.dart';
+import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 import 'opcodes.dart';
 import 'opcodes_v2.dart' as opv2;
 
@@ -734,16 +735,17 @@ class BytecodeRunner {
             cx.sigmaHat[arg.addr] = ConstTerm(op.value);
           }
         } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-          // Reader VarRef: check if bound, else add to Si (two-phase)
-          final wid = cx.rt.heap.writerForReader(arg.addr);
-          if (!cx.rt.heap.isWriterBound(wid)) {
+          // Reader VarRef: use derefAddr to handle both local and imported readers
+          final deref = cx.rt.heap.derefAddr(arg.addr);
+          if (deref is VariableEntry || deref is VarRef) {
+            // Unbound (imported or local) - suspend
             final suspendOnVar = _finalUnboundVar(cx, arg.addr);
             cx.Si.add(suspendOnVar);
             pc++;
             continue;
-          } else {
-            // Bound reader - check if value matches constant
-            final value = cx.rt.heap.valueOfWriter(wid);
+          } else if (deref is Term) {
+            // Bound - check if value matches constant
+            final value = deref;
             if (value is ConstTerm && value.value != op.value) {
               // Value mismatch - soft fail to next clause
               if (debug) {
@@ -2182,8 +2184,10 @@ class BytecodeRunner {
         // Phase 2: Resolve Si against σ̂w (two-phase HEAD unification)
         final resolvedSi = <int>{};
         for (final readerAddr in cx.Si) {
-          final writerAddr = cx.rt.heap.writerForReader(readerAddr);
-          if (!cx.sigmaHat.containsKey(writerAddr)) {
+          // Use tryWriterForReader to handle imported readers gracefully
+          final writerAddr = cx.rt.heap.tryWriterForReader(readerAddr);
+          // Imported reader (null) or writer not in σ̂w -> unresolved
+          if (writerAddr == null || !cx.sigmaHat.containsKey(writerAddr)) {
             resolvedSi.add(readerAddr);
           }
         }

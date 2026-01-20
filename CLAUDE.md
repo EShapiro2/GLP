@@ -911,10 +911,34 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - made sure claude.md points to the correct file
 - read again clause.md, and if its not there update it:  NEVER proceed in implemenetation without a spec that guides it. code should be revised only if it violates the spec.  if the spec is not clear, revise it first.
 - when we are discussing, do not move away from the discussion or do anything else until user agrees that the discussion is over
+- 🔴 CRITICAL: You CANNOT continue working (coding, running tests, making changes) while we are discussing. You must WAIT for explicit confirmation that the discussion is over before proceeding with any implementation work.
 - i want  dart run glp_repl.dart  please remember that
 - always test all repl tests after a change
 - NEVER work not following precisely the spec
 - always offer to fetch/merge/push when finishing a task
+
+## 🔴 ABSOLUTE RULE: Spec-First Development
+
+**NO IMPLEMENTATION WITHOUT SPEC. NO EXCEPTIONS.**
+
+Before writing ANY code:
+1. **IDENTIFY** which spec(s) cover this area
+2. **READ** the spec and quote the relevant section
+3. **VERIFY** the spec is clear enough to implement from
+4. **IF SPEC IS UNCLEAR OR MISSING**: STOP. Discuss with user. Clarify/write spec FIRST.
+5. **ONLY THEN** implement, and the implementation MUST match the spec exactly
+
+**If you find yourself:**
+- Making the code "work" without spec backing → STOP
+- Adding logic that isn't in the spec → STOP
+- Fixing something by guessing what the behavior should be → STOP
+- Using try-catch or null checks to "handle" cases the spec doesn't address → STOP
+
+**The correct action is ALWAYS:**
+1. STOP implementation
+2. Report: "The spec does not cover X. Here's what I found: [quote spec]. We need to clarify/extend the spec before I can implement this."
+3. WAIT for discussion and spec update
+4. ONLY THEN proceed with implementation that matches the updated spec
 
 ## #remember Directive
 

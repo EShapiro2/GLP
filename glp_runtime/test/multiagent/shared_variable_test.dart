@@ -274,62 +274,8 @@ q(a).
 
 /// Parse assignment payload to extract creator, creatorLocalId, and value
 (String, int, Term) _parseAssignmentPayload(List<int> payload) {
-  // Use PayloadSerializer to deserialize
-  // Payload format: type byte, global ID string (null-terminated), serialized term
-  
-  if (payload.isEmpty) throw StateError('Empty payload');
-  
-  int idx = 1; // Skip type byte (0 = assignment)
-  
-  // Read global ID string until null: "creator:localId"
-  final idBytes = <int>[];
-  while (idx < payload.length && payload[idx] != 0) {
-    idBytes.add(payload[idx]);
-    idx++;
-  }
-  idx++; // Skip null terminator
-  
-  final globalIdStr = String.fromCharCodes(idBytes);
-  final parts = globalIdStr.split(':');
-  final creator = parts[0];
-  final localId = int.parse(parts[1]);
-  
-  // Deserialize the term value
-  final termBytes = payload.sublist(idx);
-  final term = _deserializeTerm(termBytes);
-  
-  return (creator, localId, term);
-}
-
-/// Simple term deserializer for test purposes
-Term _deserializeTerm(List<int> bytes) {
-  if (bytes.isEmpty) throw StateError('Empty term bytes');
-  
-  final termType = bytes[0];
-  
-  switch (termType) {
-    case 1: // Integer
-      // Read 4 bytes as int32
-      final value = bytes[1] | (bytes[2] << 8) | (bytes[3] << 16) | (bytes[4] << 24);
-      return ConstTerm(value);
-      
-    case 2: // Double
-      throw UnimplementedError('Double deserialization');
-      
-    case 3: // Atom/string
-      final atomBytes = <int>[];
-      for (int i = 1; i < bytes.length && bytes[i] != 0; i++) {
-        atomBytes.add(bytes[i]);
-      }
-      return ConstTerm(String.fromCharCodes(atomBytes));
-      
-    case 4: // Variable
-      throw UnimplementedError('Variable deserialization in assignment');
-      
-    case 5: // Structure
-      throw UnimplementedError('Structure deserialization');
-      
-    default:
-      throw StateError('Unknown term type: $termType');
-  }
+  // Use PayloadSerializer to deserialize properly
+  final serializer = PayloadSerializer('test');
+  final (globalId, term) = serializer.deserializeAssignmentPayload(payload);
+  return (globalId.creator, globalId.localId, term);
 }

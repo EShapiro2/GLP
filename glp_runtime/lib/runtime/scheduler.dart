@@ -48,9 +48,14 @@ class Scheduler {
   String _getVarDisplayName(int addr) {
     // For readers, try to find writer's name first
     if (rt.heap.isReader(addr)) {
-      final writerAddr = rt.heap.writerForReader(addr);
-      if (_queryVarNames.containsKey(writerAddr)) {
-        return _queryVarNames[writerAddr]!;
+      // writerForReader may fail for imported readers (no local writer)
+      try {
+        final writerAddr = rt.heap.writerForReader(addr);
+        if (_queryVarNames.containsKey(writerAddr)) {
+          return _queryVarNames[writerAddr]!;
+        }
+      } catch (_) {
+        // Imported reader - fall through to address-based lookup
       }
     }
     // Check if this address has an original name

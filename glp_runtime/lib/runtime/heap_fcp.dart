@@ -134,6 +134,21 @@ class HeapFCP {
     return (cell.content as Pointer).targetAddr;
   }
 
+  /// Try to get writer address from reader, returns null for imported readers
+  ///
+  /// For local readers (with Pointer), returns the writer address.
+  /// For imported readers (with VariableEntry), returns null.
+  int? tryWriterForReader(int readerAddr) {
+    final cell = cells[readerAddr];
+    if (cell.tag != CellTag.RoTag) {
+      return null;
+    }
+    if (cell.content is Pointer) {
+      return (cell.content as Pointer).targetAddr;
+    }
+    return null; // Imported reader - no local writer
+  }
+
   // ==========================================================================
   // Dereferencing (Section 4 of spec)
   // ==========================================================================
