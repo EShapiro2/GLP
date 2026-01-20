@@ -2,6 +2,7 @@ import 'machine_state.dart';
 import 'heap_fcp.dart';
 import 'suspension.dart';
 import 'terms.dart';
+import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 
 /// Suspension operations using FCP-exact shared suspension records
 /// Records stored in wrapper nodes in reader cells (no separate ROQ)
@@ -40,13 +41,21 @@ class SuspendOps {
       // Create wrapper node pointing to shared record
       final node = SuspensionListNode(sharedRecord);
 
-      // Prepend to existing list (or null if none)
-      node.next = cell.content is SuspensionListNode
-          ? cell.content as SuspensionListNode
-          : null;
-
-      // REPLACE reader cell content with suspension list
-      cell.content = node;
+      // For imported readers, V_p entry serves as "virtual writer" for suspensions
+      // Per irmaGLP spec Section 3.1.2: V_p contains 4-tuples (Y, q, s, Σ)
+      if (cell.content is VariableEntry) {
+        final entry = cell.content as VariableEntry;
+        // Prepend to entry's suspension list
+        node.next = entry.suspensions;
+        entry.suspensions = node;
+        // print('[TRACE SuspendOps] Added suspension to VariableEntry for imported reader $varId');
+      } else {
+        // Normal variable - prepend to existing list in cell
+        node.next = cell.content is SuspensionListNode
+            ? cell.content as SuspensionListNode
+            : null;
+        cell.content = node;
+      }
     }
   }
 

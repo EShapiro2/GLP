@@ -68,13 +68,19 @@ When providing shell commands for the user to execute:
 2. **If user explicitly requests terminal output** (e.g., merge, push commands): output goes to terminal
 3. **Otherwise**: redirect ALL output to a file in `/private/tmp` that Claude can read later
 
-**Standard Testing One-Liner (use this exact format):**
+**Standard Testing Commands:**
+
+Dart tests and REPL tests must be run separately (they cannot be combined in a single command line):
 
 ```bash
-cd /Users/udi/Grassroots/GLP/glp_runtime && dart test > /private/tmp/glp-tests.txt 2>&1 && cd .. && bash test/full_run_repl_tests.sh >> /private/tmp/glp-tests.txt 2>&1
+# 1. Dart unit tests
+cd /Users/udi/Grassroots/GLP/glp_runtime && dart test > /private/tmp/glp-tests.txt 2>&1
+
+# 2. REPL tests (run separately)
+cd /Users/udi/Grassroots/GLP && bash test/full_run_repl_tests.sh > /private/tmp/repl-tests.txt 2>&1
 ```
 
-This runs both Dart tests and REPL tests, appending all output to `/private/tmp/glp-tests.txt`.
+Output goes to `/private/tmp/glp-tests.txt` and `/private/tmp/repl-tests.txt` respectively.
 
 **Other Examples:**
 

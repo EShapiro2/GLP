@@ -5,12 +5,16 @@
 /// Core Invariant: V_p contains exactly those variables whose paired 
 /// counterparts are non-local (i.e., in a remote agent's resolvent).
 /// 
-/// Per spec, V_p ⊆ 𝒱 × Π × (𝒯 ∪ Π ∪ {⊥}) where 𝒱 includes both X (writers)
-/// and X? (readers) as distinct elements. Therefore, the same varId can have
-/// both a writer entry and a reader entry.
+/// Per spec, V_p ⊆ 𝒱 × Π × (𝒯 ∪ Π ∪ {⊥}) × 𝒮* where 𝒱 includes both X (writers)
+/// and X? (readers) as distinct elements. The fourth component Σ is the
+/// suspension list for goals waiting on this variable. For imported readers,
+/// V_p serves as the "virtual writer" that holds suspensions since there is
+/// no local writer cell.
 /// 
-/// Specification: /docs/ma/irmaGLP-spec.md Section 3.2
+/// Specification: /docs/ma/irmaGLP-spec.md Section 3.1.2
 library;
+
+import '../runtime/suspension.dart';
 
 /// Key for variable table entries
 /// 
@@ -74,6 +78,13 @@ class VariableEntry {
   /// - Created reader: requester agent ID (String) or null if no request
   /// - Imported reader: creator ID (String) if request sent, null otherwise
   dynamic state;
+  
+  /// Suspension list for goals waiting on this variable (Σ in spec).
+  /// 
+  /// For imported readers, V_p serves as the "virtual writer" since there
+  /// is no local writer cell to hold suspensions. When an assignment arrives,
+  /// goals are resumed from this list.
+  SuspensionListNode? suspensions;
   
   VariableEntry({
     required this.varId,

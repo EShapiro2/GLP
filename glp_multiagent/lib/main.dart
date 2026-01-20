@@ -490,21 +490,14 @@ class _AgentScreenState extends State<AgentScreen> {
     final msg = serializer.deserializeMessage(payload);
     
     if (msg.type == MessageType.agentMessage) {
-      // Agent message: deserialize term with fresh variable allocation AND mapping
-      final (term, globalIdMapping) = PayloadSerializer.deserializeAgentMessagePayloadWithMapping(
+      // Agent message: use the new deserializeAndImportTerm which handles
+      // single-cell allocation and VariableEntry attachment automatically
+      final term = _agent!.context.deserializeAndImportTerm(
         msg.payload,
-        () {
-          // Allocate fresh variable pair, return the writer ID
-          final (writerId, _) = _agent!.runtime.heap.allocateFreshPair();
-          return writerId;
-        },
+        from.toLowerCase(),
       );
       
       _addOutput('[AGENT MSG] ${_formatTerm(term)}');
-      
-      // CRITICAL: Register imported variables in V_p with heap callbacks
-      // Pass the globalIdMapping so we store creator's original IDs
-      _agent!.context.importTerm(term, from.toLowerCase(), globalIdMapping: globalIdMapping);
       
       // Inject into the NET input stream (goes through merge with UserIn)
       final activations = _ioContext!.netInput.inject(term);

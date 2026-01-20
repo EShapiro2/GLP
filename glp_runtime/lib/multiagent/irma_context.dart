@@ -13,6 +13,7 @@ library;
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
+import 'package:glp_runtime/runtime/suspension.dart';
 import 'package:glp_runtime/multiagent/variable_table.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/helpers.dart';
@@ -519,17 +520,26 @@ class IrmaContext {
     
     if (entry != null) {
       if (entry.role == VariableRole.importedReader) {
-        // Imported reader - store value in entry and bind on heap
+        // Imported reader - store value in entry and activate suspensions
         print('[DEBUG IRMA $agentId] handleAssignment: IMPORTED READER - binding local varId=${entry.varId}');
         
         // Phase 5: Store value in entry.state (updates both V_p and heap cell
         // since they share the same VariableEntry object)
         entry.state = value;
         
-        // Also bind on heap for normal variable semantics
-        final activations = runtime.heap.bindVariable(entry.varId, value);
-        print('[DEBUG IRMA $agentId] handleAssignment: bindVariable returned ${activations.length} activations');
+        // Activate suspensions from VariableEntry ("virtual writer")
+        // Per irmaGLP spec Section 3.1.2: V_p serves as virtual writer for imported readers
+        final activations = _activateSuspensionsFromEntry(entry);
+        print('[DEBUG IRMA $agentId] handleAssignment: activated ${activations.length} goals from VariableEntry');
         for (final act in activations) {
+          runtime.gq.enqueue(act);
+        }
+        
+        // Also bind on heap for normal variable semantics (may return 0 activations
+        // since suspensions were in VariableEntry, not heap cell)
+        final heapActivations = runtime.heap.bindVariable(entry.varId, value);
+        print('[DEBUG IRMA $agentId] handleAssignment: bindVariable returned ${heapActivations.length} heap activations');
+        for (final act in heapActivations) {
           runtime.gq.enqueue(act);
         }
         vp.remove(entry.key);
@@ -573,12 +583,15 @@ class IrmaContext {
   /// - If (X?, q, T) ∈ V_q where T ∈ 𝒯 → reply immediately with stored value
   /// - Else if (X?, q, ⊥) ∈ V_q → record requester
   /// - Else if (X, q, T) ∈ V_q → reply with writer's value (direct communication case)
+  /// 
+  /// Note: varId is the creator's local ID (creatorLocalId), not necessarily our local varId.
+  /// We must use findByCreatorLocalId to look up entries, matching handleAssignment's approach.
   void handleReadRequest(int varId, String requester) {
     print('[DEBUG IRMA $agentId] handleReadRequest: varId=$varId, requester=$requester');
     
-    // First check reader entry
-    final readerKey = VarKey(varId, true);
-    final readerEntry = vp.lookup(readerKey);
+    // First check reader entry - use findByCreatorLocalId since varId is creatorLocalId
+    // Note: For created readers, we are the creator, so use agentId
+    final readerEntry = vp.findByCreatorLocalId(agentId, varId, isReader: true);
     
     if (readerEntry != null) {
       print('[DEBUG IRMA $agentId] handleReadRequest: found reader entry, role=${readerEntry.role}, state=${readerEntry.state}');
@@ -592,7 +605,8 @@ class IrmaContext {
         } else if (storedState == null) {
           // No request yet - record requester
           print('[DEBUG IRMA $agentId] handleReadRequest: created reader, recording requester=$requester');
-          vp.updateState(readerKey, requester);
+          readerEntry.state = requester;  // Update entry directly (same object in V_p)
+          vp.updateState(readerEntry.key, requester);
         } else {
           print('[DEBUG IRMA $agentId] handleReadRequest: created reader, already has requester=$storedState, ignoring');
         }
@@ -601,8 +615,8 @@ class IrmaContext {
     }
     
     // Check writer entry (direct communication case per spec)
-    final writerKey = VarKey(varId, false);
-    final writerEntry = vp.lookup(writerKey);
+    // Use findByCreatorLocalId for consistency with reader lookup
+    final writerEntry = vp.findByCreatorLocalId(agentId, varId, isReader: false);
     
     if (writerEntry != null && writerEntry.role == VariableRole.createdWriter) {
       print('[DEBUG IRMA $agentId] handleReadRequest: found writer entry, state=${writerEntry.state}');
@@ -622,7 +636,8 @@ class IrmaContext {
       } else {
         // Not yet bound - record requester
         print('[DEBUG IRMA $agentId] handleReadRequest: writer not bound, recording requester=$requester');
-        vp.updateState(writerKey, requester);
+        writerEntry.state = requester;  // Update entry directly
+        vp.updateState(writerEntry.key, requester);
       }
       return;
     }
@@ -648,6 +663,31 @@ class IrmaContext {
   // =========================================================================
   // Private Helpers
   // =========================================================================
+  
+  /// Activate suspensions from a VariableEntry ("virtual writer")
+  /// 
+  /// Walks the suspension list in the entry, activates armed records,
+  /// and returns GoalRefs for reactivation.
+  /// 
+  /// Per irmaGLP spec Section 3.1.2: For imported readers, V_p serves as
+  /// the virtual writer that holds suspensions.
+  List<GoalRef> _activateSuspensionsFromEntry(VariableEntry entry) {
+    final activations = <GoalRef>[];
+    var current = entry.suspensions;
+    
+    while (current != null) {
+      if (current.armed) {
+        activations.add(GoalRef(current.goalId!, current.resumePC));
+        current.record.disarm();
+      }
+      current = current.next;
+    }
+    
+    // Clear the suspension list
+    entry.suspensions = null;
+    
+    return activations;
+  }
   
   Set<int> _extractVariables(Term term) {
     final result = <int>{};
