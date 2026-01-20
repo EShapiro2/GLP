@@ -2,7 +2,7 @@
 
 ## 🔴 CRITICAL - START OF EVERY CONVERSATION
 1. **READ CLAUDE.md** - Always read this file first (thoroughly)
-2. **READ DEVELOPMENT DISCIPLINE** - Read `docs/development-discipline.md` for TDD/BDD standards
+2. **READ DEVELOPMENT DISCIPLINE** - Read `docs/DISCIPLINE.md` for TDD/BDD standards
 3. **ACKNOWLEDGE** - State that you have read both documents thoroughly and are ready for discussion
 4. **DO NOTHING ELSE** - Wait for user direction before any other action
 5. **INSTALL DART** - Only when needed: Check `/home/user/dart-sdk/bin/dart --version`. If missing, see "Dart Installation" section below
@@ -209,7 +209,7 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 - **Implementation Language**: Dart
 - **Current State**: 101 REPL tests + 25 unit tests passing (as of Dec 2025)
 - **User Expertise**: Deep understanding of GLP semantics but does not write code
-- **Working Directory**: `/Users/udi/GLP/` (user's Mac)
+- **Working Directory**: `/Users/udi/Grassroots/GLP/` (user's Mac)
 
 ## Working Modes
 
@@ -313,9 +313,9 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 | Environment | Path | Used by |
 |-------------|------|---------|
 | Claude Code (Linux) | `/home/user/GLP` | Claude running commands |
-| User's Mac | `/Users/udi/GLP` | User running commands |
+| User's Mac | `/Users/udi/Grassroots/GLP` | User running commands |
 
-**When giving instructions TO THE USER (merge commands, etc.), ALWAYS use Mac paths (`/Users/udi/GLP`).**
+**When giving instructions TO THE USER (merge commands, etc.), ALWAYS use Mac paths (`/Users/udi/Grassroots/GLP`).**
 
 ---
 
@@ -373,7 +373,7 @@ bash /home/user/GLP/test/run_book_tests.sh
 ## Directory Structure
 
 ```
-/Users/udi/GLP/
+/Users/udi/Grassroots/GLP/
 ├── CLAUDE.md                    # ← This file - ESSENTIAL for Claude Code
 ├── README.md                    # ← Project readme
 │
@@ -587,12 +587,12 @@ This protocol is required when debugging GLP programs. Do not skip steps. Stop a
 
 ### Secondary References (Consult as Needed)
 
-4. **WAM Paper**: `/Users/udi/GLP/docs/wam.pdf` - Warren's Abstract Machine
+4. **WAM Paper**: `/Users/udi/Grassroots/GLP/docs/wam.pdf` - Warren's Abstract Machine
 5. **GLP Spec**: `/tmp/GLP-2025/main GLP 2025.tex` - Formal GLP specification (paper source)
 6. **FCP Implementation**: 
    - **Local Source**: `/Users/udi/Dropbox/Concurrent Prolog/FCP/Savannah`
    - **GitHub Mirror**: https://github.com/EShapiro2/FCP
-   - **Paper**: `/Users/udi/GLP/docs/1-s2.0-0743106689900113-main.pdf`
+   - **Paper**: `/Users/udi/Grassroots/GLP/docs/1-s2.0-0743106689900113-main.pdf`
 
 ## Critical Implementation Details
 
@@ -630,11 +630,11 @@ This protocol is required when debugging GLP programs. Do not skip steps. Stop a
 
 ### dump_bytecode.dart - Bytecode Disassembler ✅
 
-**Location:** `/Users/udi/GLP/udi/dump_bytecode.dart`
+**Location:** `/Users/udi/Grassroots/GLP/udi/dump_bytecode.dart`
 
 **Usage:**
 ```bash
-cd /Users/udi/GLP/udi
+cd /Users/udi/Grassroots/GLP/udi
 dart dump_bytecode.dart glp/<filename>.glp
 ```
 
@@ -748,7 +748,7 @@ git push -u origin claude/<your-session-branch>
 Option 2 (Recommended) - User merges previous work to main first:
 ```bash
 # User runs on their Mac:
-cd /Users/udi/GLP
+cd /Users/udi/Grassroots/GLP
 git checkout main
 git pull origin main
 git fetch origin claude/<previous-session-branch>
@@ -773,7 +773,7 @@ Then new Claude session pulls from main and starts fresh.
 When a task is completed, committed, and pushed, ALWAYS provide the user with merge instructions so they can integrate the work into main. Use the exact format below with the actual branch name:
 
 ```bash
-cd /Users/udi/GLP
+cd /Users/udi/Grassroots/GLP
 git checkout main
 git pull origin main
 git fetch origin claude/<ACTUAL-BRANCH-NAME>
@@ -788,21 +788,21 @@ git push origin main
 
 **🔴 MANDATORY FORMAT for merge instructions - USE THIS EXACTLY:**
 ```bash
-cd /Users/udi/GLP
+cd /Users/udi/Grassroots/GLP
 git checkout main
 git pull origin main
 git fetch origin claude/<ACTUAL-BRANCH-NAME>
 git merge -m "Merge claude/<ACTUAL-BRANCH-NAME> into main" origin/claude/<ACTUAL-BRANCH-NAME>
 git push origin main
 ```
-- **ALWAYS include `cd /Users/udi/GLP`** - user may be in wrong directory
+- **ALWAYS include `cd /Users/udi/Grassroots/GLP`** - user may be in wrong directory
 - **ALWAYS substitute the actual branch name** - never use placeholders like `<branch-name>`
 - **ALWAYS include the fetch step** - do NOT skip it
 
 **When user asks to "merge with main" or "push to main":**
 Output the EXACT commands with actual values (no placeholders):
 ```bash
-cd /Users/udi/GLP
+cd /Users/udi/Grassroots/GLP
 git checkout main
 git pull origin main
 git fetch origin claude/xxx-actual-session-id
