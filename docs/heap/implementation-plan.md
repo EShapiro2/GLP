@@ -1,11 +1,11 @@
 # Pointer Architecture Implementation Plan
 
-**Version**: 1.1
+**Version**: 1.2
 **Date**: 2026-01-20
-**Status**: Phase 5 IN PROGRESS (runner.dart ~30% complete)
-**Spec**: `docs/heap-pointer-architecture-spec.md` v3.0
-**Branch**: `pointer-architecture` (merged to `claude/pointer-architecture-migration-zFED8`)
-**Test Suite**: `glp_runtime/test/heap/*.dart` (7 files, 78/83 passing - 5 fail due to runner.dart)
+**Status**: Phase 5 ~90% complete (198/223 REPL tests passing)
+**Spec**: `docs/heap/heap-pointer-architecture-spec.md` v3.0
+**Branch**: `claude/pointer-architecture-migration-zFED8`
+**Test Suite**: REPL tests primary (198/223 passing), heap unit tests secondary
 
 ---
 
@@ -23,7 +23,7 @@ This document describes the implementation plan for the pointer-based heap archi
 | Phase 2 | ✅ DONE | All binding/suspension methods implemented |
 | Phase 3 | ✅ DONE | derefAddr follows pointers correctly |
 | Phase 4 | ✅ DONE | Compatibility methods updated |
-| Phase 5 | 🔄 IN PROGRESS | runner.dart ~30%, others done |
+| Phase 5 | 🔄 ~90% | 198/223 REPL tests passing, 25 failing |
 | Phase 6 | ⏳ PENDING | Path compression (optional) |
 | Phase 7 | ⏳ PENDING | Final verification |
 
@@ -34,8 +34,15 @@ This document describes the implementation plan for the pointer-based heap archi
 - ✅ `lib/runtime/body_kernels.dart`
 - ✅ `lib/runtime/module_runtime.dart`
 - ✅ `lib/compiler/codegen.dart`
-- 🔄 `lib/bytecode/runner.dart` - ~30% complete
+- ✅ `lib/bytecode/runner.dart` - migrated, minor issues remain
+- ✅ `bin/glp_repl.dart` - display code migrated
+- ✅ `lib/runtime/system_predicates_impl.dart` - fully migrated
 - ⏸️ `lib/multiagent/irma_context.dart` - DEFERRED (focus on single-isolate first)
+- ⏸️ `lib/multiagent/payload_serializer.dart` - DEFERRED
+
+### Remaining Issues (25 failing tests):
+- Investigation needed for remaining test failures
+- Likely related to suspension set handling (Si/U addresses)
 
 ---
 
@@ -273,3 +280,4 @@ cd /Users/udi/Grassroots/GLP && bash test/full_run_repl_tests.sh > /private/tmp/
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-01-20 | Claude | Initial plan |
+| 1.2 | 2026-01-20 | Claude | Updated status: 198/223 REPL tests, added migrated files |
