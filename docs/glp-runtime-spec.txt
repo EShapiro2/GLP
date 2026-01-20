@@ -1,6 +1,8 @@
-# GLP Runtime System Specification for Dart Implementation v2.18
+# GLP Runtime System Specification for Dart Implementation v2.19
 
 ## Version History
+
+**v2.19 (January 2026)**: Refactored to reference `docs/heap/heap-pointer-architecture-spec.md` for heap design. Removed duplicated heap content to maintain single source of truth. The pointer architecture reverses the pointer direction: readers point TO writers (not vice versa), and suspensions are stored on writer cells.
 
 **v2.18 (January 2026)**: Extended heap representation for multiagent GLP. Reader cells can now point to V_p entries (VariableEntry) for imported readers, not just local writer cells. Dereferencing extended to handle V_p entry targets. Added "Imported Variables" subsection under Heap Storage.
 
@@ -56,7 +58,7 @@ The scheduler manages goals using Dart's event loop with two-level fairness:
 
 **System-level fairness**: To prevent GLP computations from starving the event queue (timers, I/O, UI), the runtime implements bounded tail recursion. Each goal has a tail-recursion budget counter that decrements on each `requeue` operation. When the counter reaches zero, the goal is scheduled via `Timer.run()` instead of `scheduleMicrotask()`, yielding to the event queue before continuing. This prevents compute-intensive tail-recursive goals from monopolizing the microtask queue.
 
-Suspended goals are stored in suspension lists within reader cells, with each entry containing the suspended goal's state and its resumption address. Failed goals are retained for debugging and error reporting but removed from active scheduling. The scheduler uses Dart's `scheduleMicrotask()` for goal activation when the tail-recursion budget is positive, and `Timer.run()` when yielding is required.
+Suspended goals are stored in suspension lists within writer cells, with each entry containing the suspended goal's state and its resumption address. Failed goals are retained for debugging and error reporting but removed from active scheduling. The scheduler uses Dart's `scheduleMicrotask()` for goal activation when the tail-recursion budget is positive, and `Timer.run()` when yielding is required.
 
 #### Memory Management
 The runtime leverages Dart's garbage collector. The heap is implemented as a Dart List of tagged cells, growing dynamically as needed. Stack frames are Dart objects that participate in standard garbage collection. This design simplifies the runtime while maintaining efficient execution.
@@ -94,187 +96,29 @@ class RunnerContext {
 
 **Note**: Goals do not store bytecode - the `BytecodeRunner` holds the `BytecodeProgram`, and each goal references it via `runtime.setGoalProgram(goalId, programKey)`.
 
-#### Heap Storage (Two-Cell Design)
+#### Heap Storage
 
-Each logical variable consists of two heap cells at consecutive addresses.
+See **`docs/heap/heap-pointer-architecture-spec.md`** for the complete heap specification, including:
 
-**Cell Structure:**
+- Cell structure and tags (Section 2)
+- Variable allocation (Section 3)
+- Dereferencing algorithm (Section 4)
+- Binding operations (Section 5)
+- Suspension management (Section 6)
+- Finding paired cells (Section 7)
 
-```dart
-enum CellTag {
-  WrtTag,    // Writer cell
-  RoTag,     // Reader cell  
-  ValueTag,  // Bound to value
-}
+**Key Design Points** (see heap spec for details):
 
-class HeapCell {
-  dynamic content;  // Pointer | SuspensionListNode | Term
-  CellTag tag;
-}
-```
-
-**Variable Allocation:**
-
-```dart
-(int, int) allocateVariable() {
-  final writerAddr = HP++;
-  final readerAddr = HP++;
-
-  // Writer cell points to reader
-  cells.add(HeapCell(Pointer(readerAddr), CellTag.WrtTag));
-
-  // Reader cell is initially unbound
-  cells.add(HeapCell(null, CellTag.RoTag));
-
-  return (writerAddr, readerAddr);
-}
-```
-
-The function returns two distinct addresses. There is no separate variable ID namespace; the address itself identifies the cell.
-
-**Variable References:**
-
-A variable reference is simply an address:
-
-```dart
-class VarRef extends Term {
-  final int addr;
-  VarRef(this.addr);
-}
-```
-
-To determine whether an address refers to a writer or reader, examine the cell's tag:
-
-```dart
-bool isWriter(int addr) => cells[addr].tag == CellTag.WrtTag;
-bool isReader(int addr) => cells[addr].tag == CellTag.RoTag;
-```
-
-**Cell Lifecycle:**
-
-The writer cell initially contains a pointer to its paired reader. When bound, both cells are updated to contain the bound value and tagged `ValueTag`.
-
-The reader cell initially contains null. When goals suspend on the reader, it contains the head of a suspension list. When the writer binds, the suspension list is processed and the cell content is replaced with the bound value.
-
-**Key Operations:**
-
-- `allocateVariable()`: Creates both cells, returns `(writerAddr, readerAddr)`
-- `bindWriter(writerAddr, value)`: Dereferences value if needed, updates both cells, processes reader's suspension list
-- `suspendOnReader(readerAddr, suspension)`: Prepends suspension record to reader's list
-
-**Critical Constraint:**
-
-The reader cell must NOT point back to the writer. This would create an immediate cycle:
-- Writer at addr=10 → Reader at addr=11
-- Reader at addr=11 → Writer at addr=10  ← CYCLE!
-
-Dereferencing would fail immediately with cycle detection. Instead:
-- Writer at addr=10 → Reader at addr=11
-- Reader at addr=11 → null (unbound)
-
-This allows proper dereferencing and suspension list storage.
+- Each logical variable consists of two heap cells at consecutive addresses (writer at N, reader at N+1)
+- **Reader cells point TO writer cells** (not vice versa)
+- Writer cells contain: `null` (unbound), `SuspensionListNode`, or `Pointer` (bound to another variable)
+- Suspensions are stored on **writer cells**, not reader cells
+- `VarRef` contains a single `addr` field; the cell tag determines reader/writer role
+- `allocateVariable()` returns `(writerAddr, readerAddr)` tuple
 
 **Imported Variables (Multiagent Extension):**
 
-In multiagent GLP, a reader may be imported from another agent. The paired writer exists at the remote agent's heap, not locally. For imported readers:
-
-- **Single cell allocation**: Only a reader cell is allocated, not a writer/reader pair
-- **Content**: The reader cell's content is the V_p entry (VariableEntry) representing the remote writer
-- **No local writer**: There is no local writer cell because the writer is remote
-
-Similarly, for imported writers:
-
-- **Single cell allocation**: Only a writer cell is allocated
-- **Content**: The writer cell's content is the V_p entry representing this variable
-- **Binding callback**: When bound, the onBind callback detects the V_p entry and queues an assignment message to the creator
-
-The V_p entry serves as the representation of the remote variable. It tracks:
-
-- `creator`: The agent who created the variable
-- `creatorLocalId`: The creator's heap address for this variable
-- `state`: Request state (before assignment) or received value (after assignment)
-
-**Dereferencing:**
-
-Dereferencing operates on heap addresses directly:
-
-```dart
-Term derefAddr(int addr) {
-  var current = addr;
-  Set<int> visited = {};
-
-  while (true) {
-    if (visited.contains(current)) {
-      throw StateError('Cycle detected');
-    }
-    visited.add(current);
-
-    final cell = cells[current];
-
-    // Imported reader: content is V_p entry
-    if (cell.tag == CellTag.RoTag && cell.content is VariableEntry) {
-      final entry = cell.content as VariableEntry;
-      if (entry.state is Term) {
-        return entry.state as Term;  // Value received from remote
-      }
-      return entry;  // Unbound imported reader - return V_p entry
-    }
-
-    // Imported writer: content is V_p entry
-    if (cell.tag == CellTag.WrtTag && cell.content is VariableEntry) {
-      final entry = cell.content as VariableEntry;
-      if (entry.state is Term) {
-        return entry.state as Term;  // Bound value
-      }
-      return entry;  // Unbound imported writer - return V_p entry
-    }
-
-    if (cell.tag == CellTag.ValueTag) {
-      final content = cell.content;
-      if (content is VarRef) {
-        current = content.addr;
-        continue;
-      }
-      return content as Term;
-    }
-
-    if (cell.content is Pointer && cell.tag == CellTag.WrtTag) {
-      // Unbound local writer → return writer reference
-      return VarRef(current);
-    }
-
-    if (cell.content is Pointer) {
-      current = (cell.content as Pointer).targetAddr;
-      continue;
-    }
-
-    // Unbound local reader
-    return VarRef(current);
-  }
-}
-```
-
-**Key Properties:**
-- **Read-only**: Dereferencing never modifies heap cells or compresses paths
-- **Transparent**: Opcode handlers receive fully dereferenced values automatically
-- **Chain-preserving**: Variable chains remain in heap as created
-- **Suspension-safe**: Dereferencing stops at unbound readers, allowing proper suspension detection
-
-**Dereference Results:**
-
-Dereferencing returns one of:
-
-| Result Type | Meaning |
-|-------------|----------|
-| `Term` (ground) | Variable is bound to this value |
-| `VarRef` | Unbound local variable at this address |
-| `VariableEntry` | Unbound imported variable; entry contains routing info |
-
-When the result is a `VariableEntry`, the caller can determine:
-
-- It is an imported reader (if originally dereferencing a reader cell)
-- The creator agent and their local ID for routing messages
-- Whether a request has been sent (entry.state == creator) or not (entry.state == null)
+For multiagent GLP, imported readers/writers have no local paired cell. Instead, the cell content is a `VariableEntry` (V_p entry) representing the remote variable. See heap spec Section 10 for details.
 
 ### Circular Term Handling
 
@@ -331,56 +175,15 @@ class Environment {
 
 #### Suspension Lists
 
-Suspension tracking is stored directly in reader cells. There is no separate suspension table data structure.
+See **`docs/heap/heap-pointer-architecture-spec.md` Section 6** for suspension mechanics.
 
-**Data Structure**:
-```dart
-class SuspensionRecord {
-  int? goalId;        // Process ID - can be nulled to prevent re-activation
-  int resumePC;       // Where to resume (kappa - procedure entry point)
-  SuspensionRecord? next;  // Next record in this variable's list
+**Key Points** (see heap spec for details):
 
-  void disarm() {
-    goalId = null;    // Prevent future activation
-  }
-
-  bool get armed => goalId != null;
-}
-```
-
-**Key Properties**:
-- The **same record object** appears in multiple variables' suspension lists when a goal suspends on multiple readers
-- When goal suspends on readers {R1, R2, R3}:
-  - ONE SuspensionRecord is created
-  - That same record is prepended to R1's list, R2's list, R3's list
-- When ANY variable binds:
-  - Walk its suspension list
-  - For each armed record: activate goal, then disarm
-  - Other variables' lists still have the record, but goalId is now null (disarmed)
-
-**Storage Location**:
-Suspension records are stored directly in reader cell's content field. Reader cell progression:
-1. Initially: `null` (unbound)
-2. First suspension: `SuspensionRecord(goal1, kappa, null)`
-3. More suspensions: `SuspensionRecord(goal2, kappa, next: previousRecord)`
-4. Writer binds: Content saved, replaced with bound value, saved list walked to activate goals
-
-**Checking for suspensions**:
-```dart
-// To check if reader R has suspensions:
-final content = cells[readerAddr].content;
-if (content is SuspensionRecord) {
-  // Has suspensions - walk the list
-  SuspensionRecord? current = content;
-  while (current != null) {
-    if (current.armed) {
-      activate(current.goalId!, current.resumePC);
-      current.disarm();
-    }
-    current = current.next;
-  }
-}
-```
+- Suspension records are stored on **writer cells** (not reader cells)
+- When suspending on a reader, follow its pointer to the writer and add suspension there
+- The **same record object** appears in multiple suspension lists when a goal suspends on multiple variables
+- **Disarm mechanism**: When any variable binds, walk its suspension list, activate armed goals, then disarm (set goalId = null)
+- Shared records ensure single-shot activation: if a goal suspended on multiple variables and one binds, the disarmed record prevents duplicate reactivation
 
 **SO/SRSW Enforcement**: Runtime assumes compiler-verified SRSW syntactic restriction (which preserves SO invariant). Runtime must fail on writer-to-writer term matching attempts (WxW). Circular terms may form through cross-goal communication; implementations must handle them gracefully.
 
@@ -417,91 +220,49 @@ Each active goal executes in a microtask that runs until it suspends, fails, or 
 **No backtracking**: GLP uses committed-choice semantics - once a clause commits via `commit`, there is no going back. Failed clauses simply try the next clause via `clause_next`. No choice points or trail stack needed.
 
 #### Suspension and Reactivation
-Suspension occurs when `no_more_clauses` instruction executes with non-empty U set:
+
+See **`docs/heap/heap-pointer-architecture-spec.md` Section 6** for full details.
 
 **Suspension Process** (`no_more_clauses` with U ≠ ∅):
-1. Runtime calls `suspendGoal(goalId, kappa, readers)` with U set
+1. Runtime calls `suspendGoal(goalId, kappa, U)` with the suspension set
 2. Create ONE `SuspensionRecord(goalId, kappa)`
-3. For each reader address in U, prepend the same record to that reader's suspension list
+3. For each address in U: if reader, follow pointer to writer; add suspension to writer's list
 4. Goal returns `RunResult.suspended` and is removed from GQ
 
 **Reactivation Process** (during `commit` when writer binds):
 1. `bindWriter(writerAddr, value)` binds writer
-2. Get paired reader address (writerAddr + 1)
-3. Save and clear reader's suspension list
-4. Replace reader content with bound value
-5. Walk saved list, for each armed record:
+2. Save and clear writer's suspension list
+3. Update cell content/tag per binding type
+4. Walk saved list, for each armed record:
    - Enqueue `GoalRef(goalId, kappa)` to GQ
    - Disarm the record (set goalId = null)
-6. Reactivated goal resumes at PC = kappa (first clause), NOT at suspension point
+5. Reactivated goal resumes at PC = kappa (first clause), NOT at suspension point
 
-**Single-shot mechanism**: The shared record with `armed` flag prevents duplicate reactivation if a goal was suspended on multiple readers and more than one binds.
+**Single-shot mechanism**: The shared record with `armed` flag prevents duplicate reactivation if a goal was suspended on multiple variables and more than one binds.
 
 #### Suspension Processing at Bind Time
 
-When `commit` applies σ̂w and binds writers, there is an important distinction between bind-time behavior and suspension-time behavior:
-
-**At bind time (commit):** Always process the reader at `writerAddr + 1`. This is the allocation pair — the reader that was created together with this writer. No chain-following occurs at bind time. The address arithmetic `readerAddr = writerAddr + 1` is always correct here.
-
-**At suspension time:** Follow variable chains via `derefAddr()` to find the final unbound reader, then add suspension records there. This is described in the "Variable Chain Suspension" section below.
-
 **Suspension processing depends on what the writer is bound to:**
 
-1. **Bound to ground value:** Activate all armed suspension records in the paired reader's list. Walk the list, enqueue each armed goal, then disarm the record. Goals wake and retry from their procedure entry point (kappa).
+1. **Bound to ground value:** Activate all armed suspension records in the writer's list. Walk the list, enqueue each armed goal, then disarm the record. Goals wake and retry from their procedure entry point (kappa).
 
-2. **Bound to another variable (VarRef):** Forward suspension records from the paired reader to the target variable's reader cell. Do NOT activate goals yet. This preserves wake-and-retry semantics: goals that were waiting for this variable will now wait for the target variable instead, and will wake when that target is eventually bound to ground.
-
-**Forwarding implementation:**
-
-```dart
-void forwardSuspensions(SuspensionListNode? list, int targetReaderAddr) {
-  var current = list;
-  while (current != null) {
-    if (current.armed) {
-      // Create new node sharing the same SuspensionRecord
-      // Sharing ensures disarming one disarms all copies
-      final newNode = SuspensionListNode(current.record);
-      // Prepend to target's suspension list
-      final targetContent = cells[targetReaderAddr].content;
-      newNode.next = targetContent is SuspensionListNode ? targetContent : null;
-      cells[targetReaderAddr].content = newNode;
-    }
-    current = current.next;
-  }
-}
-```
-
-**Key insight:** The distinction between bind-time arithmetic (`writerAddr + 1`) and suspension-time chain-following (`derefAddr()`) is critical. Bind-time processes the allocation pair; suspension-time finds where to wait. These are different questions with different answers.
+2. **Bound to another variable (via reader):** Forward suspension records from this writer to the target variable's writer. Do NOT activate goals yet. This preserves wake-and-retry semantics: goals that were waiting for this variable will now wait for the target variable instead, and will wake when that target is eventually bound to ground. See heap spec Section 6.4 for forwarding details.
 
 #### Variable Chain Suspension (Wake-and-Retry)
 
-When a writer is bound to another unbound variable (e.g., W at addr 10 → R at addr 15 where addr 15 is unbound), HEAD instruction suspension logic must handle this case correctly.
+When a writer is bound to another unbound variable, HEAD instruction suspension logic must follow chains to find the final unbound variable.
 
 **The Problem**:
 ```
-Writer at 10 → Reader at 15 (unbound)
-Goal G suspends on reader at 11 (paired with writer at 10)
-Later: Writer at 14 binds (which is paired with reader at 15)
+Variable X: Writer at 10, Reader at 11
+Variable Y: Writer at 14, Reader at 15
+Writer 10 is bound to Reader 15 (so X and Y are unified but Y is unbound)
 ```
 
-If G suspended on reader 11, it will never wake because reader 15 (not reader 11) gets bound.
+If Goal G encounters X during HEAD and naively suspends on writer 10, it will never wake—writer 10 is already bound! The suspension should be on writer 14 (Y's writer), which is the ultimate unbound variable.
 
 **The Solution - Suspend on Final Variable**:
-When HEAD instructions encounter an unbound reader, they must follow variable chains to find the ultimate unbound variable:
-
-```dart
-/// Find the final unbound variable in a chain
-int _finalUnboundVar(int readerAddr) {
-  final derefResult = derefAddr(readerAddr);
-
-  if (derefResult is VarRef) {
-    // Still unbound - return the address we ended at
-    return derefResult.addr;
-  }
-
-  return readerAddr;
-}
-```
+When HEAD instructions encounter an unbound variable, follow chains via `derefAddr()` to find the ultimate unbound writer, then suspend there. The `derefAddr()` algorithm returns `VarRef(writerAddr)` for unbound variables, and the suspension is added to that writer's suspension list.
 
 **Wake-and-Retry Semantics**:
 - Goals wake when ANY binding occurs (even variable-to-variable bindings)
@@ -509,7 +270,7 @@ int _finalUnboundVar(int readerAddr) {
 - This is simpler than transitive chain tracking
 
 **Key Insight**:
-By suspending on the FINAL variable in a chain, we ensure goals wake when that ultimate variable gets bound. The wake-and-retry mechanism handles all other cases - if a goal wakes but still can't proceed, it simply suspends again.
+By suspending on the FINAL unbound writer in a chain, we ensure goals wake when that ultimate variable gets bound. The wake-and-retry mechanism handles all other cases—if a goal wakes but still can't proceed, it simply suspends again.
 
 ## Instruction Implementation
 
@@ -625,7 +386,7 @@ The `proceed` instruction completes the current procedure and returns control to
 
 **`commit`**: Commit to current clause
 - Apply σ̂w to heap atomically (bind all writers)
-- For each newly bound writer, process paired reader's suspension list to reactivate suspended goals
+- For each newly bound writer, process its suspension list to reactivate suspended goals
 - Clear σ̂w and Si
 - Set `inBody = true` (enable heap mutations)
 
@@ -680,7 +441,7 @@ The runtime provides comprehensive debugging facilities. Execution tracing shows
 **Instruction dispatch**: O(1) via Dart's type-based dispatch (if-else chain on instruction types)
 **Term Matching**: O(n) in structure size (linear traversal, no deep recursion needed)
 **Suspension operations**: O(1) for prepending to suspension list
-**Reactivation**: O(k) for k suspended goals on a reader (linear scan of suspension list)
+**Reactivation**: O(k) for k suspended goals on a writer (linear scan of suspension list)
 **Armed check**: O(1) for single-shot armed flag check
 
 Note: Current implementation uses if-else dispatch, not jump tables. Dart's branch prediction makes this efficient for moderate instruction counts.
@@ -688,7 +449,7 @@ Note: Current implementation uses if-else dispatch, not jump tables. Dart's bran
 ### Space Complexity
 **Per goal**: O(1) base overhead (`RunnerContext`) plus O(v) for v clause variables in `clauseVars`
 **Heap**: O(t) for t total terms created (cells)
-**Suspensions**: O(s) for s suspension records across all readers
+**Suspensions**: O(s) for s suspension records across all writers
 **No trail stack**: Committed-choice semantics eliminate backtracking, so no trail needed
 
 ## Implementation Roadmap
