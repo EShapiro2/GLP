@@ -278,9 +278,14 @@ class BytecodeRunner {
 
     if (derefResult is VarRef) {
       // derefAddr returned the final unbound variable in the chain
-      final isReader = cx.rt.heap.isReader(derefResult.addr);
-      if (cx.debugOutput) print('[DEBUG _finalUnboundVar] Suspending on final var: ${derefResult.addr} isReader=$isReader');
-      return derefResult.addr;
+      final finalAddr = derefResult.addr;
+      final isWriter = cx.rt.heap.isWriter(finalAddr);
+
+      // Per GLP semantics: goals suspend on READERS, not writers
+      // If the final unbound var is a writer, return its paired reader
+      final readerAddr = isWriter ? finalAddr + 1 : finalAddr;
+      if (cx.debugOutput) print('[DEBUG _finalUnboundVar] Final var: $finalAddr (${isWriter ? "writer" : "reader"}), returning reader: $readerAddr');
+      return readerAddr;
     }
 
     // Writer is bound to a ground term, reader is effectively bound

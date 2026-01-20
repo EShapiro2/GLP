@@ -119,21 +119,17 @@ class HeapFCP {
   // Pointer Navigation (Section 7 of spec)
   // ==========================================================================
 
-  /// Get writer address from any address
+  /// Get writer address from reader address by following pointer
   ///
-  /// Per spec Section 7.1: If reader, follow the pointer. If writer, return as-is.
-  /// This method is robust to both reader and writer addresses.
-  int writerForReader(int addr) {
-    final cell = cells[addr];
-    if (cell.tag == CellTag.WrtTag || cell.tag == CellTag.ValueTag) {
-      // Already a writer or value cell - return as-is
-      return addr;
-    }
+  /// Per spec Section 7.1: Follow the reader's pointer to get the writer.
+  /// PRECONDITION: addr must be a reader address (RoTag cell)
+  int writerForReader(int readerAddr) {
+    final cell = cells[readerAddr];
     if (cell.tag != CellTag.RoTag) {
-      throw StateError('writerForReader called on unexpected cell type at $addr (tag: ${cell.tag})');
+      throw StateError('writerForReader called on non-reader cell at $readerAddr (tag: ${cell.tag})');
     }
     if (cell.content is! Pointer) {
-      throw StateError('Reader cell at $addr has no pointer (content: ${cell.content})');
+      throw StateError('Reader cell at $readerAddr has no pointer (content: ${cell.content})');
     }
     return (cell.content as Pointer).targetAddr;
   }
