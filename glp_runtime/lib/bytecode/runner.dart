@@ -1868,18 +1868,12 @@ class BytecodeRunner {
 
         if (!isReaderMode) {
           // GetWriterValue logic: Unify argument with clause WRITER variable
-          // Check if storedValue is a reader ID
-          if (storedValue is int) {
-            final wid = cx.rt.heap.writerIdForReader(storedValue);
-            if (wid != null) {
-              storedValue = wid;
-            }
-          }
+          // storedValue is already the writer addr (or term)
 
-          if (arg is VarRef && !arg.isReader) {
-            final argBound = cx.rt.heap.isWriterBound(arg.varId);
+          if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
+            final argBound = cx.rt.heap.isWriterBound(arg.addr);
             if (argBound) {
-              final argValue = cx.rt.heap.valueOfWriter(arg.varId);
+              final argValue = cx.rt.heap.valueOfWriter(arg.addr);
               if (storedValue is int) {
                 final storedBound = cx.rt.heap.isWriterBound(storedValue);
                 if (storedBound) {
@@ -1919,19 +1913,19 @@ class BytecodeRunner {
               if (storedValue is int) {
                 final freshVarBinding = cx.sigmaHat[storedValue];
                 if (freshVarBinding != null) {
-                  cx.sigmaHat[arg.varId] = freshVarBinding;
-                } else if (arg.varId != storedValue) {
+                  cx.sigmaHat[arg.addr] = freshVarBinding;
+                } else if (arg.addr != storedValue) {
                   _softFailToNextClause(cx, pc);
                   pc = _findNextClauseTry(pc);
                   continue;
                 }
               } else if (storedValue is Term) {
-                cx.sigmaHat[arg.varId] = storedValue;
+                cx.sigmaHat[arg.addr] = storedValue;
               }
             }
-          } else if (arg is VarRef && arg.isReader) {
-            final wid = cx.rt.heap.writerIdForReader(arg.varId);
-            if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+          } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
+            final wid = cx.rt.heap.writerForReader(arg.addr);
+            if (cx.rt.heap.isWriterBound(wid)) {
               final readerValue = cx.rt.heap.valueOfWriter(wid);
               if (storedValue is int) {
                 cx.sigmaHat[storedValue] = readerValue;
@@ -1940,17 +1934,13 @@ class BytecodeRunner {
                 pc = _findNextClauseTry(pc);
                 continue;
               }
-            } else if (wid != null) {
+            } else {
               // Reader is unbound but has an underlying writer
               // Alias storedValue to wid (same fix as GetVariable for writer-to-reader case)
               if (storedValue is int) {
-                cx.sigmaHat[storedValue] = VarRef(wid, isReader: true);
+                cx.sigmaHat[storedValue] = VarRef(wid + 1);  // reader addr
               }
               if (cx.debugOutput) print('[DEBUG] PC $pc: GetValue SUCCESS (aliased to W$wid)');
-            } else {
-              // No underlying writer - suspend
-              final suspendOnVar = _finalUnboundVar(cx, arg.varId);
-              pc = _suspendAndFail(cx, suspendOnVar, pc); continue;
             }
           } else if (arg is ConstTerm) {
             if (storedValue is int) {
