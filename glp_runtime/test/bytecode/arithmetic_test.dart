@@ -25,19 +25,19 @@ void main() {
       // Test that add/3 body kernel works when called directly
       final rt = GlpRuntime();
 
-      // Allocate variables for testing
-      final xId = rt.heap.allocateVariable();
-      final yId = rt.heap.allocateVariable();
-      final resultId = rt.heap.allocateVariable();
+      // Allocate variables for testing (returns (writerAddr, readerAddr) tuple)
+      final (xWriter, xReader) = rt.heap.allocateVariable();
+      final (yWriter, yReader) = rt.heap.allocateVariable();
+      final (resultWriter, resultReader) = rt.heap.allocateVariable();
 
       // Bind X and Y to numbers
-      rt.heap.bindVariableConst(xId, 5);
-      rt.heap.bindVariableConst(yId, 3);
+      rt.heap.bindVariableConst(xWriter, 5);
+      rt.heap.bindVariableConst(yWriter, 3);
 
-      // Call add kernel directly
-      final xRef = VarRef(xId, isReader: true);
-      final yRef = VarRef(yId, isReader: true);
-      final resultRef = VarRef(resultId, isReader: false);  // writer
+      // Call add kernel directly - readers for inputs, writer for output
+      final xRef = VarRef(xReader);
+      final yRef = VarRef(yReader);
+      final resultRef = VarRef(resultWriter);  // writer
 
       final kernel = rt.bodyKernels.lookup('_add', 3);
       expect(kernel, isNotNull, reason: '_add/3 kernel should be registered');
@@ -46,7 +46,7 @@ void main() {
       expect(result, equals(BodyKernelResult.success));
 
       // Check that result is bound to 8
-      final value = rt.heap.getValue(resultId);
+      final value = rt.heap.getValue(resultWriter);
       expect(value, isNotNull);
       expect(value, isA<ConstTerm>());
       expect((value as ConstTerm).value, equals(8));
@@ -55,86 +55,86 @@ void main() {
     test('sub/3 body kernel', () {
       final rt = GlpRuntime();
 
-      final xId = rt.heap.allocateVariable();
-      final yId = rt.heap.allocateVariable();
-      final resultId = rt.heap.allocateVariable();
+      final (xWriter, xReader) = rt.heap.allocateVariable();
+      final (yWriter, yReader) = rt.heap.allocateVariable();
+      final (resultWriter, _) = rt.heap.allocateVariable();
 
-      rt.heap.bindVariableConst(xId, 10);
-      rt.heap.bindVariableConst(yId, 4);
+      rt.heap.bindVariableConst(xWriter, 10);
+      rt.heap.bindVariableConst(yWriter, 4);
 
       final kernel = rt.bodyKernels.lookup('_sub', 3);
       expect(kernel, isNotNull);
 
       final result = kernel!(rt, [
-        VarRef(xId, isReader: true),
-        VarRef(yId, isReader: true),
-        VarRef(resultId, isReader: false),
+        VarRef(xReader),
+        VarRef(yReader),
+        VarRef(resultWriter),
       ]);
       expect(result, equals(BodyKernelResult.success));
 
-      final value = rt.heap.getValue(resultId);
+      final value = rt.heap.getValue(resultWriter);
       expect((value as ConstTerm).value, equals(6));
     });
 
     test('mul/3 body kernel', () {
       final rt = GlpRuntime();
 
-      final xId = rt.heap.allocateVariable();
-      final yId = rt.heap.allocateVariable();
-      final resultId = rt.heap.allocateVariable();
+      final (xWriter, xReader) = rt.heap.allocateVariable();
+      final (yWriter, yReader) = rt.heap.allocateVariable();
+      final (resultWriter, _) = rt.heap.allocateVariable();
 
-      rt.heap.bindVariableConst(xId, 7);
-      rt.heap.bindVariableConst(yId, 6);
+      rt.heap.bindVariableConst(xWriter, 7);
+      rt.heap.bindVariableConst(yWriter, 6);
 
       final kernel = rt.bodyKernels.lookup('_mul', 3);
       final result = kernel!(rt, [
-        VarRef(xId, isReader: true),
-        VarRef(yId, isReader: true),
-        VarRef(resultId, isReader: false),
+        VarRef(xReader),
+        VarRef(yReader),
+        VarRef(resultWriter),
       ]);
       expect(result, equals(BodyKernelResult.success));
 
-      final value = rt.heap.getValue(resultId);
+      final value = rt.heap.getValue(resultWriter);
       expect((value as ConstTerm).value, equals(42));
     });
 
     test('div/3 body kernel', () {
       final rt = GlpRuntime();
 
-      final xId = rt.heap.allocateVariable();
-      final yId = rt.heap.allocateVariable();
-      final resultId = rt.heap.allocateVariable();
+      final (xWriter, xReader) = rt.heap.allocateVariable();
+      final (yWriter, yReader) = rt.heap.allocateVariable();
+      final (resultWriter, _) = rt.heap.allocateVariable();
 
-      rt.heap.bindVariableConst(xId, 15);
-      rt.heap.bindVariableConst(yId, 4);
+      rt.heap.bindVariableConst(xWriter, 15);
+      rt.heap.bindVariableConst(yWriter, 4);
 
       final kernel = rt.bodyKernels.lookup('_div', 3);
       final result = kernel!(rt, [
-        VarRef(xId, isReader: true),
-        VarRef(yId, isReader: true),
-        VarRef(resultId, isReader: false),
+        VarRef(xReader),
+        VarRef(yReader),
+        VarRef(resultWriter),
       ]);
       expect(result, equals(BodyKernelResult.success));
 
-      final value = rt.heap.getValue(resultId);
+      final value = rt.heap.getValue(resultWriter);
       expect((value as ConstTerm).value, equals(3.75));
     });
 
     test('div/3 body kernel aborts on division by zero', () {
       final rt = GlpRuntime();
 
-      final xId = rt.heap.allocateVariable();
-      final yId = rt.heap.allocateVariable();
-      final resultId = rt.heap.allocateVariable();
+      final (xWriter, xReader) = rt.heap.allocateVariable();
+      final (yWriter, yReader) = rt.heap.allocateVariable();
+      final (resultWriter, _) = rt.heap.allocateVariable();
 
-      rt.heap.bindVariableConst(xId, 10);
-      rt.heap.bindVariableConst(yId, 0);
+      rt.heap.bindVariableConst(xWriter, 10);
+      rt.heap.bindVariableConst(yWriter, 0);
 
       final kernel = rt.bodyKernels.lookup('_div', 3);
       final result = kernel!(rt, [
-        VarRef(xId, isReader: true),
-        VarRef(yId, isReader: true),
-        VarRef(resultId, isReader: false),
+        VarRef(xReader),
+        VarRef(yReader),
+        VarRef(resultWriter),
       ]);
       expect(result, equals(BodyKernelResult.abort));
     });
@@ -142,38 +142,38 @@ void main() {
     test('neg/2 body kernel', () {
       final rt = GlpRuntime();
 
-      final xId = rt.heap.allocateVariable();
-      final resultId = rt.heap.allocateVariable();
+      final (xWriter, xReader) = rt.heap.allocateVariable();
+      final (resultWriter, _) = rt.heap.allocateVariable();
 
-      rt.heap.bindVariableConst(xId, 42);
+      rt.heap.bindVariableConst(xWriter, 42);
 
       final kernel = rt.bodyKernels.lookup('_neg', 2);
       final result = kernel!(rt, [
-        VarRef(xId, isReader: true),
-        VarRef(resultId, isReader: false),
+        VarRef(xReader),
+        VarRef(resultWriter),
       ]);
       expect(result, equals(BodyKernelResult.success));
 
-      final value = rt.heap.getValue(resultId);
+      final value = rt.heap.getValue(resultWriter);
       expect((value as ConstTerm).value, equals(-42));
     });
 
     test('sqrt_kernel/2 body kernel', () {
       final rt = GlpRuntime();
 
-      final xId = rt.heap.allocateVariable();
-      final resultId = rt.heap.allocateVariable();
+      final (xWriter, xReader) = rt.heap.allocateVariable();
+      final (resultWriter, _) = rt.heap.allocateVariable();
 
-      rt.heap.bindVariableConst(xId, 16);
+      rt.heap.bindVariableConst(xWriter, 16);
 
       final kernel = rt.bodyKernels.lookup('_sqrt', 2);
       final result = kernel!(rt, [
-        VarRef(xId, isReader: true),
-        VarRef(resultId, isReader: false),
+        VarRef(xReader),
+        VarRef(resultWriter),
       ]);
       expect(result, equals(BodyKernelResult.success));
 
-      final value = rt.heap.getValue(resultId);
+      final value = rt.heap.getValue(resultWriter);
       expect((value as ConstTerm).value, equals(4.0));
     });
 
@@ -281,8 +281,8 @@ void main() {
       final rt = GlpRuntime();
 
       // Allocate a variable for the result (Z)
-      final resultVarId = rt.heap.allocateVariable();
-      print('Allocated result variable: V$resultVarId');
+      final (resultWriter, resultReader) = rt.heap.allocateVariable();
+      print('Allocated result variable: W$resultWriter, R$resultReader');
 
       // Create runner and scheduler
       final runner = BytecodeRunner(mergedProg);
@@ -291,7 +291,7 @@ void main() {
       // Create environment with the result variable as argument
       // The query is compute_sum(Result?) where Result is our allocated variable
       final env = CallEnv(args: {
-        0: VarRef(resultVarId, isReader: true),  // Pass reader to head position Z?
+        0: VarRef(resultReader),  // Pass reader to head position Z?
       });
 
       // Set up goal
@@ -320,11 +320,11 @@ void main() {
       }
 
       // Check if the result variable is bound
-      final isBound = rt.heap.isWriterBound(resultVarId);
+      final isBound = rt.heap.isWriterBound(resultWriter);
       print('Result variable bound: $isBound');
 
       if (isBound) {
-        final value = rt.heap.getValue(resultVarId);
+        final value = rt.heap.getValue(resultWriter);
         print('Result value: $value');
 
         expect(value, isA<ConstTerm>());

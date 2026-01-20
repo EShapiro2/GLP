@@ -577,6 +577,24 @@ class Analyzer {
       }
     }
 
+    // wait_until/1 guard marks argument as ground (requires ground timestamp)
+    // wait_until(T?) succeeds only if T is a ground number (timestamp in ms)
+    if (guard.predicate == 'wait_until' && guard.args.length == 1) {
+      final arg = guard.args[0];
+      if (arg is VarTerm) {
+        varTable.markGrounded(arg.name);
+      }
+    }
+
+    // wait/1 guard marks argument as ground (requires ground duration)
+    // wait(D?) succeeds only if D is a ground number (duration in ms)
+    if (guard.predicate == 'wait' && guard.args.length == 1) {
+      final arg = guard.args[0];
+      if (arg is VarTerm) {
+        varTable.markGrounded(arg.name);
+      }
+    }
+
     // Comparison guards implicitly test groundness of both operands
     // Per spec: comparison guards require both operands to be bound numeric values,
     // which means they're ground. This allows multiple reader occurrences.

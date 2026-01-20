@@ -2452,9 +2452,23 @@ class BytecodeRunner {
 
         if (value is VarRef) {
           // Already a VarRef - determine writer addr and store with appropriate mode
-          final isWriter = cx.rt.heap.isWriter(value.addr);
-          final writerAddr = isWriter ? value.addr : cx.rt.heap.writerForReader(value.addr);
-          cx.argSlots[argSlot] = VarRef(isReaderMode ? writerAddr + 1 : writerAddr);
+          final addr = value.addr;
+          final isWriter = cx.rt.heap.isWriter(addr);
+          final isReader = cx.rt.heap.isReader(addr);
+
+          if (!isWriter && !isReader) {
+            // Bound to ground value (ValueTag) - dereference and pass value directly
+            final groundValue = cx.rt.heap.getValue(addr);
+            if (groundValue != null) {
+              cx.argSlots[argSlot] = groundValue;
+            } else {
+              cx.argSlots[argSlot] = value;  // Fallback
+            }
+          } else {
+            // Writer or reader
+            final writerAddr = isWriter ? addr : cx.rt.heap.writerForReader(addr);
+            cx.argSlots[argSlot] = VarRef(isReaderMode ? writerAddr + 1 : writerAddr);
+          }
         } else if (value is int) {
           // Legacy: bare int ID (assumed to be writer addr)
           cx.argSlots[argSlot] = VarRef(isReaderMode ? value + 1 : value);

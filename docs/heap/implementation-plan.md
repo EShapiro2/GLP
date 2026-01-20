@@ -1,11 +1,11 @@
 # Pointer Architecture Implementation Plan
 
-**Version**: 1.2
+**Version**: 1.3
 **Date**: 2026-01-20
-**Status**: Phase 5 ~90% complete (198/223 REPL tests passing)
+**Status**: Phase 5 COMPLETE for single-isolate (223/223 REPL tests, 259/271 unit tests)
 **Spec**: `docs/heap/heap-pointer-architecture-spec.md` v3.0
 **Branch**: `claude/pointer-architecture-migration-zFED8`
-**Test Suite**: REPL tests primary (198/223 passing), heap unit tests secondary
+**Test Suite**: REPL tests primary (223/223 passing), unit tests (259/271 - 12 multiagent deferred)
 
 ---
 
@@ -23,26 +23,29 @@ This document describes the implementation plan for the pointer-based heap archi
 | Phase 2 | ✅ DONE | All binding/suspension methods implemented |
 | Phase 3 | ✅ DONE | derefAddr follows pointers correctly |
 | Phase 4 | ✅ DONE | Compatibility methods updated |
-| Phase 5 | 🔄 ~90% | 198/223 REPL tests passing, 25 failing |
+| Phase 5 | ✅ DONE (single-isolate) | 223/223 REPL tests, 259/271 unit tests |
 | Phase 6 | ⏳ PENDING | Path compression (optional) |
 | Phase 7 | ⏳ PENDING | Final verification |
 
 ### Phase 5 File Status:
 - ✅ `lib/runtime/suspend_ops.dart`
-- ✅ `lib/runtime/commit.dart`
+- ✅ `lib/runtime/commit.dart` - Fixed VarRef handling per spec Section 5.3
 - ✅ `lib/runtime/scheduler.dart`
 - ✅ `lib/runtime/body_kernels.dart`
 - ✅ `lib/runtime/module_runtime.dart`
 - ✅ `lib/compiler/codegen.dart`
-- ✅ `lib/bytecode/runner.dart` - migrated, minor issues remain
+- ✅ `lib/compiler/analyzer.dart` - Added wait_until/wait as grounding guards
+- ✅ `lib/bytecode/runner.dart` - Fixed PutVariable for ValueTag cells
 - ✅ `bin/glp_repl.dart` - display code migrated
 - ✅ `lib/runtime/system_predicates_impl.dart` - fully migrated
+- ⏸️ `lib/runtime/external_io.dart` - DEFERRED (multiagent-related)
 - ⏸️ `lib/multiagent/irma_context.dart` - DEFERRED (focus on single-isolate first)
 - ⏸️ `lib/multiagent/payload_serializer.dart` - DEFERRED
+- ⏸️ `lib/multiagent/helpers.dart` - DEFERRED
 
-### Remaining Issues (25 failing tests):
-- Investigation needed for remaining test failures
-- Likely related to suspension set handling (Si/U addresses)
+### Test Status:
+- **REPL tests**: 223/223 passing ✅
+- **Unit tests**: 259/271 passing (12 failing are multiagent-related, DEFERRED)
 
 ---
 

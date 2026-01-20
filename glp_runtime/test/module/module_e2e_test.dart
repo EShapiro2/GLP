@@ -96,14 +96,14 @@ double(5, 10).
       registry.register(mathModule);
 
       // Create result variable (writer for RPC output)
-      final resultVarId = rt.heap.allocateVariable();
-      final resultWriter = VarRef(resultVarId, isReader: false);
-      print('[TEST] Created result writer W$resultVarId');
+      final (resultWriter_, resultReader_) = rt.heap.allocateVariable();
+      final resultWriter = VarRef(resultWriter_);
+      print('[TEST] Created result writer W$resultWriter_');
 
       // Manually create args for double(5, W) - constant 5 and writer W
-      final constVarId = rt.heap.allocateVariable();
-      rt.heap.bindWriterConst(constVarId, 5);
-      final constArg = VarRef(constVarId, isReader: true);  // Reader bound to 5
+      final (constWriter, constReader) = rt.heap.allocateVariable();
+      rt.heap.bindWriterConst(constWriter, 5);
+      final constArg = VarRef(constReader);  // Reader bound to 5
 
       // Start dispatcher for math module with proper executor
       final mathDispatcher = startDispatcher(
@@ -163,8 +163,8 @@ double(5, 10).
       await Future.delayed(Duration(milliseconds: 100));
 
       // Check result
-      final resultValue = rt.heap.valueOfWriter(resultVarId);
-      print('[TEST] Result W$resultVarId = $resultValue');
+      final resultValue = rt.heap.valueOfWriter(resultWriter_);
+      print('[TEST] Result W$resultWriter_ = $resultValue');
 
       // Cleanup
       mathDispatcher.stop();
@@ -214,14 +214,14 @@ factorial(N, F?) :- N? > 0 | N1 := N? - 1, factorial(N1?, F1), F := N? * F1?.
       registry.register(mathModule);
 
       // Create result variable (writer for RPC output)
-      final resultVarId = rt.heap.allocateVariable();
-      final resultWriter = VarRef(resultVarId, isReader: false);
-      print('[TEST] Created result writer W$resultVarId');
+      final (resultWriter_, _) = rt.heap.allocateVariable();
+      final resultWriter = VarRef(resultWriter_);
+      print('[TEST] Created result writer W$resultWriter_');
 
       // Create arg for N=5
-      final nVarId = rt.heap.allocateVariable();
-      rt.heap.bindWriterConst(nVarId, 5);
-      final nArg = VarRef(nVarId, isReader: true);  // Reader bound to 5
+      final (nWriter, nReader) = rt.heap.allocateVariable();
+      rt.heap.bindWriterConst(nWriter, 5);
+      final nArg = VarRef(nReader);  // Reader bound to 5
 
       // Track spawned goals for recursive execution
       final spawnedGoals = <int>[];
@@ -308,8 +308,8 @@ factorial(N, F?) :- N? > 0 | N1 := N? - 1, factorial(N1?, F1), F := N? * F1?.
       print('[TEST] Processed $iterations goals');
 
       // Check result
-      final resultValue = rt.heap.valueOfWriter(resultVarId);
-      print('[TEST] Result W$resultVarId = $resultValue');
+      final resultValue = rt.heap.valueOfWriter(resultWriter_);
+      print('[TEST] Result W$resultWriter_ = $resultValue');
 
       // Cleanup
       mathDispatcher.stop();
@@ -333,19 +333,19 @@ double(10, 20).
       registry.register(mathModule);
 
       // Create result variable (writer for RPC output)
-      final resultVarId = rt.heap.allocateVariable();
-      final resultWriter = VarRef(resultVarId, isReader: false);
-      print('[TEST] Created result writer W$resultVarId');
+      final (resultWriter_, _) = rt.heap.allocateVariable();
+      final resultWriter = VarRef(resultWriter_);
+      print('[TEST] Created result writer W$resultWriter_');
 
       // Create module name variable bound to 'math'
-      final moduleNameVarId = rt.heap.allocateVariable();
-      rt.heap.bindWriterConst(moduleNameVarId, 'math');
-      final moduleNameReader = VarRef(moduleNameVarId, isReader: true);
+      final (moduleNameWriter, moduleNameReader_) = rt.heap.allocateVariable();
+      rt.heap.bindWriterConst(moduleNameWriter, 'math');
+      final moduleNameReader = VarRef(moduleNameReader_);
 
       // Create arg for input value 5
-      final inputVarId = rt.heap.allocateVariable();
-      rt.heap.bindWriterConst(inputVarId, 5);
-      final inputArg = VarRef(inputVarId, isReader: true);
+      final (inputWriter, inputReader) = rt.heap.allocateVariable();
+      rt.heap.bindWriterConst(inputWriter, 5);
+      final inputArg = VarRef(inputReader);
 
       // Start dispatcher for math module
       final mathDispatcher = startDispatcher(
@@ -407,8 +407,8 @@ double(10, 20).
       await Future.delayed(Duration(milliseconds: 100));
 
       // Check result
-      final resultValue = rt.heap.valueOfWriter(resultVarId);
-      print('[TEST] Result W$resultVarId = $resultValue');
+      final resultValue = rt.heap.valueOfWriter(resultWriter_);
+      print('[TEST] Result W$resultWriter_ = $resultValue');
 
       // Cleanup
       mathDispatcher.stop();
@@ -532,9 +532,9 @@ get_value(R?) :- c # value(R).
       print('[TEST] Dispatcher B started');
 
       // Create result variable
-      final resultVarId = rt.heap.allocateVariable();
-      final resultWriter = VarRef(resultVarId, isReader: false);
-      print('[TEST] Created result writer W$resultVarId');
+      final (resultWriter_, _) = rt.heap.allocateVariable();
+      final resultWriter = VarRef(resultWriter_);
+      print('[TEST] Created result writer W$resultWriter_');
 
       // Send get_value(W) to module B
       final message = ExportMessage.trust(
@@ -574,8 +574,8 @@ get_value(R?) :- c # value(R).
       print('[TEST] Processed $iterations queued goals');
 
       // Check result
-      final resultValue = rt.heap.valueOfWriter(resultVarId);
-      print('[TEST] Result W$resultVarId = $resultValue');
+      final resultValue = rt.heap.valueOfWriter(resultWriter_);
+      print('[TEST] Result W$resultWriter_ = $resultValue');
 
       // Cleanup
       for (final s in bServeImports) s.stop();
@@ -742,13 +742,13 @@ private_proc(X?) :- X := 99.
       );
 
       // Create result variable (writer for RPC output)
-      final resultVarId = rt.heap.allocateVariable();
-      final resultWriter = VarRef(resultVarId, isReader: false);
+      final (resultWriter_, _) = rt.heap.allocateVariable();
+      final resultWriter = VarRef(resultWriter_);
 
       // Create input variable for compute(5, R)
-      final inputVarId = rt.heap.allocateVariable();
-      rt.heap.bindWriterConst(inputVarId, 5);
-      final inputArg = VarRef(inputVarId, isReader: true);
+      final (inputWriter, inputReader) = rt.heap.allocateVariable();
+      rt.heap.bindWriterConst(inputWriter, 5);
+      final inputArg = VarRef(inputReader);
 
       // Send compute(5, W) to main module
       final message = ExportMessage.trust(
@@ -787,8 +787,8 @@ private_proc(X?) :- X := 99.
       }
 
       // Check result: compute(5, R) -> math#double(5, R) -> R = 10
-      final resultValue = rt.heap.valueOfWriter(resultVarId);
-      print('[TEST] Result W$resultVarId = $resultValue');
+      final resultValue = rt.heap.valueOfWriter(resultWriter_);
+      print('[TEST] Result W$resultWriter_ = $resultValue');
 
       // Cleanup
       for (final s in serveImports) s.stop();
@@ -901,26 +901,26 @@ private_proc(X?) :- X := 99.
       );
 
       // Create result variable for R in double(5, R)
-      final resultVarId = rt.heap.allocateVariable();
-      final resultWriter = VarRef(resultVarId, isReader: false);
-      print('[TEST] Created result writer W$resultVarId');
+      final (resultWriter_, _) = rt.heap.allocateVariable();
+      final resultWriter = VarRef(resultWriter_);
+      print('[TEST] Created result writer W$resultWriter_');
 
       // Build the goal: double(5, R) as a structure
       // We need to pass this as the first argument to run/2
-      final goalStructVarId = rt.heap.allocateVariable();
-      final fiveVarId = rt.heap.allocateVariable();
-      rt.heap.bindWriterConst(fiveVarId, 5);
+      final (goalStructWriter, goalStructReader) = rt.heap.allocateVariable();
+      final (fiveWriter, fiveReader) = rt.heap.allocateVariable();
+      rt.heap.bindWriterConst(fiveWriter, 5);
       // Build double(5, R) structure - args are: [reader to 5, writer for result]
-      rt.heap.bindWriterStruct(goalStructVarId, 'double', [
-        VarRef(fiveVarId, isReader: true),
+      rt.heap.bindWriterStruct(goalStructWriter, 'double', [
+        VarRef(fiveReader),
         resultWriter,
       ]);
-      final goalArg = VarRef(goalStructVarId, isReader: true);
+      final goalArg = VarRef(goalStructReader);
 
       // Build the module argument: math_rules (constant)
-      final moduleVarId = rt.heap.allocateVariable();
-      rt.heap.bindWriterConst(moduleVarId, 'math_rules');
-      final moduleArg = VarRef(moduleVarId, isReader: true);
+      final (moduleWriter, moduleReader) = rt.heap.allocateVariable();
+      rt.heap.bindWriterConst(moduleWriter, 'math_rules');
+      final moduleArg = VarRef(moduleReader);
 
       // Send run(double(5, R), math_rules) to meta module
       final message = ExportMessage.trust(
@@ -960,8 +960,8 @@ private_proc(X?) :- X := 99.
       print('[TEST] Processed $iterations queued goals');
 
       // Check result
-      final resultValue = rt.heap.valueOfWriter(resultVarId);
-      print('[TEST] Result W$resultVarId = $resultValue');
+      final resultValue = rt.heap.valueOfWriter(resultWriter_);
+      print('[TEST] Result W$resultWriter_ = $resultValue');
 
       // Cleanup
       mathRulesDispatcher.stop();
@@ -1029,13 +1029,13 @@ factorial(N, F?) :- N? > 0 | N1 := N? - 1, factorial(N1?, F1), F := N? * F1?.
       );
 
       // Create result variable
-      final resultVarId = rt.heap.allocateVariable();
-      final resultWriter = VarRef(resultVarId, isReader: false);
+      final (resultWriter_, _) = rt.heap.allocateVariable();
+      final resultWriter = VarRef(resultWriter_);
 
       // Create input for factorial(5, R)
-      final inputVarId = rt.heap.allocateVariable();
-      rt.heap.bindWriterConst(inputVarId, 5);
-      final inputArg = VarRef(inputVarId, isReader: true);
+      final (inputWriter, inputReader) = rt.heap.allocateVariable();
+      rt.heap.bindWriterConst(inputWriter, 5);
+      final inputArg = VarRef(inputReader);
 
       // Start dispatcher for the module
       final dispatcher = startDispatcher(
@@ -1105,7 +1105,7 @@ factorial(N, F?) :- N? > 0 | N1 := N? - 1, factorial(N1?, F1), F := N? * F1?.
       dispatcher.stop();
 
       // Verify result
-      final resultValue = rt.heap.valueOfWriter(resultVarId);
+      final resultValue = rt.heap.valueOfWriter(resultWriter_);
       print('[TEST] Result: factorial(5, R) = $resultValue');
 
       expect(resultValue, isNotNull, reason: 'R should be bound');

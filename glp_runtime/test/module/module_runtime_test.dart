@@ -68,7 +68,7 @@ void main() {
         sourceModule: 'math',
         functor: 'factorial',
         arity: 2,
-        args: [ConstTerm(5), VarRef(1, isReader: false)],
+        args: [ConstTerm(5), VarRef(1)],  // VarRef takes just address now
       );
 
       expect(msg.callInfo.sourceModule, 'math');
