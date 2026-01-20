@@ -338,9 +338,8 @@ class BytecodeRunner {
       return 'X$displayId';
     } else if (term is VarRef && rt.heap.isReader(term.addr)) {
       final rid = term.addr;
-      final wid = rt.heap.writerForReader(rid);
-      if (rt.heap.isWriterBound(wid)) {
-        final value = rt.heap.valueOfWriter(wid);
+      if (rt.heap.isReaderBound(rid)) {
+        final value = rt.heap.getReaderValue(rid);
         if (value != null) {
           // Bound reader - just return the formatted value without ?
           return _formatTerm(rt, value, markReaders: markReaders);
@@ -695,9 +694,13 @@ class BytecodeRunner {
             // Dereference VarRef chains to get actual value
             while (value is VarRef) {
               if (cx.rt.heap.isReader(value.addr)) {
-                final wid = cx.rt.heap.writerForReader(value.addr);
-                if (cx.rt.heap.isWriterBound(wid)) {
-                  value = cx.rt.heap.valueOfWriter(wid);
+                if (cx.rt.heap.isReaderBound(value.addr)) {
+                  final readerValue = cx.rt.heap.getReaderValue(value.addr);
+                  if (readerValue != null) {
+                    value = readerValue;
+                  } else {
+                    break;
+                  }
                 } else {
                   break;
                 }
@@ -870,28 +873,29 @@ class BytecodeRunner {
             }
           } else if (clauseVarValue is VarRef && cx.rt.heap.isReader(clauseVarValue.addr)) {
             // VarRef reader - dereference and check if bound to matching structure
+            // Use abstraction methods that work for both local and imported readers
             final rid = clauseVarValue.addr;
             if (cx.debugOutput) print('DEBUG SUSPEND: HeadStructure checking VarRef reader R$rid');
-            final wid = cx.rt.heap.writerForReader(rid);
-            if (cx.debugOutput) print('DEBUG SUSPEND: writerForReader(R$rid) = $wid');
-            if (!cx.rt.heap.isWriterBound(wid)) {
+            final bound = cx.rt.heap.isReaderBound(rid);
+            if (cx.debugOutput) print('DEBUG SUSPEND: isReaderBound(R$rid) = $bound');
+            if (!bound) {
               // Unbound reader - add to Si and continue (two-phase)
               if (cx.debugOutput) print('DEBUG SUSPEND: Reader R$rid is UNBOUND! Adding to Si');
               cx.Si.add(rid);
               pc++;
               continue;
             }
-            if (cx.debugOutput) print('DEBUG SUSPEND: Reader R$rid is bound to W$wid, dereferencing...');
-            // Bound reader - dereference and check structure
-            final rawValue = cx.rt.heap.valueOfWriter(wid);
+            if (cx.debugOutput) print('DEBUG SUSPEND: Reader R$rid is bound, dereferencing...');
+            // Bound reader - get value and check structure
+            final rawValue = cx.rt.heap.getReaderValue(rid);
             if (rawValue == null) {
-              if (debug && cx.goalId >= 4000) print('  HeadStructure: reader $rid -> writer $wid has null value, failing');
+              if (debug && cx.goalId >= 4000) print('  HeadStructure: reader $rid has null value, failing');
               _softFailToNextClause(cx, pc);
               pc = _findNextClauseTry(pc);
               continue;
             }
             final value = cx.rt.heap.dereference(rawValue);
-            if (debug && cx.goalId >= 4000) print('  HeadStructure: reader $rid -> writer $wid dereferenced = $value');
+            if (debug && cx.goalId >= 4000) print('  HeadStructure: reader $rid dereferenced = $value');
             if (value is StructTerm && value.functor == op.functor && value.args.length == op.arity) {
               // Match!
               if (debug && cx.goalId >= 4000) print('  HeadStructure: MATCH! Entering READ mode');
@@ -947,9 +951,13 @@ class BytecodeRunner {
             // Dereference VarRef chains to get actual value
             while (value is VarRef) {
               if (cx.rt.heap.isReader(value.addr)) {
-                final wid = cx.rt.heap.writerForReader(value.addr);
-                if (cx.rt.heap.isWriterBound(wid)) {
-                  value = cx.rt.heap.valueOfWriter(wid);
+                if (cx.rt.heap.isReaderBound(value.addr)) {
+                  final readerValue = cx.rt.heap.getReaderValue(value.addr);
+                  if (readerValue != null) {
+                    value = readerValue;
+                  } else {
+                    break;
+                  }
                 } else {
                   break;
                 }
@@ -1091,18 +1099,19 @@ class BytecodeRunner {
         }
 
         // Store argument value in clauseVars
+        // Use abstraction methods that work for both local and imported readers
         if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
           cx.clauseVars[op.varIndex] = arg.addr;
         } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
           // Reader: check if bound
-          final wid = cx.rt.heap.writerForReader(arg.addr);
-          if (!cx.rt.heap.isWriterBound(wid)) {
+          if (!cx.rt.heap.isReaderBound(arg.addr)) {
             // Unbound reader - add to U and fail to next clause
             pc = _suspendAndFail(cx, arg.addr, pc);
             continue;
           }
-          // Bound reader - store the writer addr for dereferencing
-          cx.clauseVars[op.varIndex] = wid;
+          // Bound reader - store the value for dereferencing
+          final value = cx.rt.heap.getReaderValue(arg.addr);
+          cx.clauseVars[op.varIndex] = value ?? arg;
         } else if (arg is ConstTerm || arg is StructTerm) {
           // Ground term - store directly
           cx.clauseVars[op.varIndex] = arg;
@@ -1151,14 +1160,14 @@ class BytecodeRunner {
             }
           } else if (storedValue is VarRef && cx.rt.heap.isReader(storedValue.addr)) {
             // storedValue is a reader (e.g., Xs?) - bind writer to reader's value
+            // Use abstraction methods that work for both local and imported readers
             final readerAddr = storedValue.addr;
-            final wid = cx.rt.heap.writerForReader(readerAddr);
-            if (cx.rt.heap.isWriterBound(wid)) {
-              // Reader's writer is bound - bind arg writer to that value
-              final readerValue = cx.rt.heap.valueOfWriter(wid);
+            if (cx.rt.heap.isReaderBound(readerAddr)) {
+              // Reader is bound - bind arg writer to that value
+              final readerValue = cx.rt.heap.getReaderValue(readerAddr);
               cx.sigmaHat[arg.addr] = readerValue;
             } else {
-              // Reader's writer is unbound - add reader to Si (suspend)
+              // Reader is unbound - add reader to Si (suspend)
               pc = _suspendAndFail(cx, readerAddr, pc); continue;
             }
           } else {
@@ -1167,6 +1176,7 @@ class BytecodeRunner {
           }
         } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
           // Argument is reader VarRef - verify it matches stored value
+          // Use abstraction methods that work for both local and imported readers
           if (storedValue is VarRef && cx.rt.heap.isReader(storedValue.addr)) {
             // storedValue is also a reader - fail definitively
             _softFailToNextClause(cx, pc);
@@ -1174,25 +1184,29 @@ class BytecodeRunner {
             continue;
           }
 
-          final wid = cx.rt.heap.writerForReader(arg.addr);
-          if (cx.rt.heap.isWriterBound(wid)) {
+          final bound = cx.rt.heap.isReaderBound(arg.addr);
+          if (bound) {
             // Reader is bound - check value matches
-            final readerValue = cx.rt.heap.valueOfWriter(wid);
+            final readerValue = cx.rt.heap.getReaderValue(arg.addr);
             if (storedValue is Term) {
               if (readerValue != storedValue) {
                 _softFailToNextClause(cx, pc);
                 pc = _findNextClauseTry(pc);
                 continue;
               }
-            } else if (storedValue is int && wid != storedValue) {
-              // storedValue is a writer addr
-              _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
-              continue;
+            } else if (storedValue is int) {
+              // storedValue is a writer addr - check if they point to same writer
+              final wid = cx.rt.heap.tryWriterForReader(arg.addr);
+              if (wid == null || wid != storedValue) {
+                _softFailToNextClause(cx, pc);
+                pc = _findNextClauseTry(pc);
+                continue;
+              }
             }
           } else if (storedValue is int) {
-            // Reader unbound, storedValue is writer addr - check they match
-            if (wid != storedValue) {
+            // Reader unbound, storedValue is writer addr - check if they match
+            final wid = cx.rt.heap.tryWriterForReader(arg.addr);
+            if (wid == null || wid != storedValue) {
               _softFailToNextClause(cx, pc);
               pc = _findNextClauseTry(pc);
               continue;
@@ -1325,10 +1339,10 @@ class BytecodeRunner {
               } else if (value is VarRef && cx.rt.heap.isReader(value.addr)) {
                 // Reader variable - check if bound, else suspend
                 final rid = value.addr;
-                final wid = cx.rt.heap.writerForReader(rid);
-                if (cx.rt.heap.isWriterBound(wid)) {
+                // Use abstraction methods that work for both local and imported readers
+                if (cx.rt.heap.isReaderBound(rid)) {
                   // Reader is bound - check if it matches
-                  final boundValue = cx.rt.heap.valueOfWriter(wid);
+                  final boundValue = cx.rt.heap.getReaderValue(rid);
                   if (boundValue is ConstTerm && boundValue.value == op.value) {
                     if (debug && cx.goalId >= 4000) print('  UnifyConstant: reader $rid bound to $boundValue, matches!');
                     cx.S++; // Match successful
@@ -1597,8 +1611,10 @@ class BytecodeRunner {
                 if (value is VarRef && cx.rt.heap.isReader(value.addr)) {
                   // Query has reader, clause expects reader
                   final rid = value.addr;
-                  final wid = cx.rt.heap.writerForReader(rid);
-                  cx.clauseVars[varIndex] = wid;
+                  // Use tryWriterForReader for imported reader support
+                  final wid = cx.rt.heap.tryWriterForReader(rid);
+                  // Store writer if available, otherwise store reader address for imported readers
+                  cx.clauseVars[varIndex] = wid ?? rid;
                   cx.S++;
                 } else if (value is VarRef && cx.rt.heap.isWriter(value.addr)) {
                   // Query has writer, clause expects reader
@@ -1674,10 +1690,10 @@ class BytecodeRunner {
                     cx.S++;
                   } else if (value is VarRef && cx.rt.heap.isReader(value.addr)) {
                     final rid = value.addr;
-                    final wid = cx.rt.heap.writerForReader(rid);
-                    if (cx.rt.heap.isWriterBound(wid)) {
-                      final writerValue = cx.rt.heap.valueOfWriter(wid);
-                      cx.clauseVars[varIndex] = writerValue;
+                    // Use abstraction methods for imported reader support
+                    if (cx.rt.heap.isReaderBound(rid)) {
+                      final readerValue = cx.rt.heap.getReaderValue(rid);
+                      cx.clauseVars[varIndex] = readerValue;
                     } else {
                       cx.clauseVars[varIndex] = value;
                     }
@@ -1833,7 +1849,10 @@ class BytecodeRunner {
             }
           } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
             if (existing == null) {
-              cx.clauseVars[varIndex] = cx.rt.heap.writerForReader(arg.addr);
+              // Use tryWriterForReader for imported reader support
+              final wid = cx.rt.heap.tryWriterForReader(arg.addr);
+              // Store writer if available, otherwise store reader address for imported readers
+              cx.clauseVars[varIndex] = wid ?? arg.addr;
             }
             // If existing != null, keep existing value
           } else if (arg is ConstTerm) {
@@ -1932,9 +1951,10 @@ class BytecodeRunner {
               }
             }
           } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-            final wid = cx.rt.heap.writerForReader(arg.addr);
-            if (cx.rt.heap.isWriterBound(wid)) {
-              final readerValue = cx.rt.heap.valueOfWriter(wid);
+            final rid = arg.addr;
+            // Use abstraction methods for imported reader support
+            if (cx.rt.heap.isReaderBound(rid)) {
+              final readerValue = cx.rt.heap.getReaderValue(rid);
               if (storedValue is int) {
                 cx.sigmaHat[storedValue] = readerValue;
               } else if (storedValue != readerValue) {
@@ -1943,12 +1963,18 @@ class BytecodeRunner {
                 continue;
               }
             } else {
-              // Reader is unbound but has an underlying writer
-              // Alias storedValue to wid (same fix as GetVariable for writer-to-reader case)
+              // Reader is unbound - alias storedValue to reader
+              // Use tryWriterForReader to get writer if available (local reader)
+              final wid = cx.rt.heap.tryWriterForReader(rid);
               if (storedValue is int) {
-                cx.sigmaHat[storedValue] = VarRef(wid + 1);  // reader addr
+                if (wid != null) {
+                  cx.sigmaHat[storedValue] = VarRef(wid + 1);  // reader addr
+                } else {
+                  // Imported reader - alias to reader directly
+                  cx.sigmaHat[storedValue] = VarRef(rid);
+                }
               }
-              if (cx.debugOutput) print('[DEBUG] PC $pc: GetValue SUCCESS (aliased to W$wid)');
+              if (cx.debugOutput) print('[DEBUG] PC $pc: GetValue SUCCESS (aliased to reader $rid)');
             }
           } else if (arg is ConstTerm) {
             if (storedValue is int) {
@@ -1975,10 +2001,9 @@ class BytecodeRunner {
               // storedValue is a reader/writer reference - bind goal writer to it
               cx.sigmaHat[arg.addr] = storedValue;
             } else if (storedValue is int) {
-              // storedValue is a reader addr - get its writer
-              final wid = cx.rt.heap.writerForReader(storedValue);
-              if (cx.rt.heap.isWriterBound(wid)) {
-                final readerValue = cx.rt.heap.valueOfWriter(wid);
+              // storedValue is a reader addr - use abstraction methods for imported reader support
+              if (cx.rt.heap.isReaderBound(storedValue)) {
+                final readerValue = cx.rt.heap.getReaderValue(storedValue);
                 cx.sigmaHat[arg.addr] = readerValue;
               } else {
                 pc = _suspendAndFail(cx, storedValue, pc); continue;
@@ -1987,7 +2012,11 @@ class BytecodeRunner {
               cx.sigmaHat[arg.addr] = storedValue;
             }
           } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-            if (storedValue is int && cx.rt.heap.writerForReader(arg.addr) != storedValue) {
+            // Use tryWriterForReader for imported reader support
+            final wid = cx.rt.heap.tryWriterForReader(arg.addr);
+            // For imported readers (wid == null), compare reader addresses directly
+            final compareTo = wid ?? arg.addr;
+            if (storedValue is int && compareTo != storedValue) {
               _softFailToNextClause(cx, pc);
               pc = _findNextClauseTry(pc);
               continue;
@@ -2157,22 +2186,22 @@ class BytecodeRunner {
       }
       if (op is GuardNeedReader) {
         final readerAddr = op.readerId;
-        // Check sigmaHat first for tentative bindings
-        final writerAddr = cx.rt.heap.writerForReader(readerAddr);
+        // Check sigmaHat first for tentative bindings, then use isReaderBound for imported reader support
+        final writerAddr = cx.rt.heap.tryWriterForReader(readerAddr);
         final bound = cx.sigmaHat.containsKey(readerAddr) ||
-                      cx.sigmaHat.containsKey(writerAddr) ||
-                      cx.rt.heap.isFullyBound(writerAddr);
+                      (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) ||
+                      cx.rt.heap.isReaderBound(readerAddr);
         if (!bound) pc = _suspendAndFail(cx, readerAddr, pc); continue;
         pc++; continue;
       }
       if (op is GuardNeedReaderArg) {
         final arg = cx.env.arg(op.slot);
         if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-          // Check sigmaHat first for tentative bindings
-          final writerAddr = cx.rt.heap.writerForReader(arg.addr);
+          // Check sigmaHat first for tentative bindings, then use isReaderBound for imported reader support
+          final writerAddr = cx.rt.heap.tryWriterForReader(arg.addr);
           final bound = cx.sigmaHat.containsKey(arg.addr) ||
-                        cx.sigmaHat.containsKey(writerAddr) ||
-                        cx.rt.heap.isFullyBound(writerAddr);
+                        (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) ||
+                        cx.rt.heap.isReaderBound(arg.addr);
           if (!bound) pc = _suspendAndFail(cx, arg.addr, pc); continue;
         }
         pc++; continue;
@@ -2233,8 +2262,14 @@ class BytecodeRunner {
                     termArgs.add(resolved);
                   } else if (arg.isWriter && !isResolvedWriter) {
                     // Writer placeholder but resolved to reader? Get paired writer
-                    final wid = cx.rt.heap.writerForReader(resolved.addr);
-                    termArgs.add(VarRef(wid));
+                    // Use tryWriterForReader for imported reader support
+                    final wid = cx.rt.heap.tryWriterForReader(resolved.addr);
+                    if (wid != null) {
+                      termArgs.add(VarRef(wid));
+                    } else {
+                      // Imported reader - no local writer, use reader as-is
+                      termArgs.add(resolved);
+                    }
                   } else if (!arg.isWriter && !isResolvedWriter) {
                     // Reader placeholder, resolved to reader VarRef - use as-is
                     termArgs.add(resolved);
@@ -3179,11 +3214,11 @@ class BytecodeRunner {
             if (sigmaBinding != null) {
               collectUnbound(sigmaBinding);
             } else {
-              final writerAddr = cx.rt.heap.writerForReader(readerAddr);
-              if (!cx.rt.heap.isFullyBound(writerAddr)) {
+              // Use isReaderBound for imported reader support
+              if (!cx.rt.heap.isReaderBound(readerAddr)) {
                 unboundReaders.add(readerAddr);
               } else {
-                collectUnbound(cx.rt.heap.getValue(writerAddr));
+                collectUnbound(cx.rt.heap.getReaderValue(readerAddr));
               }
             }
           } else if (term is StructTerm) {
@@ -3213,12 +3248,11 @@ class BytecodeRunner {
               collectUnbound(cx.rt.heap.getValue(value));
             }
           } else {
-            // It's a reader address
-            final writerAddr = cx.rt.heap.writerForReader(value);
-            if (!cx.rt.heap.isFullyBound(writerAddr)) {
+            // It's a reader address - use isReaderBound for imported reader support
+            if (!cx.rt.heap.isReaderBound(value)) {
               unboundReaders.add(value);
             } else {
-              collectUnbound(cx.rt.heap.getValue(writerAddr));
+              collectUnbound(cx.rt.heap.getReaderValue(value));
             }
           }
         } else {
@@ -3308,11 +3342,11 @@ class BytecodeRunner {
               isUnboundWriter = true;
             }
           } else {
-            // It's a reader addr - check if its paired writer is bound
-            final writerAddr = cx.rt.heap.writerForReader(value);
-            if (cx.sigmaHat.containsKey(writerAddr)) {
+            // It's a reader addr - use isReaderBound for imported reader support
+            final writerAddr = cx.rt.heap.tryWriterForReader(value);
+            if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
               isKnown = true;  // Writer has tentative binding
-            } else if (cx.rt.heap.isFullyBound(writerAddr)) {
+            } else if (cx.rt.heap.isReaderBound(value)) {
               isKnown = true;
             } else {
               // Unbound reader - could become known later
@@ -3334,10 +3368,11 @@ class BytecodeRunner {
           if (cx.sigmaHat.containsKey(readerAddr)) {
             isKnown = true;
           } else {
-            final writerAddr = cx.rt.heap.writerForReader(readerAddr);
-            if (cx.sigmaHat.containsKey(writerAddr)) {
+            // Use tryWriterForReader for imported reader support
+            final writerAddr = cx.rt.heap.tryWriterForReader(readerAddr);
+            if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
               isKnown = true;
-            } else if (cx.rt.heap.isFullyBound(writerAddr)) {
+            } else if (cx.rt.heap.isReaderBound(readerAddr)) {
               isKnown = true;
             } else {
               unboundReader = readerAddr;
@@ -3437,11 +3472,11 @@ class BytecodeRunner {
             if (sigmaBinding != null) {
               collectUnbound(sigmaBinding);
             } else {
-              final writerAddr = cx.rt.heap.writerForReader(readerAddr);
-              if (!cx.rt.heap.isFullyBound(writerAddr)) {
+              // Use isReaderBound for imported reader support
+              if (!cx.rt.heap.isReaderBound(readerAddr)) {
                 unboundReaders.add(readerAddr);
               } else {
-                collectUnbound(cx.rt.heap.getValue(writerAddr));
+                collectUnbound(cx.rt.heap.getReaderValue(readerAddr));
               }
             }
           } else if (term is StructTerm) {
@@ -3467,12 +3502,11 @@ class BytecodeRunner {
                 collectUnbound(cx.rt.heap.getValue(term));
               }
             } else {
-              // It's a reader address
-              final writerAddr = cx.rt.heap.writerForReader(term);
-              if (!cx.rt.heap.isFullyBound(writerAddr)) {
+              // It's a reader address - use isReaderBound for imported reader support
+              if (!cx.rt.heap.isReaderBound(term)) {
                 unboundReaders.add(term);
               } else {
-                collectUnbound(cx.rt.heap.getValue(writerAddr));
+                collectUnbound(cx.rt.heap.getReaderValue(term));
               }
             }
           }
@@ -3630,26 +3664,50 @@ class BytecodeRunner {
             continue;
           } else if (clauseVarValue is VarRef) {
             // VarRef stored in clauseVars - extract addr and handle
+            // Use abstraction methods that work for both local and imported readers
             final addr = clauseVarValue.addr;
-            final writerAddr = cx.rt.heap.isWriter(addr) ? addr : cx.rt.heap.writerForReader(addr);
-            if (cx.rt.heap.isFullyBound(writerAddr)) {
-              final value = cx.rt.heap.getValue(writerAddr);
-              if (value is ConstTerm && value.value == 'nil') {
-                if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = VarRef(@$addr) = $value, MATCH');
-                pc++;
-                continue;
+            if (cx.rt.heap.isWriter(addr)) {
+              // Writer VarRef
+              if (cx.rt.heap.isFullyBound(addr)) {
+                final value = cx.rt.heap.getValue(addr);
+                if (value is ConstTerm && value.value == 'nil') {
+                  if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = VarRef(@$addr) = $value, MATCH');
+                  pc++;
+                  continue;
+                } else {
+                  if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = VarRef(@$addr) = $value, NO MATCH');
+                  _softFailToNextClause(cx, pc);
+                  pc = _findNextClauseTry(pc);
+                  continue;
+                }
               } else {
-                if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = VarRef(@$addr) = $value, NO MATCH');
-                _softFailToNextClause(cx, pc);
-                pc = _findNextClauseTry(pc);
+                // Unbound writer - bind to nil in σ̂w
+                cx.sigmaHat[addr] = ConstTerm('nil');
+                if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = VarRef(@$addr) (unbound), binding to nil');
+                pc++;
                 continue;
               }
             } else {
-              // Unbound variable - bind to nil in σ̂w
-              cx.sigmaHat[writerAddr] = ConstTerm('nil');
-              if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = VarRef(@$addr) (unbound), binding to nil');
-              pc++;
-              continue;
+              // Reader VarRef - check if bound
+              if (cx.rt.heap.isReaderBound(addr)) {
+                final value = cx.rt.heap.getReaderValue(addr);
+                if (value is ConstTerm && value.value == 'nil') {
+                  if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = VarRef(@$addr) = $value, MATCH');
+                  pc++;
+                  continue;
+                } else {
+                  if (debug && cx.goalId >= 4000) print('  HeadNil: clause var ${op.argSlot} = VarRef(@$addr) = $value, NO MATCH');
+                  _softFailToNextClause(cx, pc);
+                  pc = _findNextClauseTry(pc);
+                  continue;
+                }
+              } else {
+                // Unbound reader - add to Si (suspend)
+                final suspendOnVar = _finalUnboundVar(cx, addr);
+                cx.Si.add(suspendOnVar);
+                pc++;
+                continue;
+              }
             }
           } else if (clauseVarValue is int) {
             // Writer addr - check if bound
@@ -3772,10 +3830,10 @@ class BytecodeRunner {
             cx.mode = UnifyMode.write;
           }
         } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-          // Reader: check if bound, else add to U and fail
-          final writerAddr = cx.rt.heap.writerForReader(arg.addr);
-          final bound = cx.rt.heap.isFullyBound(writerAddr);
-          final value = bound ? cx.rt.heap.getValue(writerAddr) : null;
+          // Reader: check if bound, else add to Si (two-phase)
+          // Use abstraction methods that work for both local and imported readers
+          final bound = cx.rt.heap.isReaderBound(arg.addr);
+          final value = bound ? cx.rt.heap.getReaderValue(arg.addr) : null;
 
           if (!bound) {
             // Unbound reader - add to Si and continue (two-phase)
@@ -3783,9 +3841,8 @@ class BytecodeRunner {
             cx.Si.add(suspendOnVar);
             pc++;
             continue;
-          } else{
+          } else {
             // Bound reader - check if it's a list structure
-            // print('[DEBUG HeadList] → Bound reader, checking value is list');
             if (value is StructTerm && value.functor == '[|]' && value.args.length == 2) {
               cx.currentStructure = value;
               cx.S = 0;
@@ -3996,21 +4053,30 @@ class BytecodeRunner {
         return _dereferenceForExecute(value, rt, cx);
       }
 
-      // Get writer addr for checking bound status
-      final writerAddr = isReader ? rt.heap.writerForReader(addr) : addr;
-      print('[DEREF] isFullyBound($writerAddr) = ${rt.heap.isFullyBound(writerAddr)}');
-
-      // Check if writer is bound
-      if (rt.heap.isFullyBound(writerAddr)) {
-        final value = rt.heap.getValue(writerAddr);
-        print('[DEREF] Bound to: $value');
-        // Recursively dereference in case value contains more VarRefs
-        return _dereferenceForExecute(value, rt, cx);
+      // Check if bound using appropriate method for reader/writer
+      if (isReader) {
+        // Use isReaderBound for imported reader support
+        final isBound = rt.heap.isReaderBound(addr);
+        print('[DEREF] isReaderBound($addr) = $isBound');
+        if (isBound) {
+          final value = rt.heap.getReaderValue(addr);
+          print('[DEREF] Bound to: $value');
+          return _dereferenceForExecute(value, rt, cx);
+        } else {
+          print('[DEREF] Unbound - returning as-is');
+          return term;
+        }
       } else {
-        // Unbound - return the VarRef as-is
-        // (system predicate will handle suspension)
-        print('[DEREF] Unbound - returning as-is');
-        return term;
+        // Writer - check if bound
+        print('[DEREF] isFullyBound($addr) = ${rt.heap.isFullyBound(addr)}');
+        if (rt.heap.isFullyBound(addr)) {
+          final value = rt.heap.getValue(addr);
+          print('[DEREF] Bound to: $value');
+          return _dereferenceForExecute(value, rt, cx);
+        } else {
+          print('[DEREF] Unbound - returning as-is');
+          return term;
+        }
       }
     } else if (term is StructTerm) {
       print('[DEREF] StructTerm: ${term.functor}/${term.args.length}');
@@ -4054,17 +4120,17 @@ class BytecodeRunner {
       if (t is VarRef) {
         final addr = t.addr;
         if (cx.rt.heap.isReader(addr)) {
-          // Reader - get paired writer and check if bound
+          // Reader - check if bound using abstraction methods for imported reader support
           final readerAddr = addr;
-          final writerAddr = cx.rt.heap.writerForReader(readerAddr);
 
           // Check sigma-hat first for tentative bindings (before commit)
-          if (cx.sigmaHat.containsKey(writerAddr)) {
+          final writerAddr = cx.rt.heap.tryWriterForReader(readerAddr);
+          if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
             return dereference(cx.sigmaHat[writerAddr]);
           }
 
-          if (cx.rt.heap.isFullyBound(writerAddr)) {
-            final boundValue = cx.rt.heap.getValue(writerAddr);
+          if (cx.rt.heap.isReaderBound(readerAddr)) {
+            final boundValue = cx.rt.heap.getReaderValue(readerAddr);
             // CRITICAL FIX: Recursively dereference the bound value
             return dereference(boundValue);
           } else {
@@ -4175,10 +4241,16 @@ class BytecodeRunner {
       if (v is ConstTerm && v.value is num) return v.value as num;
       // Handle VarRef - dereference to get actual value
       if (v is VarRef) {
-        final writerAddr = cx.rt.heap.isReader(v.addr) ? cx.rt.heap.writerForReader(v.addr) : v.addr;
-        final deref = cx.rt.heap.getValue(writerAddr);
-        if (deref == null) return null; // Unbound
-        return evaluateNumeric(deref);
+        if (cx.rt.heap.isReader(v.addr)) {
+          // Use isReaderBound/getReaderValue for imported reader support
+          if (!cx.rt.heap.isReaderBound(v.addr)) return null; // Unbound
+          final deref = cx.rt.heap.getReaderValue(v.addr);
+          return evaluateNumeric(deref);
+        } else {
+          final deref = cx.rt.heap.getValue(v.addr);
+          if (deref == null) return null; // Unbound
+          return evaluateNumeric(deref);
+        }
       }
       if (v is StructTerm) {
         // Evaluate arithmetic expression
@@ -4441,13 +4513,21 @@ class BytecodeRunner {
           final cArg = eqVal.args[1];
           Object? cVal;
           if (cArg is VarRef) {
-            // Dereference the variable
+            // Dereference the variable - use abstraction methods for imported reader support
             final addr = cArg.addr;
-            final writerAddr = cx.rt.heap.isReader(addr) ? cx.rt.heap.writerForReader(addr) : addr;
-            if (cx.sigmaHat.containsKey(writerAddr)) {
-              cVal = cx.sigmaHat[writerAddr];
-            } else if (cx.rt.heap.isFullyBound(writerAddr)) {
-              cVal = cx.rt.heap.getValue(writerAddr);
+            if (cx.rt.heap.isReader(addr)) {
+              final writerAddr = cx.rt.heap.tryWriterForReader(addr);
+              if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
+                cVal = cx.sigmaHat[writerAddr];
+              } else if (cx.rt.heap.isReaderBound(addr)) {
+                cVal = cx.rt.heap.getReaderValue(addr);
+              }
+            } else {
+              if (cx.sigmaHat.containsKey(addr)) {
+                cVal = cx.sigmaHat[addr];
+              } else if (cx.rt.heap.isFullyBound(addr)) {
+                cVal = cx.rt.heap.getValue(addr);
+              }
             }
           } else {
             cVal = cArg;
@@ -4469,19 +4549,33 @@ class BytecodeRunner {
         // Follow binding chain to end
         while (value is VarRef) {
           final addr = value.addr;
-          final writerAddr = cx.rt.heap.isReader(addr) ? cx.rt.heap.writerForReader(addr) : addr;
-          // Check σ̂w first
-          if (cx.sigmaHat.containsKey(writerAddr)) {
-            value = cx.sigmaHat[writerAddr];
-            continue;
+          if (cx.rt.heap.isReader(addr)) {
+            // Use abstraction methods for imported reader support
+            final writerAddr = cx.rt.heap.tryWriterForReader(addr);
+            if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
+              value = cx.sigmaHat[writerAddr];
+              continue;
+            }
+            // Check heap using isReaderBound/getReaderValue
+            if (cx.rt.heap.isReaderBound(addr)) {
+              value = cx.rt.heap.getReaderValue(addr);
+              continue;
+            }
+            // Reached an unbound reader → SUCCESS
+            return GuardResult.success;
+          } else {
+            // Writer - check σ̂w first, then heap
+            if (cx.sigmaHat.containsKey(addr)) {
+              value = cx.sigmaHat[addr];
+              continue;
+            }
+            if (cx.rt.heap.isFullyBound(addr)) {
+              value = cx.rt.heap.getValue(addr);
+              continue;
+            }
+            // Reached an unbound writer → SUCCESS
+            return GuardResult.success;
           }
-          // Check heap
-          if (cx.rt.heap.isFullyBound(writerAddr)) {
-            value = cx.rt.heap.getValue(writerAddr);
-            continue;
-          }
-          // Reached an unbound variable → SUCCESS
-          return GuardResult.success;
         }
         // Dereferenced to a non-variable (ground term) → FAILURE
         return GuardResult.failure;
@@ -4610,11 +4704,12 @@ class BytecodeRunner {
       final aAddr = a.addr;
       Object? aDeref;
       if (cx.rt.heap.isReader(aAddr)) {
-        final writerAddr = cx.rt.heap.writerForReader(aAddr);
-        if (cx.sigmaHat.containsKey(writerAddr)) {
+        // Use abstraction methods for imported reader support
+        final writerAddr = cx.rt.heap.tryWriterForReader(aAddr);
+        if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
           aDeref = cx.sigmaHat[writerAddr];
-        } else if (cx.rt.heap.isFullyBound(writerAddr)) {
-          aDeref = cx.rt.heap.getValue(writerAddr);
+        } else if (cx.rt.heap.isReaderBound(aAddr)) {
+          aDeref = cx.rt.heap.getReaderValue(aAddr);
         } else {
           return false; // Unbound - can't compare
         }
@@ -4644,11 +4739,12 @@ class BytecodeRunner {
       final bAddr = b.addr;
       Object? bDeref;
       if (cx.rt.heap.isReader(bAddr)) {
-        final writerAddr = cx.rt.heap.writerForReader(bAddr);
-        if (cx.sigmaHat.containsKey(writerAddr)) {
+        // Use abstraction methods for imported reader support
+        final writerAddr = cx.rt.heap.tryWriterForReader(bAddr);
+        if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
           bDeref = cx.sigmaHat[writerAddr];
-        } else if (cx.rt.heap.isFullyBound(writerAddr)) {
-          bDeref = cx.rt.heap.getValue(writerAddr);
+        } else if (cx.rt.heap.isReaderBound(bAddr)) {
+          bDeref = cx.rt.heap.getReaderValue(bAddr);
         } else {
           return false;
         }

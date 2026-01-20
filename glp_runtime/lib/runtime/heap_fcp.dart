@@ -122,23 +122,6 @@ class HeapFCP {
   /// Get writer address from reader address by following pointer
   ///
   /// Per spec Section 7.1: Follow the reader's pointer to get the writer.
-  /// PRECONDITION: addr must be a reader address (RoTag cell)
-  ///
-  /// @deprecated Use isReaderBound/getReaderValue instead - this method
-  /// throws for imported readers which have no local writer. Use
-  /// tryWriterForReader if you need the writer address and can handle null.
-  @Deprecated('Use isReaderBound/getReaderValue for imported reader support')
-  int writerForReader(int readerAddr) {
-    final cell = cells[readerAddr];
-    if (cell.tag != CellTag.RoTag) {
-      throw StateError('writerForReader called on non-reader cell at $readerAddr (tag: ${cell.tag})');
-    }
-    if (cell.content is! Pointer) {
-      throw StateError('Reader cell at $readerAddr has no pointer (content: ${cell.content})');
-    }
-    return (cell.content as Pointer).targetAddr;
-  }
-
   /// Try to get writer address from reader, returns null for imported readers
   ///
   /// For local readers (with Pointer), returns the writer address.

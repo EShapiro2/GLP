@@ -99,12 +99,12 @@ SystemResult evaluatePredicate(GlpRuntime rt, SystemCall call) {
       }
     } else if (term is VarRef && rt.heap.isReader(term.addr)) {
       final rid = term.addr;
-      final wid = rt.heap.writerForReader(rid);
-      if (!rt.heap.isWriterBound(wid)) {
+      // Use isReaderBound/getReaderValue for imported reader support
+      if (!rt.heap.isReaderBound(rid)) {
         unboundReaders.add(rid);
       } else {
-        // Reader's writer is bound - check value recursively
-        final value = rt.heap.getValue(wid);
+        // Reader is bound - check value recursively
+        final value = rt.heap.getReaderValue(rid);
         if (value != null) {
           collectUnbound(value);
         }
@@ -188,15 +188,15 @@ SystemResult evaluatePredicate(GlpRuntime rt, SystemCall call) {
     print('[EVALUATE] Returning SUCCESS');
     return SystemResult.success;
   } else if (resultTerm is VarRef && rt.heap.isReader(resultTerm.addr)) {
-    // ResultVar is a reader - verify its writer's value matches the result
+    // ResultVar is a reader - verify its value matches the result
     final rid = resultTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       // Reader is unbound - cannot verify
       return SystemResult.failure;
     }
-    final writerValue = rt.heap.getValue(wid);
-    if (writerValue != result) {
+    final readerValue = rt.heap.getReaderValue(rid);
+    if (readerValue != result) {
       return SystemResult.failure;
     }
     return SystemResult.success;
@@ -224,11 +224,11 @@ Object? _evaluate(GlpRuntime rt, Object? term) {
 
   if (term is VarRef && rt.heap.isReader(term.addr)) {
     final rid = term.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       return null; // Unbound reader - should have been caught earlier
     }
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     return _evaluate(rt, value);
   }
 
@@ -505,13 +505,13 @@ SystemResult fileReadPredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (pathTerm is VarRef && rt.heap.isReader(pathTerm.addr)) {
     final rid = pathTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       // Unbound reader - suspend
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     if (value is ConstTerm && value.value is String) {
       path = value.value as String;
     }
@@ -603,12 +603,12 @@ SystemResult fileWritePredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (pathTerm is VarRef && rt.heap.isReader(pathTerm.addr)) {
     final rid = pathTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     if (value is ConstTerm && value.value is String) {
       path = value.value as String;
     }
@@ -635,12 +635,12 @@ SystemResult fileWritePredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (contentsTerm is VarRef && rt.heap.isReader(contentsTerm.addr)) {
     final rid = contentsTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     if (value is ConstTerm && value.value is String) {
       contents = value.value as String;
     }
@@ -707,17 +707,17 @@ SystemResult writePredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (term is VarRef && rt.heap.isReader(term.addr)) {
     final rid = term.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       // Unbound reader - suspend
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final writerValue = rt.heap.getValue(wid);
-    if (writerValue is ConstTerm) {
-      value = writerValue.value;
+    final readerValue = rt.heap.getReaderValue(rid);
+    if (readerValue is ConstTerm) {
+      value = readerValue.value;
     } else {
-      value = writerValue;
+      value = readerValue;
     }
   } else {
     value = term;
@@ -848,12 +848,12 @@ SystemResult fileExistsPredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (pathTerm is VarRef && rt.heap.isReader(pathTerm.addr)) {
     final rid = pathTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     if (value is ConstTerm && value.value is String) {
       path = value.value as String;
     }
@@ -913,12 +913,12 @@ SystemResult fileOpenPredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (pathTerm is VarRef && rt.heap.isReader(pathTerm.addr)) {
     final rid = pathTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     if (value is ConstTerm && value.value is String) {
       path = value.value as String;
     }
@@ -944,12 +944,12 @@ SystemResult fileOpenPredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (modeTerm is VarRef && rt.heap.isReader(modeTerm.addr)) {
     final rid = modeTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     if (value is ConstTerm && value.value is String) {
       mode = value.value as String;
     }
@@ -1056,12 +1056,12 @@ SystemResult fileClosePredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (handleTerm is VarRef && rt.heap.isReader(handleTerm.addr)) {
     final rid = handleTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     if (value is ConstTerm && value.value is int) {
       handle = value.value as int;
     }
@@ -1120,12 +1120,12 @@ SystemResult fileReadHandlePredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (handleTerm is VarRef && rt.heap.isReader(handleTerm.addr)) {
     final rid = handleTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     if (value is ConstTerm && value.value is int) {
       handle = value.value as int;
     }
@@ -1223,12 +1223,12 @@ SystemResult fileWriteHandlePredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (handleTerm is VarRef && rt.heap.isReader(handleTerm.addr)) {
     final rid = handleTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     if (value is ConstTerm && value.value is int) {
       handle = value.value as int;
     }
@@ -1254,12 +1254,12 @@ SystemResult fileWriteHandlePredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (contentsTerm is VarRef && rt.heap.isReader(contentsTerm.addr)) {
     final rid = contentsTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     if (value is ConstTerm && value.value is String) {
       contents = value.value as String;
     }
@@ -1329,12 +1329,12 @@ SystemResult directoryListPredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (pathTerm is VarRef && rt.heap.isReader(pathTerm.addr)) {
     final rid = pathTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     if (value is ConstTerm && value.value is String) {
       path = value.value as String;
     }
@@ -1477,12 +1477,12 @@ SystemResult copyTermPredicate(GlpRuntime rt, SystemCall call) {
     original = rt.heap.getValue(wid);
   } else if (originalTerm is VarRef && rt.heap.isReader(originalTerm.addr)) {
     final rid = originalTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    original = rt.heap.getValue(wid);
+    original = rt.heap.getReaderValue(rid);
   } else {
     original = originalTerm;
   }
@@ -1534,9 +1534,9 @@ Object? _deepCopyTerm(Object? term, GlpRuntime rt, Map<int, Object?> visited) {
     // Get the bound value
     Object? value;
     if (rt.heap.isReader(varId)) {
-      final wid = rt.heap.writerForReader(varId);
-      if (rt.heap.isWriterBound(wid)) {
-        value = rt.heap.valueOfWriter(wid);
+      // Use isReaderBound/getReaderValue for imported reader support
+      if (rt.heap.isReaderBound(varId)) {
+        value = rt.heap.getReaderValue(varId);
       } else {
         // Unbound reader - return as-is (caller handles suspension)
         return term;
@@ -1627,13 +1627,13 @@ SystemResult linkPredicate(GlpRuntime rt, SystemCall call) {
     }
   } else if (moduleListTerm is VarRef && rt.heap.isReader(moduleListTerm.addr)) {
     final rid = moduleListTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
 
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     if (value is ConstTerm) {
       final constValue = value.value;
       if (constValue is String) {
@@ -1731,13 +1731,13 @@ SystemResult loadModulePredicate(GlpRuntime rt, SystemCall call) {
     filePath = fileNameTerm.value as String;
   } else if (fileNameTerm is VarRef && rt.heap.isReader(fileNameTerm.addr)) {
     final rid = fileNameTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
 
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     if (value is ConstTerm && value.value is String) {
       filePath = value.value as String;
     }
@@ -1837,12 +1837,12 @@ SystemResult distributeStreamPredicate(GlpRuntime rt, SystemCall call) {
     inputValue = inputTerm.value;
   } else if (inputTerm is VarRef && rt.heap.isReader(inputTerm.addr)) {
     final rid = inputTerm.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     if (value is ConstTerm) {
       inputValue = value.value;
     } else {
@@ -1929,12 +1929,12 @@ SystemResult copyTermMultiPredicate(GlpRuntime rt, SystemCall call) {
     sourceValue = termArg.value;
   } else if (termArg is VarRef && rt.heap.isReader(termArg.addr)) {
     final rid = termArg.addr;
-    final wid = rt.heap.writerForReader(rid);
-    if (!rt.heap.isWriterBound(wid)) {
+    // Use isReaderBound/getReaderValue for imported reader support
+    if (!rt.heap.isReaderBound(rid)) {
       call.suspendedReaders.add(rid);
       return SystemResult.suspend;
     }
-    final value = rt.heap.getValue(wid);
+    final value = rt.heap.getReaderValue(rid);
     if (value is ConstTerm) {
       sourceValue = value.value;
     } else {

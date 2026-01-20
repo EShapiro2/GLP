@@ -314,15 +314,15 @@ void main() {
   });
 
   group('Section 7: Finding Paired Cell', () {
-    test('writerForReader follows pointer', () {
+    test('tryWriterForReader follows pointer', () {
       final heap = HeapFCP();
       final (writerAddr, readerAddr) = heap.allocateVariable();
 
-      final foundWriter = heap.writerForReader(readerAddr);
+      final foundWriter = heap.tryWriterForReader(readerAddr);
       expect(foundWriter, equals(writerAddr));
     });
 
-    test('writerForReader works after chain binding', () {
+    test('tryWriterForReader works after chain binding', () {
       final heap = HeapFCP();
       final (w1, r1) = heap.allocateVariable();
       final (w2, r2) = heap.allocateVariable();
@@ -330,9 +330,9 @@ void main() {
       // Bind w1 -> r2, so r1 chain leads to w2
       heap.bindWriterToReader(w1, r2);
 
-      // writerForReader(r1) should return w1 (the immediate target)
+      // tryWriterForReader(r1) should return w1 (the immediate target)
       // NOT w2 (the final unbound writer in the chain)
-      final foundWriter = heap.writerForReader(r1);
+      final foundWriter = heap.tryWriterForReader(r1);
       expect(foundWriter, equals(w1));
     });
 
