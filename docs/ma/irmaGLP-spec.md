@@ -59,12 +59,14 @@ The resolvent R_p partitions goals into three categories. Active goals A_p conta
 
 #### 3.1.2 Variable Table V_p
 
-V_p ⊆ 𝒱 × Π × (𝒯 ∪ Π ∪ {⊥}) maintains shared variable state as a set of triples where each (Y, q, s) ∈ V_p:
+V_p ⊆ 𝒱 × Π × (𝒯 ∪ Π ∪ {⊥}) × 𝒮* maintains shared variable state as a set of tuples where each (Y, q, s, Σ) ∈ V_p:
 
 - **Created Writer**: Y ∈ V, q = p, s ∈ 𝒯 is the value of Y, else s = ⊥
 - **Imported Writer**: Y ∈ V, q ≠ p, s ∈ 𝒯 is the value of Y, else s = ⊥
 - **Created Reader**: Y ∈ V?, q = p, s ∈ Π is the read-requesting agent, else s = ⊥
 - **Imported Reader**: Y ∈ V? (reader), q ≠ p, s = q indicates a read request has been sent from p to q, else s = ⊥
+
+The fourth component Σ ∈ 𝒮* is a list of local suspension records for goals waiting on this variable. For standard (non-imported) variables, suspensions are stored on the writer cell in the heap. For imported readers, there is no local writer cell, so V_p serves as the "virtual writer" that holds the suspension list. When an assignment message arrives for an imported reader, the runtime resumes goals from Σ.
 
 The variable table V_p maintains shared variables where one element of each reader/writer pair is local to p while its counterpart is non-local. For writers (both created and imported), the table stores the creator and any assignment to enable response to read requests. For created readers, it records which agent has requested the value. For imported readers, it tracks whether a read request has been sent to the creator. This unified structure ensures variables referenced by non-local counterparts are not prematurely garbage collected and provides routing information for cross-agent communication.
 
@@ -537,3 +539,4 @@ This ensures read requests are sent for imported readers per Section 5.2 Case 2,
 | 2.1 | 2026-01-18 | Claude | Added Imported Writer, revised Reduce/Communicate transactions, added example scenarios |
 | 2.2 | 2026-01-19 | Claude | Added section 8.4: Scheduler-IRMA Integration |
 | 2.3 | 2026-01-19 | Claude | Added export_reader/2 definition in Section 4.3 |
+| 2.4 | 2026-01-19 | Claude | Added suspension list Σ to V_p tuple; V_p as "virtual writer" for imported readers |
