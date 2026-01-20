@@ -461,7 +461,8 @@ class HeapFCP {
     }
 
     // Allocate a value cell for the term and point reader to it
-    final valueCellAddr = cells.length;
+    // IMPORTANT: Use HP++ to keep HP in sync with cells.length
+    final valueCellAddr = HP++;
     cells.add(HeapCell(value, CellTag.ValueTag));
     cell.content = Pointer(valueCellAddr);
 
