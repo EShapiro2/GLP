@@ -123,6 +123,11 @@ class HeapFCP {
   ///
   /// Per spec Section 7.1: Follow the reader's pointer to get the writer.
   /// PRECONDITION: addr must be a reader address (RoTag cell)
+  ///
+  /// @deprecated Use isReaderBound/getReaderValue instead - this method
+  /// throws for imported readers which have no local writer. Use
+  /// tryWriterForReader if you need the writer address and can handle null.
+  @Deprecated('Use isReaderBound/getReaderValue for imported reader support')
   int writerForReader(int readerAddr) {
     final cell = cells[readerAddr];
     if (cell.tag != CellTag.RoTag) {
@@ -278,11 +283,17 @@ class HeapFCP {
       throw StateError('bindWriterToReader target is not a reader at $readerAddr');
     }
 
+    // bindWriterToReader only works with LOCAL readers (must have paired writer)
+    // Imported readers cannot be targets of writer-to-reader binding
+    final targetWriterAddr = tryWriterForReader(readerAddr);
+    if (targetWriterAddr == null) {
+      throw StateError('bindWriterToReader target at $readerAddr is an imported reader (no local writer)');
+    }
+
     final activations = <GoalRef>[];
 
     // Forward suspensions to target writer
     if (writerCell.content is SuspensionListNode) {
-      final targetWriterAddr = writerForReader(readerAddr);
       _forwardSuspensions(writerCell.content as SuspensionListNode, targetWriterAddr);
     }
 
@@ -293,7 +304,6 @@ class HeapFCP {
     // Forward external callback if registered
     final callback = _bindCallbacks.remove(writerAddr);
     if (callback != null) {
-      final targetWriterAddr = writerForReader(readerAddr);
       _bindCallbacks[targetWriterAddr] = callback;
     }
 
