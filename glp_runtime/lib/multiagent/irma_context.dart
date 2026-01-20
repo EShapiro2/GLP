@@ -451,7 +451,10 @@ class IrmaContext {
       agentId,
       vp,
       relaySetups,
-      (_, __) => [runtime.heap.allocateVariable(), runtime.heap.allocateVariable()],
+      (_, __) {
+        final (writerAddr, readerAddr) = runtime.heap.allocateVariable();
+        return [writerAddr, readerAddr];
+      },
     );
     
     // Set up relay forwarding callbacks

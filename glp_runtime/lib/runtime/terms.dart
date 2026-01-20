@@ -21,11 +21,24 @@ class StructTerm implements Term {
 /// A VarRef contains only an address. The cell's tag (WrtTag or RoTag)
 /// determines whether it is a writer or reader. Use heap.isWriter(addr)
 /// or heap.isReader(addr) to check.
+///
+/// Pointer architecture address layout:
+/// - Writer at even address N, Reader at N+1 (odd)
+/// - Both share the same logical varId = N (the writer address)
 class VarRef implements Term {
   /// The heap address of this variable reference
   final int addr;
 
   VarRef(this.addr);
+
+  /// Computed property for backwards compatibility with multiagent code.
+  /// Returns the logical variable ID (the writer address for this variable pair).
+  /// Both the writer at N and its paired reader at N+1 have varId = N.
+  int get varId => addr & ~1;  // Clear lowest bit to get writer address
+
+  /// Computed property for backwards compatibility with multiagent code.
+  /// Returns true if this is a reader reference (odd address).
+  bool get isReader => (addr & 1) == 1;
 
   @override
   String toString() => 'Var@$addr';

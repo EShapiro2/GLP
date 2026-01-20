@@ -140,7 +140,7 @@ void main() {
     });
     
     test('serializes writer with global ID', () {
-      final term = VarRef(42, isReader: false);
+      final term = VarRef(42);
       final bytes = serializer.serializeTerm(term, 'alice');
       final (deserialized, _) = serializer.deserializeTerm(bytes, 0);
       
@@ -151,7 +151,7 @@ void main() {
     });
     
     test('serializes reader with global ID', () {
-      final term = VarRef(100, isReader: true);
+      final term = VarRef(101);
       final bytes = serializer.serializeTerm(term, 'bob');
       final (deserialized, _) = serializer.deserializeTerm(bytes, 0);
       
@@ -162,8 +162,8 @@ void main() {
     });
     
     test('preserves isReader flag', () {
-      final writer = VarRef(50, isReader: false);
-      final reader = VarRef(50, isReader: true);
+      final writer = VarRef(50);
+      final reader = VarRef(51);
       
       final writerBytes = serializer.serializeTerm(writer, 'alice');
       final readerBytes = serializer.serializeTerm(reader, 'alice');
@@ -204,8 +204,8 @@ void main() {
     
     test('serializes structure with variables', () {
       final term = StructTerm('ch', [
-        VarRef(10, isReader: false), // Writer
-        VarRef(11, isReader: true),  // Reader
+        VarRef(10), // Writer
+        VarRef(11),  // Reader
       ]);
       
       final bytes = serializer.serializeTerm(term, 'alice');
@@ -382,8 +382,8 @@ void main() {
     });
     
     test('variable round-trip preserves ID and isReader', () {
-      final writer = VarRef(42, isReader: false);
-      final reader = VarRef(100, isReader: true);
+      final writer = VarRef(42);
+      final reader = VarRef(101);
       
       final writerBytes = serializer.serializeTerm(writer, 'alice');
       final readerBytes = serializer.serializeTerm(reader, 'bob');
@@ -423,26 +423,26 @@ void main() {
       final term = StructTerm('intro', [
         ConstTerm('charlie'),
         StructTerm('ch', [
-          VarRef(50, isReader: false),
-          VarRef(51, isReader: true),
+          VarRef(50),   // Writer at addr 50, varId=50
+          VarRef(51),   // Reader at addr 51, varId=50 (same pair)
         ]),
       ]);
-      
+
       final bytes = serializer.serializeTerm(term, 'alice');
       final (deserialized, _) = serializer.deserializeTerm(bytes, 0);
-      
+
       expect(deserialized, isA<StructTerm>());
       final intro = deserialized as StructTerm;
       expect(intro.functor, 'intro');
       expect(intro.args.length, 2);
       expect((intro.args[0] as ConstTerm).value, 'charlie');
-      
+
       final ch = intro.args[1] as StructTerm;
       expect(ch.functor, 'ch');
       expect(ch.args.length, 2);
       expect((ch.args[0] as VarRef).varId, 50);
       expect((ch.args[0] as VarRef).isReader, false);
-      expect((ch.args[1] as VarRef).varId, 51);
+      expect((ch.args[1] as VarRef).varId, 50);  // Same varId as writer
       expect((ch.args[1] as VarRef).isReader, true);
     });
     
@@ -559,11 +559,11 @@ void main() {
         ConstTerm(3.14),
         ConstTerm(true),
         ConstTerm(null),
-        VarRef(10, isReader: false),
-        VarRef(20, isReader: true),
+        VarRef(10),
+        VarRef(21),
         StructTerm('nested', [
           ConstTerm('inner'),
-          VarRef(30, isReader: true),
+          VarRef(31),
         ]),
       ]);
       

@@ -28,7 +28,7 @@ void main() {
     final netChannel = createExternalChannel(runtime.heap, 'net');
     
     final friendPairs = rt.StructTerm('.', [
-      rt.StructTerm(',', [rt.ConstTerm('bob'), rt.VarRef(bobChannel.outputVarId, isReader: false)]),
+      rt.StructTerm(',', [rt.ConstTerm('bob'), rt.VarRef(bobChannel.outputVarId)]),  // Writer addr
       rt.ConstTerm('nil'),
     ]);
     

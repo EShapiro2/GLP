@@ -339,7 +339,7 @@ void main() {
       // Receive term with variable from bob
       final term = StructTerm('msg', [
         ConstTerm('hello'),
-        VarRef(200, isReader: true),
+        VarRef(201),
       ]);
       
       ctx.importTerm(term, 'bob');
@@ -364,7 +364,7 @@ void main() {
         state: 'bob', // Already requested
       ));
       
-      final term = VarRef(200, isReader: true);
+      final term = VarRef(201);
       ctx.importTerm(term, 'bob');
       
       // State should be unchanged
@@ -378,7 +378,7 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Allocate variable
-      final varId = rt.heap.allocateVariable();
+      final (varId, _) = rt.heap.allocateVariable();
       
       // Add to V_p as imported reader
       ctx.vp.add(VarKey(varId, true), VariableEntry(
@@ -449,7 +449,7 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Allocate a variable to represent the imported writer
-      final writerId = rt.heap.allocateVariable();
+      final (writerId, _) = rt.heap.allocateVariable();
       
       // Alice imports writer CA from bob (created by bob)
       ctx.registerImportedWriter(writerId, 'bob');
@@ -475,7 +475,7 @@ void main() {
       final ctx = IrmaContext(agentId: 'bob', runtime: rt);
       
       // Bob created reader CA? and exported it
-      final readerId = rt.heap.allocateVariable();
+      final (readerId, _) = rt.heap.allocateVariable();
       ctx.registerCreatedReader(readerId);
       
       // Charlie requests the reader
@@ -497,7 +497,7 @@ void main() {
       final ctx = IrmaContext(agentId: 'bob', runtime: rt);
       
       // Bob created reader CA?
-      final readerId = rt.heap.allocateVariable();
+      final (readerId, _) = rt.heap.allocateVariable();
       ctx.registerCreatedReader(readerId);
       
       // Alice sends value BEFORE Charlie requests
@@ -520,26 +520,27 @@ void main() {
     test('importTerm handles writers correctly', () {
       final rt = GlpRuntime();
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
-      
+
       // Allocate actual variables in the heap
-      final readerId = rt.heap.allocateVariable();
-      final writerId = rt.heap.allocateVariable();
-      
+      // allocateVariable() returns (writerAddr, readerAddr) tuple
+      final (readerVarId, readerAddr) = rt.heap.allocateVariable();  // For the reader
+      final (writerVarId, _) = rt.heap.allocateVariable();            // For the writer
+
       // Receive a term containing both writer and reader from bob
       final term = StructTerm('ch', [
-        VarRef(readerId, isReader: true),   // AC? - reader
-        VarRef(writerId, isReader: false),  // CA - writer
+        VarRef(readerAddr),    // AC? - reader at odd address
+        VarRef(writerVarId),   // CA - writer at even address
       ]);
-      
+
       ctx.importTerm(term, 'bob');
-      
-      // Reader should be imported reader
-      expect(ctx.vp.lookup(VarKey(readerId, true))!.role, VariableRole.importedReader);
-      expect(ctx.vp.lookup(VarKey(readerId, true))!.creator, 'bob');
-      
+
+      // Reader should be imported reader (varId is the writer address)
+      expect(ctx.vp.lookup(VarKey(readerVarId, true))!.role, VariableRole.importedReader);
+      expect(ctx.vp.lookup(VarKey(readerVarId, true))!.creator, 'bob');
+
       // Writer should be imported writer
-      expect(ctx.vp.lookup(VarKey(writerId, false))!.role, VariableRole.importedWriter);
-      expect(ctx.vp.lookup(VarKey(writerId, false))!.creator, 'bob');
+      expect(ctx.vp.lookup(VarKey(writerVarId, false))!.role, VariableRole.importedWriter);
+      expect(ctx.vp.lookup(VarKey(writerVarId, false))!.creator, 'bob');
     });
   });
 
@@ -549,7 +550,7 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Allocate a variable in the heap
-      final varId = rt.heap.allocateVariable();
+      final (varId, _) = rt.heap.allocateVariable();
       
       // Register as writer in V_p with callback
       ctx.registerWriter(varId);
@@ -564,7 +565,7 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Allocate a variable in the heap
-      final varId = rt.heap.allocateVariable();
+      final (varId, _) = rt.heap.allocateVariable();
       
       // Register as writer
       ctx.registerWriter(varId);
@@ -586,7 +587,7 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Allocate a variable in the heap
-      final varId = rt.heap.allocateVariable();
+      final (varId, _) = rt.heap.allocateVariable();
       
       // Register as writer (no requester yet)
       ctx.registerWriter(varId);
@@ -603,7 +604,7 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Allocate a variable in the heap
-      final varId = rt.heap.allocateVariable();
+      final (varId, _) = rt.heap.allocateVariable();
       
       // Register as created reader
       ctx.registerCreatedReader(varId);
@@ -618,7 +619,7 @@ void main() {
       final ctx = IrmaContext(agentId: 'alice', runtime: rt);
       
       // Allocate a variable in the heap
-      final varId = rt.heap.allocateVariable();
+      final (varId, _) = rt.heap.allocateVariable();
       
       // Register as created reader
       ctx.registerCreatedReader(varId);

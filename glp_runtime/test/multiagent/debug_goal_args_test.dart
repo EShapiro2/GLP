@@ -21,7 +21,7 @@ void main() {
     final netChannel = createExternalChannel(runtime.heap, 'net');
     
     final friendPairs = rt.StructTerm('.', [
-      rt.StructTerm(',', [rt.ConstTerm('bob'), rt.VarRef(bobChannel.outputVarId, isReader: false)]),
+      rt.StructTerm(',', [rt.ConstTerm('bob'), rt.VarRef(bobChannel.outputVarId)]),  // Writer addr
       rt.ConstTerm('nil'),
     ]);
     
@@ -66,18 +66,18 @@ void main() {
               final term = env.argBySlot[slot];
               print('  Arg slot $slot: $term');
               if (term is rt.VarRef) {
-                final varId = term.varId;
-                final isBound = runtime.heap.isBound(varId);
-                final value = runtime.heap.getValue(varId);
-                print('    -> varId=$varId, isReader=${term.isReader}, isBound=$isBound, value=$value');
+                final addr = term.addr;
+                final varId = term.varId;  // Computed: addr & ~1
+                final isBound = runtime.heap.isBound(addr);
+                final value = runtime.heap.getValue(addr);
+                print('    -> addr=$addr, varId=$varId, isReader=${term.isReader}, isBound=$isBound, value=$value');
                 if (term.isReader) {
-                  final writerId = runtime.heap.writerIdForReader(varId);
-                  print('    -> writerId=$writerId');
-                  if (writerId != null) {
-                    final wBound = runtime.heap.isWriterBound(writerId);
-                    final wValue = runtime.heap.valueOfWriter(writerId);
-                    print('    -> writer isBound=$wBound, value=$wValue');
-                  }
+                  // In pointer architecture, writer is at varId (even addr)
+                  final writerAddr = varId;
+                  print('    -> writerAddr=$writerAddr');
+                  final wBound = runtime.heap.isBound(writerAddr);
+                  final wValue = runtime.heap.getValue(writerAddr);
+                  print('    -> writer isBound=$wBound, value=$wValue');
                 }
               }
             }

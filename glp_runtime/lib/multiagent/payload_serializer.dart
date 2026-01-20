@@ -307,17 +307,19 @@ class PayloadSerializer {
         // Decode global ID length
         final (idLength, lengthSize) = _decodeLength(bytes, offset);
         offset += lengthSize;
-        
+
         // Decode global ID string
         final idBytes = bytes.sublist(offset, offset + idLength);
         offset += idLength;
         final globalId = GlobalVarId.decode(utf8.decode(idBytes));
-        
+
         // Decode isReader flag
         final isReader = bytes[offset] == 1;
         offset++;
-        
-        return (VarRef(globalId.localId, isReader: isReader), offset - startOffset);
+
+        // Compute heap address: varId is writer address, reader is at varId + 1
+        final addr = isReader ? globalId.localId + 1 : globalId.localId;
+        return (VarRef(addr), offset - startOffset);
         
       case _tagStruct:
         // Decode functor length
@@ -496,14 +498,16 @@ class PayloadSerializer {
           localVarId = varMapping[globalIdStr]!;
         } else {
           // Allocate appropriate cell type based on isReader
+          // allocateImportedVar returns the correct address for the cell
           localVarId = allocateImportedVar(isReader);
           varMapping[globalIdStr] = localVarId;
-          
+
           // Notify caller to create VariableEntry and attach to cell
           onVariableImported?.call(localVarId, isReader, globalId);
         }
-        
-        return (VarRef(localVarId, isReader: isReader), offset - startOffset);
+
+        // localVarId is already the correct heap address
+        return (VarRef(localVarId), offset - startOffset);
         
       case _tagStruct:
         // Decode functor length
@@ -577,11 +581,13 @@ class PayloadSerializer {
         if (varMapping.containsKey(globalIdStr)) {
           localVarId = varMapping[globalIdStr]!;
         } else {
-          localVarId = allocateFreshVar();
+          // allocateFreshVar() returns writer address; compute correct address
+          final writerAddr = allocateFreshVar();
+          localVarId = isReader ? writerAddr + 1 : writerAddr;
           varMapping[globalIdStr] = localVarId;
         }
-        
-        return (VarRef(localVarId, isReader: isReader), offset - startOffset);
+
+        return (VarRef(localVarId), offset - startOffset);
         
       case _tagStruct:
         // Decode functor length

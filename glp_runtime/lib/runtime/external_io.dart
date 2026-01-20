@@ -37,15 +37,16 @@ class ExternalChannel {
 /// Factory function to create an ExternalChannel with fresh variables
 ExternalChannel createExternalChannel(HeapFCP heap, String name) {
   // Create input stream variable (Dart=writer, GLP=reader)
-  final inputVarId = heap.allocateFreshVar();
+  // allocateVariable returns (writerAddr, readerAddr) tuple
+  final (inputWriterAddr, _) = heap.allocateVariable();
 
   // Create output stream variable (GLP=writer, Dart=reader)
-  final outputVarId = heap.allocateFreshVar();
+  final (outputWriterAddr, _) = heap.allocateVariable();
 
   return ExternalChannel(
     name: name,
-    inputVarId: inputVarId,
-    outputVarId: outputVarId,
+    inputVarId: inputWriterAddr,  // Writer address (used as logical varId)
+    outputVarId: outputWriterAddr,  // Writer address (used as logical varId)
   );
 }
 
@@ -55,9 +56,11 @@ ExternalChannel createExternalChannel(HeapFCP heap, String name) {
 /// - In? (reader) for input stream
 /// - Out (writer) for output stream
 Term buildChannelTerm(ExternalChannel channel) {
+  // inputVarId is writer address, reader is at writer + 1
+  // outputVarId is writer address (GLP holds writer)
   return StructTerm('ch', [
-    VarRef(channel.inputVarId, isReader: true),   // In? - GLP reads from this
-    VarRef(channel.outputVarId, isReader: false), // Out - GLP writes to this
+    VarRef(channel.inputVarId + 1),   // In? - GLP reads from this (reader addr)
+    VarRef(channel.outputVarId),       // Out - GLP writes to this (writer addr)
   ]);
 }
 
@@ -81,17 +84,18 @@ class InputInjector {
   /// Binds current writer to [term | newTail], advances writer to newTail.
   /// Returns list of goals that were woken up by the injection (should be enqueued).
   List<GoalRef> inject(Term term) {
-    // Allocate fresh variable for tail
-    final tailId = heap.allocateFreshVar();
+    // Allocate fresh variable for tail (returns (writerAddr, readerAddr))
+    final (tailWriterAddr, _) = heap.allocateVariable();
 
     // Build list cell: [term | tail] using '.' functor (GLP cons convention)
-    final listCell = StructTerm('.', [term, VarRef(tailId, isReader: false)]);
+    // Tail is a writer (reader at tailWriterAddr + 1)
+    final listCell = StructTerm('.', [term, VarRef(tailWriterAddr)]);
 
     // Bind current writer to list cell - this may wake suspended goals
     final activations = heap.bindVariable(_currentWriterId, listCell);
 
     // Advance writer to tail for next injection
-    _currentWriterId = tailId;
+    _currentWriterId = tailWriterAddr;
 
     return activations;
   }

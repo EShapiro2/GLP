@@ -249,12 +249,13 @@ class IrmaHelpers {
           // Implementation: We use heap callbacks instead of GLP goals.
           // When Y? is bound, Z should be bound to the same value.
           
-          final pair = allocateFreshPair(0, 0); // Callback allocates and returns IDs
-          final relayWriter = pair[0];
-          final relayReader = pair[1];
-          
-          // Replace Y? with Z? in term
-          final replacedTerm = VarRef(relayReader, isReader: true);
+          // Callback allocates and returns [writerAddr, readerAddr]
+          final pair = allocateFreshPair(0, 0);
+          final relayWriter = pair[0];  // Writer address (even)
+          final relayReader = pair[1];  // Reader address (odd)
+
+          // Replace Y? with Z? in term - relayReader is already the reader address
+          final replacedTerm = VarRef(relayReader);
           
           // Record relay setup for callback registration
           // This implements: export_reader(Y?, Z) :- Z = Y?.

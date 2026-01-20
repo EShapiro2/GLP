@@ -26,6 +26,37 @@ import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/payload_serializer.dart';
 import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
+import 'dart:convert';
+
+/// Parse read request payload to extract varId and requester
+(int, String) _parseReadRequestPayload(List<int> payload) {
+  int offset = 0;
+
+  // Decode length prefix
+  int decodeLength(int start) {
+    if (payload[start] < 128) {
+      return payload[start];
+    }
+    // Multi-byte length not handled for this simple test
+    throw UnimplementedError('Multi-byte length encoding');
+  }
+  int lengthSize(int start) => payload[start] < 128 ? 1 : 2;
+
+  // Parse global variable ID
+  final idLength = decodeLength(offset);
+  offset += lengthSize(0);
+  final idBytes = payload.sublist(offset, offset + idLength);
+  final globalId = GlobalVarId.decode(utf8.decode(idBytes));
+  offset += idLength;
+
+  // Parse requester
+  final reqLength = decodeLength(offset);
+  offset += lengthSize(offset);
+  final reqBytes = payload.sublist(offset, offset + reqLength);
+  final requester = utf8.decode(reqBytes);
+
+  return (globalId.localId, requester);
+}
 
 void main() {
   group('Shared Logic Variable - Two Isolates', () {
@@ -68,7 +99,7 @@ q(a).
       // =========================================================
       
       // @1: Allocate writer X (two-cell: writer at N, reader at N+1)
-      final writerVarId = runtime1.heap.allocateVariable();
+      final (writerVarId, _) = runtime1.heap.allocateVariable();
       print('@1: Allocated writer X with varId=$writerVarId');
       
       // Register writer in @1's V_p (sets up heap callback)
@@ -130,7 +161,7 @@ q(a).
         fail('Label p/1 not found. Available: ${program.labels.keys}');
       }
       
-      final writerRef = VarRef(writerVarId, isReader: false);
+      final writerRef = VarRef(writerVarId);  // Writer addr (even)
       final env1 = CallEnv(args: {0: writerRef});
       
       runtime1.setGoalEnv(goalId1, env1);
@@ -147,7 +178,7 @@ q(a).
         fail('Label q/1 not found. Available: ${program.labels.keys}');
       }
       
-      final readerRef = VarRef(importedReaderId, isReader: true);
+      final readerRef = VarRef(importedReaderId);  // Imported reader addr
       final env2 = CallEnv(args: {0: readerRef});
       
       runtime2.setGoalEnv(goalId2, env2);

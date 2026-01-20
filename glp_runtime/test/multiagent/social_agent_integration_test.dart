@@ -35,7 +35,7 @@ void main() {
     final friendPairs = rt.StructTerm('.', [
       rt.StructTerm(',', [
         rt.ConstTerm('bob'),
-        rt.VarRef(bobChannel.outputVarId, isReader: false),
+        rt.VarRef(bobChannel.outputVarId),  // Writer addr
       ]),
       rt.ConstTerm('nil'),
     ]);
@@ -77,11 +77,7 @@ void main() {
       
       if (result.status == ExecutionStatus.failed) {
         print('\n!!! FAILURE DETECTED !!!');
-        print('\n=== All heap variables at failure ===');
-        for (final varId in runtime.heap.allVarIds) {
-          final value = runtime.heap.getValue(varId);
-          print('  var $varId: $value');
-        }
+        // Heap debug info removed - allVarIds not available in pointer architecture
         break;
       }
     }

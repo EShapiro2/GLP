@@ -89,7 +89,7 @@ void main() {
       final agent = IrmaAgent(agentId: 'bob');
       
       // Set up a variable in bob's heap
-      final (writerId, readerId) = agent.runtime.heap.allocateFreshPair();
+      final (writerId, readerId) = agent.runtime.heap.allocateVariable();
       
       // Add to V_p as imported reader
       final readerKey = VarKey(readerId, true);
@@ -121,7 +121,7 @@ void main() {
       final agent = IrmaAgent(agentId: 'alice');
       
       // Set up a writer in alice's heap
-      final (writerId, readerId) = agent.runtime.heap.allocateFreshPair();
+      final (writerId, readerId) = agent.runtime.heap.allocateVariable();
       
       // Add to V_p as createdWriter (alice created it)
       final writerKey = VarKey(writerId, false);
@@ -155,7 +155,7 @@ void main() {
       final agent = IrmaAgent(agentId: 'alice');
       
       // Set up a writer in alice's heap
-      final (writerId, readerId) = agent.runtime.heap.allocateFreshPair();
+      final (writerId, readerId) = agent.runtime.heap.allocateVariable();
       
       // Add to V_p as createdWriter
       final writerKey = VarKey(writerId, false);
@@ -189,7 +189,7 @@ void main() {
       final agent = IrmaAgent(agentId: 'alice');
       
       // Allocate a variable
-      final (writerId, readerId) = agent.runtime.heap.allocateFreshPair();
+      final (writerId, readerId) = agent.runtime.heap.allocateVariable();
       
       // Register as writer
       agent.registerWriter(writerId);
@@ -203,7 +203,7 @@ void main() {
       final agent = IrmaAgent(agentId: 'alice');
       
       // Allocate a variable
-      final (writerId, readerId) = agent.runtime.heap.allocateFreshPair();
+      final (writerId, readerId) = agent.runtime.heap.allocateVariable();
       
       // Register as created reader
       agent.registerCreatedReader(readerId);
@@ -217,7 +217,7 @@ void main() {
       final agent = IrmaAgent(agentId: 'alice');
       
       // Allocate a variable to represent imported writer
-      final writerId = agent.runtime.heap.allocateVariable();
+      final (writerId, _) = agent.runtime.heap.allocateVariable();
       
       // Register as imported writer from bob
       agent.registerImportedWriter(writerId, 'bob');
@@ -237,7 +237,7 @@ void main() {
       agent.onLog = logs.add;
       
       // Set up a variable in alice's heap first
-      final (writerId, readerId) = agent.runtime.heap.allocateFreshPair();
+      final (writerId, readerId) = agent.runtime.heap.allocateVariable();
       
       // Add to V_p as imported reader
       final readerKey = VarKey(readerId, true);

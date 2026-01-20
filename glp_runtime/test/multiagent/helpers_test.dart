@@ -280,7 +280,7 @@ void main() {
       final relaySetups = <RelaySetup>[];
       
       // Alice exports local writer 100
-      final term = VarRef(100, isReader: false);
+      final term = VarRef(100);  // Writer at addr 100
       final result = helpers.export(
         term, 
         'alice', 
@@ -309,8 +309,8 @@ void main() {
       final helpers = IrmaHelpers('alice');
       final relaySetups = <RelaySetup>[];
       
-      // Alice exports local reader 200
-      final term = VarRef(200, isReader: true);
+      // Alice exports local reader 200 (reader at addr 201, varId=200)
+      final term = VarRef(201);  // Reader at odd addr
       final result = helpers.export(
         term, 
         'alice', 
@@ -343,9 +343,9 @@ void main() {
         role: VariableRole.importedWriter,
       ));
       
-      final term = VarRef(100, isReader: false);
+      final term = VarRef(100);  // Writer at addr 100
       helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0]);
-      
+
       // Should remove from V_p
       expect(vp.contains(key), isFalse);
     });
@@ -365,14 +365,14 @@ void main() {
         state: null,
       ));
       
-      final term = VarRef(100, isReader: true);
+      final term = VarRef(101);  // Reader at addr 101 (varId=100)
       helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0]);
-      
+
       // Should remove from V_p
       expect(vp.contains(key), isFalse);
     });
   });
-  
+
   group('export(term, agentId, vp) - Relay Mechanism', () {
     test('export requested reader creates relay', () {
       final vp = VariableTable('alice');
@@ -394,7 +394,7 @@ void main() {
         return [500, 501]; // writer=500, reader=501
       }
       
-      final term = VarRef(100, isReader: true);
+      final term = VarRef(101);  // Reader at addr 101 (varId=100)
       final result = helpers.export(term, 'alice', vp, relaySetups, allocateFreshPair);
       
       // Term should be replaced with relay reader
@@ -435,12 +435,12 @@ void main() {
       // Structure with local variables
       final term = StructTerm('msg', [
         ConstTerm('alice'),
-        VarRef(10, isReader: false),  // Local writer
-        VarRef(20, isReader: true),   // Local reader
+        VarRef(10),   // Local writer at addr 10 (varId=10)
+        VarRef(21),   // Local reader at addr 21 (varId=20)
       ]);
-      
+
       final result = helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0]);
-      
+
       // Should add both variables to V_p
       final writerKey = VarKey(10, false);
       final readerKey = VarKey(20, true);
@@ -464,18 +464,18 @@ void main() {
       // Nested structure
       final term = StructTerm('outer', [
         StructTerm('inner', [
-          VarRef(1, isReader: false),
-          VarRef(2, isReader: true),
+          VarRef(2),   // Writer at addr 2 (varId=2)
+          VarRef(3),   // Reader at addr 3 (varId=2)
         ]),
-        VarRef(3, isReader: false),
+        VarRef(4),     // Writer at addr 4 (varId=4)
       ]);
-      
+
       final result = helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0]);
-      
+
       // All three variables should be in V_p
-      expect(vp.contains(VarKey(1, false)), isTrue);
-      expect(vp.contains(VarKey(2, true)), isTrue);
-      expect(vp.contains(VarKey(3, false)), isTrue);
+      expect(vp.contains(VarKey(2, false)), isTrue);  // Writer varId=2
+      expect(vp.contains(VarKey(2, true)), isTrue);   // Reader varId=2
+      expect(vp.contains(VarKey(4, false)), isTrue);  // Writer varId=4
       
       // Structure preserved
       expect(result.term, isA<StructTerm>());
@@ -505,15 +505,15 @@ void main() {
       final relaySetups = <RelaySetup>[];
       
       // First export
-      final term1 = VarRef(100, isReader: false);
+      final term1 = VarRef(100);  // Writer at addr 100
       helpers.export(term1, 'alice', vp, relaySetups, (_, __) => [0, 0]);
-      
+
       final key = VarKey(100, false);
       expect(vp.contains(key), isTrue);
       final initialLength = vp.length;
-      
+
       // Second export of same variable
-      final term2 = VarRef(100, isReader: false);
+      final term2 = VarRef(100);  // Writer at addr 100
       helpers.export(term2, 'alice', vp, relaySetups, (_, __) => [0, 0]);
       
       // V_p length unchanged (already in table)
@@ -610,7 +610,7 @@ void main() {
       suspendedSet[goal] = {100};
       
       // Alice exports writer 100
-      final term = VarRef(100, isReader: false);
+      final term = VarRef(100);  // Writer at addr 100
       helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0]);
       
       expect(vp.contains(VarKey(100, false)), isTrue);
