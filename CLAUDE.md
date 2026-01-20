@@ -169,6 +169,32 @@ Present your findings and discuss what to do next:
 3. **Wait for discussion** - Let the user decide how to proceed
 4. **No speculation** - Report facts, not guesses about causes or fixes
 
+### Spec Consistency and Single Source of Truth
+
+**Before implementing any feature or fix:**
+1. **Identify ALL spec documents** that cover the affected area
+2. **Verify they are consistent** with each other
+3. **If conflicts exist**: STOP, harmonize specs first, then implement
+4. **Never implement against conflicting specs**
+
+**Single source of truth for each subsystem:**
+- Each subsystem should have ONE authoritative spec document
+- Other documents should REFERENCE, not duplicate content
+- When updating: update the authoritative spec, verify references still make sense
+- Example: `docs/heap/heap-pointer-architecture-spec.md` is authoritative for heap design; `docs/glp-runtime-spec.txt` references it
+
+**Implementation decisions MUST be derived from spec:**
+- If the spec covers the case: implement exactly as specified
+- If the spec is silent: STOP and discuss, then update spec before implementing
+- If the spec is ambiguous: STOP and clarify spec before implementing
+- **NEVER make arbitrary implementation decisions** — all decisions must trace to spec
+
+**"Robustness" is often a workaround in disguise:**
+- If a function is being called with invalid input, the BUG is in the caller
+- Don't make the function accept invalid input to be "robust"
+- Fix the caller to pass valid input
+- Example: If `writerForReader(addr)` receives a writer address, don't make it "handle" that — fix the caller
+
 ### Communication Style  
 - **BE TERSE** - Brief, direct responses
 - **NO LONG EXPLANATIONS** - Get to the point
