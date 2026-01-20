@@ -1,8 +1,8 @@
 # GLP Heap Storage Specification - Pointer Architecture
 
-**Version**: 3.0 DRAFT  
-**Date**: 2026-01-20  
-**Status**: DRAFT - for review before implementation  
+**Version**: 3.1
+**Date**: 2026-01-20
+**Status**: DRAFT - multiagent support added  
 **Branch**: pointer-architecture
 
 This document specifies the pointer-based variable representation for GLP, replacing the arithmetic-based address scheme in v2.18. The design follows the original FCP implementation.
@@ -120,7 +120,7 @@ Dereferencing is the act of following a chain of references until reaching the f
 ```dart
 /// Dereference an address to its final value.
 /// Updates the starting cell to point directly to the final target (path compression).
-/// Returns: Term (bound) | VarRef (unbound writer)
+/// Returns: Term (bound) | VarRef (unbound local writer) | VariableEntry (unbound imported reader)
 Object derefAddr(int startAddr) {
   // Phase 1: Follow chain to find final target
   var current = startAddr;
@@ -132,10 +132,15 @@ Object derefAddr(int startAddr) {
 
     switch (cell.tag) {
       case CellTag.RoTag:
-        // Reader: follow pointer to writer
+        // Reader: follow pointer to writer, or return VariableEntry for imported readers
         if (cell.content is Pointer) {
           current = (cell.content as Pointer).targetAddr;
           continue;
+        }
+        if (cell.content is VariableEntry) {
+          // Imported reader - no local writer to follow
+          // Return the VariableEntry; caller treats as "unbound"
+          return cell.content;
         }
         throw StateError('Reader cell has invalid content: ${cell.content}');
 
@@ -481,13 +486,13 @@ All instances of `writerAddr + 1` or `readerAddr - 1` must be replaced with expl
 
 ---
 
-## 10. Future: Imported Variables
+## 10. Imported Variables (Multiagent)
 
-For multiagent GLP, imported readers have no local writer. The reader cell points to a VariableEntry (virtual writer) instead of a writer cell:
+For multiagent GLP, imported readers have no local writer. The reader cell contains a VariableEntry (virtual writer) instead of a Pointer:
 
 ```
 +-------+-------------+
-| RoTag | VarEntry    |  ← Imported reader: points to V_p entry
+| RoTag | VarEntry    |  ← Imported reader: contains V_p entry
 +-------+-------------+
 ```
 
@@ -497,7 +502,7 @@ The VariableEntry serves as the "virtual writer" and holds:
 - Suspension queue (for local goals waiting)
 - Received value (after assignment arrives)
 
-This extension is deferred until single-isolate GLP works correctly.
+When `derefAddr` encounters an imported reader (cell content is VariableEntry), it returns the VariableEntry directly. Callers should treat this as "unbound" and suspend the goal, similar to encountering an unbound local writer.
 
 ---
 
@@ -506,3 +511,4 @@ This extension is deferred until single-isolate GLP works correctly.
 | Version | Date | Changes |
 |---------|------|---------|
 | 3.0 | 2026-01-20 | Pointer architecture specification (replaces arithmetic-based v2.18) |
+| 3.1 | 2026-01-20 | Added VariableEntry as derefAddr return type for imported readers (Section 4.2, 10) |
