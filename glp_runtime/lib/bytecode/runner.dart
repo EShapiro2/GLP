@@ -267,29 +267,25 @@ class BytecodeRunner {
   }
 
   /// Find the final unbound variable in a chain (FCP: follow var→var bindings)
-  /// If readerId's writer is bound to another unbound variable, return that variable's ID
-  /// Otherwise return the original readerId
+  /// If addr's writer is bound to another unbound variable, return that variable's addr
+  /// Otherwise return the original addr
   /// derefAddr already follows the FULL chain, so we just use it once
-  int _finalUnboundVar(RunnerContext cx, int readerId) {
-    final wid = cx.rt.heap.writerIdForReader(readerId);
-    if (wid == null) return readerId;
+  int _finalUnboundVar(RunnerContext cx, int addr) {
+    // derefAddr follows the entire chain automatically
+    final derefResult = cx.rt.heap.derefAddr(addr);
 
-    // Phase 4: Use address arithmetic directly (varId == writerAddr)
-    final wAddr = wid;  // wid IS the writer address
-    // derefAddr follows the entire VarRef chain automatically
-    final derefResult = cx.rt.heap.derefAddr(wAddr);
-
-    if (cx.debugOutput) print('[DEBUG _finalUnboundVar] R$readerId -> W$wid -> derefResult=$derefResult');
+    if (cx.debugOutput) print('[DEBUG _finalUnboundVar] @$addr -> derefResult=$derefResult');
 
     if (derefResult is VarRef) {
       // derefAddr returned the final unbound variable in the chain
-      if (cx.debugOutput) print('[DEBUG _finalUnboundVar] Suspending on final var: ${derefResult.varId} isReader=${derefResult.isReader}');
-      return derefResult.varId;
+      final isReader = cx.rt.heap.isReader(derefResult.addr);
+      if (cx.debugOutput) print('[DEBUG _finalUnboundVar] Suspending on final var: ${derefResult.addr} isReader=$isReader');
+      return derefResult.addr;
     }
 
     // Writer is bound to a ground term, reader is effectively bound
-    if (cx.debugOutput) print('[DEBUG _finalUnboundVar] Writer bound to ground term, returning original: $readerId');
-    return readerId;
+    if (cx.debugOutput) print('[DEBUG _finalUnboundVar] Bound to ground term, returning original: $addr');
+    return addr;
   }
 
   /// Suspend on unbound reader: add to U and fail to next clause atomically

@@ -15,7 +15,7 @@ class DrainResult {
   final List<int> goalsRan;
   final ExecutionStatus status;
   final List<String> suspendedGoals;
-  final Set<int> blockingReaders;  // varIds of readers causing suspension (per spec 8.4)
+  final Set<int> blockingReaders;  // addresses of readers causing suspension (per spec 8.4)
 
   DrainResult(this.goalsRan, this.status, this.suspendedGoals, [this.blockingReaders = const {}]);
 }
@@ -27,10 +27,10 @@ class Scheduler {
   Scheduler({required this.rt, BytecodeRunner? runner, Map<Object?, BytecodeRunner>? runners})
       : runners = runners ?? (runner != null ? {null: runner} : {});
 
-  /// Query variable names: maps varId to original name from query (e.g., "X", "Xs")
+  /// Query variable names: maps writerAddr to original name from query (e.g., "X", "Xs")
   Map<int, String> _queryVarNames = {};
 
-  /// Variable display map: maps actual varId to display number (1, 2, 3...)
+  /// Variable display map: maps actual addr to display number (1, 2, 3...)
   /// Only used for fresh variables created during execution
   Map<int, int> _varDisplayMap = {};
   int _nextDisplayId = 1;
@@ -45,13 +45,20 @@ class Scheduler {
 
   /// Get display name for a variable
   /// Uses original name if it's a query variable, otherwise X1, X2, etc.
-  String _getVarDisplayName(int varId) {
-    // Check if this is a query variable with an original name
-    if (_queryVarNames.containsKey(varId)) {
-      return _queryVarNames[varId]!;
+  String _getVarDisplayName(int addr) {
+    // For readers, try to find writer's name first
+    if (rt.heap.isReader(addr)) {
+      final writerAddr = rt.heap.writerForReader(addr);
+      if (_queryVarNames.containsKey(writerAddr)) {
+        return _queryVarNames[writerAddr]!;
+      }
+    }
+    // Check if this address has an original name
+    if (_queryVarNames.containsKey(addr)) {
+      return _queryVarNames[addr]!;
     }
     // Otherwise assign a fresh display ID
-    final displayId = _varDisplayMap.putIfAbsent(varId, () => _nextDisplayId++);
+    final displayId = _varDisplayMap.putIfAbsent(addr, () => _nextDisplayId++);
     return 'X$displayId';
   }
 
@@ -70,37 +77,26 @@ class Scheduler {
 
     // Follow VarRef chains with cycle detection
     while (current is VarRef) {
+      final addr = current.addr;
+      
       // Check for cycle
-      if (path.contains(current.varId)) {
+      if (path.contains(addr)) {
         return '<circular>';
       }
 
-      if (current.isReader) {
-        final wid = rt.heap.writerIdForReader(current.varId);
-        if (wid != null && rt.heap.isWriterBound(wid)) {
-          path.add(current.varId);
-          final value = rt.heap.valueOfWriter(wid);
-          if (value != null) {
-            current = value;
-          } else {
-            break;
-          }
-        } else {
-          break;
-        }
+      // Try to dereference
+      final derefResult = rt.heap.derefAddr(addr);
+      
+      if (derefResult is VarRef) {
+        // Still unbound - stop here
+        break;
+      } else if (derefResult is Term) {
+        // Bound to a value - follow it
+        path.add(addr);
+        current = derefResult;
       } else {
-        // Writer VarRef
-        if (rt.heap.isWriterBound(current.varId)) {
-          path.add(current.varId);
-          final value = rt.heap.valueOfWriter(current.varId);
-          if (value != null) {
-            current = value;
-          } else {
-            break;
-          }
-        } else {
-          break;
-        }
+        // VariableEntry or other - stop
+        break;
       }
     }
 
@@ -109,12 +105,11 @@ class Scheduler {
       if (current.value == 'nil') return '[]';
       if (current.value == null) return '<null>';
       return current.value.toString();
-    } else if (current is VarRef && !current.isReader) {
-      final name = _getVarDisplayName(current.varId);
-      return name;
-    } else if (current is VarRef && current.isReader) {
-      final name = _getVarDisplayName(current.varId);
-      return markReaders ? '$name?' : name;
+    } else if (current is VarRef) {
+      final addr = current.addr;
+      final name = _getVarDisplayName(addr);
+      final isReader = rt.heap.isReader(addr);
+      return (markReaders && isReader) ? '$name?' : name;
     } else if (current is StructTerm) {
       // Special formatting for list structures
       if (current.functor == '.' && current.args.length == 2) {
@@ -138,7 +133,7 @@ class Scheduler {
             listTerm = tail;
           } else if (tail is VarRef) {
             // Check for circular tail
-            if (path.contains(tail.varId)) {
+            if (path.contains(tail.addr)) {
               return '[${elements.join(', ')} | <circular>]';
             }
             final tailStr = _formatTerm(tail, markReaders: markReaders, path: path);
@@ -311,7 +306,7 @@ class Scheduler {
     ).toList();
 
     // Per spec section 8.4: collect blocking readers from runtime's suspended set
-    // rt.suspended maps reader varId -> Set<GoalRef> of goals blocked on that reader
+    // rt.suspended maps reader addr -> Set<GoalRef> of goals blocked on that reader
     final blockingReaders = status == ExecutionStatus.suspended
         ? rt.suspended.keys.toSet()
         : <int>{};

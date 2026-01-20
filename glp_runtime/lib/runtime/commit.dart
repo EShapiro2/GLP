@@ -5,121 +5,104 @@ import 'terms.dart';
 
 class CommitOps {
   /// Apply tentative writer substitution σ̂w (FCP-exact two-cell semantics)
-  /// Implements FCP emulate.h do_commit1 lines 217-258
-  /// Critical: Address-based dereferencing (FCP line 233) prevents variable chains
+  /// 
+  /// Per heap-pointer-architecture-spec.md v3.0:
+  /// - VarRef has only addr field
+  /// - Use heap.isWriter/isReader to check cell type
+  /// - Suspensions are on writer cells
   static List<GoalRef> applySigmaHatFCP({
     required HeapFCP heap,
     required Map<int, Object?> sigmaHat,
   }) {
-    // print('[TRACE Commit FCP] Applying σ̂w to heap (${sigmaHat.length} bindings):');
-    for (final entry in sigmaHat.entries) {
-      // print('  W${entry.key} → ${entry.value}');
-    }
-
     final activations = <GoalRef>[];
 
     // Defensive WxW validation before applying bindings
     for (final entry in sigmaHat.entries) {
       final value = entry.value;
-      if (value is VarRef && !value.isReader) {
+      if (value is VarRef && heap.isWriter(value.addr)) {
         final clauseWriterId = entry.key;
-        final queryWriterId = value.varId;
+        final queryWriterAddr = value.addr;
         // Check if both are unbound (WxW violation)
-        if (!heap.isWriterBound(clauseWriterId) && !heap.isWriterBound(queryWriterId)) {
-          throw StateError('WxW violation in applySigmaHatFCP: W$clauseWriterId → W$queryWriterId (both unbound)');
+        if (!heap.isFullyBound(clauseWriterId) && !heap.isFullyBound(queryWriterAddr)) {
+          throw StateError('WxW violation in applySigmaHatFCP: W$clauseWriterId → W$queryWriterAddr (both unbound)');
         }
       }
     }
 
     for (final entry in sigmaHat.entries) {
-      final varId = entry.key;
+      final varId = entry.key;  // This is writerAddr
       var value = entry.value;
 
       // Skip null values (writer declared but not bound in HEAD)
       if (value == null) continue;
 
-      // Phase 2: Use address arithmetic directly (varId == wAddr)
-      final wAddr = varId;
-      final rAddr = varId + 1;
-
-      // FCP line 226: CRITICAL - dereference by ADDRESS before binding
-      // This prevents W1009→R1014→nil chains
-      // IMPORTANT: Use reader address if VarRef is reader, writer address if writer
+      // Dereference VarRef before binding
       if (value is VarRef) {
-        // Phase 2: Compute target address from VarRef
-        final targetAddr = value.isReader ? value.varId + 1 : value.varId;
-        value = heap.derefAddr(targetAddr);
-        // print('[TRACE Commit FCP] Dereferenced VarRef(${(entry.value as VarRef).varId}) → $value');
+        final derefResult = heap.derefAddr(value.addr);
+        if (derefResult is Term) {
+          value = derefResult;
+        }
+        // If still VarRef or VariableEntry, keep as-is
       }
 
       // Use heap.bindVariable() to properly trigger callbacks and handle suspensions
-      // This ensures onBind callbacks for external I/O are invoked
       final valueAsTerm = value is Term ? value : ConstTerm(value);
       final acts = heap.bindVariable(varId, valueAsTerm);
       activations.addAll(acts);
     }
 
-    // CRITICAL FIX: Re-dereference all bound cells that contain VarRef
-    // This handles dependencies in σ̂w (e.g., W1002→V1005, W1005→nil)
-    // After first pass: W1002 contains VarRef(1005), W1005 contains nil
-    // After second pass: W1002 contains nil (dereferenced through chain)
-    // print('[TRACE Commit FCP] Re-dereferencing cells with VarRef values...');
+    // Re-dereference all bound cells that contain VarRef
+    // This handles dependencies in σ̂w (e.g., W1002→V1005, W1005→value)
     for (final varId in sigmaHat.keys) {
-      // Phase 2: Use address arithmetic directly
       final wAddr = varId;
-      final rAddr = varId + 1;
-      final wContent = heap.cells[wAddr].content;
+      final cell = heap.cells[wAddr];
+      
+      // Only process if still WrtTag with Pointer content (bound to another var)
+      if (cell.tag == CellTag.WrtTag && cell.content is Pointer) {
+        final targetAddr = (cell.content as Pointer).targetAddr;
+        final derefResult = heap.derefAddr(targetAddr);
 
-      if (wContent is VarRef) {
-        // Dereference again (target may now be bound)
-        // Phase 2: varId IS writerAddr
-        final derefValue = heap.derefAddr(wContent.varId);
-
-        if (derefValue is! VarRef) {
-          // Target is now bound - update both cells
-          heap.cells[wAddr].content = derefValue;
-          heap.cells[rAddr].content = derefValue;
-          // print('[TRACE Commit FCP]   W$varId: VarRef(${wContent.varId}) → $derefValue');
+        if (derefResult is Term && derefResult is! VarRef) {
+          // Target is now bound to ground - update this cell
+          cell.content = derefResult;
+          cell.tag = CellTag.ValueTag;
         }
       }
     }
 
-    // print('[TRACE Commit FCP] Total goals reactivated: ${activations.length}');
     return activations;
   }
 
-  /// Walk suspension list and activate armed records (FCP lines 247-253)
+  /// Walk suspension list and activate armed records
   static void _walkAndActivate(SuspensionListNode? list, List<GoalRef> acts) {
     var current = list;
 
     while (current != null) {
       if (current.armed) {
         acts.add(GoalRef(current.goalId!, current.resumePC));
-        current.record.disarm();  // Disarm shared record - affects all nodes
+        current.record.disarm();
       }
       current = current.next;
     }
   }
 
-  /// Forward suspension list to another variable (for reader chains)
-  /// When binding W → R? where R is unbound, suspensions waiting on W should
-  /// be moved to R's reader cell so they wake when R is eventually bound.
-  static void _forwardSuspensions(HeapFCP heap, SuspensionListNode? list, int targetVarId) {
-    // Phase 2: Use address arithmetic directly (varId == wAddr)
-    final targetRAddr = targetVarId + 1;
+  /// Forward suspension list to target writer
+  /// 
+  /// Per heap-pointer-architecture-spec.md v3.0:
+  /// Suspensions are stored on writer cells
+  static void _forwardSuspensions(HeapFCP heap, SuspensionListNode? list, int targetWriterAddr) {
     var current = list;
 
     while (current != null) {
       if (current.armed) {
-        // Create a new node sharing the same SuspensionRecord
-        // This ensures disarming one disarms all copies (FCP shared state)
         final newNode = SuspensionListNode(current.record);
-        final targetContent = heap.cells[targetRAddr].content;
-        newNode.next = targetContent is SuspensionListNode ? targetContent : null;
-        heap.cells[targetRAddr].content = newNode;
+        final targetCell = heap.cells[targetWriterAddr];
+        if (targetCell.content is SuspensionListNode) {
+          newNode.next = targetCell.content as SuspensionListNode;
+        }
+        targetCell.content = newNode;
       }
       current = current.next;
     }
   }
-
 }

@@ -104,9 +104,13 @@ class ModuleRuntime {
 
       // Create boot message
       // If no args provided, create a fresh writer variable for the result
-      final bootArgs = args.isEmpty
-          ? [VarRef(rt.heap.allocateVariable(), isReader: false)]
-          : args;
+      List<Term> bootArgs;
+      if (args.isEmpty) {
+        final (writerAddr, _) = rt.heap.allocateVariable();
+        bootArgs = [VarRef(writerAddr)];
+      } else {
+        bootArgs = args;
+      }
       final bootMessage = ExportMessage.trust(
         sourceModule: '_system',
         functor: 'boot',

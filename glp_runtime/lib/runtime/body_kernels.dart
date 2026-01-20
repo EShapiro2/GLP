@@ -5,6 +5,10 @@
 /// - Have two-valued semantics (success or abort)
 /// - Are only accessible to system predicates (assign.glp)
 /// - Expect all preconditions met (guards should verify before calling)
+///
+/// Per heap-pointer-architecture-spec.md v3.0:
+/// - VarRef has only addr field
+/// - Use heap.isWriter/isReader to check cell type
 
 import 'dart:math' as math;
 
@@ -22,42 +26,27 @@ enum BodyKernelResult {
 }
 
 /// Body kernel function signature
-///
-/// Takes:
-/// - GlpRuntime: access to heap, variable operations
-/// - List<Object?>: arguments (readers should be bound, last arg is output writer)
-///
-/// Returns:
-/// - BodyKernelResult indicating success or abort
 typedef BodyKernel = BodyKernelResult Function(
   GlpRuntime rt,
   List<Object?> args,
 );
 
 /// Registry of body kernels
-///
-/// Body kernels are registered at runtime initialization and called
-/// by system predicates like := defined in assign.glp.
 class BodyKernelRegistry {
   final Map<String, BodyKernel> _kernels = {};
 
-  /// Register a body kernel
   void register(String name, int arity, BodyKernel kernel) {
     _kernels['$name/$arity'] = kernel;
   }
 
-  /// Look up a body kernel by name and arity
   BodyKernel? lookup(String name, int arity) => _kernels['$name/$arity'];
 
-  /// Check if a kernel is registered
   bool has(String name, int arity) => _kernels.containsKey('$name/$arity');
 
-  /// Get all registered kernel names
   Iterable<String> get names => _kernels.keys;
 }
 
 /// Register all standard body kernels
-/// All kernel names start with _ to distinguish them from user predicates
 void registerStandardBodyKernels(BodyKernelRegistry registry) {
   // Arithmetic operations
   registry.register('_add', 3, addKernel);
@@ -113,11 +102,10 @@ num? _getNum(GlpRuntime rt, Object? arg) {
   if (arg is num) return arg;
   if (arg is ConstTerm && arg.value is num) return arg.value as num;
   if (arg is VarRef) {
-    final term = rt.heap.getValue(arg.varId);
-    return _getNum(rt, term); // Recursively evaluate
+    final term = rt.heap.getValue(arg.addr);
+    return _getNum(rt, term);
   }
   if (arg is StructTerm) {
-    // Evaluate arithmetic expressions
     return _evaluateArithmetic(rt, arg);
   }
   return null;
@@ -142,15 +130,12 @@ num? _evaluateArithmetic(GlpRuntime rt, StructTerm struct) {
 
 /// Helper to bind result to output writer
 BodyKernelResult _bindResult(GlpRuntime rt, Object? outputArg, Object value) {
-  if (outputArg is VarRef && !outputArg.isReader) {
-    // Bind the writer variable to the result value
-    // CRITICAL: bindVariable returns goals to reactivate - must enqueue them!
-    // Use bindVariable directly for Term values to avoid double-wrapping
+  if (outputArg is VarRef && rt.heap.isWriter(outputArg.addr)) {
     final List<GoalRef> activations;
     if (value is Term) {
-      activations = rt.heap.bindVariable(outputArg.varId, value);
+      activations = rt.heap.bindVariable(outputArg.addr, value);
     } else {
-      activations = rt.heap.bindVariableConst(outputArg.varId, value);
+      activations = rt.heap.bindVariableConst(outputArg.addr, value);
     }
     for (final act in activations) {
       rt.gq.enqueue(act);
@@ -165,7 +150,6 @@ BodyKernelResult _bindResult(GlpRuntime rt, Object? outputArg, Object value) {
 // ARITHMETIC KERNELS
 // ============================================================================
 
-/// add(X, Y, Result) - Addition
 BodyKernelResult addKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
     print('[ABORT] add/3: expected 3 arguments, got ${args.length}');
@@ -180,7 +164,6 @@ BodyKernelResult addKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[2], x + y);
 }
 
-/// sub(X, Y, Result) - Subtraction
 BodyKernelResult subKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
     print('[ABORT] sub/3: expected 3 arguments, got ${args.length}');
@@ -195,7 +178,6 @@ BodyKernelResult subKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[2], x - y);
 }
 
-/// mul(X, Y, Result) - Multiplication
 BodyKernelResult mulKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
     print('[ABORT] mul/3: expected 3 arguments, got ${args.length}');
@@ -210,7 +192,6 @@ BodyKernelResult mulKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[2], x * y);
 }
 
-/// div(X, Y, Result) - Division (always returns float)
 BodyKernelResult divKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
     print('[ABORT] div/3: expected 3 arguments, got ${args.length}');
@@ -229,7 +210,6 @@ BodyKernelResult divKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[2], x / y);
 }
 
-/// idiv(X, Y, Result) - Integer division
 BodyKernelResult idivKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
     print('[ABORT] idiv/3: expected 3 arguments, got ${args.length}');
@@ -248,7 +228,6 @@ BodyKernelResult idivKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[2], x ~/ y);
 }
 
-/// mod(X, Y, Result) - Modulo
 BodyKernelResult modKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
     print('[ABORT] mod/3: expected 3 arguments, got ${args.length}');
@@ -267,7 +246,6 @@ BodyKernelResult modKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[2], x % y);
 }
 
-/// neg(X, Result) - Unary negation
 BodyKernelResult negKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     print('[ABORT] neg/2: expected 2 arguments, got ${args.length}');
@@ -285,7 +263,6 @@ BodyKernelResult negKernel(GlpRuntime rt, List<Object?> args) {
 // MATH FUNCTION KERNELS
 // ============================================================================
 
-/// abs_kernel(X, Result) - Absolute value
 BodyKernelResult absKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -293,7 +270,6 @@ BodyKernelResult absKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], x.abs());
 }
 
-/// sqrt_kernel(X, Result) - Square root
 BodyKernelResult sqrtKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -301,7 +277,6 @@ BodyKernelResult sqrtKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], math.sqrt(x));
 }
 
-/// sin_kernel(X, Result) - Sine
 BodyKernelResult sinKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -309,7 +284,6 @@ BodyKernelResult sinKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], math.sin(x));
 }
 
-/// cos_kernel(X, Result) - Cosine
 BodyKernelResult cosKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -317,7 +291,6 @@ BodyKernelResult cosKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], math.cos(x));
 }
 
-/// tan_kernel(X, Result) - Tangent
 BodyKernelResult tanKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -325,7 +298,6 @@ BodyKernelResult tanKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], math.tan(x));
 }
 
-/// exp_kernel(X, Result) - Exponential
 BodyKernelResult expKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -333,7 +305,6 @@ BodyKernelResult expKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], math.exp(x));
 }
 
-/// ln_kernel(X, Result) - Natural logarithm
 BodyKernelResult lnKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -341,7 +312,6 @@ BodyKernelResult lnKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], math.log(x));
 }
 
-/// log10_kernel(X, Result) - Base-10 logarithm
 BodyKernelResult log10Kernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -349,7 +319,6 @@ BodyKernelResult log10Kernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], math.log(x) / math.ln10);
 }
 
-/// pow_kernel(X, Y, Result) - Power
 BodyKernelResult powKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -358,7 +327,6 @@ BodyKernelResult powKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[2], math.pow(x, y));
 }
 
-/// asin_kernel(X, Result) - Arc sine
 BodyKernelResult asinKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -366,7 +334,6 @@ BodyKernelResult asinKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], math.asin(x));
 }
 
-/// acos_kernel(X, Result) - Arc cosine
 BodyKernelResult acosKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -374,7 +341,6 @@ BodyKernelResult acosKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], math.acos(x));
 }
 
-/// atan_kernel(X, Result) - Arc tangent
 BodyKernelResult atanKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -386,7 +352,6 @@ BodyKernelResult atanKernel(GlpRuntime rt, List<Object?> args) {
 // TYPE CONVERSION KERNELS
 // ============================================================================
 
-/// integer_kernel(X, Result) - Convert to integer
 BodyKernelResult integerKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -394,7 +359,6 @@ BodyKernelResult integerKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], x.toInt());
 }
 
-/// real_kernel(X, Result) - Convert to float
 BodyKernelResult realKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -402,7 +366,6 @@ BodyKernelResult realKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], x.toDouble());
 }
 
-/// round_kernel(X, Result) - Round to nearest integer
 BodyKernelResult roundKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -410,7 +373,6 @@ BodyKernelResult roundKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], x.round());
 }
 
-/// floor_kernel(X, Result) - Floor
 BodyKernelResult floorKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -418,7 +380,6 @@ BodyKernelResult floorKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], x.floor());
 }
 
-/// ceil_kernel(X, Result) - Ceiling
 BodyKernelResult ceilKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) return BodyKernelResult.abort;
   final x = _getNum(rt, args[0]);
@@ -430,11 +391,11 @@ BodyKernelResult ceilKernel(GlpRuntime rt, List<Object?> args) {
 // STRUCTURE MANIPULATION KERNELS
 // ============================================================================
 
-/// Helper to fully dereference a term (follow VarRefs to their bound values)
+/// Helper to fully dereference a term
 Object? _deref(GlpRuntime rt, Object? term) {
   while (term is VarRef) {
-    final val = rt.heap.getValue(term.varId);
-    if (val == null) return term; // Unbound
+    final val = rt.heap.getValue(term.addr);
+    if (val == null) return term;
     term = val;
   }
   return term;
@@ -442,11 +403,11 @@ Object? _deref(GlpRuntime rt, Object? term) {
 
 /// Helper to convert Dart list to GLP list structure
 Term _dartListToGlpList(List<Object?> items) {
-  Term result = ConstTerm('nil'); // Empty list
+  Term result = ConstTerm('nil');
   for (var i = items.length - 1; i >= 0; i--) {
     final item = items[i];
     final termItem = item is Term ? item : ConstTerm(item);
-    result = StructTerm('.', [termItem, result]); // '.' is the cons functor
+    result = StructTerm('.', [termItem, result]);
   }
   return result;
 }
@@ -457,24 +418,19 @@ List<Object?>? _glpListToDartList(GlpRuntime rt, Object? list) {
   var current = _deref(rt, list);
 
   while (current != null) {
-    // Empty list (nil)
     if (current is ConstTerm && current.value == 'nil') {
       return result;
     }
-    // Non-empty list [H|T] - compiler uses '.' as cons functor
     if (current is StructTerm && current.functor == '.' && current.args.length == 2) {
       result.add(_deref(rt, current.args[0]));
       current = _deref(rt, current.args[1]);
     } else {
-      // Not a proper list
       return null;
     }
   }
   return result;
 }
 
-/// list_to_tuple(List?, Tuple) - Convert list to structure
-/// [foo, a, b] -> foo(a, b)
 BodyKernelResult listToTupleKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     print('[ABORT] list_to_tuple/2: expected 2 arguments, got ${args.length}');
@@ -489,7 +445,6 @@ BodyKernelResult listToTupleKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
 
-  // First element is the functor
   final functorTerm = items[0];
   String? functor;
   if (functorTerm is ConstTerm && functorTerm.value is String) {
@@ -503,7 +458,6 @@ BodyKernelResult listToTupleKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
 
-  // Remaining elements are arguments
   final structArgs = <Term>[];
   for (var i = 1; i < items.length; i++) {
     final item = items[i];
@@ -514,8 +468,6 @@ BodyKernelResult listToTupleKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], tuple);
 }
 
-/// tuple_to_list(Tuple?, List) - Convert structure to list
-/// foo(a, b) -> [foo, a, b]
 BodyKernelResult tupleToListKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     print('[ABORT] tuple_to_list/2: expected 2 arguments, got ${args.length}');
@@ -529,18 +481,15 @@ BodyKernelResult tupleToListKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
 
-  // Build list: [functor, arg1, arg2, ...]
   final items = <Object?>[ConstTerm(tupleArg.functor)];
   for (final arg in tupleArg.args) {
-    items.add(_deref(rt, arg));  // Dereference each arg
+    items.add(_deref(rt, arg));
   }
 
   final list = _dartListToGlpList(items);
   return _bindResult(rt, args[1], list);
 }
 
-/// copy(Source?, Target) - Copy value from source to target
-/// Used as base case for := when right-hand side is already a number
 BodyKernelResult copyKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     print('[ABORT] copy/2: expected 2 arguments, got ${args.length}');
@@ -555,8 +504,6 @@ BodyKernelResult copyKernel(GlpRuntime rt, List<Object?> args) {
 // TIME KERNELS
 // ============================================================================
 
-/// now(T) - Bind T to current Unix milliseconds since epoch
-/// Always succeeds.
 BodyKernelResult nowKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
     print('[ABORT] now/1: expected 1 argument, got ${args.length}');
@@ -570,130 +517,89 @@ BodyKernelResult nowKernel(GlpRuntime rt, List<Object?> args) {
 // MUTUAL REFERENCE KERNELS (O(1) Stream Append)
 // ============================================================================
 
-/// allocate_mutual_reference(Ref, Output) - Create MutualRef from unbound writer
-///
-/// Ref will be bound to a MutualRefTerm.
-/// Output must be an unbound writer variable (the end of a stream).
-///
-/// Example: allocate_mutual_reference(Ref, StreamTail) where StreamTail is unbound
 BodyKernelResult mutualRefKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     print('[ABORT] allocate_mutual_reference/2: expected 2 arguments, got ${args.length}');
     return BodyKernelResult.abort;
   }
 
-  // Second arg (Output) must be an unbound writer - the stream tail
   final output = _deref(rt, args[1]);
-  if (output is! VarRef || output.isReader) {
+  if (output is! VarRef || !rt.heap.isWriter(output.addr)) {
     print('[ABORT] allocate_mutual_reference/2: second argument must be an unbound writer');
     return BodyKernelResult.abort;
   }
 
-  // Check that writer is actually unbound
-  if (rt.heap.isWriterBound(output.varId)) {
-    print('[ABORT] allocate_mutual_reference/2: writer W${output.varId} is already bound');
+  if (rt.heap.isFullyBound(output.addr)) {
+    print('[ABORT] allocate_mutual_reference/2: writer @${output.addr} is already bound');
     return BodyKernelResult.abort;
   }
 
-  // Create MutualRef pointing to the unbound writer
-  final mutualRef = MutualRefTerm(output.varId);
-
-  // Bind first arg (Ref) to the MutualRef
+  final mutualRef = MutualRefTerm(output.addr);
   return _bindResult(rt, args[0], mutualRef);
 }
 
-/// kernel_stream_append(Ref, Value, RefOut) - Append value to stream via MutualRef
-///
-/// Ref must be a MutualRefTerm (from allocate_mutual_reference).
-/// Value is the value to append to the stream.
-/// RefOut will be bound to the updated MutualRef.
-///
-/// Operation:
-/// 1. Get current writer from MutualRef
-/// 2. Allocate fresh variable for new tail
-/// 3. Bind current writer to [Value | NewTail?]
-/// 4. Update MutualRef to point to new writer
-/// 5. Bind NewEnd to reader of new tail
-/// 6. Trigger reader notifications for bound writer
 BodyKernelResult streamAppendKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
     print('[ABORT] kernel_stream_append/3: expected 3 arguments, got ${args.length}');
     return BodyKernelResult.abort;
   }
 
-  // First arg must be MutualRefTerm
   final refArg = _deref(rt, args[0]);
   if (refArg is! MutualRefTerm) {
     print('[ABORT] kernel_stream_append/3: first argument must be a MutualRef');
     return BodyKernelResult.abort;
   }
 
-  // Get the current tail writer from MutualRef
-  final currentWriterId = refArg.currentWriterId;
+  final currentWriterAddr = refArg.currentWriterAddr;
 
-  // Check that current writer is still unbound
-  if (rt.heap.isWriterBound(currentWriterId)) {
-    print('[ABORT] kernel_stream_append/3: MutualRef points to already-bound writer W$currentWriterId');
+  if (rt.heap.isFullyBound(currentWriterAddr)) {
+    print('[ABORT] kernel_stream_append/3: MutualRef points to already-bound writer @$currentWriterAddr');
     return BodyKernelResult.abort;
   }
 
-  // Get value to append (second arg)
   final value = _deref(rt, args[1]);
   final termValue = value is Term ? value : ConstTerm(value);
 
   // Allocate fresh variable for new tail
-  final newTailId = rt.heap.allocateFreshVar();
-  rt.heap.addVariable(newTailId);
+  final (newTailWriter, newTailReader) = rt.heap.allocateVariable();
 
   // Build cons cell: '.'(Value, NewTail?)
-  final newTailReader = VarRef(newTailId, isReader: true);
-  final consCell = StructTerm('.', [termValue, newTailReader]);
+  final consCell = StructTerm('.', [termValue, VarRef(newTailReader)]);
 
-  // Bind current writer to the cons cell (triggers notifications!)
-  final activations = rt.heap.bindVariable(currentWriterId, consCell);
+  // Bind current writer to the cons cell
+  final activations = rt.heap.bindVariable(currentWriterAddr, consCell);
 
-  // Enqueue all reactivations
   for (final act in activations) {
     rt.gq.enqueue(act);
   }
 
   // Update MutualRef to point to the new tail's writer
-  refArg.currentWriterId = newTailId;
+  refArg.currentWriterAddr = newTailWriter;
 
-  // Bind third arg (RefOut) to the updated MutualRef
   return _bindResult(rt, args[2], refArg);
 }
 
-/// kernel_close_mutual_reference(Ref) - Close stream by binding tail to []
-///
-/// Ref must be a MutualRefTerm.
-/// Binds the current tail to empty list (nil), closing the stream.
 BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
     print('[ABORT] kernel_close_mutual_reference/1: expected 1 argument, got ${args.length}');
     return BodyKernelResult.abort;
   }
 
-  // First arg must be MutualRefTerm
   final refArg = _deref(rt, args[0]);
   if (refArg is! MutualRefTerm) {
     print('[ABORT] kernel_close_mutual_reference/1: argument must be a MutualRef');
     return BodyKernelResult.abort;
   }
 
-  // Get the current tail writer from MutualRef
-  final currentWriterId = refArg.currentWriterId;
+  final currentWriterAddr = refArg.currentWriterAddr;
 
-  // Check that current writer is still unbound
-  if (rt.heap.isWriterBound(currentWriterId)) {
-    print('[ABORT] kernel_close_mutual_reference/1: MutualRef points to already-bound writer W$currentWriterId');
+  if (rt.heap.isFullyBound(currentWriterAddr)) {
+    print('[ABORT] kernel_close_mutual_reference/1: MutualRef points to already-bound writer @$currentWriterAddr');
     return BodyKernelResult.abort;
   }
 
-  // Bind current writer to nil (empty list)
-  final activations = rt.heap.bindVariable(currentWriterId, ConstTerm('nil'));
+  final activations = rt.heap.bindVariable(currentWriterAddr, ConstTerm('nil'));
 
-  // Enqueue all reactivations
   for (final act in activations) {
     rt.gq.enqueue(act);
   }
@@ -705,55 +611,36 @@ BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
 // EQUATOR KERNELS (Many-to-One Signaling)
 // ============================================================================
 
-/// '_equator'(X) - Trigger an equator if X is an equator structure
-///
-/// Semantics:
-/// - If X = '_equator'(E, C) and E is an unbound writer: bind E = C (trigger!)
-/// - Otherwise: no-op (succeed without doing anything)
-///
-/// This allows multiple recipients to trigger an equator, with only the first
-/// successful binding actually having effect (subsequent calls see E already bound).
 BodyKernelResult equatorKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
-    // Wrong arity - no-op (succeed silently)
     return BodyKernelResult.success;
   }
 
-  // Dereference the argument
   final deref = _deref(rt, args[0]);
 
-  // Check if it's an equator structure: '_equator'(E, C)
   if (deref is! StructTerm ||
       deref.functor != '_equator' ||
       deref.args.length != 2) {
-    // Not an equator - no-op
     return BodyKernelResult.success;
   }
 
-  // Get E (first arg) and C (second arg)
   final e = deref.args[0];
   final c = _deref(rt, deref.args[1]);
 
-  // Check if E is an unbound writer
-  if (e is VarRef && !e.isReader) {
-    // E is a writer - check if it's unbound
-    if (!rt.heap.isWriterBound(e.varId)) {
-      // E is unbound - trigger by binding E = C
+  if (e is VarRef && rt.heap.isWriter(e.addr)) {
+    if (!rt.heap.isFullyBound(e.addr)) {
       final List<GoalRef> activations;
       if (c is Term) {
-        activations = rt.heap.bindVariable(e.varId, c);
+        activations = rt.heap.bindVariable(e.addr, c);
       } else {
-        activations = rt.heap.bindVariableConst(e.varId, c);
+        activations = rt.heap.bindVariableConst(e.addr, c);
       }
 
-      // Enqueue all reactivations
       for (final act in activations) {
         rt.gq.enqueue(act);
       }
     }
-    // If already bound, no-op (someone else triggered first)
   }
-  // If E is not a writer or not a VarRef, no-op
 
   return BodyKernelResult.success;
 }

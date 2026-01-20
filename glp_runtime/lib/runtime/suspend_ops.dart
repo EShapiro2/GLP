@@ -5,83 +5,63 @@ import 'terms.dart';
 import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 
 /// Suspension operations using FCP-exact shared suspension records
-/// Records stored in wrapper nodes in reader cells (no separate ROQ)
+/// 
+/// Per heap-pointer-architecture-spec.md v3.0:
+/// - Suspensions are stored on WRITER cells (not reader cells)
+/// - For imported readers, suspensions are stored in VariableEntry
 class SuspendOps {
-  /// FCP-exact suspension: create ONE shared record, wrap in nodes for each reader
-  /// Implements FCP emulate.h suspend_on lines 169-188
+  /// FCP-exact suspension: create ONE shared record, add to each variable's writer
+  /// 
+  /// Parameters:
+  /// - heap: The heap
+  /// - goalId: Goal to suspend
+  /// - kappa: Resume PC (restart at clause 1)
+  /// - readerVarIds: Set of addresses to suspend on (can be writer or reader addresses)
   static void suspendGoalFCP({
     required HeapFCP heap,
     required int goalId,
     required int kappa,
-    required Set<int> readerVarIds,  // Variable IDs (not reader IDs)
+    required Set<int> readerVarIds,
   }) {
-    // print('[TRACE SuspendOps FCP] Suspending goal $goalId on ${readerVarIds.length} reader(s):');
-    // print('  Readers: ${readerVarIds.toList()}');
-    // print('  Resume PC: $kappa');
-
     // Create ONE shared suspension record
     final sharedRecord = SuspensionRecord(goalId, kappa);
 
-    // Create wrapper node for each reader cell (independent next pointers)
-    for (final varId in readerVarIds) {
-      var finalVarId = varId;
-      
-      // Determine the reader cell address
-      // For imported readers (single cell), varId IS the reader address
-      // For normal variables (two-cell), reader is at varId + 1
-      int rAddr;
-      
-      // Check if this is an imported reader (single cell with VariableEntry)
-      if (varId < heap.cells.length && 
-          heap.cells[varId].tag == CellTag.RoTag &&
-          heap.cells[varId].content is VariableEntry) {
-        // Imported reader - varId is the reader cell directly
-        rAddr = varId;
-      } else {
-        // Normal two-cell variable - reader is at varId + 1
-        rAddr = varId + 1;
-      }
-      
-      var cell = heap.cells[rAddr];
-
-      // Follow variable chain if reader is bound to another variable
-      while (cell.content is VarRef) {
-        final nextVar = cell.content as VarRef;
-        finalVarId = nextVar.varId;
-        // Phase 2: Use address arithmetic
-        rAddr = finalVarId + 1;
-        cell = heap.cells[rAddr];
-      }
-
-      // Create wrapper node pointing to shared record
-      final node = SuspensionListNode(sharedRecord);
-
-      // For imported readers, V_p entry serves as "virtual writer" for suspensions
-      // Per irmaGLP spec Section 3.1.2: V_p contains 4-tuples (Y, q, s, Σ)
-      if (cell.content is VariableEntry) {
-        final entry = cell.content as VariableEntry;
-        // Prepend to entry's suspension list
-        node.next = entry.suspensions;
-        entry.suspensions = node;
-        // print('[TRACE SuspendOps] Added suspension to VariableEntry for imported reader $varId');
-      } else {
-        // Normal variable - prepend to existing list in cell
-        node.next = cell.content is SuspensionListNode
-            ? cell.content as SuspensionListNode
-            : null;
-        cell.content = node;
-      }
+    // Add suspension to each variable
+    for (final addr in readerVarIds) {
+      _suspendOnVariable(heap, addr, sharedRecord);
     }
   }
 
-  /// Legacy version using ROQ (for backward compatibility during migration)
-  /// TODO: Remove after runner.dart updated to use FCP suspension
+  /// Add suspension to a variable (follows chain to find final unbound writer)
+  static void _suspendOnVariable(HeapFCP heap, int addr, SuspensionRecord record) {
+    // Dereference to find the final target
+    final result = heap.derefAddr(addr);
+
+    if (result is VariableEntry) {
+      // Imported variable - store suspension in entry
+      final node = SuspensionListNode(record);
+      node.next = result.suspensions;
+      result.suspensions = node;
+      return;
+    }
+
+    if (result is VarRef) {
+      // Unbound local variable - result.addr is the writer address
+      final writerAddr = result.addr;
+      heap.suspendOnWriter(writerAddr, record);
+      return;
+    }
+
+    // Already bound to ground - no suspension needed
+    // (This shouldn't normally happen if we're suspending on unbound vars)
+  }
+
+  /// Legacy version (deprecated)
   static void suspendGoal({
     required int goalId,
     required int kappa,
     required Set<int> readerVarIds,
   }) {
-    // Placeholder - should not be called after migration
     throw UnimplementedError('Legacy suspendGoal deprecated - use suspendGoalFCP');
   }
 }

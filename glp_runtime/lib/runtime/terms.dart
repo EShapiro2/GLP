@@ -15,42 +15,27 @@ class StructTerm implements Term {
   String toString() => '$functor(${args.join(",")})';
 }
 
-/// Variable reference - holds varId and isReader flag
+/// Variable reference - holds heap address only
 ///
-/// Migration notes:
-/// - During Phase 1, varId IS the writerAddr (address of writer cell)
-/// - The isReader flag is stored explicitly for backward compatibility
-/// - The addr getter computes the heap address from (varId, isReader)
-/// - After migration completes, VarRef can be simplified to hold just addr
+/// Per heap-pointer-architecture-spec.md v3.0:
+/// A VarRef contains only an address. The cell's tag (WrtTag or RoTag)
+/// determines whether it is a writer or reader. Use heap.isWriter(addr)
+/// or heap.isReader(addr) to check.
 class VarRef implements Term {
-  /// The variable ID (which equals writerAddr during migration)
-  final int varId;
-  
-  /// Whether this reference is to the reader cell
-  final bool isReader;
+  /// The heap address of this variable reference
+  final int addr;
 
-  /// Primary constructor
-  VarRef(this.varId, {required this.isReader});
-
-  /// Get the heap address
-  /// During migration: writerAddr for writer, writerAddr+1 for reader
-  int get addr => isReader ? varId + 1 : varId;
-
-  /// Alternate constructor from heap address (for migrated code)
-  /// Requires knowing whether the address is writer or reader
-  VarRef.fromAddr(int address, {required bool reader})
-      : varId = reader ? address - 1 : address,
-        isReader = reader;
+  VarRef(this.addr);
 
   @override
-  String toString() => isReader ? 'R$varId?' : 'W$varId';
+  String toString() => 'Var@$addr';
 
   @override
   bool operator ==(Object other) =>
-      other is VarRef && other.varId == varId && other.isReader == isReader;
+      other is VarRef && other.addr == addr;
 
   @override
-  int get hashCode => Object.hash(varId, isReader);
+  int get hashCode => addr.hashCode;
 }
 
 /// Mutable reference to an unbound writer - enables O(1) stream append
@@ -66,25 +51,22 @@ class VarRef implements Term {
 ///
 /// SRSW: MutualRefTerm is treated as ground (can be read multiple times)
 ///
-/// Migration note: During Phase 1, _currentWriterId holds the writerAddr.
+/// Per heap-pointer-architecture-spec.md v3.0:
+/// _currentWriterAddr holds the heap address of the current unbound tail writer.
 class MutualRefTerm implements Term {
-  int _currentWriterId;  // heap address of current unbound tail writer
-  final int id;          // unique ID for this MutualRef
+  int _currentWriterAddr;  // heap address of current unbound tail writer
+  final int id;            // unique ID for this MutualRef
 
   static int _nextId = 0;
 
-  MutualRefTerm(this._currentWriterId) : id = _nextId++;
+  MutualRefTerm(this._currentWriterAddr) : id = _nextId++;
 
-  /// Get/set the current writer ID (which equals writerAddr during migration)
-  int get currentWriterId => _currentWriterId;
-  set currentWriterId(int varId) => _currentWriterId = varId;
-
-  /// Alias for clarity during migration
-  int get currentWriterAddr => _currentWriterId;
-  set currentWriterAddr(int addr) => _currentWriterId = addr;
+  /// Get/set the current writer address
+  int get currentWriterAddr => _currentWriterAddr;
+  set currentWriterAddr(int addr) => _currentWriterAddr = addr;
 
   @override
-  String toString() => 'MutualRef#$id(@W$_currentWriterId)';
+  String toString() => 'MutualRef#$id(@$_currentWriterAddr)';
 
   @override
   bool operator ==(Object other) =>

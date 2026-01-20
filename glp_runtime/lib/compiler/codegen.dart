@@ -567,14 +567,10 @@ class CodeGenerator {
       if (varInfo == null) {
         throw CompileError('Undefined variable: ${term.name}', term.line, term.column, phase: 'codegen');
       }
-      if (term.isReader) {
-        // Reader variable - return VarRef with isReader: true
-        // In single-ID system, reader and writer share the same registerIndex
-        return rt.VarRef(varInfo.registerIndex!, isReader: true);
-      } else {
-        // Writer variable - return VarRef with isReader: false
-        return rt.VarRef(varInfo.registerIndex!, isReader: false);
-      }
+      // In pointer architecture, VarRef just has addr.
+      // For execute/2, we pass the register index and let runtime resolve.
+      // Reader vs writer distinction is handled by the Execute instruction handler.
+      return rt.VarRef(varInfo.registerIndex!);
     } else if (term is ListTerm) {
       if (term.isNil) {
         return 'nil';  // Empty list represented as 'nil'

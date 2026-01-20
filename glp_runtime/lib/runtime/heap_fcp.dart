@@ -1,9 +1,10 @@
-/// FCP Two-Cell Heap with Address-Based Design
-/// Variables are identified by heap addresses directly, with no separate ID namespace.
-/// Each variable consists of two consecutive cells: writer at addr N, reader at addr N+1.
+/// FCP Two-Cell Heap with Pointer Architecture
 ///
-/// Imported variables (from other agents) use a single cell whose content is
-/// the VariableEntry from V_p, per irmaGLP spec.
+/// Per heap-pointer-architecture-spec.md v3.0:
+/// - Reader cells point TO writer cells
+/// - Writer cells contain: null (unbound), SuspensionListNode (waiting), or Pointer (bound to var)
+/// - Suspensions live on writer cells, not reader cells
+/// - ValueTag indicates bound to ground value
 library;
 
 import 'terms.dart';
@@ -15,12 +16,12 @@ import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 enum CellTag {
   WrtTag,   // Writer cell
   RoTag,    // Read-only (reader) cell
-  ValueTag, // Bound to value
+  ValueTag, // Bound to ground value
 }
 
-/// Heap cell - contains either Pointer, SuspensionListNode, or Term
+/// Heap cell - contains either Pointer, SuspensionListNode, Term, or VariableEntry
 class HeapCell {
-  dynamic content;  // Pointer | SuspensionListNode | Term
+  dynamic content;  // null | Pointer | SuspensionListNode | Term | VariableEntry
   CellTag tag;
 
   HeapCell(this.content, this.tag);
@@ -29,9 +30,9 @@ class HeapCell {
   bool get hasSuspensions => content is SuspensionListNode;
 }
 
-/// Pointer to another cell (just an address - List index)
+/// Pointer to another cell (heap address)
 class Pointer {
-  final int targetAddr;  // Index in cells List
+  final int targetAddr;
 
   Pointer(this.targetAddr);
 
@@ -39,44 +40,49 @@ class Pointer {
   String toString() => 'Ptr($targetAddr)';
 }
 
-/// FCP Two-Cell Heap with Address-Based Variable Identity
+/// FCP Two-Cell Heap with Pointer-Based Variable Identity
 /// 
-/// In this design:
-/// - Variables are identified by heap addresses, not separate IDs
-/// - allocateVariable() returns writerAddr (the "varId" IS the address)
-/// - Writer is at addr N, reader is at addr N+1
+/// Per heap-pointer-architecture-spec.md v3.0:
+/// - allocateVariable() returns (writerAddr, readerAddr) tuple
+/// - Reader cell points TO writer cell
+/// - Writer cell contains null (unbound), SuspensionListNode, or Pointer (chain)
+/// - Suspensions are stored on writer cells
 class HeapFCP {
   final List<HeapCell> cells = [];
   
   int HP = 0;  // Heap pointer (next free address)
 
   /// Callbacks for external observation (Phase 0 I/O)
-  /// Keyed by writerAddr (varId == writerAddr)
+  /// Keyed by writerAddr
   final Map<int, void Function(Term)> _bindCallbacks = {};
 
-  /// Allocate a fresh variable
-  /// Returns writerAddr, which serves as the variable's identity ("varId")
-  /// Writer cell is at writerAddr, reader cell is at writerAddr + 1
-  int allocateVariable() {
-    final wAddr = HP++;
-    final rAddr = HP++;
+  // ==========================================================================
+  // Variable Allocation (Section 3 of spec)
+  // ==========================================================================
 
-    // Writer cell points to reader
-    cells.add(HeapCell(Pointer(rAddr), CellTag.WrtTag));
+  /// Allocate a fresh local variable
+  /// Returns (writerAddr, readerAddr) tuple
+  /// 
+  /// Per spec Section 3.1:
+  /// - Writer cell: null content (unbound, no suspensions)
+  /// - Reader cell: Pointer to writer
+  (int, int) allocateVariable() {
+    final writerAddr = HP++;
+    final readerAddr = HP++;
 
-    // Reader cell is initially unbound (null content, RoTag)
-    cells.add(HeapCell(null, CellTag.RoTag));
-    
-    return wAddr;  // Return writerAddr as "varId"
+    // Writer cell: initially unbound (null content)
+    cells.add(HeapCell(null, CellTag.WrtTag));
+
+    // Reader cell: points TO writer
+    cells.add(HeapCell(Pointer(writerAddr), CellTag.RoTag));
+
+    return (writerAddr, readerAddr);
   }
 
   /// Allocate a single reader cell for an imported variable (no local writer)
   /// 
-  /// Per irmaGLP spec, imported readers have no local paired writer - the writer
-  /// exists at the remote agent. The cell content will be set to a VariableEntry
-  /// by the caller (IrmaContext.importTerm).
-  /// 
-  /// Returns the reader cell address (which is also the varId for this imported reader)
+  /// Per irmaGLP spec, imported readers have no local paired writer.
+  /// The cell content will be set to a VariableEntry by the caller.
   int allocateImportedReader() {
     final readerAddr = HP++;
     cells.add(HeapCell(null, CellTag.RoTag));
@@ -85,11 +91,8 @@ class HeapFCP {
 
   /// Allocate a single writer cell for an imported variable (no local reader)
   /// 
-  /// Per irmaGLP spec, imported writers have no local paired reader - the reader
-  /// exists at the remote agent. The cell content will be set to a VariableEntry
-  /// by the caller (IrmaContext.importTerm).
-  /// 
-  /// Returns the writer cell address (which is also the varId for this imported writer)
+  /// Per irmaGLP spec, imported writers have no local paired reader.
+  /// The cell content will be set to a VariableEntry by the caller.
   int allocateImportedWriter() {
     final writerAddr = HP++;
     cells.add(HeapCell(null, CellTag.WrtTag));
@@ -97,65 +100,56 @@ class HeapFCP {
   }
 
   // ==========================================================================
-  // Address Helper Methods
+  // Cell Type Checking
   // ==========================================================================
-
-  /// Get paired reader address from writer address
-  /// This is the allocation pair relationship: reader = writer + 1
-  int readerAddrFor(int writerAddr) => writerAddr + 1;
-
-  /// Get paired writer address from reader address  
-  /// This is the allocation pair relationship: writer = reader - 1
-  int writerAddrFor(int readerAddr) => readerAddr - 1;
 
   /// Check if address is a writer cell
-  bool isWriter(int addr) => addr < cells.length && cells[addr].tag == CellTag.WrtTag;
+  bool isWriter(int addr) => 
+      addr >= 0 && addr < cells.length && cells[addr].tag == CellTag.WrtTag;
 
   /// Check if address is a reader cell
-  bool isReader(int addr) => addr < cells.length && cells[addr].tag == CellTag.RoTag;
+  bool isReader(int addr) => 
+      addr >= 0 && addr < cells.length && cells[addr].tag == CellTag.RoTag;
 
-  /// Get address from VarRef (accounts for isReader flag)
-  int addrFromVarRef(VarRef ref) {
-    // varId IS writerAddr, isReader determines +0 or +1
-    return ref.isReader ? ref.varId + 1 : ref.varId;
-  }
+  /// Check if address is a value cell (bound to ground)
+  bool isValue(int addr) =>
+      addr >= 0 && addr < cells.length && cells[addr].tag == CellTag.ValueTag;
 
   // ==========================================================================
-  // Core Operations
+  // Pointer Navigation (Section 7 of spec)
   // ==========================================================================
 
-  /// Register callback for when variable is bound (Phase 0 I/O)
-  /// Takes writerAddr (which is also the varId)
-  void onBind(int writerAddr, void Function(Term) callback) {
-    // Check if already bound
-    if (isFullyBound(writerAddr)) {
-      final value = getValue(writerAddr);
-      if (value != null) {
-        callback(value);
-      }
-      return;
+  /// Get writer address from reader address by following pointer
+  /// 
+  /// Per spec Section 7.1: Follow the reader's pointer
+  int writerForReader(int readerAddr) {
+    final cell = cells[readerAddr];
+    if (cell.tag != CellTag.RoTag) {
+      throw StateError('writerForReader called on non-reader cell at $readerAddr');
     }
-    // Register for later invocation (keyed by writerAddr)
-    _bindCallbacks[writerAddr] = callback;
+    if (cell.content is! Pointer) {
+      throw StateError('Reader cell at $readerAddr has no pointer (content: ${cell.content})');
+    }
+    return (cell.content as Pointer).targetAddr;
   }
 
-  /// Remove a registered callback (for cleanup)
-  void removeBindCallback(int writerAddr) {
-    _bindCallbacks.remove(writerAddr);
-  }
+  // ==========================================================================
+  // Dereferencing (Section 4 of spec)
+  // ==========================================================================
 
-  /// Address-based dereferencing
-  /// Follows variable chains using address arithmetic
+  /// Dereference an address to its final value
   /// 
-  /// For imported variables (content is VariableEntry):
-  /// - If entry.state is a Term, returns that value
-  /// - Otherwise returns the VariableEntry itself for routing
+  /// Per spec Section 4.2:
+  /// - RoTag: follow Pointer to target
+  /// - WrtTag with null/SuspensionListNode: unbound, return VarRef
+  /// - WrtTag with Pointer: follow to target (variable chain)
+  /// - ValueTag: return the Term content
+  /// - VariableEntry: check state for value or return entry
   /// 
-  /// Returns: Term (for bound values) or VariableEntry (for imported unbound)
-  /// Callers should check: `if (result is VariableEntry) { ... }`
-  Object derefAddr(int addr) {
-    var current = addr;
-    Set<int> visited = {};
+  /// Returns: Term (bound) | VarRef (unbound writer) | VariableEntry (imported unbound)
+  Object derefAddr(int startAddr) {
+    var current = startAddr;
+    final visited = <int>{};
 
     while (true) {
       if (visited.contains(current)) {
@@ -165,83 +159,228 @@ class HeapFCP {
 
       final cell = cells[current];
 
-      // Imported reader - content is V_p entry
-      // Per irmaGLP spec, imported readers have VariableEntry as content
-      if (cell.tag == CellTag.RoTag && cell.content is VariableEntry) {
-        final entry = cell.content as VariableEntry;
-        if (entry.state is Term) {
-          return entry.state as Term;
-        }
-        // Return entry for routing (caller uses creator, creatorLocalId)
-        return entry;
+      switch (cell.tag) {
+        case CellTag.RoTag:
+          // Reader cell
+          if (cell.content is VariableEntry) {
+            // Imported reader - check for value in entry
+            final entry = cell.content as VariableEntry;
+            if (entry.state is Term) {
+              return entry.state as Term;
+            }
+            return entry;  // Unbound imported
+          }
+          if (cell.content is Pointer) {
+            // Follow pointer to writer
+            current = (cell.content as Pointer).targetAddr;
+            continue;
+          }
+          throw StateError('Reader cell at $current has invalid content: ${cell.content}');
+
+        case CellTag.WrtTag:
+          // Writer cell
+          if (cell.content is VariableEntry) {
+            // Imported writer - check for value in entry
+            final entry = cell.content as VariableEntry;
+            if (entry.state is Term) {
+              return entry.state as Term;
+            }
+            return entry;  // Unbound imported
+          }
+          if (cell.content == null || cell.content is SuspensionListNode) {
+            // Unbound writer - return VarRef to this address
+            return VarRef(current);
+          }
+          if (cell.content is Pointer) {
+            // Bound to another variable - follow pointer
+            current = (cell.content as Pointer).targetAddr;
+            continue;
+          }
+          throw StateError('Writer cell at $current has invalid content: ${cell.content}');
+
+        case CellTag.ValueTag:
+          // Bound to ground value
+          return cell.content as Term;
       }
-
-      // Imported writer - content is V_p entry
-      // Per irmaGLP spec, imported writers have VariableEntry as content
-      if (cell.tag == CellTag.WrtTag && cell.content is VariableEntry) {
-        final entry = cell.content as VariableEntry;
-        if (entry.state is Term) {
-          return entry.state as Term;
-        }
-        // Return entry for routing
-        return entry;
-      }
-
-      // Bound to value
-      if (cell.tag == CellTag.ValueTag) {
-        final content = cell.content;
-
-        // If bound to VarRef, follow the chain
-        if (content is VarRef) {
-          // varId IS writerAddr, isReader tells us +0 or +1
-          current = content.isReader ? content.varId + 1 : content.varId;
-          continue;
-        }
-
-        // Bound to ground term - return it
-        return content as Term;
-      }
-
-      // Check if this is a writer cell pointing to its paired reader
-      if (cell.content is Pointer && cell.tag == CellTag.WrtTag) {
-        // Unbound writer → return writer VarRef
-        // Since varId == writerAddr, we use current as varId
-        return VarRef(current, isReader: false);
-      }
-
-      // Follow pointer to another cell (for other pointer types)
-      if (cell.content is Pointer) {
-        current = (cell.content as Pointer).targetAddr;
-        continue;
-      }
-
-      // Unbound reader → return reader VarRef
-      // For a reader at addr N+1, the varId (writerAddr) is N
-      if (cell.tag == CellTag.RoTag) {
-        final writerAddr = current - 1;
-        return VarRef(writerAddr, isReader: true);
-      }
-
-      // Unbound (other case) - construct VarRef
-      // This shouldn't normally happen with proper two-cell design
-      return VarRef(current, isReader: false);
     }
   }
 
-  /// API: Check if variable is fully bound to ground term
-  /// Takes writerAddr (which is also varId)
+  // ==========================================================================
+  // Binding (Section 5 of spec)
+  // ==========================================================================
+
+  /// Bind a writer to a ground term value
+  /// 
+  /// Per spec Section 5.1:
+  /// - Changes writer tag to ValueTag
+  /// - Stores value as content
+  /// - Activates any suspensions on the writer
+  /// 
+  /// Returns list of goals to reactivate
+  List<GoalRef> bindWriter(int writerAddr, Term value) {
+    final cell = cells[writerAddr];
+    if (cell.tag != CellTag.WrtTag) {
+      throw StateError('bindWriter called on non-writer cell at $writerAddr (tag: ${cell.tag})');
+    }
+
+    final activations = <GoalRef>[];
+
+    // Save and process suspensions before overwriting
+    if (cell.content is SuspensionListNode) {
+      _walkAndActivate(cell.content as SuspensionListNode, activations);
+    }
+
+    // Bind to value
+    cell.content = value;
+    cell.tag = CellTag.ValueTag;
+
+    // Notify external observer if registered
+    final callback = _bindCallbacks.remove(writerAddr);
+    if (callback != null) {
+      callback(value);
+    }
+
+    return activations;
+  }
+
+  /// Bind a writer to another variable (via its reader)
+  /// 
+  /// Per spec Section 5.3:
+  /// - Stores Pointer(readerAddr) in writer cell
+  /// - Forwards suspensions to target writer
+  /// - Tag remains WrtTag (not bound to ground)
+  /// 
+  /// Returns list of goals to reactivate (empty if target unbound)
+  List<GoalRef> bindWriterToReader(int writerAddr, int readerAddr) {
+    final writerCell = cells[writerAddr];
+    if (writerCell.tag != CellTag.WrtTag) {
+      throw StateError('bindWriterToReader called on non-writer at $writerAddr');
+    }
+
+    final readerCell = cells[readerAddr];
+    if (readerCell.tag != CellTag.RoTag) {
+      throw StateError('bindWriterToReader target is not a reader at $readerAddr');
+    }
+
+    final activations = <GoalRef>[];
+
+    // Forward suspensions to target writer
+    if (writerCell.content is SuspensionListNode) {
+      final targetWriterAddr = writerForReader(readerAddr);
+      _forwardSuspensions(writerCell.content as SuspensionListNode, targetWriterAddr);
+    }
+
+    // Store pointer to reader (creates variable chain)
+    writerCell.content = Pointer(readerAddr);
+    // Tag remains WrtTag
+
+    // Forward external callback if registered
+    final callback = _bindCallbacks.remove(writerAddr);
+    if (callback != null) {
+      final targetWriterAddr = writerForReader(readerAddr);
+      _bindCallbacks[targetWriterAddr] = callback;
+    }
+
+    return activations;
+  }
+
+  /// Bind writer to writer (WxW violation)
+  /// 
+  /// Per spec Section 5.2: This is forbidden and should throw
+  void bindWriterToWriter(int w1, int w2) {
+    throw StateError('WxW violation: cannot bind writer $w1 to writer $w2');
+  }
+
+  // ==========================================================================
+  // Suspension (Section 6 of spec)
+  // ==========================================================================
+
+  /// Add a suspension to a writer cell
+  /// 
+  /// Per spec Section 6.1: Suspensions are stored on writer cells
+  void suspendOnWriter(int writerAddr, SuspensionRecord record) {
+    final cell = cells[writerAddr];
+    if (cell.tag != CellTag.WrtTag) {
+      throw StateError('suspendOnWriter called on non-writer at $writerAddr');
+    }
+
+    final node = SuspensionListNode(record);
+
+    // Prepend to existing suspension list
+    if (cell.content is SuspensionListNode) {
+      node.next = cell.content as SuspensionListNode;
+    }
+    cell.content = node;
+  }
+
+  /// Add a suspension via a reader (finds writer and adds there)
+  /// 
+  /// Per spec Section 6.1: Find the reader's writer and add suspension there
+  void suspendOnReader(int readerAddr, SuspensionRecord record) {
+    final cell = cells[readerAddr];
+    
+    if (cell.content is VariableEntry) {
+      // Imported reader - store suspension in entry or separate mechanism
+      // For now, we'll add a suspension list to the entry's state
+      // This may need refinement based on irmaGLP requirements
+      final entry = cell.content as VariableEntry;
+      // TODO: Handle imported reader suspension properly
+      // For now, just return - the caller should handle this case
+      return;
+    }
+
+    if (cell.tag != CellTag.RoTag || cell.content is! Pointer) {
+      throw StateError('suspendOnReader called on invalid reader at $readerAddr');
+    }
+
+    final writerAddr = (cell.content as Pointer).targetAddr;
+    suspendOnWriter(writerAddr, record);
+  }
+
+  /// Forward suspensions from one writer to another
+  void _forwardSuspensions(SuspensionListNode? list, int targetWriterAddr) {
+    var current = list;
+    while (current != null) {
+      if (current.armed) {
+        // Create new node sharing the same record
+        final newNode = SuspensionListNode(current.record);
+        final targetCell = cells[targetWriterAddr];
+        if (targetCell.content is SuspensionListNode) {
+          newNode.next = targetCell.content as SuspensionListNode;
+        }
+        targetCell.content = newNode;
+      }
+      current = current.next;
+    }
+  }
+
+  /// Walk suspension list and activate armed records
+  static void _walkAndActivate(SuspensionListNode? list, List<GoalRef> activations) {
+    var current = list;
+    while (current != null) {
+      if (current.armed) {
+        activations.add(GoalRef(current.goalId!, current.resumePC));
+        current.record.disarm();
+      }
+      current = current.next;
+    }
+  }
+
+  // ==========================================================================
+  // High-Level API
+  // ==========================================================================
+
+  /// Check if variable is fully bound to ground term
   /// 
   /// Returns false for VarRef (unbound) or VariableEntry (imported unbound)
   bool isFullyBound(int writerAddr) {
     final result = derefAddr(writerAddr);
-    // VarRef = local unbound, VariableEntry = imported unbound
     return result is! VarRef && result is! VariableEntry;
   }
 
-  /// API: Get variable value (dereferenced)
-  /// Takes writerAddr (which is also varId)
+  /// Get variable value (dereferenced)
   /// 
-  /// Returns null if unbound (VarRef or VariableEntry)
+  /// Returns null if unbound
   Term? getValue(int writerAddr) {
     final result = derefAddr(writerAddr);
     if (result is VarRef || result is VariableEntry) {
@@ -250,195 +389,95 @@ class HeapFCP {
     return result as Term;
   }
 
-  /// API: Bind variable to a term
-  /// Takes writerAddr (which is also varId)
-  /// Returns list of goals to reactivate
-  List<GoalRef> bindVariable(int writerAddr, Term value) {
-    final rAddr = writerAddr + 1;  // Address arithmetic
-
-    // Dereference value if it's a VarRef
-    Term finalValue = value;
-    if (value is VarRef) {
-      // varId IS writerAddr
-      final derefResult = derefAddr(value.varId);
-      if (derefResult is VariableEntry) {
-        // Cannot bind to an imported unbound variable - keep as VarRef
-        finalValue = value;
-      } else {
-        finalValue = derefResult as Term;
-      }
-    }
-
-    // Save suspension list BEFORE overwriting reader content
-    final oldContent = cells[rAddr].content;
-
-    // Bind both cells to the dereferenced value
-    cells[writerAddr].content = finalValue;
-    cells[writerAddr].tag = CellTag.ValueTag;
-    cells[rAddr].content = finalValue;
-    cells[rAddr].tag = CellTag.ValueTag;
-
-    // Handle suspensions based on whether we're binding to ground or unbound
-    final activations = <GoalRef>[];
-    if (oldContent is SuspensionListNode) {
-      if (finalValue is VarRef) {
-        // Binding to another variable - FORWARD suspensions
-        _forwardSuspensionsByAddr(oldContent, finalValue.varId + 1);  // target reader addr
-      } else {
-        // Binding to ground value - activate suspensions
-        _walkAndActivate(oldContent, activations);
-      }
-    }
-
-    // Notify external observer if registered
-    final callback = _bindCallbacks.remove(writerAddr);
-    if (callback != null) {
-      if (finalValue is VarRef) {
-        // Binding to another variable - forward callback to target
-        _bindCallbacks[finalValue.varId] = callback;  // varId IS writerAddr
-      } else {
-        // Binding to ground value - invoke callback now
-        callback(finalValue);
-      }
-    }
-
-    return activations;
-  }
-
-  /// Forward suspension list to another reader cell (by address)
-  void _forwardSuspensionsByAddr(SuspensionListNode? list, int targetReaderAddr) {
-    var current = list;
-
-    while (current != null) {
-      if (current.armed) {
-        // Create a new node sharing the same SuspensionRecord
-        final newNode = SuspensionListNode(current.record);
-        final targetContent = cells[targetReaderAddr].content;
-        newNode.next = targetContent is SuspensionListNode ? targetContent : null;
-        cells[targetReaderAddr].content = newNode;
-      }
-      current = current.next;
-    }
-  }
-
-  /// Walk suspension list and activate armed records
-  static void _walkAndActivate(SuspensionListNode? list, List<GoalRef> acts) {
-    var current = list;
-
-    while (current != null) {
-      if (current.armed) {
-        acts.add(GoalRef(current.goalId!, current.resumePC));
-        current.record.disarm();
-      }
-      current = current.next;
-    }
-  }
-
-  /// API: Bind variable to constant
-  List<GoalRef> bindVariableConst(int writerAddr, Object? v) {
-    return bindVariable(writerAddr, ConstTerm(v));
-  }
-
-  /// API: Bind variable to structure
-  List<GoalRef> bindVariableStruct(int writerAddr, String functor, List<Term> args) {
-    return bindVariable(writerAddr, StructTerm(functor, args));
-  }
-
-  /// Get suspension list from reader cell (by writerAddr/varId)
-  SuspensionListNode? getSuspensions(int writerAddr) {
-    final rAddr = writerAddr + 1;
-    final cell = cells[rAddr];
-    return cell.content is SuspensionListNode ? cell.content as SuspensionListNode : null;
-  }
-
-  /// Add suspension to reader cell (by writerAddr/varId)
-  void addSuspension(int writerAddr, SuspensionListNode node) {
-    final rAddr = writerAddr + 1;
-    final oldContent = cells[rAddr].content;
-
-    // Prepend new node to existing list
-    node.next = oldContent is SuspensionListNode ? oldContent : null;
-    cells[rAddr].content = node;
-  }
-
-  /// Process suspensions after binding
-  List<GoalRef> processBindSuspensions(int writerAddr) {
-    final rAddr = writerAddr + 1;
-    final oldContent = cells[rAddr].content;
-
-    final activations = <GoalRef>[];
-
-    if (oldContent is SuspensionListNode) {
-      SuspensionListNode? current = oldContent;
-      while (current != null) {
-        if (current.armed) {
-          activations.add(GoalRef(current.goalId!, current.resumePC));
-          current.record.disarm();
-        }
-        current = current.next;
-      }
-    }
-
-    return activations;
-  }
-
-  // ==========================================================================
-  // Compatibility Methods (API aliases for migration)
-  // ==========================================================================
-
-  bool isWriterBound(int writerId) => isFullyBound(writerId);
-
-  Term? valueOfWriter(int writerId) => getValue(writerId);
-
-  List<GoalRef> bindWriterConst(int writerId, Object? v) => bindVariableConst(writerId, v);
-
-  List<GoalRef> bindWriterStruct(int writerId, String f, List<Term> args) {
-    return bindVariableStruct(writerId, f, args);
-  }
-
-  /// Get (writerId, readerId) pair - both are the same value (writerAddr)
-  (int, int) allocateFreshPair() {
-    final writerAddr = allocateVariable();
-    return (writerAddr, writerAddr);  // Same value for compatibility
-  }
-
-  /// writerIdForReader - returns the same value since varId == writerAddr
-  int? writerIdForReader(int readerId) => readerId;
-
-  /// allocateFreshVar - alias for allocateVariable
-  int allocateFreshVar() => allocateVariable();
-
-  /// addVariable - no-op (variables are created by allocateVariable)
-  void addVariable(int varId) {
-    // No-op
-  }
-
-  /// writer - compatibility stub
-  Object? writer(int writerId) => null;
-
-  /// Dereference term
+  /// Dereference a term
   /// 
-  /// If the result is a VariableEntry (imported unbound), returns the original VarRef
+  /// If term is VarRef, dereferences it. Otherwise returns term unchanged.
   Term dereference(Term term) {
     if (term is VarRef) {
-      // varId IS writerAddr
-      final result = derefAddr(term.varId);
+      final result = derefAddr(term.addr);
       if (result is VariableEntry) {
-        // Imported unbound - return original VarRef
-        return term;
+        return term;  // Imported unbound - return original
+      }
+      if (result is VarRef) {
+        return result;  // Still unbound
       }
       return result as Term;
     }
     return term;
   }
 
-  /// isBound - alias for isFullyBound
+  /// Register callback for when variable is bound
+  void onBind(int writerAddr, void Function(Term) callback) {
+    if (isFullyBound(writerAddr)) {
+      final value = getValue(writerAddr);
+      if (value != null) {
+        callback(value);
+      }
+      return;
+    }
+    _bindCallbacks[writerAddr] = callback;
+  }
+
+  /// Remove a registered callback
+  void removeBindCallback(int writerAddr) {
+    _bindCallbacks.remove(writerAddr);
+  }
+
+  // ==========================================================================
+  // Compatibility Methods (for gradual migration of callers)
+  // ==========================================================================
+
+  /// Bind variable to a term (compatibility wrapper)
+  List<GoalRef> bindVariable(int writerAddr, Term value) {
+    if (value is VarRef) {
+      // Binding to another variable
+      if (isReader(value.addr)) {
+        return bindWriterToReader(writerAddr, value.addr);
+      } else if (isWriter(value.addr)) {
+        bindWriterToWriter(writerAddr, value.addr);  // Will throw
+        return [];
+      }
+    }
+    return bindWriter(writerAddr, value);
+  }
+
+  /// Bind variable to constant
+  List<GoalRef> bindVariableConst(int writerAddr, Object? v) {
+    return bindWriter(writerAddr, ConstTerm(v));
+  }
+
+  /// Bind variable to structure
+  List<GoalRef> bindVariableStruct(int writerAddr, String functor, List<Term> args) {
+    return bindWriter(writerAddr, StructTerm(functor, args));
+  }
+
+  /// Compatibility: isWriterBound
+  bool isWriterBound(int writerAddr) => isFullyBound(writerAddr);
+
+  /// Compatibility: valueOfWriter  
+  Term? valueOfWriter(int writerAddr) => getValue(writerAddr);
+
+  /// Compatibility: bindWriterConst
+  List<GoalRef> bindWriterConst(int writerAddr, Object? v) => bindVariableConst(writerAddr, v);
+
+  /// Compatibility: bindWriterStruct
+  List<GoalRef> bindWriterStruct(int writerAddr, String f, List<Term> args) {
+    return bindVariableStruct(writerAddr, f, args);
+  }
+
+  /// Compatibility: isBound
   bool isBound(int varId) => isFullyBound(varId);
 
-  /// allVarIds - returns all valid writerAddrs (even addresses from 0 to HP-2)
-  Iterable<int> get allVarIds sync* {
-    for (int addr = 0; addr < HP; addr += 2) {
-      yield addr;
-    }
+  /// Legacy: Get suspension list (now on writer, not reader)
+  SuspensionListNode? getSuspensions(int writerAddr) {
+    final cell = cells[writerAddr];
+    return cell.content is SuspensionListNode ? cell.content as SuspensionListNode : null;
+  }
+
+  /// Legacy: Add suspension (now on writer)
+  void addSuspension(int writerAddr, SuspensionListNode node) {
+    final cell = cells[writerAddr];
+    node.next = cell.content is SuspensionListNode ? cell.content as SuspensionListNode : null;
+    cell.content = node;
   }
 }
