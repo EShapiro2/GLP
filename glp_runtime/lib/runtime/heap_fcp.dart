@@ -520,6 +520,79 @@ class HeapFCP {
   /// Compatibility: isBound
   bool isBound(int varId) => isFullyBound(varId);
 
+  // ==========================================================================
+  // Reader abstraction methods (work for local AND imported readers)
+  // ==========================================================================
+
+  /// Check if a reader is bound (local or imported)
+  ///
+  /// For local readers: checks if paired writer is fully bound
+  /// For imported readers: checks if cell content is Pointer (bound by bindImportedReader)
+  bool isReaderBound(int readerAddr) {
+    final cell = cells[readerAddr];
+    if (cell.tag != CellTag.RoTag) return false;
+
+    if (cell.content is Pointer) {
+      final targetAddr = (cell.content as Pointer).targetAddr;
+      final targetCell = cells[targetAddr];
+      if (targetCell.tag == CellTag.WrtTag) {
+        // Local reader - check if writer is fully bound
+        return isFullyBound(targetAddr);
+      } else if (targetCell.tag == CellTag.ValueTag) {
+        // Imported reader, bound via bindImportedReader
+        return true;
+      }
+    }
+    // VariableEntry = unbound imported reader
+    return false;
+  }
+
+  /// Get value for a bound reader (local or imported)
+  ///
+  /// Returns null if reader is unbound
+  Term? getReaderValue(int readerAddr) {
+    final cell = cells[readerAddr];
+    if (cell.tag != CellTag.RoTag) return null;
+
+    if (cell.content is Pointer) {
+      final targetAddr = (cell.content as Pointer).targetAddr;
+      final targetCell = cells[targetAddr];
+      if (targetCell.tag == CellTag.WrtTag) {
+        // Local reader - get writer value
+        return getValue(targetAddr);
+      } else if (targetCell.tag == CellTag.ValueTag) {
+        // Imported reader, bound via bindImportedReader - value is in the cell
+        return targetCell.content as Term;
+      }
+    }
+    return null;
+  }
+
+  /// Check if reader is an imported reader (no local writer)
+  bool isImportedReader(int readerAddr) {
+    final cell = cells[readerAddr];
+    if (cell.tag != CellTag.RoTag) return false;
+
+    if (cell.content is VariableEntry) {
+      // Unbound imported reader
+      return true;
+    }
+    if (cell.content is Pointer) {
+      // Could be local reader (points to writer) or bound imported reader (points to ValueTag)
+      final targetAddr = (cell.content as Pointer).targetAddr;
+      final targetCell = cells[targetAddr];
+      // If target is ValueTag, it was bound via bindImportedReader
+      return targetCell.tag == CellTag.ValueTag;
+    }
+    return false;
+  }
+
+  /// Get writer address for local reader, null for imported reader
+  ///
+  /// This is the safe version - use this instead of writerForReader when
+  /// the reader might be imported
+  int? getWriterForReader(int readerAddr) => tryWriterForReader(readerAddr);
+
   /// Legacy: Get suspension list (now on writer, not reader)
   SuspensionListNode? getSuspensions(int writerAddr) {
     final cell = cells[writerAddr];

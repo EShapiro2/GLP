@@ -1007,11 +1007,11 @@ class BytecodeRunner {
 
         if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
           // Reader VarRef: check if bound and has matching structure
-          final wid = cx.rt.heap.writerForReader(arg.addr);
-          if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: READ mode, reader ${arg.addr} -> writer $wid');
-          if (!cx.rt.heap.isWriterBound(wid)) {
-            // Unbound reader - add to Si and continue (two-phase)
-            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer $wid unbound, adding to Si');
+          // Use abstraction methods that work for both local and imported readers
+          if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: READ mode, reader ${arg.addr}');
+          if (!cx.rt.heap.isReaderBound(arg.addr)) {
+            // Unbound reader (local or imported) - add to Si and continue (two-phase)
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: reader ${arg.addr} unbound, adding to Si');
             final suspendOnVar = _finalUnboundVar(cx, arg.addr);
             cx.Si.add(suspendOnVar);
             pc++;
@@ -1019,18 +1019,17 @@ class BytecodeRunner {
           }
 
           // Bound reader - dereference fully and check if it's a matching structure
-          final rawValue = cx.rt.heap.valueOfWriter(wid);
+          final rawValue = cx.rt.heap.getReaderValue(arg.addr);
           if (rawValue == null) {
-            // Null value - should not happen for bound writer
-            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer $wid has null value, failing');
+            // Null value - should not happen for bound reader
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: reader ${arg.addr} has null value, failing');
             _softFailToNextClause(cx, pc);
             pc = _findNextClauseTry(pc);
             continue;
           }
           // Dereference recursively in case value is a VarRef chain
           final value = cx.rt.heap.dereference(rawValue);
-          // print('DEBUG: HeadStructure - Writer $wid value = ${value.runtimeType}: $value, expecting ${op.functor}/${op.arity}');
-          if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: writer $wid dereferenced value = $value, expecting ${op.functor}/${op.arity}');
+          if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: reader ${arg.addr} dereferenced value = $value, expecting ${op.functor}/${op.arity}');
           if (value is StructTerm && value.functor == op.functor && value.args.length == op.arity) {
             // Matching structure - enter READ mode
             if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: MATCH! Entering READ mode');
@@ -1744,10 +1743,10 @@ class BytecodeRunner {
               }
             }
           } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-            final wid = cx.rt.heap.writerForReader(arg.addr);
-            if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable reader R${arg.addr} -> writer W$wid, bound=${cx.rt.heap.isWriterBound(wid)}');
-            if (cx.rt.heap.isWriterBound(wid)) {
-              final value = cx.rt.heap.valueOfWriter(wid);
+            // Use abstraction methods that work for both local and imported readers
+            if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable reader R${arg.addr}, bound=${cx.rt.heap.isReaderBound(arg.addr)}');
+            if (cx.rt.heap.isReaderBound(arg.addr)) {
+              final value = cx.rt.heap.getReaderValue(arg.addr);
               if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable writer value=$value');
               if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
                 if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable storing sigmaHat[${existing.addr}] = $value');
@@ -2470,8 +2469,21 @@ class BytecodeRunner {
             }
           } else {
             // Writer or reader
-            final writerAddr = isWriter ? addr : cx.rt.heap.writerForReader(addr);
-            cx.argSlots[argSlot] = VarRef(isReaderMode ? writerAddr + 1 : writerAddr);
+            if (isWriter) {
+              final writerAddr = addr;
+              cx.argSlots[argSlot] = VarRef(isReaderMode ? writerAddr + 1 : writerAddr);
+            } else {
+              // Reader - try to get writer (will be null for imported readers)
+              final writerAddr = cx.rt.heap.tryWriterForReader(addr);
+              if (writerAddr != null) {
+                // Local reader - use writer/reader based on mode
+                cx.argSlots[argSlot] = VarRef(isReaderMode ? writerAddr + 1 : writerAddr);
+              } else {
+                // Imported reader - no local writer
+                // Pass reader address directly (can only be used in reader mode)
+                cx.argSlots[argSlot] = VarRef(addr);
+              }
+            }
           }
         } else if (value is int) {
           // Legacy: bare int ID (assumed to be writer addr)
@@ -3698,9 +3710,9 @@ class BytecodeRunner {
         } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
           if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: arg is reader @${arg.addr}');
           // Reader: check if bound, else add to Si (two-phase)
-          final writerAddr = cx.rt.heap.writerForReader(arg.addr);
-          final bound = cx.rt.heap.isFullyBound(writerAddr);
-          final value = bound ? cx.rt.heap.getValue(writerAddr) : null;
+          // Use abstraction methods that work for both local and imported readers
+          final bound = cx.rt.heap.isReaderBound(arg.addr);
+          final value = bound ? cx.rt.heap.getReaderValue(arg.addr) : null;
 
           if (!bound) {
             // Unbound reader - add to Si and continue (two-phase)
