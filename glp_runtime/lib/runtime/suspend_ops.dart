@@ -25,8 +25,23 @@ class SuspendOps {
     // Create wrapper node for each reader cell (independent next pointers)
     for (final varId in readerVarIds) {
       var finalVarId = varId;
-      // Phase 2: Use address arithmetic directly (varId == wAddr)
-      var rAddr = finalVarId + 1;
+      
+      // Determine the reader cell address
+      // For imported readers (single cell), varId IS the reader address
+      // For normal variables (two-cell), reader is at varId + 1
+      int rAddr;
+      
+      // Check if this is an imported reader (single cell with VariableEntry)
+      if (varId < heap.cells.length && 
+          heap.cells[varId].tag == CellTag.RoTag &&
+          heap.cells[varId].content is VariableEntry) {
+        // Imported reader - varId is the reader cell directly
+        rAddr = varId;
+      } else {
+        // Normal two-cell variable - reader is at varId + 1
+        rAddr = varId + 1;
+      }
+      
       var cell = heap.cells[rAddr];
 
       // Follow variable chain if reader is bound to another variable
