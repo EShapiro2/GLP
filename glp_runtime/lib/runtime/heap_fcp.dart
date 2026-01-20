@@ -440,6 +440,42 @@ class HeapFCP {
   }
 
   // ==========================================================================
+  // Imported Reader Binding (Multiagent)
+  // ==========================================================================
+
+  /// Bind an imported reader to a received value
+  ///
+  /// Per irmaGLP spec Section 5.3 (imported reader case):
+  /// - Imported readers have no local writer, just a reader cell with VariableEntry
+  /// - When assignment arrives, the reader cell is updated to point to the value
+  /// - Activations are extracted from VariableEntry.suspensions
+  ///
+  /// Returns list of goals to reactivate (from VariableEntry suspensions)
+  List<GoalRef> bindImportedReader(int readerAddr, Term value, VariableEntry entry) {
+    final cell = cells[readerAddr];
+    if (cell.tag != CellTag.RoTag) {
+      throw StateError('bindImportedReader called on non-reader cell at $readerAddr (tag: ${cell.tag})');
+    }
+    if (cell.content is! VariableEntry) {
+      throw StateError('bindImportedReader called on reader without VariableEntry at $readerAddr');
+    }
+
+    final activations = <GoalRef>[];
+
+    // Extract activations from VariableEntry suspensions (linked list)
+    if (entry.suspensions != null) {
+      _walkAndActivate(entry.suspensions!, activations);
+    }
+
+    // Allocate a value cell for the term and point reader to it
+    final valueCellAddr = cells.length;
+    cells.add(HeapCell(value, CellTag.ValueTag));
+    cell.content = Pointer(valueCellAddr);
+
+    return activations;
+  }
+
+  // ==========================================================================
   // Compatibility Methods (for gradual migration of callers)
   // ==========================================================================
 

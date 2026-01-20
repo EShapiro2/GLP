@@ -523,28 +523,26 @@ class IrmaContext {
     
     if (entry != null) {
       if (entry.role == VariableRole.importedReader) {
-        // Imported reader - store value in entry and activate suspensions
-        print('[DEBUG IRMA $agentId] handleAssignment: IMPORTED READER - binding local varId=${entry.varId}');
-        
-        // Phase 5: Store value in entry.state (updates both V_p and heap cell
-        // since they share the same VariableEntry object)
+        // Imported reader - per irmaGLP spec Section 5.3:
+        // - Reactivate suspended goals
+        // - Apply {X?:=T} substitution (by updating heap cell)
+        // - Remove entry from V_p
+        // - Add V_p entries for non-local variables in T (TODO)
+        print('[DEBUG IRMA $agentId] handleAssignment: IMPORTED READER - binding readerAddr=${entry.varId}');
+
+        // Store value in entry.state for reference
         entry.state = value;
-        
-        // Activate suspensions from VariableEntry ("virtual writer")
-        // Per irmaGLP spec Section 3.1.2: V_p serves as virtual writer for imported readers
-        final activations = _activateSuspensionsFromEntry(entry);
-        print('[DEBUG IRMA $agentId] handleAssignment: activated ${activations.length} goals from VariableEntry');
+
+        // Bind imported reader: updates heap cell, gets activations from VariableEntry
+        // For imported readers, entry.varId is the reader cell address
+        final readerAddr = entry.varId;
+        final activations = runtime.heap.bindImportedReader(readerAddr, value, entry);
+        print('[DEBUG IRMA $agentId] handleAssignment: bindImportedReader returned ${activations.length} activations');
         for (final act in activations) {
           runtime.gq.enqueue(act);
         }
-        
-        // Also bind on heap for normal variable semantics (may return 0 activations
-        // since suspensions were in VariableEntry, not heap cell)
-        final heapActivations = runtime.heap.bindVariable(entry.varId, value);
-        print('[DEBUG IRMA $agentId] handleAssignment: bindVariable returned ${heapActivations.length} heap activations');
-        for (final act in heapActivations) {
-          runtime.gq.enqueue(act);
-        }
+
+        // Remove from V_p - variable is now bound
         vp.remove(entry.key);
       } else if (entry.role == VariableRole.createdReader) {
         // We created this reader - check for pending requester

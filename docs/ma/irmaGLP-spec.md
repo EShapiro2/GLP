@@ -200,18 +200,19 @@ The binary Communicate transaction (c_p, c_q) → (c'_p, c'_q) where p ≠ q and
 
 m = (X?:=T):
 
-- **If X? is local to q** (i.e., (X?, ·, ·) ∉ V'_q):
-  - Let R = reactivate(X?) for agent q (modifies S'_q)
-  - If T ≠ ⊥: A'_q := (A_q · R){X?:=T}, and apply {X?:=T} to S'_q and F_q
-  - Else: A'_q := A_q · R
-  - For each variable Y in T not already local to q and created by r: add (Y, r, ⊥) to V'_q
-
-- **Else if (X?, q, r) ∈ V'_q where r ≠ ⊥** (created reader with pending request):
+- **If (X?, q, r) ∈ V'_q where r ∈ Π** (created reader with pending request):
   - Forward assignment: add (X?:=T, r) to M'_q
   - Update entry: (X?, q, r) → (X?, q, T) in V'_q
 
 - **Else if (X?, q, ⊥) ∈ V'_q** (created reader, no request yet):
   - Store value: update to (X?, q, T) in V'_q
+
+- **Else if (X?, r, s) ∈ V'_q where r ≠ q** (imported reader):
+  - Let R = reactivate(X?) for agent q (modifies S'_q)
+  - If T ≠ ⊥: A'_q := (A_q · R){X?:=T}, and apply {X?:=T} to S'_q and F'_q
+  - Else: A'_q := A_q · R
+  - Remove (X?, r, s) from V'_q
+  - For each variable Y in T not already local to q and created by r': add (Y, r', ⊥) to V'_q
 
 #### Type 2: Read Request
 
@@ -275,8 +276,9 @@ Alice's reduction binds W := T for some term T.
 
 **Step 4: Bob receives assignment**
 
-Bob processes the assignment, W? is local.
+Bob processes the assignment for imported reader W?.
 
+- Bob has (W?, alice, alice) — imported reader (creator ≠ bob)
 - Bob applies {W?:=T} to resolvent
 - Bob removes (W?, ·, ·) from V_bob
 - Suspended goals reactivate
@@ -357,8 +359,9 @@ Bob processes assignment for CA?.
 
 **Step 8: Charlie receives value**
 
-Charlie processes assignment for CA?, which is local to Charlie.
+Charlie processes assignment for imported reader CA?.
 
+- Charlie has (CA?, bob, bob) — imported reader (creator ≠ charlie)
 - Charlie applies {CA?:=T} to resolvent
 - Charlie removes (CA?, ·, ·) from V_charlie
 - Suspended goals reactivate
@@ -369,7 +372,7 @@ The creator (Bob) maintains entries for all channel variables and routes values 
 
 1. Alice binds imported writer → notifies creator Bob
 2. Bob receives value, checks for pending request → forwards to Charlie
-3. Charlie receives value at local reader
+3. Charlie receives value at imported reader
 
 This pattern enables introduction without requiring Alice and Charlie to communicate directly until after the introduction completes.
 
@@ -540,3 +543,4 @@ This ensures read requests are sent for imported readers per Section 5.2 Case 2,
 | 2.2 | 2026-01-19 | Claude | Added section 8.4: Scheduler-IRMA Integration |
 | 2.3 | 2026-01-19 | Claude | Added export_reader/2 definition in Section 4.3 |
 | 2.4 | 2026-01-19 | Claude | Added suspension list Σ to V_p tuple; V_p as "virtual writer" for imported readers |
+| 2.5 | 2026-01-20 | Claude | Added imported reader case to Communicate Transaction (Section 5.3); updated scenarios |
