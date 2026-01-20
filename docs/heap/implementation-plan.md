@@ -1,11 +1,11 @@
 # Pointer Architecture Implementation Plan
 
-**Version**: 1.0  
-**Date**: 2026-01-20  
-**Status**: IN PROGRESS  
-**Spec**: `docs/heap-pointer-architecture-spec.md` v3.0  
-**Branch**: `pointer-architecture`  
-**Test Suite**: `glp_runtime/test/heap/*.dart` (7 files)
+**Version**: 1.1
+**Date**: 2026-01-20
+**Status**: Phase 5 IN PROGRESS (runner.dart ~30% complete)
+**Spec**: `docs/heap-pointer-architecture-spec.md` v3.0
+**Branch**: `pointer-architecture` (merged to `claude/pointer-architecture-migration-zFED8`)
+**Test Suite**: `glp_runtime/test/heap/*.dart` (7 files, 78/83 passing - 5 fail due to runner.dart)
 
 ---
 
@@ -15,7 +15,33 @@ This document describes the implementation plan for the pointer-based heap archi
 
 ---
 
+## Current Progress (2026-01-20)
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Phase 1 | ✅ DONE | VarRef simplified, allocateVariable returns tuple |
+| Phase 2 | ✅ DONE | All binding/suspension methods implemented |
+| Phase 3 | ✅ DONE | derefAddr follows pointers correctly |
+| Phase 4 | ✅ DONE | Compatibility methods updated |
+| Phase 5 | 🔄 IN PROGRESS | runner.dart ~30%, others done |
+| Phase 6 | ⏳ PENDING | Path compression (optional) |
+| Phase 7 | ⏳ PENDING | Final verification |
+
+### Phase 5 File Status:
+- ✅ `lib/runtime/suspend_ops.dart`
+- ✅ `lib/runtime/commit.dart`
+- ✅ `lib/runtime/scheduler.dart`
+- ✅ `lib/runtime/body_kernels.dart`
+- ✅ `lib/runtime/module_runtime.dart`
+- ✅ `lib/compiler/codegen.dart`
+- 🔄 `lib/bytecode/runner.dart` - ~30% complete
+- ⏸️ `lib/multiagent/irma_context.dart` - DEFERRED (focus on single-isolate first)
+
+---
+
 ## Phase 1: Core Data Structures
+
+**Status**: ✅ DONE
 
 **Goal**: Update `VarRef` and `allocateVariable()` to match spec.
 

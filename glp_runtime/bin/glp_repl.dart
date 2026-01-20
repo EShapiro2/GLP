@@ -242,7 +242,7 @@ void main() async {
               final varName = moduleArg.name;
               final writerId = varNameToId[varName];
               if (writerId != null && runtime.heap.isBound(writerId)) {
-                final value = runtime.heap.dereference(rt.VarRef(writerId, isReader: false));
+                final value = runtime.heap.dereference(rt.VarRef(writerId));
                 if (value is rt.ConstTerm) {
                   moduleName = value.value.toString();
                 }
@@ -377,7 +377,7 @@ void main() async {
             final writerId = entry.value;
             if (debugOutput) print('[DEBUG] $varName (W$writerId), isBound=${runtime.heap.isBound(writerId)}');
             if (runtime.heap.isBound(writerId)) {
-              final varRef = rt.VarRef(writerId, isReader: false);
+              final varRef = rt.VarRef(writerId);
               final derefValue = runtime.heap.dereference(varRef);
               print('$varName = ${_formatTerm(derefValue, runtime)}');
             } else {
@@ -479,7 +479,7 @@ void main() async {
           final rawValue = runtime.heap.getValue(writerId);
           if (debugOutput) print('[DEBUG] $varName (W$writerId), isBound=${runtime.heap.isBound(writerId)}, rawValue=$rawValue');
           if (runtime.heap.isBound(writerId)) {
-            final varRef = rt.VarRef(writerId, isReader: false);
+            final varRef = rt.VarRef(writerId);
             final derefValue = runtime.heap.dereference(varRef);
             print('$varName = ${_formatTerm(derefValue, runtime)}');
           } else {
@@ -683,9 +683,10 @@ void _setupConjunctionArg(
 
     if (existingId != null) {
       if (debugOutput) print('[DEBUG] Reusing var $baseName: ${arg.isReader ? "R" : "W"}$existingId');
-      argSlots[argSlot] = rt.VarRef(existingId, isReader: arg.isReader);
+      // existingId is always writer addr; add 1 for reader addr
+      argSlots[argSlot] = rt.VarRef(arg.isReader ? existingId + 1 : existingId);
     } else {
-      final (writerId, readerId) = runtime.heap.allocateFreshPair();
+      final (writerId, readerId) = runtime.heap.allocateVariable();
       varNameToId[baseName] = writerId;
 
       if (!arg.isReader) {
@@ -693,26 +694,26 @@ void _setupConjunctionArg(
       }
 
       if (debugOutput) print('[DEBUG] New var $baseName: ${arg.isReader ? "R" : "W"}$writerId');
-      argSlots[argSlot] = rt.VarRef(arg.isReader ? readerId : writerId, isReader: arg.isReader);
+      argSlots[argSlot] = rt.VarRef(arg.isReader ? readerId : writerId);
     }
   } else if (arg is ListTerm) {
-    final (writerId, readerId) = runtime.heap.allocateFreshPair();
+    final (writerId, readerId) = runtime.heap.allocateVariable();
     final listValue = _buildListTermForConj(runtime, arg, queryVarWriters, varNameToId);
     if (listValue is rt.ConstTerm) {
       runtime.heap.bindWriterConst(writerId, listValue.value);
     } else if (listValue is rt.StructTerm) {
       runtime.heap.bindWriterStruct(writerId, listValue.functor, listValue.args);
     }
-    argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
+    argSlots[argSlot] = rt.VarRef(readerId);
   } else if (arg is ConstTerm) {
-    final (writerId, readerId) = runtime.heap.allocateFreshPair();
+    final (writerId, readerId) = runtime.heap.allocateVariable();
     runtime.heap.bindWriterConst(writerId, arg.value);
-    argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
+    argSlots[argSlot] = rt.VarRef(readerId);
   } else if (arg is StructTerm) {
-    final (writerId, readerId) = runtime.heap.allocateFreshPair();
+    final (writerId, readerId) = runtime.heap.allocateVariable();
     final structValue = _buildStructTermForConj(runtime, arg, queryVarWriters, varNameToId, debugOutput: debugOutput) as rt.StructTerm;
     runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
-    argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
+    argSlots[argSlot] = rt.VarRef(readerId);
   } else {
     throw Exception('Unsupported argument type: ${arg.runtimeType}');
   }
@@ -729,39 +730,40 @@ rt.Term _buildStructTermForConj(
 
   for (final arg in struct.args) {
     if (arg is ConstTerm) {
-      final (writerId, readerId) = runtime.heap.allocateFreshPair();
+      final (writerId, readerId) = runtime.heap.allocateVariable();
       runtime.heap.bindWriterConst(writerId, arg.value);
-      argTerms.add(rt.VarRef(readerId, isReader: true));
+      argTerms.add(rt.VarRef(readerId));
     } else if (arg is VarTerm) {
       final baseName = arg.name;
       final existingId = varNameToId[baseName];
 
       if (existingId != null) {
-        argTerms.add(rt.VarRef(existingId, isReader: arg.isReader));
+        // existingId is always writer addr; add 1 for reader addr
+        argTerms.add(rt.VarRef(arg.isReader ? existingId + 1 : existingId));
       } else {
-        final (writerId, readerId) = runtime.heap.allocateFreshPair();
+        final (writerId, readerId) = runtime.heap.allocateVariable();
         varNameToId[baseName] = writerId;
         if (!arg.isReader) {
           queryVarWriters[baseName] = writerId;
         }
-        argTerms.add(arg.isReader ? rt.VarRef(readerId, isReader: true) : rt.VarRef(writerId, isReader: false));
+        argTerms.add(arg.isReader ? rt.VarRef(readerId) : rt.VarRef(writerId));
       }
     } else if (arg is ListTerm) {
       if (arg.isNil) {
-        final (writerId, readerId) = runtime.heap.allocateFreshPair();
+        final (writerId, readerId) = runtime.heap.allocateVariable();
         runtime.heap.bindWriterConst(writerId, 'nil');
-        argTerms.add(rt.VarRef(readerId, isReader: true));
+        argTerms.add(rt.VarRef(readerId));
       } else {
-        final (writerId, readerId) = runtime.heap.allocateFreshPair();
+        final (writerId, readerId) = runtime.heap.allocateVariable();
         final listValue = _buildListTermForConj(runtime, arg, queryVarWriters, varNameToId) as rt.StructTerm;
         runtime.heap.bindWriterStruct(writerId, listValue.functor, listValue.args);
-        argTerms.add(rt.VarRef(readerId, isReader: true));
+        argTerms.add(rt.VarRef(readerId));
       }
     } else if (arg is StructTerm) {
-      final (writerId, readerId) = runtime.heap.allocateFreshPair();
+      final (writerId, readerId) = runtime.heap.allocateVariable();
       final structValue = _buildStructTermForConj(runtime, arg, queryVarWriters, varNameToId, debugOutput: debugOutput) as rt.StructTerm;
       runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
-      argTerms.add(rt.VarRef(readerId, isReader: true));
+      argTerms.add(rt.VarRef(readerId));
     } else {
       throw Exception('Unsupported struct argument type: ${arg.runtimeType}');
     }
@@ -790,14 +792,15 @@ rt.Term _buildListTermForConj(
     final baseName = head.name;
     final existingId = varNameToId[baseName];
     if (existingId != null) {
-      headTerm = rt.VarRef(existingId, isReader: head.isReader);
+      // existingId is always writer addr; add 1 for reader addr
+      headTerm = rt.VarRef(head.isReader ? existingId + 1 : existingId);
     } else {
-      final (writerId, readerId) = runtime.heap.allocateFreshPair();
+      final (writerId, readerId) = runtime.heap.allocateVariable();
       varNameToId[baseName] = writerId;
       if (!head.isReader) {
         queryVarWriters[baseName] = writerId;
       }
-      headTerm = head.isReader ? rt.VarRef(readerId, isReader: true) : rt.VarRef(writerId, isReader: false);
+      headTerm = head.isReader ? rt.VarRef(readerId) : rt.VarRef(writerId);
     }
   } else if (head is ListTerm) {
     headTerm = _buildListTermForConj(runtime, head, queryVarWriters, varNameToId);
@@ -814,14 +817,15 @@ rt.Term _buildListTermForConj(
     final baseName = tail.name;
     final existingId = varNameToId[baseName];
     if (existingId != null) {
-      tailTerm = rt.VarRef(existingId, isReader: tail.isReader);
+      // existingId is always writer addr; add 1 for reader addr
+      tailTerm = rt.VarRef(tail.isReader ? existingId + 1 : existingId);
     } else {
-      final (writerId, readerId) = runtime.heap.allocateFreshPair();
+      final (writerId, readerId) = runtime.heap.allocateVariable();
       varNameToId[baseName] = writerId;
       if (!tail.isReader) {
         queryVarWriters[baseName] = writerId;
       }
-      tailTerm = tail.isReader ? rt.VarRef(readerId, isReader: true) : rt.VarRef(writerId, isReader: false);
+      tailTerm = tail.isReader ? rt.VarRef(readerId) : rt.VarRef(writerId);
     }
   } else {
     tailTerm = rt.ConstTerm(null);
@@ -845,9 +849,10 @@ void _setupArgument(
 
     if (existingId != null) {
       if (debugOutput) print('[DEBUG] Existing var $baseName: ${arg.isReader ? "R" : "W"}$existingId');
-      argSlots[argSlot] = rt.VarRef(existingId, isReader: arg.isReader);
+      // existingId is always writer addr; add 1 for reader addr
+      argSlots[argSlot] = rt.VarRef(arg.isReader ? existingId + 1 : existingId);
     } else {
-      final (writerId, _) = runtime.heap.allocateFreshPair();
+      final (writerId, _) = runtime.heap.allocateVariable();
       varNameToId[baseName] = writerId;
 
       if (!arg.isReader) {
@@ -855,10 +860,11 @@ void _setupArgument(
       }
 
       if (debugOutput) print('[DEBUG] New var $baseName: ${arg.isReader ? "R" : "W"}$writerId');
-      argSlots[argSlot] = rt.VarRef(writerId, isReader: arg.isReader);
+      // writerId is writer addr; add 1 for reader addr
+      argSlots[argSlot] = rt.VarRef(arg.isReader ? writerId + 1 : writerId);
     }
   } else if (arg is ListTerm) {
-    final (writerId, readerId) = runtime.heap.allocateFreshPair();
+    final (writerId, readerId) = runtime.heap.allocateVariable();
 
     final listValue = _buildListTerm(runtime, arg, queryVarWriters, varNameToId);
     if (listValue is rt.ConstTerm) {
@@ -867,19 +873,19 @@ void _setupArgument(
       runtime.heap.bindWriterStruct(writerId, listValue.functor, listValue.args);
     }
 
-    argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
+    argSlots[argSlot] = rt.VarRef(readerId);
   } else if (arg is ConstTerm) {
-    final (writerId, readerId) = runtime.heap.allocateFreshPair();
+    final (writerId, readerId) = runtime.heap.allocateVariable();
     runtime.heap.bindWriterConst(writerId, arg.value);
 
-    argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
+    argSlots[argSlot] = rt.VarRef(readerId);
   } else if (arg is StructTerm) {
-    final (writerId, readerId) = runtime.heap.allocateFreshPair();
+    final (writerId, readerId) = runtime.heap.allocateVariable();
 
     final structValue = _buildStructTerm(runtime, arg, queryVarWriters, varNameToId, debugOutput: debugOutput) as rt.StructTerm;
     runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
 
-    argSlots[argSlot] = rt.VarRef(readerId, isReader: true);
+    argSlots[argSlot] = rt.VarRef(readerId);
   } else {
     throw Exception('Unsupported argument type: ${arg.runtimeType}');
   }
@@ -890,9 +896,9 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
 
   for (final arg in struct.args) {
     if (arg is ConstTerm) {
-      final (writerId, readerId) = runtime.heap.allocateFreshPair();
+      final (writerId, readerId) = runtime.heap.allocateVariable();
       runtime.heap.bindWriterConst(writerId, arg.value);
-      argTerms.add(rt.VarRef(readerId, isReader: true));
+      argTerms.add(rt.VarRef(readerId));
     } else if (arg is VarTerm) {
       final baseName = arg.name;
       final existingId = varNameToId[baseName];
@@ -900,32 +906,34 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
 
       if (existingId != null) {
         if (debugOutput) print('[DEBUG REPL]   Reusing: ${arg.isReader ? "R" : "W"}$existingId');
-        argTerms.add(rt.VarRef(existingId, isReader: arg.isReader));
+        // existingId is always writer addr; add 1 for reader addr
+        argTerms.add(rt.VarRef(arg.isReader ? existingId + 1 : existingId));
       } else {
-        final (writerId, _) = runtime.heap.allocateFreshPair();
+        final (writerId, _) = runtime.heap.allocateVariable();
         varNameToId[baseName] = writerId;
         if (debugOutput) print('[DEBUG REPL]   Creating fresh: W$writerId');
         if (!arg.isReader) {
           queryVarWriters[baseName] = writerId;
         }
-        argTerms.add(rt.VarRef(writerId, isReader: arg.isReader));
+        // writerId is writer addr; add 1 for reader addr
+        argTerms.add(rt.VarRef(arg.isReader ? writerId + 1 : writerId));
       }
     } else if (arg is ListTerm) {
       if (arg.isNil) {
-        final (writerId, readerId) = runtime.heap.allocateFreshPair();
+        final (writerId, readerId) = runtime.heap.allocateVariable();
         runtime.heap.bindWriterConst(writerId, 'nil');
-        argTerms.add(rt.VarRef(readerId, isReader: true));
+        argTerms.add(rt.VarRef(readerId));
       } else {
-        final (writerId, readerId) = runtime.heap.allocateFreshPair();
+        final (writerId, readerId) = runtime.heap.allocateVariable();
         final listValue = _buildListTerm(runtime, arg, queryVarWriters, varNameToId) as rt.StructTerm;
         runtime.heap.bindWriterStruct(writerId, listValue.functor, listValue.args);
-        argTerms.add(rt.VarRef(readerId, isReader: true));
+        argTerms.add(rt.VarRef(readerId));
       }
     } else if (arg is StructTerm) {
-      final (writerId, readerId) = runtime.heap.allocateFreshPair();
+      final (writerId, readerId) = runtime.heap.allocateVariable();
       final structValue = _buildStructTerm(runtime, arg, queryVarWriters, varNameToId, debugOutput: debugOutput) as rt.StructTerm;
       runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
-      argTerms.add(rt.VarRef(readerId, isReader: true));
+      argTerms.add(rt.VarRef(readerId));
     } else {
       throw Exception('Unsupported struct argument type: ${arg.runtimeType}');
     }
@@ -949,14 +957,16 @@ rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> query
     final baseName = head.name;
     final existingId = varNameToId[baseName];
     if (existingId != null) {
-      headTerm = rt.VarRef(existingId, isReader: head.isReader);
+      // existingId is always writer addr; add 1 for reader addr
+      headTerm = rt.VarRef(head.isReader ? existingId + 1 : existingId);
     } else {
-      final (writerId, _) = runtime.heap.allocateFreshPair();
+      final (writerId, _) = runtime.heap.allocateVariable();
       varNameToId[baseName] = writerId;
       if (!head.isReader) {
         queryVarWriters[baseName] = writerId;
       }
-      headTerm = rt.VarRef(writerId, isReader: head.isReader);
+      // writerId is writer addr; add 1 for reader addr
+      headTerm = rt.VarRef(head.isReader ? writerId + 1 : writerId);
     }
   } else if (head is ListTerm) {
     headTerm = _buildListTerm(runtime, head, queryVarWriters, varNameToId);
@@ -973,14 +983,16 @@ rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> query
     final baseName = tail.name;
     final existingId = varNameToId[baseName];
     if (existingId != null) {
-      tailTerm = rt.VarRef(existingId, isReader: tail.isReader);
+      // existingId is always writer addr; add 1 for reader addr
+      tailTerm = rt.VarRef(tail.isReader ? existingId + 1 : existingId);
     } else {
-      final (writerId, _) = runtime.heap.allocateFreshPair();
+      final (writerId, _) = runtime.heap.allocateVariable();
       varNameToId[baseName] = writerId;
       if (!tail.isReader) {
         queryVarWriters[baseName] = writerId;
       }
-      tailTerm = rt.VarRef(writerId, isReader: tail.isReader);
+      // writerId is writer addr; add 1 for reader addr
+      tailTerm = rt.VarRef(tail.isReader ? writerId + 1 : writerId);
     }
   } else {
     tailTerm = rt.ConstTerm(null);
@@ -1012,19 +1024,19 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? path]) {
 
       String headStr;
       if (head is rt.VarRef && runtime != null) {
-        final varId = head.varId;
-        if (path.contains(varId)) {
+        final addr = head.addr;
+        if (path.contains(addr)) {
           headStr = '<circular>';
         } else {
-          path.add(varId);
+          path.add(addr);
           final derefHead = runtime.heap.dereference(head);
           if (derefHead is rt.VarRef) {
-            final displayId = derefHead.varId >= 1000 ? derefHead.varId - 1000 : derefHead.varId;
-            headStr = derefHead.isReader ? 'X$displayId?' : 'X$displayId';
+            final displayId = derefHead.addr;
+            headStr = runtime.heap.isReader(derefHead.addr) ? 'X$displayId?' : 'X$displayId';
           } else {
             headStr = _formatTerm(derefHead, runtime, path);
           }
-          path.remove(varId);
+          path.remove(addr);
         }
       } else {
         headStr = _formatTerm(head, runtime, path);
@@ -1033,23 +1045,23 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? path]) {
       elements.add(headStr);
 
       if (tail is rt.VarRef && runtime != null) {
-        final varId = tail.varId;
-        if (path.contains(varId)) {
-          final displayId = varId >= 1000 ? varId - 1000 : varId;
-          final label = tail.isReader ? 'X$displayId?' : 'X$displayId';
+        final addr = tail.addr;
+        if (path.contains(addr)) {
+          final displayId = addr;
+          final label = runtime.heap.isReader(tail.addr) ? 'X$displayId?' : 'X$displayId';
           return '[${elements.join(', ')} | <circular $label>]';
         }
-        path.add(varId);
+        path.add(addr);
         final derefTail = runtime.heap.dereference(tail);
         if (derefTail is rt.VarRef) {
-          path.remove(varId);
-          final displayId = derefTail.varId >= 1000 ? derefTail.varId - 1000 : derefTail.varId;
-          final label = derefTail.isReader ? 'X$displayId?' : 'X$displayId';
+          path.remove(addr);
+          final displayId = derefTail.addr;
+          final label = runtime.heap.isReader(derefTail.addr) ? 'X$displayId?' : 'X$displayId';
           return '[${elements.join(', ')} | $label]';
         }
         current = derefTail;
-        path.remove(varId);
-        if (current == null || current is! rt.StructTerm) break;
+        path.remove(addr);
+        if (current is! rt.StructTerm) break;
       } else if (tail is rt.ConstTerm && (tail.value == 'nil' || tail.value == null)) {
         break;
       } else if (tail is rt.StructTerm && tail.functor == '.') {
@@ -1066,20 +1078,20 @@ String _formatTerm(rt.Term? term, [GlpRuntime? runtime, Set<int>? path]) {
     final currentPath = path;
     final formattedArgs = term.args.map((arg) {
       if (arg is rt.VarRef && runtime != null) {
-        final varId = arg.varId;
-        if (currentPath.contains(varId)) {
+        final addr = arg.addr;
+        if (currentPath.contains(addr)) {
           return '<circular>';
         }
-        currentPath.add(varId);
+        currentPath.add(addr);
         final deref = runtime.heap.dereference(arg);
         String result;
         if (deref is rt.VarRef) {
-          final displayId = deref.varId >= 1000 ? deref.varId - 1000 : deref.varId;
-          result = deref.isReader ? 'X$displayId?' : 'X$displayId';
+          final displayId = deref.addr;
+          result = runtime.heap.isReader(deref.addr) ? 'X$displayId?' : 'X$displayId';
         } else {
           result = _formatTerm(deref, runtime, currentPath);
         }
-        currentPath.remove(varId);
+        currentPath.remove(addr);
         return result;
       }
       return _formatTerm(arg, runtime, currentPath);
