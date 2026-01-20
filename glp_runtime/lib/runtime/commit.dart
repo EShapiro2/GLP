@@ -36,16 +36,28 @@ class CommitOps {
       // Skip null values (writer declared but not bound in HEAD)
       if (value == null) continue;
 
-      // Dereference VarRef before binding
+      // Handle VarRef per spec Section 5.3:
+      // - If reader address: use bindWriterToReader directly (no deref)
+      // - If writer address: deref to get bound value, or error if unbound
       if (value is VarRef) {
-        final derefResult = heap.derefAddr(value.addr);
-        if (derefResult is Term) {
-          value = derefResult;
+        if (heap.isReader(value.addr)) {
+          // Bind writer to another variable via reader - per spec Section 5.3
+          final acts = heap.bindWriterToReader(varId, value.addr);
+          activations.addAll(acts);
+          continue;
+        } else if (heap.isWriter(value.addr)) {
+          // σ̂w contains writer address - check if it's bound to ground
+          final derefResult = heap.derefAddr(value.addr);
+          if (derefResult is Term && derefResult is! VarRef) {
+            value = derefResult;
+          } else {
+            // Unbound writer in σ̂w - this is a HEAD instruction bug
+            throw StateError('σ̂w contains unbound writer address ${value.addr} - HEAD instruction bug');
+          }
         }
-        // If still VarRef or VariableEntry, keep as-is
       }
 
-      // Use heap.bindVariable() to properly trigger callbacks and handle suspensions
+      // Bind writer to ground term
       final valueAsTerm = value is Term ? value : ConstTerm(value);
       final acts = heap.bindVariable(varId, valueAsTerm);
       activations.addAll(acts);
