@@ -1715,36 +1715,36 @@ class BytecodeRunner {
           final existing = cx.clauseVars[varIndex];
           if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable existing clauseVars[$varIndex]=$existing (${existing?.runtimeType})');
 
-          if (arg is VarRef && !arg.isReader) {
-            if (existing is VarRef && !existing.isReader) {
+          if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
+            if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
               // Both are writers - bind arg writer to existing writer's reader
-              cx.sigmaHat[arg.varId] = VarRef(existing.varId, isReader: true);
+              cx.sigmaHat[arg.addr] = VarRef(existing.addr + 1);  // reader addr
             } else if (existing is int) {
-              // existing is bare writer varId - bind arg to reader of it
-              cx.sigmaHat[arg.varId] = VarRef(existing, isReader: true);
+              // existing is bare writer addr - bind arg to reader of it
+              cx.sigmaHat[arg.addr] = VarRef(existing + 1);  // reader addr
             } else {
               // First occurrence: goal writer vs head writer
               // Store the goal's writer reference - clause can bind through it
-              if (cx.rt.heap.isWriterBound(arg.varId)) {
+              if (cx.rt.heap.isWriterBound(arg.addr)) {
                 // Goal writer already bound - use its value
-                final boundValue = cx.rt.heap.valueOfWriter(arg.varId);
-                if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable goal writer W${arg.varId} bound to $boundValue');
+                final boundValue = cx.rt.heap.valueOfWriter(arg.addr);
+                if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable goal writer W${arg.addr} bound to $boundValue');
                 cx.clauseVars[varIndex] = boundValue;
               } else {
                 // Goal writer unbound - store writer ref, clause can bind it later
-                if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable storing unbound goal writer W${arg.varId}');
+                if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable storing unbound goal writer W${arg.addr}');
                 cx.clauseVars[varIndex] = arg;
               }
             }
-          } else if (arg is VarRef && arg.isReader) {
-            final wid = cx.rt.heap.writerIdForReader(arg.varId);
-            if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable reader R${arg.varId} -> writer W$wid, bound=${wid != null ? cx.rt.heap.isWriterBound(wid) : false}');
-            if (wid != null && cx.rt.heap.isWriterBound(wid)) {
+          } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
+            final wid = cx.rt.heap.writerForReader(arg.addr);
+            if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable reader R${arg.addr} -> writer W$wid, bound=${cx.rt.heap.isWriterBound(wid)}');
+            if (cx.rt.heap.isWriterBound(wid)) {
               final value = cx.rt.heap.valueOfWriter(wid);
               if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable writer value=$value');
-              if (existing is VarRef && !existing.isReader) {
-                if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable storing sigmaHat[${existing.varId}] = $value');
-                cx.sigmaHat[existing.varId] = value;
+              if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
+                if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable storing sigmaHat[${existing.addr}] = $value');
+                cx.sigmaHat[existing.addr] = value;
               } else if (existing is int) {
                 if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable storing sigmaHat[$existing] = $value');
                 cx.sigmaHat[existing] = value;
@@ -1753,39 +1753,34 @@ class BytecodeRunner {
                 cx.clauseVars[varIndex] = value;
               }
               if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable SUCCESS, continuing to PC ${pc+1}');
-            } else if (wid != null) {
+            } else {
               // Reader is unbound - but clause expects a writer (isReaderMode=false)
               // Per spec: Goal reader X? vs Head writer V → V receives X? (the reader reference)
-              // Store the reader reference itself, not just the underlying writer ID
-              if (existing is VarRef && !existing.isReader) {
+              // Store the reader reference itself, not just the underlying writer addr
+              if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
                 // Already have a writer from earlier occurrence - bind it to goal's reader
-                cx.sigmaHat[existing.varId] = arg;  // arg is the reader VarRef
+                cx.sigmaHat[existing.addr] = arg;  // arg is the reader VarRef
               } else if (existing is int) {
                 cx.sigmaHat[existing] = arg;
               } else {
                 // First occurrence - store the reader reference
                 cx.clauseVars[varIndex] = arg;  // Store reader VarRef, not wid
               }
-              if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable SUCCESS (stored reader R${arg.varId}), continuing to PC ${pc+1}');
-            } else {
-              // No underlying writer - suspend
-              if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable SUSPENDING on R${arg.varId}');
-              final suspendOnVar = _finalUnboundVar(cx, arg.varId);
-              pc = _suspendAndFail(cx, suspendOnVar, pc); continue;
+              if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable SUCCESS (stored reader R${arg.addr}), continuing to PC ${pc+1}');
             }
           } else if (arg is ConstTerm) {
-            if (existing is VarRef && !existing.isReader) {
+            if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
               // Already have a writer from earlier occurrence - bind it
-              cx.sigmaHat[existing.varId] = arg;
+              cx.sigmaHat[existing.addr] = arg;
             } else if (existing is int) {
-              // Bare writer varId - bind it
+              // Bare writer addr - bind it
               cx.sigmaHat[existing] = arg;
             } else {
               cx.clauseVars[varIndex] = arg;
             }
           } else if (arg is StructTerm) {
-            if (existing is VarRef && !existing.isReader) {
-              cx.sigmaHat[existing.varId] = arg;
+            if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
+              cx.sigmaHat[existing.addr] = arg;
             } else if (existing is int) {
               cx.sigmaHat[existing] = arg;
             } else {
@@ -1793,8 +1788,8 @@ class BytecodeRunner {
             }
           } else if (arg is Term) {
             // Handle other Term types (e.g., MutualRefTerm)
-            if (existing is VarRef && !existing.isReader) {
-              cx.sigmaHat[existing.varId] = arg;
+            if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
+              cx.sigmaHat[existing.addr] = arg;
             } else if (existing is int) {
               cx.sigmaHat[existing] = arg;
             } else {
@@ -1806,32 +1801,31 @@ class BytecodeRunner {
           final existing = cx.clauseVars[varIndex];
           if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable (reader mode) existing clauseVars[$varIndex]=$existing (${existing?.runtimeType})');
 
-          if (arg is VarRef && !arg.isReader) {
+          if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
             // Writer VarRef → reader param (mode conversion)
             if (existing != null) {
               // clauseVars already has a value (from earlier occurrence like UnifyVariable)
               // Bind the writer arg to the READER of that value
               // BUG FIX: When existing is a writer VarRef, convert to reader
-              if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable binding writer W${arg.varId} to existing value $existing');
-              if (existing is VarRef && !existing.isReader) {
+              if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable binding writer W${arg.addr} to existing value $existing');
+              if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
                 // existing is a writer - bind to its reader
-                cx.sigmaHat[arg.varId] = VarRef(existing.varId, isReader: true);
+                cx.sigmaHat[arg.addr] = VarRef(existing.addr + 1);  // reader addr
               } else if (existing is int) {
-                // existing is bare varId - bind to reader of it
-                cx.sigmaHat[arg.varId] = VarRef(existing, isReader: true);
+                // existing is bare writer addr - bind to reader of it
+                cx.sigmaHat[arg.addr] = VarRef(existing + 1);  // reader addr
               } else {
                 // existing is already a reader or a term - use as-is
-                cx.sigmaHat[arg.varId] = existing;
+                cx.sigmaHat[arg.addr] = existing;
               }
             } else {
-              final freshVar = cx.rt.heap.allocateFreshVar();
-              cx.rt.heap.addVariable(freshVar);
-              cx.sigmaHat[arg.varId] = VarRef(freshVar, isReader: true);
-              cx.clauseVars[varIndex] = freshVar;
+              final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+              cx.sigmaHat[arg.addr] = VarRef(readerAddr);
+              cx.clauseVars[varIndex] = writerAddr;
             }
-          } else if (arg is VarRef && arg.isReader) {
+          } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
             if (existing == null) {
-              cx.clauseVars[varIndex] = arg.varId;
+              cx.clauseVars[varIndex] = cx.rt.heap.writerForReader(arg.addr);
             }
             // If existing != null, keep existing value
           } else if (arg is ConstTerm) {
