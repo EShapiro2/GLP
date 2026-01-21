@@ -238,7 +238,23 @@ Added heap structure transformation documentation showing before/after cell layo
 
 ---
 
-### Issues 19-20: Pending
+### Issue 19: handleAbandon Goal Failure ✅ COMPLETED
+
+**Status**: FIXED
+
+**Problem**: Per spec Section 5.1, "Abandoned variables cause dependent suspended goals to fail rather than wait indefinitely." The original implementation had a TODO and didn't handle suspended goals.
+
+**Solution**: Implemented goal failure via "poison value" binding:
+- When an imported reader is abandoned, bind it to special `$abandoned$` term
+- This triggers reactivation of suspended goals via bindImportedReader
+- When reactivated goals run, they fail in unification (since `$abandoned$` won't match expected values)
+
+**Files Changed**:
+- `lib/multiagent/irma_context.dart` - Implemented handleAbandon with poison binding
+
+---
+
+### Issue 20: Pending
 
 See SPEC-IMPLEMENTATION-AUDIT-2026-01-20.md for details.
 

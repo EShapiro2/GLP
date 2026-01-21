@@ -730,18 +730,45 @@ class IrmaContext {
   }
   
   /// Handle incoming abandon notification
-  /// 
+  ///
   /// Called by coordinator when abandon(Y) arrives.
+  /// Per spec Section 5.1: "Abandoned variables cause dependent suspended
+  /// goals to fail rather than wait indefinitely."
+  ///
+  /// Implementation: Bind the abandoned variable to a special '$abandoned$'
+  /// term. This triggers reactivation of suspended goals, which will then
+  /// fail in unification (since '$abandoned$' won't match their expected values).
   void handleAbandon(int varId) {
+    print('[DEBUG IRMA $agentId] handleAbandon: varId=$varId');
+
+    // For imported readers, bind to poison value to trigger goal failure
+    final readerKey = VarKey(varId, true);
+    final entry = vp.lookup(readerKey);
+
+    if (entry != null && entry.role == VariableRole.importedReader) {
+      // Get the VariableEntry from heap cell for suspensions
+      final cell = runtime.heap.cells[varId];
+      if (cell.content is VariableEntry) {
+        final heapEntry = cell.content as VariableEntry;
+
+        // Bind to poison value - this reactivates suspended goals
+        // which will then fail when they try to unify with '$abandoned$'
+        final poisonValue = ConstTerm('\$abandoned\$');
+        final activations = runtime.heap.bindImportedReader(varId, poisonValue, heapEntry);
+        print('[DEBUG IRMA $agentId] handleAbandon: bound to poison, ${activations.length} goals reactivated');
+
+        for (final act in activations) {
+          runtime.gq.enqueue(act);
+        }
+      }
+    }
+
     // Remove both reader and writer entries if present
     vp.remove(VarKey(varId, true));
     vp.remove(VarKey(varId, false));
-    
+
     // Remove any pending bind callback
     runtime.heap.removeBindCallback(varId);
-    
-    // TODO: Reactivate any goals suspended on this variable
-    // (They will fail since the remote counterpart is gone)
   }
   
   // =========================================================================
