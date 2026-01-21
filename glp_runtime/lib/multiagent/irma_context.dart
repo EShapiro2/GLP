@@ -236,37 +236,40 @@ class IrmaContext {
   }
   
   /// Send read request for an imported reader using heap-based lookup
-  /// 
+  ///
   /// Dereferences the reader's heap cell to get the VariableEntry directly,
   /// eliminating the need for V_p lookup during request routing.
-  /// 
-  /// Falls back to legacy V_p lookup for variables created via legacy importTerm.
+  ///
+  /// IMPORTANT: The readerAddr MUST exist in the heap with a VariableEntry.
+  /// All imported variables should be created via allocateImportedReader(),
+  /// which creates the heap cell.
   void _requestFromHeap(int readerAddr) {
-    // Check if this address exists in the heap
-    // (Legacy importTerm doesn't allocate heap cells, so we need to fall back)
+    // Validate address exists in heap
     if (readerAddr >= runtime.heap.cells.length) {
-      print('[DEBUG IRMA $agentId] _requestFromHeap: addr $readerAddr out of bounds, using legacy request');
-      helpers.request(readerAddr, agentId, vp, mp);
-      return;
+      throw StateError(
+        '_requestFromHeap: addr $readerAddr out of bounds. '
+        'Imported readers must be created via allocateImportedReader() '
+        'which creates the heap cell.'
+      );
     }
-    
+
     // Dereference to get either Term (if bound) or VariableEntry (if imported unbound)
     final result = runtime.heap.derefAddr(readerAddr);
-    
+
     if (result is VariableEntry) {
       final entry = result;
-      
+
       // Only send request for imported readers that haven't been requested yet
-      if (entry.role == VariableRole.importedReader && 
-          entry.creator != agentId && 
+      if (entry.role == VariableRole.importedReader &&
+          entry.creator != agentId &&
           entry.state == null) {
         print('[DEBUG IRMA $agentId] _requestFromHeap: sending request for reader $readerAddr to ${entry.creator}');
-        
+
         // Update state to mark request sent (in both V_p and heap cell)
         final readerKey = VarKey(entry.varId, true);
         vp.updateState(readerKey, entry.creator);
         entry.state = entry.creator;  // Also update the heap cell's entry
-        
+
         // Queue read request message using creator's ID namespace
         final creatorSerializer = PayloadSerializer(entry.creator);
         final payload = creatorSerializer.createReadRequestPayload(
@@ -282,8 +285,11 @@ class IrmaContext {
         print('[DEBUG IRMA $agentId] _requestFromHeap: skipping reader $readerAddr (role=${entry.role}, state=${entry.state})');
       }
     } else if (result is VarRef) {
-      // Local unbound variable - use legacy V_p lookup
-      print('[DEBUG IRMA $agentId] _requestFromHeap: local unbound VarRef, using legacy request');
+      // Local unbound variable - should not happen for imported readers
+      // If we get here, the caller passed a local variable to a method
+      // designed for imported readers
+      print('[DEBUG IRMA $agentId] _requestFromHeap: WARNING - got local VarRef at $readerAddr, expected VariableEntry');
+      // Fall back to legacy request for compatibility
       helpers.request(readerAddr, agentId, vp, mp);
     } else {
       // Already bound - no request needed
