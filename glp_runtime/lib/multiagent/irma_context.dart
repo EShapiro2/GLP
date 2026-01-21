@@ -191,13 +191,18 @@ class IrmaContext {
     // Use creator's local ID for the global variable ID
     final creatorLocalId = entry.creatorLocalId;
     final creator = entry.creator;
-    
+
     print('[DEBUG IRMA $agentId] _queueAssignment: varId=${entry.varId}, creatorLocalId=$creatorLocalId, creator=$creator, value=$value, destination=$destination');
-    
+
     // Create assignment payload with proper global ID
+    // Use V2 method with isReader callback (no address arithmetic)
     final globalIdSerializer = PayloadSerializer(creator);
-    final payload = globalIdSerializer.createAssignmentPayload(creatorLocalId, value);
-    
+    final payload = globalIdSerializer.createAssignmentPayloadV2(
+      creatorLocalId,
+      value,
+      runtime.heap.isReader,
+    );
+
     mp.add(OutboundMessage(
       destination: destination,
       type: MessageType.assignment,

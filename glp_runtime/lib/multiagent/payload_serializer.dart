@@ -118,19 +118,46 @@ class PayloadSerializer {
   // ============================================================================
   
   /// Create assignment payload: varId + serialized term
-  List<int> createAssignmentPayload(int varId, Term value) {
+  ///
+  /// [isReader] callback to check if addr is a reader (use heap.isReader).
+  /// [lookupVariable] optional callback to get (creator, creatorLocalId, isReader)
+  ///   for imported variables.
+  List<int> createAssignmentPayloadV2(
+    int varId,
+    Term value,
+    bool Function(int addr) isReader,
+    {({String creator, int creatorLocalId, bool isReader}) Function(int addr)? lookupVariable}
+  ) {
     final builder = BytesBuilder();
-    
+
     // Variable ID (as global ID)
     final globalId = GlobalVarId(agentId, varId);
     final idBytes = utf8.encode(globalId.encode());
     builder.add(_encodeLength(idBytes.length));
     builder.add(idBytes);
-    
-    // Serialized term
+
+    // Serialized term using V2 serialization (no address arithmetic)
+    final termBytes = serializeTermWithCallbacks(value, agentId, isReader, lookupVariable: lookupVariable);
+    builder.add(termBytes);
+
+    return builder.toBytes();
+  }
+
+  /// Create assignment payload: varId + serialized term (legacy - uses address arithmetic)
+  @Deprecated('Use createAssignmentPayloadV2 with isReader callback')
+  List<int> createAssignmentPayload(int varId, Term value) {
+    final builder = BytesBuilder();
+
+    // Variable ID (as global ID)
+    final globalId = GlobalVarId(agentId, varId);
+    final idBytes = utf8.encode(globalId.encode());
+    builder.add(_encodeLength(idBytes.length));
+    builder.add(idBytes);
+
+    // Serialized term (uses legacy address arithmetic)
     final termBytes = serializeTerm(value, agentId);
     builder.add(termBytes);
-    
+
     return builder.toBytes();
   }
   
