@@ -366,8 +366,8 @@ class PayloadSerializer {
   }
   
   void _serializeConstant(dynamic value, BytesBuilder builder) {
-    if (value == null || value == 'nil') {
-      // Nil
+    if (value == 'nil') {
+      // Nil (empty list) - represented as ConstTerm('nil') in GLP
       builder.addByte(0);
     } else if (value is int) {
       builder.addByte(1);
@@ -743,8 +743,8 @@ class PayloadSerializer {
     offset++;
     
     switch (typeTag) {
-      case 0: // nil
-        return (null, offset - startOffset);
+      case 0: // nil - return the string 'nil' to match ConstTerm('nil')
+        return ('nil', offset - startOffset);
       case 1: // int
         final value = _decodeInt64(bytes, offset);
         offset += 8;

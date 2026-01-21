@@ -218,7 +218,12 @@ class IrmaContext {
     final creatorLocalId = entry.creatorLocalId;
     final creator = entry.creator;
 
-    print('[DEBUG IRMA $agentId] _queueAssignment: varId=${entry.varId}, creatorLocalId=$creatorLocalId, creator=$creator, value=$value, destination=$destination');
+    // Deep dereference the value to resolve all VarRefs to their bound values
+    // This is necessary because VarRefs contain local heap addresses that are
+    // meaningless to other agents
+    final derefedValue = _deepDeref(value);
+
+    print('[DEBUG IRMA $agentId] _queueAssignment: varId=${entry.varId}, creatorLocalId=$creatorLocalId, creator=$creator, value=$derefedValue, destination=$destination');
 
     // Create assignment payload with proper global ID
     // Use V2 method with isReader callback and lookupVariable callback
@@ -226,7 +231,7 @@ class IrmaContext {
     final globalIdSerializer = PayloadSerializer(creator);
     final payload = globalIdSerializer.createAssignmentPayloadV2(
       creatorLocalId,
-      value,
+      derefedValue,
       runtime.heap.isReader,
       lookupVariable: _lookupVariableForSerialization,
     );
@@ -264,7 +269,46 @@ class IrmaContext {
       );
     }
   }
-  
+
+  /// Deeply dereference a term, resolving all VarRefs to their bound values.
+  ///
+  /// This is necessary before serializing a term for inter-agent transport,
+  /// as VarRefs contain local heap addresses that are meaningless to other agents.
+  ///
+  /// - ConstTerm: returned as-is
+  /// - VarRef: dereferenced, and if bound to another term, recursively processed
+  /// - StructTerm: args are recursively dereferenced
+  ///
+  /// If a VarRef is unbound, it remains as a VarRef (will be serialized with global ID).
+  Term _deepDeref(Term term, {Set<int>? visited}) {
+    visited ??= {};
+
+    if (term is ConstTerm) {
+      return term;
+    } else if (term is VarRef) {
+      // Prevent infinite loops
+      if (visited.contains(term.addr)) {
+        return term;
+      }
+      visited.add(term.addr);
+
+      // Dereference the VarRef
+      final derefed = runtime.heap.derefAddr(term.addr);
+      if (derefed is Term && derefed != term) {
+        // Recursively dereference the result
+        return _deepDeref(derefed, visited: visited);
+      }
+      // Unbound or self-referential - return original VarRef
+      return term;
+    } else if (term is StructTerm) {
+      // Recursively dereference all args
+      final derefedArgs = term.args.map((arg) => _deepDeref(arg, visited: visited)).toList();
+      return StructTerm(term.functor, derefedArgs);
+    }
+
+    return term;
+  }
+
   // =========================================================================
   // Abandonment Handling
   // =========================================================================
