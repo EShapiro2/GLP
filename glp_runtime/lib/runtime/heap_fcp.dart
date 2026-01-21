@@ -120,12 +120,47 @@ class HeapFCP {
   // ==========================================================================
 
   /// Get writer address from reader address by following pointer
+  /// Try to get writer address from a reader address.
   ///
   /// Per spec Section 7.1: Follow the reader's pointer to get the writer.
-  /// Try to get writer address from reader, returns null for imported readers
   ///
-  /// For local readers (with Pointer), returns the writer address.
-  /// For imported readers (with VariableEntry), returns null.
+  /// **Returns:**
+  /// - `int`: The writer address for local readers (cell.content is Pointer)
+  /// - `null`: For imported readers (cell.content is VariableEntry) or non-readers
+  ///
+  /// **Callers MUST handle null appropriately:**
+  ///
+  /// 1. **Suspending operations** (most common): If the operation needs the writer
+  ///    but gets null, the reader is imported and the goal should suspend:
+  ///    ```dart
+  ///    final wid = heap.tryWriterForReader(rid);
+  ///    if (wid == null) {
+  ///      // Imported reader - suspend on it
+  ///      suspendOnReader(rid, ...);
+  ///      return RunResult.suspended;
+  ///    }
+  ///    ```
+  ///
+  /// 2. **Read-only operations**: If just reading the value (not modifying),
+  ///    use derefAddr() instead, which handles imported readers transparently.
+  ///
+  /// 3. **Binding operations**: Operations that need to bind the writer (e.g.,
+  ///    unification) should check isImportedReader first and use the appropriate
+  ///    binding method:
+  ///    ```dart
+  ///    if (heap.isImportedReader(rid)) {
+  ///      // Imported - can't bind locally, must receive value from creator
+  ///      suspendOnReader(rid, ...);
+  ///    } else {
+  ///      // Local - can bind the writer
+  ///      heap.bindVariable(wid, value);
+  ///    }
+  ///    ```
+  ///
+  /// **Common mistakes to avoid:**
+  /// - Using `wid!` without null check → crash on imported readers
+  /// - Silently ignoring null → logic errors, lost bindings
+  /// - Throwing errors → breaks multiagent scenarios
   int? tryWriterForReader(int readerAddr) {
     final cell = cells[readerAddr];
     if (cell.tag != CellTag.RoTag) {

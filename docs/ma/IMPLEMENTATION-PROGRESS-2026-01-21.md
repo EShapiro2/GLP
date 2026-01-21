@@ -254,9 +254,24 @@ Added heap structure transformation documentation showing before/after cell layo
 
 ---
 
-### Issue 20: Pending
+### Issue 20: tryWriterForReader Null Handling ✅ COMPLETED
 
-See SPEC-IMPLEMENTATION-AUDIT-2026-01-20.md for details.
+**Status**: DOCUMENTED
+
+**Problem**: `tryWriterForReader()` returns null for imported readers, but callers handled this inconsistently - some threw errors, some silently skipped, some would crash on `null!`.
+
+**Solution**: Added comprehensive documentation to `tryWriterForReader()` explaining:
+- When and why null is returned
+- Three patterns for handling null: suspending operations, read-only operations, binding operations
+- Code examples for each pattern
+- Common mistakes to avoid
+
+**Files Changed**:
+- `lib/runtime/heap_fcp.dart` - Added caller guidance documentation
+
+---
+
+## All 20 Issues COMPLETED ✅
 
 ---
 
