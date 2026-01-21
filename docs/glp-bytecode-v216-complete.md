@@ -108,34 +108,33 @@ Never expect bytecode instructions for the `clause/2` wrapper itself. The wrappe
 
 ### 1.1 Argument Register Semantics
 
-**A1-An registers are heterogeneous term storage**, not just variable references. Each argument register can hold:
+**A1-An registers contain VarRefs pointing to heap cells.** All structured data (constants and structures) must be allocated on the heap before being passed as arguments.
 
-1. **Variable Reference**: `VarRef(varId, isReader: bool)` — reference to two-cell heap variable
-   - `varId`: identifies the variable (maps to writer/reader cell pair in heap)
-   - `isReader: false` → writer access mode (write-once, goal can bind)
-   - `isReader: true` → reader access mode (read-only, suspends if unbound)
-   - Same `varId` can appear in multiple arguments with different access modes
-   - Enforces SO invariant via SRSW syntactic restriction: each writer occurs exactly once and each reader occurs exactly once per clause (exception: ground guard allows multiple readers)
-   - **Implementation**: Uses existing `VarRef` from `lib/runtime/terms.dart`
+**Argument Register Contents**:
 
-2. **Constant Term**: `ConstTerm(value)` — immediate value (atom, number, nil)
-   - No heap allocation required
-   - Stored directly in argument register
-   - **Implementation**: Uses existing `ConstTerm` from `lib/runtime/terms.dart`
+1. **Variable Reference**: `VarRef(addr)` — reference to a heap cell
+   - `addr`: heap address of a cell (writer, reader, or value cell)
+   - Cell tag determines whether it's a writer (WrtTag), reader (RoTag), or bound value (ValueTag)
+   - Per heap-pointer-architecture-spec.md Section 3.2.1: variable identity is determined by cell tag, NOT by address arithmetic
+   - **Implementation**: Uses `VarRef` from `lib/runtime/terms.dart`
 
-3. **Structure Term**: `StructTerm(functor, args)` — compound term with nested arguments
-   - Built incrementally via put_structure + set_* instructions
-   - Arguments can be variables, constants, or nested structures
-   - **Implementation**: Uses existing `StructTerm` from `lib/runtime/terms.dart`
+**Heap-Only Requirement**:
+
+All data passed through argument registers MUST be heap-allocated. Direct `ConstTerm` and `StructTerm` objects are NOT permitted in argument registers.
+
+- **Constants**: Allocate a ValueTag cell containing the constant, pass VarRef to that cell
+- **Structures**: Build on heap via put_structure + set_* instructions, pass VarRef to root cell
+- **Variables**: Pass VarRef to the writer or reader cell as appropriate
+
+**Rationale**: The heap-only approach ensures HEAD instructions have a single code path (dereference VarRef, then match). This eliminates a class of bugs where direct Term objects bypass heap-based matching logic.
 
 **Implementation Requirement**:
-- Runtime must support `Map<int, Term>` for argument register storage
-- `CallEnv` class must use `Map<int, Term> argBySlot` (not separate writer/reader ID maps)
-- All Get* and Put* instructions operate on terms, not just variable IDs
-- Argument passing via Spawn/Call must preserve term types
+- `CallEnv` must only contain `VarRef` objects (heap addresses)
+- All goal setup code (REPL, multiagent tests, programmatic spawning) must use a helper to store terms on heap before spawning
+- HEAD instructions may assume arguments are VarRefs and dereference them
 - **Existing Code**: `lib/runtime/terms.dart` defines `Term`, `VarRef`, `ConstTerm`, `StructTerm`
 
-**WAM/FCP Alignment**: This matches the classical WAM design where argument registers are typed storage locations, and FCP's argument passing which supports arbitrary terms.
+**WAM/FCP Alignment**: This matches the classical WAM design where all structured data lives on the heap and argument registers contain references to heap locations.
 
 ### Control Registers
 - **PC**: Program counter
@@ -863,32 +862,24 @@ The `isReader` flag specifies the mode:
 
 ### 12.0.1 Argument Term Types
 
-**Get* instructions must handle all term types in argument registers** (per Section 1.1):
+**All arguments are VarRefs** (per Section 1.1 Heap-Only Requirement):
 
 ```
 arg = CallEnv.getArg(slot)
+assert(arg is VarRef)  // Always true per spec
 
-if arg is VarRef(varId, isReader: bool):
-    // Handle variable (writer or reader access mode)
-    // Mode conversion may be needed
+// Dereference to get the actual value
+value = heap.derefAddr(arg.addr)
 
-if arg is ConstTerm(value):
-    // Handle constant - bind clause variable or verify match
-    // No suspension possible (constants are always bound)
-
-if arg is StructTerm(functor, args):
-    // Handle structure - unify with clause pattern
-    // May contain variables, constants, or nested structures
+if value is VarRef:
+    // Unbound variable - handle based on cell tag (writer vs reader)
+else if value is Term:
+    // Bound value (ConstTerm or StructTerm) - match against clause pattern
+else if value is VariableEntry:
+    // Imported reader (multiagent) - suspend or handle per irmaGLP spec
 ```
 
-**GetWriterValue/GetReaderValue with constant arguments**:
-- When argument is `ConstTerm(c)`: bind clause variable to constant in σ̂w
-- When constant doesn't match expected value: soft-fail to next clause
-- No suspension (constants are always bound)
-
-**GetWriterValue/GetReaderValue with structure arguments**:
-- When argument is `StructTerm(f, args)`: unify structure with clause variable
-- Structure arguments may trigger recursive term matching or mode conversion
+**Key invariant**: CallEnv only contains VarRef objects. All constants and structures are heap-allocated before goal spawning. HEAD instructions dereference arguments and then match against the resulting value.
 
 ---
 
