@@ -301,7 +301,7 @@ String _formatStream(Object value, dynamic heap, int maxElements) {
       break;
     } else if (current is StructTerm && current.functor == '.' && current.args.length == 2) {
       // Cons cell [H|T]
-      elements.add(_formatElement(current.args[0]));
+      elements.add(_formatElement(current.args[0], heap));
       count++;
       // Dereference tail
       final tail = current.args[1];
@@ -334,9 +334,23 @@ String _formatStream(Object value, dynamic heap, int maxElements) {
   return '[${elements.join(', ')}]';
 }
 
-String _formatElement(Object elem) {
+String _formatElement(Object elem, [dynamic heap]) {
   if (elem is ConstTerm) {
     return elem.value.toString();
+  } else if (elem is VarRef && heap != null) {
+    // Dereference VarRef to see if it's bound
+    try {
+      final derefed = heap.derefAddr(elem.addr);
+      if (derefed is ConstTerm) {
+        return derefed.value.toString();
+      } else if (derefed is VarRef) {
+        return '_${derefed.addr}';  // Still unbound
+      } else {
+        return derefed.toString();
+      }
+    } catch (e) {
+      return '_${elem.addr}';
+    }
   } else if (elem is VarRef) {
     return '_${elem.addr}';
   } else {

@@ -1402,10 +1402,27 @@ class BytecodeRunner {
             final clauseVarValue = cx.clauseVars[varIndex];
 
             if (clauseVarValue is VarRef) {
-              // Subsequent use: clauseVarValue holds an addr - use appropriate mode
+              // Subsequent use: clauseVarValue holds an addr
               final addr = clauseVarValue.addr;
-              // If clauseVarValue is writer and we need reader, use addr+1; vice versa
-              if (isReaderMode && cx.rt.heap.isWriter(addr)) {
+
+              // Per spec v2.16.3: Check if VarRef points to ValueTag (ground value)
+              if (cx.rt.heap.isValue(addr)) {
+                // VarRef points to ground value - dereference and use
+                final groundValue = cx.rt.heap.getValue(addr);
+                if (groundValue != null) {
+                  if (isReaderMode) {
+                    // Reader mode with ground term: create fresh var, bind tentatively
+                    final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+                    cx.sigmaHat[writerAddr] = groundValue;
+                    struct.args[cx.S] = VarRef(readerAddr);
+                  } else {
+                    // Writer mode: use ground term directly
+                    struct.args[cx.S] = groundValue;
+                  }
+                } else {
+                  struct.args[cx.S] = clauseVarValue;
+                }
+              } else if (isReaderMode && cx.rt.heap.isWriter(addr)) {
                 struct.args[cx.S] = VarRef(addr + 1);  // reader addr
               } else if (!isReaderMode && cx.rt.heap.isReader(addr)) {
                 struct.args[cx.S] = VarRef(addr - 1);  // writer addr
@@ -1451,9 +1468,27 @@ class BytecodeRunner {
             final clauseVarValue = cx.clauseVars[varIndex];
 
             if (clauseVarValue is VarRef) {
-              // Subsequent use: clauseVarValue holds an addr - use appropriate mode
+              // Subsequent use: clauseVarValue holds an addr
               final addr = clauseVarValue.addr;
-              if (isReaderMode && cx.rt.heap.isWriter(addr)) {
+
+              // Per spec v2.16.3: Check if VarRef points to ValueTag (ground value)
+              if (cx.rt.heap.isValue(addr)) {
+                // VarRef points to ground value - dereference and use
+                final groundValue = cx.rt.heap.getValue(addr);
+                if (groundValue != null) {
+                  if (isReaderMode) {
+                    // Reader mode with ground term: create fresh var, bind it
+                    final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+                    cx.rt.heap.bindVariable(writerAddr, groundValue);
+                    struct.args[cx.S] = VarRef(readerAddr);
+                  } else {
+                    // Writer mode: use ground term directly
+                    struct.args[cx.S] = groundValue;
+                  }
+                } else {
+                  struct.args[cx.S] = clauseVarValue;
+                }
+              } else if (isReaderMode && cx.rt.heap.isWriter(addr)) {
                 struct.args[cx.S] = VarRef(addr + 1);  // reader addr
               } else if (!isReaderMode && cx.rt.heap.isReader(addr)) {
                 struct.args[cx.S] = VarRef(addr - 1);  // writer addr
@@ -2235,6 +2270,8 @@ class BytecodeRunner {
           });
         }
 
+        // Convert tentative structures to real Terms before committing
+        // Temporary trace
         // Convert tentative structures to real Terms before committing
         final convertedSigmaHat = <int, Object?>{};
         for (final entry in cx.sigmaHat.entries) {
