@@ -149,7 +149,20 @@ Added heap structure transformation documentation showing before/after cell layo
 
 ---
 
-### Issues 13-20: Pending
+### Issue 13: PayloadSerializer VariableTable Access ✅ COMPLETED
+
+**Status**: FIXED
+
+**Problem**: When serializing terms containing imported variables, the code used (agentId, addr) instead of the variable's true (creator, creatorLocalId) from V_p.
+
+**Solution**: Added `_lookupVariableForSerialization()` callback in `irma_context.dart` that looks up each variable in V_p to get the correct (creator, creatorLocalId). This callback is now passed to `createAssignmentPayloadV2()`.
+
+**Files Changed**:
+- `lib/multiagent/irma_context.dart` - Added `_lookupVariableForSerialization()` and wired it to `_queueAssignmentFromEntry()`
+
+---
+
+### Issues 14-20: Pending
 
 See SPEC-IMPLEMENTATION-AUDIT-2026-01-20.md for details.
 

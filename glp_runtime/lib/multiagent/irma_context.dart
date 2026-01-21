@@ -184,9 +184,12 @@ class IrmaContext {
   // =========================================================================
   
   /// Queue an assignment message for a remote reader
-  /// 
+  ///
   /// Uses the creator's local ID (creatorLocalId) in the global ID format,
   /// not our local varId. This ensures the creator can look it up in their V_p.
+  ///
+  /// For imported variables in the value term, uses V_p to get the correct
+  /// (creator, creatorLocalId) per irmaGLP-spec.md Section 8.1.
   void _queueAssignmentFromEntry(VariableEntry entry, Term value, String destination) {
     // Use creator's local ID for the global variable ID
     final creatorLocalId = entry.creatorLocalId;
@@ -195,12 +198,14 @@ class IrmaContext {
     print('[DEBUG IRMA $agentId] _queueAssignment: varId=${entry.varId}, creatorLocalId=$creatorLocalId, creator=$creator, value=$value, destination=$destination');
 
     // Create assignment payload with proper global ID
-    // Use V2 method with isReader callback (no address arithmetic)
+    // Use V2 method with isReader callback and lookupVariable callback
+    // to correctly serialize imported variables in the value term
     final globalIdSerializer = PayloadSerializer(creator);
     final payload = globalIdSerializer.createAssignmentPayloadV2(
       creatorLocalId,
       value,
       runtime.heap.isReader,
+      lookupVariable: _lookupVariableForSerialization,
     );
 
     mp.add(OutboundMessage(
@@ -209,6 +214,32 @@ class IrmaContext {
       payload: payload,
     ));
     print('[DEBUG IRMA $agentId] _queueAssignment: message queued, mp.totalLength=${mp.totalLength}');
+  }
+
+  /// Lookup variable info for serialization
+  ///
+  /// For imported variables, returns the original creator's (creator, creatorLocalId).
+  /// For local variables, returns (agentId, addr).
+  ({String creator, int creatorLocalId, bool isReader}) _lookupVariableForSerialization(int addr) {
+    final isReader = runtime.heap.isReader(addr);
+    final key = VarKey(addr, isReader);
+    final entry = vp.lookup(key);
+
+    if (entry != null) {
+      // Found in V_p - use original creator's ID
+      return (
+        creator: entry.creator,
+        creatorLocalId: entry.creatorLocalId,
+        isReader: entry.isReader,
+      );
+    } else {
+      // Not in V_p - local variable, use our agentId
+      return (
+        creator: agentId,
+        creatorLocalId: addr,
+        isReader: isReader,
+      );
+    }
   }
   
   // =========================================================================
