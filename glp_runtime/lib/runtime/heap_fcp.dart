@@ -445,6 +445,23 @@ class HeapFCP {
   /// - When assignment arrives, the reader cell is updated to point to the value
   /// - Activations are extracted from VariableEntry.suspensions
   ///
+  /// Heap structure transformation:
+  ///
+  /// BEFORE (unbound imported reader):
+  /// ```
+  /// cells[readerAddr] = HeapCell(VariableEntry(...), CellTag.RoTag)
+  /// ```
+  ///
+  /// AFTER (bound imported reader):
+  /// ```
+  /// cells[readerAddr] = HeapCell(Pointer(valueCellAddr), CellTag.RoTag)
+  /// cells[valueCellAddr] = HeapCell(value, CellTag.ValueTag)
+  /// ```
+  ///
+  /// Note: Unlike local readers (which point to their paired writer), imported
+  /// readers point directly to a ValueTag cell. This distinction is used by
+  /// isImportedReader() to detect bound imported readers.
+  ///
   /// Returns list of goals to reactivate (from VariableEntry suspensions)
   List<GoalRef> bindImportedReader(int readerAddr, Term value, VariableEntry entry) {
     final cell = cells[readerAddr];
