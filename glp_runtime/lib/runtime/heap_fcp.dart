@@ -721,6 +721,13 @@ class HeapFCP {
       return addr;
     }
 
+    if (term is MutualRefTerm) {
+      // MutualRefTerm contains a writer address for circular structures
+      final addr = HP++;
+      cells.add(HeapCell(term, CellTag.ValueTag));
+      return addr;
+    }
+
     throw ArgumentError('Unknown term type: ${term.runtimeType}');
   }
 }

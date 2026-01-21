@@ -267,27 +267,30 @@ class Scheduler {
       );
       final result = runner.runWithStatus(cx);
 
-      // Show suspension/failure if no reduction occurred
-      if (debug && !hadReduction && !isQueryWrapper) {
-        if (result == RunResult.suspended) {
-          // Strip /arity suffix for standard GLP syntax
+      // Track suspended goals (always, not just in debug mode)
+      if (result == RunResult.suspended) {
+        // Track this suspended goal
+        suspendedGoals[act.id] = goalStr;
+        // Show suspension if debug and no reduction
+        if (debug && !hadReduction && !isQueryWrapper) {
           final cleanGoal = goalStr.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
           print('$cleanGoal → suspended');
-          // Track this suspended goal
-          suspendedGoals[act.id] = goalStr;
-        } else if (result == RunResult.terminated) {
-          // Terminated without reduction = failed
-          // Strip /arity suffix for standard GLP syntax
-          final cleanGoal = goalStr.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
-          print('$cleanGoal → failed');
-          hasFailed = true;
-          // Remove from suspended list if it was there
-          suspendedGoals.remove(act.id);
-          break; // Stop on failure
         }
       } else if (result == RunResult.terminated) {
-        // Goal terminated successfully (with or without reduction) - remove from suspended list
-        suspendedGoals.remove(act.id);
+        // Goal terminated - check if it reduced (success) or just terminated (failure)
+        if (!hadReduction && !isQueryWrapper) {
+          // Terminated without reduction = failed
+          if (debug) {
+            final cleanGoal = goalStr.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
+            print('$cleanGoal → failed');
+          }
+          hasFailed = true;
+          suspendedGoals.remove(act.id);
+          break; // Stop on failure
+        } else {
+          // Goal terminated successfully (with reduction) - remove from suspended list
+          suspendedGoals.remove(act.id);
+        }
       }
       cycles++;
     }

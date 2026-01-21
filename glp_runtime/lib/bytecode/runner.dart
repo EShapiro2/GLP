@@ -2415,14 +2415,9 @@ class BytecodeRunner {
         if (cx.debugOutput) print('[DEBUG] PC $pc: NoMoreClauses - U=${cx.U}');
         if (cx.U.isNotEmpty) {
           if (cx.debugOutput) print('[DEBUG] NoMoreClauses - SUSPENDING on readers: ${cx.U.toList()}');
-          // print('[TRACE NoMoreClauses] Goal ${cx.goalId} suspending:');
-//           print('  U (blocked readers): ${cx.U.toList()}');
-//           print('  κ (resume PC): ${cx.kappa}');
-//           print('  Calling suspendGoalFCP to add to reader suspension lists...');
 
           cx.rt.suspendGoalFCP(goalId: cx.goalId, kappa: cx.kappa, readerVarIds: cx.U);
 
-//           print('  ✓ Goal ${cx.goalId} suspended (added to reader cells)');
           cx.U.clear();
           cx.inBody = false;
           return RunResult.suspended;
@@ -2527,12 +2522,15 @@ class BytecodeRunner {
           final isReader = cx.rt.heap.isReader(addr);
 
           if (!isWriter && !isReader) {
-            // Bound to ground value (ValueTag) - dereference and pass value directly
+            // Bound to ground value (ValueTag) - store on heap and pass VarRef
+            // Per spec v2.16.3 Section 1.1: CallEnv arguments must be VarRefs
             final groundValue = cx.rt.heap.getValue(addr);
             if (groundValue != null) {
-              cx.argSlots[argSlot] = groundValue;
+              // Store value on heap and return VarRef
+              final heapAddr = cx.rt.heap.storeTermOnHeap(groundValue);
+              cx.argSlots[argSlot] = VarRef(heapAddr);
             } else {
-              cx.argSlots[argSlot] = value;  // Fallback
+              cx.argSlots[argSlot] = value;  // Fallback: already VarRef
             }
           } else {
             // Writer or reader
@@ -2576,9 +2574,10 @@ class BytecodeRunner {
           cx.clauseVars[varIndex] = VarRef(writerAddr);
           cx.argSlots[argSlot] = VarRef(isReaderMode ? readerAddr : writerAddr);
         } else if (value is Term && isReaderMode) {
-          // Ground term (e.g., MutualRefTerm) - store directly in argSlots
-          // No need to wrap in VarRef, guards can work with Terms directly
-          cx.argSlots[argSlot] = value;
+          // Ground term (e.g., MutualRefTerm) - store on heap and pass VarRef
+          // Per spec v2.16.3 Section 1.1: CallEnv arguments must be VarRefs
+          final heapAddr = cx.rt.heap.storeTermOnHeap(value);
+          cx.argSlots[argSlot] = VarRef(heapAddr);
         } else {
           print('WARNING: PutVariable got unexpected value: $value (isReader=$isReaderMode)');
         }
