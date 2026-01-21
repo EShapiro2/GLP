@@ -329,12 +329,14 @@ class HeapFCP {
     final cell = cells[readerAddr];
     
     if (cell.content is VariableEntry) {
-      // Imported reader - store suspension in entry or separate mechanism
-      // For now, we'll add a suspension list to the entry's state
-      // This may need refinement based on irmaGLP requirements
+      // Imported reader - store suspension in VariableEntry.suspensions
+      // Per spec Section 3.1.2: For imported readers, V_p serves as the
+      // "virtual writer" that holds suspensions. When an assignment arrives,
+      // goals are resumed from VariableEntry.suspensions.
       final entry = cell.content as VariableEntry;
-      // TODO: Handle imported reader suspension properly
-      // For now, just return - the caller should handle this case
+      final node = SuspensionListNode(record);
+      node.next = entry.suspensions;
+      entry.suspensions = node;
       return;
     }
 
