@@ -202,7 +202,43 @@ Added heap structure transformation documentation showing before/after cell layo
 
 ---
 
-### Issues 17-20: Pending
+### Issue 17: export() Heap Callbacks for Writers ✅ COMPLETED
+
+**Status**: FIXED (commit 1c486ed)
+
+**Problem**: When a local writer is exported for the first time via `helpers.export()`, no heap callback was registered. Later, if a remote agent requested this writer and the writer was bound locally, no assignment message was sent.
+
+**Solution**:
+- Added `newlyExportedWriters: List<int>` field to `ExportResult`
+- Track newly exported writers in `_exportTermRecursive()`
+- Register `onBind` callbacks in `exportTerm()` for all newly exported writers
+- Also fixed stale `allocateFreshPair` callback signature
+
+**Files Changed**:
+- `lib/multiagent/helpers.dart` - Added newlyExportedWriters tracking
+- `lib/multiagent/irma_context.dart` - Register callbacks for exported writers
+
+---
+
+### Issue 18: isImportedReader Naming/Semantics ✅ COMPLETED
+
+**Status**: DOCUMENTED
+
+**Problem**: The function name `isImportedReader` was confusing because it returns true for both bound and unbound imported readers. After binding, the VariableEntry is removed from V_p, but the heap structure still identifies it as imported.
+
+**Solution**: Added comprehensive documentation to `isImportedReader()` explaining:
+- Semantics of "imported reader" - identified by cell structure, not V_p
+- Unbound: cell.content is VariableEntry
+- Bound: cell.content is Pointer -> ValueTag cell
+- Contrast with local readers: Pointer -> RwTag (writer)
+- Added cell structure summary table
+
+**Files Changed**:
+- `lib/runtime/heap_fcp.dart` - Added detailed documentation
+
+---
+
+### Issues 19-20: Pending
 
 See SPEC-IMPLEMENTATION-AUDIT-2026-01-20.md for details.
 

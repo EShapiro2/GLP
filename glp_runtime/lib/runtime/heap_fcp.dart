@@ -582,6 +582,31 @@ class HeapFCP {
   }
 
   /// Check if reader is an imported reader (no local writer)
+  ///
+  /// Returns true for both bound and unbound imported readers, identified by
+  /// cell structure rather than V_p presence. This is intentional:
+  ///
+  /// **Semantics of "imported reader":**
+  /// An imported reader is one that was received from another agent (creator != self).
+  /// The heap structure permanently marks this:
+  /// - Unbound imported reader: cell.content is VariableEntry (suspensions stored here)
+  /// - Bound imported reader: cell.content is Pointer -> ValueTag cell
+  ///
+  /// **Contrast with local readers:**
+  /// - Local readers have cell.content as Pointer -> RwTag cell (the paired writer)
+  ///
+  /// **Why this matters:**
+  /// After bindImportedReader(), the VariableEntry is removed from V_p, but the
+  /// heap structure (Pointer -> ValueTag) still identifies it as imported. This
+  /// allows derefAddr() to correctly retrieve the bound value without needing
+  /// V_p lookup.
+  ///
+  /// **Cell structure summary:**
+  /// | State | cell.content | Target cell |
+  /// |-------|--------------|-------------|
+  /// | Unbound imported | VariableEntry | N/A |
+  /// | Bound imported | Pointer | ValueTag |
+  /// | Local (any) | Pointer | RwTag (writer) |
   bool isImportedReader(int readerAddr) {
     final cell = cells[readerAddr];
     if (cell.tag != CellTag.RoTag) return false;
