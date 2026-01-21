@@ -1,7 +1,7 @@
 # irmaGLP Specification
 
-**Version**: 2.1  
-**Date**: 2026-01-18  
+**Version**: 3.0  
+**Date**: 2026-01-20  
 **Status**: DRAFT  
 **Source**: GLP-ICLP-2026 Paper (`~/Grassroots/GLP-ICLP-2026/GLP_for_ICLP.pdf`), Appendix "Smartphone Implementation-ready Multiagent Transition System for GLP"
 
@@ -18,6 +18,14 @@ A variable X is **local** to agent p if X occurs in p's resolvent. Non-local var
 ### 1.2 Fundamental Invariant
 
 Assignments produced by Reduce transactions are immediately applied if the reader is local, otherwise they become messages routed through the variable tables.
+
+### 1.3 Definitions
+
+- **Local variable**: A variable created by this agent (creator == agentId)
+- **Imported variable**: A variable created by another agent (creator != agentId)
+- **Exported variable**: A local variable sent to another agent (has V_p entry)
+- **Reader**: A variable reference for reading; identified by cell tag RoTag, not by address arithmetic
+- **Writer**: A variable reference for binding; identified by cell tag WrtTag, not by address arithmetic
 
 ---
 
@@ -59,14 +67,14 @@ The resolvent R_p partitions goals into three categories. Active goals A_p conta
 
 #### 3.1.2 Variable Table V_p
 
-V_p ⊆ 𝒱 × Π × (𝒯 ∪ Π ∪ {⊥}) × 𝒮* maintains shared variable state as a set of tuples where each (Y, q, s, Σ) ∈ V_p:
+V_p ⊆ 𝒱 × Π × (𝒯 ∪ Π ∪ {⊥}) maintains shared variable state as a set of tuples where each (Y, q, s) ∈ V_p:
 
 - **Created Writer**: Y ∈ V, q = p, s ∈ 𝒯 is the value of Y, else s = ⊥
 - **Imported Writer**: Y ∈ V, q ≠ p, s ∈ 𝒯 is the value of Y, else s = ⊥
 - **Created Reader**: Y ∈ V?, q = p, s ∈ Π is the read-requesting agent, else s = ⊥
 - **Imported Reader**: Y ∈ V? (reader), q ≠ p, s = q indicates a read request has been sent from p to q, else s = ⊥
 
-The fourth component Σ ∈ 𝒮* is a list of local suspension records for goals waiting on this variable. For standard (non-imported) variables, suspensions are stored on the writer cell in the heap. For imported readers, there is no local writer cell, so V_p serves as the "virtual writer" that holds the suspension list. When an assignment message arrives for an imported reader, the runtime resumes goals from Σ.
+For local variables, suspensions are stored on the writer cell in the heap. For imported readers, there is no local writer cell; instead, the VariableEntry object holds suspensions in its `suspensions` field. When an assignment message arrives for an imported reader, the runtime resumes goals from this list.
 
 The variable table V_p maintains shared variables where one element of each reader/writer pair is local to p while its counterpart is non-local. For writers (both created and imported), the table stores the creator and any assignment to enable response to read requests. For created readers, it records which agent has requested the value. For imported readers, it tracks whether a read request has been sent to the creator. This unified structure ensures variables referenced by non-local counterparts are not prematurely garbage collected and provides routing information for cross-agent communication.
 
@@ -80,23 +88,55 @@ M_p is a set of pending messages as pairs (content, destination) where destinati
 - Read requests: (request(X?, p), q) where p requests X? from q
 - Abandonment notifications: (abandon(X), q)
 
+### 3.2 Heap Representation
+
+#### 3.2.1 Variable Identity
+
+A variable's reader/writer identity is determined by its heap cell tag (RoTag or WrtTag), NOT by address arithmetic. Although `allocateVariable()` may initially place writer at address N and reader at N+1, this consecutive placement is an allocation convenience only. After binding operations, a reader may point to any writer cell in the heap.
+
+**MUST NOT**: Code must not assume `reader_addr == writer_addr + 1` or derive reader/writer identity from address parity.
+
+#### 3.2.2 Local Variables
+
+Local variables use two-cell allocation:
+
+- Writer cell: WrtTag, content is null (unbound), SuspensionListNode (waiting), or Pointer (bound to another variable)
+- Reader cell: RoTag, content is Pointer to a writer cell
+
+#### 3.2.3 Imported Variables
+
+Imported variables use single-cell allocation:
+
+- Imported reader: RoTag cell, content is VariableEntry
+- Imported writer: WrtTag cell, content is VariableEntry
+
+The VariableEntry contains the creator's identity and original localId for message routing, plus a `suspensions` field for imported readers.
+
+#### 3.2.4 Binding Imported Readers
+
+When an assignment message arrives for an imported reader:
+
+1. Allocate a new ValueTag cell containing the term
+2. Replace the reader cell's content with Pointer to the value cell
+3. Resume goals from VariableEntry.suspensions
+
 ---
 
 ## 4. Helper Routines
 
 Helper routines for implementation-ready transactions, agent p. All routines may modify V'_p and M'_p.
 
-### 4.1 abandon(Y)
+### 4.1 abandon(X?)
 
-The abandon helper notifies other agents when variable Y becomes unreachable. For imported variables, it notifies the creator q. For created readers with a requester s, it notifies that requester. The paired variable Y' is sent in the message to indicate which part of the pair was abandoned.
+The abandon helper notifies other agents when a reader X? becomes unreachable. Only readers can be abandoned (abandonment means "I will never read this value"). For imported readers, it notifies the creator q. For created readers with a requester s, it notifies that requester.
 
-**Definition [routine abandon(Y)]**
+**Definition [routine abandon(X?)]**
 
-- If (Y, q, s) ∈ V_p where q ≠ p: remove from V'_p and add (abandon(Y'), q) to M'_p
-- If (Y, p, s) ∈ V_p and s ≠ ⊥: remove from V'_p and add (abandon(Y'), s) to M'_p
-- Otherwise: just remove (Y, ·, ·) from V'_p if present
+- If (X?, q, s) ∈ V_p where q ≠ p (imported reader): remove from V'_p and add (abandon(X), q) to M'_p
+- If (X?, p, s) ∈ V_p and s ≠ ⊥ (created reader with requester): remove from V'_p and add (abandon(X), s) to M'_p
+- Otherwise: just remove (X?, ·, ·) from V'_p if present
 
-where Y' = Y? if Y ∈ V, else Y' = Y if Y ∈ V? (the paired variable)
+The abandon message contains the paired writer X so the recipient can clean up their entry.
 
 ### 4.2 request(X?)
 
@@ -132,13 +172,17 @@ export_reader(Y?, Z) :- Z = Y?.
 
 This ensures that when the creator eventually binds the original variable, the value flows through the relay to the new recipient.
 
+**Implementation note**: The forwarding behavior may be implemented via runtime heap callbacks rather than spawning a GLP goal, provided the semantics are preserved: when Y? receives a value T, Z is bound to T.
+
 ### 4.4 reactivate(X?) returns R
 
 **Definition [routine reactivate(X?) for agent p returns R]**
 
-- Let R = {G : (G, W) ∈ S'_p, X? ∈ W}
+- Let R = [G : (G, W) ∈ S'_p, X? ∈ W] (ordered list, preserving suspension order)
 - S'_p := S'_p \ {(G, W) : G ∈ R}
 - Return R
+
+The returned list R is appended to the active queue A_p, preserving goal ordering.
 
 ---
 
@@ -178,7 +222,9 @@ Else if W = ⋃_{C ∈ M} W_C ≠ ∅:
 
 - A'_p := A_r
 - S'_p := S'_p ∪ {(A, W)}
-- Call request(X?) for each X? ∈ W (modifies V'_p and M'_p)
+- The runtime MUST call request(X?) for each imported reader X? ∈ W (modifies V'_p and M'_p)
+
+This requires the scheduler to provide the set of blocking readers W to the IRMA layer after suspension.
 
 #### Case 3: Fail
 
@@ -199,6 +245,8 @@ The binary Communicate transaction (c_p, c_q) → (c'_p, c'_q) where p ≠ q and
 #### Type 1: Assignment
 
 m = (X?:=T):
+
+**Note**: When agent A binds an imported writer W (created by agent B), A sends (W?:=T, B) to creator B. Agent B receives this as an assignment to their created reader W? and handles it per the cases below.
 
 - **If (X?, q, r) ∈ V'_q where r ∈ Π** (created reader with pending request):
   - Forward assignment: add (X?:=T, r) to M'_q
@@ -462,14 +510,17 @@ The implementation-ready transition system with these cryptographic extensions r
 
 Variables crossing agent boundaries need globally unique identifiers for routing.
 
-**Format**: `creator:localId`
+**Format**: `<creator>:<localId>` where:
 
-- creator ∈ Π: agent who allocated this variable
-- localId: unique integer within creator's heap
+- creator ∈ Π: agent who allocated this variable (ASCII alphanumeric plus underscore, no colons)
+- localId: the decimal representation of the creator's writer address for this variable
+- The colon is the literal separator
 
-**Example**: `alice:1042` identifies variable with local ID 1042 created by alice.
+**Example**: `alice:1042` identifies the variable with writer address 1042 created by alice.
 
-When serializing terms for inter-agent transport, local variable IDs are replaced with global IDs.
+**Serialization**: Length-prefixed UTF-8 encoding of the string representation.
+
+When serializing terms for inter-agent transport, each variable is encoded with its global ID. For imported variables being serialized, use the original creator's ID, not the local agent's ID.
 
 ### 8.2 Data Structures
 
@@ -544,3 +595,4 @@ This ensures read requests are sent for imported readers per Section 5.2 Case 2,
 | 2.3 | 2026-01-19 | Claude | Added export_reader/2 definition in Section 4.3 |
 | 2.4 | 2026-01-19 | Claude | Added suspension list Σ to V_p tuple; V_p as "virtual writer" for imported readers |
 | 2.5 | 2026-01-20 | Claude | Added imported reader case to Communicate Transaction (Section 5.3); updated scenarios |
+| 3.0 | 2026-01-20 | Claude | Spec audit fixes: added Section 1.3 Definitions, Section 3.2 Heap Representation; clarified abandon() takes reader only; simplified V_p to 3-tuple; added MUST for scheduler-IRMA integration; expanded global ID format; added implementation note for export_reader |
