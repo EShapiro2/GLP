@@ -104,41 +104,41 @@ class IrmaContext {
     
     // Register heap callback to observe when this writer is bound
     runtime.heap.onBind(varId, (Term value) {
-      _onWriterBound(varId, value);
+      onWriterBound(varId, value);
     });
   }
   
   /// Called when a writer in V_p is bound to a value
-  /// 
+  ///
   /// Phase 6: For imported writers with heap-attached entries, also stores
   /// value in entry.state so derefAddr() can return it.
-  void _onWriterBound(int writerId, Term value) {
-    print('[DEBUG IRMA $agentId] _onWriterBound: writerId=$writerId, value=$value');
+  void onWriterBound(int writerId, Term value) {
+    print('[DEBUG IRMA $agentId] onWriterBound: writerId=$writerId, value=$value');
     final key = VarKey(writerId, false); // writer
     final entry = vp.lookup(key);
     if (entry == null) {
-      print('[DEBUG IRMA $agentId] _onWriterBound: NO ENTRY in V_p for $writerId');
+      print('[DEBUG IRMA $agentId] onWriterBound: NO ENTRY in V_p for $writerId');
       return;
     }
-    print('[DEBUG IRMA $agentId] _onWriterBound: entry.role=${entry.role}, entry.requester=${entry.requester}, entry.creator=${entry.creator}');
+    print('[DEBUG IRMA $agentId] onWriterBound: entry.role=${entry.role}, entry.requester=${entry.requester}, entry.creator=${entry.creator}');
 
     if (entry.role == VariableRole.createdWriter && entry.requester != null) {
       // Created writer has a requester - send assignment directly
       final requester = entry.requester!;
-      print('[DEBUG IRMA $agentId] _onWriterBound: CREATED WRITER with requester=$requester, sending assignment');
+      print('[DEBUG IRMA $agentId] onWriterBound: CREATED WRITER with requester=$requester, sending assignment');
       _queueAssignmentFromEntry(entry, value, requester);
       // Update entry to store the bound value
       entry.boundValue = value;
       vp.updateBoundValue(key, value);
     } else if (entry.role == VariableRole.importedWriter) {
       // Imported writer - notify creator (creator routes to requester)
-      print('[DEBUG IRMA $agentId] _onWriterBound: IMPORTED WRITER, notifying creator=${entry.creator}');
+      print('[DEBUG IRMA $agentId] onWriterBound: IMPORTED WRITER, notifying creator=${entry.creator}');
       _queueAssignmentFromEntry(entry, value, entry.creator);
       // Update entry to store the bound value
       entry.boundValue = value;
       vp.updateBoundValue(key, value);
     } else {
-      print('[DEBUG IRMA $agentId] _onWriterBound: NO ACTION (role=${entry.role}, requester=${entry.requester})');
+      print('[DEBUG IRMA $agentId] onWriterBound: NO ACTION (role=${entry.role}, requester=${entry.requester})');
     }
   }
   
@@ -185,7 +185,7 @@ class IrmaContext {
     // Register heap callback to notify creator when bound
     runtime.heap.onBind(varId, (Term value) {
       print('[DEBUG IRMA $agentId] HEAP CALLBACK fired for imported writer $varId, value=$value');
-      _onWriterBound(varId, value);
+      onWriterBound(varId, value);
     });
   }
   
@@ -495,7 +495,7 @@ class IrmaContext {
     if (!isReader) {
       runtime.heap.onBind(localAddr, (Term value) {
         print('[DEBUG IRMA $agentId] HEAP CALLBACK fired for imported writer $localAddr, value=$value');
-        _onWriterBound(localAddr, value);
+        onWriterBound(localAddr, value);
       });
     }
   }
@@ -586,7 +586,7 @@ class IrmaContext {
     // assignments should be sent. The callback enables message routing.
     for (final writerAddr in result.newlyExportedWriters) {
       runtime.heap.onBind(writerAddr, (Term value) {
-        _onWriterBound(writerAddr, value);
+        onWriterBound(writerAddr, value);
       });
     }
 
@@ -607,7 +607,7 @@ class IrmaContext {
       print('[DEBUG IRMA $agentId] RELAY FORWARD: Y?=${relay.originalReaderId} bound to $value, binding Z=${relay.relayWriterId}');
       
       // Bind the relay writer Z to the same value
-      // This will trigger _onWriterBound if Z has a requester
+      // This will trigger onWriterBound if Z has a requester
       final activations = runtime.heap.bindVariable(relay.relayWriterId, value);
       for (final act in activations) {
         runtime.gq.enqueue(act);
@@ -617,7 +617,7 @@ class IrmaContext {
     // Also register the relay writer's callback for message routing
     // (The relay writer Z is in V_p and needs to send assignments when bound)
     runtime.heap.onBind(relay.relayWriterId, (Term value) {
-      _onWriterBound(relay.relayWriterId, value);
+      onWriterBound(relay.relayWriterId, value);
     });
   }
   

@@ -593,7 +593,10 @@ class _AgentScreenState extends State<AgentScreen> {
 
       // Serialize the full term (preserving structure and variables)
       final serializer = PayloadSerializer(widget.agentId.toLowerCase());
-      final termPayload = serializer.createAgentMessagePayload(msgTerm);
+      final termPayload = serializer.createAgentMessagePayload(
+        msgTerm,
+        (addr) => _agent!.runtime.heap.isReader(addr),
+      );
       
       // Wrap in OutboundMessage with agentMessage type
       final msg = OutboundMessage(
@@ -816,7 +819,7 @@ class _AgentScreenState extends State<AgentScreen> {
     // Set up onBind callback for outgoing messages
     heap.onBind(outWriterAddr, (rt.Term value) {
       debugPrint('=== V_p onBind: $myId -> $friendName, value=$value ===');
-      context._onWriterBound(outWriterAddr, value);
+      context.onWriterBound(outWriterAddr, value);
     });
 
     // Create imported reader for incoming messages from friend
