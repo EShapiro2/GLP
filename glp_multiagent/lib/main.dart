@@ -849,7 +849,11 @@ class _AgentScreenState extends State<AgentScreen> {
 
   void _sendInput() {
     final text = _inputController.text.trim();
-    if (text.isEmpty || _ioContext == null || _agent == null) return;
+    debugPrint('=== _sendInput called with: "$text" ===');
+    if (text.isEmpty || _ioContext == null || _agent == null) {
+      debugPrint('=== _sendInput early return: empty=${ text.isEmpty}, ioContext=${_ioContext != null}, agent=${_agent != null} ===');
+      return;
+    }
 
     setState(() {
       _outputLog.add('> $text');
@@ -857,11 +861,17 @@ class _AgentScreenState extends State<AgentScreen> {
 
     try {
       // Parse and inject term into UserIn
+      debugPrint('=== Parsing term: $text ===');
       final term = _parseTerm(text);
+      debugPrint('=== Parsed term: $term ===');
+
+      debugPrint('=== Injecting into userInput ===');
       final activations = _ioContext!.userInput.inject(term);
+      debugPrint('=== Activations from inject: ${activations.length} ===');
 
       // Enqueue activated goals
       for (final goal in activations) {
+        debugPrint('=== Enqueueing goal: id=${goal.id}, pc=${goal.pc} ===');
         _agent!.runtime.gq.enqueue(goal);
       }
 
@@ -869,8 +879,11 @@ class _AgentScreenState extends State<AgentScreen> {
       _scrollToBottom();
 
       // Auto-run after injection
+      debugPrint('=== Running until quiescent ===');
       _runUntilQuiescent();
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('=== _sendInput ERROR: $e ===');
+      debugPrint('$st');
       _addOutput('[ERROR] $e');
     }
   }
@@ -928,7 +941,11 @@ class _AgentScreenState extends State<AgentScreen> {
   bool _glpTraceEnabled = false;
 
   Future<void> _runUntilQuiescent() async {
-    if (_scheduler == null || _agent == null) return;
+    debugPrint('=== _runUntilQuiescent START ===');
+    if (_scheduler == null || _agent == null) {
+      debugPrint('=== _runUntilQuiescent early return: scheduler=${_scheduler != null}, agent=${_agent != null} ===');
+      return;
+    }
 
     setState(() {
       _isRunning = true;
@@ -936,20 +953,24 @@ class _AgentScreenState extends State<AgentScreen> {
     });
 
     try {
+      debugPrint('=== Calling drainAsyncWithStatus, GQ length=${_agent!.runtime.gq.length} ===');
       final result = await _scheduler!.drainAsyncWithStatus(
         maxCycles: 1000,
         debug: _glpTraceEnabled,
       );
+      debugPrint('=== drainAsyncWithStatus done: status=${result.status}, goalsRan=${result.goalsRan.length} ===');
       _goalCount += result.goalsRan.length;
 
       // Per spec section 5.2 Case 2: On suspension, call request(X?) for blocking readers
       if (result.status == ExecutionStatus.suspended && result.blockingReaders.isNotEmpty) {
+        debugPrint('=== Suspended with ${result.blockingReaders.length} blocking readers ===');
         _agent!.context.processSuspension(result.blockingReaders);
         _addOutput('[IRMA] Sent read requests for ${result.blockingReaders.length} blocking readers');
       }
 
       // Flush any pending irmaGLP messages
       final messagesFlushed = _agent!.flushMessages();
+      debugPrint('=== Flushed $messagesFlushed messages ===');
       if (messagesFlushed > 0) {
         _addOutput('[IRMA] Flushed $messagesFlushed messages');
       }
@@ -962,7 +983,10 @@ class _AgentScreenState extends State<AgentScreen> {
         _status = result.status.name;
         _updateStats();
       });
-    } catch (e) {
+      debugPrint('=== _runUntilQuiescent END: status=${result.status.name} ===');
+    } catch (e, st) {
+      debugPrint('=== _runUntilQuiescent ERROR: $e ===');
+      debugPrint('$st');
       setState(() {
         _isRunning = false;
         _status = 'Error: $e';
