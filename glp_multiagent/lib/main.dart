@@ -24,8 +24,10 @@ import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/external_io.dart';
 import 'package:glp_runtime/multiagent/irma_agent.dart';
+import 'package:glp_runtime/multiagent/irma_context.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/payload_serializer.dart';
+import 'package:glp_runtime/multiagent/variable_table.dart';
 
 import 'irma_router.dart';
 
@@ -438,8 +440,8 @@ class _AgentScreenState extends State<AgentScreen> {
   int _goalId = 1;
 
   // Pending output terms (to be dereferenced after execution)
+  // Note: Friend output is now handled via V_p onBind callbacks
   final List<rt.Term> _pendingUserOutputTerms = [];
-  final Map<String, List<rt.Term>> _pendingFriendOutputTerms = {};
 
   int _goalCount = 0;
   int _heapVars = 0;
@@ -651,35 +653,17 @@ class _AgentScreenState extends State<AgentScreen> {
         },
       );
 
-      // Create channels for each friend
-      final friendChannels = <String, ExternalChannel>{};
-      final friendInputs = <String, InputInjector>{};
-      final friendOutputs = <String, OutputObserver>{};
+      // Create V_p-based channels for each friend
+      // Each friend gets:
+      // - An output writer (we write to it, friend receives via IRMA)
+      // - An imported reader (friend writes to it, we receive via IRMA)
+      final friendChannels = <String, _VpFriendChannel>{};
 
       for (final friend in widget.friends) {
         final friendLower = friend.toLowerCase();
-        final channel = createExternalChannel(_agent!.runtime.heap, friendLower);
+        final channel = _createVpFriendChannel(friendLower);
         friendChannels[friendLower] = channel;
-        
-        // Input injector for receiving from this friend
-        friendInputs[friendLower] = InputInjector(
-          _agent!.runtime.heap, 
-          friendLower, 
-          channel.inputVarId,
-        );
-        
-        // Output observer for sending to this friend
-        friendOutputs[friendLower] = OutputObserver(
-          _agent!.runtime.heap,
-          friendLower,
-          channel.outputVarId,
-          (term) {
-            _pendingFriendOutputTerms.putIfAbsent(friendLower, () => []).add(term);
-          },
-          () {
-            debugPrint('=== FRIEND $friendLower OUTPUT CLOSED ===');
-          },
-        );
+        _addOutput('[INIT] Created V_p channel for $friendLower (out=${channel.outputWriterAddr}, in=${channel.inputReaderAddr})');
       }
 
       _ioContext = _MultiAgentIOContext(
@@ -688,9 +672,7 @@ class _AgentScreenState extends State<AgentScreen> {
         friendChannels: friendChannels,
         userInput: userInput,
         netInput: netInput,
-        friendInputs: friendInputs,
         userOutput: userOutput,
-        friendOutputs: friendOutputs,
       );
 
       // Compile stdlib separately (provides =/2)
@@ -782,25 +764,84 @@ class _AgentScreenState extends State<AgentScreen> {
   }
 
   /// Build GLP list: [(name1, Out1), (name2, Out2), ...]
+  /// Uses V_p-based channels where output writers are registered in V_p
   rt.Term _buildFriendPairsList() {
     rt.Term list = rt.ConstTerm('nil');
-    
+
     // Build in reverse order so first friend is at head
     for (int i = widget.friends.length - 1; i >= 0; i--) {
       final friendLower = widget.friends[i].toLowerCase();
       final channel = _ioContext!.friendChannels[friendLower]!;
-      
+
       // Create pair: (name, OutStream)
+      // The output writer is registered in V_p - when GLP binds it,
+      // the assignment goes to the friend via IRMA
       final pair = rt.StructTerm(',', [
         rt.ConstTerm(friendLower),
-        rt.VarRef(channel.outputVarId),  // Writer address
+        rt.VarRef(channel.outputWriterAddr),  // V_p-registered writer
       ]);
-      
+
       // Cons onto list
       list = rt.StructTerm('.', [pair, list]);
     }
-    
+
     return list;
+  }
+
+  /// Create a V_p-based friend channel
+  ///
+  /// Sets up:
+  /// - Local writer for outgoing (registered in V_p with requester=friend)
+  /// - Imported reader for incoming (registered in V_p with creator=friend)
+  _VpFriendChannel _createVpFriendChannel(String friendName) {
+    final heap = _agent!.runtime.heap;
+    final context = _agent!.context;
+    final myId = widget.agentId.toLowerCase();
+
+    // Create local writer for outgoing messages to friend
+    // Per spec: when we bind this, assignment goes to friend
+    final (outWriterAddr, _) = heap.allocateVariable();
+
+    // Register in V_p as createdWriter with requester=friend
+    // This sets up the onBind callback to route assignments
+    final outKey = VarKey(outWriterAddr, false);
+    context.vp.add(outKey, VariableEntry(
+      varId: outWriterAddr,
+      isReader: false,
+      creator: myId,
+      role: VariableRole.createdWriter,
+      requester: friendName,  // Assignments go here
+    ));
+
+    // Set up onBind callback for outgoing messages
+    heap.onBind(outWriterAddr, (rt.Term value) {
+      debugPrint('=== V_p onBind: $myId -> $friendName, value=$value ===');
+      context._onWriterBound(outWriterAddr, value);
+    });
+
+    // Create imported reader for incoming messages from friend
+    // Per spec: when friend binds their writer, we receive via handleAssignment
+    final inReaderAddr = heap.allocateImportedReader();
+
+    // Create and attach VariableEntry to heap cell
+    final inEntry = VariableEntry(
+      varId: inReaderAddr,
+      isReader: true,
+      creator: friendName,  // Friend is the creator
+      role: VariableRole.importedReader,
+      creatorLocalId: inReaderAddr,  // Will be updated when we know friend's ID
+    );
+    heap.cells[inReaderAddr].content = inEntry;
+
+    // Register in V_p
+    final inKey = VarKey(inReaderAddr, true);
+    context.vp.add(inKey, inEntry);
+
+    return _VpFriendChannel(
+      friendName: friendName,
+      outputWriterAddr: outWriterAddr,
+      inputReaderAddr: inReaderAddr,
+    );
   }
 
   void _sendInput() {
@@ -944,21 +985,9 @@ class _AgentScreenState extends State<AgentScreen> {
     }
     _pendingUserOutputTerms.clear();
 
-    // Process friend output terms - send via IRMA binary path
-    for (final entry in _pendingFriendOutputTerms.entries) {
-      for (final term in entry.value) {
-        final derefTerm = _derefTerm(term);
-        // Expect msg(From, To, Content) from GLP
-        if (derefTerm is rt.StructTerm && derefTerm.functor == 'msg' && derefTerm.args.length == 3) {
-          final to = _termToString(derefTerm.args[1]);
-          _addOutput('[SEND to $to] ${_formatTerm(derefTerm.args[2])}');
-          _sendAgentMessage(to, derefTerm);
-        } else {
-          _addOutput('[FRIEND ${entry.key} OUT] ${_formatTerm(derefTerm)}');
-        }
-      }
-    }
-    _pendingFriendOutputTerms.clear();
+    // Friend output is now handled via V_p onBind callbacks
+    // which automatically route assignments through IRMA
+
     _scrollToBottom();
   }
 
@@ -1178,19 +1207,34 @@ class _AgentScreenState extends State<AgentScreen> {
 }
 
 // ============================================================================
-// HELPER CLASS
+// HELPER CLASSES
 // ============================================================================
 
-/// Multi-agent I/O context with user, network, and multiple friend channels
+/// V_p-based friend channel
+///
+/// Uses proper IRMA V_p semantics:
+/// - outputWriterAddr: Local writer we bind to send to friend
+/// - inputReaderAddr: Imported reader that receives from friend
+class _VpFriendChannel {
+  final String friendName;
+  final int outputWriterAddr;  // We write here, friend receives
+  final int inputReaderAddr;   // Friend writes here, we receive
+
+  _VpFriendChannel({
+    required this.friendName,
+    required this.outputWriterAddr,
+    required this.inputReaderAddr,
+  });
+}
+
+/// Multi-agent I/O context with user, network, and V_p-based friend channels
 class _MultiAgentIOContext {
   final ExternalChannel userChannel;
   final ExternalChannel netChannel;
-  final Map<String, ExternalChannel> friendChannels;
+  final Map<String, _VpFriendChannel> friendChannels;
   final InputInjector userInput;
   final InputInjector netInput;  // For incoming network messages
-  final Map<String, InputInjector> friendInputs;
   final OutputObserver userOutput;
-  final Map<String, OutputObserver> friendOutputs;
 
   _MultiAgentIOContext({
     required this.userChannel,
@@ -1198,9 +1242,7 @@ class _MultiAgentIOContext {
     required this.friendChannels,
     required this.userInput,
     required this.netInput,
-    required this.friendInputs,
     required this.userOutput,
-    required this.friendOutputs,
   });
 
   rt.Term get userChannelTerm => buildChannelTerm(userChannel);
@@ -1208,8 +1250,5 @@ class _MultiAgentIOContext {
 
   void dispose() {
     userOutput.dispose();
-    for (final output in friendOutputs.values) {
-      output.dispose();
-    }
   }
 }
