@@ -793,7 +793,7 @@ class _AgentScreenState extends State<AgentScreen> {
       // Create pair: (name, OutStream)
       final pair = rt.StructTerm(',', [
         rt.ConstTerm(friendLower),
-        rt.VarRef(channel.outputVarId, isReader: false),
+        rt.VarRef(channel.outputVarId),  // Writer address
       ]);
       
       // Cons onto list
@@ -854,8 +854,8 @@ class _AgentScreenState extends State<AgentScreen> {
     if (astTerm is ast.ConstTerm) {
       return rt.ConstTerm(astTerm.value);
     } else if (astTerm is ast.VarTerm) {
-      final (writerId, readerId) = _agent!.runtime.heap.allocateFreshPair();
-      return rt.VarRef(astTerm.isReader ? readerId : writerId, isReader: astTerm.isReader);
+      final (writerAddr, readerAddr) = _agent!.runtime.heap.allocateVariable();
+      return rt.VarRef(astTerm.isReader ? readerAddr : writerAddr);
     } else if (astTerm is ast.StructTerm) {
       final args = astTerm.args.map(_astToRuntimeTerm).toList();
       return rt.StructTerm(astTerm.functor, args);
@@ -928,7 +928,7 @@ class _AgentScreenState extends State<AgentScreen> {
 
   void _updateStats() {
     if (_agent != null) {
-      _heapVars = _agent!.runtime.heap.allVarIds.length;
+      _heapVars = _agent!.runtime.heap.HP;  // Heap pointer = total cells allocated
       _vpSize = _agent!.vp.entries.length;
       _mpSize = _agent!.mp.totalLength;
     }
@@ -992,7 +992,7 @@ class _AgentScreenState extends State<AgentScreen> {
     if (_agent == null) return term;
 
     if (term is rt.VarRef) {
-      final value = _agent!.runtime.heap.getValue(term.varId);
+      final value = _agent!.runtime.heap.getValue(term.addr);
       if (value != null && value is! rt.VarRef) {
         return _derefTerm(value);
       }
@@ -1011,7 +1011,8 @@ class _AgentScreenState extends State<AgentScreen> {
       return term.value.toString();
     }
     if (term is rt.VarRef) {
-      return term.isReader ? 'X${term.varId}?' : 'X${term.varId}';
+      final isReader = _agent?.runtime.heap.isReader(term.addr) ?? false;
+      return isReader ? 'X${term.addr}?' : 'X${term.addr}';
     }
     if (term is rt.StructTerm) {
       if (term.functor == '.' && term.args.length == 2) {
