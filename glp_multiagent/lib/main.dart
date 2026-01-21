@@ -734,12 +734,32 @@ class _AgentScreenState extends State<AgentScreen> {
       // Build FriendPairs list: [(name1, out1), (name2, out2), ...]
       final friendPairsList = _buildFriendPairsList();
 
+      // Allocate heap cells for arguments and bind values
+      // CallEnv requires VarRefs, not direct terms
+      final heap = _agent!.runtime.heap;
+
+      // Arg 0: agentId
+      final (arg0Writer, _) = heap.allocateVariable();
+      heap.bindVariable(arg0Writer, rt.ConstTerm(agentId));
+
+      // Arg 1: friendPairsList
+      final (arg1Writer, _) = heap.allocateVariable();
+      heap.bindVariable(arg1Writer, friendPairsList);
+
+      // Arg 2: userChannelTerm
+      final (arg2Writer, _) = heap.allocateVariable();
+      heap.bindVariable(arg2Writer, _ioContext!.userChannelTerm);
+
+      // Arg 3: netChannelTerm
+      final (arg3Writer, _) = heap.allocateVariable();
+      heap.bindVariable(arg3Writer, _ioContext!.netChannelTerm);
+
       // Set up arguments: agent(Id, FriendPairs, UserCh, NetCh)
       final argSlots = <int, rt.Term>{
-        0: rt.ConstTerm(agentId),
-        1: friendPairsList,
-        2: _ioContext!.userChannelTerm,
-        3: _ioContext!.netChannelTerm,
+        0: rt.VarRef(arg0Writer),
+        1: rt.VarRef(arg1Writer),
+        2: rt.VarRef(arg2Writer),
+        3: rt.VarRef(arg3Writer),
       };
 
       // Set up goal environment
