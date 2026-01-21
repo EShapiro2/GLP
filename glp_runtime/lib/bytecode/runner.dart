@@ -1074,37 +1074,9 @@ class BytecodeRunner {
           }
         }
 
-        // Ground term case (not writer or reader)
-        if (arg is StructTerm) {
-          // StructTerm argument - check if it matches and enter READ mode
-          if (arg.functor == op.functor && arg.args.length == op.arity) {
-            // Match! Enter READ mode to unify structure arguments
-            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: StructTerm arg matches ${op.functor}/${op.arity}, entering READ mode');
-            cx.currentStructure = arg;
-            cx.mode = UnifyMode.read;
-            cx.S = 0;
-            pc++; continue;
-          } else {
-            // Functor/arity mismatch - soft fail
-            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: StructTerm arg mismatch, failing');
-            _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
-            continue;
-          }
-        }
-
-        // Other ground terms (ConstTerm, etc.) - fail
-        if (cx.debugOutput) print('DEBUG: HeadStructure line 610 - GROUND TERM PATH (non-struct)');
-        print('  op.argSlot = ${op.argSlot}');
-        print('  arg = $arg');
-        print('  arg is VarRef = ${arg is VarRef}');
-        print('  isClauseVar = $isClauseVar');
-        if (isClauseVar && op.argSlot < 100) {
-          // print('  clauseVars[${op.argSlot}] = ${cx.clauseVars[op.argSlot]}');
-        }
-        _softFailToNextClause(cx, pc);
-        pc = _findNextClauseTry(pc);
-        continue;
+        // Per spec v2.16.3: All args should be VarRefs, handled above
+        // This is unreachable if assertion in _getArg holds
+        throw StateError('HeadStructure: unexpected argument type ${arg.runtimeType}');
       }
 
       // ===== Argument loading instructions (GET class) =====
@@ -4053,7 +4025,11 @@ class BytecodeRunner {
   /// Helper to get argument term from call environment
   /// Per spec v2.16 section 1.1: arguments are heterogeneous Terms
   Term? _getArg(RunnerContext cx, int slot) {
-    return cx.env.arg(slot);
+    final arg = cx.env.arg(slot);
+    // Per spec v2.16.3 Section 1.1: CallEnv arguments must be VarRefs
+    assert(arg == null || arg is VarRef,
+           'CallEnv arguments must be VarRefs, got ${arg.runtimeType}');
+    return arg;
   }
 
   /// Resolves VarRefs that reference HEAD variables to actual heap IDs
