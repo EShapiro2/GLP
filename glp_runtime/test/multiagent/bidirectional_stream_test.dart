@@ -158,8 +158,8 @@ void main() {
     // @1: merge(Xs?, [a], Ys)
     final entryPC = program.labels['merge/3']!;
 
-    // Build [a] list as cons cell: '.'(a, [])
-    final aList1 = StructTerm('.', [ConstTerm('a'), ConstTerm('[]')]);
+    // Build [a] list as cons cell: '.'(a, nil)
+    final aList1 = StructTerm('.', [ConstTerm('a'), ConstTerm('nil')]);
 
     // Create reader VarRef for imported Xs?
     final xsReaderRef1 = VarRef(xs1ImportedAddr);  // Reader address (imported)
@@ -174,8 +174,8 @@ void main() {
     print('\n@1: Spawned goal merge(Xs?, [a], Ys) at PC=$entryPC');
 
     // @2: merge(Ys?, [b], Xs)
-    // Build [b] list as cons cell: '.'(b, [])
-    final bList2 = StructTerm('.', [ConstTerm('b'), ConstTerm('[]')]);
+    // Build [b] list as cons cell: '.'(b, nil)
+    final bList2 = StructTerm('.', [ConstTerm('b'), ConstTerm('nil')]);
 
     // Create reader VarRef for imported Ys?
     final ysReaderRef2 = VarRef(ys2ImportedAddr);  // Reader address (imported)

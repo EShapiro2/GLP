@@ -1,0 +1,8 @@
+% Test pattern: variable matched in input, then used with ? in output
+% copy([X|Xs], [X?|Ys?]) - X bound from input, X? used in output
+
+copy([], []).
+copy([X|Xs], [X?|Ys?]) :- copy(Xs?, Ys).
+
+% Test case
+test_copy(R?) :- copy([a,b,c], R).
