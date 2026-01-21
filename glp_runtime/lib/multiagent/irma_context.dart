@@ -539,11 +539,8 @@ class IrmaContext {
         // - Add V_p entries for non-local variables in T (TODO)
         print('[DEBUG IRMA $agentId] handleAssignment: IMPORTED READER - binding readerAddr=${entry.varId}');
 
-        // Store value in entry.state for reference
-        entry.state = value;
-
-        // Bind imported reader: updates heap cell, gets activations from VariableEntry
-        // For imported readers, entry.varId is the reader cell address
+        // Bind imported reader: updates heap cell, gets activations from VariableEntry.suspensions
+        // Note: entry.state is NOT used here - bindImportedReader uses entry.suspensions
         final readerAddr = entry.varId;
         final activations = runtime.heap.bindImportedReader(readerAddr, value, entry);
         print('[DEBUG IRMA $agentId] handleAssignment: bindImportedReader returned ${activations.length} activations');
@@ -551,7 +548,7 @@ class IrmaContext {
           runtime.gq.enqueue(act);
         }
 
-        // Remove from V_p - variable is now bound
+        // Remove from V_p - variable is now bound, entry no longer needed
         vp.remove(entry.key);
       } else if (entry.role == VariableRole.createdReader) {
         // We created this reader - check for pending requester
