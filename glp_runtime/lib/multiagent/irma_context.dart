@@ -20,6 +20,29 @@ import 'package:glp_runtime/multiagent/helpers.dart';
 import 'package:glp_runtime/multiagent/payload_serializer.dart';
 
 /// Callback for delivering messages to other agents
+///
+/// The callback receives raw OutboundMessage and must switch on message.type
+/// to deserialize appropriately using PayloadSerializer methods:
+///
+/// ```dart
+/// ctx.onMessageReady = (destination, message) {
+///   switch (message.type) {
+///     case MessageType.assignment:
+///       final (globalId, value) = serializer.deserializeAssignmentPayload(message.payload);
+///       targetCtx.handleAssignment(globalId.creator, globalId.localId, value);
+///     case MessageType.readRequest:
+///       final varId = serializer.deserializeReadRequestPayload(message.payload);
+///       targetCtx.handleReadRequest(varId, sourceAgentId);
+///     case MessageType.abandon:
+///       final varId = serializer.deserializeAbandonPayload(message.payload);
+///       targetCtx.handleAbandon(varId);
+///   }
+/// };
+/// ```
+///
+/// Design note: The single callback with message type switching was chosen over
+/// separate typed callbacks (onAssignment, onReadRequest, onAbandon) to keep
+/// the API simpler and allow coordinators flexibility in message routing.
 typedef MessageDeliveryCallback = void Function(String destination, OutboundMessage message);
 
 /// irmaGLP Agent Context

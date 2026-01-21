@@ -176,7 +176,20 @@ Added heap structure transformation documentation showing before/after cell layo
 
 ---
 
-### Issues 15-20: Pending
+### Issue 15: Message Type Validation ✅ COMPLETED (docs)
+
+**Status**: DOCUMENTED
+
+**Problem**: No type-safe routing mechanism - each callback implementation must manually handle all message types.
+
+**Resolution**: This is a deliberate design choice - the single callback with message type switching keeps the API simpler and allows coordinators flexibility in message routing. Added documentation explaining the design choice and showing example usage.
+
+**Files Changed**:
+- `lib/multiagent/irma_context.dart` - Added documentation for MessageDeliveryCallback
+
+---
+
+### Issues 16-20: Pending
 
 See SPEC-IMPLEMENTATION-AUDIT-2026-01-20.md for details.
 
