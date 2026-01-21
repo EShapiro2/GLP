@@ -191,7 +191,7 @@ class IrmaHelpers {
     String agentId,
     VariableTable vp,
     List<RelaySetup> relaySetups, // Output: relay forwarding setups needed
-    List<int> Function(int, int) allocateFreshPair, // Callback to allocate (writer, reader) pair
+    List<int> Function() allocateFreshPair, // Callback to allocate (writer, reader) pair
     bool Function(int addr) isReader, // Callback to check if addr is reader (from heap)
   ) {
     final modifiedTerm = _exportTermRecursive(
@@ -211,7 +211,7 @@ class IrmaHelpers {
     String agentId,
     VariableTable vp,
     List<RelaySetup> relaySetups,
-    List<int> Function(int, int) allocateFreshPair,
+    List<int> Function() allocateFreshPair,
     bool Function(int addr) isReader,
   ) {
     if (term is ConstTerm) {
@@ -253,7 +253,7 @@ class IrmaHelpers {
           // When Y? is bound, Z should be bound to the same value.
 
           // Callback allocates and returns [writerAddr, readerAddr]
-          final pair = allocateFreshPair(0, 0);
+          final pair = allocateFreshPair();
           final relayWriter = pair[0];  // Writer address
           final relayReader = pair[1];  // Reader address
 

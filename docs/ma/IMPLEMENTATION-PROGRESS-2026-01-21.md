@@ -162,7 +162,21 @@ Added heap structure transformation documentation showing before/after cell layo
 
 ---
 
-### Issues 14-20: Pending
+### Issue 14: allocateFreshPair Unused Params ✅ COMPLETED
+
+**Status**: FIXED
+
+**Problem**: The `allocateFreshPair` callback in `export()` took two int parameters that were always passed as (0, 0) and ignored.
+
+**Solution**: Changed callback signature from `List<int> Function(int, int)` to `List<int> Function()`. Updated all call sites and tests.
+
+**Files Changed**:
+- `lib/multiagent/helpers.dart` - Changed callback signature
+- `test/multiagent/helpers_test.dart` - Updated test callbacks
+
+---
+
+### Issues 15-20: Pending
 
 See SPEC-IMPLEMENTATION-AUDIT-2026-01-20.md for details.
 
@@ -189,7 +203,7 @@ See SPEC-IMPLEMENTATION-AUDIT-2026-01-20.md for details.
 
 | Test Suite | Pass | Fail | Notes |
 |------------|------|------|-------|
-| REPL Tests | 222 | 1 | "Time advances" test failing (pre-existing) |
+| REPL Tests | 223 | 0 | All tests passing |
 | simple_imported_reader_test | Pass | - | Works correctly with processSuspension |
 | bidirectional_stream_test | Fail | - | Separate runtime issue (see above) |
 

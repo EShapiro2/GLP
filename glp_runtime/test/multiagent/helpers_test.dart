@@ -290,7 +290,7 @@ void main() {
         'alice',
         vp,
         relaySetups,
-        (_, __) => [0, 0], // No allocation needed
+        () => [0, 0], // No allocation needed
         testIsReader,
       );
 
@@ -321,7 +321,7 @@ void main() {
         'alice',
         vp,
         relaySetups,
-        (_, __) => [0, 0],
+        () => [0, 0],
         testIsReader,
       );
 
@@ -350,7 +350,7 @@ void main() {
       ));
 
       final term = VarRef(100);  // Writer at addr 100
-      helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
+      helpers.export(term, 'alice', vp, relaySetups, () => [0, 0], testIsReader);
 
       // Should remove from V_p
       expect(vp.contains(key), isFalse);
@@ -372,7 +372,7 @@ void main() {
       ));
 
       final term = VarRef(101);  // Reader at addr 101
-      helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
+      helpers.export(term, 'alice', vp, relaySetups, () => [0, 0], testIsReader);
 
       // Should remove from V_p
       expect(vp.contains(key), isFalse);
@@ -396,7 +396,7 @@ void main() {
       ));
 
       // Mock allocator returns fresh pair (500, 501)
-      List<int> allocateFreshPair(int w, int r) {
+      List<int> allocateFreshPair() {
         return [500, 501]; // writer=500, reader=501
       }
 
@@ -445,7 +445,7 @@ void main() {
         VarRef(21),   // Local reader at addr 21 (odd)
       ]);
 
-      final result = helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
+      final result = helpers.export(term, 'alice', vp, relaySetups, () => [0, 0], testIsReader);
 
       // Should add both variables to V_p (using raw addresses)
       final writerKey = VarKey(10, false);
@@ -476,7 +476,7 @@ void main() {
         VarRef(4),     // Writer at addr 4 (even)
       ]);
 
-      final result = helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
+      final result = helpers.export(term, 'alice', vp, relaySetups, () => [0, 0], testIsReader);
 
       // All three variables should be in V_p (using raw addresses)
       expect(vp.contains(VarKey(2, false)), isTrue);  // Writer at addr 2
@@ -493,7 +493,7 @@ void main() {
       final relaySetups = <RelaySetup>[];
 
       final term = ConstTerm('hello');
-      final result = helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
+      final result = helpers.export(term, 'alice', vp, relaySetups, () => [0, 0], testIsReader);
 
       // V_p still empty
       expect(vp.isEmpty, isTrue);
@@ -512,7 +512,7 @@ void main() {
 
       // First export
       final term1 = VarRef(100);  // Writer at addr 100
-      helpers.export(term1, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
+      helpers.export(term1, 'alice', vp, relaySetups, () => [0, 0], testIsReader);
 
       final key = VarKey(100, false);
       expect(vp.contains(key), isTrue);
@@ -520,7 +520,7 @@ void main() {
 
       // Second export of same variable
       final term2 = VarRef(100);  // Writer at addr 100
-      helpers.export(term2, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
+      helpers.export(term2, 'alice', vp, relaySetups, () => [0, 0], testIsReader);
 
       // V_p length unchanged (already in table)
       expect(vp.length, initialLength);
@@ -617,7 +617,7 @@ void main() {
 
       // Alice exports writer 100
       final term = VarRef(100);  // Writer at addr 100
-      helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
+      helpers.export(term, 'alice', vp, relaySetups, () => [0, 0], testIsReader);
 
       expect(vp.contains(VarKey(100, false)), isTrue);
 
