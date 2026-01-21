@@ -641,21 +641,32 @@ class IrmaContext {
   }
   
   /// Handle incoming read request message
-  /// 
+  ///
   /// Called by coordinator when request(X?, requester) arrives.
-  /// 
+  ///
   /// Per spec Section 5.3 Type 2:
   /// - If (X?, q, T) ∈ V_q where T ∈ 𝒯 → reply immediately with stored value
   /// - Else if (X?, q, ⊥) ∈ V_q → record requester
   /// - Else if (X, q, T) ∈ V_q → reply with writer's value (direct communication case)
-  /// 
-  /// Note: varId is the creator's local ID (creatorLocalId), not necessarily our local varId.
-  /// We must use findByCreatorLocalId to look up entries, matching handleAssignment's approach.
+  ///
+  /// ## varId Parameter Semantics
+  ///
+  /// The [varId] parameter is the **creator's local ID** (creatorLocalId), NOT the
+  /// requester's local heap address. Here's the flow:
+  ///
+  /// 1. Alice imports reader from Bob with: creatorLocalId=42, creator=bob
+  /// 2. Alice's local heap has the reader at address 100
+  /// 3. Alice sends read request using creatorLocalId=42 (not 100)
+  /// 4. Bob receives varId=42
+  /// 5. Bob looks up entry where: creator=bob, creatorLocalId=42
+  ///
+  /// For created variables, varId == creatorLocalId == local heap address.
+  /// We use findByCreatorLocalId to handle both cases uniformly.
   void handleReadRequest(int varId, String requester) {
-    print('[DEBUG IRMA $agentId] handleReadRequest: varId=$varId, requester=$requester');
-    
-    // First check reader entry - use findByCreatorLocalId since varId is creatorLocalId
-    // Note: For created readers, we are the creator, so use agentId
+    print('[DEBUG IRMA $agentId] handleReadRequest: varId=$varId (creatorLocalId), requester=$requester');
+
+    // Look up reader entry by creatorLocalId
+    // For created readers, we are the creator, so creator=agentId
     final readerEntry = vp.findByCreatorLocalId(agentId, varId, isReader: true);
     
     if (readerEntry != null) {

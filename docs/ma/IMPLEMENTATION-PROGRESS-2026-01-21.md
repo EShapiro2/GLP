@@ -189,7 +189,20 @@ Added heap structure transformation documentation showing before/after cell layo
 
 ---
 
-### Issues 16-20: Pending
+### Issue 16: handleReadRequest varId Clarity ✅ COMPLETED (docs)
+
+**Status**: DOCUMENTED
+
+**Problem**: The varId parameter semantics in handleReadRequest were convoluted and relied on implicit knowledge.
+
+**Resolution**: Added detailed documentation explaining that varId is the **creator's local ID** (creatorLocalId), not the requester's local heap address. Documented the message flow example.
+
+**Files Changed**:
+- `lib/multiagent/irma_context.dart` - Added varId parameter semantics documentation
+
+---
+
+### Issues 17-20: Pending
 
 See SPEC-IMPLEMENTATION-AUDIT-2026-01-20.md for details.
 
