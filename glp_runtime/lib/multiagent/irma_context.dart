@@ -97,25 +97,25 @@ class IrmaContext {
       print('[DEBUG IRMA $agentId] _onWriterBound: NO ENTRY in V_p for $writerId');
       return;
     }
-    print('[DEBUG IRMA $agentId] _onWriterBound: entry.role=${entry.role}, entry.state=${entry.state}, entry.creator=${entry.creator}');
-    
-    if (entry.role == VariableRole.createdWriter && entry.state != null) {
+    print('[DEBUG IRMA $agentId] _onWriterBound: entry.role=${entry.role}, entry.requester=${entry.requester}, entry.creator=${entry.creator}');
+
+    if (entry.role == VariableRole.createdWriter && entry.requester != null) {
       // Created writer has a requester - send assignment directly
-      final requester = entry.state as String;
+      final requester = entry.requester!;
       print('[DEBUG IRMA $agentId] _onWriterBound: CREATED WRITER with requester=$requester, sending assignment');
       _queueAssignmentFromEntry(entry, value, requester);
-      // Update entry state to store the value (Phase 6: updates both V_p and heap cell)
-      entry.state = value;
-      vp.updateState(key, value);
+      // Update entry to store the bound value
+      entry.boundValue = value;
+      vp.updateBoundValue(key, value);
     } else if (entry.role == VariableRole.importedWriter) {
       // Imported writer - notify creator (creator routes to requester)
       print('[DEBUG IRMA $agentId] _onWriterBound: IMPORTED WRITER, notifying creator=${entry.creator}');
       _queueAssignmentFromEntry(entry, value, entry.creator);
-      // Update entry state to store the value (Phase 6: updates both V_p and heap cell)
-      entry.state = value;
-      vp.updateState(key, value);
+      // Update entry to store the bound value
+      entry.boundValue = value;
+      vp.updateBoundValue(key, value);
     } else {
-      print('[DEBUG IRMA $agentId] _onWriterBound: NO ACTION (role=${entry.role}, state=${entry.state})');
+      print('[DEBUG IRMA $agentId] _onWriterBound: NO ACTION (role=${entry.role}, requester=${entry.requester})');
     }
   }
   
@@ -171,10 +171,10 @@ class IrmaContext {
     final key = VarKey(varId, true); // reader
     final entry = vp.lookup(key);
     if (entry == null) return;
-    
-    if (entry.role == VariableRole.createdReader && entry.state != null) {
+
+    if (entry.role == VariableRole.createdReader && entry.requester != null) {
       // Someone requested this reader - send them the value
-      final requester = entry.state as String;
+      final requester = entry.requester!;
       _queueAssignmentFromEntry(entry, value, requester);
     }
   }
@@ -262,13 +262,13 @@ class IrmaContext {
       // Only send request for imported readers that haven't been requested yet
       if (entry.role == VariableRole.importedReader &&
           entry.creator != agentId &&
-          entry.state == null) {
+          !entry.requestSent) {
         print('[DEBUG IRMA $agentId] _requestFromHeap: sending request for reader $readerAddr to ${entry.creator}');
 
-        // Update state to mark request sent (in both V_p and heap cell)
+        // Mark request sent (in both V_p and heap cell entry)
         final readerKey = VarKey(entry.varId, true);
-        vp.updateState(readerKey, entry.creator);
-        entry.state = entry.creator;  // Also update the heap cell's entry
+        vp.markRequestSent(readerKey);
+        entry.requestSent = true;  // Also update the heap cell's entry
 
         // Queue read request message using creator's ID namespace
         final creatorSerializer = PayloadSerializer(entry.creator);
@@ -282,7 +282,7 @@ class IrmaContext {
           payload: payload,
         ));
       } else {
-        print('[DEBUG IRMA $agentId] _requestFromHeap: skipping reader $readerAddr (role=${entry.role}, state=${entry.state})');
+        print('[DEBUG IRMA $agentId] _requestFromHeap: skipping reader $readerAddr (role=${entry.role}, requestSent=${entry.requestSent})');
       }
     } else if (result is VarRef) {
       // Local unbound variable - should not happen for imported readers
@@ -534,7 +534,7 @@ class IrmaContext {
     
     // Search V_p for entry matching this global ID
     final entry = vp.findByCreatorLocalId(creator, creatorLocalId, isReader: true);
-    print('[DEBUG IRMA $agentId] handleAssignment: entry=${entry?.role}, localVarId=${entry?.varId}, state=${entry?.state}');
+    print('[DEBUG IRMA $agentId] handleAssignment: entry=${entry?.role}, localVarId=${entry?.varId}, requester=${entry?.requester}, requestSent=${entry?.requestSent}');
     
     if (entry != null) {
       if (entry.role == VariableRole.importedReader) {
@@ -558,19 +558,17 @@ class IrmaContext {
         vp.remove(entry.key);
       } else if (entry.role == VariableRole.createdReader) {
         // We created this reader - check for pending requester
-        final storedState = entry.state;
-        
-        if (storedState != null && storedState is String) {
+        if (entry.requester != null) {
           // Created reader with pending request - forward to requester
-          print('[DEBUG IRMA $agentId] handleAssignment: CREATED READER with requester=$storedState, forwarding');
-          _queueAssignmentFromEntry(entry, value, storedState);
-          entry.state = value;  // Phase 5: Update entry directly
-          vp.updateState(entry.key, value);
+          print('[DEBUG IRMA $agentId] handleAssignment: CREATED READER with requester=${entry.requester}, forwarding');
+          _queueAssignmentFromEntry(entry, value, entry.requester!);
+          entry.boundValue = value;
+          vp.updateBoundValue(entry.key, value);
         } else {
-          // No requester yet - store value
+          // No requester yet - store value for later
           print('[DEBUG IRMA $agentId] handleAssignment: CREATED READER, no requester yet, storing value');
-          entry.state = value;  // Phase 5: Update entry directly
-          vp.updateState(entry.key, value);
+          entry.boundValue = value;
+          vp.updateBoundValue(entry.key, value);
         }
       } else {
         print('[DEBUG IRMA $agentId] handleAssignment: UNHANDLED ROLE - ${entry.role}');
@@ -607,21 +605,20 @@ class IrmaContext {
     final readerEntry = vp.findByCreatorLocalId(agentId, varId, isReader: true);
     
     if (readerEntry != null) {
-      print('[DEBUG IRMA $agentId] handleReadRequest: found reader entry, role=${readerEntry.role}, state=${readerEntry.state}');
-      
+      print('[DEBUG IRMA $agentId] handleReadRequest: found reader entry, role=${readerEntry.role}, requester=${readerEntry.requester}, boundValue=${readerEntry.boundValue}');
+
       if (readerEntry.role == VariableRole.createdReader) {
-        final storedState = readerEntry.state;
-        if (storedState != null && storedState is Term) {
+        if (readerEntry.boundValue != null) {
           // Value already stored - reply immediately
           print('[DEBUG IRMA $agentId] handleReadRequest: created reader has value, replying immediately');
-          _queueAssignmentFromEntry(readerEntry, storedState, requester);
-        } else if (storedState == null) {
+          _queueAssignmentFromEntry(readerEntry, readerEntry.boundValue!, requester);
+        } else if (readerEntry.requester == null) {
           // No request yet - record requester
           print('[DEBUG IRMA $agentId] handleReadRequest: created reader, recording requester=$requester');
-          readerEntry.state = requester;  // Update entry directly (same object in V_p)
-          vp.updateState(readerEntry.key, requester);
+          readerEntry.requester = requester;
+          vp.updateRequester(readerEntry.key, requester);
         } else {
-          print('[DEBUG IRMA $agentId] handleReadRequest: created reader, already has requester=$storedState, ignoring');
+          print('[DEBUG IRMA $agentId] handleReadRequest: created reader, already has requester=${readerEntry.requester}, ignoring');
         }
         return;
       }
@@ -632,8 +629,8 @@ class IrmaContext {
     final writerEntry = vp.findByCreatorLocalId(agentId, varId, isReader: false);
     
     if (writerEntry != null && writerEntry.role == VariableRole.createdWriter) {
-      print('[DEBUG IRMA $agentId] handleReadRequest: found writer entry, state=${writerEntry.state}');
-      
+      print('[DEBUG IRMA $agentId] handleReadRequest: found writer entry, requester=${writerEntry.requester}');
+
       // Check if variable is already bound in heap
       // Phase 3: Use isWriterBound instead of varTable (varId == writerAddr)
       Term? value;
@@ -641,7 +638,7 @@ class IrmaContext {
         value = runtime.heap.getValue(varId);
       }
       print('[DEBUG IRMA $agentId] handleReadRequest: created writer, heap value=$value');
-      
+
       if (value != null) {
         // Already bound - send value immediately
         print('[DEBUG IRMA $agentId] handleReadRequest: writer already bound, sending immediately');
@@ -649,8 +646,8 @@ class IrmaContext {
       } else {
         // Not yet bound - record requester
         print('[DEBUG IRMA $agentId] handleReadRequest: writer not bound, recording requester=$requester');
-        writerEntry.state = requester;  // Update entry directly
-        vp.updateState(writerEntry.key, requester);
+        writerEntry.requester = requester;
+        vp.updateRequester(writerEntry.key, requester);
       }
       return;
     }
@@ -736,16 +733,16 @@ class IrmaContext {
       final vpEntry = vp.lookup(readerKey);
       if (vpEntry == null) continue;
       
-      if (vpEntry.role == VariableRole.createdReader && 
+      if (vpEntry.role == VariableRole.createdReader &&
           vpEntry.creator == agentId &&
-          vpEntry.state != null) {
-        final requester = vpEntry.state as String;
+          vpEntry.requester != null) {
+        final requester = vpEntry.requester!;
         _queueAssignmentFromEntry(vpEntry, value, requester);
       }
       else if (vpEntry.role == VariableRole.importedReader &&
                vpEntry.creator != agentId &&
-               vpEntry.state == null) {
-        vp.updateState(readerKey, vpEntry.creator);
+               !vpEntry.requestSent) {
+        vp.markRequestSent(readerKey);
       }
     }
   }

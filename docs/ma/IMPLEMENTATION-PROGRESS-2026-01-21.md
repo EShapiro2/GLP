@@ -79,13 +79,77 @@ if (result1.status == ExecutionStatus.suspended && result1.blockingReaders.isNot
 
 ---
 
-### Issue 4: Legacy Arithmetic Addressing ⏳ IN PROGRESS
+### Issue 4: Legacy Arithmetic in PayloadSerializer ✅ COMPLETED
 
-**Status**: To be addressed
+Added `createAssignmentPayloadV2()` with isReader callback. Updated `irma_context._queueAssignmentFromEntry()` to use V2 method.
 
 ---
 
-### Issue 5-20: Pending
+### Issue 5: VarKey vs VarRef.varId Mismatch ✅ COMPLETED
+
+Resolved by Issue 1 - VarKey now uses raw addresses consistently.
+
+---
+
+### Issue 6: Test VarRef Explicit Reader Flag ✅ COMPLETED
+
+Resolved by Issue 1 - Tests no longer rely on VarRef.isReader.
+
+---
+
+### Issue 7: handleAssignment entry.state Semantics ✅ COMPLETED
+
+Removed unnecessary `entry.state = value` for imported readers since bindImportedReader only uses entry.suspensions.
+
+---
+
+### Issue 8: _requestFromHeap Legacy Fallback ✅ COMPLETED
+
+Converted out-of-bounds fallback to StateError since all proper import paths should create heap cells.
+
+---
+
+### Issue 9: helpers.abandon() Parameter Type ✅ COMPLETED
+
+Bug fix: abandon() was sending local readerId instead of creatorLocalId for imported readers.
+
+---
+
+### Issue 10: export() Relay VarRef ✅ COMPLETED
+
+Already resolved - RelaySetup uses integer addresses, not VarRef objects.
+
+---
+
+### Issue 11: bindImportedReader Heap Structure Docs ✅ COMPLETED
+
+Added heap structure transformation documentation showing before/after cell layout.
+
+---
+
+### Issue 12: VariableEntry.state Typed Fields ✅ COMPLETED
+
+**Status**: FIXED
+
+**Problem**: The `state` field in `VariableEntry` had overloaded semantics - it stored different types (String or Term) depending on lifecycle stage, which was error-prone.
+
+**Solution**: Replaced `dynamic state` with typed fields:
+- `String? requester` - For created writers/readers: who is waiting for the value
+- `bool requestSent` - For imported readers: whether a read request has been sent
+- `Term? boundValue` - Cached bound value for any role
+
+**Files Changed**:
+- `lib/multiagent/variable_table.dart` - Replaced `state` with typed fields, added typed update methods
+- `lib/multiagent/irma_context.dart` - Updated all state usages to typed fields
+- `lib/multiagent/helpers.dart` - Updated all state usages to typed fields
+- `lib/runtime/heap_fcp.dart` - Updated derefAddr to use boundValue
+- `test/multiagent/variable_table_test.dart` - Updated tests for typed fields
+- `test/multiagent/irma_context_test.dart` - Updated tests for typed fields
+- `test/multiagent/helpers_test.dart` - Updated tests for typed fields
+
+---
+
+### Issues 13-20: Pending
 
 See SPEC-IMPLEMENTATION-AUDIT-2026-01-20.md for details.
 

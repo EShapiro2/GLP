@@ -6,6 +6,7 @@ library;
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/variable_table.dart';
+import 'package:glp_runtime/runtime/terms.dart';
 
 void main() {
   group('VarKey', () {
@@ -45,41 +46,43 @@ void main() {
         isReader: false,
         creator: 'alice',
         role: VariableRole.createdWriter,
-        state: 'hello',
+        requester: 'bob',
       );
-      
+
       expect(entry.varId, 42);
       expect(entry.isReader, false);
       expect(entry.creator, 'alice');
       expect(entry.role, VariableRole.createdWriter);
-      expect(entry.state, 'hello');
+      expect(entry.requester, 'bob');
     });
-    
-    test('creates entry with null state', () {
+
+    test('creates entry with null typed fields', () {
       final entry = VariableEntry(
         varId: 42,
         isReader: true,
         creator: 'alice',
         role: VariableRole.createdReader,
       );
-      
-      expect(entry.state, isNull);
+
+      expect(entry.requester, isNull);
+      expect(entry.requestSent, isFalse);
+      expect(entry.boundValue, isNull);
     });
-    
-    test('toString includes all fields', () {
+
+    test('toString includes typed fields', () {
       final entry = VariableEntry(
         varId: 42,
         isReader: false,
         creator: 'alice',
         role: VariableRole.createdWriter,
-        state: 'value',
+        requester: 'bob',
       );
-      
+
       final str = entry.toString();
       expect(str, contains('42'));
       expect(str, contains('alice'));
       expect(str, contains('createdWriter'));
-      expect(str, contains('value'));
+      expect(str, contains('requester=bob'));
     });
   });
   
@@ -156,7 +159,7 @@ void main() {
       expect(vp.lookup(key), isNull);
     });
     
-    test('updateState modifies existing entry', () {
+    test('updateRequester modifies existing entry', () {
       final vp = VariableTable('alice');
       final key = VarKey(42, false);
       final entry = VariableEntry(
@@ -164,22 +167,38 @@ void main() {
         isReader: false,
         creator: 'alice',
         role: VariableRole.createdWriter,
-        state: null,
       );
-      
+
       vp.add(key, entry);
-      expect(vp.lookup(key)!.state, isNull);
-      
-      vp.updateState(key, 'hello');
-      expect(vp.lookup(key)!.state, 'hello');
+      expect(vp.lookup(key)!.requester, isNull);
+
+      vp.updateRequester(key, 'bob');
+      expect(vp.lookup(key)!.requester, 'bob');
     });
-    
-    test('updateState throws on missing entry', () {
+
+    test('markRequestSent modifies existing entry', () {
+      final vp = VariableTable('alice');
+      final key = VarKey(42, true);
+      final entry = VariableEntry(
+        varId: 42,
+        isReader: true,
+        creator: 'bob',
+        role: VariableRole.importedReader,
+      );
+
+      vp.add(key, entry);
+      expect(vp.lookup(key)!.requestSent, isFalse);
+
+      vp.markRequestSent(key);
+      expect(vp.lookup(key)!.requestSent, isTrue);
+    });
+
+    test('updateRequester throws on missing entry', () {
       final vp = VariableTable('alice');
       final key = VarKey(999, false);
-      
+
       expect(
-        () => vp.updateState(key, 'value'),
+        () => vp.updateRequester(key, 'value'),
         throwsArgumentError,
       );
     });
@@ -283,85 +302,81 @@ void main() {
     });
   });
   
-  group('VariableTable - State Semantics', () {
-    test('created writer state holds bound value or null', () {
+  group('VariableTable - Typed Field Semantics', () {
+    test('created writer requester field holds waiting agent', () {
       final vp = VariableTable('alice');
       final key = VarKey(10, false);
-      
-      // Unbound writer
-      final unboundWriter = VariableEntry(
+
+      // No requester yet
+      final writer = VariableEntry(
         varId: 10,
         isReader: false,
         creator: 'alice',
         role: VariableRole.createdWriter,
-        state: null,
       );
-      vp.add(key, unboundWriter);
-      expect(vp.lookup(key)!.state, isNull);
-      
-      // Bind writer to value
-      vp.updateState(key, 'hello');
-      expect(vp.lookup(key)!.state, 'hello');
+      vp.add(key, writer);
+      expect(vp.lookup(key)!.requester, isNull);
+
+      // Bob requests the paired reader
+      vp.updateRequester(key, 'bob');
+      expect(vp.lookup(key)!.requester, 'bob');
     });
-    
-    test('imported writer state holds bound value or null', () {
+
+    test('imported writer boundValue field holds value after binding', () {
       final vp = VariableTable('alice');
       final key = VarKey(11, false);
-      
+
       // Unbound imported writer
-      final unboundWriter = VariableEntry(
+      final importedWriter = VariableEntry(
         varId: 11,
         isReader: false,
         creator: 'bob',
         role: VariableRole.importedWriter,
-        state: null,
       );
-      vp.add(key, unboundWriter);
-      expect(vp.lookup(key)!.state, isNull);
-      
-      // Bind writer to value
-      vp.updateState(key, 'world');
-      expect(vp.lookup(key)!.state, 'world');
+      vp.add(key, importedWriter);
+      expect(vp.lookup(key)!.boundValue, isNull);
+
+      // Bind writer to value (using Term in real code)
+      vp.lookup(key)!.boundValue = ConstTerm('hello');
+      expect(vp.lookup(key)!.boundValue, isNotNull);
     });
-    
-    test('created reader state holds requester or value or null', () {
+
+    test('created reader requester field holds waiting agent', () {
       final vp = VariableTable('alice');
       final key = VarKey(20, true);
-      
+
       // No request yet
-      final noRequest = VariableEntry(
+      final reader = VariableEntry(
         varId: 20,
         isReader: true,
         creator: 'alice',
         role: VariableRole.createdReader,
-        state: null,
       );
-      vp.add(key, noRequest);
-      expect(vp.lookup(key)!.state, isNull);
-      
+      vp.add(key, reader);
+      expect(vp.lookup(key)!.requester, isNull);
+
       // Bob requests this reader
-      vp.updateState(key, 'bob');
-      expect(vp.lookup(key)!.state, 'bob');
+      vp.updateRequester(key, 'bob');
+      expect(vp.lookup(key)!.requester, 'bob');
     });
-    
-    test('imported reader state shows if request sent', () {
+
+    test('imported reader requestSent field shows if request sent', () {
       final vp = VariableTable('alice');
       final key = VarKey(30, true);
-      
+
       // Imported but not requested
-      final notRequested = VariableEntry(
+      final importedReader = VariableEntry(
         varId: 30,
         isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
-        state: null,
       );
-      vp.add(key, notRequested);
-      expect(vp.lookup(key)!.state, isNull);
-      
-      // Request sent to bob (creator)
-      vp.updateState(key, 'bob');
-      expect(vp.lookup(key)!.state, 'bob');
+      vp.add(key, importedReader);
+      expect(vp.lookup(key)!.requestSent, isFalse);
+
+      // Request sent to creator
+      vp.markRequestSent(key);
+      expect(vp.lookup(key)!.requestSent, isTrue);
     });
   });
   

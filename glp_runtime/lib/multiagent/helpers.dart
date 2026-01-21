@@ -81,12 +81,12 @@ class IrmaHelpers {
     }
     else if (entry.role == VariableRole.createdReader &&
              entry.creator == vp.agentId &&
-             entry.state != null) {
+             entry.requester != null) {
       // Created reader with requester - notify requester
       // We are the creator, so send our local readerId (which is the paired writer ID)
       final payload = _serializeAbandonMessage(readerId);
       mp.add(OutboundMessage(
-        destination: entry.state as String,
+        destination: entry.requester!,
         type: MessageType.abandon,
         payload: payload,
       ));
@@ -120,12 +120,12 @@ class IrmaHelpers {
       return;
     }
     
-    if (entry.role == VariableRole.importedReader && 
-        entry.creator != agentId && 
-        entry.state == null) {
+    if (entry.role == VariableRole.importedReader &&
+        entry.creator != agentId &&
+        !entry.requestSent) {
       // Reader imported but not yet requested
-      // Update state to mark request sent
-      vp.updateState(readerKey, entry.creator);
+      // Mark request sent
+      vp.markRequestSent(readerKey);
       
       // Queue read request message using creator's ID namespace
       // This ensures the creator can look up the variable in their V_p
@@ -238,13 +238,13 @@ class IrmaHelpers {
         // Non-local variable
         final entry = vp.lookup(varKey);
 
-        if (entry == null || entry.state == null) {
+        if (entry == null || !entry.requestSent) {
           // Writer or non-requested reader - just remove
           vp.remove(varKey);
           return term;
         }
         else if (entry.role == VariableRole.importedReader &&
-                 entry.state == entry.creator) {
+                 entry.requestSent) {
           // Requested reader - needs relay
           // Per spec Section 4.3: create fresh pair (Z, Z?), replace Y? with Z?
           // in exported term, add export_reader(Y?, Z) forwarding.

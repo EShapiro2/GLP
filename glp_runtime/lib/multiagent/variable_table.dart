@@ -15,6 +15,7 @@
 library;
 
 import '../runtime/suspension.dart';
+import '../runtime/terms.dart';
 
 /// Key for variable table entries
 /// 
@@ -53,56 +54,86 @@ enum VariableRole {
 }
 
 /// Entry in the variable table
+///
+/// Uses typed fields for state management per Issue 12 of audit:
+/// - [requester]: Who is waiting for this variable's value (for created variables)
+/// - [requestSent]: Whether a read request has been sent (for imported readers)
+/// - [boundValue]: Cached bound value (for any role)
 class VariableEntry {
   /// Variable ID (local heap ID)
   final int varId;
-  
+
   /// Whether this entry is for the reader view (true) or writer view (false)
   final bool isReader;
-  
+
   /// Agent who created this variable
   final String creator;
-  
+
   /// Creator's original local ID for this variable
-  /// 
+  ///
   /// For imported variables, this is the creator's varId that we need to use
   /// when sending messages back to the creator. For created variables, this
   /// is the same as varId.
   final int creatorLocalId;
-  
+
   /// Role of this variable
   final VariableRole role;
-  
-  /// State depends on role:
-  /// - Writer: bound value (dynamic) or null if unbound
-  /// - Created reader: requester agent ID (String) or null if no request
-  /// - Imported reader: creator ID (String) if request sent, null otherwise
-  dynamic state;
-  
+
+  /// Who is waiting for the value of this variable
+  ///
+  /// - For createdWriter: the agent who sent a read request for the paired reader
+  /// - For createdReader: the agent who sent a read request for this reader
+  /// - Not used for imported variables (they don't receive requests)
+  String? requester;
+
+  /// Whether a read request has been sent for this imported reader
+  ///
+  /// Only meaningful for importedReader role. When true, indicates we have
+  /// sent a read request to the creator and are waiting for an assignment.
+  bool requestSent;
+
+  /// Cached bound value
+  ///
+  /// - For createdWriter/importedWriter: the value this writer was bound to
+  /// - For createdReader: the value received from assignment (before forwarding)
+  /// - For importedReader: not used (entry is removed when assignment arrives)
+  Term? boundValue;
+
   /// Suspension list for goals waiting on this variable (Σ in spec).
-  /// 
+  ///
   /// For imported readers, V_p serves as the "virtual writer" since there
   /// is no local writer cell to hold suspensions. When an assignment arrives,
   /// goals are resumed from this list.
   SuspensionListNode? suspensions;
-  
+
   VariableEntry({
     required this.varId,
     required this.isReader,
     required this.creator,
     required this.role,
     int? creatorLocalId,
-    this.state,
+    this.requester,
+    this.requestSent = false,
+    this.boundValue,
   }) : creatorLocalId = creatorLocalId ?? varId;
-  
+
   /// Get the key for this entry
   VarKey get key => VarKey(varId, isReader);
-  
+
   @override
   String toString() {
     final keyStr = isReader ? 'R$varId?' : 'W$varId';
     final creatorIdStr = creatorLocalId != varId ? ', creatorLocalId=$creatorLocalId' : '';
-    return 'VarEntry($keyStr, creator=$creator, role=$role$creatorIdStr, state=$state)';
+    final stateStr = _stateString();
+    return 'VarEntry($keyStr, creator=$creator, role=$role$creatorIdStr$stateStr)';
+  }
+
+  String _stateString() {
+    final parts = <String>[];
+    if (requester != null) parts.add('requester=$requester');
+    if (requestSent) parts.add('requestSent');
+    if (boundValue != null) parts.add('boundValue=$boundValue');
+    return parts.isEmpty ? '' : ', ${parts.join(', ')}';
   }
 }
 
@@ -149,15 +180,38 @@ class VariableTable {
         .toList();
   }
   
-  /// Update the state of an existing entry
-  /// 
+  /// Update the requester of an existing entry
+  ///
+  /// For created writers/readers: sets who is waiting for the value.
   /// Throws if entry doesn't exist.
-  void updateState(VarKey key, dynamic newState) {
+  void updateRequester(VarKey key, String? requester) {
     final entry = _entries[key];
     if (entry == null) {
       throw ArgumentError('Variable $key not in table');
     }
-    entry.state = newState;
+    entry.requester = requester;
+  }
+
+  /// Mark that a read request has been sent for an imported reader
+  ///
+  /// Throws if entry doesn't exist.
+  void markRequestSent(VarKey key) {
+    final entry = _entries[key];
+    if (entry == null) {
+      throw ArgumentError('Variable $key not in table');
+    }
+    entry.requestSent = true;
+  }
+
+  /// Update the bound value of an existing entry
+  ///
+  /// Throws if entry doesn't exist.
+  void updateBoundValue(VarKey key, Term? value) {
+    final entry = _entries[key];
+    if (entry == null) {
+      throw ArgumentError('Variable $key not in table');
+    }
+    entry.boundValue = value;
   }
   
   /// Check if a variable key is in the table

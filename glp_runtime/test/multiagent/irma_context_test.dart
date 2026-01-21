@@ -54,7 +54,7 @@ void main() {
         isReader: true,
         creator: 'alice',
         role: VariableRole.createdReader,
-        state: 'bob', // bob requested
+        requester: 'bob', // bob requested
       ));
       
       // Reduce assigns reader 100 = hello
@@ -79,7 +79,7 @@ void main() {
         isReader: true,
         creator: 'alice',
         role: VariableRole.createdReader,
-        state: null, // No requester
+        // No requester (default null)
       ));
       
       final sigmaHatReader = {100: ConstTerm('hello')};
@@ -99,14 +99,14 @@ void main() {
         isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
-        state: null,
+        // requestSent defaults to false
       ));
-      
+
       final sigmaHatReader = {100: ConstTerm('hello')};
       ctx.processReaderBindings(sigmaHatReader);
-      
-      // State should be updated to creator
-      expect(ctx.vp.lookup(VarKey(100, true))!.state, 'bob');
+
+      // requestSent should be updated to true
+      expect(ctx.vp.lookup(VarKey(100, true))!.requestSent, isTrue);
     });
     
     test('ignores variables not in V_p', () {
@@ -209,19 +209,19 @@ void main() {
         isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
-        state: null,
+        // requestSent defaults to false
       ));
-      
+
       // Goal suspends on reader 100
       ctx.processSuspension({100});
-      
+
       // Should queue read request to bob
       expect(ctx.mp.countFor('bob'), 1);
       final msg = ctx.mp.poll('bob');
       expect(msg!.type, MessageType.readRequest);
-      
-      // State should be updated
-      expect(ctx.vp.lookup(VarKey(100, true))!.state, 'bob');
+
+      // requestSent should be updated to true
+      expect(ctx.vp.lookup(VarKey(100, true))!.requestSent, isTrue);
     });
     
     test('does not send duplicate request', () {
@@ -234,7 +234,7 @@ void main() {
         isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
-        state: 'bob', // Already requested
+        requestSent: true, // Already requested
       ));
       
       ctx.processSuspension({100});
@@ -361,14 +361,14 @@ void main() {
         isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
-        state: 'bob', // Already requested
+        requestSent: true, // Already requested
       ));
-      
+
       final term = VarRef(201);
       ctx.importTerm(term, 'bob');
-      
-      // State should be unchanged
-      expect(ctx.vp.lookup(VarKey(200, true))!.state, 'bob');
+
+      // requestSent should be unchanged
+      expect(ctx.vp.lookup(VarKey(200, true))!.requestSent, isTrue);
     });
   });
   
@@ -411,14 +411,14 @@ void main() {
         isReader: true,
         creator: 'alice',
         role: VariableRole.createdReader,
-        state: null,
+        // requester defaults to null
       ));
-      
+
       // Bob requests the reader
       ctx.handleReadRequest(100, 'bob');
-      
-      // State should record bob as requester
-      expect(ctx.vp.lookup(VarKey(100, true))!.state, 'bob');
+
+      // requester should record bob
+      expect(ctx.vp.lookup(VarKey(100, true))!.requester, 'bob');
     });
   });
   
@@ -480,7 +480,7 @@ void main() {
       
       // Charlie requests the reader
       ctx.handleReadRequest(readerId, 'charlie');
-      expect(ctx.vp.lookup(VarKey(readerId, true))!.state, 'charlie');
+      expect(ctx.vp.lookup(VarKey(readerId, true))!.requester, 'charlie');
       
       // Alice sends assignment to bob (the creator)
       ctx.handleAssignment('bob', readerId, ConstTerm('hello from alice'));
@@ -504,7 +504,7 @@ void main() {
       ctx.handleAssignment('bob', readerId, ConstTerm('early value'));
       
       // Value should be stored
-      expect(ctx.vp.lookup(VarKey(readerId, true))!.state, isA<Term>());
+      expect(ctx.vp.lookup(VarKey(readerId, true))!.boundValue, isA<Term>());
       expect(ctx.mp.isEmpty, isTrue); // No message yet
       
       // Now Charlie requests
@@ -571,7 +571,7 @@ void main() {
       ctx.registerWriter(varId);
       
       // Simulate bob requesting the value
-      ctx.vp.updateState(VarKey(varId, false), 'bob');
+      ctx.vp.updateRequester(VarKey(varId, false), 'bob');
       
       // Now bind the variable (triggers onBind callback)
       rt.heap.bindVariable(varId, ConstTerm('hello'));
@@ -625,7 +625,7 @@ void main() {
       ctx.registerCreatedReader(varId);
       
       // Simulate charlie requesting the value
-      ctx.vp.updateState(VarKey(varId, true), 'charlie');
+      ctx.vp.updateRequester(VarKey(varId, true), 'charlie');
       
       // Bind the variable (triggers onBind callback)
       rt.heap.bindVariable(varId, ConstTerm('world'));

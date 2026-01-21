@@ -56,7 +56,7 @@ void main() {
         isReader: true,
         creator: 'alice',
         role: VariableRole.createdReader,
-        state: 'bob', // bob is requester
+        requester: 'bob', // bob is requester
       ));
       
       // Alice abandons the reader
@@ -84,7 +84,7 @@ void main() {
         isReader: true,
         creator: 'alice',
         role: VariableRole.createdReader,
-        state: null, // No requester
+        // requester defaults to null
       ));
       
       // Alice abandons the reader
@@ -121,14 +121,14 @@ void main() {
         isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
-        state: null,
+        // requestSent defaults to false
       ));
-      
+
       // First request
       helpers.request(100, 'alice', vp, mp);
-      
-      // Should update state and send message
-      expect(vp.lookup(key)!.state, 'bob'); // Marked as requested
+
+      // Should mark requestSent and send message
+      expect(vp.lookup(key)!.requestSent, isTrue); // Marked as requested
       expect(mp.countFor('bob'), 1);
       
       final msg = mp.poll('bob');
@@ -148,15 +148,15 @@ void main() {
         isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
-        state: 'bob', // Already requested
+        requestSent: true, // Already requested
       ));
-      
+
       // Second request (idempotent)
       helpers.request(100, 'alice', vp, mp);
-      
+
       // No new message
       expect(mp.isEmpty, isTrue);
-      expect(vp.lookup(key)!.state, 'bob'); // Unchanged
+      expect(vp.lookup(key)!.requestSent, isTrue); // Unchanged
     });
     
     test('request on missing variable does nothing', () {
@@ -368,7 +368,7 @@ void main() {
         isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
-        state: null,
+        // requestSent defaults to false
       ));
 
       final term = VarRef(101);  // Reader at addr 101
@@ -392,7 +392,7 @@ void main() {
         isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
-        state: 'bob', // Request sent
+        requestSent: true, // Request sent
       ));
 
       // Mock allocator returns fresh pair (500, 501)
@@ -597,7 +597,7 @@ void main() {
       // Alice needs value - sends request
       helpers.request(100, 'alice', vp, mp);
       expect(mp.countFor('bob'), 1);
-      expect(vp.lookup(key)!.state, 'bob');
+      expect(vp.lookup(key)!.requestSent, isTrue);
       
       // Later, alice abandons the reader
       helpers.abandon(100, vp, mp);
@@ -642,7 +642,7 @@ void main() {
         isReader: false,
         creator: 'bob',
         role: VariableRole.importedWriter,
-        state: null,
+        // boundValue defaults to null
       ));
       
       // When Alice binds the imported writer, she should notify bob

@@ -167,10 +167,10 @@ class HeapFCP {
         case CellTag.RoTag:
           // Reader cell
           if (cell.content is VariableEntry) {
-            // Imported reader - check for value in entry
+            // Imported reader - check for cached bound value in entry
             final entry = cell.content as VariableEntry;
-            if (entry.state is Term) {
-              return entry.state as Term;
+            if (entry.boundValue != null) {
+              return entry.boundValue!;
             }
             return entry;  // Unbound imported
           }
@@ -184,10 +184,10 @@ class HeapFCP {
         case CellTag.WrtTag:
           // Writer cell
           if (cell.content is VariableEntry) {
-            // Imported writer - check for value in entry
+            // Imported writer - check for cached bound value in entry
             final entry = cell.content as VariableEntry;
-            if (entry.state is Term) {
-              return entry.state as Term;
+            if (entry.boundValue != null) {
+              return entry.boundValue!;
             }
             return entry;  // Unbound imported
           }
