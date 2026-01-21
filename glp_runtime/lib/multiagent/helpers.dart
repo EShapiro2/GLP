@@ -180,67 +180,74 @@ class IrmaHelpers {
   }
   
   /// export(term, agentId, vp, activeQueue) for agent p
-  /// 
+  ///
   /// Specification: irmaGLP-spec.md Section 4.3
-  /// 
+  ///
   /// Update variable table when term is sent outside agent p.
   /// Creates relay variables for requested readers being re-exported.
-  /// 
+  ///
   /// Returns modified term (with relay variables substituted if needed)
   /// and relay setup info for establishing forwarding callbacks.
+  ///
+  /// [isReader] - Callback to check if address is a reader (use heap.isReader)
   ExportResult export(
     Term term,
     String agentId,
     VariableTable vp,
     List<RelaySetup> relaySetups, // Output: relay forwarding setups needed
     List<int> Function(int, int) allocateFreshPair, // Callback to allocate (writer, reader) pair
+    bool Function(int addr) isReader, // Callback to check if addr is reader (from heap)
   ) {
     final modifiedTerm = _exportTermRecursive(
-      term, 
-      agentId, 
-      vp, 
+      term,
+      agentId,
+      vp,
       relaySetups,
       allocateFreshPair,
+      isReader,
     );
-    
+
     return ExportResult(modifiedTerm, relaySetups);
   }
-  
+
   Term _exportTermRecursive(
     Term term,
     String agentId,
     VariableTable vp,
     List<RelaySetup> relaySetups,
     List<int> Function(int, int) allocateFreshPair,
+    bool Function(int addr) isReader,
   ) {
     if (term is ConstTerm) {
       return term;
     } else if (term is VarRef) {
-      final varId = term.varId;
-      final varKey = VarKey(varId, term.isReader);
-      final creator = _getCreator(varId, term.isReader, agentId, vp);
-      
+      // Per irmaGLP-spec.md Section 3.2.1: use raw addr, check isReader via heap
+      final addr = term.addr;
+      final isReaderVar = isReader(addr);
+      final varKey = VarKey(addr, isReaderVar);
+      final creator = _getCreator(addr, isReaderVar, agentId, vp);
+
       if (creator == agentId && !vp.contains(varKey)) {
         // Local variable being exported for first time
-        final role = term.isReader ? VariableRole.createdReader : VariableRole.createdWriter;
+        final role = isReaderVar ? VariableRole.createdReader : VariableRole.createdWriter;
         vp.add(varKey, VariableEntry(
-          varId: varId,
-          isReader: term.isReader,
+          varId: addr,
+          isReader: isReaderVar,
           creator: agentId,
           role: role,
         ));
         return term;
-      } 
+      }
       else if (creator != agentId) {
         // Non-local variable
         final entry = vp.lookup(varKey);
-        
+
         if (entry == null || entry.state == null) {
           // Writer or non-requested reader - just remove
           vp.remove(varKey);
           return term;
-        } 
-        else if (entry.role == VariableRole.importedReader && 
+        }
+        else if (entry.role == VariableRole.importedReader &&
                  entry.state == entry.creator) {
           // Requested reader - needs relay
           // Per spec Section 4.3: create fresh pair (Z, Z?), replace Y? with Z?
@@ -248,23 +255,23 @@ class IrmaHelpers {
           //
           // Implementation: We use heap callbacks instead of GLP goals.
           // When Y? is bound, Z should be bound to the same value.
-          
+
           // Callback allocates and returns [writerAddr, readerAddr]
           final pair = allocateFreshPair(0, 0);
-          final relayWriter = pair[0];  // Writer address (even)
-          final relayReader = pair[1];  // Reader address (odd)
+          final relayWriter = pair[0];  // Writer address
+          final relayReader = pair[1];  // Reader address
 
-          // Replace Y? with Z? in term - relayReader is already the reader address
+          // Replace Y? with Z? in term - relayReader is the reader address
           final replacedTerm = VarRef(relayReader);
-          
+
           // Record relay setup for callback registration
           // This implements: export_reader(Y?, Z) :- Z = Y?.
           relaySetups.add(RelaySetup(
-            originalReaderId: varId,
+            originalReaderId: addr,
             relayWriterId: relayWriter,
             relayReaderId: relayReader,
           ));
-          
+
           // Add relay reader Z? to V_p as created reader
           final relayReaderKey = VarKey(relayReader, true);
           vp.add(relayReaderKey, VariableEntry(
@@ -273,7 +280,7 @@ class IrmaHelpers {
             creator: agentId,
             role: VariableRole.createdReader,
           ));
-          
+
           // Also register relay writer Z in V_p
           final relayWriterKey = VarKey(relayWriter, false);
           vp.add(relayWriterKey, VariableEntry(
@@ -282,21 +289,21 @@ class IrmaHelpers {
             creator: agentId,
             role: VariableRole.createdWriter,
           ));
-          
+
           return replacedTerm;
         }
       }
-      
+
       return term;
     } else if (term is StructTerm) {
       // Recursively export args
-      final exportedArgs = term.args.map((arg) => 
-        _exportTermRecursive(arg, agentId, vp, relaySetups, allocateFreshPair)
+      final exportedArgs = term.args.map((arg) =>
+        _exportTermRecursive(arg, agentId, vp, relaySetups, allocateFreshPair, isReader)
       ).toList();
-      
+
       return StructTerm(term.functor, exportedArgs);
     }
-    
+
     throw UnsupportedError('Cannot export term type: ${term.runtimeType}');
   }
   

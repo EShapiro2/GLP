@@ -224,27 +224,68 @@ class PayloadSerializer {
   // ============================================================================
   
   /// Serialize a term to bytes
-  /// 
-  /// agentId is the creator of local variables in this term
-  List<int> serializeTerm(Term term, String agentId) {
+  ///
+  /// [agentId] is the default creator for local variables.
+  /// [isReader] callback to check if addr is a reader (use heap.isReader).
+  /// [lookupVariable] optional callback to get (creator, creatorLocalId, isReader)
+  ///   for imported variables. If null or returns null, uses agentId and addr.
+  ///
+  /// Per irmaGLP-spec.md Section 8.1: For imported variables, use the original
+  /// creator's ID, not the local agent's ID.
+  List<int> serializeTermWithCallbacks(
+    Term term,
+    String agentId,
+    bool Function(int addr) isReader,
+    {({String creator, int creatorLocalId, bool isReader}) Function(int addr)? lookupVariable}
+  ) {
     final builder = BytesBuilder();
-    _serializeTermRecursive(term, agentId, builder);
+    _serializeTermRecursiveV2(term, agentId, builder, isReader, lookupVariable);
     return builder.toBytes();
   }
-  
-  void _serializeTermRecursive(Term term, String agentId, BytesBuilder builder) {
+
+  /// Legacy serialization - uses address arithmetic (deprecated)
+  @Deprecated('Use serializeTermWithCallbacks with isReader callback')
+  List<int> serializeTerm(Term term, String agentId) {
+    final builder = BytesBuilder();
+    _serializeTermRecursiveLegacy(term, agentId, builder);
+    return builder.toBytes();
+  }
+
+  void _serializeTermRecursiveV2(
+    Term term,
+    String agentId,
+    BytesBuilder builder,
+    bool Function(int addr) isReaderFn,
+    ({String creator, int creatorLocalId, bool isReader}) Function(int addr)? lookupVariable,
+  ) {
     if (term is ConstTerm) {
       builder.addByte(_tagConstant);
       _serializeConstant(term.value, builder);
     } else if (term is VarRef) {
       builder.addByte(_tagVariable);
-      // Encode as global ID: creator:localId
-      final globalId = GlobalVarId(agentId, term.varId);
+
+      // Per irmaGLP-spec.md Section 3.2.1: use heap to check isReader
+      final addr = term.addr;
+      final isReaderVar = isReaderFn(addr);
+
+      // Per Section 8.1: For imported variables, use original creator's ID
+      String creator;
+      int creatorLocalId;
+      if (lookupVariable != null) {
+        final info = lookupVariable(addr);
+        creator = info.creator;
+        creatorLocalId = info.creatorLocalId;
+      } else {
+        creator = agentId;
+        creatorLocalId = addr;
+      }
+
+      final globalId = GlobalVarId(creator, creatorLocalId);
       final encoded = utf8.encode(globalId.encode());
       builder.add(_encodeLength(encoded.length));
       builder.add(encoded);
       // Store isReader flag
-      builder.addByte(term.isReader ? 1 : 0);
+      builder.addByte(isReaderVar ? 1 : 0);
     } else if (term is StructTerm) {
       builder.addByte(_tagStruct);
       // Encode functor
@@ -255,7 +296,42 @@ class PayloadSerializer {
       builder.add(_encodeLength(term.args.length));
       // Encode args
       for (final arg in term.args) {
-        _serializeTermRecursive(arg, agentId, builder);
+        _serializeTermRecursiveV2(arg, agentId, builder, isReaderFn, lookupVariable);
+      }
+    } else {
+      throw UnsupportedError('Cannot serialize term type: ${term.runtimeType}');
+    }
+  }
+
+  /// Legacy serialization using address arithmetic (deprecated)
+  ///
+  /// Maintains backward compatibility by computing varId inline (addr & ~1).
+  void _serializeTermRecursiveLegacy(Term term, String agentId, BytesBuilder builder) {
+    if (term is ConstTerm) {
+      builder.addByte(_tagConstant);
+      _serializeConstant(term.value, builder);
+    } else if (term is VarRef) {
+      builder.addByte(_tagVariable);
+      // DEPRECATED: Uses address arithmetic - violates spec Section 3.2.1
+      // Compute varId inline (was term.varId = addr & ~1)
+      final varId = term.addr & ~1;  // Clear lowest bit = writer address
+      final globalId = GlobalVarId(agentId, varId);
+      final encoded = utf8.encode(globalId.encode());
+      builder.add(_encodeLength(encoded.length));
+      builder.add(encoded);
+      // Store isReader flag - DEPRECATED: assumes even=writer, odd=reader
+      builder.addByte((term.addr & 1) == 1 ? 1 : 0);
+    } else if (term is StructTerm) {
+      builder.addByte(_tagStruct);
+      // Encode functor
+      final functorBytes = utf8.encode(term.functor);
+      builder.add(_encodeLength(functorBytes.length));
+      builder.add(functorBytes);
+      // Encode arity
+      builder.add(_encodeLength(term.args.length));
+      // Encode args
+      for (final arg in term.args) {
+        _serializeTermRecursiveLegacy(arg, agentId, builder);
       }
     } else {
       throw UnsupportedError('Cannot serialize term type: ${term.runtimeType}');
@@ -285,24 +361,29 @@ class PayloadSerializer {
     }
   }
   
-  /// Deserialize a term from bytes
-  /// 
+  /// Deserialize a term from bytes (legacy - uses address arithmetic)
+  ///
+  /// DEPRECATED: Uses prohibited address arithmetic (reader = writer + 1).
+  /// For cross-agent deserialization, use deserializeAgentMessagePayload
+  /// which properly allocates imported variables.
+  ///
   /// Returns (term, bytesConsumed)
+  @Deprecated('Uses prohibited address arithmetic. Use deserializeAgentMessagePayload.')
   (Term, int) deserializeTerm(List<int> bytes, int offset) {
     final startOffset = offset;
-    
+
     if (offset >= bytes.length) {
       throw FormatException('Unexpected end of input');
     }
-    
+
     final tag = bytes[offset];
     offset++;
-    
+
     switch (tag) {
       case _tagConstant:
         final (value, constSize) = _deserializeConstant(bytes, offset);
         return (ConstTerm(value), 1 + constSize); // tag + constant
-        
+
       case _tagVariable:
         // Decode global ID length
         final (idLength, lengthSize) = _decodeLength(bytes, offset);
@@ -317,24 +398,25 @@ class PayloadSerializer {
         final isReader = bytes[offset] == 1;
         offset++;
 
-        // Compute heap address: varId is writer address, reader is at varId + 1
+        // DEPRECATED: Uses prohibited arithmetic - violates spec Section 3.2.1
+        // Assumes reader is at writer + 1
         final addr = isReader ? globalId.localId + 1 : globalId.localId;
         return (VarRef(addr), offset - startOffset);
-        
+
       case _tagStruct:
         // Decode functor length
         final (functorLength, functorLengthSize) = _decodeLength(bytes, offset);
         offset += functorLengthSize;
-        
+
         // Decode functor string
         final functorBytes = bytes.sublist(offset, offset + functorLength);
         offset += functorLength;
         final functor = utf8.decode(functorBytes);
-        
+
         // Decode arity
         final (arity, aritySize) = _decodeLength(bytes, offset);
         offset += aritySize;
-        
+
         // Decode args
         final args = <Term>[];
         for (int i = 0; i < arity; i++) {
@@ -342,9 +424,9 @@ class PayloadSerializer {
           args.add(arg);
           offset += argSize;
         }
-        
+
         return (StructTerm(functor, args), offset - startOffset);
-        
+
       default:
         throw FormatException('Unknown term tag: $tag');
     }
@@ -540,7 +622,10 @@ class PayloadSerializer {
   }
 
   /// Deserialize term with variable remapping for cross-agent terms (legacy)
-  /// 
+  ///
+  /// DEPRECATED: Uses prohibited address arithmetic (reader = writer + 1).
+  /// Use _deserializeTermWithMappingV2 which uses isReader-aware allocation.
+  ///
   /// Uses allocateFreshVar() which allocates full two-cell pairs.
   (Term, int) _deserializeTermWithMapping(
     List<int> bytes,
@@ -549,39 +634,40 @@ class PayloadSerializer {
     int Function() allocateFreshVar,
   ) {
     final startOffset = offset;
-    
+
     if (offset >= bytes.length) {
       throw FormatException('Unexpected end of input');
     }
-    
+
     final tag = bytes[offset];
     offset++;
-    
+
     switch (tag) {
       case _tagConstant:
         final (value, constSize) = _deserializeConstant(bytes, offset);
         return (ConstTerm(value), 1 + constSize);
-        
+
       case _tagVariable:
         // Decode global ID length
         final (idLength, lengthSize) = _decodeLength(bytes, offset);
         offset += lengthSize;
-        
+
         // Decode global ID string (e.g., "bob:1117")
         final idBytes = bytes.sublist(offset, offset + idLength);
         offset += idLength;
         final globalIdStr = utf8.decode(idBytes);
-        
+
         // Decode isReader flag
         final isReader = bytes[offset] == 1;
         offset++;
-        
+
         // Map to local variable (allocate fresh if first time seeing this global ID)
         int localVarId;
         if (varMapping.containsKey(globalIdStr)) {
           localVarId = varMapping[globalIdStr]!;
         } else {
-          // allocateFreshVar() returns writer address; compute correct address
+          // DEPRECATED: Uses prohibited address arithmetic - violates spec 3.2.1
+          // Assumes reader is at writer + 1
           final writerAddr = allocateFreshVar();
           localVarId = isReader ? writerAddr + 1 : writerAddr;
           varMapping[globalIdStr] = localVarId;

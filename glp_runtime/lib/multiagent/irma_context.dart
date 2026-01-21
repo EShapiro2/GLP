@@ -389,30 +389,33 @@ class IrmaContext {
   /// Import a term received from another agent (legacy method)
   ///
   /// For each variable Y in term where (Y, ·, ·) ∉ V_p:
-  /// - Add to V_p as imported reader or writer based on VarRef.isReader
-  /// 
+  /// - Add to V_p as imported reader or writer based on heap cell tag
+  ///
   /// [term] - The deserialized term
   /// [fromAgent] - The agent who sent this term (usually the creator)
-  /// [globalIdMapping] - Optional mapping from local varId -> GlobalVarId
-  ///   This maps our local heap IDs to the creator's global IDs.
+  /// [globalIdMapping] - Optional mapping from local addr -> GlobalVarId
+  ///   This maps our local heap addresses to the creator's global IDs.
   void importTerm(Term term, String fromAgent, {Map<int, GlobalVarId>? globalIdMapping}) {
     _importTermRecursive(term, fromAgent, globalIdMapping ?? {});
   }
-  
+
   void _importTermRecursive(Term term, String fromAgent, Map<int, GlobalVarId> globalIdMapping) {
     if (term is VarRef) {
-      final key = VarKey(term.varId, term.isReader);
+      // Per irmaGLP-spec.md Section 3.2.1: use heap to check isReader
+      final addr = term.addr;
+      final isReaderVar = runtime.heap.isReader(addr);
+      final key = VarKey(addr, isReaderVar);
       if (!vp.contains(key)) {
         // Look up the global ID for this variable
-        final globalId = globalIdMapping[term.varId];
+        final globalId = globalIdMapping[addr];
         final creator = globalId?.creator ?? fromAgent;
         final creatorLocalId = globalId?.localId;
-        
+
         // Variable not in V_p - add based on type
-        if (term.isReader) {
-          print('[DEBUG IRMA $agentId] _importTermRecursive: registering imported reader ${term.varId} from $creator (creatorLocalId=$creatorLocalId)');
+        if (isReaderVar) {
+          print('[DEBUG IRMA $agentId] _importTermRecursive: registering imported reader $addr from $creator (creatorLocalId=$creatorLocalId)');
           vp.add(key, VariableEntry(
-            varId: term.varId,
+            varId: addr,
             isReader: true,
             creator: creator,
             role: VariableRole.importedReader,
@@ -422,7 +425,7 @@ class IrmaContext {
           // called when a goal SUSPENDS on this reader, not at import time.
         } else {
           // Imported writer - register with callback
-          registerImportedWriter(term.varId, creator, creatorLocalId: creatorLocalId);
+          registerImportedWriter(addr, creator, creatorLocalId: creatorLocalId);
         }
       }
     } else if (term is StructTerm) {
@@ -455,6 +458,7 @@ class IrmaContext {
         final (writerAddr, readerAddr) = runtime.heap.allocateVariable();
         return [writerAddr, readerAddr];
       },
+      runtime.heap.isReader,  // Per irmaGLP-spec.md Section 3.2.1
     );
     
     // Set up relay forwarding callbacks
@@ -698,7 +702,8 @@ class IrmaContext {
   
   void _extractVariablesRecursive(Term term, Set<int> result) {
     if (term is VarRef) {
-      result.add(term.varId);
+      // Per irmaGLP-spec.md Section 3.2.1: use raw addr as identifier
+      result.add(term.addr);
     } else if (term is StructTerm) {
       for (final arg in term.args) {
         _extractVariablesRecursive(arg, result);

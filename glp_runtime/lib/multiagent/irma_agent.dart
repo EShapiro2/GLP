@@ -174,7 +174,9 @@ class IrmaAgent {
     if (term is ConstTerm) {
       return term.value?.toString() ?? 'nil';
     } else if (term is VarRef) {
-      return term.isReader ? 'X${term.varId}?' : 'X${term.varId}';
+      // Per irmaGLP-spec.md Section 3.2.1: use heap to check isReader
+      final isReaderVar = context.runtime.heap.isReader(term.addr);
+      return isReaderVar ? 'X${term.addr}?' : 'X${term.addr}';
     } else if (term is StructTerm) {
       final args = term.args.map(_formatTerm).join(', ');
       return '${term.functor}($args)';

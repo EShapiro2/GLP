@@ -154,7 +154,7 @@ class OutputObserver {
 
         // Continue observing tail
         if (tail is VarRef) {
-          _currentReaderId = tail.varId;
+          _currentReaderId = tail.addr;
           _observeNext();
         } else if (tail is ConstTerm && tail.value == 'nil') {
           // Stream closed with []
@@ -182,7 +182,7 @@ class OutputObserver {
       onTerm(head);
 
       if (tail is VarRef) {
-        _currentReaderId = tail.varId;
+        _currentReaderId = tail.addr;
         _observeNext();
         break;
       } else if (tail is ConstTerm && tail.value == 'nil') {

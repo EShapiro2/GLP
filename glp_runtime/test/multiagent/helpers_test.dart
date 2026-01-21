@@ -1,7 +1,7 @@
 /// Unit tests for irmaGLP Helper Routines
-/// 
+///
 /// Tests abandon, request, export, and reactivate helpers
-/// from irmaGLP-spec.md v1.1 Section 4
+/// from irmaGLP-spec.md v3.0 Section 4
 library;
 
 import 'package:test/test.dart';
@@ -10,6 +10,10 @@ import 'package:glp_runtime/runtime/machine_state.dart'; // For GoalRef in react
 import 'package:glp_runtime/multiagent/variable_table.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/helpers.dart';
+
+/// Test helper: isReader callback using address parity (for tests without real heap)
+/// Per spec Section 3.2.1, production code uses heap.isReader(addr).
+bool testIsReader(int addr) => (addr & 1) == 1;
 
 void main() {
   group('abandon(readerId) - CRITICAL: Only Readers', () {
@@ -282,45 +286,47 @@ void main() {
       // Alice exports local writer 100
       final term = VarRef(100);  // Writer at addr 100
       final result = helpers.export(
-        term, 
-        'alice', 
-        vp, 
+        term,
+        'alice',
+        vp,
         relaySetups,
         (_, __) => [0, 0], // No allocation needed
+        testIsReader,
       );
-      
+
       // Should add to V_p as createdWriter
       final key = VarKey(100, false);
       expect(vp.contains(key), isTrue);
       final entry = vp.lookup(key);
       expect(entry!.role, VariableRole.createdWriter);
       expect(entry.creator, 'alice');
-      
+
       // Term unchanged
       expect(result.term, isA<VarRef>());
-      expect((result.term as VarRef).varId, 100);
-      
+      expect((result.term as VarRef).addr, 100);
+
       // No relay setups
       expect(relaySetups, isEmpty);
     });
-    
+
     test('export local reader adds to V_p as createdReader', () {
       final vp = VariableTable('alice');
       final helpers = IrmaHelpers('alice');
       final relaySetups = <RelaySetup>[];
-      
-      // Alice exports local reader 200 (reader at addr 201, varId=200)
+
+      // Alice exports local reader at addr 201 (odd = reader)
       final term = VarRef(201);  // Reader at odd addr
       final result = helpers.export(
-        term, 
-        'alice', 
-        vp, 
+        term,
+        'alice',
+        vp,
         relaySetups,
         (_, __) => [0, 0],
+        testIsReader,
       );
-      
-      // Should add to V_p as createdReader
-      final key = VarKey(200, true);
+
+      // Should add to V_p as createdReader (key uses raw addr 201)
+      final key = VarKey(201, true);
       expect(vp.contains(key), isTrue);
       final entry = vp.lookup(key);
       expect(entry!.role, VariableRole.createdReader);
@@ -333,7 +339,7 @@ void main() {
       final vp = VariableTable('alice');
       final helpers = IrmaHelpers('alice');
       final relaySetups = <RelaySetup>[];
-      
+
       // Alice has bob's writer (imported via introduction)
       final key = VarKey(100, false);
       vp.add(key, VariableEntry(
@@ -342,31 +348,31 @@ void main() {
         creator: 'bob',
         role: VariableRole.importedWriter,
       ));
-      
+
       final term = VarRef(100);  // Writer at addr 100
-      helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0]);
+      helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
 
       // Should remove from V_p
       expect(vp.contains(key), isFalse);
     });
-    
+
     test('export non-requested reader removes from V_p', () {
       final vp = VariableTable('alice');
       final helpers = IrmaHelpers('alice');
       final relaySetups = <RelaySetup>[];
-      
-      // Alice has bob's reader, not requested
-      final key = VarKey(100, true);
+
+      // Alice has bob's reader at addr 101, not requested
+      final key = VarKey(101, true);
       vp.add(key, VariableEntry(
-        varId: 100,
+        varId: 101,
         isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
         state: null,
       ));
-      
-      final term = VarRef(101);  // Reader at addr 101 (varId=100)
-      helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0]);
+
+      final term = VarRef(101);  // Reader at addr 101
+      helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
 
       // Should remove from V_p
       expect(vp.contains(key), isFalse);
@@ -378,49 +384,49 @@ void main() {
       final vp = VariableTable('alice');
       final helpers = IrmaHelpers('alice');
       final relaySetups = <RelaySetup>[];
-      
-      // Alice has bob's reader, already requested
-      final key = VarKey(100, true);
+
+      // Alice has bob's reader at addr 101, already requested
+      final key = VarKey(101, true);
       vp.add(key, VariableEntry(
-        varId: 100,
+        varId: 101,
         isReader: true,
         creator: 'bob',
         role: VariableRole.importedReader,
         state: 'bob', // Request sent
       ));
-      
+
       // Mock allocator returns fresh pair (500, 501)
       List<int> allocateFreshPair(int w, int r) {
         return [500, 501]; // writer=500, reader=501
       }
-      
-      final term = VarRef(101);  // Reader at addr 101 (varId=100)
-      final result = helpers.export(term, 'alice', vp, relaySetups, allocateFreshPair);
-      
+
+      final term = VarRef(101);  // Reader at addr 101
+      final result = helpers.export(term, 'alice', vp, relaySetups, allocateFreshPair, testIsReader);
+
       // Term should be replaced with relay reader
       expect(result.term, isA<VarRef>());
       final replaced = result.term as VarRef;
-      expect(replaced.varId, 501); // Relay reader
-      expect(replaced.isReader, isTrue);
-      
+      expect(replaced.addr, 501); // Relay reader at addr 501
+      expect(testIsReader(replaced.addr), isTrue); // Check via test helper
+
       // Should add relay reader Z? to V_p as created reader
       final relayReaderKey = VarKey(501, true);
       expect(vp.contains(relayReaderKey), isTrue);
       final relayReaderEntry = vp.lookup(relayReaderKey);
       expect(relayReaderEntry!.role, VariableRole.createdReader);
       expect(relayReaderEntry.creator, 'alice');
-      
+
       // Should also add relay writer Z to V_p as created writer
       final relayWriterKey = VarKey(500, false);
       expect(vp.contains(relayWriterKey), isTrue);
       final relayWriterEntry = vp.lookup(relayWriterKey);
       expect(relayWriterEntry!.role, VariableRole.createdWriter);
       expect(relayWriterEntry.creator, 'alice');
-      
+
       // Should create relay setup for forwarding
       // This implements: export_reader(Y?, Z) :- Z = Y?.
       expect(relaySetups.length, 1);
-      expect(relaySetups[0].originalReaderId, 100); // Y?
+      expect(relaySetups[0].originalReaderId, 101); // Y? at addr 101
       expect(relaySetups[0].relayWriterId, 500);    // Z
       expect(relaySetups[0].relayReaderId, 501);    // Z?
     });
@@ -431,67 +437,67 @@ void main() {
       final vp = VariableTable('alice');
       final helpers = IrmaHelpers('alice');
       final relaySetups = <RelaySetup>[];
-      
+
       // Structure with local variables
       final term = StructTerm('msg', [
         ConstTerm('alice'),
-        VarRef(10),   // Local writer at addr 10 (varId=10)
-        VarRef(21),   // Local reader at addr 21 (varId=20)
+        VarRef(10),   // Local writer at addr 10 (even)
+        VarRef(21),   // Local reader at addr 21 (odd)
       ]);
 
-      final result = helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0]);
+      final result = helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
 
-      // Should add both variables to V_p
+      // Should add both variables to V_p (using raw addresses)
       final writerKey = VarKey(10, false);
-      final readerKey = VarKey(20, true);
+      final readerKey = VarKey(21, true);
       expect(vp.contains(writerKey), isTrue);
       expect(vp.contains(readerKey), isTrue);
       expect(vp.lookup(writerKey)!.role, VariableRole.createdWriter);
       expect(vp.lookup(readerKey)!.role, VariableRole.createdReader);
-      
+
       // Structure preserved
       expect(result.term, isA<StructTerm>());
       final struct = result.term as StructTerm;
       expect(struct.functor, 'msg');
       expect(struct.args.length, 3);
     });
-    
+
     test('export nested structure processes all variables', () {
       final vp = VariableTable('alice');
       final helpers = IrmaHelpers('alice');
       final relaySetups = <RelaySetup>[];
-      
+
       // Nested structure
       final term = StructTerm('outer', [
         StructTerm('inner', [
-          VarRef(2),   // Writer at addr 2 (varId=2)
-          VarRef(3),   // Reader at addr 3 (varId=2)
+          VarRef(2),   // Writer at addr 2 (even)
+          VarRef(3),   // Reader at addr 3 (odd)
         ]),
-        VarRef(4),     // Writer at addr 4 (varId=4)
+        VarRef(4),     // Writer at addr 4 (even)
       ]);
 
-      final result = helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0]);
+      final result = helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
 
-      // All three variables should be in V_p
-      expect(vp.contains(VarKey(2, false)), isTrue);  // Writer varId=2
-      expect(vp.contains(VarKey(2, true)), isTrue);   // Reader varId=2
-      expect(vp.contains(VarKey(4, false)), isTrue);  // Writer varId=4
-      
+      // All three variables should be in V_p (using raw addresses)
+      expect(vp.contains(VarKey(2, false)), isTrue);  // Writer at addr 2
+      expect(vp.contains(VarKey(3, true)), isTrue);   // Reader at addr 3
+      expect(vp.contains(VarKey(4, false)), isTrue);  // Writer at addr 4
+
       // Structure preserved
       expect(result.term, isA<StructTerm>());
     });
-    
+
     test('export constant term leaves V_p unchanged', () {
       final vp = VariableTable('alice');
       final helpers = IrmaHelpers('alice');
       final relaySetups = <RelaySetup>[];
-      
+
       final term = ConstTerm('hello');
-      final result = helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0]);
-      
+      final result = helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
+
       // V_p still empty
       expect(vp.isEmpty, isTrue);
-      
+
       // Term unchanged
       expect(result.term, isA<ConstTerm>());
       expect((result.term as ConstTerm).value, 'hello');
@@ -503,10 +509,10 @@ void main() {
       final vp = VariableTable('alice');
       final helpers = IrmaHelpers('alice');
       final relaySetups = <RelaySetup>[];
-      
+
       // First export
       final term1 = VarRef(100);  // Writer at addr 100
-      helpers.export(term1, 'alice', vp, relaySetups, (_, __) => [0, 0]);
+      helpers.export(term1, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
 
       final key = VarKey(100, false);
       expect(vp.contains(key), isTrue);
@@ -514,8 +520,8 @@ void main() {
 
       // Second export of same variable
       final term2 = VarRef(100);  // Writer at addr 100
-      helpers.export(term2, 'alice', vp, relaySetups, (_, __) => [0, 0]);
-      
+      helpers.export(term2, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
+
       // V_p length unchanged (already in table)
       expect(vp.length, initialLength);
     });
@@ -604,20 +610,20 @@ void main() {
       final suspendedSet = <GoalRef, Set<int>>{};
       final helpers = IrmaHelpers('alice');
       final relaySetups = <RelaySetup>[];
-      
+
       // Goal suspended on reader 100
       final goal = GoalRef(1, 100);
       suspendedSet[goal] = {100};
-      
+
       // Alice exports writer 100
       final term = VarRef(100);  // Writer at addr 100
-      helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0]);
-      
+      helpers.export(term, 'alice', vp, relaySetups, (_, __) => [0, 0], testIsReader);
+
       expect(vp.contains(VarKey(100, false)), isTrue);
-      
+
       // Reader 100 gets value - reactivate
       final reactivated = helpers.reactivate(100, suspendedSet);
-      
+
       expect(reactivated.length, 1);
       expect(reactivated.contains(goal), isTrue);
     });

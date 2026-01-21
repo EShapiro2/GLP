@@ -1,13 +1,19 @@
 /// Unit tests for PayloadSerializer
-/// 
+///
 /// Tests global variable ID encoding and term/message serialization
-/// from irmaGLP-spec.md v1.1
+/// from irmaGLP-spec.md v3.0
 library;
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/payload_serializer.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
+
+/// Test helpers for VarRef properties (legacy address arithmetic for tests)
+/// Per spec Section 3.2.1, production code uses heap.isReader(addr).
+/// These use address parity for tests that use the deprecated serialization.
+int testVarId(VarRef ref) => ref.addr & ~1;  // Writer address
+bool testIsReader(VarRef ref) => (ref.addr & 1) == 1;
 
 void main() {
   group('GlobalVarId', () {
@@ -146,8 +152,8 @@ void main() {
       
       expect(deserialized, isA<VarRef>());
       final varRef = deserialized as VarRef;
-      expect(varRef.varId, 42);
-      expect(varRef.isReader, false);
+      expect(testVarId(varRef), 42);
+      expect(testIsReader(varRef), false);
     });
     
     test('serializes reader with global ID', () {
@@ -157,8 +163,8 @@ void main() {
       
       expect(deserialized, isA<VarRef>());
       final varRef = deserialized as VarRef;
-      expect(varRef.varId, 100);
-      expect(varRef.isReader, true);
+      expect(testVarId(varRef), 100);
+      expect(testIsReader(varRef), true);
     });
     
     test('preserves isReader flag', () {
@@ -171,8 +177,8 @@ void main() {
       final (deserializedWriter, _) = serializer.deserializeTerm(writerBytes, 0);
       final (deserializedReader, _) = serializer.deserializeTerm(readerBytes, 0);
       
-      expect((deserializedWriter as VarRef).isReader, false);
-      expect((deserializedReader as VarRef).isReader, true);
+      expect(testIsReader(deserializedWriter as VarRef), false);
+      expect(testIsReader(deserializedReader as VarRef), true);
     });
   });
   
@@ -215,8 +221,8 @@ void main() {
       final struct = deserialized as StructTerm;
       expect(struct.functor, 'ch');
       expect(struct.args.length, 2);
-      expect((struct.args[0] as VarRef).isReader, false);
-      expect((struct.args[1] as VarRef).isReader, true);
+      expect(testIsReader(struct.args[0] as VarRef), false);
+      expect(testIsReader(struct.args[1] as VarRef), true);
     });
     
     test('serializes nested structures', () {
@@ -392,12 +398,12 @@ void main() {
       final (deserializedReader, _) = serializer.deserializeTerm(readerBytes, 0);
       
       expect(deserializedWriter, isA<VarRef>());
-      expect((deserializedWriter as VarRef).varId, 42);
-      expect(deserializedWriter.isReader, false);
-      
+      expect(testVarId(deserializedWriter as VarRef), 42);
+      expect(testIsReader(deserializedWriter as VarRef), false);
+
       expect(deserializedReader, isA<VarRef>());
-      expect((deserializedReader as VarRef).varId, 100);
-      expect(deserializedReader.isReader, true);
+      expect(testVarId(deserializedReader as VarRef), 100);
+      expect(testIsReader(deserializedReader as VarRef), true);
     });
     
     test('structure round-trip preserves functor and args', () {
@@ -440,10 +446,10 @@ void main() {
       final ch = intro.args[1] as StructTerm;
       expect(ch.functor, 'ch');
       expect(ch.args.length, 2);
-      expect((ch.args[0] as VarRef).varId, 50);
-      expect((ch.args[0] as VarRef).isReader, false);
-      expect((ch.args[1] as VarRef).varId, 50);  // Same varId as writer
-      expect((ch.args[1] as VarRef).isReader, true);
+      expect(testVarId(ch.args[0] as VarRef), 50);
+      expect(testIsReader(ch.args[0] as VarRef), false);
+      expect(testVarId(ch.args[1] as VarRef), 50);  // Same varId as writer
+      expect(testIsReader(ch.args[1] as VarRef), true);
     });
     
     test('message round-trip preserves all fields', () {
@@ -581,13 +587,13 @@ void main() {
       expect((complex.args[2] as ConstTerm).value, closeTo(3.14, 0.01));
       expect((complex.args[3] as ConstTerm).value, true);
       expect((complex.args[4] as ConstTerm).value, null);
-      expect((complex.args[5] as VarRef).varId, 10);
-      expect((complex.args[6] as VarRef).varId, 20);
-      
+      expect(testVarId(complex.args[5] as VarRef), 10);
+      expect(testVarId(complex.args[6] as VarRef), 20);
+
       final nested = complex.args[7] as StructTerm;
       expect(nested.functor, 'nested');
       expect((nested.args[0] as ConstTerm).value, 'inner');
-      expect((nested.args[1] as VarRef).varId, 30);
+      expect(testVarId(nested.args[1] as VarRef), 30);
     });
   });
 }

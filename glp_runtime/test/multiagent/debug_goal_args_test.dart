@@ -67,17 +67,20 @@ void main() {
               print('  Arg slot $slot: $term');
               if (term is rt.VarRef) {
                 final addr = term.addr;
-                final varId = term.varId;  // Computed: addr & ~1
+                // Per irmaGLP-spec.md Section 3.2.1: use heap.isReader(addr)
+                final isReaderVar = runtime.heap.isReader(addr);
                 final isBound = runtime.heap.isBound(addr);
                 final value = runtime.heap.getValue(addr);
-                print('    -> addr=$addr, varId=$varId, isReader=${term.isReader}, isBound=$isBound, value=$value');
-                if (term.isReader) {
-                  // In pointer architecture, writer is at varId (even addr)
-                  final writerAddr = varId;
-                  print('    -> writerAddr=$writerAddr');
-                  final wBound = runtime.heap.isBound(writerAddr);
-                  final wValue = runtime.heap.getValue(writerAddr);
-                  print('    -> writer isBound=$wBound, value=$wValue');
+                print('    -> addr=$addr, isReader=$isReaderVar, isBound=$isBound, value=$value');
+                if (isReaderVar) {
+                  // For local two-cell pairs, writer is at addr-1
+                  final writerAddr = runtime.heap.tryWriterForReader(addr);
+                  if (writerAddr != null) {
+                    print('    -> writerAddr=$writerAddr');
+                    final wBound = runtime.heap.isBound(writerAddr);
+                    final wValue = runtime.heap.getValue(writerAddr);
+                    print('    -> writer isBound=$wBound, value=$wValue');
+                  }
                 }
               }
             }

@@ -17,28 +17,22 @@ class StructTerm implements Term {
 
 /// Variable reference - holds heap address only
 ///
-/// Per heap-pointer-architecture-spec.md v3.0:
-/// A VarRef contains only an address. The cell's tag (WrtTag or RoTag)
-/// determines whether it is a writer or reader. Use heap.isWriter(addr)
+/// Per irmaGLP-spec.md Section 3.2.1:
+/// A variable's reader/writer identity is determined by its heap cell tag
+/// (RoTag or WrtTag), NOT by address arithmetic. Use heap.isWriter(addr)
 /// or heap.isReader(addr) to check.
 ///
-/// Pointer architecture address layout:
-/// - Writer at even address N, Reader at N+1 (odd)
-/// - Both share the same logical varId = N (the writer address)
+/// MUST NOT: Code must not assume reader_addr == writer_addr + 1 or
+/// derive reader/writer identity from address parity.
 class VarRef implements Term {
   /// The heap address of this variable reference
   final int addr;
 
   VarRef(this.addr);
 
-  /// Computed property for backwards compatibility with multiagent code.
-  /// Returns the logical variable ID (the writer address for this variable pair).
-  /// Both the writer at N and its paired reader at N+1 have varId = N.
-  int get varId => addr & ~1;  // Clear lowest bit to get writer address
-
-  /// Computed property for backwards compatibility with multiagent code.
-  /// Returns true if this is a reader reference (odd address).
-  bool get isReader => (addr & 1) == 1;
+  // NOTE: isReader and varId computed properties have been REMOVED per
+  // irmaGLP-spec.md Section 3.2.1. Use heap.isReader(addr) to check type
+  // and raw addr as the identifier.
 
   @override
   String toString() => 'Var@$addr';
