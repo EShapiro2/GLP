@@ -56,8 +56,8 @@ class IrmaHelpers {
   /// When reader Y? becomes unreachable at agent p, this notifies other
   /// agents so they can clean up the paired writer Y.
   void abandon(
-    int readerId, 
-    VariableTable vp, 
+    int readerId,
+    VariableTable vp,
     MessageQueue mp,
   ) {
     final readerKey = VarKey(readerId, true); // reader
@@ -66,36 +66,32 @@ class IrmaHelpers {
       // Variable not in table, nothing to do
       return;
     }
-    
-    // Compute paired writer ID (reader Y? → writer Y)
-    // In implementation: same varId, just different isReader flag
-    final writerId = readerId; // Paired writer has same ID
-    
+
     if (entry.role == VariableRole.importedReader && entry.creator != vp.agentId) {
-      // Imported variable - notify creator
-      // Send WRITER in abandon message
-      final payload = _serializeAbandonMessage(writerId);
+      // Imported reader - notify creator using THEIR local ID
+      // The creator needs to receive their creatorLocalId, not our local readerId
+      final creatorWriterId = entry.creatorLocalId ?? readerId;
+      final payload = _serializeAbandonMessage(creatorWriterId);
       mp.add(OutboundMessage(
         destination: entry.creator,
         type: MessageType.abandon,
         payload: payload,
       ));
       vp.remove(readerKey);
-    } 
-    else if (entry.role == VariableRole.createdReader && 
-             entry.creator == vp.agentId && 
+    }
+    else if (entry.role == VariableRole.createdReader &&
+             entry.creator == vp.agentId &&
              entry.state != null) {
       // Created reader with requester - notify requester
-      // Send WRITER in abandon message
-      final requester = entry.state as String;
-      final payload = _serializeAbandonMessage(writerId);
+      // We are the creator, so send our local readerId (which is the paired writer ID)
+      final payload = _serializeAbandonMessage(readerId);
       mp.add(OutboundMessage(
-        destination: requester,
+        destination: entry.state as String,
         type: MessageType.abandon,
         payload: payload,
       ));
       vp.remove(readerKey);
-    } 
+    }
     else {
       // Local abandonment only - just remove from table
       vp.remove(readerKey);
