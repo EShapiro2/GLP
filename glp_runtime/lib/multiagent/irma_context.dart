@@ -218,10 +218,15 @@ class IrmaContext {
     final creatorLocalId = entry.creatorLocalId;
     final creator = entry.creator;
 
-    // Deep dereference the value to resolve all VarRefs to their bound values
+    // Per spec Section 4.3: export the term before sending
+    // This registers any new local variables (like Zs in [a|Zs?]) in V_p
+    // with proper onBind callbacks, so nested writers can communicate
+    final exportedValue = exportTerm(value);
+
+    // Deep dereference the exported value to resolve all VarRefs to their bound values
     // This is necessary because VarRefs contain local heap addresses that are
     // meaningless to other agents
-    final derefedValue = _deepDeref(value);
+    final derefedValue = _deepDeref(exportedValue);
 
     print('[DEBUG IRMA $agentId] _queueAssignment: varId=${entry.varId}, creatorLocalId=$creatorLocalId, creator=$creator, value=$derefedValue, destination=$destination');
 
