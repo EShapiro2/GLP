@@ -182,8 +182,9 @@ class IrmaHelpers {
   /// Update variable table when term is sent outside agent p.
   /// Creates relay variables for requested readers being re-exported.
   ///
-  /// Returns modified term (with relay variables substituted if needed)
-  /// and relay setup info for establishing forwarding callbacks.
+  /// Returns modified term (with relay variables substituted if needed),
+  /// relay setup info for establishing forwarding callbacks, and
+  /// list of newly exported writers that need heap callbacks.
   ///
   /// [isReader] - Callback to check if address is a reader (use heap.isReader)
   ExportResult export(
@@ -194,6 +195,7 @@ class IrmaHelpers {
     List<int> Function() allocateFreshPair, // Callback to allocate (writer, reader) pair
     bool Function(int addr) isReader, // Callback to check if addr is reader (from heap)
   ) {
+    final newlyExportedWriters = <int>[];
     final modifiedTerm = _exportTermRecursive(
       term,
       agentId,
@@ -201,9 +203,10 @@ class IrmaHelpers {
       relaySetups,
       allocateFreshPair,
       isReader,
+      newlyExportedWriters,
     );
 
-    return ExportResult(modifiedTerm, relaySetups);
+    return ExportResult(modifiedTerm, relaySetups, newlyExportedWriters);
   }
 
   Term _exportTermRecursive(
@@ -213,6 +216,7 @@ class IrmaHelpers {
     List<RelaySetup> relaySetups,
     List<int> Function() allocateFreshPair,
     bool Function(int addr) isReader,
+    List<int> newlyExportedWriters,
   ) {
     if (term is ConstTerm) {
       return term;
@@ -232,6 +236,11 @@ class IrmaHelpers {
           creator: agentId,
           role: role,
         ));
+        // Track newly exported writers for callback registration
+        // Per spec Section 5.2: when created writers are bound, send assignments
+        if (!isReaderVar) {
+          newlyExportedWriters.add(addr);
+        }
         return term;
       }
       else if (creator != agentId) {
@@ -294,7 +303,7 @@ class IrmaHelpers {
     } else if (term is StructTerm) {
       // Recursively export args
       final exportedArgs = term.args.map((arg) =>
-        _exportTermRecursive(arg, agentId, vp, relaySetups, allocateFreshPair, isReader)
+        _exportTermRecursive(arg, agentId, vp, relaySetups, allocateFreshPair, isReader, newlyExportedWriters)
       ).toList();
 
       return StructTerm(term.functor, exportedArgs);
@@ -343,13 +352,21 @@ class IrmaHelpers {
 class ExportResult {
   /// Modified term (with relay variables if needed)
   final Term term;
-  
+
   /// Relay setups for establishing forwarding callbacks
-  /// 
+  ///
   /// Each entry specifies: when originalReaderId is bound,
   /// bind relayWriterId to the same value.
   /// This implements: export_reader(Y?, Z) :- Z = Y?.
   final List<RelaySetup> relaySetups;
-  
-  ExportResult(this.term, this.relaySetups);
+
+  /// Writers that were newly exported (first time added to V_p)
+  ///
+  /// These writers need heap callbacks registered so that when they are
+  /// bound locally, assignment messages can be sent to requesters.
+  /// Per spec Section 5.2 Case 1: assignments are sent when created
+  /// writers are bound and have requesters.
+  final List<int> newlyExportedWriters;
+
+  ExportResult(this.term, this.relaySetups, this.newlyExportedWriters);
 }

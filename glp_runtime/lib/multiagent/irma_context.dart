@@ -519,19 +519,28 @@ class IrmaContext {
       agentId,
       vp,
       relaySetups,
-      (_, __) {
+      () {
         final (writerAddr, readerAddr) = runtime.heap.allocateVariable();
         return [writerAddr, readerAddr];
       },
       runtime.heap.isReader,  // Per irmaGLP-spec.md Section 3.2.1
     );
-    
+
     // Set up relay forwarding callbacks
     // This implements: export_reader(Y?, Z) :- Z = Y?.
     for (final relay in relaySetups) {
       _setupRelayForwarding(relay);
     }
-    
+
+    // Register heap callbacks for newly exported writers (Issue 17)
+    // Per spec Section 5.2: when created writers are bound and have requesters,
+    // assignments should be sent. The callback enables message routing.
+    for (final writerAddr in result.newlyExportedWriters) {
+      runtime.heap.onBind(writerAddr, (Term value) {
+        _onWriterBound(writerAddr, value);
+      });
+    }
+
     return result.term;
   }
   
