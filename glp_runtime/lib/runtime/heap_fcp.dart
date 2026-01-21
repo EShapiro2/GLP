@@ -678,4 +678,49 @@ class HeapFCP {
     node.next = cell.content is SuspensionListNode ? cell.content as SuspensionListNode : null;
     cell.content = node;
   }
+
+  // ==========================================================================
+  // Term Storage Helper (for Heap-Only Argument Registers per spec v2.16.3)
+  // ==========================================================================
+
+  /// Store a Term on the heap and return the cell address.
+  ///
+  /// Per spec Section 1.1 (Heap-Only Requirement):
+  /// All data passed through argument registers MUST be heap-allocated.
+  /// Direct ConstTerm and StructTerm objects are NOT permitted in CallEnv.
+  ///
+  /// This helper converts any Term to a heap-stored VarRef:
+  /// - VarRef: already on heap, return the address
+  /// - ConstTerm: allocate a ValueTag cell containing the constant
+  /// - StructTerm: recursively store args, allocate ValueTag cell with VarRef args
+  ///
+  /// Returns the heap address suitable for use in CallEnv via VarRef(addr).
+  int storeTermOnHeap(Term term) {
+    if (term is VarRef) {
+      // Already on heap
+      return term.addr;
+    }
+
+    if (term is ConstTerm) {
+      // Allocate a ValueTag cell containing the constant
+      final addr = HP++;
+      cells.add(HeapCell(term, CellTag.ValueTag));
+      return addr;
+    }
+
+    if (term is StructTerm) {
+      // Recursively store all args on heap, creating VarRef args
+      final heapArgs = <Term>[];
+      for (final arg in term.args) {
+        final argAddr = storeTermOnHeap(arg);
+        heapArgs.add(VarRef(argAddr));
+      }
+      // Allocate a ValueTag cell containing the StructTerm with VarRef args
+      final addr = HP++;
+      cells.add(HeapCell(StructTerm(term.functor, heapArgs), CellTag.ValueTag));
+      return addr;
+    }
+
+    throw ArgumentError('Unknown term type: ${term.runtimeType}');
+  }
 }

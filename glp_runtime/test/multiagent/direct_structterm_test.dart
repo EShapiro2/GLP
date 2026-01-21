@@ -41,10 +41,14 @@ void main() {
       ])
     ]);
 
+    // Store the input list on heap (per spec v2.16.3 Heap-Only Requirement)
+    final inputAddr = runtime.heap.storeTermOnHeap(inputList);
+    print('Stored input list on heap at addr=$inputAddr');
+
     // Spawn copy([a,b,c], R)
     final copyPC = program.labels['copy/2']!;
     final resultRef = VarRef(resultWriterAddr);
-    runtime.setGoalEnv(1, CallEnv(args: {0: inputList, 1: resultRef}));
+    runtime.setGoalEnv(1, CallEnv(args: {0: VarRef(inputAddr), 1: resultRef}));
     runtime.setGoalProgram(1, 'main');
     runtime.gq.enqueue(GoalRef(1, copyPC));
     print('Spawned copy([a,b,c], R)');

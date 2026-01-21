@@ -1054,6 +1054,26 @@ class BytecodeRunner {
           }
         }
 
+        // Per spec v2.16.3 Section 12.0.1: Handle VarRef pointing to ValueTag cell
+        if (arg is VarRef && cx.rt.heap.isValue(arg.addr)) {
+          final value = cx.rt.heap.getValue(arg.addr);
+          if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: arg is ValueTag @${arg.addr}, value=$value');
+          if (value is StructTerm && value.functor == op.functor && value.args.length == op.arity) {
+            // Match! Enter READ mode
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: ValueTag MATCH! Entering READ mode');
+            cx.currentStructure = value;
+            cx.mode = UnifyMode.read;
+            cx.S = 0;
+            pc++; continue;
+          } else {
+            // No match - soft fail
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadStructure: ValueTag NO MATCH (expected ${op.functor}/${op.arity}), failing');
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
+        }
+
         // Ground term case (not writer or reader)
         if (arg is StructTerm) {
           // StructTerm argument - check if it matches and enter READ mode
@@ -1600,7 +1620,13 @@ class BytecodeRunner {
           if (cx.currentStructure is StructTerm) {
             final struct = cx.currentStructure as StructTerm;
             if (cx.S < struct.args.length) {
-              final value = struct.args[cx.S];
+              var value = struct.args[cx.S];
+
+              // Per spec v2.16.3: Dereference VarRef pointing to value cell
+              if (value is VarRef && cx.rt.heap.isValue(value.addr)) {
+                value = cx.rt.heap.getValue(value.addr)!;
+              }
+
               final existingValue = cx.clauseVars[varIndex];
 
               if (isReaderMode) {
@@ -3739,6 +3765,23 @@ class BytecodeRunner {
         // Regular argument handling
         if (arg == null) { pc++; continue; } // No argument at this slot
 
+        // Per spec v2.16.3 Section 12.0.1: All arguments are VarRefs
+        // Handle VarRef pointing to ValueTag cell (heap-stored constant/structure)
+        if (arg is VarRef && cx.rt.heap.isValue(arg.addr)) {
+          final value = cx.rt.heap.getValue(arg.addr);
+          if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: arg is ValueTag @${arg.addr}, value=$value');
+          if (value is ConstTerm && value.value == 'nil') {
+            // Match! Empty list
+            pc++; continue;
+          } else {
+            // Value doesn't match [] - fail
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: value is not nil, failing');
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
+        }
+
         // Note: getValue() dereferences automatically per FCP AM semantics
         if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
           if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadNil: arg is writer @${arg.addr}');
@@ -3803,6 +3846,25 @@ class BytecodeRunner {
         // Equivalent to HeadStructure('[|]', 2, op.argSlot)
         final arg = _getArg(cx, op.argSlot);
         if (arg == null) { pc++; continue; } // No argument at this slot
+
+        // Per spec v2.16.3 Section 12.0.1: Handle VarRef pointing to ValueTag cell
+        if (arg is VarRef && cx.rt.heap.isValue(arg.addr)) {
+          final value = cx.rt.heap.getValue(arg.addr);
+          if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadList: arg is ValueTag @${arg.addr}, value=$value');
+          // Check for list structure (functor '.' or '[|]')
+          if (value is StructTerm && (value.functor == '.' || value.functor == '[|]') && value.args.length == 2) {
+            cx.currentStructure = value;
+            cx.S = 0;
+            cx.mode = UnifyMode.read;
+            pc++; continue;
+          } else {
+            // Not a list structure - fail
+            if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) print('  HeadList: value is not a list, failing');
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
+        }
 
         if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
           // Writer: create tentative structure in σ̂w

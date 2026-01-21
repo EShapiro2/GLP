@@ -158,8 +158,9 @@ void main() {
     // @1: merge(Xs?, [a], Ys)
     final entryPC = program.labels['merge/3']!;
 
-    // Build [a] list as cons cell: '.'(a, nil)
+    // Build [a] list as cons cell: '.'(a, nil) and store on heap
     final aList1 = StructTerm('.', [ConstTerm('a'), ConstTerm('nil')]);
+    final aList1Addr = runtime1.heap.storeTermOnHeap(aList1);
 
     // Create reader VarRef for imported Xs?
     final xsReaderRef1 = VarRef(xs1ImportedAddr);  // Reader address (imported)
@@ -167,15 +168,16 @@ void main() {
     final ysWriterRef1 = VarRef(ysWriterAddr);  // Writer address
 
     final goalId1 = 1;
-    final env1 = CallEnv(args: {0: xsReaderRef1, 1: aList1, 2: ysWriterRef1});
+    final env1 = CallEnv(args: {0: xsReaderRef1, 1: VarRef(aList1Addr), 2: ysWriterRef1});
     runtime1.setGoalEnv(goalId1, env1);
     runtime1.setGoalProgram(goalId1, 'main');
     runtime1.gq.enqueue(GoalRef(goalId1, entryPC));
     print('\n@1: Spawned goal merge(Xs?, [a], Ys) at PC=$entryPC');
 
     // @2: merge(Ys?, [b], Xs)
-    // Build [b] list as cons cell: '.'(b, nil)
+    // Build [b] list as cons cell: '.'(b, nil) and store on heap
     final bList2 = StructTerm('.', [ConstTerm('b'), ConstTerm('nil')]);
+    final bList2Addr = runtime2.heap.storeTermOnHeap(bList2);
 
     // Create reader VarRef for imported Ys?
     final ysReaderRef2 = VarRef(ys2ImportedAddr);  // Reader address (imported)
@@ -183,7 +185,7 @@ void main() {
     final xsWriterRef2 = VarRef(xsWriterAddr);  // Writer address
 
     final goalId2 = 1;
-    final env2 = CallEnv(args: {0: ysReaderRef2, 1: bList2, 2: xsWriterRef2});
+    final env2 = CallEnv(args: {0: ysReaderRef2, 1: VarRef(bList2Addr), 2: xsWriterRef2});
     runtime2.setGoalEnv(goalId2, env2);
     runtime2.setGoalProgram(goalId2, 'main');
     runtime2.gq.enqueue(GoalRef(goalId2, entryPC));
