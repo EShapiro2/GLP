@@ -1103,15 +1103,12 @@ class BytecodeRunner {
         if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
           cx.clauseVars[op.varIndex] = arg.addr;
         } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-          // Reader: check if bound
-          if (!cx.rt.heap.isReaderBound(arg.addr)) {
-            // Unbound reader - add to U and fail to next clause
-            pc = _suspendAndFail(cx, arg.addr, pc);
-            continue;
-          }
-          // Bound reader - store the value for dereferencing
-          final value = cx.rt.heap.getReaderValue(arg.addr);
-          cx.clauseVars[op.varIndex] = value ?? arg;
+          // Reader VarRef - store directly WITHOUT suspending
+          // GetVariable just captures the reference; only instructions that DEMAND
+          // a specific value (HeadConstant, HeadStructure, etc.) should suspend.
+          // This allows clause patterns like merge(Xs, [Y|Ys], ...) to match when
+          // Xs is an unbound (imported) reader.
+          cx.clauseVars[op.varIndex] = arg;
         } else if (arg is ConstTerm || arg is StructTerm) {
           // Ground term - store directly
           cx.clauseVars[op.varIndex] = arg;

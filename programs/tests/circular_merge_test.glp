@@ -1,0 +1,9 @@
+% Test merge with unbound first argument
+% This should suspend on X? in the body
+
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], [], []).
+
+% Test case: both args bound, should succeed
+test_bound(R?) :- merge([1,2], [a,b], R).
