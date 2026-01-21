@@ -134,7 +134,12 @@ q(a).
       ctx1.onMessageReady = (destination, message) {
         print('[@1 -> $destination] ${message.type}');
         if (destination == 'isolate2' && message.type == MessageType.assignment) {
-          final (creator, creatorLocalId, value) = _parseAssignmentPayload(message.payload);
+          final (creator, creatorLocalId, value) = _parseAssignmentPayload(
+            message.payload,
+            (bool isReader) => isReader
+              ? ctx2.runtime.heap.allocateImportedReader()
+              : ctx2.runtime.heap.allocateImportedWriter(),
+          );
           print('[@2] Received assignment: creator=$creator, creatorLocalId=$creatorLocalId, value=$value');
           ctx2.handleAssignment(creator, creatorLocalId, value);
         }
@@ -273,9 +278,9 @@ q(a).
 }
 
 /// Parse assignment payload to extract creator, creatorLocalId, and value
-(String, int, Term) _parseAssignmentPayload(List<int> payload) {
+(String, int, Term) _parseAssignmentPayload(List<int> payload, int Function(bool isReader) allocator) {
   // Use PayloadSerializer to deserialize properly
   final serializer = PayloadSerializer('test');
-  final (globalId, term) = serializer.deserializeAssignmentPayload(payload);
+  final (globalId, term) = serializer.deserializeAssignmentPayload(payload, allocator);
   return (globalId.creator, globalId.localId, term);
 }

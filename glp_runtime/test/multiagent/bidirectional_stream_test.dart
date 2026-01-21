@@ -116,7 +116,13 @@ void main() {
       if (destination == 'isolate2') {
         if (message.type == MessageType.assignment) {
           final serializer = PayloadSerializer('isolate1');
-          final (globalId, value) = serializer.deserializeAssignmentPayload(message.payload);
+          // Use receiver's (ctx2) heap for variable allocation
+          final (globalId, value) = serializer.deserializeAssignmentPayload(
+            message.payload,
+            (bool isReader) => isReader
+              ? ctx2.runtime.heap.allocateImportedReader()
+              : ctx2.runtime.heap.allocateImportedWriter(),
+          );
           logMessage('isolate1', 'isolate2', 'ASSIGNMENT', '$globalId := $value');
           ctx2.handleAssignment(globalId.creator, globalId.localId, value);
           elementCount++;
@@ -135,7 +141,13 @@ void main() {
       if (destination == 'isolate1') {
         if (message.type == MessageType.assignment) {
           final serializer = PayloadSerializer('isolate2');
-          final (globalId, value) = serializer.deserializeAssignmentPayload(message.payload);
+          // Use receiver's (ctx1) heap for variable allocation
+          final (globalId, value) = serializer.deserializeAssignmentPayload(
+            message.payload,
+            (bool isReader) => isReader
+              ? ctx1.runtime.heap.allocateImportedReader()
+              : ctx1.runtime.heap.allocateImportedWriter(),
+          );
           logMessage('isolate2', 'isolate1', 'ASSIGNMENT', '$globalId := $value');
           ctx1.handleAssignment(globalId.creator, globalId.localId, value);
           elementCount++;

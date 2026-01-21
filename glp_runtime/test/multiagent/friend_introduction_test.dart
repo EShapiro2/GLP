@@ -135,7 +135,12 @@ void main() {
       if (destination == 'carol') target = ctx3;
       if (target != null) {
         if (message.type == MessageType.assignment) {
-          final (globalId, value) = serializer.deserializeAssignmentPayload(message.payload);
+          final (globalId, value) = serializer.deserializeAssignmentPayload(
+            message.payload,
+            (bool isReader) => isReader
+              ? target.runtime.heap.allocateImportedReader()
+              : target.runtime.heap.allocateImportedWriter(),
+          );
           messageLog.add('[alice -> $destination] ASSIGNMENT');
           print('[alice -> $destination] ASSIGNMENT: $globalId := ${_shortValue(value)}');
           target.handleAssignment(globalId.creator, globalId.localId, value);

@@ -120,7 +120,12 @@ void main() {
       final serializer = PayloadSerializer('producer1');
       if (destination == 'merger') {
         if (message.type == MessageType.assignment) {
-          final (globalId, value) = serializer.deserializeAssignmentPayload(message.payload);
+          final (globalId, value) = serializer.deserializeAssignmentPayload(
+            message.payload,
+            (bool isReader) => isReader
+              ? ctx3.runtime.heap.allocateImportedReader()
+              : ctx3.runtime.heap.allocateImportedWriter(),
+          );
           messageLog.add('[producer1 -> merger] ASSIGNMENT');
           print('[producer1 -> merger] ASSIGNMENT: $globalId := ${_shortValue(value)}');
           ctx3.handleAssignment(globalId.creator, globalId.localId, value);
@@ -137,7 +142,12 @@ void main() {
       final serializer = PayloadSerializer('producer2');
       if (destination == 'merger') {
         if (message.type == MessageType.assignment) {
-          final (globalId, value) = serializer.deserializeAssignmentPayload(message.payload);
+          final (globalId, value) = serializer.deserializeAssignmentPayload(
+            message.payload,
+            (bool isReader) => isReader
+              ? ctx3.runtime.heap.allocateImportedReader()
+              : ctx3.runtime.heap.allocateImportedWriter(),
+          );
           messageLog.add('[producer2 -> merger] ASSIGNMENT');
           print('[producer2 -> merger] ASSIGNMENT: $globalId := ${_shortValue(value)}');
           ctx3.handleAssignment(globalId.creator, globalId.localId, value);

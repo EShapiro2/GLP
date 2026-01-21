@@ -120,7 +120,12 @@ void main() {
       final serializer = PayloadSerializer('agent1');
       if (destination == 'agent2') {
         if (message.type == MessageType.assignment) {
-          final (globalId, value) = serializer.deserializeAssignmentPayload(message.payload);
+          final (globalId, value) = serializer.deserializeAssignmentPayload(
+            message.payload,
+            (bool isReader) => isReader
+              ? ctx2.runtime.heap.allocateImportedReader()
+              : ctx2.runtime.heap.allocateImportedWriter(),
+          );
           messageLog.add('[agent1 -> agent2] ASSIGNMENT');
           print('[agent1 -> agent2] ASSIGNMENT: $globalId := ${_shortValue(value)}');
           ctx2.handleAssignment(globalId.creator, globalId.localId, value);
@@ -141,7 +146,12 @@ void main() {
       if (destination == 'agent3') { target = ctx3; targetName = 'agent3'; }
       if (target != null) {
         if (message.type == MessageType.assignment) {
-          final (globalId, value) = serializer.deserializeAssignmentPayload(message.payload);
+          final (globalId, value) = serializer.deserializeAssignmentPayload(
+            message.payload,
+            (bool isReader) => isReader
+              ? target.runtime.heap.allocateImportedReader()
+              : target.runtime.heap.allocateImportedWriter(),
+          );
           messageLog.add('[agent2 -> $targetName] ASSIGNMENT');
           print('[agent2 -> $targetName] ASSIGNMENT: $globalId := ${_shortValue(value)}');
           target.handleAssignment(globalId.creator, globalId.localId, value);
@@ -158,7 +168,12 @@ void main() {
       final serializer = PayloadSerializer('agent3');
       if (destination == 'agent2') {
         if (message.type == MessageType.assignment) {
-          final (globalId, value) = serializer.deserializeAssignmentPayload(message.payload);
+          final (globalId, value) = serializer.deserializeAssignmentPayload(
+            message.payload,
+            (bool isReader) => isReader
+              ? ctx2.runtime.heap.allocateImportedReader()
+              : ctx2.runtime.heap.allocateImportedWriter(),
+          );
           messageLog.add('[agent3 -> agent2] ASSIGNMENT');
           print('[agent3 -> agent2] ASSIGNMENT: $globalId := ${_shortValue(value)}');
           ctx2.handleAssignment(globalId.creator, globalId.localId, value);

@@ -14,20 +14,20 @@ void main() {
     const GoalId g = 77;
     const Pc kappa = 1;
 
-    // Allocate variable for suspension
-    final varId = heap.allocateVariable();
+    // Allocate variable for suspension - returns (writerAddr, readerAddr)
+    final (writerAddr, readerAddr) = heap.allocateVariable();
 
-    // Suspend goal g on reader varId with restart point kappa
+    // Suspend goal g on reader with restart point kappa
     SuspendOps.suspendGoalFCP(
       heap: heap,
       goalId: g,
       kappa: kappa,
-      readerVarIds: {varId},
+      readerVarIds: {readerAddr},
     );
 
     // Binding the variable should activate the goal
-    // Create σ̂w with binding for varId
-    final sigmaHat = {varId: ConstTerm('ground')};
+    // Create σ̂w with binding for writerAddr
+    final sigmaHat = {writerAddr: ConstTerm('ground')};
     final acts = CommitOps.applySigmaHatFCP(heap: heap, sigmaHat: sigmaHat);
 
     expect(acts, hasLength(1));

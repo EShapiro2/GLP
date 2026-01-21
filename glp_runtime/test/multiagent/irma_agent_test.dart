@@ -102,7 +102,9 @@ void main() {
       
       // Create assignment message from alice
       final serializer = PayloadSerializer('alice');
-      final payload = serializer.createAssignmentPayload(readerId, ConstTerm('hello'));
+      // Use V2 API with isReader callback (won't be called for ConstTerm values)
+      final payload = serializer.createAssignmentPayloadV2(
+        readerId, ConstTerm('hello'), (_) => false);
       final msg = OutboundMessage(
         destination: 'bob',
         type: MessageType.assignment,
@@ -250,7 +252,9 @@ void main() {
       
       // Create an assignment message from bob
       final serializer = PayloadSerializer('bob');
-      final payload = serializer.createAssignmentPayload(readerId, ConstTerm('test'));
+      // Use V2 API with isReader callback (won't be called for ConstTerm values)
+      final payload = serializer.createAssignmentPayloadV2(
+        readerId, ConstTerm('test'), (_) => false);
       final msg = OutboundMessage(
         destination: 'alice',
         type: MessageType.assignment,

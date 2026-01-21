@@ -322,7 +322,12 @@ void _setupRouting(IrmaContext ctx1, IrmaContext ctx2, List<String> messageLog) 
       messageLog.add('@1->@2:${message.type.name}');
       if (message.type == MessageType.assignment) {
         final serializer = PayloadSerializer('agent1');
-        final (globalId, value) = serializer.deserializeAssignmentPayload(message.payload);
+        final (globalId, value) = serializer.deserializeAssignmentPayload(
+          message.payload,
+          (bool isReader) => isReader
+            ? ctx2.runtime.heap.allocateImportedReader()
+            : ctx2.runtime.heap.allocateImportedWriter(),
+        );
         ctx2.handleAssignment(globalId.creator, globalId.localId, value);
       } else if (message.type == MessageType.readRequest) {
         final serializer = PayloadSerializer('agent1');
@@ -337,7 +342,12 @@ void _setupRouting(IrmaContext ctx1, IrmaContext ctx2, List<String> messageLog) 
       messageLog.add('@2->@1:${message.type.name}');
       if (message.type == MessageType.assignment) {
         final serializer = PayloadSerializer('agent2');
-        final (globalId, value) = serializer.deserializeAssignmentPayload(message.payload);
+        final (globalId, value) = serializer.deserializeAssignmentPayload(
+          message.payload,
+          (bool isReader) => isReader
+            ? ctx1.runtime.heap.allocateImportedReader()
+            : ctx1.runtime.heap.allocateImportedWriter(),
+        );
         ctx1.handleAssignment(globalId.creator, globalId.localId, value);
       } else if (message.type == MessageType.readRequest) {
         final serializer = PayloadSerializer('agent2');

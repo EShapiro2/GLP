@@ -114,7 +114,12 @@ void main() {
       if (destination == 'agent2') {
         if (message.type == MessageType.assignment) {
           final serializer = PayloadSerializer('agent1');
-          final (globalId, value) = serializer.deserializeAssignmentPayload(message.payload);
+          final (globalId, value) = serializer.deserializeAssignmentPayload(
+            message.payload,
+            (bool isReader) => isReader
+              ? ctx2.runtime.heap.allocateImportedReader()
+              : ctx2.runtime.heap.allocateImportedWriter(),
+          );
           logMessage('agent1', 'agent2', 'ASSIGNMENT', '$globalId := ${_shortValue(value)}');
           ctx2.handleAssignment(globalId.creator, globalId.localId, value);
         } else if (message.type == MessageType.readRequest) {
@@ -131,7 +136,12 @@ void main() {
       if (destination == 'agent1') {
         if (message.type == MessageType.assignment) {
           final serializer = PayloadSerializer('agent2');
-          final (globalId, value) = serializer.deserializeAssignmentPayload(message.payload);
+          final (globalId, value) = serializer.deserializeAssignmentPayload(
+            message.payload,
+            (bool isReader) => isReader
+              ? ctx1.runtime.heap.allocateImportedReader()
+              : ctx1.runtime.heap.allocateImportedWriter(),
+          );
           logMessage('agent2', 'agent1', 'ASSIGNMENT', '$globalId := ${_shortValue(value)}');
           ctx1.handleAssignment(globalId.creator, globalId.localId, value);
         } else if (message.type == MessageType.readRequest) {

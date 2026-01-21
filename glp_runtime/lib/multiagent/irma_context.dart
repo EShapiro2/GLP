@@ -455,7 +455,7 @@ class IrmaContext {
       },
       // Entry creator callback: create and attach VariableEntry to cell
       onVariableImported: (int localAddr, bool isReader, GlobalVarId globalId) {
-        _attachImportedVariableEntry(localAddr, isReader, globalId, fromAgent);
+        attachImportedVariableEntry(localAddr, isReader, globalId, fromAgent);
       },
     );
     
@@ -465,7 +465,7 @@ class IrmaContext {
   /// Attach a VariableEntry to an imported variable's heap cell
   /// 
   /// Creates the entry and stores it both in V_p and in the heap cell content.
-  void _attachImportedVariableEntry(
+  void attachImportedVariableEntry(
     int localAddr, 
     bool isReader, 
     GlobalVarId globalId,
@@ -489,7 +489,7 @@ class IrmaContext {
     // Attach entry to heap cell content
     runtime.heap.cells[localAddr].content = entry;
     
-    print('[DEBUG IRMA $agentId] _attachImportedVariableEntry: localAddr=$localAddr, isReader=$isReader, creator=$creator, creatorLocalId=$creatorLocalId');
+    print('[DEBUG IRMA $agentId] attachImportedVariableEntry: localAddr=$localAddr, isReader=$isReader, creator=$creator, creatorLocalId=$creatorLocalId');
     
     // For imported writers, register binding callback
     if (!isReader) {

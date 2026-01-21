@@ -96,11 +96,27 @@ class IrmaAgent {
   
   void _handleAssignment(OutboundMessage msg) {
     // Extract globalVarId and value from payload
+    // Pass heap allocation callbacks to properly import nested variables
     final serializer = PayloadSerializer(agentId);
-    final (globalId, value) = serializer.deserializeAssignmentPayload(msg.payload);
-    
+    final (globalId, value) = serializer.deserializeAssignmentPayload(
+      msg.payload,
+      // Allocator callback: create single-cell for imported variable
+      (bool isReader) {
+        if (isReader) {
+          return runtime.heap.allocateImportedReader();
+        } else {
+          return runtime.heap.allocateImportedWriter();
+        }
+      },
+      // Entry creator callback: attach VariableEntry to imported variables
+      onVariableImported: (int localAddr, bool isReader, GlobalVarId nestedGlobalId) {
+        context.attachImportedVariableEntry(
+          localAddr, isReader, nestedGlobalId, nestedGlobalId.creator);
+      },
+    );
+
     _log('Assignment: ${globalId.creator}:${globalId.localId} = ${_formatTerm(value)}');
-    
+
     // Apply to context with full global ID for V_p lookup
     context.handleAssignment(globalId.creator, globalId.localId, value);
   }
