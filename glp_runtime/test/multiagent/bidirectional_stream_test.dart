@@ -206,6 +206,12 @@ void main() {
       final result1 = scheduler1.drainWithStatus();
       print('@1: status=${result1.status}, GQ=${runtime1.gq.length}');
 
+      // Per spec Section 5.2 Case 2: Send read requests for blocking readers
+      if (result1.status == ExecutionStatus.suspended && result1.blockingReaders.isNotEmpty) {
+        print('@1: Processing ${result1.blockingReaders.length} blocking readers');
+        ctx1.processSuspension(result1.blockingReaders);
+      }
+
       // Flush @1 messages
       ctx1.flushMessages();
 
@@ -213,6 +219,12 @@ void main() {
       print('\n@2 running...');
       final result2 = scheduler2.drainWithStatus();
       print('@2: status=${result2.status}, GQ=${runtime2.gq.length}');
+
+      // Per spec Section 5.2 Case 2: Send read requests for blocking readers
+      if (result2.status == ExecutionStatus.suspended && result2.blockingReaders.isNotEmpty) {
+        print('@2: Processing ${result2.blockingReaders.length} blocking readers');
+        ctx2.processSuspension(result2.blockingReaders);
+      }
 
       // Flush @2 messages
       ctx2.flushMessages();
