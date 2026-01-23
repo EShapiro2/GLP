@@ -2,7 +2,7 @@
 //
 // Moded head construction for GLP type checking.
 // Specification: docs/type system/moded-head.md v0.8
-// Paper Reference: Definition 4.8 (corrected - unconditional flip)
+// Paper Reference: Definition 5.5 (moded head)
 //
 // Constructs a moded head H' from a clause head H and a procedure declaration.
 // The moded head is used for well-typing checks.
@@ -34,7 +34,7 @@ String _freshAnonVarName() {
   return '_#$_anonVarCounter';
 }
 
-/// Constructs a moded head H' from clause head H per Definition 4.6.
+/// Constructs a moded head H' from clause head H per Definition 5.5.
 ///
 /// Given a head H, a moded head H' is obtained by:
 /// 1. Constructing an I/O-moded term corresponding to H, then
@@ -138,12 +138,12 @@ ModedTerm _buildIOModedTerm(ast.Goal term, ProcDecl decl, Mode parentMode, TypeE
 ///
 /// FIX: When expectedType is a wildcard (_ or _?), we don't recurse with
 /// type-driven mode computation. Instead, all subterms inherit the wildcard's
-/// mode uniformly. This implements Definition 4.5 Case 3 correctly.
+/// mode uniformly. This implements Definition 5.5 (wildcard positions).
 ModedTerm _buildModedSubterm(ast.Term term, Mode mode, TypeExpr? expectedType, TypeEnvironment? typeEnv) {
   // FIX: When type is wildcard (_ or _?) OR unknown (null), don't use type-driven mode computation.
   // Wildcards accept any term at this position - all subterms inherit the same mode.
   // Unknown types (null) occur when we can't resolve the type definition.
-  // This handles Definition 4.5 Case 3: type path ends at wildcard.
+  // This handles Definition 5.5: type path ends at wildcard.
   if (expectedType == null || expectedType is PrimitiveModeAlt) {
     return _buildOpaqueModedTerm(term, mode);
   }
@@ -351,41 +351,13 @@ TypeExpr _dualType(TypeExpr expr) {
   return expr;
 }
 
-/// Flip all variables unconditionally per Definition 4.8 step 2.
-///
-/// "Replacing each variable by its paired variable"
-/// - Every writer X becomes reader X?
-/// - Every reader X? becomes writer X
-///
-/// This captures the inverted roles at the call boundary.
-/// The flip is UNCONDITIONAL - it applies to all variables regardless
-/// of their current form or the structural mode at their position.
-ModedTerm _flipAllVariables(ModedTerm term) {
-  if (term is ModedCompound) {
-    final flippedArgs = term.args.map(_flipAllVariables).toList();
-    return ModedCompound(term.mode, term.functor, term.arity, flippedArgs);
-  }
-
-  if (term is ModedConstant) {
-    // Constants are unchanged
-    return term;
-  }
-
-  if (term is ModedVariable) {
-    // Unconditionally flip: X → X?, X? → X
-    return ModedVariable(term.name, isReader: !term.isReader, structuralMode: term.mode);
-  }
-
-  throw InvalidHeadError('Unknown moded term type: ${term.runtimeType}');
-}
-
 /// Build a moded term without type-driven mode computation.
 ///
 /// Used when the expected type is a wildcard (_ or _?). The entire term
 /// and all its subterms inherit the same mode from the wildcard position.
 /// Variables are still collected so they can be type-checked for complementarity.
 ///
-/// This implements Definition 4.5 Case 3: when the type path ends at a wildcard,
+/// This implements Definition 5.5: when the type path ends at a wildcard,
 /// the term at that position is accepted without examining its internal structure
 /// against any type definition.
 ModedTerm _buildOpaqueModedTerm(ast.Term term, Mode mode) {
@@ -424,7 +396,7 @@ ModedTerm _buildOpaqueModedTerm(ast.Term term, Mode mode) {
 
 /// Ensure each variable's form matches its position's structural mode.
 ///
-/// Per Definition 4.8 step 2:
+/// Per Definition 5.5 step 2:
 /// - A variable at mode ↓ (consume) should be a reader (X?)
 /// - A variable at mode ↑ (produce) should be a writer (X)
 ///
