@@ -70,7 +70,7 @@ procedure ..=(Stream, _?).      % Decompose: Compound? → Stream
 % These have clauses below. They are unfolded when used in guard position
 % (before |) but execute as normal goals in body position (after |).
 % Procedure declarations are required so body uses can be type-checked.
-procedure =(_?, _).
+procedure =(_, _?).
 procedure dl_append(_?, _?, _).
 procedure dl_to_list(_?, _).
 procedure new_channel(_, _).
@@ -82,7 +82,7 @@ procedure receive(_, _, _).
 % =============================================================================
 
 % Unification clause
-X? = X.
+X = X?.
 
 % Difference list clauses
 dl_append(A\B?, B\C?, A?\C).
