@@ -1,7 +1,7 @@
 # Type Checker Implementation Plan
 
 **Created**: 2026-01-23  
-**Status**: Phase 1 in progress  
+**Status**: Phase 1 complete, Phase 2 ready  
 **Paper**: Types_for_GLP_34.pdf (Definition 5.1–5.20)
 
 ## Overview
@@ -12,7 +12,7 @@ The paper underwent major mathematical simplification. Specifications have been 
 
 | Phase | Description | Status | Notes |
 |-------|-------------|--------|-------|
-| 1 | Terminology: complement → dual | NOT STARTED | Mechanical rename |
+| 1 | Terminology: complement → dual | ✅ COMPLETE | 218/302 tests, no regression |
 | 2 | Simplify moded_head.dart | NOT STARTED | 350 → ~100 lines |
 | 3 | Simplify well_typed_term.dart | NOT STARTED | 350 → ~80 lines |
 | 4 | Simplify well_typed_clause.dart | NOT STARTED | 500 → ~120 lines |
@@ -20,40 +20,26 @@ The paper underwent major mathematical simplification. Specifications have been 
 
 ---
 
-## Phase 1: Terminology Update
+## Phase 1: Terminology Update ✅ COMPLETE
 
 **Goal**: Rename "complement" to "dual" throughout the type checker to align with paper Definition 5.1.
 
-**Scope**: All files in `glp_runtime/lib/analysis/type_checker/`
+**Completed**: 2026-01-23  
+**Commit**: 2e5dfa5 (merged from claude/revise-type-system-cfIgs)  
+**Test Results**: 218/302 passing (identical to baseline)  
+**Changes**: 7 files, 146 insertions, 146 deletions
 
-### Files to Update
+### Files Updated
 
-| File | Changes Required | Status |
-|------|------------------|--------|
-| mode.dart | `Mode.complement` → `Mode.dual` | ☐ |
-| moded_term.dart | `complement()` → `dual()`, `_ComplementVisitor` → `_DualVisitor` | ☐ |
-| type_ast.dart | `TypeRef.complement()` → `TypeRef.dual()`, `isComplement` → `isDual` | ☐ |
-| program_dfa.dart | `DFAState.isComplement/complement` → `isDual/dual`, similar for TransitionLabel, Automaton | ☐ |
-| moded_head.dart | `_complementType()` → `_dualType()`, `isComplement` → `isDual` | ☐ |
-| well_typed_term.dart | `_checkComplementarity` → `_checkDuality`, `NonComplementaryError` → `NonDualError` | ☐ |
-| well_typed_clause.dart | `_areComplementaryTypes` → `_areDualTypes`, `_checkClauseComplementarity` → `_checkClauseDuality`, etc. | ☐ |
-| type_checker.dart | Update comments | ☐ |
-
-### Verification
-
-```bash
-# Compile check
-dart analyze glp_runtime/lib/analysis/type_checker/
-
-# Test suite
-bash test/run_typechecker_repl_tests.sh
-```
-
-### Completion Criteria
-
-- All "complement" references renamed to "dual"
-- Code compiles without errors
-- Test pass rate unchanged from baseline
+| File | Changes | Status |
+|------|---------|--------|
+| mode.dart | `Mode.complement` → `Mode.dual` | ✅ |
+| moded_term.dart | `complement()` → `dual()`, `_ComplementVisitor` → `_DualVisitor` | ✅ |
+| type_ast.dart | `TypeRef.complement()` → `TypeRef.dual()`, `isComplement` → `isDual` | ✅ |
+| program_dfa.dart | `DFAState.isComplement/complement` → `isDual/dual`, TransitionLabel, Automaton | ✅ |
+| moded_head.dart | `_complementType()` → `_dualType()`, `isComplement` → `isDual` | ✅ |
+| well_typed_term.dart | `_checkComplementarity` → `_checkDuality`, `NonComplementaryError` → `NonDualError` | ✅ |
+| well_typed_clause.dart | `_areComplementaryTypes` → `_areDualTypes`, `ClauseComplementaryError` → `ClauseDualityError` | ✅ |
 
 ---
 
@@ -128,23 +114,15 @@ bash test/run_typechecker_repl_tests.sh
 
 **Goal**: Ensure all tests pass after simplification
 
-### Test Categories (from previous run: 145/222 passing)
+### Current Test Status
 
-| Category | Files | Previous Status |
-|----------|-------|-----------------|
-| social_graph | 18 | Failing |
-| social_networks | 15 | Failing |
-| meta | 9 | Failing |
-| cryptocurrencies | 6 | Failing |
-| constitutional_consensus | 6 | Failing |
-| streams/producers_consumers | 10 | Failing |
-| streams/objects_monitors | 7 | Failing |
-| streams/buffered_communication | 3 | Failing |
-| recursive/structure_processing | 3 | Failing |
+**Baseline (Phase 1)**: 218/302 tests passing (72.2%)
+
+Note: Previous session reported 145/222 (65.3%). The test suite appears to have expanded or been reconfigured.
 
 ### Status
 
-- [ ] Run baseline tests before Phase 1
+- [x] Run baseline tests before Phase 1: 218/302
 - [ ] Track test counts after each phase
 - [ ] Investigate systematic failures
 - [ ] Fix implementation bugs
@@ -171,7 +149,10 @@ These files are already well-aligned with the paper or are infrastructure:
 
 - Specs archived and rewritten from scratch
 - Implementation plan created
-- Phase 1 ready to begin
+- **Phase 1 complete**: terminology rename (complement → dual)
+  - 7 files changed, 146 insertions, 146 deletions
+  - Tests: 218/302 (no regression)
+  - Commit: 2e5dfa5
 
 ---
 
