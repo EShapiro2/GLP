@@ -33,7 +33,7 @@ POSITIVE_FILES=(
     "$TEST_DIR/positive/int_list_sum.glp"
     "$TEST_DIR/positive/nat_operations.glp"
     "$TEST_DIR/positive/process_complete.glp"
-    "$TEST_DIR/positive/paper/merge.glp"
+    # "$TEST_DIR/positive/paper/merge.glp"  # File doesn't exist
     "$TEST_DIR/positive/disjoint_primitives.glp"
     "$TEST_DIR/positive/book/universal_accepts_structured.glp"
     
@@ -110,10 +110,10 @@ POSITIVE_FILES=(
     "$BOOK_DIR/recursive/list_processing/variants/quicksort_original.glp"
     
     # === typed_book/recursive/structure_processing ===
-    "$BOOK_DIR/recursive/structure_processing/ancestor.glp"
+    # "$BOOK_DIR/recursive/structure_processing/ancestor.glp"  # File is .disabled
     "$BOOK_DIR/recursive/structure_processing/binary_tree.glp"
     "$BOOK_DIR/recursive/structure_processing/distribute_nonground.glp"
-    "$BOOK_DIR/recursive/structure_processing/heapify.glp"
+    # "$BOOK_DIR/recursive/structure_processing/heapify.glp"  # File is .disabled
     "$BOOK_DIR/recursive/structure_processing/list_to_bst.glp"
     "$BOOK_DIR/recursive/structure_processing/observe.glp"
     "$BOOK_DIR/recursive/structure_processing/observe_minimal.glp"
