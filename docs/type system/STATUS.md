@@ -1,60 +1,27 @@
-# Type Checker Status
+# Type System Specifications
 
-**Last Updated**: 2026-01-18
-**Test Output**: `/Users/udi/Grassroots/GLP/test_output/typed_repl_output.txt`
+**Version**: 2.0  
+**Date**: 2026-01-23  
+**Paper**: Types_for_GLP_34.pdf
 
-## Current State
+## Specification Files
 
-**Test Results (2026-01-18):** 141/222 passing (63.5%)
+| File | Paper Definition | Description |
+|------|------------------|-------------|
+| `typed-program.md` | Definition 4.1 | Typed GLP program structure |
+| `moded-term.md` | Definition 5.1 | Moded terms and dual operation |
+| `consistent-paths.md` | Definition 5.2 | Path consistency rules |
+| `well-typed-term.md` | Definition 5.4 | Well-typed moded term |
+| `moded-head.md` | Definition 5.5 | Moded head construction |
+| `well-typed-clause.md` | Definition 5.7 | Well-typed clause |
+| `well-typed-program.md` | Definition 5.10 | Well-typed program |
+| `type-automaton.md` | Definitions 5.11-5.13 | Type automaton |
+| `subtyping.md` | Definitions 5.16-5.20 | Subtyping |
 
-Baseline verified after DFA state creation fix — no regressions.
+## Archived
 
-Run `bash /Users/udi/Grassroots/GLP/test/run_typechecker_repl_tests.sh` to get current numbers.
+Previous specifications (2026-01-23) moved to `archive/specs-2026-01-23/`.
 
-## Test Infrastructure
+## Test Status
 
-| Script | Output |
-|--------|--------|
-| `test/run_typechecker_repl_tests.sh` | `test_output/typed_repl_output.txt` |
-| `test/run_book_tests.sh` | `test_output/main_repl_output.txt` |
-
-## Directories
-
-| Directory | Purpose |
-|-----------|---------|
-| `programs/typed_book/` | Book programs with type annotations |
-| `programs/book/` | Original book programs (untyped) |
-| `glp_runtime/test/programs/typechecker/` | Type checker unit tests |
-| `glp_runtime/test/programs/moded_types/` | Mode checking unit tests |
-
-## Specifications
-
-All specification files are in `/Users/udi/Grassroots/GLP/docs/type system/`:
-
-| File | Purpose |
-|------|---------|
-| `compilation-pipeline.md` | **Pipeline architecture: SRSW vs typing distinction** |
-| `mode.md` | Mode definitions |
-| `type-environment.md` | Type environment spec |
-| `type-conversion.md` | Term to TypeExpr conversion |
-| `clause-validation.md` | Clause term validation |
-| `moded-term.md` | Moded term spec |
-| `moded-head.md` | Moded head spec |
-| `type-dfa.md` | Type DFA spec |
-| `well-typed-term.md` | Well-typed term spec |
-| `well-typed-clause.md` | Well-typed clause spec |
-| `well-typed-program.md` | Well-typed program spec |
-| `testing.md` | Testing strategy |
-
-## Known Errors
-
-1. **SRSW display bug** — SRSW violations not shown when type errors present (bug-report-2026-01-17.md, Bug 7).
-
-2. **81 failing typed tests** — See test output for details. Categories include social_graph, social_networks, meta, cryptocurrencies, and constitutional_consensus programs.
-
-## Remaining Diary Files
-
-| File | Purpose |
-|------|---------|
-| `docs/diary/book-fixes-tracker.md` | Tracks SRSW violations in original `book/` programs |
-| `docs/diary/glp-programming-knowledge.md` | Accumulated GLP programming wisdom |
+Run `bash test/run_typechecker_repl_tests.sh` to get current test results.

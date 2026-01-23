@@ -1,9 +1,9 @@
 # Module: type-environment
 
-**Version**: 0.8
-**Date**: 2026-01-17
+**Version**: 0.9
+**Date**: 2026-01-23
 **Status**: DRAFT
-**Paper References**: Definition 4.1 (Typed GLP Program), Section 4.1 (Type Classification), Section 4.2 (Type Automaton - Determinism, Type Aliases)
+**Paper References**: Definition 4.1 (Typed GLP Program), Section 4.1 (Type Classification), Section 5.2 (Type Automaton - Determinism, Type Aliases)
 
 ## Dependencies
 
@@ -27,9 +27,9 @@ Types are classified by their mode structure:
 
 | Classification | Definition | Example |
 |----------------|------------|---------|
-| **Output type** | No complementation in definition | `Stream ::= [] ; [_\|Stream]` |
-| **Input type** | Complement of an output type | `Stream?` (all modes flipped) |
-| **Interactive type** | Contains internal complementation | `HollowStream ::= [] ; [_?\|HollowStream]` |
+| **Output type** | No dualization in definition | `Stream ::= [] ; [_\|Stream]` |
+| **Input type** | Dual of an output type | `Stream?` (all modes flipped) |
+| **Interactive type** | Contains internal dualization | `HollowStream ::= [] ; [_?\|HollowStream]` |
 
 **Key insight:** Interactive types like `HollowStream` have some positions that consume (`_?`) while the overall structure is produced. This enables bidirectional communication.
 
@@ -37,8 +37,8 @@ Types are classified by their mode structure:
 
 The following types are predefined and cannot be redefined:
 
-| Type | Complement | Description |
-|------|------------|-------------|
+| Type | Dual | Description |
+|------|------|-------------|
 | `_` | `_?` | Any produced/consumed term (wildcard) |
 | `Integer` | `Integer?` | Any integer literal |
 | `Real` | `Real?` | Any real (floating-point) literal |
@@ -60,7 +60,7 @@ The following types are predefined and cannot be redefined:
 - `Exp` is used in comparison guards (`<`, `>`, `=<`, `>=`, `=:=`, `=\=`) which expect `Exp?` arguments
 - At runtime, `Exp` evaluates to `Number`
 
-### Determinism Requirement (Paper Section 4.2)
+### Determinism Requirement (Paper Section 5.2)
 
 Type definitions must be **deterministic**: alternatives must be distinguishable by their top-level functor or, for primitive types, by disjoint type membership.
 
@@ -71,7 +71,7 @@ AnyOne ::= 1 ; 1?.        % overlapping: 1 matches both alternatives
 Ambiguous ::= _ ; Integer. % overlapping: integers match both
 ```
 
-### Type Aliases (Paper Section 4.2)
+### Type Aliases (Paper Section 5.2, Appendix B.5)
 
 For documentation and readability, type aliases are permitted in source programs.
 
@@ -158,7 +158,7 @@ class TypeEnvironment {
     '_', '_?'
   };
   
-  /// Base predefined type names (without complement marker)
+  /// Base predefined type names (without dual marker)
   static final Set<String> predefinedBaseTypes = {
     'Integer', 'Real', 'Number', 'String', 'Exp', '_'
   };
@@ -178,9 +178,9 @@ class TypeDef {
 }
 
 enum TypeClassification {
-  output,      // No complementation in definition
-  input,       // Would be complement of output (not directly defined)
-  interactive  // Contains internal complementation
+  output,      // No dualization in definition
+  input,       // Would be dual of output (not directly defined)
+  interactive  // Contains internal dualization
 }
 ```
 
@@ -245,23 +245,23 @@ class ProcDecl {
 ```dart
 abstract class TypeExpr {
   bool get isInput;  // true for T?, false for T
-  String get baseName;  // Type name without complement marker
+  String get baseName;  // Type name without dual marker
 }
 
 class TypeRef extends TypeExpr {
   final String typeName;
-  final bool isComplement;  // true for T?
+  final bool isDual;  // true for T?
   final List<TypeExpr>? typeArgs;  // For parametric types
   
-  bool get isInput => isComplement;
+  bool get isInput => isDual;
   String get baseName => typeName;
 }
 
 class PrimitiveType extends TypeExpr {
   final String name;  // "Integer", "Real", "Number", "String", "_"
-  final bool isComplement;  // true for Integer?, etc.
+  final bool isDual;  // true for Integer?, etc.
   
-  bool get isInput => isComplement;
+  bool get isInput => isDual;
   String get baseName => name;
 }
 ```
@@ -272,7 +272,7 @@ class PrimitiveType extends TypeExpr {
 
 Returns the type definition for `name`, or `null` if not defined.
 
-**Note:** Returns `null` for predefined types (`Integer`, `Real`, `Number`, `String`, `_` and their complements).
+**Note:** Returns `null` for predefined types (`Integer`, `Real`, `Number`, `String`, `_` and their duals).
 
 #### `ProcDecl? getProcedure(String name, int arity)`
 
@@ -284,7 +284,7 @@ Returns `true` if `name` is a defined type or a predefined type.
 
 #### `bool isPredefinedType(String name)`
 
-Returns `true` if `name` is a predefined type (including complements).
+Returns `true` if `name` is a predefined type (including duals).
 
 #### `void addType(TypeDef def)`
 
@@ -310,7 +310,7 @@ Adds a procedure declaration.
 
 ```
 getType(name):
-  // Strip complement marker for lookup
+  // Strip dual marker for lookup
   baseName = name.endsWith('?') ? name.substring(0, name.length-1) : name
   
   if baseName in predefinedBaseTypes:
@@ -417,9 +417,9 @@ resolveAliases(types, procedures):
       targetDef = types[ref.name]
       if targetDef is null:
         throw UndefinedTypeError("Union alias references undefined type: ${ref.name}")
-      // Collect alternatives, applying complement if ref.isInput
+      // Collect alternatives, applying dual if ref.isInput
       for alt in targetDef.alternatives:
-        expandedAlts.add(applyComplementToAlt(alt, ref.isInput))
+        expandedAlts.add(applyDualToAlt(alt, ref.isInput))
     // Check determinism of expanded type
     if not isDeterministic(TypeDef(name, expandedAlts)):
       throw NonDeterministicTypeError("Expanded union alias has overlapping alternatives: ${name}")
@@ -455,8 +455,8 @@ resolveSimpleAlias(name, simpleAliases, visiting, resolved):
   if target is TypeRef and target.name in simpleAliases:
     // Alias to another alias - resolve transitively
     finalTarget = resolveSimpleAlias(target.name, simpleAliases, visiting, resolved)
-    // Preserve complement marker: if target was T? and finalTarget is S, result is S?
-    resolved[name] = applyComplement(finalTarget, target.isInput)
+    // Preserve dual marker: if target was T? and finalTarget is S, result is S?
+    resolved[name] = applyDual(finalTarget, target.isInput)
   else:
     resolved[name] = target
   
@@ -465,9 +465,9 @@ resolveSimpleAlias(name, simpleAliases, visiting, resolved):
 
 replaceAliasReferences(typeExpr, resolved):
   if typeExpr is TypeRef and typeExpr.name in resolved:
-    // Replace with resolved target, preserving complement
+    // Replace with resolved target, preserving dual
     target = resolved[typeExpr.name]
-    return applyComplement(target, typeExpr.isInput)
+    return applyDual(target, typeExpr.isInput)
   
   // Recursively process nested type expressions
   if typeExpr has nested types (e.g., StructAlt, ListConsAlt):
@@ -476,9 +476,9 @@ replaceAliasReferences(typeExpr, resolved):
   
   return typeExpr
 
-applyComplementToAlt(alt, applyComplement):
-  // Apply complement to all TypeRef/PrimitiveModeAlt within an alternative
-  if not applyComplement:
+applyDualToAlt(alt, applyDual):
+  // Apply dualization to all TypeRef/PrimitiveModeAlt within an alternative
+  if not applyDual:
     return alt  // No change
   
   // Recursively flip isInput on all type references in the alternative
@@ -565,25 +565,25 @@ addProcedure(decl):
 
 ```
 classifyType(def):
-  hasComplement = false
+  hasDual = false
   
   for alt in def.alternatives:
-    if containsComplement(alt):
-      hasComplement = true
+    if containsDual(alt):
+      hasDual = true
       break
   
-  if hasComplement:
+  if hasDual:
     return TypeClassification.interactive
   return TypeClassification.output
 
-containsComplement(alt):
-  // Check if any type expression in the alternative uses complement
+containsDual(alt):
+  // Check if any type expression in the alternative uses dualization
   for typeExpr in getTypeExprs(alt):
     if typeExpr.isInput:
       return true
     if typeExpr is TypeRef and typeExpr.typeArgs != null:
       for arg in typeExpr.typeArgs:
-        if containsComplement(arg):
+        if containsDual(arg):
           return true
   return false
 ```
@@ -614,12 +614,12 @@ TypeEnvironment(
   },
   procedures: {
     'merge/3': ProcDecl('merge', 3, [
-      TypeRef('Stream', isComplement: true),
-      TypeRef('Stream', isComplement: true),
-      TypeRef('Stream', isComplement: false)
+      TypeRef('Stream', isDual: true),
+      TypeRef('Stream', isDual: true),
+      TypeRef('Stream', isDual: false)
     ]),
     'consumer/1': ProcDecl('consumer', 1, [
-      TypeRef('HollowIntegers', isComplement: false)
+      TypeRef('HollowIntegers', isDual: false)
     ])
   }
 )
@@ -784,41 +784,10 @@ BadNumeric ::= Number ; Integer.
 | Redeclaring procedure | `RedefinitionError` |
 | Reference to undefined type | `UndefinedTypeError` |
 
-## Changes from v0.7
-
-- Added union alias support (e.g., `Msg ::= NetMsg ; UserMsg.`)
-- Union aliases are expanded by collecting alternatives from referenced types
-- Added `isSimpleAlias()` and `isUnionAlias()` helper functions
-- Added `AliasExpansionError` for union alias validation failures
-- Updated alias resolution algorithm for two-phase processing
-- Added examples for valid and invalid union aliases
-
-## Changes from v0.6
-
-- Changed type aliases from prohibited to permitted (resolved at preprocessing)
-- Added alias resolution algorithm
-- Replaced `TypeAliasError` with `CircularAliasError` (only circular chains are errors)
-- Updated examples to show valid aliases and circular chain error
-
-## Changes from v0.5
-
-- Added "Type Alternative Syntax" section clarifying that type definitions use the same term syntax as program terms
-- Documented conjunction shorthand: `(T1, T2)` is `','(T1, T2)`
-
-## Changes from v0.4
-
-- Added `Real`, `Number` to predefined types
-- Added determinism requirement (new validation)  
-- Added `TypeClassification` enum
-- Added `TypeAlternative` class hierarchy
-- Updated algorithms with validation checks
-- Added examples for new error conditions
-
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.8 | 2026-01-17 | Add union alias support; expand by collecting alternatives from referenced types |
 | 0.1 | 2025-01-07 | Initial draft |
 | 0.2 | 2025-01-07 | Add Dependencies section |
 | 0.3 | 2025-01-07 | Add algorithms, positive and negative examples |
@@ -826,3 +795,5 @@ BadNumeric ::= Number ; Integer.
 | 0.5 | 2025-01-12 | Add Real/Number types; type alias prohibition; determinism requirement |
 | 0.6 | 2025-01-14 | Add Type Alternative Syntax section; document compound term shorthand |
 | 0.7 | 2025-01-17 | Allow type aliases (resolved at preprocessing); add alias resolution algorithm |
+| 0.8 | 2026-01-17 | Add union alias support; expand by collecting alternatives from referenced types |
+| 0.9 | 2026-01-23 | **Paper alignment**: Updated section references (4.2→5.2 for automaton); "complement" → "dual" throughout; `isComplement` → `isDual` |

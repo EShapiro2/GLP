@@ -1,9 +1,9 @@
 # Module: clause-validation
 
-**Version**: 1.1
-**Date**: 2025-01-16
+**Version**: 1.2
+**Date**: 2026-01-23
 **Status**: DRAFT
-**Paper References**: Section 3 (GLP), SRSW Restriction
+**Paper References**: Section 3 (Grassroots Logic Programs), Definition 3.2 (SRSW Restriction), Remark [Anonymous Variables]
 
 ## Purpose
 
@@ -211,3 +211,4 @@ SRSW checking happens **after** clause validation. Anonymous `_` is an exception
 |---------|------|---------|
 | 1.0 | 2025-01-14 | Initial specification |
 | 1.1 | 2025-01-16 | Allow anonymous `_` in clause bodies (paper update) |
+| 1.2 | 2026-01-23 | **Paper alignment**: Updated section references to Definition 3.2 and Remark [Anonymous Variables] |

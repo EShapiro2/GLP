@@ -1,9 +1,9 @@
 # Module: type-conversion
 
-**Version**: 1.0
-**Date**: 2025-01-14
+**Version**: 1.1
+**Date**: 2026-01-23
 **Status**: DRAFT
-**Paper References**: Section 4.1 (Type Syntax)
+**Paper References**: Section 4 (Typed GLP), Section 4.1 (Typed GLP Programs)
 
 ## Purpose
 
@@ -182,3 +182,4 @@ This conversion is purely structural. Semantic validation (determinism, alias pr
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2025-01-14 | Initial specification |
+| 1.1 | 2026-01-23 | **Paper alignment**: Updated section references to §4 |

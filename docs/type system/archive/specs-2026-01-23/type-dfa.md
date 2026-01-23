@@ -1,22 +1,22 @@
 # Module: type-dfa
 
-**Version**: 1.0
-**Date**: 2025-01-12
+**Version**: 1.1
+**Date**: 2026-01-23
 **Status**: DRAFT
-**Paper References**: Section 4.2 (Type Automaton Definition), Definition 4.X (Type Automaton), Definition 4.X (Transition Function), Definition 4.X (Complementation as Involution)
+**Paper References**: Section 5.2 (Type Automaton), Definition 5.11 (Type Automaton), Definition 5.12 (Transition Function), Definition 5.13 (Duality as Involution)
 
 ## Purpose
 
-Represents the type automaton for a typed GLP program. The automaton formally defines well-typing via path acceptance. Each type T has a complement type T? with a corresponding complement automaton derived by flipping states and modes.
+Represents the type automaton for a typed GLP program. The automaton formally defines well-typing via path acceptance. Each type T has a dual type T? with a corresponding dual automaton derived by flipping states and modes.
 
 ## Dependencies
 
 - `mode` — Mode enum
 - `type-environment` — TypeEnvironment, TypeDef, ProcDecl, TypeAlternative
 
-## Formal Definition: Type Automaton (Paper Section 4.2)
+## Formal Definition: Type Automaton (Paper Section 5.2)
 
-### Definition: Type Automaton
+### Definition 5.11: Type Automaton
 
 Given a typed GLP program P = (Cs, D), the **type automaton** is a tuple A_D = (Q, Σ, δ, q₀, F) where:
 
@@ -33,13 +33,13 @@ Given a typed GLP program P = (Cs, D), the **type automaton** is a tuple A_D = (
 - i is the argument position (1-based, 0 for constants)
 - m ∈ {↑, ↓} is the mode (null for procedure transitions)
 
-**δ (Transition Function):** See Definition below.
+**δ (Transition Function):** See Definition 5.12 below.
 
 **q₀ (Initial States):** Each procedure state p/n serves as an initial state for checking arguments of that procedure.
 
 **F (Final States):** The set {_, _?, ✓} plus Integer, Integer?, Real, Real?, Number, Number?, String, String? when matching literals.
 
-### Definition: Transition Function
+### Definition 5.12: Transition Function
 
 The transition function δ is defined by cases:
 
@@ -57,11 +57,11 @@ For type T with alternative f(S₁^m₁, ..., Sₖ^mₖ):
 δ(T, (f, k, i, mᵢ)) = resolve(Sᵢ, mᵢ, false)
 ```
 where mᵢ is computed from the type expression Sᵢ:
-- If Sᵢ is T' (non-complement): mᵢ = ↑ (produce)
-- If Sᵢ is T'? (complement): mᵢ = ↓ (consume)
+- If Sᵢ is T' (non-dual): mᵢ = ↑ (produce)
+- If Sᵢ is T'? (dual): mᵢ = ↓ (consume)
 
-**3. Complement Type Transitions:**
-For complement type T?:
+**3. Dual Type Transitions:**
+For dual type T?:
 ```
 δ(T?, (f, k, i, m̄ᵢ)) = resolve(Sᵢ, mᵢ, true)
 ```
@@ -69,21 +69,21 @@ where m̄ᵢ is the flipped mode.
 
 **4. Resolution Function:**
 ```
-resolve(typeExpr, baseMode, inComplement):
+resolve(typeExpr, baseMode, inDual):
   if typeExpr is PrimitiveType(name, isInput):
-    effectiveComplement = isInput XOR inComplement
-    return effectiveComplement ? name + '?' : name
+    effectiveDual = isInput XOR inDual
+    return effectiveDual ? name + '?' : name
   
   if typeExpr is TypeRef(name, isInput):
-    effectiveComplement = isInput XOR inComplement
-    return effectiveComplement ? name + '?' : name
+    effectiveDual = isInput XOR inDual
+    return effectiveDual ? name + '?' : name
 ```
 
 **5. Constant Transitions:**
 For any state with a constant alternative c:
 ```
 δ(S, (c, 0, ↑)) = ✓  for state S
-δ(S?, (c, 0, ↓)) = ✓  for complement state S?
+δ(S?, (c, 0, ↓)) = ✓  for dual state S?
 ```
 
 **6. Primitive Type Transitions:**
@@ -103,13 +103,13 @@ The states _ and _? are final states that accept any term:
 - _ accepts any writer variable at mode ↑
 - _? accepts any reader variable at mode ↓
 
-### Definition: Complementation as Involution
+### Definition 5.13: Duality as Involution
 
 For each type T, the automaton for T? is obtained from the automaton for T by:
-1. Replacing each state S with its complement state S?
+1. Replacing each state S with its dual state S?
 2. Replacing each mode: ↑ becomes ↓, and ↓ becomes ↑
 
-This defines complementation as an involution: (T?)? = T, since flipping states and modes twice returns to the original automaton.
+This defines duality as an involution: (T?)? = T, since flipping states and modes twice returns to the original automaton.
 
 ## Public Interface
 
@@ -120,23 +120,23 @@ This defines complementation as an involution: (T?)? = T, since flipping states 
 ```dart
 class DFAState {
   final String baseName;      // e.g., "Stream", "Integer", "_", "merge/3"
-  final bool isComplement;    // true for Stream?, Integer?, _?
+  final bool isDual;          // true for Stream?, Integer?, _?
   final bool isFinal;         // true for _, _?, ✓
   final bool isProcedure;     // true for procedure states
 
-  String get name => isComplement ? '$baseName?' : baseName;
+  String get name => isDual ? '$baseName?' : baseName;
 
-  DFAState get complement => DFAState(
+  DFAState get dual => DFAState(
     baseName, 
-    isComplement: !isComplement, 
+    isDual: !isDual, 
     isFinal: isFinal,
     isProcedure: isProcedure
   );
 
   // State classification
   bool get isWildcard => baseName == '_';
-  bool get isProducedWildcard => baseName == '_' && !isComplement;
-  bool get isConsumedWildcard => baseName == '_' && isComplement;
+  bool get isProducedWildcard => baseName == '_' && !isDual;
+  bool get isConsumedWildcard => baseName == '_' && isDual;
   bool get isIntegerType => baseName == 'Integer';
   bool get isRealType => baseName == 'Real';
   bool get isNumberType => baseName == 'Number';
@@ -162,7 +162,7 @@ class TransitionLabel {
   factory TransitionLabel.constant(Object value);
   factory TransitionLabel.procedureArg(String procName, int procArity, int argIndex);
 
-  TransitionLabel get complement => TransitionLabel(
+  TransitionLabel get dual => TransitionLabel(
     symbol, arity, argIndex, 
     mode: mode?.flip
   );
@@ -191,8 +191,8 @@ class Automaton {
   /// Get all outgoing transitions from a state
   List<(TransitionLabel, DFAState)> getTransitions(DFAState from);
 
-  /// Create complement automaton by flipping all states and modes
-  Automaton get complement;
+  /// Create dual automaton by flipping all states and modes
+  Automaton get dual;
 }
 ```
 
@@ -227,7 +227,7 @@ Builds the complete type automaton from the type environment.
 **Postconditions:**
 - Returns a ProgramDFA with automata for all types and procedures
 - Each type T has automata for both T and T?
-- Complement automata satisfy the involution property
+- Dual automata satisfy the involution property
 
 ## Algorithm: Build Program DFA
 
@@ -237,34 +237,34 @@ buildProgramDFA(env):
   automata = {}
 
   // Create anonymous final state
-  states['✓'] = DFAState('✓', isComplement: false, isFinal: true)
+  states['✓'] = DFAState('✓', isDual: false, isFinal: true)
 
   // Create wildcard states (final states)
-  states['_'] = DFAState('_', isComplement: false, isFinal: true)
-  states['_?'] = DFAState('_', isComplement: true, isFinal: true)
+  states['_'] = DFAState('_', isDual: false, isFinal: true)
+  states['_?'] = DFAState('_', isDual: true, isFinal: true)
   automata['_'] = wildcardAutomaton(states['_'])
   automata['_?'] = wildcardAutomaton(states['_?'])
 
   // Create primitive type states
   for baseName in ['Integer', 'Real', 'Number', 'String']:
-    states[baseName] = DFAState(baseName, isComplement: false, isFinal: false)
-    states[baseName + '?'] = DFAState(baseName, isComplement: true, isFinal: false)
+    states[baseName] = DFAState(baseName, isDual: false, isFinal: false)
+    states[baseName + '?'] = DFAState(baseName, isDual: true, isFinal: false)
     automata[baseName] = primitiveAutomaton(states[baseName], baseName, states['✓'])
     automata[baseName + '?'] = primitiveAutomaton(states[baseName + '?'], baseName, states['✓'])
 
   // Create states for user-defined types
   for (typeName, typeDef) in env.types:
-    states[typeName] = DFAState(typeName, isComplement: false, isFinal: false)
-    states[typeName + '?'] = DFAState(typeName, isComplement: true, isFinal: false)
+    states[typeName] = DFAState(typeName, isDual: false, isFinal: false)
+    states[typeName + '?'] = DFAState(typeName, isDual: true, isFinal: false)
 
   // Build automata for user-defined types
   for (typeName, typeDef) in env.types:
-    automata[typeName] = buildTypeAutomaton(typeDef, states, env, isComplement: false)
-    automata[typeName + '?'] = buildTypeAutomaton(typeDef, states, env, isComplement: true)
+    automata[typeName] = buildTypeAutomaton(typeDef, states, env, isDual: false)
+    automata[typeName + '?'] = buildTypeAutomaton(typeDef, states, env, isDual: true)
 
   // Create procedure states
   for (procKey, procDecl) in env.procedures:
-    states[procKey] = DFAState(procKey, isComplement: false, isFinal: false, isProcedure: true)
+    states[procKey] = DFAState(procKey, isDual: false, isFinal: false, isProcedure: true)
 
   // Build procedure automata
   for (procKey, procDecl) in env.procedures:
@@ -276,16 +276,16 @@ buildProgramDFA(env):
 ## Algorithm: Build Type Automaton
 
 ```
-buildTypeAutomaton(typeDef, states, env, isComplement):
+buildTypeAutomaton(typeDef, states, env, isDual):
   typeName = typeDef.name
-  startStateName = isComplement ? typeName + '?' : typeName
+  startStateName = isDual ? typeName + '?' : typeName
   startState = states[startStateName]
 
   transitions = {}
   finalStates = {states['✓'], states['_'], states['_?']}
 
   for alt in typeDef.alternatives:
-    addTypeTransitions(startState, alt, states, transitions, env, isComplement)
+    addTypeTransitions(startState, alt, states, transitions, env, isDual)
 
   return Automaton(startState, transitions, finalStates)
 ```
@@ -293,73 +293,73 @@ buildTypeAutomaton(typeDef, states, env, isComplement):
 ## Algorithm: Add Type Transitions
 
 ```
-addTypeTransitions(fromState, alt, states, transitions, env, isComplement):
+addTypeTransitions(fromState, alt, states, transitions, env, isDual):
   match alt:
     ConstantAlt(value):
       // Constant transition to final state
-      mode = isComplement ? Mode.consume : Mode.produce
+      mode = isDual ? Mode.consume : Mode.produce
       label = TransitionLabel.constant(value, mode: mode)
       transitions[(fromState, label)] = states['✓']
 
     ListNilAlt:
-      mode = isComplement ? Mode.consume : Mode.produce
+      mode = isDual ? Mode.consume : Mode.produce
       label = TransitionLabel.constant('[]', mode: mode)
       transitions[(fromState, label)] = states['✓']
 
     ListConsAlt(headType, tailType):
       // Head transition
       headBaseMode = headType.isInput ? Mode.consume : Mode.produce
-      headMode = isComplement ? headBaseMode.flip : headBaseMode
+      headMode = isDual ? headBaseMode.flip : headBaseMode
       headLabel = TransitionLabel.functor('[|]', 2, 1, mode: headMode)
-      headTarget = resolveTargetState(headType, states, isComplement)
+      headTarget = resolveTargetState(headType, states, isDual)
       transitions[(fromState, headLabel)] = headTarget
       
       // Tail transition
       tailBaseMode = tailType.isInput ? Mode.consume : Mode.produce
-      tailMode = isComplement ? tailBaseMode.flip : tailBaseMode
+      tailMode = isDual ? tailBaseMode.flip : tailBaseMode
       tailLabel = TransitionLabel.functor('[|]', 2, 2, mode: tailMode)
-      tailTarget = resolveTargetState(tailType, states, isComplement)
+      tailTarget = resolveTargetState(tailType, states, isDual)
       transitions[(fromState, tailLabel)] = tailTarget
 
     StructAlt(functor, argTypes):
       for i in 0..<argTypes.length:
         argType = argTypes[i]
         argBaseMode = argType.isInput ? Mode.consume : Mode.produce
-        argMode = isComplement ? argBaseMode.flip : argBaseMode
+        argMode = isDual ? argBaseMode.flip : argBaseMode
         label = TransitionLabel.functor(functor, argTypes.length, i+1, mode: argMode)
-        target = resolveTargetState(argType, states, isComplement)
+        target = resolveTargetState(argType, states, isDual)
         transitions[(fromState, label)] = target
 
     DiffListAlt(contentType, holeType):
       // Content transition (first arg of \)
       contentBaseMode = contentType.isInput ? Mode.consume : Mode.produce
-      contentMode = isComplement ? contentBaseMode.flip : contentBaseMode
+      contentMode = isDual ? contentBaseMode.flip : contentBaseMode
       contentLabel = TransitionLabel.functor('\\', 2, 1, mode: contentMode)
-      contentTarget = resolveTargetState(contentType, states, isComplement)
+      contentTarget = resolveTargetState(contentType, states, isDual)
       transitions[(fromState, contentLabel)] = contentTarget
       
       // Hole transition (second arg of \)
       holeBaseMode = holeType.isInput ? Mode.consume : Mode.produce
-      holeMode = isComplement ? holeBaseMode.flip : holeBaseMode
+      holeMode = isDual ? holeBaseMode.flip : holeBaseMode
       holeLabel = TransitionLabel.functor('\\', 2, 2, mode: holeMode)
-      holeTarget = resolveTargetState(holeType, states, isComplement)
+      holeTarget = resolveTargetState(holeType, states, isDual)
       transitions[(fromState, holeLabel)] = holeTarget
 ```
 
 ## Algorithm: Resolve Target State
 
 ```
-resolveTargetState(typeExpr, states, inComplement):
+resolveTargetState(typeExpr, states, inDual):
   match typeExpr:
     PrimitiveType(baseName, isInput):
-      // XOR: input type in complement context = non-complement state
-      effectiveComplement = isInput XOR inComplement
-      stateName = effectiveComplement ? baseName + '?' : baseName
+      // XOR: input type in dual context = non-dual state
+      effectiveDual = isInput XOR inDual
+      stateName = effectiveDual ? baseName + '?' : baseName
       return states[stateName]
     
     TypeRef(typeName, isInput, _):
-      effectiveComplement = isInput XOR inComplement
-      stateName = effectiveComplement ? typeName + '?' : typeName
+      effectiveDual = isInput XOR inDual
+      stateName = effectiveDual ? typeName + '?' : typeName
       return states[stateName]
 ```
 
@@ -387,7 +387,7 @@ buildProcedureAutomaton(procDecl, states):
 
 ## Path Consistency Checking
 
-Path consistency is checked by traversing the appropriate automaton. The automaton for the declared argument type is used directly (no runtime complement flag needed).
+Path consistency is checked by traversing the appropriate automaton. The automaton for the declared argument type is used directly (no runtime dual flag needed).
 
 ```
 checkPathConsistency(termPath, automaton, dfa):
@@ -474,7 +474,7 @@ checkLeafConsistency(leaf, state, dfa):
 
   // Case: Constant at type state - check for matching transition
   if leaf.isConstant:
-    mode = state.isComplement ? Mode.consume : Mode.produce
+    mode = state.isDual ? Mode.consume : Mode.produce
     constLabel = TransitionLabel.constant(leaf.value, mode: mode)
     if automaton.transition(state, constLabel) != null:
       return consistent(type: dfa.finalState)
@@ -483,17 +483,17 @@ checkLeafConsistency(leaf, state, dfa):
   return inconsistent("Unexpected leaf at state ${state.name}")
 
 checkVariableAtPrimitiveState(leaf, state):
-  expectedMode = state.isComplement ? Mode.consume : Mode.produce
-  if leaf.isReader && state.isComplement:
+  expectedMode = state.isDual ? Mode.consume : Mode.produce
+  if leaf.isReader && state.isDual:
     return consistent(type: state)
-  if !leaf.isReader && !state.isComplement:
+  if !leaf.isReader && !state.isDual:
     return consistent(type: state)
   return inconsistent("Variable mode mismatch at ${state.name}")
 
 checkVariableAtTypeState(leaf, state):
-  if leaf.isReader && state.isComplement:
+  if leaf.isReader && state.isDual:
     return consistent(type: state)
-  if !leaf.isReader && !state.isComplement:
+  if !leaf.isReader && !state.isDual:
     return consistent(type: state)
   return inconsistent("Variable mode mismatch at ${state.name}")
 ```
@@ -621,16 +621,6 @@ This demonstrates the automaton boundary crossing that handles nested compound t
 | `UnknownTypeError` | Type name not found in states |
 | `UnknownProcedureError` | Procedure key not found in states |
 
-## Changes from v0.9
-
-- Added formal Type Automaton definition (Definition 4.X)
-- Added formal Transition Function definition
-- Added Complementation as Involution definition
-- Added `isProcedure` and `isUserDefinedType` to DFAState
-- Added automaton switching at type boundaries in path checking
-- Added parametric type example (Channel)
-- Restructured algorithms to match formal definitions
-
 ## Version History
 
 | Version | Date | Changes |
@@ -641,3 +631,4 @@ This demonstrates the automaton boundary crossing that handles nested compound t
 | 0.8 | 2025-01-10 | Complement automata model: two automata per type |
 | 0.9 | 2025-01-10 | Added Real, Number system types |
 | 1.0 | 2025-01-12 | Formal automaton definition from paper Section 4.2; automaton switching at type boundaries |
+| 1.1 | 2026-01-23 | **Paper alignment**: Updated to Section 5.2, Definitions 5.11-5.13; "complement" → "dual" throughout; `isComplement` → `isDual` |

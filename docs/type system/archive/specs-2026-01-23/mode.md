@@ -1,9 +1,9 @@
 # Module: mode
 
-**Version**: 0.2  
-**Date**: 2025-01-12  
+**Version**: 0.3  
+**Date**: 2026-01-23  
 **Status**: DRAFT  
-**Paper References**: Section 4 (Moded Terms), Definition [Moded Term, Complement]
+**Paper References**: Section 5.1 (Definition 5.1: Moded Term, Dual)
 
 ## Purpose
 
@@ -15,20 +15,23 @@ None (leaf module).
 
 ## Definitions
 
-### Mode (Paper Section 4)
+### Mode (Paper Definition 5.1)
 
 A **mode** indicates whether a term or subterm is consumed or produced during computation:
 
 - **consume (↓)**: The value is read/consumed by the program
 - **produce (↑)**: The value is written/produced by the program
 
-### Mode Complementation
+Modes appear in moded terms as annotations on non-variable subterms, indicating the direction of data flow at each position.
 
-Mode complementation flips the direction:
+### Mode Flipping
+
+Mode flipping reverses the direction:
 - consume ↔ produce
-- The complement operation is an involution: flip(flip(m)) = m
 
-This follows from the paper's definition of complement for moded terms, which flips every mode annotation.
+The flip operation is an involution: flip(flip(m)) = m.
+
+This operation is used in computing the dual of a moded term (Definition 5.1), which flips every mode annotation.
 
 ## Public Interface
 
@@ -47,7 +50,7 @@ enum Mode {
 
 #### `Mode.flip`
 
-Returns the complementary mode.
+Returns the flipped mode.
 
 ```dart
 extension ModeExtension on Mode {
@@ -94,3 +97,4 @@ For `HollowIntegers ::= [] ; [Integer?|HollowIntegers]`:
 |---------|------|---------|
 | 0.1 | 2025-01-08 | Initial draft — extracted from moded-term |
 | 0.2 | 2025-01-12 | Added interactive type example; updated paper references |
+| 0.3 | 2026-01-23 | Updated paper reference to Section 5.1, Definition 5.1; renamed "Mode Complementation" to "Mode Flipping" to align with paper terminology (duality) |
