@@ -7,17 +7,17 @@
 %% Type definitions
 
 %% Message operations (combines cold-call and friend-mediated introduction)
-MsgOp ::= connect(Any) ; intro(Any, Any, Any) ; intro(Any, Any) ; befriend(Any, Any) ; decision(Any, Any, Any) ; response(Any) ; introduce(Any, Any) ; befriend_intro(Any, Any, Any) ; accept_intro(Any, Any) ; reject_intro(Any, Any).
+MsgOp ::= connect(_) ; intro(_, _, _) ; intro(_, _) ; befriend(_, _) ; decision(_, _, _) ; response(_) ; introduce(_, _) ; befriend_intro(_, _, _) ; accept_intro(_, _) ; reject_intro(_, _).
 
 %% Social graph messages
-SocialMsg ::= msg(Any, Any, MsgOp).
+SocialMsg ::= msg(_, _, MsgOp).
 MsgList ::= [] ; [SocialMsg | MsgList].
 
 %% Friend list entries
-FriendList ::= [] ; [Any | FriendList].
+FriendList ::= [] ; [_ | FriendList].
 
 %% Procedure type declarations
-procedure social_graph(Any, MsgList, FriendList).
+procedure social_graph(_, MsgList, FriendList).
 %%
 %% This tests both cold-call and friend introduction protocols
 

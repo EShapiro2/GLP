@@ -7,17 +7,17 @@
 %% Type definitions
 
 %% Message operations for cold-call protocol
-MsgOp ::= connect(Any) ; intro(Any, Any, Any) ; befriend(Any, Any) ; decision(Any, Any, Any) ; response(Any).
+MsgOp ::= connect(_) ; intro(_, _, _) ; befriend(_, _) ; decision(_, _, _) ; response(_).
 
 %% Social graph messages
-SocialMsg ::= msg(Any, Any, MsgOp).
+SocialMsg ::= msg(_, _, MsgOp).
 MsgList ::= [] ; [SocialMsg | MsgList].
 
 %% Friend list entries
-FriendList ::= [] ; [Any | FriendList].
+FriendList ::= [] ; [_ | FriendList].
 
 %% Procedure type declarations
-procedure social_graph(Any, MsgList, FriendList).
+procedure social_graph(_, MsgList, FriendList).
 
 %% === Library predicates (inlined for self-contained test) ===
 

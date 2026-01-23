@@ -2,9 +2,9 @@
 % Each step is one clause; unexpected messages cause failure
 
 %% Procedure type declarations
-procedure bob_actor(Any).
-procedure bob_wait_msg(Any, Any).
-procedure bob_done(Any, Any).
+procedure bob_actor(_).
+procedure bob_wait_msg(_, _).
+procedure bob_done(_, _).
 
 % Step 1: Receive befriend request from agent, accept it
 bob_actor(ch([befriend(alice, Resp)|In], [decision(yes, alice, Resp?)|Out?])) :-

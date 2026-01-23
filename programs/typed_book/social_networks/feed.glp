@@ -5,12 +5,12 @@
 %% while maintaining cryptographic proof of authorship.
 
 %% Type definitions
-FollowerList ::= [] ; [Any | FollowerList].
+FollowerList ::= [] ; [_ | FollowerList].
 
 %% Procedure type declarations
-procedure post(Any, FollowerList, FollowerList).
-procedure broadcast(Any, FollowerList, FollowerList).
-procedure create_post(Any, Number, Any).
+procedure post(_, FollowerList, FollowerList).
+procedure broadcast(_, FollowerList, FollowerList).
+procedure create_post(_, Number, _).
 procedure current_time(Number).
 
 % Post distribution with attestation preservation

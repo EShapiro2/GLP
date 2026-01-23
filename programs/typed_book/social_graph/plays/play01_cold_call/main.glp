@@ -2,12 +2,12 @@
 % Wires together channels, network, agents, and actors
 
 %% Procedure type declarations
-procedure test(Any, Any).
-procedure new_channel(Any, Any).
-procedure network(Any, Any).
-procedure agent(Any, Any, Any).
-procedure alice_actor(Any).
-procedure bob_actor(Any).
+procedure test(_, _).
+procedure new_channel(_, _).
+procedure network(_, _).
+procedure agent(_, _, _).
+procedure alice_actor(_).
+procedure bob_actor(_).
 
 test(AliceTrace?, BobTrace?) :-
     % Create network channels

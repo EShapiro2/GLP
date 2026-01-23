@@ -4,14 +4,14 @@
 %% Enables concurrent block creation without consensus.
 
 %% Type definitions
-Stream ::= [] ; [Any | Stream].
-PayloadList ::= [] ; [Any | PayloadList].
+Stream ::= [] ; [_ | Stream].
+PayloadList ::= [] ; [_ | PayloadList].
 
 %% Procedure type declarations
-procedure streams(Any, Any).
+procedure streams(_, _).
 procedure produce_payloads(PayloadList).
-procedure interlace(PayloadList, Any, Any).
-procedure collect_tips(Any, Any, Any).
+procedure interlace(PayloadList, _, _).
+procedure collect_tips(_, _, _).
 
 streams(stream(S?), Others) :-
     produce_payloads(Payloads),

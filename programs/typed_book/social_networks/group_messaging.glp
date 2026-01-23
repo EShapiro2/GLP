@@ -6,17 +6,17 @@
 %% natural causal ordering.
 
 %% Type definitions
-MsgList ::= [] ; [Any | MsgList].
-FriendList ::= [] ; [Any | FriendList].
+MsgList ::= [] ; [_ | MsgList].
+FriendList ::= [] ; [_ | FriendList].
 
 %% Procedure type declarations
-procedure group_member(Any, Any, Any).
-procedure lookup(Any, FriendList, Any).
-procedure compose_messages(Any, Any, MsgList).
-procedure find_my_stream(Any, Any, Any).
-procedure interlace(MsgList, Any, Any, Any).
-procedure await_user_input(Any, Any, Any).
-procedure format_message(Any, Any, Any).
+procedure group_member(_, _, _).
+procedure lookup(_, FriendList, _).
+procedure compose_messages(_, _, MsgList).
+procedure find_my_stream(_, _, _).
+procedure interlace(MsgList, _, _, _).
+procedure await_user_input(_, _, _).
+procedure format_message(_, _, _).
 
 % Member participates in group
 group_member(Id, (Founder, Name), Streams) :-

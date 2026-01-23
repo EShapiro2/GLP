@@ -3,16 +3,16 @@
 %% Reference: lewis2023grassroots, shapiro2024gc
 
 %% Type definitions
-BalanceList ::= [] ; [Any | BalanceList].
-RequestList ::= [] ; [Any | RequestList].
-BlockStream ::= [] ; [Any | BlockStream].
+BalanceList ::= [] ; [_ | BalanceList].
+RequestList ::= [] ; [_ | RequestList].
+BlockStream ::= [] ; [_ | BlockStream].
 
 %% Procedure type declarations
-procedure get_balance(Any, BalanceList, Number).
-procedure set_balance(Any, Number, BalanceList, BalanceList).
+procedure get_balance(_, BalanceList, Number).
+procedure set_balance(_, Number, BalanceList, BalanceList).
 procedure agent(RequestList, BalanceList, BlockStream).
-procedure handle(Any, BalanceList, BalanceList, Any).
-procedure prepend_blocks(Any, BlockStream, BlockStream).
+procedure handle(_, BalanceList, BalanceList, _).
+procedure prepend_blocks(_, BlockStream, BlockStream).
 
 %% ============================================
 %% Balance Management
@@ -48,7 +48,7 @@ prepend_blocks([], Stream, Stream?).
 prepend_blocks([B|Bs], Stream, [B? | Stream1?]) :- prepend_blocks(Bs?, Stream?, Stream1).
 
 %% ============================================
-%% Request Handlers
+%% Request Handlers (all handle/4 clauses together)
 %% ============================================
 
 %% Issue: pay someone in a given currency
@@ -60,9 +60,6 @@ handle(issue(To, Amount, Currency), Balances, BalancesOut?, Block?) :-
     set_balance(Currency?, NewBal?, Balances?, BalancesOut),
     make_issue_block(Currency?, To?, Amount?, NewBal?, Block).
 
-make_issue_block(Currency, To, Amount, NewBal,
-                 block(tx(Currency?, [payment(To?, Amount?), payment(self, NewBal?)]), issue, [])).
-
 %% Accept: accept an incoming payment
 handle(accept(Amount, Currency, PaymentBlock, ApprovalBlock),
        Balances, BalancesOut?, Block?) :-
@@ -71,9 +68,6 @@ handle(accept(Amount, Currency, PaymentBlock, ApprovalBlock),
     NewBal := OldBal? + Amount?,
     set_balance(Currency?, NewBal?, Balances?, BalancesOut),
     make_accept_block(Currency?, NewBal?, PaymentBlock?, ApprovalBlock?, Block).
-
-make_accept_block(Currency, NewBal, PaymentBlock, ApprovalBlock,
-                  block(tx(Currency?, [payment(self, NewBal?)]), accept, [PaymentBlock?, ApprovalBlock?])).
 
 %% Approve: sovereign approves a payment in their currency
 handle(approve(PaymentBlock), Balances, Balances?,
@@ -87,12 +81,6 @@ handle(mint(Amount), Balances, BalancesOut?, Block?) :-
     set_balance(self, NewBal?, Balances?, BalancesOut),
     make_mint_block(NewBal?, Block).
 
-make_mint_block(NewBal, block(tx(self, [payment(self, NewBal?)]), mint, [])).
-
-%% ============================================
-%% Redemption
-%% ============================================
-
 %% Redeem: claimer returns sovereign's coins, requests repayment
 handle(redeem(Sovereign, Amount, Preferences),
        Balances, BalancesOut?, Block?) :-
@@ -103,15 +91,27 @@ handle(redeem(Sovereign, Amount, Preferences),
     set_balance(Sovereign?, NewBal?, Balances?, BalancesOut),
     make_redeem_block(Sovereign?, Amount?, Preferences?, Block).
 
-make_redeem_block(Sovereign, Amount, Preferences,
-                  block(tx(Sovereign?, [payment(Sovereign?, Amount?)]), (redeem, Preferences?), [])).
-
 %% Repay: sovereign repays a redemption claim
 handle(repay(Claimer, Amount, Preferences, ClaimHash),
        Balances, BalancesOut?, Blocks?) :-
     ground(Claimer?), ground(Amount?), ground(ClaimHash?), ground(Balances?) |
     compute_repayments(Amount?, Preferences?, Balances?, Repayments, BalancesOut),
     make_repay_blocks(Claimer?, Repayments?, ClaimHash?, Blocks).
+
+%% ============================================
+%% Block Construction Helpers
+%% ============================================
+
+make_issue_block(Currency, To, Amount, NewBal,
+                 block(tx(Currency?, [payment(To?, Amount?), payment(self, NewBal?)]), issue, [])).
+
+make_accept_block(Currency, NewBal, PaymentBlock, ApprovalBlock,
+                  block(tx(Currency?, [payment(self, NewBal?)]), accept, [PaymentBlock?, ApprovalBlock?])).
+
+make_mint_block(NewBal, block(tx(self, [payment(self, NewBal?)]), mint, [])).
+
+make_redeem_block(Sovereign, Amount, Preferences,
+                  block(tx(Sovereign?, [payment(Sovereign?, Amount?)]), (redeem, Preferences?), [])).
 
 %% ============================================
 %% Repayment Computation
@@ -128,7 +128,7 @@ compute_repayments(Amount, [], Balances, [(self, Amount?)], Balances?) :-
 compute_repayments(Amount, [Currency|Rest], Balances, Repayments?, Balances1?) :-
     Amount? > 0 |
     get_balance(Currency?, Balances?, Available),
-    take_from_currency(Amount?, Currency?, Available?, Rest?, 
+    take_from_currency(Amount?, Currency?, Available?, Rest?,
                        Balances?, Repayments, Balances1).
 
 %% No coins of this currency available
@@ -162,15 +162,15 @@ make_repay_blocks(Claimer, [(self, Amount)|Rest], ClaimHash, [Block | Blocks]) :
     make_self_repay_block(Claimer?, Amount?, ClaimHash?, Block),
     make_repay_blocks(Claimer?, Rest?, ClaimHash?, Blocks).
 
-make_self_repay_block(Claimer, Amount, ClaimHash,
-                      block(tx(self, [payment(Claimer?, Amount?)]), (repay, ClaimHash?), [])).
-
 %% Pay in foreign currency
 make_repay_blocks(Claimer, [(Currency, Amount)|Rest], ClaimHash, [Block | Blocks]) :-
     ground(Claimer?), ground(Currency?), ground(Amount?), ground(ClaimHash?),
     ~(Currency? =?= self) |
     make_foreign_repay_block(Currency?, Claimer?, Amount?, ClaimHash?, Block),
     make_repay_blocks(Claimer?, Rest?, ClaimHash?, Blocks).
+
+make_self_repay_block(Claimer, Amount, ClaimHash,
+                      block(tx(self, [payment(Claimer?, Amount?)]), (repay, ClaimHash?), [])).
 
 make_foreign_repay_block(Currency, Claimer, Amount, ClaimHash,
                          block(tx(Currency?, [payment(Claimer?, Amount?)]), (repay, ClaimHash?), [])).

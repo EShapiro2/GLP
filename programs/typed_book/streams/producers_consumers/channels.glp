@@ -9,7 +9,7 @@
 %% It remains untyped for now - move to typed_book when coverage semantics are resolved.
 
 %% Type definitions
-List ::= [] ; [Any | List].
+List ::= [] ; [_ | List].
 Channel ::= List ; branch(Channel, Channel).
 
 %% Basic stream operations (for comparison)

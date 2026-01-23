@@ -4,15 +4,15 @@
 %% conversation channel, separate from the control channel.
 
 %% Type definitions
-Stream ::= [] ; [Any | Stream].
+Stream ::= [] ; [_ | Stream].
 
 %% Procedure type declarations
-procedure request_dm(Stream, Any, Any).
-procedure accept_dm(Any, Any).
-procedure bind_response(Any, Any).
-procedure dm_send(Any, Any, Any).
-procedure dm_receive(Any, Any, Any).
-procedure new_channel(Any, Any).
+procedure request_dm(Stream, _, _).
+procedure accept_dm(_, _).
+procedure bind_response(_, _).
+procedure dm_send(_, _, _).
+procedure dm_receive(_, _, _).
+procedure new_channel(_, _).
 
 %% Request DM channel from friend
 %% FriendOut: current state of friend's output stream

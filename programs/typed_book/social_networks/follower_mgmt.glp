@@ -2,11 +2,11 @@
 %% Add and remove followers
 
 %% Type definitions
-FollowerList ::= [] ; [Any | FollowerList].
+FollowerList ::= [] ; [_ | FollowerList].
 
 %% Procedure type declarations
-procedure add_follower(Any, FollowerList, FollowerList, Any).
-procedure remove_follower(Any, FollowerList, FollowerList).
+procedure add_follower(_, FollowerList, FollowerList, _).
+procedure remove_follower(_, FollowerList, FollowerList).
 
 add_follower(Name, Followers, [(Name?, Stream)|Followers?], Stream?).
 

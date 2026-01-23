@@ -2,10 +2,10 @@
 %% Demonstrates observation of incomplete messages with duplicate
 
 %% Procedure type declarations
-procedure monitor(Any).
-procedure monitor_loop(Any, Number).
-procedure observe(Any, Any, Any).
-procedure copy_req(Any, Any, Any).
+procedure monitor(_).
+procedure monitor_loop(_, Number).
+procedure observe(_, _, _).
+procedure copy_req(_, _, _).
 
 % Accumulator monitor
 monitor(Reqs) :- monitor_loop(Reqs?, 0).

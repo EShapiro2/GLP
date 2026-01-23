@@ -6,9 +6,9 @@
 %% initialize with: network((p,Chp?),(q,Chq?),(r,Chr?))
 
 %% Procedure type declarations
-procedure network(Any, Any, Any).
-procedure send(Any, Any, Any).
-procedure receive(Any, Any, Any).
+procedure network(_, _, _).
+procedure send(_, _, _).
+procedure receive(_, _, _).
 
 %% P to Q forwarding
 network((P,ChP),(Q,ChQ),(R,ChR)) :-

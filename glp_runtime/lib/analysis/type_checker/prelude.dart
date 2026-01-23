@@ -77,6 +77,12 @@ procedure new_channel(_, _).
 procedure send(_, _, _).
 procedure receive(_, _, _).
 
+% MWM (Mutual Write Merge) runtime primitives
+procedure _allocate_mutual_reference(_, _).
+procedure is_mutual_ref(_?).
+procedure _stream_append(_?, _?, _).
+procedure _close_mutual_reference(_?).
+
 % =============================================================================
 % CLAUSES
 % =============================================================================
@@ -179,6 +185,11 @@ const Set<String> builtinProcedures = {
   // Univ operations
   '=../2',
   '..=/2',
+  // MWM (Mutual Write Merge) runtime primitives
+  '_allocate_mutual_reference/2',
+  'is_mutual_ref/1',
+  '_stream_append/3',
+  '_close_mutual_reference/1',
 };
 
 /// Check if a type name is predefined

@@ -2,15 +2,15 @@
 %% Combines posting and follower management
 
 %% Type definitions
-Stream ::= [] ; [Any | Stream].
-CmdList ::= [] ; [Any | CmdList].
-FollowerList ::= [] ; [Any | FollowerList].
+Stream ::= [] ; [_ | Stream].
+CmdList ::= [] ; [_ | CmdList].
+FollowerList ::= [] ; [_ | FollowerList].
 
 %% Procedure type declarations
-procedure replicate2(Any, Any, Any).
-procedure broadcast(Any, FollowerList, FollowerList).
-procedure add_follower(Any, FollowerList, FollowerList, Any).
-procedure remove_follower(Any, FollowerList, FollowerList).
+procedure replicate2(_, _, _).
+procedure broadcast(_, FollowerList, FollowerList).
+procedure add_follower(_, FollowerList, FollowerList, _).
+procedure remove_follower(_, FollowerList, FollowerList).
 procedure feed_server(CmdList, FollowerList).
 procedure serve_feed(CmdList, FollowerList, FollowerList).
 

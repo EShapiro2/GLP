@@ -5,11 +5,11 @@
 %%   Round 1: Alice → Bob (accept)
 
 %% Type definitions
-MsgList ::= [] ; [Any | MsgList].
-FriendList ::= [] ; [Any | FriendList].
+MsgList ::= [] ; [_ | MsgList].
+FriendList ::= [] ; [_ | FriendList].
 
 %% Procedure type declarations
-procedure social_graph(Any, MsgList, FriendList).
+procedure social_graph(_, MsgList, FriendList).
 %%   Round 2: Carol → Dave (accept)
 %%   Round 3: Bob → Carol (accept)
 %%   Round 4: Dave → Alice (reject)

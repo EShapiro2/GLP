@@ -2,9 +2,9 @@
 % Each step is one clause; unexpected messages cause failure
 
 %% Procedure type declarations
-procedure alice_actor(Any).
-procedure alice_wait_response(Any, Any).
-procedure alice_done(Any, Any).
+procedure alice_actor(_).
+procedure alice_wait_response(_, _).
+procedure alice_done(_, _).
 
 % Step 1: Initiate connection to bob
 alice_actor(ch(In, [connect(bob)|Out?])) :-
