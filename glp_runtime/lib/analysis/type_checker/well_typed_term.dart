@@ -2,7 +2,7 @@
 //
 // Well-typed moded term checking for GLP type system.
 // Specification: docs/type system/well-typed-term.md v0.7
-// Paper Reference: Definition 4.5 (Consistent Paths), Definition 4.7 (Well-Typed Moded Term)
+// Paper Reference: Definition 5.4 (Well-Typed Moded Term)
 //
 // Determines when a moded term is well-typed by an automaton by checking path
 // consistency via automaton traversal.
