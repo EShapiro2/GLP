@@ -133,6 +133,8 @@ When receiving instructions from Claude Web (via user copy-paste):
 
 Verbatim code is still welcome when precision is critical, but not mandatory.
 
+**Workflow reminder (2026-01):** When Claude Web makes changes to tracked files (like implementation plans), always ask the user to **push those changes before** giving instructions to Claude Code. This prevents merge conflicts when Claude Code later tries to commit changes to the same files.
+
 ### Accuracy and Honesty
 - **NEVER BS, GUESS, SPECULATE, OR HALLUCINATE**
 - **IF UNSURE, SAY SO** - "I'm not sure, need to check X"
