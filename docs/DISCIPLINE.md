@@ -130,6 +130,28 @@ When encountering a bug in the codebase — whether in your own area of responsi
 - Either fix the bug (if in scope) or wait for fix before proceeding
 - If the bug blocks your work entirely, say so explicitly
 
+### 1.8 Complete and Comprehensive Fixes: No Prioritization
+
+When fixing errors or implementing features:
+
+1. **Fix ALL errors** — never prioritize some errors over others
+2. **Fix errors completely** — no partial fixes or "good enough" solutions
+3. **Fix errors comprehensively** — address root causes, not symptoms
+
+**What this means:**
+- If there are 83 failing tests, create a plan to fix all 83
+- Do not ask "which ones should we focus on first?"
+- Do not suggest "we could start with the easy ones"
+- Do not propose "prioritizing by severity"
+
+**Rationale:** Prioritization implies some errors are acceptable to leave unfixed. In this project, all errors must be fixed. The only sequencing question is the order of execution, not which items to include.
+
+**Correct behavior:**
+- Diagnose all failures
+- Categorize by root cause (for efficient batching)
+- Create a plan that addresses every failure
+- Execute until all tests pass
+
 ---
 
 ## Part II: Test Baseline Protocol
@@ -456,4 +478,5 @@ cd glp_multiagent && flutter build macos
 | 2.0 | 2026-01-18 | Consolidated with test protocol and handover standards |
 | 2.1 | 2026-01-18 | Added section 1.7: Bug Handling - Never Bypass, Always Report |
 | 2.2 | 2026-01-18 | Added section 6.3: Commit After Every Revision |
+| 2.3 | 2026-01-23 | Added section 1.8: Complete and Comprehensive Fixes - No Prioritization |
 
