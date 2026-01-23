@@ -392,28 +392,28 @@ bool _allPathsValidIO(ModedTerm t, Mode parentMode) {
 }
 
 // =============================================================================
-// Complement Operation
+// Dual Operation
 // =============================================================================
 
-/// Constructs the complement of a moded term per Definition 4.2.
+/// Constructs the dual of a moded term per Definition 5.1.
 ///
-/// The complement T? is obtained by:
+/// The dual T? is obtained by:
 /// 1. Flipping every mode annotation (↓ ↔ ↑)
 /// 2. Replacing every variable by its paired variable (X ↔ X?)
 ///
-/// The complement operation is an involution: complement(complement(t)) == t
-ModedTerm complement(ModedTerm t) {
-  return t.accept(_ComplementVisitor());
+/// The dual operation is an involution: dual(dual(t)) == t
+ModedTerm dual(ModedTerm t) {
+  return t.accept(_DualVisitor());
 }
 
-class _ComplementVisitor implements ModedTermVisitor<ModedTerm> {
+class _DualVisitor implements ModedTermVisitor<ModedTerm> {
   @override
   ModedTerm visitCompound(ModedCompound term) {
     return ModedCompound(
       term.mode.flip,
       term.functor,
       term.arity,
-      term.args.map((arg) => complement(arg)).toList(),
+      term.args.map((arg) => dual(arg)).toList(),
     );
   }
 

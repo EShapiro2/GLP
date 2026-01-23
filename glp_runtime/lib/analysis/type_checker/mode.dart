@@ -23,10 +23,10 @@ enum Mode {
   /// Alias for output mode (↑) per paper Definition 4.2
   static const produce = Mode.output;
 
-  /// Mode complementation operator (·)?
+  /// Mode dual operator per Definition 5.1
   /// Inverts mode: output ↔ input, produce ↔ consume
   /// Used at call boundaries: caller's output = callee's input
-  Mode get complement {
+  Mode get dual {
     switch (this) {
       case Mode.output:
         return Mode.input;
@@ -35,8 +35,8 @@ enum Mode {
     }
   }
 
-  /// Alias for complement (per paper notation)
-  Mode get flip => complement;
+  /// Alias for dual (per paper notation)
+  Mode get flip => dual;
 
   @override
   String toString() {

@@ -118,19 +118,19 @@ class InconsistentVariableError extends WellTypedError {
   String toString() => message;
 }
 
-/// Error: variable pair (X, X?) not complementary
-class NonComplementaryError extends WellTypedError {
+/// Error: variable pair (X, X?) not dual
+class NonDualError extends WellTypedError {
   final String baseName;
   final VariableTypeInfo? writerType;
   final VariableTypeInfo? readerType;
   final String? reason;
 
-  NonComplementaryError(this.baseName, this.writerType, this.readerType, [this.reason]);
+  NonDualError(this.baseName, this.writerType, this.readerType, [this.reason]);
 
   @override
   String get message {
     final reasonStr = reason != null ? ': $reason' : '';
-    return 'Variable pair ($baseName, $baseName?) not complementary$reasonStr: writer=$writerType, reader=$readerType';
+    return 'Variable pair ($baseName, $baseName?) not dual$reasonStr: writer=$writerType, reader=$readerType';
   }
 
   @override
@@ -207,9 +207,9 @@ WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA d
     }
   }
 
-  // Step 2: Check variable pair complementarity
-  final complementErrors = _checkComplementarity(variableTypes);
-  errors.addAll(complementErrors);
+  // Step 2: Check variable pair duality
+  final dualityErrors = _checkDuality(variableTypes);
+  errors.addAll(dualityErrors);
 
   return WellTypedResult(
     isWellTyped: errors.isEmpty,
@@ -258,7 +258,7 @@ PathCheckResult checkPathAgainstAutomaton(
         // The structural mode at position |y| is nextStep.mode (the mode at
         // the first position beyond where the type path can follow)
         final structuralModeAtWildcard = nextStep.mode;
-        final expectedMode = state.isComplement ? Mode.consume : Mode.produce;
+        final expectedMode = state.isDual ? Mode.consume : Mode.produce;
         
         if (structuralModeAtWildcard == expectedMode) {
           // Mode matches - wildcard accepts entire subterm, path is consistent.
@@ -387,11 +387,11 @@ String _variableKey(PathStep leaf) {
   return leaf.symbol;
 }
 
-/// Check complementarity of variable pairs
-/// Per spec v0.4: uses DFAState.baseName and isComplement
-List<NonComplementaryError> _checkComplementarity(
+/// Check duality of variable pairs
+/// Per spec v0.4: uses DFAState.baseName and isDual
+List<NonDualError> _checkDuality(
     Map<String, VariableTypeInfo> variableTypes) {
-  final errors = <NonComplementaryError>[];
+  final errors = <NonDualError>[];
 
   // Group by base name (X and X? share base "X")
   final baseNames = <String, Map<String, VariableTypeInfo>>{};
@@ -422,12 +422,12 @@ List<NonComplementaryError> _checkComplementarity(
 
       // Check modes
       if (writerInfo.mode != Mode.produce) {
-        errors.add(NonComplementaryError(baseName, writerInfo, readerInfo,
+        errors.add(NonDualError(baseName, writerInfo, readerInfo,
             'Writer must have produce mode'));
         continue;
       }
       if (readerInfo.mode != Mode.consume) {
-        errors.add(NonComplementaryError(baseName, writerInfo, readerInfo,
+        errors.add(NonDualError(baseName, writerInfo, readerInfo,
             'Reader must have consume mode'));
         continue;
       }
@@ -437,31 +437,31 @@ List<NonComplementaryError> _checkComplementarity(
       final readerIsWildcard = readerInfo.typeState.baseName == '_';
 
       if (writerIsWildcard || readerIsWildcard) {
-        // Wildcards complement anything
-        if (writerIsWildcard && writerInfo.typeState.isComplement) {
-          errors.add(NonComplementaryError(baseName, writerInfo, readerInfo,
-              'Writer wildcard must be _ (non-complement), not _?'));
+        // Wildcards are dual to anything
+        if (writerIsWildcard && writerInfo.typeState.isDual) {
+          errors.add(NonDualError(baseName, writerInfo, readerInfo,
+              'Writer wildcard must be _ (non-dual), not _?'));
           continue;
         }
-        if (readerIsWildcard && !readerInfo.typeState.isComplement) {
-          errors.add(NonComplementaryError(baseName, writerInfo, readerInfo,
-              'Reader wildcard must be _? (complement), not _'));
+        if (readerIsWildcard && !readerInfo.typeState.isDual) {
+          errors.add(NonDualError(baseName, writerInfo, readerInfo,
+              'Reader wildcard must be _? (dual), not _'));
           continue;
         }
         // Wildcards are OK - no error
         continue;
       }
 
-      // Check states are complements (same baseName, opposite isComplement)
+      // Check states are duals (same baseName, opposite isDual)
       if (writerInfo.typeState.baseName != readerInfo.typeState.baseName) {
-        errors.add(NonComplementaryError(baseName, writerInfo, readerInfo,
+        errors.add(NonDualError(baseName, writerInfo, readerInfo,
             'Types must have same base: ${writerInfo.typeState.name} vs ${readerInfo.typeState.name}'));
         continue;
       }
 
-      if (writerInfo.typeState.isComplement == readerInfo.typeState.isComplement) {
-        errors.add(NonComplementaryError(baseName, writerInfo, readerInfo,
-            'One must be complement, other not: ${writerInfo.typeState.name} vs ${readerInfo.typeState.name}'));
+      if (writerInfo.typeState.isDual == readerInfo.typeState.isDual) {
+        errors.add(NonDualError(baseName, writerInfo, readerInfo,
+            'One must be dual, other not: ${writerInfo.typeState.name} vs ${readerInfo.typeState.name}'));
       }
     }
   }

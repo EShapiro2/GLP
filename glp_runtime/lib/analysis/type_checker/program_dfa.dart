@@ -16,23 +16,23 @@ import 'mode.dart';
 /// - Procedure states: `merge/3` (no complement)
 class DFAState {
   final String baseName;
-  final bool isComplement;
+  final bool isDual;
   final bool isFinal;
   final bool isProcedure;  // Fix 3.1: distinguish procedure states
 
   DFAState(this.baseName, {
-    required this.isComplement,
+    required this.isDual,
     required this.isFinal,
     this.isProcedure = false,
   });
 
-  /// Returns the full name: baseName? if complement, else baseName
-  String get name => isComplement ? '$baseName?' : baseName;
+  /// Returns the full name: baseName? if dual, else baseName
+  String get name => isDual ? '$baseName?' : baseName;
 
-  /// Returns the complement state
-  DFAState get complement =>
+  /// Returns the dual state
+  DFAState get dual =>
       DFAState(baseName,
-        isComplement: !isComplement,
+        isDual: !isDual,
         isFinal: isFinal,
         isProcedure: isProcedure);
 
@@ -40,10 +40,10 @@ class DFAState {
   bool get isWildcard => baseName == '_';
 
   /// True for `_` (produced wildcard, non-complement)
-  bool get isProducedWildcard => baseName == '_' && !isComplement;
+  bool get isProducedWildcard => baseName == '_' && !isDual;
 
   /// True for `_?` (consumed wildcard, complement)
-  bool get isConsumedWildcard => baseName == '_' && isComplement;
+  bool get isConsumedWildcard => baseName == '_' && isDual;
 
   /// True for `Integer` type state (either complement or not)
   bool get isIntegerType => baseName == 'Integer';
@@ -80,10 +80,10 @@ class DFAState {
   bool operator ==(Object other) =>
       other is DFAState &&
       other.baseName == baseName &&
-      other.isComplement == isComplement;
+      other.isDual == isDual;
 
   @override
-  int get hashCode => Object.hash(baseName, isComplement);
+  int get hashCode => Object.hash(baseName, isDual);
 }
 
 /// A transition label in the program DFA.
@@ -112,8 +112,8 @@ class TransitionLabel {
     return TransitionLabel._(value.toString(), 0, 0, null);
   }
 
-  /// Returns a complemented label with flipped mode
-  TransitionLabel get complement =>
+  /// Returns a dual label with flipped mode
+  TransitionLabel get dual =>
       TransitionLabel._(symbol, arity, argIndex, mode?.flip);
 
   @override
@@ -155,16 +155,16 @@ class Automaton {
   /// Get all transitions (for iteration by coverage checker).
   Map<(DFAState, TransitionLabel), DFAState> get transitions => _transitions;
 
-  /// Create complement automaton by flipping all states and modes.
-  Automaton get complement {
+  /// Create dual automaton by flipping all states and modes.
+  Automaton get dual {
     final newTransitions = <(DFAState, TransitionLabel), DFAState>{};
     for (final entry in _transitions.entries) {
       final (fromState, label) = entry.key;
       final toState = entry.value;
-      newTransitions[(fromState.complement, label.complement)] =
-          toState.complement;
+      newTransitions[(fromState.dual, label.dual)] =
+          toState.dual;
     }
-    return Automaton(startState.complement, newTransitions, 
+    return Automaton(startState.dual, newTransitions,
         acceptedPrimitives: acceptedPrimitives);
   }
 }
@@ -212,17 +212,17 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   final automata = <String, Automaton>{};
 
   // Create system states (complement pairs)
-  states['_'] = DFAState('_', isComplement: false, isFinal: true);
-  states['_?'] = DFAState('_', isComplement: true, isFinal: true);
-  states['Integer'] = DFAState('Integer', isComplement: false, isFinal: false);
-  states['Integer?'] = DFAState('Integer', isComplement: true, isFinal: false);
-  states['Real'] = DFAState('Real', isComplement: false, isFinal: false);
-  states['Real?'] = DFAState('Real', isComplement: true, isFinal: false);
-  states['Number'] = DFAState('Number', isComplement: false, isFinal: false);
-  states['Number?'] = DFAState('Number', isComplement: true, isFinal: false);
-  states['String'] = DFAState('String', isComplement: false, isFinal: false);
-  states['String?'] = DFAState('String', isComplement: true, isFinal: false);
-  states['_FINAL_'] = DFAState('_FINAL_', isComplement: false, isFinal: true);
+  states['_'] = DFAState('_', isDual: false, isFinal: true);
+  states['_?'] = DFAState('_', isDual: true, isFinal: true);
+  states['Integer'] = DFAState('Integer', isDual: false, isFinal: false);
+  states['Integer?'] = DFAState('Integer', isDual: true, isFinal: false);
+  states['Real'] = DFAState('Real', isDual: false, isFinal: false);
+  states['Real?'] = DFAState('Real', isDual: true, isFinal: false);
+  states['Number'] = DFAState('Number', isDual: false, isFinal: false);
+  states['Number?'] = DFAState('Number', isDual: true, isFinal: false);
+  states['String'] = DFAState('String', isDual: false, isFinal: false);
+  states['String?'] = DFAState('String', isDual: true, isFinal: false);
+  states['_FINAL_'] = DFAState('_FINAL_', isDual: false, isFinal: true);
 
   // Create automata for system types
   automata['_'] = _finalAutomaton(states['_']!);
@@ -240,9 +240,9 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   // (Automata may reference other types, so all states must exist before building automata)
   for (final entry in env.types.entries) {
     final typeName = entry.key;
-    states[typeName] = DFAState(typeName, isComplement: false, isFinal: false);
+    states[typeName] = DFAState(typeName, isDual: false, isFinal: false);
     states['$typeName?'] =
-        DFAState(typeName, isComplement: true, isFinal: false);
+        DFAState(typeName, isDual: true, isFinal: false);
   }
 
   // THEN build automata for all defined types
@@ -252,17 +252,17 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
 
     // Build producer automaton (T)
     automata[typeName] =
-        _buildTypeAutomaton(typeDef, states, isComplement: false);
+        _buildTypeAutomaton(typeDef, states, isDual: false);
 
     // Build consumer automaton (T?)
     automata['$typeName?'] =
-        _buildTypeAutomaton(typeDef, states, isComplement: true);
+        _buildTypeAutomaton(typeDef, states, isDual: true);
   }
 
   // Create procedure states (no complement)
   for (final procKey in env.procedures.keys) {
     states[procKey] = DFAState(procKey,
-      isComplement: false,
+      isDual: false,
       isFinal: false,
       isProcedure: true);  // Fix 3.1: mark as procedure
   }
@@ -294,10 +294,10 @@ Automaton _primitiveTypeAutomaton(DFAState state, DFAState finalState) {
 Automaton _buildTypeAutomaton(
   TypeDef typeDef,
   Map<String, DFAState> states, {
-  required bool isComplement,
+  required bool isDual,
 }) {
   final typeName = typeDef.name;
-  final startStateName = isComplement ? '$typeName?' : typeName;
+  final startStateName = isDual ? '$typeName?' : typeName;
   final startState = states[startStateName]!;
 
   final transitions = <(DFAState, TransitionLabel), DFAState>{};
@@ -309,7 +309,7 @@ Automaton _buildTypeAutomaton(
       acceptedPrimitives.add(alt.name);
     }
     _addTypeTransitions(
-        startState, alt, Mode.produce, states, transitions, isComplement);
+        startState, alt, Mode.produce, states, transitions, isDual);
   }
 
   return Automaton(startState, transitions, acceptedPrimitives: acceptedPrimitives);
@@ -324,7 +324,7 @@ void _addTypeTransitions(
   Mode contextMode,
   Map<String, DFAState> states,
   Map<(DFAState, TransitionLabel), DFAState> transitions,
-  bool isComplement,
+  bool isDual,
 ) {
   if (alt is ConstantAlt) {
     final label = TransitionLabel.constant(alt.value);
@@ -337,7 +337,7 @@ void _addTypeTransitions(
     var tailMode = _modeOf(alt.tail, contextMode);
 
     // Apply complement to modes if building complement automaton
-    if (isComplement) {
+    if (isDual) {
       headMode = headMode.flip;
       tailMode = tailMode.flip;
     }
@@ -346,25 +346,25 @@ void _addTypeTransitions(
     final tailLabel = TransitionLabel.functor('[|]', 2, 2, mode: tailMode);
 
     transitions[(fromState, headLabel)] =
-        _resolveTypeExpr(alt.head, states, isComplement);
+        _resolveTypeExpr(alt.head, states, isDual);
     transitions[(fromState, tailLabel)] =
-        _resolveTypeExpr(alt.tail, states, isComplement);
+        _resolveTypeExpr(alt.tail, states, isDual);
   } else if (alt is StructAlt) {
     for (var i = 0; i < alt.args.length; i++) {
       final argType = alt.args[i];
       var argMode = _modeOf(argType, contextMode);
-      if (isComplement) {
+      if (isDual) {
         argMode = argMode.flip;
       }
       final label =
           TransitionLabel.functor(alt.functor, alt.args.length, i + 1, mode: argMode);
       transitions[(fromState, label)] =
-          _resolveTypeExpr(argType, states, isComplement);
+          _resolveTypeExpr(argType, states, isDual);
     }
   } else if (alt is DiffListAlt) {
     var contentMode = _modeOf(alt.content, contextMode);
     var holeMode = _modeOf(alt.hole, contextMode);
-    if (isComplement) {
+    if (isDual) {
       contentMode = contentMode.flip;
       holeMode = holeMode.flip;
     }
@@ -373,9 +373,9 @@ void _addTypeTransitions(
     final holeLabel = TransitionLabel.functor('\\', 2, 2, mode: holeMode);
 
     transitions[(fromState, contentLabel)] =
-        _resolveTypeExpr(alt.content, states, isComplement);
+        _resolveTypeExpr(alt.content, states, isDual);
     transitions[(fromState, holeLabel)] =
-        _resolveTypeExpr(alt.hole, states, isComplement);
+        _resolveTypeExpr(alt.hole, states, isDual);
   }
   // PrimitiveModeAlt is handled in resolveTypeExpr - it's a leaf, not a constructor
 }
@@ -385,18 +385,18 @@ void _addTypeTransitions(
 /// Implements spec algorithm: resolveTypeExpr
 /// Uses XOR logic for nested complements.
 DFAState _resolveTypeExpr(
-    TypeExpr typeExpr, Map<String, DFAState> states, bool isComplement) {
+    TypeExpr typeExpr, Map<String, DFAState> states, bool isDual) {
   if (typeExpr is PrimitiveModeAlt) {
     // Determine base state: isInput means _? base
     final baseIsComplement = typeExpr.isInput;
     // XOR with automaton complement flag
-    final finalIsComplement = baseIsComplement != isComplement; // XOR
+    final finalIsComplement = baseIsComplement != isDual; // XOR
     return finalIsComplement ? states['_?']! : states['_']!;
   } else if (typeExpr is TypeRef) {
     // Determine base state
     final baseIsComplement = typeExpr.isInput;
     // XOR with automaton complement flag
-    final finalIsComplement = baseIsComplement != isComplement; // XOR
+    final finalIsComplement = baseIsComplement != isDual; // XOR
 
     if (typeExpr.name == 'Integer') {
       return finalIsComplement ? states['Integer?']! : states['Integer']!;
@@ -554,7 +554,7 @@ LeafConsistencyResult checkLeafConsistency(
   ProgramDFA dfa,
 ) {
   // Case 1: Variable leaf — check path mode matches variable's implicit mode
-  // By Mode Correspondence Property, we don't need to inspect state.isComplement
+  // By Mode Correspondence Property, we don't need to inspect state.isDual
   if (leaf.isVariable) {
     // Reader X? must be at consume position (mode ↓)
     // Writer X must be at produce position (mode ↑)

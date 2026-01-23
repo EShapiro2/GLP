@@ -230,8 +230,8 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
     return defaultModes;
   }
 
-  // Check if expected type is a complement (isInput=true)
-  final isComplement = expectedType is TypeRef && expectedType.isInput;
+  // Check if expected type is a dual (isInput=true)
+  final isDual = expectedType is TypeRef && expectedType.isInput;
 
   // Find matching structure alternative in type definition
   for (final alt in typeDef.alternatives) {
@@ -241,8 +241,8 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
       for (final argType in alt.args) {
         final embeddedMode = _getEmbeddedMode(argType);
         final combinedMode = combineMode(parentMode, embeddedMode);
-        // For complement types, flip the subterm type for DFA leaf checking
-        final subtermType = isComplement ? _complementType(argType) : argType;
+        // For dual types, flip the subterm type for DFA leaf checking
+        final subtermType = isDual ? _dualType(argType) : argType;
         result.add((combinedMode, subtermType));
       }
       return result;
@@ -252,8 +252,8 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
     if (alt is DiffListAlt && functor == r'\' && arity == 2) {
       final contentMode = _getEmbeddedMode(alt.content);
       final holeMode = _getEmbeddedMode(alt.hole);
-      final contentType = isComplement ? _complementType(alt.content) : alt.content;
-      final holeType = isComplement ? _complementType(alt.hole) : alt.hole;
+      final contentType = isDual ? _dualType(alt.content) : alt.content;
+      final holeType = isDual ? _dualType(alt.hole) : alt.hole;
       return [
         (combineMode(parentMode, contentMode), contentType),
         (combineMode(parentMode, holeMode), holeType),
@@ -293,8 +293,8 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
     return defaultResult;
   }
 
-  // Check if expected type is a complement (isInput=true)
-  final isComplement = expectedType is TypeRef && expectedType.isInput;
+  // Check if expected type is a dual (isInput=true)
+  final isDual = expectedType is TypeRef && expectedType.isInput;
 
   // Find ListConsAlt in type definition
   for (final alt in typeDef.alternatives) {
@@ -304,9 +304,9 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
       final headMode = combineMode(parentMode, headEmbeddedMode);
       final tailMode = combineMode(parentMode, tailEmbeddedMode);
 
-      // For complement types, flip the subterm types for DFA leaf checking
-      final headType = isComplement ? _complementType(alt.head) : alt.head;
-      final tailType = isComplement ? _complementType(alt.tail) : alt.tail;
+      // For dual types, flip the subterm types for DFA leaf checking
+      final headType = isDual ? _dualType(alt.head) : alt.head;
+      final tailType = isDual ? _dualType(alt.tail) : alt.tail;
 
       return (
         (headMode, headType),
@@ -336,14 +336,14 @@ Mode _getEmbeddedMode(TypeExpr expr) {
   return Mode.produce;
 }
 
-/// Get the complement of a type expression.
+/// Get the dual of a type expression.
 ///
 /// Flips the isInput flag for TypeRef and PrimitiveModeAlt.
 /// Returns the expression unchanged for other types.
-TypeExpr _complementType(TypeExpr expr) {
+TypeExpr _dualType(TypeExpr expr) {
   if (expr is TypeRef) {
-    // TypeRef has a complement() method
-    return expr.complement();
+    // TypeRef has a dual() method
+    return expr.dual();
   }
   if (expr is PrimitiveModeAlt) {
     return PrimitiveModeAlt(!expr.isInput, expr.line, expr.column);
