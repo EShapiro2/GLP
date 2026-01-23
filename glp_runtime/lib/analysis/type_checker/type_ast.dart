@@ -53,9 +53,9 @@ class TypeRef extends TypeExpr {
   TypeRef(this.name, int line, int column, {this.isInput = false})
       : super(line, column);
 
-  /// Mode complementation operator (·)?
+  /// Mode dual operator per Definition 5.1
   /// Returns a new TypeRef with inverted mode
-  TypeRef complement() => TypeRef(name, line, column, isInput: !isInput);
+  TypeRef dual() => TypeRef(name, line, column, isInput: !isInput);
 
   @override
   String toString() => isInput ? '$name?' : name;

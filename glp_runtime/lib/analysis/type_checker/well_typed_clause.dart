@@ -116,8 +116,8 @@ class BodyAtomError extends ClauseError {
   String toString() => message;
 }
 
-/// Error: variable pair not complementary across clause
-class ClauseComplementaryError extends ClauseError {
+/// Error: variable pair not dual across clause
+class ClauseDualityError extends ClauseError {
   final String baseName;
   final VariableTypeInfo? writerType;
   final VariableTypeInfo? readerType;
@@ -125,7 +125,7 @@ class ClauseComplementaryError extends ClauseError {
   final String readerLocation;
   final String? reason;
 
-  ClauseComplementaryError(
+  ClauseDualityError(
     this.baseName,
     this.writerType,
     this.readerType,
@@ -137,7 +137,7 @@ class ClauseComplementaryError extends ClauseError {
   @override
   String get message {
     final reasonStr = reason != null ? ': $reason' : '';
-    return 'Variable pair ($baseName, $baseName?) not complementary across clause$reasonStr: '
+    return 'Variable pair ($baseName, $baseName?) not dual across clause$reasonStr: '
         'writer at $writerLocation=$writerType, reader at $readerLocation=$readerType';
   }
 
@@ -292,12 +292,12 @@ ClauseCheckResult checkClause(
     }
   }
 
-  // Step 3: Check variable pair complementarity across clause
-  final complementErrors = _checkClauseComplementarity(
+  // Step 3: Check variable pair duality across clause
+  final dualityErrors = _checkClauseDuality(
     allVariableTypes,
     variableLocations,
   );
-  errors.addAll(complementErrors);
+  errors.addAll(dualityErrors);
 
   return ClauseCheckResult(
     isWellTyped: errors.isEmpty,
@@ -574,9 +574,9 @@ WellTypedResult _checkModedTermPerArg(
     }
   }
 
-  // Check complementarity within this term
-  final complementErrors = _checkTermComplementarity(variableTypes);
-  errors.addAll(complementErrors);
+  // Check duality within this term
+  final dualityErrors = _checkTermDuality(variableTypes);
+  errors.addAll(dualityErrors);
 
   return WellTypedResult(
     isWellTyped: errors.isEmpty,
@@ -585,10 +585,10 @@ WellTypedResult _checkModedTermPerArg(
   );
 }
 
-/// Check complementarity within a term (same logic as well_typed_term.dart)
-List<NonComplementaryError> _checkTermComplementarity(
+/// Check duality within a term (same logic as well_typed_term.dart)
+List<NonDualError> _checkTermDuality(
     Map<String, VariableTypeInfo> variableTypes) {
-  final errors = <NonComplementaryError>[];
+  final errors = <NonDualError>[];
 
   // Group by base name (X and X? share base "X")
   final baseNames = <String, Map<String, VariableTypeInfo>>{};
@@ -617,8 +617,8 @@ List<NonComplementaryError> _checkTermComplementarity(
       final writerInfo = variants[writerKey]!;
       final readerInfo = variants[readerKey]!;
 
-      if (!_areComplementaryTypes(writerInfo, readerInfo)) {
-        errors.add(NonComplementaryError(baseName, writerInfo, readerInfo));
+      if (!_areDualTypes(writerInfo, readerInfo)) {
+        errors.add(NonDualError(baseName, writerInfo, readerInfo));
       }
     }
   }
@@ -634,15 +634,15 @@ String _normalizeLocation(String location) {
 }
 
 /// Check variable pair type consistency across the entire clause
-/// 
+///
 /// Per Definition 4.10 (spec v0.9):
 /// - If both occur in head, or both in body: require DUAL types
 /// - If one in head and one in body: require SAME type
-List<ClauseComplementaryError> _checkClauseComplementarity(
+List<ClauseDualityError> _checkClauseDuality(
   Map<String, VariableTypeInfo> variableTypes,
   Map<String, String> variableLocations,
 ) {
-  final errors = <ClauseComplementaryError>[];
+  final errors = <ClauseDualityError>[];
 
   // Group by base name (X and X? share base "X")
   final baseNames = <String, Map<String, VariableTypeInfo>>{};
@@ -686,9 +686,9 @@ List<ClauseComplementaryError> _checkClauseComplementarity(
       // Apply location-dependent rule (spec v0.9, Definition 4.10 condition 3)
       if (writerNormLoc == readerNormLoc) {
         // Both in head OR both in body: require DUAL types
-        final (isCompat, reason) = _areComplementaryTypesWithReason(writerInfo, readerInfo);
+        final (isCompat, reason) = _areDualTypesWithReason(writerInfo, readerInfo);
         if (!isCompat) {
-          errors.add(ClauseComplementaryError(
+          errors.add(ClauseDualityError(
             baseName,
             writerInfo,
             readerInfo,
@@ -701,7 +701,7 @@ List<ClauseComplementaryError> _checkClauseComplementarity(
         // One in head, one in body: require SAME type
         final (isSame, reason) = _areSameTypeWithReason(writerInfo, readerInfo);
         if (!isSame) {
-          errors.add(ClauseComplementaryError(
+          errors.add(ClauseDualityError(
             baseName,
             writerInfo,
             readerInfo,
@@ -717,10 +717,10 @@ List<ClauseComplementaryError> _checkClauseComplementarity(
   return errors;
 }
 
-/// Check if writer and reader types are complementary
-/// Per spec v0.6: uses DFAState.baseName and isComplement
-bool _areComplementaryTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
-  final (isCompat, _) = _areComplementaryTypesWithReason(writerInfo, readerInfo);
+/// Check if writer and reader types are dual
+/// Per spec v0.6: uses DFAState.baseName and isDual
+bool _areDualTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
+  final (isCompat, _) = _areDualTypesWithReason(writerInfo, readerInfo);
   return isCompat;
 }
 
@@ -736,9 +736,9 @@ bool _areComplementaryTypes(VariableTypeInfo writerInfo, VariableTypeInfo reader
   return (true, null);
 }
 
-/// Check complementarity with reason for failure
-/// Per spec: wildcards are universal - _? complements any output, _ complements any input
-(bool, String?) _areComplementaryTypesWithReason(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
+/// Check duality with reason for failure
+/// Per spec: wildcards are universal - _? is dual to any output, _ is dual to any input
+(bool, String?) _areDualTypesWithReason(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
   // Mode check: writer must produce, reader must consume
   if (writerInfo.mode != Mode.produce) {
     return (false, 'Writer must have produce mode');
@@ -748,32 +748,32 @@ bool _areComplementaryTypes(VariableTypeInfo writerInfo, VariableTypeInfo reader
   }
 
   // Special case: wildcards are universal
-  // _? (consumed wildcard) is complementary to ANY output type
-  // _ (produced wildcard) is complementary to ANY input type
+  // _? (consumed wildcard) is dual to ANY output type
+  // _ (produced wildcard) is dual to ANY input type
   final writerIsWildcard = writerInfo.typeState.baseName == '_';
   final readerIsWildcard = readerInfo.typeState.baseName == '_';
 
   if (writerIsWildcard || readerIsWildcard) {
-    // Wildcards complement anything - just verify the wildcard has correct mode
-    // Writer at _ (non-complement, produce) - OK
-    // Reader at _? (complement, consume) - OK
-    if (writerIsWildcard && writerInfo.typeState.isComplement) {
-      return (false, 'Writer wildcard must be _ (non-complement), not _?');
+    // Wildcards are dual to anything - just verify the wildcard has correct mode
+    // Writer at _ (non-dual, produce) - OK
+    // Reader at _? (dual, consume) - OK
+    if (writerIsWildcard && writerInfo.typeState.isDual) {
+      return (false, 'Writer wildcard must be _ (non-dual), not _?');
     }
-    if (readerIsWildcard && !readerInfo.typeState.isComplement) {
-      return (false, 'Reader wildcard must be _? (complement), not _');
+    if (readerIsWildcard && !readerInfo.typeState.isDual) {
+      return (false, 'Reader wildcard must be _? (dual), not _');
     }
     return (true, null);
   }
 
-  // Non-wildcard case: states must be complements (same baseName, opposite isComplement)
+  // Non-wildcard case: states must be duals (same baseName, opposite isDual)
   if (writerInfo.typeState.baseName != readerInfo.typeState.baseName) {
     return (false, 'Types must have same base: ${writerInfo.typeState.name} vs ${readerInfo.typeState.name}');
   }
 
-  // One must be complement, the other not
-  if (writerInfo.typeState.isComplement == readerInfo.typeState.isComplement) {
-    return (false, 'One must be complement, other not: ${writerInfo.typeState.name} vs ${readerInfo.typeState.name}');
+  // One must be dual, the other not
+  if (writerInfo.typeState.isDual == readerInfo.typeState.isDual) {
+    return (false, 'One must be dual, other not: ${writerInfo.typeState.name} vs ${readerInfo.typeState.name}');
   }
 
   return (true, null);
