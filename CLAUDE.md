@@ -125,6 +125,14 @@ When receiving instructions from Claude Web (via user copy-paste):
 - **DO NOT EXCEED SCOPE** - Execute only what is specified in the instructions, nothing more
 - Only proceed with execution after review is complete and any concerns are addressed
 
+**Note on instruction format (2026-01):** Both Claude Web and Claude Code now use Opus. Instructions do not need to be verbatim code - general but clear instructions are acceptable. Claude Code can interpret design intent and implement appropriately. The key requirements are:
+- Clear specification of WHAT needs to be done
+- Reference to relevant spec/paper sections
+- Success criteria (what tests should pass)
+- File paths when relevant
+
+Verbatim code is still welcome when precision is critical, but not mandatory.
+
 ### Accuracy and Honesty
 - **NEVER BS, GUESS, SPECULATE, OR HALLUCINATE**
 - **IF UNSURE, SAY SO** - "I'm not sure, need to check X"
