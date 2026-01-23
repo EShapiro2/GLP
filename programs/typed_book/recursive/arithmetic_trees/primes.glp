@@ -32,4 +32,4 @@ reduce(sieve([P|Is], [P?|Ps?]), (filter(Is?, P?, Fs), sieve(Fs?, Ps))) :- number
 reduce(filter([], _, []), true).
 reduce(filter([X|Xs], P, Ys?), filter(Xs?, P?, Ys)) :- number(X?), number(P?), X? mod P? =:= 0 | true.
 reduce(filter([X|Xs], P, [X?|Ys?]), filter(Xs?, P?, Ys)) :- number(X?), number(P?), X? mod P? =\= 0 | true.
-reduce((X? := T), true) :- X := T? | true.
+reduce((X? := T), true) :- X := T?.

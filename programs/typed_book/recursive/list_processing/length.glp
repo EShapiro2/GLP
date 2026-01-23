@@ -19,4 +19,4 @@ length_acc([_|Xs], Acc, N?) :-
 reduce(length(Xs, N?), length_acc(Xs?, 0, N)).
 reduce(length_acc([], Acc, Acc?), true).
 reduce(length_acc([_|Xs], Acc, N?), (Acc1 := Acc? + 1, length_acc(Xs?, Acc1?, N))).
-reduce((X? := T), true) :- X := T? | true.
+reduce((X? := T), true) :- X := T?.

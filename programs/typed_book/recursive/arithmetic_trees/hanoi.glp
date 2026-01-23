@@ -46,4 +46,4 @@ reduce(hanoi_two(N, From, To, Via, M1?, M2?),
 reduce(other(a, b, c), true). reduce(other(a, c, b), true).
 reduce(other(b, a, c), true). reduce(other(b, c, a), true).
 reduce(other(c, a, b), true). reduce(other(c, b, a), true).
-reduce((X? := T), true) :- X := T? | true.
+reduce((X? := T), true) :- X := T?.

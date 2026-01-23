@@ -9,14 +9,14 @@ procedure lesseq(Nat?, Nat?).
 procedure natural_number(Nat?).
 procedure reduce(_?, _).
 
-lesseq(0, X) :- natural_number(X?) | true.
+lesseq(0, X) :- natural_number(X?).
 lesseq(s(X), s(Y)) :- lesseq(X?, Y?).
 
 natural_number(0).
 natural_number(s(X)) :- natural_number(X?).
 
 %% Metainterpreter support
-reduce(lesseq(0, X), true) :- natural_number(X?) | true.
+reduce(lesseq(0, X), natural_number(X?)).
 reduce(lesseq(s(X), s(Y)), lesseq(X?, Y?)).
 reduce(natural_number(0), true).
 reduce(natural_number(s(X)), natural_number(X?)).
