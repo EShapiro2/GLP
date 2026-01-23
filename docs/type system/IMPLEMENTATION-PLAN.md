@@ -13,10 +13,11 @@ The paper underwent major mathematical simplification. Specifications have been 
 | Phase | Description | Status | Notes |
 |-------|-------------|--------|-------|
 | 1 | Terminology: complement → dual | ✅ COMPLETE | 218/302 tests, no regression |
-| 2 | Clean up moded_head.dart | READY | Remove dead code, update refs |
-| 3 | Review well_typed_term.dart | NOT STARTED | Pending Phase 2 |
-| 4 | Review well_typed_clause.dart | NOT STARTED | Pending Phase 2 |
-| 5 | Full test suite validation | NOT STARTED | Fix regressions |
+| 2 | Clean up moded_head.dart | ✅ COMPLETE | Dead code removed, refs updated |
+| 3 | Unit tests for moded_head.dart | ✅ COMPLETE | 10/10 tests passing |
+| 4 | Review well_typed_term.dart | READY | Update refs, add tests |
+| 5 | Review well_typed_clause.dart | NOT STARTED | Pending Phase 4 |
+| 6 | Full test suite validation | NOT STARTED | Fix regressions |
 
 ---
 
@@ -95,23 +96,137 @@ In ~/GLP/glp_runtime/lib/analysis/type_checker/moded_head.dart:
 
 ---
 
-## Phase 3: Review well_typed_term.dart
+## Phase 3: Unit Tests for moded_head.dart
 
-**Status**: Pending Phase 2 completion
+**Status**: READY  
+**Spec**: docs/type system/moded-head.md  
+**Paper**: Definition 5.5
 
-Will analyze against Definition `well-typed-moded-term` in paper.
+### Gap Analysis
+
+The directory `glp_runtime/test/analysis/type_checker/` is **empty**. Per discipline §2.4, unit tests must exist for all implementations.
+
+### Required Tests
+
+Create `glp_runtime/test/analysis/type_checker/moded_head_test.dart` with:
+
+1. **modedHead() basic construction**
+   - Positive: merge head with correct type → correct moded head
+   - Positive: monitor head with interactive type → correct mode flips
+   - Negative: arity mismatch → ArityMismatchError
+
+2. **producedTerm() for body atoms**
+   - Positive: body atom has mode ↑ throughout (no variable flip)
+   - Negative: arity mismatch → ArityMismatchError
+
+3. **Variable replacement (Step 2)**
+   - Positive: writer at ↓ position → replaced with reader
+   - Positive: reader at ↑ position → replaced with writer
+   - Positive: reader at ↓ position → unchanged
+   - Positive: writer at ↑ position → unchanged
+
+4. **Nested mode propagation**
+   - Positive: Stream? element has ↓ mode
+   - Positive: Stream element has ↑ mode
+   - Positive: Interactive type flips correctly (e.g., CounterCall)
+
+5. **Anonymous variables**
+   - Positive: each _ generates unique fresh writer name
+   - Positive: _ at ↓ position becomes fresh reader in moded head
+
+### Task for Claude Code
+
+```
+Create file: glp_runtime/test/analysis/type_checker/moded_head_test.dart
+
+Spec: docs/type system/moded-head.md
+
+Test the modedHead() and producedTerm() functions from
+lib/analysis/type_checker/moded_head.dart
+
+Cover:
+1. Basic moded head construction for merge procedure
+2. Body atom construction (producedTerm)
+3. Variable replacement based on structural mode
+4. Nested mode propagation through type structure
+5. Anonymous variable uniqueness
+
+Use examples from the spec and paper Appendix A.
+
+Run: cd glp_runtime && dart test test/analysis/type_checker/
+```
 
 ---
 
-## Phase 4: Review well_typed_clause.dart
+## Phase 4: Review well_typed_term.dart
 
-**Status**: Pending Phase 2 completion
+**Status**: READY  
+**Spec**: docs/type system/well-typed-term.md  
+**Paper**: Definition 5.4
+
+### Analysis
+
+The implementation correctly implements Definition 5.4:
+1. Checks each term path against automaton for consistency
+2. Records variable types during path traversal
+3. Verifies variable pairs have dual types
+
+### Changes Needed
+
+1. **Update paper reference** in file header:
+   - Change: "Definition 4.5 (Consistent Paths), Definition 4.7 (Well-Typed Moded Term)"
+   - To: "Definition 5.4 (Well-Typed Moded Term)"
+
+2. **Add unit tests** per discipline §2.4
+
+### Task for Claude Code (Part A: Update Reference)
+
+```
+In glp_runtime/lib/analysis/type_checker/well_typed_term.dart:
+
+Change the file header comment from:
+// Paper Reference: Definition 4.5 (Consistent Paths), Definition 4.7 (Well-Typed Moded Term)
+
+To:
+// Paper Reference: Definition 5.4 (Well-Typed Moded Term)
+
+Run: cd glp_runtime && dart analyze lib/analysis/type_checker/well_typed_term.dart
+
+Commit:
+git add -A
+git commit -m "docs(well_typed_term): update paper reference to Definition 5.4"
+git push
+```
+
+### Task for Claude Code (Part B: Add Unit Tests)
+
+Create file: glp_runtime/test/analysis/type_checker/well_typed_term_test.dart
+
+Spec: docs/type system/well-typed-term.md
+
+Tests should cover:
+1. Simple well-typed term (constant at correct type position)
+2. Variable at wildcard position (should be well-typed)
+3. Variable pair with dual types (should be well-typed)
+4. Variable pair with non-dual types (should fail)
+5. Path with no matching transition (should fail)
+6. Mode mismatch at variable position (should fail)
+
+Run: cd glp_runtime && dart test test/analysis/type_checker/
+
+Commit when tests pass.
+
+---
+
+## Phase 5: Review well_typed_clause.dart
+
+**Status**: Pending Phase 3 completion
 
 Will analyze against Definition `well-typed-clause` in paper.
 
 ---
 
-## Phase 5: Full Test Suite Validation
+## Phase 6: Full Test Suite Validation
 
 **Baseline**: 218/302 tests passing (72.2%)
 
