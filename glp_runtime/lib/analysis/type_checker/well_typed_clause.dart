@@ -2,7 +2,7 @@
 //
 // Well-typed clause checking for GLP type system.
 // Specification: docs/type system/well-typed-clause.md v0.9
-// Paper Reference: Definition 4.10 (Well-Typed Clause)
+// Paper Reference: Definition 5.7 (Well-Typed Clause)
 //
 // A clause H :- G | B is well-typed if:
 // 1. The moded head H is well-typed by the procedure's type
