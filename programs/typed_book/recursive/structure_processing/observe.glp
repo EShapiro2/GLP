@@ -2,13 +2,9 @@
 %% Observes bidirectional communication between two endpoints
 %% Generalizes stream observer to arbitrary term structures
 
-%% Procedure type declarations
-procedure observe(_?, _, _).
-procedure observe_list(Stream?, Stream, Stream).
-procedure test_observe(_, _).
-
 %% observe(A, B, Log) - observe communication between A and B
 
+procedure observe(_?, _, _).
 %% A→B: value available at A (position 1)
 observe(A, A?, A?) :- atom(A?) | true.
 observe(A, A?, A?) :- number(A?) | true.
@@ -27,12 +23,14 @@ observe(A?, B, Log?) :- compound(B?) |
     A =.. ListA?,
     Log =.. Logs?.
 
+procedure observe_list(Stream?, Stream, Stream).
 observe_list([], [], []).
 observe_list([H|T], [I?|Is?], [L?|Ls?]) :-
     observe(H?, I, L),
     observe_list(T?, Is, Ls).
 
 %% Test: bidirectional - Query flows forward, Response flows backward
+procedure test_observe(_, _).
 test_observe(Out?, Log?) :-
     In = request(hello, Response?),
     observe(In?, Out, Log),

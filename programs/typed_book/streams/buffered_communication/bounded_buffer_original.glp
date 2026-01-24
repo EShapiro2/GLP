@@ -10,31 +10,29 @@
 %% Type definitions
 DiffList ::= Stream -- Stream?.
 
-%% Procedure type declarations
-procedure send_unbounded(_?, Stream?, Stream).
-procedure receive_unbounded(_, Stream?, Stream).
-procedure send(_?, Stream?, Stream).
-procedure receive(_, DiffList?, DiffList).
-procedure close(Stream?).
-procedure closed(_?).
-procedure open(Number?, DiffList).
-procedure sq_num_buffered(Number?, Stream?, Number?).
-procedure integers(Number?, Number?, Stream?).
-procedure square(DiffList?, Stream).
-
 %% Unbounded buffer send/receive (standard stream communication)
+procedure send_unbounded(_?, Stream?, Stream).
 send_unbounded(Msg, [Msg?|Tail], Tail?).
+
+procedure receive_unbounded(_, Stream?, Stream).
 receive_unbounded(Msg?, [Msg|Tail], Tail?).
 
 %% Bounded buffer send/receive
 %% Buffer is represented as difference-list: Head--Tail
+procedure send(_?, Stream?, Stream).
 send(Msg, [Msg?|Buf], Buf?).
+
+procedure receive(_, DiffList?, DiffList).
 receive(Msg?, [Msg|Buf]--[_|Tail], Buf?--Tail?).
 
+procedure close(Stream?).
 close([end_of_stream|_]).
+
+procedure closed(_?).
 closed(end_of_stream).
 
 %% Open a buffer of given size
+procedure open(Number?, DiffList).
 open(0, X--X?).
 open(N, [_|Y?]--Z?) :- N? > 0 | N1 := N? - 1, open(N1?, Y--Z).
 
@@ -44,11 +42,13 @@ open(N, [_|Y?]--Z?) :- N? > 0 | N1 := N? - 1, open(N1?, Y--Z).
 %% be shared between multiple processes. This violates the fundamental assumption
 %% that each variable cell has exactly one writer and one reader.
 %% See: CP Collected Papers Ch 18, Section 4.2 on difference-list limitations.
+procedure sq_num_buffered(Number?, Stream?, Number?).
 sq_num_buffered(N, Ss?, Size) :-
     open(Size?, Buf--Tail),
     integers(1, N?, Buf),
     square(Buf?--Tail?, Ss).
 
+procedure integers(Number?, Number?, Stream?).
 integers(I, N, [I?|Buf?]) :-
     I? =< N? |
     J := I? + 1,
@@ -57,6 +57,7 @@ integers(I, N, Buf) :-
     I? > N? |
     close(Buf?).
 
+procedure square(DiffList?, Stream).
 square([I|Buf], [I2?|Ss?]) :-
     number(I?) |
     I2 := I? * I?,

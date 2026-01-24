@@ -10,10 +10,10 @@
 %% Type definitions
 FailList ::= [] ; [_ | FailList].
 
-%% Procedure type declarations
-procedure run(_?, _?, FailList?, FailList).
+%% External procedure declarations (no clauses in this file)
 procedure reduce(_?, _).
 
+procedure run(_?, _?, FailList?, FailList).
 run(_, true, L, L?).                             % halt - close circuit
 run(M, (A, B), L, R?) :-                         % fork - chain
     ground(M?) |

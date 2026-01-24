@@ -6,10 +6,6 @@ NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
 procedure merge_sort(NumList?, NumList).
-procedure split2(Number?, Number?, NumList?, NumList, NumList).
-procedure merge_sorted(NumList?, NumList?, NumList).
-procedure merge_sorted_keep(Number?, NumList?, NumList?, NumList).
-
 merge_sort([], []).
 merge_sort([X], [X?]).
 merge_sort([A,B|Xs], Sorted?) :-
@@ -19,10 +15,12 @@ merge_sort([A,B|Xs], Sorted?) :-
     merge_sorted(SortedLeft?, SortedRight?, Sorted).
 
 %% split2 takes first two elements and rest, produces two halves
+procedure split2(Number?, Number?, NumList?, NumList, NumList).
 split2(A, B, [], [A?], [B?]).
 split2(A, B, [X], [A?,X?], [B?]).
 split2(A, B, [X,Y|Xs], [A?|Left?], [B?|Right?]) :- split2(X?, Y?, Xs?, Left, Right).
 
+procedure merge_sorted(NumList?, NumList?, NumList).
 merge_sorted([], Ys, Ys?).
 merge_sorted(Xs, [], Xs?).
 merge_sorted([X|Xs], [Y|Ys], [X?|Zs?]) :-
@@ -31,4 +29,5 @@ merge_sorted([X|Xs], [Y|Ys], [Y?|Zs?]) :-
     number(X?), number(Y?), X? > Y? | merge_sorted_keep(X?, Xs?, Ys?, Zs).
 
 %% Helper: merge keeping first element of first list
+procedure merge_sorted_keep(Number?, NumList?, NumList?, NumList).
 merge_sorted_keep(H, T, Ys, Zs?) :- merge_sorted([H?|T?], Ys?, Zs).

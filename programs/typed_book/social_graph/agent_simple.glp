@@ -10,15 +10,15 @@ FriendEntry ::= (_, _).
 FriendList ::= [] ; [FriendEntry | FriendList].
 Channel ::= ch(Stream?, Stream).
 
-%% Procedure type declarations
 procedure agent(_?, Channel?, Channel?).
-procedure merge(Stream?, Stream?, Stream).
-procedure build_friends(Stream?, Stream?, FriendList).
-procedure social_graph(_?, Stream?, FriendList?).
-
 agent(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
     merge(UserIn?, NetIn?, In),
     build_friends(UserOut?, NetOut?, Fs),
     social_graph(Id?, In?, Fs?).
 
+procedure build_friends(Stream?, Stream?, FriendList).
 build_friends(UserOut, NetOut, [(user, UserOut?), (net, NetOut?)]).
+
+%% External procedures (defined elsewhere)
+procedure merge(Stream?, Stream?, Stream).
+procedure social_graph(_?, Stream?, FriendList?).

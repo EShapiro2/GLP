@@ -19,13 +19,7 @@ MsgList ::= [] ; [SocialMsg | MsgList].
 FriendEntry ::= (_, _).
 FriendList ::= [] ; [FriendEntry | FriendList].
 
-%% Procedure type declarations
 procedure social_graph(_?, MsgList?, FriendList?).
-procedure lookup_send(_?, _?, FriendList?, FriendList).
-procedure inject_msg(_?, _?, _?, MsgList?, MsgList).
-procedure bind_response(_?, _?, _, FriendList?, FriendList, MsgList?, MsgList).
-procedure handle_response(_?, _?, FriendList?, FriendList, MsgList?, MsgList).
-
 %% Process user request to connect (self-introduction)
 social_graph(Id, [msg(user, Id?, connect(Target))|In], Fs) :-
     ground(Id?), ground(Target?) |
@@ -59,7 +53,13 @@ social_graph(Id, [msg(_, _, _)|In], Fs) :-
 
 %% inject_msg - defer insertion of response message until Resp is known (bound)
 %% Note: Use known(Resp?) not ground(Resp?) because accept(ch(...)) contains unbound channel vars
+procedure inject_msg(_?, _?, _?, MsgList?, MsgList).
 inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
     known(Resp?) | true.
 inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
     otherwise | inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
+
+%% External procedures (defined elsewhere)
+procedure lookup_send(_?, _?, FriendList?, FriendList).
+procedure bind_response(_?, _?, _, FriendList?, FriendList, MsgList?, MsgList).
+procedure handle_response(_?, _?, FriendList?, FriendList, MsgList?, MsgList).

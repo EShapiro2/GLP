@@ -15,49 +15,6 @@ State ::= state(Blocklace, Mode, Stream, Stream, _).
 ParticipantList ::= [] ; [_ | ParticipantList].
 
 %% ============================================
-%% Procedure Type Declarations
-%% ============================================
-
-procedure wave_of_round(Number?, Number).
-procedure round_in_wave(Number?, Number).
-procedure first_round_of_wave(Number?, Number).
-procedure leader_of_wave(Number?, ParticipantList?, _).
-procedure is_leader(_?, Number?, ParticipantList?).
-procedure add_block(Block?, Blocklace?, Blocklace).
-procedure blocks_at_round(Number?, Blocklace?, Blocklace).
-procedure nonempty_blocks_at_round(Number?, Blocklace?, Blocklace).
-procedure filter_nonempty(Blocklace?, Blocklace).
-procedure count_distinct_agents(Blocklace?, Number).
-procedure tips(Blocklace?, Blocklace).
-procedure max_round(Blocklace?, Number).
-procedure is_majority(Number?, Number?).
-procedure has_majority(Blocklace?, ParticipantList?).
-procedure has_conflict(Number?, Blocklace?).
-procedure no_conflict(Number?, Blocklace?).
-procedure single_candidate(Number?, Blocklace?, Block).
-procedure endorsements_for(Block?, Blocklace?, Blocklace).
-procedure filter_endorsing(Block?, Blocklace?, Blocklace).
-procedure ratifications_for(Block?, Blocklace?, Blocklace).
-procedure filter_ratifying(Block?, Blocklace?, Blocklace?, Blocklace).
-procedure ratifies_candidate(Block?, Block?, Blocklace?).
-procedure is_finalized(Block?, Blocklace?, ParticipantList?).
-procedure find_finalized(Blocklace?, ParticipantList?, Blocklace).
-procedure is_quiescent_wave(Number?, Blocklace?).
-procedure determine_mode(Blocklace?, Mode).
-procedure wait_for_leader(Number?, Block?, _).
-procedure agent(EventList?, State?, Blocklace, Blocklace).
-procedure handle_event(Event?, State?, State, Blocklace?, Blocklace).
-procedure create_block(Number?, Mode?, Blocklace?, ParticipantList?, Stream?, _?, Block, Stream).
-procedure create_block_by_pos(Number?, Number?, Mode?, Blocklace?, ParticipantList?, Stream?, _?, Blocklace?, Block, Stream).
-procedure tau(Blocklace?, ParticipantList?, Stream).
-procedure order_by_wave(Blocklace?, Blocklace).
-procedure extract_payloads(Blocklace?, Stream).
-procedure member(_?, Stream?).
-procedure append(Stream?, Stream?, Stream).
-procedure length(Stream?, Number).
-procedure nth0(Number?, Stream?, _).
-
-%% ============================================
 %% Block Structure
 %% ============================================
 
@@ -71,14 +28,17 @@ procedure nth0(Number?, Stream?, _).
 %% ============================================
 
 %% Wave number from round (waves are 1-indexed, rounds are 1-indexed)
+procedure wave_of_round(Number?, Number).
 wave_of_round(Round, Wave) :-
     Wave := (Round? - 1) // 3 + 1.
 
 %% Round position within wave (1, 2, or 3)
+procedure round_in_wave(Number?, Number).
 round_in_wave(Round, Pos) :-
     Pos := ((Round? - 1) mod 3) + 1.
 
 %% First round of a wave
+procedure first_round_of_wave(Number?, Number).
 first_round_of_wave(Wave, Round) :-
     Round := (Wave? - 1) * 3 + 1.
 
@@ -87,12 +47,14 @@ first_round_of_wave(Wave, Round) :-
 %% ============================================
 
 %% Leader for a given wave
+procedure leader_of_wave(Number?, ParticipantList?, _).
 leader_of_wave(Wave, Participants, Leader) :-
     length(Participants?, N),
     Index := (Wave? - 1) mod N?,
     nth0(Index?, Participants?, Leader).
 
 %% Check if agent is leader for wave
+procedure is_leader(_?, Number?, ParticipantList?).
 is_leader(Agent, Wave, Participants) :-
     leader_of_wave(Wave?, Participants?, Leader),
     Agent? =?= Leader? | true.
@@ -102,9 +64,11 @@ is_leader(Agent, Wave, Participants) :-
 %% ============================================
 
 %% Add block to blocklace
+procedure add_block(Block?, Blocklace?, Blocklace).
 add_block(Block, Blocklace, [Block?|Blocklace?]).
 
 %% Get all blocks at a given round
+procedure blocks_at_round(Number?, Blocklace?, Blocklace).
 blocks_at_round(_, [], []).
 blocks_at_round(Round, [block(R, P, Ptrs)|Bs], [block(R?, P?, Ptrs?)|Rest?]) :-
     R? =:= Round? |
@@ -114,10 +78,12 @@ blocks_at_round(Round, [block(R, _, _)|Bs], Rest?) :-
     blocks_at_round(Round?, Bs?, Rest).
 
 %% Get non-empty blocks at round
+procedure nonempty_blocks_at_round(Number?, Blocklace?, Blocklace).
 nonempty_blocks_at_round(Round, Blocklace, NonEmpty) :-
     blocks_at_round(Round?, Blocklace?, All),
     filter_nonempty(All?, NonEmpty).
 
+procedure filter_nonempty(Blocklace?, Blocklace).
 filter_nonempty([], []).
 filter_nonempty([block(R, empty, P)|Bs], Rest?) :-
     filter_nonempty(Bs?, Rest).
@@ -126,6 +92,7 @@ filter_nonempty([block(R, Payload, P)|Bs], [block(R?, Payload?, P?)|Rest?]) :-
     filter_nonempty(Bs?, Rest).
 
 %% Count blocks from distinct agents
+procedure count_distinct_agents(Blocklace?, Number).
 count_distinct_agents([], 0).
 count_distinct_agents([_|Bs], N) :-
     count_distinct_agents(Bs?, M),
@@ -133,10 +100,12 @@ count_distinct_agents([_|Bs], N) :-
 
 %% Get tips (blocks with no successors pointing to them)
 %% Simplified: just return all blocks at highest round
+procedure tips(Blocklace?, Blocklace).
 tips(Blocklace, Tips) :-
     max_round(Blocklace?, MaxR),
     blocks_at_round(MaxR?, Blocklace?, Tips).
 
+procedure max_round(Blocklace?, Number).
 max_round([], 0).
 max_round([block(R, _, _)|Bs], Max) :-
     max_round(Bs?, RestMax),
@@ -152,11 +121,13 @@ max_round([block(R, _, _)|Bs], Max?) :-
 %% ============================================
 
 %% Simple majority: more than half
+procedure is_majority(Number?, Number?).
 is_majority(Count, Total) :-
     Threshold := Total? // 2,
     Count? > Threshold? | true.
 
 %% Check if we have majority of participants
+procedure has_majority(Blocklace?, ParticipantList?).
 has_majority(Blocks, Participants) :-
     count_distinct_agents(Blocks?, Count),
     length(Participants?, Total),
@@ -167,12 +138,14 @@ has_majority(Blocks, Participants) :-
 %% ============================================
 
 %% Round has conflict if multiple non-empty blocks
+procedure has_conflict(Number?, Blocklace?).
 has_conflict(Round, Blocklace) :-
     nonempty_blocks_at_round(Round?, Blocklace?, NonEmpty),
     length(NonEmpty?, N),
     N? > 1 | true.
 
 %% No conflict: zero or one non-empty block
+procedure no_conflict(Number?, Blocklace?).
 no_conflict(Round, Blocklace) :-
     nonempty_blocks_at_round(Round?, Blocklace?, NonEmpty),
     length(NonEmpty?, N),
@@ -183,12 +156,14 @@ no_conflict(Round, Blocklace) :-
 %% ============================================
 
 %% Get the single candidate (if no conflict)
+procedure single_candidate(Number?, Blocklace?, Block).
 single_candidate(Round, Blocklace, Candidate) :-
     no_conflict(Round?, Blocklace?),
     nonempty_blocks_at_round(Round?, Blocklace?, [Candidate?]).
 
 %% Check if block is endorsed by majority
 %% An endorsement is a round 2 block pointing to the candidate
+procedure endorsements_for(Block?, Blocklace?, Blocklace).
 endorsements_for(Candidate, Blocklace, Endorsements) :-
     Candidate = block(R1, _, _),
     wave_of_round(R1?, Wave),
@@ -197,6 +172,7 @@ endorsements_for(Candidate, Blocklace, Endorsements) :-
     blocks_at_round(R2?, Blocklace?, R2Blocks),
     filter_endorsing(Candidate?, R2Blocks?, Endorsements).
 
+procedure filter_endorsing(Block?, Blocklace?, Blocklace).
 filter_endorsing(_, [], []).
 filter_endorsing(Candidate, [block(R, _, Ptrs)|Bs], [block(R?, _, Ptrs?)|Rest?]) :-
     member(Candidate?, Ptrs?) |
@@ -206,6 +182,7 @@ filter_endorsing(Candidate, [block(R, _, Ptrs)|Bs], Rest?) :-
     filter_endorsing(Candidate?, Bs?, Rest).
 
 %% Check if block has majority ratification
+procedure ratifications_for(Block?, Blocklace?, Blocklace).
 ratifications_for(Candidate, Blocklace, Ratifications) :-
     Candidate = block(R1, _, _),
     wave_of_round(R1?, Wave),
@@ -214,6 +191,7 @@ ratifications_for(Candidate, Blocklace, Ratifications) :-
     blocks_at_round(R3?, Blocklace?, R3Blocks),
     filter_ratifying(Candidate?, R3Blocks?, Blocklace?, Ratifications).
 
+procedure filter_ratifying(Block?, Blocklace?, Blocklace?, Blocklace).
 filter_ratifying(_, [], _, []).
 filter_ratifying(Candidate, [B|Bs], Blocklace, [B?|Rest?]) :-
     ratifies_candidate(B?, Candidate?, Blocklace?) |
@@ -223,6 +201,7 @@ filter_ratifying(Candidate, [B|Bs], Blocklace, Rest?) :-
     filter_ratifying(Candidate?, Bs?, Blocklace?, Rest).
 
 %% A block ratifies candidate if it points to an endorsement of candidate
+procedure ratifies_candidate(Block?, Block?, Blocklace?).
 ratifies_candidate(block(_, _, Ptrs), Candidate, Blocklace) :-
     member(Endorsement?, Ptrs?),
     member(Endorsement?, Blocklace?),
@@ -234,6 +213,7 @@ ratifies_candidate(block(_, _, Ptrs), Candidate, Blocklace) :-
 %% ============================================
 
 %% A block is finalized when it has majority endorsement and ratification
+procedure is_finalized(Block?, Blocklace?, ParticipantList?).
 is_finalized(Block, Blocklace, Participants) :-
     endorsements_for(Block?, Blocklace?, Endorsements),
     has_majority(Endorsements?, Participants?),
@@ -241,6 +221,7 @@ is_finalized(Block, Blocklace, Participants) :-
     has_majority(Ratifications?, Participants?).
 
 %% Find all finalized blocks
+procedure find_finalized(Blocklace?, ParticipantList?, Blocklace).
 find_finalized([], _, []).
 find_finalized([B|Bs], Participants, [B?|Rest?]) :-
     B = block(R, Payload, _),
@@ -258,6 +239,7 @@ find_finalized([B|Bs], Participants, Rest?) :-
 %% ============================================
 
 %% A wave is quiescent if all its blocks are empty
+procedure is_quiescent_wave(Number?, Blocklace?).
 is_quiescent_wave(Wave, Blocklace) :-
     first_round_of_wave(Wave?, R1),
     R2 := R1? + 1,
@@ -271,6 +253,7 @@ is_quiescent_wave(Wave, Blocklace) :-
 %% ============================================
 
 %% Determine mode based on blocklace state
+procedure determine_mode(Blocklace?, Mode).
 determine_mode(Blocklace, low) :-
     max_round(Blocklace?, MaxR),
     wave_of_round(MaxR?, Wave),
@@ -288,6 +271,7 @@ determine_mode(_, high) :- otherwise | true.
 
 %% Wait for leader block or timeout
 %% wait/1 is a guard that suspends for Duration milliseconds
+procedure wait_for_leader(Number?, Block?, _).
 wait_for_leader(Timeout, Block, timeout) :-
     wait(Timeout?), unknown(Block?) | true.
 wait_for_leader(_, Block, Block?) :-
@@ -299,6 +283,7 @@ wait_for_leader(_, Block, Block?) :-
 
 %% Agent state: state(Blocklace, Mode, Participants, Pending, MyId)
 
+procedure agent(EventList?, State?, Blocklace, Blocklace).
 agent([], State, [], Finalized) :-
     State = state(B?, _, Participants?, _, _),
     find_finalized(B?, Participants?, Finalized).
@@ -310,6 +295,8 @@ agent([Event|Events], State, OutStream, Finalized) :-
 %% ============================================
 %% Event Handlers
 %% ============================================
+
+procedure handle_event(Event?, State?, State, Blocklace?, Blocklace).
 
 %% Receive a block from another participant
 handle_event(receive(Block), State, State1, Out, Out?) :-
@@ -342,14 +329,17 @@ handle_event(timeout(Round), State, State1, Out, Out1) :-
 %% ============================================
 
 %% Create block based on mode and round position
+procedure create_block(Number?, Mode?, Blocklace?, ParticipantList?, Stream?, _?, Block, Stream).
 create_block(Round, Mode, Blocklace, Participants, Pending, MyId, Block, PendOut) :-
     round_in_wave(Round?, Pos),
     tips(Blocklace?, Tips),
-    create_block_by_pos(Pos?, Round?, Mode?, Blocklace?, Participants?, 
+    create_block_by_pos(Pos?, Round?, Mode?, Blocklace?, Participants?,
                         Pending?, MyId?, Tips?, Block, PendOut).
 
+procedure create_block_by_pos(Number?, Number?, Mode?, Blocklace?, ParticipantList?, Stream?, _?, Blocklace?, Block, Stream).
+
 %% Round 1: Propose transaction (if any)
-create_block_by_pos(1, Round, low, _, _, [Tx|Rest], _, Tips, 
+create_block_by_pos(1, Round, low, _, _, [Tx|Rest], _, Tips,
                     block(Round?, Tx?, Tips?), Rest?).
 create_block_by_pos(1, Round, low, _, _, [], _, Tips,
                     block(Round?, empty, Tips?), []).
@@ -376,14 +366,17 @@ create_block_by_pos(3, Round, _, _, _, Pending, _, Tips,
 %% ============================================
 
 %% Compute ordered sequence of finalized payloads
+procedure tau(Blocklace?, ParticipantList?, Stream).
 tau(Blocklace, Participants, Sequence) :-
     find_finalized(Blocklace?, Participants?, Finalized),
     order_by_wave(Finalized?, Ordered),
     extract_payloads(Ordered?, Sequence).
 
+procedure order_by_wave(Blocklace?, Blocklace).
 order_by_wave(Blocks, Blocks?).
     %% Simplified: blocks already roughly ordered by round
 
+procedure extract_payloads(Blocklace?, Stream).
 extract_payloads([], []).
 extract_payloads([block(_, Payload, _)|Bs], [Payload?|Rest?]) :-
     ~(Payload? =?= empty) |
@@ -395,17 +388,21 @@ extract_payloads([block(_, empty, _)|Bs], Rest?) :-
 %% Helper: Stream Operations
 %% ============================================
 
+procedure member(_?, Stream?).
 member(X, [X?|_]).
 member(X?, [_|Xs]) :- member(X, Xs?).
 
+procedure append(Stream?, Stream?, Stream).
 append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 
+procedure length(Stream?, Number).
 length([], 0).
 length([_|Xs], N) :-
     length(Xs?, M),
     N := M? + 1.
 
+procedure nth0(Number?, Stream?, _).
 nth0(0, [X|_], X?).
 nth0(N, [_|Xs], X?) :-
     N? > 0 |

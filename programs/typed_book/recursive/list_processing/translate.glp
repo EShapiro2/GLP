@@ -6,18 +6,17 @@ WordList ::= [] ; [_ | WordList].
 
 %% Procedure type declarations
 procedure translate(WordList?, WordList).
-procedure dict(_?, _).
-procedure reduce(_?, _).
-
 translate([Word|Words], [Mot?|Mots?]) :- dict(Word?, Mot), translate(Words?, Mots).
 translate([], []).
 
+procedure dict(_?, _).
 dict(the, le).
 dict(dog, chien).
 dict(chases, chasse).
 dict(cat, chat).
 
 %% reduce clauses for metainterpreter
+procedure reduce(_?, _).
 reduce(translate([Word|Words], [Mot?|Mots?]), (dict(Word?, Mot), translate(Words?, Mots))).
 reduce(translate([], []), true).
 reduce(dict(the, le), true).

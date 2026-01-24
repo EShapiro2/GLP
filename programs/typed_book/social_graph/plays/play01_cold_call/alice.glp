@@ -1,18 +1,16 @@
 % Alice's Actor for Play 01: Cold Call
 % Each step is one clause; unexpected messages cause failure
 
-%% Procedure type declarations
-procedure alice_actor(_).
-procedure alice_wait_response(_, _).
-procedure alice_done(_, _).
-
 % Step 1: Initiate connection to bob
+procedure alice_actor(_).
 alice_actor(ch(In, [connect(bob)|Out?])) :-
     alice_wait_response(In?, Out).
 
 % Step 2: After response, send hello
+procedure alice_wait_response(_, _).
 alice_wait_response([response(accept(_))|In], [send(bob, hello)|Out?]) :-
     alice_done(In?, Out).
 
 % Step 3: Done - close output stream
+procedure alice_done(_, _).
 alice_done(_, []).

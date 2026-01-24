@@ -2,17 +2,13 @@
 %% Distributes incrementally-constructed messages to two consumers
 %% Suspends on unbound subterms until producer binds them
 
-%% Procedure type declarations
 procedure distribute(Stream?, Stream, Stream).
-procedure copy(_?, _, _).
-procedure copy_list(Stream?, Stream, Stream).
-procedure test_distribute(_, _).
-
 distribute([X|Xs], [Y?|Ys?], [Z?|Zs?]) :-
     copy(X?, Y, Z),
     distribute(Xs?, Ys, Zs).
 distribute([], [], []).
 
+procedure copy(_?, _, _).
 copy(X, Y?, Z?) :- atom(X?) | Y = X?, Z = X?.
 copy(X, Y?, Z?) :- number(X?) | Y = X?, Z = X?.
 copy(X, Y?, Z?) :- compound(X?) |
@@ -21,12 +17,14 @@ copy(X, Y?, Z?) :- compound(X?) |
     Y =.. Stream1?,
     Z =.. Stream2?.
 
+procedure copy_list(Stream?, Stream, Stream).
 copy_list([], [], []).
 copy_list([H|T], [H1?|T1?], [H2?|T2?]) :-
     copy(H?, H1, H2),
     copy_list(T?, T1, T2).
 
 %% Test
+procedure test_distribute(_, _).
 test_distribute(Out1?, Out2?) :-
     In = [msg(a, R1?), msg(b, R2?)],
     distribute(In?, Out1, Out2),

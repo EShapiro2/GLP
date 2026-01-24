@@ -18,19 +18,9 @@ ReqList ::= [] ; [ApprovalReq | ReqList].
 SmithResult ::= result(_, _).
 JonesDecision ::= approved(_, _).
 
-%% Procedure type declarations
-procedure bind_resp(_, _).
-procedure parent_smith(ReqList?, SmithResult).
-procedure smith_wait(_?, SmithResult).
-procedure smith_done(_?, SmithResult).
-procedure parent_jones(ReqList?, JonesDecision).
-procedure jones_done(_?, _?, JonesDecision).
-procedure play_child_safe.
-procedure verify_child_safe(SmithResult?, JonesDecision?).
-procedure report_success.
-
 %% === Helpers ===
 
+procedure bind_resp(_, _).
 bind_resp(Resp?, Resp).
 
 %% === Simplified version for testing ===
@@ -39,26 +29,32 @@ bind_resp(Resp?, Resp).
 %% The Resp variable is embedded in the request - Jones binds it to approve
 
 %% Send approval request on ToJones channel
+procedure parent_smith(ReqList?, SmithResult).
 parent_smith([approval_request(smith, child_smith, Resp)|_], Result?) :-
     smith_wait(Resp?, Result).
 
 %% Wait for approval response (via embedded Resp variable)
+procedure smith_wait(_?, SmithResult).
 smith_wait(Resp, Result?) :-
     known(Resp?) |
     smith_done(Resp?, Result).
 
+procedure smith_done(_?, SmithResult).
 smith_done(approved, result(approved, channel_ready)).
 
 %% Parent-Jones receives and approves request
+procedure parent_jones(ReqList?, JonesDecision).
 parent_jones([approval_request(FromParent, Child, Resp)|_], Decision?) :-
     %% Approve the request by binding embedded Resp
     bind_resp(Resp?, approved),
     jones_done(FromParent?, Child?, Decision).
 
+procedure jones_done(_?, _?, JonesDecision).
 jones_done(FromParent, Child, approved(FromParent?, Child?)).
 
 %% === The Play ===
 
+procedure play_child_safe.
 play_child_safe :-
     %% Parent channel (pre-established friendship)
     %% Smith writes to StoJ, Jones reads from StoJ
@@ -69,8 +65,10 @@ play_child_safe :-
     parent_jones(StoJ?, JonesDecision),
     verify_child_safe(SmithResult?, JonesDecision?).
 
+procedure verify_child_safe(SmithResult?, JonesDecision?).
 verify_child_safe(result(approved, channel_ready),
                   approved(smith, child_smith)) :-
     report_success.
 
+procedure report_success.
 report_success.

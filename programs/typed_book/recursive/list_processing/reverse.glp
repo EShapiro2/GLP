@@ -4,24 +4,22 @@
 
 %% Uses predefined Stream type
 
-%% Procedure type declarations
-procedure reverse_naive(Stream?, Stream).
-procedure append(Stream?, Stream?, Stream).
-procedure reverse(Stream?, Stream).
-procedure reverse_acc(Stream?, Stream?, Stream).
-
 %% Naive reverse - O(n^2) due to repeated append
+procedure reverse_naive(Stream?, Stream).
 reverse_naive([], []).
 reverse_naive([X|Xs], Ys?) :-
     reverse_naive(Xs?, Zs),
     append(Zs?, [X?], Ys).
 
+procedure append(Stream?, Stream?, Stream).
 append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 
 %% Accumulator reverse - O(n) single pass
+procedure reverse(Stream?, Stream).
 reverse(Xs, Ys?) :- reverse_acc(Xs?, [], Ys).
 
+procedure reverse_acc(Stream?, Stream?, Stream).
 reverse_acc([], Acc, Acc?).
 reverse_acc([X|Xs], Acc, Ys?) :- reverse_acc(Xs?, [X?|Acc?], Ys).
 

@@ -5,13 +5,9 @@
 %% Forwards communication bidirectionally while producing a
 %% replicable audit stream.
 
-%% Procedure type declarations
-procedure observe(_?, _, _).
-procedure copy_to(_?, _, _).
-
 NonEmptyList ::= [_ | Stream].
-procedure head_tail(NonEmptyList?, _, Stream).
 
+procedure observe(_?, _, _).
 observe(X?, Y, Z?) :- observe(Y?, X, Z).
 observe(X, Out1?, Out2?) :- ground(X?) | copy_to(X?, Out1, Out2).
 observe(Xs, [Y1?|Ys1?], [Y2?|Ys2?]) :-
@@ -21,7 +17,9 @@ observe(Xs, [Y1?|Ys1?], [Y2?|Ys2?]) :-
     observe(Xs1?, Ys1, Ys2).
 
 %% Helper to copy ground value to two outputs
+procedure copy_to(_?, _, _).
 copy_to(X, X?, X?) :- ground(X?) | true.
 
 %% Helper to extract head and tail
+procedure head_tail(NonEmptyList?, _, Stream).
 head_tail([H|T], H?, T?).

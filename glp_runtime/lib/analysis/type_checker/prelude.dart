@@ -9,8 +9,9 @@
 
 /// The prelude source containing all predefined definitions
 ///
-/// IMPORTANT: All type definitions and procedure declarations must come BEFORE
-/// any clauses. The parser processes declarations first, then clauses.
+/// IMPORTANT: Procedure declarations must appear immediately before their clauses.
+/// Type definitions can appear anywhere before first use.
+/// Builtin procedure declarations (no clauses) can be grouped.
 const String typePrelude = r'''
 % =============================================================================
 % TYPE DEFINITIONS
@@ -34,7 +35,7 @@ Constant ::= Number ; String.
 Exp ::= Number ; +(Exp, Exp) ; -(Exp, Exp) ; *(Exp, Exp) ; /(Exp, Exp) ; //(Exp, Exp) ; mod(Exp, Exp) ; neg(Exp).
 
 % =============================================================================
-% PROCEDURE DECLARATIONS
+% BUILTIN PROCEDURE DECLARATIONS (no clauses - implemented by runtime)
 % =============================================================================
 
 % Type guards
@@ -66,17 +67,6 @@ procedure =?=(_?, _?).
 procedure =..(_, Stream?).      % Compose: Stream? → Compound
 procedure ..=(Stream, _?).      % Decompose: Compound? → Stream
 
-% Defined guards and system predicates
-% These have clauses below. They are unfolded when used in guard position
-% (before |) but execute as normal goals in body position (after |).
-% Procedure declarations are required so body uses can be type-checked.
-procedure =(_, _?).
-procedure dl_append(_?, _?, _).
-procedure dl_to_list(_?, _).
-procedure new_channel(_, _).
-procedure send(_, _, _).
-procedure receive(_, _, _).
-
 % MWM (Mutual Write Merge) runtime primitives
 procedure _allocate_mutual_reference(_, _).
 procedure is_mutual_ref(_?).
@@ -88,19 +78,29 @@ procedure write(_?).
 procedure writeln(_?).
 
 % =============================================================================
-% CLAUSES
+% PROCEDURES WITH CLAUSES
+% Declaration must immediately precede clauses (per typed-program.md)
 % =============================================================================
 
-% Unification clause
+% Unification
+procedure =(_, _?).
 X = X?.
 
-% Difference list clauses
+% Difference list operations
+procedure dl_append(_?, _?, _).
 dl_append(A\B?, B\C?, A?\C).
+
+procedure dl_to_list(_?, _).
 dl_to_list(L\[], L?).
 
-% Channel clauses
+% Channel operations
+procedure new_channel(_, _).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+procedure send(_, _, _).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+
+procedure receive(_, _, _).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
 ''';
 

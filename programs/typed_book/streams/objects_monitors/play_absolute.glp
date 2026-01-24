@@ -1,15 +1,7 @@
 %% play_absolute.glp - Four-actor play with absolute time targets
 %% Uses guard_sub for computing wait deltas from absolute targets
 
-%% Procedure type declarations
 procedure play_absolute(_, _, _, _, _).
-procedure alice(_, _).
-procedure bob_at(Number, Number, _, _).
-procedure carol_at(Number, Number, _, _).
-procedure diana_at(Number, Number, _, _).
-procedure merge(_, _, _).
-procedure monitor(_).
-
 play_absolute(VA?, VB?, VC?, VD?, Log?) :-
     now(T0),
     T50 := T0? + 50,
@@ -25,32 +17,46 @@ play_absolute(VA?, VB?, VC?, VD?, Log?) :-
     observe_accum(All?, Reqs, Log),
     monitor(Reqs?).
 
+procedure alice(_, _).
 alice(V, [add(10), add(5), value(V?)|Xs?]) :- alice_done(Xs).
+
+procedure alice_done(_).
 alice_done([]).
 
+procedure bob_at(Number, Number, _, _).
 bob_at(T0, TTarget, V, Ys?) :-
     guard_sub(TTarget?, T0?, Delta), wait(Delta?) |
     Ys = [subtract(3), value(V?)|Ys1?],
     bob_done(Ys1).
+
+procedure bob_done(_).
 bob_done([]).
 
+procedure carol_at(Number, Number, _, _).
 carol_at(T0, TTarget, V, Zs?) :-
     guard_sub(TTarget?, T0?, Delta), wait(Delta?) |
     Zs = [add(20), value(V?)|Zs1?],
     carol_done(Zs1).
+
+procedure carol_done(_).
 carol_done([]).
 
+procedure diana_at(Number, Number, _, _).
 diana_at(T0, TTarget, V, Ws?) :-
     guard_sub(TTarget?, T0?, Delta), wait(Delta?) |
     Ws = [value(V?)|Ws1?],
     diana_done(Ws1).
+
+procedure diana_done(_).
 diana_done([]).
 
 %% Supporting predicates (from observed_monitor.glp)
 
 % Accumulator monitor
+procedure monitor(_).
 monitor(Reqs) :- monitor_loop(Reqs?, 0).
 
+procedure monitor_loop(_, Number).
 monitor_loop([add(N)|Reqs], Sum) :-
     Sum1 := Sum? + N?, monitor_loop(Reqs?, Sum1?).
 monitor_loop([subtract(N)|Reqs], Sum) :-
@@ -60,6 +66,7 @@ monitor_loop([value(V?)|Reqs], Sum) :-
 monitor_loop([], _).
 
 % Type/mode-aware observer
+procedure observe_accum(_, _, _).
 observe_accum([add(N)|In], [add(N?)|Out?], [add(N?)|Log?]) :-
     ground(N?) | observe_accum(In?, Out, Log).
 observe_accum([subtract(N)|In], [subtract(N?)|Out?], [subtract(N?)|Log?]) :-
@@ -69,9 +76,11 @@ observe_accum([value(V1?)|In], [value(V)|Out?], [value(V2?)|Log?]) :-
     observe_accum(In?, Out, Log).
 observe_accum([], [], []).
 
+procedure duplicate(_, _, _).
 duplicate(X, X?, X?) :- ground(X?) | true.
 
 % Fair merge
+procedure merge(_, _, _).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], [], []).

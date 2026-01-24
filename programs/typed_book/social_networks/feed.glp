@@ -7,26 +7,27 @@
 %% Type definitions
 FollowerList ::= [] ; [_ | FollowerList].
 
-%% Procedure type declarations
+%% Post distribution with attestation preservation
 procedure post(_, FollowerList, FollowerList).
-procedure broadcast(_, FollowerList, FollowerList).
-procedure create_post(_, Number, _).
-procedure current_time(Number).
-
-% Post distribution with attestation preservation
 post(Content, Followers, Followers1) :-
     ground(Content), current_time(Time) |
     create_post(Content?, Time?, Post),
     broadcast(Post?, Followers?, Followers1).
 
+procedure broadcast(_, FollowerList, FollowerList).
 broadcast(_, [], []).
 broadcast(Post, [(Name,Out)|Fs], [(Name,[Post|Out1?])|Fs1]) :-
     broadcast(Post?, Fs?, Fs1).
 
-% Defined guard for attestation preservation
+procedure create_post(_, Number, _).
+
+procedure current_time(Number).
+
+%% Defined guard for attestation preservation
 preserve_attestation(Post, Author, forward(Author?, Post)).
 
-% Forward with attestation verification
+%% Forward with attestation verification
+procedure forward(_, FollowerList, FollowerList).
 forward(Post, Followers, Followers1) :-
     ground(Post), attestation(Post, att(Author, _)),
     preserve_attestation(Post?, Author?, Forward) |

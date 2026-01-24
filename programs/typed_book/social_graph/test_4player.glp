@@ -4,15 +4,15 @@
 %% NOTE: This file contains test documentation only, not runnable code.
 %% The actual test predicates are in the referenced files.
 
-%% Procedure type declarations (for referenced predicates)
+%% External procedures (for referenced predicates)
 procedure social_graph(_?, Stream?, Stream?).
 
 %% Scenario:
-%%   Round 1: Alice → Bob (accept)
-%%   Round 2: Carol → Dave (accept)
-%%   Round 3: Bob → Carol (accept)
-%%   Round 4: Dave → Alice (reject)
-%%   Round 5: Alice → Carol (accept)
+%%   Round 1: Alice -> Bob (accept)
+%%   Round 2: Carol -> Dave (accept)
+%%   Round 3: Bob -> Carol (accept)
+%%   Round 4: Dave -> Alice (reject)
+%%   Round 5: Alice -> Carol (accept)
 %%
 %% Load files:
 %%   AofGLP/lib/lookup/lookup.glp

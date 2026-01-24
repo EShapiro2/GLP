@@ -5,12 +5,7 @@
 BST ::= empty ; node(_, BST, BST).
 NonEmptyList ::= [_ | Stream].
 
-%% Procedure type declarations
 procedure list_to_bst(Stream?, BST).
-procedure split_at(NonEmptyList?, Number?, Stream, _, Stream).
-procedure length(Stream?, Number).
-procedure length_acc(Stream?, Number?, Number).
-
 list_to_bst([], empty).
 list_to_bst(Xs, node(Mid?, L?, R?)) :-
     ~(Xs? =?= []) |
@@ -21,6 +16,7 @@ list_to_bst(Xs, node(Mid?, L?, R?)) :-
     list_to_bst(Right?, R).
 
 %% split_at(Stream, N, Left, Mid, Right) - split list at position N
+procedure split_at(NonEmptyList?, Number?, Stream, _, Stream).
 split_at([X|Xs], 0, [], X?, Xs?).
 split_at([X|Xs], N, [X?|Left?], Mid?, Right?) :-
     N? > 0 |
@@ -28,7 +24,10 @@ split_at([X|Xs], N, [X?|Left?], Mid?, Right?) :-
     split_at(Xs?, N1?, Left, Mid, Right).
 
 %% Helper: length with accumulator
+procedure length(Stream?, Number).
 length(Xs, N?) :- length_acc(Xs?, 0, N).
+
+procedure length_acc(Stream?, Number?, Number).
 length_acc([], Acc, Acc?).
 length_acc([_|Xs], Acc, N?) :-
     Acc1 := Acc? + 1,

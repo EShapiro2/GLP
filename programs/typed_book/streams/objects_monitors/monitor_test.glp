@@ -15,28 +15,24 @@
 MonitorReq ::= add(Number?) ; subtract(Number?) ; value(Number).
 ReqList ::= [] ; [MonitorReq | ReqList].
 
-%% Procedure type declarations
-procedure client1(Number, ReqList).
-procedure client1_cont(ReqList).
-procedure client2(Number, ReqList).
-procedure client2_cont(ReqList).
-procedure test_monitor(Number, Number).
-procedure merge(ReqList?, ReqList?, ReqList).
-procedure monitor(ReqList?).
-procedure monitor_loop(ReqList?, Number?).
-procedure wait(Number?).
-
 % Client 1: immediate - add 5, add 3, query value
+procedure client1(Number, ReqList).
 client1(V1, [add(5), add(3), value(V1?)|Xs?]) :- client1_cont(Xs).
+
+procedure client1_cont(ReqList).
 client1_cont([]).
 
 % Client 2: delayed by 100ms - uses body list construction
+procedure client2(Number, ReqList).
 client2(V, [add(10), subtract(2), value(V?)|Ys1?]) :-
     wait(100) |
     client2_cont(Ys1).
+
+procedure client2_cont(ReqList).
 client2_cont([]).
 
 % Test harness: merge client streams and feed to monitor
+procedure test_monitor(Number, Number).
 test_monitor(V1?, V2?) :-
     client1(V1, Xs),
     client2(V2, Ys),
@@ -44,8 +40,10 @@ test_monitor(V1?, V2?) :-
     monitor(Zs?).
 
 % Monitor implementation (accumulator with add/subtract/value)
+procedure monitor(ReqList?).
 monitor(Reqs) :- monitor_loop(Reqs?, 0).
 
+procedure monitor_loop(ReqList?, Number?).
 monitor_loop([add(N)|Reqs], Sum) :-
     Sum1 := Sum? + N?, monitor_loop(Reqs?, Sum1?).
 monitor_loop([subtract(N)|Reqs], Sum) :-
@@ -55,7 +53,10 @@ monitor_loop([value(Sum?)|Reqs], Sum) :-
 monitor_loop([], _).
 
 % Fair binary merge
+procedure merge(ReqList?, ReqList?, ReqList).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).
 merge(Xs, [], Xs?).
+
+procedure wait(Number?).

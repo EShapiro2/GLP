@@ -4,26 +4,24 @@
 %% Type definitions
 NumList ::= [] ; [Number | NumList].
 
-%% Procedure type declarations
 procedure primes(Number?, NumList).
-procedure integers(Number?, Number?, NumList).
-procedure sieve(NumList?, NumList).
-procedure filter(NumList?, Number?, NumList).
-procedure reduce(_?, _).
-
 primes(Max, Ps?) :- integers(2, Max?, Is), sieve(Is?, Ps).
 
+procedure integers(Number?, Number?, NumList).
 integers(N, Max, []) :- number(N?), number(Max?), N? > Max? | true.
 integers(N, Max, [N?|Is?]) :- number(N?), number(Max?), N? =< Max? | N1 := N? + 1, integers(N1?, Max?, Is).
 
+procedure sieve(NumList?, NumList).
 sieve([], []).
 sieve([P|Is], [P?|Ps?]) :- number(P?) | filter(Is?, P?, Fs), sieve(Fs?, Ps).
 
+procedure filter(NumList?, Number?, NumList).
 filter([], _, []).
 filter([X|Xs], P, Ys?) :- number(X?), number(P?), X? mod P? =:= 0 | filter(Xs?, P?, Ys).
 filter([X|Xs], P, [X?|Ys?]) :- number(X?), number(P?), X? mod P? =\= 0 | filter(Xs?, P?, Ys).
 
 %% Metainterpreter support
+procedure reduce(_?, _).
 reduce(primes(Max, Ps?), (integers(2, Max?, Is), sieve(Is?, Ps))).
 reduce(integers(N, Max, []), true) :- number(N?), number(Max?), N? > Max? | true.
 reduce(integers(N, Max, [N?|Is?]), (N1 := N? + 1, integers(N1?, Max?, Is))) :- number(N?), number(Max?), N? =< Max? | true.

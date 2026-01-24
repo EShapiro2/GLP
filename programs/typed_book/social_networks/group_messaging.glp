@@ -9,28 +9,30 @@
 MsgList ::= [] ; [_ | MsgList].
 FriendList ::= [] ; [_ | FriendList].
 
-%% Procedure type declarations
+%% Member participates in group
 procedure group_member(_, _, _).
-procedure lookup(_, FriendList, _).
-procedure compose_messages(_, _, MsgList).
-procedure find_my_stream(_, _, _).
-procedure interlace(MsgList, _, _, _).
-procedure await_user_input(_, _, _).
-procedure format_message(_, _, _).
-
-% Member participates in group
 group_member(Id, (Founder, Name), Streams) :-
     lookup((Founder,Name), Fs?, group(Role, Streams)),
     compose_messages(Id?, Name?, Messages),
     find_my_stream(Id?, Streams?, MyStream),
     interlace(Messages?, MyStream?, [], Streams?).
 
+procedure lookup(_, FriendList, _).
+
+procedure compose_messages(_, _, MsgList).
 compose_messages(Id, Name, [Msg|Msgs]) :-
     await_user_input(Id?, Name?, Input),
     format_message(Input?, Id?, Msg),
     compose_messages(Id?, Name?, Msgs?).
 compose_messages(_, _, []).
 
+procedure find_my_stream(_, _, _).
+
+procedure interlace(MsgList, _, _, _).
+
+procedure await_user_input(_, _, _).
+
+procedure format_message(_, _, _).
 format_message(reply(Text), Id, msg(Id, reply, Text)).
 format_message(post(Text), Id, msg(Id, post, Text)).
 

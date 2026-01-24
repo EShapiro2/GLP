@@ -1,24 +1,8 @@
 %% observe_play.glp - Multi-round protocol between Alice and Bob
 
-%% Procedure type declarations
-procedure observe(_?, _, _).
-procedure observe_list(Stream?, Stream, Stream).
-procedure test_play(_).
-procedure alice(_).
-procedure alice_wait1(_?, _?, _?).
-procedure alice_round2(_?).
-procedure alice_wait2(_?, _?, _?).
-procedure alice_round3(_?, _?).
-procedure alice_wait3(_?, _?, _?).
-procedure alice_round4(_?).
-procedure alice_wait4(_?).
-procedure bob(_?).
-procedure bob_round2(_?).
-procedure bob_round3(_?).
-procedure bob_round4(_?).
-
 %% === observe.glp (inlined - consult not supported) ===
 
+procedure observe(_?, _, _).
 %% A→B: value available at A (position 1)
 observe(A, A?, A?) :- atom(A?) | true.
 observe(A, A?, A?) :- number(A?) | true.
@@ -37,6 +21,7 @@ observe(A?, B, Log?) :- compound(B?) |
     A =.. ListA?,
     Log =.. Logs?.
 
+procedure observe_list(Stream?, Stream, Stream).
 observe_list([], [], []).
 observe_list([H|T], [I?|Is?], [L?|Ls?]) :-
     observe(H?, I, L),
@@ -44,6 +29,7 @@ observe_list([H|T], [I?|Is?], [L?|Ls?]) :-
 
 %% === Protocol test ===
 
+procedure test_play(_).
 test_play(Log?) :-
     observe(A?, B, Log),
     alice(A),
@@ -53,31 +39,39 @@ test_play(Log?) :-
 %% Alice
 %% ===========================================
 
+procedure alice(_).
 alice([msg(1, hello, response(Name, Age)) | Rest]) :-
     alice_wait1(Name?, Age?, Rest?).
 
+procedure alice_wait1(_?, _?, _?).
 alice_wait1(Name, Age, Rest) :-
     atom(Name?), number(Age?) |
     alice_round2(Rest?).
 
+procedure alice_round2(_?).
 alice_round2([msg(2, order(widget, 5), quote(Price, InStock)) | Rest]) :-
     alice_wait2(Price?, InStock?, Rest?).
 
+procedure alice_wait2(_?, _?, _?).
 alice_wait2(Price, InStock, Rest) :-
     number(Price?), atom(InStock?) |
     alice_round3(Price?, Rest?).
 
+procedure alice_round3(_?, _?).
 alice_round3(P, [msg(3, buy(P?), receipt(TxId, Time)) | Rest]) :-
     number(P?) |
     alice_wait3(TxId?, Time?, Rest?).
 
+procedure alice_wait3(_?, _?, _?).
 alice_wait3(TxId, Time, Rest) :-
     compound(TxId?), compound(Time?) |
     alice_round4(Rest?).
 
+procedure alice_round4(_?).
 alice_round4([msg(4, rate(5), bonus(Points)) | []]) :-
     alice_wait4(Points?).
 
+procedure alice_wait4(_?).
 alice_wait4(Points) :-
     number(Points?) |
     true.
@@ -86,18 +80,22 @@ alice_wait4(Points) :-
 %% Bob
 %% ===========================================
 
+procedure bob(_?).
 bob([msg(1, Greeting, response(bob, 42)) | Rest]) :-
     atom(Greeting?) |
     bob_round2(Rest?).
 
+procedure bob_round2(_?).
 bob_round2([msg(2, order(Item, Qty), quote(100, yes)) | Rest]) :-
     atom(Item?), number(Qty?), Qty? >= 1 |
     bob_round3(Rest?).
 
+procedure bob_round3(_?).
 bob_round3([msg(3, buy(Amount), receipt(tx(789), time(2024, 12, 9))) | Rest]) :-
     number(Amount?), Amount? >= 100 |
     bob_round4(Rest?).
 
+procedure bob_round4(_?).
 bob_round4([msg(4, rate(Stars), bonus(50)) | []]) :-
     number(Stars?), Stars? >= 4 |
     true.

@@ -5,11 +5,10 @@
 
 %% Procedure type declarations
 procedure prefix(Stream?, Stream?).
-procedure reduce(_?, _).
-
 prefix([], _).
 prefix([X|Xs], [X?|Ys]) :- prefix(Xs?, Ys?).
 
 %% reduce clauses for metainterpreter
+procedure reduce(_?, _).
 reduce(prefix([], _), true).
 reduce(prefix([X|Xs], [X?|Ys]), prefix(Xs?, Ys?)).

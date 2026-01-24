@@ -7,28 +7,23 @@ PrefList ::= [] ; [_ | PrefList].
 RepayEntry ::= (_, Number).
 RepayList ::= [] ; [RepayEntry | RepayList].
 
-%% Procedure type declarations
-procedure compute_repayments(Number?, PrefList?, BalanceList?, RepayList, BalanceList).
-procedure get_balance(_?, BalanceList?, Number).
-procedure test_repay_zero.
-procedure test_repay_enough.
-procedure test_repay_exact.
-procedure test_repay_fallback.
-procedure test_repay_multi.
-procedure test_repay_skip_zero.
-procedure test_repayments.
-
 %% ============================================
 %% Repayment Computation Tests
 %% ============================================
 
+procedure compute_repayments(Number?, PrefList?, BalanceList?, RepayList, BalanceList).
+
+procedure get_balance(_?, BalanceList?, Number).
+
 %% Test: nothing to repay
+procedure test_repay_zero.
 test_repay_zero :-
     compute_repayments(0, [carol], [(carol, 100)], Repayments, Balances1),
     Repayments? = [],
     Balances1? = [(carol, 100)].
 
 %% Test: have enough of first preference
+procedure test_repay_enough.
 test_repay_enough :-
     compute_repayments(30, [carol], [(carol, 100)], Repayments, Balances1),
     Repayments? = [(carol, 30)],
@@ -36,6 +31,7 @@ test_repay_enough :-
     CarolBal? = 70.
 
 %% Test: exactly enough of first preference
+procedure test_repay_exact.
 test_repay_exact :-
     compute_repayments(100, [carol], [(carol, 100)], Repayments, Balances1),
     Repayments? = [(carol, 100)],
@@ -43,24 +39,28 @@ test_repay_exact :-
     CarolBal? = 0.
 
 %% Test: need to use fallback to self
+procedure test_repay_fallback.
 test_repay_fallback :-
     compute_repayments(50, [carol], [(carol, 20)], Repayments, _),
     %% Should be [(carol, 20), (self, 30)]
     Repayments? = [(carol, 20), (self, 30)].
 
 %% Test: multiple preferences, partial from each
+procedure test_repay_multi.
 test_repay_multi :-
     compute_repayments(50, [carol, dave], [(carol, 20), (dave, 15)], Repayments, _),
     %% Should be [(carol, 20), (dave, 15), (self, 15)]
     Repayments? = [(carol, 20), (dave, 15), (self, 15)].
 
 %% Test: first preference has zero
+procedure test_repay_skip_zero.
 test_repay_skip_zero :-
     compute_repayments(30, [carol, dave], [(carol, 0), (dave, 50)], Repayments, _),
     %% Should skip carol, use dave
     Repayments? = [(dave, 30)].
 
 %% Run all repayment tests
+procedure test_repayments.
 test_repayments :-
     test_repay_zero,
     test_repay_enough,

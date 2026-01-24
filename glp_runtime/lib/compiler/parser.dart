@@ -3,6 +3,7 @@ import 'ast.dart';
 import 'error.dart';
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/type_conversion.dart';
+import '../analysis/type_checker/prelude.dart' show builtinProcedures;
 
 /// Parser for GLP source code
 class Parser {
@@ -117,30 +118,170 @@ class Parser {
       }
     }
 
-    // Parse type definitions and procedure declarations (Yardeni-Shapiro syntax)
-    // Type definitions: TypeName ::= alt ; alt ; alt.
-    // Procedure declarations: procedure name(Type?, Type).
+    // Parse type definitions, procedure declarations, and clauses in order.
+    // New rules (per typed-program.md):
+    // - Type definitions can appear anywhere before first use
+    // - Procedure declarations must appear immediately before the first clause
+    // - All clauses for a procedure must be contiguous
     final typeDefs = <TypeDef>[];
     final procDeclarations = <ProcDecl>[];
+    final procedures = <Procedure>[];
 
-    while (!_isAtEnd() && _isTypeOrProcDeclaration()) {
+    // Track pending procedure declaration (waiting for its first clause)
+    ProcDecl? pendingProcDecl;
+    // Track which procedures we've seen clauses for (signature -> first Procedure)
+    final seenProcedures = <String, Procedure>{};
+
+    while (!_isAtEnd()) {
       if (_check(TokenType.PROCEDURE)) {
-        procDeclarations.add(_parseProcDeclaration());
+        // Procedure declaration
+        if (pendingProcDecl != null) {
+          // Check if the pending declaration is for a builtin (no clauses needed)
+          final pendingSig = '${pendingProcDecl.name}/${pendingProcDecl.argTypes.length}';
+          if (!builtinProcedures.contains(pendingSig)) {
+            throw CompileError(
+              'Procedure declaration for "${pendingProcDecl.name}" has no clauses.\n'
+              '  A procedure declaration must be immediately followed by its clauses.',
+              pendingProcDecl.line,
+              pendingProcDecl.column,
+              phase: 'parser'
+            );
+          }
+          // Builtin - clear pending without error
+          pendingProcDecl = null;
+        }
+        pendingProcDecl = _parseProcDeclaration();
+        procDeclarations.add(pendingProcDecl);
       } else if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
-        typeDefs.add(_parseTypeDef());
+        // Might be a type definition (TypeName ::= ...) or a clause head
+        final startPos = _current;
+        final token = _peek();
+
+        // Look ahead to see if this is a type definition (has ::=)
+        if (_isTypeDefinition()) {
+          // Type definition
+          if (pendingProcDecl != null) {
+            // Check if the pending declaration is for a builtin (no clauses needed)
+            final pendingSig = '${pendingProcDecl.name}/${pendingProcDecl.argTypes.length}';
+            if (!builtinProcedures.contains(pendingSig)) {
+              throw CompileError(
+                'Type definition cannot appear between procedure declaration and its clauses.\n'
+                '  Procedure "${pendingProcDecl.name}" declared at line ${pendingProcDecl.line} needs clauses.',
+                token.line,
+                token.column,
+                phase: 'parser'
+              );
+            }
+            // Builtin - clear pending without error
+            pendingProcDecl = null;
+          }
+          typeDefs.add(_parseTypeDef());
+        } else {
+          // It's a clause - parse the procedure
+          _current = startPos;
+          final proc = _parseProcedure();
+          final sig = '${proc.name}/${proc.arity}';
+
+          // Check if this matches pending declaration
+          if (pendingProcDecl != null) {
+            final pendingSig = '${pendingProcDecl.name}/${pendingProcDecl.argTypes.length}';
+            if (sig == pendingSig) {
+              // This clause matches the pending declaration - good
+              pendingProcDecl = null;
+            } else if (builtinProcedures.contains(pendingSig)) {
+              // Pending was a builtin (no clauses needed) - clear it
+              pendingProcDecl = null;
+            } else {
+              throw CompileError(
+                'Clause for "$sig" appears between procedure declaration and clauses for "$pendingSig".\n'
+                '  Procedure declaration at line ${pendingProcDecl.line} must be immediately followed by its clauses.',
+                proc.line,
+                proc.column,
+                phase: 'parser'
+              );
+            }
+          }
+
+          // Check for non-contiguous clauses
+          if (seenProcedures.containsKey(sig)) {
+            final first = seenProcedures[sig]!;
+            throw CompileError(
+              'Non-contiguous clauses for "$sig".\n'
+              '  First group at line ${first.line}, second group at line ${proc.line}.\n'
+              '  All clauses for a predicate must be together in the source file.',
+              proc.line,
+              proc.column,
+              phase: 'parser'
+            );
+          }
+
+          seenProcedures[sig] = proc;
+          procedures.add(proc);
+        }
+      } else if (_check(TokenType.ATOM)) {
+        // Clause starting with atom (procedure name)
+        final proc = _parseProcedure();
+        final sig = '${proc.name}/${proc.arity}';
+
+        // Check if this matches pending declaration
+        if (pendingProcDecl != null) {
+          final pendingSig = '${pendingProcDecl.name}/${pendingProcDecl.argTypes.length}';
+          if (sig == pendingSig) {
+            // This clause matches the pending declaration - good
+            pendingProcDecl = null;
+          } else if (builtinProcedures.contains(pendingSig)) {
+            // Pending was a builtin (no clauses needed) - clear it
+            pendingProcDecl = null;
+          } else {
+            throw CompileError(
+              'Clause for "$sig" appears between procedure declaration and clauses for "$pendingSig".\n'
+              '  Procedure declaration at line ${pendingProcDecl.line} must be immediately followed by its clauses.',
+              proc.line,
+              proc.column,
+              phase: 'parser'
+            );
+          }
+        }
+
+        // Check for non-contiguous clauses
+        if (seenProcedures.containsKey(sig)) {
+          final first = seenProcedures[sig]!;
+          throw CompileError(
+            'Non-contiguous clauses for "$sig".\n'
+            '  First group at line ${first.line}, second group at line ${proc.line}.\n'
+            '  All clauses for a predicate must be together in the source file.',
+            proc.line,
+            proc.column,
+            phase: 'parser'
+          );
+        }
+
+        seenProcedures[sig] = proc;
+        procedures.add(proc);
       } else {
-        break;
+        // Unexpected token
+        throw CompileError(
+          'Unexpected token: ${_peek().lexeme}',
+          _peek().line,
+          _peek().column,
+          phase: 'parser'
+        );
       }
     }
 
-    // Parse procedures (clauses)
-    final procedures = <Procedure>[];
-    while (!_isAtEnd()) {
-      procedures.add(_parseProcedure());
+    // Check for dangling procedure declaration at end of file
+    if (pendingProcDecl != null) {
+      final pendingSig = '${pendingProcDecl.name}/${pendingProcDecl.argTypes.length}';
+      if (!builtinProcedures.contains(pendingSig)) {
+        throw CompileError(
+          'Procedure declaration for "${pendingProcDecl.name}" has no clauses.\n'
+          '  A procedure declaration must be immediately followed by its clauses.',
+          pendingProcDecl.line,
+          pendingProcDecl.column,
+          phase: 'parser'
+        );
+      }
     }
-
-    // Check for non-contiguous clauses (same name/arity appearing multiple times)
-    _checkContiguousClauses(procedures);
 
     return Module(
       declaration: moduleDecl,
@@ -1142,6 +1283,24 @@ class Parser {
     // procedure keyword
     if (_check(TokenType.PROCEDURE)) return true;
 
+    // TypeName ::= ... (type names are capitalized, tokenized as VARIABLE)
+    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
+      // Look ahead for ::=
+      final saved = _current;
+      _advance();  // consume type name
+
+      final isTypeDef = _check(TokenType.COLONCOLONEQ);
+
+      _current = saved;  // restore position
+      return isTypeDef;
+    }
+
+    return false;
+  }
+
+  /// Check if we're at a type definition (TypeName ::= ...)
+  /// Used to distinguish type definitions from clause heads starting with capitalized variable.
+  bool _isTypeDefinition() {
     // TypeName ::= ... (type names are capitalized, tokenized as VARIABLE)
     if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
       // Look ahead for ::=

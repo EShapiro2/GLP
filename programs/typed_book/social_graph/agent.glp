@@ -10,11 +10,7 @@ FriendEntry ::= (Constant?, Stream).
 FriendList ::= [] ; [FriendEntry | FriendList].
 Channel ::= ch(Stream?, Stream).
 
-%% Procedure type declarations
 procedure agent(Constant?, Channel?, Channel?).
-procedure merge(Stream?, Stream?, Stream).
-procedure social_graph(Constant?, Stream?, FriendList?).
-
 agent(Id, ChUser, ChNet) :-
     ChUser? = ch(UserIn, UserOut?), ChNet? = ch(NetIn, NetOut?) |
     merge(UserIn?, NetIn?, In),
@@ -23,3 +19,7 @@ agent(Id, ChUser, ChNet) :-
 %% The initialization extracts input and output streams from user and network
 %% channels, merges inputs into unified stream In, and stores output streams
 %% in initial friends list with special identifiers "user" and "net".
+
+%% External procedures (defined elsewhere)
+procedure merge(Stream?, Stream?, Stream).
+procedure social_graph(Constant?, Stream?, FriendList?).

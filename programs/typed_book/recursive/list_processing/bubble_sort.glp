@@ -9,17 +9,14 @@ Flag ::= yes ; no.
 
 %% Procedure type declarations
 procedure bubble_sort(NumList?, NumList).
-procedure bsort(NumList?, NumList).
-procedure bubble(NumList?, NumList, Flag).
-procedure continue(Flag?, NumList?, NumList).
-procedure reduce(_?, _).
-
 bubble_sort(Xs, Sorted?) :- bsort(Xs?, Sorted).
 
+procedure bsort(NumList?, NumList).
 bsort(Xs, Sorted?) :-
     bubble(Xs?, Ys, Swapped),
     continue(Swapped?, Ys?, Sorted).
 
+procedure bubble(NumList?, NumList, Flag).
 bubble([X,Y|Xs], [Y?|Ys?], yes) :-
     X? > Y? | bubble([X?|Xs?], Ys, _).
 bubble([X,Y|Xs], [X?|Ys?], Swapped?) :-
@@ -27,10 +24,12 @@ bubble([X,Y|Xs], [X?|Ys?], Swapped?) :-
 bubble([X], [X?], no).
 bubble([], [], no).
 
+procedure continue(Flag?, NumList?, NumList).
 continue(yes, Xs, Sorted?) :- bsort(Xs?, Sorted).
 continue(no, Sorted?, Sorted).
 
 %% Metainterpreter support
+procedure reduce(_?, _).
 reduce(bubble_sort(Xs, Sorted?), bsort(Xs?, Sorted)).
 reduce(bsort(Xs, Sorted?), (bubble(Xs?, Ys, Swapped), continue(Swapped?, Ys?, Sorted))).
 reduce(bubble([X,Y|Xs], [Y?|Ys?], yes), bubble([X?|Xs?], Ys, _)) :- X? > Y? | true.

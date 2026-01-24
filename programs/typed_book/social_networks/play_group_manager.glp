@@ -18,22 +18,13 @@ MemberList ::= [] ; [MemberEntry | MemberList].
 GroupCmd ::= invite(_?) ; post(_?, _?).
 CmdList ::= [] ; [GroupCmd | CmdList].
 
-%% Procedure type declarations
-procedure manager(CmdList?, MsgList, MemberList).
-procedure manage(CmdList?, MemberList?, MsgList?, MsgList, MemberList).
-procedure prepend_all(Msg?, MemberList?, MemberList).
-procedure get_member_stream(_?, MemberList?, MsgList).
-procedure play_group_manager.
-procedure play_continue(MsgList?, MemberList?).
-procedure verify_group(MsgList?, MsgList?, MsgList?).
-procedure check_feed(MsgList?).
-procedure check_streams(MsgList?, MsgList?).
-
 %% === Manager: processes commands, returns feed and member streams ===
 
+procedure manager(CmdList?, MsgList, MemberList).
 manager(Commands?, Feed?, Members?) :-
     manage(Commands, [], [], Feed, Members).
 
+procedure manage(CmdList?, MemberList?, MsgList?, MsgList, MemberList).
 %% Process invite - add member entry
 manage([invite(Name)|Cmds], Members, Feed, Feed1?, Members1?) :-
     manage(Cmds?, [(Name?, [])|Members?], Feed?, Feed1, Members1).
@@ -49,6 +40,7 @@ manage([], Members, Feed, Feed?, Members?).
 
 %% === Prepend message to all member streams ===
 
+procedure prepend_all(Msg?, MemberList?, MemberList).
 prepend_all(_, [], []).
 prepend_all(Msg, [(Name, Stream)|Ms], [(Name?, [Msg?|Stream?])|Ms1?]) :-
     ground(Msg?) |
@@ -56,11 +48,13 @@ prepend_all(Msg, [(Name, Stream)|Ms], [(Name?, [Msg?|Stream?])|Ms1?]) :-
 
 %% === Get member stream from list ===
 
+procedure get_member_stream(_?, MemberList?, MsgList).
 get_member_stream(Name, [(Name?, Stream)|_], Stream?).
 get_member_stream(Name?, [_|Ms], Stream?) :- get_member_stream(Name, Ms?, Stream).
 
 %% === The Play ===
 
+procedure play_group_manager.
 play_group_manager :-
     %% Alice is manager - processes commands
     manager([invite(bob), invite(carol),
@@ -70,19 +64,23 @@ play_group_manager :-
     %% Get member streams and verify
     play_continue(Feed?, Members?).
 
+procedure play_continue(MsgList?, MemberList?).
 play_continue(Feed, Members) :-
     ground(Feed?), ground(Members?) |
     get_member_stream(bob, Members?, BobStream),
     get_member_stream(carol, Members?, CarolStream),
     verify_group(Feed?, BobStream?, CarolStream?).
 
+procedure verify_group(MsgList?, MsgList?, MsgList?).
 verify_group(Feed, BobRcvd, CarolRcvd) :-
     check_feed(Feed?),
     check_streams(BobRcvd?, CarolRcvd?).
 
 %% Feed has newest first: [carol_msg, bob_msg]
+procedure check_feed(MsgList?).
 check_feed([msg(carol, hello_from_carol), msg(bob, hello_from_bob)]).
 
 %% Member streams have newest first too
+procedure check_streams(MsgList?, MsgList?).
 check_streams([msg(carol, hello_from_carol), msg(bob, hello_from_bob)],
               [msg(carol, hello_from_carol), msg(bob, hello_from_bob)]).

@@ -5,11 +5,10 @@
 
 %% Procedure type declarations
 procedure list(Stream?).
-procedure reduce(_?, _).
-
 list([]).
 list([_|Xs]) :- list(Xs?).
 
 %% reduce clauses for metainterpreter
+procedure reduce(_?, _).
 reduce(list([]), true).
 reduce(list([_|Xs]), list(Xs?)).

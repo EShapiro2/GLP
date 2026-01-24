@@ -4,10 +4,7 @@
 %% Type definitions
 Tree ::= empty ; node(Number, Tree, Tree).
 
-%% Procedure type declarations
 procedure tree_sum(Tree?, Number).
-procedure reduce(_?, _).
-
 tree_sum(empty, 0).
 tree_sum(node(V, L, R), S?) :-
     tree_sum(L?, SL),
@@ -15,6 +12,7 @@ tree_sum(node(V, L, R), S?) :-
     S := V? + SL? + SR?.
 
 %% Metainterpreter support
+procedure reduce(_?, _).
 reduce(tree_sum(empty, 0), true).
 reduce(tree_sum(node(V, L, R), S?),
     (tree_sum(L?, SL), tree_sum(R?, SR), S := V? + SL? + SR?)).

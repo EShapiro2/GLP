@@ -7,23 +7,21 @@
 Stream ::= [] ; [_ | Stream].
 PayloadList ::= [] ; [_ | PayloadList].
 
-%% Procedure type declarations
 procedure streams(_, _).
-procedure produce_payloads(PayloadList).
-procedure interlace(PayloadList, _, _).
-procedure collect_tips(_, _, _).
-
 streams(stream(S?), Others) :-
     produce_payloads(Payloads),
     interlace(Payloads?, S, Others?).
 
+procedure produce_payloads(PayloadList).
 produce_payloads([r1, r2]).
 
+procedure interlace(PayloadList, _, _).
 interlace([Payload|Payloads], [block(Payload?, Tips?)|Stream?], Others) :-
     collect_tips(Others?, Tips, Others1),
     interlace(Payloads?, Stream, Others1?).
 interlace([], [], _).
 
+procedure collect_tips(_, _, _).
 collect_tips([[Block|Bs]|Others], [Block?|Tips?], [Bs?|Others1?]) :-
     unknown(Bs?) |
     collect_tips(Others?, Tips, Others1).

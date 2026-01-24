@@ -6,30 +6,29 @@
 %% Type definitions
 Stream ::= [] ; [_ | Stream].
 
-%% Procedure type declarations
-procedure request_dm(Stream, _, _).
-procedure accept_dm(_, _).
-procedure bind_response(_, _).
-procedure dm_send(_, _, _).
-procedure dm_receive(_, _, _).
-procedure new_channel(_, _).
-
 %% Request DM channel from friend
 %% FriendOut: current state of friend's output stream
 %% FriendOut1: new state with dm_request prepended
 %% Resp: response variable to receive DM channel
+procedure request_dm(Stream, _, _).
 request_dm([dm_request(Resp?)|FriendOut?], FriendOut, Resp).
 
 %% Process incoming DM request - create channel and respond
 %% RemoteCh is sent back to requester, LocalCh is kept
+procedure accept_dm(_, _).
 accept_dm(dm_request(Resp), LocalCh?) :-
     new_channel(LocalCh, RemoteCh),
     bind_response(Resp?, RemoteCh?).
 
+procedure bind_response(_, _).
 bind_response(Ch?, Ch).
 
 %% Send message on DM channel
+procedure dm_send(_, _, _).
 dm_send(Msg, ch(In, [Msg?|Out?]), ch(In?, Out)).
 
 %% Receive message from DM channel
+procedure dm_receive(_, _, _).
 dm_receive(Msg?, ch([Msg|In], Out?), ch(In?, Out)).
+
+procedure new_channel(_, _).

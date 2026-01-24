@@ -4,12 +4,10 @@
 %% Type definitions
 FollowerList ::= [] ; [_ | FollowerList].
 
-%% Procedure type declarations
 procedure add_follower(_, FollowerList, FollowerList, _).
-procedure remove_follower(_, FollowerList, FollowerList).
-
 add_follower(Name, Followers, [(Name?, Stream)|Followers?], Stream?).
 
+procedure remove_follower(_, FollowerList, FollowerList).
 remove_follower(Name, [(First, _)|Fs], Fs?) :- Name? =?= First? | true.
 remove_follower(Name, [(Other, Stream)|Fs], [(Other?, Stream?)|Fs1?]) :-
     ~(Name? =?= Other?) |

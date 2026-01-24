@@ -13,22 +13,21 @@
 Done ::= done.
 Control ::= control(Stream, Control).
 
-%% Procedure type declarations
 procedure producer_a(Control).
-procedure producer_b(Control).
-procedure produce_batch_a(Stream, Stream, Done).
-procedure produce_batch_b(Stream, Stream, Done).
-procedure handover(Done?, Stream?, Control).
-
 producer_a(control(Xs,Next?)) :-
     produce_batch_a(Xs,Xs1,Done),
     handover(Done?,Xs1?,Next).
 
+procedure producer_b(Control).
 producer_b(control(Xs,Next?)) :-
     produce_batch_b(Xs,Xs1,Done),
     handover(Done?,Xs1?,Next).
 
+procedure handover(Done?, Stream?, Control).
 handover(done,Xs,control(Xs?,Next?)).
 
+procedure produce_batch_a(Stream, Stream, Done).
 produce_batch_a([a,b,c|Xs],Xs?,done).
+
+procedure produce_batch_b(Stream, Stream, Done).
 produce_batch_b([d,e,f|Xs],Xs?,done).

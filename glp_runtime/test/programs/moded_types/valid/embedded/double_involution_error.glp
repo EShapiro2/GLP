@@ -13,7 +13,7 @@ Inner ::= inner(Number?).
 Outer ::= outer(Inner?).
 
 procedure foo(Outer?).
-procedure source(Number).
-
 foo(outer(inner(X?))) :- source(X).
+
+procedure source(Number).
 source(0).

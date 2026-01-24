@@ -3,12 +3,9 @@
 %% Type definitions
 TaggedList ::= [] ; [_ | TaggedList].
 
-%% Procedure type declarations
-procedure observe(_?, _, _).
-procedure tag_stream(_?, Stream?, TaggedList).
-
 % observe/3 - Stream observation (Program 14, SRSW-fixed)
 % Creates two copies of a stream for observation
+procedure observe(_?, _, _).
 observe(X?, Y, Z?) :- observe(Y?, X, Z).
 observe(X, X?, X?) :- ground(X) | true.
 observe(Xs, [Y1?|Ys1?], [Y2?|Ys2?]) :-
@@ -17,6 +14,7 @@ observe(Xs, [Y1?|Ys1?], [Y2?|Ys2?]) :-
     observe(Xs1?, Ys1, Ys2).
 
 % tag_stream/3 - Tag each element of a stream
+procedure tag_stream(_?, Stream?, TaggedList).
 tag_stream(Tag, [], []).
 tag_stream(Tag, [X|Xs?], [tagged(Tag?, X?)|Ys?]) :-
     tag_stream(Tag?, Xs, Ys).

@@ -5,11 +5,10 @@
 
 %% Procedure type declaration
 procedure append(Stream?, Stream?, Stream).
-procedure reduce(_?, _).
-
 append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 
 %% Metainterpreter support
+procedure reduce(_?, _).
 reduce(append([], Ys, Ys?), true).
 reduce(append([X|Xs], Ys, [X?|Zs?]), append(Xs?, Ys?, Zs)).

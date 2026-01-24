@@ -4,11 +4,7 @@
 %% Type definitions
 Tree ::= void ; tree(_, Tree, Tree).
 
-%% Procedure type declarations
 procedure substitute(_?, _?, Tree?, Tree).
-procedure replace(_?, _?, _?, _).
-procedure reduce(_?, _).
-
 substitute(_, _, void, void).
 substitute(X, Y, tree(Leaf, Left, Right), tree(Leaf1?, Left1?, Right1?)) :-
     ground(X?), ground(Y?) |
@@ -16,10 +12,12 @@ substitute(X, Y, tree(Leaf, Left, Right), tree(Leaf1?, Left1?, Right1?)) :-
     substitute(X?, Y?, Left?, Left1),
     substitute(X?, Y?, Right?, Right1).
 
+procedure replace(_?, _?, _?, _).
 replace(X, Y, Z, Y?) :- ground(X?), X? =?= Z? | true.
 replace(X, _, Z, Z?) :- ground(X?), ~(X? =?= Z?) | true.
 
 %% reduce clauses for metainterpreter
+procedure reduce(_?, _).
 reduce(substitute(_, _, void, void), true).
 reduce(substitute(X, Y, tree(Leaf, Left, Right), tree(Leaf1?, Left1?, Right1?)),
     (replace(X?, Y?, Leaf?, Leaf1), substitute(X?, Y?, Left?, Left1), substitute(X?, Y?, Right?, Right1))) :-

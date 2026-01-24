@@ -8,8 +8,6 @@ NonEmptyPointList ::= [Point | PointList].
 
 %% Procedure type declarations
 procedure area(NonEmptyPointList?, Number).
-procedure reduce(_?, _).
-
 area([_], 0).
 area([(X1,Y1), (X2,Y2) | XYs], Area?) :-
     number(X2?), number(Y2?) |
@@ -17,6 +15,7 @@ area([(X1,Y1), (X2,Y2) | XYs], Area?) :-
     Area := (X1? * Y2? - Y1? * X2?) / 2 + Area1?.
 
 %% reduce clauses for metainterpreter
+procedure reduce(_?, _).
 reduce(area([_], 0), true).
 reduce(area([(X1,Y1), (X2,Y2) | XYs], Area?),
     (area([(X2?,Y2?) | XYs?], Area1), Area := (X1? * Y2? - Y1? * X2?) / 2 + Area1?)) :-

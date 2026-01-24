@@ -9,42 +9,41 @@
 NumList ::= [] ; [Number | NumList].
 Done ::= done.
 
-%% Procedure type declarations
-procedure producer(NumList, Number?).
-procedure consumer(NumList?, Number?, Number).
-procedure observer1(NumList?, NumList, NumList).
-procedure test_obs1(Number, NumList).
-procedure bob(Stream, Done).
-procedure alice(Stream, Done).
-procedure bob_finish(Stream, Done).
-procedure observe(Stream?, Stream, Stream).
-procedure test_obs2(Stream, Done).
-
 % Producer and consumer for testing
+procedure producer(NumList, Number?).
 producer([], 0).
 producer([N?|Xs?], N) :- N? > 0 | N1 := N? - 1, producer(Xs, N1?).
 
+procedure consumer(NumList?, Number?, Number).
 consumer([], Sum, Sum?).
 consumer([X|Xs], Sum, Result?) :- ground(X?) |
     Sum1 := Sum? + X?,
     consumer(Xs?, Sum1?, Result).
 
 % Forwarding observer
+procedure observer1(NumList?, NumList, NumList).
 observer1([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | observer1(Xs?, Ys, Zs).
 observer1([], [], []).
 
 % Test forwarding observer
+procedure test_obs1(Number, NumList).
 test_obs1(Sum?, Copy?) :-
     producer(H, 5),
     observer1(H?, Fwd, Copy),
     consumer(Fwd?, 0, Sum).
 
 % Cooperative producers
+procedure bob(Stream, Done).
 bob([a,a|Tail?], Result?) :- alice(Tail, Result).
+
+procedure alice(Stream, Done).
 alice([b,b,b|Tail?], Result?) :- bob_finish(Tail, Result).
+
+procedure bob_finish(Stream, Done).
 bob_finish([a,a], done).
 
 % Cooperative observer (handles direction changes)
+procedure observe(Stream?, Stream, Stream).
 observe([X|Xs], Ys?, [X?|Zs?]) :- ground(X?) |
     Ys = [X?|Ys1?], observe(Xs?, Ys1, Zs).
 observe([X|Xs?], Ys, [X?|Zs?]) :- ground(X?) |
@@ -52,6 +51,7 @@ observe([X|Xs?], Ys, [X?|Zs?]) :- ground(X?) |
 observe([], [], []).
 
 % Test cooperative observer
+procedure test_obs2(Stream, Done).
 test_obs2(Copy?, Done?) :-
     bob(Stream, Done),
     observe(Stream?, _, Copy).

@@ -6,12 +6,11 @@ NonEmptyList ::= [_ | Stream].
 
 %% Procedure type declarations
 procedure nth(Number?, NonEmptyList?, _).
-procedure reduce(_?, _).
-
 nth(1, [X|_], X?).
 nth(N, [_|Xs], X?) :- N? > 1 | N1 := N? - 1, nth(N1?, Xs?, X).
 
 %% Metainterpreter support
+procedure reduce(_?, _).
 reduce(nth(1, [X|_], X?), true).
 reduce(nth(N, [_|Xs], X?), (N1 := N? - 1, nth(N1?, Xs?, X))) :- N? > 1 | true.
 reduce((X? := T), true) :- X := T?.

@@ -12,7 +12,7 @@
 Wrapper ::= wrap(Number?).
 
 procedure consume(Wrapper?).
-procedure sink(Number?).
-
 consume(wrap(X)) :- sink(X?).
+
+procedure sink(Number?).
 sink(_).

@@ -4,13 +4,12 @@
 %% Type definitions (Peano numerals)
 Nat ::= 0 ; s(Nat).
 
-%% Procedure type declarations
+%% natural_number/1
 procedure natural_number(Nat?).
-procedure reduce(_?, _).
-
 natural_number(0).
 natural_number(s(X)) :- natural_number(X?).
 
 %% reduce clauses for metainterpreter
+procedure reduce(_?, _).
 reduce(natural_number(0), true).
 reduce(natural_number(s(X)), natural_number(X?)).

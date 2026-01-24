@@ -13,11 +13,10 @@
 Chain ::= chain(Stream?, Stream).
 ShotList ::= [] ; [_ | ShotList].
 
-%% Procedure type declarations
-procedure run(_?, Chain).
-procedure reduce(_?, _).
+%% External procedure declarations (no clauses in this file)
 procedure merge(Stream?, Stream?, Stream).
 
+procedure run(_?, Chain).
 run(true, chain(Chain, Chain?)).                 %% halt - close circuit
 run((A, B), chain(Left, Right?)) :-              %% fork - split chain
     run(A?, chain(Left?, Middle)),
@@ -33,6 +32,7 @@ run(Goal, chain([shot(Ps)|Left], [shot([Goal?|Ps?])|Right?])) :-  %% shot
     run(Goal?, chain(Left?, Right)).
 
 %% Object program: merge
+procedure reduce(_?, _).
 reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
 reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
 reduce(merge([], [], []), true).

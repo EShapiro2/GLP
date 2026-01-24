@@ -19,7 +19,7 @@
 Wrapper ::= wrap(Number?).
 
 procedure consume(Wrapper?).
-procedure source(Number).
-
 consume(wrap(X?)) :- source(X).
+
+procedure source(Number).
 source(0).

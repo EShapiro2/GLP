@@ -8,7 +8,7 @@
 Wrapper ::= wrap(Number?).
 
 procedure produce(Wrapper).
-procedure source(Number).
-
 produce(wrap(X?)) :- source(X).
+
+procedure source(Number).
 source(0).

@@ -5,11 +5,10 @@
 
 %% Procedure type declarations
 procedure copy(Stream?, Stream).
-procedure reduce(_?, _).
-
 copy([], []).
 copy([X|Xs], [X?|Ys?]) :- copy(Xs?, Ys).
 
 %% Metainterpreter support
+procedure reduce(_?, _).
 reduce(copy([], []), true).
 reduce(copy([X|Xs], [X?|Ys?]), copy(Xs?, Ys)).

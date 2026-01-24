@@ -2,20 +2,20 @@
 %% Runs all agents concurrently with network routing messages
 %%
 %% Scenario:
-%%   Round 1: Alice → Bob (accept)
+%%   Round 1: Alice -> Bob (accept)
+%%   Round 2: Carol -> Dave (accept)
+%%   Round 3: Bob -> Carol (accept)
+%%   Round 4: Dave -> Alice (reject)
+%%   Round 5: Alice -> Carol (accept)
 
 %% Type definitions
 MsgList ::= [] ; [_ | MsgList].
 FriendList ::= [] ; [_ | FriendList].
 
-%% Procedure type declarations
 procedure social_graph(_, MsgList, FriendList).
-%%   Round 2: Carol → Dave (accept)
-%%   Round 3: Bob → Carol (accept)
-%%   Round 4: Dave → Alice (reject)
-%%   Round 5: Alice → Carol (accept)
 
 %% Main entry point
+procedure play/0.
 play :-
     %% Merge all agent outputs into single stream for network
     merge(AliceToNet?, BobToNet?, M1),
@@ -53,6 +53,7 @@ play :-
 
 %% Network switch - routes messages to destination agent
 %% Clauses are mutually exclusive by destination atom - no guards needed
+procedure switch4(MsgList?, MsgList, MsgList, MsgList, MsgList).
 switch4([msg(Src, alice, Content)|Rest], [msg(Src?, alice, Content?)|A1?], B, C, D) :-
     switch4(Rest?, A1, B?, C?, D?).
 switch4([msg(Src, bob, Content)|Rest], A, [msg(Src?, bob, Content?)|B1?], C, D) :-
@@ -62,3 +63,6 @@ switch4([msg(Src, carol, Content)|Rest], A, B, [msg(Src?, carol, Content?)|C1?],
 switch4([msg(Src, dave, Content)|Rest], A, B, C, [msg(Src?, dave, Content?)|D1?]) :-
     switch4(Rest?, A?, B?, C?, D1).
 switch4([], [], [], [], []).
+
+%% External procedures (defined elsewhere)
+procedure merge(MsgList?, MsgList?, MsgList).

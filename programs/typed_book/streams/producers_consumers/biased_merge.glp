@@ -7,13 +7,10 @@
 Msg ::= started ; halted ; _.
 MsgStream ::= [] ; [Msg | MsgStream].
 
-%% Procedure type declarations
 procedure bmerge(MsgStream?, MsgStream?, MsgStream).
-procedure bmerge(Number?, Number?, Number?, MsgStream?, MsgStream?, MsgStream).
-procedure forward_msg(Msg?, Number?, Number?, Number?, MsgStream?, MsgStream?, MsgStream).
-
 bmerge(X, Y, [started|Z?]) :- bmerge(1, 1, 1, X?, Y?, Z).
 
+procedure bmerge(Number?, Number?, Number?, MsgStream?, MsgStream?, MsgStream).
 %% Counter exhausted: switch priorities
 bmerge(Bx, By, 0, X, Y, Z?) :- ground(By?) | bmerge(By?, Bx?, By?, Y?, X?, Z).
 
@@ -30,6 +27,7 @@ bmerge(_, _, _, [], Y, [halted|Y?]).
 bmerge(_, _, _, X, [], [halted|X?]).
 
 %% Handle control messages
+procedure forward_msg(Msg?, Number?, Number?, Number?, MsgStream?, MsgStream?, MsgStream).
 forward_msg(started, Bx, By, N, X, Y, [started|Z?]) :-
     Bx1 := Bx? + 1,
     bmerge(Bx1?, By?, N?, X?, Y?, Z).

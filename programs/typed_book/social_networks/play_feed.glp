@@ -18,24 +18,9 @@ FeedCmd ::= post(_?) ; subscribe(_?).
 CmdList ::= [] ; [FeedCmd | CmdList].
 Result ::= result(_, _).
 
-%% Procedure type declarations
-procedure broadcast(_?, FollowerList?, FollowerList).
-procedure make_feed(Feed).
-procedure extend_feed(_?, Feed?, Feed).
-procedure get_feed(_?, FollowerList?, Feed).
-procedure serve_feed(CmdList?, FollowerList?, FollowerList).
-procedure alice(CmdList?, FollowerList?, FollowerList).
-procedure bob(Stream?, Result).
-procedure bob_receive(Feed?, Result).
-procedure carol(Feed?, Result).
-procedure carol_receive(Feed?, Result).
-procedure verify(Result?, Result?).
-procedure check(_?, _?, _?, _?).
-procedure play_feed.
-procedure play_continue(FollowerList?).
-
 %% === Broadcast with ground guard ===
 
+procedure broadcast(_?, FollowerList?, FollowerList).
 broadcast(_, [], []).
 broadcast(Post, [(Name, Feed)|Fs], [(Name?, Feed1?)|Fs1?]) :-
     ground(Post?) |
@@ -44,13 +29,19 @@ broadcast(Post, [(Name, Feed)|Fs], [(Name?, Feed1?)|Fs1?]) :-
 
 %% === Feed operations ===
 
+procedure make_feed(Feed).
 make_feed(feed([])).
+
+procedure extend_feed(_?, Feed?, Feed).
 extend_feed(Post, feed(Xs), feed([Post?|Xs?])).
+
+procedure get_feed(_?, FollowerList?, Feed).
 get_feed(Name, [(Name?, Feed)|_], Feed?).
 get_feed(Name?, [_|Fs], Feed?) :- get_feed(Name, Fs?, Feed).
 
 %% === Feed server ===
 
+procedure serve_feed(CmdList?, FollowerList?, FollowerList).
 serve_feed([post(Content)|Cmds], Fs, Fs2?) :-
     ground(Content?) |
     broadcast(Content?, Fs?, Fs1),
@@ -63,35 +54,43 @@ serve_feed([], Fs, Fs?).
 %% === Alice: Feed author ===
 %% Receives commands, runs feed server
 
+procedure alice(CmdList?, FollowerList, FollowerList).
 alice(Commands?, Followers, FinalFollowers?) :-
     serve_feed(Commands, Followers?, FinalFollowers).
 
 %% === Bob: Subscriber ===
 %% Subscribes to feed, receives posts
 
+procedure bob(Stream?, Result).
 bob([subscribe(bob, BobFeed)|_], BobResult?) :-
     bob_receive(BobFeed?, BobResult).
 
+procedure bob_receive(Feed?, Result).
 bob_receive(feed([Post1, Post2|_]), result(Post1?, Post2?)).
 
 %% === Carol: Subscriber ===
 %% Receives posts from feed
 
+procedure carol(Feed?, Result).
 carol(CarolFeed, CarolResult?) :-
     carol_receive(CarolFeed?, CarolResult).
 
+procedure carol_receive(Feed?, Result).
 carol_receive(feed([Post1, Post2|_]), result(Post1?, Post2?)).
 
 
 %% === Verification ===
 
+procedure verify(Result?, Result?).
 verify(result(P1, P2), result(P3, P4)) :-
     check(P1?, P2?, P3?, P4?).
 
+procedure check(_?, _?, _?, _?).
 check(second_post, hello_world, second_post, hello_world).
 
 %% === The Play ===
 
+procedure play_feed.
 play_feed :-
     %% Alice serves feed
     alice([subscribe(bob), subscribe(carol),
@@ -99,6 +98,7 @@ play_feed :-
     %% Get feeds and verify
     play_continue(Followers?).
 
+procedure play_continue(FollowerList?).
 play_continue(Followers) :-
     ground(Followers?) |
     get_feed(bob, Followers?, BobFeed),

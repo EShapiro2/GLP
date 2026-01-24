@@ -12,25 +12,19 @@ Done ::= done.
 StreamCmd ::= stream(Stream) ; merge(StreamOfStreams).
 StreamOfStreams ::= [] ; [StreamCmd | StreamOfStreams].
 
-%% Procedure type declarations
 procedure mwm(StreamOfStreams?, Stream).
-procedure mwm_main(StreamOfStreams?, _?).
-procedure mwm1(StreamOfStreams?, _?, Done?, Done).
-procedure mwm_copy(Stream?, _?, Done?, Done).
-procedure close_when_done(Done?, _?).
-procedure stream_append(_?, _?, _).
-procedure close_mutual_reference(_?).
-
 mwm(In, Out?) :-
     '_allocate_mutual_reference'(Ref, Out),
     mwm_main(In?, Ref?).
 
 % Intermediate predicate with guard to allow multiple Ref? occurrences
+procedure mwm_main(StreamOfStreams?, _?).
 mwm_main(In, Ref) :-
     is_mutual_ref(Ref?) |
     mwm1(In?, Ref?, done, Done),
     close_when_done(Done?, Ref?).
 
+procedure mwm1(StreamOfStreams?, _?, Done?, Done).
 mwm1([stream(Xs)|Streams], Ref, L, R?) :-
     is_mutual_ref(Ref?) |
     mwm_copy(Xs?, Ref?, L?, M),
@@ -43,6 +37,7 @@ mwm1([merge(NewIn)|Streams], Ref, L, R?) :-
 
 mwm1([], _, L, L?).
 
+procedure mwm_copy(Stream?, _?, Done?, Done).
 mwm_copy([X|Xs], Ref, L, R?) :-
     is_mutual_ref(Ref?) |
     stream_append(X?, Ref?, Ref1),
@@ -50,6 +45,7 @@ mwm_copy([X|Xs], Ref, L, R?) :-
 
 mwm_copy([], _, L, L?).
 
+procedure close_when_done(Done?, _?).
 close_when_done(done, Ref) :-
     is_mutual_ref(Ref?) |
     close_mutual_reference(Ref?).
@@ -58,11 +54,13 @@ close_when_done(done, Ref) :-
 % Value: value to append (input)
 % RefIn: current MutualRef (input)
 % RefOut: updated MutualRef (output)
+procedure stream_append(_?, _?, _).
 stream_append(Value, RefIn, RefOut?) :-
     is_mutual_ref(RefIn?) |
     '_stream_append'(RefIn?, Value?, RefOut).
 
 % close_mutual_reference/1 - Close stream by binding tail to []
+procedure close_mutual_reference(_?).
 close_mutual_reference(Ref) :-
     is_mutual_ref(Ref?) |
     '_close_mutual_reference'(Ref?).

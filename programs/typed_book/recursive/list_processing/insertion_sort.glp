@@ -6,19 +6,18 @@ NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
 procedure insertion_sort(NumList?, NumList).
-procedure insert(Number?, NumList?, NumList).
-procedure reduce(_?, _).
-
 insertion_sort([], []).
 insertion_sort([X|Xs], Sorted?) :-
     insertion_sort(Xs?, SortedTail),
     insert(X?, SortedTail?, Sorted).
 
+procedure insert(Number?, NumList?, NumList).
 insert(X, [], [X?]).
 insert(X, [Y|Ys], [X?|[Y?|Ys?]]) :- X? < Y? | true.
 insert(X, [Y|Ys], [Y?|Zs?]) :- X? >= Y? | insert(X?, Ys?, Zs).
 
 %% Metainterpreter support
+procedure reduce(_?, _).
 reduce(insertion_sort([], []), true).
 reduce(insertion_sort([X|Xs], Sorted?),
        (insertion_sort(Xs?, SortedTail), insert(X?, SortedTail?, Sorted))).

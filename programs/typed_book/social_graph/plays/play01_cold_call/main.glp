@@ -1,14 +1,7 @@
 % Test Harness for Play 01: Cold Call
 % Wires together channels, network, agents, and actors
 
-%% Procedure type declarations
 procedure test(_, _).
-procedure new_channel(_, _).
-procedure network(_, _).
-procedure agent(_, _, _).
-procedure alice_actor(_).
-procedure bob_actor(_).
-
 test(AliceTrace?, BobTrace?) :-
     % Create network channels
     new_channel(NetChA, ANetCh),
@@ -34,3 +27,11 @@ test(AliceTrace?, BobTrace?) :-
     % Start actors
     alice_actor(UserChA?),
     bob_actor(UserChB?).
+
+%% External procedures (defined elsewhere)
+procedure new_channel(_, _).
+procedure network(_, _).
+procedure agent(_, _, _).
+procedure alice_actor(_).
+procedure bob_actor(_).
+procedure observe(_, _, _).

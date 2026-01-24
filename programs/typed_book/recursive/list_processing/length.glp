@@ -5,17 +5,16 @@
 
 %% Procedure type declarations
 procedure length(Stream?, Number).
-procedure length_acc(Stream?, Number?, Number).
-procedure reduce(_?, _).
-
 length(Xs, N?) :- length_acc(Xs?, 0, N).
 
+procedure length_acc(Stream?, Number?, Number).
 length_acc([], Acc, Acc?).
 length_acc([_|Xs], Acc, N?) :-
     Acc1 := Acc? + 1,
     length_acc(Xs?, Acc1?, N).
 
 %% Metainterpreter support
+procedure reduce(_?, _).
 reduce(length(Xs, N?), length_acc(Xs?, 0, N)).
 reduce(length_acc([], Acc, Acc?), true).
 reduce(length_acc([_|Xs], Acc, N?), (Acc1 := Acc? + 1, length_acc(Xs?, Acc1?, N))).

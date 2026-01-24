@@ -4,18 +4,16 @@
 %% Type definitions (Peano numerals)
 Nat ::= 0 ; s(Nat).
 
-%% Procedure type declarations
 procedure lesseq(Nat?, Nat?).
-procedure natural_number(Nat?).
-procedure reduce(_?, _).
-
 lesseq(0, X) :- natural_number(X?).
 lesseq(s(X), s(Y)) :- lesseq(X?, Y?).
 
+procedure natural_number(Nat?).
 natural_number(0).
 natural_number(s(X)) :- natural_number(X?).
 
 %% Metainterpreter support
+procedure reduce(_?, _).
 reduce(lesseq(0, X), natural_number(X?)).
 reduce(lesseq(s(X), s(Y)), lesseq(X?, Y?)).
 reduce(natural_number(0), true).

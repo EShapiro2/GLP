@@ -3,11 +3,11 @@
 %% Type definitions
 Channel ::= ch(Stream?, Stream).
 
-%% Procedure type declarations
 procedure send(_?, Channel?, Channel).
-procedure receive(_, Channel?, Channel).
-procedure new_channel(Channel, Channel).
-
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+
+procedure receive(_, Channel?, Channel).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
+
+procedure new_channel(Channel, Channel).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).

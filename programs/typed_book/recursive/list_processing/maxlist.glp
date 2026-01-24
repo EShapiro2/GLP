@@ -7,19 +7,18 @@ NonEmptyNumList ::= [Number | NumList].
 
 %% Procedure type declarations
 procedure maxlist(NonEmptyNumList?, Number).
-procedure maxlist(NumList?, Number?, Number).
-procedure maximum(Number?, Number?, Number).
-procedure reduce(_?, _).
-
 maxlist([X|Xs], M?) :- maxlist(Xs?, X?, M).
 
+procedure maxlist(NumList?, Number?, Number).
 maxlist([X|Xs], Y, M?) :- maximum(X?, Y?, Y1), maxlist(Xs?, Y1?, M).
 maxlist([], M, M?).
 
+procedure maximum(Number?, Number?, Number).
 maximum(X, Y, Y?) :- X? =< Y? | true.
 maximum(X, Y, X?) :- X? > Y? | true.
 
 %% reduce clauses for metainterpreter
+procedure reduce(_?, _).
 reduce(maxlist([X|Xs], M?), maxlist(Xs?, X?, M)).
 reduce(maxlist([X|Xs], Y, M?), (maximum(X?, Y?, Y1), maxlist(Xs?, Y1?, M))).
 reduce(maxlist([], M, M?), true).

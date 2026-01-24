@@ -5,16 +5,16 @@
 %% If a goal unifies with reduce's first argument, the body is
 %% returned in the second argument.
 
-%% Procedure type declarations
-procedure run(_?).
-procedure reduce(_?, _).
+%% External procedure declarations (no clauses in this file)
 procedure merge(Stream?, Stream?, Stream).
 
+procedure run(_?).
 run(true).  % halt
 run((A,B)) :- run(A?), run(B?). % fork
 run(A) :- compound(A?) | reduce(A?, B), run(B?). % reduce
 
 %% Example: reduce encoding of merge
+procedure reduce(_?, _).
 reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
 reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
 reduce(merge([], [], []), true).

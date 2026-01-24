@@ -4,11 +4,10 @@
 %% Computes certainty factor of results.
 %% Each clause has associated certainty; result certainty is computed.
 
-%% Procedure type declarations
-procedure reduce(_?, _?, Number).
+%% External procedure declarations (no clauses in this file)
 procedure clause(_?, _?, _, Number).
-procedure min(Number?, Number?, Number).
 
+procedure reduce(_?, _?, Number).
 reduce(_, true, 1).                              %% halt - certainty 1
 reduce(Program, (A, B), C?) :-                   %% fork - min of certainties
     ground(Program?) |
@@ -22,6 +21,7 @@ reduce(Program, Goal, C?) :-                     %% reduce - multiply
     C := Cr? * C_of_body?.
 
 %% min/3 - return minimum of two values
+procedure min(Number?, Number?, Number).
 min(X, Y, Z?) :- ground(X?), ground(Y?), X? =< Y? | Z = X?.
 min(X, Y, Z?) :- ground(X?), ground(Y?), Y? < X? | Z = Y?.
 

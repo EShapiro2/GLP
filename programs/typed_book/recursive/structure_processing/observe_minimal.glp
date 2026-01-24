@@ -1,15 +1,8 @@
 %% observe_minimal.glp - Minimal case exposing observe limitation
 
-%% Procedure type declarations
-procedure observe(_?, _, _).
-procedure observe_list(Stream?, Stream, Stream).
-procedure test_minimal(_).
-procedure alice(_).
-procedure got_reply(_?).
-procedure bob(_?).
-
 %% === observe.glp (inlined - consult not supported) ===
 
+procedure observe(_?, _, _).
 %% A→B: value available at A (position 1)
 observe(A, A?, A?) :- atom(A?) | true.
 observe(A, A?, A?) :- number(A?) | true.
@@ -28,6 +21,7 @@ observe(A?, B, Log?) :- compound(B?) |
     A =.. ListA?,
     Log =.. Logs?.
 
+procedure observe_list(Stream?, Stream, Stream).
 observe_list([], [], []).
 observe_list([H|T], [I?|Is?], [L?|Ls?]) :-
     observe(H?, I, L),
@@ -35,13 +29,17 @@ observe_list([H|T], [I?|Is?], [L?|Ls?]) :-
 
 %% === Minimal test ===
 
+procedure test_minimal(_).
 test_minimal(Log?) :-
     observe(A?, B, Log),
     alice(A),
     bob(B?).
 
+procedure alice(_).
 alice(msg(hello, Reply)) :- got_reply(Reply?).
 
+procedure got_reply(_?).
 got_reply(R) :- atom(R?) | true.
 
+procedure bob(_?).
 bob(msg(Greeting, world)) :- atom(Greeting?) | true.

@@ -8,13 +8,9 @@
 QueueReq ::= dequeue(_) ; enqueue(_?).
 ReqList ::= [] ; [QueueReq | ReqList].
 
-%% Procedure type declarations
-procedure qm(ReqList?, Stream, Stream).
-procedure merge(ReqList?, ReqList?, ReqList).
-
 %% Queue manager - Head and Tail are difference list pointers
 %% Initial call: qm(Requests?, Q, Q) with same variable for empty queue
-
+procedure qm(ReqList?, Stream, Stream).
 qm([dequeue(X?)|S?], [X|Head?], Tail) :-
     qm(S?, Head?, Tail?).
 
@@ -33,6 +29,7 @@ qm([enqueue(X)|S?], Head, [X?|Tail?]) :-
 %% receiver fills it in later. No negative responses needed.
 
 %% merge/3 for combining request streams
+procedure merge(ReqList?, ReqList?, ReqList).
 merge([A|Xs?], Ys, [A?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge(Xs, [A|Ys?], [A?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], [], []).

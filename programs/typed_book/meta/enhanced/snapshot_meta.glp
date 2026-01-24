@@ -18,11 +18,10 @@ ControlCmd ::= suspend ; resume ; abort.
 ControlList ::= [] ; [ControlCmd | ControlList].
 ResolvList ::= [] ; [_ | ResolvList].
 
-%% Procedure type declarations
-procedure run(_?, ControlList?, ResolvList?, ResolvList).
-procedure suspended_run(_?, ControlList?, ResolvList?, ResolvList).
+%% External procedure declarations (no clauses in this file)
 procedure reduce(_?, _).
 
+procedure run(_?, ControlList?, ResolvList?, ResolvList).
 run(true, _, L, L?).                              % halt
 run((A, B), Cs, L, R?) :-                         % fork
     ground(Cs?) |
@@ -36,6 +35,7 @@ run(A, Cs, L, R?) :-                              % reduce
     reduce(A?, B),
     run(B?, Cs?, L?, R).
 
+procedure suspended_run(_?, ControlList?, ResolvList?, ResolvList).
 suspended_run(A, [resume|Cs], L, R?) :- run(A?, Cs?, L?, R).
 suspended_run(A, [abort|_], L, [A?|L?]).
 

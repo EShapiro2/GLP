@@ -6,8 +6,6 @@ NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
 procedure filter_even(NumList?, NumList).
-procedure reduce(_?, _).
-
 filter_even([], []).
 filter_even([X|Xs], [X?|Ys?]) :-
     X? mod 2 =:= 0 |
@@ -17,6 +15,7 @@ filter_even([X|Xs], Ys?) :-
     filter_even(Xs?, Ys).
 
 %% Metainterpreter support
+procedure reduce(_?, _).
 reduce(filter_even([], []), true).
 reduce(filter_even([X|Xs], [X?|Ys?]), filter_even(Xs?, Ys)) :- X? mod 2 =:= 0 | true.
 reduce(filter_even([X|Xs], Ys?), filter_even(Xs?, Ys)) :- X? mod 2 =\= 0 | true.

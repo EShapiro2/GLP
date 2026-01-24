@@ -17,16 +17,8 @@
 AttInfo ::= att(_, _).
 Decision ::= accept ; rejected.
 
-%% Procedure type declarations
-procedure process_message(_?, Decision).
-procedure handle_verified(_?, _?, _).
-procedure trusted_module(_?).
-procedure negotiate_protocol(_?, Decision).
-procedure compatible(_?, _?).
-procedure attestation(_?, AttInfo).
-procedure module(_).
-
 %% Example: Verify message attestation before processing
+procedure process_message(_?, Decision).
 process_message(Msg, Result?) :-
     attestation(Msg, att(Agent, Module)),
     trusted_module(Module?) |
@@ -38,8 +30,16 @@ process_message(Msg, rejected) :-
     true.
 
 %% Example: Check own module for protocol decisions
+procedure negotiate_protocol(_?, Decision).
 negotiate_protocol(Other, Result?) :-
     module(MyModule),
     attestation(Other, att(_, OtherModule)),
     compatible(MyModule?, OtherModule?) |
     Result = accept.
+
+%% External procedures (defined elsewhere)
+procedure handle_verified(_?, _?, _).
+procedure trusted_module(_?).
+procedure compatible(_?, _?).
+procedure attestation(_?, AttInfo).
+procedure module(_).

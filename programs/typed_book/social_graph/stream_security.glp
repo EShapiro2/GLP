@@ -22,24 +22,24 @@
 Done ::= done.
 Control ::= control(Stream, Control).
 
-%% Procedure type declarations
-procedure extend_stream(Stream?, _, Stream).
-procedure producer_a(Control?).
-procedure producer_b(Control?).
-procedure handover(Done?, Stream, Control).
-procedure produce_batch_a(Stream, Stream?, Done).
-procedure produce_batch_b(Stream, Stream?, Done).
-
 %% Cooperative extension example - only holder of tail writer can extend
+procedure extend_stream(Stream?, _, Stream).
 extend_stream([H?|T], H, T).
 
 %% Round-robin production through explicit handover
+procedure producer_a(Control?).
 producer_a(control(Xs,Next?)) :-
     produce_batch_a(Xs,Xs1,Done),
     handover(Done?,Xs1?,Next).
 
+procedure producer_b(Control?).
 producer_b(control(Xs,Next?)) :-
     produce_batch_b(Xs,Xs1,Done),
     handover(Done?,Xs1?,Next).
 
+procedure handover(Done?, Stream, Control).
 handover(done, Xs, control(Xs?,Next?)).
+
+%% External procedures (defined elsewhere)
+procedure produce_batch_a(Stream, Stream?, Done).
+procedure produce_batch_b(Stream, Stream?, Done).

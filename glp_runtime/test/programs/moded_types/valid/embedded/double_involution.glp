@@ -16,7 +16,7 @@ Inner ::= inner(Number?).
 Outer ::= outer(Inner?).
 
 procedure foo(Outer?).
-procedure sink(Number?).
-
 foo(outer(inner(X))) :- sink(X?).
+
+procedure sink(Number?).
 sink(_).

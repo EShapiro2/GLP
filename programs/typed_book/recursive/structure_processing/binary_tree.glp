@@ -4,13 +4,11 @@
 %% Type definitions
 Tree ::= void ; tree(_, Tree, Tree).
 
-%% Procedure type declarations
 procedure binary_tree(Tree?).
-procedure reduce(_?, _).
-
 binary_tree(void).
 binary_tree(tree(_, Left, Right)) :- binary_tree(Left?), binary_tree(Right?).
 
 %% reduce clauses for metainterpreter
+procedure reduce(_?, _).
 reduce(binary_tree(void), true).
 reduce(binary_tree(tree(_, Left, Right)), (binary_tree(Left?), binary_tree(Right?))).

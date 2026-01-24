@@ -13,12 +13,12 @@
 %% Type definitions
 ExecTree ::= true ; fork(ExecTree, ExecTree) ; reduction(_, Number?, ExecTree).
 
-%% Procedure type declarations
-procedure run(_?, ExecTree).
+%% External procedure declarations (no clauses in this file)
 procedure reduce(_?, _).
 procedure observe(_?, _, _).
 procedure time(Number).
 
+procedure run(_?, ExecTree).
 run(true, true).  % halt
 run((A,B), fork(TA?,TB?)) :- run(A?,TA), run(B?,TB). % fork
 run(A, reduction(A_obs?,Time?,TB?)) :- otherwise, time(Time) |

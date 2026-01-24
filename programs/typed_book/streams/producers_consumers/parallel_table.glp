@@ -8,10 +8,7 @@
 %% Note: This file uses channel operations with complex state passing.
 %% MT validation skipped - requires channel infrastructure.
 
-%% Procedure type declarations
 procedure table(_?, Number?, _?, Number?).
-procedure read(_, _?, _).
-
 %% Lookup: exact key match returns value and true
 table(Self, LowKey, Value, HighKey) :-
     read(lookup(LowKey?, Value?, true), Self?, NewSelf) |
@@ -34,6 +31,8 @@ table(Self, LowKey, Value, HighKey) :-
 table(Self, LowKey, _, HighKey) :-
     read(store(LowKey?, NewValue?), Self?, NewSelf) |
     table(NewSelf?, LowKey?, NewValue?, HighKey?).
+
+procedure read(_, _?, _).
 
 %% Example using channels for parallel processing:
 %% compute(C) :-

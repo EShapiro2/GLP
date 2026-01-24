@@ -10,13 +10,12 @@
 %% Type definitions
 ExecTree ::= true ; fork(ExecTree, ExecTree) ; reduction(_, _?, ExecTree).
 
-%% Procedure type declarations
-procedure run(_?, _?, ExecTree).
-procedure replay(_?, ExecTree?, _).
+%% External procedure declarations (no clauses in this file)
 procedure reduce(_?, _, _).
 procedure reduce_by_index(_?, _, _).
 procedure observe(_?, _, _).
 
+procedure run(_?, _?, ExecTree).
 run(_, true, true).                              % halt
 run(M, (A, B), fork(TA?, TB?)) :-                % fork
     ground(M?) |
@@ -32,7 +31,7 @@ run(M, A, reduction(A_obs?, I?, TB?)) :-         % reduce
 %% Object program must provide reduce/3 with clause index:
 %% reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs), 1).
 
-%% Replay from trace
+procedure replay(_?, ExecTree?, _).
 replay(_, true, true).
 replay(M, fork(T1, T2), (A?, B?)) :-
     ground(M?) |

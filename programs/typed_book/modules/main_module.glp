@@ -3,11 +3,10 @@
 %% TYPE CHECKER NOTE: This program requires parameterized types and a typed
 %% module system (cross-module calls via #). Will be supported in a future version.
 
-%% Procedure type declarations
 procedure compute(_).
-procedure reduce(_?, _).
-
 compute(Result?) :-
     math_module # factorial(5, F),
     math_module # gcd(48, 18, G),
     Result = result(factorial(F?), gcd(G?)).
+
+procedure reduce(_?, _).

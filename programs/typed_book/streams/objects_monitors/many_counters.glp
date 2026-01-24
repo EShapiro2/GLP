@@ -11,12 +11,7 @@ CounterList ::= [] ; [CounterEntry | CounterList].
 Command ::= create(_) ; (_, CounterMsg).
 CommandStream ::= [] ; [Command | CommandStream].
 
-%% Procedure type declarations
 procedure use_many_counters(CommandStream?, CounterList).
-procedure send(CounterList?, _?, CounterMsg?, CounterList).
-procedure counter(Stream?, Number?).
-procedure wait_write(_?).
-
 use_many_counters([create(Name)|Input?], Stream_of_counters) :-
     counter(Com?, 0),
     use_many_counters(Input?, [(Name?, Com)|Stream_of_counters?]).
@@ -33,11 +28,13 @@ use_many_counters([X|Input?], Stream_of_counters) :-
     use_many_counters(Input?, NewList?).
 
 %% Send message to named counter
+procedure send(CounterList?, _?, CounterMsg?, CounterList).
 send([(Name, [Message|Y?])|Stream?], Name, Message, [(Name?, Y)|Stream]).
 send([C|Stream?], Name, Message, [C?|L1?]) :-
     send(Stream?, Name?, Message?, L1).
 
 %% Counter from counter.glp
+procedure counter(Stream?, Number?).
 counter([clear|S?], _) :-
     counter(S?, 0).
 counter([up|S?], State) :-
@@ -50,4 +47,5 @@ counter([show(State?)|S?], State) :-
     counter(S?, State?).
 counter([], _).
 
+procedure wait_write(_?).
 wait_write(X) :- known(X?) | write(X?).

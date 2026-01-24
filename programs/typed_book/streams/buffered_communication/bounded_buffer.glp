@@ -7,41 +7,40 @@
 %% Type definitions
 Buffer ::= Stream \ Stream?.
 
-%% Procedure type declarations
-procedure send_unbounded(_?, Stream, Stream?).
-procedure receive_unbounded(_, Stream?, Stream).
-procedure send(_?, Buffer?, Buffer).
-procedure receive(_, Buffer?, Buffer).
-procedure close(Stream?).
-procedure closed(_?).
-procedure open(Number?, Buffer).
-procedure sq_num_buffered(Number?, Stream, Number?).
-procedure integers(Number?, Number?, Buffer?).
-procedure square(Buffer?, Stream).
-procedure square2(_?, Buffer?, Stream).
-
 %% Unbounded buffer send/receive (standard stream communication)
+procedure send_unbounded(_?, Stream, Stream?).
 send_unbounded(Msg, [Msg?|NStrm], NStrm?).
+
+procedure receive_unbounded(_, Stream?, Stream).
 receive_unbounded(Msg?, [Msg|NStrm], NStrm?).
 
 %% Bounded buffer send/receive using difference list H\T
+procedure send(_?, Buffer?, Buffer).
 send(Msg, [Msg?|Buf?]\Tail?, Buf\Tail).
+
+procedure receive(_, Buffer?, Buffer).
 receive(Msg?, [Msg|Buf]\[_|Tail?], Buf?\Tail).
 
 %% Close and test closure
+procedure close(Stream?).
 close([end_of_stream|_]\_).
+
+procedure closed(_?).
 closed(end_of_stream).
 
 %% Open a buffer of given size
+procedure open(Number?, Buffer).
 open(0, X\X?).
 open(N, [_|H?]\T?) :- N? > 0 | N1 := N? - 1, open(N1?, H\T).
 
 %% Example: Buffered stream of squares
+procedure sq_num_buffered(Number?, Stream, Number?).
 sq_num_buffered(N, Ss?, Size) :-
     open(Size?, Buf\Tail),
     integers(1, N?, Buf?\Tail),
     square(Buf\Tail?, Ss).
 
+procedure integers(Number?, Number?, Buffer?).
 integers(I, N, Buf\Tail) :-
     I? =< N? |
     J := I? + 1,
@@ -51,10 +50,12 @@ integers(I, N, Buf\_) :-
     I? > N? |
     close(Buf?).
 
+procedure square(Buffer?, Stream).
 square(Buf\Tail, Ss?) :-
     receive(I, Buf?\Tail?, NBuf\NTail),
     square2(I?, NBuf?\NTail?, Ss).
 
+procedure square2(_?, Buffer?, Stream).
 square2(I, _\_, []) :- closed(I?) | true.
 square2(I, Buf\Tail, [I2?|Ss?]) :-
     number(I?) |

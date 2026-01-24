@@ -5,11 +5,11 @@
 MsgList ::= [] ; [_ | MsgList].
 FriendList ::= [] ; [_ | FriendList].
 
-%% Procedure type declarations
 procedure social_graph(_, MsgList, FriendList).
 
 %% Round 1: Alice cold-calls Bob, Bob accepts
 %% Alice's view:
+procedure test_alice_round1(_, _).
 test_alice_round1(_, Resp1) :-
     social_graph(alice,
         [msg(user, alice, connect(bob))|AliceIn1],
@@ -18,6 +18,7 @@ test_alice_round1(_, Resp1) :-
     AliceNet = [msg(alice, bob, intro(alice, alice, Resp1))|_].
 
 %% Bob's view - receives intro, user accepts:
+procedure test_bob_round1(_, _).
 test_bob_round1(BobFs1, Resp1) :-
     social_graph(bob,
         [msg(alice, bob, intro(alice, alice, Resp1)),
@@ -26,12 +27,14 @@ test_bob_round1(BobFs1, Resp1) :-
     %% Bob now has alice in friends, Resp1 = accept(ch(...))
 
 %% Round 2: Carol cold-calls Dave, Dave accepts
+procedure test_carol_round2(_, _).
 test_carol_round2(CarolFs1, Resp2) :-
     social_graph(carol,
         [msg(user, carol, connect(dave))|CarolIn1],
         [(user, CarolUser), (net, CarolNet)]),
     CarolNet = [msg(carol, dave, intro(carol, carol, Resp2))|_].
 
+procedure test_dave_round2(_, _).
 test_dave_round2(DaveFs1, Resp2) :-
     social_graph(dave,
         [msg(carol, dave, intro(carol, carol, Resp2)),
@@ -39,12 +42,14 @@ test_dave_round2(DaveFs1, Resp2) :-
         [(user, DaveUser), (net, DaveNet)]).
 
 %% Round 3: Bob cold-calls Carol, Carol accepts
+procedure test_bob_round3(_, _).
 test_bob_round3(BobFs2, Resp3) :-
     social_graph(bob,
         [msg(user, bob, connect(carol))|BobIn2],
         [(alice, AliceOut), (user, BobUser), (net, BobNet)]),
     BobNet = [msg(bob, carol, intro(bob, bob, Resp3))|_].
 
+procedure test_carol_round3(_, _).
 test_carol_round3(CarolFs2, Resp3) :-
     social_graph(carol,
         [msg(bob, carol, intro(bob, bob, Resp3)),
@@ -52,12 +57,14 @@ test_carol_round3(CarolFs2, Resp3) :-
         [(dave, DaveOut), (user, CarolUser), (net, CarolNet)]).
 
 %% Round 4: Dave cold-calls Alice, Alice REJECTS
+procedure test_dave_round4(_, _).
 test_dave_round4(DaveFs2, Resp4) :-
     social_graph(dave,
         [msg(user, dave, connect(alice))|DaveIn2],
         [(carol, CarolOut), (user, DaveUser), (net, DaveNet)]),
     DaveNet = [msg(dave, alice, intro(dave, dave, Resp4))|_].
 
+procedure test_alice_round4(_, _).
 test_alice_round4(AliceFs2, Resp4) :-
     social_graph(alice,
         [msg(dave, alice, intro(dave, dave, Resp4)),
@@ -66,12 +73,14 @@ test_alice_round4(AliceFs2, Resp4) :-
     %% Resp4 = no, Dave NOT added to alice's friends
 
 %% Round 5: Alice cold-calls Carol, Carol accepts
+procedure test_alice_round5(_, _).
 test_alice_round5(AliceFs3, Resp5) :-
     social_graph(alice,
         [msg(user, alice, connect(carol))|AliceIn3],
         [(bob, BobOut), (user, AliceUser), (net, AliceNet)]),
     AliceNet = [msg(alice, carol, intro(alice, alice, Resp5))|_].
 
+procedure test_carol_round5(_, _).
 test_carol_round5(CarolFs3, Resp5) :-
     social_graph(carol,
         [msg(alice, carol, intro(alice, alice, Resp5)),
