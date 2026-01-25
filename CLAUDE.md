@@ -205,11 +205,16 @@ Present your findings and discuss what to do next:
 - Fix the caller to pass valid input
 - Example: If `writerForReader(addr)` receives a writer address, don't make it "handle" that — fix the caller
 
-### Communication Style  
+### Communication Style
 - **BE TERSE** - Brief, direct responses
 - **NO LONG EXPLANATIONS** - Get to the point
 - **MISTAKES**: Just acknowledge - no apologies or promises
 - **NO VERBOSE POLITENESS** - Skip the fluff
+
+### Showing GLP Code
+- **ALWAYS show full context**: type declarations, procedure declarations, and full clauses
+- **NO intervening text** between related code blocks
+- **Group related definitions together** in a single code block
 
 ## Your Role
 You are the **executor and tester** for the GLP Runtime project. You run commands, show output, and implement code based on Claude Chat's architectural guidance.
