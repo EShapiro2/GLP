@@ -23,7 +23,7 @@ OpenStream ::= [_|Stream].
 DiffList ::= Stream \ Stream?.
 
 % Communication
-Channel ::= ch(Stream?, Stream).
+Channel ::= ch(Stream, Stream?).
 
 % Primitive types
 Constant ::= Number ; String.
@@ -78,29 +78,20 @@ procedure write(_?).
 procedure writeln(_?).
 
 % =============================================================================
-% PROCEDURES WITH CLAUSES
-% Declaration must immediately precede clauses (per typed-program.md)
+% DEFINED GUARD PROCEDURES (clauses only, no declarations)
+% These are partially evaluated during type checking
 % =============================================================================
 
-% Unification
-procedure =(_, _?).
+% Assignment
 X = X?.
 
 % Difference list operations
-procedure dl_append(_?, _?, _).
 dl_append(A\B?, B\C?, A?\C).
-
-procedure dl_to_list(_?, _).
 dl_to_list(L\[], L?).
 
 % Channel operations
-procedure new_channel(_, _).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
-
-procedure send(_, _, _).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
-
-procedure receive(_, _, _).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
 ''';
 
@@ -143,7 +134,6 @@ const Set<String> predefinedProcedureNames = {
   '=\\=',
   // Equality (fundamental)
   '=?=',
-  '=',
   // Univ operations (fundamental)
   '=..',
   '..=',
@@ -162,7 +152,7 @@ const Set<String> builtinGoals = {
 
 /// True builtins: procedures implemented in Dart runtime with NO GLP clauses.
 /// These are distinct from predefinedProcedureNames which includes procedures
-/// with prelude clauses (like =, dl_append, etc.).
+/// with prelude clauses (like new_channel).
 /// Keyed by "name/arity" for precise matching.
 const Set<String> builtinProcedures = {
   // Type guards

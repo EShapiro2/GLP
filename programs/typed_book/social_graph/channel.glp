@@ -1,9 +1,5 @@
 % Channel Operations (Program 9 from GLP 2025 paper)
-
-%% Type definitions
-%% Channel has two streams: position 1 is output (produced), position 2 is input (consumed)
-%% With unconditional variable flip, this makes new_channel(ch(Xs?, Ys), ch(Ys?, Xs)) well-typed
-Channel ::= ch(Stream, Stream?).
+% Channel type is defined in prelude as: Channel ::= ch(Stream, Stream?).
 
 procedure send(_?, Channel?, Channel).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
