@@ -12,17 +12,22 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-%% Response for cold-call protocol
 Response ::= accept(Channel) ; no.
-
-%% Introduction channel - sent by introducer to introducees
-%% intro(Other, Ch) - 2-arg form (distinct from cold-call's 3-arg intro)
-IntroMsg ::= intro(_, Channel).
-
-%% Friends list: list of (name, output-stream) pairs
-%% The stream must remain a writer for future sends
-FriendEntry ::= friend(_?, Stream).
+FriendEntry ::= friend(String?, Stream).
 FriendsList ::= [] ; [FriendEntry|FriendsList].
+
+%% =============================================================================
+%% CHANNEL OPERATIONS (Defined Guards)
+%% =============================================================================
+
+%% send(Msg, ChIn, ChOut) - send message on channel
+send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+
+%% receive(Msg, ChIn, ChOut) - receive message from channel
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
+
+%% new_channel(Ch1, Ch2) - create connected channel pair
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
 %% =============================================================================
 %% MERGE
@@ -47,12 +52,12 @@ tag_stream(_, [], []).
 %% LOOKUP_SEND - send message to named destination
 %% =============================================================================
 
-procedure lookup_send(_?, _?, FriendsList?, FriendsList).
+procedure lookup_send(String?, _?, FriendsList?, FriendsList).
 lookup_send(Key, Msg, Fs, Fs1?) :-
     ground(Key?) |
     lookup_send_step(Key?, Msg?, Fs?, Fs1).
 
-procedure lookup_send_step(_?, _?, FriendsList?, FriendsList).
+procedure lookup_send_step(String?, _?, FriendsList?, FriendsList).
 lookup_send_step(Key, Msg, [friend(K, [Msg?|Tail?])|Rest], [friend(K?, Tail)|Rest?]) :-
     Key? =?= K? | true.
 lookup_send_step(Key, Msg, [friend(K, Out?)|Rest], [friend(K?, Out)|Rest1?]) :-
@@ -335,9 +340,3 @@ play_alice_bob_carol :-
     bob_actor(UserBobCh?),
     carol_actor(UserCarolCh?).
 
-%% =============================================================================
-%% CHANNEL OPERATIONS
-%% =============================================================================
-
-procedure new_channel(Channel, Channel).
-new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
