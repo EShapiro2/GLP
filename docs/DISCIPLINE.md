@@ -344,6 +344,14 @@ Each project updates their own specs. Overview GLP ensures:
 
 ## Part V: Code Standards
 
+### 5.0 GLP Programming Idioms
+
+See `docs/glp-programming-idioms.md` for essential GLP programming patterns, including:
+
+- **Head-Body Variable Flow Principle**: How to correctly use reader/writer pairs when data flows between clause heads and bodies (critical for recursive clauses)
+- **Channel Type Convention**: The recommended `Channel ::= ch(Stream, Stream?)` definition
+- **New Channel Creation**: The `new_channel` pattern for bidirectional communication
+
 ### 5.1 Types First
 
 For any new GLP predicate:

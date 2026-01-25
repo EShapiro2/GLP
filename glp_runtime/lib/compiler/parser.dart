@@ -1317,11 +1317,17 @@ class Parser {
   }
 
   /// Parse a type definition: TypeName ::= alt ; alt ; alt.
+  /// Also supports explicit dual definitions: TypeName? ::= alt.
   TypeDef _parseTypeDef() {
     final typeNameToken = _check(TokenType.READER)
         ? _advance()
         : _consume(TokenType.VARIABLE, 'Expected type name');
-    final typeName = typeNameToken.lexeme;
+    
+    // For READER tokens (e.g., Channel?), append '?' to the name
+    // This supports explicit dual type definitions
+    final typeName = typeNameToken.type == TokenType.READER
+        ? '${typeNameToken.lexeme}?'
+        : typeNameToken.lexeme;
     final line = typeNameToken.line;
     final column = typeNameToken.column;
 

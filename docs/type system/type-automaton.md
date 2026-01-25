@@ -67,14 +67,28 @@ The states `_` and `_?` accept any term:
 
 **These are final states; no outgoing transitions are required.**
 
-## Definition 5.13 (Duality as Involution)
+## Definition 5.13 (Dual Type Automaton)
 
-> For each type T, duality defines the dual type T? with a corresponding dual automaton. The automaton for T? is obtained from the automaton for T by:
+> For each type T, the dual type T? has a corresponding automaton. The automaton for T? is derived from the definition of T?, which may be implicit or explicit:
 >
+> **Implicit dual (default):** If no explicit dual is provided, the automaton for T? is obtained from the automaton for T by:
 > 1. Replacing each state S with its dual state S?
 > 2. Replacing each mode annotation: ↑ becomes ↓, and ↓ becomes ↑
 >
-> This defines duality as an involution: (T?)? = T.
+> **Explicit dual:** If an explicit dual definition T? is provided (as for abstract data types like channels and difference lists), the automaton for T? is constructed directly from that definition, preserving the internal structure.
+
+### Example: Explicit Dual for Channel
+
+```
+Channel ::= ch(Stream?, Stream).
+Channel? ::= ch(Stream?, Stream)?.
+```
+
+With the explicit dual, both `Channel` and `Channel?` have the same internal structure:
+- Position 1: mode ↓ (consuming Stream?)
+- Position 2: mode ↑ (producing Stream)
+
+This preserves the invariant that position 1 is always the input stream and position 2 is always the output stream, regardless of whether a Channel is produced or consumed.
 
 ## Determinism Requirement
 

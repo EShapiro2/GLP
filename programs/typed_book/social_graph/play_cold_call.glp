@@ -1,89 +1,238 @@
-%% play_cold_call.glp - Multi-agent cold-call scenario test
-%% 4 players: Alice, Bob, Carol, Dave
+%% play_cold_call.glp - Symmetric cold-call simulation
+%% 
+%% Two agents (Alice and Bob) connected via network router.
+%% Bob initiates a cold-call to Alice, Alice accepts.
+%%
+%% Date: 2026-01-24
 
-%% Type definitions
-MsgList ::= [] ; [_ | MsgList].
-FriendList ::= [] ; [_ | FriendList].
+%% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
 
-procedure social_graph(_, MsgList, FriendList).
+%% Channel: position 1 is output (write), position 2 is input (read when consumed)
+Channel ::= ch(Stream, Stream?).
 
-%% Round 1: Alice cold-calls Bob, Bob accepts
-%% Alice's view:
-procedure test_alice_round1(_, _).
-test_alice_round1(_, Resp1) :-
-    social_graph(alice,
-        [msg(user, alice, connect(bob))|AliceIn1],
-        [(user, AliceUser), (net, AliceNet)]),
-    %% Alice sends intro, waits for response
-    AliceNet = [msg(alice, bob, intro(alice, alice, Resp1))|_].
+%% Friend management
+FriendEntry ::= (_, Channel).
+FriendList ::= [] ; [FriendEntry | FriendList].
 
-%% Bob's view - receives intro, user accepts:
-procedure test_bob_round1(_, _).
-test_bob_round1(BobFs1, Resp1) :-
-    social_graph(bob,
-        [msg(alice, bob, intro(alice, alice, Resp1)),
-         msg(user, bob, decision(yes, alice, Resp1))|BobIn1],
-        [(user, BobUser), (net, BobNet)]).
-    %% Bob now has alice in friends, Resp1 = accept(ch(...))
+%% Response to connection request
+Response ::= accept(Channel) ; no.
 
-%% Round 2: Carol cold-calls Dave, Dave accepts
-procedure test_carol_round2(_, _).
-test_carol_round2(CarolFs1, Resp2) :-
-    social_graph(carol,
-        [msg(user, carol, connect(dave))|CarolIn1],
-        [(user, CarolUser), (net, CarolNet)]),
-    CarolNet = [msg(carol, dave, intro(carol, carol, Resp2))|_].
+%% User interface - symmetric for all agents
+Keyboard ::= connect(_) ; send(_, _) ; friends ; accept(_) ; reject(_).
+Screen ::= connected(_) ; rejected(_) ; sent(_) ; not_friend(_) 
+         ; friends_list(FriendList) ; incoming(_).
 
-procedure test_dave_round2(_, _).
-test_dave_round2(DaveFs1, Resp2) :-
-    social_graph(dave,
-        [msg(carol, dave, intro(carol, carol, Resp2)),
-         msg(user, dave, decision(yes, carol, Resp2))|DaveIn1],
-        [(user, DaveUser), (net, DaveNet)]).
+%% Network messages between agents
+NetMsg ::= intro(_, Response?) ; msg(_, _, _).
 
-%% Round 3: Bob cold-calls Carol, Carol accepts
-procedure test_bob_round3(_, _).
-test_bob_round3(BobFs2, Resp3) :-
-    social_graph(bob,
-        [msg(user, bob, connect(carol))|BobIn2],
-        [(alice, AliceOut), (user, BobUser), (net, BobNet)]),
-    BobNet = [msg(bob, carol, intro(bob, bob, Resp3))|_].
+%% Pending connection requests (waiting for user decision)
+PendingEntry ::= pending(_, Response).
+PendingList ::= [] ; [PendingEntry | PendingList].
 
-procedure test_carol_round3(_, _).
-test_carol_round3(CarolFs2, Resp3) :-
-    social_graph(carol,
-        [msg(bob, carol, intro(bob, bob, Resp3)),
-         msg(user, carol, decision(yes, bob, Resp3))|CarolIn2],
-        [(dave, DaveOut), (user, CarolUser), (net, CarolNet)]).
+%% =============================================================================
+%% CHANNEL OPERATIONS
+%% =============================================================================
 
-%% Round 4: Dave cold-calls Alice, Alice REJECTS
-procedure test_dave_round4(_, _).
-test_dave_round4(DaveFs2, Resp4) :-
-    social_graph(dave,
-        [msg(user, dave, connect(alice))|DaveIn2],
-        [(carol, CarolOut), (user, DaveUser), (net, DaveNet)]),
-    DaveNet = [msg(dave, alice, intro(dave, dave, Resp4))|_].
+procedure new_channel(Channel, Channel).
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
-procedure test_alice_round4(_, _).
-test_alice_round4(AliceFs2, Resp4) :-
-    social_graph(alice,
-        [msg(dave, alice, intro(dave, dave, Resp4)),
-         msg(user, alice, decision(no, dave, Resp4))|AliceIn2],
-        [(bob, BobOut), (user, AliceUser), (net, AliceNet)]).
-    %% Resp4 = no, Dave NOT added to alice's friends
+%% =============================================================================
+%% MERGE (for combining user and network inputs)
+%% =============================================================================
 
-%% Round 5: Alice cold-calls Carol, Carol accepts
-procedure test_alice_round5(_, _).
-test_alice_round5(AliceFs3, Resp5) :-
-    social_graph(alice,
-        [msg(user, alice, connect(carol))|AliceIn3],
-        [(bob, BobOut), (user, AliceUser), (net, AliceNet)]),
-    AliceNet = [msg(alice, carol, intro(alice, alice, Resp5))|_].
+procedure merge(Stream?, Stream?, Stream).
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
 
-procedure test_carol_round5(_, _).
-test_carol_round5(CarolFs3, Resp5) :-
-    social_graph(carol,
-        [msg(alice, carol, intro(alice, alice, Resp5)),
-         msg(user, carol, decision(yes, alice, Resp5))|CarolIn3],
-        [(bob, BobOut), (dave, DaveOut), (user, CarolUser), (net, CarolNet)]).
-    %% Carol now has 3 friends: bob, dave, alice
+%% =============================================================================
+%% LIST UTILITIES
+%% =============================================================================
+
+procedure lookup(_?, FriendList?, _).
+lookup(Key, [(Key1, Value)|_], found(Value?)) :- Key? =?= Key1? | true.
+lookup(Key, [(Key1, _)|Rest], Result?) :- Key? =\= Key1? | lookup(Key?, Rest?, Result).
+lookup(_, [], not_found).
+
+procedure add_pending(_?, Response?, PendingList?, PendingList).
+add_pending(Name, Resp, Ps, [pending(Name?, Resp?)|Ps?]).
+
+procedure lookup_pending(_?, PendingList?, _).
+lookup_pending(Name, [pending(Name1, Resp)|_], found(Resp?)) :- Name? =?= Name1? | true.
+lookup_pending(Name, [pending(Name1, _)|Rest], Result?) :- Name? =\= Name1? | lookup_pending(Name?, Rest?, Result).
+lookup_pending(_, [], not_found).
+
+%% =============================================================================
+%% SOCIAL AGENT
+%% =============================================================================
+
+%% Agent state: Id, UserChannel, NetChannel, Friends, Pending
+procedure agent(_?, Channel?, Channel?).
+agent(Id, UserCh, NetCh) :-
+    ground(Id?) |
+    agent_loop(Id?, UserCh?, NetCh?, [], []).
+
+procedure agent_loop(_?, Channel?, Channel?, FriendList?, PendingList?).
+
+%% --- User wants to connect to someone ---
+agent_loop(Id, ch([connect(Target)|UserIn], UserOut?), NetCh, Fs, Ps) :-
+    ground(Id?), ground(Target?) |
+    %% Send intro to target via network, with hollow Resp
+    send_intro(Id?, Target?, NetCh?, NetCh1, Resp),
+    %% Wait for response and continue
+    handle_connect_response(Id?, Target?, Resp?, UserIn?, UserOut, NetCh1?, Fs?, Ps?).
+
+%% --- User accepts incoming connection ---
+agent_loop(Id, ch([accept(From)|UserIn], UserOut?), NetCh, Fs, Ps) :-
+    ground(Id?), ground(From?) |
+    handle_accept(Id?, From?, UserIn?, UserOut, NetCh?, Fs?, Ps?).
+
+%% --- User rejects incoming connection ---
+agent_loop(Id, ch([reject(From)|UserIn], UserOut?), NetCh, Fs, Ps) :-
+    ground(Id?), ground(From?) |
+    handle_reject(Id?, From?, UserIn?, UserOut, NetCh?, Fs?, Ps?).
+
+%% --- User queries friends list ---
+agent_loop(Id, ch([friends|UserIn], [friends_list(Fs?)|UserOut?]), NetCh, Fs, Ps) :-
+    ground(Id?) |
+    agent_loop(Id?, ch(UserIn?, UserOut), NetCh?, Fs?, Ps?).
+
+%% --- Received intro from network (incoming cold-call) ---
+agent_loop(Id, ch(UserIn, [incoming(From?)|UserOut?]), ch([intro(From, Resp)|NetIn], NetOut?), Fs, Ps) :-
+    ground(Id?), ground(From?) |
+    add_pending(From?, Resp?, Ps?, Ps1),
+    agent_loop(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut), Fs?, Ps1?).
+
+%% --- Received response to our intro ---
+agent_loop(Id, ch(UserIn, [connected(From?)|UserOut?]), ch([response(From, accept(TheirCh))|NetIn], NetOut?), Fs, Ps) :-
+    ground(Id?), ground(From?) |
+    %% Add to friends
+    agent_loop(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut), [(From?, TheirCh?)|Fs?], Ps?).
+
+agent_loop(Id, ch(UserIn, [rejected(From?)|UserOut?]), ch([response(From, no)|NetIn], NetOut?), Fs, Ps) :-
+    ground(Id?) |
+    agent_loop(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut), Fs?, Ps?).
+
+%% --- Termination ---
+agent_loop(_, ch([], []), ch([], []), _, _).
+
+%% --- Helper: send intro ---
+procedure send_intro(_?, _?, Channel?, Channel, Response?).
+send_intro(Id, Target, ch(NetIn, [intro(Id?, Resp?)|NetOut?]), ch(NetIn?, NetOut), Resp).
+
+%% --- Helper: handle response to our connect ---
+procedure handle_connect_response(_?, _?, Response?, Stream?, Stream, Channel?, FriendList?, PendingList?).
+handle_connect_response(Id, Target, accept(TheirCh), UserIn, [connected(Target?)|UserOut?], NetCh, Fs, Ps) :-
+    ground(Id?), ground(Target?) |
+    agent_loop(Id?, ch(UserIn?, UserOut), NetCh?, [(Target?, TheirCh?)|Fs?], Ps?).
+handle_connect_response(Id, Target, no, UserIn, [rejected(Target?)|UserOut?], NetCh, Fs, Ps) :-
+    ground(Id?) |
+    agent_loop(Id?, ch(UserIn?, UserOut), NetCh?, Fs?, Ps?).
+
+%% --- Helper: handle user accepting ---
+procedure handle_accept(_?, _?, Stream?, Stream, Channel?, FriendList?, PendingList?).
+handle_accept(Id, From, UserIn, [connected(From?)|UserOut?], ch(NetIn, [response(Id?, accept(TheirCh?))|NetOut?]), Fs, Ps) :-
+    ground(Id?), ground(From?) |
+    lookup_pending(From?, Ps?, LookupResult),
+    fill_accept_response(LookupResult?, From?, OurCh, TheirCh),
+    agent_loop(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut), [(From?, OurCh?)|Fs?], Ps?).
+
+procedure fill_accept_response(_, _?, Channel, Channel).
+fill_accept_response(found(Resp), From, OurCh, TheirCh) :-
+    ground(From?) |
+    new_channel(OurCh, TheirCh),
+    Resp = accept(TheirCh?).
+
+%% --- Helper: handle user rejecting ---
+procedure handle_reject(_?, _?, Stream?, Stream, Channel?, FriendList?, PendingList?).
+handle_reject(Id, From, UserIn, [rejected(From?)|UserOut?], ch(NetIn, [response(Id?, no)|NetOut?]), Fs, Ps) :-
+    ground(Id?), ground(From?) |
+    lookup_pending(From?, Ps?, LookupResult),
+    fill_reject_response(LookupResult?),
+    agent_loop(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut), Fs?, Ps?).
+
+procedure fill_reject_response(_).
+fill_reject_response(found(Resp)) :- Resp = no.
+fill_reject_response(not_found).
+
+%% =============================================================================
+%% NETWORK ROUTER
+%% Routes messages between alice and bob
+%% =============================================================================
+
+procedure router(Channel?, Channel?).
+
+%% Alice sends to Bob (intro or response)
+router(ch([intro(alice, X)|AliceIn], AliceOut?),
+       ch(BobIn, [intro(alice, X?)|BobOut?])) :-
+    router(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+router(ch([response(alice, X)|AliceIn], AliceOut?),
+       ch(BobIn, [response(alice, X?)|BobOut?])) :-
+    router(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+%% Bob sends to Alice (intro or response)
+router(ch(AliceIn, [intro(bob, X?)|AliceOut?]),
+       ch([intro(bob, X)|BobIn], BobOut?)) :-
+    router(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+router(ch(AliceIn, [response(bob, X?)|AliceOut?]),
+       ch([response(bob, X)|BobIn], BobOut?)) :-
+    router(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+%% Termination
+router(ch([], _), ch([], _)).
+
+%% =============================================================================
+%% ACTORS (simulate user behavior)
+%% =============================================================================
+
+%% Bob: initiates connect to alice, then done
+procedure bob_actor(Channel?).
+bob_actor(ch([connected(alice)|In], [connect(alice)|Out?])) :-
+    bob_done(In?, Out).
+bob_actor(ch([rejected(alice)|In], [connect(alice)|Out?])) :-
+    bob_done(In?, Out).
+
+procedure bob_done(Stream?, Stream).
+bob_done([], []).
+bob_done([_|Xs], Ys?) :- bob_done(Xs?, Ys).
+
+%% Alice: receives incoming, accepts, then done
+procedure alice_actor(Channel?).
+alice_actor(ch([incoming(bob)|In], Out?)) :-
+    alice_respond(In?, Out).
+
+procedure alice_respond(Stream?, Stream).
+alice_respond([connected(bob)|In], [accept(bob)|Out?]) :-
+    alice_done(In?, Out).
+
+procedure alice_done(Stream?, Stream).
+alice_done([], []).
+alice_done([_|Xs], Ys?) :- alice_done(Xs?, Ys).
+
+%% =============================================================================
+%% THE PLAY
+%% =============================================================================
+
+procedure play.
+play :-
+    %% Create channel pairs
+    new_channel(AliceUserCh, UserAliceCh),
+    new_channel(AliceNetCh, NetAliceCh),
+    new_channel(BobUserCh, UserBobCh),
+    new_channel(BobNetCh, NetBobCh),
+    
+    %% Start network router
+    router(NetAliceCh?, NetBobCh?),
+    
+    %% Start agents
+    agent(alice, AliceUserCh?, AliceNetCh?),
+    agent(bob, BobUserCh?, BobNetCh?),
+    
+    %% Start actors (simulate users)
+    alice_actor(UserAliceCh?),
+    bob_actor(UserBobCh?).

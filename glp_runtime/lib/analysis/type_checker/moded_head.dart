@@ -201,6 +201,10 @@ ModedTerm _buildModedSubterm(ast.Term term, Mode mode, TypeExpr? expectedType, T
 ///
 /// Uses mode involution: combinedMode = parentMode ⊕ embeddedMode
 /// where ⊕ is XOR-like: same modes → produce, different → consume
+///
+/// For dual types (T?), first checks for an explicit dual definition.
+/// If found, uses that definition's structure directly.
+/// Otherwise, falls back to algorithmic complementation.
 List<(Mode, TypeExpr?)> _getSubtermModes(
   String functor,
   int arity,
@@ -217,21 +221,32 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
 
   // Resolve type reference to get the type definition
   String? typeName;
+  bool isDual = false;
   if (expectedType is TypeRef) {
     typeName = expectedType.name;
+    isDual = expectedType.isInput;
   }
 
   if (typeName == null) {
     return defaultModes;
   }
 
-  final typeDef = typeEnv.getType(typeName);
+  // For dual types, first check for an explicit dual definition
+  TypeDef? typeDef;
+  bool usingExplicitDual = false;
+  if (isDual) {
+    // Check for explicit dual definition (e.g., "Channel?")
+    typeDef = typeEnv.getType('$typeName?');
+    if (typeDef != null) {
+      usingExplicitDual = true;
+    }
+  }
+  
+  // Fall back to base type definition
+  typeDef ??= typeEnv.getType(typeName);
   if (typeDef == null) {
     return defaultModes;
   }
-
-  // Check if expected type is a dual (isInput=true)
-  final isDual = expectedType is TypeRef && expectedType.isInput;
 
   // Find matching structure alternative in type definition
   for (final alt in typeDef.alternatives) {
@@ -240,9 +255,11 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
       final result = <(Mode, TypeExpr?)>[];
       for (final argType in alt.args) {
         final embeddedMode = _getEmbeddedMode(argType);
-        final combinedMode = combineMode(parentMode, embeddedMode);
-        // For dual types, flip the subterm type for DFA leaf checking
-        final subtermType = isDual ? _dualType(argType) : argType;
+        // For explicit duals, use embedded mode directly (preserving internal structure)
+        // For implicit duals, combine with parent mode via involution
+        final combinedMode = usingExplicitDual ? embeddedMode : combineMode(parentMode, embeddedMode);
+        // For algorithmic duals (not explicit), flip the subterm type for DFA leaf checking
+        final subtermType = (isDual && !usingExplicitDual) ? _dualType(argType) : argType;
         result.add((combinedMode, subtermType));
       }
       return result;
@@ -252,11 +269,14 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
     if (alt is DiffListAlt && functor == r'\' && arity == 2) {
       final contentMode = _getEmbeddedMode(alt.content);
       final holeMode = _getEmbeddedMode(alt.hole);
-      final contentType = isDual ? _dualType(alt.content) : alt.content;
-      final holeType = isDual ? _dualType(alt.hole) : alt.hole;
+      // For explicit duals, use embedded modes directly
+      final contentCombined = usingExplicitDual ? contentMode : combineMode(parentMode, contentMode);
+      final holeCombined = usingExplicitDual ? holeMode : combineMode(parentMode, holeMode);
+      final contentType = (isDual && !usingExplicitDual) ? _dualType(alt.content) : alt.content;
+      final holeType = (isDual && !usingExplicitDual) ? _dualType(alt.hole) : alt.hole;
       return [
-        (combineMode(parentMode, contentMode), contentType),
-        (combineMode(parentMode, holeMode), holeType),
+        (contentCombined, contentType),
+        (holeCombined, holeType),
       ];
     }
   }
@@ -267,6 +287,10 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
 /// Get subterm modes for list [H|T] by looking up type definition.
 ///
 /// Returns a tuple of (headModeInfo, tailModeInfo) where each is (Mode, TypeExpr?).
+///
+/// For dual types (T?), first checks for an explicit dual definition.
+/// If found, uses that definition's structure directly.
+/// Otherwise, falls back to algorithmic complementation.
 ((Mode, TypeExpr?), (Mode, TypeExpr?)) _getListSubtermModes(
   Mode parentMode,
   TypeExpr? expectedType,
@@ -280,33 +304,46 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
   }
 
   String? typeName;
+  bool isDual = false;
   if (expectedType is TypeRef) {
     typeName = expectedType.name;
+    isDual = expectedType.isInput;
   }
 
   if (typeName == null) {
     return defaultResult;
   }
 
-  final typeDef = typeEnv.getType(typeName);
+  // For dual types, first check for an explicit dual definition
+  TypeDef? typeDef;
+  bool usingExplicitDual = false;
+  if (isDual) {
+    // Check for explicit dual definition (e.g., "Stream?")
+    typeDef = typeEnv.getType('$typeName?');
+    if (typeDef != null) {
+      usingExplicitDual = true;
+    }
+  }
+  
+  // Fall back to base type definition
+  typeDef ??= typeEnv.getType(typeName);
   if (typeDef == null) {
     return defaultResult;
   }
-
-  // Check if expected type is a dual (isInput=true)
-  final isDual = expectedType is TypeRef && expectedType.isInput;
 
   // Find ListConsAlt in type definition
   for (final alt in typeDef.alternatives) {
     if (alt is ListConsAlt) {
       final headEmbeddedMode = _getEmbeddedMode(alt.head);
       final tailEmbeddedMode = _getEmbeddedMode(alt.tail);
-      final headMode = combineMode(parentMode, headEmbeddedMode);
-      final tailMode = combineMode(parentMode, tailEmbeddedMode);
+      // For explicit duals, use embedded modes directly (preserving internal structure)
+      // For implicit duals, combine with parent mode via involution
+      final headMode = usingExplicitDual ? headEmbeddedMode : combineMode(parentMode, headEmbeddedMode);
+      final tailMode = usingExplicitDual ? tailEmbeddedMode : combineMode(parentMode, tailEmbeddedMode);
 
-      // For dual types, flip the subterm types for DFA leaf checking
-      final headType = isDual ? _dualType(alt.head) : alt.head;
-      final tailType = isDual ? _dualType(alt.tail) : alt.tail;
+      // For algorithmic duals (not explicit), flip the subterm types for DFA leaf checking
+      final headType = (isDual && !usingExplicitDual) ? _dualType(alt.head) : alt.head;
+      final tailType = (isDual && !usingExplicitDual) ? _dualType(alt.tail) : alt.tail;
 
       return (
         (headMode, headType),
@@ -394,13 +431,14 @@ ModedTerm _buildOpaqueModedTerm(ast.Term term, Mode mode) {
   throw InvalidHeadError('Unknown term type in opaque context: ${term.runtimeType}');
 }
 
-/// Ensure each variable's form matches its position's structural mode.
+/// Complement all variables in the moded term.
 ///
-/// Per Definition 5.5 step 2:
-/// - A variable at mode ↓ (consume) should be a reader (X?)
-/// - A variable at mode ↑ (produce) should be a writer (X)
+/// Per Definition 5.5 step 2: Replace each variable with its paired variable.
+/// This is unconditional - every variable is complemented.
 ///
-/// If form doesn't match, flip to the paired variable.
+/// This reflects the semantic inversion of head variables:
+/// - Head writers become readers in the moded head (bound BY the goal)
+/// - Head readers become writers in the moded head (will be bound BY the body)
 ModedTerm _ensureVariablesMatchModes(ModedTerm term) {
   if (term is ModedCompound) {
     final adjustedArgs = term.args.map(_ensureVariablesMatchModes).toList();
@@ -412,12 +450,8 @@ ModedTerm _ensureVariablesMatchModes(ModedTerm term) {
   }
 
   if (term is ModedVariable) {
-    final shouldBeReader = (term.mode == Mode.consume);
-    if (term.isReader == shouldBeReader) {
-      return term;  // Already correct
-    } else {
-      return ModedVariable(term.name, isReader: !term.isReader, structuralMode: term.mode);
-    }
+    // Unconditional complementation: always flip the variable
+    return ModedVariable(term.name, isReader: !term.isReader, structuralMode: term.mode);
   }
 
   throw InvalidHeadError('Unknown moded term type: ${term.runtimeType}');

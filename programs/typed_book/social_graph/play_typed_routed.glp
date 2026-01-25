@@ -1,0 +1,196 @@
+%% play_typed_routed.glp - Two-agent play with network router
+%% 
+%% Architecture:
+%%   AliceActor <--UserCh--> AliceAgent <--NetCh--> Router <--NetCh--> BobAgent <--UserCh--> BobActor
+%%
+%% Message types (from social_graph_protocol.glp):
+%%   - decision(Dec, From, Resp?) : user tells agent to accept/reject From
+%%   - response(From, Resp)       : agent receives response from From
+%%
+%% Flow:
+%% 1. BobActor sends intro_for_alice(Resp?) to BobAgent via user channel
+%% 2. BobAgent sends response(bob, Resp?) to AliceAgent via network
+%% 3. AliceAgent receives intro, asks AliceActor via befriend(bob, Resp?) on user channel
+%% 4. AliceActor sends decision(yes, bob, Resp?) back
+%% 5. AliceAgent processes decision, fills Resp with accept(Channel)
+%% 6. Resp propagates back to BobAgent
+%% 7. BobAgent processes response(alice, Resp), adds Alice to friends
+%%
+%% Date: 2026-01-24
+
+%% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
+
+Channel ::= ch(Stream, Stream?).
+FriendEntry ::= (_, Stream).
+FriendList ::= [] ; [FriendEntry | FriendList].
+Response ::= accept(Channel) ; no.
+
+%% Network message: carries response between agents
+NetMsg ::= response(_, Response).
+
+%% User messages: between actor and agent
+%% - connect(To, Resp?): actor tells agent to initiate connection to To
+%% - decision(Dec, From, Resp?): actor decides on befriend request  
+%% - befriend(From, Resp?): agent asks actor about incoming connection
+UserMsg ::= connect(_, Response?) ; decision(_, _, Response?) ; befriend(_, Response?).
+
+%% =============================================================================
+%% CHANNEL OPERATIONS
+%% =============================================================================
+
+procedure new_channel(Channel, Channel).
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+%% =============================================================================
+%% MERGE
+%% =============================================================================
+
+procedure merge(Stream?, Stream?, Stream).
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], [], []).
+
+%% =============================================================================
+%% TAG_STREAM
+%% =============================================================================
+
+procedure tag_stream(_?, Stream?, Stream).
+tag_stream(_, [], []).
+tag_stream(Tag, [X|Xs], [tagged(Tag?, X?)|Ys?]) :-
+    ground(Tag?) |
+    tag_stream(Tag?, Xs?, Ys).
+
+%% =============================================================================
+%% RESPONSE HANDLING
+%% =============================================================================
+
+procedure handle_response(Response?, _?, FriendList?, FriendList, Stream?, Stream).
+handle_response(accept(ch(FIn, FOut)), From, Fs, [(From?, FOut?)|Fs?], In, In1?) :-
+    ground(From?) |
+    tag_stream(From?, FIn?, Tagged),
+    merge(In?, Tagged?, In1).
+handle_response(no, _, Fs, Fs?, In, In?).
+
+procedure bind_response(_?, _?, Response, FriendList?, FriendList, Stream?, Stream).
+bind_response(yes, From, accept(TheirCh?), Fs, Fs1?, In, In1?) :-
+    new_channel(OurCh, TheirCh),
+    handle_response(accept(OurCh?), From?, Fs?, Fs1, In?, In1).
+bind_response(no, _, no, Fs, Fs?, In, In?).
+
+%% =============================================================================
+%% SOCIAL GRAPH
+%% =============================================================================
+
+procedure social_graph(_?, Stream?, FriendList?).
+
+social_graph(Id, [decision(Dec, From, Resp?)|In], Fs) :-
+    ground(Id?) |
+    bind_response(Dec?, From?, Resp, Fs?, Fs1, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+social_graph(Id, [response(From, Resp)|In], Fs) :-
+    ground(Id?) |
+    handle_response(Resp?, From?, Fs?, Fs1, In?, In1),
+    social_graph(Id?, In1?, Fs1?).
+
+social_graph(_, [], _).
+
+%% =============================================================================
+%% AGENT
+%% =============================================================================
+
+procedure build_friends(Stream?, Stream?, FriendList).
+build_friends(UserOut, NetOut, [(user, UserOut?), (net, NetOut?)]).
+
+procedure agent(_?, Channel?, Channel?).
+agent(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
+    merge(UserIn?, NetIn?, In),
+    build_friends(UserOut?, NetOut?, Fs),
+    social_graph(Id?, In?, Fs?).
+
+%% =============================================================================
+%% NETWORK ROUTER
+%% Routes response messages between alice and bob
+%% =============================================================================
+
+procedure router(Channel?, Channel?).
+
+%% Alice sends response to Bob
+router(ch([response(alice, X)|AliceIn], AliceOut?),
+       ch(BobIn, [response(alice, X?)|BobOut?])) :-
+    router(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+%% Bob sends response to Alice  
+router(ch(AliceIn, [response(bob, X?)|AliceOut?]),
+       ch([response(bob, X)|BobIn], BobOut?)) :-
+    router(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+%% Termination: both done
+router(ch([], _), ch([], _)).
+
+%% =============================================================================
+%% ACTORS (simulate user behavior)
+%% =============================================================================
+
+%% Alice's actor: receives befriend request from agent, sends acceptance decision
+%% When alice_actor receives befriend(From, Resp?) on input, it sends
+%% decision(yes, From, Resp?) on output, forwarding the hollow Resp.
+procedure alice_actor(Channel?).
+alice_actor(ch([befriend(From, Resp)|In], [decision(yes, From?, Resp?)|Out?])) :-
+    ground(From?) |
+    alice_actor(ch(In?, Out)).
+alice_actor(ch([], [])).
+
+%% Bob's actor: tells agent to connect to alice, then waits
+procedure bob_actor(Channel?).
+bob_actor(ch(In, [connect(alice, Resp?)|Out?])) :-
+    bob_wait(In?, Out, Resp?).
+
+%% After sending connect, Bob waits and observes the response
+procedure bob_wait(Stream?, Stream, Response?).
+bob_wait([], [], _).
+bob_wait([_|In], Out?) :- bob_wait(In?, Out, _).
+
+%% =============================================================================
+%% THE PLAY
+%% 
+%% Scenario: Bob's agent has already sent an introduction to Alice.
+%% Alice receives response(bob, Resp?) on her network channel.
+%% Alice's agent asks user via befriend, user accepts.
+%% Response flows back to Bob.
+%% =============================================================================
+
+procedure play.
+play :-
+    %% Create channel pairs
+    new_channel(AliceUserCh, UserAliceCh),
+    new_channel(AliceNetCh, NetAliceCh),
+    new_channel(BobUserCh, UserBobCh),
+    new_channel(BobNetCh, NetBobCh),
+    
+    %% Start network router with its channel ends
+    router(NetAliceCh?, NetBobCh?),
+    
+    %% Start agents with their channel ends
+    agent(alice, AliceUserCh?, AliceNetCh?),
+    agent(bob, BobUserCh?, BobNetCh?),
+    
+    %% Start actors with their channel ends
+    alice_actor(UserAliceCh?),
+    bob_actor(UserBobCh?).
+
+%% =============================================================================
+%% SIMPLER TEST: Just verify router type-checks
+%% =============================================================================
+
+procedure test_router.
+test_router :-
+    new_channel(AliceCh, RouterAliceCh),
+    new_channel(BobCh, RouterBobCh),
+    router(RouterAliceCh?, RouterBobCh?),
+    test_router_endpoints(AliceCh?, BobCh?).
+
+procedure test_router_endpoints(Channel?, Channel?).
+test_router_endpoints(_, _).
