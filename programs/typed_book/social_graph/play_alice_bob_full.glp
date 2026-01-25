@@ -56,8 +56,8 @@ collect_friends([friend(user, Out?)|Rest], Names?, [friend(user, Out)|Rest1?]) :
     collect_friends(Rest?, Names, Rest1).
 collect_friends([friend(net, Out?)|Rest], Names?, [friend(net, Out)|Rest1?]) :-
     collect_friends(Rest?, Names, Rest1).
-collect_friends([friend(Name?, Out?)|Rest], [Name|Names?], [friend(Name, Out)|Rest1?]) :-
-    otherwise | collect_friends(Rest?, Names, Rest1).
+collect_friends([friend(Name, Out?)|Rest], [Name?|Names?], [friend(Name?, Out)|Rest1?]) :-
+    ground(Name?), otherwise | collect_friends(Rest?, Names, Rest1).
 collect_friends([], [], []).
 
 %% =============================================================================
@@ -144,7 +144,7 @@ agent(_, [], _).
 %% =============================================================================
 
 procedure agent_init(_?, Channel?, Channel?).
-agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
+agent_init(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
     merge(UserIn?, NetIn?, In),
     agent(Id?, In?, [friend(user, UserOut?), friend(net, NetOut?)]).
 
