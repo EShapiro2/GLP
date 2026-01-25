@@ -1,7 +1,10 @@
 % Channel Operations (Program 9 from GLP 2025 paper)
 
 %% Type definitions
+%% Channel has two streams: position 1 is input (consumed), position 2 is output (produced)
+%% The explicit dual preserves internal structure regardless of production/consumption context
 Channel ::= ch(Stream?, Stream).
+Channel? ::= ch(Stream?, Stream)?.
 
 procedure send(_?, Channel?, Channel).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).

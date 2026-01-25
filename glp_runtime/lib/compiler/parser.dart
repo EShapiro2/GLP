@@ -1317,11 +1317,17 @@ class Parser {
   }
 
   /// Parse a type definition: TypeName ::= alt ; alt ; alt.
+  /// Also supports explicit dual definitions: TypeName? ::= alt.
   TypeDef _parseTypeDef() {
     final typeNameToken = _check(TokenType.READER)
         ? _advance()
         : _consume(TokenType.VARIABLE, 'Expected type name');
-    final typeName = typeNameToken.lexeme;
+    
+    // For READER tokens (e.g., Channel?), append '?' to the name
+    // This supports explicit dual type definitions
+    final typeName = typeNameToken.type == TokenType.READER
+        ? '${typeNameToken.lexeme}?'
+        : typeNameToken.lexeme;
     final line = typeNameToken.line;
     final column = typeNameToken.column;
 
@@ -1342,9 +1348,191 @@ class Parser {
 
   /// Parse a single type alternative using unified term parsing.
   /// Per spec (type-conversion.md): Parse as Term, then convert to TypeExpr.
+  /// 
+  /// For explicit dual definitions like `Channel? ::= ch(Stream?, Stream)?.`,
+  /// the trailing `?` on the structure is allowed and consumed. The duality
+  /// is captured in the type name (Channel?), so the trailing `?` is
+  /// documentation that confirms the definition is for the dual form.
   TypeExpr _parseTypeAlt() {
-    final term = _parseTerm();
+    final term = _parseTypeAltTerm();
     return termToTypeExpr(term);
+  }
+
+  /// Parse a term in type alternative context.
+  /// Similar to _parseTerm() but allows trailing `?` on structures.
+  Term _parseTypeAltTerm() {
+    return _parseTypeAltExpression();
+  }
+
+  /// Parse expression in type alternative context.
+  /// Handles operators like \ for difference lists.
+  Term _parseTypeAltExpression([int minPrecedence = 0]) {
+    var left = _parseTypeAltPrimary();
+
+    while (_isOperator(_peek()) && _precedence(_peek()) >= minPrecedence) {
+      final op = _advance();
+      final right = _parseTypeAltExpression(_precedence(op) + 1);
+      left = StructTerm(_operatorFunctor(op), [left, right], op.line, op.column);
+    }
+
+    // Check for trailing ? on the whole expression (for explicit duals)
+    // This is allowed in type definitions and simply consumed
+    _match(TokenType.QUESTION);
+
+    return left;
+  }
+
+  /// Parse primary term in type alternative context.
+  /// Allows trailing `?` on structures (for explicit dual definitions).
+  Term _parseTypeAltPrimary() {
+    // Operator as functor (for type definitions like Exp ::= +(Exp?, Exp?))
+    if (_check(TokenType.PLUS) || _check(TokenType.MINUS) || _check(TokenType.STAR) ||
+        _check(TokenType.SLASH) || _check(TokenType.SLASH_SLASH) || _check(TokenType.MOD)) {
+      if (_current + 1 < tokens.length && tokens[_current + 1].type == TokenType.LPAREN) {
+        final functorToken = _advance();
+        _advance();  // consume (
+        final args = <Term>[];
+        if (!_check(TokenType.RPAREN)) {
+          args.add(_parseTypeAltExpression());
+          while (_match(TokenType.COMMA)) {
+            args.add(_parseTypeAltExpression());
+          }
+        }
+        _consume(TokenType.RPAREN, 'Expected ")" after operator struct arguments');
+        // Allow trailing ? on structure in type definitions
+        _match(TokenType.QUESTION);
+        return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
+      }
+    }
+
+    // Variable or Reader
+    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
+      final token = _advance();
+      final isReader = token.type == TokenType.READER;
+      return VarTerm(token.lexeme, isReader, token.line, token.column);
+    }
+
+    // Underscore (anonymous variable) - can have reader mark: _ or _?
+    if (_match(TokenType.UNDERSCORE)) {
+      final token = _previous();
+      final isReader = _match(TokenType.QUESTION);
+      return UnderscoreTerm(token.line, token.column, isReader: isReader);
+    }
+
+    // Number
+    if (_check(TokenType.NUMBER)) {
+      final token = _advance();
+      return ConstTerm(token.literal, token.line, token.column);
+    }
+
+    // String
+    if (_check(TokenType.STRING)) {
+      final token = _advance();
+      return ConstTerm('"${token.literal}"', token.line, token.column);
+    }
+
+    // List
+    if (_check(TokenType.LBRACKET)) {
+      return _parseTypeAltList();
+    }
+
+    // Parenthesized expression or tuple
+    if (_match(TokenType.LPAREN)) {
+      final startToken = _previous();
+      final terms = <Term>[];
+      terms.add(_parseTypeAltExpression());
+
+      if (_match(TokenType.COMMA)) {
+        terms.add(_parseTypeAltExpression());
+        while (_match(TokenType.COMMA)) {
+          terms.add(_parseTypeAltExpression());
+        }
+        _consume(TokenType.RPAREN, 'Expected ")" after tuple');
+        Term result = terms.last;
+        for (int i = terms.length - 2; i >= 0; i--) {
+          result = StructTerm(',', [terms[i], result], startToken.line, startToken.column);
+        }
+        // Allow trailing ? on parenthesized expression
+        _match(TokenType.QUESTION);
+        return result;
+      } else {
+        _consume(TokenType.RPAREN, 'Expected ")" after expression');
+        // Allow trailing ? on parenthesized expression
+        _match(TokenType.QUESTION);
+        return terms[0];
+      }
+    }
+
+    // Structure or Constant Atom
+    if (_check(TokenType.ATOM)) {
+      final functorToken = _advance();
+
+      if (_match(TokenType.LPAREN)) {
+        final args = <Term>[];
+        if (!_check(TokenType.RPAREN)) {
+          args.add(_parseTypeAltExpression());
+          while (_match(TokenType.COMMA)) {
+            args.add(_parseTypeAltExpression());
+          }
+        }
+        _consume(TokenType.RPAREN, 'Expected ")" after structure arguments');
+        // Allow trailing ? on structure in type definitions (for explicit duals)
+        _match(TokenType.QUESTION);
+        return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
+      } else {
+        return ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
+      }
+    }
+
+    throw CompileError(
+      'Expected type alternative term, got ${_peek().type}',
+      _peek().line,
+      _peek().column,
+      phase: 'parser'
+    );
+  }
+
+  /// Parse list in type alternative context.
+  /// Allows trailing ? on lists (for explicit duals).
+  Term _parseTypeAltList() {
+    final bracketToken = _consume(TokenType.LBRACKET, 'Expected "["');
+
+    if (_match(TokenType.RBRACKET)) {
+      // Allow trailing ? on empty list in type definitions
+      _match(TokenType.QUESTION);
+      return ListTerm(null, null, bracketToken.line, bracketToken.column);
+    }
+
+    final elements = <Term>[];
+    Term? tail;
+
+    elements.add(_parseTypeAltTerm());
+
+    while (_match(TokenType.COMMA)) {
+      elements.add(_parseTypeAltTerm());
+    }
+
+    if (_match(TokenType.PIPE)) {
+      tail = _parseTypeAltTerm();
+      _consume(TokenType.RBRACKET, 'Expected "]" after list tail');
+      // Allow trailing ? on list in type definitions
+      _match(TokenType.QUESTION);
+      Term result = tail;
+      for (int i = elements.length - 1; i >= 0; i--) {
+        result = ListTerm(elements[i], result, bracketToken.line, bracketToken.column);
+      }
+      return result;
+    }
+
+    _consume(TokenType.RBRACKET, 'Expected "]" after list elements');
+    // Allow trailing ? on list in type definitions
+    _match(TokenType.QUESTION);
+
+    Term result = ListTerm(null, null, bracketToken.line, bracketToken.column);
+    for (int i = elements.length - 1; i >= 0; i--) {
+      result = ListTerm(elements[i], result, bracketToken.line, bracketToken.column);
+    }
+    return result;
   }
 
   /// Parse a procedure declaration: procedure name(Type?, Type).

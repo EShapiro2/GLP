@@ -173,36 +173,38 @@ void main() {
         expect(x.mode, equals(Mode.produce));
       });
 
-      test('reader at consume position unchanged', () {
+      test('reader at consume position is complemented', () {
         final decl = ProcDecl(
           'foo',
           [TypeRef('T', 0, 0, isInput: true)],
           0, 0,
         );
 
-        // Head: foo(X?) - reader at input position (already matches)
+        // Head: foo(X?) - reader at input position
+        // With unconditional complementation, reader becomes writer
         final head = goal('foo', [reader('X')]);
         final result = modedHead(head, decl) as ModedCompound;
 
         final x = result.args[0] as ModedVariable;
         expect(x.name, equals('X'));
-        expect(x.isReader, isTrue);  // unchanged
+        expect(x.isReader, isFalse);  // unconditionally flipped: reader → writer
       });
 
-      test('writer at produce position unchanged', () {
+      test('writer at produce position is complemented', () {
         final decl = ProcDecl(
           'foo',
           [TypeRef('T', 0, 0, isInput: false)],
           0, 0,
         );
 
-        // Head: foo(X) - writer at output position (already matches)
+        // Head: foo(X) - writer at output position
+        // With unconditional complementation, writer becomes reader
         final head = goal('foo', [writer('X')]);
         final result = modedHead(head, decl) as ModedCompound;
 
         final x = result.args[0] as ModedVariable;
         expect(x.name, equals('X'));
-        expect(x.isReader, isFalse);  // unchanged
+        expect(x.isReader, isTrue);  // unconditionally flipped: writer → reader
       });
     });
 
@@ -316,6 +318,180 @@ void main() {
         () => producedTerm(atom, decl),
         throwsA(isA<ArityMismatchError>()),
       );
+    });
+  });
+
+  group('explicit dual type definitions', () {
+    ast.Goal goal(String f, List<ast.Term> args) =>
+        ast.Goal(f, args, 0, 0);
+    ast.VarTerm writer(String name) => ast.VarTerm(name, false, 0, 0);
+    ast.VarTerm reader(String name) => ast.VarTerm(name, true, 0, 0);
+    ast.StructTerm struct(String f, List<ast.Term> args) =>
+        ast.StructTerm(f, args, 0, 0);
+
+    test('Channel with explicit dual preserves internal structure', () {
+      // Channel ::= ch(Stream?, Stream).
+      // Channel? ::= ch(Stream?, Stream)?.
+      // The explicit dual preserves internal structure - position 1 is always
+      // Stream? (input), position 2 is always Stream (output).
+      
+      final typeEnv = TypeEnvironment({}, {});
+      
+      // Define Channel
+      typeEnv.addType(TypeDef(
+        'Channel',
+        [
+          StructAlt('ch', [
+            TypeRef('Stream', 0, 0, isInput: true),   // Stream?
+            TypeRef('Stream', 0, 0, isInput: false),  // Stream
+          ], 0, 0),
+        ],
+        0, 0,
+      ));
+      
+      // Define explicit dual Channel?
+      typeEnv.addType(TypeDef(
+        'Channel?',
+        [
+          StructAlt('ch', [
+            TypeRef('Stream', 0, 0, isInput: true),   // Stream? (preserved!)
+            TypeRef('Stream', 0, 0, isInput: false),  // Stream (preserved!)
+          ], 0, 0),
+        ],
+        0, 0,
+      ));
+      
+      // Define Stream (simple for this test)
+      typeEnv.addType(TypeDef(
+        'Stream',
+        [
+          ListNilAlt(0, 0),
+          ListConsAlt(
+            PrimitiveModeAlt(false, 0, 0),  // _ (output)
+            TypeRef('Stream', 0, 0, isInput: false),
+          0, 0),
+        ],
+        0, 0,
+      ));
+      
+      // procedure send(_?, Channel?, Channel).
+      final decl = ProcDecl(
+        'send',
+        [
+          PrimitiveModeAlt(true, 0, 0),  // _?
+          TypeRef('Channel', 0, 0, isInput: true),   // Channel?
+          TypeRef('Channel', 0, 0, isInput: false),  // Channel
+        ],
+        0, 0,
+      );
+      
+      // Head: send(X, ch(In, Out), ch(In?, Out?))
+      // Arg 2 (Channel?) should have position 1 at mode ↓, position 2 at mode ↑
+      // (preserved from explicit dual definition)
+      final head = goal('send', [
+        writer('X'),
+        struct('ch', [writer('In'), writer('Out')]),
+        struct('ch', [reader('In'), reader('Out')]),
+      ]);
+      
+      final result = modedHead(head, decl, typeEnv: typeEnv) as ModedCompound;
+      
+      // Arg 2: ch(In, Out) at Channel? position
+      final arg2 = result.args[1] as ModedCompound;
+      expect(arg2.functor, equals('ch'));
+      expect(arg2.mode, equals(Mode.consume));  // Channel? is consumed
+      
+      // With explicit dual, internal modes are preserved:
+      // Position 1 (Stream?) should be mode ↓ (consume)
+      // Position 2 (Stream) should be mode ↑ (produce)
+      final in2 = arg2.args[0] as ModedVariable;
+      expect(in2.mode, equals(Mode.consume));  // Stream? position
+      expect(in2.isReader, isTrue);  // writer at ↓ becomes reader
+      
+      final out2 = arg2.args[1] as ModedVariable;
+      expect(out2.mode, equals(Mode.produce));  // Stream position
+      expect(out2.isReader, isTrue);  // writer at ↑ becomes reader
+    });
+
+    test('DiffList with explicit dual preserves internal structure', () {
+      // DiffList ::= Stream? \ Stream.
+      // DiffList? ::= (Stream? \ Stream)?.
+      // Position 1 is always content (Stream?, consumed), position 2 is always hole (Stream, produced)
+      
+      final typeEnv = TypeEnvironment({}, {});
+      
+      // Define Stream
+      typeEnv.addType(TypeDef(
+        'Stream',
+        [
+          ListNilAlt(0, 0),
+          ListConsAlt(
+            PrimitiveModeAlt(false, 0, 0),
+            TypeRef('Stream', 0, 0, isInput: false),
+          0, 0),
+        ],
+        0, 0,
+      ));
+      
+      // Define DiffList
+      typeEnv.addType(TypeDef(
+        'DiffList',
+        [
+          DiffListAlt(
+            TypeRef('Stream', 0, 0, isInput: true),   // Stream? (content)
+            TypeRef('Stream', 0, 0, isInput: false),  // Stream (hole)
+          0, 0),
+        ],
+        0, 0,
+      ));
+      
+      // Define explicit dual DiffList?
+      typeEnv.addType(TypeDef(
+        'DiffList?',
+        [
+          DiffListAlt(
+            TypeRef('Stream', 0, 0, isInput: true),   // Stream? (preserved!)
+            TypeRef('Stream', 0, 0, isInput: false),  // Stream (preserved!)
+          0, 0),
+        ],
+        0, 0,
+      ));
+      
+      // procedure dl_append(DiffList?, DiffList?, DiffList).
+      final decl = ProcDecl(
+        'dl_append',
+        [
+          TypeRef('DiffList', 0, 0, isInput: true),   // DiffList?
+          TypeRef('DiffList', 0, 0, isInput: true),   // DiffList?
+          TypeRef('DiffList', 0, 0, isInput: false),  // DiffList
+        ],
+        0, 0,
+      );
+      
+      // Head: dl_append(A\B?, B\C?, A?\C)
+      final head = goal('dl_append', [
+        struct(r'\', [writer('A'), reader('B')]),  // A\B?
+        struct(r'\', [writer('B'), reader('C')]),  // B\C?
+        struct(r'\', [reader('A'), writer('C')]),  // A?\C
+      ]);
+      
+      final result = modedHead(head, decl, typeEnv: typeEnv) as ModedCompound;
+      
+      // Arg 1: A\B? at DiffList? position
+      final arg1 = result.args[0] as ModedCompound;
+      expect(arg1.functor, equals(r'\'));
+      expect(arg1.mode, equals(Mode.consume));  // DiffList? is consumed
+      
+      // With explicit dual, internal modes are preserved:
+      // Position 1 (Stream? content) should be mode ↓ (consume)
+      // Position 2 (Stream hole) should be mode ↑ (produce)
+      final a1 = arg1.args[0] as ModedVariable;
+      expect(a1.mode, equals(Mode.consume));  // Stream? position
+      expect(a1.isReader, isTrue);  // writer at ↓ becomes reader
+      
+      final b1 = arg1.args[1] as ModedVariable;
+      expect(b1.mode, equals(Mode.produce));  // Stream position
+      expect(b1.isReader, isFalse);  // reader at ↑ becomes writer
     });
   });
 }

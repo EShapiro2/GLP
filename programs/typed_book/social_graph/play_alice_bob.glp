@@ -123,7 +123,7 @@ network2((alice, ch(AliceIn, [msg(bob, alice, X?)|AliceOut?])),
 
 %% === The Play ===
 
-procedure play_alice_bob/0.
+procedure play_alice_bob.
 play_alice_bob :-
     %% Network switch (holds inverse of agents' network channels)
     network2((alice, ch(AliceNetOut?, AliceNetIn)),
