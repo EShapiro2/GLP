@@ -336,24 +336,32 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 - Run `pwd` to confirm current directory
 - Check file locations with `ls` before referencing them
 
-**REPL Location and Usage:**
+## GLP Unified Tool: The REPL
 
-**Use compiled executable for faster testing** (recommended):
-```bash
-cd /home/user/GLP/glp_runtime
-# Compile once (if not already compiled or after code changes):
-export PATH="/home/user/dart-sdk/bin:$PATH"
-dart compile exe bin/glp_repl.dart -o glp_repl
+**The REPL is the ONE tool for all GLP operations.** It runs the complete pipeline:
+1. **SRSW Analysis** → Verify single-reader/single-writer
+2. **Partial Evaluation** → Evaluate defined guards
+3. **Type Checking** → Verify mode/type correctness
+4. **Compilation** → Generate bytecode
+5. **Execution** → Run goals
 
-# Run tests with compiled executable (much faster - milliseconds vs seconds):
-echo -e 'filename.glp\ngoal.' | ./glp_repl
-```
+**There are NO separate tools.** Old standalone tools (check_types.dart, glp_pe.dart, glpc.dart, etc.) have been archived to `glp_runtime/bin/archive/`.
 
-**Alternative: Use dart run** (slower, recompiles each time):
+### REPL Usage
+
+**Use dart run** (recommended):
 ```bash
 cd /home/user/GLP/glp_runtime
 export PATH="/home/user/dart-sdk/bin:$PATH"
 echo -e 'filename.glp\ngoal.' | dart run bin/glp_repl.dart
+```
+
+**Or compile for faster repeated testing:**
+```bash
+cd /home/user/GLP/glp_runtime
+export PATH="/home/user/dart-sdk/bin:$PATH"
+dart compile exe bin/glp_repl.dart -o glp_repl
+echo -e 'filename.glp\ngoal.' | ./glp_repl
 ```
 
 **REPL Test Scripts (Linux):**
