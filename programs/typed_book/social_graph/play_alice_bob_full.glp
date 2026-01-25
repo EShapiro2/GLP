@@ -8,6 +8,8 @@
 %% =============================================================================
 
 Response ::= accept(Channel) ; no.
+FriendEntry ::= friend(String?, Stream).
+FriendsList ::= [] ; [FriendEntry|FriendsList].
 
 %% =============================================================================
 %% MERGE
@@ -32,15 +34,15 @@ tag_stream(_, [], []).
 %% LOOKUP_SEND - send message to named destination
 %% =============================================================================
 
-procedure lookup_send(_?, _?, Stream?, Stream).
+procedure lookup_send(String?, _?, FriendsList?, FriendsList).
 lookup_send(Key, Msg, Fs, Fs1?) :-
     ground(Key?) |
     lookup_send_step(Key?, Msg?, Fs?, Fs1).
 
-procedure lookup_send_step(_?, _?, Stream?, Stream).
-lookup_send_step(Key, Msg, [(K, [Msg?|Out1])|Rest], [(K?, Out1?)|Rest?]) :-
+procedure lookup_send_step(String?, _?, FriendsList?, FriendsList).
+lookup_send_step(Key, Msg, [friend(K, [Msg?|Out1?])|Rest], [friend(K?, Out1)|Rest?]) :-
     Key? =?= K? | true.
-lookup_send_step(Key, Msg, [Pair|Rest], [Pair?|Rest1?]) :-
+lookup_send_step(Key, Msg, [friend(K, Out?)|Rest], [friend(K?, Out)|Rest1?]) :-
     otherwise |
     lookup_send_step(Key?, Msg?, Rest?, Rest1).
 lookup_send_step(_, _, [], []).
@@ -49,13 +51,13 @@ lookup_send_step(_, _, [], []).
 %% COLLECT_FRIENDS - extract friend names (exclude user, net)
 %% =============================================================================
 
-procedure collect_friends(Stream?, Stream, Stream).
-collect_friends([(user, Out)|Rest], Names?, [(user, Out?)|Rest1?]) :- 
+procedure collect_friends(FriendsList?, Stream, FriendsList).
+collect_friends([friend(user, Out?)|Rest], Names?, [friend(user, Out)|Rest1?]) :-
     collect_friends(Rest?, Names, Rest1).
-collect_friends([(net, Out)|Rest], Names?, [(net, Out?)|Rest1?]) :- 
+collect_friends([friend(net, Out?)|Rest], Names?, [friend(net, Out)|Rest1?]) :-
     collect_friends(Rest?, Names, Rest1).
-collect_friends([(Name, Out)|Rest], [Name?|Names?], [(Name?, Out?)|Rest1?]) :-
-    ground(Name?), otherwise | collect_friends(Rest?, Names, Rest1).
+collect_friends([friend(Name, Out?)|Rest], [Name?|Names?], [friend(Name?, Out)|Rest1?]) :-
+    ground(Name?) | collect_friends(Rest?, Names, Rest1).
 collect_friends([], [], []).
 
 %% =============================================================================
@@ -72,14 +74,14 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
 %% RESPONSE HANDLING
 %% =============================================================================
 
-procedure bind_response(_?, _?, Response, Stream?, Stream, Stream?, Stream).
+procedure bind_response(_?, _?, Response, FriendsList?, FriendsList, Stream?, Stream).
 bind_response(yes, From, accept(RetCh?), Fs, Fs1?, In, In1?) :-
     new_channel(RetCh, LocalCh) |
     handle_response(accept(LocalCh?), From?, Fs?, Fs1, In?, In1).
 bind_response(no, _, no, Fs, Fs?, In, In?).
 
-procedure handle_response(Response?, _?, Stream?, Stream, Stream?, Stream).
-handle_response(accept(ch(FIn, FOut?)), From, Fs, [(From?, FOut)|Fs?], In, In1?) :-
+procedure handle_response(Response?, _?, FriendsList?, FriendsList, Stream?, Stream).
+handle_response(accept(ch(FIn, FOut?)), From, Fs, [friend(From?, FOut)|Fs?], In, In1?) :-
     ground(From?) |
     tag_stream(From?, FIn?, Tagged),
     merge(In?, Tagged?, In1).
@@ -89,7 +91,7 @@ handle_response(no, _, Fs, Fs?, In, In?).
 %% AGENT - Main loop
 %% =============================================================================
 
-procedure agent(_?, Stream?, Stream?).
+procedure agent(_?, Stream?, FriendsList?).
 
 %% User initiates cold call
 agent(Id, [msg(user, Id1, connect(Target))|In], Fs) :-
@@ -115,12 +117,6 @@ agent(Id, [msg(From, Id1, response(Resp))|In], Fs) :-
     ground(Id?), Id? =?= Id1? |
     handle_response(Resp?, From?, Fs?, Fs1, In?, In1),
     agent(Id?, In1?, Fs1?).
-
-%% User sends message to friend
-agent(Id, [msg(user, Id1, send(Target, Content))|In], Fs) :-
-    ground(Id?), ground(Target?), Id? =?= Id1? |
-    lookup_send(Target?, Content?, Fs?, Fs1),
-    agent(Id?, In?, Fs1?).
 
 %% User queries friends list
 agent(Id, [msg(user, Id1, friends)|In], Fs) :-
@@ -150,7 +146,7 @@ agent(_, [], _).
 procedure agent_init(_?, Channel?, Channel?).
 agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
     merge(UserIn?, NetIn?, In),
-    agent(Id?, In?, [(user, UserOut), (net, NetOut)]).
+    agent(Id?, In?, [friend(user, UserOut), friend(net, NetOut)]).
 
 %% =============================================================================
 %% NETWORK SWITCH
@@ -180,10 +176,6 @@ network2(ch([], []), ch([], [])).
 
 procedure alice_actor(Channel?).
 alice_actor(ch(In, [msg(user, alice, connect(bob))|Out?])) :-
-    alice_send_message(In?, Out).
-
-procedure alice_send_message(Stream?, Stream).
-alice_send_message(In, [msg(user, alice, send(bob, hello_bob))|Out?]) :-
     alice_send_friends_query(In?, Out).
 
 procedure alice_send_friends_query(Stream?, Stream).
@@ -203,10 +195,6 @@ alice_receive_all([], []).
 procedure bob_actor(Channel?).
 bob_actor(ch([msg(agent, user, befriend(From, Resp))|In], [msg(user, bob, decision(yes, From?, Resp?))|Out?])) :-
     ground(From?) |
-    bob_send_message(In?, Out).
-
-procedure bob_send_message(Stream?, Stream).
-bob_send_message(In, [msg(user, bob, send(alice, hi_alice))|Out?]) :-
     bob_send_friends_query(In?, Out).
 
 procedure bob_send_friends_query(Stream?, Stream).
