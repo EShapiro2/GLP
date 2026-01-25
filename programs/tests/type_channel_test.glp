@@ -1,0 +1,20 @@
+%% Test case for Channel type checking
+%% The issue: When Channel appears at Channel? position,
+%% recursive complementation flips internal modes incorrectly
+
+%% Type definitions
+Stream ::= [] ; [_ | Stream].
+Channel ::= ch(Stream?, Stream).
+Response ::= accept(Channel) ; no.
+
+%% Handler receives Response? (consumed)
+%% Inside Response?, we have Channel? which has:
+%%   - With recursive complementation: ch(Stream, Stream?) - WRONG
+%%   - With explicit dual: ch(Stream?, Stream) - CORRECT (fixed semantics)
+
+procedure handle_response(Response?, Stream?, Stream).
+handle_response(accept(ch(FIn, FOut)), In, In1) :-
+    merge(In?, FIn?, In1).
+handle_response(no, In, In?).
+
+procedure merge(Stream?, Stream?, Stream).
