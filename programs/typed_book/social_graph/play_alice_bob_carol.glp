@@ -144,7 +144,7 @@ agent(Id, [msg(user, Id1, accept_intro(Other, Ch))|In], Fs) :-
     agent(Id?, In1?, Fs1?).
 
 %% User rejects friend introduction
-agent(Id, [msg(user, Id1, reject_intro(Other))|In], Fs) :-
+agent(Id, [msg(user, Id1, reject_intro(_))|In], Fs) :-
     ground(Id?), Id? =?= Id1? |
     agent(Id?, In?, Fs?).
 
