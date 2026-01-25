@@ -55,7 +55,7 @@ lookup_send(Key, Msg, Fs, Fs1?) :-
 procedure lookup_send_step(_?, _?, FriendsList?, FriendsList).
 lookup_send_step(Key, Msg, [friend(K, [Msg?|Tail?])|Rest], [friend(K?, Tail)|Rest?]) :-
     Key? =?= K? | true.
-lookup_send_step(Key, Msg, [Pair|Rest], [Pair?|Rest1?]) :-
+lookup_send_step(Key, Msg, [friend(K, Out?)|Rest], [friend(K?, Out)|Rest1?]) :-
     otherwise |
     lookup_send_step(Key?, Msg?, Rest?, Rest1).
 lookup_send_step(_, _, [], []).
@@ -74,8 +74,8 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
 %% ADD_FRIEND - add friend to friends list
 %% =============================================================================
 
-procedure add_friend(_?, Stream?, FriendsList?, FriendsList).
-add_friend(Name, Out, Fs, [friend(Name?, Out?)|Fs?]).
+procedure add_friend(_?, Stream, FriendsList?, FriendsList).
+add_friend(Name, Out?, Fs, [friend(Name?, Out)|Fs?]).
 
 %% =============================================================================
 %% RESPONSE HANDLING (Cold-call)
@@ -92,12 +92,12 @@ handle_response(accept(ch(FIn, FOut?)), From, Fs, Fs1?, In, In1?) :-
     ground(From?) |
     tag_stream(From?, FIn?, Tagged),
     merge(In?, Tagged?, In1),
-    add_friend_and_notify(From?, FOut?, Fs?, Fs1).
+    add_friend_and_notify(From?, FOut, Fs?, Fs1).
 handle_response(no, From, Fs, Fs1?, In, In?) :-
     ground(From?) |
     lookup_send(user, msg(agent, user, rejected(From?)), Fs?, Fs1).
 
-procedure add_friend_and_notify(_?, Stream?, FriendsList?, FriendsList).
+procedure add_friend_and_notify(_?, Stream, FriendsList?, FriendsList).
 add_friend_and_notify(From, FOut, Fs, Fs1?) :-
     ground(From?) |
     lookup_send(user, msg(agent, user, connected(From?)), [friend(From?, FOut?)|Fs?], Fs1).
@@ -176,7 +176,7 @@ agent(_, [], _).
 procedure handle_intro_accept(Channel?, _?, FriendsList?, FriendsList, Stream?, Stream).
 handle_intro_accept(ch(FIn, FOut?), Other, Fs, Fs1?, In, In1?) :-
     ground(Other?) |
-    add_friend(Other?, FOut?, Fs?, Fs1),
+    add_friend(Other?, FOut, Fs?, Fs1),
     tag_stream(Other?, FIn?, Tagged),
     merge(In?, Tagged?, In1).
 
@@ -187,7 +187,7 @@ handle_intro_accept(ch(FIn, FOut?), Other, Fs, Fs1?, In, In1?) :-
 procedure agent_init(_?, Channel?, Channel?).
 agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
     merge(UserIn?, NetIn?, In),
-    agent(Id?, In?, [friend(user, UserOut?), friend(net, NetOut?)]).
+    agent(Id?, In?, [friend(user, UserOut), friend(net, NetOut)]).
 
 %% =============================================================================
 %% NETWORK SWITCH (3-way)
