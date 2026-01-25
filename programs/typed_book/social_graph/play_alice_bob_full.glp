@@ -57,7 +57,7 @@ collect_friends([friend(user, Out?)|Rest], Names?, [friend(user, Out)|Rest1?]) :
 collect_friends([friend(net, Out?)|Rest], Names?, [friend(net, Out)|Rest1?]) :-
     collect_friends(Rest?, Names, Rest1).
 collect_friends([friend(Name, Out?)|Rest], [Name?|Names?], [friend(Name?, Out)|Rest1?]) :-
-    ground(Name?), otherwise | collect_friends(Rest?, Names, Rest1).
+    ground(Name?) | collect_friends(Rest?, Names, Rest1).
 collect_friends([], [], []).
 
 %% =============================================================================
@@ -81,9 +81,9 @@ bind_response(yes, From, accept(RetCh?), Fs, Fs1?, In, In1?) :-
 bind_response(no, _, no, Fs, Fs?, In, In?).
 
 procedure handle_response(Response?, _?, FriendsList?, FriendsList, Stream?, Stream).
-handle_response(accept(ch(FIn?, FOut)), From, Fs, [friend(From?, FOut?)|Fs?], In, In1?) :-
+handle_response(accept(ch(FIn, FOut?)), From, Fs, [friend(From?, FOut)|Fs?], In, In1?) :-
     ground(From?) |
-    tag_stream(From?, FIn, Tagged),
+    tag_stream(From?, FIn?, Tagged),
     merge(In?, Tagged?, In1).
 handle_response(no, _, Fs, Fs?, In, In?).
 
@@ -144,9 +144,9 @@ agent(_, [], _).
 %% =============================================================================
 
 procedure agent_init(_?, Channel?, Channel?).
-agent_init(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
+agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
     merge(UserIn?, NetIn?, In),
-    agent(Id?, In?, [friend(user, UserOut?), friend(net, NetOut?)]).
+    agent(Id?, In?, [friend(user, UserOut), friend(net, NetOut)]).
 
 %% =============================================================================
 %% NETWORK SWITCH
