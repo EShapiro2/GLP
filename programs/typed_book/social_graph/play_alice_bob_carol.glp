@@ -19,6 +19,11 @@ Response ::= accept(Channel) ; no.
 %% intro(Other, Ch) - 2-arg form (distinct from cold-call's 3-arg intro)
 IntroMsg ::= intro(_, Channel).
 
+%% Friends list: list of (name, output-stream) pairs
+%% The stream must remain a writer for future sends
+FriendEntry ::= friend(_?, Stream).
+FriendsList ::= [] ; [FriendEntry|FriendsList].
+
 %% =============================================================================
 %% MERGE
 %% =============================================================================
@@ -42,13 +47,13 @@ tag_stream(_, [], []).
 %% LOOKUP_SEND - send message to named destination
 %% =============================================================================
 
-procedure lookup_send(_?, _?, Stream?, Stream).
+procedure lookup_send(_?, _?, FriendsList?, FriendsList).
 lookup_send(Key, Msg, Fs, Fs1?) :-
     ground(Key?) |
     lookup_send_step(Key?, Msg?, Fs?, Fs1).
 
-procedure lookup_send_step(_?, _?, Stream?, Stream).
-lookup_send_step(Key, Msg, [(K, [Msg?|Out1])|Rest], [(K?, Out1?)|Rest?]) :-
+procedure lookup_send_step(_?, _?, FriendsList?, FriendsList).
+lookup_send_step(Key, Msg, [friend(K, [Msg?|Tail?])|Rest], [friend(K?, Tail)|Rest?]) :-
     Key? =?= K? | true.
 lookup_send_step(Key, Msg, [Pair|Rest], [Pair?|Rest1?]) :-
     otherwise |
@@ -69,31 +74,39 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
 %% ADD_FRIEND - add friend to friends list
 %% =============================================================================
 
-procedure add_friend(_?, Stream, Stream?, Stream).
-add_friend(Name, Out?, Fs, [(Name?, Out)|Fs?]).
+procedure add_friend(_?, Stream?, FriendsList?, FriendsList).
+add_friend(Name, Out, Fs, [friend(Name?, Out?)|Fs?]).
 
 %% =============================================================================
 %% RESPONSE HANDLING (Cold-call)
 %% =============================================================================
 
-procedure bind_response(_?, _?, Response, Stream?, Stream, Stream?, Stream).
+procedure bind_response(_?, _?, Response, FriendsList?, FriendsList, Stream?, Stream).
 bind_response(yes, From, accept(RetCh?), Fs, Fs1?, In, In1?) :-
     new_channel(RetCh, LocalCh) |
     handle_response(accept(LocalCh?), From?, Fs?, Fs1, In?, In1).
 bind_response(no, _, no, Fs, Fs?, In, In?).
 
-procedure handle_response(Response?, _?, Stream?, Stream, Stream?, Stream).
-handle_response(accept(ch(FIn, FOut?)), From, Fs, [(From?, FOut)|Fs?], In, In1?) :-
+procedure handle_response(Response?, _?, FriendsList?, FriendsList, Stream?, Stream).
+handle_response(accept(ch(FIn, FOut?)), From, Fs, Fs1?, In, In1?) :-
     ground(From?) |
     tag_stream(From?, FIn?, Tagged),
-    merge(In?, Tagged?, In1).
-handle_response(no, _, Fs, Fs?, In, In?).
+    merge(In?, Tagged?, In1),
+    add_friend_and_notify(From?, FOut?, Fs?, Fs1).
+handle_response(no, From, Fs, Fs1?, In, In?) :-
+    ground(From?) |
+    lookup_send(user, msg(agent, user, rejected(From?)), Fs?, Fs1).
+
+procedure add_friend_and_notify(_?, Stream?, FriendsList?, FriendsList).
+add_friend_and_notify(From, FOut, Fs, Fs1?) :-
+    ground(From?) |
+    lookup_send(user, msg(agent, user, connected(From?)), [friend(From?, FOut?)|Fs?], Fs1).
 
 %% =============================================================================
 %% AGENT - Main loop (Cold-call + Friend Introduction)
 %% =============================================================================
 
-procedure agent(_?, Stream?, Stream?).
+procedure agent(_?, Stream?, FriendsList?).
 
 %% --- Cold-call protocol ---
 
@@ -118,7 +131,7 @@ agent(Id, [msg(user, Id1, decision(Dec, From, Resp?))|In], Fs) :-
 
 %% Response to sent cold-call introduction
 agent(Id, [msg(From, Id1, response(Resp))|In], Fs) :-
-    ground(Id?), Id? =?= Id1? |
+    ground(Id?), ground(From?), Id? =?= Id1? |
     handle_response(Resp?, From?, Fs?, Fs1, In?, In1),
     agent(Id?, In1?, Fs1?).
 
@@ -160,10 +173,10 @@ agent(_, [], _).
 %% HANDLE_INTRO_ACCEPT - process accepted friend introduction
 %% =============================================================================
 
-procedure handle_intro_accept(Channel?, _?, Stream?, Stream, Stream?, Stream).
+procedure handle_intro_accept(Channel?, _?, FriendsList?, FriendsList, Stream?, Stream).
 handle_intro_accept(ch(FIn, FOut?), Other, Fs, Fs1?, In, In1?) :-
     ground(Other?) |
-    add_friend(Other?, FOut, Fs?, Fs1),
+    add_friend(Other?, FOut?, Fs?, Fs1),
     tag_stream(Other?, FIn?, Tagged),
     merge(In?, Tagged?, In1).
 
@@ -174,7 +187,7 @@ handle_intro_accept(ch(FIn, FOut?), Other, Fs, Fs1?, In, In1?) :-
 procedure agent_init(_?, Channel?, Channel?).
 agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
     merge(UserIn?, NetIn?, In),
-    agent(Id?, In?, [(user, UserOut), (net, NetOut)]).
+    agent(Id?, In?, [friend(user, UserOut?), friend(net, NetOut?)]).
 
 %% =============================================================================
 %% NETWORK SWITCH (3-way)
@@ -236,8 +249,7 @@ alice_actor(ch(In, [msg(user, alice, connect(bob))|Out?])) :-
     alice_wait_bob_response(In?, Out).
 
 procedure alice_wait_bob_response(Stream?, Stream).
-alice_wait_bob_response([msg(From, user, _)|In], Out?) :-
-    ground(From?) |
+alice_wait_bob_response([msg(agent, user, connected(bob))|In], Out?) :-
     alice_connect_carol(In?, Out).
 alice_wait_bob_response([], []).
 
@@ -246,8 +258,7 @@ alice_connect_carol(In, [msg(user, alice, connect(carol))|Out?]) :-
     alice_wait_carol_response(In?, Out).
 
 procedure alice_wait_carol_response(Stream?, Stream).
-alice_wait_carol_response([msg(From, user, _)|In], Out?) :-
-    ground(From?) |
+alice_wait_carol_response([msg(agent, user, connected(carol))|In], Out?) :-
     alice_introduce(In?, Out).
 alice_wait_carol_response([], []).
 

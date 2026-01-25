@@ -707,6 +707,19 @@ Example REPL tests:
 
 ## Git Safety Protocol
 
+### Commit Message Rule
+**ALWAYS use single-line commit messages.** Never use multi-line commit messages - they confuse the shell.
+```bash
+# CORRECT:
+git commit -m "Fix Channel definition to match prelude"
+
+# WRONG (causes shell quote issues):
+git commit -m "Fix Channel definition
+
+- Updated transitions
+- Fixed modes"
+```
+
 ### Before Any Work
 ```bash
 git status          # Ensure clean state
