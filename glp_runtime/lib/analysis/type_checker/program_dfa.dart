@@ -240,9 +240,21 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   // (Automata may reference other types, so all states must exist before building automata)
   for (final entry in env.types.entries) {
     final typeName = entry.key;
-    states[typeName] = DFAState(typeName, isDual: false, isFinal: false);
-    states['$typeName?'] =
-        DFAState(typeName, isDual: true, isFinal: false);
+
+    // Check if this is an explicit dual type (name ends with ?)
+    if (typeName.endsWith('?')) {
+      // Explicit dual: baseName is the name without ?, isDual = true
+      final baseName = typeName.substring(0, typeName.length - 1);
+      states[typeName] = DFAState(baseName, isDual: true, isFinal: false);
+      // Don't create a T?? state for explicit duals
+    } else {
+      // Regular type: create both T and T? states
+      states[typeName] = DFAState(typeName, isDual: false, isFinal: false);
+      // Only create implicit dual if no explicit dual exists
+      if (!env.types.containsKey('$typeName?')) {
+        states['$typeName?'] = DFAState(typeName, isDual: true, isFinal: false);
+      }
+    }
   }
 
   // THEN build automata for all defined types
@@ -250,13 +262,24 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
     final typeName = entry.key;
     final typeDef = entry.value;
 
-    // Build producer automaton (T)
-    automata[typeName] =
-        _buildTypeAutomaton(typeDef, states, isDual: false);
+    // Check if this is an explicit dual type (name ends with ?)
+    if (typeName.endsWith('?')) {
+      // Explicit dual: the typeDef already specifies the dual's structure
+      // Pass isDual: false because we don't want to flip modes again
+      // (the structure is already the dual's structure, not to be inverted)
+      automata[typeName] =
+          _buildTypeAutomaton(typeDef, states, isDual: false);
+    } else {
+      // Regular type: build both T and T? automata
+      automata[typeName] =
+          _buildTypeAutomaton(typeDef, states, isDual: false);
 
-    // Build consumer automaton (T?)
-    automata['$typeName?'] =
-        _buildTypeAutomaton(typeDef, states, isDual: true);
+      // Only build implicit dual automaton if no explicit dual exists
+      if (!env.types.containsKey('$typeName?')) {
+        automata['$typeName?'] =
+            _buildTypeAutomaton(typeDef, states, isDual: true);
+      }
+    }
   }
 
   // Create procedure states (no complement)
