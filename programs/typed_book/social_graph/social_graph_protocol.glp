@@ -8,8 +8,10 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-%% Channel type (uses predefined Stream from stdlib)
-Channel ::= ch(Stream, Stream?).
+%% Channel type: position 1 is input (consumed), position 2 is output (produced)
+%% The explicit dual preserves internal structure regardless of production/consumption context
+Channel ::= ch(Stream?, Stream).
+Channel? ::= ch(Stream?, Stream)?.
 
 %% Friend list
 FriendEntry ::= (_, Stream).

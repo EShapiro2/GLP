@@ -11,7 +11,10 @@
 %% TYPE DEFINITIONS (from social_graph_protocol.glp)
 %% =============================================================================
 
+%% Channel: position 1 is input (consumed), position 2 is output (produced)
+%% The explicit dual preserves internal structure regardless of production/consumption context
 Channel ::= ch(Stream?, Stream).
+Channel? ::= ch(Stream?, Stream)?.
 FriendEntry ::= (_, Stream).
 FriendList ::= [] ; [FriendEntry | FriendList].
 Response ::= accept(Channel) ; no.
