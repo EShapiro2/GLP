@@ -9,11 +9,6 @@
 
 Response ::= accept(Channel) ; no.
 
-%% Friends list: list of (name, output-stream) pairs
-%% The stream must remain a writer for future sends
-FriendEntry ::= friend(_?, Stream).
-FriendsList ::= [] ; [FriendEntry|FriendsList].
-
 %% =============================================================================
 %% MERGE
 %% =============================================================================
@@ -37,15 +32,15 @@ tag_stream(_, [], []).
 %% LOOKUP_SEND - send message to named destination
 %% =============================================================================
 
-procedure lookup_send(_?, _?, FriendsList?, FriendsList).
+procedure lookup_send(_?, _?, Stream?, Stream).
 lookup_send(Key, Msg, Fs, Fs1?) :-
     ground(Key?) |
     lookup_send_step(Key?, Msg?, Fs?, Fs1).
 
-procedure lookup_send_step(_?, _?, FriendsList?, FriendsList).
-lookup_send_step(Key, Msg, [friend(K, [Msg?|Out1?])|Rest], [friend(K?, Out1)|Rest?]) :-
+procedure lookup_send_step(_?, _?, Stream?, Stream).
+lookup_send_step(Key, Msg, [(K, [Msg?|Out1])|Rest], [(K?, Out1?)|Rest?]) :-
     Key? =?= K? | true.
-lookup_send_step(Key, Msg, [friend(K, Out?)|Rest], [friend(K?, Out)|Rest1?]) :-
+lookup_send_step(Key, Msg, [Pair|Rest], [Pair?|Rest1?]) :-
     otherwise |
     lookup_send_step(Key?, Msg?, Rest?, Rest1).
 lookup_send_step(_, _, [], []).
@@ -54,13 +49,13 @@ lookup_send_step(_, _, [], []).
 %% COLLECT_FRIENDS - extract friend names (exclude user, net)
 %% =============================================================================
 
-procedure collect_friends(FriendsList?, Stream, FriendsList).
-collect_friends([friend(user, Out?)|Rest], Names?, [friend(user, Out)|Rest1?]) :- 
+procedure collect_friends(Stream?, Stream, Stream).
+collect_friends([(user, Out)|Rest], Names?, [(user, Out?)|Rest1?]) :- 
     collect_friends(Rest?, Names, Rest1).
-collect_friends([friend(net, Out?)|Rest], Names?, [friend(net, Out)|Rest1?]) :- 
+collect_friends([(net, Out)|Rest], Names?, [(net, Out?)|Rest1?]) :- 
     collect_friends(Rest?, Names, Rest1).
-collect_friends([friend(Name?, Out?)|Rest], [Name|Names?], [friend(Name, Out)|Rest1?]) :-
-    otherwise | collect_friends(Rest?, Names, Rest1).
+collect_friends([(Name, Out)|Rest], [Name?|Names?], [(Name?, Out?)|Rest1?]) :-
+    ground(Name?), otherwise | collect_friends(Rest?, Names, Rest1).
 collect_friends([], [], []).
 
 %% =============================================================================
@@ -77,14 +72,14 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
 %% RESPONSE HANDLING
 %% =============================================================================
 
-procedure bind_response(_?, _?, Response, FriendsList?, FriendsList, Stream?, Stream).
+procedure bind_response(_?, _?, Response, Stream?, Stream, Stream?, Stream).
 bind_response(yes, From, accept(RetCh?), Fs, Fs1?, In, In1?) :-
     new_channel(RetCh, LocalCh) |
     handle_response(accept(LocalCh?), From?, Fs?, Fs1, In?, In1).
 bind_response(no, _, no, Fs, Fs?, In, In?).
 
-procedure handle_response(Response?, _?, FriendsList?, FriendsList, Stream?, Stream).
-handle_response(accept(ch(FIn?, FOut)), From, Fs, [friend(From?, FOut?)|Fs?], In, In1?) :-
+procedure handle_response(Response?, _?, Stream?, Stream, Stream?, Stream).
+handle_response(accept(ch(FIn, FOut?)), From, Fs, [(From?, FOut)|Fs?], In, In1?) :-
     ground(From?) |
     tag_stream(From?, FIn?, Tagged),
     merge(In?, Tagged?, In1).
@@ -94,7 +89,7 @@ handle_response(no, _, Fs, Fs?, In, In?).
 %% AGENT - Main loop
 %% =============================================================================
 
-procedure agent(_?, Stream?, FriendsList?).
+procedure agent(_?, Stream?, Stream?).
 
 %% User initiates cold call
 agent(Id, [msg(user, Id1, connect(Target))|In], Fs) :-
@@ -155,7 +150,7 @@ agent(_, [], _).
 procedure agent_init(_?, Channel?, Channel?).
 agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
     merge(UserIn?, NetIn?, In),
-    agent(Id?, In?, [friend(user, UserOut?), friend(net, NetOut?)]).
+    agent(Id?, In?, [(user, UserOut), (net, NetOut)]).
 
 %% =============================================================================
 %% NETWORK SWITCH
