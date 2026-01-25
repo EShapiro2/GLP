@@ -11,7 +11,7 @@
 %% Channel is defined in prelude as: Channel ::= ch(Stream, Stream?).
 
 %% Friend list
-FriendEntry ::= (_, Stream).
+FriendEntry ::= (_, Stream?).
 FriendList ::= [] ; [FriendEntry | FriendList].
 
 %% Response type for connection offers
@@ -76,7 +76,7 @@ update(_, _, [], []).
 %% handle_response - process accepted or rejected connection
 %% Response? is input (consumed from message) - Channel inside becomes Channel (produced to us)
 procedure handle_response(Response?, _?, FriendList?, FriendList, Stream?, Stream).
-handle_response(accept(ch(FIn, FOut)), From, Fs, [(From?, FOut?)|Fs?], In, In1?) :-
+handle_response(accept(ch(FIn, FOut?)), From, Fs, [(From?, FOut)|Fs?], In, In1?) :-
     ground(From?) |
     tag_stream(From?, FIn?, Tagged),
     merge(In?, Tagged?, In1).
@@ -98,13 +98,13 @@ bind_response(no, _, no, Fs, Fs?, In, In?).
 %% AGENT INITIALIZATION
 %% =============================================================================
 
-procedure build_friends(Stream?, Stream?, FriendList).
-build_friends(UserOut, NetOut, [(user, UserOut?), (net, NetOut?)]).
+procedure build_friends(Stream, Stream, FriendList).
+build_friends(UserOut?, NetOut?, [(user, UserOut), (net, NetOut)]).
 
 procedure agent(_?, Channel?, Channel?).
-agent(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
+agent(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
     merge(UserIn?, NetIn?, In),
-    build_friends(UserOut?, NetOut?, Fs),
+    build_friends(UserOut, NetOut, Fs),
     social_graph(Id?, In?, Fs?).
 
 %% =============================================================================
