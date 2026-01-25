@@ -58,7 +58,7 @@ lookup_send(Key, Msg, Fs, Fs1?) :-
     lookup_send_step(Key?, Msg?, Fs?, Fs1).
 
 procedure lookup_send_step(String?, _?, FriendsList?, FriendsList).
-lookup_send_step(Key, Msg, [friend(K, [Msg?|Tail?])|Rest], [friend(K?, Tail)|Rest?]) :-
+lookup_send_step(Key, Msg, [friend(K, [Msg?|Out1?])|Rest], [friend(K?, Out1)|Rest?]) :-
     Key? =?= K? | true.
 lookup_send_step(Key, Msg, [friend(K, Out?)|Rest], [friend(K?, Out)|Rest1?]) :-
     otherwise |
@@ -95,17 +95,16 @@ bind_response(no, _, no, Fs, Fs?, In, In?).
 procedure handle_response(Response?, _?, FriendsList?, FriendsList, Stream?, Stream).
 handle_response(accept(ch(FIn, FOut?)), From, Fs, Fs1?, In, In1?) :-
     ground(From?) |
-    tag_stream(From?, FIn?, Tagged),
-    merge(In?, Tagged?, In1),
+    merge(In?, FIn?, In1),
     add_friend_and_notify(From?, FOut, Fs?, Fs1).
 handle_response(no, From, Fs, Fs1?, In, In?) :-
     ground(From?) |
     lookup_send(user, msg(agent, user, rejected(From?)), Fs?, Fs1).
 
 procedure add_friend_and_notify(_?, Stream, FriendsList?, FriendsList).
-add_friend_and_notify(From, FOut, Fs, Fs1?) :-
+add_friend_and_notify(From, FOut?, Fs, [friend(From?, FOut)|Fs1?]) :-
     ground(From?) |
-    lookup_send(user, msg(agent, user, connected(From?)), [friend(From?, FOut?)|Fs?], Fs1).
+    lookup_send(user, msg(agent, user, connected(From?)), Fs?, Fs1).
 
 %% =============================================================================
 %% AGENT - Main loop (Cold-call + Friend Introduction)
@@ -287,6 +286,8 @@ bob_actor(ch([msg(agent, user, befriend(From, Resp))|In],
     bob_wait_intro(In?, Out).
 
 procedure bob_wait_intro(Stream?, Stream).
+bob_wait_intro([msg(agent, user, connected(_))|In], Out?) :-
+    bob_wait_intro(In?, Out).
 bob_wait_intro([msg(agent, user, befriend_intro(_, Other, Ch))|In],
                [msg(user, bob, accept_intro(Other?, Ch?))|Out?]) :-
     ground(Other?) |
@@ -309,6 +310,8 @@ carol_actor(ch([msg(agent, user, befriend(From, Resp))|In],
     carol_wait_intro(In?, Out).
 
 procedure carol_wait_intro(Stream?, Stream).
+carol_wait_intro([msg(agent, user, connected(_))|In], Out?) :-
+    carol_wait_intro(In?, Out).
 carol_wait_intro([msg(agent, user, befriend_intro(_, Other, Ch))|In],
                  [msg(user, carol, accept_intro(Other?, Ch?))|Out?]) :-
     ground(Other?) |
