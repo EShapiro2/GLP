@@ -210,6 +210,7 @@ Present your findings and discuss what to do next:
 - **NO LONG EXPLANATIONS** - Get to the point
 - **MISTAKES**: Just acknowledge - no apologies or promises
 - **NO VERBOSE POLITENESS** - Skip the fluff
+- **ONE-LINER SHELL COMMANDS** - When giving shell commands to user, always use single-line format (no comments, no multi-line). User can copy-paste directly.
 
 ### Showing GLP Code
 - **ALWAYS show full context**: type declarations, procedure declarations, and full clauses
