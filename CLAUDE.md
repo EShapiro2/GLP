@@ -216,6 +216,7 @@ Present your findings and discuss what to do next:
 - **ALWAYS show full context**: type declarations, procedure declarations, and full clauses
 - **NO intervening text** between related code blocks
 - **Group related definitions together** in a single code block
+- **When consulting about problems**: show type declarations, procedure declaration(s), and the problematic clause in one code block without additional or intervening text
 
 ## Your Role
 You are the **executor and tester** for the GLP Runtime project. You run commands, show output, and implement code based on Claude Chat's architectural guidance.
