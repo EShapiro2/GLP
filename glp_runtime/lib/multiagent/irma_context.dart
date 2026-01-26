@@ -73,7 +73,14 @@ class IrmaContext {
   
   /// Optional callback for message delivery (set by coordinator)
   MessageDeliveryCallback? onMessageReady;
-  
+
+  // =========================================================================
+  // Network Stream Tracking (Section 5.4)
+  // =========================================================================
+
+  /// Current tail writer of network input stream (for appending incoming messages)
+  int? _netInTailWriter;
+
   IrmaContext({
     required this.agentId,
     required this.runtime,
@@ -201,7 +208,174 @@ class IrmaContext {
       _queueAssignmentFromEntry(entry, value, requester);
     }
   }
-  
+
+  // =========================================================================
+  // Network Transaction (Section 5.4)
+  // =========================================================================
+
+  /// Register network input stream for receiving messages
+  ///
+  /// [netInTailWriter] is the writer address of the current tail of the
+  /// network input stream. When messages arrive, they are appended here.
+  void registerNetworkInput(int netInTailWriter) {
+    _netInTailWriter = netInTailWriter;
+    print('[DEBUG IRMA $agentId] registerNetworkInput: tail=$netInTailWriter');
+  }
+
+  /// Register network output stream for monitoring
+  ///
+  /// Per spec Section 5.4: When msg(destination, content) appears on the
+  /// network output stream, trigger the Network Transaction.
+  ///
+  /// [netOutWriter] is the writer address of the network output stream.
+  void registerNetworkOutput(int netOutWriter) {
+    print('[DEBUG IRMA $agentId] registerNetworkOutput: writer=$netOutWriter');
+    runtime.heap.onBind(netOutWriter, (Term term) {
+      _processNetworkOutput(term);
+    });
+  }
+
+  /// Process network output when stream is bound
+  ///
+  /// Checks if term is a cons cell [msg(Dest, X) | Rest] and triggers
+  /// Network Transaction for each message found.
+  void _processNetworkOutput(Term term) {
+    print('[DEBUG IRMA $agentId] _processNetworkOutput: term=$term');
+
+    // Dereference if VarRef
+    if (term is VarRef) {
+      final derefed = runtime.heap.derefAddr(term.addr);
+      if (derefed is Term) {
+        term = derefed;
+      } else {
+        print('[DEBUG IRMA $agentId] _processNetworkOutput: unbound VarRef, ignoring');
+        return;
+      }
+    }
+
+    // Check for cons cell: .(Head, Tail)
+    if (term is StructTerm && term.functor == '.' && term.args.length == 2) {
+      var head = term.args[0];
+      final tail = term.args[1];
+
+      // Dereference head if needed
+      if (head is VarRef) {
+        final derefedHead = runtime.heap.derefAddr(head.addr);
+        if (derefedHead is Term) {
+          head = derefedHead;
+        }
+      }
+
+      // Check if head is msg(Dest, Content)
+      if (head is StructTerm && head.functor == 'msg' && head.args.length == 2) {
+        var dest = head.args[0];
+        final content = head.args[1];
+
+        // Dereference dest if needed
+        if (dest is VarRef) {
+          final derefedDest = runtime.heap.derefAddr(dest.addr);
+          if (derefedDest is Term) {
+            dest = derefedDest;
+          }
+        }
+
+        // Extract destination agent ID
+        if (dest is ConstTerm && dest.value is String) {
+          final destAgentId = dest.value as String;
+          print('[DEBUG IRMA $agentId] _processNetworkOutput: found msg($destAgentId, $content)');
+          _triggerNetworkTransaction(destAgentId, content);
+        } else {
+          print('[DEBUG IRMA $agentId] _processNetworkOutput: dest is not atom: $dest');
+        }
+      } else {
+        print('[DEBUG IRMA $agentId] _processNetworkOutput: head is not msg/2: $head');
+      }
+
+      // Continue monitoring tail for more messages
+      if (tail is VarRef) {
+        final tailAddr = tail.addr;
+        final writerAddr = runtime.heap.tryWriterForReader(tailAddr);
+        if (writerAddr != null) {
+          print('[DEBUG IRMA $agentId] _processNetworkOutput: monitoring tail writer $writerAddr');
+          runtime.heap.onBind(writerAddr, (Term t) {
+            _processNetworkOutput(t);
+          });
+        } else if (runtime.heap.isWriter(tailAddr)) {
+          print('[DEBUG IRMA $agentId] _processNetworkOutput: monitoring tail (already writer) $tailAddr');
+          runtime.heap.onBind(tailAddr, (Term t) {
+            _processNetworkOutput(t);
+          });
+        }
+      }
+    } else if (term is ConstTerm && term.value == 'nil') {
+      print('[DEBUG IRMA $agentId] _processNetworkOutput: stream ended (nil)');
+    } else {
+      print('[DEBUG IRMA $agentId] _processNetworkOutput: unexpected term type: $term');
+    }
+  }
+
+  /// Trigger Network Transaction per spec Section 5.4
+  ///
+  /// 1. X' := export(X) for this agent
+  /// 2. Queue message for delivery to destination's network input
+  /// 3. Destination imports variables when receiving
+  void _triggerNetworkTransaction(String destination, Term content) {
+    print('[DEBUG IRMA $agentId] _triggerNetworkTransaction: to=$destination, content=$content');
+
+    // Step 1: export(content) - modifies V_p and M_p
+    final exportedContent = exportTerm(content);
+    print('[DEBUG IRMA $agentId] _triggerNetworkTransaction: exported=$exportedContent');
+
+    // Step 2: Serialize and queue for delivery
+    final payload = _serializer.createAgentMessagePayload(
+      exportedContent,
+      runtime.heap.isReader,
+      lookupVariable: _lookupVariableForSerialization,
+    );
+
+    mp.add(OutboundMessage(
+      destination: destination,
+      type: MessageType.agentMessage,
+      payload: payload,
+    ));
+    print('[DEBUG IRMA $agentId] _triggerNetworkTransaction: queued agentMessage to $destination');
+  }
+
+  /// Handle incoming network message per spec Section 5.4
+  ///
+  /// 1. Deserialize content X'
+  /// 2. For each variable Y in X' not local to this agent: add (Y, creator, ⊥) to V_p
+  /// 3. Append X' to network input stream
+  void handleNetworkMessage(String sender, List<int> payload) {
+    print('[DEBUG IRMA $agentId] handleNetworkMessage: from=$sender, ${payload.length} bytes');
+
+    // Step 1 & 2: Deserialize and import variables
+    final content = deserializeAndImportTerm(payload, sender);
+    print('[DEBUG IRMA $agentId] handleNetworkMessage: content=$content');
+
+    // Step 3: Append to network input stream
+    if (_netInTailWriter == null) {
+      print('[DEBUG IRMA $agentId] handleNetworkMessage: ERROR - no NetIn tail registered');
+      return;
+    }
+
+    // Create new cons cell [content | newTail]
+    final (newTailWriter, newTailReader) = runtime.heap.allocateVariable();
+    final consCell = StructTerm('.', [content, VarRef(newTailReader)]);
+
+    // Bind current tail to the cons cell
+    final activations = runtime.heap.bindVariable(_netInTailWriter!, consCell);
+    print('[DEBUG IRMA $agentId] handleNetworkMessage: bound NetIn tail, ${activations.length} activations');
+
+    // Update tail pointer
+    _netInTailWriter = newTailWriter;
+
+    // Enqueue any reactivated goals
+    for (final act in activations) {
+      runtime.gq.enqueue(act);
+    }
+  }
+
   // =========================================================================
   // Message Queuing
   // =========================================================================
