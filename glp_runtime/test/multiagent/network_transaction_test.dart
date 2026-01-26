@@ -61,12 +61,25 @@ void main() {
       final bobNetInValue = bobRuntime.heap.derefAddr(bobNetInWriter);
       print('[TEST] Bob NetIn value: $bobNetInValue');
 
-      // Should be a cons cell containing 'hello'
+      // Should be a cons cell containing msg(alice, hello)
       expect(bobNetInValue, isA<StructTerm>());
       final bobCons = bobNetInValue as StructTerm;
       expect(bobCons.functor, equals('.'));
-      expect(bobCons.args[0], isA<ConstTerm>());
-      expect((bobCons.args[0] as ConstTerm).value, equals('hello'));
+
+      // First element should be msg(alice, hello)
+      final receivedMsg = bobCons.args[0];
+      expect(receivedMsg, isA<StructTerm>());
+      final msgStruct = receivedMsg as StructTerm;
+      expect(msgStruct.functor, equals('msg'));
+      expect(msgStruct.args.length, equals(2));
+
+      // Check sender is 'alice'
+      expect(msgStruct.args[0], isA<ConstTerm>());
+      expect((msgStruct.args[0] as ConstTerm).value, equals('alice'));
+
+      // Check content is 'hello'
+      expect(msgStruct.args[1], isA<ConstTerm>());
+      expect((msgStruct.args[1] as ConstTerm).value, equals('hello'));
     });
 
     test('cold-call with response variable', () {
@@ -134,6 +147,7 @@ void main() {
       bobCtx.handleNetworkMessage('alice', msgToBob.payload);
 
       // Verify Bob received the message with imported response variable
+      // Format is now: [msg(alice, intro(alice, alice, Resp)) | Tail]
       final bobNetInValue = bobRuntime.heap.derefAddr(bobNetInWriter);
       print('[TEST] Bob received: $bobNetInValue');
 
@@ -141,7 +155,19 @@ void main() {
       final bobCons = bobNetInValue as StructTerm;
       expect(bobCons.functor, equals('.'));
 
-      final receivedIntro = bobCons.args[0];
+      // First element is msg(alice, intro(...))
+      final receivedMsg = bobCons.args[0];
+      expect(receivedMsg, isA<StructTerm>());
+      final msgStruct = receivedMsg as StructTerm;
+      expect(msgStruct.functor, equals('msg'));
+      expect(msgStruct.args.length, equals(2));
+
+      // Check sender is 'alice'
+      expect(msgStruct.args[0], isA<ConstTerm>());
+      expect((msgStruct.args[0] as ConstTerm).value, equals('alice'));
+
+      // Content is intro(alice, alice, Resp)
+      final receivedIntro = msgStruct.args[1];
       expect(receivedIntro, isA<StructTerm>());
       final introStruct = receivedIntro as StructTerm;
       expect(introStruct.functor, equals('intro'));

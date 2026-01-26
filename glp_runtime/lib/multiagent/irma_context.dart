@@ -359,9 +359,12 @@ class IrmaContext {
       return;
     }
 
-    // Create new cons cell [content | newTail]
+    // Wrap content as msg(sender, content) so agent knows who sent it
+    final wrappedContent = StructTerm('msg', [ConstTerm(sender), content]);
+
+    // Create new cons cell [msg(sender, content) | newTail]
     final (newTailWriter, newTailReader) = runtime.heap.allocateVariable();
-    final consCell = StructTerm('.', [content, VarRef(newTailReader)]);
+    final consCell = StructTerm('.', [wrappedContent, VarRef(newTailReader)]);
 
     // Bind current tail to the cons cell
     final activations = runtime.heap.bindVariable(_netInTailWriter!, consCell);
