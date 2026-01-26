@@ -3,10 +3,29 @@
 **Date:** 2026-01-21
 **Branch:** `claude/refactor-implementation-aGDN6`
 **Status:** Merged to main
+**Testing Status:** PENDING - User needs to run Flutter app on Mac
 
 ## Summary
 
 Fixed assertion error in the Flutter multiagent app that prevented all three agents (Alice, Bob, Charlie) from initializing. The app now compiles and runs.
+
+## Immediate Next Task
+
+**Run and test the Flutter multiagent app:**
+
+```bash
+cd /Users/udi/Grassroots/GLP/glp_multiagent
+flutter run -d macos
+```
+
+Then in Alice's window, type: `send(bob, hi)`
+
+The agents are pre-configured in a linear topology:
+- **Alice** knows: `[Bob]`
+- **Bob** knows: `[Alice, Charlie]`
+- **Charlie** knows: `[Bob]`
+
+If the fix works, Alice's message should reach Bob. If issues arise, check terminal output for errors.
 
 ## Problem
 
@@ -109,3 +128,42 @@ each argument, binding the values, and passing VarRefs to the cells.
 
 Fixes assertion error: 'CallEnv arguments must be VarRefs, got ConstTerm'
 ```
+
+## Architecture Overview
+
+The Flutter multiagent app (`glp_multiagent/`) runs three GLP agents in separate windows:
+
+1. **Agent initialization** (`_startAgentGoal`): Spawns `agent(Id, FriendPairs, UserCh, NetCh)` goal
+2. **Friend channels**: V_p-based - output writers registered in V_p with requester=friend
+3. **Message routing**: IRMA context handles cross-agent variable bindings
+4. **GLP program**: `programs/multiagent/social_agent.glp` (agent/4 predicate)
+
+## Debug Points (if issues arise)
+
+1. **Terminal output** - Debug logging was added to `_sendInput` and `_runUntilQuiescent`
+2. **Activation count** - Look for `=== Activations from inject: N ===`
+3. **Goal queue** - Look for `=== GQ length=N ===`
+4. **IRMA messages** - Look for `[DEBUG IRMA ...]` logs
+
+## Key Files
+
+- `glp_multiagent/lib/main.dart` - Flutter app, agent windows, goal spawning
+- `glp_runtime/lib/multiagent/irma_context.dart` - IRMA context, V_p management
+- `glp_runtime/lib/multiagent/irma_agent.dart` - Agent wrapper, message handling
+- `glp_runtime/lib/multiagent/payload_serializer.dart` - V2 serialization API
+- `programs/multiagent/social_agent.glp` - GLP agent program
+
+## Test Suites
+
+```bash
+# REPL tests (222/223 pass)
+cd /home/user/GLP && bash test/full_run_repl_tests.sh
+
+# Unit tests (305 pass, 18 fail - path issues)
+cd /home/user/GLP/glp_runtime && dart test
+
+# Multiagent tests only (134 pass, 15 fail - path issues)
+cd /home/user/GLP/glp_runtime && dart test test/multiagent/
+```
+
+The 15-18 test failures are pre-existing path issues (tests hardcoded to `/Users/udi/...` instead of `/home/user/...`).
