@@ -167,3 +167,24 @@ cd /home/user/GLP/glp_runtime && dart test test/multiagent/
 ```
 
 The 15-18 test failures are pre-existing path issues (tests hardcoded to `/Users/udi/...` instead of `/home/user/...`).
+
+## Three-Agent Protocol Test (`play_alice_bob_charlie_test.dart`)
+
+**Status:** Fixed and passing (7/7 tests)
+
+The test file at `glp_runtime/test/multiagent/play_alice_bob_charlie_test.dart` validates:
+1. Program compilation (4508 ops)
+2. Required procedures exist (agent_init, agent, actors, network3, merge, etc.)
+3. Three agents can be created with IRMA contexts
+4. Channel allocation works
+5. Goal spawning works (agent_init can be started)
+6. IRMA message routing works (Alice → Bob assignment)
+
+**Limitation:** Full protocol execution requires stream monitoring infrastructure to route `msg(from, to, content)` messages between agents. The GLP play uses `network3` as a coordinator; true multi-isolate execution would need to monitor each agent's NetOut stream.
+
+## GLP Play Files
+
+Three play variants exist in `programs/typed_book/social_graph/`:
+- `play_alice_bob_carol.glp` - Cold-call + friend introduction (Alice, Bob, Carol)
+- `play_alice_bob_charlie.glp` - Cold-call + messaging + friend introduction (Alice, Bob, Charlie)
+- `play_introduction.glp` - Cold-call + friend introduction (Alice, Bob, Carol)
