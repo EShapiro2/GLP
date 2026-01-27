@@ -981,6 +981,16 @@ Before writing ANY code:
 
 When the user says `#remember <something>`, add that information to this CLAUDE.md file so it persists across sessions.
 
+## maGLP Development Constraints
+
+**🔴 CRITICAL: maGLP work cannot modify core GLP implementation**
+
+When working on maGLP (multi-agent GLP) code:
+- You can ONLY modify files in `glp_runtime/lib/multiagent/` and `glp_runtime/test/multiagent/`
+- You CANNOT modify core GLP files (`runner.dart`, `heap_fcp.dart`, `compiler/`, etc.) without explicit discussion and approval
+- If a bug in core GLP is blocking maGLP work, STOP and report it - do not attempt workarounds or fixes
+- Test infrastructure must work within the constraints of the existing GLP implementation
+
 ## Bugs and Limitations - NO WORKAROUNDS
 
 **🔴 MANDATORY PROTOCOL when a bug is discovered:**
