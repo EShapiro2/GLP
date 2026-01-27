@@ -200,8 +200,8 @@ void agentIsolate(AgentConfig config) async {
   // Message handling loop
   await for (final msg in receivePort) {
     if (msg is Start || msg is Tick) {
-      // Run scheduler
-      final result = scheduler.drainWithStatus(debug: false);
+      // Run scheduler with debug to see what's happening
+      final result = scheduler.drainWithStatus(debug: true);
 
       // Process suspensions
       if (result.status == ExecutionStatus.suspended) {
