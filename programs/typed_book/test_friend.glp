@@ -5,3 +5,4 @@ procedure lookup_send_step(String?, _?, FriendsList?, FriendsList).
 
 lookup_send_step(Key, Msg, [friend(K, [Msg?|Out1?])|Rest], [friend(K?, Out1)|Rest?]) :-
     Key? =?= K? | true.
+lookup_send_step(_, _, [], []).
