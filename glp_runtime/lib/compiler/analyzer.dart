@@ -1,5 +1,6 @@
 import 'ast.dart';
 import 'error.dart';
+import '../analysis/type_checker/type_ast.dart';
 
 /// Variable information for semantic analysis
 class VariableInfo {
@@ -59,6 +60,11 @@ class VariableTable {
   bool _hasGroundGuard = false;
   final Set<String> _groundedVars = {};
 
+  // Track variables with constant types (type-based SRSW relaxation)
+  // Per paper Section 5.2.1: If a variable's type is a constant type,
+  // multiple readers are allowed since constants contain no writers.
+  final Set<String> _typeGroundedVars = {};
+
   /// Record a writer occurrence.
   /// [inHeadOrBody]: true if in head or body (counts toward SRSW), false if in guard
   void recordWriterOccurrence(String name, AstNode node, {bool inHeadOrBody = true}) {
@@ -92,6 +98,18 @@ class VariableTable {
 
   bool isGrounded(String varName) => _groundedVars.contains(varName);
 
+  /// Mark a variable as having a constant type (Integer, Real, Number, String, Constant).
+  /// This allows multiple reader occurrences per paper Section 5.2.1.
+  void markTypeGrounded(String varName) {
+    _typeGroundedVars.add(varName);
+  }
+
+  bool isTypeGrounded(String varName) => _typeGroundedVars.contains(varName);
+
+  /// Check if variable allows multiple readers (either guard-grounded or type-grounded)
+  bool allowsMultipleReaders(String varName) =>
+      isGrounded(varName) || isTypeGrounded(varName);
+
   /// Verify SRSW constraints and return list of violations (empty if valid)
   /// 
   /// SRSW rules:
@@ -112,13 +130,15 @@ class VariableTable {
         );
       }
 
-      // Check reader occurrences (multiple readers require grounded)
+      // Check reader occurrences (multiple readers require grounded or constant type)
       // Per SPEC_GUIDE.md: "Guard occurrences do not count toward SRSW satisfaction."
       // Use readerOccurrencesHeadBody (not readerOccurrences) for SRSW validation.
-      if (info.readerOccurrencesHeadBody > 1 && !isGrounded(info.name)) {
+      // Per paper Section 5.2.1: constant types (Integer, Real, Number, String) allow
+      // multiple readers since they contain no writers.
+      if (info.readerOccurrencesHeadBody > 1 && !allowsMultipleReaders(info.name)) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
-          'Line $line: Reader variable "${info.name}?" occurs ${info.readerOccurrencesHeadBody} times without ground guard'
+          'Line $line: Reader variable "${info.name}?" occurs ${info.readerOccurrencesHeadBody} times without ground guard or constant type'
         );
       }
 
@@ -156,10 +176,10 @@ class VariableTable {
       final firstVar = _vars.values.firstWhere(
         (v) {
           if (v.writerOccurrences > 1) return true;
-          if (v.readerOccurrences > 1 && !isGrounded(v.name)) return true;
+          if (v.readerOccurrences > 1 && !allowsMultipleReaders(v.name)) return true;
           if (v.writerOccurrences == 0) return true;
           final hasBodyReader = v.readerOccurrencesHeadBody > 0;
-          final hasGroundedGuardReader = isGrounded(v.name) && v.readerOccurrences > 0;
+          final hasGroundedGuardReader = allowsMultipleReaders(v.name) && v.readerOccurrences > 0;
           if (!hasBodyReader && !hasGroundedGuardReader && v.writerOccurrences > 0) return true;
           return false;
         },
@@ -222,13 +242,31 @@ class AnnotatedClause {
   String toString() => 'AnnotatedClause(guards=$hasGuards, body=$hasBody, vars=${varTable.getAllVars().length})';
 }
 
+/// Constant types that allow multiple reader occurrences (per paper Section 5.2.1)
+const _constantTypes = {'Integer', 'Real', 'Number', 'String', 'Constant'};
+
+/// Check if a type name is a constant type
+bool _isConstantType(String? typeName) {
+  return typeName != null && _constantTypes.contains(typeName);
+}
+
 /// Semantic analyzer for GLP programs
 class Analyzer {
   final PartialEvaluator _partialEvaluator = PartialEvaluator();
 
+  /// Procedure declarations for type-based SRSW relaxation (optional)
+  Map<String, ProcDecl> _procDecls = {};
+
   Analyzer();
 
-  AnnotatedProgram analyze(Program program, {bool generateReduce = false}) {
+  AnnotatedProgram analyze(Program program, {bool generateReduce = false, List<ProcDecl>? procDeclarations}) {
+    // Build procedure declaration lookup map
+    _procDecls = {};
+    if (procDeclarations != null) {
+      for (final decl in procDeclarations) {
+        _procDecls[decl.key] = decl;
+      }
+    }
     // First: transform defined guards via partial evaluation
     // This must happen BEFORE SRSW analysis
     final transformed = _partialEvaluator.transformDefinedGuards(program);
@@ -243,7 +281,10 @@ class Analyzer {
     final allViolations = <String>[];
 
     for (final proc in withReduce.procedures) {
-      final (annotatedProc, violations) = _analyzeProcedureCollectingErrors(proc);
+      // Skip SRSW checking for auto-generated reduce/2 clauses
+      // They are derived from already-validated clauses
+      final skipSRSW = proc.name == 'reduce' && proc.arity == 2;
+      final (annotatedProc, violations) = _analyzeProcedureCollectingErrors(proc, skipSRSW: skipSRSW);
       annotatedProcs.add(annotatedProc);
       allViolations.addAll(violations);
     }
@@ -388,12 +429,13 @@ class Analyzer {
   }
 
   /// Analyze procedure and collect SRSW violations instead of throwing
-  (AnnotatedProcedure, List<String>) _analyzeProcedureCollectingErrors(Procedure proc) {
+  (AnnotatedProcedure, List<String>) _analyzeProcedureCollectingErrors(Procedure proc, {bool skipSRSW = false}) {
     final annotatedClauses = <AnnotatedClause>[];
     final allViolations = <String>[];
 
     for (final clause in proc.clauses) {
-      final (annotatedClause, violations) = _analyzeClauseCollectingErrors(clause, proc.name, proc.arity);
+      final (annotatedClause, violations) = _analyzeClauseCollectingErrors(
+        clause, proc.name, proc.arity, skipSRSW: skipSRSW);
       annotatedClauses.add(annotatedClause);
       allViolations.addAll(violations);
     }
@@ -433,8 +475,15 @@ class Analyzer {
   }
 
   /// Analyze clause and collect SRSW violations instead of throwing
-  (AnnotatedClause, List<String>) _analyzeClauseCollectingErrors(Clause clause, String procName, int procArity) {
+  /// [skipSRSW]: if true, skip SRSW validation (used for auto-generated reduce/2 clauses)
+  (AnnotatedClause, List<String>) _analyzeClauseCollectingErrors(
+      Clause clause, String procName, int procArity, {bool skipSRSW = false}) {
     final varTable = VariableTable();
+
+    // Type-based SRSW relaxation: mark head variables with constant types
+    // Per paper Section 5.2.1: If a variable's type is a constant type,
+    // multiple readers are allowed since constants contain no writers.
+    _markConstantTypeVars(clause.head, procName, procArity, varTable);
 
     // Analyze head
     _analyzeAtom(clause.head, varTable);
@@ -455,8 +504,8 @@ class Analyzer {
       }
     }
 
-    // Collect SRSW violations instead of throwing
-    final violations = varTable.collectSRSWViolations();
+    // Collect SRSW violations (unless skipped for auto-generated clauses)
+    final violations = skipSRSW ? <String>[] : varTable.collectSRSWViolations();
     final contextViolations = violations.map((v) => '$procName/$procArity: $v').toList();
 
     // Assign register indices (even if there are violations, for partial analysis)
@@ -680,6 +729,37 @@ class Analyzer {
       // TODO: Analyze variable lifetimes to distinguish X vs Y registers
       info.isTemporary = true;
       info.registerIndex = nextIndex++;
+    }
+  }
+
+  /// Mark head variables with constant types as type-grounded.
+  /// This implements type-based SRSW relaxation per paper Section 5.2.1.
+  void _markConstantTypeVars(Atom head, String procName, int procArity, VariableTable varTable) {
+    final key = '$procName/$procArity';
+    final procDecl = _procDecls[key];
+    if (procDecl == null) return;
+
+    // Walk through head arguments and check their types from procDecl
+    for (int i = 0; i < head.args.length && i < procDecl.argTypes.length; i++) {
+      final typeName = procDecl.getTypeName(i);
+      if (_isConstantType(typeName)) {
+        // Mark all variables at this position as type-grounded
+        _markVarsInTermAsTypeGrounded(head.args[i], varTable);
+      }
+    }
+  }
+
+  /// Recursively mark all variables in a term as type-grounded.
+  void _markVarsInTermAsTypeGrounded(Term term, VariableTable varTable) {
+    if (term is VarTerm) {
+      varTable.markTypeGrounded(term.name);
+    } else if (term is StructTerm) {
+      for (final arg in term.args) {
+        _markVarsInTermAsTypeGrounded(arg, varTable);
+      }
+    } else if (term is ListTerm) {
+      if (term.head != null) _markVarsInTermAsTypeGrounded(term.head!, varTable);
+      if (term.tail != null) _markVarsInTermAsTypeGrounded(term.tail!, varTable);
     }
   }
 }

@@ -116,9 +116,14 @@ class GlpCompiler {
       // unreliable after stripping directives)
       final generateReduce = !isStdlib;
 
-      // Phase 3: Semantic analysis (with reduce generation flag)
+      // Phase 3: Semantic analysis (with reduce generation flag and proc declarations)
+      // Pass proc declarations for type-based SRSW relaxation
       final analyzer = _createAnalyzer();
-      final annotatedAst = analyzer.analyze(ast, generateReduce: generateReduce);
+      final annotatedAst = analyzer.analyze(
+        ast,
+        generateReduce: generateReduce,
+        procDeclarations: module.procDeclarations,
+      );
 
       // Phase 4: Code generation
       final codegen = _createCodegen();
