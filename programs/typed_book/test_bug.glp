@@ -1,0 +1,9 @@
+%% T has String (produce) at position 1
+T ::= t(String).
+procedure p(T?).
+p(t(X)) :- string(X?) | true.
+
+%% T2 has String? (consume) at position 1 - use constant
+T2 ::= t2(String?).
+procedure p2(T2?).
+p2(t2(a)).
