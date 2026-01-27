@@ -118,27 +118,28 @@ procedure agent(_?, Stream?, FriendsList?).
 %% --- Cold-call protocol ---
 
 %% User initiates cold call
+%% Cold-call uses 2-arg msg: msg(Target, intro(From, Resp))
 agent(Id, [msg(user, Id1, connect(Target))|In], Fs) :-
-    ground(Id?), ground(Target?), Id? =?= Id1? |
-    lookup_send(net, msg(Id?, Target?, intro(Id?, Id?, Resp)), Fs?, Fs1),
+    Id? =?= Id1?, ground(Target?) |
+    lookup_send(net, msg(Target?, intro(Id?, Resp)), Fs?, Fs1),
     inject_msg(Resp?, Target?, Id?, In?, In1),
     agent(Id?, In1?, Fs1?).
 
-%% Received self-introduction (cold-call: 3-arg intro) - forward to user
-agent(Id, [msg(From, Id1, intro(From1, From2, Resp))|In], Fs) :-
-    ground(Id?), ground(From?), Id? =?= Id1?, From? =?= From1?, From? =?= From2? |
+%% Received cold-call introduction (2-arg msg, 2-arg intro)
+agent(Id, [msg(Id1, intro(From, Resp))|In], Fs) :-
+    Id? =?= Id1? |
     lookup_send(user, msg(agent, user, befriend(From?, Resp?)), Fs?, Fs1),
     agent(Id?, In?, Fs1?).
 
 %% User decision on cold-call introduction
 agent(Id, [msg(user, Id1, decision(Dec, From, Resp?))|In], Fs) :-
-    ground(Id?), Id? =?= Id1? |
+    Id? =?= Id1? |
     bind_response(Dec?, From?, Resp, Fs?, Fs1, In?, In1),
     agent(Id?, In1?, Fs1?).
 
 %% Response to sent cold-call introduction
 agent(Id, [msg(From, Id1, response(Resp))|In], Fs) :-
-    ground(Id?), ground(From?), Id? =?= Id1? |
+    Id? =?= Id1? |
     handle_response(Resp?, From?, Fs?, Fs1, In?, In1),
     agent(Id?, In1?, Fs1?).
 
@@ -146,13 +147,13 @@ agent(Id, [msg(From, Id1, response(Resp))|In], Fs) :-
 
 %% User sends text message to friend
 agent(Id, [msg(user, Id1, send(Target, Text))|In], Fs) :-
-    ground(Id?), ground(Target?), Id? =?= Id1? |
+    Id? =?= Id1?, ground(Target?) |
     lookup_send(Target?, msg(Id?, Target?, text(Text?)), Fs?, Fs1),
     agent(Id?, In?, Fs1?).
 
 %% Received text message from friend - forward to user
 agent(Id, [msg(From, Id1, text(Text))|In], Fs) :-
-    ground(Id?), ground(From?), Id? =?= Id1? |
+    Id? =?= Id1? |
     lookup_send(user, msg(agent, user, received(From?, Text?)), Fs?, Fs1),
     agent(Id?, In?, Fs1?).
 
@@ -160,26 +161,26 @@ agent(Id, [msg(From, Id1, text(Text))|In], Fs) :-
 
 %% User commands: introduce P to Q (creates bidirectional channel)
 agent(Id, [msg(user, Id1, introduce(P, Q))|In], Fs) :-
-    ground(Id?), ground(P?), ground(Q?), Id? =?= Id1?, new_channel(PQCh, QPCh) |
+    Id? =?= Id1?, ground(P?), ground(Q?), new_channel(PQCh, QPCh) |
     lookup_send(P?, msg(Id?, P?, intro(Q?, QPCh?)), Fs?, Fs1),
     lookup_send(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Fs1?, Fs2),
     agent(Id?, In?, Fs2?).
 
-%% Received introduction from friend (2-arg intro) - forward to user
+%% Received introduction from friend (3-arg msg, 2-arg intro) - forward to user
 agent(Id, [msg(From, Id1, intro(Other, Ch))|In], Fs) :-
-    ground(Id?), ground(From?), ground(Other?), Id? =?= Id1? |
+    Id? =?= Id1?, ground(Other?) |
     lookup_send(user, msg(agent, user, befriend_intro(From?, Other?, Ch?)), Fs?, Fs1),
     agent(Id?, In?, Fs1?).
 
 %% User accepts friend introduction
 agent(Id, [msg(user, Id1, accept_intro(Other, Ch))|In], Fs) :-
-    ground(Id?), ground(Other?), Id? =?= Id1? |
+    Id? =?= Id1?, ground(Other?) |
     handle_intro_accept(Ch?, Other?, Fs?, Fs1, In?, In1),
     agent(Id?, In1?, Fs1?).
 
 %% User rejects friend introduction
 agent(Id, [msg(user, Id1, reject_intro(_))|In], Fs) :-
-    ground(Id?), Id? =?= Id1? |
+    Id? =?= Id1? |
     agent(Id?, In?, Fs?).
 
 %% --- Catch-all and termination ---
@@ -214,6 +215,46 @@ agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
 %% =============================================================================
 
 procedure network3(Channel?, Channel?, Channel?).
+
+%% --- Cold-call routing (2-arg msg format) ---
+
+%% Alice cold-calls Bob
+network3(ch([msg(bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Alice cold-calls Charlie
+network3(ch([msg(charlie, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Bob cold-calls Alice
+network3(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch([msg(alice, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Bob cold-calls Charlie
+network3(ch(AliceIn, AliceOut?),
+         ch([msg(charlie, X)|BobIn], BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Charlie cold-calls Alice
+network3(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch([msg(alice, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Charlie cold-calls Bob
+network3(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch([msg(bob, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% --- Friend-to-friend routing (3-arg msg format) ---
 
 %% Alice -> Bob
 network3(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
