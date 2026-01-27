@@ -1,23 +1,39 @@
 # Defined Guards: Partial Evaluation Design
 
+> **NOTE (2026-01-27):** This document uses outdated terminology. The current term is
+> "single-unit-clause procedures" — these are **regular procedures** with no special status.
+> They happen to be defined by exactly one clause with no guards and no body.
+> When called in guard position, the partial evaluator unfolds them; when called in
+> body position, they execute normally at runtime.
+>
+> See:
+> - `docs/glp-programming-idioms.md` Section 6 for usage patterns
+> - `docs/guards-reference.md` "Single-Unit-Clause Procedures in Guards" section
+> - `lib/analysis/type_checker/prelude.dart` for predefined examples with procedure declarations
+
 ## Status: IMPLEMENTED (November 2025)
 
-This document describes the implementation of defined guards via partial evaluation at compile time. The partial evaluator in `lib/compiler/analyzer.dart` transforms clauses using defined guards into their expanded form before SRSW analysis.
+This document describes the implementation of partial evaluation for single-unit-clause procedures called in guard position. The partial evaluator in `lib/compiler/analyzer.dart` transforms such calls into their expanded form before SRSW analysis.
 
 ## Overview
 
-Defined guards are user-defined guard predicates defined as unit clauses. A **unit clause** is a clause with:
+Single-unit-clause procedures are regular procedures with procedure declarations. When called in guard position, the partial evaluator unfolds them at compile time. They can also be called in body position for runtime execution.
+
+A **unit clause** is a clause with:
 - Exactly one clause for the predicate
 - No guards
 - No body
 
 Example:
 ```prolog
-channel(ch(_, _)).           % Unit clause defining channel/1 guard
-new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).  % Unit clause defining new_channel/2
+procedure channel(_?).       % Procedure declaration (required)
+channel(ch(_, _)).           % Unit clause
+
+procedure new_channel(Channel, Channel).  % Procedure declaration (required)
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).    % Unit clause
 ```
 
-When a defined guard is called in a guard position, it should be **reduced at compile time** using partial evaluation, not evaluated at runtime.
+When called in guard position, the call is **reduced at compile time** using partial evaluation. When called in body position, it executes as a normal procedure at runtime.
 
 ## Specification
 

@@ -704,8 +704,8 @@ Guards provide read-only access to the runtime state of GLP computation. A guard
 \item \verb|X=\=Y| succeeds if the unification of $X$ and $Y$ fails. 
 \end{itemize}
 
-\mypara{Defined guard predicates}
-To support abstract data types and cleaner code organization, GLP provides for user-defined guards, defined unit clauses \verb|p(T1,...,Tn)|.  The call \verb|p(S1,...,Sn)| in the guard is folded to the equalities \verb|T1=S1,...,Tn=Sn| for each unit goal. This mechanism is demonstrated in the channel abstractions below.
+\mypara{Single-unit-clause procedures}
+To support abstract data types and cleaner code organization, GLP allows procedures defined by a single unit clause (a clause with no guards and no body) to be called in guard position. These are regular procedures with procedure declarations---they have no special status. When such a procedure is called in guard position, the partial evaluator unfolds the call at compile time, applying the bindings from GLP unification to the rest of the clause. When called in body position, it executes as a normal procedure at runtime. If a procedure called in guard position is not defined by a single unit clause, the partial evaluator reports an error. This mechanism is demonstrated in the channel abstractions below.
 
 \mypara{System predicates}
 System predicates execute atomically with goal/clause reduction and provide access to underlying runtime services:
@@ -729,16 +729,21 @@ This appendix presents GLP programs that were referenced in the main text, as we
 
 \subsection{Channel Abstractions}
 
-Bidirectional channels are fundamental to concurrent communication in GLP. We represent a channel as the term \verb|ch(In?,Out)| where \verb|In?| is the input stream reader and \verb|Out| is the output stream writer. The following predicates encapsulate channel operations and are defined as guard predicates through unit clauses:
+Bidirectional channels are fundamental to concurrent communication in GLP. We represent a channel as the term \verb|ch(In?,Out)| where \verb|In?| is the input stream reader and \verb|Out| is the output stream writer. The following procedures encapsulate channel operations. They are regular procedures with procedure declarations, defined by single unit clauses:
 
 \Program{Channel Operations}\label{program:channel-operations}
 \begin{verbatim}
+procedure send(_?, Channel?, Channel).
 send(X,ch(In,[X?|Out?]),ch(In?,Out)).
+
+procedure receive(_, Channel?, Channel).
 receive(X?,ch([X|In],Out?),ch(In?,Out)).
+
+procedure new_channel(Channel, Channel).
 new_channel(ch(Xs?,Ys),ch(Ys?,Xs)).
 \end{verbatim}
 
-The \verb|send| predicate adds a message to the output stream, \verb|receive| removes a message from the input stream, and \verb|new_channel| creates a pair of channels where each channel's input is paired with the other's output. When used as guards in clause heads, these predicates enable readable code that abstracts the underlying stream mechanics:
+The \verb|send| predicate adds a message to the output stream, \verb|receive| removes a message from the input stream, and \verb|new_channel| creates a pair of channels where each channel's input is paired with the other's output. These procedures can be called in either guard position (unfolded at compile time by the partial evaluator) or body position (executed at runtime). When used as guards in clause heads, they enable readable code that abstracts the underlying stream mechanics:
 
 \Program{Stream-Channel Relay}\label{program:relay}
 \begin{verbatim}
