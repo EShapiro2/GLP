@@ -106,8 +106,9 @@ class VariableTable {
 
   bool isTypeGrounded(String varName) => _typeGroundedVars.contains(varName);
 
-  /// Check if variable allows multiple readers (either guard-grounded or type-grounded)
-  bool allowsMultipleReaders(String varName) =>
+  /// Check if variable allows multiple occurrences (either guard-grounded or type-grounded)
+  /// Per spec: both writer and reader may appear multiple times when grounded
+  bool allowsMultipleOccurrences(String varName) =>
       isGrounded(varName) || isTypeGrounded(varName);
 
   /// Verify SRSW constraints and return list of violations (empty if valid)
@@ -122,11 +123,12 @@ class VariableTable {
     final violations = <String>[];
 
     for (final info in _vars.values) {
-      // Check writer occurrences (multiple writers always bad)
-      if (info.writerOccurrences > 1) {
+      // Check writer occurrences (multiple writers require grounded or constant type)
+      // Per spec: when grounded, both writer and reader may appear multiple times
+      if (info.writerOccurrences > 1 && !allowsMultipleOccurrences(info.name)) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
-          'Line $line: Writer variable "${info.name}" occurs ${info.writerOccurrences} times'
+          'Line $line: Writer variable "${info.name}" occurs ${info.writerOccurrences} times without ground guard or constant type'
         );
       }
 
@@ -135,7 +137,7 @@ class VariableTable {
       // Use readerOccurrencesHeadBody (not readerOccurrences) for SRSW validation.
       // Per paper Section 5.2.1: constant types (Integer, Real, Number, String) allow
       // multiple readers since they contain no writers.
-      if (info.readerOccurrencesHeadBody > 1 && !allowsMultipleReaders(info.name)) {
+      if (info.readerOccurrencesHeadBody > 1 && !allowsMultipleOccurrences(info.name)) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
           'Line $line: Reader variable "${info.name}?" occurs ${info.readerOccurrencesHeadBody} times without ground guard or constant type'
@@ -176,10 +178,10 @@ class VariableTable {
       final firstVar = _vars.values.firstWhere(
         (v) {
           if (v.writerOccurrences > 1) return true;
-          if (v.readerOccurrences > 1 && !allowsMultipleReaders(v.name)) return true;
+          if (v.readerOccurrences > 1 && !allowsMultipleOccurrences(v.name)) return true;
           if (v.writerOccurrences == 0) return true;
           final hasBodyReader = v.readerOccurrencesHeadBody > 0;
-          final hasGroundedGuardReader = allowsMultipleReaders(v.name) && v.readerOccurrences > 0;
+          final hasGroundedGuardReader = allowsMultipleOccurrences(v.name) && v.readerOccurrences > 0;
           if (!hasBodyReader && !hasGroundedGuardReader && v.writerOccurrences > 0) return true;
           return false;
         },
