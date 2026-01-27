@@ -16,7 +16,7 @@
 %% =============================================================================
 
 Response ::= accept(Channel) ; no.
-FriendEntry ::= friend(String, Stream).
+FriendEntry ::= friend(String, Stream?).
 FriendsList ::= [] ; [FriendEntry|FriendsList].
 
 %% =============================================================================
