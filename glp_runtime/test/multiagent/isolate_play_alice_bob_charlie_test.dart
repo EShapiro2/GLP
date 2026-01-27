@@ -1,15 +1,27 @@
 /// Full Play Alice-Bob-Charlie with Three Isolates
 ///
-/// STATUS: WORK IN PROGRESS
-/// The goals are failing immediately because the channel terms constructed
-/// in Dart don't match the reader/writer mode expectations of the GLP head
-/// patterns. The issue is that manually creating channels in Dart doesn't
-/// replicate the structure that GLP's new_channel/2 creates.
+/// STATUS: WORK IN PROGRESS - Goals now execute but protocol doesn't complete
 ///
-/// To fix this, we need one of:
-/// 1. Run new_channel as a GLP goal to create properly structured channels
-/// 2. Understand and replicate the exact reader/writer cell structure
-/// 3. Modify the test to use a simpler protocol that doesn't require channels
+/// FIXED: Goals no longer fail immediately. The fix was to create proper
+/// reader cells for goal arguments (allocateVariable + bindVariable) instead
+/// of using storeTermOnHeap which creates ValueTag cells. GLP expects reader
+/// references for input arguments (Channel? in procedure declarations).
+///
+/// REMAINING ISSUES:
+/// 1. No messages are exchanged between agents (all "flushed 0 messages")
+/// 2. Goals complete too quickly without running the full protocol
+/// 3. Warnings: "got local VarRef at X, expected VariableEntry" suggest
+///    IRMA doesn't recognize locally-created variables
+///
+/// ROOT CAUSE: The channel variables (userInWriter, userOutWriter, etc.)
+/// are not registered with IRMA's variable table, so when the protocol
+/// tries to write to UserOut or read from UserIn?, IRMA doesn't know
+/// these are variables that need network routing.
+///
+/// NEXT STEPS:
+/// 1. Register channel variables with IrmaContext (registerWriter, etc.)
+/// 2. Verify the network output stream (NetOut) is properly monitored
+/// 3. Add debug tracing to see where the protocol gets stuck
 ///
 /// For now, the cold-call and friend-introduction isolate tests demonstrate
 /// that IRMA routing works correctly at the lower level.
@@ -134,26 +146,35 @@ void agentIsolate(AgentConfig config) async {
   print('[$agentId]   NetCh: in=($netInWriter,$netInReader), out=($netOutWriter,$netOutReader)');
 
   // Build channel terms for agent_init
+  // Channel structure: ch(In?, Out) where In? is reader, Out is writer
   final userCh = StructTerm('ch', [VarRef(userInReader), VarRef(userOutWriter)]);
   final netCh = StructTerm('ch', [VarRef(netInReader), VarRef(netOutWriter)]);
 
   // Build channel term for actor (reversed - actor writes to UserIn, reads from UserOut)
   final actorCh = StructTerm('ch', [VarRef(userOutReader), VarRef(userInWriter)]);
 
-  // Spawn agent_init goal
-  final agentInitPC = program.labels['agent_init/3']!;
-  final idAddr = runtime.heap.storeTermOnHeap(ConstTerm(agentId));
-  final userChAddr = runtime.heap.storeTermOnHeap(userCh);
-  final netChAddr = runtime.heap.storeTermOnHeap(netCh);
+  // Create proper argument cells for agent_init
+  // Each argument needs a writer/reader pair - we bind the writer and pass the reader
+  // This mimics how GLP passes arguments to procedure calls
+  final (idArgWriter, idArgReader) = runtime.heap.allocateVariable();
+  final (userChArgWriter, userChArgReader) = runtime.heap.allocateVariable();
+  final (netChArgWriter, netChArgReader) = runtime.heap.allocateVariable();
 
+  // Bind the argument writers to their values
+  runtime.heap.bindVariable(idArgWriter, ConstTerm(agentId));
+  runtime.heap.bindVariable(userChArgWriter, userCh);
+  runtime.heap.bindVariable(netChArgWriter, netCh);
+
+  // Spawn agent_init goal with READER references (as GLP expects for Channel? args)
+  final agentInitPC = program.labels['agent_init/3']!;
   runtime.setGoalEnv(1, CallEnv(args: {
-    0: VarRef(idAddr),
-    1: VarRef(userChAddr),
-    2: VarRef(netChAddr),
+    0: VarRef(idArgReader),
+    1: VarRef(userChArgReader),
+    2: VarRef(netChArgReader),
   }));
   runtime.setGoalProgram(1, 'main');
   runtime.gq.enqueue(GoalRef(1, agentInitPC));
-  print('[$agentId] Spawned agent_init');
+  print('[$agentId] Spawned agent_init with readers: id=$idArgReader, userCh=$userChArgReader, netCh=$netChArgReader');
 
   // Spawn actor goal
   final actorLabel = '${agentId}_actor/1';
@@ -164,11 +185,14 @@ void agentIsolate(AgentConfig config) async {
     return;
   }
 
-  final actorChAddr = runtime.heap.storeTermOnHeap(actorCh);
-  runtime.setGoalEnv(2, CallEnv(args: {0: VarRef(actorChAddr)}));
+  // Create proper argument cell for actor
+  final (actorChArgWriter, actorChArgReader) = runtime.heap.allocateVariable();
+  runtime.heap.bindVariable(actorChArgWriter, actorCh);
+
+  runtime.setGoalEnv(2, CallEnv(args: {0: VarRef(actorChArgReader)}));
   runtime.setGoalProgram(2, 'main');
   runtime.gq.enqueue(GoalRef(2, actorPC));
-  print('[$agentId] Spawned $actorLabel');
+  print('[$agentId] Spawned $actorLabel with reader: actorCh=$actorChArgReader');
 
   // Signal ready
   config.mainPort.send(Ready(agentId, receivePort.sendPort));
