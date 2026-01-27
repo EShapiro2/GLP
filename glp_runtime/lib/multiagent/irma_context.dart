@@ -261,7 +261,19 @@ class IrmaContext {
       // Dereference head if needed
       if (head is VarRef) {
         final derefedHead = runtime.heap.derefAddr(head.addr);
-        if (derefedHead is Term) {
+        if (derefedHead is VarRef) {
+          // Head is still unbound - register callback for when it gets bound
+          // This happens when the cons cell is created before its elements are bound
+          final headAddr = (derefedHead as VarRef).addr;
+          print('[DEBUG IRMA $agentId] _processNetworkOutput: head is unbound at $headAddr, registering callback');
+          runtime.heap.onBind(headAddr, (Term boundHead) {
+            print('[DEBUG IRMA $agentId] _processNetworkOutput: head now bound to $boundHead');
+            _processNetworkOutputMessage(boundHead, tail);
+          });
+          // Continue monitoring tail separately
+          _monitorTail(tail);
+          return;
+        } else if (derefedHead is Term) {
           head = derefedHead;
         }
       }
@@ -292,25 +304,60 @@ class IrmaContext {
       }
 
       // Continue monitoring tail for more messages
-      if (tail is VarRef) {
-        final tailAddr = tail.addr;
-        final writerAddr = runtime.heap.tryWriterForReader(tailAddr);
-        if (writerAddr != null) {
-          print('[DEBUG IRMA $agentId] _processNetworkOutput: monitoring tail writer $writerAddr');
-          runtime.heap.onBind(writerAddr, (Term t) {
-            _processNetworkOutput(t);
-          });
-        } else if (runtime.heap.isWriter(tailAddr)) {
-          print('[DEBUG IRMA $agentId] _processNetworkOutput: monitoring tail (already writer) $tailAddr');
-          runtime.heap.onBind(tailAddr, (Term t) {
-            _processNetworkOutput(t);
-          });
-        }
-      }
+      _monitorTail(tail);
     } else if (term is ConstTerm && term.value == 'nil') {
       print('[DEBUG IRMA $agentId] _processNetworkOutput: stream ended (nil)');
     } else {
       print('[DEBUG IRMA $agentId] _processNetworkOutput: unexpected term type: $term');
+    }
+  }
+
+  /// Process a message head once it's bound
+  ///
+  /// Called when the head of a network output cons cell becomes bound.
+  void _processNetworkOutputMessage(Term head, Term tail) {
+    // Check if head is msg(Dest, Content)
+    if (head is StructTerm && head.functor == 'msg' && head.args.length == 2) {
+      var dest = head.args[0];
+      final content = head.args[1];
+
+      // Dereference dest if needed
+      if (dest is VarRef) {
+        final derefedDest = runtime.heap.derefAddr(dest.addr);
+        if (derefedDest is Term) {
+          dest = derefedDest;
+        }
+      }
+
+      // Extract destination agent ID
+      if (dest is ConstTerm && dest.value is String) {
+        final destAgentId = dest.value as String;
+        print('[DEBUG IRMA $agentId] _processNetworkOutputMessage: found msg($destAgentId, $content)');
+        _triggerNetworkTransaction(destAgentId, content);
+      } else {
+        print('[DEBUG IRMA $agentId] _processNetworkOutputMessage: dest is not atom: $dest');
+      }
+    } else {
+      print('[DEBUG IRMA $agentId] _processNetworkOutputMessage: not msg/2: $head');
+    }
+  }
+
+  /// Monitor a tail VarRef for more messages
+  void _monitorTail(Term tail) {
+    if (tail is VarRef) {
+      final tailAddr = tail.addr;
+      final writerAddr = runtime.heap.tryWriterForReader(tailAddr);
+      if (writerAddr != null) {
+        print('[DEBUG IRMA $agentId] _monitorTail: monitoring tail writer $writerAddr');
+        runtime.heap.onBind(writerAddr, (Term t) {
+          _processNetworkOutput(t);
+        });
+      } else if (runtime.heap.isWriter(tailAddr)) {
+        print('[DEBUG IRMA $agentId] _monitorTail: monitoring tail (already writer) $tailAddr');
+        runtime.heap.onBind(tailAddr, (Term t) {
+          _processNetworkOutput(t);
+        });
+      }
     }
   }
 
