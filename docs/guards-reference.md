@@ -133,11 +133,11 @@ echo(Input, Output) :- known(Input) | Output = Input?.
 
 **Example**:
 ```prolog
-% Safe copying of constants (allows multiple reader occurrences)
+% Safe copying of constants
 copy(X, Y, Z) :- constant(X?) | Y = X?, Z = X?.
 ```
 
-**Note**: Constants are ground by definition (they contain no variables), so this guard permits multiple reader occurrences of X? in the clause body without violating SRSW.
+**Note**: Constants are ground by definition. See "Ground Guards - SRSW Relaxation" below for details on multiple occurrences.
 
 ---
 
@@ -177,11 +177,11 @@ copy(X, Y, Z) :- compound(X?) |
 
 **Example**:
 ```prolog
-% Enable multiple reader occurrences
+% Enable multiple occurrences with ground guard
 replicate(X, [X?, X?, X?]) :- ground(X?) | true.
 ```
 
-**Key Property**: With `ground(X?)` guard, multiple occurrences of `X?` in the body don't violate SRSW, as ground terms don't expose writers.
+**Key Property**: See "Ground Guards - SRSW Relaxation" below for details on how ground guards enable multiple occurrences.
 
 **Circular Term Behavior**: When `X?` is bound to a circular term (e.g., `f(f(f(...)))`), `ground(X?)` succeeds if the term contains no unbound variables on any branch. The cycle itself does not make a term non-ground.
 
@@ -228,17 +228,17 @@ process(X, Y?) :- ground(X) | Y = computed(X?).  % Would fail, not suspend
 
 ---
 
-## CRITICAL: Ground Guards - Exception to SRSW Syntactic Restriction
+## Ground Guards - SRSW Relaxation
 
-Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The ONLY exception: when guards guarantee groundness, multiple reader occurrences are permitted because ground terms cannot expose writers.
+Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The ONLY exception: when guards guarantee groundness, multiple occurrences of both the writer and reader are permitted because ground terms contain no unbound writers.
 
 ### The Rule
 
-When a guard ensures a variable is ground (contains no unbound variables), that variable may appear **multiple times as a reader** in the clause body without violating SRSW. This is fundamental to GLP's concurrent programming model.
+When a guard ensures a variable is ground (contains no unbound variables), both the writer and its paired reader may appear **multiple times** in the clause without violating SRSW. This is fundamental to GLP's concurrent programming model.
 
 ### Why This Works
 
-Ground terms contain no unbound writers. Multiple readers of a ground term do not create single-writer violations because there's no writer to expose.
+Ground terms contain no unbound writers. Multiple occurrences of a ground variable's writer and reader do not create single-writer violations because there's no exposed writer that could be bound multiple times.
 
 ### Guard Arguments Count as Reader Occurrences
 
@@ -250,11 +250,11 @@ check(X) :- known(X?) | true.
 
 is valid because X appears as writer in the head and X? appears as reader in the guard, satisfying SRSW with one writer and one reader.
 
-This is distinct from the multiple-reader relaxation below. Guard reader counting ensures guards participate in SRSW validation. The relaxation below determines which guards permit a variable to appear as reader more than once.
+This is distinct from the multiple-occurrence relaxation below. Guard reader counting ensures guards participate in SRSW validation. The relaxation below determines which guards permit both the writer and reader of a variable to appear multiple times.
 
 ### Guards That Imply Groundness
 
-| Guard | Implies Ground | Allows Multiple Readers |
+| Guard | Implies Ground | Allows Multiple Occurrences |
 |-------|----------------|-------------------------|
 | ✅ `ground(X?)` | Yes | ✅ Yes |
 | ⏳ `constant(X?)` | Yes | ✅ Yes |
@@ -318,13 +318,13 @@ bad_example(X, Y1, Y2) :- known(X?) |
 The SRSW analyzer must:
 1. Track guards in HEAD/GUARDS phase
 2. Recognize guards that imply groundness:
-   - Type guards: `ground/1`, `integer/1`, `number/1`
+   - Type guards: `ground/1`, `integer/1`, `number/1`, `constant/1`
    - Arithmetic comparisons: `<`, `=<`, `>`, `>=`, `=:=`, `=\=`
 3. For variables with ground-guaranteeing guards:
    - Mark variable as "ground-certified" for this clause
-   - Allow multiple reader occurrences in body
+   - Allow multiple occurrences of both writer and reader in clause
 4. For variables without such guards:
-   - Enforce strict single-reader constraint
+   - Enforce strict single-occurrence constraint
 
 ### Use Cases
 
@@ -665,7 +665,7 @@ test_known_fail :-
 - Suspend: X is unbound reader
 - Fail: X is any other value
 
-**SRSW Relaxation**: Like `ground(X?)`, the `equator(X?)` guard permits multiple reader occurrences of `X?` in the clause body without violating the SRSW syntactic restriction. This enables distributing the equator structure to multiple spawned processes.
+**SRSW Relaxation**: Like `ground(X?)`, the `equator(X?)` guard permits multiple occurrences of both `X` and `X?` in the clause. See "Ground Guards - SRSW Relaxation" above.
 
 **Example**:
 ```prolog

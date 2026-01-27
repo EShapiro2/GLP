@@ -13,7 +13,18 @@
 %% =============================================================================
 
 Response ::= accept(Channel) ; no.
-FriendEntry ::= friend(String?, Stream).
+
+MsgPayload ::= connect(String?) ; connected(String?) ; rejected(String?)
+             ; befriend(String?, Response) ; decision(_?, String?, Response)
+             ; befriend_intro(String?, String?, Channel?) ; accept_intro(String?, Channel?) ; reject_intro(String?)
+             ; introduce(String?, String?)
+             ; intro(String?, String?, Response) ; intro(String?, Channel?)
+             ; response(Response?).
+
+Msg ::= msg(_?, _?, MsgPayload).
+MsgStream ::= [] ; [Msg | MsgStream].
+
+FriendEntry ::= friend(String?, MsgStream).
 FriendsList ::= [] ; [FriendEntry|FriendsList].
 
 %% =============================================================================

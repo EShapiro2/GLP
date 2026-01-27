@@ -5,7 +5,7 @@
 // Redefinition of predefined types/procedures is an error.
 //
 // Specification: docs/modules/type-environment.md
-// Paper Reference: Section 4.x (Guards)
+// Paper Reference: Section 8 (Prelude)
 
 /// The prelude source containing all predefined definitions
 ///
@@ -78,20 +78,44 @@ procedure write(_?).
 procedure writeln(_?).
 
 % =============================================================================
-% DEFINED GUARD PROCEDURES (clauses only, no declarations)
-% These are partially evaluated during type checking
+% SINGLE-UNIT-CLAUSE PROCEDURES
+% =============================================================================
+%
+% These are regular procedures with no special status. They happen to be defined
+% by exactly one clause that has no guards and no body (a "unit clause").
+%
+% They can be called from either guard position or body position:
+%
+%   - IN GUARD POSITION: The partial evaluator verifies the procedure is defined
+%     by a single unit clause, then unfolds it at compile time. If not a single
+%     unit clause, PE reports an error.
+%
+%   - IN BODY POSITION: Called as a normal procedure at runtime.
+%
+% Example: new_channel(Ch1, Ch2) can appear in a guard (unfolded at compile time
+% to create cross-linked channel structures) or in a body (executed at runtime).
+%
 % =============================================================================
 
-% Assignment
+% Assignment (unification)
+procedure =(_?, _).
 X = X?.
 
 % Difference list operations
+procedure dl_append(DiffList?, DiffList?, DiffList).
 dl_append(A\B?, B\C?, A?\C).
+
+procedure dl_to_list(DiffList?, Stream).
 dl_to_list(L\[], L?).
 
 % Channel operations
+procedure new_channel(Channel, Channel).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+procedure send(_?, Channel?, Channel).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+
+procedure receive(_, Channel?, Channel).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
 ''';
 

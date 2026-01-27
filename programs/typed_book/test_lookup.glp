@@ -1,0 +1,12 @@
+%% Simple lookup test for type checking
+
+Pair ::= pair(String, Integer).
+PairList ::= [] ; [Pair | PairList].
+
+procedure lookup(String?, Integer, PairList?, PairList).
+
+lookup(Key, V?, [pair(K, V)|Rest], [pair(K?, V?)|Rest?]) :-
+    Key? =?= K?, integer(V) | true.
+lookup(Key, V?, [Pair|Rest], [Pair?|Rest1?]) :-
+    otherwise | lookup(Key?, V, Rest?, Rest1).
+lookup(_, _, [], []).
