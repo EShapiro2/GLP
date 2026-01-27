@@ -6,6 +6,7 @@
 
 import 'ast.dart';
 import 'error.dart';
+import '../analysis/type_checker/prelude.dart' show builtinProcedures;
 
 // ============================================================================
 // UNIFICATION RESULTS
@@ -41,10 +42,7 @@ class PartialEvaluator {
   /// Call this before SRSW analysis.
   Program transformDefinedGuards(Program program) {
     final unitClauses = _collectUnitClauses(program);
-
-    if (unitClauses.isEmpty) {
-      return program; // No unit clauses, nothing to transform
-    }
+    final allProcedures = _collectAllProcedures(program);
 
     List<Procedure> transformedProcedures = [];
 
@@ -52,7 +50,7 @@ class PartialEvaluator {
       List<Clause> transformedClauses = [];
 
       for (final clause in procedure.clauses) {
-        final transformed = _transformClause(clause, unitClauses);
+        final transformed = _transformClause(clause, unitClauses, allProcedures);
         transformedClauses.add(transformed);
       }
 
@@ -66,6 +64,16 @@ class PartialEvaluator {
     }
 
     return Program(transformedProcedures, program.line, program.column);
+  }
+
+  /// Collect all procedures from program.
+  /// Returns set of "name/arity" for all defined procedures.
+  Set<String> _collectAllProcedures(Program program) {
+    final Set<String> procedures = {};
+    for (final proc in program.procedures) {
+      procedures.add('${proc.name}/${proc.arity}');
+    }
+    return procedures;
   }
 
   /// Stage 2: Unfold reduce/2 calls in clause bodies
@@ -353,8 +361,14 @@ class PartialEvaluator {
 
   /// Transform a clause by reducing defined guards.
   /// Returns transformed clause.
-  /// Throws CompileError if guard cannot be reduced (suspend) or always fails.
-  Clause _transformClause(Clause clause, Map<String, List<Term>> unitClauses) {
+  /// Throws CompileError if:
+  ///   - Guard cannot be reduced (suspend) or always fails
+  ///   - Guard calls a non-unit-clause procedure (multiple clauses or has guards/body)
+  Clause _transformClause(
+    Clause clause,
+    Map<String, List<Term>> unitClauses,
+    Set<String> allProcedures,
+  ) {
     if (clause.guards == null || clause.guards!.isEmpty) {
       return clause; // No guards, nothing to transform
     }
@@ -442,8 +456,26 @@ class PartialEvaluator {
 
           if (changed) break; // restart outer loop
         } else {
-          // Not a defined guard - keep it
-          remainingGuards.add(guard);
+          // Not a unit clause - check if it's a builtin or an error
+          if (builtinProcedures.contains(key)) {
+            // Builtin guard (like integer/1, ground/1) - keep it
+            remainingGuards.add(guard);
+          } else if (allProcedures.contains(key)) {
+            // Procedure exists but is NOT a single unit clause
+            // This is an error - can't call non-unit-clause procedures in guards
+            throw CompileError(
+              'Cannot call "${guard.predicate}/${guard.args.length}" in guard position.\n'
+              '  Only builtin guards and single-unit-clause procedures can appear in guards.\n'
+              '  The procedure "${guard.predicate}" has multiple clauses or non-unit clauses.',
+              guard.line,
+              guard.column,
+              phase: 'partial_evaluator'
+            );
+          } else {
+            // Unknown guard - could be undefined, let later phases handle it
+            // For now, keep it (type checker will catch undefined procedures)
+            remainingGuards.add(guard);
+          }
         }
       }
 
