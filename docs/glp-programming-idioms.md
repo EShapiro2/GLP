@@ -1,7 +1,7 @@
 # GLP Programming Idioms
 
-**Version**: 1.2  
-**Date**: 2026-01-24  
+**Version**: 1.3  
+**Date**: 2026-01-27  
 **Status**: ACTIVE
 
 This document captures essential programming idioms and principles for writing correct GLP programs, particularly those involving the SRSW (Single-Reader Single-Writer) constraint and typed GLP.
@@ -254,7 +254,92 @@ This is an instance of the Head-Body Variable Flow Principle (Section 1): `Out?`
 
 ---
 
-## 6. Summary Table
+## 6. Single-Unit-Clause Procedures
+
+### 6.1 What They Are
+
+A **single-unit-clause procedure** is a regular procedure that happens to be defined by exactly one clause with no guards and no body. These procedures have **no special status** in GLP — they are ordinary procedures with ordinary procedure declarations.
+
+Examples from the prelude:
+
+```prolog
+procedure new_channel(Channel, Channel).
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+procedure send(_?, Channel?, Channel).
+send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+
+procedure receive(_, Channel?, Channel).
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
+```
+
+### 6.2 Dual Usage: Guards and Bodies
+
+These procedures can be called from either guard position or body position:
+
+**In guard position:** The partial evaluator verifies the procedure is defined by a single unit clause, then unfolds the call at compile time. If the procedure is not a single unit clause, PE reports an error.
+
+```prolog
+%% new_channel in guard position - PE unfolds at compile time
+play :- new_channel(AliceCh, BobCh) |
+    alice(AliceCh?),
+    bob(BobCh?).
+```
+
+**In body position:** Called as a normal procedure at runtime.
+
+```prolog
+%% new_channel in body position - executes at runtime
+setup(AliceCh?, BobCh?) :-
+    new_channel(AliceCh, BobCh).
+```
+
+### 6.3 Requirements
+
+Like all procedures, these require:
+
+1. **Procedure declaration** — for type checking
+2. **SRSW compliance** — the clause must satisfy SRSW (use `_` for unused positions)
+
+For guard-position calls, additionally:
+
+3. **Single unit clause** — exactly one clause, no guards, no body (PE validates this)
+
+### 6.4 Partial Evaluation Behavior
+
+When a procedure call appears in guard position, the partial evaluator classifies it:
+
+1. **Builtin guard** (e.g., `integer/1`, `ground/1`, `</2`): Keep as-is (runtime evaluation)
+2. **Single-unit-clause procedure**: Unfold at compile time (GLP unification, apply bindings, remove guard)
+3. **Any other user-defined procedure**: Report compile-time error
+
+This ensures that guards are either primitive runtime tests or can be fully resolved at compile time.
+
+### 6.5 Example: new_channel Unfolding
+
+```prolog
+%% Original clause
+play :- new_channel(AliceCh, BobCh) | alice(AliceCh?), bob(BobCh?).
+
+%% After partial evaluation (new_channel unfolded)
+play :- alice(ch(Xs?, Ys)?), bob(ch(Ys?, Xs)?).
+```
+
+The cross-linked channel structure is created at compile time.
+
+### 6.6 Common Single-Unit-Clause Procedures
+
+| Procedure | Purpose |
+| `new_channel(Channel, Channel)` | Create bidirectional channel pair |
+| `send(_?, Channel?, Channel)` | Send message on channel |
+| `receive(_, Channel?, Channel)` | Receive message from channel |
+| `dl_append(DiffList?, DiffList?, DiffList)` | Append difference lists |
+| `dl_to_list(DiffList?, Stream)` | Convert difference list to stream |
+| `X = X?` | Unification/assignment |
+
+---
+
+## 7. Summary Table
 
 | Scenario | Head Variable | Body Variable | Explanation |
 |----------|---------------|---------------|-------------|
@@ -267,7 +352,8 @@ This is an instance of the Head-Body Variable Flow Principle (Section 1): `Out?`
 ## Version History
 
 | Version | Date | Changes |
-|---------|------|---------|  
+|---------|------|---------|
+| 1.3 | 2026-01-27 | Added Section 6: Unit Clause Procedures |
 | 1.2 | 2026-01-24 | Added Section 5: Store Writers, Not Readers, in Lookup Tables |
 | 1.1 | 2026-01-24 | Added Section 4: Avoid Assignment in Guards and Bodies |
 | 1.0 | 2026-01-24 | Initial version with Head-Body Variable Flow Principle |

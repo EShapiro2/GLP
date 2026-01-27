@@ -403,61 +403,90 @@ The guard `Key =?= K?` succeeds when `Key` and `K` are both ground and equal. If
 
 ---
 
-## Defined Guards (Unit Clause Unfolding)
+## What Can Appear in Guard Position
 
-### ✅ User-defined guard predicates via unit clauses
+### Guard Classification
 
-A **unit clause** (head-only, no guards, no body) can define a guard predicate:
+The partial evaluator validates all guards at compile time. Guards fall into exactly two categories:
+
+1. **Builtin guards** — Implemented in the Dart runtime with NO GLP clauses. These include type guards (`integer/1`, `number/1`, `ground/1`, etc.), comparison guards (`</2`, `>/2`, etc.), and equality guards (`=?=/2`). Builtin guards are kept as-is by the partial evaluator.
+
+2. **Single-unit-clause procedures** — User-defined procedures with exactly one clause, no guards, and no body. These are unfolded at compile time by the partial evaluator.
+
+### Validation Rule
+
+**Any procedure called in guard position that is NOT a builtin guard MUST be a single-unit-clause procedure.** If a user-defined procedure has multiple clauses, or has guards or body goals, calling it in guard position is a compile-time error.
+
+### Error Example
 
 ```prolog
-% Define equality guard - matching both arguments against the same variable
-X = X.
+%% COMPILE ERROR: multi/1 has multiple clauses
+procedure multi(_).
+multi(a).
+multi(b).
+
+procedure test(_).
+test(X?) :- multi(X?) | process(X?).  %% ERROR!
 ```
 
-When `A = B` is used in guard position, the compiler unfolds it to matching both `A` and `B` against the same variable `X`. This succeeds when both terms unify with the same value, suspends if either contains unbound readers, and fails if they cannot match.
+The partial evaluator reports:
+```
+Cannot call "multi/1" in guard position.
+  Only builtin guards and single-unit-clause procedures can appear in guards.
+  The procedure "multi" has multiple clauses or non-unit clauses.
+```
+
+---
+
+## Single-Unit-Clause Procedures in Guards
+
+### ✅ Regular procedures can be called in guard position
+
+A **single-unit-clause procedure** is a regular procedure that happens to be defined by exactly one clause with no guards and no body. These procedures have **no special status** — they are ordinary procedures with procedure declarations.
+
+When such a procedure is called in guard position, the partial evaluator unfolds it at compile time.
+
+**Example from prelude:**
+```prolog
+procedure new_channel(Channel, Channel).
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+```
+
+This can be called in either position:
 
 ```prolog
-% Define channel/1 as a type guard predicate
+%% Guard position - PE unfolds at compile time
+play :- new_channel(AliceCh, BobCh) | alice(AliceCh?), bob(BobCh?).
+
+%% Body position - executes at runtime  
+setup(Ch1?, Ch2?) :- new_channel(Ch1, Ch2).
+```
+
+**Pure pattern guards** (for type testing) use anonymous variables:
+
+```prolog
+procedure channel(_?).
 channel(ch(_, _)).
+
+%% Usage:
+process(X, Y) :- channel(X?) | handle_channel(X?, Y).
 ```
 
-When used in guard position, the compiler unfolds it to HEAD-style pattern matching:
-
-```prolog
-% This guard:
-process(X, Y) :- channel(X?) | ...
-
-% Unfolds at compile-time to:
-process(X, Y) :- X? = ch(_, _) | ...
-```
+When `channel(X?)` is unfolded, it becomes pattern matching against `ch(_, _)`.
 
 **Semantics** (three-valued, like all guards):
-- **Success**: Argument matches the unit clause pattern
-- **Suspend**: Argument contains unbound reader
-- **Fail**: Argument doesn't match pattern
+- **Success**: Arguments unify with the clause head pattern
+- **Suspend**: Arguments contain unbound readers
+- **Fail**: Arguments don't match pattern
 
-**Example**:
-```prolog
-% Define a type guard
-pair(p(_, _)).
+**Requirements:**
+1. **Procedure declaration** — required for type checking
+2. **SRSW compliance** — the clause must satisfy SRSW
+3. **Single unit clause** — for guard-position calls (PE validates this)
 
-% Use in guard position
-process_pair(X, R) :- pair(X?) | R = is_pair.
-process_pair(_, R) :- otherwise | R = not_pair.
+**Why anonymous variables for pattern guards**: Use `_` for positions that don't need to produce bindings. Named variables like `channel(ch(In?, Out)).` would violate SRSW (reader with no paired writer).
 
-% Queries:
-% process_pair(p(a,b), R).  → R = is_pair
-% process_pair(foo, R).     → R = not_pair
-% process_pair(X, R).       → suspended (X unbound)
-```
-
-**Requirements for unit clause guards**:
-1. Exactly one clause
-2. No guards (no `|` in clause)
-3. No body (just the head pattern)
-4. Use `_` for pattern placeholders (satisfies SRSW)
-
-**Why anonymous variables**: The unit clause head pattern uses `_` because there's no body to consume the variables. Using named variables like `channel(ch(In?, Out)).` would violate SRSW (reader with no writer).
+**See also**: `docs/glp-programming-idioms.md` Section 6 for detailed examples.
 
 ---
 
