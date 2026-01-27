@@ -99,6 +99,15 @@ class VariableEntry {
   /// - For importedReader: not used (entry is removed when assignment arrives)
   Term? boundValue;
 
+  /// For imported writers: the creator's local ID of the paired reader.
+  ///
+  /// Per spec Section 5.3, assignments are addressed to the reader (W?:=T).
+  /// When an imported writer is bound, we need to send the assignment using
+  /// the reader's creatorLocalId, not the writer's. This field stores that.
+  ///
+  /// Only meaningful for importedWriter role.
+  int? pairedReaderCreatorLocalId;
+
   /// Suspension list for goals waiting on this variable (Σ in spec).
   ///
   /// For imported readers, V_p serves as the "virtual writer" since there

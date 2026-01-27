@@ -155,7 +155,7 @@ class PayloadSerializer {
   (GlobalVarId, Term) deserializeAssignmentPayload(
     List<int> payload,
     int Function(bool isReader) allocateImportedVar,
-    {void Function(int localAddr, bool isReader, GlobalVarId globalId)? onVariableImported}
+    {void Function(int localAddr, bool isReader, GlobalVarId globalId, int? pairedReaderCreatorLocalId)? onVariableImported}
   ) {
     int offset = 0;
 
@@ -298,6 +298,16 @@ class PayloadSerializer {
       builder.add(encoded);
       // Store isReader flag
       builder.addByte(isReaderVar ? 1 : 0);
+
+      // For writers, also serialize the paired reader's creatorLocalId
+      // Per spec Section 5.3: assignments are addressed to the reader (W?:=T)
+      if (!isReaderVar) {
+        // For local variables, paired reader is at writer+1
+        // For imported variables, we'd need to look it up (but we're exporting
+        // local variables here, so writer+1 is correct)
+        final pairedReaderLocalId = creatorLocalId + 1;
+        builder.add(_encodeLength(pairedReaderLocalId));
+      }
     } else if (term is StructTerm) {
       builder.addByte(_tagStruct);
       // Encode functor
@@ -355,22 +365,23 @@ class PayloadSerializer {
   }
   
   /// Result of deserializing an agent message payload
-  /// 
+  ///
   /// Contains the deserialized term and a mapping from local varIds to their
   /// original global IDs (creator:creatorLocalId).
-  /// 
+  ///
   /// [allocateImportedVar] - Callback to allocate a single cell for imported variable.
   ///   Takes isReader flag and returns the cell address (varId).
   ///   For readers: calls heap.allocateImportedReader()
   ///   For writers: calls heap.allocateImportedWriter()
-  /// 
+  ///
   /// [onVariableImported] - Optional callback invoked after allocating each variable.
   ///   Used by IrmaContext to create and attach VariableEntry to the cell.
-  ///   Parameters: (localAddr, isReader, globalId)
+  ///   Parameters: (localAddr, isReader, globalId, pairedReaderCreatorLocalId)
+  ///   For writers, pairedReaderCreatorLocalId contains the reader's ID for assignments.
   static (Term, Map<int, GlobalVarId>) deserializeAgentMessagePayloadWithMapping(
     List<int> payload,
     int Function(bool isReader) allocateImportedVar,
-    {void Function(int localAddr, bool isReader, GlobalVarId globalId)? onVariableImported}
+    {void Function(int localAddr, bool isReader, GlobalVarId globalId, int? pairedReaderCreatorLocalId)? onVariableImported}
   ) {
     // Map from global var ID string -> local varId
     final globalToLocal = <String, int>{};
@@ -389,10 +400,10 @@ class PayloadSerializer {
   }
   
   /// Deserialize agent message payload with fresh variable allocation
-  /// 
+  ///
   /// This is used when receiving a term from another agent. Remote variables
   /// are mapped to fresh local variables using the provided allocator.
-  /// 
+  ///
   /// [payload] - The serialized term bytes
   /// [allocateImportedVar] - Callback to allocate imported variable cell.
   ///   Takes isReader flag and returns the cell address (varId).
@@ -400,7 +411,7 @@ class PayloadSerializer {
   Term deserializeAgentMessagePayload(
     List<int> payload,
     int Function(bool isReader) allocateImportedVar,
-    {void Function(int localAddr, bool isReader, GlobalVarId globalId)? onVariableImported}
+    {void Function(int localAddr, bool isReader, GlobalVarId globalId, int? pairedReaderCreatorLocalId)? onVariableImported}
   ) {
     // Map from global var ID string -> local varId
     final varMapping = <String, int>{};
@@ -411,15 +422,22 @@ class PayloadSerializer {
   }
   
   /// Deserialize term with variable remapping for cross-agent terms (V2 - isReader aware)
-  /// 
+  ///
   /// This version uses isReader-aware allocation for imported variables,
   /// allocating single cells instead of full pairs.
+  ///
+  /// [onVariableImported] callback receives:
+  /// - localAddr: the allocated local heap address
+  /// - isReader: whether this is a reader variable
+  /// - globalId: the original creator's global ID
+  /// - pairedReaderCreatorLocalId: for writers, the paired reader's creatorLocalId
+  ///   (used when sending assignments per spec Section 5.3)
   (Term, int) _deserializeTermWithMappingV2(
     List<int> bytes,
     int offset,
     Map<String, int> varMapping,
     int Function(bool isReader) allocateImportedVar,
-    void Function(int localAddr, bool isReader, GlobalVarId globalId)? onVariableImported,
+    void Function(int localAddr, bool isReader, GlobalVarId globalId, int? pairedReaderCreatorLocalId)? onVariableImported,
   ) {
     final startOffset = offset;
     
@@ -439,17 +457,25 @@ class PayloadSerializer {
         // Decode global ID length
         final (idLength, lengthSize) = _decodeLength(bytes, offset);
         offset += lengthSize;
-        
+
         // Decode global ID string (e.g., "bob:1117")
         final idBytes = bytes.sublist(offset, offset + idLength);
         offset += idLength;
         final globalIdStr = utf8.decode(idBytes);
         final globalId = GlobalVarId.decode(globalIdStr);
-        
+
         // Decode isReader flag
         final isReader = bytes[offset] == 1;
         offset++;
-        
+
+        // For writers, decode the paired reader's creatorLocalId
+        int? pairedReaderCreatorLocalId;
+        if (!isReader) {
+          final (pairedReaderId, pairedReaderIdSize) = _decodeLength(bytes, offset);
+          offset += pairedReaderIdSize;
+          pairedReaderCreatorLocalId = pairedReaderId;
+        }
+
         // Map to local variable (allocate fresh if first time seeing this global ID)
         int localVarId;
         if (varMapping.containsKey(globalIdStr)) {
@@ -461,7 +487,7 @@ class PayloadSerializer {
           varMapping[globalIdStr] = localVarId;
 
           // Notify caller to create VariableEntry and attach to cell
-          onVariableImported?.call(localVarId, isReader, globalId);
+          onVariableImported?.call(localVarId, isReader, globalId, pairedReaderCreatorLocalId);
         }
 
         // localVarId is already the correct heap address

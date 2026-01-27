@@ -109,9 +109,10 @@ class IrmaAgent {
         }
       },
       // Entry creator callback: attach VariableEntry to imported variables
-      onVariableImported: (int localAddr, bool isReader, GlobalVarId nestedGlobalId) {
+      onVariableImported: (int localAddr, bool isReader, GlobalVarId nestedGlobalId, int? pairedReaderCreatorLocalId) {
         context.attachImportedVariableEntry(
-          localAddr, isReader, nestedGlobalId, nestedGlobalId.creator);
+          localAddr, isReader, nestedGlobalId, nestedGlobalId.creator,
+          pairedReaderCreatorLocalId: pairedReaderCreatorLocalId);
       },
     );
 

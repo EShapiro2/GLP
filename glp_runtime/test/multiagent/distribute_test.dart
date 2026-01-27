@@ -127,21 +127,22 @@ void main() {
       if (destination == 'consumer1') target = ctx2;
       if (destination == 'consumer2') target = ctx3;
       if (target != null) {
+        final t = target!;
         if (message.type == MessageType.assignment) {
           final (globalId, value) = serializer.deserializeAssignmentPayload(
             message.payload,
             (bool isReader) => isReader
-              ? target.runtime.heap.allocateImportedReader()
-              : target.runtime.heap.allocateImportedWriter(),
+              ? t.runtime.heap.allocateImportedReader()
+              : t.runtime.heap.allocateImportedWriter(),
           );
           messageLog.add('[producer -> $destination] ASSIGNMENT');
           print('[producer -> $destination] ASSIGNMENT: $globalId := ${_shortValue(value)}');
-          target.handleAssignment(globalId.creator, globalId.localId, value);
+          t.handleAssignment(globalId.creator, globalId.localId, value);
         } else if (message.type == MessageType.readRequest) {
           final varId = serializer.deserializeReadRequestPayload(message.payload);
           messageLog.add('[producer -> $destination] READ_REQUEST');
           print('[producer -> $destination] READ_REQUEST: varId=$varId');
-          target.handleReadRequest(varId, 'producer');
+          t.handleReadRequest(varId, 'producer');
         }
       }
     };

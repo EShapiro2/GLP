@@ -113,6 +113,11 @@ void aliceIsolate(SendPort mainPort) async {
               print('[ALICE] Sending "hello_charlie" to Charlie via CA');
               runtime.heap.bindVariable(caWriterAddr!, ConstTerm('hello_charlie'));
               ctx.flushMessages();
+
+              // Request the value of AC? (so Bob records us as requester)
+              // In real GLP, this would happen when Alice's goal suspends on AC?
+              ctx.processSuspension({acReaderAddr!});
+              ctx.flushMessages();
             }
           }
         }

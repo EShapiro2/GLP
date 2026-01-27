@@ -389,7 +389,14 @@ class IrmaContext {
   /// (creator, creatorLocalId) per irmaGLP-spec.md Section 8.1.
   void _queueAssignmentFromEntry(VariableEntry entry, Term value, String destination) {
     // Use creator's local ID for the global variable ID
-    final creatorLocalId = entry.creatorLocalId;
+    // Per spec Section 5.3: assignments are addressed to the reader (W?:=T)
+    // For imported writers, use pairedReaderCreatorLocalId (the reader's ID)
+    final int assignmentTargetId;
+    if (entry.role == VariableRole.importedWriter && entry.pairedReaderCreatorLocalId != null) {
+      assignmentTargetId = entry.pairedReaderCreatorLocalId!;
+    } else {
+      assignmentTargetId = entry.creatorLocalId;
+    }
     final creator = entry.creator;
 
     // Per spec Section 4.3: export the term before sending
@@ -402,14 +409,14 @@ class IrmaContext {
     // meaningless to other agents
     final derefedValue = _deepDeref(exportedValue);
 
-    print('[DEBUG IRMA $agentId] _queueAssignment: varId=${entry.varId}, creatorLocalId=$creatorLocalId, creator=$creator, value=$derefedValue, destination=$destination');
+    print('[DEBUG IRMA $agentId] _queueAssignment: varId=${entry.varId}, assignmentTargetId=$assignmentTargetId, creator=$creator, value=$derefedValue, destination=$destination');
 
     // Create assignment payload with proper global ID
     // Use V2 method with isReader callback and lookupVariable callback
     // to correctly serialize imported variables in the value term
     final globalIdSerializer = PayloadSerializer(creator);
     final payload = globalIdSerializer.createAssignmentPayloadV2(
-      creatorLocalId,
+      assignmentTargetId,
       derefedValue,
       runtime.heap.isReader,
       lookupVariable: _lookupVariableForSerialization,
@@ -628,26 +635,31 @@ class IrmaContext {
         }
       },
       // Entry creator callback: create and attach VariableEntry to cell
-      onVariableImported: (int localAddr, bool isReader, GlobalVarId globalId) {
-        attachImportedVariableEntry(localAddr, isReader, globalId, fromAgent);
+      onVariableImported: (int localAddr, bool isReader, GlobalVarId globalId, int? pairedReaderCreatorLocalId) {
+        attachImportedVariableEntry(localAddr, isReader, globalId, fromAgent,
+            pairedReaderCreatorLocalId: pairedReaderCreatorLocalId);
       },
     );
-    
+
     return term;
   }
   
   /// Attach a VariableEntry to an imported variable's heap cell
-  /// 
+  ///
   /// Creates the entry and stores it both in V_p and in the heap cell content.
+  ///
+  /// [pairedReaderCreatorLocalId] - For imported writers, the creator's local ID
+  ///   of the paired reader. Used when sending assignments per spec Section 5.3.
   void attachImportedVariableEntry(
-    int localAddr, 
-    bool isReader, 
+    int localAddr,
+    bool isReader,
     GlobalVarId globalId,
     String fromAgent,
+    {int? pairedReaderCreatorLocalId}
   ) {
     final creator = globalId.creator;
     final creatorLocalId = globalId.localId;
-    
+
     final entry = VariableEntry(
       varId: localAddr,
       isReader: isReader,
@@ -655,16 +667,21 @@ class IrmaContext {
       role: isReader ? VariableRole.importedReader : VariableRole.importedWriter,
       creatorLocalId: creatorLocalId,
     );
-    
+
+    // For imported writers, store the paired reader's ID for assignment routing
+    if (!isReader && pairedReaderCreatorLocalId != null) {
+      entry.pairedReaderCreatorLocalId = pairedReaderCreatorLocalId;
+    }
+
     // Add to V_p
     final key = VarKey(localAddr, isReader);
     vp.add(key, entry);
-    
+
     // Attach entry to heap cell content
     runtime.heap.cells[localAddr].content = entry;
-    
+
     print('[DEBUG IRMA $agentId] attachImportedVariableEntry: localAddr=$localAddr, isReader=$isReader, creator=$creator, creatorLocalId=$creatorLocalId');
-    
+
     // For imported writers, register binding callback
     if (!isReader) {
       runtime.heap.onBind(localAddr, (Term value) {
@@ -861,8 +878,17 @@ class IrmaContext {
       }
     } else if (creator == agentId) {
       // Not in V_p, but we created it - local variable, apply directly
-      print('[DEBUG IRMA $agentId] handleAssignment: LOCAL (not in V_p) - binding varId=$creatorLocalId');
-      final activations = runtime.heap.bindVariable(creatorLocalId, value);
+      // Per spec Section 5.3: assignments are addressed to the reader (W?:=T)
+      // If this is a reader cell, we need to bind the paired writer instead
+      int targetAddr = creatorLocalId;
+      if (runtime.heap.isReader(creatorLocalId)) {
+        // Assignment addressed to reader, bind the paired writer (reader - 1)
+        targetAddr = creatorLocalId - 1;
+        print('[DEBUG IRMA $agentId] handleAssignment: LOCAL reader - binding paired writer at $targetAddr');
+      } else {
+        print('[DEBUG IRMA $agentId] handleAssignment: LOCAL (not in V_p) - binding varId=$creatorLocalId');
+      }
+      final activations = runtime.heap.bindVariable(targetAddr, value);
       for (final act in activations) {
         runtime.gq.enqueue(act);
       }
