@@ -1105,8 +1105,8 @@ class PartialEvaluator {
     Map<String, Term> subst,
     Set<String> suspSet
   ) {
-    // Handle underscore on either side - always succeeds, no binding
-    if (_isUnderscore(callArg) || _isUnderscore(unitArg)) {
+    // Handle anonymous variable on either side - always succeeds, no binding
+    if (_isAnonymous(callArg) || _isAnonymous(unitArg)) {
       return null; // success, continue
     }
 
