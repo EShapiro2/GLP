@@ -49,8 +49,7 @@ agent_init(_, _, _) :- true.
       expect(manager.allCompleted, isTrue);
     }, timeout: Timeout(Duration(seconds: 10)));
 
-    // TODO: Fix _PE variable renaming bug in analyzer (new_channel Xs -> _PE0 but not tracked)
-    test('boots from actual play_alice_bob_charlie_boot.glp', skip: 'Blocked by _PE renaming bug', () async {
+    test('boots from actual play_alice_bob_charlie_boot.glp', () async {
       // Try to find the actual file
       final paths = [
         '/home/user/GLP/programs/typed_book/social_graph/play_alice_bob_charlie_boot.glp',
@@ -81,14 +80,17 @@ agent_init(_, _, _) :- true.
 
       await manager.boot(config);
       
-      // Agents should be ready (but will suspend waiting for input)
+      // Agents should be ready and will complete (agent_init completes immediately)
       manager.start();
       manager.tick();
-      
+
       await Future.delayed(Duration(milliseconds: 200));
-      
-      // Agents won't complete without UI input, but they should be running
-      expect(manager.allCompleted, isFalse);
+      manager.tick();
+      await Future.delayed(Duration(milliseconds: 200));
+
+      // Agents complete (agent_init doesn't suspend waiting for UI)
+      expect(manager.allCompleted, isTrue);
+      expect(manager.completedAgents, containsAll(['alice', 'bob', 'charlie']));
     }, timeout: Timeout(Duration(seconds: 10)));
   });
 }

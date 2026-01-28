@@ -1006,7 +1006,7 @@ class PartialEvaluator {
     final Map<String, String> renaming = {};
     for (final name in varNames) {
       if (!name.startsWith('_')) {
-        renaming[name] = '_PE${_varCounter++}';
+        renaming[name] = 'PE_${_varCounter++}';
       }
     }
 
