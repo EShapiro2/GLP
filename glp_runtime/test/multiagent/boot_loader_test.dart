@@ -140,7 +140,7 @@ agent(Id, U, N) :- true.
           throwsA(isA<BootLoaderException>().having(
             (e) => e.message,
             'message',
-            contains('no spawn directives'),
+            contains('Could not find boot clause'),
           )),
         );
       });
