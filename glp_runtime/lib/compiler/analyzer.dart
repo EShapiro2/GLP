@@ -31,7 +31,14 @@ class VariableInfo {
 
   VariableInfo(this.name, this.isWriter);
 
+  /// Check if this variable is anonymous (name starts with _)
+  bool get isAnonymous => name.startsWith('_');
+
   bool get isSRSWValid {
+    // Anonymous variables (names starting with _) are exempt from SRSW
+    // They denote fresh writers with no paired reader
+    if (isAnonymous) return true;
+
     // Revised SRSW: Each variable must have exactly one writer AND at least one reader
     // Exception: Ground guard allows multiple reader occurrences
 
@@ -67,7 +74,11 @@ class VariableTable {
 
   /// Record a writer occurrence.
   /// [inHeadOrBody]: true if in head or body (counts toward SRSW), false if in guard
+  /// Anonymous variables (names starting with '_') are not tracked for SRSW.
   void recordWriterOccurrence(String name, AstNode node, {bool inHeadOrBody = true}) {
+    // Skip anonymous variables - they don't participate in SRSW
+    if (name.startsWith('_')) return;
+    
     final info = _vars.putIfAbsent(name, () => VariableInfo(name, true));
     info.writerOccurrences++;
     if (inHeadOrBody) {
@@ -78,7 +89,11 @@ class VariableTable {
 
   /// Record a reader occurrence.
   /// [inHeadOrBody]: true if in head or body (counts toward SRSW), false if in guard
+  /// Anonymous variables (names starting with '_') are not tracked for SRSW.
   void recordReaderOccurrence(String name, AstNode node, {bool inHeadOrBody = true}) {
+    // Skip anonymous variables - they don't participate in SRSW
+    if (name.startsWith('_')) return;
+    
     final writerName = name;  // Reader X? pairs with writer X
 
     // Ensure writer exists or create it
@@ -123,6 +138,10 @@ class VariableTable {
     final violations = <String>[];
 
     for (final info in _vars.values) {
+      // Skip anonymous variables (names starting with _) - they are exempt from SRSW
+      // Each occurrence denotes a fresh writer with no paired reader
+      if (info.isAnonymous) continue;
+
       // Check writer occurrences (multiple writers require grounded or constant type)
       // Per spec: when grounded, both writer and reader may appear multiple times
       if (info.writerOccurrences > 1 && !allowsMultipleOccurrences(info.name)) {
@@ -703,6 +722,10 @@ class Analyzer {
   ///                 false if analyzing guards (does not count for SRSW)
   void _analyzeTerm(Term term, VariableTable varTable, {bool inHeadOrBody = true}) {
     if (term is VarTerm) {
+      // Skip anonymous variables (names starting with '_') - exempt from SRSW
+      // Each occurrence denotes a fresh writer with no paired reader
+      if (term.name.startsWith('_')) return;
+
       if (term.isReader) {
         varTable.recordReaderOccurrence(term.name, term, inHeadOrBody: inHeadOrBody);
       } else {
@@ -970,7 +993,8 @@ class PartialEvaluator {
   }
 
   /// Rename variables in unit clause arguments to fresh names.
-  /// IMPORTANT: Underscores (_) are NOT renamed - they stay as underscores.
+  /// IMPORTANT: Anonymous variables (names starting with '_') are NOT renamed - 
+  /// they stay as-is since each occurrence is independent.
   List<Term> _renameUnitClauseVars(List<Term> args) {
     // First, collect all variable names in the unit clause
     final varNames = <String>{};
@@ -978,11 +1002,11 @@ class PartialEvaluator {
       _collectVarNames(arg, varNames);
     }
 
-    // Build renaming map (skip underscores)
+    // Build renaming map (skip anonymous variables - those starting with '_')
     final Map<String, String> renaming = {};
     for (final name in varNames) {
-      if (name != '_') {
-        renaming[name] = '_PE\$${_varCounter++}';
+      if (!name.startsWith('_')) {
+        renaming[name] = '_PE\${_varCounter++}';
       }
     }
 
@@ -1233,8 +1257,10 @@ class PartialEvaluator {
     return null;
   }
 
-  bool _isUnderscore(Term term) {
-    return term is UnderscoreTerm || (term is VarTerm && term.name == '_');
+  /// Check if a term is an anonymous variable.
+  /// Anonymous variables are UnderscoreTerm or any VarTerm whose name starts with '_'.
+  bool _isAnonymous(Term term) {
+    return term is UnderscoreTerm || (term is VarTerm && term.name.startsWith('_'));
   }
 
   /// Resolve substitution chains.

@@ -290,7 +290,48 @@ play :- alice(ch(Xs?, Ys)?), bob(ch(Ys?, Xs)?).
 
 ---
 
-## 9. Summary: Variable Flow Table
+## 9. Anonymous Variables
+
+### 9.1 Definition
+
+An **anonymous variable** is any variable whose name begins with `_` (e.g., `_`, `_In`, `_Out`, `_Result`). Anonymous variables provide a controlled exception to the SRSW restriction.
+
+### 9.2 Semantics
+
+Each occurrence of an anonymous variable denotes a fresh writer with no paired reader. Values assigned to anonymous variables are discarded. This allows discarding unwanted values without creating unused variable pairs.
+
+### 9.3 Examples
+
+```prolog
+%% Discard head and tail of list
+second([_, X | _], X?).
+
+%% Discard first output of bar
+foo(X) :- bar(_Result, X?).
+
+%% Named anonymous variables improve readability
+process([msg(_From, _To, Content)|Rest], Out?) :-
+    handle(Content?, Out),
+    process(Rest?, Out?).
+```
+
+Using named anonymous variables like `_From` and `_To` documents what is being discarded, improving code readability while maintaining the same semantics as plain `_`.
+
+### 9.4 Important Distinction
+
+The symbols `_` and `_?` in **type definitions** are primitive type symbols meaning "any produced term" and "any consumed term" respectively. They are not variables and should not be confused with anonymous variables in program clauses.
+
+```prolog
+%% In type definition: _ is a type symbol
+Stream ::= [] ; [_|Stream].
+
+%% In clause: _ is an anonymous variable
+second([_, X | _], X?).
+```
+
+---
+
+## 10. Summary: Variable Flow Table
 
 | Scenario | Head Variable | Body Variable | Explanation |
 |----------|---------------|---------------|-------------|
@@ -304,6 +345,7 @@ play :- alice(ch(Xs?, Ys)?), bob(ch(Ys?, Xs)?).
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.1 | 2026-01-28 | Added Section 9: Anonymous Variables (any variable starting with `_` is anonymous) |
 | 2.0 | 2026-01-27 | Renamed to Typed GLP Manual; added Section 1 (Procedure Declarations Must Match Data Flow); added Section 3 (SRSW Relaxation for Constant Types); consolidated and reorganized |
 | 1.3 | 2026-01-27 | Added Section 6: Unit Clause Procedures |
 | 1.2 | 2026-01-24 | Added Section 5: Store Writers, Not Readers, in Lookup Tables |
