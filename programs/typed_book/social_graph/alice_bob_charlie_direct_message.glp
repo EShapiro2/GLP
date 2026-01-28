@@ -1,0 +1,125 @@
+%% alice_bob_charlie_direct_message.glp - Ring messaging with direct connections
+%%
+%% Three agents (Alice, Bob, Charlie) connected via a network3 switch.
+%% They are friends via shared logic variables at startup (no cold-call protocol).
+%%
+%% Ring pattern: Alice -> Bob -> Charlie -> Alice -> ...
+%% Each agent receives a number from predecessor, sends N+1 to successor.
+%% Terminates when count reaches max_count.
+%%
+%% Date: 2026-01-28
+
+%% =============================================================================
+%% CONFIGURATION
+%% =============================================================================
+
+max_count(10).
+
+%% =============================================================================
+%% CHANNEL OPERATIONS (Defined Guard / Fact)
+%% =============================================================================
+
+%% new_channel(Ch1, Ch2) - create connected channel pair via unification
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+%% =============================================================================
+%% NETWORK3 - Routes messages between Alice, Bob, Charlie
+%% Message format: msg(From, To, Content)
+%% =============================================================================
+
+procedure network3(Channel?, Channel?, Channel?).
+
+%% Alice -> Bob
+network3(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(alice, bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Bob -> Charlie
+network3(ch(AliceIn, AliceOut?),
+         ch([msg(bob, charlie, X)|BobIn], BobOut?),
+         ch(CharlieIn, [msg(bob, charlie, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Charlie -> Alice
+network3(ch(AliceIn, [msg(charlie, alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch([msg(charlie, alice, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Termination
+network3(ch([], []), ch([], []), ch([], [])).
+
+%% =============================================================================
+%% RING AGENTS
+%% =============================================================================
+
+%% Alice: receives from Charlie, sends to Bob
+%% Starts the ring by sending 1 immediately
+procedure alice_ring(Channel?, _?).
+
+alice_ring(ch(In, [msg(alice, bob, 1)|Out?]), Max) :-
+    alice_loop(ch(In?, Out), Max?).
+
+procedure alice_loop(Channel?, _?).
+
+%% Receive from Charlie, send N+1 to Bob (if N < Max)
+alice_loop(ch([msg(charlie, alice, N)|In], [msg(alice, bob, N1?)|Out?]), Max) :-
+    N? < Max? |
+    N1 := N? + 1,
+    alice_loop(ch(In?, Out), Max?).
+
+%% Receive from Charlie, stop (N >= Max)
+alice_loop(ch([msg(charlie, alice, N)|_], []), Max) :-
+    N? >= Max? |
+    true.
+
+alice_loop(ch([], []), _).
+
+%% Bob: receives from Alice, sends to Charlie
+procedure bob_ring(Channel?, _?).
+
+%% Receive from Alice, send N+1 to Charlie (if N < Max)
+bob_ring(ch([msg(alice, bob, N)|In], [msg(bob, charlie, N1?)|Out?]), Max) :-
+    N? < Max? |
+    N1 := N? + 1,
+    bob_ring(ch(In?, Out), Max?).
+
+%% Receive from Alice, stop (N >= Max)
+bob_ring(ch([msg(alice, bob, N)|_], []), Max) :-
+    N? >= Max? |
+    true.
+
+bob_ring(ch([], []), _).
+
+%% Charlie: receives from Bob, sends to Alice
+procedure charlie_ring(Channel?, _?).
+
+%% Receive from Bob, send N+1 to Alice (if N < Max)
+charlie_ring(ch([msg(bob, charlie, N)|In], [msg(charlie, alice, N1?)|Out?]), Max) :-
+    N? < Max? |
+    N1 := N? + 1,
+    charlie_ring(ch(In?, Out), Max?).
+
+%% Receive from Bob, stop (N >= Max)
+charlie_ring(ch([msg(bob, charlie, N)|_], []), Max) :-
+    N? >= Max? |
+    true.
+
+charlie_ring(ch([], []), _).
+
+%% =============================================================================
+%% PLAY - Main setup (following play_alice_bob_charlie.glp pattern)
+%% =============================================================================
+
+procedure play.
+play :-
+    %% Create paired channels via unification
+    new_channel(AliceCh, NetAliceCh),
+    new_channel(BobCh, NetBobCh),
+    new_channel(CharlieCh, NetCharlieCh),
+    %% Start network and agents
+    network3(NetAliceCh?, NetBobCh?, NetCharlieCh?),
+    alice_ring(AliceCh?, 10),
+    bob_ring(BobCh?, 10),
+    charlie_ring(CharlieCh?, 10).
