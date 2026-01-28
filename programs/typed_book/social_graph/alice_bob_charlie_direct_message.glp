@@ -1,11 +1,13 @@
-%% alice_bob_charlie_direct_message.glp - Ring messaging with direct connections
+%% alice_bob_charlie_direct_message.glp - Ring messaging with generic agents
 %%
-%% Three agents (Alice, Bob, Charlie) connected via a network3 switch.
-%% They are friends via shared logic variables at startup (no cold-call protocol).
+%% Three agents (Alice, Bob, Charlie) using identical logic.
+%% All agents: receive number from predecessor, send N+1 to successor.
 %%
 %% Ring pattern: Alice -> Bob -> Charlie -> Alice -> ...
-%% Each agent receives a number from predecessor, sends N+1 to successor.
 %% Terminates when count reaches max_count.
+%%
+%% Boot pattern (for future @ operator support):
+%%   boot :- agent_init(alice, ch(_?,_), ch(_?,_))@alice, ...
 %%
 %% Date: 2026-01-28
 
@@ -13,113 +15,134 @@
 %% CONFIGURATION
 %% =============================================================================
 
+procedure max_count(_).
 max_count(10).
 
+%% ring_config(Agent, Predecessor, Successor)
+procedure ring_config(_?, _, _).
+ring_config(alice, charlie, bob).
+ring_config(bob, alice, charlie).
+ring_config(charlie, bob, alice).
+
+%% ring_starter(Agent) - who initiates
+procedure ring_starter(_?).
+ring_starter(alice).
+
 %% =============================================================================
-%% CHANNEL OPERATIONS (Defined Guard / Fact)
+%% CHANNEL OPERATIONS
 %% =============================================================================
 
-%% new_channel(Ch1, Ch2) - create connected channel pair via unification
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
 %% =============================================================================
-%% NETWORK3 - Routes messages between Alice, Bob, Charlie
-%% Message format: msg(From, To, Content)
+%% NETWORK3 - Routes msg(Target, Content) between agents
 %% =============================================================================
 
 procedure network3(Channel?, Channel?, Channel?).
 
-%% Alice -> Bob
-network3(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
-         ch(BobIn, [msg(alice, bob, X?)|BobOut?]),
+%% Alice sends to Bob
+network3(ch([msg(bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(alice, X?)|BobOut?]),
          ch(CharlieIn, CharlieOut?)) :-
     network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
 
-%% Bob -> Charlie
-network3(ch(AliceIn, AliceOut?),
-         ch([msg(bob, charlie, X)|BobIn], BobOut?),
-         ch(CharlieIn, [msg(bob, charlie, X?)|CharlieOut?])) :-
+%% Alice sends to Charlie
+network3(ch([msg(charlie, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(alice, X?)|CharlieOut?])) :-
     network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
 
-%% Charlie -> Alice
-network3(ch(AliceIn, [msg(charlie, alice, X?)|AliceOut?]),
+%% Bob sends to Alice
+network3(ch(AliceIn, [msg(bob, X?)|AliceOut?]),
+         ch([msg(alice, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Bob sends to Charlie
+network3(ch(AliceIn, AliceOut?),
+         ch([msg(charlie, X)|BobIn], BobOut?),
+         ch(CharlieIn, [msg(bob, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Charlie sends to Alice
+network3(ch(AliceIn, [msg(charlie, X?)|AliceOut?]),
          ch(BobIn, BobOut?),
-         ch([msg(charlie, alice, X)|CharlieIn], CharlieOut?)) :-
+         ch([msg(alice, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Charlie sends to Bob
+network3(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(charlie, X?)|BobOut?]),
+         ch([msg(bob, X)|CharlieIn], CharlieOut?)) :-
     network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
 
 %% Termination
 network3(ch([], []), ch([], []), ch([], [])).
 
 %% =============================================================================
-%% RING AGENTS
+%% GENERIC RING AGENT - Same logic for all agents
 %% =============================================================================
 
-%% Alice: receives from Charlie, sends to Bob
-%% Starts the ring by sending 1 immediately
-procedure alice_ring(Channel?, _?).
+%% ring_agent(Id, Pred, Succ, InStream, OutStream, Max)
+%% - Id: this agent's name (alice, bob, charlie)
+%% - Pred: predecessor (receives from)
+%% - Succ: successor (sends to)
+%% - In/Out: message streams
+%% - Max: termination count
 
-alice_ring(ch(In, [msg(alice, bob, 1)|Out?]), Max) :-
-    alice_loop(ch(In?, Out), Max?).
+procedure ring_agent(_?, _?, _?, Channel?, _?).
 
-procedure alice_loop(Channel?, _?).
+%% Starter: send initial message to successor
+ring_agent(Id, Pred, Succ, ch(In, [msg(Succ?, num(1))|Out?]), Max) :-
+    ring_starter(Id?), ground(Succ?) |
+    ring_loop(Id?, Pred?, Succ?, ch(In?, Out), Max?).
 
-%% Receive from Charlie, send N+1 to Bob (if N < Max)
-alice_loop(ch([msg(charlie, alice, N)|In], [msg(alice, bob, N1?)|Out?]), Max) :-
-    N? < Max? |
+%% Non-starter: just enter loop
+ring_agent(Id, Pred, Succ, ch(In, Out?), Max) :-
+    otherwise |
+    ring_loop(Id?, Pred?, Succ?, ch(In?, Out), Max?).
+
+procedure ring_loop(_?, _?, _?, Channel?, _?).
+
+%% Receive from predecessor, forward N+1 to successor (N < Max)
+ring_loop(Id, Pred, Succ, ch([msg(P, num(N))|In], [msg(Succ?, num(N1?))|Out?]), Max) :-
+    ground(Id?), ground(Succ?), P? =?= Pred?, N? < Max? |
     N1 := N? + 1,
-    alice_loop(ch(In?, Out), Max?).
+    ring_loop(Id?, Pred?, Succ?, ch(In?, Out), Max?).
 
-%% Receive from Charlie, stop (N >= Max)
-alice_loop(ch([msg(charlie, alice, N)|_], []), Max) :-
-    N? >= Max? |
+%% Receive from predecessor, stop (N >= Max)
+ring_loop(Id, Pred, _, ch([msg(P, num(N))|_], []), Max) :-
+    ground(Id?), P? =?= Pred?, N? >= Max? |
     true.
 
-alice_loop(ch([], []), _).
+%% Skip unknown messages
+ring_loop(Id, Pred, Succ, ch([_|In], Out?), Max) :-
+    otherwise |
+    ring_loop(Id?, Pred?, Succ?, ch(In?, Out), Max?).
 
-%% Bob: receives from Alice, sends to Charlie
-procedure bob_ring(Channel?, _?).
-
-%% Receive from Alice, send N+1 to Charlie (if N < Max)
-bob_ring(ch([msg(alice, bob, N)|In], [msg(bob, charlie, N1?)|Out?]), Max) :-
-    N? < Max? |
-    N1 := N? + 1,
-    bob_ring(ch(In?, Out), Max?).
-
-%% Receive from Alice, stop (N >= Max)
-bob_ring(ch([msg(alice, bob, N)|_], []), Max) :-
-    N? >= Max? |
-    true.
-
-bob_ring(ch([], []), _).
-
-%% Charlie: receives from Bob, sends to Alice
-procedure charlie_ring(Channel?, _?).
-
-%% Receive from Bob, send N+1 to Alice (if N < Max)
-charlie_ring(ch([msg(bob, charlie, N)|In], [msg(charlie, alice, N1?)|Out?]), Max) :-
-    N? < Max? |
-    N1 := N? + 1,
-    charlie_ring(ch(In?, Out), Max?).
-
-%% Receive from Bob, stop (N >= Max)
-charlie_ring(ch([msg(bob, charlie, N)|_], []), Max) :-
-    N? >= Max? |
-    true.
-
-charlie_ring(ch([], []), _).
+%% Empty stream
+ring_loop(_, _, _, ch([], []), _).
 
 %% =============================================================================
-%% PLAY - Main setup (following play_alice_bob_charlie.glp pattern)
+%% PLAY - For REPL testing
 %% =============================================================================
 
 procedure play.
 play :-
-    %% Create paired channels via unification
+    max_count(Max),
+    ground(Max?),
     new_channel(AliceCh, NetAliceCh),
     new_channel(BobCh, NetBobCh),
-    new_channel(CharlieCh, NetCharlieCh),
-    %% Start network and agents
+    new_channel(CharlieCh, NetCharlieCh)
+    |
     network3(NetAliceCh?, NetBobCh?, NetCharlieCh?),
-    alice_ring(AliceCh?, 10),
-    bob_ring(BobCh?, 10),
-    charlie_ring(CharlieCh?, 10).
+    %% All agents use same ring_agent with config lookup in body
+    start_agent(alice, AliceCh?, Max?),
+    start_agent(bob, BobCh?, Max?),
+    start_agent(charlie, CharlieCh?, Max?).
+
+procedure start_agent(_?, Channel?, _?).
+start_agent(Id, Ch, Max) :-
+    ground(Id?), ground(Max?) |
+    ring_config(Id?, Pred, Succ),
+    ring_agent(Id?, Pred?, Succ?, Ch?, Max?).
