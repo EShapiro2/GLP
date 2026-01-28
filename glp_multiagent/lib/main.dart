@@ -771,26 +771,28 @@ class _AgentScreenState extends State<AgentScreen> {
       }
 
       // Allocate heap cells for arguments and bind values
-      // CallEnv requires VarRefs, not direct terms
+      // CallEnv requires VarRefs to READER addresses since procedure
+      // declaration is agent_init(_?, Channel?, Channel?) - all reader modes
       final heap = _agent!.runtime.heap;
 
-      // Arg 0: agentId
-      final (arg0Writer, _) = heap.allocateVariable();
+      // Arg 0: agentId - _? mode (reader)
+      final (arg0Writer, arg0Reader) = heap.allocateVariable();
       heap.bindVariable(arg0Writer, rt.ConstTerm(agentId));
 
-      // Arg 1: userChannelTerm
-      final (arg1Writer, _) = heap.allocateVariable();
+      // Arg 1: userChannelTerm - Channel? mode (reader)
+      final (arg1Writer, arg1Reader) = heap.allocateVariable();
       heap.bindVariable(arg1Writer, _ioContext!.userChannelTerm);
 
-      // Arg 2: netChannelTerm
-      final (arg2Writer, _) = heap.allocateVariable();
+      // Arg 2: netChannelTerm - Channel? mode (reader)
+      final (arg2Writer, arg2Reader) = heap.allocateVariable();
       heap.bindVariable(arg2Writer, _ioContext!.netChannelTerm);
 
       // Set up arguments: agent_init(Id, UserCh, NetCh)
+      // Pass READER addresses since procedure expects reader mode arguments
       final argSlots = <int, rt.Term>{
-        0: rt.VarRef(arg0Writer),
-        1: rt.VarRef(arg1Writer),
-        2: rt.VarRef(arg2Writer),
+        0: rt.VarRef(arg0Reader),
+        1: rt.VarRef(arg1Reader),
+        2: rt.VarRef(arg2Reader),
       };
 
       // Set up goal environment
