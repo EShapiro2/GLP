@@ -1665,10 +1665,11 @@ class BytecodeRunner {
                     }
                     cx.S++;
                   } else {
-                    // First occurrence - allocate fresh variable
-                    final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-                    cx.sigmaHat[value.addr] = VarRef(readerAddr);
-                    cx.clauseVars[varIndex] = VarRef(writerAddr);
+                    // First occurrence: head reader receives goal writer
+                    // Store the goal's writer directly - clause can write to it (output stream)
+                    // or read from it when bound. No indirection needed.
+                    // This is consistent with GetVariable reader mode (line 1877).
+                    cx.clauseVars[varIndex] = value.addr;
                     cx.S++;
                   }
                 } else if (value is ConstTerm || value is StructTerm) {
