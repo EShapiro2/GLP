@@ -1006,7 +1006,7 @@ class PartialEvaluator {
     final Map<String, String> renaming = {};
     for (final name in varNames) {
       if (!name.startsWith('_')) {
-        renaming[name] = '_PE\${_varCounter++}';
+        renaming[name] = '_PE${_varCounter++}';
       }
     }
 
@@ -1106,7 +1106,7 @@ class PartialEvaluator {
     Set<String> suspSet
   ) {
     // Handle underscore on either side - always succeeds, no binding
-    if (_isUnderscore(callArg) || _isUnderscore(unitArg)) {
+    if (_isAnonymous(callArg) || _isAnonymous(unitArg)) {
       return null; // success, continue
     }
 

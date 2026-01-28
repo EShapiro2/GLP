@@ -106,9 +106,21 @@ class IsolateManager {
     final readyCompleter = Completer<void>();
     var readyCount = 0;
     final expectedCount = config.directives.length;
+    _allCompletedCompleter = Completer<void>();
 
-    // Listen for messages from agents
-    _mainPort.listen((msg) => _handleMessage(msg));
+    // Single listener for all messages
+    _mainPort.listen((msg) {
+      // Handle Ready messages for boot completion
+      if (msg is Ready && !readyCompleter.isCompleted) {
+        _agentPorts[msg.agentId] = msg.sendPort;
+        readyCount++;
+        if (readyCount == expectedCount) {
+          readyCompleter.complete();
+        }
+      }
+      // Always handle messages via _handleMessage
+      _handleMessage(msg);
+    });
 
     // Spawn isolates
     for (final directive in config.directives) {
@@ -123,24 +135,7 @@ class IsolateManager {
     }
 
     // Wait for all agents to be ready
-    _allCompletedCompleter = Completer<void>();
-    
-    // Set up ready detection
-    final subscription = _mainPort.listen((msg) {
-      if (msg is Ready) {
-        _agentPorts[msg.agentId] = msg.sendPort;
-        readyCount++;
-        if (readyCount == expectedCount && !readyCompleter.isCompleted) {
-          readyCompleter.complete();
-        }
-      }
-    });
-
     await readyCompleter.future;
-    await subscription.cancel();
-    
-    // Re-establish main listener
-    _mainPort.listen((msg) => _handleMessage(msg));
   }
 
   /// Start all agents.
@@ -233,9 +228,12 @@ class IsolateManager {
     } else if (msg is Done) {
       print('[IsolateManager] ${msg.agentId} done: success=${msg.success}');
       _completed.add(msg.agentId);
-      
+
       if (_completed.length == _agentPorts.length) {
-        _allCompletedCompleter?.complete();
+        final completer = _allCompletedCompleter;
+        if (completer != null && !completer.isCompleted) {
+          completer.complete();
+        }
       }
     }
   }
@@ -260,6 +258,7 @@ class IsolateManager {
 void _agentIsolateEntry(AgentConfig config) async {
   final agentId = config.agentId;
   final receivePort = ReceivePort();
+  var doneSent = false;
 
   print('[$agentId] Starting isolate');
 
@@ -350,7 +349,8 @@ void _agentIsolateEntry(AgentConfig config) async {
           : (result.status == ExecutionStatus.suspended ? 'suspended' : 'running');
       config.mainPort.send(Status(agentId, status, runtime.gq.length));
 
-      if (runtime.gq.isEmpty) {
+      if (runtime.gq.isEmpty && !doneSent) {
+        doneSent = true;
         print('[$agentId] All goals completed');
         config.mainPort.send(Done(agentId, true));
       }

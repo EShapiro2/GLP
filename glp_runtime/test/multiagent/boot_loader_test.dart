@@ -96,7 +96,7 @@ boot:-agent_init( alice , ch( _? , _ ) , ch( _? , _ ) ) @ alice.
         expect(config.directives[0].agentId, equals('alice'));
       });
 
-      test('preserves full source in config', () {
+      test('preserves full source and strips boot clause', () {
         final source = '''
 procedure boot.
 boot :- agent(a, ch(_?,_), ch(_?,_))@a.
@@ -107,7 +107,13 @@ agent(Id, U, N) :- true.
 
         final config = loader.load(source);
 
-        expect(config.source, equals(source));
+        // fullSource preserves original
+        expect(config.fullSource, equals(source));
+
+        // source is stripped (no boot clause, no @ character)
+        expect(config.source, isNot(contains('@')));
+        expect(config.source, isNot(contains('procedure boot')));
+        expect(config.source, contains('procedure agent'));
       });
     });
 

@@ -363,6 +363,18 @@ class PayloadSerializer {
   ) {
     return serializeTermWithCallbacks(term, agentId, isReader, lookupVariable: lookupVariable);
   }
+
+  /// Serialize a ground term (no variables) as an agent message payload.
+  ///
+  /// Use this for UI event injection where the term contains no VarRefs.
+  /// Throws if the term contains VarRefs.
+  List<int> serializeAgentMessage(Term term) {
+    return serializeTermWithCallbacks(
+      term,
+      agentId,
+      (_) => throw StateError('Ground term expected, but VarRef found'),
+    );
+  }
   
   /// Result of deserializing an agent message payload
   ///

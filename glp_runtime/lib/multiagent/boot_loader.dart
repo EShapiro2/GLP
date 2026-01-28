@@ -29,11 +29,16 @@ class BootConfig {
   /// The spawn directives from the boot clause
   final List<SpawnDirective> directives;
 
-  /// The full source code (for compilation)
+  /// The full source code (original, including boot clause)
+  final String fullSource;
+
+  /// Source code with boot clause stripped (for GLP compilation)
+  /// The boot clause contains @ which the GLP parser doesn't understand.
   final String source;
 
   BootConfig({
     required this.directives,
+    required this.fullSource,
     required this.source,
   });
 }
@@ -52,9 +57,11 @@ class BootLoader {
   /// - Duplicate agent IDs
   BootConfig load(String source) {
     final directives = _parseBootClause(source);
+    final compilableSource = _stripBootClause(source);
     return BootConfig(
       directives: directives,
-      source: source,
+      fullSource: source,
+      source: compilableSource,
     );
   }
 
@@ -173,6 +180,25 @@ class BootLoader {
     }
 
     return directives;
+  }
+
+  /// Strip the boot clause and procedure declaration from source.
+  /// Returns source that can be compiled by the GLP compiler.
+  String _stripBootClause(String source) {
+    // Remove "procedure boot." line
+    var result = source.replaceFirst(
+      RegExp(r'procedure\s+boot\s*\.\s*\n?', multiLine: true),
+      '',
+    );
+
+    // Remove "boot :- ... ." clause (possibly multi-line)
+    // Match from "boot :-" to the closing "." before next procedure or end
+    result = result.replaceFirst(
+      RegExp(r'boot\s*:-\s*.*?\.\s*\n?', multiLine: true, dotAll: true),
+      '',
+    );
+
+    return result.trim() + '\n';
   }
 
   /// Read file contents (platform-specific)
