@@ -1,0 +1,61 @@
+%% cold_call_test_boot.glp - Tests shared variable (response) across isolates
+%%
+%% Tests: Alice sends ping(Resp) where Resp is a fresh writer exported to Bob.
+%% Bob receives the message and binds the imported variable to pong via
+%% head unification. IRMA routes the assignment back to Alice. Alice's Resp?
+%% becomes bound to pong, and she completes.
+%%
+%% This tests the core cold-call pattern: send a request with a response
+%% variable, receive the response when the remote agent binds it.
+%%
+%% Protocol:
+%% 1. Alice sends msg(bob, ping(Resp)) on NetOut (Resp is fresh writer)
+%% 2. IRMA exports Resp writer, sends message to Bob
+%% 3. Bob receives msg(alice, ping(V)) where V is imported variable
+%% 4. Bob matches ping(pong) in head → binds V to pong via sigmaHat
+%% 5. IRMA sends assignment back to Alice
+%% 6. Alice's Resp? becomes pong → wait_resp completes
+%%
+%% Date: 2026-01-28
+
+%% Unification (from stdlib - not loaded in isolates)
+X = X?.
+
+%% =============================================================================
+%% THE boot
+%% =============================================================================
+
+procedure boot.
+boot :-
+    cc_alice(alice, ch(_?,_), ch(_?,_))@alice,
+    cc_bob(bob, ch(_?,_), ch(_?,_))@bob.
+
+%% =============================================================================
+%% ALICE - Cold-call initiator
+%% =============================================================================
+
+%% Alice: sends ping with fresh response variable, waits for response
+procedure cc_alice(_?, Channel?, Channel?).
+cc_alice(_, _, ch(_, [msg(bob, ping(Resp))|Tail?])) :-
+    wait_resp(Resp?, Tail).
+
+%% Alice waits for Resp? to be bound to pong
+procedure wait_resp(_?, Stream).
+wait_resp(pong, []).
+
+%% =============================================================================
+%% BOB - Cold-call responder
+%% =============================================================================
+
+%% Bob: waits for ping, binds response variable to pong via head unification
+procedure cc_bob(_?, Channel?, Channel?).
+cc_bob(_, _, ch(NetIn, NetOut?)) :-
+    wait_ping(NetIn?, NetOut).
+
+procedure wait_ping(Stream?, Stream).
+%% Received ping - bind response to pong via head pattern match
+wait_ping([msg(_, ping(pong))|_], []).
+%% Skip non-ping messages
+wait_ping([_|In], Out?) :- otherwise | wait_ping(In?, Out).
+%% No more messages
+wait_ping([], []).

@@ -1,0 +1,74 @@
+%% friend_intro_test_boot.glp - Tests 3-agent message relay across isolates
+%%
+%% Simplified protocol: Bob relays messages between Alice and Charlie.
+%% This tests multi-hop message routing without shared channel variables.
+%%
+%% Protocol:
+%% 1. Alice sends msg(bob, forward(charlie, hello_charlie)) to Bob
+%% 2. Bob receives, extracts, sends msg(charlie, from_alice(hello_charlie)) to Charlie
+%% 3. Charlie receives, sends msg(bob, forward(alice, hello_alice)) back
+%% 4. Bob receives, extracts, sends msg(alice, from_charlie(hello_alice)) to Alice
+%% 5. Alice receives response, all complete
+%%
+%% Date: 2026-01-28
+
+%% Unification (from stdlib - not loaded in isolates)
+X = X?.
+
+%% =============================================================================
+%% THE boot
+%% =============================================================================
+
+procedure boot.
+boot :-
+    fi_alice(alice, ch(_?,_), ch(_?,_))@alice,
+    fi_bob(bob, ch(_?,_), ch(_?,_))@bob,
+    fi_charlie(charlie, ch(_?,_), ch(_?,_))@charlie.
+
+%% =============================================================================
+%% ALICE - Sends to Charlie via Bob, waits for response
+%% =============================================================================
+
+procedure fi_alice(_?, Channel?, Channel?).
+fi_alice(_, _, ch(NetIn, [msg(bob, forward(charlie, hello_charlie))|Tail?])) :-
+    alice_wait_response(NetIn?, Tail).
+
+procedure alice_wait_response(Stream?, Stream).
+%% Received response from Charlie (via Bob)
+alice_wait_response([msg(_, from_charlie(hello_alice))|_], []).
+%% Skip other messages
+alice_wait_response([_|In], Out?) :- otherwise | alice_wait_response(In?, Out).
+
+%% =============================================================================
+%% BOB - Relays messages between Alice and Charlie
+%% =============================================================================
+
+procedure fi_bob(_?, Channel?, Channel?).
+fi_bob(_, _, ch(NetIn, NetOut?)) :-
+    bob_relay(NetIn?, NetOut).
+
+procedure bob_relay(Stream?, Stream).
+%% Forward from Alice to Charlie
+bob_relay([msg(alice, forward(charlie, Content))|In], [msg(charlie, from_alice(Content?))|Out?]) :-
+    bob_relay(In?, Out).
+%% Forward from Charlie to Alice
+bob_relay([msg(charlie, forward(alice, Content))|In], [msg(alice, from_charlie(Content?))|Out?]) :-
+    bob_relay(In?, Out).
+%% Done when both messages relayed (after 2 forwards)
+bob_relay([], []).
+%% Skip unknown messages
+bob_relay([_|In], Out?) :- otherwise | bob_relay(In?, Out).
+
+%% =============================================================================
+%% CHARLIE - Receives from Alice (via Bob), responds
+%% =============================================================================
+
+procedure fi_charlie(_?, Channel?, Channel?).
+fi_charlie(_, _, ch(NetIn, NetOut?)) :-
+    charlie_wait(NetIn?, NetOut).
+
+procedure charlie_wait(Stream?, Stream).
+%% Received message from Alice, respond via Bob
+charlie_wait([msg(_, from_alice(hello_charlie))|_], [msg(bob, forward(alice, hello_alice))|[]]).
+%% Skip other messages
+charlie_wait([_|In], Out?) :- otherwise | charlie_wait(In?, Out).

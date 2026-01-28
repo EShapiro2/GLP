@@ -3,6 +3,22 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
+/// Try to load a boot file from known paths
+String? loadBootFile(String filename) {
+  final paths = [
+    '/home/user/GLP/programs/typed_book/social_graph/$filename',
+    '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/$filename',
+    'programs/typed_book/social_graph/$filename',
+  ];
+  for (final path in paths) {
+    final file = File(path);
+    if (file.existsSync()) {
+      return file.readAsStringSync();
+    }
+  }
+  return null;
+}
+
 void main() {
   group('IsolateManager', () {
     late IsolateManager manager;
@@ -146,6 +162,82 @@ agent_init(_, _, _) :- true.
           reason: 'Completed agents: ${manager.completedAgents}');
       expect(manager.completedAgents, containsAll(['alice', 'bob']));
     }, timeout: Timeout(Duration(seconds: 15)));
+
+    test('cold-call: shared response variable across isolates', () async {
+      final source = loadBootFile('cold_call_test_boot.glp');
+      if (source == null) {
+        print('Skipping: cold_call_test_boot.glp not found');
+        return;
+      }
+
+      final loader = BootLoader();
+      final config = loader.load(source);
+
+      // Should have 2 agents: alice (initiator) and bob (responder)
+      expect(config.directives.length, equals(2));
+      expect(config.directives.map((d) => d.agentId).toList(),
+          equals(['alice', 'bob']));
+
+      await manager.boot(config);
+      manager.start();
+
+      // Protocol:
+      // 1. Alice sends ping(Resp) to bob (Resp is fresh writer, exported)
+      // 2. Bob receives ping(V), matches ping(pong) → binds V to pong
+      // 3. IRMA routes assignment back to Alice
+      // 4. Alice's Resp? becomes pong → completes
+      for (var i = 0; i < 20; i++) {
+        manager.tick();
+        await Future.delayed(Duration(milliseconds: 100));
+        if (manager.allCompleted) {
+          print('Cold-call completed after ${i + 1} ticks');
+          break;
+        }
+      }
+
+      expect(manager.allCompleted, isTrue,
+          reason: 'Completed agents: ${manager.completedAgents}');
+      expect(manager.completedAgents, containsAll(['alice', 'bob']));
+    }, timeout: Timeout(Duration(seconds: 15)));
+
+    test('friend-introduction: 3-agent shared channel routing', () async {
+      final source = loadBootFile('friend_intro_test_boot.glp');
+      if (source == null) {
+        print('Skipping: friend_intro_test_boot.glp not found');
+        return;
+      }
+
+      final loader = BootLoader();
+      final config = loader.load(source);
+
+      // Should have 3 agents: alice, bob (introducer), charlie
+      expect(config.directives.length, equals(3));
+      expect(config.directives.map((d) => d.agentId).toList(),
+          equals(['alice', 'bob', 'charlie']));
+
+      await manager.boot(config);
+      manager.start();
+
+      // Protocol:
+      // 1. Bob creates channel pair, sends endpoints to Alice and Charlie
+      // 2. Alice writes hello_charlie on her write channel
+      // 3. IRMA routes: Alice → Bob (creator) → Charlie
+      // 4. Charlie reads hello_charlie, writes hello_alice
+      // 5. IRMA routes: Charlie → Bob (creator) → Alice
+      // 6. Alice reads hello_alice → all complete
+      for (var i = 0; i < 30; i++) {
+        manager.tick();
+        await Future.delayed(Duration(milliseconds: 100));
+        if (manager.allCompleted) {
+          print('Friend-introduction completed after ${i + 1} ticks');
+          break;
+        }
+      }
+
+      expect(manager.allCompleted, isTrue,
+          reason: 'Completed agents: ${manager.completedAgents}');
+      expect(manager.completedAgents, containsAll(['alice', 'bob', 'charlie']));
+    }, timeout: Timeout(Duration(seconds: 20)));
 
     test('runs full play with actor scripts (no UI)', () async {
       // Try to find the test boot file with actors
