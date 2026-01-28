@@ -230,6 +230,7 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 ## Working Modes
 
 ### Discussion Mode (DEFAULT)
+- **🔴 STOP AND WAIT** - While discussing, you CANNOT proceed with ANY actions (coding, testing, git operations) until user explicitly confirms the discussion is over
 - **NO CODE CHANGES** - Not even small fixes
 - **BRIEF RESPONSES** - Show output, explain what you see
 - **STAY ON TOPIC** - Don't jump ahead
