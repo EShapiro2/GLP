@@ -427,7 +427,7 @@ class AgentScreen extends StatefulWidget {
   State<AgentScreen> createState() => _AgentScreenState();
 }
 
-class _AgentScreenState extends State<AgentScreen> with WidgetsBindingObserver {
+class _AgentScreenState extends State<AgentScreen> {
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _inputFocusNode = FocusNode();
@@ -455,21 +455,8 @@ class _AgentScreenState extends State<AgentScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _setupMethodChannel();
     _initializeRuntime();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Restore focus when app/window becomes active again
-    if (state == AppLifecycleState.resumed && _initialized) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) {
-          _inputFocusNode.requestFocus();
-        }
-      });
-    }
   }
 
   void _setupMethodChannel() {
@@ -761,6 +748,11 @@ class _AgentScreenState extends State<AgentScreen> with WidgetsBindingObserver {
       _addOutput('  Cold-call: msg(user, $myId, connect($firstFriend))');
       _addOutput('  Send text: msg(user, $myId, send($firstFriend, hello))');
       _addOutput('  Accept:    msg(user, $myId, decision(yes, <from>, <Resp>))');
+
+      // Request focus on input field after initialization
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _inputFocusNode.requestFocus();
+      });
     } catch (e, st) {
       _addOutput('[ERROR] $e');
       debugPrint('$st');
@@ -1081,7 +1073,6 @@ class _AgentScreenState extends State<AgentScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _inputController.dispose();
     _scrollController.dispose();
     _inputFocusNode.dispose();
@@ -1126,7 +1117,7 @@ class _AgentScreenState extends State<AgentScreen> with WidgetsBindingObserver {
                   final isControl = line.startsWith('[');
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2.0),
-                    child: Text(
+                    child: SelectableText(
                       line,
                       style: TextStyle(
                         fontFamily: 'monospace',
@@ -1180,7 +1171,6 @@ class _AgentScreenState extends State<AgentScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     onSubmitted: (_) => _sendInput(),
-                    onTap: () => _inputFocusNode.requestFocus(),
                   ),
                 ),
                 const SizedBox(width: 8),
