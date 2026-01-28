@@ -173,15 +173,12 @@ class VariableTable {
       }
 
       // Each variable must have at least one reader
-      // Guard occurrences count IF the variable is grounded by that guard
-      // (grounded variables can be safely read multiple times)
-      final hasBodyReader = info.readerOccurrencesHeadBody > 0;
-      final hasGroundedGuardReader = isGrounded(info.name) && info.readerOccurrences > 0;
-      
-      if (!hasBodyReader && !hasGroundedGuardReader && info.writerOccurrences > 0) {
+      // Guard occurrences always count toward SRSW pairing (per spec Section 1.3, Remark 1)
+      // A reader may appear once in guard AND once in body (two total allowed without groundness)
+      if (info.readerOccurrences == 0 && info.writerOccurrences > 0) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
-          'Line $line: Variable "${info.name}" has no reader (guard occurrences only count if grounded)'
+          'Line $line: Variable "${info.name}" has no reader (must have exactly one)'
         );
       }
     }
@@ -199,9 +196,7 @@ class VariableTable {
           if (v.writerOccurrences > 1) return true;
           if (v.readerOccurrences > 1 && !allowsMultipleOccurrences(v.name)) return true;
           if (v.writerOccurrences == 0) return true;
-          final hasBodyReader = v.readerOccurrencesHeadBody > 0;
-          final hasGroundedGuardReader = allowsMultipleOccurrences(v.name) && v.readerOccurrences > 0;
-          if (!hasBodyReader && !hasGroundedGuardReader && v.writerOccurrences > 0) return true;
+          if (v.readerOccurrences == 0 && v.writerOccurrences > 0) return true;
           return false;
         },
         orElse: () => _vars.values.first,
@@ -288,35 +283,77 @@ class Analyzer {
         _procDecls[decl.key] = decl;
       }
     }
-    // First: transform defined guards via partial evaluation
-    // This must happen BEFORE SRSW analysis
-    final transformed = _partialEvaluator.transformDefinedGuards(program);
 
-    // Second: auto-generate reduce/2 clauses for metainterpretation
-    // Generated for all files by default, except those with -stdlib. declaration
-    final withReduce = generateReduce
-        ? _generateReduceClauses(transformed)
-        : transformed;
-
-    final annotatedProcs = <AnnotatedProcedure>[];
+    // STEP 1: Run SRSW validation on the ORIGINAL program
+    // This must happen BEFORE partial evaluation, because partial eval removes defined guards.
+    // Guard readers (like X? in send(X?, Ch?, Ch1)) must be counted for SRSW pairing.
     final allViolations = <String>[];
-
-    for (final proc in withReduce.procedures) {
-      // Skip SRSW checking for auto-generated reduce/2 clauses
-      // They are derived from already-validated clauses
-      final skipSRSW = proc.name == 'reduce' && proc.arity == 2;
-      final (annotatedProc, violations) = _analyzeProcedureCollectingErrors(proc, skipSRSW: skipSRSW);
-      annotatedProcs.add(annotatedProc);
+    for (final proc in program.procedures) {
+      final violations = _collectSRSWViolationsForProcedure(proc);
       allViolations.addAll(violations);
     }
 
-    // Report all SRSW violations together
+    // Report SRSW violations early (before partial evaluation)
     if (allViolations.isNotEmpty) {
       final message = 'SRSW violations found:\n${allViolations.map((v) => '  • $v').join('\n')}';
       throw CompileError(message, 0, 0, phase: 'analyzer');
     }
 
+    // STEP 2: Transform defined guards via partial evaluation
+    // After SRSW validation passes, we can safely transform defined guards.
+    final transformed = _partialEvaluator.transformDefinedGuards(program);
+
+    // STEP 3: Auto-generate reduce/2 clauses for metainterpretation
+    // Generated for all files by default, except those with -stdlib. declaration
+    final withReduce = generateReduce
+        ? _generateReduceClauses(transformed)
+        : transformed;
+
+    // STEP 4: Annotate clauses (register assignment) on the transformed program
+    // SRSW already validated, so skip SRSW checking here
+    final annotatedProcs = <AnnotatedProcedure>[];
+    for (final proc in withReduce.procedures) {
+      final (annotatedProc, _) = _analyzeProcedureCollectingErrors(proc, skipSRSW: true);
+      annotatedProcs.add(annotatedProc);
+    }
+
     return AnnotatedProgram(withReduce, annotatedProcs);
+  }
+
+  /// Collect SRSW violations for a procedure (for early validation before partial eval)
+  List<String> _collectSRSWViolationsForProcedure(Procedure proc) {
+    final allViolations = <String>[];
+
+    for (final clause in proc.clauses) {
+      final varTable = VariableTable();
+
+      // Type-based SRSW relaxation: mark head variables with constant types
+      _markConstantTypeVars(clause.head, proc.name, proc.arity, varTable);
+
+      // Analyze head
+      _analyzeAtom(clause.head, varTable);
+
+      // Analyze guards (if present) - THIS IS KEY: guard readers ARE counted
+      if (clause.guards != null && clause.guards!.isNotEmpty) {
+        for (final guard in clause.guards!) {
+          _analyzeGuard(guard, varTable);
+        }
+      }
+
+      // Analyze body (if present)
+      if (clause.body != null && clause.body!.isNotEmpty) {
+        for (final goal in clause.body!) {
+          _analyzeGoal(goal, varTable);
+        }
+      }
+
+      // Collect SRSW violations
+      final violations = varTable.collectSRSWViolations();
+      final contextViolations = violations.map((v) => '${proc.name}/${proc.arity}: $v').toList();
+      allViolations.addAll(contextViolations);
+    }
+
+    return allViolations;
   }
 
   /// Generate reduce/2 clauses for all procedures in the program
@@ -1003,10 +1040,11 @@ class PartialEvaluator {
     }
 
     // Build renaming map (skip anonymous variables - those starting with '_')
+    // Note: PE-generated vars must NOT start with underscore, or they'll be treated as anonymous
     final Map<String, String> renaming = {};
     for (final name in varNames) {
       if (!name.startsWith('_')) {
-        renaming[name] = '_PE\${_varCounter++}';
+        renaming[name] = 'PE${_varCounter++}';
       }
     }
 
