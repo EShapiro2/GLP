@@ -344,12 +344,17 @@ void _agentIsolateEntry(AgentConfig config) async {
       ctx.flushMessages();
 
       // Report status
-      final status = runtime.gq.isEmpty
-          ? 'completed'
-          : (result.status == ExecutionStatus.suspended ? 'suspended' : 'running');
+      // IMPORTANT: Check BOTH the drain result AND runtime.suspended (global suspension map)
+      // Goals suspended in previous drains won't show in result.status but ARE in runtime.suspended
+      final hasSuspendedGoals = result.status == ExecutionStatus.suspended ||
+                                runtime.suspended.isNotEmpty;
+      final status = hasSuspendedGoals
+          ? 'suspended'
+          : (runtime.gq.isEmpty ? 'completed' : 'running');
       config.mainPort.send(Status(agentId, status, runtime.gq.length));
 
-      if (runtime.gq.isEmpty && !doneSent) {
+      // Only report done when gq is empty AND no goals are suspended (either from this drain or previous)
+      if (runtime.gq.isEmpty && !hasSuspendedGoals && !doneSent) {
         doneSent = true;
         print('[$agentId] All goals completed');
         config.mainPort.send(Done(agentId, true));

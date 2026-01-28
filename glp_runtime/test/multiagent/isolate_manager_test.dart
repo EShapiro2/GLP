@@ -93,6 +93,60 @@ agent_init(_, _, _) :- true.
       expect(manager.completedAgents, containsAll(['alice', 'bob', 'charlie']));
     }, timeout: Timeout(Duration(seconds: 10)));
 
+    test('ping-pong: minimal network message exchange', () async {
+      // Try to find the ping-pong test boot file
+      final paths = [
+        '/home/user/GLP/programs/typed_book/social_graph/ping_pong_test_boot.glp',
+        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/ping_pong_test_boot.glp',
+        'programs/typed_book/social_graph/ping_pong_test_boot.glp',
+      ];
+
+      String? source;
+      for (final path in paths) {
+        final file = File(path);
+        if (file.existsSync()) {
+          source = file.readAsStringSync();
+          break;
+        }
+      }
+
+      if (source == null) {
+        print('Skipping: ping_pong_test_boot.glp not found');
+        return;
+      }
+
+      final loader = BootLoader();
+      final config = loader.load(source);
+
+      // Should have 2 agents: alice (ping) and bob (pong)
+      expect(config.directives.length, equals(2));
+      expect(config.directives.map((d) => d.agentId).toList(),
+          equals(['alice', 'bob']));
+
+      await manager.boot(config);
+      manager.start();
+
+      // Protocol:
+      // 1. Alice sends ping(alice) to bob
+      // 2. Bob receives ping, sends pong to alice
+      // 3. Alice receives pong, completes
+      // 4. Bob completes
+      //
+      // This requires IRMA to actually route messages!
+      for (var i = 0; i < 20; i++) {
+        manager.tick();
+        await Future.delayed(Duration(milliseconds: 100));
+        if (manager.allCompleted) {
+          print('Ping-pong completed after ${i + 1} ticks');
+          break;
+        }
+      }
+
+      expect(manager.allCompleted, isTrue,
+          reason: 'Completed agents: ${manager.completedAgents}');
+      expect(manager.completedAgents, containsAll(['alice', 'bob']));
+    }, timeout: Timeout(Duration(seconds: 15)));
+
     test('runs full play with actor scripts (no UI)', () async {
       // Try to find the test boot file with actors
       final paths = [

@@ -29,6 +29,9 @@ class CommitOps {
       }
     }
 
+    // Collect writers that need callbacks fired after all bindings complete
+    final writersWithCallbacks = <int>[];
+
     for (final entry in sigmaHat.entries) {
       final varId = entry.key;  // This is writerAddr
       var value = entry.value;
@@ -57,10 +60,12 @@ class CommitOps {
         }
       }
 
-      // Bind writer to ground term
+      // Bind writer to ground term WITHOUT firing callbacks
+      // Callbacks are deferred until all bindings complete, ensuring nested VarRefs can be dereferenced
       final valueAsTerm = value is Term ? value : ConstTerm(value);
-      final acts = heap.bindVariable(varId, valueAsTerm);
+      final acts = heap.bindWriterNoCallback(varId, valueAsTerm);
       activations.addAll(acts);
+      writersWithCallbacks.add(varId);
     }
 
     // Re-dereference all bound cells that contain VarRef
@@ -68,7 +73,7 @@ class CommitOps {
     for (final varId in sigmaHat.keys) {
       final wAddr = varId;
       final cell = heap.cells[wAddr];
-      
+
       // Only process if still WrtTag with Pointer content (bound to another var)
       if (cell.tag == CellTag.WrtTag && cell.content is Pointer) {
         final targetAddr = (cell.content as Pointer).targetAddr;
@@ -80,6 +85,12 @@ class CommitOps {
           cell.tag = CellTag.ValueTag;
         }
       }
+    }
+
+    // Now fire all deferred callbacks after ALL bindings are complete
+    // This ensures nested VarRefs in bound structures can be fully dereferenced
+    for (final writerAddr in writersWithCallbacks) {
+      heap.firePendingCallback(writerAddr);
     }
 
     return activations;

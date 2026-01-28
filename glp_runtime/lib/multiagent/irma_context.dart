@@ -406,9 +406,13 @@ class IrmaContext {
       return;
     }
 
-    // Create new cons cell [content | newTail]
+    // Wrap content in msg(sender, content) for GLP protocol
+    // The receiving agent expects msg(From, Content) to know who sent the message
+    final msgTerm = StructTerm('msg', [ConstTerm(sender), content]);
+
+    // Create new cons cell [msg(sender, content) | newTail]
     final (newTailWriter, newTailReader) = runtime.heap.allocateVariable();
-    final consCell = StructTerm('.', [content, VarRef(newTailReader)]);
+    final consCell = StructTerm('.', [msgTerm, VarRef(newTailReader)]);
 
     // Bind current tail to the cons cell
     final activations = runtime.heap.bindVariable(_netInTailWriter!, consCell);
@@ -417,9 +421,9 @@ class IrmaContext {
     // Update tail pointer
     _netInTailWriter = newTailWriter;
 
-    // Enqueue any reactivated goals
+    // Enqueue any reactivated goals (use enqueueReactivatedGoal for proper cleanup)
     for (final act in activations) {
-      runtime.gq.enqueue(act);
+      runtime.enqueueReactivatedGoal(act);
     }
   }
 
@@ -848,7 +852,7 @@ class IrmaContext {
       // This will trigger onWriterBound if Z has a requester
       final activations = runtime.heap.bindVariable(relay.relayWriterId, value);
       for (final act in activations) {
-        runtime.gq.enqueue(act);
+        runtime.enqueueReactivatedGoal(act);
       }
     });
     
@@ -901,7 +905,7 @@ class IrmaContext {
         final activations = runtime.heap.bindImportedReader(readerAddr, value, entry);
         print('[DEBUG IRMA $agentId] handleAssignment: bindImportedReader returned ${activations.length} activations');
         for (final act in activations) {
-          runtime.gq.enqueue(act);
+          runtime.enqueueReactivatedGoal(act);
         }
 
         // Remove from V_p - variable is now bound, entry no longer needed
@@ -937,7 +941,7 @@ class IrmaContext {
       }
       final activations = runtime.heap.bindVariable(targetAddr, value);
       for (final act in activations) {
-        runtime.gq.enqueue(act);
+        runtime.enqueueReactivatedGoal(act);
       }
     } else {
       // Not in V_p and we didn't create it - should not happen
@@ -1054,7 +1058,7 @@ class IrmaContext {
         print('[DEBUG IRMA $agentId] handleAbandon: bound to poison, ${activations.length} goals reactivated');
 
         for (final act in activations) {
-          runtime.gq.enqueue(act);
+          runtime.enqueueReactivatedGoal(act);
         }
       }
     }

@@ -249,14 +249,27 @@ class HeapFCP {
   // ==========================================================================
 
   /// Bind a writer to a ground term value
-  /// 
+  ///
   /// Per spec Section 5.1:
   /// - Changes writer tag to ValueTag
   /// - Stores value as content
   /// - Activates any suspensions on the writer
-  /// 
+  ///
   /// Returns list of goals to reactivate
   List<GoalRef> bindWriter(int writerAddr, Term value) {
+    return bindWriterWithCallbackControl(writerAddr, value, fireCallback: true);
+  }
+
+  /// Bind a writer without firing callbacks
+  ///
+  /// Used by applySigmaHatFCP to defer callbacks until all bindings complete.
+  /// This ensures nested VarRefs in structures can be dereferenced correctly.
+  List<GoalRef> bindWriterNoCallback(int writerAddr, Term value) {
+    return bindWriterWithCallbackControl(writerAddr, value, fireCallback: false);
+  }
+
+  /// Internal: bind with callback control
+  List<GoalRef> bindWriterWithCallbackControl(int writerAddr, Term value, {required bool fireCallback}) {
     final cell = cells[writerAddr];
     if (cell.tag != CellTag.WrtTag) {
       throw StateError('bindWriter called on non-writer cell at $writerAddr (tag: ${cell.tag})');
@@ -274,12 +287,27 @@ class HeapFCP {
     cell.tag = CellTag.ValueTag;
 
     // Notify external observer if registered
-    final callback = _bindCallbacks.remove(writerAddr);
-    if (callback != null) {
-      callback(value);
+    if (fireCallback) {
+      final callback = _bindCallbacks.remove(writerAddr);
+      if (callback != null) {
+        callback(value);
+      }
     }
 
     return activations;
+  }
+
+  /// Fire pending callback for a writer (if any)
+  ///
+  /// Used after all bindings complete to fire deferred callbacks.
+  void firePendingCallback(int writerAddr) {
+    final callback = _bindCallbacks.remove(writerAddr);
+    if (callback != null) {
+      final value = getValue(writerAddr);
+      if (value != null) {
+        callback(value);
+      }
+    }
   }
 
   /// Bind a writer to another variable (via its reader)

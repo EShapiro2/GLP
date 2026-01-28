@@ -14,6 +14,13 @@ class GoalRef {
   final GoalId id;
   final Pc pc;
   const GoalRef(this.id, this.pc);
+
+  @override
+  bool operator ==(Object other) =>
+      other is GoalRef && other.id == id && other.pc == pc;
+
+  @override
+  int get hashCode => Object.hash(id, pc);
 }
 
 /// σ̂w: clause-local, goal-local tentative writer substitution (no heap writes).

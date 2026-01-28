@@ -1,0 +1,58 @@
+%% ping_pong_test_boot.glp - Minimal test for IRMA network message routing
+%%
+%% Tests exactly one thing: can GLP code send a message via NetOut
+%% and receive on NetIn across isolates?
+%%
+%% Protocol:
+%% 1. Alice sends ping(alice) to bob via network
+%% 2. Bob receives ping, sends pong back to alice
+%% 3. Alice receives pong, done
+%%
+%% Date: 2026-01-28
+
+%% Unification (from stdlib - not loaded in isolates)
+X = X?.
+
+%% =============================================================================
+%% THE boot
+%% =============================================================================
+
+procedure boot.
+boot :-
+    ping_agent(alice, ch(_?,_), ch(_?,_))@alice,
+    pong_agent(bob, ch(_?,_), ch(_?,_))@bob.
+
+%% =============================================================================
+%% PING AGENT (Alice)
+%% =============================================================================
+
+%% Alice: immediately sends ping to bob via net, waits for pong
+%% Uses direct head binding instead of =/2 to ensure network output is bound
+procedure ping_agent(_?, Channel?, Channel?).
+ping_agent(Id, _, ch(NetIn, [msg(bob, ping(Id?))|NetOut1?])) :-
+    ground(Id?) |
+    wait_pong(NetIn?, NetOut1).
+
+procedure wait_pong(Stream?, Stream).
+wait_pong([msg(_, pong)|_], []).
+wait_pong([_|In], Out?) :- otherwise | wait_pong(In?, Out).
+wait_pong([], []).
+
+%% =============================================================================
+%% PONG AGENT (Bob)
+%% =============================================================================
+
+%% Bob: waits for ping from NetIn, sends pong to NetOut
+%% Uses direct head binding for network output
+procedure pong_agent(_?, Channel?, Channel?).
+pong_agent(_, _, ch(NetIn, NetOut?)) :-
+    wait_ping(NetIn?, NetOut).
+
+procedure wait_ping(Stream?, Stream).
+%% Received ping - send pong back and terminate
+wait_ping([msg(From, ping(_))|_], [msg(From?, pong)]) :-
+    ground(From?) | true.
+%% Skip non-ping messages
+wait_ping([_|In], Out?) :- otherwise | wait_ping(In?, Out).
+%% No more messages - terminate
+wait_ping([], []).

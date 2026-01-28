@@ -163,7 +163,29 @@ class GlpRuntime {
 
   void _enqueueAll(List<GoalRef> acts) {
     for (final a in acts) {
-      gq.enqueue(a);
+      enqueueReactivatedGoal(a);
+    }
+  }
+
+  /// Enqueue a reactivated goal and clean up from suspended map
+  /// Use this instead of gq.enqueue() when reactivating suspended goals
+  void enqueueReactivatedGoal(GoalRef goal) {
+    gq.enqueue(goal);
+    // Clean up from suspended map - goal is now reactivated
+    _removeFromSuspended(goal);
+  }
+
+  /// Remove a goal from all entries in the suspended map
+  void _removeFromSuspended(GoalRef goal) {
+    final toRemove = <int>[];
+    for (final entry in suspended.entries) {
+      entry.value.remove(goal);
+      if (entry.value.isEmpty) {
+        toRemove.add(entry.key);
+      }
+    }
+    for (final key in toRemove) {
+      suspended.remove(key);
     }
   }
 
