@@ -427,9 +427,10 @@ class AgentScreen extends StatefulWidget {
   State<AgentScreen> createState() => _AgentScreenState();
 }
 
-class _AgentScreenState extends State<AgentScreen> {
+class _AgentScreenState extends State<AgentScreen> with WidgetsBindingObserver {
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _inputFocusNode = FocusNode();
   final List<String> _outputLog = [];
 
   // IrmaAgent wraps GlpRuntime with multiagent support
@@ -454,8 +455,21 @@ class _AgentScreenState extends State<AgentScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _setupMethodChannel();
     _initializeRuntime();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Restore focus when app/window becomes active again
+    if (state == AppLifecycleState.resumed && _initialized) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          _inputFocusNode.requestFocus();
+        }
+      });
+    }
   }
 
   void _setupMethodChannel() {
@@ -741,8 +755,12 @@ class _AgentScreenState extends State<AgentScreen> {
         _updateStats();
       });
 
+      final myId = widget.agentId.toLowerCase();
       final firstFriend = widget.friends.isNotEmpty ? widget.friends.first.toLowerCase() : 'friend';
-      _addOutput('[INIT] Ready! Type: send($firstFriend, ping)');
+      _addOutput('[INIT] Ready! Commands:');
+      _addOutput('  Cold-call: msg(user, $myId, connect($firstFriend))');
+      _addOutput('  Send text: msg(user, $myId, send($firstFriend, hello))');
+      _addOutput('  Accept:    msg(user, $myId, decision(yes, <from>, <Resp>))');
     } catch (e, st) {
       _addOutput('[ERROR] $e');
       debugPrint('$st');
@@ -1063,8 +1081,10 @@ class _AgentScreenState extends State<AgentScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _inputController.dispose();
     _scrollController.dispose();
+    _inputFocusNode.dispose();
     _ioContext?.dispose();
     super.dispose();
   }
@@ -1144,10 +1164,12 @@ class _AgentScreenState extends State<AgentScreen> {
                 Expanded(
                   child: TextField(
                     controller: _inputController,
+                    focusNode: _inputFocusNode,
                     enabled: _initialized,
+                    autofocus: true,
                     decoration: InputDecoration(
-                      hintText: _initialized 
-                          ? 'send(${widget.friends.isNotEmpty ? widget.friends.first.toLowerCase() : "friend"}, ping)' 
+                      hintText: _initialized
+                          ? 'msg(user, ${widget.agentId.toLowerCase()}, connect(${widget.friends.isNotEmpty ? widget.friends.first.toLowerCase() : "friend"}))'
                           : 'Initializing...',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -1158,6 +1180,7 @@ class _AgentScreenState extends State<AgentScreen> {
                       ),
                     ),
                     onSubmitted: (_) => _sendInput(),
+                    onTap: () => _inputFocusNode.requestFocus(),
                   ),
                 ),
                 const SizedBox(width: 8),
