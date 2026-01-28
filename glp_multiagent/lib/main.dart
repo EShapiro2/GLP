@@ -31,8 +31,8 @@ import 'package:glp_runtime/multiagent/variable_table.dart';
 
 import 'irma_router.dart';
 
-/// Default GLP program path - using the v2 agent based on revised play protocols
-const _defaultGlpPath = '/Users/udi/Grassroots/GLP/programs/multiagent/social_agent_v2.glp';
+/// Default GLP program path - using the 3-person play with actors
+const _defaultGlpPath = '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_alice_bob_charlie.glp';
 
 /// Entry point - checks if spawned window or main coordinator
 void main(List<String> args) {
@@ -709,6 +709,14 @@ class _AgentScreenState extends State<AgentScreen> {
         },
       );
 
+      // Extract raw addresses for actor channel
+      // inputVarId is writer addr for input stream (Dart writes, GLP reads)
+      // outputVarId is writer addr for output stream (GLP writes, Dart reads)
+      final userInWriter = userChannel.inputVarId;
+      final userInReader = userChannel.inputVarId + 1;
+      final userOutWriter = userChannel.outputVarId;
+      final userOutReader = userChannel.outputVarId + 1;
+
       _ioContext = _MultiAgentIOContext(
         userChannel: userChannel,
         netChannel: netChannel,
@@ -716,6 +724,10 @@ class _AgentScreenState extends State<AgentScreen> {
         netInput: netInput,
         userOutput: userOutput,
         netOutput: netOutput,
+        userInWriter: userInWriter,
+        userInReader: userInReader,
+        userOutWriter: userOutWriter,
+        userOutReader: userOutReader,
       );
 
       // Compile stdlib separately (provides =/2)
@@ -724,16 +736,24 @@ class _AgentScreenState extends State<AgentScreen> {
       final stdlibProgram = stdlibCompiler.compile(stdlibSource);
       _programs['stdlib'] = stdlibProgram;
 
-      // Compile user program separately (preserves type definition ordering)
+      // Compile user program (the play file with agent protocol)
       final userCompiler = GlpCompiler();
       final userProgram = userCompiler.compile(widget.glpSource);
       _programs['user'] = userProgram;
 
-      _addOutput('[INIT] Loaded GLP program');
+      // Load ui_actor.glp for human-in-the-loop interaction
+      final uiActorPath = '/Users/udi/Grassroots/GLP/programs/multiagent/ui_actor.glp';
+      final uiActorSource = await File(uiActorPath).readAsString();
+      final uiActorCompiler = GlpCompiler();
+      final uiActorProgram = uiActorCompiler.compile(uiActorSource);
+      _programs['ui_actor'] = uiActorProgram;
 
-      // Start goal: agent_init(Id, UserCh, NetCh) - v2 protocol
+      _addOutput('[INIT] Loaded GLP program + ui_actor');
+
+      // Start goals: agent_init and ui_actor
       final agentIdLower = widget.agentId.toLowerCase();
       _addOutput('[INIT] Starting: agent_init($agentIdLower, UserCh, NetCh)');
+      _addOutput('[INIT] Starting: ui_actor($agentIdLower, ActorCh, Display, Keyboard)');
       _startAgentGoal(agentIdLower);
 
       setState(() {
@@ -744,10 +764,12 @@ class _AgentScreenState extends State<AgentScreen> {
 
       final myId = widget.agentId.toLowerCase();
       final firstFriend = widget.friends.isNotEmpty ? widget.friends.first.toLowerCase() : 'friend';
-      _addOutput('[INIT] Ready! Commands:');
-      _addOutput('  Cold-call: msg(user, $myId, connect($firstFriend))');
-      _addOutput('  Send text: msg(user, $myId, send($firstFriend, hello))');
-      _addOutput('  Accept:    msg(user, $myId, decision(yes, <from>, <Resp>))');
+      _addOutput('[INIT] Ready! Simple commands:');
+      _addOutput('  connect($firstFriend)     - cold-call');
+      _addOutput('  yes($firstFriend)         - accept cold-call');
+      _addOutput('  no($firstFriend)          - reject cold-call');
+      _addOutput('  send($firstFriend, hello) - send message');
+      _addOutput('  introduce(p, q)           - introduce friends');
 
       // Request focus on input field after initialization
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1234,6 +1256,12 @@ class _MultiAgentIOContext {
   final OutputObserver userOutput;
   final OutputObserver netOutput;  // For outgoing network messages
 
+  // Raw addresses for building actor channel
+  final int userInWriter;
+  final int userInReader;
+  final int userOutWriter;
+  final int userOutReader;
+
   _MultiAgentIOContext({
     required this.userChannel,
     required this.netChannel,
@@ -1241,10 +1269,22 @@ class _MultiAgentIOContext {
     required this.netInput,
     required this.userOutput,
     required this.netOutput,
+    required this.userInWriter,
+    required this.userInReader,
+    required this.userOutWriter,
+    required this.userOutReader,
   });
 
   rt.Term get userChannelTerm => buildChannelTerm(userChannel);
   rt.Term get netChannelTerm => buildChannelTerm(netChannel);
+
+  /// Actor channel is the OTHER END of the user channel (per new_channel semantics)
+  /// Agent channel: ch(UserIn?, UserOut) - agent reads input, writes output
+  /// Actor channel: ch(UserOut?, UserIn) - actor reads output, writes input
+  rt.Term get actorChannelTerm => rt.StructTerm('ch', [
+    rt.VarRef(userOutReader),  // Actor reads what agent writes
+    rt.VarRef(userInWriter),   // Actor writes what agent reads
+  ]);
 
   void dispose() {
     userOutput.dispose();

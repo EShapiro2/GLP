@@ -1,0 +1,123 @@
+%% ui_actor.glp - Human-in-the-loop actor for GLP agents
+%%
+%% The UI actor acts as the "user" side of the channel, but instead of
+%% following a script, it:
+%% 1. Displays agent messages to a "display" stream (Dart observes)
+%% 2. Reads user input from a "keyboard" stream (Dart injects)
+%% 3. Translates simple inputs (yes/no) to proper GLP messages
+%%
+%% This keeps variable sharing within GLP (the Resp variable flows correctly).
+
+%% =============================================================================
+%% UI ACTOR - Main entry point
+%% =============================================================================
+
+%% ui_actor(AgentId, ActorCh, DisplayOut, KeyboardIn)
+%% - AgentId: the agent this UI is for (e.g., alice, bob)
+%% - ActorCh: channel to/from the agent (reversed user channel)
+%% - DisplayOut: stream where UI writes messages for Dart to display
+%% - KeyboardIn: stream where Dart injects user input
+
+procedure ui_actor(_?, Channel?, Stream, Stream?).
+ui_actor(Id, ch(In, Out?), Display, Keyboard) :-
+    ui_loop(Id?, In?, Out, Display?, Keyboard?).
+
+%% =============================================================================
+%% UI LOOP - Process agent messages and user input
+%% =============================================================================
+
+procedure ui_loop(_?, Stream?, Stream, Stream, Stream?).
+
+%% Agent requests befriend decision (cold-call)
+ui_loop(Id, [msg(agent, user, befriend(From, Resp))|In], Out?, [befriend(From?, Resp?)|Display?], Keyboard) :-
+    ground(From?) |
+    ui_wait_decision(Id?, From?, Resp?, In?, Out, Display?, Keyboard?).
+
+%% Agent notifies connected
+ui_loop(Id, [msg(agent, user, connected(Who))|In], Out?, [connected(Who?)|Display?], Keyboard) :-
+    ground(Who?) |
+    ui_loop(Id?, In?, Out, Display?, Keyboard?).
+
+%% Agent notifies received message
+ui_loop(Id, [msg(agent, user, received(From, Text))|In], Out?, [received(From?, Text?)|Display?], Keyboard) :-
+    ground(From?) |
+    ui_loop(Id?, In?, Out, Display?, Keyboard?).
+
+%% Agent notifies rejected
+ui_loop(Id, [msg(agent, user, rejected(Who))|In], Out?, [rejected(Who?)|Display?], Keyboard) :-
+    ground(Who?) |
+    ui_loop(Id?, In?, Out, Display?, Keyboard?).
+
+%% Agent requests befriend_intro decision (friend introduction)
+ui_loop(Id, [msg(agent, user, befriend_intro(From, Other, Ch))|In], Out?, [befriend_intro(From?, Other?, Ch?)|Display?], Keyboard) :-
+    ground(From?), ground(Other?) |
+    ui_wait_intro_decision(Id?, Other?, Ch?, In?, Out, Display?, Keyboard?).
+
+%% Skip unknown messages
+ui_loop(Id, [_|In], Out?, Display?, Keyboard) :-
+    otherwise |
+    ui_loop(Id?, In?, Out, Display?, Keyboard?).
+
+%% Termination
+ui_loop(_, [], [], [], []).
+
+%% =============================================================================
+%% WAIT FOR USER DECISIONS
+%% =============================================================================
+
+%% Wait for cold-call decision from keyboard
+procedure ui_wait_decision(_?, _?, Response, Stream?, Stream, Stream, Stream?).
+
+%% User accepts: keyboard has yes(From)
+ui_wait_decision(Id, From, Resp, In, [msg(user, Id?, decision(yes, From?, Resp?))|Out?], Display?, [yes(From1)|Keyboard]) :-
+    From? =?= From1? |
+    ui_loop(Id?, In?, Out, Display?, Keyboard?).
+
+%% User rejects: keyboard has no(From)
+ui_wait_decision(Id, From, Resp, In, [msg(user, Id?, decision(no, From?, Resp?))|Out?], Display?, [no(From1)|Keyboard]) :-
+    From? =?= From1? |
+    ui_loop(Id?, In?, Out, Display?, Keyboard?).
+
+%% Other messages pass through while waiting
+ui_wait_decision(Id, From, Resp, [Msg|In], Out?, [Msg?|Display?], Keyboard) :-
+    otherwise |
+    ui_wait_decision(Id?, From?, Resp?, In?, Out, Display?, Keyboard?).
+
+%% Wait for intro decision from keyboard
+procedure ui_wait_intro_decision(_?, _?, Channel?, Stream?, Stream, Stream, Stream?).
+
+%% User accepts intro: keyboard has accept_intro(Other)
+ui_wait_intro_decision(Id, Other, Ch, In, [msg(user, Id?, accept_intro(Other?, Ch?))|Out?], Display?, [accept_intro(Other1)|Keyboard]) :-
+    Other? =?= Other1? |
+    ui_loop(Id?, In?, Out, Display?, Keyboard?).
+
+%% User rejects intro: keyboard has reject_intro(Other)
+ui_wait_intro_decision(Id, Other, _, In, [msg(user, Id?, reject_intro(Other?))|Out?], Display?, [reject_intro(Other1)|Keyboard]) :-
+    Other? =?= Other1? |
+    ui_loop(Id?, In?, Out, Display?, Keyboard?).
+
+%% Other messages pass through while waiting
+ui_wait_intro_decision(Id, Other, Ch, [Msg|In], Out?, [Msg?|Display?], Keyboard) :-
+    otherwise |
+    ui_wait_intro_decision(Id?, Other?, Ch?, In?, Out, Display?, Keyboard?).
+
+%% =============================================================================
+%% USER COMMANDS (read from keyboard, converted to agent messages)
+%% =============================================================================
+
+%% These are handled inline in ui_loop by checking keyboard stream
+
+%% connect(Target) - initiate cold-call
+ui_loop(Id, In?, [msg(user, Id?, connect(Target?))|Out?], Display?, [connect(Target)|Keyboard]) :-
+    ground(Target?) |
+    ui_loop(Id?, In?, Out, Display?, Keyboard?).
+
+%% send(Target, Text) - send message to friend
+ui_loop(Id, In?, [msg(user, Id?, send(Target?, Text?))|Out?], Display?, [send(Target, Text)|Keyboard]) :-
+    ground(Target?) |
+    ui_loop(Id?, In?, Out, Display?, Keyboard?).
+
+%% introduce(P, Q) - introduce two friends
+ui_loop(Id, In?, [msg(user, Id?, introduce(P?, Q?))|Out?], Display?, [introduce(P, Q)|Keyboard]) :-
+    ground(P?), ground(Q?) |
+    ui_loop(Id?, In?, Out, Display?, Keyboard?).
