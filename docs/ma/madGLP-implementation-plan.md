@@ -21,7 +21,7 @@ This document outlines the implementation changes needed to migrate from the req
 | Table contents | Created/imported × writer/reader | Only writers awaiting incoming assignments |
 | Message types | Assignment, ReadRequest, Abandon | Assignment only |
 | Outgoing comm | Reduce generates messages directly | `global_send` goals in resolvent |
-| Forwarding | Relay variables + callbacks | Automatic via `global_send` watching readers |
+| Forwarding | Relay variables + forwarding logic | Automatic via `global_send` watching readers |
 | Helpers | abandon(), request(), export() | Globalize(), Localize() |
 
 ---
@@ -170,36 +170,36 @@ group('Localize', () {
 });
 ```
 
-### 0.4 Unit Tests for global_send Callback
+### 0.4 Unit Tests for global_send Goal
 
 **File:** `glp_runtime/test/multiagent/global_send_test.dart`
 
 **Tests derived from spec Section 4:**
 
 ```dart
-group('GlobalSendCallback', () {
+group('GlobalSendGoal', () {
   test('fires when reader becomes known', () {
-    // Given: callback registered on reader X?
+    // Given: global_send goal watching reader X?
     // When: writer X is bound to value T
-    // Then: callback fires with value T
+    // Then: goal fires with value T
   });
 
   test('produces correct message', () {
-    // Given: callback with global name _w(p,0), destination q
+    // Given: goal with global name _w(p,0), destination q
     // When: fires with value T
     // Then: message (_w(p,0) := T↑, q) added to M_p
   });
 
-  test('nested variables spawn additional callbacks', () {
-    // Given: callback fires with value containing variable Z
+  test('nested variables spawn additional goals', () {
+    // Given: goal fires with value containing variable Z
     // When: value is globalized
-    // Then: new global_send callback registered for Z
+    // Then: new global_send goal spawned for Z
   });
 
-  test('callback removed after firing', () {
-    // Given: callback registered
+  test('goal removed after firing', () {
+    // Given: goal registered
     // When: fires
-    // Then: callback no longer registered
+    // Then: goal no longer registered (one-shot)
   });
 });
 ```
@@ -235,7 +235,7 @@ group('Network Transaction', () {
   test('globalizes at sender, localizes at receiver', () {
     // Given: p sends term X to q
     // When: Network transaction
-    // Then: p has global_send callback, q has table entry
+    // Then: p has global_send goal, q has table entry
   });
 
   test('receiver gets reader form', () {
@@ -272,11 +272,11 @@ group('Error Handling', () {
     // Then: throws ArgumentError
   });
 
-  test('global_send on already-known reader is no-op', () {
-    // Given: callback registered on reader X?
+  test('global_send on already-known reader fires immediately', () {
+    // Given: goal to be registered on reader X?
     // And: X already bound (X? already known)
-    // When: callback registration attempted
-    // Then: callback fires immediately or is not registered (no error)
+    // When: goal registration attempted
+    // Then: goal fires immediately (no error)
   });
 
   test('removing non-existent entry is safe', () {
@@ -302,11 +302,11 @@ group('Direct Communication (Section 10.1)', () {
   });
 });
 
-group('Callback Scenario (Section 10.2)', () {
+group('Return Value Scenario (Section 10.2)', () {
   test('value request: value flows back from q to p', () {
     // Setup: p sends [value(V?)|...] to q
     // Action: q assigns V_q := Sum
-    // Verify: p receives Sum via callback link
+    // Verify: p receives Sum via global link
   });
 });
 
@@ -356,7 +356,7 @@ The new table stores only writers awaiting incoming assignments. Two entry types
 /// Direct index lookup: entry at index i corresponds to _r(p, i)
 class GlobalizeEntry {
   final int writerAddr;      // Local writer X
-  final String remoteAgent;  // Agent q who will send callback
+  final String remoteAgent;  // Agent q who will send assignment
 }
 
 /// Entry created by Localize (when importing a writer global name)
@@ -495,64 +495,112 @@ LocalizeResult localize(
 
 ### Phase 3: The global_send Mechanism
 
-**3.1 Implement global_send Goal**
+**3.1 Understanding global_send (Symmetric Design)**
 
-This is the key mechanism. Options:
+The `global_send` goal is spawned whenever an agent needs to send a value outward when a local reader becomes known. This happens symmetrically in two situations:
 
-**Option A: Native Dart callback** (simpler, recommended for initial implementation)
-- Register heap callbacks that fire when readers become known
-- Callback invokes `'_send'` logic directly
+1. **Globalizing a writer Y**: The agent spawns `global_send(Y?, _w(p,i), q)` to send Y?'s value to q when known
+2. **Localizing `_r(p,i)`**: The agent creates fresh pair (Z, Z?) and spawns `global_send(Z?, _r(p,i), p)` to send Z?'s value to p when known
+
+Both are the same operation: "I have a local pair, I need to send the reader's value somewhere when it's known."
+
+**3.2 Implementation Approach**
+
+**Option A: Native Dart goal registry** (simpler, recommended for initial implementation)
+- Maintain a registry mapping reader addresses to pending `global_send` goals
+- When a writer is bound, check if its paired reader has a registered goal
+- If so, fire the goal (globalize value, send message, register any new goals for nested variables)
 
 **Option B: GLP goal in resolvent** (closer to spec, more complex)
-- Spawn actual `global_send(T, G, Q)` goals
+- Spawn actual `global_send(T, G, Q)` goals into the resolvent
 - Requires bytecode support for `known/1` guard and `'_send'/3` builtin
 
 Recommend Option A initially, with path to Option B later.
 
 ```dart
-/// Callback registered when globalizing a writer or localizing a reader
-class GlobalSendCallback {
+/// A pending global_send goal waiting for a reader to become known
+/// 
+/// Spawned symmetrically when:
+/// - Globalizing a writer Y: watches Y?, sends to destination
+/// - Localizing _r(p,i): watches Z?, sends back to p
+class GlobalSendGoal {
   final int readerAddr;       // Reader to watch
   final GlobalName globalName; // _w(p,i) or _r(p,i)
   final String destination;   // Agent to send to
   
-  void onReaderKnown(Term value, GlobalWritersTable table, MessageQueue queue) {
-    // Globalize the value (may spawn more callbacks)
-    final result = globalize(value, destination, table, ...);
+  GlobalSendGoal({
+    required this.readerAddr,
+    required this.globalName,
+    required this.destination,
+  });
+}
+
+/// Registry for pending global_send goals
+class GlobalSendRegistry {
+  final Map<int, GlobalSendGoal> _goals = {};
+  
+  void register(GlobalSendGoal goal) {
+    _goals[goal.readerAddr] = goal;
+  }
+  
+  /// Called when a writer is bound. Returns new goals spawned for nested variables.
+  List<GlobalSendGoal> onWriterBound(
+    int writerAddr,
+    Term value,
+    GlobalWritersTable table,
+    MessageQueue queue,
+    String localAgent,
+  ) {
+    final goal = _goals.remove(writerAddr); // One-shot: remove after firing
+    if (goal == null) return [];
+    
+    // Globalize the value (may produce new goals for nested variables)
+    final result = globalize(
+      variables: extractVariables(value),
+      localAgent: localAgent,
+      remoteAgent: goal.destination,
+      table: table,
+    );
+    
     // Queue the message
-    queue.add(AssignmentMessage(globalName, serialize(result.globalizedTerm)));
-    // Register any new callbacks from nested variables
-    for (final spawn in result.spawns) {
-      registerCallback(spawn);
-    }
+    queue.add(AssignmentMessage(
+      globalName: goal.globalName,
+      payload: serialize(value, result.globalNames),
+    ));
+    
+    // Return new goals for nested variables (caller must register them)
+    return result.spawns.map((s) => GlobalSendGoal(
+      readerAddr: s.readerAddr,
+      globalName: s.globalName,
+      destination: s.destAgent,
+    )).toList();
   }
 }
 ```
 
-**3.2 Hook into Heap Binding**
+**3.3 Hook into Heap Binding**
 
-When a writer is bound, check if its reader has any `global_send` callbacks:
+When a writer is bound, check if its reader has a pending `global_send` goal:
 
 ```dart
-// In heap binding logic
+// In heap binding logic or IrmaContext
 void bindWriter(int writerAddr, Term value) {
   // ... existing binding logic ...
   
-  // Check for global_send callbacks on the paired reader
-  final readerAddr = getReaderForWriter(writerAddr);
-  final callbacks = _globalSendCallbacks[readerAddr];
-  if (callbacks != null) {
-    for (final cb in callbacks) {
-      cb.onReaderKnown(value, _writersTable, _messageQueue);
-    }
-    _globalSendCallbacks.remove(readerAddr);
+  // Check for global_send goal on the paired reader
+  final newGoals = _globalSendRegistry.onWriterBound(
+    writerAddr, value, _writersTable, _messageQueue, agentId);
+  
+  // Register any new goals spawned for nested variables
+  for (final goal in newGoals) {
+    _globalSendRegistry.register(goal);
   }
 }
 ```
 
-**Files to modify:**
-- `heap_fcp.dart` - add callback registry and trigger on bind
-- New file `global_send.dart` - callback management
+**Files to create/modify:**
+- New file `global_send.dart` - `GlobalSendGoal` and `GlobalSendRegistry` classes
+- `irma_context.dart` - integrate registry, hook into binding
 
 ---
 
@@ -585,9 +633,13 @@ void handleReceive(AssignmentMessage msg) {
     // Bind the writer
     bindWriter(entry.writerAddr, result.localizedTerm);
     
-    // Register any spawned callbacks
+    // Register any spawned goals
     for (final spawn in result.spawns) {
-      registerGlobalSendCallback(spawn);
+      _globalSendRegistry.register(GlobalSendGoal(
+        readerAddr: spawn.readerAddr,
+        globalName: spawn.globalName,
+        destination: spawn.destAgent,
+      ));
     }
     
     // Remove entry
@@ -696,9 +748,9 @@ All existing multiagent tests will need updates:
 
 **High risk areas:**
 
-1. **Heap callback timing**: Ensuring `global_send` callbacks fire at the right time and don't cause infinite loops with nested variables
+1. **Goal firing timing**: Ensuring `global_send` goals fire at the right time and don't cause infinite loops with nested variables
 
-2. **Globalize recursion**: When globalizing a term that contains variables, those variables spawn callbacks. When those callbacks fire, they globalize the value, which may contain more variables. Need to handle this correctly.
+2. **Globalize recursion**: When globalizing a term that contains variables, those variables spawn goals. When those goals fire, they globalize the value, which may contain more variables. Need to handle this correctly.
 
 3. **Entry lifecycle**: Ensuring entries are removed at the right time and not accessed after removal
 
@@ -716,7 +768,7 @@ All existing multiagent tests will need updates:
 1. GlobalWritersTable: add/remove/lookup for both entry types
 2. Globalize: writer variables, reader variables, mixed terms, nested structures
 3. Localize: _w names, _r names, mixed terms
-4. GlobalSendCallback: registration, firing, nested variable handling
+4. GlobalSendGoal: registration, firing, nested variable handling
 
 **Integration tests:**
 1. Direct communication (client-monitor scenario)
@@ -746,53 +798,52 @@ All existing multiagent tests will need updates:
 
 ## Correctness Requirements
 
-### Callback Atomicity (from spec Section 12)
+### Goal Atomicity (from spec Section 12)
 
-When a `global_send` callback fires, the following must happen atomically within a single Reduce transaction:
+When a `global_send` goal fires, the following must happen atomically within a single Reduce transaction:
 
 1. The value T (from the now-known reader) is globalized
-2. Globalization may spawn additional `global_send` callbacks for nested variables in T
-3. These new callbacks must be registered before the current callback completes
+2. Globalization may spawn additional `global_send` goals for nested variables in T
+3. These new goals must be registered before the current goal completes
 4. The message `(G := T↑, Q)` is added to M_p
 
-This atomicity ensures that if T contains variable Z, the callback for Z is registered before any subsequent Reduce could observe Z becoming known.
+This atomicity ensures that if T contains variable Z, the goal for Z is registered before any subsequent Reduce could observe Z becoming known.
 
-**Implementation note**: The `onReaderKnown` callback must:
+**Implementation note**: The `onWriterBound` method must:
 ```dart
-void onReaderKnown(Term value) {
+List<GlobalSendGoal> onWriterBound(int writerAddr, Term value, ...) {
   // 1. Globalize (may produce new spawns)
   final result = globalize(value, destination, table, isReader);
   
-  // 2. Register ALL new callbacks BEFORE adding message
-  for (final spawn in result.spawns) {
-    registerGlobalSendCallback(spawn);  // Must complete before step 3
-  }
-  
-  // 3. Add message to outgoing set
+  // 2. Add message to outgoing set
   messageQueue.add(AssignmentMessage(globalName, result.globalizedTerm));
+  
+  // 3. Return new goals (caller registers them immediately)
+  return result.spawns.map((s) => GlobalSendGoal(...)).toList();
 }
+// Caller then registers all returned goals before proceeding
 ```
 
 ---
 
 ## Debugging and Tracing Strategy
 
-The callback timing mechanism is the highest-risk area. To debug issues:
+The goal firing mechanism is the highest-risk area. To debug issues:
 
 ### Trace Points
 
 Add trace logging at these points (enabled via a debug flag):
 
-1. **Callback registration**: Log reader address, global name, destination
-2. **Writer binding**: Log writer address, value, whether reader has callbacks
-3. **Callback firing**: Log which callback fired, value received, spawned callbacks count
+1. **Goal registration**: Log reader address, global name, destination
+2. **Writer binding**: Log writer address, value, whether reader has goal
+3. **Goal firing**: Log which goal fired, value received, spawned goals count
 4. **Message send**: Log global name, destination, serialized term size
 5. **Message receive**: Log global name, source, entry found/not found
 6. **Entry lifecycle**: Log entry creation (Globalize/Localize) and removal (Receive)
 
 ### Debugging Scenarios
 
-When debugging callback issues, create minimal test cases:
+When debugging goal firing issues, create minimal test cases:
 
 1. **Single variable**: p sends X to q, p assigns X := 1. Verify message arrives.
 2. **Nested variable**: p sends X to q, p assigns X := foo(Y), p assigns Y := 2. Verify both messages arrive in order.
@@ -824,7 +875,7 @@ void assertInvariants() {
 
 2. ~~**Index allocation**: Should we use a single counter for both writer and reader globalizations, or separate counters?~~ **RESOLVED**: Spec Section 3.2 now explicitly states a single counter is used.
 
-3. **Garbage collection**: When are `global_send` callbacks removed if they never fire? The spec doesn't address this. For now, assume they persist until the reader becomes known or the agent terminates.
+3. **Garbage collection**: When are `global_send` goals removed if they never fire? The spec doesn't address this. For now, assume they persist until the reader becomes known or the agent terminates.
 
 ---
 
