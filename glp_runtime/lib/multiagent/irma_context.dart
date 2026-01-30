@@ -18,6 +18,9 @@ import 'package:glp_runtime/multiagent/variable_table.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/helpers.dart';
 import 'package:glp_runtime/multiagent/payload_serializer.dart';
+import 'package:glp_runtime/multiagent/global_send.dart';
+import 'package:glp_runtime/multiagent/global_writers_table.dart';
+import 'package:glp_runtime/multiagent/mad_helpers.dart';
 
 /// Callback for delivering messages to other agents
 ///
@@ -67,12 +70,22 @@ class IrmaContext {
   
   /// Helper routines for irmaGLP transactions
   final IrmaHelpers helpers;
-  
+
   /// Payload serializer for message encoding
   late final PayloadSerializer _serializer;
-  
+
   /// Optional callback for message delivery (set by coordinator)
   MessageDeliveryCallback? onMessageReady;
+
+  // =========================================================================
+  // madGLP Components (Phase 3)
+  // =========================================================================
+
+  /// Global writers table W_p for madGLP (tracks writers awaiting incoming assignments)
+  final GlobalWritersTable wp;
+
+  /// Registry for pending global_send goals (watches readers, sends when known)
+  final GlobalSendRegistry globalSendRegistry;
 
   // =========================================================================
   // Network Stream Tracking (Section 5.4)
@@ -86,7 +99,9 @@ class IrmaContext {
     required this.runtime,
   }) : vp = VariableTable(agentId),
        mp = MessageQueue(),
-       helpers = IrmaHelpers(agentId) {
+       helpers = IrmaHelpers(agentId),
+       wp = GlobalWritersTable(agentId),
+       globalSendRegistry = GlobalSendRegistry(agentId) {
     _serializer = PayloadSerializer(agentId);
   }
   
@@ -119,8 +134,22 @@ class IrmaContext {
   ///
   /// Phase 6: For imported writers with heap-attached entries, also stores
   /// value in entry.state so derefAddr() can return it.
+  ///
+  /// Phase 3 (madGLP): Also checks for global_send goals watching this writer's
+  /// reader and fires them if found.
   void onWriterBound(int writerId, Term value) {
     print('[DEBUG IRMA $agentId] onWriterBound: writerId=$writerId, value=$value');
+
+    // =========================================================================
+    // madGLP: Check for global_send goal (Phase 3)
+    // =========================================================================
+    // The global_send goal watches a reader. When the paired writer is bound,
+    // the reader becomes "known" and the goal fires.
+    _fireGlobalSendGoalIfExists(writerId, value);
+
+    // =========================================================================
+    // irmaGLP: Check V_p for requester (legacy model)
+    // =========================================================================
     final key = VarKey(writerId, false); // writer
     final entry = vp.lookup(key);
     if (entry == null) {
@@ -1118,6 +1147,90 @@ class IrmaContext {
     // ConstTerm has no variables
   }
   
+  // =========================================================================
+  // madGLP global_send Integration (Phase 3)
+  // =========================================================================
+
+  /// Fire global_send goal if one exists for this writer's reader
+  ///
+  /// Called when a writer is bound. Checks if there's a global_send goal
+  /// watching the paired reader and fires it if so.
+  ///
+  /// Per madGLP spec Section 4: global_send(T, G, Q) fires when T (the reader)
+  /// becomes known (bound to a non-variable term).
+  void _fireGlobalSendGoalIfExists(int writerAddr, Term value) {
+    // Extract variables from the value for globalization
+    List<TermVar> extractVars(Object? v) {
+      if (v is! Term) return [];
+      final vars = <TermVar>[];
+      _extractTermVarsRecursive(v, vars);
+      return vars;
+    }
+
+    final result = globalSendRegistry.onWriterBound(
+      writerAddr: writerAddr,
+      value: value,
+      table: wp,
+      extractVariables: extractVars,
+    );
+
+    if (result == null) {
+      // No goal was watching this reader
+      return;
+    }
+
+    print('[DEBUG IRMA $agentId] global_send FIRED: ${result.globalName} -> ${result.destination}');
+
+    // Queue the assignment message
+    // For now, use the existing message format. In full madGLP migration,
+    // this would use the new message format with GlobalName.
+    final payload = _serializer.createGlobalSendPayload(
+      result.globalName,
+      result.value as Term,
+      runtime.heap.isReader,
+      lookupVariable: _lookupVariableForSerialization,
+    );
+
+    mp.add(OutboundMessage(
+      destination: result.destination,
+      type: MessageType.assignment, // Will be updated in full migration
+      payload: payload,
+    ));
+
+    // Register any new goals spawned for nested variables
+    for (final newGoal in result.newGoals) {
+      print('[DEBUG IRMA $agentId] global_send spawned new goal: ${newGoal.globalName}');
+      globalSendRegistry.register(newGoal);
+    }
+  }
+
+  /// Extract TermVars from a term for globalization
+  void _extractTermVarsRecursive(Term term, List<TermVar> result) {
+    if (term is VarRef) {
+      final isReader = runtime.heap.isReader(term.addr);
+      if (isReader) {
+        result.add(TermVar.reader(term.addr));
+      } else {
+        result.add(TermVar.writer(term.addr));
+      }
+    } else if (term is StructTerm) {
+      for (final arg in term.args) {
+        _extractTermVarsRecursive(arg, result);
+      }
+    }
+    // ConstTerm has no variables
+  }
+
+  /// Register global_send goals from GlobalSendSpawn info
+  ///
+  /// Called after globalize() or localize() to register any spawned goals.
+  void registerGlobalSendSpawns(List<GlobalSendSpawn> spawns) {
+    globalSendRegistry.registerSpawns(spawns);
+    for (final spawn in spawns) {
+      print('[DEBUG IRMA $agentId] registered global_send goal: ${spawn.globalName} -> ${spawn.destAgent}');
+    }
+  }
+
   // =========================================================================
   // Legacy API (for backward compatibility with tests)
   // =========================================================================

@@ -10,6 +10,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
+import 'package:glp_runtime/multiagent/mad_helpers.dart';
 
 /// Global Variable ID encoding
 class GlobalVarId {
@@ -174,6 +175,90 @@ class PayloadSerializer {
     return (globalId, term);
   }
   
+  // ============================================================================
+  // Global send message payload (madGLP)
+  // ============================================================================
+
+  /// Create global_send payload: GlobalName + serialized term
+  ///
+  /// Used by madGLP global_send goals to send assignment messages.
+  /// The GlobalName identifies the link (_w(p,i) or _r(p,i)).
+  ///
+  /// Format:
+  /// - type: 1 byte (0=writer, 1=reader)
+  /// - agent: length-prefixed string
+  /// - index: variable-length int
+  /// - term: serialized term
+  ///
+  /// [isReader] callback to check if addr is a reader (use heap.isReader).
+  /// [lookupVariable] optional callback to get (creator, creatorLocalId, isReader)
+  ///   for imported variables.
+  List<int> createGlobalSendPayload(
+    GlobalName globalName,
+    Term value,
+    bool Function(int addr) isReader,
+    {({String creator, int creatorLocalId, bool isReader}) Function(int addr)? lookupVariable}
+  ) {
+    final builder = BytesBuilder();
+
+    // GlobalName type (0=writer, 1=reader)
+    builder.addByte(globalName.isWriter ? 0 : 1);
+
+    // GlobalName agent
+    final agentBytes = utf8.encode(globalName.agent);
+    builder.add(_encodeLength(agentBytes.length));
+    builder.add(agentBytes);
+
+    // GlobalName index
+    builder.add(_encodeLength(globalName.index));
+
+    // Serialized term
+    final termBytes = serializeTermWithCallbacks(value, agentId, isReader, lookupVariable: lookupVariable);
+    builder.add(termBytes);
+
+    return builder.toBytes();
+  }
+
+  /// Parse global_send payload to (GlobalName, Term)
+  ///
+  /// [allocateImportedVar] - Callback to allocate imported variable cell.
+  /// [onVariableImported] - Optional callback for variable entry creation.
+  (GlobalName, Term) deserializeGlobalSendPayload(
+    List<int> payload,
+    int Function(bool isReader) allocateImportedVar,
+    {void Function(int localAddr, bool isReader, GlobalVarId globalId, int? pairedReaderCreatorLocalId)? onVariableImported}
+  ) {
+    int offset = 0;
+
+    // GlobalName type
+    final isWriter = payload[offset] == 0;
+    offset++;
+
+    // GlobalName agent
+    final (agentLength, agentLengthSize) = _decodeLength(payload, offset);
+    offset += agentLengthSize;
+    final agentBytes = payload.sublist(offset, offset + agentLength);
+    offset += agentLength;
+    final agent = utf8.decode(agentBytes);
+
+    // GlobalName index
+    final (index, indexSize) = _decodeLength(payload, offset);
+    offset += indexSize;
+
+    // Create GlobalName
+    final globalName = isWriter
+        ? GlobalName.writer(agent, index)
+        : GlobalName.reader(agent, index);
+
+    // Parse term
+    final varMapping = <String, int>{};
+    final remainingPayload = payload.sublist(offset);
+    final (term, _) = _deserializeTermWithMappingV2(
+      remainingPayload, 0, varMapping, allocateImportedVar, onVariableImported);
+
+    return (globalName, term);
+  }
+
   // ============================================================================
   // Read request message payload
   // ============================================================================
