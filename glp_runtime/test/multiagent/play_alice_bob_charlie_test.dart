@@ -1,24 +1,50 @@
-/// Play Alice-Bob-Charlie Three-Isolate Test
+/// Full Play Alice-Bob-Charlie with Three Isolates
 ///
-/// Tests the full social graph protocol across three agents:
-///   Alice: Cold-calls Bob, sends message, accepts intro to Charlie, messages Charlie
-///   Bob: Accepts Alice, receives message, cold-calls Charlie, introduces Alice↔Charlie
-///   Charlie: Accepts Bob, sends message, accepts intro to Alice, messages Alice
+/// STATUS: WORK IN PROGRESS - Goals now execute but protocol doesn't complete
 ///
-/// ARCHITECTURE NOTE:
-/// The play_alice_bob_charlie.glp program uses network3 as a GLP-level message switch.
-/// For true multi-isolate execution, we need to replace network3 with IRMA routing.
-/// This requires monitoring each agent's NetOut stream for new msg(from, to, content)
-/// elements and routing them to the destination agent's NetIn.
+/// FIXED: Goals no longer fail immediately. The fix was to create proper
+/// reader cells for goal arguments (allocateVariable + bindVariable) instead
+/// of using storeTermOnHeap which creates ValueTag cells. GLP expects reader
+/// references for input arguments (Channel? in procedure declarations).
 ///
-/// This test currently verifies:
-/// 1. The program compiles successfully
-/// 2. The agent_init and actor procedures exist
-/// 3. Basic goal spawning works
+/// REMAINING ISSUES:
+/// 1. No messages are exchanged between agents (all "flushed 0 messages")
+/// 2. Goals complete too quickly without running the full protocol
+/// 3. Warnings: "got local VarRef at X, expected VariableEntry" suggest
+///    IRMA doesn't recognize locally-created variables
 ///
-/// Full protocol testing requires stream monitoring infrastructure (future work).
+/// ROOT CAUSE: The channel variables (userInWriter, userOutWriter, etc.)
+/// are not registered with IRMA's variable table, so when the protocol
+/// tries to write to UserOut or read from UserIn?, IRMA doesn't know
+/// these are variables that need network routing.
+///
+/// NEXT STEPS:
+/// 1. Register channel variables with IrmaContext (registerWriter, etc.)
+/// 2. Verify the network output stream (NetOut) is properly monitored
+/// 3. Add debug tracing to see where the protocol gets stuck
+///
+/// For now, the cold-call and friend-introduction isolate tests demonstrate
+/// that IRMA routing works correctly at the lower level.
+///
+/// Runs the complete social graph protocol across three Dart isolates:
+/// 1. Alice cold-calls Bob (Bob accepts)
+/// 2. Alice sends "Hi Bob, this is Alice" to Bob
+/// 3. Bob cold-calls Charlie (Charlie accepts)
+/// 4. Charlie sends "Hi Bob, this is Charlie" to Bob
+/// 5. Bob introduces Alice to Charlie (both accept)
+/// 6. Alice sends "Hi Charlie, this is Alice" to Charlie
+/// 7. Charlie responds "Hi Alice, this is Charlie" to Alice
+///
+/// Architecture:
+/// - Each agent runs in its own isolate with independent GlpRuntime
+/// - IRMA Network Transaction replaces network3 GLP procedure
+/// - Main isolate coordinates message routing between agents
+/// - Agents use registerNetworkOutput/handleNetworkMessage for cold-calls
+/// - Friend channels use standard IRMA Communicate Transaction
 
+import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
@@ -31,260 +57,326 @@ import 'package:glp_runtime/multiagent/variable_table.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/payload_serializer.dart';
 
+/// Message types for inter-isolate communication
+sealed class IsolateMessage {}
+
+class NetworkMsg extends IsolateMessage {
+  final String from;
+  final String to;
+  final List<int> payload;
+  final MessageType type;
+  NetworkMsg(this.from, this.to, this.payload, this.type);
+
+  @override
+  String toString() => 'NetworkMsg($from->$to, $type)';
+}
+
+class Ready extends IsolateMessage {
+  final String agentId;
+  final SendPort sendPort;
+  Ready(this.agentId, this.sendPort);
+}
+
+class Start extends IsolateMessage {}
+
+class Tick extends IsolateMessage {}
+
+class Status extends IsolateMessage {
+  final String agentId;
+  final String status; // 'running', 'suspended', 'completed'
+  final int goalsRemaining;
+  Status(this.agentId, this.status, this.goalsRemaining);
+}
+
+class Done extends IsolateMessage {
+  final String agentId;
+  final bool success;
+  final String? message;
+  Done(this.agentId, this.success, {this.message});
+}
+
+/// Configuration passed to agent isolate
+class AgentConfig {
+  final String agentId;
+  final String programSource;
+  final SendPort mainPort;
+
+  AgentConfig(this.agentId, this.programSource, this.mainPort);
+}
+
+/// Agent isolate entry point
+void agentIsolate(AgentConfig config) async {
+  final agentId = config.agentId;
+  final receivePort = ReceivePort();
+
+  print('[$agentId] Starting isolate');
+
+  // Compile program
+  final compiler = GlpCompiler();
+  final program = compiler.compile(config.programSource);
+  print('[$agentId] Program compiled: ${program.ops.length} ops');
+
+  // Create runtime
+  final runtime = GlpRuntime();
+  final runner = BytecodeRunner(program);
+  final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
+  final ctx = IrmaContext(agentId: agentId, runtime: runtime);
+
+  // Message routing to main isolate
+  ctx.onMessageReady = (dest, msg) {
+    print('[$agentId] Sending ${msg.type} to $dest');
+    config.mainPort.send(NetworkMsg(agentId, dest, msg.payload, msg.type));
+  };
+
+  // Allocate channels
+  // UserCh: ch(UserIn?, UserOut) - user/actor side
+  final (userInWriter, userInReader) = runtime.heap.allocateVariable();
+  final (userOutWriter, userOutReader) = runtime.heap.allocateVariable();
+
+  // NetCh: ch(NetIn?, NetOut) - network side
+  final (netInWriter, netInReader) = runtime.heap.allocateVariable();
+  final (netOutWriter, netOutReader) = runtime.heap.allocateVariable();
+
+  // Register IRMA network streams
+  ctx.registerNetworkInput(netInWriter);
+  ctx.registerNetworkOutput(netOutWriter);
+
+  print('[$agentId] Channels allocated');
+  print('[$agentId]   UserCh: in=($userInWriter,$userInReader), out=($userOutWriter,$userOutReader)');
+  print('[$agentId]   NetCh: in=($netInWriter,$netInReader), out=($netOutWriter,$netOutReader)');
+
+  // Build channel terms for agent_init
+  // Channel structure: ch(In?, Out) where In? is reader, Out is writer
+  final userCh = StructTerm('ch', [VarRef(userInReader), VarRef(userOutWriter)]);
+  final netCh = StructTerm('ch', [VarRef(netInReader), VarRef(netOutWriter)]);
+
+  // Build channel term for actor (reversed - actor writes to UserIn, reads from UserOut)
+  final actorCh = StructTerm('ch', [VarRef(userOutReader), VarRef(userInWriter)]);
+
+  // Create proper argument cells for agent_init
+  // Each argument needs a writer/reader pair - we bind the writer and pass the reader
+  // This mimics how GLP passes arguments to procedure calls
+  final (idArgWriter, idArgReader) = runtime.heap.allocateVariable();
+  final (userChArgWriter, userChArgReader) = runtime.heap.allocateVariable();
+  final (netChArgWriter, netChArgReader) = runtime.heap.allocateVariable();
+
+  // Bind the argument writers to their values
+  runtime.heap.bindVariable(idArgWriter, ConstTerm(agentId));
+  runtime.heap.bindVariable(userChArgWriter, userCh);
+  runtime.heap.bindVariable(netChArgWriter, netCh);
+
+  // Spawn agent_init goal with READER references (as GLP expects for Channel? args)
+  final agentInitPC = program.labels['agent_init/3']!;
+  runtime.setGoalEnv(1, CallEnv(args: {
+    0: VarRef(idArgReader),
+    1: VarRef(userChArgReader),
+    2: VarRef(netChArgReader),
+  }));
+  runtime.setGoalProgram(1, 'main');
+  runtime.gq.enqueue(GoalRef(1, agentInitPC));
+  print('[$agentId] Spawned agent_init with readers: id=$idArgReader, userCh=$userChArgReader, netCh=$netChArgReader');
+
+  // Spawn actor goal
+  final actorLabel = '${agentId}_actor/1';
+  final actorPC = program.labels[actorLabel];
+  if (actorPC == null) {
+    print('[$agentId] ERROR: Actor $actorLabel not found');
+    config.mainPort.send(Done(agentId, false, message: 'Actor not found'));
+    return;
+  }
+
+  // Create proper argument cell for actor
+  final (actorChArgWriter, actorChArgReader) = runtime.heap.allocateVariable();
+  runtime.heap.bindVariable(actorChArgWriter, actorCh);
+
+  runtime.setGoalEnv(2, CallEnv(args: {0: VarRef(actorChArgReader)}));
+  runtime.setGoalProgram(2, 'main');
+  runtime.gq.enqueue(GoalRef(2, actorPC));
+  print('[$agentId] Spawned $actorLabel with reader: actorCh=$actorChArgReader');
+
+  // Signal ready
+  config.mainPort.send(Ready(agentId, receivePort.sendPort));
+
+  // Message handling loop
+  await for (final msg in receivePort) {
+    if (msg is Start || msg is Tick) {
+      // Run scheduler with debug to see what's happening
+      final result = scheduler.drainWithStatus(debug: true);
+
+      // Process suspensions
+      if (result.status == ExecutionStatus.suspended) {
+        ctx.processSuspension(result.blockingReaders);
+      }
+
+      // Flush messages
+      ctx.flushMessages();
+
+      // Report status
+      final status = runtime.gq.isEmpty ? 'completed' :
+                     (result.status == ExecutionStatus.suspended ? 'suspended' : 'running');
+      config.mainPort.send(Status(agentId, status, runtime.gq.length));
+
+      if (runtime.gq.isEmpty) {
+        print('[$agentId] All goals completed');
+        config.mainPort.send(Done(agentId, true, message: 'completed'));
+      }
+
+    } else if (msg is NetworkMsg) {
+      print('[$agentId] Received ${msg.type} from ${msg.from}');
+
+      if (msg.type == MessageType.agentMessage) {
+        ctx.handleNetworkMessage(msg.from, msg.payload);
+      } else if (msg.type == MessageType.assignment) {
+        final serializer = PayloadSerializer('');
+        final (globalId, value) = serializer.deserializeAssignmentPayload(
+          msg.payload,
+          (isReader) => isReader
+            ? runtime.heap.allocateImportedReader()
+            : runtime.heap.allocateImportedWriter(),
+          onVariableImported: (localAddr, isReader, globalId, pairedReaderCreatorLocalId) {
+            ctx.attachImportedVariableEntry(localAddr, isReader, globalId, msg.from,
+              pairedReaderCreatorLocalId: pairedReaderCreatorLocalId);
+          },
+        );
+        print('[$agentId] Assignment: ${globalId.creator}:${globalId.localId} := $value');
+        ctx.handleAssignment(globalId.creator, globalId.localId, value);
+      } else if (msg.type == MessageType.readRequest) {
+        final serializer = PayloadSerializer('');
+        final varId = serializer.deserializeReadRequestPayload(msg.payload);
+        print('[$agentId] Read request for $varId from ${msg.from}');
+        ctx.handleReadRequest(varId, msg.from);
+      }
+
+      // Flush any response messages
+      ctx.flushMessages();
+    }
+  }
+}
+
 void main() {
-  group('Play Alice-Bob-Charlie', () {
-    late GlpCompiler compiler;
-    late BytecodeProgram program;
+  group('Full Play Alice-Bob-Charlie with Isolates', () {
+    late String programSource;
 
     setUpAll(() {
-      // Load and compile the play program
-      // Try multiple paths for cross-platform compatibility
       final paths = [
         '/home/user/GLP/programs/typed_book/social_graph/play_alice_bob_charlie.glp',
         '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_alice_bob_charlie.glp',
       ];
-      String source = '';
       for (final path in paths) {
         final file = File(path);
         if (file.existsSync()) {
-          source = file.readAsStringSync();
-          break;
+          programSource = file.readAsStringSync();
+          return;
         }
       }
-      if (source.isEmpty) {
-        throw Exception('Could not find play_alice_bob_charlie.glp');
-      }
-      compiler = GlpCompiler();
-      program = compiler.compile(source);
+      throw Exception('Could not find play_alice_bob_charlie.glp');
     });
 
-    test('Program compiles successfully', () {
-      print('\n=== COMPILATION TEST ===');
-      print('Program size: ${program.ops.length} ops');
-      
-      expect(program.ops.length, greaterThan(0));
-      print('✓ Program compiled');
-    });
+    test('Full protocol with IRMA routing', () async {
+      print('\n=== FULL PLAY TEST ===\n');
 
-    test('Required procedures exist', () {
-      print('\n=== PROCEDURE CHECK ===');
-      
-      // Check for required entry points
-      final requiredLabels = [
-        'agent_init/3',
-        'agent/3',
-        'alice_actor/1',
-        'bob_actor/1', 
-        'charlie_actor/1',
-        'network3/3',
-        'merge/3',
-        'lookup_send/4',
-        'play_alice_bob_charlie/0',
-      ];
+      final mainReceivePort = ReceivePort();
+      final completer = Completer<void>();
 
-      for (final label in requiredLabels) {
-        final pc = program.labels[label];
-        expect(pc, isNotNull, reason: '$label should exist');
-        print('  $label -> PC $pc');
-      }
-      print('✓ All required procedures found');
-    });
+      final agents = <String, SendPort>{};
+      final completed = <String>{};
+      var tickCount = 0;
+      const maxTicks = 100;
+      Timer? tickTimer;
 
-    test('Three agents can be created', () {
-      print('\n=== AGENT CREATION TEST ===');
+      mainReceivePort.listen((msg) {
+        if (msg is Ready) {
+          print('[MAIN] ${msg.agentId} ready');
+          agents[msg.agentId] = msg.sendPort;
 
-      // Create three agent runtimes
-      final runtimeAlice = GlpRuntime();
-      final runnerAlice = BytecodeRunner(program);
-      final schedulerAlice = Scheduler(rt: runtimeAlice, runners: {'main': runnerAlice});
-      final ctxAlice = IrmaContext(agentId: 'alice', runtime: runtimeAlice);
-      print('Alice: Runtime created');
+          if (agents.length == 3) {
+            print('[MAIN] All agents ready, starting protocol');
+            for (final port in agents.values) {
+              port.send(Start());
+            }
 
-      final runtimeBob = GlpRuntime();
-      final runnerBob = BytecodeRunner(program);
-      final schedulerBob = Scheduler(rt: runtimeBob, runners: {'main': runnerBob});
-      final ctxBob = IrmaContext(agentId: 'bob', runtime: runtimeBob);
-      print('Bob: Runtime created');
+            // Set up tick timer to drive execution
+            tickTimer = Timer.periodic(Duration(milliseconds: 50), (_) {
+              tickCount++;
+              if (tickCount > maxTicks) {
+                print('[MAIN] Max ticks reached');
+                tickTimer?.cancel();
+                if (!completer.isCompleted) {
+                  completer.completeError('Timeout after $maxTicks ticks');
+                }
+                return;
+              }
 
-      final runtimeCharlie = GlpRuntime();
-      final runnerCharlie = BytecodeRunner(program);
-      final schedulerCharlie = Scheduler(rt: runtimeCharlie, runners: {'main': runnerCharlie});
-      final ctxCharlie = IrmaContext(agentId: 'charlie', runtime: runtimeCharlie);
-      print('Charlie: Runtime created');
+              for (final port in agents.values) {
+                port.send(Tick());
+              }
+            });
+          }
 
-      expect(ctxAlice.agentId, equals('alice'));
-      expect(ctxBob.agentId, equals('bob'));
-      expect(ctxCharlie.agentId, equals('charlie'));
-      print('✓ All three agents created');
-    });
+        } else if (msg is NetworkMsg) {
+          print('[MAIN] Routing: ${msg.from} -> ${msg.to}: ${msg.type}');
+          final targetPort = agents[msg.to];
+          if (targetPort != null) {
+            targetPort.send(msg);
+          } else {
+            print('[MAIN] WARNING: Unknown destination ${msg.to}');
+          }
 
-    test('Agent channels can be allocated', () {
-      print('\n=== CHANNEL ALLOCATION TEST ===');
+        } else if (msg is Status) {
+          // Print periodic status
+          if (tickCount % 10 == 0) {
+            print('[MAIN] ${msg.agentId}: ${msg.status}, goals=${msg.goalsRemaining}');
+          }
 
-      final runtime = GlpRuntime();
-      final ctx = IrmaContext(agentId: 'alice', runtime: runtime);
+        } else if (msg is Done) {
+          print('[MAIN] ${msg.agentId} done: ${msg.message}');
+          completed.add(msg.agentId);
 
-      // Allocate UserCh: ch(UserIn, UserOut)
-      final (userInWriter, userInReader) = runtime.heap.allocateVariable();
-      final (userOutWriter, userOutReader) = runtime.heap.allocateVariable();
-      print('UserCh allocated: in=($userInWriter,$userInReader), out=($userOutWriter,$userOutReader)');
-
-      // Allocate NetCh: ch(NetIn, NetOut)
-      final (netInWriter, netInReader) = runtime.heap.allocateVariable();
-      final (netOutWriter, netOutReader) = runtime.heap.allocateVariable();
-      ctx.registerWriter(netOutWriter); // Agent owns NetOut for sending
-      print('NetCh allocated: in=($netInWriter,$netInReader), out=($netOutWriter,$netOutReader)');
-
-      // Build channel term
-      final userCh = StructTerm('ch', [VarRef(userInWriter), VarRef(userOutWriter)]);
-      final netCh = StructTerm('ch', [VarRef(netInWriter), VarRef(netOutWriter)]);
-
-      expect(userCh.functor, equals('ch'));
-      expect(netCh.functor, equals('ch'));
-      print('✓ Channel terms built successfully');
-    });
-
-    test('Goal can be spawned with correct arguments', () {
-      print('\n=== GOAL SPAWNING TEST ===');
-
-      final runtime = GlpRuntime();
-      final runner = BytecodeRunner(program);
-      final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
-
-      // Allocate channels
-      final (userInW, _) = runtime.heap.allocateVariable();
-      final (userOutW, _) = runtime.heap.allocateVariable();
-      final (netInW, _) = runtime.heap.allocateVariable();
-      final (netOutW, _) = runtime.heap.allocateVariable();
-
-      // Build channel terms
-      final userCh = StructTerm('ch', [VarRef(userInW), VarRef(userOutW)]);
-      final netCh = StructTerm('ch', [VarRef(netInW), VarRef(netOutW)]);
-
-      // Allocate heap cells for arguments (CallEnv requires VarRefs)
-      final (arg0W, _) = runtime.heap.allocateVariable();
-      runtime.heap.bindVariable(arg0W, ConstTerm('alice'));
-      final (arg1W, _) = runtime.heap.allocateVariable();
-      runtime.heap.bindVariable(arg1W, userCh);
-      final (arg2W, _) = runtime.heap.allocateVariable();
-      runtime.heap.bindVariable(arg2W, netCh);
-
-      // Set up goal
-      final agentInitPC = program.labels['agent_init/3']!;
-      runtime.setGoalEnv(1, CallEnv(args: {
-        0: VarRef(arg0W),
-        1: VarRef(arg1W),
-        2: VarRef(arg2W),
-      }));
-      runtime.setGoalProgram(1, 'main');
-      runtime.gq.enqueue(GoalRef(1, agentInitPC));
-
-      expect(runtime.gq.length, equals(1));
-      print('✓ Goal spawned: agent_init(alice, UserCh, NetCh) at PC $agentInitPC');
-
-      // Run a few cycles to verify it starts executing
-      final result = scheduler.drainWithStatus(debug: false);
-      print('Execution result: ${result.status}');
-      print('Goals spawned: ${runtime.gq.length}');
-
-      // agent_init spawns merge and agent goals
-      // With no input on streams, it may fail or suspend - both are acceptable
-      // The key is that execution started and the goal was processed
-      expect(result.status, anyOf(
-        ExecutionStatus.suspended,
-        ExecutionStatus.succeeded,
-        ExecutionStatus.failed,  // No input on streams is OK for this test
-      ));
-      print('✓ Goal execution started (status=${result.status})');
-    });
-
-    test('IRMA message routing can be configured', () {
-      print('\n=== IRMA ROUTING TEST ===');
-
-      final runtime1 = GlpRuntime();
-      final ctx1 = IrmaContext(agentId: 'alice', runtime: runtime1);
-
-      final runtime2 = GlpRuntime();
-      final ctx2 = IrmaContext(agentId: 'bob', runtime: runtime2);
-
-      final messageLog = <String>[];
-
-      // Configure routing from alice to bob
-      ctx1.onMessageReady = (destination, message) {
-        if (destination == 'bob') {
-          messageLog.add('alice -> bob: ${message.type}');
-          if (message.type == MessageType.assignment) {
-            final serializer = PayloadSerializer('alice');
-            final (globalId, value) = serializer.deserializeAssignmentPayload(
-              message.payload,
-              (bool isReader) => isReader
-                ? runtime2.heap.allocateImportedReader()
-                : runtime2.heap.allocateImportedWriter(),
-            );
-            ctx2.handleAssignment(globalId.creator, globalId.localId, value);
+          if (completed.length == 3) {
+            print('[MAIN] All agents completed!');
+            tickTimer?.cancel();
+            if (!completer.isCompleted) {
+              completer.complete();
+            }
           }
         }
-      };
+      });
 
-      // Create a writer at alice, register it with bob as requester
-      final (writerAddr, _) = runtime1.heap.allocateVariable();
-      // Register writer with requester so assignment will be sent
-      final aliceEntry = VariableEntry(
-        varId: writerAddr,
-        isReader: false,
-        creator: 'alice',
-        role: VariableRole.createdWriter,
-        requester: 'bob',  // Bob will receive the assignment
+      // Spawn agent isolates
+      print('[MAIN] Spawning isolates...');
+
+      await Isolate.spawn(
+        agentIsolate,
+        AgentConfig('alice', programSource, mainReceivePort.sendPort),
       );
-      ctx1.vp.add(VarKey(writerAddr, false), aliceEntry);
-      runtime1.heap.cells[writerAddr].content = aliceEntry;
-      print('Alice: Writer at $writerAddr (requester=bob)');
 
-      // Import at bob
-      final importedAddr = runtime2.heap.allocateImportedReader();
-      final bobEntry = VariableEntry(
-        varId: importedAddr,
-        isReader: true,
-        creator: 'alice',
-        role: VariableRole.importedReader,
-        creatorLocalId: writerAddr,
+      await Isolate.spawn(
+        agentIsolate,
+        AgentConfig('bob', programSource, mainReceivePort.sendPort),
       );
-      ctx2.vp.add(VarKey(importedAddr, true), bobEntry);
-      runtime2.heap.cells[importedAddr].content = bobEntry;
-      print('Bob: Imported reader at $importedAddr');
 
-      // Bind the writer at alice - this should trigger message to bob
-      runtime1.heap.bindVariable(writerAddr, ConstTerm('hello'));
-      ctx1.onWriterBound(writerAddr, ConstTerm('hello'));
-      ctx1.flushMessages();
+      await Isolate.spawn(
+        agentIsolate,
+        AgentConfig('charlie', programSource, mainReceivePort.sendPort),
+      );
 
-      expect(messageLog.length, greaterThan(0));
-      print('Messages sent: ${messageLog.join(", ")}');
-      print('✓ IRMA message routing works');
-    });
-  });
+      // Wait for completion
+      try {
+        await completer.future.timeout(Duration(seconds: 30));
+        print('\n=== TEST PASSED ===');
+        print('All three agents completed the full protocol');
+        print('Ticks used: $tickCount');
+      } catch (e) {
+        print('\n=== TEST FAILED ===');
+        print('Error: $e');
+        print('Completed agents: $completed');
+        rethrow;
+      } finally {
+        tickTimer?.cancel();
+        mainReceivePort.close();
+      }
 
-  group('Full Protocol Test (requires stream monitoring)', () {
-    test('TODO: Implement stream monitoring for NetOut -> IRMA routing', () {
-      print('\n=== FUTURE WORK ===');
-      print('To run the full play_alice_bob_charlie protocol across isolates:');
-      print('');
-      print('1. Each agent writes msg(from, to, content) to its NetOut stream');
-      print('2. We need to monitor NetOut for new elements');
-      print('3. When msg(alice, bob, X) appears, route X to Bob\'s NetIn via IRMA');
-      print('4. When Bob\'s NetIn receives X, bind it to his stream');
-      print('');
-      print('Options:');
-      print('a) Add heap callbacks for list-cons bindings');
-      print('b) Poll NetOut streams periodically');
-      print('c) Modify agents to use IRMA directly (changes protocol)');
-      print('');
-      print('For now, the play can be tested in single-agent mode:');
-      print('  Load play_alice_bob_charlie.glp');
-      print('  Run: play_alice_bob_charlie.');
-      
-      // Mark as pending until implemented
-      // skip('Stream monitoring not yet implemented');
+      expect(completed, containsAll(['alice', 'bob', 'charlie']));
     });
   });
 }

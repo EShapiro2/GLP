@@ -1,0 +1,19 @@
+%% Test to understand channel structure
+
+%% new_channel creates: ch(Reader, Writer), ch(Reader, Writer)
+%% where the Writers and Readers are cross-connected
+
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+%% Test procedure that examines what it receives
+test_channel(ch(A, B?)) :-
+    true |
+    println('Got channel with first='),
+    println(A),
+    println('second='),
+    println(B).
+
+%% Main
+test :- 
+    new_channel(Ch1, Ch2) |
+    test_channel(Ch1?).

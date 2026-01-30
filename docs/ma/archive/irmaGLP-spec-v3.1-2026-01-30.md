@@ -5,6 +5,8 @@
 **Status**: DRAFT  
 **Source**: GLP-ICLP-2026 Paper (`~/Grassroots/GLP-ICLP-2026/GLP_for_ICLP.pdf`), Appendix "Smartphone Implementation-ready Multiagent Transition System for GLP"
 
+**ARCHIVED**: 2026-01-30 - Superseded by madGLP-based spec v4.0
+
 ---
 
 ## 1. Overview
