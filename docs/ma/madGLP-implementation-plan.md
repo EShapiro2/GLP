@@ -609,7 +609,7 @@ void bindWriter(int writerAddr, Term value) {
 **4.1 Update Reduce Transaction**
 
 The Reduce transaction no longer directly generates outgoing messages. Instead:
-- Binding a writer triggers `global_send` callbacks (Phase 3)
+- Binding a writer triggers `global_send` goals (Phase 3)
 - Remove direct message generation from reduce
 
 **4.2 Implement Send Transaction**
@@ -655,9 +655,13 @@ void handleReceive(AssignmentMessage msg) {
     // Bind the writer
     bindWriter(entry.writerAddr, result.localizedTerm);
     
-    // Register any spawned callbacks
+    // Register any spawned goals
     for (final spawn in result.spawns) {
-      registerGlobalSendCallback(spawn);
+      _globalSendRegistry.register(GlobalSendGoal(
+        readerAddr: spawn.readerAddr,
+        globalName: spawn.globalName,
+        destination: spawn.destAgent,
+      ));
     }
     
     // Remove entry
@@ -676,9 +680,13 @@ void handleNetwork(String destination, Term term) {
   // Globalize
   final result = globalize(term, destination, table, isReader);
   
-  // Register spawned global_send callbacks
+  // Register spawned global_send goals
   for (final spawn in result.spawns) {
-    registerGlobalSendCallback(spawn);
+    _globalSendRegistry.register(GlobalSendGoal(
+      readerAddr: spawn.readerAddr,
+      globalName: spawn.globalName,
+      destination: spawn.destAgent,
+    ));
   }
   
   // Send globalized term to destination for localization
@@ -690,9 +698,13 @@ void receiveNetwork(String source, Term globalizedTerm) {
   // Localize
   final result = localize(globalizedTerm, source, table, allocatePair);
   
-  // Register spawned global_send callbacks
+  // Register spawned global_send goals
   for (final spawn in result.spawns) {
-    registerGlobalSendCallback(spawn);
+    _globalSendRegistry.register(GlobalSendGoal(
+      readerAddr: spawn.readerAddr,
+      globalName: spawn.globalName,
+      destination: spawn.destAgent,
+    ));
   }
   
   // Add to network input stream (with readers replacing variables)
@@ -772,7 +784,7 @@ All existing multiagent tests will need updates:
 
 **Integration tests:**
 1. Direct communication (client-monitor scenario)
-2. Callback scenario (value request pattern)
+2. Return value scenario (value request pattern)
 3. Both ends exported (forwarding)
 4. Friend-mediated introduction
 
