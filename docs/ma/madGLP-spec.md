@@ -1,6 +1,6 @@
 # madGLP Specification
 
-**Version**: 4.0  
+**Version**: 4.2  
 **Date**: 2026-01-30  
 **Status**: DRAFT  
 **Source**: CGLP Paper (`~/Grassroots/CGLP`), Section 7 "Multiagent Deterministic GLP (madGLP)"
@@ -57,7 +57,7 @@ The global writers table tracks local writers that await incoming assignments fr
 
 A global writers table entry at agent p is either:
 
-- **(X, q)** for entries created by Globalize: X ∈ 𝒱 is a local writer that will be assigned when a callback message arrives from agent q
+- **(X, q)** for entries created by Globalize: X ∈ 𝒱 is a local writer that will be assigned when an assignment message arrives from agent q
 - **(X, q, i)** for entries created by Localize: X ∈ 𝒱 is a local writer, q ∈ Π is the remote agent, and i ∈ ℕ is the index in q's global name (needed to match incoming messages)
 
 ### 3.2 Table Structure
@@ -108,7 +108,7 @@ Given agent p, remote agent q, and term T, the globalization by p, written T_p�
 
 1. **If Y is a writer**: allocate the next index i, replace Y in T_p↑ with `_w(p, i)`, and spawn goal `global_send(Y?, _w(p,i), q)` into p's resolvent. No entry is created—the `global_send` goal handles outgoing communication.
 
-2. **If Y? is a reader**: allocate the next index i, create entry `(Y, q)` at index i in W'_p, and replace Y? in T_p↑ with `_r(p, i)`. No goal is spawned—p will receive the callback on this link.
+2. **If Y? is a reader**: allocate the next index i, create entry `(Y, q)` at index i in W'_p, and replace Y? in T_p↑ with `_r(p, i)`. No goal is spawned—p will receive the assignment on this link.
 
 ### 5.2 Localize
 
@@ -259,7 +259,7 @@ The maGLP binary Communicate transaction, which atomically transfers an assignme
 
 ### 9.3 Global Writers Table Lifecycle
 
-An entry is added to the global writers table when a global link is established with the agent as the receiver: either when globalizing a reader (expecting a callback) or when localizing a writer global name (expecting the assignment). The entry is removed when the assignment arrives and the writer is bound.
+An entry is added to the global writers table when a global link is established with the agent as the receiver: either when globalizing a reader (expecting an assignment) or when localizing a writer global name (expecting the assignment). The entry is removed when the assignment arrives and the writer is bound.
 
 ### 9.4 Message Routing
 
@@ -302,7 +302,7 @@ q receives `_w(p,0) := [add|_w(p,1)]`:
 3. Assign Xs_q := [add|Xs1_q?]
 4. Remove entry `(Xs_q, p, 0)`
 
-### 10.2 Callback Scenario (value Request)
+### 10.2 Return Value Scenario
 
 p assigns Xs1 := [value(V?)|Xs2], exporting reader V?:
 
@@ -416,7 +416,7 @@ The following invariants are maintained by madGLP:
 
 **Entry Lifecycle**: Every global writers table entry is created exactly once (by Globalize or Localize) and removed exactly once (by Receive). An entry is never modified between creation and removal.
 
-**Callback Atomicity**: When a `global_send` goal fires, the globalization of its term value (which may spawn additional `global_send` goals for nested variables) and the addition of the message to M_p occur atomically within the same Reduce transaction.
+**Send Atomicity**: When a `global_send` goal fires, the globalization of its term value (which may spawn additional `global_send` goals for nested variables) and the addition of the message to M_p occur atomically within the same Reduce transaction.
 
 **Index Uniqueness**: Each (agent, index) pair uniquely identifies a global name. Indices are allocated sequentially and never reused, even after entry removal.
 
@@ -444,5 +444,6 @@ The security extensions from the previous specification (Section 7) remain appli
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 4.2 | 2026-01-30 | Claude | Verified alignment with revised paper. No "callback" terminology—consistently uses "assignment" throughout. |
 | 4.0 | 2026-01-30 | Claude | Complete rewrite based on madGLP design from CGLP paper. Replaced request-based model with push-based global_send mechanism. Simplified global writers table. Added Globalize/Localize operations. |
 | 4.1 | 2026-01-30 | Claude | Added Section 12 (Invariants). Clarified single-counter index allocation in Section 3.2. Added wire format clarification in Section 8.2. |
