@@ -166,6 +166,20 @@ class GlobalWritersTable {
     );
   }
 
+  /// Allocate next index without creating an entry.
+  ///
+  /// Called by Globalize when exporting a writer Y:
+  /// - Allocate index i for use in `_w(p, i)`
+  /// - No entry is created (outgoing link handled by global_send)
+  ///
+  /// Spec Section 5.1: "No entry is created—the global_send goal handles
+  /// outgoing communication."
+  ///
+  /// Returns the allocated index.
+  int allocateIndex() {
+    return _nextIndex++;
+  }
+
   /// Current index counter (for testing/debugging)
   int get nextIndex => _nextIndex;
 
