@@ -13,54 +13,77 @@ import 'machine_state.dart'; // For GoalRef
 /// Each channel has:
 /// - Input stream: Dart injects terms, GLP reads them
 /// - Output stream: GLP writes terms, Dart observes them
+///
+/// Per heap-pointer-architecture-spec.md Section 1.1:
+/// "Heap navigation follows pointers explicitly rather than computing addresses
+/// via arithmetic. There is no implicit relationship between adjacent heap addresses."
+///
+/// Therefore we store BOTH writer and reader addresses explicitly.
 class ExternalChannel {
   final String name;  // 'user' or 'net'
 
   // Input: Dart → GLP
-  // Dart holds the writer, GLP receives the reader
-  final int inputVarId;
+  // Dart holds the writer (to inject terms), GLP receives the reader
+  final int inputWriterAddr;
+  final int inputReaderAddr;
 
   // Output: GLP → Dart
-  // GLP holds the writer, Dart holds the reader
-  final int outputVarId;
+  // GLP holds the writer (to produce terms), Dart holds the reader (to observe)
+  final int outputWriterAddr;
+  final int outputReaderAddr;
 
   ExternalChannel({
     required this.name,
-    required this.inputVarId,
-    required this.outputVarId,
+    required this.inputWriterAddr,
+    required this.inputReaderAddr,
+    required this.outputWriterAddr,
+    required this.outputReaderAddr,
   });
 
   @override
-  String toString() => 'ExternalChannel($name, in=$inputVarId, out=$outputVarId)';
+  String toString() => 'ExternalChannel($name, in=($inputWriterAddr,$inputReaderAddr), out=($outputWriterAddr,$outputReaderAddr))';
 }
 
 /// Factory function to create an ExternalChannel with fresh variables
 ExternalChannel createExternalChannel(HeapFCP heap, String name) {
   // Create input stream variable (Dart=writer, GLP=reader)
   // allocateVariable returns (writerAddr, readerAddr) tuple
-  final (inputWriterAddr, _) = heap.allocateVariable();
+  final (inputWriterAddr, inputReaderAddr) = heap.allocateVariable();
 
   // Create output stream variable (GLP=writer, Dart=reader)
-  final (outputWriterAddr, _) = heap.allocateVariable();
+  final (outputWriterAddr, outputReaderAddr) = heap.allocateVariable();
 
   return ExternalChannel(
     name: name,
-    inputVarId: inputWriterAddr,  // Writer address (used as logical varId)
-    outputVarId: outputWriterAddr,  // Writer address (used as logical varId)
+    inputWriterAddr: inputWriterAddr,
+    inputReaderAddr: inputReaderAddr,
+    outputWriterAddr: outputWriterAddr,
+    outputReaderAddr: outputReaderAddr,
   );
 }
 
 /// Build ch(In, Out) term for GLP
 ///
-/// GLP receives:
-/// - In? (reader) for input stream
-/// - Out (writer) for output stream
+/// GLP HEAD pattern: agent_init(Id, ch(UserIn, UserOut?), ...)
+/// - UserIn (writer mode in HEAD) expects a READER to store
+/// - UserOut? (reader mode in HEAD) expects a WRITER to bind
+///
+/// Per bytecode spec Section 8.1-8.2:
+/// - Writer-mode HEAD position + unbound writer arg → WxW violation (FAIL)
+/// - Writer-mode HEAD position + reader arg → stores reader in clause var (OK)
+/// - Reader-mode HEAD position + writer arg → binds writer to HEAD's reader (OK)
+///
+/// Therefore: ch(Reader, Writer), NOT ch(Writer, Reader)
+///
+/// Per CGLP paper Definition 5.5: initial goal is agent(p, ch(_?, _), ch(_?, _))
+/// where _? is reader and _ is writer.
 Term buildChannelTerm(ExternalChannel channel) {
-  // inputVarId is writer address, reader is at writer + 1
-  // outputVarId is writer address (GLP holds writer)
+  // Use explicit reader/writer addresses - NO address arithmetic
+  // Per heap-pointer-architecture-spec.md: "There is no implicit relationship
+  // between adjacent heap addresses"
   return StructTerm('ch', [
-    VarRef(channel.inputVarId + 1),   // In? - GLP reads from this (reader addr)
-    VarRef(channel.outputVarId),       // Out - GLP writes to this (writer addr)
+    VarRef(channel.inputReaderAddr),   // In - READER (for writer-mode HEAD position)
+    VarRef(channel.outputWriterAddr),  // Out - WRITER (for reader-mode HEAD position)
   ]);
 }
 
@@ -245,9 +268,9 @@ class AgentIOContext {
     final userChannel = createExternalChannel(heap, 'user');
     final netChannel = createExternalChannel(heap, 'net');
 
-    // Create input injectors
-    final userInput = InputInjector(heap, 'user', userChannel.inputVarId);
-    final netInput = InputInjector(heap, 'net', netChannel.inputVarId);
+    // Create input injectors (Dart holds writer, injects via writer address)
+    final userInput = InputInjector(heap, 'user', userChannel.inputWriterAddr);
+    final netInput = InputInjector(heap, 'net', netChannel.inputWriterAddr);
 
     final context = AgentIOContext._(
       agentId: agentId,
@@ -258,11 +281,11 @@ class AgentIOContext {
       netInput: netInput,
     );
 
-    // Create output observers that collect terms
+    // Create output observers that collect terms (Dart observes via reader address)
     context.userOutput = OutputObserver(
       heap,
       'user',
-      userChannel.outputVarId,
+      userChannel.outputReaderAddr,
       (term) => context.userOutputTerms.add(term),
       () => context.userOutputClosed = true,
     );
@@ -270,7 +293,7 @@ class AgentIOContext {
     context.netOutput = OutputObserver(
       heap,
       'net',
-      netChannel.outputVarId,
+      netChannel.outputReaderAddr,
       (term) => context.netOutputTerms.add(term),
       () => context.netOutputClosed = true,
     );

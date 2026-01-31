@@ -152,6 +152,57 @@ When fixing errors or implementing features:
 - Create a plan that addresses every failure
 - Execute until all tests pass
 
+### 1.9 Spec Authority: Follow the Spec, Clarify the Spec
+
+When implementing or fixing code:
+
+1. **Follow the spec** — if the spec is clear, implement exactly what it says. Do not ask for permission to follow the spec.
+2. **If the spec is unclear** — do not ask "what is correct?" Instead, propose a clarification to the spec.
+3. **Never guess** — if you cannot determine correct behavior from the spec, that's a spec deficiency, not an implementation question.
+
+**Rationale:** The spec is the source of truth. If the spec is clear, there's nothing to discuss—just implement it. If the spec is unclear, the solution is to fix the spec, not to make ad-hoc decisions that bypass the spec-first discipline.
+
+**Correct behavior:**
+- Spec is clear → implement without asking
+- Spec is unclear → propose spec amendment
+- Spec is missing → write the spec first
+
+**Incorrect behavior:**
+- "Should I follow the spec?" (yes, always)
+- "What should I do here?" (check the spec)
+- "Is option A or B correct?" (the spec should say which)
+- Looking at existing code to determine what is "correct" when the spec is unclear
+
+**CRITICAL: Code is NEVER the source of truth.** When the spec is unclear or contradictory:
+1. STOP — do not proceed with implementation
+2. Do NOT look at existing code to find "what works"
+3. Propose a spec clarification based on first principles
+4. Discuss and resolve the spec issue
+5. Only then implement
+
+Existing code may itself be wrong. Using code as reference when the spec is unclear perpetuates errors and creates circular reasoning. The spec defines correctness; code is merely an implementation that may or may not be correct.
+
+### 1.10 Debugging Protocol: Read First, Run Second
+
+When debugging issues:
+
+1. **Read the spec first** — understand what the correct behavior should be
+2. **Read the code** — trace through the logic by reading, not running
+3. **Only run/trace if reading fails** — execution traces are a last resort, not a first step
+
+**Rationale:** Reading code forces deep understanding. Running traces produces data that still requires interpretation. Most bugs can be found faster by careful reading than by generating and analyzing traces.
+
+**Correct sequence:**
+1. Read spec to understand expected behavior
+2. Read implementation code to find deviation from spec
+3. If still unclear, add targeted trace logging
+4. Run and analyze trace output
+
+**Incorrect behavior:**
+- Immediately running tests to "see what happens"
+- Adding trace logging before understanding the code
+- Generating large trace outputs hoping to spot the problem
+
 ---
 
 ## Part II: Test Baseline Protocol
@@ -487,4 +538,7 @@ cd glp_multiagent && flutter build macos
 | 2.1 | 2026-01-18 | Added section 1.7: Bug Handling - Never Bypass, Always Report |
 | 2.2 | 2026-01-18 | Added section 6.3: Commit After Every Revision |
 | 2.3 | 2026-01-23 | Added section 1.8: Complete and Comprehensive Fixes - No Prioritization |
+| 2.4 | 2026-01-31 | Added section 1.9: Spec Authority - Follow the Spec, Clarify the Spec |
+| 2.5 | 2026-01-31 | Added section 1.10: Debugging Protocol - Read First, Run Second |
+| 2.6 | 2026-01-31 | Clarified 1.9: Code is NEVER the source of truth when spec is unclear |
 

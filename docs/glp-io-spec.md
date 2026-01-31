@@ -151,46 +151,92 @@ class ExternalChannel {
   final String name;           // 'user' or 'net'
 
   // Input: Dart → GLP
-  final int inputWriterId;     // Dart holds this writer
-  final int inputReaderId;     // GLP receives this reader
+  final int inputWriterAddr;   // Dart holds this writer (to inject terms)
+  final int inputReaderAddr;   // GLP receives this reader
 
   // Output: GLP → Dart
-  final int outputWriterId;    // GLP receives this writer
-  final int outputReaderId;    // Dart holds this reader
+  final int outputWriterAddr;  // GLP receives this writer (to produce terms)
+  final int outputReaderAddr;  // Dart holds this reader (to observe)
 }
 ```
+
+**IMPORTANT**: Per `heap-pointer-architecture-spec.md` Section 1.1: "Heap navigation follows pointers explicitly rather than computing addresses via arithmetic. There is no implicit relationship between adjacent heap addresses."
+
+Therefore, the channel stores BOTH writer and reader addresses explicitly. Code must NEVER compute one from the other (e.g., `writerAddr + 1`).
 
 ### 3.2 Creation
 
 ```dart
-ExternalChannel createExternalChannel(String name) {
-  // Create input stream variable
-  final inputVarId = heap.allocateFreshVar();
-
-  // Create output stream variable
-  final outputVarId = heap.allocateFreshVar();
+ExternalChannel createExternalChannel(HeapFCP heap, String name) {
+  // allocateVariable returns (writerAddr, readerAddr) tuple
+  final (inputWriterAddr, inputReaderAddr) = heap.allocateVariable();
+  final (outputWriterAddr, outputReaderAddr) = heap.allocateVariable();
 
   return ExternalChannel(
     name: name,
-    inputWriterId: inputVarId,
-    inputReaderId: inputVarId,   // Same ID, reader role
-    outputWriterId: outputVarId,
-    outputReaderId: outputVarId, // Same ID, reader role
+    inputWriterAddr: inputWriterAddr,
+    inputReaderAddr: inputReaderAddr,
+    outputWriterAddr: outputWriterAddr,
+    outputReaderAddr: outputReaderAddr,
   );
 }
 ```
 
 ### 3.3 Building the Channel Term for GLP
 
+The channel term follows the GLP convention `ch(Reader, Writer)`.
+
+**Reference**: Per CGLP paper (Definition 5.5, madGLP Transition System), the initial configuration has:
+```
+A_p = [agent(p, ch(_?, _), ch(_?, _))]
+```
+where `_?` denotes a reader and `_` denotes a writer. Thus `ch(_?, _)` = `ch(Reader, Writer)`.
+
+**Why ch(Reader, Writer)?**
+
+The GLP clause HEAD pattern is:
+```prolog
+agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
+```
+
+Where `UserIn` (no `?`) is a writer and `UserOut?` (with `?`) is a reader. During HEAD unification:
+
+1. **First position**: HEAD has writer `UserIn`. Per bytecode spec Section 8.1, a writer-mode position cannot receive an unbound writer (WxW violation). It CAN receive a reader - the reader term is stored in the clause variable.
+
+2. **Second position**: HEAD has reader `UserOut?`. Per bytecode spec Section 8.2, a reader-mode position expects a writer to bind.
+
+Therefore the channel **passed to the goal** must be `ch(Reader, Writer)` to match the HEAD pattern `ch(Writer, Reader?)`.
+
+**CRITICAL: Heap-Only Representation**
+
+Per `glp-bytecode-v216-complete.md`, ALL terms must be heap-allocated. The channel structure must be built on the heap, not as a Dart `StructTerm` object. The function returns a `VarRef` pointing to the heap-allocated structure.
+
 ```dart
-/// Build ch(In, Out) term for GLP
-Term buildChannelTerm(ExternalChannel channel) {
-  return StructTerm('ch', [
-    VarRef(channel.inputReaderId, isReader: true),   // In?
-    VarRef(channel.outputWriterId, isReader: false), // Out
-  ]);
+/// Build ch(In, Out) term for GLP - HEAP ALLOCATED
+///
+/// Channel convention: ch(Reader, Writer)
+/// - First element: Reader for input (Dart holds writer, GLP reads via this reader)
+/// - Second element: Writer for output (GLP binds this writer, Dart reads via paired reader)
+///
+/// Returns VarRef to heap-allocated structure (NOT a StructTerm Dart object)
+VarRef buildChannelTermOnHeap(HeapFCP heap, ExternalChannel channel) {
+  // Allocate structure cell on heap
+  final structAddr = heap.allocateStructure('ch', 2);
+
+  // Use explicit addresses - NO arithmetic (per heap-pointer-architecture-spec.md)
+  heap.setStructureArg(structAddr, 0, VarRef(channel.inputReaderAddr));   // Reader
+  heap.setStructureArg(structAddr, 1, VarRef(channel.outputWriterAddr));  // Writer
+
+  return VarRef(structAddr);
 }
 ```
+
+**Data Flow Summary**:
+
+| Direction | Dart holds | Channel contains | GLP HEAD | GLP accesses |
+|-----------|------------|------------------|----------|--------------|
+| Input (Dart→GLP) | Writer (binds values) | Reader | `UserIn` (writer mode) | `UserIn?` (reader) |
+| Output (GLP→Dart) | Reader (observes) | Writer | `UserOut?` (reader mode) | `UserOut` (paired writer, binds) |
 
 ## 4. Input: Dart → GLP
 

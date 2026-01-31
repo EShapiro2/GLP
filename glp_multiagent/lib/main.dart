@@ -1,7 +1,7 @@
-/// GLP Multiagent - irmaGLP Integration
+/// GLP Multiagent - madGLP Integration
 ///
 /// Coordinator window spawns agent windows, routes messages between them.
-/// Uses IrmaAgent for proper multiagent V_p/M_p semantics.
+/// Uses MadContext for proper multiagent W_p/M_p semantics.
 /// Supports opaque byte payloads for inter-agent communication.
 library;
 
@@ -23,13 +23,58 @@ import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/external_io.dart';
-import 'package:glp_runtime/multiagent/irma_agent.dart';
-import 'package:glp_runtime/multiagent/irma_context.dart';
+import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/payload_serializer.dart';
-import 'package:glp_runtime/multiagent/variable_table.dart';
+import 'package:glp_runtime/multiagent/global_send.dart';
 
-import 'irma_router.dart';
+import 'mad_router.dart';
+
+// =============================================================================
+// SHARED FILE LOGGER
+// =============================================================================
+
+/// Shared file logger for tracing execution across coordinator and agents
+/// Uses simple file append to avoid stream conflicts across isolates
+class TraceLogger {
+  static final TraceLogger _instance = TraceLogger._();
+  static TraceLogger get instance => _instance;
+
+  TraceLogger._();
+
+  static const String _logPath = '/tmp/glp_multiagent_trace.log';
+  bool _initialized = false;
+
+  /// Initialize the logger (call once from coordinator)
+  void init({bool clear = true}) {
+    if (_initialized) return;
+    final file = File(_logPath);
+    if (clear && file.existsSync()) {
+      file.deleteSync();
+    }
+    _initialized = true;
+    log('TRACE', '=== Logger initialized ===');
+  }
+
+  /// Log a message with source tag
+  void log(String source, String message) {
+    final timestamp = DateTime.now().toIso8601String().substring(11, 23);
+    final line = '[$timestamp] [$source] $message\n';
+    // Use sync write to avoid stream issues across processes
+    try {
+      File(_logPath).writeAsStringSync(line, mode: FileMode.append, flush: true);
+    } catch (_) {
+      // Ignore file write errors
+    }
+    // Also print to console
+    debugPrint(line.trim());
+  }
+
+  /// Close the logger (no-op for sync writes)
+  void close() {
+    _initialized = false;
+  }
+}
 
 /// Default GLP program path - using the v2 agent based on revised play protocols
 const _defaultGlpPath = '/Users/udi/Grassroots/GLP/programs/multiagent/social_agent_v2.glp';
@@ -115,36 +160,42 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   @override
   void initState() {
     super.initState();
-    IrmaRouter.instance.onLogUpdate = () {
+
+    // Initialize shared file logger
+    TraceLogger.instance.init(clear: true);
+    TraceLogger.instance.log('COORD', 'Coordinator started');
+
+    MadRouter.instance.onLogUpdate = () {
       setState(() {});
     };
 
     // Set up handler for messages from agent windows
     DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
-      debugPrint('=== COORDINATOR RECEIVED: ${call.method} from $fromWindowId ===');
-      
-      if (call.method == 'send_irma') {
-        // Handle irmaGLP binary message routing
+      TraceLogger.instance.log('COORD', 'RECEIVED: ${call.method} from window $fromWindowId');
+
+      if (call.method == 'send_mad') {
+        // Handle madGLP binary message routing
         final args = jsonDecode(call.arguments as String) as Map<String, dynamic>;
         final from = args['from'] as String;
         final to = args['to'] as String;
         final encodedPayload = args['payload'] as String;
         final payload = base64Decode(encodedPayload);
-        await IrmaRouter.instance.route(from, to, Uint8List.fromList(payload));
+        TraceLogger.instance.log('COORD', 'ROUTING: $from -> $to (${payload.length} bytes)');
+        await MadRouter.instance.route(from, to, Uint8List.fromList(payload));
       } else if (call.method == 'send') {
         // Legacy JSON message routing (for backwards compatibility)
         final args = jsonDecode(call.arguments as String) as Map<String, dynamic>;
         final from = args['from'] as String;
         final to = args['to'] as String;
         final payload = args['payload'];
-        // Convert to simple string payload for legacy support
+        TraceLogger.instance.log('COORD', 'ROUTING (legacy): $from -> $to');
         final payloadBytes = utf8.encode(jsonEncode(payload));
-        await IrmaRouter.instance.route(from, to, Uint8List.fromList(payloadBytes));
+        await MadRouter.instance.route(from, to, Uint8List.fromList(payloadBytes));
       }
       return null;
     });
 
-    _log.add('Coordinator started (irmaGLP mode)');
+    _log.add('Coordinator started (madGLP mode)');
     _log.add('GLP: $_currentGlpPath');
   }
 
@@ -203,13 +254,14 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
           'glpSource': _cachedGlpSource,
         }),
       );
-      await window.setTitle('$agentId - irmaGLP Agent');
+      await window.setTitle('$agentId - madGLP Agent');
       await window.setFrame(Rect.fromLTWH(x, y, 400, 600));
       await window.show();
 
       _windows[agentId] = window;
-      IrmaRouter.instance.register(agentId, window.windowId);
+      MadRouter.instance.register(agentId, window.windowId);
 
+      TraceLogger.instance.log('COORD', 'Spawned $agentId (window ${window.windowId})');
       _log.add('Spawned $agentId (friends=${friends.join(", ")}, window ${window.windowId})');
       setState(() {});
     } catch (e) {
@@ -232,13 +284,13 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     for (final entry in _windows.entries) {
       try {
         await entry.value.close();
-        IrmaRouter.instance.unregister(entry.key);
+        MadRouter.instance.unregister(entry.key);
       } catch (e) {
         _log.add('ERROR closing ${entry.key}: $e');
       }
     }
     _windows.clear();
-    IrmaRouter.instance.clearLog();
+    MadRouter.instance.clearLog();
     _log.add('Closed all windows');
     setState(() {});
   }
@@ -247,7 +299,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('GLP Coordinator (irmaGLP)'),
+        title: const Text('GLP Coordinator (madGLP)'),
       ),
       body: Column(
         children: [
@@ -324,10 +376,10 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
               color: Colors.grey.shade100,
               child: ListView.builder(
                 padding: const EdgeInsets.all(8.0),
-                itemCount: IrmaRouter.instance.routingLog.length,
+                itemCount: MadRouter.instance.routingLog.length,
                 itemBuilder: (context, index) {
                   return Text(
-                    IrmaRouter.instance.routingLog[index],
+                    MadRouter.instance.routingLog[index],
                     style: const TextStyle(
                       fontFamily: 'monospace',
                       fontSize: 12,
@@ -380,7 +432,7 @@ class AgentApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '$agentId - irmaGLP Agent',
+      title: '$agentId - madGLP Agent',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.orange,
@@ -433,20 +485,20 @@ class _AgentScreenState extends State<AgentScreen> {
   final FocusNode _inputFocusNode = FocusNode();
   final List<String> _outputLog = [];
 
-  // IrmaAgent wraps GlpRuntime with multiagent support
-  IrmaAgent? _agent;
+  // madGLP: GlpRuntime + MadContext for multiagent support
+  GlpRuntime? _runtime;
+  MadContext? _ctx;
   Scheduler? _scheduler;
   _MultiAgentIOContext? _ioContext;
   Map<String, BytecodeProgram> _programs = {};
   int _goalId = 1;
 
   // Pending output terms (to be dereferenced after execution)
-  // Note: Friend output is now handled via V_p onBind callbacks
   final List<rt.Term> _pendingUserOutputTerms = [];
 
   int _goalCount = 0;
   int _heapVars = 0;
-  int _vpSize = 0;
+  int _wpSize = 0;  // W_p size (global writers table)
   int _mpSize = 0;
   bool _isRunning = false;
   bool _initialized = false;
@@ -459,39 +511,45 @@ class _AgentScreenState extends State<AgentScreen> {
     _initializeRuntime();
   }
 
+  String get _tag => widget.agentId.toUpperCase();
+
   void _setupMethodChannel() {
     // Handle messages from coordinator
     DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
-      debugPrint('=== AGENT ${widget.agentId} RECEIVED: ${call.method} ===');
-      
-      if (call.method == 'deliver_irma') {
-        // Handle irmaGLP binary message
+      TraceLogger.instance.log(_tag, 'METHOD_CHANNEL: ${call.method}');
+
+      if (call.method == 'deliver_mad') {
+        // Handle madGLP binary message
         final args = jsonDecode(call.arguments as String) as Map<String, dynamic>;
         final from = args['from'] as String;
         final encodedPayload = args['payload'] as String;
         final payload = Uint8List.fromList(base64Decode(encodedPayload));
-        _onIrmaMessageReceived(from, payload);
+        TraceLogger.instance.log(_tag, 'DELIVER_MAD from $from (${payload.length} bytes)');
+        _onMadMessageReceived(from, payload);
       } else if (call.method == 'deliver') {
         // Legacy JSON message (backwards compatibility)
         final args = jsonDecode(call.arguments as String) as Map<String, dynamic>;
         final from = args['from'] as String;
         final payload = args['payload'];
+        TraceLogger.instance.log(_tag, 'DELIVER (legacy) from $from');
         _onLegacyMessageReceived(from, payload);
       }
       return null;
     });
   }
 
-  /// Handle outgoing network messages - route via IRMA
+  /// Handle outgoing network messages - route via madGLP
   ///
   /// Message formats from social_agent_v2.glp:
   /// - 2-arg msg: msg(Target, Content) - cold-call to target
   /// - 3-arg msg: msg(From, To, Content) - friend-to-friend message
   void _handleNetOutput(rt.Term term) {
-    if (_agent == null) return;
+    if (_runtime == null) return;
 
     final derefTerm = _derefTerm(term);
-    _addOutput('[NET OUT] ${_formatTerm(derefTerm)}');
+    final formatted = _formatTerm(derefTerm);
+    TraceLogger.instance.log(_tag, 'NET_OUT: $formatted');
+    _addOutput('[NET OUT] $formatted');
 
     // Parse message to get destination
     if (derefTerm is rt.StructTerm && derefTerm.functor == 'msg') {
@@ -503,54 +561,93 @@ class _AgentScreenState extends State<AgentScreen> {
         if (target is rt.ConstTerm) {
           destination = target.value?.toString();
         }
+        TraceLogger.instance.log(_tag, 'NET_OUT: 2-arg msg, target=$destination');
       } else if (derefTerm.args.length == 3) {
         // 3-arg msg: msg(From, To, Content)
         final to = _derefTerm(derefTerm.args[1]);
         if (to is rt.ConstTerm) {
           destination = to.value?.toString();
         }
+        TraceLogger.instance.log(_tag, 'NET_OUT: 3-arg msg, to=$destination');
       }
 
       if (destination != null && destination != 'user' && destination != 'net') {
-        // Route to destination agent via IRMA
+        TraceLogger.instance.log(_tag, 'NET_OUT: Sending to $destination');
         _sendAgentMessage(destination, derefTerm);
+      } else {
+        TraceLogger.instance.log(_tag, 'NET_OUT: Not routing (dest=$destination)');
       }
+    } else {
+      TraceLogger.instance.log(_tag, 'NET_OUT: Not a msg struct');
     }
   }
 
-  /// Handle incoming irmaGLP binary message
-  void _onIrmaMessageReceived(String from, Uint8List payload) {
-    _addOutput('[IRMA RECV from $from] ${payload.length} bytes');
+  /// Handle incoming madGLP binary message
+  void _onMadMessageReceived(String from, Uint8List payload) {
+    TraceLogger.instance.log(_tag, 'MAD_RECV from $from (${payload.length} bytes)');
+    _addOutput('[MAD RECV from $from] ${payload.length} bytes');
 
-    if (_agent == null || _ioContext == null) return;
+    if (_runtime == null || _ctx == null || _ioContext == null) {
+      TraceLogger.instance.log(_tag, 'MAD_RECV: ERROR - runtime/ctx/ioContext is null');
+      return;
+    }
 
     // Deserialize the outer message to check type
     final serializer = PayloadSerializer(widget.agentId.toLowerCase());
     final msg = serializer.deserializeMessage(payload);
-    
-    if (msg.type == MessageType.agentMessage) {
-      // Agent message: use the new deserializeAndImportTerm which handles
-      // single-cell allocation and VariableEntry attachment automatically
-      final term = _agent!.context.deserializeAndImportTerm(
+    TraceLogger.instance.log(_tag, 'MAD_RECV: type=${msg.type}, dest=${msg.destination}');
+
+    if (msg.type == MessageType.assignment) {
+      // madGLP assignment message
+      try {
+        final (globalName, value) = serializer.deserializeGlobalSendPayload(
+          msg.payload,
+          (isReader) {
+            final (w, r) = _runtime!.heap.allocateVariable();
+            return isReader ? r : w;
+          },
+        );
+
+        TraceLogger.instance.log(_tag, 'MAD_ASSIGN: $globalName := ${_formatTerm(value)}');
+        _addOutput('[MAD ASSIGN] $globalName := ${_formatTerm(value)}');
+
+        _ctx!.handleMadAssignment(
+          globalName: globalName,
+          value: value,
+          fromAgent: from.toLowerCase(),
+        );
+      } catch (e) {
+        TraceLogger.instance.log(_tag, 'MAD_ERROR: $e');
+        _addOutput('[MAD ERROR] $e');
+      }
+    } else if (msg.type == MessageType.agentMessage) {
+      // Cold-call agent message - deserialize and inject into NET input
+      final term = serializer.deserializeAgentMessagePayload(
         msg.payload,
-        from.toLowerCase(),
+        (isReader) {
+          final (w, r) = _runtime!.heap.allocateVariable();
+          return isReader ? r : w;
+        },
       );
-      
-      _addOutput('[AGENT MSG] ${_formatTerm(term)}');
-      
-      // Inject into the NET input stream (goes through merge with UserIn)
+
+      final formatted = _formatTerm(term);
+      TraceLogger.instance.log(_tag, 'AGENT_MSG: $formatted');
+      _addOutput('[AGENT MSG] $formatted');
+
+      // Inject into the NET input stream
+      TraceLogger.instance.log(_tag, 'INJECT into netInput');
       final activations = _ioContext!.netInput.inject(term);
+      TraceLogger.instance.log(_tag, 'INJECT: ${activations.length} activations');
       for (final goal in activations) {
-        _agent!.runtime.gq.enqueue(goal);
+        _runtime!.gq.enqueue(goal);
       }
     } else {
-      // V_p operation (assignment, readRequest, abandon) - route to IrmaAgent
-      _agent!.handleIncomingMessage(from, payload);
+      TraceLogger.instance.log(_tag, 'MAD_RECV: Unknown message type ${msg.type}');
     }
-    
+
     // Update stats
     _updateStats();
-    
+
     // Run to process any reactivated goals
     _runUntilQuiescent();
   }
@@ -559,7 +656,7 @@ class _AgentScreenState extends State<AgentScreen> {
   void _onLegacyMessageReceived(String from, dynamic payload) {
     _addOutput('[RECV from $from] $payload');
 
-    if (_ioContext == null || _agent == null) return;
+    if (_ioContext == null || _runtime == null) return;
 
     final fromLower = from.toLowerCase();
 
@@ -572,30 +669,33 @@ class _AgentScreenState extends State<AgentScreen> {
 
     final activations = _ioContext!.netInput.inject(msgTerm);
     for (final goal in activations) {
-      _agent!.runtime.gq.enqueue(goal);
+      _runtime!.gq.enqueue(goal);
     }
 
     // Run to process the message
     _runUntilQuiescent();
   }
 
-  /// Send irmaGLP binary message to coordinator for routing
-  Future<void> _sendIrmaMessage(String to, Uint8List payload) async {
-    _addOutput('[IRMA SEND to $to] ${payload.length} bytes');
+  /// Send madGLP binary message to coordinator for routing
+  Future<void> _sendMadMessage(String to, Uint8List payload) async {
+    TraceLogger.instance.log(_tag, 'SEND_MAD to $to (${payload.length} bytes)');
+    _addOutput('[MAD SEND to $to] ${payload.length} bytes');
 
     try {
       final encodedPayload = base64Encode(payload);
       await DesktopMultiWindow.invokeMethod(
         0, // Main window ID is always 0
-        'send_irma',
+        'send_mad',
         jsonEncode({
           'from': widget.agentId,
           'to': to,
           'payload': encodedPayload,
         }),
       );
+      TraceLogger.instance.log(_tag, 'SEND_MAD: sent to coordinator');
     } catch (e) {
-      _addOutput('[ERROR] Failed to send irma message: $e');
+      TraceLogger.instance.log(_tag, 'SEND_MAD ERROR: $e');
+      _addOutput('[ERROR] Failed to send mad message: $e');
     }
   }
 
@@ -621,20 +721,25 @@ class _AgentScreenState extends State<AgentScreen> {
   /// Send agent message with proper term serialization
   /// This preserves structure and variables for cross-agent communication
   Future<void> _sendAgentMessage(String to, rt.Term msgTerm) async {
-    if (_agent == null) return;
+    TraceLogger.instance.log(_tag, 'SEND_AGENT_MSG to $to: ${_formatTerm(msgTerm)}');
+    if (_runtime == null || _ctx == null) {
+      TraceLogger.instance.log(_tag, 'SEND_AGENT_MSG: ERROR - runtime/ctx is null');
+      return;
+    }
 
     try {
-      // Per spec section 4.3: register exported variables in V_p before sending
+      // Per spec section 4.3: register exported variables in W_p before sending
       // This enables Bob to route assignments for variables he creates and sends
-      _agent!.context.exportTerm(msgTerm);
+      _ctx!.exportTerm(msgTerm);
 
       // Serialize the full term (preserving structure and variables)
       final serializer = PayloadSerializer(widget.agentId.toLowerCase());
       final termPayload = serializer.createAgentMessagePayload(
         msgTerm,
-        (addr) => _agent!.runtime.heap.isReader(addr),
+        (addr) => _runtime!.heap.isReader(addr),
       );
-      
+      TraceLogger.instance.log(_tag, 'SEND_AGENT_MSG: serialized ${termPayload.length} bytes');
+
       // Wrap in OutboundMessage with agentMessage type
       final msg = OutboundMessage(
         destination: to,
@@ -642,47 +747,49 @@ class _AgentScreenState extends State<AgentScreen> {
         payload: termPayload,
       );
       final payload = serializer.serializeMessage(msg);
-      
-      await _sendIrmaMessage(to, payload);
-    } catch (e) {
+      TraceLogger.instance.log(_tag, 'SEND_AGENT_MSG: wrapped ${payload.length} bytes');
+
+      await _sendMadMessage(to, payload);
+    } catch (e, st) {
+      TraceLogger.instance.log(_tag, 'SEND_AGENT_MSG ERROR: $e\n$st');
       _addOutput('[ERROR] Failed to send agent message: $e');
     }
   }
 
   Future<void> _initializeRuntime() async {
     try {
-      _addOutput('[INIT] Creating IrmaAgent...');
+      TraceLogger.instance.log(_tag, 'INIT: Creating MadContext');
+      _addOutput('[INIT] Creating MadContext...');
       _addOutput('[INIT] Friends: ${widget.friends.join(", ")}');
 
-      // Create IrmaAgent (wraps GlpRuntime with multiagent support)
-      _agent = IrmaAgent(agentId: widget.agentId.toLowerCase());
-      
-      // Set up coordinator callback for outbound messages
-      _agent!.onSendToCoordinator = (destination, payload) async {
-        await _sendIrmaMessage(destination, payload);
-      };
-      
-      // Set up logging callback
-      _agent!.onLog = (message) {
-        debugPrint(message);
+      // Create GlpRuntime and MadContext directly
+      _runtime = GlpRuntime();
+      _ctx = MadContext(agentId: widget.agentId.toLowerCase(), runtime: _runtime!);
+      TraceLogger.instance.log(_tag, 'INIT: MadContext created');
+
+      // Set up callback for outbound madGLP messages
+      _ctx!.onMessageReady = (destination, msg) async {
+        final serializer = PayloadSerializer(widget.agentId.toLowerCase());
+        final payload = serializer.serializeMessage(msg);
+        await _sendMadMessage(destination, payload);
       };
 
       // Register standard predicates
-      registerStandardPredicates(_agent!.runtime.systemPredicates);
+      registerStandardPredicates(_runtime!.systemPredicates);
 
       // Create user and net channels
-      final userChannel = createExternalChannel(_agent!.runtime.heap, 'user');
-      final netChannel = createExternalChannel(_agent!.runtime.heap, 'net');
+      final userChannel = createExternalChannel(_runtime!.heap, 'user');
+      final netChannel = createExternalChannel(_runtime!.heap, 'net');
 
-      // Create input injectors for user and network
-      final userInput = InputInjector(_agent!.runtime.heap, 'user', userChannel.inputVarId);
-      final netInput = InputInjector(_agent!.runtime.heap, 'net', netChannel.inputVarId);
+      // Create input injectors for user and network (Dart holds writer)
+      final userInput = InputInjector(_runtime!.heap, 'user', userChannel.inputWriterAddr);
+      final netInput = InputInjector(_runtime!.heap, 'net', netChannel.inputWriterAddr);
 
-      // Create user output observer - displays to UI
+      // Create user output observer - displays to UI (Dart observes via reader)
       final userOutput = OutputObserver(
-        _agent!.runtime.heap,
+        _runtime!.heap,
         'user',
-        userChannel.outputVarId,
+        userChannel.outputReaderAddr,
         (term) {
           _pendingUserOutputTerms.add(term);
         },
@@ -694,11 +801,11 @@ class _AgentScreenState extends State<AgentScreen> {
       );
 
       // Create net output observer - watches for outgoing network messages
-      // and routes them via IRMA to the destination agent
+      // and routes them via madGLP to the destination agent (Dart observes via reader)
       final netOutput = OutputObserver(
-        _agent!.runtime.heap,
+        _runtime!.heap,
         'net',
-        netChannel.outputVarId,
+        netChannel.outputReaderAddr,
         (term) {
           _handleNetOutput(term);
         },
@@ -763,7 +870,7 @@ class _AgentScreenState extends State<AgentScreen> {
   }
 
   void _startAgentGoal(String agentId) {
-    if (_agent == null || _ioContext == null) return;
+    if (_runtime == null || _ioContext == null) return;
 
     try {
       // Combine loaded programs
@@ -775,6 +882,7 @@ class _AgentScreenState extends State<AgentScreen> {
 
       // Find entry point for agent_init/3 (v2 protocol)
       final entryPC = combinedProgram.labels['agent_init/3'];
+      TraceLogger.instance.log(_tag, 'GOAL: entryPC=$entryPC, labels=${combinedProgram.labels.keys.toList()}');
       if (entryPC == null) {
         _addOutput('[ERROR] Predicate agent_init/3 not found');
         return;
@@ -783,19 +891,24 @@ class _AgentScreenState extends State<AgentScreen> {
       // Allocate heap cells for arguments and bind values
       // CallEnv requires VarRefs to READER addresses since procedure
       // declaration is agent_init(_?, Channel?, Channel?) - all reader modes
-      final heap = _agent!.runtime.heap;
+      final heap = _runtime!.heap;
 
       // Arg 0: agentId - _? mode (reader)
       final (arg0Writer, arg0Reader) = heap.allocateVariable();
       heap.bindVariable(arg0Writer, rt.ConstTerm(agentId));
+      TraceLogger.instance.log(_tag, 'GOAL: arg0 writer=$arg0Writer reader=$arg0Reader value=$agentId');
 
       // Arg 1: userChannelTerm - Channel? mode (reader)
       final (arg1Writer, arg1Reader) = heap.allocateVariable();
-      heap.bindVariable(arg1Writer, _ioContext!.userChannelTerm);
+      final userChTerm = _ioContext!.userChannelTerm;
+      heap.bindVariable(arg1Writer, userChTerm);
+      TraceLogger.instance.log(_tag, 'GOAL: arg1 writer=$arg1Writer reader=$arg1Reader value=${_formatTerm(userChTerm)}');
 
       // Arg 2: netChannelTerm - Channel? mode (reader)
       final (arg2Writer, arg2Reader) = heap.allocateVariable();
-      heap.bindVariable(arg2Writer, _ioContext!.netChannelTerm);
+      final netChTerm = _ioContext!.netChannelTerm;
+      heap.bindVariable(arg2Writer, netChTerm);
+      TraceLogger.instance.log(_tag, 'GOAL: arg2 writer=$arg2Writer reader=$arg2Reader value=${_formatTerm(netChTerm)}');
 
       // Set up arguments: agent_init(Id, UserCh, NetCh)
       // Pass READER addresses since procedure expects reader mode arguments
@@ -807,16 +920,16 @@ class _AgentScreenState extends State<AgentScreen> {
 
       // Set up goal environment
       final env = CallEnv(args: argSlots);
-      _agent!.runtime.setGoalEnv(_goalId, env);
-      _agent!.runtime.setGoalProgram(_goalId, 'main');
+      _runtime!.setGoalEnv(_goalId, env);
+      _runtime!.setGoalProgram(_goalId, 'main');
 
       // Create scheduler
       final runner = BytecodeRunner(combinedProgram);
-      _scheduler = Scheduler(rt: _agent!.runtime, runners: {'main': runner});
+      _scheduler = Scheduler(rt: _runtime!, runners: {'main': runner});
       _scheduler!.resetDisplayNumbering();
 
       // Enqueue goal
-      _agent!.runtime.gq.enqueue(GoalRef(_goalId, entryPC));
+      _runtime!.gq.enqueue(GoalRef(_goalId, entryPC));
       _goalId++;
 
       _addOutput('[GOAL] Started agent_init($agentId, UserCh, NetCh)');
@@ -831,9 +944,9 @@ class _AgentScreenState extends State<AgentScreen> {
 
   void _sendInput() {
     final text = _inputController.text.trim();
-    debugPrint('=== _sendInput called with: "$text" ===');
-    if (text.isEmpty || _ioContext == null || _agent == null) {
-      debugPrint('=== _sendInput early return: empty=${ text.isEmpty}, ioContext=${_ioContext != null}, agent=${_agent != null} ===');
+    TraceLogger.instance.log(_tag, 'USER_INPUT: $text');
+    if (text.isEmpty || _ioContext == null || _runtime == null) {
+      TraceLogger.instance.log(_tag, 'USER_INPUT: early return (empty or not initialized)');
       return;
     }
 
@@ -843,29 +956,24 @@ class _AgentScreenState extends State<AgentScreen> {
 
     try {
       // Parse and inject term into UserIn
-      debugPrint('=== Parsing term: $text ===');
       final term = _parseTerm(text);
-      debugPrint('=== Parsed term: $term ===');
+      TraceLogger.instance.log(_tag, 'USER_INPUT: parsed -> ${_formatTerm(term)}');
 
-      debugPrint('=== Injecting into userInput ===');
       final activations = _ioContext!.userInput.inject(term);
-      debugPrint('=== Activations from inject: ${activations.length} ===');
+      TraceLogger.instance.log(_tag, 'USER_INPUT: ${activations.length} activations');
 
       // Enqueue activated goals
       for (final goal in activations) {
-        debugPrint('=== Enqueueing goal: id=${goal.id}, pc=${goal.pc} ===');
-        _agent!.runtime.gq.enqueue(goal);
+        _runtime!.gq.enqueue(goal);
       }
 
       _inputController.clear();
       _scrollToBottom();
 
       // Auto-run after injection
-      debugPrint('=== Running until quiescent ===');
       _runUntilQuiescent();
     } catch (e, st) {
-      debugPrint('=== _sendInput ERROR: $e ===');
-      debugPrint('$st');
+      TraceLogger.instance.log(_tag, 'USER_INPUT ERROR: $e\n$st');
       _addOutput('[ERROR] $e');
     }
   }
@@ -893,7 +1001,7 @@ class _AgentScreenState extends State<AgentScreen> {
     if (astTerm is ast.ConstTerm) {
       return rt.ConstTerm(astTerm.value);
     } else if (astTerm is ast.VarTerm) {
-      final (writerAddr, readerAddr) = _agent!.runtime.heap.allocateVariable();
+      final (writerAddr, readerAddr) = _runtime!.heap.allocateVariable();
       return rt.VarRef(astTerm.isReader ? readerAddr : writerAddr);
     } else if (astTerm is ast.StructTerm) {
       final args = astTerm.args.map(_astToRuntimeTerm).toList();
@@ -923,9 +1031,9 @@ class _AgentScreenState extends State<AgentScreen> {
   bool _glpTraceEnabled = false;
 
   Future<void> _runUntilQuiescent() async {
-    debugPrint('=== _runUntilQuiescent START ===');
-    if (_scheduler == null || _agent == null) {
-      debugPrint('=== _runUntilQuiescent early return: scheduler=${_scheduler != null}, agent=${_agent != null} ===');
+    TraceLogger.instance.log(_tag, 'RUN: start (GQ=${_runtime?.gq.length ?? 0})');
+    if (_scheduler == null || _runtime == null) {
+      TraceLogger.instance.log(_tag, 'RUN: early return (not initialized)');
       return;
     }
 
@@ -935,26 +1043,25 @@ class _AgentScreenState extends State<AgentScreen> {
     });
 
     try {
-      debugPrint('=== Calling drainAsyncWithStatus, GQ length=${_agent!.runtime.gq.length} ===');
       final result = await _scheduler!.drainAsyncWithStatus(
         maxCycles: 1000,
         debug: _glpTraceEnabled,
       );
-      debugPrint('=== drainAsyncWithStatus done: status=${result.status}, goalsRan=${result.goalsRan.length} ===');
+      TraceLogger.instance.log(_tag, 'RUN: status=${result.status}, goals=${result.goalsRan.length}');
       _goalCount += result.goalsRan.length;
 
       // Per spec section 5.2 Case 2: On suspension, call request(X?) for blocking readers
       if (result.status == ExecutionStatus.suspended && result.blockingReaders.isNotEmpty) {
-        debugPrint('=== Suspended with ${result.blockingReaders.length} blocking readers ===');
-        _agent!.context.processSuspension(result.blockingReaders);
-        _addOutput('[IRMA] Sent read requests for ${result.blockingReaders.length} blocking readers');
+        TraceLogger.instance.log(_tag, 'RUN: suspended, ${result.blockingReaders.length} blocking readers');
+        _ctx!.processSuspension(result.blockingReaders);
+        _addOutput('[MAD] Waiting for ${result.blockingReaders.length} blocking readers');
       }
 
-      // Flush any pending irmaGLP messages
-      final messagesFlushed = _agent!.flushMessages();
-      debugPrint('=== Flushed $messagesFlushed messages ===');
+      // Flush any pending madGLP messages
+      final messagesFlushed = _ctx!.flushMessages();
       if (messagesFlushed > 0) {
-        _addOutput('[IRMA] Flushed $messagesFlushed messages');
+        TraceLogger.instance.log(_tag, 'RUN: flushed $messagesFlushed messages');
+        _addOutput('[MAD] Flushed $messagesFlushed messages');
       }
 
       // Display pending output
@@ -965,10 +1072,9 @@ class _AgentScreenState extends State<AgentScreen> {
         _status = result.status.name;
         _updateStats();
       });
-      debugPrint('=== _runUntilQuiescent END: status=${result.status.name} ===');
+      TraceLogger.instance.log(_tag, 'RUN: done (status=${result.status.name})');
     } catch (e, st) {
-      debugPrint('=== _runUntilQuiescent ERROR: $e ===');
-      debugPrint('$st');
+      TraceLogger.instance.log(_tag, 'RUN ERROR: $e\n$st');
       setState(() {
         _isRunning = false;
         _status = 'Error: $e';
@@ -977,10 +1083,10 @@ class _AgentScreenState extends State<AgentScreen> {
   }
 
   void _updateStats() {
-    if (_agent != null) {
-      _heapVars = _agent!.runtime.heap.HP;  // Heap pointer = total cells allocated
-      _vpSize = _agent!.vp.entries.length;
-      _mpSize = _agent!.mp.totalLength;
+    if (_runtime != null && _ctx != null) {
+      _heapVars = _runtime!.heap.HP;  // Heap pointer = total cells allocated
+      _wpSize = _ctx!.wp.globalizeEntryCount + _ctx!.wp.localizeEntryCount;  // W_p size
+      _mpSize = _ctx!.mp.totalLength;
     }
   }
 
@@ -1027,10 +1133,10 @@ class _AgentScreenState extends State<AgentScreen> {
   }
 
   rt.Term _derefTerm(rt.Term term) {
-    if (_agent == null) return term;
+    if (_runtime == null) return term;
 
     if (term is rt.VarRef) {
-      final value = _agent!.runtime.heap.getValue(term.addr);
+      final value = _runtime!.heap.getValue(term.addr);
       if (value != null && value is! rt.VarRef) {
         return _derefTerm(value);
       }
@@ -1049,7 +1155,7 @@ class _AgentScreenState extends State<AgentScreen> {
       return term.value.toString();
     }
     if (term is rt.VarRef) {
-      final isReader = _agent?.runtime.heap.isReader(term.addr) ?? false;
+      final isReader = _runtime?.heap.isReader(term.addr) ?? false;
       return isReader ? 'X${term.addr}?' : 'X${term.addr}';
     }
     if (term is rt.StructTerm) {
@@ -1189,7 +1295,7 @@ class _AgentScreenState extends State<AgentScreen> {
             child: Row(
               children: [
                 Text(
-                  'G:$_goalCount H:$_heapVars V:$_vpSize M:$_mpSize',
+                  'G:$_goalCount H:$_heapVars W:$_wpSize M:$_mpSize',
                   style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 10),
                 ),
                 const SizedBox(width: 8),
