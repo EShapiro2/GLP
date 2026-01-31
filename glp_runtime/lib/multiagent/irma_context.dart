@@ -1232,9 +1232,126 @@ class IrmaContext {
   }
 
   // =========================================================================
+  // madGLP Receive Transaction (Phase 4)
+  // =========================================================================
+
+  /// Handle incoming madGLP assignment message
+  ///
+  /// Per spec Section 8.3, handles two cases:
+  ///
+  /// **Case `_w(p, i) := T`**: We localized _w(p,i), search for entry (X_q, p, i).
+  /// **Case `_r(p, i) := T`**: We globalized Y?, find entry (Y, q) at index i.
+  ///
+  /// Both cases: localize T, bind writer, register spawned goals, remove entry.
+  void handleMadAssignment({
+    required GlobalName globalName,
+    required Term value,
+    required String fromAgent,
+  }) {
+    print('[DEBUG IRMA $agentId] handleMadAssignment: $globalName := $value from $fromAgent');
+
+    if (globalName.isWriter) {
+      // Case _w(p, i) := T - we localized this, search for entry
+      _handleWriterAssignment(globalName, value, fromAgent);
+    } else {
+      // Case _r(p, i) := T - we globalized this, direct lookup
+      _handleReaderAssignment(globalName, value, fromAgent);
+    }
+  }
+
+  /// Handle _w(p, i) := T assignment (we localized _w(p,i))
+  ///
+  /// Search for LocalizeEntry with (remoteAgent=p, remoteIndex=i).
+  void _handleWriterAssignment(GlobalName globalName, Term value, String fromAgent) {
+    final entry = wp.findByRemote(globalName.agent, globalName.index);
+    if (entry == null) {
+      throw StateError(
+        'No LocalizeEntry for ${globalName}: expected entry with '
+        '(remoteAgent=${globalName.agent}, remoteIndex=${globalName.index})',
+      );
+    }
+
+    print('[DEBUG IRMA $agentId] _handleWriterAssignment: found entry, writerAddr=${entry.writerAddr}');
+
+    // Bind the writer
+    final activations = runtime.heap.bindVariable(entry.writerAddr, value);
+    print('[DEBUG IRMA $agentId] _handleWriterAssignment: bound writer, ${activations.length} activations');
+
+    // Reactivate suspended goals
+    for (final act in activations) {
+      runtime.enqueueReactivatedGoal(act);
+    }
+
+    // Remove the entry
+    wp.removeLocalizeEntry(globalName.agent, globalName.index);
+    print('[DEBUG IRMA $agentId] _handleWriterAssignment: entry removed');
+  }
+
+  /// Handle _r(p, i) := T assignment (we globalized Y?)
+  ///
+  /// Lookup GlobalizeEntry at index i (we are agent p).
+  void _handleReaderAssignment(GlobalName globalName, Term value, String fromAgent) {
+    final entry = wp.lookupByIndex(globalName.index);
+    if (entry == null) {
+      throw StateError(
+        'No GlobalizeEntry at index ${globalName.index} for ${globalName}',
+      );
+    }
+
+    print('[DEBUG IRMA $agentId] _handleReaderAssignment: found entry, writerAddr=${entry.writerAddr}');
+
+    // Bind the writer
+    final activations = runtime.heap.bindVariable(entry.writerAddr, value);
+    print('[DEBUG IRMA $agentId] _handleReaderAssignment: bound writer, ${activations.length} activations');
+
+    // Reactivate suspended goals
+    for (final act in activations) {
+      runtime.enqueueReactivatedGoal(act);
+    }
+
+    // Remove the entry
+    wp.removeGlobalizeEntry(globalName.index);
+    print('[DEBUG IRMA $agentId] _handleReaderAssignment: entry removed');
+  }
+
+  /// Handle madGLP assignment with nested global names
+  ///
+  /// Extended version that handles nested global names in the value term,
+  /// creating LocalizeEntries and spawning global_send goals as needed.
+  void handleMadAssignmentWithGlobalNames({
+    required GlobalName globalName,
+    required Term value,
+    required List<GlobalName> nestedGlobalNames,
+    required String fromAgent,
+  }) {
+    print('[DEBUG IRMA $agentId] handleMadAssignmentWithGlobalNames: $globalName with ${nestedGlobalNames.length} nested names');
+
+    // Localize the nested global names
+    final localizeResult = localize(
+      globalNames: nestedGlobalNames,
+      localAgent: agentId,
+      table: wp,
+      freshAddrAllocator: () {
+        final (w, _) = runtime.heap.allocateVariable();
+        return w;
+      },
+    );
+
+    // Register spawned goals from localization
+    registerGlobalSendSpawns(localizeResult.spawns);
+
+    // Now handle the main assignment
+    handleMadAssignment(
+      globalName: globalName,
+      value: value,
+      fromAgent: fromAgent,
+    );
+  }
+
+  // =========================================================================
   // Legacy API (for backward compatibility with tests)
   // =========================================================================
-  
+
   /// Process bindings from σ̂? (reader substitution) after Reduce
   /// 
   /// DEPRECATED: Use heap callbacks instead. This is kept for test compatibility.
