@@ -1,27 +1,19 @@
-/// Message Queue (M_p) for irmaGLP
-/// 
+/// Message Queue (M_p) for madGLP
+///
 /// Manages outbound messages from an agent to other agents.
 /// Messages are queued per destination with FIFO ordering.
-/// 
-/// Specification: /docs/ma/irmaGLP-spec.md Section 3.3
+///
+/// Specification: /docs/ma/madGLP-spec.md Section 6.1
 library;
 
 import 'dart:collection';
 
 /// Type of outbound message
 enum MessageType {
-  /// Assignment: (X?:=T, destination)
-  /// Reader X? is local to destination agent
+  /// Assignment: (G := T, destination)
+  /// G is a global name (_w(p,i) or _r(p,i)), T is the assigned term
   assignment,
-  
-  /// Read request: (request(X?, requester), destination)
-  /// Agent requests value from creator
-  readRequest,
-  
-  /// Abandon notification: (abandon(Y), destination)
-  /// Variable became unreachable
-  abandon,
-  
+
   /// Agent message: structured term sent between agents
   /// Used for friend-to-friend communication (msg/3 terms)
   agentMessage,
