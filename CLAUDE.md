@@ -1,5 +1,20 @@
 # Instructions for Claude Code (Terminal Interface)
 
+## 🔴 CRITICAL - NEVER ASSUME, ALWAYS VERIFY
+
+**Before referencing any file, path, or fact:**
+1. **VERIFY FILE EXISTS** - Use `ls`, `find`, or directory listing before referencing any file path
+2. **VERIFY FILE LOCATION** - Don't assume paths from memory or previous sessions; always check
+3. **VERIFY FILE CONTENTS** - Read the actual file before describing what's in it
+4. **VERIFY DIRECTORY STRUCTURE** - List directories before assuming their contents
+5. **NO HALLUCINATED PATHS** - If you can't verify a path exists, say so
+
+This applies to:
+- Test files and their locations
+- Source code files
+- Documentation
+- Any file or directory mentioned in instructions
+
 ## 🔴 CRITICAL - START OF EVERY CONVERSATION
 1. **READ CLAUDE.md** - Always read this file first (thoroughly)
 2. **READ DEVELOPMENT DISCIPLINE** - Read `docs/DISCIPLINE.md` for TDD/BDD standards
