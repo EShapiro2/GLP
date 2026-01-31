@@ -203,6 +203,37 @@ When debugging issues:
 - Adding trace logging before understanding the code
 - Generating large trace outputs hoping to spot the problem
 
+### 1.11 FCP Reference Architecture
+
+The GLP runtime follows the original FCP (Flat Concurrent Prolog) heap architecture. When implementing or modifying heap-related code:
+
+1. **Follow FCP first** — the FCP implementation is the reference architecture
+2. **If deviating from FCP** — raise the issue for discussion before implementing
+3. **Never reinvent** — do not design new heap mechanisms when FCP already has a solution
+
+**FCP Source Code Location:**
+```
+/Users/udi/Dropbox/Concurrent Prolog/FCP/Merged EMULATOR/
+```
+
+**Key FCP Files:**
+| File | Purpose |
+|------|---------|
+| `fcp.h` | Tag definitions (WrtTag, RoTag), cell structure, macros |
+| `emulate.c` | Main emulator loop, variable allocation (`allocate_var`) |
+| `unify.c` | Unification algorithm, UnifyTable dispatch |
+| `heap.c` | Garbage collection, heap management |
+| `macros.h` | Dereferencing macros (`deref`, `deref_ptr`, `deref_val`) |
+| `kernels.c` | Built-in operations, variable pair creation patterns |
+
+**Key FCP Design Patterns:**
+- **Bidirectional variable pairs**: Writer points to reader, reader points to writer (both directions)
+- **Tag-based dispatch**: Cell tag determines operation (WrtTag, RoTag, etc.)
+- **Dereferencing with path compression**: Follow reference chains, update pointers
+- **Suspension on readers**: Goals waiting for values suspend on the writer cell
+
+**Rationale:** FCP is a mature, proven implementation. Reinventing heap architecture leads to subtle bugs and inconsistencies. When in doubt, read the FCP source.
+
 ---
 
 ## Part II: Test Baseline Protocol
@@ -524,7 +555,9 @@ cd glp_multiagent && flutter build macos
 | Test scripts | `test/` |
 | Multiagent specs | `docs/ma/` |
 | Type system specs | `docs/type system/` |
+| Heap specs | `docs/heap/` |
 | Programs | `programs/` |
+| FCP reference source | `/Users/udi/Dropbox/Concurrent Prolog/FCP/Merged EMULATOR/` |
 
 ---
 
@@ -541,4 +574,5 @@ cd glp_multiagent && flutter build macos
 | 2.4 | 2026-01-31 | Added section 1.9: Spec Authority - Follow the Spec, Clarify the Spec |
 | 2.5 | 2026-01-31 | Added section 1.10: Debugging Protocol - Read First, Run Second |
 | 2.6 | 2026-01-31 | Clarified 1.9: Code is NEVER the source of truth when spec is unclear |
+| 2.7 | 2026-01-31 | Added section 1.11: FCP Reference Architecture |
 

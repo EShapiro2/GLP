@@ -1,11 +1,13 @@
 # GLP Heap Storage Specification - Pointer Architecture
 
-**Version**: 3.1
-**Date**: 2026-01-20
-**Status**: DRAFT - multiagent support added  
+**Version**: 3.2
+**Date**: 2026-01-31
+**Status**: DRAFT - FCP bidirectional pointers
 **Branch**: pointer-architecture
 
 This document specifies the pointer-based variable representation for GLP, replacing the arithmetic-based address scheme in v2.18. The design follows the original FCP implementation.
+
+**Reference**: FCP source at `/Users/udi/Dropbox/Concurrent Prolog/FCP/Merged EMULATOR/` (see `DISCIPLINE.md` Section 1.11)
 
 ---
 
@@ -19,12 +21,20 @@ Heap navigation follows pointers explicitly rather than computing addresses via 
 
 ### 1.2 Key Differences from v2.18
 
-| Aspect | v2.18 (Arithmetic) | v3.0 (Pointer) |
+| Aspect | v2.18 (Arithmetic) | v3.2 (Pointer/FCP) |
 |--------|-------------------|----------------|
 | Reader→Writer relationship | Implicit: reader at writerAddr+1 | Explicit: reader contains pointer to writer |
-| Writer content (unbound) | Pointer to reader | NULL or suspension queue |
+| Writer→Reader relationship | Implicit: writer at readerAddr-1 | Explicit: writer contains pointer to reader (when unbound) |
+| Writer content (unbound) | Self-pointer or null | Pointer to paired reader |
 | VarRef structure | `{varId, isReader}` | Single address; tag determines role |
-| Finding paired cell | Arithmetic: addr ± 1 | Follow pointer |
+| Finding paired cell | Arithmetic: addr ± 1 | Follow pointer (both directions) |
+
+**FCP Evidence**: In `kernels.c:522-526` and `emulate.c:114-117`, FCP allocates variable pairs with bidirectional pointers:
+```c
+*HP = Var_Word((HP+1), WrtTag);   // Writer points to reader
+HP++;
+*HP = Var_Word((HP-1), RoTag);    // Reader points to writer
+```
 
 ---
 
@@ -52,16 +62,18 @@ class HeapCell {
 ### 2.3 Content Rules by Tag
 
 **WrtTag (Writer Cell)**:
-- `null` — unbound, no suspensions
-- `SuspensionListNode` — unbound, with suspended goals waiting
-- `Pointer(addr)` — bound to value at addr (or transitively to another variable)
+- `Pointer(readerAddr)` — unbound, no suspensions, points to paired reader (FCP pattern)
+- `WriterContent(Pointer(readerAddr), SuspensionListNode)` — unbound with suspensions, preserves reader pointer
+- `Pointer(valueAddr)` — bound to value at addr (or transitively to another variable via reader)
 
 **RoTag (Reader Cell)**:
-- `Pointer(writerAddr)` — points to paired writer (always, unless bound)
+- `Pointer(writerAddr)` — points to paired writer (always)
 - `Pointer(valueAddr)` — after path compression, may point directly to value
 
 **ValueTag (Ground Value)**:
 - `Term` — the bound ground term (ConstTerm or StructTerm)
+
+**FCP Pattern**: Both cells point to each other. This enables navigation in both directions without address arithmetic. When suspensions are added to an unbound writer, the reader pointer is preserved in a compound `WriterContent` structure.
 
 ---
 
@@ -72,13 +84,15 @@ class HeapCell {
 ```dart
 /// Allocate a fresh local variable.
 /// Returns (writerAddr, readerAddr).
+///
+/// FCP pattern: Both cells point to each other (bidirectional).
 (int, int) allocateVariable() {
   final writerAddr = HP;
   final readerAddr = HP + 1;
   HP += 2;
 
-  // Writer cell: initially unbound (null content)
-  cells.add(HeapCell(null, CellTag.WrtTag));
+  // Writer cell: points to its reader (FCP pattern)
+  cells.add(HeapCell(Pointer(readerAddr), CellTag.WrtTag));
 
   // Reader cell: points to its writer
   cells.add(HeapCell(Pointer(writerAddr), CellTag.RoTag));
@@ -87,7 +101,11 @@ class HeapCell {
 }
 ```
 
-**Key point**: The reader points TO the writer. The writer does NOT point to the reader. This is the opposite of v2.18.
+**Key point (FCP pattern)**: Both cells point to each other:
+- Reader points TO the writer (for dereferencing to find value)
+- Writer points TO the reader (for finding paired reader without arithmetic)
+
+This enables `readerForWriter(writerAddr)` to simply follow the pointer, eliminating all `+1` arithmetic.
 
 ### 3.2 Variable Reference
 
@@ -145,16 +163,27 @@ Object derefAddr(int startAddr) {
         throw StateError('Reader cell has invalid content: ${cell.content}');
 
       case CellTag.WrtTag:
-        if (cell.content == null || cell.content is SuspensionListNode) {
-          // Unbound writer - this is the final target
+        // Case 1: Unbound without suspensions - pointer to paired reader
+        if (cell.content is Pointer) {
+          final target = (cell.content as Pointer).targetAddr;
+          // Check if pointer is to paired reader (unbound) or to bound value
+          if (cells[target].tag == CellTag.RoTag &&
+              cells[target].content is Pointer &&
+              (cells[target].content as Pointer).targetAddr == current) {
+            // Points to paired reader which points back - this is unbound
+            finalAddr = current;
+            finalValue = VarRef(current);
+            break;
+          }
+          // Bound to another cell - follow
+          current = target;
+          continue;
+        }
+        // Case 2: Unbound with suspensions - compound content
+        if (cell.content is WriterContent) {
           finalAddr = current;
           finalValue = VarRef(current);
           break;
-        }
-        if (cell.content is Pointer) {
-          // Bound to another cell - follow
-          current = (cell.content as Pointer).targetAddr;
-          continue;
         }
         throw StateError('Writer cell has invalid content: ${cell.content}');
 
@@ -290,20 +319,36 @@ void suspendOnReader(int readerAddr, SuspensionRecord record) {
   // Follow reader's pointer to find writer
   final cell = cells[readerAddr];
   assert(cell.tag == CellTag.RoTag);
-  
+
   final writerAddr = (cell.content as Pointer).targetAddr;
   final writerCell = cells[writerAddr];
-  
+
   // Create suspension node
   final node = SuspensionListNode(record);
-  
-  // Prepend to writer's suspension list
-  if (writerCell.content is SuspensionListNode) {
-    node.next = writerCell.content as SuspensionListNode;
+
+  // Add to writer's suspension list, preserving reader pointer
+  if (writerCell.content is WriterContent) {
+    // Compound content: (readerPointer, suspensionList)
+    final content = writerCell.content as WriterContent;
+    node.next = content.suspensions;
+    content.suspensions = node;
+  } else if (writerCell.content is Pointer) {
+    // First suspension: convert to compound content
+    final readerPtr = writerCell.content as Pointer;
+    writerCell.content = WriterContent(readerPtr, node);
   }
-  writerCell.content = node;
+}
+
+/// Compound content for unbound writer with suspensions
+class WriterContent {
+  final Pointer readerPointer;  // Preserved pointer to paired reader
+  SuspensionListNode? suspensions;
+
+  WriterContent(this.readerPointer, this.suspensions);
 }
 ```
+
+**Note**: The writer must preserve its pointer to the paired reader even when suspensions are added. This enables `readerForWriter()` to work at any time.
 
 ### 6.2 Suspension List Structure
 
@@ -380,43 +425,70 @@ int writerForReader(int readerAddr) {
 }
 ```
 
-### 7.2 Writer → Reader
+### 7.2 Writer → Reader (FCP Pattern)
 
-There is no direct pointer from writer to reader. To find the paired reader, you need the original allocation return value. Alternatively, if the allocation invariant holds (reader is at writerAddr + 1), you can compute it:
+Follow the writer's pointer to find its paired reader:
 
 ```dart
-int readerForWriter(int writerAddr) {
-  // Only valid for locally allocated pairs
-  // For imported writers, there is no local reader
-  return writerAddr + 1;
+int? readerForWriter(int writerAddr) {
+  final cell = cells[writerAddr];
+  assert(cell.tag == CellTag.WrtTag);
+
+  // Case 1: Unbound without suspensions - direct pointer to reader
+  if (cell.content is Pointer) {
+    final target = (cell.content as Pointer).targetAddr;
+    // Verify it's the paired reader (points back to this writer)
+    if (cells[target].tag == CellTag.RoTag) {
+      return target;
+    }
+    // Writer is bound to something else, no direct reader access
+    return null;
+  }
+
+  // Case 2: Unbound with suspensions - compound content preserves reader pointer
+  if (cell.content is WriterContent) {
+    return (cell.content as WriterContent).readerPointer.targetAddr;
+  }
+
+  // Case 3: Bound or invalid - no reader access
+  return null;
 }
 ```
 
-**Note**: This arithmetic is only valid at allocation time for local variables. Once variables are bound or chains are formed, the relationship may not hold. For general navigation, always follow pointers.
+**FCP Pattern**: The writer points to its paired reader. No address arithmetic (`+1`) is ever needed.
+
+**Bound writers**: Once a writer is bound to a value (not its paired reader), the pointer changes. The paired reader can still be found by following the reader→writer→... chain backward, but this is rarely needed.
+
+**Suspension handling**: When suspensions are added to an unbound writer, the reader pointer is preserved in a `WriterContent` compound structure (see Section 6.1).
 
 ---
 
 ## 8. Heap Diagram
 
-### 8.1 Unbound Variable
+### 8.1 Unbound Variable (FCP Pattern)
 
 ```
 +-------+-------+
-| WrtTag| null  |  ← Writer (addr 0): unbound, no suspensions
+| WrtTag| Ptr(1)|  ← Writer (addr 0): points to reader (FCP pattern)
 +-------+-------+
 | RoTag | Ptr(0)|  ← Reader (addr 1): points to writer
 +-------+-------+
 ```
+
+Both cells point to each other. To check if unbound: follow writer's pointer, verify target is reader that points back.
 
 ### 8.2 Unbound Variable with Suspension
 
 ```
-+-------+-------+
-| WrtTag| SusQ  |  ← Writer (addr 0): unbound, with suspension queue
-+-------+-------+
-| RoTag | Ptr(0)|  ← Reader (addr 1): points to writer
-+-------+-------+
++-------+-----------+
+| WrtTag| (Ptr(1),  |  ← Writer (addr 0): reader pointer + suspension queue
+|       |  SusQ)    |
++-------+-----------+
+| RoTag | Ptr(0)    |  ← Reader (addr 1): points to writer
++-------+-----------+
 ```
+
+The writer preserves the pointer to reader even when suspensions are added.
 
 ### 8.3 Writer Bound to Ground Value
 
@@ -440,7 +512,7 @@ Variable X (addrs 0,1):
 
 Variable Y (addrs 2,3):
 +-------+-------+
-| WrtTag| null  |  ← Writer Y: unbound
+| WrtTag| Ptr(3)|  ← Writer Y: unbound, points to reader Y?
 +-------+-------+
 | RoTag | Ptr(2)|  ← Reader Y?: points to writer Y
 +-------+-------+
@@ -449,7 +521,7 @@ Variable Y (addrs 2,3):
 Dereferencing X (addr 0):
 1. addr 0 is WrtTag with Ptr(3) → follow to addr 3
 2. addr 3 is RoTag with Ptr(2) → follow to addr 2
-3. addr 2 is WrtTag with null → return VarRef(2)
+3. addr 2 is WrtTag with Ptr(3) → check: addr 3 is RoTag pointing back to addr 2 → unbound, return VarRef(2)
 
 ---
 
@@ -475,6 +547,12 @@ class VarRef extends Term {
 ### 9.2 Address Arithmetic Removal
 
 All instances of `writerAddr + 1` or `readerAddr - 1` must be replaced with explicit pointer following.
+
+**CRITICAL**: Code must NEVER use address arithmetic to navigate between writer and reader. Always use:
+- `writerForReader(readerAddr)` — follow reader's pointer
+- `readerForWriter(writerAddr)` — follow writer's pointer (FCP pattern)
+
+The `+1` pattern was a workaround for the old spec that had writers pointing to `null`. With the FCP bidirectional pointer pattern, this arithmetic is never needed.
 
 ### 9.3 Affected Code Locations
 
@@ -512,3 +590,4 @@ When `derefAddr` encounters an imported reader (cell content is VariableEntry), 
 |---------|------|---------|
 | 3.0 | 2026-01-20 | Pointer architecture specification (replaces arithmetic-based v2.18) |
 | 3.1 | 2026-01-20 | Added VariableEntry as derefAddr return type for imported readers (Section 4.2, 10) |
+| 3.2 | 2026-01-31 | FCP bidirectional pointers: writer points to reader (Sections 1.2, 2.3, 3.1, 7.2, 8.x, 9.2). Eliminates all `+1` arithmetic. |
