@@ -683,8 +683,8 @@ void _setupConjunctionArg(
 
     if (existingId != null) {
       if (debugOutput) print('[DEBUG] Reusing var $baseName: ${arg.isReader ? "R" : "W"}$existingId');
-      // existingId is always writer addr; add 1 for reader addr
-      argSlots[argSlot] = rt.VarRef(arg.isReader ? existingId + 1 : existingId);
+      // existingId is always writer addr; use readerForWriter() for reader addr (FCP pattern)
+      argSlots[argSlot] = rt.VarRef(arg.isReader ? runtime.heap.pairedReaderAddr(existingId) : existingId);
     } else {
       final (writerId, readerId) = runtime.heap.allocateVariable();
       varNameToId[baseName] = writerId;
@@ -738,8 +738,8 @@ rt.Term _buildStructTermForConj(
       final existingId = varNameToId[baseName];
 
       if (existingId != null) {
-        // existingId is always writer addr; add 1 for reader addr
-        argTerms.add(rt.VarRef(arg.isReader ? existingId + 1 : existingId));
+        // existingId is always writer addr; use readerForWriter() for reader addr (FCP pattern)
+        argTerms.add(rt.VarRef(arg.isReader ? runtime.heap.pairedReaderAddr(existingId) : existingId));
       } else {
         final (writerId, readerId) = runtime.heap.allocateVariable();
         varNameToId[baseName] = writerId;
@@ -792,8 +792,8 @@ rt.Term _buildListTermForConj(
     final baseName = head.name;
     final existingId = varNameToId[baseName];
     if (existingId != null) {
-      // existingId is always writer addr; add 1 for reader addr
-      headTerm = rt.VarRef(head.isReader ? existingId + 1 : existingId);
+      // existingId is always writer addr; use readerForWriter() for reader addr (FCP pattern)
+      headTerm = rt.VarRef(head.isReader ? runtime.heap.pairedReaderAddr(existingId) : existingId);
     } else {
       final (writerId, readerId) = runtime.heap.allocateVariable();
       varNameToId[baseName] = writerId;
@@ -817,8 +817,8 @@ rt.Term _buildListTermForConj(
     final baseName = tail.name;
     final existingId = varNameToId[baseName];
     if (existingId != null) {
-      // existingId is always writer addr; add 1 for reader addr
-      tailTerm = rt.VarRef(tail.isReader ? existingId + 1 : existingId);
+      // existingId is always writer addr; use readerForWriter() for reader addr (FCP pattern)
+      tailTerm = rt.VarRef(tail.isReader ? runtime.heap.pairedReaderAddr(existingId) : existingId);
     } else {
       final (writerId, readerId) = runtime.heap.allocateVariable();
       varNameToId[baseName] = writerId;
@@ -849,10 +849,10 @@ void _setupArgument(
 
     if (existingId != null) {
       if (debugOutput) print('[DEBUG] Existing var $baseName: ${arg.isReader ? "R" : "W"}$existingId');
-      // existingId is always writer addr; add 1 for reader addr
-      argSlots[argSlot] = rt.VarRef(arg.isReader ? existingId + 1 : existingId);
+      // existingId is always writer addr; use readerForWriter() for reader addr (FCP pattern)
+      argSlots[argSlot] = rt.VarRef(arg.isReader ? runtime.heap.pairedReaderAddr(existingId) : existingId);
     } else {
-      final (writerId, _) = runtime.heap.allocateVariable();
+      final (writerId, readerId) = runtime.heap.allocateVariable();
       varNameToId[baseName] = writerId;
 
       if (!arg.isReader) {
@@ -860,8 +860,8 @@ void _setupArgument(
       }
 
       if (debugOutput) print('[DEBUG] New var $baseName: ${arg.isReader ? "R" : "W"}$writerId');
-      // writerId is writer addr; add 1 for reader addr
-      argSlots[argSlot] = rt.VarRef(arg.isReader ? writerId + 1 : writerId);
+      // Use readerId from allocation for reader addr (FCP pattern)
+      argSlots[argSlot] = rt.VarRef(arg.isReader ? readerId : writerId);
     }
   } else if (arg is ListTerm) {
     final (writerId, readerId) = runtime.heap.allocateVariable();
@@ -906,17 +906,17 @@ rt.Term _buildStructTerm(GlpRuntime runtime, StructTerm struct, Map<String, int>
 
       if (existingId != null) {
         if (debugOutput) print('[DEBUG REPL]   Reusing: ${arg.isReader ? "R" : "W"}$existingId');
-        // existingId is always writer addr; add 1 for reader addr
-        argTerms.add(rt.VarRef(arg.isReader ? existingId + 1 : existingId));
+        // existingId is always writer addr; use readerForWriter() for reader addr (FCP pattern)
+        argTerms.add(rt.VarRef(arg.isReader ? runtime.heap.pairedReaderAddr(existingId) : existingId));
       } else {
-        final (writerId, _) = runtime.heap.allocateVariable();
+        final (writerId, readerId) = runtime.heap.allocateVariable();
         varNameToId[baseName] = writerId;
         if (debugOutput) print('[DEBUG REPL]   Creating fresh: W$writerId');
         if (!arg.isReader) {
           queryVarWriters[baseName] = writerId;
         }
-        // writerId is writer addr; add 1 for reader addr
-        argTerms.add(rt.VarRef(arg.isReader ? writerId + 1 : writerId));
+        // Use readerId from allocation for reader addr (FCP pattern)
+        argTerms.add(rt.VarRef(arg.isReader ? readerId : writerId));
       }
     } else if (arg is ListTerm) {
       if (arg.isNil) {
@@ -957,16 +957,16 @@ rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> query
     final baseName = head.name;
     final existingId = varNameToId[baseName];
     if (existingId != null) {
-      // existingId is always writer addr; add 1 for reader addr
-      headTerm = rt.VarRef(head.isReader ? existingId + 1 : existingId);
+      // existingId is always writer addr; use readerForWriter() for reader addr (FCP pattern)
+      headTerm = rt.VarRef(head.isReader ? runtime.heap.pairedReaderAddr(existingId) : existingId);
     } else {
-      final (writerId, _) = runtime.heap.allocateVariable();
+      final (writerId, readerId) = runtime.heap.allocateVariable();
       varNameToId[baseName] = writerId;
       if (!head.isReader) {
         queryVarWriters[baseName] = writerId;
       }
-      // writerId is writer addr; add 1 for reader addr
-      headTerm = rt.VarRef(head.isReader ? writerId + 1 : writerId);
+      // Use readerId from allocation for reader addr (FCP pattern)
+      headTerm = rt.VarRef(head.isReader ? readerId : writerId);
     }
   } else if (head is ListTerm) {
     headTerm = _buildListTerm(runtime, head, queryVarWriters, varNameToId);
@@ -983,16 +983,16 @@ rt.Term _buildListTerm(GlpRuntime runtime, ListTerm list, Map<String, int> query
     final baseName = tail.name;
     final existingId = varNameToId[baseName];
     if (existingId != null) {
-      // existingId is always writer addr; add 1 for reader addr
-      tailTerm = rt.VarRef(tail.isReader ? existingId + 1 : existingId);
+      // existingId is always writer addr; use readerForWriter() for reader addr (FCP pattern)
+      tailTerm = rt.VarRef(tail.isReader ? runtime.heap.pairedReaderAddr(existingId) : existingId);
     } else {
-      final (writerId, _) = runtime.heap.allocateVariable();
+      final (writerId, readerId) = runtime.heap.allocateVariable();
       varNameToId[baseName] = writerId;
       if (!tail.isReader) {
         queryVarWriters[baseName] = writerId;
       }
-      // writerId is writer addr; add 1 for reader addr
-      tailTerm = rt.VarRef(tail.isReader ? writerId + 1 : writerId);
+      // Use readerId from allocation for reader addr (FCP pattern)
+      tailTerm = rt.VarRef(tail.isReader ? readerId : writerId);
     }
   } else {
     tailTerm = rt.ConstTerm(null);

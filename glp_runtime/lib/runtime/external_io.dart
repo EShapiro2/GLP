@@ -111,7 +111,7 @@ class InputInjector {
     final (tailWriterAddr, _) = heap.allocateVariable();
 
     // Build list cell: [term | tail] using '.' functor (GLP cons convention)
-    // Tail is a writer (reader at tailWriterAddr + 1)
+    // Tail is a writer (per FCP pattern, use readerForWriter() if reader needed)
     final listCell = StructTerm('.', [term, VarRef(tailWriterAddr)]);
 
     // Bind current writer to list cell - this may wake suspended goals

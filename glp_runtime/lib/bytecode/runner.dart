@@ -284,7 +284,8 @@ class BytecodeRunner {
 
       // Per GLP semantics: goals suspend on READERS, not writers
       // If the final unbound var is a writer, return its paired reader
-      final readerAddr = isWriter ? finalAddr + 1 : finalAddr;
+      // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+      final readerAddr = isWriter ? cx.rt.heap.pairedReaderAddr(finalAddr) : finalAddr;
       if (cx.debugOutput) print('[DEBUG _finalUnboundVar] Final var: $finalAddr (${isWriter ? "writer" : "reader"}), returning reader: $readerAddr');
       return readerAddr;
     }
@@ -614,7 +615,8 @@ class BytecodeRunner {
               if (op.isReader && existingValue is int) {
                 // Reader mode with variable address - wrap in VarRef
                 // existingValue is a writer addr; for reader mode, use reader addr
-                struct.args[cx.S] = VarRef(existingValue + 1);  // reader addr = writer addr + 1
+                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(existingValue));
               } else {
                 // Use value as is
                 struct.args[cx.S] = existingValue;
@@ -1279,7 +1281,7 @@ class BytecodeRunner {
                   final targetSlot = cx.clauseVars[-2];
                   if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
                     // Put a reader reference to the structure in the target arg slot
-                    cx.argSlots[targetSlot] = VarRef(targetWriterId + 1);  // reader addr = writer addr + 1
+                    cx.argSlots[targetSlot] = VarRef(cx.rt.heap.pairedReaderAddr(targetWriterId));  // reader addr via readerForWriter
                     cx.clauseVars.remove(-2);
                   }
 
@@ -1423,16 +1425,19 @@ class BytecodeRunner {
                   struct.args[cx.S] = clauseVarValue;
                 }
               } else if (isReaderMode && cx.rt.heap.isWriter(addr)) {
-                struct.args[cx.S] = VarRef(addr + 1);  // reader addr
+                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(addr));  // reader addr
               } else if (!isReaderMode && cx.rt.heap.isReader(addr)) {
-                struct.args[cx.S] = VarRef(addr - 1);  // writer addr
+                // Per spec v3.2: use tryWriterForReader() instead of -1 arithmetic
+                struct.args[cx.S] = VarRef(cx.rt.heap.tryWriterForReader(addr)!);  // writer addr
               } else {
                 struct.args[cx.S] = VarRef(addr);  // mode already matches
               }
             } else if (clauseVarValue is int) {
               // Bare writer addr - create VarRef with appropriate mode
               if (isReaderMode) {
-                struct.args[cx.S] = VarRef(clauseVarValue + 1);  // reader addr
+                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(clauseVarValue));  // reader addr
               } else {
                 struct.args[cx.S] = VarRef(clauseVarValue);  // writer addr
               }
@@ -1489,16 +1494,19 @@ class BytecodeRunner {
                   struct.args[cx.S] = clauseVarValue;
                 }
               } else if (isReaderMode && cx.rt.heap.isWriter(addr)) {
-                struct.args[cx.S] = VarRef(addr + 1);  // reader addr
+                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(addr));  // reader addr
               } else if (!isReaderMode && cx.rt.heap.isReader(addr)) {
-                struct.args[cx.S] = VarRef(addr - 1);  // writer addr
+                // Per spec v3.2: use tryWriterForReader() instead of -1 arithmetic
+                struct.args[cx.S] = VarRef(cx.rt.heap.tryWriterForReader(addr)!);  // writer addr
               } else {
                 struct.args[cx.S] = VarRef(addr);  // mode matches
               }
             } else if (clauseVarValue is int) {
               // Bare writer addr - create VarRef with requested mode
               if (isReaderMode) {
-                struct.args[cx.S] = VarRef(clauseVarValue + 1);  // reader addr
+                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(clauseVarValue));  // reader addr
               } else {
                 struct.args[cx.S] = VarRef(clauseVarValue);  // writer addr
               }
@@ -1557,7 +1565,8 @@ class BytecodeRunner {
 
                   if (parent.structure is StructTerm) {
                     final parentStruct = parent.structure as StructTerm;
-                    parentStruct.args[parent.s] = VarRef(nestedWriterAddr + 1);  // reader addr
+                    // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                    parentStruct.args[parent.s] = VarRef(cx.rt.heap.pairedReaderAddr(nestedWriterAddr));  // reader addr
                   }
 
                   cx.currentStructure = parent.structure;
@@ -1583,7 +1592,8 @@ class BytecodeRunner {
                         final ancestor = cx.parentStack.removeLast();
                         if (ancestor.structure is StructTerm) {
                           final ancestorStruct = ancestor.structure as StructTerm;
-                          ancestorStruct.args[ancestor.s] = VarRef(currentWriterAddrInt + 1);  // reader addr
+                          // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                          ancestorStruct.args[ancestor.s] = VarRef(cx.rt.heap.pairedReaderAddr(currentWriterAddrInt));  // reader addr
                         }
                         cx.currentStructure = ancestor.structure;
                         cx.S = ancestor.s + 1;
@@ -1593,7 +1603,8 @@ class BytecodeRunner {
                         // No more ancestors - store in argSlots and reset
                         final parentTargetSlot = cx.clauseVars[-2];
                         if (parentTargetSlot is int && parentTargetSlot >= 0 && parentTargetSlot < 10) {
-                          cx.argSlots[parentTargetSlot] = VarRef(currentWriterAddrInt + 1);  // reader addr
+                          // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                          cx.argSlots[parentTargetSlot] = VarRef(cx.rt.heap.pairedReaderAddr(currentWriterAddrInt));  // reader addr
                           cx.clauseVars.remove(-2);
                         }
                         cx.currentStructure = null;
@@ -1611,7 +1622,8 @@ class BytecodeRunner {
                   // No parent - store in argSlots and reset
                   final targetSlot = cx.clauseVars[-2];
                   if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
-                    cx.argSlots[targetSlot] = VarRef(targetWriterAddr! + 1);  // reader addr
+                    // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                    cx.argSlots[targetSlot] = VarRef(cx.rt.heap.pairedReaderAddr(targetWriterAddr!));  // reader addr
                     cx.clauseVars.remove(-2);
                   }
                   cx.currentStructure = null;
@@ -1657,11 +1669,13 @@ class BytecodeRunner {
                     } else if (existingValue is VarRef) {
                       // Existing VarRef - bind writer to reader of it
                       final addr = existingValue.addr;
-                      final readerAddr = cx.rt.heap.isWriter(addr) ? addr + 1 : addr;
+                      // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                      final readerAddr = cx.rt.heap.isWriter(addr) ? cx.rt.heap.pairedReaderAddr(addr) : addr;
                       cx.sigmaHat[value.addr] = VarRef(readerAddr);
                     } else if (existingValue is int) {
                       // Bare writer addr - bind writer to reader of it
-                      cx.sigmaHat[value.addr] = VarRef(existingValue + 1);  // reader addr
+                      // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                      cx.sigmaHat[value.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existingValue));  // reader addr
                     }
                     cx.S++;
                   } else {
@@ -1771,10 +1785,12 @@ class BytecodeRunner {
           if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
             if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
               // Both are writers - bind arg writer to existing writer's reader
-              cx.sigmaHat[arg.addr] = VarRef(existing.addr + 1);  // reader addr
+              // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+              cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing.addr));  // reader addr
             } else if (existing is int) {
               // existing is bare writer addr - bind arg to reader of it
-              cx.sigmaHat[arg.addr] = VarRef(existing + 1);  // reader addr
+              // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+              cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing));  // reader addr
             } else {
               // First occurrence: goal writer vs head writer
               // Store the goal's writer reference - clause can bind through it
@@ -1863,10 +1879,12 @@ class BytecodeRunner {
               if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable binding writer W${arg.addr} to existing value $existing');
               if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
                 // existing is a writer - bind to its reader
-                cx.sigmaHat[arg.addr] = VarRef(existing.addr + 1);  // reader addr
+                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing.addr));  // reader addr
               } else if (existing is int) {
                 // existing is bare writer addr - bind to reader of it
-                cx.sigmaHat[arg.addr] = VarRef(existing + 1);  // reader addr
+                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing));  // reader addr
               } else {
                 // existing is already a reader or a term - use as-is
                 cx.sigmaHat[arg.addr] = existing;
@@ -1999,7 +2017,8 @@ class BytecodeRunner {
               final wid = cx.rt.heap.tryWriterForReader(rid);
               if (storedValue is int) {
                 if (wid != null) {
-                  cx.sigmaHat[storedValue] = VarRef(wid + 1);  // reader addr
+                  // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                  cx.sigmaHat[storedValue] = VarRef(cx.rt.heap.pairedReaderAddr(wid));  // reader addr
                 } else {
                   // Imported reader - alias to reader directly
                   cx.sigmaHat[storedValue] = VarRef(rid);
@@ -2077,16 +2096,19 @@ class BytecodeRunner {
             // VarRef: use its addr with appropriate mode
             final addr = existingValue.addr;
             if (isReaderMode && cx.rt.heap.isWriter(addr)) {
-              struct.args[cx.S] = VarRef(addr + 1);  // reader addr
+              // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+              struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(addr));  // reader addr
             } else if (!isReaderMode && cx.rt.heap.isReader(addr)) {
-              struct.args[cx.S] = VarRef(addr - 1);  // writer addr
+              // Per spec v3.2: use tryWriterForReader() instead of -1 arithmetic
+              struct.args[cx.S] = VarRef(cx.rt.heap.tryWriterForReader(addr)!);  // writer addr
             } else {
               struct.args[cx.S] = VarRef(addr);  // mode matches
             }
           } else if (existingValue is int) {
             // Legacy: bare writer addr
             if (isReaderMode) {
-              struct.args[cx.S] = VarRef(existingValue + 1);  // reader addr
+              // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+              struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(existingValue));  // reader addr
             } else {
               struct.args[cx.S] = VarRef(existingValue);  // writer addr
             }
@@ -2123,7 +2145,8 @@ class BytecodeRunner {
               if (!isReaderMode && cx.parentStack.isEmpty) {
                 final targetSlot = cx.clauseVars[-2];
                 if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
-                  cx.argSlots[targetSlot] = VarRef(targetWriterAddr + 1);  // reader addr
+                  // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                  cx.argSlots[targetSlot] = VarRef(cx.rt.heap.pairedReaderAddr(targetWriterAddr));  // reader addr
                   cx.clauseVars.remove(-2);
                 }
               }
@@ -2138,7 +2161,8 @@ class BytecodeRunner {
 
               if (parent.structure is StructTerm) {
                 final parentStruct = parent.structure as StructTerm;
-                parentStruct.args[parent.s] = VarRef(nestedWriterAddr + 1);  // reader addr
+                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                parentStruct.args[parent.s] = VarRef(cx.rt.heap.pairedReaderAddr(nestedWriterAddr));  // reader addr
               }
 
               cx.currentStructure = parent.structure;

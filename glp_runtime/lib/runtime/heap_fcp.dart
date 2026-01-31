@@ -27,7 +27,7 @@ class HeapCell {
   HeapCell(this.content, this.tag);
 
   bool get hasValue => tag == CellTag.ValueTag;
-  bool get hasSuspensions => content is SuspensionListNode;
+  bool get hasSuspensions => content is WriterContent && (content as WriterContent).suspensions != null;
 }
 
 /// Pointer to another cell (heap address)
@@ -38,6 +38,21 @@ class Pointer {
 
   @override
   String toString() => 'Ptr($targetAddr)';
+}
+
+/// Compound content for unbound writer with suspensions.
+///
+/// Per spec v3.2 Section 2.3: When suspensions are added to an unbound writer,
+/// the reader pointer is preserved in this compound structure.
+/// This enables readerForWriter() to work even when suspensions are present.
+class WriterContent {
+  final int readerAddr;  // Pointer to paired reader (preserved)
+  SuspensionListNode? suspensions;
+
+  WriterContent(this.readerAddr, [this.suspensions]);
+
+  @override
+  String toString() => 'WriterContent(reader=$readerAddr, sus=$suspensions)';
 }
 
 /// FCP Two-Cell Heap with Pointer-Based Variable Identity
@@ -62,16 +77,18 @@ class HeapFCP {
 
   /// Allocate a fresh local variable
   /// Returns (writerAddr, readerAddr) tuple
-  /// 
-  /// Per spec Section 3.1:
-  /// - Writer cell: null content (unbound, no suspensions)
+  ///
+  /// Per spec v3.2 Section 3.1 (FCP pattern):
+  /// - Writer cell: Pointer to reader (bidirectional)
   /// - Reader cell: Pointer to writer
+  /// Both cells point to each other enabling navigation without arithmetic.
   (int, int) allocateVariable() {
-    final writerAddr = HP++;
-    final readerAddr = HP++;
+    final writerAddr = HP;
+    final readerAddr = HP + 1;
+    HP += 2;
 
-    // Writer cell: initially unbound (null content)
-    cells.add(HeapCell(null, CellTag.WrtTag));
+    // Writer cell: points TO reader (FCP pattern)
+    cells.add(HeapCell(Pointer(readerAddr), CellTag.WrtTag));
 
     // Reader cell: points TO writer
     cells.add(HeapCell(Pointer(writerAddr), CellTag.RoTag));
@@ -172,6 +189,59 @@ class HeapFCP {
     return null; // Imported reader - no local writer
   }
 
+  /// Find the paired reader for an unbound writer (FCP pattern).
+  ///
+  /// Per spec v3.2 Section 7.2: Follow the writer's pointer to find its paired reader.
+  /// Returns null if writer is bound (pointer no longer points to paired reader).
+  ///
+  /// For code that needs the reader address regardless of binding state,
+  /// use pairedReaderAddr() instead.
+  int? readerForWriter(int writerAddr) {
+    final cell = cells[writerAddr];
+    if (cell.tag != CellTag.WrtTag) {
+      return null;
+    }
+
+    // Case 1: Unbound without suspensions - direct Pointer to reader
+    if (cell.content is Pointer) {
+      final target = (cell.content as Pointer).targetAddr;
+      // Verify it's the paired reader (points back to this writer)
+      if (target < cells.length && cells[target].tag == CellTag.RoTag) {
+        final readerContent = cells[target].content;
+        if (readerContent is Pointer && readerContent.targetAddr == writerAddr) {
+          return target;  // Confirmed bidirectional - this is the paired reader
+        }
+      }
+      // Writer is bound to something else, no direct reader access
+      return null;
+    }
+
+    // Case 2: Unbound with suspensions - compound WriterContent preserves reader pointer
+    if (cell.content is WriterContent) {
+      return (cell.content as WriterContent).readerAddr;
+    }
+
+    // Case 3: Bound or invalid - no reader access
+    return null;
+  }
+
+  /// Get the paired reader address for a writer (works for bound and unbound).
+  ///
+  /// Per allocation pattern, the reader is always at writerAddr + 1.
+  /// This method should be used when you need the reader address regardless
+  /// of whether the writer is currently bound.
+  ///
+  /// Note: For checking if a writer is unbound and getting its reader via
+  /// the bidirectional pointer pattern, use readerForWriter() instead.
+  int pairedReaderAddr(int writerAddr) {
+    // Try the FCP pattern first (works for unbound writers)
+    final reader = readerForWriter(writerAddr);
+    if (reader != null) return reader;
+
+    // Fallback: by allocation, reader is at writerAddr + 1
+    return writerAddr + 1;
+  }
+
   // ==========================================================================
   // Dereferencing (Section 4 of spec)
   // ==========================================================================
@@ -226,13 +296,25 @@ class HeapFCP {
             }
             return entry;  // Unbound imported
           }
-          if (cell.content == null || cell.content is SuspensionListNode) {
-            // Unbound writer - return VarRef to this address
+          // Case 1: WriterContent - unbound with suspensions (FCP pattern)
+          if (cell.content is WriterContent) {
+            // Unbound writer with suspensions - return VarRef to this address
             return VarRef(current);
           }
+          // Case 2: Pointer - check if bidirectional (unbound) or chain (bound)
           if (cell.content is Pointer) {
-            // Bound to another variable - follow pointer
-            current = (cell.content as Pointer).targetAddr;
+            final target = (cell.content as Pointer).targetAddr;
+            // Check if pointer is to paired reader (unbound) or to bound value
+            if (target < cells.length && cells[target].tag == CellTag.RoTag) {
+              final readerContent = cells[target].content;
+              if (readerContent is Pointer && readerContent.targetAddr == current) {
+                // Bidirectional - points to paired reader which points back
+                // This is an unbound variable
+                return VarRef(current);
+              }
+            }
+            // Bound to another cell - follow the pointer
+            current = target;
             continue;
           }
           throw StateError('Writer cell at $current has invalid content: ${cell.content}');
@@ -277,9 +359,10 @@ class HeapFCP {
 
     final activations = <GoalRef>[];
 
-    // Save and process suspensions before overwriting
-    if (cell.content is SuspensionListNode) {
-      _walkAndActivate(cell.content as SuspensionListNode, activations);
+    // Save and process suspensions before overwriting (FCP pattern: check WriterContent)
+    if (cell.content is WriterContent) {
+      final wc = cell.content as WriterContent;
+      _walkAndActivate(wc.suspensions, activations);
     }
 
     // Bind to value
@@ -338,9 +421,10 @@ class HeapFCP {
 
     final activations = <GoalRef>[];
 
-    // Forward suspensions to target writer
-    if (writerCell.content is SuspensionListNode) {
-      _forwardSuspensions(writerCell.content as SuspensionListNode, targetWriterAddr);
+    // Forward suspensions to target writer (FCP pattern: check WriterContent)
+    if (writerCell.content is WriterContent) {
+      final wc = writerCell.content as WriterContent;
+      _forwardSuspensions(wc.suspensions, targetWriterAddr);
     }
 
     // Store pointer to reader (creates variable chain)
@@ -368,8 +452,9 @@ class HeapFCP {
   // ==========================================================================
 
   /// Add a suspension to a writer cell
-  /// 
-  /// Per spec Section 6.1: Suspensions are stored on writer cells
+  ///
+  /// Per spec v3.2 Section 6.1: Suspensions are stored on writer cells using
+  /// WriterContent to preserve the reader pointer.
   void suspendOnWriter(int writerAddr, SuspensionRecord record) {
     final cell = cells[writerAddr];
     if (cell.tag != CellTag.WrtTag) {
@@ -378,11 +463,19 @@ class HeapFCP {
 
     final node = SuspensionListNode(record);
 
-    // Prepend to existing suspension list
-    if (cell.content is SuspensionListNode) {
-      node.next = cell.content as SuspensionListNode;
+    // FCP pattern: preserve reader pointer using WriterContent
+    if (cell.content is WriterContent) {
+      // Already has WriterContent - add to suspension list
+      final wc = cell.content as WriterContent;
+      node.next = wc.suspensions;
+      wc.suspensions = node;
+    } else if (cell.content is Pointer) {
+      // First suspension: convert Pointer to WriterContent
+      final readerAddr = (cell.content as Pointer).targetAddr;
+      cell.content = WriterContent(readerAddr, node);
+    } else {
+      throw StateError('suspendOnWriter: unexpected content ${cell.content} at $writerAddr');
     }
-    cell.content = node;
   }
 
   /// Add a suspension via a reader (finds writer and adds there)
@@ -412,6 +505,8 @@ class HeapFCP {
   }
 
   /// Forward suspensions from one writer to another
+  ///
+  /// Per spec v3.2: Target writer uses WriterContent to preserve reader pointer.
   void _forwardSuspensions(SuspensionListNode? list, int targetWriterAddr) {
     var current = list;
     while (current != null) {
@@ -419,10 +514,18 @@ class HeapFCP {
         // Create new node sharing the same record
         final newNode = SuspensionListNode(current.record);
         final targetCell = cells[targetWriterAddr];
-        if (targetCell.content is SuspensionListNode) {
-          newNode.next = targetCell.content as SuspensionListNode;
+
+        if (targetCell.content is WriterContent) {
+          // Target already has WriterContent - add to its suspension list
+          final wc = targetCell.content as WriterContent;
+          newNode.next = wc.suspensions;
+          wc.suspensions = newNode;
+        } else if (targetCell.content is Pointer) {
+          // Target is unbound with no suspensions - create WriterContent
+          final readerAddr = (targetCell.content as Pointer).targetAddr;
+          targetCell.content = WriterContent(readerAddr, newNode);
         }
-        targetCell.content = newNode;
+        // Ignore other cases (e.g., bound targets)
       }
       current = current.next;
     }
@@ -694,17 +797,26 @@ class HeapFCP {
   /// the reader might be imported
   int? getWriterForReader(int readerAddr) => tryWriterForReader(readerAddr);
 
-  /// Legacy: Get suspension list (now on writer, not reader)
+  /// Legacy: Get suspension list (now on writer via WriterContent)
   SuspensionListNode? getSuspensions(int writerAddr) {
     final cell = cells[writerAddr];
-    return cell.content is SuspensionListNode ? cell.content as SuspensionListNode : null;
+    if (cell.content is WriterContent) {
+      return (cell.content as WriterContent).suspensions;
+    }
+    return null;
   }
 
-  /// Legacy: Add suspension (now on writer)
+  /// Legacy: Add suspension (now on writer via WriterContent)
   void addSuspension(int writerAddr, SuspensionListNode node) {
     final cell = cells[writerAddr];
-    node.next = cell.content is SuspensionListNode ? cell.content as SuspensionListNode : null;
-    cell.content = node;
+    if (cell.content is WriterContent) {
+      final wc = cell.content as WriterContent;
+      node.next = wc.suspensions;
+      wc.suspensions = node;
+    } else if (cell.content is Pointer) {
+      final readerAddr = (cell.content as Pointer).targetAddr;
+      cell.content = WriterContent(readerAddr, node);
+    }
   }
 
   // ==========================================================================
