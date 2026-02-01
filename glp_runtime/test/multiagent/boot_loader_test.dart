@@ -14,12 +14,12 @@ void main() {
         final source = '''
 procedure boot.
 boot :-
-    agent_init(alice, ch(_?,_), ch(_?,_))@alice,
-    agent_init(bob, ch(_?,_), ch(_?,_))@bob,
-    agent_init(charlie, ch(_?,_), ch(_?,_))@charlie.
+    agent_init(alice, _)@alice,
+    agent_init(bob, _)@bob,
+    agent_init(charlie, _)@charlie.
 
-procedure agent_init(_?, Channel?, Channel?).
-agent_init(Id, UserCh, NetCh) :- true.
+procedure agent_init(_?, Channel?).
+agent_init(Id, Ch) :- true.
 ''';
 
         final config = loader.load(source);
@@ -37,8 +37,8 @@ agent_init(Id, UserCh, NetCh) :- true.
         final source = '''
 procedure boot.
 boot :-
-    ping_agent(alice, ch(_?,_), ch(_?,_))@alice,
-    pong_agent(bob, ch(_?,_), ch(_?,_))@bob.
+    ping_agent(alice, _)@alice,
+    pong_agent(bob, _)@bob.
 ''';
 
         final config = loader.load(source);
@@ -53,7 +53,7 @@ boot :-
       test('parses single-agent boot', () {
         final source = '''
 procedure boot.
-boot :- agent(solo, ch(_?,_), ch(_?,_))@solo.
+boot :- agent(solo, _)@solo.
 ''';
 
         final config = loader.load(source);
@@ -70,11 +70,11 @@ procedure boot.
 %% Another comment
 boot :-
     %% Comment in middle
-    agent_init(alice, ch(_?,_), ch(_?,_))@alice,
-    agent_init(bob, ch(_?,_), ch(_?,_))@bob.
+    agent_init(alice, _)@alice,
+    agent_init(bob, _)@bob.
 
 %% More comments
-procedure agent_init(_?, Channel?, Channel?).
+procedure agent_init(_?, Channel?).
 ''';
 
         final config = loader.load(source);
@@ -87,7 +87,7 @@ procedure agent_init(_?, Channel?, Channel?).
       test('handles flexible whitespace', () {
         final source = '''
 procedure  boot .
-boot:-agent_init( alice , ch( _? , _ ) , ch( _? , _ ) ) @ alice.
+boot:-agent_init( alice , _ ) @ alice.
 ''';
 
         final config = loader.load(source);
@@ -99,10 +99,10 @@ boot:-agent_init( alice , ch( _? , _ ) , ch( _? , _ ) ) @ alice.
       test('preserves full source and strips boot clause', () {
         final source = '''
 procedure boot.
-boot :- agent(a, ch(_?,_), ch(_?,_))@a.
+boot :- agent(a, _)@a.
 
-procedure agent(_?, Channel?, Channel?).
-agent(Id, U, N) :- true.
+procedure agent(_?, Channel?).
+agent(Id, Ch) :- true.
 ''';
 
         final config = loader.load(source);
@@ -120,7 +120,7 @@ agent(Id, U, N) :- true.
     group('error cases', () {
       test('throws if no procedure boot declaration', () {
         final source = '''
-boot :- agent(a, ch(_?,_), ch(_?,_))@a.
+boot :- agent(a, _)@a.
 ''';
 
         expect(
@@ -137,8 +137,8 @@ boot :- agent(a, ch(_?,_), ch(_?,_))@a.
         final source = '''
 procedure boot.
 
-procedure agent(_?, Channel?, Channel?).
-agent(Id, U, N) :- true.
+procedure agent(_?, Channel?).
+agent(Id, Ch) :- true.
 ''';
 
         expect(
@@ -154,7 +154,7 @@ agent(Id, U, N) :- true.
       test('throws if agent ID mismatch', () {
         final source = '''
 procedure boot.
-boot :- agent(alice, ch(_?,_), ch(_?,_))@bob.
+boot :- agent(alice, _)@bob.
 ''';
 
         expect(
@@ -171,8 +171,8 @@ boot :- agent(alice, ch(_?,_), ch(_?,_))@bob.
         final source = '''
 procedure boot.
 boot :-
-    agent(alice, ch(_?,_), ch(_?,_))@alice,
-    other_agent(alice, ch(_?,_), ch(_?,_))@alice.
+    agent(alice, _)@alice,
+    other_agent(alice, _)@alice.
 ''';
 
         expect(
@@ -203,24 +203,26 @@ boot :- true.
     });
 
     group('real file content', () {
-      test('parses play_alice_bob_charlie_boot.glp content', () {
+      test('parses play_alice_bob_charlie_actor_boot.glp content', () {
         // Simulating the actual file content
         final source = '''
-%% play_alice_bob_charlie.glp - Cold call + messaging + Friend-mediated introduction
+%% play_alice_bob_charlie_actor_boot.glp - Actor-driven test with ui_agent layer
 
 procedure boot.
 boot :-
-    agent_init(alice, ch(_?,_), ch(_?,_))@alice,
-    agent_init(bob, ch(_?,_), ch(_?,_))@bob,
-    agent_init(charlie, ch(_?,_), ch(_?,_))@charlie. 
+    agent_init(alice, _)@alice,
+    agent_init(bob, _)@bob,
+    agent_init(charlie, _)@charlie.
 
 %% TYPE DEFINITIONS
 Response ::= accept(Channel) ; no.
 
-procedure agent_init(_?, Channel?, Channel?).
-agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
+procedure agent_init(Constant?, Channel).
+agent_init(Id, ch(NetOut?, NetIn)) :-
+    ground(Id?), new_channel(ch(UserIn, UserOut?), ActorCh) |
+    ui_agent_actor(Id?, ActorCh?),
     merge(UserIn?, NetIn?, In),
-    agent(Id?, In?, [friend(user, UserOut), friend(net, NetOut)]).
+    agent(Id?, In?, [output('_user', UserOut), output('_net', NetOut)]).
 ''';
 
         final config = loader.load(source);

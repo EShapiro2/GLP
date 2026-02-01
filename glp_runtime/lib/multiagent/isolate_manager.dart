@@ -1,20 +1,21 @@
-/// Isolate Manager for maGLP
+/// Isolate Manager for madGLP
 ///
 /// Spawns agent isolates based on BootConfig and routes messages between them.
 /// Implements the Dart-level routing described in isolate-boot-spec.md (v0.4).
 ///
-/// See: docs/ma/isolate-boot-spec.md
+/// Updated for madGLP push-based communication model (madGLP-spec.md v4.2).
+/// Refactored to use GlpEngine - the ONE way to run GLP programs.
+///
+/// See: docs/ma/isolate-boot-spec.md, docs/ma/madGLP-spec.md
 
 import 'dart:async';
 import 'dart:isolate';
 
-import 'package:glp_runtime/compiler/compiler.dart';
+import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
-import 'package:glp_runtime/runtime/runtime.dart';
-import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/terms.dart';
+import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
-import 'package:glp_runtime/multiagent/irma_context.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/payload_serializer.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
@@ -35,13 +36,23 @@ class Start extends IsolateMessage {}
 /// Tick to drive scheduler (for testing/headless mode)
 class Tick extends IsolateMessage {}
 
-/// Network message to route between agents
+/// Network message to route between agents (madGLP assignment)
 class NetworkMsg extends IsolateMessage {
   final String from;
   final String to;
   final List<int> payload;
   final MessageType type;
-  NetworkMsg(this.from, this.to, this.payload, this.type);
+
+  /// Global name for routing (madGLP)
+  final String? globalNameAgent;
+  final int? globalNameIndex;
+  final bool? globalNameIsWriter;
+
+  NetworkMsg(this.from, this.to, this.payload, this.type, {
+    this.globalNameAgent,
+    this.globalNameIndex,
+    this.globalNameIsWriter,
+  });
 
   @override
   String toString() => 'NetworkMsg($from->$to, $type)';
@@ -92,13 +103,13 @@ class IsolateManager {
   final Map<String, SendPort> _agentPorts = {};
   final ReceivePort _mainPort = ReceivePort();
   final Set<String> _completed = {};
-  
+
   Completer<void>? _allCompletedCompleter;
   Timer? _tickTimer;
-  
+
   /// Callback for UI output from agents (for Flutter integration)
   void Function(String agentId, Term message)? onUIOutput;
-  
+
   /// Boot all agents from configuration.
   ///
   /// Returns when all agents are ready (but not yet started).
@@ -171,7 +182,7 @@ class IsolateManager {
       print('[IsolateManager] WARNING: Unknown agent $agentId');
       return;
     }
-    
+
     // Serialize the message
     final serializer = PayloadSerializer(agentId);
     final payload = serializer.serializeAgentMessage(message);
@@ -185,7 +196,7 @@ class IsolateManager {
     }
 
     final future = _allCompletedCompleter?.future ?? Future.value();
-    
+
     if (timeout != null) {
       await future.timeout(timeout, onTimeout: () {
         throw TimeoutException(
@@ -241,13 +252,13 @@ class IsolateManager {
   /// Route a network message to its destination.
   void _routeNetworkMessage(NetworkMsg msg) {
     print('[IsolateManager] Routing ${msg.type} from ${msg.from} to ${msg.to}');
-    
+
     final targetPort = _agentPorts[msg.to];
     if (targetPort == null) {
       print('[IsolateManager] WARNING: Unknown destination ${msg.to}');
       return;
     }
-    
+
     targetPort.send(msg);
   }
 }
@@ -255,6 +266,8 @@ class IsolateManager {
 /// Agent isolate entry point.
 ///
 /// This runs in a separate isolate for each agent.
+/// Uses GlpEngine - the ONE way to run GLP programs.
+/// Updated for madGLP push-based communication.
 void _agentIsolateEntry(AgentConfig config) async {
   final agentId = config.agentId;
   final receivePort = ReceivePort();
@@ -262,53 +275,39 @@ void _agentIsolateEntry(AgentConfig config) async {
 
   print('[$agentId] Starting isolate');
 
-  // Compile program
-  final compiler = GlpCompiler();
-  final program = compiler.compile(config.programSource);
-  print('[$agentId] Program compiled: ${program.ops.length} ops');
+  // Create GlpEngine (same as REPL would)
+  final engine = GlpEngine();
+  engine.loadSource(config.programSource);
+  print('[$agentId] Program loaded via GlpEngine');
 
-  // Create runtime
-  final runtime = GlpRuntime();
-  final runner = BytecodeRunner(program);
-  final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
-  final ctx = IrmaContext(agentId: agentId, runtime: runtime);
+  // Enable madGLP mode
+  engine.enableMadGLP(agentId: agentId);
+  final ctx = engine.madContext!;
+  final runtime = engine.runtime;
 
-  // Message routing to main isolate
+  // Message routing to main isolate (madGLP: push-based via onMessageReady)
   ctx.onMessageReady = (dest, msg) {
     print('[$agentId] Sending ${msg.type} to $dest');
     config.mainPort.send(NetworkMsg(agentId, dest, msg.payload, msg.type));
   };
 
-  // Allocate UI channel (second argument)
+  // Allocate UI channel (second argument to agent_init)
+  // Channel structure: ch(OutputStream?, InputStream)
+  // Per the spec, the second argument is the channel
   final (uiInWriter, uiInReader) = runtime.heap.allocateVariable();
   final (uiOutWriter, uiOutReader) = runtime.heap.allocateVariable();
-  final uiCh = StructTerm('ch', [VarRef(uiInReader), VarRef(uiOutWriter)]);
+  final chTerm = StructTerm('ch', [VarRef(uiOutWriter), VarRef(uiInReader)]);
 
-  // Allocate network channel (third argument)
-  final (netInWriter, netInReader) = runtime.heap.allocateVariable();
-  final (netOutWriter, netOutReader) = runtime.heap.allocateVariable();
-  final netCh = StructTerm('ch', [VarRef(netInReader), VarRef(netOutWriter)]);
+  print('[$agentId] Channel allocated');
+  print('[$agentId]   Ch: out=($uiOutWriter,$uiOutReader), in=($uiInWriter,$uiInReader)');
 
-  // Register IRMA network streams
-  ctx.registerNetworkInput(netInWriter);
-  ctx.registerNetworkOutput(netOutWriter);
+  // Build the goal string for agent_init(AgentId, Ch)
+  // The channel is a complex term, so we run the goal directly via the engine
+  // by using the lower-level runtime APIs
 
-  print('[$agentId] Channels allocated');
-  print('[$agentId]   UICh: in=($uiInWriter,$uiInReader), out=($uiOutWriter,$uiOutReader)');
-  print('[$agentId]   NetCh: in=($netInWriter,$netInReader), out=($netOutWriter,$netOutReader)');
-
-  // Create argument cells with proper reader references
-  final (idArgWriter, idArgReader) = runtime.heap.allocateVariable();
-  final (uiChArgWriter, uiChArgReader) = runtime.heap.allocateVariable();
-  final (netChArgWriter, netChArgReader) = runtime.heap.allocateVariable();
-
-  // Bind argument writers to their values
-  runtime.heap.bindVariable(idArgWriter, ConstTerm(agentId));
-  runtime.heap.bindVariable(uiChArgWriter, uiCh);
-  runtime.heap.bindVariable(netChArgWriter, netCh);
-
-  // Find goal entry point
-  final goalLabel = '${config.goalFunctor}/3';
+  // Find goal entry point (now 2-arity per boot spec simplification)
+  final program = engine.combinedProgram;
+  final goalLabel = '${config.goalFunctor}/2';
   final goalPC = program.labels[goalLabel];
   if (goalPC == null) {
     print('[$agentId] ERROR: Goal $goalLabel not found');
@@ -316,15 +315,27 @@ void _agentIsolateEntry(AgentConfig config) async {
     return;
   }
 
+  // Create argument cells with proper reader references
+  final (idArgWriter, idArgReader) = runtime.heap.allocateVariable();
+  final (chArgWriter, chArgReader) = runtime.heap.allocateVariable();
+
+  // Bind argument writers to their values
+  runtime.heap.bindVariable(idArgWriter, ConstTerm(agentId));
+  runtime.heap.bindVariable(chArgWriter, chTerm);
+
   // Spawn goal with reader references
+  // Import needed types
   runtime.setGoalEnv(1, CallEnv(args: {
     0: VarRef(idArgReader),
-    1: VarRef(uiChArgReader),
-    2: VarRef(netChArgReader),
+    1: VarRef(chArgReader),
   }));
   runtime.setGoalProgram(1, 'main');
   runtime.gq.enqueue(GoalRef(1, goalPC));
-  print('[$agentId] Spawned ${config.goalFunctor}/3');
+  print('[$agentId] Spawned ${config.goalFunctor}/2');
+
+  // Create scheduler for this engine
+  final runner = BytecodeRunner(program);
+  final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
 
   // Signal ready
   config.mainPort.send(Ready(agentId, receivePort.sendPort));
@@ -332,20 +343,13 @@ void _agentIsolateEntry(AgentConfig config) async {
   // Message handling loop
   await for (final msg in receivePort) {
     if (msg is Start || msg is Tick) {
-      // Run scheduler
-      final result = scheduler.drainWithStatus();
+      // Run scheduler with debug tracing
+      final result = scheduler.drainWithStatus(debug: engine.debugTrace);
 
-      // Process suspensions
-      if (result.status == ExecutionStatus.suspended) {
-        ctx.processSuspension(result.blockingReaders);
-      }
-
-      // Flush messages
+      // Flush messages (triggers global_send goals to send)
       ctx.flushMessages();
 
       // Report status
-      // IMPORTANT: Check BOTH the drain result AND runtime.suspended (global suspension map)
-      // Goals suspended in previous drains won't show in result.status but ARE in runtime.suspended
       final hasSuspendedGoals = result.status == ExecutionStatus.suspended ||
                                 runtime.suspended.isNotEmpty;
       final status = hasSuspendedGoals
@@ -353,7 +357,7 @@ void _agentIsolateEntry(AgentConfig config) async {
           : (runtime.gq.isEmpty ? 'completed' : 'running');
       config.mainPort.send(Status(agentId, status, runtime.gq.length));
 
-      // Only report done when gq is empty AND no goals are suspended (either from this drain or previous)
+      // Only report done when gq is empty AND no goals are suspended
       if (runtime.gq.isEmpty && !hasSuspendedGoals && !doneSent) {
         doneSent = true;
         print('[$agentId] All goals completed');
@@ -363,27 +367,31 @@ void _agentIsolateEntry(AgentConfig config) async {
     } else if (msg is NetworkMsg) {
       print('[$agentId] Received ${msg.type} from ${msg.from}');
 
-      if (msg.type == MessageType.agentMessage) {
-        ctx.handleNetworkMessage(msg.from, msg.payload);
-      } else if (msg.type == MessageType.assignment) {
-        final serializer = PayloadSerializer('');
-        final (globalId, value) = serializer.deserializeAssignmentPayload(
-          msg.payload,
-          (isReader) => isReader
-              ? runtime.heap.allocateImportedReader()
-              : runtime.heap.allocateImportedWriter(),
-          onVariableImported: (localAddr, isReader, globalId, pairedReaderCreatorLocalId) {
-            ctx.attachImportedVariableEntry(localAddr, isReader, globalId, msg.from,
-                pairedReaderCreatorLocalId: pairedReaderCreatorLocalId);
-          },
-        );
-        print('[$agentId] Assignment: ${globalId.creator}:${globalId.localId} := $value');
-        ctx.handleAssignment(globalId.creator, globalId.localId, value);
-      } else if (msg.type == MessageType.readRequest) {
-        final serializer = PayloadSerializer('');
-        final varId = serializer.deserializeReadRequestPayload(msg.payload);
-        print('[$agentId] Read request for $varId from ${msg.from}');
-        ctx.handleReadRequest(varId, msg.from);
+      if (msg.type == MessageType.assignment) {
+        // madGLP: Handle assignment message
+        final serializer = PayloadSerializer(agentId);
+
+        try {
+          final (globalName, value) = serializer.deserializeGlobalSendPayload(
+            msg.payload,
+            (isReader) {
+              final (w, r) = runtime.heap.allocateVariable();
+              return isReader ? r : w;
+            },
+          );
+
+          print('[$agentId] Assignment: $globalName := $value');
+
+          ctx.handleMadAssignment(
+            globalName: globalName,
+            value: value,
+            fromAgent: msg.from,
+          );
+        } catch (e) {
+          print('[$agentId] ERROR handling assignment: $e');
+        }
+      } else if (msg.type == MessageType.agentMessage) {
+        print('[$agentId] Received agent message from ${msg.from}');
       }
 
       // Flush any response messages
@@ -391,21 +399,20 @@ void _agentIsolateEntry(AgentConfig config) async {
 
     } else if (msg is UIEvent) {
       print('[$agentId] Received UI event');
-      // Deserialize and bind to uiInWriter
-      final serializer = PayloadSerializer('');
+      final serializer = PayloadSerializer(agentId);
       final term = serializer.deserializeAgentMessagePayload(
         msg.payload,
-        (isReader) => isReader
-            ? runtime.heap.allocateImportedReader()
-            : runtime.heap.allocateImportedWriter(),
+        (isReader) {
+          final (w, r) = runtime.heap.allocateVariable();
+          return isReader ? r : w;
+        },
       );
-      
+
       // Bind as next element in UI input stream
       final (tailWriter, tailReader) = runtime.heap.allocateVariable();
       final consCell = StructTerm('.', [term, VarRef(tailReader)]);
       runtime.heap.bindVariable(uiInWriter, consCell);
-      // Note: would need to track tail for subsequent messages
-      
+
       ctx.flushMessages();
     }
   }

@@ -7,7 +7,7 @@
 
 /// A single spawn directive extracted from the boot clause.
 ///
-/// Represents `goalFunctor(agentId, ch(_?,_), ch(_?,_))@agentId`
+/// Represents `goalFunctor(agentId, _)@agentId`
 class SpawnDirective {
   /// The agent identifier (e.g., 'alice', 'bob')
   final String agentId;
@@ -93,7 +93,7 @@ class BootLoader {
     final directives = _parseSpawnDirectives(bootClause);
     if (directives.isEmpty) {
       throw BootLoaderException('Boot clause contains no spawn directives. '
-          'Expected "goal(agent, ch(_?,_), ch(_?,_))@agent"');
+          'Expected "goal(agent, _)@agent"');
     }
 
     // Validate no duplicate agent IDs
@@ -139,26 +139,24 @@ class BootLoader {
   /// Parse spawn directives from boot clause body.
   ///
   /// Looks for patterns like:
-  /// `functor(agentId, ch(_?,_), ch(_?,_))@agentId`
+  /// `functor(agentId, _)@agentId`
   List<SpawnDirective> _parseSpawnDirectives(String clauseBody) {
     final directives = <SpawnDirective>[];
 
     // Pattern for spawn directive:
-    // functor(agentId, ch(_?,_), ch(_?,_))@agentId
+    // functor(agentId, _)@agentId
     //
     // Breakdown:
     // - (\w+) : goal functor (e.g., agent_init)
     // - \( : opening paren
     // - (\w+) : first arg = agent ID
     // - \s*,\s* : comma separator
-    // - ch\s*\(\s*_\?\s*,\s*_\s*\) : ch(_?,_) pattern for UICh
-    // - \s*,\s* : comma separator
-    // - ch\s*\(\s*_\?\s*,\s*_\s*\) : ch(_?,_) pattern for NetCh
+    // - _ : anonymous variable (channel placeholder)
     // - \) : closing paren
     // - \s*@\s* : @ operator
     // - (\w+) : target agent ID
     final pattern = RegExp(
-      r'(\w+)\s*\(\s*(\w+)\s*,\s*ch\s*\(\s*_\?\s*,\s*_\s*\)\s*,\s*ch\s*\(\s*_\?\s*,\s*_\s*\)\s*\)\s*@\s*(\w+)',
+      r'(\w+)\s*\(\s*(\w+)\s*,\s*_\s*\)\s*@\s*(\w+)',
     );
 
     for (final match in pattern.allMatches(clauseBody)) {
