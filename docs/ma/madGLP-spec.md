@@ -1,7 +1,7 @@
 # madGLP Specification
 
-**Version**: 4.2  
-**Date**: 2026-01-30  
+**Version**: 5.0
+**Date**: 2026-02-02
 **Status**: DRAFT  
 **Source**: CGLP Paper (`~/Grassroots/CGLP`), Section 7 "Multiagent Deterministic GLP (madGLP)"
 
@@ -68,9 +68,9 @@ The global writers table W_p of agent p is an indexed array of entries. For entr
 
 **What the Table Stores**: The table contains only writers that await incoming assignments. No entries are created for outgoing links—those are handled by `global_send` goals.
 
-**Index Allocation**: A single counter is used for index allocation at each agent, shared across both Globalize and Localize operations. Indices are never reused.
+**Index Allocation**: A single counter is used for index allocation at each agent, shared across both Globalize and Localize operations. Index 0 is reserved for the network input serializer (see Section 4.1). The counter starts at 1; indices are never reused.
 
-**Entry Removal**: When an assignment message arrives and the corresponding writer is bound, the entry is removed from the table. This may leave gaps in the array; indices are not reused. Implementations may use a sparse representation (e.g., a map from index to entry) rather than a dense array.
+**Entry Removal**: When an assignment message arrives and the corresponding writer is bound, the entry is removed from the table—except for the serializer entry at index 0, which is permanent. This may leave gaps in the array; indices are not reused. Implementations may use a sparse representation (e.g., a map from index to entry) rather than a dense array.
 
 ---
 
@@ -95,6 +95,39 @@ where:
 The guard `known(T)` succeeds when T is bound to a non-variable term. The builtin `'_send'(T, G, Q)` globalizes T and adds message `(G := T↑, Q)` to the agent's outgoing message set.
 
 **Forwarding via global_send**: When an agent exports both ends of a variable pair (e.g., sending `[X, X?]` to another agent), the Globalize operation spawns a `global_send` goal for the exported writer. If a value arrives on one global link and is assigned to a local writer X, then X? becomes known, triggering any `global_send` goal watching X?. This automatically forwards the value without requiring special forwarding logic in the Receive transaction.
+
+### 4.1 Index-0 Serializer for Cold-Calls
+
+Index 0 is reserved at each agent for the network input serializer. This provides a well-known address that any agent can use for cold-calls.
+
+**Definition [Serializer Entry]**
+
+At boot time, each agent p creates a permanent entry at index 0 mapping `_r(p, 0)` to the local writer N_p for p's network input stream. This entry is never removed.
+
+**Cold-Call Mechanism**: To send a cold-call message T to agent q, any agent p uses `global_send(T, _w(q,0), q)`. This sends the assignment `_w(q,0) := [T↑ | _w(q,0)]`, wrapping the content in a list cell and reusing the serializer writer in the tail.
+
+**Serializer Semantics (Index 0)**:
+- **Many-to-one**: Multiple agents can send to `_w(q,0)` simultaneously
+- **Reusable**: The writer `_w(q,0)` is reused in the message tail `[T | _w(q,0)]`
+- **Permanent entry**: The entry at index 0 is never removed
+- **List extension**: Each received message extends the network input stream by one element
+
+**Normal Semantics (Index > 0)**:
+- **One-to-one**: Single writer, single reader
+- **Single use**: Entry removed after assignment
+- **Direct assignment**: Message contains T directly, not wrapped in list
+
+**Remark [Serializer as Merge]**: The index-0 serializer implements a many-to-one merge pattern, combining cold-call messages from multiple senders into a single network input stream. The order of messages from different senders is non-deterministic, while messages from the same sender preserve FIFO order.
+
+**Remark [Network Output Processing]**: Each agent spawns a `send_to_net` goal to process its network output stream:
+
+```prolog
+send_to_net([msg(Q, T) | In]) :-
+    global_send(T?, _w(Q,0), Q?), send_to_net(In?).
+send_to_net([]).
+```
+
+This reads cold-call messages `msg(Q, T)` from the output stream and uses `global_send` with the well-known serializer address `_w(Q,0)` to send them.
 
 ---
 
@@ -130,24 +163,24 @@ The pairing between Globalize and Localize ensures correct dataflow:
 
 ### 5.4 Exporting Both Ends of a Pair
 
-Consider agent p exporting term `[X, X?]` to agent q. Globalize processes both:
+Consider agent p exporting term `[X, X?]` to agent q. Globalize processes both (index 0 is reserved for the serializer, so indices start at 1):
 
-- Writer X: spawns `global_send(X?, _w(p,0), q)`, no entry
-- Reader X?: entry `(X, q)` at index 1, no spawn
+- Writer X: spawns `global_send(X?, _w(p,1), q)`, no entry
+- Reader X?: entry `(X, q)` at index 2, no spawn
 
 At q, Localize creates two independent pairs:
 
-- For `_w(p,0)`: pair `(Y_q, Y_q?)`, entry `(Y_q, p, 0)`, term gets Y_q?
-- For `_r(p,1)`: pair `(Z_q, Z_q?)`, term gets Z_q, spawns `global_send(Z_q?, _r(p,1), p)`
+- For `_w(p,1)`: pair `(Y_q, Y_q?)`, entry `(Y_q, p, 1)`, term gets Y_q?
+- For `_r(p,2)`: pair `(Z_q, Z_q?)`, term gets Z_q, spawns `global_send(Z_q?, _r(p,2), p)`
 
 The term at q is `[Y_q?, Z_q]`. When q assigns Z_q := T:
 
 1. Z_q? becomes known (= T)
-2. `global_send(Z_q?, _r(p,1), p)` fires, sends `_r(p,1) := T↑` to p
-3. p receives, finds entry `(X, q)` at index 1, assigns X := T↓
+2. `global_send(Z_q?, _r(p,2), p)` fires, sends `_r(p,2) := T↑` to p
+3. p receives, finds entry `(X, q)` at index 2, assigns X := T↓
 4. X? becomes known (= T)
-5. `global_send(X?, _w(p,0), q)` fires, sends `_w(p,0) := T↑` to q
-6. q receives, finds entry `(Y_q, p, 0)`, assigns Y_q := T↓
+5. `global_send(X?, _w(p,1), q)` fires, sends `_w(p,1) := T↑` to q
+6. q receives, finds entry `(Y_q, p, 1)`, assigns Y_q := T↓
 7. Y_q? becomes known (= T)
 
 The value flows from Z_q through p's local pair to Y_q?, correctly implementing the semantics where both ends of the exported pair eventually share the same value.
@@ -183,8 +216,9 @@ The madGLP transition system over agents P ⊂ Π and GLP program M is the multi
 - **C** is the set of configurations where each c_p is a madGLP local state
 - **c₀** is the initial configuration where for each p ∈ P:
   - A_p = [agent(p, ch(_?, _), ch(_?, _))]
-  - S_p = ∅, F_p = ∅, W_p = ∅, M_p = ∅
-- **T** consists of the Reduce, Send, Receive, and Network transactions defined below
+  - S_p = ∅, F_p = ∅, M_p = ∅
+  - W_p = {(N_p, *) at index 0} where N_p is the local writer for p's network input stream (serializer entry)
+- **T** consists of the Reduce, Send, and Receive transactions defined below
 
 ---
 
@@ -228,22 +262,17 @@ The unary Send transaction for agent p is enabled when `(m, q) ∈ M_p`. It remo
 
 The unary Receive transaction processes a message m from the communication channel:
 
-**Case `m = (_w(p, i) := T↑)`**: The message is destined for the agent that localized `_w(p,i)`. Agent q searches its global writers table for an entry `(X_q, p, i)` matching the remote agent p and remote index i. Localize T↑ by q to get T_q↓, assign X_q := T_q↓, apply {X_q? := T_q↓} to goals containing X_q?, reactivate suspended goals, and remove the entry from W'_q.
+**Case `m = (_w(p, i) := T↑)` with i > 0**: The message is destined for the agent that localized `_w(p,i)`. Agent q searches its global writers table for an entry `(X_q, p, i)` matching the remote agent p and remote index i. The entry provides the remote agent identity p, which is used when localizing T↑: any variables in T↑ get their global links pointing to p. Localize T↑ by q from p to get T_q↓, assign X_q := T_q↓, apply {X_q? := T_q↓} to goals containing X_q?, reactivate suspended goals, and remove the entry from W'_q.
 
-**Case `m = (_r(p, i) := T↑)`**: The message is destined for agent p who created this global name. Agent p finds entry `(X, q)` at index i in W_p. Localize T↑ by p to get T_p↓, assign X := T_p↓, apply {X? := T_p↓} to goals containing X?, reactivate suspended goals, and remove the entry from W'_p.
+**Case `m = (_w(q, 0) := [T↑ | _w(q,0)])` (Serializer)**: Cold-call message to agent q's network input. Agent q finds the permanent entry `(N_q, *)` at index 0. Localize T↑ by q to get T_q↓. Assign N_q := [T_q↓? | N'_q] where N'_q is a fresh writer. Update the entry to `(N'_q, *)` at index 0 (extending the stream). Reactivate any goals suspended on N_q?. The entry is NOT removed—it is updated with the fresh writer for the next message.
+
+**Case `m = (_r(p, i) := T↑)`**: The message is destined for agent p who created this global name. Agent p finds entry `(X, q)` at index i in W_p. The entry provides the remote agent identity q, which is used when localizing T↑: any variables in T↑ get their global links pointing to q. Localize T↑ by p from q to get T_p↓, assign X := T_p↓, apply {X? := T_p↓} to goals containing X?, reactivate suspended goals, and remove the entry from W'_p.
+
+**Remote Agent Identity in Entries**: The entry stores the remote agent identity (q in `(X, q)` or p in `(X_q, p, i)`), which serves two purposes:
+1. For `(X_q, p, i)` entries: enables lookup by matching the message's global name `_w(p, i)` to the entry's `(p, i)` pair
+2. For both entry types: provides the remote agent identity needed during Localize to properly bake the destination into any nested global links (spawned `global_send` goals or new entries)
 
 **Automatic Forwarding**: The Receive transaction simply assigns the local writer and removes the entry. If the assigned writer's reader (X?) is being watched by a `global_send` goal (because it was also exported), that goal will fire on a subsequent Reduce, automatically forwarding the value.
-
-### 8.4 Network Transaction (Binary)
-
-**Definition [madGLP Network Transaction]**
-
-The binary Network transaction (s_p, s_q) → (s'_p, s'_q) where p ≠ q and `msg(q, T)` appears in p's network output stream:
-
-1. Globalize T by p for q to get T_p↑, updating W'_p and spawning `global_send` goals as specified
-2. Advance p's network output stream
-3. Localize T_p↑ by q from p to get T_q↓, updating W'_q and spawning `global_send` goals as specified
-4. Add T_q↓? to q's network input stream (where T_q↓? replaces each variable Y in T_q↓ with Y?)
 
 ---
 
@@ -251,11 +280,13 @@ The binary Network transaction (s_p, s_q) → (s'_p, s'_q) where p ≠ q and `ms
 
 ### 9.1 Transaction Degrees
 
-The Reduce, Send, and Receive transactions are unary. Only the Network transaction is binary, as it must atomically establish the global link between two agents. This is acceptable because Network transactions occur only during cold-calls, which are rare bootstrap operations.
+All madGLP transactions are unary: Reduce, Send, and Receive each affect only one agent's local state. Cold-calls use the same `global_send` mechanism as established links, sending to the well-known serializer address `_w(q,0)`. This uniformity simplifies the implementation and enables fully decentralized operation.
 
 ### 9.2 Correspondence to maGLP
 
 The maGLP binary Communicate transaction, which atomically transfers an assignment from one agent's writer to another agent's reader, is implemented in madGLP by the sequence: Reduce (assigns writer, triggering `global_send`) → Send → Receive (applies assignment). The correctness of this implementation relies on monotonicity.
+
+The maGLP binary Cold-call transaction is implemented in madGLP by: `global_send` with index 0 → Send → Receive (serializer case). The sender uses the well-known serializer address `_w(q,0)`, and the receiver extends its network input stream via the permanent index-0 entry.
 
 ### 9.3 Global Writers Table Lifecycle
 
@@ -276,12 +307,16 @@ Messages use global names to enable routing:
 
 Consider the initial goal `client(Xs)@p, monitor(Xs?)@q`, establishing a shared pair with writer Xs at p and reader Xs? at q.
 
-**Stage 0: Network Transaction**
+**Stage 0: Boot-Time Setup**
 
-The Network transaction establishes the link for Xs:
+At boot time, each agent has its serializer entry created:
+- p: entry `(N_p, *)` at index 0 for network input
+- q: entry `(N_q, *)` at index 0 for network input
 
-- p spawns `global_send(Xs?, _w(p,0), q)`
-- q creates entry `(Xs_q, p, 0)`
+The initial shared pair `(Xs, Xs?)` is established via cold-call: p sends `global_send(Xs?, _w(q,0), q)` to introduce itself to q. (Indices for regular links start at 1.)
+
+- p spawns `global_send(Xs?, _w(p,1), q)`
+- q creates entry `(Xs_q, p, 1)`
 - q's resolvent contains Xs_q?
 
 **Stage 1: p Assigns Xs**
@@ -289,37 +324,37 @@ The Network transaction establishes the link for Xs:
 p assigns Xs := [add|Xs1]:
 
 1. Xs? becomes known (= [add|Xs1])
-2. `global_send(Xs?, _w(p,0), q)` fires
-3. The term [add|Xs1] is globalized: Xs1 becomes `_w(p,1)`, spawns `global_send(Xs1?, _w(p,1), q)`
-4. Message `_w(p,0) := [add|_w(p,1)]` sent to q
+2. `global_send(Xs?, _w(p,1), q)` fires
+3. The term [add|Xs1] is globalized: Xs1 becomes `_w(p,2)`, spawns `global_send(Xs1?, _w(p,2), q)`
+4. Message `_w(p,1) := [add|_w(p,2)]` sent to q
 
 **Stage 2: q Receives**
 
-q receives `_w(p,0) := [add|_w(p,1)]`:
+q receives `_w(p,1) := [add|_w(p,2)]`:
 
-1. Find entry `(Xs_q, p, 0)`
-2. Localize: create pair `(Xs1_q, Xs1_q?)`, entry `(Xs1_q, p, 1)`
+1. Find entry `(Xs_q, p, 1)`
+2. Localize: create pair `(Xs1_q, Xs1_q?)`, entry `(Xs1_q, p, 2)`
 3. Assign Xs_q := [add|Xs1_q?]
-4. Remove entry `(Xs_q, p, 0)`
+4. Remove entry `(Xs_q, p, 1)`
 
 ### 10.2 Return Value Scenario
 
 p assigns Xs1 := [value(V?)|Xs2], exporting reader V?:
 
-1. Globalize V?: entry `(V, q)` at index k in W_p, becomes `_r(p,k)`
-2. Message `_w(p,1) := [value(_r(p,k))|_w(p,2)]` sent to q
+1. Globalize V?: entry `(V, q)` at index 3 in W_p, becomes `_r(p,3)`
+2. Message `_w(p,2) := [value(_r(p,3))|_w(p,4)]` sent to q
 
 q receives and localizes:
 
-1. For `_r(p,k)`: create pair `(V_q, V_q?)`, put V_q in term, spawn `global_send(V_q?, _r(p,k), p)`
-2. For `_w(p,2)`: create pair `(Xs2_q, Xs2_q?)`, entry `(Xs2_q, p, 2)`, put Xs2_q? in term
+1. For `_r(p,3)`: create pair `(V_q, V_q?)`, put V_q in term, spawn `global_send(V_q?, _r(p,3), p)`
+2. For `_w(p,4)`: create pair `(Xs2_q, Xs2_q?)`, entry `(Xs2_q, p, 4)`, put Xs2_q? in term
 
 When q's monitor assigns V_q := Sum:
 
 1. V_q? becomes known
-2. `global_send(V_q?, _r(p,k), p)` fires
-3. Message `_r(p,k) := Sum↑` sent to p
-4. p receives, finds entry `(V, q)` at index k, assigns V := Sum↓
+2. `global_send(V_q?, _r(p,3), p)` fires
+3. Message `_r(p,3) := Sum↑` sent to p
+4. p receives, finds entry `(V, q)` at index 3, assigns V := Sum↓
 5. V? becomes known in p's resolvent
 
 ### 10.3 Friend-Mediated Introduction
@@ -328,40 +363,42 @@ Bob introduces Alice to Charlie by sending writer X to Alice and reader X? to Ch
 
 **Bob exports X to Alice**:
 
-Bob sends term X to Alice via Network transaction:
+Bob sends term X to Alice via cold-call to Alice's serializer:
 
-- Globalize X: spawns `global_send(X?, _w(bob,0), alice)`, no entry
-- Alice localizes `_w(bob,0)`: creates pair `(X_a, X_a?)`, entry `(X_a, bob, 0)`, receives X_a?
+- Globalize X: spawns `global_send(X?, _w(bob,1), alice)`, no entry
+- Message sent via `global_send(intro(X?), _w(alice,0), alice)` (cold-call to Alice's serializer)
+- Alice localizes `_w(bob,1)`: creates pair `(X_a, X_a?)`, entry `(X_a, bob, 1)`, receives X_a?
 
 Alice now holds reader X_a? and will receive values when Bob's X is assigned.
 
 **Bob exports X? to Charlie**:
 
-Bob sends term X? to Charlie via Network transaction:
+Bob sends term X? to Charlie via cold-call to Charlie's serializer:
 
-- Globalize X?: entry `(X, charlie)` at index 1 in W_bob, becomes `_r(bob,1)`
-- Charlie localizes `_r(bob,1)`: creates pair `(X_c, X_c?)`, spawns `global_send(X_c?, _r(bob,1), bob)`, receives X_c (the writer)
+- Globalize X?: entry `(X, charlie)` at index 2 in W_bob, becomes `_r(bob,2)`
+- Message sent via `global_send(intro(X), _w(charlie,0), charlie)` (cold-call to Charlie's serializer)
+- Charlie localizes `_r(bob,2)`: creates pair `(X_c, X_c?)`, spawns `global_send(X_c?, _r(bob,2), bob)`, receives X_c (the writer)
 
 Charlie now holds writer X_c and can send values back to Bob.
 
 **State after introduction**:
 
-- Bob: `global_send(X?, _w(bob,0), alice)` goal, entry `(X, charlie)` at index 1
-- Alice: entry `(X_a, bob, 0)`, holds X_a?
-- Charlie: `global_send(X_c?, _r(bob,1), bob)` goal, holds X_c
+- Bob: `global_send(X?, _w(bob,1), alice)` goal, entry `(X, charlie)` at index 2
+- Alice: entry `(X_a, bob, 1)`, holds X_a?
+- Charlie: `global_send(X_c?, _r(bob,2), bob)` goal, holds X_c
 
 **Charlie sends a message**:
 
 Charlie assigns X_c := T:
 
 1. X_c? becomes known (= T)
-2. `global_send(X_c?, _r(bob,1), bob)` fires
-3. Message `_r(bob,1) := T↑` sent to Bob
-4. Bob receives, finds entry `(X, charlie)` at index 1, assigns X := T↓
+2. `global_send(X_c?, _r(bob,2), bob)` fires
+3. Message `_r(bob,2) := T↑` sent to Bob
+4. Bob receives, finds entry `(X, charlie)` at index 2, assigns X := T↓
 5. X? becomes known at Bob (= T)
-6. `global_send(X?, _w(bob,0), alice)` fires
-7. Message `_w(bob,0) := T↑` sent to Alice
-8. Alice receives, finds entry `(X_a, bob, 0)`, assigns X_a := T↓
+6. `global_send(X?, _w(bob,1), alice)` fires
+7. Message `_w(bob,1) := T↑` sent to Alice
+8. Alice receives, finds entry `(X_a, bob, 1)`, assigns X_a := T↓
 9. X_a? becomes known at Alice (= T)
 
 The value flows from Charlie through Bob to Alice, with Bob's local pair `(X, X?)` serving as the forwarding point.
@@ -399,16 +436,211 @@ Terms crossing agent boundaries are serialized with global names substituted for
 
 ### 11.5 The '_send' Builtin
 
-The `'_send'(T, G, Q)` builtin:
+The `'_send'(T, G, Q)` builtin behavior depends on whether G is a serializer address (index 0) or a normal global name (index > 0):
 
-1. Globalizes term T (which may spawn additional `global_send` goals for nested variables)
-2. Adds message `(G := T↑, Q)` to M_p
+**Case G = `_w(q, 0)` (Serializer)**:
+1. Globalizes term T for remote agent Q
+2. Adds message `(_w(q,0) := [T↑ | _w(q,0)], Q)` to M_p — content wrapped in list cell, writer reused in tail
+
+**Case G = `_w(p, i)` or `_r(p, i)` with i > 0 (Normal)**:
+1. Globalizes term T for remote agent Q
+2. Adds message `(G := T↑, Q)` to M_p — content sent directly
+
+The destination Q is baked into all nested global links created during globalization:
+- For each writer Y in T: spawns `global_send(Y?, _w(p,i), Q)` — Q is the destination
+- For each reader Y? in T: creates entry `(Y, Q)` — Q identifies who will send the assignment
 
 This builtin is invoked only when the `global_send` goal's guard succeeds, ensuring the reader argument is bound.
 
 ---
 
-## 12. Invariants
+## 12. External I/O System Predicates
+
+This section specifies the system predicates for GLP-to-Dart communication. These predicates bridge the GLP world (streams, goals) with the Dart world (isolates, Flutter windows).
+
+### 12.1 Overview
+
+Each agent has two output channels:
+- **Network output**: Messages to other agents, routed by Dart's IsolateManager
+- **UI output**: Messages to the agent's Flutter window (local to isolate)
+
+These channels are fundamentally different:
+- Network output uses madGLP's `'_send'` builtin with globalization
+- UI output uses a local `'_send_to_ui'` builtin without globalization (no variables cross the boundary)
+
+### 12.2 Network Output: send_to_net/1
+
+The network output stream carries cold-call messages of the form `msg(Q, T)` where Q is the destination agent and T is the term to send (which may contain variables).
+
+**Definition [send_to_net System Predicate]**
+
+The system predicate `send_to_net/1` reads cold-call messages from the network output stream and sends them via the serializer mechanism:
+
+```prolog
+procedure send_to_net(Stream?).
+send_to_net([msg(Q, T) | In]) :-
+    global_send(T?, _w(Q,0), Q?), send_to_net(In?).
+send_to_net([]).
+```
+
+where:
+- `Stream?` is the network output stream (reader)
+- `_w(Q,0)` is the well-known serializer address for agent Q's network input
+
+**Semantics**: For each `msg(Q, T)` in the stream:
+1. Wait for the message to be known (via list pattern match)
+2. Call `global_send(T?, _w(Q,0), Q?)` which:
+   - Waits for T? to be known (the `known(T)` guard in `global_send`)
+   - Globalizes T for agent Q, spawning `global_send` goals for nested writers and creating entries for nested readers
+   - Adds message `(_w(Q,0) := [T↑ | _w(Q,0)], Q)` to M_p (serializer format)
+3. Recurse with the tail
+
+**Unified Mechanism**: Cold-calls use the same 3-argument `global_send(T, G, Q)` as established links (Section 4), with the serializer address `_w(Q,0)` as the global name G. This unifies cold-calls with regular communication—both use `global_send`, differing only in the target address.
+
+### 12.3 Network Input: Receive via Serializer
+
+The receiving side of a cold-call is handled by the Receive transaction's serializer case. When agent q receives message `_w(q,0) := [T↑ | _w(q,0)]`:
+
+1. **Find serializer entry**: Look up the permanent entry `(N_q, *)` at index 0
+2. **Localize T↑ by q**: For each global name in T↑:
+   - For `_w(p, i)`: create fresh local pair `(Y_q, Y_q?)`, create entry `(Y_q, p, i)` in W_q, replace with Y_q?
+   - For `_r(p, i)`: create fresh local pair `(Z_q, Z_q?)`, spawn `global_send(Z_q?, _r(p,i), p)`, replace with Z_q
+3. **Extend input stream**: Assign N_q := [T_q↓? | N'_q] where N'_q is fresh, update entry to `(N'_q, *)`
+4. **Reactivate**: Wake any goals suspended on N_q?
+
+The GLP agent then reads from its network input stream like any other stream. The localized term contains only local variables, with global links established via the spawned `global_send` goals and entries.
+
+**Note on Atomicity**: Cold-calls use unary transactions only: sender's Reduce (fires `global_send`) → Send → receiver's Receive (serializer case). No binary transaction is required. Correctness relies on monotonicity—once global links are established, values flow forward.
+
+---
+
+### 12.4 UI Output: send_to_ui/1
+
+**Definition [send_to_ui System Predicate]**
+
+The system predicate `send_to_ui/1` iterates over a stream and sends each ground element to the local Flutter window:
+
+```prolog
+procedure send_to_ui(Stream?).
+send_to_ui([X|In]) :- ground(X?) | '_send_to_ui'(X?), send_to_ui(In?).
+send_to_ui([]).
+```
+
+where:
+- `Stream?` is the input stream of terms to send to the UI (reader)
+
+**Semantics**: For each element X in the input stream:
+1. Wait for X? to be ground (the `ground/1` guard)
+2. Call `'_send_to_ui'(X?)` which delivers X to the Dart/Flutter layer
+3. Recurse with the tail
+
+**Guard Requirement**: The `ground(X?)` guard ensures no unbound variables cross the GLP-Dart boundary. UI messages must be fully instantiated.
+
+### 12.5 The '_send_to_ui' Builtin
+
+**Definition ['_send_to_ui' Builtin]**
+
+The `'_send_to_ui'(T)` builtin:
+
+1. Serializes term T (which must be ground)
+2. Delivers T to the Dart layer via a Dart callback mechanism
+3. The Dart layer forwards T to the Flutter window for display
+
+This builtin does NOT:
+- Globalize T (no variables, so nothing to globalize)
+- Add to M_p (not routed through madGLP message system)
+- Create global links (purely local to isolate)
+
+**Dart Implementation**: The Dart runtime registers a callback that receives serialized terms from `'_send_to_ui'` and forwards them to the Flutter UI layer for rendering.
+
+### 12.6 Comparison: Network vs UI Output
+
+| Aspect | Network (`send_to_net`) | UI (`send_to_ui`) |
+|--------|------------------------|-------------------|
+| Goal | `global_send(T?, _w(Q,0), Q?)` | `'_send_to_ui'(T)` |
+| Globalization | Yes (creates global links) | No |
+| Variables allowed | Yes (globalized) | No (must be ground) |
+| Guard | `known(T)` (in `global_send`) | `ground(X?)` |
+| Routing | Via M_p → IsolateManager → Receive (serializer) | Direct to Dart callback |
+| Destination | Remote agent Q's serializer (`_w(Q,0)`) | Local Flutter window |
+
+### 12.7 UI Agent and Writer Binding
+
+The architecture supports interactive user queries through **writer variables**. When the social agent needs user input (e.g., "accept this friend request?"), it sends a term containing an unbound writer to the UI. The user's response binds that writer, which flows back to the social agent.
+
+**Example: Friend Request Protocol**
+
+```prolog
+%% Social agent sends befriend request with response writer
+agent(Id, [msg(Id1, intro(From, Resp))|In], Fs) :-
+    Id? =?= Id1? |
+    lookup_send(user, befriend(From?, Resp), Fs?, Fs1),  %% Resp is a WRITER
+    agent(Id?, In?, Fs1?).
+```
+
+The user sees: `befriend(alice, X35)` where `X35` is a writer.
+
+The user responds by binding the writer:
+- `X35 = accept(Ch)` — accept with a fresh channel
+- `X35 = no` — reject
+
+**UI Agent Validation with no_readers**
+
+The `ui_agent` mediates between social agent and Dart, using `no_readers/1` guard to ensure output is safe:
+
+```prolog
+procedure ui_agent(Channel?, Channel?).
+
+%% From social agent to user: wait until no readers, then forward
+ui_agent(AgentCh, DartCh) :-
+    receive(Msg, AgentCh?, AgentCh1),
+    no_readers(Msg?) |
+    send(Msg?, DartCh?, DartCh1),
+    ui_agent(AgentCh1?, DartCh1?).
+
+%% From user to social agent: pass through
+ui_agent(AgentCh, DartCh) :-
+    receive(Msg, DartCh?, DartCh1) |
+    send(Msg?, AgentCh?, AgentCh1),
+    ui_agent(AgentCh1?, DartCh1?).
+```
+
+**no_readers vs ground**
+
+| Guard | Meaning | Use Case |
+|-------|---------|----------|
+| `ground(X?)` | X has no variables (fully instantiated) | Final values only |
+| `no_readers(X?)` | X has no reader variables (writers OK) | Interactive queries |
+
+The `no_readers` guard allows writers in output, enabling the query-response pattern where users bind writers to provide input.
+
+**Future: Widget-Based Responses**
+
+Currently, users type bindings as text (e.g., `X35 = accept(Ch)`). In future versions, the UI will render interactive widgets:
+
+- `befriend(alice, X35)` → Button: [Accept] [Reject]
+- Clicking [Accept] binds `X35 = accept(Ch)` with a fresh channel
+- Clicking [Reject] binds `X35 = no`
+
+The GLP semantics remain unchanged—only the UI rendering differs.
+
+### 12.8 Usage Example
+
+In an agent's initialization:
+
+```prolog
+agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
+    %% Start UI output processor
+    send_to_ui(UserOut?),
+    %% Start network output processor (Q is established by Network transaction)
+    %% ... handle messages from UserIn? and NetIn? ...
+```
+
+The `send_to_ui` goal consumes terms written to UserOut and delivers them to the Flutter window. Network output is handled by `global_send` goals spawned during globalization, not by an explicit `send_to_net` call in user code.
+
+---
+
+## 13. Invariants
 
 The following invariants are maintained by madGLP:
 
@@ -424,13 +656,13 @@ The following invariants are maintained by madGLP:
 
 ---
 
-## 13. Security Extensions
+## 14. Security Extensions
 
 The security extensions from the previous specification (Section 7) remain applicable. Each message in M_p can be cryptographically protected with attestation, signature, and encryption as described there.
 
 ---
 
-## 14. References
+## 15. References
 
 - **CGLP Paper**: `~/Grassroots/CGLP`, Section 7 "Multiagent Deterministic GLP (madGLP)"
 - **Previous Spec**: `archive/irmaGLP-spec-v3.1-2026-01-30.md` (request-based model, now superseded)
@@ -444,6 +676,11 @@ The security extensions from the previous specification (Section 7) remain appli
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 5.0 | 2026-02-02 | Claude | **Major revision**: Unified cold-calls with established links via index-0 serializer. Removed binary Network Transaction. Added Section 4.1 (Index-0 Serializer). Updated all examples to use indices starting at 1. Updated '_send' builtin with index check. Updated Receive transaction with serializer case. Updated send_to_net to use 3-arg global_send with _w(Q,0). All transactions now unary. |
+| 4.6 | 2026-02-01 | Claude | Added Section 12.7: UI Agent and Writer Binding - documents no_readers guard for interactive queries, writer binding protocol, and future widget-based responses. Renumbered 12.7→12.8. |
+| 4.5 | 2026-01-31 | Claude | Fixed Section 12: send_to_net uses 2-arg global_send for cold-calls, corrected section numbering (12.5-12.7), updated comparison table. |
+| 4.4 | 2026-01-31 | Claude | Added Section 12: External I/O System Predicates (send_to_net/1, send_to_ui/1, '_send_to_ui' builtin). Renumbered subsequent sections. |
+| 4.3 | 2026-01-31 | Claude | Clarified how remote agent identity is stored in entries and used during Receive to properly bake Q into nested global links during Localize. Enhanced '_send' builtin documentation. |
 | 4.2 | 2026-01-30 | Claude | Verified alignment with revised paper. No "callback" terminology—consistently uses "assignment" throughout. |
 | 4.0 | 2026-01-30 | Claude | Complete rewrite based on madGLP design from CGLP paper. Replaced request-based model with push-based global_send mechanism. Simplified global writers table. Added Globalize/Localize operations. |
 | 4.1 | 2026-01-30 | Claude | Added Section 12 (Invariants). Clarified single-counter index allocation in Section 3.2. Added wire format clarification in Section 8.2. |
