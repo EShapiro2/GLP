@@ -203,7 +203,23 @@ When debugging issues:
 - Adding trace logging before understanding the code
 - Generating large trace outputs hoping to spot the problem
 
-### 1.11 FCP Reference Architecture
+### 1.11 GLP-First Implementation Principle
+
+**Any functionality that can be implemented in GLP should be implemented in GLP, not in Dart (or any other host language).**
+
+Rationale:
+- GLP provides proper suspension semantics (waiting on readers)
+- GLP code is more declarative and easier to reason about
+- Dart cannot easily suspend waiting for GLP variables to be instantiated
+- Keeps the host language layer thin (I/O only)
+
+**Rules:**
+1. Dart/host language is for I/O, display, and parsing only
+2. All logic involving channels, message handling, and synchronization belongs in GLP
+3. If you find yourself implementing wait/suspend logic in Dart, stop and move it to GLP
+4. New guards or predicates should be added to GLP, not worked around in Dart
+
+### 1.12 FCP Reference Architecture
 
 The GLP runtime follows the original FCP (Flat Concurrent Prolog) heap architecture. When implementing or modifying heap-related code:
 
@@ -233,6 +249,32 @@ The GLP runtime follows the original FCP (Flat Concurrent Prolog) heap architect
 - **Suspension on readers**: Goals waiting for values suspend on the writer cell
 
 **Rationale:** FCP is a mature, proven implementation. Reinventing heap architecture leads to subtle bugs and inconsistencies. When in doubt, read the FCP source.
+
+### 1.13 Disagreement Protocol: Discuss Before Overriding
+
+When the user provides explicit code, instructions, or decisions:
+
+1. **Use the user's code exactly** — do not modify, "improve", or reinterpret
+2. **If you disagree** — STOP and discuss your concern before proceeding
+3. **Never silently override** — your reasoning does not justify changing the user's explicit instructions without discussion
+
+**What this means:**
+- If user writes `Channel`, you write `Channel` (not `Channel?`)
+- If user writes a specific pattern, you use that pattern verbatim
+- If your internal reasoning suggests a different approach, you MUST raise it for discussion
+- You cannot proceed with your version while ignoring the user's explicit code
+
+**Correct behavior:**
+- User provides code → use it exactly as given
+- You think it's wrong → say "I notice this says X, but I think it should be Y because Z. Should we discuss?"
+- After discussion → implement the agreed-upon version
+
+**Incorrect behavior:**
+- User provides code → you "fix" it based on your understanding
+- User provides code → you use a different version without mentioning the discrepancy
+- User provides code → you assume they made a typo and correct it silently
+
+**Rationale:** The user's explicit instructions represent their intent. Your reasoning may be correct, but the user may have context or reasons you don't see. Silent overrides destroy trust and waste time debugging phantom issues. Always discuss disagreements openly.
 
 ---
 
@@ -428,7 +470,7 @@ Each project updates their own specs. Overview GLP ensures:
 
 ### 5.0 GLP Programming Idioms
 
-See `docs/glp-programming-idioms.md` for essential GLP programming patterns, including:
+See `docs/typed-glp-manual.md` for essential GLP programming patterns, including:
 
 - **Head-Body Variable Flow Principle**: How to correctly use reader/writer pairs when data flows between clause heads and bodies (critical for recursive clauses)
 - **Channel Type Convention**: The recommended `Channel ::= ch(Stream, Stream?)` definition
@@ -471,6 +513,48 @@ Public APIs require doc comments:
 /// Returns [WellTypedResult] with success/failure and any errors.
 WellTypedResult checkClause(Clause clause, ProcDecl decl) { ... }
 ```
+
+---
+
+## Part V-B: Typed GLP Debugging Protocol
+
+When debugging typed GLP programs with Claude, follow this iterative protocol:
+
+### 5B.1 Goal/Clause Reduction Failures
+
+If a goal fails to reduce when it should succeed, Claude shows **only**:
+
+```
+Type declaration(s)
+Procedure declaration
+Goal
+Clause
+```
+
+No explanations. User proposes correction. Claude applies and shows results. Iterate until resolved.
+
+### 5B.2 Well-Typing Failures
+
+If type checker reports errors, Claude shows **only**:
+
+```
+Type declaration(s)
+Procedure declaration
+Clause
+Error message
+```
+
+No explanations. User proposes correction. Claude applies and shows results. Iterate until resolved.
+
+### 5B.3 Protocol Rules
+
+1. **🔴 ABSOLUTE: Discussion mode blocks all actions** — You CANNOT write code, run tests, or make changes while discussing. Wait for explicit "discussion over" or "go ahead" signal.
+2. **🔴 "stop" means STOP** — If user says "stop", halt immediately. No cleanup, no finishing current action.
+3. **Never proceed alone** — wait for user confirmation before moving to next issue
+4. **Minimal output** — show only the relevant declarations and code
+5. **Iterate** — apply user's fix, show result, repeat until clean
+6. **One problem at a time** — resolve current issue before addressing others
+7. **"show me" means show code only** — When user says "show me", display ONLY the type declaration(s), procedure declaration, and problematic clause. No explanations, no analysis, no additional text.
 
 ---
 
@@ -575,4 +659,6 @@ cd glp_multiagent && flutter build macos
 | 2.5 | 2026-01-31 | Added section 1.10: Debugging Protocol - Read First, Run Second |
 | 2.6 | 2026-01-31 | Clarified 1.9: Code is NEVER the source of truth when spec is unclear |
 | 2.7 | 2026-01-31 | Added section 1.11: FCP Reference Architecture |
+| 2.8 | 2026-02-01 | Added section 1.11: GLP-First Implementation Principle (renumbered FCP to 1.12) |
+| 2.9 | 2026-02-01 | Added section 1.13: Disagreement Protocol - Discuss Before Overriding |
 

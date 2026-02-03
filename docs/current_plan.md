@@ -1,177 +1,71 @@
-# Current Plan: Unify dGLP/madGLP Execution via GlpEngine
+# Current Plan: Debug dGLP/madGLP Social Agent Play
 
-## Status: COMPLETED ✓
+Started: 2026-02-02
 
-All implementation steps completed on 2026-02-01.
+## Goal
 
----
+Get the social agent play working in both:
+1. **dGLP mode**: Single-process with GLP network switch (network3)
+2. **madGLP mode**: Multi-isolate with send_to_net and index-0 serializer
 
-## Problem (Solved)
+## Current State
 
-Previously there were multiple ways to run GLP programs:
-1. **REPL** (`bin/glp_repl.dart`) - CLI, single-agent dGLP only
-2. **IsolateManager** (`lib/multiagent/isolate_manager.dart`) - created its own runtime per isolate
-3. **Tests** - manually constructed goals, bypassing REPL flow
+### The Problem
 
-This caused code duplication and different behavior between REPL and tests.
+The dGLP version (`play_dglp.glp`) with `agent/4` using separate UserIn and NetIn streams **deadlocks**.
 
----
+The original dGLP version (`play_alice_bob_charlie1.glp`) with `agent/3` using **merged** input stream works.
 
-## Solution: GlpEngine
+### Why agent/4 Deadlocks in dGLP
 
-**One runtime implementation**: GlpEngine is the single source of truth.
-
-- dGLP = GlpEngine in single process (REPL is thin CLI wrapper)
-- madGLP = GlpEngine per isolate + message routing between isolates
-- Tests use GlpEngine (not manual goal construction)
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    IsolateManager                        │
-│  - Parses boot clause                                   │
-│  - Spawns isolates                                      │
-│  - Routes messages between isolates                     │
-└─────────────────────────────────────────────────────────┘
-        │                    │                    │
-        ▼                    ▼                    ▼
-┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-│   Isolate   │      │   Isolate   │      │   Isolate   │
-│   (alice)   │      │   (bob)     │      │  (charlie)  │
-│             │      │             │      │             │
-│  GlpEngine  │      │  GlpEngine  │      │  GlpEngine  │
-└─────────────┘      └─────────────┘      └─────────────┘
+`agent/4` has separate stream arguments:
+```prolog
+procedure agent(_?, Stream?, Stream?, OutputsList?).
+agent(Id, [Msg | UserIn], NetIn, Outputs) :- ...  % waits on UserIn
+agent(Id, UserIn, [Msg | NetIn], Outputs) :- ...  % waits on NetIn
 ```
 
----
+Each clause waits on only ONE stream. If a message arrives on NetIn but the goal is suspended waiting on UserIn, it never wakes up.
 
-## Implementation Steps (All Completed)
+### Why agent/3 Works in dGLP
 
-### ✓ Step 1: Extract GlpEngine from REPL
-Created `lib/engine/glp_engine.dart` - the embeddable core.
-
-```dart
-class GlpEngine {
-  void loadFile(String path);
-  void loadSource(String source);
-  Future<ExecutionResult> runGoal(String goalText);
-  void enableMadGLP({required String agentId});
-
-  GlpRuntime get runtime;
-  MadContext? madContext;
-}
-```
-
-### ✓ Step 2: Refactor REPL to use GlpEngine
-`bin/glp_repl.dart` is now a thin CLI wrapper calling engine methods.
-
-### ✓ Step 3: Refactor IsolateManager to use GlpEngine
-Each isolate creates GlpEngine, loads program, runs boot goal via engine.
-
-### ✓ Step 4: Update Tests
-- Archived `test/multiagent/actor_single_isolate_test.dart` to `test/archive/`
-- Created `test/engine/glp_engine_test.dart` with 5 tests (all passing)
-
----
-
-## Files Created
-- `lib/engine/glp_engine.dart` - the unified execution engine
-- `test/engine/glp_engine_test.dart` - GlpEngine tests
-
-## Files Modified
-- `bin/glp_repl.dart` - refactored to use GlpEngine
-- `lib/multiagent/isolate_manager.dart` - refactored to use GlpEngine
-
-## Files Archived
-- `test/multiagent/actor_single_isolate_test.dart` → `test/archive/`
-
----
-
-## Previous Completed Work
-
-### Type Checker Extensions
-- Added `#` to builtinGoals (SpawnGoal handling)
-- Added SpawnGoal handling in `well_typed_clause.dart`
-- Added `no_readers/1` to builtinProcedures and typePrelude
-
-### Boot File Redesign
-- Simplified boot clause: `agent_init(alice, _)@alice` etc.
-- Changed from separate streams to merged input with OutputsList
-- Fixed Channel argument order
-
-### BootLoader Update
-- Updated regex for 2-arity spawn directives
-
----
-
-## Reference Files
-
-### Boot File (main target)
-- `/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_alice_bob_charlie_actor_boot.glp`
-
-### Specs
-- Isolate Boot Spec: `/Users/udi/Grassroots/GLP/docs/ma/isolate-boot-spec.md`
-- Typed GLP Manual: `/Users/udi/Grassroots/GLP/docs/typed-glp-manual.md`
-- Discipline: `/Users/udi/Grassroots/GLP/docs/discipline.md`
-- madGLP Spec: `/Users/udi/Grassroots/GLP/docs/ma/madGLP-spec.md`
-
-### Type Checker
-- Prelude: `/Users/udi/Grassroots/GLP/glp_runtime/lib/analysis/type_checker/prelude.dart`
-- Clause Validation: `/Users/udi/Grassroots/GLP/glp_runtime/lib/analysis/type_checker/clause_validation.dart`
-- Well-Typed Clause: `/Users/udi/Grassroots/GLP/glp_runtime/lib/analysis/type_checker/well_typed_clause.dart`
-
-### Boot Loader
-- `/Users/udi/Grassroots/GLP/glp_runtime/lib/multiagent/boot_loader.dart`
-
-### Working Examples
-- `/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_alice_bob_typed.glp` (2-agent, well-typed)
-
----
-
-## Key Technical Details
-
-### Channel Type
-```glp
-Channel ::= ch(Stream, Stream?).
-```
-- First arg: output stream (writer)
-- Second arg: input stream (reader)
-
-### agent_init Pattern
-```glp
-procedure agent_init(Constant?, Channel).
-agent_init(Id, ch(NetOut?, NetIn)) :-
-    ground(Id?), new_channel(ch(UserIn, UserOut?), ActorCh) |
-    ui_agent_actor(Id?, ActorCh?),
+`agent/3` uses merge to combine streams:
+```prolog
+agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
     merge(UserIn?, NetIn?, In),
-    agent(Id?, In?, [output('_user', UserOut), output('_net', NetOut)]).
+    agent(Id?, In?, [friend(user, UserOut), friend(net, NetOut)]).
+
+procedure agent(_?, Stream?, FriendsList?).
+agent(Id, [Msg | In], Friends) :- ...  % waits on merged stream
 ```
 
-### OutputsList for Uniform Messaging
-```glp
-OutputEntry ::= output(String, Stream?).
-OutputsList ::= [] ; [OutputEntry|OutputsList].
-```
-Contains `'_user'`, `'_net'`, and dynamic friends.
+Messages from either source appear on the merged stream, so the agent wakes up regardless of which stream has a message.
 
----
+## Key Question
 
-## Test Commands
+**Can we use the same `agent/4` code for both dGLP and madGLP?**
 
-```bash
-# Type check boot file
-cd /Users/udi/Grassroots/GLP/glp_runtime
-echo "../programs/typed_book/social_graph/play_alice_bob_charlie_actor_boot.glp" | dart run bin/glp_repl.dart
+Options:
+1. **Use agent/3 with merge for both** - simpler, but madGLP currently uses agent/4 with separate streams
+2. **Use agent/4 for madGLP only** - different agent code for each mode
+3. **Add merge to dGLP boot** - wrap agent/4 with merge in dGLP mode
 
-# Run REPL tests
-cd /Users/udi/Grassroots/GLP && bash test/full_run_repl_tests.sh
+## Files
 
-# Run Dart unit tests
-cd /Users/udi/Grassroots/GLP/glp_runtime && dart test
+| File | Status | Notes |
+|------|--------|-------|
+| `programs/typed_book/social_graph/play_alice_bob_charlie1.glp` | Works | Original dGLP with agent/3 + merge |
+| `programs/typed_book/social_graph/play_dglp.glp` | Deadlocks | dGLP with agent/4 (no merge) |
+| `programs/typed_book/social_graph/play_alice_bob_charlie_actor_boot.glp` | Untested | madGLP with agent/4 |
 
-# Run multiagent tests
-cd /Users/udi/Grassroots/GLP/glp_runtime && dart test test/multiagent/
-```
+## Next Steps
+
+- [ ] 1. Decide: same agent code for both modes, or different?
+- [ ] 2. If same: determine how to handle the merge requirement in dGLP
+- [ ] 3. Test the chosen approach
+- [ ] 4. Verify madGLP version works (requires Phase 3 implementation)
+
+## Context
+
+This is Phase 5 of the "Unify Cold-Calls with Global Links via Index-0 Serializer" plan.
+See `/Users/udi/.claude/plans/fizzy-splashing-spark.md` for full context.

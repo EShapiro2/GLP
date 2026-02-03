@@ -662,7 +662,28 @@ The security extensions from the previous specification (Section 7) remain appli
 
 ---
 
-## 15. References
+## 15. Reserved Constants
+
+Constants beginning with underscore (`'_...'`) are reserved for system use and MUST NOT be used in user programs.
+
+### 15.1 System-Reserved Constants
+
+| Constant | Purpose |
+|----------|---------|
+| `'_user'` | Identifies messages from the local user input channel |
+| `'_net'` | Identifies the network output channel |
+| `'_w(p,i)'` | Global writer name (agent p, index i) |
+| `'_r(p,i)'` | Global reader name (agent p, index i) |
+
+### 15.2 Enforcement
+
+The GLP compiler rejects underscore-prefixed constants in user mode (default). System code that needs these constants must use the `-mode(system).` directive at the top of the file.
+
+**Rationale**: Reserved constants prevent naming collisions between user-defined agent identifiers and system channels. Without this restriction, a user could name an agent `user` or `net`, causing ambiguity with system channel identifiers.
+
+---
+
+## 16. References
 
 - **CGLP Paper**: `~/Grassroots/CGLP`, Section 7 "Multiagent Deterministic GLP (madGLP)"
 - **Previous Spec**: `archive/irmaGLP-spec-v3.1-2026-01-30.md` (request-based model, now superseded)
@@ -672,10 +693,11 @@ The security extensions from the previous specification (Section 7) remain appli
 
 ---
 
-## Document History
+## 17. Document History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 5.1 | 2026-02-02 | Claude | Added Section 15: Reserved Constants. Documents `'_user'`, `'_net'`, `'_w(p,i)'`, `'_r(p,i)'` as system-reserved. Describes `-mode(system).` directive for system code. Renumbered References→16, Document History→17. |
 | 5.0 | 2026-02-02 | Claude | **Major revision**: Unified cold-calls with established links via index-0 serializer. Removed binary Network Transaction. Added Section 4.1 (Index-0 Serializer). Updated all examples to use indices starting at 1. Updated '_send' builtin with index check. Updated Receive transaction with serializer case. Updated send_to_net to use 3-arg global_send with _w(Q,0). All transactions now unary. |
 | 4.6 | 2026-02-01 | Claude | Added Section 12.7: UI Agent and Writer Binding - documents no_readers guard for interactive queries, writer binding protocol, and future widget-based responses. Renumbered 12.7→12.8. |
 | 4.5 | 2026-01-31 | Claude | Fixed Section 12: send_to_net uses 2-arg global_send for cold-calls, corrected section numbering (12.5-12.7), updated comparison table. |

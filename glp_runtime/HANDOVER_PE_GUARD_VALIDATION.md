@@ -42,8 +42,8 @@ Any other user-defined procedure called in guard position is a compile-time erro
   - Documents guard classification and validation rule
   - Includes error example
 
-- `docs/glp-programming-idioms.md`
-  - Updated Section 6.4 to clarify the three-way classification
+- `docs/typed-glp-manual.md`
+  - Section 8 documents single-unit-clause procedures
 
 ---
 
@@ -104,5 +104,5 @@ The validation logic is in `_transformClause()` around line 455:
 ## Spec References
 
 - `docs/guards-reference.md` — "What Can Appear in Guard Position" section
-- `docs/glp-programming-idioms.md` — Section 6.4 "Partial Evaluation Behavior"
+- `docs/typed-glp-manual.md` — Section 8 "Single-Unit-Clause Procedures"
 - `lib/analysis/type_checker/prelude.dart` — `builtinProcedures` set defines all builtins

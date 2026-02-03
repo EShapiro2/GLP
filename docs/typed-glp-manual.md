@@ -1,10 +1,72 @@
 # Typed GLP Manual
 
-**Version**: 2.0  
-**Date**: 2026-01-27  
+**Version**: 2.3
+**Date**: 2026-02-02
 **Status**: ACTIVE
 
 This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, and common pitfalls.
+
+---
+
+## 0. Interactive Development Protocol
+
+### 0.1 The "show me" Command
+
+When the user says "show me", display ONLY:
+1. Relevant type declaration(s)
+2. Procedure declaration
+3. The problematic clause(s)
+
+No explanations, no analysis, no additional text. User will propose corrections.
+
+### 0.2 GLP Code Modification Protocol
+
+**🔴 CRITICAL:** Before modifying any `.glp` file:
+1. Show the proposed change (old code → new code)
+2. Wait for explicit user approval
+3. Only then make the edit
+
+Never modify GLP code without showing the user first.
+
+### 0.3 Running GLP Code
+
+Before running or tracing GLP code in the REPL:
+1. Show the user which file will be loaded
+2. Show the goal that will be executed
+3. Wait for approval (or use pre-approved commands from settings)
+
+---
+
+## 1. SRSW Errors Must Be Corrected First
+
+Before addressing type errors, ensure all SRSW (Single-Reader Single-Writer) violations are corrected. The type checker reports both SRSW violations and type errors, but they appear similar. SRSW errors manifest as "Variable mode mismatch" messages.
+
+**How to identify SRSW errors:**
+- A variable appears as a writer in multiple places
+- A variable appears as a reader in multiple places (without constant-type or ground-guard relaxation)
+- A writer/reader pair is not properly threaded through a clause
+
+**Example SRSW error:**
+```prolog
+%% WRONG: AgentOut1 used as writer twice (in receive result and send result)
+ui_relay(ch(AgentIn, AgentOut?), ch(ActorIn, ActorOut?)) :-
+    receive(Msg, ch(AgentIn?, AgentOut), ch(AgentIn1, AgentOut1)),
+    no_readers(Msg?) |
+    send(Msg?, ch(ActorIn?, ActorOut), ch(ActorIn1, ActorOut1)),
+    ui_relay(ch(AgentIn1?, AgentOut1?), ch(ActorIn1?, ActorOut1?)).
+```
+
+**Corrected:**
+```prolog
+%% CORRECT: Each variable has exactly one writer and one reader
+ui_relay(ch(AgentIn, AgentOut?), ch(ActorIn, ActorOut?)) :-
+    receive(Msg, ch(AgentIn?, AgentOut), ch(AgentIn1, AgentOut1?)),
+    no_readers(Msg?) |
+    send(Msg?, ch(ActorIn?, ActorOut), ch(ActorIn1, ActorOut1?)),
+    ui_relay(ch(AgentIn1?, AgentOut1), ch(ActorIn1?, ActorOut1)).
+```
+
+The fix: `AgentOut1` and `ActorOut1` needed `?` in the channel outputs from `receive` and `send` (they are readers there, receiving the new output stream), and the writers go to the recursive call.
 
 ---
 
@@ -294,11 +356,7 @@ play :- alice(ch(Xs?, Ys)?), bob(ch(Ys?, Xs)?).
 
 ### 9.1 Definition
 
-An **anonymous variable** is any variable whose name begins with `_` (e.g., `_`, `_In`, `_Out`, `_Result`). Anonymous variables provide a controlled exception to the SRSW restriction.
-
-### 9.2 Semantics
-
-Each occurrence of an anonymous variable denotes a fresh writer with no paired reader. Values assigned to anonymous variables are discarded. This allows discarding unwanted values without creating unused variable pairs.
+An anonymous variable is any variable whose name begins with `_` (e.g., `_`, `_In?`, `_Out`). Anonymous writers may appear in the head, denoting a fresh writer with no paired reader, so that a value assigned to it is discarded. This provides a controlled exception to the SRSW restriction, allowing a process to abandon an input (e.g. an input stream) they are no longer interested in.
 
 ### 9.3 Examples
 
@@ -331,7 +389,83 @@ second([_, X | _], X?).
 
 ---
 
-## 10. Summary: Variable Flow Table
+## 10. Channel Creation vs Channel Reception
+
+### 10.1 The Principle
+
+A procedure declaration must accurately reflect whether channels are **created** by the procedure or **received** from the caller. This is a common source of mode errors.
+
+**The rule:**
+- If a procedure **creates** a channel internally (e.g., via `new_channel`), that argument must be an **output** (no `?`)
+- If a procedure **receives** a channel from the caller, that argument must be an **input** (with `?`)
+
+### 10.2 Wrong: Declaring Input but Creating Internally
+
+```prolog
+procedure agent_init(_?, Channel?, Channel?).
+
+agent_init(Id, _DartUserCh, ch(NetIn, NetOut?)) :-
+    ground(Id?), new_channel(ch(AgentIn, AgentOut?), ActorCh) |
+    ui_agent_actor(Id?, ActorCh?),
+    merge(AgentIn?, NetIn?, In),
+    agent(Id?, In?, [friend(user, AgentOut), friend(net, NetOut)]).
+```
+
+This declares args 2 and 3 as `Channel?` (input), but the clause creates channels internally via `new_channel`. **You cannot declare a channel as input and create it internally at the same time.**
+
+### 10.3 The Fix
+
+If channels are created internally, declare them as outputs:
+
+```prolog
+procedure agent_init(_?, Channel, Channel).
+```
+
+Now the clause **produces** the channels rather than receiving them.
+
+### 10.4 Diagnosing This Error
+
+When you see `→ failed` on a clause that should match, check:
+
+1. Does the procedure declaration say an argument is input (`Type?`)?
+2. Does the clause create or construct that value internally?
+
+If both are true, the declaration is wrong — change to output mode (`Type`).
+
+### 10.5 Boot Clauses and External Channels
+
+In madGLP boot scenarios, the Dart runtime may provide channels to agents. In this case:
+
+```prolog
+%% Channels come from Dart runtime
+procedure agent_init(_?, Channel?, Channel?).
+
+agent_init(Id, UserCh, NetCh) :-
+    ground(Id?) |
+    agent(Id?, UserCh?, NetCh?).
+```
+
+Here the channels truly are inputs — provided by the external runtime. The clause receives them and passes them along.
+
+### 10.6 Hybrid Scenarios
+
+If some channels come from outside and others are created internally:
+
+```prolog
+%% UserCh from outside, InternalCh created here
+procedure agent_init(_?, Channel?, Channel).
+
+agent_init(Id, UserCh, InternalCh) :-
+    ground(Id?), new_channel(InternalCh, PeerCh) |
+    peer_process(PeerCh?),
+    agent(Id?, UserCh?, InternalCh?).
+```
+
+Each argument's mode reflects its actual data flow.
+
+---
+
+## 11. Summary: Variable Flow Table
 
 | Scenario | Head Variable | Body Variable | Explanation |
 |----------|---------------|---------------|-------------|
@@ -341,10 +475,40 @@ second([_, X | _], X?).
 
 ---
 
+## 12. Reserved Constants
+
+Constants beginning with underscore (`'_...'`) are reserved for system use. User programs MUST NOT define or use such constants.
+
+### System-Reserved Constants
+
+| Constant | Purpose |
+|----------|---------|
+| `'_user'` | User input channel identifier |
+| `'_net'` | Network output channel identifier |
+| `'_w(p,i)'`, `'_r(p,i)'` | Global variable names in madGLP |
+
+### Compiler Mode Directive
+
+The compiler enforces this restriction in user mode (default). System code requiring these constants must declare `-mode(system).` at the top of the file:
+
+```glp
+-mode(system).  %% Allows use of reserved constants
+
+%% Now '_user' and '_net' can be used
+agent(Id, [msg('_user', Id, connect(Target))|In], NetIn, Outs) :-
+    ...
+```
+
+**Rationale**: Reserved constants prevent naming collisions between user-defined identifiers and system channels. Without this restriction, a user could name an agent `user` or `net`, causing ambiguity with system channel identifiers.
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.3 | 2026-02-02 | Added Section 12: Reserved Constants (underscore-prefixed constants reserved for system use, `-mode(system).` directive) |
+| 2.2 | 2026-02-01 | Added Section 10: Channel Creation vs Channel Reception |
 | 2.1 | 2026-01-28 | Added Section 9: Anonymous Variables (any variable starting with `_` is anonymous) |
 | 2.0 | 2026-01-27 | Renamed to Typed GLP Manual; added Section 1 (Procedure Declarations Must Match Data Flow); added Section 3 (SRSW Relaxation for Constant Types); consolidated and reorganized |
 | 1.3 | 2026-01-27 | Added Section 6: Unit Clause Procedures |

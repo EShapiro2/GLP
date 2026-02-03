@@ -1,8 +1,8 @@
 # Dart Runtime Spec for `@` Operator (Isolate Boot)
 
-**Version**: 0.4 (DRAFT)
-**Date**: 2026-01-28
-**Status**: For review
+**Version**: 0.6 (DRAFT)
+**Date**: 2026-02-01
+**Status**: Updated for madGLP
 
 ---
 
@@ -12,7 +12,7 @@ The `@` operator enables GLP programs to declaratively spawn agents across Dart 
 
 ```prolog
 procedure boot.
-boot :- 
+boot :-
     agent_init(alice, ch(_?,_), ch(_?,_))@alice,
     agent_init(bob, ch(_?,_), ch(_?,_))@bob,
     agent_init(charlie, ch(_?,_), ch(_?,_))@charlie.
@@ -23,9 +23,9 @@ boot :-
 Instructs the Dart runtime to:
 1. Create three isolates named `alice`, `bob`, `charlie`
 2. In each isolate, run the specified goal with properly wired channels
-3. Route cold-call messages between isolates
+3. Route madGLP messages between isolates
 
-**Key design principle**: The Dart runtime handles all inter-isolate routing. There is no GLP-level network switch — cold-call messages are routed by Dart based on the destination agent ID in `msg(Target, Content)`.
+**Key design principle**: The Dart runtime handles all inter-isolate routing. There is no GLP-level network switch — messages are routed by Dart based on the destination agent ID.
 
 ---
 
@@ -43,7 +43,7 @@ Functor    ::= Atom
 Channel    ::= 'ch' '(' '_?' ',' '_' ')'
 ```
 
-### 2.2 Restrictions (v0.4)
+### 2.2 Restrictions (v0.5)
 
 1. **Boot-time only**: The `@` operator is only valid in the `boot/0` clause. It cannot appear elsewhere in the program.
 
@@ -102,16 +102,16 @@ Manages isolate lifecycle and message routing.
 class IsolateManager {
   final Map<String, SendPort> _agentPorts = {};
   final ReceivePort _mainPort = ReceivePort();
-  
+
   /// Spawn all agents from boot configuration
   Future<void> boot(BootConfig config);
-  
-  /// Route a cold-call message to destination agent
+
+  /// Route a madGLP message to destination agent
   void routeMessage(String from, String to, NetworkMsg msg);
-  
+
   /// Wait for all agents to complete
   Future<void> waitForCompletion({Duration? timeout});
-  
+
   /// Shutdown all isolates
   Future<void> shutdown();
 }
@@ -123,36 +123,35 @@ Each isolate runs the specified goal with the following setup:
 
 ```dart
 void agentIsolateEntry(AgentConfig config) async {
-  // 1. Create runtime and IRMA context
+  // 1. Create runtime and madGLP context
   final runtime = GlpRuntime();
-  final ctx = IrmaContext(agentId: config.agentId, runtime: runtime);
-  
+  final ctx = MadContext(agentId: config.agentId, runtime: runtime);
+
   // 2. Create UI channel pair (second argument)
   final (uiInWriter, uiInReader) = runtime.heap.allocateVariable();
   final (uiOutWriter, uiOutReader) = runtime.heap.allocateVariable();
   final uiCh = StructTerm('ch', [VarRef(uiInReader), VarRef(uiOutWriter)]);
-  
+
   // 3. Create network channel pair (third argument)
+  // In madGLP, network communication happens via global_send goals,
+  // not via explicit network streams. Channel is for cold-call initiation.
   final (netInWriter, netInReader) = runtime.heap.allocateVariable();
   final (netOutWriter, netOutReader) = runtime.heap.allocateVariable();
   final netCh = StructTerm('ch', [VarRef(netInReader), VarRef(netOutWriter)]);
-  
-  // 4. Register IRMA network streams
-  ctx.registerNetworkInput(netInWriter);
-  ctx.registerNetworkOutput(netOutWriter);
-  
-  // 5. Wire UI channel to window
-  ctx.registerUIOutput(uiOutWriter, config.uiPort);
-  ctx.registerUIInput(uiInWriter);
-  
-  // 6. Spawn the goal (e.g., agent_init/3)
+
+  // 4. Set up message delivery callback
+  ctx.onMessageReady = (dest, msg) {
+    config.mainPort.send(NetworkMsg(config.agentId, dest, msg.payload, msg.type));
+  };
+
+  // 5. Spawn the goal (e.g., agent_init/3)
   spawnGoal(runtime, config.program, '${config.goalFunctor}/3', [
     ConstTerm(config.agentId),  // Agent's identity
     uiCh,                        // UI channel (second arg)
     netCh,                       // Network channel (third arg)
   ]);
-  
-  // 7. Enter message loop
+
+  // 6. Enter message loop
   runMessageLoop(runtime, ctx, config);
 }
 ```
@@ -167,18 +166,115 @@ A channel is a pair `ch(In?, Out)` where:
 - `In?` is a reader — the agent reads messages from this stream
 - `Out` is a writer — the agent writes messages to this stream
 
-### 4.2 UI Channel (UICh) — Second Argument
+### 4.2 UI Agent Layer
 
-Connects the agent to its user interface window. **The user operating the Flutter window is the "actor"** — there are no scripted actor procedures.
+The UI channel connects the social agent to its user interface. This is mediated by a **ui_agent** layer that has two implementations:
 
-| Direction | Variable | Dart Wiring |
-|-----------|----------|-------------|
-| Agent reads | `UIIn?` | User commands from Flutter window delivered here |
-| Agent writes | `UIOut` | Agent notifications displayed in Flutter window |
+1. **Window implementation** (`ui_agent_window/2`): Spawns a Flutter window for human interaction
+2. **Actor implementation** (`ui_agent_actor/2`): Runs a scripted GLP actor procedure for automated testing
 
-**Message format (user → agent)**: `msg(user, AgentId, Command)` where Command is e.g., `connect(Target)`, `send(Target, Text)`, `decision(yes, From, Resp)`
+Both implementations provide the same interface to the social agent — a channel for bidirectional communication.
 
-**Message format (agent → user)**: `msg(agent, user, Notification)` where Notification is e.g., `befriend(From, Resp)`, `connected(Friend)`, `received(From, Text)`
+#### 4.2.1 UI Agent Interface
+
+```prolog
+%% ui_agent_window(AgentId, Ch) - spawns Flutter window
+%% ui_agent_actor(AgentId, Ch)  - runs actor/2 procedure
+
+%% Both provide Ch to social agent for communication
+```
+
+#### 4.2.2 Window Implementation
+
+```prolog
+procedure ui_agent_window(_?, Channel).
+ui_agent_window(Agent, Ch) :-
+    '_spawn_window'(Agent, DartCh) |  %% builtin: creates window, returns channel
+    ui_relay(Ch?, DartCh?).
+```
+
+The `'_spawn_window'/2` builtin:
+- Creates a Flutter window titled with Agent name
+- Returns a channel connected to the window's I/O
+- Window displays agent output, accepts user input
+
+#### 4.2.3 Actor Implementation
+
+```prolog
+procedure ui_agent_actor(_?, Channel).
+ui_agent_actor(Agent, Ch) :-
+    actor(Agent, Ch?).  %% actor/2 defined in GLP, drives the test
+```
+
+The `actor/2` procedure is pure GLP code that simulates user behavior:
+- Reads messages from the social agent
+- Makes decisions (accept/reject friend requests, etc.)
+- Writes commands back (connect, send, etc.)
+
+#### 4.2.4 Shared Relay with no_readers Validation
+
+Both implementations use a relay that validates output with `no_readers`:
+
+```prolog
+procedure ui_relay(Channel?, Channel?).
+
+%% From social agent to user: wait until no readers, then forward
+ui_relay(AgentCh, UserCh) :-
+    receive(Msg, AgentCh?, AgentCh1),
+    no_readers(Msg?) |
+    send(Msg?, UserCh?, UserCh1),
+    ui_relay(AgentCh1?, UserCh1?).
+
+%% From user to social agent: pass through
+ui_relay(AgentCh, UserCh) :-
+    receive(Msg, UserCh?, UserCh1) |
+    send(Msg?, AgentCh?, AgentCh1),
+    ui_relay(AgentCh1?, UserCh1?).
+```
+
+The `no_readers(Msg?)` guard ensures output to the user contains no reader variables (writers are allowed for interactive queries like `befriend(alice, X35)`).
+
+#### 4.2.5 Boot Examples
+
+The boot clause remains simple and BootLoader-compatible. The difference between actor and window mode is in which `agent_init` is used (in separate GLP files):
+
+**Boot clause (same for both modes):**
+```prolog
+procedure boot.
+boot :-
+    agent_init(alice, ch(_?,_), ch(_?,_))@alice,
+    agent_init(bob, ch(_?,_), ch(_?,_))@bob,
+    agent_init(charlie, ch(_?,_), ch(_?,_))@charlie.
+```
+
+**Actor mode `agent_init` (headless testing):**
+```prolog
+agent_init(Id, _DartUserCh, ch(NetIn, NetOut?)) :-
+    new_channel(AgentCh, ActorCh) |
+    ui_agent_actor(Id?, ActorCh?),
+    merge(AgentCh?, NetIn?, In),
+    agent(Id?, In?, [friend(user, AgentCh), friend(net, NetOut)]).
+```
+
+**Window mode `agent_init` (visual UI):**
+```prolog
+agent_init(Id, ch(DartIn, DartOut?), ch(NetIn, NetOut?)) :-
+    new_channel(AgentCh, WindowCh) |
+    ui_agent_window(Id?, WindowCh?, ch(DartIn?, DartOut)),
+    merge(AgentCh?, NetIn?, In),
+    agent(Id?, In?, [friend(user, AgentCh), friend(net, NetOut)]).
+```
+
+This design keeps the boot clause BootLoader-compatible while allowing different UI implementations.
+
+#### 4.2.6 Message Formats
+
+| Direction | Format | Examples |
+|-----------|--------|----------|
+| User → Agent | Command terms | `connect(bob)`, `send(bob, hello)`, `X35 = accept(Ch)` |
+| Agent → User | Notification terms | `befriend(alice, X35)`, `connected(bob)`, `received(alice, hello)` |
+
+Writer variables in output (like `X35` in `befriend(alice, X35)`) allow interactive queries — the user binds them to provide responses.
 
 ### 4.3 Network Channel (NetCh) — Third Argument
 
@@ -186,8 +282,8 @@ Connects the agent to the inter-isolate message router (Dart).
 
 | Direction | Variable | Dart Wiring |
 |-----------|----------|-------------|
-| Agent reads | `NetIn?` | IRMA delivers cold-call messages here via `handleNetworkMessage()` |
-| Agent writes | `NetOut` | IRMA monitors via `registerNetworkOutput()`, sends to router |
+| Agent reads | `NetIn?` | Cold-call messages delivered here |
+| Agent writes | `NetOut` | Cold-call messages routed by IsolateManager |
 
 **Message format**: `msg(Target, Content)` where `Target` is the destination agent's identifier.
 
@@ -195,26 +291,28 @@ Connects the agent to the inter-isolate message router (Dart).
 
 ## 5. Message Routing
 
-### 5.1 Cold-Call Flow (Network Transaction)
+### 5.1 madGLP Message Flow
 
-When agent `alice` writes `msg(bob, Content)` to her `NetOut`:
+madGLP uses a push-based model where messages are sent when writers are bound. See madGLP-spec.md for full details.
 
-1. **IRMA detects write**: `IrmaContext.flushMessages()` sees binding on monitored `NetOut`
-2. **Serialize**: `PayloadSerializer` converts the message to bytes
-3. **Send to router**: `onMessageReady(destination: 'bob', payload)` callback fires
-4. **Router delivers**: `IsolateManager.routeMessage('alice', 'bob', msg)`
-5. **Bob receives**: Bob's isolate gets `NetworkMsg` via its `ReceivePort`
-6. **IRMA processes**: `ctx.handleNetworkMessage('alice', payload)` binds to Bob's `NetIn`
+**Assignment Message Flow:**
+
+1. Agent p binds writer X, X? becomes known
+2. `global_send` goal fires (if watching X?)
+3. Message added to M_p (message set)
+4. `ctx.flushMessages()` delivers via `onMessageReady` callback
+5. IsolateManager routes to destination agent
+6. Destination receives, calls `ctx.handleMadAssignment()`
+7. Local writer bound, entry removed from W_p
 
 ### 5.2 Message Types
 
-The router handles these IRMA message types:
+The router handles these madGLP message types:
 
 | Type | Description | Routing |
 |------|-------------|---------|
 | `agentMessage` | Cold-call content (Network Transaction) | By destination in `msg(Target, _)` |
-| `assignment` | Variable binding | By creator in global variable ID |
-| `readRequest` | Read request for variable | By creator in global variable ID |
+| `assignment` | Variable assignment (per madGLP spec) | By global name in message |
 
 ---
 
@@ -239,15 +337,14 @@ The router handles these IRMA message types:
 ### 6.2 Agent Startup Sequence
 
 ```
-1. Create GlpRuntime and IrmaContext
+1. Create GlpRuntime and MadContext
 2. Allocate channel variables (UICh, NetCh)
-3. Register IRMA streams
-4. Wire UI channel to window
-5. Build goal arguments with proper VarRef readers
-6. Spawn goal on scheduler
-7. Send Ready to main isolate
-8. Wait for Start
-9. Run scheduler, process messages
+3. Set up onMessageReady callback for message delivery
+4. Build goal arguments with proper VarRef readers
+5. Spawn goal on scheduler
+6. Send Ready to main isolate
+7. Wait for Start
+8. Run scheduler, process messages via flushMessages()
 ```
 
 ---
@@ -282,18 +379,23 @@ class Ready extends IsolateMessage {
 /// Start execution
 class Start extends IsolateMessage {}
 
-/// Network message to route
+/// Network message to route (madGLP)
 class NetworkMsg extends IsolateMessage {
   final String from;
   final String to;
   final List<int> payload;
   final MessageType type;
+
+  /// Optional global name fields for routing
+  final String? globalNameAgent;
+  final int? globalNameIndex;
+  final bool? globalNameIsWriter;
 }
 
 /// UI event from window
 class UIEvent extends IsolateMessage {
   final String agentId;
-  final Term content;
+  final List<int> payload;
 }
 
 /// Agent completed
@@ -341,14 +443,14 @@ For unit tests, UI channels can be mocked:
 test('three agent cold-call protocol', () async {
   final manager = IsolateManager();
   final config = BootLoader().load('programs/play_alice_bob_charlie_boot.glp');
-  
+
   await manager.boot(config);
-  
+
   // Simulate user actions via UI channel
   manager.injectUIEvent('alice', ConstTerm('msg(user, alice, connect(bob))'));
-  
+
   await manager.waitForCompletion(timeout: Duration(seconds: 30));
-  
+
   expect(manager.allCompleted, isTrue);
 });
 ```
@@ -387,7 +489,7 @@ agent(_, [], _).
 
 ---
 
-## 11. Future Extensions (Out of Scope for v0.4)
+## 11. Future Extensions (Out of Scope for v0.5)
 
 The following are explicitly **not supported** in this version:
 
@@ -409,3 +511,5 @@ These may be added in future versions as needed.
 | 0.2 | 2026-01-28 | Restricted to boot-time only; fixed goal to `agent/3`; boot clause must be first |
 | 0.3 | 2026-01-28 | Generalized goal functor: any `p/3` procedure allowed, not just `agent/3` |
 | 0.4 | 2026-01-28 | Fixed channel order (UICh second, NetCh third); added `procedure boot.` requirement; clarified users are actors; updated example to match actual GLP code |
+| 0.5 | 2026-01-31 | Updated for madGLP: replaced IRMA terminology with madGLP, removed deprecated APIs (registerNetworkInput/Output, handleNetworkMessage), updated message flow to use push-based model with global_send and handleMadAssignment |
+| 0.6 | 2026-02-01 | Redesigned Section 4.2: UI Agent Layer with two implementations (window vs actor). Added `ui_agent_window/2`, `ui_agent_actor/2`, `ui_relay/2` with `no_readers` validation. Added `'_spawn_window'/2` builtin. Boot examples for both modes. |

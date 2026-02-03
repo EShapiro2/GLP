@@ -126,6 +126,20 @@ bar(X, Y, R?) :- X? + 1 < Y? * 2 | R = sum(X?, Y?).
 - **NEVER continue** with actions not based on instructions
 - If you encounter an obstacle: STOP, REPORT, WAIT for direction
 
+### 🔴 GLP Code Modification Protocol
+
+**Before modifying any `.glp` file:**
+1. Show the proposed change (old code → new code)
+2. Wait for explicit user approval
+3. Only then make the edit
+
+**Before running or tracing GLP code in the REPL:**
+1. Show the user which file will be loaded
+2. Show the goal that will be executed
+3. Wait for approval (or use pre-approved commands from settings)
+
+Never modify or run GLP code without showing the user first.
+
 ### Never Implement Without a Plan
 - **NEVER start implementation without an agreed upon plan**
 - First discuss and document the design
@@ -187,6 +201,35 @@ Present your findings and discuss what to do next:
 - Fix the bug
 - Add explanations to the docs so that the behavior becomes expected
 
+### GLP Bug Reporting Format
+When a suspected GLP bug is found, report it in THIS EXACT FORMAT with no intervening text or explanations:
+
+**Failing Goal:**
+```
+<the goal that fails>
+```
+
+**Type and Procedure Declarations:**
+```prolog
+<relevant type definitions>
+<procedure declaration>
+```
+
+**Suspected Clause(s):**
+```prolog
+<the clause(s) that should match but don't>
+```
+
+Then STOP and wait for discussion. Do NOT attempt to fix. Do NOT add explanations between the sections.
+
+### Discussion Mode is Default - No Rushing to Execution
+When discussing issues or bugs:
+1. **Stay in discussion mode** - Do NOT start implementing, building, or running code
+2. **Wait for explicit approval** - User must explicitly say to proceed with implementation
+3. **Present findings only** - Report what you found, then STOP and WAIT
+4. **No "let me just try"** - Even small tests or builds require approval during discussion
+5. **Ask questions** - If something is unclear, ask rather than assuming and executing
+
 ### Bug Protocol
 **NEVER bypass or circumvent a bug.** When you discover a bug:
 1. **STOP immediately** - Do not attempt workarounds or alternative approaches
@@ -245,11 +288,12 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 ## Working Modes
 
 ### Discussion Mode (DEFAULT)
-- **🔴 STOP AND WAIT** - While discussing, you CANNOT proceed with ANY actions (coding, testing, git operations) until user explicitly confirms the discussion is over
+- **🔴 ABSOLUTE RULE: NO ACTIONS DURING DISCUSSION** - You CANNOT proceed with ANY actions (coding, testing, running commands, git operations) until user explicitly confirms the discussion is over with phrases like "discussion over", "let's implement", "go ahead", etc.
+- **🔴 "stop" MEANS STOP** - If user says "stop" or "wait", STOP IMMEDIATELY. Do not finish current action. Do not clean up. Just stop.
 - **NO CODE CHANGES** - Not even small fixes
 - **BRIEF RESPONSES** - Show output, explain what you see
 - **STAY ON TOPIC** - Don't jump ahead
-- **WAIT FOR AGREEMENT** - Explicit "let's implement" signal needed
+- **WAIT FOR EXPLICIT SIGNAL** - User must explicitly end discussion before you can act
 
 ### Implementation Mode  
 - **ONLY AFTER EXPLICIT AGREEMENT**
@@ -360,7 +404,7 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 
 ## GLP Unified Tool: The REPL
 
-**The REPL is the ONE tool for all GLP operations.** It runs the complete pipeline:
+**The REPL is the only tool for all GLP operations.** Old standalone tools have been archived to `glp_runtime/bin/archive/` and must NOT be executed. This restriction is absolute - do not run archived tools even if they seem relevant. The REPL runs the complete pipeline:
 1. **SRSW Analysis** → Verify single-reader/single-writer
 2. **Partial Evaluation** → Evaluate defined guards
 3. **Type Checking** → Verify mode/type correctness
@@ -371,19 +415,24 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 
 ### REPL Usage
 
-**Use dart run** (recommended):
+**IMPORTANT:** Always use `echo -e` with pipe, NOT heredoc (`<<<`). Heredoc requires user approval for each command.
+
+**Correct pattern (no approval needed):**
 ```bash
-cd /home/user/GLP/glp_runtime
-export PATH="/home/user/dart-sdk/bin:$PATH"
-echo -e 'filename.glp\ngoal.' | dart run bin/glp_repl.dart
+cd /Users/udi/Grassroots/GLP/glp_runtime
+echo -e 'load ../programs/path/to/file.glp\ngoal.' | dart run bin/glp_repl.dart
+```
+
+**Wrong pattern (requires approval - avoid):**
+```bash
+dart run bin/glp_repl.dart <<< 'load file.glp'  # DON'T USE - needs approval
 ```
 
 **Or compile for faster repeated testing:**
 ```bash
-cd /home/user/GLP/glp_runtime
-export PATH="/home/user/dart-sdk/bin:$PATH"
+cd /Users/udi/Grassroots/GLP/glp_runtime
 dart compile exe bin/glp_repl.dart -o glp_repl
-echo -e 'filename.glp\ngoal.' | ./glp_repl
+echo -e 'load ../programs/path/to/file.glp\ngoal.' | ./glp_repl
 ```
 
 **REPL Test Scripts (Linux):**
@@ -458,10 +507,9 @@ bash /home/user/GLP/test/run_book_tests.sh
 
 **BEFORE any implementation:**
 
-1. **`SPEC_GUIDE.md`** - Start here for overview of GLP execution model
-2. **`docs/glp-bytecode-v216-complete.md`** - NORMATIVE instruction set specification
-3. **`docs/glp-runtime-spec.txt`** - NORMATIVE Dart runtime architecture
-4. **`docs/single-id-migration.md`** - Single-ID variable system design (CURRENT)
+1. **`docs/glp-bytecode-v216-complete.md`** - NORMATIVE instruction set specification
+2. **`docs/glp-runtime-spec.txt`** - NORMATIVE Dart runtime architecture
+3. **`docs/typed-glp-manual.md`** - MANDATORY for GLP programming patterns and interactive protocols
 
 **Read these AS NEEDED, not all at conversation start.**
 
@@ -513,6 +561,24 @@ dart test
 - Book: 84/141 pass (57 fail due to SRSW violations in book code)
 - Unit: All pass
 
+### 🔴 MANDATORY: REPL Test Protocol for GLP System Changes
+
+**Before ANY change to the underlying GLP system, and before any other major change:**
+
+1. **Run REPL tests** - `bash test/full_run_repl_tests.sh`
+2. **Commit and push** - Create a baseline checkpoint
+3. **Only then begin implementation**
+
+**After implementation is done:**
+
+1. **Run REPL tests again** - `bash test/full_run_repl_tests.sh`
+2. **When successful, commit and push**
+
+This ensures:
+- You have a known-good baseline to compare against
+- Any test failures can be attributed to your changes (not pre-existing issues)
+- You can easily revert if something breaks
+
 ### REPL Development Protocol
 1. Make changes to `glp_runtime/lib/` or `glp_runtime/bin/glp_repl.dart`
 2. Recompile: `cd /home/user/GLP/glp_runtime && dart compile exe bin/glp_repl.dart -o glp_repl`
@@ -536,6 +602,19 @@ run_test "Test description" \
 1. Add the test case that exposed the bug to `test/full_run_repl_tests.sh`
 2. The test should verify the fix works (not just that it doesn't crash)
 3. This prevents regression - the bug should never reappear
+
+### New Feature Test Protocol
+
+**When a new feature or revision is implemented and tested:**
+1. Add REPL tests for the new feature to `test/full_run_repl_tests.sh`
+2. Tests should cover the main use cases of the feature
+3. This ensures the feature continues to work as the codebase evolves
+
+### Deferred: Dynamic RPC Testing
+
+**Status**: Dynamic RPC (`M? # goal`) and `reduce/2` for guarded rules are currently broken.
+**Reason**: Module system needs revision to integrate with type system.
+**Action**: Frozen until module system revision. Do not attempt to fix these tests.
 
 ### Test Troubleshooting
 
@@ -997,6 +1076,37 @@ Before writing ANY code:
 
 When the user says `#remember <something>`, add that information to this CLAUDE.md file so it persists across sessions.
 
+## Multi-Stage Task Persistence
+
+**Problem:** When conversations run out of context and get compacted, multi-stage task lists are lost.
+
+**Solution:** For any multi-stage effort, write the plan to `docs/current_plan.md`.
+
+**Protocol:**
+1. When starting a multi-stage task (3+ steps), create/update `docs/current_plan.md`
+2. Format: numbered list with checkboxes, current step marked
+3. Update the file as you complete each step
+4. Delete the file when the task is complete
+
+**Example format:**
+```markdown
+# Current Plan: [Task Name]
+
+Started: 2026-02-01
+
+## Steps
+- [x] 1. Update papers (moded-types, glp-iclp)
+- [x] 2. Update spec (guards-reference.md)
+- [ ] 3. Implement in runtime ← CURRENT
+- [ ] 4. Add tests
+- [ ] 5. Run full test suite
+
+## Context
+[Brief description of what we're doing and why]
+```
+
+**At session start:** Check if `docs/current_plan.md` exists. If so, read it and resume from the current step.
+
 ## maGLP Development Constraints
 
 **🔴 CRITICAL: maGLP work cannot modify core GLP implementation**
@@ -1114,6 +1224,25 @@ Key files:
    - WRONG: `Result := N? :- number(N?) | ...` - N? is reader, but goal `X := 3` has ground term 3
    - RIGHT: `Result := N :- number(N?) | ...` - N is writer, can receive ground term 3
 
+### Flutter Multiagent App Build Process
+
+When modifying `glp_runtime` code that affects the Flutter multiagent app (`glp_multiagent`):
+
+1. **Path dependency**: The Flutter app uses `glp_runtime` via path dependency in pubspec.yaml
+2. **Clean rebuild required**: After modifying glp_runtime, you MUST do a clean Flutter rebuild:
+   ```bash
+   cd /Users/udi/Grassroots/GLP/glp_multiagent
+   pkill -f "glp_multiagent" 2>/dev/null  # Kill running app
+   flutter clean                            # Clear cached builds
+   flutter pub get                          # Re-resolve dependencies
+   flutter build macos                      # Rebuild
+   ```
+3. **Verify rebuild**: Check the build timestamp matches your changes
+4. **Clear log before testing**: `rm -f /private/tmp/glp_multiagent_trace.log`
+5. **Launch and check log**: The app logs to `/private/tmp/glp_multiagent_trace.log`
+
+**Common mistake**: Running `flutter build macos` without `flutter clean` may use cached dependencies and miss your glp_runtime changes.
+
 ### Common Mistakes to Avoid
 
 1. **Don't create fresh variables when clauseVars already has a value** - check first
@@ -1121,6 +1250,7 @@ Key files:
 3. **Always run BOTH test suites** - unit tests AND REPL tests
 4. **Don't modify code without checking the spec first**
 5. **Don't push to main** - only push to your claude branch
+6. **Flutter rebuilds need `flutter clean`** - path dependencies don't auto-invalidate cache
 
 ### Metainterpreter Pattern
 

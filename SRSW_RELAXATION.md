@@ -1,70 +1,49 @@
-# SRSW Relaxation: Allow `_` Everywhere
+# SRSW Relaxation: Anonymous Variables
 
-**Date:** 2026-01-16
-**Status:** Approved for implementation
+**Date:** 2026-02-01
+**Status:** Approved
 **Impact:** Parser, Specs, Documentation
 
 ---
 
-## Current Rule (Inconsistent)
+## Definition
 
-- `_` allowed in unit clauses (facts)
-- `_` forbidden in regular clauses (heads and bodies)
-- **This is inconsistent**
+An anonymous variable is any variable whose name begins with `_` (e.g., `_`, `_In?`, `_Out`). Anonymous writers may appear in the head, denoting a fresh writer with no paired reader, so that a value assigned to it is discarded. This provides a controlled exception to the SRSW restriction, allowing a process to abandon an input (e.g. an input stream) they are no longer interested in.
 
-## New Rule (Simple & Consistent)
+---
 
-**Allow `_` everywhere**
+## Examples
 
-### Rationale:
-- Already allowed in unit clauses
-- Natural programming style
-- Simple, consistent rule
-- Programmer's choice to use or ignore values
-
-### Examples Now Valid:
 ```glp
-% Head position - procedure doesn't bind output
-process(X, _) :- compute(X).
+%% Discard head and tail of list
+second([_, X | _], X?).
 
-% Body position - caller ignores output  
-bubble([X?|Xs?], Ys, _).
+%% Discard first output of bar
+foo(X) :- bar(_Result, X?).
 
-% Already valid - unit clause
-fact(_, _).
+%% Named anonymous variables improve readability
+process([msg(_From, _To, Content)|Rest], Out?) :-
+    handle(Content?, Out),
+    process(Rest?, Out?).
 ```
 
 ---
 
-## Implementation Changes
+## Implementation
 
-### 1. Parser (`glp_runtime/lib/compiler/`)
-**File to find and modify:** Search for SRSW validation, underscore checks
-- Remove check that forbids `_` in clause bodies
-- Remove check that forbids `_` in clause heads
-- Keep allowing `_` in unit clauses (no change needed)
+### SRSW Checker (`occurrence.dart`)
 
-### 2. Specs (`docs/`)
-**Update:** Any mention of SRSW forbidding `_`
-- Change to: "`_` is allowed in all positions"
-- Simplify SRSW description
+Variables starting with `_` are skipped in SRSW checking - they are exempt from the single-reader/single-writer requirement.
 
-### 3. Tests
-**Update:** Programs marked as ill-typed due to `_`
-- `bubble_sort.glp` - remove ILL-TYPED status
-- Any other programs marked for this reason
+### Clause Validation (`clause_validation.dart`)
+
+- Anonymous writers (`_`, `_Out`) are allowed in heads
+- Anonymous readers (`_?`, `_In?`) are rejected - there is no use case for an anonymous reader
 
 ---
 
-## Files to Modify
+## Reference
 
-Need to identify:
-1. Parser code that validates/rejects `_`
-2. Spec files mentioning SRSW and `_`
-3. Test programs marked ill-typed for this reason
-
----
-
-## Next Step
-
-Search codebase for actual SRSW validation code that needs modification.
+- **Paper (Moded-Types):** Section on SRSW Relaxations
+- **Paper (GLP-ICLP):** Remark 5 (Anonymous Variables)
+- **Spec:** `docs/typed-glp-manual.md` Section 9

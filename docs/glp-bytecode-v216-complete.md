@@ -19,6 +19,24 @@ The V2 unified opcodes are now the ONLY supported instruction format. Codegen em
 - **Registers**: A (arguments), X (temporaries). Env stack E.
 - **κ** denotes the clause-selection entry PC of the current procedure (the PC where the first clause of the procedure begins).
 
+### CRITICAL: Heap-Only Term Representation
+
+**ALL terms MUST be heap-allocated. Direct Dart Term objects are FORBIDDEN.**
+
+This is a fundamental invariant of the GLP runtime:
+
+1. **Variables**: Always represented as `VarRef(heapAddress)` pointing to a heap cell
+2. **Constants**: Must be stored in a heap cell with `ValueTag`, referenced via `VarRef`
+3. **Structures**: Must be built on heap via `put_structure` + `set_*` instructions, referenced via `VarRef`
+
+**NEVER pass `ConstTerm` or `StructTerm` Dart objects directly.** All terms flow through the heap.
+
+**CallEnv contents**: Only `VarRef` objects (heap addresses). No direct `Term` objects.
+
+**Rationale**: HEAD instructions assume arguments are `VarRef` and dereference them to find values. Direct Dart objects bypass this dereferencing, causing unification failures. This has been a recurring source of bugs.
+
+**Violation symptoms**: Goals fail immediately without reduction or suspension; unification silently fails.
+
 ### Variable Object Model
 
 GLP uses FCP's **two-cell variable system** with shared suspension records:

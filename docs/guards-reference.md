@@ -1,6 +1,6 @@
 # GLP Guards Quick Reference
 
-**Last Updated**: 2025-11-12
+**Last Updated**: 2026-02-01
 
 ---
 
@@ -58,6 +58,7 @@ These guards can be negated with `~`:
 | `list(X?)` | Test for list type | `~list(X?)` succeeds if X is not a list |
 | `is_list(X?)` | Test for proper list | `~is_list(X?)` succeeds if X is not a proper list |
 | `unknown(X?)` | Test for unbound variable | `~unknown(X?)` succeeds if X is bound |
+| `no_readers(X?)` | Test for no readers in term | `~no_readers(X?)` succeeds if X contains readers |
 | `X =?= Y` | Ground equality test | `~(X =?= Y)` succeeds if X and Y are not equal |
 
 ### Non-Negatable Guards
@@ -206,6 +207,38 @@ run(Goal) :- otherwise | execute('write', ['No clauses for: ']),
 
 ---
 
+### ⏳ `no_readers(X?)`
+**Test if X contains no readers (only ground terms or writers)**
+
+**Semantics**:
+- Success: X? is bound to a term containing no readers (ground terms and/or writers only)
+- Suspend: X? contains any readers (waiting for them to be instantiated)
+- Fail: Never fails
+
+**Key Property**: This guard **never fails**—it either succeeds (no readers) or suspends (has readers). This is because any term with readers will eventually either have those readers bound (at which point the guard is re-evaluated) or remain suspended indefinitely.
+
+**Use Case**: Ensuring a term is safe for external output (e.g., to a UI). Terms sent to external systems should not contain readers, as the external system cannot wait for them to be instantiated.
+
+**Example**:
+```prolog
+% UI agent validates output before sending to Dart
+ui_output(Term, DartOut) :- no_readers(Term?) |
+    send_to_dart(Term?, DartOut).
+```
+
+**Difference from ground**:
+- `ground(X?)` succeeds only if X contains no variables at all (neither readers nor writers)
+- `no_readers(X?)` succeeds if X contains no readers but may contain writers
+
+For example:
+- `no_readers(f(Y))` where Y is a writer: **succeeds** (writers are OK)
+- `no_readers(f(Y?))` where Y? is an unbound reader: **suspends**
+- `ground(f(Y))` where Y is a writer: **fails** (writers are unbound variables)
+
+**SRSW Relaxation**: No. Success of `no_readers(X?)` does not imply groundness (X may contain writers), so multiple occurrences are not permitted.
+
+---
+
 ## Guard Arguments: Why Readers?
 
 Guards that test variable values (`ground`, `known`, `integer`, `number`, `atom`) take **reader** arguments. This follows from GLP's three-valued guard semantics:
@@ -268,6 +301,7 @@ This is distinct from the multiple-occurrence relaxation below. Guard reader cou
 | 📝 `X? =\= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
 | ⏳ `compound(X?)` | **NO** | ❌ No |
 | ✅ `known(X?)` | **NO** | ❌ No |
+| ⏳ `no_readers(X?)` | **NO** | ❌ No |
 | ✅ `otherwise` | No | ❌ No |
 
 **Note**: Arithmetic comparison guards suspend if operands are unbound and only succeed if both operands are bound to numbers. Therefore, when they succeed, both operands are guaranteed to be ground.
@@ -486,7 +520,7 @@ When `channel(X?)` is unfolded, it becomes pattern matching against `ch(_, _)`.
 
 **Why anonymous variables for pattern guards**: Use `_` for positions that don't need to produce bindings. Named variables like `channel(ch(In?, Out)).` would violate SRSW (reader with no paired writer).
 
-**See also**: `docs/glp-programming-idioms.md` Section 6 for detailed examples.
+**See also**: `docs/typed-glp-manual.md` Section 8 for single-unit-clause procedure details.
 
 ---
 

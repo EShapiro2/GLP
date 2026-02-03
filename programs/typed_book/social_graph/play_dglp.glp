@@ -1,0 +1,405 @@
+%% play_dglp.glp - dGLP boot with network switch
+%%
+%% Unified architecture: same agent/3 code, different boot.
+%% This version uses a GLP network switch (network3) for message routing.
+%% Uses merged input stream (UserIn + NetIn -> In) like original dGLP.
+%%
+%% Scenario (left-to-right: Alice - Bob - Charlie):
+%% 1. Alice cold-calls Bob (Bob accepts)
+%% 2. Alice sends message to Bob: "Hi Bob, this is Alice"
+%% 3. Bob cold-calls Charlie (Charlie accepts)
+%% 4. Charlie sends message to Bob: "Hi Bob, this is Charlie"
+%% 5. Bob introduces Alice to Charlie (both accept)
+%% 6. Alice sends message to Charlie: "Hi Charlie, this is Alice"
+%% 7. Charlie responds to Alice: "Hi Alice, this is Charlie"
+%%
+%% Date: 2026-02-02
+
+%% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
+
+Response ::= accept(Channel) ; no.
+OutputEntry ::= output(String, Stream?).
+OutputsList ::= [] ; [OutputEntry|OutputsList].
+
+%% =============================================================================
+%% CHANNEL OPERATIONS (Defined Guards)
+%% =============================================================================
+
+send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+%% =============================================================================
+%% MERGE
+%% =============================================================================
+
+procedure merge(Stream?, Stream?, Stream).
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
+
+%% =============================================================================
+%% LOOKUP_SEND - send message to named destination
+%% =============================================================================
+
+procedure lookup_send(String?, _?, OutputsList?, OutputsList).
+lookup_send(Key, Msg, Outs, Outs1?) :-
+    ground(Key?) |
+    lookup_send_step(Key?, Msg?, Outs?, Outs1).
+
+procedure lookup_send_step(String?, _?, OutputsList?, OutputsList).
+lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
+    Key? =?= K? | true.
+lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
+    otherwise |
+    lookup_send_step(Key?, Msg?, Rest?, Rest1).
+lookup_send_step(_, _, [], []).
+
+%% =============================================================================
+%% INJECT_MSG - defer insertion until Resp is known
+%% =============================================================================
+
+procedure inject_msg(Response?, _?, _?, Stream?, Stream).
+inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
+    known(Resp?) | true.
+inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
+    otherwise | inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
+
+%% =============================================================================
+%% ADD_OUTPUT - add output to outputs list
+%% =============================================================================
+
+procedure add_output(_?, Stream, OutputsList?, OutputsList).
+add_output(Name, Out?, Outs, [output(Name?, Out)|Outs?]).
+
+%% =============================================================================
+%% RESPONSE HANDLING (Cold-call)
+%% =============================================================================
+
+procedure bind_response(_?, _?, Response, OutputsList?, OutputsList, Stream?, Stream).
+bind_response(yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
+    new_channel(RetCh, LocalCh) |
+    handle_response(accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
+bind_response(no, _, no, Outs, Outs1?, In, In?) :-
+    lookup_send('_user', msg(agent, '_user', rejected), Outs?, Outs1).
+
+procedure handle_response(Response?, _?, OutputsList?, OutputsList, Stream?, Stream).
+handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
+    ground(From?) |
+    add_output(From?, FOut, Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', connected(From?)), Outs1?, Outs2),
+    merge(In?, FIn?, In1).
+handle_response(no, From, Outs, Outs1?, In, In?) :-
+    ground(From?) |
+    lookup_send('_user', msg(agent, '_user', rejected(From?)), Outs?, Outs1).
+
+%% =============================================================================
+%% HANDLE_INTRO_ACCEPT - process accepted friend introduction
+%% =============================================================================
+
+procedure handle_intro_accept(Channel?, _?, OutputsList?, OutputsList, Stream?, Stream).
+handle_intro_accept(ch(FIn, FOut?), Other, Outs, Outs2?, In, In1?) :-
+    ground(Other?) |
+    add_output(Other?, FOut, Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
+    merge(In?, FIn?, In1).
+
+%% =============================================================================
+%% AGENT - Main loop (merged input stream)
+%% =============================================================================
+
+procedure agent(Constant?, Stream?, OutputsList?).
+
+%% --- User messages (from '_user') ---
+
+%% User initiates cold call
+agent(Id, [msg('_user', Id1, connect(Target))|In], Outs) :-
+    Id? =?= Id1?, ground(Target?) |
+    lookup_send('_net', msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
+    inject_msg(Resp?, Target?, Id?, In?, In1),
+    agent(Id?, In1?, Outs1?).
+
+%% User decision on cold-call introduction
+agent(Id, [msg('_user', Id1, decision(Dec, From, Resp?))|In], Outs) :-
+    Id? =?= Id1? |
+    bind_response(Dec?, From?, Resp, Outs?, Outs1, In?, In1),
+    agent(Id?, In1?, Outs1?).
+
+%% User sends text message to friend
+agent(Id, [msg('_user', Id1, send(Target, Text))|In], Outs) :-
+    Id? =?= Id1?, ground(Target?) |
+    lookup_send(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
+    agent(Id?, In?, Outs1?).
+
+%% User commands: introduce P to Q
+agent(Id, [msg('_user', Id1, introduce(P, Q))|In], Outs) :-
+    Id? =?= Id1?, ground(P?), ground(Q?), new_channel(PQCh, QPCh) |
+    lookup_send(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
+    lookup_send(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
+    agent(Id?, In?, Outs2?).
+
+%% User accepts friend introduction
+agent(Id, [msg('_user', Id1, accept_intro(Other, Ch))|In], Outs) :-
+    Id? =?= Id1?, ground(Other?) |
+    handle_intro_accept(Ch?, Other?, Outs?, Outs1, In?, In1),
+    agent(Id?, In1?, Outs1?).
+
+%% User rejects friend introduction
+agent(Id, [msg('_user', Id1, reject_intro(_))|In], Outs) :-
+    Id? =?= Id1? |
+    agent(Id?, In?, Outs?).
+
+%% --- Network messages ---
+
+%% Received cold-call introduction from net (2-arg msg)
+agent(Id, [msg(Id1, intro(From, Resp))|In], Outs) :-
+    Id? =?= Id1? |
+    lookup_send('_user', msg(agent, '_user', befriend(From?, Resp?)), Outs?, Outs1),
+    agent(Id?, In?, Outs1?).
+
+%% Response to sent cold-call introduction (3-arg msg)
+agent(Id, [msg(From, Id1, response(Resp))|In], Outs) :-
+    Id? =?= Id1? |
+    handle_response(Resp?, From?, Outs?, Outs1, In?, In1),
+    agent(Id?, In1?, Outs1?).
+
+%% Received text message from friend - forward to user
+agent(Id, [msg(From, Id1, text(Text))|In], Outs) :-
+    Id? =?= Id1? |
+    lookup_send('_user', msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
+    agent(Id?, In?, Outs1?).
+
+%% Received introduction from friend - forward to user
+agent(Id, [msg(From, Id1, intro(Other, Ch))|In], Outs) :-
+    Id? =?= Id1?, ground(Other?) |
+    lookup_send('_user', msg(agent, '_user', befriend_intro(From?, Other?, Ch?)), Outs?, Outs1),
+    agent(Id?, In?, Outs1?).
+
+%% --- Catch-all and termination ---
+
+agent(Id, [_|In], Outs) :-
+    ground(Id?), otherwise |
+    agent(Id?, In?, Outs?).
+
+agent(_, [], _).
+
+%% =============================================================================
+%% AGENT INITIALIZATION (dGLP version - merges user and net inputs)
+%% =============================================================================
+
+procedure agent_init_dglp(Constant?, Channel?, Channel?).
+agent_init_dglp(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
+    merge(UserIn?, NetIn?, In),
+    agent(Id?, In?, [output('_user', UserOut), output('_net', NetOut)]).
+
+%% =============================================================================
+%% NETWORK SWITCH (3-way: Alice - Bob - Charlie)
+%% =============================================================================
+
+procedure network3(Channel?, Channel?, Channel?).
+
+%% --- Cold-call routing (2-arg msg format) ---
+
+%% Alice cold-calls Bob
+network3(ch([msg(bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Alice cold-calls Charlie
+network3(ch([msg(charlie, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Bob cold-calls Alice
+network3(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch([msg(alice, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Bob cold-calls Charlie
+network3(ch(AliceIn, AliceOut?),
+         ch([msg(charlie, X)|BobIn], BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Charlie cold-calls Alice
+network3(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch([msg(alice, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Charlie cold-calls Bob
+network3(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch([msg(bob, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% --- Friend-to-friend routing (3-arg msg format) ---
+
+%% Alice -> Bob
+network3(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(alice, bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Alice -> Charlie
+network3(ch([msg(alice, charlie, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(alice, charlie, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Bob -> Alice
+network3(ch(AliceIn, [msg(bob, alice, X?)|AliceOut?]),
+         ch([msg(bob, alice, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Bob -> Charlie
+network3(ch(AliceIn, AliceOut?),
+         ch([msg(bob, charlie, X)|BobIn], BobOut?),
+         ch(CharlieIn, [msg(bob, charlie, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Charlie -> Alice
+network3(ch(AliceIn, [msg(charlie, alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch([msg(charlie, alice, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Charlie -> Bob
+network3(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(charlie, bob, X?)|BobOut?]),
+         ch([msg(charlie, bob, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Termination
+network3(ch([], []), ch([], []), ch([], [])).
+
+%% =============================================================================
+%% ACTORS
+%% =============================================================================
+
+procedure alice_actor(Channel?).
+alice_actor(ch(In, [msg('_user', alice, connect(bob))|Out?])) :-
+    alice_wait_bob_connected(In?, Out).
+
+procedure alice_wait_bob_connected(Stream?, Stream).
+alice_wait_bob_connected([msg(agent, '_user', connected(bob))|In],
+                         [msg('_user', alice, send(bob, 'Hi Bob, this is Alice'))|Out?]) :-
+    alice_wait_intro(In?, Out).
+alice_wait_bob_connected([], []).
+
+procedure alice_wait_intro(Stream?, Stream).
+alice_wait_intro([msg(agent, '_user', connected(_))|In], Out?) :-
+    alice_wait_intro(In?, Out).
+alice_wait_intro([msg(agent, '_user', received(_, _))|In], Out?) :-
+    alice_wait_intro(In?, Out).
+alice_wait_intro([msg(agent, '_user', befriend_intro(_, Other, Ch))|In],
+                 [msg('_user', alice, accept_intro(Other?, Ch?))|Out?]) :-
+    ground(Other?) |
+    alice_send_to_charlie(In?, Out).
+alice_wait_intro([], []).
+
+procedure alice_send_to_charlie(Stream?, Stream).
+alice_send_to_charlie(In, [msg('_user', alice, send(charlie, 'Hi Charlie, this is Alice'))|Out?]) :-
+    alice_wait_charlie_reply(In?, Out).
+
+procedure alice_wait_charlie_reply(Stream?, Stream).
+alice_wait_charlie_reply([msg(agent, '_user', received(charlie, _))|In], Out?) :-
+    alice_drain(In?, Out).
+alice_wait_charlie_reply([msg(agent, '_user', connected(_))|In], Out?) :-
+    alice_wait_charlie_reply(In?, Out).
+alice_wait_charlie_reply([], []).
+
+procedure alice_drain(Stream?, Stream).
+alice_drain([_|In], Out?) :- alice_drain(In?, Out).
+alice_drain([], []).
+
+%% Bob's script
+procedure bob_actor(Channel?).
+bob_actor(ch([msg(agent, '_user', befriend(From, Resp))|In],
+             [msg('_user', bob, decision(yes, From?, Resp?))|Out?])) :-
+    ground(From?) |
+    bob_wait_alice_msg(In?, Out).
+
+procedure bob_wait_alice_msg(Stream?, Stream).
+bob_wait_alice_msg([msg(agent, '_user', connected(_))|In], Out?) :-
+    bob_wait_alice_msg(In?, Out).
+bob_wait_alice_msg([msg(agent, '_user', received(alice, _))|In],
+                   [msg('_user', bob, connect(charlie))|Out?]) :-
+    bob_wait_charlie_connected(In?, Out).
+bob_wait_alice_msg([], []).
+
+procedure bob_wait_charlie_connected(Stream?, Stream).
+bob_wait_charlie_connected([msg(agent, '_user', connected(charlie))|In], Out?) :-
+    bob_wait_charlie_msg(In?, Out).
+bob_wait_charlie_connected([msg(agent, '_user', connected(_))|In], Out?) :-
+    bob_wait_charlie_connected(In?, Out).
+bob_wait_charlie_connected([], []).
+
+procedure bob_wait_charlie_msg(Stream?, Stream).
+bob_wait_charlie_msg([msg(agent, '_user', received(charlie, _))|In],
+                     [msg('_user', bob, introduce(alice, charlie))|Out?]) :-
+    bob_drain(In?, Out).
+bob_wait_charlie_msg([msg(agent, '_user', connected(_))|In], Out?) :-
+    bob_wait_charlie_msg(In?, Out).
+bob_wait_charlie_msg([], []).
+
+procedure bob_drain(Stream?, Stream).
+bob_drain([_|In], Out?) :- bob_drain(In?, Out).
+bob_drain([], []).
+
+%% Charlie's script
+procedure charlie_actor(Channel?).
+charlie_actor(ch([msg(agent, '_user', befriend(From, Resp))|In],
+                 [msg('_user', charlie, decision(yes, From?, Resp?)),
+                  msg('_user', charlie, send(bob, 'Hi Bob, this is Charlie'))|Out?])) :-
+    ground(From?) |
+    charlie_wait_intro(In?, Out).
+
+procedure charlie_wait_intro(Stream?, Stream).
+charlie_wait_intro([msg(agent, '_user', connected(_))|In], Out?) :-
+    charlie_wait_intro(In?, Out).
+charlie_wait_intro([msg(agent, '_user', befriend_intro(_, Other, Ch))|In],
+                   [msg('_user', charlie, accept_intro(Other?, Ch?))|Out?]) :-
+    ground(Other?) |
+    charlie_wait_alice_msg(In?, Out).
+charlie_wait_intro([], []).
+
+procedure charlie_wait_alice_msg(Stream?, Stream).
+charlie_wait_alice_msg([msg(agent, '_user', received(alice, _))|In],
+                       [msg('_user', charlie, send(alice, 'Hi Alice, this is Charlie'))|Out?]) :-
+    charlie_drain(In?, Out).
+charlie_wait_alice_msg([msg(agent, '_user', connected(_))|In], Out?) :-
+    charlie_wait_alice_msg(In?, Out).
+charlie_wait_alice_msg([], []).
+
+procedure charlie_drain(Stream?, Stream).
+charlie_drain([_|In], Out?) :- charlie_drain(In?, Out).
+charlie_drain([], []).
+
+%% =============================================================================
+%% THE PLAY (dGLP entry point)
+%% =============================================================================
+
+procedure play.
+play :-
+    new_channel(AliceUserCh, UserAliceCh),
+    new_channel(AliceNetCh, NetAliceCh),
+    new_channel(BobUserCh, UserBobCh),
+    new_channel(BobNetCh, NetBobCh),
+    new_channel(CharlieUserCh, UserCharlieCh),
+    new_channel(CharlieNetCh, NetCharlieCh),
+
+    network3(NetAliceCh?, NetBobCh?, NetCharlieCh?),
+    agent_init_dglp(alice, AliceUserCh?, AliceNetCh?),
+    agent_init_dglp(bob, BobUserCh?, BobNetCh?),
+    agent_init_dglp(charlie, CharlieUserCh?, CharlieNetCh?),
+    alice_actor(UserAliceCh?),
+    bob_actor(UserBobCh?),
+    charlie_actor(UserCharlieCh?).

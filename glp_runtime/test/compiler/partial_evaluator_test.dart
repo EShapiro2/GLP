@@ -6,7 +6,7 @@
 //   - Builtin guards are kept as-is
 //   - Non-unit-clause procedures (multiple clauses or has body/guards) are rejected
 //
-// Spec: docs/glp-programming-idioms.md Section 6
+// Spec: docs/typed-glp-manual.md Section 8 (Single-Unit-Clause Procedures)
 // Spec: docs/guards-reference.md
 
 import 'package:test/test.dart';

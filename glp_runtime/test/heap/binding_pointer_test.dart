@@ -204,14 +204,16 @@ void main() {
     });
 
     test('indirect WxW through deref detected', () {
+      // Per spec v3.3 Section 4.5: WxW detection during deref is mandatory
+      // This provides defense-in-depth even if a bug allows WxW binding
       final heap = HeapFCP();
       final (w1, _) = heap.allocateVariable();
       final (w2, _) = heap.allocateVariable();
 
-      // Manually corrupt to create w1 -> w2 (violation)
+      // Manually corrupt to create w1 -> w2 (simulates a bug that bypassed binding check)
       heap.cells[w1].content = Pointer(w2);
 
-      // Dereference should detect and report
+      // Dereference should detect and report the WxW violation
       expect(
         () => heap.derefAddr(w1),
         throwsStateError,
@@ -237,6 +239,7 @@ void main() {
     });
 
     test('binding to variable forwards suspensions without activation', () {
+      // Per spec v3.3 Section 2.3: Writer with suspensions has WriterContent
       final heap = HeapFCP();
       final (w1, _) = heap.allocateVariable();
       final (w2, r2) = heap.allocateVariable();
@@ -248,8 +251,9 @@ void main() {
       final acts1 = heap.bindWriterToReader(w1, r2);
       expect(acts1, isEmpty);
 
-      // Suspension should be on w2 now
-      expect(heap.cells[w2].content, isA<SuspensionListNode>());
+      // Suspension should be on w2 now (as WriterContent per spec)
+      expect(heap.cells[w2].content, isA<WriterContent>());
+      expect((heap.cells[w2].content as WriterContent).suspensions, isA<SuspensionListNode>());
 
       // Binding w2 activates
       final acts2 = heap.bindWriter(w2, ConstTerm('done'));
@@ -280,22 +284,28 @@ void main() {
   });
 
   group('Binding State Transitions', () {
-    test('unbound writer has null content', () {
+    test('unbound writer has Pointer to reader (FCP bidirectional)', () {
+      // Per spec v3.3 Section 2.3: WrtTag unbound without suspensions has Pointer(readerAddr)
       final heap = HeapFCP();
-      final (writerAddr, _) = heap.allocateVariable();
+      final (writerAddr, readerAddr) = heap.allocateVariable();
 
       expect(heap.cells[writerAddr].tag, equals(CellTag.WrtTag));
-      expect(heap.cells[writerAddr].content, isNull);
+      expect(heap.cells[writerAddr].content, isA<Pointer>());
+      expect((heap.cells[writerAddr].content as Pointer).targetAddr, equals(readerAddr));
     });
 
-    test('writer with suspension has SuspensionListNode content', () {
+    test('writer with suspension has WriterContent with reader addr and suspensions', () {
+      // Per spec v3.3 Section 2.3: WrtTag with suspensions has WriterContent(readerAddr, SuspensionListNode)
       final heap = HeapFCP();
-      final (writerAddr, _) = heap.allocateVariable();
+      final (writerAddr, readerAddr) = heap.allocateVariable();
 
       heap.suspendOnWriter(writerAddr, SuspensionRecord(1, 100));
 
       expect(heap.cells[writerAddr].tag, equals(CellTag.WrtTag));
-      expect(heap.cells[writerAddr].content, isA<SuspensionListNode>());
+      expect(heap.cells[writerAddr].content, isA<WriterContent>());
+      final wc = heap.cells[writerAddr].content as WriterContent;
+      expect(wc.readerAddr, equals(readerAddr));
+      expect(wc.suspensions, isA<SuspensionListNode>());
     });
 
     test('writer bound to variable has Pointer content', () {

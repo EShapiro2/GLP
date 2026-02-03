@@ -115,7 +115,7 @@ Note: `UserOut?` and `NetOut?` in head are readers; their paired writers `UserOu
 
 ## 5. The Principle
 
-This is an instance of the Head-Body Variable Flow Principle from `glp-programming-idioms.md`:
+This is an instance of the Head-Body Variable Flow Principle from `docs/typed-glp-manual.md`:
 
 > **Data flowing from body to head (output construction):**
 > - Head uses a **reader** (a "hole" to be filled)

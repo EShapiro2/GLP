@@ -1,0 +1,135 @@
+%% ui_mediator.glp - Mediates between agent and user UI
+%%
+%% The agent may send messages containing variables (like Resp? in befriend).
+%% Users can only send/receive ground terms.
+%% This mediator:
+%% 1. Intercepts messages from agent to user
+%% 2. Stores pending variables with unique IDs
+%% 3. Sends ground version to user (replacing vars with IDs)
+%% 4. When user responds with ID, looks up and binds the stored variable
+%%
+%% Date: 2026-02-01
+
+%% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
+
+%% PendingEntry stores a request ID and the variable to bind
+PendingEntry ::= pending(Int, Response?).
+PendingList ::= [] ; [PendingEntry|PendingList].
+
+%% =============================================================================
+%% CHANNEL OPERATIONS
+%% =============================================================================
+
+send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
+
+%% =============================================================================
+%% PENDING VARIABLE MANAGEMENT
+%% =============================================================================
+
+%% store_pending(ReqId, Var, Pending, NewPending) - store variable for later binding
+procedure store_pending(Int?, _?, PendingList?, PendingList).
+store_pending(ReqId, Var?, Ps, [pending(ReqId?, Var)|Ps?]).
+
+%% lookup_and_bind(ReqId, Value, Pending, NewPending) - find and bind the variable
+procedure lookup_and_bind(Int?, _?, PendingList?, PendingList).
+lookup_and_bind(ReqId, Value, [pending(Id, Var?)|Rest], Rest?) :-
+    ReqId? =?= Id? | Var = Value?.
+lookup_and_bind(ReqId, Value, [P|Rest], [P?|Rest1?]) :-
+    otherwise | lookup_and_bind(ReqId?, Value?, Rest?, Rest1).
+lookup_and_bind(_, _, [], []).
+
+%% =============================================================================
+%% UI MEDIATOR MAIN LOOP
+%% =============================================================================
+
+%% ui_mediator(AgentIn, AgentOut, UserIn, UserOut, Pending, NextId)
+%% - AgentIn/Out: channel to agent (receives vars, sends ground)
+%% - UserIn/Out: channel to user UI (ground only)
+%% - Pending: list of pending variables awaiting user response
+%% - NextId: next request ID to use
+
+procedure ui_mediator(Stream?, Stream, Stream?, Stream, PendingList?, Int?).
+
+%% --- Messages from agent to user ---
+
+%% befriend with response variable - replace var with request ID
+ui_mediator([msg(agent, user, befriend(From, Resp?))|AIn], AOut, UIn, [msg(agent, user, befriend(From?, ReqId?))|UOut?], Ps, N) :-
+    ground(From?) |
+    store_pending(N?, Resp, Ps?, Ps1),
+    N1 is N? + 1,
+    ui_mediator(AIn?, AOut?, UIn?, UOut, Ps1?, N1?).
+
+%% befriend_intro with channel variable - also needs mediation
+ui_mediator([msg(agent, user, befriend_intro(From, Other, Ch?))|AIn], AOut, UIn, [msg(agent, user, befriend_intro(From?, Other?, ReqId?))|UOut?], Ps, N) :-
+    ground(From?), ground(Other?) |
+    store_pending(N?, Ch, Ps?, Ps1),
+    N1 is N? + 1,
+    ui_mediator(AIn?, AOut?, UIn?, UOut, Ps1?, N1?).
+
+%% Other agent-to-user messages - pass through unchanged (they're ground)
+ui_mediator([msg(agent, user, connected(Who))|AIn], AOut, UIn, [msg(agent, user, connected(Who?))|UOut?], Ps, N) :-
+    ground(Who?) |
+    ui_mediator(AIn?, AOut?, UIn?, UOut, Ps?, N?).
+
+ui_mediator([msg(agent, user, rejected(Who))|AIn], AOut, UIn, [msg(agent, user, rejected(Who?))|UOut?], Ps, N) :-
+    ground(Who?) |
+    ui_mediator(AIn?, AOut?, UIn?, UOut, Ps?, N?).
+
+ui_mediator([msg(agent, user, received(From, Text))|AIn], AOut, UIn, [msg(agent, user, received(From?, Text?))|UOut?], Ps, N) :-
+    ground(From?), ground(Text?) |
+    ui_mediator(AIn?, AOut?, UIn?, UOut, Ps?, N?).
+
+%% --- Messages from user to agent ---
+
+%% User decision on befriend: decision(yes/no, From, ReqId)
+%% Look up ReqId, bind the stored variable appropriately
+ui_mediator(AIn, [msg(user, AgentId, decision(Dec, From, Resp?))|AOut?], [msg(user, AgentId1, decision(Dec1, From1, ReqId))|UIn], UOut, Ps, N) :-
+    AgentId? =?= AgentId1?, ground(Dec1?), ground(From1?), ground(ReqId?) |
+    lookup_and_bind(ReqId?, Resp, Ps?, Ps1),
+    ui_mediator(AIn?, AOut, UIn?, UOut?, Ps1?, N?).
+
+%% User accept_intro: accept_intro(Other, ReqId)
+ui_mediator(AIn, [msg(user, AgentId, accept_intro(Other, Ch?))|AOut?], [msg(user, AgentId1, accept_intro(Other1, ReqId))|UIn], UOut, Ps, N) :-
+    AgentId? =?= AgentId1?, ground(Other1?), ground(ReqId?) |
+    lookup_and_bind(ReqId?, Ch, Ps?, Ps1),
+    ui_mediator(AIn?, AOut, UIn?, UOut?, Ps1?, N?).
+
+%% User reject_intro - pass through
+ui_mediator(AIn, [msg(user, AgentId, reject_intro(ReqId))|AOut?], [msg(user, AgentId1, reject_intro(ReqId1))|UIn], UOut, Ps, N) :-
+    AgentId? =?= AgentId1?, ground(ReqId1?) |
+    ui_mediator(AIn?, AOut, UIn?, UOut?, Ps?, N?).
+
+%% User connect request - pass through (no vars involved)
+ui_mediator(AIn, [msg(user, AgentId, connect(Target))|AOut?], [msg(user, AgentId1, connect(Target1))|UIn], UOut, Ps, N) :-
+    AgentId? =?= AgentId1?, ground(Target1?) |
+    ui_mediator(AIn?, AOut, UIn?, UOut?, Ps?, N?).
+
+%% User send text - pass through
+ui_mediator(AIn, [msg(user, AgentId, send(Target, Text))|AOut?], [msg(user, AgentId1, send(Target1, Text1))|UIn], UOut, Ps, N) :-
+    AgentId? =?= AgentId1?, ground(Target1?), ground(Text1?) |
+    ui_mediator(AIn?, AOut, UIn?, UOut?, Ps?, N?).
+
+%% User introduce - pass through
+ui_mediator(AIn, [msg(user, AgentId, introduce(P, Q))|AOut?], [msg(user, AgentId1, introduce(P1, Q1))|UIn], UOut, Ps, N) :-
+    AgentId? =?= AgentId1?, ground(P1?), ground(Q1?) |
+    ui_mediator(AIn?, AOut, UIn?, UOut?, Ps?, N?).
+
+%% Termination
+ui_mediator([], [], [], [], _, _).
+
+%% =============================================================================
+%% INITIALIZATION
+%% =============================================================================
+
+%% Start mediator between agent and user
+%% agent_to_mediator: stream from agent
+%% mediator_to_agent: stream to agent
+%% user_to_mediator: stream from user
+%% mediator_to_user: stream to user
+
+procedure start_ui_mediator(Stream?, Stream, Stream?, Stream).
+start_ui_mediator(AgentIn, AgentOut?, UserIn, UserOut?) :-
+    ui_mediator(AgentIn?, AgentOut, UserIn?, UserOut, [], 1).

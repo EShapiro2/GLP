@@ -1,6 +1,6 @@
 # GLP Heap Storage Specification - Pointer Architecture
 
-**Version**: 3.2
+**Version**: 3.4
 **Date**: 2026-01-31
 **Status**: DRAFT - FCP bidirectional pointers
 **Branch**: pointer-architecture
@@ -226,9 +226,11 @@ For implementation purposes, path compression may be deferred as a final step af
 
 This staging is for implementation convenience only. The final implementation must include path compression as specified.
 
-### 4.5 Invariant Check
+### 4.5 Invariant Check (WxW Detection)
 
-During dereferencing, if we follow a pointer and land on a writer, the previous cell MUST have been a reader. This is because writer-to-writer bindings are forbidden. In debug mode, verify this invariant:
+During dereferencing, if we follow a pointer and land on a writer, the previous cell MUST have been a reader. This is because writer-to-writer bindings are forbidden.
+
+**Implementation requirement**: The deref operation MUST check this invariant and throw if violated:
 
 ```dart
 // In deref loop, after following a pointer:
@@ -236,6 +238,10 @@ if (cells[current].tag == CellTag.WrtTag && previousTag == CellTag.WrtTag) {
   throw StateError('SRSW violation: writer points to writer');
 }
 ```
+
+This provides defense-in-depth: even if a bug allows WxW binding to occur, deref will detect and report it.
+
+**Note for production**: This check adds overhead to every deref operation. Once the implementation is mature and well-tested, this check may be moved behind a debug flag for performance reasons. During development, it remains mandatory.
 
 ---
 
@@ -415,15 +421,34 @@ void _forwardSuspensions(SuspensionListNode? list, int targetWriterAddr) {
 
 ### 7.1 Reader → Writer
 
-Follow the reader's pointer:
+For local readers, follow the reader's pointer to find its paired writer:
 
 ```dart
+/// Get the writer for a local reader. Asserts the reader is local (has a Pointer).
+/// Use tryWriterForReader() for imported readers which may have no local writer.
 int writerForReader(int readerAddr) {
   final cell = cells[readerAddr];
   assert(cell.tag == CellTag.RoTag);
+  assert(cell.content is Pointer, 'Local reader must contain Pointer to writer');
   return (cell.content as Pointer).targetAddr;
 }
+
+/// Safely get the writer for a reader, returning null for imported readers.
+/// Imported readers contain VariableEntry instead of Pointer (see Section 10).
+int? tryWriterForReader(int readerAddr) {
+  final cell = cells[readerAddr];
+  if (cell.tag != CellTag.RoTag) return null;
+  if (cell.content is Pointer) {
+    return (cell.content as Pointer).targetAddr;
+  }
+  // Imported reader: contains VariableEntry, no local writer
+  return null;
+}
 ```
+
+**Usage guidance**:
+- Use `writerForReader()` when you know the reader is local (e.g., after allocating a variable pair)
+- Use `tryWriterForReader()` when the reader might be imported (e.g., in OutputObserver callbacks)
 
 ### 7.2 Writer → Reader (FCP Pattern)
 
@@ -591,3 +616,5 @@ When `derefAddr` encounters an imported reader (cell content is VariableEntry), 
 | 3.0 | 2026-01-20 | Pointer architecture specification (replaces arithmetic-based v2.18) |
 | 3.1 | 2026-01-20 | Added VariableEntry as derefAddr return type for imported readers (Section 4.2, 10) |
 | 3.2 | 2026-01-31 | FCP bidirectional pointers: writer points to reader (Sections 1.2, 2.3, 3.1, 7.2, 8.x, 9.2). Eliminates all `+1` arithmetic. |
+| 3.3 | 2026-01-31 | Section 7.1: Added tryWriterForReader() for imported readers; clarified usage guidance. |
+| 3.4 | 2026-01-31 | Section 4.5: Clarified WxW detection during deref is mandatory (not debug-only). Added note about production optimization. |
