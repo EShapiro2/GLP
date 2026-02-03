@@ -123,6 +123,7 @@ class GlpCompiler {
         ast,
         generateReduce: generateReduce,
         procDeclarations: module.procDeclarations,
+        compileMode: module.compileMode,
       );
 
       // Phase 4: Code generation

@@ -61,6 +61,7 @@ class Parser {
     final exports = <ExportDeclaration>[];
     final imports = <ImportDeclaration>[];
     bool isStdlib = false;
+    CompileMode compileMode = CompileMode.user;  // default: user mode
 
     // Parse declarations at the start of the file
     while (!_isAtEnd() && _check(TokenType.MINUS)) {
@@ -89,6 +90,34 @@ class Parser {
           // -stdlib. declaration - marks this file as stdlib (no reduce generation)
           _consume(TokenType.DOT, 'Expected "." after stdlib declaration');
           isStdlib = true;
+          break;
+
+        case 'mode':
+          // -mode(user). or -mode(system). declaration
+          _consume(TokenType.LPAREN, 'Expected "(" after mode');
+          if (!_check(TokenType.ATOM)) {
+            throw CompileError(
+              'Expected "user" or "system" in mode declaration',
+              _peek().line,
+              _peek().column,
+              phase: 'parser'
+            );
+          }
+          final modeToken = _advance();
+          if (modeToken.lexeme == 'user') {
+            compileMode = CompileMode.user;
+          } else if (modeToken.lexeme == 'system') {
+            compileMode = CompileMode.system;
+          } else {
+            throw CompileError(
+              'Invalid mode "${modeToken.lexeme}". Expected "user" or "system".',
+              modeToken.line,
+              modeToken.column,
+              phase: 'parser'
+            );
+          }
+          _consume(TokenType.RPAREN, 'Expected ")" after mode');
+          _consume(TokenType.DOT, 'Expected "." after mode declaration');
           break;
 
         case 'export':
@@ -291,6 +320,7 @@ class Parser {
       procDeclarations: procDeclarations,
       procedures: procedures,
       isStdlib: isStdlib,
+      compileMode: compileMode,
       line: 1,
       column: 1,
     );
@@ -675,7 +705,15 @@ class Parser {
       // Return as Goal for now (will be cast to Guard if before |)
       // Use ~functor convention if negated (will be detected during Guard conversion)
       final functor = negated ? '~${functorToken.lexeme}' : functorToken.lexeme;
-      return Goal(functor, args, negated ? negLine : functorToken.line, negated ? negColumn : functorToken.column);
+      final goal = Goal(functor, args, negated ? negLine : functorToken.line, negated ? negColumn : functorToken.column);
+
+      // Check for spawn annotation: Goal@AgentId
+      if (_match(TokenType.AT)) {
+        final agentToken = _consume(TokenType.ATOM, 'Expected agent identifier after @');
+        return SpawnGoal(goal, agentToken.lexeme, functorToken.line, functorToken.column);
+      }
+
+      return goal;
     }
 
     // Otherwise, try to parse as infix comparison (e.g., X < Y, X? mod P? =:= 0)
@@ -867,7 +905,15 @@ class Parser {
       return Goal('=..', [leftTerm, rightTerm], functorToken.line, functorToken.column);
     }
 
-    return Goal(functorToken.lexeme, args, functorToken.line, functorToken.column);
+    final goal = Goal(functorToken.lexeme, args, functorToken.line, functorToken.column);
+
+    // Check for spawn annotation: Goal@AgentId
+    if (_match(TokenType.AT)) {
+      final agentToken = _consume(TokenType.ATOM, 'Expected agent identifier after @');
+      return SpawnGoal(goal, agentToken.lexeme, functorToken.line, functorToken.column);
+    }
+
+    return goal;
   }
 
   // Guard: same as Goal but marked as guard

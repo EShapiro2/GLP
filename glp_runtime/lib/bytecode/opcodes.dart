@@ -239,6 +239,18 @@ class Known implements Op {
   Known(this.varIndex, {this.negated = false});
 }
 
+/// NoReaders test: test if term contains no readers
+/// Three-valued semantics:
+/// - SUCCESS: Term contains no readers (ground terms and/or writers only)
+/// - SUSPEND: Term contains readers (even bound ones need to be traversed)
+/// - FAILURE: Never fails (per spec)
+/// If negated: ~no_readers(X) succeeds if X contains readers
+class NoReaders implements Op {
+  final int varIndex;  // clause variable index to test
+  final bool negated;  // true if ~no_readers(X)
+  NoReaders(this.varIndex, {this.negated = false});
+}
+
 /// Ground equality test: X =?= Y
 /// Tests if two terms are structurally equal when both are ground.
 /// Three-valued semantics:

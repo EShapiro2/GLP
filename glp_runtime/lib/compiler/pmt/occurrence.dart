@@ -87,6 +87,12 @@ class OccurrenceClassifier {
       return;
     }
 
+    // Handle SpawnGoal by processing its inner goal
+    if (goal is SpawnGoal) {
+      _classifyGoal(goal.innerGoal, out);
+      return;
+    }
+
     // Collect variables from all arguments using syntactic annotations
     for (final arg in goal.args) {
       _collectVariables(arg, out);
@@ -103,6 +109,11 @@ class OccurrenceClassifier {
   /// Recursively collect variable occurrences from a term using syntactic annotations
   void _collectVariables(Term term, List<Occurrence> out) {
     if (term is VarTerm) {
+      // Skip named anonymous variables (Section 9 of typed-glp-manual)
+      // Variables starting with _ are anonymous and exempt from SRSW
+      if (term.name.startsWith('_')) {
+        return;
+      }
       // Use syntactic annotation: X? is reader, X is writer
       final occType = term.isReader ? OccurrenceType.reader : OccurrenceType.writer;
       out.add(Occurrence(term.name, occType, term.line, term.column));

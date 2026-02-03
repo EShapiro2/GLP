@@ -273,9 +273,18 @@ class Analyzer {
   /// Procedure declarations for type-based SRSW relaxation (optional)
   Map<String, ProcDecl> _procDecls = {};
 
+  /// Compilation mode: user (default) or system
+  CompileMode _compileMode = CompileMode.user;
+
   Analyzer();
 
-  AnnotatedProgram analyze(Program program, {bool generateReduce = false, List<ProcDecl>? procDeclarations}) {
+  AnnotatedProgram analyze(Program program, {
+    bool generateReduce = false,
+    List<ProcDecl>? procDeclarations,
+    CompileMode compileMode = CompileMode.user,
+  }) {
+    _compileMode = compileMode;
+
     // Build procedure declaration lookup map
     _procDecls = {};
     if (procDeclarations != null) {
@@ -588,7 +597,7 @@ class Analyzer {
   static const _negatableGuards = {
     // Type guards
     'ground', 'known', 'unknown', 'integer', 'number', 'atom', 'string',
-    'constant', 'compound', 'tuple', 'list', 'is_list',
+    'constant', 'compound', 'tuple', 'list', 'is_list', 'no_readers',
     // Equality
     '=?=',
   };
@@ -779,8 +788,20 @@ class Analyzer {
       if (term.tail != null) {
         _analyzeTerm(term.tail!, varTable, inHeadOrBody: inHeadOrBody);
       }
+    } else if (term is ConstTerm) {
+      // Validate reserved constants in user mode
+      final value = term.value;
+      if (_compileMode == CompileMode.user && value is String && value.startsWith('_')) {
+        throw CompileError(
+          "Constants starting with '_' are reserved for system use: '$value'. "
+          "Use -mode(system). directive for system code.",
+          term.line,
+          term.column,
+          phase: 'analyzer'
+        );
+      }
     }
-    // ConstTerm and UnderscoreTerm have no variables to track
+    // UnderscoreTerm has no variables to track
   }
 
   void _assignRegisters(VariableTable varTable) {

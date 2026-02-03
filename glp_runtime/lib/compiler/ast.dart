@@ -2,6 +2,14 @@
 
 import '../analysis/type_checker/type_ast.dart' show TypeDef, ProcDecl;
 
+/// Compilation mode: controls compiler restrictions
+enum CompileMode {
+  /// User mode (default): underscore-prefixed constants are rejected
+  user,
+  /// System mode: underscore-prefixed constants are allowed
+  system,
+}
+
 // Base class for all AST nodes
 abstract class AstNode {
   final int line;
@@ -241,6 +249,26 @@ class RemoteGoal extends Goal {
   }
 }
 
+/// Spawn goal: Goal@AgentId
+/// Used for isolate spawning in boot clauses
+/// In dGLP mode: the @AgentId annotation is ignored, goal runs in single isolate
+/// In madGLP mode: the goal is spawned in a separate isolate named AgentId
+class SpawnGoal extends Goal {
+  final Goal innerGoal;
+  final String agentId;
+
+  SpawnGoal(this.innerGoal, this.agentId, int line, int column)
+      : super('@', [_goalToTerm(innerGoal), ConstTerm(agentId, line, column)], line, column);
+
+  @override
+  String toString() => '$innerGoal@$agentId';
+
+  /// Convert a Goal to a StructTerm for storage in args
+  static Term _goalToTerm(Goal g) {
+    return StructTerm(g.functor, g.args, g.line, g.column);
+  }
+}
+
 // ============================================================================
 // Type Declarations (Yardeni-Shapiro syntax)
 // ============================================================================
@@ -257,6 +285,7 @@ class Module extends AstNode {
   final List<ProcDecl> procDeclarations;     // Procedure declarations: procedure name(Type?, Type).
   final List<Procedure> procedures;
   final bool isStdlib;  // true if -stdlib. declaration present
+  final CompileMode compileMode;  // user (default) or system
 
   Module({
     this.declaration,
@@ -266,6 +295,7 @@ class Module extends AstNode {
     this.procDeclarations = const [],
     this.procedures = const [],
     this.isStdlib = false,
+    this.compileMode = CompileMode.user,
     required int line,
     required int column,
   }) : super(line, column);

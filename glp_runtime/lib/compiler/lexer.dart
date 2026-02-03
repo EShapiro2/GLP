@@ -58,6 +58,7 @@ class Lexer {
       case '~': return _makeToken(TokenType.TILDE, startLine, startColumn);
       case '#': return _makeToken(TokenType.HASH, startLine, startColumn);
       case '\\': return _makeToken(TokenType.BACKSLASH, startLine, startColumn);
+      case '@': return _makeToken(TokenType.AT, startLine, startColumn);
 
       // Arithmetic operators
       case '+': return _makeToken(TokenType.PLUS, startLine, startColumn);
@@ -179,14 +180,19 @@ class Lexer {
       return Token(TokenType.PROCEDURE, text, line, column);
     }
 
+    // Check if this is a variable: starts with uppercase OR starts with _ followed by uppercase
+    // Named anonymous variables like _Out, _Result are variables, not atoms
+    final isVariable = _isUpper(text[0]) ||
+        (text[0] == '_' && text.length > 1 && _isUpper(text[1]));
+
     // Check for reader syntax (Variable?)
-    if (_peek() == '?' && _isUpper(text[0])) {
+    if (_peek() == '?' && isVariable) {
       _advance(); // consume '?'
       return Token(TokenType.READER, text, line, column);
     }
 
-    // Variable (uppercase) or Atom (lowercase)
-    final type = _isUpper(text[0]) ? TokenType.VARIABLE : TokenType.ATOM;
+    // Variable (uppercase or _Uppercase) or Atom (lowercase)
+    final type = isVariable ? TokenType.VARIABLE : TokenType.ATOM;
     return Token(type, text, line, column);
   }
 

@@ -52,6 +52,7 @@ enum TokenType {
   TILDE,          // ~ (guard negation)
   HASH,           // # (module operator: Module # Goal)
   BACKSLASH,      // \ (difference list operator: H\T)
+  AT,             // @ (isolate spawn operator: Goal@Agent)
 
   // Type declarations
   COLONCOLONEQ,   // ::= (type definition)

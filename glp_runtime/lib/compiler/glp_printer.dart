@@ -83,6 +83,11 @@ class GlpPrinter {
       return '${printTerm(goal.module)} # ${printGoal(goal.goal)}';
     }
 
+    // Handle spawn goals
+    if (goal is SpawnGoal) {
+      return '${printGoal(goal.innerGoal)}@${goal.agentId}';
+    }
+
     if (goal.args.isEmpty) {
       return goal.functor;
     }

@@ -3475,6 +3475,137 @@ class BytecodeRunner {
         }
       }
 
+      if (op is NoReaders) {
+        // no_readers(X): Succeeds if X contains no readers (only ground terms or writers)
+        // ~no_readers(X): Succeeds if X DOES contain readers
+        //
+        // Three-valued semantics for no_readers(X):
+        // 1. If X contains no readers → SUCCEED
+        // 2. If X contains readers (even bound ones) → SUSPEND on those readers
+        // 3. NEVER fails (per spec)
+        //
+        // For ~no_readers(X) (negated):
+        // 1. If X contains readers → SUCCEED
+        // 2. If X contains no readers → "FAIL" (but no_readers never fails, so this suspends forever)
+        //    Actually per spec, ~no_readers should succeed if term HAS readers
+        //
+        // Use case: Ensuring terms are safe for external output (UI, Dart)
+        // Writers are OK (the external system can receive them), readers are not
+
+        final value = cx.clauseVars[op.varIndex];
+        if (cx.debugOutput) print('[DEBUG] PC $pc: NoReaders${op.negated ? " (negated)" : ""} varIndex=${op.varIndex}, clauseVars value=$value (${value?.runtimeType})');
+
+        if (value == null) {
+          // Variable doesn't exist - for no_readers, this means no readers → succeed
+          // For ~no_readers, no readers means fail
+          if (op.negated) {
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+          } else {
+            pc++;
+          }
+          continue;
+        }
+
+        // Collect all readers in the term (we need to suspend on them)
+        // Unlike ground, we don't care about writers - writers are fine
+        final readers = <int>{};
+        final visited = <int>{};
+
+        void collectReaders(Object? term) {
+          if (term is VarRef && cx.rt.heap.isReader(term.addr)) {
+            final readerAddr = term.addr;
+            if (visited.contains(readerAddr)) return;
+            visited.add(readerAddr);
+            // Check if reader is bound - if so, traverse its value
+            final sigmaBinding = cx.sigmaHat[readerAddr];
+            if (sigmaBinding != null) {
+              collectReaders(sigmaBinding);
+            } else if (cx.rt.heap.isReaderBound(readerAddr)) {
+              collectReaders(cx.rt.heap.getReaderValue(readerAddr));
+            } else {
+              // Unbound reader - add to suspension set
+              readers.add(readerAddr);
+            }
+          } else if (term is VarRef && cx.rt.heap.isWriter(term.addr)) {
+            // Writers are OK for no_readers - they can be sent to external systems
+            // But we need to traverse their bindings to check for readers inside
+            final writerAddr = term.addr;
+            if (visited.contains(writerAddr)) return;
+            visited.add(writerAddr);
+            final sigmaBinding = cx.sigmaHat[writerAddr];
+            if (sigmaBinding != null) {
+              collectReaders(sigmaBinding);
+            } else if (cx.rt.heap.isFullyBound(writerAddr)) {
+              collectReaders(cx.rt.heap.getValue(writerAddr));
+            }
+            // Unbound writer is fine - no readers contributed
+          } else if (term is StructTerm) {
+            for (final arg in term.args) {
+              collectReaders(arg);
+            }
+          } else if (term is _TentativeStruct) {
+            for (final arg in term.args) {
+              collectReaders(arg);
+            }
+          }
+          // Constants contribute no readers
+        }
+
+        // Dereference the clause variable and collect readers
+        if (value is int) {
+          final sigmaBinding = cx.sigmaHat[value];
+          if (sigmaBinding != null) {
+            collectReaders(sigmaBinding);
+          } else if (cx.rt.heap.isWriter(value)) {
+            if (cx.rt.heap.isFullyBound(value)) {
+              collectReaders(cx.rt.heap.getValue(value));
+            }
+            // Unbound writer is fine
+          } else {
+            // Reader address
+            if (visited.contains(value)) {
+              // Already visited
+            } else if (cx.rt.heap.isReaderBound(value)) {
+              collectReaders(cx.rt.heap.getReaderValue(value));
+            } else {
+              readers.add(value);
+            }
+          }
+        } else {
+          collectReaders(value);
+        }
+
+        // Decision logic:
+        if (op.negated) {
+          // ~no_readers(X) - succeeds if X HAS readers
+          if (readers.isNotEmpty) {
+            // Has readers → SUCCEED
+            pc++;
+            continue;
+          } else {
+            // No readers → this should "fail" but no_readers never fails
+            // Per spec semantics, ~no_readers on a term with no readers
+            // would want to succeed when there ARE readers
+            // Since there are none, we fail
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
+          }
+        } else {
+          // no_readers(X) semantics
+          if (readers.isEmpty) {
+            // No readers found → SUCCEED
+            pc++;
+            continue;
+          } else {
+            // Has readers → SUSPEND (never fails)
+            pc = _suspendAndFailMulti(cx, readers, pc);
+            continue;
+          }
+        }
+      }
+
       if (op is GroundEqual) {
         // Ground equality test: X =?= Y
         // Succeeds if both arguments are ground and structurally equal.

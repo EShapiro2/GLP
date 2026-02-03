@@ -414,6 +414,17 @@ class CodeGenerator {
       }
     }
 
+    if (guard.predicate == 'no_readers' && guard.args.length == 1) {
+      final arg = guard.args[0];
+      if (arg is VarTerm) {
+        final varInfo = varTable.getVar(arg.name);
+        if (varInfo != null) {
+          ctx.emit(bc.NoReaders(varInfo.registerIndex!, negated: guard.negated));
+          return;
+        }
+      }
+    }
+
     if (guard.predicate == 'otherwise' && guard.args.isEmpty) {
       // 'otherwise' cannot be negated (enforced by analyzer)
       ctx.emit(bc.Otherwise());
@@ -460,6 +471,20 @@ class CodeGenerator {
       // Special handling for RemoteGoal (Module # Goal)
       if (goal is RemoteGoal) {
         _generateRemoteGoal(goal, varTable, ctx);
+        continue;
+      }
+
+      // Special handling for SpawnGoal (Goal@AgentId)
+      // In dGLP mode, ignore the @AgentId annotation and just run the inner goal
+      if (goal is SpawnGoal) {
+        final innerGoal = goal.innerGoal;
+        // Setup arguments for inner goal
+        for (int j = 0; j < innerGoal.args.length; j++) {
+          _generatePutArgument(innerGoal.args[j], j, varTable, ctx);
+        }
+        // Spawn the inner goal (ignoring agent annotation)
+        final procedureLabel = '${innerGoal.functor}/${innerGoal.arity}';
+        ctx.emit(bc.Spawn(procedureLabel, innerGoal.arity));
         continue;
       }
 

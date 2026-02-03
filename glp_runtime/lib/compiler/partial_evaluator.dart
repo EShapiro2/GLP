@@ -924,6 +924,10 @@ class PartialEvaluator {
           case 'ground':
             // If argument is fully concrete (no variables), ground succeeds
             return _isGround(concreteArg);
+          case 'no_readers':
+            // If argument is fully concrete (no readers), no_readers succeeds
+            // At compile time, a concrete term has no variables (hence no readers)
+            return _isGround(concreteArg);
         }
       }
     }
