@@ -1,0 +1,31 @@
+%% play_dglp_boot.glp - dGLP entry point
+%%
+%% Requires: load social_agent.glp first
+%%
+%% This is the thin wrapper for dGLP (REPL) testing.
+%% All agent code, network switch, and actors are in social_agent.glp
+%%
+%% Usage:
+%%   load social_agent.glp
+%%   load play_dglp_boot.glp
+%%   play.
+%%
+%% Date: 2026-02-03
+
+procedure play.
+play :-
+    %% Network switch connects agents via their net channels
+    %% Network reads from agent's NetOut, writes to agent's NetIn
+    network3(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn),
+             ch(CharlieNetOut?, CharlieNetIn)),
+
+    %% Agents with separate UserIn and NetIn streams
+    agent(alice, AliceUserOut?, AliceNetIn?, [output('_user', AliceUserIn), output('_net', AliceNetOut)]),
+    agent(bob, BobUserOut?, BobNetIn?, [output('_user', BobUserIn), output('_net', BobNetOut)]),
+    agent(charlie, CharlieUserOut?, CharlieNetIn?, [output('_user', CharlieUserIn), output('_net', CharlieNetOut)]),
+
+    %% Actors drive user input (actor writes to UserOut, reads from UserIn)
+    alice_actor(ch(AliceUserIn?, AliceUserOut)),
+    bob_actor(ch(BobUserIn?, BobUserOut)),
+    charlie_actor(ch(CharlieUserIn?, CharlieUserOut)).

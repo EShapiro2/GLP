@@ -1,17 +1,16 @@
-%% play_dglp.glp - dGLP version using agent/4 (same agent code as madGLP)
+%% social_agent.glp - Shared social agent code for dGLP and madGLP
 %%
-%% Uses agent/4 with separate UserIn and NetIn streams.
-%% dGLP boot creates channels and network3 switch for message routing.
-%% Same agent/4 code works for both dGLP and madGLP.
+%% This file contains all shared code:
+%% - Type definitions
+%% - Channel operations
+%% - Helper predicates
+%% - Agent/4 main loop
+%% - Network3 switch
+%% - Stream-based actors
 %%
-%% Scenario (left-to-right: Alice - Bob - Charlie):
-%% 1. Alice cold-calls Bob (Bob accepts)
-%% 2. Alice sends message to Bob: "Hi Bob, this is Alice"
-%% 3. Bob cold-calls Charlie (Charlie accepts)
-%% 4. Charlie sends message to Bob: "Hi Bob, this is Charlie"
-%% 5. Bob introduces Alice to Charlie (both accept)
-%% 6. Alice sends message to Charlie: "Hi Charlie, this is Alice"
-%% 7. Charlie responds to Alice: "Hi Alice, this is Charlie"
+%% Load this file first, then load the boot file:
+%% - play_dglp_boot.glp for dGLP (REPL testing)
+%% - play_madglp_boot.glp for madGLP (isolate testing)
 %%
 %% Date: 2026-02-03
 
@@ -80,6 +79,14 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
 
 procedure add_output(String?, Stream, OutputsList?, OutputsList).
 add_output(Name, Out?, Outs, [output(Name?, Out)|Outs?]).
+
+%% =============================================================================
+%% CLOSE_OUTPUTS - close all output streams in the list
+%% =============================================================================
+
+procedure close_outputs(OutputsList?).
+close_outputs([output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([]).
 
 %% =============================================================================
 %% RESPONSE HANDLING (Cold-call)
@@ -203,11 +210,12 @@ agent(Id, UserIn, [_|NetIn], Outs) :-
 
 %% --- Termination ---
 
-agent(_, [], _, _).
-agent(_, _, [], _).
+agent(_, [], _, Outs) :- close_outputs(Outs?).
+agent(_, _, [], Outs) :- close_outputs(Outs?).
 
 %% =============================================================================
 %% NETWORK SWITCH (3-way: Alice - Bob - Charlie)
+%% Used by dGLP for message routing
 %% =============================================================================
 
 procedure network3(Channel?, Channel?, Channel?).
@@ -292,7 +300,8 @@ network3(ch(AliceIn, AliceOut?),
 network3(ch([], []), ch([], []), ch([], [])).
 
 %% =============================================================================
-%% ACTORS (dGLP style - stream-based)
+%% ACTORS (stream-based)
+%% Used by both dGLP and madGLP
 %% =============================================================================
 
 procedure alice_actor(Channel?).
@@ -321,15 +330,11 @@ alice_send_to_charlie(In, [msg('_user', alice, send(charlie, 'Hi Charlie, this i
     alice_wait_charlie_reply(In?, Out).
 
 procedure alice_wait_charlie_reply(Stream?, Stream).
-alice_wait_charlie_reply([msg(agent, '_user', received(charlie, _))|In], Out?) :-
-    alice_drain(In?, Out).
+alice_wait_charlie_reply([msg(agent, '_user', received(charlie, _))|_], []).
 alice_wait_charlie_reply([_|In], Out?) :-
     otherwise | alice_wait_charlie_reply(In?, Out).
 alice_wait_charlie_reply([], []).
 
-procedure alice_drain(Stream?, Stream).
-alice_drain([_|In], Out?) :- alice_drain(In?, Out).
-alice_drain([], []).
 
 %% Bob's script
 procedure bob_actor(Channel?).
@@ -358,16 +363,12 @@ bob_wait_charlie_connected([_|In], Out?) :-
 bob_wait_charlie_connected([], []).
 
 procedure bob_wait_charlie_msg(Stream?, Stream).
-bob_wait_charlie_msg([msg(agent, '_user', received(charlie, _))|In],
-                     [msg('_user', bob, introduce(alice, charlie))|Out?]) :-
-    bob_drain(In?, Out).
+bob_wait_charlie_msg([msg(agent, '_user', received(charlie, _))|_],
+                     [msg('_user', bob, introduce(alice, charlie))]).
 bob_wait_charlie_msg([_|In], Out?) :-
     otherwise | bob_wait_charlie_msg(In?, Out).
 bob_wait_charlie_msg([], []).
 
-procedure bob_drain(Stream?, Stream).
-bob_drain([_|In], Out?) :- bob_drain(In?, Out).
-bob_drain([], []).
 
 %% Charlie's script
 procedure charlie_actor(Channel?).
@@ -389,19 +390,15 @@ charlie_wait_intro([_|In], Out?) :-
 charlie_wait_intro([], []).
 
 procedure charlie_wait_alice_msg(Stream?, Stream).
-charlie_wait_alice_msg([msg(agent, '_user', received(alice, _))|In],
-                       [msg('_user', charlie, send(alice, 'Hi Alice, this is Charlie'))|Out?]) :-
-    charlie_drain(In?, Out).
+charlie_wait_alice_msg([msg(agent, '_user', received(alice, _))|_],
+                       [msg('_user', charlie, send(alice, 'Hi Alice, this is Charlie'))]).
 charlie_wait_alice_msg([_|In], Out?) :-
     otherwise | charlie_wait_alice_msg(In?, Out).
 charlie_wait_alice_msg([], []).
 
-procedure charlie_drain(Stream?, Stream).
-charlie_drain([_|In], Out?) :- charlie_drain(In?, Out).
-charlie_drain([], []).
 
 %% =============================================================================
-%% THE PLAY (dGLP entry point)
+%% PLAY - dGLP entry point
 %% =============================================================================
 
 procedure play.

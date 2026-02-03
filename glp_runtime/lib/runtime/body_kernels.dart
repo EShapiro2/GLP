@@ -98,7 +98,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_equator', 1, equatorKernel);
 
   // madGLP kernels
-  registry.register('_cold_send', 2, coldSendKernel);
+  registry.register('_send', 3, sendKernel);
 }
 
 /// Helper to get numeric value from argument (with arithmetic evaluation)
@@ -395,7 +395,7 @@ BodyKernelResult ceilKernel(GlpRuntime rt, List<Object?> args) {
 // STRUCTURE MANIPULATION KERNELS
 // ============================================================================
 
-/// Helper to fully dereference a term
+/// Helper to fully dereference a term (shallow - only follows top-level VarRef)
 Object? _deref(GlpRuntime rt, Object? term) {
   while (term is VarRef) {
     final val = rt.heap.getValue(term.addr);
@@ -403,6 +403,32 @@ Object? _deref(GlpRuntime rt, Object? term) {
     term = val;
   }
   return term;
+}
+
+/// Helper to deeply dereference a term (recursively follows all VarRefs in structure)
+///
+/// This is required for serialization/globalization where we need the actual
+/// heap structure, not VarRef placeholders. Without this, nested structures
+/// like `msg(bob, intro(alice, Resp))` would be seen as `msg(VarRef, VarRef)`.
+Term _deepDeref(GlpRuntime rt, Term term) {
+  // First, dereference the term itself if it's a VarRef
+  var current = term;
+  while (current is VarRef) {
+    final val = rt.heap.getValue(current.addr);
+    if (val == null || val is! Term) return current; // Unbound variable
+    current = val;
+  }
+
+  // Now recursively dereference structure arguments
+  if (current is StructTerm) {
+    final newArgs = <Term>[];
+    for (final arg in current.args) {
+      newArgs.add(_deepDeref(rt, arg));
+    }
+    return StructTerm(current.functor, newArgs);
+  }
+
+  return current; // ConstTerm or unbound VarRef
 }
 
 /// Helper to convert Dart list to GLP list structure
@@ -653,51 +679,101 @@ BodyKernelResult equatorKernel(GlpRuntime rt, List<Object?> args) {
 // MADGLP KERNELS
 // ============================================================================
 
-/// Cold-call send kernel for madGLP
+/// Send kernel for madGLP
 ///
-/// '_cold_send'(T, Q) - sends term T to agent Q as a cold-call message.
-/// This is called by the GLP `global_send/2` predicate.
+/// '_send'(T, G, Q) - sends term T via global name G to agent Q.
+/// This is called by the GLP `global_send/3` predicate.
 ///
-/// Per madGLP-spec.md Section 12.2:
-/// - Allocates a fresh global name for the top-level message
-/// - Globalizes T for agent Q (creates global_send goals for writers, entries for readers)
-/// - Queues assignment message (G := T↑) to Q
-BodyKernelResult coldSendKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) {
-    print('[ABORT] _cold_send/2: expected 2 arguments, got ${args.length}');
+/// Per madGLP-spec.md Section 11.5:
+/// - Case G = _w(q, 0) (Serializer): wraps T in list [T↑ | _w(q,0)]
+/// - Case G = _w(p, i) or _r(p, i) with i > 0: sends T directly
+///
+/// The global name G determines the routing and message format.
+BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] \'_send\'/3: expected 3 arguments, got ${args.length}');
     return BodyKernelResult.abort;
   }
 
   // Get MadContext from runtime
   final ctx = rt.madContext;
   if (ctx == null || ctx is! MadContext) {
-    print('[ABORT] _cold_send/2: not in madGLP mode (no MadContext)');
+    print('[ABORT] \'_send\'/3: not in madGLP mode (no MadContext)');
     return BodyKernelResult.abort;
   }
 
-  // Get term T (first argument, should be fully dereferenced)
-  final termArg = _deref(rt, args[0]);
+  // Get term T (first argument)
+  // IMPORTANT: Use _deepDeref to fully resolve nested structures.
+  // _deref only follows top-level VarRefs, leaving nested structure args as VarRefs.
+  // This causes serialization bugs where msg(bob, intro(alice, X)) becomes msg(VarRef, VarRef).
+  final termArg = _deepDeref(rt, args[0] as Term);
   if (termArg is! Term) {
-    print('[ABORT] _cold_send/2: first argument must be a term, got ${termArg.runtimeType}');
+    print('[ABORT] \'_send\'/3: first argument (T) must be a term, got ${termArg.runtimeType}');
     return BodyKernelResult.abort;
   }
 
-  // Get destination agent Q (second argument, should be an atom)
-  final destArg = _deref(rt, args[1]);
+  // Get global name G (second argument) - should be _w(Agent, Index) or _r(Agent, Index)
+  final globalNameArg = _deref(rt, args[1]);
+  if (globalNameArg is! StructTerm) {
+    print('[ABORT] \'_send\'/3: second argument (G) must be a struct _w/2 or _r/2, got ${globalNameArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  // Parse the global name structure
+  final functor = globalNameArg.functor;
+  if (functor != '\'_w\'' && functor != '\'_r\'' && functor != '_w' && functor != '_r') {
+    print('[ABORT] \'_send\'/3: global name must be _w/2 or _r/2, got $functor');
+    return BodyKernelResult.abort;
+  }
+  if (globalNameArg.args.length != 2) {
+    print('[ABORT] \'_send\'/3: global name must have 2 arguments, got ${globalNameArg.args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  // Extract agent from global name (first arg of _w/_r)
+  final gnAgentArg = _deref(rt, globalNameArg.args[0]);
+  String? gnAgent;
+  if (gnAgentArg is ConstTerm && gnAgentArg.value is String) {
+    gnAgent = gnAgentArg.value as String;
+  } else if (gnAgentArg is String) {
+    gnAgent = gnAgentArg;
+  }
+  if (gnAgent == null) {
+    print('[ABORT] \'_send\'/3: global name agent must be an atom, got $gnAgentArg');
+    return BodyKernelResult.abort;
+  }
+
+  // Extract index from global name (second arg of _w/_r)
+  final gnIndexArg = _deref(rt, globalNameArg.args[1]);
+  int? gnIndex;
+  if (gnIndexArg is num) {
+    gnIndex = gnIndexArg.toInt();
+  } else if (gnIndexArg is ConstTerm && gnIndexArg.value is num) {
+    gnIndex = (gnIndexArg.value as num).toInt();
+  }
+  if (gnIndex == null) {
+    print('[ABORT] \'_send\'/3: global name index must be a number, got $gnIndexArg');
+    return BodyKernelResult.abort;
+  }
+
+  // Get destination agent Q (third argument)
+  final destArg = _deref(rt, args[2]);
   String? destAgent;
   if (destArg is ConstTerm && destArg.value is String) {
     destAgent = destArg.value as String;
   } else if (destArg is String) {
     destAgent = destArg;
   }
-
   if (destAgent == null) {
-    print('[ABORT] _cold_send/2: second argument must be an atom (destination agent), got $destArg');
+    print('[ABORT] \'_send\'/3: third argument (Q) must be an atom (destination agent), got $destArg');
     return BodyKernelResult.abort;
   }
 
-  // Perform the cold-call send
-  ctx.coldSend(termArg, destAgent);
+  // Determine if this is a writer or reader global name
+  final isWriter = functor == '\'_w\'' || functor == '_w';
+
+  // Unified send handles both serializer (index 0) and normal (index > 0) cases
+  ctx.send(termArg, isWriter, gnAgent, gnIndex, destAgent);
 
   return BodyKernelResult.success;
 }

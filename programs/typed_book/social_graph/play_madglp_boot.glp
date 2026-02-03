@@ -1,0 +1,40 @@
+%% play_madglp_boot.glp - madGLP entry point
+%%
+%% Requires: load social_agent.glp first (done by IsolateManager)
+%%
+%% This is the thin wrapper for madGLP (isolate) testing.
+%% All agent code and actors are in social_agent.glp
+%%
+%% Date: 2026-02-03
+
+-mode(system).  %% Uses @agent syntax and '_net' constant
+
+%% =============================================================================
+%% BOOT - Spawns agents on separate isolates
+%% =============================================================================
+
+procedure boot.
+boot :-
+    agent_init(alice, _)@alice,
+    agent_init(bob, _)@bob,
+    agent_init(charlie, _)@charlie.
+
+%% =============================================================================
+%% AGENT INITIALIZATION
+%% =============================================================================
+
+procedure agent_init(Constant?, Stream?).
+agent_init(Id, NetIn) :-
+    ground(Id?) |
+    send_to_net(NetOut?),
+    agent(Id?, UserOut?, NetIn?, [output('_user', UserIn), output('_net', NetOut)]),
+    actor(Id?, ch(UserIn?, UserOut)).
+
+%% =============================================================================
+%% ACTOR DISPATCH - Routes to shared actors in social_agent.glp
+%% =============================================================================
+
+procedure actor(_?, Channel?).
+actor(alice, Ch) :- alice_actor(Ch?).
+actor(bob, Ch) :- bob_actor(Ch?).
+actor(charlie, Ch) :- charlie_actor(Ch?).
