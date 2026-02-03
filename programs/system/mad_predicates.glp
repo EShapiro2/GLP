@@ -6,38 +6,44 @@
 %% See: madGLP-spec.md Section 4 and Section 12
 
 %% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
+
+%% Network message: msg(Destination, Content)
+NetMsg ::= msg(Constant, _).
+NetStream ::= [] ; [NetMsg|NetStream].
+
+%% Global name for cross-isolate communication
+GlobalName ::= '_w'(Constant, Integer) ; '_r'(Constant, Integer).
+
+%% =============================================================================
 %% send_to_net/1 - Process network output stream
 %% =============================================================================
 %%
 %% Iterates over a stream of msg(Q, T) terms and sends each to the
-%% destination agent Q via global_send.
+%% destination agent Q via global_send with the serializer address _w(Q,0).
 %%
 %% Per madGLP-spec.md Section 12.2
+%%
+%% Note: Q is used multiple times, but this is safe because messages in the
+%% network output stream contain ground destination agents.
 
-procedure send_to_net(Stream?).
-send_to_net([msg(Q, T) | In]) :- global_send(T?, Q?), send_to_net(In?).
+procedure send_to_net(NetStream?).
+send_to_net([msg(Q, T) | In]) :- ground(Q?) | global_send(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
 send_to_net([]).
 
 %% =============================================================================
-%% global_send/2 - Cold-call send (allocates fresh global name)
+%% global_send/3 - Send via global link
 %% =============================================================================
 %%
-%% For cold-call messages where no global link exists yet.
-%% The kernel '_cold_send' allocates a fresh global name internally.
+%% Sends term T via global name G to agent Q.
+%% Used for both cold-calls (index 0) and established links (index > 0).
 %%
-%% Per madGLP-spec.md Section 12.2
-
-procedure global_send(_?, _?).
-global_send(T, Q) :- known(T?) | '_cold_send'(T?, Q?).
-
-%% =============================================================================
-%% global_send/3 - Established link send (uses existing global name)
-%% =============================================================================
+%% Per madGLP-spec.md Section 4 and Section 11.5:
+%% - If G = _w(q, 0) (serializer): wraps T in list [T | _w(q,0)]
+%% - If G has index > 0: sends T directly
 %%
-%% For messages on established global links (e.g., forwarding, responses).
-%% The global name G was allocated during globalize/localize.
-%%
-%% Per madGLP-spec.md Section 4
+%% The '_send'/3 kernel handles both cases based on the index.
 
-procedure global_send(_?, _?, _?).
+procedure global_send(NetMsg?, GlobalName?, Constant?).
 global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
