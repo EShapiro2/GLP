@@ -164,4 +164,6 @@ See `/Users/udi/.claude/plans/harmonic-strolling-graham.md` for detailed analysi
 3. **Actors close output**: Each actor closes its output stream when script ends
 4. **dGLP succeeds**: Play terminates cleanly with `→ succeeds`
 5. **Fixed VarRef bug**: Added `_deepDeref` to properly serialize nested structures for madGLP
-6. **madGLP messages work**: Protocol executes correctly, but completion blocked
+6. **Fixed message format**: `send_to_net` now sends `msg(Q, T)` instead of just `T` (matches dGLP)
+7. **Strengthened types**: Added `NetMsg`, `NetStream`, `GlobalName`, `AgentId`, `Decision` types
+8. **madGLP messages work**: Protocol executes correctly, but completion blocked
