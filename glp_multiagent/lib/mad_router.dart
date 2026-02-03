@@ -1,6 +1,6 @@
-/// IrmaRouter - Routes opaque byte payloads between agent windows
+/// MadRouter - Routes opaque byte payloads between agent windows
 ///
-/// Replaces SimpleRouter for irmaGLP integration.
+/// Routes madGLP messages between agent windows.
 /// Handles Uint8List payloads instead of JSON for inter-agent messages.
 library;
 
@@ -10,11 +10,11 @@ import 'package:flutter/foundation.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 
 /// Router for opaque byte payloads between agent windows
-class IrmaRouter {
-  static final IrmaRouter _instance = IrmaRouter._();
-  static IrmaRouter get instance => _instance;
+class MadRouter {
+  static final MadRouter _instance = MadRouter._();
+  static MadRouter get instance => _instance;
 
-  IrmaRouter._();
+  MadRouter._();
 
   final Map<String, int> _agentWindows = {}; // agentId -> windowId
   final List<String> _routingLog = [];
@@ -49,7 +49,7 @@ class IrmaRouter {
   /// 
   /// [from] - sender agent ID
   /// [to] - recipient agent ID  
-  /// [payload] - opaque bytes (serialized irmaGLP message)
+  /// [payload] - opaque bytes (serialized madGLP message)
   Future<void> route(String from, String to, Uint8List payload) async {
     _log('Route: $from -> $to (${payload.length} bytes)');
 
@@ -66,7 +66,7 @@ class IrmaRouter {
       
       await DesktopMultiWindow.invokeMethod(
         targetWindowId,
-        'deliver_irma',
+        'deliver_mad',
         jsonEncode({
           'from': from,
           'payload': encodedPayload,

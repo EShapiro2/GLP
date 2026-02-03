@@ -15,6 +15,7 @@ import 'dart:math' as math;
 import 'runtime.dart';
 import 'terms.dart';
 import 'machine_state.dart' show GoalRef;
+import 'package:glp_runtime/multiagent/mad_context.dart';
 
 /// Result of executing a body kernel
 enum BodyKernelResult {
@@ -95,6 +96,9 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
 
   // Equator operations (many-to-one signaling)
   registry.register('_equator', 1, equatorKernel);
+
+  // madGLP kernels
+  registry.register('_cold_send', 2, coldSendKernel);
 }
 
 /// Helper to get numeric value from argument (with arithmetic evaluation)
@@ -641,6 +645,59 @@ BodyKernelResult equatorKernel(GlpRuntime rt, List<Object?> args) {
       }
     }
   }
+
+  return BodyKernelResult.success;
+}
+
+// ============================================================================
+// MADGLP KERNELS
+// ============================================================================
+
+/// Cold-call send kernel for madGLP
+///
+/// '_cold_send'(T, Q) - sends term T to agent Q as a cold-call message.
+/// This is called by the GLP `global_send/2` predicate.
+///
+/// Per madGLP-spec.md Section 12.2:
+/// - Allocates a fresh global name for the top-level message
+/// - Globalizes T for agent Q (creates global_send goals for writers, entries for readers)
+/// - Queues assignment message (G := T↑) to Q
+BodyKernelResult coldSendKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] _cold_send/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  // Get MadContext from runtime
+  final ctx = rt.madContext;
+  if (ctx == null || ctx is! MadContext) {
+    print('[ABORT] _cold_send/2: not in madGLP mode (no MadContext)');
+    return BodyKernelResult.abort;
+  }
+
+  // Get term T (first argument, should be fully dereferenced)
+  final termArg = _deref(rt, args[0]);
+  if (termArg is! Term) {
+    print('[ABORT] _cold_send/2: first argument must be a term, got ${termArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  // Get destination agent Q (second argument, should be an atom)
+  final destArg = _deref(rt, args[1]);
+  String? destAgent;
+  if (destArg is ConstTerm && destArg.value is String) {
+    destAgent = destArg.value as String;
+  } else if (destArg is String) {
+    destAgent = destArg;
+  }
+
+  if (destAgent == null) {
+    print('[ABORT] _cold_send/2: second argument must be an atom (destination agent), got $destArg');
+    return BodyKernelResult.abort;
+  }
+
+  // Perform the cold-call send
+  ctx.coldSend(termArg, destAgent);
 
   return BodyKernelResult.success;
 }

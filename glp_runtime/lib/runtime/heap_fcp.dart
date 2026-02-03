@@ -7,9 +7,9 @@
 /// - ValueTag indicates bound to ground value
 library;
 
-import 'terms.dart';
-import 'suspension.dart';
-import 'machine_state.dart';
+import 'package:glp_runtime/runtime/terms.dart';
+import 'package:glp_runtime/runtime/suspension.dart';
+import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 
 /// Cell tags matching FCP design
@@ -259,6 +259,7 @@ class HeapFCP {
   Object derefAddr(int startAddr) {
     var current = startAddr;
     final visited = <int>{};
+    CellTag? previousTag;  // Track previous tag for WxW detection
 
     while (true) {
       if (visited.contains(current)) {
@@ -267,6 +268,12 @@ class HeapFCP {
       visited.add(current);
 
       final cell = cells[current];
+
+      // Per spec Section 4.5: WxW detection during deref
+      // If we followed a pointer from a writer and landed on another writer, that's a violation
+      if (previousTag == CellTag.WrtTag && cell.tag == CellTag.WrtTag) {
+        throw StateError('SRSW violation: writer at ${visited.elementAt(visited.length - 2)} points to writer at $current');
+      }
 
       switch (cell.tag) {
         case CellTag.RoTag:
@@ -281,6 +288,7 @@ class HeapFCP {
           }
           if (cell.content is Pointer) {
             // Follow pointer to writer
+            previousTag = cell.tag;
             current = (cell.content as Pointer).targetAddr;
             continue;
           }
@@ -314,6 +322,7 @@ class HeapFCP {
               }
             }
             // Bound to another cell - follow the pointer
+            previousTag = cell.tag;
             current = target;
             continue;
           }

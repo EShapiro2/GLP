@@ -8,7 +8,7 @@
 import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
-import 'package:glp_runtime/multiagent/irma_context.dart';
+import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
 import 'package:glp_runtime/multiagent/global_send.dart';
@@ -22,8 +22,8 @@ void main() {
 
       final runtimeP = GlpRuntime();
       final runtimeQ = GlpRuntime();
-      final ctxP = IrmaContext(agentId: 'p', runtime: runtimeP);
-      final ctxQ = IrmaContext(agentId: 'q', runtime: runtimeQ);
+      final ctxP = MadContext(agentId: 'p', runtime: runtimeP);
+      final ctxQ = MadContext(agentId: 'q', runtime: runtimeQ);
 
       // p creates stream variable Xs
       final (writerXs, readerXs) = runtimeP.heap.allocateVariable();
@@ -90,8 +90,8 @@ void main() {
 
       final runtimeP = GlpRuntime();
       final runtimeQ = GlpRuntime();
-      final ctxP = IrmaContext(agentId: 'p', runtime: runtimeP);
-      final ctxQ = IrmaContext(agentId: 'q', runtime: runtimeQ);
+      final ctxP = MadContext(agentId: 'p', runtime: runtimeP);
+      final ctxQ = MadContext(agentId: 'q', runtime: runtimeQ);
 
       // p creates V (for return value)
       final (writerV, readerV) = runtimeP.heap.allocateVariable();
@@ -158,9 +158,9 @@ void main() {
       final runtimeAlice = GlpRuntime();
       final runtimeBob = GlpRuntime();
       final runtimeCharlie = GlpRuntime();
-      final ctxAlice = IrmaContext(agentId: 'alice', runtime: runtimeAlice);
-      final ctxBob = IrmaContext(agentId: 'bob', runtime: runtimeBob);
-      final ctxCharlie = IrmaContext(agentId: 'charlie', runtime: runtimeCharlie);
+      final ctxAlice = MadContext(agentId: 'alice', runtime: runtimeAlice);
+      final ctxBob = MadContext(agentId: 'bob', runtime: runtimeBob);
+      final ctxCharlie = MadContext(agentId: 'charlie', runtime: runtimeCharlie);
 
       // Bob creates X
       final (writerXBob, readerXBob) = runtimeBob.heap.allocateVariable();
@@ -266,8 +266,8 @@ void main() {
 
       final runtimeP = GlpRuntime();
       final runtimeQ = GlpRuntime();
-      final ctxP = IrmaContext(agentId: 'p', runtime: runtimeP);
-      final ctxQ = IrmaContext(agentId: 'q', runtime: runtimeQ);
+      final ctxP = MadContext(agentId: 'p', runtime: runtimeP);
+      final ctxQ = MadContext(agentId: 'q', runtime: runtimeQ);
 
       // p creates X (and X?)
       final (writerX, readerX) = runtimeP.heap.allocateVariable();

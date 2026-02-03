@@ -263,6 +263,30 @@ class IsolateManager {
   }
 }
 
+/// madGLP system predicates (embedded)
+///
+/// These are loaded before the user program to provide:
+/// - send_to_net/1: processes network output stream
+/// - global_send/2: cold-call send (allocates fresh global name)
+/// - global_send/3: established link send
+const String _madPredicatesSource = r'''
+%% madGLP System Predicates (embedded in isolate_manager.dart)
+%% See: madGLP-spec.md Section 4 and Section 12
+
+%% send_to_net/1 - Process network output stream
+procedure send_to_net(Stream?).
+send_to_net([msg(Q, T) | In]) :- global_send(T?, Q?), send_to_net(In?).
+send_to_net([]).
+
+%% global_send/2 - Cold-call send (allocates fresh global name)
+procedure global_send(_?, _?).
+global_send(T, Q) :- known(T?) | '_cold_send'(T?, Q?).
+
+%% global_send/3 - Established link send
+procedure global_send(_?, _?, _?).
+global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
+''';
+
 /// Agent isolate entry point.
 ///
 /// This runs in a separate isolate for each agent.
@@ -277,13 +301,27 @@ void _agentIsolateEntry(AgentConfig config) async {
 
   // Create GlpEngine (same as REPL would)
   final engine = GlpEngine();
+
+  // Load madGLP system predicates first
+  engine.loadSource(_madPredicatesSource, filename: 'mad_predicates.glp');
+
+  // Then load the user program
   engine.loadSource(config.programSource);
-  print('[$agentId] Program loaded via GlpEngine');
+  engine.debugTrace = true;  // Enable tracing for comparison with dGLP
+  print('[$agentId] Program loaded via GlpEngine (with mad_predicates)');
 
   // Enable madGLP mode
   engine.enableMadGLP(agentId: agentId);
   final ctx = engine.madContext!;
   final runtime = engine.runtime;
+
+  // Initialize the permanent index-0 serializer entry for network input
+  // Spec Section 4.1: "At boot time, each agent p creates a permanent entry
+  // at index 0 mapping `_r(p, 0)` to the local writer N_p for p's network
+  // input stream."
+  final (netInWriter, netInReader) = runtime.heap.allocateVariable();
+  ctx.wp.initializeSerializerEntry(netInWriter);
+  print('[$agentId] Serializer entry initialized at index 0, netIn=($netInWriter,$netInReader)');
 
   // Message routing to main isolate (madGLP: push-based via onMessageReady)
   ctx.onMessageReady = (dest, msg) {

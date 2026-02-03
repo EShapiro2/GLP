@@ -7,7 +7,7 @@
 import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
-import 'package:glp_runtime/multiagent/irma_context.dart';
+import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
 import 'package:glp_runtime/multiagent/global_send.dart';
@@ -20,7 +20,7 @@ void main() {
       // Then: X_q is bound to 42, entry removed
 
       final runtime = GlpRuntime();
-      final ctx = IrmaContext(agentId: 'q', runtime: runtime);
+      final ctx = MadContext(agentId: 'q', runtime: runtime);
 
       // Create a local pair that will receive the assignment
       final (writerAddr, readerAddr) = runtime.heap.allocateVariable();
@@ -51,7 +51,7 @@ void main() {
       // Then: X is bound to 42, entry removed
 
       final runtime = GlpRuntime();
-      final ctx = IrmaContext(agentId: 'p', runtime: runtime);
+      final ctx = MadContext(agentId: 'p', runtime: runtime);
 
       // Create a local pair (X, X?) where X is the writer
       final (writerAddr, readerAddr) = runtime.heap.allocateVariable();
@@ -84,7 +84,7 @@ void main() {
       // Then: Fresh pair created, entry added, spawns registered
 
       final runtime = GlpRuntime();
-      final ctx = IrmaContext(agentId: 'q', runtime: runtime);
+      final ctx = MadContext(agentId: 'q', runtime: runtime);
 
       // Setup: q has LocalizeEntry for receiving main message
       final (writerAddr, _) = runtime.heap.allocateVariable();
@@ -108,7 +108,7 @@ void main() {
 
     test('receive for non-existent LocalizeEntry throws', () {
       final runtime = GlpRuntime();
-      final ctx = IrmaContext(agentId: 'q', runtime: runtime);
+      final ctx = MadContext(agentId: 'q', runtime: runtime);
 
       // No entry exists for _w(p, 5)
       expect(
@@ -123,7 +123,7 @@ void main() {
 
     test('receive for non-existent GlobalizeEntry throws', () {
       final runtime = GlpRuntime();
-      final ctx = IrmaContext(agentId: 'p', runtime: runtime);
+      final ctx = MadContext(agentId: 'p', runtime: runtime);
 
       // No entry exists at index 5
       expect(
@@ -140,7 +140,7 @@ void main() {
   group('Send Transaction', () {
     test('flushMessages sends queued messages', () {
       final runtime = GlpRuntime();
-      final ctx = IrmaContext(agentId: 'p', runtime: runtime);
+      final ctx = MadContext(agentId: 'p', runtime: runtime);
 
       // Add a message to the queue
       ctx.mp.add(OutboundMessage(
@@ -167,8 +167,8 @@ void main() {
       // Setup two agents
       final runtimeP = GlpRuntime();
       final runtimeQ = GlpRuntime();
-      final ctxP = IrmaContext(agentId: 'p', runtime: runtimeP);
-      final ctxQ = IrmaContext(agentId: 'q', runtime: runtimeQ);
+      final ctxP = MadContext(agentId: 'p', runtime: runtimeP);
+      final ctxQ = MadContext(agentId: 'q', runtime: runtimeQ);
 
       // p creates variable X
       final (writerXp, readerXp) = runtimeP.heap.allocateVariable();
@@ -235,8 +235,8 @@ void main() {
       // Setup two agents
       final runtimeP = GlpRuntime();
       final runtimeQ = GlpRuntime();
-      final ctxP = IrmaContext(agentId: 'p', runtime: runtimeP);
-      final ctxQ = IrmaContext(agentId: 'q', runtime: runtimeQ);
+      final ctxP = MadContext(agentId: 'p', runtime: runtimeP);
+      final ctxQ = MadContext(agentId: 'q', runtime: runtimeQ);
 
       // p creates variable V (with V?)
       final (writerVp, readerVp) = runtimeP.heap.allocateVariable();

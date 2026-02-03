@@ -6,15 +6,71 @@
 /// assignments from remote agents. Two entry types:
 /// - GlobalizeEntry (X, q): created when exporting a reader
 /// - LocalizeEntry (X, q, i): created when importing a writer global name
+///
+/// Index 0 is reserved for the serializer (network input stream).
+/// Regular indices start at 1.
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
 
 void main() {
   group('GlobalWritersTable', () {
+    // Index-0 serializer tests (spec Section 4.1)
+
+    test('index 0 is reserved for serializer', () {
+      // Given: empty table
+      final table = GlobalWritersTable('p');
+
+      // Then: nextIndex starts at 1 (0 is reserved)
+      // Spec Section 3.2: "Index 0 is reserved for the network input serializer.
+      // The counter starts at 1"
+      expect(table.nextIndex, 1);
+    });
+
+    test('initializeSerializerEntry sets up index 0', () {
+      // Given: empty table
+      final table = GlobalWritersTable('p');
+
+      // When: initialize serializer entry
+      table.initializeSerializerEntry(999);
+
+      // Then: serializer writer address is set
+      // Spec Section 4.1: "At boot time, each agent p creates a permanent entry
+      // at index 0 mapping `_r(p, 0)` to the local writer N_p"
+      expect(table.hasSerializerEntry, isTrue);
+      expect(table.serializerWriterAddr, 999);
+    });
+
+    test('updateSerializerWriter updates the entry', () {
+      // Given: table with initialized serializer
+      final table = GlobalWritersTable('p');
+      table.initializeSerializerEntry(999);
+
+      // When: update serializer writer
+      table.updateSerializerWriter(1001);
+
+      // Then: new writer address is stored
+      // Spec Section 8.3: "Update the entry to `(N'_q, *)` at index 0"
+      expect(table.serializerWriterAddr, 1001);
+    });
+
+    test('removeGlobalizeEntry does not remove index 0', () {
+      // Given: table with serializer entry
+      final table = GlobalWritersTable('p');
+      table.initializeSerializerEntry(999);
+
+      // When: try to remove index 0
+      table.removeGlobalizeEntry(0);
+
+      // Then: serializer entry is still there
+      // Spec Section 4.1: "This entry is never removed."
+      expect(table.hasSerializerEntry, isTrue);
+      expect(table.serializerWriterAddr, 999);
+    });
+
     // Entry creation tests (spec Section 3.2)
 
-    test('addGlobalizeEntry allocates sequential indices', () {
+    test('addGlobalizeEntry allocates sequential indices starting at 1', () {
       // Given: empty table
       final table = GlobalWritersTable('p');
 
@@ -22,11 +78,11 @@ void main() {
       final i1 = table.addGlobalizeEntry(100, 'q');
       final i2 = table.addGlobalizeEntry(200, 'r');
 
-      // Then: indices are 0, 1
+      // Then: indices are 1, 2 (0 is reserved for serializer)
       // Spec: "A single counter is used for index allocation at each agent"
-      expect(i1, 0);
-      expect(i2, 1);
-      expect(table.nextIndex, 2);
+      expect(i1, 1);
+      expect(i2, 2);
+      expect(table.nextIndex, 3);
     });
 
     test('addLocalizeEntry stores remote index', () {
@@ -84,23 +140,23 @@ void main() {
     // Entry removal tests (spec Section 3.2)
 
     test('removeGlobalizeEntry leaves gaps (indices not reused)', () {
-      // Given: entries at indices 0, 1
+      // Given: entries at indices 1, 2 (0 is reserved for serializer)
       final table = GlobalWritersTable('p');
-      table.addGlobalizeEntry(100, 'q'); // index 0
-      table.addGlobalizeEntry(200, 'r'); // index 1
+      table.addGlobalizeEntry(100, 'q'); // index 1
+      table.addGlobalizeEntry(200, 'r'); // index 2
 
-      // When: removeGlobalizeEntry(0)
-      table.removeGlobalizeEntry(0);
+      // When: removeGlobalizeEntry(1)
+      table.removeGlobalizeEntry(1);
 
-      // Then: lookupByIndex(0) returns null
-      expect(table.lookupByIndex(0), isNull);
-      expect(table.lookupByIndex(1), isNotNull);
+      // Then: lookupByIndex(1) returns null
+      expect(table.lookupByIndex(1), isNull);
+      expect(table.lookupByIndex(2), isNotNull);
 
-      // And: new entry gets index 2, not reusing 0
+      // And: new entry gets index 3, not reusing 1
       // Spec: "Indices are never reused. Implementations may use a sparse
       // representation (e.g., a map from index to entry)"
       final i3 = table.addGlobalizeEntry(300, 's');
-      expect(i3, 2);
+      expect(i3, 3);
     });
 
     test('removeLocalizeEntry by remote agent and index', () {

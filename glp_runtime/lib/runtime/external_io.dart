@@ -163,8 +163,17 @@ class OutputObserver {
   void _observeNext() {
     if (_closed) return;
 
-    // Register callback for when reader is bound
-    heap.onBind(_currentReaderId, (Term value) {
+    // Convert reader to writer per spec Section 7.1
+    // onBind() expects writer address because bindings happen at the writer
+    final writerAddr = heap.tryWriterForReader(_currentReaderId);
+    if (writerAddr == null) {
+      // Imported reader - no local writer to observe
+      // This shouldn't happen for output streams, but handle gracefully
+      return;
+    }
+
+    // Register callback for when writer is bound
+    heap.onBind(writerAddr, (Term value) {
       if (_closed) return;
 
       if (value is StructTerm && value.functor == '.') {
@@ -224,7 +233,11 @@ class OutputObserver {
   /// Stop observing (cleanup)
   void dispose() {
     _closed = true;
-    heap.removeBindCallback(_currentReaderId);
+    // Convert reader to writer for callback removal (callbacks are keyed by writer)
+    final writerAddr = heap.tryWriterForReader(_currentReaderId);
+    if (writerAddr != null) {
+      heap.removeBindCallback(writerAddr);
+    }
   }
 }
 

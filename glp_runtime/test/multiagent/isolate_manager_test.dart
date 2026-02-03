@@ -36,12 +36,12 @@ void main() {
       final source = '''
 procedure boot.
 boot :-
-    agent_init(alice, ch(_?,_), ch(_?,_))@alice,
-    agent_init(bob, ch(_?,_), ch(_?,_))@bob,
-    agent_init(charlie, ch(_?,_), ch(_?,_))@charlie.
+    agent_init(alice, _)@alice,
+    agent_init(bob, _)@bob,
+    agent_init(charlie, _)@charlie.
 
-procedure agent_init(_?, Channel?, Channel?).
-agent_init(_, _, _) :- true.
+procedure agent_init(_?, Channel?).
+agent_init(_, _) :- true.
 ''';
 
       final loader = BootLoader();
@@ -240,11 +240,11 @@ agent_init(_, _, _) :- true.
     }, timeout: Timeout(Duration(seconds: 20)));
 
     test('runs full play with actor scripts (no UI)', () async {
-      // Try to find the test boot file with actors
+      // Try to find the actor boot file
       final paths = [
-        '/home/user/GLP/programs/typed_book/social_graph/play_alice_bob_charlie_test_boot.glp',
-        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_alice_bob_charlie_test_boot.glp',
-        'programs/typed_book/social_graph/play_alice_bob_charlie_test_boot.glp',
+        '/home/user/GLP/programs/typed_book/social_graph/play_alice_bob_charlie_actor_boot.glp',
+        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_alice_bob_charlie_actor_boot.glp',
+        'programs/typed_book/social_graph/play_alice_bob_charlie_actor_boot.glp',
       ];
 
       String? source;
@@ -257,18 +257,18 @@ agent_init(_, _, _) :- true.
       }
 
       if (source == null) {
-        print('Skipping: play_alice_bob_charlie_test_boot.glp not found');
+        print('Skipping: play_alice_bob_charlie_actor_boot.glp not found');
         return;
       }
 
       final loader = BootLoader();
       final config = loader.load(source);
 
-      // Should parse correctly with agent_with_actor goal
+      // Should parse correctly with agent_init goal (actors spawned internally)
       expect(config.directives.length, equals(3));
       expect(config.directives.map((d) => d.agentId).toList(),
           equals(['alice', 'bob', 'charlie']));
-      expect(config.directives.every((d) => d.goalFunctor == 'agent_with_actor'),
+      expect(config.directives.every((d) => d.goalFunctor == 'agent_init'),
           isTrue);
 
       await manager.boot(config);

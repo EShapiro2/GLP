@@ -237,6 +237,9 @@ class Scheduler {
       final moduleContext = rt.getGoalModuleContext(act.id);
 
       // Create context with reduction callback for trace
+      // NOTE: Always set onReduction callback to track hadReduction correctly!
+      // Otherwise hadReduction stays false even when goal reduces, causing
+      // false "failure" detection when debug=false. Bug found 2026-01-31.
       final cx = RunnerContext(
         rt: rt,
         goalId: act.id,
@@ -247,23 +250,25 @@ class Scheduler {
         debugOutput: debugOutput,
         moduleContext: moduleContext,
         termFormatter: (term, {bool markReaders = true}) => _formatTerm(term, markReaders: markReaders),
-        onReduction: debug ? (goalId, head, body) {
+        onReduction: (goalId, head, body) {
           // Skip query wrapper goals
           if (head.contains('query__')) {
             hadReduction = true;
             suspendedGoals.remove(goalId);
             return;
           }
-          // Print reduction when it occurs (at Commit)
-          // Strip /arity suffix from procedure names for standard GLP syntax
-          final cleanHead = head.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
-          final cleanBody = body.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
-          // No goal ID prefix - clean output
-          print('$cleanHead :- $cleanBody');
+          // Print reduction when it occurs (at Commit) - only when debug=true
+          if (debug) {
+            // Strip /arity suffix from procedure names for standard GLP syntax
+            final cleanHead = head.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
+            final cleanBody = body.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
+            // No goal ID prefix - clean output
+            print('$cleanHead :- $cleanBody');
+          }
           hadReduction = true;
           // Remove from suspended list if it reduced
           suspendedGoals.remove(goalId);
-        } : null,
+        },
       );
       final result = runner.runWithStatus(cx);
 

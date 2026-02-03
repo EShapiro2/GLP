@@ -60,6 +60,9 @@ class LocalizeEntry {
 /// - GlobalizeEntry: created by Globalize, direct index lookup
 /// - LocalizeEntry: created by Localize, search by (agent, index)
 ///
+/// Index 0 is reserved for the network input serializer (spec Section 4.1).
+/// This entry is permanent and supports many-to-one cold-call reception.
+///
 /// See: docs/ma/madGLP-spec.md Section 3
 class GlobalWritersTable {
   /// Agent ID that owns this table
@@ -67,8 +70,14 @@ class GlobalWritersTable {
 
   /// Single counter for index allocation (spec Section 3.2)
   /// Shared across both Globalize and Localize operations.
+  /// Index 0 is reserved for the serializer, so counter starts at 1.
   /// Indices are never reused.
-  int _nextIndex = 0;
+  int _nextIndex = 1;
+
+  /// Serializer entry at index 0 (spec Section 4.1)
+  /// Maps to the local writer for the network input stream.
+  /// This entry is permanent - never removed.
+  int? _serializerWriterAddr;
 
   /// GlobalizeEntries: direct index lookup
   /// Key is the index i, value is the entry at that index.
@@ -80,6 +89,52 @@ class GlobalWritersTable {
   final List<LocalizeEntry> _localizeEntries = [];
 
   GlobalWritersTable(this.agentId);
+
+  // ===========================================================================
+  // Serializer Entry (Index 0) - Network Input Stream
+  // ===========================================================================
+
+  /// Initialize the permanent serializer entry at index 0.
+  ///
+  /// Called at boot time to set up the network input stream writer.
+  /// This entry is never removed - it receives cold-call messages from
+  /// any agent via `_w(agentId, 0)`.
+  ///
+  /// Spec Section 4.1: "At boot time, each agent p creates a permanent entry
+  /// at index 0 mapping `_r(p, 0)` to the local writer N_p for p's network
+  /// input stream."
+  void initializeSerializerEntry(int netInWriterAddr) {
+    if (_serializerWriterAddr != null) {
+      throw StateError('Serializer entry already initialized');
+    }
+    _serializerWriterAddr = netInWriterAddr;
+  }
+
+  /// Get the current serializer writer address.
+  ///
+  /// Returns null if not yet initialized.
+  int? get serializerWriterAddr => _serializerWriterAddr;
+
+  /// Update the serializer writer to a fresh address.
+  ///
+  /// Called by Receive transaction after binding the current writer
+  /// to extend the network input stream.
+  ///
+  /// Spec Section 8.3: "Assign N_q := [T_q↓? | N'_q] where N'_q is a fresh
+  /// writer. Update the entry to `(N'_q, *)` at index 0."
+  void updateSerializerWriter(int newWriterAddr) {
+    if (_serializerWriterAddr == null) {
+      throw StateError('Cannot update serializer: not initialized');
+    }
+    _serializerWriterAddr = newWriterAddr;
+  }
+
+  /// Check if the serializer entry is initialized.
+  bool get hasSerializerEntry => _serializerWriterAddr != null;
+
+  // ===========================================================================
+  // GlobalizeEntry Operations
+  // ===========================================================================
 
   /// Allocate next index and add GlobalizeEntry.
   ///
@@ -150,8 +205,15 @@ class GlobalWritersTable {
   /// Called after receiving `_r(p, i) := T` and assigning the writer.
   /// Leaves a gap in the index space; indices are not reused.
   ///
+  /// Index 0 (serializer) cannot be removed - use updateSerializerWriter instead.
+  ///
   /// Safe to call on non-existent index (idempotent).
   void removeGlobalizeEntry(int index) {
+    if (index == 0) {
+      // Serializer entry is permanent - cannot be removed
+      // Spec Section 4.1: "This entry is never removed."
+      return;
+    }
     _globalizeEntries.remove(index);
   }
 
@@ -192,6 +254,7 @@ class GlobalWritersTable {
   @override
   String toString() {
     final buf = StringBuffer('GlobalWritersTable($agentId, nextIndex=$_nextIndex)\n');
+    buf.writeln('  Serializer[0]: ${_serializerWriterAddr ?? "(not initialized)"}');
     buf.writeln('  GlobalizeEntries:');
     for (final entry in _globalizeEntries.entries) {
       buf.writeln('    [${entry.key}] ${entry.value}');

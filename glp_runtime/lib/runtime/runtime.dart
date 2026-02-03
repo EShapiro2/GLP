@@ -49,6 +49,10 @@ class GlpRuntime {
   // Updated by suspendGoalFCP, cleared when goals reactivate
   final Map<int, Set<GoalRef>> suspended = <int, Set<GoalRef>>{};
 
+  // madGLP context (set when running in multiagent mode)
+  // Used by '_cold_send' kernel to access globalization infrastructure
+  Object? madContext;
+
   /// Check if a goal has a pending wait and if the timer has fired
   /// Returns null if no wait state, true if timer fired, false if still waiting
   bool? checkWaitState(int goalId) {

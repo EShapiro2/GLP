@@ -8,7 +8,6 @@ library;
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
@@ -26,7 +25,6 @@ import 'package:glp_runtime/runtime/external_io.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/payload_serializer.dart';
-import 'package:glp_runtime/multiagent/global_send.dart';
 
 import 'mad_router.dart';
 
@@ -76,8 +74,8 @@ class TraceLogger {
   }
 }
 
-/// Default GLP program path - using the v2 agent based on revised play protocols
-const _defaultGlpPath = '/Users/udi/Grassroots/GLP/programs/multiagent/social_agent_v2.glp';
+/// Default GLP program path - using the UI agent version
+const _defaultGlpPath = '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/ui_agent.glp';
 
 /// Entry point - checks if spawned window or main coordinator
 void main(List<String> args) {
@@ -496,6 +494,10 @@ class _AgentScreenState extends State<AgentScreen> {
   // Pending output terms (to be dereferenced after execution)
   final List<rt.Term> _pendingUserOutputTerms = [];
 
+  // Track writers that have been shown to the user
+  // Maps writer address -> variable name shown (e.g., 35 -> "X35")
+  final Map<int, String> _knownWriters = {};
+
   int _goalCount = 0;
   int _heapVars = 0;
   int _wpSize = 0;  // W_p size (global writers table)
@@ -699,25 +701,6 @@ class _AgentScreenState extends State<AgentScreen> {
     }
   }
 
-  /// Send legacy message (for backwards compatibility)
-  Future<void> _sendLegacyMessage(String to, dynamic payload) async {
-    _addOutput('[SEND to $to] $payload');
-
-    try {
-      await DesktopMultiWindow.invokeMethod(
-        0, // Main window ID is always 0
-        'send',
-        jsonEncode({
-          'from': widget.agentId,
-          'to': to,
-          'payload': payload,
-        }),
-      );
-    } catch (e) {
-      _addOutput('[ERROR] Failed to send: $e');
-    }
-  }
-
   /// Send agent message with proper term serialization
   /// This preserves structure and variables for cross-agent communication
   Future<void> _sendAgentMessage(String to, rt.Term msgTerm) async {
@@ -849,12 +832,13 @@ class _AgentScreenState extends State<AgentScreen> {
         _updateStats();
       });
 
-      final myId = widget.agentId.toLowerCase();
       final firstFriend = widget.friends.isNotEmpty ? widget.friends.first.toLowerCase() : 'friend';
-      _addOutput('[INIT] Ready! Commands:');
-      _addOutput('  Cold-call: msg(user, $myId, connect($firstFriend))');
-      _addOutput('  Send text: msg(user, $myId, send($firstFriend, hello))');
-      _addOutput('  Accept:    msg(user, $myId, decision(yes, <from>, <Resp>))');
+      _addOutput('[INIT] Ready! GLP term interface:');
+      _addOutput('  connect($firstFriend)         - cold-call $firstFriend');
+      _addOutput('  send($firstFriend, hello)     - send text message');
+      _addOutput('  X35 = accept(Ch)              - bind writer X35 to accept');
+      _addOutput('  X35 = no                      - bind writer X35 to reject');
+      _addOutput('  introduce(alice, charlie)     - introduce two friends');
 
       // Request focus on input field after initialization
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -880,61 +864,97 @@ class _AgentScreenState extends State<AgentScreen> {
       }
       final combinedProgram = BytecodeProgram(allOps);
 
-      // Find entry point for agent_init/3 (v2 protocol)
-      final entryPC = combinedProgram.labels['agent_init/3'];
-      TraceLogger.instance.log(_tag, 'GOAL: entryPC=$entryPC, labels=${combinedProgram.labels.keys.toList()}');
-      if (entryPC == null) {
-        _addOutput('[ERROR] Predicate agent_init/3 not found');
-        return;
-      }
-
-      // Allocate heap cells for arguments and bind values
-      // CallEnv requires VarRefs to READER addresses since procedure
-      // declaration is agent_init(_?, Channel?, Channel?) - all reader modes
-      final heap = _runtime!.heap;
-
-      // Arg 0: agentId - _? mode (reader)
-      final (arg0Writer, arg0Reader) = heap.allocateVariable();
-      heap.bindVariable(arg0Writer, rt.ConstTerm(agentId));
-      TraceLogger.instance.log(_tag, 'GOAL: arg0 writer=$arg0Writer reader=$arg0Reader value=$agentId');
-
-      // Arg 1: userChannelTerm - Channel? mode (reader)
-      final (arg1Writer, arg1Reader) = heap.allocateVariable();
-      final userChTerm = _ioContext!.userChannelTerm;
-      heap.bindVariable(arg1Writer, userChTerm);
-      TraceLogger.instance.log(_tag, 'GOAL: arg1 writer=$arg1Writer reader=$arg1Reader value=${_formatTerm(userChTerm)}');
-
-      // Arg 2: netChannelTerm - Channel? mode (reader)
-      final (arg2Writer, arg2Reader) = heap.allocateVariable();
-      final netChTerm = _ioContext!.netChannelTerm;
-      heap.bindVariable(arg2Writer, netChTerm);
-      TraceLogger.instance.log(_tag, 'GOAL: arg2 writer=$arg2Writer reader=$arg2Reader value=${_formatTerm(netChTerm)}');
-
-      // Set up arguments: agent_init(Id, UserCh, NetCh)
-      // Pass READER addresses since procedure expects reader mode arguments
-      final argSlots = <int, rt.Term>{
-        0: rt.VarRef(arg0Reader),
-        1: rt.VarRef(arg1Reader),
-        2: rt.VarRef(arg2Reader),
-      };
-
-      // Set up goal environment
-      final env = CallEnv(args: argSlots);
-      _runtime!.setGoalEnv(_goalId, env);
-      _runtime!.setGoalProgram(_goalId, 'main');
-
-      // Create scheduler
+      // Create scheduler first (needed for both goals)
       final runner = BytecodeRunner(combinedProgram);
       _scheduler = Scheduler(rt: _runtime!, runners: {'main': runner});
       _scheduler!.resetDisplayNumbering();
 
-      // Enqueue goal
-      _runtime!.gq.enqueue(GoalRef(_goalId, entryPC));
+      final heap = _runtime!.heap;
+
+      // Create internal channel between social agent and UI agent
+      // AgentCh = ch(AgentIn, AgentOut) - social agent's user channel
+      // UICh = ch(UIIn, UIOut) - UI agent's agent channel (connected to AgentCh)
+      final (agentInWriter, agentInReader) = heap.allocateVariable();
+      final (agentOutWriter, agentOutReader) = heap.allocateVariable();
+      final agentChTerm = rt.StructTerm('ch', [
+        rt.VarRef(agentInReader),  // Agent reads from this
+        rt.VarRef(agentOutWriter), // Agent writes to this
+      ]);
+      final uiAgentChTerm = rt.StructTerm('ch', [
+        rt.VarRef(agentOutReader), // UI agent reads what agent wrote
+        rt.VarRef(agentInWriter),  // UI agent writes what agent will read
+      ]);
+      TraceLogger.instance.log(_tag, 'GOAL: Created internal agent<->ui channel');
+
+      // --- Start Goal 1: agent_init(Id, AgentCh, NetCh) ---
+      // Social agent talks to UI agent (not directly to Dart)
+      final agentEntryPC = combinedProgram.labels['agent_init/3'];
+      TraceLogger.instance.log(_tag, 'GOAL: agent_init/3 entryPC=$agentEntryPC');
+      if (agentEntryPC == null) {
+        _addOutput('[ERROR] Predicate agent_init/3 not found');
+        return;
+      }
+
+      // Arg 0: agentId
+      final (arg0Writer, arg0Reader) = heap.allocateVariable();
+      heap.bindVariable(arg0Writer, rt.ConstTerm(agentId));
+
+      // Arg 1: agentChTerm (social agent's user channel -> goes to ui_agent)
+      final (arg1Writer, arg1Reader) = heap.allocateVariable();
+      heap.bindVariable(arg1Writer, agentChTerm);
+
+      // Arg 2: netChannelTerm (network channel -> direct to Dart)
+      final (arg2Writer, arg2Reader) = heap.allocateVariable();
+      heap.bindVariable(arg2Writer, _ioContext!.netChannelTerm);
+
+      final agentEnv = CallEnv(args: {
+        0: rt.VarRef(arg0Reader),
+        1: rt.VarRef(arg1Reader),
+        2: rt.VarRef(arg2Reader),
+      });
+      _runtime!.setGoalEnv(_goalId, agentEnv);
+      _runtime!.setGoalProgram(_goalId, 'main');
+      _runtime!.gq.enqueue(GoalRef(_goalId, agentEntryPC));
       _goalId++;
+      _addOutput('[GOAL] Started agent_init($agentId, AgentCh, NetCh)');
 
-      _addOutput('[GOAL] Started agent_init($agentId, UserCh, NetCh)');
+      // --- Start Goal 2: ui_agent(UICh, DartCh, [], 1) ---
+      // UI agent mediates between social agent and Dart
+      final uiEntryPC = combinedProgram.labels['ui_agent/4'];
+      TraceLogger.instance.log(_tag, 'GOAL: ui_agent/4 entryPC=$uiEntryPC');
+      if (uiEntryPC == null) {
+        _addOutput('[WARN] Predicate ui_agent/4 not found - running without UI mediation');
+      } else {
+        // Arg 0: uiAgentChTerm (channel to social agent)
+        final (uiArg0Writer, uiArg0Reader) = heap.allocateVariable();
+        heap.bindVariable(uiArg0Writer, uiAgentChTerm);
 
-      // Initial run to set up merge
+        // Arg 1: userChannelTerm (channel to Dart)
+        final (uiArg1Writer, uiArg1Reader) = heap.allocateVariable();
+        heap.bindVariable(uiArg1Writer, _ioContext!.userChannelTerm);
+
+        // Arg 2: [] (empty pending list)
+        final (uiArg2Writer, uiArg2Reader) = heap.allocateVariable();
+        heap.bindVariable(uiArg2Writer, rt.ConstTerm('nil'));
+
+        // Arg 3: 1 (initial request ID)
+        final (uiArg3Writer, uiArg3Reader) = heap.allocateVariable();
+        heap.bindVariable(uiArg3Writer, rt.ConstTerm(1));
+
+        final uiEnv = CallEnv(args: {
+          0: rt.VarRef(uiArg0Reader),
+          1: rt.VarRef(uiArg1Reader),
+          2: rt.VarRef(uiArg2Reader),
+          3: rt.VarRef(uiArg3Reader),
+        });
+        _runtime!.setGoalEnv(_goalId, uiEnv);
+        _runtime!.setGoalProgram(_goalId, 'main');
+        _runtime!.gq.enqueue(GoalRef(_goalId, uiEntryPC));
+        _goalId++;
+        _addOutput('[GOAL] Started ui_agent(UICh, DartCh, [], 1)');
+      }
+
+      // Initial run to set up merge and channels
       _runUntilQuiescent();
     } catch (e, st) {
       _addOutput('[ERROR] Starting goal: $e');
@@ -955,7 +975,14 @@ class _AgentScreenState extends State<AgentScreen> {
     });
 
     try {
-      // Parse and inject term into UserIn
+      // First, try to handle as a writer binding (X35 = term)
+      if (_tryHandleWriterBinding(text)) {
+        _inputController.clear();
+        _scrollToBottom();
+        return;
+      }
+
+      // Parse as GLP term
       final term = _parseTerm(text);
       TraceLogger.instance.log(_tag, 'USER_INPUT: parsed -> ${_formatTerm(term)}');
 
@@ -975,6 +1002,69 @@ class _AgentScreenState extends State<AgentScreen> {
     } catch (e, st) {
       TraceLogger.instance.log(_tag, 'USER_INPUT ERROR: $e\n$st');
       _addOutput('[ERROR] $e');
+    }
+  }
+
+  /// Try to handle direct writer binding: "X35 = accept(Ch)" or "X35 = no"
+  /// Returns true if handled as a binding, false otherwise
+  bool _tryHandleWriterBinding(String text) {
+    // Match pattern: X<number> = <term>
+    final bindingMatch = RegExp(r'^X(\d+)\s*=\s*(.+)$', caseSensitive: false).firstMatch(text);
+    if (bindingMatch == null) return false;
+
+    final addrStr = bindingMatch.group(1)!;
+    final termStr = bindingMatch.group(2)!;
+    final addr = int.tryParse(addrStr);
+    if (addr == null) return false;
+
+    // Check if this is a known writer
+    if (!_knownWriters.containsKey(addr)) {
+      _addOutput('[ERROR] X$addr is not a known writer');
+      return true;
+    }
+
+    // Verify it's actually a writer in the heap
+    if (_runtime!.heap.isReader(addr)) {
+      _addOutput('[ERROR] X$addr is a reader, not a writer');
+      return true;
+    }
+
+    try {
+      // Parse the term to bind
+      final valueTerm = _parseTerm(termStr);
+      TraceLogger.instance.log(_tag, 'BIND: X$addr = ${_formatTerm(valueTerm)}');
+
+      // Bind the writer to the value
+      _runtime!.heap.bindVariable(addr, valueTerm);
+      _addOutput('[BOUND] X$addr = ${_formatTerm(valueTerm)}');
+
+      // Run to process any activated goals
+      _runUntilQuiescent();
+      return true;
+    } catch (e) {
+      _addOutput('[ERROR] Failed to parse term: $e');
+      return true;
+    }
+  }
+
+  /// Collect writers from a term and register them as known
+  void _collectWriters(rt.Term term) {
+    if (term is rt.VarRef) {
+      // Check if it's unbound and a writer
+      final value = _runtime?.heap.getValue(term.addr);
+      if (value == null || value is rt.VarRef) {
+        // Still unbound
+        final isReader = _runtime?.heap.isReader(term.addr) ?? false;
+        if (!isReader) {
+          // It's a writer - register it
+          _knownWriters[term.addr] = 'X${term.addr}';
+          TraceLogger.instance.log(_tag, 'WRITER: registered X${term.addr}');
+        }
+      }
+    } else if (term is rt.StructTerm) {
+      for (final arg in term.args) {
+        _collectWriters(arg);
+      }
     }
   }
 
@@ -1027,8 +1117,8 @@ class _AgentScreenState extends State<AgentScreen> {
     return rt.StructTerm('.', [head, tail]);
   }
 
-  // Enable GLP trace output
-  bool _glpTraceEnabled = false;
+  // Enable GLP trace output (set true for debugging)
+  bool _glpTraceEnabled = true;
 
   Future<void> _runUntilQuiescent() async {
     TraceLogger.instance.log(_tag, 'RUN: start (GQ=${_runtime?.gq.length ?? 0})');
@@ -1091,26 +1181,24 @@ class _AgentScreenState extends State<AgentScreen> {
   }
 
   void _displayPendingOutput() {
-    // Display user output terms
+    // Display user output terms as GLP syntax
+    // Terms may contain writers that the user can bind
+    // e.g., befriend(alice, X35) where X35 is a writer
     for (final term in _pendingUserOutputTerms) {
       final derefTerm = _derefTerm(term);
+
+      // Collect any writers in the output term
+      _collectWriters(derefTerm);
+
+      // Format as GLP term
+      final formatted = _formatTerm(derefTerm);
       setState(() {
-        _outputLog.add('< ${_formatTerm(derefTerm)}');
+        _outputLog.add('< $formatted');
       });
     }
     _pendingUserOutputTerms.clear();
 
-    // Friend output is now handled via V_p onBind callbacks
-    // which automatically route assignments through IRMA
-
     _scrollToBottom();
-  }
-
-  String _termToString(rt.Term term) {
-    if (term is rt.ConstTerm) {
-      return term.value?.toString() ?? '';
-    }
-    return _formatTerm(term);
   }
 
   void _addOutput(String text) {
@@ -1266,7 +1354,7 @@ class _AgentScreenState extends State<AgentScreen> {
                     autofocus: true,
                     decoration: InputDecoration(
                       hintText: _initialized
-                          ? 'msg(user, ${widget.agentId.toLowerCase()}, connect(${widget.friends.isNotEmpty ? widget.friends.first.toLowerCase() : "friend"}))'
+                          ? 'connect ${widget.friends.isNotEmpty ? widget.friends.first.toLowerCase() : "friend"}'
                           : 'Initializing...',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),

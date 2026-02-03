@@ -152,7 +152,7 @@ class PayloadSerializer {
   /// [allocateImportedVar] - Callback to allocate imported variable cell.
   ///   Takes isReader flag and returns the cell address (varId).
   /// [onVariableImported] - Optional callback invoked after allocating each variable.
-  ///   Used by IrmaContext to create and attach VariableEntry to the cell.
+  ///   Used by MadContext to create and attach VariableEntry to the cell.
   (GlobalVarId, Term) deserializeAssignmentPayload(
     List<int> payload,
     int Function(bool isReader) allocateImportedVar,
@@ -217,6 +217,62 @@ class PayloadSerializer {
     builder.add(termBytes);
 
     return builder.toBytes();
+  }
+
+  /// Create serializer payload: wraps content in list cell [T | _w(q,0)]
+  ///
+  /// Used for cold-call messages to the index-0 serializer.
+  /// The message format is: _w(destAgent, 0) := [content | _w(destAgent, 0)]
+  ///
+  /// Spec Section 4.1: "This sends the assignment `_w(q,0) := [T↑ | _w(q,0)]`,
+  /// wrapping the content in a list cell and reusing the serializer writer in the tail."
+  ///
+  /// Format:
+  /// - type: 1 byte (0=writer for serializer address)
+  /// - agent: length-prefixed string (destination agent)
+  /// - index: 0 (serializer index)
+  /// - term: serialized list cell [content | serializer_ref]
+  List<int> createSerializerPayload(
+    GlobalName serializerName,
+    Term content,
+    bool Function(int addr) isReader,
+    {({String creator, int creatorLocalId, bool isReader}) Function(int addr)? lookupVariable}
+  ) {
+    assert(serializerName.isWriter && serializerName.index == 0,
+           'Serializer payload requires _w(agent, 0) global name');
+
+    final builder = BytesBuilder();
+
+    // GlobalName type (0=writer for serializer)
+    builder.addByte(0);
+
+    // GlobalName agent
+    final agentBytes = utf8.encode(serializerName.agent);
+    builder.add(_encodeLength(agentBytes.length));
+    builder.add(agentBytes);
+
+    // GlobalName index (0 for serializer)
+    builder.add(_encodeLength(0));
+
+    // Create list cell [content | serializer_ref]
+    // The tail is a special marker that the receiver interprets as _w(q,0) reuse
+    // We encode this as a struct '.' with two args: content and a special serializer ref
+    final listCell = _buildSerializerListCell(content, serializerName);
+    final termBytes = serializeTermWithCallbacks(listCell, agentId, isReader, lookupVariable: lookupVariable);
+    builder.add(termBytes);
+
+    return builder.toBytes();
+  }
+
+  /// Build the list cell [content | _w(q,0)] for serializer messages
+  ///
+  /// The tail is encoded as a ConstTerm marker that the receiver recognizes
+  /// as the serializer reuse indicator.
+  Term _buildSerializerListCell(Term content, GlobalName serializerName) {
+    // Represent the serializer tail as a special constant marker
+    // Format: '#serializer:agent:0' - receiver will recognize and handle
+    final serializerMarker = ConstTerm('#serializer:${serializerName.agent}:0');
+    return StructTerm('.', [content, serializerMarker]);
   }
 
   /// Parse global_send payload to (GlobalName, Term)
@@ -472,7 +528,7 @@ class PayloadSerializer {
   ///   For writers: calls heap.allocateImportedWriter()
   ///
   /// [onVariableImported] - Optional callback invoked after allocating each variable.
-  ///   Used by IrmaContext to create and attach VariableEntry to the cell.
+  ///   Used by MadContext to create and attach VariableEntry to the cell.
   ///   Parameters: (localAddr, isReader, globalId, pairedReaderCreatorLocalId)
   ///   For writers, pairedReaderCreatorLocalId contains the reader's ID for assignments.
   static (Term, Map<int, GlobalVarId>) deserializeAgentMessagePayloadWithMapping(

@@ -24,7 +24,7 @@ import 'dart:isolate';
 import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
-import 'package:glp_runtime/multiagent/irma_context.dart';
+import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
 import 'package:glp_runtime/multiagent/global_send.dart';
@@ -86,7 +86,7 @@ void aliceIsolate(SendPort mainPort) async {
 
   // Set up runtime and context
   final runtime = GlpRuntime();
-  final ctx = IrmaContext(agentId: 'alice', runtime: runtime);
+  final ctx = MadContext(agentId: 'alice', runtime: runtime);
 
   // Track the response variable for verification
   late int respWriter;
@@ -167,7 +167,7 @@ void bobIsolate(SendPort mainPort) async {
 
   // Set up runtime and context
   final runtime = GlpRuntime();
-  final ctx = IrmaContext(agentId: 'bob', runtime: runtime);
+  final ctx = MadContext(agentId: 'bob', runtime: runtime);
 
   // Track imported writer address
   int? importedWriterAddr;
