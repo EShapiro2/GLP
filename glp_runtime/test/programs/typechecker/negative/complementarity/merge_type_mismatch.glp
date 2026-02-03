@@ -7,7 +7,7 @@
 %% EXPECT: ill-typed
 %% ERROR: complementarity: Xs has type Stream, Xs? has type _?
 
-Stream ::= [] ; [_|Stream].
+% Uses predefined Stream type from stdlib
 
 procedure merge(Stream?, Stream?, Stream).
 

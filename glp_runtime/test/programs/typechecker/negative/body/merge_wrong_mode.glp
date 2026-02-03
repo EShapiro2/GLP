@@ -7,7 +7,7 @@
 %% EXPECT: ill-typed
 %% ERROR: body: mode mismatch
 
-Stream ::= [] ; [_|Stream].
+% Uses predefined Stream type from stdlib
 
 procedure merge(Stream?, Stream?, Stream).
 

@@ -7,7 +7,7 @@
 %% EXPECT: ill-typed
 %% ERROR: head: functor cons not in type Stream
 
-Stream ::= [] ; [_|Stream].
+% Uses predefined Stream type from stdlib
 
 procedure merge(Stream?, Stream?, Stream).
 

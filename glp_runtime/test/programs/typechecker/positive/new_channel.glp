@@ -4,9 +4,8 @@
 % This tests interactive types with internal mode complementation
 % Paper: Channel(X) ::= ch(Stream(X)?, Stream(X)).
 
-MyList ::= [] ; [_|MyList].
-MyChannel ::= ch(MyList?, MyList).
+% Uses predefined Channel from stdlib (Channel ::= ch(Stream, Stream?))
 
-procedure my_new_channel(MyChannel, MyChannel).
+procedure my_new_channel(Channel, Channel).
 
 my_new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).

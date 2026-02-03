@@ -7,7 +7,7 @@
 %% EXPECT: ill-typed
 %% ERROR: complementarity: X? appears at incompatible positions
 
-Stream ::= [] ; [_|Stream].
+% Uses predefined Stream type from stdlib
 
 procedure merge(Stream?, Stream?, Stream).
 

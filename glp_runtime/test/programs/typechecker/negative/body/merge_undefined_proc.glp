@@ -7,7 +7,7 @@
 %% EXPECT: ill-typed
 %% ERROR: body: undefined procedure unknown/3
 
-Stream ::= [] ; [_|Stream].
+% Uses predefined Stream type from stdlib
 
 procedure merge(Stream?, Stream?, Stream).
 

@@ -1,14 +1,14 @@
 % Test: Merge - undefined type in procedure
 % Paper: Appendix A.1 (negative control)
-% Description: Type definition error - Stream not defined
+% Description: Type definition error - MyUndefinedType not defined
 
 %% TEST: Merge undefined type
 %% PAPER: Appendix A.1
 %% EXPECT: ill-typed
-%% ERROR: type-def: Unknown type Stream
+%% ERROR: type-def: Unknown type MyUndefinedType
 
-% WRONG: Stream is not defined
-procedure merge(Stream?, Stream?, Stream).
+% WRONG: MyUndefinedType is not defined
+procedure merge(MyUndefinedType?, MyUndefinedType?, MyUndefinedType).
 
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).

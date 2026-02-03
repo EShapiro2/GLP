@@ -7,7 +7,7 @@
 %% EXPECT: ill-typed
 %% ERROR: coverage: merge/3 arg 1 missing []
 
-Stream ::= [] ; [_|Stream].
+% Uses predefined Stream type from stdlib
 
 procedure merge(Stream?, Stream?, Stream).
 

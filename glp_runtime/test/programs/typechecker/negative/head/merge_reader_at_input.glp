@@ -9,7 +9,7 @@
 %% ERROR: Arg 3 has mode error: X, Zs are writers at output (should be readers)
 %% ERROR: SRSW violation: Zs has no Zs? in clause 1
 
-Stream ::= [] ; [_|Stream].
+% Uses predefined Stream type from stdlib
 
 procedure merge(Stream?, Stream?, Stream).
 

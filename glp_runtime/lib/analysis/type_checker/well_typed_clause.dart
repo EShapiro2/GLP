@@ -475,7 +475,13 @@ WellTypedResult _checkBodyAtom(
   ProgramDFA dfa,
   TypeEnvironment env,
 ) {
-  // Skip builtin goals (true, otherwise, :=)
+  // Handle SpawnGoal (Goal@Agent) - type-check the inner goal
+  if (atom is ast.SpawnGoal) {
+    // Recursively type-check the inner goal
+    return _checkBodyAtomWithTerm(atom.innerGoal, atomIndex, dfa, env);
+  }
+
+  // Skip builtin goals (true, otherwise, :=, #)
   if (isBuiltinGoal(atom.functor)) {
     return (WellTypedResult.success({}), null);
   }

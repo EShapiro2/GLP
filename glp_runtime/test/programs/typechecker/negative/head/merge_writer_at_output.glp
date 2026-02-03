@@ -7,7 +7,7 @@
 %% EXPECT: ill-typed
 %% ERROR: Arg 3 has mode error: X, Zs are writers at output (should be readers X?, Zs?)
 
-Stream ::= [] ; [_|Stream].
+% Uses predefined Stream type from stdlib
 
 procedure merge(Stream?, Stream?, Stream).
 

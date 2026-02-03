@@ -30,7 +30,9 @@ void validateGuard(Term term) {
   _checkNoAnonymousReader(term);
 }
 
-/// Recursively check for _? and throw if found.
+/// Recursively check for anonymous readers and throw if found.
+/// Per typed-glp-manual Section 9: Anonymous writers are allowed, anonymous readers are not.
+/// This applies to both bare _? and named anonymous readers like _X?.
 void _checkNoAnonymousReader(Term term) {
   if (term is UnderscoreTerm && term.isReader) {
     throw CompileError(
@@ -40,13 +42,23 @@ void _checkNoAnonymousReader(Term term) {
       phase: 'validation',
     );
   }
-  
+
+  // Named anonymous readers (_X?) are also rejected
+  if (term is VarTerm && term.name.startsWith('_') && term.isReader) {
+    throw CompileError(
+      '${term.name}? (anonymous reader) is not permitted in program clauses',
+      term.line,
+      term.column,
+      phase: 'validation',
+    );
+  }
+
   if (term is StructTerm) {
     for (final arg in term.args) {
       _checkNoAnonymousReader(arg);
     }
   }
-  
+
   if (term is ListTerm) {
     if (term.head != null) _checkNoAnonymousReader(term.head!);
     if (term.tail != null) _checkNoAnonymousReader(term.tail!);

@@ -51,6 +51,7 @@ procedure is_list(Stream?).
 procedure ground(_?).
 procedure known(_?).
 procedure unknown(_?).
+procedure no_readers(_?).
 
 % Arithmetic comparison guards
 procedure <(Exp?, Exp?).
@@ -149,6 +150,7 @@ const Set<String> predefinedProcedureNames = {
   'ground',
   'known',
   'unknown',
+  'no_readers',
   // Comparison guards (fundamental - implemented by runtime)
   '<',
   '>',
@@ -168,10 +170,12 @@ const Set<String> predefinedProcedureNames = {
 /// Built-in goals that don't need type checking
 /// - true, otherwise: 0-arity control
 /// - :=: arithmetic assignment, handled specially
+/// - #: remote module call (Module # Goal) - inner goal is in remote module
 const Set<String> builtinGoals = {
   'true',
   'otherwise',
   ':=',
+  '#',
 };
 
 /// True builtins: procedures implemented in Dart runtime with NO GLP clauses.
@@ -187,10 +191,11 @@ const Set<String> builtinProcedures = {
   'constant/1',
   'compound/1',
   'is_list/1',
-  // Groundness guards
+  // Groundness/validation guards
   'ground/1',
   'known/1',
   'unknown/1',
+  'no_readers/1',
   // Arithmetic comparison guards
   '</2',
   '>/2',
