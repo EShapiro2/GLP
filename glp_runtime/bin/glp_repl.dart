@@ -74,6 +74,18 @@ void main() async {
       continue;
     }
 
+    if (trimmed == ':strict' || trimmed == ':s') {
+      engine.strictTypes = !engine.strictTypes;
+      print('Strict type checking ${engine.strictTypes ? "enabled" : "disabled"}');
+      continue;
+    }
+
+    if (trimmed == ':clear' || trimmed == ':c') {
+      engine.clear();
+      print('Cleared loaded programs (stdlib retained)');
+      continue;
+    }
+
     if (trimmed.startsWith(':limit')) {
       final parts = trimmed.split(RegExp(r'\s+'));
       if (parts.length != 2) {
@@ -193,14 +205,16 @@ void _printHelp() {
   print('Commands:');
   print('  :help, :h              Show this help');
   print('  :quit, :q              Exit REPL');
+  print('  :clear, :c             Clear loaded programs (keep stdlib)');
   print('  :trace, :t             Toggle trace output (reductions)');
   print('  :debug, :d             Toggle DEBUG output');
+  print('  :strict, :s            Toggle strict type checking (default: on)');
   print('  :limit <n>             Set goal reduction limit to <n>');
   print('  :bytecode, :bc         Show loaded bytecode');
   print('');
   print('Type Checking:');
   print('  Programs with procedure declarations are type-checked');
-  print('  Programs without procedure declarations skip type checking');
+  print('  Type errors abort loading by default (use :strict to toggle)');
   print('');
   print('Examples:');
   print('  GLP> merge.glp                        # Load typed program');

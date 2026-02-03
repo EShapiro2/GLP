@@ -68,6 +68,9 @@ class GlpEngine {
   /// Enable debug output
   bool debugOutput = false;
 
+  /// When true, type errors abort program loading (default: true)
+  bool strictTypes = true;
+
   /// For madGLP: the MadContext for this engine
   MadContext? madContext;
 
@@ -81,6 +84,28 @@ class GlpEngine {
   /// Constructor - registers standard predicates
   GlpEngine() {
     registerStandardPredicates(_runtime.systemPredicates);
+  }
+
+  /// Clear all loaded programs except stdlib
+  ///
+  /// Useful for test scripts that need to reset state between tests
+  /// without restarting the REPL process.
+  void clear() {
+    // Remember stdlib programs
+    final stdlibKeys = _loadedPrograms.keys
+        .where((k) => k.startsWith('__stdlib_'))
+        .toList();
+    final stdlibPrograms = <String, BytecodeProgram>{};
+    for (final key in stdlibKeys) {
+      stdlibPrograms[key] = _loadedPrograms[key]!;
+    }
+
+    // Clear everything
+    _loadedPrograms.clear();
+    _loadedModules.clear();
+
+    // Restore stdlib
+    _loadedPrograms.addAll(stdlibPrograms);
   }
 
   /// Load stdlib files from a directory
@@ -143,11 +168,15 @@ class GlpEngine {
       final partialEvaluator = PartialEvaluator();
       final transformedAst = partialEvaluator.transformDefinedGuards(ast);
 
-      // Type errors are advisory, not fatal
       final typeResult =
           checkModule(module, transformedProcedures: transformedAst.procedures);
       if (!typeResult.isWellTyped) {
-        // Could expose errors via callback if needed
+        final errors = typeResult.errors.map((e) => '  ${e.message} at line ${e.line}').join('\n');
+        if (strictTypes) {
+          throw Exception('Type checking failed:\n$errors');
+        }
+        // Non-strict mode: print warning and continue
+        print('[TYPE WARNING] Type errors found:\n$errors');
       }
     }
 
@@ -189,6 +218,8 @@ class GlpEngine {
   /// Enable madGLP mode for this engine
   void enableMadGLP({required String agentId}) {
     madContext = MadContext(agentId: agentId, runtime: _runtime);
+    // Make madContext accessible from body kernels via runtime
+    _runtime.madContext = madContext;
   }
 
   /// Get the combined bytecode program from all loaded sources
