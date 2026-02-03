@@ -74,8 +74,9 @@ class TraceLogger {
   }
 }
 
-/// Default GLP program path - using the UI agent version
-const _defaultGlpPath = '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/ui_agent.glp';
+/// Default GLP program paths - social_agent.glp + UI boot adapter
+const _defaultGlpPath = '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/social_agent.glp';
+const _uiBootPath = '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_ui_boot.glp';
 
 /// Entry point - checks if spawned window or main coordinator
 void main(List<String> args) {

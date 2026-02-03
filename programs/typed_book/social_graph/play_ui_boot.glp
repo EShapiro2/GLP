@@ -1,0 +1,36 @@
+%% play_ui_boot.glp - Visual UI boot adapter for madGLP
+%%
+%% Adapts the Flutter multiagent UI to work with the current social_agent.glp.
+%% Provides agent_init/3 entry point expected by glp_multiagent Flutter app.
+%%
+%% Requires: load social_agent.glp first (done by Flutter app)
+%%
+%% The Flutter app provides:
+%% - UserCh: channel to/from the Dart UI
+%% - NetCh: channel to/from the network (mad router)
+%%
+%% This adapter bridges to agent/4 which expects:
+%% - UserOut: stream written to user
+%% - NetIn: stream read from network
+%% - OutputsList with '_user' and '_net' entries
+%%
+%% Date: 2026-02-03
+
+-mode(system).
+
+%% =============================================================================
+%% AGENT INITIALIZATION - Entry point for Flutter UI
+%% =============================================================================
+
+%% agent_init(Id, UserCh, NetCh)
+%% - Id: agent identifier (alice, bob, charlie)
+%% - UserCh: ch(UserIn, UserOut?) - Dart reads UserOut, writes UserIn
+%% - NetCh: ch(NetIn, NetOut?) - Dart reads NetOut, writes NetIn
+%%
+%% Maps to agent/4: agent(Id, UserOut?, NetIn?, OutputsList)
+%% where OutputsList = [output('_user', UserIn), output('_net', NetOut)]
+
+procedure agent_init(Constant?, Channel?, Channel?).
+agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
+    ground(Id?) |
+    agent(Id?, UserOut?, NetIn?, [output('_user', UserIn), output('_net', NetOut)]).

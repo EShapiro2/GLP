@@ -7,7 +7,8 @@
 | Mode | Status | Result |
 |------|--------|--------|
 | dGLP | ✅ WORKING | `→ succeeds` |
-| madGLP | 🔧 MESSAGES WORK, COMPLETION BLOCKED | Agents suspended forever |
+| madGLP (headless) | 🔧 MESSAGES WORK, COMPLETION BLOCKED | Agents suspended forever |
+| madGLP (visual UI) | 🔧 READY FOR TESTING | Flutter app + play_ui_boot.glp |
 
 ---
 
@@ -16,7 +17,8 @@
 | Mode | Files | How to Run |
 |------|-------|------------|
 | dGLP | `social_agent.glp` | REPL: `play.` |
-| madGLP | `social_agent.glp` + `play_madglp_boot.glp` | Dart test |
+| madGLP (headless) | `social_agent.glp` + `play_madglp_boot.glp` | Dart test |
+| madGLP (visual UI) | `social_agent.glp` + `play_ui_boot.glp` | Flutter app |
 
 ## File Structure
 
@@ -24,7 +26,8 @@
 programs/typed_book/social_graph/
 ├── social_agent.glp        # SHARED: agent/4, actors, network3, close_outputs, helpers
 ├── play_dglp_boot.glp      # dGLP boot (thin wrapper, not needed - play/0 is in social_agent.glp)
-├── play_madglp_boot.glp    # madGLP boot: boot/0 with @agent syntax
+├── play_madglp_boot.glp    # madGLP boot: boot/0 with @agent syntax (headless with actors)
+├── play_ui_boot.glp        # madGLP boot: agent_init/3 for visual UI (Flutter app)
 └── play_dglp.glp           # STANDALONE dGLP (duplicates social_agent.glp) - DEPRECATED
 ```
 
@@ -121,6 +124,52 @@ actor(charlie, Ch) :- charlie_actor(Ch?).
 
 ---
 
+## madGLP Visual UI (Flutter App)
+
+Interactive multi-window execution using `glp_multiagent` Flutter app. Each agent runs in its own window with REPL-style input.
+
+### Run Command
+
+```bash
+cd /Users/udi/Grassroots/GLP/glp_multiagent
+flutter run -d macos
+```
+
+### Setup
+
+1. Click "Alice↔Bob↔Charlie" to spawn three agent windows
+2. Each window shows an agent with input field for GLP terms
+
+### Boot File (`play_ui_boot.glp`)
+
+```glp
+-mode(system).
+
+procedure agent_init(Constant?, Channel?, Channel?).
+agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
+    ground(Id?) |
+    agent(Id?, UserOut?, NetIn?, [output('_user', UserIn), output('_net', NetOut)]).
+```
+
+This adapter provides `agent_init/3` which the Flutter app calls, bridging to the existing `agent/4`.
+
+### User Commands
+
+In any agent window, type GLP terms:
+- `connect(bob)` - cold-call Bob
+- `send(bob, hello)` - send text message to friend
+- `introduce(alice, charlie)` - introduce two friends
+
+### Flutter App Architecture
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| Coordinator | `glp_multiagent/lib/main.dart` | Spawns windows, routes messages |
+| Agent Window | `glp_multiagent/lib/main.dart` | Per-agent GLP runtime + UI |
+| MadRouter | `glp_multiagent/lib/mad_router.dart` | Routes messages between windows |
+
+---
+
 ## Test Scenario (7 steps)
 
 1. Alice cold-calls Bob (Bob accepts)
@@ -167,3 +216,4 @@ See `/Users/udi/.claude/plans/harmonic-strolling-graham.md` for detailed analysi
 6. **Fixed message format**: `send_to_net` now sends `msg(Q, T)` instead of just `T` (matches dGLP)
 7. **Strengthened types**: Added `NetMsg`, `NetStream`, `GlobalName`, `AgentId`, `Decision` types
 8. **madGLP messages work**: Protocol executes correctly, but completion blocked
+9. **Added play_ui_boot.glp**: Adapter for visual UI connecting Flutter app to agent/4
