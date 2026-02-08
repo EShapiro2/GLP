@@ -16,8 +16,15 @@ REPL_SOURCE="bin/glp_repl.dart"
 cd "$GLP_RUNTIME"
 
 # Compile REPL to kernel snapshot for faster startup (if out of date)
+# Check any .dart source file, not just repl.dart, to catch lib/ changes (e.g. prelude.dart)
 REPL_SNAPSHOT=".dart_tool/repl.dill"
-if [ ! -f "$REPL_SNAPSHOT" ] || [ "$REPL_SOURCE" -nt "$REPL_SNAPSHOT" ]; then
+NEEDS_RECOMPILE=false
+if [ ! -f "$REPL_SNAPSHOT" ]; then
+    NEEDS_RECOMPILE=true
+elif [ -n "$(find lib bin -name '*.dart' -newer "$REPL_SNAPSHOT" 2>/dev/null | head -1)" ]; then
+    NEEDS_RECOMPILE=true
+fi
+if [ "$NEEDS_RECOMPILE" = true ]; then
     echo "Compiling REPL snapshot..."
     mkdir -p .dart_tool
     $DART compile kernel -o "$REPL_SNAPSHOT" "$REPL_SOURCE" 2>/dev/null || true
@@ -1390,6 +1397,7 @@ $TYPECHECK_DIR/positive/dl_append.glp
 $TYPECHECK_DIR/positive/new_channel.glp
 $TYPECHECK_DIR/positive/universal_structured_term.glp
 $TYPECHECK_DIR/positive/book/universal_accepts_structured.glp
+$TYPECHECK_DIR/positive/guards_all.glp
 :quit
 TC_POS
 2>&1)
@@ -1504,6 +1512,14 @@ if echo "$tc_pos_output" | grep -q "Loaded.*universal_accepts_structured.glp"; t
     PASS=$((PASS + 1))
 else
     echo "FAIL: Typecheck universal_accepts_structured should load"
+    FAIL=$((FAIL + 1))
+fi
+
+if echo "$tc_pos_output" | grep -q "Loaded.*guards_all.glp"; then
+    echo "PASS: Typecheck guards_all loads"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL: Typecheck guards_all should load"
     FAIL=$((FAIL + 1))
 fi
 

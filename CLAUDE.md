@@ -601,9 +601,10 @@ run_test "Test description" \
 
 If REPL tests fail unexpectedly, check these common causes:
 
-1. **Working directory** - Tests must run from proper location. The script handles this via `cd "$GLP_RUNTIME"`, but verify you're starting from `/home/user/GLP`
-2. **DART variable** - Should auto-detect or be `/home/user/dart-sdk/bin/dart`
-3. **Path resolution** - `$GLP_DIR` should resolve to absolute path
+1. **Stale REPL snapshot** - The test script compiles a kernel snapshot (`.dart_tool/repl.dill`) for speed. It recompiles when any `.dart` file in `lib/` or `bin/` is newer than the snapshot. If you suspect staleness (e.g., tests fail after changing `prelude.dart` or other lib files), delete the snapshot: `rm glp_runtime/.dart_tool/repl.dill`
+2. **Working directory** - Tests must run from proper location. The script handles this via `cd "$GLP_RUNTIME"`, but verify you're starting from `/home/user/GLP`
+3. **DART variable** - Should auto-detect or be `/home/user/dart-sdk/bin/dart`
+4. **Path resolution** - `$GLP_DIR` should resolve to absolute path
 
 **Standard test invocation:**
 ```bash

@@ -42,16 +42,20 @@ Exp ::= Number ; +(Exp, Exp) ; -(Exp, Exp) ; *(Exp, Exp) ; /(Exp, Exp) ; //(Exp,
 procedure integer(Integer?).
 procedure number(Number?).
 procedure string(String?).
-procedure atom(String?).
 procedure constant(Constant?).
 procedure compound(_?).
-procedure is_list(Stream?).
+procedure list(_?).
+procedure equator(_?).
 
 % Groundness guards
 procedure ground(_?).
 procedure known(_?).
 procedure unknown(_?).
 procedure no_readers(_?).
+
+% Time guards
+procedure wait(Number?).
+procedure wait_until(Number?).
 
 % Arithmetic comparison guards
 procedure <(Exp?, Exp?).
@@ -77,6 +81,9 @@ procedure _close_mutual_reference(_?).
 % Output/debugging primitives
 procedure write(_?).
 procedure writeln(_?).
+
+% madGLP network primitives
+procedure _send(_?, _?, _?).
 
 % =============================================================================
 % SINGLE-UNIT-CLAUSE PROCEDURES
@@ -143,14 +150,18 @@ const Set<String> predefinedProcedureNames = {
   'integer',
   'number',
   'string',
-  'atom',
   'constant',
   'compound',
+  'list',
+  'equator',
   // Groundness guards (fundamental - implemented by runtime)
   'ground',
   'known',
   'unknown',
   'no_readers',
+  // Time guards (fundamental - implemented by runtime)
+  'wait',
+  'wait_until',
   // Comparison guards (fundamental - implemented by runtime)
   '<',
   '>',
@@ -163,7 +174,7 @@ const Set<String> predefinedProcedureNames = {
   // Univ operations (fundamental)
   '=..',
   '..=',
-  // Note: is_list, dl_append, dl_to_list, new_channel, send, receive
+  // Note: dl_append, dl_to_list, new_channel, send, receive
   // are NOT protected - they are library-level and can be redefined
 };
 
@@ -187,15 +198,18 @@ const Set<String> builtinProcedures = {
   'integer/1',
   'number/1',
   'string/1',
-  'atom/1',
   'constant/1',
   'compound/1',
-  'is_list/1',
+  'list/1',
+  'equator/1',
   // Groundness/validation guards
   'ground/1',
   'known/1',
   'unknown/1',
   'no_readers/1',
+  // Time guards
+  'wait/1',
+  'wait_until/1',
   // Arithmetic comparison guards
   '</2',
   '>/2',
@@ -216,6 +230,8 @@ const Set<String> builtinProcedures = {
   // Output/debugging primitives
   'write/1',
   'writeln/1',
+  // madGLP network primitives
+  '_send/3',
 };
 
 /// Check if a type name is predefined

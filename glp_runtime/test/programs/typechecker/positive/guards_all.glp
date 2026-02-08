@@ -1,0 +1,78 @@
+% test: guards_all
+% expected: pass
+% description: Typechecker positive tests for all guard procedure declarations
+
+% --- Type guards ---
+
+procedure test_integer(Integer?, Integer).
+test_integer(X, X?) :- integer(X?) | true.
+
+procedure test_number(Number?, Number).
+test_number(X, X?) :- number(X?) | true.
+
+procedure test_string(String?, String).
+test_string(X, X?) :- string(X?) | true.
+
+procedure test_constant(Constant?, Constant).
+test_constant(X, X?) :- constant(X?) | true.
+
+procedure test_compound(_?, _).
+test_compound(X, X?) :- compound(X?) | true.
+
+procedure test_list(_?, _).
+test_list(X, X?) :- list(X?) | true.
+
+procedure test_equator(_?, _).
+test_equator(X, X?) :- equator(X?) | true.
+
+% --- Groundness guards ---
+
+procedure test_ground(_?, _).
+test_ground(X, X?) :- ground(X?) | true.
+
+procedure test_known(_?, _).
+test_known(X, X?) :- known(X?) | true.
+
+procedure test_unknown(_?, _).
+test_unknown(X, X?) :- unknown(X?) | true.
+
+procedure test_no_readers(_?, _).
+test_no_readers(X, X?) :- no_readers(X?) | true.
+
+% --- Comparison guards ---
+
+procedure test_less_than(Exp?, Exp?, Integer).
+test_less_than(X, Y, 1) :- X? < Y? | true.
+
+procedure test_greater_than(Exp?, Exp?, Integer).
+test_greater_than(X, Y, 1) :- X? > Y? | true.
+
+procedure test_leq(Exp?, Exp?, Integer).
+test_leq(X, Y, 1) :- X? =< Y? | true.
+
+procedure test_geq(Exp?, Exp?, Integer).
+test_geq(X, Y, 1) :- X? >= Y? | true.
+
+procedure test_arith_eq(Exp?, Exp?, Integer).
+test_arith_eq(X, Y, 1) :- X? =:= Y? | true.
+
+procedure test_arith_neq(Exp?, Exp?, Integer).
+test_arith_neq(X, Y, 1) :- X? =\= Y? | true.
+
+% --- Equality guard ---
+
+procedure test_eq(_?, _?, Integer).
+test_eq(X, Y, 1) :- X? =?= Y? | true.
+
+% --- Time guards ---
+
+procedure test_wait(Number?, Integer).
+test_wait(D, 1) :- wait(D?) | true.
+
+procedure test_wait_until(Number?, Integer).
+test_wait_until(T, 1) :- wait_until(T?) | true.
+
+% --- is_mutual_ref guard ---
+
+procedure test_is_mutual_ref(_?, Integer).
+test_is_mutual_ref(X, 1) :- is_mutual_ref(X?) | true.
