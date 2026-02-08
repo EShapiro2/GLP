@@ -4662,18 +4662,6 @@ class BytecodeRunner {
         if (val is ConstTerm && val.value is num) return GuardResult.success;
         return GuardResult.failure;
 
-      case 'atom':
-        // Succeeds if X is an atom (a constant or a tuple)
-        if (args.isEmpty) return GuardResult.failure;
-        final val = getValue(args[0]);
-        // Constant: string (including 'nil'), number
-        if (val is ConstTerm) return GuardResult.success;
-        if (val is String) return GuardResult.success;
-        if (val is num) return GuardResult.success;
-        // Tuple: any StructTerm
-        if (val is StructTerm) return GuardResult.success;
-        return GuardResult.failure;
-
       case 'list':
         // Succeeds if X is a list ([] or [H|T])
         if (args.isEmpty) return GuardResult.failure;
@@ -4812,9 +4800,6 @@ class BytecodeRunner {
       // Control guards
       case 'otherwise':
         // This is handled by the compiler - should not reach runtime
-        return GuardResult.success;
-
-      case 'true':
         return GuardResult.success;
 
       // Time guards

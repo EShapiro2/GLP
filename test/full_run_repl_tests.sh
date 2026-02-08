@@ -1154,11 +1154,11 @@ else
     FAIL=$((FAIL + 1))
 fi
 
-if echo "$otherwise_output" | grep -q "T2 = atom"; then
-    echo "PASS: otherwise - type_of hello = atom"
+if echo "$otherwise_output" | grep -q "T2 = string"; then
+    echo "PASS: otherwise - type_of hello = string"
     PASS=$((PASS + 1))
 else
-    echo "FAIL: otherwise - type_of hello (expected: T2 = atom)"
+    echo "FAIL: otherwise - type_of hello (expected: T2 = string)"
     FAIL=$((FAIL + 1))
 fi
 

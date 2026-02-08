@@ -16,11 +16,21 @@ This applies to:
 - Any file or directory mentioned in instructions
 
 ## 🔴 CRITICAL - START OF EVERY CONVERSATION
-1. **READ CLAUDE.md** - Always read this file first (thoroughly)
-2. **READ DEVELOPMENT DISCIPLINE** - Read `docs/DISCIPLINE.md` for TDD/BDD standards
-3. **ACKNOWLEDGE** - State that you have read both documents thoroughly and are ready for discussion
-4. **DO NOTHING ELSE** - Wait for user direction before any other action
-5. **INSTALL DART** - Only when needed: Check `/home/user/dart-sdk/bin/dart --version`. If missing, see "Dart Installation" section below
+
+**MANDATORY READING - Complete these IN ORDER before ANY other action:**
+
+1. **READ CLAUDE.md** - Read this entire file to completion
+2. **ACKNOWLEDGE CLAUDE.md** - State "I have read CLAUDE.md completely"
+3. **READ docs/DISCIPLINE.md** - Read to completion
+4. **ACKNOWLEDGE DISCIPLINE.md** - State "I have read DISCIPLINE.md completely"
+5. **READ docs/typed-glp-manual.md** - Read to completion
+6. **ACKNOWLEDGE typed-glp-manual.md** - State "I have read typed-glp-manual.md completely"
+7. **STOP AND WAIT** - Do not read any other files. Wait for user direction.
+
+**DO NOT read handovers, specs, code, or any other files until user gives direction.**
+
+### After User Gives Direction
+8. **INSTALL DART** - Only when needed: Check `/home/user/dart-sdk/bin/dart --version`. If missing, see "Dart Installation" section below
 6. **SET DART PATH** - `export PATH="/home/user/dart-sdk/bin:$PATH"`
 7. **MOUNT FCP** - Clone FCP repo: `git clone --depth 1 https://github.com/EShapiro2/FCP.git /tmp/FCP`
 8. **MOUNT Art-of-GLP-2025** - Clone Art-of-GLP-2025 repo: `git clone --depth 1 https://github.com/EShapiro2/Art-of-GLP-2025.git /tmp/Art-of-GLP-2025`
@@ -80,35 +90,6 @@ Example:
 ```
 https://download-directory.github.io/?url=https://github.com/EShapiro2/GLP/tree/claude/moded-type-helper-7svFn/glp_runtime/lib/analysis/type_checker
 ```
-
-## GLP Fundamentals (READ FIRST)
-
-### Reader/Writer Basics
-- `X` in a clause is a **writer** (syntactically, by definition)
-- `X?` is the paired **reader** of X (syntactically, by definition)
-- This is NOT a runtime property — it's determined by syntax
-
-### Guards
-- Guards test properties of their arguments **as passed**
-- `writer(X)` asks: "Is X a writer?" — Yes if X, No if X?
-- `reader(X?)` asks: "Is X? a reader?" — Yes
-- `ground(X?)` asks: "Is the value of X? ground?"
-
-### Arithmetic Guards Imply Groundness
-Arithmetic comparison guards (`<`, `>`, `=<`, `>=`, `=:=`, `=\=`) can only succeed when their arguments are ground numbers. Therefore, if such a guard succeeds, its arguments are guaranteed to be ground, and the SRSW analyzer permits multiple reader occurrences of those variables in the clause body.
-
-```glp
-% Valid: X? < Y? proves X and Y are ground, so X? and Y? can appear multiple times
-foo(X, Y, R?) :- X? < Y? | R = pair(X?, Y?).
-
-% Also works with complex expressions - all variables are marked ground
-bar(X, Y, R?) :- X? + 1 < Y? * 2 | R = sum(X?, Y?).
-```
-
-### When Debugging
-- Start from language semantics, not implementation details
-- If confused, ask: "What does this mean in GLP terms?"
-- Don't reason about VarRefs/isReader flags — reason about readers and writers
 
 ## Core Rules
 
@@ -700,9 +681,8 @@ This protocol is required when debugging GLP programs. Do not skip steps. Stop a
 
 ### Primary Specifications (MANDATORY - Read First)
 
-1. **`SPEC_GUIDE.md`** - Overview of GLP execution model
-2. **`docs/glp-bytecode-v216-complete.md`** - Complete v2.16 instruction set
-3. **`docs/glp-runtime-spec.txt`** - Dart runtime architecture
+1. **`docs/glp-bytecode-v216-complete.md`** - Complete v2.16 instruction set
+2. **`docs/glp-runtime-spec.txt`** - Dart runtime architecture
 
 ### Secondary References (Consult as Needed)
 
@@ -734,16 +714,6 @@ This protocol is required when debugging GLP programs. Do not skip steps. Stop a
 - `_TentativeStruct`: Handles structure building in HEAD phase
 - `_ClauseVar`: Represents unresolved variables during HEAD phase (CRITICAL - DO NOT REMOVE)
 - Structure completion: Tracked by `argsProcessed >= structureArity`
-
-## Refactoring Status
-
-**Status:** Single-ID variable system migration completed. The HeapV2 refactoring was superseded by direct fixes to the SRSW handling in the existing system.
-
-**Completed Work:**
-- ✅ SRSW checking is mandatory for all code (including stdlib)
-- ✅ Anonymous variable `_` support for abort clauses
-- ✅ Reader/writer mode handling fixed in clause heads
-- ✅ Test suites passing (27 unit tests, 181 REPL tests)
 
 ## Bytecode Inspection Tools
 
@@ -1039,6 +1009,7 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - When you figure something out after multiple tries (paths, commands, environment quirks), add it to CLAUDE.md so future sessions don't repeat the trial-and-error.
 - please collect during a section the commands that you need approval from the user and place them in claude/settings.local.json
 - please always commitm and test baseline before attemptin to fix the next bug
+- don't use boxed questions (AskUserQuestion), ask in plain text conversation
 - read and follow the Mandatory protocol for debugging the GLP implementation with GLP programs
 - made sure claude.md points to the correct file
 - read again clause.md, and if its not there update it:  NEVER proceed in implemenetation without a spec that guides it. code should be revised only if it violates the spec.  if the spec is not clear, revise it first.
@@ -1202,29 +1173,7 @@ Key files:
    - User merges completed work into `main`
 5. **At session end**: Ensure all work is committed and pushed to your branch
 
-## Important Insights (Lessons Learned)
-
-### Runtime Bugs Found and Fixed
-
-1. **Position-sensitive UnifyVariable bug** (Nov 2025): When writer occurs before reader in clause head, the reader handler was ignoring the existing value. Fix: Check `existingValue` before creating fresh variables.
-
-2. **ROQ suspension list corruption**: Wrapper nodes were being added incorrectly. Fixed with proper node management.
-
-### Key Patterns
-
-1. **Accumulator patterns in reduce clauses**: Both arg orderings now work:
-   - `reduce(sum_acc([], Acc?, Acc), true)` - reader first, writer second
-   - `reduce(sum_acc([], Acc, Acc?), true)` - writer first, reader second
-
-2. **Running the REPL**: Use compiled executable `./glp_repl` for faster testing, or `dart run bin/glp_repl.dart` if exe not compiled. Run from `glp_runtime/` directory.
-
-3. **Test file patterns**: The test suite uses a specific format - see `test/full_run_repl_tests.sh` for the `run_test` function.
-
-4. **CRITICAL - Reader/Writer modes in clause heads**: A reader in the head can ONLY be bound to a writer in the goal. If an argument of a goal is expected to be a reader or a ground term (non-variable), then the corresponding head argument MUST be a writer, not a reader!
-   - WRONG: `Result := N? :- number(N?) | ...` - N? is reader, but goal `X := 3` has ground term 3
-   - RIGHT: `Result := N :- number(N?) | ...` - N is writer, can receive ground term 3
-
-### Flutter Multiagent App Build Process
+## Flutter Multiagent App Build Process
 
 When modifying `glp_runtime` code that affects the Flutter multiagent app (`glp_multiagent`):
 
@@ -1242,26 +1191,3 @@ When modifying `glp_runtime` code that affects the Flutter multiagent app (`glp_
 5. **Launch and check log**: The app logs to `/private/tmp/glp_multiagent_trace.log`
 
 **Common mistake**: Running `flutter build macos` without `flutter clean` may use cached dependencies and miss your glp_runtime changes.
-
-### Common Mistakes to Avoid
-
-1. **Don't create fresh variables when clauseVars already has a value** - check first
-2. **Don't overwrite clauseVars[i] without checking existing value**
-3. **Always run BOTH test suites** - unit tests AND REPL tests
-4. **Don't modify code without checking the spec first**
-5. **Don't push to main** - only push to your claude branch
-6. **Flutter rebuilds need `flutter clean`** - path dependencies don't auto-invalidate cache
-
-### Metainterpreter Pattern
-
-The standard metainterpreter pattern for arithmetic:
-```prolog
-run(true).
-run((A, B)) :- run(A?), run(B?).
-run(A) :- otherwise | reduce(A?, B), run(B?).
-
-% Handle := in metainterpreter
-reduce((X?:=T), true) :- X:=T?.
-```
-
-This enables `run(factorial(5, F))` to work with arithmetic.

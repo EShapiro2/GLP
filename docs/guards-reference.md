@@ -1,6 +1,6 @@
 # GLP Guards Quick Reference
 
-**Last Updated**: 2026-02-01
+**Last Updated**: 2026-02-08
 
 ---
 
@@ -51,13 +51,11 @@ These guards can be negated with `~`:
 | `unknown(X?)` | Test if X is unbound | `~unknown(X?)` succeeds if X is bound |
 | `integer(X?)` | Test for integer type | `~integer(X?)` succeeds if X is not an integer |
 | `number(X?)` | Test for numeric type | `~number(X?)` succeeds if X is not a number |
-| `atom(X?)` | Test for atom type | `~atom(X?)` succeeds if X is not an atom |
 | `string(X?)` | Test for string type | `~string(X?)` succeeds if X is not a string |
 | `constant(X?)` | Test for constant | `~constant(X?)` succeeds if X is not a constant |
 | `compound(X?)` | Test for compound term | `~compound(X?)` succeeds if X is not compound |
 | `list(X?)` | Test for list type | `~list(X?)` succeeds if X is not a list |
-| `is_list(X?)` | Test for proper list | `~is_list(X?)` succeeds if X is not a proper list |
-| `unknown(X?)` | Test for unbound variable | `~unknown(X?)` succeeds if X is bound |
+| `is_mutual_ref(X?)` | Test for mutual reference | `~is_mutual_ref(X?)` succeeds if X is not a mutual ref |
 | `no_readers(X?)` | Test for no readers in term | `~no_readers(X?)` succeeds if X contains readers |
 | `X =?= Y` | Ground equality test | `~(X =?= Y)` succeeds if X and Y are not equal |
 
@@ -124,7 +122,7 @@ echo(Input, Output) :- known(Input) | Output = Input?.
 
 ---
 
-### ⏳ `constant(X?)`
+### ✅ `constant(X?)`
 **Test for atomic constant (number or string)**
 
 **Semantics**:
@@ -142,7 +140,7 @@ copy(X, Y, Z) :- constant(X?) | Y = X?, Z = X?.
 
 ---
 
-### ⏳ `compound(X?)`
+### ✅ `compound(X?)`
 **Test for compound term (structure with functor and arguments)**
 
 **Semantics**:
@@ -207,7 +205,7 @@ run(Goal) :- otherwise | execute('write', ['No clauses for: ']),
 
 ---
 
-### ⏳ `no_readers(X?)`
+### ✅ `no_readers(X?)`
 **Test if X contains no readers (only ground terms or writers)**
 
 **Semantics**:
@@ -241,7 +239,7 @@ For example:
 
 ## Guard Arguments: Why Readers?
 
-Guards that test variable values (`ground`, `known`, `integer`, `number`, `atom`) take **reader** arguments. This follows from GLP's three-valued guard semantics:
+Guards that test variable values (`ground`, `known`, `integer`, `number`, `string`) take **reader** arguments. This follows from GLP's three-valued guard semantics:
 
 | Argument Type | If Unbound | Behavior |
 |---------------|------------|----------|
@@ -290,18 +288,19 @@ This is distinct from the multiple-occurrence relaxation below. Guard reader cou
 | Guard | Implies Ground | Allows Multiple Occurrences |
 |-------|----------------|-------------------------|
 | ✅ `ground(X?)` | Yes | ✅ Yes |
-| ⏳ `constant(X?)` | Yes | ✅ Yes |
+| ✅ `constant(X?)` | Yes | ✅ Yes |
 | ✅ `integer(X?)` | Yes | ✅ Yes |
 | ✅ `number(X?)` | Yes | ✅ Yes |
-| 📝 `X? < Y?` | Yes (both operands, when succeeds) | ✅ Yes |
-| 📝 `X? =< Y?` | Yes (both operands, when succeeds) | ✅ Yes |
-| 📝 `X? > Y?` | Yes (both operands, when succeeds) | ✅ Yes |
-| 📝 `X? >= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
-| 📝 `X? =:= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
-| 📝 `X? =\= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
-| ⏳ `compound(X?)` | **NO** | ❌ No |
+| ✅ `string(X?)` | Yes | ✅ Yes |
+| ✅ `X? < Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| ✅ `X? =< Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| ✅ `X? > Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| ✅ `X? >= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| ✅ `X? =:= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| ✅ `X? =\= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| ✅ `compound(X?)` | **NO** | ❌ No |
 | ✅ `known(X?)` | **NO** | ❌ No |
-| ⏳ `no_readers(X?)` | **NO** | ❌ No |
+| ✅ `no_readers(X?)` | **NO** | ❌ No |
 | ✅ `otherwise` | No | ❌ No |
 
 **Note**: Arithmetic comparison guards suspend if operands are unbound and only succeed if both operands are bound to numbers. Therefore, when they succeed, both operands are guaranteed to be ground.
@@ -352,7 +351,7 @@ bad_example(X, Y1, Y2) :- known(X?) |
 The SRSW analyzer must:
 1. Track guards in HEAD/GUARDS phase
 2. Recognize guards that imply groundness:
-   - Type guards: `ground/1`, `integer/1`, `number/1`, `constant/1`
+   - Type guards: `ground/1`, `integer/1`, `number/1`, `string/1`, `constant/1`
    - Arithmetic comparisons: `<`, `=<`, `>`, `>=`, `=:=`, `=\=`
 3. For variables with ground-guaranteeing guards:
    - Mark variable as "ground-certified" for this clause
@@ -372,7 +371,27 @@ This feature enables essential concurrent patterns:
 
 ---
 
-## Type Guards (Implemented)
+## Type Guards
+
+### ✅ `string(X?)`
+**Test for string constant (non-numeric, non-nil)**
+
+**Semantics**:
+- Success: X? bound to a string constant (e.g., `hello`, `foo`)
+- Suspend: X? is unbound reader
+- Fail: X? bound to number, compound term, or empty list
+
+**Note**: The empty list `[]` is represented as `nil` internally and is NOT a string. `string([])` fails.
+
+**SRSW Relaxation**: Yes. Strings are ground by definition, so `string(X?)` implies groundness and permits multiple occurrences.
+
+**Example**:
+```prolog
+% Process string messages
+handle(X, Y) :- string(X?) | process_message(X?, Y).
+```
+
+---
 
 ### ✅ `number(X?)`
 **Test for numeric type**
@@ -401,6 +420,49 @@ safe_compute(X, Y) :- number(X?) | execute('evaluate', [X? * 2, Y]).
 ```prolog
 safe_divide(X, Y, Z) :- integer(X?), integer(Y?), Y? =\= 0 |
                         execute('evaluate', [X? / Y?, Z]).
+```
+
+---
+
+### ✅ `list(X?)`
+**Test for list (empty or cons cell)**
+
+**Semantics**:
+- Success: X? bound to `[]` (empty list) or `[H|T]` (cons cell)
+- Suspend: X? is unbound reader
+- Fail: X? bound to non-list (number, string, or non-list compound term)
+
+**Note**: This tests that the top-level term is a list constructor. It does not check whether the list is proper (i.e., terminated by `[]`). `list([a|b])` succeeds even though the tail `b` is not a list.
+
+**SRSW Relaxation**: No. A list may contain unbound subterms, so `list(X?)` does not imply groundness.
+
+**Example**:
+```prolog
+% Process only list inputs
+handle(X, Y) :- list(X?) | process_list(X?, Y).
+handle(X, Y) :- otherwise | process_other(X?, Y).
+```
+
+---
+
+### ✅ `unknown(X?)`
+**Test if X is unbound (inverse of `known`)**
+
+**Semantics**:
+- Success: X? is an unbound variable (reader or writer)
+- Fail: X? is bound to any value (constant, compound, list)
+
+**Logical Definition**: `unknown(X)` ≡ `~known(X)`. The guard succeeds when dereferencing X leads to an unbound variable.
+
+**Note**: Unlike most guards, `unknown(X?)` does NOT suspend — it either succeeds (unbound) or fails (bound). An unbound reader succeeds immediately rather than suspending, because the purpose is to test for unboundness.
+
+**SRSW Relaxation**: No.
+
+**Example**:
+```prolog
+% Default value for unbound variables
+provide_default(X, X?, _) :- known(X?) | true.
+provide_default(X, _, Default?) :- unknown(X?) | true.
 ```
 
 ---
@@ -524,9 +586,9 @@ When `channel(X?)` is unfolded, it becomes pattern matching against `ch(_, _)`.
 
 ---
 
-## Planned Comparison Guards (Require Parser Extension)
+## Comparison Guards
 
-### 📝 `X < Y`, `X =< Y`, `X > Y`, `X >= Y`
+### ✅ `X < Y`, `X =< Y`, `X > Y`, `X >= Y`
 **Arithmetic comparison**
 
 **Note**: Prolog uses `=<` (not `<=`) for "less than or equal"
@@ -536,7 +598,7 @@ When `channel(X?)` is unfolded, it becomes pattern matching against `ch(_, _)`.
 - Suspend: Either X or Y is unbound reader
 - Fail: Both bound to numbers AND condition false
 
-**Example** (future):
+**Example**:
 ```prolog
 factorial(N, F) :- integer(N?), N? > 0 |
                    execute('evaluate', [N? - 1, N1]),
@@ -545,21 +607,17 @@ factorial(N, F) :- integer(N?), N? > 0 |
 factorial(N, 1) :- integer(N?), N? =< 0 | true.
 ```
 
-**Parser Status**: Requires adding comparison tokens (`LT`, `GT`, `LE`, `GE`) to lexer and handling infix syntax in guard position.
-
 ---
 
-### 📝 `X =:= Y`
+### ✅ `X =:= Y`
 **Arithmetic equality**
 
 **Semantics**:
-- `=:=` (equality): Success if both bound and numerically equal
-- Suspends if either operand unbound
-- Fails if condition doesn't hold
+- Success: Both bound and numerically equal
+- Suspend: Either operand is unbound reader
+- Fail: Both bound and not numerically equal
 
-**Parser Status**: Requires lexer support for multi-character operator `=:=`.
-
-**Note on `=\=`**: The arithmetic inequality guard `=\=` is **redundant** once guard negation (`~`) is implemented. It becomes equivalent to `~(X =:= Y)`. The `=\=` operator will be removed in a future version. Use `~(X? =:= Y?)` for arithmetic inequality.
+**Note on `=\=`**: The arithmetic inequality guard `=\=` is **redundant** once guard negation (`~`) is implemented. It becomes equivalent to `~(X =:= Y)`. Use `~(X? =:= Y?)` for arithmetic inequality.
 
 ---
 
@@ -715,6 +773,62 @@ run(M, (A,B), Commands, Eq) :-
 
 ---
 
+### ✅ `is_mutual_ref(X?)`
+**Test if X is a mutual reference term**
+
+**Semantics**:
+- Success: X? bound to a `MutualRefTerm` (an internal runtime term that enables SRSW-safe multiple reads)
+- Suspend: X? is unbound reader
+- Fail: X? bound to any other value
+
+**SRSW Relaxation**: No.
+
+---
+
+## Time Guards
+
+### ✅ `wait(Duration)`
+**Suspend for a specified duration in milliseconds**
+
+**Semantics**:
+- Duration ≤ 0: succeed immediately
+- Duration > 0: suspend the goal, start a timer, and resume when the timer fires
+- Duration is non-number: fail
+- Duration is unbound reader: suspend (handled by caller)
+
+**Mechanism**: On the first call, `wait` allocates a reader/writer pair, starts a timer, and adds the reader to the suspension set. When the timer fires, it binds the writer, which reactivates the goal via the ROQ. On resume, the guard checks if the timer has fired and succeeds.
+
+**Non-Negatable**: `wait` is a control flow guard, not a pure test. Negation is not meaningful.
+
+**Example**:
+```prolog
+% Wait 100ms before proceeding
+delayed_action(Result?) :- wait(100) | Result = done.
+```
+
+---
+
+### ✅ `wait_until(Timestamp)`
+**Test if absolute time has passed**
+
+**Semantics**:
+- Success: current time (milliseconds since epoch) ≥ Timestamp
+- Fail: current time < Timestamp
+- Timestamp is non-number: fail
+- Timestamp is unbound reader: suspend (handled by caller)
+
+**Note**: Unlike `wait`, this guard does NOT suspend when the time has not passed — it fails. The caller must arrange for the goal to be retried later if needed.
+
+**Non-Negatable**: Time-based control flow guard.
+
+**Example**:
+```prolog
+% Proceed only after a given timestamp
+after_deadline(T, Result?) :- wait_until(T?) | Result = done.
+```
+
+---
+
 ## Frequently Asked Questions
 
 **Q: When should I use guards vs system predicates?**
@@ -727,7 +841,7 @@ A: Guards are **patient** (suspend on unbound variables) to enable concurrent pr
 
 **Q: Can I use arithmetic in guards?**
 
-A: Comparison guards like `X? < Y?` require parser extension and are not yet implemented. Type guards `number(X?)` and `integer(X?)` are implemented. Use `known(X?)` and `ground(X?)` for variable testing, then perform arithmetic via `execute('evaluate', ...)` in the body.
+A: Yes. Comparison guards (`X? < Y?`, `X? > Y?`, `X? =< Y?`, `X? >= Y?`, `X? =:= Y?`, `X? =\= Y?`) are implemented. They suspend on unbound readers and succeed or fail based on the numeric comparison. Type guards `number(X?)` and `integer(X?)` test for numeric types.
 
 **Q: What's the difference between `known` and `ground`?**
 

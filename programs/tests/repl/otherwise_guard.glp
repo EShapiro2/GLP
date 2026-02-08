@@ -15,6 +15,6 @@ grade(_, f) :- otherwise | true.
 
 % Otherwise with type guards
 type_of(X, integer) :- integer(X?) | true.
-type_of(X, atom) :- atom(X?) | true.
+type_of(X, string) :- string(X?) | true.
 type_of(X, list) :- list(X?) | true.
 type_of(_, other) :- otherwise | true.
