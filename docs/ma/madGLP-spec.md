@@ -1,7 +1,7 @@
 # madGLP Specification
 
-**Version**: 5.0
-**Date**: 2026-02-02
+**Version**: 5.2
+**Date**: 2026-02-09
 **Status**: DRAFT  
 **Source**: CGLP Paper (`~/Grassroots/CGLP`), Section 7 "Multiagent Deterministic GLP (madGLP)"
 
@@ -264,7 +264,7 @@ The unary Receive transaction processes a message m from the communication chann
 
 **Case `m = (_w(p, i) := T↑)` with i > 0**: The message is destined for the agent that localized `_w(p,i)`. Agent q searches its global writers table for an entry `(X_q, p, i)` matching the remote agent p and remote index i. The entry provides the remote agent identity p, which is used when localizing T↑: any variables in T↑ get their global links pointing to p. Localize T↑ by q from p to get T_q↓, assign X_q := T_q↓, apply {X_q? := T_q↓} to goals containing X_q?, reactivate suspended goals, and remove the entry from W'_q.
 
-**Case `m = (_w(q, 0) := [T↑ | _w(q,0)])` (Serializer)**: Cold-call message to agent q's network input. Agent q finds the permanent entry `(N_q, *)` at index 0. Localize T↑ by q to get T_q↓. Assign N_q := [T_q↓? | N'_q] where N'_q is a fresh writer. Update the entry to `(N'_q, *)` at index 0 (extending the stream). Reactivate any goals suspended on N_q?. The entry is NOT removed—it is updated with the fresh writer for the next message.
+**Case `m = (_w(q, 0) := [T↑ | _w(q,0)])` (Serializer)**: Cold-call message to agent q's network input. Agent q finds the permanent entry `(N_q, *)` at index 0. Localize T↑ by q to get T_q↓. Assign N_q := [T_q↓ | N'_q] where N'_q is a fresh writer. Update the entry to `(N'_q, *)` at index 0 (extending the stream). Reactivate any goals suspended on N_q?. The entry is NOT removed—it is updated with the fresh writer for the next message.
 
 **Case `m = (_r(p, i) := T↑)`**: The message is destined for agent p who created this global name. Agent p finds entry `(X, q)` at index i in W_p. The entry provides the remote agent identity q, which is used when localizing T↑: any variables in T↑ get their global links pointing to q. Localize T↑ by p from q to get T_p↓, assign X := T_p↓, apply {X? := T_p↓} to goals containing X?, reactivate suspended goals, and remove the entry from W'_p.
 
@@ -499,16 +499,7 @@ where:
 
 ### 12.3 Network Input: Receive via Serializer
 
-The receiving side of a cold-call is handled by the Receive transaction's serializer case. When agent q receives message `_w(q,0) := [T↑ | _w(q,0)]`:
-
-1. **Find serializer entry**: Look up the permanent entry `(N_q, *)` at index 0
-2. **Localize T↑ by q**: For each global name in T↑:
-   - For `_w(p, i)`: create fresh local pair `(Y_q, Y_q?)`, create entry `(Y_q, p, i)` in W_q, replace with Y_q?
-   - For `_r(p, i)`: create fresh local pair `(Z_q, Z_q?)`, spawn `global_send(Z_q?, _r(p,i), p)`, replace with Z_q
-3. **Extend input stream**: Assign N_q := [T_q↓? | N'_q] where N'_q is fresh, update entry to `(N'_q, *)`
-4. **Reactivate**: Wake any goals suspended on N_q?
-
-The GLP agent then reads from its network input stream like any other stream. The localized term contains only local variables, with global links established via the spawned `global_send` goals and entries.
+The receiving side of a cold-call is handled by the Receive transaction's serializer case (Section 8.3). The GLP agent then reads from its network input stream like any other stream. The localized term contains only local variables, with global links established via the spawned `global_send` goals and entries.
 
 **Note on Atomicity**: Cold-calls use unary transactions only: sender's Reduce (fires `global_send`) → Send → receiver's Receive (serializer case). No binary transaction is required. Correctness relies on monotonicity—once global links are established, values flow forward.
 
@@ -697,6 +688,7 @@ The GLP compiler rejects underscore-prefixed constants in user mode (default). S
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 5.2 | 2026-02-09 | Claude | Fixed cold-call polarity error in Receive serializer case (Section 8.3): changed `N_q := [T_q↓? \| N'_q]` to `N_q := [T_q↓ \| N'_q]`. Removed duplicate definition in Section 12.3, replaced with reference to 8.3. |
 | 5.1 | 2026-02-02 | Claude | Added Section 15: Reserved Constants. Documents `'_user'`, `'_net'`, `'_w(p,i)'`, `'_r(p,i)'` as system-reserved. Describes `-mode(system).` directive for system code. Renumbered References→16, Document History→17. |
 | 5.0 | 2026-02-02 | Claude | **Major revision**: Unified cold-calls with established links via index-0 serializer. Removed binary Network Transaction. Added Section 4.1 (Index-0 Serializer). Updated all examples to use indices starting at 1. Updated '_send' builtin with index check. Updated Receive transaction with serializer case. Updated send_to_net to use 3-arg global_send with _w(Q,0). All transactions now unary. |
 | 4.6 | 2026-02-01 | Claude | Added Section 12.7: UI Agent and Writer Binding - documents no_readers guard for interactive queries, writer binding protocol, and future widget-based responses. Renumbered 12.7→12.8. |
