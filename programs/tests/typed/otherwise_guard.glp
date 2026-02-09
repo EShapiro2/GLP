@@ -1,0 +1,19 @@
+% otherwise_guard.glp - Test the otherwise guard
+
+procedure classify(Number?, Constant).
+classify(X, positive) :- X? > 0 | true.
+classify(X, negative) :- X? < 0 | true.
+classify(_, zero) :- otherwise | true.
+
+procedure grade(Number?, Constant).
+grade(N, a) :- N? >= 90 | true.
+grade(N, b) :- N? >= 80 | true.
+grade(N, c) :- N? >= 70 | true.
+grade(N, d) :- N? >= 60 | true.
+grade(_, f) :- otherwise | true.
+
+procedure type_of(_?, Constant).
+type_of(X, integer) :- integer(X?) | true.
+type_of(X, string) :- string(X?) | true.
+type_of(X, list) :- list(X?) | true.
+type_of(_, other) :- otherwise | true.

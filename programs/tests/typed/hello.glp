@@ -1,0 +1,4 @@
+% hello.glp - Simple hello world program using write builtin
+
+procedure hello.
+hello :- write('Hello from GLP!').

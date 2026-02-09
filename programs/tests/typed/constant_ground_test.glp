@@ -1,0 +1,4 @@
+% constant_ground_test.glp - constant/1 guard marks X as grounded
+
+procedure test_constant(Constant?, Constant).
+test_constant(X, X?) :- constant(X?) | true.

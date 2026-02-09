@@ -1,7 +1,7 @@
 # GLP Test Suite
 
-**Location**: `/Users/udi/Grassroots/GLP/test/`  
-**Last Updated**: 2026-01-18  
+**Location**: `/Users/udi/Grassroots/GLP/test/`
+**Last Updated**: 2026-02-09
 **Full Protocol**: See `docs/DISCIPLINE.md` Part II for complete testing protocol
 
 ---
@@ -13,10 +13,10 @@ Run this before and after any code change:
 ```bash
 cd /Users/udi/Grassroots/GLP
 cd glp_runtime && dart test && cd ..
-bash test/full_run_repl_tests.sh
+bash test/run_all_tests.sh
 ```
 
-Expected results (as of 2026-01-18): 236 unit tests passing, 222 REPL tests passing.
+Expected results (as of 2026-02-09): 236 unit tests passing, 311 unified tests passing.
 
 ---
 
@@ -30,19 +30,23 @@ Expected results (as of 2026-01-18): 236 unit tests passing, 222 REPL tests pass
 cd /Users/udi/Grassroots/GLP/glp_runtime && dart test
 ```
 
-**REPL Tests** — End-to-end tests that run GLP programs through the REPL.
+**Unified Test Suite** — All REPL-based tests: typed runtime tests, type-check positive/negative tests, SRSW violation tests, and guard tests.
 
 ```bash
-cd /Users/udi/Grassroots/GLP && bash test/full_run_repl_tests.sh
+cd /Users/udi/Grassroots/GLP && bash test/run_all_tests.sh
 ```
+
+The unified test suite has five sections:
+
+| Section | Tests | Description |
+|---------|-------|-------------|
+| A: Typed Runtime Tests | 171 | Load typed programs, run queries, check output |
+| B: Positive Type Check | 97 | Verify typed programs load successfully |
+| C: Negative Type Tests | 39 | Verify ill-typed programs are rejected |
+| D: SRSW Violations | 3 | Verify SRSW violations are detected |
+| E: Invalid Guard | 1 | Verify `true` in guard position is rejected |
 
 ### Secondary Test Suites (Run When Relevant)
-
-**Typed REPL Tests** — Type checker tests via REPL.
-
-```bash
-cd /Users/udi/Grassroots/GLP && bash test/run_typechecker_repl_tests.sh
-```
 
 **Book Compilation Tests** — Verifies all book example programs compile.
 
@@ -64,12 +68,12 @@ cd /Users/udi/Grassroots/GLP/glp_multiagent && flutter build macos
 
 ---
 
-## Test Counts (as of 2026-01-18)
+## Test Counts (as of 2026-02-09)
 
 | Suite | Count | Status |
 |-------|-------|--------|
 | Dart Unit Tests | 236 | Passing |
-| REPL Tests | 222 | Passing |
+| Unified Tests | 311 | Passing |
 | Multiagent Tests | 139 | Passing (subset of unit tests) |
 | Book Compilation | 141 files | Compiles |
 | Flutter Build | — | Builds successfully |
@@ -81,11 +85,14 @@ cd /Users/udi/Grassroots/GLP/glp_multiagent && flutter build macos
 | Suite | Location |
 |-------|----------|
 | Unit tests | `glp_runtime/test/` |
-| REPL test script | `test/full_run_repl_tests.sh` |
-| REPL test programs | `programs/tests/` |
-| Type checker tests | `glp_runtime/test/analysis/type_checker/` |
+| Unified test script | `test/run_all_tests.sh` |
+| Typed test programs | `programs/tests/typed/` |
+| Typed book programs | `programs/typed_book/` |
+| Type checker test files | `glp_runtime/test/programs/typechecker/` |
+| Moded type test files | `glp_runtime/test/programs/moded_types/` |
 | Multiagent tests | `glp_runtime/test/multiagent/` |
-| Book programs | `programs/book/` and `programs/typed_book/` |
+
+**Archived**: Old test scripts (`full_run_repl_tests.sh`, `run_typechecker_repl_tests.sh`) are in `test/archive/`. Old untyped REPL test programs are in `programs/tests/archive/repl/`.
 
 ---
 
@@ -94,4 +101,3 @@ cd /Users/udi/Grassroots/GLP/glp_multiagent && flutter build macos
 If tests fail after a change: Stop, investigate, and fix before proceeding. Do not make additional changes that could obscure the failure. See `docs/DISCIPLINE.md` Section 2.3 for the complete protocol.
 
 If tests fail before a change (baseline failure): Report the failure before starting work. The baseline must be healthy before making changes.
-

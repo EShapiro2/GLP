@@ -1,0 +1,15 @@
+% arith_guard_ground.glp - Arithmetic guards imply groundness
+
+procedure compare_and_use(Number?, Number?, _).
+compare_and_use(X, Y, pair(X?, Y?)) :- X? < Y? | true.
+
+procedure max(Number?, Number?, Number).
+max(X, Y, X?) :- X? >= Y? | true.
+max(X, Y, Y?) :- X? < Y? | true.
+
+procedure in_range(Number?, Number?, Number?, Constant).
+in_range(X, Lo, Hi, yes) :- X? >= Lo?, X? =< Hi? | true.
+in_range(_, _, _, no) :- otherwise | true.
+
+procedure compare_expr(Number?, Number?, _).
+compare_expr(X, Y, pair(X?, Y?)) :- X? + 1 < Y? * 2 | true.

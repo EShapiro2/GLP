@@ -1,0 +1,55 @@
+% test_arithmetic_kernels.glp - Comprehensive arithmetic kernel tests
+
+procedure test_idiv(Number?, Number?, Number).
+test_idiv(X, Y, R?) :- number(X?), number(Y?) | R := X? // Y?.
+
+procedure test_abs(Number?, Number).
+test_abs(X, R?) :- number(X?) | R := abs(X?).
+
+procedure test_sqrt(Number?, Number).
+test_sqrt(X, R?) :- number(X?) | R := sqrt(X?).
+
+procedure test_sin(Number?, Number).
+test_sin(X, R?) :- number(X?) | R := sin(X?).
+
+procedure test_cos(Number?, Number).
+test_cos(X, R?) :- number(X?) | R := cos(X?).
+
+procedure test_tan(Number?, Number).
+test_tan(X, R?) :- number(X?) | R := tan(X?).
+
+procedure test_exp(Number?, Number).
+test_exp(X, R?) :- number(X?) | R := exp(X?).
+
+procedure test_ln(Number?, Number).
+test_ln(X, R?) :- number(X?) | R := ln(X?).
+
+procedure test_log10(Number?, Number).
+test_log10(X, R?) :- number(X?) | R := log10(X?).
+
+procedure test_pow(Number?, Number?, Number).
+test_pow(X, Y, R?) :- number(X?), number(Y?) | R := pow(X?, Y?).
+
+procedure test_asin(Number?, Number).
+test_asin(X, R?) :- number(X?) | R := asin(X?).
+
+procedure test_acos(Number?, Number).
+test_acos(X, R?) :- number(X?) | R := acos(X?).
+
+procedure test_atan(Number?, Number).
+test_atan(X, R?) :- number(X?) | R := atan(X?).
+
+procedure test_integer_conv(Number?, Number).
+test_integer_conv(X, R?) :- number(X?) | R := integer(X?).
+
+procedure test_real(Number?, Number).
+test_real(X, R?) :- number(X?) | R := real(X?).
+
+procedure test_round(Number?, Number).
+test_round(X, R?) :- number(X?) | R := round(X?).
+
+procedure test_floor(Number?, Number).
+test_floor(X, R?) :- number(X?) | R := floor(X?).
+
+procedure test_ceil(Number?, Number).
+test_ceil(X, R?) :- number(X?) | R := ceil(X?).

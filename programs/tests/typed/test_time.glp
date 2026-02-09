@@ -1,0 +1,8 @@
+% test_time.glp - Time-related tests using prelude-declared wait
+
+procedure wait_test(Constant).
+wait_test(done) :- wait(1) | true.
+
+procedure wait_comparison(Number?, Constant).
+wait_comparison(T, yes) :- T? > 0 | true.
+wait_comparison(_, no) :- otherwise | true.

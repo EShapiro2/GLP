@@ -1,0 +1,13 @@
+% guard_reader.glp - Guards that imply groundness allow guard-only reader occurrences
+
+procedure guard_ground(_?).
+guard_ground(X) :- ground(X?) | true.
+
+procedure guard_int(_?).
+guard_int(X) :- integer(X?) | true.
+
+procedure guard_compare(Number?, Number?).
+guard_compare(X, Y) :- X? < Y? | true.
+
+procedure guard_known_valid(_?, _).
+guard_known_valid(X, X?) :- known(X?) | true.

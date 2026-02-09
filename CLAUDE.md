@@ -516,19 +516,29 @@ You:
 
 | Suite | Location | Tests | Purpose |
 |-------|----------|-------|---------|
-| Full REPL | `test/full_run_repl_tests.sh` | 218 | Comprehensive REPL tests |
+| Unified | `test/run_all_tests.sh` | 311 | All REPL-based tests (runtime + type-check + negative) |
 | Book | `test/run_book_tests.sh` | 141 | Book examples compile check |
-| Unit | `glp_runtime/test/` | ~27 | Dart unit tests |
+| Unit | `glp_runtime/test/` | 236 | Dart unit tests |
+
+The unified test suite (`run_all_tests.sh`) has five sections:
+
+| Section | Tests | Description |
+|---------|-------|-------------|
+| A: Typed Runtime Tests | 171 | Load typed programs, run queries, check output |
+| B: Positive Type Check | 97 | Verify typed programs load successfully |
+| C: Negative Type Tests | 39 | Verify ill-typed programs are rejected |
+| D: SRSW Violations | 3 | Verify SRSW violations are detected |
+| E: Invalid Guard | 1 | Verify `true` in guard position is rejected |
 
 ### Standard Test Protocol
 
-**ALWAYS run the full REPL tests before and after changes:**
+**ALWAYS run the unified tests before and after changes:**
 
 ```bash
-cd /home/user/GLP/glp_runtime
+cd /Users/udi/Grassroots/GLP/glp_runtime
 
-# Full REPL tests (ALWAYS run this)
-bash ../test/full_run_repl_tests.sh
+# Unified REPL tests (ALWAYS run this)
+bash ../test/run_all_tests.sh
 
 # Book examples (compilation test)
 bash ../test/run_book_tests.sh
@@ -538,21 +548,21 @@ dart test
 ```
 
 **Expected results:**
-- Full REPL: 218/218 pass
+- Unified: 311/311 pass
 - Book: 84/141 pass (57 fail due to SRSW violations in book code)
 - Unit: All pass
 
-### 🔴 MANDATORY: REPL Test Protocol for GLP System Changes
+### MANDATORY: Test Protocol for GLP System Changes
 
 **Before ANY change to the underlying GLP system, and before any other major change:**
 
-1. **Run REPL tests** - `bash test/full_run_repl_tests.sh`
+1. **Run unified tests** - `bash test/run_all_tests.sh`
 2. **Commit and push** - Create a baseline checkpoint
 3. **Only then begin implementation**
 
 **After implementation is done:**
 
-1. **Run REPL tests again** - `bash test/full_run_repl_tests.sh`
+1. **Run unified tests again** - `bash test/run_all_tests.sh`
 2. **When successful, commit and push**
 
 This ensures:
@@ -562,32 +572,44 @@ This ensures:
 
 ### REPL Development Protocol
 1. Make changes to `glp_runtime/lib/` or `glp_runtime/bin/glp_repl.dart`
-2. Recompile: `cd /home/user/GLP/glp_runtime && dart compile exe bin/glp_repl.dart -o glp_repl`
-3. Run full tests: `bash ../test/full_run_repl_tests.sh`
-4. Report results
+2. Run full tests: `cd /Users/udi/Grassroots/GLP && bash test/run_all_tests.sh`
+3. Report results
 
 ### Adding New Tests
 
-Add to `test/full_run_repl_tests.sh` using the `run_test` function:
+The unified test script `test/run_all_tests.sh` uses heredoc-based REPL sessions.
+
+**Section A (runtime tests with queries):** Add a new REPL session block. Each session loads files, runs queries, then uses `check` assertions on the output. Use separate sessions when programs define conflicting procedure names.
 
 ```bash
-run_test "Test description" \
-    "programs/tests/file.glp" \
-    "query." \
-    "expected_pattern"
+# --- New test group ---
+echo "--- Description ---"
+output=$($DART run "$REPL" <<HEREDOC
+$TYPED/my_program.glp
+my_query(X).
+:quit
+HEREDOC
+2>&1)
+check "Test name" "X = expected" "$output"
 ```
+
+**Section B (type-check-only):** Add the file path to the `POSITIVE_FILES` array.
+
+**Section C (negative tests):** Add the file path to the `NEGATIVE_FILES` array.
+
+New typed test programs go in `programs/tests/typed/`. All programs must have `procedure` declarations and pass type checking.
 
 ### Bug Fix Test Protocol
 
 **When a bug is detected and fixed:**
-1. Add the test case that exposed the bug to `test/full_run_repl_tests.sh`
-2. The test should verify the fix works (not just that it doesn't crash)
-3. This prevents regression - the bug should never reappear
+1. Add a test case to `test/run_all_tests.sh` (Section A for runtime, Section B/C for type-check)
+2. The test should verify the fix works (not just that it does not crash)
+3. This prevents regression
 
 ### New Feature Test Protocol
 
 **When a new feature or revision is implemented and tested:**
-1. Add REPL tests for the new feature to `test/full_run_repl_tests.sh`
+1. Add tests to `test/run_all_tests.sh`
 2. Tests should cover the main use cases of the feature
 3. This ensures the feature continues to work as the codebase evolves
 
@@ -599,24 +621,23 @@ run_test "Test description" \
 
 ### Test Troubleshooting
 
-If REPL tests fail unexpectedly, check these common causes:
+If unified tests fail unexpectedly, check these common causes:
 
 1. **Stale REPL snapshot** - The test script compiles a kernel snapshot (`.dart_tool/repl.dill`) for speed. It recompiles when any `.dart` file in `lib/` or `bin/` is newer than the snapshot. If you suspect staleness (e.g., tests fail after changing `prelude.dart` or other lib files), delete the snapshot: `rm glp_runtime/.dart_tool/repl.dill`
-2. **Working directory** - Tests must run from proper location. The script handles this via `cd "$GLP_RUNTIME"`, but verify you're starting from `/home/user/GLP`
-3. **DART variable** - Should auto-detect or be `/home/user/dart-sdk/bin/dart`
+2. **Working directory** - Tests must run from the GLP root. The script handles this via `cd "$GLP_RUNTIME"`, but verify you are starting from `/Users/udi/Grassroots/GLP`
+3. **DART variable** - Should auto-detect via `which dart`
 4. **Path resolution** - `$GLP_DIR` should resolve to absolute path
 
 **Standard test invocation:**
 ```bash
-cd /home/user/GLP
-bash test/full_run_repl_tests.sh
+cd /Users/udi/Grassroots/GLP
+bash test/run_all_tests.sh
 ```
 
 **Debug individual test manually:**
 ```bash
-cd /home/user/GLP/glp_runtime
-export PATH="/home/user/dart-sdk/bin:$PATH"
-echo -e '/home/user/GLP/programs/tests/repl/TESTFILE.glp\nQUERY.' | dart run bin/glp_repl.dart
+cd /Users/udi/Grassroots/GLP/glp_runtime
+echo -e '/Users/udi/Grassroots/GLP/programs/tests/typed/TESTFILE.glp\nQUERY.\n:quit' | dart run .dart_tool/repl.dill
 ```
 
 ## Working Principles

@@ -1,0 +1,55 @@
+% depth_test.glp - Structure building at different nesting levels
+
+procedure bin1(_?, _).
+bin1(Y, pair(Y?, b)).
+
+procedure bin2(_?, _).
+bin2(Y, pair(a, Y?)).
+
+procedure bin3(_?, _?, _).
+bin3(Y, Z, pair(Y?, Z?)).
+
+procedure bin_nest(_?, _).
+bin_nest(Y, outer(inner(Y?, b), c)).
+
+procedure bin_nest2(_?, _).
+bin_nest2(Y, outer(a, inner(Y?, b))).
+
+procedure ter1(_?, _).
+ter1(Y, triple(Y?, b, c)).
+
+procedure ter2(_?, _).
+ter2(Y, triple(a, Y?, c)).
+
+procedure ter3(_?, _).
+ter3(Y, triple(a, b, Y?)).
+
+procedure ter_all(_?, _?, _?, _).
+ter_all(A, B, C, triple(A?, B?, C?)).
+
+procedure ter_nest(_?, _).
+ter_nest(Y, outer(inner(Y?, b, c), d, e)).
+
+procedure use_reader(_?, _).
+use_reader(In, processed(In?)).
+
+procedure tree2(_?, _).
+tree2(Y, node(leaf(Y?), leaf(z))).
+
+procedure tree3(_?, _).
+tree3(Y, node(node(leaf(Y?), leaf(a)), leaf(b))).
+
+procedure quad(_?, _?, _?, _?, _).
+quad(A, B, C, D, four(A?, B?, C?, D?)).
+
+procedure pass_reader(_?, _).
+pass_reader(In, wrapper(In?)).
+
+procedure multi_w(_?, _?, _).
+multi_w(A, B, pair(wrap(A?), wrap(B?))).
+
+procedure bind_use(_?, _).
+bind_use(Y, outer(Y?)) :- ground(Y?) | done(Y?).
+
+procedure done(_?).
+done(_).

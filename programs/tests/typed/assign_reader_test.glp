@@ -1,0 +1,4 @@
+% assign_reader_test.glp - Reader assignment test
+
+procedure assign_reader(_?, _).
+assign_reader(X, X?).

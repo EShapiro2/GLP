@@ -1,0 +1,29 @@
+% arith_comparison.glp - Arithmetic comparison operators
+
+procedure arith_eq(Number?, Number?, Constant).
+arith_eq(X, Y, equal) :- X? =:= Y? | true.
+arith_eq(_, _, not_equal) :- otherwise | true.
+
+procedure arith_neq(Number?, Number?, Constant).
+arith_neq(X, Y, not_equal) :- X? =\= Y? | true.
+arith_neq(_, _, equal) :- otherwise | true.
+
+procedure expr_eq(Number?, Number?, Constant).
+expr_eq(X, Y, equal) :- X? + 1 =:= Y? - 1 | true.
+expr_eq(_, _, not_equal) :- otherwise | true.
+
+procedure test_lt(Number?, Number?, Constant).
+test_lt(X, Y, yes) :- X? < Y? | true.
+test_lt(_, _, no) :- otherwise | true.
+
+procedure test_gt(Number?, Number?, Constant).
+test_gt(X, Y, yes) :- X? > Y? | true.
+test_gt(_, _, no) :- otherwise | true.
+
+procedure test_le(Number?, Number?, Constant).
+test_le(X, Y, yes) :- X? =< Y? | true.
+test_le(_, _, no) :- otherwise | true.
+
+procedure test_ge(Number?, Number?, Constant).
+test_ge(X, Y, yes) :- X? >= Y? | true.
+test_ge(_, _, no) :- otherwise | true.

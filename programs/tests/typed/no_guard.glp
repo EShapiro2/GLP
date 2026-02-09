@@ -1,0 +1,5 @@
+% no_guard.glp - Pattern matching without guard
+
+procedure no_guard(Stream?, Stream).
+no_guard([N|Xs], [N?, a, b|Xs?]).
+no_guard([], []).

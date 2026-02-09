@@ -1,0 +1,10 @@
+% multiply.glp - Scalar multiply stream
+
+NumList ::= [] ; [Number | NumList].
+
+procedure multiply(Number?, NumList?, NumList).
+multiply(_, [], []).
+multiply(N, [X|Xs], [Y?|Ys?]) :-
+  ground(N?) |
+  Y := N? * X?,
+  multiply(N?, Xs?, Ys).

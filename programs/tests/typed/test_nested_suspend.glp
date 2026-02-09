@@ -1,0 +1,21 @@
+% test_nested_suspend.glp - Suspension at different structure nesting levels
+
+procedure level1(_?).
+level1(foo(A, B)) :- string(A?) | done(B?).
+
+procedure level2(Stream?).
+level2([msg(A, B) | Rest]) :- string(A?) | process(B?, Rest?).
+level2([]).
+
+procedure level3(Stream?).
+level3([wrapper(inner(A)) | Rest]) :- string(A?) | finish(Rest?).
+level3([]).
+
+procedure done(_?).
+done(_).
+
+procedure process(_?, Stream?).
+process(_, _).
+
+procedure finish(Stream?).
+finish(_).

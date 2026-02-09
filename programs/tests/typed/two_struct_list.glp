@@ -1,0 +1,4 @@
+% two_struct_list.glp - List with multiple structures as elements
+
+procedure test(Stream).
+test([foo(a), bar(b)]).

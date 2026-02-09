@@ -1,0 +1,5 @@
+% test_ground_equal.glp - Ground equality guard
+
+procedure test(_?, _?, Constant).
+test(X, Y, equal) :- X? =?= Y? | true.
+test(_, _, not_equal) :- otherwise | true.

@@ -1,0 +1,5 @@
+% with_guard.glp - Pattern matching with ground guard
+
+procedure with_guard(Stream?, Stream).
+with_guard([N|Xs], [N?, a, b|Xs?]) :- ground(N?) | true.
+with_guard([], []).

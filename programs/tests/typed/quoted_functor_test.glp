@@ -1,0 +1,4 @@
+% quoted_functor_test.glp - Quoted atom functor in head
+
+procedure '_test_kernel'(Number?, Number).
+'_test_kernel'(X, Y?) :- number(X?) | Y := X? + 1.

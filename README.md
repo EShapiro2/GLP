@@ -48,9 +48,9 @@ GLP/
 │   └── archive/          # Historical files (76 files)
 │
 ├── test/                  # Test scripts
-│   ├── quick_run_repl_tests.sh  # 30 quick tests (~2s)
-│   ├── full_run_repl_tests.sh   # 181 comprehensive tests
-│   └── run_book_tests.sh        # 141 book example tests
+│   ├── run_all_tests.sh         # 311 unified tests (runtime + type-check)
+│   ├── run_book_tests.sh        # 141 book example tests
+│   └── archive/                 # Old test scripts
 │
 ├── docs/                  # Specifications
 │   ├── glp-bytecode-v216-complete.md
@@ -64,11 +64,8 @@ GLP/
 ```bash
 cd glp_runtime
 
-# Quick sanity check (~2 seconds)
-bash ../test/quick_run_repl_tests.sh
-
-# Full REPL tests (181 tests)
-bash ../test/full_run_repl_tests.sh
+# Unified tests (311 tests — runtime + type-check + negative)
+bash ../test/run_all_tests.sh
 
 # Book examples compilation test (141 files)
 bash ../test/run_book_tests.sh

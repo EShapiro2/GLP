@@ -1,0 +1,32 @@
+% run1.glp - Metainterpreter
+
+procedure run(_?).
+run(true).
+run((A, B)) :- run(A?), run(B?).
+run(A) :- otherwise | clause(A?, B), run(B?).
+
+% clause database
+procedure clause(_?, _).
+clause(merge([X|Xs], Ys, [X?|Zs?]), merge(Ys?, Xs?, Zs)).
+clause(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+clause(merge([], [], []), true).
+clause(p(a), true).
+clause(p(b), true).
+clause(q(X), p(X?)).
+clause(q(a), true).
+clause(r(a,b), true).
+
+procedure run2(Stream).
+run2(Ys?) :- run((merge([],[],Xs1), merge([],Xs1?,Ys))).
+
+procedure run3(Stream).
+run3(Ys?) :- run(merge([],[a],Ys)).
+
+procedure run4(Stream).
+run4(Ys?) :- run(merge([],[],Ys)).
+
+procedure run6(Stream).
+run6(Ys?) :- run(merge([a],[],Ys)).
+
+procedure runA(Stream).
+runA(X?) :- run(merge([],[],X)).

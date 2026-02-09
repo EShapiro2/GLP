@@ -1,0 +1,5 @@
+% paa.glp - Two-phase HEAD unification with shared variable
+% p(X,X?) and p(X?,X) should both succeed and bind X=a
+
+procedure p(Constant, Constant?).
+p(a, a).
