@@ -16,7 +16,7 @@ cd glp_runtime && dart test && cd ..
 bash test/run_all_tests.sh
 ```
 
-Expected results (as of 2026-02-09): 236 unit tests passing, 311 unified tests passing.
+Expected results (as of 2026-02-09): 236 unit tests passing, 316 unified tests passing.
 
 ---
 
@@ -40,7 +40,7 @@ The unified test suite has five sections:
 
 | Section | Tests | Description |
 |---------|-------|-------------|
-| A: Typed Runtime Tests | 171 | Load typed programs, run queries, check output |
+| A: Typed Runtime Tests | 176 | Load typed programs, run queries, check output |
 | B: Positive Type Check | 97 | Verify typed programs load successfully |
 | C: Negative Type Tests | 39 | Verify ill-typed programs are rejected |
 | D: SRSW Violations | 3 | Verify SRSW violations are detected |
@@ -73,7 +73,7 @@ cd /Users/udi/Grassroots/GLP/glp_multiagent && flutter build macos
 | Suite | Count | Status |
 |-------|-------|--------|
 | Dart Unit Tests | 236 | Passing |
-| Unified Tests | 311 | Passing |
+| Unified Tests | 316 | Passing |
 | Multiagent Tests | 139 | Passing (subset of unit tests) |
 | Book Compilation | 141 files | Compiles |
 | Flutter Build | — | Builds successfully |

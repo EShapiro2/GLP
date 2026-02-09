@@ -519,14 +519,16 @@ check "defined guard fail" "Rdg2 = not_channel" "$a19"
 check "defined guard suspend" "suspended" "$a19"
 
 # --- A20: Channel guards ---
-# Channel guards require new_channel runtime support not yet available.
-# File loading is kept as a type-check test only; no runtime assertions.
-echo "--- A20: Channel guards (type-check only) ---"
+# new_channel/send/receive are prelude defined guards, unfolded by the PE.
+echo "--- A20: Channel guards ---"
 a20=$($DART run "$REPL" <<HEREDOC
 $TYPED/test_channel_guards.glp
+make_pair(MpC1, MpC2).
 :quit
 HEREDOC
 2>&1)
+
+check "channel make_pair succeeds" "succeeds" "$a20"
 
 # --- A21: Comprehensive defined guards ---
 echo "--- A21: Comprehensive defined guards ---"
@@ -552,7 +554,9 @@ test_triple(1, 2, TtrR).
 HEREDOC
 2>&1)
 
-# Removed: DG make_pair, DG bind yes, DG bind yes local (require new_channel runtime support)
+check "DG make_pair succeeds" "succeeds" "$a21"
+check "DG bind yes" 'RespYes = accept(ch(' "$a21"
+check "DG bind yes local" 'LocalYes = ch(' "$a21"
 check "DG bind no" "RespNo = no" "$a21"
 check "DG bind no local" "LocalNo = none" "$a21"
 check "DG channel ok" "TchR1 = ok" "$a21"
@@ -581,17 +585,19 @@ HEREDOC
 check "wait test" "Xwait = done" "$a22"
 
 # --- A23: DiffList ---
+# dl_append/dl_to_list are prelude defined guards, unfolded by the PE.
 echo "--- A23: Difference lists ---"
 a23=$($DART run "$REPL" <<HEREDOC
 $TYPED/diff_list.glp
 $TYPED/bb_diff.glp
 Xdl = foo\bar.
+test_dl_to_list([1,2,3]\\[], Ldtl).
 :quit
 HEREDOC
 2>&1)
 
-# Removed: dl_append and dl_to_list queries (only in type prelude, not runtime)
 check "DL term parses" 'Xdl = \\(foo, bar)' "$a23"
+check "DL dl_to_list" 'Ldtl = \[1, 2, 3\]' "$a23"
 
 # --- A24: Suspension tests ---
 echo "--- A24: Suspension tests ---"

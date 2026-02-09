@@ -1,5 +1,6 @@
 import 'ast.dart';
 import 'error.dart';
+import 'partial_evaluator.dart' show getPreludeUnitClauses;
 import '../analysis/type_checker/type_ast.dart';
 
 /// Variable information for semantic analysis
@@ -876,7 +877,9 @@ class PartialEvaluator {
   /// Entry point: transform all defined guards in a program.
   /// Call this before SRSW analysis.
   Program transformDefinedGuards(Program program) {
-    final unitClauses = _collectUnitClauses(program);
+    // Merge prelude unit clauses with user unit clauses.
+    // User definitions override prelude (spread order: prelude first, user second).
+    final unitClauses = {...getPreludeUnitClauses(), ..._collectUnitClauses(program)};
 
     if (unitClauses.isEmpty) {
       return program; // No unit clauses, nothing to transform

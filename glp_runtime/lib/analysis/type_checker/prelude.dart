@@ -86,22 +86,21 @@ procedure writeln(_?).
 procedure _send(_?, _?, _?).
 
 % =============================================================================
-% SINGLE-UNIT-CLAUSE PROCEDURES
+% SINGLE-UNIT-CLAUSE PROCEDURES (DEFINED GUARDS)
 % =============================================================================
 %
-% These are regular procedures with no special status. They happen to be defined
-% by exactly one clause that has no guards and no body (a "unit clause").
+% These are regular procedures defined by exactly one clause with no guards and
+% no body (a "unit clause").  They serve as defined guards: when called in guard
+% position, the partial evaluator unfolds them at compile time.  In general,
+% they are NOT expected to work as body predicates.
 %
-% They can be called from either guard position or body position:
+% The PE automatically includes these prelude unit clauses when processing any
+% program, so user programs do not need to redefine them.  User programs may
+% override a prelude unit clause by defining a procedure with the same
+% name/arity.
 %
-%   - IN GUARD POSITION: The partial evaluator verifies the procedure is defined
-%     by a single unit clause, then unfolds it at compile time. If not a single
-%     unit clause, PE reports an error.
-%
-%   - IN BODY POSITION: Called as a normal procedure at runtime.
-%
-% Example: new_channel(Ch1, Ch2) can appear in a guard (unfolded at compile time
-% to create cross-linked channel structures) or in a body (executed at runtime).
+% Example: new_channel(Ch1, Ch2) in a guard is unfolded at compile time to
+% create cross-linked channel structures.
 %
 % =============================================================================
 

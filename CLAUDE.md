@@ -516,7 +516,7 @@ You:
 
 | Suite | Location | Tests | Purpose |
 |-------|----------|-------|---------|
-| Unified | `test/run_all_tests.sh` | 311 | All REPL-based tests (runtime + type-check + negative) |
+| Unified | `test/run_all_tests.sh` | 316 | All REPL-based tests (runtime + type-check + negative) |
 | Book | `test/run_book_tests.sh` | 141 | Book examples compile check |
 | Unit | `glp_runtime/test/` | 236 | Dart unit tests |
 
@@ -524,7 +524,7 @@ The unified test suite (`run_all_tests.sh`) has five sections:
 
 | Section | Tests | Description |
 |---------|-------|-------------|
-| A: Typed Runtime Tests | 171 | Load typed programs, run queries, check output |
+| A: Typed Runtime Tests | 176 | Load typed programs, run queries, check output |
 | B: Positive Type Check | 97 | Verify typed programs load successfully |
 | C: Negative Type Tests | 39 | Verify ill-typed programs are rejected |
 | D: SRSW Violations | 3 | Verify SRSW violations are detected |
@@ -548,7 +548,7 @@ dart test
 ```
 
 **Expected results:**
-- Unified: 311/311 pass
+- Unified: 316/316 pass
 - Book: 84/141 pass (57 fail due to SRSW violations in book code)
 - Unit: All pass
 

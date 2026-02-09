@@ -6,7 +6,48 @@
 
 import 'ast.dart';
 import 'error.dart';
-import '../analysis/type_checker/prelude.dart' show builtinProcedures;
+import 'lexer.dart';
+import 'parser.dart';
+import '../analysis/type_checker/prelude.dart' show builtinProcedures, typePrelude;
+
+// ============================================================================
+// PRELUDE UNIT CLAUSES
+// ============================================================================
+
+/// Cached prelude unit clauses (parsed once per process lifetime).
+Map<String, List<Term>>? _cachedPreludeUnitClauses;
+
+/// Parse the prelude source and extract unit clauses (defined guards).
+/// Result is cached — parsing happens only on first call.
+/// Returns a map from "name/arity" to the head arguments of the unit clause.
+Map<String, List<Term>> getPreludeUnitClauses() {
+  if (_cachedPreludeUnitClauses != null) return _cachedPreludeUnitClauses!;
+
+  final lexer = Lexer(typePrelude);
+  final tokens = lexer.tokenize();
+  final parser = Parser(tokens);
+  final module = parser.parseModule();
+
+  final Map<String, List<Term>> unitClauses = {};
+  for (final proc in module.procedures) {
+    if (proc.clauses.length != 1) continue;
+    final clause = proc.clauses.first;
+    if (clause.guards != null && clause.guards!.isNotEmpty) continue;
+    if (clause.body != null && clause.body!.isNotEmpty) {
+      if (clause.body!.length == 1 &&
+          clause.body![0].functor == 'true' &&
+          clause.body![0].args.isEmpty) {
+        // Body is just `true`
+      } else {
+        continue;
+      }
+    }
+    unitClauses['${proc.name}/${proc.arity}'] = clause.head.args;
+  }
+
+  _cachedPreludeUnitClauses = unitClauses;
+  return _cachedPreludeUnitClauses!;
+}
 
 // ============================================================================
 // UNIFICATION RESULTS
@@ -41,7 +82,9 @@ class PartialEvaluator {
   /// Stage 1: Transform all defined guards in a program.
   /// Call this before SRSW analysis.
   Program transformDefinedGuards(Program program) {
-    final unitClauses = _collectUnitClauses(program);
+    // Merge prelude unit clauses with user unit clauses.
+    // User definitions override prelude (spread order: prelude first, user second).
+    final unitClauses = {...getPreludeUnitClauses(), ..._collectUnitClauses(program)};
     final allProcedures = _collectAllProcedures(program);
 
     List<Procedure> transformedProcedures = [];

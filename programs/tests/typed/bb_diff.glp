@@ -4,4 +4,5 @@
 procedure test_dl(DiffList?, DiffList?, Stream).
 test_dl(D1, D2, L?) :-
     dl_append(D1?, D2?, D3),
-    dl_to_list(D3?, L).
+    dl_to_list(D3?, L)
+    | true.

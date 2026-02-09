@@ -319,11 +319,13 @@ When consuming `Channel?` with pattern `ch(In, Out?)`:
 
 ---
 
-## 8. Single-Unit-Clause Procedures
+## 8. Single-Unit-Clause Procedures (Defined Guards)
 
 ### 8.1 What They Are
 
-A **single-unit-clause procedure** is a regular procedure defined by exactly one clause with no guards and no body. These procedures can be called from either guard position (unfolded at compile time) or body position (executed at runtime).
+A **single-unit-clause procedure** is a regular procedure defined by exactly one clause with no guards and no body. These procedures serve as defined guards: when called in guard position, the partial evaluator unfolds them at compile time. In general, they are NOT expected to work as body predicates.
+
+The prelude defines several single-unit-clause procedures. The PE automatically includes them when processing any program, so user programs do not need to redefine them. User programs may override a prelude unit clause by defining a procedure with the same name/arity.
 
 Examples from the prelude:
 
@@ -500,6 +502,33 @@ agent(Id, [msg('_user', Id, connect(Target))|In], NetIn, Outs) :-
 ```
 
 **Rationale**: Reserved constants prevent naming collisions between user-defined identifiers and system channels. Without this restriction, a user could name an agent `user` or `net`, causing ambiguity with system channel identifiers.
+
+---
+
+## 13. Metainterpreter Pattern
+
+### 13.1 Standard Metainterpreter
+
+The standard metainterpreter pattern for running GLP goals with arithmetic:
+
+```prolog
+run(true).
+run((A, B)) :- run(A?), run(B?).
+run(A) :- otherwise | reduce(A?, B), run(B?).
+
+% Handle := in metainterpreter
+reduce((X?:=T), true) :- X:=T?.
+```
+
+This enables `run(factorial(5, F))` to work with arithmetic operations.
+
+### 13.2 How It Works
+
+1. `run(true)` - Base case: nothing to do
+2. `run((A, B))` - Conjunction: run both parts
+3. `run(A)` - Otherwise: reduce the goal and run the result
+
+The `reduce/2` clause for `:=` handles arithmetic assignment by extracting the assignment and executing it.
 
 ---
 
