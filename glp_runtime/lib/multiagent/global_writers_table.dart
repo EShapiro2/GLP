@@ -120,7 +120,7 @@ class GlobalWritersTable {
   /// Called by Receive transaction after binding the current writer
   /// to extend the network input stream.
   ///
-  /// Spec Section 8.3: "Assign N_q := [T_q↓? | N'_q] where N'_q is a fresh
+  /// Spec Section 8.3: "Assign N_q := [T_q↓ | N'_q] where N'_q is a fresh
   /// writer. Update the entry to `(N'_q, *)` at index 0."
   void updateSerializerWriter(int newWriterAddr) {
     if (_serializerWriterAddr == null) {

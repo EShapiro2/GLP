@@ -170,9 +170,16 @@ class MadContext {
   /// Register global_send goals from GlobalSendSpawn info
   ///
   /// Called after globalize() or localize() to register any spawned goals.
+  /// Per spec Section 4: global_send(T, G, Q) fires when T (the reader) becomes
+  /// known, i.e., when the paired writer is bound. We register both the goal in
+  /// the GlobalSendRegistry and an onBind callback on the heap so that
+  /// onWriterBound is called when the writer is assigned.
   void registerGlobalSendSpawns(List<GlobalSendSpawn> spawns) {
-    globalSendRegistry.registerSpawns(spawns);
     for (final spawn in spawns) {
+      globalSendRegistry.register(GlobalSendGoal.fromSpawn(spawn));
+      runtime.heap.onBind(spawn.readerAddr, (Term value) {
+        onWriterBound(spawn.readerAddr, value);
+      });
       print('[MAD $agentId] registered global_send goal: ${spawn.globalName} -> ${spawn.destAgent}');
     }
   }
@@ -214,7 +221,7 @@ class MadContext {
   ///
   /// This is a cold-call to our network input stream.
   /// Spec Section 8.3: "Agent q finds the permanent entry `(N_q, *)` at index 0.
-  /// Localize T↑ by q to get T_q↓. Assign N_q := [T_q↓? | N'_q] where N'_q is a
+  /// Localize T↑ by q to get T_q↓. Assign N_q := [T_q↓ | N'_q] where N'_q is a
   /// fresh writer. Update the entry to `(N'_q, *)` at index 0."
   void _handleSerializerAssignment(Term value, String fromAgent) {
     print('[MAD $agentId] _handleSerializerAssignment: cold-call from $fromAgent');
@@ -237,6 +244,34 @@ class MadContext {
       // If not wrapped in list cell, use the value directly (for compatibility)
       content = value;
       print('[MAD $agentId] _handleSerializerAssignment: using value directly (no list wrapper)');
+    }
+
+    // Localize the content: replace global names with local variables
+    // Per spec Section 8.3: "Localize T↑ by q to get T_q↓"
+    final globalNames = extractGlobalNames(content);
+    if (globalNames.isNotEmpty) {
+      print('[MAD $agentId] _handleSerializerAssignment: found ${globalNames.length} global names to localize');
+      final localizeResult = localize(
+        globalNames: globalNames,
+        localAgent: agentId,
+        table: wp,
+        freshAddrAllocator: () {
+          final (w, _) = runtime.heap.allocateVariable();
+          return w;
+        },
+      );
+
+      // Register spawned goals from localization (_r cases)
+      registerGlobalSendSpawns(localizeResult.spawns);
+
+      // Note: For _w(p, i) localizations, we do NOT set up callbacks.
+      // Per spec Section 5.2: "No goal is spawned—q will receive the assignment on this link"
+      // The entry created by localize() handles the receive side - when a message
+      // _w(p, i) := T arrives, _handleWriterAssignment finds the entry and binds the writer.
+
+      // Replace global names with local variables in content
+      content = localizeTermWithResult(content, globalNames, localizeResult);
+      print('[MAD $agentId] _handleSerializerAssignment: localized content = $content');
     }
 
     // Allocate fresh writer for stream continuation
@@ -265,6 +300,7 @@ class MadContext {
   /// Handle _w(p, i) := T assignment with i > 0 (we localized _w(p,i))
   ///
   /// Search for LocalizeEntry with (remoteAgent=p, remoteIndex=i).
+  /// Per spec Section 8.3: "Localize T↑ by q from p to get T_q↓, assign X_q := T_q↓"
   void _handleWriterAssignment(GlobalName globalName, Term value, String fromAgent) {
     final entry = wp.findByRemote(globalName.agent, globalName.index);
     if (entry == null) {
@@ -276,8 +312,28 @@ class MadContext {
 
     print('[MAD $agentId] _handleWriterAssignment: found entry, writerAddr=${entry.writerAddr}');
 
-    // Bind the writer
-    final activations = runtime.heap.bindVariable(entry.writerAddr, value);
+    // Localize the value: replace global names with local variables
+    // Per spec Section 8.3: "Localize T↑ by q from p to get T_q↓"
+    Term localizedValue = value;
+    final globalNames = extractGlobalNames(value);
+    if (globalNames.isNotEmpty) {
+      print('[MAD $agentId] _handleWriterAssignment: localizing ${globalNames.length} nested global names');
+      final localizeResult = localize(
+        globalNames: globalNames,
+        localAgent: agentId,
+        table: wp,
+        freshAddrAllocator: () {
+          final (w, _) = runtime.heap.allocateVariable();
+          return w;
+        },
+      );
+      registerGlobalSendSpawns(localizeResult.spawns);
+      localizedValue = localizeTermWithResult(value, globalNames, localizeResult);
+      print('[MAD $agentId] _handleWriterAssignment: localized value = $localizedValue');
+    }
+
+    // Bind the writer with localized value
+    final activations = runtime.heap.bindVariable(entry.writerAddr, localizedValue);
     print('[MAD $agentId] _handleWriterAssignment: bound writer, ${activations.length} activations');
 
     // Reactivate suspended goals
@@ -293,6 +349,7 @@ class MadContext {
   /// Handle _r(p, i) := T assignment (we globalized Y?)
   ///
   /// Lookup GlobalizeEntry at index i (we are agent p).
+  /// Per spec Section 8.3: "Localize T↑ by p from q to get T_p↓, assign X := T_p↓"
   void _handleReaderAssignment(GlobalName globalName, Term value, String fromAgent) {
     final entry = wp.lookupByIndex(globalName.index);
     if (entry == null) {
@@ -303,8 +360,28 @@ class MadContext {
 
     print('[MAD $agentId] _handleReaderAssignment: found entry, writerAddr=${entry.writerAddr}');
 
-    // Bind the writer
-    final activations = runtime.heap.bindVariable(entry.writerAddr, value);
+    // Localize the value: replace global names with local variables
+    // Per spec Section 8.3: "Localize T↑ by p from q to get T_p↓"
+    Term localizedValue = value;
+    final globalNames = extractGlobalNames(value);
+    if (globalNames.isNotEmpty) {
+      print('[MAD $agentId] _handleReaderAssignment: localizing ${globalNames.length} nested global names');
+      final localizeResult = localize(
+        globalNames: globalNames,
+        localAgent: agentId,
+        table: wp,
+        freshAddrAllocator: () {
+          final (w, _) = runtime.heap.allocateVariable();
+          return w;
+        },
+      );
+      registerGlobalSendSpawns(localizeResult.spawns);
+      localizedValue = localizeTermWithResult(value, globalNames, localizeResult);
+      print('[MAD $agentId] _handleReaderAssignment: localized value = $localizedValue');
+    }
+
+    // Bind the writer with localized value
+    final activations = runtime.heap.bindVariable(entry.writerAddr, localizedValue);
     print('[MAD $agentId] _handleReaderAssignment: bound writer, ${activations.length} activations');
 
     // Reactivate suspended goals
@@ -391,28 +468,28 @@ class MadContext {
   }
 
   // =========================================================================
-  // Cold-Call Send (via Index-0 Serializer)
+  // Unified Send ('_send' builtin implementation)
   // =========================================================================
 
-  /// Perform cold-call send via the index-0 serializer
+  /// Unified send operation per spec Section 11.5
   ///
-  /// Per madGLP-spec.md Section 4.1 and 12.2:
-  /// 1. Use the well-known serializer address _w(destAgent, 0)
-  /// 2. Globalize T for destAgent (spawns global_send goals for writers, creates entries for readers)
-  /// 3. Queue assignment message _w(destAgent, 0) := [T↑ | _w(destAgent, 0)]
+  /// The `'_send'(T, G, Q)` builtin behavior depends on whether G is a serializer
+  /// address (index 0) or a normal global name (index > 0):
   ///
-  /// This uses the same mechanism as established global links, but targets
-  /// the serializer address which has many-to-one semantics.
+  /// **Case G = `_w(q, 0)` (Serializer)**:
+  /// 1. Globalizes term T for remote agent Q
+  /// 2. Adds message `(_w(q,0) := [T↑ | _w(q,0)], Q)` to M_p — content wrapped in list cell
   ///
-  /// This is called by the '_cold_send'/2 kernel predicate when a cold-call
-  /// message is ready to be sent.
-  void coldSend(Term term, String destAgent) {
-    print('[MAD $agentId] coldSend: $term -> $destAgent (via serializer _w($destAgent,0))');
+  /// **Case G = `_w(p, i)` or `_r(p, i)` with i > 0 (Normal)**:
+  /// 1. Globalizes term T for remote agent Q
+  /// 2. Adds message `(G := T↑, Q)` to M_p — content sent directly
+  void send(Term term, bool isWriter, String gnAgent, int gnIndex, String destAgent) {
+    print('[MAD $agentId] send: term=$term, isWriter=$isWriter, gnAgent=$gnAgent, gnIndex=$gnIndex, dest=$destAgent');
 
-    // Extract variables from the term
+    // Extract variables from the term for globalization
     final vars = <TermVar>[];
     _extractTermVarsRecursive(term, vars);
-    print('[MAD $agentId] coldSend: found ${vars.length} variables in term');
+    print('[MAD $agentId] send: found ${vars.length} variables in term');
 
     // Globalize the term for the destination agent
     // This allocates global names for all variables and spawns global_send goals for writers
@@ -425,7 +502,7 @@ class MadContext {
 
     // Register the spawned global_send goals for nested writers
     for (final spawn in globalizeResult.spawns) {
-      print('[MAD $agentId] coldSend: registering global_send goal for ${spawn.globalName}');
+      print('[MAD $agentId] send: registering global_send goal for ${spawn.globalName}');
       globalSendRegistry.register(GlobalSendGoal.fromSpawn(spawn));
 
       // Set up callback so when the writer's paired reader becomes known, the goal fires
@@ -434,19 +511,36 @@ class MadContext {
       });
     }
 
-    // Use the well-known serializer address _w(destAgent, 0)
-    // No index allocation needed - index 0 is the permanent serializer
-    final serializerGlobalName = GlobalName.writer(destAgent, 0);
-    print('[MAD $agentId] coldSend: using serializer address $serializerGlobalName');
+    // Transform the term to use global names
+    final globalizedTerm = globalizeTermWithResult(term, vars, globalizeResult);
+    print('[MAD $agentId] send: globalized term = $globalizedTerm');
 
-    // Serialize the term with list wrapping for serializer: [T | _w(destAgent, 0)]
-    // Spec Section 4.1: "This sends the assignment `_w(q,0) := [T↑ | _w(q,0)]`"
-    final payload = _serializer.createSerializerPayload(
-      serializerGlobalName,
-      term,
-      runtime.heap.isReader,
-      lookupVariable: _lookupVariableForSerialization,
-    );
+    // Build the global name structure
+    final globalName = isWriter
+        ? GlobalName.writer(gnAgent, gnIndex)
+        : GlobalName.reader(gnAgent, gnIndex);
+
+    // Create payload based on serializer (index 0) vs normal (index > 0)
+    List<int> payload;
+    if (isWriter && gnIndex == 0) {
+      // Serializer case: wrap in list cell [T↑ | _w(q,0)]
+      print('[MAD $agentId] send: serializer case, wrapping in list cell');
+      payload = _serializer.createSerializerPayload(
+        globalName,
+        globalizedTerm,
+        runtime.heap.isReader,
+        lookupVariable: _lookupVariableForSerialization,
+      );
+    } else {
+      // Normal case: send directly
+      print('[MAD $agentId] send: normal case, sending directly');
+      payload = _serializer.createGlobalSendPayload(
+        globalName,
+        globalizedTerm,
+        runtime.heap.isReader,
+        lookupVariable: _lookupVariableForSerialization,
+      );
+    }
 
     // Queue the message for delivery
     mp.add(OutboundMessage(
@@ -455,6 +549,6 @@ class MadContext {
       payload: payload,
     ));
 
-    print('[MAD $agentId] coldSend: queued serializer message to $destAgent, mp.totalLength=${mp.totalLength}');
+    print('[MAD $agentId] send: queued message to $destAgent, mp.totalLength=${mp.totalLength}');
   }
 }
