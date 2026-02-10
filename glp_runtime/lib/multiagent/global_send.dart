@@ -57,17 +57,25 @@ class GlobalSendFiredResult {
   /// Destination agent
   final String destination;
 
-  /// The value that was sent (for testing/debugging)
+  /// The original value (before globalization)
   final Object? value;
 
   /// New goals spawned for nested variables in the value
   final List<GlobalSendGoal> newGoals;
+
+  /// The extracted variables from the value (for globalize-term-with-result)
+  final List<TermVar> extractedVariables;
+
+  /// The globalize result (for globalize-term-with-result)
+  final GlobalizeResult globalizeResult;
 
   GlobalSendFiredResult({
     required this.globalName,
     required this.destination,
     required this.value,
     required this.newGoals,
+    required this.extractedVariables,
+    required this.globalizeResult,
   });
 }
 
@@ -152,6 +160,8 @@ class GlobalSendRegistry {
       destination: goal.destination,
       value: value,
       newGoals: newGoals,
+      extractedVariables: variables,
+      globalizeResult: globalizeResult,
     );
   }
 

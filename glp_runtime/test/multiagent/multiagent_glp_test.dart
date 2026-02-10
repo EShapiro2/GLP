@@ -132,8 +132,7 @@ void main() {
     }, timeout: Timeout(Duration(seconds: 15)));
 
     test('send reader: send unbound reader, instantiate later', () async {
-      await runGlpTest('programs/typed_book/multiagent_tests/send_reader_boot.glp',
-          traceGlp: true, traceMad: true);
+      await runGlpTest('programs/typed_book/multiagent_tests/send_reader_boot.glp');
       expect(manager.completedAgents, containsAll(['agent1', 'agent2']));
     }, timeout: Timeout(Duration(seconds: 15)));
 

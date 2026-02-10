@@ -133,10 +133,18 @@ class MadContext {
 
     _trace('[MAD $agentId] global_send FIRED: ${result.globalName} -> ${result.destination}');
 
+    // Globalize the value term: replace local VarRefs with GlobalNames
+    // This is needed so the receiver can localize nested global names
+    final globalizedValue = globalizeTermWithResult(
+      result.value as Term,
+      result.extractedVariables,
+      result.globalizeResult,
+    );
+
     // Queue the assignment message
     final payload = _serializer.createGlobalSendPayload(
       result.globalName,
-      result.value as Term,
+      globalizedValue,
       runtime.heap.isReader,
       lookupVariable: _lookupVariableForSerialization,
     );
@@ -148,9 +156,13 @@ class MadContext {
     ));
 
     // Register any new goals spawned for nested variables
+    // Must set up both registry entry AND onBind callback (same as registerGlobalSendSpawns)
     for (final newGoal in result.newGoals) {
       _trace('[MAD $agentId] global_send spawned new goal: ${newGoal.globalName}');
       globalSendRegistry.register(newGoal);
+      runtime.heap.onBind(newGoal.readerAddr, (Term value) {
+        onWriterBound(newGoal.readerAddr, value);
+      });
     }
   }
 

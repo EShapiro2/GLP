@@ -4862,9 +4862,9 @@ class BytecodeRunner {
         Timer(Duration(milliseconds: duration.toInt()), () {
           // Bind writer to 0 (any value works)
           final reactivated = cx.rt.heap.bindWriterConst(writerAddr, 0);
-          // Enqueue reactivated goals
+          // Enqueue reactivated goals and clean up suspended map
           for (final goalRef in reactivated) {
-            cx.rt.gq.enqueue(goalRef);
+            cx.rt.enqueueReactivatedGoal(goalRef);
           }
           // Decrement pending timer count
           cx.rt.decrementPendingTimers();
