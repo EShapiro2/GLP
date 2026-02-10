@@ -32,7 +32,7 @@ void main() {
 
       // Network transaction: p globalizes Xs, q localizes
       final globalizeResult = globalize(
-        variables: [TermVar.writer(writerXs)],
+        variables: [TermVar.writer(writerXs, readerAddr: readerXs)],
         localAgent: 'p',
         remoteAgent: 'q',
         table: ctxP.wp,
@@ -44,10 +44,7 @@ void main() {
         globalNames: globalizeResult.globalNames,
         localAgent: 'q',
         table: ctxQ.wp,
-        freshAddrAllocator: () {
-          final (w, _) = runtimeQ.heap.allocateVariable();
-          return w;
-        },
+        freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );
       final writerXsQ = localizeResult.freshPairs[0].writerAddr;
 
@@ -98,7 +95,7 @@ void main() {
 
       // p globalizes V? (reader) - creates entry, returns _r(p,0)
       final globalizeResult = globalize(
-        variables: [TermVar.reader(writerV)], // Use writer addr for entry
+        variables: [TermVar.reader(readerV, writerAddr: writerV)],
         localAgent: 'p',
         remoteAgent: 'q',
         table: ctxP.wp,
@@ -111,10 +108,7 @@ void main() {
         globalNames: globalizeResult.globalNames,
         localAgent: 'q',
         table: ctxQ.wp,
-        freshAddrAllocator: () {
-          final (w, _) = runtimeQ.heap.allocateVariable();
-          return w;
-        },
+        freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );
       ctxQ.registerGlobalSendSpawns(localizeResult.spawns);
 
@@ -168,7 +162,7 @@ void main() {
       // === Bob -> Alice: Bob globalizes X (writer) ===
       // Spawns global_send(X?, _w(bob,0), alice)
       final bobToAliceGlobal = globalize(
-        variables: [TermVar.writer(writerXBob)],
+        variables: [TermVar.writer(writerXBob, readerAddr: readerXBob)],
         localAgent: 'bob',
         remoteAgent: 'alice',
         table: ctxBob.wp,
@@ -180,10 +174,7 @@ void main() {
         globalNames: bobToAliceGlobal.globalNames,
         localAgent: 'alice',
         table: ctxAlice.wp,
-        freshAddrAllocator: () {
-          final (w, _) = runtimeAlice.heap.allocateVariable();
-          return w;
-        },
+        freshAddrAllocator: () => runtimeAlice.heap.allocateVariable(),
       );
       expect(aliceFromBob.useReader[0], true); // Alice gets reader
       final writerXAlice = aliceFromBob.freshPairs[0].writerAddr;
@@ -191,7 +182,7 @@ void main() {
       // === Bob -> Charlie: Bob globalizes X? (reader) ===
       // Creates entry (X, charlie) at index 0, no spawn
       final bobToCharlieGlobal = globalize(
-        variables: [TermVar.reader(writerXBob)],
+        variables: [TermVar.reader(readerXBob, writerAddr: writerXBob)],
         localAgent: 'bob',
         remoteAgent: 'charlie',
         table: ctxBob.wp,
@@ -203,10 +194,7 @@ void main() {
         globalNames: bobToCharlieGlobal.globalNames,
         localAgent: 'charlie',
         table: ctxCharlie.wp,
-        freshAddrAllocator: () {
-          final (w, _) = runtimeCharlie.heap.allocateVariable();
-          return w;
-        },
+        freshAddrAllocator: () => runtimeCharlie.heap.allocateVariable(),
       );
       ctxCharlie.registerGlobalSendSpawns(charlieFromBob.spawns);
 
@@ -276,7 +264,7 @@ void main() {
       // Globalize X (writer): spawns global_send(X?, _w(p,0), q), no entry
       // Globalize X? (reader): creates entry (X, q) at index 0, no spawn
       final globalizeResult = globalize(
-        variables: [TermVar.writer(writerX), TermVar.reader(writerX)],
+        variables: [TermVar.writer(writerX, readerAddr: readerX), TermVar.reader(readerX, writerAddr: writerX)],
         localAgent: 'p',
         remoteAgent: 'q',
         table: ctxP.wp,
@@ -295,10 +283,7 @@ void main() {
         globalNames: globalizeResult.globalNames,
         localAgent: 'q',
         table: ctxQ.wp,
-        freshAddrAllocator: () {
-          final (w, _) = runtimeQ.heap.allocateVariable();
-          return w;
-        },
+        freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );
       ctxQ.registerGlobalSendSpawns(localizeResult.spawns);
 

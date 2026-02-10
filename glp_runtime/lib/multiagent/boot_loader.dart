@@ -149,19 +149,19 @@ class BootLoader {
     final directives = <SpawnDirective>[];
 
     // Pattern for spawn directive:
-    // functor(agentId, _)@agentId
+    // functor(agentId, _)@agentId  or  functor(agentId, _?)@agentId
     //
     // Breakdown:
     // - (\w+) : goal functor (e.g., agent_init)
     // - \( : opening paren
     // - (\w+) : first arg = agent ID
     // - \s*,\s* : comma separator
-    // - _ : anonymous variable (channel placeholder)
+    // - _\?? : anonymous variable (writer _ or reader _?)
     // - \) : closing paren
     // - \s*@\s* : @ operator
     // - (\w+) : target agent ID
     final pattern = RegExp(
-      r'(\w+)\s*\(\s*(\w+)\s*,\s*_\s*\)\s*@\s*(\w+)',
+      r'(\w+)\s*\(\s*(\w+)\s*,\s*_\??\s*\)\s*@\s*(\w+)',
     );
 
     for (final match in pattern.allMatches(clauseBody)) {

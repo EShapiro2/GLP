@@ -131,6 +131,12 @@ void main() {
       expect(manager.completedAgents, containsAll(['agent1', 'agent2']));
     }, timeout: Timeout(Duration(seconds: 15)));
 
+    test('send reader: send unbound reader, instantiate later', () async {
+      await runGlpTest('programs/typed_book/multiagent_tests/send_reader_boot.glp',
+          traceGlp: true, traceMad: true);
+      expect(manager.completedAgents, containsAll(['agent1', 'agent2']));
+    }, timeout: Timeout(Duration(seconds: 15)));
+
     test('writer response: send writer, receiver writes back', () async {
       await runGlpTest('programs/typed_book/multiagent_tests/writer_response_boot.glp');
       expect(manager.completedAgents, containsAll(['agent1', 'agent2']));

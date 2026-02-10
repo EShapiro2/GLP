@@ -18,7 +18,11 @@ void main() {
       final globalNames = [GlobalName.writer('p', 5)];
 
       var nextAddr = 100;
-      int allocateAddr() => nextAddr++;
+      (int, int) allocateAddr() {
+        final w = nextAddr++;
+        final r = nextAddr++;
+        return (w, r);
+      }
 
       // When: localize at agent q
       final result = localize(
@@ -32,6 +36,7 @@ void main() {
       //   - creates fresh pair (Y_q, Y_q?)
       expect(result.freshPairs.length, 1);
       expect(result.freshPairs[0].writerAddr, 100);
+      expect(result.freshPairs[0].readerAddr, 101);
 
       //   - entry (Y_q, p, 5) added to table
       // Spec Section 5.2: "add entry (Y_q, p, i)"
@@ -55,7 +60,11 @@ void main() {
       final globalNames = [GlobalName.reader('p', 3)];
 
       var nextAddr = 200;
-      int allocateAddr() => nextAddr++;
+      (int, int) allocateAddr() {
+        final w = nextAddr++;
+        final r = nextAddr++;
+        return (w, r);
+      }
 
       // When: localize at agent q
       final result = localize(
@@ -74,9 +83,10 @@ void main() {
       expect(result.useReader[0], false);
 
       //   - spawn info for global_send(Z_q?, _r(p,3), p)
+      //   - readerAddr is actually the writer address (used as onBind key)
       // Spec Section 5.2: "spawn goal global_send(Z_q?, _r(p,i), p)"
       expect(result.spawns.length, 1);
-      expect(result.spawns[0].readerAddr, 200);
+      expect(result.spawns[0].readerAddr, 200); // writer addr for onBind
       expect(result.spawns[0].globalName, GlobalName.reader('p', 3));
       expect(result.spawns[0].destAgent, 'p');
 
@@ -93,7 +103,11 @@ void main() {
       ];
 
       var nextAddr = 300;
-      int allocateAddr() => nextAddr++;
+      (int, int) allocateAddr() {
+        final w = nextAddr++;
+        final r = nextAddr++;
+        return (w, r);
+      }
 
       // When: localize at agent q
       final result = localize(
@@ -113,11 +127,11 @@ void main() {
       expect(table.localizeEntryCount, 1);
       final entry = table.findByRemote('p', 0);
       expect(entry, isNotNull);
-      expect(entry!.writerAddr, 300); // First allocated address
+      expect(entry!.writerAddr, 300); // First allocated writer address
 
-      //   - spawn info for Z_q watching Z_q?
+      //   - spawn info for Z_q watching Z_q (writer addr for onBind)
       expect(result.spawns.length, 1);
-      expect(result.spawns[0].readerAddr, 301); // Second allocated address
+      expect(result.spawns[0].readerAddr, 302); // Second pair's writer address
       expect(result.spawns[0].globalName, GlobalName.reader('p', 1));
       expect(result.spawns[0].destAgent, 'p');
 

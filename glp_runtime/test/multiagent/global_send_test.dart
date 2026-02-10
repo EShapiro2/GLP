@@ -92,7 +92,7 @@ void main() {
         writerAddr: 300,
         value: 'foo(Y)', // Symbolic - actual term contains variable Y
         table: table,
-        extractVariables: (_) => [TermVar.writer(400)], // Y is a writer at 400
+        extractVariables: (_) => [TermVar.writer(400, readerAddr: 401)], // Y is a writer at 400
       );
 
       // Then: value is globalized, spawning new goal for Y

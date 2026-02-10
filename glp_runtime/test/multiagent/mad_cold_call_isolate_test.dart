@@ -114,7 +114,7 @@ void aliceIsolate(SendPort mainPort) async {
       // This creates a GlobalizeEntry in Alice's table
       // Returns _r(alice, 0) for Bob to localize
       final globalizeResult = globalize(
-        variables: [TermVar.reader(w)],
+        variables: [TermVar.reader(r, writerAddr: w)],
         localAgent: 'alice',
         remoteAgent: 'bob',
         table: ctx.wp,
@@ -208,10 +208,7 @@ void bobIsolate(SendPort mainPort) async {
         globalNames: globalNames,
         localAgent: 'bob',
         table: ctx.wp,
-        freshAddrAllocator: () {
-          final (w, _) = runtime.heap.allocateVariable();
-          return w;
-        },
+        freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );
 
       // Register the spawned global_send goals

@@ -178,7 +178,7 @@ void main() {
       // - spawns global_send(X?, _w(p,0), q)
       // - no entry
       final globalizeResult = globalize(
-        variables: [TermVar.writer(writerXp)],
+        variables: [TermVar.writer(writerXp, readerAddr: readerXp)],
         localAgent: 'p',
         remoteAgent: 'q',
         table: ctxP.wp,
@@ -195,10 +195,7 @@ void main() {
         globalNames: globalizeResult.globalNames,
         localAgent: 'q',
         table: ctxQ.wp,
-        freshAddrAllocator: () {
-          final (w, _) = runtimeQ.heap.allocateVariable();
-          return w;
-        },
+        freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );
 
       expect(localizeResult.useReader[0], true); // q gets reader
@@ -245,9 +242,9 @@ void main() {
       // Globalize V? (reader) at p for q:
       // - creates entry (V, q) at index 0 where V is the WRITER address
       // - no spawn
-      // NOTE: TermVar.reader stores the base (writer) address for entry lookup
+      // TermVar.reader carries both addresses; writerAddr is stored in the entry
       final globalizeResult = globalize(
-        variables: [TermVar.reader(writerVp)], // Use writer addr, entry stores writer
+        variables: [TermVar.reader(readerVp, writerAddr: writerVp)],
         localAgent: 'p',
         remoteAgent: 'q',
         table: ctxP.wp,
@@ -263,10 +260,7 @@ void main() {
         globalNames: globalizeResult.globalNames,
         localAgent: 'q',
         table: ctxQ.wp,
-        freshAddrAllocator: () {
-          final (w, _) = runtimeQ.heap.allocateVariable();
-          return w;
-        },
+        freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );
 
       expect(localizeResult.useReader[0], false); // q gets writer

@@ -63,75 +63,112 @@ After fixing all issues, `three_agent_pipeline_boot.glp` should show agent3's `c
 
 ## Issue 2: TermVar.pairedReaderAddr returns wrong address
 
-**Status**: Open
+**Status**: Fixed
 **Discovered**: 2026-02-10
 **Affects**: All multi-agent programs that send terms containing writers
 **See also**: `docs/bug-send-globalise-localise.md`
 
 ### Summary
 
-`TermVar.pairedReaderAddr` (line 98 of `mad_helpers.dart`) returns `addr` (the writer address itself) instead of the actual paired reader address from the heap. This causes `globalize()` to create `GlobalSendSpawn` entries with the wrong `readerAddr`, so the `onBind` callback and `GlobalSendRegistry` goal are registered on the writer address instead of the reader address.
-
-### Code
-
-```dart
-// mad_helpers.dart line 98
-int get pairedReaderAddr => addr;  // BUG: should look up from heap
-```
-
-Used at line 183:
-```dart
-spawns.add(GlobalSendSpawn(
-  readerAddr: v.pairedReaderAddr,  // gets writerAddr instead of readerAddr
-  ...
-));
-```
+`TermVar.pairedReaderAddr` returned `addr` (the writer address itself) instead of the actual paired reader address from the heap. `TermVar` only stored a single address, with no way to look up the paired address.
 
 ### Fix
 
-`TermVar` needs access to the heap to look up the paired reader via cross-pointer. Either pass the heap to `globalize()` or resolve the paired address in `_extractTermVarsRecursive` where the heap is available.
+Redesigned `TermVar` to carry both `writerAddr` and `readerAddr` fields, populated by `_extractTermVarsRecursive()` using the heap's cross-pointer methods (`tryWriterForReader`, `pairedReaderAddr`). All call sites updated.
 
 ---
 
 ## Issue 3: No local-write-back mechanism for localized _w variables
 
-**Status**: Open
+**Status**: Fixed
 **Discovered**: 2026-02-10
 **Affects**: Multi-agent programs where the receiver writes back on a sent writer (response channel)
 **See also**: `docs/bug-send-globalise-localise.md`, `writer_response_boot.glp`
 
 ### Summary
 
-When agent q localizes `_w(p, i)`, it creates a fresh pair `(Y_q, Y_q?)` and a `LocalizeEntry(Y_q, p, i)`. The reader `Y_q?` goes into the term. If agent q later binds the writer `Y_q` (e.g., `bind_done(done)` unifies the writer with `done`), there is no mechanism to detect this and send `_w(p, i) := done` back to agent p.
+When agent q localizes `_w(p, i)`, it creates a fresh pair `(Y_q, Y_q?)` and a `LocalizeEntry(Y_q, p, i)`. The reader `Y_q?` goes into the term. If agent q later binds the writer `Y_q`, there was no mechanism to send `_w(p, i) := done` back to agent p.
 
-### Root Cause
+### Fix
 
-The `LocalizeEntry` in the `GlobalWritersTable` is designed for the **incoming** direction: when agent p sends `_w(p, i) := T` to agent q, `_handleWriterAssignment` finds the entry and binds `Y_q`. But in the writer_response pattern, agent q is the one that writes, and the value needs to flow **out** to agent p.
+Added `_registerWriteBackCallbacks()` and `_sendWriteBack()` methods to `MadContext`. When `localize()` processes `_w(p, i)`, an `onBind` callback is registered on the fresh writer. When fired, it globalizes the value and queues `_w(p, i) := T↑` for delivery to agent p. Registered in all four localize call sites.
 
-No `onBind` callback is registered on the fresh writer created by localize-`_w`. The comment in `mad_context.dart` (line 264-267) says:
+---
 
-```dart
-// Note: For _w(p, i) localizations, we do NOT set up callbacks.
-// Per spec Section 5.2: "No goal is spawned—q will receive the assignment on this link"
+## Issue 4: Type checker rejects well-typed `=` with reader argument
+
+**Status**: Open
+**Discovered**: 2026-02-10
+**Affects**: Any typed program using `=` (unification) with a reader variable
+
+### Summary
+
+The type checker rejects the following well-typed clause:
+
+```prolog
+procedure bind_later(_).
+bind_later(Done?) :- wait(1000) | done(Done).
 ```
 
-This is correct for the case where p sends a value to q. But when q writes on the localized variable and the value needs to go back to p, there must be an `onBind` callback that creates and sends the assignment message.
+Error: "Variable mode mismatch: writer requires ↑ (produce), got ↓ (consume)" for `Done` at the `=` call site (or equivalent body atom).
 
-### Observable Effect
+### Analysis
 
-In `writer_response_boot.glp`, agent2 binds its localized writer to `done`, agent2 completes, but agent1 remains suspended forever on `wait_response(Resp?)` because the value `done` never arrives.
+The prelude declares `=` as:
 
-### Fix Plan
+```prolog
+procedure =(_?, _).
+X = X?.
+```
 
-When localize creates a fresh pair for `_w(p, i)`, register an `onBind` callback on the fresh writer. When fired, it should:
-1. Globalize the value (handling any nested variables)
-2. Create a message `_w(p, i) := T↑`
-3. Queue it for delivery to agent p
+Position 0 is `_?` (reader), position 1 is `_` (writer). In the clause `bind_later(Done?)`, `Done` is the reader of the writer passed by the caller. Using `Done` as the first argument of `=` (the `_?` position) should be well-typed since `Done` is already a reader. The type checker incorrectly rejects this.
 
-This is essentially a `global_send` goal, but triggered from the localize-`_w` path rather than the globalize-writer path.
+### Workaround
+
+Use `done(Done)` instead of `Done = done` to avoid `=` entirely.
 
 ### Files Involved
 
-- `glp_runtime/lib/multiagent/mad_context.dart` — `_handleSerializerAssignment` (no `onBind` for localize-`_w` fresh pairs)
-- `glp_runtime/lib/multiagent/global_writers_table.dart` — `LocalizeEntry` structure
-- `programs/typed_book/multiagent_tests/writer_response_boot.glp` — test that exercises the bug
+- `glp_runtime/lib/analysis/type_checker/` — type checker implementation
+
+---
+
+## Issue 5: localize() spawn uses reader address; onBind needs writer address
+
+**Status**: Fixed
+**Discovered**: 2026-02-10
+**Affects**: Multi-agent programs where a localized `_r(p, i)` should trigger a `global_send` back to agent p
+
+### Summary
+
+In `localize()`, processing `_r(p, i)` creates a `GlobalSendSpawn` with `readerAddr: readerAddr`. But `registerGlobalSendSpawns()` passes `spawn.readerAddr` to `heap.onBind()`, which is indexed by **writer** address. The callback never fires because the reader address is not a valid key for `onBind`.
+
+### Fix
+
+Changed `localize()` to pass `writerAddr` in the spawn's `readerAddr` field. The field name is misleading (it is actually the `onBind` key), but the semantics are now correct.
+
+---
+
+## Issue 6: globalize-reader path has no onBind callback; entry stores reader address
+
+**Status**: Fixed
+**Discovered**: 2026-02-10
+**Affects**: Multi-agent programs where agent p sends a reader `X?` and later binds the paired writer
+
+### Summary
+
+Two bugs in the globalize-reader path:
+
+1. `globalize()` passed `v.addr` (the reader address) to `addGlobalizeEntry()`, which stores it as `writerAddr`. But `_handleReaderAssignment` later calls `bindVariable(entry.writerAddr, ...)` — passing a reader address to `bindVariable` is incorrect.
+
+2. No `onBind` callback was registered for globalize-reader entries. When agent p globalizes reader `X?` as `_r(p, i)` and later binds the paired writer, nothing detected this and sent `_r(p, i) := T↑` to agent q.
+
+### Fix
+
+1. Changed `globalize()` to pass `v.writerAddr` (the actual writer) to `addGlobalizeEntry()`.
+
+2. Added `onBind` registration in `MadContext.send()` for globalize-reader entries. When the paired writer is bound, `_sendWriteBack()` globalizes the value and queues the assignment message.
+
+### Test
+
+`send_reader_boot.glp` exercises this path: agent1 sends `data(X?)` where `X?` is an unbound reader, then binds the writer to `done` after 1000ms. Agent2 should receive `done` via the globalize-reader → onBind → `_sendWriteBack` path.

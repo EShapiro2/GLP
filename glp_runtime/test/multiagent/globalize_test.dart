@@ -15,7 +15,7 @@ void main() {
     test('writer variable: spawns global_send info, no entry', () {
       // Given: term with writer variable Y at address 100
       final table = GlobalWritersTable('p');
-      final variables = [TermVar.writer(100)];
+      final variables = [TermVar.writer(100, readerAddr: 101)];
 
       // When: globalize(Y, 'q')
       final result = globalize(
@@ -31,8 +31,9 @@ void main() {
       expect(result.globalNames[0], GlobalName.writer('p', 0));
 
       //   - spawn info for global_send(Y?, _w(p,0), q)
+      //   - readerAddr is actually the writer address (used as onBind key)
       expect(result.spawns.length, 1);
-      expect(result.spawns[0].readerAddr, 100);
+      expect(result.spawns[0].readerAddr, 100); // writer addr for onBind
       expect(result.spawns[0].globalName, GlobalName.writer('p', 0));
       expect(result.spawns[0].destAgent, 'q');
 
@@ -46,7 +47,7 @@ void main() {
     test('reader variable: creates entry, no spawn', () {
       // Given: term with reader variable Y? at address 200
       final table = GlobalWritersTable('p');
-      final variables = [TermVar.reader(200)];
+      final variables = [TermVar.reader(201, writerAddr: 200)];
 
       // When: globalize(Y?, 'q')
       final result = globalize(
@@ -66,7 +67,7 @@ void main() {
       expect(table.globalizeEntryCount, 1);
       final entry = table.lookupByIndex(0);
       expect(entry, isNotNull);
-      expect(entry!.writerAddr, 200);
+      expect(entry!.writerAddr, 200); // writer address of the pair
       expect(entry.remoteAgent, 'q');
 
       //   - NO spawn info
@@ -76,7 +77,7 @@ void main() {
     test('mixed term: correct handling of both', () {
       // Given: term [X, Y?] with writer X at 100 and reader Y? at 200
       final table = GlobalWritersTable('p');
-      final variables = [TermVar.writer(100), TermVar.reader(200)];
+      final variables = [TermVar.writer(100, readerAddr: 101), TermVar.reader(201, writerAddr: 200)];
 
       // When: globalize([X, Y?], 'q')
       final result = globalize(
@@ -93,15 +94,16 @@ void main() {
       expect(result.globalNames[1], GlobalName.reader('p', 1));
 
       //   - spawn info for global_send(X?, _w(p,0), q)
+      //   - readerAddr is actually the writer address (used as onBind key)
       expect(result.spawns.length, 1);
-      expect(result.spawns[0].readerAddr, 100);
+      expect(result.spawns[0].readerAddr, 100); // writer addr for onBind
       expect(result.spawns[0].globalName, GlobalName.writer('p', 0));
 
       //   - entry (Y, q) at index 1
       expect(table.globalizeEntryCount, 1);
       final entry = table.lookupByIndex(1);
       expect(entry, isNotNull);
-      expect(entry!.writerAddr, 200);
+      expect(entry!.writerAddr, 200); // writer address of the pair
       expect(entry.remoteAgent, 'q');
 
       // Spec Section 5.3: "Writer globalized at p: spawns global_send.
@@ -112,7 +114,7 @@ void main() {
       // Given: term foo(bar(X), Y?) with nested structure
       // Variables in order of occurrence: X at 100, Y? at 200
       final table = GlobalWritersTable('p');
-      final variables = [TermVar.writer(100), TermVar.reader(200)];
+      final variables = [TermVar.writer(100, readerAddr: 101), TermVar.reader(201, writerAddr: 200)];
 
       // When: globalize(foo(bar(X), Y?), 'q')
       final result = globalize(
@@ -137,9 +139,9 @@ void main() {
       // Given: term [X, Y, Z?] with multiple variables
       final table = GlobalWritersTable('p');
       final variables = [
-        TermVar.writer(100), // X
-        TermVar.writer(200), // Y
-        TermVar.reader(300), // Z?
+        TermVar.writer(100, readerAddr: 101), // X
+        TermVar.writer(200, readerAddr: 201), // Y
+        TermVar.reader(301, writerAddr: 300), // Z?
       ];
 
       // When: globalize([X, Y, Z?], 'q')

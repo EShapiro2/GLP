@@ -79,26 +79,39 @@ class GlobalSendSpawn {
       'GlobalSendSpawn(reader=$readerAddr, name=$globalName, dest=$destAgent)';
 }
 
-/// A variable reference in a term (for globalize/localize testing)
+/// A variable reference in a term (for globalize/localize)
 ///
-/// Represents either a writer (addr) or reader (addr with isReader=true)
+/// Represents either a writer (addr) or reader (addr with isReader=true).
+/// Always carries both writer and reader addresses of the pair.
 class TermVar {
   final int addr;
   final bool isReader;
 
+  /// Writer address of the variable pair
+  final int writerAddr;
+
+  /// Reader address of the variable pair
+  final int readerAddr;
+
   /// Create a writer variable reference
-  TermVar.writer(this.addr) : isReader = false;
+  TermVar.writer(this.addr, {required this.readerAddr})
+      : isReader = false,
+        writerAddr = addr;
 
   /// Create a reader variable reference
-  TermVar.reader(this.addr) : isReader = true;
+  TermVar.reader(this.addr, {required this.writerAddr})
+      : isReader = true,
+        readerAddr = addr;
 
   bool get isWriter => !isReader;
 
-  /// Get the paired reader address (same address, different mode)
-  int get pairedReaderAddr => addr;
+  /// Get the paired reader address
+  int get pairedReaderAddr => readerAddr;
 
   @override
-  String toString() => isReader ? 'TermVar.reader($addr)' : 'TermVar.writer($addr)';
+  String toString() => isReader
+      ? 'TermVar.reader($addr, writer=$writerAddr)'
+      : 'TermVar.writer($addr, reader=$readerAddr)';
 }
 
 /// Result of a Globalize operation
@@ -179,8 +192,11 @@ GlobalizeResult globalize({
       globalNames.add(globalName);
 
       // Spawn global_send(Y?, _w(p,i), q)
+      // Note: GlobalSendSpawn.readerAddr is used as the key for heap.onBind(),
+      // which is indexed by *writer* address. We pass writerAddr (= v.addr for
+      // a writer TermVar) so the callback fires when bindVariable is called.
       spawns.add(GlobalSendSpawn(
-        readerAddr: v.pairedReaderAddr,
+        readerAddr: v.writerAddr,
         globalName: globalName,
         destAgent: remoteAgent,
       ));
@@ -188,7 +204,8 @@ GlobalizeResult globalize({
       // Reader: create entry, no spawn
       // Spec: "allocate the next index i, create entry (Y, q) at index i,
       //        replace Y? with _r(p, i). No goal is spawned."
-      final index = table.addGlobalizeEntry(v.addr, remoteAgent);
+      // Entry stores the writer address Y (not the reader Y?) for later binding.
+      final index = table.addGlobalizeEntry(v.writerAddr, remoteAgent);
       globalNames.add(GlobalName.reader(localAgent, index));
     }
   }
@@ -238,9 +255,16 @@ LocalizeResult localize({
       //        spawn global_send(Z_q?, _r(p,i), p)"
       useReader.add(false); // Use Z_q
 
-      // Spawn global_send(Z_q?, _r(p,i), p)
+      // Create entry so incoming _r(p, i) := T can find Z and bind it
+      table.addLocalizeReaderEntry(writerAddr, gn.agent, gn.index);
+
+      // Spawn global_send(Z_q?, _r(p,i), p) for the reverse direction
+      // (when agent q binds Z, value flows back to agent p)
+      // Note: GlobalSendSpawn.readerAddr is used as the key for heap.onBind(),
+      // which is indexed by *writer* address. We pass writerAddr so the callback
+      // fires when bindVariable(writerAddr, ...) is called.
       spawns.add(GlobalSendSpawn(
-        readerAddr: readerAddr,
+        readerAddr: writerAddr,
         globalName: gn,
         destAgent: gn.agent, // Send back to the agent who created the name
       ));

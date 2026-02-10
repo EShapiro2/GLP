@@ -88,6 +88,12 @@ class GlobalWritersTable {
   /// These entries are created when localizing `_w(p, i)` names.
   final List<LocalizeEntry> _localizeEntries = [];
 
+  /// LocalizeReaderEntries: for localized `_r(p, i)` names.
+  /// Maps (remoteAgent, remoteIndex) -> writerAddr of the fresh pair.
+  /// When `_r(p, i) := T` arrives from p, this entry identifies the
+  /// local writer to bind with the incoming value.
+  final Map<String, int> _localizeReaderEntries = {};
+
   GlobalWritersTable(this.agentId);
 
   // ===========================================================================
@@ -226,6 +232,29 @@ class GlobalWritersTable {
     _localizeEntries.removeWhere(
       (e) => e.remoteAgent == agent && e.remoteIndex == index,
     );
+  }
+
+  /// Add a LocalizeReaderEntry.
+  ///
+  /// Called by Localize when importing `_r(p, i)`:
+  /// - Create fresh pair (Z, Z?)
+  /// - Add entry mapping (p, i) -> Z (writer)
+  /// - When `_r(p, i) := T` arrives, Z is bound to T
+  void addLocalizeReaderEntry(int writerAddr, String remoteAgent, int remoteIndex) {
+    final key = '$remoteAgent:$remoteIndex';
+    _localizeReaderEntries[key] = writerAddr;
+  }
+
+  /// Find LocalizeReaderEntry by remote agent and index.
+  ///
+  /// Used when receiving `_r(p, i) := T` at an agent that localized `_r(p, i)`.
+  int? findLocalizeReaderEntry(String agent, int index) {
+    return _localizeReaderEntries['$agent:$index'];
+  }
+
+  /// Remove LocalizeReaderEntry after handling the assignment.
+  void removeLocalizeReaderEntry(String agent, int index) {
+    _localizeReaderEntries.remove('$agent:$index');
   }
 
   /// Allocate next index without creating an entry.
