@@ -302,6 +302,27 @@ Head instructions perform **tentative term matching**, building σ̂w without he
 
 All head instructions are **pure** - they never mutate the heap, only extend σ̂w and Si.
 
+#### Soft-Fail: Mid-Clause Transition to Next Clause
+
+Several instructions can cause a **soft-fail** — an immediate jump to the next clause without reaching `clause_next`. Examples: `head_structure` encountering a functor mismatch, `head_constant` encountering a value mismatch, `unify_structure` encountering a nested functor mismatch, and guard instructions (`ground`, `Guard`) determining that their argument is indeterminate.
+
+**Invariant**: A soft-fail performs the same Si→U merge as `clause_next`:
+1. Union Si into U (`U := U ∪ Si`)
+2. Discard σ̂w (abandon tentative bindings)
+3. Clear Si
+4. Jump to the next clause's `clause_try`
+
+This invariant ensures that suspension information accumulated during head matching is preserved across clause transitions regardless of where the transition originates. Without this merge, a goal that should suspend (because an earlier head instruction added readers to Si) would instead fail when `no_more_clauses` finds U empty.
+
+#### Guard Three-Valued Semantics
+
+Guard instructions (`ground`, `Guard`, and other built-in guards) have **three-valued** outcomes:
+- **True**: The guard succeeds, execution continues to the next instruction
+- **False**: The guard definitively fails (e.g., `string(42)` — the value is ground but not a string), soft-fail to next clause
+- **Indeterminate**: The guard cannot be evaluated because its argument depends on an unbound reader (e.g., `ground(X?)` where X is an unbound reader), soft-fail to next clause with the unbound reader(s) added to Si
+
+In the indeterminate case, the readers are added to Si before the soft-fail, so the Si→U merge preserves them for potential suspension at `no_more_clauses`.
+
 ### Push/Pop: Nested Structure State Management
 
 When processing nested structures in HEAD mode (e.g., `p(f(X,Y))` where `f(X,Y)` is nested within the argument), the runtime must save and restore the structure processing state to properly handle the nesting.
@@ -379,10 +400,11 @@ The `proceed` instruction completes the current procedure and returns control to
 - Save restore point for σ̂w (in case clause fails)
 
 **`clause_next label`**: Move to next clause after failure or suspension
-- If Si non-empty: union Si into U (`U := U ∪ Si`)
+- Union Si into U (`U := U ∪ Si`)
 - Discard σ̂w (abandon tentative bindings)
 - Clear Si
 - Jump to label
+- Note: Mid-clause soft-fails (see "Soft-Fail" above) perform the same Si→U merge before jumping to the next clause
 
 **`commit`**: Commit to current clause
 - Apply σ̂w to heap atomically (bind all writers)
