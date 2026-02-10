@@ -208,12 +208,13 @@ GlobalizeResult globalize({
 /// Returns LocalizeResult with fresh pairs, usage info, and spawn info.
 /// Updates the GlobalWritersTable with entries for _w names.
 ///
-/// The [freshAddrAllocator] function is called to allocate each fresh writer address.
+/// The [freshAddrAllocator] function is called to allocate each fresh variable pair,
+/// returning (writerAddr, readerAddr).
 LocalizeResult localize({
   required List<GlobalName> globalNames,
   required String localAgent,
   required GlobalWritersTable table,
-  required int Function() freshAddrAllocator,
+  required (int, int) Function() freshAddrAllocator,
 }) {
   final freshPairs = <FreshPair>[];
   final useReader = <bool>[];
@@ -221,8 +222,7 @@ LocalizeResult localize({
 
   for (final gn in globalNames) {
     // Allocate fresh pair
-    final writerAddr = freshAddrAllocator();
-    final readerAddr = writerAddr; // Reader uses same address in our model
+    final (writerAddr, readerAddr) = freshAddrAllocator();
     final pair = FreshPair(writerAddr, readerAddr);
     freshPairs.add(pair);
 

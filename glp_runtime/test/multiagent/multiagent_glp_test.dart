@@ -108,5 +108,15 @@ void main() {
       await runGlpTest('programs/typed_book/multiagent_tests/distribute_boot.glp');
       expect(manager.completedAgents, containsAll(['producer', 'consumer1', 'consumer2']));
     }, timeout: Timeout(Duration(seconds: 15)));
+
+    test('minimal race: send unbound reader', () async {
+      await runGlpTest('programs/typed_book/multiagent_tests/minimal_race_boot.glp');
+      expect(manager.completedAgents, containsAll(['agent1', 'agent2']));
+    }, timeout: Timeout(Duration(seconds: 15)));
+
+    test('writer response: send writer, receiver writes back', () async {
+      await runGlpTest('programs/typed_book/multiagent_tests/writer_response_boot.glp');
+      expect(manager.completedAgents, containsAll(['agent1', 'agent2']));
+    }, timeout: Timeout(Duration(seconds: 15)));
   });
 }

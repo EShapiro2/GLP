@@ -255,10 +255,7 @@ class MadContext {
         globalNames: globalNames,
         localAgent: agentId,
         table: wp,
-        freshAddrAllocator: () {
-          final (w, _) = runtime.heap.allocateVariable();
-          return w;
-        },
+        freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );
 
       // Register spawned goals from localization (_r cases)
@@ -322,10 +319,7 @@ class MadContext {
         globalNames: globalNames,
         localAgent: agentId,
         table: wp,
-        freshAddrAllocator: () {
-          final (w, _) = runtime.heap.allocateVariable();
-          return w;
-        },
+        freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );
       registerGlobalSendSpawns(localizeResult.spawns);
       localizedValue = localizeTermWithResult(value, globalNames, localizeResult);
@@ -370,10 +364,7 @@ class MadContext {
         globalNames: globalNames,
         localAgent: agentId,
         table: wp,
-        freshAddrAllocator: () {
-          final (w, _) = runtime.heap.allocateVariable();
-          return w;
-        },
+        freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );
       registerGlobalSendSpawns(localizeResult.spawns);
       localizedValue = localizeTermWithResult(value, globalNames, localizeResult);
@@ -411,10 +402,7 @@ class MadContext {
       globalNames: nestedGlobalNames,
       localAgent: agentId,
       table: wp,
-      freshAddrAllocator: () {
-        final (w, _) = runtime.heap.allocateVariable();
-        return w;
-      },
+      freshAddrAllocator: () => runtime.heap.allocateVariable(),
     );
 
     // Register spawned goals from localization

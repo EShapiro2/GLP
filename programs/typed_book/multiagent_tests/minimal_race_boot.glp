@@ -1,0 +1,29 @@
+%% minimal_race_boot.glp - Minimal case: send unbound reader
+%%
+%% Agent1 calls build_list and send_to_net concurrently.
+%% build_list takes multiple steps, so X? may be partially bound
+%% when _send serializes it.
+
+procedure boot.
+boot :-
+    producer_init(agent1, _)@agent1,
+    consumer_init(agent2, _)@agent2.
+
+procedure producer_init(_?, _?).
+producer_init(_, _) :-
+    build_list(X),
+    send_to_net([msg(agent2, data(X?))]).
+
+procedure build_list(_).
+build_list([1|Xs?]) :- build_rest(Xs).
+
+procedure build_rest(_).
+build_rest([2,3]).
+
+procedure consumer_init(_?, _?).
+consumer_init(_, [msg(_, data(Ys))|_]) :-
+    ground(Ys?) |
+    done(Ys?).
+
+procedure done(_?).
+done(_).
