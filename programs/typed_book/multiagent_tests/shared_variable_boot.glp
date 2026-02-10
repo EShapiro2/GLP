@@ -1,0 +1,27 @@
+%% shared_variable_boot.glp - One agent sends, another receives
+%%
+%% madGLP equivalent of the old IRMA shared_variable_test:
+%%   Old: @1 runs p(X) binding X=a, @2 imports reader X? and runs q(X?)
+%%   New: agent1 sends 'hello' to agent2 via send_to_net, agent2 reads from NetIn
+%%
+%% Date: 2026-02-10
+
+procedure boot.
+boot :-
+    agent1_init(agent1, _)@agent1,
+    agent2_init(agent2, _)@agent2.
+
+%% =============================================================================
+%% AGENT1: Sender - sends a single value to agent2
+%% =============================================================================
+
+procedure agent1_init(_?, _?).
+agent1_init(_, _) :-
+    send_to_net([msg(agent2, hello)]).
+
+%% =============================================================================
+%% AGENT2: Receiver - reads one message from network input
+%% =============================================================================
+
+procedure agent2_init(_?, _?).
+agent2_init(_, [msg(_, hello)|_]) :- true.

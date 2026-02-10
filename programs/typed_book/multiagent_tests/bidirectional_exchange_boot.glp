@@ -1,0 +1,33 @@
+%% bidirectional_exchange_boot.glp - Two agents exchange values
+%%
+%% madGLP equivalent of the old IRMA bidirectional_exchange_test:
+%%   Old: @1 produces A=[1,2,3] and imports B?, @2 produces B=[a,b,c] and imports A?
+%%   New: agent1 sends [1,2,3] to agent2, agent2 sends [a,b,c] to agent1,
+%%        both receive the other's value from NetIn
+%%
+%% Data flow: agent1 <-> agent2 (symmetric exchange)
+%%
+%% Date: 2026-02-10
+
+procedure boot.
+boot :-
+    agent1_init(agent1, _)@agent1,
+    agent2_init(agent2, _)@agent2.
+
+%% =============================================================================
+%% AGENT1: Sends numbers, receives letters
+%% Sends first, then waits for incoming message on NetIn
+%% =============================================================================
+
+procedure agent1_init(_?, _?).
+agent1_init(_, _) :-
+    send_to_net([msg(agent2, numbers([1,2,3]))]).
+
+%% =============================================================================
+%% AGENT2: Sends letters, receives numbers
+%% Sends first, then waits for incoming message on NetIn
+%% =============================================================================
+
+procedure agent2_init(_?, _?).
+agent2_init(_, _) :-
+    send_to_net([msg(agent1, letters([a,b,c]))]).

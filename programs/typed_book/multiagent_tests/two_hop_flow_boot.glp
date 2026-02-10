@@ -1,0 +1,41 @@
+%% two_hop_flow_boot.glp - Two-hop data flow: produce -> transform -> return
+%%
+%% madGLP equivalent of the old IRMA two_hop_flow_test:
+%%   Old: @1 produces Xs=[1,2,3], @2 transforms Ys=[got(1),got(2),got(3)], @1 reads Ys?
+%%   New: agent1 sends [1,2,3] to agent2, agent2 transforms and sends result back
+%%
+%% Data flow: agent1 -> agent2 -> agent1 (round-trip, non-circular)
+%%
+%% NOTE: The round-trip receiving is tested by agent2 receiving from agent1.
+%% Agent1 just sends and completes. Full round-trip would require the type
+%% checker to handle send_to_net and NetIn? in the same clause.
+%%
+%% Date: 2026-02-10
+
+procedure boot.
+boot :-
+    agent1_init(agent1, _)@agent1,
+    agent2_init(agent2, _)@agent2.
+
+%% =============================================================================
+%% AGENT1: Sends data to agent2
+%% =============================================================================
+
+procedure agent1_init(_?, _?).
+agent1_init(_, _) :-
+    send_to_net([msg(agent2, data([1,2,3]))]).
+
+%% =============================================================================
+%% AGENT2: Receives data, transforms it, sends result back to agent1
+%% Tests: receive from network, local computation, send result to network
+%% =============================================================================
+
+procedure agent2_init(_?, _?).
+agent2_init(_, [msg(_, data(Xs))|_]) :-
+    ground(Xs?) |
+    transform(Xs?, Ys),
+    send_to_net([msg(agent1, result(Ys?))]).
+
+procedure transform(_?, _).
+transform([X|Xs], [got(X?)|Ys?]) :- transform(Xs?, Ys).
+transform([], []).

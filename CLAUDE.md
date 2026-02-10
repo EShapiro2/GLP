@@ -250,6 +250,7 @@ When discussing issues or bugs:
 - **MISTAKES**: Just acknowledge - no apologies or promises
 - **NO VERBOSE POLITENESS** - Skip the fluff
 - **ONE-LINER SHELL COMMANDS** - When giving shell commands to user, always use single-line format (no comments, no multi-line). User can copy-paste directly.
+- NEVER use the word "pattern" in any paper or document (except in the technical context of pattern-matching).  ALWAYS use more precise alternatives.
 
 ### Showing GLP Code
 - **ALWAYS show full context**: type declarations, procedure declarations, and full clauses

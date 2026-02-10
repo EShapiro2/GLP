@@ -1,0 +1,35 @@
+%% imported_reader_boot.glp - One-way data flow with list processing
+%%
+%% madGLP equivalent of the old IRMA simple_imported_reader_test:
+%%   Old: @1 runs p(X) binding X=[a,b]; @2 imports X? and processes it with q(X?)
+%%   New: agent1 sends [a,b] to agent2, agent2 processes the received list
+%%
+%% Data flow: agent1 -> agent2 (one-way with list traversal)
+%%
+%% Date: 2026-02-10
+
+procedure boot.
+boot :-
+    agent1_init(agent1, _)@agent1,
+    agent2_init(agent2, _)@agent2.
+
+%% =============================================================================
+%% AGENT1: Sends list [a,b] to agent2
+%% =============================================================================
+
+procedure agent1_init(_?, _?).
+agent1_init(_, _) :-
+    send_to_net([msg(agent2, list([a,b]))]).
+
+%% =============================================================================
+%% AGENT2: Receives list and processes element by element
+%% =============================================================================
+
+procedure agent2_init(_?, _?).
+agent2_init(_, [msg(_, list(Xs))|_]) :-
+    ground(Xs?) |
+    process(Xs?).
+
+procedure process(_?).
+process([_|Xs]) :- process(Xs?).
+process([]).

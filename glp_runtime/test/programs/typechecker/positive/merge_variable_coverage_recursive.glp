@@ -1,0 +1,13 @@
+% test: merge_variable_coverage_recursive
+% expected: pass
+% description: Demonstrates that variables at input positions cover all type alternatives.
+%              Ys at arg2 in clause 1 covers all of Stream? (both [] and [_?|Stream?]).
+%              Xs at arg1 in clause 2 covers all of Stream? (both [] and [_?|Stream?]).
+%              Per Definition 5.5 (Consistent Paths): X? is compatible with any state with mode down.
+
+% Uses predefined Stream type from stdlib
+
+procedure merge(Stream?, Stream?, Stream).
+
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).

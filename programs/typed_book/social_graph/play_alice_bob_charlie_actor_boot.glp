@@ -359,6 +359,12 @@ agent(Id, [msg('_user', Id1, reject_intro(_))|UserIn], NetIn, Outs) :-
     Id? =?= Id1? |
     agent(Id?, UserIn?, NetIn?, Outs?).
 
+%% Response to cold-call (injected into UserIn by inject_msg)
+agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1? |
+    handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?).
+
 %% User catch-all
 agent(Id, [_|UserIn], NetIn, Outs) :-
     ground(Id?), otherwise |

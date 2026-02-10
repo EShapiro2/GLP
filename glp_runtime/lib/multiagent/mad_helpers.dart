@@ -7,6 +7,7 @@
 /// for inter-agent communication.
 library;
 
+import 'package:glp_runtime/runtime/terms.dart';
 import 'global_writers_table.dart';
 
 /// Type of global variable name
@@ -251,4 +252,110 @@ LocalizeResult localize({
     useReader: useReader,
     spawns: spawns,
   );
+}
+
+// ============================================================================
+// Term Transformation Functions
+// ============================================================================
+
+/// Transform a term by replacing variables with their global names
+///
+/// Takes the original term and the GlobalizeResult from globalize().
+/// Returns a new term with VarRefs replaced by StructTerms representing
+/// global names (_w(agent, index) or _r(agent, index)).
+Term globalizeTermWithResult(
+  Term term,
+  List<TermVar> variables,
+  GlobalizeResult result,
+) {
+  final varToGlobalName = <int, GlobalName>{};
+  for (var i = 0; i < variables.length; i++) {
+    varToGlobalName[variables[i].addr] = result.globalNames[i];
+  }
+  return _substituteGlobalNames(term, varToGlobalName);
+}
+
+Term _substituteGlobalNames(Term term, Map<int, GlobalName> mapping) {
+  if (term is VarRef) {
+    final gn = mapping[term.addr];
+    if (gn != null) {
+      final functor = gn.isWriter ? '_w' : '_r';
+      return StructTerm(functor, [ConstTerm(gn.agent), ConstTerm(gn.index)]);
+    }
+    return term;
+  } else if (term is StructTerm) {
+    final newArgs = term.args.map((a) => _substituteGlobalNames(a, mapping)).toList();
+    return StructTerm(term.functor, newArgs);
+  }
+  return term; // ConstTerm unchanged
+}
+
+/// Extract global name structures from a term
+///
+/// Finds all _w(agent, index) and _r(agent, index) structures in the term.
+/// Returns the list of GlobalNames in order of occurrence.
+List<GlobalName> extractGlobalNames(Term term) {
+  final result = <GlobalName>[];
+  _extractGlobalNamesRecursive(term, result);
+  return result;
+}
+
+void _extractGlobalNamesRecursive(Term term, List<GlobalName> result) {
+  if (term is StructTerm) {
+    if ((term.functor == '_w' || term.functor == '_r') && term.args.length == 2) {
+      final agentArg = term.args[0];
+      final indexArg = term.args[1];
+      if (agentArg is ConstTerm && indexArg is ConstTerm) {
+        final agent = agentArg.value as String;
+        final index = (indexArg.value as num).toInt();
+        result.add(term.functor == '_w'
+            ? GlobalName.writer(agent, index)
+            : GlobalName.reader(agent, index));
+      }
+    } else {
+      for (final arg in term.args) {
+        _extractGlobalNamesRecursive(arg, result);
+      }
+    }
+  }
+}
+
+/// Transform a term by replacing global names with local variables
+///
+/// Takes the globalized term and the LocalizeResult from localize().
+/// Returns a new term with global name structures replaced by VarRefs.
+Term localizeTermWithResult(
+  Term term,
+  List<GlobalName> globalNames,
+  LocalizeResult result,
+) {
+  final globalNameToLocal = <String, int>{};
+  for (var i = 0; i < globalNames.length; i++) {
+    final gn = globalNames[i];
+    final pair = result.freshPairs[i];
+    final useReader = result.useReader[i];
+    globalNameToLocal['${gn.type.name}:${gn.agent}:${gn.index}'] =
+        useReader ? pair.readerAddr : pair.writerAddr;
+  }
+  return _substituteLocalVars(term, globalNameToLocal);
+}
+
+Term _substituteLocalVars(Term term, Map<String, int> mapping) {
+  if (term is StructTerm) {
+    if ((term.functor == '_w' || term.functor == '_r') && term.args.length == 2) {
+      final agentArg = term.args[0];
+      final indexArg = term.args[1];
+      if (agentArg is ConstTerm && indexArg is ConstTerm) {
+        final type = term.functor == '_w' ? 'writer' : 'reader';
+        final key = '$type:${agentArg.value}:${indexArg.value}';
+        final localAddr = mapping[key];
+        if (localAddr != null) {
+          return VarRef(localAddr);
+        }
+      }
+    }
+    final newArgs = term.args.map((a) => _substituteLocalVars(a, mapping)).toList();
+    return StructTerm(term.functor, newArgs);
+  }
+  return term;
 }

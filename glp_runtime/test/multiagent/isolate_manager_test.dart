@@ -3,22 +3,6 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
-/// Try to load a boot file from known paths
-String? loadBootFile(String filename) {
-  final paths = [
-    '/home/user/GLP/programs/typed_book/social_graph/$filename',
-    '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/$filename',
-    'programs/typed_book/social_graph/$filename',
-  ];
-  for (final path in paths) {
-    final file = File(path);
-    if (file.existsSync()) {
-      return file.readAsStringSync();
-    }
-  }
-  return null;
-}
-
 void main() {
   group('IsolateManager', () {
     late IsolateManager manager;
@@ -65,190 +49,21 @@ agent_init(_, _) :- true.
       expect(manager.allCompleted, isTrue);
     }, timeout: Timeout(Duration(seconds: 10)));
 
-    test('boots from actual play_alice_bob_charlie_boot.glp', () async {
-      // Try to find the actual file
-      final paths = [
-        '/home/user/GLP/programs/typed_book/social_graph/play_alice_bob_charlie_boot.glp',
-        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_alice_bob_charlie_boot.glp',
-        'programs/typed_book/social_graph/play_alice_bob_charlie_boot.glp',
-      ];
-
-      String? source;
-      for (final path in paths) {
-        final file = File(path);
-        if (file.existsSync()) {
-          source = file.readAsStringSync();
-          break;
-        }
-      }
-
-      if (source == null) {
-        print('Skipping: play_alice_bob_charlie_boot.glp not found');
-        return;
-      }
-
-      final loader = BootLoader();
-      final config = loader.load(source);
-
-      expect(config.directives.length, equals(3));
-      expect(config.directives.map((d) => d.agentId).toList(),
-          equals(['alice', 'bob', 'charlie']));
-
-      await manager.boot(config);
-
-      // Agents should be ready and will complete (agent_init completes immediately)
-      manager.start();
-      manager.tick();
-
-      await Future.delayed(Duration(milliseconds: 200));
-      manager.tick();
-      await Future.delayed(Duration(milliseconds: 200));
-
-      // Agents complete (agent_init doesn't suspend waiting for UI)
-      expect(manager.allCompleted, isTrue);
-      expect(manager.completedAgents, containsAll(['alice', 'bob', 'charlie']));
-    }, timeout: Timeout(Duration(seconds: 10)));
-
-    test('ping-pong: minimal network message exchange', () async {
-      // Try to find the ping-pong test boot file
-      final paths = [
-        '/home/user/GLP/programs/typed_book/social_graph/ping_pong_test_boot.glp',
-        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/ping_pong_test_boot.glp',
-        'programs/typed_book/social_graph/ping_pong_test_boot.glp',
-      ];
-
-      String? source;
-      for (final path in paths) {
-        final file = File(path);
-        if (file.existsSync()) {
-          source = file.readAsStringSync();
-          break;
-        }
-      }
-
-      if (source == null) {
-        print('Skipping: ping_pong_test_boot.glp not found');
-        return;
-      }
-
-      final loader = BootLoader();
-      final config = loader.load(source);
-
-      // Should have 2 agents: alice (ping) and bob (pong)
-      expect(config.directives.length, equals(2));
-      expect(config.directives.map((d) => d.agentId).toList(),
-          equals(['alice', 'bob']));
-
-      await manager.boot(config);
-      manager.start();
-
-      // Protocol:
-      // 1. Alice sends ping(alice) to bob
-      // 2. Bob receives ping, sends pong to alice
-      // 3. Alice receives pong, completes
-      // 4. Bob completes
-      //
-      // This requires IRMA to actually route messages!
-      for (var i = 0; i < 20; i++) {
-        manager.tick();
-        await Future.delayed(Duration(milliseconds: 100));
-        if (manager.allCompleted) {
-          print('Ping-pong completed after ${i + 1} ticks');
-          break;
-        }
-      }
-
-      expect(manager.allCompleted, isTrue,
-          reason: 'Completed agents: ${manager.completedAgents}');
-      expect(manager.completedAgents, containsAll(['alice', 'bob']));
-    }, timeout: Timeout(Duration(seconds: 15)));
-
-    test('cold-call: shared response variable across isolates', () async {
-      final source = loadBootFile('cold_call_test_boot.glp');
-      if (source == null) {
-        print('Skipping: cold_call_test_boot.glp not found');
-        return;
-      }
-
-      final loader = BootLoader();
-      final config = loader.load(source);
-
-      // Should have 2 agents: alice (initiator) and bob (responder)
-      expect(config.directives.length, equals(2));
-      expect(config.directives.map((d) => d.agentId).toList(),
-          equals(['alice', 'bob']));
-
-      await manager.boot(config);
-      manager.start();
-
-      // Protocol:
-      // 1. Alice sends ping(Resp) to bob (Resp is fresh writer, exported)
-      // 2. Bob receives ping(V), matches ping(pong) → binds V to pong
-      // 3. IRMA routes assignment back to Alice
-      // 4. Alice's Resp? becomes pong → completes
-      for (var i = 0; i < 20; i++) {
-        manager.tick();
-        await Future.delayed(Duration(milliseconds: 100));
-        if (manager.allCompleted) {
-          print('Cold-call completed after ${i + 1} ticks');
-          break;
-        }
-      }
-
-      expect(manager.allCompleted, isTrue,
-          reason: 'Completed agents: ${manager.completedAgents}');
-      expect(manager.completedAgents, containsAll(['alice', 'bob']));
-    }, timeout: Timeout(Duration(seconds: 15)));
-
-    test('friend-introduction: 3-agent shared channel routing', () async {
-      final source = loadBootFile('friend_intro_test_boot.glp');
-      if (source == null) {
-        print('Skipping: friend_intro_test_boot.glp not found');
-        return;
-      }
-
-      final loader = BootLoader();
-      final config = loader.load(source);
-
-      // Should have 3 agents: alice, bob (introducer), charlie
-      expect(config.directives.length, equals(3));
-      expect(config.directives.map((d) => d.agentId).toList(),
-          equals(['alice', 'bob', 'charlie']));
-
-      await manager.boot(config);
-      manager.start();
-
-      // Protocol:
-      // 1. Bob creates channel pair, sends endpoints to Alice and Charlie
-      // 2. Alice writes hello_charlie on her write channel
-      // 3. IRMA routes: Alice → Bob (creator) → Charlie
-      // 4. Charlie reads hello_charlie, writes hello_alice
-      // 5. IRMA routes: Charlie → Bob (creator) → Alice
-      // 6. Alice reads hello_alice → all complete
-      for (var i = 0; i < 30; i++) {
-        manager.tick();
-        await Future.delayed(Duration(milliseconds: 100));
-        if (manager.allCompleted) {
-          print('Friend-introduction completed after ${i + 1} ticks');
-          break;
-        }
-      }
-
-      expect(manager.allCompleted, isTrue,
-          reason: 'Completed agents: ${manager.completedAgents}');
-      expect(manager.completedAgents, containsAll(['alice', 'bob', 'charlie']));
-    }, timeout: Timeout(Duration(seconds: 20)));
-
     test('runs full play with actor scripts (no UI)', () async {
-      // Try to find the actor boot file
-      final paths = [
-        '/home/user/GLP/programs/typed_book/social_graph/play_alice_bob_charlie_actor_boot.glp',
-        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_alice_bob_charlie_actor_boot.glp',
-        'programs/typed_book/social_graph/play_alice_bob_charlie_actor_boot.glp',
+      // Try to find the boot file and shared agent file
+      final bootPaths = [
+        '/home/user/GLP/programs/typed_book/social_graph/play_madglp_boot.glp',
+        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_madglp_boot.glp',
+        'programs/typed_book/social_graph/play_madglp_boot.glp',
+      ];
+      final sharedPaths = [
+        '/home/user/GLP/programs/typed_book/social_graph/social_agent.glp',
+        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/social_agent.glp',
+        'programs/typed_book/social_graph/social_agent.glp',
       ];
 
       String? source;
-      for (final path in paths) {
+      for (final path in bootPaths) {
         final file = File(path);
         if (file.existsSync()) {
           source = file.readAsStringSync();
@@ -256,13 +71,28 @@ agent_init(_, _) :- true.
         }
       }
 
+      String? sharedSource;
+      for (final path in sharedPaths) {
+        final file = File(path);
+        if (file.existsSync()) {
+          sharedSource = file.readAsStringSync();
+          break;
+        }
+      }
+
       if (source == null) {
-        print('Skipping: play_alice_bob_charlie_actor_boot.glp not found');
+        print('Skipping: play_madglp_boot.glp not found');
+        return;
+      }
+
+      if (sharedSource == null) {
+        print('Skipping: social_agent.glp not found');
         return;
       }
 
       final loader = BootLoader();
       final config = loader.load(source);
+      config.sharedSource = sharedSource;  // Add shared agent code
 
       // Should parse correctly with agent_init goal (actors spawned internally)
       expect(config.directives.length, equals(3));

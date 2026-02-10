@@ -259,9 +259,14 @@ class BytecodeRunner {
     return prog.ops.length; // End of program if no more clauses or SUSP
   }
 
-  /// Soft-fail to next clause: clear clause state, jump to next ClauseTry
+  /// Soft-fail to next clause: merge Si into U, clear clause state, jump to next ClauseTry
   void _softFailToNextClause(RunnerContext cx, int currentPc) {
-    // Clear clause-local state (σ̂w, etc.)
+    // Merge Si into U before clearing clause state.
+    // Si contains readers that made the HEAD matching indeterminate (two-phase).
+    // These must be preserved in U so that NoMoreClauses can decide to suspend
+    // (rather than fail) when all clauses have been exhausted.
+    cx.U.addAll(cx.Si);
+    // Clear clause-local state (σ̂w, Si, etc.)
     // Note: U is not cleared - it accumulates across clause attempts
     cx.clearClause();
     // Jump to next clause (will be handled by returning new PC)
@@ -298,27 +303,17 @@ class BytecodeRunner {
   /// Suspend on unbound reader: add to U and fail to next clause atomically
   /// Per spec: "add reader to U and immediately fail to next clause" is ONE operation
   int _suspendAndFail(RunnerContext cx, int readerId, int currentPc) {
-    // print('[TRACE _suspendAndFail] Goal ${cx.goalId} adding R$readerId to U, failing to next clause');
-//     print('  Current PC: $currentPc');
     cx.U.add(readerId);
-    // Merge Si into U before clearing (HeadStructure may have added to Si)
-    cx.U.addAll(cx.Si);
+    // Note: _softFailToNextClause merges Si into U before clearing
     _softFailToNextClause(cx, currentPc);
     final nextPc = _findNextClauseTry(currentPc);
-//     print('  Next PC: $nextPc');
-    if (nextPc < prog.ops.length) {
-//       print('  Next instruction: ${prog.ops[nextPc].runtimeType}');
-    } else {
-//       print('  ⚠️  Next PC beyond program end!');
-    }
     return nextPc;
   }
 
   /// Suspend on multiple unbound readers: add all to U and fail to next clause
   int _suspendAndFailMulti(RunnerContext cx, Set<int> readerIds, int currentPc) {
     cx.U.addAll(readerIds);
-    // Merge Si into U before clearing (HeadStructure may have added to Si)
-    cx.U.addAll(cx.Si);
+    // Note: _softFailToNextClause merges Si into U before clearing
     _softFailToNextClause(cx, currentPc);
     return _findNextClauseTry(currentPc);
   }
@@ -2421,6 +2416,7 @@ class BytecodeRunner {
       // clause_next: Unified instruction for moving to next clause (spec 2.2)
       // Discard σ̂w, union Si into U, clear clause state, jump to next clause
       if (op is ClauseNext) {
+        cx.U.addAll(cx.Si);
         cx.clearClause();
         pc = prog.labels[op.label]!;
         continue;

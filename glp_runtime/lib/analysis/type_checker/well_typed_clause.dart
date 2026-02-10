@@ -743,7 +743,10 @@ bool _areDualTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
 }
 
 /// Check duality with reason for failure
-/// Per spec: wildcards are universal - _? is dual to any output, _ is dual to any input
+/// Per paper Definition 5.6: head-head and body-body pairs must have dual types.
+/// Dual types have the same baseName and opposite isDual flag.
+/// Example: Stream is dual to Stream?, _ is dual to _?
+/// Note: Stream is NOT dual to _ (different base names)
 (bool, String?) _areDualTypesWithReason(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
   // Mode check: writer must produce, reader must consume
   if (writerInfo.mode != Mode.produce) {
@@ -753,26 +756,8 @@ bool _areDualTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
     return (false, 'Reader must have consume mode');
   }
 
-  // Special case: wildcards are universal
-  // _? (consumed wildcard) is dual to ANY output type
-  // _ (produced wildcard) is dual to ANY input type
-  final writerIsWildcard = writerInfo.typeState.baseName == '_';
-  final readerIsWildcard = readerInfo.typeState.baseName == '_';
-
-  if (writerIsWildcard || readerIsWildcard) {
-    // Wildcards are dual to anything - just verify the wildcard has correct mode
-    // Writer at _ (non-dual, produce) - OK
-    // Reader at _? (dual, consume) - OK
-    if (writerIsWildcard && writerInfo.typeState.isDual) {
-      return (false, 'Writer wildcard must be _ (non-dual), not _?');
-    }
-    if (readerIsWildcard && !readerInfo.typeState.isDual) {
-      return (false, 'Reader wildcard must be _? (dual), not _');
-    }
-    return (true, null);
-  }
-
-  // Non-wildcard case: states must be duals (same baseName, opposite isDual)
+  // States must be duals: same baseName, opposite isDual
+  // This applies to ALL types including wildcards: _ is dual to _?, Stream is dual to Stream?
   if (writerInfo.typeState.baseName != readerInfo.typeState.baseName) {
     return (false, 'Types must have same base: ${writerInfo.typeState.name} vs ${readerInfo.typeState.name}');
   }

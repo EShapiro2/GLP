@@ -1,0 +1,53 @@
+%% distribute_boot.glp - One producer broadcasts to two consumers
+%%
+%% madGLP equivalent of the old IRMA distribute_test:
+%%   Old: @1 distributes [1,2,3] to @2 and @3 via shared variables
+%%   New: producer sends [1,2,3] to both consumer1 and consumer2 via network
+%%
+%% Data flow: producer -> consumer1 AND producer -> consumer2 (broadcast)
+%%
+%% Date: 2026-02-10
+
+procedure boot.
+boot :-
+    producer_init(producer, _)@producer,
+    consumer1_init(consumer1, _)@consumer1,
+    consumer2_init(consumer2, _)@consumer2.
+
+%% =============================================================================
+%% PRODUCER: Sends same data to both consumers
+%% =============================================================================
+
+procedure producer_init(_?, _?).
+producer_init(_, _) :-
+    send_to_net([msg(consumer1, data([1,2,3])), msg(consumer2, data([1,2,3]))]).
+
+%% =============================================================================
+%% CONSUMER1: Receives and wraps data
+%% =============================================================================
+
+procedure consumer1_init(_?, _?).
+consumer1_init(_, [msg(_, data(List))|_]) :-
+    ground(List?) |
+    receive(List?, Result),
+    consume(Result?).
+
+%% =============================================================================
+%% CONSUMER2: Receives and wraps data
+%% =============================================================================
+
+procedure consumer2_init(_?, _?).
+consumer2_init(_, [msg(_, data(List))|_]) :-
+    ground(List?) |
+    receive(List?, Result),
+    consume(Result?).
+
+%% =============================================================================
+%% SHARED
+%% =============================================================================
+
+procedure receive(_?, _).
+receive(List, got(List?)) :- ground(List?) | true.
+
+procedure consume(_?).
+consume(_) :- true.

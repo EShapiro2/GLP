@@ -604,10 +604,12 @@ echo "--- A24: Suspension tests ---"
 a24=$($DART run "$REPL" <<HEREDOC
 $TYPED/test_bob.glp
 $TYPED/test_nested_suspend.glp
+$TYPED/test_guard_suspend.glp
 bob(Xbob?).
 level1(Xlv1?).
 level2([Xlv2?|Rlv2]).
 level3([wrapper(Xlv3?)|Rlv3]).
+wait_ground(Xwg?).
 :quit
 HEREDOC
 2>&1)
@@ -616,6 +618,7 @@ check "bob suspend" "suspended" "$a24"
 check "level1 suspend" "suspended" "$a24"
 check "level2 suspend" "suspended" "$a24"
 check "level3 suspend" "suspended" "$a24"
+check "guard ground suspend" "suspended" "$a24"
 
 # --- A25: Quoted functor and body ---
 echo "--- A25: Quoted functor and body ---"

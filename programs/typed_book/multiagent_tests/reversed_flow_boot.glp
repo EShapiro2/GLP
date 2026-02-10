@@ -1,0 +1,35 @@
+%% reversed_flow_boot.glp - Reversed one-way flow: agent2 sends to agent1
+%%
+%% madGLP equivalent of the old IRMA reversed_flow_test:
+%%   Old: @2 has writer X, runs p(X) binding X=[a,b]; @1 has reader X?, runs q(X?)
+%%   New: agent2 sends [a,b] to agent1 via network, agent1 processes received list
+%%
+%% Data flow: agent2 -> agent1 (reversed direction from shared_variable)
+%%
+%% Date: 2026-02-10
+
+procedure boot.
+boot :-
+    agent1_init(agent1, _)@agent1,
+    agent2_init(agent2, _)@agent2.
+
+%% =============================================================================
+%% AGENT1: Receiver - processes incoming list
+%% =============================================================================
+
+procedure agent1_init(_?, _?).
+agent1_init(_, [msg(_, data(List))|_]) :-
+    ground(List?) |
+    consume_list(List?).
+
+procedure consume_list(_?).
+consume_list([_|Xs]) :- consume_list(Xs?).
+consume_list([]).
+
+%% =============================================================================
+%% AGENT2: Sender - sends [a,b] to agent1
+%% =============================================================================
+
+procedure agent2_init(_?, _?).
+agent2_init(_, _) :-
+    send_to_net([msg(agent1, data([a,b]))]).

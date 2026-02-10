@@ -1,0 +1,17 @@
+% test_guard_suspend.glp - Suspension with ground guard on unbound reader
+%
+% Tests that a goal SUSPENDS (not fails) when:
+%   1. Head matching encounters an unbound reader (adds to Si)
+%   2. A ground() guard fails because the extracted variable is unbound
+%
+% This exercises the Si→U merge path in _softFailToNextClause.
+% Without the fix, the goal would fail instead of suspending.
+%
+% NOTE: Only one clause — no fallback [] clause that would mask the bug
+% by providing an alternative suspension path through Commit.
+
+procedure wait_ground(_?).
+wait_ground([data(X)|_]) :- ground(X?) | done.
+
+procedure done.
+done.

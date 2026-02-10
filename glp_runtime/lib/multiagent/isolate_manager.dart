@@ -86,6 +86,7 @@ class AgentConfig {
   final String agentId;
   final String goalFunctor;
   final String programSource;
+  final String? sharedSource; // Optional shared code (e.g., social_agent.glp)
   final SendPort mainPort;
   final SendPort? uiPort; // null for headless
 
@@ -93,6 +94,7 @@ class AgentConfig {
     required this.agentId,
     required this.goalFunctor,
     required this.programSource,
+    this.sharedSource,
     required this.mainPort,
     this.uiPort,
   });
@@ -139,6 +141,7 @@ class IsolateManager {
         agentId: directive.agentId,
         goalFunctor: directive.goalFunctor,
         programSource: config.source,
+        sharedSource: config.sharedSource,
         mainPort: _mainPort.sendPort,
       );
 
@@ -267,22 +270,23 @@ class IsolateManager {
 ///
 /// These are loaded before the user program to provide:
 /// - send_to_net/1: processes network output stream
-/// - global_send/2: cold-call send (allocates fresh global name)
-/// - global_send/3: established link send
+/// - global_send/3: send via global link (handles both cold-calls and established links)
 const String _madPredicatesSource = r'''
+-mode(system).  %% Uses reserved constants like '_w' and '_send'
+
 %% madGLP System Predicates (embedded in isolate_manager.dart)
 %% See: madGLP-spec.md Section 4 and Section 12
 
 %% send_to_net/1 - Process network output stream
+%% Uses global_send/3 with serializer address _w(Q,0) for cold-calls
+%% Sends msg(Q, T) wrapper to match dGLP network3 format
+%% Note: Q is used twice after ground guard - SRSW checker allows this for ground vars
 procedure send_to_net(Stream?).
-send_to_net([msg(Q, T) | In]) :- global_send(T?, Q?), send_to_net(In?).
+send_to_net([msg(Q, T) | In]) :- ground(Q?) | global_send(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
 send_to_net([]).
 
-%% global_send/2 - Cold-call send (allocates fresh global name)
-procedure global_send(_?, _?).
-global_send(T, Q) :- known(T?) | '_cold_send'(T?, Q?).
-
-%% global_send/3 - Established link send
+%% global_send/3 - Send via global link
+%% Handles both cold-calls (index 0) and established links (index > 0)
 procedure global_send(_?, _?, _?).
 global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
 ''';
@@ -302,11 +306,13 @@ void _agentIsolateEntry(AgentConfig config) async {
   // Create GlpEngine (same as REPL would)
   final engine = GlpEngine();
 
-  // Load madGLP system predicates first
-  engine.loadSource(_madPredicatesSource, filename: 'mad_predicates.glp');
-
-  // Then load the user program
-  engine.loadSource(config.programSource);
+  // Build combined source: mad_predicates + shared source (if any) + boot file
+  // This ensures procedures like send_to_net/1 and agent/4 are visible to user code
+  // Strip any -mode(system) directives since it's already in mad_predicates
+  final sharedSource = config.sharedSource?.replaceAll(RegExp(r'-mode\s*\(\s*system\s*\)\s*\.'), '') ?? '';
+  final userSource = config.programSource.replaceAll(RegExp(r'-mode\s*\(\s*system\s*\)\s*\.'), '');
+  final combinedSource = '$_madPredicatesSource\n$sharedSource\n$userSource';
+  engine.loadSource(combinedSource);
   engine.debugTrace = true;  // Enable tracing for comparison with dGLP
   print('[$agentId] Program loaded via GlpEngine (with mad_predicates)');
 
@@ -329,21 +335,13 @@ void _agentIsolateEntry(AgentConfig config) async {
     config.mainPort.send(NetworkMsg(agentId, dest, msg.payload, msg.type));
   };
 
-  // Allocate UI channel (second argument to agent_init)
-  // Channel structure: ch(OutputStream?, InputStream)
-  // Per the spec, the second argument is the channel
-  final (uiInWriter, uiInReader) = runtime.heap.allocateVariable();
-  final (uiOutWriter, uiOutReader) = runtime.heap.allocateVariable();
-  final chTerm = StructTerm('ch', [VarRef(uiOutWriter), VarRef(uiInReader)]);
+  // The second argument to agent_init is NetIn (the network input stream)
+  // The serializer entry (at index 0) writes to netInWriter, so agent reads from netInReader
+  // Note: netInWriter/netInReader were allocated earlier for the serializer
 
-  print('[$agentId] Channel allocated');
-  print('[$agentId]   Ch: out=($uiOutWriter,$uiOutReader), in=($uiInWriter,$uiInReader)');
+  print('[$agentId] Network input ready: writer=$netInWriter, reader=$netInReader');
 
-  // Build the goal string for agent_init(AgentId, Ch)
-  // The channel is a complex term, so we run the goal directly via the engine
-  // by using the lower-level runtime APIs
-
-  // Find goal entry point (now 2-arity per boot spec simplification)
+  // Find goal entry point (now 2-arity: agent_init(Id, NetIn))
   final program = engine.combinedProgram;
   final goalLabel = '${config.goalFunctor}/2';
   final goalPC = program.labels[goalLabel];
@@ -355,17 +353,18 @@ void _agentIsolateEntry(AgentConfig config) async {
 
   // Create argument cells with proper reader references
   final (idArgWriter, idArgReader) = runtime.heap.allocateVariable();
-  final (chArgWriter, chArgReader) = runtime.heap.allocateVariable();
+  final (netInArgWriter, netInArgReader) = runtime.heap.allocateVariable();
 
-  // Bind argument writers to their values
+  // Bind argument writers to their values:
+  // - Arg 0: agent ID (constant)
+  // - Arg 1: network input reader (points to serializer output)
   runtime.heap.bindVariable(idArgWriter, ConstTerm(agentId));
-  runtime.heap.bindVariable(chArgWriter, chTerm);
+  runtime.heap.bindVariable(netInArgWriter, VarRef(netInReader));
 
   // Spawn goal with reader references
-  // Import needed types
   runtime.setGoalEnv(1, CallEnv(args: {
     0: VarRef(idArgReader),
-    1: VarRef(chArgReader),
+    1: VarRef(netInArgReader),
   }));
   runtime.setGoalProgram(1, 'main');
   runtime.gq.enqueue(GoalRef(1, goalPC));
@@ -436,22 +435,10 @@ void _agentIsolateEntry(AgentConfig config) async {
       ctx.flushMessages();
 
     } else if (msg is UIEvent) {
-      print('[$agentId] Received UI event');
-      final serializer = PayloadSerializer(agentId);
-      final term = serializer.deserializeAgentMessagePayload(
-        msg.payload,
-        (isReader) {
-          final (w, r) = runtime.heap.allocateVariable();
-          return isReader ? r : w;
-        },
-      );
-
-      // Bind as next element in UI input stream
-      final (tailWriter, tailReader) = runtime.heap.allocateVariable();
-      final consCell = StructTerm('.', [term, VarRef(tailReader)]);
-      runtime.heap.bindVariable(uiInWriter, consCell);
-
-      ctx.flushMessages();
+      // UIEvent handling is for external Flutter UI integration.
+      // With the current architecture (actors internal to GLP), this is not used.
+      // The actor communicates directly with the agent via channels in GLP code.
+      print('[$agentId] Received UI event (not processed - actors are internal)');
     }
   }
 }

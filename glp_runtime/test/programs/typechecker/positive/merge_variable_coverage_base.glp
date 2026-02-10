@@ -1,0 +1,13 @@
+% test: merge_variable_coverage_base
+% expected: pass
+% description: Demonstrates that variables at input positions cover all type alternatives.
+%              Xs at arg1 in both clauses covers all of Stream? (both [] and [_?|Stream?]).
+%              Per Definition 5.5 (Consistent Paths): X? is compatible with any state with mode down.
+%              Note: This program is type-correct but would deadlock if given two non-empty lists.
+
+% Uses predefined Stream type from stdlib
+
+procedure merge(Stream?, Stream?, Stream).
+
+merge(Xs, [], Xs?).
+merge([], Ys, Ys?).
