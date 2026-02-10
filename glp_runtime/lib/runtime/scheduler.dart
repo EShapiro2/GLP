@@ -259,6 +259,7 @@ class Scheduler {
         kappa: act.pc,
         env: env,
         goalHead: goalStr,
+        goalProcName: procName,
         showBindings: showBindings,
         debugOutput: debugOutput,
         moduleContext: moduleContext,

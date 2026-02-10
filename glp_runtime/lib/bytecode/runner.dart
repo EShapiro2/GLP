@@ -201,7 +201,27 @@ class RunnerContext {
 
   // Track reduction for trace output
   String? goalHead;  // Formatted head goal for trace (mutable for tail calls)
+  String? goalProcName;  // Procedure name for delayed head formatting
   final void Function(int goalId, String head, String body)? onReduction;
+
+  /// Re-format the goal head from current env state (after σ̂ applied to heap).
+  /// This shows bound values instead of unbound variable names.
+  String reformatHead() {
+    final name = goalProcName ?? goalHead ?? '?';
+    final args = <String>[];
+    for (int i = 0; i < 10; i++) {
+      final arg = env.arg(i);
+      if (arg != null) {
+        args.add(termFormatter != null
+            ? termFormatter!(arg)
+            : arg.toString());
+      } else {
+        break;
+      }
+    }
+    if (args.isEmpty) return name;
+    return '$name(${args.join(', ')})';
+  }
 
   // Control trace output
   final bool showBindings;
@@ -221,6 +241,7 @@ class RunnerContext {
     this.onActivation,
     this.reductionBudget,
     this.goalHead,
+    this.goalProcName,
     this.onReduction,
     this.showBindings = true,
     this.debugOutput = false,
@@ -2889,7 +2910,7 @@ class BytecodeRunner {
           // Print reduction trace before tail call
           if (cx.onReduction != null && cx.goalHead != null) {
             final body = cx.spawnedGoals.join(', ');
-            cx.onReduction!(cx.goalId, cx.goalHead!, body);
+            cx.onReduction!(cx.goalId, cx.reformatHead(), body);
           }
 
           // Update environment with new heterogeneous arguments
@@ -4199,7 +4220,7 @@ class BytecodeRunner {
         // Call reduction callback if trace is on
         if (cx.onReduction != null && cx.goalHead != null) {
           final body = cx.spawnedGoals.isEmpty ? 'true' : cx.spawnedGoals.join(', ');
-          cx.onReduction!(cx.goalId, cx.goalHead!, body);
+          cx.onReduction!(cx.goalId, cx.reformatHead(), body);
         }
         // Complete current procedure - terminate execution
         return RunResult.terminated;
