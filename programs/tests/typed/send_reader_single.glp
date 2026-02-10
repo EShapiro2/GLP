@@ -1,0 +1,16 @@
+%% Single-agent version of send_reader test
+%% Tests whether bind_later reduces before or after send_msg reads X?
+
+procedure sender_init.
+sender_init :-
+    send_msg(data(X?)),
+    bind_later(X).
+
+procedure send_msg(_?).
+send_msg(M) :- ground(M?) | done(M?).
+
+procedure bind_later(_).
+bind_later(done).
+
+procedure done(_?).
+done(_).
