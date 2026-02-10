@@ -15,17 +15,13 @@ class SpawnDirective {
   /// The goal functor to spawn (e.g., 'agent_init', 'alice_agent')
   final String goalFunctor;
 
-  /// The arity of the goal (number of arguments)
-  final int arity;
-
   SpawnDirective({
     required this.agentId,
     required this.goalFunctor,
-    required this.arity,
   });
 
   @override
-  String toString() => 'SpawnDirective($goalFunctor/$arity($agentId, ...)@$agentId)';
+  String toString() => 'SpawnDirective($goalFunctor($agentId, ...)@$agentId)';
 }
 
 /// Configuration extracted from a GLP boot file.
@@ -211,15 +207,6 @@ class BootLoader {
             'got "$goalAgentId"');
       }
 
-      // Count arity: number of commas at depth 0, plus 1
-      var arity = 1;
-      var aDepth = 0;
-      for (var i = 0; i < argsStr.length; i++) {
-        if (argsStr[i] == '(' || argsStr[i] == '[') aDepth++;
-        if (argsStr[i] == ')' || argsStr[i] == ']') aDepth--;
-        if (argsStr[i] == ',' && aDepth == 0) arity++;
-      }
-
       // Validate agent IDs match
       if (goalAgentId != targetAgentId) {
         throw BootLoaderException(
@@ -230,7 +217,6 @@ class BootLoader {
       directives.add(SpawnDirective(
         agentId: goalAgentId,
         goalFunctor: functor,
-        arity: arity,
       ));
     }
 

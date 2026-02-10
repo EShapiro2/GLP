@@ -109,17 +109,12 @@ https://download-directory.github.io/?url=https://github.com/EShapiro2/GLP/tree/
 
 ### 🔴 GLP Code Modification Protocol
 
-**Before modifying any `.glp` file:**
-1. Show the proposed change (old code → new code)
-2. Wait for explicit user approval
-3. Only then make the edit
+**NEVER touch `.glp` files without discussing with the user first.** This includes creating, modifying, or deleting any `.glp` file. Always discuss the intended change and get explicit approval before making any edit.
 
 **Before running or tracing GLP code in the REPL:**
 1. Show the user which file will be loaded
 2. Show the goal that will be executed
 3. Wait for approval (or use pre-approved commands from settings)
-
-Never modify or run GLP code without showing the user first.
 
 ### Never Implement Without a Plan
 - **NEVER start implementation without an agreed upon plan**
@@ -263,7 +258,8 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 ## Key Context
 - **Project**: GLP (Grassroots Logic Programs) - a secure concurrent logic programming language
 - **Implementation Language**: Dart
-- **Current State**: 101 REPL tests + 25 unit tests passing (as of Dec 2025)
+- **Current State**: 317 REPL tests passing (as of Feb 2026)
+- **Test Suite**: `bash /Users/udi/Grassroots/GLP/test/run_all_tests.sh` — ALWAYS run before committing
 - **User Expertise**: Deep understanding of GLP semantics but does not write code
 - **Working Directory**: `/Users/udi/Grassroots/GLP/` (user's Mac)
 
@@ -417,20 +413,20 @@ dart compile exe bin/glp_repl.dart -o glp_repl
 echo -e 'load ../programs/path/to/file.glp\ngoal.' | ./glp_repl
 ```
 
-**REPL Test Scripts (Linux):**
+**REPL Test Suite:**
 ```bash
-# Full REPL tests - 218 comprehensive tests (ALWAYS run this)
-bash /home/user/GLP/test/full_run_repl_tests.sh
+# Unified test suite - 317 tests (ALWAYS run before committing)
+bash /Users/udi/Grassroots/GLP/test/run_all_tests.sh
 
-# Book examples - 141 files (tests compilation only)
-bash /home/user/GLP/test/run_book_tests.sh
+# Book examples only - 141 files (tests compilation only)
+bash /Users/udi/Grassroots/GLP/test/run_book_tests.sh
 ```
 
 **Key paths:**
-- REPL: `/home/user/GLP/glp_runtime/bin/glp_repl.dart`
-- stdlib: `/home/user/GLP/programs/stdlib/`
-- GLP programs: `/home/user/GLP/programs/`
-- Test files: `/home/user/GLP/programs/tests/`
+- REPL: `/Users/udi/Grassroots/GLP/glp_runtime/bin/glp_repl.dart`
+- stdlib: `/Users/udi/Grassroots/GLP/programs/stdlib/`
+- GLP programs: `/Users/udi/Grassroots/GLP/programs/`
+- Test files: `/Users/udi/Grassroots/GLP/programs/tests/`
 
 **Commands that DON'T exist in this environment:**
 - `timeout` - not available
@@ -481,7 +477,7 @@ bash /home/user/GLP/test/run_book_tests.sh
 │   └── misc/                   # ← Miscellaneous examples (26 files)
 │
 └── test/                        # ← TEST SCRIPTS
-    ├── full_run_repl_tests.sh  # ← Full REPL tests (181 tests)
+    ├── run_all_tests.sh        # ← Unified REPL tests (317 tests) — ALWAYS run before committing
     └── run_book_tests.sh       # ← Book examples compilation test (141 files)
 ```
 

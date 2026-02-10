@@ -1,13 +1,13 @@
 # How to Run GLP Social Agent Programs
 
-**Updated: 2026-02-03**
+**Updated: 2026-02-11**
 
 ## Current Status
 
 | Mode | Status | Result |
 |------|--------|--------|
-| dGLP | ✅ WORKING | `→ succeeds` |
-| madGLP (headless) | 🔧 MESSAGES WORK, COMPLETION BLOCKED | Agents suspended forever |
+| dGLP (single-isolate) | ✅ WORKING | `→ succeeds` |
+| madGLP (multi-isolate, headless) | 🔧 IN PROGRESS | Not yet working |
 | madGLP (visual UI) | 🔧 READY FOR TESTING | Flutter app + play_ui_boot.glp |
 
 ---
@@ -17,19 +17,75 @@
 | Mode | Files | How to Run |
 |------|-------|------------|
 | dGLP | `social_agent.glp` | REPL: `play.` |
-| madGLP (headless) | `social_agent.glp` + `play_madglp_boot.glp` | Dart test |
-| madGLP (visual UI) | `social_agent.glp` + `play_ui_boot.glp` | Flutter app |
+| madGLP (headless, standalone) | `play_alice_bob_charlie_actor_boot.glp` | `dart test test/multiagent/multiagent_glp_test.dart -n "alice-bob-charlie"` |
+| madGLP (headless, shared) | `social_agent.glp` + `play_madglp_boot.glp` | `dart test test/multiagent/isolate_manager_test.dart -n "runs full play"` |
+| madGLP (visual UI) | `social_agent.glp` + `play_ui_boot.glp` | `flutter run -d macos` |
+
+---
+
+## Test Commands
+
+### All multiagent tests (12 passing + 1 skipped)
+
+```bash
+cd /Users/udi/Grassroots/GLP/glp_runtime
+dart test test/multiagent/multiagent_glp_test.dart
+```
+
+### Full REPL test suite (317 tests)
+
+```bash
+bash /Users/udi/Grassroots/GLP/test/run_all_tests.sh
+```
+
+### All Dart unit tests
+
+```bash
+cd /Users/udi/Grassroots/GLP/glp_runtime
+dart test
+```
+
+---
 
 ## File Structure
 
 ```
 programs/typed_book/social_graph/
-├── social_agent.glp        # SHARED: agent/4, actors, network3, close_outputs, helpers
-├── play_dglp_boot.glp      # dGLP boot (thin wrapper, not needed - play/0 is in social_agent.glp)
-├── play_madglp_boot.glp    # madGLP boot: boot/0 with @agent syntax (headless with actors)
-├── play_ui_boot.glp        # madGLP boot: agent_init/3 for visual UI (Flutter app)
-└── play_dglp.glp           # STANDALONE dGLP (duplicates social_agent.glp) - DEPRECATED
+├── social_agent.glp                        # SHARED: agent/4, actors, network3, close_outputs, helpers
+├── play_dglp.glp                           # STANDALONE dGLP: all code + play/0 entry point
+├── play_alice_bob_charlie_actor_boot.glp   # STANDALONE madGLP: all code + boot/0 (no shared source needed)
+├── play_madglp_boot.glp                    # THIN madGLP boot (requires social_agent.glp as shared source)
+├── play_dglp_boot.glp                      # dGLP boot (thin wrapper, not needed - play/0 is in social_agent.glp)
+└── play_ui_boot.glp                        # madGLP boot: agent_init/3 for visual UI (Flutter app)
 ```
+
+### Key distinction: two madGLP boot approaches
+
+| Approach | Boot file | Shared source | Test file |
+|----------|-----------|---------------|-----------|
+| Standalone | `play_alice_bob_charlie_actor_boot.glp` | None (self-contained) | `multiagent_glp_test.dart` |
+| Shared | `play_madglp_boot.glp` | `social_agent.glp` | `isolate_manager_test.dart` |
+
+Both use `agent_init(alice, _)@alice` boot syntax (arity 2). The standalone file contains all agent/4 code, actors, and helpers inline. The shared approach loads `social_agent.glp` as `sharedSource` in the IsolateManager.
+
+### Dart test files
+
+```
+glp_runtime/test/multiagent/
+├── multiagent_glp_test.dart          # 12 passing madGLP tests + alice-bob-charlie (skipped)
+├── isolate_manager_test.dart         # IsolateManager boot test + full play (shared source model)
+├── boot_loader_test.dart             # BootLoader parsing tests
+├── global_send_test.dart             # global_send goal mechanism
+├── global_writers_table_test.dart    # GlobalWritersTable tests
+├── globalize_test.dart               # Globalize operation tests
+├── localize_test.dart                # Localize operation tests
+├── mad_cold_call_isolate_test.dart   # Cold-call protocol in isolates
+├── mad_error_handling_test.dart      # Error handling tests
+├── mad_scenarios_test.dart           # End-to-end madGLP scenarios
+└── mad_transactions_test.dart        # Transaction handling tests
+```
+
+Debug artifacts are in `glp_runtime/test/archive/` (not run by test suites).
 
 ---
 
@@ -66,41 +122,40 @@ echo -e 'load ../programs/typed_book/social_graph/social_agent.glp\nplay.' | dar
 
 Multi-isolate execution using `IsolateManager`. Each agent runs in its own Dart isolate.
 
-### Run Command
+### Run Command (standalone boot)
+
+```bash
+cd /Users/udi/Grassroots/GLP/glp_runtime
+dart test test/multiagent/multiagent_glp_test.dart -n "alice-bob-charlie"
+```
+
+### Run Command (shared source boot)
 
 ```bash
 cd /Users/udi/Grassroots/GLP/glp_runtime
 dart test test/multiagent/isolate_manager_test.dart -n "runs full play"
 ```
 
-Or run all multiagent tests:
+### Run all multiagent tests
+
 ```bash
-dart test test/multiagent/isolate_manager_test.dart
+cd /Users/udi/Grassroots/GLP/glp_runtime
+dart test test/multiagent/multiagent_glp_test.dart
 ```
 
-### Boot File (`play_madglp_boot.glp`)
+### Boot Format
+
+Both boot files use the same arity-2 format:
 
 ```glp
--mode(system).
-
 procedure boot.
 boot :-
     agent_init(alice, _)@alice,
     agent_init(bob, _)@bob,
     agent_init(charlie, _)@charlie.
-
-procedure agent_init(Constant?, Stream?).
-agent_init(Id, NetIn) :-
-    ground(Id?) |
-    send_to_net(NetOut?),
-    agent(Id?, UserOut?, NetIn?, [output('_user', UserIn), output('_net', NetOut)]),
-    actor(Id?, ch(UserIn?, UserOut)).
-
-procedure actor(_?, Channel?).
-actor(alice, Ch) :- alice_actor(Ch?).
-actor(bob, Ch) :- bob_actor(Ch?).
-actor(charlie, Ch) :- charlie_actor(Ch?).
 ```
+
+The `agent_init/2` procedure receives the agent ID and network input stream, then internally creates the UI channel, spawns `send_to_net/1`, and calls `agent/4`.
 
 ### Key Differences from dGLP
 
@@ -108,9 +163,8 @@ actor(charlie, Ch) :- charlie_actor(Ch?).
 |--------|------|--------|
 | Process model | Single process | Separate isolates |
 | Network routing | `network3` switch in GLP | `IsolateManager` in Dart |
-| NetIn stream | Created by `network3` | Provided by `send_to_net` kernel |
+| NetIn stream | Created by `network3` | Provided by madGLP serializer |
 | Entry point | `play.` | `boot :- ...@agent` |
-| Stream closure | Propagates via heap | **NO PROPAGATION** (blocked) |
 
 ### Key Components
 
@@ -119,8 +173,7 @@ actor(charlie, Ch) :- charlie_actor(Ch?).
 | `IsolateManager` | `lib/multiagent/isolate_manager.dart` | Boots and manages agent isolates |
 | `BootLoader` | `lib/multiagent/boot_loader.dart` | Parses boot files with `@agent` syntax |
 | `MadContext` | `lib/multiagent/mad_context.dart` | Manages global writers table, message routing |
-| `send_to_net` | `lib/runtime/body_kernels.dart` | Kernel that returns network output stream |
-| `_deepDeref` | `lib/runtime/body_kernels.dart` | Recursively dereferences nested structures |
+| `send_to_net/1` | Embedded in `isolate_manager.dart` | GLP predicate processing network output stream |
 
 ---
 
@@ -137,7 +190,7 @@ flutter run -d macos
 
 ### Setup
 
-1. Click "Alice↔Bob↔Charlie" to spawn three agent windows
+1. Click "Alice-Bob-Charlie" to spawn three agent windows
 2. Each window shows an agent with input field for GLP terms
 
 ### Boot File (`play_ui_boot.glp`)
@@ -182,38 +235,23 @@ In any agent window, type GLP terms:
 
 ---
 
-## Current Issue: madGLP Completion
+## Current Issue: madGLP Blocked at Step 1
 
-### Problem
-Messages flow correctly between agents, but agents remain `suspended` forever because stream closure doesn't propagate across isolate boundaries.
+**Date: 2026-02-11**
 
-### What's Working
-- `_deepDeref` properly serializes nested structures
-- Messages like `msg(bob, intro(alice, X))` are sent correctly
-- All 7 protocol steps execute
+### What works
 
-### What's Blocked
-- No mechanism to propagate `[]` (stream closure) across isolates
-- Agents waiting on `NetIn?` stay suspended forever
-- Test times out with all agents showing `suspended, goals=0`
+- madGLP infrastructure routes messages correctly between isolates
+- 12 simpler multi-agent tests pass (shared variables, streams, bidirectional, three-agent pipeline, etc.)
+- Alice's cold-call `msg(bob, intro(alice, Resp))` reaches Bob's agent via madGLP
+- Bob's agent processes it and writes `msg(agent, _user, befriend(alice, Resp?))` to the user output stream
 
-### Next Steps (Options)
-1. **End-of-Stream Message**: Add `MessageType.eos` to signal stream termination
-2. **Global Completion Detection**: `IsolateManager` detects idle state
-3. **Actor-Driven Termination**: Actors send explicit `done` signal
+### Where it stalls
 
-See `/Users/udi/.claude/plans/harmonic-strolling-graham.md` for detailed analysis.
+Bob's `ui_relay` has a `no_readers(Msg?)` guard (line 89 of `play_alice_bob_charlie_actor_boot.glp`). The `befriend(alice, Resp?)` message contains an unbound reader (`Resp?` — the response variable). The `no_readers` guard fails because there IS a reader inside the message, so the relay suspends instead of forwarding to the actor.
 
----
+Bob's actor never sees the `befriend` request, never responds, and the protocol stalls.
 
-## Recent Changes (2026-02-03)
+### Root cause
 
-1. **Fixed type error**: `add_output` procedure now uses `String?` instead of `_?`
-2. **Added `close_outputs/1`**: Agents now close all output streams on termination
-3. **Actors close output**: Each actor closes its output stream when script ends
-4. **dGLP succeeds**: Play terminates cleanly with `→ succeeds`
-5. **Fixed VarRef bug**: Added `_deepDeref` to properly serialize nested structures for madGLP
-6. **Fixed message format**: `send_to_net` now sends `msg(Q, T)` instead of just `T` (matches dGLP)
-7. **Strengthened types**: Added `NetMsg`, `NetStream`, `GlobalName`, `AgentId`, `Decision` types
-8. **madGLP messages work**: Protocol executes correctly, but completion blocked
-9. **Added play_ui_boot.glp**: Adapter for visual UI connecting Flutter app to agent/4
+The `ui_relay` `no_readers` guard is incompatible with the cold-call protocol, which inherently passes unbound response variables through messages. This is a GLP program design issue in `play_alice_bob_charlie_actor_boot.glp`, not an infrastructure bug.
