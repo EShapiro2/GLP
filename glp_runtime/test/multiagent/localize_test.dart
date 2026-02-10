@@ -3,8 +3,8 @@
 /// Derived from madGLP-spec.md Section 5.2: Localize
 ///
 /// Given agent q, remote agent p, and globalized term T_p↑, localization
-/// produces T_q↓ with fresh local pairs, creates table entries, and spawns
-/// global_send goals.
+/// produces T_q↓ with fresh local pairs, spawns global_send goals for _w
+/// names, and creates table entries for _r names.
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
@@ -12,7 +12,7 @@ import 'package:glp_runtime/multiagent/mad_helpers.dart';
 
 void main() {
   group('Localize', () {
-    test('_w(p,i): creates entry with remote index, returns reader', () {
+    test('_w(p,i): spawns global_send, returns writer', () {
       // Given: globalized term _w(p, 5)
       final table = GlobalWritersTable('q');
       final globalNames = [GlobalName.writer('p', 5)];
@@ -38,23 +38,25 @@ void main() {
       expect(result.freshPairs[0].writerAddr, 100);
       expect(result.freshPairs[0].readerAddr, 101);
 
-      //   - entry (Y_q, p, 5) added to table
-      // Spec Section 5.2: "add entry (Y_q, p, i)"
-      expect(table.localizeEntryCount, 1);
-      final entry = table.findByRemote('p', 5);
-      expect(entry, isNotNull);
-      expect(entry!.writerAddr, 100);
-      expect(entry.remoteAgent, 'p');
-      expect(entry.remoteIndex, 5);
+      //   - term gets Y_q (the writer)
+      // Spec Section 5.2: "replace _w(p, i) with Y_q (the writer)"
+      expect(result.useReader[0], false);
 
-      //   - term gets Y_q? (the reader)
-      expect(result.useReader[0], true);
+      //   - spawn info for global_send(Y_q?, _w(p,5), p)
+      //   - readerAddr is actually the writer address (used as onBind key)
+      // Spec Section 5.2: "spawn global_send(Y_q?, _w(p,i), p)"
+      expect(result.spawns.length, 1);
+      expect(result.spawns[0].readerAddr, 100); // writer addr for onBind
+      expect(result.spawns[0].globalName, GlobalName.writer('p', 5));
+      expect(result.spawns[0].destAgent, 'p');
 
-      //   - NO spawn info
-      expect(result.spawns, isEmpty);
+      //   - NO table entry
+      // Spec Section 5.2: "No entry is created—the global_send goal handles
+      // outgoing communication."
+      expect(table.localizeEntryCount, 0);
     });
 
-    test('_r(p,i): spawns global_send, returns writer', () {
+    test('_r(p,i): creates entry with remote index, returns reader', () {
       // Given: globalized term _r(p, 3)
       final table = GlobalWritersTable('q');
       final globalNames = [GlobalName.reader('p', 3)];
@@ -78,28 +80,32 @@ void main() {
       //   - creates fresh pair (Z_q, Z_q?)
       expect(result.freshPairs.length, 1);
       expect(result.freshPairs[0].writerAddr, 200);
+      expect(result.freshPairs[0].readerAddr, 201);
 
-      //   - term gets Z_q (the writer)
-      expect(result.useReader[0], false);
+      //   - entry (Z_q, p, 3) added to table
+      // Spec Section 5.2: "add entry (Z_q, p, i)"
+      expect(table.localizeEntryCount, 1);
+      final entry = table.findByRemote('p', 3);
+      expect(entry, isNotNull);
+      expect(entry!.writerAddr, 200);
+      expect(entry.remoteAgent, 'p');
+      expect(entry.remoteIndex, 3);
 
-      //   - spawn info for global_send(Z_q?, _r(p,3), p)
-      //   - readerAddr is actually the writer address (used as onBind key)
-      // Spec Section 5.2: "spawn goal global_send(Z_q?, _r(p,i), p)"
-      expect(result.spawns.length, 1);
-      expect(result.spawns[0].readerAddr, 200); // writer addr for onBind
-      expect(result.spawns[0].globalName, GlobalName.reader('p', 3));
-      expect(result.spawns[0].destAgent, 'p');
+      //   - term gets Z_q? (the reader)
+      // Spec Section 5.2: "replace _r(p, i) with Z_q? (the reader)"
+      expect(result.useReader[0], true);
 
-      //   - NO table entry
-      expect(table.localizeEntryCount, 0);
+      //   - NO spawn info
+      // Spec Section 5.2: "No goal is spawned—q will receive the assignment."
+      expect(result.spawns, isEmpty);
     });
 
     test('mixed global names: correct handling', () {
-      // Given: term [_w(p, 0), _r(p, 1)]
+      // Given: term [_w(p, 1), _r(p, 2)]
       final table = GlobalWritersTable('q');
       final globalNames = [
-        GlobalName.writer('p', 0),
-        GlobalName.reader('p', 1),
+        GlobalName.writer('p', 1),
+        GlobalName.reader('p', 2),
       ];
 
       var nextAddr = 300;
@@ -118,22 +124,22 @@ void main() {
       );
 
       // Then:
-      //   - term becomes [Y_q?, Z_q]
+      //   - term becomes [Y_q, Z_q?]
       expect(result.freshPairs.length, 2);
-      expect(result.useReader[0], true); // Y_q? (reader) for _w
-      expect(result.useReader[1], false); // Z_q (writer) for _r
+      expect(result.useReader[0], false); // Y_q (writer) for _w
+      expect(result.useReader[1], true); // Z_q? (reader) for _r
 
-      //   - entry for Y_q with remote (p, 0)
-      expect(table.localizeEntryCount, 1);
-      final entry = table.findByRemote('p', 0);
-      expect(entry, isNotNull);
-      expect(entry!.writerAddr, 300); // First allocated writer address
-
-      //   - spawn info for Z_q watching Z_q (writer addr for onBind)
+      //   - spawn info for Y_q's gs: global_send(Y_q?, _w(p,1), p)
       expect(result.spawns.length, 1);
-      expect(result.spawns[0].readerAddr, 302); // Second pair's writer address
-      expect(result.spawns[0].globalName, GlobalName.reader('p', 1));
+      expect(result.spawns[0].readerAddr, 300); // First pair's writer address
+      expect(result.spawns[0].globalName, GlobalName.writer('p', 1));
       expect(result.spawns[0].destAgent, 'p');
+
+      //   - entry for Z_q with remote (p, 2)
+      expect(table.localizeEntryCount, 1);
+      final entry = table.findByRemote('p', 2);
+      expect(entry, isNotNull);
+      expect(entry!.writerAddr, 302); // Second pair's writer address
 
       // Spec Section 5.3: Globalize-Localize Correspondence
     });

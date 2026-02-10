@@ -209,8 +209,8 @@ class MadContext {
   /// Per spec Section 8.3, handles three cases:
   ///
   /// **Case `_w(p, 0) := [T | _w(p,0)]` (Serializer)**: Cold-call to our network input.
-  /// **Case `_w(p, i) := T` with i > 0**: We localized _w(p,i), search for entry (X_q, p, i).
-  /// **Case `_r(p, i) := T`**: We globalized Y?, find entry (Y, q) at index i.
+  /// **Case `_w(p, i) := T` with i > 0**: We globalized writer Y, find entry (Y, q) at index i.
+  /// **Case `_r(p, i) := T`**: We localized _r(p,i), search for entry (Z_q, p, i).
   ///
   /// Both non-serializer cases: localize T, bind writer, register spawned goals, remove entry.
   /// Serializer case: extend network input stream, update entry (don't remove).
@@ -225,10 +225,10 @@ class MadContext {
       // Case _w(p, 0) := [T | _w(p,0)] - serializer (cold-call to network input)
       _handleSerializerAssignment(value, fromAgent);
     } else if (globalName.isWriter) {
-      // Case _w(p, i) := T with i > 0 - we localized this, search for entry
+      // Case _w(p, i) := T with i > 0 - we globalized this writer, direct lookup
       _handleWriterAssignment(globalName, value, fromAgent);
     } else {
-      // Case _r(p, i) := T - we globalized this, direct lookup
+      // Case _r(p, i) := T - we localized this, search for entry
       _handleReaderAssignment(globalName, value, fromAgent);
     }
   }
@@ -305,23 +305,25 @@ class MadContext {
     }
   }
 
-  /// Handle _w(p, i) := T assignment with i > 0 (we localized _w(p,i))
+  /// Handle _w(p, i) := T assignment with i > 0 (we globalized writer Y)
   ///
-  /// Search for LocalizeEntry with (remoteAgent=p, remoteIndex=i).
-  /// Per spec Section 8.3: "Localize T↑ by q from p to get T_q↓, assign X_q := T_q↓"
+  /// We are agent p. We globalized writer Y, creating GlobalizeEntry (Y, q) at index i.
+  /// Now q's gs fires and sends _w(p, i) := T to us. Direct index lookup.
+  /// Per spec Section 8.3: "Agent p finds entry (X, q) at index i in W_p."
   void _handleWriterAssignment(GlobalName globalName, Term value, String fromAgent) {
-    final entry = wp.findByRemote(globalName.agent, globalName.index);
+    final entry = wp.lookupByIndex(globalName.index);
+
     if (entry == null) {
       throw StateError(
-        'No LocalizeEntry for $globalName: expected entry with '
-        '(remoteAgent=${globalName.agent}, remoteIndex=${globalName.index})',
+        'No GlobalizeEntry at index ${globalName.index} for $globalName',
       );
     }
 
-    _trace('[MAD $agentId] _handleWriterAssignment: found entry, writerAddr=${entry.writerAddr}');
+    final writerAddr = entry.writerAddr;
+    _trace('[MAD $agentId] _handleWriterAssignment: globalize-writer entry, writerAddr=$writerAddr');
 
     // Localize the value: replace global names with local variables
-    // Per spec Section 8.3: "Localize T↑ by q from p to get T_q↓"
+    // Per spec Section 8.3: "Localize T↑ by p to get T_p↓"
     Term localizedValue = value;
     final globalNames = extractGlobalNames(value);
     if (globalNames.isNotEmpty) {
@@ -338,7 +340,7 @@ class MadContext {
     }
 
     // Bind the writer with localized value
-    final activations = runtime.heap.bindVariable(entry.writerAddr, localizedValue);
+    final activations = runtime.heap.bindVariable(writerAddr, localizedValue);
     _trace('[MAD $agentId] _handleWriterAssignment: bound writer, ${activations.length} activations');
 
     // Reactivate suspended goals
@@ -347,31 +349,28 @@ class MadContext {
     }
 
     // Remove the entry
-    wp.removeLocalizeEntry(globalName.agent, globalName.index);
+    wp.removeGlobalizeEntry(globalName.index);
     _trace('[MAD $agentId] _handleWriterAssignment: entry removed');
   }
 
-  /// Handle _r(p, i) := T assignment
+  /// Handle _r(p, i) := T assignment (we localized _r(p, i))
   ///
-  /// Per spec Section 8.3: "The message is destined for agent p who created
-  /// this global name. Agent p finds entry (X, q) at index i in W_p."
-  ///
-  /// Only one case: we globalized Y? as _r(p, i), so we have a GlobalizeEntry
-  /// at index i. The localizing agent q never receives _r messages — q sends them.
+  /// We are agent q. We localized _r(p, i), creating LocalizeEntry (Z_q, p, i).
+  /// Now p's gs fires and sends _r(p, i) := T to us. Search by (p, i).
+  /// Per spec Section 8.3: "Agent q searches for entry (X_q, p, i)."
   void _handleReaderAssignment(GlobalName globalName, Term value, String fromAgent) {
-    final entry = wp.lookupByIndex(globalName.index);
-
+    final entry = wp.findByRemote(globalName.agent, globalName.index);
     if (entry == null) {
       throw StateError(
-        'No GlobalizeEntry at index ${globalName.index} for $globalName',
+        'No LocalizeEntry for $globalName: expected entry with '
+        '(remoteAgent=${globalName.agent}, remoteIndex=${globalName.index})',
       );
     }
 
-    final writerAddr = entry.writerAddr;
-    _trace('[MAD $agentId] _handleReaderAssignment: globalize-reader entry, writerAddr=$writerAddr');
+    _trace('[MAD $agentId] _handleReaderAssignment: localize-reader entry, writerAddr=${entry.writerAddr}');
 
     // Localize the value: replace global names with local variables
-    // Per spec Section 8.3: "Localize T↑ by p from q to get T_p↓"
+    // Per spec Section 8.3: "Localize T↑ by q to get T_q↓"
     Term localizedValue = value;
     final globalNames = extractGlobalNames(value);
     if (globalNames.isNotEmpty) {
@@ -388,7 +387,7 @@ class MadContext {
     }
 
     // Bind the writer with localized value
-    final activations = runtime.heap.bindVariable(writerAddr, localizedValue);
+    final activations = runtime.heap.bindVariable(entry.writerAddr, localizedValue);
     _trace('[MAD $agentId] _handleReaderAssignment: bound writer, ${activations.length} activations');
 
     // Reactivate suspended goals
@@ -397,7 +396,7 @@ class MadContext {
     }
 
     // Remove the entry
-    wp.removeGlobalizeEntry(globalName.index);
+    wp.removeLocalizeEntry(globalName.agent, globalName.index);
     _trace('[MAD $agentId] _handleReaderAssignment: entry removed');
   }
 
@@ -496,7 +495,7 @@ class MadContext {
     _trace('[MAD $agentId] send: found ${vars.length} variables in term');
 
     // Globalize the term for the destination agent
-    // This allocates global names for all variables and spawns global_send goals for writers
+    // This creates entries for writers and spawns global_send goals for readers
     final globalizeResult = globalize(
       variables: vars,
       localAgent: agentId,
@@ -504,13 +503,13 @@ class MadContext {
       table: wp,
     );
 
-    // Register the spawned global_send goals for nested writers
+    // Register the spawned global_send goals for readers
     registerGlobalSendSpawns(globalizeResult.spawns);
 
-    // For globalize-reader entries: NO onBind is registered here.
-    // Per spec Section 5.1: when Y? is a reader, p creates an entry (Y, q) and
+    // For globalize-writer entries: NO onBind is registered here.
+    // Per spec Section 5.1: when Y is a writer, p creates an entry (Y, q) and
     // waits for the assignment to arrive. The global_send goal is spawned at q
-    // (by localize), not at p. Agent p does not send anything for _r entries.
+    // (by localize), not at p. Agent p does not send anything for _w entries.
 
     // Transform the term to use global names
     final globalizedTerm = globalizeTermWithResult(term, vars, globalizeResult);

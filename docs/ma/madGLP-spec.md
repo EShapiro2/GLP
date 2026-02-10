@@ -1,7 +1,7 @@
 # madGLP Specification
 
-**Version**: 5.2
-**Date**: 2026-02-09
+**Version**: 5.3
+**Date**: 2026-02-10
 **Status**: DRAFT  
 **Source**: CGLP Paper (`~/Grassroots/CGLP`), Section 7 "Multiagent Deterministic GLP (madGLP)"
 
@@ -17,9 +17,9 @@ This document specifies **Multiagent Deterministic GLP (madGLP)**, an implementa
 
 - At agent p: a local pair `(X_p, X_p?)` where both variables remain in p's resolvent
 - At agent q: a local pair `(X_q, X_q?)` where both variables remain in q's resolvent  
-- A global link connecting X_p to X_q, realized as a `global_send` goal at p and an entry in q's global writers table
+- A global link connecting X_p to X_q, realized as a `global_send` goal at the writer-owner and an entry in the reader-owner's global writers table
 
-**Push-Based Communication**: When X_p is assigned a term T at agent p, a spawned `global_send` goal detects this (when X_p? becomes known) and sends an assignment message to q. Upon receipt, q looks up the target writer in its global writers table, assigns X_q := T_q↓, and removes the entry.
+**Push-Based Communication**: When the writer-owner assigns a term T, a spawned `global_send` goal detects this (when the paired reader becomes known) and sends an assignment message to the reader-owner. Upon receipt, the reader-owner looks up the target writer in its global writers table, assigns it T↓, and removes the entry.
 
 **Uniform Forwarding**: All outgoing communication is handled by `global_send` goals, including forwarding when both ends of a variable pair are exported.
 
@@ -64,7 +64,7 @@ A global writers table entry at agent p is either:
 
 **Definition [Global Writers Table]**
 
-The global writers table W_p of agent p is an indexed array of entries. For entries created by Globalize at index i, the index i is the index in the global name `_r(p, i)`. For entries created by Localize, the entry stores the remote index explicitly.
+The global writers table W_p of agent p is an indexed array of entries. For entries created by Globalize at index i, the index i is the index in the global name `_w(p, i)`. For entries created by Localize, the entry stores the remote index explicitly.
 
 **What the Table Stores**: The table contains only writers that await incoming assignments. No entries are created for outgoing links—those are handled by `global_send` goals.
 
@@ -94,7 +94,7 @@ where:
 
 The guard `known(T)` succeeds when T is bound to a non-variable term. The builtin `'_send'(T, G, Q)` globalizes T and adds message `(G := T↑, Q)` to the agent's outgoing message set.
 
-**Forwarding via global_send**: When an agent exports both ends of a variable pair (e.g., sending `[X, X?]` to another agent), the Globalize operation spawns a `global_send` goal for the exported writer. If a value arrives on one global link and is assigned to a local writer X, then X? becomes known, triggering any `global_send` goal watching X?. This automatically forwards the value without requiring special forwarding logic in the Receive transaction.
+**Forwarding via global_send**: When an agent exports both ends of a variable pair (e.g., sending `[X, X?]` to another agent), the Globalize operation creates an entry for the exported writer and spawns a `global_send` goal for the exported reader. If a value arrives on the writer's link and is assigned to the local writer X, then X? becomes known, triggering the `global_send` goal watching X?. This automatically forwards the value to the reader's link without requiring special forwarding logic in the Receive transaction.
 
 ### 4.1 Index-0 Serializer for Cold-Calls
 
@@ -139,9 +139,9 @@ This reads cold-call messages `msg(Q, T)` from the output stream and uses `globa
 
 Given agent p, remote agent q, and term T, the globalization by p, written T_p↑, may update the global writers table W'_p and spawn goals into p's resolvent as follows. For each variable Y occurring in T:
 
-1. **If Y is a writer**: allocate the next index i, replace Y in T_p↑ with `_w(p, i)`, and spawn goal `global_send(Y?, _w(p,i), q)` into p's resolvent. No entry is created—the `global_send` goal handles outgoing communication.
+1. **If Y is a writer**: allocate the next index i, replace Y in T_p↑ with `_w(p, i)`, and create entry `(Y, q)` at index i in W'_p. No goal is spawned—p will receive the assignment on this link (q gets the writer and will send the value back).
 
-2. **If Y? is a reader**: allocate the next index i, create entry `(Y, q)` at index i in W'_p, and replace Y? in T_p↑ with `_r(p, i)`. No goal is spawned—p will receive the assignment on this link.
+2. **If Y? is a reader**: allocate the next index i, replace Y? in T_p↑ with `_r(p, i)`, and spawn goal `global_send(Y?, _r(p,i), q)` into p's resolvent. No entry is created—the `global_send` goal handles outgoing communication (p keeps the writer and will send the value).
 
 ### 5.2 Localize
 
@@ -149,41 +149,41 @@ Given agent p, remote agent q, and term T, the globalization by p, written T_p�
 
 Given agent q, remote agent p, and globalized term T_p↑, the localization by q, written T_q↓, may update the global writers table W'_q and spawn goals into q's resolvent as follows. For each global name in T_p↑:
 
-1. **If `_w(p, i)`**: create fresh local pair `(Y_q, Y_q?)`, allocate the next index k in W'_q, add entry `(Y_q, p, i)`, and replace `_w(p, i)` with Y_q? (the reader) in T_q↓. No goal is spawned—q will receive the assignment on this link.
+1. **If `_w(p, i)`**: create fresh local pair `(Y_q, Y_q?)`, replace `_w(p, i)` with Y_q (the writer) in T_q↓, and spawn goal `global_send(Y_q?, _w(p,i), p)` into q's resolvent. No entry is created—the `global_send` goal handles outgoing communication (q gets the writer and will send the value to p).
 
-2. **If `_r(p, i)`**: create fresh local pair `(Z_q, Z_q?)`, replace `_r(p, i)` with Z_q (the writer) in T_q↓, and spawn goal `global_send(Z_q?, _r(p,i), p)` into q's resolvent. No entry is created—the `global_send` goal handles outgoing communication.
+2. **If `_r(p, i)`**: create fresh local pair `(Z_q, Z_q?)`, allocate the next index k in W'_q, add entry `(Z_q, p, i)`, and replace `_r(p, i)` with Z_q? (the reader) in T_q↓. No goal is spawned—q will receive the assignment on this link (p keeps the writer and will send the value).
 
 ### 5.3 Globalize-Localize Correspondence
 
 The pairing between Globalize and Localize ensures correct dataflow:
 
-**Writer globalized at p**: Globalize spawns `global_send(Y?, _w(p,i), q)` at p. Localize adds entry `(Y_q, p, i)` at q and puts Y_q? in q's term. When p assigns Y, the spawned goal fires and sends the value to q, where the entry routes it to Y_q, making it available via Y_q?.
+**Writer globalized at p**: Globalize creates entry `(Y, q)` at p. Localize creates fresh pair `(Y_q, Y_q?)` at q, puts Y_q (writer) in q's term, and spawns `global_send(Y_q?, _w(p,i), p)`. When q assigns Y_q, the spawned goal fires and sends the value to p, where the entry routes it to Y, making it available via Y?.
 
-**Reader globalized at p**: Globalize adds entry `(Y, q)` at p. Localize puts Z_q in q's term and spawns `global_send(Z_q?, _r(p,i), p)`. When q assigns Z_q, the spawned goal fires and sends the value back to p, where the entry routes it to Y, making it available via Y?.
+**Reader globalized at p**: Globalize spawns `global_send(Y?, _r(p,i), q)` at p. Localize creates fresh pair `(Z_q, Z_q?)` at q, adds entry `(Z_q, p, i)`, and puts Z_q? (reader) in q's term. When p assigns Y, the spawned goal fires and sends the value to q, where the entry routes it to Z_q, making it available via Z_q?.
 
 ### 5.4 Exporting Both Ends of a Pair
 
 Consider agent p exporting term `[X, X?]` to agent q. Globalize processes both (index 0 is reserved for the serializer, so indices start at 1):
 
-- Writer X: spawns `global_send(X?, _w(p,1), q)`, no entry
-- Reader X?: entry `(X, q)` at index 2, no spawn
+- Writer X: entry `(X, q)` at index 1, no spawn
+- Reader X?: spawns `global_send(X?, _r(p,2), q)`, no entry
 
 At q, Localize creates two independent pairs:
 
-- For `_w(p,1)`: pair `(Y_q, Y_q?)`, entry `(Y_q, p, 1)`, term gets Y_q?
-- For `_r(p,2)`: pair `(Z_q, Z_q?)`, term gets Z_q, spawns `global_send(Z_q?, _r(p,2), p)`
+- For `_w(p,1)`: pair `(Y_q, Y_q?)`, term gets Y_q (writer), spawns `global_send(Y_q?, _w(p,1), p)`
+- For `_r(p,2)`: pair `(Z_q, Z_q?)`, entry `(Z_q, p, 2)`, term gets Z_q? (reader)
 
-The term at q is `[Y_q?, Z_q]`. When q assigns Z_q := T:
+The term at q is `[Y_q, Z_q?]`. When q assigns Y_q := T:
 
-1. Z_q? becomes known (= T)
-2. `global_send(Z_q?, _r(p,2), p)` fires, sends `_r(p,2) := T↑` to p
-3. p receives, finds entry `(X, q)` at index 2, assigns X := T↓
+1. Y_q? becomes known (= T)
+2. `global_send(Y_q?, _w(p,1), p)` fires, sends `_w(p,1) := T↑` to p
+3. p receives, finds entry `(X, q)` at index 1, assigns X := T↓
 4. X? becomes known (= T)
-5. `global_send(X?, _w(p,1), q)` fires, sends `_w(p,1) := T↑` to q
-6. q receives, finds entry `(Y_q, p, 1)`, assigns Y_q := T↓
-7. Y_q? becomes known (= T)
+5. `global_send(X?, _r(p,2), q)` fires, sends `_r(p,2) := T↑` to q
+6. q receives, finds entry `(Z_q, p, 2)`, assigns Z_q := T↓
+7. Z_q? becomes known (= T)
 
-The value flows from Z_q through p's local pair to Y_q?, correctly implementing the semantics where both ends of the exported pair eventually share the same value.
+The value flows from Y_q through p's local pair to Z_q?, correctly implementing the semantics where both ends of the exported pair eventually share the same value.
 
 ---
 
@@ -262,14 +262,14 @@ The unary Send transaction for agent p is enabled when `(m, q) ∈ M_p`. It remo
 
 The unary Receive transaction processes a message m from the communication channel:
 
-**Case `m = (_w(p, i) := T↑)` with i > 0**: The message is destined for the agent that localized `_w(p,i)`. Agent q searches its global writers table for an entry `(X_q, p, i)` matching the remote agent p and remote index i. The entry provides the remote agent identity p, which is used when localizing T↑: any variables in T↑ get their global links pointing to p. Localize T↑ by q from p to get T_q↓, assign X_q := T_q↓, apply {X_q? := T_q↓} to goals containing X_q?, reactivate suspended goals, and remove the entry from W'_q.
+**Case `m = (_w(p, i) := T↑)` with i > 0**: The message is destined for agent p who created this global name (by globalizing a writer). Agent p finds entry `(X, q)` at index i in W_p. The entry provides the remote agent identity q, which is used when localizing T↑: any variables in T↑ get their global links pointing to q. Localize T↑ by p from q to get T_p↓, assign X := T_p↓, apply {X? := T_p↓} to goals containing X?, reactivate suspended goals, and remove the entry from W'_p.
 
 **Case `m = (_w(q, 0) := [T↑ | _w(q,0)])` (Serializer)**: Cold-call message to agent q's network input. Agent q finds the permanent entry `(N_q, *)` at index 0. Localize T↑ by q to get T_q↓. Assign N_q := [T_q↓ | N'_q] where N'_q is a fresh writer. Update the entry to `(N'_q, *)` at index 0 (extending the stream). Reactivate any goals suspended on N_q?. The entry is NOT removed—it is updated with the fresh writer for the next message.
 
-**Case `m = (_r(p, i) := T↑)`**: The message is destined for agent p who created this global name. Agent p finds entry `(X, q)` at index i in W_p. The entry provides the remote agent identity q, which is used when localizing T↑: any variables in T↑ get their global links pointing to q. Localize T↑ by p from q to get T_p↓, assign X := T_p↓, apply {X? := T_p↓} to goals containing X?, reactivate suspended goals, and remove the entry from W'_p.
+**Case `m = (_r(p, i) := T↑)`**: The message is destined for the agent that localized `_r(p,i)` (by localizing a reader global name). Agent q searches its global writers table for an entry `(X_q, p, i)` matching the remote agent p and remote index i. The entry provides the remote agent identity p, which is used when localizing T↑: any variables in T↑ get their global links pointing to p. Localize T↑ by q from p to get T_q↓, assign X_q := T_q↓, apply {X_q? := T_q↓} to goals containing X_q?, reactivate suspended goals, and remove the entry from W'_q.
 
 **Remote Agent Identity in Entries**: The entry stores the remote agent identity (q in `(X, q)` or p in `(X_q, p, i)`), which serves two purposes:
-1. For `(X_q, p, i)` entries: enables lookup by matching the message's global name `_w(p, i)` to the entry's `(p, i)` pair
+1. For `(X_q, p, i)` entries: enables lookup by matching the message's global name `_r(p, i)` to the entry's `(p, i)` pair
 2. For both entry types: provides the remote agent identity needed during Localize to properly bake the destination into any nested global links (spawned `global_send` goals or new entries)
 
 **Automatic Forwarding**: The Receive transaction simply assigns the local writer and removes the entry. If the assigned writer's reader (X?) is being watched by a `global_send` goal (because it was also exported), that goal will fire on a subsequent Reduce, automatically forwarding the value.
@@ -290,14 +290,14 @@ The maGLP binary Cold-call transaction is implemented in madGLP by: `global_send
 
 ### 9.3 Global Writers Table Lifecycle
 
-An entry is added to the global writers table when a global link is established with the agent as the receiver: either when globalizing a reader (expecting an assignment) or when localizing a writer global name (expecting the assignment). The entry is removed when the assignment arrives and the writer is bound.
+An entry is added to the global writers table when a global link is established with the agent as the receiver: either when globalizing a writer (expecting the remote agent to send the value back) or when localizing a reader global name (expecting the globalizer to send the value). The entry is removed when the assignment arrives and the writer is bound.
 
 ### 9.4 Message Routing
 
 Messages use global names to enable routing:
 
-- Message `_w(p, i) := T` is sent from p to whoever localized `_w(p, i)`; that agent searches for an entry with remote agent p and remote index i
-- Message `_r(p, i) := T` is sent to p (the original globalizer); p has an entry at index i in its global writers table
+- Message `_w(p, i) := T` is sent to p (the original globalizer); p has an entry at index i in its global writers table
+- Message `_r(p, i) := T` is sent from p to whoever localized `_r(p, i)`; that agent searches for an entry with remote agent p and remote index i
 
 ---
 
@@ -313,10 +313,11 @@ At boot time, each agent has its serializer entry created:
 - p: entry `(N_p, *)` at index 0 for network input
 - q: entry `(N_q, *)` at index 0 for network input
 
-The initial shared pair `(Xs, Xs?)` is established via cold-call: p sends `global_send(Xs?, _w(q,0), q)` to introduce itself to q. (Indices for regular links start at 1.)
+The initial shared pair `(Xs, Xs?)` is established via cold-call: p sends `global_send(msg(q, Xs?), _w(q,0), q)` through `send_to_net`. The term sent contains reader Xs?, so globalize processes a reader:
 
-- p spawns `global_send(Xs?, _w(p,1), q)`
-- q creates entry `(Xs_q, p, 1)`
+- p: globalize Xs? (reader) → spawns `global_send(Xs?, _r(p,1), q)`, global name `_r(p,1)`
+- Cold-call message `_w(q,0) := [msg(q, _r(p,1)) | _w(q,0)]` sent to q
+- q localizes `_r(p,1)`: creates pair `(Xs_q, Xs_q?)`, entry `(Xs_q, p, 1)`, puts Xs_q? (reader) in term
 - q's resolvent contains Xs_q?
 
 **Stage 1: p Assigns Xs**
@@ -324,80 +325,81 @@ The initial shared pair `(Xs, Xs?)` is established via cold-call: p sends `globa
 p assigns Xs := [add|Xs1]:
 
 1. Xs? becomes known (= [add|Xs1])
-2. `global_send(Xs?, _w(p,1), q)` fires
-3. The term [add|Xs1] is globalized: Xs1 becomes `_w(p,2)`, spawns `global_send(Xs1?, _w(p,2), q)`
-4. Message `_w(p,1) := [add|_w(p,2)]` sent to q
+2. `global_send(Xs?, _r(p,1), q)` fires
+3. The term [add|Xs1] is globalized for q: Xs1 is a writer, so entry `(Xs1, q)` at index 2 in W_p, becomes `_w(p,2)`
+4. Message `_r(p,1) := [add|_w(p,2)]` sent to q
 
 **Stage 2: q Receives**
 
-q receives `_w(p,1) := [add|_w(p,2)]`:
+q receives `_r(p,1) := [add|_w(p,2)]`:
 
-1. Find entry `(Xs_q, p, 1)`
-2. Localize: create pair `(Xs1_q, Xs1_q?)`, entry `(Xs1_q, p, 2)`
-3. Assign Xs_q := [add|Xs1_q?]
+1. Find entry `(Xs_q, p, 1)` by searching for `(p, 1)`
+2. Localize `_w(p,2)`: create pair `(Xs1_q, Xs1_q?)`, spawn `global_send(Xs1_q?, _w(p,2), p)`, put Xs1_q (writer) in term
+3. Assign Xs_q := [add|Xs1_q]
 4. Remove entry `(Xs_q, p, 1)`
 
 ### 10.2 Return Value Scenario
 
-p assigns Xs1 := [value(V?)|Xs2], exporting reader V?:
+p assigns Xs1 := [value(V?)|Xs2], exporting reader V? and writer Xs2:
 
-1. Globalize V?: entry `(V, q)` at index 3 in W_p, becomes `_r(p,3)`
-2. Message `_w(p,2) := [value(_r(p,3))|_w(p,4)]` sent to q
+1. Globalize V? (reader): spawns `global_send(V?, _r(p,3), q)`, becomes `_r(p,3)`
+2. Globalize Xs2 (writer): entry `(Xs2, q)` at index 4 in W_p, becomes `_w(p,4)`
+3. Message `_w(p,2) := [value(_r(p,3))|_w(p,4)]` sent to q
 
 q receives and localizes:
 
-1. For `_r(p,3)`: create pair `(V_q, V_q?)`, put V_q in term, spawn `global_send(V_q?, _r(p,3), p)`
-2. For `_w(p,4)`: create pair `(Xs2_q, Xs2_q?)`, entry `(Xs2_q, p, 4)`, put Xs2_q? in term
+1. For `_r(p,3)`: create pair `(V_q, V_q?)`, entry `(V_q, p, 3)`, put V_q? (reader) in term
+2. For `_w(p,4)`: create pair `(Xs2_q, Xs2_q?)`, spawn `global_send(Xs2_q?, _w(p,4), p)`, put Xs2_q (writer) in term
 
-When q's monitor assigns V_q := Sum:
+When p assigns V := Sum (the client computes the return value):
 
-1. V_q? becomes known
-2. `global_send(V_q?, _r(p,3), p)` fires
-3. Message `_r(p,3) := Sum↑` sent to p
-4. p receives, finds entry `(V, q)` at index 3, assigns V := Sum↓
-5. V? becomes known in p's resolvent
+1. V? becomes known at p (= Sum)
+2. `global_send(V?, _r(p,3), q)` fires
+3. Message `_r(p,3) := Sum↑` sent to q
+4. q receives, finds entry `(V_q, p, 3)`, assigns V_q := Sum↓
+5. V_q? becomes known in q's resolvent
 
 ### 10.3 Friend-Mediated Introduction
 
-Bob introduces Alice to Charlie by sending writer X to Alice and reader X? to Charlie.
+Bob introduces Alice to Charlie by sending reader X? to Alice and writer X to Charlie. Alice will receive values (she gets the reader end); Charlie will send values (he gets the writer end).
 
-**Bob exports X to Alice**:
+**Bob exports X? to Alice**:
 
-Bob sends term X to Alice via cold-call to Alice's serializer:
+Bob sends term containing X? to Alice via cold-call to Alice's serializer:
 
-- Globalize X: spawns `global_send(X?, _w(bob,1), alice)`, no entry
-- Message sent via `global_send(intro(X?), _w(alice,0), alice)` (cold-call to Alice's serializer)
-- Alice localizes `_w(bob,1)`: creates pair `(X_a, X_a?)`, entry `(X_a, bob, 1)`, receives X_a?
+- Globalize X? (reader): spawns `global_send(X?, _r(bob,1), alice)`, no entry
+- Cold-call message sent to Alice's serializer `_w(alice,0)`
+- Alice localizes `_r(bob,1)`: creates pair `(X_a, X_a?)`, entry `(X_a, bob, 1)`, puts X_a? (reader) in term
 
-Alice now holds reader X_a? and will receive values when Bob's X is assigned.
+Alice now holds reader X_a? and will receive values when the writer is assigned.
 
-**Bob exports X? to Charlie**:
+**Bob exports X to Charlie**:
 
-Bob sends term X? to Charlie via cold-call to Charlie's serializer:
+Bob sends term containing X to Charlie via cold-call to Charlie's serializer:
 
-- Globalize X?: entry `(X, charlie)` at index 2 in W_bob, becomes `_r(bob,2)`
-- Message sent via `global_send(intro(X), _w(charlie,0), charlie)` (cold-call to Charlie's serializer)
-- Charlie localizes `_r(bob,2)`: creates pair `(X_c, X_c?)`, spawns `global_send(X_c?, _r(bob,2), bob)`, receives X_c (the writer)
+- Globalize X (writer): entry `(X, charlie)` at index 2 in W_bob, becomes `_w(bob,2)`
+- Cold-call message sent to Charlie's serializer `_w(charlie,0)`
+- Charlie localizes `_w(bob,2)`: creates pair `(X_c, X_c?)`, spawns `global_send(X_c?, _w(bob,2), bob)`, puts X_c (writer) in term
 
-Charlie now holds writer X_c and can send values back to Bob.
+Charlie now holds writer X_c and can assign values.
 
 **State after introduction**:
 
-- Bob: `global_send(X?, _w(bob,1), alice)` goal, entry `(X, charlie)` at index 2
+- Bob: `global_send(X?, _r(bob,1), alice)` goal, entry `(X, charlie)` at index 2
 - Alice: entry `(X_a, bob, 1)`, holds X_a?
-- Charlie: `global_send(X_c?, _r(bob,2), bob)` goal, holds X_c
+- Charlie: `global_send(X_c?, _w(bob,2), bob)` goal, holds X_c
 
 **Charlie sends a message**:
 
 Charlie assigns X_c := T:
 
 1. X_c? becomes known (= T)
-2. `global_send(X_c?, _r(bob,2), bob)` fires
-3. Message `_r(bob,2) := T↑` sent to Bob
+2. `global_send(X_c?, _w(bob,2), bob)` fires
+3. Message `_w(bob,2) := T↑` sent to Bob
 4. Bob receives, finds entry `(X, charlie)` at index 2, assigns X := T↓
 5. X? becomes known at Bob (= T)
-6. `global_send(X?, _w(bob,1), alice)` fires
-7. Message `_w(bob,1) := T↑` sent to Alice
+6. `global_send(X?, _r(bob,1), alice)` fires
+7. Message `_r(bob,1) := T↑` sent to Alice
 8. Alice receives, finds entry `(X_a, bob, 1)`, assigns X_a := T↓
 9. X_a? becomes known at Alice (= T)
 
@@ -413,7 +415,7 @@ Each agent maintains a counter for allocating global name indices. The counter i
 
 ### 11.2 Entry Lookup
 
-For entries created by Globalize (form `(X, q)`), lookup is direct by index—the entry at index i corresponds to global name `_r(p, i)`.
+For entries created by Globalize (form `(X, q)`), lookup is direct by index—the entry at index i corresponds to global name `_w(p, i)`.
 
 For entries created by Localize (form `(X, q, i)`), lookup requires searching for a matching `(q, i)` pair. Implementations may maintain a secondary index mapping `(remote_agent, remote_index)` to local entries for efficiency.
 
@@ -447,8 +449,8 @@ The `'_send'(T, G, Q)` builtin behavior depends on whether G is a serializer add
 2. Adds message `(G := T↑, Q)` to M_p — content sent directly
 
 The destination Q is baked into all nested global links created during globalization:
-- For each writer Y in T: spawns `global_send(Y?, _w(p,i), Q)` — Q is the destination
-- For each reader Y? in T: creates entry `(Y, Q)` — Q identifies who will send the assignment
+- For each writer Y in T: creates entry `(Y, Q)` at p — Q identifies who will send the assignment back
+- For each reader Y? in T: spawns `global_send(Y?, _r(p,i), Q)` — Q is the destination
 
 This builtin is invoked only when the `global_send` goal's guard succeeds, ensuring the reader argument is bound.
 
@@ -491,7 +493,7 @@ where:
 1. Wait for the message to be known (via list pattern match)
 2. Call `global_send(T?, _w(Q,0), Q?)` which:
    - Waits for T? to be known (the `known(T)` guard in `global_send`)
-   - Globalizes T for agent Q, spawning `global_send` goals for nested writers and creating entries for nested readers
+   - Globalizes T for agent Q, creating entries for nested writers and spawning `global_send` goals for nested readers
    - Adds message `(_w(Q,0) := [T↑ | _w(Q,0)], Q)` to M_p (serializer format)
 3. Recurse with the tail
 
@@ -688,6 +690,7 @@ The GLP compiler rejects underscore-prefixed constants in user mode (default). S
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 5.3 | 2026-02-10 | Claude | **Corrected Globalize/Localize direction**: Swapped gs/entry placement in Sections 5.1-5.4, 8.3, 9.3-9.4, 10.1-10.3, 11.2, 11.5, 12.2. Writer → entry at globalizer (receiver gets writer, sends back). Reader → gs at globalizer (globalizer keeps writer, sends to receiver). Updated all examples and remarks to match. Aligns with corrected paper appendix. |
 | 5.2 | 2026-02-09 | Claude | Fixed cold-call polarity error in Receive serializer case (Section 8.3): changed `N_q := [T_q↓? \| N'_q]` to `N_q := [T_q↓ \| N'_q]`. Removed duplicate definition in Section 12.3, replaced with reference to 8.3. |
 | 5.1 | 2026-02-02 | Claude | Added Section 15: Reserved Constants. Documents `'_user'`, `'_net'`, `'_w(p,i)'`, `'_r(p,i)'` as system-reserved. Describes `-mode(system).` directive for system code. Renumbered References→16, Document History→17. |
 | 5.0 | 2026-02-02 | Claude | **Major revision**: Unified cold-calls with established links via index-0 serializer. Removed binary Network Transaction. Added Section 4.1 (Index-0 Serializer). Updated all examples to use indices starting at 1. Updated '_send' builtin with index check. Updated Receive transaction with serializer case. Updated send_to_net to use 3-arg global_send with _w(Q,0). All transactions now unary. |

@@ -121,7 +121,7 @@ class GlobalizeResult {
   /// Global names substituted for variables, in order of occurrence
   final List<GlobalName> globalNames;
 
-  /// Spawns needed for writer variables
+  /// Spawns needed for reader variables
   final List<GlobalSendSpawn> spawns;
 
   GlobalizeResult({
@@ -149,10 +149,10 @@ class LocalizeResult {
   final List<FreshPair> freshPairs;
 
   /// What to substitute in the term: writer addr or reader addr per position
-  /// true = use reader (Y_q?), false = use writer (Z_q)
+  /// false = use writer (Y_q) for _w names, true = use reader (Z_q?) for _r names
   final List<bool> useReader;
 
-  /// Spawns needed for _r(p,i) global names
+  /// Spawns needed for _w(p,i) global names
   final List<GlobalSendSpawn> spawns;
 
   LocalizeResult({
@@ -168,11 +168,13 @@ class LocalizeResult {
 /// produces the globalized representation T_p↑.
 ///
 /// Spec Section 5.1:
-/// - If Y is a writer: allocate index i, replace with _w(p, i), spawn global_send(Y?, _w(p,i), q)
-/// - If Y? is a reader: allocate index i, create entry (Y, q) at index i, replace with _r(p, i)
+/// - If Y is a writer: allocate index i, create entry (Y, q) at index i,
+///   replace with _w(p, i). No goal is spawned.
+/// - If Y? is a reader: allocate index i, replace with _r(p, i),
+///   spawn global_send(Y?, _r(p,i), q). No entry is created.
 ///
 /// Returns GlobalizeResult with global names and spawn info.
-/// Updates the GlobalWritersTable with entries for readers.
+/// Updates the GlobalWritersTable with entries for writers.
 GlobalizeResult globalize({
   required List<TermVar> variables,
   required String localAgent,
@@ -184,29 +186,31 @@ GlobalizeResult globalize({
 
   for (final v in variables) {
     if (v.isWriter) {
-      // Writer: spawn global_send, no entry
-      // Spec: "allocate the next index i, replace Y with _w(p, i),
-      //        spawn global_send(Y?, _w(p,i), q). No entry is created."
+      // Writer: create entry, no spawn
+      // Spec: "allocate the next index i, create entry (Y, q) at index i
+      //        in W'_p, and replace Y in T_p↑ with _w(p, i).
+      //        No goal is spawned—p will receive the assignment on this link."
+      // Entry stores the writer address Y for later binding when value arrives.
+      final index = table.addGlobalizeEntry(v.writerAddr, remoteAgent);
+      globalNames.add(GlobalName.writer(localAgent, index));
+    } else {
+      // Reader: spawn global_send, no entry
+      // Spec: "allocate the next index i, replace Y? in T_p↑ with _r(p, i),
+      //        and spawn global_send(Y?, _r(p,i), q). No entry is created—
+      //        the global_send goal handles outgoing communication."
       final index = table.allocateIndex();
-      final globalName = GlobalName.writer(localAgent, index);
+      final globalName = GlobalName.reader(localAgent, index);
       globalNames.add(globalName);
 
-      // Spawn global_send(Y?, _w(p,i), q)
+      // Spawn global_send(Y?, _r(p,i), q)
       // Note: GlobalSendSpawn.readerAddr is used as the key for heap.onBind(),
-      // which is indexed by *writer* address. We pass writerAddr (= v.addr for
-      // a writer TermVar) so the callback fires when bindVariable is called.
+      // which is indexed by *writer* address. We pass writerAddr so the
+      // callback fires when bindVariable is called on Y.
       spawns.add(GlobalSendSpawn(
         readerAddr: v.writerAddr,
         globalName: globalName,
         destAgent: remoteAgent,
       ));
-    } else {
-      // Reader: create entry, no spawn
-      // Spec: "allocate the next index i, create entry (Y, q) at index i,
-      //        replace Y? with _r(p, i). No goal is spawned."
-      // Entry stores the writer address Y (not the reader Y?) for later binding.
-      final index = table.addGlobalizeEntry(v.writerAddr, remoteAgent);
-      globalNames.add(GlobalName.reader(localAgent, index));
     }
   }
 
@@ -219,11 +223,13 @@ GlobalizeResult globalize({
 /// produces the localized representation T_q↓.
 ///
 /// Spec Section 5.2:
-/// - If _w(p, i): create fresh pair, add entry (Y_q, p, i), use Y_q? (reader)
-/// - If _r(p, i): create fresh pair, spawn global_send(Z_q?, _r(p,i), p), use Z_q (writer)
+/// - If _w(p, i): create fresh pair (Y_q, Y_q?), replace with Y_q (writer),
+///   spawn global_send(Y_q?, _w(p,i), p). No entry is created.
+/// - If _r(p, i): create fresh pair (Z_q, Z_q?), add entry (Z_q, p, i),
+///   replace with Z_q? (reader). No goal is spawned.
 ///
 /// Returns LocalizeResult with fresh pairs, usage info, and spawn info.
-/// Updates the GlobalWritersTable with entries for _w names.
+/// Updates the GlobalWritersTable with entries for _r names.
 ///
 /// The [freshAddrAllocator] function is called to allocate each fresh variable pair,
 /// returning (writerAddr, readerAddr).
@@ -244,30 +250,30 @@ LocalizeResult localize({
     freshPairs.add(pair);
 
     if (gn.isWriter) {
-      // _w(p, i): create entry with remote index, use reader
-      // Spec: "create fresh local pair (Y_q, Y_q?), allocate the next index k,
-      //        add entry (Y_q, p, i), replace _w(p, i) with Y_q? (the reader)"
-      table.addLocalizeEntry(writerAddr, gn.agent, gn.index);
-      useReader.add(true); // Use Y_q?
-    } else {
-      // _r(p, i): spawn global_send, use writer
-      // Spec: "create fresh local pair (Z_q, Z_q?), replace _r(p, i) with Z_q,
-      //        spawn global_send(Z_q?, _r(p,i), p)"
-      useReader.add(false); // Use Z_q
+      // _w(p, i): spawn global_send, use writer
+      // Spec: "create fresh local pair (Y_q, Y_q?), replace _w(p, i) with
+      //        Y_q (the writer) in T_q↓, and spawn global_send(Y_q?, _w(p,i), p).
+      //        No entry is created—the global_send goal handles outgoing communication."
+      useReader.add(false); // Use Y_q (writer)
 
-      // Spec: "No entry is created — the global_send goal handles outgoing communication."
-      // _r(p,i) messages are routed to agent p (the globalizer), not to q (the localizer).
-
-      // Spawn global_send(Z_q?, _r(p,i), p) for the reverse direction
-      // (when agent q binds Z, value flows back to agent p)
+      // Spawn global_send(Y_q?, _w(p,i), p)
+      // When q assigns Y_q, Y_q? becomes known, gs fires and sends value to p.
       // Note: GlobalSendSpawn.readerAddr is used as the key for heap.onBind(),
       // which is indexed by *writer* address. We pass writerAddr so the callback
       // fires when bindVariable(writerAddr, ...) is called.
       spawns.add(GlobalSendSpawn(
         readerAddr: writerAddr,
         globalName: gn,
-        destAgent: gn.agent, // Send back to the agent who created the name
+        destAgent: gn.agent, // Send back to agent p who created the name
       ));
+    } else {
+      // _r(p, i): create entry, use reader
+      // Spec: "create fresh local pair (Z_q, Z_q?), allocate the next index k
+      //        in W'_q, add entry (Z_q, p, i), and replace _r(p, i) with Z_q?
+      //        (the reader) in T_q↓. No goal is spawned—q will receive the
+      //        assignment on this link."
+      table.addLocalizeEntry(writerAddr, gn.agent, gn.index);
+      useReader.add(true); // Use Z_q? (reader)
     }
   }
 

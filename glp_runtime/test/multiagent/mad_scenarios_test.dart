@@ -16,45 +16,52 @@ import 'package:glp_runtime/multiagent/global_send.dart';
 void main() {
   group('Section 10.1: Direct Communication (Client-Monitor)', () {
     test('p sends stream X to q, p assigns X := [add|Xs1], q receives', () {
-      // Setup: Agent p has client(Xs), agent q has monitor(Xs?)
-      // Action: p assigns Xs := [add|Xs1]
-      // Verify: q receives [add|Xs1] via global link
+      // Corrected definitions:
+      // p sends Xs? (reader) to q. p assigns Xs, gs fires, q receives.
+      // Globalize reader Xs? → spawn gs(Xs?, _r(p,1), q), no entry
+      // Localize _r(p,1) at q → entry (Z_q, p, 1), use Z_q? (reader)
 
       final runtimeP = GlpRuntime();
       final runtimeQ = GlpRuntime();
       final ctxP = MadContext(agentId: 'p', runtime: runtimeP);
       final ctxQ = MadContext(agentId: 'q', runtime: runtimeQ);
 
-      // p creates stream variable Xs
+      // p creates stream variable (Xs, Xs?)
       final (writerXs, readerXs) = runtimeP.heap.allocateVariable();
       // p also creates Xs1 for the tail
       final (writerXs1, readerXs1) = runtimeP.heap.allocateVariable();
 
-      // Network transaction: p globalizes Xs, q localizes
+      // Globalize Xs? (reader) at p for q:
+      // - spawns global_send(Xs?, _r(p,1), q)
+      // - no entry
       final globalizeResult = globalize(
-        variables: [TermVar.writer(writerXs, readerAddr: readerXs)],
+        variables: [TermVar.reader(readerXs, writerAddr: writerXs)],
         localAgent: 'p',
         remoteAgent: 'q',
         table: ctxP.wp,
       );
+      expect(globalizeResult.spawns.length, 1); // spawn for reader
+      expect(ctxP.wp.globalizeEntryCount, 0); // no entry
       ctxP.registerGlobalSendSpawns(globalizeResult.spawns);
 
-      // q localizes _w(p,0)
+      // q localizes _r(p,1)
+      // - entry (Z_q, p, 1)
+      // - returns Z_q? (reader)
       final localizeResult = localize(
         globalNames: globalizeResult.globalNames,
         localAgent: 'q',
         table: ctxQ.wp,
         freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );
-      final writerXsQ = localizeResult.freshPairs[0].writerAddr;
+      expect(localizeResult.useReader[0], true); // q gets reader
+      final writerZq = localizeResult.freshPairs[0].writerAddr;
 
       // Message routing: p -> q
       ctxP.onMessageReady = (dest, msg) {
         if (dest == 'q') {
-          // For this test, we know the value is [add|Xs1]
-          // Lists are StructTerm with functor '.' (cons)
+          // q receives _r(p,1) := [add|Xs1]
           ctxQ.handleMadAssignment(
-            globalName: globalizeResult.globalNames[0],
+            globalName: globalizeResult.globalNames[0], // _r(p,1)
             value: StructTerm('.', [ConstTerm('add'), VarRef(readerXs1)]),
             fromAgent: 'p',
           );
@@ -70,7 +77,7 @@ void main() {
       ctxP.flushMessages();
 
       // Verify q received [add|...]
-      final derefed = runtimeQ.heap.derefAddr(writerXsQ);
+      final derefed = runtimeQ.heap.derefAddr(writerZq);
       expect(derefed, isA<StructTerm>());
       final list = derefed as StructTerm;
       expect(list.functor, '.');
@@ -81,9 +88,10 @@ void main() {
 
   group('Section 10.2: Return Value Scenario', () {
     test('p sends [value(V?)|...] to q, q assigns V_q := Sum, p receives Sum', () {
-      // Setup: p sends [value(V?)|...] to q
-      // Action: q assigns V_q := Sum (the writer it received)
-      // Verify: p receives Sum via the global link
+      // Corrected definitions:
+      // p sends V (writer) to q. q assigns V_q, gs fires, p receives.
+      // Globalize writer V → entry (V, q) at index 1, no spawn
+      // Localize _w(p,1) at q → spawn gs(V_q?, _w(p,1), p), use V_q (writer)
 
       final runtimeP = GlpRuntime();
       final runtimeQ = GlpRuntime();
@@ -93,17 +101,18 @@ void main() {
       // p creates V (for return value)
       final (writerV, readerV) = runtimeP.heap.allocateVariable();
 
-      // p globalizes V? (reader) - creates entry, returns _r(p,0)
+      // p globalizes V (writer) - creates entry, no spawn
       final globalizeResult = globalize(
-        variables: [TermVar.reader(readerV, writerAddr: writerV)],
+        variables: [TermVar.writer(writerV, readerAddr: readerV)],
         localAgent: 'p',
         remoteAgent: 'q',
         table: ctxP.wp,
       );
 
-      expect(ctxP.wp.lookupByIndex(0), isNotNull);
+      expect(ctxP.wp.lookupByIndex(1), isNotNull); // Entry at index 1
+      expect(globalizeResult.spawns, isEmpty); // No spawn for writer
 
-      // q localizes _r(p,0) - gets writer, spawns global_send
+      // q localizes _w(p,1) - gets writer, spawns global_send
       final localizeResult = localize(
         globalNames: globalizeResult.globalNames,
         localAgent: 'q',
@@ -119,7 +128,7 @@ void main() {
       ctxQ.onMessageReady = (dest, msg) {
         if (dest == 'p') {
           ctxP.handleMadAssignment(
-            globalName: globalizeResult.globalNames[0], // _r(p,0)
+            globalName: globalizeResult.globalNames[0], // _w(p,1)
             value: ConstTerm(100), // Sum = 100
             fromAgent: 'q',
           );
@@ -143,11 +152,14 @@ void main() {
   group('Section 10.3: Friend-Mediated Introduction', () {
     test('Bob forwards X from Alice to Charlie, Charlie assigns, Alice receives', () {
       // Corrected scenario per spec Section 10.3:
-      // - Bob creates X
-      // - Bob sends X (writer) to Alice
-      // - Bob sends X? (reader) to Charlie
+      // - Bob creates (X, X?)
+      // - Bob sends X? (reader) to Alice → gs at Bob, entry at Alice
+      // - Bob sends X (writer) to Charlie → entry at Bob, gs at Charlie
       // - Charlie assigns X_c := T
-      // Verify: T flows from Charlie -> Bob -> Alice
+      // - Charlie's gs fires → sends _w(bob,1) := T to Bob
+      // - Bob binds X, X? becomes known
+      // - Bob's gs fires → sends _r(bob,2) := T to Alice
+      // - Alice binds Z, Z? becomes known
 
       final runtimeAlice = GlpRuntime();
       final runtimeBob = GlpRuntime();
@@ -159,17 +171,19 @@ void main() {
       // Bob creates X
       final (writerXBob, readerXBob) = runtimeBob.heap.allocateVariable();
 
-      // === Bob -> Alice: Bob globalizes X (writer) ===
-      // Spawns global_send(X?, _w(bob,0), alice)
+      // === Bob -> Alice: Bob globalizes X? (reader) ===
+      // Corrected: reader → spawn gs(X?, _r(bob,1), alice), no entry
       final bobToAliceGlobal = globalize(
-        variables: [TermVar.writer(writerXBob, readerAddr: readerXBob)],
+        variables: [TermVar.reader(readerXBob, writerAddr: writerXBob)],
         localAgent: 'bob',
         remoteAgent: 'alice',
         table: ctxBob.wp,
       );
+      expect(bobToAliceGlobal.spawns.length, 1); // gs for reader
+      expect(ctxBob.wp.globalizeEntryCount, 0); // no entry
       ctxBob.registerGlobalSendSpawns(bobToAliceGlobal.spawns);
 
-      // Alice localizes _w(bob,0) - creates entry, gets reader
+      // Alice localizes _r(bob,1) → entry (Z_a, bob, 1), gets Z_a? (reader)
       final aliceFromBob = localize(
         globalNames: bobToAliceGlobal.globalNames,
         localAgent: 'alice',
@@ -177,19 +191,21 @@ void main() {
         freshAddrAllocator: () => runtimeAlice.heap.allocateVariable(),
       );
       expect(aliceFromBob.useReader[0], true); // Alice gets reader
-      final writerXAlice = aliceFromBob.freshPairs[0].writerAddr;
+      expect(aliceFromBob.spawns, isEmpty); // no spawn for _r
+      final writerZAlice = aliceFromBob.freshPairs[0].writerAddr;
 
-      // === Bob -> Charlie: Bob globalizes X? (reader) ===
-      // Creates entry (X, charlie) at index 0, no spawn
+      // === Bob -> Charlie: Bob globalizes X (writer) ===
+      // Corrected: writer → entry (X, charlie) at index 2, no spawn
       final bobToCharlieGlobal = globalize(
-        variables: [TermVar.reader(readerXBob, writerAddr: writerXBob)],
+        variables: [TermVar.writer(writerXBob, readerAddr: readerXBob)],
         localAgent: 'bob',
         remoteAgent: 'charlie',
         table: ctxBob.wp,
       );
-      expect(bobToCharlieGlobal.spawns.length, 0); // No spawn for reader
+      expect(bobToCharlieGlobal.spawns, isEmpty); // No spawn for writer
+      expect(ctxBob.wp.globalizeEntryCount, 1); // entry at index 2
 
-      // Charlie localizes _r(bob,0) - gets writer, spawns global_send
+      // Charlie localizes _w(bob,2) → spawn gs(Y_c?, _w(bob,2), bob), gets Y_c (writer)
       final charlieFromBob = localize(
         globalNames: bobToCharlieGlobal.globalNames,
         localAgent: 'charlie',
@@ -199,23 +215,23 @@ void main() {
       ctxCharlie.registerGlobalSendSpawns(charlieFromBob.spawns);
 
       expect(charlieFromBob.useReader[0], false); // Charlie gets writer
-      expect(charlieFromBob.spawns.length, 1);    // Spawn for _r(bob,0)
-      final writerXCharlie = charlieFromBob.freshPairs[0].writerAddr;
+      expect(charlieFromBob.spawns.length, 1); // Spawn for _w(bob,2)
+      final writerYCharlie = charlieFromBob.freshPairs[0].writerAddr;
 
       // === Message routing ===
-      // Charlie -> Bob (via global_send)
-      // Bob -> Alice (via global_send when Bob's writer is bound)
+      // Charlie -> Bob: _w(bob,2) := T
+      // Bob -> Alice: _r(bob,1) := T (after Bob's gs fires)
 
       ctxCharlie.onMessageReady = (dest, msg) {
         if (dest == 'bob') {
-          // Bob receives _r(bob,0) := T
+          // Bob receives _w(bob,2) := T → GlobalizeEntry lookup
           ctxBob.handleMadAssignment(
-            globalName: bobToCharlieGlobal.globalNames[0], // _r(bob,0)
+            globalName: bobToCharlieGlobal.globalNames[0], // _w(bob,2)
             value: ConstTerm('hello_from_charlie'),
             fromAgent: 'charlie',
           );
           // handleMadAssignment binds writerXBob
-          // Now Bob's global_send(X?, _w(bob,0), alice) should fire
+          // Now Bob's global_send(X?, _r(bob,1), alice) should fire
           ctxBob.onWriterBound(writerXBob, ConstTerm('hello_from_charlie'));
           ctxBob.flushMessages();
         }
@@ -223,34 +239,39 @@ void main() {
 
       ctxBob.onMessageReady = (dest, msg) {
         if (dest == 'alice') {
-          // Alice receives _w(bob,0) := T
+          // Alice receives _r(bob,1) := T → LocalizeEntry search
           ctxAlice.handleMadAssignment(
-            globalName: bobToAliceGlobal.globalNames[0], // _w(bob,0)
+            globalName: bobToAliceGlobal.globalNames[0], // _r(bob,1)
             value: ConstTerm('hello_from_charlie'),
             fromAgent: 'bob',
           );
         }
       };
 
-      // Charlie assigns X_c := 'hello_from_charlie'
-      runtimeCharlie.heap.bindVariable(writerXCharlie, ConstTerm('hello_from_charlie'));
-      ctxCharlie.onWriterBound(writerXCharlie, ConstTerm('hello_from_charlie'));
+      // Charlie assigns Y_c := 'hello_from_charlie'
+      runtimeCharlie.heap.bindVariable(writerYCharlie, ConstTerm('hello_from_charlie'));
+      ctxCharlie.onWriterBound(writerYCharlie, ConstTerm('hello_from_charlie'));
       ctxCharlie.flushMessages();
 
       // Verify Alice received the value
-      final derefed = runtimeAlice.heap.derefAddr(writerXAlice);
+      final derefed = runtimeAlice.heap.derefAddr(writerZAlice);
       expect(derefed, isA<ConstTerm>());
       expect((derefed as ConstTerm).value, 'hello_from_charlie');
     });
   });
 
   group('Section 5.4: Both Ends Exported', () {
-    test('p exports [X, X?] to q, q assigns Z_q := T, T flows back to p', () {
-      // Setup: p exports [X, X?] to q
-      // - X (writer) goes to q as reader
-      // - X? (reader) goes to q as writer
-      // Action: q assigns Z_q := T (the writer for X?)
-      // Verify: T flows back through p's global_send goal
+    test('p exports [X, X?] to q, q assigns Y_q := T, T flows back to p', () {
+      // Corrected definitions:
+      // Globalize X (writer): entry (X, q) at index 1, no spawn
+      // Globalize X? (reader): spawn gs(X?, _r(p,2), q), no entry
+      //
+      // Localize _w(p,1) at q: spawn gs(Y_q?, _w(p,1), p), use Y_q (writer)
+      // Localize _r(p,2) at q: entry (Z_q, p, 2), use Z_q? (reader)
+      //
+      // q's term: [Y_q, Z_q?]
+      // q assigns Y_q → gs fires → _w(p,1) := T to p → p binds X
+      // X? becomes known → p's gs fires → _r(p,2) := T to q → q binds Z_q
 
       final runtimeP = GlpRuntime();
       final runtimeQ = GlpRuntime();
@@ -261,8 +282,8 @@ void main() {
       final (writerX, readerX) = runtimeP.heap.allocateVariable();
 
       // p globalizes both X and X?
-      // Globalize X (writer): spawns global_send(X?, _w(p,0), q), no entry
-      // Globalize X? (reader): creates entry (X, q) at index 0, no spawn
+      // Writer X: entry (X, q) at index 1
+      // Reader X?: spawn gs(X?, _r(p,2), q)
       final globalizeResult = globalize(
         variables: [TermVar.writer(writerX, readerAddr: readerX), TermVar.reader(readerX, writerAddr: writerX)],
         localAgent: 'p',
@@ -272,13 +293,14 @@ void main() {
       ctxP.registerGlobalSendSpawns(globalizeResult.spawns);
 
       expect(globalizeResult.globalNames.length, 2);
-      expect(globalizeResult.globalNames[0].isWriter, true); // _w(p,0)
-      expect(globalizeResult.globalNames[1].isReader, true); // _r(p,0)
-      expect(globalizeResult.spawns.length, 1); // One spawn for writer
+      expect(globalizeResult.globalNames[0], GlobalName.writer('p', 1)); // _w(p,1)
+      expect(globalizeResult.globalNames[1], GlobalName.reader('p', 2)); // _r(p,2)
+      expect(globalizeResult.spawns.length, 1); // One spawn for reader X?
+      expect(ctxP.wp.globalizeEntryCount, 1); // One entry for writer X
 
-      // q localizes [_w(p,0), _r(p,0)]
-      // Localize _w(p,0): creates fresh (Y, Y?), entry (Y, p, 0), returns Y?
-      // Localize _r(p,0): creates fresh (Z, Z?), spawns global_send(Z?, _r(p,0), p), returns Z
+      // q localizes [_w(p,1), _r(p,2)]
+      // _w(p,1): spawn gs(Y_q?, _w(p,1), p), use Y_q (writer)
+      // _r(p,2): entry (Z_q, p, 2), use Z_q? (reader)
       final localizeResult = localize(
         globalNames: globalizeResult.globalNames,
         localAgent: 'q',
@@ -287,34 +309,57 @@ void main() {
       );
       ctxQ.registerGlobalSendSpawns(localizeResult.spawns);
 
-      expect(localizeResult.useReader[0], true);  // First gets reader
-      expect(localizeResult.useReader[1], false); // Second gets writer
-      expect(localizeResult.spawns.length, 1);    // One spawn for _r(p,0)
+      expect(localizeResult.useReader[0], false); // Y_q (writer) for _w
+      expect(localizeResult.useReader[1], true);  // Z_q? (reader) for _r
+      expect(localizeResult.spawns.length, 1);    // One spawn for _w(p,1)
 
-      final writerYq = localizeResult.freshPairs[0].writerAddr; // For _w(p,0)
-      final writerZq = localizeResult.freshPairs[1].writerAddr; // For _r(p,0)
+      final writerYq = localizeResult.freshPairs[0].writerAddr; // For _w(p,1)
+      final writerZq = localizeResult.freshPairs[1].writerAddr; // For _r(p,2)
 
-      // Message routing: q -> p
+      // Message routing:
+      // q -> p: _w(p,1) := T (q assigns Y_q, gs fires)
+      // p -> q: _r(p,2) := T (p's gs fires after X? becomes known)
+
       ctxQ.onMessageReady = (dest, msg) {
         if (dest == 'p') {
-          // p receives _r(p,0) := T
+          // p receives _w(p,1) := T → GlobalizeEntry at index 1
           ctxP.handleMadAssignment(
-            globalName: globalizeResult.globalNames[1], // _r(p,0)
+            globalName: globalizeResult.globalNames[0], // _w(p,1)
             value: ConstTerm('value_from_q'),
             fromAgent: 'q',
+          );
+          // This binds X at p. X? becomes known.
+          // p's gs(X?, _r(p,2), q) should fire.
+          ctxP.onWriterBound(writerX, ConstTerm('value_from_q'));
+          ctxP.flushMessages();
+        }
+      };
+
+      ctxP.onMessageReady = (dest, msg) {
+        if (dest == 'q') {
+          // q receives _r(p,2) := T → LocalizeEntry search for (p, 2)
+          ctxQ.handleMadAssignment(
+            globalName: globalizeResult.globalNames[1], // _r(p,2)
+            value: ConstTerm('value_from_q'),
+            fromAgent: 'p',
           );
         }
       };
 
-      // q assigns Z_q := 'value_from_q'
-      runtimeQ.heap.bindVariable(writerZq, ConstTerm('value_from_q'));
-      ctxQ.onWriterBound(writerZq, ConstTerm('value_from_q'));
+      // q assigns Y_q := 'value_from_q'
+      runtimeQ.heap.bindVariable(writerYq, ConstTerm('value_from_q'));
+      ctxQ.onWriterBound(writerYq, ConstTerm('value_from_q'));
       ctxQ.flushMessages();
 
       // Verify p received the value (X is now bound)
-      final derefed = runtimeP.heap.derefAddr(writerX);
-      expect(derefed, isA<ConstTerm>());
-      expect((derefed as ConstTerm).value, 'value_from_q');
+      final derefedP = runtimeP.heap.derefAddr(writerX);
+      expect(derefedP, isA<ConstTerm>());
+      expect((derefedP as ConstTerm).value, 'value_from_q');
+
+      // Verify q also received the value via the forwarded _r link (Z_q bound)
+      final derefedQ = runtimeQ.heap.derefAddr(writerZq);
+      expect(derefedQ, isA<ConstTerm>());
+      expect((derefedQ as ConstTerm).value, 'value_from_q');
     });
   });
 }

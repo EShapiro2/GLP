@@ -1,7 +1,7 @@
 # Bug Report: Missing `onBind` Callbacks in Receive Handlers
 
 **Date**: 2026-02-09
-**Status**: Open
+**Status**: Fixed
 **Severity**: Critical — blocks all inter-agent communication that involves response variables or nested variables
 **File**: `glp_runtime/lib/multiagent/mad_context.dart`
 
@@ -101,10 +101,18 @@ The onBind fix was committed in a prior session — `registerGlobalSendSpawns()`
 
 A subsequent polarity investigation confirmed that the paper's Globalize/Localize definitions, the spec, and the code implementation are all internally consistent. The remaining test failures (e.g., `writer_response_boot.glp`) are due to test programs sending a **writer** when they should send a **reader** for callback semantics. Under the paper's convention, sending a writer means the sender will assign (value flows sender→receiver); for the receiver to write back, the sender must send the reader (callback pattern, like V in Figure 1 Stage 2).
 
+The Globalize/Localize definitions were subsequently corrected (swapped) to match the CGLP paper appendix. Under the corrected definitions:
+- Globalizing a **writer** Y: creates entry (Y, q) at p, no spawn. Localizer q gets the writer.
+- Globalizing a **reader** Y?: spawns gs(Y?, _r(p,i), q) at p, no entry. Localizer q gets the reader.
+
+The `registerGlobalSendSpawns` fix remains correct — gs goals still need both registry registration and `heap.onBind` callbacks regardless of which operation spawns them.
+
 ---
 
 ## Related
 
-- **Spec reference**: madGLP-spec.md Section 5.2 (Localize spawns `global_send` goals for `_r` names)
+- **Spec reference**: madGLP-spec.md Section 5.1 (Globalize spawns `global_send` goals for readers)
+- **Spec reference**: madGLP-spec.md Section 5.2 (Localize spawns `global_send` goals for `_w` names)
 - **Spec reference**: madGLP-spec.md Section 4 (`global_send` fires when its reader becomes known)
-- **Working code path**: `send()` at lines 497–504 correctly registers both goal and callback
+- **Working code path**: `send()` correctly registers both goal and callback
+- **Analysis**: docs/ma/bug-globalize-direction-analysis.md

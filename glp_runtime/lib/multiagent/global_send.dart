@@ -12,8 +12,8 @@ import 'global_writers_table.dart';
 /// A pending global_send goal waiting for a reader to become known
 ///
 /// Spawned symmetrically when:
-/// - Globalizing a writer Y: watches Y?, sends to destination
-/// - Localizing _r(p,i): watches Z?, sends back to p
+/// - Globalizing a reader Y?: watches Y?, sends to destination
+/// - Localizing _w(p,i): watches Y_q?, sends back to p
 ///
 /// See: madGLP-spec.md Section 4
 class GlobalSendGoal {

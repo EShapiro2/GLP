@@ -7,10 +7,10 @@
 /// See: docs/ma/madGLP-spec.md Section 3
 library;
 
-/// Entry created by Globalize (when exporting a reader)
+/// Entry created by Globalize (when exporting a writer)
 ///
-/// Stored at index i in the table, corresponds to global name `_r(p, i)`.
-/// When agent q sends a callback message `_r(p, i) := T`, this entry
+/// Stored at index i in the table, corresponds to global name `_w(p, i)`.
+/// When agent q sends a message `_w(p, i) := T`, this entry
 /// identifies the local writer X that should be assigned.
 class GlobalizeEntry {
   /// Local writer address that will be assigned when callback arrives
@@ -28,18 +28,18 @@ class GlobalizeEntry {
   String toString() => 'GlobalizeEntry(writer=$writerAddr, remote=$remoteAgent)';
 }
 
-/// Entry created by Localize (when importing a writer global name)
+/// Entry created by Localize (when importing a reader global name)
 ///
 /// Must search by (remoteAgent, remoteIndex) to find the entry.
-/// When message `_w(p, i) := T` arrives, search for entry matching (p, i).
+/// When message `_r(p, i) := T` arrives, search for entry matching (p, i).
 class LocalizeEntry {
   /// Local writer address that will be assigned
   final int writerAddr;
 
-  /// Agent who created the global name (p in `_w(p, i)`)
+  /// Agent who created the global name (p in `_r(p, i)`)
   final String remoteAgent;
 
-  /// Index from the remote agent's global name (i in `_w(p, i)`)
+  /// Index from the remote agent's global name (i in `_r(p, i)`)
   final int remoteIndex;
 
   LocalizeEntry({
@@ -81,11 +81,11 @@ class GlobalWritersTable {
 
   /// GlobalizeEntries: direct index lookup
   /// Key is the index i, value is the entry at that index.
-  /// Corresponds to global name `_r(agentId, i)`.
+  /// Corresponds to global name `_w(agentId, i)`.
   final Map<int, GlobalizeEntry> _globalizeEntries = {};
 
   /// LocalizeEntries: search by (agent, index)
-  /// These entries are created when localizing `_w(p, i)` names.
+  /// These entries are created when localizing `_r(p, i)` names.
   final List<LocalizeEntry> _localizeEntries = [];
 
   GlobalWritersTable(this.agentId);
@@ -138,10 +138,10 @@ class GlobalWritersTable {
 
   /// Allocate next index and add GlobalizeEntry.
   ///
-  /// Called by Globalize when exporting a reader Y?:
+  /// Called by Globalize when exporting a writer Y:
   /// - Allocate index i
   /// - Create entry (Y, q) at index i
-  /// - Replace Y? with `_r(p, i)` in globalized term
+  /// - Replace Y with `_w(p, i)` in globalized term
   ///
   /// Returns the allocated index.
   int addGlobalizeEntry(int writerAddr, String remoteAgent) {
@@ -155,10 +155,10 @@ class GlobalWritersTable {
 
   /// Add LocalizeEntry.
   ///
-  /// Called by Localize when importing `_w(p, i)`:
-  /// - Create fresh pair (Y, Y?)
-  /// - Add entry (Y, p, i)
-  /// - Replace `_w(p, i)` with Y? in localized term
+  /// Called by Localize when importing `_r(p, i)`:
+  /// - Create fresh pair (Z, Z?)
+  /// - Add entry (Z, p, i)
+  /// - Replace `_r(p, i)` with Z? in localized term
   ///
   /// Throws [ArgumentError] if duplicate (remoteAgent, remoteIndex) exists.
   void addLocalizeEntry(int writerAddr, String remoteAgent, int remoteIndex) {
@@ -180,7 +180,7 @@ class GlobalWritersTable {
 
   /// Lookup GlobalizeEntry by index.
   ///
-  /// Used when receiving `_r(p, i) := T` where we are agent p.
+  /// Used when receiving `_w(p, i) := T` where we are agent p.
   /// The entry at index i identifies the local writer to assign.
   GlobalizeEntry? lookupByIndex(int index) {
     return _globalizeEntries[index];
@@ -188,7 +188,7 @@ class GlobalWritersTable {
 
   /// Search for LocalizeEntry matching remote (agent, index).
   ///
-  /// Used when receiving `_w(p, i) := T`:
+  /// Used when receiving `_r(p, i) := T`:
   /// - Search for entry with remoteAgent=p and remoteIndex=i
   /// - That entry's writerAddr is the local writer to assign
   LocalizeEntry? findByRemote(String agent, int index) {
@@ -202,7 +202,7 @@ class GlobalWritersTable {
 
   /// Remove GlobalizeEntry at index.
   ///
-  /// Called after receiving `_r(p, i) := T` and assigning the writer.
+  /// Called after receiving `_w(p, i) := T` and assigning the writer.
   /// Leaves a gap in the index space; indices are not reused.
   ///
   /// Index 0 (serializer) cannot be removed - use updateSerializerWriter instead.
@@ -219,7 +219,7 @@ class GlobalWritersTable {
 
   /// Remove LocalizeEntry by remote agent and index.
   ///
-  /// Called after receiving `_w(p, i) := T` and assigning the writer.
+  /// Called after receiving `_r(p, i) := T` and assigning the writer.
   ///
   /// Safe to call on non-existent entry (idempotent).
   void removeLocalizeEntry(String agent, int index) {
@@ -231,8 +231,8 @@ class GlobalWritersTable {
 
   /// Allocate next index without creating an entry.
   ///
-  /// Called by Globalize when exporting a writer Y:
-  /// - Allocate index i for use in `_w(p, i)`
+  /// Called by Globalize when exporting a reader Y?:
+  /// - Allocate index i for use in `_r(p, i)`
   /// - No entry is created (outgoing link handled by global_send)
   ///
   /// Spec Section 5.1: "No entry is created—the global_send goal handles

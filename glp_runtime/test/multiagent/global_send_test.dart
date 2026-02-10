@@ -87,19 +87,21 @@ void main() {
         destination: 'q',
       ));
 
-      // When: fires with value containing nested writer variable at 400
+      // When: fires with value containing nested reader variable Y? at 401
+      // Under corrected definitions, globalizing a reader spawns a goal
       final result = registry.onWriterBound(
         writerAddr: 300,
-        value: 'foo(Y)', // Symbolic - actual term contains variable Y
+        value: 'foo(Y?)', // Symbolic - actual term contains reader Y?
         table: table,
-        extractVariables: (_) => [TermVar.writer(400, readerAddr: 401)], // Y is a writer at 400
+        extractVariables: (_) => [TermVar.reader(401, writerAddr: 400)], // Y? is a reader at 401
       );
 
-      // Then: value is globalized, spawning new goal for Y
+      // Then: value is globalized, spawning new goal for Y?
+      // Corrected spec: reader → spawn global_send(Y?, _r(p,i), q)
       expect(result, isNotNull);
       expect(result!.newGoals.length, 1);
-      expect(result.newGoals[0].readerAddr, 400);
-      expect(result.newGoals[0].globalName.isWriter, isTrue);
+      expect(result.newGoals[0].readerAddr, 400); // writer addr for onBind
+      expect(result.newGoals[0].globalName.isReader, isTrue);
       expect(result.newGoals[0].destination, 'q');
 
       // Spec Section 12: "Globalization may spawn additional global_send
