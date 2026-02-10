@@ -70,7 +70,8 @@ class Status extends IsolateMessage {
   final String agentId;
   final String status; // 'running', 'suspended', 'completed'
   final int goalsRemaining;
-  Status(this.agentId, this.status, this.goalsRemaining);
+  final List<String> traceLines; // Collected trace output for this tick
+  Status(this.agentId, this.status, this.goalsRemaining, [this.traceLines = const []]);
 }
 
 /// Agent completed
@@ -81,6 +82,19 @@ class Done extends IsolateMessage {
   Done(this.agentId, this.success, {this.error});
 }
 
+/// Trace configuration for multi-agent tracing
+class TraceConfig {
+  /// Enable GLP-level trace (reductions, suspensions, failures)
+  final bool glp;
+  /// Enable MAD infrastructure trace (send, globalize, localize, message routing)
+  final bool mad;
+  /// Only trace these agents (null = all agents)
+  final Set<String>? agents;
+
+  const TraceConfig({this.glp = false, this.mad = false, this.agents});
+  static const off = TraceConfig();
+}
+
 /// Configuration passed to agent isolate
 class AgentConfig {
   final String agentId;
@@ -89,6 +103,7 @@ class AgentConfig {
   final String? sharedSource; // Optional shared code (e.g., social_agent.glp)
   final SendPort mainPort;
   final SendPort? uiPort; // null for headless
+  final TraceConfig traceConfig;
 
   AgentConfig({
     required this.agentId,
@@ -97,6 +112,7 @@ class AgentConfig {
     this.sharedSource,
     required this.mainPort,
     this.uiPort,
+    this.traceConfig = const TraceConfig(),
   });
 }
 
@@ -109,13 +125,24 @@ class IsolateManager {
   Completer<void>? _allCompletedCompleter;
   Timer? _tickTimer;
 
+  /// Trace configuration (set via boot)
+  TraceConfig _traceConfig = TraceConfig.off;
+  int _tickCount = 0;
+  bool _tickHeaderPrinted = false;
+
   /// Callback for UI output from agents (for Flutter integration)
   void Function(String agentId, Term message)? onUIOutput;
+
+  /// Infrastructure log: only prints when MAD tracing is on.
+  void _log(String msg) {
+    if (_traceConfig.mad) print('[IsolateManager] $msg');
+  }
 
   /// Boot all agents from configuration.
   ///
   /// Returns when all agents are ready (but not yet started).
-  Future<void> boot(BootConfig config) async {
+  Future<void> boot(BootConfig config, {TraceConfig traceConfig = TraceConfig.off}) async {
+    _traceConfig = traceConfig;
     final readyCompleter = Completer<void>();
     var readyCount = 0;
     final expectedCount = config.directives.length;
@@ -143,6 +170,7 @@ class IsolateManager {
         programSource: config.source,
         sharedSource: config.sharedSource,
         mainPort: _mainPort.sendPort,
+        traceConfig: traceConfig,
       );
 
       await Isolate.spawn(_agentIsolateEntry, agentConfig);
@@ -161,6 +189,8 @@ class IsolateManager {
 
   /// Send a tick to all agents (for headless testing).
   void tick() {
+    _tickCount++;
+    _tickHeaderPrinted = false;
     for (final port in _agentPorts.values) {
       port.send(Tick());
     }
@@ -229,18 +259,26 @@ class IsolateManager {
   /// Handle messages from agent isolates.
   void _handleMessage(dynamic msg) {
     if (msg is Ready) {
-      print('[IsolateManager] ${msg.agentId} ready');
+      _log('${msg.agentId} ready');
       _agentPorts[msg.agentId] = msg.sendPort;
 
     } else if (msg is NetworkMsg) {
       _routeNetworkMessage(msg);
 
     } else if (msg is Status) {
-      // Could expose via callback if needed
-      print('[IsolateManager] ${msg.agentId}: ${msg.status}, goals=${msg.goalsRemaining}');
+      // Render trace lines if tracing is enabled
+      if (msg.traceLines.isNotEmpty && _isTracingAgent(msg.agentId)) {
+        if (!_tickHeaderPrinted) {
+          print('--- tick $_tickCount ---');
+          _tickHeaderPrinted = true;
+        }
+        for (final line in msg.traceLines) {
+          print(line);
+        }
+      }
 
     } else if (msg is Done) {
-      print('[IsolateManager] ${msg.agentId} done: success=${msg.success}');
+      _log('${msg.agentId} done: success=${msg.success}');
       _completed.add(msg.agentId);
 
       if (_completed.length == _agentPorts.length) {
@@ -254,7 +292,15 @@ class IsolateManager {
 
   /// Route a network message to its destination.
   void _routeNetworkMessage(NetworkMsg msg) {
-    print('[IsolateManager] Routing ${msg.type} from ${msg.from} to ${msg.to}');
+    // Trace message events
+    if (_traceConfig.glp) {
+      if (_isTracingAgent(msg.from)) {
+        print('[${msg.from}] → msg to ${msg.to}: ${msg.type}');
+      }
+      if (_isTracingAgent(msg.to)) {
+        print('[${msg.to}] ← msg from ${msg.from}: ${msg.type}');
+      }
+    }
 
     final targetPort = _agentPorts[msg.to];
     if (targetPort == null) {
@@ -263,6 +309,13 @@ class IsolateManager {
     }
 
     targetPort.send(msg);
+  }
+
+  /// Check if an agent should be traced.
+  bool _isTracingAgent(String agentId) {
+    if (!_traceConfig.glp && !_traceConfig.mad) return false;
+    if (_traceConfig.agents != null && !_traceConfig.agents!.contains(agentId)) return false;
+    return true;
   }
 }
 
@@ -300,8 +353,14 @@ void _agentIsolateEntry(AgentConfig config) async {
   final agentId = config.agentId;
   final receivePort = ReceivePort();
   var doneSent = false;
+  final tc = config.traceConfig;
 
-  print('[$agentId] Starting isolate');
+  // Infrastructure log: only prints when MAD tracing is on
+  void log(String msg) {
+    if (tc.mad) print('[$agentId] $msg');
+  }
+
+  log('Starting isolate');
 
   // Create GlpEngine (same as REPL would)
   final engine = GlpEngine();
@@ -313,8 +372,8 @@ void _agentIsolateEntry(AgentConfig config) async {
   final userSource = config.programSource.replaceAll(RegExp(r'-mode\s*\(\s*system\s*\)\s*\.'), '');
   final combinedSource = '$_madPredicatesSource\n$sharedSource\n$userSource';
   engine.loadSource(combinedSource);
-  engine.debugTrace = true;  // Enable tracing for comparison with dGLP
-  print('[$agentId] Program loaded via GlpEngine (with mad_predicates)');
+  engine.debugTrace = tc.glp;  // Enable GLP trace only when requested
+  log('Program loaded via GlpEngine (with mad_predicates)');
 
   // Enable madGLP mode
   engine.enableMadGLP(agentId: agentId);
@@ -327,11 +386,11 @@ void _agentIsolateEntry(AgentConfig config) async {
   // input stream."
   final (netInWriter, netInReader) = runtime.heap.allocateVariable();
   ctx.wp.initializeSerializerEntry(netInWriter);
-  print('[$agentId] Serializer entry initialized at index 0, netIn=($netInWriter,$netInReader)');
+  log('Serializer entry initialized at index 0, netIn=($netInWriter,$netInReader)');
 
   // Message routing to main isolate (madGLP: push-based via onMessageReady)
   ctx.onMessageReady = (dest, msg) {
-    print('[$agentId] Sending ${msg.type} to $dest');
+    log('Sending ${msg.type} to $dest');
     config.mainPort.send(NetworkMsg(agentId, dest, msg.payload, msg.type));
   };
 
@@ -339,14 +398,14 @@ void _agentIsolateEntry(AgentConfig config) async {
   // The serializer entry (at index 0) writes to netInWriter, so agent reads from netInReader
   // Note: netInWriter/netInReader were allocated earlier for the serializer
 
-  print('[$agentId] Network input ready: writer=$netInWriter, reader=$netInReader');
+  log('Network input ready: writer=$netInWriter, reader=$netInReader');
 
   // Find goal entry point (now 2-arity: agent_init(Id, NetIn))
   final program = engine.combinedProgram;
   final goalLabel = '${config.goalFunctor}/2';
   final goalPC = program.labels[goalLabel];
   if (goalPC == null) {
-    print('[$agentId] ERROR: Goal $goalLabel not found');
+    print('[$agentId] ERROR: Goal $goalLabel not found');  // Always print errors
     config.mainPort.send(Done(agentId, false, error: 'Goal $goalLabel not found'));
     return;
   }
@@ -368,11 +427,27 @@ void _agentIsolateEntry(AgentConfig config) async {
   }));
   runtime.setGoalProgram(1, 'main');
   runtime.gq.enqueue(GoalRef(1, goalPC));
-  print('[$agentId] Spawned ${config.goalFunctor}/2');
+  log('Spawned ${config.goalFunctor}/2');
 
   // Create scheduler for this engine
   final runner = BytecodeRunner(program);
   final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
+
+  // Set up trace collection: lines are buffered and sent back in Status messages
+  final traceLines = <String>[];
+
+  if (tc.glp) {
+    scheduler.traceSink = (String line) {
+      traceLines.add('[$agentId] $line');
+    };
+  }
+
+  if (tc.mad) {
+    ctx.traceSink = (String line) {
+      // MAD traces already include [MAD agentId] prefix, no need to add [$agentId]
+      traceLines.add(line);
+    };
+  }
 
   // Signal ready
   config.mainPort.send(Ready(agentId, receivePort.sendPort));
@@ -380,29 +455,32 @@ void _agentIsolateEntry(AgentConfig config) async {
   // Message handling loop
   await for (final msg in receivePort) {
     if (msg is Start || msg is Tick) {
+      // Clear trace buffer for this tick
+      traceLines.clear();
+
       // Run scheduler with debug tracing
       final result = scheduler.drainWithStatus(debug: engine.debugTrace);
 
       // Flush messages (triggers global_send goals to send)
       ctx.flushMessages();
 
-      // Report status
+      // Report status with collected trace lines
       final hasSuspendedGoals = result.status == ExecutionStatus.suspended ||
                                 runtime.suspended.isNotEmpty;
       final status = hasSuspendedGoals
           ? 'suspended'
           : (runtime.gq.isEmpty ? 'completed' : 'running');
-      config.mainPort.send(Status(agentId, status, runtime.gq.length));
+      config.mainPort.send(Status(agentId, status, runtime.gq.length, List.from(traceLines)));
 
       // Only report done when gq is empty AND no goals are suspended
       if (runtime.gq.isEmpty && !hasSuspendedGoals && !doneSent) {
         doneSent = true;
-        print('[$agentId] All goals completed');
+        log('All goals completed');
         config.mainPort.send(Done(agentId, true));
       }
 
     } else if (msg is NetworkMsg) {
-      print('[$agentId] Received ${msg.type} from ${msg.from}');
+      log('Received ${msg.type} from ${msg.from}');
 
       if (msg.type == MessageType.assignment) {
         // madGLP: Handle assignment message
@@ -417,7 +495,7 @@ void _agentIsolateEntry(AgentConfig config) async {
             },
           );
 
-          print('[$agentId] Assignment: $globalName := $value');
+          log('Assignment: $globalName := $value');
 
           ctx.handleMadAssignment(
             globalName: globalName,
@@ -425,10 +503,10 @@ void _agentIsolateEntry(AgentConfig config) async {
             fromAgent: msg.from,
           );
         } catch (e) {
-          print('[$agentId] ERROR handling assignment: $e');
+          print('[$agentId] ERROR handling assignment: $e');  // Always print errors
         }
       } else if (msg.type == MessageType.agentMessage) {
-        print('[$agentId] Received agent message from ${msg.from}');
+        log('Received agent message from ${msg.from}');
       }
 
       // Flush any response messages
@@ -438,7 +516,7 @@ void _agentIsolateEntry(AgentConfig config) async {
       // UIEvent handling is for external Flutter UI integration.
       // With the current architecture (actors internal to GLP), this is not used.
       // The actor communicates directly with the agent via channels in GLP code.
-      print('[$agentId] Received UI event (not processed - actors are internal)');
+      log('Received UI event (not processed - actors are internal)');
     }
   }
 }

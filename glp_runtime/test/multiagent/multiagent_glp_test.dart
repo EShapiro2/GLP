@@ -41,7 +41,18 @@ void main() {
     });
 
     /// Helper: load, boot, run, and verify all agents complete.
-    Future<void> runGlpTest(String glpFile, {int maxTicks = 50, int tickDelayMs = 50}) async {
+    ///
+    /// Trace parameters (off by default for clean test output):
+    /// - [traceGlp]: GLP-level trace (reductions, suspensions, failures)
+    /// - [traceMad]: MAD infrastructure trace (send, globalize, localize)
+    /// - [traceAgents]: Only trace these agents (null = all)
+    Future<void> runGlpTest(String glpFile, {
+      int maxTicks = 50,
+      int tickDelayMs = 50,
+      bool traceGlp = false,
+      bool traceMad = false,
+      Set<String>? traceAgents,
+    }) async {
       final source = loadFile(glpFile);
       if (source == null) {
         print('Skipping: $glpFile not found');
@@ -51,7 +62,13 @@ void main() {
       final loader = BootLoader();
       final config = loader.load(source);
 
-      await manager.boot(config);
+      final traceConfig = TraceConfig(
+        glp: traceGlp,
+        mad: traceMad,
+        agents: traceAgents,
+      );
+
+      await manager.boot(config, traceConfig: traceConfig);
       manager.start();
 
       for (var i = 0; i < maxTicks; i++) {

@@ -24,7 +24,11 @@ class Scheduler {
   final GlpRuntime rt;
   final Map<Object?, BytecodeRunner> runners;
 
-  Scheduler({required this.rt, BytecodeRunner? runner, Map<Object?, BytecodeRunner>? runners})
+  /// Optional trace sink. When set, trace output (reductions, suspensions,
+  /// failures) goes through this callback instead of print().
+  void Function(String)? traceSink;
+
+  Scheduler({required this.rt, BytecodeRunner? runner, Map<Object?, BytecodeRunner>? runners, this.traceSink})
       : runners = runners ?? (runner != null ? {null: runner} : {});
 
   /// Query variable names: maps writerAddr to original name from query (e.g., "X", "Xs")
@@ -201,6 +205,15 @@ class Scheduler {
     return '$name = $valueStr';
   }
 
+  /// Send trace output to traceSink if set, otherwise to print().
+  void _trace(String line) {
+    if (traceSink != null) {
+      traceSink!(line);
+    } else {
+      print(line);
+    }
+  }
+
   DrainResult drainWithStatus({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) {
     final ran = <int>[];
     final suspendedGoals = <int, String>{}; // Track suspended goals by ID
@@ -263,7 +276,7 @@ class Scheduler {
             final cleanHead = head.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
             final cleanBody = body.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
             // No goal ID prefix - clean output
-            print('$cleanHead :- $cleanBody');
+            _trace('$cleanHead :- $cleanBody');
           }
           hadReduction = true;
           // Remove from suspended list if it reduced
@@ -279,7 +292,7 @@ class Scheduler {
         // Show suspension if debug and no reduction
         if (debug && !hadReduction && !isQueryWrapper) {
           final cleanGoal = goalStr.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
-          print('$cleanGoal → suspended');
+          _trace('$cleanGoal → suspended');
         }
       } else if (result == RunResult.terminated) {
         // Goal terminated - check if it reduced (success) or just terminated (failure)
@@ -287,7 +300,7 @@ class Scheduler {
           // Terminated without reduction = failed
           if (debug) {
             final cleanGoal = goalStr.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
-            print('$cleanGoal → failed');
+            _trace('$cleanGoal → failed');
           }
           hasFailed = true;
           suspendedGoals.remove(act.id);
