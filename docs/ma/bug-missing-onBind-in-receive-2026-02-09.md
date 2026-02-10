@@ -95,6 +95,14 @@ This matches what `send()` already does at lines 497–504. The same pattern —
 
 ---
 
+## Status Update (2026-02-10)
+
+The onBind fix was committed in a prior session — `registerGlobalSendSpawns()` now registers both the goal and the `heap.onBind` callback, matching what `send()` does.
+
+A subsequent polarity investigation confirmed that the paper's Globalize/Localize definitions, the spec, and the code implementation are all internally consistent. The remaining test failures (e.g., `writer_response_boot.glp`) are due to test programs sending a **writer** when they should send a **reader** for callback semantics. Under the paper's convention, sending a writer means the sender will assign (value flows sender→receiver); for the receiver to write back, the sender must send the reader (callback pattern, like V in Figure 1 Stage 2).
+
+---
+
 ## Related
 
 - **Spec reference**: madGLP-spec.md Section 5.2 (Localize spawns `global_send` goals for `_r` names)
