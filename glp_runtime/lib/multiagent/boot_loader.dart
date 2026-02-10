@@ -7,7 +7,7 @@
 
 /// A single spawn directive extracted from the boot clause.
 ///
-/// Represents `goalFunctor(agentId, _)@agentId`
+/// Represents `goalFunctor(agentId, ...)@agentId`
 class SpawnDirective {
   /// The agent identifier (e.g., 'alice', 'bob')
   final String agentId;
@@ -15,13 +15,17 @@ class SpawnDirective {
   /// The goal functor to spawn (e.g., 'agent_init', 'alice_agent')
   final String goalFunctor;
 
+  /// The arity of the goal (number of arguments)
+  final int arity;
+
   SpawnDirective({
     required this.agentId,
     required this.goalFunctor,
+    required this.arity,
   });
 
   @override
-  String toString() => 'SpawnDirective($goalFunctor($agentId, ...)@$agentId)';
+  String toString() => 'SpawnDirective($goalFunctor/$arity($agentId, ...)@$agentId)';
 }
 
 /// Configuration extracted from a GLP boot file.
@@ -144,30 +148,77 @@ class BootLoader {
   /// Parse spawn directives from boot clause body.
   ///
   /// Looks for patterns like:
-  /// `functor(agentId, _)@agentId`
+  /// `functor(agentId, ...)@agentId`
+  ///
+  /// The first argument must be the agent ID (an atom).
+  /// Remaining arguments can be arbitrary terms (e.g., ch(_?,_)).
+  /// The @target must match the first argument.
   List<SpawnDirective> _parseSpawnDirectives(String clauseBody) {
     final directives = <SpawnDirective>[];
 
-    // Pattern for spawn directive:
-    // functor(agentId, _)@agentId  or  functor(agentId, _?)@agentId
-    //
-    // Breakdown:
-    // - (\w+) : goal functor (e.g., agent_init)
-    // - \( : opening paren
-    // - (\w+) : first arg = agent ID
-    // - \s*,\s* : comma separator
-    // - _\?? : anonymous variable (writer _ or reader _?)
-    // - \) : closing paren
-    // - \s*@\s* : @ operator
-    // - (\w+) : target agent ID
-    final pattern = RegExp(
-      r'(\w+)\s*\(\s*(\w+)\s*,\s*_\??\s*\)\s*@\s*(\w+)',
-    );
+    // Strategy: find each @target, then work backwards to find the matching
+    // goal(agentId, ...) by balancing parentheses.
+    final atPattern = RegExp(r'@\s*(\w+)');
 
-    for (final match in pattern.allMatches(clauseBody)) {
-      final functor = match.group(1)!;
-      final goalAgentId = match.group(2)!;
-      final targetAgentId = match.group(3)!;
+    for (final atMatch in atPattern.allMatches(clauseBody)) {
+      final targetAgentId = atMatch.group(1)!;
+      final beforeAt = clauseBody.substring(0, atMatch.start).trimRight();
+
+      // The character before @ should be ')' (end of goal arguments)
+      if (beforeAt.isEmpty || beforeAt[beforeAt.length - 1] != ')') {
+        continue; // Not a goal@target pattern
+      }
+
+      // Walk backwards from ')' to find matching '('
+      var depth = 0;
+      var parenStart = -1;
+      for (var i = beforeAt.length - 1; i >= 0; i--) {
+        if (beforeAt[i] == ')') depth++;
+        if (beforeAt[i] == '(') depth--;
+        if (depth == 0) {
+          parenStart = i;
+          break;
+        }
+      }
+
+      if (parenStart < 0) continue;
+
+      // Extract functor name before '('
+      final beforeParen = beforeAt.substring(0, parenStart).trimRight();
+      final functorMatch = RegExp(r'(\w+)$').firstMatch(beforeParen);
+      if (functorMatch == null) continue;
+      final functor = functorMatch.group(1)!;
+
+      // Extract first argument (agent ID) from inside the parentheses
+      final argsStr = beforeAt.substring(parenStart + 1, beforeAt.length - 1);
+      // First arg is everything up to the first comma at depth 0
+      var argDepth = 0;
+      var firstArgEnd = argsStr.length;
+      for (var i = 0; i < argsStr.length; i++) {
+        if (argsStr[i] == '(' || argsStr[i] == '[') argDepth++;
+        if (argsStr[i] == ')' || argsStr[i] == ']') argDepth--;
+        if (argsStr[i] == ',' && argDepth == 0) {
+          firstArgEnd = i;
+          break;
+        }
+      }
+      final goalAgentId = argsStr.substring(0, firstArgEnd).trim();
+
+      // Agent ID must be a simple atom (word characters only)
+      if (!RegExp(r'^\w+$').hasMatch(goalAgentId)) {
+        throw BootLoaderException(
+            'First argument of spawn goal must be an agent ID (atom), '
+            'got "$goalAgentId"');
+      }
+
+      // Count arity: number of commas at depth 0, plus 1
+      var arity = 1;
+      var aDepth = 0;
+      for (var i = 0; i < argsStr.length; i++) {
+        if (argsStr[i] == '(' || argsStr[i] == '[') aDepth++;
+        if (argsStr[i] == ')' || argsStr[i] == ']') aDepth--;
+        if (argsStr[i] == ',' && aDepth == 0) arity++;
+      }
 
       // Validate agent IDs match
       if (goalAgentId != targetAgentId) {
@@ -179,6 +230,7 @@ class BootLoader {
       directives.add(SpawnDirective(
         agentId: goalAgentId,
         goalFunctor: functor,
+        arity: arity,
       ));
     }
 

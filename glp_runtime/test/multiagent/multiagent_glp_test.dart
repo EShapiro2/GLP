@@ -140,5 +140,12 @@ void main() {
       await runGlpTest('programs/typed_book/multiagent_tests/writer_response_boot.glp');
       expect(manager.completedAgents, containsAll(['agent1', 'agent2']));
     }, timeout: Timeout(Duration(seconds: 15)));
+
+    test('alice-bob-charlie: cold-call + messaging + friend introduction', () async {
+      await runGlpTest('programs/typed_book/social_graph/play_alice_bob_charlie_test_boot.glp',
+          maxTicks: 200, tickDelayMs: 50);
+      expect(manager.completedAgents, containsAll(['alice', 'bob', 'charlie']));
+    }, timeout: Timeout(Duration(seconds: 60)),
+    skip: 'Blocked by GLP runtime bug: body = does not bind through variable chains (see eq_channel_test.dart)');
   });
 }

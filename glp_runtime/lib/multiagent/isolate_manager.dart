@@ -99,6 +99,7 @@ class TraceConfig {
 class AgentConfig {
   final String agentId;
   final String goalFunctor;
+  final int arity; // Goal arity (e.g., 2 for goal(id, net), 3 for goal(id, user, net))
   final String programSource;
   final String? sharedSource; // Optional shared code (e.g., social_agent.glp)
   final SendPort mainPort;
@@ -108,6 +109,7 @@ class AgentConfig {
   AgentConfig({
     required this.agentId,
     required this.goalFunctor,
+    this.arity = 2,
     required this.programSource,
     this.sharedSource,
     required this.mainPort,
@@ -167,6 +169,7 @@ class IsolateManager {
       final agentConfig = AgentConfig(
         agentId: directive.agentId,
         goalFunctor: directive.goalFunctor,
+        arity: directive.arity,
         programSource: config.source,
         sharedSource: config.sharedSource,
         mainPort: _mainPort.sendPort,
@@ -363,7 +366,8 @@ void _agentIsolateEntry(AgentConfig config) async {
   log('Starting isolate');
 
   // Create GlpEngine (same as REPL would)
-  final engine = GlpEngine();
+  // Non-strict types: actor code may have type warnings that shouldn't be fatal
+  final engine = GlpEngine()..strictTypes = false;
 
   // Build combined source: mad_predicates + shared source (if any) + boot file
   // This ensures procedures like send_to_net/1 and agent/4 are visible to user code
@@ -394,15 +398,16 @@ void _agentIsolateEntry(AgentConfig config) async {
     config.mainPort.send(NetworkMsg(agentId, dest, msg.payload, msg.type));
   };
 
-  // The second argument to agent_init is NetIn (the network input stream)
-  // The serializer entry (at index 0) writes to netInWriter, so agent reads from netInReader
-  // Note: netInWriter/netInReader were allocated earlier for the serializer
+  // The last argument is the network channel.
+  // For arity 2: raw network input reader (backward compat with simple tests)
+  // For arity 3+: ch(NetIn, NetOut) channel term, with send_to_net spawned on NetOut
 
   log('Network input ready: writer=$netInWriter, reader=$netInReader');
 
-  // Find goal entry point (now 2-arity: agent_init(Id, NetIn))
+  // Find goal entry point
   final program = engine.combinedProgram;
-  final goalLabel = '${config.goalFunctor}/2';
+  final arity = config.arity;
+  final goalLabel = '${config.goalFunctor}/$arity';
   final goalPC = program.labels[goalLabel];
   if (goalPC == null) {
     print('[$agentId] ERROR: Goal $goalLabel not found');  // Always print errors
@@ -410,24 +415,60 @@ void _agentIsolateEntry(AgentConfig config) async {
     return;
   }
 
-  // Create argument cells with proper reader references
+  // Build argument map
+  final args = <int, Term>{};
+  var nextGoalId = 2; // Goal ID 1 is the main goal
+
+  // Arg 0: agent ID (constant)
   final (idArgWriter, idArgReader) = runtime.heap.allocateVariable();
-  final (netInArgWriter, netInArgReader) = runtime.heap.allocateVariable();
-
-  // Bind argument writers to their values:
-  // - Arg 0: agent ID (constant)
-  // - Arg 1: network input reader (points to serializer output)
   runtime.heap.bindVariable(idArgWriter, ConstTerm(agentId));
-  runtime.heap.bindVariable(netInArgWriter, VarRef(netInReader));
+  args[0] = VarRef(idArgReader);
 
-  // Spawn goal with reader references
-  runtime.setGoalEnv(1, CallEnv(args: {
-    0: VarRef(idArgReader),
-    1: VarRef(netInArgReader),
-  }));
+  if (arity == 2) {
+    // Simple 2-arg model: last arg is raw network input reader
+    final (netInArgWriter, netInArgReader) = runtime.heap.allocateVariable();
+    runtime.heap.bindVariable(netInArgWriter, VarRef(netInReader));
+    args[1] = VarRef(netInArgReader);
+  } else {
+    // 3+ arg model: middle args are fresh vars, last arg is ch(NetIn, NetOut)
+
+    // Middle args (if any): fresh unbound variables
+    for (var i = 1; i < arity - 1; i++) {
+      final (_, midArgReader) = runtime.heap.allocateVariable();
+      args[i] = VarRef(midArgReader);
+    }
+
+    // Build network channel: ch(NetIn, NetOut)
+    // NetIn = reader connected to serializer output (incoming messages)
+    // NetOut = writer for outgoing messages (consumed by send_to_net)
+    final (netOutWriter, netOutReader) = runtime.heap.allocateVariable();
+
+    // Build ch(netInReader, netOutWriter) on the heap
+    final chTerm = StructTerm('ch', [VarRef(netInReader), VarRef(netOutWriter)]);
+    final (netChWriter, netChReader) = runtime.heap.allocateVariable();
+    runtime.heap.bindVariable(netChWriter, chTerm);
+    args[arity - 1] = VarRef(netChReader);
+
+    // Spawn send_to_net(NetOut?) to process outgoing messages
+    final sendToNetPC = program.labels['send_to_net/1'];
+    if (sendToNetPC != null) {
+      final (stnArgWriter, stnArgReader) = runtime.heap.allocateVariable();
+      runtime.heap.bindVariable(stnArgWriter, VarRef(netOutReader));
+      runtime.setGoalEnv(nextGoalId, CallEnv(args: {0: VarRef(stnArgReader)}));
+      runtime.setGoalProgram(nextGoalId, 'main');
+      runtime.gq.enqueue(GoalRef(nextGoalId, sendToNetPC));
+      log('Spawned send_to_net/1 on NetOut reader=$netOutReader');
+      nextGoalId++;
+    } else {
+      log('WARNING: send_to_net/1 not found — outgoing messages will not be routed');
+    }
+  }
+
+  // Spawn main goal with reader references
+  runtime.setGoalEnv(1, CallEnv(args: args));
   runtime.setGoalProgram(1, 'main');
   runtime.gq.enqueue(GoalRef(1, goalPC));
-  log('Spawned ${config.goalFunctor}/2');
+  log('Spawned ${config.goalFunctor}/$arity');
 
   // Create scheduler for this engine
   final runner = BytecodeRunner(program);
