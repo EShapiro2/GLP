@@ -255,8 +255,8 @@ LocalizeResult localize({
       //        spawn global_send(Z_q?, _r(p,i), p)"
       useReader.add(false); // Use Z_q
 
-      // Create entry so incoming _r(p, i) := T can find Z and bind it
-      table.addLocalizeReaderEntry(writerAddr, gn.agent, gn.index);
+      // Spec: "No entry is created — the global_send goal handles outgoing communication."
+      // _r(p,i) messages are routed to agent p (the globalizer), not to q (the localizer).
 
       // Spawn global_send(Z_q?, _r(p,i), p) for the reverse direction
       // (when agent q binds Z, value flows back to agent p)

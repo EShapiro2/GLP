@@ -78,20 +78,23 @@ Redesigned `TermVar` to carry both `writerAddr` and `readerAddr` fields, populat
 
 ---
 
-## Issue 3: No local-write-back mechanism for localized _w variables
+## Issue 3: Spurious write-back mechanism for localized _w variables
 
-**Status**: Fixed
+**Status**: Removed
 **Discovered**: 2026-02-10
-**Affects**: Multi-agent programs where the receiver writes back on a sent writer (response channel)
-**See also**: `docs/bug-send-globalise-localise.md`, `writer_response_boot.glp`
+**Affects**: N/A (the mechanism was incorrect and has been removed)
 
 ### Summary
 
-When agent q localizes `_w(p, i)`, it creates a fresh pair `(Y_q, Y_q?)` and a `LocalizeEntry(Y_q, p, i)`. The reader `Y_q?` goes into the term. If agent q later binds the writer `Y_q`, there was no mechanism to send `_w(p, i) := done` back to agent p.
+A write-back mechanism (`_registerWriteBackCallbacks`, `_sendWriteBack`) was added to handle the case where agent q localizes `_w(p, i)`, creates a fresh pair `(Y_q, Y_q?)`, and then binds Y_q locally. The write-back sent `_w(p, i) := T` back to agent p.
 
-### Fix
+### Why It Was Wrong
 
-Added `_registerWriteBackCallbacks()` and `_sendWriteBack()` methods to `MadContext`. When `localize()` processes `_w(p, i)`, an `onBind` callback is registered on the fresh writer. When fired, it globalizes the value and queues `_w(p, i) := T↑` for delivery to agent p. Registered in all four localize call sites.
+This mechanism does not exist in GLP. The data flow for `_w(p, i)` is strictly p→q: p assigns the writer, the `global_send` goal at p fires, and the value is delivered to q's entry. There is no reverse flow. If a program needs q→p flow (the receiver writes back), the sender must export the reader, producing `_r(p, i)`, and the `global_send` spawned at q by `localize` handles the outgoing direction.
+
+### Resolution
+
+Removed `_registerWriteBackCallbacks()`, `_sendWriteBack()`, and all call sites from `mad_context.dart`. Test programs that relied on this mechanism need to use the correct polarity (export reader for q→p flow).
 
 ---
 
@@ -149,26 +152,20 @@ Changed `localize()` to pass `writerAddr` in the spawn's `readerAddr` field. The
 
 ---
 
-## Issue 6: globalize-reader path has no onBind callback; entry stores reader address
+## Issue 6: globalize-reader entry stores reader address instead of writer address
 
-**Status**: Fixed
+**Status**: Fixed (part 1); part 2 removed
 **Discovered**: 2026-02-10
-**Affects**: Multi-agent programs where agent p sends a reader `X?` and later binds the paired writer
+**Affects**: Multi-agent programs where agent p globalizes a reader `X?` as `_r(p, i)`
 
 ### Summary
 
-Two bugs in the globalize-reader path:
-
-1. `globalize()` passed `v.addr` (the reader address) to `addGlobalizeEntry()`, which stores it as `writerAddr`. But `_handleReaderAssignment` later calls `bindVariable(entry.writerAddr, ...)` — passing a reader address to `bindVariable` is incorrect.
-
-2. No `onBind` callback was registered for globalize-reader entries. When agent p globalizes reader `X?` as `_r(p, i)` and later binds the paired writer, nothing detected this and sent `_r(p, i) := T↑` to agent q.
+`globalize()` passed `v.addr` (the reader address) to `addGlobalizeEntry()`, which stores it as `writerAddr`. But `_handleReaderAssignment` later calls `bindVariable(entry.writerAddr, ...)` — passing a reader address to `bindVariable` is incorrect.
 
 ### Fix
 
-1. Changed `globalize()` to pass `v.writerAddr` (the actual writer) to `addGlobalizeEntry()`.
+Changed `globalize()` to pass `v.writerAddr` (the actual writer) to `addGlobalizeEntry()`.
 
-2. Added `onBind` registration in `MadContext.send()` for globalize-reader entries. When the paired writer is bound, `_sendWriteBack()` globalizes the value and queues the assignment message.
+### Note on onBind
 
-### Test
-
-`send_reader_boot.glp` exercises this path: agent1 sends `data(X?)` where `X?` is an unbound reader, then binds the writer to `done` after 1000ms. Agent2 should receive `done` via the globalize-reader → onBind → `_sendWriteBack` path.
+A previous fix also added an onBind callback in `send()` for globalize-reader entries, using `_sendWriteBack`. This was incorrect — for `_r(p, i)`, agent p creates an entry and WAITS. The `global_send` is spawned at q by `localize`, not at p. Agent p does not send anything for `_r` entries. The onBind and write-back have been removed.

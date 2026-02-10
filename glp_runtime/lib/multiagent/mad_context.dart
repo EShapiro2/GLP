@@ -201,81 +201,6 @@ class MadContext {
   }
 
   // =========================================================================
-  // Write-back for localized _w variables
-  // =========================================================================
-
-  /// Register write-back callbacks for localized _w variables
-  ///
-  /// When localize processes _w(p, i), it creates a fresh pair (Y_q, Y_q?).
-  /// The reader Y_q? goes into the term. If the local agent later binds
-  /// the writer Y_q, the value must be sent back to agent p as _w(p, i) := T↑.
-  ///
-  /// This method registers onBind callbacks on the fresh writers so that
-  /// when they are bound locally, a global_send fires to deliver the value.
-  void _registerWriteBackCallbacks(
-    List<GlobalName> globalNames,
-    LocalizeResult localizeResult,
-  ) {
-    for (var i = 0; i < globalNames.length; i++) {
-      final gn = globalNames[i];
-      if (!gn.isWriter) continue; // Only _w names need write-back
-
-      final pair = localizeResult.freshPairs[i];
-      final writerAddr = pair.writerAddr;
-      final destAgent = gn.agent;
-
-      _trace('[MAD $agentId] registering write-back callback for $gn on writer=$writerAddr');
-
-      runtime.heap.onBind(writerAddr, (Term value) {
-        _trace('[MAD $agentId] write-back FIRED: $gn := $value (writer=$writerAddr)');
-        _sendWriteBack(gn, value, destAgent);
-      });
-    }
-  }
-
-  /// Send a write-back message for a localized _w variable
-  ///
-  /// When the local agent binds a writer that was created by localizing _w(p, i),
-  /// globalize the value and send _w(p, i) := T↑ to agent p.
-  void _sendWriteBack(GlobalName globalName, Term value, String destAgent) {
-    // Globalize the value (may contain nested variables)
-    final vars = <TermVar>[];
-    _extractTermVarsRecursive(value, vars);
-
-    if (vars.isNotEmpty) {
-      _trace('[MAD $agentId] write-back: globalizing ${vars.length} nested variables');
-      final globalizeResult = globalize(
-        variables: vars,
-        localAgent: agentId,
-        remoteAgent: destAgent,
-        table: wp,
-      );
-
-      // Register global_send goals for nested writers
-      registerGlobalSendSpawns(globalizeResult.spawns);
-
-      // Transform the value to use global names
-      value = globalizeTermWithResult(value, vars, globalizeResult);
-    }
-
-    _trace('[MAD $agentId] write-back: sending $globalName := $value to $destAgent');
-
-    // Create and queue the assignment message
-    final payload = _serializer.createGlobalSendPayload(
-      globalName,
-      value,
-      runtime.heap.isReader,
-      lookupVariable: _lookupVariableForSerialization,
-    );
-
-    mp.add(OutboundMessage(
-      destination: destAgent,
-      type: MessageType.assignment,
-      payload: payload,
-    ));
-  }
-
-  // =========================================================================
   // madGLP Receive Transaction (Phase 4)
   // =========================================================================
 
@@ -352,10 +277,6 @@ class MadContext {
       // Register spawned goals from localization (_r cases)
       registerGlobalSendSpawns(localizeResult.spawns);
 
-      // Register write-back callbacks for _w names: if the local agent
-      // binds the fresh writer, send the value back to the originating agent.
-      _registerWriteBackCallbacks(globalNames, localizeResult);
-
       // Replace global names with local variables in content
       content = localizeTermWithResult(content, globalNames, localizeResult);
       _trace('[MAD $agentId] _handleSerializerAssignment: localized content = $content');
@@ -412,14 +333,9 @@ class MadContext {
         freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );
       registerGlobalSendSpawns(localizeResult.spawns);
-      _registerWriteBackCallbacks(globalNames, localizeResult);
       localizedValue = localizeTermWithResult(value, globalNames, localizeResult);
       _trace('[MAD $agentId] _handleWriterAssignment: localized value = $localizedValue');
     }
-
-    // Remove any onBind callback before binding — the value is arriving
-    // from a remote assignment, so we must NOT echo it back via write-back.
-    runtime.heap.removeBindCallback(entry.writerAddr);
 
     // Bind the writer with localized value
     final activations = runtime.heap.bindVariable(entry.writerAddr, localizedValue);
@@ -437,28 +353,22 @@ class MadContext {
 
   /// Handle _r(p, i) := T assignment
   ///
-  /// Two cases:
-  /// 1. We globalized Y? as _r(p, i): lookup GlobalizeEntry at index i (we are agent p)
-  /// 2. We localized _r(p, i): lookup LocalizeReaderEntry by (p, i) (we are agent q)
+  /// Per spec Section 8.3: "The message is destined for agent p who created
+  /// this global name. Agent p finds entry (X, q) at index i in W_p."
   ///
-  /// Per spec Section 8.3: "Localize T↑, assign X := T↓"
+  /// Only one case: we globalized Y? as _r(p, i), so we have a GlobalizeEntry
+  /// at index i. The localizing agent q never receives _r messages — q sends them.
   void _handleReaderAssignment(GlobalName globalName, Term value, String fromAgent) {
-    // Case 1: Check for GlobalizeEntry (we globalized this reader)
     final entry = wp.lookupByIndex(globalName.index);
 
-    // Case 2: Check for LocalizeReaderEntry (we localized this _r name)
-    final localizeWriterAddr = wp.findLocalizeReaderEntry(globalName.agent, globalName.index);
-
-    if (entry == null && localizeWriterAddr == null) {
+    if (entry == null) {
       throw StateError(
-        'No GlobalizeEntry at index ${globalName.index} and no '
-        'LocalizeReaderEntry for ($globalName.agent, $globalName.index) for $globalName',
+        'No GlobalizeEntry at index ${globalName.index} for $globalName',
       );
     }
 
-    final writerAddr = entry?.writerAddr ?? localizeWriterAddr!;
-    final isLocalizeCase = entry == null;
-    _trace('[MAD $agentId] _handleReaderAssignment: ${isLocalizeCase ? "localize-reader" : "globalize-reader"} entry, writerAddr=$writerAddr');
+    final writerAddr = entry.writerAddr;
+    _trace('[MAD $agentId] _handleReaderAssignment: globalize-reader entry, writerAddr=$writerAddr');
 
     // Localize the value: replace global names with local variables
     // Per spec Section 8.3: "Localize T↑ by p from q to get T_p↓"
@@ -473,14 +383,9 @@ class MadContext {
         freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );
       registerGlobalSendSpawns(localizeResult.spawns);
-      _registerWriteBackCallbacks(globalNames, localizeResult);
       localizedValue = localizeTermWithResult(value, globalNames, localizeResult);
       _trace('[MAD $agentId] _handleReaderAssignment: localized value = $localizedValue');
     }
-
-    // Remove any onBind callback before binding — the value is arriving
-    // from a remote assignment, so we must NOT echo it back via global_send.
-    runtime.heap.removeBindCallback(writerAddr);
 
     // Bind the writer with localized value
     final activations = runtime.heap.bindVariable(writerAddr, localizedValue);
@@ -492,11 +397,7 @@ class MadContext {
     }
 
     // Remove the entry
-    if (isLocalizeCase) {
-      wp.removeLocalizeReaderEntry(globalName.agent, globalName.index);
-    } else {
-      wp.removeGlobalizeEntry(globalName.index);
-    }
+    wp.removeGlobalizeEntry(globalName.index);
     _trace('[MAD $agentId] _handleReaderAssignment: entry removed');
   }
 
@@ -522,7 +423,6 @@ class MadContext {
 
     // Register spawned goals from localization
     registerGlobalSendSpawns(localizeResult.spawns);
-    _registerWriteBackCallbacks(nestedGlobalNames, localizeResult);
 
     // Now handle the main assignment
     handleMadAssignment(
@@ -607,19 +507,10 @@ class MadContext {
     // Register the spawned global_send goals for nested writers
     registerGlobalSendSpawns(globalizeResult.spawns);
 
-    // Register onBind callbacks for globalize-reader entries:
-    // When the paired writer is bound locally, send _r(p, i) := T↑ to dest.
-    for (var i = 0; i < vars.length; i++) {
-      if (vars[i].isReader) {
-        final gn = globalizeResult.globalNames[i];
-        final writerAddr = vars[i].writerAddr;
-        _trace('[MAD $agentId] send: registering onBind for globalize-reader $gn on writer=$writerAddr');
-        runtime.heap.onBind(writerAddr, (Term value) {
-          _trace('[MAD $agentId] globalize-reader onBind FIRED: $gn := $value (writer=$writerAddr)');
-          _sendWriteBack(gn, value, destAgent);
-        });
-      }
-    }
+    // For globalize-reader entries: NO onBind is registered here.
+    // Per spec Section 5.1: when Y? is a reader, p creates an entry (Y, q) and
+    // waits for the assignment to arrive. The global_send goal is spawned at q
+    // (by localize), not at p. Agent p does not send anything for _r entries.
 
     // Transform the term to use global names
     final globalizedTerm = globalizeTermWithResult(term, vars, globalizeResult);

@@ -186,9 +186,7 @@ Code: `glp_runtime/lib/multiagent/mad_helpers.dart` line 98:
 int get pairedReaderAddr => addr;  // BUG: should use heap cross-pointer
 ```
 
-**Bug B — No local-write-back mechanism at receiver**: When agent2 localizes `_w(agent1, 1)` and gets a fresh pair, there is no `onBind` callback registered on the fresh writer. When the receiving agent binds that writer locally, nothing sends the value back to agent1. The `LocalizeEntry` only handles the **incoming** direction (agent1 → agent2), not the **outgoing** direction (agent2 → agent1).
-
-The spec says localize-`_w` creates `(Y_q, Y_q?)` and adds entry `(Y_q, p, i)` — "q will receive the assignment on this link." But in the writer_response case, it is **q** that assigns, and the assignment needs to flow **out** to p.
+**Bug B — Not a bug**: Previously described as "no local-write-back mechanism at receiver." A write-back mechanism was added and then removed. The data flow for `_w(p, i)` is strictly p→q per the spec. There is no reverse flow. If q needs to write back to p, the program must use `_r(p, i)` (export the reader, so localize spawns a `global_send` at q). The test program `writer_response_boot.glp` exports the wrong polarity — it sends a writer expecting the receiver to write back, but should send a reader for q→p flow.
 
 ## Third Program: Send Unbound Reader, Bind Later
 
@@ -236,17 +234,11 @@ Correct flow:
 3. Agent1 binds writer of X to `done`. The `onBind` callback on agent1 fires (for the globalize-writer path), but no — globalize-reader creates an **entry**, not a spawn. There is no `onBind` on agent1 for the globalize-reader path.
 4. Instead, the `GlobalizeEntry` at agent1 index 1 has `(writerOfX, agent2)`. When writerOfX is bound, **someone** needs to detect this and send `_r(agent1, 1) := done` to agent2.
 
-### Bug C — No `onBind` for globalize-reader path
+### Bug C — Not a bug (globalize-reader has no onBind by design)
 
-When `globalize()` processes a reader `X?`, it creates a `GlobalizeEntry(writerOfX, q)` but does NOT register an `onBind` callback on the paired writer. When the writer is bound, nothing fires to send the value to agent q.
+Previously described as "no onBind for globalize-reader path." Per the spec (Section 5.1), when p globalizes reader Y? as `_r(p, i)`, p creates an entry (Y, q) and waits. No goal is spawned and no onBind is registered at p — this is correct. The `global_send` for `_r(p, i)` is spawned at q by `localize`, not at p.
 
-The globalize-writer path spawns a `global_send` goal and registers `onBind` on the writer. The globalize-reader path creates only an entry — no goal, no callback.
-
-### Fix
-
-In `registerGlobalSendSpawns()` (or a new method), also register `onBind` callbacks for `GlobalizeEntry` writers. When the writer is bound, globalize the value and send `_r(p, i) := T↑` to the destination agent recorded in the entry.
-
-Alternatively, at the call site in `MadContext.send()`, after the `globalize()` call, iterate over globalizeResult entries (reader cases) and register `onBind` on each entry's writer.
+The test program `send_reader_boot.glp` exports a reader X? expecting p to send the value when the paired writer X is bound. But per the paper, exporting a reader means q→p flow (q sends, p receives). For p→q flow (p assigns), the program should export the writer X instead.
 
 ## Fixes Applied
 
@@ -254,19 +246,17 @@ Alternatively, at the call site in `MadContext.send()`, after the `globalize()` 
 
 In `mad_helpers.dart` `localize()`, changed `GlobalSendSpawn` for `_r(p,i)` from `readerAddr: readerAddr` to `readerAddr: writerAddr`. The `readerAddr` field is used as the key for `heap.onBind()`, which is indexed by writer address.
 
-### Fix 2: Write-back callbacks for localized `_w` variables (Bug B)
+### Fix 2: Removed write-back mechanism (Bug B — not a bug)
 
-Added `_registerWriteBackCallbacks()` and `_sendWriteBack()` methods to `MadContext`. When `localize()` processes `_w(p, i)` and creates a fresh pair, an `onBind` callback is registered on the fresh writer. When fired, it globalizes the value and sends `_w(p, i) := T↑` back to agent p.
+The write-back mechanism (`_registerWriteBackCallbacks`, `_sendWriteBack`) was added and then removed. It does not exist in GLP. The `_w(p, i)` flow is strictly p→q. Programs needing q→p flow must export the reader, producing `_r(p, i)`.
 
-Registered in all four localize call sites: `_handleSerializerAssignment`, `_handleWriterAssignment`, `_handleReaderAssignment`, and `handleMadAssignmentWithGlobalNames`.
+### Fix 3: No fix needed (Bug C — not a bug)
 
-### Fix 3 (TODO): `onBind` for globalize-reader entries (Bug C)
-
-Not yet implemented. When agent p globalizes reader `X?` as `_r(p, i)` and the paired writer is bound, an `onBind` callback must fire to send `_r(p, i) := T↑` to agent q. Currently only the globalize-writer path has this mechanism.
+Globalize-reader correctly creates only an entry at p, with no onBind and no goal. The `global_send` is spawned at q by `localize`. The test programs need to use the correct polarity.
 
 ## Files Involved
 
-- `glp_runtime/lib/multiagent/mad_context.dart` — `_extractTermVarsRecursive`, `send`, `registerGlobalSendSpawns`, `_registerWriteBackCallbacks` (new), `_sendWriteBack` (new)
+- `glp_runtime/lib/multiagent/mad_context.dart` — `_extractTermVarsRecursive`, `send`, `registerGlobalSendSpawns`
 - `glp_runtime/lib/multiagent/mad_helpers.dart` — `globalize`, `localize`, `TermVar.pairedReaderAddr`
 - `glp_runtime/lib/runtime/body_kernels.dart` — `sendKernel` / `_deepDeref`
 - `glp_runtime/lib/runtime/heap_fcp.dart` — `allocateVariable`, `onBind`, `bindVariable`
