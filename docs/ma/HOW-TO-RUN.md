@@ -1,6 +1,6 @@
 # How to Run GLP Social Agent Programs
 
-**Updated: 2026-02-11**
+**Updated: 2026-02-12**
 
 ## Current Status
 
@@ -8,7 +8,7 @@
 |------|--------|--------|
 | dGLP (single-isolate) | ✅ WORKING | `→ succeeds` |
 | madGLP (multi-isolate, headless) | ✅ Protocol completes | All 7 steps run, agents terminate |
-| madGLP (visual UI) | ❌ NOT WORKING | Flutter app uses obsolete `ui_agent/4`; boot file not integrated |
+| madGLP (visual UI) | ⚠️ INTEGRATED, UNTESTED | Boot updated, needs manual testing |
 
 ---
 
@@ -18,7 +18,7 @@
 |------|-------|------------|
 | dGLP | `social_agent.glp` | REPL: `play.` |
 | madGLP (headless) | `social_agent.glp` + `play_madglp_boot.glp` | `dart test test/multiagent/isolate_manager_test.dart -n "runs full play"` |
-| madGLP (visual UI) | `social_agent.glp` + `ui_mediator.glp` + `play_ui_boot.glp` | Not yet runnable (see status below) |
+| madGLP (visual UI) | `social_agent.glp` + `ui_mediator.glp` + `play_ui_boot.glp` | `cd glp_multiagent && flutter run -d macos` |
 
 ---
 
@@ -32,11 +32,11 @@ dart test test/multiagent/output_kernel_test.dart    # 5 tests: _output/1 kernel
 dart test test/multiagent/ui_mediator_test.dart       # 3 tests: ui_mediator grounding + passthrough
 ```
 
-### All multiagent tests (12 passing + 1 skipped)
+### All multiagent tests (69 passing + 5 skipped + 2 pre-existing failures)
 
 ```bash
 cd /Users/udi/Grassroots/GLP/glp_runtime
-dart test test/multiagent/multiagent_glp_test.dart
+dart test test/multiagent/
 ```
 
 ### Full REPL test suite (317 tests)
@@ -62,11 +62,24 @@ programs/typed_book/social_graph/
 ├── ui_mediator.glp         # Ground-term mediator between agent/4 and Dart UI
 ├── play_dglp_boot.glp      # dGLP boot (thin wrapper - play/0 is in social_agent.glp)
 ├── play_madglp_boot.glp    # madGLP boot: boot/0 with @agent syntax (headless with actors)
-├── play_ui_boot.glp        # madGLP boot: agent_init/3 for visual UI (not yet integrated)
+├── play_ui_boot.glp        # madGLP boot: agent_init/3 for visual UI
 └── ui_agent.glp            # OBSOLETE: uses old agent/3 with FriendsList
 ```
 
 One shared program (`social_agent.glp`) with three boot files. The `ui_mediator.glp` provides the ground-term boundary between agent/4 and Dart.
+
+### Dart runtime files
+
+```
+glp_runtime/lib/multiagent/
+├── agent_runtime.dart      # AgentRuntime class (extracted from Flutter main.dart)
+├── isolate_manager.dart    # IsolateManager + madPredicatesSource (send_to_net, send_to_user)
+├── mad_context.dart        # MadContext: W_p, M_p, message routing
+├── boot_loader.dart        # BootLoader: parses @agent syntax
+├── message_queue.dart      # Message types and serialization
+├── payload_serializer.dart # Binary payload serialization
+└── global_writers_table.dart # GlobalWritersTable (W_p)
+```
 
 ### Dart test files
 
@@ -183,23 +196,16 @@ The `agent_init/2` procedure receives the agent ID and network input stream, the
 
 Interactive multi-window execution using `glp_multiagent` Flutter app. Each agent runs in its own window with REPL-style input.
 
-### Current Status: NOT WORKING
+### Current Status: INTEGRATED, NEEDS MANUAL TESTING
 
-The Flutter app needs to be updated to use the new UI I/O components. See `docs/ma/ui-io-spec.md` for the full specification and problem description.
+The Flutter app uses `AgentRuntime` (extracted from main.dart into `glp_runtime`) which boots `agent_init/3` from `play_ui_boot.glp`. All I/O goes through GLP:
 
-**What exists and works** (tested in isolation):
-- `_output/1` Dart kernel — prints ground terms via `outputCallback`
-- `send_to_user/1` GLP predicate — reads ground stream, calls `_output/1`
-- `ui_mediator/5` GLP process — grounds agent output, forwards user input
-- `play_ui_boot.glp` — boot file using agent/4 + ui_mediator + send_to_user
+- **User output**: `send_to_user` → `_output/1` kernel → `outputCallback` → Flutter UI
+- **Network output**: `send_to_net` → `global_send` → `MadContext` → `onMessageReady` → coordinator → `MadRouter`
+- **User input**: Flutter text field → `InputInjector` → GLP `UserIn` stream → `ui_mediator` → `agent/4`
+- **Network input**: coordinator → `MadContext` → `InputInjector` → GLP `NetIn` stream → `agent/4`
 
-**What is broken**:
-- The Flutter app (`main.dart`) still starts `agent_init/3` from `ui_agent.glp` plus a separate `ui_agent/4` goal
-- `ui_agent.glp` uses the old `agent/3` with `FriendsList` — incompatible with current `agent/4` which uses `OutputsList`
-- `ui_agent/4` is not found at runtime (only `social_agent.glp` is loaded), so the mediator goal silently fails
-- `play_ui_boot.glp` calls `send_to_net(NetOut?)` which consumes the net output stream inside GLP via `global_send`, but the Flutter app needs Dart to observe that stream via `OutputObserver` to route messages through `MadRouter`
-
-### Run Command (when working)
+### Run Command
 
 ```bash
 cd /Users/udi/Grassroots/GLP/glp_multiagent
@@ -212,18 +218,35 @@ In any agent window, type GLP terms:
 - `connect(bob)` — cold-call Bob
 - `send(bob, hello)` — send text message to friend
 - `introduce(alice, charlie)` — introduce two friends
-- `decision(yes, bob, 1)` — accept befriend request (req ID from mediator)
+- `decision(yes, bob, 1)` — accept befriend request (req ID from mediator output)
 
-### Flutter App Architecture
+### Architecture
+
+```
+Dart (Flutter)                           GLP
+                                         ┌─────────────────────────┐
+UserInput ──InputInjector──► UserIn ────►│ ui_mediator ──► agent/4 │
+                                         │      │                  │
+           ◄── outputCallback ◄── _output/1 ◄── send_to_user ◄──┘│
+                                         │                         │
+                                         │ agent/4 ──► send_to_net │
+                                         │              │          │
+           ◄── onMessageReady ◄── global_send ◄────────┘          │
+             (MadContext)                │                         │
+                                         │                         │
+NetIn ──────InputInjector──────────────►│ ──────────► agent/4     │
+  (from MadContext)                      └─────────────────────────┘
+```
+
+### Flutter App Components
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
-| Coordinator | `glp_multiagent/lib/main.dart` | Spawns windows, routes messages |
-| Agent Window | `glp_multiagent/lib/main.dart` | Per-agent GLP runtime + UI |
+| Coordinator | `glp_multiagent/lib/main.dart` | Spawns windows, routes messages via MadRouter |
+| Agent Window | `glp_multiagent/lib/main.dart` | Flutter UI + AgentRuntime wiring |
+| AgentRuntime | `glp_runtime/lib/multiagent/agent_runtime.dart` | GLP runtime, MadContext, I/O, execution |
 | MadRouter | `glp_multiagent/lib/mad_router.dart` | Routes messages between windows |
-| ExternalChannel | `glp_runtime/lib/runtime/external_io.dart` | Bidirectional Dart↔GLP streams |
 | InputInjector | `glp_runtime/lib/runtime/external_io.dart` | Dart injects terms into GLP stream |
-| OutputObserver | `glp_runtime/lib/runtime/external_io.dart` | Dart observes GLP output stream |
 
 ### GLP Files for Visual UI
 
@@ -231,16 +254,17 @@ In any agent window, type GLP terms:
 |------|---------|--------|
 | `social_agent.glp` | agent/4, protocol, helpers | ✅ Working |
 | `ui_mediator.glp` | Ground-term mediator (agent/4 ↔ Dart) | ✅ Tested |
-| `play_ui_boot.glp` | Boot: agent_init/3 with mediator | ⚠️ Not integrated |
+| `play_ui_boot.glp` | Boot: agent_init/3 with mediator | ✅ Integrated |
 | `ui_agent.glp` | Old mediator (agent/3) | ❌ Obsolete |
 
 ### Dart Implementation Files for UI I/O
 
-| File | What was added | Status |
-|------|----------------|--------|
+| File | What | Status |
+|------|------|--------|
+| `glp_runtime/lib/multiagent/agent_runtime.dart` | AgentRuntime class | ✅ |
 | `glp_runtime/lib/runtime/body_kernels.dart` | `_output/1` kernel + `formatGroundTerm()` | ✅ |
 | `glp_runtime/lib/runtime/runtime.dart` | `outputCallback` field | ✅ |
-| `glp_runtime/lib/multiagent/isolate_manager.dart` | `send_to_user/1` in `_madPredicatesSource` | ✅ |
+| `glp_runtime/lib/multiagent/isolate_manager.dart` | `madPredicatesSource` (send_to_net, send_to_user) | ✅ |
 
 ---
 
@@ -256,10 +280,10 @@ In any agent window, type GLP terms:
 
 ---
 
-## Current Status Summary (2026-02-11)
+## Current Status Summary (2026-02-12)
 
 - dGLP: ✅ Working — `play.` succeeds
 - madGLP headless: ✅ Protocol completes — all 7 steps run in multi-isolate test
-- madGLP visual UI: ❌ Flutter app not yet updated for new agent/4 + ui_mediator architecture
+- madGLP visual UI: ⚠️ Integrated — boot updated, needs manual testing with `flutter run`
 - UI I/O components: ✅ All tested in isolation (8 tests pass)
-- 12 simpler multi-agent tests pass
+- 69 multiagent tests pass, 5 skipped, 2 pre-existing isolate timeout failures

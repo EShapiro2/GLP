@@ -1,6 +1,6 @@
 # UI I/O Specification for madGLP
 
-**Updated: 2026-02-11**
+**Updated: 2026-02-12**
 
 ## Overview
 
@@ -123,39 +123,36 @@ GLP terms and writes them into a stream via `InputInjector`.
 - Passes ground `connected` message through
 - Passes ground `received` message through
 
-## Open Problem: Flutter App Integration
+## Flutter App Integration (Completed 2026-02-12)
 
-The Flutter app (`glp_multiagent/lib/main.dart`) needs to be updated to use the new components.
+The Flutter app has been updated to use `AgentRuntime` from `glp_runtime`. The runtime logic (~600 lines) was extracted from `main.dart` into `agent_runtime.dart`, and the boot was updated to use `agent_init/3` from `play_ui_boot.glp`.
 
-### Current Flutter app state
+### How it works
 
-The app's `_startAgentGoal` (lines 857–964 of `main.dart`) currently:
-- Starts two separate GLP goals: `agent_init/3` and `ui_agent/4`
-- Creates an internal channel between social agent and ui_agent
-- Uses `ExternalChannel` + `OutputObserver` for both user and network output
-- Loads only `social_agent.glp` (from `_defaultGlpPath`)
-- Looks for `ui_agent/4` which is defined in `ui_agent.glp` (not loaded), so the ui_agent goal silently fails with a warning
+1. Coordinator loads three GLP files: `social_agent.glp` + `ui_mediator.glp` + `play_ui_boot.glp`
+2. Each agent window creates an `AgentRuntime` with the concatenated source
+3. `AgentRuntime.initialize()` compiles the source (with `madPredicatesSource`), starts `agent_init(Id, UserIn, NetIn)`
+4. Network output: `send_to_net` → `global_send` → `MadContext` → `onMessageReady` → coordinator → `MadRouter`
+5. User output: `send_to_user` → `_output/1` kernel → `outputCallback` → Flutter UI
+6. No `ExternalChannel` or `OutputObserver` needed — all I/O goes through GLP predicates
 
-### Incompatibility: `ui_agent.glp` vs `social_agent.glp`
+### Status: Needs Manual Testing
 
-`ui_agent.glp` uses the old `agent/3` with `FriendsList` and `friend(user, ...)` entries. The current `social_agent.glp` uses `agent/4` with `OutputsList` and `output('_user', ...)` entries. These are incompatible — `ui_agent.glp` is obsolete.
-
-### Boot file problem: `send_to_net` vs `OutputObserver`
-
-`play_ui_boot.glp` calls `send_to_net(NetOut?)` which consumes the network output stream inside GLP using `global_send` (a madGLP kernel for inter-isolate communication). But the Flutter app needs Dart to observe the network output stream via `OutputObserver` so it can route messages to other agent windows through `MadRouter`. These two approaches conflict — either GLP consumes the net output stream, or Dart observes it, but not both.
+The integration is complete and the app builds, but has not been tested interactively with `flutter run -d macos`.
 
 ## File Summary
 
 | Component | File | Status |
 |-----------|------|--------|
+| `AgentRuntime` | `glp_runtime/lib/multiagent/agent_runtime.dart` | ✅ Implemented |
 | `_output/1` kernel | `glp_runtime/lib/runtime/body_kernels.dart` | ✅ Implemented |
 | `outputCallback` | `glp_runtime/lib/runtime/runtime.dart` | ✅ Implemented |
-| `send_to_user/1` | `glp_runtime/lib/multiagent/isolate_manager.dart` | ✅ Implemented |
+| `madPredicatesSource` | `glp_runtime/lib/multiagent/isolate_manager.dart` | ✅ Implemented |
 | `ui_mediator/5` | `programs/typed_book/social_graph/ui_mediator.glp` | ✅ Implemented |
-| `play_ui_boot.glp` | `programs/typed_book/social_graph/play_ui_boot.glp` | ⚠️ Written, not integrated |
-| `ui_agent.glp` | `programs/typed_book/social_graph/ui_agent.glp` | ❌ Obsolete (uses old agent/3) |
+| `play_ui_boot.glp` | `programs/typed_book/social_graph/play_ui_boot.glp` | ✅ Integrated |
+| `ui_agent.glp` | `programs/typed_book/social_graph/ui_agent.glp` | ❌ Obsolete |
 | Output kernel tests | `glp_runtime/test/multiagent/output_kernel_test.dart` | ✅ 5 pass |
 | Mediator tests | `glp_runtime/test/multiagent/ui_mediator_test.dart` | ✅ 3 pass |
-| Flutter app | `glp_multiagent/lib/main.dart` | ❌ Uses old ui_agent/4, needs update |
+| Flutter app | `glp_multiagent/lib/main.dart` | ✅ Updated |
 | External I/O | `glp_runtime/lib/runtime/external_io.dart` | ✅ Existing |
 | MadRouter | `glp_multiagent/lib/mad_router.dart` | ✅ Existing |
