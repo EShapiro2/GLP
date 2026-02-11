@@ -1,7 +1,7 @@
 /// GLP Multiagent - madGLP Integration
 ///
 /// Coordinator window spawns agent windows, routes messages between them.
-/// Uses MadContext for proper multiagent W_p/M_p semantics.
+/// Uses AgentRuntime (from glp_runtime) for GLP execution and madGLP context.
 /// Supports opaque byte payloads for inter-agent communication.
 library;
 
@@ -11,20 +11,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
-import 'package:glp_runtime/compiler/compiler.dart';
-import 'package:glp_runtime/compiler/parser.dart';
-import 'package:glp_runtime/compiler/lexer.dart';
-import 'package:glp_runtime/compiler/ast.dart' as ast;
-import 'package:glp_runtime/bytecode/runner.dart';
-import 'package:glp_runtime/runtime/runtime.dart';
-import 'package:glp_runtime/runtime/machine_state.dart';
-import 'package:glp_runtime/runtime/scheduler.dart';
-import 'package:glp_runtime/runtime/system_predicates_impl.dart';
-import 'package:glp_runtime/runtime/terms.dart' as rt;
-import 'package:glp_runtime/runtime/external_io.dart';
-import 'package:glp_runtime/multiagent/mad_context.dart';
-import 'package:glp_runtime/multiagent/message_queue.dart';
-import 'package:glp_runtime/multiagent/payload_serializer.dart';
+import 'package:glp_runtime/multiagent/agent_runtime.dart';
 
 import 'mad_router.dart';
 
@@ -76,7 +63,6 @@ class TraceLogger {
 
 /// Default GLP program paths - social_agent.glp + UI boot adapter
 const _defaultGlpPath = '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/social_agent.glp';
-const _uiBootPath = '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_ui_boot.glp';
 
 /// Entry point - checks if spawned window or main coordinator
 void main(List<String> args) {
@@ -211,7 +197,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
         // Load user GLP program only (stdlib compiled separately in agent)
         final userSource = await File(newPath).readAsString();
         _cachedGlpSource = userSource;
-        
+
         setState(() {
           _currentGlpPath = newPath;
           _log.add('GLP loaded: $newPath (${_cachedGlpSource!.length} chars)');
@@ -484,32 +470,49 @@ class _AgentScreenState extends State<AgentScreen> {
   final FocusNode _inputFocusNode = FocusNode();
   final List<String> _outputLog = [];
 
-  // madGLP: GlpRuntime + MadContext for multiagent support
-  GlpRuntime? _runtime;
-  MadContext? _ctx;
-  Scheduler? _scheduler;
-  _MultiAgentIOContext? _ioContext;
-  Map<String, BytecodeProgram> _programs = {};
-  int _goalId = 1;
-
-  // Pending output terms (to be dereferenced after execution)
-  final List<rt.Term> _pendingUserOutputTerms = [];
-
-  // Track writers that have been shown to the user
-  // Maps writer address -> variable name shown (e.g., 35 -> "X35")
-  final Map<int, String> _knownWriters = {};
-
-  int _goalCount = 0;
-  int _heapVars = 0;
-  int _wpSize = 0;  // W_p size (global writers table)
-  int _mpSize = 0;
-  bool _isRunning = false;
-  bool _initialized = false;
+  late final AgentRuntime _agent;
   String _status = 'Not initialized';
 
   @override
   void initState() {
     super.initState();
+
+    _agent = AgentRuntime(
+      agentId: widget.agentId,
+      glpSource: widget.glpSource,
+      friends: widget.friends,
+    );
+
+    // Wire callbacks
+    _agent.onOutput = (line) {
+      setState(() {
+        _outputLog.add(line);
+      });
+      _scrollToBottom();
+    };
+
+    _agent.onLog = (tag, message) {
+      TraceLogger.instance.log(tag, message);
+    };
+
+    _agent.onSendMadMessage = (to, payload) async {
+      TraceLogger.instance.log(widget.agentId.toUpperCase(), 'SEND_MAD to $to (${payload.length} bytes)');
+      try {
+        final encodedPayload = base64Encode(payload);
+        await DesktopMultiWindow.invokeMethod(
+          0, // Main window ID is always 0
+          'send_mad',
+          jsonEncode({
+            'from': widget.agentId,
+            'to': to,
+            'payload': encodedPayload,
+          }),
+        );
+      } catch (e) {
+        TraceLogger.instance.log(widget.agentId.toUpperCase(), 'SEND_MAD ERROR: $e');
+      }
+    };
+
     _setupMethodChannel();
     _initializeRuntime();
   }
@@ -528,684 +531,53 @@ class _AgentScreenState extends State<AgentScreen> {
         final encodedPayload = args['payload'] as String;
         final payload = Uint8List.fromList(base64Decode(encodedPayload));
         TraceLogger.instance.log(_tag, 'DELIVER_MAD from $from (${payload.length} bytes)');
-        _onMadMessageReceived(from, payload);
+        _agent.onMadMessageReceived(from, payload);
+        setState(() {
+          _agent.updateStats();
+          _status = 'Ready';
+        });
       } else if (call.method == 'deliver') {
         // Legacy JSON message (backwards compatibility)
         final args = jsonDecode(call.arguments as String) as Map<String, dynamic>;
         final from = args['from'] as String;
         final payload = args['payload'];
         TraceLogger.instance.log(_tag, 'DELIVER (legacy) from $from');
-        _onLegacyMessageReceived(from, payload);
+        _agent.onLegacyMessageReceived(from, payload);
+        setState(() {
+          _agent.updateStats();
+          _status = 'Ready';
+        });
       }
       return null;
     });
   }
 
-  /// Handle outgoing network messages - route via madGLP
-  ///
-  /// Message formats from social_agent_v2.glp:
-  /// - 2-arg msg: msg(Target, Content) - cold-call to target
-  /// - 3-arg msg: msg(From, To, Content) - friend-to-friend message
-  void _handleNetOutput(rt.Term term) {
-    if (_runtime == null) return;
-
-    final derefTerm = _derefTerm(term);
-    final formatted = _formatTerm(derefTerm);
-    TraceLogger.instance.log(_tag, 'NET_OUT: $formatted');
-    _addOutput('[NET OUT] $formatted');
-
-    // Parse message to get destination
-    if (derefTerm is rt.StructTerm && derefTerm.functor == 'msg') {
-      String? destination;
-
-      if (derefTerm.args.length == 2) {
-        // 2-arg msg: msg(Target, Content)
-        final target = _derefTerm(derefTerm.args[0]);
-        if (target is rt.ConstTerm) {
-          destination = target.value?.toString();
-        }
-        TraceLogger.instance.log(_tag, 'NET_OUT: 2-arg msg, target=$destination');
-      } else if (derefTerm.args.length == 3) {
-        // 3-arg msg: msg(From, To, Content)
-        final to = _derefTerm(derefTerm.args[1]);
-        if (to is rt.ConstTerm) {
-          destination = to.value?.toString();
-        }
-        TraceLogger.instance.log(_tag, 'NET_OUT: 3-arg msg, to=$destination');
-      }
-
-      if (destination != null && destination != 'user' && destination != 'net') {
-        TraceLogger.instance.log(_tag, 'NET_OUT: Sending to $destination');
-        _sendAgentMessage(destination, derefTerm);
-      } else {
-        TraceLogger.instance.log(_tag, 'NET_OUT: Not routing (dest=$destination)');
-      }
-    } else {
-      TraceLogger.instance.log(_tag, 'NET_OUT: Not a msg struct');
-    }
-  }
-
-  /// Handle incoming madGLP binary message
-  void _onMadMessageReceived(String from, Uint8List payload) {
-    TraceLogger.instance.log(_tag, 'MAD_RECV from $from (${payload.length} bytes)');
-    _addOutput('[MAD RECV from $from] ${payload.length} bytes');
-
-    if (_runtime == null || _ctx == null || _ioContext == null) {
-      TraceLogger.instance.log(_tag, 'MAD_RECV: ERROR - runtime/ctx/ioContext is null');
-      return;
-    }
-
-    // Deserialize the outer message to check type
-    final serializer = PayloadSerializer(widget.agentId.toLowerCase());
-    final msg = serializer.deserializeMessage(payload);
-    TraceLogger.instance.log(_tag, 'MAD_RECV: type=${msg.type}, dest=${msg.destination}');
-
-    if (msg.type == MessageType.assignment) {
-      // madGLP assignment message
-      try {
-        final (globalName, value) = serializer.deserializeGlobalSendPayload(
-          msg.payload,
-          (isReader) {
-            final (w, r) = _runtime!.heap.allocateVariable();
-            return isReader ? r : w;
-          },
-        );
-
-        TraceLogger.instance.log(_tag, 'MAD_ASSIGN: $globalName := ${_formatTerm(value)}');
-        _addOutput('[MAD ASSIGN] $globalName := ${_formatTerm(value)}');
-
-        _ctx!.handleMadAssignment(
-          globalName: globalName,
-          value: value,
-          fromAgent: from.toLowerCase(),
-        );
-      } catch (e) {
-        TraceLogger.instance.log(_tag, 'MAD_ERROR: $e');
-        _addOutput('[MAD ERROR] $e');
-      }
-    } else if (msg.type == MessageType.agentMessage) {
-      // Cold-call agent message - deserialize and inject into NET input
-      final term = serializer.deserializeAgentMessagePayload(
-        msg.payload,
-        (isReader) {
-          final (w, r) = _runtime!.heap.allocateVariable();
-          return isReader ? r : w;
-        },
-      );
-
-      final formatted = _formatTerm(term);
-      TraceLogger.instance.log(_tag, 'AGENT_MSG: $formatted');
-      _addOutput('[AGENT MSG] $formatted');
-
-      // Inject into the NET input stream
-      TraceLogger.instance.log(_tag, 'INJECT into netInput');
-      final activations = _ioContext!.netInput.inject(term);
-      TraceLogger.instance.log(_tag, 'INJECT: ${activations.length} activations');
-      for (final goal in activations) {
-        _runtime!.gq.enqueue(goal);
-      }
-    } else {
-      TraceLogger.instance.log(_tag, 'MAD_RECV: Unknown message type ${msg.type}');
-    }
-
-    // Update stats
-    _updateStats();
-
-    // Run to process any reactivated goals
-    _runUntilQuiescent();
-  }
-
-  /// Handle legacy JSON message (backwards compatibility)
-  void _onLegacyMessageReceived(String from, dynamic payload) {
-    _addOutput('[RECV from $from] $payload');
-
-    if (_ioContext == null || _runtime == null) return;
-
-    final fromLower = from.toLowerCase();
-
-    // Inject msg(From, Id, Payload) into NET input stream
-    final msgTerm = rt.StructTerm('msg', [
-      rt.ConstTerm(fromLower),
-      rt.ConstTerm(widget.agentId.toLowerCase()),
-      rt.ConstTerm(payload),
-    ]);
-
-    final activations = _ioContext!.netInput.inject(msgTerm);
-    for (final goal in activations) {
-      _runtime!.gq.enqueue(goal);
-    }
-
-    // Run to process the message
-    _runUntilQuiescent();
-  }
-
-  /// Send madGLP binary message to coordinator for routing
-  Future<void> _sendMadMessage(String to, Uint8List payload) async {
-    TraceLogger.instance.log(_tag, 'SEND_MAD to $to (${payload.length} bytes)');
-    _addOutput('[MAD SEND to $to] ${payload.length} bytes');
-
-    try {
-      final encodedPayload = base64Encode(payload);
-      await DesktopMultiWindow.invokeMethod(
-        0, // Main window ID is always 0
-        'send_mad',
-        jsonEncode({
-          'from': widget.agentId,
-          'to': to,
-          'payload': encodedPayload,
-        }),
-      );
-      TraceLogger.instance.log(_tag, 'SEND_MAD: sent to coordinator');
-    } catch (e) {
-      TraceLogger.instance.log(_tag, 'SEND_MAD ERROR: $e');
-      _addOutput('[ERROR] Failed to send mad message: $e');
-    }
-  }
-
-  /// Send agent message with proper term serialization
-  /// This preserves structure and variables for cross-agent communication
-  Future<void> _sendAgentMessage(String to, rt.Term msgTerm) async {
-    TraceLogger.instance.log(_tag, 'SEND_AGENT_MSG to $to: ${_formatTerm(msgTerm)}');
-    if (_runtime == null || _ctx == null) {
-      TraceLogger.instance.log(_tag, 'SEND_AGENT_MSG: ERROR - runtime/ctx is null');
-      return;
-    }
-
-    try {
-      // Per spec section 4.3: register exported variables in W_p before sending
-      // This enables Bob to route assignments for variables he creates and sends
-      _ctx!.exportTerm(msgTerm);
-
-      // Serialize the full term (preserving structure and variables)
-      final serializer = PayloadSerializer(widget.agentId.toLowerCase());
-      final termPayload = serializer.createAgentMessagePayload(
-        msgTerm,
-        (addr) => _runtime!.heap.isReader(addr),
-      );
-      TraceLogger.instance.log(_tag, 'SEND_AGENT_MSG: serialized ${termPayload.length} bytes');
-
-      // Wrap in OutboundMessage with agentMessage type
-      final msg = OutboundMessage(
-        destination: to,
-        type: MessageType.agentMessage,
-        payload: termPayload,
-      );
-      final payload = serializer.serializeMessage(msg);
-      TraceLogger.instance.log(_tag, 'SEND_AGENT_MSG: wrapped ${payload.length} bytes');
-
-      await _sendMadMessage(to, payload);
-    } catch (e, st) {
-      TraceLogger.instance.log(_tag, 'SEND_AGENT_MSG ERROR: $e\n$st');
-      _addOutput('[ERROR] Failed to send agent message: $e');
-    }
-  }
-
   Future<void> _initializeRuntime() async {
     try {
-      TraceLogger.instance.log(_tag, 'INIT: Creating MadContext');
-      _addOutput('[INIT] Creating MadContext...');
-      _addOutput('[INIT] Friends: ${widget.friends.join(", ")}');
-
-      // Create GlpRuntime and MadContext directly
-      _runtime = GlpRuntime();
-      _ctx = MadContext(agentId: widget.agentId.toLowerCase(), runtime: _runtime!);
-      TraceLogger.instance.log(_tag, 'INIT: MadContext created');
-
-      // Set up callback for outbound madGLP messages
-      _ctx!.onMessageReady = (destination, msg) async {
-        final serializer = PayloadSerializer(widget.agentId.toLowerCase());
-        final payload = serializer.serializeMessage(msg);
-        await _sendMadMessage(destination, payload);
-      };
-
-      // Register standard predicates
-      registerStandardPredicates(_runtime!.systemPredicates);
-
-      // Create user and net channels
-      final userChannel = createExternalChannel(_runtime!.heap, 'user');
-      final netChannel = createExternalChannel(_runtime!.heap, 'net');
-
-      // Create input injectors for user and network (Dart holds writer)
-      final userInput = InputInjector(_runtime!.heap, 'user', userChannel.inputWriterAddr);
-      final netInput = InputInjector(_runtime!.heap, 'net', netChannel.inputWriterAddr);
-
-      // Create user output observer - displays to UI (Dart observes via reader)
-      final userOutput = OutputObserver(
-        _runtime!.heap,
-        'user',
-        userChannel.outputReaderAddr,
-        (term) {
-          _pendingUserOutputTerms.add(term);
-        },
-        () {
-          setState(() {
-            _outputLog.add('[USER OUTPUT CLOSED]');
-          });
-        },
-      );
-
-      // Create net output observer - watches for outgoing network messages
-      // and routes them via madGLP to the destination agent (Dart observes via reader)
-      final netOutput = OutputObserver(
-        _runtime!.heap,
-        'net',
-        netChannel.outputReaderAddr,
-        (term) {
-          _handleNetOutput(term);
-        },
-        () {
-          setState(() {
-            _outputLog.add('[NET OUTPUT CLOSED]');
-          });
-        },
-      );
-
-      _ioContext = _MultiAgentIOContext(
-        userChannel: userChannel,
-        netChannel: netChannel,
-        userInput: userInput,
-        netInput: netInput,
-        userOutput: userOutput,
-        netOutput: netOutput,
-      );
-
-      // Compile stdlib separately (provides =/2)
-      const stdlibSource = 'X? = X.\n';
-      final stdlibCompiler = GlpCompiler();
-      final stdlibProgram = stdlibCompiler.compile(stdlibSource);
-      _programs['stdlib'] = stdlibProgram;
-
-      // Compile user program separately (preserves type definition ordering)
-      final userCompiler = GlpCompiler();
-      final userProgram = userCompiler.compile(widget.glpSource);
-      _programs['user'] = userProgram;
-
-      _addOutput('[INIT] Loaded GLP program');
-
-      // Start goal: agent_init(Id, UserCh, NetCh) - v2 protocol
-      final agentIdLower = widget.agentId.toLowerCase();
-      _addOutput('[INIT] Starting: agent_init($agentIdLower, UserCh, NetCh)');
-      _startAgentGoal(agentIdLower);
+      await _agent.initialize();
 
       setState(() {
-        _initialized = true;
         _status = 'Ready';
-        _updateStats();
       });
-
-      final firstFriend = widget.friends.isNotEmpty ? widget.friends.first.toLowerCase() : 'friend';
-      _addOutput('[INIT] Ready! GLP term interface:');
-      _addOutput('  connect($firstFriend)         - cold-call $firstFriend');
-      _addOutput('  send($firstFriend, hello)     - send text message');
-      _addOutput('  X35 = accept(Ch)              - bind writer X35 to accept');
-      _addOutput('  X35 = no                      - bind writer X35 to reject');
-      _addOutput('  introduce(alice, charlie)     - introduce two friends');
 
       // Request focus on input field after initialization
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _inputFocusNode.requestFocus();
       });
     } catch (e, st) {
-      _addOutput('[ERROR] $e');
       debugPrint('$st');
       setState(() {
         _status = 'Error: $e';
       });
-    }
-  }
-
-  void _startAgentGoal(String agentId) {
-    if (_runtime == null || _ioContext == null) return;
-
-    try {
-      // Combine loaded programs
-      final allOps = <dynamic>[];
-      for (final loaded in _programs.values) {
-        allOps.addAll(loaded.ops);
-      }
-      final combinedProgram = BytecodeProgram(allOps);
-
-      // Create scheduler first (needed for both goals)
-      final runner = BytecodeRunner(combinedProgram);
-      _scheduler = Scheduler(rt: _runtime!, runners: {'main': runner});
-      _scheduler!.resetDisplayNumbering();
-
-      final heap = _runtime!.heap;
-
-      // Create internal channel between social agent and UI agent
-      // AgentCh = ch(AgentIn, AgentOut) - social agent's user channel
-      // UICh = ch(UIIn, UIOut) - UI agent's agent channel (connected to AgentCh)
-      final (agentInWriter, agentInReader) = heap.allocateVariable();
-      final (agentOutWriter, agentOutReader) = heap.allocateVariable();
-      final agentChTerm = rt.StructTerm('ch', [
-        rt.VarRef(agentInReader),  // Agent reads from this
-        rt.VarRef(agentOutWriter), // Agent writes to this
-      ]);
-      final uiAgentChTerm = rt.StructTerm('ch', [
-        rt.VarRef(agentOutReader), // UI agent reads what agent wrote
-        rt.VarRef(agentInWriter),  // UI agent writes what agent will read
-      ]);
-      TraceLogger.instance.log(_tag, 'GOAL: Created internal agent<->ui channel');
-
-      // --- Start Goal 1: agent_init(Id, AgentCh, NetCh) ---
-      // Social agent talks to UI agent (not directly to Dart)
-      final agentEntryPC = combinedProgram.labels['agent_init/3'];
-      TraceLogger.instance.log(_tag, 'GOAL: agent_init/3 entryPC=$agentEntryPC');
-      if (agentEntryPC == null) {
-        _addOutput('[ERROR] Predicate agent_init/3 not found');
-        return;
-      }
-
-      // Arg 0: agentId
-      final (arg0Writer, arg0Reader) = heap.allocateVariable();
-      heap.bindVariable(arg0Writer, rt.ConstTerm(agentId));
-
-      // Arg 1: agentChTerm (social agent's user channel -> goes to ui_agent)
-      final (arg1Writer, arg1Reader) = heap.allocateVariable();
-      heap.bindVariable(arg1Writer, agentChTerm);
-
-      // Arg 2: netChannelTerm (network channel -> direct to Dart)
-      final (arg2Writer, arg2Reader) = heap.allocateVariable();
-      heap.bindVariable(arg2Writer, _ioContext!.netChannelTerm);
-
-      final agentEnv = CallEnv(args: {
-        0: rt.VarRef(arg0Reader),
-        1: rt.VarRef(arg1Reader),
-        2: rt.VarRef(arg2Reader),
-      });
-      _runtime!.setGoalEnv(_goalId, agentEnv);
-      _runtime!.setGoalProgram(_goalId, 'main');
-      _runtime!.gq.enqueue(GoalRef(_goalId, agentEntryPC));
-      _goalId++;
-      _addOutput('[GOAL] Started agent_init($agentId, AgentCh, NetCh)');
-
-      // --- Start Goal 2: ui_agent(UICh, DartCh, [], 1) ---
-      // UI agent mediates between social agent and Dart
-      final uiEntryPC = combinedProgram.labels['ui_agent/4'];
-      TraceLogger.instance.log(_tag, 'GOAL: ui_agent/4 entryPC=$uiEntryPC');
-      if (uiEntryPC == null) {
-        _addOutput('[WARN] Predicate ui_agent/4 not found - running without UI mediation');
-      } else {
-        // Arg 0: uiAgentChTerm (channel to social agent)
-        final (uiArg0Writer, uiArg0Reader) = heap.allocateVariable();
-        heap.bindVariable(uiArg0Writer, uiAgentChTerm);
-
-        // Arg 1: userChannelTerm (channel to Dart)
-        final (uiArg1Writer, uiArg1Reader) = heap.allocateVariable();
-        heap.bindVariable(uiArg1Writer, _ioContext!.userChannelTerm);
-
-        // Arg 2: [] (empty pending list)
-        final (uiArg2Writer, uiArg2Reader) = heap.allocateVariable();
-        heap.bindVariable(uiArg2Writer, rt.ConstTerm('nil'));
-
-        // Arg 3: 1 (initial request ID)
-        final (uiArg3Writer, uiArg3Reader) = heap.allocateVariable();
-        heap.bindVariable(uiArg3Writer, rt.ConstTerm(1));
-
-        final uiEnv = CallEnv(args: {
-          0: rt.VarRef(uiArg0Reader),
-          1: rt.VarRef(uiArg1Reader),
-          2: rt.VarRef(uiArg2Reader),
-          3: rt.VarRef(uiArg3Reader),
-        });
-        _runtime!.setGoalEnv(_goalId, uiEnv);
-        _runtime!.setGoalProgram(_goalId, 'main');
-        _runtime!.gq.enqueue(GoalRef(_goalId, uiEntryPC));
-        _goalId++;
-        _addOutput('[GOAL] Started ui_agent(UICh, DartCh, [], 1)');
-      }
-
-      // Initial run to set up merge and channels
-      _runUntilQuiescent();
-    } catch (e, st) {
-      _addOutput('[ERROR] Starting goal: $e');
-      debugPrint('$st');
     }
   }
 
   void _sendInput() {
     final text = _inputController.text.trim();
-    TraceLogger.instance.log(_tag, 'USER_INPUT: $text');
-    if (text.isEmpty || _ioContext == null || _runtime == null) {
-      TraceLogger.instance.log(_tag, 'USER_INPUT: early return (empty or not initialized)');
-      return;
-    }
+    if (text.isEmpty || !_agent.initialized) return;
 
-    setState(() {
-      _outputLog.add('> $text');
-    });
-
-    try {
-      // First, try to handle as a writer binding (X35 = term)
-      if (_tryHandleWriterBinding(text)) {
-        _inputController.clear();
-        _scrollToBottom();
-        return;
-      }
-
-      // Parse as GLP term
-      final term = _parseTerm(text);
-      TraceLogger.instance.log(_tag, 'USER_INPUT: parsed -> ${_formatTerm(term)}');
-
-      final activations = _ioContext!.userInput.inject(term);
-      TraceLogger.instance.log(_tag, 'USER_INPUT: ${activations.length} activations');
-
-      // Enqueue activated goals
-      for (final goal in activations) {
-        _runtime!.gq.enqueue(goal);
-      }
-
-      _inputController.clear();
-      _scrollToBottom();
-
-      // Auto-run after injection
-      _runUntilQuiescent();
-    } catch (e, st) {
-      TraceLogger.instance.log(_tag, 'USER_INPUT ERROR: $e\n$st');
-      _addOutput('[ERROR] $e');
-    }
-  }
-
-  /// Try to handle direct writer binding: "X35 = accept(Ch)" or "X35 = no"
-  /// Returns true if handled as a binding, false otherwise
-  bool _tryHandleWriterBinding(String text) {
-    // Match pattern: X<number> = <term>
-    final bindingMatch = RegExp(r'^X(\d+)\s*=\s*(.+)$', caseSensitive: false).firstMatch(text);
-    if (bindingMatch == null) return false;
-
-    final addrStr = bindingMatch.group(1)!;
-    final termStr = bindingMatch.group(2)!;
-    final addr = int.tryParse(addrStr);
-    if (addr == null) return false;
-
-    // Check if this is a known writer
-    if (!_knownWriters.containsKey(addr)) {
-      _addOutput('[ERROR] X$addr is not a known writer');
-      return true;
-    }
-
-    // Verify it's actually a writer in the heap
-    if (_runtime!.heap.isReader(addr)) {
-      _addOutput('[ERROR] X$addr is a reader, not a writer');
-      return true;
-    }
-
-    try {
-      // Parse the term to bind
-      final valueTerm = _parseTerm(termStr);
-      TraceLogger.instance.log(_tag, 'BIND: X$addr = ${_formatTerm(valueTerm)}');
-
-      // Bind the writer to the value
-      _runtime!.heap.bindVariable(addr, valueTerm);
-      _addOutput('[BOUND] X$addr = ${_formatTerm(valueTerm)}');
-
-      // Run to process any activated goals
-      _runUntilQuiescent();
-      return true;
-    } catch (e) {
-      _addOutput('[ERROR] Failed to parse term: $e');
-      return true;
-    }
-  }
-
-  /// Collect writers from a term and register them as known
-  void _collectWriters(rt.Term term) {
-    if (term is rt.VarRef) {
-      // Check if it's unbound and a writer
-      final value = _runtime?.heap.getValue(term.addr);
-      if (value == null || value is rt.VarRef) {
-        // Still unbound
-        final isReader = _runtime?.heap.isReader(term.addr) ?? false;
-        if (!isReader) {
-          // It's a writer - register it
-          _knownWriters[term.addr] = 'X${term.addr}';
-          TraceLogger.instance.log(_tag, 'WRITER: registered X${term.addr}');
-        }
-      }
-    } else if (term is rt.StructTerm) {
-      for (final arg in term.args) {
-        _collectWriters(arg);
-      }
-    }
-  }
-
-  rt.Term _parseTerm(String termStr) {
-    final parseInput = '_temp_($termStr).';
-    final lexer = Lexer(parseInput);
-    final tokens = lexer.tokenize();
-    final parser = Parser(tokens);
-    final parsedAst = parser.parse();
-
-    if (parsedAst.procedures.isEmpty || parsedAst.procedures[0].clauses.isEmpty) {
-      throw Exception('Could not parse term');
-    }
-
-    final clause = parsedAst.procedures[0].clauses[0];
-    if (clause.head.args.isEmpty) {
-      throw Exception('No term to inject');
-    }
-
-    return _astToRuntimeTerm(clause.head.args[0]);
-  }
-
-  rt.Term _astToRuntimeTerm(ast.Term astTerm) {
-    if (astTerm is ast.ConstTerm) {
-      return rt.ConstTerm(astTerm.value);
-    } else if (astTerm is ast.VarTerm) {
-      final (writerAddr, readerAddr) = _runtime!.heap.allocateVariable();
-      return rt.VarRef(astTerm.isReader ? readerAddr : writerAddr);
-    } else if (astTerm is ast.StructTerm) {
-      final args = astTerm.args.map(_astToRuntimeTerm).toList();
-      return rt.StructTerm(astTerm.functor, args);
-    } else if (astTerm is ast.ListTerm) {
-      return _astListToRuntimeTerm(astTerm);
-    }
-    throw Exception('Unknown AST term type: ${astTerm.runtimeType}');
-  }
-
-  rt.Term _astListToRuntimeTerm(ast.ListTerm list) {
-    if (list.isNil) {
-      return rt.ConstTerm('nil');
-    }
-
-    final head = _astToRuntimeTerm(list.head!);
-    final tail = list.tail is ast.ListTerm
-        ? _astListToRuntimeTerm(list.tail as ast.ListTerm)
-        : list.tail != null
-            ? _astToRuntimeTerm(list.tail!)
-            : rt.ConstTerm('nil');
-
-    return rt.StructTerm('.', [head, tail]);
-  }
-
-  // Enable GLP trace output (set true for debugging)
-  bool _glpTraceEnabled = true;
-
-  Future<void> _runUntilQuiescent() async {
-    TraceLogger.instance.log(_tag, 'RUN: start (GQ=${_runtime?.gq.length ?? 0})');
-    if (_scheduler == null || _runtime == null) {
-      TraceLogger.instance.log(_tag, 'RUN: early return (not initialized)');
-      return;
-    }
-
-    setState(() {
-      _isRunning = true;
-      _status = 'Running...';
-    });
-
-    try {
-      final result = await _scheduler!.drainAsyncWithStatus(
-        maxCycles: 1000,
-        debug: _glpTraceEnabled,
-      );
-      TraceLogger.instance.log(_tag, 'RUN: status=${result.status}, goals=${result.goalsRan.length}');
-      _goalCount += result.goalsRan.length;
-
-      // Per spec section 5.2 Case 2: On suspension, call request(X?) for blocking readers
-      if (result.status == ExecutionStatus.suspended && result.blockingReaders.isNotEmpty) {
-        TraceLogger.instance.log(_tag, 'RUN: suspended, ${result.blockingReaders.length} blocking readers');
-        _ctx!.processSuspension(result.blockingReaders);
-        _addOutput('[MAD] Waiting for ${result.blockingReaders.length} blocking readers');
-      }
-
-      // Flush any pending madGLP messages
-      final messagesFlushed = _ctx!.flushMessages();
-      if (messagesFlushed > 0) {
-        TraceLogger.instance.log(_tag, 'RUN: flushed $messagesFlushed messages');
-        _addOutput('[MAD] Flushed $messagesFlushed messages');
-      }
-
-      // Display pending output
-      _displayPendingOutput();
-
-      setState(() {
-        _isRunning = false;
-        _status = result.status.name;
-        _updateStats();
-      });
-      TraceLogger.instance.log(_tag, 'RUN: done (status=${result.status.name})');
-    } catch (e, st) {
-      TraceLogger.instance.log(_tag, 'RUN ERROR: $e\n$st');
-      setState(() {
-        _isRunning = false;
-        _status = 'Error: $e';
-      });
-    }
-  }
-
-  void _updateStats() {
-    if (_runtime != null && _ctx != null) {
-      _heapVars = _runtime!.heap.HP;  // Heap pointer = total cells allocated
-      _wpSize = _ctx!.wp.globalizeEntryCount + _ctx!.wp.localizeEntryCount;  // W_p size
-      _mpSize = _ctx!.mp.totalLength;
-    }
-  }
-
-  void _displayPendingOutput() {
-    // Display user output terms as GLP syntax
-    // Terms may contain writers that the user can bind
-    // e.g., befriend(alice, X35) where X35 is a writer
-    for (final term in _pendingUserOutputTerms) {
-      final derefTerm = _derefTerm(term);
-
-      // Collect any writers in the output term
-      _collectWriters(derefTerm);
-
-      // Format as GLP term
-      final formatted = _formatTerm(derefTerm);
-      setState(() {
-        _outputLog.add('< $formatted');
-      });
-    }
-    _pendingUserOutputTerms.clear();
-
-    _scrollToBottom();
-  }
-
-  void _addOutput(String text) {
-    setState(() {
-      _outputLog.add(text);
-    });
+    _inputController.clear();
+    _agent.injectUserInput(text);
     _scrollToBottom();
   }
 
@@ -1221,57 +593,12 @@ class _AgentScreenState extends State<AgentScreen> {
     });
   }
 
-  rt.Term _derefTerm(rt.Term term) {
-    if (_runtime == null) return term;
-
-    if (term is rt.VarRef) {
-      final value = _runtime!.heap.getValue(term.addr);
-      if (value != null && value is! rt.VarRef) {
-        return _derefTerm(value);
-      }
-      return term;
-    }
-    if (term is rt.StructTerm) {
-      final derefArgs = term.args.map(_derefTerm).toList();
-      return rt.StructTerm(term.functor, derefArgs);
-    }
-    return term;
-  }
-
-  String _formatTerm(rt.Term term) {
-    if (term is rt.ConstTerm) {
-      if (term.value == 'nil' || term.value == null) return '[]';
-      return term.value.toString();
-    }
-    if (term is rt.VarRef) {
-      final isReader = _runtime?.heap.isReader(term.addr) ?? false;
-      return isReader ? 'X${term.addr}?' : 'X${term.addr}';
-    }
-    if (term is rt.StructTerm) {
-      if (term.functor == '.' && term.args.length == 2) {
-        final elements = <String>[];
-        rt.Term current = term;
-        while (current is rt.StructTerm && current.functor == '.' && current.args.length == 2) {
-          elements.add(_formatTerm(current.args[0]));
-          current = current.args[1];
-        }
-        if (current is rt.ConstTerm && (current.value == 'nil' || current.value == null)) {
-          return '[${elements.join(', ')}]';
-        }
-        return '[${elements.join(', ')} | ${_formatTerm(current)}]';
-      }
-      final args = term.args.map(_formatTerm).join(', ');
-      return '${term.functor}($args)';
-    }
-    return term.toString();
-  }
-
   @override
   void dispose() {
     _inputController.dispose();
     _scrollController.dispose();
     _inputFocusNode.dispose();
-    _ioContext?.dispose();
+    _agent.dispose();
     super.dispose();
   }
 
@@ -1351,10 +678,10 @@ class _AgentScreenState extends State<AgentScreen> {
                   child: TextField(
                     controller: _inputController,
                     focusNode: _inputFocusNode,
-                    enabled: _initialized,
+                    enabled: _agent.initialized,
                     autofocus: true,
                     decoration: InputDecoration(
-                      hintText: _initialized
+                      hintText: _agent.initialized
                           ? 'connect ${widget.friends.isNotEmpty ? widget.friends.first.toLowerCase() : "friend"}'
                           : 'Initializing...',
                       border: OutlineInputBorder(
@@ -1370,7 +697,7 @@ class _AgentScreenState extends State<AgentScreen> {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: _initialized ? _sendInput : null,
+                  onPressed: _agent.initialized ? _sendInput : null,
                   child: const Text('Send'),
                 ),
               ],
@@ -1384,7 +711,7 @@ class _AgentScreenState extends State<AgentScreen> {
             child: Row(
               children: [
                 Text(
-                  'G:$_goalCount H:$_heapVars W:$_wpSize M:$_mpSize',
+                  'G:${_agent.goalCount} H:${_agent.heapVars} W:${_agent.wpSize} M:${_agent.mpSize}',
                   style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 10),
                 ),
                 const SizedBox(width: 8),
@@ -1393,7 +720,7 @@ class _AgentScreenState extends State<AgentScreen> {
                   height: 8,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _isRunning ? Colors.green : (_initialized ? Colors.orange : Colors.grey),
+                    color: _agent.initialized ? Colors.orange : Colors.grey,
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -1410,39 +737,5 @@ class _AgentScreenState extends State<AgentScreen> {
         ],
       ),
     );
-  }
-}
-
-// ============================================================================
-// HELPER CLASSES
-// ============================================================================
-
-/// Multi-agent I/O context with user and network channels
-///
-/// v2: Network output is observed and routed via IRMA.
-/// Friends are added dynamically through cold-call protocol.
-class _MultiAgentIOContext {
-  final ExternalChannel userChannel;
-  final ExternalChannel netChannel;
-  final InputInjector userInput;
-  final InputInjector netInput;  // For incoming network messages
-  final OutputObserver userOutput;
-  final OutputObserver netOutput;  // For outgoing network messages
-
-  _MultiAgentIOContext({
-    required this.userChannel,
-    required this.netChannel,
-    required this.userInput,
-    required this.netInput,
-    required this.userOutput,
-    required this.netOutput,
-  });
-
-  rt.Term get userChannelTerm => buildChannelTerm(userChannel);
-  rt.Term get netChannelTerm => buildChannelTerm(netChannel);
-
-  void dispose() {
-    userOutput.dispose();
-    netOutput.dispose();
   }
 }
