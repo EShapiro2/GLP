@@ -164,7 +164,11 @@ network2(ch(AliceIn, [msg(bob, alice, X?)|AliceOut?]),
 %% =============================================================================
 
 procedure alice_actor(Channel?).
-alice_actor(ch(_, [msg(user, alice, connect(bob))|Out?])) :-
+alice_actor(ch(In, Out?)) :-
+    wait(1000) | alice_connect(ch(In?, Out)).
+
+procedure alice_connect(Channel?).
+alice_connect(ch(_, [msg(user, alice, connect(bob))|Out?])) :-
     alice_done(Out).
 
 procedure alice_done(Stream).

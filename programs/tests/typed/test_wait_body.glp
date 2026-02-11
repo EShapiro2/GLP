@@ -1,0 +1,4 @@
+Res ::= done.
+
+procedure wait_test(Res).
+wait_test(done) :- otherwise | wait(1000).
