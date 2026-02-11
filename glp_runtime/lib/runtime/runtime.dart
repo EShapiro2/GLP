@@ -53,6 +53,10 @@ class GlpRuntime {
   // Used by '_cold_send' kernel to access globalization infrastructure
   Object? madContext;
 
+  // Output callback for '_output'/1 kernel.
+  // If set, called instead of print(). Used by tests and Flutter UI.
+  void Function(String)? outputCallback;
+
   /// Check if a goal has a pending wait and if the timer has fired
   /// Returns null if no wait state, true if timer fired, false if still waiting
   bool? checkWaitState(int goalId) {

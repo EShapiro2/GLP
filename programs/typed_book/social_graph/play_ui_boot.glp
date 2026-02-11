@@ -1,36 +1,33 @@
-%% play_ui_boot.glp - Visual UI boot adapter for madGLP
+%% play_ui_boot.glp - Interactive UI boot for madGLP
 %%
-%% Adapts the Flutter multiagent UI to work with the current social_agent.glp.
-%% Provides agent_init/3 entry point expected by glp_multiagent Flutter app.
+%% Arity 3: agent_init(Id, UserIn, NetIn)
+%% - Id:      agent identifier (alice, bob, charlie)
+%% - UserIn:  ground command stream from Dart (via InputInjector)
+%% - NetIn:   network input stream (from IsolateManager)
 %%
-%% Requires: load social_agent.glp first (done by Flutter app)
+%% Dart provides ground-only I/O:
+%% - Input:  REPL-like parser produces ground terms, injected into UserIn
+%% - Output: send_to_user/1 calls _output/1 kernel to print ground terms
 %%
-%% The Flutter app provides:
-%% - UserCh: channel to/from the Dart UI
-%% - NetCh: channel to/from the network (mad router)
+%% The ui_mediator sits between agent/4 and Dart, using two channels:
+%% - AgentCh: ch(AgentToUser?, AgentIn) — agent's _user output/input
+%% - UserCh:  ch(UserIn?, UserOut)      — Dart's input/output
 %%
-%% This adapter bridges to agent/4 which expects:
-%% - UserOut: stream written to user
-%% - NetIn: stream read from network
-%% - OutputsList with '_user' and '_net' entries
+%% Requires: load social_agent.glp first
+%% Requires: load ui_mediator.glp first
 %%
-%% Date: 2026-02-03
+%% Date: 2026-02-11
 
 -mode(system).
 
 %% =============================================================================
-%% AGENT INITIALIZATION - Entry point for Flutter UI
+%% AGENT INITIALIZATION
 %% =============================================================================
 
-%% agent_init(Id, UserCh, NetCh)
-%% - Id: agent identifier (alice, bob, charlie)
-%% - UserCh: ch(UserIn, UserOut?) - Dart reads UserOut, writes UserIn
-%% - NetCh: ch(NetIn, NetOut?) - Dart reads NetOut, writes NetIn
-%%
-%% Maps to agent/4: agent(Id, UserOut?, NetIn?, OutputsList)
-%% where OutputsList = [output('_user', UserIn), output('_net', NetOut)]
-
-procedure agent_init(Constant?, Channel?, Channel?).
-agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
+procedure agent_init(Constant?, Stream?, Stream?).
+agent_init(Id, UserIn, NetIn) :-
     ground(Id?) |
-    agent(Id?, UserOut?, NetIn?, [output('_user', UserIn), output('_net', NetOut)]).
+    send_to_net(NetOut?),
+    agent(Id?, AgentIn?, NetIn?, [output('_user', AgentToUser), output('_net', NetOut)]),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn), ch(UserIn?, UserOut), [], 1),
+    send_to_user(UserOut?).

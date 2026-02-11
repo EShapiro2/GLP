@@ -1,0 +1,138 @@
+%% ui_mediator.glp - Ground-term mediator between agent/4 and Dart UI
+%%
+%% All I/O between GLP and Dart is ground terms.
+%% Agent output may contain writers (e.g., befriend(alice, Resp?)).
+%% The mediator replaces writers with request IDs for the user,
+%% and retrieves stored writers when the user responds.
+%%
+%% ui_mediator(Id, AgentCh, UserCh, Pending, NextId)
+%%
+%% - Id:       agent identifier
+%% - AgentCh:  channel to/from agent (_user side of agent/4)
+%%             receive: agent's output (may contain writers)
+%%             send:    wrapped commands to agent's input
+%% - UserCh:   channel to/from Dart UI (ground terms only)
+%%             receive: ground commands from user
+%%             send:    ground output to user (for send_to_user)
+%% - Pending:  stored writers awaiting user response
+%% - NextId:   next request ID
+%%
+%% Requires: social_agent.glp (for send/receive/new_channel)
+%%
+%% Date: 2026-02-11
+
+-mode(system).
+
+%% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
+
+PendingEntry ::= pending(Constant, _?).
+PendingList  ::= [] ; [PendingEntry|PendingList].
+
+%% =============================================================================
+%% UI MEDIATOR - Main loop (reads from both channels via FCP guards)
+%% =============================================================================
+
+procedure ui_mediator(Constant?, Channel?, Channel?, PendingList?, Constant?).
+
+%% --- Agent-to-user: non-ground (replace writer with req ID) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', befriend(From, Resp?)), AgentCh?, AgentCh1),
+    ground(From?) |
+    send(befriend(From?, req(N?)), UserCh?, UserCh1),
+    '_add'(N?, 1, N1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, [pending(N?, Resp)|Ps?], N1?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', befriend_intro(From, Other, Ch?)), AgentCh?, AgentCh1),
+    ground(From?), ground(Other?) |
+    send(befriend_intro(From?, Other?, req(N?)), UserCh?, UserCh1),
+    '_add'(N?, 1, N1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, [pending(N?, Ch)|Ps?], N1?).
+
+%% --- Agent-to-user: ground (pass through, strip msg wrapper) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', connected(Who)), AgentCh?, AgentCh1),
+    ground(Who?) |
+    send(connected(Who?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', rejected), AgentCh?, AgentCh1) |
+    send(rejected, UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', rejected(Who)), AgentCh?, AgentCh1),
+    ground(Who?) |
+    send(rejected(Who?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', received(From, Text)), AgentCh?, AgentCh1),
+    ground(From?), ground(Text?) |
+    send(received(From?, Text?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- User-to-agent: decision (retrieve stored writer, forward to agent) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(decision(Dec, From, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(Dec?), ground(From?), ground(ReqId?) |
+    lookup_pending(ReqId?, Resp, Ps?, Ps1),
+    send(msg('_user', Id?, decision(Dec?, From?, Resp?)), AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
+%% --- User-to-agent: accept/reject intro ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(accept_intro(Other, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(Other?), ground(ReqId?) |
+    lookup_pending(ReqId?, Ch, Ps?, Ps1),
+    send(msg('_user', Id?, accept_intro(Other?, Ch?)), AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(reject_intro(Other), UserCh?, UserCh1),
+    ground(Id?), ground(Other?) |
+    send(msg('_user', Id?, reject_intro(Other?)), AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- User-to-agent: pass-through commands ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(connect(Target), UserCh?, UserCh1),
+    ground(Id?), ground(Target?) |
+    send(msg('_user', Id?, connect(Target?)), AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(send(Target, Text), UserCh?, UserCh1),
+    ground(Id?), ground(Target?), ground(Text?) |
+    send(msg('_user', Id?, send(Target?, Text?)), AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(introduce(P, Q), UserCh?, UserCh1),
+    ground(Id?), ground(P?), ground(Q?) |
+    send(msg('_user', Id?, introduce(P?, Q?)), AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- Termination ---
+
+ui_mediator(_, ch([], []), ch([], []), _, _).
+
+%% =============================================================================
+%% PENDING MANAGEMENT
+%% =============================================================================
+
+%% lookup_pending(ReqId, Writer, Pending, Remaining)
+%% Finds and removes the pending entry, returns the stored writer.
+procedure lookup_pending(Constant?, _?, PendingList?, PendingList).
+lookup_pending(ReqId, Var, [pending(Id, Var?)|Rest], Rest?) :-
+    ReqId? =?= Id? | true.
+lookup_pending(ReqId, Var, [P|Rest], [P?|Rest1?]) :-
+    otherwise | lookup_pending(ReqId?, Var?, Rest?, Rest1).

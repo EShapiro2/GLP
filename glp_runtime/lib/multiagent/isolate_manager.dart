@@ -342,6 +342,13 @@ send_to_net([]).
 %% Handles both cold-calls (index 0) and established links (index > 0)
 procedure global_send(_?, _?, _?).
 global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
+
+%% send_to_user/1 - Process user output stream (ground terms only)
+%% Calls '_output'/1 kernel to print each ground term as a line.
+%% The stream must contain only ground terms (ui_relay ensures this).
+procedure send_to_user(Stream?).
+send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
+send_to_user([]).
 ''';
 
 /// Agent isolate entry point.

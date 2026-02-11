@@ -99,6 +99,9 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
 
   // madGLP kernels
   registry.register('_send', 3, sendKernel);
+
+  // I/O kernels
+  registry.register('_output', 1, outputKernel);
 }
 
 /// Helper to get numeric value from argument (with arithmetic evaluation)
@@ -776,4 +779,61 @@ BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
   ctx.send(termArg, isWriter, gnAgent, gnIndex, destAgent);
 
   return BodyKernelResult.success;
+}
+
+// =============================================================================
+// '_output'/1 - Print a ground term as a line
+// =============================================================================
+
+/// '_output'(T) - prints ground term T to stdout.
+///
+/// Called by send_to_user/1 after ui_relay has ensured the term is ground.
+/// The output callback can be overridden via GlpRuntime.outputCallback
+/// for testing or Flutter integration.
+BodyKernelResult outputKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 1) {
+    print('[ABORT] \'_output\'/1: expected 1 argument, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final term = _deepDeref(rt, args[0] as Term);
+  final formatted = formatGroundTerm(term);
+
+  // Use callback if set (for testing/Flutter), otherwise print
+  final callback = rt.outputCallback;
+  if (callback != null) {
+    callback(formatted);
+  } else {
+    print(formatted);
+  }
+
+  return BodyKernelResult.success;
+}
+
+/// Format a ground term as readable GLP syntax.
+///
+/// Lists are shown as [a, b, c], atoms as-is, structs as f(a, b).
+String formatGroundTerm(Term term) {
+  if (term is ConstTerm) {
+    if (term.value == 'nil' || term.value == null) return '[]';
+    return term.value.toString();
+  }
+  if (term is StructTerm) {
+    // List: .(H, T) → [H, ...]
+    if (term.functor == '.' && term.args.length == 2) {
+      final elements = <String>[];
+      Term current = term;
+      while (current is StructTerm && current.functor == '.' && current.args.length == 2) {
+        elements.add(formatGroundTerm(current.args[0]));
+        current = current.args[1];
+      }
+      if (current is ConstTerm && (current.value == 'nil' || current.value == null)) {
+        return '[${elements.join(', ')}]';
+      }
+      return '[${elements.join(', ')} | ${formatGroundTerm(current)}]';
+    }
+    final args = term.args.map(formatGroundTerm).join(', ');
+    return '${term.functor}($args)';
+  }
+  return term.toString();
 }
