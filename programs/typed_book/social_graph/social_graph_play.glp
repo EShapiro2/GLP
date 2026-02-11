@@ -1,6 +1,6 @@
 %% social_graph_play.glp - Social Graph Cold-Call Befriending Protocol
 %% Single-file, single-isolate implementation with play
-%% Use :strict to disable type checking before loading (wait guard not in type checker)
+%% Alice initiates connection to Bob, Bob accepts
 
 %% =============================================================================
 %% TYPE DEFINITIONS
@@ -13,8 +13,7 @@ MsgOp ::= connect(_)
         ; intro(_, _, Resp?)
         ; befriend(_, Resp?)
         ; decision(_, _, Resp)
-        ; response(Resp?)
-        ; report(_).
+        ; response(Resp?).
 
 Msg ::= msg(_, _, MsgOp).
 TaggedMsg ::= tagged(_, _).
@@ -108,32 +107,28 @@ procedure social_graph(_?, Stream?, Friends?).
 
 %% Process user request to connect
 social_graph(Id, [msg(user, To, connect(Target))|In], Fs) :-
-    wait(1000), ground(Id?), ground(Target?), Id? =?= To? |
+    ground(Id?), ground(Target?), Id? =?= To? |
     lookup_send(net, msg(Id?, Target?, intro(Id?, Id?, Resp)), Fs?, Fs1),
     inject_msg(Resp?, Target?, Id?, In?, In1),
     social_graph(Id?, In1?, Fs1?).
 
 %% Process received self-introduction
 social_graph(Id, [msg(From, To, intro(Src1, Src2, Resp))|In], Fs) :-
-    wait(1000), ground(Id?), ground(From?), Id? =?= To?, From? =?= Src1?, From? =?= Src2? |
+    ground(Id?), ground(From?), Id? =?= To?, From? =?= Src1?, From? =?= Src2? |
     lookup_send(user, msg(agent, user, befriend(From?, Resp?)), Fs?, Fs1),
     social_graph(Id?, In?, Fs1?).
 
 %% Process user decision on received introduction
 social_graph(Id, [msg(user, To, decision(Dec, From, Resp?))|In], Fs) :-
-    wait(1000), ground(Id?), Id? =?= To? |
+    ground(Id?), Id? =?= To? |
     bind_response(Dec?, From?, Resp, Fs?, Fs1, In?, In1),
     social_graph(Id?, In1?, Fs1?).
 
 %% Process response to sent introduction
 social_graph(Id, [msg(From, To, response(Resp))|In], Fs) :-
-    wait(1000), ground(Id?), Id? =?= To? |
+    ground(Id?), Id? =?= To? |
     handle_response(Resp?, From?, Fs?, Fs1, In?, In1),
     social_graph(Id?, In1?, Fs1?).
-
-%% Report current friends list (binds result, then stops)
-social_graph(_, [msg(_, _, report(Fs?))|_], Fs) :-
-    wait(1000) | true.
 
 %% Skip unhandled messages (MUST BE LAST)
 social_graph(Id, [_|In], Fs) :-
@@ -156,7 +151,7 @@ agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
 %% NETWORK SWITCH (2-agent, in-process)
 %% =============================================================================
 
-procedure network2(_?, _?).
+procedure network2(Channel?, Channel?).
 network2(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
          ch(BobIn, [msg(alice, bob, X?)|BobOut?])) :-
     network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
@@ -169,15 +164,15 @@ network2(ch([], _), ch([], _)).
 %% ACTORS
 %% =============================================================================
 
-procedure alice_actor(_?, _).
-alice_actor(ch(_, [msg(user, alice, connect(bob))|[msg(user, alice, report(AliceFs?))|Out?]]), AliceFs) :-
+procedure alice_actor(Channel?).
+alice_actor(ch(_, [msg(user, alice, connect(bob))|Out?])) :-
     alice_done(Out).
 
 procedure alice_done(Stream).
 alice_done([]).
 
-procedure bob_actor(_?, _).
-bob_actor(ch([msg(agent, user, befriend(From, Resp))|In], [msg(user, bob, decision(yes, From?, Resp?))|[msg(user, bob, report(BobFs?))|Out?]]), BobFs) :-
+procedure bob_actor(Channel?).
+bob_actor(ch([msg(agent, user, befriend(From, Resp))|In], [msg(user, bob, decision(yes, From?, Resp?))|Out?])) :-
     ground(From?) |
     bob_done(In?, Out).
 
@@ -189,8 +184,8 @@ bob_done([_|Xs], Ys?) :- bob_done(Xs?, Ys).
 %% THE PLAY
 %% =============================================================================
 
-procedure play(_, _).
-play(AliceFs?, BobFs?) :-
+procedure play.
+play :-
     new_channel(AliceUserCh, UserAliceCh),
     new_channel(AliceNetCh, NetAliceCh),
     new_channel(BobUserCh, UserBobCh),
@@ -198,5 +193,5 @@ play(AliceFs?, BobFs?) :-
     network2(NetAliceCh?, NetBobCh?),
     agent_init(alice, AliceUserCh?, AliceNetCh?),
     agent_init(bob, BobUserCh?, BobNetCh?),
-    alice_actor(UserAliceCh?, AliceFs),
-    bob_actor(UserBobCh?, BobFs).
+    alice_actor(UserAliceCh?),
+    bob_actor(UserBobCh?).
