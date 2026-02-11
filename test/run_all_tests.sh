@@ -686,6 +686,69 @@ check "MWM empty" "Xmwm1 = \[\]" "$a26"
 check "MWM single" "Xmwm2 = \[1, 2, 3\]" "$a26"
 check "MWM two streams" "Xmwm3 = \[a, b, 1, 2\]" "$a26"
 
+# --- A27: Social graph play - clause-level tests ---
+echo "--- A27: Social graph play ---"
+a27=$($DART run "$REPL" <<HEREDOC
+$TYPED/social_graph_play.glp
+merge([1,2,3], [a,b], SGM1).
+merge([], [1,2], SGM2).
+tag_stream(alice, [m1, m2], SGTS1).
+tag_stream(bob, [], SGTS2).
+lookup_send_step(user, hello, [(user, SGLU1), (net, SGLN1)], SGLFs1).
+lookup_send_step(net, hello, [(user, SGLU2), (net, SGLN2)], SGLFs2).
+lookup_send_step(net, hello, [], SGLFs3).
+lookup_send(user, hello, [(user, SGLS1), (net, SGLS2)], SGLSFs).
+inject_msg(no, bob, alice, [], SGIM1).
+inject_msg(no, bob, alice, [x, y], SGIM2).
+handle_response(no, alice, [(user, SGHU1), (net, SGHN1)], SGHFs1, [], SGHIn1).
+bind_response(no, alice, SGBResp1, [(user, SGBU1), (net, SGBN1)], SGBFs1, [], SGBIn1).
+bind_response(yes, alice, SGBResp2, [(user, SGBU2), (net, SGBN2)], SGBFs2, [], SGBIn2).
+bob_done([], SGBD1).
+bob_done([x, y], SGBD2).
+:quit
+HEREDOC
+2>&1)
+
+check "SG merge interleave" "SGM1 = \[1, a, 2, b, 3\]" "$a27"
+check "SG merge first empty" "SGM2 = \[1, 2\]" "$a27"
+check "SG tag_stream tags" "tagged(alice, m1)" "$a27"
+check "SG tag_stream empty" "SGTS2 = \[\]" "$a27"
+check "SG lookup_send_step found" "SGLU1 = \[hello" "$a27"
+check "SG lookup_send_step skip+found" "SGLN2 = \[hello" "$a27"
+check "SG lookup_send_step empty" "SGLFs3 = \[\]" "$a27"
+check "SG lookup_send delegates" "SGLS1 = \[hello" "$a27"
+check "SG inject_msg known no" "SGIM1 = \[msg(bob, alice, response(no))\]" "$a27"
+check "SG inject_msg known+items" "SGIM2 = \[msg(bob, alice, response(no)), x, y\]" "$a27"
+check "SG handle_response no" "SGHIn1 = \[\]" "$a27"
+check "SG bind_response no Resp" "SGBResp1 = no" "$a27"
+check "SG bind_response yes Resp" "SGBResp2 = accept(ch(" "$a27"
+check "SG bob_done empty" "SGBD1 = \[\]" "$a27"
+check "SG bob_done skip" "SGBD2 = \[\]" "$a27"
+
+echo "--- A27b: Social graph protocol clauses ---"
+a27b=$($DART run "$REPL" <<HEREDOC
+$TYPED/social_graph_play.glp
+social_graph(bob, [], [(user, SGS1U), (net, SGS1N)]).
+social_graph(bob, [unknown_msg], [(user, SGS2U), (net, SGS2N)]).
+social_graph(bob, [msg(alice, bob, response(no))], [(user, SGS3U), (net, SGS3N)]).
+social_graph(alice, [msg(user, alice, connect(bob))], [(user, SGS4U), (net, SGS4N)]).
+social_graph(bob, [msg(alice, bob, intro(alice, alice, SGIRsp))], [(user, SGS5U), (net, SGS5N)]).
+social_graph(bob, [msg(user, bob, decision(no, alice, SGDRsp?))], [(user, SGS6U), (net, SGS6N)]).
+social_graph(bob, [msg(alice, bob, response(no)), msg(carol, bob, response(no))], [(user, SGS7U), (net, SGS7N)]).
+play.
+:quit
+HEREDOC
+2>&1)
+
+check "SG base case" "SGS1U = <unbound>" "$a27b"
+check "SG skip unhandled" "SGS2U = <unbound>" "$a27b"
+check "SG response(no) succeeds" "SGS3U = <unbound>" "$a27b"
+check "SG connect: intro to net" "SGS4N = \[msg(alice, bob, intro(alice, alice" "$a27b"
+check "SG intro: befriend to user" "SGS5U = \[msg(agent, user, befriend(alice" "$a27b"
+check "SG decision(no) succeeds" "SGS6U = <unbound>" "$a27b"
+check "SG multi-message succeeds" "SGS7U = <unbound>" "$a27b"
+check "SG play runs" "suspended" "$a27b"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 
@@ -793,6 +856,9 @@ POSITIVE_FILES=(
     # --- typed_book/social_graph ---
     "$BOOK/social_graph/channel.glp"
     "$BOOK/social_graph/social_agent.glp"
+
+    # --- tests/typed social_graph ---
+    "$TYPED/social_graph_play.glp"
 
     # --- typed_book/social_networks ---
     "$BOOK/social_networks/broadcast.glp"
