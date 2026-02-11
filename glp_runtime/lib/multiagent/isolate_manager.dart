@@ -324,7 +324,11 @@ class IsolateManager {
 /// These are loaded before the user program to provide:
 /// - send_to_net/1: processes network output stream
 /// - global_send/3: send via global link (handles both cold-calls and established links)
-const String _madPredicatesSource = r'''
+/// madGLP system predicates source (GLP code embedded as Dart string).
+///
+/// Provides send_to_net/1, global_send/3, send_to_user/1.
+/// Used by both IsolateManager and AgentRuntime.
+const String madPredicatesSource = r'''
 -mode(system).  %% Uses reserved constants like '_w' and '_send'
 
 %% madGLP System Predicates (embedded in isolate_manager.dart)
@@ -378,7 +382,7 @@ void _agentIsolateEntry(AgentConfig config) async {
   // Strip any -mode(system) directives since it's already in mad_predicates
   final sharedSource = config.sharedSource?.replaceAll(RegExp(r'-mode\s*\(\s*system\s*\)\s*\.'), '') ?? '';
   final userSource = config.programSource.replaceAll(RegExp(r'-mode\s*\(\s*system\s*\)\s*\.'), '');
-  final combinedSource = '$_madPredicatesSource\n$sharedSource\n$userSource';
+  final combinedSource = '$madPredicatesSource\n$sharedSource\n$userSource';
   engine.loadSource(combinedSource);
   engine.debugTrace = tc.glp;  // Enable GLP trace only when requested
   log('Program loaded via GlpEngine (with mad_predicates)');

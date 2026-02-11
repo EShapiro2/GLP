@@ -61,8 +61,15 @@ class TraceLogger {
   }
 }
 
-/// Default GLP program paths - social_agent.glp + UI boot adapter
-const _defaultGlpPath = '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/social_agent.glp';
+/// Default GLP program directory
+const _defaultGlpDir = '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph';
+
+/// GLP files loaded for UI agents (order matters: shared first, then boot)
+const _glpFiles = [
+  'social_agent.glp',
+  'ui_mediator.glp',
+  'play_ui_boot.glp',
+];
 
 /// Entry point - checks if spawned window or main coordinator
 void main(List<String> args) {
@@ -138,8 +145,8 @@ class CoordinatorScreen extends StatefulWidget {
 class _CoordinatorScreenState extends State<CoordinatorScreen> {
   final Map<String, WindowController> _windows = {};
   final List<String> _log = [];
-  final TextEditingController _glpPathController = TextEditingController(text: _defaultGlpPath);
-  String _currentGlpPath = _defaultGlpPath;
+  final TextEditingController _glpPathController = TextEditingController(text: _defaultGlpDir);
+  String _currentGlpDir = _defaultGlpDir;
   String? _cachedGlpSource;
 
   @override
@@ -181,7 +188,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     });
 
     _log.add('Coordinator started (madGLP mode)');
-    _log.add('GLP: $_currentGlpPath');
+    _log.add('GLP dir: $_currentGlpDir');
   }
 
   @override
@@ -191,26 +198,31 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   }
 
   Future<void> _updateGlpPath() async {
-    final newPath = _glpPathController.text.trim();
-    if (newPath.isNotEmpty && File(newPath).existsSync()) {
-      try {
-        // Load user GLP program only (stdlib compiled separately in agent)
-        final userSource = await File(newPath).readAsString();
-        _cachedGlpSource = userSource;
+    final newDir = _glpPathController.text.trim();
+    if (newDir.isEmpty || !Directory(newDir).existsSync()) {
+      setState(() { _log.add('ERROR: Directory not found: $newDir'); });
+      return;
+    }
 
-        setState(() {
-          _currentGlpPath = newPath;
-          _log.add('GLP loaded: $newPath (${_cachedGlpSource!.length} chars)');
-        });
-      } catch (e) {
-        setState(() {
-          _log.add('ERROR reading file: $e');
-        });
+    try {
+      // Load all GLP files and concatenate
+      final sources = <String>[];
+      for (final filename in _glpFiles) {
+        final file = File('$newDir/$filename');
+        if (!file.existsSync()) {
+          setState(() { _log.add('ERROR: File not found: $newDir/$filename'); });
+          return;
+        }
+        sources.add(await file.readAsString());
       }
-    } else {
+      _cachedGlpSource = sources.join('\n');
+
       setState(() {
-        _log.add('ERROR: File not found: $newPath');
+        _currentGlpDir = newDir;
+        _log.add('GLP loaded: ${_glpFiles.join(", ")} (${_cachedGlpSource!.length} chars)');
       });
+    } catch (e) {
+      setState(() { _log.add('ERROR reading files: $e'); });
     }
   }
 
@@ -294,7 +306,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
             color: Colors.orange.shade100,
             child: Row(
               children: [
-                const Text('GLP: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('GLP dir: ', style: TextStyle(fontWeight: FontWeight.bold)),
                 Expanded(
                   child: TextField(
                     controller: _glpPathController,

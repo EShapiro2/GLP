@@ -5,6 +5,11 @@
 /// compilation. The UI layer (Flutter, CLI, test harness) instantiates
 /// AgentRuntime, wires callbacks, and calls methods to inject input and
 /// process messages.
+///
+/// Boot approach: loads social_agent.glp + ui_mediator.glp + play_ui_boot.glp,
+/// starts agent_init(Id, UserIn, NetIn). Network output goes through
+/// send_to_net → global_send → MadContext. User output goes through
+/// send_to_user → _output/1 kernel → outputCallback.
 library;
 
 import 'dart:typed_data';
@@ -23,6 +28,7 @@ import 'package:glp_runtime/runtime/external_io.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/payload_serializer.dart';
+import 'package:glp_runtime/multiagent/isolate_manager.dart' show madPredicatesSource;
 
 /// Agent runtime encapsulating GLP execution, madGLP context, and I/O.
 ///
@@ -48,19 +54,7 @@ class AgentRuntime {
   Scheduler? _scheduler;
   InputInjector? _userInput;
   InputInjector? _netInput;
-  OutputObserver? _userOutput;
-  OutputObserver? _netOutput;
-  ExternalChannel? _userChannel;
-  ExternalChannel? _netChannel;
-  final Map<String, BytecodeProgram> _programs = {};
-  int _goalId = 1;
   bool _initialized = false;
-
-  // Pending output terms (to be dereferenced after execution)
-  final List<rt.Term> _pendingUserOutputTerms = [];
-
-  // Track writers shown to user: address -> name (e.g., 35 -> "X35")
-  final Map<int, String> _knownWriters = {};
 
   // Stats
   int goalCount = 0;
@@ -104,17 +98,23 @@ class AgentRuntime {
   // =========================================================================
 
   Future<void> initialize() async {
+    final agentIdLower = agentId.toLowerCase();
     _log('INIT: Creating MadContext');
     _output('[INIT] Creating MadContext...');
     _output('[INIT] Friends: ${friends.join(", ")}');
 
     _runtime = GlpRuntime();
-    _ctx = MadContext(agentId: agentId.toLowerCase(), runtime: _runtime!);
+    _ctx = MadContext(agentId: agentIdLower, runtime: _runtime!);
     _log('INIT: MadContext created');
+
+    // Wire _output/1 kernel to our output callback
+    _runtime!.outputCallback = (text) {
+      _output('< $text');
+    };
 
     // Wire outbound madGLP messages
     _ctx!.onMessageReady = (destination, msg) async {
-      final serializer = PayloadSerializer(agentId.toLowerCase());
+      final serializer = PayloadSerializer(agentIdLower);
       final payload = serializer.serializeMessage(msg);
       await _sendMadPayload(destination, payload);
     };
@@ -122,141 +122,72 @@ class AgentRuntime {
     // Register standard predicates
     registerStandardPredicates(_runtime!.systemPredicates);
 
-    // Create external channels
-    _userChannel = createExternalChannel(_runtime!.heap, 'user');
-    _netChannel = createExternalChannel(_runtime!.heap, 'net');
+    // Initialize serializer entry for network input (index 0)
+    // Spec Section 4.1: permanent entry mapping _r(p, 0) to local writer
+    final (netInWriter, netInReader) = _runtime!.heap.allocateVariable();
+    _ctx!.wp.initializeSerializerEntry(netInWriter);
+    _log('INIT: Serializer entry initialized, netIn=($netInWriter,$netInReader)');
 
-    _userInput = InputInjector(_runtime!.heap, 'user', _userChannel!.inputWriterAddr);
-    _netInput = InputInjector(_runtime!.heap, 'net', _netChannel!.inputWriterAddr);
+    // Create user input stream (Dart injects ground terms)
+    final (userInWriter, userInReader) = _runtime!.heap.allocateVariable();
+    _userInput = InputInjector(_runtime!.heap, 'user', userInWriter);
 
-    _userOutput = OutputObserver(
-      _runtime!.heap,
-      'user',
-      _userChannel!.outputReaderAddr,
-      (term) { _pendingUserOutputTerms.add(term); },
-      () { _output('[USER OUTPUT CLOSED]'); },
-    );
+    // Create net input stream (receives from MadContext)
+    _netInput = InputInjector(_runtime!.heap, 'net', netInWriter);
 
-    _netOutput = OutputObserver(
-      _runtime!.heap,
-      'net',
-      _netChannel!.outputReaderAddr,
-      (term) { _handleNetOutput(term); },
-      () { _output('[NET OUTPUT CLOSED]'); },
-    );
-
-    // Compile programs
+    // Compile: mad_predicates + user source (social_agent + ui_mediator + play_ui_boot)
+    // Strip -mode(system) from user source since mad_predicates already sets it
+    final strippedSource = glpSource.replaceAll(RegExp(r'-mode\s*\(\s*system\s*\)\s*\.'), '');
     const stdlibSource = 'X? = X.\n';
-    final stdlibCompiler = GlpCompiler();
-    _programs['stdlib'] = stdlibCompiler.compile(stdlibSource);
+    final combinedSource = '$stdlibSource\n$madPredicatesSource\n$strippedSource';
 
-    final userCompiler = GlpCompiler();
-    _programs['user'] = userCompiler.compile(glpSource);
-
+    final compiler = GlpCompiler();
+    final program = compiler.compile(combinedSource);
     _output('[INIT] Loaded GLP program');
 
-    // Start agent goal
-    final agentIdLower = agentId.toLowerCase();
-    _output('[INIT] Starting: agent_init($agentIdLower, UserCh, NetCh)');
-    _startAgentGoal(agentIdLower);
+    // Create scheduler
+    final runner = BytecodeRunner(program);
+    _scheduler = Scheduler(rt: _runtime!, runners: {'main': runner});
+    _scheduler!.resetDisplayNumbering();
+
+    // Start goal: agent_init(Id, UserIn, NetIn)
+    final entryPC = program.labels['agent_init/3'];
+    _log('INIT: agent_init/3 entryPC=$entryPC');
+    if (entryPC == null) {
+      _output('[ERROR] Predicate agent_init/3 not found');
+      return;
+    }
+
+    final heap = _runtime!.heap;
+    final (arg0Writer, arg0Reader) = heap.allocateVariable();
+    heap.bindVariable(arg0Writer, rt.ConstTerm(agentIdLower));
+    final (arg1Writer, arg1Reader) = heap.allocateVariable();
+    heap.bindVariable(arg1Writer, rt.VarRef(userInReader));
+    final (arg2Writer, arg2Reader) = heap.allocateVariable();
+    heap.bindVariable(arg2Writer, rt.VarRef(netInReader));
+
+    final env = CallEnv(args: {
+      0: rt.VarRef(arg0Reader),
+      1: rt.VarRef(arg1Reader),
+      2: rt.VarRef(arg2Reader),
+    });
+    _runtime!.setGoalEnv(1, env);
+    _runtime!.setGoalProgram(1, 'main');
+    _runtime!.gq.enqueue(GoalRef(1, entryPC));
+    _output('[GOAL] Started agent_init($agentIdLower, UserIn, NetIn)');
+
+    // Initial run
+    await _runUntilQuiescent();
 
     _initialized = true;
     updateStats();
 
     final firstFriend = friends.isNotEmpty ? friends.first.toLowerCase() : 'friend';
-    _output('[INIT] Ready! GLP term interface:');
+    _output('[INIT] Ready! Commands:');
     _output('  connect($firstFriend)         - cold-call $firstFriend');
     _output('  send($firstFriend, hello)     - send text message');
-    _output('  X35 = accept(Ch)              - bind writer X35 to accept');
-    _output('  X35 = no                      - bind writer X35 to reject');
+    _output('  decision(yes, $firstFriend, 1) - accept befriend (req ID from output)');
     _output('  introduce(alice, charlie)     - introduce two friends');
-  }
-
-  void _startAgentGoal(String agentId) {
-    if (_runtime == null) return;
-
-    // Combine loaded programs
-    final allOps = <dynamic>[];
-    for (final loaded in _programs.values) {
-      allOps.addAll(loaded.ops);
-    }
-    final combinedProgram = BytecodeProgram(allOps);
-
-    final runner = BytecodeRunner(combinedProgram);
-    _scheduler = Scheduler(rt: _runtime!, runners: {'main': runner});
-    _scheduler!.resetDisplayNumbering();
-
-    final heap = _runtime!.heap;
-
-    // Create internal channel between social agent and UI agent
-    final (agentInWriter, agentInReader) = heap.allocateVariable();
-    final (agentOutWriter, agentOutReader) = heap.allocateVariable();
-    final agentChTerm = rt.StructTerm('ch', [
-      rt.VarRef(agentInReader),
-      rt.VarRef(agentOutWriter),
-    ]);
-    final uiAgentChTerm = rt.StructTerm('ch', [
-      rt.VarRef(agentOutReader),
-      rt.VarRef(agentInWriter),
-    ]);
-    _log('GOAL: Created internal agent<->ui channel');
-
-    // --- Goal 1: agent_init(Id, AgentCh, NetCh) ---
-    final agentEntryPC = combinedProgram.labels['agent_init/3'];
-    _log('GOAL: agent_init/3 entryPC=$agentEntryPC');
-    if (agentEntryPC == null) {
-      _output('[ERROR] Predicate agent_init/3 not found');
-      return;
-    }
-
-    final (arg0Writer, arg0Reader) = heap.allocateVariable();
-    heap.bindVariable(arg0Writer, rt.ConstTerm(agentId));
-    final (arg1Writer, arg1Reader) = heap.allocateVariable();
-    heap.bindVariable(arg1Writer, agentChTerm);
-    final (arg2Writer, arg2Reader) = heap.allocateVariable();
-    heap.bindVariable(arg2Writer, buildChannelTerm(_netChannel!));
-
-    final agentEnv = CallEnv(args: {
-      0: rt.VarRef(arg0Reader),
-      1: rt.VarRef(arg1Reader),
-      2: rt.VarRef(arg2Reader),
-    });
-    _runtime!.setGoalEnv(_goalId, agentEnv);
-    _runtime!.setGoalProgram(_goalId, 'main');
-    _runtime!.gq.enqueue(GoalRef(_goalId, agentEntryPC));
-    _goalId++;
-    _output('[GOAL] Started agent_init($agentId, AgentCh, NetCh)');
-
-    // --- Goal 2: ui_agent(UICh, DartCh, [], 1) ---
-    final uiEntryPC = combinedProgram.labels['ui_agent/4'];
-    _log('GOAL: ui_agent/4 entryPC=$uiEntryPC');
-    if (uiEntryPC == null) {
-      _output('[WARN] Predicate ui_agent/4 not found - running without UI mediation');
-    } else {
-      final (uiArg0Writer, uiArg0Reader) = heap.allocateVariable();
-      heap.bindVariable(uiArg0Writer, uiAgentChTerm);
-      final (uiArg1Writer, uiArg1Reader) = heap.allocateVariable();
-      heap.bindVariable(uiArg1Writer, buildChannelTerm(_userChannel!));
-      final (uiArg2Writer, uiArg2Reader) = heap.allocateVariable();
-      heap.bindVariable(uiArg2Writer, rt.ConstTerm('nil'));
-      final (uiArg3Writer, uiArg3Reader) = heap.allocateVariable();
-      heap.bindVariable(uiArg3Writer, rt.ConstTerm(1));
-
-      final uiEnv = CallEnv(args: {
-        0: rt.VarRef(uiArg0Reader),
-        1: rt.VarRef(uiArg1Reader),
-        2: rt.VarRef(uiArg2Reader),
-        3: rt.VarRef(uiArg3Reader),
-      });
-      _runtime!.setGoalEnv(_goalId, uiEnv);
-      _runtime!.setGoalProgram(_goalId, 'main');
-      _runtime!.gq.enqueue(GoalRef(_goalId, uiEntryPC));
-      _goalId++;
-      _output('[GOAL] Started ui_agent(UICh, DartCh, [], 1)');
-    }
-
-    // Initial run
-    _runUntilQuiescent();
   }
 
   // =========================================================================
@@ -274,10 +205,7 @@ class AgentRuntime {
     _output('> $text');
 
     try {
-      // Try writer binding first: "X35 = term"
-      if (_tryHandleWriterBinding(text)) return;
-
-      // Parse as GLP term and inject
+      // Parse as GLP term and inject into user input stream
       final term = parseTerm(text);
       _log('USER_INPUT: parsed -> ${formatTerm(term)}');
 
@@ -294,73 +222,9 @@ class AgentRuntime {
     }
   }
 
-  bool _tryHandleWriterBinding(String text) {
-    final bindingMatch = RegExp(r'^X(\d+)\s*=\s*(.+)$', caseSensitive: false).firstMatch(text);
-    if (bindingMatch == null) return false;
-
-    final addrStr = bindingMatch.group(1)!;
-    final termStr = bindingMatch.group(2)!;
-    final addr = int.tryParse(addrStr);
-    if (addr == null) return false;
-
-    if (!_knownWriters.containsKey(addr)) {
-      _output('[ERROR] X$addr is not a known writer');
-      return true;
-    }
-
-    if (_runtime!.heap.isReader(addr)) {
-      _output('[ERROR] X$addr is a reader, not a writer');
-      return true;
-    }
-
-    try {
-      final valueTerm = parseTerm(termStr);
-      _log('BIND: X$addr = ${formatTerm(valueTerm)}');
-      _runtime!.heap.bindVariable(addr, valueTerm);
-      _output('[BOUND] X$addr = ${formatTerm(valueTerm)}');
-      _runUntilQuiescent();
-      return true;
-    } catch (e) {
-      _output('[ERROR] Failed to parse term: $e');
-      return true;
-    }
-  }
-
   // =========================================================================
   // NETWORK MESSAGES
   // =========================================================================
-
-  void _handleNetOutput(rt.Term term) {
-    if (_runtime == null) return;
-
-    final derefed = derefTerm(term);
-    final formatted = formatTerm(derefed);
-    _log('NET_OUT: $formatted');
-    _output('[NET OUT] $formatted');
-
-    if (derefed is rt.StructTerm && derefed.functor == 'msg') {
-      String? destination;
-
-      if (derefed.args.length == 2) {
-        final target = derefTerm(derefed.args[0]);
-        if (target is rt.ConstTerm) destination = target.value?.toString();
-        _log('NET_OUT: 2-arg msg, target=$destination');
-      } else if (derefed.args.length == 3) {
-        final to = derefTerm(derefed.args[1]);
-        if (to is rt.ConstTerm) destination = to.value?.toString();
-        _log('NET_OUT: 3-arg msg, to=$destination');
-      }
-
-      if (destination != null && destination != 'user' && destination != 'net') {
-        _log('NET_OUT: Sending to $destination');
-        _sendAgentMessage(destination, derefed);
-      } else {
-        _log('NET_OUT: Not routing (dest=$destination)');
-      }
-    } else {
-      _log('NET_OUT: Not a msg struct');
-    }
-  }
 
   /// Handle incoming madGLP binary message.
   void onMadMessageReceived(String from, Uint8List payload) {
@@ -446,38 +310,6 @@ class AgentRuntime {
     await onSendMadMessage?.call(to, payload);
   }
 
-  Future<void> _sendAgentMessage(String to, rt.Term msgTerm) async {
-    _log('SEND_AGENT_MSG to $to: ${formatTerm(msgTerm)}');
-    if (_runtime == null || _ctx == null) {
-      _log('SEND_AGENT_MSG: ERROR - runtime/ctx is null');
-      return;
-    }
-
-    try {
-      _ctx!.exportTerm(msgTerm);
-
-      final serializer = PayloadSerializer(agentId.toLowerCase());
-      final termPayload = serializer.createAgentMessagePayload(
-        msgTerm,
-        (addr) => _runtime!.heap.isReader(addr),
-      );
-      _log('SEND_AGENT_MSG: serialized ${termPayload.length} bytes');
-
-      final msg = OutboundMessage(
-        destination: to,
-        type: MessageType.agentMessage,
-        payload: termPayload,
-      );
-      final payload = serializer.serializeMessage(msg);
-      _log('SEND_AGENT_MSG: wrapped ${payload.length} bytes');
-
-      await _sendMadPayload(to, payload);
-    } catch (e, st) {
-      _log('SEND_AGENT_MSG ERROR: $e\n$st');
-      _output('[ERROR] Failed to send agent message: $e');
-    }
-  }
-
   // =========================================================================
   // EXECUTION
   // =========================================================================
@@ -515,52 +347,12 @@ class AgentRuntime {
         _output('[MAD] Flushed $messagesFlushed messages');
       }
 
-      _displayPendingOutput();
       updateStats();
       _log('RUN: done (status=${result.status.name})');
       return result.status.name;
     } catch (e, st) {
       _log('RUN ERROR: $e\n$st');
       return 'error';
-    }
-  }
-
-  // =========================================================================
-  // OUTPUT DISPLAY
-  // =========================================================================
-
-  /// Returns pending output lines and clears the buffer.
-  List<String> flushPendingOutputLines() {
-    final lines = <String>[];
-    for (final term in _pendingUserOutputTerms) {
-      final derefed = derefTerm(term);
-      _collectWriters(derefed);
-      lines.add('< ${formatTerm(derefed)}');
-    }
-    _pendingUserOutputTerms.clear();
-    return lines;
-  }
-
-  void _displayPendingOutput() {
-    for (final line in flushPendingOutputLines()) {
-      _output(line);
-    }
-  }
-
-  void _collectWriters(rt.Term term) {
-    if (term is rt.VarRef) {
-      final value = _runtime?.heap.getValue(term.addr);
-      if (value == null || value is rt.VarRef) {
-        final isReader = _runtime?.heap.isReader(term.addr) ?? false;
-        if (!isReader) {
-          _knownWriters[term.addr] = 'X${term.addr}';
-          _log('WRITER: registered X${term.addr}');
-        }
-      }
-    } else if (term is rt.StructTerm) {
-      for (final arg in term.args) {
-        _collectWriters(arg);
-      }
     }
   }
 
@@ -667,7 +459,6 @@ class AgentRuntime {
   // =========================================================================
 
   void dispose() {
-    _userOutput?.dispose();
-    _netOutput?.dispose();
+    // No OutputObservers to dispose — output goes through _output/1 kernel
   }
 }
