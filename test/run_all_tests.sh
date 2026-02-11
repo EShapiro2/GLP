@@ -792,7 +792,6 @@ POSITIVE_FILES=(
 
     # --- typed_book/social_graph ---
     "$BOOK/social_graph/channel.glp"
-    "$BOOK/social_graph/play_dglp.glp"
     "$BOOK/social_graph/social_agent.glp"
 
     # --- typed_book/social_networks ---

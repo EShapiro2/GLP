@@ -53,8 +53,7 @@ programs/typed_book/social_graph/
 ├── social_agent.glp        # SHARED: agent/4, actors, network3, close_outputs, helpers
 ├── play_dglp_boot.glp      # dGLP boot (thin wrapper - play/0 is in social_agent.glp)
 ├── play_madglp_boot.glp    # madGLP boot: boot/0 with @agent syntax (headless with actors)
-├── play_ui_boot.glp        # madGLP boot: agent_init/3 for visual UI (Flutter app)
-└── play_dglp.glp           # STANDALONE dGLP (older, duplicates social_agent.glp)
+└── play_ui_boot.glp        # madGLP boot: agent_init/3 for visual UI (Flutter app)
 ```
 
 One shared program (`social_agent.glp`) with two boot files: `play_dglp_boot.glp` for single-isolate, `play_madglp_boot.glp` for multi-isolate. Both use `agent_init(alice, _)@alice` boot syntax (arity 2).
