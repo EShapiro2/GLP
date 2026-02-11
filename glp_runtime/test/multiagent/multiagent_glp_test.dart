@@ -141,11 +141,5 @@ void main() {
       expect(manager.completedAgents, containsAll(['agent1', 'agent2']));
     }, timeout: Timeout(Duration(seconds: 15)));
 
-    test('alice-bob-charlie: cold-call + messaging + friend introduction', () async {
-      await runGlpTest('programs/typed_book/social_graph/play_alice_bob_charlie_actor_boot.glp',
-          maxTicks: 200, tickDelayMs: 50);
-      expect(manager.completedAgents, containsAll(['alice', 'bob', 'charlie']));
-    }, timeout: Timeout(Duration(seconds: 60)),
-    skip: 'ui_relay no_readers guard blocks messages containing unbound readers (e.g., befriend Resp)');
   });
 }

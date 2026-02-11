@@ -17,8 +17,7 @@
 | Mode | Files | How to Run |
 |------|-------|------------|
 | dGLP | `social_agent.glp` | REPL: `play.` |
-| madGLP (headless, standalone) | `play_alice_bob_charlie_actor_boot.glp` | `dart test test/multiagent/multiagent_glp_test.dart -n "alice-bob-charlie"` |
-| madGLP (headless, shared) | `social_agent.glp` + `play_madglp_boot.glp` | `dart test test/multiagent/isolate_manager_test.dart -n "runs full play"` |
+| madGLP (headless) | `social_agent.glp` + `play_madglp_boot.glp` | `dart test test/multiagent/isolate_manager_test.dart -n "runs full play"` |
 | madGLP (visual UI) | `social_agent.glp` + `play_ui_boot.glp` | `flutter run -d macos` |
 
 ---
@@ -51,22 +50,16 @@ dart test
 
 ```
 programs/typed_book/social_graph/
-├── social_agent.glp                        # SHARED: agent/4, actors, network3, close_outputs, helpers
-├── play_dglp.glp                           # STANDALONE dGLP: all code + play/0 entry point
-├── play_alice_bob_charlie_actor_boot.glp   # STANDALONE madGLP: all code + boot/0 (no shared source needed)
-├── play_madglp_boot.glp                    # THIN madGLP boot (requires social_agent.glp as shared source)
-├── play_dglp_boot.glp                      # dGLP boot (thin wrapper, not needed - play/0 is in social_agent.glp)
-└── play_ui_boot.glp                        # madGLP boot: agent_init/3 for visual UI (Flutter app)
+├── social_agent.glp        # SHARED: agent/4, actors, network3, close_outputs, helpers
+├── play_dglp_boot.glp      # dGLP boot (thin wrapper - play/0 is in social_agent.glp)
+├── play_madglp_boot.glp    # madGLP boot: boot/0 with @agent syntax (headless with actors)
+├── play_ui_boot.glp        # madGLP boot: agent_init/3 for visual UI (Flutter app)
+└── play_dglp.glp           # STANDALONE dGLP (older, duplicates social_agent.glp)
 ```
 
-### Key distinction: two madGLP boot approaches
+One shared program (`social_agent.glp`) with two boot files: `play_dglp_boot.glp` for single-isolate, `play_madglp_boot.glp` for multi-isolate. Both use `agent_init(alice, _)@alice` boot syntax (arity 2).
 
-| Approach | Boot file | Shared source | Test file |
-|----------|-----------|---------------|-----------|
-| Standalone | `play_alice_bob_charlie_actor_boot.glp` | None (self-contained) | `multiagent_glp_test.dart` |
-| Shared | `play_madglp_boot.glp` | `social_agent.glp` | `isolate_manager_test.dart` |
-
-Both use `agent_init(alice, _)@alice` boot syntax (arity 2). The standalone file contains all agent/4 code, actors, and helpers inline. The shared approach loads `social_agent.glp` as `sharedSource` in the IsolateManager.
+The madGLP test is in `isolate_manager_test.dart` ("runs full play"), which loads `play_madglp_boot.glp` with `social_agent.glp` as shared source.
 
 ### Dart test files
 
@@ -235,23 +228,8 @@ In any agent window, type GLP terms:
 
 ---
 
-## Current Issue: madGLP Blocked at Step 1
+## Current Status: madGLP (2026-02-11)
 
-**Date: 2026-02-11**
-
-### What works
-
-- madGLP infrastructure routes messages correctly between isolates
 - 12 simpler multi-agent tests pass (shared variables, streams, bidirectional, three-agent pipeline, etc.)
-- Alice's cold-call `msg(bob, intro(alice, Resp))` reaches Bob's agent via madGLP
-- Bob's agent processes it and writes `msg(agent, _user, befriend(alice, Resp?))` to the user output stream
-
-### Where it stalls
-
-Bob's `ui_relay` has a `no_readers(Msg?)` guard (line 89 of `play_alice_bob_charlie_actor_boot.glp`). The `befriend(alice, Resp?)` message contains an unbound reader (`Resp?` — the response variable). The `no_readers` guard fails because there IS a reader inside the message, so the relay suspends instead of forwarding to the actor.
-
-Bob's actor never sees the `befriend` request, never responds, and the protocol stalls.
-
-### Root cause
-
-The `ui_relay` `no_readers` guard is incompatible with the cold-call protocol, which inherently passes unbound response variables through messages. This is a GLP program design issue in `play_alice_bob_charlie_actor_boot.glp`, not an infrastructure bug.
+- The full alice-bob-charlie scenario (`social_agent.glp` + `play_madglp_boot.glp`) has not yet been tested with the shared approach
+- A standalone duplicate (`play_alice_bob_charlie_actor_boot.glp`) was archived — it had a `ui_relay` with `no_readers` guard that blocked the protocol. The shared `social_agent.glp` does not have `ui_relay`.
