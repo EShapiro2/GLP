@@ -177,32 +177,73 @@ network2(ch(AliceIn, [msg(bob, alice, X?)|AliceOut?]),
     network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
 
 %% =============================================================================
+%% GENERIC OFFER HANDLING
+%% =============================================================================
+
+%% accept_offer(Id, InChannel, OutChannel) - accept a befriend request
+procedure accept_offer(_?, Channel?, Channel).
+
+accept_offer(Id,
+    ch([msg(agent, user, befriend(From, Resp))|In], [msg(user, Id?, decision(yes, From?, Resp?))|Out?]),
+    ch(In?, Out)) :-
+    ground(From?) | true.
+
+%% reject_offer(Id, InChannel, OutChannel) - reject a befriend request
+procedure reject_offer(_?, Channel?, Channel).
+
+reject_offer(Id,
+    ch([msg(agent, user, befriend(From, Resp))|In], [msg(user, Id?, decision(no, From?, Resp?))|Out?]),
+    ch(In?, Out)) :-
+    ground(From?) | true.
+
+%% =============================================================================
+%% CHANNEL DRAIN
+%% =============================================================================
+
+procedure drain_channel(Channel?).
+
+drain_channel(ch(In, Out?)) :-
+    drain(In?, Out).
+
+procedure drain(Stream?, Stream).
+
+drain([], []).
+drain([_|Xs], Ys?) :- drain(Xs?, Ys).
+
+%% =============================================================================
 %% ACTORS
 %% =============================================================================
 
 procedure alice_actor(Channel?).
+
 alice_actor(ch(In, Out?)) :-
     wait(1000) | alice_connect(ch(In?, Out)).
 
 procedure alice_connect(Channel?).
+
 alice_connect(ch(In, [msg(user, alice, connect(bob))|Out?])) :-
     alice_end_friendship(ch(In?, Out)).
 
 procedure alice_end_friendship(Channel?).
+
 alice_end_friendship(ch(_, [msg(user, alice, remove(bob))|Out?])) :-
     alice_done(Out).
 
 procedure alice_done(Stream).
+
 alice_done([]).
 
 procedure bob_actor(Channel?).
-bob_actor(ch([msg(agent, user, befriend(From, Resp))|In], [msg(user, bob, decision(yes, From?, Resp?))|Out?])) :-
-    ground(From?) |
-    bob_done(In?, Out).
 
-procedure bob_done(Stream?, Stream).
-bob_done([], []).
-bob_done([_|Xs], Ys?) :- bob_done(Xs?, Ys).
+bob_actor(ch(In, Out?)) :-
+    wait(10000) | bob_action(ch(In?, Out)).
+
+procedure bob_action(Channel?).
+
+bob_action(Ch) :-
+    accept_offer(bob, Ch?, Ch1),    %bob accept
+%   reject_offer(bob, Ch?, Ch1),    %bob reject
+    drain_channel(Ch1?).
 
 %% =============================================================================
 %% THE PLAY
