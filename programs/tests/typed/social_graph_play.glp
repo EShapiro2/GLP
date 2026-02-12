@@ -13,7 +13,8 @@ MsgOp ::= connect(_)
         ; intro(_, _, Resp?)
         ; befriend(_, Resp?)
         ; decision(_, _, Resp)
-        ; response(Resp?).
+        ; response(Resp?)
+        ; remove(_).
 
 Msg ::= msg(_, _, MsgOp).
 TaggedMsg ::= tagged(_, _).
@@ -100,6 +101,16 @@ handle_response(accept(ch(FIn, FOut)), From, Fs, [(From?, FOut?)|Fs?], In, In1?)
 handle_response(no, _, Fs, Fs?, In, In?).
 
 %% =============================================================================
+%% REMOVE_ENTRY: Remove a friend from the friends list by key
+%% =============================================================================
+
+procedure remove_entry(_?, Friends?, Friends).
+remove_entry(Key, [(K, _)|Rest], Rest?) :- Key? =?= K? | true.
+remove_entry(Key, [Entry|Rest], [Entry?|Rest1?]) :-
+    otherwise | remove_entry(Key?, Rest?, Rest1).
+remove_entry(_, [], []).
+
+%% =============================================================================
 %% SOCIAL GRAPH PROTOCOL - Main event loop
 %% =============================================================================
 
@@ -129,6 +140,12 @@ social_graph(Id, [msg(From, To, response(Resp))|In], Fs) :-
     ground(Id?), Id? =?= To? |
     handle_response(Resp?, From?, Fs?, Fs1, In?, In1),
     social_graph(Id?, In1?, Fs1?).
+
+%% Process user request to remove a friend
+social_graph(Id, [msg(user, To, remove(Target))|In], Fs) :-
+    ground(Id?), ground(Target?), Id? =?= To? |
+    remove_entry(Target?, Fs?, Fs1),
+    social_graph(Id?, In?, Fs1?).
 
 %% Skip unhandled messages (MUST BE LAST)
 social_graph(Id, [_|In], Fs) :-
@@ -168,7 +185,11 @@ alice_actor(ch(In, Out?)) :-
     wait(1000) | alice_connect(ch(In?, Out)).
 
 procedure alice_connect(Channel?).
-alice_connect(ch(_, [msg(user, alice, connect(bob))|Out?])) :-
+alice_connect(ch(In, [msg(user, alice, connect(bob))|Out?])) :-
+    alice_end_friendship(ch(In?, Out)).
+
+procedure alice_end_friendship(Channel?).
+alice_end_friendship(ch(_, [msg(user, alice, remove(bob))|Out?])) :-
     alice_done(Out).
 
 procedure alice_done(Stream).
