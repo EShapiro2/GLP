@@ -364,6 +364,7 @@ void _agentIsolateEntry(AgentConfig config) async {
   final agentId = config.agentId;
   final receivePort = ReceivePort();
   var doneSent = false;
+  var idleTickCount = 0;
   final tc = config.traceConfig;
 
   // Infrastructure log: only prints when MAD tracing is on
@@ -480,11 +481,25 @@ void _agentIsolateEntry(AgentConfig config) async {
           : (runtime.gq.isEmpty ? 'completed' : 'running');
       config.mainPort.send(Status(agentId, status, runtime.gq.length, List.from(traceLines)));
 
-      // Only report done when gq is empty AND no goals are suspended
-      if (runtime.gq.isEmpty && !hasSuspendedGoals && !doneSent) {
-        doneSent = true;
-        log('All goals completed');
-        config.mainPort.send(Done(agentId, true));
+      // Report done when gq is empty and either:
+      // (a) no suspended goals remain, or
+      // (b) gq has been empty for 2 consecutive ticks with no progress
+      //     (suspended goals are dead — waiting on closed streams)
+      if (runtime.gq.isEmpty && !doneSent) {
+        if (!hasSuspendedGoals) {
+          doneSent = true;
+          log('All goals completed');
+          config.mainPort.send(Done(agentId, true));
+        } else {
+          idleTickCount++;
+          if (idleTickCount >= 2) {
+            doneSent = true;
+            log('All goals completed (suspended goals are dead)');
+            config.mainPort.send(Done(agentId, true));
+          }
+        }
+      } else {
+        idleTickCount = 0;
       }
 
     } else if (msg is NetworkMsg) {

@@ -50,16 +50,21 @@ agent_init(_, _) :- true.
     }, timeout: Timeout(Duration(seconds: 10)));
 
     test('runs full play with actor scripts (no UI)', () async {
-      // Try to find the boot file and shared agent file
+      // Try to find the boot file and shared typed files
       final bootPaths = [
         '/home/user/GLP/programs/typed_book/social_graph/play_madglp_boot.glp',
         '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_madglp_boot.glp',
         'programs/typed_book/social_graph/play_madglp_boot.glp',
       ];
-      final sharedPaths = [
-        '/home/user/GLP/programs/typed_book/social_graph/social_agent.glp',
-        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/social_agent.glp',
-        'programs/typed_book/social_graph/social_agent.glp',
+      final agentPaths = [
+        '/home/user/GLP/programs/typed_book/social_graph/typed_social_agent.glp',
+        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/typed_social_agent.glp',
+        'programs/typed_book/social_graph/typed_social_agent.glp',
+      ];
+      final actorPaths = [
+        '/home/user/GLP/programs/typed_book/social_graph/typed_actors.glp',
+        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/typed_actors.glp',
+        'programs/typed_book/social_graph/typed_actors.glp',
       ];
 
       String? source;
@@ -71,11 +76,20 @@ agent_init(_, _) :- true.
         }
       }
 
-      String? sharedSource;
-      for (final path in sharedPaths) {
+      String? agentSource;
+      for (final path in agentPaths) {
         final file = File(path);
         if (file.existsSync()) {
-          sharedSource = file.readAsStringSync();
+          agentSource = file.readAsStringSync();
+          break;
+        }
+      }
+
+      String? actorSource;
+      for (final path in actorPaths) {
+        final file = File(path);
+        if (file.existsSync()) {
+          actorSource = file.readAsStringSync();
           break;
         }
       }
@@ -85,10 +99,17 @@ agent_init(_, _) :- true.
         return;
       }
 
-      if (sharedSource == null) {
-        print('Skipping: social_agent.glp not found');
+      if (agentSource == null) {
+        print('Skipping: typed_social_agent.glp not found');
         return;
       }
+
+      if (actorSource == null) {
+        print('Skipping: typed_actors.glp not found');
+        return;
+      }
+
+      final sharedSource = '$agentSource\n$actorSource';
 
       final loader = BootLoader();
       final config = loader.load(source);
@@ -106,16 +127,6 @@ agent_init(_, _) :- true.
       // Start and tick repeatedly to drive the protocol
       manager.start();
 
-      // The full protocol requires multiple message exchanges:
-      // 1. Alice cold-calls Bob (Bob accepts)
-      // 2. Alice sends message to Bob
-      // 3. Bob cold-calls Charlie (Charlie accepts)
-      // 4. Charlie sends message to Bob
-      // 5. Bob introduces Alice to Charlie (both accept)
-      // 6. Alice sends message to Charlie
-      // 7. Charlie responds to Alice
-      //
-      // Each exchange needs ticks to process
       for (var i = 0; i < 50; i++) {
         manager.tick();
         await Future.delayed(Duration(milliseconds: 50));

@@ -1,11 +1,12 @@
 %% play_madglp_boot.glp - madGLP entry point
 %%
-%% Requires: load social_agent.glp first (done by IsolateManager)
+%% Requires: load typed_social_agent.glp first (done by IsolateManager)
+%% Requires: load typed_actors.glp first (done by IsolateManager)
 %%
 %% This is the thin wrapper for madGLP (isolate) testing.
-%% All agent code and actors are in social_agent.glp
+%% Agent code is in typed_social_agent.glp, actors in typed_actors.glp.
 %%
-%% Date: 2026-02-03
+%% Date: 2026-02-13
 
 -mode(system).  %% Uses @agent syntax and '_net' constant
 
@@ -31,7 +32,7 @@ agent_init(Id, NetIn) :-
     actor(Id?, ch(UserIn?, UserOut)).
 
 %% =============================================================================
-%% ACTOR DISPATCH - Routes to shared actors in social_agent.glp
+%% ACTOR DISPATCH - Routes to actors in typed_actors.glp
 %% =============================================================================
 
 procedure actor(_?, Channel?).

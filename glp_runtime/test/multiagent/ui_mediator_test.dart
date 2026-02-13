@@ -8,9 +8,9 @@ import 'package:glp_runtime/engine/glp_engine.dart';
 
 void main() {
   final socialAgentPath =
-      '../programs/typed_book/social_graph/social_agent.glp';
+      '../programs/typed_book/social_graph/typed_social_agent.glp';
   final uiMediatorPath =
-      '../programs/typed_book/social_graph/ui_mediator.glp';
+      '../programs/typed_book/social_graph/typed_ui_mediator.glp';
 
   group('ui_mediator', () {
     late GlpEngine engine;

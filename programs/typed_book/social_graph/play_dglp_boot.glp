@@ -1,31 +1,102 @@
 %% play_dglp_boot.glp - dGLP entry point
 %%
-%% Requires: load social_agent.glp first
-%%
-%% This is the thin wrapper for dGLP (REPL) testing.
-%% All agent code, network switch, and actors are in social_agent.glp
+%% network3 and play are untyped (no procedure declarations)
+%% since they call cross-file agent/4.
 %%
 %% Usage:
-%%   load social_agent.glp
+%%   load typed_social_agent.glp
+%%   load typed_actors.glp
 %%   load play_dglp_boot.glp
 %%   play.
 %%
-%% Date: 2026-02-03
+%% Date: 2026-02-13
 
-procedure play.
+-mode(system).
+
+%% =============================================================================
+%% NETWORK SWITCH (3-way)
+%% =============================================================================
+
+%% --- Cold-call routing (2-arg msg) ---
+
+network3(ch([msg(bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch([msg(charlie, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch([msg(alice, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, AliceOut?),
+         ch([msg(charlie, X)|BobIn], BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch([msg(alice, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch([msg(bob, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% --- Friend-to-friend routing (3-arg msg) ---
+
+network3(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(alice, bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch([msg(alice, charlie, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(alice, charlie, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, [msg(bob, alice, X?)|AliceOut?]),
+         ch([msg(bob, alice, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, AliceOut?),
+         ch([msg(bob, charlie, X)|BobIn], BobOut?),
+         ch(CharlieIn, [msg(bob, charlie, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, [msg(charlie, alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch([msg(charlie, alice, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(charlie, bob, X?)|BobOut?]),
+         ch([msg(charlie, bob, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Termination
+network3(ch([], []), ch([], []), ch([], [])).
+
+%% =============================================================================
+%% PLAY - dGLP entry point
+%% =============================================================================
+
 play :-
-    %% Network switch connects agents via their net channels
-    %% Network reads from agent's NetOut, writes to agent's NetIn
     network3(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn),
              ch(CharlieNetOut?, CharlieNetIn)),
 
-    %% Agents with separate UserIn and NetIn streams
     agent(alice, AliceUserOut?, AliceNetIn?, [output('_user', AliceUserIn), output('_net', AliceNetOut)]),
     agent(bob, BobUserOut?, BobNetIn?, [output('_user', BobUserIn), output('_net', BobNetOut)]),
     agent(charlie, CharlieUserOut?, CharlieNetIn?, [output('_user', CharlieUserIn), output('_net', CharlieNetOut)]),
 
-    %% Actors drive user input (actor writes to UserOut, reads from UserIn)
     alice_actor(ch(AliceUserIn?, AliceUserOut)),
     bob_actor(ch(BobUserIn?, BobUserOut)),
     charlie_actor(ch(CharlieUserIn?, CharlieUserOut)).
