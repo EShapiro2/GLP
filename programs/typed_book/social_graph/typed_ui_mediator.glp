@@ -21,20 +21,21 @@
 
 Response ::= accept(Channel) ; no.
 Decision ::= yes ; no.
+ReqId    ::= req(Constant).
 
 %% --- User channel messages (all ground, mediator-specific) ---
 
 %% User -> Mediator
-UserCmd     ::= decision(Decision, Constant, Constant)
-              ; accept_intro(Constant, Constant)
+UserCmd     ::= decision(Decision, Constant, ReqId)
+              ; accept_intro(Constant, ReqId)
               ; reject_intro(Constant)
               ; connect(Constant)
               ; send(Constant, Constant)
               ; introduce(Constant, Constant).
 
 %% Mediator -> User
-UserNotify  ::= befriend(Constant, Constant)
-              ; befriend_intro(Constant, Constant, Constant)
+UserNotify  ::= befriend(Constant, ReqId)
+              ; befriend_intro(Constant, Constant, ReqId)
               ; connected(Constant)
               ; rejected
               ; rejected(Constant)
@@ -42,7 +43,7 @@ UserNotify  ::= befriend(Constant, Constant)
 
 %% --- Pending entries ---
 PendingVar   ::= response(Response) ; channel(Channel).
-PendingEntry ::= pending(Constant, PendingVar).
+PendingEntry ::= pending(ReqId, PendingVar).
 PendingList  ::= [] ; [PendingEntry | PendingList].
 
 %% =============================================================================
@@ -62,7 +63,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     send(befriend(From?, req(N?)), UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
-        [pending(N?, response(Resp?)) | Ps?], N1?).
+        [pending(req(N?), response(Resp?)) | Ps?], N1?).
 
 %% Introduction befriend_intro: agent sends befriend_intro(From, Other, Ch)
 %% Ch is a Channel (already known, created by introducer).
@@ -75,7 +76,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
          UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
-        [pending(N?, channel(Ch?)) | Ps?], N1?).
+        [pending(req(N?), channel(Ch?)) | Ps?], N1?).
 
 %% --- Agent-to-user: ground (pass through) ---
 
@@ -166,7 +167,7 @@ ui_mediator(_, ch([], []), ch([], []), _, _).
 %% =============================================================================
 
 %% lookup_response: retrieve a stored Response by request ID
-procedure lookup_response(Constant?, Response,
+procedure lookup_response(ReqId?, Response,
                           PendingList?, PendingList).
 lookup_response(ReqId, Resp?,
     [pending(Id, response(Resp)) | Rest], Rest?) :-
@@ -177,7 +178,7 @@ lookup_response(ReqId, Resp?, [P | Rest], [P? | Rest1?]) :-
 lookup_response(_, no, [], []).
 
 %% lookup_channel: retrieve a stored Channel by request ID
-procedure lookup_channel(Constant?, Channel,
+procedure lookup_channel(ReqId?, Channel,
                          PendingList?, PendingList).
 lookup_channel(ReqId, Ch?,
     [pending(Id, channel(Ch)) | Rest], Rest?) :-
