@@ -27,10 +27,7 @@ void main() async {
   print('Commands: :quit, :help, :trace, :debug, :limit');
   print('');
 
-  final engine = GlpEngine();
-
-  // Load stdlib
-  engine.loadStdlib('../programs/stdlib');
+  final engine = GlpEngine(stdlibDir: '../programs/stdlib');
   print('Loaded stdlib');
   print('');
 

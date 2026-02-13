@@ -53,8 +53,11 @@ class TraceLogger {
   }
 }
 
-/// Default GLP program directory
-const _defaultGlpDir = '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph';
+/// Default GLP program directory (repo-relative from glp_multiagent/)
+const _defaultGlpDir = '../programs/typed_book/social_graph';
+
+/// Stdlib directory (repo-relative from glp_multiagent/)
+const _stdlibDir = '../programs/stdlib';
 
 /// GLP files loaded for UI agents (order matters: shared first, then boot)
 const _glpFiles = [
@@ -306,6 +309,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     final initMsg = InitAgent(
       agentId: agentId,
       glpSource: _cachedGlpSource!,
+      stdlibDir: _stdlibDir,
       friends: friends,
       replyPort: _replyPort.sendPort,
     );

@@ -100,7 +100,8 @@ class AgentConfig {
   final String agentId;
   final String goalFunctor;
   final String programSource;
-  final String? sharedSource; // Optional shared code (e.g., social_agent.glp)
+  final List<String>? sharedSources; // Optional shared code files (e.g., social_agent.glp)
+  final String stdlibDir; // Path to stdlib directory
   final SendPort mainPort;
   final SendPort? uiPort; // null for headless
   final TraceConfig traceConfig;
@@ -109,7 +110,8 @@ class AgentConfig {
     required this.agentId,
     required this.goalFunctor,
     required this.programSource,
-    this.sharedSource,
+    this.sharedSources,
+    required this.stdlibDir,
     required this.mainPort,
     this.uiPort,
     this.traceConfig = const TraceConfig(),
@@ -168,7 +170,8 @@ class IsolateManager {
         agentId: directive.agentId,
         goalFunctor: directive.goalFunctor,
         programSource: config.source,
-        sharedSource: config.sharedSource,
+        sharedSources: config.sharedSources,
+        stdlibDir: config.stdlibDir,
         mainPort: _mainPort.sendPort,
         traceConfig: traceConfig,
       );
@@ -319,42 +322,6 @@ class IsolateManager {
   }
 }
 
-/// madGLP system predicates (embedded)
-///
-/// These are loaded before the user program to provide:
-/// - send_to_net/1: processes network output stream
-/// - global_send/3: send via global link (handles both cold-calls and established links)
-/// madGLP system predicates source (GLP code embedded as Dart string).
-///
-/// Provides send_to_net/1, global_send/3, send_to_user/1.
-/// Used by both IsolateManager and AgentRuntime.
-const String madPredicatesSource = r'''
--mode(system).  %% Uses reserved constants like '_w' and '_send'
-
-%% madGLP System Predicates (embedded in isolate_manager.dart)
-%% See: madGLP-spec.md Section 4 and Section 12
-
-%% send_to_net/1 - Process network output stream
-%% Uses global_send/3 with serializer address _w(Q,0) for cold-calls
-%% Sends msg(Q, T) wrapper to match dGLP network3 format
-%% Note: Q is used twice after ground guard - SRSW checker allows this for ground vars
-procedure send_to_net(Stream?).
-send_to_net([msg(Q, T) | In]) :- ground(Q?) | global_send(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
-send_to_net([]).
-
-%% global_send/3 - Send via global link
-%% Handles both cold-calls (index 0) and established links (index > 0)
-procedure global_send(_?, _?, _?).
-global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
-
-%% send_to_user/1 - Process user output stream (ground terms only)
-%% Calls '_output'/1 kernel to print each ground term as a line.
-%% The stream must contain only ground terms (ui_relay ensures this).
-procedure send_to_user(Stream?).
-send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
-send_to_user([]).
-''';
-
 /// Agent isolate entry point.
 ///
 /// This runs in a separate isolate for each agent.
@@ -374,22 +341,23 @@ void _agentIsolateEntry(AgentConfig config) async {
 
   log('Starting isolate');
 
-  // Create GlpEngine (same as REPL would)
-  // Non-strict types: actor code may have type warnings that shouldn't be fatal
-  final engine = GlpEngine()..strictTypes = false;
+  // Create GlpEngine — the ONE way to run GLP programs.
+  // Non-strict types: actor code may have type warnings that shouldn't be fatal.
+  final engine = GlpEngine(stdlibDir: config.stdlibDir)..strictTypes = false;
 
-  // Build combined source: mad_predicates + shared source (if any) + boot file
-  // This ensures procedures like send_to_net/1 and agent/4 are visible to user code
-  // Strip any -mode(system) directives since it's already in mad_predicates
-  final sharedSource = config.sharedSource?.replaceAll(RegExp(r'-mode\s*\(\s*system\s*\)\s*\.'), '') ?? '';
-  final userSource = config.programSource.replaceAll(RegExp(r'-mode\s*\(\s*system\s*\)\s*\.'), '');
-  final combinedSource = '$madPredicatesSource\n$sharedSource\n$userSource';
-  engine.loadSource(combinedSource);
-  engine.debugTrace = tc.glp;  // Enable GLP trace only when requested
-  log('Program loaded via GlpEngine (with mad_predicates)');
-
-  // Enable madGLP mode
+  // Enable madGLP mode (loads madPredicates + creates MadContext)
   engine.enableMadGLP(agentId: agentId);
+
+  // Load shared source files (e.g., social_agent.glp) and boot program sequentially.
+  // Each file is loaded separately to preserve per-file -mode() directives.
+  if (config.sharedSources != null) {
+    for (final source in config.sharedSources!) {
+      engine.loadSource(source);
+    }
+  }
+  engine.loadSource(config.programSource);
+  engine.debugTrace = tc.glp;  // Enable GLP trace only when requested
+  log('Program loaded via GlpEngine (stdlib + madPredicates + user code)');
   final ctx = engine.madContext!;
   final runtime = engine.runtime;
 

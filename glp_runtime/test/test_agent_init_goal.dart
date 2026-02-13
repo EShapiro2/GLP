@@ -12,7 +12,7 @@ void main() async {
   print('=== Testing agent_init goal setup ===\n');
 
   // Load the program (just user program for now - like REPL does)
-  final glpSource = File('/Users/udi/Grassroots/GLP/programs/multiagent/social_agent_v2.glp').readAsStringSync();
+  final glpSource = File('../programs/multiagent/social_agent_v2.glp').readAsStringSync();
 
   // Compile user program
   final userCompiler = GlpCompiler();

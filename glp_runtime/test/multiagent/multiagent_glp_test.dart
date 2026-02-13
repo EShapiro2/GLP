@@ -12,19 +12,13 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
-/// Try to find a file at multiple possible paths.
+/// Load a GLP file using repo-relative path (from glp_runtime/).
 String? loadFile(String relativePath) {
-  final paths = [
-    '/Users/udi/Grassroots/GLP/$relativePath',
-    '/home/user/GLP/$relativePath',
-    relativePath,
-  ];
-  for (final path in paths) {
-    final file = File(path);
-    if (file.existsSync()) {
-      return file.readAsStringSync();
-    }
+  final file = File('../$relativePath');
+  if (file.existsSync()) {
+    return file.readAsStringSync();
   }
+  print('Skipping: $relativePath not found at ${file.path}');
   return null;
 }
 
