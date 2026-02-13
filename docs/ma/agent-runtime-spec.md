@@ -148,51 +148,13 @@ The headless model's tick loop is simpler: it retries unconditionally. The UI mo
 
 **Fix applied:** Removed `_reactivateSuspendedGoals()` method and its call site from `agent_runtime.dart`. `MadContext` already handles reactivation correctly via `runtime.enqueueReactivatedGoal()`.
 
-### 6.2 Introduction protocol — GLP fix applied, runtime bug remains
-
-**Symptom:** After `introduce` + `accept_intro`, `connected()` messages appear but `send(charlie, hi)` from Bob does not deliver to Charlie.
-
-**GLP fix applied (2026-02-13):** Three edits to `social_agent.glp`:
-
-1. **Removed `otherwise` from `inject_msg`** — The second clause of `inject_msg` had `otherwise` in its guard, but the first clause uses `known()` which suspends (never fails), so `otherwise` was dead code.
-
-2. **Replaced `accept_intro` clause in agent/4** — The old clause called `handle_intro_accept(Ch?, ...)` which blocked the entire agent/4 recursion on Outs threading until the channel was known. The new clause decomposes the channel directly in the head pattern:
-```
-agent(Id, [msg('_user', Id1,
-    accept_intro(Other, ch(FIn, FOut?)))
-    |UserIn], NetIn, Outs) :-
-    Id? =?= Id1?, ground(Other?) |
-    add_output(Other?, FOut, Outs?, Outs1),
-    lookup_send('_user',
-        msg(agent, '_user', connected(Other?)),
-        Outs1?, Outs2),
-    merge(NetIn?, FIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs2?).
-```
-
-3. **Removed dead code `handle_intro_accept`** — No longer needed.
-
-**Remaining runtime bug:** The `accept_intro` clause's head pattern `ch(FIn, FOut?)` requires the channel variable to be known (bound to a `ch(...)` structure) at the time agent/4 tries to reduce. The channel arrives from `lookup_pending`, which retrieves it from the pending list. Both `lookup_pending` and agent/4 are spawned from the same ui_mediator reduction.
-
-Trace analysis (2026-02-13) shows:
-- `lookup_pending` commits and binds the channel writer (e.g., W343 := `ch(...)`)
-- `send` writes `msg(_user, bob, accept_intro(charlie, Ch?))` to the agent's UserIn stream
-- agent/4 is reactivated by the UserIn extension and tries to match `accept_intro(charlie, Ch?)` against `accept_intro(Other, ch(FIn, FOut?))`
-- agent/4 **suspends** because `Ch?` appears unbound, even though `lookup_pending` already bound the underlying writer
-
-The bug appears to be a runtime issue with how the channel variable's binding propagates through the variable chain. Specifically: `Ch` is allocated as a fresh SRSW pair by the ui_mediator body phase. The writer goes to `lookup_pending` (which binds it), and the paired reader goes into the `accept_intro(Other, Ch?)` message inside `send`. When agent/4 tries to dereference the reader, the writer should already be bound, but the goal suspends as if it were unbound. The suspension is never re-activated because the writer was already bound before the suspension was registered.
-
-**Investigation status:** Debug logging confirmed that `clauseVars` correctly maps the same register index for both occurrences of `Ch` in the ui_mediator clause, and the `SetVariable` instruction correctly derives the paired reader from the writer. The remaining hypothesis is a timing/ordering issue: agent/4's suspension on the channel reader may be registered after `lookup_pending` has already bound the writer, causing the activation to be missed. The `bindWriter` activation mechanism walks the writer's suspension list, but if no suspensions exist yet (because agent/4 hasn't suspended on it yet), no activation occurs. When agent/4 later suspends, it registers on an already-bound writer, but `suspendOnWriter` may not check whether the writer is already bound.
-
-**Next step:** Check `suspendOnWriter` — if the writer is already bound (ValueTag), the suspension should not be registered at all; instead, the goal should be immediately re-enqueued. If `suspendOnWriter` silently stores the suspension on a bound writer, the goal will never wake.
-
-### 6.3 Send not delivering in Flutter UI
+### 6.2 Send not delivering in Flutter UI
 
 **Symptom:** `send(bob, hello_bob)` from Alice does not produce `received(alice, hello_bob)` on Bob in the visual Flutter UI. Steps 1-2 (connect + decision → connected) work correctly.
 
 **Status:** Under investigation. The headless tests also had this issue masked by the loadSource filename collision bug (agents were crashing silently). Now that the filename bug is fixed, the headless protocol may work correctly but needs verification.
 
-### 6.4 Headless tests don't distinguish success from failure
+### 6.3 Headless tests don't distinguish success from failure
 
 **Symptom:** `isolate_manager_test.dart` tests 2-3 pass even when agents crash, because `Done` messages are added to `_completed` regardless of `msg.success`.
 
@@ -206,31 +168,23 @@ The bug appears to be a runtime issue with how the channel variable's binding pr
 
 Deleted `_reactivateSuspendedGoals()` method and its call site from `agent_runtime.dart`.
 
-### 7.2 Fix accept_intro GLP logic — DONE
-
-Replaced the `accept_intro` clause in `social_agent.glp` to inline channel decomposition in agent/4's head pattern. Removed dead `handle_intro_accept` predicate and fixed `inject_msg` `otherwise` bug.
-
-### 7.3 Fix loadSource filename collisions — DONE (2026-02-13)
+### 7.2 Fix loadSource filename collisions — DONE (2026-02-13)
 
 `loadSource()` without `filename:` defaults to key `'_source_'`. Multiple calls overwrite each other in `_loadedPrograms`. Fixed by passing unique filenames (`'shared_$i'`, `'program'`). This was the root cause of the `ERROR: Spawn could not find procedure label: agent/4` messages in the headless tests.
 
-### 7.3b Fix source concatenation — DONE (2026-02-13)
+### 7.2b Fix source concatenation — DONE (2026-02-13)
 
 Flutter app concatenated GLP files with `sources.join('\n')` and passed as single string. Parser failed on second file's `-mode(system)`. Fixed by changing `glpSource: String` to `glpSources: List<String>` in `AgentRuntime`, `InitAgent`, and `main.dart`.
 
-### 7.3c GlpEngine constructor loads stdlib — DONE (2026-02-13)
+### 7.2c GlpEngine constructor loads stdlib — DONE (2026-02-13)
 
 Made stdlib loading mandatory in `GlpEngine({required String stdlibDir})`. All three paths (REPL, IsolateManager, AgentRuntime) now use the same initialization. `enableMadGLP()` loads madPredicates internally.
 
-### 7.3d Fix channel binding propagation — TODO
-
-Investigate `suspendOnWriter` and `_suspendOnVariable` in `heap_fcp.dart` / `suspend_ops.dart`. If the writer is already bound when the suspension is registered, the goal should be immediately re-enqueued rather than stored as a suspension. This is the likely fix for the remaining introduce protocol bug.
-
-### 7.4 Fix send delivery in Flutter UI — TODO
+### 7.3 Fix send delivery in Flutter UI — TODO
 
 Investigate why `send(bob, hello_bob)` from Alice does not deliver to Bob. The message should flow: Alice agent → global_send → MadContext → onMessageReady → coordinator → route to Bob → Bob's onMadMessageReceived → inject into NetIn → agent/4 matches text clause → send_to_user → `received(alice, hello_bob)`.
 
-### 7.5 Harden headless tests — TODO
+### 7.4 Harden headless tests — TODO
 
 Change `IsolateManager._completed` to track success separately from failure. Add `allSucceeded` check. Update tests 2-3 to assert success, not just completion.
 
