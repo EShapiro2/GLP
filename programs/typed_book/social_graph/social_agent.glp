@@ -82,7 +82,7 @@ procedure inject_msg(Response?, AgentId?, AgentId?, Stream?, Stream).
 inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
     known(Resp?) | true.
 inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
-    otherwise | inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
+    inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
 
 %% =============================================================================
 %% ADD_OUTPUT - add output to outputs list
@@ -120,16 +120,6 @@ handle_response(no, From, Outs, Outs1?, In, In?) :-
     ground(From?) |
     lookup_send('_user', msg(agent, '_user', rejected(From?)), Outs?, Outs1).
 
-%% =============================================================================
-%% HANDLE_INTRO_ACCEPT - process accepted friend introduction
-%% =============================================================================
-
-procedure handle_intro_accept(Channel?, AgentId?, OutputsList?, OutputsList, Stream?, Stream).
-handle_intro_accept(ch(FIn, FOut?), Other, Outs, Outs2?, In, In1?) :-
-    ground(Other?) |
-    add_output(Other?, FOut, Outs?, Outs1),
-    lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
-    merge(In?, FIn?, In1).
 
 %% =============================================================================
 %% AGENT/4 - Main loop with separate UserIn and NetIn streams
@@ -167,10 +157,16 @@ agent(Id, [msg('_user', Id1, introduce(P, Q))|UserIn], NetIn, Outs) :-
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% User accepts friend introduction
-agent(Id, [msg('_user', Id1, accept_intro(Other, Ch))|UserIn], NetIn, Outs) :-
+%% Head unification decomposes Ch into ch(FIn, FOut?).
+%% NOTE: If the network delays Ch, agent/4 blocks on head unification.
+%% Future fix: add a completeness filter on NetIn to ensure messages
+%% arrive fully resolved.
+agent(Id, [msg('_user', Id1, accept_intro(Other, ch(FIn, FOut?)))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Other?) |
-    handle_intro_accept(Ch?, Other?, Outs?, Outs1, NetIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs1?).
+    add_output(Other?, FOut, Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
+    merge(NetIn?, FIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs2?).
 
 %% User rejects friend introduction
 agent(Id, [msg('_user', Id1, reject_intro(_))|UserIn], NetIn, Outs) :-

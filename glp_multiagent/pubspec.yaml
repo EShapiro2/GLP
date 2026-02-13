@@ -12,9 +12,8 @@ dependencies:
   flutter:
     sdk: flutter
   path: ^1.8.0
-  desktop_multi_window: ^0.2.0
 
-  # Link to existing GLP runtime with Phase 0 I/O
+  # Link to existing GLP runtime
   glp_runtime:
     path: ../glp_runtime
 

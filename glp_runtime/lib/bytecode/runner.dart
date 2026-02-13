@@ -2107,6 +2107,7 @@ class BytecodeRunner {
           // Check what value exists in clause variables
           final existingValue = cx.clauseVars[varIndex];
           final struct = cx.currentStructure as StructTerm;
+          // DEBUG: trace clauseVars for accept_intro Ch variable
 
           if (existingValue is VarRef) {
             // VarRef: use its addr with appropriate mode
@@ -2392,11 +2393,9 @@ class BytecodeRunner {
         }
 
         // TRACE: Show all sigmaHat bindings before applying to heap
-        // print('[TRACE Commit] Applying sigmaHat to heap (${convertedSigmaHat.length} bindings):');
         for (final entry in convertedSigmaHat.entries) {
           final writerAddr = entry.key;
           final value = entry.value;
-          // print('  W$writerAddr → $value');
           // Enforce WxW: writer→writer bindings are prohibited
           if (value is VarRef && cx.rt.heap.isWriter(value.addr)) {
             throw StateError('WxW violation in commit: W$writerAddr → W${value.addr} (both unbound writers)');

@@ -1,12 +1,10 @@
 /// AgentRuntime — encapsulates GLP agent runtime for UI integration.
 ///
 /// Extracted from glp_multiagent/lib/main.dart.
-/// Manages GlpRuntime, MadContext, Scheduler, I/O channels, and GLP program
-/// compilation. The UI layer (Flutter, CLI, test harness) instantiates
-/// AgentRuntime, wires callbacks, and calls methods to inject input and
-/// process messages.
+/// Uses GlpEngine (the ONE way to run GLP programs) for compilation,
+/// MadContext for madGLP messaging, and Scheduler for execution.
 ///
-/// Boot approach: loads social_agent.glp + ui_mediator.glp + play_ui_boot.glp,
+/// Boot approach: loads madPredicatesSource + user GLP source via GlpEngine,
 /// starts agent_init(Id, UserIn, NetIn). Network output goes through
 /// send_to_net → global_send → MadContext. User output goes through
 /// send_to_user → _output/1 kernel → outputCallback.
@@ -14,15 +12,14 @@ library;
 
 import 'dart:typed_data';
 
-import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/ast.dart' as ast;
 import 'package:glp_runtime/bytecode/runner.dart';
+import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
-import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/external_io.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
@@ -99,12 +96,25 @@ class AgentRuntime {
 
   Future<void> initialize() async {
     final agentIdLower = agentId.toLowerCase();
-    _log('INIT: Creating MadContext');
+    _log('INIT: Starting');
     _output('[INIT] Creating MadContext...');
-    _output('[INIT] Friends: ${friends.join(", ")}');
 
-    _runtime = GlpRuntime();
-    _ctx = MadContext(agentId: agentIdLower, runtime: _runtime!);
+    // Use GlpEngine — the ONE way to run GLP programs.
+    // Matches isolate_manager.dart's approach exactly.
+    final engine = GlpEngine()..strictTypes = false;
+
+    // Build combined source: madPredicatesSource + user GLP source
+    // Strip -mode(system) from user source since mad_predicates already sets it
+    final strippedSource = glpSource.replaceAll(RegExp(r'-mode\s*\(\s*system\s*\)\s*\.'), '');
+    final combinedSource = '$madPredicatesSource\n$strippedSource';
+    engine.loadSource(combinedSource);
+    _log('INIT: Program loaded via GlpEngine');
+
+    // Enable madGLP mode (creates MadContext)
+    engine.enableMadGLP(agentId: agentIdLower);
+
+    _runtime = engine.runtime;
+    _ctx = engine.madContext;
     _log('INIT: MadContext created');
 
     // Wire _output/1 kernel to our output callback
@@ -119,9 +129,6 @@ class AgentRuntime {
       await _sendMadPayload(destination, payload);
     };
 
-    // Register standard predicates
-    registerStandardPredicates(_runtime!.systemPredicates);
-
     // Initialize serializer entry for network input (index 0)
     // Spec Section 4.1: permanent entry mapping _r(p, 0) to local writer
     final (netInWriter, netInReader) = _runtime!.heap.allocateVariable();
@@ -135,19 +142,13 @@ class AgentRuntime {
     // Create net input stream (receives from MadContext)
     _netInput = InputInjector(_runtime!.heap, 'net', netInWriter);
 
-    // Compile: mad_predicates + user source (social_agent + ui_mediator + play_ui_boot)
-    // Strip -mode(system) from user source since mad_predicates already sets it
-    final strippedSource = glpSource.replaceAll(RegExp(r'-mode\s*\(\s*system\s*\)\s*\.'), '');
-    const stdlibSource = 'X? = X.\n';
-    final combinedSource = '$stdlibSource\n$madPredicatesSource\n$strippedSource';
-
-    final compiler = GlpCompiler();
-    final program = compiler.compile(combinedSource);
     _output('[INIT] Loaded GLP program');
 
-    // Create scheduler
+    // Get combined program and create scheduler
+    final program = engine.combinedProgram;
     final runner = BytecodeRunner(program);
-    _scheduler = Scheduler(rt: _runtime!, runners: {'main': runner});
+    _scheduler = Scheduler(rt: _runtime!, runners: {'main': runner},
+      traceSink: (line) => _log('GLP: $line'));
     _scheduler!.resetDisplayNumbering();
 
     // Start goal: agent_init(Id, UserIn, NetIn)
@@ -195,7 +196,7 @@ class AgentRuntime {
   // =========================================================================
 
   /// Inject user input text.
-  void injectUserInput(String text) {
+  Future<void> injectUserInput(String text) async {
     _log('USER_INPUT: $text');
     if (text.isEmpty || _userInput == null || _runtime == null) {
       _log('USER_INPUT: early return (empty or not initialized)');
@@ -215,7 +216,7 @@ class AgentRuntime {
         _runtime!.gq.enqueue(goal);
       }
 
-      _runUntilQuiescent();
+      await _runUntilQuiescent();
     } catch (e, st) {
       _log('USER_INPUT ERROR: $e\n$st');
       _output('[ERROR] $e');
@@ -227,9 +228,8 @@ class AgentRuntime {
   // =========================================================================
 
   /// Handle incoming madGLP binary message.
-  void onMadMessageReceived(String from, Uint8List payload) {
+  Future<void> onMadMessageReceived(String from, Uint8List payload) async {
     _log('MAD_RECV from $from (${payload.length} bytes)');
-    _output('[MAD RECV from $from] ${payload.length} bytes');
 
     if (_runtime == null || _ctx == null || _netInput == null) {
       _log('MAD_RECV: ERROR - runtime/ctx/netInput is null');
@@ -250,15 +250,14 @@ class AgentRuntime {
           },
         );
         _log('MAD_ASSIGN: $globalName := ${formatTerm(value)}');
-        _output('[MAD ASSIGN] $globalName := ${formatTerm(value)}');
         _ctx!.handleMadAssignment(
           globalName: globalName,
           value: value,
           fromAgent: from.toLowerCase(),
         );
+        // Reactivation handled by bindVariable() inside MadContext.handleMadAssignment
       } catch (e) {
         _log('MAD_ERROR: $e');
-        _output('[MAD ERROR] $e');
       }
     } else if (msg.type == MessageType.agentMessage) {
       final term = serializer.deserializeAgentMessagePayload(
@@ -270,7 +269,6 @@ class AgentRuntime {
       );
       final formatted = formatTerm(term);
       _log('AGENT_MSG: $formatted');
-      _output('[AGENT MSG] $formatted');
 
       _log('INJECT into netInput');
       final activations = _netInput!.inject(term);
@@ -283,11 +281,11 @@ class AgentRuntime {
     }
 
     updateStats();
-    _runUntilQuiescent();
+    await _runUntilQuiescent();
   }
 
   /// Handle legacy JSON message (backwards compatibility).
-  void onLegacyMessageReceived(String from, dynamic payload) {
+  Future<void> onLegacyMessageReceived(String from, dynamic payload) async {
     _output('[RECV from $from] $payload');
     if (_netInput == null || _runtime == null) return;
 
@@ -301,12 +299,11 @@ class AgentRuntime {
     for (final goal in activations) {
       _runtime!.gq.enqueue(goal);
     }
-    _runUntilQuiescent();
+    await _runUntilQuiescent();
   }
 
   Future<void> _sendMadPayload(String to, Uint8List payload) async {
     _log('SEND_MAD to $to (${payload.length} bytes)');
-    _output('[MAD SEND to $to] ${payload.length} bytes');
     await onSendMadMessage?.call(to, payload);
   }
 
@@ -328,28 +325,39 @@ class AgentRuntime {
     }
 
     try {
-      final result = await _scheduler!.drainAsyncWithStatus(
-        maxCycles: 1000,
-        debug: glpTraceEnabled,
-      );
-      _log('RUN: status=${result.status}, goals=${result.goalsRan.length}');
-      goalCount += result.goalsRan.length;
+      String? lastStatus;
 
-      if (result.status == ExecutionStatus.suspended && result.blockingReaders.isNotEmpty) {
-        _log('RUN: suspended, ${result.blockingReaders.length} blocking readers');
-        _ctx!.processSuspension(result.blockingReaders);
-        _output('[MAD] Waiting for ${result.blockingReaders.length} blocking readers');
-      }
+      // Loop until truly quiescent: no runnable goals and no pending messages.
+      // Each iteration may produce new goals (from suspension processing)
+      // or new outbound messages (from flushMessages).
+      for (var round = 0; round < 20; round++) {
+        final result = await _scheduler!.drainAsyncWithStatus(
+          maxCycles: 1000,
+          debug: glpTraceEnabled,
+        );
+        _log('RUN[$round]: status=${result.status}, goals=${result.goalsRan.length}');
+        goalCount += result.goalsRan.length;
+        lastStatus = result.status.name;
 
-      final messagesFlushed = _ctx!.flushMessages();
-      if (messagesFlushed > 0) {
-        _log('RUN: flushed $messagesFlushed messages');
-        _output('[MAD] Flushed $messagesFlushed messages');
+        if (result.status == ExecutionStatus.suspended && result.blockingReaders.isNotEmpty) {
+          _log('RUN[$round]: suspended, ${result.blockingReaders.length} blocking readers');
+          _ctx!.processSuspension(result.blockingReaders);
+        }
+
+        final messagesFlushed = _ctx!.flushMessages();
+        if (messagesFlushed > 0) {
+          _log('RUN[$round]: flushed $messagesFlushed messages');
+        }
+
+        // If no goals ran and nothing was flushed, we're truly quiescent
+        if (result.goalsRan.isEmpty && messagesFlushed == 0) {
+          break;
+        }
       }
 
       updateStats();
-      _log('RUN: done (status=${result.status.name})');
-      return result.status.name;
+      _log('RUN: done (status=$lastStatus)');
+      return lastStatus;
     } catch (e, st) {
       _log('RUN ERROR: $e\n$st');
       return 'error';

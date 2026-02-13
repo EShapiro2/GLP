@@ -1,22 +1,24 @@
-/// MadRouter - Routes opaque byte payloads between agent windows
+/// IsolateRouter — routes MAD messages between agent isolates via SendPort.
 ///
-/// Routes madGLP messages between agent windows.
-/// Handles Uint8List payloads instead of JSON for inter-agent messages.
+/// Replaces the previous MadRouter which used desktop_multi_window method
+/// channels between separate OS windows. Now routes via Dart isolate ports.
 library;
 
-import 'dart:convert';
+import 'dart:isolate';
 import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
-import 'package:desktop_multi_window/desktop_multi_window.dart';
 
-/// Router for opaque byte payloads between agent windows
-class MadRouter {
-  static final MadRouter _instance = MadRouter._();
-  static MadRouter get instance => _instance;
+import 'isolate_protocol.dart';
 
-  MadRouter._();
+/// Routes MAD messages between agent isolates via SendPort.
+class IsolateRouter {
+  static final IsolateRouter _instance = IsolateRouter._();
+  static IsolateRouter get instance => _instance;
 
-  final Map<String, int> _agentWindows = {}; // agentId -> windowId
+  IsolateRouter._();
+
+  final Map<String, SendPort> _agentPorts = {}; // agentId -> SendPort
   final List<String> _routingLog = [];
   VoidCallback? onLogUpdate;
 
@@ -33,61 +35,35 @@ class MadRouter {
     onLogUpdate?.call();
   }
 
-  /// Register an agent with its window ID
-  void register(String agentId, int windowId) {
-    _agentWindows[agentId.toLowerCase()] = windowId;
-    _log('Registered $agentId (window $windowId)');
+  /// Register an agent with its command SendPort.
+  void register(String agentId, SendPort port) {
+    _agentPorts[agentId.toLowerCase()] = port;
+    _log('Registered $agentId');
   }
 
-  /// Unregister an agent
+  /// Unregister an agent.
   void unregister(String agentId) {
-    _agentWindows.remove(agentId.toLowerCase());
+    _agentPorts.remove(agentId.toLowerCase());
     _log('Unregistered $agentId');
   }
 
-  /// Route a binary message from one agent to another
-  /// 
-  /// [from] - sender agent ID
-  /// [to] - recipient agent ID  
-  /// [payload] - opaque bytes (serialized madGLP message)
-  Future<void> route(String from, String to, Uint8List payload) async {
+  /// Route a MAD message to the target agent's isolate.
+  void route(String from, String to, Uint8List payload) {
     _log('Route: $from -> $to (${payload.length} bytes)');
 
-    final targetWindowId = _agentWindows[to.toLowerCase()];
-    if (targetWindowId == null) {
+    final targetPort = _agentPorts[to.toLowerCase()];
+    if (targetPort == null) {
       _log('ERROR: Unknown recipient $to');
       return;
     }
 
-    try {
-      // Encode payload as base64 for JSON transport
-      // (DesktopMultiWindow requires JSON-serializable arguments)
-      final encodedPayload = base64Encode(payload);
-      
-      await DesktopMultiWindow.invokeMethod(
-        targetWindowId,
-        'deliver_mad',
-        jsonEncode({
-          'from': from,
-          'payload': encodedPayload,
-        }),
-      );
-      _log('Delivered to $to');
-    } catch (e) {
-      _log('ERROR delivering to $to: $e');
-    }
+    targetPort.send(DeliverMad(from, payload));
+    _log('Delivered to $to');
   }
 
-  /// Get window ID for an agent (for direct access if needed)
-  int? getWindowId(String agentId) {
-    return _agentWindows[agentId.toLowerCase()];
-  }
-
-  /// Check if an agent is registered
   bool isRegistered(String agentId) {
-    return _agentWindows.containsKey(agentId.toLowerCase());
+    return _agentPorts.containsKey(agentId.toLowerCase());
   }
 
-  /// Get list of registered agent IDs
-  List<String> get registeredAgents => _agentWindows.keys.toList();
+  List<String> get registeredAgents => _agentPorts.keys.toList();
 }

@@ -1,7 +1,7 @@
 # GLP Test Suite
 
 **Location**: `/Users/udi/Grassroots/GLP/test/`
-**Last Updated**: 2026-02-09
+**Last Updated**: 2026-02-13
 **Full Protocol**: See `docs/DISCIPLINE.md` Part II for complete testing protocol
 
 ---
@@ -16,7 +16,7 @@ cd glp_runtime && dart test && cd ..
 bash test/run_all_tests.sh
 ```
 
-Expected results (as of 2026-02-09): 236 unit tests passing, 316 unified tests passing.
+Expected results (as of 2026-02-13): 285 unit tests passing (5 skipped, 15 pre-existing failures), 316 unified tests passing.
 
 ---
 
@@ -68,14 +68,13 @@ cd /Users/udi/Grassroots/GLP/glp_multiagent && flutter build macos
 
 ---
 
-## Test Counts (as of 2026-02-09)
+## Test Counts (as of 2026-02-13)
 
 | Suite | Count | Status |
 |-------|-------|--------|
-| Dart Unit Tests | 236 | Passing |
-| Unified Tests | 316 | Passing |
-| Multiagent Tests | 139 | Passing (subset of unit tests) |
-| Book Compilation | 141 files | Compiles |
+| Dart Unit Tests | 285 pass, 5 skip, 15 fail | 15 failures are pre-existing (type checker, isolate timeout) |
+| Unified Tests | 316 | All passing |
+| Book Compilation | — | Script broken (binary path issue) |
 | Flutter Build | — | Builds successfully |
 
 ---
