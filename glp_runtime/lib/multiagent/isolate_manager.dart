@@ -351,11 +351,11 @@ void _agentIsolateEntry(AgentConfig config) async {
   // Load shared source files (e.g., social_agent.glp) and boot program sequentially.
   // Each file is loaded separately to preserve per-file -mode() directives.
   if (config.sharedSources != null) {
-    for (final source in config.sharedSources!) {
-      engine.loadSource(source);
+    for (var i = 0; i < config.sharedSources!.length; i++) {
+      engine.loadSource(config.sharedSources![i], filename: 'shared_$i');
     }
   }
-  engine.loadSource(config.programSource);
+  engine.loadSource(config.programSource, filename: 'program');
   engine.debugTrace = tc.glp;  // Enable GLP trace only when requested
   log('Program loaded via GlpEngine (stdlib + madPredicates + user code)');
   final ctx = engine.madContext!;

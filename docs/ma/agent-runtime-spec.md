@@ -1,6 +1,6 @@
 # AgentRuntime Execution Spec
 
-**Status: DRAFT — 2026-02-12**
+**Status: DRAFT — 2026-02-13**
 
 This document specifies when and how the `AgentRuntime` (Flutter UI mode) drives GLP execution. It contrasts with the headless `IsolateManager` model and identifies gaps.
 
@@ -28,7 +28,7 @@ Key property: **no execution happens during message receipt.** All execution hap
 
 ### 1.2 Visual UI (AgentRuntime)
 
-Each agent runs in a separate **window process** (not an isolate — uses `desktop_multi_window`). There is **no tick loop.** Execution is event-driven, triggered by three events:
+Each agent runs in a separate **Dart isolate** spawned by the coordinator (single-window architecture). There is **no tick loop.** Execution is event-driven, triggered by three events:
 
 | Event | Entry point | What happens |
 |-------|-------------|-------------|
@@ -95,16 +95,16 @@ for round in 0..19:
 ## 4. Cross-Agent Message Flow
 
 ```
-Agent A                     Coordinator                 Agent B
-────────                    ───────────                 ────────
+Agent A (isolate)           Coordinator (main isolate)   Agent B (isolate)
+─────────────────           ──────────────────────────   ─────────────────
 goal runs
  → global_send fires
  → message queued to M_p
 flushMessages()
  → onMessageReady callback
- → send_mad via DesktopMultiWindow
-                            routes to B's window
-                            → deliver_mad
+ → send via SendPort
+                            routes to B via IsolateRouter
+                            → DeliverMad to B's SendPort
                                                         onMadMessageReceived()
                                                          → handleMadAssignment()
                                                          → bindVariable() → activations
@@ -112,9 +112,9 @@ flushMessages()
                                                           → goals run
                                                           → may produce response
                                                           → flushMessages()
-                                                          → send_mad back
-                            routes to A's window
-                            → deliver_mad
+                                                          → send via SendPort back
+                            routes to A via IsolateRouter
+                            → DeliverMad to A's SendPort
 onMadMessageReceived()
  → handleMadAssignment()
  → _runUntilQuiescent()
@@ -186,11 +186,17 @@ The bug appears to be a runtime issue with how the channel variable's binding pr
 
 **Next step:** Check `suspendOnWriter` — if the writer is already bound (ValueTag), the suspension should not be registered at all; instead, the goal should be immediately re-enqueued. If `suspendOnWriter` silently stores the suspension on a bound writer, the goal will never wake.
 
-### 6.3 Focus/typing issue
+### 6.3 Send not delivering in Flutter UI
 
-**Symptom:** Cannot type in agent window after switching to another window and back.
+**Symptom:** `send(bob, hello_bob)` from Alice does not produce `received(alice, hello_bob)` on Bob in the visual Flutter UI. Steps 1-2 (connect + decision → connected) work correctly.
 
-**Root cause:** `desktop_multi_window` spawned windows lose keyboard focus when the macOS window manager deactivates them. The current `FocusNode.requestFocus()` calls are insufficient because they only fire on specific events (init, send, tap), not on window re-activation.
+**Status:** Under investigation. The headless tests also had this issue masked by the loadSource filename collision bug (agents were crashing silently). Now that the filename bug is fixed, the headless protocol may work correctly but needs verification.
+
+### 6.4 Headless tests don't distinguish success from failure
+
+**Symptom:** `isolate_manager_test.dart` tests 2-3 pass even when agents crash, because `Done` messages are added to `_completed` regardless of `msg.success`.
+
+**Status:** Known issue. The filename collision fix (section 5.3) was the root cause of the crashes. With the fix applied, agents no longer crash and the runtime ERROR messages are gone. The tests should still be hardened to check success status.
 
 ---
 
@@ -204,13 +210,29 @@ Deleted `_reactivateSuspendedGoals()` method and its call site from `agent_runti
 
 Replaced the `accept_intro` clause in `social_agent.glp` to inline channel decomposition in agent/4's head pattern. Removed dead `handle_intro_accept` predicate and fixed `inject_msg` `otherwise` bug.
 
-### 7.3 Fix channel binding propagation — TODO
+### 7.3 Fix loadSource filename collisions — DONE (2026-02-13)
+
+`loadSource()` without `filename:` defaults to key `'_source_'`. Multiple calls overwrite each other in `_loadedPrograms`. Fixed by passing unique filenames (`'shared_$i'`, `'program'`). This was the root cause of the `ERROR: Spawn could not find procedure label: agent/4` messages in the headless tests.
+
+### 7.3b Fix source concatenation — DONE (2026-02-13)
+
+Flutter app concatenated GLP files with `sources.join('\n')` and passed as single string. Parser failed on second file's `-mode(system)`. Fixed by changing `glpSource: String` to `glpSources: List<String>` in `AgentRuntime`, `InitAgent`, and `main.dart`.
+
+### 7.3c GlpEngine constructor loads stdlib — DONE (2026-02-13)
+
+Made stdlib loading mandatory in `GlpEngine({required String stdlibDir})`. All three paths (REPL, IsolateManager, AgentRuntime) now use the same initialization. `enableMadGLP()` loads madPredicates internally.
+
+### 7.3d Fix channel binding propagation — TODO
 
 Investigate `suspendOnWriter` and `_suspendOnVariable` in `heap_fcp.dart` / `suspend_ops.dart`. If the writer is already bound when the suspension is registered, the goal should be immediately re-enqueued rather than stored as a suspension. This is the likely fix for the remaining introduce protocol bug.
 
-### 7.4 Fix window focus
+### 7.4 Fix send delivery in Flutter UI — TODO
 
-Listen for window activation events and request focus on the input field when the window regains focus.
+Investigate why `send(bob, hello_bob)` from Alice does not deliver to Bob. The message should flow: Alice agent → global_send → MadContext → onMessageReady → coordinator → route to Bob → Bob's onMadMessageReceived → inject into NetIn → agent/4 matches text clause → send_to_user → `received(alice, hello_bob)`.
+
+### 7.5 Harden headless tests — TODO
+
+Change `IsolateManager._completed` to track success separately from failure. Add `allSucceeded` check. Update tests 2-3 to assert success, not just completion.
 
 ---
 

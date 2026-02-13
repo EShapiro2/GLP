@@ -36,7 +36,7 @@ import 'package:glp_runtime/multiagent/payload_serializer.dart';
 /// 5. Call onMadMessageReceived(from, payload) for network messages
 class AgentRuntime {
   final String agentId;
-  final String glpSource;
+  final List<String> glpSources;
   final String stdlibDir;
   final List<String> friends;
 
@@ -64,7 +64,7 @@ class AgentRuntime {
 
   AgentRuntime({
     required this.agentId,
-    required this.glpSource,
+    required this.glpSources,
     required this.stdlibDir,
     this.friends = const [],
   });
@@ -106,9 +106,11 @@ class AgentRuntime {
     // Enable madGLP mode (loads madPredicates + creates MadContext)
     engine.enableMadGLP(agentId: agentIdLower);
 
-    // Load user GLP source
-    engine.loadSource(glpSource);
-    _log('INIT: Program loaded via GlpEngine (stdlib + madPredicates + user code)');
+    // Load user GLP sources (each file separately to preserve -mode() directives)
+    for (var i = 0; i < glpSources.length; i++) {
+      engine.loadSource(glpSources[i], filename: 'source_$i');
+    }
+    _log('INIT: Program loaded via GlpEngine (stdlib + madPredicates + ${glpSources.length} source files)');
 
     _runtime = engine.runtime;
     _ctx = engine.madContext;

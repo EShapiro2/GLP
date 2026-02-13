@@ -10,7 +10,7 @@
 | dGLP (single-isolate, with mediator + UI actors) | ✅ WORKING | `→ suspended` (all processes active) |
 | madGLP (multi-isolate, headless, no UI) | ✅ WORKING | All 3 agents complete |
 | madGLP (multi-isolate, headless, with mediator + UI actors) | ✅ WORKING | All 3 agents complete |
-| madGLP (visual Flutter UI) | ⚠️ INTEGRATED, UNTESTED | Boot updated, needs manual testing |
+| madGLP (visual Flutter UI) | ⚠️ PARTIALLY WORKING | Steps 1-2 work (connect + decision → connected). Send not yet confirmed. |
 
 ---
 
@@ -123,7 +123,7 @@ programs/typed_book/social_graph/archive/
 ```
 glp_runtime/lib/multiagent/
 ├── agent_runtime.dart      # AgentRuntime class (for Flutter UI)
-├── isolate_manager.dart    # IsolateManager + madPredicatesSource (send_to_net, send_to_user)
+├── isolate_manager.dart    # IsolateManager (headless multi-isolate execution)
 ├── mad_context.dart        # MadContext: W_p, M_p, message routing
 ├── boot_loader.dart        # BootLoader: parses @agent syntax
 ├── message_queue.dart      # Message types and serialization
@@ -240,21 +240,20 @@ agent_init(Id, NetIn) :-
 
 Interactive multi-window execution using `glp_multiagent` Flutter app. Each agent runs in its own window with REPL-style input.
 
-### Current Status: INTEGRATED, NEEDS MANUAL TESTING
+### Current Status: PARTIALLY WORKING
 
-The mediator pending-key bug has been fixed (was storing bare `N` but sending `req(N)` to user). This should resolve the "decision got 0 activations" error seen previously.
+Steps 1-2 of the interactive protocol work: `connect(bob)` + `decision(yes, alice, req(1))` produce `connected(bob)` on both sides. Step 3 (`send(bob, hello_bob)`) does not yet deliver `received(alice, hello_bob)` to Bob. Under investigation.
 
 ### Build and Launch
 
-**IMPORTANT: Use release build, not `flutter run`.**
-
 ```bash
-cd /Users/udi/Grassroots/GLP/glp_multiagent && flutter build macos --release 2>&1
+cd /Users/udi/Grassroots/GLP/glp_multiagent && flutter run -d macos
 ```
 
-Then launch:
+Or build release and launch:
 
 ```bash
+cd /Users/udi/Grassroots/GLP/glp_multiagent && flutter build macos --release
 open /Users/udi/Grassroots/GLP/glp_multiagent/build/macos/Build/Products/Release/glp_multiagent.app
 ```
 
@@ -414,8 +413,9 @@ All four headless modes (dGLP ± mediator, madGLP ± mediator) run the same scen
 ## Known Issues
 
 - **1 pre-existing test failure**: `mad_cold_call_isolate_test.dart: Alice sends Resp?` times out due to `useReader[0]` direction mismatch in globalize/localize.
-- **Duplicate messages in Flutter UI**: The `_reactivateSuspendedGoals()` method in `agent_runtime.dart` likely causes duplicate processing. See `/Users/udi/Grassroots/GLP/docs/ma/agent-runtime-spec.md`.
-- **Focus fix requires release build**: The `DispatchQueue.main.async` focus fix in `AppDelegate.swift` works in release mode but not reliably in debug mode.
+- **Headless tests (isolate_manager_test.dart tests 2-3)**: These tests check `allCompleted` which counts both successful and failed agents. A crashing agent is counted as "completed". The tests should distinguish success from failure.
+- **Flutter UI send not delivering**: `send(bob, hello_bob)` from Alice does not produce `received(alice, hello_bob)` on Bob. Steps 1-2 (connect + decision) work correctly. Under investigation.
+- **Type checker warnings for cross-file references**: When files are loaded separately, the type checker warns about "Undefined procedure" for procedures defined in other files. These are compile-time warnings only and do not affect runtime.
 
 ---
 
@@ -423,7 +423,27 @@ All four headless modes (dGLP ± mediator, madGLP ± mediator) run the same scen
 
 - dGLP (no mediator): ✅ Working — `play.` succeeds
 - dGLP (with mediator + UI actors): ✅ Working — `play.` runs, processes active
-- madGLP headless (no mediator): ✅ Working — all 3 agents complete
+- madGLP headless (no mediator): ✅ Working — all 3 agents complete (but see headless test issue above)
 - madGLP headless (with mediator + UI actors): ✅ Working — all 3 agents complete
-- madGLP visual Flutter UI: ⚠️ Integrated, pending-key bug fixed, needs manual testing
+- madGLP visual Flutter UI: ⚠️ Partially working — connect + decision work, send under investigation
 - 71 multiagent tests pass, 5 skipped, 1 pre-existing failure
+
+---
+
+## Bugs Fixed in This Session (2026-02-13)
+
+### 1. ONE way to run GLP — GlpEngine constructor loads stdlib
+
+Previously three code paths (REPL, IsolateManager, AgentRuntime) each set up GlpEngine differently. Paths 2 and 3 skipped stdlib, causing `:=/2` to be missing. Fixed by making `GlpEngine({required String stdlibDir})` load stdlib in the constructor. `enableMadGLP()` loads madPredicates internally. `loadStdlib` is now private.
+
+### 2. Source file concatenation bug — separate loadSource per file
+
+Multiple GLP files were concatenated with `sources.join('\n')` and loaded as one `loadSource()` call. The parser failed on the second file's `-mode(system)` directive. Fixed by storing files as `List<String>` and loading each separately.
+
+### 3. loadSource filename collision — files overwriting each other
+
+`loadSource()` without a `filename:` parameter defaults to key `'_source_'`. When loading 3+ files, each overwrites the previous in `_loadedPrograms`. Only the last file survives. Fixed by passing unique filenames: `filename: 'shared_$i'` and `filename: 'program'`.
+
+### 4. All paths use repo-relative paths
+
+Replaced all absolute `/Users/udi/Grassroots/GLP/...` paths with repo-relative paths (`../programs/stdlib`, `../programs/typed_book/social_graph/...`).
