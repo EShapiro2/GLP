@@ -58,8 +58,8 @@ const _defaultGlpDir = '/Users/udi/Grassroots/GLP/programs/typed_book/social_gra
 
 /// GLP files loaded for UI agents (order matters: shared first, then boot)
 const _glpFiles = [
-  'social_agent.glp',
-  'ui_mediator.glp',
+  'typed_social_agent.glp',
+  'typed_ui_mediator.glp',
   'play_ui_boot.glp',
 ];
 

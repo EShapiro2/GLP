@@ -13,8 +13,8 @@
 %% - AgentCh: ch(AgentToUser?, AgentIn) — agent's _user output/input
 %% - UserCh:  ch(UserIn?, UserOut)      — Dart's input/output
 %%
-%% Requires: load social_agent.glp first
-%% Requires: load ui_mediator.glp first
+%% Requires: load typed_social_agent.glp first
+%% Requires: load typed_ui_mediator.glp first
 %%
 %% Date: 2026-02-11
 
@@ -24,7 +24,6 @@
 %% AGENT INITIALIZATION
 %% =============================================================================
 
-procedure agent_init(Constant?, Stream?, Stream?).
 agent_init(Id, UserIn, NetIn) :-
     ground(Id?) |
     send_to_net(NetOut?),

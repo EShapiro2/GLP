@@ -46,11 +46,11 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ui_mediator(Id?, AgentCh1?, UserCh1?, [pending(N?, Resp)|Ps?], N1?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', befriend_intro(From, Other, Ch?)), AgentCh?, AgentCh1),
+    receive(msg(agent, '_user', befriend_intro(From, Other, Ch)), AgentCh?, AgentCh1),
     ground(From?), ground(Other?) |
     send(befriend_intro(From?, Other?, req(N?)), UserCh?, UserCh1),
     '_add'(N?, 1, N1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, [pending(N?, Ch)|Ps?], N1?).
+    ui_mediator(Id?, AgentCh1?, UserCh1?, [pending(N?, Ch?)|Ps?], N1?).
 
 %% --- Agent-to-user: ground (pass through, strip msg wrapper) ---
 
