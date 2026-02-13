@@ -53,8 +53,25 @@ class TraceLogger {
   }
 }
 
-/// Default GLP program directory
-const _defaultGlpDir = '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph';
+/// Default GLP program directory — auto-detected relative to the executable.
+final _defaultGlpDir = () {
+  // Walk up from the executable to find the GLP repo root, then descend to social_graph.
+  // Executable is typically at: <repo>/glp_multiagent/build/macos/Build/Products/Release/glp_multiagent.app/...
+  // We look for the 'programs' directory to confirm we found the repo root.
+  var dir = File(Platform.resolvedExecutable).parent;
+  for (var i = 0; i < 10; i++) {
+    if (Directory('${dir.path}/programs/typed_book/social_graph').existsSync()) {
+      return '${dir.path}/programs/typed_book/social_graph';
+    }
+    dir = dir.parent;
+  }
+  // Fallback: current working directory-based guess
+  final cwd = Directory.current.path;
+  final cwdCandidate = '$cwd/programs/typed_book/social_graph';
+  if (Directory(cwdCandidate).existsSync()) return cwdCandidate;
+  // Last resort: return a placeholder the user must fill in
+  return '';
+}();
 
 /// GLP files loaded for UI agents (order matters: shared first, then boot)
 const _glpFiles = [
