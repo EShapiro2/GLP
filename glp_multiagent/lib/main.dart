@@ -53,24 +53,33 @@ class TraceLogger {
   }
 }
 
-/// Default GLP program directory — auto-detected relative to the executable.
+/// Default GLP program directory.
+/// Override locally by creating glp_multiagent/glp_config.json:
+///   { "glp_dir": "/your/path/to/GLP/programs/typed_book/social_graph" }
+/// That file is .gitignore'd so it won't be pushed.
 final _defaultGlpDir = () {
-  // Walk up from the executable to find the GLP repo root, then descend to social_graph.
-  // Executable is typically at: <repo>/glp_multiagent/build/macos/Build/Products/Release/glp_multiagent.app/...
-  // We look for the 'programs' directory to confirm we found the repo root.
-  var dir = File(Platform.resolvedExecutable).parent;
-  for (var i = 0; i < 10; i++) {
-    if (Directory('${dir.path}/programs/typed_book/social_graph').existsSync()) {
-      return '${dir.path}/programs/typed_book/social_graph';
+  try {
+    // Look for glp_config.json next to the repo's glp_multiagent/ directory.
+    // Walk up from executable to find it, or check current working directory.
+    for (final base in [
+      File(Platform.resolvedExecutable).parent,
+      Directory.current,
+    ]) {
+      var dir = base is File ? (base as File).parent : base as Directory;
+      for (var i = 0; i < 10; i++) {
+        final configFile = File('${dir.path}/glp_multiagent/glp_config.json');
+        if (configFile.existsSync()) {
+          final content = configFile.readAsStringSync();
+          // Simple JSON parse — extract glp_dir value
+          final match = RegExp(r'"glp_dir"\s*:\s*"([^"]+)"').firstMatch(content);
+          if (match != null) return match.group(1)!;
+        }
+        dir = dir.parent;
+      }
     }
-    dir = dir.parent;
-  }
-  // Fallback: current working directory-based guess
-  final cwd = Directory.current.path;
-  final cwdCandidate = '$cwd/programs/typed_book/social_graph';
-  if (Directory(cwdCandidate).existsSync()) return cwdCandidate;
-  // Last resort: return a placeholder the user must fill in
-  return '';
+  } catch (_) {}
+  // Fallback to original default
+  return '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph';
 }();
 
 /// GLP files loaded for UI agents (order matters: shared first, then boot)
