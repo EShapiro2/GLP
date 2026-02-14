@@ -84,9 +84,9 @@ final _defaultGlpDir = () {
 
 /// GLP files loaded for UI agents (order matters: shared first, then boot)
 const _glpFiles = [
-  'typed_social_agent.glp',
-  'typed_ui_mediator.glp',
-  'play_ui_boot.glp',
+  'social_graph_agent.glp',
+  'social_graph_ui_mediator.glp',
+  'social_graph_ui_boot.glp',
 ];
 
 // =============================================================================
