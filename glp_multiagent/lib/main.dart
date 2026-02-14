@@ -82,6 +82,9 @@ final _defaultGlpDir = () {
   return '/Users/ohadey/Desktop/Grassroots/GLP2/GLP/programs/typed_book/social_graph';
 }();
 
+/// Stdlib directory (repo-relative from glp_multiagent/)
+const _stdlibDir = '../programs/stdlib';
+
 /// GLP files loaded for UI agents (order matters: shared first, then boot)
 const _glpFiles = [
   'social_graph_agent.glp',
