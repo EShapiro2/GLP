@@ -1,0 +1,30 @@
+%% social_graph_ui_boot.glp - Boot for social_graph agent with Flutter UI
+%%
+%% Entry point: agent_init(Id, DartUserIn, NetIn)
+%% - Id:         agent identifier (alice, bob, charlie)
+%% - DartUserIn: ground command stream from Dart (via InputInjector)
+%% - NetIn:      network input stream (from IsolateManager)
+%%
+%% Wires the ui_mediator between Dart I/O and the social_graph agent:
+%% - Mediator reads agent's user output, grounds non-ground terms, sends to Dart
+%% - Mediator reads Dart input, wraps in msg format, sends to agent
+%% - Network I/O bypasses the mediator entirely
+%%
+%% Requires: load social_graph_agent.glp first
+%% Requires: load social_graph_ui_mediator.glp first
+%%
+%% Date: 2026-02-14
+
+-mode(system).
+
+%% =============================================================================
+%% AGENT INITIALIZATION
+%% =============================================================================
+
+agent_init(Id, DartUserIn, NetIn) :-
+    ground(Id?) |
+    send_to_net(NetOut?),
+    merge(MediatorToAgent?, NetIn?, In),
+    social_graph(Id?, In?, [(user, AgentToMediator), (net, NetOut)]),
+    ui_mediator(Id?, ch(AgentToMediator?, MediatorToAgent), ch(DartUserIn?, DartUserOut), [], 1),
+    send_to_user(DartUserOut?).
