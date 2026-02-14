@@ -79,7 +79,7 @@ final _defaultGlpDir = () {
     }
   } catch (_) {}
   // Fallback to original default
-  return '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph';
+  return '/Users/ohadey/Desktop/Grassroots/GLP2/GLP/programs/typed_book/social_graph';
 }();
 
 /// GLP files loaded for UI agents (order matters: shared first, then boot)
