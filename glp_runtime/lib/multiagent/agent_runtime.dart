@@ -4,7 +4,7 @@
 /// Uses GlpEngine (the ONE way to run GLP programs) for compilation,
 /// MadContext for madGLP messaging, and Scheduler for execution.
 ///
-/// Boot approach: loads madPredicatesSource + user GLP source via GlpEngine,
+/// Boot approach: GlpEngine loads stdlib, enableMadGLP loads madPredicates,
 /// starts agent_init(Id, UserIn, NetIn). Network output goes through
 /// send_to_net → global_send → MadContext. User output goes through
 /// send_to_user → _output/1 kernel → outputCallback.
@@ -25,7 +25,6 @@ import 'package:glp_runtime/runtime/external_io.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/payload_serializer.dart';
-import 'package:glp_runtime/multiagent/isolate_manager.dart' show madPredicatesSource;
 
 /// Agent runtime encapsulating GLP execution, madGLP context, and I/O.
 ///
@@ -37,7 +36,8 @@ import 'package:glp_runtime/multiagent/isolate_manager.dart' show madPredicatesS
 /// 5. Call onMadMessageReceived(from, payload) for network messages
 class AgentRuntime {
   final String agentId;
-  final String glpSource;
+  final List<String> glpSources;
+  final String stdlibDir;
   final List<String> friends;
 
   // Callbacks set by UI layer
@@ -64,7 +64,8 @@ class AgentRuntime {
 
   AgentRuntime({
     required this.agentId,
-    required this.glpSource,
+    required this.glpSources,
+    required this.stdlibDir,
     this.friends = const [],
   });
 
@@ -100,18 +101,16 @@ class AgentRuntime {
     _output('[INIT] Creating MadContext...');
 
     // Use GlpEngine — the ONE way to run GLP programs.
-    // Matches isolate_manager.dart's approach exactly.
-    final engine = GlpEngine()..strictTypes = false;
+    final engine = GlpEngine(stdlibDir: stdlibDir)..strictTypes = false;
 
-    // Build combined source: madPredicatesSource + user GLP source
-    // Strip -mode(system) from user source since mad_predicates already sets it
-    final strippedSource = glpSource.replaceAll(RegExp(r'-mode\s*\(\s*system\s*\)\s*\.'), '');
-    final combinedSource = '$madPredicatesSource\n$strippedSource';
-    engine.loadSource(combinedSource);
-    _log('INIT: Program loaded via GlpEngine');
-
-    // Enable madGLP mode (creates MadContext)
+    // Enable madGLP mode (loads madPredicates + creates MadContext)
     engine.enableMadGLP(agentId: agentIdLower);
+
+    // Load user GLP sources (each file separately to preserve -mode() directives)
+    for (var i = 0; i < glpSources.length; i++) {
+      engine.loadSource(glpSources[i], filename: 'source_$i');
+    }
+    _log('INIT: Program loaded via GlpEngine (stdlib + madPredicates + ${glpSources.length} source files)');
 
     _runtime = engine.runtime;
     _ctx = engine.madContext;

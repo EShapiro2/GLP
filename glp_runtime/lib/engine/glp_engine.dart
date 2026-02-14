@@ -50,6 +50,31 @@ class ModuleInfo {
   ModuleInfo({required this.name, required this.program, required this.imports});
 }
 
+/// madGLP system predicates (embedded).
+///
+/// Provides send_to_net/1, global_send/3, send_to_user/1.
+/// Loaded by enableMadGLP().
+const String _madPredicatesSource = r'''
+-mode(system).  %% Uses reserved constants like '_w' and '_send'
+
+%% madGLP System Predicates
+%% See: madGLP-spec.md Section 4 and Section 12
+
+%% send_to_net/1 - Process network output stream
+procedure send_to_net(Stream?).
+send_to_net([msg(Q, T) | In]) :- ground(Q?) | global_send(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
+send_to_net([]).
+
+%% global_send/3 - Send via global link
+procedure global_send(_?, _?, _?).
+global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
+
+%% send_to_user/1 - Process user output stream (ground terms only)
+procedure send_to_user(Stream?).
+send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
+send_to_user([]).
+''';
+
 /// GLP Engine - the embeddable core for running GLP programs
 class GlpEngine {
   final GlpCompiler _compiler = GlpCompiler();
@@ -81,9 +106,13 @@ class GlpEngine {
   Map<String, BytecodeProgram> get loadedPrograms =>
       Map.unmodifiable(_loadedPrograms);
 
-  /// Constructor - registers standard predicates
-  GlpEngine() {
+  /// Constructor - registers standard predicates and loads stdlib.
+  ///
+  /// [stdlibDir] is the path to the stdlib directory (e.g., '../programs/stdlib').
+  /// Loading stdlib is not optional — it's part of engine initialization.
+  GlpEngine({required String stdlibDir}) {
     registerStandardPredicates(_runtime.systemPredicates);
+    _loadStdlib(stdlibDir);
   }
 
   /// Clear all loaded programs except stdlib
@@ -108,8 +137,8 @@ class GlpEngine {
     _loadedPrograms.addAll(stdlibPrograms);
   }
 
-  /// Load stdlib files from a directory
-  void loadStdlib(String stdlibDir) {
+  /// Load stdlib files from a directory (private — called by constructor).
+  void _loadStdlib(String stdlibDir) {
     final stdlibFiles = [
       'assign.glp',
       'univ.glp',
@@ -215,8 +244,12 @@ class GlpEngine {
     }
   }
 
-  /// Enable madGLP mode for this engine
+  /// Enable madGLP mode for this engine.
+  ///
+  /// Loads madGLP system predicates (send_to_net, global_send, send_to_user)
+  /// and creates MadContext for message routing.
   void enableMadGLP({required String agentId}) {
+    loadSource(_madPredicatesSource, filename: '__mad_predicates__');
     madContext = MadContext(agentId: agentId, runtime: _runtime);
     // Make madContext accessible from body kernels via runtime
     _runtime.madContext = madContext;

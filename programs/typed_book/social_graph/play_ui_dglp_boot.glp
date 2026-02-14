@@ -1,0 +1,118 @@
+%% play_ui_dglp_boot.glp - dGLP entry point with UI mediator
+%%
+%% Full stack: network3 ↔ agent/4 ↔ ui_mediator ↔ ui_actor
+%%
+%% network3 and play are untyped (no procedure declarations)
+%% since they call cross-file agent/4 and ui_mediator/5.
+%%
+%% Usage:
+%%   load typed_social_agent.glp
+%%   load typed_ui_mediator.glp
+%%   load typed_ui_actors.glp
+%%   load play_ui_dglp_boot.glp
+%%   play.
+%%
+%% Date: 2026-02-13
+
+-mode(system).
+
+%% =============================================================================
+%% NETWORK SWITCH (3-way)
+%% =============================================================================
+
+%% --- Cold-call routing (2-arg msg) ---
+
+network3(ch([msg(bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch([msg(charlie, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch([msg(alice, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, AliceOut?),
+         ch([msg(charlie, X)|BobIn], BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch([msg(alice, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch([msg(bob, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% --- Friend-to-friend routing (3-arg msg) ---
+
+network3(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(alice, bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch([msg(alice, charlie, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(alice, charlie, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, [msg(bob, alice, X?)|AliceOut?]),
+         ch([msg(bob, alice, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, AliceOut?),
+         ch([msg(bob, charlie, X)|BobIn], BobOut?),
+         ch(CharlieIn, [msg(bob, charlie, X?)|CharlieOut?])) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, [msg(charlie, alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch([msg(charlie, alice, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+network3(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(charlie, bob, X?)|BobOut?]),
+         ch([msg(charlie, bob, X)|CharlieIn], CharlieOut?)) :-
+    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
+
+%% Termination
+network3(ch([], []), ch([], []), ch([], [])).
+
+%% =============================================================================
+%% PLAY - dGLP entry point with UI mediator
+%% =============================================================================
+
+play :-
+    network3(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn),
+             ch(CharlieNetOut?, CharlieNetIn)),
+
+    %% Alice: agent ↔ mediator ↔ ui_actor
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)]),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceUserOut?, AliceUserIn), [], 1),
+    alice_ui_actor(ch(AliceUserIn?, AliceUserOut)),
+
+    %% Bob: agent ↔ mediator ↔ ui_actor
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)]),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobUserOut?, BobUserIn), [], 1),
+    bob_ui_actor(ch(BobUserIn?, BobUserOut)),
+
+    %% Charlie: agent ↔ mediator ↔ ui_actor
+    agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)]),
+    ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+                ch(CharlieUserOut?, CharlieUserIn), [], 1),
+    charlie_ui_actor(ch(CharlieUserIn?, CharlieUserOut)).

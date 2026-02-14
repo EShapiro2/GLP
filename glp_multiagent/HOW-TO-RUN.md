@@ -1,5 +1,7 @@
 # GLP Multiagent UI — HOW TO RUN
 
+**Updated: 2026-02-13**
+
 ## Build and Launch
 
 **IMPORTANT: Use release build, not `flutter run`.**
@@ -39,8 +41,8 @@ updates before we override first responder. Without this, child windows
 ## Interactive Protocol — The Full Introduction Script
 
 The protocol below matches the automated actor scripts in
-`social_agent.glp` (`alice_actor`, `bob_actor`, `charlie_actor`).
-The ui_mediator replaces non-ground writers with `req(N)` identifiers,
+`typed_ui_actors.glp` (`alice_ui_actor`, `bob_ui_actor`, `charlie_ui_actor`).
+The ui_mediator replaces non-ground variables with `req(N)` identifiers,
 so the user types ground terms only.
 
 ### Step 1 — Alice: cold-call Bob
@@ -63,9 +65,9 @@ decision(yes, alice, req(1))
 
 Type in **Alice's** window:
 ```
-send(bob, hi)
+send(bob, 'Hi Bob, this is Alice')
 ```
-**Wait for:** Bob shows `received(alice, hi)`.
+**Wait for:** Bob shows `received(alice, Hi Bob, this is Alice)`.
 
 ### Step 4 — Bob: cold-call Charlie
 
@@ -75,23 +77,19 @@ connect(charlie)
 ```
 **Wait for:** Charlie shows `befriend(bob, req(1))`.
 
-### Step 5 — Charlie: accept Bob's friend request
+### Step 5 — Charlie: accept Bob's friend request and greet
 
 Type in **Charlie's** window (use the req number from Charlie's output):
 ```
 decision(yes, bob, req(1))
 ```
-**Wait for:** Both Bob and Charlie show `connected(...)`.
-
-### Step 6 — Charlie: send message to Bob
-
-Type in **Charlie's** window:
+Then:
 ```
-send(bob, hi)
+send(bob, 'Hi Bob, this is Charlie')
 ```
-**Wait for:** Bob shows `received(charlie, hi)`.
+**Wait for:** Both Bob and Charlie show `connected(...)`. Bob shows `received(charlie, ...)`.
 
-### Step 7 — Bob: introduce Alice to Charlie
+### Step 6 — Bob: introduce Alice to Charlie
 
 Type in **Bob's** window:
 ```
@@ -103,37 +101,37 @@ introduce(alice, charlie)
 
 Note the req numbers — they may differ between Alice and Charlie.
 
-### Step 8 — Alice: accept introduction to Charlie
+### Step 7 — Alice: accept introduction to Charlie
 
-Type in **Alice's** window (use Alice's req number from step 7):
+Type in **Alice's** window (use Alice's req number from step 6):
 ```
 accept_intro(charlie, req(N))
 ```
 
-### Step 9 — Charlie: accept introduction to Alice
+### Step 8 — Charlie: accept introduction to Alice
 
-Type in **Charlie's** window (use Charlie's req number from step 7):
+Type in **Charlie's** window (use Charlie's req number from step 6):
 ```
 accept_intro(alice, req(N))
 ```
 **Wait for:** Both Alice and Charlie show `connected(...)`.
 Alice and Charlie are now direct friends via Bob's introduction.
 
-### Step 10 — Verify: Alice sends to Charlie
+### Step 9 — Verify: Alice sends to Charlie
 
 Type in **Alice's** window:
 ```
-send(charlie, hi)
+send(charlie, 'Hi Charlie, this is Alice')
 ```
-**Wait for:** Charlie shows `received(alice, hi)`.
+**Wait for:** Charlie shows `received(alice, ...)`.
 
-### Step 11 — Verify: Charlie sends to Alice
+### Step 10 — Verify: Charlie sends to Alice
 
 Type in **Charlie's** window:
 ```
-send(alice, hi)
+send(alice, 'Hi Alice, this is Charlie')
 ```
-**Wait for:** Alice shows `received(charlie, hi)`.
+**Wait for:** Alice shows `received(charlie, ...)`.
 
 ## Architecture
 
@@ -143,15 +141,35 @@ send(alice, hi)
   GLP engine and `MadContext`. User input is parsed and injected via
   `InputInjector`.
 - **GLP files loaded** (in order):
-  1. `social_agent.glp` — agent/4 main loop, channel ops, actors
-  2. `ui_mediator.glp` — ground-term translation between agent and Dart
+  1. `typed_social_agent.glp` — agent/4, channel ops, merge, helpers (typed)
+  2. `typed_ui_mediator.glp` — ground-term mediator between agent/4 and Dart (typed)
   3. `play_ui_boot.glp` — interactive boot: `agent_init(Id, UserIn, NetIn)`
 - **GLP directory**: `/Users/udi/Grassroots/GLP/programs/typed_book/social_graph`
 - **Friends list in coordinator** is display-only — it does NOT set up
   GLP-level friendships. Friendships form only through `connect` commands.
 
+## Headless Testing (no Flutter)
+
+The same protocol runs headlessly via automated UI actors:
+
+```bash
+cd /Users/udi/Grassroots/GLP/glp_runtime
+
+# madGLP with mediator + UI actors (all 3 agents complete)
+dart test test/multiagent/isolate_manager_test.dart -n "UI mediator"
+
+# madGLP without mediator (actors talk directly to agent/4)
+dart test test/multiagent/isolate_manager_test.dart -n "no UI"
+
+# All multiagent tests (71 pass, 5 skip, 1 pre-existing fail)
+dart test test/multiagent/
+```
+
 ## Known Issues
 
+- **Mediator pending-key bug (FIXED)**: The mediator previously stored bare `N`
+  as the pending key but sent `req(N)` to the user. This caused `decision(yes, alice, req(1))`
+  to fail lookup ("0 activations"). Fixed 2026-02-13: mediator now stores `req(N)` as key.
 - **Duplicate messages**: The `_reactivateSuspendedGoals()` method in
   `agent_runtime.dart` likely causes duplicate processing of incoming
   messages. See `/Users/udi/Grassroots/GLP/docs/ma/agent-runtime-spec.md`
@@ -169,3 +187,17 @@ send(alice, hi)
 | `macos/Runner/AppDelegate.swift` | Focus fix (makeFirstResponder) |
 | `macos/Runner/MainFlutterWindow.swift` | Main window setup |
 | `pubspec.yaml` | Dependencies (glp_runtime, desktop_multi_window) |
+
+## Related GLP Files
+
+| File | Purpose |
+|------|---------|
+| `typed_social_agent.glp` | agent/4, channel ops, merge, response handling |
+| `typed_ui_mediator.glp` | Ground-term mediator (agent/4 ↔ Dart UI) |
+| `typed_actors.glp` | Scripted actors — talk directly to agent/4 |
+| `typed_ui_actors.glp` | Scripted UI actors — talk to ui_mediator (ground terms) |
+| `play_ui_boot.glp` | Flutter UI boot: agent_init/3 |
+| `play_ui_dglp_boot.glp` | dGLP boot with mediator (single-isolate REPL) |
+| `play_ui_madglp_boot.glp` | madGLP boot with mediator (headless multi-isolate) |
+| `play_dglp_boot.glp` | dGLP boot without mediator (single-isolate REPL) |
+| `play_madglp_boot.glp` | madGLP boot without mediator (headless multi-isolate) |

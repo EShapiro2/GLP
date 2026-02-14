@@ -176,7 +176,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   final TextEditingController _glpPathController =
       TextEditingController(text: _defaultGlpDir);
   String _currentGlpDir = _defaultGlpDir;
-  String? _cachedGlpSource;
+  List<String>? _cachedGlpSources;
 
   final ReceivePort _replyPort = ReceivePort();
   StreamSubscription? _replySubscription;
@@ -290,12 +290,13 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
         }
         sources.add(await file.readAsString());
       }
-      _cachedGlpSource = sources.join('\n');
+      _cachedGlpSources = sources;
 
       setState(() {
         _currentGlpDir = newDir;
+        final totalChars = sources.fold<int>(0, (sum, s) => sum + s.length);
         _log.add(
-            'GLP loaded: ${_glpFiles.join(", ")} (${_cachedGlpSource!.length} chars)');
+            'GLP loaded: ${_glpFiles.join(", ")} ($totalChars chars in ${sources.length} files)');
       });
     } catch (e) {
       setState(() {
@@ -316,9 +317,9 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     }
 
     // Load GLP source if not cached
-    if (_cachedGlpSource == null) {
+    if (_cachedGlpSources == null) {
       await _updateGlpPath();
-      if (_cachedGlpSource == null) {
+      if (_cachedGlpSources == null) {
         _log.add('ERROR: Could not load GLP source');
         setState(() {});
         return;
@@ -331,7 +332,8 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
 
     final initMsg = InitAgent(
       agentId: agentId,
-      glpSource: _cachedGlpSource!,
+      glpSources: _cachedGlpSources!,
+      stdlibDir: _stdlibDir,
       friends: friends,
       replyPort: _replyPort.sendPort,
     );

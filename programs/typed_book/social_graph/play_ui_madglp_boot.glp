@@ -1,0 +1,39 @@
+%% play_ui_madglp_boot.glp - madGLP entry point with UI mediator
+%%
+%% Full stack per isolate: agent/4 ↔ ui_mediator ↔ ui_actor ↔ send_to_net
+%%
+%% Requires: load typed_social_agent.glp first (done by IsolateManager)
+%% Requires: load typed_ui_mediator.glp first (done by IsolateManager)
+%% Requires: load typed_ui_actors.glp first (done by IsolateManager)
+%%
+%% This is the thin wrapper for madGLP (isolate) testing.
+%% Agent code is in typed_social_agent.glp, mediator in typed_ui_mediator.glp,
+%% UI actors in typed_ui_actors.glp.
+%%
+%% Date: 2026-02-13
+
+-mode(system).  %% Uses @agent syntax and '_net' constant
+
+%% =============================================================================
+%% BOOT - Spawns agents on separate isolates
+%% =============================================================================
+
+procedure boot.
+boot :-
+    agent_init(alice, _)@alice,
+    agent_init(bob, _)@bob,
+    agent_init(charlie, _)@charlie.
+
+%% =============================================================================
+%% AGENT INITIALIZATION
+%% =============================================================================
+
+procedure agent_init(Constant?, Stream?).
+agent_init(Id, NetIn) :-
+    ground(Id?) |
+    send_to_net(NetOut?),
+    agent(Id?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser), output('_net', NetOut)]),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(UserOut?, UserIn), [], 1),
+    ui_actor(Id?, ch(UserIn?, UserOut)).

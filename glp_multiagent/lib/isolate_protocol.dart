@@ -23,13 +23,15 @@ sealed class ToAgentMsg {}
 /// Initialization message — sent as the spawn argument.
 class InitAgent extends ToAgentMsg {
   final String agentId;
-  final String glpSource;
+  final List<String> glpSources;
+  final String stdlibDir;
   final List<String> friends;
   final SendPort replyPort;
 
   InitAgent({
     required this.agentId,
-    required this.glpSource,
+    required this.glpSources,
+    required this.stdlibDir,
     required this.friends,
     required this.replyPort,
   });
@@ -126,7 +128,8 @@ Future<void> _runAgent(InitAgent init) async {
 
   final agent = AgentRuntime(
     agentId: agentId,
-    glpSource: init.glpSource,
+    glpSources: init.glpSources,
+    stdlibDir: init.stdlibDir,
     friends: init.friends,
   );
 
