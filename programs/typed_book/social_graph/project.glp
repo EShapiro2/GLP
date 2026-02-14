@@ -1,8 +1,6 @@
-%% social_graph_agent.glp - Core social graph agent for Flutter app
+%% project.glp - Self-contained social graph agent for Flutter app
 %%
-%% Extracted from social_graph_play.glp: types, helpers, and social_graph/3.
-%% Does NOT include agent_init, actors, play, or network2.
-%% Those are provided by separate boot/mediator files.
+%% Combines: social_graph_agent.glp + social_graph_ui_mediator.glp + social_graph_ui_boot.glp
 %%
 %% Date: 2026-02-14
 
@@ -25,6 +23,14 @@ MsgStream ::= [] ; [MsgItem | MsgStream].
 FriendEntry ::= (_, MsgStream).
 FriendList ::= [] ; [FriendEntry | FriendList].
 Friends ::= [] ; [_|Friends].
+
+Decision ::= yes ; no.
+
+%% Pending entries (from mediator)
+PendingVar   ::= pending_response(Resp).
+PendingEntry ::= pending(Constant, PendingVar).
+PendingList  ::= [] ; [PendingEntry | PendingList].
+
 %% =============================================================================
 %% MERGE
 %% =============================================================================
@@ -129,3 +135,80 @@ social_graph(Id, [_|In], Fs) :-
     social_graph(Id?, In?, Fs?).
 %% Base case
 social_graph(_, [], _).
+
+%% =============================================================================
+%% UI MEDIATOR - Main loop
+%% =============================================================================
+
+procedure ui_mediator(Constant?, Channel?, Channel?, PendingList?, Constant?).
+
+%% --- Agent-to-user: befriend (non-ground Resp) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, user, befriend(From, Resp)),
+            AgentCh?, AgentCh1),
+    ground(From?) |
+    send(befriend(From?, req(N?)), UserCh?, UserCh1),
+    N1 := N? + 1,
+    ui_mediator(Id?, AgentCh1?, UserCh1?,
+        [pending(N?, pending_response(Resp?)) | Ps?], N1?).
+
+%% --- User-to-agent: connect ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(connect(Target), UserCh?, UserCh1),
+    ground(Id?), ground(Target?) |
+    send(msg(user, Id?, connect(Target?)), AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- User-to-agent: decision (cold-call response) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(decision(Dec, From, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(Dec?), ground(From?),
+    ground(ReqId?) |
+    lookup_response(ReqId?, Resp, Ps?, Ps1),
+    send(msg(user, Id?, decision(Dec?, From?, Resp?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
+%% --- User-to-agent: remove ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(remove(Target), UserCh?, UserCh1),
+    ground(Id?), ground(Target?) |
+    send(msg(user, Id?, remove(Target?)), AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- Termination ---
+
+ui_mediator(_, ch([], []), ch([], []), _, _).
+
+%% =============================================================================
+%% PENDING MANAGEMENT
+%% =============================================================================
+
+%% lookup_response: retrieve a stored Resp by request ID
+procedure lookup_response(Constant?, Resp,
+                          PendingList?, PendingList).
+lookup_response(ReqId, Resp?,
+    [pending(Id, pending_response(Resp)) | Rest], Rest?) :-
+    ReqId? =?= Id? | true.
+lookup_response(ReqId, Resp?, [P | Rest], [P? | Rest1?]) :-
+    otherwise |
+    lookup_response(ReqId?, Resp?, Rest?, Rest1).
+lookup_response(_, no, [], []).
+
+%% =============================================================================
+%% AGENT INITIALIZATION (boot)
+%% =============================================================================
+
+-mode(system).
+
+agent_init(Id, DartUserIn, NetIn) :-
+    ground(Id?) |
+    send_to_net(NetOut?),
+    merge(MediatorToAgent?, NetIn?, In),
+    social_graph(Id?, In?, [(user, AgentToMediator), (net, NetOut)]),
+    ui_mediator(Id?, ch(AgentToMediator?, MediatorToAgent), ch(DartUserIn?, DartUserOut), [], 1),
+    send_to_user(DartUserOut?).
