@@ -53,17 +53,40 @@ class TraceLogger {
   }
 }
 
-/// Default GLP program directory (repo-relative from glp_multiagent/)
-const _defaultGlpDir = '../programs/typed_book/social_graph';
-
-/// Stdlib directory (repo-relative from glp_multiagent/)
-const _stdlibDir = '../programs/stdlib';
+/// Default GLP program directory.
+/// Override locally by creating glp_multiagent/glp_config.json:
+///   { "glp_dir": "/your/path/to/GLP/programs/typed_book/social_graph" }
+/// That file is .gitignore'd so it won't be pushed.
+final _defaultGlpDir = () {
+  try {
+    // Look for glp_config.json next to the repo's glp_multiagent/ directory.
+    // Walk up from executable to find it, or check current working directory.
+    for (final base in [
+      File(Platform.resolvedExecutable).parent,
+      Directory.current,
+    ]) {
+      var dir = base is File ? (base as File).parent : base as Directory;
+      for (var i = 0; i < 10; i++) {
+        final configFile = File('${dir.path}/glp_multiagent/glp_config.json');
+        if (configFile.existsSync()) {
+          final content = configFile.readAsStringSync();
+          // Simple JSON parse — extract glp_dir value
+          final match = RegExp(r'"glp_dir"\s*:\s*"([^"]+)"').firstMatch(content);
+          if (match != null) return match.group(1)!;
+        }
+        dir = dir.parent;
+      }
+    }
+  } catch (_) {}
+  // Fallback to original default
+  return '/Users/ohadey/Desktop/Grassroots/GLP2/GLP/programs/typed_book/social_graph';
+}();
 
 /// GLP files loaded for UI agents (order matters: shared first, then boot)
 const _glpFiles = [
-  'typed_social_agent.glp',
-  'typed_ui_mediator.glp',
-  'play_ui_boot.glp',
+  'social_graph_agent.glp',
+  'social_graph_ui_mediator.glp',
+  'social_graph_ui_boot.glp',
 ];
 
 // =============================================================================
