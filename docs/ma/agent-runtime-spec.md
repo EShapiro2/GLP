@@ -1,48 +1,49 @@
-# AgentRuntime Execution Spec
+# Agent Execution Spec
 
-**Status: DRAFT — 2026-02-13**
+**Status: DRAFT — 2026-02-14**
 
-This document specifies when and how the `AgentRuntime` (Flutter UI mode) drives GLP execution. It contrasts with the headless `IsolateManager` model and identifies gaps.
+This document specifies how agents execute in both headless (IsolateManager) and visual UI (AgentRuntime) modes. Both modes use the same event-driven execution model.
 
 ---
 
-## 1. Two Execution Models
+## 1. Execution Model (Unified)
+
+Each agent runs in a separate Dart isolate. Execution is **event-driven**: agents drain their goal queue and flush outgoing messages in response to events. There is no external clock or tick loop.
+
+```
+await for message on receivePort:
+    handle message (Start, NetworkMsg, or UIEvent)
+    scheduler.drainWithStatus()    // run all runnable goals
+    ctx.flushMessages()            // send queued outbound messages
+```
+
+Three event types trigger execution:
+
+| Event | What happens |
+|-------|-------------|
+| `Start` | Initial drain+flush after boot. Kicks off the agent's goal. |
+| `NetworkMsg` | Deserialize assignment, bind variables (activating suspended goals), drain+flush. |
+| `UIEvent` | Inject user input into stream (activating suspended goals), drain+flush. |
+
+Each event is handled fully (drain+flush) before the next event is processed. The messages produced by flush are routed by the `IsolateManager` (headless) or coordinator (UI) to destination agents, where they arrive as new `NetworkMsg` events. This chain of events drives the entire protocol forward — no polling or periodic triggering is needed.
 
 ### 1.1 Headless (IsolateManager)
 
-Each agent runs in a separate Dart isolate. A **tick loop** drives execution:
-
-```
-while not done:
-    receive Tick message
-    scheduler.drainWithStatus()    // run all runnable goals
-    ctx.flushMessages()            // send queued outbound messages
-    report status (running / suspended / completed)
-```
-
-The tick is an external clock sent by the `IsolateManager` at fixed intervals (default 50ms). Every tick, every agent drains its goal queue and flushes. The tick loop is the **only driver** of execution.
-
-When a `NetworkMsg` (assignment) arrives between ticks, `handleMadAssignment` binds the local writer and calls `runtime.heap.bindVariable()`. The heap's `bindVariable` returns a list of **activations** — GoalRefs that were suspended on the now-bound reader. These are enqueued into the goal queue. On the **next tick**, those goals run.
-
-Key property: **no execution happens during message receipt.** All execution happens in the tick handler.
+The `IsolateManager` spawns agent isolates, sends `Start` to each, and routes `NetworkMsg` between them. There is no tick loop. Events (incoming messages) drive execution.
 
 ### 1.2 Visual UI (AgentRuntime)
 
-Each agent runs in a separate **Dart isolate** spawned by the coordinator (single-window architecture). There is **no tick loop.** Execution is event-driven, triggered by three events:
+The coordinator spawns agent isolates and routes messages between them, same as headless. Additionally, user input from the Flutter UI arrives as `UIEvent` messages.
 
-| Event | Entry point | What happens |
-|-------|-------------|-------------|
-| Initialization | `initialize()` | Compiles program, starts `agent_init/3`, runs until quiescent |
-| User input | `injectUserInput(text)` | Parses term, injects into UserIn stream, runs until quiescent |
-| Network message | `onMadMessageReceived(from, payload)` | Deserializes, handles assignment/message, runs until quiescent |
+### 1.3 Termination
 
-The absence of a tick loop means: **if execution is not explicitly triggered after each state change, goals can be stranded.**
+Agents do not detect or report their own termination. The caller (test harness, Flutter app) shuts down the isolates externally when done. This is the same in both modes — the Flutter app kills isolates when the user closes the window; the test harness kills isolates after observing expected behavior or after a timeout.
 
 ---
 
 ## 2. Activation Points (When Goals Become Runnable)
 
-A goal becomes runnable when data it was waiting for arrives. There are exactly four mechanisms:
+A goal becomes runnable when data it was waiting for arrives. There are exactly three mechanisms:
 
 ### 2.1 Stream extension (InputInjector.inject)
 
@@ -66,81 +67,59 @@ When a remote agent sends an assignment (`_w(p,i) := T` or `_r(p,i) := T`), `Mad
 
 When a local writer is bound (during GLP execution), the heap's `onBind` callback fires `MadContext.onWriterBound`, which checks if a `global_send` goal was watching that writer's reader. If so, the message is globalized and queued to `M_p`. This does **not** produce new runnable goals directly — it produces outbound messages, which are picked up by `flushMessages()`.
 
-### 2.4 Scheduler suspension reactivation (_reactivateSuspendedGoals)
-
-**This is the problematic mechanism.** `AgentRuntime._reactivateSuspendedGoals()` scans `runtime.suspended` for goals blocked on readers that are now bound (`heap.isBound(readerId)`), and re-enqueues them.
-
-**Problem:** This mechanism is redundant with 2.2, which already enqueues activations returned by `bindVariable`. The `suspended` map and `bindVariable`'s activation list track the same thing via different paths. Double-enqueuing may explain the duplicate messages observed.
-
 ---
 
-## 3. The Run-Until-Quiescent Loop
+## 3. The Drain-Flush Cycle
 
-After each trigger event, `AgentRuntime` runs `_runUntilQuiescent()`:
+After each event, the agent runs a drain-flush cycle:
 
 ```
-for round in 0..19:
-    drain scheduler (run all goals in GQ, up to 1000 cycles)
-    processSuspension (currently a no-op in madGLP push model)
-    flushMessages (send all queued outbound messages via coordinator)
-    if no goals ran AND nothing flushed: break
+drain scheduler (run all goals in GQ until quiescent)
+flushMessages (send all queued outbound messages)
 ```
 
-**Purpose of the loop:** A single drain may produce outbound messages (via global_send firing during execution). Flushing those messages doesn't directly produce new local goals, but within the same agent, one goal's output may enable another goal. The loop handles cascading local work.
+**Purpose:** A single drain may produce outbound messages (via global_send firing during execution). Flushing sends those messages to other agents. Within the same agent, one goal's output may enable another goal, but that is handled within the drain itself (the scheduler keeps running until the goal queue is empty or all remaining goals are suspended).
 
-**What the loop does NOT handle:** Cross-agent round-trips. When agent A sends a message to agent B, agent B processes it and may send a response back to agent A. This response arrives as a new `onMadMessageReceived` event, which triggers a new `_runUntilQuiescent` cycle. Each leg of the round-trip is a separate event-driven cycle.
+**What the cycle does NOT handle:** Cross-agent round-trips. When agent A sends a message to agent B, agent B processes it and may send a response back to agent A. This response arrives as a new `NetworkMsg` event at agent A, which triggers a new drain-flush cycle. Each leg of the round-trip is a separate event.
 
 ---
 
 ## 4. Cross-Agent Message Flow
 
 ```
-Agent A (isolate)           Coordinator (main isolate)   Agent B (isolate)
-─────────────────           ──────────────────────────   ─────────────────
+Agent A (isolate)           Router (main isolate)        Agent B (isolate)
+─────────────────           ─────────────────────        ─────────────────
 goal runs
  → global_send fires
  → message queued to M_p
 flushMessages()
  → onMessageReady callback
  → send via SendPort
-                            routes to B via IsolateRouter
-                            → DeliverMad to B's SendPort
-                                                        onMadMessageReceived()
+                            routes to B
+                            → NetworkMsg to B's SendPort
+                                                        receives NetworkMsg
                                                          → handleMadAssignment()
                                                          → bindVariable() → activations
-                                                         → _runUntilQuiescent()
+                                                         → drain+flush
                                                           → goals run
                                                           → may produce response
                                                           → flushMessages()
                                                           → send via SendPort back
-                            routes to A via IsolateRouter
-                            → DeliverMad to A's SendPort
-onMadMessageReceived()
+                            routes to A
+                            → NetworkMsg to A's SendPort
+receives NetworkMsg
  → handleMadAssignment()
- → _runUntilQuiescent()
+ → drain+flush
   → goals run
 ```
 
-Each arrow from coordinator to agent window is an asynchronous method channel call. The event-driven model handles this correctly **as long as** each `onMadMessageReceived` triggers `_runUntilQuiescent`.
+The router is the `IsolateManager` in headless mode and the coordinator in UI mode. Both perform the same function: receive a `NetworkMsg` from one agent and forward it to the destination agent's `SendPort`.
 
 ---
 
-## 5. Comparison: Headless vs UI Activation
+## 5. Known Bugs and Their Root Causes
 
-| Mechanism | Headless (IsolateManager) | UI (AgentRuntime) |
-|-----------|--------------------------|-------------------|
-| Stream extension | `bindVariable` returns activations; next tick runs them | `bindVariable` returns activations; enqueued, `_runUntilQuiescent` runs them immediately |
-| MAD assignment | `bindVariable` inside MadContext enqueues activations; next tick runs them | Same, **plus** `_reactivateSuspendedGoals` scans again (REDUNDANT) |
-| global_send fire | `onBind` callback queues to M_p; next tick flushes | `onBind` callback queues to M_p; loop flushes in same cycle |
-| Cross-agent | Tick loop naturally retries; all agents tick together | Event-driven: each message receipt triggers a new cycle |
-
-The headless model's tick loop is simpler: it retries unconditionally. The UI model must be precise about triggering execution after each state change.
-
----
-
-## 6. Known Bugs and Their Root Causes
-
-### 6.1 Duplicate messages — FIXED (2026-02-12)
+### 5.1 Duplicate messages — FIXED (2026-02-12)
 
 **Symptom:** Every SEND_MAD appeared twice in the trace log.
 
@@ -148,54 +127,70 @@ The headless model's tick loop is simpler: it retries unconditionally. The UI mo
 
 **Fix applied:** Removed `_reactivateSuspendedGoals()` method and its call site from `agent_runtime.dart`. `MadContext` already handles reactivation correctly via `runtime.enqueueReactivatedGoal()`.
 
-### 6.2 Send not delivering in Flutter UI
+### 5.2 Mediator pending list stores readers instead of writers — IN PROGRESS (2026-02-14)
 
-**Symptom:** `send(bob, hello_bob)` from Alice does not produce `received(alice, hello_bob)` on Bob in the visual Flutter UI. Steps 1-2 (connect + decision → connected) work correctly.
+**Symptom:** Both dGLP and madGLP with-mediator tests suspend at `bob_ui_wait_alice_msg`. Bob accepts Alice's cold-call and gets `connected(alice)`, but Alice never receives `connected(bob)` because the cold-call response variable binding does not propagate back.
 
-**Status:** Under investigation. The headless tests also had this issue masked by the loadSource filename collision bug (agents were crashing silently). Now that the filename bug is fixed, the headless protocol may work correctly but needs verification.
+**Root cause:** `typed_ui_mediator.glp` stored `Resp?` (reader) in the pending list instead of `Resp` (writer). When `lookup_response` retrieved the variable and `bind_response` bound it, the binding was on a reader copy — it did not propagate back to Alice's original writer variable that `inject_msg` was waiting on.
 
-### 6.3 Headless tests don't distinguish success from failure
+**Fix applied (code logic):** Inverted modes on `Resp` and `Ch` in the storage clauses. Removed `response()`/`channel()` wrappers (the pending values are opaque). Merged `lookup_response`/`lookup_channel` into `lookup_pending`.
 
-**Symptom:** `isolate_manager_test.dart` tests 2-3 pass even when agents crash, because `Done` messages are added to `_completed` regardless of `msg.success`.
+**Remaining issue (typechecking):** The `ui_mediator` clauses now typecheck. But `lookup_pending` does not — it needs to extract a writer from a pending list that is declared as `PendingList?` (reader). The type `PendingEntry ::= pending(ReqId, _?)` describes the intended structure but `lookup_pending`'s procedure declaration and clause modes need to be reconciled. The pending list is not a stream — it is a finite data structure (escrow table) passed by value. The type system cannot currently express "a reader list containing writer entries" without further work.
 
-**Status:** Known issue. The filename collision fix (section 5.3) was the root cause of the crashes. With the fix applied, agents no longer crash and the runtime ERROR messages are gone. The tests should still be hardened to check success status.
+### 5.3 Premature death detection removed — DONE (2026-02-13)
+
+**Symptom:** Headless tests appeared to pass but agents were not actually running the protocol. An unspecified "idle tick" heuristic declared agents dead after 2 idle ticks, before any messages arrived.
+
+**Fix applied:** Removed the death detection code from `_agentIsolateEntry`. Agents do not self-terminate; termination is external.
+
+### 5.4 Tick loop removed — DONE (2026-02-13)
+
+**Symptom:** The headless model used an external tick loop (polling) that is not present in the paper or the UI model. This created an unnecessary difference between the two execution modes.
+
+**Fix applied:** Replaced tick-driven execution with event-driven execution. Both headless and UI modes now use the same model: drain+flush on `Start` and on each incoming `NetworkMsg`.
 
 ---
 
-## 7. Applied and Proposed Fixes
+## 6. Applied and Proposed Fixes
 
-### 7.1 Remove _reactivateSuspendedGoals — DONE
+### 6.1 Remove _reactivateSuspendedGoals — DONE
 
 Deleted `_reactivateSuspendedGoals()` method and its call site from `agent_runtime.dart`.
 
-### 7.2 Fix loadSource filename collisions — DONE (2026-02-13)
+### 6.2 Fix loadSource filename collisions — DONE (2026-02-13)
 
 `loadSource()` without `filename:` defaults to key `'_source_'`. Multiple calls overwrite each other in `_loadedPrograms`. Fixed by passing unique filenames (`'shared_$i'`, `'program'`). This was the root cause of the `ERROR: Spawn could not find procedure label: agent/4` messages in the headless tests.
 
-### 7.2b Fix source concatenation — DONE (2026-02-13)
+### 6.2b Fix source concatenation — DONE (2026-02-13)
 
 Flutter app concatenated GLP files with `sources.join('\n')` and passed as single string. Parser failed on second file's `-mode(system)`. Fixed by changing `glpSource: String` to `glpSources: List<String>` in `AgentRuntime`, `InitAgent`, and `main.dart`.
 
-### 7.2c GlpEngine constructor loads stdlib — DONE (2026-02-13)
+### 6.2c GlpEngine constructor loads stdlib — DONE (2026-02-13)
 
 Made stdlib loading mandatory in `GlpEngine({required String stdlibDir})`. All three paths (REPL, IsolateManager, AgentRuntime) now use the same initialization. `enableMadGLP()` loads madPredicates internally.
 
-### 7.3 Fix send delivery in Flutter UI — TODO
+### 6.3 Remove tick loop and death detection — DONE (2026-02-13)
 
-Investigate why `send(bob, hello_bob)` from Alice does not deliver to Bob. The message should flow: Alice agent → global_send → MadContext → onMessageReady → coordinator → route to Bob → Bob's onMadMessageReceived → inject into NetIn → agent/4 matches text clause → send_to_user → `received(alice, hello_bob)`.
+Replaced tick-driven headless execution with event-driven execution. Removed `Tick` message type, tick timer, death detection, and self-termination (`Done` message). Both headless and UI modes now use the same event-driven model.
 
-### 7.4 Harden headless tests — TODO
+### 6.4 Fix mediator pending list modes — IN PROGRESS (2026-02-14)
 
-Change `IsolateManager._completed` to track success separately from failure. Add `allSucceeded` check. Update tests 2-3 to assert success, not just completion.
+Code logic fixed: writers stored instead of readers, wrappers removed, lookup unified. Blocked on typechecking `lookup_pending` — needs design discussion on how to type a list that carries writer entries in a reader context.
+
+### 6.5 Fix send delivery in Flutter UI — TODO
+
+Investigate why `send(bob, hello_bob)` from Alice does not deliver to Bob. Likely the same mediator bug (5.2) — once the mediator is fixed, re-test.
 
 ---
 
-## 8. Invariants
+## 7. Invariants
 
-1. **Every state change that may unblock a goal MUST be followed by `_runUntilQuiescent()`.** The three entry points (initialize, user input, network message) all satisfy this.
+1. **Every event that may unblock a goal MUST be followed by a drain-flush cycle.** The three event types (Start, NetworkMsg, UIEvent) all satisfy this.
 
-2. **A goal must never be enqueued twice.** The `suspended` map and `bindVariable`'s activations list are two views of the same information. Only one path should enqueue.
+2. **A goal must never be enqueued twice.** `bindVariable`'s returned activations are the single path for re-enqueuing suspended goals.
 
-3. **`flushMessages()` must be called after every drain.** The run loop handles this.
+3. **`flushMessages()` must be called after every drain.** The drain-flush cycle handles this.
 
-4. **Cross-agent communication is asynchronous.** Each leg is a separate event cycle. The run loop does not need to handle multi-hop round-trips within a single call.
+4. **Cross-agent communication is asynchronous.** Each leg is a separate event. The drain-flush cycle does not need to handle multi-hop round-trips within a single event.
+
+5. **Agents do not self-terminate.** Termination is external — the caller shuts down isolates.

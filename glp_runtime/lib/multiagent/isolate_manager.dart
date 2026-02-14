@@ -1,12 +1,12 @@
 /// Isolate Manager for madGLP
 ///
 /// Spawns agent isolates based on BootConfig and routes messages between them.
-/// Implements the Dart-level routing described in isolate-boot-spec.md (v0.4).
+/// Execution is event-driven: agents drain+flush on Start and on each incoming
+/// NetworkMsg. There is no tick loop or external clock.
 ///
-/// Updated for madGLP push-based communication model (madGLP-spec.md v4.2).
-/// Refactored to use GlpEngine - the ONE way to run GLP programs.
+/// Termination is external: the caller shuts down isolates when done.
 ///
-/// See: docs/ma/isolate-boot-spec.md, docs/ma/madGLP-spec.md
+/// See: docs/ma/agent-runtime-spec.md
 
 import 'dart:async';
 import 'dart:isolate';
@@ -32,9 +32,6 @@ class Ready extends IsolateMessage {
 
 /// Signal to start execution
 class Start extends IsolateMessage {}
-
-/// Tick to drive scheduler (for testing/headless mode)
-class Tick extends IsolateMessage {}
 
 /// Network message to route between agents (madGLP assignment)
 class NetworkMsg extends IsolateMessage {
@@ -63,23 +60,6 @@ class UIEvent extends IsolateMessage {
   final String agentId;
   final List<int> payload;
   UIEvent(this.agentId, this.payload);
-}
-
-/// Agent status report
-class Status extends IsolateMessage {
-  final String agentId;
-  final String status; // 'running', 'suspended', 'completed'
-  final int goalsRemaining;
-  final List<String> traceLines; // Collected trace output for this tick
-  Status(this.agentId, this.status, this.goalsRemaining, [this.traceLines = const []]);
-}
-
-/// Agent completed
-class Done extends IsolateMessage {
-  final String agentId;
-  final bool success;
-  final String? error;
-  Done(this.agentId, this.success, {this.error});
 }
 
 /// Trace configuration for multi-agent tracing
@@ -119,18 +99,15 @@ class AgentConfig {
 }
 
 /// Manages agent isolates and message routing.
+///
+/// Event-driven: agents execute on Start and on each incoming NetworkMsg.
+/// Termination is external — the caller calls shutdown() when done.
 class IsolateManager {
   final Map<String, SendPort> _agentPorts = {};
   final ReceivePort _mainPort = ReceivePort();
-  final Set<String> _completed = {};
-
-  Completer<void>? _allCompletedCompleter;
-  Timer? _tickTimer;
 
   /// Trace configuration (set via boot)
   TraceConfig _traceConfig = TraceConfig.off;
-  int _tickCount = 0;
-  bool _tickHeaderPrinted = false;
 
   /// Callback for UI output from agents (for Flutter integration)
   void Function(String agentId, Term message)? onUIOutput;
@@ -148,7 +125,6 @@ class IsolateManager {
     final readyCompleter = Completer<void>();
     var readyCount = 0;
     final expectedCount = config.directives.length;
-    _allCompletedCompleter = Completer<void>();
 
     // Single listener for all messages
     _mainPort.listen((msg) {
@@ -190,27 +166,6 @@ class IsolateManager {
     }
   }
 
-  /// Send a tick to all agents (for headless testing).
-  void tick() {
-    _tickCount++;
-    _tickHeaderPrinted = false;
-    for (final port in _agentPorts.values) {
-      port.send(Tick());
-    }
-  }
-
-  /// Start automatic ticking at given interval.
-  void startTicking({Duration interval = const Duration(milliseconds: 50)}) {
-    _tickTimer?.cancel();
-    _tickTimer = Timer.periodic(interval, (_) => tick());
-  }
-
-  /// Stop automatic ticking.
-  void stopTicking() {
-    _tickTimer?.cancel();
-    _tickTimer = null;
-  }
-
   /// Inject a UI event to an agent (for testing).
   void injectUIEvent(String agentId, Term message) {
     final port = _agentPorts[agentId];
@@ -225,38 +180,10 @@ class IsolateManager {
     port.send(UIEvent(agentId, payload));
   }
 
-  /// Wait for all agents to complete.
-  Future<void> waitForCompletion({Duration? timeout}) async {
-    if (_completed.length == _agentPorts.length) {
-      return;
-    }
-
-    final future = _allCompletedCompleter?.future ?? Future.value();
-
-    if (timeout != null) {
-      await future.timeout(timeout, onTimeout: () {
-        throw TimeoutException(
-          'Agents did not complete within $timeout. '
-          'Completed: $_completed, Expected: ${_agentPorts.keys}',
-        );
-      });
-    } else {
-      await future;
-    }
-  }
-
-  /// Check if all agents have completed.
-  bool get allCompleted => _completed.length == _agentPorts.length;
-
-  /// Get list of completed agent IDs.
-  Set<String> get completedAgents => Set.unmodifiable(_completed);
-
   /// Shutdown all isolates.
   Future<void> shutdown() async {
-    stopTicking();
     _mainPort.close();
     _agentPorts.clear();
-    _completed.clear();
   }
 
   /// Handle messages from agent isolates.
@@ -267,29 +194,6 @@ class IsolateManager {
 
     } else if (msg is NetworkMsg) {
       _routeNetworkMessage(msg);
-
-    } else if (msg is Status) {
-      // Render trace lines if tracing is enabled
-      if (msg.traceLines.isNotEmpty && _isTracingAgent(msg.agentId)) {
-        if (!_tickHeaderPrinted) {
-          print('--- tick $_tickCount ---');
-          _tickHeaderPrinted = true;
-        }
-        for (final line in msg.traceLines) {
-          print(line);
-        }
-      }
-
-    } else if (msg is Done) {
-      _log('${msg.agentId} done: success=${msg.success}');
-      _completed.add(msg.agentId);
-
-      if (_completed.length == _agentPorts.length) {
-        final completer = _allCompletedCompleter;
-        if (completer != null && !completer.isCompleted) {
-          completer.complete();
-        }
-      }
     }
   }
 
@@ -326,12 +230,11 @@ class IsolateManager {
 ///
 /// This runs in a separate isolate for each agent.
 /// Uses GlpEngine - the ONE way to run GLP programs.
-/// Updated for madGLP push-based communication.
+///
+/// Event-driven execution: drain+flush on Start and on each incoming NetworkMsg.
 void _agentIsolateEntry(AgentConfig config) async {
   final agentId = config.agentId;
   final receivePort = ReceivePort();
-  var doneSent = false;
-  var idleTickCount = 0;
   final tc = config.traceConfig;
 
   // Infrastructure log: only prints when MAD tracing is on
@@ -383,7 +286,6 @@ void _agentIsolateEntry(AgentConfig config) async {
   final goalPC = program.labels[goalLabel];
   if (goalPC == null) {
     print('[$agentId] ERROR: Goal $goalLabel not found');  // Always print errors
-    config.mainPort.send(Done(agentId, false, error: 'Goal $goalLabel not found'));
     return;
   }
 
@@ -410,65 +312,29 @@ void _agentIsolateEntry(AgentConfig config) async {
   final runner = BytecodeRunner(program);
   final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
 
-  // Set up trace collection: lines are buffered and sent back in Status messages
-  final traceLines = <String>[];
-
+  // Set up tracing: lines print directly (no buffering needed without ticks)
   if (tc.glp) {
     scheduler.traceSink = (String line) {
-      traceLines.add('[$agentId] $line');
+      print('[$agentId] $line');
     };
   }
 
   if (tc.mad) {
     ctx.traceSink = (String line) {
-      // MAD traces already include [MAD agentId] prefix, no need to add [$agentId]
-      traceLines.add(line);
+      // MAD traces already include [MAD agentId] prefix
+      print(line);
     };
   }
 
   // Signal ready
   config.mainPort.send(Ready(agentId, receivePort.sendPort));
 
-  // Message handling loop
+  // Event-driven message handling loop
   await for (final msg in receivePort) {
-    if (msg is Start || msg is Tick) {
-      // Clear trace buffer for this tick
-      traceLines.clear();
-
-      // Run scheduler with debug tracing
-      final result = scheduler.drainWithStatus(debug: engine.debugTrace);
-
-      // Flush messages (triggers global_send goals to send)
+    if (msg is Start) {
+      // Initial drain+flush: kicks off the agent's goal
+      scheduler.drainWithStatus(debug: engine.debugTrace);
       ctx.flushMessages();
-
-      // Report status with collected trace lines
-      final hasSuspendedGoals = result.status == ExecutionStatus.suspended ||
-                                runtime.suspended.isNotEmpty;
-      final status = hasSuspendedGoals
-          ? 'suspended'
-          : (runtime.gq.isEmpty ? 'completed' : 'running');
-      config.mainPort.send(Status(agentId, status, runtime.gq.length, List.from(traceLines)));
-
-      // Report done when gq is empty and either:
-      // (a) no suspended goals remain, or
-      // (b) gq has been empty for 2 consecutive ticks with no progress
-      //     (suspended goals are dead — waiting on closed streams)
-      if (runtime.gq.isEmpty && !doneSent) {
-        if (!hasSuspendedGoals) {
-          doneSent = true;
-          log('All goals completed');
-          config.mainPort.send(Done(agentId, true));
-        } else {
-          idleTickCount++;
-          if (idleTickCount >= 2) {
-            doneSent = true;
-            log('All goals completed (suspended goals are dead)');
-            config.mainPort.send(Done(agentId, true));
-          }
-        }
-      } else {
-        idleTickCount = 0;
-      }
 
     } else if (msg is NetworkMsg) {
       log('Received ${msg.type} from ${msg.from}');
@@ -500,7 +366,8 @@ void _agentIsolateEntry(AgentConfig config) async {
         log('Received agent message from ${msg.from}');
       }
 
-      // Flush any response messages
+      // Drain activated goals and flush any response messages
+      scheduler.drainWithStatus(debug: engine.debugTrace);
       ctx.flushMessages();
 
     } else if (msg is UIEvent) {

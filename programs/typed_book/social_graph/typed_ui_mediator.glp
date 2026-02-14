@@ -5,13 +5,13 @@
 %% The mediator replaces these with request IDs for the user,
 %% stores them in a pending list, and retrieves them when the user responds.
 %%
-%% Two kinds of pending entries:
-%% - response(Resp): cold-call Response, bound later by decision
-%% - channel(Ch):    introduction Channel, forwarded by accept_intro
+%% Pending entries store opaque variables (Response writers, Channel writers)
+%% keyed by request ID. The mediator holds them in escrow until the user
+%% responds, then retrieves and forwards them to the agent.
 %%
 %% Requires: load typed_social_agent.glp first
 %%
-%% Date: 2026-02-13
+%% Date: 2026-02-14
 
 -mode(system).
 
@@ -42,8 +42,7 @@ UserNotify  ::= befriend(Constant, ReqId)
               ; received(Constant, Constant).
 
 %% --- Pending entries ---
-PendingVar   ::= response(Response) ; channel(Channel).
-PendingEntry ::= pending(ReqId, PendingVar).
+PendingEntry ::= pending(ReqId, _?).
 PendingList  ::= [] ; [PendingEntry | PendingList].
 
 %% =============================================================================
@@ -55,28 +54,28 @@ procedure ui_mediator(Constant?, Channel?, Channel?, PendingList?, Constant?).
 %% --- Agent-to-user: non-ground (replace variable with req ID) ---
 
 %% Cold-call befriend: agent sends befriend(From, Resp)
-%% Resp is received from agent, stored in pending as reader.
+%% Resp is received from agent, stored in pending as writer.
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', befriend(From, Resp)),
+    receive(msg(agent, '_user', befriend(From, Resp?)),
             AgentCh?, AgentCh1),
     ground(From?) |
     send(befriend(From?, req(N?)), UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
-        [pending(req(N?), response(Resp?)) | Ps?], N1?).
+        [pending(req(N?), Resp) | Ps?], N1?).
 
 %% Introduction befriend_intro: agent sends befriend_intro(From, Other, Ch)
 %% Ch is a Channel (already known, created by introducer).
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(msg(agent, '_user',
-                befriend_intro(From, Other, Ch)),
+                befriend_intro(From, Other, Ch?)),
             AgentCh?, AgentCh1),
     ground(From?), ground(Other?) |
     send(befriend_intro(From?, Other?, req(N?)),
          UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
-        [pending(req(N?), channel(Ch?)) | Ps?], N1?).
+        [pending(req(N?), Ch) | Ps?], N1?).
 
 %% --- Agent-to-user: ground (pass through) ---
 
@@ -113,7 +112,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(decision(Dec, From, ReqId), UserCh?, UserCh1),
     ground(Id?), ground(Dec?), ground(From?),
     ground(ReqId?) |
-    lookup_response(ReqId?, Resp, Ps?, Ps1),
+    lookup_pending(ReqId?, Resp, Ps?, Ps1),
     send(msg('_user', Id?, decision(Dec?, From?, Resp?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
@@ -123,7 +122,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(accept_intro(Other, ReqId), UserCh?, UserCh1),
     ground(Id?), ground(Other?), ground(ReqId?) |
-    lookup_channel(ReqId?, Ch, Ps?, Ps1),
+    lookup_pending(ReqId?, Ch, Ps?, Ps1),
     send(msg('_user', Id?, accept_intro(Other?, Ch?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
@@ -166,24 +165,12 @@ ui_mediator(_, ch([], []), ch([], []), _, _).
 %% PENDING MANAGEMENT
 %% =============================================================================
 
-%% lookup_response: retrieve a stored Response by request ID
-procedure lookup_response(ReqId?, Response,
-                          PendingList?, PendingList).
-lookup_response(ReqId, Resp?,
-    [pending(Id, response(Resp)) | Rest], Rest?) :-
+%% lookup_pending: retrieve a stored opaque value by request ID
+procedure lookup_pending(ReqId?, _, PendingList?, PendingList).
+lookup_pending(ReqId, Val?,
+    [pending(Id, Val) | Rest], Rest?) :-
     ReqId? =?= Id? | true.
-lookup_response(ReqId, Resp?, [P | Rest], [P? | Rest1?]) :-
+lookup_pending(ReqId, Val?, [P | Rest], [P? | Rest1?]) :-
     otherwise |
-    lookup_response(ReqId?, Resp, Rest?, Rest1).
-lookup_response(_, no, [], []).
-
-%% lookup_channel: retrieve a stored Channel by request ID
-procedure lookup_channel(ReqId?, Channel,
-                         PendingList?, PendingList).
-lookup_channel(ReqId, Ch?,
-    [pending(Id, channel(Ch)) | Rest], Rest?) :-
-    ReqId? =?= Id? | true.
-lookup_channel(ReqId, Ch?, [P | Rest], [P? | Rest1?]) :-
-    otherwise |
-    lookup_channel(ReqId?, Ch, Rest?, Rest1).
-lookup_channel(_, ch([], []), [], []).
+    lookup_pending(ReqId?, Val, Rest?, Rest1).
+lookup_pending(_, _, [], []).

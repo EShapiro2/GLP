@@ -1,16 +1,16 @@
 # How to Run GLP Social Agent Programs
 
-**Updated: 2026-02-13**
+**Updated: 2026-02-14**
 
 ## Current Status
 
 | Mode | Status | Result |
 |------|--------|--------|
 | dGLP (single-isolate, no UI) | ✅ WORKING | `→ succeeds` |
-| dGLP (single-isolate, with mediator + UI actors) | ✅ WORKING | `→ suspended` (all processes active) |
-| madGLP (multi-isolate, headless, no UI) | ✅ WORKING | All 3 agents complete |
-| madGLP (multi-isolate, headless, with mediator + UI actors) | ✅ WORKING | All 3 agents complete |
-| madGLP (visual Flutter UI) | ⚠️ PARTIALLY WORKING | Steps 1-2 work (connect + decision → connected). Send not yet confirmed. |
+| dGLP (single-isolate, with mediator + UI actors) | ⚠️ IN PROGRESS | Bug found and partially fixed; does not typecheck yet |
+| madGLP (multi-isolate, headless, no UI) | ✅ WORKING | Full protocol completes |
+| madGLP (multi-isolate, headless, with mediator + UI actors) | ⚠️ IN PROGRESS | Same mediator bug as dGLP with mediator |
+| madGLP (visual Flutter UI) | ⚠️ PARTIALLY WORKING | Steps 1-2 work. Same mediator bug blocks further progress. |
 
 ---
 
@@ -413,20 +413,31 @@ All four headless modes (dGLP ± mediator, madGLP ± mediator) run the same scen
 ## Known Issues
 
 - **1 pre-existing test failure**: `mad_cold_call_isolate_test.dart: Alice sends Resp?` times out due to `useReader[0]` direction mismatch in globalize/localize.
-- **Headless tests (isolate_manager_test.dart tests 2-3)**: These tests check `allCompleted` which counts both successful and failed agents. A crashing agent is counted as "completed". The tests should distinguish success from failure.
-- **Flutter UI send not delivering**: `send(bob, hello_bob)` from Alice does not produce `received(alice, hello_bob)` on Bob. Steps 1-2 (connect + decision) work correctly. Under investigation.
 - **Type checker warnings for cross-file references**: When files are loaded separately, the type checker warns about "Undefined procedure" for procedures defined in other files. These are compile-time warnings only and do not affect runtime.
+
+### Mediator pending list bug (2026-02-14, in progress)
+
+**Root cause identified:** The mediator's pending list stores opaque variables (Response writers for cold-call, Channel writers for introductions) keyed by request ID. The original code stored readers (`Resp?`, `Ch?`) instead of writers (`Resp`, `Ch`). When `bind_response` later bound the retrieved variable, the binding did not propagate back to Alice's `inject_msg` because it was binding a reader copy, not the original writer.
+
+**Fix applied to code logic:** The mode on `Resp` and `Ch` in the storage clauses has been inverted — the mediator now stores writers. The `response()`/`channel()` wrappers were removed (the pending values are opaque, not deconstructed). `lookup_response`/`lookup_channel` merged into a single `lookup_pending`.
+
+**Remaining problem — type checker:** The pending list argument of `ui_mediator` is declared `PendingList?` (reader). But the list contains writers (the escrowed variables). The type `PendingEntry ::= pending(ReqId, _?)` correctly describes this (the `_?` says the second field inverts mode). The `ui_mediator` clauses now pass typechecking. However, `lookup_pending` does not yet typecheck — its procedure declaration and clause modes need to be reconciled with the fact that it extracts a writer from a reader-context list.
+
+**What works at the GLP level:** The corrected code logic is believed to be correct (writers stored and retrieved). The type checker rejects `lookup_pending` so the file does not load. Once the type issue is resolved, the with-mediator tests should complete the full protocol.
+
+**Discussion context:** The pending list is not a stream — it is a finite data structure passed by value between recursive `ui_mediator` calls. It functions as an escrow table. The type system currently cannot express "a reader list containing writer entries" without further work on the type checker or a design change to how the pending list is typed.
 
 ---
 
-## Current Status Summary (2026-02-13)
+## Current Status Summary (2026-02-14)
 
 - dGLP (no mediator): ✅ Working — `play.` succeeds
-- dGLP (with mediator + UI actors): ✅ Working — `play.` runs, processes active
-- madGLP headless (no mediator): ✅ Working — all 3 agents complete (but see headless test issue above)
-- madGLP headless (with mediator + UI actors): ✅ Working — all 3 agents complete
-- madGLP visual Flutter UI: ⚠️ Partially working — connect + decision work, send under investigation
-- 71 multiagent tests pass, 5 skipped, 1 pre-existing failure
+- dGLP (with mediator + UI actors): ⚠️ Bug found, code logic fixed, blocked on typechecking
+- madGLP headless (no mediator): ✅ Working — full protocol completes
+- madGLP headless (with mediator + UI actors): ⚠️ Same mediator bug
+- madGLP visual Flutter UI: ⚠️ Same mediator bug blocks progress
+- 287 dart unit tests pass, 5 skip, 14 pre-existing failures (none related to our changes)
+- 316 REPL tests pass
 
 ---
 
