@@ -172,7 +172,7 @@ procedure alice_actor(Channel?).
 alice_actor(ch(In, Out?)) :-
     wait(1000) | alice_connect_end(ch(In?, Out)).
 procedure alice_connect(Channel?).
-alice_connect(ch(In, [msg(user, alice, connect(bob))|Out?])) :-
+alice_connect(ch(_, [msg(user, alice, connect(bob))|Out?])) :-
 	alice_done(Out).
 procedure alice_connect_end(Channel?).
 alice_connect_end(ch(In, [msg(user, alice, connect(bob))|Out?])) :-
