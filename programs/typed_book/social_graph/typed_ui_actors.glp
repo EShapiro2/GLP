@@ -1,0 +1,146 @@
+%% typed_ui_actors.glp - Ground-term actors for the UI mediator
+%%
+%% These actors interact with the ui_mediator's user-facing side using
+%% ground terms — the same protocol a human uses in the Flutter UI.
+%% Request IDs (req(N)) are captured from mediator notifications and
+%% passed back in responses.
+%%
+%% Shared by both boot files:
+%% - play_ui_dglp_boot.glp (single-isolate REPL)
+%% - play_ui_madglp_boot.glp (multi-isolate headless)
+%%
+%% Requires: load typed_social_agent.glp first
+%% Requires: load typed_ui_mediator.glp first
+%%
+%% Date: 2026-02-13
+
+-mode(system).
+
+%% =============================================================================
+%% UI ACTOR DISPATCH
+%% =============================================================================
+
+procedure ui_actor(_?, Channel?).
+ui_actor(alice, Ch) :- alice_ui_actor(Ch?).
+ui_actor(bob, Ch) :- bob_ui_actor(Ch?).
+ui_actor(charlie, Ch) :- charlie_ui_actor(Ch?).
+
+%% =============================================================================
+%% ALICE
+%%
+%% 1. Send connect(bob)
+%% 2. Wait connected(bob) → send(bob, 'Hi Bob, this is Alice')
+%% 3. Wait befriend_intro(bob, charlie, ReqId) → accept_intro(charlie, ReqId)
+%% 4. Wait connected(charlie) → send(charlie, 'Hi Charlie, this is Alice')
+%% 5. Wait received(charlie, _) → done
+%% =============================================================================
+
+procedure alice_ui_actor(Channel?).
+alice_ui_actor(ch(In, [connect(bob)|Out?])) :-
+    alice_ui_wait_bob_connected(In?, Out).
+
+procedure alice_ui_wait_bob_connected(Stream?, Stream).
+alice_ui_wait_bob_connected([connected(bob)|In],
+                            [send(bob, 'Hi Bob, this is Alice')|Out?]) :-
+    alice_ui_wait_intro(In?, Out).
+alice_ui_wait_bob_connected([_|In], Out?) :-
+    otherwise | alice_ui_wait_bob_connected(In?, Out).
+alice_ui_wait_bob_connected([], []).
+
+procedure alice_ui_wait_intro(Stream?, Stream).
+alice_ui_wait_intro([befriend_intro(bob, charlie, ReqId)|In],
+                    [accept_intro(charlie, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    alice_ui_wait_charlie_connected(In?, Out).
+alice_ui_wait_intro([_|In], Out?) :-
+    otherwise | alice_ui_wait_intro(In?, Out).
+alice_ui_wait_intro([], []).
+
+procedure alice_ui_wait_charlie_connected(Stream?, Stream).
+alice_ui_wait_charlie_connected([connected(charlie)|In],
+                                [send(charlie, 'Hi Charlie, this is Alice')|Out?]) :-
+    alice_ui_wait_charlie_reply(In?, Out).
+alice_ui_wait_charlie_connected([_|In], Out?) :-
+    otherwise | alice_ui_wait_charlie_connected(In?, Out).
+alice_ui_wait_charlie_connected([], []).
+
+procedure alice_ui_wait_charlie_reply(Stream?, Stream).
+alice_ui_wait_charlie_reply([received(charlie, _)|_], []).
+alice_ui_wait_charlie_reply([_|In], Out?) :-
+    otherwise | alice_ui_wait_charlie_reply(In?, Out).
+alice_ui_wait_charlie_reply([], []).
+
+%% =============================================================================
+%% BOB
+%%
+%% 1. Wait befriend(alice, ReqId) → decision(yes, alice, ReqId)
+%% 2. Wait received(alice, _) → connect(charlie)
+%% 3. Wait connected(charlie), wait received(charlie, _) → introduce(alice, charlie)
+%% 4. Done
+%% =============================================================================
+
+procedure bob_ui_actor(Channel?).
+bob_ui_actor(ch([befriend(alice, ReqId)|In],
+               [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob_ui_wait_alice_msg(In?, Out).
+bob_ui_actor(ch([_|In], Out?)) :-
+    otherwise | bob_ui_actor(ch(In?, Out)).
+
+procedure bob_ui_wait_alice_msg(Stream?, Stream).
+bob_ui_wait_alice_msg([connected(_)|In], Out?) :-
+    bob_ui_wait_alice_msg(In?, Out).
+bob_ui_wait_alice_msg([received(alice, _)|In],
+                      [connect(charlie)|Out?]) :-
+    bob_ui_wait_charlie_connected(In?, Out).
+bob_ui_wait_alice_msg([_|In], Out?) :-
+    otherwise | bob_ui_wait_alice_msg(In?, Out).
+bob_ui_wait_alice_msg([], []).
+
+procedure bob_ui_wait_charlie_connected(Stream?, Stream).
+bob_ui_wait_charlie_connected([connected(charlie)|In], Out?) :-
+    bob_ui_wait_charlie_msg(In?, Out).
+bob_ui_wait_charlie_connected([_|In], Out?) :-
+    otherwise | bob_ui_wait_charlie_connected(In?, Out).
+bob_ui_wait_charlie_connected([], []).
+
+procedure bob_ui_wait_charlie_msg(Stream?, Stream).
+bob_ui_wait_charlie_msg([received(charlie, _)|_],
+                        [introduce(alice, charlie)]).
+bob_ui_wait_charlie_msg([_|In], Out?) :-
+    otherwise | bob_ui_wait_charlie_msg(In?, Out).
+bob_ui_wait_charlie_msg([], []).
+
+%% =============================================================================
+%% CHARLIE
+%%
+%% 1. Wait befriend(bob, ReqId) → decision(yes, bob, ReqId) + send(bob, ...)
+%% 2. Wait befriend_intro(bob, alice, ReqId2) → accept_intro(alice, ReqId2)
+%% 3. Wait received(alice, _) → send(alice, 'Hi Alice, this is Charlie')
+%% 4. Done
+%% =============================================================================
+
+procedure charlie_ui_actor(Channel?).
+charlie_ui_actor(ch([befriend(bob, ReqId)|In],
+                    [decision(yes, bob, ReqId?),
+                     send(bob, 'Hi Bob, this is Charlie')|Out?])) :-
+    ground(ReqId?) |
+    charlie_ui_wait_intro(In?, Out).
+charlie_ui_actor(ch([_|In], Out?)) :-
+    otherwise | charlie_ui_actor(ch(In?, Out)).
+
+procedure charlie_ui_wait_intro(Stream?, Stream).
+charlie_ui_wait_intro([befriend_intro(bob, alice, ReqId)|In],
+                      [accept_intro(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    charlie_ui_wait_alice_msg(In?, Out).
+charlie_ui_wait_intro([_|In], Out?) :-
+    otherwise | charlie_ui_wait_intro(In?, Out).
+charlie_ui_wait_intro([], []).
+
+procedure charlie_ui_wait_alice_msg(Stream?, Stream).
+charlie_ui_wait_alice_msg([received(alice, _)|_],
+                          [send(alice, 'Hi Alice, this is Charlie')]).
+charlie_ui_wait_alice_msg([_|In], Out?) :-
+    otherwise | charlie_ui_wait_alice_msg(In?, Out).
+charlie_ui_wait_alice_msg([], []).

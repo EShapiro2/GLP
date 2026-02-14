@@ -8,8 +8,7 @@ void main() {
     late GlpEngine engine;
 
     setUp(() {
-      engine = GlpEngine();
-      engine.loadStdlib('../programs/stdlib');
+      engine = GlpEngine(stdlibDir: '../programs/stdlib');
     });
 
     test('runs simple goal with binding', () async {
@@ -41,8 +40,7 @@ pick(charlie, X?) :- X = picked_charlie.
       print('pick(alice, X) -> X = ${result.bindings['X']}');
 
       // Test bob - need fresh engine for clean state
-      final engine2 = GlpEngine();
-      engine2.loadStdlib('../programs/stdlib');
+      final engine2 = GlpEngine(stdlibDir: '../programs/stdlib');
       engine2.loadSource('''
 procedure pick(_?, _).
 pick(alice, X?) :- X = picked_alice.

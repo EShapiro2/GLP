@@ -8,8 +8,7 @@ void main() {
     late List<String> outputLines;
 
     setUp(() {
-      engine = GlpEngine()..strictTypes = false;
-      engine.loadStdlib('../programs/stdlib');
+      engine = GlpEngine(stdlibDir: '../programs/stdlib')..strictTypes = false;
       outputLines = [];
       engine.runtime.outputCallback = (line) => outputLines.add(line);
     });
@@ -53,8 +52,7 @@ test :- '_output'([a, b, c]).
     late List<String> outputLines;
 
     setUp(() {
-      engine = GlpEngine()..strictTypes = false;
-      engine.loadStdlib('../programs/stdlib');
+      engine = GlpEngine(stdlibDir: '../programs/stdlib')..strictTypes = false;
       outputLines = [];
       engine.runtime.outputCallback = (line) => outputLines.add(line);
     });

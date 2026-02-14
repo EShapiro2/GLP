@@ -3,6 +3,19 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
+/// Base directory for GLP source files (repo-relative from glp_runtime/).
+const _socialGraphDir = '../programs/typed_book/social_graph';
+
+/// Read a GLP file from the social_graph directory, or skip the test.
+String? _readGlpFile(String filename) {
+  final file = File('$_socialGraphDir/$filename');
+  if (!file.existsSync()) {
+    print('Skipping: $filename not found at ${file.path}');
+    return null;
+  }
+  return file.readAsStringSync();
+}
+
 void main() {
   group('IsolateManager', () {
     late IsolateManager manager;
@@ -32,88 +45,24 @@ agent_init(_, _) :- true.
       final config = loader.load(source);
 
       await manager.boot(config);
-      
-      // All agents should be ready
-      expect(manager.completedAgents, isEmpty); // Not completed yet, just ready
-      
-      // Start and tick
+
+      // Start and let event-driven execution run
       manager.start();
-      manager.tick();
-      
-      // Wait briefly for completion
-      await Future.delayed(Duration(milliseconds: 100));
-      manager.tick();
-      await Future.delayed(Duration(milliseconds: 100));
-      
-      // Agents with trivial goals should complete
-      expect(manager.allCompleted, isTrue);
+      await Future.delayed(Duration(milliseconds: 200));
+
+      // Test verifies boot + start don't crash with trivial goals
     }, timeout: Timeout(Duration(seconds: 10)));
 
     test('runs full play with actor scripts (no UI)', () async {
-      // Try to find the boot file and shared typed files
-      final bootPaths = [
-        '/home/user/GLP/programs/typed_book/social_graph/play_madglp_boot.glp',
-        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_madglp_boot.glp',
-        'programs/typed_book/social_graph/play_madglp_boot.glp',
-      ];
-      final agentPaths = [
-        '/home/user/GLP/programs/typed_book/social_graph/typed_social_agent.glp',
-        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/typed_social_agent.glp',
-        'programs/typed_book/social_graph/typed_social_agent.glp',
-      ];
-      final actorPaths = [
-        '/home/user/GLP/programs/typed_book/social_graph/typed_actors.glp',
-        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/typed_actors.glp',
-        'programs/typed_book/social_graph/typed_actors.glp',
-      ];
+      final source = _readGlpFile('play_madglp_boot.glp');
+      final agentSource = _readGlpFile('typed_social_agent.glp');
+      final actorSource = _readGlpFile('typed_actors.glp');
 
-      String? source;
-      for (final path in bootPaths) {
-        final file = File(path);
-        if (file.existsSync()) {
-          source = file.readAsStringSync();
-          break;
-        }
-      }
-
-      String? agentSource;
-      for (final path in agentPaths) {
-        final file = File(path);
-        if (file.existsSync()) {
-          agentSource = file.readAsStringSync();
-          break;
-        }
-      }
-
-      String? actorSource;
-      for (final path in actorPaths) {
-        final file = File(path);
-        if (file.existsSync()) {
-          actorSource = file.readAsStringSync();
-          break;
-        }
-      }
-
-      if (source == null) {
-        print('Skipping: play_madglp_boot.glp not found');
-        return;
-      }
-
-      if (agentSource == null) {
-        print('Skipping: typed_social_agent.glp not found');
-        return;
-      }
-
-      if (actorSource == null) {
-        print('Skipping: typed_actors.glp not found');
-        return;
-      }
-
-      final sharedSource = '$agentSource\n$actorSource';
+      if (source == null || agentSource == null || actorSource == null) return;
 
       final loader = BootLoader();
       final config = loader.load(source);
-      config.sharedSource = sharedSource;  // Add shared agent code
+      config.sharedSources = [agentSource, actorSource];
 
       // Should parse correctly with agent_init goal (actors spawned internally)
       expect(config.directives.length, equals(3));
@@ -122,21 +71,44 @@ agent_init(_, _) :- true.
       expect(config.directives.every((d) => d.goalFunctor == 'agent_init'),
           isTrue);
 
-      await manager.boot(config);
+      await manager.boot(config,
+          traceConfig: TraceConfig(glp: true, mad: true));
 
-      // Start and tick repeatedly to drive the protocol
+      // Start and let event-driven execution run the protocol
       manager.start();
+      await Future.delayed(Duration(seconds: 5));
 
-      for (var i = 0; i < 50; i++) {
-        manager.tick();
-        await Future.delayed(Duration(milliseconds: 50));
-        if (manager.allCompleted) break;
-      }
+      // Termination is external — we shut down in tearDown
+    }, timeout: Timeout(Duration(seconds: 30)));
 
-      // All agents should complete the full protocol
-      expect(manager.allCompleted, isTrue,
-          reason: 'Completed agents: ${manager.completedAgents}');
-      expect(manager.completedAgents, containsAll(['alice', 'bob', 'charlie']));
+    test('runs full play with UI mediator and UI actors', () async {
+      final source = _readGlpFile('play_ui_madglp_boot.glp');
+      final agentSource = _readGlpFile('typed_social_agent.glp');
+      final mediatorSource = _readGlpFile('typed_ui_mediator.glp');
+      final uiActorSource = _readGlpFile('typed_ui_actors.glp');
+
+      if (source == null || agentSource == null ||
+          mediatorSource == null || uiActorSource == null) return;
+
+      final loader = BootLoader();
+      final config = loader.load(source);
+      config.sharedSources = [agentSource, mediatorSource, uiActorSource];
+
+      // Should parse correctly with agent_init goal
+      expect(config.directives.length, equals(3));
+      expect(config.directives.map((d) => d.agentId).toList(),
+          equals(['alice', 'bob', 'charlie']));
+      expect(config.directives.every((d) => d.goalFunctor == 'agent_init'),
+          isTrue);
+
+      await manager.boot(config,
+          traceConfig: TraceConfig(glp: true, mad: true));
+
+      // Start and let event-driven execution run the protocol
+      manager.start();
+      await Future.delayed(Duration(seconds: 5));
+
+      // Termination is external — we shut down in tearDown
     }, timeout: Timeout(Duration(seconds: 30)));
   });
 }

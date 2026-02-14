@@ -53,40 +53,17 @@ class TraceLogger {
   }
 }
 
-/// Default GLP program directory.
-/// Override locally by creating glp_multiagent/glp_config.json:
-///   { "glp_dir": "/your/path/to/GLP/programs/typed_book/social_graph" }
-/// That file is .gitignore'd so it won't be pushed.
-final _defaultGlpDir = () {
-  try {
-    // Look for glp_config.json next to the repo's glp_multiagent/ directory.
-    // Walk up from executable to find it, or check current working directory.
-    for (final base in [
-      File(Platform.resolvedExecutable).parent,
-      Directory.current,
-    ]) {
-      var dir = base is File ? (base as File).parent : base as Directory;
-      for (var i = 0; i < 10; i++) {
-        final configFile = File('${dir.path}/glp_multiagent/glp_config.json');
-        if (configFile.existsSync()) {
-          final content = configFile.readAsStringSync();
-          // Simple JSON parse — extract glp_dir value
-          final match = RegExp(r'"glp_dir"\s*:\s*"([^"]+)"').firstMatch(content);
-          if (match != null) return match.group(1)!;
-        }
-        dir = dir.parent;
-      }
-    }
-  } catch (_) {}
-  // Fallback to original default
-  return '/Users/ohadey/Desktop/Grassroots/GLP2/GLP/programs/typed_book/social_graph';
-}();
+/// Default GLP program directory (repo-relative from glp_multiagent/)
+const _defaultGlpDir = '../programs/typed_book/social_graph';
+
+/// Stdlib directory (repo-relative from glp_multiagent/)
+const _stdlibDir = '../programs/stdlib';
 
 /// GLP files loaded for UI agents (order matters: shared first, then boot)
 const _glpFiles = [
-  'social_graph_agent.glp',
-  'social_graph_ui_mediator.glp',
-  'social_graph_ui_boot.glp',
+  'typed_social_agent.glp',
+  'typed_ui_mediator.glp',
+  'play_ui_boot.glp',
 ];
 
 // =============================================================================
@@ -176,7 +153,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   final TextEditingController _glpPathController =
       TextEditingController(text: _defaultGlpDir);
   String _currentGlpDir = _defaultGlpDir;
-  String? _cachedGlpSource;
+  List<String>? _cachedGlpSources;
 
   final ReceivePort _replyPort = ReceivePort();
   StreamSubscription? _replySubscription;
@@ -290,12 +267,13 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
         }
         sources.add(await file.readAsString());
       }
-      _cachedGlpSource = sources.join('\n');
+      _cachedGlpSources = sources;
 
       setState(() {
         _currentGlpDir = newDir;
+        final totalChars = sources.fold<int>(0, (sum, s) => sum + s.length);
         _log.add(
-            'GLP loaded: ${_glpFiles.join(", ")} (${_cachedGlpSource!.length} chars)');
+            'GLP loaded: ${_glpFiles.join(", ")} ($totalChars chars in ${sources.length} files)');
       });
     } catch (e) {
       setState(() {
@@ -316,9 +294,9 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     }
 
     // Load GLP source if not cached
-    if (_cachedGlpSource == null) {
+    if (_cachedGlpSources == null) {
       await _updateGlpPath();
-      if (_cachedGlpSource == null) {
+      if (_cachedGlpSources == null) {
         _log.add('ERROR: Could not load GLP source');
         setState(() {});
         return;
@@ -331,7 +309,8 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
 
     final initMsg = InitAgent(
       agentId: agentId,
-      glpSource: _cachedGlpSource!,
+      glpSources: _cachedGlpSources!,
+      stdlibDir: _stdlibDir,
       friends: friends,
       replyPort: _replyPort.sendPort,
     );

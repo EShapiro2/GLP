@@ -36,15 +36,20 @@ class BootConfig {
   /// The boot clause contains @ which the GLP parser doesn't understand.
   final String source;
 
-  /// Optional shared source code to load before the boot file
-  /// (e.g., social_agent.glp containing agent/4, actors, helpers)
-  String? sharedSource;
+  /// Optional shared source files to load before the boot file
+  /// (e.g., social_agent.glp containing agent/4, actors, helpers).
+  /// Each entry is loaded separately to preserve per-file -mode() directives.
+  List<String>? sharedSources;
+
+  /// Path to stdlib directory (repo-relative, e.g., '../programs/stdlib')
+  String stdlibDir;
 
   BootConfig({
     required this.directives,
     required this.fullSource,
     required this.source,
-    this.sharedSource,
+    this.sharedSources,
+    this.stdlibDir = '../programs/stdlib',
   });
 }
 
