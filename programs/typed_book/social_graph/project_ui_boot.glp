@@ -18,13 +18,36 @@
 -mode(system).
 
 %% =============================================================================
+%% FILTER USER INPUT
+%% =============================================================================
+%%
+%% Sits between DartUserIn and the mediator.  Passes through recognised
+%% commands (connect, decision, remove) and silently drops anything else.
+%%
+%% Because this process reads from a SINGLE stream, `otherwise` fires
+%% correctly when no specific clause matches the head element.
+%% =============================================================================
+
+filter_user_input([connect(T)|In], [connect(T?)|Out?]) :-
+    filter_user_input(In?, Out).
+filter_user_input([decision(D, F, R)|In], [decision(D?, F?, R?)|Out?]) :-
+    filter_user_input(In?, Out).
+filter_user_input([remove(T)|In], [remove(T?)|Out?]) :-
+    filter_user_input(In?, Out).
+filter_user_input([_|In], Out?) :-
+    otherwise |
+    filter_user_input(In?, Out).
+filter_user_input([], []).
+
+%% =============================================================================
 %% AGENT INITIALIZATION
 %% =============================================================================
 
 agent_init(Id, DartUserIn, NetIn) :-
     ground(Id?) |
+    filter_user_input(DartUserIn?, FilteredUserIn),
     send_to_net(NetOut?),
     merge(MediatorToAgent?, NetIn?, In),
     social_graph(Id?, In?, [(user, AgentToMediator), (net, NetOut)]),
-    ui_mediator(Id?, ch(AgentToMediator?, MediatorToAgent), ch(DartUserIn?, DartUserOut), [], 1),
+    ui_mediator(Id?, ch(AgentToMediator?, MediatorToAgent), ch(FilteredUserIn?, DartUserOut), [], 1),
     send_to_user(DartUserOut?).
