@@ -354,9 +354,9 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   }
 
   Future<void> _spawnLinearTopology() async {
-    // Two agents: Alice↔Bob
-    await _spawnAgent('Alice', ['Bob']);
-    await _spawnAgent('Bob', ['Alice']);
+    // Two agents: Alice and Bob (no initial friendship)
+    await _spawnAgent('Alice', []);
+    await _spawnAgent('Bob', []);
     // await _spawnAgent('Charlie', ['Bob']);
   }
 
