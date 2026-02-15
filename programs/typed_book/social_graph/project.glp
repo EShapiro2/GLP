@@ -33,8 +33,14 @@ merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge(Xs, [], Xs?).
 merge([], Ys, Ys?).
 %% =============================================================================
-%% NEW_CHANNEL
+%% CHANNEL OPERATIONS
 %% =============================================================================
+procedure send(_?, Channel?, Channel).
+send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+
+procedure receive(_, Channel?, Channel).
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
+
 procedure new_channel(Channel, Channel).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 %% =============================================================================
