@@ -354,10 +354,10 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   }
 
   Future<void> _spawnLinearTopology() async {
-    // Linear: Alice↔Bob↔Charlie
+    // Two agents: Alice↔Bob
     await _spawnAgent('Alice', ['Bob']);
-    await _spawnAgent('Bob', ['Alice', 'Charlie']);
-    await _spawnAgent('Charlie', ['Bob']);
+    await _spawnAgent('Bob', ['Alice']);
+    // await _spawnAgent('Charlie', ['Bob']);
   }
 
   Future<void> _closeAll() async {
@@ -460,7 +460,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
           ElevatedButton.icon(
             onPressed: _spawnLinearTopology,
             icon: const Icon(Icons.people),
-            label: const Text('Alice↔Bob↔Charlie'),
+            label: const Text('Alice↔Bob'),
           ),
           const SizedBox(width: 16),
           ElevatedButton.icon(
