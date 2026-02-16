@@ -17,15 +17,16 @@
 
 Response ::= accept(Channel) ; no.
 Decision ::= yes ; no.
+PendingValue ::= response(Response?) ; channel(Channel?) ; error.
 
 %% --- Content types for messages ---
 
 %% Content carried inside user-to-agent messages (msg('_user', Id, Content))
 UserContent ::= connect(Constant)
-              ; decision(Decision, Constant, Response)
+              ; decision(Decision, Constant, PendingValue)
               ; send(Constant, Constant)
               ; introduce(Constant, Constant)
-              ; accept_intro(Constant, Channel)
+              ; accept_intro(Constant, PendingValue)
               ; reject_intro(Constant)
               ; response(Response).
 
@@ -146,7 +147,7 @@ agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs) :-
     agent(Id?, UserIn1?, NetIn?, Outs1?).
 
 %% User decision on cold-call
-agent(Id, [msg('_user', Id1, decision(Dec, From, Resp?))|UserIn], NetIn, Outs) :-
+agent(Id, [msg('_user', Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn, Outs) :-
     Id? =?= Id1? |
     bind_response(Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs1?).
@@ -165,7 +166,7 @@ agent(Id, [msg('_user', Id1, introduce(P, Q))|UserIn], NetIn, Outs) :-
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% User accepts friend introduction
-agent(Id, [msg('_user', Id1, accept_intro(Other, ch(FIn, FOut?)))|UserIn], NetIn, Outs) :-
+agent(Id, [msg('_user', Id1, accept_intro(Other, channel(ch(FIn, FOut?))))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Other?) |
     add_output(Other?, FOut, Outs?, Outs1),
     lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
