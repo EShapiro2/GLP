@@ -1,7 +1,8 @@
-%% project.glp - Core social graph agent for Flutter app
+%% social_graph_agent.glp - Core social graph agent for Flutter app
 %%
-%% Same as social_graph_agent.glp - modify this file for your project.
-%% Loaded together with social_graph_ui_mediator.glp and social_graph_ui_boot.glp.
+%% Extracted from social_graph_play.glp: types, helpers, and social_graph/3.
+%% Does NOT include agent_init, actors, play, or network2.
+%% Those are provided by separate boot/mediator files.
 %%
 %% Date: 2026-02-14
 
