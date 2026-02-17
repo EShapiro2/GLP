@@ -84,11 +84,9 @@ final _defaultGlpDir = () {
 /// Stdlib directory (repo-relative from glp_multiagent/)
 const _stdlibDir = '../programs/stdlib';
 
-/// GLP file loaded for agents — single project file
+/// GLP file loaded for agents — single combined project file
 const _glpFiles = [
-  'project_social_graph_agent.glp',
-  'project_social_graph_ui_mediator.glp',
-  'project_social_graph_ui_boot.glp',
+  'project_social_graph.glp',
 ];
 
 // =============================================================================
