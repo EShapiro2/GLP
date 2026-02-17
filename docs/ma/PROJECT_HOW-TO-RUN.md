@@ -52,7 +52,26 @@ Expected output: `→ suspended`
 
 ```bash
 cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP/glp_runtime
-dart test test/multiagent/project_isolate_manager_test.dart
+dart test test/multiagent/project_isolate_manager_test.dart -n "no UI"
+```
+
+Expected output: 1 test passing (full protocol completes)
+
+---
+
+## madGLP (multi-isolate, headless, with mediator + UI actors)
+
+| Project file | Copied from |
+|---|---|
+| `project_typed_social_agent.glp` | `typed_social_agent.glp` |
+| `project_typed_ui_mediator.glp` | `typed_ui_mediator.glp` |
+| `project_typed_ui_actors.glp` | `typed_ui_actors.glp` |
+| `project_play_ui_madglp_boot.glp` | `play_ui_madglp_boot.glp` |
+| `glp_runtime/test/multiagent/project_isolate_manager_test.dart` | `isolate_manager_test.dart` (subset) |
+
+```bash
+cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP/glp_runtime
+dart test test/multiagent/project_isolate_manager_test.dart -n "UI mediator"
 ```
 
 Expected output: 1 test passing (full protocol completes)
@@ -86,6 +105,7 @@ programs/typed_book/social_graph/
 ├── project_typed_ui_actors.glp          # Scripted UI actors using ground-term protocol
 ├── project_play_ui_dglp_boot.glp        # dGLP boot with mediator + UI actors
 ├── project_play_madglp_boot.glp         # madGLP boot: boot + agent_init/2 + actor dispatch
+├── project_play_ui_madglp_boot.glp      # madGLP boot with mediator + UI actors
 ├── project_social_graph_agent.glp       # social_graph/3 for Flutter UI
 ├── project_social_graph_ui_mediator.glp # Ground-term mediator for Flutter UI
 └── project_social_graph_ui_boot.glp     # Flutter UI boot: agent_init/3

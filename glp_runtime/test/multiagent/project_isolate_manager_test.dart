@@ -51,5 +51,31 @@ void main() {
       manager.start();
       await Future.delayed(Duration(seconds: 5));
     }, timeout: Timeout(Duration(seconds: 30)));
+
+    test('runs full play with UI mediator and UI actors', () async {
+      final source = _readGlpFile('project_play_ui_madglp_boot.glp');
+      final agentSource = _readGlpFile('project_typed_social_agent.glp');
+      final mediatorSource = _readGlpFile('project_typed_ui_mediator.glp');
+      final uiActorSource = _readGlpFile('project_typed_ui_actors.glp');
+
+      if (source == null || agentSource == null ||
+          mediatorSource == null || uiActorSource == null) return;
+
+      final loader = BootLoader();
+      final config = loader.load(source);
+      config.sharedSources = [agentSource, mediatorSource, uiActorSource];
+
+      expect(config.directives.length, equals(3));
+      expect(config.directives.map((d) => d.agentId).toList(),
+          equals(['alice', 'bob', 'charlie']));
+      expect(config.directives.every((d) => d.goalFunctor == 'agent_init'),
+          isTrue);
+
+      await manager.boot(config,
+          traceConfig: TraceConfig(glp: true, mad: true));
+
+      manager.start();
+      await Future.delayed(Duration(seconds: 5));
+    }, timeout: Timeout(Duration(seconds: 30)));
   });
 }
