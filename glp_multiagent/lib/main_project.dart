@@ -86,9 +86,9 @@ const _stdlibDir = '../programs/stdlib';
 
 /// GLP file loaded for agents — single project file
 const _glpFiles = [
-  'project.glp',
-  'project_ui_mediator.glp',
-  'project_ui_boot.glp',
+  'project_social_graph_agent.glp',
+  'project_social_graph_ui_mediator.glp',
+  'project_social_graph_ui_boot.glp',
 ];
 
 // =============================================================================
