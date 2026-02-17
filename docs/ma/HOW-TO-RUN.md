@@ -100,6 +100,39 @@ programs/typed_book/social_graph/
 └── play_ui_boot.glp          # Flutter UI boot: agent_init/3 with send_to_user (for visual UI)
 ```
 
+### Project files (independent copies for experimentation)
+
+The `project_` prefixed files are independent copies of the social graph files. They can be modified freely without affecting the originals. Two sets exist:
+
+**dGLP (no UI) — run in REPL with scripted actors:**
+
+| Project file | Copied from |
+|---|---|
+| `project_typed_social_agent.glp` | `typed_social_agent.glp` |
+| `project_typed_actors.glp` | `typed_actors.glp` |
+| `project_play_dglp_boot.glp` | `play_dglp_boot.glp` |
+
+```bash
+cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP/glp_runtime
+echo -e 'load ../programs/typed_book/social_graph/project_typed_social_agent.glp\nload ../programs/typed_book/social_graph/project_typed_actors.glp\nload ../programs/typed_book/social_graph/project_play_dglp_boot.glp\nplay.\n:quit' | dart run bin/glp_repl.dart
+```
+
+Expected output: `→ suspended`
+
+**Flutter UI — interactive multi-agent app:**
+
+| Project file | Copied from |
+|---|---|
+| `project_social_graph_agent.glp` | `social_graph_agent.glp` |
+| `project_social_graph_ui_mediator.glp` | `social_graph_ui_mediator.glp` |
+| `project_social_graph_ui_boot.glp` | `social_graph_ui_boot.glp` |
+| `glp_multiagent/lib/project_main.dart` | `glp_multiagent/lib/main.dart` |
+
+```bash
+cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP/glp_multiagent
+flutter run -d macos -t lib/project_main.dart
+```
+
 ### Boot file variants
 
 | Boot file | Stack | Use case |
