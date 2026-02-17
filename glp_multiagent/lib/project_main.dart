@@ -1,7 +1,7 @@
 /// GLP Multiagent — Single-Window Isolate Architecture (Project variant)
 ///
-/// Same as main.dart but loads a single project.glp file
-/// instead of three separate social_graph files.
+/// Same as main.dart but loads project_ prefixed GLP files
+/// that can evolve independently from the originals.
 library;
 
 import 'dart:async';
@@ -84,9 +84,11 @@ final _defaultGlpDir = () {
 /// Stdlib directory (repo-relative from glp_multiagent/)
 const _stdlibDir = '../programs/stdlib';
 
-/// GLP file loaded for agents — single combined project file
+/// GLP files loaded for UI agents (project variants)
 const _glpFiles = [
-  'project_social_graph.glp',
+  'project_social_graph_agent.glp',
+  'project_social_graph_ui_mediator.glp',
+  'project_social_graph_ui_boot.glp',
 ];
 
 // =============================================================================
@@ -352,10 +354,10 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   }
 
   Future<void> _spawnLinearTopology() async {
-    // Two agents: Alice and Bob (no initial friendship)
-    await _spawnAgent('Alice', []);
-    await _spawnAgent('Bob', []);
-    // await _spawnAgent('Charlie', ['Bob']);
+    // Linear: Alice↔Bob↔Charlie
+    await _spawnAgent('Alice', ['Bob']);
+    await _spawnAgent('Bob', ['Alice', 'Charlie']);
+    await _spawnAgent('Charlie', ['Bob']);
   }
 
   Future<void> _closeAll() async {
@@ -458,7 +460,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
           ElevatedButton.icon(
             onPressed: _spawnLinearTopology,
             icon: const Icon(Icons.people),
-            label: const Text('Alice↔Bob'),
+            label: const Text('Alice↔Bob↔Charlie'),
           ),
           const SizedBox(width: 16),
           ElevatedButton.icon(
