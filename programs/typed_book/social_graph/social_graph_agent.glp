@@ -100,7 +100,7 @@ procedure social_graph(_?, Stream?, Friends?).
 %% Process user request to connect
 social_graph(Id, [msg(user, To, connect(Target))|In], Fs) :-
     ground(Id?), ground(Target?), Id? =?= To? |
-    lookup_send(net, msg(Target?, msg(Id?, Target?, intro(Id?, Id?, Resp))), Fs?, Fs1),
+    lookup_send(net, msg(Id?, Target?, intro(Id?, Id?, Resp)), Fs?, Fs1),
     inject_msg(Resp?, Target?, Id?, In?, In1),
     social_graph(Id?, In1?, Fs1?).
 %% Process received self-introduction
