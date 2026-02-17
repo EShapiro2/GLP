@@ -1,8 +1,9 @@
-/// GLP Multiagent — Single-Window Isolate Architecture
+/// GLP Social Graph Play — Multi-Isolate Architecture
 ///
 /// Single Flutter window with agent panels side-by-side.
 /// Each agent runs in its own Dart isolate using AgentRuntime.
 /// Messages route between isolates via SendPort (IsolateRouter).
+/// Loads social_graph_play.glp (single file with full protocol).
 library;
 
 import 'dart:async';
@@ -18,15 +19,13 @@ import 'mad_router.dart';
 // SHARED FILE LOGGER
 // =============================================================================
 
-/// Shared file logger for tracing execution across coordinator and agents.
-/// Uses simple file append to avoid stream conflicts across isolates.
 class TraceLogger {
   static final TraceLogger _instance = TraceLogger._();
   static TraceLogger get instance => _instance;
 
   TraceLogger._();
 
-  static const String _logPath = '/tmp/glp_multiagent_trace.log';
+  static const String _logPath = '/tmp/multiagent_project_trace.log';
   bool _initialized = false;
 
   void init({bool clear = true}) {
@@ -54,23 +53,20 @@ class TraceLogger {
 }
 
 /// Default GLP program directory.
-/// Override locally by creating glp_multiagent/glp_config.json:
+/// Override locally by creating multiagent_project/glp_config.json:
 ///   { "glp_dir": "/your/path/to/GLP/programs/typed_book/social_graph" }
 /// That file is .gitignore'd so it won't be pushed.
 final _defaultGlpDir = () {
   try {
-    // Look for glp_config.json next to the repo's glp_multiagent/ directory.
-    // Walk up from executable to find it, or check current working directory.
     for (final base in [
       File(Platform.resolvedExecutable).parent,
       Directory.current,
     ]) {
       var dir = base is File ? (base as File).parent : base as Directory;
       for (var i = 0; i < 10; i++) {
-        final configFile = File('${dir.path}/glp_multiagent/glp_config.json');
+        final configFile = File('${dir.path}/multiagent_project/glp_config.json');
         if (configFile.existsSync()) {
           final content = configFile.readAsStringSync();
-          // Simple JSON parse — extract glp_dir value
           final match = RegExp(r'"glp_dir"\s*:\s*"([^"]+)"').firstMatch(content);
           if (match != null) return match.group(1)!;
         }
@@ -78,58 +74,50 @@ final _defaultGlpDir = () {
       }
     }
   } catch (_) {}
-  // Fallback to original default
-  return '/Users/ohadey/Desktop/Grassroots/GLP2/GLP/programs/typed_book/social_graph';
+  return '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph';
 }();
 
-/// Stdlib directory (repo-relative from glp_multiagent/)
-const _stdlibDir = '../programs/stdlib';
-
-/// GLP files loaded for UI agents (order matters: shared first, then boot)
-const _glpFiles = [
-  'social_graph_agent.glp',
-  'social_graph_ui_mediator.glp',
-  'social_graph_ui_boot.glp',
-];
+/// Single GLP file containing the full social graph protocol
+const _glpFile = 'social_graph_play.glp';
 
 // =============================================================================
 // ENTRY POINT
 // =============================================================================
 
 void main() {
-  runApp(const CoordinatorApp());
+  runApp(const PlayApp());
 }
 
 // =============================================================================
-// COORDINATOR APP
+// APP
 // =============================================================================
 
-class CoordinatorApp extends StatelessWidget {
-  const CoordinatorApp({super.key});
+class PlayApp extends StatelessWidget {
+  const PlayApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'GLP Coordinator',
+      title: 'GLP Social Graph Play',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.orange,
+        primarySwatch: Colors.indigo,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.orange,
+          seedColor: Colors.indigo,
           brightness: Brightness.light,
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.orange,
+          backgroundColor: Colors.indigo,
           foregroundColor: Colors.white,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
+            backgroundColor: Colors.indigo,
             foregroundColor: Colors.white,
           ),
         ),
       ),
-      home: const CoordinatorScreen(),
+      home: const PlayScreen(),
     );
   }
 }
@@ -163,23 +151,23 @@ class AgentState {
 }
 
 // =============================================================================
-// COORDINATOR SCREEN
+// PLAY SCREEN
 // =============================================================================
 
-class CoordinatorScreen extends StatefulWidget {
-  const CoordinatorScreen({super.key});
+class PlayScreen extends StatefulWidget {
+  const PlayScreen({super.key});
 
   @override
-  State<CoordinatorScreen> createState() => _CoordinatorScreenState();
+  State<PlayScreen> createState() => _PlayScreenState();
 }
 
-class _CoordinatorScreenState extends State<CoordinatorScreen> {
+class _PlayScreenState extends State<PlayScreen> {
   final Map<String, AgentState> _agents = {};
   final List<String> _log = [];
   final TextEditingController _glpPathController =
       TextEditingController(text: _defaultGlpDir);
   String _currentGlpDir = _defaultGlpDir;
-  List<String>? _cachedGlpSources;
+  String? _cachedGlpSource;
 
   final ReceivePort _replyPort = ReceivePort();
   StreamSubscription? _replySubscription;
@@ -189,16 +177,15 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     super.initState();
 
     TraceLogger.instance.init(clear: true);
-    TraceLogger.instance.log('COORD', 'Coordinator started (isolate mode)');
+    TraceLogger.instance.log('COORD', 'Play coordinator started');
 
     IsolateRouter.instance.onLogUpdate = () {
       setState(() {});
     };
 
-    // Listen for messages from all agent isolates.
     _replySubscription = _replyPort.listen(_handleAgentMessage);
 
-    _log.add('Coordinator started (isolate mode)');
+    _log.add('Play coordinator started');
     _log.add('GLP dir: $_currentGlpDir');
   }
 
@@ -282,28 +269,22 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     }
 
     try {
-      final sources = <String>[];
-      for (final filename in _glpFiles) {
-        final file = File('$newDir/$filename');
-        if (!file.existsSync()) {
-          setState(() {
-            _log.add('ERROR: File not found: $newDir/$filename');
-          });
-          return;
-        }
-        sources.add(await file.readAsString());
+      final file = File('$newDir/$_glpFile');
+      if (!file.existsSync()) {
+        setState(() {
+          _log.add('ERROR: File not found: $newDir/$_glpFile');
+        });
+        return;
       }
-      _cachedGlpSources = sources;
+      _cachedGlpSource = await file.readAsString();
 
       setState(() {
         _currentGlpDir = newDir;
-        final totalChars = sources.fold<int>(0, (sum, s) => sum + s.length);
-        _log.add(
-            'GLP loaded: ${_glpFiles.join(", ")} ($totalChars chars in ${sources.length} files)');
+        _log.add('GLP loaded: $_glpFile (${_cachedGlpSource!.length} chars)');
       });
     } catch (e) {
       setState(() {
-        _log.add('ERROR reading files: $e');
+        _log.add('ERROR reading file: $e');
       });
     }
   }
@@ -319,10 +300,9 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       return;
     }
 
-    // Load GLP source if not cached
-    if (_cachedGlpSources == null) {
+    if (_cachedGlpSource == null) {
       await _updateGlpPath();
-      if (_cachedGlpSources == null) {
+      if (_cachedGlpSource == null) {
         _log.add('ERROR: Could not load GLP source');
         setState(() {});
         return;
@@ -335,8 +315,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
 
     final initMsg = InitAgent(
       agentId: agentId,
-      glpSources: _cachedGlpSources!,
-      stdlibDir: _stdlibDir,
+      glpSource: _cachedGlpSource!,
       friends: friends,
       replyPort: _replyPort.sendPort,
     );
@@ -354,11 +333,9 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     }
   }
 
-  Future<void> _spawnLinearTopology() async {
-    // Linear: Alice↔Bob↔Charlie
+  Future<void> _spawnAliceBob() async {
     await _spawnAgent('Alice', ['Bob']);
-    await _spawnAgent('Bob', ['Alice', 'Charlie']);
-    await _spawnAgent('Charlie', ['Bob']);
+    await _spawnAgent('Bob', ['Alice']);
   }
 
   Future<void> _closeAll() async {
@@ -395,17 +372,16 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('GLP Coordinator (Isolate Mode)'),
+        title: const Text('GLP Social Graph Play'),
       ),
       body: Column(
         children: [
           _buildGlpPathBar(),
           _buildControlBar(),
-          // Agent panels
           Expanded(
             child: _agents.isEmpty
                 ? const Center(
-                    child: Text('No agents spawned. Click a topology button above.'))
+                    child: Text('No agents spawned. Click "Alice <-> Bob" above.'))
                 : Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: _agents.values
@@ -413,9 +389,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                         .toList(),
                   ),
           ),
-          // Routing log
           _buildRoutingLog(),
-          // Coordinator log
           _buildCoordinatorLog(),
         ],
       ),
@@ -425,7 +399,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   Widget _buildGlpPathBar() {
     return Container(
       padding: const EdgeInsets.all(8.0),
-      color: Colors.orange.shade100,
+      color: Colors.indigo.shade100,
       child: Row(
         children: [
           const Text('GLP dir: ', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -455,13 +429,13 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   Widget _buildControlBar() {
     return Container(
       padding: const EdgeInsets.all(16.0),
-      color: Colors.orange.shade50,
+      color: Colors.indigo.shade50,
       child: Row(
         children: [
           ElevatedButton.icon(
-            onPressed: _spawnLinearTopology,
+            onPressed: _spawnAliceBob,
             icon: const Icon(Icons.people),
-            label: const Text('Alice↔Bob↔Charlie'),
+            label: const Text('Alice <-> Bob'),
           ),
           const SizedBox(width: 16),
           ElevatedButton.icon(
@@ -490,11 +464,11 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
           Container(
             padding:
                 const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
-            color: Colors.orange,
+            color: Colors.indigo,
             child: Row(
               children: [
                 Text(
-                  '${agent.agentId} (${agent.friends.join(", ")})',
+                  '${agent.agentId} (friends: ${agent.friends.join(", ")})',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -535,7 +509,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
           // Input area
           Container(
             padding: const EdgeInsets.all(8.0),
-            color: Colors.orange.shade50,
+            color: Colors.indigo.shade50,
             child: Row(
               children: [
                 Expanded(
@@ -571,7 +545,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
           Container(
             padding:
                 const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-            color: Colors.orange.shade100,
+            color: Colors.indigo.shade100,
             child: Row(
               children: [
                 Text(
@@ -585,7 +559,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                   height: 8,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: agent.initialized ? Colors.orange : Colors.grey,
+                    color: agent.initialized ? Colors.green : Colors.grey,
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -625,7 +599,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   Widget _buildCoordinatorLog() {
     return Container(
       height: 80,
-      color: Colors.orange.shade50,
+      color: Colors.indigo.shade50,
       child: ListView.builder(
         padding: const EdgeInsets.all(8.0),
         itemCount: _log.length,
@@ -640,7 +614,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   }
 
   // ===========================================================================
-  // OUTPUT LINE STYLING (same as previous AgentScreen)
+  // OUTPUT LINE STYLING
   // ===========================================================================
 
   Color _outputLineColor(String line) {
@@ -653,7 +627,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       return Colors.teal.shade800;
     }
     if (line.startsWith('[IRMA')) return Colors.deepPurple.shade800;
-    if (line.startsWith('[')) return Colors.orange.shade800;
+    if (line.startsWith('[')) return Colors.indigo.shade800;
     return Colors.black87;
   }
 

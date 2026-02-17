@@ -1,8 +1,7 @@
-/// GLP Multiagent — Single-Window Isolate Architecture
+/// GLP Multiagent — Single-Window Isolate Architecture (Project variant)
 ///
-/// Single Flutter window with agent panels side-by-side.
-/// Each agent runs in its own Dart isolate using AgentRuntime.
-/// Messages route between isolates via SendPort (IsolateRouter).
+/// Same as main.dart but loads a single project.glp file
+/// instead of three separate social_graph files.
 library;
 
 import 'dart:async';
@@ -85,11 +84,11 @@ final _defaultGlpDir = () {
 /// Stdlib directory (repo-relative from glp_multiagent/)
 const _stdlibDir = '../programs/stdlib';
 
-/// GLP files loaded for UI agents (order matters: shared first, then boot)
+/// GLP file loaded for agents — single project file
 const _glpFiles = [
-  'social_graph_agent.glp',
-  'social_graph_ui_mediator.glp',
-  'social_graph_ui_boot.glp',
+  'project.glp',
+  'project_ui_mediator.glp',
+  'project_ui_boot.glp',
 ];
 
 // =============================================================================
