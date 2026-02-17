@@ -78,13 +78,13 @@ Expected output: 1 test passing (full protocol completes)
 
 ---
 
-## Flutter UI — interactive multi-agent app
+## madGLP (visual Flutter UI)
 
 | Project file | Copied from |
 |---|---|
-| `project_social_graph_agent.glp` | `social_graph_agent.glp` |
-| `project_social_graph_ui_mediator.glp` | `social_graph_ui_mediator.glp` |
-| `project_social_graph_ui_boot.glp` | `social_graph_ui_boot.glp` |
+| `project_typed_social_agent.glp` | `typed_social_agent.glp` |
+| `project_typed_ui_mediator.glp` | `typed_ui_mediator.glp` |
+| `project_play_ui_boot.glp` | `play_ui_boot.glp` |
 | `glp_multiagent/lib/project_main.dart` | `glp_multiagent/lib/main.dart` |
 
 ```bash
@@ -106,9 +106,7 @@ programs/typed_book/social_graph/
 ├── project_play_ui_dglp_boot.glp        # dGLP boot with mediator + UI actors
 ├── project_play_madglp_boot.glp         # madGLP boot: boot + agent_init/2 + actor dispatch
 ├── project_play_ui_madglp_boot.glp      # madGLP boot with mediator + UI actors
-├── project_social_graph_agent.glp       # social_graph/3 for Flutter UI
-├── project_social_graph_ui_mediator.glp # Ground-term mediator for Flutter UI
-└── project_social_graph_ui_boot.glp     # Flutter UI boot: agent_init/3
+└── project_play_ui_boot.glp             # Flutter UI boot: agent_init/3 (interactive)
 
 glp_runtime/test/multiagent/
 └── project_isolate_manager_test.dart    # madGLP test using project_ GLP files
