@@ -209,13 +209,6 @@ class AgentRuntime {
       final term = parseTerm(text);
       _log('USER_INPUT: parsed -> ${formatTerm(term)}');
 
-      // Validate: mediator only handles connect/1, decision/3, remove/1
-      if (!_isValidUserCommand(term)) {
-        _log('USER_INPUT: rejected (unrecognized command)');
-        _output('[INFO] Unrecognized command. Valid commands: connect(Target), decision(Dec, From, ReqId), remove(Target)');
-        return;
-      }
-
       final activations = _userInput!.inject(term);
       _log('USER_INPUT: ${activations.length} activations');
       for (final goal in activations) {
@@ -368,25 +361,6 @@ class AgentRuntime {
       _log('RUN ERROR: $e\n$st');
       return 'error';
     }
-  }
-
-  // =========================================================================
-  // INPUT VALIDATION
-  // =========================================================================
-
-  /// Check that a parsed term is a recognised user command for the mediator.
-  bool _isValidUserCommand(rt.Term term) {
-    if (term is rt.StructTerm) {
-      switch (term.functor) {
-        case 'connect':
-          return term.args.length == 1;
-        case 'decision':
-          return term.args.length == 3;
-        case 'remove':
-          return term.args.length == 1;
-      }
-    }
-    return false;
   }
 
   // =========================================================================
