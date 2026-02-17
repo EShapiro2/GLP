@@ -42,7 +42,8 @@ UserNotify  ::= befriend(Constant, ReqId)
               ; received(Constant, Constant).
 
 %% --- Pending entries ---
-PendingEntry ::= pending(ReqId, _?).
+PendingValue ::= response(Response?) ; channel(Channel?) ; error.
+PendingEntry ::= pending(ReqId, PendingValue).
 PendingList  ::= [] ; [PendingEntry | PendingList].
 
 %% =============================================================================
@@ -62,7 +63,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     send(befriend(From?, req(N?)), UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
-        [pending(req(N?), Resp) | Ps?], N1?).
+        [pending(req(N?), response(Resp)) | Ps?], N1?).
 
 %% Introduction befriend_intro: agent sends befriend_intro(From, Other, Ch)
 %% Ch is a Channel (already known, created by introducer).
@@ -75,7 +76,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
          UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
-        [pending(req(N?), Ch) | Ps?], N1?).
+        [pending(req(N?), channel(Ch)) | Ps?], N1?).
 
 %% --- Agent-to-user: ground (pass through) ---
 
@@ -166,11 +167,11 @@ ui_mediator(_, ch([], []), ch([], []), _, _).
 %% =============================================================================
 
 %% lookup_pending: retrieve a stored opaque value by request ID
-procedure lookup_pending(ReqId?, _, PendingList?, PendingList).
+procedure lookup_pending(ReqId?, PendingValue, PendingList?, PendingList).
 lookup_pending(ReqId, Val?,
     [pending(Id, Val) | Rest], Rest?) :-
     ReqId? =?= Id? | true.
 lookup_pending(ReqId, Val?, [P | Rest], [P? | Rest1?]) :-
     otherwise |
     lookup_pending(ReqId?, Val, Rest?, Rest1).
-lookup_pending(_, _, [], []).
+lookup_pending(_, error, [], []).

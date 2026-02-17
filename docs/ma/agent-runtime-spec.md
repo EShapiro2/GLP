@@ -127,15 +127,18 @@ The router is the `IsolateManager` in headless mode and the coordinator in UI mo
 
 **Fix applied:** Removed `_reactivateSuspendedGoals()` method and its call site from `agent_runtime.dart`. `MadContext` already handles reactivation correctly via `runtime.enqueueReactivatedGoal()`.
 
-### 5.2 Mediator pending list stores readers instead of writers — IN PROGRESS (2026-02-14)
+### 5.2 Mediator pending list double-reader bug — FIXED (2026-02-16)
 
-**Symptom:** Both dGLP and madGLP with-mediator tests suspend at `bob_ui_wait_alice_msg`. Bob accepts Alice's cold-call and gets `connected(alice)`, but Alice never receives `connected(bob)` because the cold-call response variable binding does not propagate back.
+**Symptom:** Both dGLP and madGLP with-mediator tests suspended at `bob_ui_wait_alice_msg`. Bob accepted Alice's cold-call and got `connected(alice)`, but Alice never received `connected(bob)` because the cold-call response variable binding did not propagate back through reader-of-reader indirection.
 
-**Root cause:** `typed_ui_mediator.glp` stored `Resp?` (reader) in the pending list instead of `Resp` (writer). When `lookup_response` retrieved the variable and `bind_response` bound it, the binding was on a reader copy — it did not propagate back to Alice's original writer variable that `inject_msg` was waiting on.
+**Root cause:** The mediator stored opaque variables in the pending list. Passing them through `lookup_pending` and then to the agent created a chain of reader indirections. The agent's `bind_response` bound a reader-of-reader, which did not propagate back to the original writer that `inject_msg` was waiting on.
 
-**Fix applied (code logic):** Inverted modes on `Resp` and `Ch` in the storage clauses. Removed `response()`/`channel()` wrappers (the pending values are opaque). Merged `lookup_response`/`lookup_channel` into `lookup_pending`.
-
-**Remaining issue (typechecking):** The `ui_mediator` clauses now typecheck. But `lookup_pending` does not — it needs to extract a writer from a pending list that is declared as `PendingList?` (reader). The type `PendingEntry ::= pending(ReqId, _?)` describes the intended structure but `lookup_pending`'s procedure declaration and clause modes need to be reconciled. The pending list is not a stream — it is a finite data structure (escrow table) passed by value. The type system cannot currently express "a reader list containing writer entries" without further work.
+**Fix:** Introduced a precise `PendingValue` wrapper type:
+```prolog
+PendingValue ::= response(Response?) ; channel(Channel?) ; error.
+PendingEntry ::= pending(ReqId, PendingValue).
+```
+The mediator stores `response(Resp?)` or `channel(Ch?)` in pending and passes the whole `PendingValue` to the agent without destructuring. The agent unwraps the `PendingValue` in its clause heads (`decision(Dec, From, response(Resp?))`, `accept_intro(Other, channel(ch(FIn, FOut?)))`), accessing the original reader directly. Both files typecheck. All five execution modes verified working.
 
 ### 5.3 Premature death detection removed — DONE (2026-02-13)
 

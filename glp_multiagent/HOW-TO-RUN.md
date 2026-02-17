@@ -1,6 +1,6 @@
 # GLP Multiagent UI — HOW TO RUN
 
-**Updated: 2026-02-13**
+**Updated: 2026-02-16**
 
 ## Build and Launch
 
@@ -167,13 +167,12 @@ dart test test/multiagent/
 
 ## Known Issues
 
-- **Mediator pending-key bug (FIXED)**: The mediator previously stored bare `N`
-  as the pending key but sent `req(N)` to the user. This caused `decision(yes, alice, req(1))`
-  to fail lookup ("0 activations"). Fixed 2026-02-13: mediator now stores `req(N)` as key.
-- **Duplicate messages**: The `_reactivateSuspendedGoals()` method in
-  `agent_runtime.dart` likely causes duplicate processing of incoming
-  messages. See `/Users/udi/Grassroots/GLP/docs/ma/agent-runtime-spec.md`
-  for analysis.
+- **Mediator pending-key bug (FIXED 2026-02-13)**: The mediator previously stored bare `N`
+  as the pending key but sent `req(N)` to the user. Fixed: mediator now stores `req(N)` as key.
+- **Mediator double-reader bug (FIXED 2026-02-16)**: The mediator's pending list created
+  reader-of-reader indirection when passing opaque variables back to the agent. Fixed by
+  wrapping pending values in `PendingValue ::= response(Response?) ; channel(Channel?) ; error`
+  and having the agent unwrap them. Full 10-step interactive script now verified working.
 - **Focus fix requires release build**: The `DispatchQueue.main.async`
   focus fix in `AppDelegate.swift` works in release mode but not reliably
   in debug mode (`flutter run -d macos`).

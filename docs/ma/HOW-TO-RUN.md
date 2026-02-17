@@ -1,16 +1,16 @@
 # How to Run GLP Social Agent Programs
 
-**Updated: 2026-02-14**
+**Updated: 2026-02-16**
 
 ## Current Status
 
 | Mode | Status | Result |
 |------|--------|--------|
 | dGLP (single-isolate, no UI) | ✅ WORKING | `→ succeeds` |
-| dGLP (single-isolate, with mediator + UI actors) | ⚠️ IN PROGRESS | Bug found and partially fixed; does not typecheck yet |
+| dGLP (single-isolate, with mediator + UI actors) | ✅ WORKING | `→ suspended` (all concurrent processes active) |
 | madGLP (multi-isolate, headless, no UI) | ✅ WORKING | Full protocol completes |
-| madGLP (multi-isolate, headless, with mediator + UI actors) | ⚠️ IN PROGRESS | Same mediator bug as dGLP with mediator |
-| madGLP (visual Flutter UI) | ⚠️ PARTIALLY WORKING | Steps 1-2 work. Same mediator bug blocks further progress. |
+| madGLP (multi-isolate, headless, with mediator + UI actors) | ✅ WORKING | Full protocol completes |
+| madGLP (visual Flutter UI) | ✅ WORKING | Full 10-step interactive script verified (2026-02-16) |
 
 ---
 
@@ -240,9 +240,9 @@ agent_init(Id, NetIn) :-
 
 Interactive multi-window execution using `glp_multiagent` Flutter app. Each agent runs in its own window with REPL-style input.
 
-### Current Status: PARTIALLY WORKING
+### Current Status: WORKING
 
-Steps 1-2 of the interactive protocol work: `connect(bob)` + `decision(yes, alice, req(1))` produce `connected(bob)` on both sides. Step 3 (`send(bob, hello_bob)`) does not yet deliver `received(alice, hello_bob)` to Bob. Under investigation.
+Full 10-step interactive protocol verified (2026-02-16). All steps complete: cold-call, messaging, introduction, and cross-introduction messaging.
 
 ### Build and Launch
 
@@ -415,29 +415,28 @@ All four headless modes (dGLP ± mediator, madGLP ± mediator) run the same scen
 - **1 pre-existing test failure**: `mad_cold_call_isolate_test.dart: Alice sends Resp?` times out due to `useReader[0]` direction mismatch in globalize/localize.
 - **Type checker warnings for cross-file references**: When files are loaded separately, the type checker warns about "Undefined procedure" for procedures defined in other files. These are compile-time warnings only and do not affect runtime.
 
-### Mediator pending list bug (2026-02-14, in progress)
+### Mediator pending list bug — FIXED (2026-02-16)
 
-**Root cause identified:** The mediator's pending list stores opaque variables (Response writers for cold-call, Channel writers for introductions) keyed by request ID. The original code stored readers (`Resp?`, `Ch?`) instead of writers (`Resp`, `Ch`). When `bind_response` later bound the retrieved variable, the binding did not propagate back to Alice's `inject_msg` because it was binding a reader copy, not the original writer.
+**Root cause:** The mediator stored opaque variables in the pending list. When `lookup_pending` retrieved a variable and the agent tried to bind it, the binding did not propagate back through the reader-of-reader chain created by the extra pending-list indirection.
 
-**Fix applied to code logic:** The mode on `Resp` and `Ch` in the storage clauses has been inverted — the mediator now stores writers. The `response()`/`channel()` wrappers were removed (the pending values are opaque, not deconstructed). `lookup_response`/`lookup_channel` merged into a single `lookup_pending`.
+**Fix:** Introduced a precise `PendingValue` type that wraps stored values:
+```prolog
+PendingValue ::= response(Response?) ; channel(Channel?) ; error.
+PendingEntry ::= pending(ReqId, PendingValue).
+```
+The mediator stores `response(Resp?)` or `channel(Ch?)` in pending and passes the whole `PendingValue` to the agent without destructuring. The agent unwraps the `PendingValue` in its clause heads: `decision(Dec, From, response(Resp?))` and `accept_intro(Other, channel(ch(FIn, FOut?)))`. This eliminates the double-reader problem because the agent destructures the wrapper to access the original reader directly.
 
-**Remaining problem — type checker:** The pending list argument of `ui_mediator` is declared `PendingList?` (reader). But the list contains writers (the escrowed variables). The type `PendingEntry ::= pending(ReqId, _?)` correctly describes this (the `_?` says the second field inverts mode). The `ui_mediator` clauses now pass typechecking. However, `lookup_pending` does not yet typecheck — its procedure declaration and clause modes need to be reconciled with the fact that it extracts a writer from a reader-context list.
-
-**What works at the GLP level:** The corrected code logic is believed to be correct (writers stored and retrieved). The type checker rejects `lookup_pending` so the file does not load. Once the type issue is resolved, the with-mediator tests should complete the full protocol.
-
-**Discussion context:** The pending list is not a stream — it is a finite data structure passed by value between recursive `ui_mediator` calls. It functions as an escrow table. The type system currently cannot express "a reader list containing writer entries" without further work on the type checker or a design change to how the pending list is typed.
+Both `typed_social_agent.glp` and `typed_ui_mediator.glp` typecheck. All five execution modes pass.
 
 ---
 
-## Current Status Summary (2026-02-14)
+## Current Status Summary (2026-02-16)
 
 - dGLP (no mediator): ✅ Working — `play.` succeeds
-- dGLP (with mediator + UI actors): ⚠️ Bug found, code logic fixed, blocked on typechecking
+- dGLP (with mediator + UI actors): ✅ Working — `play.` suspends (all processes active)
 - madGLP headless (no mediator): ✅ Working — full protocol completes
-- madGLP headless (with mediator + UI actors): ⚠️ Same mediator bug
-- madGLP visual Flutter UI: ⚠️ Same mediator bug blocks progress
-- 287 dart unit tests pass, 5 skip, 14 pre-existing failures (none related to our changes)
-- 316 REPL tests pass
+- madGLP headless (with mediator + UI actors): ✅ Working — full protocol completes
+- madGLP visual Flutter UI: ✅ Working — full 10-step interactive script verified
 
 ---
 
