@@ -1,0 +1,45 @@
+Unfriendship Protocol Discussion
+=================================
+Date: 2026-02-18
+
+AGREED PROTOCOL
+---------------
+
+Trigger: User sends unfriend(Target) to their agent A.
+
+Steps:
+1. A sends unfriend(A, Done) on output stream to B — A holds Done?
+2. B receives unfriend(A, Done) on merged input
+3. B closes output stream to A
+4. B removes A's entry from outputs list
+5. B writes Done = true
+6. B is silent — no notification to B's user
+7. A reads Done? = true (suspends until B writes it)
+8. A closes output stream to B
+9. A removes B's entry from outputs list
+10. A notifies user: unfriended(Target)
+
+KEY DECISIONS
+-------------
+
+- Streams are CLOSED on unfriendship (bound to [])
+- A waits for B to finish (Done? = true) before closing its own stream
+- B does NOT notify its user
+- Re-friending after unfriendship requires a new friend_request with a fresh channel
+- Done variable provides synchronization — A knows when B has finished
+- Input streams can't be unmerged, but no new messages arrive since output streams are closed
+
+OPEN QUESTIONS
+--------------
+
+1. TIMEOUT: If B never responds, A suspends forever on Done?.
+   GLP has no timer/timeout mechanism. How to handle?
+   Status: Open.
+
+2. MESSAGES DURING UNFRIENDSHIP: Between A sending unfriend and A closing
+   its stream (steps 1-8), can B still send regular messages to A?
+   Status: Open.
+
+3. SIMULTANEOUS UNFRIENDSHIP: If both agents unfriend each other at the
+   same time, each sends unfriend to the other.
+   Status: Assumed this won't happen. Not addressed.
