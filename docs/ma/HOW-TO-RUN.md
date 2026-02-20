@@ -26,6 +26,19 @@
 | madGLP (headless, no UI) | `typed_social_agent.glp` + `typed_actors.glp` + `play_madglp_boot.glp` | `dart test test/multiagent/isolate_manager_test.dart -n "no UI"` |
 | madGLP (headless, with mediator) | `typed_social_agent.glp` + `typed_ui_mediator.glp` + `typed_ui_actors.glp` + `play_ui_madglp_boot.glp` | `dart test test/multiagent/isolate_manager_test.dart -n "UI mediator"` |
 | madGLP (visual UI) | `typed_social_agent.glp` + `typed_ui_mediator.glp` + `play_ui_boot.glp` | `cd glp_multiagent && flutter build macos --release` |
+| Simulated plays (Flutter) | `cssg/` files via `ReplPlayRunner` | Build Flutter app, click Play 1/2/3 |
+| Simulated plays (REPL) | `cssg/` 4 files + `fplayN.` | See below |
+
+### Simulated plays via REPL
+
+```bash
+cd /Users/udi/Grassroots/GLP/glp_runtime
+echo -e '../programs/typed_book/cssg/typed_social_agent.glp\n../programs/typed_book/cssg/typed_ui_mediator.glp\n../programs/typed_book/cssg/typed_ui_actors.glp\n../programs/typed_book/cssg/play_ui_sim_boot.glp\nfplay1.\n:quit' | dart run bin/glp_repl.dart
+```
+
+Replace `fplay1.` with `fplay2.` or `fplay3.` for other scenarios. Use `play1.` (without `f`) for silent plays (no tagged output).
+
+A frozen snapshot of these files (before CSSG extension) is in `programs/typed_book/social_graph_simulated_ui/`.
 
 ---
 
