@@ -15,6 +15,10 @@ This applies to:
 - Documentation
 - Any file or directory mentioned in instructions
 
+## 🔴 CRITICAL - AFTER CONTEXT COMPACTION
+
+When emerging from compaction (you see a session summary replacing the original conversation), do NOT silently continue working.  Stop immediately, tell the user you have emerged from compaction, summarise where things stand, and ask how to proceed.  Never assume the summary is complete or that prior agreements still hold.
+
 ## 🔴 CRITICAL - START OF EVERY CONVERSATION
 
 **MANDATORY READING - Complete these IN ORDER before ANY other action:**
@@ -107,9 +111,11 @@ https://download-directory.github.io/?url=https://github.com/EShapiro2/GLP/tree/
 - **NEVER continue** with actions not based on instructions
 - If you encounter an obstacle: STOP, REPORT, WAIT for direction
 
-### 🔴 GLP Code Modification Protocol
+### 🔴 Code Modification Protocol
 
-**NEVER touch `.glp` files without discussing with the user first.** This includes creating, modifying, or deleting any `.glp` file. Always discuss the intended change and get explicit approval before making any edit.
+**`.glp` files:** NEVER modify without discussing with the user first. Always discuss the intended change and get explicit approval before making any edit. This includes creating, modifying, or deleting any `.glp` file.
+
+**Dart files:** You may modify Dart code, but always tell the user what you are changing and why before or as you do it.
 
 **Before running or tracing GLP code in the REPL:**
 1. Show the user which file will be loaded
@@ -382,14 +388,16 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 
 ## GLP Unified Tool: The REPL
 
-**The REPL is the only tool for all GLP operations.** Old standalone tools have been archived to `glp_runtime/bin/archive/` and must NOT be executed. This restriction is absolute - do not run archived tools even if they seem relevant. The REPL runs the complete pipeline:
+**There is exactly ONE way to compile, typecheck, and run GLP code: the REPL.** There is no separate type checker, no separate compiler, no separate runner. Loading a `.glp` file in the REPL automatically runs the complete pipeline:
 1. **SRSW Analysis** → Verify single-reader/single-writer
 2. **Partial Evaluation** → Evaluate defined guards
 3. **Type Checking** → Verify mode/type correctness
 4. **Compilation** → Generate bytecode
 5. **Execution** → Run goals
 
-**There are NO separate tools.** Old standalone tools (check_types.dart, glp_pe.dart, glpc.dart, etc.) have been archived to `glp_runtime/bin/archive/`.
+If a file loads successfully, it has passed SRSW analysis, partial evaluation, and type checking. If it fails at any stage, the REPL reports the error. To typecheck a file, load it in the REPL. To run a file, load it and execute a goal. That is all.
+
+**There are NO separate tools.** Old standalone tools (check_types.dart, glp_pe.dart, glpc.dart, etc.) have been archived to `glp_runtime/bin/archive/` and must NOT be executed.
 
 ### REPL Usage
 
@@ -436,6 +444,10 @@ bash /Users/udi/Grassroots/GLP/test/run_book_tests.sh
 - `:trace` - toggle tracing (not `trace goal.`)
 - `:debug` - toggle debug output
 - Load file first, then run goals
+
+## GLP Code Location Policy
+
+**All `.glp` code lives in `/Users/udi/Grassroots/GLP/programs/`.**  No GLP source files should reside in paper repos (SGLP, CGLP, etc.) or elsewhere.  Paper repos may reference GLP code by path but must not contain copies.  This ensures a single source of truth for all GLP programs.
 
 ## Directory Structure
 
