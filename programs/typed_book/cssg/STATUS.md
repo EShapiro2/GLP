@@ -7,7 +7,7 @@
 The ack/nack friend introduction protocol is implemented and working.
 All files typecheck and load successfully in the REPL.
 All plays run correctly: silent (play1–3 with sink) and Flutter (fplay1–3 with tagged output).
-Dart/Flutter integration (steps 6–7 in DESIGN.md) is not yet implemented.
+Dart/Flutter integration (steps 6–7 in DESIGN.md) is implemented and working.
 
 ## Files
 
@@ -40,25 +40,31 @@ actor ↔ ui_mediator ↔ agent ↔ network3
 | play2 | Alice accepts, Charlie rejects | Alice gets rejected(charlie); Charlie done immediately |
 | play3 | Both reject intro | Both done immediately after sending nack |
 
-## Next task: Flutter integration via REPL subprocess
+## Flutter integration via REPL subprocess
 
 **Goal:** Show fplay1–3 in the Flutter UI with per-agent read-only transcript windows.
 
 **Approach:** The existing `glp_multiagent` coordinator manages per-agent panels and routes `AgentOutput` messages. For simulated plays, we reuse the same coordinator — the only difference is that instead of spawning one isolate per agent (madGLP), we spawn the REPL as a single subprocess.
 
-**Steps:**
-1. Add play buttons ("Play 1", "Play 2", "Play 3") to the coordinator control bar.
-2. On click: create read-only `AgentState` entries for alice/bob/charlie.
-3. Spawn REPL as subprocess: `dart run bin/glp_repl.dart` (working dir: `glp_runtime/`).
-4. Pipe stdin: load 4 cssg files, then `fplayN.`, then `:quit`.
-5. Capture stdout: parse `tagged(ID, cmd/notify(...))` lines, send as `AgentOutput(id, content)` to coordinator.
-6. Coordinator routes to agent panels (existing code, no changes).
-
-**Display:** `cmd(...)` → shown as user input. `notify(...)` → shown as agent output.
-
 **Key rule:** GLP runs through the REPL subprocess. No GlpEngine/AgentRuntime API calls for simulated plays.
 
 **No GLP changes needed.** `fplay1`–`fplay3` in `play_ui_sim_boot.glp` already produce the correct tagged output.
+
+### Implementation (complete)
+
+**Runtime layer** (`glp_runtime/lib/multiagent/repl_play_runner.dart`):
+- `ReplPlayRunner` class encapsulates REPL subprocess management: spawning, stdin piping, stdout parsing, and tagged-output line parsing.
+- Accepts a repo root path and play number; delivers parsed output via `onOutput(PlayOutput)` callback.
+- Resolves absolute paths to `glp_runtime/` and `dart` executable, avoiding relative-path issues from app bundles.
+- Strips `GLP> ` prefix from REPL output before regex matching.
+
+**UI layer** (`glp_multiagent/lib/main.dart`):
+- `AgentState.readOnly` field — when true, the input area is hidden (play panels are read-only).
+- Three green "Play 1/2/3" buttons in the control bar alongside the existing madGLP button.
+- `_runPlay(int)` creates read-only panels, instantiates `ReplPlayRunner`, wires callbacks, calls `run()`.
+- `_closeAll()` calls `runner.kill()` to stop the REPL subprocess.
+
+All three plays verified in the Flutter UI (2026-02-20).
 
 ## Future
 

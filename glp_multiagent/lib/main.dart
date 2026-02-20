@@ -1,7 +1,10 @@
 /// GLP Multiagent — Single-Window Isolate Architecture
 ///
 /// Single Flutter window with agent panels side-by-side.
-/// Each agent runs in its own Dart isolate using AgentRuntime.
+/// Two modes:
+///   1. madGLP: Each agent runs in its own Dart isolate using AgentRuntime.
+///   2. Simulated plays: REPL subprocess runs dGLP fplay goals, tagged output
+///      is parsed and routed to per-agent read-only panels.
 /// Messages route between isolates via SendPort (IsolateRouter).
 library;
 
@@ -10,6 +13,7 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:flutter/material.dart';
+import 'package:glp_runtime/multiagent/repl_play_runner.dart';
 
 import 'isolate_protocol.dart';
 import 'mad_router.dart';
@@ -115,6 +119,7 @@ class CoordinatorApp extends StatelessWidget {
 class AgentState {
   final String agentId;
   final List<String> friends;
+  final bool readOnly;
   SendPort? commandPort;
   bool initialized = false;
   String status = 'Spawning...';
@@ -127,7 +132,7 @@ class AgentState {
   final ScrollController scrollController = ScrollController();
   final FocusNode inputFocusNode = FocusNode();
 
-  AgentState(this.agentId, this.friends);
+  AgentState(this.agentId, this.friends, {this.readOnly = false});
 
   void dispose() {
     inputController.dispose();
@@ -336,6 +341,10 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   }
 
   Future<void> _closeAll() async {
+    // Kill REPL subprocess if running
+    _playRunner?.kill();
+    _playRunner = null;
+
     for (final agent in _agents.values) {
       if (agent.commandPort != null) {
         agent.commandPort!.send(DisposeAgent());
@@ -347,6 +356,81 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     IsolateRouter.instance.clearLog();
     _log.add('Closed all agents');
     setState(() {});
+  }
+
+  // ===========================================================================
+  // SIMULATED PLAYS (via ReplPlayRunner)
+  // ===========================================================================
+
+  ReplPlayRunner? _playRunner;
+
+  /// Resolve the GLP repo root from the glp_multiagent working directory.
+  /// The app may run from the repo (development) or from a bundle (release).
+  static String _resolveRepoRoot() {
+    // In development, cwd is glp_multiagent/ and repo root is ..
+    // Check for the glp_runtime sibling directory as a landmark.
+    final devRoot = Directory.current.parent.path;
+    if (Directory('$devRoot/glp_runtime').existsSync()) {
+      return devRoot;
+    }
+    // Fallback: try absolute path (Udi's machine)
+    const fallback = '/Users/udi/Grassroots/GLP';
+    if (Directory('$fallback/glp_runtime').existsSync()) {
+      return fallback;
+    }
+    return devRoot; // best guess
+  }
+
+  Future<void> _runPlay(int playNumber) async {
+    await _closeAll();
+
+    // Create read-only agent panels
+    for (final id in ['Alice', 'Bob', 'Charlie']) {
+      final agent = AgentState(id, [], readOnly: true);
+      agent.initialized = true;
+      agent.status = 'Play $playNumber';
+      _agents[id] = agent;
+    }
+
+    final repoRoot = _resolveRepoRoot();
+    setState(() {
+      _log.add('Starting fplay$playNumber (repo: $repoRoot)...');
+    });
+
+    final runner = ReplPlayRunner(repoRoot: repoRoot);
+    _playRunner = runner;
+
+    runner.onOutput = (output) {
+      // Capitalize to match AgentState keys (Alice, Bob, Charlie)
+      final key = output.agentId[0].toUpperCase() + output.agentId.substring(1);
+      final state = _agents[key];
+      if (state == null) return;
+
+      final displayLine = output.kind == 'cmd' ? '> ${output.content}' : '< ${output.content}';
+      state.outputLog.add(displayLine);
+      setState(() {});
+      _scrollAgentToBottom(state);
+    };
+
+    runner.onLog = (line) {
+      TraceLogger.instance.log('REPL', line);
+    };
+
+    runner.onError = (error) {
+      TraceLogger.instance.log('REPL-ERR', error);
+      setState(() {
+        _log.add('REPL ERROR: $error');
+      });
+    };
+
+    runner.onDone = (exitCode) {
+      _playRunner = null;
+      setState(() {
+        _log.add('fplay$playNumber finished (exit $exitCode)');
+      });
+    };
+
+    await runner.run(playNumber);
   }
 
   // ===========================================================================
@@ -439,6 +523,33 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
           ),
           const SizedBox(width: 16),
           ElevatedButton.icon(
+            onPressed: () => _runPlay(1),
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('Play 1'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton.icon(
+            onPressed: () => _runPlay(2),
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('Play 2'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton.icon(
+            onPressed: () => _runPlay(3),
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('Play 3'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+          ),
+          const SizedBox(width: 16),
+          ElevatedButton.icon(
             onPressed: _closeAll,
             icon: const Icon(Icons.close),
             label: const Text('Close All'),
@@ -506,41 +617,42 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
               ),
             ),
           ),
-          // Input area
-          Container(
-            padding: const EdgeInsets.all(8.0),
-            color: Colors.orange.shade50,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: agent.inputController,
-                    focusNode: agent.inputFocusNode,
-                    enabled: agent.initialized,
-                    decoration: InputDecoration(
-                      hintText: agent.initialized
-                          ? 'connect ${agent.friends.isNotEmpty ? agent.friends.first.toLowerCase() : "friend"}'
-                          : 'Initializing...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+          // Input area (hidden for read-only play panels)
+          if (!agent.readOnly)
+            Container(
+              padding: const EdgeInsets.all(8.0),
+              color: Colors.orange.shade50,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: agent.inputController,
+                      focusNode: agent.inputFocusNode,
+                      enabled: agent.initialized,
+                      decoration: InputDecoration(
+                        hintText: agent.initialized
+                            ? 'connect ${agent.friends.isNotEmpty ? agent.friends.first.toLowerCase() : "friend"}'
+                            : 'Initializing...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
+                      onSubmitted: (_) => _sendInputToAgent(agent),
                     ),
-                    onSubmitted: (_) => _sendInputToAgent(agent),
                   ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed:
-                      agent.initialized ? () => _sendInputToAgent(agent) : null,
-                  child: const Text('Send'),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed:
+                        agent.initialized ? () => _sendInputToAgent(agent) : null,
+                    child: const Text('Send'),
+                  ),
+                ],
+              ),
             ),
-          ),
           // Status bar
           Container(
             padding:

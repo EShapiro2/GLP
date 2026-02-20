@@ -1,6 +1,8 @@
 # How to Run GLP Social Agent Programs
 
-**Updated: 2026-02-16**
+**Updated: 2026-02-20**
+
+**Prerequisite:** Read `/Users/udi/Grassroots/GLP/CLAUDE.md` before working with GLP code. The REPL is the only way to compile, typecheck, and run GLP code.
 
 ## Current Status
 
@@ -11,6 +13,7 @@
 | madGLP (multi-isolate, headless, no UI) | ✅ WORKING | Full protocol completes |
 | madGLP (multi-isolate, headless, with mediator + UI actors) | ✅ WORKING | Full protocol completes |
 | madGLP (visual Flutter UI) | ✅ WORKING | Full 10-step interactive script verified (2026-02-16) |
+| Simulated plays (Flutter UI, REPL subprocess) | ✅ WORKING | fplay1–3 verified (2026-02-20) |
 
 ---
 

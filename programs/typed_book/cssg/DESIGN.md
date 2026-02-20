@@ -167,54 +167,17 @@ Dart/Flutter-side:
 
 All GLP code runs through the REPL. The REPL is the only supported way to compile, typecheck, and execute GLP programs (see `/Grassroots/GLP/CLAUDE.md`). The Dart/Flutter side must use the REPL infrastructure — it must not call `GlpEngine.runGoal` directly to execute play goals. The existing multi-isolate architecture already follows this rule: each agent isolate runs a REPL-based engine. The simulated UI must do the same.
 
-### Current state
+### Current state (complete, 2026-02-20)
 
-GLP-side (steps 1–5): complete. `play_ui_sim_boot.glp` contains `tee/3`, `sink/1`, `send_to_user_tagged/3`, silent plays (`play1`–`play3` with sink), and Flutter plays (`fplay1`–`fplay3` with tagged output). The `tee/3` splitter requires a `ground(X?)` guard because X is read into two output streams (SRSW constraint). `send_to_user_tagged/3` is untyped because `_output/1` is a kernel predicate with no procedure declaration. All plays verified in the REPL.
+All seven steps implemented and working.
 
-Dart/Flutter-side (steps 6–7): not yet implemented. Previous attempt was reverted because it bypassed the REPL and called `GlpEngine.runGoal` directly, which failed (stdlib procedures like `:=/2` not found by spawned goals).
+GLP-side (steps 1–5): `play_ui_sim_boot.glp` contains `tee/3`, `sink/1`, `send_to_user_tagged/3`, silent plays (`play1`–`play3` with sink), and Flutter plays (`fplay1`–`fplay3` with tagged output). The `tee/3` splitter requires a `ground(X?)` guard because X is read into two output streams (SRSW constraint). `send_to_user_tagged/3` is untyped because `_output/1` is a kernel predicate with no procedure declaration. All plays verified in the REPL.
 
-### Plan for Dart/Flutter integration
+Dart/Flutter-side (steps 6–7): `ReplPlayRunner` (`glp_runtime/lib/multiagent/repl_play_runner.dart`) encapsulates REPL subprocess management. `main.dart` wires play buttons to `ReplPlayRunner` and routes parsed output to read-only agent panels. All three plays verified in the Flutter UI.
 
-The existing `glp_multiagent` coordinator already manages per-agent panels and routes `AgentOutput(agentId, line)` messages to the correct panel. The simulated plays reuse this infrastructure.
+### Dart/Flutter integration (implemented)
 
-**Approach:** Run the REPL as a subprocess, capture its stdout, parse tagged output, route to coordinator panels.
-
-1. **Add play buttons** to the coordinator control bar (e.g., "Play 1", "Play 2", "Play 3") alongside the existing "Alice↔Bob↔Charlie" madGLP button.
-
-2. **When a play button is clicked:**
-   - Create `AgentState` entries for alice, bob, charlie with input disabled (read-only panels).
-   - Spawn the REPL as a `dart run bin/glp_repl.dart` subprocess (working directory: `glp_runtime/`).
-   - Write to its stdin the load commands and play goal:
-     ```
-     ../programs/typed_book/cssg/typed_social_agent.glp
-     ../programs/typed_book/cssg/typed_ui_mediator.glp
-     ../programs/typed_book/cssg/typed_ui_actors.glp
-     ../programs/typed_book/cssg/play_ui_sim_boot.glp
-     fplay1.
-     :quit
-     ```
-   - Listen on stdout for lines matching `tagged(ID, cmd(...))` or `tagged(ID, notify(...))`.
-
-3. **For each tagged output line:**
-   - Parse the agent ID and the content (cmd or notify).
-   - Send `AgentOutput(id, content)` to the coordinator via the existing `_handleAgentMessage` mechanism.
-   - The coordinator routes to the agent's panel — no changes to panel rendering.
-
-4. **Display formatting:**
-   - `cmd(...)` lines shown as user commands (e.g., prefixed with `>` or styled as input).
-   - `notify(...)` lines shown as agent responses (e.g., prefixed with `<` or styled as output).
-
-**What stays unchanged:**
-- All GLP code (`fplay1`–`fplay3` in `play_ui_sim_boot.glp`) — runs unchanged.
-- The `_output/1` kernel predicate — REPL prints to stdout, no `outputCallback` override needed.
-- The coordinator's `AgentState`, panel rendering, scroll-to-bottom, and output log — reused as-is.
-- The `AgentOutput` message type — same for both madGLP and simulated plays.
-
-**What is new (Dart only):**
-- Play buttons in the coordinator UI.
-- Subprocess launch of the REPL with piped stdin/stdout.
-- Stdout line parser for `tagged(id, cmd/notify(...))` format.
-- Read-only mode for agent panels (input field disabled when running a play).
+**Approach:** The REPL runs as a subprocess. `ReplPlayRunner` spawns it, pipes load commands + `fplayN.` + `:quit` to stdin, parses `tagged(id, cmd/notify(...))` lines from stdout, and delivers them via callbacks. `main.dart` creates read-only panels and routes output — no GlpEngine or AgentRuntime calls for simulated plays.
 
 **Key rule:** GLP runs through the REPL subprocess. The Flutter app does not call GlpEngine, AgentRuntime, or any GLP API directly for simulated plays.
 
