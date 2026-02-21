@@ -1,0 +1,22 @@
+% test: wrong_direction_fileop_readop
+% expected: fail (even with subtyping)
+% description: FileOp is NOT a subtype of ReadOp (wrong direction).
+%   FileOp has {read, write, delete}, ReadOp has only {read}.
+%   FileOp has alternatives not in ReadOp, so FileOp <: ReadOp fails.
+%   Body-body pair: writer X at FileOpStream, reader X? at ReadOpStream?.
+
+FileOp ::= read(_?,_) ; write(_?,_?) ; delete(_?).
+ReadOp ::= read(_?,_).
+
+FileOpStream ::= [] ; [FileOp|FileOpStream].
+ReadOpStream ::= [] ; [ReadOp|ReadOpStream].
+
+procedure fo_client(FileOpStream).
+fo_client([]).
+
+procedure ro_monitor(ReadOpStream?).
+ro_monitor([]).
+ro_monitor([_|Xs]) :- ro_monitor(Xs?).
+
+procedure connect.
+connect :- fo_client(X), ro_monitor(X?).
