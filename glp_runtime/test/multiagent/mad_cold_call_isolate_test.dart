@@ -12,10 +12,10 @@
 ///
 /// Scenario (per madGLP-spec.md Section 10.2):
 /// 1. Alice creates response variable Resp (writer) and Resp? (reader)
-/// 2. Alice globalizes Resp? (reader) to send to Bob -> creates entry, returns _r(alice,0)
-/// 3. Bob localizes _r(alice,0) -> gets writer, spawns global_send
+/// 2. Alice globalizes Resp (writer) to send to Bob -> creates entry (Resp, bob) at index 1
+/// 3. Bob localizes _w(alice,1) -> gets writer, spawns global_send
 /// 4. Bob binds his writer to "pong"
-/// 5. global_send fires: Bob sends _r(alice,0) := "pong" to Alice
+/// 5. global_send fires: Bob sends _w(alice,1) := "pong" to Alice
 /// 6. Alice receives assignment, binds her Resp writer
 /// 7. Test verifies Alice's Resp? == "pong"
 
@@ -110,17 +110,18 @@ void aliceIsolate(SendPort mainPort) async {
       respWriter = w;
       print('[ALICE] Created Resp: writer=$w, reader=$r');
 
-      // Globalize Resp? (reader) to send to Bob
-      // This creates a GlobalizeEntry in Alice's table
-      // Returns _r(alice, 0) for Bob to localize
+      // Globalize Resp (writer) to send to Bob
+      // Per spec Section 10.2: Alice globalizes the writer, creating
+      // GlobalizeEntry (Resp, bob) at index 1.  Bob localizes _w(alice,1),
+      // gets a writer, and spawns global_send.
       final globalizeResult = globalize(
-        variables: [TermVar.reader(r, writerAddr: w)],
+        variables: [TermVar.writer(w, readerAddr: r)],
         localAgent: 'alice',
         remoteAgent: 'bob',
         table: ctx.wp,
       );
 
-      print('[ALICE] Globalized Resp?: ${globalizeResult.globalNames}');
+      print('[ALICE] Globalized Resp: ${globalizeResult.globalNames}');
       print('[ALICE] Entry created in W_alice at index ${globalizeResult.globalNames[0].index}');
 
       // Send the global names to Bob (via main)
@@ -140,8 +141,8 @@ void aliceIsolate(SendPort mainPort) async {
           ? GlobalName.writer(msg.globalNameAgent, msg.globalNameIndex)
           : GlobalName.reader(msg.globalNameAgent, msg.globalNameIndex);
 
-      // This is _r(alice, 0) := "pong" from Bob
-      // Alice globalized the reader, so this is handled by _handleReaderAssignment
+      // This is _w(alice, 1) := "pong" from Bob
+      // Alice globalized the writer, so this is handled by _handleWriterAssignment
       ctx.handleMadAssignment(
         globalName: globalName,
         value: ConstTerm('pong'), // For simplicity, we know the value
@@ -198,7 +199,7 @@ void bobIsolate(SendPort mainPort) async {
       print('[BOB] Received global names from Alice: ${msg.names}');
 
       // Localize each global name
-      // _r(alice, 0) -> Bob gets writer, spawns global_send
+      // _w(alice, 1) -> Bob gets writer, spawns global_send
       final globalNames = msg.names.map((n) => n.isWriter
           ? GlobalName.writer(n.agent, n.index)
           : GlobalName.reader(n.agent, n.index)
