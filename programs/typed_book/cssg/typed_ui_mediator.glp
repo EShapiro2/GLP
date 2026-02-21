@@ -29,6 +29,10 @@ ReqId    ::= req(Constant).
 UserCmd     ::= decision(Decision, Constant, ReqId)
               ; accept_intro(Constant, ReqId)
               ; reject_intro(Constant, ReqId)
+              ; accept_child_intro(Constant, ReqId)
+              ; reject_child_intro(Constant, ReqId)
+              ; approve_child_intro(Constant, Constant, ReqId)
+              ; child_introduce(Constant, Constant, Constant)
               ; connect(Constant)
               ; send(Constant, Constant)
               ; introduce(Constant, Constant).
@@ -36,6 +40,7 @@ UserCmd     ::= decision(Decision, Constant, ReqId)
 %% Mediator -> User
 UserNotify  ::= befriend(Constant, ReqId)
               ; befriend_intro(Constant, Constant, ReqId)
+              ; child_befriend(Constant, Constant, ReqId)
               ; connected(Constant)
               ; rejected
               ; rejected(Constant)
@@ -73,6 +78,19 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
             AgentCh?, AgentCh1),
     ground(From?), ground(Other?) |
     send(befriend_intro(From?, Other?, req(N?)),
+         UserCh?, UserCh1),
+    N1 := N? + 1,
+    ui_mediator(Id?, AgentCh1?, UserCh1?,
+        [pending(req(N?), channel(Ch)) | Ps?], N1?).
+
+%% CSSG: child_befriend — agent sends child_befriend(From, Other, Ch)
+%% Ch is the intro channel; stored in pending for accept/reject/approve.
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user',
+                child_befriend(From, Other, Ch?)),
+            AgentCh?, AgentCh1),
+    ground(From?), ground(Other?) |
+    send(child_befriend(From?, Other?, req(N?)),
          UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
@@ -138,6 +156,35 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 
+%% --- User-to-agent: CSSG accept/reject/approve child_intro ---
+
+%% Child accepts child_intro
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(accept_child_intro(Other, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(Other?), ground(ReqId?) |
+    lookup_pending(ReqId?, Pv, Ps?, Ps1),
+    send(msg('_user', Id?, accept_child_intro(Other?, Pv?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
+%% Child or parent rejects child_intro
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(reject_child_intro(Other, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(Other?), ground(ReqId?) |
+    lookup_pending(ReqId?, Pv, Ps?, Ps1),
+    send(msg('_user', Id?, reject_child_intro(Other?, Pv?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
+%% Parent approves child_intro — forward to own child
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(approve_child_intro(OtherChild, MyChild, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(OtherChild?), ground(MyChild?), ground(ReqId?) |
+    lookup_pending(ReqId?, Pv, Ps?, Ps1),
+    send(msg('_user', Id?, approve_child_intro(OtherChild?, MyChild?, Pv?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
 %% --- User-to-agent: pass-through commands ---
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
@@ -158,6 +205,13 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(introduce(P, Q), UserCh?, UserCh1),
     ground(Id?), ground(P?), ground(Q?) |
     send(msg('_user', Id?, introduce(P?, Q?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(child_introduce(MyChild, Friend, FriendChild), UserCh?, UserCh1),
+    ground(Id?), ground(MyChild?), ground(Friend?), ground(FriendChild?) |
+    send(msg('_user', Id?, child_introduce(MyChild?, Friend?, FriendChild?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 

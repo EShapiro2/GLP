@@ -1,11 +1,7 @@
-/// GLP Multiagent — Single-Window Isolate Architecture
+/// GLP Social Graph — Simulated SG Plays
 ///
-/// Single Flutter window with agent panels side-by-side.
-/// Two modes:
-///   1. madGLP: Each agent runs in its own Dart isolate using AgentRuntime.
-///   2. Simulated plays: REPL subprocess runs dGLP fplay goals, tagged output
-///      is parsed and routed to per-agent read-only panels.
-/// Messages route between isolates via SendPort (IsolateRouter).
+/// Runs SG plays (fplay1-3) via REPL subprocess, with tagged output
+/// parsed and routed to per-agent read-only panels (Alice, Bob, Charlie).
 library;
 
 import 'dart:async';
@@ -88,7 +84,7 @@ class CoordinatorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'GLP Coordinator',
+      title: 'Social Graph',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.orange,
@@ -384,7 +380,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   Future<void> _runPlay(int playNumber) async {
     await _closeAll();
 
-    // Create read-only agent panels
+    // Create read-only agent panels (Alice, Bob, Charlie)
     for (final id in ['Alice', 'Bob', 'Charlie']) {
       final agent = AgentState(id, [], readOnly: true);
       agent.initialized = true;
@@ -453,7 +449,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('GLP Coordinator (Isolate Mode)'),
+        title: const Text('Social Graph'),
       ),
       body: Column(
         children: [
@@ -463,7 +459,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
           Expanded(
             child: _agents.isEmpty
                 ? const Center(
-                    child: Text('No agents spawned. Click a topology button above.'))
+                    child: Text('Click a Play button above to run a scenario.'))
                 : Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: _agents.values
@@ -517,12 +513,6 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       child: Row(
         children: [
           ElevatedButton.icon(
-            onPressed: _spawnLinearTopology,
-            icon: const Icon(Icons.people),
-            label: const Text('Alice↔Bob↔Charlie'),
-          ),
-          const SizedBox(width: 16),
-          ElevatedButton.icon(
             onPressed: () => _runPlay(1),
             icon: const Icon(Icons.play_arrow),
             label: const Text('Play 1'),
@@ -546,15 +536,6 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
             label: const Text('Play 3'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
-            ),
-          ),
-          const SizedBox(width: 16),
-          ElevatedButton.icon(
-            onPressed: _closeAll,
-            icon: const Icon(Icons.close),
-            label: const Text('Close All'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
             ),
           ),
         ],

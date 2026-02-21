@@ -310,3 +310,288 @@ charlie3_wait_intro([befriend_intro(bob, alice, ReqId)|_],
 charlie3_wait_intro([_|In], Out?) :-
     otherwise | charlie3_wait_intro(In?, Out).
 charlie3_wait_intro([], []).
+
+%% =============================================================================
+%% PLAY 4 — CSSG: All four accept child introduction
+%% =============================================================================
+%%
+%% Setup: alice cold-calls bob (bob accepts).
+%% Then: alice initiates child_introduce(carol, bob, dave).
+%% Carol accepts, bob approves, dave accepts.
+%% Carol and dave become friends and exchange messages.
+
+%% --- Alice (play4) ---
+%% 1. connect(bob)
+%% 2. Wait connected(bob) → child_introduce(carol, bob, dave)
+%% 3. Done (fire and forget)
+
+procedure alice4(Channel?).
+alice4(ch(In, [connect(bob)|Out?])) :-
+    alice4_wait_connected(In?, Out).
+
+procedure alice4_wait_connected(Stream?, Stream).
+alice4_wait_connected([connected(bob)|_],
+                      [child_introduce(carol, bob, dave)]).
+alice4_wait_connected([_|In], Out?) :-
+    otherwise | alice4_wait_connected(In?, Out).
+alice4_wait_connected([], []).
+
+%% --- Bob (play4) ---
+%% 1. Wait befriend(alice, ReqId) → decision(yes, alice, ReqId)
+%% 2. Wait child_befriend(alice, carol, ReqId2) → approve_child_intro(carol, dave, ReqId2)
+%% 3. Done
+
+procedure bob4(Channel?).
+bob4(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob4_wait_child_intro(In?, Out).
+bob4(ch([_|In], Out?)) :-
+    otherwise | bob4(ch(In?, Out)).
+
+procedure bob4_wait_child_intro(Stream?, Stream).
+bob4_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
+                      [approve_child_intro(carol, dave, ReqId?)]) :-
+    ground(ReqId?) | true.
+bob4_wait_child_intro([_|In], Out?) :-
+    otherwise | bob4_wait_child_intro(In?, Out).
+bob4_wait_child_intro([], []).
+
+%% --- Carol (play4) ---
+%% 1. Wait child_befriend(alice, dave, ReqId) → accept_child_intro(dave, ReqId)
+%% 2. Wait connected(dave) → send(dave, 'Hi Dave')
+%% 3. Wait received(dave, _) → done
+
+procedure carol4(Channel?).
+carol4(ch([child_befriend(alice, dave, ReqId)|In],
+          [accept_child_intro(dave, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    carol4_wait_connected(In?, Out).
+carol4(ch([_|In], Out?)) :-
+    otherwise | carol4(ch(In?, Out)).
+
+procedure carol4_wait_connected(Stream?, Stream).
+carol4_wait_connected([connected(dave)|In],
+                      [send(dave, 'Hi Dave')|Out?]) :-
+    carol4_wait_reply(In?, Out).
+carol4_wait_connected([_|In], Out?) :-
+    otherwise | carol4_wait_connected(In?, Out).
+carol4_wait_connected([], []).
+
+procedure carol4_wait_reply(Stream?, Stream).
+carol4_wait_reply([received(dave, _)|_], []).
+carol4_wait_reply([_|In], Out?) :-
+    otherwise | carol4_wait_reply(In?, Out).
+carol4_wait_reply([], []).
+
+%% --- Dave (play4) ---
+%% 1. Wait child_befriend(bob, carol, ReqId) → accept_child_intro(carol, ReqId)
+%% 2. Wait received(carol, _) → send(carol, 'Hi Carol')
+%% 3. Done
+
+procedure dave4(Channel?).
+dave4(ch([child_befriend(bob, carol, ReqId)|In],
+         [accept_child_intro(carol, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    dave4_wait_msg(In?, Out).
+dave4(ch([_|In], Out?)) :-
+    otherwise | dave4(ch(In?, Out)).
+
+procedure dave4_wait_msg(Stream?, Stream).
+dave4_wait_msg([connected(_)|In], Out?) :-
+    dave4_wait_msg(In?, Out).
+dave4_wait_msg([received(carol, _)|_],
+               [send(carol, 'Hi Carol')]).
+dave4_wait_msg([_|In], Out?) :-
+    otherwise | dave4_wait_msg(In?, Out).
+dave4_wait_msg([], []).
+
+%% =============================================================================
+%% PLAY 5 — CSSG: Bob (p2) rejects
+%% =============================================================================
+%%
+%% Setup: alice cold-calls bob (bob accepts).
+%% Then: alice initiates child_introduce(carol, bob, dave).
+%% Carol accepts, bob rejects. Dave never learns.
+%% Carol gets rejected(dave).
+
+%% --- Alice (play5) — same as play4 ---
+
+procedure alice5(Channel?).
+alice5(ch(In, [connect(bob)|Out?])) :-
+    alice5_wait_connected(In?, Out).
+
+procedure alice5_wait_connected(Stream?, Stream).
+alice5_wait_connected([connected(bob)|_],
+                      [child_introduce(carol, bob, dave)]).
+alice5_wait_connected([_|In], Out?) :-
+    otherwise | alice5_wait_connected(In?, Out).
+alice5_wait_connected([], []).
+
+%% --- Bob (play5) — rejects child intro ---
+
+procedure bob5(Channel?).
+bob5(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob5_wait_child_intro(In?, Out).
+bob5(ch([_|In], Out?)) :-
+    otherwise | bob5(ch(In?, Out)).
+
+procedure bob5_wait_child_intro(Stream?, Stream).
+bob5_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
+                      [reject_child_intro(carol, ReqId?)]) :-
+    ground(ReqId?) | true.
+bob5_wait_child_intro([_|In], Out?) :-
+    otherwise | bob5_wait_child_intro(In?, Out).
+bob5_wait_child_intro([], []).
+
+%% --- Carol (play5) — accepts but gets rejected ---
+
+procedure carol5(Channel?).
+carol5(ch([child_befriend(alice, dave, ReqId)|In],
+          [accept_child_intro(dave, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    carol5_wait_rejected(In?, Out).
+carol5(ch([_|In], Out?)) :-
+    otherwise | carol5(ch(In?, Out)).
+
+procedure carol5_wait_rejected(Stream?, Stream).
+carol5_wait_rejected([rejected(dave)|_], []).
+carol5_wait_rejected([_|In], Out?) :-
+    otherwise | carol5_wait_rejected(In?, Out).
+carol5_wait_rejected([], []).
+
+%% --- Dave (play5) — never receives proposal, idle ---
+
+procedure dave5(Channel?).
+dave5(ch(_, [])).
+
+%% =============================================================================
+%% PLAY 6 — CSSG: Carol (c1) rejects
+%% =============================================================================
+%%
+%% Setup: alice cold-calls bob (bob accepts).
+%% Then: alice initiates child_introduce(carol, bob, dave).
+%% Carol rejects. Bob approves, dave accepts → gets rejected(carol).
+
+%% --- Alice (play6) — same as play4 ---
+
+procedure alice6(Channel?).
+alice6(ch(In, [connect(bob)|Out?])) :-
+    alice6_wait_connected(In?, Out).
+
+procedure alice6_wait_connected(Stream?, Stream).
+alice6_wait_connected([connected(bob)|_],
+                      [child_introduce(carol, bob, dave)]).
+alice6_wait_connected([_|In], Out?) :-
+    otherwise | alice6_wait_connected(In?, Out).
+alice6_wait_connected([], []).
+
+%% --- Bob (play6) — approves ---
+
+procedure bob6(Channel?).
+bob6(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob6_wait_child_intro(In?, Out).
+bob6(ch([_|In], Out?)) :-
+    otherwise | bob6(ch(In?, Out)).
+
+procedure bob6_wait_child_intro(Stream?, Stream).
+bob6_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
+                      [approve_child_intro(carol, dave, ReqId?)]) :-
+    ground(ReqId?) | true.
+bob6_wait_child_intro([_|In], Out?) :-
+    otherwise | bob6_wait_child_intro(In?, Out).
+bob6_wait_child_intro([], []).
+
+%% --- Carol (play6) — rejects ---
+
+procedure carol6(Channel?).
+carol6(ch([child_befriend(alice, dave, ReqId)|_],
+          [reject_child_intro(dave, ReqId?)])) :-
+    ground(ReqId?) | true.
+carol6(ch([_|In], Out?)) :-
+    otherwise | carol6(ch(In?, Out)).
+
+%% --- Dave (play6) — accepts but gets rejected ---
+
+procedure dave6(Channel?).
+dave6(ch([child_befriend(bob, carol, ReqId)|In],
+         [accept_child_intro(carol, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    dave6_wait_rejected(In?, Out).
+dave6(ch([_|In], Out?)) :-
+    otherwise | dave6(ch(In?, Out)).
+
+procedure dave6_wait_rejected(Stream?, Stream).
+dave6_wait_rejected([rejected(carol)|_], []).
+dave6_wait_rejected([_|In], Out?) :-
+    otherwise | dave6_wait_rejected(In?, Out).
+dave6_wait_rejected([], []).
+
+%% =============================================================================
+%% PLAY 7 — CSSG: Dave (c2) rejects
+%% =============================================================================
+%%
+%% Setup: alice cold-calls bob (bob accepts).
+%% Then: alice initiates child_introduce(carol, bob, dave).
+%% Carol accepts, bob approves, dave rejects.
+%% Carol gets rejected(dave).
+
+%% --- Alice (play7) — same as play4 ---
+
+procedure alice7(Channel?).
+alice7(ch(In, [connect(bob)|Out?])) :-
+    alice7_wait_connected(In?, Out).
+
+procedure alice7_wait_connected(Stream?, Stream).
+alice7_wait_connected([connected(bob)|_],
+                      [child_introduce(carol, bob, dave)]).
+alice7_wait_connected([_|In], Out?) :-
+    otherwise | alice7_wait_connected(In?, Out).
+alice7_wait_connected([], []).
+
+%% --- Bob (play7) — approves ---
+
+procedure bob7(Channel?).
+bob7(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob7_wait_child_intro(In?, Out).
+bob7(ch([_|In], Out?)) :-
+    otherwise | bob7(ch(In?, Out)).
+
+procedure bob7_wait_child_intro(Stream?, Stream).
+bob7_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
+                      [approve_child_intro(carol, dave, ReqId?)]) :-
+    ground(ReqId?) | true.
+bob7_wait_child_intro([_|In], Out?) :-
+    otherwise | bob7_wait_child_intro(In?, Out).
+bob7_wait_child_intro([], []).
+
+%% --- Carol (play7) — accepts but gets rejected ---
+
+procedure carol7(Channel?).
+carol7(ch([child_befriend(alice, dave, ReqId)|In],
+          [accept_child_intro(dave, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    carol7_wait_rejected(In?, Out).
+carol7(ch([_|In], Out?)) :-
+    otherwise | carol7(ch(In?, Out)).
+
+procedure carol7_wait_rejected(Stream?, Stream).
+carol7_wait_rejected([rejected(dave)|_], []).
+carol7_wait_rejected([_|In], Out?) :-
+    otherwise | carol7_wait_rejected(In?, Out).
+carol7_wait_rejected([], []).
+
+%% --- Dave (play7) — rejects ---
+
+procedure dave7(Channel?).
+dave7(ch([child_befriend(bob, carol, ReqId)|_],
+         [reject_child_intro(carol, ReqId?)])) :-
+    ground(ReqId?) | true.
+dave7(ch([_|In], Out?)) :-
+    otherwise | dave7(ch(In?, Out)).

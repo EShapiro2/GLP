@@ -358,3 +358,481 @@ fplay3 :-
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
     send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?).
+
+%% =============================================================================
+%% NETWORK SWITCH (2-way, for CSSG plays: only parents on network)
+%% =============================================================================
+
+%% --- Cold-call routing (2-arg msg) ---
+
+network2(ch([msg(bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?])) :-
+    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+network2(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch([msg(alice, X)|BobIn], BobOut?)) :-
+    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+%% --- Friend-to-friend routing (3-arg msg) ---
+
+network2(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(alice, bob, X?)|BobOut?])) :-
+    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+network2(ch(AliceIn, [msg(bob, alice, X?)|AliceOut?]),
+         ch([msg(bob, alice, X)|BobIn], BobOut?)) :-
+    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+%% Termination
+network2(ch([], []), ch([], [])).
+
+%% =============================================================================
+%% PLAY4 — CSSG: All four accept (with tee + sink display)
+%% =============================================================================
+
+play4 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice (parent): network + child channel
+    alice4(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+          [output('_user', AliceAgentToUser),
+           output('_net', AliceNetOut),
+           output(child(carol), AliceToCarol)]),
+    merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob (parent): network + child channel
+    bob4(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetAndChildIn?,
+          [output('_user', BobAgentToUser),
+           output('_net', BobNetOut),
+           output(child(dave), BobToDave)]),
+    merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?),
+
+    %% Carol (child): parent channel only
+    carol4(ch(CarolActorIn?, CarolActorOut)),
+    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
+    agent(carol, CarolAgentIn?, CarolFromAlice?,
+          [output('_user', CarolAgentToUser),
+           output(child(alice), CarolToAlice)]),
+    ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+                ch(CarolMedIn?, CarolMedOut), [], 1),
+    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    sink(CarolDispCmd?), sink(CarolDispNotify?),
+
+    %% Dave (child): parent channel only
+    dave4(ch(DaveActorIn?, DaveActorOut)),
+    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
+    agent(dave, DaveAgentIn?, DaveFromBob?,
+          [output('_user', DaveAgentToUser),
+           output(child(bob), DaveToBob)]),
+    ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+                ch(DaveMedIn?, DaveMedOut), [], 1),
+    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    sink(DaveDispCmd?), sink(DaveDispNotify?),
+
+    %% Wire parent-child channels
+    merge(AliceToCarol?, [], CarolFromAlice),
+    merge(CarolToAlice?, [], AliceFromCarol),
+    merge(BobToDave?, [], DaveFromBob),
+    merge(DaveToBob?, [], BobFromDave).
+
+%% =============================================================================
+%% PLAY5 — CSSG: Bob rejects (with tee + sink display)
+%% =============================================================================
+
+play5 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    alice5(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+          [output('_user', AliceAgentToUser),
+           output('_net', AliceNetOut),
+           output(child(carol), AliceToCarol)]),
+    merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    bob5(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetAndChildIn?,
+          [output('_user', BobAgentToUser),
+           output('_net', BobNetOut),
+           output(child(dave), BobToDave)]),
+    merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?),
+
+    carol5(ch(CarolActorIn?, CarolActorOut)),
+    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
+    agent(carol, CarolAgentIn?, CarolFromAlice?,
+          [output('_user', CarolAgentToUser),
+           output(child(alice), CarolToAlice)]),
+    ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+                ch(CarolMedIn?, CarolMedOut), [], 1),
+    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    sink(CarolDispCmd?), sink(CarolDispNotify?),
+
+    dave5(ch(DaveActorIn?, DaveActorOut)),
+    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
+    agent(dave, DaveAgentIn?, DaveFromBob?,
+          [output('_user', DaveAgentToUser),
+           output(child(bob), DaveToBob)]),
+    ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+                ch(DaveMedIn?, DaveMedOut), [], 1),
+    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    sink(DaveDispCmd?), sink(DaveDispNotify?),
+
+    merge(AliceToCarol?, [], CarolFromAlice),
+    merge(CarolToAlice?, [], AliceFromCarol),
+    merge(BobToDave?, [], DaveFromBob),
+    merge(DaveToBob?, [], BobFromDave).
+
+%% =============================================================================
+%% PLAY6 — CSSG: Carol rejects (with tee + sink display)
+%% =============================================================================
+
+play6 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    alice6(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+          [output('_user', AliceAgentToUser),
+           output('_net', AliceNetOut),
+           output(child(carol), AliceToCarol)]),
+    merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    bob6(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetAndChildIn?,
+          [output('_user', BobAgentToUser),
+           output('_net', BobNetOut),
+           output(child(dave), BobToDave)]),
+    merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?),
+
+    carol6(ch(CarolActorIn?, CarolActorOut)),
+    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
+    agent(carol, CarolAgentIn?, CarolFromAlice?,
+          [output('_user', CarolAgentToUser),
+           output(child(alice), CarolToAlice)]),
+    ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+                ch(CarolMedIn?, CarolMedOut), [], 1),
+    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    sink(CarolDispCmd?), sink(CarolDispNotify?),
+
+    dave6(ch(DaveActorIn?, DaveActorOut)),
+    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
+    agent(dave, DaveAgentIn?, DaveFromBob?,
+          [output('_user', DaveAgentToUser),
+           output(child(bob), DaveToBob)]),
+    ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+                ch(DaveMedIn?, DaveMedOut), [], 1),
+    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    sink(DaveDispCmd?), sink(DaveDispNotify?),
+
+    merge(AliceToCarol?, [], CarolFromAlice),
+    merge(CarolToAlice?, [], AliceFromCarol),
+    merge(BobToDave?, [], DaveFromBob),
+    merge(DaveToBob?, [], BobFromDave).
+
+%% =============================================================================
+%% PLAY7 — CSSG: Dave rejects (with tee + sink display)
+%% =============================================================================
+
+play7 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    alice7(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+          [output('_user', AliceAgentToUser),
+           output('_net', AliceNetOut),
+           output(child(carol), AliceToCarol)]),
+    merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    bob7(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetAndChildIn?,
+          [output('_user', BobAgentToUser),
+           output('_net', BobNetOut),
+           output(child(dave), BobToDave)]),
+    merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?),
+
+    carol7(ch(CarolActorIn?, CarolActorOut)),
+    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
+    agent(carol, CarolAgentIn?, CarolFromAlice?,
+          [output('_user', CarolAgentToUser),
+           output(child(alice), CarolToAlice)]),
+    ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+                ch(CarolMedIn?, CarolMedOut), [], 1),
+    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    sink(CarolDispCmd?), sink(CarolDispNotify?),
+
+    dave7(ch(DaveActorIn?, DaveActorOut)),
+    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
+    agent(dave, DaveAgentIn?, DaveFromBob?,
+          [output('_user', DaveAgentToUser),
+           output(child(bob), DaveToBob)]),
+    ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+                ch(DaveMedIn?, DaveMedOut), [], 1),
+    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    sink(DaveDispCmd?), sink(DaveDispNotify?),
+
+    merge(AliceToCarol?, [], CarolFromAlice),
+    merge(CarolToAlice?, [], AliceFromCarol),
+    merge(BobToDave?, [], DaveFromBob),
+    merge(DaveToBob?, [], BobFromDave).
+
+%% =============================================================================
+%% FLUTTER CSSG PLAYS — Tagged output for per-agent windows
+%% =============================================================================
+%% These use send_to_user_tagged instead of sink, so display streams
+%% reach Dart via _output/1 as tagged(Id, cmd/notify(...)).
+
+fplay4 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    alice4(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+          [output('_user', AliceAgentToUser),
+           output('_net', AliceNetOut),
+           output(child(carol), AliceToCarol)]),
+    merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    bob4(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetAndChildIn?,
+          [output('_user', BobAgentToUser),
+           output('_net', BobNetOut),
+           output(child(dave), BobToDave)]),
+    merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
+
+    carol4(ch(CarolActorIn?, CarolActorOut)),
+    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
+    agent(carol, CarolAgentIn?, CarolFromAlice?,
+          [output('_user', CarolAgentToUser),
+           output(child(alice), CarolToAlice)]),
+    ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+                ch(CarolMedIn?, CarolMedOut), [], 1),
+    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
+
+    dave4(ch(DaveActorIn?, DaveActorOut)),
+    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
+    agent(dave, DaveAgentIn?, DaveFromBob?,
+          [output('_user', DaveAgentToUser),
+           output(child(bob), DaveToBob)]),
+    ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+                ch(DaveMedIn?, DaveMedOut), [], 1),
+    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
+
+    merge(AliceToCarol?, [], CarolFromAlice),
+    merge(CarolToAlice?, [], AliceFromCarol),
+    merge(BobToDave?, [], DaveFromBob),
+    merge(DaveToBob?, [], BobFromDave).
+
+fplay5 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    alice5(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+          [output('_user', AliceAgentToUser),
+           output('_net', AliceNetOut),
+           output(child(carol), AliceToCarol)]),
+    merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    bob5(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetAndChildIn?,
+          [output('_user', BobAgentToUser),
+           output('_net', BobNetOut),
+           output(child(dave), BobToDave)]),
+    merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
+
+    carol5(ch(CarolActorIn?, CarolActorOut)),
+    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
+    agent(carol, CarolAgentIn?, CarolFromAlice?,
+          [output('_user', CarolAgentToUser),
+           output(child(alice), CarolToAlice)]),
+    ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+                ch(CarolMedIn?, CarolMedOut), [], 1),
+    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
+
+    dave5(ch(DaveActorIn?, DaveActorOut)),
+    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
+    agent(dave, DaveAgentIn?, DaveFromBob?,
+          [output('_user', DaveAgentToUser),
+           output(child(bob), DaveToBob)]),
+    ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+                ch(DaveMedIn?, DaveMedOut), [], 1),
+    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
+
+    merge(AliceToCarol?, [], CarolFromAlice),
+    merge(CarolToAlice?, [], AliceFromCarol),
+    merge(BobToDave?, [], DaveFromBob),
+    merge(DaveToBob?, [], BobFromDave).
+
+fplay6 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    alice6(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+          [output('_user', AliceAgentToUser),
+           output('_net', AliceNetOut),
+           output(child(carol), AliceToCarol)]),
+    merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    bob6(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetAndChildIn?,
+          [output('_user', BobAgentToUser),
+           output('_net', BobNetOut),
+           output(child(dave), BobToDave)]),
+    merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
+
+    carol6(ch(CarolActorIn?, CarolActorOut)),
+    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
+    agent(carol, CarolAgentIn?, CarolFromAlice?,
+          [output('_user', CarolAgentToUser),
+           output(child(alice), CarolToAlice)]),
+    ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+                ch(CarolMedIn?, CarolMedOut), [], 1),
+    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
+
+    dave6(ch(DaveActorIn?, DaveActorOut)),
+    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
+    agent(dave, DaveAgentIn?, DaveFromBob?,
+          [output('_user', DaveAgentToUser),
+           output(child(bob), DaveToBob)]),
+    ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+                ch(DaveMedIn?, DaveMedOut), [], 1),
+    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
+
+    merge(AliceToCarol?, [], CarolFromAlice),
+    merge(CarolToAlice?, [], AliceFromCarol),
+    merge(BobToDave?, [], DaveFromBob),
+    merge(DaveToBob?, [], BobFromDave).
+
+fplay7 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    alice7(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+          [output('_user', AliceAgentToUser),
+           output('_net', AliceNetOut),
+           output(child(carol), AliceToCarol)]),
+    merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    bob7(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetAndChildIn?,
+          [output('_user', BobAgentToUser),
+           output('_net', BobNetOut),
+           output(child(dave), BobToDave)]),
+    merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
+
+    carol7(ch(CarolActorIn?, CarolActorOut)),
+    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
+    agent(carol, CarolAgentIn?, CarolFromAlice?,
+          [output('_user', CarolAgentToUser),
+           output(child(alice), CarolToAlice)]),
+    ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+                ch(CarolMedIn?, CarolMedOut), [], 1),
+    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
+
+    dave7(ch(DaveActorIn?, DaveActorOut)),
+    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
+    agent(dave, DaveAgentIn?, DaveFromBob?,
+          [output('_user', DaveAgentToUser),
+           output(child(bob), DaveToBob)]),
+    ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+                ch(DaveMedIn?, DaveMedOut), [], 1),
+    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
+
+    merge(AliceToCarol?, [], CarolFromAlice),
+    merge(CarolToAlice?, [], AliceFromCarol),
+    merge(BobToDave?, [], DaveFromBob),
+    merge(DaveToBob?, [], BobFromDave).

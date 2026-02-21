@@ -48,10 +48,10 @@ Follows the original SG design: the intro channel is passed to the user via the 
 
 ### Files
 
-- `typed_social_agent.glp`: agent with ack/nack intro, intro_await_peer, inject_intro_result
-- `typed_ui_mediator.glp`: mediator storing channel(Ch) in pending for intro
-- `typed_ui_actors.glp`: three test scripts (play1/play2/play3)
-- `play_ui_dglp_boot.glp`: wiring goals for play1/play2/play3
+- `typed_social_agent.glp`: agent with ack/nack intro + CSSG, intro_await_peer, inject_intro_result
+- `typed_ui_mediator.glp`: mediator storing channel(Ch) in pending for intro + CSSG
+- `typed_ui_actors.glp`: seven test scripts (play1–7)
+- `play_ui_sim_boot.glp`: boot goals with tee/sink (silent) and tee/tagged (Flutter) for all plays
 
 ### Types
 
@@ -171,9 +171,9 @@ All GLP code runs through the REPL. The REPL is the only supported way to compil
 
 All seven steps implemented and working.
 
-GLP-side (steps 1–5): `play_ui_sim_boot.glp` contains `tee/3`, `sink/1`, `send_to_user_tagged/3`, silent plays (`play1`–`play3` with sink), and Flutter plays (`fplay1`–`fplay3` with tagged output). The `tee/3` splitter requires a `ground(X?)` guard because X is read into two output streams (SRSW constraint). `send_to_user_tagged/3` is untyped because `_output/1` is a kernel predicate with no procedure declaration. All plays verified in the REPL.
+GLP-side (steps 1–5): `play_ui_sim_boot.glp` contains `tee/3`, `sink/1`, `send_to_user_tagged/3`, silent plays (`play1`–`play7` with sink), and Flutter plays (`fplay1`–`fplay7` with tagged output). The `tee/3` splitter requires a `ground(X?)` guard because X is read into two output streams (SRSW constraint). `send_to_user_tagged/3` is untyped because `_output/1` is a kernel predicate with no procedure declaration. All plays verified in the REPL.
 
-Dart/Flutter-side (steps 6–7): `ReplPlayRunner` (`glp_runtime/lib/multiagent/repl_play_runner.dart`) encapsulates REPL subprocess management. `main.dart` wires play buttons to `ReplPlayRunner` and routes parsed output to read-only agent panels. All three plays verified in the Flutter UI.
+Dart/Flutter-side (steps 6–7): `ReplPlayRunner` (`glp_runtime/lib/multiagent/repl_play_runner.dart`) encapsulates REPL subprocess management. Two separate Flutter apps (`main.dart` for SG, `main_cssg.dart` for CSSG) wire play buttons to `ReplPlayRunner` and route parsed output to read-only agent panels. All seven plays verified in the Flutter UI.
 
 ### Dart/Flutter integration (implemented)
 
@@ -183,6 +183,209 @@ Dart/Flutter-side (steps 6–7): `ReplPlayRunner` (`glp_runtime/lib/multiagent/r
 
 ---
 
-## Next: CSSG Extension
+## CSSG Extension: Child-Safe Social Graph
 
-Child befriend extends the ack/nack protocol with four-party consent. Parent p1 initiates, creating a channel pair for c1-c2. The proposal goes to p2 (friend channel) and c1 (parent-child channel). p2 forwards to c2. All four must consent (ack) for the channel to become live.
+### Overview
+
+Child befriend extends the ack/nack friend-mediated introduction protocol with four-party consent. Two parents (p1, p2) and two children (c1, c2) must all consent for a c1-c2 friendship channel to become live. The protocol reuses the existing ack/nack handshake (intro_await_peer, inject_intro_result) for the final c1-c2 channel establishment.
+
+Unfriending is deferred (as in the existing SG implementation).
+
+### Agents and names
+
+Agent names are simple atoms: parents are `alice`, `bob`; children are `carol`, `dave`. There are no derived/structured names.
+
+### Parent-child relationship
+
+The parent-child relationship is established at boot time, not through the social protocol. Each parent-child pair gets a bidirectional channel:
+
+- Parent has `output(child(carol), ChildOut)` in its output list (sends to child via `lookup_send(child(carol), ...)`)
+- Child has `output(child(alice), ParentOut)` in its output list (sends to parent via `lookup_send(child(alice), ...)`)
+- Parent's input from child is merged into parent's NetIn
+- Child's input from parent is merged into child's NetIn
+
+Output list keys are structured: `'_user'`, `'_net'`, `friend(Name)`, `child(Name)`. This distinguishes friends from children, allowing the agent to find its child output without knowing the child's name in advance. The `lookup_send` key type is `OutputKey` (see type definitions).
+
+Children have the same agent/4 structure as adults. The only difference is boot wiring: children have no network connection. Their only external communication is via the parent-child channel and (eventually) friendship channels established through this protocol.
+
+### Network
+
+Only parents (alice, bob) are on the network. A 2-way network suffices. Children (carol, dave) are not routable through the network — they communicate only via parent-child channels and direct friendship channels.
+
+### User command
+
+`child_introduce(carol, bob, dave)` — alice tells her agent: "introduce my child carol to dave (bob's child)". The knowledge of who is whose child resides in the user/actor, not in the agent. The agent needs the child's name to know which output to send on.
+
+Alice's consent is implicit in initiating the command.
+
+### Protocol flow
+
+Participants: alice (p1), bob (p2), carol (c1, alice's child), dave (c2, bob's child).
+
+Preconditions: alice and bob are friends. alice has a parent-child channel with carol. bob has a parent-child channel with dave.
+
+**Step 1 — alice initiates.** Alice's user sends `child_introduce(carol, bob, dave)`. Alice's agent:
+- Creates channel pair `(CarolCh, DaveCh)` using `new_channel`
+- Sends `child_intro(dave, CarolCh)` to carol via parent-child channel (`lookup_send(carol, ...)`)
+- Sends `child_intro(carol, DaveCh)` to bob via friend channel (`lookup_send(bob, ...)`)
+- Alice is done (fire and forget). Alice's consent is implicit in initiating.
+
+**Step 2 — carol receives proposal.** Carol's agent receives `child_intro(dave, Ch)` on NetIn (from parent). Carol's agent notifies carol's user via mediator: `child_befriend(alice, dave, Ch)`. Carol's user responds:
+- Accept: carol sends `ack(carol)` on the channel, spawns `intro_await_peer(dave, Ch1, Result)`, injects result into UserIn. (Same mechanism as existing SG intro accept.)
+- Reject: carol sends `nack` on the channel. Done.
+
+**Step 3 — bob receives proposal.** Bob's agent receives `child_intro(carol, Ch)` on the friend channel from alice. This is a consent gate for bob. Bob's agent notifies bob's user via mediator: `child_befriend(alice, carol, Ch)` (same notification type as children receive). Bob's user responds:
+- Approve: bob's agent forwards `child_intro(carol, Ch)` to dave via parent-child channel (`lookup_send(child(dave), ...)`). Bob is done (fire and forget after forwarding).
+- Reject: bob sends `nack` on Ch. Bob does NOT forward to dave. Done.
+
+**Step 4 — dave receives proposal.** Dave's agent receives `child_intro(carol, Ch)` on NetIn (from parent, forwarded by bob). Same as carol in Step 2: dave's user decides, ack or nack on the channel.
+
+**Step 5 — channel resolution.** The ack/nack handshake between carol and dave proceeds exactly as in SG friend introduction:
+- Both ack → `intro_await_peer` on each side reads the peer's ack, writes `intro_result(Other, Ch)`. The friendship channel becomes live. Each child adds the friend output, merges friend input into NetIn, notifies user `connected(Other)`.
+- One acks, other nacks (or bob nacked) → the acking side gets `intro_rejected(Other)` via `intro_await_peer`.
+- Both nack → both sides are done immediately.
+
+### What is reused from SG
+
+- `intro_await_peer/3` — reused exactly as-is for the carol-dave handshake
+- `inject_intro_result/3` — reused exactly as-is
+- agent/4 clauses for `intro_result` and `intro_rejected` — reused by carol and dave
+- The ack/nack mechanism on the channel (first message is `ack(Id)` or `nack`)
+- Mediator channel escrow (storing channel in pending, retrieving on accept/reject)
+
+### New agent/4 clauses (implemented)
+
+1. **Parent initiates child introduction.** Handles `child_introduce(MyChild, Friend, FriendChild)` from UserIn. Creates channel pair, sends `child_intro(FriendChild, C1Ch)` to own child and `child_intro(MyChild, C2Ch)` to friend. Fire and forget.
+
+2. **Child receives child_intro from parent.** Handles `child_intro(Other, Ch)` on NetIn. Notifies user via mediator: `child_befriend(From, Other, Ch)`. On accept: ack + intro_await_peer + inject_intro_result (same as SG intro accept). On reject: nack on channel.
+
+3. **Parent receives child_intro on friend channel (consent gate).** Handles `child_intro(OtherChild, Ch)` on NetIn from friend. Notifies user via mediator: `child_befriend(From, OtherChild, Ch)`. User may accept, reject, or approve:
+   - **Reject:** agent sends nack on Ch. Does NOT forward to own child. Done.
+   - **Approve:** agent forwards `child_intro(OtherChild, Ch)` to own child via `lookup_send(child(MyChild), ...)`.
+
+4. **Parent approves child_intro.** Handles `approve_child_intro(OtherChild, MyChild, channel(Ch))` from UserIn. Forwards `child_intro(OtherChild, Ch)` to own child.
+
+### New mediator clauses (implemented)
+
+1. **child_befriend(From, Other, Ch)** — single agent → user notification used for both children and parents receiving `child_intro`. The channel is stored in pending. User sees ground `child_befriend(From, Other, ReqId)`. User responds with one of:
+   - `accept_child_intro(Other, ReqId)` — child accepts the proposal
+   - `reject_child_intro(Other, ReqId)` — child or parent rejects
+   - `approve_child_intro(OtherChild, MyChild, ReqId)` — parent approves and forwards to own child
+
+2. **accept_child_intro** — mediator retrieves `channel(Ch)` from pending, forwards to agent as `accept_child_intro(Other, channel(Ch))`.
+
+3. **reject_child_intro** — mediator retrieves `channel(Ch)` from pending, forwards to agent as `reject_child_intro(Other, channel(Ch))`.
+
+4. **approve_child_intro** — mediator retrieves `channel(Ch)` from pending, forwards to agent as `approve_child_intro(OtherChild, MyChild, channel(Ch))`.
+
+### New type definitions (implemented)
+
+```
+%% User commands
+UserContent += child_introduce(Constant, Constant, Constant).
+
+UserContent += accept_child_intro(Constant, PendingValue)
+             ; reject_child_intro(Constant, PendingValue)
+             ; approve_child_intro(Constant, Constant, PendingValue).
+
+%% Agent → user notifications
+AgentContent += child_befriend(Constant, Constant, Channel).
+
+%% Friend-to-friend and parent-child channel content
+FriendContent += child_intro(Constant, Channel).
+
+%% Output keys (structured)
+OutputKey ::= '_user' ; '_net' ; friend(Constant) ; child(Constant).
+```
+
+### Boot configuration (single isolate, 4 agents)
+
+```
+%% Schematic — not actual GLP syntax
+
+%% Network: only parents
+network2(ch(AliceNetOut?, AliceNetIn),
+         ch(BobNetOut?, BobNetIn)),
+
+%% Parent-child channels
+%% alice ↔ carol
+%% bob ↔ dave
+
+%% Alice: network + child channel
+agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+      [output('_user', AliceToUser),
+       output('_net', AliceNetOut),
+       output(child(carol), AliceToCarol)]),
+merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
+
+%% Carol: parent channel only, no network
+agent(carol, CarolAgentIn?, CarolFromAlice?,
+      [output('_user', CarolToUser),
+       output(child(alice), CarolToAlice)]),
+
+%% Bob: network + child channel
+agent(bob, BobAgentIn?, BobNetAndChildIn?,
+      [output('_user', BobToUser),
+       output('_net', BobNetOut),
+       output(child(dave), BobToDave)]),
+merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
+
+%% Dave: parent channel only, no network
+agent(dave, DaveAgentIn?, DaveFromBob?,
+      [output('_user', DaveToUser),
+       output(child(bob), DaveToBob)]),
+
+%% Wire parent-child channels
+%% alice → carol: AliceToCarol? feeds CarolFromAlice
+%% carol → alice: CarolToAlice? feeds AliceFromCarol
+%% bob → dave: BobToDave? feeds DaveFromBob
+%% dave → bob: DaveToBob? feeds BobFromDave
+```
+
+### Test plays
+
+| Play | Scenario | Expected result |
+|------|----------|-----------------|
+| play4 | All four accept | carol and dave become friends, exchange messages |
+| play5 | bob (p2) rejects | carol gets intro_rejected(dave); dave never learns of proposal |
+| play6 | carol (c1) rejects | dave gets intro_rejected(carol) (if dave already acked); carol done immediately |
+| play7 | dave (c2) rejects | carol gets intro_rejected(dave); dave done immediately |
+
+Common setup for all plays: alice and bob become friends first (cold call, same as existing plays). Then alice initiates `child_introduce(carol, bob, dave)`.
+
+### Implementation (complete, 2026-02-20)
+
+All CSSG code implemented, typechecked, and tested. Both silent plays (play4–7 with sink) and Flutter plays (fplay4–7 with tagged output) run correctly in the REPL and Flutter UI.
+
+**Step 3 simplification:** During implementation, the separate `child_befriend_request` notification for parents was eliminated. Both children and parents receive the same `child_befriend(From, Other, Ch)` notification. The parent's user distinguishes consent approval (forward to child) from direct acceptance by choosing `approve_child_intro` rather than `accept_child_intro`. This keeps the protocol simpler and the agent/mediator code uniform.
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `typed_social_agent.glp` | Agent with SG + CSSG clauses, all types |
+| `typed_ui_mediator.glp` | Mediator with SG + CSSG clauses |
+| `typed_ui_actors.glp` | Actor scripts for play1–7 |
+| `play_ui_sim_boot.glp` | Boot goals: network, agents, mediators, actors, tee, sink/tagged |
+
+---
+
+## Separate Flutter Apps for SG and CSSG
+
+The Flutter multiagent app (`glp_multiagent`) has two separate entry points:
+
+- **`lib/main.dart`** — Social Graph app. Green Play 1/2/3 buttons. Three agent panels (Alice, Bob, Charlie).
+- **`lib/main_cssg.dart`** — Child-Safe Social Graph app. Blue Play 4/5/6/7 buttons. Four agent panels (Alice, Carol, Bob, Dave) with parent-child grouping and color families:
+  - Indigo family: Alice (parent, dark), Carol (child, light)
+  - Teal family: Bob (parent, dark), Dave (child, light)
+
+Build commands:
+```bash
+# SG app (default entry point)
+flutter build macos
+
+# CSSG app (alternate entry point)
+flutter build macos --target lib/main_cssg.dart
+```
+
+Both apps use the same `ReplPlayRunner` infrastructure from `glp_runtime`.

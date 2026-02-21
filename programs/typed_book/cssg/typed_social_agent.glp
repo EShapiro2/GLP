@@ -36,11 +36,16 @@ UserContent ::= connect(Constant)
               ; introduce(Constant, Constant)
               ; accept_intro(Constant, PendingValue)
               ; reject_intro(Constant, PendingValue)
+              ; child_introduce(Constant, Constant, Constant)
+              ; accept_child_intro(Constant, PendingValue)
+              ; reject_child_intro(Constant, PendingValue)
+              ; approve_child_intro(Constant, Constant, PendingValue)
               ; response(Response).
 
 %% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
 AgentContent ::= befriend(Constant, Response)
                ; befriend_intro(Constant, Constant, Channel)
+               ; child_befriend(Constant, Constant, Channel)
                ; connected(Constant)
                ; rejected
                ; rejected(Constant)
@@ -52,7 +57,8 @@ NetColdCall ::= intro(Constant, Response).
 %% Friend-to-friend content (3-arg: msg(From, To, Content))
 FriendContent ::= response(Response)
                 ; text(Constant)
-                ; intro(Constant, Channel).
+                ; intro(Constant, Channel)
+                ; child_intro(Constant, Channel).
 
 %% Intro channel content (first message is ack/nack handshake)
 IntroContent ::= ack(Constant) ; nack.
@@ -60,8 +66,9 @@ IntroContent ::= ack(Constant) ; nack.
 %% Intro result — written by intro_await_peer, injected into UserIn
 IntroResult ::= intro_result(Constant, Channel) ; intro_rejected(Constant).
 
-%% Output list
-OutputEntry ::= output(String, Stream?).
+%% Output list — keys distinguish system channels, friends, and children
+OutputKey   ::= '_user' ; '_net' ; friend(Constant) ; child(Constant).
+OutputEntry ::= output(OutputKey, Stream?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
 %% =============================================================================
@@ -86,12 +93,12 @@ merge(Xs, [], Xs?).
 %% LOOKUP_SEND
 %% =============================================================================
 
-procedure lookup_send(String?, _?, OutputsList?, OutputsList).
+procedure lookup_send(OutputKey?, _?, OutputsList?, OutputsList).
 lookup_send(Key, Msg, Outs, Outs1?) :-
     ground(Key?) |
     lookup_send_step(Key?, Msg?, Outs?, Outs1).
 
-procedure lookup_send_step(String?, _?, OutputsList?, OutputsList).
+procedure lookup_send_step(OutputKey?, _?, OutputsList?, OutputsList).
 lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
     Key? =?= K? | true.
 lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
@@ -113,8 +120,8 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
 %% ADD_OUTPUT
 %% =============================================================================
 
-procedure add_output(String?, Stream, OutputsList?, OutputsList).
-add_output(Name, Out?, Outs, [output(Name?, Out)|Outs?]).
+procedure add_output(OutputKey?, Stream, OutputsList?, OutputsList).
+add_output(Key, Out?, Outs, [output(Key?, Out)|Outs?]).
 
 %% =============================================================================
 %% CLOSE_OUTPUTS
@@ -176,7 +183,7 @@ bind_response(no, _, no, Outs, Outs1?, In, In?) :-
 procedure handle_response(Response?, Constant?, OutputsList?, OutputsList, Stream?, Stream).
 handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
     ground(From?) |
-    add_output(From?, FOut, Outs?, Outs1),
+    add_output(friend(From?), FOut, Outs?, Outs1),
     lookup_send('_user', msg(agent, '_user', connected(From?)), Outs1?, Outs2),
     merge(In?, FIn?, In1).
 handle_response(no, From, Outs, Outs1?, In, In?) :-
@@ -204,17 +211,17 @@ agent(Id, [msg('_user', Id1, decision(Dec, From, response(Resp?)))|UserIn], NetI
     bind_response(Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs1?).
 
-%% User sends text message
+%% User sends text message to friend
 agent(Id, [msg('_user', Id1, send(Target, Text))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Target?) |
-    lookup_send(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
+    lookup_send(friend(Target?), msg(Id?, Target?, text(Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
-%% User introduces P to Q
+%% User introduces friend P to friend Q
 agent(Id, [msg('_user', Id1, introduce(P, Q))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(P?), ground(Q?), new_channel(PQCh, QPCh) |
-    lookup_send(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
-    lookup_send(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
+    lookup_send(friend(P?), msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
+    lookup_send(friend(Q?), msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% User accepts intro — send ack, spawn peer-wait, inject result
@@ -233,7 +240,7 @@ agent(Id, [msg('_user', Id1, reject_intro(_, channel(ch(_, [nack|[]]))))|UserIn]
 %% Intro result: peer acked — add friend
 agent(Id, [intro_result(Other, ch(FIn, FOut?))|UserIn], NetIn, Outs) :-
     ground(Id?), ground(Other?) |
-    add_output(Other?, FOut, Outs?, Outs1),
+    add_output(friend(Other?), FOut, Outs?, Outs1),
     lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
     merge(NetIn?, FIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs2?).
@@ -249,6 +256,35 @@ agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs) :-
     Id? =?= Id1? |
     handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs1?).
+
+%% --- CSSG: Child-safe social graph ---
+
+%% Parent initiates child introduction (fire and forget)
+agent(Id, [msg('_user', Id1, child_introduce(MyChild, Friend, FriendChild))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(MyChild?), ground(Friend?), ground(FriendChild?),
+    new_channel(C1Ch, C2Ch) |
+    lookup_send(child(MyChild?), msg(Id?, MyChild?, child_intro(FriendChild?, C1Ch?)), Outs?, Outs1),
+    lookup_send(friend(Friend?), msg(Id?, Friend?, child_intro(MyChild?, C2Ch?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
+%% Child (or parent) accepts child_intro — send ack, spawn peer-wait, inject result
+agent(Id, [msg('_user', Id1, accept_child_intro(Other, channel(Ch)))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(Other?),
+    send(ack(Id?), Ch?, Ch1) |
+    intro_await_peer(Other?, Ch1?, Result),
+    inject_intro_result(Result?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs?).
+
+%% Child (or parent) rejects child_intro — send nack on channel, close it
+agent(Id, [msg('_user', Id1, reject_child_intro(_, channel(ch(_, [nack|[]]))))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1? |
+    agent(Id?, UserIn?, NetIn?, Outs?).
+
+%% Parent approves child_intro — forward to own child
+agent(Id, [msg('_user', Id1, approve_child_intro(OtherChild, MyChild, channel(Ch)))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(OtherChild?), ground(MyChild?) |
+    lookup_send(child(MyChild?), msg(Id?, MyChild?, child_intro(OtherChild?, Ch?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% User catch-all
 agent(Id, [_|UserIn], NetIn, Outs) :-
@@ -279,6 +315,15 @@ agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
 agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch))|NetIn], Outs) :-
     Id? =?= Id1?, ground(Other?) |
     lookup_send('_user', msg(agent, '_user', befriend_intro(From?, Other?, Ch?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% --- CSSG network messages ---
+
+%% Child receives child_intro from parent (or parent forwards from friend)
+%% Notify user via mediator: child_befriend(From, Other, Ch)
+agent(Id, UserIn, [msg(From, Id1, child_intro(Other, Ch))|NetIn], Outs) :-
+    Id? =?= Id1?, ground(Other?) |
+    lookup_send('_user', msg(agent, '_user', child_befriend(From?, Other?, Ch?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Network catch-all
