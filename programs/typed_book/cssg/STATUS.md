@@ -67,3 +67,42 @@ actor ↔ ui_mediator ↔ agent ↔ network
 GLP runs through the REPL subprocess. `ReplPlayRunner` spawns the REPL, pipes load commands + `fplayN.` + `:quit` to stdin, parses `tagged(id, cmd/notify(...))` lines from stdout, and delivers them via callbacks. No GlpEngine/AgentRuntime API calls for simulated plays.
 
 All seven plays verified in both REPL and Flutter UI (2026-02-21).
+
+### How to build and run
+
+Both Flutter targets produce the same output path, so build one, copy aside, then build the other:
+
+```bash
+cd /Users/udi/Grassroots/GLP/glp_multiagent
+
+# Build SG, copy aside, build CSSG, copy aside, launch both
+flutter build macos
+cp -R build/macos/Build/Products/Release/glp_multiagent.app \
+      build/macos/Build/Products/Release/glp_sg.app
+flutter build macos --target lib/main_cssg.dart
+cp -R build/macos/Build/Products/Release/glp_multiagent.app \
+      build/macos/Build/Products/Release/glp_cssg.app
+open build/macos/Build/Products/Release/glp_sg.app
+open build/macos/Build/Products/Release/glp_cssg.app
+```
+
+### How to test in the REPL (no Flutter)
+
+```bash
+cd /Users/udi/Grassroots/GLP/glp_runtime
+dart run bin/glp_repl.dart
+```
+
+At the `GLP>` prompt, load the four files then run any play:
+
+```
+../programs/typed_book/cssg/typed_social_agent.glp
+../programs/typed_book/cssg/typed_ui_mediator.glp
+../programs/typed_book/cssg/typed_ui_actors.glp
+../programs/typed_book/cssg/play_ui_sim_boot.glp
+play1.
+play4.
+fplay1.
+fplay4.
+:quit
+```

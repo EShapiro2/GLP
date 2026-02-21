@@ -379,13 +379,54 @@ The Flutter multiagent app (`glp_multiagent`) has two separate entry points:
   - Indigo family: Alice (parent, dark), Carol (child, light)
   - Teal family: Bob (parent, dark), Dave (child, light)
 
-Build commands:
+### How to build and run both apps
+
+Both targets produce the same output path (`glp_multiagent.app`), so build one, copy it aside, then build the other:
+
 ```bash
-# SG app (default entry point)
+cd /Users/udi/Grassroots/GLP/glp_multiagent
+
+# 1. Build the SG app (default entry point)
 flutter build macos
 
-# CSSG app (alternate entry point)
+# 2. Copy it aside
+cp -R build/macos/Build/Products/Release/glp_multiagent.app \
+      build/macos/Build/Products/Release/glp_sg.app
+
+# 3. Build the CSSG app (alternate entry point)
 flutter build macos --target lib/main_cssg.dart
+
+# 4. Copy it aside
+cp -R build/macos/Build/Products/Release/glp_multiagent.app \
+      build/macos/Build/Products/Release/glp_cssg.app
+
+# 5. Launch both
+open build/macos/Build/Products/Release/glp_sg.app
+open build/macos/Build/Products/Release/glp_cssg.app
 ```
 
 Both apps use the same `ReplPlayRunner` infrastructure from `glp_runtime`.
+
+### How to test in the REPL (no Flutter)
+
+```bash
+cd /Users/udi/Grassroots/GLP/glp_runtime
+dart run bin/glp_repl.dart
+```
+
+Then at the `GLP>` prompt:
+
+```
+../programs/typed_book/cssg/typed_social_agent.glp
+../programs/typed_book/cssg/typed_ui_mediator.glp
+../programs/typed_book/cssg/typed_ui_actors.glp
+../programs/typed_book/cssg/play_ui_sim_boot.glp
+play1.
+play4.
+fplay1.
+fplay4.
+:quit
+```
+
+Silent plays (`play1`–`play7`) run and terminate silently (output consumed by `sink`).
+Flutter plays (`fplay1`–`fplay7`) emit `tagged(id, cmd/notify(...))` lines to stdout.
