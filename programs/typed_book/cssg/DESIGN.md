@@ -55,9 +55,11 @@ Follows the original SG design: the intro channel is passed to the user via the 
 
 ### Types
 
-- `PendingValue ::= response(Response) ; channel(IntroChannel) ; error.`
+- `PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.`
+- `AgentContent ::= befriend(Constant, Response?) ; ...` (Response? makes the field output/produce)
+- `NetColdCall ::= intro(Constant, Response?).` (same — Response? for output position)
 - `UserContent` includes `accept_intro(Constant, PendingValue)` and `reject_intro(Constant, PendingValue)`
-- `AgentContent` includes `befriend_intro(Constant, Constant, Channel)`
+- `AgentContent` includes `befriend_intro(Constant, Constant, IntroChannel)`
 - `IntroResult ::= intro_result(Constant, Channel) ; intro_rejected(Constant).`
 
 ### Test plays

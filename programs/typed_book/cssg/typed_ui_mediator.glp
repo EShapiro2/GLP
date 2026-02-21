@@ -34,7 +34,7 @@ IntroChannel ::= ch(IntroStream, IntroStream?).
 
 %% --- Agent-side content types ---
 
-AgentContent ::= befriend(Constant, Response)
+AgentContent ::= befriend(Constant, Response?)
                ; befriend_intro(Constant, Constant, IntroChannel)
                ; child_befriend(Constant, Constant, IntroChannel)
                ; connected(Constant)
@@ -91,7 +91,7 @@ UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
 UserChannel      ::= ch(UserCmdStream, UserNotifyStream?).
 
 %% --- Pending entries ---
-PendingValue ::= response(Response) ; channel(IntroChannel) ; error.
+PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.
 PendingEntry ::= pending(ReqId, PendingValue).
 PendingList  ::= [] ; [PendingEntry | PendingList].
 
@@ -119,16 +119,15 @@ procedure ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Cons
 
 %% --- Agent-to-user: non-ground (replace variable with req ID) ---
 
-%% Cold-call befriend: agent sends befriend(From, Resp)
-%% Resp is received from agent, stored in pending as writer.
+%% befriend: Resp? reader in receive, Resp writer in body
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', befriend(From, Resp)),
+    receive(msg(agent, '_user', befriend(From, Resp?)),
             AgentCh?, AgentCh1),
     ground(From?) |
     send_user(befriend(From?, req(N?)), UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
-        [pending(req(N?), response(Resp?)) | Ps?], N1?).
+        [pending(req(N?), response(Resp)) | Ps?], N1?).
 
 %% Introduction befriend_intro: agent sends befriend_intro(From, Other, Ch)
 %% Ch is the intro channel; stored in pending for accept/reject.

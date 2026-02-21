@@ -4,18 +4,22 @@
 
 ## Current state
 
-All three precisely-typed files (agent, mediator, actors) typecheck cleanly.
+All three precisely-typed files (agent, mediator, actors) typecheck cleanly and
+fplay1 runs to completion.
 
-Three mode errors in the mediator's befriend/befriend_intro/child_befriend clauses
-have been fixed. The fix involved swapping writer/reader annotations in the receive
-pattern vs pending storage, and updating the PendingValue type definition to match:
-- `PendingValue ::= response(Response) ; channel(IntroChannel) ; error.`
-  (stores writers, not readers — mediator receives writer from agent, stores it in
-  pending, and later retrieves the reader to send back to the agent)
+Mode fixes required changes to both type definitions and clause annotations:
 
-Plays now progress through the befriend handshake (mediator correctly processes
-non-ground messages) but still suspend during the agent's handling of the decision
-response. This is a separate issue from the mode errors that were fixed.
+- `PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.`
+- `AgentContent ::= befriend(Constant, Response?)` in mediator (was `Response`)
+- `NetColdCall ::= intro(Constant, Response?)` in agent (was `Response`)
+- Agent cold-call clause: `Resp?` (reader) in receive head, `Resp` (writer) in
+  `befriend(From?, Resp)` sent to mediator via `lookup_send`
+- Mediator befriend clause: `Resp?` (reader) in receive, `Resp` (writer) in
+  `response(Resp)` stored in pending list
+
+The `Response?` mode annotation in the type definitions makes the Response field
+an output (produce) position, allowing a writer to be placed there. Without `?`,
+the field is input (consume) position, which conflicts with SRSW requirements.
 
 ## Files
 
