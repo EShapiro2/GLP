@@ -686,6 +686,16 @@ check "MWM empty" "Xmwm1 = \[\]" "$a26"
 check "MWM single" "Xmwm2 = \[1, 2, 3\]" "$a26"
 check "MWM two streams" "Xmwm3 = \[a, b, 1, 2\]" "$a26"
 
+# --- A27: Reader-to-reader bug (befriend_intro) ---
+echo "--- A27: Reader-to-reader fail ---"
+a27=$($DART run "$REPL" <<HEREDOC
+$TYPED/test_befriend_intro_bug.glp
+med(charlie, ch([msg(agent, _user, befriend_intro(bob, alice, X?)) | Xs], Y), ch(Us?, Vs), [], 2).
+:quit
+HEREDOC
+2>&1)
+check_not "reader-to-reader no reduction" "req(2)" "$a27"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 
