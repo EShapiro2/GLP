@@ -55,7 +55,7 @@ Follows the original SG design: the intro channel is passed to the user via the 
 
 ### Types
 
-- `PendingValue ::= response(Response?) ; channel(Channel?) ; error.`
+- `PendingValue ::= response(Response) ; channel(IntroChannel) ; error.`
 - `UserContent` includes `accept_intro(Constant, PendingValue)` and `reject_intro(Constant, PendingValue)`
 - `AgentContent` includes `befriend_intro(Constant, Constant, Channel)`
 - `IntroResult ::= intro_result(Constant, Channel) ; intro_rejected(Constant).`

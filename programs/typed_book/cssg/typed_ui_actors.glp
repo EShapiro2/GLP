@@ -1,21 +1,52 @@
-%% typed_ui_actors.glp - Ground-term actors for the UI mediator
+%% typed_ui_actors.glp - Precisely typed ground-term actors for the UI mediator
 %%
-%% Three test scripts for friend-mediated introduction with ack/nack:
-%%   play1: both accept    — Alice and Charlie become friends
-%%   play2: Alice accepts, Charlie rejects — both get rejected
-%%   play3: both reject   — both get rejected
+%% Copy of typed_book/cssg/typed_ui_actors.glp with precise types.
 %%
-%% Common setup for all scripts:
-%%   Alice cold-calls Bob (Bob accepts)
-%%   Bob cold-calls Charlie (Charlie accepts)
-%%   Bob introduces Alice to Charlie
+%% Changes from original:
+%%   - ActorChannel replaces generic Channel for actor procedures
+%%   - UserNotifyStream / UserCmdStream for the actor's read/write sides
+%%   - Code logic unchanged; only type/proc declarations revised
 %%
-%% Requires: load typed_social_agent.glp first
-%% Requires: load typed_ui_mediator.glp first
-%%
-%% Date: 2026-02-20
+%% Date: 2026-02-21
 
 -mode(system).
+
+%% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
+
+%% --- Mediator-to-actor message types ---
+
+Decision ::= yes ; no.
+ReqId    ::= req(Constant).
+
+%% User -> Mediator (actor writes these)
+UserCmd     ::= decision(Decision, Constant, ReqId)
+              ; accept_intro(Constant, ReqId)
+              ; reject_intro(Constant, ReqId)
+              ; accept_child_intro(Constant, ReqId)
+              ; reject_child_intro(Constant, ReqId)
+              ; approve_child_intro(Constant, Constant, ReqId)
+              ; child_introduce(Constant, Constant, Constant)
+              ; connect(Constant)
+              ; send(Constant, Constant)
+              ; introduce(Constant, Constant).
+
+%% Mediator -> User (actor reads these)
+UserNotify  ::= befriend(Constant, ReqId)
+              ; befriend_intro(Constant, Constant, ReqId)
+              ; child_befriend(Constant, Constant, ReqId)
+              ; connected(Constant)
+              ; rejected
+              ; rejected(Constant)
+              ; received(Constant, Constant).
+
+UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].
+UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
+
+%% Actor's channel end: reads UserNotify, writes UserCmd
+%% (other end of mediator's UserChannel = ch(UserCmdStream, UserNotifyStream?))
+ActorChannel ::= ch(UserNotifyStream, UserCmdStream?).
 
 %% =============================================================================
 %% PLAY 1 — Both accept introduction
@@ -28,11 +59,11 @@
 %% 4. Wait connected(charlie) → send(charlie, 'Hi Charlie')
 %% 5. Wait received(charlie, _) → done
 
-procedure alice1(Channel?).
+procedure alice1(ActorChannel?).
 alice1(ch(In, [connect(bob)|Out?])) :-
     alice1_wait_connected(In?, Out).
 
-procedure alice1_wait_connected(Stream?, Stream).
+procedure alice1_wait_connected(UserNotifyStream?, UserCmdStream).
 alice1_wait_connected([connected(bob)|In],
                       [send(bob, hello)|Out?]) :-
     alice1_wait_intro(In?, Out).
@@ -40,7 +71,7 @@ alice1_wait_connected([_|In], Out?) :-
     otherwise | alice1_wait_connected(In?, Out).
 alice1_wait_connected([], []).
 
-procedure alice1_wait_intro(Stream?, Stream).
+procedure alice1_wait_intro(UserNotifyStream?, UserCmdStream).
 alice1_wait_intro([befriend_intro(bob, charlie, ReqId)|In],
                   [accept_intro(charlie, ReqId?)|Out?]) :-
     ground(ReqId?) |
@@ -49,7 +80,7 @@ alice1_wait_intro([_|In], Out?) :-
     otherwise | alice1_wait_intro(In?, Out).
 alice1_wait_intro([], []).
 
-procedure alice1_wait_charlie(Stream?, Stream).
+procedure alice1_wait_charlie(UserNotifyStream?, UserCmdStream).
 alice1_wait_charlie([connected(charlie)|In],
                     [send(charlie, 'Hi Charlie')|Out?]) :-
     alice1_wait_reply(In?, Out).
@@ -57,7 +88,7 @@ alice1_wait_charlie([_|In], Out?) :-
     otherwise | alice1_wait_charlie(In?, Out).
 alice1_wait_charlie([], []).
 
-procedure alice1_wait_reply(Stream?, Stream).
+procedure alice1_wait_reply(UserNotifyStream?, UserCmdStream).
 alice1_wait_reply([received(charlie, _)|_], []).
 alice1_wait_reply([_|In], Out?) :-
     otherwise | alice1_wait_reply(In?, Out).
@@ -69,7 +100,7 @@ alice1_wait_reply([], []).
 %% 3. Wait connected(charlie), wait received(charlie, _) → introduce(alice, charlie)
 %% 4. Done
 
-procedure bob1(Channel?).
+procedure bob1(ActorChannel?).
 bob1(ch([befriend(alice, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
@@ -77,7 +108,7 @@ bob1(ch([befriend(alice, ReqId)|In],
 bob1(ch([_|In], Out?)) :-
     otherwise | bob1(ch(In?, Out)).
 
-procedure bob1_wait_alice_msg(Stream?, Stream).
+procedure bob1_wait_alice_msg(UserNotifyStream?, UserCmdStream).
 bob1_wait_alice_msg([connected(_)|In], Out?) :-
     bob1_wait_alice_msg(In?, Out).
 bob1_wait_alice_msg([received(alice, _)|In],
@@ -87,14 +118,14 @@ bob1_wait_alice_msg([_|In], Out?) :-
     otherwise | bob1_wait_alice_msg(In?, Out).
 bob1_wait_alice_msg([], []).
 
-procedure bob1_wait_charlie_connected(Stream?, Stream).
+procedure bob1_wait_charlie_connected(UserNotifyStream?, UserCmdStream).
 bob1_wait_charlie_connected([connected(charlie)|In], Out?) :-
     bob1_wait_charlie_msg(In?, Out).
 bob1_wait_charlie_connected([_|In], Out?) :-
     otherwise | bob1_wait_charlie_connected(In?, Out).
 bob1_wait_charlie_connected([], []).
 
-procedure bob1_wait_charlie_msg(Stream?, Stream).
+procedure bob1_wait_charlie_msg(UserNotifyStream?, UserCmdStream).
 bob1_wait_charlie_msg([received(charlie, _)|_],
                       [introduce(alice, charlie)]).
 bob1_wait_charlie_msg([_|In], Out?) :-
@@ -107,7 +138,7 @@ bob1_wait_charlie_msg([], []).
 %% 3. Wait received(alice, _) → send(alice, 'Hi Alice')
 %% 4. Done
 
-procedure charlie1(Channel?).
+procedure charlie1(ActorChannel?).
 charlie1(ch([befriend(bob, ReqId)|In],
             [decision(yes, bob, ReqId?),
              send(bob, hello)|Out?])) :-
@@ -116,7 +147,7 @@ charlie1(ch([befriend(bob, ReqId)|In],
 charlie1(ch([_|In], Out?)) :-
     otherwise | charlie1(ch(In?, Out)).
 
-procedure charlie1_wait_intro(Stream?, Stream).
+procedure charlie1_wait_intro(UserNotifyStream?, UserCmdStream).
 charlie1_wait_intro([befriend_intro(bob, alice, ReqId)|In],
                     [accept_intro(alice, ReqId?)|Out?]) :-
     ground(ReqId?) |
@@ -125,7 +156,7 @@ charlie1_wait_intro([_|In], Out?) :-
     otherwise | charlie1_wait_intro(In?, Out).
 charlie1_wait_intro([], []).
 
-procedure charlie1_wait_alice_msg(Stream?, Stream).
+procedure charlie1_wait_alice_msg(UserNotifyStream?, UserCmdStream).
 charlie1_wait_alice_msg([received(alice, _)|_],
                         [send(alice, 'Hi Alice')]).
 charlie1_wait_alice_msg([_|In], Out?) :-
@@ -137,16 +168,12 @@ charlie1_wait_alice_msg([], []).
 %% =============================================================================
 
 %% --- Alice (play2) ---
-%% 1. connect(bob)
-%% 2. Wait connected(bob) → send(bob, hello)
-%% 3. Wait befriend_intro(bob, charlie, ReqId) → accept_intro(charlie, ReqId)
-%% 4. Wait rejected(charlie) → done
 
-procedure alice2(Channel?).
+procedure alice2(ActorChannel?).
 alice2(ch(In, [connect(bob)|Out?])) :-
     alice2_wait_connected(In?, Out).
 
-procedure alice2_wait_connected(Stream?, Stream).
+procedure alice2_wait_connected(UserNotifyStream?, UserCmdStream).
 alice2_wait_connected([connected(bob)|In],
                       [send(bob, hello)|Out?]) :-
     alice2_wait_intro(In?, Out).
@@ -154,7 +181,7 @@ alice2_wait_connected([_|In], Out?) :-
     otherwise | alice2_wait_connected(In?, Out).
 alice2_wait_connected([], []).
 
-procedure alice2_wait_intro(Stream?, Stream).
+procedure alice2_wait_intro(UserNotifyStream?, UserCmdStream).
 alice2_wait_intro([befriend_intro(bob, charlie, ReqId)|In],
                   [accept_intro(charlie, ReqId?)|Out?]) :-
     ground(ReqId?) |
@@ -163,7 +190,7 @@ alice2_wait_intro([_|In], Out?) :-
     otherwise | alice2_wait_intro(In?, Out).
 alice2_wait_intro([], []).
 
-procedure alice2_wait_rejected(Stream?, Stream).
+procedure alice2_wait_rejected(UserNotifyStream?, UserCmdStream).
 alice2_wait_rejected([rejected(charlie)|_], []).
 alice2_wait_rejected([_|In], Out?) :-
     otherwise | alice2_wait_rejected(In?, Out).
@@ -171,7 +198,7 @@ alice2_wait_rejected([], []).
 
 %% --- Bob (play2) — same as play1 ---
 
-procedure bob2(Channel?).
+procedure bob2(ActorChannel?).
 bob2(ch([befriend(alice, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
@@ -179,7 +206,7 @@ bob2(ch([befriend(alice, ReqId)|In],
 bob2(ch([_|In], Out?)) :-
     otherwise | bob2(ch(In?, Out)).
 
-procedure bob2_wait_alice_msg(Stream?, Stream).
+procedure bob2_wait_alice_msg(UserNotifyStream?, UserCmdStream).
 bob2_wait_alice_msg([connected(_)|In], Out?) :-
     bob2_wait_alice_msg(In?, Out).
 bob2_wait_alice_msg([received(alice, _)|In],
@@ -189,14 +216,14 @@ bob2_wait_alice_msg([_|In], Out?) :-
     otherwise | bob2_wait_alice_msg(In?, Out).
 bob2_wait_alice_msg([], []).
 
-procedure bob2_wait_charlie_connected(Stream?, Stream).
+procedure bob2_wait_charlie_connected(UserNotifyStream?, UserCmdStream).
 bob2_wait_charlie_connected([connected(charlie)|In], Out?) :-
     bob2_wait_charlie_msg(In?, Out).
 bob2_wait_charlie_connected([_|In], Out?) :-
     otherwise | bob2_wait_charlie_connected(In?, Out).
 bob2_wait_charlie_connected([], []).
 
-procedure bob2_wait_charlie_msg(Stream?, Stream).
+procedure bob2_wait_charlie_msg(UserNotifyStream?, UserCmdStream).
 bob2_wait_charlie_msg([received(charlie, _)|_],
                       [introduce(alice, charlie)]).
 bob2_wait_charlie_msg([_|In], Out?) :-
@@ -204,11 +231,8 @@ bob2_wait_charlie_msg([_|In], Out?) :-
 bob2_wait_charlie_msg([], []).
 
 %% --- Charlie (play2) ---
-%% 1. Wait befriend(bob, ReqId) → decision(yes, bob, ReqId) + send(bob, hello)
-%% 2. Wait befriend_intro(bob, alice, ReqId2) → reject_intro(alice, ReqId2)
-%% 3. Done (user rejected, no notification expected)
 
-procedure charlie2(Channel?).
+procedure charlie2(ActorChannel?).
 charlie2(ch([befriend(bob, ReqId)|In],
             [decision(yes, bob, ReqId?),
              send(bob, hello)|Out?])) :-
@@ -217,7 +241,7 @@ charlie2(ch([befriend(bob, ReqId)|In],
 charlie2(ch([_|In], Out?)) :-
     otherwise | charlie2(ch(In?, Out)).
 
-procedure charlie2_wait_intro(Stream?, Stream).
+procedure charlie2_wait_intro(UserNotifyStream?, UserCmdStream).
 charlie2_wait_intro([befriend_intro(bob, alice, ReqId)|_],
                     [reject_intro(alice, ReqId?)]) :-
     ground(ReqId?) | true.
@@ -230,16 +254,12 @@ charlie2_wait_intro([], []).
 %% =============================================================================
 
 %% --- Alice (play3) ---
-%% 1. connect(bob)
-%% 2. Wait connected(bob) → send(bob, hello)
-%% 3. Wait befriend_intro(bob, charlie, ReqId) → reject_intro(charlie, ReqId)
-%% 4. Done (user rejected, no notification expected)
 
-procedure alice3(Channel?).
+procedure alice3(ActorChannel?).
 alice3(ch(In, [connect(bob)|Out?])) :-
     alice3_wait_connected(In?, Out).
 
-procedure alice3_wait_connected(Stream?, Stream).
+procedure alice3_wait_connected(UserNotifyStream?, UserCmdStream).
 alice3_wait_connected([connected(bob)|In],
                       [send(bob, hello)|Out?]) :-
     alice3_wait_intro(In?, Out).
@@ -247,7 +267,7 @@ alice3_wait_connected([_|In], Out?) :-
     otherwise | alice3_wait_connected(In?, Out).
 alice3_wait_connected([], []).
 
-procedure alice3_wait_intro(Stream?, Stream).
+procedure alice3_wait_intro(UserNotifyStream?, UserCmdStream).
 alice3_wait_intro([befriend_intro(bob, charlie, ReqId)|_],
                   [reject_intro(charlie, ReqId?)]) :-
     ground(ReqId?) | true.
@@ -257,7 +277,7 @@ alice3_wait_intro([], []).
 
 %% --- Bob (play3) — same as play1 ---
 
-procedure bob3(Channel?).
+procedure bob3(ActorChannel?).
 bob3(ch([befriend(alice, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
@@ -265,7 +285,7 @@ bob3(ch([befriend(alice, ReqId)|In],
 bob3(ch([_|In], Out?)) :-
     otherwise | bob3(ch(In?, Out)).
 
-procedure bob3_wait_alice_msg(Stream?, Stream).
+procedure bob3_wait_alice_msg(UserNotifyStream?, UserCmdStream).
 bob3_wait_alice_msg([connected(_)|In], Out?) :-
     bob3_wait_alice_msg(In?, Out).
 bob3_wait_alice_msg([received(alice, _)|In],
@@ -275,14 +295,14 @@ bob3_wait_alice_msg([_|In], Out?) :-
     otherwise | bob3_wait_alice_msg(In?, Out).
 bob3_wait_alice_msg([], []).
 
-procedure bob3_wait_charlie_connected(Stream?, Stream).
+procedure bob3_wait_charlie_connected(UserNotifyStream?, UserCmdStream).
 bob3_wait_charlie_connected([connected(charlie)|In], Out?) :-
     bob3_wait_charlie_msg(In?, Out).
 bob3_wait_charlie_connected([_|In], Out?) :-
     otherwise | bob3_wait_charlie_connected(In?, Out).
 bob3_wait_charlie_connected([], []).
 
-procedure bob3_wait_charlie_msg(Stream?, Stream).
+procedure bob3_wait_charlie_msg(UserNotifyStream?, UserCmdStream).
 bob3_wait_charlie_msg([received(charlie, _)|_],
                       [introduce(alice, charlie)]).
 bob3_wait_charlie_msg([_|In], Out?) :-
@@ -290,11 +310,8 @@ bob3_wait_charlie_msg([_|In], Out?) :-
 bob3_wait_charlie_msg([], []).
 
 %% --- Charlie (play3) ---
-%% 1. Wait befriend(bob, ReqId) → decision(yes, bob, ReqId) + send(bob, hello)
-%% 2. Wait befriend_intro(bob, alice, ReqId2) → reject_intro(alice, ReqId2)
-%% 3. Done (user rejected, no notification expected)
 
-procedure charlie3(Channel?).
+procedure charlie3(ActorChannel?).
 charlie3(ch([befriend(bob, ReqId)|In],
             [decision(yes, bob, ReqId?),
              send(bob, hello)|Out?])) :-
@@ -303,7 +320,7 @@ charlie3(ch([befriend(bob, ReqId)|In],
 charlie3(ch([_|In], Out?)) :-
     otherwise | charlie3(ch(In?, Out)).
 
-procedure charlie3_wait_intro(Stream?, Stream).
+procedure charlie3_wait_intro(UserNotifyStream?, UserCmdStream).
 charlie3_wait_intro([befriend_intro(bob, alice, ReqId)|_],
                     [reject_intro(alice, ReqId?)]) :-
     ground(ReqId?) | true.
@@ -314,22 +331,14 @@ charlie3_wait_intro([], []).
 %% =============================================================================
 %% PLAY 4 — CSSG: All four accept child introduction
 %% =============================================================================
-%%
-%% Setup: alice cold-calls bob (bob accepts).
-%% Then: alice initiates child_introduce(carol, bob, dave).
-%% Carol accepts, bob approves, dave accepts.
-%% Carol and dave become friends and exchange messages.
 
 %% --- Alice (play4) ---
-%% 1. connect(bob)
-%% 2. Wait connected(bob) → child_introduce(carol, bob, dave)
-%% 3. Done (fire and forget)
 
-procedure alice4(Channel?).
+procedure alice4(ActorChannel?).
 alice4(ch(In, [connect(bob)|Out?])) :-
     alice4_wait_connected(In?, Out).
 
-procedure alice4_wait_connected(Stream?, Stream).
+procedure alice4_wait_connected(UserNotifyStream?, UserCmdStream).
 alice4_wait_connected([connected(bob)|_],
                       [child_introduce(carol, bob, dave)]).
 alice4_wait_connected([_|In], Out?) :-
@@ -337,11 +346,8 @@ alice4_wait_connected([_|In], Out?) :-
 alice4_wait_connected([], []).
 
 %% --- Bob (play4) ---
-%% 1. Wait befriend(alice, ReqId) → decision(yes, alice, ReqId)
-%% 2. Wait child_befriend(alice, carol, ReqId2) → approve_child_intro(carol, dave, ReqId2)
-%% 3. Done
 
-procedure bob4(Channel?).
+procedure bob4(ActorChannel?).
 bob4(ch([befriend(alice, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
@@ -349,7 +355,7 @@ bob4(ch([befriend(alice, ReqId)|In],
 bob4(ch([_|In], Out?)) :-
     otherwise | bob4(ch(In?, Out)).
 
-procedure bob4_wait_child_intro(Stream?, Stream).
+procedure bob4_wait_child_intro(UserNotifyStream?, UserCmdStream).
 bob4_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
                       [approve_child_intro(carol, dave, ReqId?)]) :-
     ground(ReqId?) | true.
@@ -358,11 +364,8 @@ bob4_wait_child_intro([_|In], Out?) :-
 bob4_wait_child_intro([], []).
 
 %% --- Carol (play4) ---
-%% 1. Wait child_befriend(alice, dave, ReqId) → accept_child_intro(dave, ReqId)
-%% 2. Wait connected(dave) → send(dave, 'Hi Dave')
-%% 3. Wait received(dave, _) → done
 
-procedure carol4(Channel?).
+procedure carol4(ActorChannel?).
 carol4(ch([child_befriend(alice, dave, ReqId)|In],
           [accept_child_intro(dave, ReqId?)|Out?])) :-
     ground(ReqId?) |
@@ -370,7 +373,7 @@ carol4(ch([child_befriend(alice, dave, ReqId)|In],
 carol4(ch([_|In], Out?)) :-
     otherwise | carol4(ch(In?, Out)).
 
-procedure carol4_wait_connected(Stream?, Stream).
+procedure carol4_wait_connected(UserNotifyStream?, UserCmdStream).
 carol4_wait_connected([connected(dave)|In],
                       [send(dave, 'Hi Dave')|Out?]) :-
     carol4_wait_reply(In?, Out).
@@ -378,18 +381,15 @@ carol4_wait_connected([_|In], Out?) :-
     otherwise | carol4_wait_connected(In?, Out).
 carol4_wait_connected([], []).
 
-procedure carol4_wait_reply(Stream?, Stream).
+procedure carol4_wait_reply(UserNotifyStream?, UserCmdStream).
 carol4_wait_reply([received(dave, _)|_], []).
 carol4_wait_reply([_|In], Out?) :-
     otherwise | carol4_wait_reply(In?, Out).
 carol4_wait_reply([], []).
 
 %% --- Dave (play4) ---
-%% 1. Wait child_befriend(bob, carol, ReqId) → accept_child_intro(carol, ReqId)
-%% 2. Wait received(carol, _) → send(carol, 'Hi Carol')
-%% 3. Done
 
-procedure dave4(Channel?).
+procedure dave4(ActorChannel?).
 dave4(ch([child_befriend(bob, carol, ReqId)|In],
          [accept_child_intro(carol, ReqId?)|Out?])) :-
     ground(ReqId?) |
@@ -397,7 +397,7 @@ dave4(ch([child_befriend(bob, carol, ReqId)|In],
 dave4(ch([_|In], Out?)) :-
     otherwise | dave4(ch(In?, Out)).
 
-procedure dave4_wait_msg(Stream?, Stream).
+procedure dave4_wait_msg(UserNotifyStream?, UserCmdStream).
 dave4_wait_msg([connected(_)|In], Out?) :-
     dave4_wait_msg(In?, Out).
 dave4_wait_msg([received(carol, _)|_],
@@ -409,19 +409,14 @@ dave4_wait_msg([], []).
 %% =============================================================================
 %% PLAY 5 — CSSG: Bob (p2) rejects
 %% =============================================================================
-%%
-%% Setup: alice cold-calls bob (bob accepts).
-%% Then: alice initiates child_introduce(carol, bob, dave).
-%% Carol accepts, bob rejects. Dave never learns.
-%% Carol gets rejected(dave).
 
 %% --- Alice (play5) — same as play4 ---
 
-procedure alice5(Channel?).
+procedure alice5(ActorChannel?).
 alice5(ch(In, [connect(bob)|Out?])) :-
     alice5_wait_connected(In?, Out).
 
-procedure alice5_wait_connected(Stream?, Stream).
+procedure alice5_wait_connected(UserNotifyStream?, UserCmdStream).
 alice5_wait_connected([connected(bob)|_],
                       [child_introduce(carol, bob, dave)]).
 alice5_wait_connected([_|In], Out?) :-
@@ -430,7 +425,7 @@ alice5_wait_connected([], []).
 
 %% --- Bob (play5) — rejects child intro ---
 
-procedure bob5(Channel?).
+procedure bob5(ActorChannel?).
 bob5(ch([befriend(alice, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
@@ -438,7 +433,7 @@ bob5(ch([befriend(alice, ReqId)|In],
 bob5(ch([_|In], Out?)) :-
     otherwise | bob5(ch(In?, Out)).
 
-procedure bob5_wait_child_intro(Stream?, Stream).
+procedure bob5_wait_child_intro(UserNotifyStream?, UserCmdStream).
 bob5_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
                       [reject_child_intro(carol, ReqId?)]) :-
     ground(ReqId?) | true.
@@ -448,7 +443,7 @@ bob5_wait_child_intro([], []).
 
 %% --- Carol (play5) — accepts but gets rejected ---
 
-procedure carol5(Channel?).
+procedure carol5(ActorChannel?).
 carol5(ch([child_befriend(alice, dave, ReqId)|In],
           [accept_child_intro(dave, ReqId?)|Out?])) :-
     ground(ReqId?) |
@@ -456,7 +451,7 @@ carol5(ch([child_befriend(alice, dave, ReqId)|In],
 carol5(ch([_|In], Out?)) :-
     otherwise | carol5(ch(In?, Out)).
 
-procedure carol5_wait_rejected(Stream?, Stream).
+procedure carol5_wait_rejected(UserNotifyStream?, UserCmdStream).
 carol5_wait_rejected([rejected(dave)|_], []).
 carol5_wait_rejected([_|In], Out?) :-
     otherwise | carol5_wait_rejected(In?, Out).
@@ -464,24 +459,20 @@ carol5_wait_rejected([], []).
 
 %% --- Dave (play5) — never receives proposal, idle ---
 
-procedure dave5(Channel?).
+procedure dave5(ActorChannel?).
 dave5(ch(_, [])).
 
 %% =============================================================================
 %% PLAY 6 — CSSG: Carol (c1) rejects
 %% =============================================================================
-%%
-%% Setup: alice cold-calls bob (bob accepts).
-%% Then: alice initiates child_introduce(carol, bob, dave).
-%% Carol rejects. Bob approves, dave accepts → gets rejected(carol).
 
 %% --- Alice (play6) — same as play4 ---
 
-procedure alice6(Channel?).
+procedure alice6(ActorChannel?).
 alice6(ch(In, [connect(bob)|Out?])) :-
     alice6_wait_connected(In?, Out).
 
-procedure alice6_wait_connected(Stream?, Stream).
+procedure alice6_wait_connected(UserNotifyStream?, UserCmdStream).
 alice6_wait_connected([connected(bob)|_],
                       [child_introduce(carol, bob, dave)]).
 alice6_wait_connected([_|In], Out?) :-
@@ -490,7 +481,7 @@ alice6_wait_connected([], []).
 
 %% --- Bob (play6) — approves ---
 
-procedure bob6(Channel?).
+procedure bob6(ActorChannel?).
 bob6(ch([befriend(alice, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
@@ -498,7 +489,7 @@ bob6(ch([befriend(alice, ReqId)|In],
 bob6(ch([_|In], Out?)) :-
     otherwise | bob6(ch(In?, Out)).
 
-procedure bob6_wait_child_intro(Stream?, Stream).
+procedure bob6_wait_child_intro(UserNotifyStream?, UserCmdStream).
 bob6_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
                       [approve_child_intro(carol, dave, ReqId?)]) :-
     ground(ReqId?) | true.
@@ -508,7 +499,7 @@ bob6_wait_child_intro([], []).
 
 %% --- Carol (play6) — rejects ---
 
-procedure carol6(Channel?).
+procedure carol6(ActorChannel?).
 carol6(ch([child_befriend(alice, dave, ReqId)|_],
           [reject_child_intro(dave, ReqId?)])) :-
     ground(ReqId?) | true.
@@ -517,7 +508,7 @@ carol6(ch([_|In], Out?)) :-
 
 %% --- Dave (play6) — accepts but gets rejected ---
 
-procedure dave6(Channel?).
+procedure dave6(ActorChannel?).
 dave6(ch([child_befriend(bob, carol, ReqId)|In],
          [accept_child_intro(carol, ReqId?)|Out?])) :-
     ground(ReqId?) |
@@ -525,7 +516,7 @@ dave6(ch([child_befriend(bob, carol, ReqId)|In],
 dave6(ch([_|In], Out?)) :-
     otherwise | dave6(ch(In?, Out)).
 
-procedure dave6_wait_rejected(Stream?, Stream).
+procedure dave6_wait_rejected(UserNotifyStream?, UserCmdStream).
 dave6_wait_rejected([rejected(carol)|_], []).
 dave6_wait_rejected([_|In], Out?) :-
     otherwise | dave6_wait_rejected(In?, Out).
@@ -534,19 +525,14 @@ dave6_wait_rejected([], []).
 %% =============================================================================
 %% PLAY 7 — CSSG: Dave (c2) rejects
 %% =============================================================================
-%%
-%% Setup: alice cold-calls bob (bob accepts).
-%% Then: alice initiates child_introduce(carol, bob, dave).
-%% Carol accepts, bob approves, dave rejects.
-%% Carol gets rejected(dave).
 
 %% --- Alice (play7) — same as play4 ---
 
-procedure alice7(Channel?).
+procedure alice7(ActorChannel?).
 alice7(ch(In, [connect(bob)|Out?])) :-
     alice7_wait_connected(In?, Out).
 
-procedure alice7_wait_connected(Stream?, Stream).
+procedure alice7_wait_connected(UserNotifyStream?, UserCmdStream).
 alice7_wait_connected([connected(bob)|_],
                       [child_introduce(carol, bob, dave)]).
 alice7_wait_connected([_|In], Out?) :-
@@ -555,7 +541,7 @@ alice7_wait_connected([], []).
 
 %% --- Bob (play7) — approves ---
 
-procedure bob7(Channel?).
+procedure bob7(ActorChannel?).
 bob7(ch([befriend(alice, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
@@ -563,7 +549,7 @@ bob7(ch([befriend(alice, ReqId)|In],
 bob7(ch([_|In], Out?)) :-
     otherwise | bob7(ch(In?, Out)).
 
-procedure bob7_wait_child_intro(Stream?, Stream).
+procedure bob7_wait_child_intro(UserNotifyStream?, UserCmdStream).
 bob7_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
                       [approve_child_intro(carol, dave, ReqId?)]) :-
     ground(ReqId?) | true.
@@ -573,7 +559,7 @@ bob7_wait_child_intro([], []).
 
 %% --- Carol (play7) — accepts but gets rejected ---
 
-procedure carol7(Channel?).
+procedure carol7(ActorChannel?).
 carol7(ch([child_befriend(alice, dave, ReqId)|In],
           [accept_child_intro(dave, ReqId?)|Out?])) :-
     ground(ReqId?) |
@@ -581,7 +567,7 @@ carol7(ch([child_befriend(alice, dave, ReqId)|In],
 carol7(ch([_|In], Out?)) :-
     otherwise | carol7(ch(In?, Out)).
 
-procedure carol7_wait_rejected(Stream?, Stream).
+procedure carol7_wait_rejected(UserNotifyStream?, UserCmdStream).
 carol7_wait_rejected([rejected(dave)|_], []).
 carol7_wait_rejected([_|In], Out?) :-
     otherwise | carol7_wait_rejected(In?, Out).
@@ -589,7 +575,7 @@ carol7_wait_rejected([], []).
 
 %% --- Dave (play7) — rejects ---
 
-procedure dave7(Channel?).
+procedure dave7(ActorChannel?).
 dave7(ch([child_befriend(bob, carol, ReqId)|_],
          [reject_child_intro(carol, ReqId?)])) :-
     ground(ReqId?) | true.

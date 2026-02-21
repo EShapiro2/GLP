@@ -4,22 +4,27 @@
 
 ## Current state
 
-The full CSSG (Child-Safe Social Graph) implementation is complete and working.
+All three precisely-typed files (agent, mediator, actors) typecheck cleanly.
 
-- SG ack/nack friend introduction protocol: implemented and tested (plays 1–3)
-- CSSG four-party consent protocol: implemented and tested (plays 4–7)
-- All files typecheck and load successfully in the REPL
-- All plays run correctly: silent (play1–7 with sink) and Flutter (fplay1–7 with tagged output)
-- Two separate Flutter apps: SG (main.dart) and CSSG (main_cssg.dart)
+Three mode errors in the mediator's befriend/befriend_intro/child_befriend clauses
+have been fixed. The fix involved swapping writer/reader annotations in the receive
+pattern vs pending storage, and updating the PendingValue type definition to match:
+- `PendingValue ::= response(Response) ; channel(IntroChannel) ; error.`
+  (stores writers, not readers — mediator receives writer from agent, stores it in
+  pending, and later retrieves the reader to send back to the agent)
+
+Plays now progress through the befriend handshake (mediator correctly processes
+non-ground messages) but still suspend during the agent's handling of the decision
+response. This is a separate issue from the mode errors that were fixed.
 
 ## Files
 
 | File | Status | Description |
 |------|--------|-------------|
-| `typed_social_agent.glp` | Typechecks ✅, runs ✅ | Agent with SG intro + CSSG four-party consent |
-| `typed_ui_mediator.glp` | Typechecks ✅, runs ✅ | Mediator with SG + CSSG clauses |
-| `typed_ui_actors.glp` | Typechecks ✅, runs ✅ | Seven test scripts: play1–7 |
-| `play_ui_sim_boot.glp` | Typechecks ✅, runs ✅ | Boot goals: network, tee/sink, tee/tagged |
+| `typed_social_agent.glp` | Typechecks ✅ | Agent with SG intro + CSSG four-party consent |
+| `typed_ui_mediator.glp` | Typechecks ✅ | Mediator with SG + CSSG clauses (mode errors fixed) |
+| `typed_ui_actors.glp` | Typechecks ✅ | Seven test scripts: play1–7 |
+| `play_ui_sim_boot.glp` | Typechecks ✅ | Boot goals: network, tee/sink, tee/tagged |
 
 ## Architecture
 

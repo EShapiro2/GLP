@@ -1,16 +1,18 @@
-%% typed_social_agent.glp - Fully typed social agent (ack/nack intro variant)
+%% typed_social_agent.glp - Precisely typed social agent (ack/nack intro variant)
 %%
-%% Typed version of social_agent.glp with precise message types.
-%% Channel operations use prelude Channel ::= ch(Stream, Stream?).
+%% Copy of typed_book/cssg/typed_social_agent.glp with precise types.
+%% Uses subtyping to allow precisely-typed streams to flow through
+%% generic Stream positions (e.g., OutputsList).
 %%
-%% Friend-mediated introductions follow the original SG design:
-%% the channel is passed to the user via the mediator and returned
-%% with accept/reject. On accept, ack(Id) is sent on the channel
-%% and a concurrent intro_await_peer reads the peer's ack/nack,
-%% writing the result to a writer that is injected into UserIn.
-%% On reject, nack is sent and the channel is closed immediately.
+%% Changes from original:
+%%   - AgentToUserMsg / AgentToUserStream for agent→user output
+%%   - MediatorToAgentMsg / MediatorToAgentStream for mediator→agent input
+%%   - AgentChannel: precise channel between agent and mediator
+%%   - IntroChannel operations use generic Channel (protocol transition
+%%     from handshake to friend messaging can't be typed precisely)
+%%   - Code logic unchanged; only type/proc declarations added
 %%
-%% Date: 2026-02-20
+%% Date: 2026-02-21
 
 -mode(system).
 
@@ -22,7 +24,12 @@
 %%   Stream ::= [] ; [_|Stream].
 %%   Channel ::= ch(Stream, Stream?).
 
-Response ::= accept(Channel) ; no.
+%% Friend messages (after connection established)
+FriendMsg     ::= msg(Constant, Constant, FriendContent).
+FriendStream  ::= [] ; [FriendMsg | FriendStream].
+FriendChannel ::= ch(FriendStream, FriendStream?).
+
+Response ::= accept(FriendChannel) ; no.
 Decision ::= yes ; no.
 Handshake ::= ack(Constant) ; nack.
 PendingValue ::= response(Response?) ; channel(_) ; error.
@@ -74,6 +81,19 @@ UserInMsg ::= msg(Constant, Constant, UserContent)
             ; intro_result(Constant, Channel)
             ; intro_rejected(Constant).
 UserInStream ::= [] ; [UserInMsg | UserInStream].
+
+%% What the mediator actually writes to the agent (subset of UserInMsg)
+%% MediatorToAgentMsg <: UserInMsg via subtyping
+MediatorToAgentMsg ::= msg(Constant, Constant, UserContent).
+MediatorToAgentStream ::= [] ; [MediatorToAgentMsg | MediatorToAgentStream].
+
+%% Precise stream for agent→user output
+AgentToUserMsg ::= msg(Constant, Constant, AgentContent).
+AgentToUserStream ::= [] ; [AgentToUserMsg | AgentToUserStream].
+
+%% Precise channel between agent and mediator
+%% Read end: agent-to-user messages; Write end: mediator-to-agent messages
+AgentChannel ::= ch(AgentToUserStream, MediatorToAgentStream?).
 
 %% NetIn carries msg/2 (cold call) and msg/3 (friend messages)
 NetInMsg ::= msg(Constant, NetColdCall)
@@ -163,6 +183,9 @@ close_outputs([]).
 %%   nack          → write intro_rejected
 %%
 %% The result is injected into UserIn by inject_intro_result.
+%%
+%% Uses generic Channel because after the handshake the channel
+%% transitions from intro protocol to friend messaging protocol.
 
 procedure intro_await_peer(Constant?, Channel?, IntroResult).
 
@@ -333,9 +356,9 @@ agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Introduction from friend — pass channel to user via mediator
-agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch?))|NetIn], Outs) :-
+agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch))|NetIn], Outs) :-
     Id? =?= Id1?, ground(Other?) |
-    lookup_send('_user', msg(agent, '_user', befriend_intro(From?, Other?, Ch)), Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', befriend_intro(From?, Other?, Ch?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% --- CSSG network messages ---
