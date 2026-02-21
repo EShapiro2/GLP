@@ -102,15 +102,6 @@ remove_entry(Key, [Entry|Rest], [Entry?|Rest1?]) :-
     otherwise | remove_entry(Key?, Rest?, Rest1).
 remove_entry(_, [], []).
 %% =============================================================================
-%% AWAIT_UNFRIEND: Wait for Done, then remove entry and notify user
-%% =============================================================================
-procedure await_unfriend(_?, _?, _?, MsgStream?, Friends?).
-await_unfriend(Done, Id, Target, In, Fs) :-
-    Done? =?= true, ground(Target?) |
-    remove_entry(Target?, Fs?, Fs1),
-    lookup_send(user, msg(agent, user, unfriended(Target?)), Fs1?, Fs2),
-    social_graph(Id?, In?, Fs2?).
-%% =============================================================================
 %% SOCIAL GRAPH PROTOCOL - Main event loop
 %% =============================================================================
 procedure social_graph(_?, Stream?, Friends?).
@@ -143,13 +134,14 @@ social_graph(Id, [msg(user, To, remove(Target))|In], Fs) :-
 %% User requests unfriend
 social_graph(Id, [msg(user, To, unfriend(Target))|In], Fs) :-
     ground(Id?), ground(Target?), Id? =?= To? |
-    lookup_send(Target?, unfriend(Id?, Done), Fs?, Fs1),
-    await_unfriend(Done?, Id?, Target?, In?, Fs1?).
+    lookup_send(Target?, unfriend(Id?), Fs?, Fs1),
+    remove_entry(Target?, Fs1?, Fs2),
+    lookup_send(user, msg(agent, user, unfriended(Target?)), Fs2?, Fs3),
+    social_graph(Id?, In?, Fs3?).
 %% Receiving unfriend from friend (via tagged stream)
-social_graph(Id, [tagged(From, unfriend(Src, Done))|In], Fs) :-
+social_graph(Id, [tagged(From, unfriend(Src))|In], Fs) :-
     ground(Id?), From? =?= Src? |
     remove_entry(From?, Fs?, Fs1),
-    Done? = true,
     social_graph(Id?, In?, Fs1?).
 %% Skip unhandled messages (MUST BE LAST)
 social_graph(Id, [_|In], Fs) :-
