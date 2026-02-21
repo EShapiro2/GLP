@@ -40,6 +40,14 @@ class AgentRuntime {
   final String stdlibDir;
   final List<String> friends;
 
+  /// Entry-point goal label, e.g. 'agent_init/3', 'agent_init_play/3',
+  /// 'parent_init/4', 'child_init/3'.
+  final String goalLabel;
+
+  /// Extra arguments inserted between Id (arg 0) and NetIn (last arg).
+  /// For example, ['carol', '4'] for parent_init(alice, carol, 4, NetIn).
+  final List<String> extraArgs;
+
   // Callbacks set by UI layer
   void Function(String line)? onOutput;
   void Function(String tag, String message)? onLog;
@@ -67,6 +75,8 @@ class AgentRuntime {
     required this.glpSources,
     required this.stdlibDir,
     this.friends = const [],
+    this.goalLabel = 'agent_init/3',
+    this.extraArgs = const [],
   });
 
   bool get initialized => _initialized;
@@ -150,31 +160,54 @@ class AgentRuntime {
       traceSink: (line) => _log('GLP: $line'));
     _scheduler!.resetDisplayNumbering();
 
-    // Start goal: agent_init(Id, UserIn, NetIn)
-    final entryPC = program.labels['agent_init/3'];
-    _log('INIT: agent_init/3 entryPC=$entryPC');
+    // Start goal using configurable goalLabel and extraArgs.
+    // Args are always: [Id, ...extraArgs, NetIn].
+    // For backward compatibility, agent_init/3 also gets UserIn before NetIn.
+    final entryPC = program.labels[goalLabel];
+    _log('INIT: $goalLabel entryPC=$entryPC');
     if (entryPC == null) {
-      _output('[ERROR] Predicate agent_init/3 not found');
+      _output('[ERROR] Predicate $goalLabel not found');
       return;
     }
 
     final heap = _runtime!.heap;
+    final args = <int, rt.Term>{};
+    var argIdx = 0;
+
+    // Arg 0: agent ID (always first)
     final (arg0Writer, arg0Reader) = heap.allocateVariable();
     heap.bindVariable(arg0Writer, rt.ConstTerm(agentIdLower));
-    final (arg1Writer, arg1Reader) = heap.allocateVariable();
-    heap.bindVariable(arg1Writer, rt.VarRef(userInReader));
-    final (arg2Writer, arg2Reader) = heap.allocateVariable();
-    heap.bindVariable(arg2Writer, rt.VarRef(netInReader));
+    args[argIdx++] = rt.VarRef(arg0Reader);
 
-    final env = CallEnv(args: {
-      0: rt.VarRef(arg0Reader),
-      1: rt.VarRef(arg1Reader),
-      2: rt.VarRef(arg2Reader),
-    });
+    // For agent_init/3 (legacy): insert UserIn before NetIn
+    if (goalLabel == 'agent_init/3') {
+      final (userWriter, userReader) = heap.allocateVariable();
+      heap.bindVariable(userWriter, rt.VarRef(userInReader));
+      args[argIdx++] = rt.VarRef(userReader);
+    }
+
+    // Extra args (e.g. child name, play number) — inserted as constants
+    for (final extra in extraArgs) {
+      final (eWriter, eReader) = heap.allocateVariable();
+      // Try to parse as int, otherwise use as atom
+      final intVal = int.tryParse(extra);
+      heap.bindVariable(eWriter, rt.ConstTerm(intVal ?? extra));
+      args[argIdx++] = rt.VarRef(eReader);
+    }
+
+    // Last arg: NetIn (always last)
+    final (netWriter, netReader) = heap.allocateVariable();
+    heap.bindVariable(netWriter, rt.VarRef(netInReader));
+    args[argIdx++] = rt.VarRef(netReader);
+
+    final env = CallEnv(args: args);
     _runtime!.setGoalEnv(1, env);
     _runtime!.setGoalProgram(1, 'main');
     _runtime!.gq.enqueue(GoalRef(1, entryPC));
-    _output('[GOAL] Started agent_init($agentIdLower, UserIn, NetIn)');
+
+    final argsDesc = [agentIdLower, ...extraArgs, 'NetIn'].join(', ');
+    final goalName = goalLabel.split('/').first;
+    _output('[GOAL] Started $goalName($argsDesc)');
 
     // Initial run
     await _runUntilQuiescent();
@@ -312,6 +345,9 @@ class AgentRuntime {
 
   /// Run the scheduler until quiescent.
   /// Returns the execution status name, or null if not initialized.
+  ///
+  /// Per agent-runtime-spec.md Section 3: one drain (run all runnable goals
+  /// until quiescent), one flush (send all queued outbound messages).
   Future<String?> runUntilQuiescent() async {
     return _runUntilQuiescent();
   }
@@ -324,39 +360,19 @@ class AgentRuntime {
     }
 
     try {
-      String? lastStatus;
+      // Per spec: drain all runnable goals, then flush outbound messages.
+      final result = _scheduler!.drainWithStatus(debug: glpTraceEnabled);
+      _log('RUN: status=${result.status}, goals=${result.goalsRan.length}');
+      goalCount += result.goalsRan.length;
 
-      // Loop until truly quiescent: no runnable goals and no pending messages.
-      // Each iteration may produce new goals (from suspension processing)
-      // or new outbound messages (from flushMessages).
-      for (var round = 0; round < 20; round++) {
-        final result = await _scheduler!.drainAsyncWithStatus(
-          maxCycles: 1000,
-          debug: glpTraceEnabled,
-        );
-        _log('RUN[$round]: status=${result.status}, goals=${result.goalsRan.length}');
-        goalCount += result.goalsRan.length;
-        lastStatus = result.status.name;
-
-        if (result.status == ExecutionStatus.suspended && result.blockingReaders.isNotEmpty) {
-          _log('RUN[$round]: suspended, ${result.blockingReaders.length} blocking readers');
-          _ctx!.processSuspension(result.blockingReaders);
-        }
-
-        final messagesFlushed = _ctx!.flushMessages();
-        if (messagesFlushed > 0) {
-          _log('RUN[$round]: flushed $messagesFlushed messages');
-        }
-
-        // If no goals ran and nothing was flushed, we're truly quiescent
-        if (result.goalsRan.isEmpty && messagesFlushed == 0) {
-          break;
-        }
+      final messagesFlushed = _ctx!.flushMessages();
+      if (messagesFlushed > 0) {
+        _log('RUN: flushed $messagesFlushed messages');
       }
 
       updateStats();
-      _log('RUN: done (status=$lastStatus)');
-      return lastStatus;
+      _log('RUN: done (status=${result.status.name})');
+      return result.status.name;
     } catch (e, st) {
       _log('RUN ERROR: $e\n$st');
       return 'error';
