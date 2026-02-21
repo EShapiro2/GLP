@@ -1,0 +1,62 @@
+%% temp.glp - Proposed unfriend additions for typed_social_agent.glp
+
+%% =============================================================================
+%% TYPE ADDITIONS
+%% =============================================================================
+
+%% Add unfriend(Constant) to UserContent
+UserContent ::= connect(Constant)
+              ; decision(Decision, Constant, PendingValue)
+              ; send(Constant, Constant)
+              ; introduce(Constant, Constant)
+              ; accept_intro(Constant, PendingValue)
+              ; reject_intro(Constant)
+              ; response(Response)
+              ; unfriend(Constant).
+
+%% Add unfriend(Constant) to FriendContent
+FriendContent ::= response(Response)
+                ; text(Constant)
+                ; intro(Constant, Channel)
+                ; unfriend(Constant).
+
+%% Add unfriended(Constant) to AgentContent
+AgentContent ::= befriend(Constant, Response)
+               ; befriend_intro(Constant, Constant, Channel)
+               ; connected(Constant)
+               ; rejected
+               ; rejected(Constant)
+               ; received(Constant, Constant)
+               ; unfriended(Constant).
+
+%% =============================================================================
+%% REMOVE_OUTPUT
+%% =============================================================================
+
+procedure remove_output(String?, OutputsList?, OutputsList).
+remove_output(Key, [output(K, [])|Rest], Rest?) :- Key? =?= K? | true.
+remove_output(Key, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    remove_output(Key?, Rest?, Rest1).
+remove_output(_, [], []).
+
+%% =============================================================================
+%% USER-INITIATED UNFRIEND
+%% =============================================================================
+
+agent(Id, [msg('_user', Id1, unfriend(Target))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(Target?) |
+    lookup_send(Target?, msg(Id?, Target?, unfriend(Id?)), Outs?, Outs1),
+    remove_output(Target?, Outs1?, Outs2),
+    lookup_send('_user', msg(agent, '_user', unfriended(Target?)), Outs2?, Outs3),
+    agent(Id?, UserIn?, NetIn?, Outs3?).
+
+%% =============================================================================
+%% NETWORK-RECEIVED UNFRIEND (from friend)
+%% =============================================================================
+
+agent(Id, UserIn, [msg(From, Id1, unfriend(_))|NetIn], Outs) :-
+    Id? =?= Id1?, ground(From?) |
+    remove_output(From?, Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
