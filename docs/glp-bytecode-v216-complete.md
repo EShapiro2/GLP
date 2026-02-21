@@ -977,12 +977,12 @@ If arg.isWriter:
 
 **Critical**: The fresh variable is allocated UNBOUND. It will be bound later if the clause body provides a value through subsequent GetWriterValue on the same variable.
 
-**Case 2: Argument is reader**
+**Case 2: Argument is reader — FAIL**
 ```
 If arg.isReader:
-  clauseVars[Xi] = arg.readerId
+  FAIL (soft-fail to next clause)
 ```
-Reader-to-reader needs no conversion.
+A writers substitution assigns only writers (CGLP paper, Definition 5), so it cannot make two readers equal. This is the Reader × Reader = fail entry in the term matching table (GLP paper, Definition 10). See also §6.3.
 
 **Case 3: Argument is known term**
 ```

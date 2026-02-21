@@ -22,6 +22,9 @@
 Response ::= accept(Channel) ; no.
 Decision ::= yes ; no.
 ReqId    ::= req(Constant).
+IntroContent ::= ack(Constant) ; nack.
+IntroStream  ::= [] ; [IntroContent | IntroStream].
+IntroChannel ::= ch(IntroStream, IntroStream?).
 
 %% --- User channel messages (all ground, mediator-specific) ---
 
@@ -47,7 +50,7 @@ UserNotify  ::= befriend(Constant, ReqId)
               ; received(Constant, Constant).
 
 %% --- Pending entries ---
-PendingValue ::= response(Response?) ; channel(Channel?) ; error.
+PendingValue ::= response(Response?) ; channel(IntroChannel?) ; error.
 PendingEntry ::= pending(ReqId, PendingValue).
 PendingList  ::= [] ; [PendingEntry | PendingList].
 
