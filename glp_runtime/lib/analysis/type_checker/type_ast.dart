@@ -206,6 +206,12 @@ class ProcDecl {
 
   String get key => '$name/$arity';
 
+  /// Key for TypeEnvironment lookup, including module path for imported procedures.
+  /// - Local/exported: 'factorial/2'
+  /// - Imported with path: 'math#factorial/2'
+  /// - Imported from ancestor (no path): 'factorial/2'
+  String get qualifiedKey => '$qualifiedName/$arity';
+
   /// Get the mode for argument at index i (true = input mode)
   bool isInputArg(int i) {
     final arg = argTypes[i];
