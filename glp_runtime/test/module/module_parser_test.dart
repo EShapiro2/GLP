@@ -34,22 +34,14 @@ void main() {
       expect(tokens[5].type, TokenType.DOT);
     });
 
-    test('lexer handles export declaration tokens', () {
-      final lexer = Lexer('-export([foo/1, bar/2]).');
+    test('lexer handles exported keyword tokens', () {
+      final lexer = Lexer('exported procedure foo(Integer?, Integer).');
       final tokens = lexer.tokenize();
 
-      expect(tokens.any((t) => t.lexeme == 'export'), true);
-      expect(tokens.any((t) => t.lexeme == 'foo'), true);
-      expect(tokens.any((t) => t.type == TokenType.SLASH), true);
-    });
-
-    test('lexer handles import declaration tokens', () {
-      final lexer = Lexer('-import([math, io]).');
-      final tokens = lexer.tokenize();
-
-      expect(tokens.any((t) => t.lexeme == 'import'), true);
-      expect(tokens.any((t) => t.lexeme == 'math'), true);
-      expect(tokens.any((t) => t.lexeme == 'io'), true);
+      expect(tokens[0].type, TokenType.ATOM);
+      expect(tokens[0].lexeme, 'exported');
+      expect(tokens[1].type, TokenType.PROCEDURE);
+      expect(tokens[1].lexeme, 'procedure');
     });
   });
 
@@ -71,8 +63,6 @@ factorial(0, 1).
     });
 
     test('parser parses hierarchical module name', () {
-      // Note: This test is for future hierarchical module support
-      // For now, we just verify simple module names work
       final source = '-module(math).\nfoo.';
       final lexer = Lexer(source);
       final tokens = lexer.tokenize();
@@ -80,110 +70,6 @@ factorial(0, 1).
       final module = parser.parseModule();
 
       expect(module.declaration!.name, 'math');
-    });
-  });
-
-  group('Module Parser - Export Declaration', () {
-    test('parser parses export declaration', () {
-      final source = '''
--module(math).
--export([factorial/2, gcd/3]).
-factorial(0, 1).
-gcd(A, 0, A?).
-''';
-      final lexer = Lexer(source);
-      final tokens = lexer.tokenize();
-      final parser = Parser(tokens);
-      final module = parser.parseModule();
-
-      expect(module.exports.length, 1);
-      expect(module.exports[0].exports.length, 2);
-      expect(module.exports[0].exports[0].name, 'factorial');
-      expect(module.exports[0].exports[0].arity, 2);
-      expect(module.exports[0].exports[1].name, 'gcd');
-      expect(module.exports[0].exports[1].arity, 3);
-    });
-
-    test('parser parses multiple export declarations', () {
-      final source = '''
--module(math).
--export([factorial/2]).
--export([gcd/3]).
-factorial(0, 1).
-gcd(A, 0, A?).
-''';
-      final lexer = Lexer(source);
-      final tokens = lexer.tokenize();
-      final parser = Parser(tokens);
-      final module = parser.parseModule();
-
-      expect(module.exports.length, 2);
-      expect(module.exportedSignatures, {'factorial/2', 'gcd/3'});
-    });
-
-    test('parser parses empty export list', () {
-      final source = '''
--module(math).
--export([]).
-foo.
-''';
-      final lexer = Lexer(source);
-      final tokens = lexer.tokenize();
-      final parser = Parser(tokens);
-      final module = parser.parseModule();
-
-      expect(module.exports.length, 1);
-      expect(module.exports[0].exports.length, 0);
-    });
-  });
-
-  group('Module Parser - Import Declaration', () {
-    test('parser parses import declaration', () {
-      final source = '''
--module(main).
--import([math, io]).
-boot.
-''';
-      final lexer = Lexer(source);
-      final tokens = lexer.tokenize();
-      final parser = Parser(tokens);
-      final module = parser.parseModule();
-
-      expect(module.imports.length, 1);
-      expect(module.imports[0].imports.length, 2);
-      expect(module.imports[0].imports[0], 'math');
-      expect(module.imports[0].imports[1], 'io');
-    });
-
-    test('parser parses multiple import declarations', () {
-      final source = '''
--module(main).
--import([math]).
--import([io]).
-boot.
-''';
-      final lexer = Lexer(source);
-      final tokens = lexer.tokenize();
-      final parser = Parser(tokens);
-      final module = parser.parseModule();
-
-      expect(module.imports.length, 2);
-      expect(module.importedModules, ['math', 'io']);
-    });
-
-    test('parser parses empty import list', () {
-      final source = '''
--module(main).
--import([]).
-boot.
-''';
-      final lexer = Lexer(source);
-      final tokens = lexer.tokenize();
-      final parser = Parser(tokens);
-      final module = parser.parseModule();
-
-      expect(module.imports.length, 1);
-      expect(module.imports[0].imports.length, 0);
     });
   });
 
@@ -280,11 +166,11 @@ boot :- true | foo(x) # bar.
   });
 
   group('Module Parser - Complete Module', () {
-    test('parser parses complete module file', () {
+    test('parser parses complete module file with exported procedure', () {
       final source = '''
 -module(math).
--export([factorial/2, gcd/3]).
 
+exported procedure factorial(Integer?, Integer).
 factorial(0, 1).
 factorial(N, F) :-
     N? > 0 |
@@ -292,6 +178,7 @@ factorial(N, F) :-
     factorial(N1?, F1),
     F := N? * F1?.
 
+exported procedure gcd(Integer?, Integer?, Integer).
 gcd(A, 0, A?).
 gcd(A, B, G) :-
     B? > 0 |
@@ -322,23 +209,20 @@ bar(X) :- baz(X?).
 
       expect(module.declaration, isNull);
       expect(module.name, isNull);
-      expect(module.exports, isEmpty);
-      expect(module.imports, isEmpty);
+      expect(module.procDeclarations, isEmpty);
       expect(module.procedures.length, 2);
     });
 
-    test('legacy parse() skips declarations', () {
+    test('legacy parse() skips module declaration', () {
       final source = '''
 -module(math).
--export([foo/0]).
--import([bar]).
 
 foo.
 ''';
       final lexer = Lexer(source);
       final tokens = lexer.tokenize();
       final parser = Parser(tokens);
-      final program = parser.parse();  // Legacy parse, skips declarations
+      final program = parser.parse();
 
       expect(program.procedures.length, 1);
       expect(program.procedures[0].name, 'foo');
@@ -396,9 +280,8 @@ double(N, R) :- true | R := N? * 2.
     test('parser parses module with remote goals', () {
       final source = '''
 -module(main).
--import([math]).
--export([boot/1]).
 
+exported procedure boot(_).
 boot(_Args) :-
     true |
     math # factorial(5, F),
@@ -410,7 +293,6 @@ boot(_Args) :-
       final module = parser.parseModule();
 
       expect(module.name, 'main');
-      expect(module.importedModules, ['math']);
       expect(module.exportedSignatures, {'boot/1'});
 
       final bootClause = module.procedures[0].clauses[0];
