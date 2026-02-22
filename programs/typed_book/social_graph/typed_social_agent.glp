@@ -17,7 +17,7 @@
 
 Response ::= accept(Channel) ; no.
 Decision ::= yes ; no.
-PendingValue ::= response(Response?) ; channel(Channel?) ; error.
+PendingValue ::= response(Response) ; channel(Channel) ; error.
 
 %% --- Content types for messages ---
 

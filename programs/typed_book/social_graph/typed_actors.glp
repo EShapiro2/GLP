@@ -12,6 +12,43 @@
 -mode(system).
 
 %% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
+%% Duplicated from typed_social_agent.glp because cross-file type
+%% references are not supported.
+
+Response ::= accept(Channel) ; no.
+Decision ::= yes ; no.
+PendingValue ::= response(Response?) ; channel(Channel?) ; error.
+
+AgentContent ::= befriend(Constant, Response)
+               ; befriend_intro(Constant, Constant, Channel)
+               ; connected(Constant)
+               ; rejected
+               ; rejected(Constant)
+               ; received(Constant, Constant).
+
+UserContent ::= connect(Constant)
+              ; decision(Decision, Constant, PendingValue)
+              ; send(Constant, Constant)
+              ; introduce(Constant, Constant)
+              ; accept_intro(Constant, PendingValue)
+              ; reject_intro(Constant)
+              ; response(Response).
+
+%% Messages from agent to user (actor reads these)
+AgentMsg ::= msg(Constant, Constant, AgentContent).
+
+%% Messages from user to agent (actor writes these)
+UserMsg ::= msg(Constant, Constant, UserContent).
+
+%% Actor input stream (reads AgentMsg)
+ActorIn ::= [] ; [AgentMsg|ActorIn].
+
+%% Actor output stream (writes UserMsg)
+ActorOut ::= [] ; [UserMsg|ActorOut].
+
+%% =============================================================================
 %% ALICE
 %% =============================================================================
 
@@ -19,7 +56,7 @@ procedure alice_actor(Channel?).
 alice_actor(ch(In, [msg('_user', alice, connect(bob))|Out?])) :-
     alice_wait_bob_connected(In?, Out).
 
-procedure alice_wait_bob_connected(Stream?, Stream).
+procedure alice_wait_bob_connected(ActorIn?, ActorOut).
 alice_wait_bob_connected([msg(agent, '_user', connected(bob))|In],
                          [msg('_user', alice, send(bob, 'Hi Bob, this is Alice'))|Out?]) :-
     alice_wait_intro(In?, Out).
@@ -27,7 +64,7 @@ alice_wait_bob_connected([_|In], Out?) :-
     otherwise | alice_wait_bob_connected(In?, Out).
 alice_wait_bob_connected([], []).
 
-procedure alice_wait_intro(Stream?, Stream).
+procedure alice_wait_intro(ActorIn?, ActorOut).
 alice_wait_intro([msg(agent, '_user', befriend_intro(_, Other, Ch))|In],
                  [msg('_user', alice, accept_intro(Other?, Ch?))|Out?]) :-
     ground(Other?) |
@@ -36,11 +73,11 @@ alice_wait_intro([_|In], Out?) :-
     otherwise | alice_wait_intro(In?, Out).
 alice_wait_intro([], []).
 
-procedure alice_send_to_charlie(Stream?, Stream).
+procedure alice_send_to_charlie(ActorIn?, ActorOut).
 alice_send_to_charlie(In, [msg('_user', alice, send(charlie, 'Hi Charlie, this is Alice'))|Out?]) :-
     alice_wait_charlie_reply(In?, Out).
 
-procedure alice_wait_charlie_reply(Stream?, Stream).
+procedure alice_wait_charlie_reply(ActorIn?, ActorOut).
 alice_wait_charlie_reply([msg(agent, '_user', received(charlie, _))|_], []).
 alice_wait_charlie_reply([_|In], Out?) :-
     otherwise | alice_wait_charlie_reply(In?, Out).
@@ -58,7 +95,7 @@ bob_actor(ch([msg(agent, '_user', befriend(From, Resp))|In],
 bob_actor(ch([_|In], Out?)) :-
     otherwise | bob_actor(ch(In?, Out)).
 
-procedure bob_wait_alice_msg(Stream?, Stream).
+procedure bob_wait_alice_msg(ActorIn?, ActorOut).
 bob_wait_alice_msg([msg(agent, '_user', connected(_))|In], Out?) :-
     bob_wait_alice_msg(In?, Out).
 bob_wait_alice_msg([msg(agent, '_user', received(alice, _))|In],
@@ -68,14 +105,14 @@ bob_wait_alice_msg([_|In], Out?) :-
     otherwise | bob_wait_alice_msg(In?, Out).
 bob_wait_alice_msg([], []).
 
-procedure bob_wait_charlie_connected(Stream?, Stream).
+procedure bob_wait_charlie_connected(ActorIn?, ActorOut).
 bob_wait_charlie_connected([msg(agent, '_user', connected(charlie))|In], Out?) :-
     bob_wait_charlie_msg(In?, Out).
 bob_wait_charlie_connected([_|In], Out?) :-
     otherwise | bob_wait_charlie_connected(In?, Out).
 bob_wait_charlie_connected([], []).
 
-procedure bob_wait_charlie_msg(Stream?, Stream).
+procedure bob_wait_charlie_msg(ActorIn?, ActorOut).
 bob_wait_charlie_msg([msg(agent, '_user', received(charlie, _))|_],
                      [msg('_user', bob, introduce(alice, charlie))]).
 bob_wait_charlie_msg([_|In], Out?) :-
@@ -95,7 +132,7 @@ charlie_actor(ch([msg(agent, '_user', befriend(From, Resp))|In],
 charlie_actor(ch([_|In], Out?)) :-
     otherwise | charlie_actor(ch(In?, Out)).
 
-procedure charlie_wait_intro(Stream?, Stream).
+procedure charlie_wait_intro(ActorIn?, ActorOut).
 charlie_wait_intro([msg(agent, '_user', befriend_intro(_, Other, Ch))|In],
                    [msg('_user', charlie, accept_intro(Other?, Ch?))|Out?]) :-
     ground(Other?) |
@@ -104,7 +141,7 @@ charlie_wait_intro([_|In], Out?) :-
     otherwise | charlie_wait_intro(In?, Out).
 charlie_wait_intro([], []).
 
-procedure charlie_wait_alice_msg(Stream?, Stream).
+procedure charlie_wait_alice_msg(ActorIn?, ActorOut).
 charlie_wait_alice_msg([msg(agent, '_user', received(alice, _))|_],
                        [msg('_user', charlie, send(alice, 'Hi Alice, this is Charlie'))]).
 charlie_wait_alice_msg([_|In], Out?) :-
