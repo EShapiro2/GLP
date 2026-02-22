@@ -75,7 +75,98 @@ helper(N, R) :- true | R := N? * 2.
     });
   });
 
-  group('Phase 1 - 2b: rejection of old syntax', () {
+  group('Phase 1 - 2b: imported procedure parsing', () {
+    test('imported procedure with module path', () {
+      final source = '''
+-module(main).
+imported procedure social#agent(Constant?, AgentChannel?).
+boot :- true | social # agent(id, Ch).
+''';
+      final module = parseModule(source);
+
+      expect(module.procDeclarations.length, 1);
+      final decl = module.procDeclarations[0];
+      expect(decl.imported, true);
+      expect(decl.exported, false);
+      expect(decl.modulePath, 'social');
+      expect(decl.name, 'agent');
+      expect(decl.argTypes.length, 2);
+    });
+
+    test('imported procedure with deep path', () {
+      final source = '''
+-module(main).
+imported procedure ui#actors#render(Widget?, Screen).
+boot :- true | true.
+''';
+      final module = parseModule(source);
+
+      expect(module.procDeclarations.length, 1);
+      final decl = module.procDeclarations[0];
+      expect(decl.imported, true);
+      expect(decl.modulePath, 'ui#actors');
+      expect(decl.name, 'render');
+      expect(decl.argTypes.length, 2);
+    });
+
+    test('imported procedure from ancestor scope (no path)', () {
+      final source = '''
+-module(main).
+imported procedure merge(Stream?, Stream?, Stream).
+boot :- true | true.
+''';
+      final module = parseModule(source);
+
+      expect(module.procDeclarations.length, 1);
+      final decl = module.procDeclarations[0];
+      expect(decl.imported, true);
+      expect(decl.modulePath, isNull);
+      expect(decl.name, 'merge');
+      expect(decl.argTypes.length, 3);
+    });
+
+    test('imported procedure with qualified types using #', () {
+      final source = '''
+-module(boot).
+imported procedure social#agent(Constant?, social#AgentChannel?).
+boot :- true | true.
+''';
+      final module = parseModule(source);
+
+      expect(module.procDeclarations.length, 1);
+      final decl = module.procDeclarations[0];
+      expect(decl.imported, true);
+      expect(decl.modulePath, 'social');
+      expect(decl.name, 'agent');
+      // The second arg type should reference 'social#AgentChannel'
+      expect(decl.argTypes[1], isA<TypeRef>());
+      final typeRef = decl.argTypes[1] as TypeRef;
+      expect(typeRef.name, 'social#AgentChannel');
+      expect(typeRef.isInput, true);
+    });
+
+    test('imported procedure has no clauses (declaration only)', () {
+      // Imported procedures are pure declarations — no clauses follow
+      final source = '''
+-module(main).
+imported procedure math#factorial(Integer?, Integer).
+exported procedure compute(Integer?, Integer).
+compute(N, R?) :- true | math # factorial(N?, R).
+''';
+      final module = parseModule(source);
+
+      expect(module.procDeclarations.length, 2);
+      expect(module.procDeclarations[0].imported, true);
+      expect(module.procDeclarations[0].name, 'factorial');
+      expect(module.procDeclarations[1].exported, true);
+      expect(module.procDeclarations[1].name, 'compute');
+      // Only compute has clauses
+      expect(module.procedures.length, 1);
+      expect(module.procedures[0].name, 'compute');
+    });
+  });
+
+  group('Phase 1 - 2c: rejection of old syntax', () {
     test('-export([...]) is rejected with parse error', () {
       final source = '''
 -export([factorial/2]).
@@ -107,7 +198,7 @@ boot.
     });
   });
 
-  group('Phase 1 - 2c: -module(name) still works', () {
+  group('Phase 1 - 2d: -module(name) still works', () {
     test('-module(name) still parses', () {
       final source = '''
 -module(math).
@@ -121,7 +212,7 @@ factorial(0, 1).
     });
   });
 
-  group('Phase 1 - 2d: Module # Goal still works', () {
+  group('Phase 1 - 2e: Module # Goal still works', () {
     test('remote goal parsing unchanged', () {
       final source = '''
 boot :- true | math # factorial(5, R).
@@ -143,7 +234,7 @@ boot :- true | math # factorial(5, R).
     });
   });
 
-  group('Phase 1 - 2e: type-only file', () {
+  group('Phase 1 - 2f: type-only file', () {
     test('file with only type definitions and no procedures parses successfully', () {
       final source = '''
 Response ::= accept(Channel) ; no.
