@@ -494,15 +494,8 @@ class GlpEngine {
       name = _moduleNameFromFilename(filename);
     }
 
+    // Imports are no longer declared via -import(). Cross-module calls use Module # Goal.
     final imports = <String>[];
-    final importMatch = RegExp(r'-import\(\[([^\]]*)\]\)\.').firstMatch(source);
-    if (importMatch != null) {
-      imports.addAll(importMatch
-          .group(1)!
-          .split(',')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty));
-    }
 
     return ModuleInfo(name: name, program: program, imports: imports);
   }

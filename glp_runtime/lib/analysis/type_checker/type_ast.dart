@@ -196,8 +196,9 @@ class ProcDecl {
   final int line;
   final int column;
   final bool isBuiltin;  // True if implemented in Dart runtime (no GLP clauses)
+  final bool exported;   // True if declared with 'exported procedure'
 
-  ProcDecl(this.name, this.argTypes, this.line, this.column, {this.isBuiltin = false});
+  ProcDecl(this.name, this.argTypes, this.line, this.column, {this.isBuiltin = false, this.exported = false});
 
   int get arity => argTypes.length;
 
@@ -220,7 +221,7 @@ class ProcDecl {
   }
 
   @override
-  String toString() => 'procedure $name(${argTypes.join(', ')}).';
+  String toString() => '${exported ? 'exported ' : ''}procedure $name(${argTypes.join(', ')}).';
 }
 
 /// The type environment: all type definitions and procedure declarations in a module
