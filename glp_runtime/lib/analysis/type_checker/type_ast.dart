@@ -281,7 +281,7 @@ class TypeEnvironment {
 
   /// Add a procedure declaration to the environment
   void addProcedure(ProcDecl procDecl) {
-    procedures[procDecl.key] = procDecl;
+    procedures[procDecl.qualifiedKey] = procDecl;
   }
 
   @override

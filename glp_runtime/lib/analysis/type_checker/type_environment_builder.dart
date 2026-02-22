@@ -136,15 +136,18 @@ TypeEnvironment _buildEnvironmentFromModule(
     final isBuiltin = isBuiltinProcedure(procDecl.key);
     if (isBuiltin && !procDecl.isBuiltin) {
       // Create new ProcDecl with isBuiltin flag set
-      procedures[procDecl.key] = ProcDecl(
+      procedures[procDecl.qualifiedKey] = ProcDecl(
         procDecl.name,
         procDecl.argTypes,
         procDecl.line,
         procDecl.column,
         isBuiltin: true,
+        exported: procDecl.exported,
+        imported: procDecl.imported,
+        modulePath: procDecl.modulePath,
       );
     } else {
-      procedures[procDecl.key] = procDecl;
+      procedures[procDecl.qualifiedKey] = procDecl;
     }
   }
 
@@ -375,6 +378,9 @@ void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedure
       entry.value.line,
       entry.value.column,
       isBuiltin: entry.value.isBuiltin,
+      exported: entry.value.exported,
+      imported: entry.value.imported,
+      modulePath: entry.value.modulePath,
     );
   }
 

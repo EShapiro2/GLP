@@ -137,7 +137,7 @@ TypeEnvironment _buildScopeFromModule(ast.Module module) {
   }
 
   for (final procDecl in module.procDeclarations) {
-    procedures[procDecl.key] = procDecl;
+    procedures[procDecl.qualifiedKey] = procDecl;
   }
 
   return TypeEnvironment(types, procedures);
