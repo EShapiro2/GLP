@@ -285,7 +285,9 @@ void main() {
         // Prelude types should always be available
         expect(env.hasType('Stream'), isTrue);
         expect(env.hasType('Channel'), isTrue);
-        expect(env.hasProcedure('merge', 3), isTrue);
+        // Prelude procedures should be available
+        expect(env.hasProcedure('send', 3), isTrue);
+        expect(env.hasProcedure('new_channel', 2), isTrue);
       } finally {
         await tempDir.delete(recursive: true);
       }
