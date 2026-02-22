@@ -1,0 +1,23 @@
+% test: arg_type_mismatch
+% expected: fail (even with subtyping)
+% description: Functors match but argument types differ at output positions.
+%   SubMsg has get(_?, Integer) -- integer response.
+%   SuperMsg has get(_?, String) -- string response.
+%   At position 2 (output, covariant): Integer is not <: String and
+%   String is not <: Integer (disjoint primitive types).
+
+SubMsg ::= get(_?, Integer).
+SuperMsg ::= get(_?, String).
+
+SubStream ::= [] ; [SubMsg|SubStream].
+SuperStream ::= [] ; [SuperMsg|SuperStream].
+
+procedure super_server(SuperStream?).
+super_server([]).
+super_server([_|Xs]) :- super_server(Xs?).
+
+procedure sub_client(SubStream).
+sub_client([]).
+
+procedure connect.
+connect :- sub_client(X), super_server(X?).

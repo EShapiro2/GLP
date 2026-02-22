@@ -16,6 +16,7 @@ import 'moded_term.dart';
 import 'moded_head.dart';
 import 'well_typed_term.dart';
 import 'program_dfa.dart';
+import 'subtyping.dart';
 import 'type_ast.dart';
 import 'prelude.dart';
 import '../../compiler/ast.dart' as ast;
@@ -296,6 +297,7 @@ ClauseCheckResult checkClause(
   final dualityErrors = _checkClauseDuality(
     allVariableTypes,
     variableLocations,
+    dfa,
   );
   errors.addAll(dualityErrors);
 
@@ -647,6 +649,7 @@ String _normalizeLocation(String location) {
 List<ClauseDualityError> _checkClauseDuality(
   Map<String, VariableTypeInfo> variableTypes,
   Map<String, String> variableLocations,
+  ProgramDFA dfa,
 ) {
   final errors = <ClauseDualityError>[];
 
@@ -691,17 +694,37 @@ List<ClauseDualityError> _checkClauseDuality(
       
       // Apply location-dependent rule (spec v0.9, Definition 4.10 condition 3)
       if (writerNormLoc == readerNormLoc) {
-        // Both in head OR both in body: require DUAL types
-        final (isCompat, reason) = _areDualTypesWithReason(writerInfo, readerInfo);
-        if (!isCompat) {
-          errors.add(ClauseDualityError(
-            baseName,
-            writerInfo,
-            readerInfo,
-            writerLoc,
-            readerLoc,
-            'Variables in same clause part ($writerNormLoc) must have dual types: $reason',
-          ));
+        if (writerNormLoc == 'head') {
+          // Both in head: require exact DUAL types (unchanged)
+          final (isCompat, reason) = _areDualTypesWithReason(writerInfo, readerInfo);
+          if (!isCompat) {
+            errors.add(ClauseDualityError(
+              baseName,
+              writerInfo,
+              readerInfo,
+              writerLoc,
+              readerLoc,
+              'Variables in same clause part (head) must have dual types: $reason',
+            ));
+          }
+        } else {
+          // Both in body: require subtyping S <: T (Definition 4.8)
+          // Writer X has output type S. Reader X? has dual type T?.
+          // Need: S <: T (both output types).
+          final writerOutputState = writerInfo.typeState; // S (output, not dual)
+          final readerDualState = readerInfo.typeState;   // T? (dual)
+          final readerOutputState = dfa.getState(readerDualState.baseName); // T (output)
+          final isSub = isSubtype(writerOutputState, readerOutputState, dfa);
+          if (!isSub) {
+            errors.add(ClauseDualityError(
+              baseName,
+              writerInfo,
+              readerInfo,
+              writerLoc,
+              readerLoc,
+              'Body variable pair: writer type ${writerOutputState.name} is not a subtype of ${readerOutputState.name}',
+            ));
+          }
         }
       } else {
         // One in head, one in body: require SAME type

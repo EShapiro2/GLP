@@ -1,0 +1,29 @@
+% test: contravariant_response_slot
+% expected: pass (requires subtyping)
+% description: Tests contravariance at mode inversion points.
+%   FlexibleReq has one alternative (query) with a wide response slot (OkOrError?).
+%   FullReq has two alternatives (query, update) with a narrow response slot (OkOnly?).
+%   FlexibleReq <: FullReq because:
+%     - Covariant: query functor is in FullReq's alternatives.
+%     - Contravariant at response slot: OkOnly <: OkOrError (reversed direction).
+%   Body-body pair: writer at FlexibleReqStream, reader at FullReqStream?.
+% Paper reference: Section 4.6 Definition 4.9, condition 2 (coinductive)
+
+OkOnly ::= ok.
+OkOrError ::= ok ; error(_).
+
+FlexibleReq ::= query(OkOrError?).
+FullReq ::= query(OkOnly?) ; update.
+
+FlexibleReqStream ::= [] ; [FlexibleReq|FlexibleReqStream].
+FullReqStream ::= [] ; [FullReq|FullReqStream].
+
+procedure server(FullReqStream?).
+server([]).
+server([_|Xs]) :- server(Xs?).
+
+procedure client(FlexibleReqStream).
+client([]).
+
+procedure connect.
+connect :- client(X), server(X?).

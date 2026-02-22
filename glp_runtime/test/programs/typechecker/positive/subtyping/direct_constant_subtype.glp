@@ -1,0 +1,20 @@
+% test: direct_constant_subtype
+% expected: pass (requires subtyping)
+% description: Direct subtyping between constant types (no streams).
+%   Pet has {dog, cat}, Animal has {dog, cat, bird}.
+%   Pet <: Animal because every Pet alternative is in Animal.
+%   Body-body pair: writer X at Pet (from has_pet output), 
+%   reader X? at Animal? (from wants_animal input).
+
+Animal ::= dog ; cat ; bird.
+Pet ::= dog ; cat.
+
+procedure wants_animal(Animal?).
+wants_animal(_).
+
+procedure has_pet(Pet).
+has_pet(dog).
+has_pet(cat).
+
+procedure give_pet.
+give_pet :- has_pet(X), wants_animal(X?).

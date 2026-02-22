@@ -4,22 +4,31 @@
 
 ## Current state
 
-The full CSSG (Child-Safe Social Graph) implementation is complete and working.
+All three precisely-typed files (agent, mediator, actors) typecheck cleanly and
+fplay1 runs to completion.
 
-- SG ack/nack friend introduction protocol: implemented and tested (plays 1–3)
-- CSSG four-party consent protocol: implemented and tested (plays 4–7)
-- All files typecheck and load successfully in the REPL
-- All plays run correctly: silent (play1–7 with sink) and Flutter (fplay1–7 with tagged output)
-- Two separate Flutter apps: SG (main.dart) and CSSG (main_cssg.dart)
+Mode fixes required changes to both type definitions and clause annotations:
+
+- `PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.`
+- `AgentContent ::= befriend(Constant, Response?)` in mediator (was `Response`)
+- `NetColdCall ::= intro(Constant, Response?)` in agent (was `Response`)
+- Agent cold-call clause: `Resp?` (reader) in receive head, `Resp` (writer) in
+  `befriend(From?, Resp)` sent to mediator via `lookup_send`
+- Mediator befriend clause: `Resp?` (reader) in receive, `Resp` (writer) in
+  `response(Resp)` stored in pending list
+
+The `Response?` mode annotation in the type definitions makes the Response field
+an output (produce) position, allowing a writer to be placed there. Without `?`,
+the field is input (consume) position, which conflicts with SRSW requirements.
 
 ## Files
 
 | File | Status | Description |
 |------|--------|-------------|
-| `typed_social_agent.glp` | Typechecks ✅, runs ✅ | Agent with SG intro + CSSG four-party consent |
-| `typed_ui_mediator.glp` | Typechecks ✅, runs ✅ | Mediator with SG + CSSG clauses |
-| `typed_ui_actors.glp` | Typechecks ✅, runs ✅ | Seven test scripts: play1–7 |
-| `play_ui_sim_boot.glp` | Typechecks ✅, runs ✅ | Boot goals: network, tee/sink, tee/tagged |
+| `typed_social_agent.glp` | Typechecks ✅ | Agent with SG intro + CSSG four-party consent |
+| `typed_ui_mediator.glp` | Typechecks ✅ | Mediator with SG + CSSG clauses (mode errors fixed) |
+| `typed_ui_actors.glp` | Typechecks ✅ | Seven test scripts: play1–7 |
+| `play_ui_sim_boot.glp` | Typechecks ✅ | Boot goals: network, tee/sink, tee/tagged |
 
 ## Architecture
 
