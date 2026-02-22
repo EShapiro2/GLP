@@ -180,12 +180,11 @@ const Set<String> predefinedProcedureNames = {
 /// Built-in goals that don't need type checking
 /// - true, otherwise: 0-arity control
 /// - :=: arithmetic assignment, handled specially
-/// - #: remote module call (Module # Goal) - inner goal is in remote module
+/// Note: # (remote module call) is handled as RemoteGoal before the builtin check
 const Set<String> builtinGoals = {
   'true',
   'otherwise',
   ':=',
-  '#',
 };
 
 /// True builtins: procedures implemented in Dart runtime with NO GLP clauses.
