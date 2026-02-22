@@ -1,0 +1,20 @@
+% test: disjoint_types
+% expected: fail (even with subtyping)
+% description: Completely disjoint constant types. No alternatives in common.
+%   Fruit and Color share no alternatives, so neither is a subtype of the other.
+
+Fruit ::= apple ; banana ; cherry.
+Color ::= red ; green ; blue.
+
+FruitStream ::= [] ; [Fruit|FruitStream].
+ColorStream ::= [] ; [Color|ColorStream].
+
+procedure color_sink(ColorStream?).
+color_sink([]).
+color_sink([_|Xs]) :- color_sink(Xs?).
+
+procedure fruit_source(FruitStream).
+fruit_source([]).
+
+procedure connect.
+connect :- fruit_source(X), color_sink(X?).

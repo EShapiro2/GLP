@@ -1,0 +1,22 @@
+% test: constants_fewer_alternatives
+% expected: pass (requires subtyping)
+% description: Type with fewer constant alternatives is a subtype.
+%   Color has three alternatives; WarmColor has two (a subset).
+%   WarmColor <: Color because every WarmColor alternative is also a Color.
+%   Body-body pair: writer at WarmColorStream, reader at ColorStream?.
+
+Color ::= red ; green ; blue.
+WarmColor ::= red.
+
+ColorStream ::= [] ; [Color|ColorStream].
+WarmColorStream ::= [] ; [WarmColor|WarmColorStream].
+
+procedure color_sink(ColorStream?).
+color_sink([]).
+color_sink([_|Xs]) :- color_sink(Xs?).
+
+procedure warm_source(WarmColorStream).
+warm_source([]).
+
+procedure connect.
+connect :- warm_source(X), color_sink(X?).
