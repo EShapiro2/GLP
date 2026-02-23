@@ -807,3 +807,125 @@ bob10_wait_connected2([connected(alice)|_], []).
 bob10_wait_connected2([_|In], Out?) :-
     otherwise | bob10_wait_connected2(In?, Out).
 bob10_wait_connected2([], []).
+
+%% =============================================================================
+%% PLAY 11 — Full lifecycle: friend, msg, unfriend, re-friend, msg, unfriend,
+%%           re-friend by other side, msg
+%% Round 1: Alice connects Bob, Alice sends hi1, Alice unfriends
+%% Round 2: Alice re-connects Bob, Bob sends hi2, Bob unfriends
+%% Round 3: Bob connects Alice, Alice sends hi3, done
+%% =============================================================================
+
+%% --- Alice (play11) ---
+%% Round 1: connect(bob) → wait connected → send hi1 → unfriend
+%% Round 2: wait unfriended → connect(bob) → wait connected → wait received(hi2) → wait unfriended
+%% Round 3: wait befriend(bob) → accept → wait connected → send hi3 → done
+
+procedure alice11(ActorChannel?).
+alice11(ch(In, [connect(bob)|Out?])) :-
+    alice11_r1_wait_connected(In?, Out).
+
+procedure alice11_r1_wait_connected(UserNotifyStream?, UserCmdStream).
+alice11_r1_wait_connected([connected(bob)|In],
+                          [send(bob, hi1), unfriend(bob)|Out?]) :-
+    alice11_r1_wait_unfriended(In?, Out).
+alice11_r1_wait_connected([_|In], Out?) :-
+    otherwise | alice11_r1_wait_connected(In?, Out).
+alice11_r1_wait_connected([], []).
+
+procedure alice11_r1_wait_unfriended(UserNotifyStream?, UserCmdStream).
+alice11_r1_wait_unfriended([unfriended(bob)|In],
+                           [connect(bob)|Out?]) :-
+    alice11_r2_wait_connected(In?, Out).
+alice11_r1_wait_unfriended([_|In], Out?) :-
+    otherwise | alice11_r1_wait_unfriended(In?, Out).
+alice11_r1_wait_unfriended([], []).
+
+procedure alice11_r2_wait_connected(UserNotifyStream?, UserCmdStream).
+alice11_r2_wait_connected([connected(bob)|In], Out?) :-
+    alice11_r2_wait_unfriended(In?, Out).
+alice11_r2_wait_connected([_|In], Out?) :-
+    otherwise | alice11_r2_wait_connected(In?, Out).
+alice11_r2_wait_connected([], []).
+
+procedure alice11_r2_wait_unfriended(UserNotifyStream?, UserCmdStream).
+alice11_r2_wait_unfriended([unfriended(bob)|In], Out?) :-
+    alice11_r3_wait_befriend(In?, Out).
+alice11_r2_wait_unfriended([_|In], Out?) :-
+    otherwise | alice11_r2_wait_unfriended(In?, Out).
+alice11_r2_wait_unfriended([], []).
+
+procedure alice11_r3_wait_befriend(UserNotifyStream?, UserCmdStream).
+alice11_r3_wait_befriend([befriend(bob, ReqId)|In],
+                         [decision(yes, bob, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    alice11_r3_wait_connected(In?, Out).
+alice11_r3_wait_befriend([_|In], Out?) :-
+    otherwise | alice11_r3_wait_befriend(In?, Out).
+alice11_r3_wait_befriend([], []).
+
+procedure alice11_r3_wait_connected(UserNotifyStream?, UserCmdStream).
+alice11_r3_wait_connected([connected(bob)|_],
+                          [send(bob, hi3)]).
+alice11_r3_wait_connected([_|In], Out?) :-
+    otherwise | alice11_r3_wait_connected(In?, Out).
+alice11_r3_wait_connected([], []).
+
+%% --- Bob (play11) ---
+%% Round 1: wait befriend(alice) → accept → wait connected → wait received(hi1) → wait unfriended
+%% Round 2: wait befriend(alice) → accept → wait connected → send hi2 → wait sent → unfriend
+%% Round 3: wait unfriended → connect(alice) → wait connected → done
+
+procedure bob11(ActorChannel?).
+bob11(ch([befriend(alice, ReqId)|In],
+         [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob11_r1_wait_connected(In?, Out).
+bob11(ch([_|In], Out?)) :-
+    otherwise | bob11(ch(In?, Out)).
+
+procedure bob11_r1_wait_connected(UserNotifyStream?, UserCmdStream).
+bob11_r1_wait_connected([connected(alice)|In], Out?) :-
+    bob11_r1_wait_unfriended(In?, Out).
+bob11_r1_wait_connected([_|In], Out?) :-
+    otherwise | bob11_r1_wait_connected(In?, Out).
+bob11_r1_wait_connected([], []).
+
+procedure bob11_r1_wait_unfriended(UserNotifyStream?, UserCmdStream).
+bob11_r1_wait_unfriended([unfriended(alice)|In],
+                         [send(alice, alice_will_not_get_it)|Out?]) :-
+    bob11_r2_wait_befriend(In?, Out).
+bob11_r1_wait_unfriended([_|In], Out?) :-
+    otherwise | bob11_r1_wait_unfriended(In?, Out).
+bob11_r1_wait_unfriended([], []).
+
+procedure bob11_r2_wait_befriend(UserNotifyStream?, UserCmdStream).
+bob11_r2_wait_befriend([befriend(alice, ReqId)|In],
+                       [decision(yes, alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob11_r2_wait_connected(In?, Out).
+bob11_r2_wait_befriend([_|In], Out?) :-
+    otherwise | bob11_r2_wait_befriend(In?, Out).
+bob11_r2_wait_befriend([], []).
+
+procedure bob11_r2_wait_connected(UserNotifyStream?, UserCmdStream).
+bob11_r2_wait_connected([connected(alice)|In],
+                        [send(alice, hi2), unfriend(alice)|Out?]) :-
+    bob11_r2_wait_unfriended(In?, Out).
+bob11_r2_wait_connected([_|In], Out?) :-
+    otherwise | bob11_r2_wait_connected(In?, Out).
+bob11_r2_wait_connected([], []).
+
+procedure bob11_r2_wait_unfriended(UserNotifyStream?, UserCmdStream).
+bob11_r2_wait_unfriended([unfriended(alice)|In],
+                         [send(alice, alice_will_not_get_it), connect(alice)|Out?]) :-
+    bob11_r3_wait_connected(In?, Out).
+bob11_r2_wait_unfriended([_|In], Out?) :-
+    otherwise | bob11_r2_wait_unfriended(In?, Out).
+bob11_r2_wait_unfriended([], []).
+
+procedure bob11_r3_wait_connected(UserNotifyStream?, UserCmdStream).
+bob11_r3_wait_connected([connected(alice)|_], []).
+bob11_r3_wait_connected([_|In], Out?) :-
+    otherwise | bob11_r3_wait_connected(In?, Out).
+bob11_r3_wait_connected([], []).
