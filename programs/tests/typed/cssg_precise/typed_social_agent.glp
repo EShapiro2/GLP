@@ -32,7 +32,7 @@ FriendChannel ::= ch(FriendStream, FriendStream?).
 Response ::= accept(FriendChannel) ; no.
 Decision ::= yes ; no.
 Handshake ::= ack(Constant) ; nack.
-PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.
+PendingValue ::= response(Response?) ; channel(_) ; error.
 
 %% --- Content types for messages ---
 
@@ -59,7 +59,7 @@ AgentContent ::= befriend(Constant, Response)
                ; received(Constant, Constant).
 
 %% Network content (2-arg cold-call: msg(Dest, Content))
-NetColdCall ::= intro(Constant, Response?).
+NetColdCall ::= intro(Constant, Response).
 
 %% Friend-to-friend content (3-arg: msg(From, To, Content))
 FriendContent ::= response(Response)
@@ -330,17 +330,17 @@ agent(Id, [msg('_user', Id1, approve_child_intro(OtherChild, MyChild, channel(Ch
     lookup_send(child(MyChild?), msg(Id?, MyChild?, child_intro(OtherChild?, Ch?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
-%% User catch-all (commented out — was consuming messages that should suspend)
-%% agent(Id, [_|UserIn], NetIn, Outs) :-
-%%     ground(Id?), otherwise |
-%%     agent(Id?, UserIn?, NetIn?, Outs?).
+%% User catch-all
+agent(Id, [_|UserIn], NetIn, Outs) :-
+    ground(Id?), otherwise |
+    agent(Id?, UserIn?, NetIn?, Outs?).
 
 %% --- Network messages ---
 
 %% Cold-call from network
-agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs) :-
+agent(Id, UserIn, [msg(Id1, intro(From, Resp))|NetIn], Outs) :-
     Id? =?= Id1? |
-    lookup_send('_user', msg(agent, '_user', befriend(From?, Resp)), Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', befriend(From?, Resp?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Response to cold-call from network
@@ -370,10 +370,10 @@ agent(Id, UserIn, [msg(From, Id1, child_intro(Other, Ch))|NetIn], Outs) :-
     lookup_send('_user', msg(agent, '_user', child_befriend(From?, Other?, Ch?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
-%% Network catch-all (commented out — was consuming messages that should suspend)
-%% agent(Id, UserIn, [_|NetIn], Outs) :-
-%%     ground(Id?), otherwise |
-%%     agent(Id?, UserIn?, NetIn?, Outs?).
+%% Network catch-all
+agent(Id, UserIn, [_|NetIn], Outs) :-
+    ground(Id?), otherwise |
+    agent(Id?, UserIn?, NetIn?, Outs?).
 
 %% --- Termination ---
 

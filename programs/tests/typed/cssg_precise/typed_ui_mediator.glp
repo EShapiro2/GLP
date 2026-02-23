@@ -34,7 +34,7 @@ IntroChannel ::= ch(IntroStream, IntroStream?).
 
 %% --- Agent-side content types ---
 
-AgentContent ::= befriend(Constant, Response?)
+AgentContent ::= befriend(Constant, Response)
                ; befriend_intro(Constant, Constant, IntroChannel)
                ; child_befriend(Constant, Constant, IntroChannel)
                ; connected(Constant)
@@ -91,7 +91,7 @@ UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
 UserChannel      ::= ch(UserCmdStream, UserNotifyStream?).
 
 %% --- Pending entries ---
-PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.
+PendingValue ::= response(Response?) ; channel(IntroChannel?) ; error.
 PendingEntry ::= pending(ReqId, PendingValue).
 PendingList  ::= [] ; [PendingEntry | PendingList].
 
@@ -119,7 +119,8 @@ procedure ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Cons
 
 %% --- Agent-to-user: non-ground (replace variable with req ID) ---
 
-%% befriend: Resp? reader in receive, Resp writer in body
+%% Cold-call befriend: agent sends befriend(From, Resp)
+%% Resp is received from agent, stored in pending as writer.
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(msg(agent, '_user', befriend(From, Resp?)),
             AgentCh?, AgentCh1),
@@ -133,27 +134,27 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% Ch is the intro channel; stored in pending for accept/reject.
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(msg(agent, '_user',
-                befriend_intro(From, Other, Ch)),
+                befriend_intro(From, Other, Ch?)),
             AgentCh?, AgentCh1),
     ground(From?), ground(Other?) |
     send_user(befriend_intro(From?, Other?, req(N?)),
          UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
-        [pending(req(N?), channel(Ch?)) | Ps?], N1?).
+        [pending(req(N?), channel(Ch)) | Ps?], N1?).
 
 %% CSSG: child_befriend — agent sends child_befriend(From, Other, Ch)
 %% Ch is the intro channel; stored in pending for accept/reject/approve.
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(msg(agent, '_user',
-                child_befriend(From, Other, Ch)),
+                child_befriend(From, Other, Ch?)),
             AgentCh?, AgentCh1),
     ground(From?), ground(Other?) |
     send_user(child_befriend(From?, Other?, req(N?)),
          UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
-        [pending(req(N?), channel(Ch?)) | Ps?], N1?).
+        [pending(req(N?), channel(Ch)) | Ps?], N1?).
 
 %% --- Agent-to-user: ground (pass through) ---
 

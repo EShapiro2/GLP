@@ -1,0 +1,22 @@
+% test: struct_fewer_functors
+% expected: pass (requires subtyping)
+% description: Subtyping between structured types with different functor sets.
+%   GetOp has only get(key, value response). DbOp adds put and del.
+%   GetOp <: DbOp because get is in DbOp's alternatives, and argument types match.
+%   Body-body pair: writer at GetOpStream, reader at DbOpStream?.
+
+DbOp ::= get(_?,_) ; put(_?,_?) ; del(_?).
+GetOp ::= get(_?,_).
+
+DbOpStream ::= [] ; [DbOp|DbOpStream].
+GetOpStream ::= [] ; [GetOp|GetOpStream].
+
+procedure db_server(DbOpStream?).
+db_server([]).
+db_server([_|Xs]) :- db_server(Xs?).
+
+procedure get_client(GetOpStream).
+get_client([]).
+
+procedure connect.
+connect :- get_client(X), db_server(X?).

@@ -1667,13 +1667,11 @@ class BytecodeRunner {
               if (isReaderMode) {
                 // UnifyReader READ mode logic
                 if (value is VarRef && cx.rt.heap.isReader(value.addr)) {
-                  // Query has reader, clause expects reader
-                  final rid = value.addr;
-                  // Use tryWriterForReader for imported reader support
-                  final wid = cx.rt.heap.tryWriterForReader(rid);
-                  // Store writer if available, otherwise store reader address for imported readers
-                  cx.clauseVars[varIndex] = wid ?? rid;
-                  cx.S++;
+                  // Spec §12.2 Case 2 / §6.3: Reader × Reader = FAIL
+                  // A writers substitution cannot make two readers equal.
+                  _softFailToNextClause(cx, pc);
+                  pc = _findNextClauseTry(pc);
+                  continue;
                 } else if (value is VarRef && cx.rt.heap.isWriter(value.addr)) {
                   // Query has writer, clause expects reader
                   if (existingValue != null) {
@@ -1913,13 +1911,11 @@ class BytecodeRunner {
               if (cx.debugOutput) print('[DEBUG] PC $pc: GetVariable (reader mode) storing goal writer W${arg.addr} in clauseVars[$varIndex]');
             }
           } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-            if (existing == null) {
-              // Use tryWriterForReader for imported reader support
-              final wid = cx.rt.heap.tryWriterForReader(arg.addr);
-              // Store writer if available, otherwise store reader address for imported readers
-              cx.clauseVars[varIndex] = wid ?? arg.addr;
-            }
-            // If existing != null, keep existing value
+            // Spec §12.2 Case 2: Reader × Reader = FAIL
+            // A writers substitution cannot make two readers equal (CGLP Definition 5).
+            _softFailToNextClause(cx, pc);
+            pc = _findNextClauseTry(pc);
+            continue;
           } else if (arg is ConstTerm) {
             if (existing == null) {
               cx.clauseVars[varIndex] = arg;

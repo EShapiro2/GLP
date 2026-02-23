@@ -1,0 +1,29 @@
+% test: contravariant_wrong_direction
+% expected: fail (even with subtyping)
+% description: Contravariance violation at mode inversion point.
+%   NarrowReq has query with NarrowResp? response slot.
+%   WideReq has query with WideResp? response slot.
+%   NarrowResp ::= ok (fewer alternatives).
+%   WideResp ::= ok ; error(_) (more alternatives).
+%   At mode inversion: need WideResp <: NarrowResp (reversed) but
+%   WideResp has 'error' not in NarrowResp, so WideResp <: NarrowResp FAILS.
+%   Therefore NarrowReq is NOT <: WideReq.
+
+NarrowResp ::= ok.
+WideResp ::= ok ; error(_).
+
+NarrowReq ::= query(NarrowResp?).
+WideReq ::= query(WideResp?).
+
+NarrowStream ::= [] ; [NarrowReq|NarrowStream].
+WideStream ::= [] ; [WideReq|WideStream].
+
+procedure wide_server(WideStream?).
+wide_server([]).
+wide_server([_|Xs]) :- wide_server(Xs?).
+
+procedure narrow_client(NarrowStream).
+narrow_client([]).
+
+procedure connect.
+connect :- narrow_client(X), wide_server(X?).

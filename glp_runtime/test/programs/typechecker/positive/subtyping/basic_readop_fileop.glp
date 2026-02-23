@@ -1,0 +1,23 @@
+% test: basic_readop_fileop
+% expected: pass (requires subtyping)
+% description: Paper example - ReadOp <: FileOp. A read-only client produces
+%   ReadOp messages on a stream, a file system monitor consumes FileOp messages.
+%   ReadOp has fewer alternatives than FileOp, so ReadOp <: FileOp.
+%   Body-body pair X/X?: writer X at ReadOpStream, reader X? at FileOpStream?.
+% Paper reference: Section 4.6 (Subtyping), Definition 4.9
+
+FileOp ::= read(_?,_) ; write(_?,_?) ; delete(_?).
+ReadOp ::= read(_?,_).
+
+FileOpStream ::= [] ; [FileOp|FileOpStream].
+ReadOpStream ::= [] ; [ReadOp|ReadOpStream].
+
+procedure fs_monitor(FileOpStream?).
+fs_monitor([]).
+fs_monitor([_|Xs]) :- fs_monitor(Xs?).
+
+procedure ro_client(ReadOpStream).
+ro_client([]).
+
+procedure connect.
+connect :- ro_client(X), fs_monitor(X?).

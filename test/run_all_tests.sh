@@ -686,6 +686,16 @@ check "MWM empty" "Xmwm1 = \[\]" "$a26"
 check "MWM single" "Xmwm2 = \[1, 2, 3\]" "$a26"
 check "MWM two streams" "Xmwm3 = \[a, b, 1, 2\]" "$a26"
 
+# --- A27: Reader-to-reader bug (befriend_intro) ---
+echo "--- A27: Reader-to-reader fail ---"
+a27=$($DART run "$REPL" <<HEREDOC
+$TYPED/test_befriend_intro_bug.glp
+med(charlie, ch([msg(agent, _user, befriend_intro(bob, alice, X?)) | Xs], Y), ch(Us?, Vs), [], 2).
+:quit
+HEREDOC
+2>&1)
+check_not "reader-to-reader no reduction" "req(2)" "$a27"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 
@@ -822,6 +832,13 @@ POSITIVE_FILES=(
     "$BOOK/test_bug.glp"
     "$BOOK/test_friend.glp"
     "$BOOK/test_lookup2.glp"
+
+    # --- subtyping positive tests ---
+    "$TC_DIR/positive/subtyping/basic_readop_fileop.glp"
+    "$TC_DIR/positive/subtyping/constants_fewer_alternatives.glp"
+    "$TC_DIR/positive/subtyping/contravariant_response_slot.glp"
+    "$TC_DIR/positive/subtyping/direct_constant_subtype.glp"
+    "$TC_DIR/positive/subtyping/struct_fewer_functors.glp"
 )
 
 # Build REPL input: load each positive file with :clear between
@@ -942,6 +959,12 @@ NEGATIVE_FILES=(
     "$MODED/invalid/universal/any_reduce_pattern.glp"
     "$MODED/invalid/universal/any_struct_at_input.glp"
     "$MODED/invalid/universal/any_struct_at_output.glp"
+
+    # --- subtyping negative tests ---
+    "$TC_DIR/negative/subtyping/wrong_direction_fileop_readop.glp"
+    "$TC_DIR/negative/subtyping/contravariant_wrong_direction.glp"
+    "$TC_DIR/negative/subtyping/disjoint_types.glp"
+    "$TC_DIR/negative/subtyping/arg_type_mismatch.glp"
 )
 
 # Build REPL input with :clear between each negative file
