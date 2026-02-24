@@ -1212,7 +1212,7 @@ When modifying `glp_runtime` code that affects the Flutter multiagent app (`glp_
 1. **Path dependency**: The Flutter app uses `glp_runtime` via path dependency in pubspec.yaml
 2. **Clean rebuild required**: After modifying glp_runtime, you MUST do a clean Flutter rebuild:
    ```bash
-   cd /Users/ohadey/Grassroots/GLP2/GLP/glp_multiagent
+   cd /Users/udi/Grassroots/GLP/glp_multiagent
    pkill -f "glp_multiagent" 2>/dev/null  # Kill running app
    flutter clean                            # Clear cached builds
    flutter pub get                          # Re-resolve dependencies
