@@ -818,7 +818,7 @@ bob10_wait_connected2([], []).
 
 %% --- Alice (play11) ---
 %% Round 1: connect(bob) → wait connected → send hi1 → unfriend
-%% Round 2: wait unfriended → connect(bob) → wait connected → wait received(hi2) → wait unfriended
+%% Round 2: wait unfriended → connect(bob) → wait connected → wait unfriended, ignoring received(hi2)
 %% Round 3: wait befriend(bob) → accept → wait connected → send hi3 → done
 
 procedure alice11(ActorChannel?).
