@@ -872,8 +872,8 @@ alice11_r3_wait_connected([_|In], Out?) :-
 alice11_r3_wait_connected([], []).
 
 %% --- Bob (play11) ---
-%% Round 1: wait befriend(alice) → accept → wait connected → wait received(hi1) → wait unfriended
-%% Round 2: wait befriend(alice) → accept → wait connected → send hi2 → wait sent → unfriend
+%% Round 1: wait befriend(alice) → accept → wait connected → wait unfriended
+%% Round 2: wait befriend(alice) → accept → wait connected → send hi2 → unfriend
 %% Round 3: wait unfriended → connect(alice) → wait connected → done
 
 procedure bob11(ActorChannel?).
