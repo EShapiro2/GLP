@@ -47,28 +47,27 @@ The following Dart infrastructure exists and will be progressively replaced or a
 
 **Input:** The module's list of `ProcDecl` nodes where `exported == true`.
 
-**Output:** Bytecode for `_select/2` appended to the module's procedure table. For each exported procedure `p/n`:
+**Output:** Bytecode for `_select/1` appended to the module's procedure table. For each exported procedure `p/n`:
 
 ```
-_select(p(A1, ..., An), Controls) :-
-    Controls = controls(L, R) |
-    p(A1, ..., An, L, R).
+_select(p(A1, ..., An)) :-
+    true |
+    p(A1, ..., An).
 ```
 
-The internal call `p(A1, ..., An, L, R)` is the augmented version of `p` with termination circuit arguments. The `otherwise` clause:
+The `otherwise` fallback clause:
 
 ```
-_select(Goal, Controls) :-
+_select(_) :-
     otherwise |
-    Controls = controls(L, R),
-    '_unknown'(Goal, L, R).
+    true.
 ```
 
-**Detail — augmented procedures:** Each exported procedure `p/n` is compiled with two additional arguments (L, R) for the termination circuit, yielding `p/(n+2)` internally. The `_select` clause unpacks `Controls = controls(L, R)` and calls the augmented procedure. This follows FCP's `control/self.cp` pattern.
+Each clause matches on the goal term's functor and arity, then calls the corresponding exported procedure with its original arguments.
 
-**Detail — `_select` is internal:** The `_select/2` procedure is not declared in the source. It is purely compiler-generated. It does not appear in the module's export list. The `'_activate'` body kernel knows to look for it by convention.
+**Detail — `_select` is internal:** The `_select/1` procedure is not declared in the source. It is purely compiler-generated. It does not appear in the module's export list. The `'_activate'` body kernel knows to look for it by convention.
 
-**Testing:** Compile a module with exported procedures, verify `_select/2` exists in the bytecode, verify it has the correct number of clauses (one per export plus one fallback).
+**Testing:** Compile a module with exported procedures, verify `_select/1` exists in the bytecode, verify it has the correct number of clauses (one per export plus one fallback).
 
 **Files changed:**
 - `lib/compiler/codegen.dart` — new `_generateSelectTable()` method
@@ -76,15 +75,15 @@ _select(Goal, Controls) :-
 
 ### Phase 2: `'_activate'` body kernel
 
-**What:** A new body kernel that resolves a goal term against a compiled module's `_select/2` table.
+**What:** A new body kernel that resolves a goal term against a compiled module's `_select/1` table.
 
-**Signature:** `'_activate'(Module?, Goal, Controls)`
+**Signature:** `'_activate'(Module?, Goal)`
 
 **Semantics:**
 1. Dereference `Module?` to obtain the module reference (a `LoadedModule` or equivalent runtime handle).
-2. Look up the `_select/2` entry point in the module's compiled bytecode.
-3. Spawn a goal `_select(Goal, Controls)` in the module's execution context.
-4. The goal executes within the module's procedure table, resolving against the generated `_select/2` clauses.
+2. Look up the `_select/1` entry point in the module's compiled bytecode.
+3. Spawn a goal `_select(Goal)` in the module's execution context.
+4. The goal executes within the module's procedure table, resolving against the generated `_select/1` clauses.
 
 **Where:** `lib/runtime/body_kernels.dart`, registered in `registerStandardBodyKernels`.
 
@@ -112,9 +111,9 @@ _select(Goal, Controls) :-
 
 procedure serve(_, Stream?).
 
-serve(Module, [export(Goal, L, R) | In]) :-
+serve(Module, [Goal | In]) :-
     true |
-    '_activate'(Module?, Goal, controls(L, R)),
+    '_activate'(Module?, Goal),
     serve(Module, In?).
 
 serve(_, []) :-
@@ -124,7 +123,7 @@ serve(_, []) :-
 
 `serve/2` is a system predicate because it calls the `'_activate'` body kernel, which is not accessible to user programs.
 
-**Detail — message format:** Each message on the module's input stream is `export(Goal, L, R)` where `Goal` is the remote procedure call term and `L`, `R` are the caller's termination circuit endpoints. This is a GLP term — a struct with functor `export` and three arguments.
+**Detail — message format:** Each message on the module's input stream is a goal term (e.g., `factorial(5, F)`) — the remote procedure call sent directly, with no wrapper.
 
 **Detail — the Module argument:** The first argument is threaded unchanged through all recursive calls. It is the module handle established at activation time.
 
@@ -167,9 +166,8 @@ serve(_, []) :-
 **Where:** `lib/compiler/codegen.dart` (RPC compilation), `lib/runtime/runtime.dart` (RPC execution).
 
 **RPC compilation:** Currently `RemoteGoal` nodes are compiled to Dart-level dispatch. Change to:
-1. Allocate termination circuit segment (L, R) for this call.
-2. Build the message term: `export(goal_term, L, R)`.
-3. Send the message on the target module's channel writer: `send(Message, ChannelWriter)`.
+1. Build the goal term from the `RemoteGoal`'s inner goal.
+2. Send the goal term on the target module's channel writer: `send(GoalTerm, ChannelWriter)`.
 
 **RPC resolution:** When the target module is not yet loaded, the runtime loads and activates it (Phase 4) before sending the message. The channel writer is obtained from the module registry.
 
@@ -220,11 +218,7 @@ Each phase maintains zero regressions on existing tests while adding new tests.
 
 ## 6. Open Decisions
 
-**Controls tuple.** The spec uses `controls(L, R)` as a minimal termination circuit. The existing codebase may need a richer controls structure (signals, suspension). Start minimal; extend if needed.
-
 **Module reference term.** How is a module handle represented on the GLP heap? Options: (a) a new cell type `ModuleRef`, (b) a tagged constant wrapping a Dart object, (c) an opaque integer index into a runtime table. Decision needed before Phase 2.
-
-**Message format.** The spec uses `export(Goal, L, R)`. The existing `ExportMessage` Dart class wraps more information (CallInfo, Scope). Start with the minimal format; extend for delegation and error reporting as needed.
 
 **Backward compatibility.** Phases 1–3 are purely additive — they add new bytecode, a new body kernel, and a new system predicate without changing any existing behavior. Single-file programs and existing module tests are unaffected. Phases 4–5 introduce the new GLP-level dispatch alongside the existing Dart-level dispatch (`Dispatcher`, `StreamController`, `ExportMessage`), behind a flag. The Dart path remains the default. The GLP path must pass all existing module tests before becoming the default. Only after validation is the Dart path deprecated and removed.
 
