@@ -87,7 +87,7 @@ Each clause matches on the goal term's functor and arity, then calls the corresp
 
 **Where:** `lib/runtime/body_kernels.dart`, registered in `registerStandardBodyKernels`.
 
-**Detail — module references:** A module reference is a runtime value (a heap term) that the GLP program can hold in a variable. The runtime must support a new term type or a tagged constant that refers to a `LoadedModule`. This is analogous to FCP's `module(Module)` guard — GLP needs a way to represent and pass around module handles.
+**Detail — module references:** A compiled module is a string (byte sequence) on the heap, following FCP's convention. The `'_activate'` body kernel receives this string, interprets it as compiled bytecode containing a `_select/1` procedure, and resolves the goal against it.
 
 **Detail — execution context:** The spawned `_select` goal runs against the *target module's* procedure table, not the caller's. The runtime must set the execution context (procedure lookup, import vector) to the target module when executing the goal.
 
@@ -218,7 +218,7 @@ Each phase maintains zero regressions on existing tests while adding new tests.
 
 ## 6. Open Decisions
 
-**Module reference term.** How is a module handle represented on the GLP heap? Options: (a) a new cell type `ModuleRef`, (b) a tagged constant wrapping a Dart object, (c) an opaque integer index into a runtime table. Decision needed before Phase 2.
+**Module reference term.** Settled: a compiled module is a string (byte sequence) on the heap, following FCP. The `'_activate'` body kernel receives the string, interprets it as compiled bytecode, and resolves the goal against its `_select/1`. No opaque objects, no registry lookup — the module *is* the string.
 
 **Backward compatibility.** Phases 1–3 are purely additive — they add new bytecode, a new body kernel, and a new system predicate without changing any existing behavior. Single-file programs and existing module tests are unaffected. Phases 4–5 introduce the new GLP-level dispatch alongside the existing Dart-level dispatch (`Dispatcher`, `StreamController`, `ExportMessage`), behind a flag. The Dart path remains the default. The GLP path must pass all existing module tests before becoming the default. Only after validation is the Dart path deprecated and removed.
 
