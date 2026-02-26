@@ -44,8 +44,6 @@ use(M2?).                  %% consume final map
 
 Each variable (M0, M1, M2) is written once and read once — fully SRSW-compliant.
 
-An `is_map` guard allows multiple reads of a map variable within a clause (SRSW relaxation for ground terms), following the same mechanism as `is_mutual_ref`.
-
 ## GLP Usage Examples
 
 ### Building and querying a map
@@ -100,16 +98,43 @@ The implementation uses existing GLP infrastructure:
 
 - **`MapTerm`**: New `Term` subclass in `terms.dart`, stored in `ValueTag` heap cells (same as `MutualRefTerm`)
 - **Body operations** (`map_new`, `map_put`): Implemented as body kernels (same mechanism as `_stream_append`)
-- **Guard operations** (`map_contains`, `is_map`): Implemented as guard cases in the bytecode runner (same mechanism as `ground`, `known`)
+- **Guard operations** (`map_contains`): Implemented as guard cases in the bytecode runner (same mechanism as `ground`, `known`)
 - **`map_get`**: GLP-level wrapper combining `map_contains` guard + `_map_get` body kernel
 
 No changes to the parser, compiler, or type system core are needed. The operations plug into existing extension points.
 
+## Design Decisions (Resolved)
+
+1. **`map_get` is a GLP stdlib wrapper**, not a built-in. It combines a `map_contains` guard (pure test) with a `_map_get` body kernel (binding). This keeps guards side-effect free.
+
+2. **Untyped operations.** Keys and values are any GLP terms. No polymorphic types needed. Same approach as other body kernels (`_stream_append`, etc.).
+
+3. **No `is_map` guard** in initial release. Maps are always threaded through fresh variables (M0, M1, M2...), so SRSW is satisfied without relaxation. Add later if a real use case needs it.
+
+4. **Stdlib placement.** The `map_get` wrapper lives in `programs/stdlib/`. Users load it when they need maps.
+
+### Built-ins (Dart-level)
+
+| Operation | Kind | Description |
+|-----------|------|-------------|
+| `map_new(M)` | Body kernel | Create empty map, bind M |
+| `map_put(M?, Key?, Val?, M1)` | Body kernel | Copy map + new entry, bind M1 |
+| `_map_get(M?, Key?, Val)` | Body kernel | Look up key, bind Val |
+| `map_contains(M?, Key?)` | Guard | Test if key exists (success/fail) |
+
+### Stdlib (GLP-level)
+
+```prolog
+map_get(M, Key, Val) :-
+    map_contains(M?, Key?) |
+    _map_get(M?, Key?, Val).
+```
+
 ## Scope
 
-Initial release: `map_new`, `map_put`, `map_get`, `map_contains`.
+Initial release: `map_new`, `map_put`, `_map_get`, `map_contains` (built-ins) + `map_get` (stdlib wrapper).
 
-Possible future additions: `map_remove`, `map_keys`, `map_size`, `map_merge`.
+Possible future additions: `map_remove`, `map_keys`, `map_size`, `map_merge`, `is_map`.
 
 ## Trade-offs
 
