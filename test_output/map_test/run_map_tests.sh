@@ -2,6 +2,7 @@
 # GLP Map Operations Test Suite
 # Tests all map built-ins: map_new, map_put, _map_get, map_contains
 # and the stdlib map_get wrapper.
+# Includes O(1) lookup benchmark.
 
 set -e
 
@@ -223,6 +224,114 @@ HEREDOC
 2>&1)
 
 check "struct value stored and retrieved" "X = person(alice, 30)" "$t12"
+
+# =============================================================================
+# Test 13: Store 100 values, verify lookups at key 1, 50, 100
+# =============================================================================
+echo "--- Test 13: 100-entry map (correctness) ---"
+t13=$($DART run "$REPL" <<HEREDOC
+$MAP_TEST/test_map_100.glp
+test_100(A, B, C).
+test_100_missing(X).
+:quit
+HEREDOC
+2>&1)
+
+check "100-entry map: key 1 → 10" "A = 10" "$t13"
+check "100-entry map: key 50 → 500" "B = 500" "$t13"
+check "100-entry map: key 100 → 1000" "C = 1000" "$t13"
+check "100-entry map: key 101 → not_found" "X = not_found" "$t13"
+
+# =============================================================================
+# Test 14: O(1) lookup benchmark
+# =============================================================================
+echo "--- Test 14: O(1) lookup benchmark ---"
+echo ""
+echo "  Strategy: Build maps of size 10, 100, 1000."
+echo "  Do 50000 lookups on each. Measure total time."
+echo "  Subtract build-only time to isolate lookup cost."
+echo "  If lookup is O(1), lookup times should be similar"
+echo "  regardless of map size."
+echo ""
+
+LOOKUPS=50000
+
+# Use python3 for precise timing (avoids shell `time` parsing issues)
+measure() {
+    python3 -c "
+import subprocess, time, sys
+start = time.perf_counter()
+proc = subprocess.run(
+    ['$DART', 'run', '$REPL'],
+    input=sys.stdin.read(),
+    capture_output=True, text=True
+)
+elapsed = time.perf_counter() - start
+print(f'{elapsed:.4f}')
+" <<HEREDOC
+$MAP_TEST/test_map_benchmark.glp
+$1
+:quit
+HEREDOC
+}
+
+# Run each measurement 3 times and take the median for stability
+measure_median() {
+    local t1 t2 t3
+    t1=$(measure "$1")
+    t2=$(measure "$1")
+    t3=$(measure "$1")
+    python3 -c "print(f'{sorted([$t1, $t2, $t3])[1]:.4f}')"
+}
+
+echo "  Measuring (3 trials each, median selected)..."
+echo ""
+
+# Measure build-only time (baseline)
+BUILD_10=$(measure_median "build_only(10, X).")
+BUILD_100=$(measure_median "build_only(100, X).")
+BUILD_1000=$(measure_median "build_only(1000, X).")
+
+# Measure build + lookup time
+BENCH_10=$(measure_median "bench(10, $LOOKUPS, X).")
+BENCH_100=$(measure_median "bench(100, $LOOKUPS, X).")
+BENCH_1000=$(measure_median "bench(1000, $LOOKUPS, X).")
+
+# Calculate isolated lookup times
+L10=$(python3 -c "print(f'{max($BENCH_10 - $BUILD_10, 0.001):.4f}')")
+L100=$(python3 -c "print(f'{max($BENCH_100 - $BUILD_100, 0.001):.4f}')")
+L1000=$(python3 -c "print(f'{max($BENCH_1000 - $BUILD_1000, 0.001):.4f}')")
+
+echo "  Results ($LOOKUPS lookups per trial, median of 3 runs):"
+echo "  ┌─────────────┬────────────┬─────────────┬──────────────┐"
+echo "  │ Map Size    │ Build (s)  │ Total (s)   │ Lookup (s)   │"
+echo "  ├─────────────┼────────────┼─────────────┼──────────────┤"
+printf "  │ %-11s │ %-10s │ %-11s │ %-12s │\n" "10" "${BUILD_10}" "${BENCH_10}" "${L10}"
+printf "  │ %-11s │ %-10s │ %-11s │ %-12s │\n" "100" "${BUILD_100}" "${BENCH_100}" "${L100}"
+printf "  │ %-11s │ %-10s │ %-11s │ %-12s │\n" "1000" "${BUILD_1000}" "${BENCH_1000}" "${L1000}"
+echo "  └─────────────┴────────────┴─────────────┴──────────────┘"
+echo ""
+
+# O(1) check: lookup time for size 1000 should be < 3x lookup time for size 10
+# (100x size increase → if O(1), ratio should stay ~1.0)
+RATIO=$(python3 -c "
+l10 = max($BENCH_10 - $BUILD_10, 0.001)
+l1000 = max($BENCH_1000 - $BUILD_1000, 0.001)
+print(f'{l1000 / l10:.1f}')
+")
+
+echo "  Lookup time ratio (size 1000 / size 10): ${RATIO}x"
+echo "  (100x map size increase → if O(1), ratio should be ~1.0)"
+echo ""
+
+IS_O1=$(python3 -c "print(1 if float('$RATIO') < 3.0 else 0)")
+if [ "$IS_O1" = "1" ]; then
+    echo "  PASS: O(1) lookup confirmed (ratio ${RATIO}x < 3.0x threshold)"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: Lookup appears non-O(1) (ratio ${RATIO}x >= 3.0x threshold)"
+    FAIL=$((FAIL + 1))
+fi
 
 # =============================================================================
 # Summary
