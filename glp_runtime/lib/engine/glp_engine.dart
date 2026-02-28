@@ -145,7 +145,8 @@ class GlpEngine {
       'unify.glp',
       'mwm.glp',
       'equator.glp',
-      'time.glp'
+      'time.glp',
+      'map.glp'
     ];
 
     for (final filename in stdlibFiles) {

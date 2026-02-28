@@ -82,3 +82,23 @@ class MutualRefTerm implements Term {
   @override
   int get hashCode => id.hashCode;
 }
+
+/// Opaque map term wrapping a Dart HashMap for O(1) key-value lookup.
+///
+/// Keys are Dart-level objects (strings, ints, doubles) extracted from GLP
+/// ConstTerm values. Values are GLP Term objects stored as-is.
+///
+/// Stored on the heap in a ValueTag cell, same as MutualRefTerm.
+/// Immutable semantics: map_put creates a new MapTerm (copy + insert).
+class MapTerm implements Term {
+  final Map<Object, Term> entries;
+
+  MapTerm(this.entries);
+
+  @override
+  String toString() {
+    if (entries.isEmpty) return 'map({})';
+    final pairs = entries.entries.map((e) => '${e.key}: ${e.value}').join(', ');
+    return 'map({$pairs})';
+  }
+}

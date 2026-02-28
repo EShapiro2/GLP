@@ -1,0 +1,10 @@
+% Test 5: Overwrite existing key
+% Verifies map_put overwrites an existing key with a new value
+% and the new value is retrieved.
+
+procedure test_overwrite(_).
+test_overwrite(Result?) :-
+    map_new(M0),
+    map_put(M0?, k, old, M1),
+    map_put(M1?, k, new_val, M2),
+    map_get(M2?, k, Result).

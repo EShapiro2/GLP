@@ -1,0 +1,12 @@
+% Test 7: map_get fallback with otherwise
+% Verifies that when a key is not found, an otherwise clause provides a default.
+% Uses map_contains directly in the guard for proper clause selection.
+
+procedure test_fallback(_).
+test_fallback(Result?) :-
+    map_new(M0),
+    try_get(M0?, missing, Result).
+
+procedure try_get(_?, _?, _).
+try_get(M, Key, Val?) :- map_contains(M?, Key?) | _map_get(M?, Key?, Val).
+try_get(_, _, not_found) :- otherwise | true.

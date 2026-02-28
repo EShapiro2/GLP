@@ -1,0 +1,9 @@
+% Test 12: Maps with structured values
+% Verifies that map values can be complex GLP terms (structures),
+% not just constants.
+
+procedure test_struct_val(_).
+test_struct_val(Result?) :-
+    map_new(M0),
+    map_put(M0?, alice, person(alice, 30), M1),
+    _map_get(M1?, alice, Result).
