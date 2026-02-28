@@ -102,6 +102,11 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
 
   // I/O kernels
   registry.register('_output', 1, outputKernel);
+
+  // Map operations (O(1) key-value lookup)
+  registry.register('map_new', 1, mapNewKernel);
+  registry.register('map_put', 4, mapPutKernel);
+  registry.register('_map_get', 3, mapGetKernel);
 }
 
 /// Helper to get numeric value from argument (with arithmetic evaluation)
@@ -808,6 +813,85 @@ BodyKernelResult outputKernel(GlpRuntime rt, List<Object?> args) {
   }
 
   return BodyKernelResult.success;
+}
+
+// ============================================================================
+// MAP KERNELS (O(1) Key-Value Lookup)
+// ============================================================================
+
+/// Extract a Dart-level key from a GLP term.
+/// Keys must be ground constants (string, int, double).
+Object? _extractMapKey(GlpRuntime rt, Object? arg) {
+  final val = _deref(rt, arg);
+  if (val is ConstTerm) return val.value;
+  if (val is num) return val;
+  if (val is String) return val;
+  return null; // not a valid map key
+}
+
+/// map_new(M) — Create empty map, bind M to it.
+BodyKernelResult mapNewKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 1) {
+    print('[ABORT] map_new/1: expected 1 argument, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  return _bindResult(rt, args[0], MapTerm({}));
+}
+
+/// map_put(M?, Key?, Val?, M1) — Copy map + new entry, bind M1.
+/// O(n) — copies the map for immutable semantics.
+BodyKernelResult mapPutKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 4) {
+    print('[ABORT] map_put/4: expected 4 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final mapArg = _deref(rt, args[0]);
+  if (mapArg is! MapTerm) {
+    print('[ABORT] map_put/4: first argument must be a MapTerm, got ${mapArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  final key = _extractMapKey(rt, args[1]);
+  if (key == null) {
+    print('[ABORT] map_put/4: second argument must be a ground constant');
+    return BodyKernelResult.abort;
+  }
+
+  final val = _deref(rt, args[2]);
+  final newEntries = Map<Object, Term>.of(mapArg.entries);
+  newEntries[key] = (val is Term) ? val : ConstTerm(val);
+
+  return _bindResult(rt, args[3], MapTerm(newEntries));
+}
+
+/// _map_get(M?, Key?, Val) — Look up key, bind Val to value.
+/// Only called after map_contains guard confirms key exists.
+BodyKernelResult mapGetKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] _map_get/3: expected 3 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final mapArg = _deref(rt, args[0]);
+  if (mapArg is! MapTerm) {
+    print('[ABORT] _map_get/3: first argument must be a MapTerm, got ${mapArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  final key = _extractMapKey(rt, args[1]);
+  if (key == null) {
+    print('[ABORT] _map_get/3: second argument must be a ground constant');
+    return BodyKernelResult.abort;
+  }
+
+  final val = mapArg.entries[key];
+  if (val == null) {
+    print('[ABORT] _map_get/3: key not found (guard should have checked)');
+    return BodyKernelResult.abort;
+  }
+
+  return _bindResult(rt, args[2], val);
 }
 
 /// Format a ground term as readable GLP syntax.

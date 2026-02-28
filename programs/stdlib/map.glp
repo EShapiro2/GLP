@@ -1,0 +1,9 @@
+%% map_get/3 — Look up a key in a map, bind Val to the value.
+%% Fails (via otherwise in caller) if key not found.
+-stdlib.
+
+procedure map_get(_?, _?, _).
+
+map_get(M, Key, Val?) :-
+    map_contains(M?, Key?) |
+    _map_get(M?, Key?, Val).

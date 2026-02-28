@@ -177,6 +177,12 @@ class PmtChecker {
         _collectVarNames(guard.args[0], grounded);
         _collectVarNames(guard.args[1], grounded);
       }
+
+      // map_contains/2: both map and key args are grounded
+      if (guard.predicate == 'map_contains' && guard.args.length == 2) {
+        _collectVarNames(guard.args[0], grounded);
+        _collectVarNames(guard.args[1], grounded);
+      }
     }
 
     return grounded;

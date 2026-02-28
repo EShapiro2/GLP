@@ -1,0 +1,9 @@
+% Test 6: Stdlib map_get wrapper
+% Verifies the GLP-level map_get/3 wrapper (which combines
+% map_contains guard + _map_get body kernel) works correctly.
+
+procedure test_stdlib(_).
+test_stdlib(Result?) :-
+    map_new(M0),
+    map_put(M0?, alice, 42, M1),
+    map_get(M1?, alice, Result).

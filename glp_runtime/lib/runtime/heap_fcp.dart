@@ -877,6 +877,13 @@ class HeapFCP {
       return addr;
     }
 
+    if (term is MapTerm) {
+      // MapTerm is an opaque Dart map stored as a ground value
+      final addr = HP++;
+      cells.add(HeapCell(term, CellTag.ValueTag));
+      return addr;
+    }
+
     throw ArgumentError('Unknown term type: ${term.runtimeType}');
   }
 }

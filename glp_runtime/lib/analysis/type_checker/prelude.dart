@@ -78,6 +78,13 @@ procedure is_mutual_ref(_?).
 procedure _stream_append(_?, _?, _).
 procedure _close_mutual_reference(_?).
 
+% Map operations (O(1) key-value lookup)
+procedure map_new(_).
+procedure map_put(_?, _?, _?, _).
+procedure _map_get(_?, _?, _).
+procedure map_contains(_?, _?).
+procedure map_get(_?, _?, _).
+
 % Output/debugging primitives
 procedure write(_?).
 procedure writeln(_?).
@@ -173,6 +180,12 @@ const Set<String> predefinedProcedureNames = {
   // Univ operations (fundamental)
   '=..',
   '..=',
+  // Map operations (fundamental builtins - implemented by runtime)
+  'map_new',
+  'map_put',
+  '_map_get',
+  'map_contains',
+  // Note: map_get is NOT protected - it's a stdlib wrapper that can be redefined
   // Note: dl_append, dl_to_list, new_channel, send, receive
   // are NOT protected - they are library-level and can be redefined
 };
@@ -226,6 +239,12 @@ const Set<String> builtinProcedures = {
   'is_mutual_ref/1',
   '_stream_append/3',
   '_close_mutual_reference/1',
+  // Map operations (O(1) key-value lookup)
+  'map_new/1',
+  'map_put/4',
+  '_map_get/3',
+  'map_contains/2',
+  'map_get/3',
   // Output/debugging primitives
   'write/1',
   'writeln/1',

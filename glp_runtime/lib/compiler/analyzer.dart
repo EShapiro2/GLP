@@ -676,6 +676,19 @@ class Analyzer {
       }
     }
 
+    // map_contains/2 guard marks first argument (the map) as ground
+    // MapTerm is opaque and immutable — safe to read multiple times
+    if (guard.predicate == 'map_contains' && guard.args.length == 2) {
+      final mapArg = guard.args[0];
+      if (mapArg is VarTerm) {
+        varTable.markGrounded(mapArg.name);
+      }
+      final keyArg = guard.args[1];
+      if (keyArg is VarTerm) {
+        varTable.markGrounded(keyArg.name);
+      }
+    }
+
     // equator/1 guard marks argument as ground (equator structure can be read multiple times)
     // Equators enable many-to-one signaling where multiple recipients receive the same structure
     if (guard.predicate == 'equator' && guard.args.length == 1) {
