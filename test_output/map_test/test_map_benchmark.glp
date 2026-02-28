@@ -31,10 +31,9 @@ repeat_get(K, _, done) :-
 
 % Build-only: construct map of size N (no lookups)
 procedure build_only(Number?, _).
-build_only(N, Done?) :-
+build_only(N, done) :-
     map_new(M0),
-    build_n(N?, M0?, _),
-    Done = done.
+    build_n(N?, M0?, _).
 
 % Build + lookup: construct map of size N, then do K lookups
 procedure bench(Number?, Number?, _).
