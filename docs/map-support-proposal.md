@@ -11,7 +11,7 @@ Four operations, divided by execution phase:
 | Operation | Phase | Semantics |
 |-----------|-------|-----------|
 | `map_new(M)` | Body | Create empty map, bind M to it |
-| `map_put(M?, Key?, Val?, M1)` | Body | Add entry, bind M1 to new map |
+| `map_put(M?, Key?, Val?, M1)` | Body | Mutate map in place, bind M1 |
 | `map_get(M?, Key?, Val)` | Guard + Body | Look up key, bind Val to value |
 | `map_contains(M?, Key?)` | Guard | Test if key exists |
 
@@ -27,9 +27,9 @@ A map is an opaque Dart object stored directly on the GLP heap as a `MapTerm` �
 - Dart's garbage collector handles cleanup automatically
 - The map handle threads through variables like any other GLP term
 
-## Functional (Immutable) Semantics
+## In-Place Mutation Semantics
 
-`map_put` does **not** mutate the original map. It creates a new `MapTerm` containing a copy of the old map plus the new entry. The old map variable is never used again (guaranteed by SRSW), but the copy ensures correctness if the old map is referenced from within a data structure.
+`map_put` mutates the map **in place** — it inserts the new entry directly into the existing `MapTerm` and binds the output variable to the same object. This is safe because SRSW guarantees the old map variable (M) is dead after the read: each variable is written once and read once, so the single owner can safely mutate. No copy is needed, giving O(1) amortized put.
 
 ## SRSW Compliance
 
@@ -67,11 +67,13 @@ lookup(M, Key, not_found) :-
 
 ```prolog
 agent(Contacts, [add(Name, Addr)|Msgs]) :-
-    map_put(Contacts?, Name?, Addr?, Contacts1) |
+    ground(Contacts?), ground(Name?), ground(Addr?) |
+    map_put(Contacts?, Name?, Addr?, Contacts1),
     agent(Contacts1?, Msgs?).
 
 agent(Contacts, [lookup(Name, Reply)|Msgs]) :-
-    map_get(Contacts?, Name?, Addr) |
+    map_contains(Contacts?, Name?) |
+    _map_get(Contacts?, Name?, Addr),
     Reply = Addr?,
     agent(Contacts?, Msgs?).
 
@@ -88,9 +90,9 @@ agent(Contacts, [lookup(Name, Reply)|Msgs]) :-
 | `map_new` | O(1) |
 | `map_get` | O(1) amortized |
 | `map_contains` | O(1) amortized |
-| `map_put` | O(n) — copies the map |
+| `map_put` | O(1) amortized — in-place mutation |
 
-`map_put` is O(n) due to the copy. This is the cost of functional/immutable semantics. In practice, SRSW guarantees the old map is dead after `map_put`, so a future optimization could mutate in place (O(1) amortized) when safe.
+All four map operations are O(1) amortized. `map_put` mutates the underlying Dart `HashMap` in place — SRSW guarantees the old map variable is dead after the read, so the single owner can safely mutate without copying.
 
 ## Implementation Approach
 
@@ -118,7 +120,7 @@ No changes to the parser, compiler, or type system core are needed. The operatio
 | Operation | Kind | Description |
 |-----------|------|-------------|
 | `map_new(M)` | Body kernel | Create empty map, bind M |
-| `map_put(M?, Key?, Val?, M1)` | Body kernel | Copy map + new entry, bind M1 |
+| `map_put(M?, Key?, Val?, M1)` | Body kernel | Mutate map in place + bind M1 |
 | `_map_get(M?, Key?, Val)` | Body kernel | Look up key, bind Val |
 | `map_contains(M?, Key?)` | Guard | Test if key exists (success/fail) |
 
@@ -142,7 +144,7 @@ Possible future additions: `map_remove`, `map_keys`, `map_size`, `map_merge`, `i
 
 **Why not a general FFI?** A general foreign function interface would be over-engineered for this need. Four focused operations are simpler, safer, and sufficient. If more Dart bridging is needed later, the same body-kernel + guard mechanism can be reused.
 
-**Why copy on put?** Correctness. The old map might be reachable from a data structure even though SRSW says the variable won't be read again. Copying is safe. Mutation-in-place is a future optimization.
+**Why mutate in place?** Performance. SRSW guarantees each map variable is written once and read once. After `map_put` reads M, M is dead — the single owner can safely mutate the underlying Dart `HashMap` and bind M1 to the same object. This gives O(1) put instead of O(n) copy.
 
 ---
 
@@ -213,9 +215,11 @@ BodyKernelResult mapNewKernel(GlpRuntime rt, List<Object?> args) {
 **Phase:** Body
 **Args:** M — reader (existing map), Key — reader (ground constant), Val — reader (any term), M1 — unbound writer (new map)
 
-**Semantics:** Dereference M to get a `MapTerm`. Extract a Dart key from Key. Dereference Val. Create a **new** `MapTerm` whose entries are a copy of M's entries plus `{key: val}`. Bind M1 to the new map.
+**Semantics:** Dereference M to get a `MapTerm`. Extract a Dart key from Key. Dereference Val. **Mutate the existing `MapTerm` in place** by inserting `{key: val}` into its entries. Bind M1 to the same `MapTerm` object.
 
-If Key already exists, its value is **overwritten** in the new map.
+If Key already exists, its value is **overwritten**.
+
+This is safe because SRSW guarantees M is dead after this read — the single owner can mutate without copying.
 
 ```dart
 BodyKernelResult mapPutKernel(GlpRuntime rt, List<Object?> args) {
@@ -226,7 +230,7 @@ BodyKernelResult mapPutKernel(GlpRuntime rt, List<Object?> args) {
 
   final mapArg = _deref(rt, args[0]);
   if (mapArg is! MapTerm) {
-    print('[ABORT] map_put/4: first argument must be a MapTerm');
+    print('[ABORT] map_put/4: first argument must be a MapTerm, got ${mapArg.runtimeType}');
     return BodyKernelResult.abort;
   }
 
@@ -237,16 +241,15 @@ BodyKernelResult mapPutKernel(GlpRuntime rt, List<Object?> args) {
   }
 
   final val = _deref(rt, args[2]);
-  final newEntries = Map<Object, Term>.of(mapArg.entries);
-  newEntries[key] = (val is Term) ? val : ConstTerm(val);
+  mapArg.entries[key] = (val is Term) ? val : ConstTerm(val);
 
-  return _bindResult(rt, args[3], MapTerm(newEntries));
+  return _bindResult(rt, args[3], mapArg);
 }
 ```
 
 **Registration:** `registry.register('map_put', 4, mapPutKernel);`
 
-**Complexity:** O(n) — copies the map. Future optimization: mutate in place when SRSW guarantees the old map is dead.
+**Complexity:** O(1) amortized — in-place mutation of the underlying Dart `HashMap`.
 
 ## 5. Body Kernel: `_map_get/3`
 
@@ -405,8 +408,8 @@ Run full test suite. Then run the map-specific test programs.
 ## Test 1: Basic map creation and put
 
 ```glp
-procedure test_new(Result).
-test_new(Result) :- map_new(M0), map_put(M0?, alice, 42, M1), map_contains(M1?, alice) | Result = yes.
+procedure test_new(_).
+test_new(Result?) :- map_new(M0), map_put(M0?, alice, 42, M1), map_contains(M1?, alice) | Result = yes.
 ```
 
 **Goal:** `test_new(X).`
@@ -415,8 +418,8 @@ test_new(Result) :- map_new(M0), map_put(M0?, alice, 42, M1), map_contains(M1?, 
 ## Test 2: map_get retrieval
 
 ```glp
-procedure test_get(Result).
-test_get(Result) :- map_new(M0), map_put(M0?, bob, 99, M1), _map_get(M1?, bob, Result).
+procedure test_get(_).
+test_get(Result?) :- map_new(M0), map_put(M0?, bob, 99, M1), map_get(M1?, bob, Result).
 ```
 
 **Goal:** `test_get(X).`
@@ -425,9 +428,9 @@ test_get(Result) :- map_new(M0), map_put(M0?, bob, 99, M1), _map_get(M1?, bob, R
 ## Test 3: Key not found (map_contains fails)
 
 ```glp
-procedure test_missing(Result).
-test_missing(Result) :- map_new(M0), map_put(M0?, alice, 42, M1), map_contains(M1?, bob) | Result = found.
-test_missing(Result) :- otherwise | Result = not_found.
+procedure test_missing(_).
+test_missing(Result?) :- map_new(M0), map_put(M0?, alice, 42, M1), map_contains(M1?, bob) | Result = found.
+test_missing(Result?) :- otherwise | Result = not_found.
 ```
 
 **Goal:** `test_missing(X).`
@@ -436,13 +439,13 @@ test_missing(Result) :- otherwise | Result = not_found.
 ## Test 4: Multiple puts and gets
 
 ```glp
-procedure test_multi(R1, R2).
-test_multi(R1, R2) :-
+procedure test_multi(_, _).
+test_multi(R1?, R2?) :-
     map_new(M0),
     map_put(M0?, a, 1, M1),
     map_put(M1?, b, 2, M2),
-    _map_get(M2?, a, R1),
-    _map_get(M2?, b, R2).
+    map_get(M2?, a, R1),
+    map_get(M2?, b, R2).
 ```
 
 **Goal:** `test_multi(X, Y).`
@@ -451,24 +454,24 @@ test_multi(R1, R2) :-
 ## Test 5: Overwrite existing key
 
 ```glp
-procedure test_overwrite(Result).
-test_overwrite(Result) :-
+procedure test_overwrite(_).
+test_overwrite(Result?) :-
     map_new(M0),
-    map_put(M0?, k, old, M1),
-    map_put(M1?, k, new, M2),
-    _map_get(M2?, k, Result).
+    map_put(M0?, k, old_val, M1),
+    map_put(M1?, k, new_val, M2),
+    map_get(M2?, k, Result).
 ```
 
 **Goal:** `test_overwrite(X).`
-**Expected:** `X = new`
+**Expected:** `X = new_val`
 
 ## Test 6: Stdlib map_get wrapper
 
 Load `programs/stdlib/map.glp`, then:
 
 ```glp
-procedure test_stdlib(Result).
-test_stdlib(Result) :-
+procedure test_stdlib(_).
+test_stdlib(Result?) :-
     map_new(M0),
     map_put(M0?, alice, 42, M1),
     map_get(M1?, alice, Result).
@@ -480,9 +483,9 @@ test_stdlib(Result) :-
 ## Test 7: map_get with otherwise fallback
 
 ```glp
-procedure test_fallback(Result).
-test_fallback(Result) :- map_new(M0), map_get(M0?, missing, Result).
-test_fallback(Result) :- otherwise | Result = not_found.
+procedure test_fallback(_).
+test_fallback(Result?) :- map_new(M0), map_get(M0?, missing, Result).
+test_fallback(Result?) :- otherwise | Result = not_found.
 ```
 
 **Goal:** `test_fallback(X).`
@@ -491,20 +494,22 @@ test_fallback(Result) :- otherwise | Result = not_found.
 ## Test 8: Map as agent state (integration)
 
 ```glp
-procedure agent(_, _, _).
-agent(Contacts, [add(Name, Addr)|Msgs], Done) :-
-    map_put(Contacts?, Name?, Addr?, C1) |
+procedure agent(_?, _?, _).
+agent(Contacts, [add(Name, Addr)|Msgs], Done?) :-
+    ground(Contacts?), ground(Name?), ground(Addr?) |
+    map_put(Contacts?, Name?, Addr?, C1),
     agent(C1?, Msgs?, Done).
-agent(Contacts, [get(Name, Reply)|Msgs], Done) :-
-    map_get(Contacts?, Name?, Val) |
+agent(Contacts, [get(Name, Reply)|Msgs], Done?) :-
+    map_contains(Contacts?, Name?) |
+    _map_get(Contacts?, Name?, Val),
     Reply = Val?,
     agent(Contacts?, Msgs?, Done).
-agent(Contacts, [], Done) :- Done = done.
+agent(_, [], done).
 
-procedure test_agent(Result).
-test_agent(Result) :-
+procedure test_agent(_).
+test_agent(Result?) :-
     map_new(M0),
-    agent(M0?, [add(alice, 42), add(bob, 99), get(alice, R)], Done),
+    agent(M0?, [add(alice, 42), add(bob, 99), get(alice, R)], _Done),
     Result = R?.
 ```
 
