@@ -89,7 +89,8 @@ class MutualRefTerm implements Term {
 /// ConstTerm values. Values are GLP Term objects stored as-is.
 ///
 /// Stored on the heap in a ValueTag cell, same as MutualRefTerm.
-/// Immutable semantics: map_put creates a new MapTerm (copy + insert).
+/// Mutated in place by map_put: SRSW guarantees the old variable is dead
+/// after read, so the single owner can safely mutate. O(1) put.
 class MapTerm implements Term {
   final Map<Object, Term> entries;
 

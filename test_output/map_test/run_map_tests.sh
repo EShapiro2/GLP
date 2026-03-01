@@ -243,6 +243,30 @@ check "100-entry map: key 100 → 1000" "C = 1000" "$t13"
 check "100-entry map: key 101 → not_found" "X = not_found" "$t13"
 
 # =============================================================================
+# Test 16: Map with list-of-numbers values
+# =============================================================================
+echo "--- Test 16: List values (store, head, len, sum, multi, overwrite) ---"
+t16=$($DART run "$REPL" <<HEREDOC
+$MAP_TEST/test_map_list_values.glp
+test_list_val(A).
+test_list_head(B).
+test_list_len(C).
+test_list_sum(D).
+test_two_lists(E, F).
+test_overwrite_list(G).
+:quit
+HEREDOC
+2>&1)
+
+check "list value stored and retrieved" "A = \[1, 2, 3\]" "$t16"
+check "list head extracted" "B = 10" "$t16"
+check "list length computed" "C = 5" "$t16"
+check "list sum computed" "D = 100" "$t16"
+check "two lists: alice head" "E = 1" "$t16"
+check "two lists: bob head" "F = 10" "$t16"
+check "overwrite list and sum" "G = 600" "$t16"
+
+# =============================================================================
 # Test 14: O(1) lookup benchmark
 # =============================================================================
 echo "--- Test 14: O(1) lookup benchmark ---"
