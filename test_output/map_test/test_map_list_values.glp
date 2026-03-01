@@ -1,0 +1,75 @@
+% Test 16: Map with list-of-numbers values
+% Verifies maps can store lists as values and the retrieved lists
+% are fully functional GLP lists (pattern-matchable, traversable).
+
+% --- Sub-test A: Store name → [numbers], retrieve the full list ---
+procedure test_list_val(_).
+test_list_val(Result?) :-
+    map_new(M0),
+    map_put(M0?, alice, [1, 2, 3], M1),
+    map_get(M1?, alice, Result).
+
+% --- Sub-test B: Retrieve list, extract head element ---
+procedure get_head(_?, _).
+get_head([H|_], H?).
+
+procedure test_list_head(_).
+test_list_head(H?) :-
+    map_new(M0),
+    map_put(M0?, scores, [10, 20, 30], M1),
+    map_get(M1?, scores, List),
+    get_head(List?, H).
+
+% --- Sub-test C: Retrieve list, compute its length ---
+procedure list_len(_?, _?, _).
+list_len([_|Rest], Acc, Result?) :-
+    A1 := Acc? + 1,
+    list_len(Rest?, A1?, Result).
+list_len([], Acc, Acc?).
+
+procedure test_list_len(_).
+test_list_len(Result?) :-
+    map_new(M0),
+    map_put(M0?, data, [5, 10, 15, 20, 25], M1),
+    map_get(M1?, data, List),
+    list_len(List?, 0, Result).
+
+% --- Sub-test D: Store two name→list entries, sum one list ---
+procedure sum_list(_?, _?, _).
+sum_list([H|Rest], Acc, Result?) :-
+    A1 := Acc? + H?,
+    sum_list(Rest?, A1?, Result).
+sum_list([], Acc, Acc?).
+
+procedure test_list_sum(_).
+test_list_sum(Result?) :-
+    map_new(M0),
+    map_put(M0?, alice, [1, 2, 3], M1),
+    map_put(M1?, bob, [10, 20, 30, 40], M2),
+    map_get(M2?, bob, List),
+    sum_list(List?, 0, Result).
+
+% --- Sub-test E: Retrieve two different lists, extract heads ---
+procedure get_both_heads(_?, _?, _?, _, _).
+get_both_heads(M, K1, K2, H1?, H2?) :-
+    map_contains(M?, K1?) |
+    _map_get(M?, K1?, L1),
+    get_head(L1?, H1),
+    map_get(M?, K2?, L2),
+    get_head(L2?, H2).
+
+procedure test_two_lists(_, _).
+test_two_lists(R1?, R2?) :-
+    map_new(M0),
+    map_put(M0?, alice, [1, 2, 3], M1),
+    map_put(M1?, bob, [10, 20], M2),
+    get_both_heads(M2?, alice, bob, R1, R2).
+
+% --- Sub-test F: Overwrite a list value with a new list ---
+procedure test_overwrite_list(_).
+test_overwrite_list(Result?) :-
+    map_new(M0),
+    map_put(M0?, alice, [1, 2], M1),
+    map_put(M1?, alice, [100, 200, 300], M2),
+    map_get(M2?, alice, List),
+    sum_list(List?, 0, Result).

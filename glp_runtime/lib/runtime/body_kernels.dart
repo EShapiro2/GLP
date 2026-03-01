@@ -838,8 +838,9 @@ BodyKernelResult mapNewKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[0], MapTerm({}));
 }
 
-/// map_put(M?, Key?, Val?, M1) — Copy map + new entry, bind M1.
-/// O(n) — copies the map for immutable semantics.
+/// map_put(M?, Key?, Val?, M1) — Mutate map in place + bind M1.
+/// O(1) — SRSW guarantees the old map variable (M) is dead after this
+/// read, so in-place mutation is safe. No copy needed.
 BodyKernelResult mapPutKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 4) {
     print('[ABORT] map_put/4: expected 4 arguments, got ${args.length}');
@@ -859,10 +860,9 @@ BodyKernelResult mapPutKernel(GlpRuntime rt, List<Object?> args) {
   }
 
   final val = _deref(rt, args[2]);
-  final newEntries = Map<Object, Term>.of(mapArg.entries);
-  newEntries[key] = (val is Term) ? val : ConstTerm(val);
+  mapArg.entries[key] = (val is Term) ? val : ConstTerm(val);
 
-  return _bindResult(rt, args[3], MapTerm(newEntries));
+  return _bindResult(rt, args[3], mapArg);
 }
 
 /// _map_get(M?, Key?, Val) — Look up key, bind Val to value.
