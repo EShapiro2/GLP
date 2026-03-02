@@ -47,7 +47,7 @@ class ReplPlayRunner {
 
   Process? _process;
 
-  /// CSSG GLP files to load (relative to glp_runtime/).
+  /// Default CSSG GLP files to load (relative to glp_runtime/).
   static const _cssgFiles = [
     '../programs/typed_book/project_cssg/project_typed_social_agent.glp',
     '../programs/typed_book/project_cssg/project_typed_ui_mediator.glp',
@@ -55,11 +55,14 @@ class ReplPlayRunner {
     '../programs/typed_book/project_cssg/project_play_ui_sim_boot.glp',
   ];
 
+  /// Custom GLP source files. If provided, these are loaded instead of _cssgFiles.
+  final List<String>? sourceFiles;
+
   /// Regex for parsing tagged output lines.
   static final _taggedRegex =
       RegExp(r'^tagged\((\w+), (cmd|notify)\((.+)\)\)$');
 
-  ReplPlayRunner({required this.repoRoot});
+  ReplPlayRunner({required this.repoRoot, this.sourceFiles});
 
   bool get isRunning => _process != null;
 
@@ -93,8 +96,9 @@ class ReplPlayRunner {
       onLog?.call('REPL: process started (pid=${process.pid})');
 
       // Feed load commands + play goal + quit
+      final files = sourceFiles ?? _cssgFiles;
       final commands = [
-        for (final f in _cssgFiles) f,
+        for (final f in files) f,
         'fplay$playNumber.',
         ':quit',
       ].join('\n');
