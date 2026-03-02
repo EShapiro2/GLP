@@ -1,9 +1,9 @@
 /// GLP Child-Safe Social Graph — Simulated CSSG Plays
 ///
-/// Runs CSSG plays (fplay4-10) via REPL subprocess, with tagged output
+/// Runs CSSG plays (fplay4-11) via REPL subprocess, with tagged output
 /// parsed and routed to per-agent read-only panels.
 /// Plays 4-7: 4 agents (Alice, Carol, Bob, Dave) — parent-child protocol
-/// Plays 8-10: 2 agents (Alice, Bob) — unfriend protocol
+/// Plays 8-11: 2 agents (Alice, Bob) — unfriend protocol
 library;
 
 import 'dart:io';
@@ -75,7 +75,7 @@ const _agentInfos4 = [
   _AgentInfo('Dave',  'Child',  Color(0xFF4DB6AC), Color(0xFFF5FFFE)),  // teal 300, very light
 ];
 
-/// Panel order for 2-agent plays (8-10): Alice, Bob.
+/// Panel order for 2-agent plays (8-11): Alice, Bob.
 const _agentInfos2 = [
   _AgentInfo('Alice', 'Agent', Color(0xFF3949AB), Color(0xFFE8EAF6)),  // indigo 600, indigo 50
   _AgentInfo('Bob',   'Agent', Color(0xFF00897B), Color(0xFFE0F2F1)),  // teal 600, teal 50
@@ -149,7 +149,7 @@ class _CssgScreenState extends State<CssgScreen> {
     _agents.clear();
 
     // Create agent panels based on play type
-    // Plays 4-7: 4 agents (parent-child), Plays 8-10: 2 agents
+    // Plays 4-7: 4 agents (parent-child), Plays 8-11: 2 agents
     final agentInfos = playNumber >= 8 ? _agentInfos2 : _agentInfos4;
     for (final info in agentInfos) {
       _agents[info.id] = _AgentState(info);
