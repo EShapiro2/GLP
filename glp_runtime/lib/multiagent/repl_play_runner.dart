@@ -47,19 +47,30 @@ class ReplPlayRunner {
 
   Process? _process;
 
-  /// CSSG GLP files to load (relative to glp_runtime/).
-  static const _cssgFiles = [
+  /// Which GLP files to load (relative to glp_runtime/).
+  final List<String> glpFiles;
+
+  /// CSSG GLP files (child-safe social graph, plays 1–7).
+  static const cssgFiles = [
     '../programs/typed_book/cssg/typed_social_agent.glp',
     '../programs/typed_book/cssg/typed_ui_mediator.glp',
     '../programs/typed_book/cssg/typed_ui_actors.glp',
     '../programs/typed_book/cssg/play_ui_sim_boot.glp',
   ];
 
+  /// CSSN GLP files (child-safe social networking, plays 1–10).
+  static const cssnFiles = [
+    '../programs/typed_book/cssn/typed_social_agent.glp',
+    '../programs/typed_book/cssn/typed_ui_mediator.glp',
+    '../programs/typed_book/cssn/typed_ui_actors.glp',
+    '../programs/typed_book/cssn/play_ui_sim_boot.glp',
+  ];
+
   /// Regex for parsing tagged output lines.
   static final _taggedRegex =
       RegExp(r'^tagged\((\w+), (cmd|notify)\((.+)\)\)$');
 
-  ReplPlayRunner({required this.repoRoot});
+  ReplPlayRunner({required this.repoRoot, this.glpFiles = cssgFiles});
 
   bool get isRunning => _process != null;
 
@@ -94,7 +105,7 @@ class ReplPlayRunner {
 
       // Feed load commands + play goal + quit
       final commands = [
-        for (final f in _cssgFiles) f,
+        for (final f in glpFiles) f,
         'fplay$playNumber.',
         ':quit',
       ].join('\n');

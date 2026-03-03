@@ -1,8 +1,10 @@
-/// GLP Child-Safe Social Graph / Networking — Simulated Plays
+/// GLP Child-Safe Social Groups — 6-Agent Demo
 ///
-/// Runs CSSG plays (fplay4-7) and CSSN group plays (fplay8-10) via REPL
-/// subprocess, with tagged output parsed and routed to per-agent read-only
-/// panels (Alice, Bob, Carol, Dave).
+/// Runs CSSN play 11 (fplay11) via REPL subprocess: 3 parents (Alice, Bob,
+/// Charlie) introduce their children (Carol, Dave, Eve) to each other.
+/// Carol creates a group chat and invites Dave and Eve directly.
+/// Tagged output is parsed and routed to per-agent read-only panels
+/// arranged in a 2×3 grid (parents on top, children below).
 library;
 
 import 'dart:io';
@@ -15,39 +17,39 @@ import 'package:glp_runtime/multiagent/repl_play_runner.dart';
 // =============================================================================
 
 void main() {
-  runApp(const CssgApp());
+  runApp(const CssgGroupsApp());
 }
 
 // =============================================================================
-// CSSG APP
+// APP
 // =============================================================================
 
-class CssgApp extends StatelessWidget {
-  const CssgApp({super.key});
+class CssgGroupsApp extends StatelessWidget {
+  const CssgGroupsApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Child-Safe Social Graph',
+      title: 'Child-Safe Social Groups',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.deepPurple,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
+          seedColor: Colors.deepPurple,
           brightness: Brightness.light,
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.blue,
+          backgroundColor: Color(0xFF5E35B1), // deep purple 600
           foregroundColor: Colors.white,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
+            backgroundColor: const Color(0xFF5E35B1),
             foregroundColor: Colors.white,
           ),
         ),
       ),
-      home: const CssgScreen(),
+      home: const CssgGroupsScreen(),
     );
   }
 }
@@ -58,20 +60,29 @@ class CssgApp extends StatelessWidget {
 
 class _AgentInfo {
   final String id;
-  final String role;    // "Parent" or "Child"
+  final String role; // "Parent" or "Child"
   final Color headerColor;
   final Color bgColor;
+  final int row; // 0 = top (parents), 1 = bottom (children)
+  final int col; // 0, 1, 2 — family column
 
-  const _AgentInfo(this.id, this.role, this.headerColor, this.bgColor);
+  const _AgentInfo(
+      this.id, this.role, this.headerColor, this.bgColor, this.row, this.col);
 }
 
-/// Panel order: Parent, Child, Parent, Child — grouped by family.
-/// Alice/Carol = indigo family, Bob/Dave = teal family.
+/// 6 agents arranged in 2×3 grid:
+///   Row 0 (parents): Alice, Bob, Charlie
+///   Row 1 (children): Carol, Dave, Eve
+/// Each column is a family pair.
 const _agentInfos = [
-  _AgentInfo('Alice', 'Parent', Color(0xFF3949AB), Color(0xFFE8EAF6)),  // indigo 600, indigo 50
-  _AgentInfo('Carol', 'Child',  Color(0xFF7986CB), Color(0xFFF5F5FF)),  // indigo 300, very light
-  _AgentInfo('Bob',   'Parent', Color(0xFF00897B), Color(0xFFE0F2F1)),  // teal 600, teal 50
-  _AgentInfo('Dave',  'Child',  Color(0xFF4DB6AC), Color(0xFFF5FFFE)),  // teal 300, very light
+  // Parents (row 0)
+  _AgentInfo('Alice', 'Parent', Color(0xFF3949AB), Color(0xFFE8EAF6), 0, 0), // indigo
+  _AgentInfo('Bob', 'Parent', Color(0xFF00897B), Color(0xFFE0F2F1), 0, 1), // teal
+  _AgentInfo('Charlie', 'Parent', Color(0xFF6D4C41), Color(0xFFEFEBE9), 0, 2), // brown
+  // Children (row 1)
+  _AgentInfo('Carol', 'Child', Color(0xFF7986CB), Color(0xFFF5F5FF), 1, 0), // light indigo
+  _AgentInfo('Dave', 'Child', Color(0xFF4DB6AC), Color(0xFFF5FFFE), 1, 1), // light teal
+  _AgentInfo('Eve', 'Child', Color(0xFFA1887F), Color(0xFFFBF8F6), 1, 2), // light brown
 ];
 
 class _AgentState {
@@ -89,17 +100,17 @@ class _AgentState {
 }
 
 // =============================================================================
-// CSSG SCREEN
+// MAIN SCREEN
 // =============================================================================
 
-class CssgScreen extends StatefulWidget {
-  const CssgScreen({super.key});
+class CssgGroupsScreen extends StatefulWidget {
+  const CssgGroupsScreen({super.key});
 
   @override
-  State<CssgScreen> createState() => _CssgScreenState();
+  State<CssgGroupsScreen> createState() => _CssgGroupsScreenState();
 }
 
-class _CssgScreenState extends State<CssgScreen> {
+class _CssgGroupsScreenState extends State<CssgGroupsScreen> {
   final Map<String, _AgentState> _agents = {};
   final List<String> _log = [];
   ReplPlayRunner? _playRunner;
@@ -126,7 +137,7 @@ class _CssgScreenState extends State<CssgScreen> {
     return devRoot;
   }
 
-  Future<void> _runPlay(int playNumber) async {
+  Future<void> _runPlay() async {
     // Kill previous run
     _playRunner?.kill();
     _playRunner = null;
@@ -137,27 +148,26 @@ class _CssgScreenState extends State<CssgScreen> {
     }
     _agents.clear();
 
-    // Create agent panels: Alice, Carol, Bob, Dave (parent-child grouping)
+    // Create all 6 agent panels
     for (final info in _agentInfos) {
       _agents[info.id] = _AgentState(info);
     }
 
     final repoRoot = _resolveRepoRoot();
     setState(() {
-      _log.add('Starting fplay$playNumber (repo: $repoRoot)...');
+      _log.add('Starting fplay11 (repo: $repoRoot)...');
     });
 
     final runner = ReplPlayRunner(
       repoRoot: repoRoot,
-      glpFiles: playNumber >= 8
-          ? ReplPlayRunner.cssnFiles
-          : ReplPlayRunner.cssgFiles,
+      glpFiles: ReplPlayRunner.cssnFiles,
     );
     _playRunner = runner;
 
     runner.onOutput = (output) {
-      // Capitalize to match _AgentState keys (Alice, Bob, Carol, Dave)
-      final key = output.agentId[0].toUpperCase() + output.agentId.substring(1);
+      // Capitalize to match _AgentState keys
+      final key =
+          output.agentId[0].toUpperCase() + output.agentId.substring(1);
       final state = _agents[key];
       if (state == null) return;
 
@@ -170,7 +180,6 @@ class _CssgScreenState extends State<CssgScreen> {
     };
 
     runner.onLog = (line) {
-      // Silently log REPL output
       debugPrint('REPL: $line');
     };
 
@@ -183,11 +192,11 @@ class _CssgScreenState extends State<CssgScreen> {
     runner.onDone = (exitCode) {
       _playRunner = null;
       setState(() {
-        _log.add('fplay$playNumber finished (exit $exitCode)');
+        _log.add('fplay11 finished (exit $exitCode)');
       });
     };
 
-    await runner.run(playNumber);
+    await runner.run(11);
   }
 
   void _scrollToBottom(_AgentState agent) {
@@ -210,22 +219,18 @@ class _CssgScreenState extends State<CssgScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Child-Safe Social Graph'),
+        title: const Text('Child-Safe Social Groups'),
       ),
       body: Column(
         children: [
           _buildControlBar(),
-          // Agent panels
+          // Agent panels: 2×3 grid
           Expanded(
             child: _agents.isEmpty
                 ? const Center(
-                    child: Text('Click a Play button above to run a scenario.'))
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: _agents.values
-                        .map((agent) => Expanded(child: _buildAgentPanel(agent)))
-                        .toList(),
-                  ),
+                    child: Text(
+                        'Click "Run Demo" to start the 6-agent scenario.'))
+                : _buildAgentGrid(),
           ),
           // Log
           _buildLog(),
@@ -236,55 +241,62 @@ class _CssgScreenState extends State<CssgScreen> {
 
   Widget _buildControlBar() {
     return Container(
-      padding: const EdgeInsets.all(16.0),
-      color: Colors.blue.shade50,
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      color: const Color(0xFFEDE7F6), // deep purple 50
       child: Row(
         children: [
           ElevatedButton.icon(
-            onPressed: () => _runPlay(4),
+            onPressed: _runPlay,
             icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 4'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(5),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 5'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(6),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 6'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(7),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 7'),
+            label: const Text('Run Demo'),
           ),
           const SizedBox(width: 16),
-          Container(width: 1, height: 24, color: Colors.blue.shade300),
-          const SizedBox(width: 16),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(8),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 8'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(9),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 9'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(10),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 10'),
+          const Expanded(
+            child: Text(
+              '3 parents introduce their children ▸ '
+              'children become friends ▸ '
+              'Carol creates group ▸ all chat',
+              style: TextStyle(fontSize: 12, color: Color(0xFF4A148C)),
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAgentGrid() {
+    // Row 0: parents (Alice, Bob, Charlie)
+    // Row 1: children (Carol, Dave, Eve)
+    final parents =
+        _agentInfos.where((info) => info.row == 0).map((info) => _agents[info.id]!);
+    final children =
+        _agentInfos.where((info) => info.row == 1).map((info) => _agents[info.id]!);
+
+    return Column(
+      children: [
+        // Parents row (1/3 of space)
+        Expanded(
+          flex: 1,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: parents
+                .map((agent) => Expanded(child: _buildAgentPanel(agent)))
+                .toList(),
+          ),
+        ),
+        // Thin separator
+        Container(height: 2, color: Colors.grey.shade400),
+        // Children row (2/3 of space — more activity here)
+        Expanded(
+          flex: 2,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children
+                .map((agent) => Expanded(child: _buildAgentPanel(agent)))
+                .toList(),
+          ),
+        ),
+      ],
     );
   }
 
@@ -332,7 +344,7 @@ class _CssgScreenState extends State<CssgScreen> {
                       line,
                       style: TextStyle(
                         fontFamily: 'monospace',
-                        fontSize: 13,
+                        fontSize: 12,
                         color: line.startsWith('>')
                             ? Colors.blue.shade800
                             : Colors.green.shade800,
@@ -353,8 +365,8 @@ class _CssgScreenState extends State<CssgScreen> {
 
   Widget _buildLog() {
     return Container(
-      height: 60,
-      color: Colors.blue.shade50,
+      height: 50,
+      color: const Color(0xFFEDE7F6), // deep purple 50
       child: ListView.builder(
         padding: const EdgeInsets.all(8.0),
         itemCount: _log.length,

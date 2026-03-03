@@ -1,7 +1,7 @@
 # GLP Module System — Language Specification
 
-**Status:** Draft
-**Date:** 2026-02-21
+**Status:** Draft  
+**Date:** 2026-02-22  
 **Supersedes:** `archive/glp-module-system-v1-spec.md`, `archive/glp-modules-spec-future.md`
 
 ---
@@ -12,13 +12,15 @@
 
 2. **Hierarchy mirrors the file system.** Module structure maps to directory structure, following FCP conventions.
 
-3. **Implicit lexical scoping.** A module sees all type and procedure definitions from its ancestors. No import declarations needed.
+3. **Implicit lexical scoping.** A module sees all type and procedure definitions from its ancestors automatically.
 
-4. **Procedure declarations carry types.** A procedure declaration implicitly carries the transitive closure of all types it depends upon. Types are not exported separately.
+4. **Self-contained modules.** Every module declares all procedures it uses: its own, exported ones for callers, and imported ones from other modules. Type checking is entirely local — no need to parse other modules.
 
-5. **Structural type compatibility.** Type identity is structural (automata equivalence/subtyping), never nominal. Two independently defined types with the same structure are compatible.
+5. **Procedure declarations carry types.** A procedure declaration implicitly carries the transitive closure of all types it depends upon. Types are not exported separately.
 
-6. **Design vs. implementation separation.** This spec defines language-level semantics: syntax, scoping, type checking, compatibility. Implementation mechanisms (RPC via streams, direct calls, etc.) are orthogonal.
+6. **Structural type compatibility.** Type identity is structural (automata equivalence/subtyping), never nominal. Two independently defined types with the same structure are compatible.
+
+7. **Design vs. implementation separation.** This spec defines language-level semantics: syntax, scoping, type checking, compatibility. Implementation mechanisms (RPC via streams, direct calls, etc.) are orthogonal.
 
 ---
 
@@ -65,15 +67,15 @@ The prelude is the root ancestor of all modules. It defines global types (`Strea
 
 ### 3.1 Implicit Ancestor Scoping
 
-A module implicitly sees all definitions from every ancestor scope, from its parent directory up through the root. No import declaration is required.
+A module implicitly sees all definitions from every ancestor scope, from its parent directory up through the root. No import declaration is required for ancestor definitions.
 
 Given:
 ```
 project/
-  protocol.glp       — defines AgentContent, Response, ...
-  agent.glp          — sees protocol.glp's types
+  self.glp           — defines AgentContent, Response, ...
+  agent.glp          — sees self.glp's types
   ui/
-    mediator.glp     — sees protocol.glp's types (grandparent)
+    mediator.glp     — sees self.glp's types (grandparent)
 ```
 
 Both `agent.glp` and `ui/mediator.glp` can use `AgentContent`, `Response`, etc. without any import directive.
@@ -92,7 +94,7 @@ To reference a definition from a sibling, cousin, or other non-ancestor module, 
 ui#actors # some_procedure(X?, Y)
 ```
 
-Only `exported` procedures (Section 4) are reachable via `#`.
+Only `exported` procedures (Section 4) are reachable via `#`. Cross-module calls require a corresponding `imported` declaration (Section 4.3).
 
 ---
 
@@ -114,16 +116,56 @@ The `exported` keyword makes a procedure reachable via `#` from outside the modu
 exported procedure factorial(Integer?, Integer).
 ```
 
-### 4.3 No Separate Export/Import Lists
+### 4.3 Imported Procedures
 
-Visibility is declared at the procedure declaration site. There is no `-export([...])` list and no `-import([...])` list.
+A module must declare every cross-module procedure it calls. The `imported` keyword declares a procedure from another module, with its full type signature:
 
-- **No export list:** the `exported` keyword on each procedure declaration replaces it. Visibility cannot drift out of sync with the declaration.
-- **No import list:** the `#` operator names the source module explicitly at each call site. Ancestor scoping handles the rest.
+```glp
+imported procedure social#agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+```
 
-### 4.4 Types Are Carried by Procedures
+The module path uses `#` on the procedure name, matching call-site syntax. For procedures from an ancestor scope (visible via implicit scoping), no path is needed:
 
-A procedure declaration implicitly carries the transitive closure of all types referenced in its signature. When a client module references an exported procedure via `#`, it gains access to the procedure's type dependencies.
+```glp
+imported procedure merge(Stream?, Stream?, Stream).
+```
+
+The imported declaration provides everything the type checker needs to verify calls to that procedure — no parsing of the source module is required.
+
+Types referenced in imported declarations may use `#` to reference types from other modules:
+
+```glp
+imported procedure social#agent(Constant?, social#AgentChannel?, social#OutputsList?).
+```
+
+With future parameterized types, imported declarations can instantiate type parameters:
+
+```glp
+imported procedure merge(Stream(AgentMsg)?, Stream(AgentMsg)?, Stream(AgentMsg)).
+```
+
+### 4.4 Three Procedure Kinds
+
+Every procedure declaration is exactly one of:
+
+| Kind | Syntax | Meaning |
+|------|--------|---------|
+| Private | `procedure p(...)` | Local to module and descendants |
+| Exported | `exported procedure p(...)` | Reachable from outside via `#` |
+| Imported | `imported procedure [path#]p(...)` | Dependency on another module |
+
+### 4.5 No Separate Export/Import Lists
+
+Visibility is declared at each procedure declaration site. There are no `-export([...])` or `-import([...])` lists.
+
+- **No export list:** the `exported` keyword on each procedure declaration replaces it.
+- **No import list:** `imported` declarations at each procedure replace it.
+
+Both export and import information lives at the declaration site and cannot drift out of sync.
+
+### 4.6 Types Are Carried by Procedures
+
+A procedure declaration — whether `exported`, `imported`, or plain — implicitly carries the transitive closure of all types referenced in its signature.
 
 For example:
 ```glp
@@ -139,9 +181,12 @@ implicitly carries `AgentChannel`, `AgentToUserStream`, `AgentContent`, `Respons
 
 When a module calls `M # p(X?, Y)`, the type checker:
 
-1. Resolves `M` to a module in the hierarchy.
-2. Finds the `exported procedure p(...)` declaration in `M`.
-3. Type-checks the call arguments against `p`'s declared types, using the standard well-typing rules (including subtyping).
+1. Finds the local `imported procedure M#p(...)` declaration in the calling module.
+2. Type-checks the call arguments against the imported declaration's types, using the standard well-typing rules (including subtyping).
+
+The type checker does NOT need to access module `M` — the imported declaration provides all necessary type information locally. This enables fully separate compilation.
+
+At link or load time, the system verifies that `M`'s actual `exported procedure p(...)` declaration is subtype-compatible with the caller's `imported` declaration.
 
 ### 5.2 Type Compatibility
 
@@ -155,9 +200,9 @@ The primary mechanism for type sharing is ancestor scoping. Common types are def
 
 ```
 project/
-  protocol.glp       — AgentContent, Response, Channel types
-  agent.glp          — uses AgentContent (from parent scope)
-  mediator.glp       — uses AgentContent (from parent scope)
+  self.glp           — AgentContent, Response, Channel types
+  agent.glp          — uses AgentContent (from self.glp)
+  mediator.glp       — uses AgentContent (from self.glp)
 ```
 
 Both modules see the same definition. The copy-paste problem is eliminated.
@@ -176,7 +221,7 @@ The compilation unit is flexible. A compiler may process:
 
 Broader compilation scope enables more optimization:
 
-- **Single file:** type-checks against declared interfaces of dependencies.
+- **Single file:** type-checks against its own `imported` declarations. No access to other modules needed.
 - **Directory:** full type checking within the directory, interface-level across boundaries.
 - **Whole project:** global type checking, cross-module inlining, dead code elimination, type-driven specialization.
 
@@ -191,9 +236,9 @@ When the compiler sees both sides of a typed channel, it can:
 
 ### 6.3 Separate Compilation
 
-For separate compilation, a module is compiled against the **interface** of its dependencies: the set of `exported procedure` declarations and their transitive type dependencies. The interface is sufficient for type checking the client.
+For separate compilation, a module is compiled against its own `imported` procedure declarations. The imported declarations are sufficient for type checking — no access to other modules is needed.
 
-The compiled module records the interfaces it was compiled against, enabling compatibility verification at load time.
+The compiled module records its `imported` declarations, enabling compatibility verification at load time.
 
 ---
 
@@ -205,9 +250,11 @@ GLP supports dynamic module loading. Code is loaded from trusted sources (signed
 
 ### 7.2 Load-Time Verification
 
-When a module is loaded dynamically, the loader verifies that the actual module's exported procedure declarations are **subtype-compatible** with the interfaces the client was compiled against.
+When a module is loaded dynamically, the loader verifies that the actual module's `exported procedure` declarations are **subtype-compatible** with the caller's `imported` declarations.
 
-This means: for each procedure the client calls, the actual module's procedure declaration must accept at least the inputs the client may send (contravariance on inputs) and produce at most the outputs the client expects (covariance on outputs). This is exactly the subtyping relation on procedure types induced by the moded type system.
+For each imported procedure, the actual module's exported declaration must accept at least the inputs the caller may send (contravariance on inputs) and produce at most the outputs the caller expects (covariance on outputs). This is exactly the subtyping relation on procedure types induced by the moded type system.
+
+The `imported` declaration records the caller's expectations. The `exported` declaration records the callee's guarantees. The loader checks that guarantees meet expectations.
 
 ### 7.3 Type Automata as Runtime Artifacts
 
@@ -266,6 +313,9 @@ AgentChannel ::= ch(AgentToUserStream, MediatorToAgentStream?).
 
 exported procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
 
+%% Import mediator's procedure for cross-module calls
+imported procedure social#mediator#ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Constant?).
+
 agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs) :-
     %% ... uses AgentContent, Response from self.glp ...
 ```
@@ -276,13 +326,22 @@ agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs) :-
 
 exported procedure ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Constant?).
 
+%% Import merge from ancestor scope (no path needed)
+imported procedure merge(Stream?, Stream?, Stream).
+
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     %% ... uses AgentContent, Response from self.glp — same definition ...
 ```
 
 ### 9.2 Cross-Module Calls
 
+A boot module that calls into the social hierarchy:
+
 ```glp
+%% Import the procedures we call
+imported procedure social#agent#start(Constant?, social#Channel).
+imported procedure social#mediator#connect(Constant?, social#Channel?).
+
 boot(Id) :-
     social#agent # start(Id?, Ch),
     social#mediator # connect(Id?, Ch?).
@@ -316,9 +375,11 @@ Key differences:
 |--------|----------------|-------------|
 | Foundation | FCP stream-based RPC | Moded type system |
 | Type sharing | Not addressed | Ancestor scoping, structural compatibility |
-| Interface | `-export([proc/arity, ...])` list | `exported procedure` at declaration site |
-| Dependencies | `-import([module, ...])` list | Implicit (ancestor scoping) + explicit (`#`) |
-| Dynamic verification | Not addressed | Subtype compatibility of type automata |
+| Exports | `-export([proc/arity, ...])` list | `exported procedure` at declaration site |
+| Imports | `-import([module, ...])` list | `imported procedure path#name(...)` at declaration site |
+| Type checking | Not addressed | Fully local via imported declarations |
+| Separate compilation | Not addressed | Enabled by imported/exported declarations |
+| Dynamic verification | Not addressed | Subtype compatibility: imported vs exported |
 | Compilation scope | Single module | Flexible: file, directory, project |
 
 ---
@@ -331,4 +392,4 @@ Key differences:
 
 ---
 
-*Version 1.0 — 2026-02-21*
+*Version 1.1 — 2026-02-22*

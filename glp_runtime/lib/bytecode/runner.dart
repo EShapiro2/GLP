@@ -2964,6 +2964,19 @@ class BytecodeRunner {
             final target = replCtx.imports[op.importIndex];
 
             if (target != null) {
+              // Check GLP channel first (Phase 5: RPC routing via GLP channels)
+              final glpChannel = cx.rt.glpChannels[target.name];
+              if (glpChannel != null) {
+                // Route via GLP channel — build goal term, send on channel
+                final goalTerm = StructTerm(op.functor, args);
+                final activations = glpChannel.send(goalTerm);
+                for (final act in activations) {
+                  cx.rt.enqueueReactivatedGoal(act);
+                }
+                if (cx.debugOutput) {
+                  print('[MODULE] Distribute (GLP channel): ${replCtx.moduleName} -> ${target.name} # ${op.functor}/${op.arity}');
+                }
+              } else {
               // Find entry point - use combined program if available, otherwise target's program
               final signature = '${op.functor}/${op.arity}';
               final program = replCtx.combinedProgram ?? target.program;
@@ -2994,6 +3007,7 @@ class BytecodeRunner {
                 if (cx.debugOutput) {
                   print('[MODULE] Distribute: Entry point not found for ${op.functor}/${op.arity} in ${target.name}');
                 }
+              }
               }
             } else {
               if (cx.debugOutput) {
@@ -3050,23 +3064,33 @@ class BytecodeRunner {
           // Get module name from clause variable
           final moduleVar = cx.clauseVars[op.moduleVarIndex];
 
-          // Check if module context is available
-          if (cx.moduleContext is ModuleGoalContext) {
-            final modCtx = cx.moduleContext as ModuleGoalContext;
-
-            // Resolve module name from variable
-            String? moduleName;
-            if (moduleVar is ConstTerm) {
-              moduleName = moduleVar.value?.toString();
-            } else if (moduleVar is VarRef) {
-              // Dereference variable to get bound value
-              final deref = cx.rt.heap.dereference(moduleVar);
-              if (deref is ConstTerm) {
-                moduleName = deref.value?.toString();
-              }
+          // Resolve module name from variable
+          String? moduleName;
+          if (moduleVar is ConstTerm) {
+            moduleName = moduleVar.value?.toString();
+          } else if (moduleVar is VarRef) {
+            // Dereference variable to get bound value
+            final deref = cx.rt.heap.dereference(moduleVar);
+            if (deref is ConstTerm) {
+              moduleName = deref.value?.toString();
             }
+          }
 
-            if (moduleName != null) {
+          if (moduleName != null) {
+            // Check GLP channel first (Phase 5: RPC routing via GLP channels)
+            final glpChannel = cx.rt.glpChannels[moduleName];
+            if (glpChannel != null) {
+              // Route via GLP channel — build goal term, send on channel
+              final goalTerm = StructTerm(op.functor, args);
+              final activations = glpChannel.send(goalTerm);
+              for (final act in activations) {
+                cx.rt.enqueueReactivatedGoal(act);
+              }
+              if (cx.debugOutput) {
+                print('[MODULE] Transmit (GLP channel): -> $moduleName # ${op.functor}/${op.arity}');
+              }
+            } else if (cx.moduleContext is ModuleGoalContext) {
+              final modCtx = cx.moduleContext as ModuleGoalContext;
               // Look up target module in registry
               final targetModule = modCtx.registry.lookup(moduleName);
               if (targetModule != null) {
@@ -3089,13 +3113,12 @@ class BytecodeRunner {
               }
             } else {
               if (cx.debugOutput) {
-                print('[MODULE] Transmit: Could not resolve module name from X${op.moduleVarIndex}');
+                print('[MODULE] Transmit (no context): $moduleName # ${op.functor}/${op.arity}');
               }
             }
           } else {
-            // No module context - log only (standalone execution)
             if (cx.debugOutput) {
-              print('[MODULE] Transmit (no context): X${op.moduleVarIndex}($moduleVar) # ${op.functor}/${op.arity}');
+              print('[MODULE] Transmit: Could not resolve module name from X${op.moduleVarIndex}');
             }
           }
           cx.argSlots.clear();

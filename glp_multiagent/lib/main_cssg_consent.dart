@@ -1,8 +1,11 @@
-/// GLP Child-Safe Social Graph / Networking — Simulated Plays
+/// GLP Child-Safe Social Groups — Parental Consent Demo
 ///
-/// Runs CSSG plays (fplay4-7) and CSSN group plays (fplay8-10) via REPL
-/// subprocess, with tagged output parsed and routed to per-agent read-only
-/// panels (Alice, Bob, Carol, Dave).
+/// Runs CSSN play 12 (fplay12) via REPL subprocess: Alice (adult) creates a
+/// "study" star group, invites Bob and Charlie (adults) who accept, then
+/// invites Dave (Bob's child) via Bob and Eve (Charlie's child) via Charlie.
+/// Both parents approve.  All 5 members chat.
+/// Tagged output is parsed and routed to per-agent read-only panels
+/// arranged in a 2-row layout (3 adults on top, 2 children below).
 library;
 
 import 'dart:io';
@@ -15,39 +18,39 @@ import 'package:glp_runtime/multiagent/repl_play_runner.dart';
 // =============================================================================
 
 void main() {
-  runApp(const CssgApp());
+  runApp(const CssgConsentApp());
 }
 
 // =============================================================================
-// CSSG APP
+// APP
 // =============================================================================
 
-class CssgApp extends StatelessWidget {
-  const CssgApp({super.key});
+class CssgConsentApp extends StatelessWidget {
+  const CssgConsentApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Child-Safe Social Graph',
+      title: 'Parental Consent for Groups',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.teal,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
+          seedColor: Colors.teal,
           brightness: Brightness.light,
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.blue,
+          backgroundColor: Color(0xFF00796B), // teal 700
           foregroundColor: Colors.white,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
+            backgroundColor: const Color(0xFF00796B),
             foregroundColor: Colors.white,
           ),
         ),
       ),
-      home: const CssgScreen(),
+      home: const CssgConsentScreen(),
     );
   }
 }
@@ -58,20 +61,25 @@ class CssgApp extends StatelessWidget {
 
 class _AgentInfo {
   final String id;
-  final String role;    // "Parent" or "Child"
+  final String role;
   final Color headerColor;
   final Color bgColor;
+  final int row; // 0 = top (adults), 1 = bottom (children)
 
-  const _AgentInfo(this.id, this.role, this.headerColor, this.bgColor);
+  const _AgentInfo(this.id, this.role, this.headerColor, this.bgColor, this.row);
 }
 
-/// Panel order: Parent, Child, Parent, Child — grouped by family.
-/// Alice/Carol = indigo family, Bob/Dave = teal family.
+/// 5 agents arranged in 2 rows:
+///   Row 0 (adults):   Alice (creator), Bob (parent), Charlie (parent)
+///   Row 1 (children): Dave (Bob's child), Eve (Charlie's child)
 const _agentInfos = [
-  _AgentInfo('Alice', 'Parent', Color(0xFF3949AB), Color(0xFFE8EAF6)),  // indigo 600, indigo 50
-  _AgentInfo('Carol', 'Child',  Color(0xFF7986CB), Color(0xFFF5F5FF)),  // indigo 300, very light
-  _AgentInfo('Bob',   'Parent', Color(0xFF00897B), Color(0xFFE0F2F1)),  // teal 600, teal 50
-  _AgentInfo('Dave',  'Child',  Color(0xFF4DB6AC), Color(0xFFF5FFFE)),  // teal 300, very light
+  // Adults (row 0)
+  _AgentInfo('Alice', 'Teacher', Color(0xFF3949AB), Color(0xFFE8EAF6), 0), // indigo
+  _AgentInfo('Bob', 'Parent', Color(0xFF00897B), Color(0xFFE0F2F1), 0), // teal
+  _AgentInfo('Charlie', 'Parent', Color(0xFF6D4C41), Color(0xFFEFEBE9), 0), // brown
+  // Children (row 1)
+  _AgentInfo('Dave', 'Child (Bob\'s)', Color(0xFF4DB6AC), Color(0xFFF5FFFE), 1), // light teal
+  _AgentInfo('Eve', 'Child (Charlie\'s)', Color(0xFFA1887F), Color(0xFFFBF8F6), 1), // light brown
 ];
 
 class _AgentState {
@@ -89,17 +97,17 @@ class _AgentState {
 }
 
 // =============================================================================
-// CSSG SCREEN
+// MAIN SCREEN
 // =============================================================================
 
-class CssgScreen extends StatefulWidget {
-  const CssgScreen({super.key});
+class CssgConsentScreen extends StatefulWidget {
+  const CssgConsentScreen({super.key});
 
   @override
-  State<CssgScreen> createState() => _CssgScreenState();
+  State<CssgConsentScreen> createState() => _CssgConsentScreenState();
 }
 
-class _CssgScreenState extends State<CssgScreen> {
+class _CssgConsentScreenState extends State<CssgConsentScreen> {
   final Map<String, _AgentState> _agents = {};
   final List<String> _log = [];
   ReplPlayRunner? _playRunner;
@@ -113,7 +121,6 @@ class _CssgScreenState extends State<CssgScreen> {
     super.dispose();
   }
 
-  /// Resolve the GLP repo root.
   static String _resolveRepoRoot() {
     final devRoot = Directory.current.parent.path;
     if (Directory('$devRoot/glp_runtime').existsSync()) {
@@ -126,38 +133,33 @@ class _CssgScreenState extends State<CssgScreen> {
     return devRoot;
   }
 
-  Future<void> _runPlay(int playNumber) async {
-    // Kill previous run
+  Future<void> _runPlay() async {
     _playRunner?.kill();
     _playRunner = null;
 
-    // Clear previous panels
     for (final agent in _agents.values) {
       agent.dispose();
     }
     _agents.clear();
 
-    // Create agent panels: Alice, Carol, Bob, Dave (parent-child grouping)
     for (final info in _agentInfos) {
       _agents[info.id] = _AgentState(info);
     }
 
     final repoRoot = _resolveRepoRoot();
     setState(() {
-      _log.add('Starting fplay$playNumber (repo: $repoRoot)...');
+      _log.add('Starting fplay12 (repo: $repoRoot)...');
     });
 
     final runner = ReplPlayRunner(
       repoRoot: repoRoot,
-      glpFiles: playNumber >= 8
-          ? ReplPlayRunner.cssnFiles
-          : ReplPlayRunner.cssgFiles,
+      glpFiles: ReplPlayRunner.cssnFiles,
     );
     _playRunner = runner;
 
     runner.onOutput = (output) {
-      // Capitalize to match _AgentState keys (Alice, Bob, Carol, Dave)
-      final key = output.agentId[0].toUpperCase() + output.agentId.substring(1);
+      final key =
+          output.agentId[0].toUpperCase() + output.agentId.substring(1);
       final state = _agents[key];
       if (state == null) return;
 
@@ -170,7 +172,6 @@ class _CssgScreenState extends State<CssgScreen> {
     };
 
     runner.onLog = (line) {
-      // Silently log REPL output
       debugPrint('REPL: $line');
     };
 
@@ -183,11 +184,11 @@ class _CssgScreenState extends State<CssgScreen> {
     runner.onDone = (exitCode) {
       _playRunner = null;
       setState(() {
-        _log.add('fplay$playNumber finished (exit $exitCode)');
+        _log.add('fplay12 finished (exit $exitCode)');
       });
     };
 
-    await runner.run(playNumber);
+    await runner.run(12);
   }
 
   void _scrollToBottom(_AgentState agent) {
@@ -210,24 +211,18 @@ class _CssgScreenState extends State<CssgScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Child-Safe Social Graph'),
+        title: const Text('Parental Consent for Groups'),
       ),
       body: Column(
         children: [
           _buildControlBar(),
-          // Agent panels
           Expanded(
             child: _agents.isEmpty
                 ? const Center(
-                    child: Text('Click a Play button above to run a scenario.'))
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: _agents.values
-                        .map((agent) => Expanded(child: _buildAgentPanel(agent)))
-                        .toList(),
-                  ),
+                    child: Text(
+                        'Click "Run Demo" to start the parental consent scenario.'))
+                : _buildAgentGrid(),
           ),
-          // Log
           _buildLog(),
         ],
       ),
@@ -236,54 +231,75 @@ class _CssgScreenState extends State<CssgScreen> {
 
   Widget _buildControlBar() {
     return Container(
-      padding: const EdgeInsets.all(16.0),
-      color: Colors.blue.shade50,
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      color: const Color(0xFFE0F2F1), // teal 50
       child: Row(
         children: [
           ElevatedButton.icon(
-            onPressed: () => _runPlay(4),
+            onPressed: _runPlay,
             icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 4'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(5),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 5'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(6),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 6'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(7),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 7'),
+            label: const Text('Run Demo'),
           ),
           const SizedBox(width: 16),
-          Container(width: 1, height: 24, color: Colors.blue.shade300),
-          const SizedBox(width: 16),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(8),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 8'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(9),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 9'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(10),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 10'),
+          const Expanded(
+            child: Text(
+              'Alice creates group ▸ '
+              'invites Bob & Charlie ▸ '
+              'invites Dave via Bob ▸ '
+              'invites Eve via Charlie ▸ '
+              'parents approve ▸ '
+              'all chat',
+              style: TextStyle(fontSize: 12, color: Color(0xFF004D40)),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAgentGrid() {
+    // 3-column layout: each column is a family.
+    //   Col 0: Alice (no child)
+    //   Col 1: Bob / Dave
+    //   Col 2: Charlie / Eve
+    return Column(
+      children: [
+        // Adults row
+        Expanded(
+          flex: 1,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _buildAgentPanel(_agents['Alice']!)),
+              Expanded(child: _buildAgentPanel(_agents['Bob']!)),
+              Expanded(child: _buildAgentPanel(_agents['Charlie']!)),
+            ],
+          ),
+        ),
+        Container(height: 2, color: Colors.grey.shade400),
+        // Children row: blank under Alice, Dave under Bob, Eve under Charlie
+        Expanded(
+          flex: 1,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _buildBlankPanel()),
+              Expanded(child: _buildAgentPanel(_agents['Dave']!)),
+              Expanded(child: _buildAgentPanel(_agents['Eve']!)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBlankPanel() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        border: Border(
+          right: BorderSide(color: Colors.grey.shade300),
+        ),
       ),
     );
   }
@@ -298,7 +314,6 @@ class _CssgScreenState extends State<CssgScreen> {
       ),
       child: Column(
         children: [
-          // Agent header: "Parent: Alice" or "Child: Carol"
           Container(
             padding:
                 const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
@@ -316,7 +331,6 @@ class _CssgScreenState extends State<CssgScreen> {
               ],
             ),
           ),
-          // Output log
           Expanded(
             child: Container(
               color: info.bgColor,
@@ -332,7 +346,7 @@ class _CssgScreenState extends State<CssgScreen> {
                       line,
                       style: TextStyle(
                         fontFamily: 'monospace',
-                        fontSize: 13,
+                        fontSize: 12,
                         color: line.startsWith('>')
                             ? Colors.blue.shade800
                             : Colors.green.shade800,
@@ -353,8 +367,8 @@ class _CssgScreenState extends State<CssgScreen> {
 
   Widget _buildLog() {
     return Container(
-      height: 60,
-      color: Colors.blue.shade50,
+      height: 50,
+      color: const Color(0xFFE0F2F1), // teal 50
       child: ListView.builder(
         padding: const EdgeInsets.all(8.0),
         itemCount: _log.length,
