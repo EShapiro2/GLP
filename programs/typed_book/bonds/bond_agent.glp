@@ -30,12 +30,16 @@ CreditResponse ::= credit_accept(BondList) ; credit_reject.
 %% Redeem response — written by issuer, read by holder's inject
 RedeemResponse ::= redeem_ok(BondList).
 
+%% Loan response — written by borrower, read by lender's inject
+LoanResponse ::= loan_accept(BondList) ; loan_reject.
+
 %% Friend messages (after connection established)
 FriendContent ::= response(Response)
                 ; text(Constant)
                 ; credit_propose(Constant, Constant, BondList, CreditResponse?)
                 ; payment(BondList)
-                ; redeem_request(Constant, Constant, BondList, RedeemResponse?).
+                ; redeem_request(Constant, Constant, BondList, RedeemResponse?)
+                ; loan_propose(Constant, Constant, Constant, BondList, LoanResponse?).
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
@@ -59,11 +63,15 @@ UserContent ::= mint(Constant, Constant)       %% mint(K, Maturity)
               ; accept_credit(Constant, PendingValue) %% accept credit proposal
               ; reject_credit(Constant, PendingValue) %% reject credit proposal
               ; pay(Constant, Constant)                %% pay(Target, K)
-              ; redeem(Constant, Constant, Constant).  %% redeem(Target, K, MaxMaturity)
+              ; redeem(Constant, Constant, Constant)   %% redeem(Target, K, MaxMaturity)
+              ; loan(Constant, Constant, Constant, Constant)  %% loan(Target, Principal, FaceValue, Maturity)
+              ; accept_loan(Constant, PendingValue)    %% accept_loan(From, PendingValue)
+              ; reject_loan(Constant, PendingValue).   %% reject_loan(From, PendingValue)
 
 %% Pending values stored by mediator
 PendingValue ::= response(Response?)
                ; credit_pending(CreditResponse?, Constant, Constant, BondList)
+               ; loan_pending(LoanResponse?, Constant, Constant, BondList)
                ; error.
 
 %% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
@@ -81,7 +89,10 @@ AgentContent ::= minted(Constant, Constant)     %% minted(K, Maturity)
                ; payment_failed(Constant, Constant)   %% payment_failed(Target, K)
                ; redeemed(Constant, Constant)          %% redeemed(Target, K)
                ; redeem_failed(Constant, Constant)     %% redeem_failed(Target, K)
-               ; redeem_received(Constant, Constant).  %% redeem_received(From, K)
+               ; redeem_received(Constant, Constant)   %% redeem_received(From, K)
+               ; loan_proposed(Constant, Constant, Constant, Constant, LoanResponse?, BondList)
+               ; loan_opened(Constant, Constant, Constant)   %% loan_opened(Other, Principal, FaceValue)
+               ; loan_rejected(Constant).              %% loan_rejected(Other)
 
 %% Credit result — written by inject_credit_result
 CreditResult ::= credit_result(Constant, Constant, BondList)
@@ -91,7 +102,9 @@ CreditResult ::= credit_result(Constant, Constant, BondList)
 UserInMsg    ::= msg(Constant, Constant, UserContent)
                ; credit_result(Constant, Constant, BondList)
                ; credit_was_rejected(Constant)
-               ; redeem_complete(Constant, Constant, BondList).
+               ; redeem_complete(Constant, Constant, BondList)
+               ; loan_result(Constant, Constant, Constant, BondList)
+               ; loan_was_rejected(Constant).
 UserInStream ::= [] ; [UserInMsg | UserInStream].
 
 MediatorToAgentMsg    ::= msg(Constant, Constant, UserContent).
@@ -131,7 +144,11 @@ OutputContent ::= minted(Constant, Constant)
                 ; redeemed(Constant, Constant)
                 ; redeem_failed(Constant, Constant)
                 ; redeem_received(Constant, Constant)
-                ; redeem_request(Constant, Constant, BondList, RedeemResponse?).
+                ; redeem_request(Constant, Constant, BondList, RedeemResponse?)
+                ; loan_propose(Constant, Constant, Constant, BondList, LoanResponse?)
+                ; loan_proposed(Constant, Constant, Constant, Constant, LoanResponse?, BondList)
+                ; loan_opened(Constant, Constant, Constant)
+                ; loan_rejected(Constant).
 OutputMsg    ::= msg(Constant, Constant, OutputContent)
                ; msg(Constant, NetColdCall).
 OutputStream ::= [] ; [OutputMsg | OutputStream].
@@ -349,8 +366,8 @@ select_bonds_min_maturity(_, 0, Hs, [], Hs?, 0).
 select_bonds_min_maturity(MinMat, K, [bond(I, M, S)|Rest], [bond(I?, M?, S?)|Sel?], Rem?, Got?) :-
     K? > 0, M? >= MinMat? |
     K1 := K? - 1,
-    select_bonds_min_maturity(MinMat?, K1?, Rest?, Sel, Rem, Got),
-    Got := Got? + 1.
+    select_bonds_min_maturity(MinMat?, K1?, Rest?, Sel, Rem, SubGot),
+    Got := SubGot? + 1.
 select_bonds_min_maturity(MinMat, K, [B|Rest], Sel?, [B?|Rem?], Got?) :-
     otherwise |
     select_bonds_min_maturity(MinMat?, K?, Rest?, Sel, Rem, Got).
@@ -378,6 +395,39 @@ inject_redeem_result(Resp, From, K, [Y|Ys], [Y?|Ys1?]) :-
     inject_redeem_result(Resp?, From?, K?, Ys?, Ys1).
 
 %% =============================================================================
+%% BIND_LOAN — Bind LoanResponse variable (writer mode)
+%% =============================================================================
+%%
+%% Same design as bind_credit_accept: the LoanResponse parameter is in writer
+%% mode, so the clause head constructs the value that binds the variable.
+
+procedure bind_loan_accept(LoanResponse, Constant?, Constant?, Constant?, Constant?).
+bind_loan_accept(loan_accept(MyBonds?), Id, Maturity, FaceValue, Serial) :-
+    ground(Id?), ground(Maturity?), ground(FaceValue?), ground(Serial?) |
+    create_bonds(Id?, Maturity?, FaceValue?, Serial?, MyBonds).
+
+procedure bind_loan_reject(LoanResponse).
+bind_loan_reject(loan_reject).
+
+%% =============================================================================
+%% INJECT_LOAN_RESULT — Inject loan response into UserIn
+%% =============================================================================
+%%
+%% Waits for LoanResp to become known (bound by borrower).
+%% loan_accept(Bonds) → inject loan_result(From, Principal, FaceValue, Bonds)
+%% loan_reject → inject loan_was_rejected(From)
+
+procedure inject_loan_result(LoanResponse?, Constant?, Constant?, Constant?, UserInStream?, UserInStream).
+inject_loan_result(loan_accept(Bonds), From, Principal, FaceValue, Ys,
+    [loan_result(From?, Principal?, FaceValue?, Bonds?)|Ys?]) :-
+    ground(From?), ground(Principal?), ground(FaceValue?), ground(Bonds?) | true.
+inject_loan_result(loan_reject, From, _, _, Ys,
+    [loan_was_rejected(From?)|Ys?]) :-
+    ground(From?) | true.
+inject_loan_result(Resp, From, Principal, FaceValue, [Y|Ys], [Y?|Ys1?]) :-
+    inject_loan_result(Resp?, From?, Principal?, FaceValue?, Ys?, Ys1).
+
+%% =============================================================================
 %% DO_REDEEM — Select bonds, then execute or reject redemption (Alice's side)
 %% =============================================================================
 
@@ -399,26 +449,27 @@ do_redeem_result(fail, K, Id, Target, _, Selected, Remaining, UserIn, NetIn, Out
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
 
 %% =============================================================================
-%% PREPARE_REDEEM_BONDS — Select bonds for redemption, mint if needed (Bob's side)
+%% HANDLE_REDEEM_FILL — Complete redemption: bind response, update holdings (Bob's side)
 %% =============================================================================
 %%
-%% Selects up to K bonds with maturity ≥ MaxMat from Holdings.
-%% If fewer than K found, mints fresh self-bonds to cover the shortfall.
-%% Returns BondsForRedeemer (exactly K bonds) and Remaining holdings.
+%% Called after select_bonds_min_maturity with Shortfall = K - Got.
+%% Shortfall=0: bind RedeemResp to Selected, continue agent.
+%% Shortfall>0: mint shortfall bonds, append to Selected, bind RedeemResp, continue agent.
+%% RedeemResponse is decomposed in the head (required by type checker).
 
-procedure prepare_redeem_bonds(Constant?, Constant?, Constant?, BondList?, Constant?, BondList, BondList, Constant).
-prepare_redeem_bonds(K, MaxMat, Id, Holdings, NextSerial, BondsForRedeemer, Remaining, NewNextSerial) :-
-    select_bonds_min_maturity(MaxMat?, K?, Holdings?, Selected, Remaining, Got),
-    Shortfall := K? - Got?,
-    fill_shortfall(Shortfall?, MaxMat?, Id?, NextSerial?, Selected?, BondsForRedeemer, NewNextSerial).
-
-procedure fill_shortfall(Constant?, Constant?, Constant?, Constant?, BondList?, BondList, Constant).
-fill_shortfall(0, _, _, NextSerial, Selected, Selected?, NextSerial?).
-fill_shortfall(Shortfall, MaxMat, Id, NextSerial, Selected, AllBonds?, NewNextSerial?) :-
+procedure handle_redeem_fill(Constant?, Constant?, Constant?, Constant?, Constant?, BondList?, RedeemResponse, BondList?, BondList?, Constant?, UserInStream?, NetInStream?, OutputsList?).
+handle_redeem_fill(0, K, _, Id, From, ReturnedBonds, redeem_ok(Selected?), Selected, Remaining, NextSerial, UserIn, NetIn, Outs) :-
+    append(Remaining?, ReturnedBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', redeem_received(From?, K?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+handle_redeem_fill(Shortfall, K, MaxMat, Id, From, ReturnedBonds, redeem_ok(AllBonds?), Selected, Remaining, NextSerial, UserIn, NetIn, Outs) :-
     Shortfall? > 0 |
     create_bonds(Id?, MaxMat?, Shortfall?, NextSerial?, MintedBonds),
     NewNextSerial := NextSerial? + Shortfall?,
-    append(Selected?, MintedBonds?, AllBonds).
+    append(Selected?, MintedBonds?, AllBonds),
+    append(Remaining?, ReturnedBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', redeem_received(From?, K?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NewNextSerial?).
 
 %% =============================================================================
 %% AGENT/6 — Bond agent
@@ -572,11 +623,67 @@ agent(Id, [redeem_complete(From, K, ReceivedBonds)|UserIn], NetIn, Outs, Holding
 agent(Id, UserIn, [msg(From, Id1, redeem_request(K, MaxMaturity, ReturnedBonds, RedeemResp?))|NetIn],
       Outs, Holdings, NextSerial) :-
     Id? =?= Id1?, ground(From?), ground(K?), ground(MaxMaturity?), ground(ReturnedBonds?) |
-    prepare_redeem_bonds(K?, MaxMaturity?, Id?, Holdings?, NextSerial?, BondsForRedeemer, Remaining, NewNextSerial),
-    bind_redeem(RedeemResp, BondsForRedeemer?),
-    append(Remaining?, ReturnedBonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', redeem_received(From?, K?)), Outs?, Outs1),
+    select_bonds_min_maturity(MaxMaturity?, K?, Holdings?, Selected, Remaining, Got),
+    Shortfall := K? - Got?,
+    handle_redeem_fill(Shortfall?, K?, MaxMaturity?, Id?, From?, ReturnedBonds?,
+        RedeemResp, Selected?, Remaining?, NextSerial?, UserIn?, NetIn?, Outs?).
+
+%% --- Phase 5: Zero-Coupon Loan ---
+
+%% User requests loan (lender side): mint Principal coins, propose on friend channel
+agent(Id, [msg('_user', Id1, loan(Target, Principal, FaceValue, Maturity))|UserIn],
+      NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(Target?), ground(Principal?), ground(FaceValue?), ground(Maturity?) |
+    NewNextSerial := NextSerial? + Principal?,
+    create_bonds(Id?, 0, Principal?, NextSerial?, MyCoins),
+    lookup_send(friend(Target?),
+        msg(Id?, Target?, loan_propose(Principal?, FaceValue?, Maturity?, MyCoins?, LoanResp)),
+        Outs?, Outs1),
+    inject_loan_result(LoanResp?, Target?, Principal?, FaceValue?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NewNextSerial?).
+
+%% Injected loan_result: borrower accepted — add borrower's bonds, notify user
+agent(Id, [loan_result(From, Principal, FaceValue, BorrowerBonds)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    ground(Id?), ground(From?), ground(Principal?), ground(FaceValue?), ground(BorrowerBonds?) |
+    append(Holdings?, BorrowerBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', loan_opened(From?, Principal?, FaceValue?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+
+%% Injected loan_was_rejected: borrower rejected — notify user
+agent(Id, [loan_was_rejected(From)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    ground(Id?) |
+    lookup_send('_user', msg(agent, '_user', loan_rejected(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
+
+%% Incoming loan_propose from friend (borrower receives)
+agent(Id, UserIn, [msg(From, Id1, loan_propose(Principal, FaceValue, Maturity, LenderCoins, LoanResp?))|NetIn],
+      Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(From?), ground(Principal?), ground(FaceValue?),
+    ground(Maturity?), ground(LenderCoins?) |
+    lookup_send('_user',
+        msg(agent, '_user', loan_proposed(From?, Principal?, FaceValue?, Maturity?, LoanResp, LenderCoins?)),
+        Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
+
+%% User accepts loan (borrower side): mint FaceValue bonds, bind LoanResp, add lender's coins
+agent(Id, [msg('_user', Id1, accept_loan(From,
+        loan_pending(LoanResp?, FaceValue, Maturity, LenderCoins)))|UserIn],
+      NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(From?), ground(FaceValue?), ground(Maturity?), ground(LenderCoins?) |
+    NewNextSerial := NextSerial? + FaceValue?,
+    bind_loan_accept(LoanResp, Id?, Maturity?, FaceValue?, NextSerial?),
+    append(Holdings?, LenderCoins?, NewHoldings),
+    list_length(LenderCoins?, Principal),
+    lookup_send('_user', msg(agent, '_user', loan_opened(From?, Principal?, FaceValue?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NewNextSerial?).
+
+%% User rejects loan (borrower side): bind LoanResp to loan_reject
+agent(Id, [msg('_user', Id1, reject_loan(_,
+        loan_pending(LoanResp?, _, _, _)))|UserIn],
+      NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1? |
+    bind_loan_reject(LoanResp),
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?).
 
 %% --- Termination ---
 %%
