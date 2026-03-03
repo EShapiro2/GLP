@@ -50,17 +50,13 @@ The following Dart infrastructure exists and will be progressively replaced or a
 **Output:** Bytecode for `_select/1` appended to the module's procedure table. For each exported procedure `p/n`:
 
 ```
-_select(p(A1, ..., An)) :-
-    true |
-    p(A1, ..., An).
+_select(p(A1, ..., An)) :- p(A1?, ..., An?).
 ```
 
 The `otherwise` fallback clause:
 
 ```
-_select(_) :-
-    otherwise |
-    true.
+_select(_) :- otherwise | true.
 ```
 
 Each clause matches on the goal term's functor and arity, then calls the corresponding exported procedure with its original arguments.
@@ -87,7 +83,7 @@ Each clause matches on the goal term's functor and arity, then calls the corresp
 
 **Where:** `lib/runtime/body_kernels.dart`, registered in `registerStandardBodyKernels`.
 
-**Detail — module references:** A compiled module is a string (byte sequence) on the heap, following FCP's convention. The `'_activate'` body kernel receives this string, interprets it as compiled bytecode containing a `_select/1` procedure, and resolves the goal against it.
+**Detail — module references:** A compiled module is a constant of type `Module` on the heap.  The Dart implementation wraps a `BytecodeProgram` in a `ModuleTerm`.  The `'_activate'` body kernel receives this value, extracts the bytecode containing a `_select/1` procedure, and resolves the goal against it.
 
 **Detail — execution context:** The spawned `_select` goal runs against the *target module's* procedure table, not the caller's. The runtime must set the execution context (procedure lookup, import vector) to the target module when executing the goal.
 
@@ -218,7 +214,7 @@ Each phase maintains zero regressions on existing tests while adding new tests.
 
 ## 6. Open Decisions
 
-**Module reference term.** Settled: a compiled module is a string (byte sequence) on the heap, following FCP. The `'_activate'` body kernel receives the string, interprets it as compiled bytecode, and resolves the goal against its `_select/1`. No opaque objects, no registry lookup — the module *is* the string.
+**Module reference term.** Settled: a compiled module is a constant of type `Module` on the heap — a new subtype of `Constant`, alongside `String`, `Integer`, and `Float`.  The `module(M?)` guard tests for it.  The `'_activate'` body kernel receives the `Module` value, interprets it as compiled bytecode, and resolves the goal against its `_select/1`.  The Dart implementation wraps a `BytecodeProgram` in a `ModuleTerm`.
 
 **Backward compatibility.** Phases 1–3 are purely additive — they add new bytecode, a new body kernel, and a new system predicate without changing any existing behavior. Single-file programs and existing module tests are unaffected. Phases 4–5 introduce the new GLP-level dispatch alongside the existing Dart-level dispatch (`Dispatcher`, `StreamController`, `ExportMessage`), behind a flag. The Dart path remains the default. The GLP path must pass all existing module tests before becoming the default. Only after validation is the Dart path deprecated and removed.
 
