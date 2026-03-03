@@ -35,22 +35,17 @@ LoadedModule compileModule(String source, String name) {
   final generator = CodeGenerator();
   final bytecode = generator.generate(annotatedProgram);
 
-  // Default: if no -export declarations, export ALL procedures (backwards compatibility)
+  // Extract exports from procedure declarations with exported=true.
+  // If none are exported, export all (backwards compatibility).
+  final explicitExports = module.exportedSignatures;
   Set<String> exports;
-  if (module.exports.isEmpty) {
-    // No explicit exports - export all procedures
+  if (explicitExports.isEmpty) {
     exports = <String>{};
     for (final proc in module.procedures) {
       exports.add('${proc.name}/${proc.arity}');
     }
   } else {
-    // Explicit exports - only export listed procedures
-    exports = <String>{};
-    for (final exportDecl in module.exports) {
-      for (final procRef in exportDecl.exports) {
-        exports.add(procRef.signature);
-      }
-    }
+    exports = explicitExports;
   }
 
   // Module name: from -module declaration, or fallback to parameter
@@ -60,7 +55,7 @@ LoadedModule compileModule(String source, String name) {
     name: moduleName,
     bytecode: bytecode,
     exports: exports,
-    imports: module.importedModules,
+    imports: const [],
   );
 }
 
@@ -88,7 +83,7 @@ void main() {
       // Create math module - fact binds writer arg to constant
       final mathSource = '''
 -module(math).
--export([double/2]).
+exported procedure double(_, _).
 
 double(5, 10).
 ''';
@@ -183,7 +178,7 @@ double(5, 10).
       // Using SRSW-compliant pattern: F? in head (reader), F := in body (writer)
       final mathSource = '''
 -module(math).
--export([factorial/2]).
+exported procedure factorial(_, _).
 
 factorial(0, 1).
 factorial(N, F?) :- N? > 0 | N1 := N? - 1, factorial(N1?, F1), F := N? * F1?.
@@ -324,7 +319,7 @@ factorial(N, F?) :- N? > 0 | N1 := N? - 1, factorial(N1?, F1), F := N? * F1?.
       // Create math module with double/2
       final mathSource = '''
 -module(math).
--export([double/2]).
+exported procedure double(_, _).
 
 double(5, 10).
 double(10, 20).
@@ -426,7 +421,7 @@ double(10, 20).
       // Module C: simple fact
       final cSource = '''
 -module(c).
--export([value/1]).
+exported procedure value(_).
 
 value(42).
 ''';
@@ -439,8 +434,7 @@ value(42).
       // Clean syntax without 'otherwise |' - parser fix allows atom # goal
       final bSource = '''
 -module(b).
--import([c]).
--export([get_value/1]).
+exported procedure get_value(_).
 
 get_value(R?) :- c # value(R).
 ''';
@@ -602,7 +596,7 @@ get_value(R?) :- c # value(R).
       // Create math module with private procedure (not exported)
       final mathSource = '''
 -module(math).
--export([public_proc/1]).
+exported procedure public_proc(_).
 
 public_proc(X?) :- X := 42.
 private_proc(X?) :- X := 99.
@@ -661,8 +655,9 @@ private_proc(X?) :- X := 99.
       final mainModule = await loader.load('main');
       expect(mainModule.name, equals('main'), reason: 'Module name should be main');
       expect(mainModule.isExported('compute/2'), isTrue, reason: 'compute/2 should be exported');
-      expect(mainModule.imports, contains('math'), reason: 'main should import math');
-      print('[TEST] main module loaded: imports=${mainModule.imports}, exports=${mainModule.exports}');
+      // Note: imports list is empty because -import() was removed.
+      // Cross-module calls are auto-detected from Module # Goal syntax at compile time.
+      print('[TEST] main module loaded: exports=${mainModule.exports}');
 
       // Verify both modules are in registry
       expect(testRegistry.lookup('math'), isNotNull, reason: 'math should be in registry');

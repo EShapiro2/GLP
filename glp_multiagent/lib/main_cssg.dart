@@ -1,9 +1,8 @@
-/// GLP Child-Safe Social Graph — Simulated CSSG Plays
+/// GLP Child-Safe Social Graph / Networking — Simulated Plays
 ///
-/// Runs CSSG plays (fplay4-11) via REPL subprocess, with tagged output
-/// parsed and routed to per-agent read-only panels.
-/// Plays 4-7: 4 agents (Alice, Carol, Bob, Dave) — parent-child protocol
-/// Plays 8-11: 2 agents (Alice, Bob) — unfriend protocol
+/// Runs CSSG plays (fplay4-7) and CSSN group plays (fplay8-10) via REPL
+/// subprocess, with tagged output parsed and routed to per-agent read-only
+/// panels (Alice, Bob, Carol, Dave).
 library;
 
 import 'dart:io';
@@ -66,19 +65,13 @@ class _AgentInfo {
   const _AgentInfo(this.id, this.role, this.headerColor, this.bgColor);
 }
 
-/// Panel order for 4-agent plays (4-7): Parent, Child, Parent, Child.
+/// Panel order: Parent, Child, Parent, Child — grouped by family.
 /// Alice/Carol = indigo family, Bob/Dave = teal family.
-const _agentInfos4 = [
+const _agentInfos = [
   _AgentInfo('Alice', 'Parent', Color(0xFF3949AB), Color(0xFFE8EAF6)),  // indigo 600, indigo 50
   _AgentInfo('Carol', 'Child',  Color(0xFF7986CB), Color(0xFFF5F5FF)),  // indigo 300, very light
   _AgentInfo('Bob',   'Parent', Color(0xFF00897B), Color(0xFFE0F2F1)),  // teal 600, teal 50
   _AgentInfo('Dave',  'Child',  Color(0xFF4DB6AC), Color(0xFFF5FFFE)),  // teal 300, very light
-];
-
-/// Panel order for 2-agent plays (8-11): Alice, Bob.
-const _agentInfos2 = [
-  _AgentInfo('Alice', 'Agent', Color(0xFF3949AB), Color(0xFFE8EAF6)),  // indigo 600, indigo 50
-  _AgentInfo('Bob',   'Agent', Color(0xFF00897B), Color(0xFFE0F2F1)),  // teal 600, teal 50
 ];
 
 class _AgentState {
@@ -126,13 +119,9 @@ class _CssgScreenState extends State<CssgScreen> {
     if (Directory('$devRoot/glp_runtime').existsSync()) {
       return devRoot;
     }
-    const fallback1 = '/Users/ohadey/Desktop/Grassroots/GLP2/GLP';
-    if (Directory('$fallback1/glp_runtime').existsSync()) {
-      return fallback1;
-    }
-    const fallback2 = '/Users/udi/Grassroots/GLP';
-    if (Directory('$fallback2/glp_runtime').existsSync()) {
-      return fallback2;
+    const fallback = '/Users/udi/Grassroots/GLP';
+    if (Directory('$fallback/glp_runtime').existsSync()) {
+      return fallback;
     }
     return devRoot;
   }
@@ -148,10 +137,8 @@ class _CssgScreenState extends State<CssgScreen> {
     }
     _agents.clear();
 
-    // Create agent panels based on play type
-    // Plays 4-7: 4 agents (parent-child), Plays 8-11: 2 agents
-    final agentInfos = playNumber >= 8 ? _agentInfos2 : _agentInfos4;
-    for (final info in agentInfos) {
+    // Create agent panels: Alice, Carol, Bob, Dave (parent-child grouping)
+    for (final info in _agentInfos) {
       _agents[info.id] = _AgentState(info);
     }
 
@@ -160,7 +147,12 @@ class _CssgScreenState extends State<CssgScreen> {
       _log.add('Starting fplay$playNumber (repo: $repoRoot)...');
     });
 
-    final runner = ReplPlayRunner(repoRoot: repoRoot);
+    final runner = ReplPlayRunner(
+      repoRoot: repoRoot,
+      glpFiles: playNumber >= 8
+          ? ReplPlayRunner.cssnFiles
+          : ReplPlayRunner.cssgFiles,
+    );
     _playRunner = runner;
 
     runner.onOutput = (output) {
@@ -272,7 +264,7 @@ class _CssgScreenState extends State<CssgScreen> {
             label: const Text('Play 7'),
           ),
           const SizedBox(width: 16),
-          Container(width: 1, height: 30, color: Colors.grey),
+          Container(width: 1, height: 24, color: Colors.blue.shade300),
           const SizedBox(width: 16),
           ElevatedButton.icon(
             onPressed: () => _runPlay(8),
@@ -290,12 +282,6 @@ class _CssgScreenState extends State<CssgScreen> {
             onPressed: () => _runPlay(10),
             icon: const Icon(Icons.play_arrow),
             label: const Text('Play 10'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(11),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 11'),
           ),
         ],
       ),

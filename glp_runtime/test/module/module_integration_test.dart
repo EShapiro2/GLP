@@ -35,32 +35,38 @@ LoadedModule compileModule(String source, String name) {
   final generator = CodeGenerator();
   final bytecode = generator.generate(annotatedProgram);
 
-  final exports = <String>{};
-  for (final exportDecl in module.exports) {
-    for (final procRef in exportDecl.exports) {
-      exports.add(procRef.signature);
+  // Extract exports from procedure declarations with exported=true.
+  // If none are exported, export all (backwards compatibility).
+  final explicitExports = module.exportedSignatures;
+  Set<String> exports;
+  if (explicitExports.isEmpty) {
+    exports = <String>{};
+    for (final proc in module.procedures) {
+      exports.add('${proc.name}/${proc.arity}');
     }
+  } else {
+    exports = explicitExports;
   }
 
   return LoadedModule(
     name: name,
     bytecode: bytecode,
     exports: exports,
-    imports: module.importedModules,
+    imports: const [],
   );
 }
 
 void main() {
   group('Module Integration - Compilation', () {
-    test('compiles math module with exports', () {
-      // Simple module with valid SRSW patterns - no output chaining
+    test('compiles math module with exported procedures', () {
       final source = '''
 -module(math).
--export([process/1]).
 
+exported procedure process(_).
 process(X) :- otherwise |
     consume(X?).
 
+procedure consume(_).
 consume(_).
 ''';
 
@@ -68,21 +74,19 @@ consume(_).
 
       expect(module.name, 'math');
       expect(module.exports, {'process/1'});
-      expect(module.imports, isEmpty);
       expect(module.bytecode.ops, isNotEmpty);
     });
 
-    test('compiles main module with imports', () {
-      // Module with static RPC using valid SRSW
+    test('compiles main module with remote goals', () {
       final source = '''
 -module(main).
--import([math]).
--export([boot/0]).
 
+exported procedure boot.
 boot :- otherwise |
     math # add(1, 2, R),
     done(R?).
 
+procedure done(_).
 done(_).
 ''';
 
@@ -90,7 +94,6 @@ done(_).
 
       expect(module.name, 'main');
       expect(module.exports, {'boot/0'});
-      expect(module.imports, ['math']);
 
       // Check that Distribute opcodes were generated
       final distributeOps = module.bytecode.ops.whereType<Distribute>().toList();
@@ -101,8 +104,8 @@ done(_).
     test('compiles module with dynamic RPC', () {
       final source = '''
 -module(dispatcher).
--export([forward/2]).
 
+exported procedure forward(_, _).
 forward(M, X) :- otherwise |
     M? # process(X?).
 ''';
@@ -122,13 +125,14 @@ forward(M, X) :- otherwise |
     test('registers and looks up modules', () {
       final registry = FcpModuleRegistry();
 
-      // Simple valid SRSW - no output chaining
       final mathSource = '''
 -module(math).
--export([process/1]).
+
+exported procedure process(_).
 process(X) :- otherwise |
     consume(X?).
 
+procedure consume(_).
 consume(_).
 ''';
       final mathModule = compileModule(mathSource, 'math');
@@ -145,23 +149,24 @@ consume(_).
     test('creates and routes messages through import vector', () async {
       final registry = FcpModuleRegistry();
 
-      // Create math module with valid SRSW - no output
       final mathSource = '''
 -module(math).
--export([process/1]).
+
+exported procedure process(_).
 process(X) :- otherwise |
     consume(X?).
 
+procedure consume(_).
 consume(_).
 ''';
       final mathModule = compileModule(mathSource, 'math');
       registry.register(mathModule);
 
-      // Create main module with import (valid SRSW)
+      // Create main module with remote goal
       final mainSource = '''
 -module(main).
--import([math]).
--export([boot/0]).
+
+exported procedure boot.
 boot :- otherwise |
     math # process(5).
 ''';
@@ -178,12 +183,10 @@ boot :- otherwise |
 
   group('Module Integration - Bytecode Inspection', () {
     test('static RPC generates correct Distribute opcode', () {
-      // Valid SRSW with multiple static RPCs
       final source = '''
 -module(client).
--import([math, io]).
--export([run/0]).
 
+exported procedure run.
 run :- otherwise |
     math # compute(5, R),
     io # print(R?).
@@ -195,12 +198,12 @@ run :- otherwise |
       // Should have 2 Distribute ops
       expect(distributeOps.length, 2);
 
-      // math gets index 1 (first import)
+      // math gets index 1 (first import seen)
       final computeOp = distributeOps.firstWhere((op) => op.functor == 'compute');
       expect(computeOp.importIndex, 1);
       expect(computeOp.arity, 2);
 
-      // io gets index 2 (second import)
+      // io gets index 2 (second import seen)
       final printOp = distributeOps.firstWhere((op) => op.functor == 'print');
       expect(printOp.importIndex, 2);
       expect(printOp.arity, 1);
@@ -209,8 +212,8 @@ run :- otherwise |
     test('dynamic RPC generates correct Transmit opcode', () {
       final source = '''
 -module(router).
--export([route/2]).
 
+exported procedure route(_, _).
 route(Module, Data) :- otherwise |
     Module? # handle(Data?).
 ''';
@@ -226,9 +229,8 @@ route(Module, Data) :- otherwise |
     test('mixed static and dynamic RPC in same module', () {
       final source = '''
 -module(hybrid).
--import([logger]).
--export([process/2]).
 
+exported procedure process(_, _).
 process(Target, Data) :- otherwise |
     logger # start(ok),
     Target? # handle(Data?),

@@ -4,8 +4,8 @@
 
 ## Current state
 
-All three precisely-typed files (agent, mediator, actors) typecheck cleanly and
-fplay1 runs to completion.
+All three precisely-typed files (agent, mediator, actors) typecheck cleanly.
+All seven plays (fplay1–fplay7) run to completion in both the REPL and Flutter UI.
 
 Mode fixes required changes to both type definitions and clause annotations:
 

@@ -440,7 +440,7 @@ Mode _modeOf(TypeExpr typeExpr, Mode contextMode) {
 /// Implements spec algorithm: buildProcedureAutomaton
 Automaton _buildProcedureAutomaton(
     ProcDecl procDecl, Map<String, DFAState> states) {
-  final procState = states[procDecl.key]!;
+  final procState = states[procDecl.qualifiedKey]!;
   final transitions = <(DFAState, TransitionLabel), DFAState>{};
 
   for (var i = 0; i < procDecl.arity; i++) {

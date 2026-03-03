@@ -22,6 +22,9 @@ import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/compiler/partial_evaluator.dart';
 import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
+import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
+import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
+import 'package:glp_runtime/runtime/module_hierarchy.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 
 /// Result of running a goal
@@ -191,14 +194,29 @@ class GlpEngine {
     final parser = Parser(tokens);
     final module = parser.parseModule();
 
+    // Discover ancestor scope from self.glp hierarchy (if loading from a file)
+    TypeEnvironment? ancestorScope;
+    if (name != '_source_' && name != '__mad_predicates__' &&
+        !name.startsWith('__stdlib_') &&
+        File(name).existsSync()) {
+      final rootDir = _findProjectRoot(name);
+      if (rootDir != null) {
+        final chain = discoverSelfChain(targetFile: name, rootDir: rootDir);
+        if (chain.isNotEmpty) {
+          ancestorScope = _buildAncestorScope(chain);
+        }
+      }
+    }
+
     // Type check if program has procedure declarations
     if (module.procDeclarations.isNotEmpty) {
       final ast = Program(module.procedures, module.line, module.column);
       final partialEvaluator = PartialEvaluator();
       final transformedAst = partialEvaluator.transformDefinedGuards(ast);
 
-      final typeResult =
-          checkModule(module, transformedProcedures: transformedAst.procedures);
+      final typeResult = checkModule(module,
+          transformedProcedures: transformedAst.procedures,
+          ancestorScope: ancestorScope);
       if (!typeResult.isWellTyped) {
         final errors = typeResult.errors.map((e) => '  ${e.message} at line ${e.line}').join('\n');
         if (strictTypes) {
@@ -494,15 +512,8 @@ class GlpEngine {
       name = _moduleNameFromFilename(filename);
     }
 
+    // Imports are no longer declared via -import(). Cross-module calls use Module # Goal.
     final imports = <String>[];
-    final importMatch = RegExp(r'-import\(\[([^\]]*)\]\)\.').firstMatch(source);
-    if (importMatch != null) {
-      imports.addAll(importMatch
-          .group(1)!
-          .split(',')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty));
-    }
 
     return ModuleInfo(name: name, program: program, imports: imports);
   }
@@ -513,6 +524,47 @@ class GlpEngine {
       return baseName.substring(0, baseName.length - 4);
     }
     return baseName;
+  }
+
+  /// Walk up from the file's directory to find the topmost directory
+  /// containing self.glp.
+  String? _findProjectRoot(String filePath) {
+    var dir = File(filePath).parent;
+    String? root;
+    while (true) {
+      final selfGlp = File('${dir.path}/self.glp');
+      if (selfGlp.existsSync()) {
+        root = dir.path;
+      }
+      final parent = dir.parent;
+      if (parent.path == dir.path) break; // filesystem root
+      dir = parent;
+    }
+    return root;
+  }
+
+  /// Build prelude + chain scope (WITHOUT the target module — checkModule
+  /// adds that via buildTypeEnvironment).
+  TypeEnvironment _buildAncestorScope(List<String> chain) {
+    var env = buildPreludeEnvironment();
+    for (final selfGlpPath in chain) {
+      final source = File(selfGlpPath).readAsStringSync();
+      final lexer = Lexer(source);
+      final tokens = lexer.tokenize();
+      final parser = Parser(tokens);
+      final selfModule = parser.parseModule();
+
+      final types = <String, TypeDef>{};
+      for (final t in selfModule.typeDefs) {
+        types[t.name] = t;
+      }
+      final procs = <String, ProcDecl>{};
+      for (final p in selfModule.procDeclarations) {
+        procs[p.qualifiedKey] = p;
+      }
+      env = env.merge(TypeEnvironment(types, procs));
+    }
+    return env;
   }
 
   ModuleInfo? _findModuleForProcedure(String procedureLabel) {

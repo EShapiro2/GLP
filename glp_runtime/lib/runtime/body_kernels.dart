@@ -15,6 +15,7 @@ import 'dart:math' as math;
 import 'runtime.dart';
 import 'terms.dart';
 import 'machine_state.dart' show GoalRef;
+import 'package:glp_runtime/bytecode/runner.dart' show BytecodeRunner, BytecodeProgram, CallEnv;
 import 'package:glp_runtime/multiagent/mad_context.dart';
 
 /// Result of executing a body kernel
@@ -102,6 +103,9 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
 
   // I/O kernels
   registry.register('_output', 1, outputKernel);
+
+  // Module dispatch kernels
+  registry.register('_activate', 2, activateKernel);
 }
 
 /// Helper to get numeric value from argument (with arithmetic evaluation)
@@ -836,4 +840,67 @@ String formatGroundTerm(Term term) {
     return '${term.functor}($args)';
   }
   return term.toString();
+}
+
+// ============================================================================
+// MODULE DISPATCH KERNELS
+// ============================================================================
+
+/// '_activate'(Module?, Goal) — resolve Goal against a module's _select/1 table.
+///
+/// Module? is a reader referencing a ModuleTerm (wrapping a BytecodeProgram).
+/// Goal is a term representing the remote procedure call (e.g., factorial(5, F)).
+///
+/// The kernel looks up _select/1 in the module's bytecode, creates a new goal
+/// _select(Goal) with that entry point, and enqueues it to run against the
+/// module's procedure table.
+BodyKernelResult activateKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] _activate/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  // Dereference Module? (first arg) to get the ModuleTerm
+  final moduleArg = _deref(rt, args[0]);
+  if (moduleArg is! ModuleTerm) {
+    print('[ABORT] _activate/2: first argument must be a ModuleTerm, got ${moduleArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  final bytecode = moduleArg.bytecode;
+  if (bytecode is! BytecodeProgram) {
+    print('[ABORT] _activate/2: ModuleTerm does not contain a BytecodeProgram');
+    return BodyKernelResult.abort;
+  }
+
+  // Look up _select/1 entry point in the module's bytecode
+  final selectPc = bytecode.labels['_select/1'];
+  if (selectPc == null) {
+    print('[ABORT] _activate/2: module "${moduleArg.name}" has no _select/1 entry point');
+    return BodyKernelResult.abort;
+  }
+
+  // Get the Goal term (second arg) and store it on the heap
+  final goalArg = args[1];
+  final goalTerm = goalArg is Term ? goalArg : ConstTerm(goalArg);
+  final goalAddr = rt.heap.storeTermOnHeap(goalTerm);
+
+  // Create a new goal: _select(Goal) against the module's bytecode
+  // CallEnv arguments must be VarRefs pointing to heap cells
+  final newGoalId = rt.nextGoalId++;
+  final env = CallEnv(args: {0: VarRef(goalAddr)});
+  rt.setGoalEnv(newGoalId, env);
+
+  // Use the BytecodeProgram itself as the program key
+  rt.setGoalProgram(newGoalId, bytecode);
+
+  // Ensure a BytecodeRunner exists for this program in rt.runners
+  if (!rt.runners.containsKey(bytecode)) {
+    rt.runners[bytecode] = BytecodeRunner(bytecode);
+  }
+
+  // Enqueue the goal
+  rt.gq.enqueue(GoalRef(newGoalId, selectPc));
+
+  return BodyKernelResult.success;
 }

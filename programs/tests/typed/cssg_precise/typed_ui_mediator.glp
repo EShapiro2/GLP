@@ -91,7 +91,7 @@ UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
 UserChannel      ::= ch(UserCmdStream, UserNotifyStream?).
 
 %% --- Pending entries ---
-PendingValue ::= response(Response?) ; channel(IntroChannel?) ; error.
+PendingValue ::= response(Response) ; channel(IntroChannel) ; error.
 PendingEntry ::= pending(ReqId, PendingValue).
 PendingList  ::= [] ; [PendingEntry | PendingList].
 

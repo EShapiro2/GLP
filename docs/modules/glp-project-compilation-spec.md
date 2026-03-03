@@ -1,0 +1,146 @@
+# GLP Project Compilation — Specification
+
+**Status:** Draft  
+**Date:** 2026-02-23  
+**Extends:** `glp-module-system-spec.md` Section 6
+
+---
+
+## 1. Overview
+
+Project compilation transforms a hierarchy of modules into a single flat program. All inter-module calls become local calls. The output is indistinguishable from a hand-written single-file program.
+
+---
+
+## 2. Input
+
+A project root directory containing:
+- One or more `.glp` module files
+- Zero or more `self.glp` scope files
+- Zero or more subdirectories (recursively)
+
+---
+
+## 3. Process
+
+### 3.1 Discovery
+
+Walk the project directory tree. Collect every `.glp` file. Parse each into a Module AST. Build the ancestor scope chain for each module (per `glp-module-system-spec.md` Section 3).
+
+`self.glp` files contribute only type definitions to the scope — they have no procedures to compile.
+
+### 3.2 Procedure Renaming
+
+Every procedure in every module is prefixed with its module path:
+
+| Module file | Procedure | Renamed to |
+|---|---|---|
+| `agent.glp` | `agent/4` | `agent:agent/4` |
+| `agent.glp` | `merge/3` | `agent:merge/3` |
+| `ui/mediator.glp` | `ui_mediator/5` | `mediator:ui_mediator/5` |
+| `ui/mediator.glp` | `send_agent/3` | `mediator:send_agent/3` |
+| `ui/actors.glp` | `alice1/1` | `actors:alice1/1` |
+| `boot.glp` | `tee/3` | `boot:tee/3` |
+| `boot.glp` | `play1/0` | `boot:play1/0` |
+
+The prefix is the module name (from `-module(name)` or filename), not the full path. If two modules at different levels have the same name, the full relative path is used (e.g., `ui/mediator:proc`).
+
+### 3.3 Call Resolution
+
+Every goal in every clause body is resolved:
+
+**Local calls** — a call to `merge(X, Y, Z)` inside `agent.glp` becomes `agent:merge(X, Y, Z)`.
+
+**Cross-module calls** — a call to `agent # agent(alice, ...)` inside `boot.glp` becomes `agent:agent(alice, ...)`.
+
+**Prelude calls** — calls to prelude procedures (`send`, `receive`, `new_channel`, etc.) are left unprefixed.
+
+### 3.4 Entry Points
+
+The top-level module's exported procedures are aliased without prefix. If `boot.glp` exports `play1/0`, the output contains both `boot:play1/0` (the renamed procedure) and `play1/0` (an alias that calls it). This allows the REPL to invoke `play1.` as before.
+
+If no module has exported procedures, all top-level module procedures get unprefixed aliases (backwards compatibility).
+
+### 3.5 Type Checking
+
+Each module is type-checked independently with its ancestor scope, exactly as today. The renaming step happens after type checking — it is a purely syntactic transformation on well-typed modules.
+
+### 3.6 Imported/Exported Declarations After Linking
+
+After linking, `imported` and `exported` declarations are no longer needed — they have served their purpose during type checking. They are dropped from the output.
+
+### 3.7 Output
+
+A single Module AST containing:
+- All type definitions from all `self.glp` files and all modules (deduplicated by name, inner scopes shadow outer)
+- All procedures from all modules, renamed
+- Entry point aliases for the top-level module's exports
+
+This AST is fed into the existing compilation pipeline (partial evaluation → codegen).
+
+---
+
+## 4. Example
+
+### Input
+
+```
+cssg_modules/
+  self.glp          — defines Response, AgentContent, ...
+  agent.glp         — exported agent/4, private merge/3, lookup_send/4, ...
+  boot.glp          — imports agent#agent, mediator#ui_mediator, actors#alice1, ...
+  ui/
+    mediator.glp    — exported ui_mediator/5, private send_agent/3, ...
+    actors.glp      — exported alice1/1, bob1/1, ...
+```
+
+### Output (flat program)
+
+```glp
+%% Types from self.glp
+Response ::= accept(FriendChannel) ; no.
+AgentContent ::= ...
+%% ... all types ...
+
+%% From agent.glp
+procedure agent:merge(Stream?, Stream?, Stream).
+agent:merge([X|Xs], Ys, [X?|Zs?]) :- agent:merge(Ys?, Xs?, Zs).
+%% ...
+
+procedure agent:agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+agent:agent(Id, [msg(...)|UserIn], NetIn, Outs) :-
+    ... agent:lookup_send(...) ... agent:merge(...) ...
+
+%% From ui/mediator.glp
+procedure mediator:ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Constant?).
+mediator:ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    ... mediator:send_agent(...) ...
+
+%% From ui/actors.glp
+procedure actors:alice1(ActorChannel?).
+%% ...
+
+%% From boot.glp
+procedure boot:tee(Stream?, Stream, Stream).
+%% ...
+
+procedure boot:play1.
+boot:play1 :-
+    boot:network3(...),
+    actors:alice1(...),
+    boot:tee(...),
+    agent:agent(alice, ...),
+    mediator:ui_mediator(alice, ...),
+    boot:sink(...), ...
+
+%% Entry point alias
+play1 :- boot:play1.
+play2 :- boot:play2.
+%% ...
+```
+
+---
+
+## 5. Scope
+
+This spec covers whole-project compilation only. Separate compilation with runtime inter-module calls is a separate concern, not specified here.

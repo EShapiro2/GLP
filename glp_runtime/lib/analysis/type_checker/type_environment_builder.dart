@@ -74,15 +74,21 @@ TypeEnvironment buildPreludeEnvironment() {
 ///
 /// Loads prelude first, then merges user definitions.
 /// Throws RedefinitionError if user redefines predefined types/procedures.
-TypeEnvironment buildTypeEnvironment(ast.Module module) {
-  // Load prelude (with aliases resolved)
-  final preludeEnv = buildPreludeEnvironment();
+///
+/// If [ancestorScope] is provided, it is used as the base environment
+/// instead of just the prelude. The ancestor scope should already include
+/// the prelude and all ancestor self.glp definitions (built by
+/// assembleTypeScope in module_hierarchy.dart). The module's own
+/// definitions are then merged on top (shadowing ancestors).
+TypeEnvironment buildTypeEnvironment(ast.Module module, {TypeEnvironment? ancestorScope}) {
+  // Base environment: ancestor scope if provided, otherwise just prelude
+  final baseEnv = ancestorScope ?? buildPreludeEnvironment();
 
   // Build user environment WITHOUT resolving aliases yet
-  final userEnv = _buildEnvironmentFromModule(module, checkRedefinitions: true, resolveAliasesNow: false);
+  final userEnv = _buildEnvironmentFromModule(module, checkRedefinitions: ancestorScope == null, resolveAliasesNow: false);
 
-  // Merge: prelude first, then user (user can shadow non-predefined)
-  final merged = preludeEnv.merge(userEnv);
+  // Merge: base first, then user (user can shadow non-predefined)
+  final merged = baseEnv.merge(userEnv);
 
   // Now resolve aliases on the merged environment (so user aliases can reference prelude types)
   final types = Map<String, TypeDef>.from(merged.types);
@@ -130,15 +136,18 @@ TypeEnvironment _buildEnvironmentFromModule(
     final isBuiltin = isBuiltinProcedure(procDecl.key);
     if (isBuiltin && !procDecl.isBuiltin) {
       // Create new ProcDecl with isBuiltin flag set
-      procedures[procDecl.key] = ProcDecl(
+      procedures[procDecl.qualifiedKey] = ProcDecl(
         procDecl.name,
         procDecl.argTypes,
         procDecl.line,
         procDecl.column,
         isBuiltin: true,
+        exported: procDecl.exported,
+        imported: procDecl.imported,
+        modulePath: procDecl.modulePath,
       );
     } else {
-      procedures[procDecl.key] = procDecl;
+      procedures[procDecl.qualifiedKey] = procDecl;
     }
   }
 
@@ -369,6 +378,9 @@ void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedure
       entry.value.line,
       entry.value.column,
       isBuiltin: entry.value.isBuiltin,
+      exported: entry.value.exported,
+      imported: entry.value.imported,
+      modulePath: entry.value.modulePath,
     );
   }
 

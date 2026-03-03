@@ -19,12 +19,12 @@ All commits go on this branch. When done, the user will merge `subtyping` into `
 ## Steps
 
 - [x] 1. Create test programs (positive and negative)
-- [ ] 2. Run baseline tests, commit ← CURRENT
-- [ ] 3. Create `subtyping.dart` module
-- [ ] 4. Integrate into `well_typed_clause.dart`
-- [ ] 5. Add tests to `run_all_tests.sh`
-- [ ] 6. Run full test suite, verify green
-- [ ] 7. Final commit, offer merge
+- [x] 2. Run baseline tests, commit
+- [x] 3. Create `subtyping.dart` module
+- [x] 4. Integrate into `well_typed_clause.dart`
+- [x] 5. Add tests to `run_all_tests.sh`
+- [x] 6. Run full test suite, verify green (326/326 pass)
+- [x] 7. Final commit (56bb7dc)
 
 ## Context
 

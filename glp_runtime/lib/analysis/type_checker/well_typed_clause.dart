@@ -483,7 +483,12 @@ WellTypedResult _checkBodyAtom(
     return _checkBodyAtomWithTerm(atom.innerGoal, atomIndex, dfa, env);
   }
 
-  // Skip builtin goals (true, otherwise, :=, #)
+  // Handle RemoteGoal (M # proc(...)) - type-check against imported declaration
+  if (atom is ast.RemoteGoal) {
+    return _checkRemoteGoal(atom, atomIndex, dfa, env);
+  }
+
+  // Skip builtin goals (true, otherwise, :=)
   if (isBuiltinGoal(atom.functor)) {
     return (WellTypedResult.success({}), null);
   }
@@ -508,6 +513,74 @@ WellTypedResult _checkBodyAtom(
     final modedAtomTerm = producedTerm(atom, procDecl, typeEnv: env);
 
     // Check each argument against its declared type's automaton
+    final result = _checkModedTermPerArg(modedAtomTerm, procDecl, dfa);
+    return (result, modedAtomTerm);
+  } on ArityMismatchError catch (e) {
+    return (WellTypedResult.failure([
+      InconsistentPathError(
+        ModedPath([PathStep(symbol: e.message, argIndex: 0, mode: Mode.produce)]),
+        e.message,
+      ),
+    ]), null);
+  }
+}
+
+/// Check a remote goal (M # proc(...)) against the imported procedure declaration.
+///
+/// Per spec Section 5.1: type checking is local — we look up the imported
+/// declaration in the local TypeEnvironment, not the remote module.
+///
+/// Dynamic dispatch (variable module) is skipped — can't resolve at compile time.
+(WellTypedResult, ModedTerm?) _checkRemoteGoal(
+  ast.RemoteGoal remote,
+  int atomIndex,
+  ProgramDFA dfa,
+  TypeEnvironment env,
+) {
+  // Dynamic dispatch (variable module) — skip type checking
+  if (remote.isDynamic) {
+    return (WellTypedResult.success({}), null);
+  }
+
+  // Flatten nested RemoteGoals to extract full module path and actual goal.
+  // Example: ui#actors # render(X?) parses as RemoteGoal(ui, RemoteGoal(actors, render(X?)))
+  // We need: modulePath = "ui#actors", innerGoal = render(X?)
+  final pathParts = <String>[];
+  ast.Goal innerGoal = remote;
+  while (innerGoal is ast.RemoteGoal) {
+    final rg = innerGoal as ast.RemoteGoal;
+    if (rg.isDynamic) {
+      // If any part of the path is dynamic, skip type checking
+      return (WellTypedResult.success({}), null);
+    }
+    pathParts.add(rg.staticModuleName!);
+    innerGoal = rg.goal;
+  }
+  final modulePath = pathParts.join('#');
+  final goalFunctor = innerGoal.functor;
+  final goalArity = innerGoal.arity;
+
+  // Look up: 'modulePath#goalFunctor/arity'
+  final qualifiedKey = '$modulePath#$goalFunctor/$goalArity';
+  final procDecl = env.procedures[qualifiedKey];
+
+  if (procDecl == null) {
+    return (WellTypedResult.failure([
+      InconsistentPathError(
+        ModedPath([PathStep(
+          symbol: qualifiedKey,
+          argIndex: 0,
+          mode: Mode.produce,
+        )]),
+        'No imported declaration for $modulePath#$goalFunctor/$goalArity — '
+        'add "imported procedure $modulePath#$goalFunctor(...)" to this module',
+      ),
+    ]), null);
+  }
+
+  // Type-check the inner goal's arguments against the imported declaration
+  try {
+    final modedAtomTerm = producedTerm(innerGoal, procDecl, typeEnv: env);
     final result = _checkModedTermPerArg(modedAtomTerm, procDecl, dfa);
     return (result, modedAtomTerm);
   } on ArityMismatchError catch (e) {

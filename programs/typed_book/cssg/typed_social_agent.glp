@@ -51,7 +51,7 @@ UserContent ::= connect(Constant)
               ; response(Response).
 
 %% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
-AgentContent ::= befriend(Constant, Response)
+AgentContent ::= befriend(Constant, Response?)
                ; befriend_intro(Constant, Constant, IntroChannel)
                ; child_befriend(Constant, Constant, IntroChannel)
                ; connected(Constant)
@@ -103,9 +103,25 @@ NetInMsg ::= msg(Constant, NetColdCall)
            ; msg(Constant, Constant, FriendContent).
 NetInStream ::= [] ; [NetInMsg | NetInStream].
 
+%% Union of all content the agent sends on output streams
+OutputContent ::= befriend(Constant, Response?)
+                ; befriend_intro(Constant, Constant, IntroChannel)
+                ; child_befriend(Constant, Constant, IntroChannel)
+                ; connected(Constant)
+                ; rejected
+                ; rejected(Constant)
+                ; received(Constant, Constant)
+                ; response(Response)
+                ; text(Constant)
+                ; intro(Constant, IntroChannel)
+                ; child_intro(Constant, IntroChannel).
+OutputMsg ::= msg(Constant, Constant, OutputContent)
+            ; msg(Constant, NetColdCall).
+OutputStream ::= [] ; [OutputMsg | OutputStream].
+
 %% Output list — keys distinguish system channels, friends, and children
 OutputKey   ::= '_user' ; '_net' ; friend(Constant) ; child(Constant).
-OutputEntry ::= output(OutputKey, Stream?).
+OutputEntry ::= output(OutputKey, OutputStream?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
 %% =============================================================================
@@ -137,12 +153,12 @@ merge_net_in(Xs, [], Xs?).
 %% LOOKUP_SEND
 %% =============================================================================
 
-procedure lookup_send(OutputKey?, _?, OutputsList?, OutputsList).
+procedure lookup_send(OutputKey?, OutputMsg?, OutputsList?, OutputsList).
 lookup_send(Key, Msg, Outs, Outs1?) :-
     ground(Key?) |
     lookup_send_step(Key?, Msg?, Outs?, Outs1).
 
-procedure lookup_send_step(OutputKey?, _?, OutputsList?, OutputsList).
+procedure lookup_send_step(OutputKey?, OutputMsg?, OutputsList?, OutputsList).
 lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
     Key? =?= K? | true.
 lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
@@ -164,7 +180,7 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
 %% ADD_OUTPUT
 %% =============================================================================
 
-procedure add_output(OutputKey?, Stream, OutputsList?, OutputsList).
+procedure add_output(OutputKey?, OutputStream, OutputsList?, OutputsList).
 add_output(Key, Out?, Outs, [output(Key?, Out)|Outs?]).
 
 %% =============================================================================

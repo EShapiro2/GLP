@@ -1,0 +1,504 @@
+%% bond_actors.glp - Scripted actors for Grassroots Bonds plays
+%%
+%% Phase 1: alice_p1 — solo mint + balance
+%% Phase 2: alice_p2, bob_p2 — befriend + credit line
+%% Phase 3: alice_p3, bob_p3 — credit + payment
+%% Phase 4: alice_p4, bob_p4 — credit + redemption
+%% Phase 5: alice_p5, bob_p5 — zero-coupon loan
+%%
+%% Date: 2026-03-03
+
+-mode(system).
+
+%% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
+
+Bond     ::= bond(Constant, Constant, Constant).
+BondList ::= [] ; [Bond | BondList].
+
+ReqId ::= req(Constant).
+
+%% User -> Mediator (actor writes these)
+UserCmd ::= mint(Constant, Constant)
+          ; balance
+          ; done
+          ; connect(Constant)
+          ; decision(Decision, Constant, ReqId)
+          ; credit(Constant, Constant, Constant)
+          ; accept_credit(Constant, ReqId)
+          ; reject_credit(Constant, ReqId)
+          ; pay(Constant, Constant)
+          ; redeem(Constant, Constant, Constant)
+          ; loan(Constant, Constant, Constant, Constant)
+          ; accept_loan(Constant, ReqId)
+          ; reject_loan(Constant, ReqId).
+
+Decision ::= yes ; no.
+
+%% Mediator -> User (actor reads these)
+UserNotify ::= minted(Constant, Constant)
+             ; balance_report(BondList)
+             ; befriend(Constant, ReqId)
+             ; connected(Constant)
+             ; rejected
+             ; rejected(Constant)
+             ; credit_proposed(Constant, Constant, Constant, ReqId)
+             ; credit_opened(Constant, Constant)
+             ; credit_rejected(Constant)
+             ; paid(Constant, Constant)
+             ; payment_received(Constant, Constant)
+             ; payment_failed(Constant, Constant)
+             ; redeemed(Constant, Constant)
+             ; redeem_failed(Constant, Constant)
+             ; redeem_received(Constant, Constant)
+             ; loan_proposed(Constant, Constant, Constant, Constant, ReqId)
+             ; loan_opened(Constant, Constant, Constant)
+             ; loan_rejected(Constant).
+
+UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].
+UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
+
+ActorChannel ::= ch(UserNotifyStream, UserCmdStream?).
+
+%% =============================================================================
+%% PLAY 1 — Solo mint + balance
+%% =============================================================================
+
+procedure alice_p1(ActorChannel?).
+alice_p1(ch(In, [mint(3, 0)|Out?])) :-
+    alice_p1_wait_minted1(In?, Out).
+
+procedure alice_p1_wait_minted1(UserNotifyStream?, UserCmdStream).
+alice_p1_wait_minted1([minted(3, 0)|In], [mint(2, 10)|Out?]) :-
+    alice_p1_wait_minted2(In?, Out).
+alice_p1_wait_minted1([_|In], Out?) :-
+    otherwise | alice_p1_wait_minted1(In?, Out).
+alice_p1_wait_minted1([], []).
+
+procedure alice_p1_wait_minted2(UserNotifyStream?, UserCmdStream).
+alice_p1_wait_minted2([minted(2, 10)|In], [balance|Out?]) :-
+    alice_p1_wait_balance(In?, Out).
+alice_p1_wait_minted2([_|In], Out?) :-
+    otherwise | alice_p1_wait_minted2(In?, Out).
+alice_p1_wait_minted2([], []).
+
+procedure alice_p1_wait_balance(UserNotifyStream?, UserCmdStream).
+alice_p1_wait_balance([balance_report(_)|In], [done|Out?]) :-
+    alice_p1_finish(In?, Out).
+alice_p1_wait_balance([_|In], Out?) :-
+    otherwise | alice_p1_wait_balance(In?, Out).
+alice_p1_wait_balance([], []).
+
+procedure alice_p1_finish(UserNotifyStream?, UserCmdStream).
+alice_p1_finish(_, []).
+
+%% =============================================================================
+%% PLAY 2 — Alice cold-calls Bob, then opens credit line
+%% =============================================================================
+%%
+%% Alice:
+%% 1. connect(bob)
+%% 2. Wait connected(bob)
+%% 3. credit(bob, 3, 0) — propose 3-coin credit line
+%% 4. Wait credit_opened(bob, _)
+%% 5. balance
+%% 6. Wait balance_report(_)
+%% 7. done
+%%
+%% Bob:
+%% 1. Wait befriend(alice, ReqId) → decision(yes, alice, ReqId)
+%% 2. Wait connected(alice)
+%% 3. Wait credit_proposed(alice, 3, 0, ReqId2) → accept_credit(alice, ReqId2)
+%% 4. Wait credit_opened(alice, _)
+%% 5. balance
+%% 6. Wait balance_report(_)
+%% 7. done
+
+procedure alice_p2(ActorChannel?).
+alice_p2(ch(In, [connect(bob)|Out?])) :-
+    alice_p2_wait_connected(In?, Out).
+
+procedure alice_p2_wait_connected(UserNotifyStream?, UserCmdStream).
+alice_p2_wait_connected([connected(bob)|In],
+                        [credit(bob, 3, 0)|Out?]) :-
+    alice_p2_wait_credit(In?, Out).
+alice_p2_wait_connected([_|In], Out?) :-
+    otherwise | alice_p2_wait_connected(In?, Out).
+alice_p2_wait_connected([], []).
+
+procedure alice_p2_wait_credit(UserNotifyStream?, UserCmdStream).
+alice_p2_wait_credit([credit_opened(bob, _)|In], [balance|Out?]) :-
+    alice_p2_wait_balance(In?, Out).
+alice_p2_wait_credit([_|In], Out?) :-
+    otherwise | alice_p2_wait_credit(In?, Out).
+alice_p2_wait_credit([], []).
+
+procedure alice_p2_wait_balance(UserNotifyStream?, UserCmdStream).
+alice_p2_wait_balance([balance_report(_)|In], [done|Out?]) :-
+    alice_p2_finish(In?, Out).
+alice_p2_wait_balance([_|In], Out?) :-
+    otherwise | alice_p2_wait_balance(In?, Out).
+alice_p2_wait_balance([], []).
+
+procedure alice_p2_finish(UserNotifyStream?, UserCmdStream).
+alice_p2_finish(_, []).
+
+%% --- Bob (play2) ---
+
+procedure bob_p2(ActorChannel?).
+bob_p2(ch([befriend(alice, ReqId)|In],
+          [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob_p2_wait_connected(In?, Out).
+bob_p2(ch([_|In], Out?)) :-
+    otherwise | bob_p2(ch(In?, Out)).
+
+procedure bob_p2_wait_connected(UserNotifyStream?, UserCmdStream).
+bob_p2_wait_connected([connected(alice)|In], Out?) :-
+    bob_p2_wait_credit_proposed(In?, Out).
+bob_p2_wait_connected([_|In], Out?) :-
+    otherwise | bob_p2_wait_connected(In?, Out).
+bob_p2_wait_connected([], []).
+
+procedure bob_p2_wait_credit_proposed(UserNotifyStream?, UserCmdStream).
+bob_p2_wait_credit_proposed([credit_proposed(alice, 3, 0, ReqId)|In],
+                            [accept_credit(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob_p2_wait_credit_opened(In?, Out).
+bob_p2_wait_credit_proposed([_|In], Out?) :-
+    otherwise | bob_p2_wait_credit_proposed(In?, Out).
+bob_p2_wait_credit_proposed([], []).
+
+procedure bob_p2_wait_credit_opened(UserNotifyStream?, UserCmdStream).
+bob_p2_wait_credit_opened([credit_opened(alice, _)|In], [balance|Out?]) :-
+    bob_p2_wait_balance(In?, Out).
+bob_p2_wait_credit_opened([_|In], Out?) :-
+    otherwise | bob_p2_wait_credit_opened(In?, Out).
+bob_p2_wait_credit_opened([], []).
+
+procedure bob_p2_wait_balance(UserNotifyStream?, UserCmdStream).
+bob_p2_wait_balance([balance_report(_)|In], [done|Out?]) :-
+    bob_p2_finish(In?, Out).
+bob_p2_wait_balance([_|In], Out?) :-
+    otherwise | bob_p2_wait_balance(In?, Out).
+bob_p2_wait_balance([], []).
+
+procedure bob_p2_finish(UserNotifyStream?, UserCmdStream).
+bob_p2_finish(_, []).
+
+%% =============================================================================
+%% PLAY 3 — Credit + payment
+%% =============================================================================
+%%
+%% Alice:
+%% 1. connect(bob)
+%% 2. Wait connected(bob)
+%% 3. credit(bob, 3, 0) — propose 3-coin credit line
+%% 4. Wait credit_opened(bob, _)
+%% 5. pay(bob, 2) — pay 2 bob-coins to Bob
+%% 6. Wait paid(bob, _)
+%% 7. balance
+%% 8. Wait balance_report(_)
+%% 9. done
+%%
+%% Bob:
+%% 1. Wait befriend(alice, ReqId) → decision(yes, alice, ReqId)
+%% 2. Wait connected(alice)
+%% 3. Wait credit_proposed(alice, 3, 0, ReqId2) → accept_credit(alice, ReqId2)
+%% 4. Wait credit_opened(alice, _)
+%% 5. Wait payment_received(alice, _)
+%% 6. balance
+%% 7. Wait balance_report(_)
+%% 8. done
+
+procedure alice_p3(ActorChannel?).
+alice_p3(ch(In, [connect(bob)|Out?])) :-
+    alice_p3_wait_connected(In?, Out).
+
+procedure alice_p3_wait_connected(UserNotifyStream?, UserCmdStream).
+alice_p3_wait_connected([connected(bob)|In],
+                        [credit(bob, 3, 0)|Out?]) :-
+    alice_p3_wait_credit(In?, Out).
+alice_p3_wait_connected([_|In], Out?) :-
+    otherwise | alice_p3_wait_connected(In?, Out).
+alice_p3_wait_connected([], []).
+
+procedure alice_p3_wait_credit(UserNotifyStream?, UserCmdStream).
+alice_p3_wait_credit([credit_opened(bob, _)|In], [pay(bob, 2)|Out?]) :-
+    alice_p3_wait_paid(In?, Out).
+alice_p3_wait_credit([_|In], Out?) :-
+    otherwise | alice_p3_wait_credit(In?, Out).
+alice_p3_wait_credit([], []).
+
+procedure alice_p3_wait_paid(UserNotifyStream?, UserCmdStream).
+alice_p3_wait_paid([paid(bob, _)|In], [balance|Out?]) :-
+    alice_p3_wait_balance(In?, Out).
+alice_p3_wait_paid([_|In], Out?) :-
+    otherwise | alice_p3_wait_paid(In?, Out).
+alice_p3_wait_paid([], []).
+
+procedure alice_p3_wait_balance(UserNotifyStream?, UserCmdStream).
+alice_p3_wait_balance([balance_report(_)|In], [done|Out?]) :-
+    alice_p3_finish(In?, Out).
+alice_p3_wait_balance([_|In], Out?) :-
+    otherwise | alice_p3_wait_balance(In?, Out).
+alice_p3_wait_balance([], []).
+
+procedure alice_p3_finish(UserNotifyStream?, UserCmdStream).
+alice_p3_finish(_, []).
+
+%% --- Bob (play3) ---
+
+procedure bob_p3(ActorChannel?).
+bob_p3(ch([befriend(alice, ReqId)|In],
+          [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob_p3_wait_connected(In?, Out).
+bob_p3(ch([_|In], Out?)) :-
+    otherwise | bob_p3(ch(In?, Out)).
+
+procedure bob_p3_wait_connected(UserNotifyStream?, UserCmdStream).
+bob_p3_wait_connected([connected(alice)|In], Out?) :-
+    bob_p3_wait_credit_proposed(In?, Out).
+bob_p3_wait_connected([_|In], Out?) :-
+    otherwise | bob_p3_wait_connected(In?, Out).
+bob_p3_wait_connected([], []).
+
+procedure bob_p3_wait_credit_proposed(UserNotifyStream?, UserCmdStream).
+bob_p3_wait_credit_proposed([credit_proposed(alice, 3, 0, ReqId)|In],
+                            [accept_credit(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob_p3_wait_credit_opened(In?, Out).
+bob_p3_wait_credit_proposed([_|In], Out?) :-
+    otherwise | bob_p3_wait_credit_proposed(In?, Out).
+bob_p3_wait_credit_proposed([], []).
+
+procedure bob_p3_wait_credit_opened(UserNotifyStream?, UserCmdStream).
+bob_p3_wait_credit_opened([credit_opened(alice, _)|In], Out?) :-
+    bob_p3_wait_payment(In?, Out).
+bob_p3_wait_credit_opened([_|In], Out?) :-
+    otherwise | bob_p3_wait_credit_opened(In?, Out).
+bob_p3_wait_credit_opened([], []).
+
+procedure bob_p3_wait_payment(UserNotifyStream?, UserCmdStream).
+bob_p3_wait_payment([payment_received(alice, _)|In], [balance|Out?]) :-
+    bob_p3_wait_balance(In?, Out).
+bob_p3_wait_payment([_|In], Out?) :-
+    otherwise | bob_p3_wait_payment(In?, Out).
+bob_p3_wait_payment([], []).
+
+procedure bob_p3_wait_balance(UserNotifyStream?, UserCmdStream).
+bob_p3_wait_balance([balance_report(_)|In], [done|Out?]) :-
+    bob_p3_finish(In?, Out).
+bob_p3_wait_balance([_|In], Out?) :-
+    otherwise | bob_p3_wait_balance(In?, Out).
+bob_p3_wait_balance([], []).
+
+procedure bob_p3_finish(UserNotifyStream?, UserCmdStream).
+bob_p3_finish(_, []).
+
+%% =============================================================================
+%% PLAY 4 — Credit + redemption
+%% =============================================================================
+%%
+%% Alice:
+%% 1. connect(bob)
+%% 2. Wait connected(bob)
+%% 3. credit(bob, 3, 0) — propose 3-coin credit line
+%% 4. Wait credit_opened(bob, _)
+%% 5. redeem(bob, 2, 0) — redeem 2 bob-coins
+%% 6. Wait redeemed(bob, _)
+%% 7. balance
+%% 8. Wait balance_report(_)
+%% 9. done
+%%
+%% Bob:
+%% 1. Wait befriend(alice, ReqId) → decision(yes, alice, ReqId)
+%% 2. Wait connected(alice)
+%% 3. Wait credit_proposed(alice, 3, 0, ReqId2) → accept_credit(alice, ReqId2)
+%% 4. Wait credit_opened(alice, _)
+%% 5. Wait redeem_received(alice, _)
+%% 6. balance
+%% 7. Wait balance_report(_)
+%% 8. done
+
+procedure alice_p4(ActorChannel?).
+alice_p4(ch(In, [connect(bob)|Out?])) :-
+    alice_p4_wait_connected(In?, Out).
+
+procedure alice_p4_wait_connected(UserNotifyStream?, UserCmdStream).
+alice_p4_wait_connected([connected(bob)|In],
+                        [credit(bob, 3, 0)|Out?]) :-
+    alice_p4_wait_credit(In?, Out).
+alice_p4_wait_connected([_|In], Out?) :-
+    otherwise | alice_p4_wait_connected(In?, Out).
+alice_p4_wait_connected([], []).
+
+procedure alice_p4_wait_credit(UserNotifyStream?, UserCmdStream).
+alice_p4_wait_credit([credit_opened(bob, _)|In], [redeem(bob, 2, 0)|Out?]) :-
+    alice_p4_wait_redeemed(In?, Out).
+alice_p4_wait_credit([_|In], Out?) :-
+    otherwise | alice_p4_wait_credit(In?, Out).
+alice_p4_wait_credit([], []).
+
+procedure alice_p4_wait_redeemed(UserNotifyStream?, UserCmdStream).
+alice_p4_wait_redeemed([redeemed(bob, _)|In], [balance|Out?]) :-
+    alice_p4_wait_balance(In?, Out).
+alice_p4_wait_redeemed([_|In], Out?) :-
+    otherwise | alice_p4_wait_redeemed(In?, Out).
+alice_p4_wait_redeemed([], []).
+
+procedure alice_p4_wait_balance(UserNotifyStream?, UserCmdStream).
+alice_p4_wait_balance([balance_report(_)|In], [done|Out?]) :-
+    alice_p4_finish(In?, Out).
+alice_p4_wait_balance([_|In], Out?) :-
+    otherwise | alice_p4_wait_balance(In?, Out).
+alice_p4_wait_balance([], []).
+
+procedure alice_p4_finish(UserNotifyStream?, UserCmdStream).
+alice_p4_finish(_, []).
+
+%% --- Bob (play4) ---
+
+procedure bob_p4(ActorChannel?).
+bob_p4(ch([befriend(alice, ReqId)|In],
+          [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob_p4_wait_connected(In?, Out).
+bob_p4(ch([_|In], Out?)) :-
+    otherwise | bob_p4(ch(In?, Out)).
+
+procedure bob_p4_wait_connected(UserNotifyStream?, UserCmdStream).
+bob_p4_wait_connected([connected(alice)|In], Out?) :-
+    bob_p4_wait_credit_proposed(In?, Out).
+bob_p4_wait_connected([_|In], Out?) :-
+    otherwise | bob_p4_wait_connected(In?, Out).
+bob_p4_wait_connected([], []).
+
+procedure bob_p4_wait_credit_proposed(UserNotifyStream?, UserCmdStream).
+bob_p4_wait_credit_proposed([credit_proposed(alice, 3, 0, ReqId)|In],
+                            [accept_credit(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob_p4_wait_credit_opened(In?, Out).
+bob_p4_wait_credit_proposed([_|In], Out?) :-
+    otherwise | bob_p4_wait_credit_proposed(In?, Out).
+bob_p4_wait_credit_proposed([], []).
+
+procedure bob_p4_wait_credit_opened(UserNotifyStream?, UserCmdStream).
+bob_p4_wait_credit_opened([credit_opened(alice, _)|In], Out?) :-
+    bob_p4_wait_redeem_received(In?, Out).
+bob_p4_wait_credit_opened([_|In], Out?) :-
+    otherwise | bob_p4_wait_credit_opened(In?, Out).
+bob_p4_wait_credit_opened([], []).
+
+procedure bob_p4_wait_redeem_received(UserNotifyStream?, UserCmdStream).
+bob_p4_wait_redeem_received([redeem_received(alice, _)|In], [balance|Out?]) :-
+    bob_p4_wait_balance(In?, Out).
+bob_p4_wait_redeem_received([_|In], Out?) :-
+    otherwise | bob_p4_wait_redeem_received(In?, Out).
+bob_p4_wait_redeem_received([], []).
+
+procedure bob_p4_wait_balance(UserNotifyStream?, UserCmdStream).
+bob_p4_wait_balance([balance_report(_)|In], [done|Out?]) :-
+    bob_p4_finish(In?, Out).
+bob_p4_wait_balance([_|In], Out?) :-
+    otherwise | bob_p4_wait_balance(In?, Out).
+bob_p4_wait_balance([], []).
+
+procedure bob_p4_finish(UserNotifyStream?, UserCmdStream).
+bob_p4_finish(_, []).
+
+%% =============================================================================
+%% PLAY 5 — Zero-coupon loan
+%% =============================================================================
+%%
+%% Alice (lender):
+%% 1. connect(bob)
+%% 2. Wait connected(bob)
+%% 3. loan(bob, 9, 10, 5) — lend 9 alice-coins for 10 bob-bonds (maturity 5)
+%% 4. Wait loan_opened(bob, _, _)
+%% 5. balance
+%% 6. Wait balance_report(_)
+%% 7. done
+%%
+%% Bob (borrower):
+%% 1. Wait befriend(alice, ReqId) → decision(yes, alice, ReqId)
+%% 2. Wait connected(alice)
+%% 3. Wait loan_proposed(alice, 9, 10, 5, ReqId2) → accept_loan(alice, ReqId2)
+%% 4. Wait loan_opened(alice, _, _)
+%% 5. balance
+%% 6. Wait balance_report(_)
+%% 7. done
+
+procedure alice_p5(ActorChannel?).
+alice_p5(ch(In, [connect(bob)|Out?])) :-
+    alice_p5_wait_connected(In?, Out).
+
+procedure alice_p5_wait_connected(UserNotifyStream?, UserCmdStream).
+alice_p5_wait_connected([connected(bob)|In],
+                        [loan(bob, 9, 10, 5)|Out?]) :-
+    alice_p5_wait_loan(In?, Out).
+alice_p5_wait_connected([_|In], Out?) :-
+    otherwise | alice_p5_wait_connected(In?, Out).
+alice_p5_wait_connected([], []).
+
+procedure alice_p5_wait_loan(UserNotifyStream?, UserCmdStream).
+alice_p5_wait_loan([loan_opened(bob, _, _)|In], [balance|Out?]) :-
+    alice_p5_wait_balance(In?, Out).
+alice_p5_wait_loan([_|In], Out?) :-
+    otherwise | alice_p5_wait_loan(In?, Out).
+alice_p5_wait_loan([], []).
+
+procedure alice_p5_wait_balance(UserNotifyStream?, UserCmdStream).
+alice_p5_wait_balance([balance_report(_)|In], [done|Out?]) :-
+    alice_p5_finish(In?, Out).
+alice_p5_wait_balance([_|In], Out?) :-
+    otherwise | alice_p5_wait_balance(In?, Out).
+alice_p5_wait_balance([], []).
+
+procedure alice_p5_finish(UserNotifyStream?, UserCmdStream).
+alice_p5_finish(_, []).
+
+%% --- Bob (play5) ---
+
+procedure bob_p5(ActorChannel?).
+bob_p5(ch([befriend(alice, ReqId)|In],
+          [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob_p5_wait_connected(In?, Out).
+bob_p5(ch([_|In], Out?)) :-
+    otherwise | bob_p5(ch(In?, Out)).
+
+procedure bob_p5_wait_connected(UserNotifyStream?, UserCmdStream).
+bob_p5_wait_connected([connected(alice)|In], Out?) :-
+    bob_p5_wait_loan_proposed(In?, Out).
+bob_p5_wait_connected([_|In], Out?) :-
+    otherwise | bob_p5_wait_connected(In?, Out).
+bob_p5_wait_connected([], []).
+
+procedure bob_p5_wait_loan_proposed(UserNotifyStream?, UserCmdStream).
+bob_p5_wait_loan_proposed([loan_proposed(alice, 9, 10, 5, ReqId)|In],
+                          [accept_loan(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob_p5_wait_loan_opened(In?, Out).
+bob_p5_wait_loan_proposed([_|In], Out?) :-
+    otherwise | bob_p5_wait_loan_proposed(In?, Out).
+bob_p5_wait_loan_proposed([], []).
+
+procedure bob_p5_wait_loan_opened(UserNotifyStream?, UserCmdStream).
+bob_p5_wait_loan_opened([loan_opened(alice, _, _)|In], [balance|Out?]) :-
+    bob_p5_wait_balance(In?, Out).
+bob_p5_wait_loan_opened([_|In], Out?) :-
+    otherwise | bob_p5_wait_loan_opened(In?, Out).
+bob_p5_wait_loan_opened([], []).
+
+procedure bob_p5_wait_balance(UserNotifyStream?, UserCmdStream).
+bob_p5_wait_balance([balance_report(_)|In], [done|Out?]) :-
+    bob_p5_finish(In?, Out).
+bob_p5_wait_balance([_|In], Out?) :-
+    otherwise | bob_p5_wait_balance(In?, Out).
+bob_p5_wait_balance([], []).
+
+procedure bob_p5_finish(UserNotifyStream?, UserCmdStream).
+bob_p5_finish(_, []).

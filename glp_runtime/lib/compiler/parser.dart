@@ -58,8 +58,6 @@ class Parser {
   /// Parse tokens into a Module AST (includes declarations)
   Module parseModule() {
     ModuleDeclaration? moduleDecl;
-    final exports = <ExportDeclaration>[];
-    final imports = <ImportDeclaration>[];
     bool isStdlib = false;
     CompileMode compileMode = CompileMode.user;  // default: user mode
 
@@ -121,24 +119,20 @@ class Parser {
           break;
 
         case 'export':
-          _consume(TokenType.LPAREN, 'Expected "(" after export');
-          _consume(TokenType.LBRACKET, 'Expected "[" for export list');
-          final procRefs = _parseProcRefList();
-          _consume(TokenType.RBRACKET, 'Expected "]" after export list');
-          _consume(TokenType.RPAREN, 'Expected ")" after export');
-          _consume(TokenType.DOT, 'Expected "." after export declaration');
-          exports.add(ExportDeclaration(procRefs, startLine, startCol));
-          break;
+          throw CompileError(
+            'The -export() declaration is no longer supported. Use \'exported procedure\' instead.',
+            startLine,
+            startCol,
+            phase: 'parser'
+          );
 
         case 'import':
-          _consume(TokenType.LPAREN, 'Expected "(" after import');
-          _consume(TokenType.LBRACKET, 'Expected "[" for import list');
-          final moduleNames = _parseAtomList();
-          _consume(TokenType.RBRACKET, 'Expected "]" after import list');
-          _consume(TokenType.RPAREN, 'Expected ")" after import');
-          _consume(TokenType.DOT, 'Expected "." after import declaration');
-          imports.add(ImportDeclaration(moduleNames, startLine, startCol));
-          break;
+          throw CompileError(
+            'The -import() declaration is no longer supported. Use \'imported procedure\' instead.',
+            startLine,
+            startCol,
+            phase: 'parser'
+          );
 
         default:
           // Unknown declaration, back up to the '-'
@@ -162,12 +156,17 @@ class Parser {
     final seenProcedures = <String, Procedure>{};
 
     while (!_isAtEnd()) {
-      if (_check(TokenType.PROCEDURE)) {
-        // Procedure declaration
+      // Check for procedure declaration: 'procedure ...' or 'exported procedure ...' or 'imported procedure ...'
+      final isProcedureDecl = _check(TokenType.PROCEDURE) ||
+          (_check(TokenType.ATOM) && (_peek().lexeme == 'exported' || _peek().lexeme == 'imported') &&
+           _current + 1 < tokens.length && tokens[_current + 1].type == TokenType.PROCEDURE);
+
+      if (isProcedureDecl) {
+        // Procedure declaration (possibly exported or imported)
         if (pendingProcDecl != null) {
-          // Check if the pending declaration is for a builtin (no clauses needed)
+          // Check if the pending declaration is for a builtin or imported (no clauses needed)
           final pendingSig = '${pendingProcDecl.name}/${pendingProcDecl.argTypes.length}';
-          if (!builtinProcedures.contains(pendingSig)) {
+          if (!builtinProcedures.contains(pendingSig) && !pendingProcDecl.imported) {
             throw CompileError(
               'Procedure declaration for "${pendingProcDecl.name}" has no clauses.\n'
               '  A procedure declaration must be immediately followed by its clauses.',
@@ -176,11 +175,15 @@ class Parser {
               phase: 'parser'
             );
           }
-          // Builtin - clear pending without error
+          // Builtin or imported - clear pending without error
           pendingProcDecl = null;
         }
-        pendingProcDecl = _parseProcDeclaration();
-        procDeclarations.add(pendingProcDecl);
+        final decl = _parseProcDeclaration();
+        procDeclarations.add(decl);
+        // Imported procedures are declaration-only — no clauses expected
+        if (!decl.imported) {
+          pendingProcDecl = decl;
+        }
       } else if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
         // Might be a type definition (TypeName ::= ...) or a clause head
         final startPos = _current;
@@ -190,9 +193,9 @@ class Parser {
         if (_isTypeDefinition()) {
           // Type definition
           if (pendingProcDecl != null) {
-            // Check if the pending declaration is for a builtin (no clauses needed)
+            // Check if the pending declaration is for a builtin or imported (no clauses needed)
             final pendingSig = '${pendingProcDecl.name}/${pendingProcDecl.argTypes.length}';
-            if (!builtinProcedures.contains(pendingSig)) {
+            if (!builtinProcedures.contains(pendingSig) && !pendingProcDecl.imported) {
               throw CompileError(
                 'Type definition cannot appear between procedure declaration and its clauses.\n'
                 '  Procedure "${pendingProcDecl.name}" declared at line ${pendingProcDecl.line} needs clauses.',
@@ -201,7 +204,7 @@ class Parser {
                 phase: 'parser'
               );
             }
-            // Builtin - clear pending without error
+            // Builtin or imported - clear pending without error
             pendingProcDecl = null;
           }
           typeDefs.add(_parseTypeDef());
@@ -301,7 +304,7 @@ class Parser {
     // Check for dangling procedure declaration at end of file
     if (pendingProcDecl != null) {
       final pendingSig = '${pendingProcDecl.name}/${pendingProcDecl.argTypes.length}';
-      if (!builtinProcedures.contains(pendingSig)) {
+      if (!builtinProcedures.contains(pendingSig) && !pendingProcDecl.imported) {
         throw CompileError(
           'Procedure declaration for "${pendingProcDecl.name}" has no clauses.\n'
           '  A procedure declaration must be immediately followed by its clauses.',
@@ -314,8 +317,6 @@ class Parser {
 
     return Module(
       declaration: moduleDecl,
-      exports: exports,
-      imports: imports,
       typeDefs: typeDefs,
       procDeclarations: procDeclarations,
       procedures: procedures,
@@ -339,7 +340,7 @@ class Parser {
 
       final keyword = _peek().lexeme;
 
-      if (['module', 'export', 'import'].contains(keyword)) {
+      if (['module', 'stdlib', 'mode'].contains(keyword)) {
         // Skip to the next DOT
         while (!_isAtEnd() && !_check(TokenType.DOT)) {
           _advance();
@@ -373,44 +374,8 @@ class Parser {
     return parts.join('.');
   }
 
-  /// Parse list of procedure references: [proc/arity, ...]
-  List<ProcRef> _parseProcRefList() {
-    final refs = <ProcRef>[];
-
-    if (_check(TokenType.RBRACKET)) return refs;  // Empty list
-
-    refs.add(_parseProcRef());
-
-    while (_match(TokenType.COMMA)) {
-      refs.add(_parseProcRef());
-    }
-
-    return refs;
-  }
-
-  /// Parse single procedure reference: name/arity
-  ProcRef _parseProcRef() {
-    final name = _consume(TokenType.ATOM, 'Expected procedure name').lexeme;
-    _consume(TokenType.SLASH, 'Expected "/" in procedure reference');
-    final arityToken = _consume(TokenType.NUMBER, 'Expected arity');
-    final arity = arityToken.literal as int;
-    return ProcRef(name, arity);
-  }
-
-  /// Parse list of atoms: [atom, ...]
-  List<String> _parseAtomList() {
-    final atoms = <String>[];
-
-    if (_check(TokenType.RBRACKET)) return atoms;  // Empty list
-
-    atoms.add(_parseModuleName());
-
-    while (_match(TokenType.COMMA)) {
-      atoms.add(_parseModuleName());
-    }
-
-    return atoms;
-  }
+  // _parseProcRefList, _parseProcRef, _parseAtomList removed in Phase 1.
+  // These were only used for -export([...]) and -import([...]) syntax.
 
   // Procedure: one or more clauses with same head functor/arity
   Procedure _parseProcedure() {
@@ -1582,10 +1547,30 @@ class Parser {
   }
 
   /// Parse a procedure declaration: procedure name(Type?, Type).
+  /// or: exported procedure name(Type?, Type).
+  /// or: imported procedure [path#]name(Type?, Type).
   ProcDecl _parseProcDeclaration() {
-    final procToken = _consume(TokenType.PROCEDURE, 'Expected "procedure" keyword');
-    final line = procToken.line;
-    final column = procToken.column;
+    // Check for 'exported' or 'imported' keyword before 'procedure'
+    bool exported = false;
+    bool imported = false;
+    final startLine = _peek().line;
+    final startColumn = _peek().column;
+    if (_check(TokenType.ATOM) && _peek().lexeme == 'exported') {
+      _advance(); // consume 'exported'
+      exported = true;
+    } else if (_check(TokenType.ATOM) && _peek().lexeme == 'imported') {
+      _advance(); // consume 'imported'
+      imported = true;
+    }
+    _consume(TokenType.PROCEDURE, 'Expected "procedure" keyword');
+    final line = startLine;
+    final column = startColumn;
+
+    // Parse procedure name, possibly with module path for imported procedures.
+    // For imported: 'social#agent' → modulePath='social', name='agent'
+    //              'ui#actors#render' → modulePath='ui#actors', name='render'
+    //              'merge' → modulePath=null, name='merge'
+    String? modulePath;
 
     // Procedure name can be atom or operator (<, >, =<, >=, =:=, =\=, =?=, =)
     Token nameToken;
@@ -1621,7 +1606,30 @@ class Parser {
         phase: 'parser',
       );
     }
-    final name = nameToken.lexeme;
+
+    // For imported procedures, parse #-separated path: social#agent, ui#actors#render
+    // The last component is the procedure name, everything before is the module path.
+    var name = nameToken.lexeme;
+    if (imported) {
+      final parts = <String>[name];
+      while (_match(TokenType.HASH)) {
+        // Next token should be an atom (next path component or procedure name)
+        if (!_check(TokenType.ATOM)) {
+          throw CompileError(
+            'Expected module path component or procedure name after "#"',
+            _peek().line,
+            _peek().column,
+            phase: 'parser',
+          );
+        }
+        parts.add(_advance().lexeme);
+      }
+      // Last part is the procedure name, rest is the module path
+      name = parts.last;
+      if (parts.length > 1) {
+        modulePath = parts.sublist(0, parts.length - 1).join('#');
+      }
+    }
 
     // Parentheses are optional for nullary procedures:
     // procedure play_introduction.    (valid - nullary)
@@ -1642,10 +1650,11 @@ class Parser {
 
     _consume(TokenType.DOT, 'Expected "." after procedure declaration');
 
-    return ProcDecl(name, argTypes, line, column);
+    return ProcDecl(name, argTypes, line, column, exported: exported, imported: imported, modulePath: modulePath);
   }
 
-  /// Parse a procedure argument type: TypeName, TypeName?, _, or _?
+  /// Parse a procedure argument type: TypeName, TypeName?, _, _?,
+  /// or qualified: mod#TypeName, mod#TypeName?
   TypeExpr _parseProcArgType() {
     final line = _peek().line;
     final column = _peek().column;
@@ -1654,6 +1663,30 @@ class Parser {
     if (_match(TokenType.UNDERSCORE)) {
       final isInput = _match(TokenType.QUESTION);
       return PrimitiveModeAlt(isInput, line, column);
+    }
+
+    // Qualified type reference: atom # TypeName or atom # TypeName?
+    // e.g., social#AgentChannel, social#AgentChannel?
+    if (_check(TokenType.ATOM) && _current + 1 < tokens.length && tokens[_current + 1].type == TokenType.HASH) {
+      // Collect path: atom # atom # ... # TypeName
+      final pathParts = <String>[];
+      while (_check(TokenType.ATOM) && _current + 1 < tokens.length && tokens[_current + 1].type == TokenType.HASH) {
+        pathParts.add(_advance().lexeme); // consume atom
+        _advance(); // consume #
+      }
+      // Now parse the final type name (must be VARIABLE or READER)
+      if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
+        final typeToken = _advance();
+        final isInput = typeToken.type == TokenType.READER || _match(TokenType.QUESTION);
+        final qualifiedName = '${pathParts.join('#')}#${typeToken.lexeme}';
+        return TypeRef(qualifiedName, line, column, isInput: isInput);
+      }
+      throw CompileError(
+        'Expected type name after module path in qualified type reference',
+        _peek().line,
+        _peek().column,
+        phase: 'parser',
+      );
     }
 
     // Type reference with optional mode

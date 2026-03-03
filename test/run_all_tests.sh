@@ -1061,6 +1061,27 @@ fi
 echo ""
 
 # =============================================================================
+# Section F: CSSG Modules (modular play tests)
+# =============================================================================
+echo "=== Section F: CSSG Modules ==="
+echo ""
+
+cssg_result=$(bash "$SCRIPT_DIR/cssg_modules_test.sh" 2>&1)
+cssg_pass=$(echo "$cssg_result" | grep "^Total:" | sed 's/.*Passed: \([0-9]*\).*/\1/')
+cssg_fail=$(echo "$cssg_result" | grep "^Total:" | sed 's/.*Failed: \([0-9]*\).*/\1/')
+
+if [ -n "$cssg_pass" ] && [ -n "$cssg_fail" ]; then
+    PASS=$((PASS + cssg_pass))
+    FAIL=$((FAIL + cssg_fail))
+    echo "$cssg_result" | grep -E "PASS:|FAIL:|CSSG|Using"
+else
+    echo "  FAIL: cssg_modules_test.sh did not produce expected output"
+    FAIL=$((FAIL + 1))
+fi
+
+echo ""
+
+# =============================================================================
 # SUMMARY
 # =============================================================================
 TOTAL=$((PASS + FAIL))

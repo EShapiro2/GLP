@@ -621,12 +621,16 @@ class TypeChecker {
 ///
 /// This is the primary entry point for type checking.
 /// The module should be parsed using the main parser.
-/// 
+///
 /// If transformedProcedures is provided, uses those instead of module.procedures.
 /// This allows running partial evaluation (defined guard expansion) before type checking.
-TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures}) {
-  // Build type environment from module (includes prelude)
-  final typeEnv = buildTypeEnvironment(module);
+///
+/// If [ancestorScope] is provided, it is used as the base type environment
+/// (prelude + ancestor self.glp definitions) instead of just the prelude.
+/// See module_hierarchy.dart for how ancestor scopes are assembled.
+TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope}) {
+  // Build type environment from module (includes prelude or ancestor scope)
+  final typeEnv = buildTypeEnvironment(module, ancestorScope: ancestorScope);
 
   // Extract clauses - from transformed procedures if provided, otherwise from module
   final clauses = <ast.Clause>[];

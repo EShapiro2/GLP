@@ -109,27 +109,22 @@ class ModuleLoader {
     final generator = CodeGenerator();
     final bytecode = generator.generate(annotatedProgram);
 
-    // Extract exports from module declarations
-    // Default: if no -export declarations, export ALL procedures (backwards compatibility)
+    // Extract exports from procedure declarations with exported=true.
+    // If no procedure has exported=true, export all procedures (backwards compatibility).
+    final explicitExports = module.exportedSignatures;
     Set<String> exports;
-    if (module.exports.isEmpty) {
-      // No explicit exports - export all procedures
+    if (explicitExports.isEmpty) {
+      // No exported procedures declared - export all procedures
       exports = <String>{};
       for (final proc in module.procedures) {
         exports.add('${proc.name}/${proc.arity}');
       }
     } else {
-      // Explicit exports - only export listed procedures
-      exports = <String>{};
-      for (final exportDecl in module.exports) {
-        for (final procRef in exportDecl.exports) {
-          exports.add(procRef.signature);
-        }
-      }
+      exports = explicitExports;
     }
 
-    // Extract imports (default: empty list if no -import declarations)
-    final imports = module.importedModules;
+    // Imports are no longer declared via -import(). Cross-module calls use Module # Goal.
+    final imports = <String>[];
 
     // Determine module name:
     // 1. From -module(name) declaration if present

@@ -78,7 +78,6 @@ class ModuleRuntime {
     if (debugOutput) {
       print('[MODULE] Loaded: ${module.name}');
       print('  Exports: ${module.exports}');
-      print('  Imports: ${module.imports}');
     }
   }
 

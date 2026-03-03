@@ -1,0 +1,345 @@
+%% bond_boot.glp - Play orchestrator for Grassroots Bonds
+%%
+%% Full stack: network2 <-> agent/6 <-> ui_mediator <-> tee <-> actor
+%%                                                       |
+%%                                                  sink (display)
+%%
+%% Phase 1: Single-agent plays (no network).
+%% Phase 2: Two-agent plays with network2.
+%% Phase 3: Credit + payment (two-agent).
+%% Phase 4: Credit + redemption (two-agent).
+%%
+%% Usage:
+%%   load bond_agent.glp
+%%   load bond_mediator.glp
+%%   load bond_actors.glp
+%%   load bond_boot.glp
+%%   play1.
+%%
+%% Date: 2026-03-03
+
+-mode(system).
+
+%% =============================================================================
+%% TEE — Stream splitter
+%% =============================================================================
+
+procedure tee(Stream?, Stream, Stream).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
+tee([], [], []).
+
+%% =============================================================================
+%% SINK — Dummy consumer (discards stream)
+%% =============================================================================
+
+procedure sink(Stream?).
+sink([_|Xs]) :- sink(Xs?).
+sink([]).
+
+%% =============================================================================
+%% SEND_TO_USER_TAGGED — Merge display streams, tag with agent ID
+%% =============================================================================
+
+send_to_user_tagged(Id, [T|Cmds], Notifies) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, cmd(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, notify(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(_, [], []).
+send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
+
+%% =============================================================================
+%% NETWORK SWITCH (2-way)
+%% =============================================================================
+
+%% Cold-call routing (2-arg msg)
+network2(ch([msg(bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?])) :-
+    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+network2(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch([msg(alice, X)|BobIn], BobOut?)) :-
+    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+%% Friend-to-friend routing (3-arg msg)
+network2(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(alice, bob, X?)|BobOut?])) :-
+    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+network2(ch(AliceIn, [msg(bob, alice, X?)|AliceOut?]),
+         ch([msg(bob, alice, X)|BobIn], BobOut?)) :-
+    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+%% Termination
+network2(ch([], []), ch([], [])).
+
+%% =============================================================================
+%% PLAY 1 — Solo mint + balance (with tee + sink display)
+%% =============================================================================
+
+play1 :-
+    alice_p1(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, _,
+          [output('_user', AliceAgentToUser)], [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 1 — Solo mint + balance (with tagged output for UI)
+%% =============================================================================
+
+fplay1 :-
+    alice_p1(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, _,
+          [output('_user', AliceAgentToUser)], [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?).
+
+%% =============================================================================
+%% PLAY 2 — Befriend + credit line (with tee + sink display)
+%% =============================================================================
+
+play2 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p2(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    bob_p2(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 2 — Befriend + credit line (with tagged output for UI)
+%% =============================================================================
+
+fplay2 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p2(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    bob_p2(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 3 — Credit + payment (with tee + sink display)
+%% =============================================================================
+
+play3 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p3(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    bob_p3(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 3 — Credit + payment (with tagged output for UI)
+%% =============================================================================
+
+fplay3 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p3(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    bob_p3(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 4 — Credit + redemption (with tee + sink display)
+%% =============================================================================
+
+play4 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p4(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    bob_p4(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 4 — Credit + redemption (with tagged output for UI)
+%% =============================================================================
+
+fplay4 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p4(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    bob_p4(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 5 — Zero-coupon loan (with tee + sink display)
+%% =============================================================================
+
+play5 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p5(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    bob_p5(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 5 — Zero-coupon loan (with tagged output for UI)
+%% =============================================================================
+
+fplay5 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p5(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    bob_p5(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).

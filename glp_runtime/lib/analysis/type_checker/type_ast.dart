@@ -196,12 +196,21 @@ class ProcDecl {
   final int line;
   final int column;
   final bool isBuiltin;  // True if implemented in Dart runtime (no GLP clauses)
+  final bool exported;   // True if declared with 'exported procedure'
+  final bool imported;   // True if declared with 'imported procedure'
+  final String? modulePath;  // For imported procedures: module path (e.g., 'social' or 'ui#actors'), null for ancestor scope
 
-  ProcDecl(this.name, this.argTypes, this.line, this.column, {this.isBuiltin = false});
+  ProcDecl(this.name, this.argTypes, this.line, this.column, {this.isBuiltin = false, this.exported = false, this.imported = false, this.modulePath});
 
   int get arity => argTypes.length;
 
   String get key => '$name/$arity';
+
+  /// Key for TypeEnvironment lookup, including module path for imported procedures.
+  /// - Local/exported: 'factorial/2'
+  /// - Imported with path: 'math#factorial/2'
+  /// - Imported from ancestor (no path): 'factorial/2'
+  String get qualifiedKey => '$qualifiedName/$arity';
 
   /// Get the mode for argument at index i (true = input mode)
   bool isInputArg(int i) {
@@ -219,8 +228,21 @@ class ProcDecl {
     return null;  // Primitive types have no name
   }
 
+  /// The visibility prefix for this declaration
+  String get _visibilityPrefix {
+    if (exported) return 'exported ';
+    if (imported) return 'imported ';
+    return '';
+  }
+
+  /// The full qualified name (with module path for imported procedures)
+  String get qualifiedName {
+    if (modulePath != null) return '$modulePath#$name';
+    return name;
+  }
+
   @override
-  String toString() => 'procedure $name(${argTypes.join(', ')}).';
+  String toString() => '${_visibilityPrefix}procedure $qualifiedName(${argTypes.join(', ')}).';
 }
 
 /// The type environment: all type definitions and procedure declarations in a module
@@ -259,7 +281,7 @@ class TypeEnvironment {
 
   /// Add a procedure declaration to the environment
   void addProcedure(ProcDecl procDecl) {
-    procedures[procDecl.key] = procDecl;
+    procedures[procDecl.qualifiedKey] = procDecl;
   }
 
   @override

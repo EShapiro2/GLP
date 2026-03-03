@@ -82,3 +82,21 @@ class MutualRefTerm implements Term {
   @override
   int get hashCode => id.hashCode;
 }
+
+/// Module reference term — wraps a compiled BytecodeProgram.
+///
+/// Used by the '_activate' body kernel to resolve goals against a module's
+/// _select/1 dispatch table. The module binary is represented as a ground
+/// term on the heap, following FCP's convention.
+class ModuleTerm implements Term {
+  /// The compiled bytecode program for this module
+  final Object bytecode;  // BytecodeProgram (untyped to avoid circular import)
+
+  /// Module name (for display/debugging)
+  final String name;
+
+  ModuleTerm(this.bytecode, {this.name = ''});
+
+  @override
+  String toString() => 'Module($name)';
+}

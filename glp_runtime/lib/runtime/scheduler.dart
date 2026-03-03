@@ -226,7 +226,9 @@ class Scheduler {
       ran.add(act.id);
       final env = rt.getGoalEnv(act.id);
       final program = rt.getGoalProgram(act.id);
-      final runner = runners[program];
+      var runner = runners[program];
+      // Fall back to rt.runners (e.g., runners registered by _activate kernel)
+      runner ??= rt.runners[program];
       if (runner == null) {
         throw StateError('No runner found for program $program for goal ${act.id}');
       }
