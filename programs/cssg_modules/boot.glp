@@ -53,20 +53,15 @@ imported procedure actors#dave7(ActorChannel?).
 %% LOCAL UTILITIES
 %% =============================================================================
 
+procedure tee(_?, _, _).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
+procedure sink(_?).
 sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
-%% =============================================================================
-%% SEND_TO_USER_TAGGED — Merge display streams, tag with agent ID
-%% =============================================================================
-%%
-%% Merges two display streams (commands and notifications) and sends
-%% each ground term to _output/1 wrapped as tagged(Id, cmd(T)) or
-%% tagged(Id, notify(T)).
-
+%% Untyped: _output/1 is a kernel predicate with no procedure declaration.
 send_to_user_tagged(Id, [T|Cmds], Notifies) :-
     ground(Id?), ground(T?) |
     '_output'(tagged(Id?, cmd(T?))),
@@ -78,6 +73,7 @@ send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
 send_to_user_tagged(_, [], []).
 send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
 
+procedure merge(_?, _?, _).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).

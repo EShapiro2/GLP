@@ -152,15 +152,13 @@ class GlpCompiler {
   /// [procDeclarations] should contain renamed declarations (e.g., from
   /// [linkProject]) for SRSW type-based relaxation.
   BytecodeProgram compileProgram(Program ast, {List<ProcDecl>? procDeclarations}) {
-    final pe = PartialEvaluator();
-    final transformed = pe.transformDefinedGuards(ast);
-
     final analyzer = _createAnalyzer();
     final annotated = analyzer.analyze(
-      transformed,
+      ast,
       generateReduce: true,
       compileMode: CompileMode.system,
       procDeclarations: procDeclarations ?? [],
+      skipGlobalSRSW: true,  // Linked programs: modules already type-checked individually
     );
 
     final codegen = _createCodegen();

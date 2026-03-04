@@ -218,7 +218,12 @@ class _CssgMadModulesScreenState extends State<CssgMadModulesScreen> {
       }
     } else if (msg is AgentOutput) {
       _routeOutput(msg.agentId, msg.line);
+    } else if (msg is AgentLog) {
+      if (msg.message.contains('INIT:') || msg.message.contains('ERROR') || msg.message.contains('RUN:')) {
+        debugPrint('[LOG ${msg.agentId}] ${msg.message}');
+      }
     } else if (msg is AgentSendMad) {
+      debugPrint('[MAD] ${msg.agentId} -> ${msg.to} (${msg.payload.length} bytes)');
       IsolateRouter.instance.route(msg.agentId, msg.to, msg.payload);
     } else if (msg is AgentError) {
       setState(() {
@@ -229,9 +234,13 @@ class _CssgMadModulesScreenState extends State<CssgMadModulesScreen> {
 
   /// Parse tagged output and route to per-agent panel.
   void _routeOutput(String sourceAgent, String line) {
+    debugPrint('[ROUTE] from=$sourceAgent: $line');
     final stripped = line.startsWith('< ') ? line.substring(2) : line;
     final match = _taggedRegex.firstMatch(stripped);
-    if (match == null) return;
+    if (match == null) {
+      debugPrint('[ROUTE] no match for: $stripped');
+      return;
+    }
 
     final agentId = match.group(1)!;
     final kind = match.group(2)!;

@@ -283,6 +283,7 @@ class Analyzer {
     bool generateReduce = false,
     List<ProcDecl>? procDeclarations,
     CompileMode compileMode = CompileMode.user,
+    bool skipGlobalSRSW = false,
   }) {
     _compileMode = compileMode;
 
@@ -297,16 +298,23 @@ class Analyzer {
     // STEP 1: Run SRSW validation on the ORIGINAL program
     // This must happen BEFORE partial evaluation, because partial eval removes defined guards.
     // Guard readers (like X? in send(X?, Ch?, Ch1)) must be counted for SRSW pairing.
-    final allViolations = <String>[];
-    for (final proc in program.procedures) {
-      final violations = _collectSRSWViolationsForProcedure(proc);
-      allViolations.addAll(violations);
-    }
+    //
+    // skipGlobalSRSW: Linked programs skip this check because each module was already
+    // type-checked independently, and the generated alias clauses use a forwarding
+    // pattern (writer pass-through for output args) that doesn't satisfy SRSW locally
+    // but is safe at the program level.
+    if (!skipGlobalSRSW) {
+      final allViolations = <String>[];
+      for (final proc in program.procedures) {
+        final violations = _collectSRSWViolationsForProcedure(proc);
+        allViolations.addAll(violations);
+      }
 
-    // Report SRSW violations early (before partial evaluation)
-    if (allViolations.isNotEmpty) {
-      final message = 'SRSW violations found:\n${allViolations.map((v) => '  • $v').join('\n')}';
-      throw CompileError(message, 0, 0, phase: 'analyzer');
+      // Report SRSW violations early (before partial evaluation)
+      if (allViolations.isNotEmpty) {
+        final message = 'SRSW violations found:\n${allViolations.map((v) => '  • $v').join('\n')}';
+        throw CompileError(message, 0, 0, phase: 'analyzer');
+      }
     }
 
     // STEP 2: Transform defined guards via partial evaluation

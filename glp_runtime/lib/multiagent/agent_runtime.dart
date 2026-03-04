@@ -125,11 +125,20 @@ class AgentRuntime {
     // Load program: either project-linked or individual source files.
     if (projectDir != null) {
       // Project mode: load linked project, then boot source(s) on top.
+      _log('INIT: Loading project from $projectDir');
       engine.loadProject(projectDir!);
+      _log('INIT: Project loaded, loading ${glpSources.length} boot source(s)');
       for (var i = 0; i < glpSources.length; i++) {
         engine.loadSource(glpSources[i], filename: 'source_$i');
       }
-      _log('INIT: Program loaded via project linking ($projectDir) + ${glpSources.length} boot source(s)');
+      // Diagnostic: check key labels
+      final program = engine.combinedProgram;
+      final keyLabels = ['parent_init/4', 'child_init/3', 'agent/4', 'ui_mediator/5', 'merge/3', 'tee/3'];
+      for (final key in keyLabels) {
+        final pc = program.labels[key];
+        _log('INIT: Label $key -> ${pc != null ? "PC=$pc" : "NOT FOUND"}');
+      }
+      _log('INIT: Program loaded via project linking ($projectDir) + ${glpSources.length} boot source(s), ${program.labels.length} labels');
     } else {
       // Legacy mode: load each source file separately.
       for (var i = 0; i < glpSources.length; i++) {
@@ -224,9 +233,11 @@ class AgentRuntime {
     final argsDesc = [agentIdLower, ...extraArgs, 'NetIn'].join(', ');
     final goalName = goalLabel.split('/').first;
     _output('[GOAL] Started $goalName($argsDesc)');
+    _log('INIT: GQ length before initial run: ${_runtime!.gq.length}');
 
     // Initial run
-    await _runUntilQuiescent();
+    final initStatus = await _runUntilQuiescent();
+    _log('INIT: Initial run status: $initStatus, GQ after: ${_runtime!.gq.length}');
 
     _initialized = true;
     updateStats();

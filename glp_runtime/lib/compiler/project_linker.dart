@@ -198,6 +198,18 @@ LinkResult linkProject(List<DiscoveredModule> modules, String topModuleName) {
     }
   }
 
+  // Build a project-wide procedure declaration index for mode-aware aliases.
+  // Maps 'name/arity' → ProcDecl, collecting from all modules' non-imported decls.
+  final declIndex = <String, ProcDecl>{};
+  for (final mod in modules) {
+    for (final d in mod.ast.procDeclarations) {
+      if (d.imported) continue;
+      final sig = '${d.name}/${d.arity}';
+      // First declaration wins (could also prefer exported, but any is fine)
+      declIndex.putIfAbsent(sig, () => d);
+    }
+  }
+
   // Generate entry point aliases.
   // Top module: ALL procedures get aliases (for REPL invocation).
   // Other modules: only EXPORTED procedures get aliases (for cross-module calls
@@ -219,10 +231,17 @@ LinkResult linkProject(List<DiscoveredModule> modules, String topModuleName) {
       if (aliasedSigs.containsKey(sig)) continue;
 
       aliasedSigs[sig] = mod.moduleName;
+
+      // Look up ProcDecl for mode-aware alias generation.
+      // First check the owning module, then the project-wide index.
+      final decl = _findProcDecl(mod, proc.name, proc.arity)
+          ?? declIndex[sig];
+
       final aliasClause = _makeAliasClause(
         proc.name,
         proc.arity,
         '${mod.moduleName}:${proc.name}',
+        declaration: decl,
       );
       allProcedures.add(Procedure(
         proc.name,
@@ -295,8 +314,25 @@ Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs) {
   return goal;
 }
 
-/// Create an alias clause: p(A0, ..., An-1) :- M:p(A0?, ..., An-1?).
-Clause _makeAliasClause(String name, int arity, String targetName) {
+/// Find the ProcDecl for a procedure in a module (non-imported only).
+ProcDecl? _findProcDecl(DiscoveredModule mod, String name, int arity) {
+  for (final d in mod.ast.procDeclarations) {
+    if (!d.imported && d.name == name && d.arity == arity) return d;
+  }
+  return null;
+}
+
+/// Create an alias clause with mode-aware argument forwarding.
+///
+/// Given a procedure declaration, generates:
+///   p(V0, V1, V2) :- M:p(V0?, V1, V2).
+/// where input args (declared with ?) get reader annotation in the body,
+/// and output args (no ?) get writer annotation (pass-through).
+///
+/// Without a declaration, falls back to all-reader body args:
+///   p(V0, V1, V2) :- M:p(V0?, V1?, V2?).
+Clause _makeAliasClause(String name, int arity, String targetName,
+    {ProcDecl? declaration}) {
   if (arity == 0) {
     // Zero-arity: p :- M:p.
     final head = Atom(name, [], 0, 0);
@@ -307,8 +343,16 @@ Clause _makeAliasClause(String name, int arity, String targetName) {
   // Generate variable names (V prefix — underscore prefix causes issues in codegen)
   final headArgs = List.generate(
       arity, (i) => VarTerm('V$i', false, 0, 0) as Term);
-  final bodyArgs = List.generate(
-      arity, (i) => VarTerm('V$i', true, 0, 0) as Term);
+
+  // Body args: use mode from declaration if available.
+  // Input args (T?) → isReader: true  (forward the value as reader)
+  // Output args (T) → isReader: false (forward the writer so callee can write)
+  final bodyArgs = List.generate(arity, (i) {
+    final isInput = declaration != null && i < declaration.argTypes.length
+        ? declaration.isInputArg(i)
+        : true; // Fallback: assume input (reader) when no declaration
+    return VarTerm('V$i', isInput, 0, 0) as Term;
+  });
 
   final head = Atom(name, headArgs, 0, 0);
   final body = [Goal(targetName, bodyArgs, 0, 0)];
