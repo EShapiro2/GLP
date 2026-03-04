@@ -108,7 +108,7 @@ parent_init(Id, Child, PlayNum, NetIn) :-
 %%   child_init(Id, PlayNum, NetIn)
 
 child_init(Id, PlayNum,
-           [parent_connect(Parent, ParentToChild, accept(ChildToParent?)) | NetInRest]) :-
+           [msg(Id, parent_connect(Parent, ParentToChild, accept(ChildToParent?))) | NetInRest]) :-
     ground(Id?), ground(PlayNum?), ground(Parent?) |
 
     %% parent_connect is accepted via head unification:

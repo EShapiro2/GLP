@@ -234,13 +234,9 @@ class _CssgMadModulesScreenState extends State<CssgMadModulesScreen> {
 
   /// Parse tagged output and route to per-agent panel.
   void _routeOutput(String sourceAgent, String line) {
-    debugPrint('[ROUTE] from=$sourceAgent: $line');
     final stripped = line.startsWith('< ') ? line.substring(2) : line;
     final match = _taggedRegex.firstMatch(stripped);
-    if (match == null) {
-      debugPrint('[ROUTE] no match for: $stripped');
-      return;
-    }
+    if (match == null) return;
 
     final agentId = match.group(1)!;
     final kind = match.group(2)!;
