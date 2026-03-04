@@ -48,6 +48,11 @@ class AgentRuntime {
   /// For example, ['carol', '4'] for parent_init(alice, carol, 4, NetIn).
   final List<String> extraArgs;
 
+  /// Optional project directory for static linking.
+  /// When set, the engine calls loadProject(projectDir) first, then loads
+  /// glpSources on top (typically just the madGLP boot source).
+  final String? projectDir;
+
   // Callbacks set by UI layer
   void Function(String line)? onOutput;
   void Function(String tag, String message)? onLog;
@@ -77,6 +82,7 @@ class AgentRuntime {
     this.friends = const [],
     this.goalLabel = 'agent_init/3',
     this.extraArgs = const [],
+    this.projectDir,
   });
 
   bool get initialized => _initialized;
@@ -116,11 +122,21 @@ class AgentRuntime {
     // Enable madGLP mode (loads madPredicates + creates MadContext)
     engine.enableMadGLP(agentId: agentIdLower);
 
-    // Load user GLP sources (each file separately to preserve -mode() directives)
-    for (var i = 0; i < glpSources.length; i++) {
-      engine.loadSource(glpSources[i], filename: 'source_$i');
+    // Load program: either project-linked or individual source files.
+    if (projectDir != null) {
+      // Project mode: load linked project, then boot source(s) on top.
+      engine.loadProject(projectDir!);
+      for (var i = 0; i < glpSources.length; i++) {
+        engine.loadSource(glpSources[i], filename: 'source_$i');
+      }
+      _log('INIT: Program loaded via project linking ($projectDir) + ${glpSources.length} boot source(s)');
+    } else {
+      // Legacy mode: load each source file separately.
+      for (var i = 0; i < glpSources.length; i++) {
+        engine.loadSource(glpSources[i], filename: 'source_$i');
+      }
+      _log('INIT: Program loaded via GlpEngine (stdlib + madPredicates + ${glpSources.length} source files)');
     }
-    _log('INIT: Program loaded via GlpEngine (stdlib + madPredicates + ${glpSources.length} source files)');
 
     _runtime = engine.runtime;
     _ctx = engine.madContext;

@@ -1,0 +1,136 @@
+%% mad_boot.glp - madGLP boot procedures for multi-isolate CSSG plays
+%%
+%% Contains only the orchestration procedures needed for multi-isolate
+%% execution.  Agent, mediator, and actor logic comes from the statically
+%% linked project (cssg_modules/) via entry-point aliases.
+%%
+%% Procedures defined here:
+%%   tee/3                  — stream splitter
+%%   send_to_user_tagged/3  — merge display streams, tag with agent ID
+%%   extract_child_stream/2 — helper for parent-child channel setup
+%%   parent_init/4          — parent agent boot (CSSG plays 4-7)
+%%   child_init/3           — child agent boot (CSSG plays 4-7)
+%%   ui_actor/3             — dispatch table mapping (agent, play) to actor
+%%
+%% Calls into linked project (resolved via entry-point aliases):
+%%   agent/4, ui_mediator/5, merge/3, alice4/1, bob4/1, carol4/1, dave4/1, ...
+%%
+%% Date: 2026-03-04
+
+-mode(system).
+
+%% =============================================================================
+%% TEE — Stream splitter
+%% =============================================================================
+
+procedure tee(Stream?, Stream, Stream).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
+tee([], [], []).
+
+%% =============================================================================
+%% SEND_TO_USER_TAGGED — Merge display streams, tag with agent ID
+%% =============================================================================
+
+send_to_user_tagged(Id, [T|Cmds], Notifies) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, cmd(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, notify(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(_, [], []).
+
+%% =============================================================================
+%% CSSG MULTI-ISOLATE PARENT INIT (plays 4-7)
+%% =============================================================================
+%%
+%% Parent sends parent_connect cold call to child at boot, then starts agent.
+%% The parent_connect message goes as the first element of the network output
+%% stream, followed by whatever the agent writes.
+%%
+%% Dart spawns each parent with:
+%%   parent_init(Id, ChildName, PlayNum, NetIn)
+
+%% extract_child_stream/2 - extract stream from accept(Stream) response.
+%% Suspends on Response? until child binds it.
+extract_child_stream(accept(Stream), Stream?).
+
+parent_init(Id, Child, PlayNum, NetIn) :-
+    ground(Id?), ground(Child?), ground(PlayNum?) |
+
+    %% Send parent_connect as first message, agent writes rest.
+    %% Pass reader ParentToChild? so child can read from it.
+    send_to_net([msg(Child?, parent_connect(Id?, ParentToChild?, Response))
+                 | AgentNetOut?]),
+
+    %% Extract child's return stream from Response once child binds it
+    extract_child_stream(Response?, ChildToParent),
+
+    %% merge suspends on ChildToParent? until extract_child_stream binds it
+    merge(ChildToParent?, NetIn?, AgentNetIn),
+
+    agent(Id?, AgentIn?, AgentNetIn?,
+          [output('_user', AgentToUser),
+           output('_net', AgentNetOut),
+           output(child(Child?), ParentToChild)]),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    ui_actor(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+%% =============================================================================
+%% CSSG MULTI-ISOLATE CHILD INIT (plays 4-7)
+%% =============================================================================
+%%
+%% Child intercepts parent_connect as first message on NetIn, binds Response
+%% to establish return channel, then starts agent.
+%%
+%% Dart spawns each child with:
+%%   child_init(Id, PlayNum, NetIn)
+
+child_init(Id, PlayNum,
+           [parent_connect(Parent, ParentToChild, accept(ChildToParent?)) | NetInRest]) :-
+    ground(Id?), ground(PlayNum?), ground(Parent?) |
+
+    %% parent_connect is accepted via head unification:
+    %% Response (parent's writer) is bound to accept(ChildToParent?).
+    %% Reader ChildToParent? is passed to parent so parent can read child's output.
+    %% Writer ChildToParent stays in child's output list.
+
+    %% Merge parent's stream with remaining network input
+    merge(ParentToChild?, NetInRest?, AgentNetIn),
+
+    agent(Id?, AgentIn?, AgentNetIn?,
+          [output('_user', AgentToUser),
+           output(child(Parent?), ChildToParent)]),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    ui_actor(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+%% =============================================================================
+%% UI_ACTOR DISPATCH — selects actor for (agent, play) pair
+%% =============================================================================
+
+%% CSSG plays (4-7)
+ui_actor(alice, 4, Ch) :- alice4(Ch?).
+ui_actor(bob, 4, Ch) :- bob4(Ch?).
+ui_actor(carol, 4, Ch) :- carol4(Ch?).
+ui_actor(dave, 4, Ch) :- dave4(Ch?).
+ui_actor(alice, 5, Ch) :- alice5(Ch?).
+ui_actor(bob, 5, Ch) :- bob5(Ch?).
+ui_actor(carol, 5, Ch) :- carol5(Ch?).
+ui_actor(dave, 5, Ch) :- dave5(Ch?).
+ui_actor(alice, 6, Ch) :- alice6(Ch?).
+ui_actor(bob, 6, Ch) :- bob6(Ch?).
+ui_actor(carol, 6, Ch) :- carol6(Ch?).
+ui_actor(dave, 6, Ch) :- dave6(Ch?).
+ui_actor(alice, 7, Ch) :- alice7(Ch?).
+ui_actor(bob, 7, Ch) :- bob7(Ch?).
+ui_actor(carol, 7, Ch) :- carol7(Ch?).
+ui_actor(dave, 7, Ch) :- dave7(Ch?).

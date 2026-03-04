@@ -73,6 +73,9 @@ List<DiscoveredModule> discoverProject(String rootDir) {
     // Skip boot_direct.glp (copy of boot.glp with direct calls, not a module)
     if (filename == 'boot_direct.glp') continue;
 
+    // Skip mad_boot.glp (madGLP boot procedures, loaded on top of linked project)
+    if (filename == 'mad_boot.glp') continue;
+
     // Parse the module
     final source = file.readAsStringSync();
     final lexer = Lexer(source);
