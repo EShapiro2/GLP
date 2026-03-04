@@ -355,23 +355,52 @@ select_bonds_by_issuer(Issuer, MaxMat, K, [B|Rest], Status?, Sel?, [B?|Rem?]) :-
 select_bonds_by_issuer(_, _, K, [], fail, [], []) :- K? > 0 | true.
 
 %% =============================================================================
-%% SELECT_BONDS_MIN_MATURITY — Select up to K bonds with maturity ≥ MinMaturity
+%% SELECT_ANY_BONDS — Select up to K bonds regardless of maturity
+%% =============================================================================
+
+procedure select_any_bonds(Constant?, BondList?, BondList, BondList, Constant).
+select_any_bonds(0, Hs, [], Hs?, 0).
+select_any_bonds(K, [bond(I, M, S)|Rest], [bond(I?, M?, S?)|Sel?], Rem?, Got?) :-
+    K? > 0 |
+    K1 := K? - 1,
+    select_any_bonds(K1?, Rest?, Sel, Rem, SubGot),
+    Got := SubGot? + 1.
+select_any_bonds(K, [], [], [], 0) :- K? > 0 | true.
+
+%% =============================================================================
+%% SELECT_BONDS_MIN_MATURITY — Select up to K bonds with maturity >= MinMaturity
 %% =============================================================================
 %%
-%% For Bob's side of redemption: any issuer qualifies.
-%% Returns Got = number actually found (may be < K).
+%% Time-aware: if MinMaturity has passed (wait_until succeeds), any bond qualifies.
+%% Otherwise, require M >= MinMaturity strictly.
 
 procedure select_bonds_min_maturity(Constant?, Constant?, BondList?, BondList, BondList, Constant).
-select_bonds_min_maturity(_, 0, Hs, [], Hs?, 0).
-select_bonds_min_maturity(MinMat, K, [bond(I, M, S)|Rest], [bond(I?, M?, S?)|Sel?], Rem?, Got?) :-
+
+%% When MinMaturity has passed (bonds are mature), any bond qualifies
+select_bonds_min_maturity(MinMat, K, Hs, Sel?, Rem?, Got?) :-
+    wait_until(MinMat?) |
+    select_any_bonds(K?, Hs?, Sel, Rem, Got).
+
+%% When MinMaturity has NOT passed, require M >= MinMaturity
+select_bonds_min_maturity(MinMat, K, Hs, Sel?, Rem?, Got?) :-
+    otherwise |
+    select_bonds_min_maturity_strict(MinMat?, K?, Hs?, Sel, Rem, Got).
+
+%% =============================================================================
+%% SELECT_BONDS_MIN_MATURITY_STRICT — Strict maturity check (M >= MinMaturity)
+%% =============================================================================
+
+procedure select_bonds_min_maturity_strict(Constant?, Constant?, BondList?, BondList, BondList, Constant).
+select_bonds_min_maturity_strict(_, 0, Hs, [], Hs?, 0).
+select_bonds_min_maturity_strict(MinMat, K, [bond(I, M, S)|Rest], [bond(I?, M?, S?)|Sel?], Rem?, Got?) :-
     K? > 0, M? >= MinMat? |
     K1 := K? - 1,
-    select_bonds_min_maturity(MinMat?, K1?, Rest?, Sel, Rem, SubGot),
+    select_bonds_min_maturity_strict(MinMat?, K1?, Rest?, Sel, Rem, SubGot),
     Got := SubGot? + 1.
-select_bonds_min_maturity(MinMat, K, [B|Rest], Sel?, [B?|Rem?], Got?) :-
+select_bonds_min_maturity_strict(MinMat, K, [B|Rest], Sel?, [B?|Rem?], Got?) :-
     otherwise |
-    select_bonds_min_maturity(MinMat?, K?, Rest?, Sel, Rem, Got).
-select_bonds_min_maturity(_, _, [], [], [], 0).
+    select_bonds_min_maturity_strict(MinMat?, K?, Rest?, Sel, Rem, Got).
+select_bonds_min_maturity_strict(_, _, [], [], [], 0).
 
 %% =============================================================================
 %% BIND_REDEEM — Bind RedeemResponse variable (writer mode)

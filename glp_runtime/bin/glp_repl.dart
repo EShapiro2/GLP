@@ -115,6 +115,18 @@ void main() async {
       continue;
     }
 
+    // Check if input is a project directory to load
+    if (!trimmed.contains(' ') && !trimmed.endsWith('.glp') &&
+        Directory(trimmed).existsSync()) {
+      try {
+        engine.loadProject(trimmed);
+        print('✓ Loaded project: $trimmed');
+      } catch (e) {
+        print('Error loading project $trimmed: $e');
+      }
+      continue;
+    }
+
     // Check if input is a .glp file to load
     if (trimmed.endsWith('.glp')) {
       String filename;

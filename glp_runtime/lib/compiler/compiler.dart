@@ -5,7 +5,7 @@ import 'codegen.dart';
 import 'error.dart';
 import 'token.dart';
 import 'result.dart';
-import 'ast.dart' show Program, Procedure, Clause, Atom, Goal, Guard, Term, VarTerm, StructTerm, UnderscoreTerm;
+import 'ast.dart' show Program, Procedure, Clause, Atom, Goal, Guard, Term, VarTerm, StructTerm, UnderscoreTerm, CompileMode;
 import '../analysis/type_checker/type_ast.dart' show ProcDecl;
 import 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
 import '../analysis/type_checker/type_checker.dart' show checkModule;
@@ -142,6 +142,29 @@ class GlpCompiler {
       // Rethrow with source context
       throw CompileError(e.message, e.line, e.column, source: source, phase: e.category?.toString().split('.').last);
     }
+  }
+
+  /// Compile a Program AST directly to bytecode.
+  ///
+  /// Used by the project linker for statically linked programs.
+  /// Skips lexing, parsing, type checking, and _select generation.
+  ///
+  /// [procDeclarations] should contain renamed declarations (e.g., from
+  /// [linkProject]) for SRSW type-based relaxation.
+  BytecodeProgram compileProgram(Program ast, {List<ProcDecl>? procDeclarations}) {
+    final pe = PartialEvaluator();
+    final transformed = pe.transformDefinedGuards(ast);
+
+    final analyzer = _createAnalyzer();
+    final annotated = analyzer.analyze(
+      transformed,
+      generateReduce: true,
+      compileMode: CompileMode.system,
+      procDeclarations: procDeclarations ?? [],
+    );
+
+    final codegen = _createCodegen();
+    return codegen.generateWithMetadata(annotated).program;
   }
 
   /// Generate _select/1 dispatch table from exported procedure declarations.

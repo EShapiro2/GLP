@@ -26,6 +26,7 @@ import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
+import 'package:glp_runtime/compiler/project_linker.dart';
 
 /// Result of running a goal
 class ExecutionResult {
@@ -233,6 +234,39 @@ class GlpEngine {
 
     final moduleInfo = _extractModuleInfo(source, program, name);
     _loadedModules[moduleInfo.name] = moduleInfo;
+
+    return true;
+  }
+
+  /// Load an entire project directory via static linking.
+  ///
+  /// Discovers all modules, type-checks each independently, links into a
+  /// single flat program, and compiles it. The result is loaded as a single
+  /// program accessible via `combinedProgram`.
+  ///
+  /// [projectDir] is the path to the project root directory.
+  /// [topModuleName] specifies the top module (for entry point aliases).
+  ///   If null, auto-detects (the module with the most procedures).
+  bool loadProject(String projectDir, {String? topModuleName}) {
+    final modules = discoverProject(projectDir);
+    if (modules.isEmpty) {
+      throw Exception('No modules found in $projectDir');
+    }
+
+    typeCheckProject(modules);
+
+    // Auto-detect top module: the one with the most procedures
+    final top = topModuleName ??
+        (modules..sort((a, b) =>
+            b.ast.procedures.length.compareTo(a.ast.procedures.length)))
+        .first.moduleName;
+
+    final linked = linkProject(modules, top);
+    final program = _compiler.compileProgram(
+      linked.program,
+      procDeclarations: linked.procDeclarations,
+    );
+    _loadedPrograms['__project__'] = program;
 
     return true;
   }

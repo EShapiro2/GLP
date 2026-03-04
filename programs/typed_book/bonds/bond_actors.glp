@@ -4,6 +4,7 @@
 %% Phase 2: alice_p2, bob_p2 — befriend + credit line
 %% Phase 3: alice_p3, bob_p3 — credit + payment
 %% Phase 4: alice_p4, bob_p4 — credit + redemption
+%% Phase 4b: alice_p4b, bob_p4b — time-dependent redemption
 %% Phase 5: alice_p5, bob_p5 — zero-coupon loan
 %%
 %% Date: 2026-03-03
@@ -408,6 +409,179 @@ bob_p4_wait_balance([], []).
 
 procedure bob_p4_finish(UserNotifyStream?, UserCmdStream).
 bob_p4_finish(_, []).
+
+%% =============================================================================
+%% PLAY 4b — Time-dependent redemption
+%% =============================================================================
+%%
+%% Alice:
+%% 1. connect(bob)
+%% 2. Wait connected(bob)
+%% 3. credit(bob, 5, 0) — coin credit line
+%% 4. Wait credit_opened(bob, _)
+%% 5. Compute T = now + 500. credit(bob, 5, T) — bond credit line
+%% 6. Wait credit_opened(bob, _)
+%% 7. redeem(bob, 2, T) — before T passes, Bob provides alice-bonds with M>=T
+%% 8. Wait redeemed(bob, _)
+%% 9. balance
+%% 10. Wait balance_report(_), then wait(500)
+%% 11. redeem(bob, 2, T) — after T passes, Bob can provide ANY bond (coins)
+%% 12. Wait redeemed(bob, _)
+%% 13. balance
+%% 14. done
+%%
+%% Bob:
+%% 1. Wait befriend(alice, ReqId) → decision(yes)
+%% 2. Wait connected(alice)
+%% 3. Wait credit_proposed(alice, 5, 0, ReqId) → accept
+%% 4. Wait credit_opened(alice, _)
+%% 5. Wait credit_proposed(alice, 5, _, ReqId) → accept (maturity T)
+%% 6. Wait credit_opened(alice, _)
+%% 7. Wait redeem_received(alice, _) — first redemption
+%% 8. Wait redeem_received(alice, _) — second redemption (after maturity)
+%% 9. balance
+%% 10. done
+
+procedure alice_p4b(ActorChannel?, Constant?).
+alice_p4b(ch(In, [connect(bob)|Out?]), T) :-
+    alice_p4b_wait_connected(T?, In?, Out).
+
+procedure alice_p4b_wait_connected(Constant?, UserNotifyStream?, UserCmdStream).
+alice_p4b_wait_connected(T, [connected(bob)|In],
+                         [credit(bob, 5, 0)|Out?]) :-
+    alice_p4b_wait_credit1(T?, In?, Out).
+alice_p4b_wait_connected(T, [_|In], Out?) :-
+    otherwise | alice_p4b_wait_connected(T?, In?, Out).
+alice_p4b_wait_connected(_, [], []).
+
+%% Wait for coin credit to open, then send bond credit with maturity T
+procedure alice_p4b_wait_credit1(Constant?, UserNotifyStream?, UserCmdStream).
+alice_p4b_wait_credit1(T, [credit_opened(bob, _)|In], [credit(bob, 5, T?)|Out?]) :-
+    alice_p4b_wait_credit2(T?, In?, Out).
+alice_p4b_wait_credit1(T, [_|In], Out?) :-
+    otherwise | alice_p4b_wait_credit1(T?, In?, Out).
+alice_p4b_wait_credit1(_, [], []).
+
+%% Wait for bond credit to open, then redeem (pre-maturity)
+procedure alice_p4b_wait_credit2(Constant?, UserNotifyStream?, UserCmdStream).
+alice_p4b_wait_credit2(T, [credit_opened(bob, _)|In], [redeem(bob, 2, T?)|Out?]) :-
+    alice_p4b_wait_redeemed1(T?, In?, Out).
+alice_p4b_wait_credit2(T, [_|In], Out?) :-
+    otherwise | alice_p4b_wait_credit2(T?, In?, Out).
+alice_p4b_wait_credit2(_, [], []).
+
+%% Wait for first redemption to complete
+procedure alice_p4b_wait_redeemed1(Constant?, UserNotifyStream?, UserCmdStream).
+alice_p4b_wait_redeemed1(T, [redeemed(bob, _)|In], [balance|Out?]) :-
+    alice_p4b_wait_balance1(T?, In?, Out).
+alice_p4b_wait_redeemed1(T, [_|In], Out?) :-
+    otherwise | alice_p4b_wait_redeemed1(T?, In?, Out).
+alice_p4b_wait_redeemed1(_, [], []).
+
+%% Wait for balance report, then wait 500ms, then redeem again (post-maturity)
+procedure alice_p4b_wait_balance1(Constant?, UserNotifyStream?, UserCmdStream).
+alice_p4b_wait_balance1(T, [balance_report(_)|In], [redeem(bob, 2, T?)|Out?]) :-
+    wait(500) |
+    alice_p4b_wait_redeemed2(In?, Out).
+alice_p4b_wait_balance1(T, [_|In], Out?) :-
+    otherwise | alice_p4b_wait_balance1(T?, In?, Out).
+alice_p4b_wait_balance1(_, [], []).
+
+%% Wait for second redemption to complete
+procedure alice_p4b_wait_redeemed2(UserNotifyStream?, UserCmdStream).
+alice_p4b_wait_redeemed2([redeemed(bob, _)|In], [balance|Out?]) :-
+    alice_p4b_wait_balance2(In?, Out).
+alice_p4b_wait_redeemed2([_|In], Out?) :-
+    otherwise | alice_p4b_wait_redeemed2(In?, Out).
+alice_p4b_wait_redeemed2([], []).
+
+%% Wait for final balance report, then done
+procedure alice_p4b_wait_balance2(UserNotifyStream?, UserCmdStream).
+alice_p4b_wait_balance2([balance_report(_)|In], [done|Out?]) :-
+    alice_p4b_finish(In?, Out).
+alice_p4b_wait_balance2([_|In], Out?) :-
+    otherwise | alice_p4b_wait_balance2(In?, Out).
+alice_p4b_wait_balance2([], []).
+
+procedure alice_p4b_finish(UserNotifyStream?, UserCmdStream).
+alice_p4b_finish(_, []).
+
+%% --- Bob (play4b) ---
+
+procedure bob_p4b(ActorChannel?).
+bob_p4b(ch([befriend(alice, ReqId)|In],
+           [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob_p4b_wait_connected(In?, Out).
+bob_p4b(ch([_|In], Out?)) :-
+    otherwise | bob_p4b(ch(In?, Out)).
+
+procedure bob_p4b_wait_connected(UserNotifyStream?, UserCmdStream).
+bob_p4b_wait_connected([connected(alice)|In], Out?) :-
+    bob_p4b_wait_credit_proposed1(In?, Out).
+bob_p4b_wait_connected([_|In], Out?) :-
+    otherwise | bob_p4b_wait_connected(In?, Out).
+bob_p4b_wait_connected([], []).
+
+%% Wait for coin credit proposal (maturity 0)
+procedure bob_p4b_wait_credit_proposed1(UserNotifyStream?, UserCmdStream).
+bob_p4b_wait_credit_proposed1([credit_proposed(alice, 5, 0, ReqId)|In],
+                              [accept_credit(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob_p4b_wait_credit_opened1(In?, Out).
+bob_p4b_wait_credit_proposed1([_|In], Out?) :-
+    otherwise | bob_p4b_wait_credit_proposed1(In?, Out).
+bob_p4b_wait_credit_proposed1([], []).
+
+procedure bob_p4b_wait_credit_opened1(UserNotifyStream?, UserCmdStream).
+bob_p4b_wait_credit_opened1([credit_opened(alice, _)|In], Out?) :-
+    bob_p4b_wait_credit_proposed2(In?, Out).
+bob_p4b_wait_credit_opened1([_|In], Out?) :-
+    otherwise | bob_p4b_wait_credit_opened1(In?, Out).
+bob_p4b_wait_credit_opened1([], []).
+
+%% Wait for bond credit proposal (maturity T — wildcard)
+procedure bob_p4b_wait_credit_proposed2(UserNotifyStream?, UserCmdStream).
+bob_p4b_wait_credit_proposed2([credit_proposed(alice, 5, _, ReqId)|In],
+                              [accept_credit(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob_p4b_wait_credit_opened2(In?, Out).
+bob_p4b_wait_credit_proposed2([_|In], Out?) :-
+    otherwise | bob_p4b_wait_credit_proposed2(In?, Out).
+bob_p4b_wait_credit_proposed2([], []).
+
+procedure bob_p4b_wait_credit_opened2(UserNotifyStream?, UserCmdStream).
+bob_p4b_wait_credit_opened2([credit_opened(alice, _)|In], Out?) :-
+    bob_p4b_wait_redeem1(In?, Out).
+bob_p4b_wait_credit_opened2([_|In], Out?) :-
+    otherwise | bob_p4b_wait_credit_opened2(In?, Out).
+bob_p4b_wait_credit_opened2([], []).
+
+%% Wait for first redemption (pre-maturity)
+procedure bob_p4b_wait_redeem1(UserNotifyStream?, UserCmdStream).
+bob_p4b_wait_redeem1([redeem_received(alice, _)|In], Out?) :-
+    bob_p4b_wait_redeem2(In?, Out).
+bob_p4b_wait_redeem1([_|In], Out?) :-
+    otherwise | bob_p4b_wait_redeem1(In?, Out).
+bob_p4b_wait_redeem1([], []).
+
+%% Wait for second redemption (post-maturity)
+procedure bob_p4b_wait_redeem2(UserNotifyStream?, UserCmdStream).
+bob_p4b_wait_redeem2([redeem_received(alice, _)|In], [balance|Out?]) :-
+    bob_p4b_wait_balance(In?, Out).
+bob_p4b_wait_redeem2([_|In], Out?) :-
+    otherwise | bob_p4b_wait_redeem2(In?, Out).
+bob_p4b_wait_redeem2([], []).
+
+procedure bob_p4b_wait_balance(UserNotifyStream?, UserCmdStream).
+bob_p4b_wait_balance([balance_report(_)|In], [done|Out?]) :-
+    bob_p4b_finish(In?, Out).
+bob_p4b_wait_balance([_|In], Out?) :-
+    otherwise | bob_p4b_wait_balance(In?, Out).
+bob_p4b_wait_balance([], []).
+
+procedure bob_p4b_finish(UserNotifyStream?, UserCmdStream).
+bob_p4b_finish(_, []).
 
 %% =============================================================================
 %% PLAY 5 — Zero-coupon loan
