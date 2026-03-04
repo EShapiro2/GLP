@@ -95,8 +95,10 @@ For each module `M`:
 
 4. **Collect all procedures** from all modules into a single list.
 
-5. **Generate entry point aliases** for the top-level module's exported procedures:
-   - For each exported `p/n` in the top module, add: `p(A1,...,An) :- M:p(A1?,...,An?).`
+5. **Generate entry point aliases** for all modules' exported procedures:
+   - For each exported `p/n` in any module `M`, add: `p(A1,...,An) :- M:p(A1?,...,An?).`
+   - This allows code loaded on top of the linked program (e.g., madGLP boot, REPL goals) to call any exported procedure by its original name.
+   - Report a conflict if two modules export the same name/arity.
 
 6. **Collect all type definitions** from all `self.glp` files and all modules, deduplicated (inner scopes shadow outer).
 

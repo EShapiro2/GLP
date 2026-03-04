@@ -57,9 +57,11 @@ Every goal in every clause body is resolved:
 
 ### 3.4 Entry Points
 
-The top-level module's exported procedures are aliased without prefix. If `boot.glp` exports `play1/0`, the output contains both `boot:play1/0` (the renamed procedure) and `play1/0` (an alias that calls it). This allows the REPL to invoke `play1.` as before.
+Every exported procedure in every module receives an unprefixed alias.  If `agent.glp` exports `agent/4`, the output contains both `agent:agent/4` (the renamed procedure) and `agent/4` (an alias that calls it).  If `boot.glp` exports `play1/0`, the output contains both `boot:play1/0` and `play1/0`.
 
-If no module has exported procedures, all top-level module procedures get unprefixed aliases (backwards compatibility).
+This is necessary because code loaded on top of a linked project (e.g., madGLP boot procedures, REPL goals) must be able to call any exported procedure by its original name, not only the top module's exports.
+
+If two modules export procedures with the same name and arity, a conflict is reported.  If no module has exported procedures, all top-level module procedures get unprefixed aliases (backwards compatibility).
 
 ### 3.5 Type Checking
 
@@ -74,7 +76,7 @@ After linking, `imported` and `exported` declarations are no longer needed — t
 A single Module AST containing:
 - All type definitions from all `self.glp` files and all modules (deduplicated by name, inner scopes shadow outer)
 - All procedures from all modules, renamed
-- Entry point aliases for the top-level module's exports
+- Entry point aliases for all modules' exported procedures
 
 This AST is fed into the existing compilation pipeline (partial evaluation → codegen).
 
@@ -133,8 +135,13 @@ boot:play1 :-
     mediator:ui_mediator(alice, ...),
     boot:sink(...), ...
 
-%% Entry point alias
-play1 :- boot:play1.
+%% Entry point aliases (all exported procedures)
+agent :- agent:agent.      %% from agent.glp
+ui_mediator :- mediator:ui_mediator.  %% from ui/mediator.glp
+alice1 :- actors:alice1.   %% from ui/actors.glp
+bob1 :- actors:bob1.
+%% ... all other exported actors ...
+play1 :- boot:play1.       %% from boot.glp
 play2 :- boot:play2.
 %% ...
 ```
