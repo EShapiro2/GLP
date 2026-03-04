@@ -1232,3 +1232,7 @@ When modifying `glp_runtime` code that affects the Flutter multiagent app (`glp_
 5. **Launch and check log**: The app logs to `/private/tmp/glp_multiagent_trace.log`
 
 **Common mistake**: Running `flutter build macos` without `flutter clean` may use cached dependencies and miss your glp_runtime changes.
+
+## Interaction Style
+
+Never ask Udi closed-form questions (multiple choice, yes/no, pick-from-list). Only ask free-text questions when clarification is needed.

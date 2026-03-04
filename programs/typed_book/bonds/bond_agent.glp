@@ -33,13 +33,17 @@ RedeemResponse ::= redeem_ok(BondList).
 %% Loan response — written by borrower, read by lender's inject
 LoanResponse ::= loan_accept(BondList) ; loan_reject.
 
+%% Installment schedule for loans
+Installment ::= installment(Constant, Constant).
+Schedule    ::= [] ; [Installment | Schedule].
+
 %% Friend messages (after connection established)
 FriendContent ::= response(Response)
                 ; text(Constant)
                 ; credit_propose(Constant, Constant, BondList, CreditResponse?)
                 ; payment(BondList)
                 ; redeem_request(Constant, Constant, BondList, RedeemResponse?)
-                ; loan_propose(Constant, Constant, Constant, BondList, LoanResponse?).
+                ; loan_propose(Constant, Schedule, BondList, LoanResponse?).
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
@@ -64,14 +68,14 @@ UserContent ::= mint(Constant, Constant)       %% mint(K, Maturity)
               ; reject_credit(Constant, PendingValue) %% reject credit proposal
               ; pay(Constant, Constant)                %% pay(Target, K)
               ; redeem(Constant, Constant, Constant)   %% redeem(Target, K, MaxMaturity)
-              ; loan(Constant, Constant, Constant, Constant)  %% loan(Target, Principal, FaceValue, Maturity)
+              ; loan(Constant, Constant, Schedule)  %% loan(Target, Principal, Schedule)
               ; accept_loan(Constant, PendingValue)    %% accept_loan(From, PendingValue)
               ; reject_loan(Constant, PendingValue).   %% reject_loan(From, PendingValue)
 
 %% Pending values stored by mediator
 PendingValue ::= response(Response?)
                ; credit_pending(CreditResponse?, Constant, Constant, BondList)
-               ; loan_pending(LoanResponse?, Constant, Constant, BondList)
+               ; loan_pending(LoanResponse?, Schedule, BondList)
                ; error.
 
 %% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
@@ -90,7 +94,7 @@ AgentContent ::= minted(Constant, Constant)     %% minted(K, Maturity)
                ; redeemed(Constant, Constant)          %% redeemed(Target, K)
                ; redeem_failed(Constant, Constant)     %% redeem_failed(Target, K)
                ; redeem_received(Constant, Constant)   %% redeem_received(From, K)
-               ; loan_proposed(Constant, Constant, Constant, Constant, LoanResponse?, BondList)
+               ; loan_proposed(Constant, Constant, Schedule, LoanResponse?, BondList)
                ; loan_opened(Constant, Constant, Constant)   %% loan_opened(Other, Principal, FaceValue)
                ; loan_rejected(Constant).              %% loan_rejected(Other)
 
@@ -145,8 +149,8 @@ OutputContent ::= minted(Constant, Constant)
                 ; redeem_failed(Constant, Constant)
                 ; redeem_received(Constant, Constant)
                 ; redeem_request(Constant, Constant, BondList, RedeemResponse?)
-                ; loan_propose(Constant, Constant, Constant, BondList, LoanResponse?)
-                ; loan_proposed(Constant, Constant, Constant, Constant, LoanResponse?, BondList)
+                ; loan_propose(Constant, Schedule, BondList, LoanResponse?)
+                ; loan_proposed(Constant, Constant, Schedule, LoanResponse?, BondList)
                 ; loan_opened(Constant, Constant, Constant)
                 ; loan_rejected(Constant).
 OutputMsg    ::= msg(Constant, Constant, OutputContent)
@@ -299,6 +303,29 @@ append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 append([], Ys, Ys?).
 
 %% =============================================================================
+%% SCHEDULE_TOTAL — Sum of amounts in a schedule
+%% =============================================================================
+
+procedure schedule_total(Schedule?, Constant).
+schedule_total([installment(Amount, _)|Rest], Total?) :-
+    schedule_total(Rest?, SubTotal),
+    Total := SubTotal? + Amount?.
+schedule_total([], 0).
+
+%% =============================================================================
+%% CREATE_BONDS_FROM_SCHEDULE — Create bonds for each installment
+%% =============================================================================
+
+procedure create_bonds_from_schedule(Constant?, Schedule?, Constant?, BondList, Constant).
+create_bonds_from_schedule(Id, [installment(Amount, Maturity)|Rest], Serial, AllBonds?, NewSerial?) :-
+    ground(Amount?), ground(Maturity?) |
+    create_bonds(Id?, Maturity?, Amount?, Serial?, Batch),
+    BatchSerial := Serial? + Amount?,
+    create_bonds_from_schedule(Id?, Rest?, BatchSerial?, RestBonds, NewSerial),
+    append(Batch?, RestBonds?, AllBonds).
+create_bonds_from_schedule(_, [], Serial, [], Serial?).
+
+%% =============================================================================
 %% SELECT_COINS — Select K coins issued by Issuer from Holdings (single pass)
 %% =============================================================================
 %%
@@ -430,10 +457,10 @@ inject_redeem_result(Resp, From, K, [Y|Ys], [Y?|Ys1?]) :-
 %% Same design as bind_credit_accept: the LoanResponse parameter is in writer
 %% mode, so the clause head constructs the value that binds the variable.
 
-procedure bind_loan_accept(LoanResponse, Constant?, Constant?, Constant?, Constant?).
-bind_loan_accept(loan_accept(MyBonds?), Id, Maturity, FaceValue, Serial) :-
-    ground(Id?), ground(Maturity?), ground(FaceValue?), ground(Serial?) |
-    create_bonds(Id?, Maturity?, FaceValue?, Serial?, MyBonds).
+procedure bind_loan_accept(LoanResponse, Constant?, Schedule?, Constant?, Constant).
+bind_loan_accept(loan_accept(MyBonds?), Id, Schedule, Serial, NewSerial?) :-
+    ground(Id?), ground(Schedule?), ground(Serial?) |
+    create_bonds_from_schedule(Id?, Schedule?, Serial?, MyBonds, NewSerial).
 
 procedure bind_loan_reject(LoanResponse).
 bind_loan_reject(loan_reject).
@@ -660,15 +687,16 @@ agent(Id, UserIn, [msg(From, Id1, redeem_request(K, MaxMaturity, ReturnedBonds, 
 %% --- Phase 5: Zero-Coupon Loan ---
 
 %% User requests loan (lender side): mint Principal coins, propose on friend channel
-agent(Id, [msg('_user', Id1, loan(Target, Principal, FaceValue, Maturity))|UserIn],
+agent(Id, [msg('_user', Id1, loan(Target, Principal, Schedule))|UserIn],
       NetIn, Outs, Holdings, NextSerial) :-
-    Id? =?= Id1?, ground(Target?), ground(Principal?), ground(FaceValue?), ground(Maturity?) |
+    Id? =?= Id1?, ground(Target?), ground(Principal?), ground(Schedule?) |
     NewNextSerial := NextSerial? + Principal?,
     create_bonds(Id?, 0, Principal?, NextSerial?, MyCoins),
+    schedule_total(Schedule?, TotalFV),
     lookup_send(friend(Target?),
-        msg(Id?, Target?, loan_propose(Principal?, FaceValue?, Maturity?, MyCoins?, LoanResp)),
+        msg(Id?, Target?, loan_propose(Principal?, Schedule?, MyCoins?, LoanResp)),
         Outs?, Outs1),
-    inject_loan_result(LoanResp?, Target?, Principal?, FaceValue?, UserIn?, UserIn1),
+    inject_loan_result(LoanResp?, Target?, Principal?, TotalFV?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NewNextSerial?).
 
 %% Injected loan_result: borrower accepted — add borrower's bonds, notify user
@@ -685,30 +713,29 @@ agent(Id, [loan_was_rejected(From)|UserIn], NetIn, Outs, Holdings, NextSerial) :
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
 
 %% Incoming loan_propose from friend (borrower receives)
-agent(Id, UserIn, [msg(From, Id1, loan_propose(Principal, FaceValue, Maturity, LenderCoins, LoanResp?))|NetIn],
+agent(Id, UserIn, [msg(From, Id1, loan_propose(Principal, Schedule, LenderCoins, LoanResp?))|NetIn],
       Outs, Holdings, NextSerial) :-
-    Id? =?= Id1?, ground(From?), ground(Principal?), ground(FaceValue?),
-    ground(Maturity?), ground(LenderCoins?) |
+    Id? =?= Id1?, ground(From?), ground(Principal?), ground(Schedule?), ground(LenderCoins?) |
     lookup_send('_user',
-        msg(agent, '_user', loan_proposed(From?, Principal?, FaceValue?, Maturity?, LoanResp, LenderCoins?)),
+        msg(agent, '_user', loan_proposed(From?, Principal?, Schedule?, LoanResp, LenderCoins?)),
         Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
 
-%% User accepts loan (borrower side): mint FaceValue bonds, bind LoanResp, add lender's coins
+%% User accepts loan (borrower side): mint bonds per schedule, bind LoanResp, add lender's coins
 agent(Id, [msg('_user', Id1, accept_loan(From,
-        loan_pending(LoanResp?, FaceValue, Maturity, LenderCoins)))|UserIn],
+        loan_pending(LoanResp?, Schedule, LenderCoins)))|UserIn],
       NetIn, Outs, Holdings, NextSerial) :-
-    Id? =?= Id1?, ground(From?), ground(FaceValue?), ground(Maturity?), ground(LenderCoins?) |
-    NewNextSerial := NextSerial? + FaceValue?,
-    bind_loan_accept(LoanResp, Id?, Maturity?, FaceValue?, NextSerial?),
+    Id? =?= Id1?, ground(From?), ground(Schedule?), ground(LenderCoins?) |
+    bind_loan_accept(LoanResp, Id?, Schedule?, NextSerial?, NewNextSerial),
+    schedule_total(Schedule?, TotalFV),
     append(Holdings?, LenderCoins?, NewHoldings),
     list_length(LenderCoins?, Principal),
-    lookup_send('_user', msg(agent, '_user', loan_opened(From?, Principal?, FaceValue?)), Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', loan_opened(From?, Principal?, TotalFV?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NewNextSerial?).
 
 %% User rejects loan (borrower side): bind LoanResp to loan_reject
 agent(Id, [msg('_user', Id1, reject_loan(_,
-        loan_pending(LoanResp?, _, _, _)))|UserIn],
+        loan_pending(LoanResp?, _, _)))|UserIn],
       NetIn, Outs, Holdings, NextSerial) :-
     Id? =?= Id1? |
     bind_loan_reject(LoanResp),

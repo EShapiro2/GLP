@@ -1,6 +1,8 @@
-# GLP Bytecode Instruction Set Specification — v2.16 (Normative)
+# GLP Bytecode Instruction Set Specification — v2.16.3 (Normative)
 
 ## Version History
+
+**v2.16.3 (March 2026)**: Harmonise Section 19 (System Predicates) with paper Appendix A. System predicates are now documented as regular GLP clauses whose bodies call body kernels, not external Dart functions via `execute`. Updated Section 19.8 comparison table to distinguish system predicates (three-valued, GLP clauses) from body kernels (two-valued, runtime primitives). Legacy `execute/2` mechanism retained as deprecated subsection. Fixed stale `evaluate/2` references.
 
 **v2.16.2 (November 2025)**: V1 opcode sunset complete. The following separate writer/reader opcodes have been REMOVED and replaced with unified V2 opcodes using an `isReader` flag:
 - `GetWriterVariable`, `GetReaderVariable` → `GetVariable(varIndex, argSlot, isReader: bool)`
@@ -802,7 +804,7 @@ process(X) :- known(X?)   | ... handle bound case
 
 **Implementation Status**: Type guards implemented, comparison guards require parser extension
 
-Type guards are three-valued and patient (unlike `evaluate/2` which is two-valued and aborts on unbound inputs).
+Type guards are three-valued and patient (unlike body kernels which are two-valued and abort on unbound inputs).
 
 #### ✅ Implemented: number(X?)
 **Operation**: Test if X? is bound to a number
@@ -838,19 +840,19 @@ Type guards are three-valued and patient (unlike `evaluate/2` which is two-value
 - ✅ `number(X?)`, `integer(X?)` - type tests
 
 **Design Pattern**:
-```prolog
-% Safe arithmetic with guards protecting execute
-safe_divide(X, Y, Z) :-
-  number(X?), number(Y?), Y? =\= 0 |   % guards ensure preconditions
-  execute('evaluate', [X? / Y?, Z]).   % two-valued execute
+```glp
+% Safe arithmetic — := is a system predicate that handles preconditions
+safe_divide(X, Y, Z?) :-
+  number(X?), number(Y?), Y? =\= 0 |
+  Z := X? / Y?.
 
-% Conditional computation (when comparison guards implemented)
-compute(N, Result) :-
-  integer(N?), N? > 0 |               % guards test and select clause
-  execute('evaluate', [N? * 2, Result]).
-compute(N, Result) :-
+% Conditional computation
+compute(N, Result?) :-
+  integer(N?), N? > 0 |
+  Result := N? * 2.
+compute(N, Result?) :-
   integer(N?), N? =< 0 |
-  execute('evaluate', [-N?, Result]).
+  Result := -N?.
 ```
 
 ## 12. Mode-Aware Argument Loading (FCP-style)
@@ -1447,152 +1449,132 @@ The heap manages writer and reader cells:
 - FIFO ordering ensures fairness across concurrent goals
 - Tail-recursion budget (`requeue` instruction) prevents starvation
 
-## 19. System Predicates (Execute Mechanism)
+## 19. System Predicates and Body Kernels
 
-**Status**: FULLY IMPLEMENTED
+**Status**: ARCHITECTURE REVISED (see paper Appendix A)
 
-System predicates are external Dart functions callable from GLP bytecode via the `execute` instruction. They follow three-valued semantics (success/suspend/failure) and properly handle unbound readers.
+System predicates are **regular GLP clauses** shipped with the standard library. Their bodies may invoke *body kernel predicates* — runtime-implemented primitives with two-valued semantics (success/abort). System predicates are compiled and executed as normal GLP procedures (via `Spawn`), not via a special `execute` opcode.
 
-### 18.1 execute Predicate, Args
-**Operation**: Call external system predicate
-**Behavior**:
-- Look up predicate by name in SystemPredicateRegistry
-- Pass arguments as list of Terms
-- Return SystemResult: success, suspend, or failure
-- If suspend: adds first unbound reader to U and tries next clause
+### 19.0 Architecture Overview
 
-**Phase**: Can be used in guards (Phase 1) or body (Phase 3)
-- In guards: pure test, no heap mutation allowed
-- In body: may mutate heap after commit
+The paper (Appendix A) defines a three-layer architecture:
 
-### 18.2 Implemented System Predicates
+1. **Body kernels** — runtime-implemented primitives (e.g., `'_add'`, `'_now'`). Two-valued: succeed or abort. Not directly accessible to user programs. Named with quoted underscore atoms to prevent collisions.
 
-**IMPORTANT**: System predicates called via execute/2 have **two-valued semantics** (success/abort), NOT three-valued (success/suspend/fail). They abort on unbound readers rather than suspending.
+2. **System predicates** — GLP clauses with privileged access to body kernels (e.g., `:=/2`, `=../2`, `now/1`). Three-valued (success/suspend/fail) like any GLP procedure. Their own guards ensure body kernel preconditions are met before invocation.
+
+3. **User programs** — call system predicates as ordinary procedure calls (spawns). Cannot call body kernels directly.
+
+### 19.1 System Predicate Definitions
+
+System predicates are defined in stdlib `.glp` files and loaded at startup with `grantBodyKernelAccess: true`.
+
+**Arithmetic evaluation and assignment (`:=/2`)** — defined in `stdlib/assign.glp`:
+```glp
+procedure :=(Number, Exp?).
+
+%% Base case: plain number
+Result? := N :- number(N?) | Result = N?.
+
+%% Addition
+Result? := X + Y :- number(X?), number(Y?) |
+    '_add'(X?, Y?, Result).
+Result? := X + Y :- otherwise |
+    X1 := X?, Y1 := Y?, Result := X1? + Y1?.
+
+%% Subtraction, multiplication, division, etc. follow the same pattern.
+%% See paper Appendix A for the complete definition.
+```
+
+**Term composition/decomposition (`=../2`)** — defined in `stdlib/univ.glp`:
+```glp
+X? =.. [Y|Ys] :- list(Ys?) | '_list_to_tuple'([Y?|Ys?], X).
+X =.. Y? :- compound(X?) | '_tuple_to_list'(X?, Y).
+```
+
+**Clock access (`now/1`)** — defined in `stdlib/time.glp`:
+```glp
+procedure now(Integer).
+now(T?) :- '_now'(T).
+```
+
+### 19.2 Implemented Body Kernels
+
+Body kernels are registered in `lib/runtime/body_kernels.dart`. They execute inline (not spawned) and must succeed — failure aborts with an error.
 
 **Arithmetic**:
-- `evaluate(Expression, Result)` - Arithmetic evaluation
+- `'_add'(Number?, Number?, Number)` — Addition
+- `'_sub'(Number?, Number?, Number)` — Subtraction
+- `'_mul'(Number?, Number?, Number)` — Multiplication
+- `'_div'(Number?, Number?, Number)` — Division (real result)
+- `'_idiv'(Integer?, Integer?, Integer)` — Integer division
+- `'_mod'(Integer?, Integer?, Integer)` — Modulo
+- `'_neg'(Number?, Number)` — Unary negation
+- `'_abs'(Number?, Number)` — Absolute value
 
-**Syntax**: `execute('evaluate', [Expression, Result])`
+**Math functions**:
+- `'_sqrt'`, `'_sin'`, `'_cos'`, `'_tan'`, `'_asin'`, `'_acos'`, `'_atan'` — Trigonometric
+- `'_exp'`, `'_ln'`, `'_log10'`, `'_pow'` — Exponential/logarithmic
 
-**Semantics**: **Two-valued** (success or abort)
-- All operands bound numbers → compute and unify result → SUCCESS
-- Any operand unbound → ABORT "Unbound reader in arithmetic"
-- Non-numeric operand → ABORT "Type error: expected number"
-- Division by zero → ABORT "Arithmetic error: division by zero"
+**Type conversion**:
+- `'_integer'`, `'_real'`, `'_round'`, `'_floor'`, `'_ceil'`
 
-**Expression Format**: Prefix structure notation using functors:
-- `+(X, Y)` - addition
-- `-(X, Y)` - subtraction
-- `*(X, Y)` - multiplication
-- `/(X, Y)` - division
-- `mod(X, Y)` - modulo
-- `neg(X)` - unary negation
+**Structure**:
+- `'_list_to_tuple'(List?, _)` — List to compound term
+- `'_tuple_to_list'(_?, List)` — Compound term to list
 
-**Parser Support**: The GLP parser automatically transforms infix arithmetic notation to prefix:
-- Source: `X? + Y?` → AST: `+(VarRef(X, true), VarRef(Y, true))`
-- Source: `(2 + 3) * 4` → AST: `*(+(2, 3), 4)`
-- Source: `-X?` → AST: `neg(VarRef(X, true))`
+**Time**:
+- `'_now'(Integer)` — Current Unix timestamp (ms)
 
-**Type System**: Integers and floats supported. The lexer parses both `int` and `double` literals.
+### 19.3 Legacy `execute/2` Mechanism
 
-**Example GLP Source**:
-```prolog
-% UNSAFE - aborts if X or Y unbound
-add(X, Y, Z) :- execute('evaluate', [X? + Y?, Z]).
+**Status**: DEPRECATED — The `execute` bytecode instruction exists in the runtime but has a known VarRef resolution bug (see `docs/bug-execute-varref-resolution.md`). The paper now specifies system predicates as GLP clauses using body kernels. The `execute` mechanism may still be used for utility predicates not yet migrated to the body-kernel architecture.
 
-% SAFE - guards ensure inputs bound
-safe_add(X, Y, Z) :-
-  number(X?), number(Y?) |
-  execute('evaluate', [X? + Y?, Z]).
-```
+**Legacy predicates still using `execute/2`**:
 
-**Compiles to Execute instruction with**:
-```
-execute('evaluate', [
-  +(VarRef(X, isReader:true), VarRef(Y, isReader:true)),
-  VarRef(Z, isReader:false)
-])
-```
+*Utilities*:
+- `unique_id(ID)` — Generates unique sequential integer IDs
+- `variable_name(Var, Name)` — Returns string name for writer/reader
+- `copy_term(Term, Copy)` — Deep copy of term
 
-**Utilities**:
-- `current_time(Time)` - Binds Time to current milliseconds since epoch
-- `unique_id(ID)` - Generates unique sequential integer IDs
-- `variable_name(Var, Name)` - Returns string name for writer/reader (e.g., "W123", "R456")
-- `copy_term(Term, Copy)` - Deep copy of term (suspends on unbound readers)
+*File I/O*:
+- `file_read(Path, Contents)`, `file_write(Path, Contents)`, `file_exists(Path)`
+- `file_open(Path, Mode, Handle)`, `file_close(Handle)`
+- `file_read_handle(Handle, Contents)`, `file_write_handle(Handle, Contents)`
+- `directory_list(Path, Entries)`
 
-**File I/O - Simple**:
-- `file_read(Path, Contents)` - Read entire file as string
-- `file_write(Path, Contents)` - Write string to file (overwrites)
-- `file_exists(Path)` - Test if file exists
+*Terminal I/O*:
+- `write(Term)`, `nl()`, `read(Term)`
 
-**File I/O - Handle-Based**:
-- `file_open(Path, Mode, Handle)` - Open file, return handle
-  - Modes: 'read', 'write', 'append', 'read_write'
-  - Handle is integer ID managed by runtime
-- `file_close(Handle)` - Close file handle
-- `file_read_handle(Handle, Contents)` - Read remaining contents from open file
-- `file_write_handle(Handle, Contents)` - Write to open file
+*Module Loading*:
+- `link(ModulePath, Handle)`, `load_module(FileName, Module)`
 
-**Directory Operations**:
-- `directory_list(Path, Entries)` - List directory contents as list of filenames
+**Note**: `current_time/1` is superseded by the system predicate `now/1` (which calls the `'_now'` body kernel). `evaluate/2` is superseded by the system predicate `:=/2` (which calls arithmetic body kernels).
 
-**Terminal I/O**:
-- `write(Term)` - Write term to stdout
-- `nl()` - Write newline to stdout
-- `read(Term)` - Read line from stdin (blocks until input available)
+### 19.4 Registry and Access Control
 
-**Module Loading**:
-- `link(ModulePath, Handle)` - Load dynamic library via FFI, return handle
-  - Path can be string or list of strings
-  - Uses dart:ffi DynamicLibrary.open()
-- `load_module(FileName, Module)` - Load GLP bytecode module from file
-  - Returns module as Map with metadata
-  - TODO: Bytecode deserialization format specification
-
-### 18.3 Suspension Semantics
-
-All system predicates follow consistent suspension rules:
-1. Extract arguments, checking term types
-2. If argument is ReaderTerm, check if paired writer is bound
-3. If writer unbound, add reader to `call.suspendedReaders` and return SystemResult.suspend
-4. If all inputs ground, execute predicate logic
-5. Bind output variables or verify against existing bindings
-
-**Example execution flow**:
-```
-execute('evaluate', [+(ReaderTerm(r5), ConstTerm(10)), WriterTerm(w1)])
-
-1. Check r5's paired writer (w5)
-2. If w5 unbound → return suspend with suspendedReaders = {r5}
-3. If w5 bound to ConstTerm(7) → compute 7 + 10 = 17
-4. Bind w1 to ConstTerm(17)
-5. Return success
-```
-
-### 18.4 Registry and Extension
-
-System predicates registered in `lib/runtime/system_predicates_impl.dart`:
-
+**Body kernel registry** (`lib/runtime/body_kernels.dart`):
 ```dart
-void registerStandardPredicates(SystemPredicateRegistry registry) {
-  registry.register('evaluate', evaluatePredicate);
-  registry.register('current_time', currentTimePredicate);
-  // ... 21 total predicates
-}
+bodyKernelRegistry.register("'_add'", addBodyKernel);
+bodyKernelRegistry.register("'_now'", nowBodyKernel);
+// ...
 ```
 
-**Adding new predicates**:
-1. Implement predicate function: `SystemResult myPredicate(GlpRuntime rt, SystemCall call)`
-2. Handle argument extraction with suspension on unbound readers
-3. Return SystemResult.success/failure/suspend
-4. Register in `registerStandardPredicates()`
+**System predicates** are loaded from trusted stdlib with special access:
+```dart
+runtime.loadSystemPredicates('stdlib/assign.glpc', {
+  grantBodyKernelAccess: true  // Give access to body kernel registry
+});
+```
 
-### 18.5 Deferred Predicates
+User-loaded code does not get body kernel access.
+
+### 19.5 Deferred Predicates
 
 **Channel primitives** (deferred for future implementation):
-- `create_merger(InputList, Output)` - N-to-1 stream merger
-- `distribute_stream(Input, OutputList)` - 1-to-N stream distributor
-- `copy_term(Term, Copy1, Copy2)` - Multi-output deep copy
+- `create_merger(InputList, Output)` — N-to-1 stream merger
+- `distribute_stream(Input, OutputList)` — 1-to-N stream distributor
+- `copy_term(Term, Copy1, Copy2)` — Multi-output deep copy
 
 These require additional runtime support for stream merging and multi-reader coordination.
 
@@ -1667,7 +1649,7 @@ Guards like `X? + 1 < Y? * 2` require expression evaluation:
 3. **If any operand contains unbound readers**: add first unbound reader to U, try next clause
 4. **Apply comparison** to evaluated results
 
-**Note**: This uses the same arithmetic evaluator as evaluate/2 but with three-valued semantics (can suspend).
+**Note**: Guard kernels perform the same arithmetic operations as body kernels but with three-valued semantics (can suspend on unbound readers, rather than aborting).
 
 **Type guards check raw type**: `number(5 + 3)` FAILS because `+(5,3)` is a StructTerm, not a number. Use comparison guards like `=:=` if you need arithmetic evaluation.
 
@@ -1783,7 +1765,7 @@ Result := X? + Y? :- number(X?), number(Y?) |   % Matches arithmetic expressions
 
 **Example**:
 ```prolog
-safe_div(X, Y, Z?) :- ground(X?), ground(Y?), Y? =\= 0 | execute('evaluate', [X? / Y?, Z]).
+safe_div(X, Y, Z?) :- ground(X?), ground(Y?), Y? =\= 0 | Z := X? / Y?.
 ```
 
 #### 19.4.2 guard_known Xi
@@ -1912,21 +1894,23 @@ lookup(Key, [(K,_)|Rest], V?) :- ~(Key =?= K?) | lookup(Key?, Rest?, V).
 
 **Ordering Critical**: Lexer must check `=?=` and `=:=` before `=<`, and `=<` before `<`.
 
-### 19.8 Guards vs. System Predicates
+### 19.8 Guards vs. System Predicates vs. Body Kernels
 
-**Key Distinction**: Guards are three-valued built-in tests; system predicates are two-valued external functions.
+**Key Distinction**: Guards are three-valued built-in tests; system predicates are GLP clauses with three-valued semantics; body kernels are two-valued runtime primitives accessible only to system predicates.
 
-| Aspect               | Guards                                  | System Predicates                |
-|----------------------|-----------------------------------------|----------------------------------|
-| **Examples**         | `guard_less`, `guard_ground`            | `evaluate/2`, `write/1`          |
-| **Semantics**        | Three-valued (SUCCESS/FAIL/SUSPEND)     | Two-valued (SUCCESS/ABORT)       |
-| **Phase**            | Before COMMIT (guards phase)            | After COMMIT (body phase)        |
-| **Heap Access**      | Read-only                               | Read/Write                       |
-| **σ̂w Access**        | Read-only                               | N/A (already committed)          |
-| **Side Effects**     | Forbidden (pure)                        | Allowed (I/O, arithmetic)        |
-| **Purpose**          | Clause selection                        | Computation/IO                   |
-| **Suspension**       | On unbound readers (three-valued)       | Abort on unbound readers         |
-| **Instruction Type** | Built-in bytecode instructions          | External function calls          |
+| Aspect               | Guards                                  | System Predicates                          | Body Kernels                     |
+|----------------------|-----------------------------------------|--------------------------------------------|----------------------------------|
+| **Examples**         | `guard_less`, `guard_ground`            | `:=/2`, `=../2`, `now/1`                   | `'_add'`, `'_now'`              |
+| **Semantics**        | Three-valued (SUCCESS/FAIL/SUSPEND)     | Three-valued (SUCCESS/FAIL/SUSPEND)        | Two-valued (SUCCESS/ABORT)       |
+| **Implementation**   | Runtime-implemented                     | GLP clauses (stdlib)                       | Runtime-implemented              |
+| **Phase**            | Before COMMIT (guards phase)            | After COMMIT (body phase)                  | After COMMIT (body, inline)      |
+| **Heap Access**      | Read-only                               | Read/Write                                 | Read/Write                       |
+| **σ̂w Access**        | Read-only                               | N/A (already committed)                    | N/A (already committed)          |
+| **Side Effects**     | Forbidden (pure)                        | Allowed (I/O, arithmetic)                  | Allowed (binding, time)          |
+| **Purpose**          | Clause selection                        | Safe user-accessible wrappers              | Low-level runtime operations     |
+| **Suspension**       | On unbound readers (three-valued)       | On unbound readers (three-valued)          | Abort on unbound readers         |
+| **Visibility**       | User-visible                            | User-visible (callable, not redefinable)   | Internal only (via system preds) |
+| **Execution**        | Built-in bytecode instructions          | Spawned as normal GLP goals                | Inline (not spawned)             |
 
 ### 19.9 Compilation Example
 
@@ -2003,5 +1987,5 @@ Guards must satisfy these requirements:
 
 **See Also**:
 - Section 11: Existing guard instructions (ground, known, unknown)
-- Section 18: System predicates (execute mechanism)
+- Section 19: System predicates and body kernels
 - parser-spec.md: Parser implementation details

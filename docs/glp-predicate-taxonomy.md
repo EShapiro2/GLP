@@ -1,8 +1,8 @@
 # GLP Predicates Taxonomy (Normative)
 
-**Version**: 1.0
+**Version**: 1.2
 **Status**: Draft
-**Date**: 2025-11-21
+**Date**: 2026-03-04
 
 ## 1. Overview
 
@@ -27,9 +27,8 @@ GLP distinguishes between four categories of predicates based on their implement
 - `constant(X?)` - Succeeds if X is a constant (a string, a number, or `[]`)
 - `number(X?)` - Succeeds if X is a number
 - `ground(X?)` - Succeeds if X is fully ground (no unbound variables)
-- `atom(X?)` - Succeeds if X is an atom (a constant or a tuple)
+- `compound(X?)` - Succeeds if X is a compound term (a term with a functor and arguments)
 - `list(X?)` - Succeeds if X is a list (`[]` or `[H|T]`)
-- `tuple(X?)` - Succeeds if X is a tuple (a term with a functor and arguments)
 - `X? > Y?` - Arithmetic comparison
 - `X? =:= Y?` - Arithmetic equality
 
@@ -222,12 +221,12 @@ action(T, Result?) :- otherwise | handle_early(Result).
 **Usage** (internal):
 ```glp
 % System predicate := uses body kernels
-':='(Result, +(X?, Y?)) :-
+Result? := X + Y :-
   number(X?), number(Y?) |    % Guards ensure preconditions
-  add(X?, Y?, Result).        % Body kernel - guaranteed to succeed
+  '_add'(X?, Y?, Result).     % Body kernel - guaranteed to succeed
 ```
 
-**Detailed Semantics** for `add(X?, Y?, Result)`:
+**Detailed Semantics** for `'_add'(X?, Y?, Result)`:
 
 | X value | Y value | Behavior |
 |---------|---------|----------|
@@ -256,30 +255,28 @@ action(T, Result?) :- otherwise | handle_early(Result).
 **Purpose**: Provide high-level abstractions over body kernels with proper guard checks.
 
 **Examples**:
-- `:=/2` - Arithmetic assignment
-- `=../2` - Structure decomposition/composition
-- `append/3` - List concatenation
-- `length/2` - List length
-- `reverse/2` - List reversal
+- `:=/2` - Arithmetic evaluation and assignment (recursive GLP clauses calling arithmetic body kernels)
+- `=../2` - Term composition/decomposition (bidirectional, using `'_list_to_tuple'`/`'_tuple_to_list'` body kernels)
+- `now/1` - Clock access (calls `'_now'` body kernel)
 
 **Safety Guarantee**: System predicates' own clauses contain guards that ensure body kernels are called safely.
 
-**Example: `:=` Definition**:
+**Example: `:=` Definition** (from paper, Appendix A):
 
 ```glp
-% Clause 1: Both operands are numbers - use body kernel directly
-':='(Result, +(X?, Y?)) :-
-  number(X?), number(Y?) |    % Guard ensures body kernel precondition
-  add(X?, Y?, Result).        % Body kernel call is safe
+procedure :=(Number, Exp?).
 
-% Clause 2: Operands may be expressions - recursive evaluation
-':='(Result, +(X?, Y?)) :-
-  otherwise |                 % No guard - fallback clause
-  X1 := X?,                   % Recursively evaluate X
-  Y1 := Y?,                   % Recursively evaluate Y
-  Result := X1? + Y1?.        % Recurse with evaluated operands
+%% Base case: plain number
+Result? := N :- number(N?) | Result = N?.
 
-% Similar clauses for -, *, /, mod, etc.
+%% Addition
+Result? := X + Y :- number(X?), number(Y?) |
+    '_add'(X?, Y?, Result).
+Result? := X + Y :- otherwise |
+    X1 := X?, Y1 := Y?, Result := X1? + Y1?.
+
+%% Subtraction, multiplication, division, etc. follow the same pattern.
+%% See paper Appendix A for the complete definition.
 ```
 
 **Key Point**: The safety comes from **`:=`'s own clauses**, not from user's code.
@@ -294,24 +291,22 @@ compute(X, Y, Z?) :-
 
 **Future Optimization**: User-provided guards may enable compiler optimizations:
 ```glp
-% Guards allow compiler to call add/3 inline instead of spawning :=
+% Guards allow compiler to call '_add'/3 inline instead of spawning :=
 compute(X, Y, Z?) :-
   number(X?), number(Y?) |
-  Z := X? + Y?.    % Compiler can optimize: inline add(X?, Y?, Z)
+  Z := X? + Y?.    % Compiler can optimize: inline '_add'(X?, Y?, Z)
 ```
 
-**Example: `=..` Definition**:
+**Example: `=..` Definition** (from paper, Appendix A):
 
 ```glp
-% =../2 - Structure decomposition/composition (univ)
+% =../2 - Bidirectional term composition/decomposition
 
-% Composition: list → tuple
-% [foo, a, b] =.. T  →  T = foo(a, b)
-X? =.. Y :- list(Y?) | list_to_tuple(Y?, X).
+% Composition: list → compound term
+X? =.. [Y|Ys] :- list(Ys?) | '_list_to_tuple'([Y?|Ys?], X).
 
-% Decomposition: tuple → list
-% foo(a, b) =.. L  →  L = [foo, a, b]
-X =.. Y? :- tuple(X?) | tuple_to_list(X?, Y).
+% Decomposition: compound term → list
+X =.. Y? :- compound(X?) | '_tuple_to_list'(X?, Y).
 ```
 
 **Usage**:
@@ -336,7 +331,7 @@ build(Functor?, Args?, Term?) :-
 | **Guard Predicates** | Runtime | User-visible | Guards | 3-valued | Try next clause |
 | **Guard Kernels** | Runtime | Internal only | Guards (compiler) | 3-valued | Try next clause |
 | **Body Kernels** | Runtime | Internal only | Body (via system preds) | 2-valued | Abort |
-| **System Predicates** | GLP clauses | User-visible | Any | 3-valued | Try next clause |
+| **System Predicates** | GLP clauses | User-visible | Body | 3-valued | Try next clause |
 
 ---
 
@@ -363,7 +358,7 @@ build(Functor?, Args?, Term?) :-
 - Spawned goals
 
 **Internal (Used by System Predicates)**:
-- Body kernels: `add(X?, Y?, Z)`
+- Body kernels: `'_add'(X?, Y?, Z)`
 
 **Execution Characteristics**:
 - Post-commit (no backtracking)
@@ -395,7 +390,7 @@ build(Functor?, Args?, Term?) :-
 % DANGEROUS if body kernels were exposed
 unsafe(X, Y, Z?) :-
   true |
-  add(X?, Y?, Z).    % ABORT if X or Y unbound or non-numeric
+  '_add'(X?, Y?, Z).    % ABORT if X or Y unbound or non-numeric
 ```
 
 **Safe via System Predicates**:
@@ -466,7 +461,7 @@ compute1(X, Y, Z?) :-
 % Version 2: Guards enable future optimization
 compute2(X, Y, Z?) :-
   number(X?), number(Y?) |
-  Z := X? + Y?.    % Future: compiler could inline add/3
+  Z := X? + Y?.    % Future: compiler could inline '_add'/3
 ```
 
 **Current Behavior**: Both versions work safely.
@@ -540,8 +535,8 @@ Goal failed: trying next clause
 
 **Body Kernel Abort** (error):
 ```
-ABORT: Body kernel 'add' failed
-Reason: Unbound reader X in add/3
+ABORT: Body kernel '_add' failed
+Reason: Unbound reader X in '_add'/3
 Location: compute/3, clause 1, body goal 2
 ```
 
@@ -580,21 +575,13 @@ X? < Temp2?                  % Guard predicate
 ### 8.3 Safe Division
 
 ```glp
-% System predicate := definition includes safe division
-':='(Result, /(X?, Y?)) :-
-  number(X?), number(Y?), Y? =\= 0 |
-  div(X?, Y?, Result).        % Body kernel - safe to call
-
-':='(Result, /(X?, Y?)) :-
-  number(X?), number(Y?), Y? =:= 0 |
-  abort("Division by zero").
-
-% Fallback for non-ground operands
-':='(Result, /(X?, Y?)) :-
-  otherwise |
-  X1 := X?,
-  Y1 := Y?,
-  Result := X1? / Y1?.
+%% Division (real result) - from paper, Appendix A
+Result? := X / Y :- number(X?), number(Y?), Y? =\= 0 |
+    '_div'(X?, Y?, Result).
+_ := X / Y :- number(X?), number(Y?), Y? =:= 0 |
+    abort("Division by zero").
+Result? := X / Y :- otherwise |
+    X1 := X?, Y1 := Y?, Result := X1? / Y1?.
 ```
 
 ---
@@ -641,6 +628,8 @@ risky(X, Y?) :-
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2025-11-21 | Initial specification based on FCP analysis |
+| 1.1 | 2026-03-04 | Harmonise with paper (Appendix A): fix body kernel quoting (`'_add'` not `add`), fix `=..` clauses (use `compound` not `tuple`, `'_list_to_tuple'`/`'_tuple_to_list'` not unquoted), fix `:=` examples to use infix syntax matching stdlib, replace `atom`/`tuple` guards with `compound`, drop `append/3`/`length/2`/`reverse/2` from system predicates (they are regular user programs), add `now/1` |
+| 1.2 | 2026-03-04 | Verified against paper appendix-guards.tex and stdlib .glp files: comparison table Context column correct, `=` correctly categorised as defined guard predicate (not system predicate), no `..=` references, no `execute/2` references, guard kernel naming internally consistent |
 
 ---
 

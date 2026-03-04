@@ -114,7 +114,18 @@ The `continue` after `_suspendAndFailMulti` makes the subsequent two lines dead 
 
 ---
 
-## Workaround
+## Architectural Note (March 2026)
+
+The paper (Appendix A of the CGLP/ICLP-2026 paper) now specifies system predicates as **regular GLP clauses** whose bodies call body kernel predicates. Under this architecture, the "workaround" described below — using body kernels like `'_now'(T)` via the standard `PutVariable` → `Spawn` path — is actually the **correct architecture**, not a workaround. The `execute/2` mechanism is a legacy path that predates the body-kernel design.
+
+Specifically:
+- `now/1` is a system predicate defined as `now(T?) :- '_now'(T).` (in `stdlib/time.glp`)
+- `:=/2` is a system predicate whose clauses call arithmetic body kernels like `'_add'`, `'_sub'`, etc. (in `stdlib/assign.glp`)
+- `=../2` is a system predicate using `'_list_to_tuple'`/`'_tuple_to_list'` body kernels (in `stdlib/univ.glp`)
+
+All of these are compiled and executed as normal GLP procedures, bypassing `execute/2` entirely. The VarRef resolution bug in `execute/2` does not affect them.
+
+## Workaround (for predicates still using `execute/2`)
 
 Use body kernels instead of `execute/2`. Body kernels go through the standard `PutVariable` → `Spawn` argument-passing path, which handles variable addressing correctly.
 

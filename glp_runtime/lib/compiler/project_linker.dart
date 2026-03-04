@@ -195,14 +195,31 @@ LinkResult linkProject(List<DiscoveredModule> modules, String topModuleName) {
     }
   }
 
-  // Generate entry point aliases for the top module's procedures
-  final topModule = modules.where((m) => m.moduleName == topModuleName);
-  if (topModule.isNotEmpty) {
-    for (final proc in topModule.first.ast.procedures) {
+  // Generate entry point aliases.
+  // Top module: ALL procedures get aliases (for REPL invocation).
+  // Other modules: only EXPORTED procedures get aliases (for cross-module calls
+  // from code loaded on top, e.g., madGLP boot source calling agent/4).
+  final aliasedSigs = <String, String>{}; // sig → owning module (for conflict detection)
+  for (final mod in modules) {
+    final isTop = mod.moduleName == topModuleName;
+    for (final proc in mod.ast.procedures) {
+      final sig = '${proc.name}/${proc.arity}';
+
+      // Top module: alias all. Others: only exported.
+      if (!isTop) {
+        final isExported = mod.ast.procDeclarations
+            .any((d) => d.exported && d.name == proc.name && d.arity == proc.arity);
+        if (!isExported) continue;
+      }
+
+      // Skip if an alias already exists (top module wins)
+      if (aliasedSigs.containsKey(sig)) continue;
+
+      aliasedSigs[sig] = mod.moduleName;
       final aliasClause = _makeAliasClause(
         proc.name,
         proc.arity,
-        '$topModuleName:${proc.name}',
+        '${mod.moduleName}:${proc.name}',
       );
       allProcedures.add(Procedure(
         proc.name,
