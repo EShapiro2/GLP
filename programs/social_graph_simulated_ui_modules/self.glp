@@ -1,0 +1,82 @@
+%% self.glp — Social Graph (simulated UI) shared type vocabulary
+%%
+%% All protocol types for the Social Graph application with UI mediator.
+%% Defined once here, visible to all modules via ancestor scoping.
+
+-module(social_graph).
+
+%% =============================================================================
+%% CORE PROTOCOL TYPES
+%% =============================================================================
+
+%% Stream and Channel are predefined in prelude:
+%%   Stream ::= [] ; [_|Stream].
+%%   Channel ::= ch(Stream, Stream?).
+
+Response ::= accept(Channel) ; no.
+Decision ::= yes ; no.
+Handshake ::= ack(Constant) ; nack.
+PendingValue ::= response(Response?) ; channel(Channel?) ; error.
+
+%% --- Content types for messages ---
+
+%% Content carried inside user-to-agent messages (msg('_user', Id, Content))
+UserContent ::= connect(Constant)
+              ; decision(Decision, Constant, PendingValue)
+              ; send(Constant, Constant)
+              ; introduce(Constant, Constant)
+              ; accept_intro(Constant, PendingValue)
+              ; reject_intro(Constant, PendingValue)
+              ; response(Response).
+
+%% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
+AgentContent ::= befriend(Constant, Response)
+               ; befriend_intro(Constant, Constant, Channel)
+               ; connected(Constant)
+               ; rejected
+               ; rejected(Constant)
+               ; received(Constant, Constant).
+
+%% Network content (2-arg cold-call: msg(Dest, Content))
+NetColdCall ::= intro(Constant, Response).
+
+%% Friend-to-friend content (3-arg: msg(From, To, Content))
+FriendContent ::= response(Response)
+                ; text(Constant)
+                ; intro(Constant, Channel).
+
+%% Intro channel content (first message is ack/nack handshake)
+IntroContent ::= ack(Constant) ; nack.
+
+%% Intro result — written by intro_await_peer, injected into UserIn
+IntroResult ::= intro_result(Constant, Channel) ; intro_rejected(Constant).
+
+%% Output list
+OutputEntry ::= output(String, Stream?).
+OutputsList ::= [] ; [OutputEntry|OutputsList].
+
+%% =============================================================================
+%% MEDIATOR TYPES
+%% =============================================================================
+
+ReqId ::= req(Constant).
+
+%% User -> Mediator
+UserCmd ::= decision(Decision, Constant, ReqId)
+          ; accept_intro(Constant, ReqId)
+          ; reject_intro(Constant, ReqId)
+          ; connect(Constant)
+          ; send(Constant, Constant)
+          ; introduce(Constant, Constant).
+
+%% Mediator -> User
+UserNotify ::= befriend(Constant, ReqId)
+             ; befriend_intro(Constant, Constant, ReqId)
+             ; connected(Constant)
+             ; rejected
+             ; rejected(Constant)
+             ; received(Constant, Constant).
+
+%% Pending entries
+PendingEntry ::= pending(ReqId, PendingValue).
+PendingList  ::= [] ; [PendingEntry | PendingList].

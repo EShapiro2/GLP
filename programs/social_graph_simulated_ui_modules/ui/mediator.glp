@@ -1,0 +1,151 @@
+%% mediator.glp — UI mediator module
+%%
+%% Exports: ui_mediator/5
+%% Types: from ../self.glp (ancestor scoping)
+%% No cross-module imports — lookup_pending is local.
+
+-module(mediator).
+-mode(system).
+
+%% =============================================================================
+%% CHANNEL OPERATIONS (Defined Guards)
+%% =============================================================================
+
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+%% =============================================================================
+%% LOCAL HELPERS — Precisely-typed channel operations
+%% =============================================================================
+
+procedure send_agent(_?, Channel?, Channel).
+send_agent(X, ch(In, [X?|Out?]), ch(In?, Out)).
+
+procedure send_user(_?, Channel?, Channel).
+send_user(X, ch(In, [X?|Out?]), ch(In?, Out)).
+
+%% =============================================================================
+%% PENDING MANAGEMENT
+%% =============================================================================
+
+procedure lookup_pending(ReqId?, PendingValue, PendingList?, PendingList).
+lookup_pending(ReqId, Val?,
+    [pending(Id, Val) | Rest], Rest?) :-
+    ReqId? =?= Id? | true.
+lookup_pending(ReqId, Val?, [P | Rest], [P? | Rest1?]) :-
+    otherwise |
+    lookup_pending(ReqId?, Val, Rest?, Rest1).
+lookup_pending(_, error, [], []).
+
+%% =============================================================================
+%% UI MEDIATOR — Main loop
+%% =============================================================================
+
+exported procedure ui_mediator(Constant?, Channel?, Channel?, PendingList?, Constant?).
+
+%% --- Agent-to-user: non-ground (replace variable with req ID) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', befriend(From, Resp?)),
+            AgentCh?, AgentCh1),
+    ground(From?) |
+    send_user(befriend(From?, req(N?)), UserCh?, UserCh1),
+    N1 := N? + 1,
+    ui_mediator(Id?, AgentCh1?, UserCh1?,
+        [pending(req(N?), response(Resp)) | Ps?], N1?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user',
+                befriend_intro(From, Other, Ch?)),
+            AgentCh?, AgentCh1),
+    ground(From?), ground(Other?) |
+    send_user(befriend_intro(From?, Other?, req(N?)),
+         UserCh?, UserCh1),
+    N1 := N? + 1,
+    ui_mediator(Id?, AgentCh1?, UserCh1?,
+        [pending(req(N?), channel(Ch)) | Ps?], N1?).
+
+%% --- Agent-to-user: ground (pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', connected(Who)),
+            AgentCh?, AgentCh1),
+    ground(Who?) |
+    send_user(connected(Who?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', rejected),
+            AgentCh?, AgentCh1) |
+    send_user(rejected, UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', rejected(Who)),
+            AgentCh?, AgentCh1),
+    ground(Who?) |
+    send_user(rejected(Who?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', received(From, Text)),
+            AgentCh?, AgentCh1),
+    ground(From?), ground(Text?) |
+    send_user(received(From?, Text?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- User-to-agent: decision (cold-call response) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(decision(Dec, From, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(Dec?), ground(From?),
+    ground(ReqId?) |
+    lookup_pending(ReqId?, Resp, Ps?, Ps1),
+    send_agent(msg('_user', Id?, decision(Dec?, From?, Resp?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
+%% --- User-to-agent: accept/reject intro ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(accept_intro(Other, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(Other?), ground(ReqId?) |
+    lookup_pending(ReqId?, Pv, Ps?, Ps1),
+    send_agent(msg('_user', Id?, accept_intro(Other?, Pv?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(reject_intro(Other, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(Other?), ground(ReqId?) |
+    lookup_pending(ReqId?, Pv, Ps?, Ps1),
+    send_agent(msg('_user', Id?, reject_intro(Other?, Pv?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
+%% --- User-to-agent: pass-through commands ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(connect(Target), UserCh?, UserCh1),
+    ground(Id?), ground(Target?) |
+    send_agent(msg('_user', Id?, connect(Target?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(send(Target, Text), UserCh?, UserCh1),
+    ground(Id?), ground(Target?), ground(Text?) |
+    send_agent(msg('_user', Id?, send(Target?, Text?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(introduce(P, Q), UserCh?, UserCh1),
+    ground(Id?), ground(P?), ground(Q?) |
+    send_agent(msg('_user', Id?, introduce(P?, Q?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- Termination ---
+
+ui_mediator(_, ch([], []), ch([], []), _, _).
