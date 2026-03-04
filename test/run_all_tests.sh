@@ -9,6 +9,9 @@
 #   C - Negative Type Tests (load must be rejected)
 #   D - SRSW Violation Tests (load must be rejected)
 #   E - Invalid Guard Test (true in guard rejected)
+#   F - CSSG Modules (modular play tests via project-directory loading)
+#   G - Social Graph Simulated UI Modules (project-directory loading)
+#   H - CSSN Modules (project-directory loading, plays 1-12)
 
 set -e
 
@@ -1078,6 +1081,204 @@ else
     echo "  FAIL: cssg_modules_test.sh did not produce expected output"
     FAIL=$((FAIL + 1))
 fi
+
+echo ""
+
+# =============================================================================
+# Section G: Social Graph Simulated UI Modules (project-directory loading)
+# =============================================================================
+echo "=== Section G: Social Graph Simulated UI Modules ==="
+echo ""
+
+SGSIM="$GLP_DIR/programs/social_graph_simulated_ui_modules"
+
+# Loading
+g_load=$($DART run "$REPL" <<HEREDOC
+$SGSIM
+:quit
+HEREDOC
+2>&1)
+
+check "SG-SIM project loads" "Loaded project" "$g_load"
+check_not "SG-SIM no type errors" "Type checking failed" "$g_load"
+check_not "SG-SIM no load errors" "Error loading" "$g_load"
+
+# Silent plays (play1-play3)
+echo "--- Silent plays (play1-play3) ---"
+for play_num in 1 2 3; do
+    g_play=$($DART run "$REPL" <<HEREDOC
+$SGSIM
+play${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "SG play${play_num} succeeds" "succeeds\|suspended" "$g_play"
+done
+
+# Tagged plays (fplay1-fplay3) with output checks
+echo "--- Tagged plays (fplay1-fplay3) ---"
+
+g_fp1=$($DART run "$REPL" <<HEREDOC
+$SGSIM
+fplay1.
+:quit
+HEREDOC
+2>&1)
+
+check "SG fplay1 succeeds" "succeeds\|suspended" "$g_fp1"
+check "SG fplay1 alice connected bob" "tagged(alice.*connected(bob)" "$g_fp1"
+check "SG fplay1 charlie connected alice" "tagged(charlie.*connected(alice)" "$g_fp1"
+
+g_fp2=$($DART run "$REPL" <<HEREDOC
+$SGSIM
+fplay2.
+:quit
+HEREDOC
+2>&1)
+
+check "SG fplay2 succeeds" "succeeds\|suspended" "$g_fp2"
+check "SG fplay2 rejected" "tagged(alice.*rejected" "$g_fp2"
+
+g_fp3=$($DART run "$REPL" <<HEREDOC
+$SGSIM
+fplay3.
+:quit
+HEREDOC
+2>&1)
+
+check "SG fplay3 succeeds" "succeeds\|suspended" "$g_fp3"
+
+echo ""
+
+# =============================================================================
+# Section H: CSSN Modules (project-directory loading)
+# =============================================================================
+echo "=== Section H: CSSN Modules ==="
+echo ""
+
+CSSN="$GLP_DIR/programs/cssn_modules"
+
+# Loading
+h_load=$($DART run "$REPL" <<HEREDOC
+$CSSN
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN project loads" "Loaded project" "$h_load"
+check_not "CSSN no type errors" "Type checking failed" "$h_load"
+check_not "CSSN no load errors" "Error loading" "$h_load"
+
+# fplay1-3: Basic social graph
+echo "--- Basic social graph (fplay1-fplay3) ---"
+
+h_fp1=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay1.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay1 succeeds" "succeeds\|suspended" "$h_fp1"
+check "CSSN fplay1 alice connected bob" "tagged(alice.*connected(bob)" "$h_fp1"
+check "CSSN fplay1 charlie connected alice" "tagged(charlie.*connected(alice)" "$h_fp1"
+
+h_fp2=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay2.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay2 succeeds" "succeeds\|suspended" "$h_fp2"
+check "CSSN fplay2 rejected" "tagged(alice.*rejected" "$h_fp2"
+
+h_fp3=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay3.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay3 succeeds" "succeeds\|suspended" "$h_fp3"
+
+# fplay4-7: CSSG (child-safe social graph)
+echo "--- CSSG plays (fplay4-fplay7) ---"
+
+h_fp4=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay4.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay4 succeeds" "succeeds\|suspended" "$h_fp4"
+check "CSSN fplay4 carol connected dave" "tagged(carol.*connected(dave)" "$h_fp4"
+
+for play_num in 5 6 7; do
+    h_fpN=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "CSSN fplay${play_num} succeeds" "succeeds\|suspended" "$h_fpN"
+done
+
+# fplay8-10: CSSN groups
+echo "--- CSSN group plays (fplay8-fplay10) ---"
+
+h_fp8=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay8.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay8 succeeds" "succeeds\|suspended" "$h_fp8"
+check "CSSN fplay8 group_joined" "tagged(alice.*group_joined" "$h_fp8"
+check "CSSN fplay8 group_received" "group_received" "$h_fp8"
+
+h_fp9=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay9.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay9 succeeds" "succeeds\|suspended" "$h_fp9"
+
+h_fp10=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay10.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay10 succeeds" "succeeds\|suspended" "$h_fp10"
+
+# fplay11-12: Large CSSN scenarios
+echo "--- Large CSSN plays (fplay11-fplay12) ---"
+
+h_fp11=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay11.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay11 succeeds" "succeeds\|suspended" "$h_fp11"
+check "CSSN fplay11 tagged output" "tagged(" "$h_fp11"
+
+h_fp12=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay12.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay12 succeeds" "succeeds\|suspended" "$h_fp12"
+check "CSSN fplay12 tagged output" "tagged(" "$h_fp12"
 
 echo ""
 

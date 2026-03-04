@@ -255,11 +255,8 @@ class GlpEngine {
 
     typeCheckProject(modules);
 
-    // Auto-detect top module: the one with the most procedures
-    final top = topModuleName ??
-        (modules..sort((a, b) =>
-            b.ast.procedures.length.compareTo(a.ast.procedures.length)))
-        .first.moduleName;
+    // Auto-detect top module: prefer the orchestrator (has imported procedures)
+    final top = topModuleName ?? _detectTopModule(modules);
 
     final linked = linkProject(modules, top);
     final program = _compiler.compileProgram(
@@ -269,6 +266,24 @@ class GlpEngine {
     _loadedPrograms['__project__'] = program;
 
     return true;
+  }
+
+  /// Detect the top module in a project.
+  ///
+  /// Prefers the module with imported procedure declarations (the orchestrator
+  /// that depends on other modules via M#p(...) calls). Falls back to the
+  /// module with the most procedures.
+  String _detectTopModule(List<DiscoveredModule> modules) {
+    final withImports = modules
+        .where((m) => m.ast.procDeclarations.any((d) => d.imported))
+        .toList();
+    if (withImports.length == 1) {
+      return withImports.first.moduleName;
+    }
+    // Fallback: module with the most procedures
+    modules.sort(
+        (a, b) => b.ast.procedures.length.compareTo(a.ast.procedures.length));
+    return modules.first.moduleName;
   }
 
   /// Run a goal and return the result
