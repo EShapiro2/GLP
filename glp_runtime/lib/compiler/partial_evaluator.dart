@@ -8,11 +8,21 @@ import 'ast.dart';
 import 'error.dart';
 import 'lexer.dart';
 import 'parser.dart';
-import '../analysis/type_checker/prelude.dart' show builtinProcedures, typePrelude;
+import '../analysis/type_checker/prelude.dart' show builtinProcedures;
 
 // ============================================================================
 // PRELUDE UNIT CLAUSES
 // ============================================================================
+
+/// Source for prelude unit clauses (set by engine from programs/self.glp).
+String? _preludeUnitClauseSource;
+
+/// Set the source from which prelude unit clauses are extracted.
+/// Call this once during engine initialization with the content of programs/self.glp.
+void setPreludeUnitClauseSource(String source) {
+  _preludeUnitClauseSource = source;
+  _cachedPreludeUnitClauses = null; // invalidate cache
+}
 
 /// Cached prelude unit clauses (parsed once per process lifetime).
 Map<String, List<Term>>? _cachedPreludeUnitClauses;
@@ -23,7 +33,13 @@ Map<String, List<Term>>? _cachedPreludeUnitClauses;
 Map<String, List<Term>> getPreludeUnitClauses() {
   if (_cachedPreludeUnitClauses != null) return _cachedPreludeUnitClauses!;
 
-  final lexer = Lexer(typePrelude);
+  final source = _preludeUnitClauseSource ?? '';
+  if (source.isEmpty) {
+    _cachedPreludeUnitClauses = {};
+    return _cachedPreludeUnitClauses!;
+  }
+
+  final lexer = Lexer(source);
   final tokens = lexer.tokenize();
   final parser = Parser(tokens);
   final module = parser.parseModule();
@@ -641,6 +657,22 @@ class PartialEvaluator {
     return UnifySuccess(resolved);
   }
 
+  /// Set subst[key] = value, propagating to any existing alias.
+  /// If subst[key] was previously a VarTerm (alias), also bind that variable.
+  void _substSet(Map<String, Term> subst, String key, Term value) {
+    if (subst.containsKey(key)) {
+      final old = subst[key]!;
+      if (old is VarTerm && !old.isReader && value is! VarTerm) {
+        // key was aliased to old.name; now key maps to a concrete value.
+        // Propagate: also bind old.name to the concrete value.
+        if (!subst.containsKey(old.name)) {
+          subst[old.name] = value;
+        }
+      }
+    }
+    subst[key] = value;
+  }
+
   /// Unify two terms, updating substitution and suspension set.
   /// Returns UnifyFail on structural mismatch, null on success.
   UnifyResult? _unifyTerms(
@@ -707,11 +739,11 @@ class PartialEvaluator {
         }
       } else if (unitArg is VarTerm && !unitArg.isReader) {
         // Constant vs Writer: bind unit writer to constant
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
         // Constant vs Reader in unit clause - unusual
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else {
         return UnifyFail('Constant ${callArg.value} cannot match structure $unitArg');
@@ -731,10 +763,10 @@ class PartialEvaluator {
         }
         return null;
       } else if (unitArg is VarTerm && !unitArg.isReader) {
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else {
         return UnifyFail('Structure ${callArg.functor} cannot match $unitArg');
@@ -763,10 +795,10 @@ class PartialEvaluator {
         }
         return null;
       } else if (unitArg is VarTerm && !unitArg.isReader) {
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else {
         return UnifyFail('List cannot match $unitArg');

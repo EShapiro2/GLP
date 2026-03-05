@@ -1158,6 +1158,20 @@ class PartialEvaluator {
     return UnifySuccess(resolved);
   }
 
+  /// Set subst[key] = value, propagating to any existing alias.
+  /// If subst[key] was previously a VarTerm (alias), also bind that variable.
+  void _substSet(Map<String, Term> subst, String key, Term value) {
+    if (subst.containsKey(key)) {
+      final old = subst[key]!;
+      if (old is VarTerm && !old.isReader && value is! VarTerm) {
+        if (!subst.containsKey(old.name)) {
+          subst[old.name] = value;
+        }
+      }
+    }
+    subst[key] = value;
+  }
+
   /// Unify two terms, updating substitution and suspension set.
   /// Returns UnifyFail on structural mismatch, null on success.
   UnifyResult? _unifyTerms(
@@ -1224,11 +1238,11 @@ class PartialEvaluator {
         }
       } else if (unitArg is VarTerm && !unitArg.isReader) {
         // Constant vs Writer: bind unit writer to constant
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
         // Constant vs Reader in unit clause - unusual
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else {
         return UnifyFail('Constant ${callArg.value} cannot match structure $unitArg');
@@ -1248,10 +1262,10 @@ class PartialEvaluator {
         }
         return null;
       } else if (unitArg is VarTerm && !unitArg.isReader) {
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else {
         return UnifyFail('Structure ${callArg.functor} cannot match $unitArg');
@@ -1280,10 +1294,10 @@ class PartialEvaluator {
         }
         return null;
       } else if (unitArg is VarTerm && !unitArg.isReader) {
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else {
         return UnifyFail('List cannot match $unitArg');

@@ -42,6 +42,14 @@ serve(_, []) :-
 ''';
 
 void main() {
+  // Set prelude sources from programs/self.glp (same as GlpEngine constructor)
+  final rootSelfGlp = File('../programs/self.glp');
+  if (rootSelfGlp.existsSync()) {
+    final source = rootSelfGlp.readAsStringSync();
+    setPreludeUnitClauseSource(source);
+    setPreludeEnvironmentSource(source);
+  }
+
   final projectRoot = '../programs/cssn_modules';
 
   if (!Directory(projectRoot).existsSync()) {

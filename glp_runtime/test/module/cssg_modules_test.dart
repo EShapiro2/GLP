@@ -18,6 +18,14 @@ import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
 
 void main() {
+  // Set prelude sources from programs/self.glp (same as GlpEngine constructor)
+  final rootSelfGlp = File('../programs/self.glp');
+  if (rootSelfGlp.existsSync()) {
+    final source = rootSelfGlp.readAsStringSync();
+    setPreludeUnitClauseSource(source);
+    setPreludeEnvironmentSource(source);
+  }
+
   // Locate cssg_modules relative to glp_runtime/
   final cssgRoot = '../programs/cssg_modules';
 

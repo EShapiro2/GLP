@@ -8,6 +8,11 @@ import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
 
 void main() {
+  // Set prelude sources from programs/self.glp (same as GlpEngine constructor)
+  final rootSelfGlp = File('../programs/self.glp');
+  if (rootSelfGlp.existsSync()) {
+    setPreludeEnvironmentSource(rootSelfGlp.readAsStringSync());
+  }
   // Helper: parse source into Module AST
   Module parseModule(String source) {
     final lexer = Lexer(source);

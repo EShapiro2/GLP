@@ -60,9 +60,23 @@ class AliasExpansionError implements Exception {
   String toString() => '$message at line $line, column $column';
 }
 
+/// Source for the prelude environment (set by engine from programs/self.glp).
+String? _preludeEnvironmentSource;
+
+/// Set the source from which the prelude environment is built.
+/// Call this once during engine initialization with the content of programs/self.glp.
+void setPreludeEnvironmentSource(String source) {
+  _preludeEnvironmentSource = source;
+}
+
 /// Build TypeEnvironment from prelude
 TypeEnvironment buildPreludeEnvironment() {
-  final lexer = Lexer(typePrelude);
+  final source = _preludeEnvironmentSource ?? typePrelude;
+  if (source.isEmpty) {
+    return TypeEnvironment({}, {});
+  }
+
+  final lexer = Lexer(source);
   final tokens = lexer.tokenize();
   final parser = Parser(tokens);
   final module = parser.parseModule();

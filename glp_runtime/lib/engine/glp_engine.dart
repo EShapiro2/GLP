@@ -121,6 +121,15 @@ class GlpEngine {
     // Derive root self.glp path from stdlib dir
     // e.g., '../programs/stdlib' → '../programs/self.glp'
     _rootSelfGlpPath = stdlibDir.replaceAll('/stdlib', '/self.glp');
+
+    // Set prelude sources from programs/self.glp for PE and type checker
+    final rootSelfFile = File(_rootSelfGlpPath);
+    if (rootSelfFile.existsSync()) {
+      final rootSource = rootSelfFile.readAsStringSync();
+      setPreludeUnitClauseSource(rootSource);
+      setPreludeEnvironmentSource(rootSource);
+    }
+
     registerStandardPredicates(_runtime.systemPredicates);
     _loadStdlib(stdlibDir);
   }

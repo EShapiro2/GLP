@@ -10,6 +10,8 @@
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/compiler.dart';
+import 'package:glp_runtime/compiler/partial_evaluator.dart' show setPreludeUnitClauseSource;
+import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart' show setPreludeEnvironmentSource;
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
@@ -33,6 +35,14 @@ serve(_, []) :-
 ''';
 
 void main() {
+  // Set prelude sources from programs/self.glp (same as GlpEngine constructor)
+  final rootSelfGlp = File('../programs/self.glp');
+  if (rootSelfGlp.existsSync()) {
+    final source = rootSelfGlp.readAsStringSync();
+    setPreludeUnitClauseSource(source);
+    setPreludeEnvironmentSource(source);
+  }
+
   final cssgRoot = '../programs/cssg_modules';
 
   // Verify the project directory exists
