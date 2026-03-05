@@ -65,6 +65,9 @@ procedure _close_mutual_reference(_?).
 % madGLP network primitives
 procedure _send(_?, _?, _?).
 
+% Stdlib procedure declarations
+procedure _output(_?).
+
 % =============================================================================
 % SINGLE-UNIT-CLAUSE PROCEDURES (DEFINED GUARDS)
 % =============================================================================

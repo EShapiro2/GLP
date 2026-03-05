@@ -219,6 +219,8 @@ const Set<String> builtinProcedures = {
   '_close_mutual_reference/1',
   // madGLP network primitives
   '_send/3',
+  // Output (system predicate)
+  '_output/1',
 };
 
 /// Check if a type name is predefined
