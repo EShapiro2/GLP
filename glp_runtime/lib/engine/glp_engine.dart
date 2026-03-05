@@ -100,6 +100,9 @@ class GlpEngine {
   /// When true, type errors abort program loading (default: true)
   bool strictTypes = true;
 
+  /// Path to the root self.glp (programs/self.glp) for the type scope chain.
+  late final String _rootSelfGlpPath;
+
   /// For madGLP: the MadContext for this engine
   MadContext? madContext;
 
@@ -115,6 +118,9 @@ class GlpEngine {
   /// [stdlibDir] is the path to the stdlib directory (e.g., '../programs/stdlib').
   /// Loading stdlib is not optional — it's part of engine initialization.
   GlpEngine({required String stdlibDir}) {
+    // Derive root self.glp path from stdlib dir
+    // e.g., '../programs/stdlib' → '../programs/self.glp'
+    _rootSelfGlpPath = stdlibDir.replaceAll('/stdlib', '/self.glp');
     registerStandardPredicates(_runtime.systemPredicates);
     _loadStdlib(stdlibDir);
   }
@@ -595,24 +601,39 @@ class GlpEngine {
   /// adds that via buildTypeEnvironment).
   TypeEnvironment _buildAncestorScope(List<String> chain) {
     var env = buildPreludeEnvironment();
-    for (final selfGlpPath in chain) {
-      final source = File(selfGlpPath).readAsStringSync();
-      final lexer = Lexer(source);
-      final tokens = lexer.tokenize();
-      final parser = Parser(tokens);
-      final selfModule = parser.parseModule();
 
-      final types = <String, TypeDef>{};
-      for (final t in selfModule.typeDefs) {
-        types[t.name] = t;
+    // Include root self.glp (programs/self.glp) as first scope layer
+    final rootSelfGlp = File(_rootSelfGlpPath);
+    if (rootSelfGlp.existsSync()) {
+      env = _mergeModuleIntoEnv(env, rootSelfGlp.readAsStringSync());
+    }
+
+    for (final selfGlpPath in chain) {
+      // Skip if this chain entry IS the root self.glp (avoid double-merging)
+      if (File(selfGlpPath).absolute.path == rootSelfGlp.absolute.path) {
+        continue;
       }
-      final procs = <String, ProcDecl>{};
-      for (final p in selfModule.procDeclarations) {
-        procs[p.qualifiedKey] = p;
-      }
-      env = env.merge(TypeEnvironment(types, procs));
+      env = _mergeModuleIntoEnv(env, File(selfGlpPath).readAsStringSync());
     }
     return env;
+  }
+
+  /// Parse GLP source and merge its types/procedures into an environment.
+  TypeEnvironment _mergeModuleIntoEnv(TypeEnvironment env, String source) {
+    final lexer = Lexer(source);
+    final tokens = lexer.tokenize();
+    final parser = Parser(tokens);
+    final selfModule = parser.parseModule();
+
+    final types = <String, TypeDef>{};
+    for (final t in selfModule.typeDefs) {
+      types[t.name] = t;
+    }
+    final procs = <String, ProcDecl>{};
+    for (final p in selfModule.procDeclarations) {
+      procs[p.qualifiedKey] = p;
+    }
+    return env.merge(TypeEnvironment(types, procs));
   }
 
   ModuleInfo? _findModuleForProcedure(String procedureLabel) {
