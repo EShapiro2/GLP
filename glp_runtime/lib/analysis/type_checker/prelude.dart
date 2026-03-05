@@ -45,8 +45,6 @@ procedure string(String?).
 procedure constant(Constant?).
 procedure compound(_?).
 procedure list(_?).
-procedure equator(_?).
-
 % Groundness guards
 procedure ground(_?).
 procedure known(_?).
@@ -152,7 +150,6 @@ const Set<String> predefinedProcedureNames = {
   'constant',
   'compound',
   'list',
-  'equator',
   // Groundness guards (fundamental - implemented by runtime)
   'ground',
   'known',
@@ -199,7 +196,6 @@ const Set<String> builtinProcedures = {
   'constant/1',
   'compound/1',
   'list/1',
-  'equator/1',
   // Groundness/validation guards
   'ground/1',
   'known/1',

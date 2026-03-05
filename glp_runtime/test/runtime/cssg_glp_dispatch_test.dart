@@ -61,7 +61,6 @@ void main() {
         'univ.glp',
         'unify.glp',
         'mwm.glp',
-        'equator.glp',
         'time.glp',
       ];
       final stdlibOps = <dynamic>[];

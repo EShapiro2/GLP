@@ -95,9 +95,6 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_stream_append', 3, streamAppendKernel);
   registry.register('_close_mutual_reference', 1, mutualRefCloseKernel);
 
-  // Equator operations (many-to-one signaling)
-  registry.register('_equator', 1, equatorKernel);
-
   // madGLP kernels
   registry.register('_send', 3, sendKernel);
 
@@ -639,44 +636,6 @@ BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
 
   for (final act in activations) {
     rt.gq.enqueue(act);
-  }
-
-  return BodyKernelResult.success;
-}
-
-// ============================================================================
-// EQUATOR KERNELS (Many-to-One Signaling)
-// ============================================================================
-
-BodyKernelResult equatorKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 1) {
-    return BodyKernelResult.success;
-  }
-
-  final deref = _deref(rt, args[0]);
-
-  if (deref is! StructTerm ||
-      deref.functor != '_equator' ||
-      deref.args.length != 2) {
-    return BodyKernelResult.success;
-  }
-
-  final e = deref.args[0];
-  final c = _deref(rt, deref.args[1]);
-
-  if (e is VarRef && rt.heap.isWriter(e.addr)) {
-    if (!rt.heap.isFullyBound(e.addr)) {
-      final List<GoalRef> activations;
-      if (c is Term) {
-        activations = rt.heap.bindVariable(e.addr, c);
-      } else {
-        activations = rt.heap.bindVariableConst(e.addr, c);
-      }
-
-      for (final act in activations) {
-        rt.gq.enqueue(act);
-      }
-    }
   }
 
   return BodyKernelResult.success;

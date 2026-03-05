@@ -4703,45 +4703,6 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
-      case 'equator':
-        // Succeeds if X is bound to '_equator'(E, C) where C is a constant
-        // Enables many-to-one signaling via equators
-        if (args.isEmpty) return GuardResult.failure;
-        final eqVal = getValue(args[0]);
-        // Check for _equator(E, C) structure with constant C
-        if (eqVal is StructTerm &&
-            eqVal.functor == '_equator' &&
-            eqVal.args.length == 2) {
-          // Check that second arg is a constant (after dereferencing)
-          final cArg = eqVal.args[1];
-          Object? cVal;
-          if (cArg is VarRef) {
-            // Dereference the variable - use abstraction methods for imported reader support
-            final addr = cArg.addr;
-            if (cx.rt.heap.isReader(addr)) {
-              final writerAddr = cx.rt.heap.tryWriterForReader(addr);
-              if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
-                cVal = cx.sigmaHat[writerAddr];
-              } else if (cx.rt.heap.isReaderBound(addr)) {
-                cVal = cx.rt.heap.getReaderValue(addr);
-              }
-            } else {
-              if (cx.sigmaHat.containsKey(addr)) {
-                cVal = cx.sigmaHat[addr];
-              } else if (cx.rt.heap.isFullyBound(addr)) {
-                cVal = cx.rt.heap.getValue(addr);
-              }
-            }
-          } else {
-            cVal = cArg;
-          }
-          // Check if it's a constant (ConstTerm or primitive)
-          if (cVal is ConstTerm || cVal is num || cVal is String) {
-            return GuardResult.success;
-          }
-        }
-        return GuardResult.failure;
-
       case 'unknown':
         // Test if dereferencing leads to an unbound variable
         // Per spec: "Succeeds if X is bound to an unbound variable"

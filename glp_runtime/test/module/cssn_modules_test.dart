@@ -58,7 +58,7 @@ void main() {
     final stdlibDir = '../programs/stdlib';
     final stdlibFiles = [
       'assign.glp', 'univ.glp', 'unify.glp',
-      'mwm.glp', 'equator.glp', 'time.glp',
+      'mwm.glp', 'time.glp',
     ];
     final ops = <dynamic>[];
     for (final f in stdlibFiles) {

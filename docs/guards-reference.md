@@ -747,32 +747,6 @@ test_known_fail :-
 
 ---
 
-## Equator Guard
-
-### `equator(X?)`
-**Test if X is an equator structure**
-
-**Semantics**:
-- Success: X is bound to `'_equator'(E, C)` where C is a constant
-- Suspend: X is unbound reader
-- Fail: X is any other value
-
-**SRSW Relaxation**: Like `ground(X?)`, the `equator(X?)` guard permits multiple occurrences of both `X` and `X?` in the clause. See "Ground Guards - SRSW Relaxation" above.
-
-**Example**:
-```prolog
-% Meta-interpreter with emergency brake
-run(M, (A,B), Commands, Eq) :-
-    equator(Eq?) |
-    distribute(Commands?, Commands1, Commands2),
-    run(M?, A?, Commands1?, Eq?),  % Eq? appears twice - OK with equator guard
-    run(M?, B?, Commands2?, Eq?).
-```
-
-**See also**: `docs/equators-spec.md` for full specification.
-
----
-
 ### ✅ `is_mutual_ref(X?)`
 **Test if X is a mutual reference term**
 

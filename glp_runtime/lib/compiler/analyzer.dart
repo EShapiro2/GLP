@@ -684,15 +684,6 @@ class Analyzer {
       }
     }
 
-    // equator/1 guard marks argument as ground (equator structure can be read multiple times)
-    // Equators enable many-to-one signaling where multiple recipients receive the same structure
-    if (guard.predicate == 'equator' && guard.args.length == 1) {
-      final arg = guard.args[0];
-      if (arg is VarTerm) {
-        varTable.markGrounded(arg.name);
-      }
-    }
-
     // unknown/1 guard marks argument as ground for SRSW purposes
     // Unbound variables are safe to read multiple times (always return same reference)
     if (guard.predicate == 'unknown' && guard.args.length == 1) {

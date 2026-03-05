@@ -148,7 +148,6 @@ class GlpEngine {
       'univ.glp',
       'unify.glp',
       'mwm.glp',
-      'equator.glp',
       'time.glp'
     ];
 

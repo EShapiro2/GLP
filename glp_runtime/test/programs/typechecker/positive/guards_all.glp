@@ -22,9 +22,6 @@ test_compound(X, X?) :- compound(X?) | true.
 procedure test_list(_?, _).
 test_list(X, X?) :- list(X?) | true.
 
-procedure test_equator(_?, _).
-test_equator(X, X?) :- equator(X?) | true.
-
 % --- Groundness guards ---
 
 procedure test_ground(_?, _).
