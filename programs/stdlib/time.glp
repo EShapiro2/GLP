@@ -1,7 +1,0 @@
-%% time.glp - Time system predicates
--mode(system).
-
-procedure now(Integer).
-
-%% now(T?) - Bind T to current Unix milliseconds since epoch
-now(T?) :- '_now'(T).

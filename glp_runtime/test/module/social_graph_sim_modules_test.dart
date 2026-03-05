@@ -52,24 +52,9 @@ void main() {
   late GlpCompiler compiler;
   late BytecodeProgram stdlibBytecode;
 
-  /// Compile stdlib and return combined bytecode.
+  /// Compile root self.glp and return stdlib bytecode.
   BytecodeProgram compileStdlib(GlpCompiler compiler) {
-    final stdlibDir = '../programs/stdlib';
-    final stdlibFiles = [
-      'assign.glp', 'univ.glp', 'unify.glp',
-      'mwm.glp', 'time.glp',
-    ];
-    final ops = <dynamic>[];
-    for (final f in stdlibFiles) {
-      final path = '$stdlibDir/$f';
-      if (File(path).existsSync()) {
-        try {
-          final prog = compiler.compile(File(path).readAsStringSync());
-          ops.addAll(prog.ops);
-        } catch (_) {}
-      }
-    }
-    return BytecodeProgram(ops);
+    return compiler.compile(File('../programs/self.glp').readAsStringSync());
   }
 
   setUpAll(() {

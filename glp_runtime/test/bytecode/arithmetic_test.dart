@@ -14,7 +14,7 @@ void main() {
   setUpAll(() {
     // Compile assign.glp - now SRSW compliant
     // Use relative path from glp_runtime directory
-    final stdlibSource = File('../programs/stdlib/assign.glp').readAsStringSync();
+    final stdlibSource = File('../programs/self.glp').readAsStringSync();
     final stdlibCompiler = GlpCompiler();
     stdlibProg = stdlibCompiler.compile(stdlibSource);
     print('Stdlib compiled: ${stdlibProg.ops.length} instructions');
@@ -218,7 +218,7 @@ void main() {
     test('assign.glp compiles and merges correctly', () {
       // Load stdlib (assign.glp) - now SRSW compliant
       // Use relative path from glp_runtime directory
-      final stdlibSource = File('../programs/stdlib/assign.glp').readAsStringSync();
+      final stdlibSource = File('../programs/self.glp').readAsStringSync();
       final stdlibCompiler = GlpCompiler();
       final stdlibProg = stdlibCompiler.compile(stdlibSource);
 
@@ -262,7 +262,7 @@ void main() {
 
       // Load stdlib (assign.glp) - now SRSW compliant
       // Use relative path from glp_runtime directory
-      final stdlibSource = File('../programs/stdlib/assign.glp').readAsStringSync();
+      final stdlibSource = File('../programs/self.glp').readAsStringSync();
       final stdlibCompiler = GlpCompiler();
       final stdlibProg = stdlibCompiler.compile(stdlibSource);
 

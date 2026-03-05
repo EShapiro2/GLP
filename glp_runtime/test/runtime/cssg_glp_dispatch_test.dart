@@ -51,30 +51,10 @@ void main() {
 
     setUpAll(() {
       compiler = GlpCompiler();
-      final stdlibDir = '../programs/stdlib';
 
-      // Compile stdlib files and build combined stdlib bytecode.
-      // Modules need stdlib procedures (e.g., :=/2 from assign.glp) at runtime.
-      final stdlibFiles = [
-        'assign.glp',
-        'univ.glp',
-        'unify.glp',
-        'mwm.glp',
-        'time.glp',
-      ];
-      final stdlibOps = <dynamic>[];
-      for (final f in stdlibFiles) {
-        final path = '$stdlibDir/$f';
-        if (File(path).existsSync()) {
-          try {
-            final prog = compiler.compile(File(path).readAsStringSync());
-            stdlibOps.addAll(prog.ops);
-          } catch (_) {
-            // Skip failed stdlib files
-          }
-        }
-      }
-      final stdlibBytecode = BytecodeProgram(stdlibOps);
+      // Compile self.glp (root stdlib) for runtime procedures
+      final stdlibBytecode = compiler.compile(
+          File('../programs/self.glp').readAsStringSync());
 
       // Read source files
       final agentSource = File('$cssgRoot/agent.glp').readAsStringSync();

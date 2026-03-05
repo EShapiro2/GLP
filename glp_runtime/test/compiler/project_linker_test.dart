@@ -253,22 +253,10 @@ void main() {
         procDeclarations: result.procDeclarations,
       );
 
-      // Compile stdlib and merge
-      final stdlibDir = '../programs/stdlib';
-      final stdlibFiles = [
-        'assign.glp', 'univ.glp', 'unify.glp',
-        'mwm.glp', 'time.glp',
-      ];
-      var program = bytecode;
-      for (final f in stdlibFiles) {
-        final path = '$stdlibDir/$f';
-        if (File(path).existsSync()) {
-          try {
-            final prog = compiler.compile(File(path).readAsStringSync());
-            program = program.merge(prog);
-          } catch (_) {}
-        }
-      }
+      // Compile self.glp (root stdlib) and merge
+      final stdlibProg = compiler.compile(
+          File('../programs/self.glp').readAsStringSync());
+      var program = bytecode.merge(stdlibProg);
 
       // Set up runtime
       final rt = GlpRuntime();
