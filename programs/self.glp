@@ -1,0 +1,91 @@
+% programs/self.glp — Root type and procedure declarations
+% This is the outermost ancestor in the scope chain, visible to every project.
+-mode(system).
+
+% =============================================================================
+% TYPE DEFINITIONS
+% =============================================================================
+
+% Collections
+Stream ::= [] ; [_|Stream].
+OpenStream ::= [_|Stream].
+DiffList ::= Stream \ Stream?.
+
+% Communication
+Channel ::= ch(Stream, Stream?).
+
+% Primitive types
+Constant ::= Number ; String.
+
+% Arithmetic expressions
+Exp ::= Number ; +(Exp, Exp) ; -(Exp, Exp) ; *(Exp, Exp) ; /(Exp, Exp) ; //(Exp, Exp) ; mod(Exp, Exp) ; neg(Exp).
+
+% =============================================================================
+% BUILTIN PROCEDURE DECLARATIONS (no clauses - implemented by runtime)
+% =============================================================================
+
+% Type guards
+procedure integer(Integer?).
+procedure number(Number?).
+procedure string(String?).
+procedure constant(Constant?).
+procedure compound(_?).
+procedure list(_?).
+% Groundness guards
+procedure ground(_?).
+procedure known(_?).
+procedure unknown(_?).
+procedure no_readers(_?).
+
+% Time guards
+procedure wait(Number?).
+procedure wait_until(Number?).
+
+% Arithmetic comparison guards
+procedure <(Exp?, Exp?).
+procedure >(Exp?, Exp?).
+procedure =<(Exp?, Exp?).
+procedure >=(Exp?, Exp?).
+procedure =:=(Exp?, Exp?).
+procedure =\=(Exp?, Exp?).
+
+% Equality guard
+procedure =?=(_?, _?).
+
+% Univ operations (term ↔ list conversion)
+procedure =..(_, Stream?).      % Compose: Stream? → Compound
+procedure ..=(Stream, _?).      % Decompose: Compound? → Stream
+
+% MWM (Mutual Write Merge) runtime primitives
+procedure _allocate_mutual_reference(_, _).
+procedure is_mutual_ref(_?).
+procedure _stream_append(_?, _?, _).
+procedure _close_mutual_reference(_?).
+
+% madGLP network primitives
+procedure _send(_?, _?, _?).
+
+% =============================================================================
+% SINGLE-UNIT-CLAUSE PROCEDURES (DEFINED GUARDS)
+% =============================================================================
+
+% Assignment (unification)
+procedure =(_?, _).
+X = X?.
+
+% Difference list operations
+procedure dl_append(DiffList?, DiffList?, DiffList).
+dl_append(A\B?, B\C?, A?\C).
+
+procedure dl_to_list(DiffList?, Stream).
+dl_to_list(L\[], L?).
+
+% Channel operations
+procedure new_channel(Channel, Channel).
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+procedure send(_?, Channel?, Channel).
+send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+
+procedure receive(_, Channel?, Channel).
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
