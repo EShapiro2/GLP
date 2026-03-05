@@ -1,6 +1,6 @@
 # GLP Maps — User Guide
 
-Maps provide O(1) key-value storage for GLP programs. They are backed by Dart's `HashMap` and exposed through four built-in operations.
+Maps provide O(1) key-value storage for GLP programs. They are backed by Dart's `HashMap` and exposed through six built-in operations.
 
 ## Quick Start
 
@@ -20,14 +20,16 @@ demo(Result?) :-
 
 ## Operations
 
-| Operation | What it does |
-|-----------|-------------|
-| `map_new(M)` | Create an empty map, bind it to `M` |
-| `map_put(M?, Key?, Val?, M1)` | Insert `Key → Val` into map `M`, bind result to `M1` |
-| `map_get(M?, Key?, Val)` | Look up `Key` in map `M`, bind result to `Val` |
-| `map_contains(M?, Key?)` | Guard: succeeds if `Key` exists in `M`, fails otherwise |
+| Operation | What it does | Complexity |
+|-----------|-------------|------------|
+| `map_new(M)` | Create an empty map, bind it to `M` | O(1) |
+| `map_put(M?, Key?, Val?, M1)` | Insert `Key → Val` into map `M`, bind result to `M1` | O(1) |
+| `map_get(M?, Key?, Val)` | Look up `Key` in map `M`, bind result to `Val` | O(1) |
+| `map_contains(M?, Key?)` | Guard: succeeds if `Key` exists in `M`, fails otherwise | O(1) |
+| `map_remove(M?, Key?, M1)` | Remove `Key` from map `M`, bind result to `M1` | O(1) |
+| `map_keys(M?, Keys)` | Extract all keys from map `M` as a list, bind to `Keys` | O(n) |
 
-All operations are O(1).
+All operations except `map_keys` are O(1). `map_keys` is O(n) where n is the number of entries — it must iterate all keys and build a GLP list.
 
 ## How Map Threading Works
 
@@ -93,6 +95,114 @@ overwrite_demo(Result?) :-
 % Output: X = blue
 ```
 
+## Removing a Key
+
+Use `map_remove/3` to remove a key from a map. Like `map_put`, it follows SRSW threading — you pass the old map in and get the modified map out:
+
+```glp
+procedure remove_demo(_).
+remove_demo(Result?) :-
+    map_new(M0),
+    map_put(M0?, alice, 1, M1),
+    map_put(M1?, bob, 2, M2),
+    map_remove(M2?, bob, M3),
+    check_removed(M3?, Result).
+
+procedure check_removed(_?, _).
+check_removed(M, found) :- map_contains(M?, bob) | true.
+check_removed(_, gone) :- otherwise | true.
+
+% Query: remove_demo(X).
+% Output: X = gone
+```
+
+If the key does not exist, `map_remove` is a no-op — it does not crash:
+
+```glp
+procedure safe_remove(_).
+safe_remove(Result?) :-
+    map_new(M0),
+    map_remove(M0?, missing_key, M1),
+    map_get(M1?, missing_key, Result).
+safe_remove(not_found?) :-
+    otherwise | true.
+
+% Query: safe_remove(X).
+% Output: X = not_found
+```
+
+You can remove a key and re-add it with a different value:
+
+```glp
+procedure replace_demo(_).
+replace_demo(Result?) :-
+    map_new(M0),
+    map_put(M0?, color, red, M1),
+    map_remove(M1?, color, M2),
+    map_put(M2?, color, blue, M3),
+    map_get(M3?, color, Result).
+
+% Query: replace_demo(X).
+% Output: X = blue
+```
+
+## Extracting Keys
+
+Use `map_keys/2` to extract all keys from a map as a GLP list:
+
+```glp
+procedure keys_demo(_).
+keys_demo(Len?) :-
+    map_new(M0),
+    map_put(M0?, x, 1, M1),
+    map_put(M1?, y, 2, M2),
+    map_put(M2?, z, 3, M3),
+    map_keys(M3?, Keys),
+    list_len(Keys?, 0, Len).
+
+procedure list_len(_?, _?, _).
+list_len([_|Rest], Acc, Len?) :-
+    Acc1 := Acc? + 1,
+    list_len(Rest?, Acc1?, Len).
+list_len([], Acc, Acc?).
+
+% Query: keys_demo(X).
+% Output: X = 3
+```
+
+An empty map returns an empty list:
+
+```glp
+procedure empty_keys(_).
+empty_keys(Keys?) :-
+    map_new(M0),
+    map_keys(M0?, Keys).
+
+% Query: empty_keys(X).
+% Output: X = []
+```
+
+**Note:** HashMap iteration order is not guaranteed. To check if a specific key is present in the keys list, use a member predicate with `=?=` and `otherwise`:
+
+```glp
+procedure list_member(_?, _?, _).
+list_member(Key, [H|_], yes) :-
+    Key? =?= H? | true.
+list_member(Key, [_|Rest], Result?) :-
+    otherwise |
+    list_member(Key?, Rest?, Result).
+list_member(_, [], no).
+```
+
+**Important:** When `map_keys` is called on a map produced by concurrent body calls, use a `ground` guard to ensure the map is ready before extracting keys:
+
+```glp
+procedure safe_keys(_?, _).
+safe_keys(M, Keys?) :-
+    ground(M?) |
+    map_keys(M?, Keys).
+```
+
 ## Storing Complex Values
 
 Map values can be any GLP term — atoms, numbers, structures, or lists:
@@ -138,7 +248,7 @@ head_demo(H?) :-
 % Output: X = 100
 ```
 
-## Map Keys
+## Key Constraints
 
 Keys must be ground constants: atoms (like `alice`, `color`) or numbers (like `42`, `3.14`). Structures and lists cannot be used as keys.
 

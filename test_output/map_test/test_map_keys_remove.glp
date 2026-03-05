@@ -1,0 +1,60 @@
+% Test 19: map_keys + map_remove combined
+%
+% Verifies that map_keys reflects removals correctly:
+%   - Build map, remove a key, get keys → removed key not in list
+%   - Verify list length matches expected count
+
+% Helper: compute list length
+procedure kr_len(_?, _?, _).
+kr_len([_|Rest], Acc, Len?) :-
+    Acc1 := Acc? + 1,
+    kr_len(Rest?, Acc1?, Len).
+kr_len([], Acc, Acc?).
+
+% Helper: check if a key is in a list
+procedure kr_member(_?, _?, _).
+kr_member(Key, [H|_], yes) :-
+    Key? =?= H? | true.
+kr_member(Key, [_|Rest], Result?) :-
+    otherwise |
+    kr_member(Key?, Rest?, Result).
+kr_member(_, [], no).
+
+% Helper: safely extract keys (waits for map to be ground)
+procedure safe_keys(_?, _).
+safe_keys(M, Keys?) :-
+    ground(M?) |
+    map_keys(M?, Keys).
+
+% Test: build {a→1, b→2, c→3}, remove b, keys should have length 2
+%       and should NOT contain b
+procedure test_kr_len(_).
+test_kr_len(Len?) :-
+    map_new(M0),
+    map_put(M0?, a, 1, M1),
+    map_put(M1?, b, 2, M2),
+    map_put(M2?, c, 3, M3),
+    map_remove(M3?, b, M4),
+    safe_keys(M4?, Keys),
+    kr_len(Keys?, 0, Len).
+
+procedure test_kr_no_b(_).
+test_kr_no_b(HasB?) :-
+    map_new(M0),
+    map_put(M0?, a, 1, M1),
+    map_put(M1?, b, 2, M2),
+    map_put(M2?, c, 3, M3),
+    map_remove(M3?, b, M4),
+    safe_keys(M4?, Keys),
+    kr_member(b, Keys?, HasB).
+
+% Test: remove all keys, verify empty list
+procedure test_kr_all_removed(_).
+test_kr_all_removed(Len?) :-
+    map_new(M0),
+    map_put(M0?, x, 1, M1),
+    map_put(M1?, y, 2, M2),
+    map_remove(M2?, x, M3),
+    map_remove(M3?, y, M4),
+    safe_keys(M4?, Keys),
+    kr_len(Keys?, 0, Len).
