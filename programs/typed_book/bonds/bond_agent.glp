@@ -419,18 +419,19 @@ select_any_bonds(K, [], [], [], 0) :- K? > 0 | true.
 %% SELECT_BONDS_MIN_MATURITY — Select up to K bonds with maturity >= MinMaturity
 %% =============================================================================
 %%
-%% Time-aware: if MinMaturity has passed (wait_until succeeds), any bond qualifies.
+%% Time-aware: if MinMaturity has passed, any bond qualifies.
 %% Otherwise, require M >= MinMaturity strictly.
+%% Now parameter provides current time for arithmetic comparison.
 
-procedure select_bonds_min_maturity(Constant?, Constant?, BondList?, BondList, BondList, Constant).
+procedure select_bonds_min_maturity(Constant?, Constant?, Constant?, BondList?, BondList, BondList, Constant).
 
 %% When MinMaturity has passed (bonds are mature), any bond qualifies
-select_bonds_min_maturity(MinMat, K, Hs, Sel?, Rem?, Got?) :-
-    wait_until(MinMat?) |
+select_bonds_min_maturity(Now, MinMat, K, Hs, Sel?, Rem?, Got?) :-
+    MinMat? =< Now? |
     select_any_bonds(K?, Hs?, Sel, Rem, Got).
 
 %% When MinMaturity has NOT passed, require M >= MinMaturity
-select_bonds_min_maturity(MinMat, K, Hs, Sel?, Rem?, Got?) :-
+select_bonds_min_maturity(Now, MinMat, K, Hs, Sel?, Rem?, Got?) :-
     otherwise |
     select_bonds_min_maturity_strict(MinMat?, K?, Hs?, Sel, Rem, Got).
 
@@ -792,7 +793,8 @@ agent(Id, [redeem_complete(From, K, ReceivedBonds)|UserIn], NetIn, Outs, Holding
 agent(Id, UserIn, [msg(From, Id1, redeem_request(K, MaxMaturity, ReturnedBonds, RedeemResp?))|NetIn],
       Outs, Holdings, NextSerial) :-
     Id? =?= Id1?, ground(From?), ground(K?), ground(MaxMaturity?), ground(ReturnedBonds?) |
-    select_bonds_min_maturity(MaxMaturity?, K?, Holdings?, Selected, Remaining, Got),
+    now(Now),
+    select_bonds_min_maturity(Now?, MaxMaturity?, K?, Holdings?, Selected, Remaining, Got),
     Shortfall := K? - Got?,
     handle_redeem_fill(Shortfall?, K?, MaxMaturity?, Id?, From?, ReturnedBonds?,
         RedeemResp, Selected?, Remaining?, NextSerial?, UserIn?, NetIn?, Outs?).
