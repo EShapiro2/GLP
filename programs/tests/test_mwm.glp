@@ -1,6 +1,6 @@
 % Test MutualRef - simple test that works
 % (Direct mwm calls work; wrapper predicates with structures in lists fail due to separate bug)
--stdlib.
+-mode(system).
 
 test_build(Out?) :-
     '_allocate_mutual_reference'(Ref, Out),

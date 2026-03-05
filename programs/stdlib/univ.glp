@@ -7,7 +7,7 @@
 %
 % Decomposition: tuple → list
 %   foo(a, b) =.. L  →  L = [foo, a, b]
--stdlib.
+-mode(system).
 
 % Composition: list → tuple
 X? =.. [Y|Ys] :- list(Ys?) | '_list_to_tuple'([Y?|Ys?], X).

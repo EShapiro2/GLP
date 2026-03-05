@@ -8,7 +8,6 @@
 % This is the GLP equivalent of FCP's in_server (domain_server.cp).
 
 -mode(system).
--stdlib.
 
 procedure serve(Any?, Any?).
 

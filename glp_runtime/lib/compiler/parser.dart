@@ -58,7 +58,6 @@ class Parser {
   /// Parse tokens into a Module AST (includes declarations)
   Module parseModule() {
     ModuleDeclaration? moduleDecl;
-    bool isStdlib = false;
     CompileMode compileMode = CompileMode.user;  // default: user mode
 
     // Parse declarations at the start of the file
@@ -85,9 +84,9 @@ class Parser {
           break;
 
         case 'stdlib':
-          // -stdlib. declaration - marks this file as stdlib (no reduce generation)
+          // -stdlib. is deprecated — treated as -mode(system).
           _consume(TokenType.DOT, 'Expected "." after stdlib declaration');
-          isStdlib = true;
+          compileMode = CompileMode.system;
           break;
 
         case 'mode':
@@ -320,7 +319,6 @@ class Parser {
       typeDefs: typeDefs,
       procDeclarations: procDeclarations,
       procedures: procedures,
-      isStdlib: isStdlib,
       compileMode: compileMode,
       line: 1,
       column: 1,

@@ -1,5 +1,5 @@
 %% time.glp - Time system predicates
--stdlib.
+-mode(system).
 
 procedure now(Integer).
 

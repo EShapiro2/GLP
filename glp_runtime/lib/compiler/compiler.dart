@@ -56,10 +56,6 @@ class GlpCompiler {
   CompilationResult compileWithMetadata(String source, [CompileOptions? options]) {
     final opts = options ?? const CompileOptions();
     try {
-      // Phase 0a: Detect stdlib status from original source BEFORE stripping
-      // (stripping removes -stdlib. directive, so we must detect it first)
-      final isStdlib = source.contains(RegExp(r'^\s*-stdlib\s*\.', multiLine: true));
-
       // Phase 1: Lexical analysis
       // Note: Main lexer now handles type declarations (::= and procedure)
       final lexer = _createLexer(source);
@@ -112,10 +108,8 @@ class GlpCompiler {
         }
       }
 
-      // Generate reduce/2 for all files except stdlib
-      // (use isStdlib detected from original source, not module.isStdlib which is
-      // unreliable after stripping directives)
-      final generateReduce = !isStdlib;
+      // Generate reduce/2 for all files except system-mode code (stdlib)
+      final generateReduce = module.compileMode != CompileMode.system;
 
       // Phase 2.6: Generate _select/1 dispatch table for modules with exports
       final selectProc = _generateSelectProcedure(module.procDeclarations);

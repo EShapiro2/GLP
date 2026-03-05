@@ -252,7 +252,6 @@ class Module extends AstNode {
   final List<TypeDef> typeDefs;              // Type definitions: Name ::= alt ; alt.
   final List<ProcDecl> procDeclarations;     // Procedure declarations (each with exported flag)
   final List<Procedure> procedures;
-  final bool isStdlib;  // true if -stdlib. declaration present
   final CompileMode compileMode;  // user (default) or system
 
   Module({
@@ -260,7 +259,6 @@ class Module extends AstNode {
     this.typeDefs = const [],
     this.procDeclarations = const [],
     this.procedures = const [],
-    this.isStdlib = false,
     this.compileMode = CompileMode.user,
     required int line,
     required int column,

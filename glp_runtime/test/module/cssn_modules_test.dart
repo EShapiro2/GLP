@@ -28,7 +28,6 @@ import 'package:glp_runtime/bytecode/runner.dart';
 /// Source for the serve/2 system predicate (needed for dynamic dispatch).
 const serveSource = '''
 -mode(system).
--stdlib.
 
 procedure serve(Any?, Any?).
 

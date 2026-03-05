@@ -2,7 +2,7 @@
 % This is a system predicate with special access to body kernel predicates
 % File: stdlib/assign.glp
 % Loaded at runtime with grantBodyKernelAccess: true
--stdlib.
+-mode(system).
 
 % Type: Exp is defined in prelude (Number ; +(Exp,Exp) ; -(Exp,Exp) ; ...)
 % Procedure declaration for arithmetic assignment
