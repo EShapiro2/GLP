@@ -76,10 +76,6 @@ procedure is_mutual_ref(_?).
 procedure _stream_append(_?, _?, _).
 procedure _close_mutual_reference(_?).
 
-% Output/debugging primitives
-procedure write(_?).
-procedure writeln(_?).
-
 % madGLP network primitives
 procedure _send(_?, _?, _?).
 
@@ -221,9 +217,6 @@ const Set<String> builtinProcedures = {
   'is_mutual_ref/1',
   '_stream_append/3',
   '_close_mutual_reference/1',
-  // Output/debugging primitives
-  'write/1',
-  'writeln/1',
   // madGLP network primitives
   '_send/3',
 };
