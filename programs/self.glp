@@ -65,7 +65,7 @@ procedure _close_mutual_reference(_?).
 % madGLP network primitives
 procedure _send(_?, _?, _?).
 
-% Stdlib procedure declarations
+% Output (system predicate)
 procedure _output(_?).
 
 % =============================================================================
@@ -92,3 +92,321 @@ send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 
 procedure receive(_, Channel?, Channel).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
+
+% =============================================================================
+% ARITHMETIC ASSIGNMENT (:=/2)
+% =============================================================================
+
+procedure :=(Number, Exp?).
+
+% Base case: plain number
+Result? := N :- number(N?) | Result = N?.
+
+% Addition
+Result? := X + Y :-
+  number(X?), number(Y?) |
+  '_add'(X?, Y?, Result).
+Result? := X + Y :-
+  otherwise |
+  X1 := X?,
+  Y1 := Y?,
+  Result := X1? + Y1?.
+
+% Subtraction
+Result? := X - Y :-
+  number(X?), number(Y?) |
+  '_sub'(X?, Y?, Result).
+Result? := X - Y :-
+  otherwise |
+  X1 := X?,
+  Y1 := Y?,
+  Result := X1? - Y1?.
+
+% Multiplication
+Result? := X * Y :-
+  number(X?), number(Y?) |
+  '_mul'(X?, Y?, Result).
+Result? := X * Y :-
+  otherwise |
+  X1 := X?,
+  Y1 := Y?,
+  Result := X1? * Y1?.
+
+% Division (always returns float)
+Result? := X / Y :-
+  number(X?), number(Y?), Y? =\= 0 |
+  '_div'(X?, Y?, Result).
+_ := X / Y :-
+  number(X?), number(Y?), Y? =:= 0 |
+  abort("Division by zero").
+Result? := X / Y :-
+  otherwise |
+  X1 := X?,
+  Y1 := Y?,
+  Result := X1? / Y1?.
+
+% Integer division
+Result? := X // Y :-
+  integer(X?), integer(Y?), Y? =\= 0 |
+  '_idiv'(X?, Y?, Result).
+_ := X // Y :-
+  integer(X?), integer(Y?), Y? =:= 0 |
+  abort("Integer division by zero").
+Result? := X // Y :-
+  otherwise |
+  X1 := X?,
+  Y1 := Y?,
+  Result := X1? // Y1?.
+
+% Modulo
+Result? := X mod Y :-
+  integer(X?), integer(Y?), Y? =\= 0 |
+  '_mod'(X?, Y?, Result).
+_ := X mod Y :-
+  integer(X?), integer(Y?), Y? =:= 0 |
+  abort("Modulo by zero").
+Result? := X mod Y :-
+  otherwise |
+  X1 := X?,
+  Y1 := Y?,
+  Result := X1? mod Y1?.
+
+% Unary negation
+Result? := -X :-
+  number(X?) |
+  '_neg'(X?, Result).
+Result? := -X :-
+  otherwise |
+  X1 := X?,
+  Result := -X1?.
+
+% Absolute value
+Result? := abs(X) :-
+  number(X?) |
+  '_abs'(X?, Result).
+Result? := abs(X) :-
+  otherwise |
+  X1 := X?,
+  Result := abs(X1?).
+
+% Square root
+Result? := sqrt(X) :-
+  number(X?), X? >= 0 |
+  '_sqrt'(X?, Result).
+_ := sqrt(X) :-
+  number(X?), X? < 0 |
+  abort("Square root of negative number").
+Result? := sqrt(X) :-
+  otherwise |
+  X1 := X?,
+  Result := sqrt(X1?).
+
+% Sine
+Result? := sin(X) :-
+  number(X?) |
+  '_sin'(X?, Result).
+Result? := sin(X) :-
+  otherwise |
+  X1 := X?,
+  Result := sin(X1?).
+
+% Cosine
+Result? := cos(X) :-
+  number(X?) |
+  '_cos'(X?, Result).
+Result? := cos(X) :-
+  otherwise |
+  X1 := X?,
+  Result := cos(X1?).
+
+% Tangent
+Result? := tan(X) :-
+  number(X?) |
+  '_tan'(X?, Result).
+Result? := tan(X) :-
+  otherwise |
+  X1 := X?,
+  Result := tan(X1?).
+
+% Exponential
+Result? := exp(X) :-
+  number(X?) |
+  '_exp'(X?, Result).
+Result? := exp(X) :-
+  otherwise |
+  X1 := X?,
+  Result := exp(X1?).
+
+% Natural logarithm
+Result? := ln(X) :-
+  number(X?), X? > 0 |
+  '_ln'(X?, Result).
+_ := ln(X) :-
+  number(X?), X? =< 0 |
+  abort("Natural logarithm of non-positive number").
+Result? := ln(X) :-
+  otherwise |
+  X1 := X?,
+  Result := ln(X1?).
+
+% Base-10 logarithm
+Result? := log(X) :-
+  number(X?), X? > 0 |
+  '_log10'(X?, Result).
+_ := log(X) :-
+  number(X?), X? =< 0 |
+  abort("Logarithm of non-positive number").
+Result? := log(X) :-
+  otherwise |
+  X1 := X?,
+  Result := log(X1?).
+
+% Power
+Result? := pow(X, Y) :-
+  number(X?), number(Y?) |
+  '_pow'(X?, Y?, Result).
+Result? := pow(X, Y) :-
+  otherwise |
+  X1 := X?,
+  Y1 := Y?,
+  Result := pow(X1?, Y1?).
+
+% Arc sine
+Result? := asin(X) :-
+  number(X?), X? >= -1, X? =< 1 |
+  '_asin'(X?, Result).
+_ := asin(X) :-
+  number(X?), (X? < -1 ; X? > 1) |
+  abort("Arc sine domain error: argument must be in [-1, 1]").
+Result? := asin(X) :-
+  otherwise |
+  X1 := X?,
+  Result := asin(X1?).
+
+% Arc cosine
+Result? := acos(X) :-
+  number(X?), X? >= -1, X? =< 1 |
+  '_acos'(X?, Result).
+_ := acos(X) :-
+  number(X?), (X? < -1 ; X? > 1) |
+  abort("Arc cosine domain error: argument must be in [-1, 1]").
+Result? := acos(X) :-
+  otherwise |
+  X1 := X?,
+  Result := acos(X1?).
+
+% Arc tangent
+Result? := atan(X) :-
+  number(X?) |
+  '_atan'(X?, Result).
+Result? := atan(X) :-
+  otherwise |
+  X1 := X?,
+  Result := atan(X1?).
+
+% Convert to integer
+Result? := integer(X) :-
+  number(X?) |
+  '_integer'(X?, Result).
+Result? := integer(X) :-
+  otherwise |
+  X1 := X?,
+  Result := integer(X1?).
+
+% Convert to real
+Result? := real(X) :-
+  number(X?) |
+  '_real'(X?, Result).
+Result? := real(X) :-
+  otherwise |
+  X1 := X?,
+  Result := real(X1?).
+
+% Round
+Result? := round(X) :-
+  number(X?) |
+  '_round'(X?, Result).
+Result? := round(X) :-
+  otherwise |
+  X1 := X?,
+  Result := round(X1?).
+
+% Floor
+Result? := floor(X) :-
+  number(X?) |
+  '_floor'(X?, Result).
+Result? := floor(X) :-
+  otherwise |
+  X1 := X?,
+  Result := floor(X1?).
+
+% Ceiling
+Result? := ceil(X) :-
+  number(X?) |
+  '_ceil'(X?, Result).
+Result? := ceil(X) :-
+  otherwise |
+  X1 := X?,
+  Result := ceil(X1?).
+
+% =============================================================================
+% TIME (now/1)
+% =============================================================================
+
+procedure now(Integer).
+now(T?) :- '_now'(T).
+
+% =============================================================================
+% UNIV (=../2, ..=/2)
+% =============================================================================
+
+% Composition: list → tuple
+X? =.. [Y|Ys] :- list(Ys?) | '_list_to_tuple'([Y?|Ys?], X).
+
+% Decomposition: compound → list
+X =.. Y? :- compound(X?) | '_tuple_to_list'(X?, Y).
+
+% =============================================================================
+% MULTIWAY MERGE (mwm/2)
+% =============================================================================
+% MWM types and procedure declarations are omitted from the scope chain
+% because the type system's DFA builder cannot handle compound type
+% constructors like stream(Stream) in MwmInput. The clauses below are
+% compiled for runtime use only — they are not type-checked.
+
+mwm(In, Out?) :-
+    '_allocate_mutual_reference'(Ref, Out),
+    mwm_main(In?, Ref?).
+
+mwm_main(In, Ref) :-
+    is_mutual_ref(Ref?) |
+    mwm1(In?, Ref?, done, Done),
+    close_when_done(Done?, Ref?).
+
+mwm1([stream(Xs)|Streams], Ref, L, R?) :-
+    is_mutual_ref(Ref?) |
+    mwm_copy(Xs?, Ref?, L?, M),
+    mwm1(Streams?, Ref?, M?, R).
+mwm1([merge(NewIn)|Streams], Ref, L, R?) :-
+    is_mutual_ref(Ref?) |
+    mwm1(NewIn?, Ref?, L?, M),
+    mwm1(Streams?, Ref?, M?, R).
+mwm1([], _, L, L?).
+
+mwm_copy([X|Xs], Ref, L, R?) :-
+    is_mutual_ref(Ref?) |
+    stream_append(X?, Ref?, Ref1),
+    mwm_copy(Xs?, Ref1?, L?, R).
+mwm_copy([], _, L, L?).
+
+close_when_done(done, Ref) :-
+    is_mutual_ref(Ref?) |
+    close_mutual_reference(Ref?).
+
+stream_append(Value, RefIn, RefOut?) :-
+    is_mutual_ref(RefIn?) |
+    '_stream_append'(RefIn?, Value?, RefOut).
+
+close_mutual_reference(Ref) :-
+    is_mutual_ref(Ref?) |
+    '_close_mutual_reference'(Ref?).
