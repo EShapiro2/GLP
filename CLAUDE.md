@@ -19,6 +19,10 @@ This applies to:
 - Documentation
 - Any file or directory mentioned in instructions
 
+## 🔴 CRITICAL - LANGUAGE DESIGN AUTHORITY
+
+The GLP language definition — guards, system predicates, body kernels, directives, type system features, primitive types — **cannot be revised, extended, or added to without explicit discussion with Udi and his express approval.** This includes adding new guards, new system predicates, new body kernels, new directives, or extending the type system. Propose first, wait for approval, then implement. See DISCIPLINE.md section 1.14.
+
 ## 🔴 CRITICAL - AFTER CONTEXT COMPACTION
 
 When emerging from compaction (you see a session summary replacing the original conversation), do NOT silently continue working.  Stop immediately, tell the user you have emerged from compaction, summarise where things stand, and ask how to proceed.  Never assume the summary is complete or that prior agreements still hold.
