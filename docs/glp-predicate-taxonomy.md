@@ -116,26 +116,23 @@ X? < Temp?                 % Guard predicate: compares X with Temp
 - ROQ lookup finds no suspended goals (goal already activated or failed)
 - Bind succeeds but triggers no reactivation - harmless no-op
 
-#### `wait_until(Timestamp?)` - Absolute Time Test Guard
+#### `wait_until(Timestamp?)` - Absolute Time Suspension Guard
 
-**Semantics** (simple time comparison, NOT a wait):
+**Semantics** (suspends until deadline, like `wait` but with absolute time):
 
 | Timestamp value | Behavior |
 |-----------------|----------|
 | unbound | Suspend on Timestamp (normal reader suspension) |
 | non-number | Fail |
 | current time ≥ Timestamp | Succeed |
-| current time < Timestamp | **Fail** (not suspend!) |
+| current time < Timestamp | **Suspend** until time passes (timer-based, same mechanism as `wait`) |
 
-**Key Difference from `wait`**: This is a **test**, not a blocking wait. It checks "has time T passed?" If not, it fails (try next clause). If the goal is later retried when time has passed, it will succeed then.
+**Mechanism**: Like `wait`, allocates a reader/writer pair, starts a Dart timer for `remaining = timestamp - now` milliseconds, and suspends on the reader. When the timer fires, it binds the writer, reactivating the goal via the ROQ. On resume, the guard re-checks `now >= timestamp` and succeeds.
 
 **Usage Pattern**:
 ```glp
-% Clause 1: If time has come, proceed
-action(T, Result?) :- wait_until(T?) | Result = done.
-
-% Clause 2: Otherwise, do something else
-action(T, Result?) :- otherwise | handle_early(Result).
+% Suspend until maturity time, then proceed
+redeem(T, Result?) :- wait_until(T?) | Result = done.
 ```
 
 **Detailed Semantics** for `guard_add(X?, Y?, Result)`:

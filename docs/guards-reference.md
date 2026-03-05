@@ -809,21 +809,21 @@ delayed_action(Result?) :- wait(100) | Result = done.
 ---
 
 ### ✅ `wait_until(Timestamp)`
-**Test if absolute time has passed**
+**Suspend until absolute time has passed**
 
 **Semantics**:
 - Success: current time (milliseconds since epoch) ≥ Timestamp
-- Fail: current time < Timestamp
+- Suspend: current time < Timestamp — starts a timer for the remaining duration, suspends until the timer fires, then succeeds
 - Timestamp is non-number: fail
 - Timestamp is unbound reader: suspend (handled by caller)
 
-**Note**: Unlike `wait`, this guard does NOT suspend when the time has not passed — it fails. The caller must arrange for the goal to be retried later if needed.
+**Mechanism**: Like `wait`, uses a reader/writer pair and a Dart timer. Computes `remaining = timestamp - now`, starts a timer for that duration, and suspends the goal on the reader. When the timer fires, the writer is bound, reactivating the goal via the ROQ. On resume, the guard re-checks `now >= timestamp` and succeeds.
 
 **Non-Negatable**: Time-based control flow guard.
 
 **Example**:
 ```prolog
-% Proceed only after a given timestamp
+% Suspend until a given timestamp, then proceed
 after_deadline(T, Result?) :- wait_until(T?) | Result = done.
 ```
 

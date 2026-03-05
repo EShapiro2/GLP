@@ -4893,17 +4893,48 @@ class BytecodeRunner {
         return GuardResult.failure;
 
       case 'wait_until':
-        // wait_until(Timestamp) - Test if absolute time has passed
+        // wait_until(Timestamp) - Suspend until absolute time has passed
         // Semantics:
         // - Unbound Timestamp: handled by caller (suspend on reader)
         // - Non-number: fail
         // - current time >= Timestamp: succeed
-        // - current time < Timestamp: FAIL (not suspend!)
+        // - current time < Timestamp: suspend until time passes (timer-based)
         if (args.isEmpty) return GuardResult.failure;
         final timestamp = evaluateNumeric(args[0]);
         if (timestamp == null) return GuardResult.failure;
         final now = DateTime.now().millisecondsSinceEpoch;
-        return now >= timestamp ? GuardResult.success : GuardResult.failure;
+        if (now >= timestamp) return GuardResult.success;
+
+        // Time hasn't arrived yet — use timer-based suspension (same as wait)
+        final remaining = timestamp.toInt() - now;
+
+        // Check if this goal already has a pending wait_until
+        final existingReaderWU = cx.rt.getWaitReader(cx.goalId);
+        if (existingReaderWU != null) {
+          if (cx.rt.heap.isFullyBound(existingReaderWU)) {
+            cx.rt.clearWaitState(cx.goalId);
+            return GuardResult.success;
+          } else {
+            cx.U.add(existingReaderWU);
+            return GuardResult.failure;
+          }
+        }
+
+        // First call — create fresh reader/writer pair for timer notification
+        final (writerAddrWU, readerAddrWU) = cx.rt.heap.allocateVariable();
+        cx.rt.setWaitReader(cx.goalId, readerAddrWU);
+        cx.rt.incrementPendingTimers();
+
+        Timer(Duration(milliseconds: remaining), () {
+          final reactivated = cx.rt.heap.bindWriterConst(writerAddrWU, 0);
+          for (final goalRef in reactivated) {
+            cx.rt.enqueueReactivatedGoal(goalRef);
+          }
+          cx.rt.decrementPendingTimers();
+        });
+
+        cx.U.add(readerAddrWU);
+        return GuardResult.failure;
 
       case '=?=':
         // Ground equality test
