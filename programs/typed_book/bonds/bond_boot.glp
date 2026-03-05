@@ -467,3 +467,123 @@ fplay6 :-
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 8 — Sale of Debt (with tee + sink display)
+%% =============================================================================
+
+play8 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p8(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    bob_p8(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 8 — Sale of Debt (with tagged output for UI)
+%% =============================================================================
+
+fplay8 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p8(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    bob_p8(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 9 — Forward Contract (with tee + sink display)
+%% =============================================================================
+
+play9 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p9(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    bob_p9(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 9 — Forward Contract (with tagged output for UI)
+%% =============================================================================
+
+fplay9 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p9(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    bob_p9(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).

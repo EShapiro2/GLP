@@ -33,6 +33,11 @@ RedeemResponse ::= redeem_ok(BondList).
 %% Loan response — written by borrower, read by lender's inject
 LoanResponse ::= loan_accept(BondList) ; loan_reject.
 
+%% Trade types
+Lot     ::= lot(Constant, Constant, Constant).
+LotList ::= [] ; [Lot | LotList].
+TradeResponse ::= trade_accept(BondList) ; trade_decline(BondList).
+
 %% Installment schedule for loans
 Installment ::= installment(Constant, Constant).
 Schedule    ::= [] ; [Installment | Schedule].
@@ -43,7 +48,8 @@ FriendContent ::= response(Response)
                 ; credit_propose(Constant, Constant, BondList, CreditResponse?)
                 ; payment(BondList)
                 ; redeem_request(Constant, Constant, BondList, RedeemResponse?)
-                ; loan_propose(Constant, Schedule, BondList, LoanResponse?).
+                ; loan_propose(Constant, Schedule, BondList, LoanResponse?)
+                ; trade_propose(LotList, BondList, TradeResponse?).
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
@@ -70,12 +76,16 @@ UserContent ::= mint(Constant, Constant)       %% mint(K, Maturity)
               ; redeem(Constant, Constant, Constant)   %% redeem(Target, K, MaxMaturity)
               ; loan(Constant, Constant, Schedule)  %% loan(Target, Principal, Schedule)
               ; accept_loan(Constant, PendingValue)    %% accept_loan(From, PendingValue)
-              ; reject_loan(Constant, PendingValue).   %% reject_loan(From, PendingValue)
+              ; reject_loan(Constant, PendingValue)    %% reject_loan(From, PendingValue)
+              ; trade(Constant, LotList, LotList)      %% trade(Target, GiveSpec, WantSpec)
+              ; accept_trade(Constant, PendingValue)   %% accept_trade(From, PendingValue)
+              ; reject_trade(Constant, PendingValue).  %% reject_trade(From, PendingValue)
 
 %% Pending values stored by mediator
 PendingValue ::= response(Response?)
                ; credit_pending(CreditResponse?, Constant, Constant, BondList)
                ; loan_pending(LoanResponse?, Schedule, BondList)
+               ; trade_pending(TradeResponse?, LotList, BondList)
                ; error.
 
 %% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
@@ -96,7 +106,11 @@ AgentContent ::= minted(Constant, Constant)     %% minted(K, Maturity)
                ; redeem_received(Constant, Constant)   %% redeem_received(From, K)
                ; loan_proposed(Constant, Constant, Schedule, LoanResponse?, BondList)
                ; loan_opened(Constant, Constant, Constant)   %% loan_opened(Other, Principal, FaceValue)
-               ; loan_rejected(Constant).              %% loan_rejected(Other)
+               ; loan_rejected(Constant)               %% loan_rejected(Other)
+               ; trade_proposed(Constant, LotList, TradeResponse?, BondList)
+               ; trade_completed(Constant)
+               ; trade_failed(Constant)
+               ; trade_returned(Constant).
 
 %% Credit result — written by inject_credit_result
 CreditResult ::= credit_result(Constant, Constant, BondList)
@@ -108,7 +122,9 @@ UserInMsg    ::= msg(Constant, Constant, UserContent)
                ; credit_was_rejected(Constant)
                ; redeem_complete(Constant, Constant, BondList)
                ; loan_result(Constant, Constant, Constant, BondList)
-               ; loan_was_rejected(Constant).
+               ; loan_was_rejected(Constant)
+               ; trade_complete(Constant, BondList)
+               ; trade_returned_bonds(Constant, BondList).
 UserInStream ::= [] ; [UserInMsg | UserInStream].
 
 MediatorToAgentMsg    ::= msg(Constant, Constant, UserContent).
@@ -152,7 +168,12 @@ OutputContent ::= minted(Constant, Constant)
                 ; loan_propose(Constant, Schedule, BondList, LoanResponse?)
                 ; loan_proposed(Constant, Constant, Schedule, LoanResponse?, BondList)
                 ; loan_opened(Constant, Constant, Constant)
-                ; loan_rejected(Constant).
+                ; loan_rejected(Constant)
+                ; trade_propose(LotList, BondList, TradeResponse?)
+                ; trade_proposed(Constant, LotList, TradeResponse?, BondList)
+                ; trade_completed(Constant)
+                ; trade_failed(Constant)
+                ; trade_returned(Constant).
 OutputMsg    ::= msg(Constant, Constant, OutputContent)
                ; msg(Constant, NetColdCall).
 OutputStream ::= [] ; [OutputMsg | OutputStream].
@@ -528,6 +549,98 @@ handle_redeem_fill(Shortfall, K, MaxMat, Id, From, ReturnedBonds, redeem_ok(AllB
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NewNextSerial?).
 
 %% =============================================================================
+%% SELECT_BONDS_EXACT — Select K bonds with exact Issuer+Maturity
+%% =============================================================================
+
+procedure select_bonds_exact(Constant?, Constant?, Constant?, BondList?, Constant, BondList, BondList).
+select_bonds_exact(_, _, 0, Hs, ok, [], Hs?).
+select_bonds_exact(Issuer, Maturity, K, [bond(I, M, S)|Rest], Status?, [bond(I?, M?, S?)|Sel?], Rem?) :-
+    K? > 0, Issuer? =?= I?, Maturity? =?= M? |
+    K1 := K? - 1,
+    select_bonds_exact(Issuer?, Maturity?, K1?, Rest?, Status, Sel, Rem).
+select_bonds_exact(Issuer, Maturity, K, [B|Rest], Status?, Sel?, [B?|Rem?]) :-
+    otherwise |
+    select_bonds_exact(Issuer?, Maturity?, K?, Rest?, Status, Sel, Rem).
+select_bonds_exact(_, _, K, [], fail, [], []) :- K? > 0 | true.
+
+%% =============================================================================
+%% SELECT_BONDS_BY_SPEC — Fold over LotList
+%% =============================================================================
+
+procedure select_bonds_by_spec(LotList?, BondList?, Constant, BondList, BondList).
+select_bonds_by_spec([lot(Issuer, Maturity, Count)|Rest], Holdings, Status?, AllSel?, FinalRem?) :-
+    ground(Issuer?), ground(Maturity?), ground(Count?) |
+    select_bonds_exact(Issuer?, Maturity?, Count?, Holdings?, LotStatus, LotSel, LotRem),
+    select_by_spec_continue(LotStatus?, Rest?, LotSel?, LotRem?, Status, AllSel, FinalRem).
+select_bonds_by_spec([], Holdings, ok, [], Holdings?).
+
+procedure select_by_spec_continue(Constant?, LotList?, BondList?, BondList?, Constant, BondList, BondList).
+select_by_spec_continue(ok, Rest, LotSel, LotRem, Status?, AllSel?, FinalRem?) :-
+    select_bonds_by_spec(Rest?, LotRem?, Status, RestSel, FinalRem),
+    append(LotSel?, RestSel?, AllSel).
+select_by_spec_continue(fail, _, LotSel, LotRem, fail, LotSel?, LotRem?).
+
+%% =============================================================================
+%% BIND_TRADE — Bind TradeResponse variable (writer mode)
+%% =============================================================================
+
+procedure bind_trade_accept(TradeResponse, BondList?).
+bind_trade_accept(trade_accept(Bonds?), Bonds).
+
+procedure bind_trade_decline(TradeResponse, BondList?).
+bind_trade_decline(trade_decline(Bonds?), Bonds).
+
+%% =============================================================================
+%% INJECT_TRADE_RESULT — Inject trade response into UserIn
+%% =============================================================================
+
+procedure inject_trade_result(TradeResponse?, Constant?, UserInStream?, UserInStream).
+inject_trade_result(trade_accept(TheirBonds), From, Ys,
+    [trade_complete(From?, TheirBonds?)|Ys?]) :-
+    ground(From?), ground(TheirBonds?) | true.
+inject_trade_result(trade_decline(OurBonds), From, Ys,
+    [trade_returned_bonds(From?, OurBonds?)|Ys?]) :-
+    ground(From?), ground(OurBonds?) | true.
+inject_trade_result(Resp, From, [Y|Ys], [Y?|Ys1?]) :-
+    inject_trade_result(Resp?, From?, Ys?, Ys1).
+
+%% =============================================================================
+%% DO_TRADE — Select bonds matching GiveSpec, then send or fail
+%% =============================================================================
+
+procedure do_trade(Constant?, Constant?, LotList?, LotList?, BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
+do_trade(Id, Target, GiveSpec, WantSpec, Holdings, UserIn, NetIn, Outs, NextSerial) :-
+    select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
+    do_trade_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, UserIn?, NetIn?, Outs?, NextSerial?).
+
+procedure do_trade_result(Constant?, Constant?, Constant?, LotList?, BondList?, BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
+do_trade_result(ok, Id, Target, WantSpec, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
+    lookup_send(friend(Target?),
+        msg(Id?, Target?, trade_propose(WantSpec?, Selected?, TradeResp)),
+        Outs?, Outs1),
+    inject_trade_result(TradeResp?, Target?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?, Remaining?, NextSerial?).
+do_trade_result(fail, Id, Target, _, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_failed(Target?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
+
+%% =============================================================================
+%% HANDLE_TRADE_FILL — Bind TradeResponse after selection attempt
+%% =============================================================================
+
+procedure handle_trade_fill(Constant?, Constant?, Constant?, TradeResponse, BondList?, BondList?, BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
+%% Can fill: bind accept(our bonds), take offered bonds
+handle_trade_fill(ok, Id, _, trade_accept(Selected?), OfferedBonds, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
+    append(Remaining?, OfferedBonds?, NewHoldings),
+    agent(Id?, UserIn?, NetIn?, Outs?, NewHoldings?, NextSerial?).
+%% Can't fill: bind decline(offered bonds back), reconstruct own holdings
+handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_failed(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
+
+%% =============================================================================
 %% AGENT/6 — Bond agent
 %% =============================================================================
 %%
@@ -739,6 +852,53 @@ agent(Id, [msg('_user', Id1, reject_loan(_,
       NetIn, Outs, Holdings, NextSerial) :-
     Id? =?= Id1? |
     bind_loan_reject(LoanResp),
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?).
+
+%% --- Phase 7: Trade (Sale of Debt + Forward Contract) ---
+
+%% Proposer: trade command
+agent(Id, [msg('_user', Id1, trade(Target, GiveSpec, WantSpec))|UserIn],
+      NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(Target?), ground(GiveSpec?), ground(WantSpec?) |
+    do_trade(Id?, Target?, GiveSpec?, WantSpec?, Holdings?, UserIn?, NetIn?, Outs?, NextSerial?).
+
+%% Proposer: trade_complete (injected — accept)
+agent(Id, [trade_complete(From, TheirBonds)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    ground(Id?), ground(From?), ground(TheirBonds?) |
+    append(Holdings?, TheirBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+
+%% Proposer: trade_returned_bonds (injected — decline)
+agent(Id, [trade_returned_bonds(From, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    ground(Id?), ground(From?), ground(OurBonds?) |
+    append(Holdings?, OurBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_returned(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+
+%% Responder: incoming trade_propose
+agent(Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeResp?))|NetIn],
+      Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
+    lookup_send('_user',
+        msg(agent, '_user', trade_proposed(From?, WantSpec?, TradeResp, OfferedBonds?)),
+        Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
+
+%% Responder: accept_trade (inlined — select bonds then fill)
+agent(Id, [msg('_user', Id1, accept_trade(From,
+        trade_pending(TradeResp?, WantSpec, OfferedBonds)))|UserIn],
+      NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
+    select_bonds_by_spec(WantSpec?, Holdings?, Status, Selected, Remaining),
+    handle_trade_fill(Status?, Id?, From?, TradeResp, OfferedBonds?, Selected?, Remaining?, UserIn?, NetIn?, Outs?, NextSerial?).
+
+%% Responder: reject_trade
+agent(Id, [msg('_user', Id1, reject_trade(From,
+        trade_pending(TradeResp?, _, OfferedBonds)))|UserIn],
+      NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(From?), ground(OfferedBonds?) |
+    bind_trade_decline(TradeResp, OfferedBonds?),
     agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?).
 
 %% --- Termination ---

@@ -24,6 +24,10 @@ CreditResponse ::= credit_accept(BondList) ; credit_reject.
 RedeemResponse ::= redeem_ok(BondList).
 LoanResponse ::= loan_accept(BondList) ; loan_reject.
 
+Lot     ::= lot(Constant, Constant, Constant).
+LotList ::= [] ; [Lot | LotList].
+TradeResponse ::= trade_accept(BondList) ; trade_decline(BondList).
+
 Installment ::= installment(Constant, Constant).
 Schedule    ::= [] ; [Installment | Schedule].
 
@@ -32,7 +36,8 @@ FriendContent ::= response(Response)
                 ; credit_propose(Constant, Constant, BondList, CreditResponse?)
                 ; payment(BondList)
                 ; redeem_request(Constant, Constant, BondList, RedeemResponse?)
-                ; loan_propose(Constant, Schedule, BondList, LoanResponse?).
+                ; loan_propose(Constant, Schedule, BondList, LoanResponse?)
+                ; trade_propose(LotList, BondList, TradeResponse?).
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
@@ -60,7 +65,11 @@ AgentContent ::= minted(Constant, Constant)
                ; redeem_received(Constant, Constant)
                ; loan_proposed(Constant, Constant, Schedule, LoanResponse?, BondList)
                ; loan_opened(Constant, Constant, Constant)
-               ; loan_rejected(Constant).
+               ; loan_rejected(Constant)
+               ; trade_proposed(Constant, LotList, TradeResponse?, BondList)
+               ; trade_completed(Constant)
+               ; trade_failed(Constant)
+               ; trade_returned(Constant).
 
 AgentToUserMsg    ::= msg(Constant, Constant, AgentContent).
 AgentToUserStream ::= [] ; [AgentToUserMsg | AgentToUserStream].
@@ -68,6 +77,7 @@ AgentToUserStream ::= [] ; [AgentToUserMsg | AgentToUserStream].
 PendingValue ::= response(Response?)
                ; credit_pending(CreditResponse?, Constant, Constant, BondList)
                ; loan_pending(LoanResponse?, Schedule, BondList)
+               ; trade_pending(TradeResponse?, LotList, BondList)
                ; error.
 
 UserContent ::= mint(Constant, Constant)
@@ -83,7 +93,10 @@ UserContent ::= mint(Constant, Constant)
               ; redeem(Constant, Constant, Constant)
               ; loan(Constant, Constant, Schedule)
               ; accept_loan(Constant, PendingValue)
-              ; reject_loan(Constant, PendingValue).
+              ; reject_loan(Constant, PendingValue)
+              ; trade(Constant, LotList, LotList)
+              ; accept_trade(Constant, PendingValue)
+              ; reject_trade(Constant, PendingValue).
 
 MediatorToAgentMsg    ::= msg(Constant, Constant, UserContent).
 MediatorToAgentStream ::= [] ; [MediatorToAgentMsg | MediatorToAgentStream].
@@ -104,7 +117,10 @@ UserCmd ::= mint(Constant, Constant)
           ; redeem(Constant, Constant, Constant)
           ; loan(Constant, Constant, Schedule)
           ; accept_loan(Constant, ReqId)
-          ; reject_loan(Constant, ReqId).
+          ; reject_loan(Constant, ReqId)
+          ; trade(Constant, LotList, LotList)
+          ; accept_trade(Constant, ReqId)
+          ; reject_trade(Constant, ReqId).
 
 UserNotify ::= minted(Constant, Constant)
              ; balance_report(BondList)
@@ -123,7 +139,11 @@ UserNotify ::= minted(Constant, Constant)
              ; redeem_received(Constant, Constant)
              ; loan_proposed(Constant, Constant, ReqId)
              ; loan_opened(Constant, Constant, Constant)
-             ; loan_rejected(Constant).
+             ; loan_rejected(Constant)
+             ; trade_proposed(Constant, LotList, ReqId)
+             ; trade_completed(Constant)
+             ; trade_failed(Constant)
+             ; trade_returned(Constant).
 
 UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].
 UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
@@ -443,6 +463,70 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ground(Id?), ground(From?), ground(ReqId?) |
     lookup_pending(ReqId?, Pv, Ps?, Ps1),
     send_agent(msg('_user', Id?, reject_loan(From?, Pv?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
+%% --- Agent-to-user: trade_proposed (non-ground — store TradeResp + data in pending) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', trade_proposed(From, WantSpec, TradeResp?, OfferedBonds)),
+            AgentCh?, AgentCh1),
+    ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
+    send_user(trade_proposed(From?, WantSpec?, req(N?)), UserCh?, UserCh1),
+    N1 := N? + 1,
+    ui_mediator(Id?, AgentCh1?, UserCh1?,
+        [pending(req(N?), trade_pending(TradeResp, WantSpec?, OfferedBonds?)) | Ps?], N1?).
+
+%% --- Agent-to-user: trade_completed (ground — pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', trade_completed(Who)), AgentCh?, AgentCh1),
+    ground(Who?) |
+    send_user(trade_completed(Who?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- Agent-to-user: trade_failed (ground — pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', trade_failed(Who)), AgentCh?, AgentCh1),
+    ground(Who?) |
+    send_user(trade_failed(Who?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- Agent-to-user: trade_returned (ground — pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', trade_returned(Who)), AgentCh?, AgentCh1),
+    ground(Who?) |
+    send_user(trade_returned(Who?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- User-to-agent: trade (pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(trade(Target, GiveSpec, WantSpec), UserCh?, UserCh1),
+    ground(Id?), ground(Target?), ground(GiveSpec?), ground(WantSpec?) |
+    send_agent(msg('_user', Id?, trade(Target?, GiveSpec?, WantSpec?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- User-to-agent: accept_trade (with pending lookup) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(accept_trade(From, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(From?), ground(ReqId?) |
+    lookup_pending(ReqId?, Pv, Ps?, Ps1),
+    send_agent(msg('_user', Id?, accept_trade(From?, Pv?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
+%% --- User-to-agent: reject_trade (with pending lookup) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(reject_trade(From, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(From?), ground(ReqId?) |
+    lookup_pending(ReqId?, Pv, Ps?, Ps1),
+    send_agent(msg('_user', Id?, reject_trade(From?, Pv?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 

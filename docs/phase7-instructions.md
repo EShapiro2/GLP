@@ -34,16 +34,23 @@ Both variants carry bonds: accept carries responder's bonds to proposer; decline
 3. Bob's agent receives, forwards to user via mediator as `trade_proposed(alice, WantSpec, req(N))`. The offered bonds and TradeResp are stored in pending.
 4. Bob accepts or rejects:
    - **Accept**: Bob's agent selects bonds matching WantSpec from own holdings.
-     - Ok: bind `trade_accept(BobSelected)`. Bob removes his selected bonds, adds Alice's offered bonds. Notify `trade_opened(alice)`.
-     - Can't fill: bind `trade_decline(OfferedBonds)`. Bob returns Alice's bonds via response. Holdings unchanged. Notify `trade_declined(alice)`.
-   - **Reject**: bind `trade_decline(OfferedBonds)`. Bob returns Alice's bonds via response. Holdings unchanged. Notify `trade_declined(alice)`.
+     - Ok: bind `trade_accept(BobSelected)`. Bob removes his selected bonds, adds Alice's offered bonds. No notification (acceptance is synchronous).
+     - Can't fill: bind `trade_decline(OfferedBonds)`. Bob returns Alice's bonds. Holdings unchanged. Notify `trade_failed(alice)`.
+   - **Reject**: bind `trade_decline(OfferedBonds)`. Bob returns Alice's bonds. Holdings unchanged. No notification (rejection is the responder's own action).
 5. Alice's inject detects response:
-   - `trade_accept(TheirBonds)` → inject `trade_complete(bob, TheirBonds)`. Agent adds TheirBonds, notifies `trade_opened(bob)`.
+   - `trade_accept(TheirBonds)` → inject `trade_complete(bob, TheirBonds)`. Agent adds TheirBonds, notifies `trade_completed(bob)`.
    - `trade_decline(OurBonds)` → inject `trade_returned_bonds(bob, OurBonds)`. Agent adds OurBonds back, notifies `trade_returned(bob)`.
 
 ### Freeze behavior
 
 If responder never responds, proposer's bonds are locked (TradeResp stays unbound). By design.
+
+### Notifications (4 total)
+
+- `trade_proposed(From, WantSpec, req(N))` — to responder: incoming proposal
+- `trade_completed(Target)` — to proposer: trade succeeded, bonds received
+- `trade_failed(Other)` — to proposer: couldn't fill own offer; to responder: accepted but couldn't fill
+- `trade_returned(Target)` — to proposer: responder declined, bonds back
 
 ## Part 1: New Types (all three typed files)
 
@@ -72,17 +79,16 @@ TradeResponse ::= trade_accept(BondList) ; trade_decline(BondList).
 ### PendingValue addition
 
 ```prolog
-; trade_pending(TradeResponse?, LotList, BondList)   %% TradeResp, WantSpec, OfferedBonds
+; trade_pending(TradeResponse?, LotList, BondList)
 ```
 
 ### AgentContent additions
 
 ```prolog
 ; trade_proposed(Constant, LotList, TradeResponse?, BondList)
-; trade_opened(Constant)
+; trade_completed(Constant)
 ; trade_failed(Constant)
 ; trade_returned(Constant)
-; trade_declined(Constant)
 ```
 
 ### OutputContent additions
@@ -108,10 +114,9 @@ UserCmd:
 UserNotify:
 ```prolog
 ; trade_proposed(Constant, LotList, ReqId)
-; trade_opened(Constant)
+; trade_completed(Constant)
 ; trade_failed(Constant)
 ; trade_returned(Constant)
-; trade_declined(Constant)
 ```
 
 ## Part 2: New Helper Procedures (bond_agent.glp)
@@ -150,23 +155,19 @@ select_by_spec_continue(fail, _, LotSel, LotRem, fail, LotSel?, LotRem?).
 
 ## Part 3: Bind and Inject (bond_agent.glp)
 
-### bind_trade_accept
+### bind_trade_accept / bind_trade_decline
 
 ```prolog
 procedure bind_trade_accept(TradeResponse, BondList?).
 bind_trade_accept(trade_accept(Bonds?), Bonds).
-```
 
-### bind_trade_decline
-
-```prolog
 procedure bind_trade_decline(TradeResponse, BondList?).
 bind_trade_decline(trade_decline(Bonds?), Bonds).
 ```
 
 ### inject_trade_result
 
-No OurBonds parameter needed — bonds come back through the response itself.
+No OurBonds parameter — bonds come back through the response itself.
 
 ```prolog
 procedure inject_trade_result(TradeResponse?, Constant?, UserInStream?, UserInStream).
@@ -201,8 +202,6 @@ do_trade_result(fail, Id, Target, _, Selected, Remaining, UserIn, NetIn, Outs, N
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
 ```
 
-Note: Selected is only used once in the ok clause (in the msg). No `ground(Selected?)` needed.
-
 ## Part 5: handle_trade_accept (bond_agent.glp)
 
 ```prolog
@@ -215,32 +214,16 @@ procedure handle_trade_fill(Constant?, Constant?, Constant?, TradeResponse, Bond
 %% Can fill: bind accept(our bonds), take offered bonds
 handle_trade_fill(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
     append(Remaining?, OfferedBonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', trade_opened(From?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+    agent(Id?, UserIn?, NetIn?, Outs?, NewHoldings?, NextSerial?).
 %% Can't fill: bind decline(offered bonds back), reconstruct own holdings
-handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
-    append(Selected?, Remaining?, OrigHoldings),
-    lookup_send('_user', msg(agent, '_user', trade_declined(From?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
-```
-
-TradeResponse is writer-mode, decomposed in clause heads.
-
-Wait — in the fail case, OfferedBonds appears twice: once in `trade_decline(OfferedBonds?)` (writer output) and once as the input parameter `OfferedBonds`. The input `OfferedBonds?` is reader. The writer `OfferedBonds?` inside `trade_decline(OfferedBonds?)` constructs the return value. These are actually different variables — the head parameter is consumed (reader), and we need to produce the writer from it. But they have the same name.
-
-Better: use a different name to be safe:
-
-```prolog
 handle_trade_fill(fail, Id, From, trade_decline(ReturnBonds?), OfferedBonds, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
     ReturnBonds = OfferedBonds?,
     append(Selected?, Remaining?, OrigHoldings),
-    lookup_send('_user', msg(agent, '_user', trade_declined(From?)), Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', trade_failed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
 ```
 
-Actually, `=` is a unit clause (X = X?), so `ReturnBonds = OfferedBonds?` unifies them. That should work.
-
-Hmm, but does the type checker allow this? The head has `trade_decline(ReturnBonds?)` where ReturnBonds is a fresh writer, and OfferedBonds is a reader from the parameter. In the body, `ReturnBonds = OfferedBonds?` reads OfferedBonds and writes ReturnBonds. This follows the SRSW pattern correctly.
+TradeResponse is writer-mode, decomposed in clause heads. In the fail case, `ReturnBonds = OfferedBonds?` bridges reader to writer.
 
 ## Part 6: Agent Clauses (bond_agent.glp)
 
@@ -259,7 +242,7 @@ agent(Id, [msg('_user', Id1, trade(Target, GiveSpec, WantSpec))|UserIn],
 agent(Id, [trade_complete(From, TheirBonds)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
     ground(Id?), ground(From?), ground(TheirBonds?) |
     append(Holdings?, TheirBonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', trade_opened(From?)), Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
 ```
 
@@ -303,8 +286,7 @@ agent(Id, [msg('_user', Id1, reject_trade(From,
       NetIn, Outs, Holdings, NextSerial) :-
     Id? =?= Id1?, ground(From?), ground(OfferedBonds?) |
     bind_trade_decline(TradeResp, OfferedBonds?),
-    lookup_send('_user', msg(agent, '_user', trade_declined(From?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?).
 ```
 
 ## Part 7: Mediator (bond_mediator.glp)
@@ -322,19 +304,19 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
         [pending(req(N?), trade_pending(TradeResp, WantSpec?, OfferedBonds?)) | Ps?], N1?).
 ```
 
-### Agent-to-user: ground pass-through (one clause per notification)
+### Agent-to-user: ground pass-through
 
-Add mediator clauses for: `trade_opened`, `trade_failed`, `trade_returned`, `trade_declined`. Each follows the standard pattern:
+Add mediator clauses for `trade_completed`, `trade_failed`, `trade_returned`. Each follows the standard pattern:
 
 ```prolog
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', trade_opened(Who)), AgentCh?, AgentCh1),
+    receive(msg(agent, '_user', trade_completed(Who)), AgentCh?, AgentCh1),
     ground(Who?) |
-    send_user(trade_opened(Who?), UserCh?, UserCh1),
+    send_user(trade_completed(Who?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 ```
 
-Same pattern for trade_failed, trade_returned, trade_declined.
+Same pattern for trade_failed and trade_returned.
 
 ### User-to-agent: trade (pass through)
 
@@ -381,7 +363,7 @@ alice_p8:
 5. mint(3, 10)
 6. Wait minted(3, 10)
 7. `trade(bob, [lot(alice, 10, 3)], [lot(alice, 0, 2)])`
-8. Wait trade_opened(bob)
+8. Wait trade_completed(bob)
 9. balance → Wait balance_report(_)
 10. done
 
@@ -391,9 +373,10 @@ bob_p8:
 3. Wait credit_proposed → accept_credit
 4. Wait credit_opened
 5. Wait `trade_proposed(alice, _, ReqId)` → `accept_trade(alice, ReqId)`
-6. Wait trade_opened(alice)
-7. balance → Wait balance_report(_)
-8. done
+6. balance → Wait balance_report(_)
+7. done
+
+Note: Bob has no trade_opened/trade_completed notification — acceptance is synchronous. Bob just proceeds to balance.
 
 Expected final holdings:
 - Alice: 5 bob-coins + 2 alice-coins = 7 bonds (gave 3 alice-bonds(10))
@@ -409,7 +392,7 @@ alice_p9:
 3. mint(3, 50)
 4. Wait minted(3, 50)
 5. `trade(bob, [lot(alice, 50, 3)], [lot(bob, 50, 3)])`
-6. Wait trade_opened(bob)
+6. Wait trade_completed(bob)
 7. balance → Wait balance_report(_)
 8. done
 
@@ -419,9 +402,8 @@ bob_p9:
 3. mint(3, 50)
 4. Wait minted(3, 50)
 5. Wait `trade_proposed(alice, _, ReqId)` → `accept_trade(alice, ReqId)`
-6. Wait trade_opened(alice)
-7. balance → Wait balance_report(_)
-8. done
+6. balance → Wait balance_report(_)
+7. done
 
 Expected final holdings:
 - Alice: 3 bob-bonds(50)
@@ -434,14 +416,16 @@ Add play8/fplay8 and play9/fplay9. Same wiring as play5, using p8/p9 actors.
 ## Testing
 
 1. Run baseline: fplay1–fplay7, fplay4b
-2. Run fplay8: verify trade_opened on both sides, balance shows correct distribution
-3. Run fplay9: verify trade_opened on both sides, balance shows correct distribution
+2. Run fplay8: verify trade_completed on Alice's side, balance shows correct distribution
+3. Run fplay9: verify trade_completed on Alice's side, balance shows correct distribution
 4. Update status report at `Grassroots-Bonds/docs/bonds-glp-status-report.md`
 
 ## Important Notes
 
 - `trade_decline(BondList)` returns the offered bonds through the response variable — the inject reads them from the response, no separate copy needed
 - In `handle_trade_fill(fail, ...)`, use `ReturnBonds = OfferedBonds?` to bridge from reader to writer for the trade_decline response
-- In `reject_trade` agent clause, `bind_trade_decline(TradeResp, OfferedBonds?)` passes the offered bonds directly
+- In `reject_trade` agent clause, `bind_trade_decline(TradeResp, OfferedBonds?)` passes offered bonds directly
 - `select_bonds_exact` uses `=?=` for both Issuer and Maturity (exact equality)
 - On partial failure in `select_bonds_by_spec`, reconstruct holdings via `append(Selected, Remaining, Orig)`
+- Responder gets no notification on success or rejection (both are synchronous actions)
+- Responder gets `trade_failed` only when accept_trade fails due to insufficient holdings
