@@ -74,7 +74,7 @@ procedure _output(_?).
 
 % Assignment (unification)
 procedure =(_?, _).
-X = X?.
+X? = X.
 
 % Difference list operations
 procedure dl_append(DiffList?, DiffList?, DiffList).

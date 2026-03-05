@@ -130,45 +130,32 @@ class GlpEngine {
   /// Useful for test scripts that need to reset state between tests
   /// without restarting the REPL process.
   void clear() {
-    // Remember stdlib programs
-    final stdlibKeys = _loadedPrograms.keys
-        .where((k) => k.startsWith('__stdlib_'))
-        .toList();
-    final stdlibPrograms = <String, BytecodeProgram>{};
-    for (final key in stdlibKeys) {
-      stdlibPrograms[key] = _loadedPrograms[key]!;
-    }
+    // Remember stdlib program
+    BytecodeProgram? rootSelf = _loadedPrograms['__root_self__'];
 
     // Clear everything
     _loadedPrograms.clear();
     _loadedModules.clear();
 
     // Restore stdlib
-    _loadedPrograms.addAll(stdlibPrograms);
+    if (rootSelf != null) {
+      _loadedPrograms['__root_self__'] = rootSelf;
+    }
   }
 
-  /// Load stdlib files from a directory (private — called by constructor).
+  /// Load stdlib from programs/self.glp (private — called by constructor).
   void _loadStdlib(String stdlibDir) {
-    final stdlibFiles = [
-      'assign.glp',
-      'univ.glp',
-      'unify.glp',
-      'mwm.glp',
-      'time.glp'
-    ];
-
-    for (final filename in stdlibFiles) {
-      final path = '$stdlibDir/$filename';
-      final file = File(path);
-      if (file.existsSync()) {
-        try {
-          final source = file.readAsStringSync();
-          final stdlibCompiler = GlpCompiler();
-          final prog = stdlibCompiler.compile(source);
-          _loadedPrograms['__stdlib_${filename}__'] = prog;
-        } catch (e) {
-          // Silently skip failed stdlib loads
-        }
+    // Derive root self.glp path from stdlib dir
+    final rootSelfGlp = stdlibDir.replaceAll('/stdlib', '/self.glp');
+    final file = File(rootSelfGlp);
+    if (file.existsSync()) {
+      try {
+        final source = file.readAsStringSync();
+        final compiler = GlpCompiler();
+        final prog = compiler.compile(source);
+        _loadedPrograms['__root_self__'] = prog;
+      } catch (e) {
+        // Silently skip failed load
       }
     }
   }
@@ -203,7 +190,7 @@ class GlpEngine {
     // Discover ancestor scope from self.glp hierarchy (if loading from a file)
     TypeEnvironment? ancestorScope;
     if (name != '_source_' && name != '__mad_predicates__' &&
-        !name.startsWith('__stdlib_') &&
+        !name.startsWith('__stdlib_') && name != '__root_self__' &&
         File(name).existsSync()) {
       final rootDir = _findProjectRoot(name);
       if (rootDir != null) {
