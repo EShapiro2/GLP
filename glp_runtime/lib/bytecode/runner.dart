@@ -7,8 +7,6 @@ import 'package:glp_runtime/runtime/commit.dart';
 import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/system_predicates.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
-import 'package:glp_runtime/runtime/module_runtime.dart' show ModuleGoalContext;
-import 'package:glp_runtime/runtime/module_messages.dart';
 import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 import 'opcodes.dart';
 import 'opcodes_v2.dart' as opv2;
@@ -2947,8 +2945,7 @@ class BytecodeRunner {
         // Static RPC to imported module at known index
         // Following FCP: distribute # {Index, Goal}
         //
-        // Writes ExportMessage to import vector which routes via
-        // serve_import to target module's dispatcher.
+        // Routes RPC via GLP channels or REPL module context.
         if (cx.inBody) {
           // Collect arguments from argSlots
           final args = <Term>[];
@@ -3014,28 +3011,6 @@ class BytecodeRunner {
                 print('[MODULE] Distribute: No target for import index ${op.importIndex}');
               }
             }
-          } else if (cx.moduleContext is ModuleGoalContext) {
-            final modCtx = cx.moduleContext as ModuleGoalContext;
-            final vector = modCtx.module.importVector;
-
-            if (vector != null && op.importIndex <= vector.size) {
-              // Build and send ExportMessage
-              final message = ExportMessage.trust(
-                sourceModule: modCtx.module.name,
-                functor: op.functor,
-                arity: op.arity,
-                args: args,
-              );
-              vector.write(op.importIndex, message);
-
-              if (cx.debugOutput) {
-                print('[MODULE] Distribute: ${modCtx.module.name} -> import[${op.importIndex}] # ${op.functor}/${op.arity}');
-              }
-            } else {
-              if (cx.debugOutput) {
-                print('[MODULE] Distribute: No vector or index out of range for ${op.functor}/${op.arity}');
-              }
-            }
           } else {
             // No module context - log only (standalone execution)
             if (cx.debugOutput) {
@@ -3052,7 +3027,7 @@ class BytecodeRunner {
         // Following FCP: transmit # {ModuleVar, Goal}
         //
         // Resolves module name from variable, looks up in registry,
-        // sends ExportMessage directly to target module's input channel.
+        // Routes via GLP channels to target module.
         if (cx.inBody) {
           // Collect arguments from argSlots
           final args = <Term>[];
@@ -3088,28 +3063,6 @@ class BytecodeRunner {
               }
               if (cx.debugOutput) {
                 print('[MODULE] Transmit (GLP channel): -> $moduleName # ${op.functor}/${op.arity}');
-              }
-            } else if (cx.moduleContext is ModuleGoalContext) {
-              final modCtx = cx.moduleContext as ModuleGoalContext;
-              // Look up target module in registry
-              final targetModule = modCtx.registry.lookup(moduleName);
-              if (targetModule != null) {
-                // Build and send ExportMessage directly to target
-                final message = ExportMessage.trust(
-                  sourceModule: modCtx.module.name,
-                  functor: op.functor,
-                  arity: op.arity,
-                  args: args,
-                );
-                targetModule.inputSink.add(message);
-
-                if (cx.debugOutput) {
-                  print('[MODULE] Transmit: ${modCtx.module.name} -> $moduleName # ${op.functor}/${op.arity}');
-                }
-              } else {
-                if (cx.debugOutput) {
-                  print('[MODULE] Transmit: Module "$moduleName" not found in registry');
-                }
               }
             } else {
               if (cx.debugOutput) {
