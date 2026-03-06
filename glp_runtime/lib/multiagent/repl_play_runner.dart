@@ -58,6 +58,14 @@ class ReplPlayRunner {
     '../programs/typed_book/cssg/play_ui_sim_boot.glp',
   ];
 
+  /// Bonds GLP files (grassroots bonds, plays 1–11).
+  static const bondsFiles = [
+    '../programs/typed_book/bonds/bond_agent.glp',
+    '../programs/typed_book/bonds/bond_mediator.glp',
+    '../programs/typed_book/bonds/bond_actors.glp',
+    '../programs/typed_book/bonds/bond_boot.glp',
+  ];
+
   /// CSSN GLP files (child-safe social networking, plays 1–10).
   static const cssnFiles = [
     '../programs/typed_book/cssn/typed_social_agent.glp',
