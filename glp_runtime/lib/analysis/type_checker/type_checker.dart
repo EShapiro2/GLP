@@ -10,6 +10,7 @@
 //    a clause C ∈ Cs that accepts it
 
 import 'type_ast.dart';
+import 'param_expansion.dart';
 import 'program_dfa.dart';
 import 'type_environment_builder.dart';
 import 'well_typed_clause.dart' as wtc;
@@ -629,8 +630,12 @@ class TypeChecker {
 /// (prelude + ancestor self.glp definitions) instead of just the prelude.
 /// See module_hierarchy.dart for how ancestor scopes are assembled.
 TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope}) {
-  // Build type environment from module (includes prelude or ancestor scope)
-  final typeEnv = buildTypeEnvironment(module, ancestorScope: ancestorScope);
+  // Expand parameterized types to monomorphic equivalents before type checking.
+  // This is a no-op if the module has no parameterized types.
+  final expandedModule = expandParameterizedTypes(module);
+
+  // Build type environment from expanded module (includes prelude or ancestor scope)
+  final typeEnv = buildTypeEnvironment(expandedModule, ancestorScope: ancestorScope);
 
   // Extract clauses - from transformed procedures if provided, otherwise from module
   final clauses = <ast.Clause>[];

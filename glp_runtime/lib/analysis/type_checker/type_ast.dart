@@ -46,19 +46,26 @@ extension ProcArgTypeExpr on TypeExpr {
 
 /// Reference to a named type: Nat, List, Number, String, Any
 /// Optionally with input mode annotation (Type?)
+/// Optionally with type arguments for parameterized types: Stream(Integer)
 class TypeRef extends TypeExpr {
   final String name;
   final bool isInput;  // true if Type?, false if Type
+  final List<TypeExpr> typeArgs;  // e.g., [TypeRef('Integer')] for Stream(Integer), [] for simple refs
 
-  TypeRef(this.name, int line, int column, {this.isInput = false})
+  TypeRef(this.name, int line, int column, {this.isInput = false, this.typeArgs = const []})
       : super(line, column);
+
+  bool get isParameterized => typeArgs.isNotEmpty;
 
   /// Mode dual operator per Definition 5.1
   /// Returns a new TypeRef with inverted mode
-  TypeRef dual() => TypeRef(name, line, column, isInput: !isInput);
+  TypeRef dual() => TypeRef(name, line, column, isInput: !isInput, typeArgs: typeArgs);
 
   @override
-  String toString() => isInput ? '$name?' : name;
+  String toString() {
+    final argsStr = typeArgs.isNotEmpty ? '(${typeArgs.join(', ')})' : '';
+    return isInput ? '$name$argsStr?' : '$name$argsStr';
+  }
 
   /// Primitive types (not defined via ::=, handled specially by compiler)
   static const builtins = {'Integer', 'Real', 'Number', 'String'};
@@ -70,10 +77,19 @@ class TypeRef extends TypeExpr {
 
   @override
   bool operator ==(Object other) =>
-      other is TypeRef && other.name == name && other.isInput == isInput;
+      other is TypeRef && other.name == name && other.isInput == isInput &&
+      _listEquals(other.typeArgs, typeArgs);
 
   @override
-  int get hashCode => Object.hash(name, isInput);
+  int get hashCode => Object.hash(name, isInput, Object.hashAll(typeArgs));
+
+  static bool _listEquals(List<TypeExpr> a, List<TypeExpr> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 }
 
 /// A constant alternative in a type: 0, [], foo
@@ -142,13 +158,17 @@ class DiffListAlt extends TypeExpr {
 }
 
 /// A type definition: TypeName ::= alt1 ; alt2 ; ... .
+/// Parameterized types have non-empty typeParams: Stream(X) ::= [] ; [X | Stream(X)].
 class TypeDef {
   final String name;
+  final List<String> typeParams;  // e.g., ['X'] for Stream(X), [] for monomorphic
   final List<TypeExpr> alternatives;
   final int line;
   final int column;
 
-  TypeDef(this.name, this.alternatives, this.line, this.column);
+  TypeDef(this.name, this.alternatives, this.line, this.column, {this.typeParams = const []});
+
+  bool get isParameterized => typeParams.isNotEmpty;
 
   /// Classify this type based on mode structure
   /// Per spec (type-environment.md v0.5):

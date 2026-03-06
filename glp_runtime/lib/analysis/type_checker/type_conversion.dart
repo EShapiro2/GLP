@@ -52,7 +52,24 @@ TypeExpr termToTypeExpr(Term term) {
         term.column,
       );
     }
-    // Regular structure (including conjunction ',')
+
+    // Parameterized type reference — uppercase-initial functor (possibly with trailing '?')
+    // e.g., Stream(X), Channel(In, Out), Stream(X)? (encoded as "Stream?")
+    // In type definition bodies, uppercase functor with arguments is always a parameterized
+    // type reference, never a struct alternative (struct functors are lowercase atoms).
+    var functor = term.functor;
+    bool isInput = false;
+    if (functor.endsWith('?')) {
+      functor = functor.substring(0, functor.length - 1);
+      isInput = true;
+    }
+    if (functor.isNotEmpty && _isUppercaseLetter(functor[0])) {
+      return TypeRef(functor, term.line, term.column,
+          isInput: isInput,
+          typeArgs: term.args.map(termToTypeExpr).toList());
+    }
+
+    // Regular structure (lowercase functor, including conjunction ',')
     return StructAlt(
       term.functor,
       term.args.map(termToTypeExpr).toList(),
@@ -63,4 +80,10 @@ TypeExpr termToTypeExpr(Term term) {
   
   // Should not reach here for valid terms
   throw ArgumentError('Cannot convert term to type expression: $term');
+}
+
+/// Check if a character is an uppercase letter (A-Z).
+/// Excludes operators (+, -, etc.) and underscore which satisfy toUpperCase() == self.
+bool _isUppercaseLetter(String ch) {
+  return ch.codeUnitAt(0) >= 65 && ch.codeUnitAt(0) <= 90; // A-Z
 }

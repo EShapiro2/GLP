@@ -1307,14 +1307,25 @@ class Parser {
     return false;
   }
 
-  /// Check if we're at a type definition (TypeName ::= ...)
+  /// Check if we're at a type definition (TypeName ::= ... or TypeName(X) ::= ...)
   /// Used to distinguish type definitions from clause heads starting with capitalized variable.
   bool _isTypeDefinition() {
     // TypeName ::= ... (type names are capitalized, tokenized as VARIABLE)
     if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
-      // Look ahead for ::=
+      // Look ahead for ::=, skipping optional type parameters (X, Y, ...)
       final saved = _current;
       _advance();  // consume type name
+
+      // Skip optional type parameters: (X, Y, ...)
+      if (_check(TokenType.LPAREN)) {
+        _advance(); // consume (
+        int depth = 1;
+        while (!_isAtEnd() && depth > 0) {
+          if (_check(TokenType.LPAREN)) depth++;
+          if (_check(TokenType.RPAREN)) depth--;
+          _advance();
+        }
+      }
 
       final isTypeDef = _check(TokenType.COLONCOLONEQ);
 
@@ -1326,12 +1337,13 @@ class Parser {
   }
 
   /// Parse a type definition: TypeName ::= alt ; alt ; alt.
+  /// Also supports parameterized: TypeName(X, Y) ::= alt ; alt.
   /// Also supports explicit dual definitions: TypeName? ::= alt.
   TypeDef _parseTypeDef() {
     final typeNameToken = _check(TokenType.READER)
         ? _advance()
         : _consume(TokenType.VARIABLE, 'Expected type name');
-    
+
     // For READER tokens (e.g., Channel?), append '?' to the name
     // This supports explicit dual type definitions
     final typeName = typeNameToken.type == TokenType.READER
@@ -1339,6 +1351,18 @@ class Parser {
         : typeNameToken.lexeme;
     final line = typeNameToken.line;
     final column = typeNameToken.column;
+
+    // Parse optional type parameters: (X, Y, ...)
+    final typeParams = <String>[];
+    if (_match(TokenType.LPAREN)) {
+      final firstParam = _consume(TokenType.VARIABLE, 'Expected type parameter name');
+      typeParams.add(firstParam.lexeme);
+      while (_match(TokenType.COMMA)) {
+        final param = _consume(TokenType.VARIABLE, 'Expected type parameter name');
+        typeParams.add(param.lexeme);
+      }
+      _consume(TokenType.RPAREN, 'Expected ")" after type parameters');
+    }
 
     _consume(TokenType.COLONCOLONEQ, 'Expected "::=" in type definition');
 
@@ -1352,7 +1376,7 @@ class Parser {
 
     _consume(TokenType.DOT, 'Expected "." after type definition');
 
-    return TypeDef(typeName, alternatives, line, column);
+    return TypeDef(typeName, alternatives, line, column, typeParams: typeParams);
   }
 
   /// Parse a single type alternative using unified term parsing.
@@ -1414,7 +1438,28 @@ class Parser {
       }
     }
 
-    // Variable or Reader
+    // Parameterized type reference in type body: TypeName(Arg1, Arg2, ...)
+    // Uppercase names followed by ( are parameterized type refs, not structs.
+    // Encode reader mode in functor name for type_conversion to decode.
+    if ((_check(TokenType.VARIABLE) || _check(TokenType.READER)) &&
+        _current + 1 < tokens.length && tokens[_current + 1].type == TokenType.LPAREN) {
+      final token = _advance();
+      final isReader = token.type == TokenType.READER;
+      _advance(); // consume (
+      final args = <Term>[];
+      if (!_check(TokenType.RPAREN)) {
+        args.add(_parseTypeAltExpression());
+        while (_match(TokenType.COMMA)) {
+          args.add(_parseTypeAltExpression());
+        }
+      }
+      _consume(TokenType.RPAREN, 'Expected ")" after type arguments');
+      final trailingQ = _match(TokenType.QUESTION);
+      final effectiveName = (isReader || trailingQ) ? '${token.lexeme}?' : token.lexeme;
+      return StructTerm(effectiveName, args, token.line, token.column);
+    }
+
+    // Variable or Reader (simple, non-parameterized)
     if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
       final token = _advance();
       final isReader = token.type == TokenType.READER;
@@ -1687,11 +1732,23 @@ class Parser {
       );
     }
 
-    // Type reference with optional mode
+    // Type reference with optional type arguments and optional mode
     if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
       final token = _advance();
+      final baseName = token.lexeme;
+
+      // Parse optional type arguments: (Type1, Type2, ...)
+      final typeArgs = <TypeExpr>[];
+      if (_match(TokenType.LPAREN)) {
+        typeArgs.add(_parseProcArgType());  // recursive — supports nested parameterized types
+        while (_match(TokenType.COMMA)) {
+          typeArgs.add(_parseProcArgType());
+        }
+        _consume(TokenType.RPAREN, 'Expected ")" after type arguments');
+      }
+
       final isInput = token.type == TokenType.READER || _match(TokenType.QUESTION);
-      return TypeRef(token.lexeme, line, column, isInput: isInput);
+      return TypeRef(baseName, line, column, isInput: isInput, typeArgs: typeArgs);
     }
 
     throw CompileError(

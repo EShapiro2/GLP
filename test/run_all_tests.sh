@@ -855,6 +855,11 @@ POSITIVE_FILES=(
 
     # --- module guard test ---
     "$TYPED/module_guard.glp"
+
+    # --- parameterized types ---
+    "$TYPED/param_stream_integer.glp"
+    "$TYPED/param_channel.glp"
+    "$TYPED/param_procedure_inference.glp"
 )
 
 # Build REPL input: load each positive file with :clear between
@@ -981,6 +986,9 @@ NEGATIVE_FILES=(
     "$TC_DIR/negative/subtyping/contravariant_wrong_direction.glp"
     "$TC_DIR/negative/subtyping/disjoint_types.glp"
     "$TC_DIR/negative/subtyping/arg_type_mismatch.glp"
+
+    # --- parameterized types negative ---
+    "$TYPED/param_arity_mismatch.glp"
 )
 
 # Build REPL input with :clear between each negative file
