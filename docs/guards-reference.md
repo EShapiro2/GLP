@@ -292,7 +292,7 @@ This is distinct from the multiple-occurrence relaxation below. Guard reader cou
 | ✅ `integer(X?)` | Yes | ✅ Yes |
 | ✅ `number(X?)` | Yes | ✅ Yes |
 | ✅ `string(X?)` | Yes | ✅ Yes |
-| ⏳ `module(X?)` | Yes | ✅ Yes |
+| ✅ `module(X?)` | Yes | ✅ Yes |
 | ✅ `X? < Y?` | Yes (both operands, when succeeds) | ✅ Yes |
 | ✅ `X? =< Y?` | Yes (both operands, when succeeds) | ✅ Yes |
 | ✅ `X? > Y?` | Yes (both operands, when succeeds) | ✅ Yes |
@@ -446,7 +446,7 @@ handle(X, Y) :- otherwise | process_other(X?, Y).
 
 ---
 
-### ⏳ `module(X?)`
+### ✅ `module(X?)`
 **Test if X is a module term**
 
 **Semantics**:

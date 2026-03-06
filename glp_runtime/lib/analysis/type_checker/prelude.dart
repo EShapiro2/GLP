@@ -38,6 +38,7 @@ const Set<String> predefinedProcedureNames = {
   'constant',
   'compound',
   'list',
+  'module',
   // Groundness guards (fundamental - implemented by runtime)
   'ground',
   'known',
@@ -84,6 +85,7 @@ const Set<String> builtinProcedures = {
   'constant/1',
   'compound/1',
   'list/1',
+  'module/1',
   // Groundness/validation guards
   'ground/1',
   'known/1',

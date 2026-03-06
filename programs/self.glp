@@ -31,6 +31,7 @@ procedure string(String?).
 procedure constant(Constant?).
 procedure compound(_?).
 procedure list(_?).
+procedure module(_?).
 % Groundness guards
 procedure ground(_?).
 procedure known(_?).

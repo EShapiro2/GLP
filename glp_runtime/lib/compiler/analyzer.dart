@@ -606,7 +606,8 @@ class Analyzer {
   static const _negatableGuards = {
     // Type guards
     'ground', 'known', 'unknown', 'integer', 'number', 'atom', 'string',
-    'constant', 'compound', 'tuple', 'list', 'is_list', 'no_readers',
+    'constant', 'compound', 'tuple', 'list', 'is_list', 'module',
+    'is_mutual_ref', 'no_readers',
     // Equality
     '=?=',
   };
@@ -672,6 +673,14 @@ class Analyzer {
       final arg = guard.args[0];
       if (arg is VarTerm) {
         // Mark the writer as grounded (readers of X are allowed multiple times)
+        varTable.markGrounded(arg.name);
+      }
+    }
+
+    // module/1 guard marks argument as ground (ModuleTerm is ground)
+    if (guard.predicate == 'module' && guard.args.length == 1) {
+      final arg = guard.args[0];
+      if (arg is VarTerm) {
         varTable.markGrounded(arg.name);
       }
     }

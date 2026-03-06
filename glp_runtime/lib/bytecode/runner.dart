@@ -4694,6 +4694,15 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
+      case 'module':
+        // Succeeds if X is a ModuleTerm (ground module reference)
+        if (args.isEmpty) return GuardResult.failure;
+        final mval = getValue(args[0]);
+        if (mval is ModuleTerm) {
+          return GuardResult.success;
+        }
+        return GuardResult.failure;
+
       case 'is_mutual_ref':
         // Succeeds if X is a MutualRefTerm (enables SRSW multiple reads)
         if (args.isEmpty) return GuardResult.failure;

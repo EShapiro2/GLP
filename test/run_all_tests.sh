@@ -699,6 +699,16 @@ HEREDOC
 2>&1)
 check_not "reader-to-reader no reduction" "req(2)" "$a27"
 
+# --- A28: Module guard ---
+echo "--- A28: Module guard ---"
+a28=$($DART run "$REPL" <<HEREDOC
+$TYPED/module_guard.glp
+test_not_module(42, Rm1).
+:quit
+HEREDOC
+2>&1)
+check "module guard ~module(42)" "Rm1 = not_module" "$a28"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 
@@ -842,6 +852,9 @@ POSITIVE_FILES=(
     "$TC_DIR/positive/subtyping/contravariant_response_slot.glp"
     "$TC_DIR/positive/subtyping/direct_constant_subtype.glp"
     "$TC_DIR/positive/subtyping/struct_fewer_functors.glp"
+
+    # --- module guard test ---
+    "$TYPED/module_guard.glp"
 )
 
 # Build REPL input: load each positive file with :clear between
