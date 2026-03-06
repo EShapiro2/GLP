@@ -81,9 +81,13 @@ Only `Number`, `Integer`, `Real`, `String` — types with no GLP representation.
 
 Need to determine: which belong in the language (declared in root), which are internal (only visible to `-mode(system).` code), which should be removed.
 
-## Implementation
+## Status
 
-1. Unify `-mode(system).` and `-stdlib.` — remove `-stdlib.` directive, `-mode(system).` grants both constant access and kernel access
+**Complete.** All steps implemented and tested. 382/382 REPL, 374+5skip-14fail Dart (matching baseline).
+
+## Implementation (completed)
+
+1. ~~Unify `-mode(system).` and `-stdlib.`~~ — remove `-stdlib.` directive, `-mode(system).` grants both constant access and kernel access
 2. Create `programs/self.glp` with all type definitions and procedure declarations from the current prelude + stdlib
 3. Move stdlib clause implementations into `programs/self.glp` (or keep as separate files loaded from the same directory)
 4. Shrink `prelude.dart` to just primitive types (Number, Integer, Real, String)
