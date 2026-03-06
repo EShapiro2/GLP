@@ -423,7 +423,7 @@ select_any_bonds(K, [], [], [], 0) :- K? > 0 | true.
 %% Otherwise, require M >= MinMaturity strictly.
 %% Now parameter provides current time for arithmetic comparison.
 
-procedure select_bonds_min_maturity(Constant?, Constant?, Constant?, BondList?, BondList, BondList, Constant).
+procedure select_bonds_min_maturity(Integer?, Constant?, Constant?, BondList?, BondList, BondList, Constant).
 
 %% When MinMaturity has passed (bonds are mature), any bond qualifies
 select_bonds_min_maturity(Now, MinMat, K, Hs, Sel?, Rem?, Got?) :-
@@ -431,7 +431,7 @@ select_bonds_min_maturity(Now, MinMat, K, Hs, Sel?, Rem?, Got?) :-
     select_any_bonds(K?, Hs?, Sel, Rem, Got).
 
 %% When MinMaturity has NOT passed, require M >= MinMaturity
-select_bonds_min_maturity(Now, MinMat, K, Hs, Sel?, Rem?, Got?) :-
+select_bonds_min_maturity(_, MinMat, K, Hs, Sel?, Rem?, Got?) :-
     otherwise |
     select_bonds_min_maturity_strict(MinMat?, K?, Hs?, Sel, Rem, Got).
 
