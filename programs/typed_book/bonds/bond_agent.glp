@@ -57,7 +57,7 @@ FriendContent ::= response(Response)
                 ; redeem_request(Constant, Constant, BondList, RedeemResponse?)
                 ; loan_propose(Constant, Schedule, BondList, LoanResponse?)
                 ; trade_propose(LotList, BondList, TradeResponse?)
-                ; escrow_offer(Constant, EscrowBenResult?).
+                ; escrow_offer(Constant, EscrowBenResult).
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
@@ -196,7 +196,7 @@ OutputContent ::= minted(Constant, Constant)
                 ; trade_completed(Constant)
                 ; trade_failed(Constant)
                 ; trade_returned(Constant)
-                ; escrow_offer(Constant, EscrowBenResult?)
+                ; escrow_offer(Constant, EscrowBenResult)
                 ; escrow_deposited(Constant, Constant, EscrowCancel?)
                 ; escrow_received(Constant, Constant)
                 ; escrow_released(Constant)

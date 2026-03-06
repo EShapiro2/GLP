@@ -161,7 +161,7 @@ FriendMsg     ::= msg(Constant, Constant, FriendContent).
 Replace with:
 ```
                 ; trade_propose(LotList, BondList, TradeResponse?)
-                ; escrow_offer(Constant, EscrowBenResult?).
+                ; escrow_offer(Constant, EscrowBenResult).
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
 ```
 

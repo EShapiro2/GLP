@@ -28,6 +28,10 @@ Lot     ::= lot(Constant, Constant, Constant).
 LotList ::= [] ; [Lot | LotList].
 TradeResponse ::= trade_accept(BondList) ; trade_decline(BondList).
 
+EscrowCancel    ::= cancel.
+EscrowBenResult ::= escrow_bonds(BondList) ; escrow_cancelled.
+EscrowDepResult ::= escrow_bonds(BondList) ; escrow_expired.
+
 Installment ::= installment(Constant, Constant).
 Schedule    ::= [] ; [Installment | Schedule].
 
@@ -37,7 +41,8 @@ FriendContent ::= response(Response)
                 ; payment(BondList)
                 ; redeem_request(Constant, Constant, BondList, RedeemResponse?)
                 ; loan_propose(Constant, Schedule, BondList, LoanResponse?)
-                ; trade_propose(LotList, BondList, TradeResponse?).
+                ; trade_propose(LotList, BondList, TradeResponse?)
+                ; escrow_offer(Constant, EscrowBenResult).
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
@@ -69,7 +74,14 @@ AgentContent ::= minted(Constant, Constant)
                ; trade_proposed(Constant, LotList, TradeResponse?, BondList)
                ; trade_completed(Constant)
                ; trade_failed(Constant)
-               ; trade_returned(Constant).
+               ; trade_returned(Constant)
+               ; escrow_deposited(Constant, Constant, EscrowCancel?)
+               ; escrow_received(Constant, Constant)
+               ; escrow_released(Constant)
+               ; escrow_cancelled(Constant)
+               ; escrow_expired(Constant)
+               ; escrow_returned(Constant)
+               ; escrow_failed(Constant).
 
 AgentToUserMsg    ::= msg(Constant, Constant, AgentContent).
 AgentToUserStream ::= [] ; [AgentToUserMsg | AgentToUserStream].
@@ -78,6 +90,7 @@ PendingValue ::= response(Response?)
                ; credit_pending(CreditResponse?, Constant, Constant, BondList)
                ; loan_pending(LoanResponse?, Schedule, BondList)
                ; trade_pending(TradeResponse?, LotList, BondList)
+               ; escrow_pending(EscrowCancel?)
                ; error.
 
 UserContent ::= mint(Constant, Constant)
@@ -96,7 +109,9 @@ UserContent ::= mint(Constant, Constant)
               ; reject_loan(Constant, PendingValue)
               ; trade(Constant, LotList, LotList)
               ; accept_trade(Constant, PendingValue)
-              ; reject_trade(Constant, PendingValue).
+              ; reject_trade(Constant, PendingValue)
+              ; deposit_escrow(Constant, LotList, Constant)
+              ; cancel_escrow(Constant, PendingValue).
 
 MediatorToAgentMsg    ::= msg(Constant, Constant, UserContent).
 MediatorToAgentStream ::= [] ; [MediatorToAgentMsg | MediatorToAgentStream].
@@ -120,7 +135,9 @@ UserCmd ::= mint(Constant, Constant)
           ; reject_loan(Constant, ReqId)
           ; trade(Constant, LotList, LotList)
           ; accept_trade(Constant, ReqId)
-          ; reject_trade(Constant, ReqId).
+          ; reject_trade(Constant, ReqId)
+          ; deposit_escrow(Constant, LotList, Constant)
+          ; cancel_escrow(Constant, ReqId).
 
 UserNotify ::= minted(Constant, Constant)
              ; balance_report(BondList)
@@ -143,7 +160,14 @@ UserNotify ::= minted(Constant, Constant)
              ; trade_proposed(Constant, LotList, ReqId)
              ; trade_completed(Constant)
              ; trade_failed(Constant)
-             ; trade_returned(Constant).
+             ; trade_returned(Constant)
+             ; escrow_deposited(Constant, Constant, ReqId)
+             ; escrow_received(Constant, Constant)
+             ; escrow_released(Constant)
+             ; escrow_cancelled(Constant)
+             ; escrow_expired(Constant)
+             ; escrow_returned(Constant)
+             ; escrow_failed(Constant).
 
 UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].
 UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
@@ -527,6 +551,90 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ground(Id?), ground(From?), ground(ReqId?) |
     lookup_pending(ReqId?, Pv, Ps?, Ps1),
     send_agent(msg('_user', Id?, reject_trade(From?, Pv?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
+%% --- Agent-to-user: escrow_deposited (non-ground — store CancelSignal in pending) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', escrow_deposited(Target, ReleaseTime, CancelSignal?)),
+            AgentCh?, AgentCh1),
+    ground(Target?), ground(ReleaseTime?) |
+    send_user(escrow_deposited(Target?, ReleaseTime?, req(N?)), UserCh?, UserCh1),
+    N1 := N? + 1,
+    ui_mediator(Id?, AgentCh1?, UserCh1?,
+        [pending(req(N?), escrow_pending(CancelSignal)) | Ps?], N1?).
+
+%% --- Agent-to-user: escrow_received (ground — pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', escrow_received(From, ReleaseTime)),
+            AgentCh?, AgentCh1),
+    ground(From?), ground(ReleaseTime?) |
+    send_user(escrow_received(From?, ReleaseTime?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- Agent-to-user: escrow_released (ground — pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', escrow_released(From)),
+            AgentCh?, AgentCh1),
+    ground(From?) |
+    send_user(escrow_released(From?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- Agent-to-user: escrow_cancelled (ground — pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', escrow_cancelled(From)),
+            AgentCh?, AgentCh1),
+    ground(From?) |
+    send_user(escrow_cancelled(From?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- Agent-to-user: escrow_expired (ground — pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', escrow_expired(Target)),
+            AgentCh?, AgentCh1),
+    ground(Target?) |
+    send_user(escrow_expired(Target?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- Agent-to-user: escrow_returned (ground — pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', escrow_returned(Target)),
+            AgentCh?, AgentCh1),
+    ground(Target?) |
+    send_user(escrow_returned(Target?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- Agent-to-user: escrow_failed (ground — pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', escrow_failed(Target)),
+            AgentCh?, AgentCh1),
+    ground(Target?) |
+    send_user(escrow_failed(Target?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- User-to-agent: deposit_escrow (pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(deposit_escrow(Target, GiveSpec, ReleaseTime), UserCh?, UserCh1),
+    ground(Id?), ground(Target?), ground(GiveSpec?), ground(ReleaseTime?) |
+    send_agent(msg('_user', Id?, deposit_escrow(Target?, GiveSpec?, ReleaseTime?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- User-to-agent: cancel_escrow (with pending lookup) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(cancel_escrow(Target, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(Target?), ground(ReqId?) |
+    lookup_pending(ReqId?, Pv, Ps?, Ps1),
+    send_agent(msg('_user', Id?, cancel_escrow(Target?, Pv?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 

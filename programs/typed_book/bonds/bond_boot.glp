@@ -587,3 +587,137 @@ fplay9 :-
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 10 — Escrow: Time Release
+%% =============================================================================
+%%
+%% T = now + 500 ms. Alice deposits 3 bob-coins for Bob.
+%% Timer expires. Bob gets bonds. Alice gets escrow_expired.
+
+play10 :-
+    now(Now),
+    T := Now? + 500,
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p10(T?, ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    bob_p10(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 10 — Escrow: Time Release (with tagged output for UI)
+%% =============================================================================
+
+fplay10 :-
+    now(Now),
+    T := Now? + 500,
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p10(T?, ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    bob_p10(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 11 — Escrow: Cancel
+%% =============================================================================
+%%
+%% T = now + 5000 ms (far future). Alice deposits 3 bob-coins for Bob.
+%% Alice cancels immediately. Alice gets bonds back. Bob gets escrow_cancelled.
+
+play11 :-
+    now(Now),
+    T := Now? + 5000,
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p11(T?, ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    bob_p11(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 11 — Escrow: Cancel (with tagged output for UI)
+%% =============================================================================
+
+fplay11 :-
+    now(Now),
+    T := Now? + 5000,
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    alice_p11(T?, ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    bob_p11(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).

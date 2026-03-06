@@ -43,7 +43,9 @@ UserCmd ::= mint(Constant, Constant)
           ; reject_loan(Constant, ReqId)
           ; trade(Constant, LotList, LotList)
           ; accept_trade(Constant, ReqId)
-          ; reject_trade(Constant, ReqId).
+          ; reject_trade(Constant, ReqId)
+          ; deposit_escrow(Constant, LotList, Constant)
+          ; cancel_escrow(Constant, ReqId).
 
 Decision ::= yes ; no.
 
@@ -69,7 +71,14 @@ UserNotify ::= minted(Constant, Constant)
              ; trade_proposed(Constant, LotList, ReqId)
              ; trade_completed(Constant)
              ; trade_failed(Constant)
-             ; trade_returned(Constant).
+             ; trade_returned(Constant)
+             ; escrow_deposited(Constant, Constant, ReqId)
+             ; escrow_received(Constant, Constant)
+             ; escrow_released(Constant)
+             ; escrow_cancelled(Constant)
+             ; escrow_expired(Constant)
+             ; escrow_returned(Constant)
+             ; escrow_failed(Constant).
 
 UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].
 UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
@@ -994,3 +1003,264 @@ bob_p9_wait_balance([], []).
 
 procedure bob_p9_finish(UserCmdStream).
 bob_p9_finish([]).
+
+%% =============================================================================
+%% PLAY 10 — Escrow: Time Release
+%% =============================================================================
+%%
+%% Alice:
+%% 1. connect(bob)
+%% 2. Wait connected(bob)
+%% 3. credit(bob,5,0)
+%% 4. Wait credit_opened(bob,5)
+%% 5. deposit_escrow(bob,[lot(bob,0,3)],T)
+%% 6. Wait escrow_deposited(bob,T,req(1))
+%% 7. Wait escrow_expired(bob)
+%% 8. balance
+%% 9. Wait balance_report(_)
+%% 10. done
+%%
+%% Bob:
+%% 1. Wait befriend(alice,req(1)) → decision(yes,alice,req(1))
+%% 2. Wait credit_proposed(alice,5,0,req(2)) → accept_credit(alice,req(2))
+%% 3. Wait escrow_received(alice,T)
+%% 4. Wait escrow_released(alice)
+%% 5. balance
+%% 6. Wait balance_report(_)
+%% 7. done
+
+%% --- Alice (play10) ---
+
+procedure alice_p10(Constant?, ActorChannel?).
+alice_p10(T, ch(In, [connect(bob)|Out?])) :-
+    ground(T?) |
+    alice_p10_wait_connected(T?, In?, Out).
+
+procedure alice_p10_wait_connected(Constant?, UserNotifyStream?, UserCmdStream).
+alice_p10_wait_connected(T, [connected(bob)|In],
+                         [credit(bob, 5, 0)|Out?]) :-
+    alice_p10_wait_credit(T?, In?, Out).
+alice_p10_wait_connected(T, [_|In], Out?) :-
+    otherwise | alice_p10_wait_connected(T?, In?, Out).
+alice_p10_wait_connected(_, [], []).
+
+procedure alice_p10_wait_credit(Constant?, UserNotifyStream?, UserCmdStream).
+alice_p10_wait_credit(T, [credit_opened(bob, 5)|In],
+                      [deposit_escrow(bob, [lot(bob, 0, 3)], T?)|Out?]) :-
+    alice_p10_wait_deposited(In?, Out).
+alice_p10_wait_credit(T, [_|In], Out?) :-
+    otherwise | alice_p10_wait_credit(T?, In?, Out).
+alice_p10_wait_credit(_, [], []).
+
+procedure alice_p10_wait_deposited(UserNotifyStream?, UserCmdStream).
+alice_p10_wait_deposited([escrow_deposited(bob, _, _)|In], Out?) :-
+    alice_p10_wait_expired(In?, Out).
+alice_p10_wait_deposited([_|In], Out?) :-
+    otherwise | alice_p10_wait_deposited(In?, Out).
+alice_p10_wait_deposited([], []).
+
+procedure alice_p10_wait_expired(UserNotifyStream?, UserCmdStream).
+alice_p10_wait_expired([escrow_expired(bob)|In], [balance|Out?]) :-
+    alice_p10_wait_balance(In?, Out).
+alice_p10_wait_expired([_|In], Out?) :-
+    otherwise | alice_p10_wait_expired(In?, Out).
+alice_p10_wait_expired([], []).
+
+procedure alice_p10_wait_balance(UserNotifyStream?, UserCmdStream).
+alice_p10_wait_balance([balance_report(_)|In], [done|Out?]) :-
+    alice_p10_finish(In?, Out).
+alice_p10_wait_balance([_|In], Out?) :-
+    otherwise | alice_p10_wait_balance(In?, Out).
+alice_p10_wait_balance([], []).
+
+procedure alice_p10_finish(UserNotifyStream?, UserCmdStream).
+alice_p10_finish(_, []).
+
+%% --- Bob (play10) ---
+
+procedure bob_p10(ActorChannel?).
+bob_p10(ch([befriend(alice, ReqId)|In],
+           [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob_p10_wait_connected(In?, Out).
+bob_p10(ch([_|In], Out?)) :-
+    otherwise | bob_p10(ch(In?, Out)).
+
+procedure bob_p10_wait_connected(UserNotifyStream?, UserCmdStream).
+bob_p10_wait_connected([connected(alice)|In], Out?) :-
+    bob_p10_wait_credit_proposed(In?, Out).
+bob_p10_wait_connected([_|In], Out?) :-
+    otherwise | bob_p10_wait_connected(In?, Out).
+bob_p10_wait_connected([], []).
+
+procedure bob_p10_wait_credit_proposed(UserNotifyStream?, UserCmdStream).
+bob_p10_wait_credit_proposed([credit_proposed(alice, 5, 0, ReqId)|In],
+                             [accept_credit(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob_p10_wait_credit_opened(In?, Out).
+bob_p10_wait_credit_proposed([_|In], Out?) :-
+    otherwise | bob_p10_wait_credit_proposed(In?, Out).
+bob_p10_wait_credit_proposed([], []).
+
+procedure bob_p10_wait_credit_opened(UserNotifyStream?, UserCmdStream).
+bob_p10_wait_credit_opened([credit_opened(alice, 5)|In], Out?) :-
+    bob_p10_wait_escrow_received(In?, Out).
+bob_p10_wait_credit_opened([_|In], Out?) :-
+    otherwise | bob_p10_wait_credit_opened(In?, Out).
+bob_p10_wait_credit_opened([], []).
+
+procedure bob_p10_wait_escrow_received(UserNotifyStream?, UserCmdStream).
+bob_p10_wait_escrow_received([escrow_received(alice, _)|In], Out?) :-
+    bob_p10_wait_escrow_released(In?, Out).
+bob_p10_wait_escrow_received([_|In], Out?) :-
+    otherwise | bob_p10_wait_escrow_received(In?, Out).
+bob_p10_wait_escrow_received([], []).
+
+procedure bob_p10_wait_escrow_released(UserNotifyStream?, UserCmdStream).
+bob_p10_wait_escrow_released([escrow_released(alice)|In], [balance|Out?]) :-
+    bob_p10_wait_balance(In?, Out).
+bob_p10_wait_escrow_released([_|In], Out?) :-
+    otherwise | bob_p10_wait_escrow_released(In?, Out).
+bob_p10_wait_escrow_released([], []).
+
+procedure bob_p10_wait_balance(UserNotifyStream?, UserCmdStream).
+bob_p10_wait_balance([balance_report(_)|_], [done|Out?]) :-
+    bob_p10_finish(Out).
+bob_p10_wait_balance([_|In], Out?) :-
+    otherwise | bob_p10_wait_balance(In?, Out).
+bob_p10_wait_balance([], []).
+
+procedure bob_p10_finish(UserCmdStream).
+bob_p10_finish([]).
+
+%% =============================================================================
+%% PLAY 11 — Escrow: Cancel
+%% =============================================================================
+%%
+%% Alice:
+%% 1. connect(bob)
+%% 2. Wait connected(bob)
+%% 3. credit(bob,5,0)
+%% 4. Wait credit_opened(bob,5)
+%% 5. deposit_escrow(bob,[lot(bob,0,3)],T)
+%% 6. Wait escrow_deposited(bob,T,ReqId)
+%% 7. cancel_escrow(bob,ReqId)
+%% 8. Wait escrow_returned(bob)
+%% 9. balance
+%% 10. Wait balance_report(_)
+%% 11. done
+%%
+%% Bob:
+%% 1. Wait befriend(alice,req(1)) → decision(yes,alice,req(1))
+%% 2. Wait credit_proposed(alice,5,0,req(2)) → accept_credit(alice,req(2))
+%% 3. Wait escrow_received(alice,T)
+%% 4. Wait escrow_cancelled(alice)
+%% 5. balance
+%% 6. Wait balance_report(_)
+%% 7. done
+
+%% --- Alice (play11) ---
+
+procedure alice_p11(Constant?, ActorChannel?).
+alice_p11(T, ch(In, [connect(bob)|Out?])) :-
+    ground(T?) |
+    alice_p11_wait_connected(T?, In?, Out).
+
+procedure alice_p11_wait_connected(Constant?, UserNotifyStream?, UserCmdStream).
+alice_p11_wait_connected(T, [connected(bob)|In],
+                         [credit(bob, 5, 0)|Out?]) :-
+    alice_p11_wait_credit(T?, In?, Out).
+alice_p11_wait_connected(T, [_|In], Out?) :-
+    otherwise | alice_p11_wait_connected(T?, In?, Out).
+alice_p11_wait_connected(_, [], []).
+
+procedure alice_p11_wait_credit(Constant?, UserNotifyStream?, UserCmdStream).
+alice_p11_wait_credit(T, [credit_opened(bob, 5)|In],
+                      [deposit_escrow(bob, [lot(bob, 0, 3)], T?)|Out?]) :-
+    alice_p11_wait_deposited(In?, Out).
+alice_p11_wait_credit(T, [_|In], Out?) :-
+    otherwise | alice_p11_wait_credit(T?, In?, Out).
+alice_p11_wait_credit(_, [], []).
+
+procedure alice_p11_wait_deposited(UserNotifyStream?, UserCmdStream).
+alice_p11_wait_deposited([escrow_deposited(bob, _, ReqId)|In],
+                         [cancel_escrow(bob, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    alice_p11_wait_returned(In?, Out).
+alice_p11_wait_deposited([_|In], Out?) :-
+    otherwise | alice_p11_wait_deposited(In?, Out).
+alice_p11_wait_deposited([], []).
+
+procedure alice_p11_wait_returned(UserNotifyStream?, UserCmdStream).
+alice_p11_wait_returned([escrow_returned(bob)|In], [balance|Out?]) :-
+    alice_p11_wait_balance(In?, Out).
+alice_p11_wait_returned([_|In], Out?) :-
+    otherwise | alice_p11_wait_returned(In?, Out).
+alice_p11_wait_returned([], []).
+
+procedure alice_p11_wait_balance(UserNotifyStream?, UserCmdStream).
+alice_p11_wait_balance([balance_report(_)|In], [done|Out?]) :-
+    alice_p11_finish(In?, Out).
+alice_p11_wait_balance([_|In], Out?) :-
+    otherwise | alice_p11_wait_balance(In?, Out).
+alice_p11_wait_balance([], []).
+
+procedure alice_p11_finish(UserNotifyStream?, UserCmdStream).
+alice_p11_finish(_, []).
+
+%% --- Bob (play11) ---
+
+procedure bob_p11(ActorChannel?).
+bob_p11(ch([befriend(alice, ReqId)|In],
+           [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob_p11_wait_connected(In?, Out).
+bob_p11(ch([_|In], Out?)) :-
+    otherwise | bob_p11(ch(In?, Out)).
+
+procedure bob_p11_wait_connected(UserNotifyStream?, UserCmdStream).
+bob_p11_wait_connected([connected(alice)|In], Out?) :-
+    bob_p11_wait_credit_proposed(In?, Out).
+bob_p11_wait_connected([_|In], Out?) :-
+    otherwise | bob_p11_wait_connected(In?, Out).
+bob_p11_wait_connected([], []).
+
+procedure bob_p11_wait_credit_proposed(UserNotifyStream?, UserCmdStream).
+bob_p11_wait_credit_proposed([credit_proposed(alice, 5, 0, ReqId)|In],
+                             [accept_credit(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob_p11_wait_credit_opened(In?, Out).
+bob_p11_wait_credit_proposed([_|In], Out?) :-
+    otherwise | bob_p11_wait_credit_proposed(In?, Out).
+bob_p11_wait_credit_proposed([], []).
+
+procedure bob_p11_wait_credit_opened(UserNotifyStream?, UserCmdStream).
+bob_p11_wait_credit_opened([credit_opened(alice, 5)|In], Out?) :-
+    bob_p11_wait_escrow_received(In?, Out).
+bob_p11_wait_credit_opened([_|In], Out?) :-
+    otherwise | bob_p11_wait_credit_opened(In?, Out).
+bob_p11_wait_credit_opened([], []).
+
+procedure bob_p11_wait_escrow_received(UserNotifyStream?, UserCmdStream).
+bob_p11_wait_escrow_received([escrow_received(alice, _)|In], Out?) :-
+    bob_p11_wait_escrow_cancelled(In?, Out).
+bob_p11_wait_escrow_received([_|In], Out?) :-
+    otherwise | bob_p11_wait_escrow_received(In?, Out).
+bob_p11_wait_escrow_received([], []).
+
+procedure bob_p11_wait_escrow_cancelled(UserNotifyStream?, UserCmdStream).
+bob_p11_wait_escrow_cancelled([escrow_cancelled(alice)|In], [balance|Out?]) :-
+    bob_p11_wait_balance(In?, Out).
+bob_p11_wait_escrow_cancelled([_|In], Out?) :-
+    otherwise | bob_p11_wait_escrow_cancelled(In?, Out).
+bob_p11_wait_escrow_cancelled([], []).
+
+procedure bob_p11_wait_balance(UserNotifyStream?, UserCmdStream).
+bob_p11_wait_balance([balance_report(_)|_], [done|Out?]) :-
+    bob_p11_finish(Out).
+bob_p11_wait_balance([_|In], Out?) :-
+    otherwise | bob_p11_wait_balance(In?, Out).
+bob_p11_wait_balance([], []).
+
+procedure bob_p11_finish(UserCmdStream).
+bob_p11_finish([]).
