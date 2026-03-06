@@ -1,5 +1,31 @@
 # Stage 1: Parameterized Types — Claude Code Instructions
 
+## 🔴 MANDATORY READING — Complete Before Any Work
+
+Read these files IN ORDER before doing anything else:
+
+1. **`/Users/udi/Grassroots/GLP/CLAUDE.md`** — Claude Code rules, workflow, git protocol, working modes
+2. **`/Users/udi/Grassroots/claude.md`** — Project-wide rules (output size, writing style, bibliography, git push workflow)
+3. **`/Users/udi/Grassroots/GLP/docs/DISCIPLINE.md`** — Development discipline rules
+4. **`/Users/udi/Grassroots/GLP/docs/typed-glp-manual.md`** — GLP programming manual (especially Section 17: Parameterized Types)
+5. **`/Users/udi/Grassroots/GLP/docs/glp-cheat-sheet.md`** — GLP programming cheat sheet
+6. **`/Users/udi/Grassroots/GLP/docs/type system/typed-program.md`** — Type system spec including parameterized types section
+7. **`/Users/udi/Grassroots/GLP/docs/type system/type-automaton.md`** — Type automaton spec (note: unchanged by this work)
+8. **`/Users/udi/Grassroots/GLP/docs/type system/IMPLEMENTATION-PLAN.md`** — Implementation plan (Phase 7 is this work)
+9. **`/Users/udi/Grassroots/GLP/docs/type system/parameterized-types-plan.md`** — Two-stage plan for parameterized types
+10. **This file** (`docs/type system/stage1-claude-code-instructions.md`) — Detailed implementation instructions
+
+Key source files to read before implementing:
+
+11. **`glp_runtime/lib/analysis/type_checker/type_ast.dart`** — Type AST (TypeDef, TypeRef, ProcDecl, etc.)
+12. **`glp_runtime/lib/compiler/parser.dart`** — Parser (type definition and procedure declaration parsing)
+13. **`glp_runtime/lib/analysis/type_checker/type_conversion.dart`** — Term-to-TypeExpr conversion
+14. **`glp_runtime/lib/compiler/analyzer.dart`** — Compilation pipeline (integration point for expansion)
+
+After reading all of the above, acknowledge each one, then STOP and WAIT for direction.
+
+---
+
 **Spec**: `docs/type system/typed-program.md`, section "Parameterized Types"
 **Paper**: Moded-Types paper, Section 8
 **Plan**: `docs/type system/parameterized-types-plan.md`
