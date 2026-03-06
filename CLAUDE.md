@@ -37,7 +37,9 @@ When emerging from compaction (you see a session summary replacing the original 
 4. **ACKNOWLEDGE DISCIPLINE.md** - State "I have read DISCIPLINE.md completely"
 5. **READ docs/typed-glp-manual.md** - Read to completion
 6. **ACKNOWLEDGE typed-glp-manual.md** - State "I have read typed-glp-manual.md completely"
-7. **STOP AND WAIT** - Do not read any other files. Wait for user direction.
+7. **READ docs/glp-cheat-sheet.md** - Read to completion. This is a compact reference for GLP programming patterns. GLP is NOT Prolog — study the wrong vs right examples carefully.
+8. **ACKNOWLEDGE glp-cheat-sheet.md** - State "I have read glp-cheat-sheet.md completely"
+9. **STOP AND WAIT** - Do not read any other files. Wait for user direction.
 
 **DO NOT read handovers, specs, code, or any other files until user gives direction.**
 
@@ -272,7 +274,7 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 ## Key Context
 - **Project**: GLP (Grassroots Logic Programs) - a secure concurrent logic programming language
 - **Implementation Language**: Dart
-- **Current State**: 382 REPL tests passing, 374 Dart tests passing (as of Mar 2026)
+- **Current State**: 384 REPL tests passing, 374 Dart tests passing (as of Mar 2026)
 - **Test Suite**: `bash /Users/udi/Grassroots/GLP/test/run_all_tests.sh` — ALWAYS run before committing
 - **User Expertise**: Deep understanding of GLP semantics but does not write code
 - **Working Directory**: `/Users/udi/Grassroots/GLP/` (user's Mac)
@@ -431,7 +433,7 @@ echo -e 'load ../programs/path/to/file.glp\ngoal.' | ./glp_repl
 
 **REPL Test Suite:**
 ```bash
-# Unified test suite - 382 tests (ALWAYS run before committing)
+# Unified test suite - 384 tests (ALWAYS run before committing)
 bash /Users/udi/Grassroots/GLP/test/run_all_tests.sh
 
 # Book examples only - 141 files (tests compilation only)
@@ -533,7 +535,7 @@ You:
 
 | Suite | Location | Tests | Purpose |
 |-------|----------|-------|---------|
-| Unified | `test/run_all_tests.sh` | 382 | All REPL-based tests (runtime + type-check + negative + modules) |
+| Unified | `test/run_all_tests.sh` | 384 | All REPL-based tests (runtime + type-check + negative + modules) |
 | Book | `test/run_book_tests.sh` | 141 | Book examples compile check |
 | Dart | `glp_runtime/test/` | 374 | Dart unit tests (14 known failures, 5 skipped) |
 
@@ -568,7 +570,7 @@ dart test
 ```
 
 **Expected results:**
-- Unified: 382/382 pass
+- Unified: 384/384 pass
 - Book: 84/141 pass (57 fail due to SRSW violations in book code)
 - Dart: 374 pass, 14 known failures, 5 skipped
 
@@ -672,7 +674,7 @@ echo -e '/Users/udi/Grassroots/GLP/programs/tests/typed/TESTFILE.glp\nQUERY.\n:q
 ```bash
 # ALWAYS run test suites first
 cd /home/user/GLP/glp_runtime
-bash ../test/run_all_tests.sh          # 382 REPL tests
+bash ../test/run_all_tests.sh          # 384 REPL tests
 dart test                              # Dart unit tests
 ```
 If tests failing BEFORE changes, STOP and inform user.
@@ -806,7 +808,7 @@ PC 44: Proceed
 These must continue passing:
 ```bash
 cd /home/user/GLP/glp_runtime
-bash ../test/run_all_tests.sh  # Should show 382 passing
+bash ../test/run_all_tests.sh  # Should show 384 passing
 dart test                      # Should show 374 passing (14 known failures, 5 skipped)
 ```
 

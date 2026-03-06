@@ -1,7 +1,7 @@
 # Type Checker Implementation Plan
 
 **Created**: 2026-01-23
-**Status**: Phase 6 COMPLETE - All phases finished
+**Status**: Phase 7 NOT STARTED - Parameterized type expansion
 **Paper**: sections/well-typing.tex (Definition `moded-head` = Definition 5.5)
 
 ## Overview
@@ -18,6 +18,7 @@ The paper underwent major mathematical simplification. Specifications have been 
 | 4 | Review well_typed_term.dart | ✅ COMPLETE | Refs updated, 7 tests added |
 | 5 | Review well_typed_clause.dart | ✅ COMPLETE | Refs updated, 6 tests added |
 | 6 | Full test suite validation | ✅ COMPLETE | No regressions, 23 unit tests |
+| 7 | Parameterized type expansion | NOT STARTED | Preprocessing before automaton construction |
 
 ---
 
@@ -275,6 +276,64 @@ The 18 Dart unit test failures and 1 REPL test failure are pre-existing issues u
 - Specs archived and rewritten from scratch
 - Implementation plan created
 - **Phase 1 complete**: terminology rename (complement → dual)
+
+---
+
+---
+
+## Phase 7: Parameterized Type Expansion
+
+**Status**: NOT STARTED
+**Paper Reference**: Section 8, Definition 8.1
+**Spec**: `docs/type system/typed-program.md`, section "Parameterized Types"
+
+### Overview
+
+Parameterized types are syntactic sugar. A preprocessing step expands all parameterized type definitions and references into monomorphic equivalents before type automaton construction. After expansion, all existing machinery (automaton, well-typing, subtyping) applies without modification.
+
+### Implementation Location
+
+New file: `glp_runtime/lib/analysis/type_checker/param_expansion.dart`
+
+This runs after parsing and before type automaton construction. The entry point should accept the parsed program (type definitions + procedure declarations) and return a transformed program with only monomorphic types.
+
+### Algorithm (5 steps)
+
+1. **Collect templates.** Scan type definitions. A definition with parameters (e.g., `Stream(X)`) is a template. Record it; do not add to type environment.
+
+2. **Collect instantiations.** Scan all type definitions (including bodies), procedure declarations (`procedure`, `imported procedure`, `exported procedure`) for parameterized type references like `Stream(Integer)`. Record each distinct instantiation.
+
+3. **Expand.** For each instantiation, generate a fresh monomorphic type definition by substituting parameters. Recursive self-references become the fresh name. Nested instantiations expand inside-out.
+
+4. **Replace references.** In all type definitions and procedure declarations, replace `T(S₁,...,Sₖ)` with the expanded name `T<S₁,...,Sₖ>`.
+
+5. **Remove templates.** Remove parameterized type definitions. Only expanded monomorphic definitions remain.
+
+### Parameterized Procedure Declarations
+
+When a procedure is declared with type parameters (e.g., `merge(Stream(X)?, Stream(X)?, Stream(X))`), the type checker must infer the instantiation at each call site by structural matching of the declared parameterized types against the concrete types from the call context. Conflicting bindings are an error.
+
+### What Does NOT Change
+
+- Type automaton construction (`type-automaton.md`)
+- Moded head construction (`moded-head.md`)
+- Well-typed term checking (`well-typed-term.md`)
+- Well-typed clause checking (`well-typed-clause.md`)
+- Well-typed program checking (`well-typed-program.md`)
+- Subtyping (`subtyping.md`)
+- Consistent paths (`consistent-paths.md`)
+
+### Test Strategy
+
+New test programs in `programs/tests/typed/`:
+
+1. **Positive**: `Stream(Integer)` with merge — basic expansion
+2. **Positive**: `Channel(Msg, Msg)` — mode annotations preserved
+3. **Positive**: Nested `Stream(Pair(Integer, String))` — inside-out expansion
+4. **Positive**: Parameterized procedure declaration with inference
+5. **Negative**: Conflicting type parameter bindings at call site
+6. **Negative**: Wrong arity in instantiation (e.g., `Stream(A, B)`)
+7. **Positive**: Module interaction — imported procedure with instantiated parameters
 
 ---
 

@@ -1,7 +1,7 @@
 # Typed GLP Manual
 
-**Version**: 2.4
-**Date**: 2026-02-21
+**Version**: 2.6
+**Date**: 2026-03-06
 **Status**: ACTIVE
 
 This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, and common pitfalls.
@@ -651,15 +651,161 @@ Use the generic name followed by an underscore and a descriptive qualifier:
 | `copy` | `copy_agent` | Copying an AgentStream |
 | `distribute` | `distribute_agent` | Distributing over AgentStreams |
 
-### 14.6 Relationship to Parametric Types
+### 14.6 Relationship to Parameterized Types
 
-This technique is a workaround for the absence of parametric types. With parametric types, one could write:
+This technique is a workaround for the absence of parameterized types. With parameterized types (Section 17), one writes:
 
 ```prolog
-procedure send(X?, Channel(Stream(X))?, Channel(Stream(X))).
+procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
 ```
 
-and the type checker would instantiate `X` to `AgentMsg` automatically. Until parametric types are implemented, renamed copies are the way to achieve precise typing for generic procedures used in body position.
+and the type checker instantiates `X` to `AgentMsg` automatically. When parameterized types are implemented, renamed copies will no longer be needed for generic procedures used in body position.
+
+---
+
+## 15. Receiving and Forwarding Non-Ground Variables
+
+### 15.1 The Pattern
+
+When a process receives a message containing a non-ground variable (e.g., an unbound response variable) and needs to pass it to another concurrent process, use the standard writer/reader pattern:
+
+```prolog
+p(..., [msg(From, escrow_offer(Time, Result))|Rest], ...) :-
+    ... |
+    monitor(Result?, ...),
+    p(..., Rest?, ...).
+```
+
+- `Result` (writer, no `?`) in the HEAD — receives the variable from the message
+- `Result?` (reader) in the BODY — passes it to the monitoring process
+- Total: 1 writer + 1 reader = SRSW satisfied
+
+This is the same pattern as Section 2's "input continues to recursive call," applied to inter-process communication rather than recursion.
+
+### 15.2 Common Mistake
+
+Writing `Result?` (reader) in the head:
+
+```prolog
+%% WRONG — 2 readers, 0 writers
+p(..., [msg(From, offer(Time, Result?))|Rest], ...) :-
+    ... |
+    monitor(Result?, ...).   %% SRSW violation!
+```
+
+This mistake often arises when the programmer sees `?` in the type definition (e.g., `offer(Constant, SomeType?)`) and assumes the clause variable must also carry `?`.
+
+### 15.3 Existing Examples in the Codebase
+
+The bond agent uses this pattern in every protocol:
+
+- Cold-call: `intro(From, Resp?)` in the message → `Resp` (writer) in head, `Resp` forwarded as writer in outgoing befriend message
+- Credit: `credit_propose(K, Maturity, Bonds, CreditResp?)` → `CreditResp` forwarded as writer to mediator
+- Trade: `trade_propose(WantSpec, Bonds, TradeResp?)` → `TradeResp` forwarded as writer to mediator
+- Escrow: `escrow_offer(Time, BenResult?)` → `BenResult` (writer) in head, `BenResult?` (reader) passed to inject
+
+The escrow case is notable because the receiver calls `inject` directly rather than forwarding the writer to another message. The SRSW pattern is the same either way.
+
+---
+
+## 16. `?` in Type Definitions vs `?` on Clause Variables
+
+### 16.1 The Distinction
+
+The `?` symbol appears in two different contexts with different meanings:
+
+- **In type definitions**: `?` describes the mode of data as it flows through the structure. For example, `credit_propose(Constant, Constant, BondList, CreditResponse?)` means the fourth position carries a reader reference — the data at that position is a reader pointing to an unbound writer.
+
+- **On clause variables**: `?` marks the reader half of a variable in that clause. `X?` reads the value that `X` (the writer) provides.
+
+These are independent. The `?` in a type definition does NOT constrain the clause variable to be a reader.
+
+### 16.2 Why This Matters
+
+When matching against `credit_propose(K, Maturity, Bonds, CreditResp?)` in a clause head:
+
+```prolog
+p(..., [msg(From, credit_propose(K, Maturity, Bonds, CreditResp?))|Rest], ...) :-
+```
+
+The `CreditResp?` extracts the reader from the message. But `CreditResp` (the writer half) is also available in the clause. If the body needs to forward this variable, it uses the writer `CreditResp`:
+
+```prolog
+    send_msg(credit_proposed(From?, K?, CreditResp, Bonds?), ...),
+```
+
+The type's `?` describes what's IN the data structure. The clause variable's `?` describes how you USE the variable in this particular clause.
+
+### 16.3 Contrast with Section 9.4
+
+Section 9.4 notes that `_` and `_?` in type definitions are type symbols (meaning "any type"), not anonymous variables. Section 16 generalizes this: ALL `?` annotations in type definitions describe data modes, not clause variable constraints.
+
+---
+
+## 17. Parameterized Types
+
+### 17.1 Overview
+
+Parameterized types allow generic type definitions with type parameters. They are syntactic sugar: each use is expanded into a monomorphic type before type checking. This eliminates the need for renamed procedure copies (Section 14) when generic procedures are used in body position.
+
+### 17.2 Defining Parameterized Types
+
+Type parameters are uppercase identifiers in parentheses after the type name:
+
+```prolog
+Stream(X) ::= [] ; [X | Stream(X)].
+Pair(A, B) ::= pair(A, B).
+Channel(In, Out) ::= ch(In, Out?).
+```
+
+Mode annotations within the template (e.g., `Out?`) are preserved during expansion.
+
+### 17.3 Parameterized Procedure Declarations
+
+Use type parameters in procedure declarations to express uniform behaviour:
+
+```prolog
+procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+procedure send(X?, Channel(Stream(X))?, Channel(Stream(X))).
+procedure new_channel(Channel(X, Y), Channel(Y, X)).
+```
+
+The type parameter `X` is implicitly universally quantified. The type checker infers its binding from the call context by structural matching.
+
+### 17.4 Using Parameterized Types
+
+Use concrete instantiations in procedure declarations:
+
+```prolog
+AgentMsg ::= befriend(Constant, Response?) ; connected(Constant) ; rejected.
+
+procedure agent_merge(Stream(AgentMsg)?, Stream(AgentMsg)?, Stream(AgentMsg)).
+agent_merge(A, B, C) :- merge(A?, B?, C).
+```
+
+The call `merge(A?, B?, C)` matches `Stream(X)` against `Stream(AgentMsg)`, infers `X = AgentMsg`, and type-checks the body against the expanded monomorphic declaration.
+
+### 17.5 In Module Declarations
+
+Imported procedure declarations instantiate type parameters to the local message type:
+
+```prolog
+imported procedure merge(Stream(CounterCall)?, Stream(CounterCall)?, Stream(CounterCall)).
+```
+
+The defining module's parameterized declaration `merge(Stream(X)?, ...)` is instantiated at the importing site.
+
+### 17.6 What Parameterized Types Replace
+
+With parameterized types, the following Section 14 workarounds are no longer needed:
+
+| Before (renamed copy) | After (parameterized) |
+|-----------------------|-----------------------|
+| `merge_agent(AgentStream?, ...)` | `merge(Stream(AgentMsg)?, ...)` |
+| `send_agent(AgentMsg?, AgentChannel?, ...)` | `send(X?, Channel(Stream(X))?, ...)` |
+| `new_agent_channel(AgentChannel, ...)` | `new_channel(Channel(X,Y), ...)` |
+
+The generic procedures `merge`, `send`, `new_channel` work directly with precise types through parameter inference.
 
 ---
 
@@ -667,6 +813,8 @@ and the type checker would instantiate `X` to `AgentMsg` automatically. Until pa
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.6 | 2026-03-06 | Added Section 17: Parameterized Types; updated Section 14.6 |
+| 2.5 | 2026-03-06 | Added Section 15: Receiving and Forwarding Non-Ground Variables; Added Section 16: `?` in Type Definitions vs `?` on Clause Variables |
 | 2.4 | 2026-02-21 | Added Section 14: Precise Typing via Renamed Procedures (workaround for absent parametric types) |
 | 2.3 | 2026-02-02 | Added Section 12: Reserved Constants (underscore-prefixed constants reserved for system use, `-mode(system).` directive) |
 | 2.2 | 2026-02-01 | Added Section 10: Channel Creation vs Channel Reception |

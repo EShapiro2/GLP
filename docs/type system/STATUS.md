@@ -18,6 +18,8 @@
 | `type-automaton.md` | Definitions 5.11-5.13 | Type automaton |
 | `subtyping.md` | Definitions 5.16-5.20 | Subtyping |
 
+`typed-program.md` also covers **parameterized types** (Paper Section 8, Definition 8.1): parameterized type definitions, instantiation, the expansion algorithm, parameterized procedure declarations, and interaction with modules. The expansion is a preprocessing step; all other specs are unchanged.
+
 ## Archived
 
 Previous specifications (2026-01-23) moved to `archive/specs-2026-01-23/`.
