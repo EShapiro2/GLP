@@ -1,6 +1,6 @@
 # GLP Guards Quick Reference
 
-**Last Updated**: 2026-02-08
+**Last Updated**: 2026-03-06
 
 ---
 
@@ -55,6 +55,7 @@ These guards can be negated with `~`:
 | `constant(X?)` | Test for constant | `~constant(X?)` succeeds if X is not a constant |
 | `compound(X?)` | Test for compound term | `~compound(X?)` succeeds if X is not compound |
 | `list(X?)` | Test for list type | `~list(X?)` succeeds if X is not a list |
+| `module(X?)` | Test for module term | `~module(X?)` succeeds if X is not a module |
 | `is_mutual_ref(X?)` | Test for mutual reference | `~is_mutual_ref(X?)` succeeds if X is not a mutual ref |
 | `no_readers(X?)` | Test for no readers in term | `~no_readers(X?)` succeeds if X contains readers |
 | `X =?= Y` | Ground equality test | `~(X =?= Y)` succeeds if X and Y are not equal |
@@ -197,8 +198,7 @@ replicate(X, [X?, X?, X?]) :- ground(X?) | true.
 ```prolog
 % Metainterpreter catch-all
 run(Goal) :- clause(Goal?, Body) | run(Body?).
-run(Goal) :- otherwise | execute('write', ['No clauses for: ']),
-                         execute('write', [Goal?]).
+run(Goal) :- otherwise | send_to_user(no_clauses(Goal?)).
 ```
 
 **Usage**: Common in metainterpreters and default case handling.
@@ -292,6 +292,7 @@ This is distinct from the multiple-occurrence relaxation below. Guard reader cou
 | ✅ `integer(X?)` | Yes | ✅ Yes |
 | ✅ `number(X?)` | Yes | ✅ Yes |
 | ✅ `string(X?)` | Yes | ✅ Yes |
+| ⏳ `module(X?)` | Yes | ✅ Yes |
 | ✅ `X? < Y?` | Yes (both operands, when succeeds) | ✅ Yes |
 | ✅ `X? =< Y?` | Yes (both operands, when succeeds) | ✅ Yes |
 | ✅ `X? > Y?` | Yes (both operands, when succeeds) | ✅ Yes |
@@ -442,6 +443,20 @@ safe_divide(X, Y, Z) :- integer(X?), integer(Y?), Y? =\= 0 |
 handle(X, Y) :- list(X?) | process_list(X?, Y).
 handle(X, Y) :- otherwise | process_other(X?, Y).
 ```
+
+---
+
+### ⏳ `module(X?)`
+**Test if X is a module term**
+
+**Semantics**:
+- Success: X? bound to a `ModuleTerm` (compiled module binary)
+- Suspend: X? is unbound reader
+- Fail: X? bound to any other value
+
+**SRSW Relaxation**: Yes. Module terms are ground (opaque compiled values with no unbound variables), so `module(X?)` implies groundness and permits multiple occurrences.
+
+**Use Case**: Guards in module-based code that need to verify a term is a module before dispatching goals to it via `_activate/2`.
 
 ---
 
@@ -630,7 +645,7 @@ factorial(N, 1) :- integer(N?), N? =< 0 | true.
 | **Syntax** | `Head :- Guard \| Body` | `execute('name', [Args])` |
 | **Phase** | HEAD/GUARDS (before commit) | BODY (after commit) |
 | **Side Effects** | Never | May have (I/O, mutations) |
-| **Examples** | `known(X?)`, `ground(X?)`, `number(X?)` | `evaluate/2`, `write/1`, `file_read/2` |
+| **Examples** | `known(X?)`, `ground(X?)`, `number(X?)` | `evaluate/2`, `file_read/2` |
 
 ---
 
@@ -723,12 +738,12 @@ broadcast(Msg, [Msg?, Msg?, Msg?]) :- ground(Msg?) | true.
 test_known_success :-
   X = 42,
   known(X) |  % Should succeed
-  execute('write', ['known(42) succeeded']).
+  send_to_user(known_42_succeeded).
 
 % Test suspension (requires runtime trace)
 test_known_suspend :-
   known(X) |  % Should suspend on unbound X
-  execute('write', ['Should not reach here']).
+  send_to_user(should_not_reach_here).
 
 % Test failure (writer case)
 test_known_fail :-

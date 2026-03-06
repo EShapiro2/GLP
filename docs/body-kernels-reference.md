@@ -10,11 +10,11 @@ Body kernels are runtime-implemented predicates that:
 
 - Execute **inline** within the reducing goal (not spawned as separate goals)
 - Have **two-valued semantics**: success or abort (no suspension)
-- Are **only accessible from `-mode(system).` code** (stdlib modules)
+- Are **only accessible from `-mode(system).` code**
 - Expect all preconditions to be met by guards before invocation
 - Are called via underscore-prefixed names (e.g., `'_add'(X?, Y?, Z)`)
 
-Body kernels are the mechanism by which GLP stdlib modules (such as `assign.glp`, `time.glp`, `unify.glp`) implement operations that require Dart runtime support. User-mode GLP code cannot call body kernels directly; it calls the stdlib procedures that wrap them.
+Body kernels are the mechanism by which GLP system-mode code (in `programs/self.glp`) implements operations that require Dart runtime support. User-mode GLP code cannot call body kernels directly; it calls the system procedures that wrap them.
 
 ---
 

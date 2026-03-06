@@ -272,7 +272,7 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 ## Key Context
 - **Project**: GLP (Grassroots Logic Programs) - a secure concurrent logic programming language
 - **Implementation Language**: Dart
-- **Current State**: 317 REPL tests passing (as of Feb 2026)
+- **Current State**: 382 REPL tests passing, 374 Dart tests passing (as of Mar 2026)
 - **Test Suite**: `bash /Users/udi/Grassroots/GLP/test/run_all_tests.sh` — ALWAYS run before committing
 - **User Expertise**: Deep understanding of GLP semantics but does not write code
 - **Working Directory**: `/Users/udi/Grassroots/GLP/` (user's Mac)
@@ -431,7 +431,7 @@ echo -e 'load ../programs/path/to/file.glp\ngoal.' | ./glp_repl
 
 **REPL Test Suite:**
 ```bash
-# Unified test suite - 317 tests (ALWAYS run before committing)
+# Unified test suite - 382 tests (ALWAYS run before committing)
 bash /Users/udi/Grassroots/GLP/test/run_all_tests.sh
 
 # Book examples only - 141 files (tests compilation only)
@@ -440,7 +440,7 @@ bash /Users/udi/Grassroots/GLP/test/run_book_tests.sh
 
 **Key paths:**
 - REPL: `/Users/udi/Grassroots/GLP/glp_runtime/bin/glp_repl.dart`
-- stdlib: `/Users/udi/Grassroots/GLP/programs/stdlib/`
+- Root prelude: `/Users/udi/Grassroots/GLP/programs/self.glp`
 - GLP programs: `/Users/udi/Grassroots/GLP/programs/`
 - Test files: `/Users/udi/Grassroots/GLP/programs/tests/`
 
@@ -480,8 +480,8 @@ bash /Users/udi/Grassroots/GLP/test/run_book_tests.sh
 │   │   └── glp_repl.dart      # ← REPL source
 │   └── glp_repl               # ← Compiled REPL executable
 │
-├── programs/                    # ← ALL GLP SOURCE FILES (380 files total)
-│   ├── stdlib/                 # ← Standard library (6 files)
+├── programs/                    # ← ALL GLP SOURCE FILES
+│   ├── self.glp               # ← Root prelude: types, procedures, unit clauses
 │   ├── book/                   # ← Art of GLP book examples (140 files)
 │   │   ├── recursive/         # ← arithmetic_trees/, list_processing/, structure_processing/
 │   │   ├── streams/           # ← producers_consumers/, objects_monitors/, buffered_communication/
@@ -497,7 +497,7 @@ bash /Users/udi/Grassroots/GLP/test/run_book_tests.sh
 │   └── misc/                   # ← Miscellaneous examples (26 files)
 │
 └── test/                        # ← TEST SCRIPTS
-    ├── run_all_tests.sh        # ← Unified REPL tests (317 tests) — ALWAYS run before committing
+    ├── run_all_tests.sh        # ← Unified REPL tests (382 tests) — ALWAYS run before committing
     └── run_book_tests.sh       # ← Book examples compilation test (141 files)
 ```
 
@@ -533,19 +533,22 @@ You:
 
 | Suite | Location | Tests | Purpose |
 |-------|----------|-------|---------|
-| Unified | `test/run_all_tests.sh` | 316 | All REPL-based tests (runtime + type-check + negative) |
+| Unified | `test/run_all_tests.sh` | 382 | All REPL-based tests (runtime + type-check + negative + modules) |
 | Book | `test/run_book_tests.sh` | 141 | Book examples compile check |
-| Unit | `glp_runtime/test/` | 236 | Dart unit tests |
+| Dart | `glp_runtime/test/` | 374 | Dart unit tests (14 known failures, 5 skipped) |
 
-The unified test suite (`run_all_tests.sh`) has five sections:
+The unified test suite (`run_all_tests.sh`) has eight sections:
 
-| Section | Tests | Description |
-|---------|-------|-------------|
-| A: Typed Runtime Tests | 176 | Load typed programs, run queries, check output |
-| B: Positive Type Check | 97 | Verify typed programs load successfully |
-| C: Negative Type Tests | 39 | Verify ill-typed programs are rejected |
-| D: SRSW Violations | 3 | Verify SRSW violations are detected |
-| E: Invalid Guard | 1 | Verify `true` in guard position is rejected |
+| Section | Description |
+|---------|-------------|
+| A: Typed Runtime Tests | Load typed programs, run queries, check output |
+| B: Positive Type Check | Verify typed programs load successfully |
+| C: Negative Type Tests | Verify ill-typed programs are rejected |
+| D: SRSW Violations | Verify SRSW violations are detected |
+| E: Invalid Guard | Verify `true` in guard position is rejected |
+| F: CSSG Modules | Modular play tests via project-directory loading |
+| G: Social Graph Modules | Project-directory loading |
+| H: CSSN Modules | Project-directory loading, plays 1-12 |
 
 ### Standard Test Protocol
 
@@ -565,9 +568,9 @@ dart test
 ```
 
 **Expected results:**
-- Unified: 316/316 pass
+- Unified: 382/382 pass
 - Book: 84/141 pass (57 fail due to SRSW violations in book code)
-- Unit: All pass
+- Dart: 374 pass, 14 known failures, 5 skipped
 
 ### MANDATORY: Test Protocol for GLP System Changes
 
@@ -669,8 +672,8 @@ echo -e '/Users/udi/Grassroots/GLP/programs/tests/typed/TESTFILE.glp\nQUERY.\n:q
 ```bash
 # ALWAYS run test suites first
 cd /home/user/GLP/glp_runtime
-bash ../test/full_run_repl_tests.sh    # 181 REPL tests
-dart test                              # Unit tests
+bash ../test/run_all_tests.sh          # 382 REPL tests
+dart test                              # Dart unit tests
 ```
 If tests failing BEFORE changes, STOP and inform user.
 
@@ -803,8 +806,8 @@ PC 44: Proceed
 These must continue passing:
 ```bash
 cd /home/user/GLP/glp_runtime
-bash ../test/full_run_repl_tests.sh  # Should show 181 passing
-dart test                            # Should show ~27 passing
+bash ../test/run_all_tests.sh  # Should show 382 passing
+dart test                      # Should show 374 passing (14 known failures, 5 skipped)
 ```
 
 Example REPL tests:
@@ -903,7 +906,7 @@ Then new Claude session pulls from main and starts fresh.
 
 **At session start:**
 1. Pull from main: `git pull origin main`
-2. Run baseline tests: `dart test` and `bash test/full_run_repl_tests.sh`
+2. Run baseline tests: `dart test` and `bash test/run_all_tests.sh`
 3. Work on your branch
 
 **During work:**
@@ -974,7 +977,7 @@ git push origin main
 **To verify merge:**
 ```bash
 cd glp_runtime && dart test
-bash ../test/full_run_repl_tests.sh
+bash ../test/run_all_tests.sh
 ```
 
 ### Common Issues and Fixes
