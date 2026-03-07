@@ -721,3 +721,554 @@ fplay11 :-
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% NETWORK SWITCH (6-way)
+%% =============================================================================
+
+%% --- Cold-call routing (2-arg msg) ---
+
+network6(ch([msg(bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(charlie, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(diana, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(eve, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(frank, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch([msg(alice, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(charlie, X)|BobIn], BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(diana, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(eve, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(frank, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch([msg(alice, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch([msg(bob, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch([msg(diana, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, [msg(diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch([msg(eve, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch([msg(frank, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(alice, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(bob, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?]),
+         ch([msg(charlie, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(eve, X)|DianaIn], DianaOut?),
+         ch(EveIn, [msg(eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(frank, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch([msg(alice, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch([msg(bob, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch([msg(charlie, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(diana, X?)|DianaOut?]),
+         ch([msg(diana, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch([msg(frank, X)|EveIn], EveOut?),
+         ch(FrankIn, [msg(frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch([msg(alice, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch([msg(bob, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch([msg(charlie, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch([msg(diana, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(eve, X?)|EveOut?]),
+         ch([msg(eve, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+%% --- Friend-to-friend routing (3-arg msg) ---
+
+network6(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(alice, bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(alice, charlie, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(alice, charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(alice, diana, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(alice, diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(alice, eve, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(alice, eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(alice, frank, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(alice, frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(bob, alice, X?)|AliceOut?]),
+         ch([msg(bob, alice, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(bob, charlie, X)|BobIn], BobOut?),
+         ch(CharlieIn, [msg(bob, charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(bob, diana, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(bob, diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(bob, eve, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(bob, eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(bob, frank, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(bob, frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(charlie, alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch([msg(charlie, alice, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(charlie, bob, X?)|BobOut?]),
+         ch([msg(charlie, bob, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch([msg(charlie, diana, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, [msg(charlie, diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch([msg(charlie, eve, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(charlie, eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch([msg(charlie, frank, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(charlie, frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(diana, alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(diana, alice, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(diana, bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(diana, bob, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(diana, charlie, X?)|CharlieOut?]),
+         ch([msg(diana, charlie, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(diana, eve, X)|DianaIn], DianaOut?),
+         ch(EveIn, [msg(diana, eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(diana, frank, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(diana, frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(eve, alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch([msg(eve, alice, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(eve, bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch([msg(eve, bob, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(eve, charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch([msg(eve, charlie, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(eve, diana, X?)|DianaOut?]),
+         ch([msg(eve, diana, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch([msg(eve, frank, X)|EveIn], EveOut?),
+         ch(FrankIn, [msg(eve, frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(frank, alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch([msg(frank, alice, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(frank, bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch([msg(frank, bob, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(frank, charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch([msg(frank, charlie, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(frank, diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch([msg(frank, diana, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(frank, eve, X?)|EveOut?]),
+         ch([msg(frank, eve, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+%% Termination
+network6(ch([], []), ch([], []), ch([], []), ch([], []), ch([], []), ch([], [])).
