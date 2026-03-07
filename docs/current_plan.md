@@ -1,175 +1,117 @@
-# Current Plan: Subtyping Implementation
+# Plan: Map-Based Friend Lookup for GLP Social Graph Agent
 
-Started: 2026-02-21  
-Branch: `subtyping`  
-Spec: `docs/type system/subtyping.md`  
-Paper: Section 4.6, Definitions 4.5–4.9
+Started: 2026-03-07
+Branch: `claude/agent-friend-request-maps-HEmnr`
 
-## 🔴 Branch Instructions
+## Discussion Summary
 
-**Work on the existing `subtyping` branch.** Do NOT create a new `claude/...` branch.
+### Goal
+Replace O(n) list-based friend lookup in the social graph agent with O(1) map-based lookup using the existing Dart Map support.
 
-```bash
-git checkout subtyping
-git pull origin subtyping
+### Key Design Decisions
+
+1. **Dual data structure**: Friends go in a Map (O(1) lookup), system channels (`_user`, `_net`) stay in the existing OutputsList. Friends are NOT stored in both -- only in the map.
+
+2. **Map keys are plain Constants**: Dart map keys only support constants (String, num), not structured terms like `friend(alice)`. So the map indexes friends by NAME only (e.g., `'alice'`), not by the full OutputKey.
+
+3. **New `map_send/4` kernel needed**: There is no `=` (assignment/unification) body kernel in GLP. Writing to a stream writer retrieved from a map cannot be done in pure GLP. A new Dart kernel `map_send(Map?, Key?, Msg?, Map1)` combines: get stream from map, write `[Msg|NewTail]`, update map with NewTail.
+
+4. **Stale-writer problem resolved**: If we stored the same stream writer in both the list and the map, the list would become stale after map-based sends. Resolution: friends go ONLY in the map; the OutputsList retains only system channels.
+
+5. **`send_all_friends` deferred**: Broadcasting to all friends (used in GSN update_befriend/update_unfriend) requires map_keys-based iteration. This is future work -- temporarily broken for plays 12-14.
+
+6. **Don't touch the existing list**: Keep the list infrastructure intact. Add map alongside. Replace the list later if map approach works.
+
+### Required Merges
+
+- **`origin/map_impl`**: Brings `map_remove/3`, `map_keys/2` kernels + prelude declarations
+- **`origin/ohad3`**: Brings GSN agent with `send_all_friends/4`, `update_befriend`/`update_unfriend` messages, plays 12-14
+
+---
+
+## Implementation Steps
+
+### Phase 0: Merges and Baseline
+- [ ] 0.1: Run all REPL tests, commit baseline
+- [ ] 0.2: Merge `origin/map_impl` (map_remove, map_keys), run tests
+- [ ] 0.3: Merge `origin/ohad3` (GSN agent, plays 12-14), run tests
+
+### Phase 1: New Dart Kernels
+- [ ] 1.1: Implement `map_send/4` in `body_kernels.dart`
+- [ ] 1.2: Implement `map_close_all/1` in `body_kernels.dart`
+- [ ] 1.3: Register both in `prelude.dart` + protected predicates
+- [ ] 1.4: Test `map_send` with standalone GLP program
+
+### Phase 2: Modified GLP Agent
+- [ ] 2.1: Change agent signature to `agent/5` (add map arg)
+- [ ] 2.2: Add `map_lookup_send/4` procedure
+- [ ] 2.3: Replace friend operations in agent clauses (see table below)
+- [ ] 2.4: Thread map through `bind_response` and `handle_response`
+- [ ] 2.5: Update boot files with `map_new` initialization
+- [ ] 2.6: Comment out `send_all_friends` calls (DEFERRED)
+- [ ] 2.7: Add `map_close_all` to agent termination
+
+### Phase 3: Testing
+- [ ] 3.1: Unit test for `map_send/4` kernel
+- [ ] 3.2: Run plays 1-11 (should work)
+- [ ] 3.3: Note plays 12-14 as deferred
+- [ ] 3.4: Run full REPL test suite -- no regressions
+
+### Phase 4: Future Work (Deferred)
+- [ ] `send_all_friends` via `map_keys` iteration
+- [ ] Remove OutputsList for friends entirely
+- [ ] General `bind/2` body kernel
+- [ ] `map_close_all/1` kernel for termination
+
+---
+
+## Operation Mapping
+
+| Operation | Before (list) | After (map) |
+|-----------|--------------|-------------|
+| Send to friend | `lookup_send(friend(X?), Msg, Outs, Outs1)` | `map_lookup_send(X?, Msg, FMap, FMap1)` |
+| Add friend | `add_output(friend(X?), FOut, Outs, Outs1)` | `map_put(FMap?, X?, FOut, FMap1)` |
+| Remove friend | `remove_output(friend(X?), Outs, Outs1)` | `map_remove(FMap?, X?, FMap1)` |
+| Send to child | `lookup_send(child(X?), ...)` | `map_lookup_send(X?, ...)` (same map) |
+| Send to `_user`/`_net` | `lookup_send('_user', ...)` | **unchanged** (list-based) |
+| Broadcast friends | `send_all_friends(...)` | **DEFERRED** |
+| Close all | `close_outputs(Outs?)` | `close_outputs(Outs?)` + `map_close_all(FMap?)` |
+
+---
+
+## New Dart Kernels
+
+### `map_send(Map?, Key?, Msg?, Map1)` -- body_kernels.dart
+1. Get current stream writer from map at Key
+2. Create cons cell `[Msg | NewTail]` (NewTail = fresh unbound variable)
+3. Bind old stream writer to cons cell (activates suspended readers)
+4. Update map in-place: `entries[key] = NewTail`
+5. Bind Map1 to mutated map
+
+### `map_close_all(Map?)` -- body_kernels.dart
+1. Iterate all map entries
+2. Bind each value (stream writer) to `[]` (terminates stream)
+
+---
+
+## New GLP Procedures
+
+### `map_lookup_send/4`
+```prolog
+procedure map_lookup_send(Constant?, _?, _?, _).
+map_lookup_send(Key, Msg, Map, Map1?) :-
+    map_contains(Map?, Key?) |
+    map_send(Map?, Key?, Msg?, Map1).
 ```
 
-All commits go on this branch. When done, the user will merge `subtyping` into `main`.
+---
 
-## Steps
+## Critical Files
 
-- [x] 1. Create test programs (positive and negative)
-- [ ] 2. Run baseline tests, commit ← CURRENT
-- [ ] 3. Create `subtyping.dart` module
-- [ ] 4. Integrate into `well_typed_clause.dart`
-- [ ] 5. Add tests to `run_all_tests.sh`
-- [ ] 6. Run full test suite, verify green
-- [ ] 7. Final commit, offer merge
-
-## Context
-
-The type checker currently requires exact type duality for body-body variable pairs (writer X at type S, reader X? at type T?: S must equal T). The paper relaxes this to S <: T (subtyping). This blocks programs where a producer emits a subset of messages that a consumer accepts (e.g., read-only client connected to a full file-system monitor).
-
-## Step Details
-
-### Step 2: Baseline
-
-```bash
-cd /Users/udi/Grassroots/GLP
-bash test/run_all_tests.sh
-```
-
-All 317 existing tests must pass before any code changes. Commit baseline if clean.
-
-### Step 3: Create `subtyping.dart`
-
-**File**: `glp_runtime/lib/analysis/type_checker/subtyping.dart`
-
-**Spec**: `docs/type system/subtyping.md`, Section 4 (Algorithm on the DFA)
-
-**Public API**:
-```dart
-/// Check if output type A is a subtype of output type B.
-/// Both stateA and stateB must be output types (isDual == false).
-/// Paper Reference: Definition 4.7 (Subtyping)
-bool isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa);
-```
-
-**Implementation per spec section 4.1–4.5**:
-
-1. Coinductive visited set: `Set<(DFAState, DFAState)>` (use a Set of string keys `"${a.name}:${b.name}"` for efficiency)
-2. Reflexivity: `stateA == stateB → true`
-3. Wildcard top: `stateB` is `_` → true; `stateA` is `_` and `stateB` is not `_` → false
-4. Primitive lattice (spec section 4.3):
-   - `Integer <: Number` ✓, `Real <: Number` ✓
-   - Any output type `<: _` ✓
-   - Otherwise primitives must be identical
-5. User-defined types: iterate transitions of automaton A; for each, find matching transition in automaton B. If no match → false. If match, check target compatibility (spec section 4.2):
-   - Both output → recurse covariantly
-   - Both dual → extract base types, recurse contravariantly (reversed)
-   - Mixed → false
-6. Handle `_FINAL_` state: treat as equivalent to `_` for subtyping purposes (it's a terminal acceptance state)
-
-**Unit test file**: `glp_runtime/test/analysis/type_checker/subtyping_test.dart`
-
-Test cases:
-- Reflexivity: Stream <: Stream
-- Wildcard top: Stream <: _
-- Wildcard not bottom: _ ≮: Stream (when Stream has structure)
-- Primitive lattice: Integer <: Number, Real <: Number, Integer ≮: String
-- Simple fewer alternatives: {a, b} <: {a, b, c}
-- Wrong direction: {a, b, c} ≮: {a, b}
-- Contravariance at mode inversion
-- Coinductive cycle: recursive types (Stream <: Stream via cycle)
-- Disjoint types: fail
-
-### Step 4: Integrate into `well_typed_clause.dart`
-
-**Spec**: `docs/type system/subtyping.md`, Section 5
-
-**Change**: In `_checkClauseDuality`, for body-body pairs, replace the exact duality check with a subtyping check.
-
-Current code (in `_checkClauseDuality`):
-```dart
-if (writerNormLoc == readerNormLoc) {
-  // Both in head OR both in body: require DUAL types
-  final (isCompat, reason) = _areDualTypesWithReason(writerInfo, readerInfo);
-```
-
-Change to:
-```dart
-if (writerNormLoc == readerNormLoc) {
-  if (writerNormLoc == 'head') {
-    // Both in head: require exact DUAL types (unchanged)
-    final (isCompat, reason) = _areDualTypesWithReason(writerInfo, readerInfo);
-    ...
-  } else {
-    // Both in body: require subtyping (S <: T)
-    // Writer X has output type S. Reader X? has dual type T?.
-    // Need: S <: T (both output types).
-    final writerOutputState = writerInfo.typeState;  // S (output, not dual)
-    final readerDualState = readerInfo.typeState;     // T? (dual)
-    final readerOutputState = dfa.getState(readerDualState.baseName); // T (output)
-    final isSub = isSubtype(writerOutputState, readerOutputState, dfa);
-    if (!isSub) {
-      errors.add(ClauseDualityError(...));
-    }
-  }
-}
-```
-
-**IMPORTANT**: `_checkClauseDuality` currently does NOT receive the ProgramDFA. Its signature must be extended to accept it:
-```dart
-List<ClauseDualityError> _checkClauseDuality(
-  Map<String, VariableTypeInfo> variableTypes,
-  Map<String, String> variableLocations,
-  ProgramDFA dfa,   // NEW PARAMETER
-)
-```
-
-And the call site in `checkClause` must pass `dfa` through.
-
-### Step 5: Add tests to `run_all_tests.sh`
-
-**Positive tests** — add to `POSITIVE_FILES` array in Section B:
-```bash
-"$TC_DIR/positive/subtyping/basic_readop_fileop.glp"
-"$TC_DIR/positive/subtyping/constants_fewer_alternatives.glp"
-"$TC_DIR/positive/subtyping/contravariant_response_slot.glp"
-"$TC_DIR/positive/subtyping/direct_constant_subtype.glp"
-"$TC_DIR/positive/subtyping/struct_fewer_functors.glp"
-```
-
-**Negative tests** — add to `NEGATIVE_FILES` array in Section C:
-```bash
-"$TC_DIR/negative/subtyping/wrong_direction_fileop_readop.glp"
-"$TC_DIR/negative/subtyping/contravariant_wrong_direction.glp"
-"$TC_DIR/negative/subtyping/disjoint_types.glp"
-"$TC_DIR/negative/subtyping/arg_type_mismatch.glp"
-```
-
-### Step 6: Full test suite
-
-```bash
-cd /Users/udi/Grassroots/GLP
-bash test/run_all_tests.sh
-```
-
-**Expected**: All 317 existing tests still pass + 5 new positive + 4 new negative = 326 total.
-
-### Step 7: Commit and merge
-
-```bash
-git add -A
-git commit -m "Implement subtyping for body-body variable pairs (Definition 4.7)"
-```
-
-Then offer merge instructions to user.
-
-## Key Invariants
-
-- Head-head pairs: UNCHANGED (exact duality required)
-- Head-body pairs: UNCHANGED (same type required)
-- Body-body pairs: RELAXED from exact duality to subtyping
-- All 317 existing tests must continue to pass (subtyping is a relaxation, not a restriction)
-- No changes to DFA construction, moded term construction, or input coverage
+| File | Change |
+|------|--------|
+| `glp_runtime/lib/runtime/body_kernels.dart` | Add `map_send/4`, `map_close_all/1` |
+| `glp_runtime/lib/analysis/type_checker/prelude.dart` | Register new kernel declarations |
+| `programs/typed_book/gsn/typed_social_agent.glp` | Agent/5, map threading, new procedures |
+| `programs/typed_book/gsn/play_ui_sim_boot.glp` | Add `map_new` to agent init |
+| `programs/typed_book/gsn/play_dglp_boot.glp` | Add `map_new` to agent init |
