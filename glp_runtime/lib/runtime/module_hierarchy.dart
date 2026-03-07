@@ -108,22 +108,37 @@ TypeEnvironment assembleTypeScope({
     final parser = Parser(tokens);
     final selfModule = parser.parseModule();
 
+    // Extract templates from this self.glp before expansion removes them.
+    // These chain to descendant modules so they can expand references.
+    final selfTemplates = <String, TypeDef>{};
+    for (final td in selfModule.typeDefs) {
+      if (td.isParameterized) {
+        selfTemplates[td.name] = td;
+      }
+    }
+
     // Expand parameterized types before building scope
     // Pass accumulated env type names so earlier types aren't mistaken for type params.
+    // Pass ancestor templates so this self.glp can expand references to prelude templates.
     final expandedSelfModule = expandParameterizedTypes(selfModule,
-        knownTypeNames: env.types.keys.toSet());
+        knownTypeNames: env.types.keys.toSet(),
+        externalTemplates: env.typeTemplates);
 
     // Build environment from this self.glp (without prelude check — ancestors
     // can define types with same names, shadowing is allowed)
     final selfEnv = _buildScopeFromModule(expandedSelfModule);
 
-    // Merge: later entries overwrite earlier ones (shadowing)
-    env = env.merge(selfEnv);
+    // Merge: later entries overwrite earlier ones (shadowing).
+    // Include this self.glp's templates in the environment for descendants.
+    env = env.merge(TypeEnvironment(selfEnv.types, selfEnv.procedures,
+        paramProcDecls: selfEnv.paramProcDecls,
+        typeTemplates: selfTemplates));
   }
 
   // Finally, merge the target module's own definitions (shadows all ancestors)
   final expandedModule = expandParameterizedTypes(module,
-      knownTypeNames: env.types.keys.toSet());
+      knownTypeNames: env.types.keys.toSet(),
+      externalTemplates: env.typeTemplates);
   final moduleEnv = _buildScopeFromModule(expandedModule);
   env = env.merge(moduleEnv);
 

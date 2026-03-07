@@ -14,7 +14,10 @@ import 'type_ast.dart';
 /// procedure declarations. The original Module is not modified.
 ///
 /// If the module has no parameterized types, returns it unchanged.
-ast.Module expandParameterizedTypes(ast.Module module, {Set<String> knownTypeNames = const {}}) {
+ast.Module expandParameterizedTypes(ast.Module module, {
+    Set<String> knownTypeNames = const {},
+    Map<String, TypeDef> externalTemplates = const {},
+}) {
   // Step 1: Separate templates from monomorphic types
   final templates = <String, TypeDef>{};
   final monoTypeDefs = <TypeDef>[];
@@ -27,8 +30,21 @@ ast.Module expandParameterizedTypes(ast.Module module, {Set<String> knownTypeNam
     }
   }
 
+  // Merge external templates (from prelude/ancestor scopes).
+  // Local templates take precedence over external ones.
+  for (final entry in externalTemplates.entries) {
+    templates.putIfAbsent(entry.key, () => entry.value);
+  }
+
   // Note: don't return early if templates is empty — proc decls may reference
   // prelude templates (e.g., Stream(X)) and still need type param detection.
+
+  // Known monomorphic type names: used to collapse all-wildcard expansions
+  // (e.g., Stream(_) → Stream) when a monomorphic version exists.
+  final monoNames = <String>{
+    ...monoTypeDefs.map((td) => td.name),
+    ...knownTypeNames,
+  };
 
   // Step 2: Collect all instantiations from type defs and proc decls
   final instantiations = <String, List<TypeExpr>>{}; // expanded name -> type args
@@ -90,7 +106,7 @@ ast.Module expandParameterizedTypes(ast.Module module, {Set<String> knownTypeNam
       // Substitute parameters
       final substitution = Map<String, TypeExpr>.fromIterables(template.typeParams, typeArgs);
       final newAlts = template.alternatives
-          .map((alt) => _substituteTypeExpr(alt, substitution, templates, instantiations))
+          .map((alt) => _substituteTypeExpr(alt, substitution, templates, instantiations, monoNames: monoNames))
           .toList();
       expandedDefs.add(TypeDef(expandedName, newAlts, template.line, template.column));
       expanded.add(expandedName);
@@ -100,7 +116,7 @@ ast.Module expandParameterizedTypes(ast.Module module, {Set<String> knownTypeNam
   // Step 4: Replace references in monomorphic type defs
   final replacedTypeDefs = monoTypeDefs.map((td) {
     final newAlts = td.alternatives
-        .map((alt) => _replaceParamRefs(alt, templates))
+        .map((alt) => _replaceParamRefs(alt, templates, monoNames: monoNames))
         .toList();
     return TypeDef(td.name, newAlts, td.line, td.column);
   }).toList();
@@ -128,8 +144,8 @@ ast.Module expandParameterizedTypes(ast.Module module, {Set<String> knownTypeNam
           tp: PrimitiveModeAlt(false, 0, 0),
       };
       final wildcardArgTypes = pd.argTypes.map((arg) {
-        final substituted = _substituteTypeExpr(arg, wildcardSubst, templates, instantiations);
-        return _replaceParamRefs(substituted, templates);
+        final substituted = _substituteTypeExpr(arg, wildcardSubst, templates, instantiations, monoNames: monoNames);
+        return _replaceParamRefs(substituted, templates, monoNames: monoNames);
       }).toList();
 
       replacedProcDecls.add(ProcDecl(pd.name, wildcardArgTypes, pd.line, pd.column,
@@ -137,7 +153,7 @@ ast.Module expandParameterizedTypes(ast.Module module, {Set<String> knownTypeNam
     } else {
       // Non-parameterized: expand as before
       final newArgTypes = pd.argTypes
-          .map((arg) => _replaceParamRefs(arg, templates))
+          .map((arg) => _replaceParamRefs(arg, templates, monoNames: monoNames))
           .toList();
       replacedProcDecls.add(ProcDecl(pd.name, newArgTypes, pd.line, pd.column,
           exported: pd.exported, imported: pd.imported, modulePath: pd.modulePath));
@@ -162,7 +178,7 @@ ast.Module expandParameterizedTypes(ast.Module module, {Set<String> knownTypeNam
       }
       final substitution = Map<String, TypeExpr>.fromIterables(template.typeParams, typeArgs);
       final newAlts = template.alternatives
-          .map((alt) => _substituteTypeExpr(alt, substitution, templates, instantiations))
+          .map((alt) => _substituteTypeExpr(alt, substitution, templates, instantiations, monoNames: monoNames))
           .toList();
       expandedDefs.add(TypeDef(expandedName, newAlts, template.line, template.column));
       expanded.add(expandedName);
@@ -265,11 +281,20 @@ String _templateNameFromExpanded(String expandedName) {
   return expandedName.substring(0, idx);
 }
 
+/// Check if a TypeRef references a template with matching arity.
+/// Returns true only if the name is a template AND the type arg count matches.
+bool _isTemplateRef(TypeRef expr, Map<String, TypeDef> templates) {
+  if (expr.typeArgs.isEmpty) return false;
+  final template = templates[expr.name];
+  if (template == null) return false;
+  return expr.typeArgs.length == template.typeParams.length;
+}
+
 /// Collect parameterized type references from a TypeExpr
 void _collectInstantiations(TypeExpr expr, Map<String, TypeDef> templates,
     Map<String, List<TypeExpr>> instantiations) {
   if (expr is TypeRef) {
-    if (expr.typeArgs.isNotEmpty && templates.containsKey(expr.name)) {
+    if (_isTemplateRef(expr, templates)) {
       final name = _expandedName(expr.name, expr.typeArgs);
       instantiations.putIfAbsent(name, () => expr.typeArgs);
       // Recurse into type args (for nested parameterized types)
@@ -305,15 +330,16 @@ void _collectInstantiations(TypeExpr expr, Map<String, TypeDef> templates,
 void _collectInstantiationsInTemplate(TypeExpr expr, Map<String, TypeDef> templates,
     Map<String, List<TypeExpr>> instantiations, List<String> templateParams) {
   if (expr is TypeRef) {
-    if (expr.typeArgs.isNotEmpty && templates.containsKey(expr.name)) {
+    if (_isTemplateRef(expr, templates)) {
       // Check if all args are just bare type parameters — if so, it's a recursive
       // self-reference, not an instantiation to collect separately.
       final allParamRefs = expr.typeArgs.every((arg) =>
           arg is TypeRef && arg.typeArgs.isEmpty && templateParams.contains(arg.name));
       if (!allParamRefs) {
         // Contains concrete types — collect any nested instantiations
+        // Use template-aware version to preserve param awareness through nesting
         for (final arg in expr.typeArgs) {
-          _collectInstantiations(arg, templates, instantiations);
+          _collectInstantiationsInTemplate(arg, templates, instantiations, templateParams);
         }
       }
     }
@@ -337,9 +363,12 @@ void _collectInstantiationsInTemplate(TypeExpr expr, Map<String, TypeDef> templa
   }
 }
 
-/// Substitute type parameters in a TypeExpr
+/// Substitute type parameters in a TypeExpr.
+/// [monoNames]: set of known monomorphic type names. When all substituted args
+/// are wildcards AND the base name is in monoNames, use the base name directly.
 TypeExpr _substituteTypeExpr(TypeExpr expr, Map<String, TypeExpr> substitution,
-    Map<String, TypeDef> templates, Map<String, List<TypeExpr>> instantiations) {
+    Map<String, TypeDef> templates, Map<String, List<TypeExpr>> instantiations,
+    {Set<String> monoNames = const {}}) {
   if (expr is TypeRef) {
     // If this is a type parameter, substitute it
     if (substitution.containsKey(expr.name) && expr.typeArgs.isEmpty) {
@@ -354,11 +383,18 @@ TypeExpr _substituteTypeExpr(TypeExpr expr, Map<String, TypeExpr> substitution,
       }
       return replacement;
     }
-    // If this is a parameterized reference to a template, record and replace
-    if (expr.typeArgs.isNotEmpty && templates.containsKey(expr.name)) {
+    // If this is a parameterized reference to a template with matching arity, record and replace
+    if (_isTemplateRef(expr, templates)) {
       final substArgs = expr.typeArgs
-          .map((a) => _substituteTypeExpr(a, substitution, templates, instantiations))
+          .map((a) => _substituteTypeExpr(a, substitution, templates, instantiations, monoNames: monoNames))
           .toList();
+      // If all substituted args are wildcards (_) AND a monomorphic type with
+      // the base name exists, use the base name directly.
+      // Stream(_) ≡ Stream when a monomorphic Stream type exists.
+      final allWildcards = substArgs.every((a) => a is PrimitiveModeAlt);
+      if (allWildcards && monoNames.contains(expr.name)) {
+        return TypeRef(expr.name, expr.line, expr.column, isInput: expr.isInput);
+      }
       final expandedName = _expandedName(expr.name, substArgs);
       instantiations.putIfAbsent(expandedName, () => substArgs);
       return TypeRef(expandedName, expr.line, expr.column, isInput: expr.isInput);
@@ -367,40 +403,47 @@ TypeExpr _substituteTypeExpr(TypeExpr expr, Map<String, TypeExpr> substitution,
   }
   if (expr is StructAlt) {
     return StructAlt(expr.functor,
-        expr.args.map((a) => _substituteTypeExpr(a, substitution, templates, instantiations)).toList(),
+        expr.args.map((a) => _substituteTypeExpr(a, substitution, templates, instantiations, monoNames: monoNames)).toList(),
         expr.line, expr.column);
   }
   if (expr is ListConsAlt) {
     return ListConsAlt(
-        _substituteTypeExpr(expr.head, substitution, templates, instantiations),
-        _substituteTypeExpr(expr.tail, substitution, templates, instantiations),
+        _substituteTypeExpr(expr.head, substitution, templates, instantiations, monoNames: monoNames),
+        _substituteTypeExpr(expr.tail, substitution, templates, instantiations, monoNames: monoNames),
         expr.line, expr.column);
   }
   if (expr is DiffListAlt) {
     return DiffListAlt(
-        _substituteTypeExpr(expr.content, substitution, templates, instantiations),
-        _substituteTypeExpr(expr.hole, substitution, templates, instantiations),
+        _substituteTypeExpr(expr.content, substitution, templates, instantiations, monoNames: monoNames),
+        _substituteTypeExpr(expr.hole, substitution, templates, instantiations, monoNames: monoNames),
         expr.line, expr.column);
   }
   // PrimitiveModeAlt, ConstantAlt, ListNilAlt — no substitution needed
   return expr;
 }
 
-/// Replace parameterized type refs with expanded names (for non-template types and proc decls)
-TypeExpr _replaceParamRefs(TypeExpr expr, Map<String, TypeDef> templates) {
+/// Replace parameterized type refs with expanded names (for non-template types and proc decls).
+/// [monoNames]: when all args are wildcards AND base name is in monoNames, use base name.
+TypeExpr _replaceParamRefs(TypeExpr expr, Map<String, TypeDef> templates,
+    {Set<String> monoNames = const {}}) {
   if (expr is TypeRef) {
-    if (expr.typeArgs.isNotEmpty && templates.containsKey(expr.name)) {
+    if (_isTemplateRef(expr, templates)) {
       // Replace args recursively first
       final replacedArgs = expr.typeArgs
-          .map((a) => _replaceParamRefs(a, templates))
+          .map((a) => _replaceParamRefs(a, templates, monoNames: monoNames))
           .toList();
+      // If all args are wildcards (_) AND base name exists as monomorphic, use base name.
+      final allWildcards = replacedArgs.every((a) => a is PrimitiveModeAlt);
+      if (allWildcards && monoNames.contains(expr.name)) {
+        return TypeRef(expr.name, expr.line, expr.column, isInput: expr.isInput);
+      }
       final expandedName = _expandedName(expr.name, replacedArgs);
       return TypeRef(expandedName, expr.line, expr.column, isInput: expr.isInput);
     }
     // Recurse into typeArgs even if not a template ref
     if (expr.typeArgs.isNotEmpty) {
       final replacedArgs = expr.typeArgs
-          .map((a) => _replaceParamRefs(a, templates))
+          .map((a) => _replaceParamRefs(a, templates, monoNames: monoNames))
           .toList();
       return TypeRef(expr.name, expr.line, expr.column, isInput: expr.isInput, typeArgs: replacedArgs);
     }
@@ -408,19 +451,19 @@ TypeExpr _replaceParamRefs(TypeExpr expr, Map<String, TypeDef> templates) {
   }
   if (expr is StructAlt) {
     return StructAlt(expr.functor,
-        expr.args.map((a) => _replaceParamRefs(a, templates)).toList(),
+        expr.args.map((a) => _replaceParamRefs(a, templates, monoNames: monoNames)).toList(),
         expr.line, expr.column);
   }
   if (expr is ListConsAlt) {
     return ListConsAlt(
-        _replaceParamRefs(expr.head, templates),
-        _replaceParamRefs(expr.tail, templates),
+        _replaceParamRefs(expr.head, templates, monoNames: monoNames),
+        _replaceParamRefs(expr.tail, templates, monoNames: monoNames),
         expr.line, expr.column);
   }
   if (expr is DiffListAlt) {
     return DiffListAlt(
-        _replaceParamRefs(expr.content, templates),
-        _replaceParamRefs(expr.hole, templates),
+        _replaceParamRefs(expr.content, templates, monoNames: monoNames),
+        _replaceParamRefs(expr.hole, templates, monoNames: monoNames),
         expr.line, expr.column);
   }
   return expr;

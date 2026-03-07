@@ -82,11 +82,24 @@ TypeEnvironment buildPreludeEnvironment() {
   final parser = Parser(tokens);
   final module = parser.parseModule();
 
+  // Extract templates before expansion removes them.
+  // These are passed to downstream modules so they can expand references
+  // to prelude-defined parameterized types (e.g., Stream(X), Channel(X,Y)).
+  final preludeTemplates = <String, TypeDef>{};
+  for (final td in module.typeDefs) {
+    if (td.isParameterized) {
+      preludeTemplates[td.name] = td;
+    }
+  }
+
   // Expand parameterized types before building the environment.
   // Templates (e.g., Stream(X)) are removed; only concrete expansions remain.
   final expandedModule = expandParameterizedTypes(module);
 
-  return _buildEnvironmentFromModule(expandedModule, checkRedefinitions: false, resolveAliasesNow: true);
+  final env = _buildEnvironmentFromModule(expandedModule, checkRedefinitions: false, resolveAliasesNow: true);
+  return TypeEnvironment(env.types, env.procedures,
+      paramProcDecls: env.paramProcDecls,
+      typeTemplates: preludeTemplates);
 }
 
 /// Build TypeEnvironment from a parsed Module

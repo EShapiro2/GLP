@@ -635,8 +635,11 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
   final baseEnv = ancestorScope ?? buildPreludeEnvironment();
 
   // Expand parameterized types to monomorphic equivalents before type checking.
+  // Pass prelude/ancestor templates so downstream modules can expand references
+  // to parameterized types defined in ancestor scopes.
   final expandedModule = expandParameterizedTypes(module,
-      knownTypeNames: baseEnv.types.keys.toSet());
+      knownTypeNames: baseEnv.types.keys.toSet(),
+      externalTemplates: baseEnv.typeTemplates);
 
   // Build type environment from expanded module (reuses baseEnv)
   final typeEnv = buildTypeEnvironment(expandedModule, ancestorScope: baseEnv);

@@ -622,10 +622,21 @@ class GlpEngine {
     final parser = Parser(tokens);
     final selfModule = parser.parseModule();
 
+    // Extract templates before expansion removes them.
+    // These chain to downstream modules for expansion of ancestor templates.
+    final selfTemplates = <String, TypeDef>{};
+    for (final td in selfModule.typeDefs) {
+      if (td.isParameterized) {
+        selfTemplates[td.name] = td;
+      }
+    }
+
     // Expand parameterized types (strips templates, keeps monomorphic defs)
     // Pass existing env type names so prelude types aren't mistaken for type params.
+    // Pass ancestor templates so this module can expand references to them.
     final expandedModule = expandParameterizedTypes(selfModule,
-        knownTypeNames: env.types.keys.toSet());
+        knownTypeNames: env.types.keys.toSet(),
+        externalTemplates: env.typeTemplates);
 
     final types = <String, TypeDef>{};
     for (final t in expandedModule.typeDefs) {
@@ -635,7 +646,13 @@ class GlpEngine {
     for (final p in expandedModule.procDeclarations) {
       procs[p.qualifiedKey] = p;
     }
-    return env.merge(TypeEnvironment(types, procs));
+    final paramProcs = <String, ProcDecl>{};
+    for (final p in expandedModule.paramProcDecls) {
+      paramProcs[p.qualifiedKey] = p;
+    }
+    return env.merge(TypeEnvironment(types, procs,
+        paramProcDecls: paramProcs,
+        typeTemplates: selfTemplates));
   }
 
   ModuleInfo? _findModuleForProcedure(String procedureLabel) {

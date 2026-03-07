@@ -279,18 +279,25 @@ class TypeEnvironment {
   /// Parameterized procedure declaration templates, keyed by "name/arity".
   /// Used for call-site type parameter inference (Case B).
   final Map<String, ProcDecl> paramProcDecls;
+  /// Parameterized type templates from prelude/ancestors.
+  /// Passed to downstream expansions so they can expand references
+  /// to templates defined in ancestor scopes.
+  final Map<String, TypeDef> typeTemplates;
 
-  TypeEnvironment(this.types, this.procedures, {Map<String, ProcDecl>? paramProcDecls})
-      : paramProcDecls = paramProcDecls ?? {};
+  TypeEnvironment(this.types, this.procedures, {
+      Map<String, ProcDecl>? paramProcDecls,
+      this.typeTemplates = const {},
+  }) : paramProcDecls = paramProcDecls ?? {};
 
   factory TypeEnvironment.empty() => TypeEnvironment({}, {});
-  
+
   /// Merge another environment into this one
   TypeEnvironment merge(TypeEnvironment other) {
     return TypeEnvironment(
       {...types, ...other.types},
       {...procedures, ...other.procedures},
       paramProcDecls: {...paramProcDecls, ...other.paramProcDecls},
+      typeTemplates: {...typeTemplates, ...other.typeTemplates},
     );
   }
   
