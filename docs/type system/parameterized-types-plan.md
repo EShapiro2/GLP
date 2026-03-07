@@ -110,24 +110,11 @@ The `boot` modules that were previously untyped (noted in the paper as motivatio
 
 Run full test suite after conversion. All tests must pass.
 
-### 2.4 Remove renamed procedure copies
+### 2.4 Parameterize `self.glp` procedure declarations
 
-After all files use parameterized types, the Section 14 workarounds (renamed copies like `merge_agent`, `send_agent`, etc.) can be removed. The parameterized originals serve the same purpose.
+Before removing renamed copies, the prelude's generic procedures must be parameterized. Otherwise there's nothing to replace the renamed copies with — the generic `send(_?, Channel?, Channel)` can't serve as a replacement for `send_agent(MediatorToAgentMsg?, AgentChannel?, AgentChannel)` because `AgentChannel ≠ Channel`.
 
-Run full test suite after removal. All tests must pass.
-
-### 2.5 Remove monomorphic definitions from `self.glp`
-
-Now that all downstream files use parameterized types, remove the old monomorphic definitions:
-
-| Remove | Keep |
-|--------|------|
-| `Stream ::= [] ; [_\|Stream].` | `Stream(X) ::= [] ; [X \| Stream(X)].` |
-| `OpenStream ::= [_\|Stream].` | `OpenStream(X) ::= [X \| Stream(X)].` |
-| `Channel ::= ch(Stream, Stream?).` | `Channel(In, Out) ::= ch(In, Out?).` |
-| `DiffList ::= Stream \ Stream?.` | `DiffList(X) ::= Stream(X) \ Stream(X)?.` |
-
-Also parameterize predefined procedure declarations where possible:
+Parameterize procedure declarations in `self.glp`:
 
 | Before | After |
 |--------|-------|
@@ -138,7 +125,24 @@ Also parameterize predefined procedure declarations where possible:
 | `procedure dl_append(DiffList?, DiffList?, DiffList).` | `procedure dl_append(DiffList(X)?, DiffList(X)?, DiffList(X)).` |
 | `procedure dl_to_list(DiffList?, Stream).` | `procedure dl_to_list(DiffList(X)?, Stream(X)).` |
 
+Also remove the old monomorphic type definitions (now that all downstream files use parameterized types):
+
+| Remove | Keep |
+|--------|------|
+| `Stream ::= [] ; [_\|Stream].` | `Stream(X) ::= [] ; [X \| Stream(X)].` |
+| `OpenStream ::= [_\|Stream].` | `OpenStream(X) ::= [X \| Stream(X)].` |
+| `Channel ::= ch(Stream, Stream?).` | `Channel(In, Out) ::= ch(In, Out?).` |
+| `DiffList ::= Stream \ Stream?.` | `DiffList(X) ::= Stream(X) \ Stream(X)?.` |
+
 Predefined procedure declarations that genuinely accept any term — `ground(_?)`, `=(_?, _)`, `=?=(_?, _?)` — keep `_` and `_?`.
+
+Also convert module-local monomorphic channel types to parameterized instantiations where needed. For example, `AgentChannel ::= ch(AgentToUserStream, MediatorToAgentStream?).` should become a type alias for `Channel(AgentToUserStream, MediatorToAgentStream)`, or the modules should use `Channel(AgentToUserStream, MediatorToAgentStream)` directly.
+
+Run full test suite. All tests must pass.
+
+### 2.5 Remove renamed procedure copies
+
+Now that `send`, `receive`, `new_channel`, and `merge` are parameterized, the Section 14 workarounds (renamed copies like `send_agent`, `send_user`, etc.) can be removed. The parameterized originals serve the same purpose through call-site type parameter inference.
 
 Run full test suite after removal. All tests must pass.
 
