@@ -103,7 +103,6 @@ trade(bob, [lot(alice,0,15)], [lot(bob,0,15)]) → wait trade_completed(bob)
 mint(15, 0) → wait minted(15, 0)
 trade(charlie, [lot(alice,0,15)], [lot(charlie,0,15)]) → wait trade_completed(charlie)
 wait payment_received(bob, 5)                          %% Act 3a: Bob buys bread
-wait trade_proposed(eve, ...) → accept_trade(eve, ReqId)  %% Act 4a: Eve trades for alice-coins
 wait payment_received(eve, 3)                          %% Act 4b: Eve buys bread
 trade(eve, [lot(bob,0,10)], [lot(frank,0,5)]) → wait trade_completed(eve) OR wait trade_returned  %% Act 7: sale of debt (first proposal)
   ... negotiation: reject/re-propose may happen ...
