@@ -1,0 +1,75 @@
+% Test 17: map_keys — extract keys as list
+%
+% Verifies that map_keys/2 extracts all keys from a map as a GLP list.
+% Since HashMap iteration order is not guaranteed, we verify:
+%   - The list has the correct length
+%   - Each expected key is present in the list
+%   - Empty map → keys = []
+
+% Helper: compute list length
+procedure list_len(_?, _?, _).
+list_len([_|Rest], Acc, Len?) :-
+    Acc1 := Acc? + 1,
+    list_len(Rest?, Acc1?, Len).
+list_len([], Acc, Acc?).
+
+% Helper: check if a key is in a list
+procedure list_member(_?, _?, _).
+list_member(Key, [H|_], yes) :-
+    Key? =?= H? | true.
+list_member(Key, [_|Rest], Result?) :-
+    otherwise |
+    list_member(Key?, Rest?, Result).
+list_member(_, [], no).
+
+% Helper: get keys from map, guarded by map_contains to ensure map is ready
+procedure get_keys_from(_?, _).
+get_keys_from(M, Keys?) :-
+    ground(M?) |
+    map_keys(M?, Keys).
+
+% Test: keys length = 3
+procedure test_keys_len(_).
+test_keys_len(Len?) :-
+    map_new(M0),
+    map_put(M0?, x, 1, M1),
+    map_put(M1?, y, 2, M2),
+    map_put(M2?, z, 3, M3),
+    get_keys_from(M3?, Keys),
+    list_len(Keys?, 0, Len).
+
+% Test: keys contains x
+procedure test_keys_has_x(_).
+test_keys_has_x(HasX?) :-
+    map_new(M0),
+    map_put(M0?, x, 1, M1),
+    map_put(M1?, y, 2, M2),
+    map_put(M2?, z, 3, M3),
+    get_keys_from(M3?, Keys),
+    list_member(x, Keys?, HasX).
+
+% Test: keys contains y
+procedure test_keys_has_y(_).
+test_keys_has_y(HasY?) :-
+    map_new(M0),
+    map_put(M0?, x, 1, M1),
+    map_put(M1?, y, 2, M2),
+    map_put(M2?, z, 3, M3),
+    get_keys_from(M3?, Keys),
+    list_member(y, Keys?, HasY).
+
+% Test: keys contains z
+procedure test_keys_has_z(_).
+test_keys_has_z(HasZ?) :-
+    map_new(M0),
+    map_put(M0?, x, 1, M1),
+    map_put(M1?, y, 2, M2),
+    map_put(M2?, z, 3, M3),
+    get_keys_from(M3?, Keys),
+    list_member(z, Keys?, HasZ).
+
+% Test: empty map → keys = []
+procedure test_keys_empty(_).
+test_keys_empty(Keys?) :-
+    map_new(M0),
+    map_keys(M0?, Keys).

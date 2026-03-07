@@ -267,6 +267,78 @@ check "two lists: bob head" "F = 10" "$t16"
 check "overwrite list and sum" "G = 600" "$t16"
 
 # =============================================================================
+# Test 15: map_remove — basic removal
+# =============================================================================
+echo "--- Test 15: map_remove basic ---"
+t15=$($DART run "$REPL" <<HEREDOC
+$MAP_TEST/test_map_remove.glp
+test_remove(A, C, Gone).
+test_remove_gone(X).
+:quit
+HEREDOC
+2>&1)
+
+check "remove: remaining key a" "A = 1" "$t15"
+check "remove: remaining key c" "C = 3" "$t15"
+check "remove: b is gone" "Gone = gone" "$t15"
+check "remove: contains confirms absent" "X = not_found" "$t15"
+
+# =============================================================================
+# Test 17: map_keys — extract keys as list
+# =============================================================================
+echo "--- Test 17: map_keys ---"
+t17=$($DART run "$REPL" <<HEREDOC
+$MAP_TEST/test_map_keys.glp
+test_keys_len(Len).
+test_keys_has_x(X).
+test_keys_has_y(Y).
+test_keys_has_z(Z).
+test_keys_empty(Keys).
+:quit
+HEREDOC
+2>&1)
+
+check "keys: length is 3" "Len = 3" "$t17"
+check "keys: contains x" "X = yes" "$t17"
+check "keys: contains y" "Y = yes" "$t17"
+check "keys: contains z" "Z = yes" "$t17"
+check "keys: empty map → []" "Keys = \[\]" "$t17"
+
+# =============================================================================
+# Test 18: map_remove — edge cases
+# =============================================================================
+echo "--- Test 18: map_remove edge cases ---"
+t18=$($DART run "$REPL" <<HEREDOC
+$MAP_TEST/test_map_remove_edge.glp
+test_remove_missing(X).
+test_remove_last(Y).
+test_remove_readd(Z).
+:quit
+HEREDOC
+2>&1)
+
+check "remove: missing key no crash" "X = empty" "$t18"
+check "remove: last key → empty" "Y = empty" "$t18"
+check "remove: re-add after remove" "Z = new_value" "$t18"
+
+# =============================================================================
+# Test 19: map_keys + map_remove combined
+# =============================================================================
+echo "--- Test 19: map_keys + map_remove combined ---"
+t19=$($DART run "$REPL" <<HEREDOC
+$MAP_TEST/test_map_keys_remove.glp
+test_kr_len(Len).
+test_kr_no_b(HasB).
+test_kr_all_removed(Len2).
+:quit
+HEREDOC
+2>&1)
+
+check "keys after remove: length 2" "Len = 2" "$t19"
+check "keys after remove: b absent" "HasB = no" "$t19"
+check "keys after remove all: length 0" "Len2 = 0" "$t19"
+
+# =============================================================================
 # Test 14: O(1) lookup benchmark
 # =============================================================================
 echo "--- Test 14: O(1) lookup benchmark ---"
