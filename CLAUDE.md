@@ -39,7 +39,7 @@ When emerging from compaction (you see a session summary replacing the original 
 6. **ACKNOWLEDGE typed-glp-manual.md** - State "I have read typed-glp-manual.md completely"
 7. **READ docs/glp-cheat-sheet.md** - Read to completion. This is a compact reference for GLP programming patterns. GLP is NOT Prolog — study the wrong vs right examples carefully.
 8. **ACKNOWLEDGE glp-cheat-sheet.md** - State "I have read glp-cheat-sheet.md completely"
-9. **STOP AND WAIT** - Do not read any other files. Wait for user direction.
+9. **STOP AND WAIT** - Do not read any other files. Wait for user direction. The user will tell you which project or workstream to work on and where to find its plan.
 
 **DO NOT read handovers, specs, code, or any other files until user gives direction.**
 
