@@ -109,6 +109,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_map_get', 3, mapGetKernel);
   registry.register('map_remove', 3, mapRemoveKernel);
   registry.register('map_keys', 2, mapKeysKernel);
+  registry.register('map_show', 3, mapShowKernel);
 
   // Arithmetic assignment
   registry.register(':=', 2, assignKernel);
@@ -946,6 +947,50 @@ BodyKernelResult mapKeysKernel(GlpRuntime rt, List<Object?> args) {
   final glpList = _dartListToGlpList(keys);
 
   return _bindResult(rt, args[1], glpList);
+}
+
+/// map_show(AgentId?, MapIn?, MapOut) — Print FMap contents to screen.
+/// Outputs tagged(id, notify(fmap({...}))) via _output path so it
+/// routes to the correct agent panel in Flutter UI.
+/// Pass-through: binds MapOut to a copy of MapIn so the map remains usable.
+BodyKernelResult mapShowKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] map_show/3: expected 3 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final idArg = _deref(rt, args[0]);
+  final id = (idArg is ConstTerm) ? idArg.value.toString() : idArg.toString();
+
+  final mapArg = _deref(rt, args[1]);
+  if (mapArg is! MapTerm) {
+    print('[ABORT] map_show/3: second argument must be a MapTerm, got ${mapArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  // Format map entries
+  String mapStr;
+  if (mapArg.entries.isEmpty) {
+    mapStr = '{}';
+  } else {
+    final pairs = mapArg.entries.entries.map((e) {
+      final val = (e.value is Term) ? formatGroundTerm(e.value) : e.value.toString();
+      return '${e.key}: $val';
+    }).join(', ');
+    mapStr = '{$pairs}';
+  }
+
+  final line = 'tagged($id, notify(fmap($mapStr)))';
+  final callback = rt.outputCallback;
+  if (callback != null) {
+    callback(line);
+  } else {
+    print(line);
+  }
+
+  // Pass-through: copy the map so it remains usable
+  final copy = MapTerm(Map<Object, Term>.from(mapArg.entries));
+  return _bindResult(rt, args[2], copy);
 }
 
 /// :=(Result, Expr) — Arithmetic assignment.
