@@ -52,6 +52,38 @@ send_to_user_tagged(_, [], []).
 send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
 
 %% =============================================================================
+%% NARRATIVE TYPES — for play 12 actors
+%% =============================================================================
+
+NarrativeItem   ::= friend(Constant)
+                  ; say(Constant)
+                  ; act(Constant)
+                  ; event(Constant).
+NarrativeStream ::= [] ; [NarrativeItem | NarrativeStream].
+
+%% =============================================================================
+%% SEND_TO_USER_NARRATE — Emit narrative items as tagged output
+%% =============================================================================
+
+send_to_user_narrate(Id, [friend(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, friend(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(Id, [say(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, say(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(Id, [act(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, act(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(Id, [event(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, event(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(_, []).
+
+%% =============================================================================
 %% NETWORK SWITCH (2-way)
 %% =============================================================================
 
@@ -721,6 +753,86 @@ fplay11 :-
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 12 — Village Market Month (6 agents + narrative)
+%% =============================================================================
+
+fplay12 :-
+    now(Now),
+    T := Now? + 700,
+    network6(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn),
+             ch(CharlieNetOut?, CharlieNetIn),
+             ch(DianaNetOut?, DianaNetIn),
+             ch(EveNetOut?, EveNetIn),
+             ch(FrankNetOut?, FrankNetIn)),
+
+    %% Alice (T unused by alice, pass dummy constant to avoid SRSW on T?)
+    alice_p12(0, ch(AliceActorIn?, AliceActorOut), AliceNarr),
+    send_to_user_narrate(alice, AliceNarr?),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)], [], 1),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    bob_p12(ch(BobActorIn?, BobActorOut), BobNarr),
+    send_to_user_narrate(bob, BobNarr?),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)], [], 1),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
+
+    %% Charlie
+    charlie_p12(T?, ch(CharlieActorIn?, CharlieActorOut), CharlieNarr),
+    send_to_user_narrate(charlie, CharlieNarr?),
+    tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
+    agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)], [], 1),
+    ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+                ch(CharlieMedIn?, CharlieMedOut), [], 1),
+    tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
+    send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?),
+
+    %% Diana
+    diana_p12(ch(DianaActorIn?, DianaActorOut), DianaNarr),
+    send_to_user_narrate(diana, DianaNarr?),
+    tee(DianaActorOut?, DianaMedIn, DianaDispCmd),
+    agent(diana, DianaAgentIn?, DianaNetIn?,
+          [output('_user', DianaAgentToUser), output('_net', DianaNetOut)], [], 1),
+    ui_mediator(diana, ch(DianaAgentToUser?, DianaAgentIn),
+                ch(DianaMedIn?, DianaMedOut), [], 1),
+    tee(DianaMedOut?, DianaActorIn, DianaDispNotify),
+    send_to_user_tagged(diana, DianaDispCmd?, DianaDispNotify?),
+
+    %% Eve
+    eve_p12(ch(EveActorIn?, EveActorOut), EveNarr),
+    send_to_user_narrate(eve, EveNarr?),
+    tee(EveActorOut?, EveMedIn, EveDispCmd),
+    agent(eve, EveAgentIn?, EveNetIn?,
+          [output('_user', EveAgentToUser), output('_net', EveNetOut)], [], 1),
+    ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
+                ch(EveMedIn?, EveMedOut), [], 1),
+    tee(EveMedOut?, EveActorIn, EveDispNotify),
+    send_to_user_tagged(eve, EveDispCmd?, EveDispNotify?),
+
+    %% Frank
+    frank_p12(ch(FrankActorIn?, FrankActorOut), FrankNarr),
+    send_to_user_narrate(frank, FrankNarr?),
+    tee(FrankActorOut?, FrankMedIn, FrankDispCmd),
+    agent(frank, FrankAgentIn?, FrankNetIn?,
+          [output('_user', FrankAgentToUser), output('_net', FrankNetOut)], [], 1),
+    ui_mediator(frank, ch(FrankAgentToUser?, FrankAgentIn),
+                ch(FrankMedIn?, FrankMedOut), [], 1),
+    tee(FrankMedOut?, FrankActorIn, FrankDispNotify),
+    send_to_user_tagged(frank, FrankDispCmd?, FrankDispNotify?).
 
 %% =============================================================================
 %% NETWORK SWITCH (6-way)

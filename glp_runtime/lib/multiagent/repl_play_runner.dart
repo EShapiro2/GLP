@@ -5,6 +5,9 @@
 ///
 /// Tagged output format from GLP: tagged(alice, cmd(connect(bob)))
 /// Parsed into: agentId="alice", kind="cmd", content="connect(bob)"
+///
+/// Narrative kinds (play 12): friend, say, act, event
+/// e.g. tagged(alice, friend(bob)) → agentId="alice", kind="friend", content="bob"
 library;
 
 import 'dart:async';
@@ -14,7 +17,7 @@ import 'dart:io';
 /// Parsed output line from a simulated play.
 class PlayOutput {
   final String agentId; // e.g. "alice"
-  final String kind; // "cmd" or "notify"
+  final String kind; // "cmd", "notify", "friend", "say", "act", or "event"
   final String content; // e.g. "connect(bob)"
 
   PlayOutput(this.agentId, this.kind, this.content);
@@ -60,10 +63,21 @@ class ReplPlayRunner {
 
   /// Bonds GLP files (grassroots bonds, plays 1–11).
   static const bondsFiles = [
-    '../programs/typed_book/bonds/bond_agent.glp',
-    '../programs/typed_book/bonds/bond_mediator.glp',
-    '../programs/typed_book/bonds/bond_actors.glp',
-    '../programs/typed_book/bonds/bond_boot.glp',
+    '../programs/typed_book/bonds/agent.glp',
+    '../programs/typed_book/bonds/mediator.glp',
+    '../programs/typed_book/bonds/actors.glp',
+    '../programs/typed_book/bonds/boot.glp',
+  ];
+
+  /// Bonds GLP files for play 12 (adds play12 actor files).
+  static const bondsPlay12Files = [
+    ...bondsFiles,
+    '../programs/typed_book/bonds/play12/alice.glp',
+    '../programs/typed_book/bonds/play12/bob.glp',
+    '../programs/typed_book/bonds/play12/charlie.glp',
+    '../programs/typed_book/bonds/play12/diana.glp',
+    '../programs/typed_book/bonds/play12/eve.glp',
+    '../programs/typed_book/bonds/play12/frank.glp',
   ];
 
   /// CSSN GLP files (child-safe social networking, plays 1–10).
@@ -75,8 +89,9 @@ class ReplPlayRunner {
   ];
 
   /// Regex for parsing tagged output lines.
+  /// Matches cmd, notify (protocol), and friend, say, act, event (narrative).
   static final _taggedRegex =
-      RegExp(r'^tagged\((\w+), (cmd|notify)\((.+)\)\)$');
+      RegExp(r'^tagged\((\w+), (cmd|notify|friend|say|act|event)\((.+)\)\)$');
 
   ReplPlayRunner({required this.repoRoot, this.glpFiles = cssgFiles});
 

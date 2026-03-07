@@ -5,104 +5,115 @@
 %% Receives payments from Bob (bread) and Eve (bread).
 %% Act 7: sells bob-debt to Eve (final deal, no negotiation).
 %%
-%% Types: from self.glp (ancestor scoping)
+%% Types: from bonds/self.glp (ancestor scoping)
 
--module(alice).
 -mode(system).
 
-exported procedure alice_p12(Constant?, ActorChannel?).
-alice_p12(_, ch(In, [connect(bob)|Out?])) :-
-    alice_p12_wait_connected_bob(In?, Out).
+procedure alice_p12(Constant?, ActorChannel?, NarrativeStream).
+alice_p12(_, ch(In, [connect(bob)|Out?]), Narr?) :-
+    alice_p12_wait_connected_bob(In?, Out, Narr).
 
-procedure alice_p12_wait_connected_bob(UserNotifyStream?, UserCmdStream).
+procedure alice_p12_wait_connected_bob(UserNotifyStream?, UserCmdStream, NarrativeStream).
 alice_p12_wait_connected_bob([connected(bob)|In],
-                             [connect(charlie)|Out?]) :-
-    alice_p12_wait_connected_charlie(In?, Out).
-alice_p12_wait_connected_bob([_|In], Out?) :-
-    otherwise | alice_p12_wait_connected_bob(In?, Out).
-alice_p12_wait_connected_bob([], []).
+                             [connect(charlie)|Out?],
+                             [friend(bob)|Narr?]) :-
+    alice_p12_wait_connected_charlie(In?, Out, Narr).
+alice_p12_wait_connected_bob([_|In], Out?, Narr?) :-
+    otherwise | alice_p12_wait_connected_bob(In?, Out, Narr).
+alice_p12_wait_connected_bob([], [], []).
 
-procedure alice_p12_wait_connected_charlie(UserNotifyStream?, UserCmdStream).
+procedure alice_p12_wait_connected_charlie(UserNotifyStream?, UserCmdStream, NarrativeStream).
 alice_p12_wait_connected_charlie([connected(charlie)|In],
-                                 [connect(eve)|Out?]) :-
-    alice_p12_wait_connected_eve(In?, Out).
-alice_p12_wait_connected_charlie([_|In], Out?) :-
-    otherwise | alice_p12_wait_connected_charlie(In?, Out).
-alice_p12_wait_connected_charlie([], []).
+                                 [connect(eve)|Out?],
+                                 [friend(charlie)|Narr?]) :-
+    alice_p12_wait_connected_eve(In?, Out, Narr).
+alice_p12_wait_connected_charlie([_|In], Out?, Narr?) :-
+    otherwise | alice_p12_wait_connected_charlie(In?, Out, Narr).
+alice_p12_wait_connected_charlie([], [], []).
 
-procedure alice_p12_wait_connected_eve(UserNotifyStream?, UserCmdStream).
+procedure alice_p12_wait_connected_eve(UserNotifyStream?, UserCmdStream, NarrativeStream).
 alice_p12_wait_connected_eve([connected(eve)|In],
-                             [mint(15, 0)|Out?]) :-
-    alice_p12_wait_minted1(In?, Out).
-alice_p12_wait_connected_eve([_|In], Out?) :-
-    otherwise | alice_p12_wait_connected_eve(In?, Out).
-alice_p12_wait_connected_eve([], []).
+                             [mint(15, 0)|Out?],
+                             [friend(eve)|Narr?]) :-
+    alice_p12_wait_minted1(In?, Out, Narr).
+alice_p12_wait_connected_eve([_|In], Out?, Narr?) :-
+    otherwise | alice_p12_wait_connected_eve(In?, Out, Narr).
+alice_p12_wait_connected_eve([], [], []).
 
 %% Act 2a: Symmetric trade with Bob (15-for-15)
-procedure alice_p12_wait_minted1(UserNotifyStream?, UserCmdStream).
+procedure alice_p12_wait_minted1(UserNotifyStream?, UserCmdStream, NarrativeStream).
 alice_p12_wait_minted1([minted(15, 0)|In],
-                       [trade(bob, [lot(alice, 0, 15)], [lot(bob, 0, 15)])|Out?]) :-
-    alice_p12_wait_trade_bob(In?, Out).
-alice_p12_wait_minted1([_|In], Out?) :-
-    otherwise | alice_p12_wait_minted1(In?, Out).
-alice_p12_wait_minted1([], []).
+                       [trade(bob, [lot(alice, 0, 15)], [lot(bob, 0, 15)])|Out?],
+                       [say('Bob, lets trade — 15 coins each')|Narr?]) :-
+    alice_p12_wait_trade_bob(In?, Out, Narr).
+alice_p12_wait_minted1([_|In], Out?, Narr?) :-
+    otherwise | alice_p12_wait_minted1(In?, Out, Narr).
+alice_p12_wait_minted1([], [], []).
 
-procedure alice_p12_wait_trade_bob(UserNotifyStream?, UserCmdStream).
+procedure alice_p12_wait_trade_bob(UserNotifyStream?, UserCmdStream, NarrativeStream).
 alice_p12_wait_trade_bob([trade_completed(bob)|In],
-                         [mint(15, 0)|Out?]) :-
-    alice_p12_wait_minted2(In?, Out).
-alice_p12_wait_trade_bob([_|In], Out?) :-
-    otherwise | alice_p12_wait_trade_bob(In?, Out).
-alice_p12_wait_trade_bob([], []).
+                         [mint(15, 0)|Out?],
+                         [act('Credit line with Bob: 15 alice-coins for 15 bob-coins')|Narr?]) :-
+    alice_p12_wait_minted2(In?, Out, Narr).
+alice_p12_wait_trade_bob([_|In], Out?, Narr?) :-
+    otherwise | alice_p12_wait_trade_bob(In?, Out, Narr).
+alice_p12_wait_trade_bob([], [], []).
 
 %% Act 2b: Symmetric trade with Charlie (15-for-15)
-procedure alice_p12_wait_minted2(UserNotifyStream?, UserCmdStream).
+procedure alice_p12_wait_minted2(UserNotifyStream?, UserCmdStream, NarrativeStream).
 alice_p12_wait_minted2([minted(15, 0)|In],
-                       [trade(charlie, [lot(alice, 0, 15)], [lot(charlie, 0, 15)])|Out?]) :-
-    alice_p12_wait_trade_charlie(In?, Out).
-alice_p12_wait_minted2([_|In], Out?) :-
-    otherwise | alice_p12_wait_minted2(In?, Out).
-alice_p12_wait_minted2([], []).
+                       [trade(charlie, [lot(alice, 0, 15)], [lot(charlie, 0, 15)])|Out?],
+                       [say('Charlie, same deal — 15 for 15?')|Narr?]) :-
+    alice_p12_wait_trade_charlie(In?, Out, Narr).
+alice_p12_wait_minted2([_|In], Out?, Narr?) :-
+    otherwise | alice_p12_wait_minted2(In?, Out, Narr).
+alice_p12_wait_minted2([], [], []).
 
-procedure alice_p12_wait_trade_charlie(UserNotifyStream?, UserCmdStream).
-alice_p12_wait_trade_charlie([trade_completed(charlie)|In], Out?) :-
-    alice_p12_wait_payment_bob(In?, Out).
-alice_p12_wait_trade_charlie([_|In], Out?) :-
-    otherwise | alice_p12_wait_trade_charlie(In?, Out).
-alice_p12_wait_trade_charlie([], []).
+procedure alice_p12_wait_trade_charlie(UserNotifyStream?, UserCmdStream, NarrativeStream).
+alice_p12_wait_trade_charlie([trade_completed(charlie)|In], Out?,
+                             [act('Credit line with Charlie: 15 alice-coins for 15 charlie-coins')|Narr?]) :-
+    alice_p12_wait_payment_bob(In?, Out, Narr).
+alice_p12_wait_trade_charlie([_|In], Out?, Narr?) :-
+    otherwise | alice_p12_wait_trade_charlie(In?, Out, Narr).
+alice_p12_wait_trade_charlie([], [], []).
 
 %% Act 3a: Bob buys bread (payment_received)
-procedure alice_p12_wait_payment_bob(UserNotifyStream?, UserCmdStream).
-alice_p12_wait_payment_bob([payment_received(bob, 5)|In], Out?) :-
-    alice_p12_wait_payment_eve(In?, Out).
-alice_p12_wait_payment_bob([_|In], Out?) :-
-    otherwise | alice_p12_wait_payment_bob(In?, Out).
-alice_p12_wait_payment_bob([], []).
+procedure alice_p12_wait_payment_bob(UserNotifyStream?, UserCmdStream, NarrativeStream).
+alice_p12_wait_payment_bob([payment_received(bob, 5)|In], Out?,
+                           [event('Bob bought 5 loaves — paid 5 alice-coins')|Narr?]) :-
+    alice_p12_wait_payment_eve(In?, Out, Narr).
+alice_p12_wait_payment_bob([_|In], Out?, Narr?) :-
+    otherwise | alice_p12_wait_payment_bob(In?, Out, Narr).
+alice_p12_wait_payment_bob([], [], []).
 
 %% Act 4b: Eve buys bread (payment_received)
-procedure alice_p12_wait_payment_eve(UserNotifyStream?, UserCmdStream).
+procedure alice_p12_wait_payment_eve(UserNotifyStream?, UserCmdStream, NarrativeStream).
 alice_p12_wait_payment_eve([payment_received(eve, 3)|In],
-                           [trade(eve, [lot(bob, 0, 10)], [lot(frank, 0, 4)])|Out?]) :-
-    alice_p12_wait_trade_eve(In?, Out).
-alice_p12_wait_payment_eve([_|In], Out?) :-
-    otherwise | alice_p12_wait_payment_eve(In?, Out).
-alice_p12_wait_payment_eve([], []).
+                           [trade(eve, [lot(bob, 0, 10)], [lot(frank, 0, 4)])|Out?],
+                           [event('Eve bought 3 loaves — paid 3 alice-coins'),
+                            say('Eve, Ill sell you 10 bob-bonds for 4 frank-coins')|Narr?]) :-
+    alice_p12_wait_trade_eve(In?, Out, Narr).
+alice_p12_wait_payment_eve([_|In], Out?, Narr?) :-
+    otherwise | alice_p12_wait_payment_eve(In?, Out, Narr).
+alice_p12_wait_payment_eve([], [], []).
 
 %% Act 7: Sale of debt — final deal (skip negotiation)
 %% Alice proposes 10 bob-bonds for 4 frank-coins, Eve accepts
-procedure alice_p12_wait_trade_eve(UserNotifyStream?, UserCmdStream).
-alice_p12_wait_trade_eve([trade_completed(eve)|In], [balance|Out?]) :-
-    alice_p12_wait_balance(In?, Out).
-alice_p12_wait_trade_eve([_|In], Out?) :-
-    otherwise | alice_p12_wait_trade_eve(In?, Out).
-alice_p12_wait_trade_eve([], []).
+procedure alice_p12_wait_trade_eve(UserNotifyStream?, UserCmdStream, NarrativeStream).
+alice_p12_wait_trade_eve([trade_completed(eve)|In], [balance|Out?],
+                         [act('Sold debt: 10 bob-bonds to Eve for 4 frank-coins')|Narr?]) :-
+    alice_p12_wait_balance(In?, Out, Narr).
+alice_p12_wait_trade_eve([_|In], Out?, Narr?) :-
+    otherwise | alice_p12_wait_trade_eve(In?, Out, Narr).
+alice_p12_wait_trade_eve([], [], []).
 
-procedure alice_p12_wait_balance(UserNotifyStream?, UserCmdStream).
-alice_p12_wait_balance([balance_report(_)|In], [done|Out?]) :-
-    alice_p12_finish(In?, Out).
-alice_p12_wait_balance([_|In], Out?) :-
-    otherwise | alice_p12_wait_balance(In?, Out).
-alice_p12_wait_balance([], []).
+procedure alice_p12_wait_balance(UserNotifyStream?, UserCmdStream, NarrativeStream).
+alice_p12_wait_balance([balance_report(_)|In], [done|Out?],
+                       [act('Balance: 5 bob-coins, 15 charlie-coins, 8 alice-coins, 4 frank-coins')|Narr?]) :-
+    alice_p12_finish(In?, Out, Narr).
+alice_p12_wait_balance([_|In], Out?, Narr?) :-
+    otherwise | alice_p12_wait_balance(In?, Out, Narr).
+alice_p12_wait_balance([], [], []).
 
-procedure alice_p12_finish(UserNotifyStream?, UserCmdStream).
-alice_p12_finish(_, []).
+procedure alice_p12_finish(UserNotifyStream?, UserCmdStream, NarrativeStream).
+alice_p12_finish(_, [], []).

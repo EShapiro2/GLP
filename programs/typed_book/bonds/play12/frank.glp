@@ -1,6 +1,6 @@
 %% frank.glp -- Fisherman actor for Play 12 (Village Market Month)
 %%
-%% Frank accepts befriends from Charlie, Diana, and Eve.
+%% Frank accepts befriends from Charlie, Diana, and Eve (concurrent, any order).
 %% Accepts Diana's loan (15 diana-coins for 18 frank-bonds).
 %% Symmetric trade with Eve (10-for-10).
 %% Pays Diana (medical checkup).
@@ -9,140 +9,145 @@
 %%
 %% Types: from self.glp (ancestor scoping)
 
--module(frank).
 -mode(system).
 
-exported procedure frank_p12(ActorChannel?).
-frank_p12(ch(In, Out?)) :-
-    frank_p12_wait_befriend_charlie(In?, Out).
+procedure frank_p12(ActorChannel?, NarrativeStream).
+frank_p12(ch(In, Out?), Narr?) :-
+    frank_p12_gather(none, none, none, In?, Out, Narr).
 
-%% Act 1: Accept Charlie's befriend request
-procedure frank_p12_wait_befriend_charlie(UserNotifyStream?, UserCmdStream).
-frank_p12_wait_befriend_charlie([befriend(charlie, ReqId)|In],
-                                [decision(yes, charlie, ReqId?)|Out?]) :-
+%% Gather befriends from Charlie, Diana, Eve (3 actors, any order).
+%% CS = charlie status, DS = diana status, ES = eve status.
+%% Status atoms: none → befriended → done.
+procedure frank_p12_gather(Constant?, Constant?, Constant?, UserNotifyStream?, UserCmdStream, NarrativeStream).
+
+%% All three connected — proceed to mint bonds for Diana's loan
+frank_p12_gather(done, done, done, In, [mint(18, 28)|Out?], Narr?) :-
+    frank_p12_wait_minted1(In?, Out, Narr).
+
+%% Befriend from Charlie
+frank_p12_gather(none, DS, ES, [befriend(charlie, ReqId)|In],
+                 [decision(yes, charlie, ReqId?)|Out?], Narr?) :-
     ground(ReqId?) |
-    frank_p12_wait_connected_charlie(In?, Out).
-frank_p12_wait_befriend_charlie([_|In], Out?) :-
-    otherwise | frank_p12_wait_befriend_charlie(In?, Out).
-frank_p12_wait_befriend_charlie([], []).
+    frank_p12_gather(befriended, DS?, ES?, In?, Out, Narr).
 
-procedure frank_p12_wait_connected_charlie(UserNotifyStream?, UserCmdStream).
-frank_p12_wait_connected_charlie([connected(charlie)|In], Out?) :-
-    frank_p12_wait_befriend_diana(In?, Out).
-frank_p12_wait_connected_charlie([_|In], Out?) :-
-    otherwise | frank_p12_wait_connected_charlie(In?, Out).
-frank_p12_wait_connected_charlie([], []).
+%% Connected Charlie
+frank_p12_gather(befriended, DS, ES, [connected(charlie)|In], Out?,
+                 [friend(charlie)|Narr?]) :-
+    frank_p12_gather(done, DS?, ES?, In?, Out, Narr).
 
-%% Accept Diana's befriend request
-procedure frank_p12_wait_befriend_diana(UserNotifyStream?, UserCmdStream).
-frank_p12_wait_befriend_diana([befriend(diana, ReqId)|In],
-                              [decision(yes, diana, ReqId?)|Out?]) :-
+%% Befriend from Diana
+frank_p12_gather(CS, none, ES, [befriend(diana, ReqId)|In],
+                 [decision(yes, diana, ReqId?)|Out?], Narr?) :-
     ground(ReqId?) |
-    frank_p12_wait_connected_diana(In?, Out).
-frank_p12_wait_befriend_diana([_|In], Out?) :-
-    otherwise | frank_p12_wait_befriend_diana(In?, Out).
-frank_p12_wait_befriend_diana([], []).
+    frank_p12_gather(CS?, befriended, ES?, In?, Out, Narr).
 
-procedure frank_p12_wait_connected_diana(UserNotifyStream?, UserCmdStream).
-frank_p12_wait_connected_diana([connected(diana)|In], Out?) :-
-    frank_p12_wait_befriend_eve(In?, Out).
-frank_p12_wait_connected_diana([_|In], Out?) :-
-    otherwise | frank_p12_wait_connected_diana(In?, Out).
-frank_p12_wait_connected_diana([], []).
+%% Connected Diana
+frank_p12_gather(CS, befriended, ES, [connected(diana)|In], Out?,
+                 [friend(diana)|Narr?]) :-
+    frank_p12_gather(CS?, done, ES?, In?, Out, Narr).
 
-%% Accept Eve's befriend request
-procedure frank_p12_wait_befriend_eve(UserNotifyStream?, UserCmdStream).
-frank_p12_wait_befriend_eve([befriend(eve, ReqId)|In],
-                            [decision(yes, eve, ReqId?)|Out?]) :-
+%% Befriend from Eve
+frank_p12_gather(CS, DS, none, [befriend(eve, ReqId)|In],
+                 [decision(yes, eve, ReqId?)|Out?], Narr?) :-
     ground(ReqId?) |
-    frank_p12_wait_connected_eve(In?, Out).
-frank_p12_wait_befriend_eve([_|In], Out?) :-
-    otherwise | frank_p12_wait_befriend_eve(In?, Out).
-frank_p12_wait_befriend_eve([], []).
+    frank_p12_gather(CS?, DS?, befriended, In?, Out, Narr).
 
-procedure frank_p12_wait_connected_eve(UserNotifyStream?, UserCmdStream).
-frank_p12_wait_connected_eve([connected(eve)|In],
-                             [mint(18, 28)|Out?]) :-
-    frank_p12_wait_minted1(In?, Out).
-frank_p12_wait_connected_eve([_|In], Out?) :-
-    otherwise | frank_p12_wait_connected_eve(In?, Out).
-frank_p12_wait_connected_eve([], []).
+%% Connected Eve
+frank_p12_gather(CS, DS, befriended, [connected(eve)|In], Out?,
+                 [friend(eve)|Narr?]) :-
+    frank_p12_gather(CS?, DS?, done, In?, Out, Narr).
+
+%% Skip other messages
+frank_p12_gather(CS, DS, ES, [_|In], Out?, Narr?) :-
+    otherwise | frank_p12_gather(CS?, DS?, ES?, In?, Out, Narr).
+frank_p12_gather(_, _, _, [], [], []).
 
 %% Act 2e: Mint frank-bonds(Day28) for Diana's loan
-procedure frank_p12_wait_minted1(UserNotifyStream?, UserCmdStream).
-frank_p12_wait_minted1([minted(18, 28)|In], Out?) :-
-    frank_p12_wait_trade_diana(In?, Out).
-frank_p12_wait_minted1([_|In], Out?) :-
-    otherwise | frank_p12_wait_minted1(In?, Out).
-frank_p12_wait_minted1([], []).
+procedure frank_p12_wait_minted1(UserNotifyStream?, UserCmdStream, NarrativeStream).
+frank_p12_wait_minted1([minted(18, 28)|In], Out?, Narr?) :-
+    frank_p12_wait_trade_diana(In?, Out, Narr).
+frank_p12_wait_minted1([_|In], Out?, Narr?) :-
+    otherwise | frank_p12_wait_minted1(In?, Out, Narr).
+frank_p12_wait_minted1([], [], []).
 
 %% Accept Diana's loan: 15 diana-coins for 18 frank-bonds(28)
-procedure frank_p12_wait_trade_diana(UserNotifyStream?, UserCmdStream).
+procedure frank_p12_wait_trade_diana(UserNotifyStream?, UserCmdStream, NarrativeStream).
 frank_p12_wait_trade_diana([trade_proposed(diana, _, ReqId)|In],
-                           [accept_trade(diana, ReqId?), mint(10, 0)|Out?]) :-
+                           [accept_trade(diana, ReqId?), mint(10, 0)|Out?],
+                           [say('Diana, deal — 18 bonds maturing day 28 for 15 coins'),
+                            act('Loan from Diana: 15 diana-coins for 18 frank-bonds(28)')|Narr?]) :-
     ground(ReqId?) |
-    frank_p12_wait_minted2(In?, Out).
-frank_p12_wait_trade_diana([_|In], Out?) :-
-    otherwise | frank_p12_wait_trade_diana(In?, Out).
-frank_p12_wait_trade_diana([], []).
+    frank_p12_wait_minted2(In?, Out, Narr).
+frank_p12_wait_trade_diana([_|In], Out?, Narr?) :-
+    otherwise | frank_p12_wait_trade_diana(In?, Out, Narr).
+frank_p12_wait_trade_diana([], [], []).
 
 %% Act 2f: Mint frank-coins for symmetric trade with Eve
-procedure frank_p12_wait_minted2(UserNotifyStream?, UserCmdStream).
-frank_p12_wait_minted2([minted(10, 0)|In], Out?) :-
-    frank_p12_wait_trade_eve(In?, Out).
-frank_p12_wait_minted2([_|In], Out?) :-
-    otherwise | frank_p12_wait_minted2(In?, Out).
-frank_p12_wait_minted2([], []).
+procedure frank_p12_wait_minted2(UserNotifyStream?, UserCmdStream, NarrativeStream).
+frank_p12_wait_minted2([minted(10, 0)|In], Out?, Narr?) :-
+    frank_p12_wait_trade_eve(In?, Out, Narr).
+frank_p12_wait_minted2([_|In], Out?, Narr?) :-
+    otherwise | frank_p12_wait_minted2(In?, Out, Narr).
+frank_p12_wait_minted2([], [], []).
 
 %% Accept Eve's symmetric trade proposal
-procedure frank_p12_wait_trade_eve(UserNotifyStream?, UserCmdStream).
+procedure frank_p12_wait_trade_eve(UserNotifyStream?, UserCmdStream, NarrativeStream).
 frank_p12_wait_trade_eve([trade_proposed(eve, _, ReqId)|In],
-                         [accept_trade(eve, ReqId?), pay(diana, 3)|Out?]) :-
+                         [accept_trade(eve, ReqId?), pay(diana, 3)|Out?],
+                         [say('Eve, of course — 10 for 10'),
+                          act('Credit line with Eve: 10 frank-coins for 10 eve-coins'),
+                          say('Diana, checkup please — 3 coins')|Narr?]) :-
     ground(ReqId?) |
-    frank_p12_wait_paid_diana(In?, Out).
-frank_p12_wait_trade_eve([_|In], Out?) :-
-    otherwise | frank_p12_wait_trade_eve(In?, Out).
-frank_p12_wait_trade_eve([], []).
+    frank_p12_wait_paid_diana(In?, Out, Narr).
+frank_p12_wait_trade_eve([_|In], Out?, Narr?) :-
+    otherwise | frank_p12_wait_trade_eve(In?, Out, Narr).
+frank_p12_wait_trade_eve([], [], []).
 
 %% Act 3b: Frank pays Diana for medical checkup
-procedure frank_p12_wait_paid_diana(UserNotifyStream?, UserCmdStream).
-frank_p12_wait_paid_diana([paid(diana, 3)|In], Out?) :-
-    frank_p12_wait_escrow_received(In?, Out).
-frank_p12_wait_paid_diana([_|In], Out?) :-
-    otherwise | frank_p12_wait_paid_diana(In?, Out).
-frank_p12_wait_paid_diana([], []).
+procedure frank_p12_wait_paid_diana(UserNotifyStream?, UserCmdStream, NarrativeStream).
+frank_p12_wait_paid_diana([paid(diana, 3)|In], Out?,
+                          [act('Paid Diana 3 for checkup')|Narr?]) :-
+    frank_p12_wait_escrow_received(In?, Out, Narr).
+frank_p12_wait_paid_diana([_|In], Out?, Narr?) :-
+    otherwise | frank_p12_wait_paid_diana(In?, Out, Narr).
+frank_p12_wait_paid_diana([], [], []).
 
 %% Act 5: Receive escrow from Charlie (dock work)
-procedure frank_p12_wait_escrow_received(UserNotifyStream?, UserCmdStream).
-frank_p12_wait_escrow_received([escrow_received(charlie, _)|In], Out?) :-
-    frank_p12_wait_escrow_released(In?, Out).
-frank_p12_wait_escrow_received([_|In], Out?) :-
-    otherwise | frank_p12_wait_escrow_received(In?, Out).
-frank_p12_wait_escrow_received([], []).
+procedure frank_p12_wait_escrow_received(UserNotifyStream?, UserCmdStream, NarrativeStream).
+frank_p12_wait_escrow_received([escrow_received(charlie, _)|In], Out?,
+                               [event('Escrow from Charlie: 8 alice-coins, release day 15')|Narr?]) :-
+    frank_p12_wait_escrow_released(In?, Out, Narr).
+frank_p12_wait_escrow_received([_|In], Out?, Narr?) :-
+    otherwise | frank_p12_wait_escrow_received(In?, Out, Narr).
+frank_p12_wait_escrow_received([], [], []).
 
 %% Dock done, escrow released
-procedure frank_p12_wait_escrow_released(UserNotifyStream?, UserCmdStream).
+procedure frank_p12_wait_escrow_released(UserNotifyStream?, UserCmdStream, NarrativeStream).
 frank_p12_wait_escrow_released([escrow_released(charlie)|In],
-                               [redeem(diana, 5, 0)|Out?]) :-
-    frank_p12_wait_redeemed(In?, Out).
-frank_p12_wait_escrow_released([_|In], Out?) :-
-    otherwise | frank_p12_wait_escrow_released(In?, Out).
-frank_p12_wait_escrow_released([], []).
+                               [redeem(diana, 5, 0)|Out?],
+                               [event('Escrow released — received 8 alice-coins for dock'),
+                                say('Diana, Id like to redeem 5 of your coins')|Narr?]) :-
+    frank_p12_wait_redeemed(In?, Out, Narr).
+frank_p12_wait_escrow_released([_|In], Out?, Narr?) :-
+    otherwise | frank_p12_wait_escrow_released(In?, Out, Narr).
+frank_p12_wait_escrow_released([], [], []).
 
 %% Act 6: Redeem diana-coins
-procedure frank_p12_wait_redeemed(UserNotifyStream?, UserCmdStream).
-frank_p12_wait_redeemed([redeemed(diana, 5)|In], [balance|Out?]) :-
-    frank_p12_wait_balance(In?, Out).
-frank_p12_wait_redeemed([_|In], Out?) :-
-    otherwise | frank_p12_wait_redeemed(In?, Out).
-frank_p12_wait_redeemed([], []).
+procedure frank_p12_wait_redeemed(UserNotifyStream?, UserCmdStream, NarrativeStream).
+frank_p12_wait_redeemed([redeemed(diana, 5)|In], [balance|Out?],
+                        [act('Redeemed 5 diana-coins from Diana')|Narr?]) :-
+    frank_p12_wait_balance(In?, Out, Narr).
+frank_p12_wait_redeemed([_|In], Out?, Narr?) :-
+    otherwise | frank_p12_wait_redeemed(In?, Out, Narr).
+frank_p12_wait_redeemed([], [], []).
 
-procedure frank_p12_wait_balance(UserNotifyStream?, UserCmdStream).
-frank_p12_wait_balance([balance_report(_)|In], [done|Out?]) :-
-    frank_p12_finish(In?, Out).
-frank_p12_wait_balance([_|In], Out?) :-
-    otherwise | frank_p12_wait_balance(In?, Out).
-frank_p12_wait_balance([], []).
+procedure frank_p12_wait_balance(UserNotifyStream?, UserCmdStream, NarrativeStream).
+frank_p12_wait_balance([balance_report(_)|In], [done|Out?],
+                       [act('Balance: 8 alice-coins, 7 diana-coins, 10 eve-coins')|Narr?]) :-
+    frank_p12_finish(In?, Out, Narr).
+frank_p12_wait_balance([_|In], Out?, Narr?) :-
+    otherwise | frank_p12_wait_balance(In?, Out, Narr).
+frank_p12_wait_balance([], [], []).
 
-procedure frank_p12_finish(UserNotifyStream?, UserCmdStream).
-frank_p12_finish(_, []).
+procedure frank_p12_finish(UserNotifyStream?, UserCmdStream, NarrativeStream).
+frank_p12_finish(_, [], []).

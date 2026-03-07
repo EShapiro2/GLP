@@ -1,7 +1,10 @@
 /// GLP Grassroots Bonds — Simulated Plays
 ///
-/// Runs bond plays (fplay1-11) via REPL subprocess, with tagged output
-/// parsed and routed to per-agent read-only panels (Alice, Bob).
+/// Runs bond plays (fplay1-12) via REPL subprocess, with tagged output
+/// parsed and routed to per-agent read-only panels.
+///
+/// Play 12 adds narrative kinds (friend, say, act, event) with a
+/// Code/Story toggle to switch between protocol trace and narrative view.
 library;
 
 import 'dart:io';
@@ -63,14 +66,30 @@ class _AgentInfo {
   const _AgentInfo(this.id, this.headerColor, this.bgColor);
 }
 
-const _agentInfos = [
-  _AgentInfo('Alice', Color(0xFF3949AB), Color(0xFFE8EAF6)),  // indigo
-  _AgentInfo('Bob',   Color(0xFF00897B), Color(0xFFE0F2F1)),  // teal
+const _twoAgentInfos = [
+  _AgentInfo('Alice', Color(0xFF3949AB), Color(0xFFE8EAF6)), // indigo
+  _AgentInfo('Bob', Color(0xFF00897B), Color(0xFFE0F2F1)), // teal
 ];
+
+const _sixAgentInfos = [
+  _AgentInfo('Alice', Color(0xFF3949AB), Color(0xFFE8EAF6)), // indigo
+  _AgentInfo('Bob', Color(0xFF00897B), Color(0xFFE0F2F1)), // teal
+  _AgentInfo('Charlie', Color(0xFFEF6C00), Color(0xFFFFF3E0)), // orange
+  _AgentInfo('Diana', Color(0xFF7B1FA2), Color(0xFFF3E5F5)), // purple
+  _AgentInfo('Eve', Color(0xFFC2185B), Color(0xFFFCE4EC)), // pink
+  _AgentInfo('Frank', Color(0xFF546E7A), Color(0xFFECEFF1)), // blue-grey
+];
+
+/// A single log entry with its kind for filtering.
+class _AgentLogEntry {
+  final String kind; // cmd, notify, friend, say, act, event
+  final String displayLine;
+  const _AgentLogEntry(this.kind, this.displayLine);
+}
 
 class _AgentState {
   final _AgentInfo info;
-  final List<String> outputLog = [];
+  final List<_AgentLogEntry> outputLog = [];
   final ScrollController scrollController = ScrollController();
 
   _AgentState(this.info);
@@ -97,6 +116,8 @@ class _BondsScreenState extends State<BondsScreen> {
   final Map<String, _AgentState> _agents = {};
   final List<String> _log = [];
   ReplPlayRunner? _playRunner;
+  int _currentPlay = 0;
+  bool _storyMode = false;
 
   @override
   void dispose() {
@@ -128,9 +149,15 @@ class _BondsScreenState extends State<BondsScreen> {
     }
     _agents.clear();
 
-    for (final info in _agentInfos) {
+    // Play 12 uses 6 agents; plays 1-11 use 2.
+    final infos = playNumber == 12 ? _sixAgentInfos : _twoAgentInfos;
+    for (final info in infos) {
       _agents[info.id] = _AgentState(info);
     }
+
+    _currentPlay = playNumber;
+    // Default view: Story for play 12, Code for plays 1-11.
+    _storyMode = playNumber == 12;
 
     final repoRoot = _resolveRepoRoot();
     setState(() {
@@ -139,19 +166,20 @@ class _BondsScreenState extends State<BondsScreen> {
 
     final runner = ReplPlayRunner(
       repoRoot: repoRoot,
-      glpFiles: ReplPlayRunner.bondsFiles,
+      glpFiles: playNumber == 12
+          ? ReplPlayRunner.bondsPlay12Files
+          : ReplPlayRunner.bondsFiles,
     );
     _playRunner = runner;
 
     runner.onOutput = (output) {
-      final key = output.agentId[0].toUpperCase() + output.agentId.substring(1);
+      final key =
+          output.agentId[0].toUpperCase() + output.agentId.substring(1);
       final state = _agents[key];
       if (state == null) return;
 
-      final displayLine = output.kind == 'cmd'
-          ? '> ${output.content}'
-          : '< ${output.content}';
-      state.outputLog.add(displayLine);
+      final displayLine = _formatDisplayLine(output.kind, output.content);
+      state.outputLog.add(_AgentLogEntry(output.kind, displayLine));
       setState(() {});
       _scrollToBottom(state);
     };
@@ -174,6 +202,89 @@ class _BondsScreenState extends State<BondsScreen> {
     };
 
     await runner.run(playNumber);
+  }
+
+  /// Format display text based on narrative kind.
+  /// Formatting rules are based on the tag type (part of the GLP→Dart protocol).
+  String _formatDisplayLine(String kind, String content) {
+    switch (kind) {
+      case 'cmd':
+        return '> $content';
+      case 'notify':
+        return '< $content';
+      case 'friend':
+        // Capitalize first letter of content
+        final name = content.isEmpty
+            ? content
+            : content[0].toUpperCase() + content.substring(1);
+        return 'Now friends with $name';
+      case 'say':
+        return '"$content"';
+      case 'act':
+        return '  $content';
+      case 'event':
+        return content;
+      default:
+        return content;
+    }
+  }
+
+  /// Style for each output kind.
+  TextStyle _styleForKind(String kind) {
+    switch (kind) {
+      case 'cmd':
+        return TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 13,
+          color: Colors.blue.shade800,
+        );
+      case 'notify':
+        return TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 13,
+          color: Colors.green.shade800,
+          fontWeight: FontWeight.bold,
+        );
+      case 'friend':
+        return TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 13,
+          color: Colors.grey.shade600,
+        );
+      case 'say':
+        return TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 13,
+          color: Colors.indigo.shade700,
+          fontStyle: FontStyle.italic,
+        );
+      case 'act':
+        return TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 13,
+          color: Colors.grey.shade800,
+        );
+      case 'event':
+        return TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 13,
+          color: Colors.teal.shade700,
+        );
+      default:
+        return const TextStyle(fontFamily: 'monospace', fontSize: 13);
+    }
+  }
+
+  /// Whether a log entry is visible in the current view mode.
+  bool _isVisible(_AgentLogEntry entry) {
+    if (_storyMode) {
+      return entry.kind == 'friend' ||
+          entry.kind == 'say' ||
+          entry.kind == 'act' ||
+          entry.kind == 'event';
+    } else {
+      return entry.kind == 'cmd' || entry.kind == 'notify';
+    }
   }
 
   void _scrollToBottom(_AgentState agent) {
@@ -204,11 +315,13 @@ class _BondsScreenState extends State<BondsScreen> {
           Expanded(
             child: _agents.isEmpty
                 ? const Center(
-                    child: Text('Click a Play button above to run a scenario.'))
+                    child:
+                        Text('Click a Play button above to run a scenario.'))
                 : Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: _agents.values
-                        .map((agent) => Expanded(child: _buildAgentPanel(agent)))
+                        .map((agent) =>
+                            Expanded(child: _buildAgentPanel(agent)))
                         .toList(),
                   ),
           ),
@@ -224,7 +337,14 @@ class _BondsScreenState extends State<BondsScreen> {
       color: Colors.indigo.shade50,
       child: Row(
         children: [
-          // Escrow plays (primary)
+          // Play 12 (primary)
+          ElevatedButton.icon(
+            onPressed: () => _runPlay(12),
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('Play 12 (Market)'),
+          ),
+          const SizedBox(width: 8),
+          // Escrow plays
           ElevatedButton.icon(
             onPressed: () => _runPlay(11),
             icon: const Icon(Icons.play_arrow),
@@ -247,6 +367,28 @@ class _BondsScreenState extends State<BondsScreen> {
             ),
             if (i < 9) const SizedBox(width: 4),
           ],
+          const Spacer(),
+          // Code/Story toggle (visible when a play is running)
+          if (_currentPlay > 0)
+            ToggleButtons(
+              borderRadius: BorderRadius.circular(8),
+              isSelected: [!_storyMode, _storyMode],
+              onPressed: (index) {
+                setState(() {
+                  _storyMode = index == 1;
+                });
+              },
+              children: const [
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Text('Code'),
+                ),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Text('Story'),
+                ),
+              ],
+            ),
         ],
       ),
     );
@@ -254,6 +396,9 @@ class _BondsScreenState extends State<BondsScreen> {
 
   Widget _buildAgentPanel(_AgentState agent) {
     final info = agent.info;
+    final filteredLog =
+        agent.outputLog.where(_isVisible).toList(growable: false);
+
     return Container(
       decoration: BoxDecoration(
         border: Border(
@@ -285,23 +430,14 @@ class _BondsScreenState extends State<BondsScreen> {
               child: ListView.builder(
                 controller: agent.scrollController,
                 padding: const EdgeInsets.all(8.0),
-                itemCount: agent.outputLog.length,
+                itemCount: filteredLog.length,
                 itemBuilder: (context, index) {
-                  final line = agent.outputLog[index];
+                  final entry = filteredLog[index];
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2.0),
                     child: Text(
-                      line,
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 13,
-                        color: line.startsWith('>')
-                            ? Colors.blue.shade800
-                            : Colors.green.shade800,
-                        fontWeight: line.startsWith('<')
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
+                      entry.displayLine,
+                      style: _styleForKind(entry.kind),
                     ),
                   );
                 },

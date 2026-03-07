@@ -90,3 +90,13 @@ UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].
 UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
 
 ActorChannel ::= ch(UserNotifyStream, UserCmdStream?).
+
+%% =============================================================================
+%% NARRATIVE TYPES
+%% =============================================================================
+
+NarrativeItem   ::= friend(Constant)
+                  ; say(Constant)
+                  ; act(Constant)
+                  ; event(Constant).
+NarrativeStream ::= [] ; [NarrativeItem | NarrativeStream].

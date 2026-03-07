@@ -8,95 +8,104 @@
 %%
 %% Types: from self.glp (ancestor scoping)
 
--module(diana).
 -mode(system).
 
-exported procedure diana_p12(ActorChannel?).
-diana_p12(ch(In, Out?)) :-
-    diana_p12_wait_befriend_bob(In?, Out).
+procedure diana_p12(ActorChannel?, NarrativeStream).
+diana_p12(ch(In, Out?), Narr?) :-
+    diana_p12_wait_befriend_bob(In?, Out, Narr).
 
 %% Act 1: Accept Bob's befriend request
-procedure diana_p12_wait_befriend_bob(UserNotifyStream?, UserCmdStream).
+procedure diana_p12_wait_befriend_bob(UserNotifyStream?, UserCmdStream, NarrativeStream).
 diana_p12_wait_befriend_bob([befriend(bob, ReqId)|In],
-                            [decision(yes, bob, ReqId?)|Out?]) :-
+                            [decision(yes, bob, ReqId?)|Out?],
+                            Narr?) :-
     ground(ReqId?) |
-    diana_p12_wait_connected_bob(In?, Out).
-diana_p12_wait_befriend_bob([_|In], Out?) :-
-    otherwise | diana_p12_wait_befriend_bob(In?, Out).
-diana_p12_wait_befriend_bob([], []).
+    diana_p12_wait_connected_bob(In?, Out, Narr).
+diana_p12_wait_befriend_bob([_|In], Out?, Narr?) :-
+    otherwise | diana_p12_wait_befriend_bob(In?, Out, Narr).
+diana_p12_wait_befriend_bob([], [], []).
 
-procedure diana_p12_wait_connected_bob(UserNotifyStream?, UserCmdStream).
+procedure diana_p12_wait_connected_bob(UserNotifyStream?, UserCmdStream, NarrativeStream).
 diana_p12_wait_connected_bob([connected(bob)|In],
-                             [connect(frank)|Out?]) :-
-    diana_p12_wait_connected_frank(In?, Out).
-diana_p12_wait_connected_bob([_|In], Out?) :-
-    otherwise | diana_p12_wait_connected_bob(In?, Out).
-diana_p12_wait_connected_bob([], []).
+                             [connect(frank)|Out?],
+                             [friend(bob)|Narr?]) :-
+    diana_p12_wait_connected_frank(In?, Out, Narr).
+diana_p12_wait_connected_bob([_|In], Out?, Narr?) :-
+    otherwise | diana_p12_wait_connected_bob(In?, Out, Narr).
+diana_p12_wait_connected_bob([], [], []).
 
-procedure diana_p12_wait_connected_frank(UserNotifyStream?, UserCmdStream).
+procedure diana_p12_wait_connected_frank(UserNotifyStream?, UserCmdStream, NarrativeStream).
 diana_p12_wait_connected_frank([connected(frank)|In],
-                               [mint(20, 0)|Out?]) :-
-    diana_p12_wait_minted1(In?, Out).
-diana_p12_wait_connected_frank([_|In], Out?) :-
-    otherwise | diana_p12_wait_connected_frank(In?, Out).
-diana_p12_wait_connected_frank([], []).
+                               [mint(20, 0)|Out?],
+                               [friend(frank)|Narr?]) :-
+    diana_p12_wait_minted1(In?, Out, Narr).
+diana_p12_wait_connected_frank([_|In], Out?, Narr?) :-
+    otherwise | diana_p12_wait_connected_frank(In?, Out, Narr).
+diana_p12_wait_connected_frank([], [], []).
 
 %% Act 2c: Mint diana-coins for Bob's loan
-procedure diana_p12_wait_minted1(UserNotifyStream?, UserCmdStream).
-diana_p12_wait_minted1([minted(20, 0)|In], Out?) :-
-    diana_p12_wait_trade_bob(In?, Out).
-diana_p12_wait_minted1([_|In], Out?) :-
-    otherwise | diana_p12_wait_minted1(In?, Out).
-diana_p12_wait_minted1([], []).
+procedure diana_p12_wait_minted1(UserNotifyStream?, UserCmdStream, NarrativeStream).
+diana_p12_wait_minted1([minted(20, 0)|In], Out?, Narr?) :-
+    diana_p12_wait_trade_bob(In?, Out, Narr).
+diana_p12_wait_minted1([_|In], Out?, Narr?) :-
+    otherwise | diana_p12_wait_minted1(In?, Out, Narr).
+diana_p12_wait_minted1([], [], []).
 
 %% Accept Bob's 20% loan proposal (skip negotiation)
-procedure diana_p12_wait_trade_bob(UserNotifyStream?, UserCmdStream).
+procedure diana_p12_wait_trade_bob(UserNotifyStream?, UserCmdStream, NarrativeStream).
 diana_p12_wait_trade_bob([trade_proposed(bob, _, ReqId)|In],
-                         [accept_trade(bob, ReqId?), mint(15, 0)|Out?]) :-
+                         [accept_trade(bob, ReqId?), mint(15, 0)|Out?],
+                         [say('Bob, deal — 20 diana-coins for 24 bob-bonds maturing day 25'),
+                          act('Loan to Bob: 20 diana-coins for 24 bob-bonds(25)')|Narr?]) :-
     ground(ReqId?) |
-    diana_p12_wait_minted2(In?, Out).
-diana_p12_wait_trade_bob([_|In], Out?) :-
-    otherwise | diana_p12_wait_trade_bob(In?, Out).
-diana_p12_wait_trade_bob([], []).
+    diana_p12_wait_minted2(In?, Out, Narr).
+diana_p12_wait_trade_bob([_|In], Out?, Narr?) :-
+    otherwise | diana_p12_wait_trade_bob(In?, Out, Narr).
+diana_p12_wait_trade_bob([], [], []).
 
 %% Act 2e: Mint diana-coins for Frank's loan
-procedure diana_p12_wait_minted2(UserNotifyStream?, UserCmdStream).
+procedure diana_p12_wait_minted2(UserNotifyStream?, UserCmdStream, NarrativeStream).
 diana_p12_wait_minted2([minted(15, 0)|In],
-                       [trade(frank, [lot(diana, 0, 15)], [lot(frank, 28, 18)])|Out?]) :-
-    diana_p12_wait_trade_frank(In?, Out).
-diana_p12_wait_minted2([_|In], Out?) :-
-    otherwise | diana_p12_wait_minted2(In?, Out).
-diana_p12_wait_minted2([], []).
+                       [trade(frank, [lot(diana, 0, 15)], [lot(frank, 28, 18)])|Out?],
+                       [say('Frank, 15 coins for 18 bonds maturing day 28')|Narr?]) :-
+    diana_p12_wait_trade_frank(In?, Out, Narr).
+diana_p12_wait_minted2([_|In], Out?, Narr?) :-
+    otherwise | diana_p12_wait_minted2(In?, Out, Narr).
+diana_p12_wait_minted2([], [], []).
 
-procedure diana_p12_wait_trade_frank(UserNotifyStream?, UserCmdStream).
-diana_p12_wait_trade_frank([trade_completed(frank)|In], Out?) :-
-    diana_p12_wait_payment_frank(In?, Out).
-diana_p12_wait_trade_frank([_|In], Out?) :-
-    otherwise | diana_p12_wait_trade_frank(In?, Out).
-diana_p12_wait_trade_frank([], []).
+procedure diana_p12_wait_trade_frank(UserNotifyStream?, UserCmdStream, NarrativeStream).
+diana_p12_wait_trade_frank([trade_completed(frank)|In], Out?,
+                           [act('Loan to Frank: 15 diana-coins for 18 frank-bonds(28)')|Narr?]) :-
+    diana_p12_wait_payment_frank(In?, Out, Narr).
+diana_p12_wait_trade_frank([_|In], Out?, Narr?) :-
+    otherwise | diana_p12_wait_trade_frank(In?, Out, Narr).
+diana_p12_wait_trade_frank([], [], []).
 
 %% Act 3b: Frank pays for medical checkup
-procedure diana_p12_wait_payment_frank(UserNotifyStream?, UserCmdStream).
-diana_p12_wait_payment_frank([payment_received(frank, 3)|In], Out?) :-
-    diana_p12_wait_redeem_frank(In?, Out).
-diana_p12_wait_payment_frank([_|In], Out?) :-
-    otherwise | diana_p12_wait_payment_frank(In?, Out).
-diana_p12_wait_payment_frank([], []).
+procedure diana_p12_wait_payment_frank(UserNotifyStream?, UserCmdStream, NarrativeStream).
+diana_p12_wait_payment_frank([payment_received(frank, 3)|In], Out?,
+                             [event('Frank paid 3 for medical checkup')|Narr?]) :-
+    diana_p12_wait_redeem_frank(In?, Out, Narr).
+diana_p12_wait_payment_frank([_|In], Out?, Narr?) :-
+    otherwise | diana_p12_wait_payment_frank(In?, Out, Narr).
+diana_p12_wait_payment_frank([], [], []).
 
 %% Act 6: Frank redeems 5 diana-coins
-procedure diana_p12_wait_redeem_frank(UserNotifyStream?, UserCmdStream).
-diana_p12_wait_redeem_frank([redeem_received(frank, 5)|In], [balance|Out?]) :-
-    diana_p12_wait_balance(In?, Out).
-diana_p12_wait_redeem_frank([_|In], Out?) :-
-    otherwise | diana_p12_wait_redeem_frank(In?, Out).
-diana_p12_wait_redeem_frank([], []).
+procedure diana_p12_wait_redeem_frank(UserNotifyStream?, UserCmdStream, NarrativeStream).
+diana_p12_wait_redeem_frank([redeem_received(frank, 5)|In], [balance|Out?],
+                            [event('Frank redeemed 5 diana-coins')|Narr?]) :-
+    diana_p12_wait_balance(In?, Out, Narr).
+diana_p12_wait_redeem_frank([_|In], Out?, Narr?) :-
+    otherwise | diana_p12_wait_redeem_frank(In?, Out, Narr).
+diana_p12_wait_redeem_frank([], [], []).
 
-procedure diana_p12_wait_balance(UserNotifyStream?, UserCmdStream).
-diana_p12_wait_balance([balance_report(_)|In], [done|Out?]) :-
-    diana_p12_finish(In?, Out).
-diana_p12_wait_balance([_|In], Out?) :-
-    otherwise | diana_p12_wait_balance(In?, Out).
-diana_p12_wait_balance([], []).
+procedure diana_p12_wait_balance(UserNotifyStream?, UserCmdStream, NarrativeStream).
+diana_p12_wait_balance([balance_report(_)|In], [done|Out?],
+                       [act('Balance: 24 bob-bonds(25), 18 frank-bonds(28)')|Narr?]) :-
+    diana_p12_finish(In?, Out, Narr).
+diana_p12_wait_balance([_|In], Out?, Narr?) :-
+    otherwise | diana_p12_wait_balance(In?, Out, Narr).
+diana_p12_wait_balance([], [], []).
 
-procedure diana_p12_finish(UserNotifyStream?, UserCmdStream).
-diana_p12_finish(_, []).
+procedure diana_p12_finish(UserNotifyStream?, UserCmdStream, NarrativeStream).
+diana_p12_finish(_, [], []).
