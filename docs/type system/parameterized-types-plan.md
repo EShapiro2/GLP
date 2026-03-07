@@ -1,11 +1,11 @@
 # Parameterized Types: Two-Stage Plan
 
 **Created**: 2026-03-06
-**Status**: Stage 1 not started
+**Status**: Stage 1 COMPLETE, Stage 2.1 next
 
 ## Goal
 
-Introduce parameterized types, convert all existing code to use them, then enforce a tight typing discipline by forbidding `_` and `_?` in user type definitions and procedure declarations.
+Introduce parameterized types, convert all existing code to use them, then adopt a tight typing discipline where we do not use `_` or `_?` in user type definitions or procedure declarations.
 
 ---
 
@@ -71,24 +71,63 @@ Run the full test suite. All existing tests must pass unchanged — parameterize
 
 ## Stage 2: Convert to Tight Typing and Remove Imprecise Types
 
-Convert all existing code to use parameterized types, then forbid `_` and `_?` in user type definitions and procedure declarations.
+Convert all existing code to use parameterized types, then adopt a tight typing discipline.
 
-### 2.1 Convert `self.glp`
+**Key principle**: Both monomorphic and parameterized definitions coexist in `self.glp` throughout the conversion (as established in Step 1.4). Files are converted one directory at a time while both forms are available. Only after all files are converted are the monomorphic definitions removed. **Tests must pass after every step.**
 
-Replace monomorphic type definitions with parameterized ones:
+### 2.1 Convert test files (`programs/tests/typed/`)
 
-| Before | After |
-|--------|-------|
-| `Stream ::= [] ; [\|Stream].` | Remove (keep only `Stream(X)`) |
-| `OpenStream ::= [_\|Stream].` | Remove (keep only `OpenStream(X)`) |
-| `Channel ::= ch(Stream, Stream?).` | Remove (keep only `Channel(In, Out)`) |
+Convert test files first — they are small, well-understood, and directly exercised by the test suite. Each file's type definitions and procedure declarations are updated to use parameterized types.
+
+Conversion rules:
+- `procedure merge(Stream?, Stream?, Stream).` → `procedure merge(Stream(X)?, Stream(X)?, Stream(X)).` (parameterized) or `procedure merge(Stream(Integer)?, Stream(Integer)?, Stream(Integer)).` (concrete instantiation), depending on context.
+- Files that define their own `Stream ::= [] ; [_|Stream].` locally: remove the local definition (they inherit `Stream(X)` from `self.glp`) and update procedure declarations to use instantiated types.
+- Files that already define domain-specific types (e.g., `CounterCall`) just need procedure declarations updated to reference `Stream(CounterCall)`.
+
+Run full test suite after conversion. All tests must pass.
+
+### 2.2 Convert typed book examples (`programs/typed_book/`)
+
+**Categories by conversion difficulty:**
+
+1. **Arithmetic/recursive** (factorial, fibonacci, quicksort, etc.): Use `Stream` only for list types. Need `Stream(Integer)`, `Stream(Number)`, or `Stream(String)` depending on content. Straightforward.
+
+2. **Stream programs** (merge, copy, producers/consumers, etc.): Core cases. `merge` becomes parameterized. Programs composing multiple stream operations need consistent instantiation.
+
+3. **Monitor/object programs** (counter, queue_manager, etc.): Already define domain types like `CounterCall`. Need `Stream(CounterCall)` in procedure declarations.
+
+4. **Social graph/network programs**: Already have rich type definitions. Need stream and channel types parameterized with the appropriate message types.
+
+5. **Meta-interpreters**: Deferred to future work (see Future Work section).
+
+Run full test suite after conversion. All tests must pass.
+
+### 2.3 Convert module applications (CSSG, CSSN, social_graph_simulated_ui)
+
+These already have domain-specific types in their `self.glp` files. The main change is parameterizing `merge`, `send`, `receive`, `new_channel` declarations in each module's procedure declarations.
+
+The `boot` modules that were previously untyped (noted in the paper as motivation for parameterized types) can now be fully typed.
+
+Run full test suite after conversion. All tests must pass.
+
+### 2.4 Remove renamed procedure copies
+
+After all files use parameterized types, the Section 14 workarounds (renamed copies like `merge_agent`, `send_agent`, etc.) can be removed. The parameterized originals serve the same purpose.
+
+Run full test suite after removal. All tests must pass.
+
+### 2.5 Remove monomorphic definitions from `self.glp`
+
+Now that all downstream files use parameterized types, remove the old monomorphic definitions:
+
+| Remove | Keep |
+|--------|------|
+| `Stream ::= [] ; [_\|Stream].` | `Stream(X) ::= [] ; [X \| Stream(X)].` |
+| `OpenStream ::= [_\|Stream].` | `OpenStream(X) ::= [X \| Stream(X)].` |
+| `Channel ::= ch(Stream, Stream?).` | `Channel(In, Out) ::= ch(In, Out?).` |
 | `DiffList ::= Stream \ Stream?.` | `DiffList(X) ::= Stream(X) \ Stream(X)?.` |
 
-The old `DiffList` uses `Stream` which itself uses `_`. After conversion, `DiffList(X)` uses `Stream(X)`.
-
-Predefined procedure declarations in `self.glp` are system-level (under `-mode(system)`) and may continue to use `_` and `_?` where they genuinely accept any term — e.g., `ground(_?)`, `=(_?, _)`, `=?=(_?, _?)`. These are truly polymorphic at the system level.
-
-However, parameterize where possible:
+Also parameterize predefined procedure declarations where possible:
 
 | Before | After |
 |--------|-------|
@@ -99,45 +138,17 @@ However, parameterize where possible:
 | `procedure dl_append(DiffList?, DiffList?, DiffList).` | `procedure dl_append(DiffList(X)?, DiffList(X)?, DiffList(X)).` |
 | `procedure dl_to_list(DiffList?, Stream).` | `procedure dl_to_list(DiffList(X)?, Stream(X)).` |
 
-### 2.2 Convert book examples (`programs/book/`, `programs/typed_book/`)
+Predefined procedure declarations that genuinely accept any term — `ground(_?)`, `=(_?, _)`, `=?=(_?, _?)` — keep `_` and `_?`.
 
-These files use `Stream ::= [] ; [_|Stream]` and `Channel ::= ch(Stream, Stream?)` inherited from `self.glp`. After 2.1, they inherit `Stream(X)` and `Channel(In, Out)` instead.
-
-Each file's procedure declarations must be updated to use instantiated types. The conversion is mechanical for most files:
-
-- `procedure merge(Stream?, Stream?, Stream).` → `procedure merge(Stream(X)?, Stream(X)?, Stream(X)).` (or use the inherited parameterized declaration)
-- Files that define their own `Stream` must either remove it (inheriting from `self.glp`) or convert it to `Stream(X)`.
-- Files that define domain-specific types already (e.g., `CounterCall ::= add ; clear ; read(Integer?).`) just need their procedure declarations updated to reference `Stream(CounterCall)`.
-
-**Categories of book files by conversion difficulty:**
-
-1. **Arithmetic/recursive** (factorial, fibonacci, quicksort, etc.): These typically use `Stream` only for list types. They need `Stream(Integer)`, `Stream(Number)`, or `Stream(String)` depending on content. Most are straightforward.
-
-2. **Stream programs** (merge, copy, producers/consumers, etc.): These are the core cases. `merge` becomes parameterized. Programs that compose multiple stream operations need consistent instantiation.
-
-3. **Monitor/object programs** (counter, queue_manager, etc.): These already define domain types like `CounterCall`. They need `Stream(CounterCall)` in procedure declarations.
-
-4. **Social graph/network programs**: These already have rich type definitions. They need their stream and channel types parameterized with the appropriate message types.
-
-5. **Meta-interpreters**: These are inherently untyped (they manipulate arbitrary terms). Their conversion is deferred to future work (see Open Questions).
-
-### 2.3 Convert test files (`programs/tests/typed/`)
-
-Same mechanical conversion as book files. Each test file's type definitions and procedure declarations are updated.
-
-### 2.4 Convert module applications (CSSG, CSSN, social_graph_simulated_ui)
-
-These already have domain-specific types in their `self.glp` files. The main change is parameterizing `merge`, `send`, `receive`, `new_channel` declarations in each module's procedure declarations.
-
-The `boot` modules that were previously untyped (noted in the paper as motivation for parameterized types) can now be fully typed.
-
-### 2.5 Remove renamed procedure copies
-
-After parameterized types work, all the Section 14 workarounds (renamed copies like `merge_agent`, `send_agent`, etc.) can be removed. The parameterized originals serve the same purpose.
+Run full test suite after removal. All tests must pass.
 
 ### 2.6 Archive `book/` directory
 
 Move `programs/book/` to `programs/archive/book/`. This directory contains the original untyped examples. It is dated and does not pass type checking. The typed equivalents live in `programs/typed_book/`.
+
+Update `test/run_book_tests.sh` to point to the new location, or retire the script if the book tests are no longer relevant.
+
+Run full test suite after archiving.
 
 ### 2.7 Adopt tight typing discipline
 
