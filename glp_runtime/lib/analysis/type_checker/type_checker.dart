@@ -172,6 +172,8 @@ class TypeChecker {
 
     // Check each declared procedure
     for (final procDecl in typeEnv.procedures.values) {
+      // Skip parameterized proc decls — type params have no DFA states.
+      if (procDecl.isParameterized) continue;
       final key = procDecl.key;
       final procClauses = procedureClauses[key];
 
@@ -630,12 +632,16 @@ class TypeChecker {
 /// (prelude + ancestor self.glp definitions) instead of just the prelude.
 /// See module_hierarchy.dart for how ancestor scopes are assembled.
 TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope}) {
-  // Expand parameterized types to monomorphic equivalents before type checking.
-  // This is a no-op if the module has no parameterized types.
-  final expandedModule = expandParameterizedTypes(module);
+  // Build base environment first so we know all type names for expansion.
+  // This avoids mistaking prelude type names for type parameters.
+  final baseEnv = ancestorScope ?? buildPreludeEnvironment();
 
-  // Build type environment from expanded module (includes prelude or ancestor scope)
-  final typeEnv = buildTypeEnvironment(expandedModule, ancestorScope: ancestorScope);
+  // Expand parameterized types to monomorphic equivalents before type checking.
+  final expandedModule = expandParameterizedTypes(module,
+      knownTypeNames: baseEnv.types.keys.toSet());
+
+  // Build type environment from expanded module (reuses baseEnv)
+  final typeEnv = buildTypeEnvironment(expandedModule, ancestorScope: baseEnv);
 
   // Extract clauses - from transformed procedures if provided, otherwise from module
   final clauses = <ast.Clause>[];

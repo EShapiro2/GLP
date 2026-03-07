@@ -109,7 +109,9 @@ TypeEnvironment assembleTypeScope({
     final selfModule = parser.parseModule();
 
     // Expand parameterized types before building scope
-    final expandedSelfModule = expandParameterizedTypes(selfModule);
+    // Pass accumulated env type names so earlier types aren't mistaken for type params.
+    final expandedSelfModule = expandParameterizedTypes(selfModule,
+        knownTypeNames: env.types.keys.toSet());
 
     // Build environment from this self.glp (without prelude check — ancestors
     // can define types with same names, shadowing is allowed)
@@ -120,7 +122,8 @@ TypeEnvironment assembleTypeScope({
   }
 
   // Finally, merge the target module's own definitions (shadows all ancestors)
-  final expandedModule = expandParameterizedTypes(module);
+  final expandedModule = expandParameterizedTypes(module,
+      knownTypeNames: env.types.keys.toSet());
   final moduleEnv = _buildScopeFromModule(expandedModule);
   env = env.merge(moduleEnv);
 

@@ -1,6 +1,6 @@
 % reader_output.glp - Reader in output position binds result correctly
 
-procedure unwrap(Stream(X)?, _).
+procedure unwrap(Stream(X)?, X).
 unwrap([X|_], X?).
 unwrap([], none).
 

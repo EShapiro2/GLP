@@ -1,0 +1,8 @@
+% param_bare_typevar.glp - Bare type parameters in parameterized proc decls
+
+procedure gethead_param(Stream(X)?, X).
+gethead_param([H|_], H?).
+gethead_param([], none).
+
+procedure test_gethead_param(Constant).
+test_gethead_param(R?) :- gethead_param([a,b,c], R).

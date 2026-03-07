@@ -260,8 +260,11 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   }
 
   // Create procedure states (no complement)
-  for (final procKey in env.procedures.keys) {
-    states[procKey] = DFAState(procKey,
+  // Skip parameterized proc decls — their type params have no DFA states.
+  for (final entry in env.procedures.entries) {
+    final procDecl = entry.value;
+    if (procDecl.isParameterized) continue;
+    states[entry.key] = DFAState(entry.key,
       isDual: false,
       isFinal: false,
       isProcedure: true);  // Fix 3.1: mark as procedure
@@ -271,6 +274,7 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   for (final entry in env.procedures.entries) {
     final procKey = entry.key;
     final procDecl = entry.value;
+    if (procDecl.isParameterized) continue;
     automata[procKey] = _buildProcedureAutomaton(procDecl, states);
   }
 

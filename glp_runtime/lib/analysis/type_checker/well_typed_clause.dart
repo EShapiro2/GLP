@@ -445,6 +445,12 @@ WellTypedResult _checkHead(
     // Build moded head term (pass env for embedded mode handling in structures)
     final modedHeadTerm = modedHead(clause.head, procDecl, typeEnv: env);
 
+    // For parameterized proc decls, skip DFA-based argument type checking.
+    // Type parameters don't have DFA states.
+    if (procDecl.isParameterized) {
+      return (WellTypedResult.success({}), modedHeadTerm);
+    }
+
     // Check each argument against its declared type's automaton
     final result = _checkModedTermPerArg(modedHeadTerm, procDecl, dfa);
     return (result, modedHeadTerm);
@@ -511,6 +517,14 @@ WellTypedResult _checkBodyAtom(
   // Build produced term (no variable flip for body atoms)
   try {
     final modedAtomTerm = producedTerm(atom, procDecl, typeEnv: env);
+
+    // For parameterized proc decls, skip DFA-based argument type checking.
+    // Type parameters (e.g., X in Stream(X)) don't have DFA states.
+    // The modes are still enforced by producedTerm; well-typing of concrete
+    // types is checked via head constraints and duality.
+    if (procDecl.isParameterized) {
+      return (WellTypedResult.success({}), modedAtomTerm);
+    }
 
     // Check each argument against its declared type's automaton
     final result = _checkModedTermPerArg(modedAtomTerm, procDecl, dfa);

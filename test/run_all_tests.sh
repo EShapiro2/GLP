@@ -506,6 +506,17 @@ HEREDOC
 check "constant ground" "Rcgt1 = foo" "$a18"
 check "gethead" "Rgh1 = a" "$a18"
 
+# --- A18b: Parameterized proc decl with bare type var ---
+echo "--- A18b: Param bare typevar ---"
+a18b=$($DART run "$REPL" <<HEREDOC
+$TYPED/param_bare_typevar.glp
+test_gethead_param(Rpbt1).
+:quit
+HEREDOC
+2>&1)
+
+check "param bare typevar" "Rpbt1 = a" "$a18b"
+
 # --- A19: Defined guards ---
 echo "--- A19: Defined guards ---"
 a19=$($DART run "$REPL" <<HEREDOC

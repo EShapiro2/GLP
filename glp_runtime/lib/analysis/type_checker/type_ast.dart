@@ -210,9 +210,14 @@ class TypeDef {
 /// Argument types can be:
 /// - TypeRef: a named type reference (e.g., Nat, Stream?)
 /// - PrimitiveModeAlt: a primitive type directly (e.g., _, _?)
+///
+/// Parameterized procedure declarations have non-empty typeParams:
+///   procedure gethead(Stream(X)?, X).  → typeParams: ['X']
+/// These are templates instantiated per call site by the type checker.
 class ProcDecl {
   final String name;
   final List<TypeExpr> argTypes;  // TypeRef or PrimitiveModeAlt
+  final List<String> typeParams;  // e.g., ['X'] for parameterized proc decls, [] for monomorphic
   final int line;
   final int column;
   final bool isBuiltin;  // True if implemented in Dart runtime (no GLP clauses)
@@ -220,7 +225,9 @@ class ProcDecl {
   final bool imported;   // True if declared with 'imported procedure'
   final String? modulePath;  // For imported procedures: module path (e.g., 'social' or 'ui#actors'), null for ancestor scope
 
-  ProcDecl(this.name, this.argTypes, this.line, this.column, {this.isBuiltin = false, this.exported = false, this.imported = false, this.modulePath});
+  ProcDecl(this.name, this.argTypes, this.line, this.column, {this.typeParams = const [], this.isBuiltin = false, this.exported = false, this.imported = false, this.modulePath});
+
+  bool get isParameterized => typeParams.isNotEmpty;
 
   int get arity => argTypes.length;
 

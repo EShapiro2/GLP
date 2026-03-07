@@ -623,7 +623,9 @@ class GlpEngine {
     final selfModule = parser.parseModule();
 
     // Expand parameterized types (strips templates, keeps monomorphic defs)
-    final expandedModule = expandParameterizedTypes(selfModule);
+    // Pass existing env type names so prelude types aren't mistaken for type params.
+    final expandedModule = expandParameterizedTypes(selfModule,
+        knownTypeNames: env.types.keys.toSet());
 
     final types = <String, TypeDef>{};
     for (final t in expandedModule.typeDefs) {

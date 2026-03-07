@@ -6,5 +6,5 @@ test_list_in_body(L, L?).
 procedure process_list(Stream(X)?, Stream(X)).
 process_list(L, L?).
 
-procedure build_list(_?, _?, Stream(X)).
+procedure build_list(X?, X?, Stream(X)).
 build_list(X, Y, [X?,Y?]).

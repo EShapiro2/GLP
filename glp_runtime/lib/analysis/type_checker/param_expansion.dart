@@ -14,7 +14,7 @@ import 'type_ast.dart';
 /// procedure declarations. The original Module is not modified.
 ///
 /// If the module has no parameterized types, returns it unchanged.
-ast.Module expandParameterizedTypes(ast.Module module) {
+ast.Module expandParameterizedTypes(ast.Module module, {Set<String> knownTypeNames = const {}}) {
   // Step 1: Separate templates from monomorphic types
   final templates = <String, TypeDef>{};
   final monoTypeDefs = <TypeDef>[];
@@ -27,7 +27,8 @@ ast.Module expandParameterizedTypes(ast.Module module) {
     }
   }
 
-  if (templates.isEmpty) return module; // nothing to expand
+  // Note: don't return early if templates is empty — proc decls may reference
+  // prelude templates (e.g., Stream(X)) and still need type param detection.
 
   // Step 2: Collect all instantiations from type defs and proc decls
   final instantiations = <String, List<TypeExpr>>{}; // expanded name -> type args
@@ -39,10 +40,22 @@ ast.Module expandParameterizedTypes(ast.Module module) {
     }
   }
 
-  // Scan procedure declarations
+  // Scan procedure declarations.
+  // For parameterized proc decls (those with bare type params), skip
+  // instantiations that contain type parameter names — those are templates,
+  // not concrete instantiations.
   for (final pd in module.procDeclarations) {
-    for (final arg in pd.argTypes) {
-      _collectInstantiations(arg, templates, instantiations);
+    final procTypeParams = _detectProcTypeParams(pd, templates, monoTypeDefs, knownTypeNames);
+    if (procTypeParams.isEmpty) {
+      // Non-parameterized proc decl: collect all instantiations normally
+      for (final arg in pd.argTypes) {
+        _collectInstantiations(arg, templates, instantiations);
+      }
+    } else {
+      // Parameterized proc decl: only collect instantiations with concrete args
+      for (final arg in pd.argTypes) {
+        _collectInstantiationsInTemplate(arg, templates, instantiations, procTypeParams);
+      }
     }
   }
 
@@ -92,8 +105,17 @@ ast.Module expandParameterizedTypes(ast.Module module) {
     return TypeDef(td.name, newAlts, td.line, td.column);
   }).toList();
 
-  // Step 5: Replace references in procedure declarations
+  // Step 5: Replace references in procedure declarations.
+  // Parameterized proc decls are preserved as-is (with typeParams set).
   final replacedProcDecls = module.procDeclarations.map((pd) {
+    final procTypeParams = _detectProcTypeParams(pd, templates, monoTypeDefs, knownTypeNames);
+    if (procTypeParams.isNotEmpty) {
+      // Parameterized proc decl: keep original type refs, set typeParams
+      return ProcDecl(pd.name, pd.argTypes, pd.line, pd.column,
+          typeParams: procTypeParams,
+          exported: pd.exported, imported: pd.imported, modulePath: pd.modulePath);
+    }
+    // Non-parameterized: expand as before
     final newArgTypes = pd.argTypes
         .map((arg) => _replaceParamRefs(arg, templates))
         .toList();
@@ -110,6 +132,64 @@ ast.Module expandParameterizedTypes(ast.Module module) {
     line: module.line,
     column: module.column,
   );
+}
+
+/// Detect type parameters in a procedure declaration.
+/// A type parameter is a name that:
+///  1. Appears as a bare typeArg inside a TypeRef with typeArgs (e.g., X in Stream(X))
+///  2. Is not a known defined type
+/// Bare top-level unknown types (e.g., MyUndefinedType) are NOT type params —
+/// they are only type params if the same name also appears inside a typeArg.
+List<String> _detectProcTypeParams(ProcDecl pd, Map<String, TypeDef> templates,
+    List<TypeDef> monoTypeDefs, Set<String> externalKnownTypes) {
+  final knownTypes = <String>{
+    ...templates.keys,
+    ...monoTypeDefs.map((td) => td.name),
+    ...TypeRef.builtins,
+    ...externalKnownTypes,
+    'Constant', // also a known type
+  };
+  // Pass 1: collect names that appear as typeArgs of any TypeRef with typeArgs.
+  // These are the "inner" type parameter candidates.
+  final innerCandidates = <String>{};
+  for (final arg in pd.argTypes) {
+    _collectInnerTypeParamCandidates(arg, knownTypes, innerCandidates);
+  }
+  return innerCandidates.toList();
+}
+
+/// Collect type parameter names from inside parameterized type refs.
+/// A candidate is a bare TypeRef name that appears as a typeArg of any
+/// TypeRef with typeArgs, and is not a known type.
+void _collectInnerTypeParamCandidates(TypeExpr expr,
+    Set<String> knownTypes, Set<String> candidates) {
+  if (expr is TypeRef) {
+    if (expr.typeArgs.isNotEmpty) {
+      // Check each typeArg for bare unknown names
+      for (final arg in expr.typeArgs) {
+        if (arg is TypeRef && arg.typeArgs.isEmpty && !knownTypes.contains(arg.name)) {
+          candidates.add(arg.name);
+        }
+        // Recurse into nested type args
+        _collectInnerTypeParamCandidates(arg, knownTypes, candidates);
+      }
+    }
+    return;
+  }
+  // Recurse into structural types
+  if (expr is StructAlt) {
+    for (final arg in expr.args) {
+      _collectInnerTypeParamCandidates(arg, knownTypes, candidates);
+    }
+  }
+  if (expr is ListConsAlt) {
+    _collectInnerTypeParamCandidates(expr.head, knownTypes, candidates);
+    _collectInnerTypeParamCandidates(expr.tail, knownTypes, candidates);
+  }
+  if (expr is DiffListAlt) {
+    _collectInnerTypeParamCandidates(expr.content, knownTypes, candidates);
+    _collectInnerTypeParamCandidates(expr.hole, knownTypes, candidates);
+  }
 }
 
 /// Generate expanded name: Stream + [Integer] -> "Stream<Integer>"
