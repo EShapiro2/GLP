@@ -109,6 +109,9 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_map_get', 3, mapGetKernel);
   registry.register('map_remove', 3, mapRemoveKernel);
   registry.register('map_keys', 2, mapKeysKernel);
+  registry.register('map_send', 4, mapSendKernel);
+  registry.register('map_close_all', 1, mapCloseAllKernel);
+  registry.register('map_broadcast', 4, mapBroadcastKernel);
 }
 
 /// Helper to get numeric value from argument (with arithmetic evaluation)
@@ -943,6 +946,176 @@ BodyKernelResult mapKeysKernel(GlpRuntime rt, List<Object?> args) {
   final glpList = _dartListToGlpList(keys);
 
   return _bindResult(rt, args[1], glpList);
+}
+
+/// map_send(Map?, Key?, Msg?, Map1) — Send message to stream stored in map.
+///
+/// 1. Get current stream writer from map at Key
+/// 2. Create cons cell [Msg | NewTail] (NewTail = fresh unbound variable)
+/// 3. Bind old stream writer to cons cell (activates suspended readers)
+/// 4. Update map in-place: entries[key] = NewTail
+/// 5. Bind Map1 to mutated map
+BodyKernelResult mapSendKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 4) {
+    print('[ABORT] map_send/4: expected 4 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final mapArg = _deref(rt, args[0]);
+  if (mapArg is! MapTerm) {
+    print('[ABORT] map_send/4: first argument must be a MapTerm, got ${mapArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  final key = _extractMapKey(rt, args[1]);
+  if (key == null) {
+    print('[ABORT] map_send/4: second argument must be a ground constant');
+    return BodyKernelResult.abort;
+  }
+
+  final currentWriter = mapArg.entries[key];
+  if (currentWriter == null) {
+    print('[ABORT] map_send/4: key not found in map (guard should have checked)');
+    return BodyKernelResult.abort;
+  }
+
+  // Dereference to get the actual writer VarRef
+  final writerVal = _deref(rt, currentWriter);
+  if (writerVal is! VarRef || !rt.heap.isWriter(writerVal.addr)) {
+    print('[ABORT] map_send/4: map value for key is not an unbound writer');
+    return BodyKernelResult.abort;
+  }
+
+  if (rt.heap.isFullyBound(writerVal.addr)) {
+    print('[ABORT] map_send/4: writer @${writerVal.addr} is already bound');
+    return BodyKernelResult.abort;
+  }
+
+  // Get the message
+  final msgVal = _deref(rt, args[2]);
+  final termMsg = (msgVal is Term) ? msgVal : ConstTerm(msgVal);
+
+  // Allocate fresh variable for new tail
+  final (newTailWriter, newTailReader) = rt.heap.allocateVariable();
+
+  // Build cons cell: [Msg | NewTail?]
+  final consCell = StructTerm('.', [termMsg, VarRef(newTailReader)]);
+
+  // Bind current writer to cons cell (activates suspended readers)
+  final activations = rt.heap.bindVariable(writerVal.addr, consCell);
+  for (final act in activations) {
+    rt.gq.enqueue(act);
+  }
+
+  // Update map in-place: entry now points to new tail's writer
+  mapArg.entries[key] = VarRef(newTailWriter);
+
+  // Bind Map1 to mutated map
+  return _bindResult(rt, args[3], mapArg);
+}
+
+/// map_broadcast(Map?, Sender?, Content?, Map1) — Send msg(Sender, Key, Content)
+/// to ALL channels in the map.
+///
+/// Iterates all map entries and for each key K with stream writer W:
+/// 1. Builds msg(Sender, K, Content)
+/// 2. Creates cons cell [Msg | NewTail] with fresh tail variable
+/// 3. Binds old writer to cons cell (activates suspended readers)
+/// 4. Updates map entry to point to new tail writer
+/// 5. After all sends, binds Map1 to the mutated map
+///
+/// This is a body kernel (executes immediately), avoiding the sequencing bug
+/// where a procedure-based broadcast's output is not yet bound when a
+/// following body kernel tries to read it.
+BodyKernelResult mapBroadcastKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 4) {
+    print('[ABORT] map_broadcast/4: expected 4 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final mapArg = _deref(rt, args[0]);
+  if (mapArg is! MapTerm) {
+    print('[ABORT] map_broadcast/4: first argument must be a MapTerm, got ${mapArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  final sender = _deref(rt, args[1]);
+  if (sender == null) {
+    print('[ABORT] map_broadcast/4: second argument (Sender) must be ground');
+    return BodyKernelResult.abort;
+  }
+  final senderTerm = (sender is Term) ? sender : ConstTerm(sender);
+
+  final content = _deref(rt, args[2]);
+  if (content == null) {
+    print('[ABORT] map_broadcast/4: third argument (Content) must be ground');
+    return BodyKernelResult.abort;
+  }
+  final contentTerm = (content is Term) ? content : ConstTerm(content);
+
+  // Send to each channel in the map
+  for (final key in mapArg.entries.keys.toList()) {
+    final currentWriter = mapArg.entries[key];
+    if (currentWriter == null) continue;
+
+    final writerVal = _deref(rt, currentWriter);
+    if (writerVal is! VarRef || !rt.heap.isWriter(writerVal.addr)) continue;
+    if (rt.heap.isFullyBound(writerVal.addr)) continue;
+
+    // Build msg(Sender, Key, Content)
+    final keyTerm = (key is Term) ? key : ConstTerm(key);
+    final msg = StructTerm('msg', [senderTerm, keyTerm, contentTerm]);
+
+    // Allocate fresh variable for new tail
+    final (newTailWriter, newTailReader) = rt.heap.allocateVariable();
+
+    // Build cons cell: [Msg | NewTail?]
+    final consCell = StructTerm('.', [msg, VarRef(newTailReader)]);
+
+    // Bind current writer to cons cell (activates suspended readers)
+    final activations = rt.heap.bindVariable(writerVal.addr, consCell);
+    for (final act in activations) {
+      rt.gq.enqueue(act);
+    }
+
+    // Update map in-place: entry now points to new tail's writer
+    mapArg.entries[key] = VarRef(newTailWriter);
+  }
+
+  // Bind Map1 to mutated map
+  return _bindResult(rt, args[3], mapArg);
+}
+
+/// map_close_all(Map?) — Close all streams stored in map.
+///
+/// Iterates all map entries and binds each value (stream writer) to []
+/// (terminates the stream).
+BodyKernelResult mapCloseAllKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 1) {
+    print('[ABORT] map_close_all/1: expected 1 argument, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final mapArg = _deref(rt, args[0]);
+  if (mapArg is! MapTerm) {
+    print('[ABORT] map_close_all/1: argument must be a MapTerm, got ${mapArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  final nil = ConstTerm('nil');
+  for (final entry in mapArg.entries.entries) {
+    final writerVal = _deref(rt, entry.value);
+    if (writerVal is VarRef &&
+        rt.heap.isWriter(writerVal.addr) &&
+        !rt.heap.isFullyBound(writerVal.addr)) {
+      final activations = rt.heap.bindVariable(writerVal.addr, nil);
+      for (final act in activations) {
+        rt.gq.enqueue(act);
+      }
+    }
+  }
+
+  return BodyKernelResult.success;
 }
 
 /// Format a ground term as readable GLP syntax.

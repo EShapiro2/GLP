@@ -1,0 +1,70 @@
+%% Test suite for Dart Map support
+%% Tests: map_new, map_put, _map_get, map_contains
+
+%% Test 1: map_get retrieval (99)
+procedure test_get(_).
+test_get(R?) :-
+    map_new(M0), map_put(M0?, bob, 99, M1), _map_get(M1?, bob, R).
+
+%% Test 2: Multiple puts — get key a
+procedure test_multi_a(_).
+test_multi_a(R?) :-
+    map_new(M0),
+    map_put(M0?, a, 1, M1),
+    map_put(M1?, b, 2, M2),
+    _map_get(M2?, a, R).
+
+%% Test 3: Multiple puts — get key b
+procedure test_multi_b(_).
+test_multi_b(R?) :-
+    map_new(M0),
+    map_put(M0?, a, 1, M1),
+    map_put(M1?, b, 2, M2),
+    _map_get(M2?, b, R).
+
+%% Test 4: Overwrite existing key
+procedure test_overwrite(_).
+test_overwrite(R?) :-
+    map_new(M0),
+    map_put(M0?, k, old, M1),
+    map_put(M1?, k, new, M2),
+    _map_get(M2?, k, R).
+
+%% Test 5: map_contains as guard — key found
+procedure test_contains_helper(_?, Constant).
+test_contains_helper(M, yes) :-
+    map_contains(M?, alice) |
+    true.
+
+procedure test_contains(_).
+test_contains(R?) :-
+    map_new(M0), map_put(M0?, alice, 42, M1),
+    test_contains_helper(M1?, R).
+
+%% Test 6: map_contains as guard — key not found (otherwise)
+procedure test_missing_helper(_?, Constant).
+test_missing_helper(M, found) :-
+    map_contains(M?, bob) |
+    true.
+test_missing_helper(_, not_found) :-
+    otherwise |
+    true.
+
+procedure test_missing(_).
+test_missing(R?) :-
+    map_new(M0), map_put(M0?, alice, 42, M1),
+    test_missing_helper(M1?, R).
+
+%% Test 7: map_contains guard enables multiple reads of map
+procedure test_guard_read(_?, _, _).
+test_guard_read(M, R1?, R2?) :-
+    map_contains(M?, a) |
+    _map_get(M?, a, R1),
+    _map_get(M?, b, R2).
+
+procedure test_multi_read(_, _).
+test_multi_read(R1?, R2?) :-
+    map_new(M0),
+    map_put(M0?, a, 1, M1),
+    map_put(M1?, b, 2, M2),
+    test_guard_read(M2?, R1, R2).

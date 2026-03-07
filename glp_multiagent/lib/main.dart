@@ -1,7 +1,8 @@
-/// GLP Social Graph — Simulated SG Plays
+/// GLP Grassroots Social Network — Simulated GSN Plays
 ///
-/// Runs SG plays (fplay1-3) via REPL subprocess, with tagged output
-/// parsed and routed to per-agent read-only panels (Alice, Bob, Charlie).
+/// Runs GSN plays (fplay1-14) via REPL subprocess, with tagged output
+/// parsed and routed to per-agent panels. Also supports interactive mode
+/// via dGLP subprocess for live keyboard input.
 library;
 
 import 'dart:async';
@@ -10,6 +11,7 @@ import 'dart:isolate';
 
 import 'package:flutter/material.dart';
 import 'package:glp_runtime/multiagent/repl_play_runner.dart';
+import 'package:glp_runtime/multiagent/interactive_runner.dart';
 
 import 'isolate_protocol.dart';
 import 'mad_router.dart';
@@ -87,9 +89,9 @@ const _stdlibDir = '../programs/stdlib';
 
 /// GLP files loaded for UI agents (order matters: shared first, then boot)
 const _glpFiles = [
-  'social_graph_agent.glp',
-  'social_graph_ui_mediator.glp',
-  'social_graph_ui_boot.glp',
+  'typed_social_agent.glp',
+  'typed_ui_mediator.glp',
+  'play_ui_boot.glp',
 ];
 
 // =============================================================================
@@ -110,21 +112,21 @@ class CoordinatorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Social Graph',
+      title: 'Grassroots Social Network',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.orange,
+        primarySwatch: Colors.blue,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.orange,
+          seedColor: Colors.blue,
           brightness: Brightness.light,
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.orange,
+          backgroundColor: Colors.blue,
           foregroundColor: Colors.white,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
+            backgroundColor: Colors.blue,
             foregroundColor: Colors.white,
           ),
         ),
@@ -138,10 +140,57 @@ class CoordinatorApp extends StatelessWidget {
 // PER-AGENT UI STATE
 // =============================================================================
 
+/// Visual info for an agent panel (color, role label).
+class _AgentInfo {
+  final String id;
+  final String role;    // "Parent", "Child", or "Agent"
+  final Color headerColor;
+  final Color bgColor;
+
+  const _AgentInfo(this.id, this.role, this.headerColor, this.bgColor);
+}
+
+/// Plays 1-3: 3 agents (Alice, Bob, Charlie).
+const _agentInfos3abc = [
+  _AgentInfo('Alice',   'Agent', Color(0xFF3949AB), Color(0xFFE8EAF6)),
+  _AgentInfo('Bob',     'Agent', Color(0xFF00897B), Color(0xFFE0F2F1)),
+  _AgentInfo('Charlie', 'Agent', Color(0xFFEF6C00), Color(0xFFFFF3E0)),
+];
+
+/// Plays 4-7: 4 agents (Alice, Carol, Bob, Dave) — parent/child protocol.
+const _agentInfos4 = [
+  _AgentInfo('Alice', 'Parent', Color(0xFF3949AB), Color(0xFFE8EAF6)),
+  _AgentInfo('Carol', 'Child',  Color(0xFF7986CB), Color(0xFFF5F5FF)),
+  _AgentInfo('Bob',   'Parent', Color(0xFF00897B), Color(0xFFE0F2F1)),
+  _AgentInfo('Dave',  'Child',  Color(0xFF4DB6AC), Color(0xFFF5FFFE)),
+];
+
+/// Plays 8-11: 2 agents (Alice, Bob) — unfriend protocol.
+const _agentInfos2 = [
+  _AgentInfo('Alice', 'Agent', Color(0xFF3949AB), Color(0xFFE8EAF6)),
+  _AgentInfo('Bob',   'Agent', Color(0xFF00897B), Color(0xFFE0F2F1)),
+];
+
+/// Plays 12-14: 3 agents (Alice, Bob, Charlie) — friendship update protocol.
+const _agentInfos3update = [
+  _AgentInfo('Alice',   'Agent', Color(0xFF3949AB), Color(0xFFE8EAF6)),
+  _AgentInfo('Bob',     'Agent', Color(0xFF00897B), Color(0xFFE0F2F1)),
+  _AgentInfo('Charlie', 'Agent', Color(0xFFEF6C00), Color(0xFFFFF3E0)),
+];
+
+/// Returns the agent infos for a given play number.
+List<_AgentInfo> _agentInfosForPlay(int playNumber) {
+  if (playNumber >= 12) return _agentInfos3update;
+  if (playNumber >= 8) return _agentInfos2;
+  if (playNumber >= 4) return _agentInfos4;
+  return _agentInfos3abc;
+}
+
 class AgentState {
   final String agentId;
   final List<String> friends;
   final bool readOnly;
+  final _AgentInfo? info;
   SendPort? commandPort;
   bool initialized = false;
   String status = 'Spawning...';
@@ -154,7 +203,7 @@ class AgentState {
   final ScrollController scrollController = ScrollController();
   final FocusNode inputFocusNode = FocusNode();
 
-  AgentState(this.agentId, this.friends, {this.readOnly = false});
+  AgentState(this.agentId, this.friends, {this.readOnly = false, this.info});
 
   void dispose() {
     inputController.dispose();
@@ -367,6 +416,10 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     _playRunner?.kill();
     _playRunner = null;
 
+    // Stop interactive runner if running
+    _interactiveRunner?.stop();
+    _interactiveRunner = null;
+
     for (final agent in _agents.values) {
       if (agent.commandPort != null) {
         agent.commandPort!.send(DisposeAgent());
@@ -385,6 +438,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   // ===========================================================================
 
   ReplPlayRunner? _playRunner;
+  InteractiveRunner? _interactiveRunner;
 
   /// Resolve the GLP repo root from the glp_multiagent working directory.
   /// The app may run from the repo (development) or from a bundle (release).
@@ -395,23 +449,87 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     if (Directory('$devRoot/glp_runtime').existsSync()) {
       return devRoot;
     }
-    // Fallback: try absolute path (Udi's machine)
-    const fallback = '/Users/udi/Grassroots/GLP';
+    // Fallback: try absolute path
+    const fallback = '/Users/ohadey/Desktop/Grassroots/GLP2/GLP';
     if (Directory('$fallback/glp_runtime').existsSync()) {
       return fallback;
     }
     return devRoot; // best guess
   }
 
+  Future<void> _startInteractive() async {
+    await _closeAll();
+
+    // Create agent panels with input enabled (3 agents: Alice, Bob, Charlie)
+    for (final info in _agentInfos3abc) {
+      final agent = AgentState(info.id, [], readOnly: false, info: info);
+      agent.initialized = true;
+      agent.status = 'Interactive';
+      _agents[info.id] = agent;
+    }
+
+    final repoRoot = _resolveRepoRoot();
+    setState(() {
+      _log.add('Starting interactive mode (repo: $repoRoot)...');
+    });
+
+    final runner = InteractiveRunner(repoRoot: repoRoot);
+    _interactiveRunner = runner;
+
+    runner.onOutput = (output) {
+      final key = output.agentId[0].toUpperCase() + output.agentId.substring(1);
+      final state = _agents[key];
+      if (state == null) return;
+
+      final displayLine = output.kind == 'cmd'
+          ? '> ${output.content}'
+          : '< ${output.content}';
+      state.outputLog.add(displayLine);
+      setState(() {});
+      _scrollAgentToBottom(state);
+    };
+
+    runner.onReady = () {
+      // Update status to show ready
+      for (final agent in _agents.values) {
+        if (agent.status == 'Processing...') {
+          agent.status = 'Interactive';
+        }
+      }
+      setState(() {});
+    };
+
+    runner.onLog = (line) {
+      TraceLogger.instance.log('INTERACTIVE', line);
+    };
+
+    runner.onError = (error) {
+      TraceLogger.instance.log('INTERACTIVE-ERR', error);
+      setState(() {
+        _log.add('Interactive ERROR: $error');
+      });
+    };
+
+    runner.onDone = (exitCode) {
+      _interactiveRunner = null;
+      setState(() {
+        _log.add('Interactive mode ended (exit $exitCode)');
+      });
+    };
+
+    await runner.start();
+  }
+
   Future<void> _runPlay(int playNumber) async {
     await _closeAll();
 
-    // Create read-only agent panels (Alice, Bob, Charlie)
-    for (final id in ['Alice', 'Bob', 'Charlie']) {
-      final agent = AgentState(id, [], readOnly: true);
+    // Create read-only agent panels based on play type
+    final agentInfos = _agentInfosForPlay(playNumber);
+    for (final info in agentInfos) {
+      final agent = AgentState(info.id, [], readOnly: true, info: info);
       agent.initialized = true;
       agent.status = 'Play $playNumber';
-      _agents[id] = agent;
+      _agents[info.id] = agent;
     }
 
     final repoRoot = _resolveRepoRoot();
@@ -419,7 +537,15 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       _log.add('Starting fplay$playNumber (repo: $repoRoot)...');
     });
 
-    final runner = ReplPlayRunner(repoRoot: repoRoot);
+    final runner = ReplPlayRunner(
+      repoRoot: repoRoot,
+      sourceFiles: const [
+        '../programs/typed_book/gsn/typed_social_agent.glp',
+        '../programs/typed_book/gsn/typed_ui_mediator.glp',
+        '../programs/typed_book/gsn/typed_ui_actors.glp',
+        '../programs/typed_book/gsn/play_ui_sim_boot.glp',
+      ],
+    );
     _playRunner = runner;
 
     runner.onOutput = (output) {
@@ -461,9 +587,20 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
 
   void _sendInputToAgent(AgentState agent) {
     final text = agent.inputController.text.trim();
-    if (text.isEmpty || agent.commandPort == null) return;
+    if (text.isEmpty) return;
     agent.inputController.clear();
-    agent.commandPort!.send(UserInput(text));
+
+    if (_interactiveRunner != null && _interactiveRunner!.isRunning) {
+      // Interactive dGLP mode: send via subprocess stdin
+      _interactiveRunner!.sendCommand(
+          agent.agentId.toLowerCase(), text);
+      agent.status = 'Processing...';
+      setState(() {});
+    } else if (agent.commandPort != null) {
+      // madGLP isolate mode: send via isolate SendPort
+      agent.commandPort!.send(UserInput(text));
+    }
+
     agent.inputFocusNode.requestFocus();
   }
 
@@ -475,7 +612,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Social Graph'),
+        title: const Text('Grassroots Social Network'),
       ),
       body: Column(
         children: [
@@ -505,7 +642,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   Widget _buildGlpPathBar() {
     return Container(
       padding: const EdgeInsets.all(8.0),
-      color: Colors.orange.shade100,
+      color: Colors.blue.shade100,
       child: Row(
         children: [
           const Text('GLP dir: ', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -532,44 +669,84 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     );
   }
 
+  Widget _buildPlayButton(int n) {
+    return ElevatedButton.icon(
+      onPressed: () => _runPlay(n),
+      icon: const Icon(Icons.play_arrow, size: 16),
+      label: Text('Play $n'),
+    );
+  }
+
+  Widget _buildSeparator() {
+    return Container(width: 1, height: 30, color: Colors.grey);
+  }
+
   Widget _buildControlBar() {
     return Container(
       padding: const EdgeInsets.all(16.0),
-      color: Colors.orange.shade50,
-      child: Row(
-        children: [
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(1),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 1'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
+      color: Colors.blue.shade50,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            // Interactive mode button
+            ElevatedButton.icon(
+              onPressed: () async {
+                await _startInteractive();
+              },
+              icon: const Icon(Icons.keyboard, size: 16),
+              label: const Text('Interactive'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(2),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 2'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-            ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(3),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 3'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-            ),
-          ),
-        ],
+            const SizedBox(width: 16),
+            _buildSeparator(),
+            const SizedBox(width: 16),
+            // Plays 1-3 (3 agents: Alice, Bob, Charlie)
+            for (int i = 1; i <= 3; i++) ...[
+              _buildPlayButton(i),
+              if (i < 3) const SizedBox(width: 8),
+            ],
+            const SizedBox(width: 16),
+            _buildSeparator(),
+            const SizedBox(width: 16),
+            // Plays 4-7 (4 agents: Alice, Carol, Bob, Dave)
+            for (int i = 4; i <= 7; i++) ...[
+              _buildPlayButton(i),
+              if (i < 7) const SizedBox(width: 8),
+            ],
+            const SizedBox(width: 16),
+            _buildSeparator(),
+            const SizedBox(width: 16),
+            // Plays 8-11 (2 agents: Alice, Bob)
+            for (int i = 8; i <= 11; i++) ...[
+              _buildPlayButton(i),
+              if (i < 11) const SizedBox(width: 8),
+            ],
+            const SizedBox(width: 16),
+            _buildSeparator(),
+            const SizedBox(width: 16),
+            // Plays 12-14 (3 agents: Alice, Bob, Charlie)
+            for (int i = 12; i <= 14; i++) ...[
+              _buildPlayButton(i),
+              if (i < 14) const SizedBox(width: 8),
+            ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildAgentPanel(AgentState agent) {
+    final headerColor = agent.info?.headerColor ?? Colors.blue;
+    final bgColor = agent.info?.bgColor ?? Colors.grey.shade100;
+    final headerLabel = agent.info != null
+        ? '${agent.info!.role}: ${agent.agentId}'
+        : '${agent.agentId} (${agent.friends.join(", ")})';
+
     return Container(
       decoration: BoxDecoration(
         border: Border(
@@ -582,11 +759,11 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
           Container(
             padding:
                 const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
-            color: Colors.orange,
+            color: headerColor,
             child: Row(
               children: [
                 Text(
-                  '${agent.agentId} (${agent.friends.join(", ")})',
+                  headerLabel,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -599,7 +776,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
           // Output log
           Expanded(
             child: Container(
-              color: Colors.grey.shade100,
+              color: bgColor,
               child: ListView.builder(
                 controller: agent.scrollController,
                 padding: const EdgeInsets.all(8.0),
@@ -628,7 +805,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
           if (!agent.readOnly)
             Container(
               padding: const EdgeInsets.all(8.0),
-              color: Colors.orange.shade50,
+              color: Colors.blue.shade50,
               child: Row(
                 children: [
                   Expanded(
@@ -638,7 +815,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                       enabled: agent.initialized,
                       decoration: InputDecoration(
                         hintText: agent.initialized
-                            ? 'connect ${agent.friends.isNotEmpty ? agent.friends.first.toLowerCase() : "friend"}'
+                            ? 'connect(bob), send(bob, hi), ...'
                             : 'Initializing...',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -664,7 +841,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
           Container(
             padding:
                 const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-            color: Colors.orange.shade100,
+            color: Colors.blue.shade100,
             child: Row(
               children: [
                 Text(
@@ -678,7 +855,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                   height: 8,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: agent.initialized ? Colors.orange : Colors.grey,
+                    color: agent.initialized ? Colors.blue : Colors.grey,
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -718,7 +895,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   Widget _buildCoordinatorLog() {
     return Container(
       height: 80,
-      color: Colors.orange.shade50,
+      color: Colors.blue.shade50,
       child: ListView.builder(
         padding: const EdgeInsets.all(8.0),
         itemCount: _log.length,
@@ -746,7 +923,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       return Colors.teal.shade800;
     }
     if (line.startsWith('[IRMA')) return Colors.deepPurple.shade800;
-    if (line.startsWith('[')) return Colors.orange.shade800;
+    if (line.startsWith('[')) return Colors.blue.shade800;
     return Colors.black87;
   }
 

@@ -12,6 +12,13 @@
 %%     from handshake to friend messaging can't be typed precisely)
 %%   - Code logic unchanged; only type/proc declarations added
 %%
+%% Map-based friend lookup (2026-03):
+%%   - agent/4 → agent/5 (added FMap argument for O(1) friend lookup)
+%%   - Friends stored in Map (map_put/map_send/map_remove)
+%%   - System channels (_user, _net) remain in OutputsList
+%%   - map_send_all broadcasts updates via map_keys iteration
+%%   - map_send_and_remove avoids body-kernel/procedure sequencing bug
+%%
 %% Date: 2026-02-21
 
 -mode(system).
@@ -107,7 +114,7 @@ NetInMsg ::= msg(Constant, NetColdCall)
            ; msg(Constant, Constant, FriendContent).
 NetInStream ::= [] ; [NetInMsg | NetInStream].
 
-%% Output list — keys distinguish system channels, friends, and children
+%% Output list — keys distinguish system channels only (_user, _net)
 OutputKey   ::= '_user' ; '_net' ; friend(Constant) ; child(Constant).
 OutputEntry ::= output(OutputKey, Stream?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
@@ -138,7 +145,7 @@ merge_net_in([], Ys, Ys?).
 merge_net_in(Xs, [], Xs?).
 
 %% =============================================================================
-%% LOOKUP_SEND
+%% LOOKUP_SEND (for system channels _user, _net only)
 %% =============================================================================
 
 procedure lookup_send(OutputKey?, _?, OutputsList?, OutputsList).
@@ -155,6 +162,19 @@ lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
 lookup_send_step(_, _, [], []).
 
 %% =============================================================================
+%% MAP_LOOKUP_SEND (for friends/children via map)
+%% =============================================================================
+%%
+%% O(1) send to a stream stored in the map.
+%% Guard: map_contains checks key exists.
+%% Body: map_send writes message to the stream and updates map.
+
+procedure map_lookup_send(Constant?, _?, _?, _).
+map_lookup_send(Key, Msg, Map, Map1?) :-
+    map_contains(Map?, Key?) |
+    map_send(Map?, Key?, Msg?, Map1).
+
+%% =============================================================================
 %% INJECT_MSG
 %% =============================================================================
 
@@ -165,7 +185,7 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
     inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
 
 %% =============================================================================
-%% ADD_OUTPUT
+%% ADD_OUTPUT (for system channels only)
 %% =============================================================================
 
 procedure add_output(OutputKey?, Stream, OutputsList?, OutputsList).
@@ -180,7 +200,7 @@ close_outputs([output(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([]).
 
 %% =============================================================================
-%% REMOVE_OUTPUT
+%% REMOVE_OUTPUT (for system channels only)
 %% =============================================================================
 %%
 %% Find output(Key, Out) in the list, close it (Out = []), return remaining list.
@@ -194,19 +214,38 @@ remove_output(Key, [O|Rest], [O?|Rest1?]) :-
 remove_output(_, [], []).
 
 %% =============================================================================
-%% SEND_ALL_FRIENDS
+%% MAP_SEND_ALL — Broadcast to all friends via map
 %% =============================================================================
 %%
-%% Send a message to all friend channels in the outputs list.
-%% Constructs msg(Id, K, Content) for each output(friend(K), ...).
-procedure send_all_friends(Constant?, FriendContent?, OutputsList?, OutputsList).
-send_all_friends(Id, Content, [output(friend(K), [msg(Id?, K?, Content?)|Out1?])|Rest], [output(friend(K?), Out1)|Rest1?]) :-
+%% map_send_all(Id, Content, FMap, FMap1?) — Send msg(Id, K, Content) to all
+%% streams in FMap. Uses map_keys to get the key list, then iterates.
+
+procedure map_send_all(Constant?, _?, _?, _).
+map_send_all(Id, Content, Map, Map1?) :-
+    ground(Map?) |
+    map_keys(Map?, Keys),
+    map_send_all_iter(Id?, Content?, Keys?, Map?, Map1).
+
+procedure map_send_all_iter(Constant?, _?, _?, _?, _).
+map_send_all_iter(Id, Content, [K|Ks], Map, Map1?) :-
     ground(K?), ground(Content?) |
-    send_all_friends(Id?, Content?, Rest?, Rest1).
-send_all_friends(Id, Content, [O|Rest], [O?|Rest1?]) :-
-    otherwise |
-    send_all_friends(Id?, Content?, Rest?, Rest1).
-send_all_friends(_, _, [], []).
+    map_send(Map?, K?, msg(Id?, K?, Content?), MapMid),
+    map_send_all_iter(Id?, Content?, Ks?, MapMid?, Map1).
+map_send_all_iter(_, _, [], Map, Map?).
+
+%% =============================================================================
+%% MAP_SEND_AND_REMOVE — Send message then remove key from map
+%% =============================================================================
+%%
+%% Combines map_send + map_remove in a single clause body so both body kernels
+%% execute sequentially (avoids the bug where a procedure call output is not
+%% yet bound when a following body kernel tries to read it).
+
+procedure map_send_and_remove(Constant?, _?, _?, _).
+map_send_and_remove(Key, Msg, Map, Map1?) :-
+    map_contains(Map?, Key?) |
+    map_send(Map?, Key?, Msg?, MapMid),
+    map_remove(MapMid?, Key?, Map1).
 
 %% =============================================================================
 %% INTRO_AWAIT_PEER
@@ -253,198 +292,204 @@ inject_intro_result(Res, [Y|Ys], [Y?|Ys1?]) :-
 %% RESPONSE HANDLING
 %% =============================================================================
 
-procedure bind_response(Constant?, Decision?, Constant?, Response, OutputsList?, OutputsList, NetInStream?, NetInStream).
-bind_response(Id, yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
+procedure bind_response(Constant?, Decision?, Constant?, Response, OutputsList?, OutputsList, NetInStream?, NetInStream, _?, _).
+bind_response(Id, yes, From, accept(RetCh?), Outs, Outs1?, In, In1?, FMap, FMap1?) :-
     new_channel(RetCh, LocalCh) |
-    handle_response(Id?, accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
-bind_response(_, no, _, no, Outs, Outs1?, In, In?) :-
+    handle_response(Id?, accept(LocalCh?), From?, Outs?, Outs1, In?, In1, FMap?, FMap1).
+bind_response(_, no, _, no, Outs, Outs1?, In, In?, FMap, FMap?) :-
     lookup_send('_user', msg(agent, '_user', rejected), Outs?, Outs1).
 
-procedure handle_response(Constant?, Response?, Constant?, OutputsList?, OutputsList, NetInStream?, NetInStream).
-handle_response(Id, accept(ch(FIn, FOut?)), From, Outs, Outs3?, In, In1?) :-
+procedure handle_response(Constant?, Response?, Constant?, OutputsList?, OutputsList, NetInStream?, NetInStream, _?, _).
+handle_response(Id, accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?, FMap, FMap1?) :-
     ground(From?) |
-    send_all_friends(Id?, update_befriend(From?), Outs?, Outs1),
-    add_output(friend(From?), FOut, Outs1?, Outs2),
-    lookup_send('_user', msg(agent, '_user', connected(From?)), Outs2?, Outs3),
+    map_send_all(Id?, update_befriend(From?), FMap?, FMapMid),
+    map_put(FMapMid?, From?, FOut, FMap1),
+    lookup_send('_user', msg(agent, '_user', connected(From?)), Outs?, Outs2),
     merge_net_in(In?, FIn?, In1).
-handle_response(_, no, From, Outs, Outs1?, In, In?) :-
+handle_response(_, no, From, Outs, Outs1?, In, In?, FMap, FMap?) :-
     ground(From?) |
     lookup_send('_user', msg(agent, '_user', rejected(From?)), Outs?, Outs1).
 
 %% =============================================================================
-%% AGENT/4
+%% AGENT/5
 %% =============================================================================
+%%
+%% agent(Id, UserIn, NetIn, Outs, FMap)
+%%   Id    - agent name (constant)
+%%   UserIn - user input stream
+%%   NetIn  - network input stream
+%%   Outs   - system outputs list (_user, _net only)
+%%   FMap   - friends/children map (O(1) lookup)
 
-procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?, _?).
 
 %% --- User messages ---
 
 %% User initiates cold call
-agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs) :-
+agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs, FMap) :-
     Id? =?= Id1?, ground(Target?) |
     lookup_send('_net', msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
     inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs1?).
+    agent(Id?, UserIn1?, NetIn?, Outs1?, FMap?).
 
 %% User decision on cold-call
-agent(Id, [msg('_user', Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn, Outs) :-
+agent(Id, [msg('_user', Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn, Outs, FMap) :-
     Id? =?= Id1? |
-    bind_response(Id?, Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs1?).
+    bind_response(Id?, Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1, FMap?, FMap1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, FMap1?).
 
 %% User sends text message to friend
-agent(Id, [msg('_user', Id1, send(Target, Text))|UserIn], NetIn, Outs) :-
+agent(Id, [msg('_user', Id1, send(Target, Text))|UserIn], NetIn, Outs, FMap) :-
     Id? =?= Id1?, ground(Target?) |
-    lookup_send(friend(Target?), msg(Id?, Target?, text(Text?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
+    map_lookup_send(Target?, msg(Id?, Target?, text(Text?)), FMap?, FMap1),
+    agent(Id?, UserIn?, NetIn?, Outs?, FMap1?).
 
 %% User initiates unfriend
-agent(Id, [msg('_user', Id1, unfriend(Target))|UserIn], NetIn, Outs) :-
+agent(Id, [msg('_user', Id1, unfriend(Target))|UserIn], NetIn, Outs, FMap) :-
     Id? =?= Id1?, ground(Target?) |
-    lookup_send(friend(Target?), msg(Id?, Target?, unfriend(Id?)), Outs?, Outs1),
-    remove_output(friend(Target?), Outs1?, Outs2),
-    send_all_friends(Id?, update_unfriend(Target?), Outs2?, Outs3),
-    lookup_send('_user', msg(agent, '_user', unfriended(Target?)), Outs3?, Outs4),
-    agent(Id?, UserIn?, NetIn?, Outs4?).
+    map_send_and_remove(Target?, msg(Id?, Target?, unfriend(Id?)), FMap?, FMap1),
+    map_send_all(Id?, update_unfriend(Target?), FMap1?, FMap2),
+    lookup_send('_user', msg(agent, '_user', unfriended(Target?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, FMap2?).
 
 %% User introduces friend P to friend Q
-agent(Id, [msg('_user', Id1, introduce(P, Q))|UserIn], NetIn, Outs) :-
+agent(Id, [msg('_user', Id1, introduce(P, Q))|UserIn], NetIn, Outs, FMap) :-
     Id? =?= Id1?, ground(P?), ground(Q?), new_channel(PQCh, QPCh) |
-    lookup_send(friend(P?), msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
-    lookup_send(friend(Q?), msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?).
+    map_lookup_send(P?, msg(Id?, P?, intro(Q?, QPCh?)), FMap?, FMap1),
+    map_lookup_send(Q?, msg(Id?, Q?, intro(P?, PQCh?)), FMap1?, FMap2),
+    agent(Id?, UserIn?, NetIn?, Outs?, FMap2?).
 
 %% User accepts intro — send ack, spawn peer-wait, inject result
-agent(Id, [msg('_user', Id1, accept_intro(Other, channel(Ch)))|UserIn], NetIn, Outs) :-
+agent(Id, [msg('_user', Id1, accept_intro(Other, channel(Ch)))|UserIn], NetIn, Outs, FMap) :-
     Id? =?= Id1?, ground(Other?),
     send(ack(Id?), Ch?, Ch1) |
     intro_await_peer(Other?, Ch1?, Result),
     inject_intro_result(Result?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs?).
+    agent(Id?, UserIn1?, NetIn?, Outs?, FMap?).
 
 %% User rejects intro — send nack on channel, close it
-agent(Id, [msg('_user', Id1, reject_intro(_, channel(ch(_, [nack|[]]))))|UserIn], NetIn, Outs) :-
+agent(Id, [msg('_user', Id1, reject_intro(_, channel(ch(_, [nack|[]]))))|UserIn], NetIn, Outs, FMap) :-
     Id? =?= Id1? |
-    agent(Id?, UserIn?, NetIn?, Outs?).
+    agent(Id?, UserIn?, NetIn?, Outs?, FMap?).
 
-%% Intro result: peer acked — add friend
-agent(Id, [intro_result(Other, ch(FIn, FOut?))|UserIn], NetIn, Outs) :-
+%% Intro result: peer acked — add friend to map
+agent(Id, [intro_result(Other, ch(FIn, FOut?))|UserIn], NetIn, Outs, FMap) :-
     ground(Id?), ground(Other?) |
-    send_all_friends(Id?, update_befriend(Other?), Outs?, Outs1),
-    add_output(friend(Other?), FOut, Outs1?, Outs2),
-    lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs2?, Outs3),
+    map_send_all(Id?, update_befriend(Other?), FMap?, FMapMid),
+    map_put(FMapMid?, Other?, FOut, FMap1),
+    lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs?, Outs1),
     merge_net_in(NetIn?, FIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs3?).
+    agent(Id?, UserIn?, NetIn1?, Outs1?, FMap1?).
 
 %% Intro result: peer nacked — notify rejected
-agent(Id, [intro_rejected(Other)|UserIn], NetIn, Outs) :-
+agent(Id, [intro_rejected(Other)|UserIn], NetIn, Outs, FMap) :-
     ground(Id?) |
     lookup_send('_user', msg(agent, '_user', rejected(Other?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, FMap?).
 
 %% Response to cold-call (injected by inject_msg)
-agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs) :-
+agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, FMap) :-
     Id? =?= Id1? |
-    handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs1?).
+    handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1, FMap?, FMap1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, FMap1?).
 
 %% --- CSSG: Child-safe social graph ---
 
 %% Parent initiates child introduction (fire and forget)
-agent(Id, [msg('_user', Id1, child_introduce(MyChild, Friend, FriendChild))|UserIn], NetIn, Outs) :-
+agent(Id, [msg('_user', Id1, child_introduce(MyChild, Friend, FriendChild))|UserIn], NetIn, Outs, FMap) :-
     Id? =?= Id1?, ground(MyChild?), ground(Friend?), ground(FriendChild?),
     new_channel(C1Ch, C2Ch) |
-    lookup_send(child(MyChild?), msg(Id?, MyChild?, child_intro(FriendChild?, C1Ch?)), Outs?, Outs1),
-    lookup_send(friend(Friend?), msg(Id?, Friend?, child_intro(MyChild?, C2Ch?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?).
+    map_lookup_send(MyChild?, msg(Id?, MyChild?, child_intro(FriendChild?, C1Ch?)), FMap?, FMap1),
+    map_lookup_send(Friend?, msg(Id?, Friend?, child_intro(MyChild?, C2Ch?)), FMap1?, FMap2),
+    agent(Id?, UserIn?, NetIn?, Outs?, FMap2?).
 
 %% Child (or parent) accepts child_intro — send ack, spawn peer-wait, inject result
-agent(Id, [msg('_user', Id1, accept_child_intro(Other, channel(Ch)))|UserIn], NetIn, Outs) :-
+agent(Id, [msg('_user', Id1, accept_child_intro(Other, channel(Ch)))|UserIn], NetIn, Outs, FMap) :-
     Id? =?= Id1?, ground(Other?),
     send(ack(Id?), Ch?, Ch1) |
     intro_await_peer(Other?, Ch1?, Result),
     inject_intro_result(Result?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs?).
+    agent(Id?, UserIn1?, NetIn?, Outs?, FMap?).
 
 %% Child (or parent) rejects child_intro — send nack on channel, close it
-agent(Id, [msg('_user', Id1, reject_child_intro(_, channel(ch(_, [nack|[]]))))|UserIn], NetIn, Outs) :-
+agent(Id, [msg('_user', Id1, reject_child_intro(_, channel(ch(_, [nack|[]]))))|UserIn], NetIn, Outs, FMap) :-
     Id? =?= Id1? |
-    agent(Id?, UserIn?, NetIn?, Outs?).
+    agent(Id?, UserIn?, NetIn?, Outs?, FMap?).
 
 %% Parent approves child_intro — forward to own child
-agent(Id, [msg('_user', Id1, approve_child_intro(OtherChild, MyChild, channel(Ch)))|UserIn], NetIn, Outs) :-
+agent(Id, [msg('_user', Id1, approve_child_intro(OtherChild, MyChild, channel(Ch)))|UserIn], NetIn, Outs, FMap) :-
     Id? =?= Id1?, ground(OtherChild?), ground(MyChild?) |
-    lookup_send(child(MyChild?), msg(Id?, MyChild?, child_intro(OtherChild?, Ch?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
+    map_lookup_send(MyChild?, msg(Id?, MyChild?, child_intro(OtherChild?, Ch?)), FMap?, FMap1),
+    agent(Id?, UserIn?, NetIn?, Outs?, FMap1?).
 
 %% User catch-all (commented out — was consuming messages that should suspend)
-%% agent(Id, [_|UserIn], NetIn, Outs) :-
+%% agent(Id, [_|UserIn], NetIn, Outs, FMap) :-
 %%     ground(Id?), otherwise |
-%%     agent(Id?, UserIn?, NetIn?, Outs?).
+%%     agent(Id?, UserIn?, NetIn?, Outs?, FMap?).
 
 %% --- Network messages ---
 
 %% Cold-call from network
-agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs) :-
+agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs, FMap) :-
     Id? =?= Id1? |
     lookup_send('_user', msg(agent, '_user', befriend(From?, Resp)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, FMap?).
 
 %% Response to cold-call from network
-agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs) :-
+agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs, FMap) :-
     Id? =?= Id1? |
-    handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs1?).
+    handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1, FMap?, FMap1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, FMap1?).
 
 %% Text from friend
-agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
+agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs, FMap) :-
     Id? =?= Id1? |
     lookup_send('_user', msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, FMap?).
 
 %% Unfriend from friend
-agent(Id, UserIn, [msg(From, Id1, unfriend(_))|NetIn], Outs) :-
+agent(Id, UserIn, [msg(From, Id1, unfriend(_))|NetIn], Outs, FMap) :-
     Id? =?= Id1?, ground(From?) |
-    remove_output(friend(From?), Outs?, Outs1),
-    send_all_friends(Id?, update_unfriend(From?), Outs1?, Outs2),
-    lookup_send('_user', msg(agent, '_user', unfriended(From?)), Outs2?, Outs3),
-    agent(Id?, UserIn?, NetIn?, Outs3?).
+    map_remove(FMap?, From?, FMap1),
+    map_send_all(Id?, update_unfriend(From?), FMap1?, FMap2),
+    lookup_send('_user', msg(agent, '_user', unfriended(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, FMap2?).
 
 %% Introduction from friend — pass channel to user via mediator
-agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch))|NetIn], Outs) :-
+agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch))|NetIn], Outs, FMap) :-
     Id? =?= Id1?, ground(Other?) |
     lookup_send('_user', msg(agent, '_user', befriend_intro(From?, Other?, Ch?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, FMap?).
 
 %% --- CSSG network messages ---
 
 %% Child receives child_intro from parent (or parent forwards from friend)
 %% Notify user via mediator: child_befriend(From, Other, Ch)
-agent(Id, UserIn, [msg(From, Id1, child_intro(Other, Ch))|NetIn], Outs) :-
+agent(Id, UserIn, [msg(From, Id1, child_intro(Other, Ch))|NetIn], Outs, FMap) :-
     Id? =?= Id1?, ground(Other?) |
     lookup_send('_user', msg(agent, '_user', child_befriend(From?, Other?, Ch?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, FMap?).
 
 %% --- Friendship updates from friends ---
 
 %% Friendship update: friend befriended someone — pass to user
-agent(Id, UserIn, [msg(From, Id1, update_befriend(Who))|NetIn], Outs) :-
+agent(Id, UserIn, [msg(From, Id1, update_befriend(Who))|NetIn], Outs, FMap) :-
     Id? =?= Id1? |
     lookup_send('_user', msg(agent, '_user', update_befriend(From?, Who?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, FMap?).
 
 %% Friendship update: friend unfriended someone — pass to user
-agent(Id, UserIn, [msg(From, Id1, update_unfriend(Who))|NetIn], Outs) :-
+agent(Id, UserIn, [msg(From, Id1, update_unfriend(Who))|NetIn], Outs, FMap) :-
     Id? =?= Id1? |
     lookup_send('_user', msg(agent, '_user', update_unfriend(From?, Who?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, FMap?).
 
 %% Network catch-all (commented out — was consuming messages that should suspend)
-%% agent(Id, UserIn, [_|NetIn], Outs) :-
+%% agent(Id, UserIn, [_|NetIn], Outs, FMap) :-
 %%     ground(Id?), otherwise |
-%%     agent(Id?, UserIn?, NetIn?, Outs?).
+%%     agent(Id?, UserIn?, NetIn?, Outs?, FMap?).
 
 %% --- Termination ---
 
-agent(_, [], _, Outs) :- close_outputs(Outs?).
-agent(_, _, [], Outs) :- close_outputs(Outs?).
+agent(_, [], _, Outs, FMap) :- close_outputs(Outs?), map_close_all(FMap?).
+agent(_, _, [], Outs, FMap) :- close_outputs(Outs?), map_close_all(FMap?).

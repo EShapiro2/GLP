@@ -84,6 +84,11 @@ class GlpEngine {
 
   int _goalId = 1;
 
+  /// Query variable writer addresses from the last runGoal() call.
+  /// Maps variable name → heap writer address.
+  /// Used by interactive mode to get stream writer addresses for InputInjector.
+  Map<String, int> _lastQueryVarWriters = {};
+
   /// Max execution cycles (default 10000)
   int maxCycles = 10000;
 
@@ -265,6 +270,49 @@ class GlpEngine {
     return BytecodeProgram(allOps);
   }
 
+  /// Get query variable writer addresses from last runGoal() call.
+  /// Maps variable name → heap writer address.
+  Map<String, int> get lastQueryVarWriters =>
+      Map.unmodifiable(_lastQueryVarWriters);
+
+  /// Parse a term string into a runtime Term.
+  ///
+  /// Wraps the string in a dummy clause, parses, and converts the AST term
+  /// to a runtime term. Variables are treated as constants (atoms).
+  rt.Term parseTerm(String termStr) {
+    final parseInput = '_p_($termStr).';
+    final lexer = Lexer(parseInput);
+    final tokens = lexer.tokenize();
+    final parser = Parser(tokens);
+    final ast = parser.parse();
+
+    if (ast.procedures.isEmpty || ast.procedures[0].clauses.isEmpty) {
+      throw Exception('Could not parse term: $termStr');
+    }
+
+    final arg = ast.procedures[0].clauses[0].head.args[0];
+    return _astToGroundRuntimeTerm(arg);
+  }
+
+  /// Run any pending/woken goals in the queue until quiescent.
+  ///
+  /// Used by interactive mode: after injecting a term into a stream
+  /// (which wakes suspended goals), call this to process them.
+  Future<ExecutionResult> runPendingGoals() async {
+    final program = combinedProgram;
+    final runner = BytecodeRunner(program);
+    final scheduler = Scheduler(rt: _runtime, runners: {'main': runner});
+
+    final result = await scheduler.drainAsyncWithStatus(
+      maxCycles: maxCycles,
+      debug: debugTrace,
+      showBindings: false,
+      debugOutput: debugOutput,
+    );
+
+    return ExecutionResult(status: result.status);
+  }
+
   // ============ Private Methods ============
 
   Future<ExecutionResult> _runSingleGoal(String trimmed) async {
@@ -341,6 +389,9 @@ class GlpEngine {
       showBindings: false,
       debugOutput: debugOutput,
     );
+
+    // Store query var writers for interactive mode
+    _lastQueryVarWriters = Map.of(queryVarWriters);
 
     // Collect bindings
     final bindings = <String, rt.Term?>{};
@@ -891,5 +942,33 @@ class GlpEngine {
     }
 
     return rt.StructTerm('.', [headTerm, tailTerm]);
+  }
+
+  /// Convert an AST term to a ground runtime term.
+  /// Variables are treated as atom constants (for user input parsing).
+  rt.Term _astToGroundRuntimeTerm(Term ast) {
+    if (ast is ConstTerm) {
+      return rt.ConstTerm(ast.value);
+    } else if (ast is VarTerm) {
+      // In interactive input, variables are just atoms (e.g., "yes", "no")
+      return rt.ConstTerm(ast.name.toLowerCase());
+    } else if (ast is StructTerm) {
+      final args = ast.args.map(_astToGroundRuntimeTerm).toList();
+      return rt.StructTerm(ast.functor, args);
+    } else if (ast is ListTerm) {
+      return _astListToGroundRuntime(ast);
+    }
+    throw Exception('Unsupported term type: ${ast.runtimeType}');
+  }
+
+  rt.Term _astListToGroundRuntime(ListTerm list) {
+    if (list.isNil) {
+      return rt.ConstTerm('nil');
+    }
+    final head = _astToGroundRuntimeTerm(list.head!);
+    final tail = list.tail is ListTerm
+        ? _astListToGroundRuntime(list.tail! as ListTerm)
+        : _astToGroundRuntimeTerm(list.tail!);
+    return rt.StructTerm('.', [head, tail]);
   }
 }

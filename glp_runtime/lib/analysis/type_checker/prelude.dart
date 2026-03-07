@@ -80,12 +80,14 @@ procedure _close_mutual_reference(_?).
 
 % Map operations (O(1) key-value lookup)
 procedure map_new(_).
-procedure map_put(_?, _?, _?, _).
+procedure map_put(_?, _?, _, _).
 procedure _map_get(_?, _?, _).
 procedure map_contains(_?, _?).
 procedure map_get(_?, _?, _).
 procedure map_remove(_?, _?, _).
 procedure map_keys(_?, _).
+procedure map_send(_?, _?, _?, _).
+procedure map_close_all(_?).
 
 % Output/debugging primitives
 procedure write(_?).
@@ -189,6 +191,8 @@ const Set<String> predefinedProcedureNames = {
   'map_contains',
   'map_remove',
   'map_keys',
+  'map_send',
+  'map_close_all',
   // Note: map_get is NOT protected - it's a stdlib wrapper that can be redefined
   // Note: dl_append, dl_to_list, new_channel, send, receive
   // are NOT protected - they are library-level and can be redefined
@@ -251,6 +255,8 @@ const Set<String> builtinProcedures = {
   'map_get/3',
   'map_remove/3',
   'map_keys/2',
+  'map_send/4',
+  'map_close_all/1',
   // Output/debugging primitives
   'write/1',
   'writeln/1',

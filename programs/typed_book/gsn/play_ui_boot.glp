@@ -1,0 +1,60 @@
+%% play_ui_boot.glp - Boot for GSN agent with Flutter UI (madGLP)
+%%
+%% Entry point: agent_init(Id, DartUserIn, NetIn)
+%% - Id:         agent identifier (alice, bob, charlie)
+%% - DartUserIn: ground command stream from Dart (via InputInjector)
+%% - NetIn:      network input stream (from madGLP IsolateManager)
+%%
+%% Wires the ui_mediator between Dart I/O and the typed social agent:
+%% - Mediator reads agent's user output, grounds non-ground terms, sends to Dart
+%% - Mediator reads Dart input, wraps in msg format, sends to agent
+%% - Network I/O goes through madGLP send_to_net
+%%
+%% Requires: load typed_social_agent.glp first
+%% Requires: load typed_ui_mediator.glp first
+%%
+%% Date: 2026-03-07
+
+-mode(system).
+
+%% =============================================================================
+%% FILTER USER INPUT
+%% =============================================================================
+%%
+%% Passes through recognised commands and silently drops anything else.
+
+filter_user_input([connect(T)|In], [connect(T?)|Out?]) :-
+    filter_user_input(In?, Out).
+filter_user_input([decision(D, F, R)|In], [decision(D?, F?, R?)|Out?]) :-
+    filter_user_input(In?, Out).
+filter_user_input([remove(T)|In], [remove(T?)|Out?]) :-
+    filter_user_input(In?, Out).
+filter_user_input([send(T, M)|In], [send(T?, M?)|Out?]) :-
+    filter_user_input(In?, Out).
+filter_user_input([unfriend(T)|In], [unfriend(T?)|Out?]) :-
+    filter_user_input(In?, Out).
+filter_user_input([introduce(P, Q)|In], [introduce(P?, Q?)|Out?]) :-
+    filter_user_input(In?, Out).
+filter_user_input([accept_intro(O, C)|In], [accept_intro(O?, C?)|Out?]) :-
+    filter_user_input(In?, Out).
+filter_user_input([reject_intro(O, C)|In], [reject_intro(O?, C?)|Out?]) :-
+    filter_user_input(In?, Out).
+filter_user_input([_|In], Out?) :-
+    otherwise |
+    filter_user_input(In?, Out).
+filter_user_input([], []).
+
+%% =============================================================================
+%% AGENT INITIALIZATION (madGLP entry point)
+%% =============================================================================
+
+agent_init(Id, DartUserIn, NetIn) :-
+    ground(Id?) |
+    filter_user_input(DartUserIn?, FilteredUserIn),
+    send_to_net(NetOut?),
+    map_new(FMap),
+    agent(Id?, AgentIn?, NetIn?,
+          [output('_user', AgentToMediator), output('_net', NetOut)], FMap?),
+    ui_mediator(Id?, ch(AgentToMediator?, AgentIn),
+                ch(FilteredUserIn?, DartUserOut), [], 1),
+    send_to_user(DartUserOut?).

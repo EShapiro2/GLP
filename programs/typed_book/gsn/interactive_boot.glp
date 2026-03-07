@@ -1,0 +1,56 @@
+%% interactive_boot.glp - Interactive dGLP boot for Flutter UI
+%%
+%% Entry point: interactive_boot(AliceUserCmd, BobUserCmd, CharlieUserCmd)
+%% - Each UserCmd stream is an open (unbound) variable controlled by Dart
+%% - Dart injects commands via InputInjector into the writer end
+%% - Uses the same dGLP single-process architecture as fplay1-14
+%%
+%% Architecture:
+%%   Dart (InputInjector)
+%%     ↓ AliceUserCmd
+%%   tee → AliceMedIn → ui_mediator → AliceMedOut
+%%     ↓ AliceDispCmd                      ↓ (directly to display)
+%%   send_to_user_tagged(alice, AliceDispCmd, AliceMedOut)
+%%     ↓
+%%   '_output'(tagged(alice, cmd/notify(...)))
+%%     ↓
+%%   Dart stdout → Flutter UI
+%%
+%% Requires: load typed_social_agent.glp first
+%% Requires: load typed_ui_mediator.glp first
+%% Requires: load play_ui_sim_boot.glp first (for tee, network3, send_to_user_tagged)
+%%
+%% Date: 2026-03-07
+
+-mode(system).
+
+interactive_boot(AliceUserCmd, BobUserCmd, CharlieUserCmd) :-
+    network3(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn),
+             ch(CharlieNetOut?, CharlieNetIn)),
+
+    map_new(AliceFMap), map_new(BobFMap), map_new(CharlieFMap),
+
+    %% Alice — input from Dart via AliceUserCmd
+    tee(AliceUserCmd?, AliceMedIn, AliceDispCmd),
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)], AliceFMap?),
+    ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceMedOut?),
+
+    %% Bob — input from Dart via BobUserCmd
+    tee(BobUserCmd?, BobMedIn, BobDispCmd),
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)], BobFMap?),
+    ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    send_to_user_tagged(bob, BobDispCmd?, BobMedOut?),
+
+    %% Charlie — input from Dart via CharlieUserCmd
+    tee(CharlieUserCmd?, CharlieMedIn, CharlieDispCmd),
+    agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)], CharlieFMap?),
+    ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+                ch(CharlieMedIn?, CharlieMedOut), [], 1),
+    send_to_user_tagged(charlie, CharlieDispCmd?, CharlieMedOut?).

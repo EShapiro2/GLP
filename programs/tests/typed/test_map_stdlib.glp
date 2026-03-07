@@ -1,0 +1,25 @@
+%% Test suite for stdlib map_get wrapper
+%% stdlib/map.glp loaded automatically by engine
+
+%% Test: Stdlib map_get wrapper — found
+procedure test_stdlib_helper(_?, _).
+test_stdlib_helper(M, R?) :-
+    map_get(M?, alice, R).
+
+procedure test_stdlib(_).
+test_stdlib(R?) :-
+    map_new(M0), map_put(M0?, alice, 42, M1),
+    test_stdlib_helper(M1?, R).
+
+%% Test: Fallback when key not found (uses map_contains guard directly)
+procedure test_fallback_helper(_?, _).
+test_fallback_helper(M, R?) :-
+    map_contains(M?, missing) |
+    _map_get(M?, missing, R).
+test_fallback_helper(_, not_found) :-
+    otherwise | true.
+
+procedure test_fallback(_).
+test_fallback(R?) :-
+    map_new(M0),
+    test_fallback_helper(M0?, R).
