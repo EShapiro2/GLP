@@ -1,10 +1,10 @@
 % nonground_list.glp - Non-ground list in body goal argument
 
-procedure test_list_in_body(Stream?, Stream).
+procedure test_list_in_body(Stream(X)?, Stream(X)).
 test_list_in_body(L, L?).
 
-procedure process_list(Stream?, Stream).
+procedure process_list(Stream(X)?, Stream(X)).
 process_list(L, L?).
 
-procedure build_list(_?, _?, Stream).
+procedure build_list(_?, _?, Stream(X)).
 build_list(X, Y, [X?,Y?]).

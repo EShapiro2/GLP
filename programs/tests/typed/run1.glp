@@ -16,17 +16,17 @@ clause(q(X), p(X?)).
 clause(q(a), true).
 clause(r(a,b), true).
 
-procedure run2(Stream).
+procedure run2(Stream(X)).
 run2(Ys?) :- run((merge([],[],Xs1), merge([],Xs1?,Ys))).
 
-procedure run3(Stream).
+procedure run3(Stream(X)).
 run3(Ys?) :- run(merge([],[a],Ys)).
 
-procedure run4(Stream).
+procedure run4(Stream(X)).
 run4(Ys?) :- run(merge([],[],Ys)).
 
-procedure run6(Stream).
+procedure run6(Stream(X)).
 run6(Ys?) :- run(merge([a],[],Ys)).
 
-procedure runA(Stream).
+procedure runA(Stream(X)).
 runA(X?) :- run(merge([],[],X)).

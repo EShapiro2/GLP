@@ -1,13 +1,13 @@
 % test_channel_guards.glp - Channel operations as defined guards
 % Uses prelude-defined send, receive, new_channel
 
-procedure make_pair(Channel, Channel).
+procedure make_pair(Channel(X, Y), Channel(Y, X)).
 make_pair(C1?, C2?) :- new_channel(C1, C2) | true.
 
-procedure relay_send(Stream?, Channel?, Channel).
+procedure relay_send(Stream(X)?, Channel(Stream(X))?, Channel(Stream(X))).
 relay_send([X|In1], Ch, Ch2?) :- send(X?, Ch?, Ch1) | relay_send(In1?, Ch1?, Ch2).
 relay_send([], Ch, Ch?).
 
-procedure relay_recv(Stream, Channel?, Channel).
+procedure relay_recv(Stream(X), Channel(Stream(X))?, Channel(Stream(X))).
 relay_recv([X?|Out1?], Ch, Ch2?) :- receive(X, Ch?, Ch1) | relay_recv(Out1, Ch1?, Ch2).
 relay_recv([], Ch, Ch?).

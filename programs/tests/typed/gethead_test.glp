@@ -1,6 +1,6 @@
 % gethead_test.glp - Extract head from a list
 
-procedure gethead(Stream?, _).
+procedure gethead(Stream(X)?, _).
 gethead([H|_], H?).
 gethead([], none).
 

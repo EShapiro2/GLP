@@ -2,8 +2,8 @@
 % Note: dl_append and dl_to_list are already in the prelude.
 % This file tests using them from user code.
 
-procedure test_dl_append(DiffList?, DiffList?, DiffList).
+procedure test_dl_append(DiffList(X)?, DiffList(X)?, DiffList(X)).
 test_dl_append(A, B, C?) :- dl_append(A?, B?, C) | true.
 
-procedure test_dl_to_list(DiffList?, Stream).
+procedure test_dl_to_list(DiffList(X)?, Stream(X)).
 test_dl_to_list(D, L?) :- dl_to_list(D?, L) | true.
