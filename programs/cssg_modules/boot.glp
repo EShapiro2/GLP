@@ -53,11 +53,11 @@ imported procedure actors#dave7(ActorChannel?).
 %% LOCAL UTILITIES
 %% =============================================================================
 
-procedure tee(_?, _, _).
+procedure tee(Stream(X)?, Stream(X), Stream(X)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
-procedure sink(_?).
+procedure sink(Stream(X)?).
 sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
@@ -73,7 +73,7 @@ send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
 send_to_user_tagged(_, [], []).
 send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
 
-procedure merge(_?, _?, _).
+procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).

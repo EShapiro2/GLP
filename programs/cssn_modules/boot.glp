@@ -76,17 +76,17 @@ imported procedure actors#eve12(ActorChannel?).
 %% LOCAL UTILITIES
 %% =============================================================================
 
-procedure merge(Stream?, Stream?, Stream).
+procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).
 merge(Xs, [], Xs?).
 
-procedure tee(Stream?, Stream, Stream).
+procedure tee(Stream(X)?, Stream(X), Stream(X)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
-procedure sink(Stream?).
+procedure sink(Stream(X)?).
 sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
