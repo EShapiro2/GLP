@@ -6,13 +6,21 @@
 % TYPE DEFINITIONS
 % =============================================================================
 
-% Collections
+% Collections (monomorphic — kept for backward compatibility)
 Stream ::= [] ; [_|Stream].
 OpenStream ::= [_|Stream].
 DiffList ::= Stream \ Stream?.
 
-% Communication
+% Collections (parameterized)
+Stream(X) ::= [] ; [X | Stream(X)].
+OpenStream(X) ::= [X | Stream(X)].
+DiffList(X) ::= Stream(X) \ Stream(X)?.
+
+% Communication (monomorphic — kept for backward compatibility)
 Channel ::= ch(Stream, Stream?).
+
+% Communication (parameterized)
+Channel(In, Out) ::= ch(In, Out?).
 
 % Primitive types
 Constant ::= Number ; String.

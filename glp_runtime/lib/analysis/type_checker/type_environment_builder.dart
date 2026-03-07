@@ -8,6 +8,7 @@
 
 import 'type_ast.dart';
 import 'prelude.dart';
+import 'param_expansion.dart';
 import '../../compiler/ast.dart' as ast;
 import '../../compiler/lexer.dart';
 import '../../compiler/parser.dart';
@@ -81,7 +82,11 @@ TypeEnvironment buildPreludeEnvironment() {
   final parser = Parser(tokens);
   final module = parser.parseModule();
 
-  return _buildEnvironmentFromModule(module, checkRedefinitions: false, resolveAliasesNow: true);
+  // Expand parameterized types before building the environment.
+  // Templates (e.g., Stream(X)) are removed; only concrete expansions remain.
+  final expandedModule = expandParameterizedTypes(module);
+
+  return _buildEnvironmentFromModule(expandedModule, checkRedefinitions: false, resolveAliasesNow: true);
 }
 
 /// Build TypeEnvironment from a parsed Module

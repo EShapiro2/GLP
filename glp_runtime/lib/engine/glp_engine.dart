@@ -23,6 +23,7 @@ import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/compiler/partial_evaluator.dart';
 import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
+import 'package:glp_runtime/analysis/type_checker/param_expansion.dart';
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
@@ -621,12 +622,15 @@ class GlpEngine {
     final parser = Parser(tokens);
     final selfModule = parser.parseModule();
 
+    // Expand parameterized types (strips templates, keeps monomorphic defs)
+    final expandedModule = expandParameterizedTypes(selfModule);
+
     final types = <String, TypeDef>{};
-    for (final t in selfModule.typeDefs) {
+    for (final t in expandedModule.typeDefs) {
       types[t.name] = t;
     }
     final procs = <String, ProcDecl>{};
-    for (final p in selfModule.procDeclarations) {
+    for (final p in expandedModule.procDeclarations) {
       procs[p.qualifiedKey] = p;
     }
     return env.merge(TypeEnvironment(types, procs));

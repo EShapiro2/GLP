@@ -13,6 +13,7 @@ import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/ast.dart' as ast;
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
+import 'package:glp_runtime/analysis/type_checker/param_expansion.dart';
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 
 /// Discover the self.glp chain from root to target file's directory.
@@ -107,16 +108,20 @@ TypeEnvironment assembleTypeScope({
     final parser = Parser(tokens);
     final selfModule = parser.parseModule();
 
+    // Expand parameterized types before building scope
+    final expandedSelfModule = expandParameterizedTypes(selfModule);
+
     // Build environment from this self.glp (without prelude check — ancestors
     // can define types with same names, shadowing is allowed)
-    final selfEnv = _buildScopeFromModule(selfModule);
+    final selfEnv = _buildScopeFromModule(expandedSelfModule);
 
     // Merge: later entries overwrite earlier ones (shadowing)
     env = env.merge(selfEnv);
   }
 
   // Finally, merge the target module's own definitions (shadows all ancestors)
-  final moduleEnv = _buildScopeFromModule(module);
+  final expandedModule = expandParameterizedTypes(module);
+  final moduleEnv = _buildScopeFromModule(expandedModule);
   env = env.merge(moduleEnv);
 
   return env;
