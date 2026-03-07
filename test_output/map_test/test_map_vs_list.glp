@@ -1,0 +1,163 @@
+% Benchmark: Map vs Association List — get, contains, put
+%
+% Compares Dart HashMap operations against GLP association list
+% equivalents across three operations:
+%   GET:      map O(1) vs list O(n)
+%   CONTAINS: map O(1) vs list O(n)
+%   PUT:      map O(n) vs list O(1) — map copies, list prepends
+
+% =====================================================================
+% Shared builders
+% =====================================================================
+
+% Map builder: keys N down to 1, value = N*10
+procedure build_map(Number?, _?, _).
+build_map(N, M, Final?) :-
+    N? > 0 |
+    V := N? * 10,
+    map_put(M?, N?, V?, M1),
+    N1 := N? - 1,
+    build_map(N1?, M1?, Final).
+build_map(N, M, M?) :-
+    N? =:= 0 | true.
+
+% List builder: [kv(1,10), kv(2,20), ..., kv(N,N*10)]
+procedure build_list(Number?, _?, _).
+build_list(N, Acc, Final?) :-
+    N? > 0 |
+    V := N? * 10,
+    N1 := N? - 1,
+    build_list(N1?, [kv(N?, V?)|Acc?], Final).
+build_list(N, Acc, Acc?) :-
+    N? =:= 0 | true.
+
+% Build-only baselines
+procedure build_map_only(Number?, _).
+build_map_only(N, done) :-
+    map_new(M0),
+    build_map(N?, M0?, _).
+
+procedure build_list_only(Number?, _).
+build_list_only(N, done) :-
+    build_list(N?, [], _).
+
+% =====================================================================
+% GET — map O(1) vs list O(n)
+% =====================================================================
+
+% Map: repeat _map_get K times
+procedure repeat_map_get(Number?, _?, Number?, _).
+repeat_map_get(K, M, Key, Done?) :-
+    K? > 0, map_contains(M?, Key?) |
+    _map_get(M?, Key?, _),
+    K1 := K? - 1,
+    repeat_map_get(K1?, M?, Key?, Done).
+repeat_map_get(K, _, _, done) :-
+    K? =:= 0 | true.
+
+% List: linear scan for key, return value
+procedure list_lookup(_?, Number?, _).
+list_lookup([kv(K, V)|_], Key, V?) :- K? =:= Key? | true.
+list_lookup([_|Rest], Key, Val?) :- list_lookup(Rest?, Key?, Val).
+
+% List: repeat list_lookup K times
+procedure repeat_list_get(Number?, _?, Number?, _).
+repeat_list_get(K, List, Key, Done?) :-
+    K? > 0, ground(List?), ground(Key?) |
+    list_lookup(List?, Key?, _),
+    K1 := K? - 1,
+    repeat_list_get(K1?, List?, Key?, Done).
+repeat_list_get(K, _, _, done) :-
+    K? =:= 0 | true.
+
+% Drivers
+procedure bench_map_get(Number?, Number?, _).
+bench_map_get(N, K, Done?) :-
+    ground(N?) |
+    map_new(M0),
+    build_map(N?, M0?, Final),
+    repeat_map_get(K?, Final?, N?, Done).
+
+procedure bench_list_get(Number?, Number?, _).
+bench_list_get(N, K, Done?) :-
+    ground(N?) |
+    build_list(N?, [], List),
+    repeat_list_get(K?, List?, N?, Done).
+
+% =====================================================================
+% CONTAINS — map O(1) vs list O(n)
+% =====================================================================
+
+% Map: repeat map_contains K times (guard-only, no body work)
+procedure repeat_map_has(Number?, _?, Number?, _).
+repeat_map_has(K, M, Key, Done?) :-
+    K? > 0, map_contains(M?, Key?) |
+    K1 := K? - 1,
+    repeat_map_has(K1?, M?, Key?, Done).
+repeat_map_has(K, _, _, done) :-
+    K? =:= 0 | true.
+
+% List: linear scan for key existence
+procedure list_has(_?, Number?, _).
+list_has([kv(K, _)|_], Key, yes) :- K? =:= Key? | true.
+list_has([_|Rest], Key, Result?) :- list_has(Rest?, Key?, Result).
+list_has([], _, no).
+
+% List: repeat list_has K times
+procedure repeat_list_has(Number?, _?, Number?, _).
+repeat_list_has(K, List, Key, Done?) :-
+    K? > 0, ground(List?), ground(Key?) |
+    list_has(List?, Key?, _),
+    K1 := K? - 1,
+    repeat_list_has(K1?, List?, Key?, Done).
+repeat_list_has(K, _, _, done) :-
+    K? =:= 0 | true.
+
+% Drivers
+procedure bench_map_has(Number?, Number?, _).
+bench_map_has(N, K, Done?) :-
+    ground(N?) |
+    map_new(M0),
+    build_map(N?, M0?, Final),
+    repeat_map_has(K?, Final?, N?, Done).
+
+procedure bench_list_has(Number?, Number?, _).
+bench_list_has(N, K, Done?) :-
+    ground(N?) |
+    build_list(N?, [], List),
+    repeat_list_has(K?, List?, N?, Done).
+
+% =====================================================================
+% PUT — map O(n) copy vs list O(1) prepend
+% =====================================================================
+
+% Map: repeat map_put K times (each copies entire map)
+procedure repeat_map_put(Number?, _?, _).
+repeat_map_put(K, M, Done?) :-
+    K? > 0, ground(M?) |
+    map_put(M?, K?, K?, M1),
+    K1 := K? - 1,
+    repeat_map_put(K1?, M1?, Done).
+repeat_map_put(K, _, done) :-
+    K? =:= 0 | true.
+
+% List: repeat prepend K times (O(1) each, no dedup)
+procedure repeat_list_put(Number?, _?, _).
+repeat_list_put(K, List, Done?) :-
+    K? > 0 |
+    K1 := K? - 1,
+    repeat_list_put(K1?, [kv(K?, K?)|List?], Done).
+repeat_list_put(K, _, done) :-
+    K? =:= 0 | true.
+
+% Drivers: start with pre-built structure of size N, then do K puts
+procedure bench_map_put(Number?, Number?, _).
+bench_map_put(N, K, Done?) :-
+    map_new(M0),
+    build_map(N?, M0?, Base),
+    repeat_map_put(K?, Base?, Done).
+
+procedure bench_list_put(Number?, Number?, _).
+bench_list_put(N, K, Done?) :-
+    build_list(N?, [], Base),
+    repeat_list_put(K?, Base?, Done).

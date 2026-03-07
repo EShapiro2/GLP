@@ -4727,6 +4727,27 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
+      case 'map_contains':
+        // Succeeds if M is a MapTerm and contains Key
+        // Suspension on unbound readers handled by caller
+        if (args.length < 2) return GuardResult.failure;
+        final mapVal = getValue(args[0]);
+        if (mapVal is! MapTerm) return GuardResult.failure;
+        final keyArg = getValue(args[1]);
+        // Extract Dart-level key from constant
+        Object? mapKey;
+        if (keyArg is num) {
+          mapKey = keyArg;
+        } else if (keyArg is String) {
+          mapKey = keyArg;
+        } else if (keyArg is ConstTerm) {
+          mapKey = keyArg.value;
+        }
+        if (mapKey == null) return GuardResult.failure;
+        return mapVal.entries.containsKey(mapKey)
+            ? GuardResult.success
+            : GuardResult.failure;
+
       case 'equator':
         // Succeeds if X is bound to '_equator'(E, C) where C is a constant
         // Enables many-to-one signaling via equators
