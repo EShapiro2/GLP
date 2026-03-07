@@ -168,9 +168,9 @@ class _GsnScreenState extends State<GsnScreen> {
     _agents.clear();
 
     // Create agent panels based on play type
-    // Plays 12-13: 3 agents, Plays 8-11: 2 agents, Plays 4-7: 4 agents
+    // Plays 1-3, 12-14: 3 agents, Plays 8-11: 2 agents, Plays 4-7: 4 agents
     final List<_AgentInfo> agentInfos;
-    if (playNumber >= 12) {
+    if (playNumber <= 3 || playNumber >= 12) {
       agentInfos = _agentInfos3;
     } else if (playNumber >= 8) {
       agentInfos = _agentInfos2;
@@ -276,6 +276,26 @@ class _GsnScreenState extends State<GsnScreen> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
+            ElevatedButton.icon(
+              onPressed: () => _runPlay(1),
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('Play 1'),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton.icon(
+              onPressed: () => _runPlay(2),
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('Play 2'),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton.icon(
+              onPressed: () => _runPlay(3),
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('Play 3'),
+            ),
+            const SizedBox(width: 16),
+            Container(width: 1, height: 30, color: Colors.grey),
+            const SizedBox(width: 16),
             ElevatedButton.icon(
               onPressed: () => _runPlay(4),
               icon: const Icon(Icons.play_arrow),

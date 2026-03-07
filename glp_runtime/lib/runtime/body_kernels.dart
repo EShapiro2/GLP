@@ -109,6 +109,9 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_map_get', 3, mapGetKernel);
   registry.register('map_remove', 3, mapRemoveKernel);
   registry.register('map_keys', 2, mapKeysKernel);
+
+  // Arithmetic assignment
+  registry.register(':=', 2, assignKernel);
 }
 
 /// Helper to get numeric value from argument (with arithmetic evaluation)
@@ -943,6 +946,21 @@ BodyKernelResult mapKeysKernel(GlpRuntime rt, List<Object?> args) {
   final glpList = _dartListToGlpList(keys);
 
   return _bindResult(rt, args[1], glpList);
+}
+
+/// :=(Result, Expr) — Arithmetic assignment.
+BodyKernelResult assignKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] :=/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final result = _getNum(rt, args[1]);
+  if (result == null) {
+    print('[ABORT] :=/2: right-hand side must evaluate to a number');
+    return BodyKernelResult.abort;
+  }
+  final value = result == result.toInt() ? result.toInt() : result;
+  return _bindResult(rt, args[0], ConstTerm(value));
 }
 
 /// Format a ground term as readable GLP syntax.
