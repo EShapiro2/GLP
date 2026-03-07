@@ -2,7 +2,6 @@
 %% Combines posting and follower management
 
 %% Type definitions
-Stream ::= [] ; [_ | Stream].
 CmdList ::= [] ; [_ | CmdList].
 FollowerList ::= [] ; [_ | FollowerList].
 

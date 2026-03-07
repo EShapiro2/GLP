@@ -50,7 +50,7 @@ PendingList  ::= [] ; [PendingEntry | PendingList].
 %% UI MEDIATOR - Main loop
 %% =============================================================================
 
-procedure ui_mediator(Constant?, Channel?, Channel?, PendingList?, Constant?).
+procedure ui_mediator(Constant?, Channel(X, Y)?, Channel(X, Y)?, PendingList?, Constant?).
 
 %% --- Agent-to-user: non-ground (replace variable with req ID) ---
 

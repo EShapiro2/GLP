@@ -21,7 +21,7 @@ observe(A?, B, Log?) :- compound(B?) |
     A =.. ListA?,
     Log =.. Logs?.
 
-procedure observe_list(Stream?, Stream, Stream).
+procedure observe_list(Stream(X)?, Stream(X), Stream(X)).
 observe_list([], [], []).
 observe_list([H|T], [I?|Is?], [L?|Ls?]) :-
     observe(H?, I, L),

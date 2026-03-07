@@ -11,10 +11,8 @@
 %% =============================================================================
 
 %% Basic stream type
-Stream ::= [] ; [_|Stream].
 
 %% Bidirectional channel
-Channel ::= ch(Stream?, Stream).
 
 %% Response types for connection offers
 Resp ::= accept(Channel) ; no.
@@ -59,7 +57,7 @@ merge([], Ys, Ys?).
 
 %% Agent entry point - pattern matches channel structures directly in head
 %% (avoids SRSW violation from guard-based unification)
-procedure agent(_?, Channel?, Channel?).
+procedure agent(_?, Channel(X, Y)?, Channel(X, Y)?).
 agent(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
     merge(UserIn?, NetIn?, In),
     social_graph(Id?, In?, [(user, UserOut?), (net, NetOut?)]).
@@ -159,7 +157,7 @@ send_if_found(not_found, _, _, Fs, Fs?, no).
 %% UPDATE: Replace value for key in association list
 %% =============================================================================
 
-procedure update(_?, Stream?, FriendList?, FriendList).
+procedure update(_?, Stream(X)?, FriendList?, FriendList).
 update(Key, NewVal, [(K, _)|Fs], [(K?, NewVal?)|Fs?]) :- Key? =?= K? | true.
 update(Key, NewVal, [F|Fs], [F?|Fs1?]) :-
     otherwise | update(Key?, NewVal?, Fs?, Fs1).
@@ -179,7 +177,7 @@ bind_response(no, _, no, Fs, Fs?, In, In?).
 %% HANDLE_ACCEPT: Process accepted connection (local side)
 %% =============================================================================
 
-procedure handle_accept(_?, Channel?, FriendList?, FriendList, MsgStream?, MsgStream).
+procedure handle_accept(_?, Channel(X, Y)?, FriendList?, FriendList, MsgStream?, MsgStream).
 handle_accept(From, ch(FIn, FOut), Fs, [(From?, FOut?)|Fs?], In, In1?) :-
     tag_stream(From?, FIn?, Tagged),
     merge(In?, Tagged?, In1).
@@ -197,7 +195,7 @@ handle_response(no, _, Fs, Fs?, In, In?).
 %% TAG_STREAM: Tag messages with source identifier
 %% =============================================================================
 
-procedure tag_stream(_?, Stream?, MsgStream).
+procedure tag_stream(_?, Stream(X)?, MsgStream).
 tag_stream(Name, [M|In], [tagged(Name?, M?)|Out?]) :-
     constant(Name?) |
     tag_stream(Name?, In?, Out).
@@ -207,5 +205,5 @@ tag_stream(_, [], []).
 %% NEW_CHANNEL: Create paired channels (from prelude)
 %% =============================================================================
 
-procedure new_channel(Channel, Channel).
+procedure new_channel(Channel(X, Y), Channel(X, Y)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).

@@ -20,14 +20,14 @@ Response ::= accept(Channel) ; no.
 %% CHANNEL OPERATIONS
 %% =============================================================================
 
-procedure new_channel(Channel, Channel).
+procedure new_channel(Channel(X, Y), Channel(X, Y)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
 %% =============================================================================
 %% MERGE
 %% =============================================================================
 
-procedure merge(Stream?, Stream?, Stream).
+procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], [], []).
@@ -36,7 +36,7 @@ merge([], [], []).
 %% TAG_STREAM
 %% =============================================================================
 
-procedure tag_stream(_?, Stream?, Stream).
+procedure tag_stream(_?, Stream(X)?, Stream(X)).
 tag_stream(_, [], []).
 tag_stream(Tag, [X|Xs], [tagged(Tag?, X?)|Ys?]) :-
     ground(Tag?) |
@@ -46,14 +46,14 @@ tag_stream(Tag, [X|Xs], [tagged(Tag?, X?)|Ys?]) :-
 %% RESPONSE HANDLING
 %% =============================================================================
 
-procedure handle_response(Response?, _?, FriendList?, FriendList, Stream?, Stream).
+procedure handle_response(Response?, _?, FriendList?, FriendList, Stream(X)?, Stream(X)).
 handle_response(accept(ch(FIn, FOut)), From, Fs, [(From?, FOut?)|Fs?], In, In1?) :-
     ground(From?) |
     tag_stream(From?, FIn?, Tagged),
     merge(In?, Tagged?, In1).
 handle_response(no, _, Fs, Fs?, In, In?).
 
-procedure bind_response(_?, _?, Response, FriendList?, FriendList, Stream?, Stream).
+procedure bind_response(_?, _?, Response, FriendList?, FriendList, Stream(X)?, Stream(X)).
 bind_response(yes, From, accept(TheirCh?), Fs, Fs1?, In, In1?) :-
     new_channel(OurCh, TheirCh),
     handle_response(accept(OurCh?), From?, Fs?, Fs1, In?, In1).
@@ -63,7 +63,7 @@ bind_response(no, _, no, Fs, Fs?, In, In?).
 %% SOCIAL GRAPH (handles decision and response messages)
 %% =============================================================================
 
-procedure social_graph(_?, Stream?, FriendList?).
+procedure social_graph(_?, Stream(X)?, FriendList?).
 
 social_graph(Id, [decision(Dec, From, Resp?)|In], Fs) :-
     ground(Id?) |
@@ -104,7 +104,7 @@ test_bob_receives :-
                  [(user, _), (net, _)]),
     check_channel(AliceCh?).
 
-procedure check_channel(Channel?).
+procedure check_channel(Channel(X, Y)?).
 check_channel(ch(In, Out)) :- known(In?) | true.
 check_channel(ch(In, Out)) :- known(Out?) | true.
 
@@ -137,5 +137,5 @@ test_full_exchange :-
 procedure relay(Response?, Response).
 relay(Resp, Resp?).
 
-procedure observe_exchange(Response?, Response?, Stream?, Stream?).
+procedure observe_exchange(Response?, Response?, Stream(X)?, Stream(X)?).
 observe_exchange(_, _, _, _).

@@ -7,26 +7,26 @@
 Done ::= done.
 
 % Bob produces two a's then hands tail to Alice
-procedure bob(Stream, Done).
+procedure bob(Stream(X), Done).
 bob([a,a|Tail?], Result?) :- alice(Tail, Result).
 
 % Alice produces three b's then hands tail to Bob
-procedure alice(Stream, Done).
+procedure alice(Stream(X), Done).
 alice([b,b,b|Tail?], Result?) :- bob_finish(Tail, Result).
 
 % Bob produces two more a's then closes
-procedure bob_finish(Stream, Done).
+procedure bob_finish(Stream(X), Done).
 bob_finish([a,a], done).
 
 % Reader: counts elements in stream
-procedure reader(Stream?, Number?, Number).
+procedure reader(Stream(X)?, Number?, Number).
 reader([], Count, Count?).
 reader([X|Xs], Count, Result?) :- ground(X?) |
     Count1 := Count? + 1,
     reader(Xs?, Count1?, Result).
 
 % Test cooperative production
-procedure test_coop(Stream, Done).
+procedure test_coop(Stream(X), Done).
 test_coop(Stream?, Done?) :- bob(Stream, Done).
 
 % Test reading the cooperatively-produced stream
@@ -35,5 +35,5 @@ test_read(Count?) :-
     bob(Stream, _),
     start_reader(Stream?, Count).
 
-procedure start_reader(Stream?, Number).
+procedure start_reader(Stream(X)?, Number).
 start_reader(S, C?) :- reader(S?, 0, C).

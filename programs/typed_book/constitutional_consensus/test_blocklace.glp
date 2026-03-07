@@ -16,7 +16,7 @@ procedure nonempty_blocks_at_round(Number?, Blocklace?, Blocklace).
 
 procedure max_round(Blocklace?, Number).
 
-procedure length(Stream?, Number).
+procedure length(Stream(X)?, Number).
 
 procedure no_conflict(Number?, Blocklace?).
 

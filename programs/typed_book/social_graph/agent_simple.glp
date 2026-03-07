@@ -8,17 +8,16 @@
 %% Type definitions
 FriendEntry ::= (_, _).
 FriendList ::= [] ; [FriendEntry | FriendList].
-Channel ::= ch(Stream?, Stream).
 
-procedure agent(_?, Channel?, Channel?).
+procedure agent(_?, Channel(X, Y)?, Channel(X, Y)?).
 agent(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
     merge(UserIn?, NetIn?, In),
     build_friends(UserOut?, NetOut?, Fs),
     social_graph(Id?, In?, Fs?).
 
-procedure build_friends(Stream?, Stream?, FriendList).
+procedure build_friends(Stream(X)?, Stream(X)?, FriendList).
 build_friends(UserOut, NetOut, [(user, UserOut?), (net, NetOut?)]).
 
 %% External procedures (defined elsewhere)
-procedure merge(Stream?, Stream?, Stream).
-procedure social_graph(_?, Stream?, FriendList?).
+procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+procedure social_graph(_?, Stream(X)?, FriendList?).

@@ -1,7 +1,6 @@
 % Network Switch for 2 Agents (based on Program 12)
 
 %% Type definitions
-Channel ::= ch(Stream?, Stream).
 AgentEntry ::= (_, Channel?).
 
 procedure network(AgentEntry?, AgentEntry?).
@@ -18,5 +17,5 @@ network((P, ChP), (Q, ChQ)) :-
     network((P?, ChP1?), (Q?, ChQ1?)).
 
 %% External procedures (defined elsewhere)
-procedure receive(_, Channel?, Channel).
-procedure send(_?, Channel?, Channel).
+procedure receive(_, Channel(X, Y)?, Channel(X, Y)).
+procedure send(_?, Channel(X, Y)?, Channel(X, Y)).

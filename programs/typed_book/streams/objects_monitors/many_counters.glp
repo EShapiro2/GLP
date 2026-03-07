@@ -34,7 +34,7 @@ send([C|Stream?], Name, Message, [C?|L1?]) :-
     send(Stream?, Name?, Message?, L1).
 
 %% Counter from counter.glp
-procedure counter(Stream?, Number?).
+procedure counter(Stream(X)?, Number?).
 counter([clear|S?], _) :-
     counter(S?, 0).
 counter([up|S?], State) :-

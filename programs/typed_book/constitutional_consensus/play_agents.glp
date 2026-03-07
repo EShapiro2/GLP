@@ -14,7 +14,7 @@ ResultList ::= [] ; [_ | ResultList].
 %% Three-Agent Play
 %% ============================================
 
-procedure agent(Stream?, State?, Blocklace, Blocklace).
+procedure agent(Stream(X)?, State?, Blocklace, Blocklace).
 
 procedure handle_event(Event?, State?, State, Blocklace?, Blocklace).
 

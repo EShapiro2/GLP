@@ -6,7 +6,6 @@
 
 %% Type definitions
 Msg ::= msg(_, _, _).
-Channel ::= ch(Stream?, Stream).
 AgentEntry ::= (_, Channel?).
 
 procedure network3(AgentEntry?, AgentEntry?, AgentEntry?).

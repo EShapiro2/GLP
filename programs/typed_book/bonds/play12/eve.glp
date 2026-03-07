@@ -1,0 +1,141 @@
+%% eve.glp -- Teacher actor for Play 12 (Village Market Month)
+%%
+%% Eve accepts befriends from Alice and Charlie, connects to Frank.
+%% Symmetric trade with Charlie (10-for-10).
+%% Symmetric trade with Frank (10-for-10).
+%% Pays Charlie (bookshelf), trades with Charlie for alice-coins,
+%% pays Alice (bread).
+%% Act 7: accepts Alice's debt-sale proposal.
+%%
+%% Types: from self.glp (ancestor scoping)
+
+-module(eve).
+-mode(system).
+
+exported procedure eve_p12(ActorChannel?).
+eve_p12(ch(In, Out?)) :-
+    eve_p12_wait_befriend_alice(In?, Out).
+
+%% Act 1: Accept Alice's befriend request
+procedure eve_p12_wait_befriend_alice(UserNotifyStream?, UserCmdStream).
+eve_p12_wait_befriend_alice([befriend(alice, ReqId)|In],
+                            [decision(yes, alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    eve_p12_wait_connected_alice(In?, Out).
+eve_p12_wait_befriend_alice([_|In], Out?) :-
+    otherwise | eve_p12_wait_befriend_alice(In?, Out).
+eve_p12_wait_befriend_alice([], []).
+
+procedure eve_p12_wait_connected_alice(UserNotifyStream?, UserCmdStream).
+eve_p12_wait_connected_alice([connected(alice)|In], Out?) :-
+    eve_p12_wait_befriend_charlie(In?, Out).
+eve_p12_wait_connected_alice([_|In], Out?) :-
+    otherwise | eve_p12_wait_connected_alice(In?, Out).
+eve_p12_wait_connected_alice([], []).
+
+%% Accept Charlie's befriend request
+procedure eve_p12_wait_befriend_charlie(UserNotifyStream?, UserCmdStream).
+eve_p12_wait_befriend_charlie([befriend(charlie, ReqId)|In],
+                              [decision(yes, charlie, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    eve_p12_wait_connected_charlie(In?, Out).
+eve_p12_wait_befriend_charlie([_|In], Out?) :-
+    otherwise | eve_p12_wait_befriend_charlie(In?, Out).
+eve_p12_wait_befriend_charlie([], []).
+
+procedure eve_p12_wait_connected_charlie(UserNotifyStream?, UserCmdStream).
+eve_p12_wait_connected_charlie([connected(charlie)|In],
+                               [connect(frank)|Out?]) :-
+    eve_p12_wait_connected_frank(In?, Out).
+eve_p12_wait_connected_charlie([_|In], Out?) :-
+    otherwise | eve_p12_wait_connected_charlie(In?, Out).
+eve_p12_wait_connected_charlie([], []).
+
+procedure eve_p12_wait_connected_frank(UserNotifyStream?, UserCmdStream).
+eve_p12_wait_connected_frank([connected(frank)|In],
+                             [mint(10, 0)|Out?]) :-
+    eve_p12_wait_minted1(In?, Out).
+eve_p12_wait_connected_frank([_|In], Out?) :-
+    otherwise | eve_p12_wait_connected_frank(In?, Out).
+eve_p12_wait_connected_frank([], []).
+
+%% Act 2d: Mint eve-coins for symmetric trade with Charlie
+procedure eve_p12_wait_minted1(UserNotifyStream?, UserCmdStream).
+eve_p12_wait_minted1([minted(10, 0)|In], Out?) :-
+    eve_p12_wait_trade_charlie(In?, Out).
+eve_p12_wait_minted1([_|In], Out?) :-
+    otherwise | eve_p12_wait_minted1(In?, Out).
+eve_p12_wait_minted1([], []).
+
+%% Accept Charlie's symmetric trade proposal
+procedure eve_p12_wait_trade_charlie(UserNotifyStream?, UserCmdStream).
+eve_p12_wait_trade_charlie([trade_proposed(charlie, _, ReqId)|In],
+                           [accept_trade(charlie, ReqId?), mint(10, 0)|Out?]) :-
+    ground(ReqId?) |
+    eve_p12_wait_minted2(In?, Out).
+eve_p12_wait_trade_charlie([_|In], Out?) :-
+    otherwise | eve_p12_wait_trade_charlie(In?, Out).
+eve_p12_wait_trade_charlie([], []).
+
+%% Act 2f: Mint eve-coins for symmetric trade with Frank
+procedure eve_p12_wait_minted2(UserNotifyStream?, UserCmdStream).
+eve_p12_wait_minted2([minted(10, 0)|In],
+                     [trade(frank, [lot(eve, 0, 10)], [lot(frank, 0, 10)])|Out?]) :-
+    eve_p12_wait_trade_frank(In?, Out).
+eve_p12_wait_minted2([_|In], Out?) :-
+    otherwise | eve_p12_wait_minted2(In?, Out).
+eve_p12_wait_minted2([], []).
+
+procedure eve_p12_wait_trade_frank(UserNotifyStream?, UserCmdStream).
+eve_p12_wait_trade_frank([trade_completed(frank)|In],
+                         [pay(charlie, 6)|Out?]) :-
+    eve_p12_wait_paid_charlie(In?, Out).
+eve_p12_wait_trade_frank([_|In], Out?) :-
+    otherwise | eve_p12_wait_trade_frank(In?, Out).
+eve_p12_wait_trade_frank([], []).
+
+%% Act 3c: Eve pays Charlie for bookshelf
+procedure eve_p12_wait_paid_charlie(UserNotifyStream?, UserCmdStream).
+eve_p12_wait_paid_charlie([paid(charlie, 6)|In],
+                          [trade(charlie, [lot(frank, 0, 5)], [lot(alice, 0, 5)])|Out?]) :-
+    eve_p12_wait_trade_charlie2(In?, Out).
+eve_p12_wait_paid_charlie([_|In], Out?) :-
+    otherwise | eve_p12_wait_paid_charlie(In?, Out).
+eve_p12_wait_paid_charlie([], []).
+
+%% Act 4a: Eve trades frank-coins for alice-coins with Charlie
+procedure eve_p12_wait_trade_charlie2(UserNotifyStream?, UserCmdStream).
+eve_p12_wait_trade_charlie2([trade_completed(charlie)|In],
+                            [pay(alice, 3)|Out?]) :-
+    eve_p12_wait_paid_alice(In?, Out).
+eve_p12_wait_trade_charlie2([_|In], Out?) :-
+    otherwise | eve_p12_wait_trade_charlie2(In?, Out).
+eve_p12_wait_trade_charlie2([], []).
+
+%% Act 4b: Eve pays Alice for bread
+procedure eve_p12_wait_paid_alice(UserNotifyStream?, UserCmdStream).
+eve_p12_wait_paid_alice([paid(alice, 3)|In], Out?) :-
+    eve_p12_wait_trade_alice(In?, Out).
+eve_p12_wait_paid_alice([_|In], Out?) :-
+    otherwise | eve_p12_wait_paid_alice(In?, Out).
+eve_p12_wait_paid_alice([], []).
+
+%% Act 7: Accept Alice's debt-sale proposal (skip negotiation)
+procedure eve_p12_wait_trade_alice(UserNotifyStream?, UserCmdStream).
+eve_p12_wait_trade_alice([trade_proposed(alice, _, ReqId)|In],
+                         [accept_trade(alice, ReqId?), balance|Out?]) :-
+    ground(ReqId?) |
+    eve_p12_wait_balance(In?, Out).
+eve_p12_wait_trade_alice([_|In], Out?) :-
+    otherwise | eve_p12_wait_trade_alice(In?, Out).
+eve_p12_wait_trade_alice([], []).
+
+procedure eve_p12_wait_balance(UserNotifyStream?, UserCmdStream).
+eve_p12_wait_balance([balance_report(_)|In], [done|Out?]) :-
+    eve_p12_finish(In?, Out).
+eve_p12_wait_balance([_|In], Out?) :-
+    otherwise | eve_p12_wait_balance(In?, Out).
+eve_p12_wait_balance([], []).
+
+procedure eve_p12_finish(UserNotifyStream?, UserCmdStream).
+eve_p12_finish(_, []).

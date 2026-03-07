@@ -2,7 +2,7 @@
 %% Distributes incrementally-constructed messages to two consumers
 %% Suspends on unbound subterms until producer binds them
 
-procedure distribute(Stream?, Stream, Stream).
+procedure distribute(Stream(X)?, Stream(X), Stream(X)).
 distribute([X|Xs], [Y?|Ys?], [Z?|Zs?]) :-
     copy(X?, Y, Z),
     distribute(Xs?, Ys, Zs).
@@ -17,7 +17,7 @@ copy(X, Y?, Z?) :- compound(X?) |
     Y =.. Stream1?,
     Z =.. Stream2?.
 
-procedure copy_list(Stream?, Stream, Stream).
+procedure copy_list(Stream(X)?, Stream(X), Stream(X)).
 copy_list([], [], []).
 copy_list([H|T], [H1?|T1?], [H2?|T2?]) :-
     copy(H?, H1, H2),

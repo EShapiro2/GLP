@@ -27,7 +27,7 @@
 %% TEE — Stream splitter
 %% =============================================================================
 
-procedure tee(Stream?, Stream, Stream).
+procedure tee(Stream(X)?, Stream(X), Stream(X)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
@@ -35,7 +35,7 @@ tee([], [], []).
 %% SINK — Dummy consumer (discards stream)
 %% =============================================================================
 
-procedure sink(Stream?).
+procedure sink(Stream(X)?).
 sink([_|Xs]) :- sink(Xs?).
 sink([]).
 

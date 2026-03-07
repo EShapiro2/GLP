@@ -23,11 +23,11 @@ producer_b(control(Xs,Next?)) :-
     produce_batch_b(Xs,Xs1,Done),
     handover(Done?,Xs1?,Next).
 
-procedure handover(Done?, Stream?, Control).
+procedure handover(Done?, Stream(X)?, Control).
 handover(done,Xs,control(Xs?,Next?)).
 
-procedure produce_batch_a(Stream, Stream, Done).
+procedure produce_batch_a(Stream(X), Stream(X), Done).
 produce_batch_a([a,b,c|Xs],Xs?,done).
 
-procedure produce_batch_b(Stream, Stream, Done).
+procedure produce_batch_b(Stream(X), Stream(X), Done).
 produce_batch_b([d,e,f|Xs],Xs?,done).

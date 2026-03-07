@@ -6,17 +6,17 @@
 %% Type definitions
 Tree ::= void ; tree(_, Tree, Tree).
 
-procedure preorder(Tree?, Stream).
+procedure preorder(Tree?, Stream(X)).
 preorder(tree(X, L, R), Xs?) :-
     preorder(L?, Ls), preorder(R?, Rs), append([X?|Ls?], Rs?, Xs).
 preorder(void, []).
 
-procedure inorder(Tree?, Stream).
+procedure inorder(Tree?, Stream(X)).
 inorder(tree(X, L, R), Xs?) :-
     inorder(L?, Ls), inorder(R?, Rs), append(Ls?, [X?|Rs?], Xs).
 inorder(void, []).
 
-procedure postorder(Tree?, Stream).
+procedure postorder(Tree?, Stream(X)).
 postorder(tree(X, L, R), Xs?) :-
     postorder(L?, Ls),
     postorder(R?, Rs),
@@ -25,7 +25,7 @@ postorder(tree(X, L, R), Xs?) :-
 postorder(void, []).
 
 %% append for use in traversals
-procedure append(Stream?, Stream?, Stream).
+procedure append(Stream(X)?, Stream(X)?, Stream(X)).
 append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 

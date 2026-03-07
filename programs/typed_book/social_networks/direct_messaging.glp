@@ -8,7 +8,6 @@
 MsgList ::= [] ; [_ | MsgList].
 FriendEntry ::= (_, _).
 FriendList ::= [] ; [FriendEntry | FriendList].
-Channel ::= ch(Stream?, Stream).
 AttInfo ::= att(_, _).
 
 %% Modified establishment for direct messaging
@@ -21,7 +20,7 @@ establish(yes, From, Resp, Fs, Fs1, In, In1) :-
     attestation(DMCh, att(From, _)) |  % Verify DM channel from authenticated friend
     handle_friend(From?, FIn?, FOut?, DMIn?, DMOut?, Fs?, Fs1, In?, In1).
 
-procedure new_channel(Channel, Channel).
+procedure new_channel(Channel(X, Y), Channel(X, Y)).
 
 procedure attestation(_?, AttInfo).
 

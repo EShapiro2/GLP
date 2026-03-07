@@ -1,6 +1,6 @@
 %% test_agent_init.glp - minimal test case
 
-procedure agent_init(Constant?, Channel).
+procedure agent_init(Constant?, Channel(X, Y)).
 agent_init(Id, ch(NetOut?, NetIn)) :-
     ground(Id?) |
     true.

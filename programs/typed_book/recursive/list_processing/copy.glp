@@ -4,7 +4,7 @@
 %% Uses predefined Stream type
 
 %% Procedure type declarations
-procedure copy(Stream?, Stream).
+procedure copy(Stream(X)?, Stream(X)).
 copy([], []).
 copy([X|Xs], [X?|Ys?]) :- copy(Xs?, Ys).
 

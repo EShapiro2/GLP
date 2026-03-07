@@ -1,0 +1,92 @@
+%% self.glp -- Play 12 shared type vocabulary
+%%
+%% All protocol types for the Village Market Month scenario.
+%% Extracted from bond_actors.glp type definitions.
+%% Defined once here, visible to all actor modules via ancestor scoping.
+
+-module(play12).
+
+%% =============================================================================
+%% CORE TYPES
+%% =============================================================================
+
+Bond     ::= bond(Constant, Constant, Constant).
+BondList ::= [] ; [Bond | BondList].
+
+ReqId ::= req(Constant).
+
+Lot     ::= lot(Constant, Constant, Constant).
+LotList ::= [] ; [Lot | LotList].
+
+Installment ::= installment(Constant, Constant).
+Schedule    ::= [] ; [Installment | Schedule].
+
+Decision ::= yes ; no.
+
+%% =============================================================================
+%% ESCROW TYPES
+%% =============================================================================
+
+EscrowCancel    ::= cancel ; no_cancel.
+EscrowBenResult ::= released ; cancelled.
+EscrowDepResult ::= expired ; returned.
+
+%% =============================================================================
+%% USER <-> MEDIATOR INTERFACE
+%% =============================================================================
+
+%% User -> Mediator (actor writes these)
+UserCmd ::= mint(Constant, Constant)
+          ; balance
+          ; done
+          ; connect(Constant)
+          ; decision(Decision, Constant, ReqId)
+          ; credit(Constant, Constant, Constant)
+          ; accept_credit(Constant, ReqId)
+          ; reject_credit(Constant, ReqId)
+          ; pay(Constant, Constant)
+          ; redeem(Constant, Constant, Constant)
+          ; loan(Constant, Constant, Schedule)
+          ; accept_loan(Constant, ReqId)
+          ; reject_loan(Constant, ReqId)
+          ; trade(Constant, LotList, LotList)
+          ; accept_trade(Constant, ReqId)
+          ; reject_trade(Constant, ReqId)
+          ; deposit_escrow(Constant, LotList, Constant)
+          ; cancel_escrow(Constant, ReqId).
+
+%% Mediator -> User (actor reads these)
+UserNotify ::= minted(Constant, Constant)
+             ; balance_report(BondList)
+             ; befriend(Constant, ReqId)
+             ; connected(Constant)
+             ; rejected
+             ; rejected(Constant)
+             ; credit_proposed(Constant, Constant, Constant, ReqId)
+             ; credit_opened(Constant, Constant)
+             ; credit_rejected(Constant)
+             ; paid(Constant, Constant)
+             ; payment_received(Constant, Constant)
+             ; payment_failed(Constant, Constant)
+             ; redeemed(Constant, Constant)
+             ; redeem_failed(Constant, Constant)
+             ; redeem_received(Constant, Constant)
+             ; loan_proposed(Constant, Constant, ReqId)
+             ; loan_opened(Constant, Constant, Constant)
+             ; loan_rejected(Constant)
+             ; trade_proposed(Constant, LotList, ReqId)
+             ; trade_completed(Constant)
+             ; trade_failed(Constant)
+             ; trade_returned(Constant)
+             ; escrow_deposited(Constant, Constant, ReqId)
+             ; escrow_received(Constant, Constant)
+             ; escrow_released(Constant)
+             ; escrow_cancelled(Constant)
+             ; escrow_expired(Constant)
+             ; escrow_returned(Constant)
+             ; escrow_failed(Constant).
+
+UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].
+UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
+
+ActorChannel ::= ch(UserNotifyStream, UserCmdStream?).

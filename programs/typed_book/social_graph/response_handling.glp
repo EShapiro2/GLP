@@ -8,11 +8,10 @@
 MsgList ::= [] ; [_ | MsgList].
 FriendEntry ::= (_, _).
 FriendList ::= [] ; [FriendEntry | FriendList].
-Channel ::= ch(Stream?, Stream).
 Response ::= accept(Channel) ; no.
 
 %% Channel operations (defined guard)
-procedure new_channel(Channel, Channel).
+procedure new_channel(Channel(X, Y), Channel(X, Y)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
 % Bind response based on user decision

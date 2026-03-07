@@ -4,7 +4,7 @@
 %% Uses predefined Stream type
 
 %% Procedure type declaration
-procedure append(Stream?, Stream?, Stream).
+procedure append(Stream(X)?, Stream(X)?, Stream(X)).
 append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 

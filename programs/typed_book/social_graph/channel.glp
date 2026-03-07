@@ -1,11 +1,11 @@
 % Channel Operations (Program 9 from GLP 2025 paper)
 % Channel type is defined in prelude as: Channel ::= ch(Stream, Stream?).
 
-procedure send(_?, Channel?, Channel).
+procedure send(_?, Channel(X, Y)?, Channel(X, Y)).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 
-procedure receive(_, Channel?, Channel).
+procedure receive(_, Channel(X, Y)?, Channel(X, Y)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
 
-procedure new_channel(Channel, Channel).
+procedure new_channel(Channel(X, Y), Channel(X, Y)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).

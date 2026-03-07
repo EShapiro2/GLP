@@ -4,10 +4,10 @@
 %% Uses predefined Stream type
 
 %% Procedure type declarations
-procedure length(Stream?, Number).
+procedure length(Stream(X)?, Number).
 length(Xs, N?) :- length_acc(Xs?, 0, N).
 
-procedure length_acc(Stream?, Number?, Number).
+procedure length_acc(Stream(X)?, Number?, Number).
 length_acc([], Acc, Acc?).
 length_acc([_|Xs], Acc, N?) :-
     Acc1 := Acc? + 1,

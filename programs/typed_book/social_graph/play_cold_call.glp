@@ -10,7 +10,6 @@
 %% =============================================================================
 
 %% Channel: position 1 is output (write), position 2 is input (read when consumed)
-Channel ::= ch(Stream, Stream?).
 
 %% Friend management
 FriendEntry ::= (_, Channel).
@@ -35,14 +34,14 @@ PendingList ::= [] ; [PendingEntry | PendingList].
 %% CHANNEL OPERATIONS
 %% =============================================================================
 
-procedure new_channel(Channel, Channel).
+procedure new_channel(Channel(X, Y), Channel(X, Y)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
 %% =============================================================================
 %% MERGE (for combining user and network inputs)
 %% =============================================================================
 
-procedure merge(Stream?, Stream?, Stream).
+procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).
@@ -70,12 +69,12 @@ lookup_pending(_, [], not_found).
 %% =============================================================================
 
 %% Agent state: Id, UserChannel, NetChannel, Friends, Pending
-procedure agent(_?, Channel?, Channel?).
+procedure agent(_?, Channel(X, Y)?, Channel(X, Y)?).
 agent(Id, UserCh, NetCh) :-
     ground(Id?) |
     agent_loop(Id?, UserCh?, NetCh?, [], []).
 
-procedure agent_loop(_?, Channel?, Channel?, FriendList?, PendingList?).
+procedure agent_loop(_?, Channel(X, Y)?, Channel(X, Y)?, FriendList?, PendingList?).
 
 %% --- User wants to connect to someone ---
 agent_loop(Id, ch([connect(Target)|UserIn], UserOut?), NetCh, Fs, Ps) :-
@@ -120,11 +119,11 @@ agent_loop(Id, ch(UserIn, [rejected(From?)|UserOut?]), ch([response(From, no)|Ne
 agent_loop(_, ch([], []), ch([], []), _, _).
 
 %% --- Helper: send intro ---
-procedure send_intro(_?, _?, Channel?, Channel, Response?).
+procedure send_intro(_?, _?, Channel(X, Y)?, Channel(X, Y), Response?).
 send_intro(Id, Target, ch(NetIn, [intro(Id?, Resp?)|NetOut?]), ch(NetIn?, NetOut), Resp).
 
 %% --- Helper: handle response to our connect ---
-procedure handle_connect_response(_?, _?, Response?, Stream?, Stream, Channel?, FriendList?, PendingList?).
+procedure handle_connect_response(_?, _?, Response?, Stream(X)?, Stream(X), Channel(X, Y)?, FriendList?, PendingList?).
 handle_connect_response(Id, Target, accept(TheirCh), UserIn, [connected(Target?)|UserOut?], NetCh, Fs, Ps) :-
     ground(Id?), ground(Target?) |
     agent_loop(Id?, ch(UserIn?, UserOut), NetCh?, [(Target?, TheirCh?)|Fs?], Ps?).
@@ -133,21 +132,21 @@ handle_connect_response(Id, Target, no, UserIn, [rejected(Target?)|UserOut?], Ne
     agent_loop(Id?, ch(UserIn?, UserOut), NetCh?, Fs?, Ps?).
 
 %% --- Helper: handle user accepting ---
-procedure handle_accept(_?, _?, Stream?, Stream, Channel?, FriendList?, PendingList?).
+procedure handle_accept(_?, _?, Stream(X)?, Stream(X), Channel(X, Y)?, FriendList?, PendingList?).
 handle_accept(Id, From, UserIn, [connected(From?)|UserOut?], ch(NetIn, [response(Id?, accept(TheirCh?))|NetOut?]), Fs, Ps) :-
     ground(Id?), ground(From?) |
     lookup_pending(From?, Ps?, LookupResult),
     fill_accept_response(LookupResult?, From?, OurCh, TheirCh),
     agent_loop(Id?, ch(UserIn?, UserOut), ch(NetIn?, NetOut), [(From?, OurCh?)|Fs?], Ps?).
 
-procedure fill_accept_response(_, _?, Channel, Channel).
+procedure fill_accept_response(_, _?, Channel(X, Y), Channel(X, Y)).
 fill_accept_response(found(Resp), From, OurCh, TheirCh) :-
     ground(From?) |
     new_channel(OurCh, TheirCh),
     Resp = accept(TheirCh?).
 
 %% --- Helper: handle user rejecting ---
-procedure handle_reject(_?, _?, Stream?, Stream, Channel?, FriendList?, PendingList?).
+procedure handle_reject(_?, _?, Stream(X)?, Stream(X), Channel(X, Y)?, FriendList?, PendingList?).
 handle_reject(Id, From, UserIn, [rejected(From?)|UserOut?], ch(NetIn, [response(Id?, no)|NetOut?]), Fs, Ps) :-
     ground(Id?), ground(From?) |
     lookup_pending(From?, Ps?, LookupResult),
@@ -163,7 +162,7 @@ fill_reject_response(not_found).
 %% Routes messages between alice and bob
 %% =============================================================================
 
-procedure router(Channel?, Channel?).
+procedure router(Channel(X, Y)?, Channel(X, Y)?).
 
 %% Alice sends to Bob (intro or response)
 router(ch([intro(alice, X)|AliceIn], AliceOut?),
@@ -191,26 +190,26 @@ router(ch([], _), ch([], _)).
 %% =============================================================================
 
 %% Bob: initiates connect to alice, then done
-procedure bob_actor(Channel?).
+procedure bob_actor(Channel(X, Y)?).
 bob_actor(ch([connected(alice)|In], [connect(alice)|Out?])) :-
     bob_done(In?, Out).
 bob_actor(ch([rejected(alice)|In], [connect(alice)|Out?])) :-
     bob_done(In?, Out).
 
-procedure bob_done(Stream?, Stream).
+procedure bob_done(Stream(X)?, Stream(X)).
 bob_done([], []).
 bob_done([_|Xs], Ys?) :- bob_done(Xs?, Ys).
 
 %% Alice: receives incoming, accepts, then done
-procedure alice_actor(Channel?).
+procedure alice_actor(Channel(X, Y)?).
 alice_actor(ch([incoming(bob)|In], Out?)) :-
     alice_respond(In?, Out).
 
-procedure alice_respond(Stream?, Stream).
+procedure alice_respond(Stream(X)?, Stream(X)).
 alice_respond([connected(bob)|In], [accept(bob)|Out?]) :-
     alice_done(In?, Out).
 
-procedure alice_done(Stream?, Stream).
+procedure alice_done(Stream(X)?, Stream(X)).
 alice_done([], []).
 alice_done([_|Xs], Ys?) :- alice_done(Xs?, Ys).
 

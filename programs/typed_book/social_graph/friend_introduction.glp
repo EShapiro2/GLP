@@ -16,10 +16,9 @@ MsgList ::= [] ; [SocialMsg | MsgList].
 %% Friend list entries
 FriendEntry ::= (_, _).
 FriendList ::= [] ; [FriendEntry | FriendList].
-Channel ::= ch(Stream?, Stream).
 
 %% Channel operations (defined guard)
-procedure new_channel(Channel, Channel).
+procedure new_channel(Channel(X, Y), Channel(X, Y)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
 procedure social_graph(_?, MsgList?, FriendList?).

@@ -1,0 +1,95 @@
+%% bob.glp -- Farmer actor for Play 12 (Village Market Month)
+%%
+%% Bob accepts Alice's befriend, connects to Diana.
+%% Symmetric trade with Alice (15-for-15).
+%% Negotiated loan from Diana (24 bob-bonds for 20 diana-coins, skip rejection).
+%% Pays Alice for bread.
+%%
+%% Types: from self.glp (ancestor scoping)
+
+-module(bob).
+-mode(system).
+
+exported procedure bob_p12(ActorChannel?).
+bob_p12(ch(In, Out?)) :-
+    bob_p12_wait_befriend_alice(In?, Out).
+
+%% Act 1: Accept Alice's befriend request
+procedure bob_p12_wait_befriend_alice(UserNotifyStream?, UserCmdStream).
+bob_p12_wait_befriend_alice([befriend(alice, ReqId)|In],
+                            [decision(yes, alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob_p12_wait_connected_alice(In?, Out).
+bob_p12_wait_befriend_alice([_|In], Out?) :-
+    otherwise | bob_p12_wait_befriend_alice(In?, Out).
+bob_p12_wait_befriend_alice([], []).
+
+procedure bob_p12_wait_connected_alice(UserNotifyStream?, UserCmdStream).
+bob_p12_wait_connected_alice([connected(alice)|In],
+                             [connect(diana)|Out?]) :-
+    bob_p12_wait_connected_diana(In?, Out).
+bob_p12_wait_connected_alice([_|In], Out?) :-
+    otherwise | bob_p12_wait_connected_alice(In?, Out).
+bob_p12_wait_connected_alice([], []).
+
+procedure bob_p12_wait_connected_diana(UserNotifyStream?, UserCmdStream).
+bob_p12_wait_connected_diana([connected(diana)|In],
+                             [mint(15, 0)|Out?]) :-
+    bob_p12_wait_minted1(In?, Out).
+bob_p12_wait_connected_diana([_|In], Out?) :-
+    otherwise | bob_p12_wait_connected_diana(In?, Out).
+bob_p12_wait_connected_diana([], []).
+
+%% Act 2a: Mint bob-coins for symmetric trade with Alice
+procedure bob_p12_wait_minted1(UserNotifyStream?, UserCmdStream).
+bob_p12_wait_minted1([minted(15, 0)|In], Out?) :-
+    bob_p12_wait_trade_alice(In?, Out).
+bob_p12_wait_minted1([_|In], Out?) :-
+    otherwise | bob_p12_wait_minted1(In?, Out).
+bob_p12_wait_minted1([], []).
+
+%% Accept Alice's symmetric trade proposal
+procedure bob_p12_wait_trade_alice(UserNotifyStream?, UserCmdStream).
+bob_p12_wait_trade_alice([trade_proposed(alice, _, ReqId)|In],
+                         [accept_trade(alice, ReqId?), mint(24, 25)|Out?]) :-
+    ground(ReqId?) |
+    bob_p12_wait_minted2(In?, Out).
+bob_p12_wait_trade_alice([_|In], Out?) :-
+    otherwise | bob_p12_wait_trade_alice(In?, Out).
+bob_p12_wait_trade_alice([], []).
+
+%% Act 2c: Mint bob-bonds(Day25) for loan from Diana
+procedure bob_p12_wait_minted2(UserNotifyStream?, UserCmdStream).
+bob_p12_wait_minted2([minted(24, 25)|In],
+                     [trade(diana, [lot(bob, 25, 24)], [lot(diana, 0, 20)])|Out?]) :-
+    bob_p12_wait_trade_diana(In?, Out).
+bob_p12_wait_minted2([_|In], Out?) :-
+    otherwise | bob_p12_wait_minted2(In?, Out).
+bob_p12_wait_minted2([], []).
+
+%% Bob proposes 20% loan: 24 bob-bonds(25) for 20 diana-coins (skip negotiation)
+procedure bob_p12_wait_trade_diana(UserNotifyStream?, UserCmdStream).
+bob_p12_wait_trade_diana([trade_completed(diana)|In],
+                         [pay(alice, 5)|Out?]) :-
+    bob_p12_wait_paid_alice(In?, Out).
+bob_p12_wait_trade_diana([_|In], Out?) :-
+    otherwise | bob_p12_wait_trade_diana(In?, Out).
+bob_p12_wait_trade_diana([], []).
+
+%% Act 3a: Bob buys bread from Alice
+procedure bob_p12_wait_paid_alice(UserNotifyStream?, UserCmdStream).
+bob_p12_wait_paid_alice([paid(alice, 5)|In], [balance|Out?]) :-
+    bob_p12_wait_balance(In?, Out).
+bob_p12_wait_paid_alice([_|In], Out?) :-
+    otherwise | bob_p12_wait_paid_alice(In?, Out).
+bob_p12_wait_paid_alice([], []).
+
+procedure bob_p12_wait_balance(UserNotifyStream?, UserCmdStream).
+bob_p12_wait_balance([balance_report(_)|In], [done|Out?]) :-
+    bob_p12_finish(In?, Out).
+bob_p12_wait_balance([_|In], Out?) :-
+    otherwise | bob_p12_wait_balance(In?, Out).
+bob_p12_wait_balance([], []).
+
+procedure bob_p12_finish(UserNotifyStream?, UserCmdStream).
+bob_p12_finish(_, []).

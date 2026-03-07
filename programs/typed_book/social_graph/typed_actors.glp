@@ -52,7 +52,7 @@ ActorOut ::= [] ; [UserMsg|ActorOut].
 %% ALICE
 %% =============================================================================
 
-procedure alice_actor(Channel?).
+procedure alice_actor(Channel(X, Y)?).
 alice_actor(ch(In, [msg('_user', alice, connect(bob))|Out?])) :-
     alice_wait_bob_connected(In?, Out).
 
@@ -87,7 +87,7 @@ alice_wait_charlie_reply([], []).
 %% BOB
 %% =============================================================================
 
-procedure bob_actor(Channel?).
+procedure bob_actor(Channel(X, Y)?).
 bob_actor(ch([msg(agent, '_user', befriend(From, Resp))|In],
              [msg('_user', bob, decision(yes, From?, Resp?))|Out?])) :-
     ground(From?) |
@@ -123,7 +123,7 @@ bob_wait_charlie_msg([], []).
 %% CHARLIE
 %% =============================================================================
 
-procedure charlie_actor(Channel?).
+procedure charlie_actor(Channel(X, Y)?).
 charlie_actor(ch([msg(agent, '_user', befriend(From, Resp))|In],
                  [msg('_user', charlie, decision(yes, From?, Resp?)),
                   msg('_user', charlie, send(bob, 'Hi Bob, this is Charlie'))|Out?])) :-

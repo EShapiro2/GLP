@@ -14,9 +14,9 @@ procedure round_in_wave(Number?, Number).
 
 procedure first_round_of_wave(Number?, Number).
 
-procedure leader_of_wave(Number?, Stream?, _).
+procedure leader_of_wave(Number?, Stream(X)?, _).
 
-procedure is_leader(_?, Number?, Stream?).
+procedure is_leader(_?, Number?, Stream(X)?).
 
 procedure is_majority(Number?, Number?).
 
@@ -91,7 +91,7 @@ test_is_leader(Result?) :-
     check_is_leader(carol, 3, Participants?, R3),
     combine_results(R1?, R2?, R3?, Result).
 
-procedure check_is_leader(_?, Number?, Stream?, Result).
+procedure check_is_leader(_?, Number?, Stream(X)?, Result).
 check_is_leader(Agent, Wave, Participants, passed) :-
     is_leader(Agent?, Wave?, Participants?) | true.
 check_is_leader(_, _, _, failed) :-

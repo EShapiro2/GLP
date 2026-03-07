@@ -36,7 +36,7 @@ new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 %% - AgentCh: channel to/from social agent
 %% - DartCh: channel to/from Dart UI
 
-procedure ui_agent(Channel?, Channel?).
+procedure ui_agent(Channel(X, Y)?, Channel(X, Y)?).
 
 %% --- Messages FROM social agent TO user ---
 %% Validate that output contains only ground terms or writers, then pass through
@@ -72,7 +72,7 @@ ui_agent(AgentCh, DartCh) :-
 %% =============================================================================
 
 %% validate_and_send: check term and send to user
-procedure validate_and_send(_?, Channel?, Channel).
+procedure validate_and_send(_?, Channel(X, Y)?, Channel(X, Y)).
 validate_and_send(Msg, DartCh, DartCh1?) :-
     valid_for_user(Msg?) |
     send(Msg?, DartCh?, DartCh1).
@@ -96,7 +96,7 @@ not_bind(_) :- otherwise | true.
 %% MERGE
 %% =============================================================================
 
-procedure merge(Stream?, Stream?, Stream).
+procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).
@@ -123,7 +123,7 @@ lookup_send_step(_, _, [], []).
 %% INJECT_MSG - defer insertion until Resp is known
 %% =============================================================================
 
-procedure inject_msg(Response?, _?, _?, Stream?, Stream).
+procedure inject_msg(Response?, _?, _?, Stream(X)?, Stream(X)).
 inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
     known(Resp?) | true.
 inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
@@ -133,20 +133,20 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
 %% ADD_FRIEND - add friend to friends list
 %% =============================================================================
 
-procedure add_friend(_?, Stream, FriendsList?, FriendsList).
+procedure add_friend(_?, Stream(X), FriendsList?, FriendsList).
 add_friend(Name, Out?, Fs, [friend(Name?, Out)|Fs?]).
 
 %% =============================================================================
 %% RESPONSE HANDLING (Cold-call)
 %% =============================================================================
 
-procedure bind_response(_?, _?, Response, FriendsList?, FriendsList, Stream?, Stream).
+procedure bind_response(_?, _?, Response, FriendsList?, FriendsList, Stream(X)?, Stream(X)).
 bind_response(yes, From, accept(RetCh?), Fs, Fs1?, In, In1?) :-
     new_channel(RetCh, LocalCh) |
     handle_response(accept(LocalCh?), From?, Fs?, Fs1, In?, In1).
 bind_response(no, _, no, Fs, Fs?, In, In?).
 
-procedure handle_response(Response?, _?, FriendsList?, FriendsList, Stream?, Stream).
+procedure handle_response(Response?, _?, FriendsList?, FriendsList, Stream(X)?, Stream(X)).
 handle_response(accept(ch(FIn, FOut?)), From, Fs, Fs1?, In, In1?) :-
     ground(From?) |
     merge(In?, FIn?, In1),
@@ -155,7 +155,7 @@ handle_response(no, From, Fs, Fs1?, In, In?) :-
     ground(From?) |
     lookup_send(user, rejected(From?), Fs?, Fs1).
 
-procedure add_friend_and_notify(_?, Stream, FriendsList?, FriendsList).
+procedure add_friend_and_notify(_?, Stream(X), FriendsList?, FriendsList).
 add_friend_and_notify(From, FOut?, Fs, [friend(From?, FOut)|Fs1?]) :-
     ground(From?) |
     lookup_send(user, connected(From?), Fs?, Fs1).
@@ -164,7 +164,7 @@ add_friend_and_notify(From, FOut?, Fs, [friend(From?, FOut)|Fs1?]) :-
 %% AGENT - Main loop (Cold-call + Messaging + Friend Introduction)
 %% =============================================================================
 
-procedure agent(_?, Stream?, FriendsList?).
+procedure agent(_?, Stream(X)?, FriendsList?).
 
 %% --- Cold-call protocol ---
 
@@ -235,7 +235,7 @@ agent(_, [], _).
 %% AGENT INITIALIZATION
 %% =============================================================================
 
-procedure agent_init(_?, Channel?, Channel?).
+procedure agent_init(_?, Channel(X, Y)?, Channel(X, Y)?).
 agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
     merge(UserIn?, NetIn?, In),
     agent(Id?, In?, [friend(user, UserOut), friend(net, NetOut)]).

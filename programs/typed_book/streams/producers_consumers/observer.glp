@@ -21,5 +21,5 @@ procedure copy_to(_?, _, _).
 copy_to(X, X?, X?) :- ground(X?) | true.
 
 %% Helper to extract head and tail
-procedure head_tail(NonEmptyList?, _, Stream).
+procedure head_tail(NonEmptyList?, _, Stream(X)).
 head_tail([H|T], H?, T?).

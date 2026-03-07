@@ -4,7 +4,6 @@
 %% Enables concurrent block creation without consensus.
 
 %% Type definitions
-Stream ::= [] ; [_ | Stream].
 PayloadList ::= [] ; [_ | PayloadList].
 
 procedure streams(_, _).

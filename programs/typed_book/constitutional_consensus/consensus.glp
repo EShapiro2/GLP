@@ -329,14 +329,14 @@ handle_event(timeout(Round), State, State1, Out, Out1) :-
 %% ============================================
 
 %% Create block based on mode and round position
-procedure create_block(Number?, Mode?, Blocklace?, ParticipantList?, Stream?, _?, Block, Stream).
+procedure create_block(Number?, Mode?, Blocklace?, ParticipantList?, Stream(X)?, _?, Block, Stream(X)).
 create_block(Round, Mode, Blocklace, Participants, Pending, MyId, Block, PendOut) :-
     round_in_wave(Round?, Pos),
     tips(Blocklace?, Tips),
     create_block_by_pos(Pos?, Round?, Mode?, Blocklace?, Participants?,
                         Pending?, MyId?, Tips?, Block, PendOut).
 
-procedure create_block_by_pos(Number?, Number?, Mode?, Blocklace?, ParticipantList?, Stream?, _?, Blocklace?, Block, Stream).
+procedure create_block_by_pos(Number?, Number?, Mode?, Blocklace?, ParticipantList?, Stream(X)?, _?, Blocklace?, Block, Stream(X)).
 
 %% Round 1: Propose transaction (if any)
 create_block_by_pos(1, Round, low, _, _, [Tx|Rest], _, Tips,
@@ -366,7 +366,7 @@ create_block_by_pos(3, Round, _, _, _, Pending, _, Tips,
 %% ============================================
 
 %% Compute ordered sequence of finalized payloads
-procedure tau(Blocklace?, ParticipantList?, Stream).
+procedure tau(Blocklace?, ParticipantList?, Stream(X)).
 tau(Blocklace, Participants, Sequence) :-
     find_finalized(Blocklace?, Participants?, Finalized),
     order_by_wave(Finalized?, Ordered),
@@ -376,7 +376,7 @@ procedure order_by_wave(Blocklace?, Blocklace).
 order_by_wave(Blocks, Blocks?).
     %% Simplified: blocks already roughly ordered by round
 
-procedure extract_payloads(Blocklace?, Stream).
+procedure extract_payloads(Blocklace?, Stream(X)).
 extract_payloads([], []).
 extract_payloads([block(_, Payload, _)|Bs], [Payload?|Rest?]) :-
     ~(Payload? =?= empty) |
@@ -388,21 +388,21 @@ extract_payloads([block(_, empty, _)|Bs], Rest?) :-
 %% Helper: Stream Operations
 %% ============================================
 
-procedure member(_?, Stream?).
+procedure member(_?, Stream(X)?).
 member(X, [X?|_]).
 member(X?, [_|Xs]) :- member(X, Xs?).
 
-procedure append(Stream?, Stream?, Stream).
+procedure append(Stream(X)?, Stream(X)?, Stream(X)).
 append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 
-procedure length(Stream?, Number).
+procedure length(Stream(X)?, Number).
 length([], 0).
 length([_|Xs], N) :-
     length(Xs?, M),
     N := M? + 1.
 
-procedure nth0(Number?, Stream?, _).
+procedure nth0(Number?, Stream(X)?, _).
 nth0(0, [X|_], X?).
 nth0(N, [_|Xs], X?) :-
     N? > 0 |

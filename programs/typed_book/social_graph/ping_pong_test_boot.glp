@@ -28,12 +28,12 @@ boot :-
 
 %% Alice: immediately sends ping to bob via net, waits for pong
 %% Uses direct head binding instead of =/2 to ensure network output is bound
-procedure ping_agent(_?, Channel?, Channel?).
+procedure ping_agent(_?, Channel(X, Y)?, Channel(X, Y)?).
 ping_agent(Id, _, ch(NetIn, [msg(bob, ping(Id?))|NetOut1?])) :-
     ground(Id?) |
     wait_pong(NetIn?, NetOut1).
 
-procedure wait_pong(Stream?, Stream).
+procedure wait_pong(Stream(X)?, Stream(X)).
 wait_pong([msg(_, pong)|_], []).
 wait_pong([_|In], Out?) :- otherwise | wait_pong(In?, Out).
 wait_pong([], []).
@@ -44,11 +44,11 @@ wait_pong([], []).
 
 %% Bob: waits for ping from NetIn, sends pong to NetOut
 %% Uses direct head binding for network output
-procedure pong_agent(_?, Channel?, Channel?).
+procedure pong_agent(_?, Channel(X, Y)?, Channel(X, Y)?).
 pong_agent(_, _, ch(NetIn, NetOut?)) :-
     wait_ping(NetIn?, NetOut).
 
-procedure wait_ping(Stream?, Stream).
+procedure wait_ping(Stream(X)?, Stream(X)).
 %% Received ping - send pong back and terminate
 wait_ping([msg(From, ping(_))|_], [msg(From?, pong)]) :-
     ground(From?) | true.
