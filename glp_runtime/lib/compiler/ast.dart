@@ -251,6 +251,7 @@ class Module extends AstNode {
   final ModuleDeclaration? declaration;
   final List<TypeDef> typeDefs;              // Type definitions: Name ::= alt ; alt.
   final List<ProcDecl> procDeclarations;     // Procedure declarations (each with exported flag)
+  final List<ProcDecl> paramProcDecls;       // Parameterized proc decl templates (for call-site inference)
   final List<Procedure> procedures;
   final CompileMode compileMode;  // user (default) or system
 
@@ -258,6 +259,7 @@ class Module extends AstNode {
     this.declaration,
     this.typeDefs = const [],
     this.procDeclarations = const [],
+    this.paramProcDecls = const [],
     this.procedures = const [],
     this.compileMode = CompileMode.user,
     required int line,

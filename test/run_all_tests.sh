@@ -1000,6 +1000,9 @@ NEGATIVE_FILES=(
 
     # --- parameterized types negative ---
     "$TYPED/param_arity_mismatch.glp"
+
+    # --- parameterized proc decl negative (Case A: own clauses checked) ---
+    "$TC_DIR/negative/body/param_merge_wrong_mode.glp"
 )
 
 # Build REPL input with :clear between each negative file

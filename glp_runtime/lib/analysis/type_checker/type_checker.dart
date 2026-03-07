@@ -172,8 +172,6 @@ class TypeChecker {
 
     // Check each declared procedure
     for (final procDecl in typeEnv.procedures.values) {
-      // Skip parameterized proc decls — type params have no DFA states.
-      if (procDecl.isParameterized) continue;
       final key = procDecl.key;
       final procClauses = procedureClauses[key];
 

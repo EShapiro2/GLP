@@ -276,9 +276,13 @@ class ProcDecl {
 class TypeEnvironment {
   final Map<String, TypeDef> types;
   final Map<String, ProcDecl> procedures;  // keyed by "name/arity"
-  
-  TypeEnvironment(this.types, this.procedures);
-  
+  /// Parameterized procedure declaration templates, keyed by "name/arity".
+  /// Used for call-site type parameter inference (Case B).
+  final Map<String, ProcDecl> paramProcDecls;
+
+  TypeEnvironment(this.types, this.procedures, {Map<String, ProcDecl>? paramProcDecls})
+      : paramProcDecls = paramProcDecls ?? {};
+
   factory TypeEnvironment.empty() => TypeEnvironment({}, {});
   
   /// Merge another environment into this one
@@ -286,6 +290,7 @@ class TypeEnvironment {
     return TypeEnvironment(
       {...types, ...other.types},
       {...procedures, ...other.procedures},
+      paramProcDecls: {...paramProcDecls, ...other.paramProcDecls},
     );
   }
   

@@ -114,7 +114,7 @@ TypeEnvironment buildTypeEnvironment(ast.Module module, {TypeEnvironment? ancest
   final procedures = Map<String, ProcDecl>.from(merged.procedures);
   _resolveAliases(types, procedures);
 
-  return TypeEnvironment(types, procedures);
+  return TypeEnvironment(types, procedures, paramProcDecls: merged.paramProcDecls);
 }
 
 /// Build TypeEnvironment from Module's type definitions and procedure declarations
@@ -125,6 +125,7 @@ TypeEnvironment _buildEnvironmentFromModule(
 }) {
   final types = <String, TypeDef>{};
   final procedures = <String, ProcDecl>{};
+  final paramProcDecls = <String, ProcDecl>{};
 
   // Add type definitions (including aliases - will be resolved later)
   for (final typeDef in module.typeDefs) {
@@ -170,12 +171,17 @@ TypeEnvironment _buildEnvironmentFromModule(
     }
   }
 
+  // Add parameterized proc decl templates (for call-site inference)
+  for (final paramDecl in module.paramProcDecls) {
+    paramProcDecls[paramDecl.qualifiedKey] = paramDecl;
+  }
+
   // Resolve aliases (preprocessing step per v0.8 spec) - only if requested
   if (resolveAliasesNow) {
     _resolveAliases(types, procedures);
   }
 
-  return TypeEnvironment(types, procedures);
+  return TypeEnvironment(types, procedures, paramProcDecls: paramProcDecls);
 }
 
 /// Extract all clauses from a Module's procedures

@@ -139,6 +139,7 @@ TypeEnvironment assembleTypeScope({
 TypeEnvironment _buildScopeFromModule(ast.Module module) {
   final types = <String, TypeDef>{};
   final procedures = <String, ProcDecl>{};
+  final paramProcDecls = <String, ProcDecl>{};
 
   for (final typeDef in module.typeDefs) {
     types[typeDef.name] = typeDef;
@@ -148,5 +149,9 @@ TypeEnvironment _buildScopeFromModule(ast.Module module) {
     procedures[procDecl.qualifiedKey] = procDecl;
   }
 
-  return TypeEnvironment(types, procedures);
+  for (final paramDecl in module.paramProcDecls) {
+    paramProcDecls[paramDecl.qualifiedKey] = paramDecl;
+  }
+
+  return TypeEnvironment(types, procedures, paramProcDecls: paramProcDecls);
 }
