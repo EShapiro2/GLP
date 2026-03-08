@@ -357,7 +357,7 @@ handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Se
 %%   payment    — WantSpec is empty (proposer gives coins, wants nothing back).
 %%                Auto-accept: nobody refuses free money.
 %%   redemption — OfferedBonds is exactly one coin issued by me.
-%%                Auto-accept with redemption priority rule.
+%%                Auto-accept with requested bond, or reject with menu.
 %%   normal     — everything else. Present to user for decision.
 
 procedure classify_trade(Constant?, LotList?, BondList?, Constant).
