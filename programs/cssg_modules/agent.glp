@@ -59,7 +59,7 @@ close_outputs([]).
 %% INTRO_AWAIT_PEER
 %% =============================================================================
 
-procedure intro_await_peer(Constant?, Channel?, IntroResult).
+procedure intro_await_peer(Constant?, IntroChannel?, IntroResult).
 
 intro_await_peer(Other, ch([ack(_)|ChIn], ChOut?),
                  intro_result(Other?, ch(ChIn?, ChOut))).

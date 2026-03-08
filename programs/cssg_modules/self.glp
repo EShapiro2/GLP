@@ -80,11 +80,11 @@ NetInMsg    ::= msg(Constant, NetColdCall)
 NetInStream ::= [] ; [NetInMsg | NetInStream].
 
 %% Intro result — written by intro_await_peer, injected into UserIn
-IntroResult ::= intro_result(Constant, Channel) ; intro_rejected(Constant).
+IntroResult ::= intro_result(Constant, IntroChannel) ; intro_rejected(Constant).
 
 %% Agent input stream (user messages + injected intro results)
 UserInMsg    ::= msg(Constant, Constant, UserContent)
-               ; intro_result(Constant, Channel)
+               ; intro_result(Constant, IntroChannel)
                ; intro_rejected(Constant).
 UserInStream ::= [] ; [UserInMsg | UserInStream].
 
