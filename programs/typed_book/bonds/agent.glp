@@ -372,28 +372,6 @@ classify_trade(Id, _, [bond(I, 0, _)], redemption) :- Id? =?= I? | true.
 classify_trade(_, _, _, normal) :- otherwise | true.
 
 %% =============================================================================
-%% FIND_COIN_BY_ISSUER — Find one coin issued by Issuer in holdings
-%% =============================================================================
-%%
-%% Searches for a bond(Issuer, 0, _) — a coin (maturity 0) issued by Issuer.
-%% Returns found/not_found status, the coin if found, and remaining holdings.
-
-procedure find_coin_by_issuer(Constant?, BondList?, Constant, BondList, BondList).
-
-%% Found a coin by Issuer — return it
-find_coin_by_issuer(Issuer, [bond(I, 0, S)|Rest], found,
-    [bond(I?, 0, S?)], Rest?) :-
-    Issuer? =?= I? | true.
-
-%% Not a match — keep looking
-find_coin_by_issuer(Issuer, [B|Rest], Status?, Coin?, [B?|Rem?]) :-
-    otherwise |
-    find_coin_by_issuer(Issuer?, Rest?, Status, Coin, Rem).
-
-%% Not found
-find_coin_by_issuer(_, [], not_found, [], []).
-
-%% =============================================================================
 %% BUILD_MENU — One bond per issuer, earliest maturity
 %% =============================================================================
 %%
@@ -456,12 +434,12 @@ trade_dispatch(payment, Id, From, _, OfferedBonds, trade_accept([]),
     lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
 
-%% Redemption — find proposer's coin in our holdings
+%% Redemption — auto-accept with requested bond, or reject with menu
 trade_dispatch(redemption, Id, From, WantSpec, OfferedBonds, TradeResp?,
     Holdings, UserIn, NetIn, Outs, NextSerial) :-
-    find_coin_by_issuer(From?, Holdings?, CoinStatus, Coin, HoldingsAfterCoin),
-    redemption_dispatch(CoinStatus?, Id?, From?, WantSpec?, OfferedBonds?, TradeResp,
-        Coin?, HoldingsAfterCoin?,
+    select_bonds_by_spec(WantSpec?, Holdings?, Status, Selected, Remaining),
+    redemption_result(Status?, Id?, From?, TradeResp, OfferedBonds?,
+        Selected?, Remaining?,
         UserIn?, NetIn?, Outs?, NextSerial?).
 
 %% Normal trade — present to user
@@ -473,48 +451,23 @@ trade_dispatch(normal, Id, From, WantSpec, OfferedBonds, TradeResp?,
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
 
 %% =============================================================================
-%% REDEMPTION_DISPATCH — Branch on coin found / not found
+%% REDEMPTION_RESULT — Accept with requested bond or reject with menu
 %% =============================================================================
 
-procedure redemption_dispatch(Constant?, Constant?, Constant?, LotList?, BondList?,
-    TradeResponse, BondList?, BondList?,
-    UserInStream?, NetInStream?, OutputsList?, Constant?).
-
-%% Priority 1: We hold a p-coin — return it, ignore WantSpec
-redemption_dispatch(found, Id, From, _, OfferedBonds, trade_accept(Coin?),
-    Coin, Remaining,
-    UserIn, NetIn, Outs, NextSerial) :-
-    append(Remaining?, OfferedBonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
-
-%% Priority 2/3: No p-coin — try what proposer asked for
-redemption_dispatch(not_found, Id, From, WantSpec, OfferedBonds, TradeResp?,
-    _, Holdings,
-    UserIn, NetIn, Outs, NextSerial) :-
-    select_bonds_by_spec(WantSpec?, Holdings?, Status, Selected, Remaining),
-    redemption_fill(Status?, Id?, From?, TradeResp, OfferedBonds?,
-        Selected?, Remaining?,
-        UserIn?, NetIn?, Outs?, NextSerial?).
-
-%% =============================================================================
-%% REDEMPTION_FILL — Fill or reject with menu
-%% =============================================================================
-
-procedure redemption_fill(Constant?, Constant?, Constant?, TradeResponse, BondList?,
+procedure redemption_result(Constant?, Constant?, Constant?, TradeResponse, BondList?,
     BondList?, BondList?,
     UserInStream?, NetInStream?, OutputsList?, Constant?).
 
-%% Priority 2: Can fill — accept with requested bonds
-redemption_fill(ok, Id, From, trade_accept(Selected?), OfferedBonds,
+%% Can fill — accept with requested bonds
+redemption_result(ok, Id, From, trade_accept(Selected?), OfferedBonds,
     Selected, Remaining,
     UserIn, NetIn, Outs, NextSerial) :-
     append(Remaining?, OfferedBonds?, NewHoldings),
     lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
 
-%% Priority 3: Can't fill — reject with menu
-redemption_fill(fail, Id, From, trade_decline_menu(OfferedBonds?, Menu?), OfferedBonds,
+%% Can't fill — reject with menu
+redemption_result(fail, Id, From, trade_decline_menu(OfferedBonds?, Menu?), OfferedBonds,
     Selected, Remaining,
     UserIn, NetIn, Outs, NextSerial) :-
     append(Selected?, Remaining?, OrigHoldings),
