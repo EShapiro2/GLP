@@ -1,7 +1,8 @@
-FriendEntry ::= friend(String, Stream?).
+FriendMsg ::= msg(Constant, Constant).
+FriendEntry ::= friend(String, Stream(FriendMsg)?).
 FriendsList ::= [] ; [FriendEntry|FriendsList].
 
-procedure lookup_send_step(String?, _?, FriendsList?, FriendsList).
+procedure lookup_send_step(String?, FriendMsg?, FriendsList?, FriendsList).
 
 lookup_send_step(Key, Msg, [friend(K, [Msg?|Out1?])|Rest], [friend(K?, Out1)|Rest?]) :-
     Key? =?= K? | true.
