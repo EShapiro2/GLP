@@ -125,7 +125,7 @@ close_outputs([]).
 %% INTRO_AWAIT_PEER
 %% =============================================================================
 
-procedure intro_await_peer(Constant?, Channel?, IntroResult).
+procedure intro_await_peer(Constant?, IntroChannel?, IntroResult).
 
 intro_await_peer(Other, ch([ack(_)|ChIn], ChOut?),
                  intro_result(Other?, ch(ChIn?, ChOut))).
@@ -149,7 +149,7 @@ inject_intro_result(Res, [Y|Ys], [Y?|Ys1?]) :-
 %% GROUP_AWAIT_JOIN
 %% =============================================================================
 
-procedure group_await_join(GroupId?, Constant?, Channel?, GroupJoinResult).
+procedure group_await_join(GroupId?, Constant?, GroupSetupCreatorChannel?, GroupJoinResult).
 
 group_await_join(GroupId, Invitee, ch([ack(_)|ChIn], ChOut?),
                  group_join_ack(GroupId?, Invitee?, ch(ChIn?, ChOut))).
@@ -175,7 +175,7 @@ inject_group_result(Res, [Y|Ys], [Y?|Ys1?]) :-
 %% AWAIT_GROUP_CHANNEL
 %% =============================================================================
 
-procedure await_group_channel(Constant?, GroupId?, Stream?, UserInStream?, NetInStream?, OutputsList?).
+procedure await_group_channel(Constant?, GroupId?, GroupSetupResponseStream?, UserInStream?, NetInStream?, OutputsList?).
 await_group_channel(Id, GroupId, [group_channel(ch(FromHub, ToHub?))|_],
         UserIn, NetIn, Outs) :-
     ground(Id?), ground(GroupId?) |
