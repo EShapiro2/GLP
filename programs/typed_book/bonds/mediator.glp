@@ -20,7 +20,9 @@ BondList ::= [] ; [Bond | BondList].
 
 Lot     ::= lot(Constant, Constant, Constant).
 LotList ::= [] ; [Lot | LotList].
-TradeResponse ::= trade_accept(BondList) ; trade_decline(BondList).
+TradeResponse ::= trade_accept(BondList)
+               ; trade_decline(BondList)
+               ; trade_decline_menu(BondList, BondList).
 
 EscrowCancel    ::= cancel.
 EscrowBenResult ::= escrow_bonds(BondList) ; escrow_cancelled.
@@ -56,7 +58,8 @@ AgentContent ::= minted(Constant, Constant)
                ; escrow_cancelled(Constant)
                ; escrow_expired(Constant)
                ; escrow_returned(Constant)
-               ; escrow_failed(Constant).
+               ; escrow_failed(Constant)
+               ; trade_returned_menu(Constant, BondList).
 
 AgentToUserMsg    ::= msg(Constant, Constant, AgentContent).
 AgentToUserStream ::= [] ; [AgentToUserMsg | AgentToUserStream].
@@ -112,7 +115,8 @@ UserNotify ::= minted(Constant, Constant)
              ; escrow_cancelled(Constant)
              ; escrow_expired(Constant)
              ; escrow_returned(Constant)
-             ; escrow_failed(Constant).
+             ; escrow_failed(Constant)
+             ; trade_returned_menu(Constant, BondList).
 
 UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].
 UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
@@ -280,6 +284,15 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(msg(agent, '_user', trade_returned(Who)), AgentCh?, AgentCh1),
     ground(Who?) |
     send_user(trade_returned(Who?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- Agent-to-user: trade_returned_menu (ground — pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', trade_returned_menu(From, Menu)),
+            AgentCh?, AgentCh1),
+    ground(From?), ground(Menu?) |
+    send_user(trade_returned_menu(From?, Menu?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 %% --- User-to-agent: trade (pass through) ---

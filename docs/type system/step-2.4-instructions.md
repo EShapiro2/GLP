@@ -13,7 +13,9 @@
 
 The channel inside `intro_result(Constant, ...)` is constructed by `intro_await_peer` from an IntroChannel's streams. The streams have type IntroStream (the tail after stripping the ack is still IntroStream by the recursive type definition). So the result channel is `ch(IntroStream, IntroStream?)` = `IntroChannel`.
 
-The agent later treats this channel as a friend channel (merging FIn into NetIn, etc.), but that's a protocol transition at runtime. Since agent modules are `-mode(system)`, the clause-level type mismatch isn't checked. The type definitions need to be consistent with the *producer* (`intro_await_peer`), not the *consumer* (`agent`).
+The agent later treats this channel as a friend channel (merging FIn into NetIn, etc.), but the type definitions need to be consistent with the *producer* (`intro_await_peer`), which constructs the channel from IntroStream-typed streams.
+
+Note: `-mode(system)` does NOT exempt modules from type checking. It allows calling kernel predicates and using reserved constants. System-mode modules are fully type-checked.
 
 Also: `intro_await_peer`'s procedure declaration must change from bare `Channel?` to `IntroChannel?`.
 
@@ -272,4 +274,4 @@ Offer to push.
 
 If tests fail after 2.4e, the most likely cause is a `.glp` file somewhere that still references bare `Channel`, `Stream`, `OpenStream`, or `DiffList` without type parameters. Search for these in `programs/` (excluding `archive/`) and convert them.
 
-Files in `-mode(system)` still have their type definitions parsed as part of ancestor scope construction, so even system-mode files must not reference removed types. Procedure declarations in system-mode files may also be validated against the type environment.
+Files in `-mode(system)` still have their type definitions parsed as part of ancestor scope construction, so even system-mode files must not reference removed types. `-mode(system)` does NOT exempt modules from type checking — it only allows calling kernel predicates and using reserved constants. All modules are fully type-checked.

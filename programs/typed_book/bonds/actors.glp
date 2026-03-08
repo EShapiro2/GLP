@@ -59,7 +59,8 @@ UserNotify ::= minted(Constant, Constant)
              ; escrow_cancelled(Constant)
              ; escrow_expired(Constant)
              ; escrow_returned(Constant)
-             ; escrow_failed(Constant).
+             ; escrow_failed(Constant)
+             ; trade_returned_menu(Constant, BondList).
 
 UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].
 UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].

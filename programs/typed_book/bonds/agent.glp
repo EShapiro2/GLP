@@ -27,7 +27,9 @@ BondList ::= [] ; [Bond | BondList].
 %% Trade types
 Lot     ::= lot(Constant, Constant, Constant).
 LotList ::= [] ; [Lot | LotList].
-TradeResponse ::= trade_accept(BondList) ; trade_decline(BondList).
+TradeResponse ::= trade_accept(BondList)
+               ; trade_decline(BondList)
+               ; trade_decline_menu(BondList, BondList).
 
 %% Escrow cancel signal
 EscrowCancel ::= cancel.
@@ -89,7 +91,8 @@ AgentContent ::= minted(Constant, Constant)     %% minted(K, Maturity)
                ; escrow_cancelled(Constant)
                ; escrow_expired(Constant)
                ; escrow_returned(Constant)
-               ; escrow_failed(Constant).
+               ; escrow_failed(Constant)
+               ; trade_returned_menu(Constant, BondList).
 
 %% Agent input stream (from mediator + injected results)
 UserInMsg    ::= msg(Constant, Constant, UserContent)
@@ -98,7 +101,8 @@ UserInMsg    ::= msg(Constant, Constant, UserContent)
                ; escrow_ben_released(Constant, BondList)
                ; escrow_ben_cancelled(Constant)
                ; escrow_dep_expired(Constant)
-               ; escrow_dep_returned(Constant, BondList).
+               ; escrow_dep_returned(Constant, BondList)
+               ; trade_returned_bonds_menu(Constant, BondList, BondList).
 UserInStream ::= [] ; [UserInMsg | UserInStream].
 
 MediatorToAgentMsg    ::= msg(Constant, Constant, UserContent).
@@ -139,7 +143,8 @@ OutputContent ::= minted(Constant, Constant)
                 ; escrow_cancelled(Constant)
                 ; escrow_expired(Constant)
                 ; escrow_returned(Constant)
-                ; escrow_failed(Constant).
+                ; escrow_failed(Constant)
+                ; trade_returned_menu(Constant, BondList).
 OutputMsg    ::= msg(Constant, Constant, OutputContent)
                ; msg(Constant, NetColdCall).
 OutputStream ::= [] ; [OutputMsg | OutputStream].
@@ -301,6 +306,9 @@ inject_trade_result(trade_accept(TheirBonds), From, Ys,
 inject_trade_result(trade_decline(OurBonds), From, Ys,
     [trade_returned_bonds(From?, OurBonds?)|Ys?]) :-
     ground(From?), ground(OurBonds?) | true.
+inject_trade_result(trade_decline_menu(OurBonds, Menu), From, Ys,
+    [trade_returned_bonds_menu(From?, OurBonds?, Menu?)|Ys?]) :-
+    ground(From?), ground(OurBonds?), ground(Menu?) | true.
 inject_trade_result(Resp, From, [Y|Ys], [Y?|Ys1?]) :-
     inject_trade_result(Resp?, From?, Ys?, Ys1).
 
@@ -351,17 +359,89 @@ check_own_bond(Id, [_|Rest], Result?) :- otherwise | check_own_bond(Id?, Rest?, 
 check_own_bond(_, [], no).
 
 %% =============================================================================
+%% FIND_COIN_BY_ISSUER — Find one coin issued by Issuer in holdings
+%% =============================================================================
+%%
+%% Searches for a bond(Issuer, 0, _) — a coin (maturity 0) issued by Issuer.
+%% Returns found/not_found status, the coin if found, and remaining holdings.
+
+procedure find_coin_by_issuer(Constant?, BondList?, Constant, BondList, BondList).
+
+%% Found a coin by Issuer — return it
+find_coin_by_issuer(Issuer, [bond(I, 0, S)|Rest], found,
+    [bond(I?, 0, S?)], Rest?) :-
+    Issuer? =?= I? | true.
+
+%% Not a match — keep looking
+find_coin_by_issuer(Issuer, [B|Rest], Status?, Coin?, [B?|Rem?]) :-
+    otherwise |
+    find_coin_by_issuer(Issuer?, Rest?, Status, Coin, Rem).
+
+%% Not found
+find_coin_by_issuer(_, [], not_found, [], []).
+
+%% =============================================================================
+%% BUILD_MENU — One bond per issuer, earliest maturity
+%% =============================================================================
+%%
+%% Walks holdings, collecting the earliest bond per issuer (excluding own).
+%% Menu items show what's available for a rejected redeemer to choose from.
+
+procedure build_menu(Constant?, BondList?, BondList).
+build_menu(Id, Holdings, Menu?) :-
+    build_menu_acc(Id?, Holdings?, [], Menu).
+
+procedure build_menu_acc(Constant?, BondList?, BondList?, BondList).
+
+%% Skip own bonds
+build_menu_acc(Id, [bond(I, _, _)|Rest], Acc, Menu?) :-
+    Id? =?= I? |
+    build_menu_acc(Id?, Rest?, Acc?, Menu).
+
+%% Foreign bond — check if issuer already in accumulator
+build_menu_acc(Id, [bond(I, M, S)|Rest], Acc, Menu?) :-
+    otherwise |
+    menu_update(I?, M?, S?, Acc?, Acc1),
+    build_menu_acc(Id?, Rest?, Acc1?, Menu).
+
+%% Done
+build_menu_acc(_, [], Acc, Acc?).
+
+%% --- menu_update: insert or replace if earlier maturity ---
+
+procedure menu_update(Constant?, Constant?, Constant?, BondList?, BondList).
+
+%% Found same issuer — keep earlier maturity
+menu_update(I, M, S, [bond(I2, M2, _)|Rest],
+    [bond(I2?, M?, S?)|Rest?]) :-
+    I? =?= I2?, M? < M2? | true.
+
+%% Found same issuer — existing is earlier or equal, keep it
+menu_update(I, _, _, [bond(I2, M2, S2)|Rest],
+    [bond(I2?, M2?, S2?)|Rest?]) :-
+    I? =?= I2? | true.
+
+%% Different issuer — keep looking
+menu_update(I, M, S, [B|Rest], [B?|Rest1?]) :-
+    otherwise |
+    menu_update(I?, M?, S?, Rest?, Rest1).
+
+%% Not found — add new entry
+menu_update(I, M, S, [], [bond(I?, M?, S?)]).
+
+%% =============================================================================
 %% TRADE_DISPATCH — Branch on auto-accept vs. user decision
 %% =============================================================================
 
 procedure trade_dispatch(Constant?, Constant?, Constant?, LotList?, BondList?, TradeResponse,
     BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
 
-%% Redemption/payment — auto-accept
+%% Redemption — find proposer's coin in our holdings
 trade_dispatch(yes, Id, From, WantSpec, OfferedBonds, TradeResp?,
     Holdings, UserIn, NetIn, Outs, NextSerial) :-
-    select_bonds_by_spec(WantSpec?, Holdings?, Status, Selected, Remaining),
-    handle_trade_auto(Status?, Id?, From?, TradeResp, OfferedBonds?, Selected?, Remaining?,
+    find_coin_by_issuer(From?, Holdings?, CoinStatus, Coin, HoldingsAfterCoin),
+    redemption_dispatch(CoinStatus?, Id?, From?, WantSpec?, OfferedBonds?, TradeResp,
+        Coin?, HoldingsAfterCoin?,
         UserIn?, NetIn?, Outs?, NextSerial?).
 
 %% Normal trade — present to user
@@ -373,23 +453,59 @@ trade_dispatch(no, Id, From, WantSpec, OfferedBonds, TradeResp?,
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
 
 %% =============================================================================
-%% HANDLE_TRADE_AUTO — Auto-accept trade with user notification
+%% REDEMPTION_DISPATCH — Branch on coin found / not found
 %% =============================================================================
 
-procedure handle_trade_auto(Constant?, Constant?, Constant?, TradeResponse, BondList?, BondList?, BondList?,
+procedure redemption_dispatch(Constant?, Constant?, Constant?, LotList?, BondList?,
+    TradeResponse, BondList?, BondList?,
     UserInStream?, NetInStream?, OutputsList?, Constant?).
 
-%% Can fill: bind accept(our bonds), take offered bonds, notify user
-handle_trade_auto(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining,
+%% Priority 1: We hold a p-coin — return it, ignore WantSpec
+redemption_dispatch(found, Id, From, _, OfferedBonds, trade_accept(Coin?),
+    Coin, Remaining,
     UserIn, NetIn, Outs, NextSerial) :-
     append(Remaining?, OfferedBonds?, NewHoldings),
     lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
 
-%% Can't fill: bind decline(offered bonds back), reconstruct own holdings
-handle_trade_auto(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Selected, Remaining,
+%% Priority 2/3: No p-coin — try what proposer asked for
+redemption_dispatch(not_found, Id, From, WantSpec, OfferedBonds, TradeResp?,
+    _, Holdings,
+    UserIn, NetIn, Outs, NextSerial) :-
+    select_bonds_by_spec(WantSpec?, Holdings?, Status, Selected, Remaining),
+    redemption_fill(Status?, Id?, From?, TradeResp, OfferedBonds?,
+        Selected?, Remaining?,
+        UserIn?, NetIn?, Outs?, NextSerial?).
+
+%% =============================================================================
+%% REDEMPTION_FILL — Fill or reject with menu
+%% =============================================================================
+
+procedure redemption_fill(Constant?, Constant?, Constant?, TradeResponse, BondList?,
+    BondList?, BondList?,
+    UserInStream?, NetInStream?, OutputsList?, Constant?).
+
+%% Priority 2: Can fill — accept with requested bonds
+redemption_fill(ok, Id, From, trade_accept(Selected?), OfferedBonds,
+    Selected, Remaining,
+    UserIn, NetIn, Outs, NextSerial) :-
+    append(Remaining?, OfferedBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+
+%% Priority 3: Can't fill — reject with menu
+redemption_fill(fail, Id, From, trade_decline_menu(OfferedBonds?, Menu?), OfferedBonds,
+    Selected, Remaining,
     UserIn, NetIn, Outs, NextSerial) :-
     append(Selected?, Remaining?, OrigHoldings),
+    redemption_reject(Id?, From?, OrigHoldings?, Menu,
+        UserIn?, NetIn?, Outs?, NextSerial?).
+
+procedure redemption_reject(Constant?, Constant?, BondList?, BondList,
+    UserInStream?, NetInStream?, OutputsList?, Constant?).
+redemption_reject(Id, From, OrigHoldings, Menu?, UserIn, NetIn, Outs, NextSerial) :-
+    ground(OrigHoldings?) |
+    build_menu(Id?, OrigHoldings?, Menu),
     lookup_send('_user', msg(agent, '_user', trade_failed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
 
@@ -559,6 +675,13 @@ agent(Id, [trade_returned_bonds(From, OurBonds)|UserIn], NetIn, Outs, Holdings, 
     ground(Id?), ground(From?), ground(OurBonds?) |
     append(Holdings?, OurBonds?, NewHoldings),
     lookup_send('_user', msg(agent, '_user', trade_returned(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+
+%% Proposer: trade returned with menu (redemption rejected — menu of available bonds)
+agent(Id, [trade_returned_bonds_menu(From, OurBonds, Menu)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    ground(Id?), ground(From?), ground(OurBonds?), ground(Menu?) |
+    append(Holdings?, OurBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_returned_menu(From?, Menu?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
 
 %% Responder: incoming trade_propose (auto-accept if offered bonds include own)
