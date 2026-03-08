@@ -1,11 +1,8 @@
 %% nth.glp - Nth Element of List
 %% Source: Standard GLP list operations
 
-%% Type definitions
-NonEmptyList ::= [_ | Stream].
-
 %% Procedure type declarations
-procedure nth(Number?, NonEmptyList?, _).
+procedure nth(Number?, OpenStream(X)?, X).
 nth(1, [X|_], X?).
 nth(N, [_|Xs], X?) :- N? > 1 | N1 := N? - 1, nth(N1?, Xs?, X).
 
