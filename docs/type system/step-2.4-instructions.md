@@ -1,11 +1,21 @@
 # Step 2.4 Instructions: Parameterize self.glp and Remove Monomorphic Types
 
-**Date**: 2026-03-08
+**Date**: 2026-03-08 (revised after failed attempt with FriendChannel)
 **Context**: This is Step 7 in `current_plan.md`, corresponding to Step 2.4 in `parameterized-types-plan.md`.
 
 **Goal**: Parameterize the prelude's generic procedure declarations in `programs/self.glp`, convert all downstream files that reference bare `Channel` or `Stream` to use precise types, and remove the old monomorphic type definitions.
 
 **Prerequisite reading**: `docs/type system/typed-glp-handoff-2026-03-08.md`, `docs/type system/parameterized-types-plan.md`, `docs/type system/current_plan.md`.
+
+---
+
+## Key design decision: IntroResult carries IntroChannel
+
+The channel inside `intro_result(Constant, ...)` is constructed by `intro_await_peer` from an IntroChannel's streams. The streams have type IntroStream (the tail after stripping the ack is still IntroStream by the recursive type definition). So the result channel is `ch(IntroStream, IntroStream?)` = `IntroChannel`.
+
+The agent later treats this channel as a friend channel (merging FIn into NetIn, etc.), but that's a protocol transition at runtime. Since agent modules are `-mode(system)`, the clause-level type mismatch isn't checked. The type definitions need to be consistent with the *producer* (`intro_await_peer`), not the *consumer* (`agent`).
+
+Also: `intro_await_peer`'s procedure declaration must change from bare `Channel?` to `IntroChannel?`.
 
 ---
 
@@ -21,35 +31,44 @@ Run `bash test/run_all_tests.sh`. Confirm 390 pass. Commit baseline if there are
 
 ---
 
-## 2.4a — Fix `programs/cssg_modules/self.glp`
+## 2.4a — Fix `programs/cssg_modules/self.glp` and `programs/cssg_modules/agent.glp`
 
-Two bare `Channel` references need to become `FriendChannel` (already defined in this file). The channel in `intro_result` has completed the intro handshake and is used by the agent as a friend channel going forward.
+**In `cssg_modules/self.glp`** — two bare `Channel` references → `IntroChannel` (already defined in this file):
 
-**Edit 1** — In `IntroResult` type definition, change:
+**Edit 1** — `IntroResult` type definition:
 ```
 IntroResult ::= intro_result(Constant, Channel) ; intro_rejected(Constant).
 ```
-to:
+→
 ```
-IntroResult ::= intro_result(Constant, FriendChannel) ; intro_rejected(Constant).
+IntroResult ::= intro_result(Constant, IntroChannel) ; intro_rejected(Constant).
 ```
 
-**Edit 2** — In `UserInMsg` type definition, change the `intro_result` alternative from:
+**Edit 2** — `UserInMsg`, the `intro_result` alternative:
 ```
                ; intro_result(Constant, Channel)
 ```
-to:
+→
 ```
-               ; intro_result(Constant, FriendChannel)
+               ; intro_result(Constant, IntroChannel)
 ```
 
-Run tests. Commit: `fix(types): replace bare Channel with FriendChannel in cssg_modules/self.glp`
+**In `cssg_modules/agent.glp`** — update `intro_await_peer` proc declaration:
+```
+procedure intro_await_peer(Constant?, Channel?, IntroResult).
+```
+→
+```
+procedure intro_await_peer(Constant?, IntroChannel?, IntroResult).
+```
+
+Run tests. Commit: `fix(types): replace bare Channel with IntroChannel in cssg_modules`
 
 ---
 
-## 2.4b — Fix `programs/cssn_modules/self.glp`
+## 2.4b — Fix `programs/cssn_modules/self.glp` and agent.glp
 
-Multiple bare `Channel` references. Each one is either an intro channel or a group channel. Named types `IntroChannel` and `GroupChannel` are already defined in this file.
+**In `cssn_modules/self.glp`** — replace bare `Channel` with `IntroChannel`, `FriendChannel`, or `GroupChannel` as appropriate:
 
 **Edit 1** — `FriendContent`: two `Channel` → `GroupChannel`:
 ```
@@ -82,13 +101,13 @@ Multiple bare `Channel` references. Each one is either an intro channel or a gro
                ; group_channel(GroupChannel) ; error.
 ```
 
-**Edit 4** — `IntroResult`: `Channel` → `FriendChannel` (same reasoning as CSSG — post-handshake, used as friend channel):
+**Edit 4** — `IntroResult`: `Channel` → `IntroChannel`:
 ```
 IntroResult ::= intro_result(Constant, Channel) ; intro_rejected(Constant).
 ```
 →
 ```
-IntroResult ::= intro_result(Constant, FriendChannel) ; intro_rejected(Constant).
+IntroResult ::= intro_result(Constant, IntroChannel) ; intro_rejected(Constant).
 ```
 
 **Edit 5** — `UserInMsg`: two `Channel` references:
@@ -97,7 +116,7 @@ IntroResult ::= intro_result(Constant, FriendChannel) ; intro_rejected(Constant)
 ```
 →
 ```
-            ; intro_result(Constant, FriendChannel)
+            ; intro_result(Constant, IntroChannel)
 ```
 and:
 ```
@@ -119,15 +138,17 @@ and:
                 ; group_invite_child(GroupId, Constant, GroupChannel)
 ```
 
-Run tests. Commit: `fix(types): replace bare Channel with FriendChannel/GroupChannel in cssn_modules/self.glp`
+**In `cssn_modules/agent.glp`** — if it has an `intro_await_peer` declaration with bare `Channel?`, update it to `IntroChannel?`. (Check the file — it may differ from CSSG.)
+
+Run tests. Commit: `fix(types): replace bare Channel with precise types in cssn_modules`
 
 ---
 
-## 2.4c — Fix `programs/social_graph_simulated_ui_modules/self.glp`
+## 2.4c — Fix `programs/social_graph_simulated_ui_modules/self.glp` and agent.glp
 
-This module lacks named stream/channel subtypes. Add them following the CSSG convention, then replace bare `Channel` and `Stream` references.
+This module lacks named stream/channel subtypes. Add them, then replace bare references.
 
-**Add new type definitions** after the existing `IntroContent` definition and before `IntroResult`:
+**Add new type definitions** in `self.glp` after the existing `IntroContent` definition and before `IntroResult`:
 
 ```
 %% Intro channel (handshake protocol)
@@ -154,25 +175,30 @@ OutputMsg     ::= msg(Constant, Constant, OutputContent)
 OutputStream  ::= [] ; [OutputMsg | OutputStream].
 ```
 
-**Then replace bare type references:**
+**Then replace bare type references in `self.glp`:**
 
 1. `Response ::= accept(Channel) ; no.` → `Response ::= accept(FriendChannel) ; no.`
 
 2. `PendingValue ::= response(Response?) ; channel(Channel?) ; error.` → `PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.`
-   (Note: drop the `?` on IntroChannel to match CSSG convention — the pending value stores the channel itself, not a reader of it.)
 
 3. `AgentContent`: `befriend_intro(Constant, Constant, Channel)` → `befriend_intro(Constant, Constant, IntroChannel)`
 
-4. `NetColdCall ::= intro(Constant, Response).` — This already references `Response`, not bare `Channel`. No change needed.
+4. `FriendContent`: `intro(Constant, Channel).` → `intro(Constant, IntroChannel).`
 
-5. `FriendContent`: `intro(Constant, Channel).` → `intro(Constant, IntroChannel).`
+5. `IntroResult ::= intro_result(Constant, Channel) ; intro_rejected(Constant).` → `IntroResult ::= intro_result(Constant, IntroChannel) ; intro_rejected(Constant).`
 
-6. `IntroResult ::= intro_result(Constant, Channel) ; intro_rejected(Constant).` → `IntroResult ::= intro_result(Constant, FriendChannel) ; intro_rejected(Constant).`
-   (Note: After intro handshake completes, the result is a friend channel — matching how agent.glp uses it for friend communication.)
+6. `OutputEntry ::= output(String, Stream?).` → `OutputEntry ::= output(String, OutputStream?).`
 
-7. `OutputEntry ::= output(String, Stream?).` → `OutputEntry ::= output(String, OutputStream?).`
+**In `social_graph_simulated_ui_modules/agent.glp`** — update `intro_await_peer` proc declaration:
+```
+procedure intro_await_peer(Constant?, Channel?, IntroResult).
+```
+→
+```
+procedure intro_await_peer(Constant?, IntroChannel?, IntroResult).
+```
 
-Run tests. Commit: `fix(types): add precise channel/stream types to social_graph_simulated_ui_modules/self.glp`
+Run tests. Commit: `fix(types): add precise types to social_graph_simulated_ui_modules`
 
 ---
 
@@ -204,7 +230,7 @@ Run tests. Commit: `feat(types): parameterize prelude procedure declarations in 
 
 ## 2.4e — Remove monomorphic type definitions from root `programs/self.glp`
 
-Remove these four lines (the monomorphic definitions, keeping the parameterized versions):
+Remove these lines (the monomorphic definitions, keeping the parameterized versions):
 
 ```
 Stream ::= [] ; [_|Stream].
@@ -246,4 +272,4 @@ Offer to push.
 
 If tests fail after 2.4e, the most likely cause is a `.glp` file somewhere that still references bare `Channel`, `Stream`, `OpenStream`, or `DiffList` without type parameters. Search for these in `programs/` (excluding `archive/`) and convert them.
 
-Files in `-mode(system)` still have their type definitions parsed as part of ancestor scope construction, so even system-mode files must not reference removed types.
+Files in `-mode(system)` still have their type definitions parsed as part of ancestor scope construction, so even system-mode files must not reference removed types. Procedure declarations in system-mode files may also be validated against the type environment.
