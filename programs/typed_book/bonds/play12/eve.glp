@@ -93,44 +93,44 @@ eve_p12_wait_minted2([], [], []).
 
 procedure eve_p12_wait_trade_frank(UserNotifyStream?, UserCmdStream, NarrativeStream).
 eve_p12_wait_trade_frank([trade_completed(frank)|In],
-                         [pay(charlie, 6)|Out?],
+                         [trade(charlie, [lot(charlie, 0, 6)], [])|Out?],
                          [act('Credit line with Frank: 10 eve-coins for 10 frank-coins'),
                           say('Charlie, 6 coins for the bookshelf')|Narr?]) :-
-    eve_p12_wait_paid_charlie(In?, Out, Narr).
+    eve_p12_wait_trade_pay_charlie(In?, Out, Narr).
 eve_p12_wait_trade_frank([_|In], Out?, Narr?) :-
     otherwise | eve_p12_wait_trade_frank(In?, Out, Narr).
 eve_p12_wait_trade_frank([], [], []).
 
 %% Act 3c: Eve pays Charlie for bookshelf
-procedure eve_p12_wait_paid_charlie(UserNotifyStream?, UserCmdStream, NarrativeStream).
-eve_p12_wait_paid_charlie([paid(charlie, 6)|In],
-                          [trade(charlie, [lot(frank, 0, 5)], [lot(alice, 0, 5)])|Out?],
-                          [act('Paid Charlie 6 for bookshelf'),
-                           say('Charlie, can I swap 5 frank-coins for 5 alice-coins?')|Narr?]) :-
+procedure eve_p12_wait_trade_pay_charlie(UserNotifyStream?, UserCmdStream, NarrativeStream).
+eve_p12_wait_trade_pay_charlie([trade_completed(charlie)|In],
+                               [trade(charlie, [lot(frank, 0, 5)], [lot(alice, 0, 5)])|Out?],
+                               [act('Paid Charlie 6 for bookshelf'),
+                                say('Charlie, can I swap 5 frank-coins for 5 alice-coins?')|Narr?]) :-
     eve_p12_wait_trade_charlie2(In?, Out, Narr).
-eve_p12_wait_paid_charlie([_|In], Out?, Narr?) :-
-    otherwise | eve_p12_wait_paid_charlie(In?, Out, Narr).
-eve_p12_wait_paid_charlie([], [], []).
+eve_p12_wait_trade_pay_charlie([_|In], Out?, Narr?) :-
+    otherwise | eve_p12_wait_trade_pay_charlie(In?, Out, Narr).
+eve_p12_wait_trade_pay_charlie([], [], []).
 
 %% Act 4a: Eve trades frank-coins for alice-coins with Charlie
 procedure eve_p12_wait_trade_charlie2(UserNotifyStream?, UserCmdStream, NarrativeStream).
 eve_p12_wait_trade_charlie2([trade_completed(charlie)|In],
-                            [pay(alice, 3)|Out?],
+                            [trade(alice, [lot(alice, 0, 3)], [])|Out?],
                             [act('Swap with Charlie: 5 frank-coins for 5 alice-coins'),
                              say('Alice, 3 loaves please')|Narr?]) :-
-    eve_p12_wait_paid_alice(In?, Out, Narr).
+    eve_p12_wait_trade_pay_alice(In?, Out, Narr).
 eve_p12_wait_trade_charlie2([_|In], Out?, Narr?) :-
     otherwise | eve_p12_wait_trade_charlie2(In?, Out, Narr).
 eve_p12_wait_trade_charlie2([], [], []).
 
 %% Act 4b: Eve pays Alice for bread
-procedure eve_p12_wait_paid_alice(UserNotifyStream?, UserCmdStream, NarrativeStream).
-eve_p12_wait_paid_alice([paid(alice, 3)|In], Out?,
-                        [act('Paid Alice 3 for bread')|Narr?]) :-
+procedure eve_p12_wait_trade_pay_alice(UserNotifyStream?, UserCmdStream, NarrativeStream).
+eve_p12_wait_trade_pay_alice([trade_completed(alice)|In], Out?,
+                             [act('Paid Alice 3 for bread')|Narr?]) :-
     eve_p12_wait_trade_alice(In?, Out, Narr).
-eve_p12_wait_paid_alice([_|In], Out?, Narr?) :-
-    otherwise | eve_p12_wait_paid_alice(In?, Out, Narr).
-eve_p12_wait_paid_alice([], [], []).
+eve_p12_wait_trade_pay_alice([_|In], Out?, Narr?) :-
+    otherwise | eve_p12_wait_trade_pay_alice(In?, Out, Narr).
+eve_p12_wait_trade_pay_alice([], [], []).
 
 %% Act 7: Accept Alice's debt-sale proposal (skip negotiation)
 procedure eve_p12_wait_trade_alice(UserNotifyStream?, UserCmdStream, NarrativeStream).

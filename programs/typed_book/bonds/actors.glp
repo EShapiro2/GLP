@@ -2,9 +2,9 @@
 %%
 %% Phase 1: alice_p1 — solo mint + balance
 %% Phase 2: alice_p2, bob_p2 — befriend + credit line
-%% Phase 3: alice_p3, bob_p3 — credit + payment
-%% Phase 4: alice_p4, bob_p4 — credit + redemption
-%% Phase 4b: alice_p4b, bob_p4b — time-dependent redemption
+%% Phase 3: alice_p3, bob_p3 — credit + payment (via trade)
+%% Phase 4: alice_p4, bob_p4 — credit + redemption (via trade)
+%% Phase 4b: alice_p4b, bob_p4b — time-dependent redemption (via trade)
 %% Phase 5: alice_p5, bob_p5 — zero-coupon loan
 %% Phase 6: alice_p6, bob_p6 — balloon loan
 %%
@@ -36,8 +36,6 @@ UserCmd ::= mint(Constant, Constant)
           ; credit(Constant, Constant, Constant)
           ; accept_credit(Constant, ReqId)
           ; reject_credit(Constant, ReqId)
-          ; pay(Constant, Constant)
-          ; redeem(Constant, Constant, Constant)
           ; loan(Constant, Constant, Schedule)
           ; accept_loan(Constant, ReqId)
           ; reject_loan(Constant, ReqId)
@@ -59,12 +57,6 @@ UserNotify ::= minted(Constant, Constant)
              ; credit_proposed(Constant, Constant, Constant, ReqId)
              ; credit_opened(Constant, Constant)
              ; credit_rejected(Constant)
-             ; paid(Constant, Constant)
-             ; payment_received(Constant, Constant)
-             ; payment_failed(Constant, Constant)
-             ; redeemed(Constant, Constant)
-             ; redeem_failed(Constant, Constant)
-             ; redeem_received(Constant, Constant)
              ; loan_proposed(Constant, Constant, ReqId)
              ; loan_opened(Constant, Constant, Constant)
              ; loan_rejected(Constant)
@@ -212,7 +204,7 @@ procedure bob_p2_finish(UserNotifyStream?, UserCmdStream).
 bob_p2_finish(_, []).
 
 %% =============================================================================
-%% PLAY 3 — Credit + payment
+%% PLAY 3 — Credit + payment (via trade)
 %% =============================================================================
 %%
 %% Alice:
@@ -220,8 +212,8 @@ bob_p2_finish(_, []).
 %% 2. Wait connected(bob)
 %% 3. credit(bob, 3, 0) — propose 3-coin credit line
 %% 4. Wait credit_opened(bob, _)
-%% 5. pay(bob, 2) — pay 2 bob-coins to Bob
-%% 6. Wait paid(bob, _)
+%% 5. trade(bob, [lot(bob, 0, 2)], []) — pay 2 bob-coins to Bob
+%% 6. Wait trade_completed(bob)
 %% 7. balance
 %% 8. Wait balance_report(_)
 %% 9. done
@@ -231,7 +223,7 @@ bob_p2_finish(_, []).
 %% 2. Wait connected(alice)
 %% 3. Wait credit_proposed(alice, 3, 0, ReqId2) → accept_credit(alice, ReqId2)
 %% 4. Wait credit_opened(alice, _)
-%% 5. Wait payment_received(alice, _)
+%% 5. Wait trade_completed(alice) — auto-accepted (own coins returned)
 %% 6. balance
 %% 7. Wait balance_report(_)
 %% 8. done
@@ -249,18 +241,19 @@ alice_p3_wait_connected([_|In], Out?) :-
 alice_p3_wait_connected([], []).
 
 procedure alice_p3_wait_credit(UserNotifyStream?, UserCmdStream).
-alice_p3_wait_credit([credit_opened(bob, _)|In], [pay(bob, 2)|Out?]) :-
-    alice_p3_wait_paid(In?, Out).
+alice_p3_wait_credit([credit_opened(bob, _)|In],
+                     [trade(bob, [lot(bob, 0, 2)], [])|Out?]) :-
+    alice_p3_wait_trade(In?, Out).
 alice_p3_wait_credit([_|In], Out?) :-
     otherwise | alice_p3_wait_credit(In?, Out).
 alice_p3_wait_credit([], []).
 
-procedure alice_p3_wait_paid(UserNotifyStream?, UserCmdStream).
-alice_p3_wait_paid([paid(bob, _)|In], [balance|Out?]) :-
+procedure alice_p3_wait_trade(UserNotifyStream?, UserCmdStream).
+alice_p3_wait_trade([trade_completed(bob)|In], [balance|Out?]) :-
     alice_p3_wait_balance(In?, Out).
-alice_p3_wait_paid([_|In], Out?) :-
-    otherwise | alice_p3_wait_paid(In?, Out).
-alice_p3_wait_paid([], []).
+alice_p3_wait_trade([_|In], Out?) :-
+    otherwise | alice_p3_wait_trade(In?, Out).
+alice_p3_wait_trade([], []).
 
 procedure alice_p3_wait_balance(UserNotifyStream?, UserCmdStream).
 alice_p3_wait_balance([balance_report(_)|In], [done|Out?]) :-
@@ -300,17 +293,17 @@ bob_p3_wait_credit_proposed([], []).
 
 procedure bob_p3_wait_credit_opened(UserNotifyStream?, UserCmdStream).
 bob_p3_wait_credit_opened([credit_opened(alice, _)|In], Out?) :-
-    bob_p3_wait_payment(In?, Out).
+    bob_p3_wait_trade(In?, Out).
 bob_p3_wait_credit_opened([_|In], Out?) :-
     otherwise | bob_p3_wait_credit_opened(In?, Out).
 bob_p3_wait_credit_opened([], []).
 
-procedure bob_p3_wait_payment(UserNotifyStream?, UserCmdStream).
-bob_p3_wait_payment([payment_received(alice, _)|In], [balance|Out?]) :-
+procedure bob_p3_wait_trade(UserNotifyStream?, UserCmdStream).
+bob_p3_wait_trade([trade_completed(alice)|In], [balance|Out?]) :-
     bob_p3_wait_balance(In?, Out).
-bob_p3_wait_payment([_|In], Out?) :-
-    otherwise | bob_p3_wait_payment(In?, Out).
-bob_p3_wait_payment([], []).
+bob_p3_wait_trade([_|In], Out?) :-
+    otherwise | bob_p3_wait_trade(In?, Out).
+bob_p3_wait_trade([], []).
 
 procedure bob_p3_wait_balance(UserNotifyStream?, UserCmdStream).
 bob_p3_wait_balance([balance_report(_)|In], [done|Out?]) :-
@@ -323,7 +316,7 @@ procedure bob_p3_finish(UserNotifyStream?, UserCmdStream).
 bob_p3_finish(_, []).
 
 %% =============================================================================
-%% PLAY 4 — Credit + redemption
+%% PLAY 4 — Credit + redemption (via trade)
 %% =============================================================================
 %%
 %% Alice:
@@ -331,8 +324,8 @@ bob_p3_finish(_, []).
 %% 2. Wait connected(bob)
 %% 3. credit(bob, 3, 0) — propose 3-coin credit line
 %% 4. Wait credit_opened(bob, _)
-%% 5. redeem(bob, 2, 0) — redeem 2 bob-coins
-%% 6. Wait redeemed(bob, _)
+%% 5. trade(bob, [lot(bob, 0, 2)], [lot(alice, 0, 2)]) — redeem 2 bob-coins
+%% 6. Wait trade_completed(bob)
 %% 7. balance
 %% 8. Wait balance_report(_)
 %% 9. done
@@ -342,7 +335,7 @@ bob_p3_finish(_, []).
 %% 2. Wait connected(alice)
 %% 3. Wait credit_proposed(alice, 3, 0, ReqId2) → accept_credit(alice, ReqId2)
 %% 4. Wait credit_opened(alice, _)
-%% 5. Wait redeem_received(alice, _)
+%% 5. Wait trade_completed(alice) — auto-accepted (own coins returned)
 %% 6. balance
 %% 7. Wait balance_report(_)
 %% 8. done
@@ -360,18 +353,19 @@ alice_p4_wait_connected([_|In], Out?) :-
 alice_p4_wait_connected([], []).
 
 procedure alice_p4_wait_credit(UserNotifyStream?, UserCmdStream).
-alice_p4_wait_credit([credit_opened(bob, _)|In], [redeem(bob, 2, 0)|Out?]) :-
-    alice_p4_wait_redeemed(In?, Out).
+alice_p4_wait_credit([credit_opened(bob, _)|In],
+                     [trade(bob, [lot(bob, 0, 2)], [lot(alice, 0, 2)])|Out?]) :-
+    alice_p4_wait_trade(In?, Out).
 alice_p4_wait_credit([_|In], Out?) :-
     otherwise | alice_p4_wait_credit(In?, Out).
 alice_p4_wait_credit([], []).
 
-procedure alice_p4_wait_redeemed(UserNotifyStream?, UserCmdStream).
-alice_p4_wait_redeemed([redeemed(bob, _)|In], [balance|Out?]) :-
+procedure alice_p4_wait_trade(UserNotifyStream?, UserCmdStream).
+alice_p4_wait_trade([trade_completed(bob)|In], [balance|Out?]) :-
     alice_p4_wait_balance(In?, Out).
-alice_p4_wait_redeemed([_|In], Out?) :-
-    otherwise | alice_p4_wait_redeemed(In?, Out).
-alice_p4_wait_redeemed([], []).
+alice_p4_wait_trade([_|In], Out?) :-
+    otherwise | alice_p4_wait_trade(In?, Out).
+alice_p4_wait_trade([], []).
 
 procedure alice_p4_wait_balance(UserNotifyStream?, UserCmdStream).
 alice_p4_wait_balance([balance_report(_)|In], [done|Out?]) :-
@@ -411,17 +405,17 @@ bob_p4_wait_credit_proposed([], []).
 
 procedure bob_p4_wait_credit_opened(UserNotifyStream?, UserCmdStream).
 bob_p4_wait_credit_opened([credit_opened(alice, _)|In], Out?) :-
-    bob_p4_wait_redeem_received(In?, Out).
+    bob_p4_wait_trade(In?, Out).
 bob_p4_wait_credit_opened([_|In], Out?) :-
     otherwise | bob_p4_wait_credit_opened(In?, Out).
 bob_p4_wait_credit_opened([], []).
 
-procedure bob_p4_wait_redeem_received(UserNotifyStream?, UserCmdStream).
-bob_p4_wait_redeem_received([redeem_received(alice, _)|In], [balance|Out?]) :-
+procedure bob_p4_wait_trade(UserNotifyStream?, UserCmdStream).
+bob_p4_wait_trade([trade_completed(alice)|In], [balance|Out?]) :-
     bob_p4_wait_balance(In?, Out).
-bob_p4_wait_redeem_received([_|In], Out?) :-
-    otherwise | bob_p4_wait_redeem_received(In?, Out).
-bob_p4_wait_redeem_received([], []).
+bob_p4_wait_trade([_|In], Out?) :-
+    otherwise | bob_p4_wait_trade(In?, Out).
+bob_p4_wait_trade([], []).
 
 procedure bob_p4_wait_balance(UserNotifyStream?, UserCmdStream).
 bob_p4_wait_balance([balance_report(_)|In], [done|Out?]) :-
@@ -434,7 +428,7 @@ procedure bob_p4_finish(UserNotifyStream?, UserCmdStream).
 bob_p4_finish(_, []).
 
 %% =============================================================================
-%% PLAY 4b — Time-dependent redemption
+%% PLAY 4b — Time-dependent redemption (via trade)
 %% =============================================================================
 %%
 %% Alice:
@@ -444,12 +438,12 @@ bob_p4_finish(_, []).
 %% 4. Wait credit_opened(bob, _)
 %% 5. Compute T = now + 500. credit(bob, 5, T) — bond credit line
 %% 6. Wait credit_opened(bob, _)
-%% 7. redeem(bob, 2, T) — before T passes, Bob provides alice-bonds with M>=T
-%% 8. Wait redeemed(bob, _)
+%% 7. trade(bob, [lot(bob,0,2)], [lot(alice,T,2)]) — pre-maturity: want alice-bonds(T)
+%% 8. Wait trade_completed(bob)
 %% 9. balance
 %% 10. Wait balance_report(_), then wait(500)
-%% 11. redeem(bob, 2, T) — after T passes, Bob can provide ANY bond (coins)
-%% 12. Wait redeemed(bob, _)
+%% 11. trade(bob, [lot(bob,0,2)], [lot(alice,0,2)]) — post-maturity: want alice-coins
+%% 12. Wait trade_completed(bob)
 %% 13. balance
 %% 14. done
 %%
@@ -460,8 +454,8 @@ bob_p4_finish(_, []).
 %% 4. Wait credit_opened(alice, _)
 %% 5. Wait credit_proposed(alice, 5, _, ReqId) → accept (maturity T)
 %% 6. Wait credit_opened(alice, _)
-%% 7. Wait redeem_received(alice, _) — first redemption
-%% 8. Wait redeem_received(alice, _) — second redemption (after maturity)
+%% 7. Wait trade_completed(alice) — first trade (auto-accepted)
+%% 8. Wait trade_completed(alice) — second trade (auto-accepted)
 %% 9. balance
 %% 10. done
 
@@ -485,38 +479,40 @@ alice_p4b_wait_credit1(T, [_|In], Out?) :-
     otherwise | alice_p4b_wait_credit1(T?, In?, Out).
 alice_p4b_wait_credit1(_, [], []).
 
-%% Wait for bond credit to open, then redeem (pre-maturity)
+%% Wait for bond credit to open, then trade (pre-maturity redemption)
 procedure alice_p4b_wait_credit2(Constant?, UserNotifyStream?, UserCmdStream).
-alice_p4b_wait_credit2(T, [credit_opened(bob, _)|In], [redeem(bob, 2, T?)|Out?]) :-
-    alice_p4b_wait_redeemed1(T?, In?, Out).
+alice_p4b_wait_credit2(T, [credit_opened(bob, _)|In],
+                       [trade(bob, [lot(bob, 0, 2)], [lot(alice, T?, 2)])|Out?]) :-
+    alice_p4b_wait_trade1(T?, In?, Out).
 alice_p4b_wait_credit2(T, [_|In], Out?) :-
     otherwise | alice_p4b_wait_credit2(T?, In?, Out).
 alice_p4b_wait_credit2(_, [], []).
 
-%% Wait for first redemption to complete
-procedure alice_p4b_wait_redeemed1(Constant?, UserNotifyStream?, UserCmdStream).
-alice_p4b_wait_redeemed1(T, [redeemed(bob, _)|In], [balance|Out?]) :-
+%% Wait for first trade to complete
+procedure alice_p4b_wait_trade1(Constant?, UserNotifyStream?, UserCmdStream).
+alice_p4b_wait_trade1(T, [trade_completed(bob)|In], [balance|Out?]) :-
     alice_p4b_wait_balance1(T?, In?, Out).
-alice_p4b_wait_redeemed1(T, [_|In], Out?) :-
-    otherwise | alice_p4b_wait_redeemed1(T?, In?, Out).
-alice_p4b_wait_redeemed1(_, [], []).
+alice_p4b_wait_trade1(T, [_|In], Out?) :-
+    otherwise | alice_p4b_wait_trade1(T?, In?, Out).
+alice_p4b_wait_trade1(_, [], []).
 
-%% Wait for balance report, then wait 500ms, then redeem again (post-maturity)
+%% Wait for balance report, then wait 500ms, then trade again (post-maturity)
 procedure alice_p4b_wait_balance1(Constant?, UserNotifyStream?, UserCmdStream).
-alice_p4b_wait_balance1(T, [balance_report(_)|In], [redeem(bob, 2, T?)|Out?]) :-
+alice_p4b_wait_balance1(_, [balance_report(_)|In],
+                        [trade(bob, [lot(bob, 0, 2)], [lot(alice, 0, 2)])|Out?]) :-
     wait(500) |
-    alice_p4b_wait_redeemed2(In?, Out).
+    alice_p4b_wait_trade2(In?, Out).
 alice_p4b_wait_balance1(T, [_|In], Out?) :-
     otherwise | alice_p4b_wait_balance1(T?, In?, Out).
 alice_p4b_wait_balance1(_, [], []).
 
-%% Wait for second redemption to complete
-procedure alice_p4b_wait_redeemed2(UserNotifyStream?, UserCmdStream).
-alice_p4b_wait_redeemed2([redeemed(bob, _)|In], [balance|Out?]) :-
+%% Wait for second trade to complete
+procedure alice_p4b_wait_trade2(UserNotifyStream?, UserCmdStream).
+alice_p4b_wait_trade2([trade_completed(bob)|In], [balance|Out?]) :-
     alice_p4b_wait_balance2(In?, Out).
-alice_p4b_wait_redeemed2([_|In], Out?) :-
-    otherwise | alice_p4b_wait_redeemed2(In?, Out).
-alice_p4b_wait_redeemed2([], []).
+alice_p4b_wait_trade2([_|In], Out?) :-
+    otherwise | alice_p4b_wait_trade2(In?, Out).
+alice_p4b_wait_trade2([], []).
 
 %% Wait for final balance report, then done
 procedure alice_p4b_wait_balance2(UserNotifyStream?, UserCmdStream).
@@ -575,26 +571,26 @@ bob_p4b_wait_credit_proposed2([], []).
 
 procedure bob_p4b_wait_credit_opened2(UserNotifyStream?, UserCmdStream).
 bob_p4b_wait_credit_opened2([credit_opened(alice, _)|In], Out?) :-
-    bob_p4b_wait_redeem1(In?, Out).
+    bob_p4b_wait_trade1(In?, Out).
 bob_p4b_wait_credit_opened2([_|In], Out?) :-
     otherwise | bob_p4b_wait_credit_opened2(In?, Out).
 bob_p4b_wait_credit_opened2([], []).
 
-%% Wait for first redemption (pre-maturity)
-procedure bob_p4b_wait_redeem1(UserNotifyStream?, UserCmdStream).
-bob_p4b_wait_redeem1([redeem_received(alice, _)|In], Out?) :-
-    bob_p4b_wait_redeem2(In?, Out).
-bob_p4b_wait_redeem1([_|In], Out?) :-
-    otherwise | bob_p4b_wait_redeem1(In?, Out).
-bob_p4b_wait_redeem1([], []).
+%% Wait for first trade (pre-maturity)
+procedure bob_p4b_wait_trade1(UserNotifyStream?, UserCmdStream).
+bob_p4b_wait_trade1([trade_completed(alice)|In], Out?) :-
+    bob_p4b_wait_trade2(In?, Out).
+bob_p4b_wait_trade1([_|In], Out?) :-
+    otherwise | bob_p4b_wait_trade1(In?, Out).
+bob_p4b_wait_trade1([], []).
 
-%% Wait for second redemption (post-maturity)
-procedure bob_p4b_wait_redeem2(UserNotifyStream?, UserCmdStream).
-bob_p4b_wait_redeem2([redeem_received(alice, _)|In], [balance|Out?]) :-
+%% Wait for second trade (post-maturity)
+procedure bob_p4b_wait_trade2(UserNotifyStream?, UserCmdStream).
+bob_p4b_wait_trade2([trade_completed(alice)|In], [balance|Out?]) :-
     bob_p4b_wait_balance(In?, Out).
-bob_p4b_wait_redeem2([_|In], Out?) :-
-    otherwise | bob_p4b_wait_redeem2(In?, Out).
-bob_p4b_wait_redeem2([], []).
+bob_p4b_wait_trade2([_|In], Out?) :-
+    otherwise | bob_p4b_wait_trade2(In?, Out).
+bob_p4b_wait_trade2([], []).
 
 procedure bob_p4b_wait_balance(UserNotifyStream?, UserCmdStream).
 bob_p4b_wait_balance([balance_report(_)|In], [done|Out?]) :-

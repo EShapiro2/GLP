@@ -3,7 +3,7 @@
 %% Charlie accepts Alice's befriend, connects to Eve and Frank.
 %% Symmetric trade with Alice (15-for-15).
 %% Symmetric trade with Eve (10-for-10).
-%% Receives payment from Eve (bookshelf).
+%% Receives trade-payment from Eve (bookshelf).
 %% Accepts Eve's swap (5 frank-coins for 5 alice-coins).
 %% Deposits escrow with Frank (dock construction).
 %%
@@ -88,19 +88,19 @@ charlie_p12_wait_minted2(_, [], [], []).
 procedure charlie_p12_wait_trade_eve(Constant?, UserNotifyStream?, UserCmdStream, NarrativeStream).
 charlie_p12_wait_trade_eve(T, [trade_completed(eve)|In], Out?,
                            [act('Credit line with Eve: 10 charlie-coins for 10 eve-coins')|Narr?]) :-
-    charlie_p12_wait_payment_eve(T?, In?, Out, Narr).
+    charlie_p12_wait_trade_pay_eve(T?, In?, Out, Narr).
 charlie_p12_wait_trade_eve(T, [_|In], Out?, Narr?) :-
     otherwise | charlie_p12_wait_trade_eve(T?, In?, Out, Narr).
 charlie_p12_wait_trade_eve(_, [], [], []).
 
-%% Act 3c: Eve buys bookshelf (payment_received)
-procedure charlie_p12_wait_payment_eve(Constant?, UserNotifyStream?, UserCmdStream, NarrativeStream).
-charlie_p12_wait_payment_eve(T, [payment_received(eve, 6)|In], Out?,
-                             [event('Eve bought a bookshelf — paid 6 charlie-coins')|Narr?]) :-
+%% Act 3c: Eve buys bookshelf (auto-accepted trade)
+procedure charlie_p12_wait_trade_pay_eve(Constant?, UserNotifyStream?, UserCmdStream, NarrativeStream).
+charlie_p12_wait_trade_pay_eve(T, [trade_completed(eve)|In], Out?,
+                               [event('Eve bought a bookshelf — paid 6 charlie-coins')|Narr?]) :-
     charlie_p12_wait_trade_eve2(T?, In?, Out, Narr).
-charlie_p12_wait_payment_eve(T, [_|In], Out?, Narr?) :-
-    otherwise | charlie_p12_wait_payment_eve(T?, In?, Out, Narr).
-charlie_p12_wait_payment_eve(_, [], [], []).
+charlie_p12_wait_trade_pay_eve(T, [_|In], Out?, Narr?) :-
+    otherwise | charlie_p12_wait_trade_pay_eve(T?, In?, Out, Narr).
+charlie_p12_wait_trade_pay_eve(_, [], [], []).
 
 %% Act 4a: Accept Eve's swap (5 frank-coins for 5 alice-coins), then deposit escrow
 procedure charlie_p12_wait_trade_eve2(Constant?, UserNotifyStream?, UserCmdStream, NarrativeStream).

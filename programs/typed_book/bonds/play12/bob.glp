@@ -75,22 +75,22 @@ bob_p12_wait_minted2([], [], []).
 %% Bob proposes 20% loan: 24 bob-bonds(25) for 20 diana-coins (skip negotiation)
 procedure bob_p12_wait_trade_diana(UserNotifyStream?, UserCmdStream, NarrativeStream).
 bob_p12_wait_trade_diana([trade_completed(diana)|In],
-                         [pay(alice, 5)|Out?],
+                         [trade(alice, [lot(alice, 0, 5)], [])|Out?],
                          [act('Loan from Diana: 20 diana-coins for 24 bob-bonds(25)'),
                           say('Alice, 5 loaves please')|Narr?]) :-
-    bob_p12_wait_paid_alice(In?, Out, Narr).
+    bob_p12_wait_trade_pay(In?, Out, Narr).
 bob_p12_wait_trade_diana([_|In], Out?, Narr?) :-
     otherwise | bob_p12_wait_trade_diana(In?, Out, Narr).
 bob_p12_wait_trade_diana([], [], []).
 
 %% Act 3a: Bob buys bread from Alice
-procedure bob_p12_wait_paid_alice(UserNotifyStream?, UserCmdStream, NarrativeStream).
-bob_p12_wait_paid_alice([paid(alice, 5)|In], [balance|Out?],
-                        [act('Paid Alice 5 for bread')|Narr?]) :-
+procedure bob_p12_wait_trade_pay(UserNotifyStream?, UserCmdStream, NarrativeStream).
+bob_p12_wait_trade_pay([trade_completed(alice)|In], [balance|Out?],
+                       [act('Paid Alice 5 for bread')|Narr?]) :-
     bob_p12_wait_balance(In?, Out, Narr).
-bob_p12_wait_paid_alice([_|In], Out?, Narr?) :-
-    otherwise | bob_p12_wait_paid_alice(In?, Out, Narr).
-bob_p12_wait_paid_alice([], [], []).
+bob_p12_wait_trade_pay([_|In], Out?, Narr?) :-
+    otherwise | bob_p12_wait_trade_pay(In?, Out, Narr).
+bob_p12_wait_trade_pay([], [], []).
 
 procedure bob_p12_wait_balance(UserNotifyStream?, UserCmdStream, NarrativeStream).
 bob_p12_wait_balance([balance_report(_)|In], [done|Out?],

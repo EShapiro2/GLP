@@ -11,7 +11,7 @@ Started: 2026-03-07
 - [x] 6. FIX: Parameterized proc decl type checking
 - [ ] 7. **Step 2.4: Parameterize self.glp procedures + remove monomorphic types** ← CURRENT
 - [ ] 8. Step 2.5: Remove renamed procedure copies (send_agent, send_user, etc.)
-- [ ] 9. Step 2.6: Archive book/ directory
+- [x] 9. Step 2.6: Archive book/ directory (done out of order, commit 1473fb31)
 - [ ] 10. Step 2.7: Adopt tight typing discipline (documentation)
 - [ ] 11. Step 2.8: Final validation
 

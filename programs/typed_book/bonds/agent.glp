@@ -27,9 +27,6 @@ BondList ::= [] ; [Bond | BondList].
 %% Credit response — written by responder, read by proposer's inject
 CreditResponse ::= credit_accept(BondList) ; credit_reject.
 
-%% Redeem response — written by issuer, read by holder's inject
-RedeemResponse ::= redeem_ok(BondList).
-
 %% Loan response — written by borrower, read by lender's inject
 LoanResponse ::= loan_accept(BondList) ; loan_reject.
 
@@ -53,8 +50,6 @@ Schedule    ::= [] ; [Installment | Schedule].
 FriendContent ::= response(Response)
                 ; text(Constant)
                 ; credit_propose(Constant, Constant, BondList, CreditResponse?)
-                ; payment(BondList)
-                ; redeem_request(Constant, Constant, BondList, RedeemResponse?)
                 ; loan_propose(Constant, Schedule, BondList, LoanResponse?)
                 ; trade_propose(LotList, BondList, TradeResponse?)
                 ; escrow_offer(Constant, EscrowBenResult).
@@ -80,8 +75,6 @@ UserContent ::= mint(Constant, Constant)       %% mint(K, Maturity)
               ; credit(Constant, Constant, Constant)  %% credit(Target, K, Maturity)
               ; accept_credit(Constant, PendingValue) %% accept credit proposal
               ; reject_credit(Constant, PendingValue) %% reject credit proposal
-              ; pay(Constant, Constant)                %% pay(Target, K)
-              ; redeem(Constant, Constant, Constant)   %% redeem(Target, K, MaxMaturity)
               ; loan(Constant, Constant, Schedule)  %% loan(Target, Principal, Schedule)
               ; accept_loan(Constant, PendingValue)    %% accept_loan(From, PendingValue)
               ; reject_loan(Constant, PendingValue)    %% reject_loan(From, PendingValue)
@@ -109,12 +102,6 @@ AgentContent ::= minted(Constant, Constant)     %% minted(K, Maturity)
                ; credit_proposed(Constant, Constant, Constant, CreditResponse?, BondList)
                ; credit_opened(Constant, Constant) %% credit_opened(Other, K)
                ; credit_rejected(Constant)       %% credit rejected by other
-               ; paid(Constant, Constant)        %% paid(Target, K)
-               ; payment_received(Constant, Constant)  %% payment_received(From, K)
-               ; payment_failed(Constant, Constant)   %% payment_failed(Target, K)
-               ; redeemed(Constant, Constant)          %% redeemed(Target, K)
-               ; redeem_failed(Constant, Constant)     %% redeem_failed(Target, K)
-               ; redeem_received(Constant, Constant)   %% redeem_received(From, K)
                ; loan_proposed(Constant, Constant, Schedule, LoanResponse?, BondList)
                ; loan_opened(Constant, Constant, Constant)   %% loan_opened(Other, Principal, FaceValue)
                ; loan_rejected(Constant)               %% loan_rejected(Other)
@@ -138,7 +125,6 @@ CreditResult ::= credit_result(Constant, Constant, BondList)
 UserInMsg    ::= msg(Constant, Constant, UserContent)
                ; credit_result(Constant, Constant, BondList)
                ; credit_was_rejected(Constant)
-               ; redeem_complete(Constant, Constant, BondList)
                ; loan_result(Constant, Constant, Constant, BondList)
                ; loan_was_rejected(Constant)
                ; trade_complete(Constant, BondList)
@@ -179,14 +165,6 @@ OutputContent ::= minted(Constant, Constant)
                 ; credit_rejected(Constant)
                 ; response(Response)
                 ; credit_propose(Constant, Constant, BondList, CreditResponse?)
-                ; paid(Constant, Constant)
-                ; payment_received(Constant, Constant)
-                ; payment_failed(Constant, Constant)
-                ; payment(BondList)
-                ; redeemed(Constant, Constant)
-                ; redeem_failed(Constant, Constant)
-                ; redeem_received(Constant, Constant)
-                ; redeem_request(Constant, Constant, BondList, RedeemResponse?)
                 ; loan_propose(Constant, Schedule, BondList, LoanResponse?)
                 ; loan_proposed(Constant, Constant, Schedule, LoanResponse?, BondList)
                 ; loan_opened(Constant, Constant, Constant)
@@ -377,132 +355,6 @@ create_bonds_from_schedule(Id, [installment(Amount, Maturity)|Rest], Serial, All
 create_bonds_from_schedule(_, [], Serial, [], Serial?).
 
 %% =============================================================================
-%% SELECT_COINS — Select K coins issued by Issuer from Holdings (single pass)
-%% =============================================================================
-%%
-%% Returns Status = ok or fail.
-%% On ok: Selected has K coins, Remaining has the rest.
-%% On fail: Selected = [], Remaining = rebuilt Holdings.
-
-procedure select_coins(Constant?, Constant?, BondList?, Constant, BondList, BondList).
-select_coins(_, 0, Hs, ok, [], Hs?).
-select_coins(Issuer, K, [bond(I, 0, S)|Rest], Status?, [bond(I?, 0, S?)|Sel?], Rem?) :-
-    K? > 0, Issuer? =?= I? |
-    K1 := K? - 1,
-    select_coins(Issuer?, K1?, Rest?, Status, Sel, Rem).
-select_coins(Issuer, K, [B|Rest], Status?, Sel?, [B?|Rem?]) :-
-    otherwise |
-    select_coins(Issuer?, K?, Rest?, Status, Sel, Rem).
-select_coins(_, K, [], fail, [], []) :- K? > 0 | true.
-
-%% =============================================================================
-%% DO_PAY — Select coins, then execute or reject payment
-%% =============================================================================
-
-procedure do_pay(Constant?, Constant?, Constant?, BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
-do_pay(K, Id, Target, Holdings, UserIn, NetIn, Outs, NextSerial) :-
-    select_coins(Target?, K?, Holdings?, Status, Selected, Remaining),
-    do_pay_result(Status?, K?, Id?, Target?, Selected?, Remaining?, UserIn?, NetIn?, Outs?, NextSerial?).
-
-procedure do_pay_result(Constant?, Constant?, Constant?, Constant?, BondList?, BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
-do_pay_result(ok, K, Id, Target, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
-    lookup_send(friend(Target?), msg(Id?, Target?, payment(Selected?)), Outs?, Outs1),
-    lookup_send('_user', msg(agent, '_user', paid(Target?, K?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?, Remaining?, NextSerial?).
-do_pay_result(fail, K, Id, Target, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
-    append(Selected?, Remaining?, OrigHoldings),
-    lookup_send('_user', msg(agent, '_user', payment_failed(Target?, K?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
-
-%% =============================================================================
-%% SELECT_BONDS_BY_ISSUER — Select K bonds by issuer with maturity ≤ MaxMaturity
-%% =============================================================================
-%%
-%% Generalizes select_coins: selects bonds where issuer matches and maturity ≤ max.
-%% Returns Status = ok or fail. Same structure as select_coins.
-
-procedure select_bonds_by_issuer(Constant?, Constant?, Constant?, BondList?, Constant, BondList, BondList).
-select_bonds_by_issuer(_, _, 0, Hs, ok, [], Hs?).
-select_bonds_by_issuer(Issuer, MaxMat, K, [bond(I, M, S)|Rest], Status?, [bond(I?, M?, S?)|Sel?], Rem?) :-
-    K? > 0, Issuer? =?= I?, MaxMat? >= M? |
-    K1 := K? - 1,
-    select_bonds_by_issuer(Issuer?, MaxMat?, K1?, Rest?, Status, Sel, Rem).
-select_bonds_by_issuer(Issuer, MaxMat, K, [B|Rest], Status?, Sel?, [B?|Rem?]) :-
-    otherwise |
-    select_bonds_by_issuer(Issuer?, MaxMat?, K?, Rest?, Status, Sel, Rem).
-select_bonds_by_issuer(_, _, K, [], fail, [], []) :- K? > 0 | true.
-
-%% =============================================================================
-%% SELECT_ANY_BONDS — Select up to K bonds regardless of maturity
-%% =============================================================================
-
-procedure select_any_bonds(Constant?, BondList?, BondList, BondList, Constant).
-select_any_bonds(0, Hs, [], Hs?, 0).
-select_any_bonds(K, [bond(I, M, S)|Rest], [bond(I?, M?, S?)|Sel?], Rem?, Got?) :-
-    K? > 0 |
-    K1 := K? - 1,
-    select_any_bonds(K1?, Rest?, Sel, Rem, SubGot),
-    Got := SubGot? + 1.
-select_any_bonds(K, [], [], [], 0) :- K? > 0 | true.
-
-%% =============================================================================
-%% SELECT_BONDS_MIN_MATURITY — Select up to K bonds with maturity >= MinMaturity
-%% =============================================================================
-%%
-%% Time-aware: if MinMaturity has passed, any bond qualifies.
-%% Otherwise, require M >= MinMaturity strictly.
-%% Now parameter provides current time for arithmetic comparison.
-
-procedure select_bonds_min_maturity(Integer?, Constant?, Constant?, BondList?, BondList, BondList, Constant).
-
-%% When MinMaturity has passed (bonds are mature), any bond qualifies
-select_bonds_min_maturity(Now, MinMat, K, Hs, Sel?, Rem?, Got?) :-
-    MinMat? =< Now? |
-    select_any_bonds(K?, Hs?, Sel, Rem, Got).
-
-%% When MinMaturity has NOT passed, require M >= MinMaturity
-select_bonds_min_maturity(_, MinMat, K, Hs, Sel?, Rem?, Got?) :-
-    otherwise |
-    select_bonds_min_maturity_strict(MinMat?, K?, Hs?, Sel, Rem, Got).
-
-%% =============================================================================
-%% SELECT_BONDS_MIN_MATURITY_STRICT — Strict maturity check (M >= MinMaturity)
-%% =============================================================================
-
-procedure select_bonds_min_maturity_strict(Constant?, Constant?, BondList?, BondList, BondList, Constant).
-select_bonds_min_maturity_strict(_, 0, Hs, [], Hs?, 0).
-select_bonds_min_maturity_strict(MinMat, K, [bond(I, M, S)|Rest], [bond(I?, M?, S?)|Sel?], Rem?, Got?) :-
-    K? > 0, M? >= MinMat? |
-    K1 := K? - 1,
-    select_bonds_min_maturity_strict(MinMat?, K1?, Rest?, Sel, Rem, SubGot),
-    Got := SubGot? + 1.
-select_bonds_min_maturity_strict(MinMat, K, [B|Rest], Sel?, [B?|Rem?], Got?) :-
-    otherwise |
-    select_bonds_min_maturity_strict(MinMat?, K?, Rest?, Sel, Rem, Got).
-select_bonds_min_maturity_strict(_, _, [], [], [], 0).
-
-%% =============================================================================
-%% BIND_REDEEM — Bind RedeemResponse variable (writer mode)
-%% =============================================================================
-
-procedure bind_redeem(RedeemResponse, BondList?).
-bind_redeem(redeem_ok(Bonds?), Bonds).
-
-%% =============================================================================
-%% INJECT_REDEEM_RESULT — Inject redemption response into UserIn
-%% =============================================================================
-%%
-%% Waits for RedeemResp to become known (bound by issuer).
-%% redeem_ok(Bonds) → inject redeem_complete(From, K, Bonds)
-
-procedure inject_redeem_result(RedeemResponse?, Constant?, Constant?, UserInStream?, UserInStream).
-inject_redeem_result(redeem_ok(Bonds), From, K, Ys,
-    [redeem_complete(From?, K?, Bonds?)|Ys?]) :-
-    ground(From?), ground(K?), ground(Bonds?) | true.
-inject_redeem_result(Resp, From, K, [Y|Ys], [Y?|Ys1?]) :-
-    inject_redeem_result(Resp?, From?, K?, Ys?, Ys1).
-
-%% =============================================================================
 %% BIND_LOAN — Bind LoanResponse variable (writer mode)
 %% =============================================================================
 %%
@@ -534,50 +386,6 @@ inject_loan_result(loan_reject, From, _, _, Ys,
     ground(From?) | true.
 inject_loan_result(Resp, From, Principal, FaceValue, [Y|Ys], [Y?|Ys1?]) :-
     inject_loan_result(Resp?, From?, Principal?, FaceValue?, Ys?, Ys1).
-
-%% =============================================================================
-%% DO_REDEEM — Select bonds, then execute or reject redemption (Alice's side)
-%% =============================================================================
-
-procedure do_redeem(Constant?, Constant?, Constant?, Constant?, BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
-do_redeem(K, Id, Target, MaxMat, Holdings, UserIn, NetIn, Outs, NextSerial) :-
-    select_bonds_by_issuer(Target?, MaxMat?, K?, Holdings?, Status, Selected, Remaining),
-    do_redeem_result(Status?, K?, Id?, Target?, MaxMat?, Selected?, Remaining?, UserIn?, NetIn?, Outs?, NextSerial?).
-
-procedure do_redeem_result(Constant?, Constant?, Constant?, Constant?, Constant?, BondList?, BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
-do_redeem_result(ok, K, Id, Target, MaxMat, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
-    lookup_send(friend(Target?),
-        msg(Id?, Target?, redeem_request(K?, MaxMat?, Selected?, RedeemResp)),
-        Outs?, Outs1),
-    inject_redeem_result(RedeemResp?, Target?, K?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs1?, Remaining?, NextSerial?).
-do_redeem_result(fail, K, Id, Target, _, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
-    append(Selected?, Remaining?, OrigHoldings),
-    lookup_send('_user', msg(agent, '_user', redeem_failed(Target?, K?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
-
-%% =============================================================================
-%% HANDLE_REDEEM_FILL — Complete redemption: bind response, update holdings (Bob's side)
-%% =============================================================================
-%%
-%% Called after select_bonds_min_maturity with Shortfall = K - Got.
-%% Shortfall=0: bind RedeemResp to Selected, continue agent.
-%% Shortfall>0: mint shortfall bonds, append to Selected, bind RedeemResp, continue agent.
-%% RedeemResponse is decomposed in the head (required by type checker).
-
-procedure handle_redeem_fill(Constant?, Constant?, Constant?, Constant?, Constant?, BondList?, RedeemResponse, BondList?, BondList?, Constant?, UserInStream?, NetInStream?, OutputsList?).
-handle_redeem_fill(0, K, _, Id, From, ReturnedBonds, redeem_ok(Selected?), Selected, Remaining, NextSerial, UserIn, NetIn, Outs) :-
-    append(Remaining?, ReturnedBonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', redeem_received(From?, K?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
-handle_redeem_fill(Shortfall, K, MaxMat, Id, From, ReturnedBonds, redeem_ok(AllBonds?), Selected, Remaining, NextSerial, UserIn, NetIn, Outs) :-
-    Shortfall? > 0 |
-    create_bonds(Id?, MaxMat?, Shortfall?, NextSerial?, MintedBonds),
-    NewNextSerial := NextSerial? + Shortfall?,
-    append(Selected?, MintedBonds?, AllBonds),
-    append(Remaining?, ReturnedBonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', redeem_received(From?, K?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NewNextSerial?).
 
 %% =============================================================================
 %% SELECT_BONDS_EXACT — Select K bonds with exact Issuer+Maturity
@@ -667,6 +475,58 @@ handle_trade_fill(ok, Id, _, trade_accept(Selected?), OfferedBonds, Selected, Re
     agent(Id?, UserIn?, NetIn?, Outs?, NewHoldings?, NextSerial?).
 %% Can't fill: bind decline(offered bonds back), reconstruct own holdings
 handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_failed(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
+
+%% =============================================================================
+%% CHECK_OWN_BOND — Check if any offered bond was issued by me
+%% =============================================================================
+
+procedure check_own_bond(Constant?, BondList?, Constant).
+check_own_bond(Id, [bond(I, _, _)|_], yes) :- Id? =?= I? | true.
+check_own_bond(Id, [_|Rest], Result?) :- otherwise | check_own_bond(Id?, Rest?, Result).
+check_own_bond(_, [], no).
+
+%% =============================================================================
+%% TRADE_DISPATCH — Branch on auto-accept vs. user decision
+%% =============================================================================
+
+procedure trade_dispatch(Constant?, Constant?, Constant?, LotList?, BondList?, TradeResponse,
+    BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
+
+%% Redemption/payment — auto-accept
+trade_dispatch(yes, Id, From, WantSpec, OfferedBonds, TradeResp?,
+    Holdings, UserIn, NetIn, Outs, NextSerial) :-
+    select_bonds_by_spec(WantSpec?, Holdings?, Status, Selected, Remaining),
+    handle_trade_auto(Status?, Id?, From?, TradeResp, OfferedBonds?, Selected?, Remaining?,
+        UserIn?, NetIn?, Outs?, NextSerial?).
+
+%% Normal trade — present to user
+trade_dispatch(no, Id, From, WantSpec, OfferedBonds, TradeResp?,
+    Holdings, UserIn, NetIn, Outs, NextSerial) :-
+    lookup_send('_user',
+        msg(agent, '_user', trade_proposed(From?, WantSpec?, TradeResp, OfferedBonds?)),
+        Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
+
+%% =============================================================================
+%% HANDLE_TRADE_AUTO — Auto-accept trade with user notification
+%% =============================================================================
+
+procedure handle_trade_auto(Constant?, Constant?, Constant?, TradeResponse, BondList?, BondList?, BondList?,
+    UserInStream?, NetInStream?, OutputsList?, Constant?).
+
+%% Can fill: bind accept(our bonds), take offered bonds, notify user
+handle_trade_auto(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining,
+    UserIn, NetIn, Outs, NextSerial) :-
+    append(Remaining?, OfferedBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+
+%% Can't fill: bind decline(offered bonds back), reconstruct own holdings
+handle_trade_auto(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Selected, Remaining,
+    UserIn, NetIn, Outs, NextSerial) :-
     append(Selected?, Remaining?, OrigHoldings),
     lookup_send('_user', msg(agent, '_user', trade_failed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
@@ -873,45 +733,6 @@ agent(Id, [msg('_user', Id1, reject_credit(_,
     bind_credit_reject(CreditResp),
     agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?).
 
-%% --- Phase 3: Payment ---
-
-%% User requests payment: count available coins, then pay or fail
-agent(Id, [msg('_user', Id1, pay(Target, K))|UserIn], NetIn, Outs, Holdings, NextSerial) :-
-    Id? =?= Id1?, ground(Target?), ground(K?) |
-    do_pay(K?, Id?, Target?, Holdings?, UserIn?, NetIn?, Outs?, NextSerial?).
-
-%% Incoming payment from friend: add bonds to holdings, notify user
-agent(Id, UserIn, [msg(From, Id1, payment(Bonds))|NetIn], Outs, Holdings, NextSerial) :-
-    Id? =?= Id1?, ground(From?), ground(Bonds?) |
-    append(Holdings?, Bonds?, NewHoldings),
-    list_length(Bonds?, K),
-    lookup_send('_user', msg(agent, '_user', payment_received(From?, K?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
-
-%% --- Phase 4: Redemption ---
-
-%% User requests redemption: select target-bonds, then redeem or fail
-agent(Id, [msg('_user', Id1, redeem(Target, K, MaxMaturity))|UserIn], NetIn, Outs, Holdings, NextSerial) :-
-    Id? =?= Id1?, ground(Target?), ground(K?), ground(MaxMaturity?) |
-    do_redeem(K?, Id?, Target?, MaxMaturity?, Holdings?, UserIn?, NetIn?, Outs?, NextSerial?).
-
-%% Injected redeem_complete: add received bonds to holdings, notify user
-agent(Id, [redeem_complete(From, K, ReceivedBonds)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
-    ground(Id?), ground(From?), ground(K?), ground(ReceivedBonds?) |
-    append(Holdings?, ReceivedBonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', redeemed(From?, K?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
-
-%% Incoming redeem_request from friend (automatic — no user decision)
-agent(Id, UserIn, [msg(From, Id1, redeem_request(K, MaxMaturity, ReturnedBonds, RedeemResp?))|NetIn],
-      Outs, Holdings, NextSerial) :-
-    Id? =?= Id1?, ground(From?), ground(K?), ground(MaxMaturity?), ground(ReturnedBonds?) |
-    now(Now),
-    select_bonds_min_maturity(Now?, MaxMaturity?, K?, Holdings?, Selected, Remaining, Got),
-    Shortfall := K? - Got?,
-    handle_redeem_fill(Shortfall?, K?, MaxMaturity?, Id?, From?, ReturnedBonds?,
-        RedeemResp, Selected?, Remaining?, NextSerial?, UserIn?, NetIn?, Outs?).
-
 %% --- Phase 5: Zero-Coupon Loan ---
 
 %% User requests loan (lender side): mint Principal coins, propose on friend channel
@@ -991,14 +812,13 @@ agent(Id, [trade_returned_bonds(From, OurBonds)|UserIn], NetIn, Outs, Holdings, 
     lookup_send('_user', msg(agent, '_user', trade_returned(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
 
-%% Responder: incoming trade_propose
+%% Responder: incoming trade_propose (auto-accept if offered bonds include own)
 agent(Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeResp?))|NetIn],
       Outs, Holdings, NextSerial) :-
     Id? =?= Id1?, ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
-    lookup_send('_user',
-        msg(agent, '_user', trade_proposed(From?, WantSpec?, TradeResp, OfferedBonds?)),
-        Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
+    check_own_bond(Id?, OfferedBonds?, IsRedemption),
+    trade_dispatch(IsRedemption?, Id?, From?, WantSpec?, OfferedBonds?, TradeResp,
+        Holdings?, UserIn?, NetIn?, Outs?, NextSerial?).
 
 %% Responder: accept_trade (inlined — select bonds then fill)
 agent(Id, [msg('_user', Id1, accept_trade(From,

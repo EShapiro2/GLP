@@ -6,8 +6,6 @@
 %% Phase 1: mint, balance, done (all ground, pass-through)
 %% Phase 2: befriend (non-ground Response in pending),
 %%          credit_proposed (non-ground CreditResp + data in pending)
-%% Phase 3: pay, paid, payment_received, payment_failed (all ground, pass-through)
-%% Phase 4: redeem, redeemed, redeem_failed, redeem_received (all ground, pass-through)
 %%
 %% Date: 2026-03-03
 
@@ -21,7 +19,6 @@ Bond     ::= bond(Constant, Constant, Constant).
 BondList ::= [] ; [Bond | BondList].
 
 CreditResponse ::= credit_accept(BondList) ; credit_reject.
-RedeemResponse ::= redeem_ok(BondList).
 LoanResponse ::= loan_accept(BondList) ; loan_reject.
 
 Lot     ::= lot(Constant, Constant, Constant).
@@ -38,8 +35,6 @@ Schedule    ::= [] ; [Installment | Schedule].
 FriendContent ::= response(Response)
                 ; text(Constant)
                 ; credit_propose(Constant, Constant, BondList, CreditResponse?)
-                ; payment(BondList)
-                ; redeem_request(Constant, Constant, BondList, RedeemResponse?)
                 ; loan_propose(Constant, Schedule, BondList, LoanResponse?)
                 ; trade_propose(LotList, BondList, TradeResponse?)
                 ; escrow_offer(Constant, EscrowBenResult).
@@ -62,12 +57,6 @@ AgentContent ::= minted(Constant, Constant)
                ; credit_proposed(Constant, Constant, Constant, CreditResponse?, BondList)
                ; credit_opened(Constant, Constant)
                ; credit_rejected(Constant)
-               ; paid(Constant, Constant)
-               ; payment_received(Constant, Constant)
-               ; payment_failed(Constant, Constant)
-               ; redeemed(Constant, Constant)
-               ; redeem_failed(Constant, Constant)
-               ; redeem_received(Constant, Constant)
                ; loan_proposed(Constant, Constant, Schedule, LoanResponse?, BondList)
                ; loan_opened(Constant, Constant, Constant)
                ; loan_rejected(Constant)
@@ -102,8 +91,6 @@ UserContent ::= mint(Constant, Constant)
               ; credit(Constant, Constant, Constant)
               ; accept_credit(Constant, PendingValue)
               ; reject_credit(Constant, PendingValue)
-              ; pay(Constant, Constant)
-              ; redeem(Constant, Constant, Constant)
               ; loan(Constant, Constant, Schedule)
               ; accept_loan(Constant, PendingValue)
               ; reject_loan(Constant, PendingValue)
@@ -128,8 +115,6 @@ UserCmd ::= mint(Constant, Constant)
           ; credit(Constant, Constant, Constant)
           ; accept_credit(Constant, ReqId)
           ; reject_credit(Constant, ReqId)
-          ; pay(Constant, Constant)
-          ; redeem(Constant, Constant, Constant)
           ; loan(Constant, Constant, Schedule)
           ; accept_loan(Constant, ReqId)
           ; reject_loan(Constant, ReqId)
@@ -148,12 +133,6 @@ UserNotify ::= minted(Constant, Constant)
              ; credit_proposed(Constant, Constant, Constant, ReqId)
              ; credit_opened(Constant, Constant)
              ; credit_rejected(Constant)
-             ; paid(Constant, Constant)
-             ; payment_received(Constant, Constant)
-             ; payment_failed(Constant, Constant)
-             ; redeemed(Constant, Constant)
-             ; redeem_failed(Constant, Constant)
-             ; redeem_received(Constant, Constant)
              ; loan_proposed(Constant, Constant, ReqId)
              ; loan_opened(Constant, Constant, Constant)
              ; loan_rejected(Constant)
@@ -288,33 +267,6 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     send_user(credit_rejected(Who?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
-%% --- Agent-to-user: paid (ground — pass through) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', paid(Target, K)),
-            AgentCh?, AgentCh1),
-    ground(Target?), ground(K?) |
-    send_user(paid(Target?, K?), UserCh?, UserCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
-%% --- Agent-to-user: payment_received (ground — pass through) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', payment_received(From, K)),
-            AgentCh?, AgentCh1),
-    ground(From?), ground(K?) |
-    send_user(payment_received(From?, K?), UserCh?, UserCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
-%% --- Agent-to-user: payment_failed (ground — pass through) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', payment_failed(Target, K)),
-            AgentCh?, AgentCh1),
-    ground(Target?), ground(K?) |
-    send_user(payment_failed(Target?, K?), UserCh?, UserCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
 %% --- User-to-agent: Phase 1 pass-through ---
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
@@ -386,51 +338,6 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     send_agent(msg('_user', Id?, reject_credit(From?, Pv?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
-
-%% --- User-to-agent: pay (pass through) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(pay(Target, K), UserCh?, UserCh1),
-    ground(Id?), ground(Target?), ground(K?) |
-    send_agent(msg('_user', Id?, pay(Target?, K?)),
-         AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
-%% --- Agent-to-user: redeemed (ground — pass through) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', redeemed(Target, K)),
-            AgentCh?, AgentCh1),
-    ground(Target?), ground(K?) |
-    send_user(redeemed(Target?, K?), UserCh?, UserCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
-%% --- Agent-to-user: redeem_failed (ground — pass through) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', redeem_failed(Target, K)),
-            AgentCh?, AgentCh1),
-    ground(Target?), ground(K?) |
-    send_user(redeem_failed(Target?, K?), UserCh?, UserCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
-%% --- Agent-to-user: redeem_received (ground — pass through) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', redeem_received(From, K)),
-            AgentCh?, AgentCh1),
-    ground(From?), ground(K?) |
-    send_user(redeem_received(From?, K?), UserCh?, UserCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
-%% --- User-to-agent: redeem (pass through) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(redeem(Target, K, MaxMaturity), UserCh?, UserCh1),
-    ground(Id?), ground(Target?), ground(K?), ground(MaxMaturity?) |
-    send_agent(msg('_user', Id?, redeem(Target?, K?, MaxMaturity?)),
-         AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 %% --- Agent-to-user: loan_proposed (non-ground — store LoanResp + data in pending) ---
 

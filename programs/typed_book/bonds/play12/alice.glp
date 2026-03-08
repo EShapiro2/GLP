@@ -72,30 +72,30 @@ alice_p12_wait_minted2([], [], []).
 procedure alice_p12_wait_trade_charlie(UserNotifyStream?, UserCmdStream, NarrativeStream).
 alice_p12_wait_trade_charlie([trade_completed(charlie)|In], Out?,
                              [act('Credit line with Charlie: 15 alice-coins for 15 charlie-coins')|Narr?]) :-
-    alice_p12_wait_payment_bob(In?, Out, Narr).
+    alice_p12_wait_trade_pay_bob(In?, Out, Narr).
 alice_p12_wait_trade_charlie([_|In], Out?, Narr?) :-
     otherwise | alice_p12_wait_trade_charlie(In?, Out, Narr).
 alice_p12_wait_trade_charlie([], [], []).
 
-%% Act 3a: Bob buys bread (payment_received)
-procedure alice_p12_wait_payment_bob(UserNotifyStream?, UserCmdStream, NarrativeStream).
-alice_p12_wait_payment_bob([payment_received(bob, 5)|In], Out?,
-                           [event('Bob bought 5 loaves — paid 5 alice-coins')|Narr?]) :-
-    alice_p12_wait_payment_eve(In?, Out, Narr).
-alice_p12_wait_payment_bob([_|In], Out?, Narr?) :-
-    otherwise | alice_p12_wait_payment_bob(In?, Out, Narr).
-alice_p12_wait_payment_bob([], [], []).
+%% Act 3a: Bob buys bread (auto-accepted trade)
+procedure alice_p12_wait_trade_pay_bob(UserNotifyStream?, UserCmdStream, NarrativeStream).
+alice_p12_wait_trade_pay_bob([trade_completed(bob)|In], Out?,
+                             [event('Bob bought 5 loaves — paid 5 alice-coins')|Narr?]) :-
+    alice_p12_wait_trade_pay_eve(In?, Out, Narr).
+alice_p12_wait_trade_pay_bob([_|In], Out?, Narr?) :-
+    otherwise | alice_p12_wait_trade_pay_bob(In?, Out, Narr).
+alice_p12_wait_trade_pay_bob([], [], []).
 
-%% Act 4b: Eve buys bread (payment_received)
-procedure alice_p12_wait_payment_eve(UserNotifyStream?, UserCmdStream, NarrativeStream).
-alice_p12_wait_payment_eve([payment_received(eve, 3)|In],
-                           [trade(eve, [lot(bob, 0, 10)], [lot(frank, 0, 4)])|Out?],
-                           [event('Eve bought 3 loaves — paid 3 alice-coins'),
-                            say('Eve, Ill sell you 10 bob-bonds for 4 frank-coins')|Narr?]) :-
+%% Act 4b: Eve buys bread (auto-accepted trade)
+procedure alice_p12_wait_trade_pay_eve(UserNotifyStream?, UserCmdStream, NarrativeStream).
+alice_p12_wait_trade_pay_eve([trade_completed(eve)|In],
+                             [trade(eve, [lot(bob, 0, 10)], [lot(frank, 0, 4)])|Out?],
+                             [event('Eve bought 3 loaves — paid 3 alice-coins'),
+                              say('Eve, Ill sell you 10 bob-bonds for 4 frank-coins')|Narr?]) :-
     alice_p12_wait_trade_eve(In?, Out, Narr).
-alice_p12_wait_payment_eve([_|In], Out?, Narr?) :-
-    otherwise | alice_p12_wait_payment_eve(In?, Out, Narr).
-alice_p12_wait_payment_eve([], [], []).
+alice_p12_wait_trade_pay_eve([_|In], Out?, Narr?) :-
+    otherwise | alice_p12_wait_trade_pay_eve(In?, Out, Narr).
+alice_p12_wait_trade_pay_eve([], [], []).
 
 %% Act 7: Sale of debt — final deal (skip negotiation)
 %% Alice proposes 10 bob-bonds for 4 frank-coins, Eve accepts
