@@ -3,12 +3,9 @@
 % Description: Two-way communication channel with send/receive
 % Tests interactive Channel type with complementary streams
 
-MyStream ::= [] ; [_|MyStream].
-MyChannel ::= ch(MyStream?, MyStream).
-
-procedure my_new_channel(MyChannel, MyChannel).
-procedure my_send(_, MyChannel?, MyChannel).
-procedure my_receive(_?, MyChannel?, MyChannel).
+procedure my_new_channel(Channel(X, Y), Channel(Y, X)).
+procedure my_send(X?, Channel(Stream(X))?, Channel(Stream(X))).
+procedure my_receive(X, Channel(Stream(X))?, Channel(Stream(X))).
 
 my_new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 my_send(X, ch(In, [X?|Out?]), ch(In?, Out)).
