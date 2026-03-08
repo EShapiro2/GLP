@@ -18,9 +18,6 @@ ReqId ::= req(Constant).
 Lot     ::= lot(Constant, Constant, Constant).
 LotList ::= [] ; [Lot | LotList].
 
-Installment ::= installment(Constant, Constant).
-Schedule    ::= [] ; [Installment | Schedule].
-
 Decision ::= yes ; no.
 
 %% =============================================================================
@@ -41,12 +38,6 @@ UserCmd ::= mint(Constant, Constant)
           ; done
           ; connect(Constant)
           ; decision(Decision, Constant, ReqId)
-          ; credit(Constant, Constant, Constant)
-          ; accept_credit(Constant, ReqId)
-          ; reject_credit(Constant, ReqId)
-          ; loan(Constant, Constant, Schedule)
-          ; accept_loan(Constant, ReqId)
-          ; reject_loan(Constant, ReqId)
           ; trade(Constant, LotList, LotList)
           ; accept_trade(Constant, ReqId)
           ; reject_trade(Constant, ReqId)
@@ -60,12 +51,6 @@ UserNotify ::= minted(Constant, Constant)
              ; connected(Constant)
              ; rejected
              ; rejected(Constant)
-             ; credit_proposed(Constant, Constant, Constant, ReqId)
-             ; credit_opened(Constant, Constant)
-             ; credit_rejected(Constant)
-             ; loan_proposed(Constant, Constant, ReqId)
-             ; loan_opened(Constant, Constant, Constant)
-             ; loan_rejected(Constant)
              ; trade_proposed(Constant, LotList, ReqId)
              ; trade_completed(Constant)
              ; trade_failed(Constant)

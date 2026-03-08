@@ -4,8 +4,8 @@
 %% and user/actor messages (ground terms with req IDs).
 %%
 %% Phase 1: mint, balance, done (all ground, pass-through)
-%% Phase 2: befriend (non-ground Response in pending),
-%%          credit_proposed (non-ground CreditResp + data in pending)
+%% Phase 2: befriend (non-ground Response in pending)
+%% Phase 7: trade (non-ground TradeResp + data in pending)
 %%
 %% Date: 2026-03-03
 
@@ -18,9 +18,6 @@
 Bond     ::= bond(Constant, Constant, Constant).
 BondList ::= [] ; [Bond | BondList].
 
-CreditResponse ::= credit_accept(BondList) ; credit_reject.
-LoanResponse ::= loan_accept(BondList) ; loan_reject.
-
 Lot     ::= lot(Constant, Constant, Constant).
 LotList ::= [] ; [Lot | LotList].
 TradeResponse ::= trade_accept(BondList) ; trade_decline(BondList).
@@ -29,13 +26,8 @@ EscrowCancel    ::= cancel.
 EscrowBenResult ::= escrow_bonds(BondList) ; escrow_cancelled.
 EscrowDepResult ::= escrow_bonds(BondList) ; escrow_expired.
 
-Installment ::= installment(Constant, Constant).
-Schedule    ::= [] ; [Installment | Schedule].
-
 FriendContent ::= response(Response)
                 ; text(Constant)
-                ; credit_propose(Constant, Constant, BondList, CreditResponse?)
-                ; loan_propose(Constant, Schedule, BondList, LoanResponse?)
                 ; trade_propose(LotList, BondList, TradeResponse?)
                 ; escrow_offer(Constant, EscrowBenResult).
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
@@ -54,12 +46,6 @@ AgentContent ::= minted(Constant, Constant)
                ; connected(Constant)
                ; rejected
                ; rejected(Constant)
-               ; credit_proposed(Constant, Constant, Constant, CreditResponse?, BondList)
-               ; credit_opened(Constant, Constant)
-               ; credit_rejected(Constant)
-               ; loan_proposed(Constant, Constant, Schedule, LoanResponse?, BondList)
-               ; loan_opened(Constant, Constant, Constant)
-               ; loan_rejected(Constant)
                ; trade_proposed(Constant, LotList, TradeResponse?, BondList)
                ; trade_completed(Constant)
                ; trade_failed(Constant)
@@ -76,8 +62,6 @@ AgentToUserMsg    ::= msg(Constant, Constant, AgentContent).
 AgentToUserStream ::= [] ; [AgentToUserMsg | AgentToUserStream].
 
 PendingValue ::= response(Response?)
-               ; credit_pending(CreditResponse?, Constant, Constant, BondList)
-               ; loan_pending(LoanResponse?, Schedule, BondList)
                ; trade_pending(TradeResponse?, LotList, BondList)
                ; escrow_pending(EscrowCancel?)
                ; error.
@@ -88,12 +72,6 @@ UserContent ::= mint(Constant, Constant)
               ; connect(Constant)
               ; decision(Decision, Constant, PendingValue)
               ; response(Response)
-              ; credit(Constant, Constant, Constant)
-              ; accept_credit(Constant, PendingValue)
-              ; reject_credit(Constant, PendingValue)
-              ; loan(Constant, Constant, Schedule)
-              ; accept_loan(Constant, PendingValue)
-              ; reject_loan(Constant, PendingValue)
               ; trade(Constant, LotList, LotList)
               ; accept_trade(Constant, PendingValue)
               ; reject_trade(Constant, PendingValue)
@@ -112,12 +90,6 @@ UserCmd ::= mint(Constant, Constant)
           ; done
           ; connect(Constant)
           ; decision(Decision, Constant, ReqId)
-          ; credit(Constant, Constant, Constant)
-          ; accept_credit(Constant, ReqId)
-          ; reject_credit(Constant, ReqId)
-          ; loan(Constant, Constant, Schedule)
-          ; accept_loan(Constant, ReqId)
-          ; reject_loan(Constant, ReqId)
           ; trade(Constant, LotList, LotList)
           ; accept_trade(Constant, ReqId)
           ; reject_trade(Constant, ReqId)
@@ -130,12 +102,6 @@ UserNotify ::= minted(Constant, Constant)
              ; connected(Constant)
              ; rejected
              ; rejected(Constant)
-             ; credit_proposed(Constant, Constant, Constant, ReqId)
-             ; credit_opened(Constant, Constant)
-             ; credit_rejected(Constant)
-             ; loan_proposed(Constant, Constant, ReqId)
-             ; loan_opened(Constant, Constant, Constant)
-             ; loan_rejected(Constant)
              ; trade_proposed(Constant, LotList, ReqId)
              ; trade_completed(Constant)
              ; trade_failed(Constant)
@@ -238,35 +204,6 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     send_user(rejected(Who?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
-%% --- Agent-to-user: credit_proposed (non-ground — store CreditResp + data in pending) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', credit_proposed(From, K, Maturity, CreditResp?, TheirBonds)),
-            AgentCh?, AgentCh1),
-    ground(From?), ground(K?), ground(Maturity?), ground(TheirBonds?) |
-    send_user(credit_proposed(From?, K?, Maturity?, req(N?)), UserCh?, UserCh1),
-    N1 := N? + 1,
-    ui_mediator(Id?, AgentCh1?, UserCh1?,
-        [pending(req(N?), credit_pending(CreditResp, K?, Maturity?, TheirBonds?)) | Ps?], N1?).
-
-%% --- Agent-to-user: credit_opened (ground — pass through) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', credit_opened(Who, K)),
-            AgentCh?, AgentCh1),
-    ground(Who?), ground(K?) |
-    send_user(credit_opened(Who?, K?), UserCh?, UserCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
-%% --- Agent-to-user: credit_rejected (ground — pass through) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', credit_rejected(Who)),
-            AgentCh?, AgentCh1),
-    ground(Who?) |
-    send_user(credit_rejected(Who?), UserCh?, UserCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
 %% --- User-to-agent: Phase 1 pass-through ---
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
@@ -307,93 +244,6 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ground(ReqId?) |
     lookup_pending(ReqId?, Pv, Ps?, Ps1),
     send_agent(msg('_user', Id?, decision(Dec?, From?, Pv?)),
-         AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
-
-%% --- User-to-agent: credit (pass through) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(credit(Target, K, Maturity), UserCh?, UserCh1),
-    ground(Id?), ground(Target?), ground(K?), ground(Maturity?) |
-    send_agent(msg('_user', Id?, credit(Target?, K?, Maturity?)),
-         AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
-%% --- User-to-agent: accept_credit (with pending lookup) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(accept_credit(From, ReqId), UserCh?, UserCh1),
-    ground(Id?), ground(From?), ground(ReqId?) |
-    lookup_pending(ReqId?, Pv, Ps?, Ps1),
-    send_agent(msg('_user', Id?, accept_credit(From?, Pv?)),
-         AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
-
-%% --- User-to-agent: reject_credit (with pending lookup) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(reject_credit(From, ReqId), UserCh?, UserCh1),
-    ground(Id?), ground(From?), ground(ReqId?) |
-    lookup_pending(ReqId?, Pv, Ps?, Ps1),
-    send_agent(msg('_user', Id?, reject_credit(From?, Pv?)),
-         AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
-
-%% --- Agent-to-user: loan_proposed (non-ground — store LoanResp + data in pending) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', loan_proposed(From, Principal, Schedule, LoanResp?, LenderCoins)),
-            AgentCh?, AgentCh1),
-    ground(From?), ground(Principal?), ground(Schedule?), ground(LenderCoins?) |
-    send_user(loan_proposed(From?, Principal?, req(N?)), UserCh?, UserCh1),
-    N1 := N? + 1,
-    ui_mediator(Id?, AgentCh1?, UserCh1?,
-        [pending(req(N?), loan_pending(LoanResp, Schedule?, LenderCoins?)) | Ps?], N1?).
-
-%% --- Agent-to-user: loan_opened (ground — pass through) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', loan_opened(Who, Principal, FaceValue)),
-            AgentCh?, AgentCh1),
-    ground(Who?), ground(Principal?), ground(FaceValue?) |
-    send_user(loan_opened(Who?, Principal?, FaceValue?), UserCh?, UserCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
-%% --- Agent-to-user: loan_rejected (ground — pass through) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', loan_rejected(Who)),
-            AgentCh?, AgentCh1),
-    ground(Who?) |
-    send_user(loan_rejected(Who?), UserCh?, UserCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
-%% --- User-to-agent: loan (pass through) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(loan(Target, Principal, Schedule), UserCh?, UserCh1),
-    ground(Id?), ground(Target?), ground(Principal?), ground(Schedule?) |
-    send_agent(msg('_user', Id?, loan(Target?, Principal?, Schedule?)),
-         AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
-%% --- User-to-agent: accept_loan (with pending lookup) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(accept_loan(From, ReqId), UserCh?, UserCh1),
-    ground(Id?), ground(From?), ground(ReqId?) |
-    lookup_pending(ReqId?, Pv, Ps?, Ps1),
-    send_agent(msg('_user', Id?, accept_loan(From?, Pv?)),
-         AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
-
-%% --- User-to-agent: reject_loan (with pending lookup) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(reject_loan(From, ReqId), UserCh?, UserCh1),
-    ground(Id?), ground(From?), ground(ReqId?) |
-    lookup_pending(ReqId?, Pv, Ps?, Ps1),
-    send_agent(msg('_user', Id?, reject_loan(From?, Pv?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 

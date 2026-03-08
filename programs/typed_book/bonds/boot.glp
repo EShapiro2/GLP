@@ -323,6 +323,10 @@ fplay4 :-
 play4b :-
     now(Now),
     T := Now? + 500,
+    play4b_run(T?).
+
+play4b_run(T) :-
+    ground(T?) |
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
 
@@ -338,7 +342,7 @@ play4b :-
     sink(AliceDispCmd?), sink(AliceDispNotify?),
 
     %% Bob
-    bob_p4b(ch(BobActorIn?, BobActorOut)),
+    bob_p4b(ch(BobActorIn?, BobActorOut), T?),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent(bob, BobAgentIn?, BobNetIn?,
           [output('_user', BobAgentToUser), output('_net', BobNetOut)],
@@ -355,6 +359,10 @@ play4b :-
 fplay4b :-
     now(Now),
     T := Now? + 500,
+    fplay4b_run(T?).
+
+fplay4b_run(T) :-
+    ground(T?) |
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
 
@@ -370,7 +378,7 @@ fplay4b :-
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
-    bob_p4b(ch(BobActorIn?, BobActorOut)),
+    bob_p4b(ch(BobActorIn?, BobActorOut), T?),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent(bob, BobAgentIn?, BobNetIn?,
           [output('_user', BobAgentToUser), output('_net', BobNetOut)],
