@@ -2,7 +2,8 @@
 %%
 %% Testing if ch(Reader?, Writer) unifies with ch(Writer, Reader?)
 
-procedure agent_init(_?, Channel?, Channel?).
+Msg ::= hello.
+procedure agent_init(Constant?, Channel(Stream(Msg), Stream(Msg))?, Channel(Stream(Msg), Stream(Msg))?).
 agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
     Id? = alice,
     UserIn? = ui,
