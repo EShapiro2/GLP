@@ -43,7 +43,8 @@ AgentContent ::= befriend(Constant, Response?)
                ; received(Constant, Constant)
                ; unfriended(Constant)
                ; update_befriend(Constant, Constant)
-               ; update_unfriend(Constant, Constant).
+               ; update_unfriend(Constant, Constant)
+               ; friend_list(Constant, _).
 
 AgentToUserMsg    ::= msg(Constant, Constant, AgentContent).
 AgentToUserStream ::= [] ; [AgentToUserMsg | AgentToUserStream].
@@ -92,7 +93,8 @@ UserNotify  ::= befriend(Constant, ReqId)
               ; received(Constant, Constant)
               ; unfriended(Constant)
               ; update_befriend(Constant, Constant)
-              ; update_unfriend(Constant, Constant).
+              ; update_unfriend(Constant, Constant)
+              ; friend_list(Constant, _).
 
 UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].
 UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
@@ -211,6 +213,13 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
             AgentCh?, AgentCh1),
     ground(From?), ground(Who?) |
     send_user(update_unfriend(From?, Who?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', friend_list(From, Names)),
+            AgentCh?, AgentCh1),
+    ground(From?) |
+    send_user(friend_list(From?, Names?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 %% --- User-to-agent: decision (cold-call response) ---

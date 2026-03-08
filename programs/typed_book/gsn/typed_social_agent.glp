@@ -60,7 +60,8 @@ AgentContent ::= befriend(Constant, Response)
                ; received(Constant, Constant)
                ; unfriended(Constant)
                ; update_befriend(Constant, Constant)
-               ; update_unfriend(Constant, Constant).
+               ; update_unfriend(Constant, Constant)
+               ; friend_list(Constant, _).
 
 %% Network content (2-arg cold-call: msg(Dest, Content))
 NetColdCall ::= intro(Constant, Response?).
@@ -72,7 +73,8 @@ FriendContent ::= response(Response)
                 ; child_intro(Constant, IntroChannel)
                 ; unfriend(Constant)
                 ; update_befriend(Constant)
-                ; update_unfriend(Constant).
+                ; update_unfriend(Constant)
+                ; update_friend_list(_).
 
 %% Intro channel content (first message is ack/nack handshake)
 IntroContent ::= ack(Constant) ; nack.
@@ -209,6 +211,23 @@ send_all_friends(Id, Content, [O|Rest], [O?|Rest1?]) :-
 send_all_friends(_, _, [], []).
 
 %% =============================================================================
+%% COLLECT_FRIEND_NAMES
+%% =============================================================================
+%%
+%% Walk the outputs list and collect the names of all friend entries.
+%% Threads the outputs list through unchanged (SRSW-safe).
+%% Returns a list of friend names, e.g. [alice, charlie, dave].
+
+procedure collect_friend_names(OutputsList?, _, OutputsList).
+collect_friend_names([output(friend(K), Out?)|Rest], [K?|Names?], [output(friend(K?), Out)|Rest1?]) :-
+    ground(K?) |
+    collect_friend_names(Rest?, Names, Rest1).
+collect_friend_names([O|Rest], Names?, [O?|Rest1?]) :-
+    otherwise |
+    collect_friend_names(Rest?, Names, Rest1).
+collect_friend_names([], [], []).
+
+%% =============================================================================
 %% INTRO_AWAIT_PEER
 %% =============================================================================
 %%
@@ -261,11 +280,13 @@ bind_response(_, no, _, no, Outs, Outs1?, In, In?, FMap, FMap?) :-
     lookup_send('_user', msg(agent, '_user', rejected), Outs?, Outs1).
 
 procedure handle_response(Constant?, Response?, Constant?, OutputsList?, OutputsList, NetInStream?, NetInStream, _?, _).
-handle_response(Id, accept(ch(FIn, FOut?)), From, Outs, Outs3?, In, In1?, FMap, FMap2?) :-
+handle_response(Id, accept(ch(FIn, FOut?)), From, Outs, Outs4?, In, In1?, FMap, FMap2?) :-
     ground(From?) |
-    send_all_friends(Id?, update_befriend(From?), Outs?, Outs1),
+    collect_friend_names(Outs?, Names, Outs0),
+    send_all_friends(Id?, update_befriend(From?), Outs0?, Outs1),
     add_output(friend(From?), FOut, Outs1?, Outs2),
-    lookup_send('_user', msg(agent, '_user', connected(From?)), Outs2?, Outs3),
+    lookup_send(friend(From?), msg(Id?, From?, update_friend_list(Names?)), Outs2?, Outs3),
+    lookup_send('_user', msg(agent, '_user', connected(From?)), Outs3?, Outs4),
     merge_net_in(In?, FIn?, In1),
     map_put(FMap?, From?, [], FMap1),
     map_show(Id?, FMap1?, FMap2).
@@ -332,13 +353,15 @@ agent(Id, [msg('_user', Id1, reject_intro(_, channel(ch(_, [nack|[]]))))|UserIn]
 %% Intro result: peer acked — add friend
 agent(Id, [intro_result(Other, ch(FIn, FOut?))|UserIn], NetIn, Outs, FMap) :-
     ground(Id?), ground(Other?) |
-    send_all_friends(Id?, update_befriend(Other?), Outs?, Outs1),
+    collect_friend_names(Outs?, Names, Outs0),
+    send_all_friends(Id?, update_befriend(Other?), Outs0?, Outs1),
     add_output(friend(Other?), FOut, Outs1?, Outs2),
-    lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs2?, Outs3),
+    lookup_send(friend(Other?), msg(Id?, Other?, update_friend_list(Names?)), Outs2?, Outs3),
+    lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs3?, Outs4),
     merge_net_in(NetIn?, FIn?, NetIn1),
     map_put(FMap?, Other?, [], FMap1),
     map_show(Id?, FMap1?, FMap2),
-    agent(Id?, UserIn?, NetIn1?, Outs3?, FMap2?).
+    agent(Id?, UserIn?, NetIn1?, Outs4?, FMap2?).
 
 %% Intro result: peer nacked — notify rejected
 agent(Id, [intro_rejected(Other)|UserIn], NetIn, Outs, FMap) :-
@@ -443,6 +466,12 @@ agent(Id, UserIn, [msg(From, Id1, update_befriend(Who))|NetIn], Outs, FMap) :-
 agent(Id, UserIn, [msg(From, Id1, update_unfriend(Who))|NetIn], Outs, FMap) :-
     Id? =?= Id1? |
     lookup_send('_user', msg(agent, '_user', update_unfriend(From?, Who?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, FMap?).
+
+%% Friend list exchange: friend sends their current friend names on befriend
+agent(Id, UserIn, [msg(From, Id1, update_friend_list(Names))|NetIn], Outs, FMap) :-
+    Id? =?= Id1?, ground(From?) |
+    lookup_send('_user', msg(agent, '_user', friend_list(From?, Names?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, FMap?).
 
 %% Network catch-all (commented out — was consuming messages that should suspend)
