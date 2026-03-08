@@ -440,6 +440,25 @@ bash /Users/udi/Grassroots/GLP/test/run_all_tests.sh
 bash /Users/udi/Grassroots/GLP/test/run_book_tests.sh
 ```
 
+**Testing Bonds (Grassroots Bonds plays):**
+
+The bonds code lives in `programs/typed_book/bonds/` and is NOT included in `test/run_all_tests.sh`.  To test bonds, load the individual `.glp` files (not the directory) into the REPL, then run fplay goals.  There is no `fplay7` — plays are: fplay1-6, fplay8-12, plus fplay4b.  Play 12 (village market) also needs the play12 sub-module actor files.
+
+```bash
+cd /Users/udi/Grassroots/GLP/glp_runtime
+BONDS=/Users/udi/Grassroots/GLP/programs/typed_book/bonds
+
+# Single play (fplay1-6, fplay8-11):
+printf 'load $BONDS/agent.glp\nload $BONDS/mediator.glp\nload $BONDS/actors.glp\nload $BONDS/boot.glp\n:limit 1000000\nfplay1.\n' | dart run bin/glp_repl.dart
+
+# Play 12 (village market — needs play12 actor files + higher limit):
+printf 'load $BONDS/agent.glp\nload $BONDS/mediator.glp\nload $BONDS/actors.glp\nload $BONDS/play12/alice.glp\nload $BONDS/play12/bob.glp\nload $BONDS/play12/charlie.glp\nload $BONDS/play12/diana.glp\nload $BONDS/play12/eve.glp\nload $BONDS/play12/frank.glp\nload $BONDS/boot.glp\n:limit 5000000\nfplay12.\n' | dart run bin/glp_repl.dart
+```
+
+Expected results: `→ succeeds` or `→ suspended` (suspended is normal for plays with escrow timers: fplay3, fplay4, fplay4b, fplay12).
+
+**IMPORTANT:** Do NOT try to load the bonds directory as a project (`/path/to/bonds` at the REPL prompt).  The bonds directory has no `self.glp` at the top level, and while loadProject succeeds, it does not export the fplay goals.  Load files individually with `load /absolute/path/file.glp`.
+
 **Key paths:**
 - REPL: `/Users/udi/Grassroots/GLP/glp_runtime/bin/glp_repl.dart`
 - Root prelude: `/Users/udi/Grassroots/GLP/programs/self.glp`

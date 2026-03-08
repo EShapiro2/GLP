@@ -350,13 +350,17 @@ handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Se
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
 
 %% =============================================================================
-%% CHECK_OWN_BOND — Check if any offered bond was issued by me
+%% IS_REDEMPTION — Check if offer is exactly one coin issued by me
 %% =============================================================================
+%%
+%% Redemption triggers auto-accept ONLY when the trade offer is exactly
+%% one coin (maturity 0) issued by the recipient. Any other offer —
+%% multiple bonds, immature bonds, or mixed offers — is a bilateral
+%% trade requiring the user's consent.
 
-procedure check_own_bond(Constant?, BondList?, Constant).
-check_own_bond(Id, [bond(I, _, _)|_], yes) :- Id? =?= I? | true.
-check_own_bond(Id, [_|Rest], Result?) :- otherwise | check_own_bond(Id?, Rest?, Result).
-check_own_bond(_, [], no).
+procedure is_redemption(Constant?, BondList?, Constant).
+is_redemption(Id, [bond(I, 0, _)], yes) :- Id? =?= I? | true.
+is_redemption(_, _, no) :- otherwise | true.
 
 %% =============================================================================
 %% FIND_COIN_BY_ISSUER — Find one coin issued by Issuer in holdings
@@ -688,7 +692,7 @@ agent(Id, [trade_returned_bonds_menu(From, OurBonds, Menu)|UserIn], NetIn, Outs,
 agent(Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeResp?))|NetIn],
       Outs, Holdings, NextSerial) :-
     Id? =?= Id1?, ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
-    check_own_bond(Id?, OfferedBonds?, IsRedemption),
+    is_redemption(Id?, OfferedBonds?, IsRedemption),
     trade_dispatch(IsRedemption?, Id?, From?, WantSpec?, OfferedBonds?, TradeResp,
         Holdings?, UserIn?, NetIn?, Outs?, NextSerial?).
 
