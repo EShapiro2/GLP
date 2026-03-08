@@ -463,7 +463,8 @@ bob_p4_finish(_, []).
 %% 2. Wait trade_proposed → mint(5, 0) → wait minted → accept_trade
 %%    → wait trade_completed
 %% 3. Wait trade_proposed → mint(5, T) → wait minted → accept_trade
-%% 4. Wait trade_completed (auto 1) → wait trade_completed (auto 2)
+%% 4. Wait trade_completed (accept) → wait trade_completed (pre-maturity auto)
+%%    → wait trade_completed (post-maturity auto, after wait(500))
 %% 5. balance → done
 
 procedure alice_p4b(ActorChannel?, Constant?).
@@ -602,7 +603,10 @@ bob_p4b_wait_minted2(ReqId, [_|In], Out?) :-
     otherwise | bob_p4b_wait_minted2(ReqId?, In?, Out).
 bob_p4b_wait_minted2(_, [], []).
 
-%% Wait for two auto-accepted trades
+%% Wait for three trade_completed(alice) notifications:
+%%   auto1: from accepting bond-credit trade (second accept_trade)
+%%   auto2: pre-maturity redemption (auto-accepted)
+%%   auto3: post-maturity redemption (auto-accepted, arrives after wait(500))
 procedure bob_p4b_wait_auto1(UserNotifyStream?, UserCmdStream).
 bob_p4b_wait_auto1([trade_completed(alice)|In], Out?) :-
     bob_p4b_wait_auto2(In?, Out).
@@ -611,11 +615,18 @@ bob_p4b_wait_auto1([_|In], Out?) :-
 bob_p4b_wait_auto1([], []).
 
 procedure bob_p4b_wait_auto2(UserNotifyStream?, UserCmdStream).
-bob_p4b_wait_auto2([trade_completed(alice)|In], [balance|Out?]) :-
-    bob_p4b_wait_balance(In?, Out).
+bob_p4b_wait_auto2([trade_completed(alice)|In], Out?) :-
+    bob_p4b_wait_auto3(In?, Out).
 bob_p4b_wait_auto2([_|In], Out?) :-
     otherwise | bob_p4b_wait_auto2(In?, Out).
 bob_p4b_wait_auto2([], []).
+
+procedure bob_p4b_wait_auto3(UserNotifyStream?, UserCmdStream).
+bob_p4b_wait_auto3([trade_completed(alice)|In], [balance|Out?]) :-
+    bob_p4b_wait_balance(In?, Out).
+bob_p4b_wait_auto3([_|In], Out?) :-
+    otherwise | bob_p4b_wait_auto3(In?, Out).
+bob_p4b_wait_auto3([], []).
 
 procedure bob_p4b_wait_balance(UserNotifyStream?, UserCmdStream).
 bob_p4b_wait_balance([balance_report(_)|In], [done|Out?]) :-
