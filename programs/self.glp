@@ -86,20 +86,20 @@ procedure =(_?, _).
 X? = X.
 
 % Difference list operations
-procedure dl_append(DiffList?, DiffList?, DiffList).
+procedure dl_append(DiffList(X)?, DiffList(X)?, DiffList(X)).
 dl_append(A\B?, B\C?, A?\C).
 
-procedure dl_to_list(DiffList?, Stream).
+procedure dl_to_list(DiffList(X)?, Stream(X)).
 dl_to_list(L\[], L?).
 
 % Channel operations
-procedure new_channel(Channel, Channel).
+procedure new_channel(Channel(X, Y), Channel(Y, X)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
-procedure send(_?, Channel?, Channel).
+procedure send(X?, Channel(Stream(X))?, Channel(Stream(X))).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 
-procedure receive(_, Channel?, Channel).
+procedure receive(X, Channel(Stream(X))?, Channel(Stream(X))).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
 
 % =============================================================================
