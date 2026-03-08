@@ -29,12 +29,12 @@ merge(Xs, [], Xs?).
 %% LOOKUP_SEND
 %% =============================================================================
 
-procedure lookup_send(String?, _?, OutputsList?, OutputsList).
+procedure lookup_send(Constant?, OutputMsg?, OutputsList?, OutputsList).
 lookup_send(Key, Msg, Outs, Outs1?) :-
     ground(Key?) |
     lookup_send_step(Key?, Msg?, Outs?, Outs1).
 
-procedure lookup_send_step(String?, _?, OutputsList?, OutputsList).
+procedure lookup_send_step(Constant?, OutputMsg?, OutputsList?, OutputsList).
 lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
     Key? =?= K? | true.
 lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
@@ -56,7 +56,7 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
 %% ADD_OUTPUT
 %% =============================================================================
 
-procedure add_output(String?, Stream, OutputsList?, OutputsList).
+procedure add_output(Constant?, OutputStream, OutputsList?, OutputsList).
 add_output(Name, Out?, Outs, [output(Name?, Out)|Outs?]).
 
 %% =============================================================================
@@ -71,7 +71,7 @@ close_outputs([]).
 %% INTRO_AWAIT_PEER
 %% =============================================================================
 
-procedure intro_await_peer(Constant?, Channel?, IntroResult).
+procedure intro_await_peer(Constant?, IntroChannel?, IntroResult).
 
 intro_await_peer(Other, ch([ack(_)|ChIn], ChOut?),
                  intro_result(Other?, ch(ChIn?, ChOut))).
