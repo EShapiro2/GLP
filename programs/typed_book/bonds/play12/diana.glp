@@ -85,19 +85,47 @@ diana_p12_wait_trade_frank([], [], []).
 procedure diana_p12_wait_trade_pay_frank(UserNotifyStream?, UserCmdStream, NarrativeStream).
 diana_p12_wait_trade_pay_frank([trade_completed(frank)|In], Out?,
                                [event('Frank paid 3 for medical checkup')|Narr?]) :-
-    diana_p12_wait_trade_redeem_frank(In?, Out, Narr).
+    diana_p12_wait_redeem1(In?, Out, Narr).
 diana_p12_wait_trade_pay_frank([_|In], Out?, Narr?) :-
     otherwise | diana_p12_wait_trade_pay_frank(In?, Out, Narr).
 diana_p12_wait_trade_pay_frank([], [], []).
 
-%% Act 6: Frank redeems 5 diana-coins (auto-accepted trade)
-procedure diana_p12_wait_trade_redeem_frank(UserNotifyStream?, UserCmdStream, NarrativeStream).
-diana_p12_wait_trade_redeem_frank([trade_completed(frank)|In], [balance|Out?],
-                                  [event('Frank redeemed 5 diana-coins')|Narr?]) :-
+%% Act 6: Frank redeems 5 diana-coins — 5 unit redemptions (auto-accepted)
+procedure diana_p12_wait_redeem1(UserNotifyStream?, UserCmdStream, NarrativeStream).
+diana_p12_wait_redeem1([trade_completed(frank)|In], Out?, Narr?) :-
+    diana_p12_wait_redeem2(In?, Out, Narr).
+diana_p12_wait_redeem1([_|In], Out?, Narr?) :-
+    otherwise | diana_p12_wait_redeem1(In?, Out, Narr).
+diana_p12_wait_redeem1([], [], []).
+
+procedure diana_p12_wait_redeem2(UserNotifyStream?, UserCmdStream, NarrativeStream).
+diana_p12_wait_redeem2([trade_completed(frank)|In], Out?, Narr?) :-
+    diana_p12_wait_redeem3(In?, Out, Narr).
+diana_p12_wait_redeem2([_|In], Out?, Narr?) :-
+    otherwise | diana_p12_wait_redeem2(In?, Out, Narr).
+diana_p12_wait_redeem2([], [], []).
+
+procedure diana_p12_wait_redeem3(UserNotifyStream?, UserCmdStream, NarrativeStream).
+diana_p12_wait_redeem3([trade_completed(frank)|In], Out?, Narr?) :-
+    diana_p12_wait_redeem4(In?, Out, Narr).
+diana_p12_wait_redeem3([_|In], Out?, Narr?) :-
+    otherwise | diana_p12_wait_redeem3(In?, Out, Narr).
+diana_p12_wait_redeem3([], [], []).
+
+procedure diana_p12_wait_redeem4(UserNotifyStream?, UserCmdStream, NarrativeStream).
+diana_p12_wait_redeem4([trade_completed(frank)|In], Out?, Narr?) :-
+    diana_p12_wait_redeem5(In?, Out, Narr).
+diana_p12_wait_redeem4([_|In], Out?, Narr?) :-
+    otherwise | diana_p12_wait_redeem4(In?, Out, Narr).
+diana_p12_wait_redeem4([], [], []).
+
+procedure diana_p12_wait_redeem5(UserNotifyStream?, UserCmdStream, NarrativeStream).
+diana_p12_wait_redeem5([trade_completed(frank)|In], [balance|Out?],
+                       [event('Frank redeemed 5 diana-coins')|Narr?]) :-
     diana_p12_wait_balance(In?, Out, Narr).
-diana_p12_wait_trade_redeem_frank([_|In], Out?, Narr?) :-
-    otherwise | diana_p12_wait_trade_redeem_frank(In?, Out, Narr).
-diana_p12_wait_trade_redeem_frank([], [], []).
+diana_p12_wait_redeem5([_|In], Out?, Narr?) :-
+    otherwise | diana_p12_wait_redeem5(In?, Out, Narr).
+diana_p12_wait_redeem5([], [], []).
 
 procedure diana_p12_wait_balance(UserNotifyStream?, UserCmdStream, NarrativeStream).
 diana_p12_wait_balance([balance_report(_)|In], [done|Out?],

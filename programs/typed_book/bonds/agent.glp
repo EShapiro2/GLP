@@ -350,17 +350,26 @@ handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Se
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
 
 %% =============================================================================
-%% IS_REDEMPTION — Check if offer is exactly one coin issued by me
+%% CLASSIFY_TRADE — Classify incoming trade for auto-accept
 %% =============================================================================
 %%
-%% Redemption triggers auto-accept ONLY when the trade offer is exactly
-%% one coin (maturity 0) issued by the recipient. Any other offer —
-%% multiple bonds, immature bonds, or mixed offers — is a bilateral
-%% trade requiring the user's consent.
+%% Three classifications:
+%%   payment    — WantSpec is empty (proposer gives coins, wants nothing back).
+%%                Auto-accept: nobody refuses free money.
+%%   redemption — OfferedBonds is exactly one coin issued by me.
+%%                Auto-accept with redemption priority rule.
+%%   normal     — everything else. Present to user for decision.
 
-procedure is_redemption(Constant?, BondList?, Constant).
-is_redemption(Id, [bond(I, 0, _)], yes) :- Id? =?= I? | true.
-is_redemption(_, _, no) :- otherwise | true.
+procedure classify_trade(Constant?, LotList?, BondList?, Constant).
+
+%% Payment: empty WantSpec
+classify_trade(_, [], _, payment).
+
+%% Redemption: exactly one of my coins
+classify_trade(Id, _, [bond(I, 0, _)], redemption) :- Id? =?= I? | true.
+
+%% Normal: everything else
+classify_trade(_, _, _, normal) :- otherwise | true.
 
 %% =============================================================================
 %% FIND_COIN_BY_ISSUER — Find one coin issued by Issuer in holdings
@@ -440,8 +449,15 @@ menu_update(I, M, S, [], [bond(I?, M?, S?)]).
 procedure trade_dispatch(Constant?, Constant?, Constant?, LotList?, BondList?, TradeResponse,
     BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
 
+%% Payment — auto-accept (proposer gives coins, wants nothing)
+trade_dispatch(payment, Id, From, _, OfferedBonds, trade_accept([]),
+    Holdings, UserIn, NetIn, Outs, NextSerial) :-
+    append(Holdings?, OfferedBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+
 %% Redemption — find proposer's coin in our holdings
-trade_dispatch(yes, Id, From, WantSpec, OfferedBonds, TradeResp?,
+trade_dispatch(redemption, Id, From, WantSpec, OfferedBonds, TradeResp?,
     Holdings, UserIn, NetIn, Outs, NextSerial) :-
     find_coin_by_issuer(From?, Holdings?, CoinStatus, Coin, HoldingsAfterCoin),
     redemption_dispatch(CoinStatus?, Id?, From?, WantSpec?, OfferedBonds?, TradeResp,
@@ -449,7 +465,7 @@ trade_dispatch(yes, Id, From, WantSpec, OfferedBonds, TradeResp?,
         UserIn?, NetIn?, Outs?, NextSerial?).
 
 %% Normal trade — present to user
-trade_dispatch(no, Id, From, WantSpec, OfferedBonds, TradeResp?,
+trade_dispatch(normal, Id, From, WantSpec, OfferedBonds, TradeResp?,
     Holdings, UserIn, NetIn, Outs, NextSerial) :-
     lookup_send('_user',
         msg(agent, '_user', trade_proposed(From?, WantSpec?, TradeResp, OfferedBonds?)),
@@ -692,8 +708,8 @@ agent(Id, [trade_returned_bonds_menu(From, OurBonds, Menu)|UserIn], NetIn, Outs,
 agent(Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeResp?))|NetIn],
       Outs, Holdings, NextSerial) :-
     Id? =?= Id1?, ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
-    is_redemption(Id?, OfferedBonds?, IsRedemption),
-    trade_dispatch(IsRedemption?, Id?, From?, WantSpec?, OfferedBonds?, TradeResp,
+    classify_trade(Id?, WantSpec?, OfferedBonds?, TradeClass),
+    trade_dispatch(TradeClass?, Id?, From?, WantSpec?, OfferedBonds?, TradeResp,
         Holdings?, UserIn?, NetIn?, Outs?, NextSerial?).
 
 %% Responder: accept_trade (inlined — select bonds then fill)
