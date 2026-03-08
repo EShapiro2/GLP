@@ -413,7 +413,9 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
 
     // Create read-only agent panels based on play type
     final List<String> agentIds;
-    if (playNumber <= 3 || playNumber >= 12) {
+    if (playNumber == 15) {
+      agentIds = ['Alice', 'Bob', 'Charlie', 'Dave'];
+    } else if (playNumber <= 3 || (playNumber >= 12 && playNumber <= 14)) {
       agentIds = ['Alice', 'Bob', 'Charlie'];
     } else if (playNumber >= 8) {
       agentIds = ['Alice', 'Bob'];
@@ -576,6 +578,8 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
             for (final n in [8, 9, 10, 11]) ...[playButton(n), const SizedBox(width: 8)],
             sep(),
             for (final n in [12, 13, 14]) ...[playButton(n), const SizedBox(width: 8)],
+            sep(),
+            playButton(15), const SizedBox(width: 8),
           ],
         ),
       ),

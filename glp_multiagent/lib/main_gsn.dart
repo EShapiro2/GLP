@@ -89,6 +89,14 @@ const _agentInfos3 = [
   _AgentInfo('Charlie', 'Agent', Color(0xFFEF6C00), Color(0xFFFFF3E0)),  // orange 800, orange 50
 ];
 
+/// Panel order for 4-agent peer plays (15+): Alice, Bob, Charlie, Dave.
+const _agentInfos4peer = [
+  _AgentInfo('Alice',   'Agent', Color(0xFF3949AB), Color(0xFFE8EAF6)),  // indigo 600, indigo 50
+  _AgentInfo('Bob',     'Agent', Color(0xFF00897B), Color(0xFFE0F2F1)),  // teal 600, teal 50
+  _AgentInfo('Charlie', 'Agent', Color(0xFFEF6C00), Color(0xFFFFF3E0)),  // orange 800, orange 50
+  _AgentInfo('Dave',    'Agent', Color(0xFF7B1FA2), Color(0xFFF3E5F5)),  // purple 800, purple 50
+];
+
 class _AgentState {
   final _AgentInfo info;
   final List<String> outputLog = [];
@@ -168,9 +176,10 @@ class _GsnScreenState extends State<GsnScreen> {
     _agents.clear();
 
     // Create agent panels based on play type
-    // Plays 1-3, 12-14: 3 agents, Plays 8-11: 2 agents, Plays 4-7: 4 agents
     final List<_AgentInfo> agentInfos;
-    if (playNumber <= 3 || playNumber >= 12) {
+    if (playNumber == 15) {
+      agentInfos = _agentInfos4peer;
+    } else if (playNumber <= 3 || (playNumber >= 12 && playNumber <= 14)) {
       agentInfos = _agentInfos3;
     } else if (playNumber >= 8) {
       agentInfos = _agentInfos2;
@@ -364,6 +373,14 @@ class _GsnScreenState extends State<GsnScreen> {
               onPressed: () => _runPlay(14),
               icon: const Icon(Icons.play_arrow),
               label: const Text('Play 14'),
+            ),
+            const SizedBox(width: 16),
+            Container(width: 1, height: 30, color: Colors.grey),
+            const SizedBox(width: 16),
+            ElevatedButton.icon(
+              onPressed: () => _runPlay(15),
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('Play 15'),
             ),
           ],
         ),

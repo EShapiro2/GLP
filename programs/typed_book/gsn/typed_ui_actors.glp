@@ -1325,3 +1325,118 @@ charlie14_wait_unfriended([unfriended(alice)|_], []).
 charlie14_wait_unfriended([_|In], Out?) :-
     otherwise | charlie14_wait_unfriended(In?, Out).
 charlie14_wait_unfriended([], []).
+
+%% =============================================================================
+%% PLAY 15 — FMap test: 4 agents, sequential cold-calls with wait
+%% Step 1: Alice→Bob (accept)
+%% Step 2: Alice→Charlie (accept), Bob gets update_befriend(alice, charlie)
+%% Step 3: Bob→Dave (accept), Alice gets update_befriend(bob, dave)
+%%
+%% Expected final FMaps:
+%%   Alice:   {bob: [dave], charlie: []}
+%%   Bob:     {alice: [charlie], dave: []}
+%%   Charlie: {alice: []}
+%%   Dave:    {bob: []}
+%% =============================================================================
+
+%% --- Alice (play15) ---
+%% 1. connect(bob) → wait connected(bob)
+%% 2. wait(2000), connect(charlie) → wait connected(charlie)
+%% 3. Wait update_befriend(bob, dave) → done
+
+procedure alice15(ActorChannel?).
+alice15(ch(In, [connect(bob)|Out?])) :-
+    alice15_wait_bob(In?, Out).
+
+procedure alice15_wait_bob(UserNotifyStream?, UserCmdStream).
+alice15_wait_bob([connected(bob)|In], [connect(charlie)|Out?]) :-
+    wait(2000) |
+    alice15_wait_charlie(In?, Out).
+alice15_wait_bob([_|In], Out?) :-
+    otherwise | alice15_wait_bob(In?, Out).
+alice15_wait_bob([], []).
+
+procedure alice15_wait_charlie(UserNotifyStream?, UserCmdStream).
+alice15_wait_charlie([connected(charlie)|In], Out?) :-
+    alice15_wait_update(In?, Out).
+alice15_wait_charlie([_|In], Out?) :-
+    otherwise | alice15_wait_charlie(In?, Out).
+alice15_wait_charlie([], []).
+
+procedure alice15_wait_update(UserNotifyStream?, UserCmdStream).
+alice15_wait_update([update_befriend(bob, dave)|_], []).
+alice15_wait_update([_|In], Out?) :-
+    otherwise | alice15_wait_update(In?, Out).
+alice15_wait_update([], []).
+
+%% --- Bob (play15) ---
+%% 1. Wait befriend(alice, ReqId) → decision(yes, alice, ReqId)
+%% 2. Wait connected(alice)
+%% 3. Wait update_befriend(alice, charlie) → wait(2000), connect(dave)
+%% 4. Wait connected(dave) → done
+
+procedure bob15(ActorChannel?).
+bob15(ch([befriend(alice, ReqId)|In],
+         [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob15_wait_connected(In?, Out).
+bob15(ch([_|In], Out?)) :-
+    otherwise | bob15(ch(In?, Out)).
+
+procedure bob15_wait_connected(UserNotifyStream?, UserCmdStream).
+bob15_wait_connected([connected(alice)|In], Out?) :-
+    bob15_wait_update(In?, Out).
+bob15_wait_connected([_|In], Out?) :-
+    otherwise | bob15_wait_connected(In?, Out).
+bob15_wait_connected([], []).
+
+procedure bob15_wait_update(UserNotifyStream?, UserCmdStream).
+bob15_wait_update([update_befriend(alice, charlie)|In],
+                  [connect(dave)|Out?]) :-
+    wait(2000) |
+    bob15_wait_dave(In?, Out).
+bob15_wait_update([_|In], Out?) :-
+    otherwise | bob15_wait_update(In?, Out).
+bob15_wait_update([], []).
+
+procedure bob15_wait_dave(UserNotifyStream?, UserCmdStream).
+bob15_wait_dave([connected(dave)|_], []).
+bob15_wait_dave([_|In], Out?) :-
+    otherwise | bob15_wait_dave(In?, Out).
+bob15_wait_dave([], []).
+
+%% --- Charlie (play15) ---
+%% 1. Wait befriend(alice, ReqId) → decision(yes, alice, ReqId)
+%% 2. Wait connected(alice) → done
+
+procedure charlie15(ActorChannel?).
+charlie15(ch([befriend(alice, ReqId)|In],
+             [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    charlie15_wait_connected(In?, Out).
+charlie15(ch([_|In], Out?)) :-
+    otherwise | charlie15(ch(In?, Out)).
+
+procedure charlie15_wait_connected(UserNotifyStream?, UserCmdStream).
+charlie15_wait_connected([connected(alice)|_], []).
+charlie15_wait_connected([_|In], Out?) :-
+    otherwise | charlie15_wait_connected(In?, Out).
+charlie15_wait_connected([], []).
+
+%% --- Dave (play15) ---
+%% 1. Wait befriend(bob, ReqId) → decision(yes, bob, ReqId)
+%% 2. Wait connected(bob) → done
+
+procedure dave15(ActorChannel?).
+dave15(ch([befriend(bob, ReqId)|In],
+          [decision(yes, bob, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    dave15_wait_connected(In?, Out).
+dave15(ch([_|In], Out?)) :-
+    otherwise | dave15(ch(In?, Out)).
+
+procedure dave15_wait_connected(UserNotifyStream?, UserCmdStream).
+dave15_wait_connected([connected(bob)|_], []).
+dave15_wait_connected([_|In], Out?) :-
+    otherwise | dave15_wait_connected(In?, Out).
+dave15_wait_connected([], []).

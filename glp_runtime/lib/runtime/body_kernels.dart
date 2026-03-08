@@ -110,6 +110,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('map_remove', 3, mapRemoveKernel);
   registry.register('map_keys', 2, mapKeysKernel);
   registry.register('map_show', 3, mapShowKernel);
+  registry.register('map_list_append', 4, mapListAppendKernel);
 
   // Arithmetic assignment
   registry.register(':=', 2, assignKernel);
@@ -991,6 +992,39 @@ BodyKernelResult mapShowKernel(GlpRuntime rt, List<Object?> args) {
   // Pass-through: copy the map so it remains usable
   final copy = MapTerm(Map<Object, Term>.from(mapArg.entries));
   return _bindResult(rt, args[2], copy);
+}
+
+/// map_list_append(MapIn?, Key?, Value?, MapOut) — Append Value to list at Key.
+/// Looks up Key in the map. If found and value is a list, prepends Value.
+/// If Key not found, creates new entry with [Value].
+BodyKernelResult mapListAppendKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 4) {
+    print('[ABORT] map_list_append/4: expected 4 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final mapArg = _deref(rt, args[0]);
+  if (mapArg is! MapTerm) {
+    print('[ABORT] map_list_append/4: first argument must be a MapTerm, got ${mapArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  final key = _extractMapKey(rt, args[1]);
+  if (key == null) {
+    print('[ABORT] map_list_append/4: second argument must be a ground constant');
+    return BodyKernelResult.abort;
+  }
+
+  final value = _deref(rt, args[2]);
+  final valueTerm = (value is Term) ? value : ConstTerm(value);
+
+  // Get current list (or start with nil = empty list)
+  final current = mapArg.entries[key];
+  // Prepend value: [Value | CurrentList]
+  final newList = StructTerm('.', [valueTerm, current ?? ConstTerm('nil')]);
+  mapArg.entries[key] = newList;
+
+  return _bindResult(rt, args[3], mapArg);
 }
 
 /// :=(Result, Expr) — Arithmetic assignment.
