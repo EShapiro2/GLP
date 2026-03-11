@@ -18,10 +18,10 @@ new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 %% LOCAL HELPERS — Precisely-typed channel operations
 %% =============================================================================
 
-procedure send_agent(_?, Channel?, Channel).
+procedure send_agent(MediatorToAgentMsg?, AgentChannel?, AgentChannel).
 send_agent(X, ch(In, [X?|Out?]), ch(In?, Out)).
 
-procedure send_user(_?, Channel?, Channel).
+procedure send_user(UserNotify?, UserChannel?, UserChannel).
 send_user(X, ch(In, [X?|Out?]), ch(In?, Out)).
 
 %% =============================================================================
@@ -41,7 +41,7 @@ lookup_pending(_, error, [], []).
 %% UI MEDIATOR — Main loop
 %% =============================================================================
 
-exported procedure ui_mediator(Constant?, Channel?, Channel?, PendingList?, Constant?).
+exported procedure ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Constant?).
 
 %% --- Agent-to-user: non-ground (replace variable with req ID) ---
 
@@ -56,14 +56,14 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(msg(agent, '_user',
-                befriend_intro(From, Other, Ch?)),
+                befriend_intro(From, Other, Ch)),
             AgentCh?, AgentCh1),
     ground(From?), ground(Other?) |
     send_user(befriend_intro(From?, Other?, req(N?)),
          UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
-        [pending(req(N?), channel(Ch)) | Ps?], N1?).
+        [pending(req(N?), channel(Ch?)) | Ps?], N1?).
 
 %% --- Agent-to-user: ground (pass through) ---
 

@@ -46,7 +46,7 @@ lookup_send_step(_, _, [], []).
 %% INJECT_MSG
 %% =============================================================================
 
-procedure inject_msg(Response?, Constant?, Constant?, Stream?, Stream).
+procedure inject_msg(Response?, Constant?, Constant?, UserInStream?, UserInStream).
 inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
     known(Resp?) | true.
 inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
@@ -83,7 +83,7 @@ intro_await_peer(Other, ch([nack|_], []),
 %% INJECT_INTRO_RESULT
 %% =============================================================================
 
-procedure inject_intro_result(IntroResult?, Stream?, Stream).
+procedure inject_intro_result(IntroResult?, UserInStream?, UserInStream).
 inject_intro_result(intro_result(Other, Ch), Ys, [intro_result(Other?, Ch?)|Ys?]) :-
     ground(Other?) | true.
 inject_intro_result(intro_rejected(Other), Ys, [intro_rejected(Other?)|Ys?]) :-
@@ -95,14 +95,14 @@ inject_intro_result(Res, [Y|Ys], [Y?|Ys1?]) :-
 %% RESPONSE HANDLING
 %% =============================================================================
 
-procedure bind_response(Decision?, Constant?, Response, OutputsList?, OutputsList, Stream?, Stream).
+procedure bind_response(Decision?, Constant?, Response, OutputsList?, OutputsList, NetInStream?, NetInStream).
 bind_response(yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
     new_channel(RetCh, LocalCh) |
     handle_response(accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
 bind_response(no, _, no, Outs, Outs1?, In, In?) :-
     lookup_send('_user', msg(agent, '_user', rejected), Outs?, Outs1).
 
-procedure handle_response(Response?, Constant?, OutputsList?, OutputsList, Stream?, Stream).
+procedure handle_response(Response?, Constant?, OutputsList?, OutputsList, NetInStream?, NetInStream).
 handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
     ground(From?) |
     add_output(From?, FOut, Outs?, Outs1),
@@ -116,7 +116,7 @@ handle_response(no, From, Outs, Outs1?, In, In?) :-
 %% AGENT/4
 %% =============================================================================
 
-exported procedure agent(Constant?, Stream?, Stream?, OutputsList?).
+exported procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
 
 %% --- User messages ---
 

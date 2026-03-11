@@ -16,7 +16,7 @@
 Response ::= accept(FriendChannel) ; no.
 Decision ::= yes ; no.
 Handshake ::= ack(Constant) ; nack.
-PendingValue ::= response(Response?) ; channel(IntroChannel?) ; error.
+PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.
 
 %% --- Content types for messages ---
 
@@ -99,6 +99,31 @@ UserNotify ::= befriend(Constant, ReqId)
              ; rejected
              ; rejected(Constant)
              ; received(Constant, Constant).
+
+%% User ↔ mediator streams and channels
+UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].
+UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
+UserChannel      ::= ch(UserCmdStream, UserNotifyStream?).
+
+%% Actor's view of the user channel (reversed)
+ActorChannel ::= ch(UserNotifyStream, UserCmdStream?).
+
+%% Agent ↔ mediator precise streams
+AgentToUserMsg        ::= msg(Constant, Constant, AgentContent).
+AgentToUserStream     ::= [] ; [AgentToUserMsg | AgentToUserStream].
+MediatorToAgentMsg    ::= msg(Constant, Constant, UserContent).
+MediatorToAgentStream ::= [] ; [MediatorToAgentMsg | MediatorToAgentStream].
+AgentChannel          ::= ch(AgentToUserStream, MediatorToAgentStream?).
+
+%% Agent input types
+UserInMsg    ::= msg(Constant, Constant, UserContent)
+               ; intro_result(Constant, IntroChannel)
+               ; intro_rejected(Constant).
+UserInStream ::= [] ; [UserInMsg | UserInStream].
+
+NetInMsg     ::= msg(Constant, NetColdCall)
+               ; msg(Constant, Constant, FriendContent).
+NetInStream  ::= [] ; [NetInMsg | NetInStream].
 
 %% Pending entries
 PendingEntry ::= pending(ReqId, PendingValue).
