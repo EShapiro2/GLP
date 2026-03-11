@@ -2,9 +2,14 @@
 %% Alice and Bob establish credit, then Alice pays Carol in Bob-coins
 
 %% Type definitions
-BalanceList ::= [] ; [_ | BalanceList].
-RequestList ::= [] ; [_ | RequestList].
-BlockStream ::= [] ; [_ | BlockStream].
+BalanceEntry ::= (Constant, Number).
+BalanceList ::= [] ; [BalanceEntry | BalanceList].
+Block ::= block(X, Y, BlockStream).
+BlockStream ::= [] ; [Block | BlockStream].
+Request ::= issue(Constant, Number, Constant)
+          ; accept(Number, Constant, X, Y)
+          ; approve(X).
+RequestList ::= [] ; [Request | RequestList].
 
 %% ============================================
 %% The Play
@@ -18,9 +23,9 @@ BlockStream ::= [] ; [_ | BlockStream].
 
 procedure agent(RequestList?, BalanceList?, BlockStream).
 
-procedure find_payment_to(_?, BlockStream?, _).
+procedure find_payment_to(Constant?, BlockStream?, Block).
 
-procedure find_approval(BlockStream?, _).
+procedure find_approval(BlockStream?, Block).
 
 procedure play_payment.
 play_payment :-

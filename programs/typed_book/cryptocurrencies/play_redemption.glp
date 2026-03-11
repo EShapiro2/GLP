@@ -2,9 +2,14 @@
 %% Bob redeems Alice-coins with preference list
 
 %% Type definitions
-BalanceList ::= [] ; [_ | BalanceList].
-RequestList ::= [] ; [_ | RequestList].
-BlockStream ::= [] ; [_ | BlockStream].
+BalanceEntry ::= (Constant, Number).
+BalanceList ::= [] ; [BalanceEntry | BalanceList].
+PrefList ::= [] ; [Constant | PrefList].
+Block ::= block(X, Y, BlockStream).
+BlockStream ::= [] ; [Block | BlockStream].
+Request ::= redeem(Constant, Number, PrefList)
+          ; repay(Constant, Number, PrefList, Constant).
+RequestList ::= [] ; [Request | RequestList].
 
 %% ============================================
 %% The Play

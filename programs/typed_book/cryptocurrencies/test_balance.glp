@@ -1,16 +1,16 @@
 %% test_balance.glp - Unit tests for balance management
 
 %% Type definitions
-BalanceEntry ::= (_, Number).
+BalanceEntry ::= (Constant, Number).
 BalanceList ::= [] ; [BalanceEntry | BalanceList].
 
 %% ============================================
 %% Balance Tests
 %% ============================================
 
-procedure get_balance(_?, BalanceList?, Number).
+procedure get_balance(Constant?, BalanceList?, Number).
 
-procedure set_balance(_?, Number?, BalanceList?, BalanceList).
+procedure set_balance(Constant?, Number?, BalanceList?, BalanceList).
 
 %% Test get_balance on empty list returns 0
 procedure test_get_empty.
