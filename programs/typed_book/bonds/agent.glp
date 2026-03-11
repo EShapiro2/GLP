@@ -153,16 +153,6 @@ OutputEntry ::= output(OutputKey, OutputStream?).
 OutputsList ::= [] ; [OutputEntry | OutputsList].
 
 %% =============================================================================
-%% MERGE_NET_IN
-%% =============================================================================
-
-procedure merge_net_in(NetInStream?, NetInStream?, NetInStream).
-merge_net_in([X|Xs], Ys, [X?|Zs?]) :- merge_net_in(Ys?, Xs?, Zs).
-merge_net_in(Xs, [Y|Ys], [Y?|Zs?]) :- merge_net_in(Xs?, Ys?, Zs).
-merge_net_in([], Ys, Ys?).
-merge_net_in(Xs, [], Xs?).
-
-%% =============================================================================
 %% LOOKUP_SEND
 %% =============================================================================
 
@@ -205,19 +195,12 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
     inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
 
 %% =============================================================================
-%% NEW_FRIEND_CHANNEL — Create a bidirectional FriendChannel pair
-%% =============================================================================
-
-procedure new_friend_channel(FriendChannel, FriendChannel).
-new_friend_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
-
-%% =============================================================================
 %% RESPONSE HANDLING — bind cold-call decision
 %% =============================================================================
 
 procedure bind_response(Decision?, Constant?, Response, OutputsList?, OutputsList, NetInStream?, NetInStream).
 bind_response(yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
-    new_friend_channel(RetCh, LocalCh) |
+    new_channel(RetCh, LocalCh) |
     handle_response(accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
 bind_response(no, _, no, Outs, Outs1?, In, In?) :-
     lookup_send('_user', msg(agent, '_user', rejected), Outs?, Outs1).
@@ -227,7 +210,7 @@ handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
     ground(From?) |
     add_output(friend(From?), FOut, Outs?, Outs1),
     lookup_send('_user', msg(agent, '_user', connected(From?)), Outs1?, Outs2),
-    merge_net_in(In?, FIn?, In1).
+    merge(In?, FIn?, In1).
 handle_response(no, From, Outs, Outs1?, In, In?) :-
     ground(From?) |
     lookup_send('_user', msg(agent, '_user', rejected(From?)), Outs?, Outs1).

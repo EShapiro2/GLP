@@ -104,12 +104,6 @@ merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).
 merge(Xs, [], Xs?).
 
-procedure merge_net_in(NetInStream?, NetInStream?, NetInStream).
-merge_net_in([X|Xs], Ys, [X?|Zs?]) :- merge_net_in(Ys?, Xs?, Zs).
-merge_net_in(Xs, [Y|Ys], [Y?|Zs?]) :- merge_net_in(Xs?, Ys?, Zs).
-merge_net_in([], Ys, Ys?).
-merge_net_in(Xs, [], Xs?).
-
 %% =============================================================================
 %% LOOKUP_SEND
 %% =============================================================================
@@ -206,7 +200,7 @@ handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
     ground(From?) |
     add_output(friend(From?), FOut, Outs?, Outs1),
     lookup_send('_user', msg(agent, '_user', connected(From?)), Outs1?, Outs2),
-    merge_net_in(In?, FIn?, In1).
+    merge(In?, FIn?, In1).
 handle_response(no, From, Outs, Outs1?, In, In?) :-
     ground(From?) |
     lookup_send('_user', msg(agent, '_user', rejected(From?)), Outs?, Outs1).
@@ -263,7 +257,7 @@ agent(Id, [intro_result(Other, ch(FIn, FOut?))|UserIn], NetIn, Outs) :-
     ground(Id?), ground(Other?) |
     add_output(friend(Other?), FOut, Outs?, Outs1),
     lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
-    merge_net_in(NetIn?, FIn?, NetIn1),
+    merge(NetIn?, FIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs2?).
 
 %% Intro result: peer nacked — notify rejected
