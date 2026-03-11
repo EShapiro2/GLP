@@ -1,6 +1,6 @@
 # Typed GLP Manual
 
-**Version**: 2.7
+**Version**: 2.8
 **Date**: 2026-03-11
 **Status**: ACTIVE
 
@@ -208,15 +208,15 @@ Guards that imply groundness include: `ground/1`, `integer/1`, `number/1`, `stri
 
 ## 4. Channel Type Convention
 
-### 4.1 Recommended Definition
+### 4.1 Definition
 
 ```prolog
-Channel ::= ch(Stream, Stream?).
+Channel(In, Out) ::= ch(In, Out?).
 ```
 
 This means:
-- Position 1 (`Stream`): output/produce mode — the channel owner writes here
-- Position 2 (`Stream?`): input/consume mode — the channel owner reads here
+- Position 1 (`In`): output/produce mode — the channel owner writes here
+- Position 2 (`Out?`): input/consume mode — the channel owner reads here
 
 ### 4.2 When Consuming a Channel (Channel?)
 
@@ -244,7 +244,7 @@ The agent receives `Channel?` (inverted view), reads from position 1 (`In?`), an
 ### 5.1 The new_channel Pattern
 
 ```prolog
-procedure new_channel(Channel, Channel).
+procedure new_channel(Channel(X, Y), Channel(Y, X)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 ```
 
@@ -252,7 +252,7 @@ This creates two "ends" of a bidirectional channel:
 - First channel: reads from `Xs?`, writes to `Ys`
 - Second channel: reads from `Ys?`, writes to `Xs`
 
-What one end writes, the other reads.
+The type parameters `X` and `Y` capture the asymmetry: what one end reads, the other writes.
 
 ### 5.2 Usage
 
@@ -330,13 +330,13 @@ The prelude defines several single-unit-clause procedures. The PE automatically 
 Examples from the prelude:
 
 ```prolog
-procedure new_channel(Channel, Channel).
+procedure new_channel(Channel(X, Y), Channel(Y, X)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
-procedure send(_?, Channel?, Channel).
+procedure send(X?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 
-procedure receive(_, Channel?, Channel).
+procedure receive(X, Channel(Stream(X), Y)?, Channel(Stream(X), Y)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
 ```
 
@@ -382,8 +382,8 @@ Using named anonymous variables like `_From` and `_To` documents what is being d
 The symbols `_` and `_?` in **type definitions** are primitive type symbols meaning "any produced term" and "any consumed term" respectively. They are not variables and should not be confused with anonymous variables in program clauses.
 
 ```prolog
-%% In type definition: _ is a type symbol
-Stream ::= [] ; [_|Stream].
+%% In type definition: _ is a type symbol (system builtins only)
+procedure ground(_?).
 
 %% In clause: _ is an anonymous variable
 second([_, X | _], X?).
@@ -658,7 +658,8 @@ Use type parameters in procedure declarations to express uniform behaviour:
 
 ```prolog
 procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
-procedure send(X?, Channel(Stream(X))?, Channel(Stream(X))).
+procedure send(X?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
+procedure receive(X, Channel(Stream(X), Y)?, Channel(Stream(X), Y)).
 procedure new_channel(Channel(X, Y), Channel(Y, X)).
 ```
 
@@ -694,10 +695,44 @@ With parameterized types, the following Section 14 workarounds are no longer nee
 | Before (renamed copy) | After (parameterized) |
 |-----------------------|-----------------------|
 | `merge_agent(AgentStream?, ...)` | `merge(Stream(AgentMsg)?, ...)` |
-| `send_agent(AgentMsg?, AgentChannel?, ...)` | `send(X?, Channel(Stream(X))?, ...)` |
+| `send_agent(AgentMsg?, AgentChannel?, ...)` | `send(X?, Channel(Y, Stream(X))?, ...)` |
 | `new_agent_channel(AgentChannel, ...)` | `new_channel(Channel(X,Y), ...)` |
 
 The generic procedures `merge`, `send`, `new_channel` work directly with precise types through parameter inference.
+
+---
+
+## 18. Tight Typing Discipline
+
+### 18.1 The Discipline
+
+As a project discipline, we do not use `_` or `_?` in type definitions or procedure declarations.  All type definitions use concrete types or type parameters; all procedure declarations use concrete or parameterized types.
+
+The GLP language continues to support `_` and `_?` as primitive types.  The discipline is a coding standard, not a language restriction.
+
+### 18.2 Parameterized Types Replace Imprecise Types
+
+Every local imprecise type definition should be replaced by a parameterized instantiation from the root prelude:
+
+| Before (imprecise) | After (precise) |
+|---|---|
+| `MsgStream ::= [] ; [_ \| MsgStream].` | Remove; use `Stream(Msg)` |
+| `Channel ::= ch(Stream, Stream?).` | Remove; use `Channel(In, Out)` |
+| `DiffList ::= Stream \ Stream?.` | Remove; use `DiffList(X)` |
+| `NonEmptyList ::= [_ \| Stream].` | Remove; use `OpenStream(X)` |
+| `procedure merge(Stream?, Stream?, Stream).` | `procedure merge(Stream(X)?, Stream(X)?, Stream(X)).` |
+
+### 18.3 Exceptions
+
+Two categories of code may retain `_` and `_?`:
+
+1. **System builtins** in `self.glp` that genuinely accept any term: `ground(_?)`, `=(_?, _)`, `=?=(_?, _?)`, `=..(_, Stream(_)?)`, `compound(_?)`, etc.  These are implemented by the runtime and have no meaningful type restriction.
+
+2. **Meta-interpreters** that manipulate arbitrary terms (goals, clause representations).  Types like `DumpList ::= [] ; [_ | DumpList].` or `Chain ::= chain(Stream(_)?, Stream(_)).` are acceptable with a comment explaining why.  Meta-interpreter typing is deferred to future work.
+
+### 18.4 `-mode(system)` Does Not Exempt From Type Checking
+
+The `-mode(system)` directive permits calling kernel predicates and using reserved constants.  It does **not** exempt the module from type checking.  All modules, including system-mode modules, are fully type-checked.  Type definitions and procedure declarations in system-mode files must follow the tight typing discipline.
 
 ---
 
@@ -705,6 +740,7 @@ The generic procedures `merge`, `send`, `new_channel` work directly with precise
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.8 | 2026-03-11 | Added Section 18: Tight Typing Discipline; corrected send/receive Channel arity to 2-arg form |
 | 2.7 | 2026-03-11 | Section 14 marked obsolete — renamed procedure copies removed, replaced by parameterized types |
 | 2.6 | 2026-03-06 | Added Section 17: Parameterized Types; updated Section 14.6 |
 | 2.5 | 2026-03-06 | Added Section 15: Receiving and Forwarding Non-Ground Variables; Added Section 16: `?` in Type Definitions vs `?` on Clause Variables |
