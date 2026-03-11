@@ -8,15 +8,16 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-%% Channel is defined in prelude as: Channel ::= ch(Stream, Stream?).
-
-%% Friend list
-FriendEntry ::= (_, Stream?).
-FriendList ::= [] ; [FriendEntry | FriendList].
+%% Friend channel types
+FriendContent ::= response(Response) ; text(Constant).
+FriendChannel ::= ch(Stream(FriendContent), Stream(FriendContent)?).
 
 %% Response type for connection offers
-%% Channel is produced inside accept (standard covariant flow: producer provides channel to consumer)
-Response ::= accept(Channel) ; no.
+Response ::= accept(FriendChannel) ; no.
+
+%% Friend list
+FriendEntry ::= (Constant, Stream(FriendContent)?).
+FriendList ::= [] ; [FriendEntry | FriendList].
 
 %% =============================================================================
 %% MERGE: Fair merge of two streams (from merge_simple.glp - PASSES)

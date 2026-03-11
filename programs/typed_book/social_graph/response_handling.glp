@@ -5,10 +5,17 @@
 %% configurations and merge new friend's input stream into main loop.
 
 %% Type definitions
-MsgList ::= [] ; [_ | MsgList].
-FriendEntry ::= (_, _).
+%% Friend channel types
+FriendContent ::= response(Response) ; text(Constant).
+FriendChannel ::= ch(Stream(FriendContent), Stream(FriendContent)?).
+Response ::= accept(FriendChannel) ; no.
+
+%% Message stream carries protocol messages and tagged friend content
+MsgList ::= [] ; [MsgItem | MsgList].
+MsgItem ::= decision(Constant, Constant, Response?) ; response(Constant, Response) ; tagged(Constant, FriendContent).
+
+FriendEntry ::= (Constant, Stream(FriendContent)).
 FriendList ::= [] ; [FriendEntry | FriendList].
-Response ::= accept(Channel) ; no.
 
 %% Channel operations (defined guard)
 procedure new_channel(Channel(X, Y), Channel(X, Y)).

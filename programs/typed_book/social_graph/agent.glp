@@ -6,7 +6,11 @@
 %% with the user interface, and ChNet connects to the network.
 
 %% Type definitions
-FriendEntry ::= (Constant?, Stream).
+FriendContent ::= response(Response) ; text(Constant).
+FriendChannel ::= ch(Stream(FriendContent), Stream(FriendContent)?).
+Response ::= accept(FriendChannel) ; no.
+
+FriendEntry ::= (Constant, Stream(FriendContent)).
 FriendList ::= [] ; [FriendEntry | FriendList].
 
 procedure agent(Constant?, Channel(X, Y)?, Channel(X, Y)?).

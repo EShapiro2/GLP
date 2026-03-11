@@ -1,7 +1,10 @@
 % Network Switch for 2 Agents (based on Program 12)
 
 %% Type definitions
-AgentEntry ::= (_, Channel?).
+%% 2-arg network messages: msg(Target, Content)
+%% Content is protocol-opaque — router forwards without inspection
+NetMsg ::= msg(Constant, _).
+AgentEntry ::= (Constant, Channel(Stream(NetMsg), Stream(NetMsg))?).
 
 procedure network(AgentEntry?, AgentEntry?).
 network((P, ChP), (Q, ChQ)) :-

@@ -1,11 +1,12 @@
 % Stream Utilities
 
 %% Type definitions
-TaggedList ::= [] ; [_ | TaggedList].
+Tagged ::= tagged(Constant, Constant).
+TaggedList ::= [] ; [Tagged | TaggedList].
 
 % observe/3 - Stream observation (Program 14, SRSW-fixed)
 % Creates two copies of a stream for observation
-procedure observe(_?, _, _).
+procedure observe(Stream(X)?, Stream(X), Stream(X)).
 observe(X?, Y, Z?) :- observe(Y?, X, Z).
 observe(X, X?, X?) :- ground(X) | true.
 observe(Xs, [Y1?|Ys1?], [Y2?|Ys2?]) :-

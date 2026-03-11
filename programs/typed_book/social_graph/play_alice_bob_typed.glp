@@ -8,25 +8,26 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-%% Channel type - position 1 is output, position 2 is input (when consumed)
+%% Friend channel for established connections
+FriendChannel ::= ch(MsgList, MsgList?).
+
+%% Response to connection request
+Response ::= accept(FriendChannel) ; no.
 
 %% Message operations
-MsgOp ::= connect(_) ; intro(_, _, Response?) ; befriend(_, Response?) 
-        ; decision(_, _, Response?) ; response(Response).
+MsgOp ::= connect(Constant) ; intro(Constant, Constant, Response?) ; befriend(Constant, Response?)
+        ; decision(Constant, Constant, Response?) ; response(Response).
 
 %% Social message with sender, receiver, operation
-SocialMsg ::= msg(_, _, MsgOp).
+SocialMsg ::= msg(Constant, Constant, MsgOp).
 MsgList ::= [] ; [SocialMsg | MsgList].
 
 %% Friend list - pairs of (name, output_stream)
-FriendEntry ::= (_, Stream).
+FriendEntry ::= (Constant, MsgList).
 FriendList ::= [] ; [FriendEntry | FriendList].
 
-%% Response to connection request
-Response ::= accept(Channel) ; no.
-
 %% Agent entry for network
-AgentEntry ::= (_, Channel?).
+AgentEntry ::= (Constant, Channel(MsgList, MsgList)?).
 
 %% =============================================================================
 %% MERGE
@@ -51,7 +52,7 @@ tag_stream(_, [], []).
 %% LOOKUP
 %% =============================================================================
 
-procedure lookup(_?, FriendList?, Stream(X)).
+procedure lookup(_?, FriendList?, MsgList).
 lookup(Key, [(K, Value)|_], Value?) :- Key? =?= K? | true.
 lookup(Key, [_|Rest], Value?) :- otherwise | lookup(Key?, Rest?, Value).
 

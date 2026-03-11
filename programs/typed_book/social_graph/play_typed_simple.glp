@@ -11,10 +11,14 @@
 %% TYPE DEFINITIONS (from social_graph_protocol.glp)
 %% =============================================================================
 
-%% Channel is defined in prelude as: Channel ::= ch(Stream, Stream?).
-FriendEntry ::= (_, Stream).
+%% Friend channel types
+FriendContent ::= response(Response) ; text(Constant).
+FriendChannel ::= ch(Stream(FriendContent), Stream(FriendContent)?).
+
+Response ::= accept(FriendChannel) ; no.
+
+FriendEntry ::= (Constant, Stream(FriendContent)).
 FriendList ::= [] ; [FriendEntry | FriendList].
-Response ::= accept(Channel) ; no.
 
 %% =============================================================================
 %% CHANNEL OPERATIONS

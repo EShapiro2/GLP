@@ -9,10 +9,29 @@
 %%   Round 5: Alice -> Carol (accept)
 
 %% Type definitions
-MsgList ::= [] ; [_ | MsgList].
-FriendList ::= [] ; [_ | FriendList].
 
-procedure social_graph(_, MsgList, FriendList).
+%% Decision type
+Decision ::= yes ; no.
+
+%% Friend channel for established connections
+FriendChannel ::= ch(MsgList, MsgList?).
+
+%% Response to connection request
+Response ::= accept(FriendChannel) ; no.
+
+%% Message operations for cold-call protocol
+MsgOp ::= connect(Constant) ; intro(Constant, Constant, Response?) ; befriend(Constant, Response?)
+        ; decision(Decision, Constant, Response?) ; response(Response).
+
+%% Social graph messages
+SocialMsg ::= msg(Constant, Constant, MsgOp).
+MsgList ::= [] ; [SocialMsg | MsgList].
+
+%% Friend list entries
+FriendEntry ::= (Constant, MsgList).
+FriendList ::= [] ; [FriendEntry | FriendList].
+
+procedure social_graph(_?, MsgList?, FriendList?).
 
 %% Main entry point
 procedure play/0.

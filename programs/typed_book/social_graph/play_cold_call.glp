@@ -9,25 +9,27 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-%% Channel: position 1 is output (write), position 2 is input (read when consumed)
-
-%% Friend management
-FriendEntry ::= (_, Channel).
-FriendList ::= [] ; [FriendEntry | FriendList].
+%% Friend channel types
+FriendContent ::= response(Response) ; text(Constant).
+FriendChannel ::= ch(Stream(FriendContent), Stream(FriendContent)?).
 
 %% Response to connection request
-Response ::= accept(Channel) ; no.
+Response ::= accept(FriendChannel) ; no.
+
+%% Friend management
+FriendEntry ::= (Constant, FriendChannel).
+FriendList ::= [] ; [FriendEntry | FriendList].
 
 %% User interface - symmetric for all agents
-Keyboard ::= connect(_) ; send(_, _) ; friends ; accept(_) ; reject(_).
-Screen ::= connected(_) ; rejected(_) ; sent(_) ; not_friend(_) 
-         ; friends_list(FriendList) ; incoming(_).
+Keyboard ::= connect(Constant) ; send(Constant, Constant) ; friends ; accept(Constant) ; reject(Constant).
+Screen ::= connected(Constant) ; rejected(Constant) ; sent(Constant) ; not_friend(Constant)
+         ; friends_list(FriendList) ; incoming(Constant).
 
 %% Network messages between agents
-NetMsg ::= intro(_, Response?) ; msg(_, _, _).
+NetMsg ::= intro(Constant, Response?) ; response(Constant, Response).
 
 %% Pending connection requests (waiting for user decision)
-PendingEntry ::= pending(_, Response).
+PendingEntry ::= pending(Constant, Response).
 PendingList ::= [] ; [PendingEntry | PendingList].
 
 %% =============================================================================

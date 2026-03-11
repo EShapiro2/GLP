@@ -7,8 +7,13 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-Response ::= accept(Channel) ; no.
-FriendEntry ::= friend(String?, Stream).
+%% Friend channel types
+FriendContent ::= text(Constant) ; response(Response).
+FriendMsg ::= msg(Constant, Constant, FriendContent).
+FriendChannel ::= ch(Stream(FriendMsg), Stream(FriendMsg)?).
+Response ::= accept(FriendChannel) ; no.
+
+FriendEntry ::= friend(String?, Stream(FriendMsg)).
 FriendsList ::= [] ; [FriendEntry|FriendsList].
 
 %% =============================================================================

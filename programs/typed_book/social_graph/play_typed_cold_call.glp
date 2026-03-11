@@ -16,13 +16,17 @@
 %% TYPE DEFINITIONS (must match social_graph_protocol.glp)
 %% =============================================================================
 
-%% Channel is defined in prelude as: Channel ::= ch(Stream, Stream?).
-FriendEntry ::= (_, Stream).
+%% Friend channel types
+FriendContent ::= response(Response) ; text(Constant).
+FriendChannel ::= ch(Stream(FriendContent), Stream(FriendContent)?).
+
+Response ::= accept(FriendChannel) ; no.
+
+FriendEntry ::= (Constant, Stream(FriendContent)).
 FriendList ::= [] ; [FriendEntry | FriendList].
-Response ::= accept(Channel) ; no.
 
 %% Network message type
-NetMsg ::= msg(_, _, _).
+NetMsg ::= msg(Constant, Constant, Constant).
 
 %% =============================================================================
 %% CHANNEL OPERATIONS
@@ -103,7 +107,7 @@ agent(Id, ch(UserIn, UserOut), ch(NetIn, NetOut)) :-
 %% =============================================================================
 
 %% AgentEntry for network: holds channel to communicate with agent
-AgentEntry ::= (_, Channel?).
+AgentEntry ::= (Constant, Channel(Stream(NetMsg), Stream(NetMsg))?).
 
 procedure network(AgentEntry?, AgentEntry?).
 

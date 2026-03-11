@@ -16,8 +16,9 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-Response ::= accept(Channel) ; no.
-FriendEntry ::= friend(String, Stream?).
+FriendChannel ::= ch(Stream(X), Stream(X)?).
+Response ::= accept(FriendChannel) ; no.
+FriendEntry ::= friend(String, Stream(X)?).
 FriendsList ::= [] ; [FriendEntry|FriendsList].
 
 %% =============================================================================

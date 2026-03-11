@@ -20,7 +20,7 @@
 
 %% Type definitions
 Done ::= done.
-Control ::= control(Stream, Control).
+Control ::= control(Stream(X), Control).
 
 %% Cooperative extension example - only holder of tail writer can extend
 procedure extend_stream(Stream(X)?, _, Stream(X)).

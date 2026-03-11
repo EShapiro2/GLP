@@ -22,10 +22,14 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-%% Channel is defined in prelude as: Channel ::= ch(Stream, Stream?).
-FriendEntry ::= (_, Stream).
+%% Friend channel types
+FriendContent ::= response(Response) ; text(Constant).
+FriendChannel ::= ch(Stream(FriendContent), Stream(FriendContent)?).
+
+Response ::= accept(FriendChannel) ; no.
+
+FriendEntry ::= (Constant, Stream(FriendContent)).
 FriendList ::= [] ; [FriendEntry | FriendList].
-Response ::= accept(Channel) ; no.
 
 %% Network message: carries response between agents
 NetMsg ::= response(_, Response).

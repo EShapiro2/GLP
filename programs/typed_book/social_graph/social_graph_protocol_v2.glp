@@ -10,35 +10,38 @@
 %% TYPE DEFINITIONS (must appear before use)
 %% =============================================================================
 
-%% Basic stream type
-
-%% Bidirectional channel
+%% Decision type
+Decision ::= yes ; no.
 
 %% Response types for connection offers
-Resp ::= accept(Channel) ; no.
+Resp ::= accept(FriendChannel) ; no.
 
-%% Lookup result type  
-LookupResult ::= found(Stream) ; not_found.
+%% Lookup result type
+LookupResult ::= found(FriendStream) ; not_found.
 
 %% Message operations
-MsgOp ::= connect(_)              % User requests connection to target
-        ; intro(_, _, Resp?)      % Introduction offer (from, from, response slot)
-        ; befriend(_, Resp?)      % Ask user to approve (from, response slot)
-        ; decision(_, _, Resp)    % User decision (yes/no, from, response)
-        ; response(Resp?).        % Response to our offer
+MsgOp ::= connect(Constant)              % User requests connection to target
+        ; intro(Constant, Constant, Resp?)  % Introduction offer (from, from, response slot)
+        ; befriend(Constant, Resp?)       % Ask user to approve (from, response slot)
+        ; decision(Decision, Constant, Resp)  % User decision (yes/no, from, response)
+        ; response(Resp?).                % Response to our offer
 
 %% Protocol message: msg(From, To, Operation)
-Msg ::= msg(_, _, MsgOp).
+Msg ::= msg(Constant, Constant, MsgOp).
 
 %% Tagged content from friend channels
-TaggedMsg ::= tagged(_, _).
+TaggedMsg ::= tagged(Constant, Msg).
 
 %% Unified message stream (protocol messages and tagged friend content)
 MsgItem ::= Msg ; TaggedMsg.
 MsgStream ::= [] ; [MsgItem | MsgStream].
 
+%% Friend streams and channels
+FriendStream  ::= [] ; [Msg | FriendStream].
+FriendChannel ::= ch(FriendStream, FriendStream?).
+
 %% Friends list: list of (name, output_stream) pairs
-FriendEntry ::= (_, Stream).
+FriendEntry ::= (Constant, FriendStream).
 FriendList ::= [] ; [FriendEntry | FriendList].
 
 %% =============================================================================

@@ -12,16 +12,18 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-Response ::= accept(Channel) ; no.
+Decision ::= yes ; no.
+FriendChannel ::= ch(MsgStream, MsgStream?).
+Response ::= accept(FriendChannel) ; no.
 
 MsgPayload ::= connect(String?) ; connected(String?) ; rejected(String?)
-             ; befriend(String?, Response) ; decision(_?, String?, Response)
-             ; befriend_intro(String?, String?, Channel?) ; accept_intro(String?, Channel?) ; reject_intro(String?)
+             ; befriend(String?, Response) ; decision(Decision, String?, Response)
+             ; befriend_intro(String?, String?, FriendChannel?) ; accept_intro(String?, FriendChannel?) ; reject_intro(String?)
              ; introduce(String?, String?)
-             ; intro(String?, String?, Response) ; intro(String?, Channel?)
+             ; intro(String?, String?, Response) ; intro(String?, FriendChannel?)
              ; response(Response?).
 
-Msg ::= msg(_?, _?, MsgPayload).
+Msg ::= msg(Constant, Constant, MsgPayload).
 MsgStream ::= [] ; [Msg | MsgStream].
 
 FriendEntry ::= friend(String?, MsgStream).
