@@ -1,7 +1,7 @@
 %% Well-moded append procedure
-%% Uses predefined Stream type from prelude
+%% Uses predefined Stream(X) type from prelude
 
-procedure append(Stream?, Stream?, Stream).
+procedure append(Stream(_)?, Stream(_)?, Stream(_)).
 
 append([], Ys, Ys?).
 append([H|Xs], Ys, [H?|Zs?]) :- append(Xs?, Ys?, Zs).

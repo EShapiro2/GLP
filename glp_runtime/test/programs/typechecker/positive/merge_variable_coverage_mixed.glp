@@ -5,9 +5,9 @@
 %              Per Definition 5.5 (Consistent Paths): X? is compatible with any state with mode down.
 %              Missing merge([], Ys, Ys?) but Xs in clause 2 provides coverage for [] at arg1.
 
-% Uses predefined Stream type from stdlib
+% Uses predefined Stream(X) type from stdlib
 
-procedure merge(Stream?, Stream?, Stream).
+procedure merge(Stream(_)?, Stream(_)?, Stream(_)).
 
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).

@@ -14,11 +14,11 @@ wrapper_guard(w(_)).
 procedure make_pair(Channel(X, Y), Channel(Y, X)).
 make_pair(C1?, C2?) :- new_channel(C1, C2) | true.
 
-procedure relay_send(Stream(X)?, Channel(Stream(X))?, Channel(Stream(X))).
+procedure relay_send(Stream(X)?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
 relay_send([X|In1], Ch, Ch2?) :- send(X?, Ch?, Ch1) | relay_send(In1?, Ch1?, Ch2).
 relay_send([], Ch, Ch?).
 
-procedure relay_recv(Stream(X), Channel(Stream(X))?, Channel(Stream(X))).
+procedure relay_recv(Stream(X), Channel(Stream(X), Y)?, Channel(Stream(X), Y)).
 relay_recv([X?|Out1?], Ch, Ch2?) :- receive(X, Ch?, Ch1) | relay_recv(Out1, Ch1?, Ch2).
 relay_recv([], Ch, Ch?).
 

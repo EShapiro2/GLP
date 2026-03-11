@@ -6,18 +6,10 @@
 % TYPE DEFINITIONS
 % =============================================================================
 
-% Collections (monomorphic — kept for backward compatibility)
-Stream ::= [] ; [_|Stream].
-OpenStream ::= [_|Stream].
-DiffList ::= Stream \ Stream?.
-
 % Collections (parameterized)
 Stream(X) ::= [] ; [X | Stream(X)].
 OpenStream(X) ::= [X | Stream(X)].
 DiffList(X) ::= Stream(X) \ Stream(X)?.
-
-% Communication (monomorphic — kept for backward compatibility)
-Channel ::= ch(Stream, Stream?).
 
 % Communication (parameterized)
 Channel(In, Out) ::= ch(In, Out?).
@@ -62,8 +54,8 @@ procedure =\=(Exp?, Exp?).
 procedure =?=(_?, _?).
 
 % Univ operations (term ↔ list conversion)
-procedure =..(_, Stream?).      % Compose: Stream? → Compound
-procedure ..=(Stream, _?).      % Decompose: Compound? → Stream
+procedure =..(_, Stream(_)?).      % Compose: Stream? → Compound
+procedure ..=(Stream(_), _?).      % Decompose: Compound? → Stream
 
 % MWM (Mutual Write Merge) runtime primitives
 procedure _allocate_mutual_reference(_, _).
@@ -96,10 +88,10 @@ dl_to_list(L\[], L?).
 procedure new_channel(Channel(X, Y), Channel(Y, X)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
-procedure send(X?, Channel(Stream(X))?, Channel(Stream(X))).
+procedure send(X?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 
-procedure receive(X, Channel(Stream(X))?, Channel(Stream(X))).
+procedure receive(X, Channel(Stream(X), Y)?, Channel(Stream(X), Y)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
 
 % =============================================================================

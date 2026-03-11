@@ -66,7 +66,7 @@ const String _madPredicatesSource = r'''
 %% See: madGLP-spec.md Section 4 and Section 12
 
 %% send_to_net/1 - Process network output stream
-procedure send_to_net(Stream?).
+procedure send_to_net(Stream(_)?).
 send_to_net([msg(Q, T) | In]) :- ground(Q?) | global_send(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
 send_to_net([]).
 
@@ -75,7 +75,7 @@ procedure global_send(_?, _?, _?).
 global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
 
 %% send_to_user/1 - Process user output stream (ground terms only)
-procedure send_to_user(Stream?).
+procedure send_to_user(Stream(_)?).
 send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
 ''';

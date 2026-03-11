@@ -5,9 +5,9 @@
 %              Per Definition 5.5 (Consistent Paths): X? is compatible with any state with mode down.
 %              Note: This program is type-correct but would deadlock if given two non-empty lists.
 
-% Uses predefined Stream type from stdlib
+% Uses predefined Stream(X) type from stdlib
 
-procedure merge(Stream?, Stream?, Stream).
+procedure merge(Stream(_)?, Stream(_)?, Stream(_)).
 
 merge(Xs, [], Xs?).
 merge([], Ys, Ys?).

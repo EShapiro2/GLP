@@ -108,7 +108,10 @@ ast.Module expandParameterizedTypes(ast.Module module, {
       final newAlts = template.alternatives
           .map((alt) => _substituteTypeExpr(alt, substitution, templates, instantiations, monoNames: monoNames))
           .toList();
-      expandedDefs.add(TypeDef(expandedName, newAlts, template.line, template.column));
+      final processedAlts = newAlts
+          .map((alt) => _replaceParamRefs(alt, templates, monoNames: monoNames))
+          .toList();
+      expandedDefs.add(TypeDef(expandedName, processedAlts, template.line, template.column));
       expanded.add(expandedName);
     }
   }
@@ -180,7 +183,10 @@ ast.Module expandParameterizedTypes(ast.Module module, {
       final newAlts = template.alternatives
           .map((alt) => _substituteTypeExpr(alt, substitution, templates, instantiations, monoNames: monoNames))
           .toList();
-      expandedDefs.add(TypeDef(expandedName, newAlts, template.line, template.column));
+      final processedAlts = newAlts
+          .map((alt) => _replaceParamRefs(alt, templates, monoNames: monoNames))
+          .toList();
+      expandedDefs.add(TypeDef(expandedName, processedAlts, template.line, template.column));
       expanded.add(expandedName);
     }
   }
