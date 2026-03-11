@@ -10,16 +10,16 @@ Started: 2026-03-07
 - [x] 5. Step 2.3: Convert module applications (CSSG, CSSN, simulated UI)
 - [x] 6. FIX: Parameterized proc decl type checking
 - [x] 7. Step 2.4: Parameterize self.glp procedures + remove monomorphic types
-- [ ] 8. **Step 2.5: Remove renamed procedure copies (send_agent, send_user, etc.)** ← CURRENT
+- [x] 8. Step 2.5: Remove renamed procedure copies (send_agent, send_user, etc.)
 - [x] 9. Step 2.6: Archive book/ directory (done out of order, commit 1473fb31)
-- [ ] 10. Step 2.7: Adopt tight typing discipline (documentation)
+- [ ] 10. **Step 2.7: Adopt tight typing discipline (documentation)** ← CURRENT
 - [ ] 11. Step 2.8: Final validation
 
 ## Context
 
-Step 2.4 complete (commit c3348bd1). Monomorphic types removed from self.glp, param_expansion.dart fixed to post-process expanded defs through _replaceParamRefs, proc decl signatures corrected for 2-arg Channel, test files updated. 390/390 REPL tests pass.
+Step 2.5 complete. All renamed procedure copies (send_agent, send_user, merge_net_in, new_friend_channel) removed from 13 files across module mediators, typed_book, and test files. Calls replaced with generic send/merge/new_channel. typed-glp-manual.md Section 14 marked obsolete. 390/390 REPL tests pass.
 
-Next: Step 2.5 — remove renamed procedure copies (send_agent, send_user, merge_agent, etc.) that parameterized types make unnecessary.
+Next: Step 2.7 — adopt tight typing discipline (documentation).
 
 ## Master Plan
 

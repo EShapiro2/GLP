@@ -1,7 +1,7 @@
 # Typed GLP Manual
 
-**Version**: 2.6
-**Date**: 2026-03-06
+**Version**: 2.7
+**Date**: 2026-03-11
 **Status**: ACTIVE
 
 This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, and common pitfalls.
@@ -532,134 +532,26 @@ The `reduce/2` clause for `:=` handles arithmetic assignment by extracting the a
 
 ---
 
-## 14. Precise Typing via Renamed Procedures
+## 14. Precise Typing via Renamed Procedures (OBSOLETE)
 
-### 14.1 The Problem
+**This section is obsolete.** Parameterized types (Section 17) eliminate the need for renamed procedure copies. The prelude's generic procedures (`send`, `receive`, `new_channel`, `merge`) now have parameterized signatures, and the type checker infers precise types at each call site. Use the generic procedures directly.
 
-Generic procedures like `send`, `new_channel`, and `merge` are declared with generic types:
+### 14.1 Historical Context
 
-```prolog
-procedure send(_?, Channel?, Channel).
-send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+Before parameterized types, generic procedures declared with monomorphic types (e.g., `procedure send(_?, Channel?, Channel)`) assigned generic output types in body position. To preserve precise types, modules defined renamed copies with precisely-typed signatures (e.g., `send_agent`, `send_user`, `merge_net_in`). The clause bodies were identical to the originals — only the name and type declaration differed.
 
-procedure new_channel(Channel, Channel).
-new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+### 14.2 Current Practice
 
-procedure merge(Stream?, Stream?, Stream).
-merge([], Ys, Ys?).
-merge(Xs, [], Xs?).
-merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
-merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
-```
-
-When a program defines precisely-typed channels or streams:
-
-```prolog
-AgentMsg ::= befriend(_?) ; status(_).
-AgentStream ::= [] ; [AgentMsg|AgentStream].
-AgentChannel ::= ch(AgentStream, Stream?).
-```
-
-and uses these generic procedures in the body of a clause, the type checker assigns output variables the generic type from the procedure's declaration. For example, `send` on an `AgentChannel` produces a `Channel` output — not `AgentChannel`. Similarly, `merge` on two `AgentStream` inputs produces a generic `Stream` output — not `AgentStream`.
-
-This loses precision: the recursive call or subsequent use expects the precise type, but the variable has the generic type. The generic type is a supertype, not a subtype, so subtyping does not help — the variance goes the wrong way.
-
-Note: this problem occurs only for procedures called in **body position**. Defined guards called in **guard position** are eliminated by partial evaluation before type checking, so the type checker never sees the generic signature — it sees the inlined structure and infers the precise type from the surrounding context.
-
-### 14.2 The Solution: Renamed Copies with Precise Types
-
-Create a copy of the generic procedure with a new name and a precisely-typed signature. The clauses are identical — only the procedure name and type declaration change.
-
-**Example 1: send**
-
-```prolog
-%% Generic (from prelude)
-procedure send(_?, Channel?, Channel).
-send(X, ch(In, [X?|Out?]), ch(In?, Out)).
-
-%% Precisely-typed copy for AgentChannel
-procedure send_agent(AgentMsg?, AgentChannel?, AgentChannel).
-send_agent(X, ch(In, [X?|Out?]), ch(In?, Out)).
-```
-
-**Example 2: merge**
-
-```prolog
-%% Generic (from prelude)
-procedure merge(Stream?, Stream?, Stream).
-merge([], Ys, Ys?).
-merge(Xs, [], Xs?).
-merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
-merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
-
-%% Precisely-typed copy for AgentStream
-procedure merge_agent(AgentStream?, AgentStream?, AgentStream).
-merge_agent([], Ys, Ys?).
-merge_agent(Xs, [], Xs?).
-merge_agent([X|Xs], Ys, [X?|Zs?]) :- merge_agent(Ys?, Xs?, Zs).
-merge_agent(Xs, [Y|Ys], [Y?|Zs?]) :- merge_agent(Xs?, Ys?, Zs).
-```
-
-Note: recursive calls within `merge_agent` must also use `merge_agent` (not `merge`), otherwise the output of the recursive call would revert to `Stream`.
-
-Then use the precise versions in clause bodies:
-
-```prolog
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(Msg, AgentCh?, AgentCh1), ground(Msg?) |
-    send_agent(Response, AgentCh1?, AgentCh2),   %% precise type preserved
-    ui_mediator(Id?, AgentCh2?, UserCh?, Ps?, N1?).
-
-agent(Id, In, Outs) :-
-    ...
-    merge_agent(UserIn?, NetIn?, In),             %% precise type preserved
-    agent(Id?, In?, Outs?).
-```
-
-The type checker now assigns precise types to the output variables, and recursive calls type-check.
-
-### 14.3 Why This Works
-
-The renamed procedure has identical operational behavior to the generic one — same clause, same unification. The only difference is the type signature, which constrains the type checker to assign precise types to the output variables.
-
-With subtyping, the caller's message type only needs to be a subtype of the declared message type, so the precise signature is not overly rigid — it accommodates subtype-compatible callers.
-
-### 14.4 When This Technique Is Needed
-
-This technique is needed for **every** generic procedure that is called in **body position** and whose output variables must carry a precise type. This includes but is not limited to `send`, `new_channel`, `merge`, `append`, `copy`, `distribute`, and any user-defined generic procedure.
-
-The three conditions are:
-
-1. A generic procedure is called in **body position** (not guard position)
-2. The procedure's output arguments need to carry a precise type (not the generic one)
-3. The precise type is a subtype of the generic type, not the other way around
-
-If the procedure is only called in **guard position**, partial evaluation eliminates it and no renamed copy is needed.
-
-### 14.5 Naming Convention
-
-Use the generic name followed by an underscore and a descriptive qualifier:
-
-| Generic | Precise Copy | For |
-|---------|-------------|-----|
-| `send` | `send_agent` | Sending on AgentChannel |
-| `send` | `send_user` | Sending on UserChannel |
-| `new_channel` | `new_agent_channel` | Creating AgentChannel pairs |
-| `merge` | `merge_net_in` | Merging into agent's net input |
-| `merge` | `merge_agent` | Merging AgentStreams |
-| `append` | `append_agent` | Appending AgentStreams |
-| `copy` | `copy_agent` | Copying an AgentStream |
-| `distribute` | `distribute_agent` | Distributing over AgentStreams |
-
-### 14.6 Relationship to Parameterized Types
-
-This technique is a workaround for the absence of parameterized types. With parameterized types (Section 17), one writes:
+With parameterized types, write:
 
 ```prolog
 procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+procedure send(X?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
 ```
 
-and the type checker instantiates `X` to `AgentMsg` automatically. When parameterized types are implemented, renamed copies will no longer be needed for generic procedures used in body position.
+The type checker instantiates `X` (and `Y`) from context. No renamed copies are needed.
+
+All renamed copies (`send_agent`, `send_user`, `merge_net_in`, `new_friend_channel`, etc.) have been removed from the codebase as of Step 2.5 (March 2026).
 
 ---
 
@@ -813,6 +705,7 @@ The generic procedures `merge`, `send`, `new_channel` work directly with precise
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.7 | 2026-03-11 | Section 14 marked obsolete — renamed procedure copies removed, replaced by parameterized types |
 | 2.6 | 2026-03-06 | Added Section 17: Parameterized Types; updated Section 14.6 |
 | 2.5 | 2026-03-06 | Added Section 15: Receiving and Forwarding Non-Ground Variables; Added Section 16: `?` in Type Definitions vs `?` on Clause Variables |
 | 2.4 | 2026-02-21 | Added Section 14: Precise Typing via Renamed Procedures (workaround for absent parametric types) |
