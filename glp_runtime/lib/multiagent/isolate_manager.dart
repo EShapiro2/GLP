@@ -84,7 +84,7 @@ class AgentConfig {
   final String programSource;
   final List<String>? sharedSources; // Optional shared code files (e.g., social_agent.glp)
   final String? projectDir; // Optional project directory for static linking
-  final String stdlibDir; // Path to stdlib directory
+  final String rootSelfGlpPath; // Absolute path to programs/self.glp
   final SendPort mainPort;
   final SendPort? uiPort; // null for headless
   final TraceConfig traceConfig;
@@ -97,7 +97,7 @@ class AgentConfig {
     required this.programSource,
     this.sharedSources,
     this.projectDir,
-    required this.stdlibDir,
+    required this.rootSelfGlpPath,
     required this.mainPort,
     this.uiPort,
     this.traceConfig = const TraceConfig(),
@@ -156,7 +156,7 @@ class IsolateManager {
         programSource: config.source,
         sharedSources: config.sharedSources,
         projectDir: config.projectDir,
-        stdlibDir: config.stdlibDir,
+        rootSelfGlpPath: config.rootSelfGlpPath,
         mainPort: _mainPort.sendPort,
         traceConfig: traceConfig,
       );
@@ -255,7 +255,7 @@ void _agentIsolateEntry(AgentConfig config) async {
 
   // Create GlpEngine — the ONE way to run GLP programs.
   // Non-strict types: actor code may have type warnings that shouldn't be fatal.
-  final engine = GlpEngine(stdlibDir: config.stdlibDir)..strictTypes = false;
+  final engine = GlpEngine(rootSelfGlpPath: config.rootSelfGlpPath)..strictTypes = false;
 
   // Enable madGLP mode (loads madPredicates + creates MadContext)
   engine.enableMadGLP(agentId: agentId);

@@ -63,8 +63,8 @@ class BootConfig {
   /// loading individual shared sources. The boot source is loaded on top.
   String? projectDir;
 
-  /// Path to stdlib directory (repo-relative, e.g., '../programs/stdlib')
-  String stdlibDir;
+  /// Absolute path to programs/self.glp
+  String rootSelfGlpPath;
 
   BootConfig({
     required this.directives,
@@ -72,7 +72,7 @@ class BootConfig {
     required this.source,
     this.sharedSources,
     this.projectDir,
-    this.stdlibDir = '../programs/stdlib',
+    required this.rootSelfGlpPath,
   });
 }
 

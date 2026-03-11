@@ -1,4 +1,5 @@
 /// Tests for GlpEngine - the unified GLP execution core
+import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
@@ -8,7 +9,7 @@ void main() {
     late GlpEngine engine;
 
     setUp(() {
-      engine = GlpEngine(stdlibDir: '../programs/stdlib');
+      engine = GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path);
     });
 
     test('runs simple goal with binding', () async {
@@ -40,7 +41,7 @@ pick(charlie, X?) :- X = picked_charlie.
       print('pick(alice, X) -> X = ${result.bindings['X']}');
 
       // Test bob - need fresh engine for clean state
-      final engine2 = GlpEngine(stdlibDir: '../programs/stdlib');
+      final engine2 = GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path);
       engine2.loadSource('''
 procedure pick(_?, _).
 pick(alice, X?) :- X = picked_alice.

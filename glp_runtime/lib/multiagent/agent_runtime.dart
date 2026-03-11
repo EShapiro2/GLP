@@ -37,7 +37,7 @@ import 'package:glp_runtime/multiagent/payload_serializer.dart';
 class AgentRuntime {
   final String agentId;
   final List<String> glpSources;
-  final String stdlibDir;
+  final String rootSelfGlpPath;
   final List<String> friends;
 
   /// Entry-point goal label, e.g. 'agent_init/3', 'agent_init_play/3',
@@ -78,7 +78,7 @@ class AgentRuntime {
   AgentRuntime({
     required this.agentId,
     required this.glpSources,
-    required this.stdlibDir,
+    required this.rootSelfGlpPath,
     this.friends = const [],
     this.goalLabel = 'agent_init/3',
     this.extraArgs = const [],
@@ -117,7 +117,7 @@ class AgentRuntime {
     _output('[INIT] Creating MadContext...');
 
     // Use GlpEngine — the ONE way to run GLP programs.
-    final engine = GlpEngine(stdlibDir: stdlibDir)..strictTypes = false;
+    final engine = GlpEngine(rootSelfGlpPath: rootSelfGlpPath)..strictTypes = false;
 
     // Enable madGLP mode (loads madPredicates + creates MadContext)
     engine.enableMadGLP(agentId: agentIdLower);

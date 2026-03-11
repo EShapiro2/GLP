@@ -17,7 +17,7 @@ void main() {
     late List<String> outputLines;
 
     setUp(() {
-      engine = GlpEngine(stdlibDir: '../programs/stdlib')..strictTypes = false;
+      engine = GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path)..strictTypes = false;
       outputLines = [];
       engine.runtime.outputCallback = (line) => outputLines.add(line);
     });

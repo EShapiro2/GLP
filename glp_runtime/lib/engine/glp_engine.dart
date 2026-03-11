@@ -114,14 +114,12 @@ class GlpEngine {
   Map<String, BytecodeProgram> get loadedPrograms =>
       Map.unmodifiable(_loadedPrograms);
 
-  /// Constructor - registers standard predicates and loads stdlib.
+  /// Constructor - registers standard predicates and loads root self.glp.
   ///
-  /// [stdlibDir] is the path to the stdlib directory (e.g., '../programs/stdlib').
-  /// Loading stdlib is not optional — it's part of engine initialization.
-  GlpEngine({required String stdlibDir}) {
-    // Derive root self.glp path from stdlib dir (caller must pass absolute path)
-    // e.g., '/abs/path/programs/stdlib' → '/abs/path/programs/self.glp'
-    _rootSelfGlpPath = stdlibDir.replaceAll('/stdlib', '/self.glp');
+  /// [rootSelfGlpPath] is the absolute path to programs/self.glp.
+  /// Loading root self.glp is not optional — it's part of engine initialization.
+  GlpEngine({required String rootSelfGlpPath}) {
+    _rootSelfGlpPath = rootSelfGlpPath;
 
     // Set prelude sources from programs/self.glp for PE and type checker
     final rootSelfFile = File(_rootSelfGlpPath);
@@ -132,7 +130,7 @@ class GlpEngine {
     }
 
     registerStandardPredicates(_runtime.systemPredicates);
-    _loadStdlib(stdlibDir);
+    _loadRootSelf();
   }
 
   /// Clear all loaded programs except stdlib
@@ -153,11 +151,9 @@ class GlpEngine {
     }
   }
 
-  /// Load stdlib from programs/self.glp (private — called by constructor).
-  void _loadStdlib(String stdlibDir) {
-    // Derive root self.glp path from stdlib dir
-    final rootSelfGlp = stdlibDir.replaceAll('/stdlib', '/self.glp');
-    final file = File(rootSelfGlp);
+  /// Load root self.glp (private — called by constructor).
+  void _loadRootSelf() {
+    final file = File(_rootSelfGlpPath);
     if (file.existsSync()) {
       try {
         final source = file.readAsStringSync();

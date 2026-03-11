@@ -27,9 +27,12 @@ void main() async {
   print('Commands: :quit, :help, :trace, :debug, :limit');
   print('');
 
-  final stdlibDir = File('../programs/stdlib').absolute.path;
-  final engine = GlpEngine(stdlibDir: stdlibDir);
-  print('Loaded stdlib');
+  // Resolve programs/self.glp relative to this script's location.
+  // Platform.script points to glp_runtime/bin/glp_repl.dart.
+  // Two levels up (../../) reaches the GLP repo root; then programs/self.glp.
+  final rootSelfGlpPath = Platform.script.resolve('../../programs/self.glp').toFilePath();
+  final engine = GlpEngine(rootSelfGlpPath: rootSelfGlpPath);
+  print('Loaded root self.glp');
   print('');
 
   while (true) {
@@ -80,7 +83,7 @@ void main() async {
 
     if (trimmed == ':clear' || trimmed == ':c') {
       engine.clear();
-      print('Cleared loaded programs (stdlib retained)');
+      print('Cleared loaded programs (root self.glp retained)');
       continue;
     }
 

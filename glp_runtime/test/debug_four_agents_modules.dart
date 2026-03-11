@@ -10,7 +10,7 @@ import 'package:glp_runtime/multiagent/agent_runtime.dart';
 void main() async {
   final projectDir = '../programs/cssg_modules';
   final bootSource = File('../programs/cssg_modules/mad_boot.glp').readAsStringSync();
-  final stdlibDir = '../programs/stdlib';
+  final rootSelfGlpPath = File('../programs/self.glp').absolute.path;
 
   print('=== Four-agent modules diagnostic (Play 4) ===\n');
 
@@ -23,7 +23,7 @@ void main() async {
     final agent = AgentRuntime(
       agentId: id,
       glpSources: [bootSource],
-      stdlibDir: stdlibDir,
+      rootSelfGlpPath: rootSelfGlpPath,
       goalLabel: goal,
       extraArgs: extra,
       projectDir: projectDir,

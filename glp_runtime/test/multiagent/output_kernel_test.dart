@@ -1,4 +1,5 @@
 /// Tests for '_output'/1 kernel and send_to_user/1 GLP predicate.
+import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 
@@ -8,7 +9,7 @@ void main() {
     late List<String> outputLines;
 
     setUp(() {
-      engine = GlpEngine(stdlibDir: '../programs/stdlib')..strictTypes = false;
+      engine = GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path)..strictTypes = false;
       outputLines = [];
       engine.runtime.outputCallback = (line) => outputLines.add(line);
     });
@@ -52,7 +53,7 @@ test :- '_output'([a, b, c]).
     late List<String> outputLines;
 
     setUp(() {
-      engine = GlpEngine(stdlibDir: '../programs/stdlib')..strictTypes = false;
+      engine = GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path)..strictTypes = false;
       outputLines = [];
       engine.runtime.outputCallback = (line) => outputLines.add(line);
     });
