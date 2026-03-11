@@ -22,10 +22,16 @@
 %%   Stream ::= [] ; [_|Stream].
 %%   Channel ::= ch(Stream, Stream?).
 
-Response ::= accept(Channel) ; no.
 Decision ::= yes ; no.
 Handshake ::= ack(Constant) ; nack.
-PendingValue ::= response(Response?) ; channel(Channel?) ; error.
+
+%% Friend channel types (forward-referenced by FriendContent)
+FriendMsg ::= msg(Constant, Constant, FriendContent).
+FriendStream ::= [] ; [FriendMsg | FriendStream].
+FriendChannel ::= ch(FriendStream, FriendStream?).
+
+Response ::= accept(FriendChannel) ; no.
+PendingValue ::= response(Response?) ; channel(FriendChannel?) ; error.
 
 %% --- Content types for messages ---
 
@@ -40,7 +46,7 @@ UserContent ::= connect(Constant)
 
 %% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
 AgentContent ::= befriend(Constant, Response)
-               ; befriend_intro(Constant, Constant, Channel)
+               ; befriend_intro(Constant, Constant, FriendChannel)
                ; connected(Constant)
                ; rejected
                ; rejected(Constant)
@@ -52,16 +58,16 @@ NetColdCall ::= intro(Constant, Response).
 %% Friend-to-friend content (3-arg: msg(From, To, Content))
 FriendContent ::= response(Response)
                 ; text(Constant)
-                ; intro(Constant, Channel).
+                ; intro(Constant, FriendChannel).
 
 %% Intro channel content (first message is ack/nack handshake)
 IntroContent ::= ack(Constant) ; nack.
 
 %% Intro result — written by intro_await_peer, injected into UserIn
-IntroResult ::= intro_result(Constant, Channel) ; intro_rejected(Constant).
+IntroResult ::= intro_result(Constant, FriendChannel) ; intro_rejected(Constant).
 
 %% Output list
-OutputEntry ::= output(String, Stream?).
+OutputEntry ::= output(String, Stream(X)?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
 %% =============================================================================
