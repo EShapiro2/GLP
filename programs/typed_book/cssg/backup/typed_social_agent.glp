@@ -22,10 +22,16 @@
 %%   Stream ::= [] ; [_|Stream].
 %%   Channel ::= ch(Stream, Stream?).
 
-Response ::= accept(Channel) ; no.
 Decision ::= yes ; no.
 Handshake ::= ack(Constant) ; nack.
-PendingValue ::= response(Response?) ; channel(_) ; error.
+
+%% Friend channel types
+FriendMsg ::= msg(Constant, Constant, FriendContent).
+FriendStream ::= [] ; [FriendMsg | FriendStream].
+FriendChannel ::= ch(FriendStream, FriendStream?).
+
+Response ::= accept(FriendChannel) ; no.
+PendingValue ::= response(Response?) ; channel(FriendChannel?) ; error.
 
 %% --- Content types for messages ---
 
@@ -66,12 +72,12 @@ IntroStream  ::= [] ; [IntroContent | IntroStream].
 IntroChannel ::= ch(IntroStream, IntroStream?).
 
 %% Intro result — written by intro_await_peer, injected into UserIn
-IntroResult ::= intro_result(Constant, Channel) ; intro_rejected(Constant).
+IntroResult ::= intro_result(Constant, FriendChannel) ; intro_rejected(Constant).
 
 %% Agent input stream element types
 %% UserIn carries msg/3 (from user and friend responses) and injected IntroResult
 UserInMsg ::= msg(Constant, Constant, UserContent)
-            ; intro_result(Constant, Channel)
+            ; intro_result(Constant, FriendChannel)
             ; intro_rejected(Constant).
 UserInStream ::= [] ; [UserInMsg | UserInStream].
 
@@ -82,7 +88,7 @@ NetInStream ::= [] ; [NetInMsg | NetInStream].
 
 %% Output list — keys distinguish system channels, friends, and children
 OutputKey   ::= '_user' ; '_net' ; friend(Constant) ; child(Constant).
-OutputEntry ::= output(OutputKey, Stream?).
+OutputEntry ::= output(OutputKey, Stream(X)?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
 %% =============================================================================

@@ -33,7 +33,7 @@ Response ::= accept(FriendChannel) ; no.
 Decision ::= yes ; no.
 Handshake ::= ack(Constant) ; nack.
 PendingValue ::= response(Response?) ; channel(IntroChannel)
-               ; group_channel(Channel) ; error.
+               ; group_channel(Channel(X, Y)) ; error.
 
 %% Group types
 GroupType ::= clique ; star.
@@ -70,8 +70,8 @@ AgentContent ::= befriend(Constant, Response?)
                ; rejected
                ; rejected(Constant)
                ; received(Constant, Constant)
-               ; group_invite(GroupId, Channel)
-               ; group_invite_child(GroupId, Constant, Channel)
+               ; group_invite(GroupId, Channel(X, Y))
+               ; group_invite_child(GroupId, Constant, Channel(X, Y))
                ; group_joined(GroupId)
                ; group_joined_member(GroupId, Constant)
                ; group_left(GroupId)
@@ -85,8 +85,8 @@ FriendContent ::= response(Response)
                 ; text(Constant)
                 ; intro(Constant, IntroChannel)
                 ; child_intro(Constant, IntroChannel)
-                ; group_invite(GroupId, Channel)
-                ; group_invite_child(GroupId, Constant, Channel)
+                ; group_invite(GroupId, Channel(X, Y))
+                ; group_invite_child(GroupId, Constant, Channel(X, Y))
                 ; group_msg(GroupId, Constant, Constant).
 
 %% Intro channel content (first message is ack/nack handshake)
@@ -95,19 +95,19 @@ IntroStream  ::= [] ; [IntroContent | IntroStream].
 IntroChannel ::= ch(IntroStream, IntroStream?).
 
 %% Intro result — written by intro_await_peer, injected into UserIn
-IntroResult ::= intro_result(Constant, Channel) ; intro_rejected(Constant).
+IntroResult ::= intro_result(Constant, FriendChannel) ; intro_rejected(Constant).
 
 %% Group join result — written by group_await_join, injected into UserIn
-GroupJoinResult ::= group_join_ack(GroupId, Constant, Channel)
+GroupJoinResult ::= group_join_ack(GroupId, Constant, Channel(X, Y))
                   ; group_join_nack(GroupId, Constant).
 
 %% Agent input stream element types
 %% UserIn carries msg/3 (from user and friend responses), injected IntroResult,
 %% and injected GroupJoinResult
 UserInMsg ::= msg(Constant, Constant, UserContent)
-            ; intro_result(Constant, Channel)
+            ; intro_result(Constant, FriendChannel)
             ; intro_rejected(Constant)
-            ; group_join_ack(GroupId, Constant, Channel)
+            ; group_join_ack(GroupId, Constant, Channel(X, Y))
             ; group_join_nack(GroupId, Constant).
 UserInStream ::= [] ; [UserInMsg | UserInStream].
 
@@ -147,8 +147,8 @@ OutputContent ::= befriend(Constant, Response?)
                 ; text(Constant)
                 ; intro(Constant, IntroChannel)
                 ; child_intro(Constant, IntroChannel)
-                ; group_invite(GroupId, Channel)
-                ; group_invite_child(GroupId, Constant, Channel)
+                ; group_invite(GroupId, Channel(X, Y))
+                ; group_invite_child(GroupId, Constant, Channel(X, Y))
                 ; group_joined(GroupId)
                 ; group_joined_member(GroupId, Constant)
                 ; group_left(GroupId)
